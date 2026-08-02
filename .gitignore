@@ -23,3 +23,6 @@ downloaded_files/
 
 # Локальные отчёты
 team_stats.csv
+
+# Главная модель нужна для запуска приложения
+!football_model_xgboost_elo.pkl
