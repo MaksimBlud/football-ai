@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+    <title>Football AI</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f3f6fb;
+            margin: 0;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            background: white;
+            padding: 28px;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        label {
+            display: block;
+            margin-top: 16px;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            border: 1px solid #ccd3dd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 22px;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            background: #2563eb;
+            color: white;
+            font-size: 17px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        #result {
+            display: none;
+            margin-top: 24px;
+            padding: 18px;
+            background: #eef4ff;
+            border-radius: 10px;
+        }
+
+        #error {
+            display: none;
+            margin-top: 20px;
+            padding: 14px;
+            background: #ffecec;
+            color: #a40000;
+            border-radius: 8px;
+        }
+
+        .probability {
+            margin: 8px 0;
+        }
+
+        .bar {
+            width: 100%;
+            height: 12px;
+            background: #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 6px 0 14px;
+        }
+
+        .fill {
+            height: 100%;
+            background: #2563eb;
+            width: 0%;
+            transition: width .4s ease;
+        }
+
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Football AI</h1>
+        <p>Прогноз футбольного матча</p>
+
+        <form id="prediction-form">
+            <label for="home_team">Домашняя команда</label>
+            <select id="home_team" required></select>
+
+            <label for="away_team">Гостевая команда</label>
+            <select id="away_team" required></select>
+
+            <label for="home_odds">Коэффициент на хозяев</label>
+            <input
+                id="home_odds"
+                type="number"
+                step="0.01"
+                min="1.01"
+                required
+                value="2.20"
+            >
+
+            <label for="draw_odds">Коэффициент на ничью</label>
+            <input
+                id="draw_odds"
+                type="number"
+                step="0.01"
+                min="1.01"
+                required
+                value="3.50"
+            >
+
+            <label for="away_odds">Коэффициент на гостей</label>
+            <input
+                id="away_odds"
+                type="number"
+                step="0.01"
+                min="1.01"
+                required
+                value="3.10"
+            >
+
+            <button id="submit-button" type="submit">Получить прогноз</button>
+        </form>
+
+        <div id="error"></div>
+
+        <div id="result">
+            <h2 id="match-title"></h2>
+
+            <div class="probability" id="home-probability"></div>
+            <div class="bar"><div id="home-bar" class="fill"></div></div>
+
+            <div class="probability" id="draw-probability"></div>
+            <div class="bar"><div id="draw-bar" class="fill"></div></div>
+
+            <div class="probability" id="away-probability"></div>
+            <div class="bar"><div id="away-bar" class="fill"></div></div>
+
+            <p>
+                <strong>Прогноз:</strong>
+                <span id="prediction"></span>
+            </p>
+
+            <p>
+                <strong>Уверенность:</strong>
+                <span id="confidence"></span>
+            </p>
+
+            <p id="form-info"></p>
+            <p id="elo-info"></p>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById("prediction-form");
+        const resultBlock = document.getElementById("result");
+        const errorBlock = document.getElementById("error");
+
+        async function loadTeams() {
+            try {
+                const response = await fetch("/teams");
+
+                if (!response.ok) {
+                    throw new Error("Не удалось загрузить список команд");
+                }
+
+                const teams = await response.json();
+
+                const homeSelect = document.getElementById("home_team");
+                const awaySelect = document.getElementById("away_team");
+
+                for (const team of teams) {
+                    const homeOption = document.createElement("option");
+                    homeOption.value = team;
+                    homeOption.textContent = team;
+                    homeSelect.appendChild(homeOption);
+
+                    const awayOption = document.createElement("option");
+                    awayOption.value = team;
+                    awayOption.textContent = team;
+                    awaySelect.appendChild(awayOption);
+                }
+
+                homeSelect.value = "Liverpool";
+                awaySelect.value = "Arsenal";
+
+            } catch (error) {
+                errorBlock.textContent = error.message;
+                errorBlock.style.display = "block";
+            }
+        }
+
+        loadTeams();
+
+        const homeSelect = document.getElementById("home_team");
+        const awaySelect = document.getElementById("away_team");
+
+        function validateTeams() {
+            if (homeSelect.value === awaySelect.value) {
+                errorBlock.textContent =
+                    "Домашняя и гостевая команды должны отличаться.";
+                errorBlock.style.display = "block";
+                return false;
+            }
+
+            errorBlock.style.display = "none";
+            return true;
+        }
+
+        homeSelect.addEventListener("change", validateTeams);
+        awaySelect.addEventListener("change", validateTeams);
+
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const submitButton =
+                document.getElementById("submit-button");
+
+            resultBlock.style.display = "none";
+            errorBlock.style.display = "none";
+
+            if (!validateTeams()) {
+                return;
+            }
+
+            const payload = {
+                home_team: document.getElementById("home_team").value.trim(),
+                away_team: document.getElementById("away_team").value.trim(),
+                home_odds: Number(
+                    document.getElementById("home_odds").value
+                ),
+                draw_odds: Number(
+                    document.getElementById("draw_odds").value
+                ),
+                away_odds: Number(
+                    document.getElementById("away_odds").value
+                )
+            };
+
+            try {
+                submitButton.disabled = true;
+                submitButton.textContent = "Рассчитываю...";
+
+                const response = await fetch("/predict", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        data.detail || "Не удалось получить прогноз"
+                    );
+                }
+
+                document.getElementById("match-title").textContent =
+                    `${data.home_team} — ${data.away_team}`;
+
+                document.getElementById("home-probability").textContent =
+                    `Победа ${data.home_team}: ` +
+                    `${(data.home_probability * 100).toFixed(2)}%`;
+
+                document.getElementById("draw-probability").textContent =
+                    `Ничья: ${(data.draw_probability * 100).toFixed(2)}%`;
+
+                document.getElementById("away-probability").textContent =
+                    `Победа ${data.away_team}: ` +
+                    `${(data.away_probability * 100).toFixed(2)}%`;
+
+
+                document.getElementById("home-bar").style.width =
+                    (data.home_probability * 100) + "%";
+
+                document.getElementById("draw-bar").style.width =
+                    (data.draw_probability * 100) + "%";
+
+                document.getElementById("away-bar").style.width =
+                    (data.away_probability * 100) + "%";
+
+                document.getElementById("prediction").textContent =
+                    data.prediction;
+
+                const probabilities = [
+                    data.home_probability,
+                    data.draw_probability,
+                    data.away_probability
+                ].sort((a, b) => b - a);
+
+                const confidenceGap =
+                    (probabilities[0] - probabilities[1]) * 100;
+
+                let confidenceText;
+
+                if (confidenceGap < 5) {
+                    confidenceText = "Низкая";
+                } else if (confidenceGap < 15) {
+                    confidenceText = "Средняя";
+                } else {
+                    confidenceText = "Высокая";
+                }
+
+                document.getElementById("confidence").textContent =
+                    `${confidenceText} (разница ${confidenceGap.toFixed(1)} п.п.)`;
+
+                document.getElementById("form-info").textContent =
+                    `Форма за 5 матчей: ` +
+                    `${data.home_team} ${data.home_last5_points} — ` +
+                    `${data.away_last5_points} ${data.away_team}`;
+
+                document.getElementById("elo-info").textContent =
+                    `Эло: ${data.home_team} ${data.home_elo.toFixed(1)} — ` +
+                    `${data.away_elo.toFixed(1)} ${data.away_team}`;
+
+                resultBlock.style.display = "block";
+
+            } catch (error) {
+                errorBlock.textContent = error.message;
+                errorBlock.style.display = "block";
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = "Получить прогноз";
+            }
+        });
+    </script>
+</body>
+</html>

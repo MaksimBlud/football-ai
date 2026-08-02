@@ -1,0 +1,25 @@
+# Секреты
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Резервные и временные файлы
+*.save
+*.save.*
+*_backup.py
+*_backup_*.py
+
+# Системные файлы
+.DS_Store
+
+# Данные и обученные модели
+data/
+downloaded_files/
+*.pkl
+
+# Локальные отчёты
+team_stats.csv
