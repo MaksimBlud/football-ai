@@ -64,9 +64,10 @@ print("Для проверки:", len(X_test))
 print("Обучаю модель...")
 
 model = XGBClassifier(
-    n_estimators=500,
-    max_depth=4,
-    learning_rate=0.03,
+    n_estimators=300,
+    max_depth=3,
+    learning_rate=0.02,
+    min_child_weight=1,
     subsample=0.8,
     colsample_bytree=0.8,
     objective="multi:softprob",
