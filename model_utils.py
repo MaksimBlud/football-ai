@@ -27,6 +27,10 @@ FEATURES = [
     "home_elo",
     "away_elo",
     "elo_difference",
+    "home_venue_win_rate",
+    "away_venue_win_rate",
+    "home_venue_goals_scored",
+    "away_venue_goals_scored",
 ]
 
 
@@ -142,6 +146,8 @@ def load_all_matches():
 
 def calculate_current_state(df):
     team_history = {}
+    home_venue_history = {}
+    away_venue_history = {}
     ratings = {}
 
     for _, row in df.iterrows():
@@ -151,27 +157,43 @@ def calculate_current_state(df):
 
         home_points, away_points = result_points(result)
 
-        team_history.setdefault(
-            home_team,
-            []
-        ).append({
+        home_match = {
             "points": home_points,
+            "win": 1 if result == "H" else 0,
             "goals_scored": row["home_goals"],
             "goals_conceded": row["away_goals"],
             "shots": row["home_shots"],
             "shots_target": row["home_shots_target"],
-        })
+        }
 
         team_history.setdefault(
-            away_team,
+            home_team,
             []
-        ).append({
+        ).append(home_match)
+
+        home_venue_history.setdefault(
+            home_team,
+            []
+        ).append(home_match)
+
+        away_match = {
             "points": away_points,
+            "win": 1 if result == "A" else 0,
             "goals_scored": row["away_goals"],
             "goals_conceded": row["home_goals"],
             "shots": row["away_shots"],
             "shots_target": row["away_shots_target"],
-        })
+        }
+
+        team_history.setdefault(
+            away_team,
+            []
+        ).append(away_match)
+
+        away_venue_history.setdefault(
+            away_team,
+            []
+        ).append(away_match)
 
         home_elo = ratings.get(
             home_team,
@@ -206,7 +228,12 @@ def calculate_current_state(df):
             * (actual_away - expected_away)
         )
 
-    return team_history, ratings
+    return (
+        team_history,
+        home_venue_history,
+        away_venue_history,
+        ratings,
+    )
 
 
 def build_match_features(
@@ -242,7 +269,12 @@ def build_match_features(
             "Коэффициенты должны быть больше 1"
         )
 
-    team_history, ratings = calculate_current_state(df)
+    (
+        team_history,
+        home_venue_history,
+        away_venue_history,
+        ratings,
+    ) = calculate_current_state(df)
 
     home_history = team_history.get(
         home_team,
@@ -272,6 +304,16 @@ def build_match_features(
     away_elo = ratings.get(
         away_team,
         INITIAL_ELO
+    )
+
+    home_venue_matches = home_venue_history.get(
+        home_team,
+        []
+    )
+
+    away_venue_matches = away_venue_history.get(
+        away_team,
+        []
     )
 
     values = {
@@ -327,6 +369,23 @@ def build_match_features(
             + HOME_ADVANTAGE
             - away_elo
         ),
+
+        "home_venue_win_rate": average([
+            match["win"]
+            for match in home_venue_matches
+        ]),
+        "away_venue_win_rate": average([
+            match["win"]
+            for match in away_venue_matches
+        ]),
+        "home_venue_goals_scored": average([
+            match["goals_scored"]
+            for match in home_venue_matches
+        ]),
+        "away_venue_goals_scored": average([
+            match["goals_scored"]
+            for match in away_venue_matches
+        ]),
     }
 
     return pd.DataFrame(

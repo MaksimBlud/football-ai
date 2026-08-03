@@ -27,6 +27,10 @@ FEATURES = [
     "home_elo",
     "away_elo",
     "elo_difference",
+    "home_venue_win_rate",
+    "away_venue_win_rate",
+    "home_venue_goals_scored",
+    "away_venue_goals_scored",
 ]
 
 

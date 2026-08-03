@@ -101,6 +101,8 @@ def build_features(df):
         ).fillna(0)
 
     team_history = {}
+    home_venue_history = {}
+    away_venue_history = {}
     feature_rows = []
 
     print("Рассчитываю признаки до каждого матча...")
@@ -119,6 +121,16 @@ def build_features(df):
             []
         )[-LAST_MATCHES:]
 
+        home_venue_matches = home_venue_history.get(
+            home_team,
+            []
+        )
+
+        away_venue_matches = away_venue_history.get(
+            away_team,
+            []
+        )
+
         home_last5_points = sum(
             match["points"]
             for match in home_history
@@ -130,6 +142,7 @@ def build_features(df):
         )
 
         feature_rows.append({
+            "season": row["season"],
             "match_date": row["match_date"],
             "match_time": row["match_time"],
             "home_team": home_team,
@@ -195,6 +208,48 @@ def build_features(df):
                 for match in away_history
             ]),
 
+            "home_venue_matches": len(home_venue_matches),
+            "away_venue_matches": len(away_venue_matches),
+
+            "home_venue_win_rate": average([
+                match["win"]
+                for match in home_venue_matches
+            ]),
+            "away_venue_win_rate": average([
+                match["win"]
+                for match in away_venue_matches
+            ]),
+
+            "home_venue_goals_scored": average([
+                match["goals_scored"]
+                for match in home_venue_matches
+            ]),
+            "home_venue_goals_conceded": average([
+                match["goals_conceded"]
+                for match in home_venue_matches
+            ]),
+
+            "away_venue_goals_scored": average([
+                match["goals_scored"]
+                for match in away_venue_matches
+            ]),
+            "away_venue_goals_conceded": average([
+                match["goals_conceded"]
+                for match in away_venue_matches
+            ]),
+
+            "venue_win_rate_difference": (
+                average([
+                    match["win"]
+                    for match in home_venue_matches
+                ])
+                -
+                average([
+                    match["win"]
+                    for match in away_venue_matches
+                ])
+            ),
+
             "home_odds": row["home_odds"],
             "draw_odds": row["draw_odds"],
             "away_odds": row["away_odds"],
@@ -209,6 +264,7 @@ def build_features(df):
                 row["result"],
                 "home"
             ),
+            "win": 1 if row["result"] in ("H", "HOME") else 0,
             "goals_scored": row["home_goals"],
             "goals_conceded": row["away_goals"],
             "shots": row["home_shots"],
@@ -222,6 +278,7 @@ def build_features(df):
                 row["result"],
                 "away"
             ),
+            "win": 1 if row["result"] in ("A", "AWAY") else 0,
             "goals_scored": row["away_goals"],
             "goals_conceded": row["home_goals"],
             "shots": row["away_shots"],
@@ -236,6 +293,16 @@ def build_features(df):
         ).append(home_match)
 
         team_history.setdefault(
+            away_team,
+            []
+        ).append(away_match)
+
+        home_venue_history.setdefault(
+            home_team,
+            []
+        ).append(home_match)
+
+        away_venue_history.setdefault(
             away_team,
             []
         ).append(away_match)
