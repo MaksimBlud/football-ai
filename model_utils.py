@@ -248,13 +248,15 @@ def build_match_features(
     known_teams = set(df["home_team"]) | set(df["away_team"])
 
     if home_team not in known_teams:
-        raise ValueError(
-            f"Команда не найдена: {home_team}"
+        print(
+            f"Новая команда: {home_team}. "
+            "Использую нейтральные стартовые признаки."
         )
 
     if away_team not in known_teams:
-        raise ValueError(
-            f"Команда не найдена: {away_team}"
+        print(
+            f"Новая команда: {away_team}. "
+            "Использую нейтральные стартовые признаки."
         )
 
     if home_team == away_team:

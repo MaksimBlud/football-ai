@@ -314,6 +314,12 @@
         <p>Прогноз футбольного матча</p>
 
         <form id="prediction-form">
+
+            <label for="upcoming_match">Ближайший матч</label>
+            <select id="upcoming_match">
+                <option value="">Выберите матч</option>
+            </select>
+
             <label for="home_team">Домашняя команда</label>
             <select id="home_team" required></select>
 
@@ -547,6 +553,63 @@
         const resultBlock = document.getElementById("result");
         const errorBlock = document.getElementById("error");
 
+        async function loadUpcomingMatches() {
+            try {
+                const response = await fetch("/upcoming-matches");
+
+                if (!response.ok) {
+                    throw new Error(
+                        "Не удалось загрузить ближайшие матчи"
+                    );
+                }
+
+                const matches = await response.json();
+
+                const select =
+                    document.getElementById("upcoming_match");
+
+                for (const match of matches) {
+                    const option =
+                        document.createElement("option");
+
+                    option.value = JSON.stringify({
+                        home_team: match.home_team_model,
+                        away_team: match.away_team_model
+                    });
+
+                    option.textContent =
+                        `${match.match_date} ${match.match_time} — ` +
+                        `${match.home_team} — ${match.away_team}`;
+
+                    select.appendChild(option);
+                }
+
+                select.addEventListener(
+                    "change",
+                    function () {
+                        if (!this.value) {
+                            return;
+                        }
+
+                        const match =
+                            JSON.parse(this.value);
+
+                        document.getElementById(
+                            "home_team"
+                        ).value = match.home_team;
+
+                        document.getElementById(
+                            "away_team"
+                        ).value = match.away_team;
+                    }
+                );
+
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+
         async function loadTeams() {
             try {
                 const response = await fetch("/teams");
@@ -582,6 +645,7 @@
         }
 
         loadTeams();
+        loadUpcomingMatches();
 
         const homeSelect = document.getElementById("home_team");
         const awaySelect = document.getElementById("away_team");

@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
+import pandas as pd
+
 from goal_prediction import predict_goal_markets
 from market_value import calculate_market_values
 from predict_match import predict_match
@@ -119,6 +121,25 @@ def health():
 @app.get("/teams")
 def teams():
     return get_team_names()
+
+
+@app.get("/upcoming-matches")
+def upcoming_matches():
+    path = "data/upcoming_matches.csv"
+
+    try:
+        df = pd.read_csv(path)
+    except FileNotFoundError as error:
+        raise HTTPException(
+            status_code=404,
+            detail="Файл ближайших матчей не найден.",
+        ) from error
+
+    return df.head(50).to_dict(
+        orient="records"
+    )
+
+
 
 
 @app.post(
