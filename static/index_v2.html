@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+    <title>Football AI</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f3f6fb;
+            margin: 0;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            background: white;
+            padding: 28px;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        label {
+            display: block;
+            margin-top: 16px;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            border: 1px solid #ccd3dd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 22px;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            background: #2563eb;
+            color: white;
+            font-size: 17px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        #result {
+            display: none;
+            margin-top: 24px;
+            padding: 18px;
+            background: #eef4ff;
+            border-radius: 10px;
+        }
+
+        #error {
+            display: none;
+            margin-top: 20px;
+            padding: 14px;
+            background: #ffecec;
+            color: #a40000;
+            border-radius: 8px;
+        }
+
+        .probability {
+            margin: 8px 0;
+        }
+
+        .bar {
+            width: 100%;
+            height: 12px;
+            background: #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 6px 0 14px;
+        }
+
+        .fill {
+            height: 100%;
+            background: #2563eb;
+            width: 0%;
+            transition: width .4s ease;
+        }
+
+    
+.goal-cards{
+    display:flex;
+    gap:16px;
+    margin:18px 0;
+}
+
+.goal-card{
+    flex:1;
+    background:#ffffff;
+    border-radius:12px;
+    padding:16px;
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+    text-align:center;
+}
+
+.goal-team{
+    font-size:15px;
+    color:#666;
+    margin-bottom:8px;
+}
+
+.goal-value{
+    font-size:34px;
+    font-weight:bold;
+    color:#2f62d6;
+}
+
+
+.market-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:16px;
+    margin:18px 0;
+}
+
+.market-card{
+    background:#ffffff;
+    border-radius:12px;
+    padding:16px;
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+
+.market-title{
+    font-size:16px;
+    font-weight:bold;
+    margin-bottom:12px;
+}
+
+.market-row{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    padding:7px 0;
+    border-bottom:1px solid #edf0f5;
+}
+
+.market-row:last-child{
+    border-bottom:none;
+}
+
+.market-value{
+    font-weight:bold;
+    color:#2f62d6;
+}
+
+@media (max-width:600px){
+    .goal-cards,
+    .market-grid{
+        grid-template-columns:1fr;
+        display:grid;
+    }
+}
+
+
+.outcome-grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:12px;
+    margin:18px 0;
+}
+
+.outcome-card{
+    background:#ffffff;
+    border-radius:12px;
+    padding:14px;
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+    text-align:center;
+}
+
+.outcome-label{
+    font-size:14px;
+    color:#666;
+    margin-bottom:8px;
+}
+
+.outcome-value{
+    font-size:24px;
+    font-weight:bold;
+    color:#2f62d6;
+}
+
+@media (max-width:600px){
+    .outcome-grid{
+        grid-template-columns:1fr;
+    }
+}
+
+
+.outcome-card.best{
+    border:2px solid #2563eb;
+    background:#eff6ff;
+    transform:translateY(-2px);
+}
+
+.outcome-card.best .outcome-label{
+    color:#1d4ed8;
+    font-weight:bold;
+}
+
+
+.value-card{
+    margin:20px 0;
+    padding:18px;
+    border-radius:12px;
+    background:#f8fafc;
+    border:1px solid #dbe3ef;
+}
+
+.value-card.value{
+    background:#ecfdf5;
+    border-color:#22c55e;
+}
+
+.value-card.small-edge{
+    background:#fffbeb;
+    border-color:#f59e0b;
+}
+
+.value-title{
+    font-size:17px;
+    font-weight:bold;
+    margin-bottom:12px;
+}
+
+.value-card p{
+    margin:7px 0;
+}
+
+.value-card small{
+    display:block;
+    margin-top:12px;
+    color:#64748b;
+    line-height:1.4;
+}
+
+
+.table-wrapper{
+    overflow-x:auto;
+    margin:16px 0 22px;
+}
+
+#market-value-table{
+    width:100%;
+    border-collapse:collapse;
+    background:#ffffff;
+    border-radius:12px;
+    overflow:hidden;
+}
+
+#market-value-table th,
+#market-value-table td{
+    padding:11px 10px;
+    border-bottom:1px solid #e5e7eb;
+    text-align:left;
+    white-space:nowrap;
+}
+
+#market-value-table th{
+    background:#f8fafc;
+    font-size:14px;
+}
+
+.market-status-value{
+    color:#15803d;
+    font-weight:bold;
+}
+
+.market-status-small-edge{
+    color:#b45309;
+    font-weight:bold;
+}
+
+.market-status-pass{
+    color:#64748b;
+}
+
+.market-positive-roi{
+    color:#15803d;
+    font-weight:bold;
+}
+
+.market-negative-roi{
+    color:#b91c1c;
+}
+
+</style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Football AI</h1>
+        <p>Прогноз футбольного матча</p>
+
+        <form id="prediction-form">
+            <label for="home_team">Домашняя команда</label>
+            <select id="home_team" required></select>
+
+            <label for="away_team">Гостевая команда</label>
+            <select id="away_team" required></select>
+
+            <label for="home_odds">Коэффициент на хозяев</label>
+            <input
+                id="home_odds"
+                type="number"
+                step="0.01"
+                min="1.01"
+                required
+                value="2.20"
+            >
+
+            <label for="draw_odds">Коэффициент на ничью</label>
+            <input
+                id="draw_odds"
+                type="number"
+                step="0.01"
+                min="1.01"
+                required
+                value="3.50"
+            >
+
+            <label for="away_odds">Коэффициент на гостей</label>
+            <input
+                id="away_odds"
+                type="number"
+                step="0.01"
+                min="1.01"
+                required
+                value="3.10"
+            >
+
+            <hr>
+
+            <h3>Коэффициенты дополнительных рынков</h3>
+
+            <label for="over_2_5_odds">ТБ 2.5</label>
+            <input
+                id="over_2_5_odds"
+                type="number"
+                step="0.01"
+                min="1.01"
+                required
+                value="2.10"
+            >
+
+            <label for="under_2_5_odds">ТМ 2.5</label>
+            <input
+                id="under_2_5_odds"
+                type="number"
+                step="0.01"
+                min="1.01"
+                required
+                value="1.75"
+            >
+
+            <label for="btts_yes_odds">Обе забьют — Да</label>
+            <input
+                id="btts_yes_odds"
+                type="number"
+                step="0.01"
+                min="1.01"
+                required
+                value="1.95"
+            >
+
+            <label for="btts_no_odds">Обе забьют — Нет</label>
+            <input
+                id="btts_no_odds"
+                type="number"
+                step="0.01"
+                min="1.01"
+                required
+                value="1.85"
+            >
+
+            <button id="submit-button" type="submit">Получить прогноз</button>
+        </form>
+
+        <div id="error"></div>
+
+        <div id="result">
+            <h2 id="match-title"></h2>
+
+            <div class="outcome-grid">
+                <div class="outcome-card" id="home-outcome-card">
+                    <div class="outcome-label" id="home-outcome-label"></div>
+                    <div class="outcome-value" id="home-probability"></div>
+                </div>
+
+                <div class="outcome-card" id="draw-outcome-card">
+                    <div class="outcome-label">Ничья</div>
+                    <div class="outcome-value" id="draw-probability"></div>
+                </div>
+
+                <div class="outcome-card" id="away-outcome-card">
+                    <div class="outcome-label" id="away-outcome-label"></div>
+                    <div class="outcome-value" id="away-probability"></div>
+                </div>
+            </div>
+
+            <p>
+                <strong>Прогноз:</strong>
+                <span id="prediction"></span>
+            </p>
+
+            <p>
+                <strong>Уверенность:</strong>
+                <span id="confidence"></span>
+            </p>
+
+            <p id="form-info"></p>
+            <p id="elo-info"></p>
+
+            <div id="value-card" class="value-card">
+                <div class="value-title">Value-анализ 1X2</div>
+                <p id="bookmaker-margin"></p>
+                <p id="best-value-name"></p>
+                <p id="best-value-edge"></p>
+                <p id="best-value-roi"></p>
+                <p id="best-value-status"></p>
+                <small>
+                    Расчёт основан на вероятностях модели и введённых коэффициентах.
+                    Он не гарантирует прибыль.
+                </small>
+            </div>
+
+            <h3>Все рынки по ожидаемому ROI</h3>
+
+            <div class="table-wrapper">
+                <table id="market-value-table">
+                    <thead>
+                        <tr>
+                            <th>Рынок</th>
+                            <th>Коэф.</th>
+                            <th>Модель</th>
+                            <th>ROI</th>
+                            <th>Статус</th>
+                        </tr>
+                    </thead>
+                    <tbody id="market-value-body"></tbody>
+                </table>
+            </div>
+
+            <hr>
+
+            <h3>Ожидаемые голы</h3>
+
+            <div class="goal-cards">
+
+                <div class="goal-card">
+                    <div class="goal-team" id="expected-home-name"></div>
+                    <div class="goal-value" id="expected-home-goals"></div>
+                </div>
+
+                <div class="goal-card">
+                    <div class="goal-team" id="expected-away-name"></div>
+                    <div class="goal-value" id="expected-away-goals"></div>
+                </div>
+
+            </div>
+
+            <p id="expected-total-goals"></p>
+
+            <div class="market-grid">
+
+                <div class="market-card">
+                    <div class="market-title">Тотал 2.5</div>
+
+                    <div class="market-row">
+                        <span>Больше 2.5</span>
+                        <span
+                            id="over-probability"
+                            class="market-value"
+                        ></span>
+                    </div>
+
+                    <div class="market-row">
+                        <span>Меньше 2.5</span>
+                        <span
+                            id="under-probability"
+                            class="market-value"
+                        ></span>
+                    </div>
+                </div>
+
+                <div class="market-card">
+                    <div class="market-title">Обе забьют</div>
+
+                    <div class="market-row">
+                        <span>Да</span>
+                        <span
+                            id="btts-yes-probability"
+                            class="market-value"
+                        ></span>
+                    </div>
+
+                    <div class="market-row">
+                        <span>Нет</span>
+                        <span
+                            id="btts-no-probability"
+                            class="market-value"
+                        ></span>
+                    </div>
+                </div>
+
+            </div>
+
+            <h3>Самые вероятные счета</h3>
+
+            
+<table id="top-scores-table" style="width:100%;border-collapse:collapse;">
+    <thead>
+        <tr>
+            <th style="text-align:left;">Счёт</th>
+            <th style="text-align:right;">Вероятность</th>
+        </tr>
+    </thead>
+    <tbody id="top-scores"></tbody>
+</table>
+
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById("prediction-form");
+        const resultBlock = document.getElementById("result");
+        const errorBlock = document.getElementById("error");
+
+        async function loadTeams() {
+            try {
+                const response = await fetch("/teams");
+
+                if (!response.ok) {
+                    throw new Error("Не удалось загрузить список команд");
+                }
+
+                const teams = await response.json();
+
+                const homeSelect = document.getElementById("home_team");
+                const awaySelect = document.getElementById("away_team");
+
+                for (const team of teams) {
+                    const homeOption = document.createElement("option");
+                    homeOption.value = team;
+                    homeOption.textContent = team;
+                    homeSelect.appendChild(homeOption);
+
+                    const awayOption = document.createElement("option");
+                    awayOption.value = team;
+                    awayOption.textContent = team;
+                    awaySelect.appendChild(awayOption);
+                }
+
+                homeSelect.value = "Liverpool";
+                awaySelect.value = "Arsenal";
+
+            } catch (error) {
+                errorBlock.textContent = error.message;
+                errorBlock.style.display = "block";
+            }
+        }
+
+        loadTeams();
+
+        const homeSelect = document.getElementById("home_team");
+        const awaySelect = document.getElementById("away_team");
+
+        function validateTeams() {
+            if (homeSelect.value === awaySelect.value) {
+                errorBlock.textContent =
+                    "Домашняя и гостевая команды должны отличаться.";
+                errorBlock.style.display = "block";
+                return false;
+            }
+
+            errorBlock.style.display = "none";
+            return true;
+        }
+
+        homeSelect.addEventListener("change", validateTeams);
+        awaySelect.addEventListener("change", validateTeams);
+
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const submitButton =
+                document.getElementById("submit-button");
+
+            resultBlock.style.display = "none";
+            errorBlock.style.display = "none";
+
+            if (!validateTeams()) {
+                return;
+            }
+
+            const payload = {
+                home_team: document.getElementById("home_team").value.trim(),
+                away_team: document.getElementById("away_team").value.trim(),
+                home_odds: Number(
+                    document.getElementById("home_odds").value
+                ),
+                draw_odds: Number(
+                    document.getElementById("draw_odds").value
+                ),
+                away_odds: Number(
+                    document.getElementById("away_odds").value
+                ),
+                over_2_5_odds: Number(
+                    document.getElementById("over_2_5_odds").value
+                ),
+                under_2_5_odds: Number(
+                    document.getElementById("under_2_5_odds").value
+                ),
+                btts_yes_odds: Number(
+                    document.getElementById("btts_yes_odds").value
+                ),
+                btts_no_odds: Number(
+                    document.getElementById("btts_no_odds").value
+                )
+            };
+
+            try {
+                submitButton.disabled = true;
+                submitButton.textContent = "Рассчитываю...";
+
+                const response = await fetch("/predict", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        data.detail || "Не удалось получить прогноз"
+                    );
+                }
+
+                const goalsResponse = await fetch("/predict-goals", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const goalsData = await goalsResponse.json();
+
+                if (!goalsResponse.ok) {
+                    throw new Error(
+                        goalsData.detail ||
+                        "Не удалось получить прогноз голов"
+                    );
+                }
+
+                const marketValueResponse = await fetch("/market-value", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const marketValueData =
+                    await marketValueResponse.json();
+
+                if (!marketValueResponse.ok) {
+                    throw new Error(
+                        marketValueData.detail ||
+                        "Не удалось получить анализ рынков"
+                    );
+                }
+
+                document.getElementById("match-title").textContent =
+                    `${data.home_team} — ${data.away_team}`;
+
+                document.getElementById("home-outcome-label").textContent =
+                    `Победа ${data.home_team}`;
+
+                document.getElementById("home-probability").textContent =
+                    `${(data.home_probability * 100).toFixed(2)}%`;
+
+                document.getElementById("draw-probability").textContent =
+                    `${(data.draw_probability * 100).toFixed(2)}%`;
+
+                document.getElementById("away-outcome-label").textContent =
+                    `Победа ${data.away_team}`;
+
+                document.getElementById("away-probability").textContent =
+                    `${(data.away_probability * 100).toFixed(2)}%`;
+
+
+                document.getElementById("prediction").textContent =
+                    data.prediction;
+
+                const outcomeCards = {
+                    HOME: document.getElementById("home-outcome-card"),
+                    DRAW: document.getElementById("draw-outcome-card"),
+                    AWAY: document.getElementById("away-outcome-card")
+                };
+
+                for (const card of Object.values(outcomeCards)) {
+                    card.classList.remove("best");
+                }
+
+                if (outcomeCards[data.prediction]) {
+                    outcomeCards[data.prediction].classList.add("best");
+                }
+
+                const probabilities = [
+                    data.home_probability,
+                    data.draw_probability,
+                    data.away_probability
+                ].sort((a, b) => b - a);
+
+                const confidenceGap =
+                    (probabilities[0] - probabilities[1]) * 100;
+
+                let confidenceText;
+
+                if (confidenceGap < 5) {
+                    confidenceText = "Низкая";
+                } else if (confidenceGap < 15) {
+                    confidenceText = "Средняя";
+                } else {
+                    confidenceText = "Высокая";
+                }
+
+                document.getElementById("confidence").textContent =
+                    `${confidenceText} (разница ${confidenceGap.toFixed(1)} п.п.)`;
+
+                document.getElementById("form-info").textContent =
+                    `Форма за 5 матчей: ` +
+                    `${data.home_team} ${data.home_last5_points} — ` +
+                    `${data.away_last5_points} ${data.away_team}`;
+
+                document.getElementById("elo-info").textContent =
+                    `Эло: ${data.home_team} ${data.home_elo.toFixed(1)} — ` +
+                    `${data.away_elo.toFixed(1)} ${data.away_team}`;
+
+                const bestValue = data.best_value;
+                const valueCard = document.getElementById("value-card");
+
+                valueCard.classList.remove(
+                    "value",
+                    "small-edge"
+                );
+
+                if (bestValue.status === "VALUE") {
+                    valueCard.classList.add("value");
+                } else if (bestValue.status === "SMALL_EDGE") {
+                    valueCard.classList.add("small-edge");
+                }
+
+                document.getElementById(
+                    "bookmaker-margin"
+                ).textContent =
+                    `Маржа букмекера: ` +
+                    `${(data.bookmaker_margin * 100).toFixed(2)}%`;
+
+                document.getElementById(
+                    "best-value-name"
+                ).textContent =
+                    `Лучший вариант: ${bestValue.name} ` +
+                    `(коэффициент ${bestValue.odds.toFixed(2)})`;
+
+                document.getElementById(
+                    "best-value-edge"
+                ).textContent =
+                    `Преимущество модели: ` +
+                    `${(bestValue.edge * 100).toFixed(2)} п.п.`;
+
+                document.getElementById(
+                    "best-value-roi"
+                ).textContent =
+                    `Расчётный ROI: ` +
+                    `${(bestValue.expected_roi * 100).toFixed(2)}%`;
+
+                const statusLabels = {
+                    VALUE: "Статус: потенциальный value",
+                    SMALL_EDGE: "Статус: небольшое преимущество",
+                    PASS: "Статус: пропустить"
+                };
+
+                document.getElementById(
+                    "best-value-status"
+                ).textContent =
+                    statusLabels[bestValue.status] ||
+                    `Статус: ${bestValue.status}`;
+
+                document.getElementById(
+                    "expected-home-name"
+                ).textContent =
+                    goalsData.home_team;
+
+                document.getElementById(
+                    "expected-home-goals"
+                ).textContent =
+                    goalsData.expected_home_goals.toFixed(2);
+
+                document.getElementById(
+                    "expected-away-name"
+                ).textContent =
+                    goalsData.away_team;
+
+                document.getElementById(
+                    "expected-away-goals"
+                ).textContent =
+                    goalsData.expected_away_goals.toFixed(2);
+
+                document.getElementById(
+                    "expected-total-goals"
+                ).textContent =
+                    `Общий ожидаемый тотал: ` +
+                    `${goalsData.expected_total_goals.toFixed(2)}`;
+
+                document.getElementById(
+                    "over-probability"
+                ).textContent =
+                    `${(goalsData.over_2_5_probability * 100).toFixed(2)}%`;
+
+                document.getElementById(
+                    "under-probability"
+                ).textContent =
+                    `${(goalsData.under_2_5_probability * 100).toFixed(2)}%`;
+
+                document.getElementById(
+                    "btts-yes-probability"
+                ).textContent =
+                    `${(goalsData.btts_yes_probability * 100).toFixed(2)}%`;
+
+                document.getElementById(
+                    "btts-no-probability"
+                ).textContent =
+                    `${(goalsData.btts_no_probability * 100).toFixed(2)}%`;
+
+                const topScores =
+                    document.getElementById("top-scores");
+
+                topScores.innerHTML = "";
+
+                for (const score of goalsData.top_scores) {
+                    const row = document.createElement("tr");
+
+                    row.innerHTML =
+                        `<td>${score.home_goals}:${score.away_goals}</td>` +
+                        `<td style="text-align:right;">` +
+                        `${(score.probability * 100).toFixed(2)}%</td>`;
+
+                    topScores.appendChild(row);
+                }
+
+                const marketValueBody =
+                    document.getElementById("market-value-body");
+
+                marketValueBody.innerHTML = "";
+
+                const marketStatusLabels = {
+                    VALUE: "VALUE",
+                    SMALL_EDGE: "Небольшое преимущество",
+                    PASS: "Пропустить"
+                };
+
+                for (const market of marketValueData.markets) {
+                    const row = document.createElement("tr");
+
+                    const roiClass =
+                        market.expected_roi >= 0
+                            ? "market-positive-roi"
+                            : "market-negative-roi";
+
+                    const statusClass =
+                        market.status === "VALUE"
+                            ? "market-status-value"
+                            : market.status === "SMALL_EDGE"
+                                ? "market-status-small-edge"
+                                : "market-status-pass";
+
+                    row.innerHTML =
+                        `<td>${market.name}</td>` +
+                        `<td>${market.odds.toFixed(2)}</td>` +
+                        `<td>${(market.model_probability * 100).toFixed(2)}%</td>` +
+                        `<td class="${roiClass}">` +
+                        `${(market.expected_roi * 100).toFixed(2)}%</td>` +
+                        `<td class="${statusClass}">` +
+                        `${marketStatusLabels[market.status] || market.status}</td>`;
+
+                    marketValueBody.appendChild(row);
+                }
+
+                resultBlock.style.display = "block";
+
+            } catch (error) {
+                errorBlock.textContent = error.message;
+                errorBlock.style.display = "block";
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = "Получить прогноз";
+            }
+        });
+    </script>
+</body>
+</html>

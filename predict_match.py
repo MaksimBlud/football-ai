@@ -4,6 +4,7 @@ from pathlib import Path
 import joblib
 
 from model_utils import build_match_features
+from value_utils import calculate_1x2_value
 
 
 MODEL_PATH = Path("football_model_xgboost_elo.pkl")
@@ -40,6 +41,17 @@ def predict_match(
     probabilities = model.predict_proba(features)[0]
     prediction = int(model.predict(features)[0])
 
+    value_analysis = calculate_1x2_value(
+        home_team=home_team,
+        away_team=away_team,
+        home_probability=float(probabilities[0]),
+        draw_probability=float(probabilities[1]),
+        away_probability=float(probabilities[2]),
+        home_odds=home_odds,
+        draw_odds=draw_odds,
+        away_odds=away_odds,
+    )
+
     result = {
         "home_team": home_team,
         "away_team": away_team,
@@ -51,6 +63,11 @@ def predict_match(
         "away_last5_points": int(features.iloc[0]["away_last5_points"]),
         "home_elo": float(features.iloc[0]["home_elo"]),
         "away_elo": float(features.iloc[0]["away_elo"]),
+        "bookmaker_margin": float(
+            value_analysis["bookmaker_margin"]
+        ),
+        "value_outcomes": value_analysis["outcomes"],
+        "best_value": value_analysis["best_outcome"],
     }
 
     return result
