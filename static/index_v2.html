@@ -305,6 +305,274 @@
     color:#b91c1c;
 }
 
+
+.round-section{
+    margin-bottom:28px;
+    padding:20px;
+    background:#ffffff;
+    border-radius:14px;
+    box-shadow:0 2px 10px rgba(0,0,0,.08);
+}
+
+#load-round-button{
+    margin-bottom:18px;
+}
+
+#round-table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+#round-table th,
+#round-table td{
+    padding:10px 8px;
+    border-bottom:1px solid #e5e7eb;
+    text-align:left;
+    white-space:nowrap;
+}
+
+#round-table th{
+    background:#f8fafc;
+}
+
+.round-prediction{
+    font-weight:bold;
+    color:#2563eb;
+}
+
+.round-confidence-high{
+    color:#15803d;
+    font-weight:bold;
+}
+
+.round-confidence-medium{
+    color:#b45309;
+    font-weight:bold;
+}
+
+.round-confidence-low{
+    color:#64748b;
+}
+
+.round-note{
+    margin-top:12px;
+    font-size:13px;
+    color:#64748b;
+}
+
+
+.round-cards{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:14px;
+    margin-top:18px;
+}
+
+.round-card{
+    background:#ffffff;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    padding:16px;
+    box-shadow:0 2px 8px rgba(0,0,0,.05);
+}
+
+.round-card-title{
+    font-size:17px;
+    font-weight:bold;
+    margin-bottom:12px;
+}
+
+.round-card-prediction{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 12px;
+    border-radius:10px;
+    background:#f8fafc;
+    margin-bottom:12px;
+}
+
+.round-card-pick{
+    font-size:22px;
+    font-weight:bold;
+    color:#2563eb;
+}
+
+.round-probs{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:8px;
+    margin-bottom:12px;
+}
+
+.round-prob{
+    text-align:center;
+    padding:8px;
+    background:#f8fafc;
+    border-radius:8px;
+}
+
+.round-prob-label{
+    font-size:12px;
+    color:#64748b;
+}
+
+.round-prob-value{
+    font-weight:bold;
+    margin-top:3px;
+}
+
+.round-markets{
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:8px;
+}
+
+.round-market{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    padding:8px 10px;
+    border-bottom:1px solid #eef2f7;
+}
+
+.round-confidence-high{
+    color:#15803d;
+    font-weight:bold;
+}
+
+.round-confidence-medium{
+    color:#b45309;
+    font-weight:bold;
+}
+
+.round-confidence-low{
+    color:#64748b;
+}
+
+@media (max-width:750px){
+    .round-cards{
+        grid-template-columns:1fr;
+    }
+}
+
+
+.model-agreement{
+    display:inline-block;
+    margin-top:10px;
+    padding:6px 10px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:bold;
+}
+
+.model-agreement-ok{
+    background:#dcfce7;
+    color:#166534;
+}
+
+.model-agreement-warn{
+    background:#fef3c7;
+    color:#92400e;
+}
+
+
+.prediction-strength{
+    display:inline-block;
+    margin-top:8px;
+    padding:6px 10px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:bold;
+}
+
+.prediction-strength-strong{
+    background:#dcfce7;
+    color:#166534;
+}
+
+.prediction-strength-medium{
+    background:#fef3c7;
+    color:#92400e;
+}
+
+.prediction-strength-weak{
+    background:#e5e7eb;
+    color:#475569;
+}
+
+
+.round-filters{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:18px;
+    margin-bottom:4px;
+}
+
+.round-filter{
+    width:auto;
+    border:1px solid #dbe3ef;
+    background:#ffffff;
+    color:#334155;
+    padding:8px 14px;
+    border-radius:999px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.round-filter:hover{
+    background:#f8fafc;
+}
+
+.round-filter.active{
+    background:#2563eb;
+    border-color:#2563eb;
+    color:#ffffff;
+}
+
+
+.round-market-filters{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:10px;
+    margin-bottom:4px;
+}
+
+.round-market-filter{
+    width:auto;
+    border:1px solid #dbe3ef;
+    background:#ffffff;
+    color:#334155;
+    padding:8px 14px;
+    border-radius:999px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.round-market-filter:hover{
+    background:#f8fafc;
+}
+
+.round-market-filter.active{
+    background:#0f766e;
+    border-color:#0f766e;
+    color:#ffffff;
+}
+
+
+.calibrated-badge{
+    display:inline-block;
+    margin-top:8px;
+    padding:5px 9px;
+    border-radius:999px;
+    background:#e0f2fe;
+    color:#075985;
+    font-size:11px;
+    font-weight:bold;
+}
+
 </style>
 </head>
 
@@ -313,7 +581,84 @@
         <h1>Football AI</h1>
         <p>Прогноз футбольного матча</p>
 
+        
+        <div class="round-section">
+            <h2>Прогноз ближайшего тура</h2>
+
+            <button
+                type="button"
+                id="load-round-button"
+            >
+                Показать прогнозы тура
+            </button>
+
+            <div
+                id="round-predictions"
+                style="display:none;"
+            >
+                <div class="round-filters">
+                    <button
+                        type="button"
+                        class="round-filter active"
+                        data-filter="ALL"
+                    >
+                        Все
+                    </button>
+
+                    <button
+                        type="button"
+                        class="round-filter"
+                        data-filter="STRONG"
+                    >
+                        Сильные
+                    </button>
+
+                    <button
+                        type="button"
+                        class="round-filter"
+                        data-filter="MEDIUM"
+                    >
+                        Средние
+                    </button>
+
+                    <button
+                        type="button"
+                        class="round-filter"
+                        data-filter="WEAK"
+                    >
+                        Слабые
+                    </button>
+                </div>
+
+                <div class="round-market-filters">
+                    <button
+                        type="button"
+                        class="round-market-filter active"
+                        data-market-filter="ALL"
+                    >
+                        Все рынки
+                    </button>
+
+                    <button
+                        type="button"
+                        class="round-market-filter"
+                        data-market-filter="OVER25"
+                    >
+                        ТБ 2.5 ≥ 60%
+                    </button>
+
+                </div>
+
+                <div id="round-cards" class="round-cards"></div>
+
+                <p class="round-note">
+                    Предварительные прогнозы модели без букмекерских коэффициентов.
+                </p>
+            </div>
+        </div>
+
         <form id="prediction-form">
+
 
             <label for="upcoming_match">Ближайший матч</label>
             <select id="upcoming_match">
@@ -553,6 +898,233 @@
         const resultBlock = document.getElementById("result");
         const errorBlock = document.getElementById("error");
 
+        async function loadRoundPredictions() {
+            const button =
+                document.getElementById("load-round-button");
+
+            const block =
+                document.getElementById("round-predictions");
+
+            const cards =
+                document.getElementById("round-cards");
+
+            try {
+                button.disabled = true;
+                button.textContent = "Загружаю...";
+
+                const response = await fetch(
+                    "/upcoming-round-predictions"
+                );
+
+                if (!response.ok) {
+                    throw new Error(
+                        "Не удалось загрузить прогнозы тура"
+                    );
+                }
+
+                const matches = await response.json();
+
+                cards.innerHTML = "";
+
+                for (const [matchId, match] of matches.entries()) {
+                    const card =
+                        document.createElement("div");
+
+                    card.className = "round-card";
+                    card.dataset.strength =
+                        match.prediction_strength;
+
+                    card.dataset.over25 =
+                        match.over_2_5_probability;
+
+                    card.dataset.btts =
+                        match.btts_yes_probability;
+
+                    card.style.cursor = "pointer";
+
+                    card.addEventListener("click", () => {
+                        window.location.href =
+                            `/match?id=${matchId}`;
+                    });
+
+                    let confidenceClass =
+                        "round-confidence-low";
+
+                    if (match.confidence >= 0.60) {
+                        confidenceClass =
+                            "round-confidence-high";
+                    } else if (match.confidence >= 0.45) {
+                        confidenceClass =
+                            "round-confidence-medium";
+                    }
+
+                    const predictionLabels = {
+                        HOME: "1",
+                        DRAW: "X",
+                        AWAY: "2"
+                    };
+
+                    card.innerHTML =
+                        `<div class="round-card-title">` +
+                        `${match.home_team} — ${match.away_team}` +
+                        `</div>` +
+
+                        `<div class="round-card-prediction">` +
+                        `<span>Прогноз</span>` +
+                        `<span class="round-card-pick">` +
+                        `${predictionLabels[match.prediction]}` +
+                        `</span>` +
+                        `<span class="${confidenceClass}">` +
+                        `${(match.confidence * 100).toFixed(1)}%` +
+                        `</span>` +
+                        `</div>` +
+
+                        `<div class="round-probs">` +
+                        `<div class="round-prob">` +
+                        `<div class="round-prob-label">1</div>` +
+                        `<div class="round-prob-value">` +
+                        `${(match.home_probability * 100).toFixed(1)}%` +
+                        `</div></div>` +
+
+                        `<div class="round-prob">` +
+                        `<div class="round-prob-label">X</div>` +
+                        `<div class="round-prob-value">` +
+                        `${(match.draw_probability * 100).toFixed(1)}%` +
+                        `</div></div>` +
+
+                        `<div class="round-prob">` +
+                        `<div class="round-prob-label">2</div>` +
+                        `<div class="round-prob-value">` +
+                        `${(match.away_probability * 100).toFixed(1)}%` +
+                        `</div></div>` +
+                        `</div>` +
+
+                        `<div class="calibrated-badge">` +
+                        `Калиброванные вероятности 1X2` +
+                        `</div>` +
+
+                        `<div class="model-agreement ` +
+                        `${match.model_agreement
+                            ? "model-agreement-ok"
+                            : "model-agreement-warn"}">` +
+                        `${match.model_agreement
+                            ? "✓ Модели согласны"
+                            : "⚠ Модели расходятся"}` +
+                        `</div>` +
+
+                        `<div class="prediction-strength ` +
+                        `prediction-strength-${match.prediction_strength.toLowerCase()}">` +
+                        `${match.prediction_strength === "STRONG"
+                            ? "Сильный прогноз"
+                            : match.prediction_strength === "MEDIUM"
+                                ? "Средний прогноз"
+                                : "Слабый прогноз"}` +
+                        `</div>` +
+
+                        `<div class="round-markets">` +
+                        `<div class="round-market">` +
+                        `<span>xG</span>` +
+                        `<strong>${match.expected_total_goals.toFixed(2)}</strong>` +
+                        `</div>` +
+
+                        `<div class="round-market">` +
+                        `<span>ТБ 2.5</span>` +
+                        `<strong>${(match.over_2_5_probability * 100).toFixed(1)}%</strong>` +
+                        `</div>` +
+
+                        `<div class="round-market">` +
+                        `<span>BTTS</span>` +
+                        `<strong>${(match.btts_yes_probability * 100).toFixed(1)}%</strong>` +
+                        `</div>` +
+
+                        `<div class="round-market">` +
+                        `<span>Счёт</span>` +
+                        `<strong>${match.top_score}</strong>` +
+                        `</div>` +
+                        `</div>`;
+
+                    cards.appendChild(card);
+                }
+
+                block.style.display = "block";
+                button.textContent = "Обновить прогнозы тура";
+
+                let activeStrengthFilter = "ALL";
+                let activeMarketFilter = "ALL";
+
+                function applyRoundFilters() {
+                    document.querySelectorAll(
+                        ".round-card"
+                    ).forEach(card => {
+                        const strengthVisible =
+                            activeStrengthFilter === "ALL"
+                            || card.dataset.strength ===
+                                activeStrengthFilter;
+
+                        let marketVisible = true;
+
+                        if (
+                            activeMarketFilter === "OVER25"
+                        ) {
+                            marketVisible =
+                                Number(card.dataset.over25) >= 0.60;
+                        }
+
+                        card.style.display =
+                            strengthVisible && marketVisible
+                                ? "block"
+                                : "none";
+                    });
+                }
+
+                document.querySelectorAll(
+                    ".round-filter"
+                ).forEach(filterButton => {
+                    filterButton.onclick = () => {
+                        activeStrengthFilter =
+                            filterButton.dataset.filter;
+
+                        document.querySelectorAll(
+                            ".round-filter"
+                        ).forEach(item => {
+                            item.classList.remove("active");
+                        });
+
+                        filterButton.classList.add("active");
+
+                        applyRoundFilters();
+                    };
+                });
+
+                document.querySelectorAll(
+                    ".round-market-filter"
+                ).forEach(filterButton => {
+                    filterButton.onclick = () => {
+                        activeMarketFilter =
+                            filterButton.dataset.marketFilter;
+
+                        document.querySelectorAll(
+                            ".round-market-filter"
+                        ).forEach(item => {
+                            item.classList.remove("active");
+                        });
+
+                        filterButton.classList.add("active");
+
+                        applyRoundFilters();
+                    };
+                });
+
+            } catch (error) {
+                alert(error.message);
+                button.textContent = "Показать прогнозы тура";
+
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+
         async function loadUpcomingMatches() {
             try {
                 const response = await fetch("/upcoming-matches");
@@ -594,13 +1166,42 @@
                         const match =
                             JSON.parse(this.value);
 
-                        document.getElementById(
-                            "home_team"
-                        ).value = match.home_team;
+                        const homeSelect =
+                            document.getElementById("home_team");
 
-                        document.getElementById(
-                            "away_team"
-                        ).value = match.away_team;
+                        const awaySelect =
+                            document.getElementById("away_team");
+
+                        if (
+                            !Array.from(homeSelect.options).some(
+                                option => option.value === match.home_team
+                            )
+                        ) {
+                            const option =
+                                document.createElement("option");
+
+                            option.value = match.home_team;
+                            option.textContent = match.home_team;
+
+                            homeSelect.appendChild(option);
+                        }
+
+                        if (
+                            !Array.from(awaySelect.options).some(
+                                option => option.value === match.away_team
+                            )
+                        ) {
+                            const option =
+                                document.createElement("option");
+
+                            option.value = match.away_team;
+                            option.textContent = match.away_team;
+
+                            awaySelect.appendChild(option);
+                        }
+
+                        homeSelect.value = match.home_team;
+                        awaySelect.value = match.away_team;
                     }
                 );
 
@@ -646,6 +1247,16 @@
 
         loadTeams();
         loadUpcomingMatches();
+
+        const loadRoundButton =
+            document.getElementById("load-round-button");
+
+        if (loadRoundButton) {
+            loadRoundButton.addEventListener(
+                "click",
+                loadRoundPredictions
+            );
+        }
 
         const homeSelect = document.getElementById("home_team");
         const awaySelect = document.getElementById("away_team");

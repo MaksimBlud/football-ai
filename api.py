@@ -272,3 +272,49 @@ def create_market_value(
             status_code=400,
             detail=str(error),
         ) from error
+
+
+@app.get("/upcoming-round-predictions")
+def upcoming_round_predictions():
+    path = "data/upcoming_round_predictions.csv"
+
+    try:
+        df = pd.read_csv(path)
+    except FileNotFoundError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Файл прогнозов тура не найден. "
+                "Сначала запустите predict_upcoming_round.py."
+            ),
+        ) from error
+
+    return df.to_dict(
+        orient="records"
+    )
+
+
+@app.get("/match")
+def match_page():
+    return FileResponse("static/match.html")
+
+
+@app.get("/upcoming-round-match/{match_id}")
+def upcoming_round_match(match_id: int):
+    path = "data/upcoming_round_predictions.csv"
+
+    try:
+        df = pd.read_csv(path)
+    except FileNotFoundError as error:
+        raise HTTPException(
+            status_code=404,
+            detail="Файл прогнозов тура не найден.",
+        ) from error
+
+    if match_id < 0 or match_id >= len(df):
+        raise HTTPException(
+            status_code=404,
+            detail="Матч не найден",
+        )
+
+    return df.iloc[match_id].to_dict()
