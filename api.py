@@ -318,3 +318,81 @@ def upcoming_round_match(match_id: int):
         )
 
     return df.iloc[match_id].to_dict()
+
+
+@app.post("/refresh-predictions")
+def refresh_predictions():
+    import subprocess
+    import sys
+
+    try:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "update_predictions.py",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise HTTPException(
+            status_code=504,
+            detail="Обновление прогнозов превысило лимит времени.",
+        ) from error
+
+    if result.returncode != 0:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                result.stderr
+                or result.stdout
+                or "Не удалось обновить прогнозы."
+            ),
+        )
+
+    predictions_path = (
+        "data/upcoming_round_predictions.csv"
+    )
+
+    try:
+        df = pd.read_csv(
+            predictions_path
+        )
+    except FileNotFoundError as error:
+        raise HTTPException(
+            status_code=500,
+            detail="Файл прогнозов после обновления не найден.",
+        ) from error
+
+    return {
+        "status": "ok",
+        "matches": len(df),
+        "strong": int(
+            (
+                df["prediction_strength"]
+                == "STRONG"
+            ).sum()
+        ),
+        "medium": int(
+            (
+                df["prediction_strength"]
+                == "MEDIUM"
+            ).sum()
+        ),
+        "weak": int(
+            (
+                df["prediction_strength"]
+                == "WEAK"
+            ).sum()
+        ),
+        "model_agreement": int(
+            df["model_agreement"].sum()
+        ),
+        "over_2_5_60": int(
+            (
+                df["over_2_5_probability"]
+                >= 0.60
+            ).sum()
+        ),
+    }

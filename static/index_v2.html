@@ -573,6 +573,54 @@
     font-weight:bold;
 }
 
+
+.refresh-predictions-button{
+    margin-left:8px;
+    background:#0f766e;
+}
+
+.refresh-predictions-button:hover{
+    background:#115e59;
+}
+
+.refresh-predictions-button:disabled{
+    opacity:.65;
+    cursor:not-allowed;
+}
+
+.refresh-status{
+    display:none;
+    margin-top:12px;
+    padding:10px 12px;
+    border-radius:10px;
+    font-size:13px;
+}
+
+.refresh-status-loading{
+    display:block;
+    background:#eff6ff;
+    color:#1d4ed8;
+}
+
+.refresh-status-success{
+    display:block;
+    background:#dcfce7;
+    color:#166534;
+}
+
+.refresh-status-error{
+    display:block;
+    background:#fee2e2;
+    color:#991b1b;
+}
+
+@media(max-width:700px){
+    .refresh-predictions-button{
+        margin-left:0;
+        margin-top:8px;
+    }
+}
+
 </style>
 </head>
 
@@ -591,6 +639,19 @@
             >
                 Показать прогнозы тура
             </button>
+
+            <button
+                type="button"
+                id="refresh-predictions-button"
+                class="refresh-predictions-button"
+            >
+                Обновить данные и прогнозы
+            </button>
+
+            <div
+                id="refresh-status"
+                class="refresh-status"
+            ></div>
 
             <div
                 id="round-predictions"
@@ -897,6 +958,68 @@
         const form = document.getElementById("prediction-form");
         const resultBlock = document.getElementById("result");
         const errorBlock = document.getElementById("error");
+
+        async function refreshPredictions() {
+            const button = document.getElementById(
+                "refresh-predictions-button"
+            );
+
+            const status = document.getElementById(
+                "refresh-status"
+            );
+
+            try {
+                button.disabled = true;
+                button.textContent = "Обновляю...";
+
+                status.className =
+                    "refresh-status refresh-status-loading";
+
+                status.textContent =
+                    "Загружаю календарь и пересчитываю прогнозы...";
+
+                const response = await fetch(
+                    "/refresh-predictions",
+                    {
+                        method: "POST"
+                    }
+                );
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        data.detail ||
+                        "Не удалось обновить прогнозы"
+                    );
+                }
+
+                status.className =
+                    "refresh-status refresh-status-success";
+
+                status.textContent =
+                    `Готово: ${data.matches} матчей. ` +
+                    `Сильных: ${data.strong}, ` +
+                    `средних: ${data.medium}, ` +
+                    `слабых: ${data.weak}. ` +
+                    `ТБ 2.5 ≥ 60%: ${data.over_2_5_60}.`;
+
+                await loadRoundPredictions();
+
+            } catch (error) {
+                status.className =
+                    "refresh-status refresh-status-error";
+
+                status.textContent =
+                    error.message;
+
+            } finally {
+                button.disabled = false;
+                button.textContent =
+                    "Обновить данные и прогнозы";
+            }
+        }
+
 
         async function loadRoundPredictions() {
             const button =
@@ -1255,6 +1378,18 @@
             loadRoundButton.addEventListener(
                 "click",
                 loadRoundPredictions
+            );
+        }
+
+        const refreshPredictionsButton =
+            document.getElementById(
+                "refresh-predictions-button"
+            );
+
+        if (refreshPredictionsButton) {
+            refreshPredictionsButton.addEventListener(
+                "click",
+                refreshPredictions
             );
         }
 
