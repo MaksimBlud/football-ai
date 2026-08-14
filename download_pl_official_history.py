@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 import time
 
@@ -6,7 +7,34 @@ import requests
 
 BASE = "https://sdp-prem-prod.premier-league-prod.pulselive.com/api"
 
-OUTPUT = Path("data/pl_official_2024_2025.csv")
+parser = argparse.ArgumentParser(
+    description="Загрузка официальной истории Premier League."
+)
+
+parser.add_argument(
+    "start_year",
+    type=int,
+    nargs="?",
+    default=2024,
+    help="Начальный год сезона, например 2023 для 2023/24.",
+)
+
+args = parser.parse_args()
+
+START_YEAR = args.start_year
+END_YEAR = START_YEAR + 1
+
+SEASON_API = str(
+    START_YEAR
+)
+
+SEASON_LABEL = (
+    f"{START_YEAR}/{END_YEAR}"
+)
+
+OUTPUT = Path(
+    f"data/pl_official_{START_YEAR}_{END_YEAR}.csv"
+)
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0",
@@ -16,6 +44,7 @@ HEADERS = {
 }
 
 TEAM_NAME_MAP = {
+    "Luton Town": "Luton",
     "Brighton and Hove Albion": "Brighton",
     "Ipswich Town": "Ipswich",
     "Leicester City": "Leicester",
@@ -33,32 +62,107 @@ def normalize_team(name):
     return TEAM_NAME_MAP.get(name, name)
 
 
-def request_json(path, params=None, retries=5):
+def request_json(
+    path,
+    params=None,
+    retries=8,
+):
     url = f"{BASE}{path}"
 
-    for attempt in range(1, retries + 1):
-        response = requests.get(
-            url,
-            params=params,
-            headers=HEADERS,
-            timeout=30,
-        )
-
-        if response.status_code == 429:
-            wait = min(60, 5 * attempt)
-            print(
-                f"429 rate limit. Жду {wait} сек..."
+    for attempt in range(
+        1,
+        retries + 1,
+    ):
+        try:
+            response = requests.get(
+                url,
+                params=params,
+                headers=HEADERS,
+                timeout=45,
             )
-            time.sleep(wait)
-            continue
 
-        response.raise_for_status()
-        return response.json()
+            if response.status_code == 429:
+                retry_after = (
+                    response.headers.get(
+                        "Retry-After"
+                    )
+                )
+
+                try:
+                    wait = int(
+                        retry_after
+                    )
+                except (
+                    TypeError,
+                    ValueError,
+                ):
+                    wait = min(
+                        60,
+                        5 * attempt,
+                    )
+
+                print(
+                    f"429 rate limit. "
+                    f"Жду {wait} сек..."
+                )
+
+                time.sleep(wait)
+                continue
+
+            if response.status_code in {
+                500,
+                502,
+                503,
+                504,
+            }:
+                wait = min(
+                    60,
+                    3 * attempt,
+                )
+
+                print(
+                    f"HTTP "
+                    f"{response.status_code}. "
+                    f"Повтор через "
+                    f"{wait} сек..."
+                )
+
+                time.sleep(wait)
+                continue
+
+            response.raise_for_status()
+
+            return response.json()
+
+        except (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout,
+        ) as error:
+            if attempt >= retries:
+                raise RuntimeError(
+                    f"Не удалось получить "
+                    f"{url} после "
+                    f"{retries} попыток."
+                ) from error
+
+            wait = min(
+                60,
+                3 * attempt,
+            )
+
+            print(
+                f"Ошибка соединения: "
+                f"{type(error).__name__}. "
+                f"Повтор через {wait} сек..."
+            )
+
+            time.sleep(wait)
 
     raise RuntimeError(
-        f"Не удалось получить {url} после {retries} попыток."
+        f"Не удалось получить "
+        f"{url} после "
+        f"{retries} попыток."
     )
-
 
 def get_all_matches():
     all_matches = []
@@ -68,7 +172,7 @@ def get_all_matches():
     while True:
         params = {
             "competition": "8",
-            "season": "2024",
+            "season": SEASON_API,
             "_limit": "100",
         }
 
@@ -173,7 +277,7 @@ def save_rows(rows):
 
 
 print(
-    "Загружаю полный сезон Premier League 2024/25..."
+    f"Загружаю полный сезон Premier League {SEASON_LABEL}..."
 )
 
 matches = get_all_matches()
@@ -270,7 +374,7 @@ for index, match in enumerate(
 
     rows.append({
         "match_id": match_id,
-        "season": "2024/2025",
+        "season": SEASON_LABEL,
         "league": "EPL",
         "match_date": kickoff.date().isoformat(),
         "match_time": kickoff.strftime("%H:%M"),
