@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
 
   schedule:
-    # Проверяем каждые 4 часа.
+    # Проверяем каждые 2 часа.
     # Сам Python-скрипт решает, нужен ли API-запрос.
-    - cron: "17 */4 * * *"
+    - cron: "17 */2 * * *"
 
 permissions:
   contents: read
