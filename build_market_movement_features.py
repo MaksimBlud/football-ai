@@ -14,19 +14,39 @@ OUTPUT = (
 # LOAD
 # ============================================================
 
-response = (
-    supabase
-    .table(TABLE)
-    .select("*")
-    .order(
-        "snapshot_time_utc",
-        desc=False,
+page_size = 1000
+offset = 0
+all_rows = []
+
+while True:
+
+    response = (
+        supabase
+        .table(TABLE)
+        .select("*")
+        .order(
+            "snapshot_time_utc",
+            desc=False,
+        )
+        .range(
+            offset,
+            offset + page_size - 1,
+        )
+        .execute()
     )
-    .execute()
-)
+
+    rows = response.data or []
+
+    all_rows.extend(rows)
+
+    if len(rows) < page_size:
+        break
+
+    offset += page_size
+
 
 df = pd.DataFrame(
-    response.data or []
+    all_rows
 )
 
 if df.empty:
