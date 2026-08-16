@@ -844,16 +844,59 @@
             <p id="form-info"></p>
             <p id="elo-info"></p>
 
+            <hr>
+
+            <h3>Сравнение рынка и AI</h3>
+
+            <div class="table-wrapper">
+                <table id="compare-table">
+                    <thead>
+                        <tr>
+                            <th>Источник</th>
+                            <th>1</th>
+                            <th>X</th>
+                            <th>2</th>
+                            <th>Прогноз</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Рынок</strong></td>
+                            <td id="compare-market-home"></td>
+                            <td id="compare-market-draw"></td>
+                            <td id="compare-market-away"></td>
+                            <td id="compare-market-prediction"></td>
+                        </tr>
+                        <tr>
+                            <td><strong>AI</strong></td>
+                            <td id="compare-ai-home"></td>
+                            <td id="compare-ai-draw"></td>
+                            <td id="compare-ai-away"></td>
+                            <td id="compare-ai-prediction"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p id="compare-agreement"></p>
+            <p id="compare-disagreement"></p>
+
+            <small>
+                Расхождение AI и рынка является аналитическим сигналом,
+                а не подтверждённым betting value.
+            </small>
+
             <div id="value-card" class="value-card">
-                <div class="value-title">Value-анализ 1X2</div>
+                <div class="value-title">Legacy 1X2 model signal</div>
                 <p id="bookmaker-margin"></p>
                 <p id="best-value-name"></p>
                 <p id="best-value-edge"></p>
                 <p id="best-value-roi"></p>
                 <p id="best-value-status"></p>
                 <small>
-                    Расчёт основан на вероятностях модели и введённых коэффициентах.
-                    Он не гарантирует прибыль.
+                    Этот блок использует legacy-модель 1X2 с букмекерскими коэффициентами
+                    во входных признаках. Историческое преимущество над рынком не подтверждено.
+                    Не интерпретировать как доказанный betting value.
                 </small>
             </div>
 
@@ -1471,6 +1514,27 @@
                     );
                 }
 
+                const compareResponse = await fetch(
+                    "/predict-compare",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(payload)
+                    }
+                );
+
+                const compareData =
+                    await compareResponse.json();
+
+                if (!compareResponse.ok) {
+                    throw new Error(
+                        compareData.detail ||
+                        "Не удалось сравнить рынок и AI"
+                    );
+                }
+
                 const goalsResponse = await fetch("/predict-goals", {
                     method: "POST",
                     headers: {
@@ -1573,6 +1637,70 @@
                     `Эло: ${data.home_team} ${data.home_elo.toFixed(1)} — ` +
                     `${data.away_elo.toFixed(1)} ${data.away_team}`;
 
+                document.getElementById(
+                    "compare-market-home"
+                ).textContent =
+                    `${(compareData.market.home_probability * 100).toFixed(1)}%`;
+
+                document.getElementById(
+                    "compare-market-draw"
+                ).textContent =
+                    `${(compareData.market.draw_probability * 100).toFixed(1)}%`;
+
+                document.getElementById(
+                    "compare-market-away"
+                ).textContent =
+                    `${(compareData.market.away_probability * 100).toFixed(1)}%`;
+
+                document.getElementById(
+                    "compare-market-prediction"
+                ).textContent =
+                    compareData.market_prediction;
+
+                document.getElementById(
+                    "compare-ai-home"
+                ).textContent =
+                    `${(compareData.ai.home_probability * 100).toFixed(1)}%`;
+
+                document.getElementById(
+                    "compare-ai-draw"
+                ).textContent =
+                    `${(compareData.ai.draw_probability * 100).toFixed(1)}%`;
+
+                document.getElementById(
+                    "compare-ai-away"
+                ).textContent =
+                    `${(compareData.ai.away_probability * 100).toFixed(1)}%`;
+
+                document.getElementById(
+                    "compare-ai-prediction"
+                ).textContent =
+                    compareData.ai_prediction;
+
+                document.getElementById(
+                    "compare-agreement"
+                ).textContent =
+                    compareData.agreement
+                        ? "✓ Рынок и AI согласны по наиболее вероятному исходу."
+                        : "⚠ Рынок и AI расходятся по наиболее вероятному исходу.";
+
+                const disagreement =
+                    compareData.strongest_disagreement;
+
+                const deltaPoints =
+                    disagreement.delta * 100;
+
+                const deltaSign =
+                    deltaPoints >= 0 ? "+" : "";
+
+                document.getElementById(
+                    "compare-disagreement"
+                ).textContent =
+                    `Максимальное расхождение: ` +
+                    `${disagreement.outcome} ` +
+                    `${deltaSign}${deltaPoints.toFixed(1)} п.п. ` +
+                    `(AI относительно рынка).`;
+
                 const bestValue = data.best_value;
                 const valueCard = document.getElementById("value-card");
 
@@ -1602,7 +1730,7 @@
                 document.getElementById(
                     "best-value-edge"
                 ).textContent =
-                    `Преимущество модели: ` +
+                    `Расхождение legacy-модели с рынком: ` +
                     `${(bestValue.edge * 100).toFixed(2)} п.п.`;
 
                 document.getElementById(
@@ -1612,9 +1740,9 @@
                     `${(bestValue.expected_roi * 100).toFixed(2)}%`;
 
                 const statusLabels = {
-                    VALUE: "Статус: потенциальный value",
-                    SMALL_EDGE: "Статус: небольшое преимущество",
-                    PASS: "Статус: пропустить"
+                    VALUE: "Статус legacy-сигнала: сильное расхождение",
+                    SMALL_EDGE: "Статус legacy-сигнала: небольшое расхождение",
+                    PASS: "Статус legacy-сигнала: слабое расхождение"
                 };
 
                 document.getElementById(
