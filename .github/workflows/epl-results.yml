@@ -1,0 +1,81 @@
+name: EPL Results Dry Run
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    # Проверяем результаты два раза в сутки.
+    # Пока только DRY RUN — Supabase не изменяется.
+    - cron: "37 */12 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  check-results:
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 10
+
+    env:
+      FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
+      API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests supabase python-dotenv
+
+      - name: Check required secrets
+        run: |
+          python - <<'PY'
+          import os
+
+          football_key = (
+              os.getenv("FOOTBALL_DATA_API_KEY")
+              or os.getenv("API_FOOTBALL_KEY")
+          )
+
+          if not football_key:
+              raise SystemExit(
+                  "Missing GitHub Secret: "
+                  "FOOTBALL_DATA_API_KEY or API_FOOTBALL_KEY"
+              )
+
+          required = [
+              "SUPABASE_URL",
+              "SUPABASE_KEY",
+          ]
+
+          missing = [
+              name
+              for name in required
+              if not os.getenv(name)
+          ]
+
+          if missing:
+              raise SystemExit(
+                  "Missing GitHub Secrets: "
+                  + ", ".join(missing)
+              )
+
+          print("Football-data API key доступен.")
+          print("Supabase secrets доступны.")
+          print("Значения secrets НЕ выводились.")
+          PY
+
+      - name: Run EPL result updater dry run
+        run: python update_epl_results.py
