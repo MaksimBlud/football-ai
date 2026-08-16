@@ -7,6 +7,9 @@ import pandas as pd
 from goal_prediction import predict_goal_markets
 from market_value import calculate_market_values
 from predict_match import predict_match
+from predict_match_no_odds import predict_match_no_odds
+from predict_market import predict_market
+from team_names import normalize_team_name
 from teams import get_team_names
 
 
@@ -140,6 +143,154 @@ def upcoming_matches():
     )
 
 
+
+
+@app.post("/predict-compare")
+def create_compare_prediction(
+    request: PredictionRequest,
+):
+    try:
+        home_original = request.home_team.strip()
+        away_original = request.away_team.strip()
+
+        market = predict_market(
+            home_team=home_original,
+            away_team=away_original,
+            home_odds=request.home_odds,
+            draw_odds=request.draw_odds,
+            away_odds=request.away_odds,
+        )
+
+        ai = predict_match_no_odds(
+            home_team=normalize_team_name(
+                home_original
+            ),
+            away_team=normalize_team_name(
+                away_original
+            ),
+        )
+
+        deltas = {
+            "HOME": (
+                ai["home_probability"]
+                - market["home_probability"]
+            ),
+            "DRAW": (
+                ai["draw_probability"]
+                - market["draw_probability"]
+            ),
+            "AWAY": (
+                ai["away_probability"]
+                - market["away_probability"]
+            ),
+        }
+
+        strongest_disagreement = max(
+            deltas,
+            key=lambda side: abs(
+                deltas[side]
+            ),
+        )
+
+        return {
+            "home_team": home_original,
+            "away_team": away_original,
+
+            "market": market,
+
+            "ai": ai,
+
+            "agreement": (
+                market["prediction"]
+                == ai["prediction"]
+            ),
+
+            "market_prediction": (
+                market["prediction"]
+            ),
+
+            "ai_prediction": (
+                ai["prediction"]
+            ),
+
+            "delta": {
+                "home": deltas["HOME"],
+                "draw": deltas["DRAW"],
+                "away": deltas["AWAY"],
+            },
+
+            "strongest_disagreement": {
+                "outcome": strongest_disagreement,
+                "delta": deltas[
+                    strongest_disagreement
+                ],
+                "absolute_delta": abs(
+                    deltas[
+                        strongest_disagreement
+                    ]
+                ),
+            },
+
+            "note": (
+                "AI-vs-market disagreement is an "
+                "analytical signal, not validated betting value."
+            ),
+        }
+
+    except (
+        FileNotFoundError,
+        ValueError,
+        RuntimeError,
+    ) as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+
+@app.post("/predict-ai")
+def create_ai_prediction(
+    request: PredictionRequest,
+):
+    try:
+        return predict_match_no_odds(
+            home_team=normalize_team_name(
+                request.home_team
+            ),
+            away_team=normalize_team_name(
+                request.away_team
+            ),
+        )
+
+    except (
+        FileNotFoundError,
+        ValueError,
+        RuntimeError,
+    ) as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+
+@app.post("/predict-market")
+def create_market_prediction(
+    request: PredictionRequest,
+):
+    try:
+        return predict_market(
+            home_team=request.home_team.strip(),
+            away_team=request.away_team.strip(),
+            home_odds=request.home_odds,
+            draw_odds=request.draw_odds,
+            away_odds=request.away_odds,
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
 
 
 @app.post(
