@@ -5,6 +5,8 @@ from database import supabase
 
 TABLE = "odds_snapshots"
 
+NO_FUTURE_MATCH_COOLDOWN_HOURS = 24
+
 
 def parse_dt(value):
     if not value:
@@ -90,16 +92,48 @@ else:
     ]
 
     if not future_matches:
+        hours_since_snapshot = (
+            now - last_snapshot
+        ).total_seconds() / 3600
+
+        should_run = (
+            hours_since_snapshot
+            >= NO_FUTURE_MATCH_COOLDOWN_HOURS
+        )
+
         print(
             "Будущих матчей в последних "
             "snapshot-данных нет."
         )
+
         print(
-            "Запускаю обновление, чтобы "
-            "получить новый календарь odds."
+            "Последний snapshot:",
+            last_snapshot.isoformat(),
         )
 
-        should_run = True
+        print(
+            "После snapshot, часов:",
+            round(
+                hours_since_snapshot,
+                2,
+            ),
+        )
+
+        print(
+            "Cooldown поиска нового тура:",
+            NO_FUTURE_MATCH_COOLDOWN_HOURS,
+            "час.",
+        )
+
+        if should_run:
+            print(
+                "Cooldown истёк. "
+                "Разрешён поиск новых odds."
+            )
+        else:
+            print(
+                "Cooldown ещё не истёк."
+            )
 
     else:
         nearest_match = min(
