@@ -1312,7 +1312,10 @@
 
                     option.value = JSON.stringify({
                         home_team: match.home_team_model,
-                        away_team: match.away_team_model
+                        away_team: match.away_team_model,
+                        home_odds: match.home_odds,
+                        draw_odds: match.draw_odds,
+                        away_odds: match.away_odds
                     });
 
                     option.textContent =
@@ -1368,6 +1371,33 @@
 
                         homeSelect.value = match.home_team;
                         awaySelect.value = match.away_team;
+
+                        if (
+                            match.home_odds != null
+                            && match.draw_odds != null
+                            && match.away_odds != null
+                        ) {
+                            document.getElementById(
+                                "home_odds"
+                            ).value =
+                                Number(
+                                    match.home_odds
+                                ).toFixed(3);
+
+                            document.getElementById(
+                                "draw_odds"
+                            ).value =
+                                Number(
+                                    match.draw_odds
+                                ).toFixed(3);
+
+                            document.getElementById(
+                                "away_odds"
+                            ).value =
+                                Number(
+                                    match.away_odds
+                                ).toFixed(3);
+                        }
                     }
                 );
 

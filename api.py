@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 import pandas as pd
 
+from database import supabase
 from goal_prediction import predict_goal_markets
 from market_value import calculate_market_values
 from predict_match import predict_match
@@ -138,7 +139,96 @@ def upcoming_matches():
             detail="Файл ближайших матчей не найден.",
         ) from error
 
-    return df.head(50).to_dict(
+    df = df.head(50).copy()
+
+    odds_response = (
+        supabase
+        .table("odds_snapshots")
+        .select(
+            "snapshot_time_utc,"
+            "home_team,"
+            "away_team,"
+            "home_odds,"
+            "draw_odds,"
+            "away_odds"
+        )
+        .order(
+            "snapshot_time_utc",
+            desc=True,
+        )
+        .limit(1000)
+        .execute()
+    )
+
+    odds_df = pd.DataFrame(
+        odds_response.data or []
+    )
+
+    df["home_odds"] = None
+    df["draw_odds"] = None
+    df["away_odds"] = None
+
+    if not odds_df.empty:
+
+        odds_df["snapshot_time_utc"] = pd.to_datetime(
+            odds_df["snapshot_time_utc"],
+            utc=True,
+            errors="coerce",
+        )
+
+        odds_df = odds_df.sort_values(
+            "snapshot_time_utc",
+            ascending=False,
+        )
+
+        latest_odds = (
+            odds_df
+            .drop_duplicates(
+                subset=[
+                    "home_team",
+                    "away_team",
+                ],
+                keep="first",
+            )
+        )
+
+        odds_map = {
+            (
+                normalize_team_name(
+                    row["home_team"]
+                ),
+                normalize_team_name(
+                    row["away_team"]
+                ),
+            ): {
+                "home_odds": row["home_odds"],
+                "draw_odds": row["draw_odds"],
+                "away_odds": row["away_odds"],
+            }
+            for _, row in latest_odds.iterrows()
+        }
+
+        for index, row in df.iterrows():
+
+            key = (
+                normalize_team_name(
+                    row["home_team"]
+                ),
+                normalize_team_name(
+                    row["away_team"]
+                ),
+            )
+
+            odds = odds_map.get(key)
+
+            if odds is None:
+                continue
+
+            df.at[index, "home_odds"] = odds["home_odds"]
+            df.at[index, "draw_odds"] = odds["draw_odds"]
+            df.at[index, "away_odds"] = odds["away_odds"]
+
+    return df.to_dict(
         orient="records"
     )
 
