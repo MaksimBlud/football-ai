@@ -1,11 +1,11 @@
-name: EPL Results Dry Run
+name: EPL Results Sync
 
 on:
   workflow_dispatch:
 
   schedule:
     # Проверяем результаты два раза в сутки.
-    # Пока только DRY RUN — Supabase не изменяется.
+    # Записываются только новые FINISHED-матчи.
     - cron: "37 */12 * * *"
 
 permissions:
@@ -77,5 +77,5 @@ jobs:
           print("Значения secrets НЕ выводились.")
           PY
 
-      - name: Run EPL result updater dry run
-        run: python update_epl_results.py
+      - name: Sync finished EPL results
+        run: python update_epl_results.py --write
