@@ -154,8 +154,11 @@ else:
         elif hours_to_match > 24:
             required_interval = 6
 
-        else:
+        elif hours_to_match > 6:
             required_interval = 4
+
+        else:
+            required_interval = 2
 
         should_run = (
             hours_since_snapshot
