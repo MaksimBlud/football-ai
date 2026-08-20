@@ -1,4 +1,3 @@
-import joblib
 import pandas as pd
 
 from sklearn.metrics import (
@@ -6,12 +5,10 @@ from sklearn.metrics import (
     mean_squared_error,
 )
 from xgboost import XGBRegressor
+from artifact_lifecycle import save_candidate
 
 
 INPUT = "data/features_with_elo.csv"
-
-HOME_MODEL_PATH = "home_goals_model_no_odds.pkl"
-AWAY_MODEL_PATH = "away_goals_model_no_odds.pkl"
 
 FEATURES = [
     "home_last5_points",
@@ -156,16 +153,15 @@ print(
     f"MAE: {baseline_away_mae:.4f}"
 )
 
-joblib.dump(
-    home_model,
-    HOME_MODEL_PATH,
+home_path, home_manifest = save_candidate(
+    home_model, "home_goals_model_no_odds.pkl", __file__, [INPUT],
+    "xgboost_home_goals_regressor_no_odds", FEATURES, home_model.get_params(),
 )
-
-joblib.dump(
-    away_model,
-    AWAY_MODEL_PATH,
+away_path, away_manifest = save_candidate(
+    away_model, "away_goals_model_no_odds.pkl", __file__, [INPUT],
+    "xgboost_away_goals_regressor_no_odds", FEATURES, away_model.get_params(),
 )
 
 print("\nМодели сохранены:")
-print(HOME_MODEL_PATH)
-print(AWAY_MODEL_PATH)
+print(home_path, home_manifest)
+print(away_path, away_manifest)

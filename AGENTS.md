@@ -162,7 +162,8 @@ At task completion always report:
 
 The current production safety behavior is intentional:
 
-`train_model_xgboost_elo.py` saves a candidate artifact by default.
-Production overwrite requires an explicit `--production` flag.
+All production model and calibrator producers save candidate artifacts by default.
+Production replacement is only available through the separately invoked, validated
+`artifact_lifecycle.py promote` command.
 
 Do not weaken this invariant.
