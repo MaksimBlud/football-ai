@@ -1,3 +1,7 @@
+import argparse
+from datetime import datetime, UTC
+from pathlib import Path
+
 import joblib
 import pandas as pd
 
@@ -6,7 +10,14 @@ from sklearn.metrics import accuracy_score, classification_report
 
 
 INPUT = "data/features_with_elo.csv"
-MODEL_PATH = "football_model_xgboost_elo.pkl"
+
+PRODUCTION_MODEL_PATH = Path(
+    "football_model_xgboost_elo.pkl"
+)
+
+CANDIDATE_DIR = Path(
+    "artifacts/candidates"
+)
 
 
 FEATURES = [
@@ -32,6 +43,49 @@ FEATURES = [
     "home_venue_goals_scored",
     "away_venue_goals_scored",
 ]
+
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument(
+    "--production",
+    action="store_true",
+    help=(
+        "Явно разрешить запись поверх production model. "
+        "Без этого флага training сохраняет candidate artifact."
+    ),
+)
+
+args = parser.parse_args()
+
+if args.production:
+    model_path = PRODUCTION_MODEL_PATH
+    print(
+        "⚠️ PRODUCTION MODE: модель будет записана в",
+        model_path,
+    )
+else:
+    CANDIDATE_DIR.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    timestamp = datetime.now(UTC).strftime(
+        "%Y%m%d_%H%M%S"
+    )
+
+    model_path = (
+        CANDIDATE_DIR
+        / f"football_model_xgboost_elo_{timestamp}.pkl"
+    )
+
+    print(
+        "Candidate mode. Production model не изменяется."
+    )
+    print(
+        "Candidate artifact:",
+        model_path,
+    )
 
 
 print("Загружаю данные...")
@@ -97,6 +151,12 @@ print(
     )
 )
 
-joblib.dump(model, MODEL_PATH)
+joblib.dump(model, model_path)
 
-print("Модель сохранена:", MODEL_PATH)
+print("Модель сохранена:", model_path)
+
+if not args.production:
+    print(
+        "Production model НЕ изменена:",
+        PRODUCTION_MODEL_PATH,
+    )

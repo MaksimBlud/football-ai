@@ -26,3 +26,7 @@ team_stats.csv
 
 # Главная модель нужна для запуска приложения
 !football_model_xgboost_elo.pkl
+
+# Generated model candidates / local audit snapshots
+artifacts/candidates/
+artifacts/audit_snapshot/
