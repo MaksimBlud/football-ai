@@ -41,8 +41,27 @@ class ArtifactLifecycleTests(unittest.TestCase):
         self.assertTrue(manifest.is_file())
         self.assertEqual(sha256_file(self.production), self.production_hash)
 
+    def test_verification_reports_present_hash_type_and_schema(self):
+        before = {path.relative_to(self.root) for path in self.root.rglob("*")}
+        reports = verify_production(self.root)
+        after = {path.relative_to(self.root) for path in self.root.rglob("*")}
+        report = next(item for item in reports if item["filename"] == self.destination)
+        spec = ARTIFACT_SPECS[self.destination]
+        self.assertEqual(report["status"], "PRESENT")
+        self.assertEqual(report["sha256"], self.production_hash)
+        self.assertEqual(report["artifact_type"], spec["type"])
+        self.assertEqual(report["feature_schema"], {
+            "count": len(spec["features"]), "names": spec["features"],
+        })
+        self.assertEqual(before, after)
+
     def test_verification_reports_missing_required_artifact(self):
-        self.assertIn("1x2_calibrator.pkl", verify_production(self.root))
+        reports = verify_production(self.root)
+        report = next(
+            item for item in reports if item["filename"] == "1x2_calibrator.pkl"
+        )
+        self.assertEqual(report["status"], "MISSING")
+        self.assertIsNone(report["sha256"])
 
     def test_promotion_dry_run_writes_nothing(self):
         candidate, manifest = self.create_candidate()

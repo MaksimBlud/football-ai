@@ -159,8 +159,22 @@ def promote_candidate(
     return destination_path
 
 
-def verify_production(root: Path = Path(".")) -> list[str]:
-    return [name for name in ARTIFACT_SPECS if not (root / name).is_file()]
+def verify_production(root: Path = Path(".")) -> list[dict[str, Any]]:
+    reports = []
+    for filename, spec in ARTIFACT_SPECS.items():
+        path = root / filename
+        present = path.is_file()
+        reports.append({
+            "filename": filename,
+            "status": "PRESENT" if present else "MISSING",
+            "sha256": sha256_file(path) if present else None,
+            "artifact_type": spec["type"],
+            "feature_schema": {
+                "count": len(spec["features"]),
+                "names": spec["features"],
+            },
+        })
+    return reports
 
 
 def main() -> int:
@@ -176,13 +190,16 @@ def main() -> int:
     promote_parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     if args.command == "verify":
-        missing = verify_production(args.root)
-        if missing:
-            print("Missing required production artifacts:")
-            print("\n".join(f"- {name}" for name in missing))
-            return 1
-        print("All required production artifacts are present.")
-        return 0
+        reports = verify_production(args.root)
+        for report in reports:
+            schema = report["feature_schema"]
+            digest = report["sha256"] or "-"
+            print(
+                f"{report['filename']} | {report['status']} | SHA256={digest} | "
+                f"type={report['artifact_type']} | features={schema['count']} | "
+                f"feature_names={','.join(schema['names'])}"
+            )
+        return 1 if any(report["status"] == "MISSING" for report in reports) else 0
     manifest = args.manifest or args.candidate.with_suffix(".pkl.json")
     path = promote_candidate(args.candidate, manifest, args.destination, args.root, args.dry_run)
     print(f"{'DRY RUN: would promote to' if args.dry_run else 'Promoted to'} {path}")
