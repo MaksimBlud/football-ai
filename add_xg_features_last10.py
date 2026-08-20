@@ -114,10 +114,10 @@ home_xg = xg_features[
 
 home_xg = home_xg.rename(columns={
     "team": "home_team",
-    "xg_last5": "home_xg_last5",
-    "xga_last5": "home_xga_last5",
-    "npxg_last5": "home_npxg_last5",
-    "npxga_last5": "home_npxga_last5",
+    "xg_last5": "home_xg_last10",
+    "xga_last5": "home_xga_last10",
+    "npxg_last5": "home_npxg_last10",
+    "npxga_last5": "home_npxga_last10",
 })
 
 home_xg = home_xg.drop(
@@ -130,10 +130,10 @@ away_xg = xg_features[
 
 away_xg = away_xg.rename(columns={
     "team": "away_team",
-    "xg_last5": "away_xg_last5",
-    "xga_last5": "away_xga_last5",
-    "npxg_last5": "away_npxg_last5",
-    "npxga_last5": "away_npxga_last5",
+    "xg_last5": "away_xg_last10",
+    "xga_last5": "away_xga_last10",
+    "npxg_last5": "away_npxg_last10",
+    "npxga_last5": "away_npxga_last10",
 })
 
 away_xg = away_xg.drop(
@@ -161,14 +161,14 @@ result = result.merge(
 )
 
 xg_columns = [
-    "home_xg_last5",
-    "home_xga_last5",
-    "home_npxg_last5",
-    "home_npxga_last5",
-    "away_xg_last5",
-    "away_xga_last5",
-    "away_npxg_last5",
-    "away_npxga_last5",
+    "home_xg_last10",
+    "home_xga_last10",
+    "home_npxg_last10",
+    "home_npxga_last10",
+    "away_xg_last10",
+    "away_xga_last10",
+    "away_npxg_last10",
+    "away_npxga_last10",
 ]
 
 for column in xg_columns:
@@ -177,14 +177,14 @@ for column in xg_columns:
         errors="coerce",
     )
 
-result["xg_attack_difference"] = (
-    result["home_xg_last5"]
-    - result["away_xg_last5"]
+result["xg_attack_difference_last10"] = (
+    result["home_xg_last10"]
+    - result["away_xg_last10"]
 )
 
-result["xg_defence_difference"] = (
-    result["away_xga_last5"]
-    - result["home_xga_last5"]
+result["xg_defence_difference_last10"] = (
+    result["away_xga_last10"]
+    - result["home_xga_last10"]
 )
 
 result.to_csv(
