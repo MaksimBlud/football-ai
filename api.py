@@ -141,11 +141,18 @@ def upcoming_matches():
 
     df = df.head(50).copy()
 
+    df["commence_time_utc"] = pd.to_datetime(
+        df["match_datetime_uk"],
+        utc=True,
+        errors="coerce",
+    )
+
     odds_response = (
         supabase
         .table("odds_snapshots")
         .select(
             "snapshot_time_utc,"
+            "commence_time_utc,"
             "home_team,"
             "away_team,"
             "home_odds,"
@@ -176,6 +183,19 @@ def upcoming_matches():
             errors="coerce",
         )
 
+        odds_df["commence_time_utc"] = pd.to_datetime(
+            odds_df["commence_time_utc"],
+            utc=True,
+            errors="coerce",
+        )
+
+        odds_df = odds_df.dropna(
+            subset=[
+                "snapshot_time_utc",
+                "commence_time_utc",
+            ]
+        )
+
         odds_df = odds_df.sort_values(
             "snapshot_time_utc",
             ascending=False,
@@ -187,6 +207,7 @@ def upcoming_matches():
                 subset=[
                     "home_team",
                     "away_team",
+                    "commence_time_utc",
                 ],
                 keep="first",
             )
@@ -200,6 +221,7 @@ def upcoming_matches():
                 normalize_team_name(
                     row["away_team"]
                 ),
+                row["commence_time_utc"],
             ): {
                 "home_odds": row["home_odds"],
                 "draw_odds": row["draw_odds"],
@@ -217,6 +239,7 @@ def upcoming_matches():
                 normalize_team_name(
                     row["away_team"]
                 ),
+                row["commence_time_utc"],
             )
 
             odds = odds_map.get(key)
@@ -227,6 +250,16 @@ def upcoming_matches():
             df.at[index, "home_odds"] = odds["home_odds"]
             df.at[index, "draw_odds"] = odds["draw_odds"]
             df.at[index, "away_odds"] = odds["away_odds"]
+
+    df["commence_time_utc"] = (
+        df["commence_time_utc"]
+        .apply(
+            lambda value:
+                value.isoformat()
+                if pd.notna(value)
+                else None
+        )
+    )
 
     return df.to_dict(
         orient="records"
