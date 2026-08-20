@@ -1,24 +1,11 @@
-import argparse
-from datetime import datetime, UTC
-from pathlib import Path
-
-import joblib
 import pandas as pd
 
 from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score, classification_report
+from artifact_lifecycle import save_candidate
 
 
 INPUT = "data/features_with_elo.csv"
-
-PRODUCTION_MODEL_PATH = Path(
-    "football_model_xgboost_elo.pkl"
-)
-
-CANDIDATE_DIR = Path(
-    "artifacts/candidates"
-)
-
 
 FEATURES = [
     "home_odds",
@@ -43,49 +30,6 @@ FEATURES = [
     "home_venue_goals_scored",
     "away_venue_goals_scored",
 ]
-
-
-parser = argparse.ArgumentParser()
-
-parser.add_argument(
-    "--production",
-    action="store_true",
-    help=(
-        "Явно разрешить запись поверх production model. "
-        "Без этого флага training сохраняет candidate artifact."
-    ),
-)
-
-args = parser.parse_args()
-
-if args.production:
-    model_path = PRODUCTION_MODEL_PATH
-    print(
-        "⚠️ PRODUCTION MODE: модель будет записана в",
-        model_path,
-    )
-else:
-    CANDIDATE_DIR.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    timestamp = datetime.now(UTC).strftime(
-        "%Y%m%d_%H%M%S"
-    )
-
-    model_path = (
-        CANDIDATE_DIR
-        / f"football_model_xgboost_elo_{timestamp}.pkl"
-    )
-
-    print(
-        "Candidate mode. Production model не изменяется."
-    )
-    print(
-        "Candidate artifact:",
-        model_path,
-    )
 
 
 print("Загружаю данные...")
@@ -151,12 +95,15 @@ print(
     )
 )
 
-joblib.dump(model, model_path)
-
-print("Модель сохранена:", model_path)
-
-if not args.production:
-    print(
-        "Production model НЕ изменена:",
-        PRODUCTION_MODEL_PATH,
-    )
+model_path, manifest_path = save_candidate(
+    model,
+    "football_model_xgboost_elo.pkl",
+    __file__,
+    [INPUT],
+    "xgboost_1x2_classifier",
+    FEATURES,
+    model.get_params(),
+)
+print("Candidate model saved:", model_path)
+print("Candidate manifest saved:", manifest_path)
+print("Production model was not changed.")

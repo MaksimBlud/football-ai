@@ -1,4 +1,3 @@
-import joblib
 import numpy as np
 import pandas as pd
 
@@ -8,13 +7,11 @@ from sklearn.metrics import (
     accuracy_score,
     log_loss,
 )
+from artifact_lifecycle import save_candidate
 
 
 INPUT = "data/1x2_oos_predictions.csv"
 OUTPUT = "data/1x2_calibration_results.csv"
-CALIBRATOR_PATH = "1x2_calibrator.pkl"
-
-
 CALIBRATION_SEASONS = [
     "2017/2018",
     "2018/2019",
@@ -427,9 +424,14 @@ else:
     }
 
 
-joblib.dump(
+calibrator_path, manifest_path = save_candidate(
     calibrator,
-    CALIBRATOR_PATH,
+    "1x2_calibrator.pkl",
+    __file__,
+    [INPUT],
+    "1x2_probability_calibrator",
+    PROBABILITY_COLUMNS,
+    {"method": best_name, "calibration_seasons": CALIBRATION_SEASONS},
 )
 
 
@@ -544,8 +546,10 @@ print(
 
 print(
     "Калибратор сохранён:",
-    CALIBRATOR_PATH,
+    calibrator_path,
 )
+
+print("Manifest saved:", manifest_path)
 
 print(
     "Метрики сохранены:",

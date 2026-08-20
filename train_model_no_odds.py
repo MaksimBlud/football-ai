@@ -1,14 +1,11 @@
-import joblib
 import pandas as pd
 
 from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score, classification_report
+from artifact_lifecycle import save_candidate
 
 
 INPUT = "data/features_with_elo.csv"
-MODEL_PATH = "football_model_no_odds.pkl"
-
-
 FEATURES = [
     "home_last5_points",
     "away_last5_points",
@@ -94,6 +91,9 @@ print(
     )
 )
 
-joblib.dump(model, MODEL_PATH)
-
-print("Модель сохранена:", MODEL_PATH)
+model_path, manifest_path = save_candidate(
+    model, "football_model_no_odds.pkl", __file__, [INPUT],
+    "xgboost_1x2_classifier_no_odds", FEATURES, model.get_params(),
+)
+print("Candidate model saved:", model_path)
+print("Candidate manifest saved:", manifest_path)

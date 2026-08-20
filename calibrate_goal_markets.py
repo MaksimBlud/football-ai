@@ -1,4 +1,3 @@
-import joblib
 import numpy as np
 import pandas as pd
 
@@ -8,12 +7,10 @@ from sklearn.metrics import (
     brier_score_loss,
     log_loss,
 )
+from artifact_lifecycle import save_candidate
 
 
 INPUT = "data/goal_markets_oos_predictions.csv"
-
-OVER_CALIBRATOR_PATH = "over_2_5_calibrator.pkl"
-BTTS_CALIBRATOR_PATH = "btts_calibrator.pkl"
 
 META_PATH = "data/goal_market_calibration_results.csv"
 
@@ -348,14 +345,16 @@ btts_final = fit_final_calibrator(
 )
 
 
-joblib.dump(
-    over_final,
-    OVER_CALIBRATOR_PATH,
+over_path, over_manifest = save_candidate(
+    over_final, "over_2_5_calibrator.pkl", __file__, [INPUT],
+    "over_2_5_probability_calibrator", ["over_probability"],
+    {"method": over_method, "calibration_seasons": CALIBRATION_SEASONS},
 )
 
-joblib.dump(
-    btts_final,
-    BTTS_CALIBRATOR_PATH,
+btts_path, btts_manifest = save_candidate(
+    btts_final, "btts_calibrator.pkl", __file__, [INPUT],
+    "btts_probability_calibrator", ["btts_probability"],
+    {"method": btts_method, "calibration_seasons": CALIBRATION_SEASONS},
 )
 
 
@@ -377,13 +376,15 @@ print(
 print()
 print(
     "Сохранено:",
-    OVER_CALIBRATOR_PATH,
+    over_path,
 )
 
 print(
     "Сохранено:",
-    BTTS_CALIBRATOR_PATH,
+    btts_path,
 )
+
+print("Manifests:", over_manifest, btts_manifest)
 
 print(
     "Метрики:",
