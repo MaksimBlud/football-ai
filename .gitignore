@@ -30,3 +30,26 @@ team_stats.csv
 # Generated model candidates / local audit snapshots
 artifacts/candidates/
 artifacts/audit_snapshot/
+
+# ============================================================
+# Local research / audit outputs
+# ============================================================
+
+# Generated experiment results and logs
+experiments/
+logs/
+final_audit_output.txt
+
+# Historical local audit reports
+AUDIT_REPORT.md
+AUDIT_SUMMARY.txt
+EXECUTIVE_SUMMARY.txt
+EXPERIMENTS_SUMMARY.md
+FINAL_AUDIT_REPORT.md
+FINAL_VERIFICATION_REPORT.txt
+VERIFICATION_COMPLETE.txt
+VERIFICATION_REPORT.md
+VERIFICATION_REPORT_FINAL.md
+
+# Temporary/manual backup files
+*.save_*
