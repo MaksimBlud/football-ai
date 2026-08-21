@@ -53,3 +53,16 @@ VERIFICATION_REPORT_FINAL.md
 
 # Temporary/manual backup files
 *.save_*
+
+# Historical/local audit scripts
+audit_1x2_model.py
+audit_draw_problem.py
+audit_final_diagnosis.py
+audit_injury_mapping.py
+audit_training.py
+final_verification.py
+verify_audit.py
+xg_signal_test.py
+
+# Historical local Copilot instructions; AGENTS.md is authoritative
+.github/copilot-instructions.md
