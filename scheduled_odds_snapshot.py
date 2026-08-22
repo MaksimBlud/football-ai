@@ -223,17 +223,12 @@ print(
     "Запускаю save_odds_snapshot.py..."
 )
 
-import subprocess
-import sys
+from shadow_automation import run_with_shadow
 
-result = subprocess.run(
-    [
-        sys.executable,
-        "save_odds_snapshot.py",
-    ],
-    check=False,
+returncode = run_with_shadow(
+    ["save_odds_snapshot.py"],
 )
 
 raise SystemExit(
-    result.returncode
+    returncode
 )
