@@ -497,3 +497,99 @@ def test_past_matches_are_excluded_from_upcoming_shadow():
 
     assert len(prepared) == 1
     assert prepared.iloc[0]["home_team"] == "Manchester City"
+
+
+def test_generated_at_utc_is_attached_to_every_shadow_row():
+    results = module.build_shadow_results(
+        upcoming(),
+        pd.DataFrame([
+            snapshot()
+        ]),
+        fake_predictor,
+        generated_at_utc="2026-08-22T06:30:00Z",
+    )
+
+    assert len(results) == 1
+
+    assert (
+        results.loc[
+            0,
+            "generated_at_utc",
+        ]
+        == "2026-08-22T06:30:00+00:00"
+    )
+
+
+def test_shadow_history_appends_rows(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.chdir(
+        tmp_path
+    )
+
+    first = pd.DataFrame([
+        {
+            "shadow_status": "OK",
+            "generated_at_utc": "2026-08-22T06:00:00+00:00",
+        }
+    ])
+
+    second = pd.DataFrame([
+        {
+            "shadow_status": "NO_MARKET_ODDS",
+            "generated_at_utc": "2026-08-22T07:00:00+00:00",
+        }
+    ])
+
+    history = Path(
+        "experiments/shadow_history.csv"
+    )
+
+    module.append_shadow_history(
+        first,
+        history,
+    )
+
+    module.append_shadow_history(
+        second,
+        history,
+    )
+
+    saved = pd.read_csv(
+        history
+    )
+
+    assert len(saved) == 2
+
+    assert saved[
+        "generated_at_utc"
+    ].tolist() == [
+        "2026-08-22T06:00:00+00:00",
+        "2026-08-22T07:00:00+00:00",
+    ]
+
+
+def test_shadow_history_is_experiments_only(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.chdir(
+        tmp_path
+    )
+
+    results = pd.DataFrame([
+        {
+            "shadow_status": "OK",
+            "generated_at_utc": "2026-08-22T06:00:00+00:00",
+        }
+    ])
+
+    with pytest.raises(
+        ValueError,
+        match="experiments",
+    ):
+        module.append_shadow_history(
+            results,
+            Path("elsewhere/history.csv"),
+        )

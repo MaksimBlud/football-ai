@@ -27,6 +27,10 @@ DEFAULT_OUTPUT_PATH = Path(
     "experiments/upcoming_challenger_shadow.csv"
 )
 
+DEFAULT_HISTORY_PATH = Path(
+    "experiments/upcoming_challenger_shadow_history.csv"
+)
+
 PRODUCTION_ARTIFACTS = (
     "football_model_xgboost_elo.pkl",
     "football_model_no_odds.pkl",
@@ -91,6 +95,7 @@ OUTPUT_COLUMNS = (
     "challenger_probability_source",
 
     "shadow_only",
+    "generated_at_utc",
 )
 
 
@@ -527,6 +532,7 @@ def build_shadow_results(
     upcoming: pd.DataFrame,
     snapshots: pd.DataFrame,
     predictor,
+    generated_at_utc=None,
 ) -> pd.DataFrame:
     """Build shadow rows for every selected upcoming fixture."""
 
@@ -535,15 +541,29 @@ def build_shadow_results(
         snapshots,
     )
 
+    if generated_at_utc is None:
+        generated_at_utc = pd.Timestamp.now(tz="UTC")
+    else:
+        generated_at_utc = pd.Timestamp(generated_at_utc)
+
+        if generated_at_utc.tzinfo is None:
+            generated_at_utc = generated_at_utc.tz_localize("UTC")
+        else:
+            generated_at_utc = generated_at_utc.tz_convert("UTC")
+
+    rows = []
+
+    for _, match in matched.iterrows():
+        row = build_shadow_result_row(
+            match,
+            predictor,
+        )
+
+        row["generated_at_utc"] = generated_at_utc.isoformat()
+        rows.append(row)
+
     return pd.DataFrame(
-        [
-            build_shadow_result_row(
-                row,
-                predictor,
-            )
-            for _, row
-            in matched.iterrows()
-        ],
+        rows,
         columns=OUTPUT_COLUMNS,
     )
 
@@ -584,6 +604,56 @@ def write_shadow_results(
     )
 
     results.to_csv(
+        destination,
+        index=False,
+    )
+
+
+def append_shadow_history(
+    results: pd.DataFrame,
+    history_path: Path = DEFAULT_HISTORY_PATH,
+) -> None:
+    """Append shadow rows to an experiments-only history file."""
+
+    root = Path.cwd().resolve()
+
+    destination = (
+        (root / history_path).resolve()
+        if not history_path.is_absolute()
+        else history_path.resolve()
+    )
+
+    experiments = (root / "experiments").resolve()
+
+    if (
+        destination.parent != experiments
+        and experiments not in destination.parents
+    ):
+        raise ValueError(
+            "Shadow history must be written under experiments/"
+        )
+
+    destination.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    if destination.exists():
+        existing = pd.read_csv(
+            destination
+        )
+
+        combined = pd.concat(
+            [
+                existing,
+                results,
+            ],
+            ignore_index=True,
+        )
+    else:
+        combined = results.copy()
+
+    combined.to_csv(
         destination,
         index=False,
     )
@@ -651,6 +721,10 @@ def main() -> None:
             results
         )
 
+        append_shadow_history(
+            results
+        )
+
         ok = int(
             (
                 results[
@@ -698,6 +772,11 @@ def main() -> None:
         print(
             "output:",
             DEFAULT_OUTPUT_PATH,
+        )
+
+        print(
+            "history:",
+            DEFAULT_HISTORY_PATH,
         )
 
     finally:
