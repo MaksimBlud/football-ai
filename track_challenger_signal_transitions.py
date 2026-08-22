@@ -105,6 +105,12 @@ def _valid_observations(
 ) -> pd.DataFrame:
     """Return only complete OK observations, preserving coverage elsewhere."""
 
+    from fixture_identity import load_legacy_epl_history
+
+    history = load_legacy_epl_history(
+        history
+    )
+
     probability_columns = [
         f"{prefix}_{outcome}_probability"
         for prefix in (
@@ -693,6 +699,12 @@ def report_counts(
     summary: pd.DataFrame,
 ) -> dict:
     """Return coverage and behavioral counts used by the text report."""
+
+    from fixture_identity import load_legacy_epl_history
+
+    history = load_legacy_epl_history(
+        history
+    )
 
     valid = _valid_observations(
         history

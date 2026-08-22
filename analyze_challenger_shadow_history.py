@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 
 import pandas as pd
+from fixture_identity import load_legacy_epl_history
 
 
 DEFAULT_INPUT = Path(
@@ -13,6 +14,7 @@ DEFAULT_INPUT = Path(
 )
 
 FIXTURE_COLUMNS = [
+    "league",
     "home_team",
     "away_team",
     "commence_time_utc",
@@ -83,6 +85,9 @@ def load_history(
 
     frame = pd.read_csv(
         path
+    )
+    frame = load_legacy_epl_history(
+        frame
     )
 
     missing = sorted(
@@ -157,6 +162,10 @@ def build_movement_summary(
     """
     Summarize first/latest valid market observation per fixture.
     """
+
+    history = load_legacy_epl_history(
+        history
+    )
 
     ok = history.loc[
         history[
@@ -460,6 +469,10 @@ def analyze_history(
     history: pd.DataFrame,
 ):
     """Return run coverage/status counts and movement diagnostics."""
+
+    history = load_legacy_epl_history(
+        history
+    )
 
     grouped = (
         history.groupby(

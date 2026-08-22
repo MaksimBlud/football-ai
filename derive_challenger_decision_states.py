@@ -30,6 +30,7 @@ DECISION_STATES = (
 )
 
 OUTPUT_COLUMNS = [
+    "league",
     "home_team",
     "away_team",
     "commence_time_utc",
@@ -342,6 +343,12 @@ def classify_decision_state(
 def derive_decision_states(
     summary: pd.DataFrame,
 ) -> pd.DataFrame:
+    from fixture_identity import load_legacy_epl_history
+
+    summary = load_legacy_epl_history(
+        summary
+    )
+
     records: list[dict] = []
 
     for _, row in summary.iterrows():

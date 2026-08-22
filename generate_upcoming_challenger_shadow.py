@@ -19,6 +19,11 @@ import numpy as np
 import pandas as pd
 
 from team_names import normalize_team_name
+from fixture_identity import (
+    load_legacy_epl_history,
+    normalize_snapshot_rows,
+    require_league,
+)
 
 
 UPCOMING_PATH = Path("data/upcoming_matches.csv")
@@ -52,6 +57,7 @@ ODDS_COLUMNS = (
 )
 
 OUTPUT_COLUMNS = (
+    "league",
     "match_date",
     "match_time",
     "home_team",
@@ -121,8 +127,15 @@ def prepare_upcoming_matches(
     upcoming: pd.DataFrame,
     limit: int = 50,
     now=None,
+    *,
+    legacy_epl: bool = True,
 ) -> pd.DataFrame:
     """Prepare future upcoming fixtures only."""
+
+    upcoming = require_league(
+        upcoming,
+        legacy_epl=legacy_epl,
+    )
 
     required = {
         "match_datetime_uk",
@@ -182,17 +195,32 @@ def prepare_upcoming_matches(
 
 def prepare_odds_snapshots(
     snapshots: pd.DataFrame,
+    *,
+    legacy_epl: bool = True,
 ) -> pd.DataFrame:
     """Normalize snapshot keys and discard unusable rows."""
 
     if snapshots.empty:
+        snapshots = snapshots.copy()
+
+        if "league" not in snapshots.columns:
+            snapshots["league"] = pd.Series(
+                dtype="object"
+            )
+
         return pd.DataFrame(
             columns=(
+                "league",
                 *ODDS_COLUMNS,
                 "home_team_model",
                 "away_team_model",
             )
         )
+
+    snapshots = normalize_snapshot_rows(
+        snapshots,
+        legacy_epl=legacy_epl,
+    )
 
     missing = set(
         ODDS_COLUMNS
@@ -208,7 +236,10 @@ def prepare_odds_snapshots(
 
     prepared = snapshots.loc[
         :,
-        ODDS_COLUMNS,
+        (
+            "league",
+            *ODDS_COLUMNS,
+        ),
     ].copy()
 
     for column in (
@@ -263,6 +294,8 @@ def prepare_odds_snapshots(
 
 def select_latest_pre_kickoff_odds(
     snapshots: pd.DataFrame,
+    *,
+    legacy_epl: bool = True,
 ) -> pd.DataFrame:
     """
     Select the latest snapshot strictly before each fixture kickoff.
@@ -271,7 +304,8 @@ def select_latest_pre_kickoff_odds(
     """
 
     prepared = prepare_odds_snapshots(
-        snapshots
+        snapshots,
+        legacy_epl=legacy_epl,
     )
 
     eligible = (
@@ -287,6 +321,7 @@ def select_latest_pre_kickoff_odds(
 
     return eligible.drop_duplicates(
         [
+            "league",
             "home_team_model",
             "away_team_model",
             "commence_time_utc",
@@ -298,6 +333,8 @@ def select_latest_pre_kickoff_odds(
 def match_odds_to_upcoming(
     upcoming: pd.DataFrame,
     snapshots: pd.DataFrame,
+    *,
+    legacy_epl: bool = True,
 ) -> pd.DataFrame:
     """
     Left join point-in-time odds.
@@ -307,14 +344,17 @@ def match_odds_to_upcoming(
     """
 
     prepared = prepare_upcoming_matches(
-        upcoming
+        upcoming,
+        legacy_epl=legacy_epl,
     )
 
     latest = select_latest_pre_kickoff_odds(
-        snapshots
+        snapshots,
+        legacy_epl=legacy_epl,
     )
 
     keys = [
+        "league",
         "home_team_model",
         "away_team_model",
         "commence_time_utc",
@@ -359,6 +399,7 @@ def build_shadow_result_row(
     }
 
     for column in (
+        "league",
         "match_date",
         "match_time",
         "home_team",
@@ -533,12 +574,15 @@ def build_shadow_results(
     snapshots: pd.DataFrame,
     predictor,
     generated_at_utc=None,
+    *,
+    legacy_epl: bool = True,
 ) -> pd.DataFrame:
     """Build shadow rows for every selected upcoming fixture."""
 
     matched = match_odds_to_upcoming(
         upcoming,
         snapshots,
+        legacy_epl=legacy_epl,
     )
 
     if generated_at_utc is None:
@@ -641,6 +685,10 @@ def append_shadow_history(
     if destination.exists():
         existing = pd.read_csv(
             destination
+        )
+
+        existing = load_legacy_epl_history(
+            existing
         )
 
         combined = pd.concat(
