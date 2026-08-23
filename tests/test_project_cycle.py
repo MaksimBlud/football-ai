@@ -63,6 +63,7 @@ def test_la_liga_pipeline_order():
         "market shadow",
         "movement classifier",
         "transition tracker",
+        "temporal behavior",
     ]
 
 
@@ -100,3 +101,55 @@ def test_hash_function(tmp_path):
 
     assert first == second
     assert len(first) == 64
+
+
+def test_v1_readiness_has_fixed_checks(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        project_cycle,
+        "production_hashes",
+        lambda: {
+            name: "hash"
+            for name in project_cycle.PRODUCTION_ARTIFACTS
+        },
+    )
+
+    monkeypatch.setattr(
+        project_cycle,
+        "database_state",
+        lambda: {
+            "rows": 100,
+            "league_counts": {
+                "EPL": 50,
+                "LA_LIGA": 50,
+            },
+            "la_liga_rows": 50,
+            "la_liga_snapshot_times": 4,
+            "la_liga_fixtures": 13,
+            "duplicate_snapshot_rows": 0,
+        },
+    )
+
+    monkeypatch.setattr(
+        project_cycle,
+        "csv_health",
+        lambda: {
+            "history":
+                __import__("pandas").DataFrame(
+                    [{"x": 1}]
+                ),
+
+            "transitions":
+                __import__("pandas").DataFrame(
+                    [{"x": 1}]
+                ),
+        },
+    )
+
+    result = (
+        project_cycle.v1_readiness()
+    )
+
+    assert result["percent"] == 100
+    assert result["blockers"] == []

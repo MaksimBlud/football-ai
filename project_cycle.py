@@ -56,9 +56,14 @@ LA_LIGA_STEPS = (
         "transition tracker",
         ["python3", "track_la_liga_market_transitions.py"],
     ),
+    (
+        "temporal behavior",
+        ["python3", "analyze_la_liga_temporal_behavior.py"],
+    ),
 )
 
 TEST_FILES = (
+    "tests/test_analyze_la_liga_temporal_behavior.py",
     "tests/test_track_la_liga_market_transitions.py",
     "tests/test_classify_la_liga_market_movements.py",
     "tests/test_la_liga_market_shadow.py",
@@ -709,4 +714,143 @@ def main() -> int:
 if __name__ == "__main__":
     raise SystemExit(
         main()
+    )
+
+
+def v1_readiness() -> dict:
+    """Return deterministic descriptive V1 readiness state."""
+
+    db = database_state()
+    csvs = csv_health()
+
+    history = csvs.get(
+        "history"
+    )
+
+    transitions = csvs.get(
+        "transitions"
+    )
+
+    checks = {
+        "production_artifacts_present":
+            len(
+                production_hashes()
+            )
+            == len(
+                PRODUCTION_ARTIFACTS
+            ),
+
+        "league_aware_database":
+            db[
+                "duplicate_snapshot_rows"
+            ]
+            == 0,
+
+        "epl_data_present":
+            db[
+                "league_counts"
+            ].get(
+                "EPL",
+                0,
+            )
+            > 0,
+
+        "la_liga_data_present":
+            db[
+                "la_liga_rows"
+            ]
+            > 0,
+
+        "la_liga_three_snapshots":
+            db[
+                "la_liga_snapshot_times"
+            ]
+            >= 3,
+
+        "la_liga_observation_history":
+            isinstance(
+                history,
+                pd.DataFrame,
+            )
+            and len(history) > 0,
+
+        "la_liga_transition_history":
+            isinstance(
+                transitions,
+                pd.DataFrame,
+            )
+            and len(transitions) > 0,
+    }
+
+    passed = sum(
+        bool(value)
+        for value in checks.values()
+    )
+
+    total = len(checks)
+
+    percent = round(
+        100 * passed / total
+    )
+
+    blockers = [
+        key
+        for key, value
+        in checks.items()
+        if not value
+    ]
+
+    return {
+        "checks":
+            checks,
+
+        "passed":
+            passed,
+
+        "total":
+            total,
+
+        "percent":
+            percent,
+
+        "blockers":
+            blockers,
+    }
+
+
+def print_v1_readiness() -> None:
+    readiness = v1_readiness()
+
+    print()
+    print("=" * 72)
+    print("V1 READINESS")
+    print("=" * 72)
+
+    for key, value in (
+        readiness[
+            "checks"
+        ].items()
+    ):
+        print(
+            f"{key:36}",
+            "PASS"
+            if value
+            else "BLOCKED",
+        )
+
+    print()
+    print(
+        "READINESS:",
+        f'{readiness["percent"]}%',
+    )
+
+    print(
+        "PASSED:",
+        f'{readiness["passed"]}/{readiness["total"]}',
+    )
+
+    print(
+        "BLOCKERS:",
+        readiness["blockers"]
+        or "none",
     )
