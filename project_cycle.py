@@ -638,6 +638,7 @@ def parse_args() -> argparse.Namespace:
             "verify",
             "la-liga",
             "full",
+            "release-audit",
         ],
     )
 
@@ -668,17 +669,29 @@ def main() -> int:
 
     if (
         args.live_snapshot
-        and args.mode == "verify"
+        and args.mode in {
+            "verify",
+            "release-audit",
+        }
     ):
         print(
             "ERROR: --live-snapshot is not "
-            "valid with verify."
+            "valid with this mode."
         )
         return 2
 
     if args.mode == "verify":
         ok = run_verify(
             tests=tests,
+        )
+
+    elif args.mode == "release-audit":
+        ok = run_step(
+            "V1 release audit",
+            [
+                sys.executable,
+                "release_audit.py",
+            ],
         )
 
     elif args.mode in {

@@ -199,3 +199,21 @@ def test_current_release_gate_has_explicit_blockers():
         "release_audit_script"
         in result["checks"]
     )
+
+
+def test_release_audit_mode_is_registered():
+    source = Path(
+        "project_cycle.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        '"release-audit"'
+        in source
+    )
+
+    assert (
+        '"release_audit.py"'
+        in source
+    )
