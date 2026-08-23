@@ -60,9 +60,14 @@ LA_LIGA_STEPS = (
         "temporal behavior",
         ["python3", "analyze_la_liga_temporal_behavior.py"],
     ),
+    (
+        "La Liga prediction",
+        ["python3", "predict_la_liga.py"],
+    ),
 )
 
 TEST_FILES = (
+    "tests/test_predict_la_liga.py",
     "tests/test_analyze_la_liga_temporal_behavior.py",
     "tests/test_track_la_liga_market_transitions.py",
     "tests/test_classify_la_liga_market_movements.py",
@@ -775,26 +780,44 @@ def _la_liga_collection_status() -> tuple[bool, str]:
 
 
 def _la_liga_prediction_status() -> tuple[bool, str]:
-    # V1 requires an explicit La Liga prediction path,
-    # not reuse of the EPL production model by accident.
-    candidates = (
-        "predict_la_liga.py",
-        "predict_la_liga_round.py",
-        "la_liga_predictor.py",
+    path = ROOT / "predict_la_liga.py"
+
+    if not path.exists():
+        return False, "NOT_READY"
+
+    try:
+        source = path.read_text(
+            encoding="utf-8"
+        )
+
+    except Exception:
+        return False, "UNREADABLE"
+
+    required_tokens = (
+        'PREDICTION_SOURCE = "MARKET_BASELINE"',
+        "AI_MODEL_USED = False",
+        "def build_predictions(",
     )
 
-    present = any(
-        _file_present(path)
-        for path in candidates
+    if not all(
+        token in source
+        for token in required_tokens
+    ):
+        return False, "INVALID_RUNTIME"
+
+    forbidden_tokens = (
+        "football_model_xgboost_elo.pkl",
+        "football_model_no_odds.pkl",
+        "predict_match_no_odds",
     )
 
-    return (
-        present,
-        "READY"
-        if present
-        else "NOT_READY",
-    )
+    if any(
+        token in source
+        for token in forbidden_tokens
+    ):
+        return False, "EPL_MODEL_REUSE"
 
+    return True, "MARKET_BASELINE_READY"
 
 def v1_readiness() -> dict:
     """Return release-oriented V1 readiness state."""

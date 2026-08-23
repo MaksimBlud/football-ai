@@ -64,6 +64,7 @@ def test_la_liga_pipeline_order():
         "movement classifier",
         "transition tracker",
         "temporal behavior",
+        "La Liga prediction",
     ]
 
 
