@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from database import supabase
+from league_config import EPL
 
 
 TABLE = "odds_snapshots"
@@ -39,6 +40,10 @@ response = (
     .select(
         "snapshot_time_utc,"
         "commence_time_utc"
+    )
+    .eq(
+        "league",
+        EPL.identifier,
     )
     .order(
         "snapshot_time_utc",

@@ -724,7 +724,11 @@ def fetch_odds_snapshots() -> pd.DataFrame:
         )
         .select(
             ",".join(
-                ODDS_COLUMNS
+                (
+                    "league",
+                    "event_id",
+                    *ODDS_COLUMNS,
+                )
             )
         )
         .order(
@@ -739,7 +743,11 @@ def fetch_odds_snapshots() -> pd.DataFrame:
 
     return pd.DataFrame(
         response.data or [],
-        columns=ODDS_COLUMNS,
+        columns=(
+            "league",
+            "event_id",
+            *ODDS_COLUMNS,
+        ),
     )
 
 
@@ -755,6 +763,11 @@ def main() -> None:
             UPCOMING_PATH
         )
 
+        upcoming = normalize_upcoming_fixtures(
+            upcoming,
+            source_path=UPCOMING_PATH,
+        )
+
         snapshots = (
             fetch_odds_snapshots()
         )
@@ -763,6 +776,7 @@ def main() -> None:
             upcoming,
             snapshots,
             predict_challenger,
+            legacy_epl=False,
         )
 
         write_shadow_results(
