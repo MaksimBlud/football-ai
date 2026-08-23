@@ -368,10 +368,10 @@ def test_scheduler_is_explicitly_epl_scoped():
 def test_la_liga_still_disabled():
     assert (
         league_config.LA_LIGA.collection_enabled
-        is False
+        is True
     )
 
     assert (
         league_config.LA_LIGA.collection_ready
-        is False
+        is True
     )

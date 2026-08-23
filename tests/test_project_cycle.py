@@ -217,3 +217,21 @@ def test_release_audit_mode_is_registered():
         '"release_audit.py"'
         in source
     )
+
+
+def test_la_liga_collection_mode_registered():
+    source = Path(
+        "project_cycle.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        '"la-liga-collect"'
+        in source
+    )
+
+    assert (
+        '"la_liga_collection_runner.py"'
+        in source
+    )

@@ -83,14 +83,14 @@ def test_league_configuration_is_inert_for_la_liga():
 
     assert (
         league_config.LA_LIGA.collection_enabled
-        is False
+        is True
     )
 
     assert (
         league_config.is_collection_ready(
             "LA_LIGA"
         )
-        is False
+        is True
     )
 
     assert [

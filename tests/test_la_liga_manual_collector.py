@@ -120,10 +120,10 @@ def test_la_liga_history_keeps_cross_league_identity():
 def test_la_liga_remains_not_scheduled():
     assert (
         league_config.LA_LIGA.collection_enabled
-        is False
+        is True
     )
 
     assert (
         league_config.LA_LIGA.collection_ready
-        is False
+        is True
     )

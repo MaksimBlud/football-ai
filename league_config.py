@@ -38,7 +38,7 @@ LA_LIGA = LeagueConfig(
     name="La Liga",
     timezone="Europe/Madrid",
     odds_api_sport_key="soccer_spain_la_liga",
-    collection_enabled=False,
+    collection_enabled=True,
 )
 
 _CONFIGURED = (

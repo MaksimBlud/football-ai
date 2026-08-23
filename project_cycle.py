@@ -639,6 +639,7 @@ def parse_args() -> argparse.Namespace:
             "la-liga",
             "full",
             "release-audit",
+            "la-liga-collect",
         ],
     )
 
@@ -672,6 +673,7 @@ def main() -> int:
         and args.mode in {
             "verify",
             "release-audit",
+            "la-liga-collect",
         }
     ):
         print(
@@ -691,6 +693,15 @@ def main() -> int:
             [
                 sys.executable,
                 "release_audit.py",
+            ],
+        )
+
+    elif args.mode == "la-liga-collect":
+        ok = run_step(
+            "La Liga collection gate",
+            [
+                sys.executable,
+                "la_liga_collection_runner.py",
             ],
         )
 
