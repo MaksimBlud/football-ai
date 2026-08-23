@@ -137,13 +137,15 @@ def test_market_shadow_uses_no_ai_fields():
 
 
 def test_second_run_calculates_market_movement():
+    first_snapshots = snapshots(
+        2.0,
+        4.0,
+        4.0,
+    )
+
     first = market.build_market_shadow(
         upcoming(),
-        snapshots(
-            2.0,
-            4.0,
-            4.0,
-        ),
+        first_snapshots,
         generated_at_utc=datetime(
             2030,
             1,
@@ -153,13 +155,19 @@ def test_second_run_calculates_market_movement():
         ),
     )
 
+    second_snapshots = snapshots(
+        1.8,
+        4.2,
+        4.4,
+    )
+
+    second_snapshots[
+        "snapshot_time_utc"
+    ] = "2030-01-01T20:30:00Z"
+
     second = market.build_market_shadow(
         upcoming(),
-        snapshots(
-            1.8,
-            4.2,
-            4.4,
-        ),
+        second_snapshots,
         previous_history=first,
         generated_at_utc=datetime(
             2030,
@@ -180,11 +188,10 @@ def test_second_run_calculates_market_movement():
 
     assert (
         row[
-            "market_home_movement"
+            "maximum_absolute_market_movement"
         ]
         > 0
     )
-
 
 def test_non_la_liga_snapshot_rejected():
     frame = snapshots()
@@ -257,9 +264,11 @@ def test_history_append_only(
         tmp_path
     )
 
+    first_snapshots = snapshots()
+
     first = market.build_market_shadow(
         upcoming(),
-        snapshots(),
+        first_snapshots,
         generated_at_utc=datetime(
             2030,
             1,
@@ -269,9 +278,15 @@ def test_history_append_only(
         ),
     )
 
+    second_snapshots = snapshots()
+
+    second_snapshots[
+        "snapshot_time_utc"
+    ] = "2030-01-01T20:30:00Z"
+
     second = market.build_market_shadow(
         upcoming(),
-        snapshots(),
+        second_snapshots,
         previous_history=first,
         generated_at_utc=datetime(
             2030,
@@ -306,7 +321,151 @@ def test_history_append_only(
 
     assert (
         combined[
-            "generated_at_utc"
+            "snapshot_time_utc"
         ].nunique()
         == 2
     )
+
+def test_same_market_snapshot_does_not_create_movement():
+    first = market.build_market_shadow(
+        upcoming(),
+        snapshots(),
+        generated_at_utc=datetime(
+            2030,
+            1,
+            1,
+            20,
+            tzinfo=timezone.utc,
+        ),
+    )
+
+    second = market.build_market_shadow(
+        upcoming(),
+        snapshots(),
+        previous_history=first,
+        generated_at_utc=datetime(
+            2030,
+            1,
+            1,
+            21,
+            tzinfo=timezone.utc,
+        ),
+    )
+
+    row = second.iloc[0]
+
+    assert pd.isna(
+        row[
+            "maximum_absolute_market_movement"
+        ]
+    )
+
+
+def test_floating_point_noise_is_zeroed():
+    previous = market.build_market_shadow(
+        upcoming(),
+        snapshots(),
+        generated_at_utc=datetime(
+            2030,
+            1,
+            1,
+            19,
+            tzinfo=timezone.utc,
+        ),
+    )
+
+    current_snapshots = snapshots()
+    current_snapshots.loc[
+        0,
+        "snapshot_time_utc",
+    ] = "2030-01-01T21:00:00Z"
+
+    current = market.build_market_shadow(
+        upcoming(),
+        current_snapshots,
+        previous_history=previous,
+        generated_at_utc=datetime(
+            2030,
+            1,
+            1,
+            22,
+            tzinfo=timezone.utc,
+        ),
+    )
+
+    row = current.iloc[0]
+
+    assert (
+        row[
+            "market_home_movement"
+        ]
+        == 0.0
+    )
+
+    assert (
+        row[
+            "market_draw_movement"
+        ]
+        == 0.0
+    )
+
+    assert (
+        row[
+            "market_away_movement"
+        ]
+        == 0.0
+    )
+
+    assert (
+        row[
+            "maximum_absolute_market_movement"
+        ]
+        == 0.0
+    )
+
+
+def test_repeated_shadow_write_does_not_duplicate_observation(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.chdir(
+        tmp_path
+    )
+
+    Path(
+        "experiments"
+    ).mkdir()
+
+    run = market.build_market_shadow(
+        upcoming(),
+        snapshots(),
+        generated_at_utc=datetime(
+            2030,
+            1,
+            1,
+            20,
+            tzinfo=timezone.utc,
+        ),
+    )
+
+    latest_path = Path(
+        "experiments/latest.csv"
+    )
+
+    history_path = Path(
+        "experiments/history.csv"
+    )
+
+    market.write_outputs(
+        run,
+        latest_path=latest_path,
+        history_path=history_path,
+    )
+
+    combined = market.write_outputs(
+        run,
+        latest_path=latest_path,
+        history_path=history_path,
+    )
+
+    assert len(combined) == 1

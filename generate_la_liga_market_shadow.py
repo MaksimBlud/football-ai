@@ -38,6 +38,8 @@ HISTORY_OUTPUT = Path(
     "experiments/la_liga_market_shadow_history.csv"
 )
 
+MOVEMENT_EPSILON = 1e-12
+
 OUTPUT_COLUMNS = [
     "league",
     "event_id",
@@ -545,8 +547,32 @@ def build_market_shadow(
         ].copy()
 
         if not previous.empty:
+            previous[
+                "_snapshot_time"
+            ] = pd.to_datetime(
+                previous[
+                    "snapshot_time_utc"
+                ],
+                utc=True,
+                errors="coerce",
+            )
+
+            # Temporal movement must compare two distinct
+            # market observations, never two shadow executions
+            # that happened to read the same snapshot.
+            previous = previous[
+                previous[
+                    "_snapshot_time"
+                ]
+                < snapshot_time
+            ].copy()
+
+        if not previous.empty:
             previous = previous.sort_values(
-                "generated_at_utc"
+                [
+                    "_snapshot_time",
+                    "generated_at_utc",
+                ]
             )
 
             prev = previous.iloc[-1]
@@ -573,6 +599,16 @@ def build_market_shadow(
                 p_home - prev_home,
                 p_draw - prev_draw,
                 p_away - prev_away,
+            ]
+
+            movements = [
+                (
+                    0.0
+                    if abs(value)
+                    < MOVEMENT_EPSILON
+                    else value
+                )
+                for value in movements
             ]
 
             row.update({
@@ -678,6 +714,44 @@ def write_outputs(
 
     else:
         combined = latest.copy()
+
+    # History records market observations rather than script runs.
+    # Re-running the shadow against the same Supabase snapshot must
+    # not manufacture another temporal observation.
+    observations = combined[
+        combined[
+            "snapshot_time_utc"
+        ].notna()
+    ].drop_duplicates(
+        subset=[
+            "league",
+            "event_id",
+            "snapshot_time_utc",
+        ],
+        keep="first",
+    )
+
+    without_market = combined[
+        combined[
+            "snapshot_time_utc"
+        ].isna()
+    ].drop_duplicates(
+        subset=[
+            "league",
+            "event_id",
+            "generated_at_utc",
+        ],
+        keep="first",
+    )
+
+    combined = pd.concat(
+        [
+            observations,
+            without_market,
+        ],
+        ignore_index=True,
+        sort=False,
+    )
 
     combined.to_csv(
         history_path,
