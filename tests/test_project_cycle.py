@@ -103,7 +103,7 @@ def test_hash_function(tmp_path):
     assert len(first) == 64
 
 
-def test_v1_readiness_has_fixed_checks(
+def test_v1_readiness_release_gate(
     monkeypatch,
 ):
     monkeypatch.setattr(
@@ -111,7 +111,8 @@ def test_v1_readiness_has_fixed_checks(
         "production_hashes",
         lambda: {
             name: "hash"
-            for name in project_cycle.PRODUCTION_ARTIFACTS
+            for name
+            in project_cycle.PRODUCTION_ARTIFACTS
         },
     )
 
@@ -147,9 +148,54 @@ def test_v1_readiness_has_fixed_checks(
         },
     )
 
+    monkeypatch.setattr(
+        project_cycle,
+        "_la_liga_collection_status",
+        lambda: (
+            True,
+            "READY",
+        ),
+    )
+
+    monkeypatch.setattr(
+        project_cycle,
+        "_la_liga_prediction_status",
+        lambda: (
+            True,
+            "READY",
+        ),
+    )
+
+    monkeypatch.setattr(
+        project_cycle,
+        "_file_present",
+        lambda path: True,
+    )
+
     result = (
         project_cycle.v1_readiness()
     )
 
     assert result["percent"] == 100
     assert result["blockers"] == []
+
+
+def test_current_release_gate_has_explicit_blockers():
+    result = (
+        project_cycle.v1_readiness()
+    )
+
+    assert (
+        "la_liga_automated_collection"
+        in result["checks"]
+    )
+
+    assert (
+        "la_liga_prediction_runtime"
+        in result["checks"]
+    )
+
+    assert (
+        "release_audit_script"
+        in result["checks"]
+    )

@@ -717,8 +717,63 @@ if __name__ == "__main__":
     )
 
 
+def _file_present(path: str) -> bool:
+    return (ROOT / path).exists()
+
+
+def _la_liga_collection_status() -> tuple[bool, str]:
+    try:
+        from league_config import LA_LIGA
+
+        enabled = bool(
+            getattr(
+                LA_LIGA,
+                "collection_enabled",
+                False,
+            )
+        )
+
+        ready = bool(
+            getattr(
+                LA_LIGA,
+                "collection_ready",
+                False,
+            )
+        )
+
+        if enabled and ready:
+            return True, "READY"
+
+        return False, "MANUAL_ONLY"
+
+    except Exception:
+        return False, "UNKNOWN"
+
+
+def _la_liga_prediction_status() -> tuple[bool, str]:
+    # V1 requires an explicit La Liga prediction path,
+    # not reuse of the EPL production model by accident.
+    candidates = (
+        "predict_la_liga.py",
+        "predict_la_liga_round.py",
+        "la_liga_predictor.py",
+    )
+
+    present = any(
+        _file_present(path)
+        for path in candidates
+    )
+
+    return (
+        present,
+        "READY"
+        if present
+        else "NOT_READY",
+    )
+
+
 def v1_readiness() -> dict:
-    """Return deterministic descriptive V1 readiness state."""
+    """Return release-oriented V1 readiness state."""
 
     db = database_state()
     csvs = csv_health()
@@ -729,6 +784,14 @@ def v1_readiness() -> dict:
 
     transitions = csvs.get(
         "transitions"
+    )
+
+    collection_ready, collection_status = (
+        _la_liga_collection_status()
+    )
+
+    prediction_ready, prediction_status = (
+        _la_liga_prediction_status()
     )
 
     checks = {
@@ -755,6 +818,22 @@ def v1_readiness() -> dict:
             )
             > 0,
 
+        "epl_runtime_present":
+            _file_present(
+                "predict_upcoming_round.py"
+            )
+            and _file_present(
+                "generate_upcoming_challenger_shadow.py"
+            ),
+
+        "challenger_runtime_present":
+            _file_present(
+                "predict_challenger.py"
+            )
+            and _file_present(
+                "analyze_challenger_shadow_history.py"
+            ),
+
         "la_liga_data_present":
             db[
                 "la_liga_rows"
@@ -780,6 +859,22 @@ def v1_readiness() -> dict:
                 pd.DataFrame,
             )
             and len(transitions) > 0,
+
+        "la_liga_automated_collection":
+            collection_ready,
+
+        "la_liga_prediction_runtime":
+            prediction_ready,
+
+        "project_orchestrator":
+            _file_present(
+                "project_cycle.py"
+            ),
+
+        "release_audit_script":
+            _file_present(
+                "release_audit.py"
+            ),
     }
 
     passed = sum(
@@ -815,6 +910,14 @@ def v1_readiness() -> dict:
 
         "blockers":
             blockers,
+
+        "details": {
+            "la_liga_collection":
+                collection_status,
+
+            "la_liga_prediction":
+                prediction_status,
+        },
     }
 
 
@@ -823,7 +926,7 @@ def print_v1_readiness() -> None:
 
     print()
     print("=" * 72)
-    print("V1 READINESS")
+    print("V1 RELEASE READINESS")
     print("=" * 72)
 
     for key, value in (
@@ -836,6 +939,19 @@ def print_v1_readiness() -> None:
             "PASS"
             if value
             else "BLOCKED",
+        )
+
+    print()
+    print("DETAILS:")
+
+    for key, value in (
+        readiness[
+            "details"
+        ].items()
+    ):
+        print(
+            f"{key:36}",
+            value,
         )
 
     print()
