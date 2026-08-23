@@ -10,18 +10,28 @@ REGIONS = "uk"
 MARKETS = "h2h"
 
 
-def get_epl_h2h_odds():
+def get_h2h_odds(
+    sport_key: str,
+    *,
+    regions: str = REGIONS,
+):
+    """Fetch h2h odds for an explicit Odds API sport key."""
 
     if not THE_ODDS_API_KEY:
         raise RuntimeError(
             "THE_ODDS_API_KEY не найден в окружении."
         )
 
+    if not sport_key:
+        raise ValueError(
+            "sport_key must be non-empty"
+        )
+
     response = requests.get(
-        f"{BASE_URL}/sports/{SPORT}/odds/",
+        f"{BASE_URL}/sports/{sport_key}/odds/",
         params={
             "apiKey": THE_ODDS_API_KEY,
-            "regions": REGIONS,
+            "regions": regions,
             "markets": MARKETS,
             "oddsFormat": "decimal",
             "dateFormat": "iso",
@@ -58,6 +68,14 @@ def get_epl_h2h_odds():
             ),
         },
     }
+
+
+def get_epl_h2h_odds():
+    """Backward-compatible EPL wrapper."""
+
+    return get_h2h_odds(
+        SPORT
+    )
 
 
 def aggregate_event_h2h(event):
