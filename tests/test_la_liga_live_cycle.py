@@ -165,3 +165,21 @@ def test_legacy_system_exit_becomes_runtime_error():
         cycle.call_legacy_main(
             legacy_main
         )
+
+
+def test_results_updater_is_integrated():
+    import inspect
+
+    source = inspect.getsource(
+        cycle
+    )
+
+    assert (
+        "results_updater"
+        in source
+    )
+
+    assert (
+        "WAITING_FOR_RESULTS_SOURCE"
+        not in source
+    )

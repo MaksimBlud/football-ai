@@ -32,6 +32,7 @@ import generate_la_liga_market_shadow as market_shadow
 import la_liga_structural_v2_shadow as structural_shadow
 import la_liga_structural_v2_shadow_history as shadow_history
 import evaluate_la_liga_structural_v2_live as live_eval
+import la_liga_results_updater as results_updater
 
 
 ROOT = Path(__file__).resolve().parent
@@ -387,57 +388,70 @@ def run_cycle(
     # --------------------------------------------------
     # 6. results
     # --------------------------------------------------
-    if (
-        not RESULTS_PATH.exists()
-        or RESULTS_PATH.stat().st_size
-        == 0
-    ):
-        result["steps"][
-            "results"
-        ] = step(
-            "WAIT",
-            "WAITING_FOR_RESULTS_SOURCE",
+    try:
+        results_report = (
+            results_updater
+            .update_results(
+                output_path=RESULTS_PATH,
+            )
         )
 
-    else:
-        try:
-            raw_results = pd.read_csv(
-                RESULTS_PATH
-            )
+        results_status = (
+            results_report[
+                "status"
+            ]
+        )
 
-            normalized = (
-                structural_shadow
-                .normalize_finished_matches(
-                    raw_results
-                )
+        if results_status == "WAIT":
+            result["steps"][
+                "results"
+            ] = step(
+                "WAIT",
+                results_report[
+                    "detail"
+                ],
             )
-
+        else:
             result["steps"][
                 "results"
             ] = step(
                 "PASS",
-                f"rows={len(normalized)}",
+                (
+                    f"new={results_report['new_rows']}, "
+                    f"total={results_report['output_rows']}"
+                ),
             )
 
-        except Exception as exc:
-            result["steps"][
-                "results"
-            ] = step(
-                "FAIL",
-                str(exc),
-            )
+        result["metrics"][
+            "results"
+        ] = results_report
 
-            result["status"] = "FAIL"
+    except (
+        results_updater.ResultsSourceError,
+        results_updater.ResultsConflictError,
+        results_updater.UnknownTeamError,
+    ) as exc:
+        result["steps"][
+            "results"
+        ] = step(
+            "FAIL",
+            (
+                f"{type(exc).__name__}: "
+                f"{exc}"
+            ),
+        )
 
-            after = production_state()
+        result["status"] = "FAIL"
 
-            result[
-                "production_unchanged"
-            ] = (
-                before == after
-            )
+        after = production_state()
 
-            return result
+        result[
+            "production_unchanged"
+        ] = (
+            before == after
+        )
+
+        return result
 
     # --------------------------------------------------
     # 7. evaluation
