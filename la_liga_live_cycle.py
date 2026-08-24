@@ -171,16 +171,109 @@ def call_legacy_main(
 def run_cycle(
     *,
     skip_collection: bool = False,
+    persistence_mode: str = "local",
+    persistence_client=None,
 ) -> dict:
     before = production_state()
 
     result = {
         "status": "PASS",
+        "persistence_mode": persistence_mode,
         "steps": {},
         "metrics": {},
         "production_unchanged":
             False,
     }
+
+    durable = None
+
+    if persistence_mode == "supabase":
+        # Lazy import keeps ordinary local mode independent
+        # from the new durable persistence layer.
+        import la_liga_live_persistence as durable
+
+        if persistence_client is None:
+            from database import supabase
+
+            persistence_client = supabase
+
+        schema = durable.check_schema(
+            persistence_client
+        )
+
+        result["steps"][
+            "database_schema"
+        ] = step(
+            schema.status,
+            schema.detail,
+        )
+
+        if schema.status != "PASS":
+            result["status"] = (
+                schema.status
+            )
+
+            result[
+                "production_unchanged"
+            ] = (
+                before
+                == production_state()
+            )
+
+            return result
+
+        try:
+            hydrated = (
+                durable
+                .hydrate_local_mirrors(
+                    persistence_client,
+                    HISTORY_PATH,
+                    RESULTS_PATH,
+                )
+            )
+
+            result["steps"][
+                "durable_hydrate"
+            ] = step(
+                "PASS",
+                (
+                    "observations="
+                    f"{hydrated['observations']}, "
+                    "results="
+                    f"{hydrated['results']}"
+                ),
+            )
+
+            result["metrics"][
+                "hydrated_observations"
+            ] = hydrated[
+                "observations"
+            ]
+
+            result["metrics"][
+                "hydrated_results"
+            ] = hydrated[
+                "results"
+            ]
+
+        except Exception as exc:
+            result["steps"][
+                "durable_hydrate"
+            ] = step(
+                "FAIL",
+                str(exc),
+            )
+
+            result["status"] = "FAIL"
+
+            result[
+                "production_unchanged"
+            ] = (
+                before
+                == production_state()
+            )
+
+            return result
 
     # --------------------------------------------------
     # 1. collection
@@ -365,6 +458,41 @@ def run_cycle(
             "PASS"
         )
 
+        if durable is not None:
+            observations = pd.read_csv(
+                HISTORY_PATH
+            )
+
+            persisted = (
+                durable
+                .persist_observations(
+                    persistence_client,
+                    observations,
+                )
+            )
+
+            result["steps"][
+                "durable_observations"
+            ] = step(
+                "PASS",
+                (
+                    f"inserted={persisted['inserted']}, "
+                    f"unchanged={persisted['unchanged']}"
+                ),
+            )
+
+            result["metrics"][
+                "persisted_observations_inserted"
+            ] = persisted[
+                "inserted"
+            ]
+
+            result["metrics"][
+                "persisted_observations_unchanged"
+            ] = persisted[
+                "unchanged"
+            ]
+
     except Exception as exc:
         result["steps"][
             "live_history"
@@ -426,10 +554,48 @@ def run_cycle(
             "results"
         ] = results_report
 
+        if durable is not None:
+            results_frame = pd.read_csv(
+                RESULTS_PATH
+            )
+
+            persisted_results = (
+                durable
+                .persist_results(
+                    persistence_client,
+                    results_frame,
+                )
+            )
+
+            result["steps"][
+                "durable_results"
+            ] = step(
+                "PASS",
+                (
+                    "inserted="
+                    f"{persisted_results['inserted']}, "
+                    "unchanged="
+                    f"{persisted_results['unchanged']}"
+                ),
+            )
+
+            result["metrics"][
+                "persisted_results_inserted"
+            ] = persisted_results[
+                "inserted"
+            ]
+
+            result["metrics"][
+                "persisted_results_unchanged"
+            ] = persisted_results[
+                "unchanged"
+            ]
+
     except (
         results_updater.ResultsSourceError,
         results_updater.ResultsConflictError,
         results_updater.UnknownTeamError,
+        Exception,
     ) as exc:
         result["steps"][
             "results"
@@ -454,7 +620,64 @@ def run_cycle(
         return result
 
     # --------------------------------------------------
-    # 7. evaluation
+    # 7. refresh cumulative durable authority
+    # --------------------------------------------------
+    if durable is not None:
+        try:
+            refreshed = (
+                durable
+                .hydrate_local_mirrors(
+                    persistence_client,
+                    HISTORY_PATH,
+                    RESULTS_PATH,
+                )
+            )
+
+            result["steps"][
+                "durable_refresh"
+            ] = step(
+                "PASS",
+                (
+                    "observations="
+                    f"{refreshed['observations']}, "
+                    "results="
+                    f"{refreshed['results']}"
+                ),
+            )
+
+            result["metrics"][
+                "durable_observations_total"
+            ] = refreshed[
+                "observations"
+            ]
+
+            result["metrics"][
+                "durable_results_total"
+            ] = refreshed[
+                "results"
+            ]
+
+        except Exception as exc:
+            result["steps"][
+                "durable_refresh"
+            ] = step(
+                "FAIL",
+                str(exc),
+            )
+
+            result["status"] = "FAIL"
+
+            result[
+                "production_unchanged"
+            ] = (
+                before
+                == production_state()
+            )
+
+            return result
+
+    # --------------------------------------------------
+    # 8. evaluation
     # --------------------------------------------------
     try:
         call_legacy_main(live_eval.main)
@@ -787,6 +1010,37 @@ def print_summary(
         ],
     )
 
+    health = {
+        "status":
+            result["status"],
+        "persistence_mode":
+            result.get(
+                "persistence_mode",
+                "local",
+            ),
+        "production_unchanged":
+            result[
+                "production_unchanged"
+            ],
+        "steps":
+            result[
+                "steps"
+            ],
+        "metrics":
+            result[
+                "metrics"
+            ],
+    }
+
+    print(
+        "HEALTH_JSON="
+        + json.dumps(
+            health,
+            sort_keys=True,
+            default=str,
+        )
+    )
+
 
 def main() -> int:
     parser = argparse.ArgumentParser()
@@ -796,12 +1050,28 @@ def main() -> int:
         action="store_true",
     )
 
+    parser.add_argument(
+        "--persistence",
+        choices=(
+            "local",
+            "supabase",
+        ),
+        default="local",
+        help=(
+            "State authority: local mirrors "
+            "or durable Supabase."
+        ),
+    )
+
     args = parser.parse_args()
 
     result = run_cycle(
         skip_collection=(
             args.skip_collection
-        )
+        ),
+        persistence_mode=(
+            args.persistence
+        ),
     )
 
     print_summary(

@@ -183,3 +183,81 @@ def test_results_updater_is_integrated():
         "WAITING_FOR_RESULTS_SOURCE"
         not in source
     )
+
+
+def test_local_mode_is_default():
+    import inspect
+
+    signature = inspect.signature(
+        cycle.run_cycle
+    )
+
+    assert (
+        signature.parameters[
+            "persistence_mode"
+        ].default
+        == "local"
+    )
+
+
+def test_health_json_contains_operating_contract(
+    capsys,
+):
+    import json
+
+    result = {
+        "status": "WAIT",
+        "persistence_mode": "supabase",
+        "production_unchanged": True,
+        "steps": {
+            "database_schema":
+                cycle.step(
+                    "WAIT",
+                    "DATABASE_SCHEMA_NOT_APPLIED",
+                ),
+        },
+        "metrics": {},
+    }
+
+    cycle.print_summary(
+        result
+    )
+
+    output = (
+        capsys
+        .readouterr()
+        .out
+    )
+
+    line = next(
+        item
+        for item in output.splitlines()
+        if item.startswith(
+            "HEALTH_JSON="
+        )
+    )
+
+    health = json.loads(
+        line.removeprefix(
+            "HEALTH_JSON="
+        )
+    )
+
+    assert (
+        health["status"]
+        == "WAIT"
+    )
+
+    assert (
+        health[
+            "persistence_mode"
+        ]
+        == "supabase"
+    )
+
+    assert (
+        health[
+            "production_unchanged"
+        ]
+        is True
+    )
