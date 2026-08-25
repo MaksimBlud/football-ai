@@ -261,3 +261,48 @@ def test_health_json_contains_operating_contract(
         ]
         is True
     )
+
+
+def test_reference_data_reused_when_present(
+    monkeypatch,
+    tmp_path,
+):
+    history = (
+        tmp_path
+        / "history.csv"
+    )
+
+    features = (
+        tmp_path
+        / "features.csv"
+    )
+
+    history.write_text(
+        "ok\n",
+        encoding="utf-8",
+    )
+
+    features.write_text(
+        "ok\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        cycle,
+        "LA_LIGA_NORMALIZED_HISTORY",
+        history,
+    )
+
+    monkeypatch.setattr(
+        cycle,
+        "LA_LIGA_TRAINABLE_FEATURES",
+        features,
+    )
+
+    result = (
+        cycle
+        .ensure_la_liga_reference_data()
+    )
+
+    assert result["status"] == "PASS"
+    assert result["built"] is False

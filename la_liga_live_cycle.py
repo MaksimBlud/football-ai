@@ -37,6 +37,18 @@ import la_liga_results_updater as results_updater
 
 ROOT = Path(__file__).resolve().parent
 
+LA_LIGA_NORMALIZED_HISTORY = (
+    ROOT
+    / "data"
+    / "la_liga_official_history_2016_2026_normalized.csv"
+)
+
+LA_LIGA_TRAINABLE_FEATURES = (
+    ROOT
+    / "data"
+    / "la_liga_features_with_elo_trainable.csv"
+)
+
 PRODUCTION_ARTIFACTS = (
     "football_model_xgboost_elo.pkl",
     "football_model_no_odds.pkl",
@@ -166,6 +178,58 @@ def call_legacy_main(
 
     finally:
         sys.argv = original_argv
+
+
+def ensure_la_liga_reference_data() -> dict:
+    """Build deterministic Structural V2 reference data when absent.
+
+    Fresh GitHub Actions runners do not contain ignored data/ artifacts.
+    These datasets are reproducible research inputs derived from the
+    repository's committed builders and public Football-Data history.
+    """
+
+    required = (
+        LA_LIGA_NORMALIZED_HISTORY,
+        LA_LIGA_TRAINABLE_FEATURES,
+    )
+
+    if all(
+        path.exists()
+        for path in required
+    ):
+        return {
+            "status": "PASS",
+            "detail": "existing reference data reused",
+            "built": False,
+        }
+
+    import build_la_liga_historical_dataset as history_builder
+    import normalize_la_liga_history as history_normalizer
+    import build_la_liga_temporal_features as temporal_builder
+    import add_la_liga_elo_features as elo_builder
+
+    history_builder.main()
+    history_normalizer.main()
+    temporal_builder.main()
+    elo_builder.main()
+
+    missing = [
+        str(path)
+        for path in required
+        if not path.exists()
+    ]
+
+    if missing:
+        raise RuntimeError(
+            "Reference bootstrap incomplete: "
+            + ", ".join(missing)
+        )
+
+    return {
+        "status": "PASS",
+        "detail": "reference data rebuilt",
+        "built": True,
+    }
 
 
 def run_cycle(
@@ -394,7 +458,51 @@ def run_cycle(
         return result
 
     # --------------------------------------------------
-    # 4. Structural V2 shadow
+    # 4. deterministic Structural V2 reference data
+    # --------------------------------------------------
+    try:
+        reference = (
+            ensure_la_liga_reference_data()
+        )
+
+        result["steps"][
+            "reference_data"
+        ] = step(
+            "PASS",
+            reference[
+                "detail"
+            ],
+        )
+
+        result["metrics"][
+            "reference_data_built"
+        ] = bool(
+            reference[
+                "built"
+            ]
+        )
+
+    except Exception as exc:
+        result["steps"][
+            "reference_data"
+        ] = step(
+            "FAIL",
+            str(exc),
+        )
+
+        result["status"] = "FAIL"
+
+        result[
+            "production_unchanged"
+        ] = (
+            before
+            == production_state()
+        )
+
+        return result
+
+    # --------------------------------------------------
+    # 5. Structural V2 shadow
     # --------------------------------------------------
     try:
         call_legacy_main(structural_shadow.main)
