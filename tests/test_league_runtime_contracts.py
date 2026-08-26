@@ -562,3 +562,109 @@ def test_generic_evaluator_rejects_cross_league_results():
             results,
             LA_LIGA_RUNTIME_CONFIG,
         )
+
+
+def test_observation_identity_changes_when_structural_state_changes():
+    from league_structural_v2_history import (
+        observation_key,
+    )
+
+    base = {
+        "league": "LA_LIGA",
+        "event_id": "event-identity",
+        "commence_time_utc": "2026-08-30T19:00:00Z",
+        "snapshot_time_utc": "2026-08-29T10:00:00Z",
+        "home_team": "Barcelona",
+        "away_team": "Valencia",
+        "structural_ready": True,
+        "structural_score": 0.80,
+        "correction_enabled": True,
+        "realized_correction_weight": 0.10,
+        "market_home_probability": 0.60,
+        "market_draw_probability": 0.24,
+        "market_away_probability": 0.16,
+        "shadow_home_probability": 0.62,
+        "shadow_draw_probability": 0.23,
+        "shadow_away_probability": 0.15,
+        "market_argmax": "H",
+        "shadow_argmax": "H",
+        "prediction_source": "STRUCTURAL_EDGE_V2_SHADOW",
+    }
+
+    changed_score = dict(
+        base
+    )
+    changed_score[
+        "structural_score"
+    ] = 0.90
+
+    changed_weight = dict(
+        base
+    )
+    changed_weight[
+        "realized_correction_weight"
+    ] = 0.05
+
+    assert (
+        observation_key(
+            base,
+            LA_LIGA_RUNTIME_CONFIG,
+        )
+        !=
+        observation_key(
+            changed_score,
+            LA_LIGA_RUNTIME_CONFIG,
+        )
+    )
+
+    assert (
+        observation_key(
+            base,
+            LA_LIGA_RUNTIME_CONFIG,
+        )
+        !=
+        observation_key(
+            changed_weight,
+            LA_LIGA_RUNTIME_CONFIG,
+        )
+    )
+
+
+def test_exact_structural_state_replay_keeps_same_identity():
+    from league_structural_v2_history import (
+        observation_key,
+    )
+
+    row = {
+        "league": "LA_LIGA",
+        "event_id": "event-replay",
+        "commence_time_utc": "2026-08-30T19:00:00Z",
+        "snapshot_time_utc": "2026-08-29T10:00:00Z",
+        "home_team": "Barcelona",
+        "away_team": "Valencia",
+        "structural_ready": True,
+        "structural_score": 0.80,
+        "correction_enabled": True,
+        "realized_correction_weight": 0.10,
+        "market_home_probability": 0.60,
+        "market_draw_probability": 0.24,
+        "market_away_probability": 0.16,
+        "shadow_home_probability": 0.62,
+        "shadow_draw_probability": 0.23,
+        "shadow_away_probability": 0.15,
+        "market_argmax": "H",
+        "shadow_argmax": "H",
+        "prediction_source": "STRUCTURAL_EDGE_V2_SHADOW",
+    }
+
+    assert (
+        observation_key(
+            row,
+            LA_LIGA_RUNTIME_CONFIG,
+        )
+        ==
+        observation_key(
+            dict(row),
+            LA_LIGA_RUNTIME_CONFIG,
+        )
+    )
