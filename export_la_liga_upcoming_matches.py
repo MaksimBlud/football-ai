@@ -24,6 +24,13 @@ from database import supabase
 from league_config import LA_LIGA
 from team_names import normalize_team_name
 
+from league_fixture_export import (
+    prepare_upcoming_fixtures as prepare_generic_upcoming_fixtures,
+)
+from league_runtime_config import (
+    LA_LIGA_RUNTIME_CONFIG,
+)
+
 
 OUTPUT_PATH = Path(
     "data/upcoming_matches_la_liga.csv"
@@ -70,162 +77,14 @@ def prepare_upcoming_fixtures(
     *,
     now: datetime | None = None,
 ) -> pd.DataFrame:
-    columns = [
-        "league",
-        "event_id",
-        "match_date",
-        "match_time",
-        "home_team",
-        "away_team",
-        "home_team_model",
-        "away_team_model",
-        "commence_time_utc",
-        "match_datetime_local",
-    ]
+    """La Liga compatibility facade over the generic fixture core."""
 
-    if snapshots.empty:
-        return pd.DataFrame(
-            columns=columns
-        )
-
-    required = {
-        "league",
-        "event_id",
-        "snapshot_time_utc",
-        "commence_time_utc",
-        "home_team",
-        "away_team",
-    }
-
-    missing = required - set(
-        snapshots.columns
+    return prepare_generic_upcoming_fixtures(
+        snapshots,
+        LA_LIGA_RUNTIME_CONFIG,
+        normalize_team=normalize_team_name,
+        now=now,
     )
-
-    if missing:
-        raise ValueError(
-            "Missing snapshot columns: "
-            + ", ".join(
-                sorted(missing)
-            )
-        )
-
-    df = snapshots.copy()
-
-    if not (
-        df["league"]
-        == LA_LIGA.identifier
-    ).all():
-        raise ValueError(
-            "Non-La-Liga rows supplied "
-            "to La Liga fixture exporter."
-        )
-
-    df["snapshot_time_utc"] = (
-        pd.to_datetime(
-            df["snapshot_time_utc"],
-            utc=True,
-            errors="coerce",
-        )
-    )
-
-    df["commence_time_utc"] = (
-        pd.to_datetime(
-            df["commence_time_utc"],
-            utc=True,
-            errors="coerce",
-        )
-    )
-
-    df = df.dropna(
-        subset=[
-            "event_id",
-            "snapshot_time_utc",
-            "commence_time_utc",
-            "home_team",
-            "away_team",
-        ]
-    ).copy()
-
-    if now is None:
-        now = datetime.now(
-            timezone.utc
-        )
-
-    now_utc = pd.Timestamp(now)
-
-    if now_utc.tzinfo is None:
-        now_utc = now_utc.tz_localize(
-            "UTC"
-        )
-    else:
-        now_utc = now_utc.tz_convert(
-            "UTC"
-        )
-
-    df = df[
-        df["commence_time_utc"]
-        > now_utc
-    ].copy()
-
-    # Same fixture can have many market snapshots.
-    # Keep the newest snapshot representation.
-    df = df.sort_values(
-        "snapshot_time_utc",
-        ascending=False,
-    )
-
-    df = df.drop_duplicates(
-        subset=[
-            "league",
-            "event_id",
-        ],
-        keep="first",
-    )
-
-    local_dt = (
-        df["commence_time_utc"]
-        .dt.tz_convert(
-            LOCAL_TIMEZONE
-        )
-    )
-
-    df["match_date"] = (
-        local_dt
-        .dt.strftime("%Y-%m-%d")
-    )
-
-    df["match_time"] = (
-        local_dt
-        .dt.strftime("%H:%M")
-    )
-
-    df["match_datetime_local"] = (
-        local_dt.astype(str)
-    )
-
-    # These columns are retained for schema compatibility only.
-    # Their presence does NOT mean EPL models may be run on La Liga.
-    df["home_team_model"] = (
-        df["home_team"]
-        .map(normalize_team_name)
-    )
-
-    df["away_team_model"] = (
-        df["away_team"]
-        .map(normalize_team_name)
-    )
-
-    df = df.sort_values(
-        [
-            "commence_time_utc",
-            "home_team",
-            "away_team",
-        ]
-    ).reset_index(
-        drop=True
-    )
-
-    return df[columns]
 
 
 def main() -> None:

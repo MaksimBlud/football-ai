@@ -25,6 +25,15 @@ import pandas as pd
 from database import supabase
 from league_config import LA_LIGA
 
+from league_market_shadow import (
+    normalized_market_probabilities as generic_normalized_market_probabilities,
+    prepare_snapshots as generic_prepare_snapshots,
+    probability_argmax as generic_probability_argmax,
+)
+from league_runtime_config import (
+    LA_LIGA_RUNTIME_CONFIG,
+)
+
 
 UPCOMING_PATH = Path(
     "data/upcoming_matches_la_liga.csv"
@@ -76,58 +85,26 @@ def normalized_market_probabilities(
     draw_odds: float,
     away_odds: float,
 ) -> tuple[float, float, float]:
-    """Convert decimal odds to normalized implied probabilities."""
+    """La Liga compatibility facade over generic market normalization."""
 
-    odds = np.array(
-        [
-            home_odds,
-            draw_odds,
-            away_odds,
-        ],
-        dtype=float,
+    return generic_normalized_market_probabilities(
+        home_odds,
+        draw_odds,
+        away_odds,
     )
-
-    if (
-        not np.isfinite(odds).all()
-        or (odds <= 1.0).any()
-    ):
-        raise ValueError(
-            "Odds must be finite decimal prices greater than 1.0"
-        )
-
-    raw = 1.0 / odds
-    total = raw.sum()
-
-    if not np.isfinite(total) or total <= 0:
-        raise ValueError(
-            "Invalid implied probability total"
-        )
-
-    normalized = raw / total
-
-    return (
-        float(normalized[0]),
-        float(normalized[1]),
-        float(normalized[2]),
-    )
-
 
 def probability_argmax(
     home: float,
     draw: float,
     away: float,
 ) -> str:
-    values = {
-        "H": float(home),
-        "D": float(draw),
-        "A": float(away),
-    }
+    """La Liga compatibility facade over generic argmax."""
 
-    return max(
-        values,
-        key=values.get,
+    return generic_probability_argmax(
+        home,
+        draw,
+        away,
     )
-
 
 def fetch_la_liga_snapshots() -> pd.DataFrame:
     response = (
@@ -164,93 +141,11 @@ def fetch_la_liga_snapshots() -> pd.DataFrame:
 def prepare_snapshots(
     snapshots: pd.DataFrame,
 ) -> pd.DataFrame:
-    required = {
-        "league",
-        "event_id",
-        "snapshot_time_utc",
-        "commence_time_utc",
-        "home_team",
-        "away_team",
-        "home_odds",
-        "draw_odds",
-        "away_odds",
-    }
+    """La Liga compatibility facade over generic snapshot validation."""
 
-    missing = required - set(
-        snapshots.columns
-    )
-
-    if missing:
-        raise ValueError(
-            "Snapshot data missing columns: "
-            + ", ".join(
-                sorted(missing)
-            )
-        )
-
-    if snapshots.empty:
-        return snapshots.copy()
-
-    result = snapshots.copy()
-
-    if not (
-        result["league"]
-        == LA_LIGA.identifier
-    ).all():
-        raise ValueError(
-            "Non-La-Liga snapshot supplied"
-        )
-
-    result[
-        "snapshot_time_utc"
-    ] = pd.to_datetime(
-        result["snapshot_time_utc"],
-        utc=True,
-        errors="coerce",
-    )
-
-    result[
-        "commence_time_utc"
-    ] = pd.to_datetime(
-        result["commence_time_utc"],
-        utc=True,
-        errors="coerce",
-    )
-
-    for column in (
-        "home_odds",
-        "draw_odds",
-        "away_odds",
-    ):
-        result[column] = pd.to_numeric(
-            result[column],
-            errors="coerce",
-        )
-
-    result = result.dropna(
-        subset=[
-            "event_id",
-            "snapshot_time_utc",
-            "commence_time_utc",
-            "home_odds",
-            "draw_odds",
-            "away_odds",
-        ]
-    ).copy()
-
-    # Never use an observation at or after kickoff.
-    result = result[
-        result["snapshot_time_utc"]
-        < result["commence_time_utc"]
-    ].copy()
-
-    return result.sort_values(
-        [
-            "event_id",
-            "snapshot_time_utc",
-        ]
-    ).reset_index(
-        drop=True
+    return generic_prepare_snapshots(
+        snapshots,
+        LA_LIGA_RUNTIME_CONFIG,
     )
 
 
