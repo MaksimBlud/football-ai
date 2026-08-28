@@ -3,6 +3,11 @@ name: EPL Live Cycle
 on:
   workflow_dispatch:
 
+  schedule:
+    # Odds snapshots run at :17 every two hours.
+    # Run the durable MARKET_ONLY mirror 30 minutes later.
+    - cron: "47 */2 * * *"
+
 concurrency:
   group: epl-live-cycle
   cancel-in-progress: false
