@@ -1,0 +1,94 @@
+name: EPL Live Cycle
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: epl-live-cycle
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  live-cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Check required secrets
+        run: |
+          python - <<'PY'
+          import os
+
+          required = [
+              "SUPABASE_URL",
+              "SUPABASE_KEY",
+          ]
+
+          missing = [
+              name
+              for name in required
+              if not os.getenv(name)
+          ]
+
+          if missing:
+              raise SystemExit(
+                  "Missing required secrets: "
+                  + ", ".join(missing)
+              )
+
+          print("Required Supabase secrets are configured.")
+          print("Secret values were not printed.")
+          PY
+
+      - name: Verify EPL MARKET_ONLY safety
+        run: |
+          python - <<'PY'
+          from league_runtime_config import EPL_RUNTIME_CONFIG
+
+          s = EPL_RUNTIME_CONFIG.structural_v2
+
+          print("calibration_status:", s.calibration_status)
+          print("structural_alpha:", s.structural_alpha)
+          print("edge_threshold:", s.edge_threshold)
+
+          if s.calibration_status != "CALIBRATION_REQUIRED":
+              raise SystemExit(
+                  "EPL Structural V2 unexpectedly active"
+              )
+
+          if s.structural_alpha is not None:
+              raise SystemExit(
+                  "EPL structural_alpha must be None"
+              )
+
+          if s.edge_threshold is not None:
+              raise SystemExit(
+                  "EPL edge_threshold must be None"
+              )
+
+          print("PASS: EPL remains MARKET_ONLY")
+          PY
+
+      - name: Run durable EPL market-only live cycle
+        run: |
+          python3 epl_live_cycle.py
