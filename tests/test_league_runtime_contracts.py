@@ -668,3 +668,144 @@ def test_exact_structural_state_replay_keeps_same_identity():
             LA_LIGA_RUNTIME_CONFIG,
         )
     )
+
+
+def test_structural_raw_correction_respects_explicit_alpha():
+    import numpy as np
+
+    import league_structural_edge_v2 as v2
+
+    market = np.asarray(
+        [0.50, 0.30, 0.20],
+        dtype=float,
+    )
+
+    low = v2.raw_structural_correction(
+        market,
+        1.5,
+        structural_alpha=0.05,
+    )
+
+    high = v2.raw_structural_correction(
+        market,
+        1.5,
+        structural_alpha=0.20,
+    )
+
+    assert not np.allclose(
+        low,
+        high,
+    )
+
+    assert (
+        high[0] - market[0]
+        >
+        low[0] - market[0]
+    )
+
+
+def test_structural_raw_correction_default_preserves_legacy_alpha():
+    import numpy as np
+
+    import league_structural_edge_v2 as v2
+
+    market = np.asarray(
+        [0.50, 0.30, 0.20],
+        dtype=float,
+    )
+
+    legacy = v2.raw_structural_correction(
+        market,
+        1.5,
+    )
+
+    explicit = v2.raw_structural_correction(
+        market,
+        1.5,
+        structural_alpha=v2.STRUCTURAL_ALPHA,
+    )
+
+    assert np.allclose(
+        legacy,
+        explicit,
+    )
+
+
+def test_generic_structural_wrapper_preserves_market_argmax():
+    from dataclasses import replace
+
+    import numpy as np
+
+    from league_runtime_config import (
+        EPL_RUNTIME_CONFIG,
+    )
+
+    from league_structural_v2_shadow import (
+        apply_structural_v2,
+    )
+
+    config = replace(
+        EPL_RUNTIME_CONFIG,
+        structural_v2=replace(
+            EPL_RUNTIME_CONFIG.structural_v2,
+            calibration_status="CALIBRATED",
+            structural_alpha=0.20,
+            edge_threshold=0.25,
+        ),
+    )
+
+    market = np.asarray(
+        [
+            [0.40, 0.35, 0.25],
+            [0.30, 0.45, 0.25],
+            [0.30, 0.25, 0.45],
+        ],
+        dtype=float,
+    )
+
+    scores = np.asarray(
+        [
+            2.0,
+            -2.0,
+            2.0,
+        ],
+        dtype=float,
+    )
+
+    corrected, enabled, weights = (
+        apply_structural_v2(
+            market,
+            scores,
+            config,
+        )
+    )
+
+    assert enabled.all()
+
+    assert np.array_equal(
+        np.argmax(
+            market,
+            axis=1,
+        ),
+        np.argmax(
+            corrected,
+            axis=1,
+        ),
+    )
+
+    assert np.isfinite(
+        corrected
+    ).all()
+
+    assert np.allclose(
+        corrected.sum(
+            axis=1
+        ),
+        1.0,
+    )
+
+    assert (
+        (weights >= 0.0)
+        &
+        (weights <= 1.0)
+    ).all()

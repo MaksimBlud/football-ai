@@ -258,6 +258,8 @@ def metrics(
 def raw_structural_correction(
     market_row: np.ndarray,
     score: float,
+    *,
+    structural_alpha: float | None = None,
 ) -> np.ndarray:
     result = (
         market_row
@@ -265,8 +267,23 @@ def raw_structural_correction(
         .copy()
     )
 
-    correction = (
+    alpha = (
         STRUCTURAL_ALPHA
+        if structural_alpha is None
+        else float(structural_alpha)
+    )
+
+    if not (
+        0.0
+        <= alpha
+        <= 1.0
+    ):
+        raise ValueError(
+            "structural_alpha must be in [0, 1]"
+        )
+
+    correction = (
+        alpha
         * min(
             abs(float(score)),
             2.0,

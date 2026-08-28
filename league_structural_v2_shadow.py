@@ -165,15 +165,25 @@ def apply_structural_v2(
             )
             continue
 
-        output = (
+        market_array = np.asarray(
+            market_row,
+            dtype=float,
+        )
+
+        candidate = (
             structural_v2
-            .argmax_preserving_correction(
-                np.asarray(
-                    market_row,
-                    dtype=float,
-                ),
+            .raw_structural_correction(
+                market_array,
                 score_value,
                 structural_alpha=alpha,
+            )
+        )
+
+        output = (
+            structural_v2
+            .preserve_market_argmax(
+                market_array,
+                candidate,
             )
         )
 
