@@ -73,6 +73,9 @@ jobs:
       - name: Run RPL operational cycle tests
         run: python -m pytest -q tests/test_rpl_operational_cycle.py
 
+      - name: Run RPL results contract tests
+        run: python -m pytest -q tests/test_rpl_results_persistence_contract.py
+
       - name: Enforce no production artifact changes
         run: |
           git fetch origin "${{ github.base_ref }}" --depth=1
