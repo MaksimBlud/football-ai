@@ -10,7 +10,7 @@ from the_odds_service import get_h2h_odds
 
 
 def main() -> None:
-    sport_key = RPL_RUNTIME_CONFIG.identity.odds_api_sport_key
+    sport_key = RPL_RUNTIME_CONFIG.identity.odds_sport_key
     if not sport_key:
         raise RuntimeError("RPL Odds API sport key is missing")
 
