@@ -5,7 +5,7 @@ from subprocess import CompletedProcess
 import scheduled_la_liga_live_cycle as scheduled
 
 
-def test_scheduled_cycle_grants_live_collection_then_runs_durable_cycle():
+def test_scheduled_cycle_grants_live_collection_then_runs_durable_cycle_and_ledger():
     commands = []
 
     def runner(command, **kwargs):
@@ -35,10 +35,17 @@ def test_scheduled_cycle_grants_live_collection_then_runs_durable_cycle():
             ],
             {"check": False},
         ),
+        (
+            [
+                sys.executable,
+                "persist_la_liga_prediction_ledger.py",
+            ],
+            {"check": False},
+        ),
     ]
 
 
-def test_collection_failure_prevents_durable_cycle():
+def test_collection_failure_prevents_durable_cycle_and_ledger():
     commands = []
 
     def runner(command, **kwargs):
@@ -56,6 +63,43 @@ def test_collection_failure_prevents_durable_cycle():
             "--skip-downstream",
         ]
     ]
+
+
+def test_durable_cycle_failure_prevents_ledger():
+    commands = []
+    returncodes = iter((0, 9))
+
+    def runner(command, **kwargs):
+        commands.append(command)
+        return CompletedProcess(command, next(returncodes))
+
+    result = scheduled.run_scheduled_cycle(runner=runner)
+
+    assert result == 9
+    assert commands == [
+        [
+            sys.executable,
+            "la_liga_collection_runner.py",
+            "--live",
+            "--skip-downstream",
+        ],
+        [
+            sys.executable,
+            "la_liga_live_cycle.py",
+            "--skip-collection",
+            "--persistence",
+            "supabase",
+        ],
+    ]
+
+
+def test_ledger_failure_fails_scheduled_cycle():
+    returncodes = iter((0, 0, 11))
+
+    def runner(command, **kwargs):
+        return CompletedProcess(command, next(returncodes))
+
+    assert scheduled.run_scheduled_cycle(runner=runner) == 11
 
 
 def test_workflow_uses_explicit_scheduled_entrypoint():

@@ -2,7 +2,9 @@
 
 Explicitly grants live Odds API collection only for the scheduled workflow,
 then runs the durable La Liga cycle against the resulting/persisted snapshot
-without permitting a second collection attempt.
+without permitting a second collection attempt. After durable observations
+exist, the same pre-kickoff MARKET_ONLY state is mirrored into the canonical
+append-only league prediction ledger.
 """
 
 from __future__ import annotations
@@ -23,6 +25,10 @@ CYCLE_COMMAND = (
     "--skip-collection",
     "--persistence",
     "supabase",
+)
+
+LEDGER_COMMAND = (
+    "persist_la_liga_prediction_ledger.py",
 )
 
 
@@ -61,11 +67,23 @@ def run_scheduled_cycle(
 
     if cycle_rc != 0:
         print(
-            "La Liga durable cycle failed "
+            "La Liga durable cycle failed; canonical ledger skipped "
             f"(exit code {cycle_rc})."
         )
+        return cycle_rc
 
-    return cycle_rc
+    ledger_rc = run_command(
+        LEDGER_COMMAND,
+        runner=runner,
+    )
+
+    if ledger_rc != 0:
+        print(
+            "La Liga canonical ledger persistence failed "
+            f"(exit code {ledger_rc})."
+        )
+
+    return ledger_rc
 
 
 if __name__ == "__main__":
