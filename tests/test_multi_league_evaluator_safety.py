@@ -49,6 +49,7 @@ def _results(league: str, match_date: str) -> pd.DataFrame:
         ("SERIE_A", "2026-08-02"),
         ("BUNDESLIGA", "2026-08-02"),
         ("LIGUE_1", "2026-08-02"),
+        ("EREDIVISIE", "2026-08-02"),
     ],
 )
 def test_settlement_uses_each_leagues_local_match_date(league, expected_date):
@@ -88,6 +89,7 @@ def test_configured_timezones_are_distinct_and_resolved():
         "SERIE_A": "Europe/Rome",
         "BUNDESLIGA": "Europe/Berlin",
         "LIGUE_1": "Europe/Paris",
+        "EREDIVISIE": "Europe/Amsterdam",
     }
     assert {league: get_league_config(league).timezone for league in expected} == expected
 
@@ -97,11 +99,17 @@ def test_rpl_registry_distinguishes_generic_and_operational_collection():
     assert is_operational_collection_ready("RPL") is True
 
 
+def test_eredivisie_registry_is_operationally_enabled():
+    assert is_collection_ready("EREDIVISIE") is True
+    assert is_operational_collection_ready("EREDIVISIE") is True
+
+
 def test_new_market_only_leagues_remain_structural_independent():
     from league_runtime_config import EPL_RUNTIME_CONFIG, RPL_RUNTIME_CONFIG
     from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
     from bundesliga_runtime_config import BUNDESLIGA_RUNTIME_CONFIG
     from ligue1_runtime_config import LIGUE1_RUNTIME_CONFIG
+    from eredivisie_runtime_config import EREDIVISIE_RUNTIME_CONFIG
 
     configs = [
         EPL_RUNTIME_CONFIG,
@@ -109,6 +117,7 @@ def test_new_market_only_leagues_remain_structural_independent():
         SERIE_A_RUNTIME_CONFIG,
         BUNDESLIGA_RUNTIME_CONFIG,
         LIGUE1_RUNTIME_CONFIG,
+        EREDIVISIE_RUNTIME_CONFIG,
     ]
     for config in configs:
         structural = config.structural_v2

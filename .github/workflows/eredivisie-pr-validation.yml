@@ -1,0 +1,57 @@
+name: Eredivisie PR Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_URL: https://example.supabase.co
+      SUPABASE_KEY: eredivisie-pr-placeholder
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: |
+          python -m pip install --upgrade pip
+          pip install pytest pandas numpy requests supabase python-dotenv
+      - name: Compile Eredivisie modules
+        run: |
+          python -m py_compile eredivisie_runtime_config.py
+          python -m py_compile save_eredivisie_odds_snapshot.py
+          python -m py_compile export_eredivisie_upcoming_matches.py
+          python -m py_compile generate_eredivisie_market_shadow.py
+          python -m py_compile persist_eredivisie_market_observations.py
+          python -m py_compile persist_eredivisie_prediction_ledger.py
+          python -m py_compile eredivisie_live_cycle.py
+          python -m py_compile scheduled_eredivisie_odds_snapshot.py
+          python -m py_compile eredivisie_scores_service.py
+          python -m py_compile update_eredivisie_results.py
+          python -m py_compile evaluate_eredivisie_predictions.py
+      - name: Run Eredivisie operational tests
+        run: python -m pytest -q tests/test_eredivisie_operational.py
+      - name: Run Eredivisie workflow contract tests
+        run: python -m pytest -q tests/test_eredivisie_workflow_contract.py
+      - name: Run shared ledger and settlement safety
+        run: |
+          python -m pytest -q tests/test_league_prediction_ledger.py
+          python -m pytest -q tests/test_evaluate_league_predictions.py
+          python -m pytest -q tests/test_multi_league_evaluator_safety.py
+      - name: Enforce no production artifact changes
+        run: |
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -E '\.pkl$'; then
+            echo "Production model artifact change detected"
+            exit 1
+          fi
+          echo "PASS: no .pkl changes in Eredivisie PR"
