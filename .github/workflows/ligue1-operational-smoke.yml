@@ -1,0 +1,26 @@
+name: Ligue 1 Operational Smoke
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install pandas numpy supabase python-dotenv
+      - run: python evaluate_ligue1_predictions.py
+      - name: Durable counts
+        run: |
+          python - <<'PY'
+          from database import supabase
+          for t in ("odds_snapshots","league_structural_v2_observations","league_prediction_ledger","league_finished_results"):
+              r=supabase.table(t).select("*",count="exact").eq("league","LIGUE_1").limit(1).execute()
+              print(t,int(r.count or 0))
+          PY
