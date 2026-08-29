@@ -35,6 +35,12 @@ def test_operational_workflows_do_not_load_or_train_production_models():
 
 
 def test_workflow_schedules_are_non_overlapping():
-    assert 'cron: "33 */2 * * *"' in _read("eredivisie-odds-snapshots.yml")
+    assert 'cron: "38 */2 * * *"' in _read("eredivisie-odds-snapshots.yml")
     assert 'cron: "58 */2 * * *"' in _read("eredivisie-live-cycle.yml")
     assert 'cron: "23 */12 * * *"' in _read("eredivisie-results.yml")
+
+
+def test_eredivisie_odds_does_not_collide_with_ligue1_live_cycle():
+    ligue1_live = _read("ligue1-live-cycle.yml")
+    assert 'cron: "33 */2 * * *"' in ligue1_live
+    assert 'cron: "33 */2 * * *"' not in _read("eredivisie-odds-snapshots.yml")
