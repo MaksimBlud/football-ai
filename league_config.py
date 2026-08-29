@@ -17,7 +17,8 @@ LA_LIGA=LeagueConfig("LA_LIGA","La Liga","Europe/Madrid","soccer_spain_la_liga",
 RPL=LeagueConfig("RPL","Russian Premier League","Europe/Moscow","soccer_russia_premier_league",False)
 SERIE_A=LeagueConfig("SERIE_A","Serie A","Europe/Rome","soccer_italy_serie_a",True)
 BUNDESLIGA=LeagueConfig("BUNDESLIGA","Bundesliga","Europe/Berlin","soccer_germany_bundesliga",True)
-_CONFIGURED=(EPL,LA_LIGA,RPL,SERIE_A,BUNDESLIGA)
+LIGUE_1=LeagueConfig("LIGUE_1","Ligue 1","Europe/Paris","soccer_france_ligue_one",False)
+_CONFIGURED=(EPL,LA_LIGA,RPL,SERIE_A,BUNDESLIGA,LIGUE_1)
 LEAGUES={league.identifier:league for league in _CONFIGURED}
 def validate_league_identifier(identifier):
     if identifier not in LEAGUES:raise ValueError(f"Unknown league identifier: {identifier!r}")
