@@ -343,8 +343,35 @@ def match_odds_to_upcoming(
     are unavailable.
     """
 
+    # Matching must be deterministic with respect to the supplied
+    # fixture set. Filtering against the wall clock belongs to the
+    # upstream fixture-export boundary, not this point-in-time matcher.
+    #
+    # Using a timestamp immediately before the earliest supplied
+    # kickoff preserves prepare_upcoming_matches() validation and
+    # normalization without making historical/replay matching depend
+    # on today's date.
+    raw_kickoffs = pd.to_datetime(
+        upcoming["match_datetime_uk"],
+        utc=True,
+        errors="coerce",
+    )
+
+    valid_kickoffs = raw_kickoffs.dropna()
+
+    if valid_kickoffs.empty:
+        matching_now = pd.Timestamp(
+            "1970-01-01T00:00:00Z"
+        )
+    else:
+        matching_now = (
+            valid_kickoffs.min()
+            - pd.Timedelta(microseconds=1)
+        )
+
     prepared = prepare_upcoming_matches(
         upcoming,
+        now=matching_now,
         legacy_epl=legacy_epl,
     )
 
@@ -360,14 +387,33 @@ def match_odds_to_upcoming(
         "commence_time_utc",
     ]
 
-    odds_values = latest[
-        keys
-        + [
-            "snapshot_time_utc",
+    odds_columns = [
+        "snapshot_time_utc",
+        "home_odds",
+        "draw_odds",
+        "away_odds",
+    ]
+
+    # Avoid a dtype-sensitive merge when no eligible market snapshot
+    # exists. The contract is one output row per upcoming fixture with
+    # null market fields, never disappearance of the fixture.
+    if latest.empty:
+        result = prepared.copy()
+
+        result["snapshot_time_utc"] = pd.NaT
+
+        for column in (
             "home_odds",
             "draw_odds",
             "away_odds",
-        ]
+        ):
+            result[column] = np.nan
+
+        return result
+
+    odds_values = latest[
+        keys
+        + odds_columns
     ]
 
     return prepared.merge(
