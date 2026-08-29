@@ -76,11 +76,12 @@ def test_market_shadow_uses_market_only_probabilities():
     row = latest.iloc[0]
     assert row["league"] == "RPL"
     assert row["market_shadow_status"] == "OK"
-    assert row["market_pick"] in {"H", "D", "A"}
+    assert row["market_argmax"] in {"H", "D", "A"}
+    assert bool(row["market_only"]) is True
     assert abs(
-        float(row["market_home_prob"])
-        + float(row["market_draw_prob"])
-        + float(row["market_away_prob"])
+        float(row["market_home_probability"])
+        + float(row["market_draw_probability"])
+        + float(row["market_away_probability"])
         - 1.0
     ) < 1e-9
 
