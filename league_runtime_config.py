@@ -405,3 +405,100 @@ EPL_RUNTIME_CONFIG = LeagueRuntimeConfig(
 
 
 EPL_RUNTIME_CONFIG.validate()
+
+
+# RPL starts as a market-only research league. Historical/results source
+# identifiers are intentionally unresolved until a provider contract is
+# verified; guessed competition IDs are not allowed into the runtime config.
+RPL_RUNTIME_CONFIG = LeagueRuntimeConfig(
+    identity=LeagueIdentity(
+        identifier="RPL",
+        display_name="Russian Premier League",
+        timezone="Europe/Moscow",
+        odds_sport_key="soccer_russia_premier_league",
+    ),
+    historical_source=HistoricalSourceConfig(
+        provider="SOURCE_REQUIRED",
+        competition_code="UNRESOLVED",
+        season_codes={},
+    ),
+    finished_results_source=FinishedResultsSourceConfig(
+        provider="SOURCE_REQUIRED",
+        competition_code="UNRESOLVED",
+        season="2026-2027",
+        season_code="2026",
+    ),
+    paths=LeaguePaths(
+        historical_raw=(
+            ROOT
+            / "data"
+            / "rpl_history_raw.csv"
+        ),
+        historical_normalized=(
+            ROOT
+            / "data"
+            / "rpl_history_normalized.csv"
+        ),
+        temporal_features=(
+            ROOT
+            / "data"
+            / "rpl_features_temporal.csv"
+        ),
+        trainable_features=(
+            ROOT
+            / "data"
+            / "rpl_features_with_elo_trainable.csv"
+        ),
+        upcoming_fixtures=(
+            ROOT
+            / "data"
+            / "upcoming_matches_rpl.csv"
+        ),
+        market_shadow=(
+            ROOT
+            / "experiments"
+            / "rpl_market_shadow.csv"
+        ),
+        market_history=(
+            ROOT
+            / "experiments"
+            / "rpl_market_shadow_history.csv"
+        ),
+        structural_shadow=(
+            ROOT
+            / "experiments"
+            / "rpl_structural_v2_shadow.csv"
+        ),
+        structural_history=(
+            ROOT
+            / "experiments"
+            / "rpl_structural_v2_shadow_history.csv"
+        ),
+        current_results=(
+            ROOT
+            / "data"
+            / "rpl_2026_2027_results.csv"
+        ),
+    ),
+    aliases={},
+    allowed_cold_starts=frozenset(),
+    temporal=TemporalConfig(
+        min_prior_matches=5,
+    ),
+    elo=EloConfig(
+        initial_rating=1500.0,
+        k_factor=20.0,
+        home_advantage=65.0,
+    ),
+    structural_v2=StructuralV2Config(
+        league_id="RPL",
+        structural_alpha=None,
+        edge_threshold=None,
+        min_prior_matches=5,
+        prediction_source="STRUCTURAL_EDGE_V2_SHADOW",
+        calibration_status="CALIBRATION_REQUIRED",
+    ),
+)
+
+
+RPL_RUNTIME_CONFIG.validate()
