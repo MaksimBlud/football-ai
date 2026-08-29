@@ -29,6 +29,7 @@ jobs:
       - run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install pytest
       - name: Check required secrets
         run: |
           python - <<'PY'
