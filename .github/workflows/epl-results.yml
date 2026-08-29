@@ -37,7 +37,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests supabase python-dotenv
+          pip install requests supabase python-dotenv numpy pandas
 
       - name: Check required secrets
         run: |
@@ -79,3 +79,6 @@ jobs:
 
       - name: Sync finished EPL results
         run: python update_epl_results.py --write
+
+      - name: Evaluate settled EPL predictions
+        run: python evaluate_league_predictions.py --league EPL
