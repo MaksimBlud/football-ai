@@ -1,9 +1,7 @@
 name: RPL Scores Provider Audit
 
 on:
-  push:
-    branches:
-      - phase-rpl-operational-complete
+  workflow_dispatch:
 
 permissions:
   contents: read
