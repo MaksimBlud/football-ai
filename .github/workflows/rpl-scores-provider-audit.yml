@@ -1,0 +1,35 @@
+name: RPL Scores Provider Audit
+
+on:
+  push:
+    branches:
+      - phase-rpl-operational-complete
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - run: pip install requests python-dotenv
+      - name: Check score-provider secret
+        run: |
+          python - <<'PY'
+          import os
+          if not os.getenv("THE_ODDS_API_KEY"):
+              raise SystemExit("Missing THE_ODDS_API_KEY")
+          print("PASS: THE_ODDS_API_KEY available; value not printed")
+          PY
+      - run: python -m py_compile rpl_scores_service.py audit_rpl_scores_provider.py
+      - name: Run read-only RPL score audit
+        run: python audit_rpl_scores_provider.py
