@@ -19,10 +19,7 @@ class LeagueConfig:
 
     @property
     def collection_ready(self) -> bool:
-        return bool(
-            self.collection_enabled
-            and self.odds_api_sport_key
-        )
+        return bool(self.collection_enabled and self.odds_api_sport_key)
 
 
 EPL = LeagueConfig(
@@ -46,7 +43,15 @@ RPL = LeagueConfig(
     name="Russian Premier League",
     timezone="Europe/Moscow",
     odds_api_sport_key="soccer_russia_premier_league",
-    # Manual-only until the first persisted snapshot and durable-cycle audit pass.
+    collection_enabled=False,
+)
+
+SERIE_A = LeagueConfig(
+    identifier="SERIE_A",
+    name="Serie A",
+    timezone="Europe/Rome",
+    odds_api_sport_key="soccer_italy_serie_a",
+    # Activated only after the branch live bootstrap passes.
     collection_enabled=False,
 )
 
@@ -54,49 +59,31 @@ _CONFIGURED = (
     EPL,
     LA_LIGA,
     RPL,
+    SERIE_A,
 )
 
-LEAGUES = {
-    league.identifier: league
-    for league in _CONFIGURED
-}
+LEAGUES = {league.identifier: league for league in _CONFIGURED}
 
 
-def validate_league_identifier(
-    identifier: str,
-) -> str:
+def validate_league_identifier(identifier: str) -> str:
     if identifier not in LEAGUES:
-        raise ValueError(
-            f"Unknown league identifier: {identifier!r}"
-        )
-
+        raise ValueError(f"Unknown league identifier: {identifier!r}")
     return identifier
 
 
-def get_league_config(
-    identifier: str,
-) -> LeagueConfig:
+def get_league_config(identifier: str) -> LeagueConfig:
     validate_league_identifier(identifier)
     return LEAGUES[identifier]
 
 
 def configured_leagues() -> tuple[LeagueConfig, ...]:
     """Return deterministic configured-league order."""
-
     return _CONFIGURED
 
 
 def collection_ready_leagues() -> tuple[LeagueConfig, ...]:
-    return tuple(
-        league
-        for league in _CONFIGURED
-        if league.collection_ready
-    )
+    return tuple(league for league in _CONFIGURED if league.collection_ready)
 
 
-def is_collection_ready(
-    identifier: str,
-) -> bool:
-    return get_league_config(
-        identifier
-    ).collection_ready
+def is_collection_ready(identifier: str) -> bool:
+    return get_league_config(identifier).collection_ready
