@@ -65,9 +65,9 @@ def test_collection_failure_prevents_durable_cycle_and_ledger():
     ]
 
 
-def test_durable_cycle_failure_prevents_ledger():
+def test_durable_cycle_failure_still_attempts_ledger_and_preserves_cycle_failure():
     commands = []
-    returncodes = iter((0, 9))
+    returncodes = iter((0, 9, 0))
 
     def runner(command, **kwargs):
         commands.append(command)
@@ -90,10 +90,23 @@ def test_durable_cycle_failure_prevents_ledger():
             "--persistence",
             "supabase",
         ],
+        [
+            sys.executable,
+            "persist_la_liga_prediction_ledger.py",
+        ],
     ]
 
 
-def test_ledger_failure_fails_scheduled_cycle():
+def test_cycle_and_ledger_failure_preserves_cycle_failure():
+    returncodes = iter((0, 9, 11))
+
+    def runner(command, **kwargs):
+        return CompletedProcess(command, next(returncodes))
+
+    assert scheduled.run_scheduled_cycle(runner=runner) == 9
+
+
+def test_ledger_failure_fails_successful_scheduled_cycle():
     returncodes = iter((0, 0, 11))
 
     def runner(command, **kwargs):
