@@ -3,10 +3,17 @@ import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+import pandas as pd
 import requests
 from dotenv import load_dotenv
 
 from database import supabase
+import league_supabase_persistence as generic_persistence
+
+from league_runtime_config import (
+    EPL_RUNTIME_CONFIG,
+)
+
 from team_names import normalize_team_name
 
 
@@ -161,6 +168,79 @@ def build_finished_payload(match):
                 int(away_goals),
             ),
     }
+
+
+def build_generic_finished_results(
+    finished_payloads,
+):
+    """Convert Football-Data EPL results to generic durable contract."""
+
+    if not finished_payloads:
+        return pd.DataFrame(
+            columns=[
+                "league",
+                "season",
+                "match_date",
+                "match_time",
+                "home_team",
+                "away_team",
+                "home_goals",
+                "away_goals",
+                "result",
+                "source",
+                "source_competition",
+            ]
+        )
+
+    rows = []
+
+    for payload in finished_payloads:
+        row = dict(
+            payload
+        )
+
+        row[
+            "league"
+        ] = (
+            EPL_RUNTIME_CONFIG
+            .identity
+            .identifier
+        )
+
+        row[
+            "source"
+        ] = "football-data.org"
+
+        row[
+            "source_competition"
+        ] = "PL"
+
+        rows.append(
+            row
+        )
+
+    return pd.DataFrame(
+        rows
+    )
+
+
+def persist_generic_finished_results(
+    finished_payloads,
+):
+    frame = (
+        build_generic_finished_results(
+            finished_payloads
+        )
+    )
+
+    return (
+        generic_persistence
+        .persist_results(
+            supabase,
+            frame,
+            EPL_RUNTIME_CONFIG,
+        )
+    )
 
 
 def load_existing_season():
@@ -364,23 +444,56 @@ def main():
     if not new_rows:
         print()
         print(
-            "Новых результатов для записи нет."
+            "Новых результатов для matches нет."
         )
-        return
+    else:
+        response = (
+            supabase
+            .table("matches")
+            .insert(
+                new_rows
+            )
+            .execute()
+        )
 
-    response = (
-        supabase
-        .table("matches")
-        .insert(
-            new_rows
+        print()
+        print(
+            "Записано в matches:",
+            len(response.data or []),
         )
-        .execute()
+
+    generic_metrics = (
+        persist_generic_finished_results(
+            finished_payloads
+        )
     )
 
     print()
     print(
-        "Записано строк:",
-        len(response.data or []),
+        "Generic finished results inserted:",
+        int(
+            generic_metrics[
+                "inserted"
+            ]
+        ),
+    )
+
+    print(
+        "Generic finished results unchanged:",
+        int(
+            generic_metrics[
+                "unchanged"
+            ]
+        ),
+    )
+
+    print(
+        "Generic finished results conflicts:",
+        int(
+            generic_metrics[
+                "conflicts"
+            ]
+        ),
     )
 
 
