@@ -40,6 +40,9 @@ jobs:
           python -m py_compile league_runtime_config.py
           python -m py_compile evaluate_league_predictions.py
           python -m py_compile build_league_calibration_dataset.py
+          python -m py_compile rpl_source_contract.py
+          python -m py_compile export_rpl_upcoming_matches.py
+          python -m py_compile generate_rpl_market_shadow.py
 
       - name: Run canonical evaluator tests
         run: python -m pytest -q tests/test_evaluate_league_predictions.py
@@ -49,6 +52,9 @@ jobs:
 
       - name: Run RPL runtime configuration tests
         run: python -m pytest -q tests/test_rpl_runtime_config.py
+
+      - name: Run RPL market-only live foundation tests
+        run: python -m pytest -q tests/test_rpl_market_only_live.py
 
       - name: Enforce no production artifact changes
         run: |
