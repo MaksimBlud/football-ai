@@ -1,0 +1,55 @@
+name: RPL Live Readiness Audit
+
+on:
+  push:
+    branches:
+      - phase-rpl-live-readiness-audit
+
+permissions:
+  contents: read
+
+jobs:
+  read-only-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install audit dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas supabase python-dotenv
+
+      - name: Check Supabase secrets
+        run: |
+          python - <<'PY'
+          import os
+          missing = [name for name in ("SUPABASE_URL", "SUPABASE_KEY") if not os.getenv(name)]
+          if missing:
+              raise SystemExit("Missing secrets: " + ", ".join(missing))
+          print("PASS: Supabase secrets available; values not printed")
+          PY
+
+      - name: Compile audit
+        run: python -m py_compile audit_rpl_live_readiness.py rpl_snapshot_readiness.py
+
+      - name: Run read-only RPL audit
+        run: python audit_rpl_live_readiness.py
+
+      - name: Enforce research-only diff
+        run: |
+          if git diff --name-only c570d50ea83f3738e151f4e1649d030fc03470c0...HEAD | grep -E '\.pkl$'; then
+            echo "Production artifact change detected"
+            exit 1
+          fi
+          echo "PASS: no .pkl changes"
