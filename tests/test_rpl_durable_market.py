@@ -48,7 +48,6 @@ def current_shadow():
         fixtures,
         sample_snapshots(),
         previous_history=pd.DataFrame(columns=market_shadow.OUTPUT_COLUMNS),
-        generated_at_utc=datetime(2026, 8, 29, 11, 0, tzinfo=timezone.utc),
     )
 
 
