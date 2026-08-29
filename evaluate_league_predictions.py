@@ -153,11 +153,9 @@ def _assert_league(frame: pd.DataFrame, league: str, label: str) -> None:
 def _resolve_league(ledger: pd.DataFrame, results: pd.DataFrame, league: str | None) -> str:
     if league is not None:
         return str(league)
-    values: set[str] = set()
-    if not ledger.empty:
-        values.update(ledger["league"].astype(str).unique())
-    if not results.empty:
-        values.update(results["league"].astype(str).unique())
+    ledger_values = set(ledger["league"].astype(str).unique()) if not ledger.empty else set()
+    result_values = set(results["league"].astype(str).unique()) if not results.empty else set()
+    values = ledger_values | result_values
     if len(values) != 1:
         raise ValueError("Cannot infer a single league for settlement")
     return next(iter(values))
