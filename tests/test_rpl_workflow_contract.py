@@ -21,7 +21,7 @@ def test_rpl_live_workflow_runs_after_snapshot_window():
 
 def test_rpl_results_workflow_is_twice_daily_and_evaluates():
     source = read(".github/workflows/rpl-results.yml")
-    assert 'cron: "52 */12 * * *"' in source
+    assert 'cron: "54 */12 * * *"' in source
     assert "update_rpl_results.py --write" in source
     assert "evaluate_rpl_predictions.py" in source
 
