@@ -2,7 +2,7 @@ name: Ligue 1 Results
 on:
   workflow_dispatch:
   schedule:
-    - cron: "47 */12 * * *"
+    - cron: "49 */12 * * *"
 permissions:
   contents: read
 jobs:

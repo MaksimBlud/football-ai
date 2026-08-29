@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   schedule:
     # Scores endpoint costs 2 units; twice daily is sufficient for settlement.
-    - cron: "52 */12 * * *"
+    - cron: "54 */12 * * *"
 
 concurrency:
   group: rpl-results-sync
