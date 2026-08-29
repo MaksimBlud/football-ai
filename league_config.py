@@ -14,7 +14,7 @@ class LeagueConfig:
 
 EPL=LeagueConfig("EPL","Premier League","Europe/London","soccer_epl",True)
 LA_LIGA=LeagueConfig("LA_LIGA","La Liga","Europe/Madrid","soccer_spain_la_liga",True)
-RPL=LeagueConfig("RPL","Russian Premier League","Europe/Moscow","soccer_russia_premier_league",False)
+RPL=LeagueConfig("RPL","Russian Premier League","Europe/Moscow","soccer_russia_premier_league",True)
 SERIE_A=LeagueConfig("SERIE_A","Serie A","Europe/Rome","soccer_italy_serie_a",True)
 BUNDESLIGA=LeagueConfig("BUNDESLIGA","Bundesliga","Europe/Berlin","soccer_germany_bundesliga",True)
 LIGUE_1=LeagueConfig("LIGUE_1","Ligue 1","Europe/Paris","soccer_france_ligue_one",True)
