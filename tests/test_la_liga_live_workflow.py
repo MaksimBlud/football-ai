@@ -58,13 +58,13 @@ def test_workflow_contract():
         assert secret in text
 
     assert (
-        "python3 la_liga_live_cycle.py"
+        "python3 scheduled_la_liga_live_cycle.py"
         in text
     )
 
     assert (
-        "--persistence supabase"
-        in text
+        "python3 la_liga_live_cycle.py"
+        not in text
     )
 
     lowered = text.lower()

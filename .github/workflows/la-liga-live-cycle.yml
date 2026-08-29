@@ -64,7 +64,5 @@ jobs:
           print("Secret values were not printed.")
           PY
 
-      - name: Run durable La Liga live cycle
-        run: |
-          python3 la_liga_live_cycle.py \
-            --persistence supabase
+      - name: Run scheduled La Liga live cycle
+        run: python3 scheduled_la_liga_live_cycle.py
