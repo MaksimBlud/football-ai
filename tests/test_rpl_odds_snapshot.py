@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
+import league_config
 import save_rpl_odds_snapshot as collector
 
 
@@ -25,6 +26,9 @@ def test_rpl_collector_is_explicitly_eu_market_only_foundation(monkeypatch):
     assert collector.LEAGUE == "RPL"
     assert collector.SPORT_KEY == "soccer_russia_premier_league"
     assert collector.REGION == "eu"
+    assert league_config.RPL.identifier == "RPL"
+    assert league_config.RPL.collection_enabled is False
+    assert league_config.RPL.collection_ready is False
     source = Path("save_rpl_odds_snapshot.py").read_text(encoding="utf-8")
     assert "football_model_xgboost_elo.pkl" not in source
     assert "joblib.load" not in source
