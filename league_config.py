@@ -16,7 +16,7 @@ EPL=LeagueConfig("EPL","Premier League","Europe/London","soccer_epl",True)
 LA_LIGA=LeagueConfig("LA_LIGA","La Liga","Europe/Madrid","soccer_spain_la_liga",True)
 RPL=LeagueConfig("RPL","Russian Premier League","Europe/Moscow","soccer_russia_premier_league",False)
 SERIE_A=LeagueConfig("SERIE_A","Serie A","Europe/Rome","soccer_italy_serie_a",True)
-BUNDESLIGA=LeagueConfig("BUNDESLIGA","Bundesliga","Europe/Berlin","soccer_germany_bundesliga",False)
+BUNDESLIGA=LeagueConfig("BUNDESLIGA","Bundesliga","Europe/Berlin","soccer_germany_bundesliga",True)
 _CONFIGURED=(EPL,LA_LIGA,RPL,SERIE_A,BUNDESLIGA)
 LEAGUES={league.identifier:league for league in _CONFIGURED}
 def validate_league_identifier(identifier):
