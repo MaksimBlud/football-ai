@@ -1,0 +1,53 @@
+name: RPL Live Cycle
+
+on:
+  workflow_dispatch:
+  schedule:
+    # RPL snapshots are checked at :07 every two hours.
+    - cron: "32 */2 * * *"
+
+concurrency:
+  group: rpl-live-cycle
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  live-cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - run: |
+          python -m pip install --upgrade pip
+          pip install pandas numpy supabase python-dotenv
+      - name: Check required secrets
+        run: |
+          python - <<'PY'
+          import os
+          missing = [name for name in ("SUPABASE_URL", "SUPABASE_KEY") if not os.getenv(name)]
+          if missing:
+              raise SystemExit("Missing RPL live-cycle secrets: " + ", ".join(missing))
+          print("PASS: RPL live-cycle secrets available; values not printed")
+          PY
+      - name: Verify RPL MARKET_ONLY safety
+        run: |
+          python - <<'PY'
+          from league_runtime_config import RPL_RUNTIME_CONFIG
+          s = RPL_RUNTIME_CONFIG.structural_v2
+          assert s.calibration_status == "CALIBRATION_REQUIRED"
+          assert s.structural_alpha is None
+          assert s.edge_threshold is None
+          print("PASS: RPL remains MARKET_ONLY")
+          PY
+      - name: Run durable RPL live cycle
+        run: python rpl_live_cycle.py
