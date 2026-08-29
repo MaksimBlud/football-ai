@@ -1,4 +1,5 @@
 import sys
+from pathlib import Path
 from subprocess import CompletedProcess
 
 import scheduled_la_liga_live_cycle as scheduled
@@ -58,8 +59,6 @@ def test_collection_failure_prevents_durable_cycle():
 
 
 def test_workflow_uses_explicit_scheduled_entrypoint():
-    from pathlib import Path
-
     workflow = (
         Path(__file__).parents[1]
         / ".github"
@@ -72,8 +71,9 @@ def test_workflow_uses_explicit_scheduled_entrypoint():
 
 
 def test_default_live_cycle_still_does_not_grant_live_collection():
-    import inspect
-    import la_liga_live_cycle as cycle
+    source = (
+        Path(__file__).parents[1]
+        / "la_liga_live_cycle.py"
+    ).read_text()
 
-    source = inspect.getsource(cycle)
     assert '"--live"' not in source
