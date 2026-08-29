@@ -469,11 +469,6 @@ def run_cycle() -> EPLLiveCycleResult:
         results_before,
     ) = durable_counts()
 
-    if results_before != 0:
-        raise RuntimeError(
-            "Phase 4D does not permit EPL results persistence"
-        )
-
     (
         fixture_snapshots,
         upcoming,
