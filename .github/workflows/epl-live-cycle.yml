@@ -96,4 +96,4 @@ jobs:
 
       - name: Run durable EPL market-only live cycle
         run: |
-          python3 epl_live_cycle.py
+          python3 scheduled_epl_live_cycle.py
