@@ -27,6 +27,7 @@ import export_epl_upcoming_matches as fixture_export
 import generate_epl_market_shadow as market_shadow
 import league_supabase_persistence as persistence
 import persist_epl_market_observations as observation_mirror
+import persist_epl_prediction_ledger as prediction_ledger
 
 from league_runtime_config import (
     EPL_RUNTIME_CONFIG,
@@ -46,6 +47,11 @@ class EPLLiveCycleResult:
     observations_inserted: int
     observations_unchanged: int
     observation_conflicts: int
+    ledger_before: int
+    ledger_after: int
+    ledger_inserted: int
+    ledger_unchanged: int
+    ledger_conflicts: int
     results_before: int
     results_after: int
 
@@ -309,6 +315,142 @@ def durable_counts() -> tuple[int, int]:
     )
 
 
+def ledger_count() -> int:
+    response = (
+        supabase
+        .table(
+            prediction_ledger.TABLE
+        )
+        .select(
+            "prediction_key",
+            count="exact",
+        )
+        .eq(
+            "league",
+            EPL_RUNTIME_CONFIG.identity.identifier,
+        )
+        .execute()
+    )
+
+    if response.count is not None:
+        return int(
+            response.count
+        )
+
+    return len(
+        response.data
+        or []
+    )
+
+
+def persist_prediction_ledger() -> tuple[
+    int,
+    int,
+    dict[str, int],
+]:
+    """Persist canonical prediction state after durable observations."""
+
+    before = ledger_count()
+
+    predictions = (
+        prediction_ledger
+        .build_current_predictions()
+    )
+
+    if predictions.empty:
+        raise RuntimeError(
+            "EPL canonical prediction ledger input is empty"
+        )
+
+    if not (
+        predictions[
+            "prediction_mode"
+        ]
+        == "MARKET_ONLY"
+    ).all():
+        raise RuntimeError(
+            "EPL prediction ledger contains non-MARKET_ONLY state"
+        )
+
+    if (
+        predictions[
+            "structural_applied"
+        ]
+        .astype(bool)
+        .any()
+    ):
+        raise RuntimeError(
+            "EPL prediction ledger unexpectedly applied Structural V2"
+        )
+
+    if predictions[
+        "observation_key"
+    ].isna().any():
+        raise RuntimeError(
+            "EPL prediction ledger contains unlinked observations"
+        )
+
+    metrics = (
+        prediction_ledger
+        .persist_predictions(
+            supabase,
+            predictions,
+        )
+    )
+
+    after = ledger_count()
+
+    inserted = int(
+        metrics[
+            "inserted"
+        ]
+    )
+
+    unchanged = int(
+        metrics[
+            "unchanged"
+        ]
+    )
+
+    conflicts = int(
+        metrics[
+            "conflicts"
+        ]
+    )
+
+    if conflicts != 0:
+        raise RuntimeError(
+            "EPL prediction ledger reported conflicts"
+        )
+
+    if (
+        inserted
+        + unchanged
+        != len(predictions)
+    ):
+        raise RuntimeError(
+            "EPL prediction-ledger metrics do not cover input"
+        )
+
+    if after != (
+        before
+        + inserted
+    ):
+        raise RuntimeError(
+            "EPL prediction-ledger count disagrees with metrics"
+        )
+
+    return (
+        before,
+        after,
+        {
+            "inserted": inserted,
+            "unchanged": unchanged,
+            "conflicts": conflicts,
+        },
+    )
+
+
 def run_cycle() -> EPLLiveCycleResult:
     assert_market_only_runtime()
 
@@ -448,6 +590,12 @@ def run_cycle() -> EPLLiveCycleResult:
             "Persistence metrics do not cover all incoming observations"
         )
 
+    (
+        ledger_before,
+        ledger_after,
+        ledger_metrics,
+    ) = persist_prediction_ledger()
+
     return EPLLiveCycleResult(
         fixture_source_rows=len(
             fixture_snapshots
@@ -485,6 +633,27 @@ def run_cycle() -> EPLLiveCycleResult:
         ),
         observation_conflicts=int(
             metrics[
+                "conflicts"
+            ]
+        ),
+        ledger_before=(
+            ledger_before
+        ),
+        ledger_after=(
+            ledger_after
+        ),
+        ledger_inserted=int(
+            ledger_metrics[
+                "inserted"
+            ]
+        ),
+        ledger_unchanged=int(
+            ledger_metrics[
+                "unchanged"
+            ]
+        ),
+        ledger_conflicts=int(
+            ledger_metrics[
                 "conflicts"
             ]
         ),
@@ -557,6 +726,31 @@ def main() -> None:
     print(
         "conflicts:",
         result.observation_conflicts,
+    )
+
+    print(
+        "prediction ledger before:",
+        result.ledger_before,
+    )
+
+    print(
+        "prediction ledger after:",
+        result.ledger_after,
+    )
+
+    print(
+        "ledger inserted:",
+        result.ledger_inserted,
+    )
+
+    print(
+        "ledger unchanged:",
+        result.ledger_unchanged,
+    )
+
+    print(
+        "ledger conflicts:",
+        result.ledger_conflicts,
     )
 
     print(

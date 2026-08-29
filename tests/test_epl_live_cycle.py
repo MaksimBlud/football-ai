@@ -209,3 +209,87 @@ def test_csv_probability_roundtrip_may_change_exact_float(tmp_path):
         )
         < 1e-15
     )
+
+
+def test_cycle_integrates_prediction_ledger_after_observations():
+    source = open(
+        "epl_live_cycle.py",
+        encoding="utf-8",
+    ).read()
+
+    compact = "".join(
+        source.split()
+    )
+
+    assert (
+        "importpersist_epl_prediction_ledgerasprediction_ledger"
+        in compact
+    )
+
+    run_cycle_source = compact[
+        compact.index(
+            "defrun_cycle()->EPLLiveCycleResult:"
+        ):
+        compact.index(
+            "defmain()->None:"
+        )
+    ]
+
+    observation_position = (
+        run_cycle_source.index(
+            "persistence.persist_observations("
+        )
+    )
+
+    ledger_position = (
+        run_cycle_source.index(
+            "persist_prediction_ledger()"
+        )
+    )
+
+    assert ledger_position > observation_position
+
+
+def test_prediction_ledger_contract_remains_market_only():
+    source = open(
+        "epl_live_cycle.py",
+        encoding="utf-8",
+    ).read()
+
+    compact = "".join(
+        source.split()
+    )
+
+    assert (
+        '=="MARKET_ONLY"'
+        in compact
+    )
+
+    assert (
+        '"structural_applied"'
+        in source
+    )
+
+    assert (
+        "prediction_ledger.persist_predictions("
+        in compact
+    )
+
+
+def test_cycle_does_not_write_finished_results_or_load_model():
+    source = open(
+        "epl_live_cycle.py",
+        encoding="utf-8",
+    ).read()
+
+    assert "persist_results(" not in source
+
+    assert (
+        "football_model_xgboost_elo"
+        not in source
+    )
+
+    assert (
+        "league_structural_v2_shadow"
+        not in source
+    )
