@@ -1,13 +1,7 @@
 name: RPL Operational Bootstrap
 
 on:
-  push:
-    branches:
-      - phase-rpl-operational-complete
-
-concurrency:
-  group: rpl-operational-bootstrap
-  cancel-in-progress: false
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,106 +9,5 @@ permissions:
 jobs:
   bootstrap:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-      THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: "pip"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Check required secrets
-        run: |
-          python - <<'PY'
-          import os
-          required = ("SUPABASE_URL", "SUPABASE_KEY", "THE_ODDS_API_KEY")
-          missing = [name for name in required if not os.getenv(name)]
-          if missing:
-              raise SystemExit("Missing secrets: " + ", ".join(missing))
-          print("PASS: RPL bootstrap secrets available; values not printed")
-          PY
-
-      - name: Compile RPL operational modules
-        run: |
-          python -m py_compile save_rpl_odds_snapshot.py
-          python -m py_compile export_rpl_upcoming_matches.py
-          python -m py_compile generate_rpl_market_shadow.py
-          python -m py_compile persist_rpl_market_observations.py
-          python -m py_compile persist_rpl_prediction_ledger.py
-          python -m py_compile rpl_live_cycle.py
-
-      - name: Verify RPL remains MARKET_ONLY
-        run: |
-          python - <<'PY'
-          from league_runtime_config import RPL_RUNTIME_CONFIG
-          s = RPL_RUNTIME_CONFIG.structural_v2
-          assert s.calibration_status == "CALIBRATION_REQUIRED"
-          assert s.structural_alpha is None
-          assert s.edge_threshold is None
-          print("PASS: RPL remains MARKET_ONLY")
-          PY
-
-      - name: Write first live RPL odds snapshot
-        run: python save_rpl_odds_snapshot.py
-
-      - name: Run first durable RPL live cycle
-        run: python rpl_live_cycle.py
-
-      - name: Replay durable RPL live cycle
-        run: python rpl_live_cycle.py
-
-      - name: Audit durable RPL state
-        run: |
-          python - <<'PY'
-          from database import supabase
-
-          checks = (
-              ("odds_snapshots", "league"),
-              ("league_structural_v2_observations", "league"),
-              ("league_prediction_ledger", "league"),
-              ("league_finished_results", "league"),
-          )
-          counts = {}
-          for table, field in checks:
-              response = (
-                  supabase.table(table)
-                  .select("*", count="exact")
-                  .eq(field, "RPL")
-                  .limit(5)
-                  .execute()
-              )
-              count = int(response.count or 0)
-              counts[table] = count
-              print(table, "count:", count)
-              for row in response.data or []:
-                  print(" ", row)
-
-          if counts["odds_snapshots"] <= 0:
-              raise SystemExit("RPL bootstrap failed: no odds snapshots")
-          if counts["league_structural_v2_observations"] <= 0:
-              raise SystemExit("RPL bootstrap failed: no durable observations")
-          if counts["league_prediction_ledger"] <= 0:
-              raise SystemExit("RPL bootstrap failed: no prediction ledger rows")
-          print("PASS: durable RPL MARKET_ONLY state is live")
-          PY
-
-      - name: Enforce no production artifacts in branch
-        run: |
-          if git diff --name-only origin/main...HEAD | grep -E '\.pkl$'; then
-            echo "Production artifact change detected"
-            exit 1
-          fi
-          echo "PASS: no .pkl changes"
+      - run: echo "RPL bootstrap already completed successfully; retained only as an explicit manual record."
