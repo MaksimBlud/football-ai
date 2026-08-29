@@ -40,6 +40,7 @@ jobs:
           python -m py_compile evaluate_league_predictions.py
           python -m py_compile build_league_calibration_dataset.py
           python -m py_compile scheduled_la_liga_live_cycle.py
+          python -m py_compile persist_la_liga_prediction_ledger.py
           python -m py_compile rpl_source_contract.py
           python -m py_compile export_rpl_upcoming_matches.py
           python -m py_compile generate_rpl_market_shadow.py
@@ -63,6 +64,11 @@ jobs:
 
       - name: Run La Liga scheduled collection tests
         run: python -m pytest -q tests/test_scheduled_la_liga_live_cycle.py tests/test_la_liga_live_workflow.py
+
+      - name: Run La Liga canonical ledger tests
+        run: |
+          python -m pytest -q tests/test_league_prediction_ledger.py
+          python -m pytest -q tests/test_persist_la_liga_prediction_ledger.py
 
       - name: Run EPL odds workflow contract tests
         run: python -m pytest -q tests/test_epl_odds_workflow_contract.py
