@@ -1,0 +1,20 @@
+name: Bundesliga Live Cycle
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "52 */2 * * *"
+permissions:
+  contents: read
+jobs:
+  live-cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install pandas numpy supabase python-dotenv
+      - run: python bundesliga_live_cycle.py
