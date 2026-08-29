@@ -13,6 +13,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
+    env:
+      # Unit tests do not perform network calls, but database.py constructs
+      # the Supabase client at import time. Use inert CI-only placeholders so
+      # collection stays independent from repository secrets.
+      SUPABASE_URL: https://example.supabase.co
+      SUPABASE_KEY: research-pr-validation-placeholder
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
