@@ -1,0 +1,55 @@
+name: Research PR Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  targeted-research-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      # Unit tests do not perform network calls, but database.py constructs
+      # the Supabase client at import time. Use inert CI-only placeholders so
+      # collection stays independent from repository secrets.
+      SUPABASE_URL: https://example.supabase.co
+      SUPABASE_KEY: research-pr-validation-placeholder
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest numpy pandas requests supabase python-dotenv
+
+      - name: Compile research modules
+        run: |
+          python -m py_compile evaluate_league_predictions.py
+          python -m py_compile build_league_calibration_dataset.py
+
+      - name: Run canonical evaluator tests
+        run: python -m pytest -q tests/test_evaluate_league_predictions.py
+
+      - name: Run calibration dataset tests
+        run: python -m pytest -q tests/test_build_league_calibration_dataset.py
+
+      - name: Enforce no production artifact changes
+        run: |
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$'; then
+            echo "Production model artifact change detected"
+            exit 1
+          fi
+          echo "PASS: no .pkl changes in PR"
