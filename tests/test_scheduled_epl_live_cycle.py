@@ -27,7 +27,7 @@ def test_preexisting_finished_results_are_allowed(monkeypatch):
 
 
 def test_finished_result_mutation_is_rejected_even_when_inner_cycle_succeeds(monkeypatch):
-    states = iter(((10, 7), (10, 7), (10, 8)))
+    states = iter(((10, 7), (10, 8)))
 
     def counts():
         return next(states)
@@ -43,7 +43,7 @@ def test_finished_result_mutation_is_rejected_even_when_inner_cycle_succeeds(mon
 
 
 def test_finished_result_mutation_is_rejected_even_when_inner_cycle_fails(monkeypatch):
-    states = iter(((10, 7), (10, 7), (10, 8)))
+    states = iter(((10, 7), (10, 8)))
 
     def counts():
         return next(states)
@@ -60,7 +60,7 @@ def test_finished_result_mutation_is_rejected_even_when_inner_cycle_fails(monkey
 
 
 def test_inner_failure_is_preserved_when_results_are_unchanged(monkeypatch):
-    states = iter(((10, 7), (10, 7), (10, 7)))
+    states = iter(((10, 7), (10, 7)))
 
     def counts():
         return next(states)
