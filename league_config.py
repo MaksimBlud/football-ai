@@ -41,9 +41,19 @@ LA_LIGA = LeagueConfig(
     collection_enabled=True,
 )
 
+RPL = LeagueConfig(
+    identifier="RPL",
+    name="Russian Premier League",
+    timezone="Europe/Moscow",
+    odds_api_sport_key="soccer_russia_premier_league",
+    # Manual-only until the first persisted snapshot and durable-cycle audit pass.
+    collection_enabled=False,
+)
+
 _CONFIGURED = (
     EPL,
     LA_LIGA,
+    RPL,
 )
 
 LEAGUES = {
