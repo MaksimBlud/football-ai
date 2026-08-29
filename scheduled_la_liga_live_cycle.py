@@ -4,13 +4,13 @@ Explicitly grants live Odds API collection only for the scheduled workflow,
 then runs the durable La Liga cycle against the resulting/persisted snapshot
 without permitting a second collection attempt. After the durable-cycle
 attempt, immutable La Liga state is mirrored into both canonical authorities:
-the prediction ledger and generic finished-results table.
+the prediction ledger and generic finished-results table, then the shared
+read-only evaluator validates the canonical settlement path.
 
-A downstream results/evaluation failure must not suppress an already-durable
-pre-kickoff prediction. Likewise, any legacy finished-results state that is
-already durable is eligible for the one-way canonical results bridge. The
-durable-cycle return code remains authoritative when that cycle fails. When
-the durable cycle succeeds, both canonical mirrors are mandatory.
+A downstream legacy-cycle failure must not suppress canonical mirroring of
+state already committed. The durable-cycle return code remains authoritative
+when that cycle fails. When the durable cycle succeeds, both canonical
+mirrors and the read-only canonical evaluator are mandatory.
 """
 
 from __future__ import annotations
@@ -41,6 +41,12 @@ RESULTS_BRIDGE_COMMAND = (
     "persist_la_liga_finished_results.py",
 )
 
+EVALUATION_COMMAND = (
+    "evaluate_league_predictions.py",
+    "--league",
+    "LA_LIGA",
+)
+
 
 def run_command(
     command: Sequence[str],
@@ -66,7 +72,7 @@ def run_scheduled_cycle(
     if collection_rc != 0:
         print(
             "La Liga live collection failed; durable cycle and canonical "
-            f"mirrors skipped (exit code {collection_rc})."
+            f"steps skipped (exit code {collection_rc})."
         )
         return collection_rc
 
@@ -75,10 +81,8 @@ def run_scheduled_cycle(
         runner=runner,
     )
 
-    # The durable La Liga cycle may have committed useful immutable state
-    # before a later downstream step fails. Always attempt both one-way
-    # canonical mirrors after the cycle attempt. Neither bridge fetches a
-    # new result source or mutates the legacy durable authority.
+    # A legacy cycle may commit immutable observations/results before a later
+    # downstream step fails. Always attempt both one-way canonical mirrors.
     ledger_rc = run_command(
         LEDGER_COMMAND,
         runner=runner,
@@ -89,11 +93,20 @@ def run_scheduled_cycle(
         runner=runner,
     )
 
+    # Evaluation is read-only. Run it after both mirror attempts so scheduled
+    # logs expose whether the shared ledger/results authority is internally
+    # readable and settleable. Zero settled fixtures is a valid evaluation.
+    evaluation_rc = run_command(
+        EVALUATION_COMMAND,
+        runner=runner,
+    )
+
     if cycle_rc != 0:
         print(
-            "La Liga durable cycle failed; canonical mirrors were attempted "
+            "La Liga durable cycle failed; canonical steps were attempted "
             "against any immutable state already committed "
-            f"(cycle={cycle_rc}, ledger={ledger_rc}, results={results_rc})."
+            f"(cycle={cycle_rc}, ledger={ledger_rc}, results={results_rc}, "
+            f"evaluation={evaluation_rc})."
         )
         return cycle_rc
 
@@ -110,6 +123,13 @@ def run_scheduled_cycle(
             f"(exit code {results_rc})."
         )
         return results_rc
+
+    if evaluation_rc != 0:
+        print(
+            "La Liga canonical read-only evaluation failed "
+            f"(exit code {evaluation_rc})."
+        )
+        return evaluation_rc
 
     return 0
 
