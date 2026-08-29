@@ -51,8 +51,7 @@ SERIE_A = LeagueConfig(
     name="Serie A",
     timezone="Europe/Rome",
     odds_api_sport_key="soccer_italy_serie_a",
-    # Activated only after the branch live bootstrap passes.
-    collection_enabled=False,
+    collection_enabled=True,
 )
 
 _CONFIGURED = (
