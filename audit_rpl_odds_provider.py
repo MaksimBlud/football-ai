@@ -9,18 +9,22 @@ from league_runtime_config import RPL_RUNTIME_CONFIG
 from the_odds_service import get_h2h_odds
 
 
+REGION = "eu"
+
+
 def main() -> None:
     sport_key = RPL_RUNTIME_CONFIG.identity.odds_sport_key
     if not sport_key:
         raise RuntimeError("RPL Odds API sport key is missing")
 
-    result = get_h2h_odds(sport_key)
+    result = get_h2h_odds(sport_key, regions=REGION)
     events = result["events"]
 
     print("=" * 88)
     print("RPL THE ODDS API PROVIDER AUDIT — READ ONLY")
     print("=" * 88)
     print("sport key:", sport_key)
+    print("region:", REGION)
     print("events:", len(events))
     print("quota:", result["quota"])
 
@@ -34,7 +38,10 @@ def main() -> None:
     )
     print("teams:", teams)
     print("fixtures:")
+    total_bookmakers = 0
     for event in sorted(events, key=lambda row: str(row.get("commence_time", ""))):
+        bookmaker_count = len(event.get("bookmakers") or [])
+        total_bookmakers += bookmaker_count
         print(
             " ",
             event.get("commence_time"),
@@ -43,9 +50,10 @@ def main() -> None:
             "vs",
             event.get("away_team"),
             "| bookmakers=",
-            len(event.get("bookmakers") or []),
+            bookmaker_count,
         )
 
+    print("total bookmaker-event rows:", total_bookmakers)
     print("Supabase writes:", False)
     print("production model used:", False)
     print("Structural V2 used:", False)
