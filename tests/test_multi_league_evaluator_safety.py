@@ -2,7 +2,11 @@ import pandas as pd
 import pytest
 
 import evaluate_league_predictions as evaluator
-from league_config import get_league_config, is_collection_ready
+from league_config import (
+    get_league_config,
+    is_collection_ready,
+    is_operational_collection_ready,
+)
 
 
 def _ledger(league: str, kickoff: str = "2026-08-01T22:30:00Z") -> pd.DataFrame:
@@ -88,8 +92,9 @@ def test_configured_timezones_are_distinct_and_resolved():
     assert {league: get_league_config(league).timezone for league in expected} == expected
 
 
-def test_rpl_registry_matches_scheduled_collection_activation():
-    assert is_collection_ready("RPL") is True
+def test_rpl_registry_distinguishes_generic_and_operational_collection():
+    assert is_collection_ready("RPL") is False
+    assert is_operational_collection_ready("RPL") is True
 
 
 def test_new_market_only_leagues_remain_structural_independent():
