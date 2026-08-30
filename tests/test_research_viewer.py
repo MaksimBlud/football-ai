@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+import pytest
+
 from research_viewer import ACTIVE_LEAGUES, assemble_viewer_payload
 
 
@@ -34,11 +36,23 @@ def _row(**overrides):
     return row
 
 
-def test_viewer_keeps_latest_pre_kickoff_prediction_only():
+def test_viewer_keeps_latest_eligible_snapshot_not_latest_prediction_timestamp():
     rows = [
-        _row(prediction_key="old", prediction_time_utc="2026-08-30T10:00:00Z"),
-        _row(prediction_key="latest", prediction_time_utc="2026-08-30T14:00:00Z"),
-        _row(prediction_key="bad-post", prediction_time_utc="2026-08-30T16:00:00Z"),
+        _row(
+            prediction_key="older-snapshot",
+            snapshot_time_utc="2026-08-30T10:00:00Z",
+            prediction_time_utc="2026-08-30T14:30:00Z",
+        ),
+        _row(
+            prediction_key="latest-snapshot",
+            snapshot_time_utc="2026-08-30T14:00:00Z",
+            prediction_time_utc="2026-08-30T14:10:00Z",
+        ),
+        _row(
+            prediction_key="bad-post-snapshot",
+            snapshot_time_utc="2026-08-30T16:00:00Z",
+            prediction_time_utc="2026-08-30T14:20:00Z",
+        ),
     ]
     payload = assemble_viewer_payload(
         rows,
@@ -46,19 +60,19 @@ def test_viewer_keeps_latest_pre_kickoff_prediction_only():
         now=datetime(2026, 8, 30, 13, 0, tzinfo=timezone.utc),
     )
     assert payload["summary"]["predictions"] == 1
-    assert payload["matches"][0]["prediction_key"] == "latest"
+    assert payload["matches"][0]["prediction_key"] == "latest-snapshot"
     assert payload["matches"][0]["status"] == "UPCOMING"
 
 
-def test_viewer_matches_canonical_finished_result_by_league_identity_and_date():
+def test_viewer_matches_finished_result_using_normalized_team_names():
     payload = assemble_viewer_payload(
-        [_row()],
+        [_row(home_team="Manchester City", away_team="Leeds United")],
         [{
             "league": "EPL",
             "season": "2026-27",
             "match_date": "2026-08-30",
-            "home_team": "Alpha",
-            "away_team": "Beta",
+            "home_team": "Man City",
+            "away_team": "Leeds",
             "home_goals": 2,
             "away_goals": 1,
             "result": "H",
@@ -68,6 +82,45 @@ def test_viewer_matches_canonical_finished_result_by_league_identity_and_date():
     card = payload["matches"][0]
     assert card["status"] == "SETTLED"
     assert card["result"] == {"home_goals": 2, "away_goals": 1, "result": "H"}
+
+
+def test_viewer_uses_league_local_match_date_for_settlement():
+    payload = assemble_viewer_payload(
+        [_row(
+            league="LA_LIGA",
+            prediction_key="LA_LIGA:event-1:pred-1",
+            kickoff_utc="2026-08-30T22:30:00Z",
+            prediction_time_utc="2026-08-30T20:00:00Z",
+            snapshot_time_utc="2026-08-30T20:00:00Z",
+        )],
+        [{
+            "league": "LA_LIGA",
+            "season": "2026-27",
+            "match_date": "2026-08-31",
+            "home_team": "Alpha",
+            "away_team": "Beta",
+            "home_goals": 0,
+            "away_goals": 0,
+            "result": "D",
+        }],
+        now=datetime(2026, 8, 31, 1, 0, tzinfo=timezone.utc),
+    )
+    assert payload["matches"][0]["status"] == "SETTLED"
+
+
+def test_viewer_rejects_duplicate_finished_result_identity():
+    result = {
+        "league": "EPL",
+        "season": "2026-27",
+        "match_date": "2026-08-30",
+        "home_team": "Alpha",
+        "away_team": "Beta",
+        "home_goals": 1,
+        "away_goals": 0,
+        "result": "H",
+    }
+    with pytest.raises(ValueError, match="Duplicate canonical finished-result identity"):
+        assemble_viewer_payload([_row()], [result, dict(result)])
 
 
 def test_viewer_exposes_structural_shadow_without_applying_it():
@@ -94,3 +147,4 @@ def test_viewer_exposes_structural_shadow_without_applying_it():
 def test_viewer_contract_lists_all_operational_leagues():
     payload = assemble_viewer_payload([], [])
     assert tuple(payload["active_leagues"]) == ACTIVE_LEAGUES
+    assert payload["summary"]["awaiting_result"] == 0
