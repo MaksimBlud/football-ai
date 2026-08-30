@@ -28,6 +28,9 @@
     .prob strong { display:block; font-size:18px; }
     .section { margin-top:12px; padding-top:10px; border-top:1px solid #eee; }
     .status { font-size:12px; font-weight:700; padding:4px 7px; border-radius:999px; background:#eef2ff; }
+    .outcome { display:inline-block; margin-left:6px; font-size:12px; font-weight:700; padding:3px 7px; border-radius:999px; }
+    .outcome-win { background:#dcfce7; color:#166534; }
+    .outcome-loss { background:#fee2e2; color:#991b1b; }
     .attention { background:#fff7ed; }
     .muted { color:#6b7280; font-size:13px; }
     .error { padding:14px; border-radius:10px; background:#fee2e2; color:#991b1b; }
@@ -36,9 +39,11 @@
     table { width:100%; border-collapse:collapse; }
     th,td { padding:10px 8px; border-bottom:1px solid #e5e7eb; text-align:left; }
     th { font-size:12px; color:#6b7280; text-transform:uppercase; letter-spacing:.03em; }
-    .stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
+    .stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; }
     .stat-box { background:#f9fafb; border-radius:10px; padding:14px; }
     .stat-box strong { display:block; font-size:24px; margin-top:4px; }
+    .stat-box.win strong { color:#166534; }
+    .stat-box.loss strong { color:#991b1b; }
     @media (max-width:640px){ main{padding:14px} header{padding:18px 14px} .grid{grid-template-columns:1fr} table{font-size:13px} }
   </style>
 </head>
@@ -107,21 +112,25 @@ let activeTab = 'matches';
 const T = {
   ru: {
     title:'Football AI — Исследовательский просмотр', subtitle:'ТОЛЬКО ЧТЕНИЕ · канонические прогнозы · результаты · Structural shadow',
-    matches:'Матчи', stats:'Общая статистика', allLeagues:'Все лиги', allStatuses:'Все статусы', upcoming:'Ближайшие', awaiting:'Ожидаем результат', settled:'Завершённые',
+    matches:'Матчи', stats:'Общая статистика', allLeagues:'Все лиги', allStatuses:'Все статусы', upcoming:'Ближайшие', awaiting:'В игре / ожидаем результат', settled:'Завершённые',
     byKickoff:'По времени матча', byDisagreement:'По расхождению Structural', refresh:'Обновить', predictions:'Прогнозов', kickoff:'Начало', snapshot:'Снимок',
     market:'Рыночный прогноз', pick:'выбор', structural:'Structural shadow', disagreement:'макс. расхождение', applied:'применён к canonical', yes:'да', no:'нет',
     noStructural:'Structural shadow отсутствует для этой канонической записи.', result:'Результат', noMatches:'Нет матчей для выбранного фильтра.', loadError:'Не удалось загрузить канонические данные',
-    byLeague:'По лигам', league:'Лига', total:'Всего', structuralCoverage:'Structural покрытие', avgDisagreement:'Среднее расхождение', marketDistribution:'Распределение рыночных выборов',
-    home:'П1', draw:'X', away:'П2', generated:'Обновлено', statusMap:{UPCOMING:'Ближайший',AWAITING_RESULT:'Ожидаем результат',SETTLED:'Завершён'}
+    byLeague:'По лигам', league:'Лига', total:'Всего', completed:'Завершено', won:'Выигрышные', lost:'Проигрышные', inPlay:'В игре', winRate:'Точность',
+    structuralCoverage:'Structural покрытие', avgDisagreement:'Среднее расхождение', marketDistribution:'Распределение рыночных выборов',
+    home:'П1', draw:'X', away:'П2', generated:'Обновлено', forecastOutcome:'Итог прогноза', wonLabel:'Сыграл', lostLabel:'Не сыграл',
+    statusMap:{UPCOMING:'Ближайший',AWAITING_RESULT:'В игре / ожидаем результат',SETTLED:'Завершён'}
   },
   en: {
     title:'Football AI — Research Viewer', subtitle:'READ-ONLY · canonical predictions · results · Structural shadow',
-    matches:'Matches', stats:'Overall statistics', allLeagues:'All leagues', allStatuses:'All statuses', upcoming:'Upcoming', awaiting:'Awaiting result', settled:'Settled',
+    matches:'Matches', stats:'Overall statistics', allLeagues:'All leagues', allStatuses:'All statuses', upcoming:'Upcoming', awaiting:'In play / awaiting result', settled:'Settled',
     byKickoff:'By kickoff time', byDisagreement:'By Structural disagreement', refresh:'Refresh', predictions:'Predictions', kickoff:'Kickoff', snapshot:'Snapshot',
     market:'Market prediction', pick:'pick', structural:'Structural shadow', disagreement:'max disagreement', applied:'applied to canonical', yes:'yes', no:'no',
     noStructural:'Structural shadow is not available for this canonical record.', result:'Result', noMatches:'No matches for the selected filter.', loadError:'Failed to load canonical data',
-    byLeague:'By league', league:'League', total:'Total', structuralCoverage:'Structural coverage', avgDisagreement:'Average disagreement', marketDistribution:'Market pick distribution',
-    home:'Home', draw:'Draw', away:'Away', generated:'Updated', statusMap:{UPCOMING:'Upcoming',AWAITING_RESULT:'Awaiting result',SETTLED:'Settled'}
+    byLeague:'By league', league:'League', total:'Total', completed:'Completed', won:'Won', lost:'Lost', inPlay:'In play', winRate:'Accuracy',
+    structuralCoverage:'Structural coverage', avgDisagreement:'Average disagreement', marketDistribution:'Market pick distribution',
+    home:'Home', draw:'Draw', away:'Away', generated:'Updated', forecastOutcome:'Prediction outcome', wonLabel:'Won', lostLabel:'Lost',
+    statusMap:{UPCOMING:'Upcoming',AWAITING_RESULT:'In play / awaiting result',SETTLED:'Settled'}
   }
 };
 
@@ -129,6 +138,8 @@ const tr = key => T[lang][key];
 const pct = v => v == null || Number.isNaN(Number(v)) ? '—' : (100*Number(v)).toFixed(1)+'%';
 const dt = v => v ? new Date(v).toLocaleString(lang==='ru'?'ru-RU':'en-GB') : '—';
 const label = p => ({H:'1',D:'X',A:'2'})[p] || p || '—';
+const isSettled = x => x.status==='SETTLED' && x.result && x.market?.pick;
+const isWin = x => isSettled(x) && x.market.pick===x.result.result;
 
 function setLanguage(next){
   lang = next;
@@ -176,6 +187,7 @@ function render(){
     const s=x.structural;
     const attention=(s?.max_abs_delta||0)>=.05?' attention':'';
     const result=x.result?`${x.result.home_goals}:${x.result.away_goals} (${x.result.result})`:'—';
+    const outcome=isSettled(x)?`<span class="outcome ${isWin(x)?'outcome-win':'outcome-loss'}">${isWin(x)?'✓ '+tr('wonLabel'):'✕ '+tr('lostLabel')}</span>`:'';
     return `<article class="card${attention}">
       <div class="top"><div><div class="league">${x.league}</div><div class="teams">${x.home_team} — ${x.away_team}</div></div><span class="status">${T[lang].statusMap[x.status]||x.status}</span></div>
       <div class="meta">${tr('kickoff')}: ${dt(x.kickoff_utc)}<br>${tr('snapshot')}: ${dt(x.snapshot_time_utc)} · ${x.prediction_mode}</div>
@@ -183,7 +195,7 @@ function render(){
         <div class="probs"><div class="prob">1<strong>${pct(x.market.home)}</strong></div><div class="prob">X<strong>${pct(x.market.draw)}</strong></div><div class="prob">2<strong>${pct(x.market.away)}</strong></div></div>
       </div>
       <div class="section">${s?`<strong>${tr('structural')} · ${tr('pick')} ${label(s.pick)}</strong><div class="probs"><div class="prob">1<strong>${pct(s.home)}</strong></div><div class="prob">X<strong>${pct(s.draw)}</strong></div><div class="prob">2<strong>${pct(s.away)}</strong></div></div><div class="muted">${tr('disagreement')}: ${pct(s.max_abs_delta)} · ${tr('applied')}: ${s.applied?tr('yes'):tr('no')}</div>`:`<span class="muted">${tr('noStructural')}</span>`}</div>
-      <div class="section"><strong>${tr('result')}:</strong> ${result}</div>
+      <div class="section"><strong>${tr('result')}:</strong> ${result} ${outcome}</div>
     </article>`;
   }).join('');
 }
@@ -193,16 +205,22 @@ function renderStats(){
   const rows=payload.matches;
   const structuralRows=rows.filter(x=>x.structural);
   const avgDelta=structuralRows.length?structuralRows.reduce((s,x)=>s+(Number(x.structural.max_abs_delta)||0),0)/structuralRows.length:null;
+  const completed=rows.filter(isSettled);
+  const wins=completed.filter(isWin).length;
+  const losses=completed.length-wins;
+  const inPlay=rows.filter(x=>x.status==='AWAITING_RESULT').length;
+  const winRate=completed.length?wins/completed.length:null;
   document.getElementById('statsSummary').innerHTML=[
-    [tr('predictions'),rows.length],[tr('upcoming'),rows.filter(x=>x.status==='UPCOMING').length],[tr('settled'),rows.filter(x=>x.status==='SETTLED').length],
-    [tr('structuralCoverage'),pct(rows.length?structuralRows.length/rows.length:null)],[tr('avgDisagreement'),pct(avgDelta)],[tr('generated'),dt(payload.generated_at_utc)]
-  ].map(([k,v])=>`<div class="stat-box"><span class="muted">${k}</span><strong>${v}</strong></div>`).join('');
+    [tr('predictions'),rows.length,''],[tr('completed'),completed.length,''],[tr('won'),wins,'win'],[tr('lost'),losses,'loss'],[tr('inPlay'),inPlay,''],[tr('upcoming'),rows.filter(x=>x.status==='UPCOMING').length,''],
+    [tr('winRate'),pct(winRate),''],[tr('structuralCoverage'),pct(rows.length?structuralRows.length/rows.length:null),''],[tr('avgDisagreement'),pct(avgDelta),''],[tr('generated'),dt(payload.generated_at_utc),'']
+  ].map(([k,v,c])=>`<div class="stat-box ${c}"><span class="muted">${k}</span><strong>${v}</strong></div>`).join('');
 
-  document.getElementById('leagueStatsHead').innerHTML=[tr('league'),tr('total'),tr('upcoming'),tr('awaiting'),tr('settled'),tr('structuralCoverage'),tr('avgDisagreement')].map(x=>`<th>${x}</th>`).join('');
+  document.getElementById('leagueStatsHead').innerHTML=[tr('league'),tr('total'),tr('completed'),tr('won'),tr('lost'),tr('inPlay'),tr('upcoming'),tr('winRate'),tr('structuralCoverage'),tr('avgDisagreement')].map(x=>`<th>${x}</th>`).join('');
   const leagues=[...new Set(rows.map(x=>x.league))].sort();
   document.getElementById('leagueStatsBody').innerHTML=leagues.map(l=>{
     const r=rows.filter(x=>x.league===l), sr=r.filter(x=>x.structural), avg=sr.length?sr.reduce((s,x)=>s+(Number(x.structural.max_abs_delta)||0),0)/sr.length:null;
-    return `<tr><td><strong>${l}</strong></td><td>${r.length}</td><td>${r.filter(x=>x.status==='UPCOMING').length}</td><td>${r.filter(x=>x.status==='AWAITING_RESULT').length}</td><td>${r.filter(x=>x.status==='SETTLED').length}</td><td>${pct(r.length?sr.length/r.length:null)}</td><td>${pct(avg)}</td></tr>`;
+    const done=r.filter(isSettled), w=done.filter(isWin).length, lost=done.length-w;
+    return `<tr><td><strong>${l}</strong></td><td>${r.length}</td><td>${done.length}</td><td>${w}</td><td>${lost}</td><td>${r.filter(x=>x.status==='AWAITING_RESULT').length}</td><td>${r.filter(x=>x.status==='UPCOMING').length}</td><td>${pct(done.length?w/done.length:null)}</td><td>${pct(r.length?sr.length/r.length:null)}</td><td>${pct(avg)}</td></tr>`;
   }).join('');
 
   const picks={H:0,D:0,A:0}; rows.forEach(x=>{if(picks[x.market?.pick]!==undefined)picks[x.market.pick]++;});
