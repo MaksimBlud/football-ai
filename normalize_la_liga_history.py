@@ -30,15 +30,18 @@ OUTPUT = Path(
 
 # Football-Data name -> canonical project / Odds API name.
 ALIASES = {
+    "Alaves": "Alavés",
     "Ath Bilbao": "Athletic Bilbao",
     "Ath Madrid": "Atlético Madrid",
     "Osasuna": "CA Osasuna",
     "Celta": "Celta Vigo",
     "La Coruna": "Deportivo La Coruña",
     "Elche": "Elche CF",
+    "Espanol": "Espanyol",
     "Malaga": "Málaga",
     "Betis": "Real Betis",
     "Sociedad": "Real Sociedad",
+    "Vallecano": "Rayo Vallecano",
 }
 
 # Current clubs legitimately absent from the 2016-2026
