@@ -39,6 +39,7 @@ jobs:
           python -m py_compile build_league_calibration_dataset.py
           python -m py_compile report_league_calibration_coverage.py
           python -m py_compile audit_league_canonical_data_quality.py
+          python -m py_compile report_multi_league_health.py
           python -m py_compile scheduled_epl_live_cycle.py
           python -m py_compile scheduled_la_liga_live_cycle.py
           python -m py_compile normalize_la_liga_history.py
@@ -67,6 +68,9 @@ jobs:
 
       - name: Run calibration coverage report tests
         run: python -m pytest -q tests/test_report_league_calibration_coverage.py
+
+      - name: Run multi-league health report tests
+        run: python -m pytest -q tests/test_report_multi_league_health.py
 
       - name: Run operational schedule grid tests
         run: python -m pytest -q tests/test_operational_workflow_schedule_grid.py
