@@ -40,6 +40,10 @@ jobs:
           python -m py_compile report_league_calibration_coverage.py
           python -m py_compile audit_league_canonical_data_quality.py
           python -m py_compile report_multi_league_health.py
+          python -m py_compile advanced_oos_evaluator.py
+          python -m py_compile validate_research_experiments.py
+          python -m py_compile analyze_multi_league_market_movement.py
+          python -m py_compile trace_canonical_prediction.py
           python -m py_compile scheduled_epl_live_cycle.py
           python -m py_compile scheduled_la_liga_live_cycle.py
           python -m py_compile normalize_la_liga_history.py
@@ -71,6 +75,11 @@ jobs:
 
       - name: Run multi-league health report tests
         run: python -m pytest -q tests/test_report_multi_league_health.py
+
+      - name: Run Observe and Measure tooling tests
+        run: |
+          python validate_research_experiments.py
+          python -m pytest -q tests/test_observe_measure_tooling.py
 
       - name: Run operational schedule grid tests
         run: python -m pytest -q tests/test_operational_workflow_schedule_grid.py
