@@ -1,0 +1,62 @@
+name: Research Viewer PR Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "research_viewer.py"
+      - "research_viewer_app.py"
+      - "static/research_viewer.html"
+      - "tests/test_research_viewer.py"
+      - ".github/workflows/research-viewer-pr-validation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  research-viewer-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_URL: https://example.supabase.co
+      SUPABASE_KEY: research-viewer-validation-placeholder
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pandas fastapi uvicorn supabase python-dotenv
+
+      - name: Compile viewer modules
+        run: |
+          python -m py_compile research_viewer.py
+          python -m py_compile research_viewer_app.py
+
+      - name: Run Research Viewer tests
+        run: python -m pytest -q tests/test_research_viewer.py
+
+      - name: Enforce read-only app contract
+        run: |
+          if grep -En '(@app\.(post|put|patch|delete)|\.insert\(|\.update\(|\.upsert\(|\.delete\()' research_viewer.py research_viewer_app.py; then
+            echo "Write-capable Research Viewer code detected"
+            exit 1
+          fi
+          echo "PASS: viewer is read-only"
+
+      - name: Enforce no production artifact changes
+        run: |
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -E '\.pkl$'; then
+            echo "Production model artifact change detected"
+            exit 1
+          fi
+          echo "PASS: no .pkl changes in PR"

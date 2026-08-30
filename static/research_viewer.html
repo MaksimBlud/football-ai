@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Football AI — Research Viewer</title>
+  <style>
+    :root { font-family: Inter, system-ui, sans-serif; color:#111; background:#f5f6f8; }
+    body { margin:0; }
+    header { padding:20px 24px; background:#111827; color:white; }
+    header h1 { margin:0 0 6px; font-size:22px; }
+    header p { margin:0; opacity:.8; }
+    main { max-width:1280px; margin:auto; padding:20px; }
+    .controls,.summary { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+    select,button { padding:9px 12px; border:1px solid #d1d5db; border-radius:8px; background:white; }
+    .pill { background:white; border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:14px; }
+    .card { background:white; border:1px solid #e5e7eb; border-radius:12px; padding:14px; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+    .top { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
+    .league { font-size:12px; font-weight:700; letter-spacing:.04em; color:#4b5563; }
+    .teams { font-size:18px; font-weight:700; margin:6px 0; }
+    .meta { color:#6b7280; font-size:13px; }
+    .probs { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; }
+    .prob { background:#f9fafb; border-radius:8px; padding:8px; text-align:center; }
+    .prob strong { display:block; font-size:18px; }
+    .section { margin-top:12px; padding-top:10px; border-top:1px solid #eee; }
+    .status { font-size:12px; font-weight:700; padding:4px 7px; border-radius:999px; background:#eef2ff; }
+    .attention { background:#fff7ed; }
+    .muted { color:#6b7280; font-size:13px; }
+    .error { padding:14px; border-radius:10px; background:#fee2e2; color:#991b1b; }
+    .empty { padding:24px; text-align:center; color:#6b7280; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Football AI — Research Viewer</h1>
+  <p>READ-ONLY · canonical predictions · результаты · Structural shadow</p>
+</header>
+<main>
+  <div class="controls">
+    <select id="league"><option value="ALL">Все лиги</option></select>
+    <select id="status">
+      <option value="ALL">Все статусы</option>
+      <option value="UPCOMING">Ближайшие</option>
+      <option value="AWAITING_RESULT">Ждём результат</option>
+      <option value="SETTLED">Завершённые</option>
+    </select>
+    <select id="sort">
+      <option value="kickoff">По времени матча</option>
+      <option value="disagreement">По Structural disagreement</option>
+    </select>
+    <button id="refresh">Обновить</button>
+  </div>
+  <div id="summary" class="summary"></div>
+  <div id="error"></div>
+  <div id="grid" class="grid"></div>
+</main>
+<script>
+let payload = null;
+const pct = v => v == null ? '—' : (100*v).toFixed(1)+'%';
+const dt = v => v ? new Date(v).toLocaleString() : '—';
+const label = p => ({H:'1',D:'X',A:'2'})[p] || p || '—';
+
+function render(){
+  if(!payload) return;
+  const league = document.getElementById('league').value;
+  const status = document.getElementById('status').value;
+  const sort = document.getElementById('sort').value;
+  let rows = payload.matches.filter(x => (league==='ALL'||x.league===league) && (status==='ALL'||x.status===status));
+  if(sort==='disagreement') rows.sort((a,b)=>(b.structural?.max_abs_delta||0)-(a.structural?.max_abs_delta||0));
+  else rows.sort((a,b)=>new Date(a.kickoff_utc)-new Date(b.kickoff_utc));
+
+  document.getElementById('summary').innerHTML = [
+    ['Predictions', payload.summary.predictions], ['Upcoming',payload.summary.upcoming],
+    ['Awaiting result',payload.summary.awaiting_result||0], ['Settled',payload.summary.settled]
+  ].map(([k,v])=>`<div class="pill"><strong>${v}</strong> ${k}</div>`).join('');
+
+  const grid=document.getElementById('grid');
+  if(!rows.length){ grid.innerHTML='<div class="empty">Нет матчей для выбранного фильтра.</div>'; return; }
+  grid.innerHTML=rows.map(x=>{
+    const structural=x.structural;
+    const attention=(structural?.max_abs_delta||0)>=0.05?' attention':'';
+    const result=x.result?`${x.result.home_goals}:${x.result.away_goals} (${x.result.result})`:'—';
+    return `<article class="card${attention}">
+      <div class="top"><div><div class="league">${x.league}</div><div class="teams">${x.home_team} — ${x.away_team}</div></div><span class="status">${x.status}</span></div>
+      <div class="meta">Kickoff: ${dt(x.kickoff_utc)}<br>Prediction: ${dt(x.prediction_time_utc)} · ${x.prediction_mode}</div>
+      <div class="section"><strong>MARKET_ONLY · pick ${label(x.market.pick)}</strong>
+        <div class="probs"><div class="prob">1<strong>${pct(x.market.home)}</strong></div><div class="prob">X<strong>${pct(x.market.draw)}</strong></div><div class="prob">2<strong>${pct(x.market.away)}</strong></div></div>
+      </div>
+      <div class="section">${structural ? `<strong>Structural shadow · pick ${label(structural.pick)}</strong><div class="probs"><div class="prob">1<strong>${pct(structural.home)}</strong></div><div class="prob">X<strong>${pct(structural.draw)}</strong></div><div class="prob">2<strong>${pct(structural.away)}</strong></div></div><div class="muted">max disagreement: ${pct(structural.max_abs_delta)} · applied to canonical: ${structural.applied?'yes':'no'}</div>` : '<span class="muted">Structural shadow отсутствует для этой canonical записи.</span>'}</div>
+      <div class="section"><strong>Результат:</strong> ${result}</div>
+    </article>`;
+  }).join('');
+}
+
+async function load(){
+  document.getElementById('error').innerHTML='';
+  try{
+    const r=await fetch('/api/research-viewer',{cache:'no-store'});
+    if(!r.ok) throw new Error(await r.text());
+    payload=await r.json();
+    const select=document.getElementById('league');
+    const current=select.value;
+    select.innerHTML='<option value="ALL">Все лиги</option>'+payload.active_leagues.map(x=>`<option value="${x}">${x}</option>`).join('');
+    select.value=current && [...select.options].some(o=>o.value===current)?current:'ALL';
+    render();
+  }catch(e){document.getElementById('error').innerHTML=`<div class="error">Не удалось загрузить canonical данные: ${e.message}</div>`;}
+}
+['league','status','sort'].forEach(id=>document.getElementById(id).addEventListener('change',render));
+document.getElementById('refresh').addEventListener('click',load);
+load(); setInterval(load,60000);
+</script>
+</body>
+</html>
