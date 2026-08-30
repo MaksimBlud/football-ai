@@ -5,17 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Football AI — Research Viewer</title>
   <style>
-    :root { font-family: Inter, system-ui, sans-serif; color:#111; background:#f5f6f8; }
+    :root { font-family: Inter, system-ui, sans-serif; color:#111827; background:#f5f6f8; }
     body { margin:0; }
     header { padding:20px 24px; background:#111827; color:white; }
     header h1 { margin:0 0 6px; font-size:22px; }
     header p { margin:0; opacity:.8; }
     main { max-width:1280px; margin:auto; padding:20px; }
-    .controls,.summary { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
-    select,button { padding:9px 12px; border:1px solid #d1d5db; border-radius:8px; background:white; }
+    .toolbar,.controls,.summary,.tabs { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; align-items:center; }
+    .toolbar { justify-content:space-between; }
+    select,button { padding:9px 12px; border:1px solid #d1d5db; border-radius:8px; background:white; cursor:pointer; }
+    button.active { background:#111827; color:white; border-color:#111827; }
     .pill { background:white; border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px; }
     .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:14px; }
-    .card { background:white; border:1px solid #e5e7eb; border-radius:12px; padding:14px; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+    .card,.panel { background:white; border:1px solid #e5e7eb; border-radius:12px; padding:14px; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+    .panel { margin-bottom:16px; }
     .top { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
     .league { font-size:12px; font-weight:700; letter-spacing:.04em; color:#4b5563; }
     .teams { font-size:18px; font-weight:700; margin:6px 0; }
@@ -29,86 +32,207 @@
     .muted { color:#6b7280; font-size:13px; }
     .error { padding:14px; border-radius:10px; background:#fee2e2; color:#991b1b; }
     .empty { padding:24px; text-align:center; color:#6b7280; }
+    .hidden { display:none; }
+    table { width:100%; border-collapse:collapse; }
+    th,td { padding:10px 8px; border-bottom:1px solid #e5e7eb; text-align:left; }
+    th { font-size:12px; color:#6b7280; text-transform:uppercase; letter-spacing:.03em; }
+    .stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
+    .stat-box { background:#f9fafb; border-radius:10px; padding:14px; }
+    .stat-box strong { display:block; font-size:24px; margin-top:4px; }
+    @media (max-width:640px){ main{padding:14px} header{padding:18px 14px} .grid{grid-template-columns:1fr} table{font-size:13px} }
   </style>
 </head>
 <body>
 <header>
-  <h1>Football AI — Research Viewer</h1>
-  <p>READ-ONLY · canonical predictions · результаты · Structural shadow</p>
+  <div class="toolbar">
+    <div>
+      <h1 id="title">Football AI — Исследовательский просмотр</h1>
+      <p id="subtitle">ТОЛЬКО ЧТЕНИЕ · канонические прогнозы · результаты · Structural shadow</p>
+    </div>
+    <div>
+      <button id="langRu" class="active">RU</button>
+      <button id="langEn">EN</button>
+    </div>
+  </div>
 </header>
 <main>
-  <div class="controls">
-    <select id="league"><option value="ALL">Все лиги</option></select>
-    <select id="status">
-      <option value="ALL">Все статусы</option>
-      <option value="UPCOMING">Ближайшие</option>
-      <option value="AWAITING_RESULT">Ждём результат</option>
-      <option value="SETTLED">Завершённые</option>
-    </select>
-    <select id="sort">
-      <option value="kickoff">По времени матча</option>
-      <option value="disagreement">По Structural disagreement</option>
-    </select>
-    <button id="refresh">Обновить</button>
+  <div class="tabs">
+    <button id="tabMatches" class="active">Матчи</button>
+    <button id="tabStats">Общая статистика</button>
   </div>
-  <div id="summary" class="summary"></div>
-  <div id="error"></div>
-  <div id="grid" class="grid"></div>
+
+  <section id="matchesView">
+    <div class="controls">
+      <select id="league"><option value="ALL">Все лиги</option></select>
+      <select id="status">
+        <option value="ALL">Все статусы</option>
+        <option value="UPCOMING">Ближайшие</option>
+        <option value="AWAITING_RESULT">Ожидаем результат</option>
+        <option value="SETTLED">Завершённые</option>
+      </select>
+      <select id="sort">
+        <option value="kickoff">По времени матча</option>
+        <option value="disagreement">По расхождению Structural</option>
+      </select>
+      <button id="refresh">Обновить</button>
+    </div>
+    <div id="summary" class="summary"></div>
+    <div id="error"></div>
+    <div id="grid" class="grid"></div>
+  </section>
+
+  <section id="statsView" class="hidden">
+    <div id="statsError"></div>
+    <div id="statsSummary" class="stat-grid"></div>
+    <div class="panel">
+      <h2 id="leagueStatsTitle">По лигам</h2>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr id="leagueStatsHead"></tr></thead>
+          <tbody id="leagueStatsBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <h2 id="marketStatsTitle">Распределение рыночных выборов</h2>
+      <div id="marketStats" class="stat-grid"></div>
+    </div>
+  </section>
 </main>
 <script>
 let payload = null;
-const pct = v => v == null ? '—' : (100*v).toFixed(1)+'%';
-const dt = v => v ? new Date(v).toLocaleString() : '—';
+let lang = 'ru';
+let activeTab = 'matches';
+
+const T = {
+  ru: {
+    title:'Football AI — Исследовательский просмотр', subtitle:'ТОЛЬКО ЧТЕНИЕ · канонические прогнозы · результаты · Structural shadow',
+    matches:'Матчи', stats:'Общая статистика', allLeagues:'Все лиги', allStatuses:'Все статусы', upcoming:'Ближайшие', awaiting:'Ожидаем результат', settled:'Завершённые',
+    byKickoff:'По времени матча', byDisagreement:'По расхождению Structural', refresh:'Обновить', predictions:'Прогнозов', kickoff:'Начало', snapshot:'Снимок',
+    market:'Рыночный прогноз', pick:'выбор', structural:'Structural shadow', disagreement:'макс. расхождение', applied:'применён к canonical', yes:'да', no:'нет',
+    noStructural:'Structural shadow отсутствует для этой канонической записи.', result:'Результат', noMatches:'Нет матчей для выбранного фильтра.', loadError:'Не удалось загрузить канонические данные',
+    byLeague:'По лигам', league:'Лига', total:'Всего', structuralCoverage:'Structural покрытие', avgDisagreement:'Среднее расхождение', marketDistribution:'Распределение рыночных выборов',
+    home:'П1', draw:'X', away:'П2', generated:'Обновлено', statusMap:{UPCOMING:'Ближайший',AWAITING_RESULT:'Ожидаем результат',SETTLED:'Завершён'}
+  },
+  en: {
+    title:'Football AI — Research Viewer', subtitle:'READ-ONLY · canonical predictions · results · Structural shadow',
+    matches:'Matches', stats:'Overall statistics', allLeagues:'All leagues', allStatuses:'All statuses', upcoming:'Upcoming', awaiting:'Awaiting result', settled:'Settled',
+    byKickoff:'By kickoff time', byDisagreement:'By Structural disagreement', refresh:'Refresh', predictions:'Predictions', kickoff:'Kickoff', snapshot:'Snapshot',
+    market:'Market prediction', pick:'pick', structural:'Structural shadow', disagreement:'max disagreement', applied:'applied to canonical', yes:'yes', no:'no',
+    noStructural:'Structural shadow is not available for this canonical record.', result:'Result', noMatches:'No matches for the selected filter.', loadError:'Failed to load canonical data',
+    byLeague:'By league', league:'League', total:'Total', structuralCoverage:'Structural coverage', avgDisagreement:'Average disagreement', marketDistribution:'Market pick distribution',
+    home:'Home', draw:'Draw', away:'Away', generated:'Updated', statusMap:{UPCOMING:'Upcoming',AWAITING_RESULT:'Awaiting result',SETTLED:'Settled'}
+  }
+};
+
+const tr = key => T[lang][key];
+const pct = v => v == null || Number.isNaN(Number(v)) ? '—' : (100*Number(v)).toFixed(1)+'%';
+const dt = v => v ? new Date(v).toLocaleString(lang==='ru'?'ru-RU':'en-GB') : '—';
 const label = p => ({H:'1',D:'X',A:'2'})[p] || p || '—';
+
+function setLanguage(next){
+  lang = next;
+  document.documentElement.lang = lang;
+  document.getElementById('langRu').classList.toggle('active',lang==='ru');
+  document.getElementById('langEn').classList.toggle('active',lang==='en');
+  document.getElementById('title').textContent=tr('title');
+  document.getElementById('subtitle').textContent=tr('subtitle');
+  document.getElementById('tabMatches').textContent=tr('matches');
+  document.getElementById('tabStats').textContent=tr('stats');
+  document.getElementById('league').options[0].text=tr('allLeagues');
+  const s=document.getElementById('status');
+  s.options[0].text=tr('allStatuses'); s.options[1].text=tr('upcoming'); s.options[2].text=tr('awaiting'); s.options[3].text=tr('settled');
+  const sort=document.getElementById('sort'); sort.options[0].text=tr('byKickoff'); sort.options[1].text=tr('byDisagreement');
+  document.getElementById('refresh').textContent=tr('refresh');
+  document.getElementById('leagueStatsTitle').textContent=tr('byLeague');
+  document.getElementById('marketStatsTitle').textContent=tr('marketDistribution');
+  render(); renderStats();
+}
+
+function switchTab(next){
+  activeTab=next;
+  document.getElementById('tabMatches').classList.toggle('active',next==='matches');
+  document.getElementById('tabStats').classList.toggle('active',next==='stats');
+  document.getElementById('matchesView').classList.toggle('hidden',next!=='matches');
+  document.getElementById('statsView').classList.toggle('hidden',next!=='stats');
+}
 
 function render(){
   if(!payload) return;
-  const league = document.getElementById('league').value;
-  const status = document.getElementById('status').value;
-  const sort = document.getElementById('sort').value;
-  let rows = payload.matches.filter(x => (league==='ALL'||x.league===league) && (status==='ALL'||x.status===status));
+  const league=document.getElementById('league').value;
+  const status=document.getElementById('status').value;
+  const sort=document.getElementById('sort').value;
+  let rows=payload.matches.filter(x=>(league==='ALL'||x.league===league)&&(status==='ALL'||x.status===status));
   if(sort==='disagreement') rows.sort((a,b)=>(b.structural?.max_abs_delta||0)-(a.structural?.max_abs_delta||0));
   else rows.sort((a,b)=>new Date(a.kickoff_utc)-new Date(b.kickoff_utc));
 
-  document.getElementById('summary').innerHTML = [
-    ['Predictions', payload.summary.predictions], ['Upcoming',payload.summary.upcoming],
-    ['Awaiting result',payload.summary.awaiting_result||0], ['Settled',payload.summary.settled]
+  document.getElementById('summary').innerHTML=[
+    [tr('predictions'),payload.summary.predictions],[tr('upcoming'),payload.summary.upcoming],[tr('awaiting'),payload.summary.awaiting_result||0],[tr('settled'),payload.summary.settled]
   ].map(([k,v])=>`<div class="pill"><strong>${v}</strong> ${k}</div>`).join('');
 
   const grid=document.getElementById('grid');
-  if(!rows.length){ grid.innerHTML='<div class="empty">Нет матчей для выбранного фильтра.</div>'; return; }
+  if(!rows.length){grid.innerHTML=`<div class="empty">${tr('noMatches')}</div>`;return;}
   grid.innerHTML=rows.map(x=>{
-    const structural=x.structural;
-    const attention=(structural?.max_abs_delta||0)>=0.05?' attention':'';
+    const s=x.structural;
+    const attention=(s?.max_abs_delta||0)>=.05?' attention':'';
     const result=x.result?`${x.result.home_goals}:${x.result.away_goals} (${x.result.result})`:'—';
     return `<article class="card${attention}">
-      <div class="top"><div><div class="league">${x.league}</div><div class="teams">${x.home_team} — ${x.away_team}</div></div><span class="status">${x.status}</span></div>
-      <div class="meta">Kickoff: ${dt(x.kickoff_utc)}<br>Prediction: ${dt(x.prediction_time_utc)} · ${x.prediction_mode}</div>
-      <div class="section"><strong>MARKET_ONLY · pick ${label(x.market.pick)}</strong>
+      <div class="top"><div><div class="league">${x.league}</div><div class="teams">${x.home_team} — ${x.away_team}</div></div><span class="status">${T[lang].statusMap[x.status]||x.status}</span></div>
+      <div class="meta">${tr('kickoff')}: ${dt(x.kickoff_utc)}<br>${tr('snapshot')}: ${dt(x.snapshot_time_utc)} · ${x.prediction_mode}</div>
+      <div class="section"><strong>${tr('market')} · ${tr('pick')} ${label(x.market.pick)}</strong>
         <div class="probs"><div class="prob">1<strong>${pct(x.market.home)}</strong></div><div class="prob">X<strong>${pct(x.market.draw)}</strong></div><div class="prob">2<strong>${pct(x.market.away)}</strong></div></div>
       </div>
-      <div class="section">${structural ? `<strong>Structural shadow · pick ${label(structural.pick)}</strong><div class="probs"><div class="prob">1<strong>${pct(structural.home)}</strong></div><div class="prob">X<strong>${pct(structural.draw)}</strong></div><div class="prob">2<strong>${pct(structural.away)}</strong></div></div><div class="muted">max disagreement: ${pct(structural.max_abs_delta)} · applied to canonical: ${structural.applied?'yes':'no'}</div>` : '<span class="muted">Structural shadow отсутствует для этой canonical записи.</span>'}</div>
-      <div class="section"><strong>Результат:</strong> ${result}</div>
+      <div class="section">${s?`<strong>${tr('structural')} · ${tr('pick')} ${label(s.pick)}</strong><div class="probs"><div class="prob">1<strong>${pct(s.home)}</strong></div><div class="prob">X<strong>${pct(s.draw)}</strong></div><div class="prob">2<strong>${pct(s.away)}</strong></div></div><div class="muted">${tr('disagreement')}: ${pct(s.max_abs_delta)} · ${tr('applied')}: ${s.applied?tr('yes'):tr('no')}</div>`:`<span class="muted">${tr('noStructural')}</span>`}</div>
+      <div class="section"><strong>${tr('result')}:</strong> ${result}</div>
     </article>`;
   }).join('');
 }
 
+function renderStats(){
+  if(!payload) return;
+  const rows=payload.matches;
+  const structuralRows=rows.filter(x=>x.structural);
+  const avgDelta=structuralRows.length?structuralRows.reduce((s,x)=>s+(Number(x.structural.max_abs_delta)||0),0)/structuralRows.length:null;
+  document.getElementById('statsSummary').innerHTML=[
+    [tr('predictions'),rows.length],[tr('upcoming'),rows.filter(x=>x.status==='UPCOMING').length],[tr('settled'),rows.filter(x=>x.status==='SETTLED').length],
+    [tr('structuralCoverage'),pct(rows.length?structuralRows.length/rows.length:null)],[tr('avgDisagreement'),pct(avgDelta)],[tr('generated'),dt(payload.generated_at_utc)]
+  ].map(([k,v])=>`<div class="stat-box"><span class="muted">${k}</span><strong>${v}</strong></div>`).join('');
+
+  document.getElementById('leagueStatsHead').innerHTML=[tr('league'),tr('total'),tr('upcoming'),tr('awaiting'),tr('settled'),tr('structuralCoverage'),tr('avgDisagreement')].map(x=>`<th>${x}</th>`).join('');
+  const leagues=[...new Set(rows.map(x=>x.league))].sort();
+  document.getElementById('leagueStatsBody').innerHTML=leagues.map(l=>{
+    const r=rows.filter(x=>x.league===l), sr=r.filter(x=>x.structural), avg=sr.length?sr.reduce((s,x)=>s+(Number(x.structural.max_abs_delta)||0),0)/sr.length:null;
+    return `<tr><td><strong>${l}</strong></td><td>${r.length}</td><td>${r.filter(x=>x.status==='UPCOMING').length}</td><td>${r.filter(x=>x.status==='AWAITING_RESULT').length}</td><td>${r.filter(x=>x.status==='SETTLED').length}</td><td>${pct(r.length?sr.length/r.length:null)}</td><td>${pct(avg)}</td></tr>`;
+  }).join('');
+
+  const picks={H:0,D:0,A:0}; rows.forEach(x=>{if(picks[x.market?.pick]!==undefined)picks[x.market.pick]++;});
+  document.getElementById('marketStats').innerHTML=[[tr('home'),picks.H],[tr('draw'),picks.D],[tr('away'),picks.A]].map(([k,v])=>`<div class="stat-box"><span class="muted">${k}</span><strong>${v}</strong></div>`).join('');
+}
+
 async function load(){
   document.getElementById('error').innerHTML='';
+  document.getElementById('statsError').innerHTML='';
   try{
     const r=await fetch('/api/research-viewer',{cache:'no-store'});
     if(!r.ok) throw new Error(await r.text());
     payload=await r.json();
-    const select=document.getElementById('league');
-    const current=select.value;
-    select.innerHTML='<option value="ALL">Все лиги</option>'+payload.active_leagues.map(x=>`<option value="${x}">${x}</option>`).join('');
-    select.value=current && [...select.options].some(o=>o.value===current)?current:'ALL';
-    render();
-  }catch(e){document.getElementById('error').innerHTML=`<div class="error">Не удалось загрузить canonical данные: ${e.message}</div>`;}
+    const select=document.getElementById('league'),current=select.value;
+    select.innerHTML=`<option value="ALL">${tr('allLeagues')}</option>`+payload.active_leagues.map(x=>`<option value="${x}">${x}</option>`).join('');
+    select.value=current&&[...select.options].some(o=>o.value===current)?current:'ALL';
+    render(); renderStats();
+  }catch(e){
+    const html=`<div class="error">${tr('loadError')}: ${e.message}</div>`;
+    document.getElementById('error').innerHTML=html; document.getElementById('statsError').innerHTML=html;
+  }
 }
+
 ['league','status','sort'].forEach(id=>document.getElementById(id).addEventListener('change',render));
 document.getElementById('refresh').addEventListener('click',load);
-load(); setInterval(load,60000);
+document.getElementById('langRu').addEventListener('click',()=>setLanguage('ru'));
+document.getElementById('langEn').addEventListener('click',()=>setLanguage('en'));
+document.getElementById('tabMatches').addEventListener('click',()=>switchTab('matches'));
+document.getElementById('tabStats').addEventListener('click',()=>switchTab('stats'));
+setLanguage('ru'); load(); setInterval(load,60000);
 </script>
 </body>
 </html>
