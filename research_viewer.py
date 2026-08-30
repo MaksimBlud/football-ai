@@ -3,6 +3,10 @@
 This module never writes to Supabase, never loads production model artifacts,
 and never triggers prediction/training code. It only projects canonical ledger
 and finished-result state for human inspection.
+
+Settlement identity intentionally mirrors ``evaluate_league_predictions``:
+league-local match date plus normalized home/away team names. The viewer also
+uses the canonical latest eligible pre-kickoff snapshot per league/event.
 """
 
 from __future__ import annotations
@@ -11,6 +15,9 @@ from datetime import datetime, timezone
 from typing import Any
 
 import pandas as pd
+
+from league_config import get_league_config
+from team_names import normalize_team_name
 
 
 LEDGER_COLUMNS = (
@@ -42,24 +49,33 @@ def _utc(value: Any) -> pd.Timestamp:
     return pd.to_datetime(value, utc=True, errors="coerce")
 
 
+def _team_key(value: Any) -> str:
+    return normalize_team_name(str(value))
+
+
 def _result_key(row: pd.Series) -> tuple[str, str, str, str]:
     date_value = pd.to_datetime(row["match_date"], errors="coerce")
     date_text = date_value.date().isoformat() if pd.notna(date_value) else ""
     return (
         str(row["league"]),
-        str(row["home_team"]),
-        str(row["away_team"]),
+        _team_key(row["home_team"]),
+        _team_key(row["away_team"]),
         date_text,
     )
 
 
 def _ledger_result_key(row: pd.Series) -> tuple[str, str, str, str]:
+    league = str(row["league"])
     kickoff = _utc(row["kickoff_utc"])
-    date_text = kickoff.date().isoformat() if pd.notna(kickoff) else ""
+    if pd.isna(kickoff):
+        date_text = ""
+    else:
+        timezone_name = get_league_config(league).timezone
+        date_text = kickoff.tz_convert(timezone_name).date().isoformat()
     return (
-        str(row["league"]),
-        str(row["home_team"]),
-        str(row["away_team"]),
+        league,
+        _team_key(row["home_team"]),
+        _team_key(row["away_team"]),
         date_text,
     )
 
@@ -96,35 +112,59 @@ def assemble_viewer_payload(
         return {
             "generated_at_utc": now_ts.isoformat(),
             "active_leagues": list(ACTIVE_LEAGUES),
-            "summary": {"predictions": 0, "upcoming": 0, "settled": 0},
+            "summary": {
+                "predictions": 0,
+                "upcoming": 0,
+                "settled": 0,
+                "awaiting_result": 0,
+            },
             "matches": [],
         }
 
     required = {
-        "prediction_key", "league", "event_id", "home_team", "away_team",
-        "kickoff_utc", "prediction_time_utc", "market_home_prob",
-        "market_draw_prob", "market_away_prob", "market_pick",
+        "prediction_key",
+        "league",
+        "event_id",
+        "home_team",
+        "away_team",
+        "kickoff_utc",
+        "prediction_time_utc",
+        "snapshot_time_utc",
+        "market_home_prob",
+        "market_draw_prob",
+        "market_away_prob",
+        "market_pick",
         "prediction_mode",
     }
     missing = required - set(ledger.columns)
     if missing:
         raise ValueError("Missing ledger columns: " + ", ".join(sorted(missing)))
 
-    ledger["kickoff_utc"] = pd.to_datetime(ledger["kickoff_utc"], utc=True, errors="coerce")
+    ledger["kickoff_utc"] = pd.to_datetime(
+        ledger["kickoff_utc"], utc=True, errors="coerce"
+    )
     ledger["prediction_time_utc"] = pd.to_datetime(
         ledger["prediction_time_utc"], utc=True, errors="coerce"
     )
-    ledger = ledger.dropna(subset=["kickoff_utc", "prediction_time_utc"])
-    ledger = ledger[ledger["prediction_time_utc"] < ledger["kickoff_utc"]]
+    ledger["snapshot_time_utc"] = pd.to_datetime(
+        ledger["snapshot_time_utc"], utc=True, errors="coerce"
+    )
+    ledger = ledger.dropna(
+        subset=["kickoff_utc", "prediction_time_utc", "snapshot_time_utc"]
+    )
+    ledger = ledger[ledger["snapshot_time_utc"] < ledger["kickoff_utc"]]
 
-    # Viewer contract: one latest eligible pre-kickoff state per league/event.
-    ledger = ledger.sort_values("prediction_time_utc")
+    # Canonical contract: latest eligible pre-kickoff snapshot per league/event.
+    ledger = ledger.sort_values(["league", "event_id", "snapshot_time_utc"])
     ledger = ledger.drop_duplicates(subset=["league", "event_id"], keep="last")
 
     result_map: dict[tuple[str, str, str, str], dict[str, Any]] = {}
     if not results.empty:
         for _, row in results.iterrows():
-            result_map[_result_key(row)] = row.to_dict()
+            key = _result_key(row)
+            if key in result_map:
+                raise ValueError(f"Duplicate canonical finished-result identity: {key!r}")
+            result_map[key] = row.to_dict()
 
     cards: list[dict[str, Any]] = []
     for _, row in ledger.sort_values("kickoff_utc").iterrows():
@@ -141,13 +181,14 @@ def assemble_viewer_payload(
             "pick": row.get("market_pick"),
             "pick_probability": _prob(row.get("market_pick_probability")),
         }
+
         structural = None
         structural_values = [
             row.get("structural_home_prob"),
             row.get("structural_draw_prob"),
             row.get("structural_away_prob"),
         ]
-        if any(value is not None and not pd.isna(value) for value in structural_values):
+        if all(value is not None and not pd.isna(value) for value in structural_values):
             deltas = [
                 float(row.get("structural_home_prob")) - float(row.get("market_home_prob")),
                 float(row.get("structural_draw_prob")) - float(row.get("market_draw_prob")),
@@ -181,6 +222,7 @@ def assemble_viewer_payload(
             "away_team": row["away_team"],
             "kickoff_utc": _iso(kickoff),
             "prediction_time_utc": _iso(row["prediction_time_utc"]),
+            "snapshot_time_utc": _iso(row["snapshot_time_utc"]),
             "hours_to_kickoff": _prob(row.get("hours_to_kickoff")),
             "prediction_mode": row["prediction_mode"],
             "status": status,
@@ -196,7 +238,9 @@ def assemble_viewer_payload(
             "predictions": len(cards),
             "upcoming": sum(card["status"] == "UPCOMING" for card in cards),
             "settled": sum(card["status"] == "SETTLED" for card in cards),
-            "awaiting_result": sum(card["status"] == "AWAITING_RESULT" for card in cards),
+            "awaiting_result": sum(
+                card["status"] == "AWAITING_RESULT" for card in cards
+            ),
         },
         "matches": cards,
     }
