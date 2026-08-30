@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "experiments": [
+    {
+      "experiment_id": "CANONICAL_MARKET_ONLY_V1",
+      "status": "FROZEN",
+      "research_only": true,
+      "prediction_source": "league_prediction_ledger",
+      "prediction_mode": "MARKET_ONLY",
+      "eligible_leagues": ["EPL", "LA_LIGA", "RPL", "SERIE_A", "BUNDESLIGA", "LIGUE_1", "EREDIVISIE"],
+      "start_time_utc": "2026-08-30T01:05:32Z",
+      "code_sha": "9e42849bb295ab807e967bbd78894238ee4f2f85",
+      "parameters": {},
+      "evaluation_view": "LATEST_PRE_KICKOFF_PER_FIXTURE",
+      "readiness_threshold": null
+    },
+    {
+      "experiment_id": "LA_LIGA_STRUCTURAL_V2_LEGACY_SHADOW",
+      "status": "FROZEN",
+      "research_only": true,
+      "prediction_source": "la_liga_structural_v2_shadow_history",
+      "prediction_mode": "STRUCTURAL_EDGE_V2_SHADOW",
+      "eligible_leagues": ["LA_LIGA"],
+      "start_time_utc": "2026-08-30T01:05:32Z",
+      "code_sha": "9e42849bb295ab807e967bbd78894238ee4f2f85",
+      "parameters": {"alpha": 0.1, "edge_threshold": 0.75},
+      "evaluation_view": "LATEST_PRE_KICKOFF_PER_FIXTURE",
+      "readiness_threshold": null
+    }
+  ]
+}
