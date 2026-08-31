@@ -40,6 +40,8 @@ jobs:
           python -m py_compile report_league_calibration_coverage.py
           python -m py_compile audit_league_canonical_data_quality.py
           python -m py_compile report_multi_league_health.py
+          python -m py_compile historical_strategy_lab.py
+          python -m py_compile historical_strategy_runner.py
           python -m py_compile scheduled_epl_live_cycle.py
           python -m py_compile scheduled_la_liga_live_cycle.py
           python -m py_compile normalize_la_liga_history.py
@@ -57,6 +59,9 @@ jobs:
           python -m py_compile scheduled_rpl_odds_snapshot.py
           python -m py_compile update_rpl_results.py
           python -m py_compile evaluate_rpl_predictions.py
+
+      - name: Run historical strategy lab tests
+        run: python -m pytest -q tests/test_historical_strategy_lab.py tests/test_historical_strategy_runner.py
 
       - name: Run canonical evaluator tests
         run: |
