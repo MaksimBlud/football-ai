@@ -2,6 +2,15 @@ name: Historical Strategy Lab
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - historical_strategy_lab.py
+      - historical_strategy_runner.py
+      - league_historical_market.py
+      - league_runtime_config.py
+      - .github/workflows/historical-strategy-lab.yml
 
 permissions:
   contents: read
