@@ -80,6 +80,16 @@ def prepare_market_frame(frame: pd.DataFrame) -> pd.DataFrame:
         valid &= result[column].gt(1.0) & result[column].map(math.isfinite)
     result = result.loc[valid].copy()
 
+    # Drawdown and cumulative P&L are path-dependent. Keep the historical
+    # sequence chronological whenever a point-in-time date is available.
+    if "match_date" in result.columns:
+        result["match_date"] = pd.to_datetime(result["match_date"], errors="coerce")
+        sort_columns = ["match_date"]
+        for column in ("league", "home_team", "away_team"):
+            if column in result.columns:
+                sort_columns.append(column)
+        result = result.sort_values(sort_columns, kind="stable").reset_index(drop=True)
+
     probabilities = result.apply(
         lambda row: no_vig_probabilities(
             row[ODDS_COLUMNS["H"]], row[ODDS_COLUMNS["D"]], row[ODDS_COLUMNS["A"]]
@@ -172,6 +182,28 @@ def by_league_and_season(frame: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def write_reports(frame: pd.DataFrame, output_dir: Path) -> dict[str, Path]:
+    prepared = prepare_market_frame(frame)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    reports = {
+        "overall": output_dir / "overall.csv",
+        "confidence": output_dir / "confidence_buckets.csv",
+        "odds": output_dir / "odds_buckets.csv",
+        "league_season": output_dir / "league_season.csv",
+        "prepared": output_dir / "prepared_matches.csv",
+    }
+
+    pd.DataFrame([evaluate(prepared).__dict__]).to_csv(reports["overall"], index=False)
+    segment_table(prepared, CONFIDENCE_BUCKETS, "market_confidence").to_csv(
+        reports["confidence"], index=False
+    )
+    segment_table(prepared, ODDS_BUCKETS, "selected_odds").to_csv(reports["odds"], index=False)
+    by_league_and_season(prepared).to_csv(reports["league_season"], index=False)
+    prepared.to_csv(reports["prepared"], index=False)
+    return reports
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Read-only historical MARKET_ONLY strategy diagnostics")
     parser.add_argument("inputs", nargs="+", type=Path, help="Normalized historical market CSV files")
@@ -180,18 +212,8 @@ def main() -> None:
 
     frames = [pd.read_csv(path) for path in args.inputs]
     combined = pd.concat(frames, ignore_index=True)
-    prepared = prepare_market_frame(combined)
-    args.output_dir.mkdir(parents=True, exist_ok=True)
-
-    overall = pd.DataFrame([evaluate(prepared).__dict__])
-    confidence = segment_table(prepared, CONFIDENCE_BUCKETS, "market_confidence")
-    odds = segment_table(prepared, ODDS_BUCKETS, "selected_odds")
-    league_season = by_league_and_season(prepared)
-
-    overall.to_csv(args.output_dir / "overall.csv", index=False)
-    confidence.to_csv(args.output_dir / "confidence_buckets.csv", index=False)
-    odds.to_csv(args.output_dir / "odds_buckets.csv", index=False)
-    league_season.to_csv(args.output_dir / "league_season.csv", index=False)
+    reports = write_reports(combined, args.output_dir)
+    overall = pd.read_csv(reports["overall"])
 
     print("HISTORICAL STRATEGY LAB — RESEARCH ONLY")
     print(overall.to_string(index=False))
