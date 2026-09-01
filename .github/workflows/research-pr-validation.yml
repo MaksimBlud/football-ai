@@ -49,6 +49,7 @@ jobs:
           python -m py_compile historical_frozen_market_expectation.py
           python -m py_compile historical_frozen_selection_null.py
           python -m py_compile historical_frozen_team_concentration.py
+          python -m py_compile historical_frozen_team_season_stress.py
           python -m py_compile historical_market_timing_audit.py
           python -m py_compile historical_frozen_closing_comparison.py
           python -m py_compile historical_cross_bookmaker_validation.py
@@ -81,6 +82,7 @@ jobs:
           python -m pytest -q tests/test_historical_frozen_market_expectation.py
           python -m pytest -q tests/test_historical_frozen_selection_null.py
           python -m pytest -q tests/test_historical_frozen_team_concentration.py
+          python -m pytest -q tests/test_historical_frozen_team_season_stress.py
           python -m pytest -q tests/test_historical_market_timing_audit.py
           python -m pytest -q tests/test_historical_frozen_closing_comparison.py
           python -m pytest -q tests/test_historical_cross_bookmaker_validation.py
