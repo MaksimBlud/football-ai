@@ -8,6 +8,8 @@ on:
     paths:
       - historical_strategy_lab.py
       - historical_strategy_runner.py
+      - historical_strategy_stability.py
+      - historical_strategy_walk_forward.py
       - league_historical_market.py
       - league_runtime_config.py
       - .github/workflows/historical-strategy-lab.yml
@@ -47,6 +49,18 @@ jobs:
             --work-dir artifacts/historical_strategy_work \
             --output-dir artifacts/historical_strategy_lab
 
+      - name: Run historical stability diagnostics
+        run: |
+          python historical_strategy_stability.py \
+            artifacts/historical_strategy_lab/prepared_matches.csv \
+            --output-dir artifacts/historical_strategy_stability
+
+      - name: Run expanding-window walk-forward validation
+        run: |
+          python historical_strategy_walk_forward.py \
+            artifacts/historical_strategy_lab/prepared_matches.csv \
+            --output-dir artifacts/historical_strategy_walk_forward
+
       - name: Verify production artifacts unchanged
         run: |
           find . -maxdepth 1 -name '*.pkl' -print0 | sort -z | xargs -0 sha256sum > /tmp/pkl-after.sha256
@@ -57,12 +71,10 @@ jobs:
         run: |
           echo "Overall"
           cat artifacts/historical_strategy_lab/overall.csv
-          echo "League-season"
-          cat artifacts/historical_strategy_lab/league_season.csv
-          echo "Confidence buckets"
-          cat artifacts/historical_strategy_lab/confidence_buckets.csv
-          echo "Odds buckets"
-          cat artifacts/historical_strategy_lab/odds_buckets.csv
+          echo "Walk-forward summary"
+          cat artifacts/historical_strategy_walk_forward/walk_forward_summary.csv
+          echo "Walk-forward selections"
+          cat artifacts/historical_strategy_walk_forward/walk_forward_selections.csv
 
       - name: Upload historical strategy artifact
         uses: actions/upload-artifact@v4
@@ -70,6 +82,8 @@ jobs:
           name: historical-strategy-lab-${{ github.run_number }}
           path: |
             artifacts/historical_strategy_lab/*.csv
+            artifacts/historical_strategy_stability/*.csv
+            artifacts/historical_strategy_walk_forward/*.csv
             artifacts/historical_strategy_work/normalized/*.csv
           if-no-files-found: error
           retention-days: 30
