@@ -12,6 +12,7 @@ on:
       - historical_strategy_walk_forward.py
       - historical_strategy_frozen_validation.py
       - historical_frozen_uncertainty.py
+      - historical_frozen_market_expectation.py
       - historical_market_timing_audit.py
       - historical_frozen_closing_comparison.py
       - historical_cross_bookmaker_validation.py
@@ -52,6 +53,8 @@ jobs:
         run: python historical_strategy_frozen_validation.py artifacts/historical_strategy_lab/prepared_matches.csv --output-dir artifacts/historical_strategy_frozen
       - name: Run frozen-rule uncertainty audit
         run: python historical_frozen_uncertainty.py artifacts/historical_strategy_frozen/frozen_rule_by_season.csv --output-dir artifacts/historical_strategy_uncertainty
+      - name: Compare frozen wins with market expectation
+        run: python historical_frozen_market_expectation.py artifacts/historical_strategy_lab/prepared_matches.csv artifacts/historical_strategy_frozen/frozen_rule_summary.csv --output-dir artifacts/historical_strategy_market_expectation
       - name: Compare frozen rules at explicit closing prices
         run: python historical_frozen_closing_comparison.py artifacts/historical_strategy_work/raw artifacts/historical_strategy_frozen/frozen_rule_summary.csv --output-dir artifacts/historical_strategy_closing
       - name: Cross-bookmaker frozen rule validation
@@ -69,6 +72,7 @@ jobs:
           cat artifacts/historical_strategy_walk_forward/walk_forward_summary.csv
           cat artifacts/historical_strategy_frozen/frozen_rule_summary.csv
           cat artifacts/historical_strategy_uncertainty/frozen_uncertainty_summary.csv
+          cat artifacts/historical_strategy_market_expectation/market_expectation_summary.csv
           cat artifacts/historical_strategy_closing/frozen_closing_summary.csv
           cat artifacts/historical_strategy_cross_bookmaker/cross_bookmaker_summary.csv
           cat artifacts/historical_strategy_paired_bookmaker/paired_bookmaker_summary.csv
@@ -81,6 +85,7 @@ jobs:
             artifacts/historical_strategy_walk_forward/*.csv
             artifacts/historical_strategy_frozen/*.csv
             artifacts/historical_strategy_uncertainty/*.csv
+            artifacts/historical_strategy_market_expectation/*.csv
             artifacts/historical_strategy_timing/*.csv
             artifacts/historical_strategy_closing/*.csv
             artifacts/historical_strategy_cross_bookmaker/*.csv
