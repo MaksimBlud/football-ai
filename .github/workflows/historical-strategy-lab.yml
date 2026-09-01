@@ -12,6 +12,7 @@ on:
       - historical_strategy_walk_forward.py
       - historical_strategy_frozen_validation.py
       - historical_market_timing_audit.py
+      - historical_frozen_closing_comparison.py
       - league_historical_market.py
       - league_runtime_config.py
       - .github/workflows/historical-strategy-lab.yml
@@ -23,57 +24,43 @@ jobs:
   historical-backtest:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: "pip"
-
-      - name: Install research dependencies
-        run: |
+      - run: |
           python -m pip install --upgrade pip
           pip install pandas requests
-
       - name: Record production artifact hashes
         run: |
           find . -maxdepth 1 -name '*.pkl' -print0 | sort -z | xargs -0 sha256sum > /tmp/pkl-before.sha256
           cat /tmp/pkl-before.sha256
-
-      - name: Run EPL and La Liga historical strategy lab
+      - name: Run historical strategy lab
         run: python historical_strategy_runner.py --leagues EPL LA_LIGA --work-dir artifacts/historical_strategy_work --output-dir artifacts/historical_strategy_lab
-
-      - name: Audit standard vs explicit closing historical odds
+      - name: Audit historical odds timing
         run: python historical_market_timing_audit.py artifacts/historical_strategy_work/raw --output artifacts/historical_strategy_timing/timing_coverage.csv
-
-      - name: Run historical stability diagnostics
+      - name: Run stability diagnostics
         run: python historical_strategy_stability.py artifacts/historical_strategy_lab/prepared_matches.csv --output-dir artifacts/historical_strategy_stability
-
-      - name: Run expanding-window walk-forward validation
+      - name: Run walk-forward validation
         run: python historical_strategy_walk_forward.py artifacts/historical_strategy_lab/prepared_matches.csv --output-dir artifacts/historical_strategy_walk_forward
-
       - name: Run frozen-rule validation
         run: python historical_strategy_frozen_validation.py artifacts/historical_strategy_lab/prepared_matches.csv --output-dir artifacts/historical_strategy_frozen
-
+      - name: Compare frozen rules at explicit closing prices
+        run: python historical_frozen_closing_comparison.py artifacts/historical_strategy_work/raw artifacts/historical_strategy_frozen/frozen_rule_summary.csv --output-dir artifacts/historical_strategy_closing
       - name: Verify production artifacts unchanged
         run: |
           find . -maxdepth 1 -name '*.pkl' -print0 | sort -z | xargs -0 sha256sum > /tmp/pkl-after.sha256
           diff -u /tmp/pkl-before.sha256 /tmp/pkl-after.sha256
           echo "PASS: production .pkl hashes unchanged"
-
       - name: Show historical summary
         run: |
           cat artifacts/historical_strategy_lab/overall.csv
           cat artifacts/historical_strategy_walk_forward/walk_forward_summary.csv
           cat artifacts/historical_strategy_frozen/frozen_rule_summary.csv
-          cat artifacts/historical_strategy_timing/timing_coverage.csv
-
-      - name: Upload historical strategy artifact
-        uses: actions/upload-artifact@v4
+          cat artifacts/historical_strategy_closing/frozen_closing_summary.csv
+      - uses: actions/upload-artifact@v4
         with:
           name: historical-strategy-lab-${{ github.run_number }}
           path: |
@@ -82,6 +69,7 @@ jobs:
             artifacts/historical_strategy_walk_forward/*.csv
             artifacts/historical_strategy_frozen/*.csv
             artifacts/historical_strategy_timing/*.csv
+            artifacts/historical_strategy_closing/*.csv
             artifacts/historical_strategy_work/normalized/*.csv
           if-no-files-found: error
           retention-days: 30
