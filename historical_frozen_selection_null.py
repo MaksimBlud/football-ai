@@ -124,7 +124,10 @@ def _simulate_candidate_metrics(
     test_profit = np.empty(simulations, dtype=float)
     test_roi = np.empty(simulations, dtype=float)
 
-    all_train = np.concatenate(candidate.training_indices_by_season)
+    nonempty_training_seasons = tuple(
+        indices for indices in candidate.training_indices_by_season if len(indices)
+    )
+    all_train = np.concatenate(nonempty_training_seasons)
     test_indices = candidate.test_indices
     for start in range(0, simulations, batch_size):
         stop = min(start + batch_size, simulations)
@@ -137,15 +140,13 @@ def _simulate_candidate_metrics(
 
         offset = 0
         positive = np.zeros(size, dtype=float)
-        for indices in candidate.training_indices_by_season:
+        for indices in nonempty_training_seasons:
             count = len(indices)
-            if count == 0:
-                continue
             season_wins = wins_train[:, offset : offset + count]
             season_profit = (season_wins * odds[indices]).sum(axis=1) - count
             positive += season_profit > 0.0
             offset += count
-        positive_share[start:stop] = positive / len(candidate.training_indices_by_season)
+        positive_share[start:stop] = positive / len(nonempty_training_seasons)
 
         if len(test_indices):
             p_test = probabilities[test_indices]
@@ -274,6 +275,8 @@ def selection_aware_null(
         if league_sim.empty:
             continue
         valid_roi = league_sim["test_roi"].dropna()
+        roi_exceedances = int((valid_roi >= observed_row.test_roi).sum())
+        profit_exceedances = int((league_sim["test_profit"] >= observed_row.test_profit).sum())
         same_rule = (
             (league_sim["selected_market_pick"] == observed_row.market_pick)
             & (league_sim["selected_confidence_bucket"] == observed_row.confidence_bucket)
@@ -292,8 +295,10 @@ def selection_aware_null(
             "null_test_roi_median": float(valid_roi.median()),
             "null_test_roi_q95": float(valid_roi.quantile(0.95)),
             "null_test_roi_q99": float(valid_roi.quantile(0.99)),
-            "selection_aware_roi_upper_tail": float((valid_roi >= observed_row.test_roi).mean()),
-            "selection_aware_profit_upper_tail": float((league_sim["test_profit"] >= observed_row.test_profit).mean()),
+            "selection_aware_roi_exceedances": roi_exceedances,
+            "selection_aware_roi_upper_tail": float((roi_exceedances + 1) / (len(valid_roi) + 1)),
+            "selection_aware_profit_exceedances": profit_exceedances,
+            "selection_aware_profit_upper_tail": float((profit_exceedances + 1) / (len(league_sim) + 1)),
             "same_rule_selection_share": float(same_rule.mean()),
             "initial_training_seasons": INITIAL_TRAINING_SEASONS,
             "min_training_matches": MIN_TRAINING_MATCHES,
@@ -327,6 +332,7 @@ def main() -> None:
     print("SELECTION-AWARE FROZEN RULE NULL — RESEARCH ONLY")
     print(summary.to_string(index=False))
     print("Each simulation redraws fixed market-pick wins from no-vig confidence and repeats the original frozen training selection.")
+    print("Upper-tail estimates use the finite-simulation plus-one correction; raw exceedance counts are also reported.")
     print("This is a conditional parametric market benchmark; it does not prove match independence or production profitability.")
     print("No tuning, activation, training, Supabase writes, Structural changes, or .pkl changes performed.")
 
