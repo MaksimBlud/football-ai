@@ -9,17 +9,15 @@ def sample_frame():
     rows = []
     seasons = ["2020-2021", "2021-2022", "2022-2023", "2023-2024", "2024-2025"]
     for season_index, season in enumerate(seasons):
-        for i in range(60):
-            # HOME 60–70% is profitable in the first three seasons and then weakens.
-            won = i < (42 if season_index < 3 else 30)
+        for i in range(20):
+            won = i < (14 if season_index < 3 else 10)
             rows.append({
                 "league": "EPL", "season": season, "market_pick": "H",
                 "market_confidence": 0.65, "selected_odds": 1.60,
                 "won": won, "profit": 0.60 if won else -1.0,
             })
-        for i in range(60):
-            # AWAY 40–50% is inferior in training but stronger later.
-            won = i < (24 if season_index < 3 else 36)
+        for i in range(20):
+            won = i < (8 if season_index < 3 else 12)
             rows.append({
                 "league": "EPL", "season": season, "market_pick": "A",
                 "market_confidence": 0.45, "selected_odds": 2.20,
@@ -28,27 +26,63 @@ def sample_frame():
     return pd.DataFrame(rows)
 
 
-def test_walk_forward_uses_only_prior_seasons_for_selection():
-    selections, bets = walk_forward(sample_frame())
-    first = selections.iloc[0]
-    assert first["test_season"] == "2023-2024"
-    assert first["training_seasons"] == 3
-    assert first["market_pick"] == "H"
-    assert first["confidence_bucket"] == "60–70%"
-    assert set(bets["walk_forward_test_season"].unique()) == {"2023-2024", "2024-2025"}
+def test_walk_forward_evaluates_all_fixed_candidates_without_selection():
+    evaluations = walk_forward(sample_frame())
+    assert set(evaluations["test_season"].unique()) == {"2023-2024", "2024-2025"}
+    # 3 picks × 5 confidence buckets × 2 unseen seasons.
+    assert len(evaluations) == 30
+    active = evaluations[evaluations["test_matches"] > 0]
+    assert set(zip(active["market_pick"], active["confidence_bucket"])) == {
+        ("H", "60–70%"), ("A", "40–50%")
+    }
 
 
-def test_walk_forward_summary_aggregates_only_test_results():
-    selections, _ = walk_forward(sample_frame())
-    summary = summary_table(selections)
-    total = summary[summary["league"] == "ALL"].iloc[0]
-    assert total["test_seasons"] == 2
-    assert total["matches"] == 120
-    assert math.isclose(total["profit"], -24.0)
-    assert math.isclose(total["roi"], -0.20)
+def test_training_fields_use_only_prior_seasons():
+    evaluations = walk_forward(sample_frame())
+    row = evaluations[
+        (evaluations["test_season"] == "2023-2024")
+        & (evaluations["market_pick"] == "H")
+        & (evaluations["confidence_bucket"] == "60–70%")
+    ].iloc[0]
+    assert row["prior_seasons"] == 3
+    assert row["training_matches"] == 60
+    # First three seasons have 14/20 wins at 1.60: +2.4 units each season.
+    assert math.isclose(row["training_profit"], 7.2)
+    assert math.isclose(row["training_positive_season_share"], 1.0)
+    # Test season is deliberately weaker and must not affect training metrics.
+    assert row["test_matches"] == 20
+    assert math.isclose(row["test_profit"], -4.0)
 
 
-def test_walk_forward_does_not_emit_training_rows_as_bets():
-    _, bets = walk_forward(sample_frame())
-    assert not bets.empty
-    assert set(bets["season"].unique()).isdisjoint({"2020-2021", "2021-2022", "2022-2023"})
+def test_summary_aggregates_only_unseen_test_results_per_candidate():
+    evaluations = walk_forward(sample_frame())
+    summary = summary_table(evaluations)
+    home = summary[
+        (summary["league"] == "EPL")
+        & (summary["market_pick"] == "H")
+        & (summary["confidence_bucket"] == "60–70%")
+    ].iloc[0]
+    away = summary[
+        (summary["league"] == "EPL")
+        & (summary["market_pick"] == "A")
+        & (summary["confidence_bucket"] == "40–50%")
+    ].iloc[0]
+    assert home["matches"] == 40
+    assert math.isclose(home["profit"], -8.0)
+    assert math.isclose(home["roi"], -0.20)
+    assert away["matches"] == 40
+    # 12/20 wins at 2.20 => +6.4 units per test season.
+    assert math.isclose(away["profit"], 12.8)
+    assert math.isclose(away["roi"], 0.32)
+
+
+def test_empty_candidates_remain_visible_with_zero_matches():
+    summary = summary_table(walk_forward(sample_frame()))
+    draw = summary[
+        (summary["league"] == "EPL")
+        & (summary["market_pick"] == "D")
+        & (summary["confidence_bucket"] == "≥70%")
+    ].iloc[0]
+    assert draw["test_seasons"] == 2
+    assert draw["matches"] == 0
+    assert math.isnan(draw["roi"])
