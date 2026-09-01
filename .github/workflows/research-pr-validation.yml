@@ -44,6 +44,7 @@ jobs:
           python -m py_compile historical_strategy_runner.py
           python -m py_compile historical_strategy_stability.py
           python -m py_compile historical_strategy_walk_forward.py
+          python -m py_compile historical_strategy_frozen_validation.py
           python -m py_compile scheduled_epl_live_cycle.py
           python -m py_compile scheduled_la_liga_live_cycle.py
           python -m py_compile normalize_la_liga_history.py
@@ -67,6 +68,7 @@ jobs:
           python -m pytest -q tests/test_historical_strategy_lab.py tests/test_historical_strategy_runner.py
           python -m pytest -q tests/test_historical_strategy_stability.py
           python -m pytest -q tests/test_historical_strategy_walk_forward.py
+          python -m pytest -q tests/test_historical_strategy_frozen_validation.py
 
       - name: Run canonical evaluator tests
         run: |
