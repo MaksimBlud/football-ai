@@ -10,6 +10,7 @@ on:
       - historical_strategy_runner.py
       - historical_strategy_stability.py
       - historical_strategy_walk_forward.py
+      - historical_strategy_frozen_validation.py
       - league_historical_market.py
       - league_runtime_config.py
       - .github/workflows/historical-strategy-lab.yml
@@ -44,22 +45,16 @@ jobs:
 
       - name: Run EPL and La Liga historical strategy lab
         run: |
-          python historical_strategy_runner.py \
-            --leagues EPL LA_LIGA \
-            --work-dir artifacts/historical_strategy_work \
-            --output-dir artifacts/historical_strategy_lab
+          python historical_strategy_runner.py --leagues EPL LA_LIGA --work-dir artifacts/historical_strategy_work --output-dir artifacts/historical_strategy_lab
 
       - name: Run historical stability diagnostics
-        run: |
-          python historical_strategy_stability.py \
-            artifacts/historical_strategy_lab/prepared_matches.csv \
-            --output-dir artifacts/historical_strategy_stability
+        run: python historical_strategy_stability.py artifacts/historical_strategy_lab/prepared_matches.csv --output-dir artifacts/historical_strategy_stability
 
       - name: Run expanding-window walk-forward validation
-        run: |
-          python historical_strategy_walk_forward.py \
-            artifacts/historical_strategy_lab/prepared_matches.csv \
-            --output-dir artifacts/historical_strategy_walk_forward
+        run: python historical_strategy_walk_forward.py artifacts/historical_strategy_lab/prepared_matches.csv --output-dir artifacts/historical_strategy_walk_forward
+
+      - name: Run frozen-rule validation
+        run: python historical_strategy_frozen_validation.py artifacts/historical_strategy_lab/prepared_matches.csv --output-dir artifacts/historical_strategy_frozen
 
       - name: Verify production artifacts unchanged
         run: |
@@ -69,12 +64,9 @@ jobs:
 
       - name: Show historical summary
         run: |
-          echo "Overall"
           cat artifacts/historical_strategy_lab/overall.csv
-          echo "Walk-forward summary"
           cat artifacts/historical_strategy_walk_forward/walk_forward_summary.csv
-          echo "Walk-forward selections"
-          cat artifacts/historical_strategy_walk_forward/walk_forward_selections.csv
+          cat artifacts/historical_strategy_frozen/frozen_rule_summary.csv
 
       - name: Upload historical strategy artifact
         uses: actions/upload-artifact@v4
@@ -84,6 +76,7 @@ jobs:
             artifacts/historical_strategy_lab/*.csv
             artifacts/historical_strategy_stability/*.csv
             artifacts/historical_strategy_walk_forward/*.csv
+            artifacts/historical_strategy_frozen/*.csv
             artifacts/historical_strategy_work/normalized/*.csv
           if-no-files-found: error
           retention-days: 30
