@@ -20,6 +20,7 @@ def test_team_concentration_preserves_frozen_oos_membership_and_leave_one_out():
                     "home_team": team,
                     "market_pick": "H",
                     "market_confidence": 0.65,
+                    "selected_odds": 1.5,
                     "profit": profit,
                     "won": profit > 0,
                 })
@@ -29,6 +30,7 @@ def test_team_concentration_preserves_frozen_oos_membership_and_leave_one_out():
                 "home_team": team,
                 "market_pick": "H",
                 "market_confidence": 0.55,
+                "selected_odds": 1.8,
                 "profit": 10.0,
                 "won": True,
             })
@@ -42,11 +44,11 @@ def test_team_concentration_preserves_frozen_oos_membership_and_leave_one_out():
     summary, by_team, leave_one_out = team_concentration(pd.DataFrame(rows), frozen)
     row = summary.iloc[0]
     assert row["matches"] == 12
-    assert math.isclose(row["profit"], 2.0)
-    assert math.isclose(row["roi"], 2.0 / 12.0)
+    assert math.isclose(row["profit"], 3.0)
+    assert math.isclose(row["roi"], 3.0 / 12.0)
     assert row["home_teams"] == 3
     assert row["profitable_home_teams"] == 2
-    assert row["leave_one_team_out_all_positive"] is False or row["leave_one_team_out_all_positive"] == False
+    assert bool(row["leave_one_team_out_all_positive"])
     assert set(by_team["home_team"]) == {"Alpha", "Beta", "Gamma"}
     beta_loo = leave_one_out[leave_one_out["excluded_home_team"] == "Beta"].iloc[0]
     assert math.isclose(beta_loo["remaining_profit"], 4.0)
@@ -56,7 +58,7 @@ def test_team_concentration_preserves_frozen_oos_membership_and_leave_one_out():
 def test_missing_home_team_is_rejected():
     prepared = pd.DataFrame([{
         "league": "LA_LIGA", "season": "2019-2020", "market_pick": "H",
-        "market_confidence": 0.65, "profit": 0.5, "won": True,
+        "market_confidence": 0.65, "selected_odds": 1.5, "profit": 0.5, "won": True,
     }])
     frozen = pd.DataFrame([{
         "league": "LA_LIGA", "first_test_season": "2019-2020",
