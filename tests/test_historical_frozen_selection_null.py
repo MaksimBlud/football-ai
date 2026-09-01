@@ -6,6 +6,7 @@ import pandas as pd
 from historical_frozen_selection_null import (
     Candidate,
     _simulate_candidate_metrics,
+    familywise_null_summary,
     selection_aware_null,
 )
 
@@ -65,6 +66,37 @@ def test_observed_rule_and_plus_one_tail_are_reported():
     )
     assert 0.0 < row["selection_aware_roi_upper_tail"] <= 1.0
     assert 0.0 <= row["same_rule_selection_share"] <= 1.0
+
+
+def test_familywise_null_uses_maximum_across_leagues_per_simulation():
+    observed = pd.DataFrame([
+        {
+            "league": "EPL",
+            "observed_market_pick": "H",
+            "observed_confidence_bucket": "50–60%",
+            "observed_test_roi": 0.04,
+        },
+        {
+            "league": "LA_LIGA",
+            "observed_market_pick": "H",
+            "observed_confidence_bucket": "60–70%",
+            "observed_test_roi": 0.10,
+        },
+    ])
+    simulations = pd.DataFrame([
+        {"simulation": 0, "league": "EPL", "test_roi": 0.02},
+        {"simulation": 0, "league": "LA_LIGA", "test_roi": 0.08},
+        {"simulation": 1, "league": "EPL", "test_roi": 0.12},
+        {"simulation": 1, "league": "LA_LIGA", "test_roi": 0.01},
+        {"simulation": 2, "league": "EPL", "test_roi": 0.03},
+        {"simulation": 2, "league": "LA_LIGA", "test_roi": 0.11},
+    ])
+    row = familywise_null_summary(observed, simulations).iloc[0]
+    assert row["leagues_tested"] == 2
+    assert row["observed_best_league"] == "LA_LIGA"
+    assert row["familywise_roi_exceedances"] == 2
+    assert math.isclose(row["familywise_roi_upper_tail"], 3 / 4)
+    assert math.isclose(row["null_global_max_roi_q99"], np.quantile([0.08, 0.12, 0.11], 0.99))
 
 
 def test_positive_season_share_ignores_absent_training_seasons_like_original_selector():
