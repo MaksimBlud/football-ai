@@ -11,6 +11,7 @@ on:
       - historical_strategy_stability.py
       - historical_strategy_walk_forward.py
       - historical_strategy_frozen_validation.py
+      - historical_market_timing_audit.py
       - league_historical_market.py
       - league_runtime_config.py
       - .github/workflows/historical-strategy-lab.yml
@@ -44,8 +45,10 @@ jobs:
           cat /tmp/pkl-before.sha256
 
       - name: Run EPL and La Liga historical strategy lab
-        run: |
-          python historical_strategy_runner.py --leagues EPL LA_LIGA --work-dir artifacts/historical_strategy_work --output-dir artifacts/historical_strategy_lab
+        run: python historical_strategy_runner.py --leagues EPL LA_LIGA --work-dir artifacts/historical_strategy_work --output-dir artifacts/historical_strategy_lab
+
+      - name: Audit standard vs explicit closing historical odds
+        run: python historical_market_timing_audit.py artifacts/historical_strategy_work/raw --output artifacts/historical_strategy_timing/timing_coverage.csv
 
       - name: Run historical stability diagnostics
         run: python historical_strategy_stability.py artifacts/historical_strategy_lab/prepared_matches.csv --output-dir artifacts/historical_strategy_stability
@@ -67,6 +70,7 @@ jobs:
           cat artifacts/historical_strategy_lab/overall.csv
           cat artifacts/historical_strategy_walk_forward/walk_forward_summary.csv
           cat artifacts/historical_strategy_frozen/frozen_rule_summary.csv
+          cat artifacts/historical_strategy_timing/timing_coverage.csv
 
       - name: Upload historical strategy artifact
         uses: actions/upload-artifact@v4
@@ -77,6 +81,7 @@ jobs:
             artifacts/historical_strategy_stability/*.csv
             artifacts/historical_strategy_walk_forward/*.csv
             artifacts/historical_strategy_frozen/*.csv
+            artifacts/historical_strategy_timing/*.csv
             artifacts/historical_strategy_work/normalized/*.csv
           if-no-files-found: error
           retention-days: 30
