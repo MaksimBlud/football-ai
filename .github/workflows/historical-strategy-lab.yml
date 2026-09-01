@@ -14,6 +14,7 @@ on:
       - historical_market_timing_audit.py
       - historical_frozen_closing_comparison.py
       - historical_cross_bookmaker_validation.py
+      - historical_paired_bookmaker_validation.py
       - league_historical_market.py
       - league_runtime_config.py
       - .github/workflows/historical-strategy-lab.yml
@@ -52,6 +53,8 @@ jobs:
         run: python historical_frozen_closing_comparison.py artifacts/historical_strategy_work/raw artifacts/historical_strategy_frozen/frozen_rule_summary.csv --output-dir artifacts/historical_strategy_closing
       - name: Cross-bookmaker frozen rule validation
         run: python historical_cross_bookmaker_validation.py artifacts/historical_strategy_work/raw artifacts/historical_strategy_frozen/frozen_rule_summary.csv --output-dir artifacts/historical_strategy_cross_bookmaker
+      - name: Paired common-fixture bookmaker validation
+        run: python historical_paired_bookmaker_validation.py artifacts/historical_strategy_work/raw artifacts/historical_strategy_frozen/frozen_rule_summary.csv --output-dir artifacts/historical_strategy_paired_bookmaker
       - name: Verify production artifacts unchanged
         run: |
           find . -maxdepth 1 -name '*.pkl' -print0 | sort -z | xargs -0 sha256sum > /tmp/pkl-after.sha256
@@ -64,6 +67,7 @@ jobs:
           cat artifacts/historical_strategy_frozen/frozen_rule_summary.csv
           cat artifacts/historical_strategy_closing/frozen_closing_summary.csv
           cat artifacts/historical_strategy_cross_bookmaker/cross_bookmaker_summary.csv
+          cat artifacts/historical_strategy_paired_bookmaker/paired_bookmaker_summary.csv
       - uses: actions/upload-artifact@v4
         with:
           name: historical-strategy-lab-${{ github.run_number }}
@@ -75,6 +79,7 @@ jobs:
             artifacts/historical_strategy_timing/*.csv
             artifacts/historical_strategy_closing/*.csv
             artifacts/historical_strategy_cross_bookmaker/*.csv
+            artifacts/historical_strategy_paired_bookmaker/*.csv
             artifacts/historical_strategy_work/normalized/*.csv
           if-no-files-found: error
           retention-days: 30
