@@ -55,7 +55,7 @@ jobs:
             artifacts/historical_strategy_lab/prepared_matches.csv \
             --output-dir artifacts/historical_strategy_stability
 
-      - name: Run expanding-window walk-forward validation
+      - name: Run selection-free expanding-window diagnostics
         run: |
           python historical_strategy_walk_forward.py \
             artifacts/historical_strategy_lab/prepared_matches.csv \
@@ -71,10 +71,10 @@ jobs:
         run: |
           echo "Overall"
           cat artifacts/historical_strategy_lab/overall.csv
-          echo "Walk-forward summary"
+          echo "Walk-forward candidate summary"
           cat artifacts/historical_strategy_walk_forward/walk_forward_summary.csv
-          echo "Walk-forward selections"
-          cat artifacts/historical_strategy_walk_forward/walk_forward_selections.csv
+          echo "Walk-forward evaluations"
+          cat artifacts/historical_strategy_walk_forward/walk_forward_evaluations.csv
 
       - name: Upload historical strategy artifact
         uses: actions/upload-artifact@v4
