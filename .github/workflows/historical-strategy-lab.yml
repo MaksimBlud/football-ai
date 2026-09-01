@@ -14,6 +14,7 @@ on:
       - historical_frozen_uncertainty.py
       - historical_frozen_market_expectation.py
       - historical_frozen_selection_null.py
+      - historical_frozen_team_concentration.py
       - historical_market_timing_audit.py
       - historical_frozen_closing_comparison.py
       - historical_cross_bookmaker_validation.py
@@ -58,6 +59,8 @@ jobs:
         run: python historical_frozen_market_expectation.py artifacts/historical_strategy_lab/prepared_matches.csv artifacts/historical_strategy_frozen/frozen_rule_summary.csv --output-dir artifacts/historical_strategy_market_expectation
       - name: Run selection-aware market null
         run: python historical_frozen_selection_null.py artifacts/historical_strategy_lab/prepared_matches.csv --output-dir artifacts/historical_strategy_selection_null --simulations 20000 --seed 20260901
+      - name: Audit frozen team concentration
+        run: python historical_frozen_team_concentration.py artifacts/historical_strategy_lab/prepared_matches.csv artifacts/historical_strategy_frozen/frozen_rule_summary.csv --output-dir artifacts/historical_strategy_team_concentration
       - name: Compare frozen rules at explicit closing prices
         run: python historical_frozen_closing_comparison.py artifacts/historical_strategy_work/raw artifacts/historical_strategy_frozen/frozen_rule_summary.csv --output-dir artifacts/historical_strategy_closing
       - name: Cross-bookmaker frozen rule validation
@@ -78,6 +81,7 @@ jobs:
           cat artifacts/historical_strategy_market_expectation/market_expectation_summary.csv
           cat artifacts/historical_strategy_selection_null/selection_aware_null_summary.csv
           cat artifacts/historical_strategy_selection_null/selection_aware_global_summary.csv
+          cat artifacts/historical_strategy_team_concentration/team_concentration_summary.csv
           cat artifacts/historical_strategy_closing/frozen_closing_summary.csv
           cat artifacts/historical_strategy_cross_bookmaker/cross_bookmaker_summary.csv
           cat artifacts/historical_strategy_paired_bookmaker/paired_bookmaker_summary.csv
@@ -92,6 +96,7 @@ jobs:
             artifacts/historical_strategy_uncertainty/*.csv
             artifacts/historical_strategy_market_expectation/*.csv
             artifacts/historical_strategy_selection_null/*.csv
+            artifacts/historical_strategy_team_concentration/*.csv
             artifacts/historical_strategy_timing/*.csv
             artifacts/historical_strategy_closing/*.csv
             artifacts/historical_strategy_cross_bookmaker/*.csv
