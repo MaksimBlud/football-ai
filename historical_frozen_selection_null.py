@@ -165,7 +165,6 @@ def _simulate_candidate_metrics(
 
 
 def _candidate_tiebreak(candidate: Candidate) -> tuple[int, str, str]:
-    # Original sort: training_matches descending, market_pick ascending, bucket ascending.
     return (-candidate.training_matches, candidate.market_pick, candidate.confidence_bucket)
 
 
@@ -204,8 +203,6 @@ def _simulate_league(
     positive_matrix = np.column_stack(positive_columns)
     matches = np.array([candidate.training_matches for candidate in candidates], dtype=int)
 
-    # Preserve the original deterministic lexical tie-break by considering candidates
-    # in that tie-break order and replacing only on a strictly better primary metric.
     order = sorted(range(len(candidates)), key=lambda index: _candidate_tiebreak(candidates[index]))
     selected = np.full(simulations, order[0], dtype=int)
     best_roi = train_roi_matrix[:, order[0]].copy()
@@ -239,6 +236,35 @@ def _simulate_league(
         "test_profit": test_profit_matrix[row_index, selected],
         "test_roi": test_roi_matrix[row_index, selected],
     })
+
+
+def familywise_null_summary(
+    observed_summary: pd.DataFrame,
+    simulations_frame: pd.DataFrame,
+) -> pd.DataFrame:
+    """Correct for looking across all tested leagues after within-league rule selection."""
+    if observed_summary.empty or simulations_frame.empty:
+        return pd.DataFrame()
+    valid_observed = observed_summary.dropna(subset=["observed_test_roi"])
+    if valid_observed.empty:
+        return pd.DataFrame()
+    observed_best = valid_observed.loc[valid_observed["observed_test_roi"].idxmax()]
+    global_max = simulations_frame.groupby("simulation", sort=True)["test_roi"].max().dropna()
+    exceedances = int((global_max >= observed_best["observed_test_roi"]).sum())
+    return pd.DataFrame([{
+        "leagues_tested": int(valid_observed["league"].nunique()),
+        "observed_best_league": observed_best["league"],
+        "observed_best_market_pick": observed_best["observed_market_pick"],
+        "observed_best_confidence_bucket": observed_best["observed_confidence_bucket"],
+        "observed_best_test_roi": float(observed_best["observed_test_roi"]),
+        "simulations": len(global_max),
+        "null_global_max_roi_mean": float(global_max.mean()),
+        "null_global_max_roi_median": float(global_max.median()),
+        "null_global_max_roi_q95": float(global_max.quantile(0.95)),
+        "null_global_max_roi_q99": float(global_max.quantile(0.99)),
+        "familywise_roi_exceedances": exceedances,
+        "familywise_roi_upper_tail": float((exceedances + 1) / (len(global_max) + 1)),
+    }])
 
 
 def selection_aware_null(
@@ -326,12 +352,17 @@ def main() -> None:
         seed=args.seed,
         batch_size=args.batch_size,
     )
+    global_summary = familywise_null_summary(summary, simulation_rows)
     args.output_dir.mkdir(parents=True, exist_ok=True)
     summary.to_csv(args.output_dir / "selection_aware_null_summary.csv", index=False)
     simulation_rows.to_csv(args.output_dir / "selection_aware_null_simulations.csv", index=False)
+    global_summary.to_csv(args.output_dir / "selection_aware_global_summary.csv", index=False)
     print("SELECTION-AWARE FROZEN RULE NULL — RESEARCH ONLY")
     print(summary.to_string(index=False))
+    print("FAMILY-WISE LEAGUE MAXIMUM")
+    print(global_summary.to_string(index=False))
     print("Each simulation redraws fixed market-pick wins from no-vig confidence and repeats the original frozen training selection.")
+    print("The family-wise row also corrects for inspecting multiple leagues and highlighting the best observed OOS ROI.")
     print("Upper-tail estimates use the finite-simulation plus-one correction; raw exceedance counts are also reported.")
     print("This is a conditional parametric market benchmark; it does not prove match independence or production profitability.")
     print("No tuning, activation, training, Supabase writes, Structural changes, or .pkl changes performed.")
