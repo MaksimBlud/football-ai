@@ -1,0 +1,38 @@
+{
+  "candidate_id": "LA_LIGA_MARKET_HOME_60_70_V1",
+  "status": "FROZEN_RESEARCH_ONLY",
+  "league": "LA_LIGA",
+  "market": "1X2",
+  "selection": "HOME",
+  "probability_definition": "margin-free market home probability from the canonical pre-kickoff 1X2 snapshot",
+  "lower_bound_inclusive": 0.60,
+  "upper_bound_exclusive": 0.70,
+  "decision_time": "pre-kickoff",
+  "stake_for_research_accounting": 1.0,
+  "activation": "NONE",
+  "production_use": false,
+  "structural_alpha_change": false,
+  "model_promotion": false,
+  "prospective_rules": {
+    "tag_every_qualifying_fixture_before_kickoff": true,
+    "do_not_reselect_thresholds": true,
+    "do_not_exclude_teams_after_results": true,
+    "do_not_exclude_seasons_or_months_after_results": true,
+    "preserve_market_snapshot_and_odds_used_for_tagging": true,
+    "evaluate_all_tagged_fixtures": true
+  },
+  "required_reporting": [
+    "count",
+    "wins",
+    "accuracy",
+    "market_expected_wins",
+    "actual_minus_expected_wins",
+    "flat_stake_profit",
+    "roi",
+    "average_odds",
+    "max_drawdown",
+    "brier_or_binary_calibration_diagnostic",
+    "results_by_month_or_season"
+  ],
+  "interpretation_guard": "This candidate represents a frozen historical market anomaly. It is not evidence that Football AI adds information beyond the market. Any Football-AI-specific claim requires a separate paired incremental-information test against the same market snapshot on the same fixtures."
+}
