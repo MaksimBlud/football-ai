@@ -77,6 +77,7 @@ jobs:
           cat artifacts/historical_strategy_uncertainty/frozen_uncertainty_summary.csv
           cat artifacts/historical_strategy_market_expectation/market_expectation_summary.csv
           cat artifacts/historical_strategy_selection_null/selection_aware_null_summary.csv
+          cat artifacts/historical_strategy_selection_null/selection_aware_global_summary.csv
           cat artifacts/historical_strategy_closing/frozen_closing_summary.csv
           cat artifacts/historical_strategy_cross_bookmaker/cross_bookmaker_summary.csv
           cat artifacts/historical_strategy_paired_bookmaker/paired_bookmaker_summary.csv
