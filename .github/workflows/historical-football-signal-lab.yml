@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: '3.11'}
-      - run: pip install pandas numpy requests scikit-learn pytest
+      - run: pip install pandas numpy requests 'scikit-learn==1.7.2' pytest
       - name: Snapshot production hashes
         run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
       - run: pytest -q tests/test_historical_football_signal_lab.py
