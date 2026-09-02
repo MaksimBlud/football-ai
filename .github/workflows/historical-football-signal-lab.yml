@@ -1,0 +1,40 @@
+name: Historical Football Signal Lab
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'historical_football_signal_lab.py'
+      - 'historical_football_signal_runner.py'
+      - 'tests/test_historical_football_signal_lab.py'
+      - '.github/workflows/historical-football-signal-lab.yml'
+  pull_request:
+    paths:
+      - 'historical_football_signal_lab.py'
+      - 'historical_football_signal_runner.py'
+      - 'tests/test_historical_football_signal_lab.py'
+      - '.github/workflows/historical-football-signal-lab.yml'
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install pandas numpy requests 'scikit-learn==1.7.2' pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - run: pytest -q tests/test_historical_football_signal_lab.py
+      - name: Run three-league signal lab
+        run: python historical_football_signal_runner.py
+      - name: Verify production hashes unchanged
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        with:
+          name: historical-football-signal-lab
+          path: artifacts/historical_football_signal_lab/
+          retention-days: 30
