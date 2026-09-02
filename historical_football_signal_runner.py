@@ -12,17 +12,28 @@ LEAGUES={"EPL":EPL_RUNTIME_CONFIG,"LA_LIGA":LA_LIGA_RUNTIME_CONFIG,"SERIE_A":SER
 BASE="https://www.football-data.co.uk/mmz4281/{code}/{comp}.csv"
 
 def download(config, league: str, raw_dir: Path):
-    frames=[]
+    raw_frames=[]
     raw_dir.mkdir(parents=True,exist_ok=True)
     for code,season in config.historical_source.season_codes.items():
         url=BASE.format(code=code,comp=config.historical_source.competition_code)
         r=requests.get(url,timeout=60); r.raise_for_status()
         path=raw_dir/f"{league.lower()}_{code}.csv"; path.write_bytes(r.content)
         df=pd.read_csv(path)
-        features=build_point_in_time_features(df,league,season)
-        frames.append(features)
-        print(f"{league} {season}: raw={len(df)} usable={len(features)}")
-    return pd.concat(frames,ignore_index=True)
+        df["_season"]=season
+        raw_frames.append(df)
+        print(f"{league} {season}: raw={len(df)}")
+    raw=pd.concat(raw_frames,ignore_index=True)
+    # Build once across the full chronology so August fixtures can use May history.
+    features=build_point_in_time_features(raw,league,"MULTI_SEASON")
+    keys=raw[["Date","HomeTeam","AwayTeam","_season"]].copy()
+    keys["match_date"]=pd.to_datetime(keys["Date"],dayfirst=True,errors="coerce")
+    keys=keys.rename(columns={"HomeTeam":"home_team","AwayTeam":"away_team","_season":"season"})
+    keys=keys[["match_date","home_team","away_team","season"]].drop_duplicates()
+    features=features.drop(columns=["season"]).merge(keys,on=["match_date","home_team","away_team"],how="left",validate="one_to_one")
+    if features["season"].isna().any():
+        raise RuntimeError(f"{league}: failed to restore season labels after continuous feature build")
+    print(f"{league}: continuous point-in-time rows={len(features)}")
+    return features
 
 def main():
     p=argparse.ArgumentParser(); p.add_argument("--work-dir",type=Path,default=Path("artifacts/historical_football_signal_work")); p.add_argument("--output-dir",type=Path,default=Path("artifacts/historical_football_signal_lab")); a=p.parse_args()
