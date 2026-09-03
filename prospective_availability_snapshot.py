@@ -1,9 +1,7 @@
 """Normalize append-only API-Football availability polls and poll items."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import hashlib
-import json
 import re
 import unicodedata
 
@@ -68,10 +66,7 @@ def _availability_type(item: dict) -> str:
 
 def _state_key(provider_fixture_id, provider_team_id, provider_player_id, availability_type, reason) -> str:
     raw = "|".join(
-        map(
-            str,
-            (PROVIDER, provider_fixture_id, provider_team_id, provider_player_id, availability_type, reason or ""),
-        )
+        map(str, (PROVIDER, provider_fixture_id, provider_team_id, provider_player_id, availability_type, reason or ""))
     )
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
@@ -89,6 +84,13 @@ def normalize_poll(
         raise ValueError("Availability poll must be observed before kickoff")
     fixture = provider_fixture.get("fixture") or {}
     provider_fixture_id = int(fixture["id"])
+    teams = provider_fixture.get("teams") or {}
+    home_provider_id = int((teams.get("home") or {})["id"])
+    away_provider_id = int((teams.get("away") or {})["id"])
+    canonical_team_by_provider_id = {
+        home_provider_id: str(canonical_row["home_team"]),
+        away_provider_id: str(canonical_row["away_team"]),
+    }
     raw_sha = canonical_json_sha256(injury_payload)
     poll_material = "|".join(
         (str(PROVIDER), str(provider_fixture_id), str(canonical_row["league"]), kickoff.isoformat(), raw_sha)
@@ -114,6 +116,8 @@ def normalize_poll(
         availability_type = _availability_type(item)
         reason = str(player.get("reason") or player.get("type") or "").strip()
         provider_team_id = int(team["id"])
+        if provider_team_id not in canonical_team_by_provider_id:
+            raise ValueError("Availability item team does not belong to matched fixture")
         provider_player_id = int(player["id"])
         state_key = _state_key(
             provider_fixture_id,
@@ -136,7 +140,7 @@ def normalize_poll(
                 "home_team": str(canonical_row["home_team"]),
                 "away_team": str(canonical_row["away_team"]),
                 "commence_time_utc": kickoff,
-                "team_name": str(team.get("name") or "").strip(),
+                "team_name": canonical_team_by_provider_id[provider_team_id],
                 "player_name": str(player.get("name") or "").strip(),
                 "availability_type": availability_type,
                 "reason": reason,
