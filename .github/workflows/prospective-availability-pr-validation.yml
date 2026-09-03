@@ -6,6 +6,7 @@ on:
       - "prospective_availability_contract.py"
       - "tests/test_prospective_availability_contract.py"
       - "docs/PROSPECTIVE_AVAILABILITY_SIGNAL_LAB_PROTOCOL.md"
+      - "docs/PROSPECTIVE_AVAILABILITY_SIGNAL_LAB_STATUS.md"
       - ".github/workflows/prospective-availability-pr-validation.yml"
 
 jobs:
