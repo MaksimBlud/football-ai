@@ -1,0 +1,14 @@
+{
+  "research_block": "PROSPECTIVE_AVAILABILITY_SIGNAL_LAB",
+  "version": 1,
+  "status": "OPEN_RESEARCH_ONLY",
+  "leagues": ["EPL", "LA_LIGA", "SERIE_A"],
+  "provider": "API_FOOTBALL",
+  "endpoint": "/injuries",
+  "eligibility_clock": "first_seen_timestamp_utc",
+  "primary_future_comparison": ["MARKET_MODEL", "MARKET_AVAILABILITY"],
+  "primary_metrics": ["multiclass_brier", "log_loss"],
+  "production_activation": false,
+  "supabase_activation": false,
+  "historical_backfill_is_strict_point_in_time": false
+}
