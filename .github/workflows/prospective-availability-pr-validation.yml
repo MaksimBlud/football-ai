@@ -21,7 +21,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install focused test dependencies
-        run: python -m pip install pytest pandas requests
+        run: python -m pip install pytest pandas requests scikit-learn
 
       - name: Compile research contour
         run: |
@@ -32,14 +32,17 @@ jobs:
             prospective_availability_persistence.py \
             prospective_availability_features.py \
             prospective_availability_collector.py \
+            prospective_availability_evaluation.py \
             tests/test_prospective_availability_contract.py \
-            tests/test_prospective_availability_operational.py
+            tests/test_prospective_availability_operational.py \
+            tests/test_prospective_availability_evaluation.py
 
       - name: Run focused availability tests
         run: |
           python -m pytest -q \
             tests/test_prospective_availability_contract.py \
-            tests/test_prospective_availability_operational.py
+            tests/test_prospective_availability_operational.py \
+            tests/test_prospective_availability_evaluation.py
 
       - name: Verify production model artifacts are untouched by this PR
         shell: bash
