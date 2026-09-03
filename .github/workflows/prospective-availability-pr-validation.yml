@@ -33,6 +33,7 @@ jobs:
             prospective_availability_features.py \
             prospective_availability_collector.py \
             prospective_availability_evaluation.py \
+            prospective_availability_research_cycle.py \
             tests/test_prospective_availability_contract.py \
             tests/test_prospective_availability_operational.py \
             tests/test_prospective_availability_evaluation.py
