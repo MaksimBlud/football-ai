@@ -1,0 +1,53 @@
+name: Prospective Availability Collector
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */4 * * *"
+
+concurrency:
+  group: prospective-availability-collector
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  collect:
+    if: github.event_name == 'workflow_dispatch' || vars.PROSPECTIVE_AVAILABILITY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: |
+          python -m pip install --upgrade pip
+          pip install pandas requests supabase python-dotenv
+      - name: Check research collector secrets
+        run: |
+          python - <<'PY'
+          import os
+          names = ("SUPABASE_URL", "SUPABASE_KEY", "API_FOOTBALL_KEY")
+          missing = [name for name in names if not os.getenv(name)]
+          if missing:
+              raise SystemExit("Missing prospective availability secrets: " + ", ".join(missing))
+          print("PASS: collector secrets available; values not printed")
+          PY
+      - name: Confirm research-only contract
+        run: |
+          python - <<'PY'
+          import json
+          spec = json.load(open("research/prospective_availability_signal_lab_v2.json"))
+          assert spec["production_activation"] is False
+          assert spec["feature_version"] == "COUNT_ONLY_V1"
+          print("PASS: prospective availability remains research-only")
+          PY
+      - name: Run append-only collector
+        run: python prospective_availability_collector.py

@@ -1,0 +1,41 @@
+{
+  "research_block": "PROSPECTIVE_AVAILABILITY_SIGNAL_LAB",
+  "version": 3,
+  "status": "EVALUATION_PROTOCOL_FROZEN_BEFORE_OUTCOMES",
+  "fixture_unit": "one_market_row_per_fixture",
+  "market_row_selection": "latest_snapshot_at_or_before_kickoff_minus_6h",
+  "cutoff_hours_before_kickoff": 6,
+  "availability_state": "latest_full_poll_observed_at_or_before_selected_market_snapshot",
+  "feature_version": "COUNT_ONLY_V1",
+  "model_family": "SimpleImputer(median)+StandardScaler+LogisticRegression(max_iter=1000)",
+  "baseline_features": [
+    "market_home_probability",
+    "market_draw_probability",
+    "market_away_probability"
+  ],
+  "candidate_features_append": [
+    "home_injury_count",
+    "away_injury_count",
+    "injury_count_difference",
+    "home_suspension_count",
+    "away_suspension_count",
+    "suspension_count_difference",
+    "home_unavailable_count",
+    "away_unavailable_count",
+    "unavailable_count_difference"
+  ],
+  "temporal_evaluation": "expanding_train_previous_calendar_months_test_next_month",
+  "readiness": {
+    "min_train_matches_per_league": 60,
+    "min_test_matches_per_block": 20,
+    "min_evaluation_blocks_per_league": 2,
+    "min_calendar_months_per_league": 4,
+    "min_paired_finished_matches_per_league": 100,
+    "all_three_leagues_must_be_ready_before_scoring": true
+  },
+  "primary_metrics": ["multiclass_brier", "log_loss"],
+  "secondary_metric": "accuracy",
+  "promotion_rule": "requires stable candidate improvement across leagues and time blocks; no production promotion is automatic",
+  "production_activation": false,
+  "historical_backfill_is_strict_point_in_time": false
+}

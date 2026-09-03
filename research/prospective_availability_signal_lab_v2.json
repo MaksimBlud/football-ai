@@ -1,0 +1,32 @@
+{
+  "research_block": "PROSPECTIVE_AVAILABILITY_SIGNAL_LAB",
+  "version": 2,
+  "status": "OPERATIONAL_SPEC_FROZEN",
+  "leagues": ["EPL", "LA_LIGA", "SERIE_A"],
+  "provider": "API_FOOTBALL",
+  "endpoint": "/injuries",
+  "poll_cadence_hours": 4,
+  "fixture_match_kickoff_tolerance_minutes": 15,
+  "eligibility_clock": "first_seen_timestamp_utc",
+  "paired_cutoff": "market_snapshot_time_utc",
+  "availability_state": "latest_full_poll_observed_at_or_before_cutoff",
+  "feature_version": "COUNT_ONLY_V1",
+  "features": [
+    "home_injury_count",
+    "away_injury_count",
+    "injury_count_difference",
+    "home_suspension_count",
+    "away_suspension_count",
+    "suspension_count_difference",
+    "home_unavailable_count",
+    "away_unavailable_count",
+    "unavailable_count_difference"
+  ],
+  "player_importance_enabled": false,
+  "primary_future_comparison": ["MARKET_MODEL", "MARKET_AVAILABILITY"],
+  "primary_metrics": ["multiclass_brier", "log_loss"],
+  "production_activation": false,
+  "supabase_activation": false,
+  "scheduled_collection_activation_variable": "PROSPECTIVE_AVAILABILITY_ENABLED",
+  "historical_backfill_is_strict_point_in_time": false
+}

@@ -3,12 +3,12 @@ name: Prospective Availability PR Validation
 on:
   pull_request:
     paths:
-      - "prospective_availability_contract.py"
-      - "tests/test_prospective_availability_contract.py"
-      - "docs/PROSPECTIVE_AVAILABILITY_SIGNAL_LAB_PROTOCOL.md"
-      - "docs/PROSPECTIVE_AVAILABILITY_SIGNAL_LAB_STATUS.md"
-      - "research/prospective_availability_signal_lab_v1.json"
-      - ".github/workflows/prospective-availability-pr-validation.yml"
+      - "prospective_availability_*.py"
+      - "tests/test_prospective_availability_*.py"
+      - "docs/PROSPECTIVE_AVAILABILITY_SIGNAL_LAB_*.md"
+      - "research/prospective_availability_signal_lab_v*.json"
+      - "supabase/migrations/202609030002_prospective_availability.sql"
+      - ".github/workflows/prospective-availability-*.yml"
 
 jobs:
   validate:
@@ -21,13 +21,29 @@ jobs:
           python-version: "3.12"
 
       - name: Install focused test dependencies
-        run: python -m pip install pytest pandas
+        run: python -m pip install pytest pandas requests scikit-learn
 
-      - name: Compile contract
-        run: python -m py_compile prospective_availability_contract.py tests/test_prospective_availability_contract.py
+      - name: Compile research contour
+        run: |
+          python -m py_compile \
+            prospective_availability_contract.py \
+            prospective_availability_provider.py \
+            prospective_availability_snapshot.py \
+            prospective_availability_persistence.py \
+            prospective_availability_features.py \
+            prospective_availability_collector.py \
+            prospective_availability_evaluation.py \
+            prospective_availability_research_cycle.py \
+            tests/test_prospective_availability_contract.py \
+            tests/test_prospective_availability_operational.py \
+            tests/test_prospective_availability_evaluation.py
 
-      - name: Run focused contract tests
-        run: python -m pytest -q tests/test_prospective_availability_contract.py
+      - name: Run focused availability tests
+        run: |
+          python -m pytest -q \
+            tests/test_prospective_availability_contract.py \
+            tests/test_prospective_availability_operational.py \
+            tests/test_prospective_availability_evaluation.py
 
       - name: Verify production model artifacts are untouched by this PR
         shell: bash
