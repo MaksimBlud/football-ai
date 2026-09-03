@@ -8,6 +8,7 @@ import pandas as pd
 
 POLL_TABLE = "prospective_availability_polls"
 OBSERVATION_TABLE = "prospective_availability_observations"
+PAGE_SIZE = 1000
 
 
 class AvailabilityPersistenceConflict(RuntimeError):
@@ -62,12 +63,28 @@ def _equal(left: dict, right: dict) -> bool:
     return _comparable(_record(left)) == _comparable(_record(right))
 
 
+def _fetch_all(client, table: str, *, league: str | None, order_column: str) -> list[dict]:
+    rows = []
+    start = 0
+    while True:
+        query = client.table(table).select("*")
+        if league is not None:
+            query = query.eq("league", league)
+        response = (
+            query.order(order_column, desc=False)
+            .range(start, start + PAGE_SIZE - 1)
+            .execute()
+        )
+        page = _rows(response)
+        rows.extend(page)
+        if len(page) < PAGE_SIZE:
+            break
+        start += PAGE_SIZE
+    return rows
+
+
 def fetch_polls(client, league: str | None = None) -> pd.DataFrame:
-    query = client.table(POLL_TABLE).select("*")
-    if league is not None:
-        query = query.eq("league", league)
-    response = query.order("observed_at_utc", desc=False).execute()
-    frame = pd.DataFrame(_rows(response))
+    frame = pd.DataFrame(_fetch_all(client, POLL_TABLE, league=league, order_column="observed_at_utc"))
     for column in ("commence_time_utc", "observed_at_utc", "persisted_at_utc"):
         if column in frame.columns:
             frame[column] = pd.to_datetime(frame[column], utc=True, errors="coerce")
@@ -75,11 +92,9 @@ def fetch_polls(client, league: str | None = None) -> pd.DataFrame:
 
 
 def fetch_observations(client, league: str | None = None) -> pd.DataFrame:
-    query = client.table(OBSERVATION_TABLE).select("*")
-    if league is not None:
-        query = query.eq("league", league)
-    response = query.order("observed_at_utc", desc=False).execute()
-    frame = pd.DataFrame(_rows(response))
+    frame = pd.DataFrame(
+        _fetch_all(client, OBSERVATION_TABLE, league=league, order_column="observed_at_utc")
+    )
     for column in (
         "commence_time_utc",
         "source_timestamp_utc",
@@ -148,8 +163,6 @@ def persist_poll(client, poll: dict, observations: pd.DataFrame) -> dict:
         if state in state_first_seen:
             row["first_seen_timestamp_utc"] = state_first_seen[state]
         if poll_unchanged:
-            # The same full provider state was already captured. Do not invent a later
-            # information time for its poll-item membership.
             row["observed_at_utc"] = poll_record["observed_at_utc"]
             row["source_timestamp_utc"] = poll_record["observed_at_utc"]
             if state not in state_first_seen:
