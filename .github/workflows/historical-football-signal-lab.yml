@@ -6,13 +6,17 @@ on:
     paths:
       - 'historical_football_signal_lab.py'
       - 'historical_football_signal_runner.py'
+      - 'historical_football_window_audit.py'
       - 'tests/test_historical_football_signal_lab.py'
+      - 'tests/test_historical_football_window_audit.py'
       - '.github/workflows/historical-football-signal-lab.yml'
   pull_request:
     paths:
       - 'historical_football_signal_lab.py'
       - 'historical_football_signal_runner.py'
+      - 'historical_football_window_audit.py'
       - 'tests/test_historical_football_signal_lab.py'
+      - 'tests/test_historical_football_window_audit.py'
       - '.github/workflows/historical-football-signal-lab.yml'
 jobs:
   validate:
@@ -26,7 +30,8 @@ jobs:
       - run: pip install pandas numpy requests 'scikit-learn==1.7.2' pytest
       - name: Snapshot production hashes
         run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
-      - run: pytest -q tests/test_historical_football_signal_lab.py
+      - name: Run signal and window tests
+        run: pytest -q tests/test_historical_football_signal_lab.py tests/test_historical_football_window_audit.py
       - name: Run three-league signal lab
         run: python historical_football_signal_runner.py
       - name: Verify production hashes unchanged
