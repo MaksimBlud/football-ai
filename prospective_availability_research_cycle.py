@@ -20,6 +20,7 @@ from prospective_availability_evaluation import (
 )
 
 OUTPUT_DIR = Path("artifacts/prospective_availability_signal_lab")
+PAGE_SIZE = 1000
 RUNTIMES = {
     "EPL": EPL_RUNTIME_CONFIG,
     "LA_LIGA": LA_LIGA_RUNTIME_CONFIG,
@@ -27,26 +28,37 @@ RUNTIMES = {
 }
 
 
+def _fetch_league_rows(table: str, columns: str, league: str, order_column: str | None = None) -> list[dict]:
+    rows = []
+    start = 0
+    while True:
+        query = supabase.table(table).select(columns).eq("league", league)
+        if order_column is not None:
+            query = query.order(order_column, desc=False)
+        response = query.range(start, start + PAGE_SIZE - 1).execute()
+        page = list(response.data or [])
+        rows.extend(page)
+        if len(page) < PAGE_SIZE:
+            break
+        start += PAGE_SIZE
+    return rows
+
+
 def load_market_snapshots() -> pd.DataFrame:
     frames = []
+    columns = (
+        "league,event_id,snapshot_time_utc,commence_time_utc,home_team,away_team,"
+        "home_odds,draw_odds,away_odds"
+    )
     for league in RUNTIMES:
-        response = (
-            supabase.table("odds_snapshots")
-            .select(
-                "league,event_id,snapshot_time_utc,commence_time_utc,home_team,away_team,home_odds,draw_odds,away_odds"
-            )
-            .eq("league", league)
-            .order("snapshot_time_utc", desc=False)
-            .limit(10000)
-            .execute()
-        )
-        frame = pd.DataFrame(response.data or [])
+        frame = pd.DataFrame(_fetch_league_rows("odds_snapshots", columns, league, "snapshot_time_utc"))
         if frame.empty:
             continue
         odds = frame[["home_odds", "draw_odds", "away_odds"]].apply(pd.to_numeric, errors="coerce")
         implied = 1.0 / odds
         sums = implied.sum(axis=1)
-        valid = (~implied.isna().any(axis=1)) & np.isfinite(implied).all(axis=1) & (sums > 0)
+        finite = pd.Series(np.isfinite(implied.to_numpy()).all(axis=1), index=implied.index)
+        valid = (~implied.isna().any(axis=1)) & finite & (sums > 0)
         frame = frame.loc[valid].copy()
         implied = implied.loc[valid]
         probabilities = implied.div(implied.sum(axis=1), axis=0)
@@ -57,14 +69,9 @@ def load_market_snapshots() -> pd.DataFrame:
 
 def load_finished_results() -> pd.DataFrame:
     frames = []
+    columns = "league,match_date,home_team,away_team,result"
     for league in RUNTIMES:
-        response = (
-            supabase.table("league_finished_results")
-            .select("league,match_date,home_team,away_team,result")
-            .eq("league", league)
-            .execute()
-        )
-        frame = pd.DataFrame(response.data or [])
+        frame = pd.DataFrame(_fetch_league_rows("league_finished_results", columns, league, "match_date"))
         if not frame.empty:
             frames.append(frame)
     return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
