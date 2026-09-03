@@ -1,0 +1,41 @@
+name: Prospective Availability External Gate Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/prospective-availability-external-gate-audit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      SPORTMONKS_API_KEY: ${{ secrets.SPORTMONKS_API_KEY }}
+      RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+    steps:
+      - name: Report credential availability without values
+        run: |
+          python - <<'PY'
+          import os
+          names = (
+              "SUPABASE_ACCESS_TOKEN",
+              "SUPABASE_DB_PASSWORD",
+              "SUPABASE_PROJECT_REF",
+              "SUPABASE_DB_URL",
+              "DATABASE_URL",
+              "SPORTMONKS_API_KEY",
+              "RAPIDAPI_KEY",
+          )
+          for name in names:
+              state = "PRESENT" if os.getenv(name) else "MISSING"
+              print(f"{name}={state}")
+          PY
