@@ -30,84 +30,122 @@ jobs:
           import os
           import requests
 
+          failures = []
           required = ("SUPABASE_URL", "SUPABASE_KEY", "API_FOOTBALL_KEY")
           missing = [name for name in required if not os.getenv(name)]
           if missing:
-              raise SystemExit("FAIL missing secrets: " + ", ".join(missing))
-          print("PASS secrets present; values not printed")
+              failures.append("missing secrets: " + ", ".join(missing))
+              print("FAIL missing secrets: " + ", ".join(missing))
+          else:
+              print("PASS secrets present; values not printed")
 
-          supabase_url = os.environ["SUPABASE_URL"].rstrip("/")
-          supabase_key = os.environ["SUPABASE_KEY"]
-          headers = {
-              "apikey": supabase_key,
-              "Authorization": "Bearer " + supabase_key,
-          }
-          for table in (
-              "prospective_availability_polls",
-              "prospective_availability_observations",
-          ):
-              response = requests.get(
-                  f"{supabase_url}/rest/v1/{table}",
-                  headers=headers,
-                  params={"select": "*", "limit": 1},
-                  timeout=20,
+          if os.getenv("SUPABASE_URL") and os.getenv("SUPABASE_KEY"):
+              supabase_url = os.environ["SUPABASE_URL"].rstrip("/")
+              supabase_key = os.environ["SUPABASE_KEY"]
+              headers = {
+                  "apikey": supabase_key,
+                  "Authorization": "Bearer " + supabase_key,
+              }
+              for table in (
+                  "prospective_availability_polls",
+                  "prospective_availability_observations",
+              ):
+                  try:
+                      response = requests.get(
+                          f"{supabase_url}/rest/v1/{table}",
+                          headers=headers,
+                          params={"select": "*", "limit": 1},
+                          timeout=20,
+                      )
+                  except requests.RequestException as exc:
+                      detail = f"Supabase table={table} request_error={type(exc).__name__}"
+                      failures.append(detail)
+                      print("FAIL " + detail)
+                      continue
+                  if response.status_code != 200:
+                      body = response.text[:500].replace("\n", " ")
+                      detail = (
+                          f"Supabase schema table={table} status={response.status_code} body={body}"
+                      )
+                      failures.append(detail)
+                      print("FAIL " + detail)
+                  else:
+                      print(f"PASS Supabase table readable: {table}")
+
+          if os.getenv("API_FOOTBALL_KEY"):
+              api_key = os.environ["API_FOOTBALL_KEY"]
+              api_headers = {"x-apisports-key": api_key}
+              expected = (
+                  ("EPL", 39, "Premier League", "England"),
+                  ("LA_LIGA", 140, "La Liga", "Spain"),
+                  ("SERIE_A", None, "Serie A", "Italy"),
               )
-              if response.status_code != 200:
-                  body = response.text[:500].replace("\n", " ")
-                  raise SystemExit(
-                      f"FAIL Supabase schema table={table} status={response.status_code} body={body}"
+              for league, known_id, expected_name, expected_country in expected:
+                  params = {"season": 2026}
+                  if known_id is None:
+                      params["country"] = expected_country
+                  else:
+                      params["id"] = known_id
+                  try:
+                      response = requests.get(
+                          "https://v3.football.api-sports.io/leagues",
+                          headers=api_headers,
+                          params=params,
+                          timeout=20,
+                      )
+                      response.raise_for_status()
+                      payload = response.json()
+                  except (requests.RequestException, ValueError) as exc:
+                      detail = f"API-Football {league} request_error={type(exc).__name__}"
+                      failures.append(detail)
+                      print("FAIL " + detail)
+                      continue
+                  if payload.get("errors"):
+                      detail = f"API-Football {league} errors={payload['errors']}"
+                      failures.append(detail)
+                      print("FAIL " + detail)
+                      continue
+                  matches = []
+                  for item in payload.get("response") or []:
+                      provider_league = item.get("league") or {}
+                      country = item.get("country") or {}
+                      if (
+                          provider_league.get("name") == expected_name
+                          and country.get("name") == expected_country
+                      ):
+                          matches.append(item)
+                  if len(matches) != 1:
+                      detail = f"API-Football {league} matches={len(matches)}"
+                      failures.append(detail)
+                      print("FAIL " + detail)
+                      continue
+                  item = matches[0]
+                  provider_id = int(item["league"]["id"])
+                  if known_id is not None and provider_id != known_id:
+                      detail = f"API-Football {league} unexpected id={provider_id}"
+                      failures.append(detail)
+                      print("FAIL " + detail)
+                      continue
+                  season = next(
+                      (s for s in item.get("seasons") or [] if int(s.get("year", -1)) == 2026),
+                      None,
                   )
-              print(f"PASS Supabase table readable: {table}")
+                  injuries = bool(((season or {}).get("coverage") or {}).get("injuries"))
+                  if not injuries:
+                      detail = f"API-Football {league} coverage.injuries=false"
+                      failures.append(detail)
+                      print("FAIL " + detail)
+                      continue
+                  print(
+                      f"PASS API-Football {league}: id={provider_id} "
+                      "coverage.injuries=true"
+                  )
 
-          api_key = os.environ["API_FOOTBALL_KEY"]
-          api_headers = {"x-apisports-key": api_key}
-          expected = (
-              ("EPL", 39, "Premier League", "England"),
-              ("LA_LIGA", 140, "La Liga", "Spain"),
-              ("SERIE_A", None, "Serie A", "Italy"),
-          )
-          for league, known_id, expected_name, expected_country in expected:
-              params = {"season": 2026}
-              if known_id is None:
-                  params["country"] = expected_country
-              else:
-                  params["id"] = known_id
-              response = requests.get(
-                  "https://v3.football.api-sports.io/leagues",
-                  headers=api_headers,
-                  params=params,
-                  timeout=20,
-              )
-              response.raise_for_status()
-              payload = response.json()
-              if payload.get("errors"):
-                  raise SystemExit(f"FAIL API-Football {league}: {payload['errors']}")
-              matches = []
-              for item in payload.get("response") or []:
-                  provider_league = item.get("league") or {}
-                  country = item.get("country") or {}
-                  if (
-                      provider_league.get("name") == expected_name
-                      and country.get("name") == expected_country
-                  ):
-                      matches.append(item)
-              if len(matches) != 1:
-                  raise SystemExit(f"FAIL API-Football {league}: matches={len(matches)}")
-              item = matches[0]
-              provider_id = int(item["league"]["id"])
-              if known_id is not None and provider_id != known_id:
-                  raise SystemExit(f"FAIL API-Football {league}: unexpected id={provider_id}")
-              season = next(
-                  (s for s in item.get("seasons") or [] if int(s.get("year", -1)) == 2026),
-                  None,
-              )
-              injuries = bool(((season or {}).get("coverage") or {}).get("injuries"))
-              if not injuries:
-                  raise SystemExit(f"FAIL API-Football {league}: coverage.injuries=false")
-              print(
-                  f"PASS API-Football {league}: id={provider_id} "
-                  "coverage.injuries=true"
-              )
+          if failures:
+              print(f"BOOTSTRAP_GATE_FAILURES={len(failures)}")
+              for index, failure in enumerate(failures, 1):
+                  print(f"GATE_FAILURE_{index}: {failure}")
+              raise SystemExit(1)
 
           print("PASS PROSPECTIVE_AVAILABILITY_BOOTSTRAP_READ_ONLY")
           PY
