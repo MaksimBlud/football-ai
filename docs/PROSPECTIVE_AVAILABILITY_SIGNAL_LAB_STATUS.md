@@ -1,9 +1,15 @@
 # Prospective Availability Signal Lab — Status
 
-Status: **PHASE 1 — CONTRACT / PROTOCOL VALIDATION**
+Status: **PHASE 2 — OPERATIONAL CONTRACT READY / ACTIVATION GATED**
 
-This status file is intentionally operationally inert. The lab has not activated data collection, Supabase persistence, production inference, model training, calibration, or `.pkl` promotion.
+Phase 1 was merged after CI validation. Phase 2 now freezes the provider bootstrap, immutable full-poll persistence contract, canonical fixture reconciliation, and COUNT_ONLY_V1 feature semantics for EPL, La Liga, and Serie A.
 
-Current phase establishes the information-time contract before any outcome data can influence feature design. The authoritative eligibility timestamp is `first_seen_timestamp_utc` relative to a frozen prediction cutoff.
+The collector remains research-only. It does not train or load a production model, does not modify market observations or prediction ledgers, and does not change any `.pkl` artifact. Scheduled collection is additionally gated by repository variable `PROSPECTIVE_AVAILABILITY_ENABLED=true`; manual workflow dispatch remains available for an explicit bootstrap run.
 
-Next allowed phase after Phase 1 validation: live provider bootstrap for EPL, La Liga, and Serie A, including `coverage.injuries` verification, fixture-ID reconciliation, unresolved provider identifier verification, and append-only research persistence design.
+Durable storage is additive: `prospective_availability_polls` stores complete provider states, including zero-item states, while `prospective_availability_observations` stores the poll membership rows and state-level `first_seen_timestamp_utc`. A player disappearing from a later full poll is therefore represented without rewriting prior observations.
+
+Prediction-time feature eligibility is frozen to the latest complete poll whose `observed_at_utc` is not later than the paired market row's `snapshot_time_utc`. COUNT_ONLY_V1 contains only injury, suspension, and total unavailable-player counts for home/away teams plus their differences. Player-importance weighting remains disabled.
+
+Database activation is **not assumed** by this commit. The additive migration `202609030002_prospective_availability.sql` must be applied to the connected Supabase project and live provider credentials/coverage must pass the bootstrap before scheduled collection can be enabled. Until those gates pass, the honest operational state is READY-BUT-NOT-ACTIVE.
+
+No outcome-based availability result has been inspected. Phase 3 is prospective accumulation after activation; Phase 4 is the pre-registered paired `MARKET_MODEL` versus `MARKET_AVAILABILITY` evaluation.
