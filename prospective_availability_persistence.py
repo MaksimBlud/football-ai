@@ -122,7 +122,6 @@ def persist_poll(client, poll: dict, observations: pd.DataFrame) -> dict:
     poll_inserted = 0
     poll_unchanged = 0
     if existing_poll is not None:
-        # observed_at is intentionally earliest collector sighting for an identical full state.
         comparable = dict(poll_record)
         comparable["observed_at_utc"] = existing_poll.get("observed_at_utc")
         if not _equal(existing_poll, comparable):
@@ -148,8 +147,13 @@ def persist_poll(client, poll: dict, observations: pd.DataFrame) -> dict:
         state = str(row["state_key"])
         if state in state_first_seen:
             row["first_seen_timestamp_utc"] = state_first_seen[state]
-        elif poll_unchanged:
-            row["first_seen_timestamp_utc"] = poll_record["observed_at_utc"]
+        if poll_unchanged:
+            # The same full provider state was already captured. Do not invent a later
+            # information time for its poll-item membership.
+            row["observed_at_utc"] = poll_record["observed_at_utc"]
+            row["source_timestamp_utc"] = poll_record["observed_at_utc"]
+            if state not in state_first_seen:
+                row["first_seen_timestamp_utc"] = poll_record["observed_at_utc"]
 
     existing = _existing_by(
         client,
