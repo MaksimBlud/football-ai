@@ -32,9 +32,10 @@ def download(config, league: str, raw_dir: Path):
 def main():
     p=argparse.ArgumentParser(); p.add_argument("--work-dir",type=Path,default=Path("artifacts/historical_football_signal_work")); p.add_argument("--output-dir",type=Path,default=Path("artifacts/historical_football_signal_lab")); a=p.parse_args()
     combined=pd.concat([download(cfg,league,a.work_dir/"raw"/league.lower()) for league,cfg in LEAGUES.items()],ignore_index=True)
-    paths=write_reports(combined,a.output_dir); window=write_window_reports(combined,a.output_dir)
+    paths=write_reports(combined,a.output_dir); window,robustness=write_window_reports(combined,a.output_dir)
     print(f"HISTORICAL FOOTBALL SIGNAL LAB COMPLETE rows={len(combined)}")
     for k,v in paths.items(): print(f"{k}: {v}")
     print("WINDOW ABLATION"); print(window.to_string(index=False))
+    print("PAIRED WINDOW ROBUSTNESS"); print(robustness.to_string(index=False))
     print("Research only: no training promotion, Supabase writes, Structural changes, or .pkl changes.")
 if __name__=="__main__": main()
