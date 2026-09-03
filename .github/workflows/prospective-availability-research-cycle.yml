@@ -1,0 +1,50 @@
+name: Prospective Availability Research Cycle
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "31 7 * * 1"
+
+concurrency:
+  group: prospective-availability-research-cycle
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate-readiness:
+    if: github.event_name == 'workflow_dispatch' || vars.PROSPECTIVE_AVAILABILITY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: |
+          python -m pip install --upgrade pip
+          pip install pandas numpy scikit-learn supabase python-dotenv
+      - name: Check Supabase credentials
+        run: |
+          python - <<'PY'
+          import os
+          missing = [name for name in ("SUPABASE_URL", "SUPABASE_KEY") if not os.getenv(name)]
+          if missing:
+              raise SystemExit("Missing research-cycle secrets: " + ", ".join(missing))
+          print("PASS: research-cycle secrets available; values not printed")
+          PY
+      - name: Run frozen readiness/evaluation cycle
+        run: python prospective_availability_research_cycle.py
+      - name: Upload research-only readiness/evaluation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prospective-availability-research-${{ github.run_id }}
+          path: artifacts/prospective_availability_signal_lab/
+          if-no-files-found: ignore
+          retention-days: 30
