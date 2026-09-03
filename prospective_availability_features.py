@@ -36,7 +36,11 @@ def build_availability_features(
         result[column] = pd.NA
     result["availability_covered"] = False
     result["availability_poll_key"] = pd.NA
-    result["availability_poll_observed_at_utc"] = pd.NaT
+    result["availability_poll_observed_at_utc"] = pd.Series(
+        pd.NaT,
+        index=result.index,
+        dtype="datetime64[ns, UTC]",
+    )
     if polls.empty:
         return result
 
