@@ -1,8 +1,10 @@
 # Prospective Market Path V1 — Status
 
-Status: **PREREGISTERED / RESEARCH-ONLY / ACCUMULATING PROSPECTIVE SAMPLE**
+Status: **OPERATIONAL IMPLEMENTATION CLOSED / RESEARCH-ONLY / ACTIVE PROSPECTIVE ACCUMULATION**
 
 `PROSPECTIVE_MARKET_PATH_V1` tests one narrow question that was not answered by the prior historical market-timing or convergence work: whether the already-observed path of our own timestamped 1X2 market snapshots adds outcome-predictive information beyond the current market price available at a fixed pre-match cutoff.
+
+The engineering and governance implementation is now closed. The scientific conclusion is intentionally still unknown and remains active only because genuine future observations must accumulate before the single frozen evaluation is allowed. See `docs/PROSPECTIVE_MARKET_PATH_V1_OPERATIONAL_CLOSURE.md` for the formal operational closure.
 
 ## Frozen information contract
 
@@ -24,13 +26,15 @@ Outcome metrics are forbidden until **all three** leagues independently have:
 - at least 60 prior training fixtures for each scored block;
 - at least 20 fixtures in each scored test block.
 
-Until every league passes that gate, the autonomous cycle may emit only eligibility and readiness coverage. It must not calculate or print Brier or log-loss comparisons.
+Autonomous scheduled and push-triggered workflows may emit only coverage, settlement health, sample growth, and readiness. They do **not** query outcome values and cannot automatically transition to scoring when readiness becomes true.
+
+The preregistered paired outcome evaluation is now an explicit manual research action only. It requires `workflow_dispatch` with `evaluate=true`, which invokes `prospective_market_path_cycle.py --evaluate`. That explicit path re-checks the frozen all-three-league readiness gate and refuses to score if the gate is not satisfied.
 
 ## Operational state
 
-The block is read-only and needs no new database table, migration, or external provider. It consumes the already-existing immutable `odds_snapshots` and `league_finished_results` data. The weekly research workflow checks readiness and is protected by production `.pkl` hash comparison before and after every run.
+The block is read-only and needs no new database table, migration, or external provider. It consumes the already-existing immutable `odds_snapshots` and `league_finished_results` data. Autonomous research workflows are protected by production `.pkl` hash comparison before and after every run.
 
-A separate two-hour fixture-level coverage monitor now checks whether each observed provider event already satisfies, can still satisfy, or can no longer satisfy the frozen path requirements. Active fixtures that become `IRRECOVERABLE` make the monitor workflow fail **after** diagnostic CSV artifacts have been uploaded. Provider schedule revisions that are clearly stale are reported as `SUPERSEDED`; same-event kickoff ambiguity remains `CONFLICT` and is excluded fail-closed.
+A separate two-hour fixture-level coverage monitor checks whether each observed provider event already satisfies, can still satisfy, or can no longer satisfy the frozen path requirements. Active fixtures that become `IRRECOVERABLE` make the monitor workflow fail **after** diagnostic CSV artifacts have been uploaded. Provider schedule revisions that are clearly stale are reported as `SUPERSEDED`; same-event kickoff ambiguity remains `CONFLICT` and is excluded fail-closed.
 
 The live coverage audit on **2026-09-04** confirmed that the existing collection cadence is sufficient for the current active sample:
 
@@ -40,8 +44,14 @@ The live coverage audit on **2026-09-04** confirmed that the existing collection
 
 The known Serie A conflict is Cagliari–Lecce provider event `8f751e96142db860ba66bbea713baf50`; it is excluded rather than repaired or guessed. Settlement also excludes an entire canonical fixture identity if two distinct provider event IDs would otherwise map to the same league-local match date and normalized home/away pair. No later provider information is used to choose between revisions.
 
-The post-hardening prospective research cycle on **2026-09-04** still reported 0 settled eligible fixtures in EPL, La Liga, and Serie A and explicitly returned `PROSPECTIVE_MARKET_PATH_SAMPLE_NOT_READY; no outcome scores computed`. This is the expected state immediately after preregistration.
+The first settlement-lag audit reported 20 eligible EPL paths, 23 La Liga paths, and 22 Serie A paths, all still inside the 18-hour settlement grace period and with `SETTLEMENT_LATE=0`.
 
-No Supabase rows are written, no prediction ledger is changed, no production model or calibrator is loaded or promoted, and no live selection rule is affected.
+The first outcome-free sample-growth audit on **2026-09-04** reported 0 settled eligible fixtures, 0 calendar months, and 0 valid test blocks for EPL, La Liga, and Serie A. It explicitly reported that readiness was not reached and no outcome evaluation was performed. This is the expected state immediately after preregistration.
 
-The research conclusion is intentionally **not yet known**. The block remains open only for genuine prospective accumulation and the pre-registered evaluation once the frozen readiness gate is satisfied.
+No Supabase rows are written by the Market Path research monitors, no prediction ledger is changed, no production model or calibrator is promoted, and no live selection rule is affected.
+
+## Closure semantics
+
+No further Market Path V1 feature engineering, cutoff changes, span changes, eligibility tuning, model-family tuning, or retrospective probing is permitted while the prospective sample accumulates. Future code changes are justified only by a concrete operational health failure and must preserve the frozen hypothesis.
+
+Therefore the **implementation phase is CLOSED**. The registry remains `ACTIVE_ACCUMULATING` only because the scientific experiment cannot be resolved until future data satisfy the preregistered gate. Reaching readiness will not trigger scoring automatically; evaluation remains a separate explicit manual action, and any future production promotion remains a separate explicit decision.
