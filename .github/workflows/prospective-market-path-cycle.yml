@@ -1,0 +1,54 @@
+name: Prospective Market Path Research Cycle
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '43 6 * * 1'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/prospective-market-path-cycle.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prospective-market-path-v1
+  cancel-in-progress: false
+
+jobs:
+  cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: .
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas numpy 'scikit-learn==1.7.2' supabase python-dotenv
+      - name: Verify read-only source credentials
+        run: |
+          python - <<'PY'
+          import os
+          missing=[name for name in ('SUPABASE_URL','SUPABASE_KEY') if not os.getenv(name)]
+          if missing:
+              raise SystemExit('Missing research read credentials: '+', '.join(missing))
+          print('PASS: read credentials available; values not printed')
+          PY
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Run prospective readiness/evaluation cycle
+        run: python prospective_market_path_cycle.py
+      - name: Verify production hashes unchanged
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prospective-market-path-v1
+          path: artifacts/prospective_market_path_v1/
+          retention-days: 90

@@ -1,0 +1,48 @@
+{
+  "research_block": "PROSPECTIVE_MARKET_PATH_V1",
+  "status": "PREREGISTERED_RESEARCH_ONLY_ACCUMULATING",
+  "frozen_at_utc": "2026-09-04T14:25:00Z",
+  "eligible_kickoff_not_before_utc": "2026-09-04T14:25:00Z",
+  "leagues": ["EPL", "LA_LIGA", "SERIE_A"],
+  "source": "immutable odds_snapshots plus immutable league_finished_results",
+  "information_contract": {
+    "cutoff_hours_before_kickoff": 6,
+    "snapshots_after_cutoff_forbidden": true,
+    "post_freeze_kickoffs_only": true,
+    "minimum_snapshots_through_cutoff": 3,
+    "minimum_path_span_hours": 12,
+    "current_fixture_outcome_forbidden_from_features": true,
+    "future_snapshots_forbidden": true
+  },
+  "feature_version": "MARKET_PATH_V1",
+  "baseline_features": ["market_home_prob", "market_draw_prob", "market_away_prob"],
+  "path_features": [
+    "net_home_prob_move",
+    "net_draw_prob_move",
+    "net_away_prob_move",
+    "total_home_prob_path",
+    "total_draw_prob_path",
+    "total_away_prob_path"
+  ],
+  "model_family": "median_imputer_standard_scaler_multinomial_logistic_regression",
+  "comparisons": ["MARKET_MODEL", "MARKET_PATH_MODEL"],
+  "readiness": {
+    "minimum_settled_eligible_fixtures_per_league": 100,
+    "minimum_calendar_months_per_league": 4,
+    "minimum_valid_monthly_test_blocks_per_league": 2,
+    "minimum_prior_training_fixtures_per_block": 60,
+    "minimum_test_fixtures_per_block": 20,
+    "scores_forbidden_before_all_leagues_ready": true
+  },
+  "evaluation": {
+    "split": "expanding_monthly_walk_forward",
+    "primary_metrics": ["multiclass_brier", "log_loss"],
+    "paired_incremental_test": "MARKET_PATH_MODEL minus MARKET_MODEL",
+    "no_threshold_search": true,
+    "no_feature_selection_after_results": true,
+    "no_pre_freeze_outcomes": true
+  },
+  "production_activation": false,
+  "supabase_writes": false,
+  "production_artifact_changes": false
+}
