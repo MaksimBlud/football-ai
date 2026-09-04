@@ -108,6 +108,34 @@ def test_settlement_uses_canonical_local_date_and_team_keys():
     assert settled.iloc[0].actual_result == "H"
 
 
+def test_distinct_provider_revisions_for_same_canonical_fixture_are_both_excluded():
+    paths = pd.DataFrame([
+        {
+            "league": "EPL",
+            "event_id": "old-revision",
+            "home_team": "Arsenal",
+            "away_team": "Chelsea",
+            "kickoff_utc": "2026-09-12T18:00:00Z",
+        },
+        {
+            "league": "EPL",
+            "event_id": "new-revision",
+            "home_team": "Arsenal",
+            "away_team": "Chelsea",
+            "kickoff_utc": "2026-09-12T20:00:00Z",
+        },
+    ])
+    results = pd.DataFrame([{
+        "league": "EPL",
+        "match_date": "2026-09-12",
+        "home_team": "Arsenal",
+        "away_team": "Chelsea",
+        "result": "H",
+    }])
+    settled = settle_market_paths(paths, results, "EPL")
+    assert settled.empty
+
+
 def test_unready_sample_refuses_outcome_scoring():
     settled = pd.DataFrame(columns=["league", "event_id", "month", "kickoff_utc"])
     state = readiness_for_league(settled, "EPL")
