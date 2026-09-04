@@ -17,6 +17,20 @@ A fixture qualifies only when all of the following are true before kickoff:
 
 No team, month, season, bookmaker, or contextual exclusions may be introduced after outcomes are observed.
 
+## Operational freeze addendum — 2026-09-04
+
+This addendum was adopted before the operational prospective sample begins. It does not change the historical candidate thresholds.
+
+- Operational prospective observations begin at `2026-09-04T17:00:00Z`. Earlier snapshots are excluded from the operational prospective sample even when the fixture kicks off later.
+- The repository's existing canonical closing convention is used: the designated decision is the **latest durably recorded pre-kickoff `MARKET_ONLY` row** in `league_prediction_ledger` for the provider event.
+- That immutable ledger row is the durable pre-kickoff tag source. Its `event_id + snapshot_time_utc` must match exactly one raw `odds_snapshots` row; the raw row supplies the offered HOME odds and must reproduce the stored margin-free market probabilities.
+- Ambiguous provider event revisions or conflicting kickoff identities are excluded fail-closed. The implementation may not select one revision using later outcome information.
+- Autonomous monitoring is outcome-free. It may use only settlement identity presence, not `result` values.
+- Outcome evaluation is a separate explicit manual action and is time-gated until `2027-06-01T00:00:00Z`. No schedule or push trigger may bypass this gate.
+- The post-gate evaluation remains descriptive and research-only. No production promotion rule, ROI threshold, p-value threshold, or match-count threshold is introduced by this addendum.
+
+The machine-readable operational contract is `research/la_liga_market_home_60_70_v1_prospective_runtime.json`.
+
 ## Prospective accounting
 
 Every qualifying fixture must be tagged before kickoff and later settled. Report count, wins, accuracy, expected wins from the recorded margin-free probabilities, actual-minus-expected wins, flat one-unit P&L/ROI at the recorded offered odds, average odds, max drawdown, calibration diagnostics, and temporal breakdown.
