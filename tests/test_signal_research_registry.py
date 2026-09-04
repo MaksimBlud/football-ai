@@ -19,6 +19,7 @@ def test_registry_has_unique_ids_and_expected_active_closed_split():
     assert {block["id"] for block in active} == {
         "PROSPECTIVE_AVAILABILITY_SIGNAL_LAB",
         "PROSPECTIVE_MARKET_PATH_V1",
+        "LA_LIGA_MARKET_HOME_60_70_V1",
     }
 
 
@@ -66,3 +67,12 @@ def test_availability_is_operationally_closed_but_externally_gated():
     assert block["activation_monitor_read_only"] is True
     assert block["automatic_external_gate_bypass"] is False
     assert Path(block["operational_closure_document"]).is_file()
+
+
+def test_la_liga_60_70_candidate_is_frozen_and_outcome_gated():
+    block = _block("LA_LIGA_MARKET_HOME_60_70_V1")
+    assert block["status"] == "ACTIVE_ACCUMULATING"
+    assert block["scheduled_outcome_scoring"] is False
+    assert block["evaluation_requires_explicit_manual_dispatch"] is True
+    assert Path(block["protocol_document"]).is_file()
+    assert Path(block["runtime_contract"]).is_file()
