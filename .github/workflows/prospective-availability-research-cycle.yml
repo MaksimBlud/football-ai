@@ -2,6 +2,12 @@ name: Prospective Availability Research Cycle
 
 on:
   workflow_dispatch:
+    inputs:
+      evaluate:
+        description: "Run preregistered outcome evaluation after readiness gate"
+        required: true
+        type: boolean
+        default: false
   schedule:
     - cron: "31 7 * * 1"
 
@@ -38,9 +44,20 @@ jobs:
               raise SystemExit("Missing research-cycle secrets: " + ", ".join(missing))
           print("PASS: research-cycle secrets available; values not printed")
           PY
-      - name: Run frozen readiness/evaluation cycle
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Run outcome-free availability readiness
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.evaluate != true }}
         run: python prospective_availability_research_cycle.py
-      - name: Upload research-only readiness/evaluation artifacts
+      - name: Run explicit preregistered availability evaluation
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.evaluate == true }}
+        run: python prospective_availability_research_cycle.py --evaluate
+      - name: Verify production hashes unchanged
+        if: always()
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - name: Upload research-only artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:

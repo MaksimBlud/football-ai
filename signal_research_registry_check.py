@@ -7,6 +7,10 @@ from pathlib import Path
 REGISTRY = Path("research/signal_research_registry_v1.json")
 CLOSED_PREFIX = "CLOSED_"
 ACTIVE_PREFIX = "ACTIVE_"
+OPERATIONALLY_CLOSED_PROSPECTIVE = {
+    "PROSPECTIVE_MARKET_PATH_V1",
+    "PROSPECTIVE_AVAILABILITY_SIGNAL_LAB",
+}
 
 
 def validate_registry(root: Path = Path(".")) -> list[str]:
@@ -44,7 +48,7 @@ def validate_registry(root: Path = Path(".")) -> list[str]:
         else:
             errors.append(f"{block_id}: unsupported registry status {status!r}")
 
-        if block_id == "PROSPECTIVE_MARKET_PATH_V1":
+        if block_id in OPERATIONALLY_CLOSED_PROSPECTIVE:
             if block.get("operational_implementation") != "CLOSED":
                 errors.append(f"{block_id}: operational implementation must be CLOSED")
             if block.get("scheduled_outcome_scoring") is not False:
@@ -54,6 +58,12 @@ def validate_registry(root: Path = Path(".")) -> list[str]:
             closure = block.get("operational_closure_document")
             if not closure or not (root / str(closure)).is_file():
                 errors.append(f"{block_id}: operational_closure_document must exist")
+
+        if block_id == "PROSPECTIVE_AVAILABILITY_SIGNAL_LAB":
+            if block.get("activation_monitor_read_only") is not True:
+                errors.append(f"{block_id}: activation monitor must be read-only")
+            if block.get("automatic_external_gate_bypass") is not False:
+                errors.append(f"{block_id}: automatic external gate bypass must be false")
 
     governance = payload.get("governance") or {}
     required_true = (
