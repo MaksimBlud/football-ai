@@ -44,7 +44,6 @@ def test_path_uses_only_snapshots_at_or_before_six_hour_cutoff():
         _snapshot("e1", kickoff, "2026-09-11T18:00:00Z", 2.20),
         _snapshot("e1", kickoff, "2026-09-12T06:00:00Z", 2.10),
         _snapshot("e1", kickoff, "2026-09-12T12:00:00Z", 2.00),
-        # after the -6h cutoff and therefore forbidden from features
         _snapshot("e1", kickoff, "2026-09-12T14:00:00Z", 1.40),
     ]
     path = build_market_paths(pd.DataFrame(rows))
@@ -68,6 +67,15 @@ def test_path_requires_three_snapshots_and_twelve_hour_span():
     ]
     assert build_market_paths(pd.DataFrame(too_few)).empty
     assert build_market_paths(pd.DataFrame(too_short)).empty
+
+
+def test_rescheduled_event_with_conflicting_kickoff_is_excluded_fail_closed():
+    rows = [
+        _snapshot("rescheduled", "2026-09-12T18:00:00Z", "2026-09-10T18:00:00Z", 2.2),
+        _snapshot("rescheduled", "2026-09-12T18:00:00Z", "2026-09-11T18:00:00Z", 2.1),
+        _snapshot("rescheduled", "2026-09-13T18:00:00Z", "2026-09-12T12:00:00Z", 2.0),
+    ]
+    assert build_market_paths(pd.DataFrame(rows)).empty
 
 
 def test_path_feature_family_is_exactly_frozen():

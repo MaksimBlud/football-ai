@@ -91,14 +91,18 @@ def build_market_paths(snapshots: pd.DataFrame) -> pd.DataFrame:
     identity = ["league", "event_id"]
     for (league, event_id), group in work.groupby(identity, sort=False):
         group = group.sort_values("snapshot_time_utc").drop_duplicates("snapshot_time_utc", keep="last")
+        # A provider event may be rescheduled while retaining event_id. Mixing snapshots
+        # from multiple announced kickoffs would make the -6h information cutoff
+        # ambiguous, so the entire event is excluded rather than guessed or re-keyed.
+        kickoff_values = group["commence_time_utc"].unique()
+        if len(kickoff_values) != 1:
+            print(f"WAIT conflicting kickoff excluded for {league}/{event_id}")
+            continue
         if len(group) < MIN_SNAPSHOTS:
             continue
         span_hours = (group["snapshot_time_utc"].iloc[-1] - group["snapshot_time_utc"].iloc[0]).total_seconds() / 3600.0
         if span_hours < MIN_PATH_SPAN_HOURS:
             continue
-        kickoff_values = group["commence_time_utc"].unique()
-        if len(kickoff_values) != 1:
-            raise ValueError(f"conflicting kickoff for {league}/{event_id}")
         first = group.iloc[0]
         last = group.iloc[-1]
         row = {
@@ -156,11 +160,14 @@ def settle_market_paths(paths: pd.DataFrame, results: pd.DataFrame, league: str)
     if result_view.duplicated(identity, keep=False).any():
         raise ValueError("duplicate finished-result fixture identity")
     settled = p.merge(result_view.rename(columns={"result": "actual_result"}), on=identity, how="inner", validate="one_to_one")
-    settled["month"] = pd.to_datetime(settled["kickoff_utc"], utc=True).dt.to_period("M").astype(str)
+    kickoff_utc = pd.to_datetime(settled["kickoff_utc"], utc=True)
+    settled["month"] = kickoff_utc.dt.tz_localize(None).dt.to_period("M").astype(str)
     return settled
 
 
 def readiness_for_league(settled: pd.DataFrame, league: str) -> Readiness:
+    if settled.empty or "league" not in settled.columns:
+        return Readiness(league, 0, 0, 0, False)
     frame = settled[settled["league"].astype(str) == league].sort_values("kickoff_utc").copy()
     fixtures = int(frame["event_id"].nunique()) if not frame.empty else 0
     months = sorted(frame["month"].unique()) if not frame.empty else []
