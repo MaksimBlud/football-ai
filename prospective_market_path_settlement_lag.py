@@ -24,12 +24,7 @@ def _team_key(value) -> str:
     return normalize_team_name(str(value))
 
 
-def audit_settlement_lag(
-    paths: pd.DataFrame,
-    results_identity: pd.DataFrame,
-    *,
-    now_utc: pd.Timestamp | None = None,
-) -> pd.DataFrame:
+def audit_settlement_lag(paths: pd.DataFrame, results_identity: pd.DataFrame, *, now_utc: pd.Timestamp | None = None) -> pd.DataFrame:
     required_paths = {"league", "event_id", "home_team", "away_team", "kickoff_utc"}
     missing_paths = required_paths - set(paths.columns)
     if missing_paths:
@@ -41,49 +36,43 @@ def audit_settlement_lag(
 
     now = pd.Timestamp(now_utc if now_utc is not None else datetime.now(timezone.utc))
     now = now.tz_localize("UTC") if now.tzinfo is None else now.tz_convert("UTC")
-
     rows: list[dict] = []
+
     for league in LEAGUES:
         p = paths[paths["league"].astype(str) == league].copy()
         if p.empty:
             continue
         r = results_identity[results_identity["league"].astype(str) == league].copy()
         timezone_name = get_league_config(league).timezone
-
         p["kickoff_utc"] = pd.to_datetime(p["kickoff_utc"], utc=True, errors="coerce")
         p = p.dropna(subset=["kickoff_utc"])
-        p["_match_date"] = p["kickoff_utc"].dt.tz_convert(timezone_name).dt.date
-        p["_home_key"] = p["home_team"].map(_team_key)
-        p["_away_key"] = p["away_team"].map(_team_key)
+        p["match_date_key"] = p["kickoff_utc"].dt.tz_convert(timezone_name).dt.date
+        p["home_key"] = p["home_team"].map(_team_key)
+        p["away_key"] = p["away_team"].map(_team_key)
 
         if r.empty:
             known: set[tuple] = set()
         else:
-            r["_match_date"] = pd.to_datetime(r["match_date"], errors="coerce").dt.date
-            r["_home_key"] = r["home_team"].map(_team_key)
-            r["_away_key"] = r["away_team"].map(_team_key)
-            known = set(r[["_match_date", "_home_key", "_away_key"]].dropna().itertuples(index=False, name=None))
+            r["match_date_key"] = pd.to_datetime(r["match_date"], errors="coerce").dt.date
+            r["home_key"] = r["home_team"].map(_team_key)
+            r["away_key"] = r["away_team"].map(_team_key)
+            known = set(r[["match_date_key", "home_key", "away_key"]].dropna().itertuples(index=False, name=None))
 
-        identity = ["_match_date", "_home_key", "_away_key"]
+        identity = ["match_date_key", "home_key", "away_key"]
         ambiguous = p.duplicated(identity, keep=False)
         if ambiguous.any():
-            # Same fail-closed canonical-identity rule as settlement: do not monitor
-            # one provider revision as if it were independently settleable.
             p = p.loc[~ambiguous].copy()
 
         for row in p.itertuples(index=False):
-            key = (row._match_date, row._home_key, row._away_key)
+            key = (row.match_date_key, row.home_key, row.away_key)
             present = key in known
             grace_deadline = pd.Timestamp(row.kickoff_utc) + pd.Timedelta(hours=SETTLEMENT_GRACE_HOURS)
             if present:
-                status = STATUS_PRESENT
-                reason = "CANONICAL_RESULT_IDENTITY_PRESENT"
+                status, reason = STATUS_PRESENT, "CANONICAL_RESULT_IDENTITY_PRESENT"
             elif now <= grace_deadline:
-                status = STATUS_AWAITING
-                reason = "WITHIN_POST_KICKOFF_GRACE"
+                status, reason = STATUS_AWAITING, "WITHIN_POST_KICKOFF_GRACE"
             else:
-                status = STATUS_LATE
-                reason = "CANONICAL_RESULT_IDENTITY_MISSING_AFTER_GRACE"
+                status, reason = STATUS_LATE, "CANONICAL_RESULT_IDENTITY_MISSING_AFTER_GRACE"
             rows.append({
                 "league": league,
                 "event_id": str(row.event_id),
@@ -94,7 +83,6 @@ def audit_settlement_lag(
                 "status": status,
                 "reason": reason,
             })
-
     return pd.DataFrame(rows)
 
 
