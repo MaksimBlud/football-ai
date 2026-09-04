@@ -156,6 +156,18 @@ def settle_market_paths(paths: pd.DataFrame, results: pd.DataFrame, league: str)
     if not r["result"].isin(OUTCOMES).all():
         raise ValueError("invalid finished result")
     identity = ["_match_date", "_home_key", "_away_key"]
+
+    # Distinct provider event ids can represent multiple schedule revisions of the
+    # same canonical fixture. Do not select one revision using later provider state:
+    # exclude the entire ambiguous canonical identity fail-closed before settlement.
+    ambiguous_paths = p.duplicated(identity, keep=False)
+    if ambiguous_paths.any():
+        for key in p.loc[ambiguous_paths, identity].drop_duplicates().itertuples(index=False, name=None):
+            print(f"WAIT ambiguous canonical path identity excluded for {league}/{key}")
+        p = p.loc[~ambiguous_paths].copy()
+        if p.empty:
+            return pd.DataFrame()
+
     result_view = r[identity + ["result"]].copy()
     if result_view.duplicated(identity, keep=False).any():
         raise ValueError("duplicate finished-result fixture identity")
