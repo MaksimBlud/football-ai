@@ -172,3 +172,13 @@ def test_migration_is_additive_insert_only_and_has_time_guards():
     assert " for select " in sql
     assert " for update " not in sql
     assert " for delete " not in sql
+
+
+def test_collector_has_global_provider_preflight_before_any_league_collection():
+    source = Path("prospective_availability_collector.py").read_text()
+    preflight = "resolved = preflight_provider(session, api_key)"
+    collection = "metrics = collect_league("
+    assert preflight in source
+    assert collection in source
+    assert source.index(preflight) < source.index(collection)
+    assert "resolved_league=resolved[league]" in source
