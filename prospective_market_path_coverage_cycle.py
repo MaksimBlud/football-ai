@@ -8,6 +8,7 @@ import pandas as pd
 from database import supabase
 from prospective_market_path import LEAGUES
 from prospective_market_path_coverage import build_fixture_coverage, summarize_fixture_coverage
+from prospective_market_path_revisions import STATUS_SUPERSEDED, mark_superseded_revisions
 
 PAGE_SIZE = 1000
 OUTPUT_DIR = Path("artifacts/prospective_market_path_v1")
@@ -41,7 +42,11 @@ def run() -> dict:
         raise RuntimeError("No odds_snapshots available for market-path coverage audit")
 
     coverage = build_fixture_coverage(snapshots)
+    coverage = mark_superseded_revisions(coverage, snapshots)
     summary = summarize_fixture_coverage(coverage)
+    superseded_counts = coverage[coverage["status"] == STATUS_SUPERSEDED]["league"].value_counts().to_dict()
+    summary["superseded"] = summary["league"].map(lambda league: int(superseded_counts.get(league, 0)))
+
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     coverage.to_csv(OUTPUT_DIR / "fixture_coverage_monitor.csv", index=False)
     summary.to_csv(OUTPUT_DIR / "fixture_coverage_summary.csv", index=False)
@@ -52,6 +57,10 @@ def run() -> dict:
         if not problem.empty:
             print("\nATTENTION: fixtures unavailable to frozen V1 path protocol:")
             print(problem[["league", "event_id", "home_team", "away_team", "kickoff_utc", "status", "reason"]].to_string(index=False))
+        superseded = coverage[coverage["status"] == STATUS_SUPERSEDED]
+        if not superseded.empty:
+            print("\nINFO: stale provider schedule revisions excluded from operational risk counts:")
+            print(superseded[["league", "event_id", "home_team", "away_team", "kickoff_utc", "status", "reason"]].to_string(index=False))
     print("READ_ONLY_COVERAGE_AUDIT: no outcome scores, no Supabase writes, no production changes")
     return {"summary": summary.to_dict(orient="records"), "fixtures": int(len(coverage))}
 
