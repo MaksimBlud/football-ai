@@ -1,7 +1,8 @@
 {
   "research_block": "SCHEDULE_LOAD_SIGNAL_LAB_V1",
-  "status": "PREREGISTERED_RESEARCH_ONLY",
+  "status": "CLOSED_RESEARCH_ONLY_NO_INCREMENTAL_MARKET_VALUE",
   "frozen_at_utc": "2026-09-04T14:24:00Z",
+  "closed_at_utc": "2026-09-04T14:30:00Z",
   "leagues": ["EPL", "LA_LIGA", "SERIE_A"],
   "source": "football-data.co.uk historical match rows already used by Historical Football Signal Lab",
   "information_contract": {
@@ -37,6 +38,12 @@
     "no_threshold_search": true,
     "no_feature_selection_after_results": true
   },
+  "observed_result": {
+    "EPL": {"matches": 2660, "seasons": 7, "mean_delta_brier": 0.002728, "mean_delta_log_loss": 0.005058, "brier_wins": 1, "log_loss_wins": 1},
+    "LA_LIGA": {"matches": 2660, "seasons": 7, "mean_delta_brier": 0.002919, "mean_delta_log_loss": 0.004742, "brier_wins": 2, "log_loss_wins": 2},
+    "SERIE_A": {"matches": 2659, "seasons": 7, "mean_delta_brier": 0.001677, "mean_delta_log_loss": 0.002764, "brier_wins": 1, "log_loss_wins": 1}
+  },
+  "decision": "do_not_add_schedule_v1_to_market_model_and_do_not_tune_on_seen_sample",
   "production_activation": false,
   "supabase_writes": false,
   "production_artifact_changes": false
