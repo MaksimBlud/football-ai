@@ -46,6 +46,12 @@
       "sample_family": "prospective_timestamp_safe_live",
       "decision": "accumulate_only_after_external_schema_and_provider_gates_pass",
       "status_document": "docs/PROSPECTIVE_AVAILABILITY_SIGNAL_LAB_STATUS.md",
+      "operational_closure_document": "docs/PROSPECTIVE_AVAILABILITY_SIGNAL_LAB_OPERATIONAL_CLOSURE.md",
+      "operational_implementation": "CLOSED",
+      "scheduled_outcome_scoring": false,
+      "evaluation_requires_explicit_manual_dispatch": true,
+      "activation_monitor_read_only": true,
+      "automatic_external_gate_bypass": false,
       "frozen_protocol": true,
       "outcome_scoring_before_readiness": false
     },
