@@ -1,0 +1,44 @@
+name: Schedule Load Signal Lab
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'schedule_load_signal_lab.py'
+      - 'schedule_load_signal_runner.py'
+      - 'research/schedule_load_signal_lab_v1.json'
+      - 'tests/test_schedule_load_signal_lab.py'
+      - '.github/workflows/schedule-load-signal-lab.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas numpy requests 'scikit-learn==1.7.2' pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile schedule lab
+        run: python -m py_compile schedule_load_signal_lab.py schedule_load_signal_runner.py
+      - name: Run focused tests
+        run: pytest -q tests/test_schedule_load_signal_lab.py
+      - name: Run preregistered three-league experiment
+        run: python schedule_load_signal_runner.py
+      - name: Verify production hashes unchanged
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        with:
+          name: schedule-load-signal-lab
+          path: artifacts/schedule_load_signal_lab/
+          retention-days: 30

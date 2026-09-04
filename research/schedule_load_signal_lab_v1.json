@@ -1,0 +1,50 @@
+{
+  "research_block": "SCHEDULE_LOAD_SIGNAL_LAB_V1",
+  "status": "CLOSED_RESEARCH_ONLY_NO_INCREMENTAL_MARKET_VALUE",
+  "frozen_at_utc": "2026-09-04T14:24:00Z",
+  "closed_at_utc": "2026-09-04T14:30:00Z",
+  "leagues": ["EPL", "LA_LIGA", "SERIE_A"],
+  "source": "football-data.co.uk historical match rows already used by Historical Football Signal Lab",
+  "information_contract": {
+    "current_fixture_date_allowed": true,
+    "prior_completed_match_dates_only": true,
+    "future_fixture_schedule_not_used": true,
+    "current_match_outcome_or_stats_not_used": true,
+    "same_match_not_counted_in_load": true
+  },
+  "feature_version": "SCHEDULE_V1",
+  "features": [
+    "home_rest_days_capped",
+    "away_rest_days_capped",
+    "diff_rest_days_capped",
+    "home_matches_7d",
+    "away_matches_7d",
+    "diff_matches_7d",
+    "home_matches_14d",
+    "away_matches_14d",
+    "diff_matches_14d"
+  ],
+  "rest_day_cap": 30,
+  "models": {
+    "family": "median_imputer_standard_scaler_multinomial_logistic_regression",
+    "comparisons": ["SCHEDULE_ONLY", "MARKET_MODEL", "MARKET_SCHEDULE"],
+    "market_baseline": "historical no-vig bookmaker probabilities"
+  },
+  "evaluation": {
+    "split": "expanding_season_walk_forward",
+    "minimum_training_seasons": 3,
+    "primary_metrics": ["multiclass_brier", "log_loss"],
+    "paired_incremental_test": "MARKET_SCHEDULE minus MARKET_MODEL",
+    "no_threshold_search": true,
+    "no_feature_selection_after_results": true
+  },
+  "observed_result": {
+    "EPL": {"matches": 2660, "seasons": 7, "mean_delta_brier": 0.002728, "mean_delta_log_loss": 0.005058, "brier_wins": 1, "log_loss_wins": 1},
+    "LA_LIGA": {"matches": 2660, "seasons": 7, "mean_delta_brier": 0.002919, "mean_delta_log_loss": 0.004742, "brier_wins": 2, "log_loss_wins": 2},
+    "SERIE_A": {"matches": 2659, "seasons": 7, "mean_delta_brier": 0.001677, "mean_delta_log_loss": 0.002764, "brier_wins": 1, "log_loss_wins": 1}
+  },
+  "decision": "do_not_add_schedule_v1_to_market_model_and_do_not_tune_on_seen_sample",
+  "production_activation": false,
+  "supabase_writes": false,
+  "production_artifact_changes": false
+}
