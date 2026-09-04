@@ -1,0 +1,35 @@
+name: Prospective Market Path Coverage PR Validation
+
+on:
+  pull_request:
+    paths:
+      - "prospective_market_path_coverage.py"
+      - "prospective_market_path_coverage_cycle.py"
+      - "tests/test_prospective_market_path_coverage.py"
+      - ".github/workflows/prospective-market-path-coverage*.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pandas numpy 'scikit-learn==1.7.2' pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile coverage modules
+        run: python -m py_compile prospective_market_path_coverage.py prospective_market_path_coverage_cycle.py
+      - name: Run focused coverage tests
+        run: pytest -q tests/test_prospective_market_path_coverage.py
+      - name: Verify production hashes unchanged
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
