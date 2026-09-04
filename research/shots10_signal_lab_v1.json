@@ -1,7 +1,8 @@
 {
   "research_block": "SHOTS10_SIGNAL_LAB_V1",
-  "status": "PREREGISTERED_RESEARCH_ONLY",
+  "status": "CLOSED_RESEARCH_ONLY_NO_INCREMENTAL_MARKET_VALUE",
   "frozen_at_utc": "2026-09-04T14:33:00Z",
+  "closed_at_utc": "2026-09-04T14:36:00Z",
   "leagues": ["EPL", "LA_LIGA", "SERIE_A"],
   "source": "football-data.co.uk historical match rows",
   "required_columns": ["HS", "AS", "HST", "AST"],
@@ -31,6 +32,12 @@
     "no_threshold_search": true,
     "no_feature_selection_after_results": true
   },
+  "observed_result": {
+    "EPL": {"matches": 2660, "seasons": 7, "mean_delta_brier": 0.002465, "mean_delta_log_loss": 0.003810, "brier_wins": 1, "log_loss_wins": 1},
+    "LA_LIGA": {"matches": 2660, "seasons": 7, "mean_delta_brier": 0.002040, "mean_delta_log_loss": 0.003040, "brier_wins": 1, "log_loss_wins": 1},
+    "SERIE_A": {"matches": 2659, "seasons": 7, "mean_delta_brier": 0.001216, "mean_delta_log_loss": 0.001297, "brier_wins": 2, "log_loss_wins": 3}
+  },
+  "decision": "do_not_add_shots10_v1_to_market_model_and_do_not_tune_on_seen_sample",
   "production_activation": false,
   "supabase_writes": false,
   "production_artifact_changes": false
