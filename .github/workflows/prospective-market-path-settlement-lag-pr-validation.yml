@@ -1,0 +1,44 @@
+name: Prospective Market Path Settlement Lag PR Validation
+
+on:
+  pull_request:
+    paths:
+      - "prospective_market_path_settlement_lag.py"
+      - "prospective_market_path_settlement_lag_cycle.py"
+      - "tests/test_prospective_market_path_settlement_lag.py"
+      - ".github/workflows/prospective-market-path-settlement-lag*.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pandas numpy 'scikit-learn==1.7.2' pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile settlement-lag modules
+        run: python -m py_compile prospective_market_path_settlement_lag.py prospective_market_path_settlement_lag_cycle.py
+      - name: Run focused settlement-lag tests
+        run: pytest -q tests/test_prospective_market_path_settlement_lag.py
+      - name: Verify result values are not queried
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text=Path('prospective_market_path_settlement_lag_cycle.py').read_text()
+          assert 'result_identity_columns = "league,match_date,home_team,away_team"' in text
+          assert 'result_identity_columns = "league,match_date,home_team,away_team,result"' not in text
+          print('PASS: settlement-lag source query is identity-only')
+          PY
+      - name: Verify production hashes unchanged
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
