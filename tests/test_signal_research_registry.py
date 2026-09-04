@@ -40,3 +40,14 @@ def test_governance_explicitly_treats_negative_results_as_results():
     assert governance["negative_results_are_first_class_results"] is True
     assert governance["new_retrospective_feature_family_requires_independent_information_justification"] is True
     assert governance["production_promotion_requires_separate_explicit_decision"] is True
+    assert governance["prospective_outcome_evaluation_requires_explicit_action"] is True
+
+
+def test_market_path_is_operationally_closed_but_scientifically_active():
+    payload = json.loads(REGISTRY.read_text())
+    block = next(block for block in payload["blocks"] if block["id"] == "PROSPECTIVE_MARKET_PATH_V1")
+    assert block["status"] == "ACTIVE_ACCUMULATING"
+    assert block["operational_implementation"] == "CLOSED"
+    assert block["scheduled_outcome_scoring"] is False
+    assert block["evaluation_requires_explicit_manual_dispatch"] is True
+    assert Path(block["operational_closure_document"]).is_file()

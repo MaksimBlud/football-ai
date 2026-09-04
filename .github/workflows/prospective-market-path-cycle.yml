@@ -2,6 +2,12 @@ name: Prospective Market Path Research Cycle
 
 on:
   workflow_dispatch:
+    inputs:
+      evaluate:
+        description: "Run preregistered outcome evaluation after readiness gate"
+        required: true
+        type: boolean
+        default: false
   schedule:
     - cron: '43 6 * * 1'
   push:
@@ -10,6 +16,8 @@ on:
       - '.github/workflows/prospective-market-path-cycle.yml'
       - 'prospective_market_path.py'
       - 'prospective_market_path_cycle.py'
+      - 'prospective_market_path_sample_growth.py'
+      - 'prospective_market_path_sample_growth_cycle.py'
 
 permissions:
   contents: read
@@ -43,13 +51,19 @@ jobs:
           PY
       - name: Snapshot production hashes
         run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
-      - name: Run prospective readiness/evaluation cycle
+      - name: Run outcome-free readiness cycle
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.evaluate != true }}
         run: python prospective_market_path_cycle.py
+      - name: Run explicit preregistered outcome evaluation
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.evaluate == true }}
+        run: python prospective_market_path_cycle.py --evaluate
       - name: Verify production hashes unchanged
+        if: always()
         run: |
           sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
           diff -u /tmp/pkl-before /tmp/pkl-after
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: prospective-market-path-v1
           path: artifacts/prospective_market_path_v1/
