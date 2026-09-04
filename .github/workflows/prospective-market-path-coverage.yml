@@ -9,6 +9,7 @@ on:
     paths:
       - "prospective_market_path_coverage.py"
       - "prospective_market_path_coverage_cycle.py"
+      - "prospective_market_path_revisions.py"
       - ".github/workflows/prospective-market-path-coverage.yml"
 
 permissions:
@@ -49,8 +50,24 @@ jobs:
         run: |
           sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
           diff -u /tmp/pkl-before /tmp/pkl-after
-      - uses: actions/upload-artifact@v4
+      - name: Upload coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: prospective-market-path-coverage-v1
           path: artifacts/prospective_market_path_v1/fixture_coverage_*.csv
           retention-days: 90
+      - name: Enforce active coverage health
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          path='artifacts/prospective_market_path_v1/fixture_coverage_monitor.csv'
+          frame=pd.read_csv(path)
+          bad=frame[frame['status'].astype(str).eq('IRRECOVERABLE')]
+          if len(bad):
+              cols=['league','event_id','home_team','away_team','kickoff_utc','reason']
+              print('FAIL: active frozen-V1 fixtures became irrecoverable:')
+              print(bad[cols].to_string(index=False))
+              raise SystemExit(1)
+          print('PASS: no active irrecoverable frozen-V1 fixtures')
+          PY
