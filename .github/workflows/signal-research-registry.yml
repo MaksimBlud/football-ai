@@ -1,0 +1,37 @@
+name: Signal Research Registry
+
+on:
+  pull_request:
+    paths:
+      - 'research/signal_research_registry_v1.json'
+      - 'signal_research_registry_check.py'
+      - 'tests/test_signal_research_registry.py'
+      - 'docs/*SIGNAL*LAB*CLOSURE.md'
+      - 'docs/PROSPECTIVE_*_STATUS.md'
+      - '.github/workflows/signal-research-registry.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Validate research registry
+        run: python signal_research_registry_check.py
+      - name: Run registry tests
+        run: pytest -q tests/test_signal_research_registry.py
+      - name: Verify production hashes unchanged
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after

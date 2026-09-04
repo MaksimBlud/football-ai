@@ -1,0 +1,63 @@
+{
+  "registry_version": "SIGNAL_RESEARCH_REGISTRY_V1",
+  "created_at_utc": "2026-09-04T14:50:00Z",
+  "scope": "post_historical_signal_program",
+  "governance": {
+    "closed_hypotheses_must_not_be_retuned_on_seen_sample": true,
+    "active_prospective_blocks_must_preserve_frozen_protocol": true,
+    "new_retrospective_feature_family_requires_independent_information_justification": true,
+    "production_promotion_requires_separate_explicit_decision": true,
+    "research_runs_must_not_modify_production_artifacts": true,
+    "negative_results_are_first_class_results": true
+  },
+  "blocks": [
+    {
+      "id": "HISTORICAL_FOOTBALL_SIGNAL_LAB",
+      "status": "CLOSED_RESEARCH_ONLY",
+      "hypothesis_family": "rolling_football_form_goals_corners",
+      "sample_family": "football_data_historical_2016_2026",
+      "decision": "retain_CORNERS10_as_football_only_reference_but_do_not_add_to_market_model",
+      "closure_document": "docs/HISTORICAL_FOOTBALL_SIGNAL_LAB_CLOSURE.md",
+      "retune_on_seen_sample": false
+    },
+    {
+      "id": "SCHEDULE_LOAD_SIGNAL_LAB_V1",
+      "status": "CLOSED_RESEARCH_ONLY_NO_INCREMENTAL_MARKET_VALUE",
+      "hypothesis_family": "rest_and_match_congestion",
+      "sample_family": "football_data_historical_2016_2026",
+      "decision": "do_not_add_schedule_v1_to_market_model",
+      "closure_document": "docs/SCHEDULE_LOAD_SIGNAL_LAB_CLOSURE.md",
+      "retune_on_seen_sample": false
+    },
+    {
+      "id": "SHOTS10_SIGNAL_LAB_V1",
+      "status": "CLOSED_RESEARCH_ONLY_NO_INCREMENTAL_MARKET_VALUE",
+      "hypothesis_family": "rolling_shot_volume_and_shots_on_target",
+      "sample_family": "football_data_historical_2016_2026",
+      "decision": "do_not_add_shots10_v1_to_market_model",
+      "closure_document": "docs/SHOTS10_SIGNAL_LAB_CLOSURE.md",
+      "retune_on_seen_sample": false
+    },
+    {
+      "id": "PROSPECTIVE_AVAILABILITY_SIGNAL_LAB",
+      "status": "ACTIVE_EXTERNALLY_GATED",
+      "hypothesis_family": "point_in_time_player_availability",
+      "sample_family": "prospective_timestamp_safe_live",
+      "decision": "accumulate_only_after_external_schema_and_provider_gates_pass",
+      "status_document": "docs/PROSPECTIVE_AVAILABILITY_SIGNAL_LAB_STATUS.md",
+      "frozen_protocol": true,
+      "outcome_scoring_before_readiness": false
+    },
+    {
+      "id": "PROSPECTIVE_MARKET_PATH_V1",
+      "status": "ACTIVE_ACCUMULATING",
+      "hypothesis_family": "pre_cutoff_timestamped_market_path",
+      "sample_family": "prospective_post_2026_09_04_1425Z",
+      "decision": "accumulate_until_all_three_leagues_pass_frozen_readiness_gate",
+      "status_document": "docs/PROSPECTIVE_MARKET_PATH_V1_STATUS.md",
+      "protocol_document": "research/prospective_market_path_v1.json",
+      "frozen_protocol": true,
+      "outcome_scoring_before_readiness": false
+    }
+  ]
+}
