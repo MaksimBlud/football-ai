@@ -44,6 +44,17 @@ def validate_registry(root: Path = Path(".")) -> list[str]:
         else:
             errors.append(f"{block_id}: unsupported registry status {status!r}")
 
+        if block_id == "PROSPECTIVE_MARKET_PATH_V1":
+            if block.get("operational_implementation") != "CLOSED":
+                errors.append(f"{block_id}: operational implementation must be CLOSED")
+            if block.get("scheduled_outcome_scoring") is not False:
+                errors.append(f"{block_id}: scheduled outcome scoring must be false")
+            if block.get("evaluation_requires_explicit_manual_dispatch") is not True:
+                errors.append(f"{block_id}: evaluation must require explicit manual dispatch")
+            closure = block.get("operational_closure_document")
+            if not closure or not (root / str(closure)).is_file():
+                errors.append(f"{block_id}: operational_closure_document must exist")
+
     governance = payload.get("governance") or {}
     required_true = (
         "closed_hypotheses_must_not_be_retuned_on_seen_sample",
@@ -52,6 +63,7 @@ def validate_registry(root: Path = Path(".")) -> list[str]:
         "production_promotion_requires_separate_explicit_decision",
         "research_runs_must_not_modify_production_artifacts",
         "negative_results_are_first_class_results",
+        "prospective_outcome_evaluation_requires_explicit_action",
     )
     for key in required_true:
         if governance.get(key) is not True:
