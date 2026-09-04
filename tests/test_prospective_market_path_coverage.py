@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pandas as pd
 
 from prospective_market_path_coverage import (
@@ -77,3 +79,14 @@ def test_summary_keeps_all_three_research_leagues():
     summary = summarize_fixture_coverage(coverage)
     assert summary["league"].tolist() == ["EPL", "LA_LIGA", "SERIE_A"]
     assert summary.loc[summary["league"] == "EPL", "ready"].iloc[0] == 1
+
+
+def test_workflow_uploads_diagnostics_before_health_gate():
+    text = Path(".github/workflows/prospective-market-path-coverage.yml").read_text()
+    upload = "name: Upload coverage artifacts"
+    gate = "name: Enforce active coverage health"
+    assert upload in text
+    assert gate in text
+    assert text.index(upload) < text.index(gate)
+    assert "eq('IRRECOVERABLE')" in text
+    assert "if: always()" in text
