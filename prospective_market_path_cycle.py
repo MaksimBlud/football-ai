@@ -11,7 +11,6 @@ from pathlib import Path
 
 import pandas as pd
 
-from database import supabase
 from prospective_market_path import (
     LEAGUES,
     build_market_paths,
@@ -19,13 +18,16 @@ from prospective_market_path import (
     readiness_for_league,
     settle_market_paths,
 )
-from prospective_market_path_sample_growth_cycle import run as run_sample_growth
 
 PAGE_SIZE = 1000
 OUTPUT_DIR = Path("artifacts/prospective_market_path_v1")
 
 
 def _fetch_league_rows(table: str, columns: str, league: str, order_column: str) -> list[dict]:
+    # Keep database client import lazy so pure gate/contract tests do not require
+    # Supabase or credentials simply to import this module.
+    from database import supabase
+
     rows: list[dict] = []
     start = 0
     while True:
@@ -42,6 +44,13 @@ def _fetch_league_rows(table: str, columns: str, league: str, order_column: str)
         if len(page) < PAGE_SIZE:
             return rows
         start += PAGE_SIZE
+
+
+def _run_sample_growth() -> dict:
+    # The outcome-free readiness cycle owns the canonical identity-only query.
+    from prospective_market_path_sample_growth_cycle import run as run_sample_growth
+
+    return run_sample_growth()
 
 
 def load_snapshots() -> pd.DataFrame:
@@ -70,7 +79,7 @@ def load_results_for_explicit_evaluation() -> pd.DataFrame:
 
 def run_readiness_only() -> dict:
     """Run the canonical identity-only readiness audit; never query outcomes."""
-    result = run_sample_growth()
+    result = _run_sample_growth()
     print("OUTCOME_EVALUATION_GATED: explicit --evaluate required after frozen readiness")
     return {"status": "ACCUMULATING", "sample_growth": result}
 
