@@ -30,6 +30,18 @@ Until every league passes that gate, the autonomous cycle may emit only eligibil
 
 The block is read-only and needs no new database table, migration, or external provider. It consumes the already-existing immutable `odds_snapshots` and `league_finished_results` data. The weekly research workflow checks readiness and is protected by production `.pkl` hash comparison before and after every run.
 
+A separate two-hour fixture-level coverage monitor now checks whether each observed provider event already satisfies, can still satisfy, or can no longer satisfy the frozen path requirements. Active fixtures that become `IRRECOVERABLE` make the monitor workflow fail **after** diagnostic CSV artifacts have been uploaded. Provider schedule revisions that are clearly stale are reported as `SUPERSEDED`; same-event kickoff ambiguity remains `CONFLICT` and is excluded fail-closed.
+
+The live coverage audit on **2026-09-04** confirmed that the existing collection cadence is sufficient for the current active sample:
+
+- EPL: 20 active fixtures, all 20 `READY`, 0 `IRRECOVERABLE`;
+- La Liga: 23 active fixtures `READY`, plus 1 stale `SUPERSEDED` provider revision, 0 `IRRECOVERABLE`;
+- Serie A: 21 active fixtures `READY`, plus 2 stale `SUPERSEDED` revisions and 1 same-event kickoff `CONFLICT`, 0 `IRRECOVERABLE`.
+
+The known Serie A conflict is Cagliari–Lecce provider event `8f751e96142db860ba66bbea713baf50`; it is excluded rather than repaired or guessed. Settlement also excludes an entire canonical fixture identity if two distinct provider event IDs would otherwise map to the same league-local match date and normalized home/away pair. No later provider information is used to choose between revisions.
+
+The post-hardening prospective research cycle on **2026-09-04** still reported 0 settled eligible fixtures in EPL, La Liga, and Serie A and explicitly returned `PROSPECTIVE_MARKET_PATH_SAMPLE_NOT_READY; no outcome scores computed`. This is the expected state immediately after preregistration.
+
 No Supabase rows are written, no prediction ledger is changed, no production model or calibrator is loaded or promoted, and no live selection rule is affected.
 
 The research conclusion is intentionally **not yet known**. The block remains open only for genuine prospective accumulation and the pre-registered evaluation once the frozen readiness gate is satisfied.
