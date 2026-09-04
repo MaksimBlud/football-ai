@@ -1,0 +1,37 @@
+{
+  "research_block": "SHOTS10_SIGNAL_LAB_V1",
+  "status": "PREREGISTERED_RESEARCH_ONLY",
+  "frozen_at_utc": "2026-09-04T14:33:00Z",
+  "leagues": ["EPL", "LA_LIGA", "SERIE_A"],
+  "source": "football-data.co.uk historical match rows",
+  "required_columns": ["HS", "AS", "HST", "AST"],
+  "information_contract": {
+    "prior_completed_matches_only": true,
+    "rolling_window": 10,
+    "continuous_across_seasons": true,
+    "current_match_stats_not_used": true,
+    "future_rows_not_used": true
+  },
+  "feature_version": "SHOTS10_V1",
+  "features": [
+    "diff_shots_for_10",
+    "diff_shots_against_10",
+    "diff_sot_for_10",
+    "diff_sot_against_10"
+  ],
+  "models": {
+    "family": "median_imputer_standard_scaler_multinomial_logistic_regression",
+    "comparisons": ["SHOTS10_ONLY", "MARKET_MODEL", "MARKET_SHOTS10"]
+  },
+  "evaluation": {
+    "split": "expanding_season_walk_forward",
+    "minimum_training_seasons": 3,
+    "primary_metrics": ["multiclass_brier", "log_loss"],
+    "paired_incremental_test": "MARKET_SHOTS10 minus MARKET_MODEL",
+    "no_threshold_search": true,
+    "no_feature_selection_after_results": true
+  },
+  "production_activation": false,
+  "supabase_writes": false,
+  "production_artifact_changes": false
+}
