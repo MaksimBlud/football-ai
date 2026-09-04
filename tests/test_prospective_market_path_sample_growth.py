@@ -30,7 +30,7 @@ def test_settled_identity_sample_uses_presence_only():
 
 
 def test_readiness_counts_match_frozen_threshold_shape_without_outcomes():
-    paths=_paths(130)
+    paths=_paths(160)
     audit=pd.DataFrame([
         {'league':'EPL','event_id':event_id,'status':'SETTLED_IDENTITY_PRESENT'}
         for event_id in paths['event_id']
@@ -38,8 +38,8 @@ def test_readiness_counts_match_frozen_threshold_shape_without_outcomes():
     sample=settled_identity_sample(paths,audit)
     readiness=readiness_without_outcomes(sample).set_index('league')
     epl=readiness.loc['EPL']
-    assert int(epl['settled_fixtures'])==130
-    assert int(epl['calendar_months']) >= 4
+    assert int(epl['settled_fixtures'])==160
+    assert int(epl['calendar_months']) >= 5
     assert int(epl['valid_test_blocks']) >= 2
     assert bool(epl['ready']) is True
     assert int(epl['min_fixtures_required'])==100
