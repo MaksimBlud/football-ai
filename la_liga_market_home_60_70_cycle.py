@@ -16,6 +16,7 @@ from la_liga_market_home_60_70_prospective import (
     descriptive_evaluation,
     settlement_identity,
 )
+from la_liga_market_home_60_70_source_audit import audit_recent_source_contract
 
 OUTPUT_DIR = Path("artifacts/la_liga_market_home_60_70_v1")
 PAGE_SIZE = 1000
@@ -107,6 +108,7 @@ def run(*, evaluate: bool = False, now_utc: pd.Timestamp | str | None = None) ->
     client = _client()
     ledger = load_ledger(client)
     odds = load_odds_snapshots(client)
+    source_contract = audit_recent_source_contract(ledger, odds)
     decisions, audit = build_canonical_decisions(ledger, odds, now_utc=now)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -117,6 +119,7 @@ def run(*, evaluate: bool = False, now_utc: pd.Timestamp | str | None = None) ->
         "candidate_id": CANDIDATE_ID,
         "implementation_freeze_utc": IMPLEMENTATION_FREEZE_UTC.isoformat(),
         "now_utc": now.isoformat(),
+        "source_contract": source_contract,
         "audit": audit,
         "readiness": readiness,
         "outcome_values_queried": False,
