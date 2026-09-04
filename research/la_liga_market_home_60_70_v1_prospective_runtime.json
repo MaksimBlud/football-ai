@@ -1,0 +1,39 @@
+{
+  "candidate_id": "LA_LIGA_MARKET_HOME_60_70_V1",
+  "research_status": "ACTIVE_ACCUMULATING",
+  "original_frozen_spec": "research/la_liga_market_home_60_70_v1.json",
+  "original_protocol": "docs/LA_LIGA_MARKET_HOME_60_70_V1_PROSPECTIVE_PROTOCOL.md",
+  "implementation_freeze_utc": "2026-09-04T17:00:00Z",
+  "prospective_source": {
+    "decision_authority": "league_prediction_ledger",
+    "decision_mode": "MARKET_ONLY",
+    "exact_price_authority": "odds_snapshots",
+    "canonical_snapshot": "latest durably recorded pre-kickoff ledger row for the provider event",
+    "ledger_snapshot_must_match_exact_raw_odds_snapshot": true,
+    "provider_revision_conflicts": "exclude_fail_closed"
+  },
+  "candidate_rule": {
+    "league": "LA_LIGA",
+    "market_pick": "H",
+    "home_probability_lower": 0.60,
+    "home_probability_lower_inclusive": true,
+    "home_probability_upper": 0.70,
+    "home_probability_upper_exclusive": true,
+    "probability_definition": "margin-free canonical 1X2 market probability"
+  },
+  "tagging": {
+    "durable_pre_kickoff_tag_source": "immutable league_prediction_ledger row",
+    "scheduled_reporting_reads_outcomes": false,
+    "no_new_supabase_table_required": true
+  },
+  "outcome_evaluation": {
+    "automatic": false,
+    "explicit_manual_dispatch_required": true,
+    "not_before_utc": "2027-06-01T00:00:00Z",
+    "historical_rows_pooled_into_prospective_score": false,
+    "reporting_only": true,
+    "promotion_rule": null
+  },
+  "production_activation": false,
+  "threshold_retuning_allowed": false
+}

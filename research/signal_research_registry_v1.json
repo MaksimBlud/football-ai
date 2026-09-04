@@ -69,6 +69,20 @@
       "evaluation_requires_explicit_manual_dispatch": true,
       "frozen_protocol": true,
       "outcome_scoring_before_readiness": false
+    },
+    {
+      "id": "LA_LIGA_MARKET_HOME_60_70_V1",
+      "status": "ACTIVE_ACCUMULATING",
+      "hypothesis_family": "la_liga_market_home_probability_60_70",
+      "sample_family": "prospective_post_2026_09_04_1700Z",
+      "decision": "accumulate_without_outcomes_until_explicit_post_2027_06_01_evaluation",
+      "status_document": "docs/LA_LIGA_MARKET_HOME_60_70_V1_STATUS.md",
+      "protocol_document": "docs/LA_LIGA_MARKET_HOME_60_70_V1_PROSPECTIVE_PROTOCOL.md",
+      "runtime_contract": "research/la_liga_market_home_60_70_v1_prospective_runtime.json",
+      "scheduled_outcome_scoring": false,
+      "evaluation_requires_explicit_manual_dispatch": true,
+      "frozen_protocol": true,
+      "outcome_scoring_before_readiness": false
     }
   ]
 }

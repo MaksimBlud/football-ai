@@ -1,0 +1,64 @@
+name: La Liga Market Home 60-70 PR Validation
+
+on:
+  pull_request:
+    paths:
+      - "la_liga_market_home_60_70_*.py"
+      - "tests/test_la_liga_market_home_60_70_*.py"
+      - "docs/LA_LIGA_MARKET_HOME_60_70_V1_*.md"
+      - "research/la_liga_market_home_60_70_v1*.json"
+      - "research/signal_research_registry_v1.json"
+      - "tests/test_signal_research_registry.py"
+      - ".github/workflows/la-liga-market-home-60-70*.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install focused dependencies
+        run: pip install pytest pandas numpy
+      - name: Compile prospective modules
+        run: |
+          python -m py_compile \
+            la_liga_market_home_60_70_prospective.py \
+            la_liga_market_home_60_70_cycle.py \
+            tests/test_la_liga_market_home_60_70_prospective.py \
+            tests/test_la_liga_market_home_60_70_cycle.py
+      - name: Run focused prospective tests
+        run: |
+          PYTHONPATH=. pytest -q \
+            tests/test_la_liga_market_home_60_70_prospective.py \
+            tests/test_la_liga_market_home_60_70_cycle.py
+      - name: Verify frozen machine-readable contract
+        run: |
+          python - <<'PY'
+          import json
+          spec=json.load(open('research/la_liga_market_home_60_70_v1_prospective_runtime.json'))
+          rule=spec['candidate_rule']
+          assert rule['league']=='LA_LIGA'
+          assert rule['market_pick']=='H'
+          assert rule['home_probability_lower']==0.60
+          assert rule['home_probability_upper']==0.70
+          assert spec['implementation_freeze_utc']=='2026-09-04T17:00:00Z'
+          assert spec['outcome_evaluation']['not_before_utc']=='2027-06-01T00:00:00Z'
+          assert spec['outcome_evaluation']['automatic'] is False
+          assert spec['production_activation'] is False
+          assert spec['threshold_retuning_allowed'] is False
+          print('PASS frozen LA_LIGA_MARKET_HOME_60_70_V1 runtime contract')
+          PY
+      - name: Verify production model artifacts untouched
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -E '\.pkl$'; then
+            echo "Production .pkl change detected"
+            exit 1
+          fi

@@ -1,0 +1,71 @@
+name: La Liga Market Home 60-70 Prospective
+
+on:
+  workflow_dispatch:
+    inputs:
+      evaluate:
+        description: "Run explicit post-season descriptive outcome evaluation"
+        required: true
+        type: boolean
+        default: false
+  schedule:
+    - cron: "51 */2 * * *"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/la-liga-market-home-60-70.yml"
+      - "la_liga_market_home_60_70_prospective.py"
+      - "la_liga_market_home_60_70_cycle.py"
+      - "research/la_liga_market_home_60_70_v1_prospective_runtime.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: la-liga-market-home-60-70-v1
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: .
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pandas numpy supabase python-dotenv
+      - name: Check read-only research credentials
+        run: |
+          python - <<'PY'
+          import os
+          missing=[name for name in ("SUPABASE_URL","SUPABASE_KEY") if not os.getenv(name)]
+          if missing:
+              raise SystemExit("Missing read-only research credentials: "+", ".join(missing))
+          print("PASS: read credentials available; values not printed")
+          PY
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Run outcome-free prospective accumulation
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.evaluate != true }}
+        run: python la_liga_market_home_60_70_cycle.py
+      - name: Run explicit post-gate descriptive evaluation
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.evaluate == true }}
+        run: python la_liga_market_home_60_70_cycle.py --evaluate
+      - name: Verify production hashes unchanged
+        if: always()
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - name: Upload research-only artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: la-liga-market-home-60-70-v1-${{ github.run_id }}
+          path: artifacts/la_liga_market_home_60_70_v1/
+          if-no-files-found: warn
+          retention-days: 90
