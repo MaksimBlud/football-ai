@@ -1,6 +1,12 @@
-"""Autonomous read-only cycle for PROSPECTIVE_MARKET_PATH_V1."""
+"""Explicit evaluation gate for PROSPECTIVE_MARKET_PATH_V1.
+
+Scheduled/default execution is outcome-free and delegates to the identity-only
+sample-growth readiness audit. Outcome values are queried only when an operator
+explicitly passes ``--evaluate`` after the frozen readiness gate is satisfied.
+"""
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 import pandas as pd
@@ -13,6 +19,7 @@ from prospective_market_path import (
     readiness_for_league,
     settle_market_paths,
 )
+from prospective_market_path_sample_growth_cycle import run as run_sample_growth
 
 PAGE_SIZE = 1000
 OUTPUT_DIR = Path("artifacts/prospective_market_path_v1")
@@ -50,7 +57,8 @@ def load_snapshots() -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
 
 
-def load_results() -> pd.DataFrame:
+def load_results_for_explicit_evaluation() -> pd.DataFrame:
+    """Load outcome values only for an explicitly requested evaluation run."""
     columns = "league,match_date,home_team,away_team,result"
     frames = [
         pd.DataFrame(_fetch_league_rows("league_finished_results", columns, league, "match_date"))
@@ -60,12 +68,20 @@ def load_results() -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
 
 
-def run() -> dict:
+def run_readiness_only() -> dict:
+    """Run the canonical identity-only readiness audit; never query outcomes."""
+    result = run_sample_growth()
+    print("OUTCOME_EVALUATION_GATED: explicit --evaluate required after frozen readiness")
+    return {"status": "ACCUMULATING", "sample_growth": result}
+
+
+def run_explicit_evaluation() -> dict:
+    """Run the frozen paired evaluation after an explicit operator request."""
     snapshots = load_snapshots()
     if snapshots.empty:
         raise RuntimeError("No odds_snapshots available")
     paths = build_market_paths(snapshots)
-    results = load_results()
+    results = load_results_for_explicit_evaluation()
     settled_frames = []
     readiness_rows = []
     for league in LEAGUES:
@@ -82,8 +98,9 @@ def run() -> dict:
     print(readiness.to_string(index=False))
 
     if not bool(readiness["ready"].all()):
-        print("WAIT: PROSPECTIVE_MARKET_PATH_SAMPLE_NOT_READY; no outcome scores computed")
-        return {"status": "WAIT", "readiness": readiness_rows}
+        raise RuntimeError(
+            "EXPLICIT_EVALUATION_REFUSED: all three leagues must pass the frozen readiness gate"
+        )
 
     settled_all = pd.concat(settled_frames, ignore_index=True) if settled_frames else pd.DataFrame()
     blocks = pd.concat(
@@ -98,9 +115,24 @@ def run() -> dict:
     )
     summary.to_csv(OUTPUT_DIR / "paired_summary.csv", index=False)
     print(summary.to_string(index=False))
-    print("SCORED_RESEARCH_ONLY: no production activation or writes")
-    return {"status": "SCORED_RESEARCH_ONLY", "blocks": len(blocks)}
+    print("SCORED_RESEARCH_ONLY_EXPLICIT: no production activation or writes")
+    return {"status": "SCORED_RESEARCH_ONLY_EXPLICIT", "blocks": len(blocks)}
+
+
+def run(*, evaluate: bool = False) -> dict:
+    return run_explicit_evaluation() if evaluate else run_readiness_only()
+
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Prospective Market Path V1 cycle")
+    parser.add_argument(
+        "--evaluate",
+        action="store_true",
+        help="Explicitly run the preregistered outcome evaluation after readiness.",
+    )
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
-    run()
+    args = _parse_args()
+    run(evaluate=args.evaluate)
