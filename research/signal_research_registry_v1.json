@@ -8,7 +8,8 @@
     "new_retrospective_feature_family_requires_independent_information_justification": true,
     "production_promotion_requires_separate_explicit_decision": true,
     "research_runs_must_not_modify_production_artifacts": true,
-    "negative_results_are_first_class_results": true
+    "negative_results_are_first_class_results": true,
+    "prospective_outcome_evaluation_requires_explicit_action": true
   },
   "blocks": [
     {
@@ -56,6 +57,10 @@
       "decision": "accumulate_until_all_three_leagues_pass_frozen_readiness_gate",
       "status_document": "docs/PROSPECTIVE_MARKET_PATH_V1_STATUS.md",
       "protocol_document": "research/prospective_market_path_v1.json",
+      "operational_closure_document": "docs/PROSPECTIVE_MARKET_PATH_V1_OPERATIONAL_CLOSURE.md",
+      "operational_implementation": "CLOSED",
+      "scheduled_outcome_scoring": false,
+      "evaluation_requires_explicit_manual_dispatch": true,
       "frozen_protocol": true,
       "outcome_scoring_before_readiness": false
     }
