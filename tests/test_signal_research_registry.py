@@ -43,11 +43,26 @@ def test_governance_explicitly_treats_negative_results_as_results():
     assert governance["prospective_outcome_evaluation_requires_explicit_action"] is True
 
 
-def test_market_path_is_operationally_closed_but_scientifically_active():
+def _block(block_id: str) -> dict:
     payload = json.loads(REGISTRY.read_text())
-    block = next(block for block in payload["blocks"] if block["id"] == "PROSPECTIVE_MARKET_PATH_V1")
+    return next(block for block in payload["blocks"] if block["id"] == block_id)
+
+
+def test_market_path_is_operationally_closed_but_scientifically_active():
+    block = _block("PROSPECTIVE_MARKET_PATH_V1")
     assert block["status"] == "ACTIVE_ACCUMULATING"
     assert block["operational_implementation"] == "CLOSED"
     assert block["scheduled_outcome_scoring"] is False
     assert block["evaluation_requires_explicit_manual_dispatch"] is True
+    assert Path(block["operational_closure_document"]).is_file()
+
+
+def test_availability_is_operationally_closed_but_externally_gated():
+    block = _block("PROSPECTIVE_AVAILABILITY_SIGNAL_LAB")
+    assert block["status"] == "ACTIVE_EXTERNALLY_GATED"
+    assert block["operational_implementation"] == "CLOSED"
+    assert block["scheduled_outcome_scoring"] is False
+    assert block["evaluation_requires_explicit_manual_dispatch"] is True
+    assert block["activation_monitor_read_only"] is True
+    assert block["automatic_external_gate_bypass"] is False
     assert Path(block["operational_closure_document"]).is_file()
