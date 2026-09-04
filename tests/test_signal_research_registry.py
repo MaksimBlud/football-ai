@@ -69,10 +69,12 @@ def test_availability_is_operationally_closed_but_externally_gated():
     assert Path(block["operational_closure_document"]).is_file()
 
 
-def test_la_liga_60_70_candidate_is_frozen_and_outcome_gated():
+def test_la_liga_60_70_is_operationally_closed_but_scientifically_active():
     block = _block("LA_LIGA_MARKET_HOME_60_70_V1")
     assert block["status"] == "ACTIVE_ACCUMULATING"
+    assert block["operational_implementation"] == "CLOSED"
     assert block["scheduled_outcome_scoring"] is False
     assert block["evaluation_requires_explicit_manual_dispatch"] is True
     assert Path(block["protocol_document"]).is_file()
     assert Path(block["runtime_contract"]).is_file()
+    assert Path(block["operational_closure_document"]).is_file()
