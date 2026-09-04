@@ -79,6 +79,8 @@
       "status_document": "docs/LA_LIGA_MARKET_HOME_60_70_V1_STATUS.md",
       "protocol_document": "docs/LA_LIGA_MARKET_HOME_60_70_V1_PROSPECTIVE_PROTOCOL.md",
       "runtime_contract": "research/la_liga_market_home_60_70_v1_prospective_runtime.json",
+      "operational_closure_document": "docs/LA_LIGA_MARKET_HOME_60_70_V1_OPERATIONAL_CLOSURE.md",
+      "operational_implementation": "CLOSED",
       "scheduled_outcome_scoring": false,
       "evaluation_requires_explicit_manual_dispatch": true,
       "frozen_protocol": true,
