@@ -6,9 +6,23 @@ import pytest
 import la_liga_market_home_60_70_cycle as cycle
 
 
+def _stub_source_audit(monkeypatch):
+    monkeypatch.setattr(
+        cycle,
+        "audit_recent_source_contract",
+        lambda ledger, odds: {
+            "status": "PASS",
+            "checked_rows": 1,
+            "outcomes_queried": False,
+            "prospective_rows_used": False,
+        },
+    )
+
+
 def test_default_runtime_does_not_load_result_values(monkeypatch, tmp_path):
     monkeypatch.setattr(cycle, "OUTPUT_DIR", tmp_path)
     monkeypatch.setattr(cycle, "_client", lambda: object())
+    _stub_source_audit(monkeypatch)
     monkeypatch.setattr(cycle, "load_ledger", lambda client: pd.DataFrame(columns=[
         "prediction_key", "league", "event_id", "home_team", "away_team", "kickoff_utc",
         "snapshot_time_utc", "market_home_prob", "market_draw_prob", "market_away_prob",
@@ -34,6 +48,7 @@ def test_default_runtime_does_not_load_result_values(monkeypatch, tmp_path):
 def test_explicit_evaluation_refuses_before_frozen_time_gate(monkeypatch, tmp_path):
     monkeypatch.setattr(cycle, "OUTPUT_DIR", tmp_path)
     monkeypatch.setattr(cycle, "_client", lambda: object())
+    _stub_source_audit(monkeypatch)
     monkeypatch.setattr(cycle, "load_ledger", lambda client: pd.DataFrame(columns=[
         "prediction_key", "league", "event_id", "home_team", "away_team", "kickoff_utc",
         "snapshot_time_utc", "market_home_prob", "market_draw_prob", "market_away_prob",

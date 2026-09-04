@@ -28,13 +28,16 @@ jobs:
         run: |
           python -m py_compile \
             la_liga_market_home_60_70_prospective.py \
+            la_liga_market_home_60_70_source_audit.py \
             la_liga_market_home_60_70_cycle.py \
             tests/test_la_liga_market_home_60_70_prospective.py \
+            tests/test_la_liga_market_home_60_70_source_audit.py \
             tests/test_la_liga_market_home_60_70_cycle.py
       - name: Run focused prospective tests
         run: |
           PYTHONPATH=. pytest -q \
             tests/test_la_liga_market_home_60_70_prospective.py \
+            tests/test_la_liga_market_home_60_70_source_audit.py \
             tests/test_la_liga_market_home_60_70_cycle.py
       - name: Verify frozen machine-readable contract
         run: |
