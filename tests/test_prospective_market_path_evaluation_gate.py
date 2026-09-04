@@ -14,7 +14,7 @@ def test_default_run_uses_readiness_only(monkeypatch):
         calls["evaluation"] += 1
         return {"status": "unexpected"}
 
-    monkeypatch.setattr(cycle, "run_sample_growth", fake_growth)
+    monkeypatch.setattr(cycle, "_run_sample_growth", fake_growth)
     monkeypatch.setattr(cycle, "run_explicit_evaluation", fake_evaluation)
 
     result = cycle.run()
@@ -52,5 +52,6 @@ def test_cycle_source_separates_readiness_and_outcome_loading():
     source = Path("prospective_market_path_cycle.py").read_text()
     assert "def load_results_for_explicit_evaluation" in source
     assert "def run_readiness_only" in source
-    assert "run_sample_growth()" in source
+    assert "def _run_sample_growth" in source
     assert "--evaluate" in source
+    assert "from database import supabase" in source
