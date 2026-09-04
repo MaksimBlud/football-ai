@@ -38,10 +38,12 @@ jobs:
             prospective_availability_collector.py \
             prospective_availability_evaluation.py \
             prospective_availability_research_cycle.py \
+            prospective_availability_activation_monitor.py \
             tests/test_prospective_availability_contract.py \
             tests/test_prospective_availability_operational.py \
             tests/test_prospective_availability_evaluation.py \
-            tests/test_prospective_availability_evaluation_gate.py
+            tests/test_prospective_availability_evaluation_gate.py \
+            tests/test_prospective_availability_activation_monitor.py
 
       - name: Run focused availability tests
         run: |
@@ -49,7 +51,8 @@ jobs:
             tests/test_prospective_availability_contract.py \
             tests/test_prospective_availability_operational.py \
             tests/test_prospective_availability_evaluation.py \
-            tests/test_prospective_availability_evaluation_gate.py
+            tests/test_prospective_availability_evaluation_gate.py \
+            tests/test_prospective_availability_activation_monitor.py
 
       - name: Verify production model artifacts are untouched by this PR
         shell: bash
