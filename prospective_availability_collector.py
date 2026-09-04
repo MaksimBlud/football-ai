@@ -1,7 +1,7 @@
 """Collect prospective pre-match availability without touching production inference."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import os
 
 import pandas as pd
@@ -21,6 +21,7 @@ from prospective_availability_snapshot import match_provider_fixture, normalize_
 
 SEASON = 2026
 LOOKAHEAD_DAYS = 14
+LEAGUE_ORDER = ("EPL", "LA_LIGA", "SERIE_A")
 RUNTIMES = {
     "EPL": EPL_RUNTIME_CONFIG,
     "LA_LIGA": LA_LIGA_RUNTIME_CONFIG,
@@ -45,13 +46,28 @@ def load_upcoming(runtime, *, now=None) -> pd.DataFrame:
     )
 
 
-def collect_league(session, api_key: str, league: str, *, observed_at=None) -> dict:
+def preflight_provider(session, api_key: str) -> dict[str, object]:
+    """Resolve every required league before any collector persistence is allowed."""
+    resolved = {}
+    for league in LEAGUE_ORDER:
+        resolved[league] = resolve_league(session, api_key, league, SEASON)
+    return resolved
+
+
+def collect_league(
+    session,
+    api_key: str,
+    league: str,
+    *,
+    resolved_league=None,
+    observed_at=None,
+) -> dict:
     runtime = RUNTIMES[league]
     observed = pd.Timestamp(observed_at or datetime.now(timezone.utc))
     if observed.tzinfo is None:
         observed = observed.tz_localize("UTC")
     observed = observed.tz_convert("UTC")
-    resolved = resolve_league(session, api_key, league, SEASON)
+    resolved = resolved_league or resolve_league(session, api_key, league, SEASON)
     upcoming = load_upcoming(runtime, now=observed.to_pydatetime())
     horizon = observed + pd.Timedelta(days=LOOKAHEAD_DAYS)
     upcoming = upcoming.loc[pd.to_datetime(upcoming["commence_time_utc"], utc=True) <= horizon].copy()
@@ -113,9 +129,20 @@ def run() -> list[dict]:
     if not api_key:
         raise RuntimeError("API_FOOTBALL_KEY is required; value is never printed")
     session = build_session()
+
+    # Global activation barrier: all required provider league identities and injury
+    # coverage must resolve successfully before the first persistence path is entered.
+    resolved = preflight_provider(session, api_key)
+    print("PASS: global provider preflight complete for EPL, LA_LIGA, SERIE_A")
+
     results = []
-    for league in ("EPL", "LA_LIGA", "SERIE_A"):
-        metrics = collect_league(session, api_key, league)
+    for league in LEAGUE_ORDER:
+        metrics = collect_league(
+            session,
+            api_key,
+            league,
+            resolved_league=resolved[league],
+        )
         results.append(metrics)
         print(metrics)
     return results
