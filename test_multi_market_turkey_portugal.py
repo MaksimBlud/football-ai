@@ -40,22 +40,8 @@ def test_turkey_and_portugal_route_to_their_multi_market_sport_keys(monkeypatch)
 
     now = datetime(2026, 9, 5, 8, 0, tzinfo=UTC)
     events = [
-        {
-            "league": "TURKEY_SUPER_LIG",
-            "event_id": "turkey-e1",
-            "home_team": "Turkey Home",
-            "away_team": "Turkey Away",
-            "commence_time_utc": "2026-09-06T06:00:00Z",
-            "snapshot_time_utc": "2026-09-05T07:00:00Z",
-        },
-        {
-            "league": "PRIMEIRA_LIGA",
-            "event_id": "portugal-e1",
-            "home_team": "Portugal Home",
-            "away_team": "Portugal Away",
-            "commence_time_utc": "2026-09-06T07:00:00Z",
-            "snapshot_time_utc": "2026-09-05T07:00:00Z",
-        },
+        {"league": "TURKEY_SUPER_LIG", "event_id": "turkey-e1", "home_team": "Turkey Home", "away_team": "Turkey Away", "commence_time_utc": "2026-09-06T06:00:00Z", "snapshot_time_utc": "2026-09-05T07:00:00Z"},
+        {"league": "PRIMEIRA_LIGA", "event_id": "portugal-e1", "home_team": "Portugal Home", "away_team": "Portugal Away", "commence_time_utc": "2026-09-06T07:00:00Z", "snapshot_time_utc": "2026-09-05T07:00:00Z"},
     ]
     provider_calls = []
 
@@ -66,15 +52,13 @@ def test_turkey_and_portugal_route_to_their_multi_market_sport_keys(monkeypatch)
 
     def fake_fetch_event_markets(sport_key, event_id, **_kwargs):
         provider_calls.append((sport_key, event_id))
-        return {
-            "home_team": "Home",
-            "away_team": "Away",
-            "bookmakers": [],
-        }, {"remaining": 999}
+        return {"home_team": "Home", "away_team": "Away", "bookmakers": []}, {"remaining": 999, "last_cost": 4}
 
     monkeypatch.setattr(collector, "fetch_event_markets", fake_fetch_event_markets)
 
-    summary = collector.collect(now)
+    # This test proves routing for two leagues, so it explicitly grants the
+    # two-request worst-case budget. Production/manual default remains 4 credits.
+    summary = collector.collect(now, max_paid_requests=2, max_paid_credits=8)
 
     assert provider_calls == [
         ("soccer_turkey_super_league", "turkey-e1"),
@@ -82,6 +66,7 @@ def test_turkey_and_portugal_route_to_their_multi_market_sport_keys(monkeypatch)
     ]
     assert summary["eligible_events"] == 2
     assert summary["fetched"] == 2
+    assert summary["provider_paid_credits"] == 8
     assert summary["inserted"] == 2
     assert summary["skipped_unsupported"] == 0
     assert {row["league"] for row in fake_database.supabase.rows} == {"TURKEY_SUPER_LIG", "PRIMEIRA_LIGA"}

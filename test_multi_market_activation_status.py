@@ -1,7 +1,8 @@
-from multi_market_activation_status import (
-    CORNER_SOURCE_READY_LEAGUES,
-    START_MIN_REQUESTS_REMAINING,
-    build_status,
+from multi_market_activation_status import CORNER_SOURCE_READY_LEAGUES, build_status
+from multi_market_policy import (
+    EVENT_REQUEST_MAX_CREDITS,
+    HARD_RESERVE_CREDITS,
+    MIN_COLLECTION_REMAINING_CREDITS,
 )
 
 
@@ -38,7 +39,6 @@ class Client:
         self.calls = []
 
     def table(self, name):
-        self.client_name = name
         self.calls.append(("table", name))
         return Query(self, name)
 
@@ -47,34 +47,33 @@ def quota(remaining):
     return {"remaining": str(remaining), "used": "10", "last_cost": "0"}
 
 
-def test_all_schema_and_quota_green_is_infrastructure_ready_but_awaits_manual_activation():
-    status = build_status(Client(), lambda: quota(START_MIN_REQUESTS_REMAINING))
+def test_all_schema_and_minimum_credit_budget_is_ready_but_awaits_manual_activation():
+    status = build_status(Client(), lambda: quota(MIN_COLLECTION_REMAINING_CREDITS))
     assert status["quota_ready"] is True
     assert status["collection_ready"] is True
-    assert status["infrastructure_collection_ready"] is True
     assert status["manual_collection_activation_required"] is True
     assert status["scheduled_collection_enabled"] is False
-    assert status["goals_settlement_ready"] is True
-    assert status["corner_storage_ready"] is True
-    assert status["oos_structural_ready"] is True
-    assert status["prospective_oos_evaluation_active"] is False
-    assert status["activation_ready"] is True
     assert status["status"] == "INFRASTRUCTURE_READY_AWAITING_MANUAL_ACTIVATION"
     assert status["blockers"] == []
+    assert status["quota_threshold"] == HARD_RESERVE_CREDITS + EVENT_REQUEST_MAX_CREDITS
+    assert status["hard_reserve_credits"] == HARD_RESERVE_CREDITS
+    assert status["event_request_max_credits"] == EVENT_REQUEST_MAX_CREDITS
     assert status["paid_provider_requests"] == 0
+    assert status["paid_provider_credits"] == 0
     assert status["writes_performed"] is False
 
 
+def test_current_september_style_remaining_is_ready_without_crossing_reserve():
+    status = build_status(Client(), lambda: quota(204))
+    assert status["quota_ready"] is True
+    assert status["collection_ready"] is True
+
+
 def test_missing_all_tables_blocks_each_lifecycle_stage_even_with_high_quota():
-    missing = {
-        "league_multi_market_snapshots",
-        "league_multi_market_settlements",
-        "league_corner_results",
-    }
+    missing = {"league_multi_market_snapshots", "league_multi_market_settlements", "league_corner_results"}
     status = build_status(Client(missing=missing), lambda: quota(9999))
     assert status["quota_ready"] is True
     assert status["collection_ready"] is False
-    assert status["infrastructure_collection_ready"] is False
     assert status["status"] == "BLOCKED"
     assert status["goals_settlement_ready"] is False
     assert status["corner_storage_ready"] is False
@@ -82,40 +81,25 @@ def test_missing_all_tables_blocks_each_lifecycle_stage_even_with_high_quota():
     assert len([b for b in status["blockers"] if b.startswith("SCHEMA_")]) == 3
 
 
-def test_snapshot_table_plus_quota_enables_collection_infrastructure_but_not_settlement():
-    missing = {"league_multi_market_settlements", "league_corner_results"}
-    status = build_status(Client(missing=missing), lambda: quota(800))
-    assert status["collection_ready"] is True
-    assert status["infrastructure_collection_ready"] is True
-    assert status["manual_collection_activation_required"] is True
-    assert status["scheduled_collection_enabled"] is False
-    assert status["status"] == "INFRASTRUCTURE_READY_AWAITING_MANUAL_ACTIVATION"
-    assert status["goals_settlement_ready"] is False
-    assert status["corner_storage_ready"] is False
-    assert status["oos_structural_ready"] is False
-
-
-def test_low_quota_blocks_collection_but_not_schema_based_settlement_structure():
-    status = build_status(Client(), lambda: quota(START_MIN_REQUESTS_REMAINING - 1))
+def test_low_quota_blocks_before_one_worst_case_event_call():
+    status = build_status(Client(), lambda: quota(MIN_COLLECTION_REMAINING_CREDITS - 1))
     assert status["quota_ready"] is False
     assert status["collection_ready"] is False
-    assert status["status"] == "BLOCKED"
     assert status["goals_settlement_ready"] is True
     assert status["corner_storage_ready"] is True
-    assert "QUOTA_BELOW_THRESHOLD_OR_UNAVAILABLE" in status["blockers"]
+    assert "QUOTA_BELOW_CREDIT_RESERVE_OR_UNAVAILABLE" in status["blockers"]
 
 
 def test_quota_failure_is_fail_closed_and_recorded():
     def fail():
         raise RuntimeError("provider unavailable")
-
     status = build_status(Client(), fail)
     assert status["quota"] is None
     assert "provider unavailable" in status["quota_error"]
     assert status["quota_ready"] is False
     assert status["collection_ready"] is False
-    assert status["status"] == "BLOCKED"
     assert status["paid_provider_requests"] == 0
+    assert status["paid_provider_credits"] == 0
 
 
 def test_only_audited_corner_source_leagues_are_marked_source_ready():

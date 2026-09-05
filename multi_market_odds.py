@@ -7,9 +7,13 @@ from config import THE_ODDS_API_KEY
 from the_odds_service import BASE_URL
 
 FEATURED_MARKETS = ("h2h", "spreads", "totals")
+# Keep only markets actually consumed by Multi-Market Card V1. With one region,
+# this reduces the conservative request cost from seven credits to four.
 EVENT_MARKETS = (
-    "alternate_spreads", "alternate_totals", "team_totals", "alternate_team_totals",
-    "alternate_spreads_corners", "alternate_totals_corners", "alternate_team_totals_corners",
+    "alternate_spreads",
+    "alternate_totals",
+    "alternate_totals_corners",
+    "alternate_team_totals_corners",
 )
 
 
