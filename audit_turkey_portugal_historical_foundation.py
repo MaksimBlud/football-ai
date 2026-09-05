@@ -24,7 +24,7 @@ import requests
 
 from league_offline_features import build_temporal_elo_features
 from league_offline_history import normalize_football_data_frame
-from primeiraliga_runtime_config import PRIMEIRA_LIGA_RUNTIME_CONFIG
+from primeira_liga_runtime_config import PRIMEIRA_LIGA_RUNTIME_CONFIG
 from turkey_super_lig_runtime_config import TURKEY_SUPER_LIG_RUNTIME_CONFIG
 
 
@@ -105,8 +105,6 @@ def _feature_contract_check(features: pd.DataFrame, normalized: pd.DataFrame) ->
 
     first_home = features.groupby("home_team", sort=False).head(1)
     first_away = features.groupby("away_team", sort=False).head(1)
-    # At a team's first appearance in a given role it may already have played in
-    # the opposite role, so the robust invariant is non-negative pre-match counts.
     if (first_home["home_prior_matches"] < 0).any() or (first_away["away_prior_matches"] < 0).any():
         raise ValueError("Negative prior-match count")
 
@@ -158,7 +156,6 @@ def audit_league(config, *, as_of: date, session: requests.Session) -> dict:
             record["expected_rows"] = int(len(raw_teams) * (len(raw_teams) - 1))
             record["complete_double_round_robin"] = True
         else:
-            # Current-season outcomes are not used for calibration foundation.
             record["normalized_rows"] = 0
             record["complete_double_round_robin"] = None
 
