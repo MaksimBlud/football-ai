@@ -10,6 +10,7 @@ on:
       - "scheduled_turkey_portugal_odds.py"
       - "persist_turkey_portugal_prediction_ledger.py"
       - "update_turkey_portugal_results.py"
+      - "research_viewer.py"
       - "tests/test_turkey_portugal_*.py"
       - ".github/workflows/turkey-portugal-*.yml"
 
@@ -32,10 +33,10 @@ jobs:
       - run: pip install pytest pandas requests supabase python-dotenv numpy
       - name: Compile foundation
         run: |
-          python -m py_compile turkey_super_lig_runtime_config.py primeira_liga_runtime_config.py turkey_portugal_market_only.py scheduled_turkey_portugal_odds.py persist_turkey_portugal_prediction_ledger.py turkey_portugal_scores_service.py update_turkey_portugal_results.py turkey_portugal_operational_cycle.py
+          python -m py_compile turkey_super_lig_runtime_config.py primeira_liga_runtime_config.py turkey_portugal_market_only.py scheduled_turkey_portugal_odds.py persist_turkey_portugal_prediction_ledger.py turkey_portugal_scores_service.py update_turkey_portugal_results.py turkey_portugal_operational_cycle.py research_viewer.py
       - name: Run focused tests
         run: |
-          PYTHONPATH=. pytest -q tests/test_turkey_portugal_league_config.py tests/test_turkey_portugal_runtime_config.py tests/test_turkey_portugal_operational_foundation.py
+          PYTHONPATH=. pytest -q tests/test_turkey_portugal_*.py
       - name: Enforce no production artifact changes
         run: |
           git fetch origin main --depth=1
