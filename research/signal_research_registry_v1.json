@@ -88,18 +88,17 @@
     },
     {
       "id": "TURKEY_PORTUGAL_STRUCTURAL_V2_CALIBRATION_V1",
-      "status": "ACTIVE_PREREGISTERED",
+      "status": "CLOSED_RESEARCH_ONLY_MIXED_OUTCOME",
       "hypothesis_family": "argmax_preserving_structural_v2_market_probability_calibration",
       "sample_family": "football_data_completed_seasons_2016_2017_through_2025_2026",
-      "decision": "run_independent_nested_walk_forward_calibration_research_without_runtime_activation",
-      "status_document": "docs/TURKEY_PORTUGAL_STRUCTURAL_V2_CALIBRATION_V1_STATUS.md",
+      "decision": "turkey_historical_oos_signal_observed_portugal_calibration_not_supported_no_runtime_activation",
       "protocol_document": "research/turkey_portugal_structural_v2_calibration_v1.json",
-      "frozen_protocol": true,
-      "outcome_scoring_before_readiness": false,
-      "cross_league_parameter_transfer": false,
+      "result_document": "research/turkey_portugal_structural_v2_calibration_v1_result.json",
+      "closure_document": "docs/TURKEY_PORTUGAL_STRUCTURAL_V2_CALIBRATION_V1_CLOSURE.md",
       "runtime_status": "CALIBRATION_REQUIRED",
       "automatic_promotion": false,
-      "negative_result_is_valid": true
+      "cross_league_parameter_transfer": false,
+      "retune_on_seen_sample": false
     }
   ]
 }
