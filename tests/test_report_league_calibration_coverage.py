@@ -30,6 +30,7 @@ def test_report_covers_all_operational_leagues_and_preserves_calibration_status(
     expected = {
         "EPL", "LA_LIGA", "RPL", "SERIE_A",
         "BUNDESLIGA", "LIGUE_1", "EREDIVISIE",
+        "TURKEY_SUPER_LIG", "PRIMEIRA_LIGA",
     }
 
     assert set(seen) == expected
