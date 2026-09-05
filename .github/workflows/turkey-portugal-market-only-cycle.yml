@@ -2,6 +2,16 @@ name: Turkey Portugal MARKET_ONLY Cycle
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'turkey_portugal_market_only.py'
+      - 'scheduled_turkey_portugal_odds.py'
+      - 'persist_turkey_portugal_prediction_ledger.py'
+      - 'turkey_portugal_scores_service.py'
+      - 'update_turkey_portugal_results.py'
+      - 'turkey_portugal_operational_cycle.py'
+      - '.github/workflows/turkey-portugal-market-only-cycle.yml'
   schedule:
     - cron: "47 */2 * * *"
 
