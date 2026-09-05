@@ -7,7 +7,6 @@ WORKFLOW_DIR = Path(__file__).parents[1] / ".github" / "workflows"
 SCHEDULED_OPERATIONAL_WORKFLOWS = (
     "epl-live-cycle.yml",
     "epl-results.yml",
-    "la-liga-live-cycle.yml",
     "rpl-live-cycle.yml",
     "serie-a-live-cycle.yml",
     "serie-a-results.yml",
@@ -16,7 +15,6 @@ SCHEDULED_OPERATIONAL_WORKFLOWS = (
     "ligue1-live-cycle.yml",
     "ligue1-results.yml",
     "eredivisie-live-cycle.yml",
-    "eredivisie-results.yml",
 )
 
 PROVIDER_FREE_RESULTS_WORKFLOWS = (
@@ -27,13 +25,16 @@ PROVIDER_FREE_RESULTS_WORKFLOWS = (
 
 PAID_MANUAL_ONLY_WORKFLOWS = (
     "odds-snapshots.yml",
+    "la-liga-live-cycle.yml",
     "rpl-odds-snapshots.yml",
     "rpl-results.yml",
     "serie-a-odds-snapshots.yml",
     "bundesliga-odds-snapshots.yml",
     "ligue1-odds-snapshots.yml",
     "eredivisie-odds-snapshots.yml",
+    "eredivisie-results.yml",
     "turkey-portugal-market-only-cycle.yml",
+    "multi-market-coverage-audit.yml",
 )
 
 
@@ -91,6 +92,7 @@ def test_paid_workflows_are_manual_only():
         source = (WORKFLOW_DIR / name).read_text()
         assert "workflow_dispatch:" in source, name
         assert _crons(WORKFLOW_DIR / name) == [], name
+        assert "push:" not in source, name
 
 
 def test_provider_free_results_are_scheduled_without_odds_api_secret():
