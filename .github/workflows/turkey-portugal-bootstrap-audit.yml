@@ -1,0 +1,25 @@
+name: Turkey Portugal Bootstrap Audit
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'turkey_super_lig_runtime_config.py'
+      - 'primeira_liga_runtime_config.py'
+      - 'audit_turkey_portugal_bootstrap.py'
+      - '.github/workflows/turkey-portugal-bootstrap-audit.yml'
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12', cache: pip}
+      - run: pip install requests python-dotenv pytest
+      - run: PYTHONPATH=. pytest -q tests/test_turkey_portugal_bootstrap.py tests/test_turkey_portugal_runtime_config.py
+      - run: python audit_turkey_portugal_bootstrap.py

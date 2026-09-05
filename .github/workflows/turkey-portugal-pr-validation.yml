@@ -1,0 +1,46 @@
+name: Turkey Portugal PR Validation
+
+on:
+  pull_request:
+    paths:
+      - "league_config.py"
+      - "turkey_super_lig_runtime_config.py"
+      - "primeira_liga_runtime_config.py"
+      - "turkey_portugal_*.py"
+      - "scheduled_turkey_portugal_odds.py"
+      - "persist_turkey_portugal_prediction_ledger.py"
+      - "update_turkey_portugal_results.py"
+      - "tests/test_turkey_portugal_*.py"
+      - ".github/workflows/turkey-portugal-*.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: https://example.supabase.co
+      SUPABASE_KEY: turkey-portugal-validation-placeholder
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest pandas requests supabase python-dotenv numpy
+      - name: Compile foundation
+        run: |
+          python -m py_compile turkey_super_lig_runtime_config.py primeira_liga_runtime_config.py turkey_portugal_market_only.py scheduled_turkey_portugal_odds.py persist_turkey_portugal_prediction_ledger.py turkey_portugal_scores_service.py update_turkey_portugal_results.py turkey_portugal_operational_cycle.py
+      - name: Run focused tests
+        run: |
+          PYTHONPATH=. pytest -q tests/test_turkey_portugal_league_config.py tests/test_turkey_portugal_runtime_config.py tests/test_turkey_portugal_operational_foundation.py
+      - name: Enforce no production artifact changes
+        run: |
+          git fetch origin main --depth=1
+          if git diff --name-only origin/main...HEAD | grep -E '\.pkl$'; then
+            echo "Production model artifact change detected"
+            exit 1
+          fi
+          echo "PASS: no .pkl changes"
