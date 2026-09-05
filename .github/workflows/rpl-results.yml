@@ -2,9 +2,6 @@ name: RPL Results Sync
 
 on:
   workflow_dispatch:
-  schedule:
-    # Scores endpoint costs 2 units; twice daily is sufficient for settlement.
-    - cron: "54 */12 * * *"
 
 concurrency:
   group: rpl-results-sync
@@ -21,7 +18,6 @@ jobs:
       THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
