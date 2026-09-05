@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: '37 */6 * * *'
   workflow_dispatch:
+    inputs:
+      allow_paid_collection:
+        description: 'Explicitly allow this manual run to enter the paid collection path after schema+quota gates pass'
+        required: true
+        default: false
+        type: boolean
   pull_request:
     paths:
       - 'multi_market_activation_status.py'
@@ -58,6 +64,7 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
       THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+      MULTI_MARKET_COLLECTION_ENABLED: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_paid_collection && '1' || '0' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -68,7 +75,7 @@ jobs:
         run: sha256sum football_model_xgboost_elo.pkl > /tmp/model.before
       - name: Run fail-closed Multi-Market V2 cycle
         run: python multi_market_cycle.py
-      - name: Verify blocked-cycle safety contract
+      - name: Verify cycle safety contract
         run: |
           python - <<'PY'
           import json
@@ -77,10 +84,13 @@ jobs:
           assert p['schema_version']=='MULTI_MARKET_V2_CYCLE_STATUS_V1'
           assert p['research_only'] is True
           assert p['prospective_oos_evaluation_active'] is False
-          if p['action']=='NOOP_BLOCKED':
+          if p['action'] in {'NOOP_BLOCKED','NOOP_ACTIVATION_REQUIRED'}:
               assert p['collection_called'] is False
               assert p['paid_provider_requests']==0
+          if p['action']=='COLLECTION_ATTEMPTED':
+              assert p['collection_activation_enabled'] is True
           print('action=',p['action'])
+          print('activation_enabled=',p.get('collection_activation_enabled'))
           print('collection_called=',p['collection_called'])
           print('paid_provider_requests=',p['paid_provider_requests'])
           print('blockers=',p['readiness'].get('blockers'))
