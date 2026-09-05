@@ -10,10 +10,19 @@ SCHEDULED_OPERATIONAL_WORKFLOWS = (
     "la-liga-live-cycle.yml",
     "rpl-live-cycle.yml",
     "serie-a-live-cycle.yml",
+    "serie-a-results.yml",
     "bundesliga-live-cycle.yml",
+    "bundesliga-results.yml",
     "ligue1-live-cycle.yml",
+    "ligue1-results.yml",
     "eredivisie-live-cycle.yml",
     "eredivisie-results.yml",
+)
+
+PROVIDER_FREE_RESULTS_WORKFLOWS = (
+    "serie-a-results.yml",
+    "bundesliga-results.yml",
+    "ligue1-results.yml",
 )
 
 PAID_MANUAL_ONLY_WORKFLOWS = (
@@ -21,11 +30,8 @@ PAID_MANUAL_ONLY_WORKFLOWS = (
     "rpl-odds-snapshots.yml",
     "rpl-results.yml",
     "serie-a-odds-snapshots.yml",
-    "serie-a-results.yml",
     "bundesliga-odds-snapshots.yml",
-    "bundesliga-results.yml",
     "ligue1-odds-snapshots.yml",
-    "ligue1-results.yml",
     "eredivisie-odds-snapshots.yml",
     "turkey-portugal-market-only-cycle.yml",
 )
@@ -85,3 +91,13 @@ def test_paid_workflows_are_manual_only():
         source = (WORKFLOW_DIR / name).read_text()
         assert "workflow_dispatch:" in source, name
         assert _crons(WORKFLOW_DIR / name) == [], name
+
+
+def test_provider_free_results_are_scheduled_without_odds_api_secret():
+    for name in PROVIDER_FREE_RESULTS_WORKFLOWS:
+        path = WORKFLOW_DIR / name
+        source = path.read_text()
+        assert "workflow_dispatch:" in source, name
+        assert len(_crons(path)) == 1, name
+        assert "THE_ODDS_API_KEY" not in source, name
+        assert "update_" in source and "_results.py --write" in source, name

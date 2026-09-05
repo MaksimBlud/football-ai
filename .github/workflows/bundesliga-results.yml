@@ -1,6 +1,8 @@
 name: Bundesliga Results
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "19 */12 * * *"
 permissions:
   contents: read
 jobs:
@@ -10,7 +12,6 @@ jobs:
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-      THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

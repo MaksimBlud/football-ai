@@ -39,10 +39,10 @@ SERIE_A_RUNTIME_CONFIG = LeagueRuntimeConfig(
         },
     ),
     finished_results_source=FinishedResultsSourceConfig(
-        provider="THE_ODDS_API",
-        competition_code="soccer_italy_serie_a",
+        provider="FOOTBALL_DATA_CSV",
+        competition_code="I1",
         season="2026-2027",
-        season_code="2026",
+        season_code="2627",
     ),
     paths=LeaguePaths(
         historical_raw=ROOT / "data" / "serie_a_history_2016_2026_raw.csv",
