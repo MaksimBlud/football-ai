@@ -14,6 +14,7 @@ SOURCE_TABLE = "odds_snapshots"
 LOOKAHEAD_HOURS = 24
 MIN_INTERVAL_HOURS = 6
 PAGE_SIZE = 1000
+EVENT_ID_BATCH_SIZE = 100
 
 
 def _utc(value): return pd.to_datetime(value, utc=True, errors="coerce")
@@ -39,15 +40,30 @@ def load_future_events(now_utc):
 
 
 def load_latest_collection_times(event_ids):
+    """Return latest stored collection time for every requested event.
+
+    The query is paginated per bounded event-id batch. Without pagination,
+    PostgREST's default row cap can omit an event completely when other events
+    in the same batch have many newer snapshots. That would incorrectly make
+    the collector treat the omitted event as never collected and can consume a
+    paid provider request before MIN_INTERVAL_HOURS has elapsed.
+    """
     latest = {}
-    for i in range(0, len(event_ids), 100):
-        r = (supabase.table(TABLE).select("league,event_id,snapshot_time_utc").in_("event_id", event_ids[i:i+100])
-             .order("snapshot_time_utc", desc=True).execute())
-        for row in r.data or []:
-            ts = _utc(row["snapshot_time_utc"])
-            if pd.isna(ts): continue
-            key, pyts = (str(row["league"]), str(row["event_id"])), ts.to_pydatetime()
-            if key not in latest or pyts > latest[key]: latest[key] = pyts
+    for i in range(0, len(event_ids), EVENT_ID_BATCH_SIZE):
+        event_id_batch = event_ids[i:i + EVENT_ID_BATCH_SIZE]
+        start = 0
+        while True:
+            r = (supabase.table(TABLE).select("league,event_id,snapshot_time_utc").in_("event_id", event_id_batch)
+                 .order("snapshot_time_utc", desc=True).range(start, start + PAGE_SIZE - 1).execute())
+            rows = r.data or []
+            for row in rows:
+                ts = _utc(row["snapshot_time_utc"])
+                if pd.isna(ts): continue
+                key, pyts = (str(row["league"]), str(row["event_id"])), ts.to_pydatetime()
+                if key not in latest or pyts > latest[key]: latest[key] = pyts
+            if len(rows) < PAGE_SIZE:
+                break
+            start += PAGE_SIZE
     return latest
 
 
