@@ -1,0 +1,137 @@
+{
+  "id": "TURKEY_PORTUGAL_STRUCTURAL_V2_CALIBRATION_V1",
+  "status": "PREREGISTERED_NOT_EVALUATED",
+  "frozen_at_utc": "2026-09-05T08:40:30Z",
+  "research_only": true,
+  "purpose": "independent_historical_structural_v2_calibration_research",
+  "governance": {
+    "runtime_config_mutation_during_research": false,
+    "production_model_artifact_mutation": false,
+    "automatic_promotion": false,
+    "copy_final_parameters_from_other_leagues": false,
+    "negative_result_is_valid": true,
+    "outcome_dependent_changes_after_freeze": false
+  },
+  "leagues": {
+    "TURKEY_SUPER_LIG": {
+      "football_data_competition": "T1",
+      "completed_seasons": [
+        "2016-2017",
+        "2017-2018",
+        "2018-2019",
+        "2019-2020",
+        "2020-2021",
+        "2021-2022",
+        "2022-2023",
+        "2023-2024",
+        "2024-2025",
+        "2025-2026"
+      ],
+      "market_source": "BET365",
+      "market_columns": ["B365H", "B365D", "B365A"],
+      "outcome_blind_market_coverage_proof": {
+        "valid_rows": 3352,
+        "total_rows": 3394,
+        "coverage": 0.9876252209781968,
+        "workflow_run": 33955853472
+      }
+    },
+    "PRIMEIRA_LIGA": {
+      "football_data_competition": "P1",
+      "completed_seasons": [
+        "2016-2017",
+        "2017-2018",
+        "2018-2019",
+        "2019-2020",
+        "2020-2021",
+        "2021-2022",
+        "2022-2023",
+        "2023-2024",
+        "2024-2025",
+        "2025-2026"
+      ],
+      "market_source": "BET365",
+      "market_columns": ["B365H", "B365D", "B365A"],
+      "outcome_blind_market_coverage_proof": {
+        "valid_rows": 3058,
+        "total_rows": 3060,
+        "coverage": 0.9993464052287582,
+        "workflow_run": 33955853472
+      }
+    }
+  },
+  "dataset_contract": {
+    "current_season_2026_2027_excluded": true,
+    "fixture_completeness": "league_and_season_aware_double_round_robin_N_times_N_minus_1",
+    "football_features": "league_offline_features.build_temporal_elo_features",
+    "feature_state": "prior_matches_only",
+    "market_probability": "reciprocal_odds_normalized_to_sum_one",
+    "market_rows_with_any_odds_missing_or_not_gt_1_excluded": true,
+    "result_labels": ["H", "D", "A"],
+    "fixture_merge": "one_to_one_on_league_season_match_date_home_team_away_team",
+    "cross_league_pooling": false
+  },
+  "structural_algorithm": {
+    "implementation": "league_structural_v2_shadow",
+    "reference_stats_fit": "prior_training_seasons_only",
+    "test_distribution_normalization": false,
+    "market_argmax_must_be_preserved": true,
+    "score_features": [
+      "elo_difference",
+      "form_difference",
+      "venue_win_rate_difference",
+      "home_goals_scored_last5",
+      "home_goals_conceded_last5",
+      "away_goals_scored_last5",
+      "away_goals_conceded_last5"
+    ]
+  },
+  "candidate_search_space": {
+    "alphas": [0.025, 0.05, 0.075, 0.1, 0.125, 0.15, 0.2, 0.25],
+    "thresholds": [0.25, 0.5, 0.75, 1.0, 1.25, 1.5],
+    "interpretation": "shared_methodology_search_space_only_not_transferred_final_parameters"
+  },
+  "nested_walk_forward": {
+    "outer_test_seasons": [
+      "2021-2022",
+      "2022-2023",
+      "2023-2024",
+      "2024-2025",
+      "2025-2026"
+    ],
+    "outer_training": "all_completed_seasons_strictly_before_outer_test_season",
+    "inner_validation": "each_prior_season_after_the_first_prior_season",
+    "inner_training": "all_prior_seasons_strictly_before_inner_validation_season",
+    "candidate_selection_must_not_read_outer_test_outcomes": true,
+    "minimum_positive_fraction_per_metric": 0.6,
+    "robust_candidate_requires": [
+      "weighted_mean_log_loss_delta_less_than_0",
+      "weighted_mean_brier_delta_less_than_0",
+      "log_loss_improves_on_at_least_ceil_60_percent_of_inner_folds",
+      "brier_improves_on_at_least_ceil_60_percent_of_inner_folds"
+    ],
+    "selection_order": [
+      "robust_true_first",
+      "lowest_weighted_log_loss_delta",
+      "lowest_weighted_brier_delta",
+      "smaller_alpha",
+      "higher_threshold"
+    ],
+    "no_robust_candidate_action": "MARKET_ONLY"
+  },
+  "evaluation": {
+    "primary_metric": "log_loss",
+    "secondary_metric": "brier",
+    "diagnostic_metric": "accuracy",
+    "per_outer_fold_report_required": true,
+    "aggregate_outer_oos_report_required": true,
+    "parameter_selection_report_required": true,
+    "argmax_change_count_must_equal": 0
+  },
+  "decision_contract": {
+    "research_can_conclude_calibration_not_supported": true,
+    "runtime_status_before_and_after_research": "CALIBRATION_REQUIRED",
+    "research_result_cannot_activate_structural_v2": true,
+    "any_future_runtime_calibration_requires_separate_explicit_review_and_PR": true
+  }
+}
