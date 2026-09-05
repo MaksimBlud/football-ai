@@ -7,13 +7,12 @@ from database import supabase
 from league_config import get_league_config
 from multi_market_card import build_multi_market_card
 from multi_market_odds import EVENT_MARKETS, fetch_event_markets, fetch_quota_status
+from multi_market_policy import HARD_RESERVE_REQUESTS, START_MIN_REQUESTS_REMAINING
 
 TABLE = "league_multi_market_snapshots"
 SOURCE_TABLE = "odds_snapshots"
 LOOKAHEAD_HOURS = 24
 MIN_INTERVAL_HOURS = 6
-START_MIN_REQUESTS_REMAINING = 500
-HARD_RESERVE_REQUESTS = 100
 PAGE_SIZE = 1000
 
 
@@ -58,43 +57,59 @@ def _key(league, event_id, ts):
 
 def collect(now_utc=None):
     now_utc = now_utc or datetime.now(UTC)
-    quota_before = fetch_quota_status()  # /sports is zero-cost at the provider.
-    remaining = quota_before.get("remaining")
-    if remaining is not None and int(remaining) < START_MIN_REQUESTS_REMAINING:
-        return {"quota_blocked": True, "quota_before": quota_before, "provider_paid_requests": 0,
-                "reason": f"remaining<{START_MIN_REQUESTS_REMAINING}"}
-
+    quota = fetch_quota_status()
+    remaining = quota.get("remaining")
+    if remaining is None:
+        raise RuntimeError("Provider quota remaining header unavailable")
+    if int(remaining) < START_MIN_REQUESTS_REMAINING:
+        return {"status": "BLOCKED_QUOTA", "quota": quota, "inserted": 0, "unchanged": 0, "skipped_recent": 0, "skipped_quota": 0}
     events = load_future_events(now_utc)
-    latest = load_latest_collection_times([str(e["event_id"]) for e in events])
-    summary = {"quota_blocked": False, "quota_before": quota_before, "eligible_events": len(events), "fetched": 0,
-               "inserted": 0, "skipped_recent": 0, "skipped_unsupported": 0, "quota_stop": False}
-    for event in events:
-        league, event_id = str(event["league"]), str(event["event_id"])
-        config = get_league_config(league)
-        if not config.odds_api_sport_key:
-            summary["skipped_unsupported"] += 1; continue
-        previous = latest.get((league, event_id))
-        if previous and now_utc - previous < timedelta(hours=MIN_INTERVAL_HOURS):
+    latest = load_latest_collection_times([str(e["event_id"]) for e in events]) if events else {}
+    summary = {"status": "OK", "quota_start": quota, "inserted": 0, "unchanged": 0, "skipped_recent": 0, "skipped_quota": 0, "events_considered": len(events)}
+    for e in events:
+        league, event_id = str(e["league"]), str(e["event_id"])
+        last = latest.get((league, event_id))
+        if last and now_utc - last < timedelta(hours=MIN_INTERVAL_HOURS):
             summary["skipped_recent"] += 1; continue
-        payload, quota = fetch_event_markets(config.odds_api_sport_key, event_id, regions="eu", markets=EVENT_MARKETS)
-        summary["fetched"] += 1
-        snapshot_time, kickoff = datetime.now(UTC), _utc(event["commence_time_utc"])
-        if not pd.isna(kickoff) and snapshot_time < kickoff.to_pydatetime():
-            card = build_multi_market_card(payload)
-            stored = {"schema_version": "MULTI_MARKET_V1", "research_only": True, "card": card,
-                      "provider_market_keys": sorted({m.get("key") for b in payload.get("bookmakers", []) for m in b.get("markets", []) if m.get("key")}),
-                      "bookmakers": payload.get("bookmakers", []), "quota": quota}
-            row = {"snapshot_key": _key(league, event_id, snapshot_time), "league": league, "event_id": event_id,
-                   "home_team": str(event.get("home_team") or payload.get("home_team") or ""),
-                   "away_team": str(event.get("away_team") or payload.get("away_team") or ""),
-                   "kickoff_utc": kickoff.isoformat(), "snapshot_time_utc": snapshot_time.isoformat(),
-                   "payload": stored, "provider": "THE_ODDS_API"}
+        current = fetch_quota_status(); rem = current.get("remaining")
+        if rem is None or int(rem) <= HARD_RESERVE_REQUESTS:
+            summary["skipped_quota"] += 1; summary["status"] = "STOPPED_HARD_RESERVE"; break
+        config = get_league_config(league)
+        payload, after = fetch_event_markets(config.identity.odds_sport_key, event_id, regions="eu")
+        if int(after.get("remaining") or 0) <= HARD_RESERVE_REQUESTS:
+            summary["status"] = "STOPPED_HARD_RESERVE_AFTER_REQUEST"
+        card = build_multi_market_card(payload)
+        snapshot_time = datetime.now(UTC)
+        kickoff = _utc(e["commence_time_utc"])
+        if pd.isna(kickoff) or snapshot_time >= kickoff.to_pydatetime():
+            continue
+        row = {
+            "snapshot_key": _key(league, event_id, snapshot_time),
+            "league": league,
+            "event_id": event_id,
+            "home_team": str(e["home_team"]),
+            "away_team": str(e["away_team"]),
+            "kickoff_utc": kickoff.isoformat(),
+            "snapshot_time_utc": snapshot_time.isoformat(),
+            "payload": {
+                "schema_version": "MULTI_MARKET_V1",
+                "research_only": True,
+                "quota": after,
+                "card": card,
+            },
+            "provider": "THE_ODDS_API",
+        }
+        existing = supabase.table(TABLE).select("payload").eq("snapshot_key", row["snapshot_key"]).limit(1).execute().data or []
+        if existing:
+            if json.dumps(existing[0]["payload"], sort_keys=True) != json.dumps(row["payload"], sort_keys=True):
+                raise RuntimeError("Immutable Multi-Market snapshot conflict")
+            summary["unchanged"] += 1
+        else:
             supabase.table(TABLE).insert(row).execute(); summary["inserted"] += 1
-        after = quota.get("remaining")
-        if after is not None and int(after) < HARD_RESERVE_REQUESTS:
-            summary["quota_stop"] = True; break
+        if summary["status"].startswith("STOPPED_"):
+            break
     return summary
 
 
-def main(): print(json.dumps(collect(), indent=2, default=str))
-if __name__ == "__main__": main()
+if __name__ == "__main__":
+    print(json.dumps(collect(), indent=2, default=str))
