@@ -26,6 +26,7 @@ TABLE = "league_corner_results"
 SCHEMA_VERSION = "LEAGUE_CORNER_RESULT_V1"
 SOURCE = "FOOTBALL_DATA_CSV_HC_AC"
 IDENTITY_FIELDS = ("league", "season", "match_date", "home_team", "away_team")
+EXISTING_KEY_BATCH_SIZE = 100
 
 
 class CornerResultIdentityError(ValueError):
@@ -246,6 +247,17 @@ def _response_rows(response: Any) -> list[dict]:
     return list(getattr(response, "data", None) or [])
 
 
+def _load_existing_by_keys(client, keys: list[str]) -> dict[str, dict]:
+    """Read existing immutable corner rows in bounded unique-key batches."""
+    existing: dict[str, dict] = {}
+    for start in range(0, len(keys), EXISTING_KEY_BATCH_SIZE):
+        batch = keys[start:start + EXISTING_KEY_BATCH_SIZE]
+        response = client.table(TABLE).select("*").in_("corner_result_key", batch).execute()
+        for row in _response_rows(response):
+            existing[str(row["corner_result_key"])] = dict(row)
+    return existing
+
+
 def persist_corner_results(client, records: Iterable[dict]) -> dict:
     """Insert immutable canonical corner-result revisions idempotently."""
     incoming = [dict(row) for row in records]
@@ -257,8 +269,7 @@ def persist_corner_results(client, records: Iterable[dict]) -> dict:
     if len(keys) != len(set(keys)):
         raise ValueError("duplicate corner_result_key in incoming batch")
 
-    response = client.table(TABLE).select("*").in_("corner_result_key", keys).execute()
-    existing = {str(row["corner_result_key"]): dict(row) for row in _response_rows(response)}
+    existing = _load_existing_by_keys(client, keys)
     inserted = 0
     unchanged = 0
     for record in incoming:
