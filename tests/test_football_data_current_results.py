@@ -11,7 +11,9 @@ from football_data_current_results import (
     fetch_current_finished_results,
 )
 from ligue1_runtime_config import LIGUE1_RUNTIME_CONFIG
+from primeira_liga_runtime_config import PRIMEIRA_LIGA_RUNTIME_CONFIG
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
+from turkey_super_lig_runtime_config import TURKEY_SUPER_LIG_RUNTIME_CONFIG
 
 
 def _raw(rows):
@@ -23,6 +25,8 @@ def test_current_urls_are_explicit_2627_contracts():
     assert configured_current_csv_url(BUNDESLIGA_RUNTIME_CONFIG).endswith("/2627/D1.csv")
     assert configured_current_csv_url(LIGUE1_RUNTIME_CONFIG).endswith("/2627/F1.csv")
     assert configured_current_csv_url(EREDIVISIE_RUNTIME_CONFIG).endswith("/2627/N1.csv")
+    assert configured_current_csv_url(TURKEY_SUPER_LIG_RUNTIME_CONFIG).endswith("/2627/T1.csv")
+    assert configured_current_csv_url(PRIMEIRA_LIGA_RUNTIME_CONFIG).endswith("/2627/P1.csv")
 
 
 def test_finished_frame_filters_unfinished_rows_and_applies_aliases():
