@@ -1,6 +1,6 @@
 # Multi-Market V2 — Status
 
-Status: **SETTLEMENT + CANONICAL CORNER-OUTCOME + FROZEN OOS EVALUATOR FOUNDATIONS IMPLEMENTED / LIVE PERSISTENCE EXTERNALLY GATED / PROSPECTIVE OOS EVALUATION NOT YET ACTIVE**
+Status: **SETTLEMENT + CANONICAL CORNER-OUTCOME + FROZEN OOS EVALUATOR FOUNDATIONS IMPLEMENTED / LIVE SCHEMA PROVEN ABSENT / PROSPECTIVE OOS EVALUATION NOT ACTIVE**
 
 Multi-Market V2 extends the research-only Multi-Market V1 snapshot layer toward `Results → Settlement → OOS Evaluation`.
 
@@ -27,6 +27,7 @@ Multi-Market V2 extends the research-only Multi-Market V1 snapshot layer toward 
 - Soft LogLoss and Brier are reported per league/market, pooled micro, and macro over sample-ready cells.
 - Sample readiness is frozen at 30 unique events / 30 usable observations per league/market cell; this is a descriptive reporting floor, not a betting/production activation threshold.
 - `NOT_OFFERED`, `UNSETTLED_MISSING_OUTCOME`, `INVALID`, missing settlements and invalid probabilities are explicitly counted rather than silently coerced.
+- Read-only live schema probe validates exact required columns with bounded `SELECT ... LIMIT 1`; it cannot create or mutate schema.
 
 ## Live zero-cost corner source proof
 
@@ -41,17 +42,40 @@ EPL, Serie A, Bundesliga, Ligue 1 and RPL remain `SOURCE_NOT_CONFIGURED` for a r
 
 The source proof used zero The Odds API requests, zero Supabase operations and zero production-model operations.
 
+## Live Supabase schema proof — 2026-09-05
+
+Post-merge read-only workflow run `33967488303` on commit `f4e53534ffc6bf4799455983d47005e30bf9268c` probed the exact repository-required columns for all three Multi-Market persistence tables. Artifact `9969892388` has digest `sha256:e533ab3e55118b06b03012d9d56f1bee74516c49886e1cb65460d56ca9eefa56`.
+
+The result is unambiguous: `all_ready=false`, `ready_tables=[]`, and all three tables are blocked:
+
+- `league_multi_market_snapshots` — absent from live schema / PostgREST cache (`PGRST205`).
+- `league_multi_market_settlements` — absent from live schema / PostgREST cache (`PGRST205`).
+- `league_corner_results` — absent from live schema / PostgREST cache (`PGRST205`).
+
+The probe performed bounded SELECT-only requests and no writes, DDL, migration execution, paid provider requests, or production-model operations.
+
+Repository search also found no proven automated migration deployment path: no `SUPABASE_ACCESS_TOKEN`, no `SUPABASE_DB_PASSWORD`, and no `supabase db push` workflow/command contract. Existing runtime GitHub workflows expose only the application Supabase URL/key for normal data access. Those credentials must not be repurposed into an invented DDL path.
+
 ## Current external blockers
 
-1. `league_multi_market_snapshots` was previously proven absent from the live Supabase schema. The repository contains its additive migration, but no safe automatic migration-deployment path has been proven.
-2. `league_corner_results` and `league_multi_market_settlements` are repository schema contracts only until their additive migrations are actually deployed and proven live.
-3. The Odds API quota was last proven below the Multi-Market safety threshold, so no paid Multi-Market collection should run until the quota gate passes.
-4. Corner-result source readiness currently applies only to La Liga, Eredivisie, Turkey Super Lig and Primeira Liga. The other five operational leagues remain gated until an explicit source contract is configured and audited.
-5. The OOS evaluator contract is implemented, but prospective evaluation remains gated until durable pre-kickoff Multi-Market snapshots and matching immutable settlement rows actually exist live.
+1. All three required Multi-Market persistence tables are freshly proven absent from live Supabase. Repository migrations exist, but no safe automated migration-deployment credential/path is established.
+2. Paid Multi-Market collection remains separately quota-gated. The readiness workflow uses only The Odds API zero-cost `/sports` preflight; paid event-market calls must not run unless the configured reserve threshold passes.
+3. Corner-result source readiness currently applies only to La Liga, Eredivisie, Turkey Super Lig and Primeira Liga. The other five operational leagues remain gated until an explicit source contract is configured and audited.
+4. The OOS evaluator contract is implemented and frozen, but prospective evaluation remains inactive until durable pre-kickoff Multi-Market snapshots and matching immutable settlement rows actually exist live.
+
+## Required external schema action
+
+The repository-owned additive migrations are, in dependency order:
+
+1. `supabase/migrations/202609050001_league_multi_market_snapshots.sql`
+2. `supabase/migrations/202609050002_league_multi_market_settlements.sql`
+3. `supabase/migrations/202609050003_league_corner_results.sql`
+
+They must be applied through an authenticated, reviewed Supabase migration/DDL channel outside the current runtime-key workflow. After deployment, the read-only schema probe is the required verification gate; no collection or persistence process should infer success merely because a migration command returned zero.
 
 ## Not yet claimed
 
-- No live corner-result or settlement persistence proof until the required Supabase tables exist.
+- No live Multi-Market snapshot, corner-result, or settlement persistence proof exists yet.
 - No prospective OOS result has been inspected under `MULTI_MARKET_V2_OOS_PROTOCOL_V1` yet.
 - No AI probability edge claims or `Best Bets` from these markets.
 - No production model change or promotion.
