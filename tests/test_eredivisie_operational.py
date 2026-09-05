@@ -13,6 +13,9 @@ def test_runtime_contract():
     assert c.identity.odds_sport_key=="soccer_netherlands_eredivisie"
     assert c.historical_source.competition_code=="N1"
     assert c.historical_source.season_codes["2627"]=="2026-2027"
+    assert c.finished_results_source.provider=="FOOTBALL_DATA_CSV"
+    assert c.finished_results_source.competition_code=="N1"
+    assert c.finished_results_source.season_code=="2627"
     assert c.structural_v2.calibration_status=="CALIBRATION_REQUIRED"
     assert c.structural_v2.structural_alpha is None
     assert c.structural_v2.edge_threshold is None

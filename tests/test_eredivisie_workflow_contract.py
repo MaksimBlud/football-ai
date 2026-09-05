@@ -34,18 +34,25 @@ def test_operational_workflows_do_not_load_or_train_production_models():
             assert token not in source
 
 
-def test_paid_eredivisie_provider_workflows_are_manual_only_and_guarded():
+def test_paid_eredivisie_odds_is_manual_only_and_guarded():
     odds = _read("eredivisie-odds-snapshots.yml")
-    results = _read("eredivisie-results.yml")
-    for source in (odds, results):
-        assert "workflow_dispatch:" in source
-        assert "cron:" not in source
-        assert "push:" not in source
+    assert "workflow_dispatch:" in odds
+    assert "cron:" not in odds
+    assert "push:" not in odds
     assert "python odds_api_budget_guard.py --max-cost 1" in odds
-    assert "python odds_api_budget_guard.py --max-cost 2" in results
 
-    # The downstream live cycle works from already persisted state and can
-    # remain scheduled because it is not the paid provider collection path.
+
+def test_eredivisie_results_are_provider_free_and_scheduled():
+    results = _read("eredivisie-results.yml")
+    assert "workflow_dispatch:" in results
+    assert 'cron: "23 */12 * * *"' in results
+    assert "THE_ODDS_API_KEY" not in results
+    assert "odds_api_budget_guard.py" not in results
+    assert 'source.provider == "FOOTBALL_DATA_CSV"' in results
+    assert 'source.competition_code == "N1"' in results
+    assert 'source.season_code == "2627"' in results
+
+    # The downstream live cycle works from already persisted state and remains scheduled.
     assert 'cron: "58 */2 * * *"' in _read("eredivisie-live-cycle.yml")
 
 
