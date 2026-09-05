@@ -4,14 +4,18 @@ on:
   pull_request:
     paths:
       - 'evaluate_turkey_portugal_structural_v2.py'
+      - 'league_historical_market.py'
       - 'tests/test_turkey_portugal_structural_v2_evaluation.py'
+      - 'tests/test_league_historical_market_invalid_rows.py'
       - 'research/turkey_portugal_structural_v2_calibration_v1.json'
       - '.github/workflows/turkey-portugal-structural-v2-evaluation.yml'
   push:
     branches: [main]
     paths:
       - 'evaluate_turkey_portugal_structural_v2.py'
+      - 'league_historical_market.py'
       - 'tests/test_turkey_portugal_structural_v2_evaluation.py'
+      - 'tests/test_league_historical_market_invalid_rows.py'
       - 'research/turkey_portugal_structural_v2_calibration_v1.json'
       - '.github/workflows/turkey-portugal-structural-v2-evaluation.yml'
 
@@ -32,9 +36,12 @@ jobs:
       - name: Install research dependencies
         run: pip install pandas numpy requests pytest scikit-learn xgboost joblib
       - name: Compile frozen evaluator
-        run: python -m py_compile evaluate_turkey_portugal_structural_v2.py tests/test_turkey_portugal_structural_v2_evaluation.py
+        run: python -m py_compile evaluate_turkey_portugal_structural_v2.py league_historical_market.py tests/test_turkey_portugal_structural_v2_evaluation.py tests/test_league_historical_market_invalid_rows.py
       - name: Run frozen evaluation contract tests
-        run: PYTHONPATH=. pytest -q tests/test_turkey_portugal_structural_v2_evaluation.py
+        run: |
+          PYTHONPATH=. pytest -q \
+            tests/test_turkey_portugal_structural_v2_evaluation.py \
+            tests/test_league_historical_market_invalid_rows.py
       - name: Guard production model artifacts
         if: github.event_name == 'pull_request'
         run: |

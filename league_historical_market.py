@@ -336,15 +336,35 @@ def normalize_market_frame(
         axis=1,
     )
 
+    probability_columns = [
+        "market_home_probability",
+        "market_draw_probability",
+        "market_away_probability",
+    ]
+
     result[
         "market_argmax"
-    ] = (
+    ] = pd.Series(
+        pd.NA,
+        index=result.index,
+        dtype="string",
+    )
+
+    valid_market = (
         result[
-            [
-                "market_home_probability",
-                "market_draw_probability",
-                "market_away_probability",
-            ]
+            "market_valid"
+        ]
+        .fillna(False)
+        .astype(bool)
+    )
+
+    result.loc[
+        valid_market,
+        "market_argmax",
+    ] = (
+        result.loc[
+            valid_market,
+            probability_columns,
         ]
         .idxmax(
             axis=1,
