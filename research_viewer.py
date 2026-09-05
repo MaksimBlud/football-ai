@@ -30,6 +30,7 @@ MULTI_MARKET_COLUMNS = "league,event_id,kickoff_utc,snapshot_time_utc,payload"
 
 ACTIVE_LEAGUES = (
     "EPL", "LA_LIGA", "RPL", "SERIE_A", "BUNDESLIGA", "LIGUE_1", "EREDIVISIE",
+    "TURKEY_SUPER_LIG", "PRIMEIRA_LIGA",
 )
 
 
