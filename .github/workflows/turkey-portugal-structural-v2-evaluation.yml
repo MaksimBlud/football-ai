@@ -34,7 +34,7 @@ jobs:
       - name: Compile frozen evaluator
         run: python -m py_compile evaluate_turkey_portugal_structural_v2.py tests/test_turkey_portugal_structural_v2_evaluation.py
       - name: Run frozen evaluation contract tests
-        run: pytest -q tests/test_turkey_portugal_structural_v2_evaluation.py
+        run: PYTHONPATH=. pytest -q tests/test_turkey_portugal_structural_v2_evaluation.py
       - name: Guard production model artifacts
         if: github.event_name == 'pull_request'
         run: |
@@ -58,7 +58,7 @@ jobs:
         run: pip install pandas numpy requests scikit-learn xgboost joblib
       - name: Run frozen post-preregistration evaluation
         run: |
-          python evaluate_turkey_portugal_structural_v2.py \
+          PYTHONPATH=. python evaluate_turkey_portugal_structural_v2.py \
             --output artifacts/turkey_portugal_structural_v2_evaluation.json
       - name: Verify research-only result contract
         run: |
