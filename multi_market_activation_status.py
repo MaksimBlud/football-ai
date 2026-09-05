@@ -1,8 +1,11 @@
 """Read-only Multi-Market V2 lifecycle readiness status.
 
 This module combines the exact live schema probe with the provider's zero-cost
-quota preflight. It never creates schema, writes Supabase, performs a paid odds
-request, settles a match, evaluates OOS outcomes, or changes production models.
+quota preflight. It reports infrastructure readiness only: paid collection still
+requires an explicit manual activation latch in ``multi_market_cycle``.
+
+It never creates schema, writes Supabase, performs a paid odds request, settles
+a match, evaluates OOS outcomes, or changes production models.
 """
 from __future__ import annotations
 
@@ -43,7 +46,7 @@ def build_status(
     client: Any,
     fetch_quota: Callable[[], dict[str, Any]],
 ) -> dict[str, Any]:
-    """Build read-only lifecycle readiness from live schema + zero-cost quota."""
+    """Build read-only infrastructure readiness from live schema + zero-cost quota."""
     schema = probe_schema(client)
     ready_tables = set(schema.get("ready_tables") or [])
     quota, quota_error = _safe_quota(fetch_quota)
@@ -74,6 +77,12 @@ def build_status(
     if not quota_ready:
         blockers.append("QUOTA_BELOW_THRESHOLD_OR_UNAVAILABLE")
 
+    lifecycle_status = (
+        "INFRASTRUCTURE_READY_AWAITING_MANUAL_ACTIVATION"
+        if collection_ready
+        else "BLOCKED"
+    )
+
     return {
         "schema_version": STATUS_SCHEMA,
         "research_only": True,
@@ -84,6 +93,9 @@ def build_status(
         "quota_threshold": START_MIN_REQUESTS_REMAINING,
         "quota_ready": quota_ready,
         "collection_ready": collection_ready,
+        "infrastructure_collection_ready": collection_ready,
+        "manual_collection_activation_required": True,
+        "scheduled_collection_enabled": False,
         "goals_settlement_ready": goals_settlement_ready,
         "corner_storage_ready": corner_storage_ready,
         "corner_source_ready_leagues": list(CORNER_SOURCE_READY_LEAGUES),
@@ -93,7 +105,7 @@ def build_status(
         "oos_structural_ready": oos_structural_ready,
         "prospective_oos_evaluation_active": False,
         "activation_ready": collection_ready,
-        "status": "READY_FOR_COLLECTION" if collection_ready else "BLOCKED",
+        "status": lifecycle_status,
         "blockers": blockers,
         "writes_performed": False,
         "paid_provider_requests": 0,
