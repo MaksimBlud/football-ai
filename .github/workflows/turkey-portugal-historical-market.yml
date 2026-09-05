@@ -1,0 +1,64 @@
+name: Turkey Portugal Historical Market
+
+on:
+  pull_request:
+    paths:
+      - 'audit_turkey_portugal_historical_market.py'
+      - 'tests/test_turkey_portugal_historical_market.py'
+      - 'league_historical_market.py'
+      - 'audit_turkey_portugal_historical_foundation.py'
+      - '.github/workflows/turkey-portugal-historical-market.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'audit_turkey_portugal_historical_market.py'
+      - 'tests/test_turkey_portugal_historical_market.py'
+      - 'league_historical_market.py'
+      - 'audit_turkey_portugal_historical_foundation.py'
+      - '.github/workflows/turkey-portugal-historical-market.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install pandas requests pytest
+      - name: Compile market audit
+        run: python -m py_compile audit_turkey_portugal_historical_market.py
+      - name: Run market audit tests
+        run: PYTHONPATH=. pytest -q tests/test_turkey_portugal_historical_market.py
+      - name: Guard production model artifacts
+        if: github.event_name == 'pull_request'
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$' && exit 1 || true
+
+  live-outcome-blind-audit:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install pandas requests
+      - name: Run zero-cost outcome-blind market audit
+        run: python audit_turkey_portugal_historical_market.py --as-of 2026-09-05 --output artifacts/turkey_portugal_historical_market.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: turkey-portugal-historical-market
+          path: artifacts/turkey_portugal_historical_market.json
+          if-no-files-found: error
