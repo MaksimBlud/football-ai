@@ -1,0 +1,65 @@
+{
+  "id": "TURKEY_PORTUGAL_STRUCTURAL_V2_CALIBRATION_V1_RESULT",
+  "protocol_id": "TURKEY_PORTUGAL_STRUCTURAL_V2_CALIBRATION_V1",
+  "status": "EVALUATED_RESEARCH_ONLY",
+  "evaluation_run": 33965220775,
+  "evaluation_head_sha": "385331fcb1799749fd053e9dc67393c9a35db9e4",
+  "artifact": {
+    "id": 9969216176,
+    "name": "turkey-portugal-structural-v2-evaluation",
+    "sha256": "2fc4f5f5dd4f8d95466cfafb4b37b5f6e5c1ce89276abff756f9ced3ce2b29b5"
+  },
+  "research_only": true,
+  "outcomes_read": true,
+  "odds_api_requests": 0,
+  "supabase_operations": 0,
+  "production_artifacts_unchanged": true,
+  "runtime_mutation": false,
+  "automatic_promotion": false,
+  "runtime_status_after_research": "CALIBRATION_REQUIRED",
+  "leagues": {
+    "TURKEY_SUPER_LIG": {
+      "market_valid_rows": 3352,
+      "outer_oos_rows": 1716,
+      "outer_folds": 5,
+      "market_only_folds": 0,
+      "structural_candidate_folds": 5,
+      "argmax_changes": 0,
+      "weighted_logloss_delta": -0.0010542716010495574,
+      "weighted_brier_delta": -0.0004530200963225977,
+      "weighted_accuracy_delta": 0.0,
+      "research_conclusion": "HISTORICAL_OOS_SIGNAL_OBSERVED",
+      "outer_fold_summary": [
+        {"season":"2021-2022","alpha":0.25,"threshold":1.0,"logloss_delta":-0.00031803207411440493,"brier_delta":-0.00022848961221932917},
+        {"season":"2022-2023","alpha":0.25,"threshold":1.0,"logloss_delta":-0.00012409957446202213,"brier_delta":-0.00011051336434342374},
+        {"season":"2023-2024","alpha":0.2,"threshold":0.5,"logloss_delta":-0.00288191474955124,"brier_delta":-0.0013455859940267871},
+        {"season":"2024-2025","alpha":0.2,"threshold":0.75,"logloss_delta":-0.0017567579263129134,"brier_delta":-0.0006632740554518561},
+        {"season":"2025-2026","alpha":0.25,"threshold":0.75,"logloss_delta":0.00014093358425670832,"brier_delta":0.0002627735262590305}
+      ],
+      "decision": "RESEARCH_SIGNAL_ONLY_NO_RUNTIME_ACTIVATION"
+    },
+    "PRIMEIRA_LIGA": {
+      "market_valid_rows": 3058,
+      "outer_oos_rows": 1528,
+      "outer_folds": 5,
+      "market_only_folds": 0,
+      "structural_candidate_folds": 5,
+      "argmax_changes": 0,
+      "weighted_logloss_delta": -0.0005029266108470644,
+      "weighted_brier_delta": 0.0001820944975439356,
+      "weighted_accuracy_delta": 0.0,
+      "research_conclusion": "CALIBRATION_NOT_SUPPORTED_OR_INCONSISTENT",
+      "outer_fold_summary": [
+        {"season":"2021-2022","alpha":0.25,"threshold":0.5,"logloss_delta":0.0005607173530975957,"brier_delta":0.001689139250569903},
+        {"season":"2022-2023","alpha":0.25,"threshold":0.75,"logloss_delta":-0.003505380919226808,"brier_delta":-0.0020373014485775},
+        {"season":"2023-2024","alpha":0.25,"threshold":1.0,"logloss_delta":0.001133930231007274,"brier_delta":0.000847517381693863},
+        {"season":"2024-2025","alpha":0.25,"threshold":0.75,"logloss_delta":0.0011933290196891592,"brier_delta":0.0009800953394989431},
+        {"season":"2025-2026","alpha":0.25,"threshold":1.0,"logloss_delta":-0.0019035651208544346,"brier_delta":-0.0005713058123297825}
+      ],
+      "decision": "NO_STRUCTURAL_V2_RUNTIME_CALIBRATION_SUPPORTED"
+    }
+  },
+  "governance_decision": "CLOSE_HISTORICAL_CALIBRATION_RESEARCH_WITHOUT_RUNTIME_CHANGE",
+  "future_runtime_change_requires_separate_explicit_review_and_pr": true,
+  "retune_on_seen_sample": false
+}
