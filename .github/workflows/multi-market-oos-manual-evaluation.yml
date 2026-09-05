@@ -1,0 +1,51 @@
+name: Multi-Market V2 Manual OOS Evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      manual_evaluate:
+        description: 'Explicitly read immutable outcome rows and run the frozen evaluator'
+        required: true
+        type: boolean
+        default: false
+      protocol_ack:
+        description: 'For evaluation, enter MULTI_MARKET_V2_OOS_PROTOCOL_V1 exactly'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  status-or-manual-evaluation:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas supabase python-dotenv
+      - name: Record production model hash before
+        run: sha256sum football_model_xgboost_elo.pkl > /tmp/model.before
+      - name: Outcome-agnostic status only
+        if: ${{ !inputs.manual_evaluate }}
+        run: python multi_market_oos_gate.py --output artifacts/multi_market_oos_gate_status.json
+      - name: Validate explicit frozen protocol acknowledgement
+        if: ${{ inputs.manual_evaluate }}
+        run: test "${{ inputs.protocol_ack }}" = "MULTI_MARKET_V2_OOS_PROTOCOL_V1"
+      - name: Run explicit manual frozen evaluation
+        if: ${{ inputs.manual_evaluate }}
+        run: python multi_market_oos_gate.py --manual-evaluate --ack-protocol "${{ inputs.protocol_ack }}" --output artifacts/multi_market_oos_gate_status.json
+      - name: Verify production model unchanged
+        run: |
+          sha256sum football_model_xgboost_elo.pkl > /tmp/model.after
+          diff -u /tmp/model.before /tmp/model.after
+      - uses: actions/upload-artifact@v4
+        with:
+          name: multi-market-v2-oos-manual-gate
+          path: artifacts/multi_market_oos_gate_status.json
+          if-no-files-found: error
