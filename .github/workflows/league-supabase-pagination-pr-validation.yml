@@ -1,0 +1,31 @@
+name: Generic Supabase Pagination PR Validation
+
+on:
+  pull_request:
+    paths:
+      - 'league_supabase_persistence.py'
+      - 'tests/test_league_supabase_persistence.py'
+      - 'tests/test_league_supabase_pagination.py'
+      - '.github/workflows/league-supabase-pagination-pr-validation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pagination-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas pytest
+      - name: Compile generic persistence adapter
+        run: python -m py_compile league_supabase_persistence.py
+      - name: Run persistence and pagination regressions
+        run: python -m pytest -q tests/test_league_supabase_persistence.py tests/test_league_supabase_pagination.py
+      - name: Production artifact guard
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$' && exit 1 || true
