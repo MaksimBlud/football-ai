@@ -15,12 +15,14 @@ SCHEDULED_OPERATIONAL_WORKFLOWS = (
     "ligue1-live-cycle.yml",
     "ligue1-results.yml",
     "eredivisie-live-cycle.yml",
+    "eredivisie-results.yml",
 )
 
 PROVIDER_FREE_RESULTS_WORKFLOWS = (
     "serie-a-results.yml",
     "bundesliga-results.yml",
     "ligue1-results.yml",
+    "eredivisie-results.yml",
 )
 
 PAID_MANUAL_ONLY_WORKFLOWS = (
@@ -32,7 +34,6 @@ PAID_MANUAL_ONLY_WORKFLOWS = (
     "bundesliga-odds-snapshots.yml",
     "ligue1-odds-snapshots.yml",
     "eredivisie-odds-snapshots.yml",
-    "eredivisie-results.yml",
     "turkey-portugal-market-only-cycle.yml",
     "multi-market-coverage-audit.yml",
 )
