@@ -36,5 +36,7 @@ jobs:
               raise SystemExit("Missing GitHub Secrets: " + ", ".join(missing))
           print("All required secrets are available; values were not printed.")
           PY
+      - name: Protect provider hard reserve
+        run: python odds_api_budget_guard.py --max-cost 1
       - name: Run smart odds scheduler
         run: python scheduled_odds_snapshot.py

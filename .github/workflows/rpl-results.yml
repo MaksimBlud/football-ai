@@ -37,6 +37,8 @@ jobs:
               raise SystemExit("Missing RPL results secrets: " + ", ".join(missing))
           print("PASS: RPL results secrets available; values not printed")
           PY
+      - name: Protect provider hard reserve
+        run: python odds_api_budget_guard.py --max-cost 2
       - name: Sync immutable RPL finished results
         run: python update_rpl_results.py --write
       - name: Evaluate settled RPL predictions

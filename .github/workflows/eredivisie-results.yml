@@ -2,8 +2,6 @@ name: Eredivisie Results Sync
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "23 */12 * * *"
 
 concurrency:
   group: eredivisie-results-sync
@@ -39,6 +37,8 @@ jobs:
               raise SystemExit("Missing Eredivisie results secrets: " + ", ".join(missing))
           print("PASS: Eredivisie results secrets available; values not printed")
           PY
+      - name: Protect provider hard reserve
+        run: python odds_api_budget_guard.py --max-cost 2
       - name: Verify Eredivisie MARKET_ONLY safety
         run: |
           python - <<'PY'

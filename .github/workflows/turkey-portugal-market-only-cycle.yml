@@ -38,6 +38,11 @@ jobs:
           if missing: raise SystemExit("Missing Turkey/Portugal secrets: "+", ".join(missing))
           print("PASS: required secrets present; values not printed")
           PY
+      - name: Protect provider hard reserve
+        # Two matrix jobs can each spend up to 3 credits (h2h=1 + scores=2).
+        # Reserving the workflow-wide worst case in each preflight prevents a
+        # concurrent boundary race from crossing the provider hard reserve.
+        run: python odds_api_budget_guard.py --max-cost 6
       - name: Record production model hash before
         run: sha256sum football_model_xgboost_elo.pkl > /tmp/model.before
       - name: Run quota-safe MARKET_ONLY cycle
