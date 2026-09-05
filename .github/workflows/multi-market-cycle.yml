@@ -11,13 +11,21 @@ on:
         default: false
         type: boolean
       max_paid_requests:
-        description: 'Maximum paid provider requests for this controlled manual run'
+        description: 'Secondary cap on paid provider HTTP requests for this controlled manual run'
         required: true
         default: '1'
         type: choice
         options: ['1', '2', '3', '5']
+      max_paid_credits:
+        description: 'Maximum The Odds API credits for this controlled manual run'
+        required: true
+        default: '4'
+        type: choice
+        options: ['4', '8', '12', '20']
   pull_request:
     paths:
+      - 'multi_market_policy.py'
+      - 'multi_market_odds.py'
       - 'multi_market_activation_status.py'
       - 'multi_market_schema_probe.py'
       - 'multi_market_card.py'
@@ -25,11 +33,15 @@ on:
       - 'multi_market_cycle.py'
       - 'test_multi_market_cycle.py'
       - 'test_multi_market_collector.py'
+      - 'test_multi_market_activation_status.py'
+      - 'test_multi_market_odds.py'
       - 'supabase/migrations/20260905000*.sql'
       - '.github/workflows/multi-market-cycle.yml'
   push:
     branches: [main]
     paths:
+      - 'multi_market_policy.py'
+      - 'multi_market_odds.py'
       - 'multi_market_activation_status.py'
       - 'multi_market_schema_probe.py'
       - 'multi_market_card.py'
@@ -37,6 +49,8 @@ on:
       - 'multi_market_cycle.py'
       - 'test_multi_market_cycle.py'
       - 'test_multi_market_collector.py'
+      - 'test_multi_market_activation_status.py'
+      - 'test_multi_market_odds.py'
       - 'supabase/migrations/20260905000*.sql'
       - '.github/workflows/multi-market-cycle.yml'
 
@@ -55,7 +69,7 @@ jobs:
           python-version: '3.12'
       - run: pip install pandas requests supabase python-dotenv pytest
       - name: Compile cycle modules
-        run: python -m py_compile multi_market_cycle.py multi_market_activation_status.py multi_market_schema_probe.py multi_market_collector.py
+        run: python -m py_compile multi_market_policy.py multi_market_odds.py multi_market_cycle.py multi_market_activation_status.py multi_market_schema_probe.py multi_market_collector.py
       - name: Run fail-closed cycle tests
         run: pytest -q test_multi_market_cycle.py test_multi_market_collector.py test_multi_market_activation_status.py test_multi_market_schema_probe.py test_multi_market_card.py test_multi_market_odds.py
       - name: Production artifact guard
@@ -74,6 +88,7 @@ jobs:
       THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
       MULTI_MARKET_COLLECTION_ENABLED: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_paid_collection && '1' || '0' }}
       MULTI_MARKET_MAX_PAID_REQUESTS: ${{ github.event_name == 'workflow_dispatch' && inputs.max_paid_requests || '' }}
+      MULTI_MARKET_MAX_PAID_CREDITS: ${{ github.event_name == 'workflow_dispatch' && inputs.max_paid_credits || '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -98,13 +113,18 @@ jobs:
               assert p['paid_provider_requests']==0
           if p['action']=='COLLECTION_ATTEMPTED':
               assert p['collection_activation_enabled'] is True
-              cap=p['collection'].get('max_paid_requests')
-              if cap is not None:
-                  assert p['paid_provider_requests'] <= int(cap)
+              c=p['collection']
+              request_cap=c.get('max_paid_requests')
+              credit_cap=c.get('max_paid_credits')
+              if request_cap is not None:
+                  assert p['paid_provider_requests'] <= int(request_cap)
+              if credit_cap is not None:
+                  assert int(c.get('provider_paid_credits') or 0) <= int(credit_cap)
           print('action=',p['action'])
           print('activation_enabled=',p.get('collection_activation_enabled'))
           print('collection_called=',p['collection_called'])
           print('paid_provider_requests=',p['paid_provider_requests'])
+          print('paid_provider_credits=',(p.get('collection') or {}).get('provider_paid_credits',0))
           print('blockers=',p['readiness'].get('blockers'))
           PY
       - name: Verify production model unchanged
