@@ -1,0 +1,121 @@
+name: Multi-Market V2 Backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      write:
+        description: 'Explicitly persist canonical corners and settlements if all schema gates are ready'
+        required: true
+        default: false
+        type: boolean
+  pull_request:
+    paths:
+      - 'multi_market_backfill.py'
+      - 'test_multi_market_backfill.py'
+      - 'multi_market_corner_results.py'
+      - 'multi_market_settlement_persistence.py'
+      - 'multi_market_schema_probe.py'
+      - '.github/workflows/multi-market-backfill.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'multi_market_backfill.py'
+      - 'test_multi_market_backfill.py'
+      - '.github/workflows/multi-market-backfill.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas requests supabase python-dotenv pytest
+      - name: Compile backfill
+        run: python -m py_compile multi_market_backfill.py
+      - name: Run backfill contract tests
+        run: pytest -q test_multi_market_backfill.py test_multi_market_corner_results.py test_multi_market_settlement_persistence.py test_multi_market_schema_probe.py
+      - name: Production artifact guard
+        if: github.event_name == 'pull_request'
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$' && exit 1 || true
+
+  live-dry-run:
+    if: github.event_name == 'push'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas requests supabase python-dotenv
+      - name: Record production model hash before
+        run: sha256sum football_model_xgboost_elo.pkl > /tmp/model.before
+      - name: Run default read-only backfill
+        run: python multi_market_backfill.py
+      - name: Verify live proof safety
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path('artifacts/multi_market_v2_backfill_status.json').read_text())
+          assert p['schema_version']=='MULTI_MARKET_V2_BACKFILL_STATUS_V1'
+          assert p['research_only'] is True
+          assert p['write_requested'] is False
+          assert p['writes_performed']==0
+          assert p['the_odds_api_requests']==0
+          assert p['oos_evaluation_invoked'] is False
+          print('status=',p['status'])
+          print('writes_performed=',p['writes_performed'])
+          print('football_data_fetches=',p['football_data_fetches'])
+          print('blocked_tables=',p.get('schema',{}).get('blocked_tables'))
+          PY
+      - name: Verify production model unchanged
+        run: |
+          sha256sum football_model_xgboost_elo.pkl > /tmp/model.after
+          diff -u /tmp/model.before /tmp/model.after
+      - uses: actions/upload-artifact@v4
+        with:
+          name: multi-market-v2-backfill-status
+          path: artifacts/multi_market_v2_backfill_status.json
+          if-no-files-found: error
+
+  manual-write:
+    if: github.event_name == 'workflow_dispatch' && inputs.write == true
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: multi-market-research-write
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas requests supabase python-dotenv
+      - name: Record production model hash before
+        run: sha256sum football_model_xgboost_elo.pkl > /tmp/model.before
+      - name: Run explicitly requested write backfill
+        run: python multi_market_backfill.py --write
+      - name: Verify no production model change
+        run: |
+          sha256sum football_model_xgboost_elo.pkl > /tmp/model.after
+          diff -u /tmp/model.before /tmp/model.after
+      - uses: actions/upload-artifact@v4
+        with:
+          name: multi-market-v2-backfill-write-status
+          path: artifacts/multi_market_v2_backfill_status.json
+          if-no-files-found: error
