@@ -1,0 +1,45 @@
+name: Provider Budget PR Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'odds_api_budget_guard.py'
+      - 'tests/test_odds_api_budget_guard.py'
+      - 'tests/test_paid_provider_workflow_budget_contract.py'
+      - '.github/workflows/*odds-snapshots.yml'
+      - '.github/workflows/rpl-results.yml'
+      - '.github/workflows/turkey-portugal-market-only-cycle.yml'
+      - '.github/workflows/multi-market-cycle.yml'
+      - '.github/workflows/multi-market-activation-status.yml'
+      - '.github/workflows/provider-budget-pr-validation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  provider-budget-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      THE_ODDS_API_KEY: test-placeholder
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pytest requests python-dotenv
+      - name: Compile budget guard
+        run: python -m py_compile odds_api_budget_guard.py
+      - name: Run budget guard tests
+        run: pytest -q tests/test_odds_api_budget_guard.py tests/test_paid_provider_workflow_budget_contract.py
+      - name: Enforce no production artifact changes
+        run: |
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -E '\.pkl$'; then
+            echo "Production model artifact change detected"
+            exit 1
+          fi
+          echo "PASS: no .pkl changes in PR"
