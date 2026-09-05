@@ -73,7 +73,7 @@ jobs:
           assert report['supabase_operations'] == 0
           assert report['production_model_operations'] == 0
           assert len(report['leagues']) == 9
-          assert report['configured_csv_leagues'] == 7
+          assert report['configured_csv_leagues'] == 8
           print('PASS: zero-cost corner outcome source audit contract verified')
           PY
       - uses: actions/upload-artifact@v4

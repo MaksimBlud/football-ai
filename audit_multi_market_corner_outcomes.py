@@ -1,8 +1,10 @@
 """Zero-cost current-season corner outcome source audit for Multi-Market V2.
 
-This is an infrastructure/source-feasibility audit. It reads only explicitly
-configured Football-Data CSV contracts already present in repository runtime
-configuration. It never guesses a season code or competition code.
+The audit reads only explicit repository-owned Football-Data CSV contracts.
+Most contracts come from league runtime configuration; EPL has a separate
+corner-only contract because its authoritative finished-results source remains
+Football-Data.org and the incomplete 2026/27 CSV must not enter historical
+training configuration.
 
 No The Odds API requests. No Supabase operations. No model operations.
 """
@@ -14,7 +16,6 @@ import math
 from datetime import datetime, timezone
 from io import StringIO
 from pathlib import Path
-from typing import Iterable
 
 import pandas as pd
 import requests
@@ -42,9 +43,23 @@ CONFIGS = (
     PRIMEIRA_LIGA_RUNTIME_CONFIG,
 )
 
+# Explicit corner-only source contracts. These do not change finished-results
+# authority and do not add an incomplete current season to historical training.
+CORNER_ONLY_CSV_CONTRACTS = {
+    "EPL": {
+        "contract_source": "multi_market_corner_source_contract",
+        "competition_code": "E0",
+        "season_code": "2627",
+    },
+}
+
 
 def configured_csv_contract(config) -> dict | None:
-    """Resolve only a repository-configured Football-Data CSV contract."""
+    """Resolve only an explicit repository-owned Football-Data CSV contract."""
+    override = CORNER_ONLY_CSV_CONTRACTS.get(config.identity.identifier)
+    if override is not None:
+        return dict(override)
+
     finished = config.finished_results_source
     if (
         finished.provider == "FOOTBALL_DATA_CSV"
@@ -201,7 +216,7 @@ def audit_league(config, *, session: requests.Session) -> dict:
             "league": config.identity.identifier,
             "status": "SOURCE_NOT_CONFIGURED",
             "season": SEASON,
-            "reason": "no repository-configured 2026-2027 FOOTBALL_DATA_CSV contract",
+            "reason": "no repository-configured 2026-2027 FOOTBALL_DATA_CSV corner contract",
         }
 
     url = URL.format(

@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 
-from league_runtime_config import LA_LIGA_RUNTIME_CONFIG, EPL_RUNTIME_CONFIG
+from league_runtime_config import LA_LIGA_RUNTIME_CONFIG, EPL_RUNTIME_CONFIG, RPL_RUNTIME_CONFIG
 from multi_market_corner_results import (
     CornerResultConflictError,
     CornerResultIdentityError,
@@ -49,9 +49,32 @@ def test_normalization_uses_configured_contract_aliases_and_finished_rows_only()
     assert row["source_season_code"] == "2627"
 
 
-def test_unconfigured_current_csv_source_is_rejected():
+def test_epl_corner_only_contract_does_not_require_finished_source_switch():
+    frame = pd.DataFrame({
+        "Date": ["05/09/2026"],
+        "HomeTeam": ["Hull"],
+        "AwayTeam": ["Aston Villa"],
+        "FTHG": [1],
+        "FTAG": [2],
+        "FTR": ["A"],
+        "HC": [4],
+        "AC": [6],
+    })
+    rows = normalize_corner_source_frame(
+        EPL_RUNTIME_CONFIG,
+        frame,
+        source_url="https://www.football-data.co.uk/mmz4281/2627/E0.csv",
+        fetched_at_utc="2026-09-05T12:00:00+00:00",
+    )
+    assert len(rows) == 1
+    assert rows.iloc[0]["league"] == "EPL"
+    assert rows.iloc[0]["source_competition_code"] == "E0"
+    assert rows.iloc[0]["source_season_code"] == "2627"
+
+
+def test_unconfigured_rpl_current_csv_source_is_rejected():
     with pytest.raises(ValueError, match="no configured"):
-        normalize_corner_source_frame(EPL_RUNTIME_CONFIG, _frame(), source_url="x")
+        normalize_corner_source_frame(RPL_RUNTIME_CONFIG, _frame(), source_url="x")
 
 
 def _finished(**overrides):
