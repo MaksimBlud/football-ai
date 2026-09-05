@@ -4,8 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'turkey_runtime_config.py'
-      - 'primeira_runtime_config.py'
+      - 'turkey_super_lig_runtime_config.py'
+      - 'primeira_liga_runtime_config.py'
       - 'audit_turkey_portugal_bootstrap.py'
       - '.github/workflows/turkey-portugal-bootstrap-audit.yml'
 permissions:
@@ -21,5 +21,5 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: '3.12', cache: pip}
       - run: pip install requests python-dotenv pytest
-      - run: pytest -q tests/test_turkey_portugal_bootstrap.py
+      - run: PYTHONPATH=. pytest -q tests/test_turkey_portugal_bootstrap.py tests/test_turkey_portugal_runtime_config.py
       - run: python audit_turkey_portugal_bootstrap.py
