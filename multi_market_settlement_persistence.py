@@ -1,18 +1,19 @@
 """Append-only durable contract for Multi-Market V2 research settlement.
 
-The module is deliberately dependency-injected: callers pass a Supabase-like
-client. It never imports the project database singleton, never applies schema,
-and never calls an odds/results provider.
+The module is dependency-injected: callers pass a Supabase-like client. It
+never imports the project database singleton, applies schema, calls an odds
+provider, or calls a results provider.
 
-Identity is fail-closed. A bookmaker snapshot can match a canonical finished
-result only when league, league-local kickoff date, home team and away team are
-an exact unique match. No +/- day tolerance or fuzzy team matching is allowed.
+Identity is fail-closed. A snapshot matches a canonical finished result only
+when league, league-local kickoff date, home team and away team are an exact
+unique match. No +/- day tolerance and no fuzzy team matching are permitted.
 """
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
 import hashlib
 import json
+import math
 from typing import Any, Iterable
 from zoneinfo import ZoneInfo
 
@@ -26,51 +27,59 @@ IDENTITY_VERSION = "LEAGUE_LOCAL_DATE_EXACT_TEAMS_V1"
 
 
 class SettlementIdentityError(ValueError):
-    """Raised when snapshot/result identity cannot be resolved uniquely."""
+    """Snapshot/result identity was missing, ambiguous, or inconsistent."""
 
 
 class SettlementConflictError(RuntimeError):
-    """Raised when an existing immutable settlement key has different data."""
+    """An immutable settlement key already exists with different content."""
 
 
-def _iso_datetime(value: Any) -> datetime:
+def _iso_datetime(value: Any, field: str = "datetime") -> datetime:
     if isinstance(value, datetime):
         parsed = value
     elif isinstance(value, str):
-        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+        try:
+            parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise SettlementIdentityError(f"{field} must be an ISO datetime") from exc
     else:
-        raise SettlementIdentityError("kickoff_utc must be an ISO datetime")
+        raise SettlementIdentityError(f"{field} must be an ISO datetime")
     if parsed.tzinfo is None:
-        raise SettlementIdentityError("kickoff_utc must be timezone-aware")
+        raise SettlementIdentityError(f"{field} must be timezone-aware")
     return parsed.astimezone(timezone.utc)
 
 
-def _date(value: Any) -> date:
+def _date(value: Any, field: str = "match_date") -> date:
     if isinstance(value, datetime):
         return value.date()
     if isinstance(value, date):
         return value
     if isinstance(value, str):
-        return date.fromisoformat(value[:10])
-    raise SettlementIdentityError("match_date must be a date")
+        try:
+            return date.fromisoformat(value[:10])
+        except ValueError as exc:
+            raise SettlementIdentityError(f"{field} must be a date") from exc
+    raise SettlementIdentityError(f"{field} must be a date")
 
 
 def snapshot_local_match_date(snapshot: dict) -> date:
     league = str(snapshot.get("league") or "")
+    if not league:
+        raise SettlementIdentityError("snapshot league is required")
     config = get_league_config(league)
-    kickoff = _iso_datetime(snapshot.get("kickoff_utc"))
+    kickoff = _iso_datetime(snapshot.get("kickoff_utc"), "kickoff_utc")
     return kickoff.astimezone(ZoneInfo(config.timezone)).date()
 
 
-def match_finished_result(snapshot: dict, results: Iterable[dict]) -> dict:
-    """Return the one exact canonical finished result for a snapshot.
+def validate_pre_kickoff_snapshot(snapshot: dict) -> None:
+    kickoff = _iso_datetime(snapshot.get("kickoff_utc"), "kickoff_utc")
+    snapshot_time = _iso_datetime(snapshot.get("snapshot_time_utc"), "snapshot_time_utc")
+    if snapshot_time >= kickoff:
+        raise SettlementIdentityError("snapshot_time_utc must be strictly before kickoff_utc")
 
-    Required equality:
-      league
-      league-local date derived from kickoff_utc
-      home_team
-      away_team
-    """
+
+def match_finished_result(snapshot: dict, results: Iterable[dict]) -> dict:
+    """Return the one exact canonical finished result for a snapshot."""
     league = str(snapshot.get("league") or "")
     home = str(snapshot.get("home_team") or "")
     away = str(snapshot.get("away_team") or "")
@@ -78,7 +87,7 @@ def match_finished_result(snapshot: dict, results: Iterable[dict]) -> dict:
         raise SettlementIdentityError("snapshot league/home_team/away_team are required")
     local_date = snapshot_local_match_date(snapshot)
 
-    matches = []
+    matches: list[dict] = []
     for row in results:
         if str(row.get("league") or "") != league:
             continue
@@ -93,47 +102,60 @@ def match_finished_result(snapshot: dict, results: Iterable[dict]) -> dict:
         if row_date == local_date:
             matches.append(dict(row))
 
+    identity = (league, local_date.isoformat(), home, away)
     if not matches:
-        raise SettlementIdentityError(
-            f"no exact finished result for {(league, local_date.isoformat(), home, away)!r}"
-        )
+        raise SettlementIdentityError(f"no exact finished result for {identity!r}")
     if len(matches) != 1:
-        raise SettlementIdentityError(
-            f"ambiguous finished results for {(league, local_date.isoformat(), home, away)!r}: {len(matches)}"
-        )
+        raise SettlementIdentityError(f"ambiguous finished results for {identity!r}: {len(matches)}")
     return matches[0]
 
 
+def validate_corner_outcome_identity(snapshot: dict, corner_outcome: dict) -> None:
+    """Require a corner observation to carry its own exact fixture identity."""
+    required = {"league", "match_date", "home_team", "away_team", "home_corners", "away_corners"}
+    missing = required - set(corner_outcome)
+    if missing:
+        raise SettlementIdentityError(
+            "corner outcome missing identity/outcome fields: " + ", ".join(sorted(missing))
+        )
+
+    expected_date = snapshot_local_match_date(snapshot)
+    observed_date = _date(corner_outcome.get("match_date"), "corner match_date")
+    comparisons = {
+        "league": (str(snapshot.get("league") or ""), str(corner_outcome.get("league") or "")),
+        "home_team": (str(snapshot.get("home_team") or ""), str(corner_outcome.get("home_team") or "")),
+        "away_team": (str(snapshot.get("away_team") or ""), str(corner_outcome.get("away_team") or "")),
+    }
+    mismatches = [field for field, (expected, observed) in comparisons.items() if expected != observed]
+    if observed_date != expected_date:
+        mismatches.append("match_date")
+    if "event_id" in corner_outcome and str(corner_outcome.get("event_id")) != str(snapshot.get("event_id")):
+        mismatches.append("event_id")
+    if mismatches:
+        raise SettlementIdentityError("corner outcome identity mismatch: " + ", ".join(sorted(set(mismatches))))
+
+
 def _finite_nonnegative_int(value: Any, field: str) -> int:
-    if isinstance(value, bool):
+    if value is None or isinstance(value, bool):
         raise ValueError(f"{field} must be a non-negative integer")
     try:
-        number = int(value)
+        numeric = float(value)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{field} must be a non-negative integer") from exc
-    if number < 0 or str(number) != str(value).strip() and not isinstance(value, int):
-        # Accept numeric strings such as "2"; reject lossy values such as 2.5.
-        try:
-            if float(value) != float(number):
-                raise ValueError(f"{field} must be a non-negative integer")
-        except (TypeError, ValueError):
-            raise ValueError(f"{field} must be a non-negative integer")
-    return number
+    if not math.isfinite(numeric) or numeric < 0 or not numeric.is_integer():
+        raise ValueError(f"{field} must be a non-negative integer")
+    return int(numeric)
 
 
-def build_outcome(result: dict, corner_outcome: dict | None = None) -> dict:
+def build_outcome(snapshot: dict, result: dict, corner_outcome: dict | None = None) -> dict:
     outcome = {
         "home_goals": _finite_nonnegative_int(result.get("home_goals"), "home_goals"),
         "away_goals": _finite_nonnegative_int(result.get("away_goals"), "away_goals"),
     }
     if corner_outcome is not None:
-        home_corners = corner_outcome.get("home_corners")
-        away_corners = corner_outcome.get("away_corners")
-        if (home_corners is None) != (away_corners is None):
-            raise ValueError("corner outcome must provide both home_corners and away_corners")
-        if home_corners is not None:
-            outcome["home_corners"] = _finite_nonnegative_int(home_corners, "home_corners")
-            outcome["away_corners"] = _finite_nonnegative_int(away_corners, "away_corners")
+        validate_corner_outcome_identity(snapshot, corner_outcome)
+        outcome["home_corners"] = _finite_nonnegative_int(corner_outcome.get("home_corners"), "home_corners")
+        outcome["away_corners"] = _finite_nonnegative_int(corner_outcome.get("away_corners"), "away_corners")
     return outcome
 
 
@@ -176,13 +198,14 @@ def build_settlement_record(
     *,
     corner_outcome: dict | None = None,
 ) -> dict:
-    """Build one immutable settlement revision.
+    """Build one immutable settlement revision for one immutable snapshot.
 
-    A later corner result intentionally creates a second revision because the
-    outcome fingerprint changes. Existing GOALS_ONLY rows are never updated.
+    A later exact corner observation creates a second revision because the
+    outcome fingerprint changes. The earlier GOALS_ONLY row remains immutable.
     """
+    validate_pre_kickoff_snapshot(snapshot)
     matched = match_finished_result(snapshot, [result])
-    outcome = build_outcome(matched, corner_outcome)
+    outcome = build_outcome(snapshot, matched, corner_outcome)
     completeness = outcome_completeness(outcome)
     if completeness == "INCOMPLETE":
         raise ValueError("goals are required before settlement")
@@ -199,6 +222,8 @@ def build_settlement_record(
     if not result_season:
         raise ValueError("matched result season is required")
 
+    kickoff = _iso_datetime(snapshot["kickoff_utc"], "kickoff_utc")
+    snapshot_time = _iso_datetime(snapshot["snapshot_time_utc"], "snapshot_time_utc")
     payload = {
         "schema_version": SCHEMA_VERSION,
         "research_only": True,
@@ -214,8 +239,8 @@ def build_settlement_record(
         "event_id": str(snapshot["event_id"]),
         "home_team": str(snapshot["home_team"]),
         "away_team": str(snapshot["away_team"]),
-        "kickoff_utc": _iso_datetime(snapshot["kickoff_utc"]).isoformat(),
-        "snapshot_time_utc": _iso_datetime(snapshot["snapshot_time_utc"]).isoformat(),
+        "kickoff_utc": kickoff.isoformat(),
+        "snapshot_time_utc": snapshot_time.isoformat(),
         "result_season": result_season,
         "result_match_date": local_date.isoformat(),
         "outcome_fingerprint": fingerprint,
@@ -233,12 +258,7 @@ def _immutable_equal(left: dict, right: dict) -> bool:
 
 
 def persist_settlement_records(client, records: Iterable[dict]) -> dict:
-    """Insert immutable settlement revisions idempotently.
-
-    Existing rows with the same settlement_key must be byte-semantically equal
-    on all supplied immutable fields. Different outcome fingerprints naturally
-    use different keys and therefore append a new revision.
-    """
+    """Insert immutable settlement revisions idempotently."""
     records = [dict(row) for row in records]
     if not records:
         return {"inserted": 0, "unchanged": 0, "conflicts": 0}
