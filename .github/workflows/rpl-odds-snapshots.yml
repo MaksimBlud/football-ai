@@ -47,5 +47,7 @@ jobs:
           assert s.edge_threshold is None
           print("PASS: RPL remains MARKET_ONLY")
           PY
+      - name: Protect provider hard reserve
+        run: python odds_api_budget_guard.py --max-cost 1
       - name: Run adaptive RPL snapshot check
         run: python scheduled_rpl_odds_snapshot.py
