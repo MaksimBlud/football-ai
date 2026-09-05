@@ -2,8 +2,6 @@ name: Serie A Odds Snapshots
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "12 */2 * * *"
 
 concurrency:
   group: serie-a-odds-snapshots

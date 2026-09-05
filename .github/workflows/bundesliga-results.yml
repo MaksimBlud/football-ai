@@ -1,8 +1,6 @@
 name: Bundesliga Results
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "19 */12 * * *"
 permissions:
   contents: read
 jobs:

@@ -2,8 +2,6 @@ name: RPL Odds Snapshots
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "7 */2 * * *"
 
 concurrency:
   group: rpl-odds-snapshots
@@ -20,7 +18,6 @@ jobs:
       THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

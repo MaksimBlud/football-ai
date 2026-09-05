@@ -34,8 +34,10 @@ def test_operational_workflows_do_not_load_or_train_production_models():
             assert token not in source
 
 
-def test_workflow_schedules_are_non_overlapping():
-    assert 'cron: "38 */2 * * *"' in _read("eredivisie-odds-snapshots.yml")
+def test_workflow_schedules_are_non_overlapping_and_paid_odds_is_manual_only():
+    odds = _read("eredivisie-odds-snapshots.yml")
+    assert "workflow_dispatch:" in odds
+    assert "cron:" not in odds
     assert 'cron: "58 */2 * * *"' in _read("eredivisie-live-cycle.yml")
     assert 'cron: "23 */12 * * *"' in _read("eredivisie-results.yml")
 

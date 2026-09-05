@@ -5,9 +5,10 @@ def read(path):
     return Path(path).read_text(encoding="utf-8")
 
 
-def test_rpl_snapshot_workflow_uses_adaptive_scheduler():
+def test_rpl_snapshot_workflow_is_manual_only_and_uses_adaptive_scheduler():
     source = read(".github/workflows/rpl-odds-snapshots.yml")
-    assert 'cron: "7 */2 * * *"' in source
+    assert "workflow_dispatch:" in source
+    assert "cron:" not in source
     assert "scheduled_rpl_odds_snapshot.py" in source
     assert "save_rpl_odds_snapshot.py" not in source
 
@@ -19,9 +20,10 @@ def test_rpl_live_workflow_runs_after_snapshot_window():
     assert "THE_ODDS_API_KEY" not in source
 
 
-def test_rpl_results_workflow_is_twice_daily_and_evaluates():
+def test_rpl_results_workflow_is_manual_only_and_evaluates():
     source = read(".github/workflows/rpl-results.yml")
-    assert 'cron: "54 */12 * * *"' in source
+    assert "workflow_dispatch:" in source
+    assert "cron:" not in source
     assert "update_rpl_results.py --write" in source
     assert "evaluate_rpl_predictions.py" in source
 

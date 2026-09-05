@@ -4,32 +4,40 @@ from pathlib import Path
 
 WORKFLOW_DIR = Path(__file__).parents[1] / ".github" / "workflows"
 
-OPERATIONAL_WORKFLOWS = (
-    "odds-snapshots.yml",
+SCHEDULED_OPERATIONAL_WORKFLOWS = (
     "epl-live-cycle.yml",
     "epl-results.yml",
     "la-liga-live-cycle.yml",
-    "rpl-odds-snapshots.yml",
     "rpl-live-cycle.yml",
-    "rpl-results.yml",
-    "serie-a-odds-snapshots.yml",
     "serie-a-live-cycle.yml",
-    "serie-a-results.yml",
-    "bundesliga-odds-snapshots.yml",
     "bundesliga-live-cycle.yml",
-    "bundesliga-results.yml",
-    "ligue1-odds-snapshots.yml",
     "ligue1-live-cycle.yml",
-    "ligue1-results.yml",
-    "eredivisie-odds-snapshots.yml",
     "eredivisie-live-cycle.yml",
     "eredivisie-results.yml",
 )
 
+PAID_MANUAL_ONLY_WORKFLOWS = (
+    "odds-snapshots.yml",
+    "rpl-odds-snapshots.yml",
+    "rpl-results.yml",
+    "serie-a-odds-snapshots.yml",
+    "serie-a-results.yml",
+    "bundesliga-odds-snapshots.yml",
+    "bundesliga-results.yml",
+    "ligue1-odds-snapshots.yml",
+    "ligue1-results.yml",
+    "eredivisie-odds-snapshots.yml",
+    "turkey-portugal-market-only-cycle.yml",
+)
+
+
+def _crons(path: Path) -> list[str]:
+    source = path.read_text()
+    return re.findall(r'cron:\s*["\']([^"\']+)["\']', source)
+
 
 def _cron(path: Path) -> str:
-    source = path.read_text()
-    matches = re.findall(r'cron:\s*["\']([^"\']+)["\']', source)
+    matches = _crons(path)
     assert len(matches) == 1, f"Expected one scheduled cron in {path.name}: {matches}"
     return matches[0]
 
@@ -58,7 +66,7 @@ def _slots(cron: str) -> set[tuple[int, int]]:
 def test_operational_scheduled_workflows_do_not_share_utc_slots():
     schedules = {
         name: _slots(_cron(WORKFLOW_DIR / name))
-        for name in OPERATIONAL_WORKFLOWS
+        for name in SCHEDULED_OPERATIONAL_WORKFLOWS
     }
 
     collisions = []
@@ -70,3 +78,10 @@ def test_operational_scheduled_workflows_do_not_share_utc_slots():
                 collisions.append((left, right, sorted(overlap)))
 
     assert collisions == []
+
+
+def test_paid_workflows_are_manual_only():
+    for name in PAID_MANUAL_ONLY_WORKFLOWS:
+        source = (WORKFLOW_DIR / name).read_text()
+        assert "workflow_dispatch:" in source, name
+        assert _crons(WORKFLOW_DIR / name) == [], name

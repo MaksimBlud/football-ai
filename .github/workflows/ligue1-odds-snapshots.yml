@@ -1,8 +1,6 @@
 name: Ligue 1 Odds Snapshots
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "03 */2 * * *"
 permissions:
   contents: read
 jobs:
