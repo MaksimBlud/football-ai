@@ -1,5 +1,14 @@
+import sys
 from datetime import UTC, datetime, timedelta
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
+
+# multi_market_collector imports database.supabase at module import time. Keep
+# this regression suite fully offline by installing an inert database module
+# before importing the collector; individual tests replace collector.supabase
+# with a purpose-built fake.
+fake_database = ModuleType("database")
+fake_database.supabase = None
+sys.modules["database"] = fake_database
 
 import multi_market_collector as collector
 
