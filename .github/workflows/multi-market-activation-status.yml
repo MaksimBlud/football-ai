@@ -1,0 +1,44 @@
+name: Multi-Market V1 Activation Status
+
+on:
+  schedule:
+    - cron: '12 5 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'multi_market_activation_status.py'
+      - 'multi_market_collector.py'
+      - 'multi_market_odds.py'
+      - 'supabase/migrations/202609050001_league_multi_market_snapshots.sql'
+      - '.github/workflows/multi-market-activation-status.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas requests supabase python-dotenv
+      - name: Record production model hash before
+        run: sha256sum football_model_xgboost_elo.pkl > /tmp/model.before
+      - name: Check schema and zero-cost quota readiness
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+        run: python multi_market_activation_status.py
+      - name: Verify production model unchanged
+        run: |
+          sha256sum football_model_xgboost_elo.pkl > /tmp/model.after
+          diff -u /tmp/model.before /tmp/model.after
+      - name: Upload activation status
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-market-activation-status
+          path: artifacts/multi_market_activation_status.json
