@@ -23,6 +23,7 @@ jobs:
     timeout-minutes: 10
     env:
       THE_ODDS_API_KEY: test-placeholder
+      PYTHONPATH: .
     steps:
       - uses: actions/checkout@v4
         with:
