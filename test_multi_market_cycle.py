@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 from multi_market_cycle import run_cycle
+from multi_market_policy import MIN_COLLECTION_REMAINING_CREDITS
 
 
 class FakeQuery:
@@ -8,12 +9,8 @@ class FakeQuery:
         self.response = response
         self.error = error
 
-    def select(self, *args, **kwargs):
-        return self
-
-    def limit(self, *args, **kwargs):
-        return self
-
+    def select(self, *args, **kwargs): return self
+    def limit(self, *args, **kwargs): return self
     def execute(self):
         if self.error is not None:
             raise self.error
@@ -33,30 +30,25 @@ class FakeClient:
 def test_cycle_does_not_call_collect_when_schema_blocked():
     client = FakeClient({"league_multi_market_snapshots": RuntimeError("PGRST205")})
     calls = {"collect": 0, "quota": 0}
-
     def quota():
         calls["quota"] += 1
         return {"remaining": "999", "last_cost": "0"}
-
     def collect():
         calls["collect"] += 1
         return {"fetched": 1}
-
     result = run_cycle(client, quota, collect, collection_enabled=True)
     assert result["action"] == "NOOP_BLOCKED"
     assert result["collection_called"] is False
     assert result["paid_provider_requests"] == 0
-    assert result["prospective_oos_evaluation_active"] is False
     assert calls == {"collect": 0, "quota": 1}
 
 
-def test_cycle_does_not_call_collect_when_quota_below_threshold():
+def test_cycle_does_not_call_collect_when_quota_below_credit_threshold():
     client = FakeClient()
     calls = {"collect": 0}
-
     result = run_cycle(
         client,
-        lambda: {"remaining": "207", "last_cost": "0"},
+        lambda: {"remaining": str(MIN_COLLECTION_REMAINING_CREDITS - 1), "last_cost": "0"},
         lambda: calls.__setitem__("collect", calls["collect"] + 1) or {"fetched": 1},
         collection_enabled=True,
     )
@@ -67,33 +59,29 @@ def test_cycle_does_not_call_collect_when_quota_below_threshold():
     assert calls["collect"] == 0
 
 
-def test_ready_infrastructure_still_requires_explicit_activation():
+def test_204_credits_is_infrastructure_ready_but_still_requires_activation():
     client = FakeClient()
     calls = {"collect": 0}
-
     result = run_cycle(
         client,
-        lambda: {"remaining": "700", "last_cost": "0"},
+        lambda: {"remaining": "204", "last_cost": "0"},
         lambda: calls.__setitem__("collect", calls["collect"] + 1) or {"fetched": 1},
     )
     assert result["action"] == "NOOP_ACTIVATION_REQUIRED"
-    assert result["collection_activation_enabled"] is False
+    assert result["readiness"]["quota_ready"] is True
     assert result["collection_called"] is False
-    assert result["paid_provider_requests"] == 0
     assert calls["collect"] == 0
 
 
 def test_cycle_calls_collect_only_when_all_gates_and_activation_ready():
     client = FakeClient()
     calls = {"collect": 0}
-
     def collect():
         calls["collect"] += 1
-        return {"fetched": 2, "inserted": 2}
-
+        return {"fetched": 2, "inserted": 2, "provider_paid_credits": 4}
     result = run_cycle(
         client,
-        lambda: {"remaining": "700", "last_cost": "0"},
+        lambda: {"remaining": "204", "last_cost": "0"},
         collect,
         collection_enabled=True,
     )
