@@ -1,8 +1,6 @@
 name: Bundesliga Odds Snapshots
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "22 */2 * * *"
 permissions:
   contents: read
 jobs:
