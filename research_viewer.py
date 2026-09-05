@@ -231,6 +231,13 @@ def assemble_viewer_payload(
             "result": result_payload,
         })
 
+    # Viewer-first ordering: show the nearest current predictions before history.
+    # The ledger itself remains untouched and canonical. Upcoming fixtures retain
+    # chronological order; past/settled cards are reversed so newest history is first.
+    upcoming_cards = [card for card in cards if card["status"] == "UPCOMING"]
+    historical_cards = [card for card in cards if card["status"] != "UPCOMING"]
+    cards = upcoming_cards + list(reversed(historical_cards))
+
     return {
         "generated_at_utc": now_ts.isoformat(),
         "active_leagues": list(ACTIVE_LEAGUES),

@@ -64,6 +64,50 @@ def test_viewer_keeps_latest_eligible_snapshot_not_latest_prediction_timestamp()
     assert payload["matches"][0]["status"] == "UPCOMING"
 
 
+def test_viewer_shows_upcoming_first_and_newest_history_after_it():
+    rows = [
+        _row(
+            event_id="old-event",
+            prediction_key="old",
+            kickoff_utc="2026-08-28T15:00:00Z",
+            prediction_time_utc="2026-08-28T12:00:00Z",
+            snapshot_time_utc="2026-08-28T12:00:00Z",
+        ),
+        _row(
+            event_id="recent-event",
+            prediction_key="recent",
+            kickoff_utc="2026-08-29T15:00:00Z",
+            prediction_time_utc="2026-08-29T12:00:00Z",
+            snapshot_time_utc="2026-08-29T12:00:00Z",
+        ),
+        _row(
+            event_id="next-event",
+            prediction_key="next",
+            kickoff_utc="2026-08-30T15:00:00Z",
+            prediction_time_utc="2026-08-30T12:00:00Z",
+            snapshot_time_utc="2026-08-30T12:00:00Z",
+        ),
+        _row(
+            event_id="later-event",
+            prediction_key="later",
+            kickoff_utc="2026-08-31T15:00:00Z",
+            prediction_time_utc="2026-08-31T12:00:00Z",
+            snapshot_time_utc="2026-08-31T12:00:00Z",
+        ),
+    ]
+    payload = assemble_viewer_payload(
+        rows,
+        [],
+        now=datetime(2026, 8, 30, 13, 0, tzinfo=timezone.utc),
+    )
+    assert [card["prediction_key"] for card in payload["matches"]] == [
+        "next",
+        "later",
+        "recent",
+        "old",
+    ]
+
+
 def test_viewer_matches_finished_result_using_normalized_team_names():
     payload = assemble_viewer_payload(
         [_row(home_team="Manchester City", away_team="Leeds United")],
