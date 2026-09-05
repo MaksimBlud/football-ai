@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 from bundesliga_runtime_config import BUNDESLIGA_RUNTIME_CONFIG
+from eredivisie_runtime_config import EREDIVISIE_RUNTIME_CONFIG
 from football_data_current_results import (
     build_finished_frame,
     configured_current_csv_url,
@@ -21,6 +22,7 @@ def test_current_urls_are_explicit_2627_contracts():
     assert configured_current_csv_url(SERIE_A_RUNTIME_CONFIG).endswith("/2627/I1.csv")
     assert configured_current_csv_url(BUNDESLIGA_RUNTIME_CONFIG).endswith("/2627/D1.csv")
     assert configured_current_csv_url(LIGUE1_RUNTIME_CONFIG).endswith("/2627/F1.csv")
+    assert configured_current_csv_url(EREDIVISIE_RUNTIME_CONFIG).endswith("/2627/N1.csv")
 
 
 def test_finished_frame_filters_unfinished_rows_and_applies_aliases():
