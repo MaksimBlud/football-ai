@@ -155,20 +155,19 @@ def test_missing_last_cost_is_charged_conservatively_at_worst_case(monkeypatch):
     assert summary["provider_paid_credits"] == 4
 
 
-def test_reserve_guard_checks_worst_case_before_next_call(monkeypatch):
+def test_reserve_guard_uses_worst_case_before_next_call(monkeypatch):
     now = datetime(2026, 9, 5, 13, 0, tzinfo=UTC)
     _prepare_collection(monkeypatch, now, quota_remaining=HARD_RESERVE_CREDITS + 5)
     calls = []
     def paid_fetch(*_a, **_k):
         calls.append(1)
-        return {"bookmakers": []}, {"remaining": str(HARD_RESERVE_CREDITS + 4), "last_cost": "1"}
+        return {"bookmakers": []}, {"remaining": str(HARD_RESERVE_CREDITS + 3), "last_cost": "2"}
     monkeypatch.setattr(collector, "fetch_event_markets", paid_fetch)
     summary = collector.collect(now, max_paid_requests=5, max_paid_credits=8)
     assert len(calls) == 1
-    assert summary["quota_stop"] is False or summary["quota_stop"] is True
-    # The second call is forbidden because 104 - 4 would only touch reserve;
-    # after first actual cost remaining is 104, so no call may cross below 100.
     assert summary["provider_paid_requests"] == 1
+    assert summary["provider_paid_credits"] == 2
+    assert summary["quota_stop"] is True
 
 
 def test_invalid_caps_fail_before_provider_preflight():
