@@ -1,0 +1,34 @@
+name: Multi-Market Coverage Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'multi_market_odds.py'
+      - 'audit_multi_market_coverage.py'
+      - '.github/workflows/multi-market-coverage-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install requests pytest
+      - name: Focused tests
+        run: pytest -q test_multi_market_odds.py
+      - name: Live read-only coverage audit
+        env:
+          THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+        run: python audit_multi_market_coverage.py
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-market-coverage
+          path: artifacts/multi_market_coverage.json
