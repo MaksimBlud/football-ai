@@ -1,0 +1,28 @@
+name: Offline History Completeness PR Validation
+
+on:
+  pull_request:
+    paths:
+      - 'league_offline_history.py'
+      - 'test_league_offline_history_completeness.py'
+      - '.github/workflows/offline-history-completeness-pr.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas pytest
+      - name: Compile offline history module
+        run: python -m py_compile league_offline_history.py test_league_offline_history_completeness.py
+      - name: Run league-aware completeness tests
+        run: pytest -q test_league_offline_history_completeness.py
+      - name: Guard production model artifacts
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$' && exit 1 || true
