@@ -1,0 +1,74 @@
+name: Multi-Market V2 Live Schema Probe
+
+on:
+  pull_request:
+    paths:
+      - 'multi_market_schema_probe.py'
+      - 'test_multi_market_schema_probe.py'
+      - '.github/workflows/multi-market-schema-probe.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'multi_market_schema_probe.py'
+      - 'test_multi_market_schema_probe.py'
+      - '.github/workflows/multi-market-schema-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pytest
+      - name: Compile probe
+        run: python -m py_compile multi_market_schema_probe.py
+      - name: Run mocked read-only contract tests
+        run: pytest -q test_multi_market_schema_probe.py
+      - name: Guard production model artifacts
+        if: github.event_name == 'pull_request'
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$' && exit 1 || true
+
+  live-read-only-probe:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install supabase python-dotenv
+      - name: Probe exact required columns with bounded SELECTs
+        run: python multi_market_schema_probe.py --output artifacts/multi_market_schema_probe.json
+      - name: Verify artifact safety contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = json.loads(Path('artifacts/multi_market_schema_probe.json').read_text())
+          assert p['schema_version'] == 'MULTI_MARKET_SCHEMA_PROBE_V1'
+          assert p['research_only'] is True
+          assert p['read_only'] is True
+          assert len(p['tables']) == 3
+          print('all_ready=', p['all_ready'])
+          print('ready_tables=', p['ready_tables'])
+          print('blocked_tables=', p['blocked_tables'])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: multi-market-v2-live-schema-probe
+          path: artifacts/multi_market_schema_probe.json
+          if-no-files-found: error
