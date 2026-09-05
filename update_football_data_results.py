@@ -5,7 +5,6 @@ import argparse
 import json
 
 from bundesliga_runtime_config import BUNDESLIGA_RUNTIME_CONFIG
-from database import supabase
 from football_data_current_results import fetch_current_results
 from league_supabase_persistence import persist_results
 from ligue1_runtime_config import LIGUE1_RUNTIME_CONFIG
@@ -25,7 +24,10 @@ def run(league: str, *, write: bool = False, session=None, client=None) -> dict:
     frame, source = fetch_current_results(config, session=session)
     persistence = {"inserted": 0, "unchanged": 0, "conflicts": 0}
     if write:
-        persistence = persist_results(client or supabase, frame, config)
+        if client is None:
+            from database import supabase
+            client = supabase
+        persistence = persist_results(client, frame, config)
     return {
         "league": league,
         "season": config.finished_results_source.season,
