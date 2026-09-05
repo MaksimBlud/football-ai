@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Mapping
 
 import pandas as pd
 
@@ -163,10 +164,18 @@ def load_configured_history(
     raw_directory: Path,
     file_prefix: str,
     require_complete: bool = True,
+    season_codes: Mapping[str, str] | None = None,
 ) -> pd.DataFrame:
-    frames = []
+    selected_seasons = (
+        config.historical_source.season_codes
+        if season_codes is None
+        else season_codes
+    )
+    if not selected_seasons:
+        raise ValueError("No historical seasons selected")
 
-    for code, season in config.historical_source.season_codes.items():
+    frames = []
+    for code, season in selected_seasons.items():
         start_year = int(season.split("-")[0])
         path = raw_directory / (
             f"{file_prefix}_{start_year}_{start_year + 1}.csv"
