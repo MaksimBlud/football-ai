@@ -9,8 +9,8 @@ on:
       - 'static/multi_market_viewer.html'
       - 'test_multi_market_*.py'
       - 'test_research_viewer_multi_market.py'
-      - 'supabase/migrations/202609050001_league_multi_market_snapshots.sql'
-      - 'docs/MULTI_MARKET_V1_STATUS.md'
+      - 'supabase/migrations/20260905000*.sql'
+      - 'docs/MULTI_MARKET_*.md'
       - '.github/workflows/multi-market-*.yml'
 
 permissions:
@@ -28,9 +28,9 @@ jobs:
           python-version: '3.12'
       - run: pip install pandas requests supabase python-dotenv pytest fastapi
       - name: Compile
-        run: python -m py_compile multi_market_odds.py multi_market_card.py multi_market_collector.py multi_market_cycle.py multi_market_activation_status.py multi_market_settlement.py research_viewer.py research_viewer_app.py
+        run: python -m py_compile multi_market_odds.py multi_market_card.py multi_market_collector.py multi_market_cycle.py multi_market_activation_status.py multi_market_settlement.py multi_market_settlement_persistence.py research_viewer.py research_viewer_app.py
       - name: Focused tests
-        run: pytest -q test_multi_market_odds.py test_multi_market_card.py test_multi_market_settlement.py test_research_viewer_multi_market.py test_multi_market_viewer_contract.py test_multi_market_turkey_portugal.py
+        run: pytest -q test_multi_market_odds.py test_multi_market_card.py test_multi_market_settlement.py test_multi_market_settlement_persistence.py test_research_viewer_multi_market.py test_multi_market_viewer_contract.py test_multi_market_turkey_portugal.py
       - name: Production artifact guard
         run: |
           git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$' && exit 1 || true
