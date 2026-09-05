@@ -1,0 +1,50 @@
+name: Turkey Portugal MARKET_ONLY Cycle
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "47 */2 * * *"
+
+concurrency:
+  group: turkey-portugal-market-only-cycle
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  cycle:
+    strategy:
+      fail-fast: false
+      matrix:
+        league: [TURKEY_SUPER_LIG, PRIMEIRA_LIGA]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install pandas requests supabase python-dotenv numpy
+      - name: Check required secrets
+        run: |
+          python - <<'PY'
+          import os
+          required=("THE_ODDS_API_KEY","SUPABASE_URL","SUPABASE_KEY")
+          missing=[k for k in required if not os.getenv(k)]
+          if missing: raise SystemExit("Missing Turkey/Portugal secrets: "+", ".join(missing))
+          print("PASS: required secrets present; values not printed")
+          PY
+      - name: Record production model hash before
+        run: sha256sum football_model_xgboost_elo.pkl > /tmp/model.before
+      - name: Run quota-safe MARKET_ONLY cycle
+        run: python turkey_portugal_operational_cycle.py "${{ matrix.league }}"
+      - name: Verify production model unchanged
+        run: |
+          sha256sum football_model_xgboost_elo.pkl > /tmp/model.after
+          diff -u /tmp/model.before /tmp/model.after
