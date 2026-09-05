@@ -91,6 +91,8 @@ def test_schema_blocked_short_circuits_every_data_and_write_path():
 
 def test_source_unconfigured_league_never_constructs_or_fetches_corner_url():
     fetch_calls = 0
+    snap = snapshot("RPL", "Dinamo Moscow", "Spartak Moscow")
+    res = result("RPL", "Dinamo Moscow", "Spartak Moscow")
 
     def forbidden_fetch(*args, **kwargs):
         nonlocal fetch_calls
@@ -100,13 +102,13 @@ def test_source_unconfigured_league_never_constructs_or_fetches_corner_url():
     out = run_backfill(
         object(),
         probe_fn=lambda client: READY_SCHEMA,
-        snapshot_loader=lambda client: [snapshot()],
+        snapshot_loader=lambda client: [snap],
         corner_loader=lambda client: [],
-        results_loader=lambda client, config: pd.DataFrame([result()]),
+        results_loader=lambda client, config: pd.DataFrame([res]),
         corner_fetcher=forbidden_fetch,
     )
     assert fetch_calls == 0
-    assert out["corner_status"]["EPL"]["status"] == "SOURCE_NOT_CONFIGURED"
+    assert out["corner_status"]["RPL"]["status"] == "SOURCE_NOT_CONFIGURED"
     assert out["settlement_rows_built"] == 1
     assert out["status"] == "DRY_RUN_READY"
     assert out["writes_performed"] == 0
