@@ -8,7 +8,6 @@ to Supabase.
 
 from __future__ import annotations
 
-from dataclasses import asdict
 from typing import Callable
 
 import evaluate_league_predictions as evaluator
@@ -18,6 +17,8 @@ from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 from bundesliga_runtime_config import BUNDESLIGA_RUNTIME_CONFIG
 from ligue1_runtime_config import LIGUE1_RUNTIME_CONFIG
 from eredivisie_runtime_config import EREDIVISIE_RUNTIME_CONFIG
+from turkey_super_lig_runtime_config import TURKEY_SUPER_LIG_RUNTIME_CONFIG
+from primeira_liga_runtime_config import PRIMEIRA_LIGA_RUNTIME_CONFIG
 
 
 RUNTIME_CONFIGS = {
@@ -30,6 +31,8 @@ RUNTIME_CONFIGS = {
         BUNDESLIGA_RUNTIME_CONFIG,
         LIGUE1_RUNTIME_CONFIG,
         EREDIVISIE_RUNTIME_CONFIG,
+        TURKEY_SUPER_LIG_RUNTIME_CONFIG,
+        PRIMEIRA_LIGA_RUNTIME_CONFIG,
     )
 }
 
