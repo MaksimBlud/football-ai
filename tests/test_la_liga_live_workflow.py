@@ -30,10 +30,12 @@ def test_workflow_contract():
         )
     )
 
-    assert (
-        'cron: "27 */2 * * *"'
-        in text
-    )
+    # This entrypoint performs a real h2h provider collection, so quota safety
+    # requires explicit manual dispatch plus a zero-cost hard-reserve preflight.
+    assert "workflow_dispatch:" in text
+    assert "cron:" not in text
+    assert "push:" not in text
+    assert "python odds_api_budget_guard.py --max-cost 1" in text
 
     assert (
         "concurrency:"
