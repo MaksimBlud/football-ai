@@ -28,9 +28,9 @@ jobs:
           python-version: '3.12'
       - run: pip install pandas requests supabase python-dotenv pytest fastapi
       - name: Compile
-        run: python -m py_compile multi_market_odds.py multi_market_card.py multi_market_collector.py multi_market_cycle.py multi_market_activation_status.py multi_market_settlement.py multi_market_settlement_persistence.py multi_market_corner_results.py multi_market_oos_evaluator.py research_viewer.py research_viewer_app.py
+        run: python -m py_compile multi_market_odds.py multi_market_card.py multi_market_collector.py multi_market_cycle.py multi_market_activation_status.py multi_market_settlement.py multi_market_settlement_persistence.py multi_market_corner_results.py multi_market_oos_evaluator.py multi_market_backfill.py research_viewer.py research_viewer_app.py
       - name: Focused tests
-        run: pytest -q test_multi_market_odds.py test_multi_market_card.py test_multi_market_settlement.py test_multi_market_settlement_persistence.py test_multi_market_corner_results.py test_multi_market_oos_evaluator.py test_research_viewer_multi_market.py test_multi_market_viewer_contract.py test_multi_market_turkey_portugal.py
+        run: pytest -q test_multi_market_odds.py test_multi_market_card.py test_multi_market_settlement.py test_multi_market_settlement_persistence.py test_multi_market_corner_results.py test_multi_market_oos_evaluator.py test_multi_market_backfill.py test_research_viewer_multi_market.py test_multi_market_viewer_contract.py test_multi_market_turkey_portugal.py
       - name: Production artifact guard
         run: |
           git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$' && exit 1 || true
