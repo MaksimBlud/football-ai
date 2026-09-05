@@ -8,6 +8,7 @@ on:
     branches: [main]
     paths:
       - 'multi_market_card.py'
+      - 'multi_market_policy.py'
       - 'multi_market_collector.py'
       - 'multi_market_cycle.py'
       - 'supabase/migrations/202609050001_league_multi_market_snapshots.sql'
@@ -26,7 +27,7 @@ jobs:
           python-version: '3.12'
       - run: pip install pandas requests supabase python-dotenv pytest
       - name: Focused normalization tests
-        run: pytest -q test_multi_market_card.py test_multi_market_odds.py
+        run: pytest -q test_multi_market_card.py test_multi_market_odds.py test_multi_market_workflow_contract.py
       - name: Record production model hash before
         run: sha256sum football_model_xgboost_elo.pkl > /tmp/model.before
       - name: Run fail-closed multi-market cycle
