@@ -4,6 +4,9 @@ import pandas as pd
 
 import audit_multi_market_corner_outcomes as audit
 from league_runtime_config import LA_LIGA_RUNTIME_CONFIG, EPL_RUNTIME_CONFIG
+from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
+from bundesliga_runtime_config import BUNDESLIGA_RUNTIME_CONFIG
+from ligue1_runtime_config import LIGUE1_RUNTIME_CONFIG
 from eredivisie_runtime_config import EREDIVISIE_RUNTIME_CONFIG
 from turkey_super_lig_runtime_config import TURKEY_SUPER_LIG_RUNTIME_CONFIG
 from primeira_liga_runtime_config import PRIMEIRA_LIGA_RUNTIME_CONFIG
@@ -16,6 +19,9 @@ def test_configured_contracts_are_repo_owned_not_guessed():
         "competition_code": "SP1",
         "season_code": "2627",
     }
+    assert audit.configured_csv_contract(SERIE_A_RUNTIME_CONFIG)["competition_code"] == "I1"
+    assert audit.configured_csv_contract(BUNDESLIGA_RUNTIME_CONFIG)["competition_code"] == "D1"
+    assert audit.configured_csv_contract(LIGUE1_RUNTIME_CONFIG)["competition_code"] == "F1"
     assert audit.configured_csv_contract(EREDIVISIE_RUNTIME_CONFIG)["season_code"] == "2627"
     assert audit.configured_csv_contract(TURKEY_SUPER_LIG_RUNTIME_CONFIG)["competition_code"] == "T1"
     assert audit.configured_csv_contract(PRIMEIRA_LIGA_RUNTIME_CONFIG)["competition_code"] == "P1"
@@ -102,7 +108,7 @@ class FakeSession:
         return FakeResponse(self.text)
 
 
-def test_run_audit_fetches_only_four_explicitly_configured_csv_leagues():
+def test_run_audit_fetches_only_seven_explicitly_configured_csv_leagues():
     csv = _frame().to_csv(index=False)
     session = FakeSession(csv)
     report = audit.run_audit(session=session)
@@ -110,13 +116,11 @@ def test_run_audit_fetches_only_four_explicitly_configured_csv_leagues():
     assert report["odds_api_requests"] == 0
     assert report["supabase_operations"] == 0
     assert report["production_model_operations"] == 0
-    assert report["configured_csv_leagues"] == 4
-    assert len(session.calls) == 4
+    assert report["configured_csv_leagues"] == 7
+    assert len(session.calls) == 7
     urls = {url for url, _ in session.calls}
-    assert any(url.endswith("/2627/SP1.csv") for url in urls)
-    assert any(url.endswith("/2627/N1.csv") for url in urls)
-    assert any(url.endswith("/2627/T1.csv") for url in urls)
-    assert any(url.endswith("/2627/P1.csv") for url in urls)
+    for code in ("SP1", "I1", "D1", "F1", "N1", "T1", "P1"):
+        assert any(url.endswith(f"/2627/{code}.csv") for url in urls)
     by_league = {item["league"]: item for item in report["leagues"]}
-    for league in {"EPL", "SERIE_A", "BUNDESLIGA", "LIGUE_1", "RPL"}:
+    for league in {"EPL", "RPL"}:
         assert by_league[league]["status"] == "SOURCE_NOT_CONFIGURED"
