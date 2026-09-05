@@ -1,8 +1,10 @@
 """Read-only live schema compatibility probe for Multi-Market V2.
 
 The probe performs SELECT-only PostgREST requests against the exact columns
-required by the repository schema contracts. It never creates, alters, inserts,
-updates, deletes, or invokes an odds provider.
+required by the repository schema contracts. It requests zero data rows: the
+server still validates table/column compatibility while no snapshot, corner,
+or settlement payload/outcome values are returned. It never creates, alters,
+inserts, updates, deletes, or invokes an odds provider.
 """
 from __future__ import annotations
 
@@ -69,12 +71,12 @@ def _safe_error(exc: Exception) -> dict[str, str]:
 
 
 def probe_table(client: Any, table: str, columns: tuple[str, ...]) -> dict[str, Any]:
-    """Probe table existence and required columns using one bounded SELECT."""
+    """Validate table existence + required columns without returning a data row."""
     try:
         response = (
             client.table(table)
             .select(",".join(columns), count="exact")
-            .limit(1)
+            .limit(0)
             .execute()
         )
     except Exception as exc:  # provider-specific PostgREST exceptions vary
@@ -93,6 +95,7 @@ def probe_table(client: Any, table: str, columns: tuple[str, ...]) -> dict[str, 
         "required_columns": list(columns),
         "row_count": int(count) if count is not None else None,
         "sample_rows_returned": len(rows),
+        "zero_row_probe": True,
     }
 
 
@@ -111,6 +114,7 @@ def probe_schema(client: Any) -> dict[str, Any]:
         "schema_version": "MULTI_MARKET_SCHEMA_PROBE_V1",
         "research_only": True,
         "read_only": True,
+        "zero_row_probe": True,
         "tables": tables,
         "ready_tables": ready,
         "blocked_tables": blocked,
