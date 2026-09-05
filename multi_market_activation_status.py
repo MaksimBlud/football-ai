@@ -10,19 +10,12 @@ import json
 from pathlib import Path
 from typing import Any, Callable
 
-from multi_market_collector import START_MIN_REQUESTS_REMAINING
+from multi_market_policy import CORNER_SOURCE_READY_LEAGUES, START_MIN_REQUESTS_REMAINING
 from multi_market_schema_probe import probe_schema
 
 OUTPUT = Path("artifacts/multi_market_activation_status.json")
 STATUS_SCHEMA = "MULTI_MARKET_V2_READINESS_STATUS_V1"
 OOS_PROTOCOL_VERSION = "MULTI_MARKET_V2_OOS_PROTOCOL_V1"
-
-CORNER_SOURCE_READY_LEAGUES = (
-    "LA_LIGA",
-    "EREDIVISIE",
-    "TURKEY_SUPER_LIG",
-    "PRIMEIRA_LIGA",
-)
 
 TABLE_SNAPSHOTS = "league_multi_market_snapshots"
 TABLE_SETTLEMENTS = "league_multi_market_settlements"
