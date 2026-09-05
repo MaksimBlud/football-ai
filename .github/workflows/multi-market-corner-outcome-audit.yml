@@ -1,0 +1,83 @@
+name: Multi-Market V2 Corner Outcome Audit
+
+on:
+  pull_request:
+    paths:
+      - 'audit_multi_market_corner_outcomes.py'
+      - 'test_multi_market_corner_outcome_audit.py'
+      - '.github/workflows/multi-market-corner-outcome-audit.yml'
+      - '*runtime_config.py'
+  push:
+    branches: [main]
+    paths:
+      - 'audit_multi_market_corner_outcomes.py'
+      - 'test_multi_market_corner_outcome_audit.py'
+      - '.github/workflows/multi-market-corner-outcome-audit.yml'
+      - '*runtime_config.py'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install audit dependencies
+        run: pip install pandas requests pytest
+      - name: Compile audit
+        run: python -m py_compile audit_multi_market_corner_outcomes.py test_multi_market_corner_outcome_audit.py
+      - name: Run mocked source-contract tests
+        run: PYTHONPATH=. pytest -q test_multi_market_corner_outcome_audit.py
+      - name: Guard production model artifacts
+        if: github.event_name == 'pull_request'
+        run: |
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$'; then
+            echo 'Production .pkl changes are forbidden in source-audit PRs.'
+            exit 1
+          fi
+
+  live-zero-cost-audit:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install audit dependencies
+        run: pip install pandas requests
+      - name: Run configured Football-Data corner audit
+        run: |
+          PYTHONPATH=. python audit_multi_market_corner_outcomes.py \
+            --output artifacts/multi_market_v2_corner_outcome_audit.json
+      - name: Verify zero-cost research contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('artifacts/multi_market_v2_corner_outcome_audit.json')
+          report = json.loads(path.read_text(encoding='utf-8'))
+          assert report['research_only'] is True
+          assert report['source_feasibility_audit'] is True
+          assert report['outcomes_read'] is True
+          assert report['odds_api_requests'] == 0
+          assert report['supabase_operations'] == 0
+          assert report['production_model_operations'] == 0
+          assert len(report['leagues']) == 9
+          assert report['configured_csv_leagues'] == 4
+          print('PASS: zero-cost corner outcome source audit contract verified')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: multi-market-v2-corner-outcome-audit
+          path: artifacts/multi_market_v2_corner_outcome_audit.json
+          if-no-files-found: error
