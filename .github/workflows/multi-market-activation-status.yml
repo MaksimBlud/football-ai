@@ -9,6 +9,7 @@ on:
       - 'multi_market_activation_status.py'
       - 'test_multi_market_activation_status.py'
       - 'multi_market_schema_probe.py'
+      - 'multi_market_policy.py'
       - 'multi_market_collector.py'
       - 'multi_market_odds.py'
       - 'supabase/migrations/20260905000*.sql'
@@ -19,6 +20,7 @@ on:
       - 'multi_market_activation_status.py'
       - 'test_multi_market_activation_status.py'
       - 'multi_market_schema_probe.py'
+      - 'multi_market_policy.py'
       - 'multi_market_collector.py'
       - 'multi_market_odds.py'
       - 'supabase/migrations/20260905000*.sql'
@@ -39,9 +41,9 @@ jobs:
           python-version: '3.12'
       - run: pip install pandas requests supabase python-dotenv pytest
       - name: Compile readiness modules
-        run: python -m py_compile multi_market_activation_status.py multi_market_schema_probe.py
+        run: python -m py_compile multi_market_activation_status.py multi_market_schema_probe.py multi_market_policy.py
       - name: Run mocked readiness tests
-        run: pytest -q test_multi_market_activation_status.py test_multi_market_schema_probe.py
+        run: pytest -q test_multi_market_activation_status.py test_multi_market_schema_probe.py test_multi_market_workflow_contract.py
       - name: Guard production model artifacts
         if: github.event_name == 'pull_request'
         run: |
