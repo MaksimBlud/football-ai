@@ -19,6 +19,11 @@ EXPECTED = (
 SNAPSHOT_TABLE = "public.league_multi_market_snapshots"
 SETTLEMENT_TABLE = "public.league_multi_market_settlements"
 CORNER_TABLE = "public.league_corner_results"
+TABLE_BY_FILE = {
+    EXPECTED[0]: SNAPSHOT_TABLE,
+    EXPECTED[1]: SETTLEMENT_TABLE,
+    EXPECTED[2]: CORNER_TABLE,
+}
 
 # These operations are outside the preregistered additive-only deployment scope.
 FORBIDDEN_PATTERNS = {
@@ -28,12 +33,38 @@ FORBIDDEN_PATTERNS = {
     "UPDATE": r"\bupdate\s+\w",
     "ALTER_DROP": r"\balter\s+table\b[\s\S]*?\bdrop\b",
     "ALTER_COLUMN": r"\balter\s+table\b[\s\S]*?\balter\s+column\b",
+    "POLICY_UPDATE": r"\bfor\s+update\b",
+    "POLICY_DELETE": r"\bfor\s+delete\b",
+    "POLICY_ALL": r"\bfor\s+all\b",
 }
 
 
 def _strip_comments(sql: str) -> str:
     sql = re.sub(r"/\*.*?\*/", " ", sql, flags=re.S)
     return re.sub(r"--[^\n]*", " ", sql)
+
+
+def _policy_contract(executable: str, table: str) -> list[str]:
+    blockers: list[str] = []
+    if f"alter table {table} enable row level security" not in executable:
+        blockers.append(f"RLS_MISSING:{table}")
+
+    select_policy = re.search(
+        rf"create\s+policy\s+[^;]+?on\s+{re.escape(table)}\s+for\s+select\s+to\s+service_role\s+using\s*\(\s*true\s*\)",
+        executable,
+        flags=re.S,
+    )
+    if not select_policy:
+        blockers.append(f"SERVICE_ROLE_SELECT_POLICY_MISSING:{table}")
+
+    insert_policy = re.search(
+        rf"create\s+policy\s+[^;]+?on\s+{re.escape(table)}\s+for\s+insert\s+to\s+service_role\s+with\s+check\s*\(\s*true\s*\)",
+        executable,
+        flags=re.S,
+    )
+    if not insert_policy:
+        blockers.append(f"SERVICE_ROLE_INSERT_POLICY_MISSING:{table}")
+    return blockers
 
 
 def audit_migrations(root: Path = MIGRATION_DIR) -> dict:
@@ -47,16 +78,28 @@ def audit_migrations(root: Path = MIGRATION_DIR) -> dict:
             blockers.append(f"MISSING:{name}")
             continue
         text = path.read_text(encoding="utf-8")
-        texts[name] = text
         executable = _strip_comments(text).lower()
-        forbidden = [label for label, pattern in FORBIDDEN_PATTERNS.items() if re.search(pattern, executable, flags=re.I)]
+        texts[name] = executable
+        forbidden = [
+            label
+            for label, pattern in FORBIDDEN_PATTERNS.items()
+            if re.search(pattern, executable, flags=re.I)
+        ]
         if forbidden:
             blockers.append(f"DESTRUCTIVE_SQL:{name}:{','.join(forbidden)}")
-        files.append({"name": name, "forbidden_operations": forbidden})
+        table = TABLE_BY_FILE[name]
+        policy_blockers = _policy_contract(executable, table)
+        blockers.extend(policy_blockers)
+        files.append({
+            "name": name,
+            "table": table,
+            "forbidden_operations": forbidden,
+            "rls_and_append_only_policy_ready": not policy_blockers,
+        })
 
-    first = texts.get(EXPECTED[0], "").lower()
-    second = texts.get(EXPECTED[1], "").lower()
-    third = texts.get(EXPECTED[2], "").lower()
+    first = texts.get(EXPECTED[0], "")
+    second = texts.get(EXPECTED[1], "")
+    third = texts.get(EXPECTED[2], "")
 
     if first and f"create table if not exists {SNAPSHOT_TABLE}" not in first:
         blockers.append("SNAPSHOT_CREATE_CONTRACT_MISSING")
