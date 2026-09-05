@@ -24,6 +24,7 @@ from multi_market_settlement import settle_multi_market_card
 TABLE = "league_multi_market_settlements"
 SCHEMA_VERSION = "MULTI_MARKET_SETTLEMENT_V2"
 IDENTITY_VERSION = "LEAGUE_LOCAL_DATE_EXACT_TEAMS_V1"
+EXISTING_KEY_BATCH_SIZE = 100
 
 
 class SettlementIdentityError(ValueError):
@@ -257,6 +258,22 @@ def _immutable_equal(left: dict, right: dict) -> bool:
     return _canonical_json(left) == _canonical_json(right)
 
 
+def _load_existing_by_keys(client, keys: list[str]) -> dict[str, dict]:
+    """Read existing immutable revisions in bounded unique-key batches.
+
+    Chunking avoids both a large PostgREST `in` URL and silent row-cap risk
+    during future backfills. settlement_key is unique, so each bounded chunk
+    can return at most EXISTING_KEY_BATCH_SIZE rows and needs no range paging.
+    """
+    existing: dict[str, dict] = {}
+    for start in range(0, len(keys), EXISTING_KEY_BATCH_SIZE):
+        batch = keys[start:start + EXISTING_KEY_BATCH_SIZE]
+        response = client.table(TABLE).select("*").in_("settlement_key", batch).execute()
+        for row in _response_rows(response):
+            existing[str(row["settlement_key"])] = dict(row)
+    return existing
+
+
 def persist_settlement_records(client, records: Iterable[dict]) -> dict:
     """Insert immutable settlement revisions idempotently."""
     records = [dict(row) for row in records]
@@ -269,8 +286,7 @@ def persist_settlement_records(client, records: Iterable[dict]) -> dict:
     if len(keys) != len(set(keys)):
         raise ValueError("duplicate settlement_key in incoming batch")
 
-    response = client.table(TABLE).select("*").in_("settlement_key", keys).execute()
-    existing = {str(row["settlement_key"]): dict(row) for row in _response_rows(response)}
+    existing = _load_existing_by_keys(client, keys)
     inserted = 0
     unchanged = 0
 
