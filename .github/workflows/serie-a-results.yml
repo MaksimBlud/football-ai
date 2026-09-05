@@ -2,8 +2,6 @@ name: Serie A Results Sync
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "2 */12 * * *"
 
 concurrency:
   group: serie-a-results-sync
