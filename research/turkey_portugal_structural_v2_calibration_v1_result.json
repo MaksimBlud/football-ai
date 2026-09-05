@@ -31,10 +31,10 @@
       "research_conclusion": "HISTORICAL_OOS_SIGNAL_OBSERVED",
       "outer_fold_summary": [
         {"season":"2021-2022","alpha":0.25,"threshold":1.0,"logloss_delta":-0.00031803207411440493,"brier_delta":-0.00022848961221932917},
-        {"season":"2022-2023","alpha":0.25,"threshold":1.0,"logloss_delta":-0.00012409957446202213,"brier_delta":-0.00011051336434342374},
-        {"season":"2023-2024","alpha":0.2,"threshold":0.5,"logloss_delta":-0.00288191474955124,"brier_delta":-0.0013455859940267871},
-        {"season":"2024-2025","alpha":0.2,"threshold":0.75,"logloss_delta":-0.0017567579263129134,"brier_delta":-0.0006632740554518561},
-        {"season":"2025-2026","alpha":0.25,"threshold":0.75,"logloss_delta":0.00014093358425670832,"brier_delta":0.0002627735262590305}
+        {"season":"2022-2023","alpha":0.25,"threshold":1.0,"logloss_delta":-0.00012410022616138328,"brier_delta":-0.0001105128994862703},
+        {"season":"2023-2024","alpha":0.2,"threshold":0.5,"logloss_delta":-0.002881914761241555,"brier_delta":-0.0013455863631861575},
+        {"season":"2024-2025","alpha":0.2,"threshold":0.75,"logloss_delta":-0.0017567576316169786,"brier_delta":-0.0006632737458167615},
+        {"season":"2025-2026","alpha":0.25,"threshold":0.75,"logloss_delta":0.0001409342979407091,"brier_delta":0.0002627742026533042}
       ],
       "decision": "RESEARCH_SIGNAL_ONLY_NO_RUNTIME_ACTIVATION"
     },
@@ -50,11 +50,11 @@
       "weighted_accuracy_delta": 0.0,
       "research_conclusion": "CALIBRATION_NOT_SUPPORTED_OR_INCONSISTENT",
       "outer_fold_summary": [
-        {"season":"2021-2022","alpha":0.25,"threshold":0.5,"logloss_delta":0.0005607173530975957,"brier_delta":0.001689139250569903},
-        {"season":"2022-2023","alpha":0.25,"threshold":0.75,"logloss_delta":-0.003505380919226808,"brier_delta":-0.0020373014485775},
+        {"season":"2021-2022","alpha":0.25,"threshold":0.5,"logloss_delta":0.0005607169428649694,"brier_delta":0.0016891388598117008},
+        {"season":"2022-2023","alpha":0.25,"threshold":0.75,"logloss_delta":-0.0035053807667360104,"brier_delta":-0.0020373006013251205},
         {"season":"2023-2024","alpha":0.25,"threshold":1.0,"logloss_delta":0.001133930231007274,"brier_delta":0.000847517381693863},
-        {"season":"2024-2025","alpha":0.25,"threshold":0.75,"logloss_delta":0.0011933290196891592,"brier_delta":0.0009800953394989431},
-        {"season":"2025-2026","alpha":0.25,"threshold":1.0,"logloss_delta":-0.0019035651208544346,"brier_delta":-0.0005713058123297825}
+        {"season":"2024-2025","alpha":0.25,"threshold":0.75,"logloss_delta":0.001193329201994331,"brier_delta":0.0009800951490309684},
+        {"season":"2025-2026","alpha":0.25,"threshold":1.0,"logloss_delta":-0.0019035646457259414,"brier_delta":-0.0005713062450753981}
       ],
       "decision": "NO_STRUCTURAL_V2_RUNTIME_CALIBRATION_SUPPORTED"
     }
