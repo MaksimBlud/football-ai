@@ -1,0 +1,54 @@
+name: Turkey Portugal Structural V2 Prereg
+
+on:
+  pull_request:
+    paths:
+      - 'research/turkey_portugal_structural_v2_calibration_v1.json'
+      - 'research/signal_research_registry_v1.json'
+      - 'tests/test_turkey_portugal_structural_v2_prereg.py'
+      - 'turkey_super_lig_runtime_config.py'
+      - 'primeira_liga_runtime_config.py'
+      - '.github/workflows/turkey-portugal-structural-v2-prereg.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'research/turkey_portugal_structural_v2_calibration_v1.json'
+      - 'research/signal_research_registry_v1.json'
+      - 'tests/test_turkey_portugal_structural_v2_prereg.py'
+      - 'turkey_super_lig_runtime_config.py'
+      - 'primeira_liga_runtime_config.py'
+      - '.github/workflows/turkey-portugal-structural-v2-prereg.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install pytest pandas
+      - name: Validate JSON syntax
+        run: |
+          python -m json.tool research/turkey_portugal_structural_v2_calibration_v1.json >/dev/null
+          python -m json.tool research/signal_research_registry_v1.json >/dev/null
+      - name: Run frozen preregistration tests
+        run: PYTHONPATH=. pytest -q tests/test_turkey_portugal_structural_v2_prereg.py
+      - name: Guard production model artifacts
+        if: github.event_name == 'pull_request'
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$' && exit 1 || true
+      - name: Guard runtime calibration mutation
+        if: github.event_name == 'pull_request'
+        run: |
+          if git diff origin/${{ github.base_ref }}...HEAD -- turkey_super_lig_runtime_config.py primeira_liga_runtime_config.py | grep -E '^\+.*(structural_alpha|edge_threshold|calibration_status)'; then
+            echo 'Turkey/Portugal runtime calibration fields changed in preregistration PR'
+            exit 1
+          fi
