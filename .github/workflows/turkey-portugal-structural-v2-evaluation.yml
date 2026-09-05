@@ -1,0 +1,90 @@
+name: Turkey Portugal Structural V2 Evaluation
+
+on:
+  pull_request:
+    paths:
+      - 'evaluate_turkey_portugal_structural_v2.py'
+      - 'tests/test_turkey_portugal_structural_v2_evaluation.py'
+      - 'research/turkey_portugal_structural_v2_calibration_v1.json'
+      - '.github/workflows/turkey-portugal-structural-v2-evaluation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'evaluate_turkey_portugal_structural_v2.py'
+      - 'tests/test_turkey_portugal_structural_v2_evaluation.py'
+      - 'research/turkey_portugal_structural_v2_calibration_v1.json'
+      - '.github/workflows/turkey-portugal-structural-v2-evaluation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install research dependencies
+        run: pip install pandas numpy requests pytest scikit-learn xgboost joblib
+      - name: Compile frozen evaluator
+        run: python -m py_compile evaluate_turkey_portugal_structural_v2.py tests/test_turkey_portugal_structural_v2_evaluation.py
+      - name: Run frozen evaluation contract tests
+        run: PYTHONPATH=. pytest -q tests/test_turkey_portugal_structural_v2_evaluation.py
+      - name: Guard production model artifacts
+        if: github.event_name == 'pull_request'
+        run: |
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$'; then
+            echo 'Production .pkl changes are forbidden in research evaluation PRs.'
+            exit 1
+          fi
+
+  live-historical-evaluation:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install research dependencies
+        run: pip install pandas numpy requests scikit-learn xgboost joblib
+      - name: Run frozen post-preregistration evaluation
+        run: |
+          PYTHONPATH=. python evaluate_turkey_portugal_structural_v2.py \
+            --output artifacts/turkey_portugal_structural_v2_evaluation.json
+      - name: Verify research-only result contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('artifacts/turkey_portugal_structural_v2_evaluation.json')
+          report = json.loads(path.read_text(encoding='utf-8'))
+          assert report['research_only'] is True
+          assert report['outcomes_read'] is True
+          assert report['odds_api_requests'] == 0
+          assert report['supabase_operations'] == 0
+          assert report['production_artifacts_unchanged'] is True
+          assert report['automatic_promotion'] is False
+          assert report['runtime_mutation'] is False
+          assert len(report['leagues']) == 2
+          for league in report['leagues']:
+              assert league['runtime_calibration_status_before'] == 'CALIBRATION_REQUIRED'
+              assert league['runtime_calibration_status_after'] == 'CALIBRATION_REQUIRED'
+              assert league['aggregate_outer_oos']['argmax_changes'] == 0
+              assert league['runtime_action'] == 'NONE_REQUIRES_SEPARATE_EXPLICIT_REVIEW_AND_PR'
+          print('PASS: frozen research-only evaluation contract verified')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: turkey-portugal-structural-v2-evaluation
+          path: artifacts/turkey_portugal_structural_v2_evaluation.json
+          if-no-files-found: error
