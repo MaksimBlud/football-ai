@@ -120,6 +120,7 @@ class FakeQuery:
 
     def in_(self, _column, values):
         self.keys = set(values)
+        self.table.query_batches.append(list(values))
         return self
 
     def insert(self, row):
@@ -139,6 +140,7 @@ class FakeQuery:
 class FakeTable:
     def __init__(self):
         self.rows = []
+        self.query_batches = []
 
     def query(self):
         return FakeQuery(self)
@@ -162,3 +164,20 @@ def test_corner_persistence_is_append_only_idempotent_and_conflict_safe():
     mutated["home_corners"] = 99
     with pytest.raises(CornerResultConflictError, match="immutable corner-result conflict"):
         persist_corner_results(client, [mutated])
+
+
+def test_corner_persistence_finds_existing_revision_in_second_key_chunk():
+    client = FakeClient()
+    records = [
+        {"corner_result_key": f"k{i:03d}", "payload": {"revision": i}}
+        for i in range(101)
+    ]
+    table = client.tables.setdefault("league_corner_results", FakeTable())
+    table.rows.append(deepcopy(records[100]))
+
+    summary = persist_corner_results(client, records)
+
+    assert summary == {"inserted": 100, "unchanged": 1, "conflicts": 0}
+    assert [len(batch) for batch in table.query_batches] == [100, 1]
+    assert len(table.rows) == 101
+    assert sum(row["corner_result_key"] == "k100" for row in table.rows) == 1
