@@ -1,0 +1,31 @@
+name: Multi-Market V1 PR Validation
+
+on:
+  pull_request:
+    paths:
+      - 'multi_market_*.py'
+      - 'research_viewer.py'
+      - 'test_multi_market_*.py'
+      - 'test_research_viewer_multi_market.py'
+      - 'supabase/migrations/202609050001_league_multi_market_snapshots.sql'
+      - '.github/workflows/multi-market-*.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  multi-market-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas requests supabase python-dotenv pytest
+      - name: Compile
+        run: python -m py_compile multi_market_odds.py multi_market_card.py multi_market_collector.py multi_market_cycle.py research_viewer.py
+      - name: Focused tests
+        run: pytest -q test_multi_market_odds.py test_multi_market_card.py test_research_viewer_multi_market.py
+      - name: Production artifact guard
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$' && exit 1 || true

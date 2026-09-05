@@ -1,6 +1,6 @@
-"""Read-only live coverage audit for Multi-Market Card V1.
+"""Read-only live coverage and normalization audit for Multi-Market Card V1.
 
-The audit deliberately does not persist odds or touch production artifacts.
+The audit deliberately does not persist provider data or touch production artifacts.
 """
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 
 from league_config import operational_collection_ready_leagues
+from multi_market_card import build_multi_market_card
 from multi_market_odds import EVENT_MARKETS, FEATURED_MARKETS, fetch_event_markets, fetch_sport_markets, summarize_market_coverage
 
 OUTPUT = Path("artifacts/multi_market_coverage.json")
@@ -16,15 +17,8 @@ OUTPUT = Path("artifacts/multi_market_coverage.json")
 def main() -> None:
     report = {"leagues": {}, "featured_markets": list(FEATURED_MARKETS), "event_markets": list(EVENT_MARKETS)}
     for league in operational_collection_ready_leagues():
-        if league.identifier == "RPL":
-            continue
         events, featured_quota = fetch_sport_markets(league.odds_api_sport_key, regions="eu")
-        entry = {
-            "sport_key": league.odds_api_sport_key,
-            "events_returned": len(events),
-            "featured_quota": featured_quota,
-            "sample_event": None,
-        }
+        entry = {"sport_key": league.odds_api_sport_key, "events_returned": len(events), "featured_quota": featured_quota, "sample_event": None}
         if events:
             event = sorted(events, key=lambda x: x.get("commence_time") or "")[0]
             event_payload, event_quota = fetch_event_markets(league.odds_api_sport_key, event["id"], regions="eu")
@@ -34,6 +28,7 @@ def main() -> None:
                 "home_team": event.get("home_team"),
                 "away_team": event.get("away_team"),
                 "coverage": summarize_market_coverage(event_payload),
+                "canonical_card": build_multi_market_card(event_payload),
                 "event_quota": event_quota,
             }
         report["leagues"][league.identifier] = entry

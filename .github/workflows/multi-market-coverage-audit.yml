@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'multi_market_odds.py'
+      - 'multi_market_card.py'
       - 'audit_multi_market_coverage.py'
       - '.github/workflows/multi-market-coverage-audit.yml'
 
@@ -22,8 +23,8 @@ jobs:
           python-version: '3.12'
       - run: pip install requests pytest python-dotenv
       - name: Focused tests
-        run: pytest -q test_multi_market_odds.py
-      - name: Live read-only coverage audit
+        run: pytest -q test_multi_market_odds.py test_multi_market_card.py
+      - name: Live read-only coverage and normalization audit
         env:
           THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
         run: python audit_multi_market_coverage.py
