@@ -5,6 +5,8 @@ on:
   push:
     branches: [main]
     paths:
+      - 'turkey_super_lig_runtime_config.py'
+      - 'primeira_liga_runtime_config.py'
       - 'turkey_portugal_market_only.py'
       - 'scheduled_turkey_portugal_odds.py'
       - 'persist_turkey_portugal_prediction_ledger.py'
