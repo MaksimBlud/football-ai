@@ -15,12 +15,33 @@ def schema_ready() -> bool:
         return False
 
 
-def main() -> None:
+def run_cycle() -> dict:
     if not schema_ready():
-        print("MULTI_MARKET_V1=BLOCKED; schema not applied; provider quota not used")
-        return
+        return {
+            "status": "BLOCKED_SCHEMA",
+            "reason": "schema_not_applied",
+            "provider_paid_requests": 0,
+        }
+
     result = collect()
-    print("MULTI_MARKET_V1=COLLECTED")
+    if result.get("quota_blocked"):
+        return {
+            "status": "BLOCKED_LOW_QUOTA",
+            "collector": result,
+            "provider_paid_requests": int(result.get("provider_paid_requests", 0)),
+        }
+
+    inserted = int(result.get("inserted", 0))
+    return {
+        "status": "COLLECTED" if inserted > 0 else "NO_ELIGIBLE_COLLECTION",
+        "collector": result,
+        "provider_paid_requests": int(result.get("fetched", 0)),
+    }
+
+
+def main() -> None:
+    result = run_cycle()
+    print(f"MULTI_MARKET_V1={result['status']}")
     print(json.dumps(result, indent=2, default=str))
 
 
