@@ -14,6 +14,9 @@ def test_runtime_contract():
     assert cfg.identity.timezone == "Europe/Rome"
     assert cfg.identity.odds_sport_key == "soccer_italy_serie_a"
     assert cfg.historical_source.competition_code == "I1"
+    assert cfg.finished_results_source.provider == "FOOTBALL_DATA_CSV"
+    assert cfg.finished_results_source.competition_code == "I1"
+    assert cfg.finished_results_source.season_code == "2627"
     assert cfg.structural_v2.calibration_status == "CALIBRATION_REQUIRED"
     assert cfg.structural_v2.structural_alpha is None
     assert cfg.structural_v2.edge_threshold is None
