@@ -191,4 +191,7 @@ def test_viewer_exposes_structural_shadow_without_applying_it():
 def test_viewer_contract_lists_all_operational_leagues():
     payload = assemble_viewer_payload([], [])
     assert tuple(payload["active_leagues"]) == ACTIVE_LEAGUES
+    assert "TURKEY_SUPER_LIG" in payload["active_leagues"]
+    assert "PRIMEIRA_LIGA" in payload["active_leagues"]
+    assert len(payload["active_leagues"]) == 9
     assert payload["summary"]["awaiting_result"] == 0
