@@ -23,8 +23,13 @@ MIN_COLLECTION_REMAINING_CREDITS = HARD_RESERVE_CREDITS + EVENT_REQUEST_MAX_CRED
 START_MIN_REQUESTS_REMAINING = MIN_COLLECTION_REMAINING_CREDITS
 HARD_RESERVE_REQUESTS = HARD_RESERVE_CREDITS
 
+# Current-season public Football-Data CSV corner outcomes have been live-audited
+# with complete HC/AC coverage for finished rows in these seven leagues.
 CORNER_SOURCE_READY_LEAGUES = (
     "LA_LIGA",
+    "SERIE_A",
+    "BUNDESLIGA",
+    "LIGUE_1",
     "EREDIVISIE",
     "TURKEY_SUPER_LIG",
     "PRIMEIRA_LIGA",
