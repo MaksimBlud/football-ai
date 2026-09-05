@@ -31,13 +31,16 @@ class Query:
         failure = self.client.failures.get(self.table_name)
         if failure:
             raise RuntimeError(failure)
-        return Response(self.client.counts.get(self.table_name, 0), [])
+        # A zero-row schema probe must never expose configured data rows.
+        data = [] if self.limit_value == 0 else self.client.rows.get(self.table_name, [])[: self.limit_value]
+        return Response(self.client.counts.get(self.table_name, 0), data)
 
 
 class Client:
-    def __init__(self, *, failures=None, counts=None):
+    def __init__(self, *, failures=None, counts=None, rows=None):
         self.failures = failures or {}
         self.counts = counts or {}
+        self.rows = rows or {}
         self.calls = []
 
     def table(self, name):
@@ -45,17 +48,18 @@ class Client:
         return Query(self, name)
 
 
-def test_probe_uses_exact_required_columns_and_bounded_select_only():
+def test_probe_uses_exact_required_columns_and_zero_row_select_only():
     client = Client()
     result = probe_schema(client)
     assert result["all_ready"] is True
+    assert result["zero_row_probe"] is True
     assert result["blocked_tables"] == []
     assert set(result["ready_tables"]) == set(TABLE_COLUMNS)
 
     for table, columns in TABLE_COLUMNS.items():
         assert ("table", table) in client.calls
         assert ("select", table, ",".join(columns), "exact") in client.calls
-        assert ("limit", table, 1) in client.calls
+        assert ("limit", table, 0) in client.calls
         assert ("execute", table) in client.calls
 
     assert all(call[0] in {"table", "select", "limit", "execute"} for call in client.calls)
@@ -82,10 +86,18 @@ def test_empty_table_is_schema_ready_and_count_is_preserved():
     assert row["status"] == "READY"
     assert row["row_count"] == 0
     assert row["sample_rows_returned"] == 0
+    assert row["zero_row_probe"] is True
 
 
-def test_nonzero_count_is_reported_without_fetching_more_than_one_row():
-    client = Client(counts={"league_multi_market_settlements": 42})
+def test_nonzero_count_is_reported_without_returning_any_payload_or_outcome_row():
+    client = Client(
+        counts={"league_multi_market_settlements": 42},
+        rows={
+            "league_multi_market_settlements": [
+                {"settlement_key": "secret-row", "payload": {"outcome": {"home_goals": 9}}}
+            ]
+        },
+    )
     row = probe_table(
         client,
         "league_multi_market_settlements",
@@ -93,4 +105,6 @@ def test_nonzero_count_is_reported_without_fetching_more_than_one_row():
     )
     assert row["status"] == "READY"
     assert row["row_count"] == 42
-    assert ("limit", "league_multi_market_settlements", 1) in client.calls
+    assert row["sample_rows_returned"] == 0
+    assert row["zero_row_probe"] is True
+    assert ("limit", "league_multi_market_settlements", 0) in client.calls
