@@ -2,8 +2,6 @@ name: Eredivisie Odds Snapshots
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "38 */2 * * *"
 
 concurrency:
   group: eredivisie-odds-snapshots
