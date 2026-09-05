@@ -1,0 +1,124 @@
+{
+  "id": "TURKEY_PORTUGAL_STRUCTURAL_V2_CALIBRATION_V1_RESULT",
+  "preregistration_id": "TURKEY_PORTUGAL_STRUCTURAL_V2_CALIBRATION_V1",
+  "evaluation_run_id": 33965220775,
+  "evaluation_head_sha": "385331fcb1799749fd053e9dc67393c9a35db9e4",
+  "evaluation_artifact_id": 9969216176,
+  "evaluation_artifact_sha256": "2fc4f5f5dd4f8d95466cfafb4b37b5f6e5c1ce89276abff756f9ced3ce2b29b5",
+  "status": "HISTORICAL_OOS_EVALUATED_RESEARCH_ONLY",
+  "research_only": true,
+  "runtime_mutation": false,
+  "automatic_promotion": false,
+  "production_artifacts_unchanged": true,
+  "odds_api_requests": 0,
+  "supabase_operations": 0,
+  "runtime_calibration_status_after_research": "CALIBRATION_REQUIRED",
+  "leagues": {
+    "TURKEY_SUPER_LIG": {
+      "market_valid_rows": 3352,
+      "outer_oos_rows": 1716,
+      "outer_folds": 5,
+      "market_only_folds": 0,
+      "structural_candidate_folds": 5,
+      "weighted_logloss_delta": -0.0010542716010495574,
+      "weighted_brier_delta": -0.0004530200963225977,
+      "weighted_accuracy_delta": 0.0,
+      "argmax_changes": 0,
+      "research_conclusion": "HISTORICAL_OOS_SIGNAL_OBSERVED",
+      "runtime_action": "NONE_REQUIRES_SEPARATE_EXPLICIT_REVIEW_AND_PR",
+      "outer_fold_results": [
+        {
+          "test_season": "2021-2022",
+          "selected_candidate": {"alpha": 0.25, "threshold": 1.0},
+          "logloss_delta": -0.00031803207411440493,
+          "brier_delta": -0.00022848961221932917,
+          "argmax_changes": 0
+        },
+        {
+          "test_season": "2022-2023",
+          "selected_candidate": {"alpha": 0.25, "threshold": 1.0},
+          "logloss_delta": -0.00012410022616138328,
+          "brier_delta": -0.0001105128994862703,
+          "argmax_changes": 0
+        },
+        {
+          "test_season": "2023-2024",
+          "selected_candidate": {"alpha": 0.2, "threshold": 0.5},
+          "logloss_delta": -0.002881914761241555,
+          "brier_delta": -0.0013455863631861575,
+          "argmax_changes": 0
+        },
+        {
+          "test_season": "2024-2025",
+          "selected_candidate": {"alpha": 0.2, "threshold": 0.75},
+          "logloss_delta": -0.0017567576316169786,
+          "brier_delta": -0.0006632737458167615,
+          "argmax_changes": 0
+        },
+        {
+          "test_season": "2025-2026",
+          "selected_candidate": {"alpha": 0.25, "threshold": 0.75},
+          "logloss_delta": 0.0001409342979407091,
+          "brier_delta": 0.0002627742026533042,
+          "argmax_changes": 0
+        }
+      ]
+    },
+    "PRIMEIRA_LIGA": {
+      "market_valid_rows": 3058,
+      "outer_oos_rows": 1528,
+      "outer_folds": 5,
+      "market_only_folds": 0,
+      "structural_candidate_folds": 5,
+      "weighted_logloss_delta": -0.0005029266108470644,
+      "weighted_brier_delta": 0.0001820944975439356,
+      "weighted_accuracy_delta": 0.0,
+      "argmax_changes": 0,
+      "research_conclusion": "CALIBRATION_NOT_SUPPORTED_OR_INCONSISTENT",
+      "runtime_action": "NONE_REQUIRES_SEPARATE_EXPLICIT_REVIEW_AND_PR",
+      "outer_fold_results": [
+        {
+          "test_season": "2021-2022",
+          "selected_candidate": {"alpha": 0.25, "threshold": 0.5},
+          "logloss_delta": 0.0005607169428649694,
+          "brier_delta": 0.0016891388598117008,
+          "argmax_changes": 0
+        },
+        {
+          "test_season": "2022-2023",
+          "selected_candidate": {"alpha": 0.25, "threshold": 0.75},
+          "logloss_delta": -0.0035053807667360104,
+          "brier_delta": -0.0020373006013251205,
+          "argmax_changes": 0
+        },
+        {
+          "test_season": "2023-2024",
+          "selected_candidate": {"alpha": 0.25, "threshold": 1.0},
+          "logloss_delta": 0.001133930231007274,
+          "brier_delta": 0.000847517381693863,
+          "argmax_changes": 0
+        },
+        {
+          "test_season": "2024-2025",
+          "selected_candidate": {"alpha": 0.25, "threshold": 0.75},
+          "logloss_delta": 0.001193329201994331,
+          "brier_delta": 0.0009800951490309684,
+          "argmax_changes": 0
+        },
+        {
+          "test_season": "2025-2026",
+          "selected_candidate": {"alpha": 0.25, "threshold": 1.0},
+          "logloss_delta": -0.0019035646457259414,
+          "brier_delta": -0.0005713062450753981,
+          "argmax_changes": 0
+        }
+      ]
+    }
+  },
+  "decision": {
+    "turkey": "RETAIN_HISTORICAL_RESEARCH_SIGNAL_ONLY_NO_RUNTIME_ACTIVATION",
+    "portugal": "DO_NOT_CALIBRATE_FROM_THIS_V1_RESULT",
+    "runtime": "KEEP_BOTH_LEAGUES_CALIBRATION_REQUIRED",
+    "next_runtime_gate": "SEPARATE_EXPLICIT_REVIEW_AND_PR_AFTER_CURRENT_SEASON_IDENTITY_AND_PROSPECTIVE_EVIDENCE_ARE_AVAILABLE"
+  }
+}
