@@ -1,0 +1,75 @@
+name: Turkey Portugal Team Identity
+
+on:
+  pull_request:
+    paths:
+      - 'audit_turkey_portugal_team_identity.py'
+      - 'tests/test_turkey_portugal_team_identity.py'
+      - 'turkey_super_lig_runtime_config.py'
+      - 'primeira_liga_runtime_config.py'
+      - '.github/workflows/turkey-portugal-team-identity.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'audit_turkey_portugal_team_identity.py'
+      - 'tests/test_turkey_portugal_team_identity.py'
+      - 'turkey_super_lig_runtime_config.py'
+      - 'primeira_liga_runtime_config.py'
+      - '.github/workflows/turkey-portugal-team-identity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install pandas requests pytest
+      - name: Compile team identity audit
+        run: python -m py_compile audit_turkey_portugal_team_identity.py
+      - name: Run team identity tests
+        run: PYTHONPATH=. pytest -q tests/test_turkey_portugal_team_identity.py
+      - name: Guard production model artifacts
+        if: github.event_name == 'pull_request'
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$' && exit 1 || true
+
+  live-read-only-audit:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install pandas requests supabase python-dotenv
+      - name: Check read-only source secrets
+        run: |
+          python - <<'PY'
+          import os
+          missing=[key for key in ('SUPABASE_URL','SUPABASE_KEY') if not os.getenv(key)]
+          if missing: raise SystemExit('Missing Supabase secrets: '+', '.join(missing))
+          print('PASS: Supabase read credentials present; values not printed')
+          PY
+      - name: Run zero-Odds-API team identity audit
+        run: python audit_turkey_portugal_team_identity.py --output artifacts/turkey_portugal_team_identity.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: turkey-portugal-team-identity
+          path: artifacts/turkey_portugal_team_identity.json
+          if-no-files-found: error
