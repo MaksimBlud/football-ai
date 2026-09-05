@@ -2,6 +2,8 @@ name: Serie A Results Sync
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "2 */12 * * *"
 
 concurrency:
   group: serie-a-results-sync
@@ -15,7 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
     steps:
@@ -31,13 +32,13 @@ jobs:
         run: |
           python - <<'PY'
           import os
-          required = ("THE_ODDS_API_KEY", "SUPABASE_URL", "SUPABASE_KEY")
+          required = ("SUPABASE_URL", "SUPABASE_KEY")
           missing = [name for name in required if not os.getenv(name)]
           if missing:
               raise SystemExit("Missing Serie A results secrets: " + ", ".join(missing))
-          print("PASS: Serie A results secrets available; values not printed")
+          print("PASS: Serie A results Supabase secrets available; values not printed")
           PY
-      - name: Sync immutable Serie A finished results
+      - name: Sync immutable Serie A finished results from public CSV
         run: python update_serie_a_results.py --write
       - name: Evaluate settled Serie A predictions
         run: python evaluate_serie_a_predictions.py
