@@ -31,6 +31,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -39,7 +41,7 @@ jobs:
       - name: Compile historical audit modules
         run: python -m py_compile audit_turkey_portugal_historical_foundation.py league_offline_history.py league_offline_features.py
       - name: Run historical foundation tests
-        run: pytest -q tests/test_turkey_portugal_historical_foundation.py test_league_offline_history_completeness.py
+        run: PYTHONPATH=. pytest -q tests/test_turkey_portugal_historical_foundation.py test_league_offline_history_completeness.py
       - name: Guard production model artifacts
         if: github.event_name == 'pull_request'
         run: |
