@@ -1,0 +1,68 @@
+name: Turkey Portugal Historical Foundation
+
+on:
+  pull_request:
+    paths:
+      - 'audit_turkey_portugal_historical_foundation.py'
+      - 'tests/test_turkey_portugal_historical_foundation.py'
+      - 'league_offline_history.py'
+      - 'league_offline_features.py'
+      - 'turkey_super_lig_runtime_config.py'
+      - 'primeira_liga_runtime_config.py'
+      - '.github/workflows/turkey-portugal-historical-foundation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'audit_turkey_portugal_historical_foundation.py'
+      - 'tests/test_turkey_portugal_historical_foundation.py'
+      - 'league_offline_history.py'
+      - 'league_offline_features.py'
+      - 'turkey_super_lig_runtime_config.py'
+      - 'primeira_liga_runtime_config.py'
+      - '.github/workflows/turkey-portugal-historical-foundation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install pandas requests pytest
+      - name: Compile historical audit modules
+        run: python -m py_compile audit_turkey_portugal_historical_foundation.py league_offline_history.py league_offline_features.py
+      - name: Run historical foundation tests
+        run: PYTHONPATH=. pytest -q tests/test_turkey_portugal_historical_foundation.py test_league_offline_history_completeness.py
+      - name: Guard production model artifacts
+        if: github.event_name == 'pull_request'
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$' && exit 1 || true
+
+  live-public-data-audit:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install pandas requests
+      - name: Run zero-cost Football-Data historical audit
+        run: python audit_turkey_portugal_historical_foundation.py --output artifacts/turkey_portugal_historical_foundation.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: turkey-portugal-historical-foundation
+          path: artifacts/turkey_portugal_historical_foundation.json
+          if-no-files-found: error
