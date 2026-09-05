@@ -34,12 +34,19 @@ def test_operational_workflows_do_not_load_or_train_production_models():
             assert token not in source
 
 
-def test_workflow_schedules_are_non_overlapping_and_paid_odds_is_manual_only():
+def test_paid_eredivisie_provider_workflows_are_manual_only_and_guarded():
     odds = _read("eredivisie-odds-snapshots.yml")
-    assert "workflow_dispatch:" in odds
-    assert "cron:" not in odds
+    results = _read("eredivisie-results.yml")
+    for source in (odds, results):
+        assert "workflow_dispatch:" in source
+        assert "cron:" not in source
+        assert "push:" not in source
+    assert "python odds_api_budget_guard.py --max-cost 1" in odds
+    assert "python odds_api_budget_guard.py --max-cost 2" in results
+
+    # The downstream live cycle works from already persisted state and can
+    # remain scheduled because it is not the paid provider collection path.
     assert 'cron: "58 */2 * * *"' in _read("eredivisie-live-cycle.yml")
-    assert 'cron: "23 */12 * * *"' in _read("eredivisie-results.yml")
 
 
 def test_eredivisie_odds_does_not_collide_with_ligue1_live_cycle():
