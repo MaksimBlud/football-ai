@@ -7,13 +7,12 @@ from database import supabase
 from league_config import get_league_config
 from multi_market_card import build_multi_market_card
 from multi_market_odds import EVENT_MARKETS, fetch_event_markets, fetch_quota_status
+from multi_market_policy import HARD_RESERVE_REQUESTS, START_MIN_REQUESTS_REMAINING
 
 TABLE = "league_multi_market_snapshots"
 SOURCE_TABLE = "odds_snapshots"
 LOOKAHEAD_HOURS = 24
 MIN_INTERVAL_HOURS = 6
-START_MIN_REQUESTS_REMAINING = 500
-HARD_RESERVE_REQUESTS = 100
 PAGE_SIZE = 1000
 
 
