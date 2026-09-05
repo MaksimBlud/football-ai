@@ -15,12 +15,11 @@ def test_registry_has_unique_ids_and_expected_active_closed_split():
     assert len(ids) == len(set(ids))
     closed = [block for block in blocks if block["status"].startswith("CLOSED_")]
     active = [block for block in blocks if block["status"].startswith("ACTIVE_")]
-    assert len(closed) >= 3
+    assert len(closed) >= 4
     assert {block["id"] for block in active} == {
         "PROSPECTIVE_AVAILABILITY_SIGNAL_LAB",
         "PROSPECTIVE_MARKET_PATH_V1",
         "LA_LIGA_MARKET_HOME_60_70_V1",
-        "TURKEY_PORTUGAL_STRUCTURAL_V2_CALIBRATION_V1",
     }
 
 
@@ -81,14 +80,16 @@ def test_la_liga_60_70_is_operationally_closed_but_scientifically_active():
     assert Path(block["operational_closure_document"]).is_file()
 
 
-def test_turkey_portugal_structural_v2_is_preregistered_without_runtime_activation():
+def test_turkey_portugal_structural_v2_is_closed_without_runtime_activation():
     block = _block("TURKEY_PORTUGAL_STRUCTURAL_V2_CALIBRATION_V1")
-    assert block["status"] == "ACTIVE_PREREGISTERED"
-    assert block["frozen_protocol"] is True
-    assert block["outcome_scoring_before_readiness"] is False
-    assert block["cross_league_parameter_transfer"] is False
+    assert block["status"] == "CLOSED_RESEARCH_ONLY_MIXED_OUTCOME"
     assert block["runtime_status"] == "CALIBRATION_REQUIRED"
     assert block["automatic_promotion"] is False
-    assert block["negative_result_is_valid"] is True
-    assert Path(block["status_document"]).is_file()
+    assert block["cross_league_parameter_transfer"] is False
+    assert block["retune_on_seen_sample"] is False
+    assert block["decision"] == (
+        "turkey_historical_oos_signal_observed_portugal_calibration_not_supported_no_runtime_activation"
+    )
     assert Path(block["protocol_document"]).is_file()
+    assert Path(block["result_document"]).is_file()
+    assert Path(block["closure_document"]).is_file()
