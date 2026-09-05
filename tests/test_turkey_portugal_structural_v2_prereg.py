@@ -65,7 +65,8 @@ def test_runtime_configs_remain_uncalibrated():
         assert structural.calibration_status == "CALIBRATION_REQUIRED"
         assert structural.structural_alpha is None
         assert structural.edge_threshold is None
-        assert structural.mode == "SHADOW"
+        assert structural.prediction_source == "STRUCTURAL_EDGE_V2_SHADOW"
+        config.validate()
 
 
 def test_research_result_cannot_activate_runtime():
