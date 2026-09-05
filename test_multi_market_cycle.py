@@ -42,7 +42,7 @@ def test_cycle_does_not_call_collect_when_schema_blocked():
         calls["collect"] += 1
         return {"fetched": 1}
 
-    result = run_cycle(client, quota, collect)
+    result = run_cycle(client, quota, collect, collection_enabled=True)
     assert result["action"] == "NOOP_BLOCKED"
     assert result["collection_called"] is False
     assert result["paid_provider_requests"] == 0
@@ -58,6 +58,7 @@ def test_cycle_does_not_call_collect_when_quota_below_threshold():
         client,
         lambda: {"remaining": "207", "last_cost": "0"},
         lambda: calls.__setitem__("collect", calls["collect"] + 1) or {"fetched": 1},
+        collection_enabled=True,
     )
     assert result["action"] == "NOOP_BLOCKED"
     assert result["readiness"]["quota_ready"] is False
@@ -66,7 +67,23 @@ def test_cycle_does_not_call_collect_when_quota_below_threshold():
     assert calls["collect"] == 0
 
 
-def test_cycle_calls_collect_only_when_all_collection_gates_ready():
+def test_ready_infrastructure_still_requires_explicit_activation():
+    client = FakeClient()
+    calls = {"collect": 0}
+
+    result = run_cycle(
+        client,
+        lambda: {"remaining": "700", "last_cost": "0"},
+        lambda: calls.__setitem__("collect", calls["collect"] + 1) or {"fetched": 1},
+    )
+    assert result["action"] == "NOOP_ACTIVATION_REQUIRED"
+    assert result["collection_activation_enabled"] is False
+    assert result["collection_called"] is False
+    assert result["paid_provider_requests"] == 0
+    assert calls["collect"] == 0
+
+
+def test_cycle_calls_collect_only_when_all_gates_and_activation_ready():
     client = FakeClient()
     calls = {"collect": 0}
 
@@ -78,8 +95,10 @@ def test_cycle_calls_collect_only_when_all_collection_gates_ready():
         client,
         lambda: {"remaining": "700", "last_cost": "0"},
         collect,
+        collection_enabled=True,
     )
     assert result["action"] == "COLLECTION_ATTEMPTED"
+    assert result["collection_activation_enabled"] is True
     assert result["collection_called"] is True
     assert result["paid_provider_requests"] == 2
     assert calls["collect"] == 1
