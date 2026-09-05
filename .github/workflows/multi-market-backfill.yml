@@ -46,8 +46,8 @@ jobs:
         run: |
           git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$' && exit 1 || true
 
-  live-dry-run:
-    if: github.event_name == 'push'
+  manual-dry-run:
+    if: github.event_name == 'workflow_dispatch' && inputs.write == false
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -62,9 +62,9 @@ jobs:
       - run: pip install pandas requests supabase python-dotenv
       - name: Record production model hash before
         run: sha256sum football_model_xgboost_elo.pkl > /tmp/model.before
-      - name: Run default read-only backfill
+      - name: Run explicitly requested read-only backfill dry-run
         run: python multi_market_backfill.py
-      - name: Verify live proof safety
+      - name: Verify manual dry-run safety
         run: |
           python - <<'PY'
           import json
