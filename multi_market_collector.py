@@ -1,6 +1,6 @@
 """Quota-safe append-only Multi-Market V1 collector."""
 from __future__ import annotations
-import hashlib, json
+import hashlib, json, os
 from datetime import UTC, datetime, timedelta
 import pandas as pd
 from database import supabase
@@ -18,6 +18,16 @@ EVENT_ID_BATCH_SIZE = 100
 
 
 def _utc(value): return pd.to_datetime(value, utc=True, errors="coerce")
+
+
+def _request_cap(explicit=None):
+    value = explicit if explicit is not None else os.getenv("MULTI_MARKET_MAX_PAID_REQUESTS")
+    if value in (None, ""):
+        return None
+    cap = int(value)
+    if cap < 1:
+        raise ValueError("max paid requests must be >= 1")
+    return cap
 
 
 def load_future_events(now_utc):
@@ -71,18 +81,20 @@ def _key(league, event_id, ts):
     return hashlib.sha256(f"{league}|{event_id}|{ts.isoformat()}|MULTI_MARKET_V1".encode()).hexdigest()
 
 
-def collect(now_utc=None):
+def collect(now_utc=None, *, max_paid_requests=None):
     now_utc = now_utc or datetime.now(UTC)
+    request_cap = _request_cap(max_paid_requests)
     quota_before = fetch_quota_status()  # /sports is zero-cost at the provider.
     remaining = quota_before.get("remaining")
     if remaining is not None and int(remaining) < START_MIN_REQUESTS_REMAINING:
         return {"quota_blocked": True, "quota_before": quota_before, "provider_paid_requests": 0,
-                "reason": f"remaining<{START_MIN_REQUESTS_REMAINING}"}
+                "max_paid_requests": request_cap, "reason": f"remaining<{START_MIN_REQUESTS_REMAINING}"}
 
     events = load_future_events(now_utc)
     latest = load_latest_collection_times([str(e["event_id"]) for e in events])
     summary = {"quota_blocked": False, "quota_before": quota_before, "eligible_events": len(events), "fetched": 0,
-               "inserted": 0, "skipped_recent": 0, "skipped_unsupported": 0, "quota_stop": False}
+               "inserted": 0, "skipped_recent": 0, "skipped_unsupported": 0, "quota_stop": False,
+               "max_paid_requests": request_cap, "request_cap_stop": False}
     for event in events:
         league, event_id = str(event["league"]), str(event["event_id"])
         config = get_league_config(league)
@@ -91,6 +103,8 @@ def collect(now_utc=None):
         previous = latest.get((league, event_id))
         if previous and now_utc - previous < timedelta(hours=MIN_INTERVAL_HOURS):
             summary["skipped_recent"] += 1; continue
+        if request_cap is not None and summary["fetched"] >= request_cap:
+            summary["request_cap_stop"] = True; break
         payload, quota = fetch_event_markets(config.odds_api_sport_key, event_id, regions="eu", markets=EVENT_MARKETS)
         summary["fetched"] += 1
         snapshot_time, kickoff = datetime.now(UTC), _utc(event["commence_time_utc"])
