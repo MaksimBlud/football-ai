@@ -10,8 +10,11 @@ SCHEDULED_OPERATIONAL_WORKFLOWS = (
     "la-liga-live-cycle.yml",
     "rpl-live-cycle.yml",
     "serie-a-live-cycle.yml",
+    "serie-a-results.yml",
     "bundesliga-live-cycle.yml",
+    "bundesliga-results.yml",
     "ligue1-live-cycle.yml",
+    "ligue1-results.yml",
     "eredivisie-live-cycle.yml",
     "eredivisie-results.yml",
 )
@@ -21,13 +24,16 @@ PAID_MANUAL_ONLY_WORKFLOWS = (
     "rpl-odds-snapshots.yml",
     "rpl-results.yml",
     "serie-a-odds-snapshots.yml",
-    "serie-a-results.yml",
     "bundesliga-odds-snapshots.yml",
-    "bundesliga-results.yml",
     "ligue1-odds-snapshots.yml",
-    "ligue1-results.yml",
     "eredivisie-odds-snapshots.yml",
     "turkey-portugal-market-only-cycle.yml",
+)
+
+FREE_CURRENT_RESULT_WORKFLOWS = (
+    "serie-a-results.yml",
+    "bundesliga-results.yml",
+    "ligue1-results.yml",
 )
 
 
@@ -64,19 +70,14 @@ def _slots(cron: str) -> set[tuple[int, int]]:
 
 
 def test_operational_scheduled_workflows_do_not_share_utc_slots():
-    schedules = {
-        name: _slots(_cron(WORKFLOW_DIR / name))
-        for name in SCHEDULED_OPERATIONAL_WORKFLOWS
-    }
-
+    schedules = {name: _slots(_cron(WORKFLOW_DIR / name)) for name in SCHEDULED_OPERATIONAL_WORKFLOWS}
     collisions = []
     names = list(schedules)
     for index, left in enumerate(names):
-        for right in names[index + 1 :]:
+        for right in names[index + 1:]:
             overlap = schedules[left] & schedules[right]
             if overlap:
                 collisions.append((left, right, sorted(overlap)))
-
     assert collisions == []
 
 
@@ -85,3 +86,12 @@ def test_paid_workflows_are_manual_only():
         source = (WORKFLOW_DIR / name).read_text()
         assert "workflow_dispatch:" in source, name
         assert _crons(WORKFLOW_DIR / name) == [], name
+
+
+def test_free_current_result_workflows_never_receive_odds_api_secret():
+    for name in FREE_CURRENT_RESULT_WORKFLOWS:
+        source = (WORKFLOW_DIR / name).read_text()
+        assert "workflow_dispatch:" in source, name
+        assert len(_crons(WORKFLOW_DIR / name)) == 1, name
+        assert "THE_ODDS_API_KEY" not in source, name
+        assert "update_football_data_results.py" in source, name
