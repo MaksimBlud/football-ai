@@ -9,7 +9,6 @@ GUARDED_PAID_WORKFLOWS = {
     "bundesliga-odds-snapshots.yml": 1,
     "ligue1-odds-snapshots.yml": 1,
     "eredivisie-odds-snapshots.yml": 1,
-    "eredivisie-results.yml": 2,
     "rpl-odds-snapshots.yml": 1,
     "rpl-results.yml": 2,
     # Two matrix jobs can each spend h2h=1 + scores=2. Each job reserves the
