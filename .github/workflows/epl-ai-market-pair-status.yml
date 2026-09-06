@@ -35,10 +35,10 @@ jobs:
               raise SystemExit("Missing research credentials: "+", ".join(missing))
           print("PASS: Supabase credentials available; no provider credential required")
           PY
-      - name: Require fresh outcome-free collection status
+      - name: Check unique-event collection action
         run: |
           set -o pipefail
-          python report_epl_ai_market_pair_collection_status.py --require-fresh | tee /tmp/epl-pair-status.json.log
+          python report_epl_ai_market_pair_collection_status.py --fail-on-action | tee /tmp/epl-pair-status.json.log
       - name: Upload status log
         if: always()
         uses: actions/upload-artifact@v4
