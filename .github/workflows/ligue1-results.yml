@@ -3,6 +3,11 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "49 */12 * * *"
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/ligue1-results.yml'
+      - 'update_ligue1_results.py'
 permissions:
   contents: read
 jobs:
@@ -17,5 +22,37 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: "3.12", cache: pip}
       - run: pip install pandas requests supabase python-dotenv
-      - run: python update_ligue1_results.py --write
+      - name: Sync immutable public finished results
+        run: python update_ligue1_results.py --write --status-json artifacts/ligue1_results_status.json
+      - name: Verify explicit provider-free result status
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('artifacts/ligue1_results_status.json')
+          if not path.exists():
+              raise SystemExit('missing Ligue 1 results status artifact')
+          p=json.loads(path.read_text())
+          assert p['league']=='LIGUE_1'
+          assert p['paid_provider_requests']==0
+          assert p['status'] in {'WRITTEN','SOURCE_UNAVAILABLE'}
+          if p['status']=='SOURCE_UNAVAILABLE':
+              assert int(p['public_http_requests'])==3
+              assert int(p['http_status']) in {429,500,502,503,504}
+              assert int(p['inserted'])==0
+              assert int(p['conflicts'])==0
+          print('status=',p['status'])
+          print('public_http_requests=',p.get('public_http_requests'))
+          print('inserted=',p.get('inserted'))
+          print('unchanged=',p.get('unchanged'))
+          print('conflicts=',p.get('conflicts'))
+          PY
+      - name: Upload public results status
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ligue1-results-status
+          path: artifacts/ligue1_results_status.json
+          if-no-files-found: error
       - run: python evaluate_ligue1_predictions.py
