@@ -161,6 +161,37 @@ def _resolve_league(ledger: pd.DataFrame, results: pd.DataFrame, league: str | N
     return next(iter(values))
 
 
+def ambiguous_event_ids(ledger: pd.DataFrame) -> set[str]:
+    """Return event ids whose ledger history contains multiple fixture identities.
+
+    Providers may retain one event id while moving kickoff time/date. Finished
+    results do not carry that provider event id, so choosing one historical
+    kickoff after the outcome is known would be retrospective identity repair.
+    Such events remain immutable in the ledger but are excluded from automatic
+    settlement until a separate explicit identity-resolution contract exists.
+    """
+    if ledger.empty:
+        return set()
+    required = {"event_id", "home_team", "away_team", "kickoff_utc"}
+    missing = required - set(ledger.columns)
+    if missing:
+        raise ValueError("Ledger missing ambiguity columns: " + ", ".join(sorted(missing)))
+
+    identities: dict[str, set[tuple[str, str, pd.Timestamp]]] = {}
+    for row in ledger.itertuples(index=False):
+        event_id = str(row.event_id).strip()
+        if not event_id:
+            continue
+        identities.setdefault(event_id, set()).add(
+            (
+                _team_key(row.home_team),
+                _team_key(row.away_team),
+                row.kickoff_utc,
+            )
+        )
+    return {event_id for event_id, values in identities.items() if len(values) > 1}
+
+
 def settle_predictions(
     ledger: pd.DataFrame,
     results: pd.DataFrame,
@@ -177,6 +208,12 @@ def settle_predictions(
     _assert_league(ledger, league, "Ledger")
     _assert_league(results, league, "Results")
     timezone = timezone or get_league_config(league).timezone
+
+    ambiguous = ambiguous_event_ids(ledger)
+    if ambiguous:
+        ledger = ledger.loc[~ledger["event_id"].astype(str).isin(ambiguous)].copy()
+        if ledger.empty:
+            return pd.DataFrame()
 
     ledger = ledger.copy()
     results = results.copy()
