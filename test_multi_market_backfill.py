@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pandas as pd
 
-from multi_market_backfill import load_paginated_rows, run_backfill
+from multi_market_backfill import ambiguous_snapshot_events, load_paginated_rows, run_backfill
 
 
 READY_SCHEMA = {"all_ready": True, "blocked_tables": [], "tables": []}
@@ -112,6 +112,55 @@ def test_source_unconfigured_league_never_constructs_or_fetches_corner_url():
     assert out["settlement_rows_built"] == 1
     assert out["status"] == "DRY_RUN_READY"
     assert out["writes_performed"] == 0
+
+
+def test_rescheduled_event_id_is_fail_closed_before_settlement():
+    old = snapshot("RPL", "Dinamo Moscow", "Spartak Moscow")
+    old["snapshot_key"] = "snap-old"
+    old["event_id"] = "event-rescheduled"
+    old["kickoff_utc"] = "2026-09-05T18:00:00+00:00"
+    old["snapshot_time_utc"] = "2026-09-05T12:00:00+00:00"
+
+    current = snapshot("RPL", "Dinamo Moscow", "Spartak Moscow")
+    current["snapshot_key"] = "snap-current"
+    current["event_id"] = "event-rescheduled"
+    current["kickoff_utc"] = "2026-09-05T14:00:00+00:00"
+    current["snapshot_time_utc"] = "2026-09-05T13:00:00+00:00"
+
+    res = result("RPL", "Dinamo Moscow", "Spartak Moscow")
+    persisted = []
+
+    out = run_backfill(
+        object(),
+        write=True,
+        probe_fn=lambda client: READY_SCHEMA,
+        snapshot_loader=lambda client: [old, current],
+        corner_loader=lambda client: [],
+        results_loader=lambda client, config: pd.DataFrame([res]),
+        corner_fetcher=lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("RPL must not fetch corner source")
+        ),
+        settlement_persist=lambda client, rows: persisted.extend(rows) or {
+            "inserted": len(persisted), "unchanged": 0, "conflicts": 0
+        },
+    )
+
+    assert ambiguous_snapshot_events([old, current]) == {("RPL", "event-rescheduled")}
+    assert out["ambiguous_snapshot_event_count"] == 1
+    assert out["ambiguous_snapshot_events"] == ["RPL:event-rescheduled"]
+    assert out["settlement_rows_built"] == 0
+    assert out["settlement_skips"] == {"AMBIGUOUS_EVENT_IDENTITY": 2}
+    assert out["settlement_persistence"] == {"inserted": 0, "unchanged": 0, "conflicts": 0}
+    assert persisted == []
+
+
+def test_same_event_id_same_fixture_identity_is_not_ambiguous():
+    first = snapshot("RPL", "Dinamo Moscow", "Spartak Moscow")
+    second = dict(first)
+    second["snapshot_key"] = "snap-second"
+    second["snapshot_time_utc"] = "2026-09-05T11:00:00+00:00"
+
+    assert ambiguous_snapshot_events([first, second]) == set()
 
 
 def test_supported_corner_source_reconciles_and_builds_complete_settlement():
