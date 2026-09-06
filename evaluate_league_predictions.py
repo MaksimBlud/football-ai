@@ -14,6 +14,7 @@ import pandas as pd
 
 from database import supabase
 from league_config import get_league_config
+from league_supabase_persistence import _fetch_league_rows
 from team_names import normalize_team_name
 
 LEDGER_TABLE = "league_prediction_ledger"
@@ -51,28 +52,26 @@ class EvaluationReport:
     latest_pre_kickoff: EvaluationMetrics
 
 
-def _response_rows(response):
-    return list(getattr(response, "data", None) or [])
-
-
 def load_ledger(league: str) -> pd.DataFrame:
-    response = (
-        supabase.table(LEDGER_TABLE)
-        .select("*")
-        .eq("league", league)
-        .execute()
+    """Load the complete league ledger with deterministic pagination."""
+    rows = _fetch_league_rows(
+        supabase,
+        LEDGER_TABLE,
+        league,
+        order_fields=("snapshot_time_utc", "event_id", "prediction_key"),
     )
-    return pd.DataFrame(_response_rows(response))
+    return pd.DataFrame(rows)
 
 
 def load_results(league: str) -> pd.DataFrame:
-    response = (
-        supabase.table(RESULT_TABLE)
-        .select("*")
-        .eq("league", league)
-        .execute()
+    """Load all immutable league results without relying on server row caps."""
+    rows = _fetch_league_rows(
+        supabase,
+        RESULT_TABLE,
+        league,
+        order_fields=("match_date", "season", "home_team", "away_team"),
     )
-    return pd.DataFrame(_response_rows(response))
+    return pd.DataFrame(rows)
 
 
 def _team_key(value) -> str:
