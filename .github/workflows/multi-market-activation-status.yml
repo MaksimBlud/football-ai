@@ -8,6 +8,7 @@ on:
     paths:
       - 'multi_market_activation_status.py'
       - 'test_multi_market_activation_status.py'
+      - 'test_multi_market_readiness_workflow.py'
       - 'multi_market_schema_probe.py'
       - 'multi_market_collector.py'
       - 'multi_market_odds.py'
@@ -28,6 +29,7 @@ on:
     paths:
       - 'multi_market_activation_status.py'
       - 'test_multi_market_activation_status.py'
+      - 'test_multi_market_readiness_workflow.py'
       - 'multi_market_schema_probe.py'
       - 'multi_market_collector.py'
       - 'multi_market_odds.py'
@@ -66,6 +68,7 @@ jobs:
       - name: Run mocked readiness tests
         run: >-
           pytest -q test_multi_market_activation_status.py
+          test_multi_market_readiness_workflow.py
           test_multi_market_schema_probe.py test_multi_market_sampling_plan.py
           test_multi_market_provider_capability_attestation.py
           test_multi_market_capability_attestation_readiness.py
@@ -113,7 +116,12 @@ jobs:
           att=p['provider_corner_capability_attestation']
           sources=p['provider_corner_capability_sources']
           assert stored['read_only'] is True
-          assert stored['rows_inspected'] <= stored['sample_limit']
+          assert int(stored['page_size']) > 0
+          assert int(stored['pages_inspected']) >= 0
+          assert int(stored['rows_inspected']) >= 0
+          assert isinstance(stored['scan_complete'], bool)
+          if stored['rows_inspected'] > 0:
+              assert stored['pages_inspected'] >= 1
           assert att['read_only'] is True
           assert sources['stored_snapshot_evidence'] == stored['capability_ready']
           assert sources['reviewed_attestation'] == bool(att['valid'] and att['capability_ready'])
