@@ -2,6 +2,7 @@ from pathlib import Path
 
 
 WORKFLOW = Path(".github/workflows/odds-snapshots.yml")
+LIVE_CYCLE_WORKFLOW = Path(".github/workflows/epl-live-cycle.yml")
 REQUIREMENTS = Path("requirements.txt")
 
 
@@ -30,3 +31,12 @@ def test_epl_odds_workflow_does_not_train_or_promote_models():
 
     for token in forbidden:
         assert token not in workflow
+
+
+def test_epl_live_cycle_does_not_claim_automatic_paid_snapshot_schedule():
+    live_cycle = LIVE_CYCLE_WORKFLOW.read_text(encoding="utf-8")
+
+    assert "Paid EPL odds snapshots are intentionally manual-only" in live_cycle
+    assert "Odds snapshots run at :17 every two hours" not in live_cycle
+    assert "THE_ODDS_API_KEY" not in live_cycle
+    assert "scheduled_odds_snapshot.py" not in live_cycle
