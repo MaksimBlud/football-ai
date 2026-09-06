@@ -54,8 +54,10 @@ def test_missing_preregistered_target_blocks_before_quota_or_provider():
     )
     assert result["status"] == "BLOCKED"
     assert result["blocker"] == "PREREGISTERED_TARGET_NOT_FOUND"
+    assert result["provider_request_attempted"] is False
     assert result["paid_provider_requests"] == 0
     assert result["paid_provider_credits"] == 0
+    assert result["paid_provider_credit_cost_known"] is True
     assert result["writes_performed"] is False
     assert calls == []
 
@@ -98,9 +100,33 @@ def test_hard_reserve_blocks_before_paid_provider_call():
     )
     assert result["status"] == "BLOCKED"
     assert result["blocker"] == "HARD_RESERVE_PROTECTED"
+    assert result["provider_request_attempted"] is False
     assert result["paid_provider_requests"] == 0
     assert result["paid_provider_credits"] == 0
+    assert result["paid_provider_credit_cost_known"] is True
     assert calls == []
+
+
+def test_provider_exception_is_conservatively_accounted_as_one_attempt():
+    def event_call(*_args, **_kwargs):
+        raise RuntimeError("provider transport failed")
+
+    with pytest.raises(probe.ProviderRequestAttemptedError, match="provider transport failed") as caught:
+        probe.run_probe(
+            Client(),
+            lambda: {"remaining": "193", "used": "307", "last_cost": "0"},
+            event_call,
+            sport_key="soccer_france_ligue_one",
+            now_utc=NOW,
+        )
+
+    result = caught.value.result
+    assert result["target_verified"] is True
+    assert result["provider_request_attempted"] is True
+    assert result["paid_provider_requests"] == 1
+    assert result["paid_provider_credits"] is None
+    assert result["paid_provider_credit_cost_known"] is False
+    assert result["writes_performed"] is False
 
 
 def test_empty_corner_payload_is_one_request_capability_miss_without_write():
@@ -119,8 +145,10 @@ def test_empty_corner_payload_is_one_request_capability_miss_without_write():
     )
     assert result["status"] == "CAPABILITY_MISS"
     assert result["target_verified"] is True
+    assert result["provider_request_attempted"] is True
     assert result["paid_provider_requests"] == 1
     assert result["paid_provider_credits"] == 0
+    assert result["paid_provider_credit_cost_known"] is True
     assert result["corner_market_keys"] == []
     assert result["corner_bookmaker_keys"] == []
     assert result["writes_performed"] is False
@@ -146,8 +174,10 @@ def test_corner_payload_confirms_capability_inside_one_request_two_credit_cap():
         now_utc=NOW,
     )
     assert result["status"] == "CAPABILITY_CONFIRMED"
+    assert result["provider_request_attempted"] is True
     assert result["paid_provider_requests"] == 1
     assert result["paid_provider_credits"] == 2
+    assert result["paid_provider_credit_cost_known"] is True
     assert result["quota_after"]["remaining"] == "191"
     assert result["corner_market_keys"] == [
         "alternate_team_totals_corners",
@@ -158,8 +188,8 @@ def test_corner_payload_confirms_capability_inside_one_request_two_credit_cap():
     assert result["writes_performed"] is False
 
 
-def test_provider_cost_above_cap_fails_closed():
-    with pytest.raises(RuntimeError, match="outside cap"):
+def test_provider_cost_above_cap_fails_closed_with_known_cost_preserved():
+    with pytest.raises(probe.ProviderRequestAttemptedError, match="outside cap") as caught:
         probe.run_probe(
             Client(),
             lambda: {"remaining": "193", "used": "307", "last_cost": "0"},
@@ -167,10 +197,15 @@ def test_provider_cost_above_cap_fails_closed():
             sport_key="soccer_france_ligue_one",
             now_utc=NOW,
         )
+    result = caught.value.result
+    assert result["provider_request_attempted"] is True
+    assert result["paid_provider_requests"] == 1
+    assert result["paid_provider_credits"] == 3
+    assert result["paid_provider_credit_cost_known"] is True
 
 
 def test_provider_remaining_below_reserve_fails_closed():
-    with pytest.raises(RuntimeError, match="crossed hard reserve"):
+    with pytest.raises(probe.ProviderRequestAttemptedError, match="crossed hard reserve") as caught:
         probe.run_probe(
             Client(),
             lambda: {"remaining": "193", "used": "307", "last_cost": "0"},
@@ -178,3 +213,8 @@ def test_provider_remaining_below_reserve_fails_closed():
             sport_key="soccer_france_ligue_one",
             now_utc=NOW,
         )
+    result = caught.value.result
+    assert result["provider_request_attempted"] is True
+    assert result["paid_provider_requests"] == 1
+    assert result["paid_provider_credits"] == 2
+    assert result["paid_provider_credit_cost_known"] is True
