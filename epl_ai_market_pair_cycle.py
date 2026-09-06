@@ -22,6 +22,7 @@ from epl_ai_market_pair_collector import (
     load_model_bundle,
     verify_model_bundle_unchanged,
 )
+from research_model_features import coerce_numeric_history_like_production
 
 OUTPUT_DIR = Path("artifacts/epl_ai_market_pair_v1")
 PAIR_TABLE = "epl_ai_market_pair_ledger"
@@ -93,6 +94,7 @@ def main() -> None:
     )
     odds = _read_paginated("odds_snapshots", ODDS_COLUMNS, filters={"league": LEAGUE})
     history = _read_paginated("matches", HISTORY_COLUMNS, filters={"league": LEAGUE})
+    history = coerce_numeric_history_like_production(history)
 
     candidates = canonical_market_candidates(ledger, odds, now_utc=generated_at)
     pairs, excluded = build_pair_rows(
