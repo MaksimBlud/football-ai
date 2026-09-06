@@ -1,6 +1,10 @@
 from pathlib import Path
 
-from multi_market_activation_status import CORNER_SOURCE_READY_LEAGUES, build_status
+from multi_market_activation_status import (
+    CAPABILITY_PAGE_SIZE,
+    CORNER_SOURCE_READY_LEAGUES,
+    build_status,
+)
 from multi_market_policy import (
     EVENT_REQUEST_MAX_CREDITS,
     FEATURED_REQUEST_MAX_CREDITS,
@@ -11,11 +15,13 @@ from multi_market_policy import (
 
 
 CORNER_ROW = {
+    "snapshot_key": "corner-1",
     "league": "EPL",
     "event_id": "e1",
     "payload": {"provider_market_keys": ["spreads", "alternate_totals_corners"]},
 }
 NON_CORNER_ROW = {
+    "snapshot_key": "plain-1",
     "league": "EREDIVISIE",
     "event_id": "e0",
     "payload": {"provider_market_keys": ["spreads", "totals"]},
@@ -35,6 +41,8 @@ class Query:
         self.count_requested = False
         self.columns = ""
         self.limit_value = None
+        self.range_start = None
+        self.range_end = None
 
     def select(self, columns, count=None):
         self.columns = columns
@@ -51,15 +59,26 @@ class Query:
         self.client.calls.append(("limit", self.table_name, value))
         return self
 
+    def range(self, start, end):
+        self.range_start = start
+        self.range_end = end
+        self.client.calls.append(("range", self.table_name, start, end))
+        return self
+
     def execute(self):
         self.client.calls.append(("execute", self.table_name))
         if self.table_name in self.client.missing:
             raise RuntimeError("PGRST205 missing relation")
         if self.count_requested:
             return Response(self.client.counts.get(self.table_name, 0))
-        if self.table_name == "league_multi_market_snapshots" and self.columns == "league,event_id,payload":
+        if (
+            self.table_name == "league_multi_market_snapshots"
+            and self.columns == "snapshot_key,league,event_id,payload"
+        ):
             rows = list(self.client.snapshot_rows)
-            if self.limit_value is not None:
+            if self.range_start is not None:
+                rows = rows[self.range_start : self.range_end + 1]
+            elif self.limit_value is not None:
                 rows = rows[: self.limit_value]
             return Response(data=rows)
         return Response()
@@ -109,6 +128,7 @@ def test_failed_eredivisie_canary_blocks_collection_activation_but_not_infrastru
     assert status["provider_corner_capability_ready"] is False
     assert status["provider_corner_capability"]["rows_inspected"] == 2
     assert status["provider_corner_capability"]["corner_evidence_rows"] == 0
+    assert status["provider_corner_capability"]["scan_complete"] is True
     assert status["collection_ready"] is False
     assert status["activation_ready"] is False
     assert status["status"] == "INFRASTRUCTURE_READY_PROVIDER_CAPABILITY_UNPROVEN"
@@ -165,15 +185,57 @@ def test_only_audited_corner_source_leagues_are_marked_source_ready():
     assert all(v["source_ready"] for v in status["per_league_corner_readiness"].values())
 
 
-def test_provider_capability_probe_is_bounded_and_read_only():
-    status = build_status(Client(snapshot_rows=[CORNER_ROW] * 150), lambda: quota(999))
+def test_provider_capability_scan_is_read_only_and_stops_after_first_evidence_page():
+    rows = [dict(CORNER_ROW, snapshot_key=f"corner-{index}") for index in range(1500)]
+    client = Client(snapshot_rows=rows)
+    status = build_status(client, lambda: quota(999))
     capability = status["provider_corner_capability"]
     assert capability["read_only"] is True
-    assert capability["sample_limit"] == 100
-    assert capability["rows_inspected"] == 100
-    assert capability["corner_evidence_rows"] == 100
+    assert capability["page_size"] == CAPABILITY_PAGE_SIZE == 1000
+    assert capability["pages_inspected"] == 1
+    assert capability["rows_inspected"] == 1000
+    assert capability["corner_evidence_rows"] == 1000
     assert capability["corner_evidence_leagues"] == ["EPL"]
     assert capability["corner_market_keys"] == ["alternate_totals_corners"]
+    assert capability["capability_ready"] is True
+    assert ("range", "league_multi_market_snapshots", 0, 999) in client.calls
+    assert ("range", "league_multi_market_snapshots", 1000, 1999) not in client.calls
+
+
+def test_provider_capability_finds_historical_evidence_beyond_first_page():
+    rows = [
+        dict(NON_CORNER_ROW, snapshot_key=f"plain-{index:04d}")
+        for index in range(CAPABILITY_PAGE_SIZE)
+    ]
+    rows.append(dict(CORNER_ROW, snapshot_key="older-corner-evidence"))
+    client = Client(snapshot_rows=rows)
+
+    status = build_status(client, lambda: quota(999))
+    capability = status["provider_corner_capability"]
+
+    assert capability["capability_ready"] is True
+    assert capability["pages_inspected"] == 2
+    assert capability["rows_inspected"] == CAPABILITY_PAGE_SIZE + 1
+    assert capability["corner_evidence_rows"] == 1
+    assert capability["corner_evidence_leagues"] == ["EPL"]
+    assert capability["corner_market_keys"] == ["alternate_totals_corners"]
+    assert capability["scan_complete"] is True
+    assert ("range", "league_multi_market_snapshots", 0, 999) in client.calls
+    assert ("range", "league_multi_market_snapshots", 1000, 1999) in client.calls
+
+
+def test_provider_capability_scans_all_pages_before_declaring_unproven():
+    rows = [
+        dict(NON_CORNER_ROW, snapshot_key=f"plain-{index:04d}")
+        for index in range(CAPABILITY_PAGE_SIZE + 5)
+    ]
+    status = build_status(Client(snapshot_rows=rows), lambda: quota(999))
+    capability = status["provider_corner_capability"]
+    assert capability["capability_ready"] is False
+    assert capability["pages_inspected"] == 2
+    assert capability["rows_inspected"] == CAPABILITY_PAGE_SIZE + 5
+    assert capability["scan_complete"] is True
+    assert capability["corner_evidence_rows"] == 0
 
 
 def test_policy_changes_self_trigger_read_only_sampling_plan_workflow():
