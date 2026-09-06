@@ -5,12 +5,14 @@ import pandas as pd
 from report_epl_ai_market_pair_collection_status import (
     EXPERIMENT_ID,
     LEAGUE,
+    MANUAL_REVIEW_EXIT_CODE,
     PAIR_TABLE,
     SNAPSHOT_TABLE,
     _read_paginated,
     _required_interval_hours,
     build_status,
     load_live_status,
+    status_exit_code,
 )
 
 
@@ -107,6 +109,12 @@ def test_no_future_matches_uses_twenty_four_hour_cooldown():
     assert out["scheduler_required_interval_hours"] == 24
     assert out["scheduler_would_request_snapshot"] is False
     assert out["collection_status_reason"] == "NO_FUTURE_MATCH_COOLDOWN"
+
+
+def test_require_fresh_exit_code_is_actionable_but_does_not_trigger_any_call():
+    assert status_exit_code({"collection_status": "FRESH"}, require_fresh=True) == 0
+    assert status_exit_code({"collection_status": "MANUAL_REVIEW"}, require_fresh=False) == 0
+    assert status_exit_code({"collection_status": "MANUAL_REVIEW"}, require_fresh=True) == MANUAL_REVIEW_EXIT_CODE
 
 
 def test_live_status_reads_only_pair_and_snapshot_tables(monkeypatch, tmp_path):

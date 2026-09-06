@@ -1,6 +1,7 @@
 """Zero-cost, outcome-free collection status for EPL_AI_MARKET_PAIR_V1."""
 from __future__ import annotations
 
+import argparse
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,6 +17,7 @@ PAGE_SIZE = 1000
 MAX_PAGES = 20
 RECENT_SCHEDULER_ROWS = 100
 NO_FUTURE_MATCH_COOLDOWN_HOURS = 24
+MANUAL_REVIEW_EXIT_CODE = 4
 
 
 def _read_paginated(client, table: str, columns: str, *, filters: dict[str, str] | None = None) -> pd.DataFrame:
@@ -69,8 +71,6 @@ def build_status(*, pairs: pd.DataFrame, snapshots: pd.DataFrame, now_utc: pd.Ti
             latest_snapshot = latest_snapshot_ts.isoformat()
             snapshot_age_hours = float((now_utc - latest_snapshot_ts).total_seconds() / 3600)
 
-            # Match scheduled_odds_snapshot.py: reason about the most recent 100
-            # snapshot rows, not arbitrary older fixture history.
             recent = valid.sort_values("snapshot_time_utc", ascending=False).head(RECENT_SCHEDULER_ROWS)
             future = recent[recent["commence_time_utc"] > now_utc].copy()
             future_snapshot_events = int(future["event_id"].astype(str).nunique())
@@ -111,6 +111,12 @@ def build_status(*, pairs: pd.DataFrame, snapshots: pd.DataFrame, now_utc: pd.Ti
     }
 
 
+def status_exit_code(payload: dict, *, require_fresh: bool) -> int:
+    if require_fresh and payload.get("collection_status") != "FRESH":
+        return MANUAL_REVIEW_EXIT_CODE
+    return 0
+
+
 def load_live_status(client, *, now_utc: pd.Timestamp | None = None) -> dict:
     contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
     primary_cohort_size = int(contract["evaluation"]["primary_cohort_size"])
@@ -128,8 +134,19 @@ def load_live_status(client, *, now_utc: pd.Timestamp | None = None) -> dict:
 def main() -> None:
     from database import supabase
 
+    parser = argparse.ArgumentParser(description="Zero-cost EPL pair collection status")
+    parser.add_argument(
+        "--require-fresh",
+        action="store_true",
+        help="exit non-zero when manual review is required; never triggers provider calls",
+    )
+    args = parser.parse_args()
     payload = load_live_status(supabase)
     print(json.dumps(payload, indent=2, sort_keys=True))
+    code = status_exit_code(payload, require_fresh=args.require_fresh)
+    if code:
+        print("MANUAL_REVIEW: guarded paid snapshot may be due; no provider call was made")
+        raise SystemExit(code)
     print("PASS: zero-cost outcome-free EPL pair collection status complete")
 
 
