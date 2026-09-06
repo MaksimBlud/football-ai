@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -281,6 +283,92 @@ def test_empty_results_safe():
         report.latest_pre_kickoff.log_loss
         is None
     )
+
+
+class _PagedQuery:
+    def __init__(self, rows, ranges):
+        self.rows = rows
+        self.ranges = ranges
+        self.start = None
+        self.end = None
+
+    def select(self, _columns):
+        return self
+
+    def eq(self, _field, _value):
+        return self
+
+    def order(self, _field, desc=False):
+        assert desc is False
+        return self
+
+    def range(self, start, end):
+        self.start = start
+        self.end = end
+        self.ranges.append((start, end))
+        return self
+
+    def execute(self):
+        if self.start is None:
+            data = self.rows
+        else:
+            data = self.rows[self.start : self.end + 1]
+        return SimpleNamespace(data=data)
+
+
+class _PagedClient:
+    def __init__(self, tables):
+        self.tables = tables
+        self.ranges = {name: [] for name in tables}
+
+    def table(self, name):
+        return _PagedQuery(
+            self.tables[name],
+            self.ranges[name],
+        )
+
+
+def test_canonical_loaders_page_beyond_default_server_cap(monkeypatch):
+    ledger_rows = [
+        {
+            "league": "EPL",
+            "event_id": f"event-{index:04d}",
+            "snapshot_time_utc": f"2030-01-01T00:{index % 60:02d}:00Z",
+            "prediction_key": f"prediction-{index:04d}",
+        }
+        for index in range(1005)
+    ]
+    result_rows = [
+        {
+            "league": "EPL",
+            "match_date": "2030-01-01",
+            "season": "2029-30",
+            "home_team": f"Home {index:04d}",
+            "away_team": f"Away {index:04d}",
+        }
+        for index in range(1005)
+    ]
+    client = _PagedClient(
+        {
+            evaluator.LEDGER_TABLE: ledger_rows,
+            evaluator.RESULT_TABLE: result_rows,
+        }
+    )
+    monkeypatch.setattr(evaluator, "supabase", client)
+
+    ledger = evaluator.load_ledger("EPL")
+    results = evaluator.load_results("EPL")
+
+    assert len(ledger) == 1005
+    assert len(results) == 1005
+    assert client.ranges[evaluator.LEDGER_TABLE] == [
+        (0, 999),
+        (1000, 1999),
+    ]
+    assert client.ranges[evaluator.RESULT_TABLE] == [
+        (0, 999),
+        (1000, 1999),
+    ]
 
 
 def test_source_is_read_only():
