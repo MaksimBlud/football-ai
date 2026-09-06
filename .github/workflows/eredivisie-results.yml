@@ -38,25 +38,30 @@ jobs:
         run: |
           python - <<'PY'
           import os
-          required=("SUPABASE_URL","SUPABASE_KEY")
-          missing=[name for name in required if not os.getenv(name)]
-          if missing: raise SystemExit("Missing Eredivisie results secrets: " + ", ".join(missing))
+          required = ("SUPABASE_URL", "SUPABASE_KEY")
+          missing = [name for name in required if not os.getenv(name)]
+          if missing:
+              raise SystemExit("Missing Eredivisie results secrets: " + ", ".join(missing))
           print("PASS: Eredivisie results Supabase secrets available; values not printed")
           PY
       - name: Verify zero-cost public results source
         run: |
           python - <<'PY'
           from eredivisie_runtime_config import EREDIVISIE_RUNTIME_CONFIG
-          source=EREDIVISIE_RUNTIME_CONFIG.finished_results_source
-          assert source.provider=="FOOTBALL_DATA_CSV" and source.competition_code=="N1" and source.season_code=="2627"
+          source = EREDIVISIE_RUNTIME_CONFIG.finished_results_source
+          assert source.provider == "FOOTBALL_DATA_CSV"
+          assert source.competition_code == "N1"
+          assert source.season_code == "2627"
           print("PASS: Eredivisie results use public Football-Data N1/2627")
           PY
       - name: Verify Eredivisie MARKET_ONLY safety
         run: |
           python - <<'PY'
           from eredivisie_runtime_config import EREDIVISIE_RUNTIME_CONFIG
-          s=EREDIVISIE_RUNTIME_CONFIG.structural_v2
-          assert s.calibration_status=="CALIBRATION_REQUIRED" and s.structural_alpha is None and s.edge_threshold is None
+          s = EREDIVISIE_RUNTIME_CONFIG.structural_v2
+          assert s.calibration_status == "CALIBRATION_REQUIRED"
+          assert s.structural_alpha is None
+          assert s.edge_threshold is None
           print("PASS: Eredivisie remains MARKET_ONLY")
           PY
       - name: Sync immutable Eredivisie finished results
@@ -67,14 +72,16 @@ jobs:
           python - <<'PY'
           import json
           from pathlib import Path
-          p=json.loads(Path('artifacts/eredivisie_results_status.json').read_text())
-          assert p['league']=='EREDIVISIE' and p['paid_provider_requests']==0
-          assert p['status'] in {'WRITTEN','SOURCE_UNAVAILABLE'}
-          if p['status']=='SOURCE_UNAVAILABLE':
-              assert int(p['public_http_requests'])==3
-              assert int(p['http_status']) in {429,500,502,503,504}
-              assert int(p['inserted'])==0 and int(p['conflicts'])==0
-          print('status=',p['status'])
+          p = json.loads(Path('artifacts/eredivisie_results_status.json').read_text())
+          assert p['league'] == 'EREDIVISIE'
+          assert p['paid_provider_requests'] == 0
+          assert p['status'] in {'WRITTEN', 'SOURCE_UNAVAILABLE'}
+          if p['status'] == 'SOURCE_UNAVAILABLE':
+              assert int(p['public_http_requests']) == 3
+              assert int(p['http_status']) in {429, 500, 502, 503, 504}
+              assert int(p['inserted']) == 0
+              assert int(p['conflicts']) == 0
+          print('status=', p['status'])
           PY
       - name: Evaluate settled Eredivisie predictions only after successful result sync
         if: success()
