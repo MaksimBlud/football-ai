@@ -10,17 +10,11 @@ from epl_ai_market_pair_collector import (
     canonical_market_candidates,
     history_as_of_market_snapshot,
 )
+from research_model_features import FEATURES
 
 
 class DummyModel:
-    feature_names_in_ = np.array([
-        "home_odds", "draw_odds", "away_odds", "home_last5_points", "away_last5_points",
-        "form_difference", "home_goals_scored_last5", "home_goals_conceded_last5",
-        "away_goals_scored_last5", "away_goals_conceded_last5", "home_shots_last5",
-        "away_shots_last5", "home_shots_target_last5", "away_shots_target_last5",
-        "home_elo", "away_elo", "elo_difference", "home_venue_win_rate",
-        "away_venue_win_rate", "home_venue_goals_scored", "away_venue_goals_scored",
-    ])
+    feature_names_in_ = np.array(FEATURES)
 
     def predict_proba(self, frame):
         assert list(frame.columns) == list(self.feature_names_in_)
@@ -110,8 +104,7 @@ def test_canonical_market_candidate_rejects_invalid_latest_without_fallback():
 
 def test_canonical_market_candidate_rejects_valid_but_price_mismatched_latest():
     ledger = _ledger()
-    p = np.array([0.50, 0.30, 0.20])
-    ledger.loc[ledger["prediction_key"] == "latest", ["market_home_prob", "market_draw_prob", "market_away_prob"]] = p
+    ledger.loc[ledger["prediction_key"] == "latest", ["market_home_prob", "market_draw_prob", "market_away_prob"]] = [0.50, 0.30, 0.20]
     with pytest.raises(RuntimeError, match="do not reproduce"):
         canonical_market_candidates(ledger, _odds(), now_utc="2026-09-04T17:00:00Z")
 
