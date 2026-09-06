@@ -1,17 +1,18 @@
 from pathlib import Path
 
 
-def test_rpl_live_cycle_uses_serialized_shadow_before_durable_persistence():
+def test_rpl_live_cycle_uses_serialized_shadow_before_guarded_durable_persistence():
     source = Path("rpl_live_cycle.py").read_text(encoding="utf-8")
     run_cycle = source[source.index("def run_cycle") :]
     compact = "".join(run_cycle.split())
 
     serialized = compact.index("observation_mirror.load_market_shadow()")
     build = compact.index("observation_mirror.build_market_only_observations(persisted_shadow)")
-    persist = compact.index("persistence.persist_observations(")
-    ledger = compact.index("prediction_ledger.persist_current_predictions()")
+    guarded = compact.index("dual_write_guard.execute_dual_write(")
 
-    assert serialized < build < persist < ledger
+    assert serialized < build < guarded
+    assert "persistence.persist_observations(" not in compact
+    assert "prediction_ledger.persist_current_predictions()" not in compact
 
 
 def test_rpl_live_cycle_never_modifies_finished_results():
