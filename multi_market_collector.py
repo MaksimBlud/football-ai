@@ -212,7 +212,7 @@ def collect(now_utc=None, *, max_paid_requests=None, max_paid_credits=None):
         summary["event_requests"] += 1
 
         payload = merge_event_market_payloads(featured_by_league[league].get(event_id), corner_payload)
-        snapshot_time, kickoff = datetime.now(UTC), _utc(event["commence_time_utc"])
+        snapshot_time, kickoff = now_utc, _utc(event["commence_time_utc"])
         if not pd.isna(kickoff) and snapshot_time < kickoff.to_pydatetime():
             card = build_multi_market_card(payload)
             stored = {
