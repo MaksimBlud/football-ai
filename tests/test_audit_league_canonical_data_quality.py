@@ -39,6 +39,7 @@ def test_clean_canonical_state_has_no_critical_failures():
     assert report.post_ledger_alias_duplicate_result_rows == 0
     assert report.alias_conflicting_result_rows == 0
     assert report.missing_event_ids == 0
+    assert report.ambiguous_event_identities == 0
     assert report.unlinked_finished_results == 0
     assert report.critical_failures == 0
 
@@ -57,6 +58,19 @@ def test_unlinked_finished_result_is_diagnostic_not_critical():
     ], ignore_index=True)
     report = audit.audit_frames("EPL", ledger_frame(), results)
     assert report.unlinked_finished_results == 1
+    assert report.critical_failures == 0
+
+
+def test_rescheduled_event_identity_is_visible_but_not_critical():
+    first = ledger_frame()
+    second = ledger_frame(kickoff="2026-08-01T19:00:00Z")
+    second.loc[0, "snapshot_time_utc"] = "2026-08-01T13:30:00Z"
+    ledger = pd.concat([first, second], ignore_index=True)
+
+    report = audit.audit_frames("EPL", ledger, result_frame())
+
+    assert report.ambiguous_event_identities == 1
+    assert report.settled_fixtures == 0
     assert report.critical_failures == 0
 
 

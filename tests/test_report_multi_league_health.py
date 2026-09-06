@@ -30,6 +30,7 @@ def test_health_report_merges_coverage_and_audit_by_league():
             "post_ledger_alias_duplicate_result_rows": 0,
             "alias_conflicting_result_rows": 0,
             "missing_event_ids": 0,
+            "ambiguous_event_identities": 1,
             "unlinked_finished_results": 1,
             "critical_failures": 0,
         },
@@ -54,8 +55,10 @@ def test_health_report_merges_coverage_and_audit_by_league():
     assert by_league["EPL"]["alias_duplicate_result_rows"] == 6
     assert by_league["EPL"]["pre_ledger_alias_duplicate_result_rows"] == 6
     assert by_league["EPL"]["post_ledger_alias_duplicate_result_rows"] == 0
+    assert by_league["EPL"]["ambiguous_event_identities"] == 1
     assert by_league["EPL"]["critical_failures"] == 0
     assert by_league["RPL"]["alias_duplicate_result_rows"] == 0
+    assert by_league["RPL"]["ambiguous_event_identities"] == 0
     assert by_league["RPL"]["critical_failures"] == 2
 
 

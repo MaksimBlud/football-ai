@@ -54,6 +54,9 @@ def build_health_report(
                     "alias_conflicting_result_rows", 0
                 ),
                 "missing_event_ids": audit_row["missing_event_ids"],
+                "ambiguous_event_identities": audit_row.get(
+                    "ambiguous_event_identities", 0
+                ),
                 "unlinked_finished_results": audit_row["unlinked_finished_results"],
                 "critical_failures": audit_row["critical_failures"],
             }
@@ -77,6 +80,7 @@ def main() -> None:
             f"pre_ledger_alias_duplicates={row['pre_ledger_alias_duplicate_result_rows']}, "
             f"post_ledger_alias_duplicates={row['post_ledger_alias_duplicate_result_rows']}, "
             f"alias_conflicts={row['alias_conflicting_result_rows']}, "
+            f"ambiguous_event_ids={row['ambiguous_event_identities']}, "
             f"critical={row['critical_failures']}, "
             f"unlinked_results={row['unlinked_finished_results']}, "
             f"stage={row['data_stage']}"
