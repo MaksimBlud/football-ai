@@ -11,6 +11,9 @@ from multi_market_provider_capability_attestation import (
 )
 
 
+TRACKED_ATTESTATION = "research/multi_market_provider_corner_capability_attestation.json"
+
+
 def approved_payload():
     return {
         "schema_version": ATTESTATION_SCHEMA,
@@ -114,3 +117,20 @@ def test_contract_does_not_create_attestation_as_side_effect(tmp_path):
     path = tmp_path / "attestation.json"
     load_attestation(path)
     assert not path.exists()
+
+
+def test_paid_probe_cannot_self_attest_or_write_reviewed_capability():
+    probe = Path("multi_market_corner_capability_probe.py").read_text(encoding="utf-8")
+    workflow = Path(".github/workflows/multi-market-corner-capability-probe.yml").read_text(encoding="utf-8")
+    forbidden = (
+        "multi_market_provider_capability_attestation",
+        TRACKED_ATTESTATION,
+    )
+    for token in forbidden:
+        assert token not in probe
+        assert token not in workflow
+
+
+def test_readiness_self_proves_tracked_attestation_changes():
+    workflow = Path(".github/workflows/multi-market-activation-status.yml").read_text(encoding="utf-8")
+    assert workflow.count(f"- '{TRACKED_ATTESTATION}'") == 2
