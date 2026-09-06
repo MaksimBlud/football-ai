@@ -6,8 +6,10 @@ on:
     paths:
       - "epl_ai_market_pair_collector.py"
       - "epl_ai_market_pair_cycle.py"
+      - "epl_ai_market_pair_evaluation.py"
       - "research_model_features.py"
       - "tests/test_epl_ai_market_pair_collector.py"
+      - "tests/test_epl_ai_market_pair_evaluation.py"
       - "research/epl_ai_market_pair_v1.json"
       - "research/epl_ai_market_pair_ledger.sql"
       - ".github/workflows/epl-ai-market-pair-pr-validation.yml"
@@ -26,16 +28,19 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install pandas numpy joblib pytest supabase python-dotenv xgboost
-      - name: Compile research collector
-        run: python -m py_compile research_model_features.py epl_ai_market_pair_collector.py epl_ai_market_pair_cycle.py
+      - name: Compile research collector and frozen evaluator
+        run: python -m py_compile research_model_features.py epl_ai_market_pair_collector.py epl_ai_market_pair_cycle.py epl_ai_market_pair_evaluation.py
       - name: Run focused tests
-        run: python -m pytest -q tests/test_epl_ai_market_pair_collector.py
-      - name: Load tracked production artifact and verify feature schema
+        run: python -m pytest -q tests/test_epl_ai_market_pair_collector.py tests/test_epl_ai_market_pair_evaluation.py
+      - name: Load tracked production artifact and verify frozen hash
         run: |
           python - <<'PY'
           from epl_ai_market_pair_collector import load_model_bundle
+          from epl_ai_market_pair_evaluation import FROZEN_MODEL_SHA256
           bundle = load_model_bundle()
-          print("PASS: tracked production artifact loaded; SHA256=" + bundle.model_sha256)
+          if bundle.model_sha256 != FROZEN_MODEL_SHA256:
+              raise SystemExit(f"Frozen model hash mismatch: {bundle.model_sha256}")
+          print("PASS: frozen production artifact loaded; SHA256=" + bundle.model_sha256)
           PY
       - name: Enforce outcome-free scheduled collector
         run: |
