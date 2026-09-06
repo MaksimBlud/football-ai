@@ -74,8 +74,7 @@ def build_status(*, pairs: pd.DataFrame, snapshots: pd.DataFrame, now_utc: pd.Ti
             snapshot_age_hours = float((now_utc - latest_snapshot_ts).total_seconds() / 3600)
 
             recent = valid.sort_values("snapshot_time_utc", ascending=False).head(RECENT_SCHEDULER_ROWS)
-            future = recent[future_mask := (recent["commence_time_utc"] > now_utc)].copy()
-            del future_mask
+            future = recent[recent["commence_time_utc"] > now_utc].copy()
             future_snapshot_ids = set(future["event_id"].dropna().astype(str))
 
             if future.empty:
