@@ -1,0 +1,43 @@
+name: EPL Dual Write Guard PR Validation
+
+on:
+  pull_request:
+    paths:
+      - 'epl_dual_write_guard.py'
+      - 'scheduled_epl_live_cycle.py'
+      - 'tests/test_epl_dual_write_guard.py'
+      - '.github/workflows/epl-dual-write-guard-pr-validation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_URL: https://example.supabase.co
+      SUPABASE_KEY: epl-dual-write-guard-placeholder
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install pytest numpy pandas requests supabase python-dotenv
+      - name: Compile EPL guard modules
+        run: |
+          python -m py_compile epl_dual_write_guard.py
+          python -m py_compile scheduled_epl_live_cycle.py
+      - name: Run EPL dual-write guard tests
+        run: PYTHONPATH=. pytest -q tests/test_epl_dual_write_guard.py tests/test_scheduled_epl_live_cycle.py
+      - name: Guard production model artifacts
+        run: |
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -E '\.pkl$'; then
+            echo "Production model artifact change detected"
+            exit 1
+          fi
+          echo "PASS: no .pkl changes in PR"
