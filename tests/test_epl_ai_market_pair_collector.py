@@ -116,10 +116,12 @@ def test_build_pair_normalizes_team_uses_exact_odds_and_asof_history():
     )
     assert excluded == []
     assert len(pairs) == 1
-    row = pairs[0]
+    row = pairs.iloc[0]
     assert row["model_home_team"] == "Man United"
     assert row["model_away_team"] == "Arsenal"
-    assert row["home_odds"] == 2.0 and row["draw_odds"] == 3.0 and row["away_odds"] == 4.0
+    assert row["market_home_odds"] == 2.0
+    assert row["market_draw_odds"] == 3.0
+    assert row["market_away_odds"] == 4.0
     assert row["history_cutoff_utc"] == "2026-09-04T16:00:00+00:00"
     assert row["history_rows"] < len(_history())
     assert abs(row["model_home_prob"] + row["model_draw_prob"] + row["model_away_prob"] - 1.0) < 1e-9
@@ -132,14 +134,15 @@ def test_build_pair_excludes_unknown_team_at_decision_time():
     pairs, excluded = build_pair_rows(
         candidates, _history(), _bundle(), generated_at_utc="2026-09-04T17:00:00Z", code_commit_sha="abc123"
     )
-    assert pairs == []
+    assert pairs.empty
     assert len(excluded) == 1
-    assert "Unknown normalized model teams" in excluded[0]["reason"]
+    assert excluded[0]["reason"] == "UNKNOWN_NORMALIZED_TEAM_AT_DECISION_TIME"
 
 
-def test_build_pair_rejects_generation_after_kickoff():
+def test_build_pair_excludes_generation_after_kickoff_fail_closed():
     candidates = canonical_market_candidates(_ledger(), _odds(), now_utc="2026-09-04T17:00:00Z")
-    with pytest.raises(RuntimeError, match="before kickoff"):
-        build_pair_rows(
-            candidates, _history(), _bundle(), generated_at_utc="2026-09-06T16:00:00Z", code_commit_sha="abc123"
-        )
+    pairs, excluded = build_pair_rows(
+        candidates, _history(), _bundle(), generated_at_utc="2026-09-06T16:00:00Z", code_commit_sha="abc123"
+    )
+    assert pairs.empty
+    assert excluded == [{"event_id": "evt-1", "reason": "MODEL_NOT_GENERATED_PRE_KICKOFF"}]
