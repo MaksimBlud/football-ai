@@ -1,6 +1,6 @@
 # Turkey Super Lig + Primeira Liga — MARKET_ONLY Status
 
-Status: **IMPLEMENTATION COMPLETE / OPERATIONALLY WIRED / RESEARCH-ONLY / LIVE DATA QUOTA-GATED**
+Status: **IMPLEMENTATION COMPLETE / OPERATIONALLY WIRED / RESEARCH-ONLY / LIVE DATA QUOTA-GATED / PAID ACQUISITION MANUAL-ONLY**
 
 ## Scope
 
@@ -18,22 +18,31 @@ Each league has exactly one canonical runtime module:
 - `turkey_super_lig_runtime_config.py`;
 - `primeira_liga_runtime_config.py`.
 
-The obsolete `turkey_runtime_config.py` and `primeira_runtime_config.py` modules were removed because they defined different data-path prefixes and could create a split-brain runtime if accidentally imported. Regression coverage now requires the legacy modules to remain absent and verifies the canonical path prefixes.
+The obsolete `turkey_runtime_config.py` and `primeira_runtime_config.py` modules were removed because they defined different data-path prefixes and could create a split-brain runtime if accidentally imported. Regression coverage requires the legacy modules to remain absent and verifies the canonical path prefixes.
 
 ## Operational foundation
 
 The implementation provides:
 
 - h2h odds normalization into the canonical `odds_snapshots` schema;
-- adaptive 12h/6h/4h/2h collection cadence;
+- adaptive 12h/6h/4h/2h collection cadence inside the guarded paid-cycle runtime;
 - zero-cost `/sports` quota preflight before any paid provider request;
 - frozen collection start floor of 500 remaining requests;
 - canonical append-only `league_prediction_ledger` MARKET_ONLY bridge;
-- The Odds API score parsing and canonical `league_finished_results` settlement;
-- a two-hour scheduled matrix workflow for both leagues;
+- provider-free Football-Data current-result sync into canonical `league_finished_results`;
+- a dedicated **manual-only** paid MARKET_ONLY workflow for both leagues;
+- a separate scheduled provider-free public-results workflow;
 - production `.pkl` hash protection and dedicated PR validation.
 
-`collection_enabled` remains false because these leagues do not use the generic collector. `operational_collection_enabled` is true because the dedicated quota-safe workflow is installed and live-proven.
+`collection_enabled` remains false because these leagues do not use the generic collector. `operational_collection_enabled` is true because the dedicated quota-safe operational path is installed and live-proven. It does **not** mean paid snapshot acquisition is automatically scheduled.
+
+## Current scheduling contract
+
+Paid h2h acquisition is intentionally `MANUAL_ONLY` under the project-wide quota-preservation policy introduced after the original live wiring proof. `.github/workflows/turkey-portugal-market-only-cycle.yml` exposes `workflow_dispatch` only: it has no cron and no push trigger. A manual run still has to pass the workflow-wide provider budget guard and the runtime zero-cost quota preflight before a paid request can occur.
+
+Provider-free finished-result ingestion remains automated separately through `.github/workflows/turkey-portugal-results.yml`. That workflow is scheduled, does not use `THE_ODDS_API_KEY`, and may report explicit public-source availability states without spending provider credits.
+
+Because paid snapshot acquisition is manual-only, the canonical Turkey/Portugal observation and prediction ledgers may legitimately remain empty until an explicitly triggered guarded acquisition succeeds. An empty ledger is therefore not evidence that the operational wiring is missing, and no automatic paid run is promised merely because provider quota rises above the start floor.
 
 ## Viewer and Multi-Market integration
 
@@ -44,13 +53,13 @@ Research Viewer support is complete for both leagues:
 - Multi-Market snapshots attach using the league-aware identity `(league, event_id)` so an event-id collision across leagues cannot cross-match;
 - the standalone Multi-Market viewer builds its league selector dynamically from the returned match payload and has no hardcoded league allow-list.
 
-The Multi-Market collector is also league-dynamic. It reads `league` and `event_id` from canonical `odds_snapshots`, resolves the provider sport key through the central league registry, and therefore requires no Turkey/Portugal-specific market code. Handicap, total-goals and corner-market collection will become eligible automatically when the shared Multi-Market schema/quota gates are open and the leagues have future 1X2 event ids.
+The Multi-Market collector is league-dynamic. It reads `league` and `event_id` from canonical `odds_snapshots`, resolves the provider sport key through the central league registry, and therefore requires no Turkey/Portugal-specific market code. Additional-market collection remains subject to the shared Multi-Market capability, quota, reserve and preregistration gates; this status document does not activate or schedule it.
 
 ## CI and automation hardening
 
-Turkey/Portugal focused PR validation now executes the complete `tests/test_turkey_portugal_*.py` suite rather than a fixed historical subset. It compiles the canonical runtime, operational and viewer modules and enforces the production `.pkl` artifact guard.
+Turkey/Portugal focused PR validation executes the complete `tests/test_turkey_portugal_*.py` suite, compiles the canonical runtime, operational and viewer modules, and enforces the production `.pkl` artifact guard.
 
-The MARKET_ONLY push-proof workflow is triggered by changes to either canonical runtime config in addition to the operational modules themselves. This ensures runtime-config changes receive an immediate post-merge live wiring check rather than waiting only for the scheduled cycle.
+The global operational schedule contract separately verifies that `turkey-portugal-market-only-cycle.yml` remains manual-only while `turkey-portugal-results.yml` remains scheduled and provider-free.
 
 ## Live proof — 2026-09-05
 
@@ -61,21 +70,21 @@ Post-merge read-only/bootstrap proof confirmed both provider sport keys are pres
 
 The provider reported `remaining=215`, `used=285`, `last_cost=0` on the zero-cost catalog check.
 
-The dedicated operational cycle then ran for both leagues and correctly returned `BLOCKED_LOW_QUOTA` for both odds and results. It performed zero paid provider requests, inserted zero ledger/results rows, did not use Structural V2, and left the production model hash unchanged.
+The dedicated operational cycle then ran for both leagues and correctly returned `BLOCKED_LOW_QUOTA`. It performed zero paid provider requests, inserted zero ledger rows, did not use Structural V2, and left the production model hash unchanged.
 
-A second post-hardening push-proof repeated the same result for both leagues with `remaining=215`: snapshots and results were both `BLOCKED_LOW_QUOTA`, `paid requests=0`, ledger writes remained zero, `production_model_used=False`, `structural_v2_used=False`, and the production model hash stayed unchanged.
+A second post-hardening proof repeated the same fail-closed result with `remaining=215`: paid requests remained zero, ledger writes remained zero, `production_model_used=False`, `structural_v2_used=False`, and the production model hash stayed unchanged.
 
-This is the expected fail-closed state. It proves operational wiring without consuming scarce quota or pretending that live snapshots already exist.
+This proves the guarded operational wiring without consuming scarce quota or pretending that live snapshots already exist. It does not imply that subsequent paid acquisition is automatic.
 
 ## Activation gate
 
-Actual h2h snapshot/results collection starts automatically only when the zero-cost preflight observes at least 500 remaining requests. Until then the two-hour workflow remains safely blocked.
+A manual paid MARKET_ONLY run is eligible to acquire h2h snapshots only after all current safety gates pass, including the workflow budget guard, hard reserve, exact runtime configuration and the zero-cost quota preflight. The 500-request start floor is a necessary runtime gate, not a scheduler trigger.
 
-The first future run above the threshold will exercise the already-installed chain:
+If a guarded manual run succeeds, the installed chain is:
 
-`provider h2h -> odds_snapshots -> MARKET_ONLY prediction ledger -> finished-result settlement`.
+`provider h2h -> odds_snapshots -> MARKET_ONLY prediction ledger`
 
-No code or registry activation change is required for that transition.
+Finished results are synchronized independently through the scheduled public Football-Data workflow and then become available for canonical settlement. No registry activation, Structural V2 activation, training or model promotion is implied.
 
 ## Production isolation
 
@@ -83,4 +92,4 @@ This block does not train, calibrate, promote, or modify production models. All 
 
 ## Closure
 
-The Turkey Super Lig + Primeira Liga MARKET_ONLY implementation is considered operationally complete. Remaining blockers are external gates only: provider quota for live h2h/results collection and the shared Multi-Market schema/quota gates for additional markets.
+The Turkey Super Lig + Primeira Liga MARKET_ONLY implementation remains operationally complete as a guarded research-only capability. Current live-data progress depends on explicit manual paid acquisition plus the existing external quota/reserve gates; public finished-result synchronization remains scheduled and provider-free. The project intentionally does not promise automatic paid collection.
