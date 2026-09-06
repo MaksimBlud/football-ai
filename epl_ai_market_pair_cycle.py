@@ -1,8 +1,8 @@
 """Scheduled outcome-free cycle for EPL_AI_MARKET_PAIR_V1.
 
-This collector reads only canonical market data plus historical ``matches`` used by the
-existing no-odds model. It never reads target settlement/result tables and performs
-append-only writes to ``epl_ai_market_pair_ledger``.
+Reads canonical market data and the EPL historical ``matches`` table only. It never
+reads target settlement tables. Valid pairs are inserted append-only into the dedicated
+research ledger; no model training, promotion, threshold search or wagering occurs.
 """
 from __future__ import annotations
 
@@ -14,7 +14,6 @@ import pandas as pd
 
 from database import supabase
 from epl_ai_market_pair_collector import (
-    CALIBRATOR_PATH,
     EXPERIMENT_ID,
     LEAGUE,
     MODEL_PATH,
@@ -28,52 +27,20 @@ OUTPUT_DIR = Path("artifacts/epl_ai_market_pair_v1")
 PAIR_TABLE = "epl_ai_market_pair_ledger"
 PAGE_SIZE = 1000
 
-LEDGER_COLUMNS = ",".join(
-    [
-        "prediction_key",
-        "league",
-        "event_id",
-        "home_team",
-        "away_team",
-        "kickoff_utc",
-        "prediction_time_utc",
-        "snapshot_time_utc",
-        "market_home_prob",
-        "market_draw_prob",
-        "market_away_prob",
-        "prediction_mode",
-    ]
-)
-ODDS_COLUMNS = ",".join(
-    [
-        "league",
-        "event_id",
-        "snapshot_time_utc",
-        "commence_time_utc",
-        "home_team",
-        "away_team",
-        "home_odds",
-        "draw_odds",
-        "away_odds",
-    ]
-)
-HISTORY_COLUMNS = ",".join(
-    [
-        "season",
-        "league",
-        "match_date",
-        "match_time",
-        "home_team",
-        "away_team",
-        "home_goals",
-        "away_goals",
-        "result",
-        "home_shots",
-        "away_shots",
-        "home_shots_target",
-        "away_shots_target",
-    ]
-)
+LEDGER_COLUMNS = ",".join([
+    "prediction_key", "league", "event_id", "home_team", "away_team",
+    "kickoff_utc", "prediction_time_utc", "snapshot_time_utc",
+    "market_home_prob", "market_draw_prob", "market_away_prob", "prediction_mode",
+])
+ODDS_COLUMNS = ",".join([
+    "league", "event_id", "snapshot_time_utc", "commence_time_utc",
+    "home_team", "away_team", "home_odds", "draw_odds", "away_odds",
+])
+HISTORY_COLUMNS = ",".join([
+    "season", "league", "match_date", "match_time", "home_team", "away_team",
+    "home_goals", "away_goals", "result", "home_shots", "away_shots",
+    "home_shots_target", "away_shots_target",
+])
 
 
 def _read_paginated(table: str, columns: str, *, filters: dict[str, str] | None = None) -> pd.DataFrame:
@@ -93,11 +60,11 @@ def _read_paginated(table: str, columns: str, *, filters: dict[str, str] | None 
 
 
 def _existing_pair_keys(keys: list[str]) -> set[str]:
-    if not keys:
-        return set()
     existing: set[str] = set()
     for start in range(0, len(keys), 200):
         chunk = keys[start : start + 200]
+        if not chunk:
+            continue
         response = supabase.table(PAIR_TABLE).select("pair_key").in_("pair_key", chunk).execute()
         existing.update(str(row["pair_key"]) for row in (response.data or []))
     return existing
@@ -118,13 +85,10 @@ def _append_new_pairs(frame: pd.DataFrame) -> tuple[int, int]:
 def main() -> None:
     generated_at = pd.Timestamp.now(tz="UTC")
     code_commit_sha = os.getenv("GITHUB_SHA", "LOCAL_OR_UNKNOWN")
-
-    # Load and hash artifacts once. The same in-memory objects are used for every row.
-    bundle = load_model_bundle(MODEL_PATH, CALIBRATOR_PATH)
+    bundle = load_model_bundle(MODEL_PATH)
 
     ledger = _read_paginated(
-        "league_prediction_ledger",
-        LEDGER_COLUMNS,
+        "league_prediction_ledger", LEDGER_COLUMNS,
         filters={"league": LEAGUE, "prediction_mode": "MARKET_ONLY"},
     )
     odds = _read_paginated("odds_snapshots", ODDS_COLUMNS, filters={"league": LEAGUE})
@@ -132,15 +96,12 @@ def main() -> None:
 
     candidates = canonical_market_candidates(ledger, odds, now_utc=generated_at)
     pairs, excluded = build_pair_rows(
-        candidates,
-        history,
-        bundle,
+        candidates, history, bundle,
         generated_at_utc=generated_at,
         code_commit_sha=code_commit_sha,
     )
 
-    # Fail if production artifacts changed at any point while this run was calculating.
-    verify_model_bundle_unchanged(bundle, MODEL_PATH, CALIBRATOR_PATH)
+    verify_model_bundle_unchanged(bundle, MODEL_PATH)
     inserted, unchanged = _append_new_pairs(pairs)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -152,8 +113,8 @@ def main() -> None:
         "experiment_id": EXPERIMENT_ID,
         "generated_at_utc": generated_at.isoformat(),
         "code_commit_sha": code_commit_sha,
+        "model_artifact": str(MODEL_PATH),
         "model_artifact_sha256": bundle.model_sha256,
-        "calibrator_artifact_sha256": bundle.calibrator_sha256,
         "ledger_rows_read": int(len(ledger)),
         "odds_rows_read": int(len(odds)),
         "history_rows_read": int(len(history)),
@@ -169,7 +130,7 @@ def main() -> None:
         json.dumps(audit, indent=2, sort_keys=True), encoding="utf-8"
     )
     print(json.dumps(audit, indent=2, sort_keys=True))
-    print("RESEARCH ONLY: append-only future AI/market pairs; target outcomes are not read.")
+    print("RESEARCH ONLY: append-only EPL production-AI/market pairs; no target outcomes read.")
 
 
 if __name__ == "__main__":
