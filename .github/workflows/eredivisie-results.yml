@@ -4,6 +4,12 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "23 */12 * * *"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/eredivisie-results.yml"
+      - "update_eredivisie_results.py"
+      - "tests/test_eredivisie_results_source_availability.py"
 
 concurrency:
   group: eredivisie-results-sync
@@ -32,33 +38,62 @@ jobs:
         run: |
           python - <<'PY'
           import os
-          required = ("SUPABASE_URL", "SUPABASE_KEY")
-          missing = [name for name in required if not os.getenv(name)]
-          if missing:
-              raise SystemExit("Missing Eredivisie results secrets: " + ", ".join(missing))
-          print("PASS: Eredivisie results secrets available; values not printed")
+          required=("SUPABASE_URL","SUPABASE_KEY")
+          missing=[name for name in required if not os.getenv(name)]
+          if missing: raise SystemExit("Missing Eredivisie results secrets: " + ", ".join(missing))
+          print("PASS: Eredivisie results Supabase secrets available; values not printed")
           PY
       - name: Verify zero-cost public results source
         run: |
           python - <<'PY'
           from eredivisie_runtime_config import EREDIVISIE_RUNTIME_CONFIG
-          source = EREDIVISIE_RUNTIME_CONFIG.finished_results_source
-          assert source.provider == "FOOTBALL_DATA_CSV"
-          assert source.competition_code == "N1"
-          assert source.season_code == "2627"
+          source=EREDIVISIE_RUNTIME_CONFIG.finished_results_source
+          assert source.provider=="FOOTBALL_DATA_CSV" and source.competition_code=="N1" and source.season_code=="2627"
           print("PASS: Eredivisie results use public Football-Data N1/2627")
           PY
       - name: Verify Eredivisie MARKET_ONLY safety
         run: |
           python - <<'PY'
           from eredivisie_runtime_config import EREDIVISIE_RUNTIME_CONFIG
-          s = EREDIVISIE_RUNTIME_CONFIG.structural_v2
-          assert s.calibration_status == "CALIBRATION_REQUIRED"
-          assert s.structural_alpha is None
-          assert s.edge_threshold is None
+          s=EREDIVISIE_RUNTIME_CONFIG.structural_v2
+          assert s.calibration_status=="CALIBRATION_REQUIRED" and s.structural_alpha is None and s.edge_threshold is None
           print("PASS: Eredivisie remains MARKET_ONLY")
           PY
       - name: Sync immutable Eredivisie finished results
-        run: python update_eredivisie_results.py --write
-      - name: Evaluate settled Eredivisie predictions
-        run: python evaluate_eredivisie_predictions.py
+        run: python update_eredivisie_results.py --write --status-json artifacts/eredivisie_results_status.json
+      - name: Verify explicit provider-free result status
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path('artifacts/eredivisie_results_status.json').read_text())
+          assert p['league']=='EREDIVISIE' and p['paid_provider_requests']==0
+          assert p['status'] in {'WRITTEN','SOURCE_UNAVAILABLE'}
+          if p['status']=='SOURCE_UNAVAILABLE':
+              assert int(p['public_http_requests'])==3
+              assert int(p['http_status']) in {429,500,502,503,504}
+              assert int(p['inserted'])==0 and int(p['conflicts'])==0
+          print('status=',p['status'])
+          PY
+      - name: Evaluate settled Eredivisie predictions only after successful result sync
+        if: success()
+        run: |
+          status="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          print(json.loads(Path('artifacts/eredivisie_results_status.json').read_text())['status'])
+          PY
+          )"
+          if [ "$status" != "WRITTEN" ]; then
+            echo "SKIP evaluator: result status=$status"
+            exit 0
+          fi
+          python evaluate_eredivisie_predictions.py
+      - name: Upload public results status
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eredivisie-results-status
+          path: artifacts/eredivisie_results_status.json
+          if-no-files-found: error
