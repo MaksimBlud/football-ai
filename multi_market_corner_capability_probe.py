@@ -22,11 +22,11 @@ SOURCE_TABLE = "odds_snapshots"
 MAX_PAID_REQUESTS = 1
 MAX_PAID_CREDITS = 2
 TARGET = {
-    "league": "LIGUE_1",
-    "event_id": "b292d9e6b90eb73e0547ace2a44728e8",
-    "home_team": "Troyes",
-    "away_team": "Strasbourg",
-    "commence_time_utc": "2026-09-06T13:00:00+00:00",
+    "league": "LA_LIGA",
+    "event_id": "0817220a8e0794e15ecba51338bb6cf8",
+    "home_team": "Getafe",
+    "away_team": "Celta Vigo",
+    "commence_time_utc": "2026-09-07T17:00:00+00:00",
 }
 PROHIBITED_LEAGUES = frozenset({"EREDIVISIE", "RPL", "TURKEY_SUPER_LIG", "PRIMEIRA_LIGA"})
 CORNER_MARKETS = ("alternate_totals_corners", "alternate_team_totals_corners")
