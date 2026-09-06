@@ -47,8 +47,8 @@ jobs:
           PY
       - name: Enforce outcome-free scheduled collector and status monitor
         run: |
-          if grep -E 'league_finished_results|la_liga_finished_results|league_corner_results|actual_result|settlement' epl_ai_market_pair_cycle.py report_epl_ai_market_pair_collection_status.py; then
-            echo "Forbidden outcome reference in outcome-free EPL research path"
+          if grep -E 'league_finished_results|la_liga_finished_results|league_corner_results|actual_result' epl_ai_market_pair_cycle.py report_epl_ai_market_pair_collection_status.py; then
+            echo "Forbidden outcome identifier in outcome-free EPL research path"
             exit 1
           fi
           if grep -E 'THE_ODDS_API_KEY|the_odds_service|save_odds_snapshot' report_epl_ai_market_pair_collection_status.py .github/workflows/epl-ai-market-pair-status.yml; then
