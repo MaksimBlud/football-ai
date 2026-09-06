@@ -4,8 +4,10 @@ on:
   workflow_dispatch:
 
   schedule:
-    # Odds snapshots run at :17 every two hours.
-    # Run the durable MARKET_ONLY mirror 30 minutes later.
+    # Paid EPL odds snapshots are intentionally manual-only and are not
+    # scheduled here. This durable Supabase-only mirror may run independently;
+    # collection freshness/actionability is monitored by
+    # epl-ai-market-pair-status.yml without triggering provider calls.
     - cron: "47 */2 * * *"
 
 concurrency:
