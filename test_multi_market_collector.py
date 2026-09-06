@@ -164,6 +164,52 @@ def test_six_credits_collect_two_events_same_league_with_one_featured_request(mo
     assert summary["inserted"] == 2
 
 
+def test_batching_groups_ready_leagues_and_excludes_rpl_without_outcome_signal():
+    events = [
+        {"league": "LA_LIGA", "event_id": "la-1"},
+        {"league": "EPL", "event_id": "epl-1"},
+        {"league": "RPL", "event_id": "rpl-1"},
+        {"league": "LA_LIGA", "event_id": "la-2"},
+        {"league": "EPL", "event_id": "epl-2"},
+    ]
+    batched = collector._batch_outcome_ready_events(events)
+    assert [(e["league"], e["event_id"]) for e in batched] == [
+        ("LA_LIGA", "la-1"),
+        ("LA_LIGA", "la-2"),
+        ("EPL", "epl-1"),
+        ("EPL", "epl-2"),
+    ]
+
+
+def test_rpl_only_input_never_enters_paid_multi_market_path(monkeypatch):
+    now = datetime(2026, 9, 5, 13, 0, tzinfo=UTC)
+    fake = FakeSupabase([])
+    monkeypatch.setattr(collector, "supabase", fake)
+    monkeypatch.setattr(collector, "load_future_events", lambda _now: [
+        {"league": "RPL", "event_id": "rpl-1", "home_team": "RPL Home", "away_team": "RPL Away",
+         "commence_time_utc": (now + timedelta(hours=5)).isoformat()}
+    ])
+    monkeypatch.setattr(collector, "fetch_quota_status", lambda: {"remaining": "204", "last_cost": "0"})
+    paid_calls = []
+
+    def forbidden_paid_fetch(*args, **kwargs):
+        paid_calls.append((args, kwargs))
+        raise AssertionError("RPL has no canonical corner outcome source and must not consume Multi-Market credits")
+
+    monkeypatch.setattr(collector, "fetch_sport_markets", forbidden_paid_fetch)
+    monkeypatch.setattr(collector, "fetch_event_markets", forbidden_paid_fetch)
+    summary = collector.collect(now, max_paid_requests=5, max_paid_credits=20)
+
+    assert paid_calls == []
+    assert summary["source_events"] == 1
+    assert summary["eligible_events"] == 0
+    assert summary["skipped_no_corner_source"] == 1
+    assert summary["collection_leagues"] == []
+    assert summary["provider_paid_requests"] == 0
+    assert summary["provider_paid_credits"] == 0
+    assert summary["inserted"] == 0
+
+
 def test_request_cap_requires_two_http_calls_for_first_complete_event(monkeypatch):
     now = datetime(2026, 9, 5, 13, 0, tzinfo=UTC)
     _prepare_collection(monkeypatch, now)
