@@ -28,6 +28,7 @@ from league_live_persistence import (
     validate_results,
 )
 from league_runtime_config import LeagueRuntimeConfig
+from team_names import normalize_team_name
 
 
 GENERIC_OBSERVATION_TABLE = "league_structural_v2_observations"
@@ -318,7 +319,8 @@ def _canonical_result_team(value, config: LeagueRuntimeConfig | None):
     team = str(value).strip()
     if config is None:
         return team
-    return config.aliases.get(team, team)
+    configured = config.aliases.get(team, team)
+    return normalize_team_name(configured)
 
 
 def _canonical_result_payload(record: dict, config: LeagueRuntimeConfig | None) -> dict:
