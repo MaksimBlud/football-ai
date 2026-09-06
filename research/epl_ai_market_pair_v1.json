@@ -1,0 +1,63 @@
+{
+  "experiment_id": "EPL_AI_MARKET_PAIR_V1",
+  "status": "FROZEN_RESEARCH_ONLY",
+  "league": "EPL",
+  "market": "1X2",
+  "purpose": "Prospectively collect point-in-time Football AI and canonical market probabilities on the same future EPL fixtures without reading target outcomes.",
+  "collection": {
+    "prediction_mode": "MARKET_ONLY",
+    "market_decision": "latest durably recorded pre-kickoff league_prediction_ledger row observed at collection time",
+    "exact_market_price_authority": "odds_snapshots",
+    "model": "football_model_no_odds.pkl",
+    "calibrator": "1x2_calibrator.pkl",
+    "team_name_normalizer": "team_names.normalize_team_name",
+    "one_record_per": "event_id + market_snapshot_time_utc + model_artifact_sha256 + calibrator_artifact_sha256",
+    "append_only": true,
+    "outcomes_read_by_collector": false
+  },
+  "point_in_time_guards": {
+    "market_snapshot_before_kickoff": true,
+    "model_generated_before_kickoff": true,
+    "target_fixture_absent_from_model_history": true,
+    "history_max_match_date_strictly_before_market_snapshot_utc_date": true,
+    "unknown_normalized_team": "exclude_fail_closed",
+    "ambiguous_provider_revision": "exclude_fail_closed",
+    "market_probability_mismatch": "exclude_fail_closed"
+  },
+  "stored_provenance": [
+    "league",
+    "event_id",
+    "provider_home_team",
+    "provider_away_team",
+    "model_home_team",
+    "model_away_team",
+    "kickoff_utc",
+    "market_snapshot_time_utc",
+    "model_generated_at_utc",
+    "market_home_prob",
+    "market_draw_prob",
+    "market_away_prob",
+    "model_home_prob",
+    "model_draw_prob",
+    "model_away_prob",
+    "raw_model_home_prob",
+    "raw_model_draw_prob",
+    "raw_model_away_prob",
+    "model_artifact_sha256",
+    "calibrator_artifact_sha256",
+    "code_commit_sha",
+    "history_max_match_date",
+    "history_rows"
+  ],
+  "evaluation": {
+    "automatic": false,
+    "collector_reads_target_outcomes": false,
+    "paired_audit": "market_model_incremental_audit.py",
+    "primary_metrics": ["multiclass_brier", "multiclass_log_loss"],
+    "score_delta": "model_minus_market",
+    "interpretation": "negative deltas favor the model",
+    "threshold_search": false,
+    "production_activation": false,
+    "model_promotion": false
+  }
+}
