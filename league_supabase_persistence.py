@@ -28,11 +28,13 @@ from league_live_persistence import (
     validate_results,
 )
 from league_runtime_config import LeagueRuntimeConfig
+from team_names import normalize_team_name
 
 
 GENERIC_OBSERVATION_TABLE = "league_structural_v2_observations"
 GENERIC_RESULTS_TABLE = "league_finished_results"
 PAGE_SIZE = 1000
+RESULT_STORAGE_TIMESTAMP_FIELDS = {"source_updated_at_utc", "persisted_at_utc"}
 
 
 def _response_rows(response: Any) -> list[dict]:
@@ -314,13 +316,39 @@ def persist_observations(
     return {"inserted": inserted, "unchanged": unchanged, "conflicts": 0}
 
 
-def _result_key(record: dict) -> tuple:
+def _canonical_result_team(value, config: LeagueRuntimeConfig | None):
+    team = str(value).strip()
+    if config is None:
+        return team
+    configured = config.aliases.get(team, team)
+    return normalize_team_name(configured)
+
+
+def _canonical_result_payload(record: dict, config: LeagueRuntimeConfig | None) -> dict:
+    normalized = {
+        key: value
+        for key, value in dict(record).items()
+        if key not in RESULT_STORAGE_TIMESTAMP_FIELDS
+    }
+    normalized["home_team"] = _canonical_result_team(
+        normalized.get("home_team"), config
+    )
+    normalized["away_team"] = _canonical_result_team(
+        normalized.get("away_team"), config
+    )
+    return normalized
+
+
+def _result_key(
+    record: dict,
+    config: LeagueRuntimeConfig | None = None,
+) -> tuple:
     return (
         record.get("league"),
         str(record.get("season")),
         str(record.get("match_date")),
-        record.get("home_team"),
-        record.get("away_team"),
+        _canonical_result_team(record.get("home_team"), config),
+        _canonical_result_team(record.get("away_team"), config),
     )
 
 
@@ -334,24 +362,39 @@ def persist_results(
         return {"inserted": 0, "unchanged": 0, "conflicts": 0}
 
     existing = fetch_results(client, config)
-    existing_by_key = {
-        _result_key(_normalize_record(row.to_dict())): _normalize_record(
-            row.to_dict()
-        )
-        for _, row in existing.iterrows()
-    }
+    existing_by_key = {}
+    for _, row in existing.iterrows():
+        record = _normalize_record(row.to_dict())
+        key = _result_key(record, config)
+        previous = existing_by_key.get(key)
+        if previous is not None:
+            left = _canonical_result_payload(previous, config)
+            right = _canonical_result_payload(record, config)
+            comparable_left = {
+                column: left.get(column) for column in right.keys()
+            }
+            if not immutable_payload_equal(comparable_left, right):
+                raise PersistenceConflictError(
+                    "Existing alias-equivalent finished-result conflict for "
+                    + repr(key)
+                )
+            continue
+        existing_by_key[key] = record
 
     inserted = 0
     unchanged = 0
     for _, row in incoming.iterrows():
         record = _normalize_record(row.to_dict())
-        key = _result_key(record)
+        key = _result_key(record, config)
         previous = existing_by_key.get(key)
         if previous is not None:
+            canonical_previous = _canonical_result_payload(previous, config)
+            canonical_record = _canonical_result_payload(record, config)
             comparable_previous = {
-                column: previous.get(column) for column in record.keys()
+                column: canonical_previous.get(column)
+                for column in canonical_record.keys()
             }
-            if not immutable_payload_equal(comparable_previous, record):
+            if not immutable_payload_equal(comparable_previous, canonical_record):
                 raise PersistenceConflictError(
                     "Finished-result conflict for " + repr(key)
                 )
