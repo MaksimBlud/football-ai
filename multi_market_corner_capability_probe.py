@@ -32,6 +32,33 @@ PROHIBITED_LEAGUES = frozenset({"EREDIVISIE", "RPL", "TURKEY_SUPER_LIG", "PRIMEI
 CORNER_MARKETS = ("alternate_totals_corners", "alternate_team_totals_corners")
 
 
+class ProviderRequestAttemptedError(RuntimeError):
+    """A probe failure after entering the single paid-provider call boundary."""
+
+    def __init__(self, result: dict[str, Any], cause: Exception):
+        self.result = dict(result)
+        self.cause = cause
+        super().__init__(str(cause))
+
+
+def _base_result(*, status: str) -> dict[str, Any]:
+    return {
+        "schema_version": "MULTI_MARKET_CORNER_CAPABILITY_PROBE_V1",
+        "research_only": True,
+        "preregistered": True,
+        "target": dict(TARGET),
+        "max_paid_requests": MAX_PAID_REQUESTS,
+        "max_paid_credits": MAX_PAID_CREDITS,
+        "hard_reserve_credits": HARD_RESERVE_CREDITS,
+        "writes_performed": False,
+        "provider_request_attempted": False,
+        "paid_provider_requests": 0,
+        "paid_provider_credits": 0,
+        "paid_provider_credit_cost_known": True,
+        "status": status,
+    }
+
+
 def _int_header(value: Any, *, name: str) -> int:
     if value in (None, ""):
         raise RuntimeError(f"provider quota header missing: {name}")
@@ -97,19 +124,7 @@ def run_probe(
     now_utc: datetime | None = None,
 ) -> dict[str, Any]:
     now_utc = now_utc or datetime.now(UTC)
-    result: dict[str, Any] = {
-        "schema_version": "MULTI_MARKET_CORNER_CAPABILITY_PROBE_V1",
-        "research_only": True,
-        "preregistered": True,
-        "target": dict(TARGET),
-        "max_paid_requests": MAX_PAID_REQUESTS,
-        "max_paid_credits": MAX_PAID_CREDITS,
-        "hard_reserve_credits": HARD_RESERVE_CREDITS,
-        "writes_performed": False,
-        "paid_provider_requests": 0,
-        "paid_provider_credits": 0,
-        "status": "BLOCKED",
-    }
+    result = _base_result(status="BLOCKED")
 
     row = _load_target(client)
     if row is None:
@@ -126,28 +141,37 @@ def run_probe(
         return result
     result["quota_before"] = quota_before
 
-    payload, quota_after = fetch_event_fn(
-        sport_key,
-        TARGET["event_id"],
-        regions="eu",
-        markets=CORNER_MARKETS,
-    )
+    # From this boundary onward audit conservatively as one provider request
+    # attempted, even if the provider helper raises before returning headers.
+    result["provider_request_attempted"] = True
     result["paid_provider_requests"] = 1
-    actual_cost = _int_header(quota_after.get("last_cost"), name="last_cost")
-    remaining_after = _int_header(quota_after.get("remaining"), name="remaining")
-    if actual_cost < 0 or actual_cost > MAX_PAID_CREDITS:
-        raise RuntimeError(f"probe provider cost outside cap: {actual_cost}")
-    if remaining_after < HARD_RESERVE_CREDITS:
-        raise RuntimeError("probe crossed hard reserve")
-    result["paid_provider_credits"] = actual_cost
-    result["quota_after"] = dict(quota_after)
+    result["paid_provider_credits"] = None
+    result["paid_provider_credit_cost_known"] = False
+    try:
+        payload, quota_after = fetch_event_fn(
+            sport_key,
+            TARGET["event_id"],
+            regions="eu",
+            markets=CORNER_MARKETS,
+        )
+        result["quota_after"] = dict(quota_after)
+        actual_cost = _int_header(quota_after.get("last_cost"), name="last_cost")
+        remaining_after = _int_header(quota_after.get("remaining"), name="remaining")
+        result["paid_provider_credits"] = actual_cost
+        result["paid_provider_credit_cost_known"] = True
+        if actual_cost < 0 or actual_cost > MAX_PAID_CREDITS:
+            raise RuntimeError(f"probe provider cost outside cap: {actual_cost}")
+        if remaining_after < HARD_RESERVE_CREDITS:
+            raise RuntimeError("probe crossed hard reserve")
 
-    market_keys, bookmaker_keys = _market_evidence(dict(payload or {}))
-    result["corner_market_keys"] = market_keys
-    result["corner_bookmaker_keys"] = bookmaker_keys
-    result["corner_bookmaker_count"] = len(bookmaker_keys)
-    result["status"] = "CAPABILITY_CONFIRMED" if market_keys else "CAPABILITY_MISS"
-    return result
+        market_keys, bookmaker_keys = _market_evidence(dict(payload or {}))
+        result["corner_market_keys"] = market_keys
+        result["corner_bookmaker_keys"] = bookmaker_keys
+        result["corner_bookmaker_count"] = len(bookmaker_keys)
+        result["status"] = "CAPABILITY_CONFIRMED" if market_keys else "CAPABILITY_MISS"
+        return result
+    except Exception as exc:
+        raise ProviderRequestAttemptedError(result, exc) from exc
 
 
 def _write_result(result: dict[str, Any]) -> None:
@@ -157,24 +181,12 @@ def _write_result(result: dict[str, Any]) -> None:
 
 
 def main() -> None:
-    from database import supabase
-    from league_config import get_league_config
-    from multi_market_odds import fetch_event_markets, fetch_quota_status
-
-    result: dict[str, Any] = {
-        "schema_version": "MULTI_MARKET_CORNER_CAPABILITY_PROBE_V1",
-        "research_only": True,
-        "preregistered": True,
-        "target": dict(TARGET),
-        "max_paid_requests": MAX_PAID_REQUESTS,
-        "max_paid_credits": MAX_PAID_CREDITS,
-        "hard_reserve_credits": HARD_RESERVE_CREDITS,
-        "writes_performed": False,
-        "paid_provider_requests": 0,
-        "paid_provider_credits": 0,
-        "status": "FAILED",
-    }
+    result = _base_result(status="FAILED")
     try:
+        from database import supabase
+        from league_config import get_league_config
+        from multi_market_odds import fetch_event_markets, fetch_quota_status
+
         config = get_league_config(TARGET["league"])
         if not config.odds_api_sport_key:
             raise RuntimeError("preregistered target league has no Odds API sport key")
@@ -184,6 +196,13 @@ def main() -> None:
             fetch_event_markets,
             sport_key=config.odds_api_sport_key,
         )
+    except ProviderRequestAttemptedError as exc:
+        result = dict(exc.result)
+        result["status"] = "FAILED"
+        result["error_type"] = type(exc.cause).__name__
+        result["error"] = str(exc.cause)[:1000]
+        _write_result(result)
+        raise exc.cause from exc
     except Exception as exc:
         result["status"] = "FAILED"
         result["error_type"] = type(exc).__name__
