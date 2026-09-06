@@ -29,6 +29,7 @@ class DataQualityReport:
     post_ledger_alias_duplicate_result_rows: int
     alias_conflicting_result_rows: int
     missing_event_ids: int
+    ambiguous_event_identities: int
     unlinked_finished_results: int
     critical_failures: int
 
@@ -131,6 +132,13 @@ def _missing_event_ids(ledger: pd.DataFrame) -> int:
     return int((values.isna() | values.astype(str).str.strip().eq("")).sum())
 
 
+def _ambiguous_event_identities(ledger: pd.DataFrame) -> int:
+    if ledger.empty:
+        return 0
+    validated = evaluator._validate_ledger(ledger)
+    return len(evaluator.ambiguous_event_ids(validated))
+
+
 def _unlinked_finished_results(
     league: str,
     ledger: pd.DataFrame,
@@ -177,11 +185,13 @@ def audit_frames(
         alias_critical,
     ) = _alias_duplicate_result_metrics(league, ledger, results)
     missing_event_ids = _missing_event_ids(ledger)
+    ambiguous_events = _ambiguous_event_identities(ledger)
     unlinked_results = _unlinked_finished_results(league, ledger, results)
     # Exact duplicate identities remain critical. Alias-equivalent rows are
     # additionally critical only if they overlap the canonical ledger era or
-    # disagree on the immutable outcome. Pre-ledger identical alias copies are
-    # retained as visible legacy warnings without rewriting durable history.
+    # disagree on the immutable outcome. Rescheduled event ids are visible as
+    # diagnostics but are excluded from automatic evaluator settlement rather
+    # than treated as corrupt immutable history.
     critical = duplicate_predictions + duplicate_results + missing_event_ids + alias_critical
 
     return DataQualityReport(
@@ -197,6 +207,7 @@ def audit_frames(
         post_ledger_alias_duplicate_result_rows=post_ledger_alias_duplicates,
         alias_conflicting_result_rows=alias_conflicts,
         missing_event_ids=missing_event_ids,
+        ambiguous_event_identities=ambiguous_events,
         unlinked_finished_results=int(unlinked_results),
         critical_failures=int(critical),
     )
@@ -229,6 +240,7 @@ def main() -> None:
             f"post_ledger_alias_duplicates={row['post_ledger_alias_duplicate_result_rows']}, "
             f"alias_conflicts={row['alias_conflicting_result_rows']}, "
             f"missing_event_ids={row['missing_event_ids']}, "
+            f"ambiguous_event_ids={row['ambiguous_event_identities']}, "
             f"unlinked_results={row['unlinked_finished_results']}, critical={row['critical_failures']}"
         )
     print()
