@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from la_liga_canonical_names import normalize_team as normalize_la_liga_team
 from league_runtime_config import LeagueRuntimeConfig
 
 
@@ -23,6 +24,8 @@ def normalize_team(value, config: LeagueRuntimeConfig) -> str:
     name = str(value).strip()
     if not name:
         raise ValueError("Empty team name")
+    if config.identity.identifier == "LA_LIGA":
+        return normalize_la_liga_team(name)
     return config.aliases.get(name, name)
 
 
