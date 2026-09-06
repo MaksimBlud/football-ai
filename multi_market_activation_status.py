@@ -1,15 +1,18 @@
 """Read-only Multi-Market V2 lifecycle readiness status.
 
 This module combines exact live schema, a provider zero-cost quota preflight,
-and bounded read-only evidence from already-persisted Multi-Market snapshots.
-Infrastructure readiness and observed provider corner-market capability are kept
-separate: recurring/manual collection is not activation-ready until at least one
-stored prospective snapshot proves that a requested corner market was actually
-returned by the provider.
+bounded read-only evidence from already-persisted Multi-Market snapshots, and
+an optional separately review-approved provider capability attestation.
 
-The first diagnostic canary is a separate workflow and does not depend on this
-activation latch. This module never creates schema, writes Supabase, performs a
-paid odds request, settles a match, evaluates OOS outcomes, or changes models.
+Infrastructure readiness and provider corner-market capability are kept
+separate. A diagnostic capability probe can never promote itself: its workflow
+artifact remains diagnostic evidence until a distinct tracked attestation is
+added through normal Git review. Collection is activation-ready only when
+corner capability is proven either by immutable stored snapshot evidence or by
+that separately approved attestation.
+
+This module never creates schema, writes Supabase, performs a paid odds request,
+settles a match, evaluates OOS outcomes, or changes models.
 """
 from __future__ import annotations
 
@@ -25,6 +28,7 @@ from multi_market_policy import (
     HARD_RESERVE_CREDITS,
     MIN_COLLECTION_REMAINING_CREDITS,
 )
+from multi_market_provider_capability_attestation import load_attestation
 from multi_market_schema_probe import probe_schema
 
 OUTPUT = Path("artifacts/multi_market_activation_status.json")
@@ -111,8 +115,34 @@ def _provider_corner_capability(client: Any, *, snapshots_ready: bool) -> dict[s
     return result
 
 
-def build_status(client: Any, fetch_quota: Callable[[], dict[str, Any]]) -> dict[str, Any]:
-    """Build read-only infrastructure + observed provider capability readiness."""
+def _safe_attestation(
+    load_capability_attestation: Callable[[], dict[str, Any]],
+) -> dict[str, Any]:
+    """Fail closed if the local reviewed-attestation loader itself fails."""
+    try:
+        result = dict(load_capability_attestation())
+    except Exception as exc:
+        return {
+            "read_only": True,
+            "present": False,
+            "valid": False,
+            "capability_ready": False,
+            "error": f"{type(exc).__name__}: {str(exc)[:400]}",
+        }
+    result.setdefault("read_only", True)
+    result.setdefault("present", False)
+    result.setdefault("valid", False)
+    result.setdefault("capability_ready", False)
+    result.setdefault("error", None)
+    return result
+
+
+def build_status(
+    client: Any,
+    fetch_quota: Callable[[], dict[str, Any]],
+    load_capability_attestation: Callable[[], dict[str, Any]] = load_attestation,
+) -> dict[str, Any]:
+    """Build read-only infrastructure + reviewed/observed provider readiness."""
     schema = probe_schema(client)
     ready_tables = set(schema.get("ready_tables") or [])
     quota, quota_error = _safe_quota(fetch_quota)
@@ -124,7 +154,18 @@ def build_status(client: Any, fetch_quota: Callable[[], dict[str, Any]]) -> dict
 
     infrastructure_collection_ready = snapshots_ready and quota_ready
     capability = _provider_corner_capability(client, snapshots_ready=snapshots_ready)
-    provider_corner_capability_ready = bool(capability["capability_ready"])
+    attestation = _safe_attestation(load_capability_attestation)
+    stored_snapshot_capability_ready = bool(capability["capability_ready"])
+    reviewed_attestation_capability_ready = bool(
+        attestation.get("valid") and attestation.get("capability_ready")
+    )
+    provider_corner_capability_ready = (
+        stored_snapshot_capability_ready or reviewed_attestation_capability_ready
+    )
+    capability_sources = {
+        "stored_snapshot_evidence": stored_snapshot_capability_ready,
+        "reviewed_attestation": reviewed_attestation_capability_ready,
+    }
     collection_ready = infrastructure_collection_ready and provider_corner_capability_ready
     goals_settlement_ready = snapshots_ready and settlements_ready
     corner_storage_ready = snapshots_ready and settlements_ready and corners_ready
@@ -173,6 +214,8 @@ def build_status(client: Any, fetch_quota: Callable[[], dict[str, Any]]) -> dict
         "infrastructure_collection_ready": infrastructure_collection_ready,
         "provider_corner_capability_ready": provider_corner_capability_ready,
         "provider_corner_capability": capability,
+        "provider_corner_capability_attestation": attestation,
+        "provider_corner_capability_sources": capability_sources,
         "manual_collection_activation_required": True,
         "scheduled_collection_enabled": False,
         "goals_settlement_ready": goals_settlement_ready,
@@ -195,6 +238,7 @@ def build_status(client: Any, fetch_quota: Callable[[], dict[str, Any]]) -> dict
 def main() -> None:
     from database import supabase
     from multi_market_odds import fetch_quota_status
+
     status = build_status(supabase, fetch_quota_status)
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(json.dumps(status, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
