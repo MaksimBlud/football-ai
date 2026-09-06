@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import json
 from datetime import datetime
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pandas as pd
 
-from database import supabase
-from football_data_current_results import fetch_current_finished_results
+from football_data_current_results import PublicResultsSourceUnavailable, fetch_current_finished_results
 import league_supabase_persistence as persistence
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 
@@ -84,8 +85,28 @@ def build_finished_frame(events: list[dict]) -> pd.DataFrame:
     return frame
 
 
-def sync_results(*, write: bool) -> dict:
-    provider = fetch_current_finished_results(SERIE_A_RUNTIME_CONFIG)
+def sync_results(*, write: bool, client=None) -> dict:
+    try:
+        provider = fetch_current_finished_results(SERIE_A_RUNTIME_CONFIG)
+    except PublicResultsSourceUnavailable as exc:
+        print("=" * 88)
+        print("SERIE A FINISHED RESULTS SYNC — PUBLIC FOOTBALL-DATA CSV")
+        print("=" * 88)
+        print("source status: TRANSIENT_UNAVAILABLE")
+        print("source:", exc.url)
+        print("HTTP status:", exc.status_code, "attempts:", exc.attempts)
+        return {
+            "status": "SOURCE_UNAVAILABLE",
+            "source_url": exc.url,
+            "http_status": exc.status_code,
+            "inserted": 0,
+            "unchanged": 0,
+            "conflicts": 0,
+            "finished_rows": 0,
+            "public_http_requests": exc.attempts,
+            "paid_provider_requests": 0,
+        }
+
     frame = provider["frame"]
     print("=" * 88)
     print("SERIE A FINISHED RESULTS SYNC — PUBLIC FOOTBALL-DATA CSV")
@@ -99,15 +120,26 @@ def sync_results(*, write: bool) -> dict:
     if not write:
         print("DRY RUN: no Supabase writes")
         return {
-            "inserted": 0, "unchanged": 0, "conflicts": 0,
-            "finished_rows": len(frame), "paid_provider_requests": 0,
+            "status": "DRY_RUN",
+            "source_url": provider["source_url"],
+            "inserted": 0,
+            "unchanged": 0,
+            "conflicts": 0,
+            "finished_rows": len(frame),
+            "public_http_requests": int(provider["public_http_requests"]),
+            "paid_provider_requests": 0,
         }
-    metrics = persistence.persist_results(supabase, frame, SERIE_A_RUNTIME_CONFIG)
+    if client is None:
+        from database import supabase as client
+    metrics = persistence.persist_results(client, frame, SERIE_A_RUNTIME_CONFIG)
     result = {
+        "status": "WRITTEN",
+        "source_url": provider["source_url"],
         "inserted": int(metrics["inserted"]),
         "unchanged": int(metrics["unchanged"]),
         "conflicts": int(metrics["conflicts"]),
         "finished_rows": len(frame),
+        "public_http_requests": int(provider["public_http_requests"]),
         "paid_provider_requests": 0,
     }
     print("persistence:", result)
@@ -116,11 +148,34 @@ def sync_results(*, write: bool) -> dict:
     return result
 
 
+def _write_status(path_value: str | None, payload: dict) -> None:
+    if not path_value:
+        return
+    path = Path(path_value)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--write", action="store_true")
+    parser.add_argument("--status-json")
     args = parser.parse_args()
-    sync_results(write=args.write)
+    try:
+        result = sync_results(write=args.write)
+    except Exception as exc:
+        failure = {
+            "league": LEAGUE,
+            "status": "FAILED",
+            "error_type": type(exc).__name__,
+            "error": str(exc)[:1000],
+            "paid_provider_requests": 0,
+        }
+        _write_status(args.status_json, failure)
+        raise
+    payload = {"league": LEAGUE, **result}
+    _write_status(args.status_json, payload)
+    print(json.dumps(payload, sort_keys=True))
 
 
 if __name__ == "__main__":
