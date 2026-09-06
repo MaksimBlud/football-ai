@@ -26,3 +26,10 @@ def test_results_workflow_is_provider_free_and_scheduled_for_both_leagues():
     assert "the-odds-api" not in text.lower()
     assert "update_turkey_portugal_results.py" in text
     assert "--write" in text
+
+
+def test_results_workflow_self_proves_on_main_only_when_its_contract_changes():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    on_block = text[:text.index("permissions:")]
+    assert "  push:\n    branches: [main]\n    paths:\n      - \".github/workflows/turkey-portugal-results.yml\"" in on_block
+    assert "update_turkey_portugal_results.py" not in on_block
