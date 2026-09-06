@@ -1,0 +1,54 @@
+name: EPL AI Market Pair PR Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "epl_ai_market_pair_collector.py"
+      - "epl_ai_market_pair_cycle.py"
+      - "research_model_features.py"
+      - "tests/test_epl_ai_market_pair_collector.py"
+      - "research/epl_ai_market_pair_v1.json"
+      - "research/epl_ai_market_pair_ledger.sql"
+      - ".github/workflows/epl-ai-market-pair-pr-validation.yml"
+      - ".github/workflows/epl-ai-market-pair.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pandas numpy joblib pytest supabase python-dotenv xgboost
+      - name: Compile research collector
+        run: python -m py_compile research_model_features.py epl_ai_market_pair_collector.py epl_ai_market_pair_cycle.py
+      - name: Run focused tests
+        run: python -m pytest -q tests/test_epl_ai_market_pair_collector.py
+      - name: Load tracked production artifact and verify feature schema
+        run: |
+          python - <<'PY'
+          from epl_ai_market_pair_collector import load_model_bundle
+          bundle = load_model_bundle()
+          print("PASS: tracked production artifact loaded; SHA256=" + bundle.model_sha256)
+          PY
+      - name: Enforce outcome-free scheduled collector
+        run: |
+          if grep -E 'league_finished_results|la_liga_finished_results|league_corner_results' epl_ai_market_pair_cycle.py; then
+            echo "Forbidden outcome table reference in scheduled collector"
+            exit 1
+          fi
+          echo "PASS: scheduled collector has no target settlement-table references"
+      - name: Enforce no production artifact changes
+        run: |
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -E '\.pkl$'; then
+            echo "Production model artifact change detected"
+            exit 1
+          fi
+          echo "PASS: no .pkl changes in PR"
