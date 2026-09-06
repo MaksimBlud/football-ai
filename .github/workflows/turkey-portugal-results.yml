@@ -1,0 +1,46 @@
+name: Turkey + Portugal Public Results Sync
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "41 */12 * * *"
+
+concurrency:
+  group: turkey-portugal-public-results-${{ matrix.league }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  results:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        league: [TURKEY_SUPER_LIG, PRIMEIRA_LIGA]
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: |
+          python -m pip install --upgrade pip
+          pip install pandas numpy requests supabase python-dotenv
+      - name: Check required secrets
+        run: |
+          python - <<'PY'
+          import os
+          required = ("SUPABASE_URL", "SUPABASE_KEY")
+          missing = [name for name in required if not os.getenv(name)]
+          if missing:
+              raise SystemExit("Missing Turkey/Portugal results secrets: " + ", ".join(missing))
+          print("PASS: Turkey/Portugal public results Supabase secrets available; values not printed")
+          PY
+      - name: Sync immutable public finished results
+        run: python update_turkey_portugal_results.py "${{ matrix.league }}" --write
