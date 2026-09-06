@@ -8,7 +8,7 @@ This wrapper masks only that obsolete precondition, preserves the finished-resul
 count, and hardens the append-only observation -> prediction-ledger sequence:
 all deterministic observation/ledger conflicts are preflighted before the first
 write; each append side gets one idempotent replay for a non-deterministic error;
-and the canonical ledger plan is read-after-write verified.
+and both durable sides are read-after-write verified.
 """
 
 from __future__ import annotations
@@ -51,12 +51,35 @@ def run_scheduled_cycle(
             config,
         )
 
-        return dual_write_guard.persist_observations_with_retry(
+        dual_write_guard.persist_observations_with_retry(
             client,
             frame,
             config,
             persist_fn=original_observation_persist,
         )
+
+        verified = dual_write_guard.preflight_observations(
+            client,
+            frame,
+            config,
+        )
+        expected = (
+            prepared_plan.observation_present
+            + prepared_plan.observation_missing
+        )
+        if verified["missing"] != 0 or verified["present"] != expected:
+            raise RuntimeError(
+                "EPL observation read-after-write verification failed"
+            )
+
+        # Return whole-batch metrics from the preflight state, not from the
+        # final retry call.  The first attempt may have committed a prefix
+        # before a transport error; replay then reports only the remainder.
+        return {
+            "inserted": prepared_plan.observation_missing,
+            "unchanged": prepared_plan.observation_present,
+            "conflicts": 0,
+        }
 
     def guarded_ledger_persist():
         if prepared_plan is None:
