@@ -3,7 +3,7 @@ name: Turkey + Portugal Public Results Sync
 on:
   workflow_dispatch:
   schedule:
-    - cron: "37 */12 * * *"
+    - cron: "41 */12 * * *"
 
 concurrency:
   group: turkey-portugal-public-results-${{ matrix.league }}
