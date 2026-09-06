@@ -1,6 +1,8 @@
 from multi_market_activation_status import CORNER_SOURCE_READY_LEAGUES, build_status
 from multi_market_policy import (
     EVENT_REQUEST_MAX_CREDITS,
+    FEATURED_REQUEST_MAX_CREDITS,
+    FIRST_EVENT_MAX_CREDITS,
     HARD_RESERVE_CREDITS,
     MIN_COLLECTION_REMAINING_CREDITS,
 )
@@ -55,9 +57,11 @@ def test_all_schema_and_minimum_credit_budget_is_ready_but_awaits_manual_activat
     assert status["scheduled_collection_enabled"] is False
     assert status["status"] == "INFRASTRUCTURE_READY_AWAITING_MANUAL_ACTIVATION"
     assert status["blockers"] == []
-    assert status["quota_threshold"] == HARD_RESERVE_CREDITS + EVENT_REQUEST_MAX_CREDITS
+    assert status["quota_threshold"] == HARD_RESERVE_CREDITS + FIRST_EVENT_MAX_CREDITS
+    assert status["featured_request_max_credits"] == FEATURED_REQUEST_MAX_CREDITS == 2
+    assert status["event_request_max_credits"] == EVENT_REQUEST_MAX_CREDITS == 2
+    assert status["first_event_max_credits"] == FIRST_EVENT_MAX_CREDITS == 4
     assert status["hard_reserve_credits"] == HARD_RESERVE_CREDITS
-    assert status["event_request_max_credits"] == EVENT_REQUEST_MAX_CREDITS
     assert status["paid_provider_requests"] == 0
     assert status["paid_provider_credits"] == 0
     assert status["writes_performed"] is False
