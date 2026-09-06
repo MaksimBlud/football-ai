@@ -6,6 +6,7 @@ on:
     paths:
       - "epl_ai_market_pair_collector.py"
       - "epl_ai_market_pair_cycle.py"
+      - "research_model_features.py"
       - "tests/test_epl_ai_market_pair_collector.py"
       - "research/epl_ai_market_pair_v1.json"
       - "research/epl_ai_market_pair_ledger.sql"
@@ -26,7 +27,7 @@ jobs:
           python-version: "3.12"
       - run: pip install pandas numpy joblib pytest supabase python-dotenv
       - name: Compile research collector
-        run: python -m py_compile epl_ai_market_pair_collector.py epl_ai_market_pair_cycle.py
+        run: python -m py_compile research_model_features.py epl_ai_market_pair_collector.py epl_ai_market_pair_cycle.py
       - name: Run focused tests
         run: python -m pytest -q tests/test_epl_ai_market_pair_collector.py
       - name: Enforce outcome-free scheduled collector
