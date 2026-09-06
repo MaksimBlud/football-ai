@@ -1,5 +1,7 @@
 from types import SimpleNamespace
 
+import pytest
+
 from multi_market_cycle import run_cycle
 from multi_market_policy import MIN_COLLECTION_REMAINING_CREDITS
 
@@ -78,7 +80,7 @@ def test_cycle_calls_collect_only_when_all_gates_and_activation_ready():
     calls = {"collect": 0}
     def collect():
         calls["collect"] += 1
-        return {"fetched": 2, "inserted": 2, "provider_paid_credits": 4}
+        return {"fetched": 2, "inserted": 2, "provider_paid_requests": 2, "provider_paid_credits": 4}
     result = run_cycle(
         client,
         lambda: {"remaining": "204", "last_cost": "0"},
@@ -91,3 +93,46 @@ def test_cycle_calls_collect_only_when_all_gates_and_activation_ready():
     assert result["paid_provider_requests"] == 2
     assert calls["collect"] == 1
     assert result["prospective_oos_evaluation_active"] is False
+
+
+def test_cycle_reports_two_http_requests_for_one_amortized_complete_event():
+    client = FakeClient()
+    result = run_cycle(
+        client,
+        lambda: {"remaining": "195", "last_cost": "0"},
+        lambda: {
+            "fetched": 1,
+            "inserted": 1,
+            "featured_requests": 1,
+            "event_requests": 1,
+            "provider_paid_requests": 2,
+            "provider_paid_credits": 4,
+        },
+        collection_enabled=True,
+    )
+    assert result["paid_provider_requests"] == 2
+    assert result["collection"]["fetched"] == 1
+    assert result["collection"]["provider_paid_requests"] == 2
+
+
+def test_cycle_keeps_fetched_as_legacy_request_count_fallback():
+    client = FakeClient()
+    result = run_cycle(
+        client,
+        lambda: {"remaining": "195", "last_cost": "0"},
+        lambda: {"fetched": 1, "inserted": 1},
+        collection_enabled=True,
+    )
+    assert result["paid_provider_requests"] == 1
+
+
+def test_invalid_explicit_provider_request_count_fails_closed():
+    client = FakeClient()
+    for value in (-1, "not-an-int"):
+        with pytest.raises(ValueError, match="provider paid request count"):
+            run_cycle(
+                client,
+                lambda: {"remaining": "195", "last_cost": "0"},
+                lambda value=value: {"fetched": 1, "provider_paid_requests": value},
+                collection_enabled=True,
+            )
