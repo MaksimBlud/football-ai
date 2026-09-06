@@ -9,6 +9,9 @@ on:
       - 'static/multi_market_viewer.html'
       - 'test_multi_market_*.py'
       - 'test_research_viewer_multi_market.py'
+      - 'tests/test_la_liga_canonical_source_names.py'
+      - 'la_liga_canonical_names.py'
+      - 'league_offline_history.py'
       - 'research/multi_market_corner_capability_probe_fallback_v1.json'
       - 'research/prospective_corners10_incremental_v1.json'
       - 'supabase/migrations/20260905000*.sql'
@@ -30,9 +33,9 @@ jobs:
           python-version: '3.12'
       - run: pip install pandas requests supabase python-dotenv pytest fastapi
       - name: Compile
-        run: python -m py_compile multi_market_odds.py multi_market_card.py multi_market_collector.py multi_market_cycle.py multi_market_activation_status.py multi_market_settlement.py multi_market_settlement_persistence.py multi_market_corner_results.py multi_market_oos_evaluator.py multi_market_oos_gate.py multi_market_backfill.py multi_market_migration_contract.py research_viewer.py research_viewer_app.py
+        run: python -m py_compile multi_market_odds.py multi_market_card.py multi_market_collector.py multi_market_cycle.py multi_market_activation_status.py multi_market_settlement.py multi_market_settlement_persistence.py multi_market_corner_results.py multi_market_oos_evaluator.py multi_market_oos_gate.py multi_market_backfill.py multi_market_migration_contract.py la_liga_canonical_names.py league_offline_history.py research_viewer.py research_viewer_app.py
       - name: Focused tests
-        run: pytest -q test_multi_market_odds.py test_multi_market_card.py test_multi_market_collector.py test_multi_market_settlement.py test_multi_market_settlement_persistence.py test_multi_market_corner_results.py test_multi_market_oos_evaluator.py test_multi_market_oos_gate.py test_multi_market_backfill.py test_multi_market_backfill_workflow.py test_multi_market_migration_contract.py test_research_viewer_multi_market.py test_multi_market_viewer_contract.py test_multi_market_turkey_portugal.py test_multi_market_corner_capability_probe_fallback.py test_multi_market_corners10_incremental_protocol.py
+        run: pytest -q test_multi_market_odds.py test_multi_market_card.py test_multi_market_collector.py test_multi_market_settlement.py test_multi_market_settlement_persistence.py test_multi_market_corner_results.py tests/test_la_liga_canonical_source_names.py test_multi_market_oos_evaluator.py test_multi_market_oos_gate.py test_multi_market_backfill.py test_multi_market_backfill_workflow.py test_multi_market_migration_contract.py test_research_viewer_multi_market.py test_multi_market_viewer_contract.py test_multi_market_turkey_portugal.py test_multi_market_corner_capability_probe_fallback.py test_multi_market_corners10_incremental_protocol.py
       - name: Production artifact guard
         run: |
           git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$' && exit 1 || true
