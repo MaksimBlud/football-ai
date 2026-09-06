@@ -1,8 +1,9 @@
-"""Frozen row selection and evaluation gate for EPL_AI_MARKET_PAIR_V1.
+"""Frozen row selection, readiness gate, and primary decision for EPL_AI_MARKET_PAIR_V1.
 
-This module is outcome-free. It selects the preregistered paired evidence and decides
-whether the primary evaluation gate is open *before* any caller may join target results.
-It performs no fitting, outcome reads, threshold search, or subgroup selection.
+This module is outcome-free until a caller explicitly supplies a completed audit result.
+It selects the preregistered paired evidence, decides whether target outcomes may be read,
+and applies the preregistered primary decision rule without fitting, threshold search, or
+subgroup selection.
 """
 from __future__ import annotations
 
@@ -13,6 +14,9 @@ LEAGUE = "EPL"
 FROZEN_MODEL_SHA256 = "1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5"
 PRIMARY_COHORT_SIZE = 100
 EVALUATION_DELAY_HOURS = 24
+FIRST_PERMITTED_OUTCOME_READ_UTC = pd.Timestamp("2026-11-01T12:16:54.672903Z")
+AUDIT_BOOTSTRAP_SIMULATIONS = 20000
+AUDIT_BOOTSTRAP_SEED = 20260901
 
 REQUIRED_COLUMNS = {
     "pair_key",
@@ -35,15 +39,7 @@ REQUIRED_COLUMNS = {
 
 
 def select_frozen_evaluation_pairs(frame: pd.DataFrame) -> tuple[pd.DataFrame, list[dict[str, str]]]:
-    """Select exactly one preregistered pair per unambiguous event.
-
-    Rules frozen before target outcomes are used:
-    - only EPL_AI_MARKET_PAIR_V1 rows from the first live model SHA are eligible;
-    - both market snapshot and model generation must be pre-kickoff;
-    - any event_id carrying multiple kickoff/home/away identities is excluded entirely;
-    - otherwise choose maximum market_snapshot_time_utc;
-    - exact timestamp ties resolve by pair_key ascending.
-    """
+    """Select exactly one preregistered pair per unambiguous event."""
     missing = REQUIRED_COLUMNS.difference(frame.columns)
     if missing:
         raise ValueError(f"paired evidence missing columns: {sorted(missing)}")
@@ -102,13 +98,12 @@ def primary_evaluation_gate(
     *,
     now_utc: str | pd.Timestamp,
 ) -> tuple[dict[str, object], pd.DataFrame, list[dict[str, str]]]:
-    """Return an outcome-free gate decision and the immutable primary cohort candidate.
+    """Return the frozen outcome-read gate and immutable first-100 cohort candidate.
 
-    The primary cohort is the first 100 eligible selected events ordered by kickoff,
-    event_id, then pair_key. No target outcome may be read until all 100 exist and the
-    latest kickoff in that cohort is at least 24 hours in the past. This prevents both
-    performance-based optional stopping and evaluation while fixture outcomes may still
-    be settling into canonical result tables.
+    Outcomes remain forbidden until the first 100 eligible selected events exist, the
+    latest kickoff among those 100 is at least 24 hours old, and the fixed 56-day
+    wall-clock embargo from first live collection has elapsed. The effective opening
+    instant is the later of those two timestamps.
     """
     selected, excluded = select_frozen_evaluation_pairs(frame)
     cohort = selected.head(PRIMARY_COHORT_SIZE).copy().reset_index(drop=True)
@@ -125,13 +120,16 @@ def primary_evaluation_gate(
             "outcome_reads_allowed": False,
         }, cohort, excluded
 
-    gate_opens_at = cohort["kickoff_utc"].max() + pd.Timedelta(hours=EVALUATION_DELAY_HOURS)
+    cohort_mature_at = cohort["kickoff_utc"].max() + pd.Timedelta(hours=EVALUATION_DELAY_HOURS)
+    gate_opens_at = max(cohort_mature_at, FIRST_PERMITTED_OUTCOME_READ_UTC)
     if now < gate_opens_at:
         return {
             "open": False,
-            "reason": "COHORT_NOT_MATURE",
+            "reason": "PREREGISTERED_GATE_NOT_REACHED",
             "required_events": PRIMARY_COHORT_SIZE,
             "eligible_events": PRIMARY_COHORT_SIZE,
+            "cohort_mature_at_utc": cohort_mature_at.isoformat(),
+            "fixed_wall_clock_gate_utc": FIRST_PERMITTED_OUTCOME_READ_UTC.isoformat(),
             "gate_opens_at_utc": gate_opens_at.isoformat(),
             "outcome_reads_allowed": False,
         }, cohort, excluded
@@ -141,6 +139,27 @@ def primary_evaluation_gate(
         "reason": "PREREGISTERED_GATE_OPEN",
         "required_events": PRIMARY_COHORT_SIZE,
         "eligible_events": PRIMARY_COHORT_SIZE,
+        "cohort_mature_at_utc": cohort_mature_at.isoformat(),
+        "fixed_wall_clock_gate_utc": FIRST_PERMITTED_OUTCOME_READ_UTC.isoformat(),
         "gate_opens_at_utc": gate_opens_at.isoformat(),
         "outcome_reads_allowed": True,
     }, cohort, excluded
+
+
+def primary_decision_from_audit(result: dict) -> str:
+    """Apply the frozen two-metric bootstrap-CI primary decision rule."""
+    try:
+        brier = result["brier_delta_model_minus_market"]
+        logloss = result["logloss_delta_model_minus_market"]
+        brier_low = float(brier["ci95_low"])
+        brier_high = float(brier["ci95_high"])
+        logloss_low = float(logloss["ci95_low"])
+        logloss_high = float(logloss["ci95_high"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("audit result missing valid preregistered CI fields") from exc
+
+    if brier_high < 0 and logloss_high < 0:
+        return "PASS"
+    if brier_low > 0 and logloss_low > 0:
+        return "FAIL"
+    return "INCONCLUSIVE"
