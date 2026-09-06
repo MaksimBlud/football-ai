@@ -97,3 +97,7 @@ jobs:
       - name: Run durable EPL market-only live cycle
         run: |
           python3 scheduled_epl_live_cycle.py
+
+      - name: Audit durable observation / ledger parity
+        run: |
+          python3 audit_epl_observation_ledger_parity.py
