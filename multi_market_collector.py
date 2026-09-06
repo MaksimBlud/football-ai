@@ -65,6 +65,16 @@ def _int_quota(value):
         return None
 
 
+def _event_corner_market_keys(payload):
+    requested = set(EVENT_MARKETS)
+    return sorted({
+        str(market.get("key"))
+        for bookmaker in (payload.get("bookmakers") or [])
+        for market in (bookmaker.get("markets") or [])
+        if market.get("key") in requested
+    })
+
+
 def load_future_events(now_utc):
     rows, start = [], 0
     while True:
@@ -172,6 +182,7 @@ def collect(now_utc=None, *, max_paid_requests=None, max_paid_credits=None):
         "inserted": 0,
         "skipped_recent": 0,
         "skipped_unsupported": 0,
+        "skipped_no_corner_market": 0,
         "quota_stop": False,
         "max_paid_requests": request_cap,
         "max_paid_credits": credit_cap,
@@ -229,6 +240,11 @@ def collect(now_utc=None, *, max_paid_requests=None, max_paid_credits=None):
         current_remaining = _charge(summary, event_quota, EVENT_REQUEST_MAX_CREDITS, current_remaining)
         summary["fetched"] += 1
         summary["event_requests"] += 1
+
+        corner_keys = _event_corner_market_keys(corner_payload)
+        if not corner_keys and _int_quota(event_quota.get("last_cost")) == 0:
+            summary["skipped_no_corner_market"] += 1
+            continue
 
         payload = merge_event_market_payloads(featured_by_league[league].get(event_id), corner_payload)
         snapshot_time, kickoff = now_utc, _utc(event["commence_time_utc"])

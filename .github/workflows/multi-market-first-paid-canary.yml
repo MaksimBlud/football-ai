@@ -4,7 +4,9 @@ on:
   pull_request:
     paths:
       - 'multi_market_first_paid_canary.py'
+      - 'multi_market_collector.py'
       - 'test_multi_market_first_paid_canary.py'
+      - 'test_multi_market_empty_corner_payload.py'
       - '.github/workflows/multi-market-first-paid-canary.yml'
   push:
     branches: [main]
@@ -28,7 +30,7 @@ jobs:
       - name: Compile canary modules
         run: python -m py_compile multi_market_first_paid_canary.py multi_market_sampling_plan.py multi_market_collector.py multi_market_odds.py
       - name: Run first-paid canary regressions
-        run: pytest -q test_multi_market_first_paid_canary.py test_multi_market_collector.py test_multi_market_sampling_plan.py
+        run: pytest -q test_multi_market_first_paid_canary.py test_multi_market_empty_corner_payload.py test_multi_market_collector.py test_multi_market_sampling_plan.py
       - name: Guard production model artifacts
         if: github.event_name == 'pull_request'
         run: |
@@ -51,7 +53,7 @@ jobs:
       - run: pip install pandas requests supabase python-dotenv
       - name: Record production model hash before
         run: sha256sum football_model_xgboost_elo.pkl > /tmp/model.before
-      - name: Run guarded two-event first paid canary
+      - name: Run guarded first-paid proof or read-only postmortem
         run: python multi_market_first_paid_canary.py
       - name: Verify canary proof contract
         run: |
@@ -63,31 +65,51 @@ jobs:
           assert p['research_only'] is True
           assert p['production_promotion'] is False
           assert p['prospective_oos_evaluation_active'] is False
-          assert p['status']=='PASSED'
-          assert p['snapshot_count_before']==0
-          assert p['snapshot_count_after']==2
           assert p['max_paid_requests']==3
           assert p['max_paid_credits']==6
-          assert p['preflight']['paid_provider_requests']==0
-          assert p['preflight']['paid_provider_credits']==0
-          assert p['preflight']['hard_reserve_preserved'] is True
-          assert p['collection']['featured_requests']==1
-          assert p['collection']['event_requests']==2
-          assert p['collection']['provider_paid_requests']==3
-          assert 1 <= int(p['collection']['provider_paid_credits']) <= 6
           assert p['post_collection']['unique_events']==2
           assert p['post_collection']['unique_snapshot_keys']==2
-          assert int(p['quota_after']['remaining']) >= int(p['hard_reserve_credits'])
-          assert p['preflight']['expected_league'] not in {'RPL','TURKEY_SUPER_LIG'}
-          print('league=',p['preflight']['expected_league'])
-          print('event_ids=',p['preflight']['expected_event_ids'])
-          print('paid_requests=',p['collection']['provider_paid_requests'])
-          print('paid_credits=',p['collection']['provider_paid_credits'])
-          print('quota_after=',p['quota_after'])
+          if p['status']=='PASSED':
+              assert p['snapshot_count_before']==0
+              assert p['snapshot_count_after']==2
+              assert p['preflight']['paid_provider_requests']==0
+              assert p['preflight']['paid_provider_credits']==0
+              assert p['preflight']['hard_reserve_preserved'] is True
+              assert p['collection']['featured_requests']==1
+              assert p['collection']['event_requests']==2
+              assert p['collection']['provider_paid_requests']==3
+              assert 1 <= int(p['collection']['provider_paid_credits']) <= 6
+              assert int(p['quota_after']['remaining']) >= int(p['hard_reserve_credits'])
+              assert p['preflight']['expected_league'] not in {'RPL','TURKEY_SUPER_LIG'}
+              assert not p['post_collection']['missing_corner_event_ids']
+              print('status=PASSED')
+              print('league=',p['preflight']['expected_league'])
+              print('event_ids=',p['preflight']['expected_event_ids'])
+              print('paid_requests=',p['collection']['provider_paid_requests'])
+              print('paid_credits=',p['collection']['provider_paid_credits'])
+              print('quota_after=',p['quota_after'])
+          else:
+              assert p['status']=='BLOCKED_NO_CORNER_MARKET'
+              assert p['blocker']=='FIRST_PAID_CANARY_NO_CORNER_MARKET'
+              assert p['snapshot_count_before']==2
+              assert p['snapshot_count_after']==2
+              assert p['provider_recheck_performed'] is False
+              assert p['preflight'] is None
+              assert p['collection'] is None
+              assert p['quota_after'] is None
+              assert len(p['post_collection']['missing_corner_event_ids'])==2
+              assert p['post_collection']['event_last_costs']==[0,0]
+              assert all(cost==2 for cost in p['post_collection']['featured_last_costs'])
+              assert int(p['post_collection']['observed_remaining_credits']) >= int(p['hard_reserve_credits'])
+              print('status=BLOCKED_NO_CORNER_MARKET')
+              print('missing_corner_event_ids=',p['post_collection']['missing_corner_event_ids'])
+              print('event_last_costs=',p['post_collection']['event_last_costs'])
+              print('observed_remaining=',p['post_collection']['observed_remaining_credits'])
           print('market_keys=',p['post_collection']['provider_market_keys'])
           print('bookmakers=',p['post_collection']['bookmaker_keys'])
           PY
       - name: Verify production model unchanged
+        if: always()
         run: |
           sha256sum football_model_xgboost_elo.pkl > /tmp/model.after
           diff -u /tmp/model.before /tmp/model.after

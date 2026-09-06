@@ -1,15 +1,16 @@
 """One-shot guarded live canary for the first prospective Multi-Market sample.
 
 This entry point is intentionally stricter than the recurring collector:
-- the snapshot table must still be empty, so a rerun fails before provider spend;
+- an empty snapshot table permits the one-time paid canary path;
+- a non-empty table is audited read-only and can never trigger provider spend;
 - a fresh zero-cost planner must fit two fixtures from one outcome-ready league
   inside the 3-request / 6-credit canary envelope;
 - the collector is called with explicit caps and the hard reserve remains intact;
 - exactly two unique prospective snapshots must be written and contain real
-  corner-market/bookmaker payloads.
+  corner-market/bookmaker payloads to pass.
 
 It never enables scheduled collection, settlement, evaluation, or promotion.
-Live planner/provider dependencies are imported only after the empty-table guard.
+Provider-aware modules are imported only on the empty-table paid path.
 """
 from __future__ import annotations
 
@@ -125,7 +126,13 @@ def _validate_collection(collection: dict[str, Any], expected_league: str) -> No
         raise RuntimeError("actual canary spend crosses hard reserve")
 
 
-def _audit_rows(rows: list[dict[str, Any]], expected_league: str, expected_event_ids: list[str]) -> dict[str, Any]:
+def _audit_rows(
+    rows: list[dict[str, Any]],
+    expected_league: str,
+    expected_event_ids: list[str],
+    *,
+    require_corners: bool = True,
+) -> dict[str, Any]:
     if len(rows) != EXPECTED_EVENTS:
         raise RuntimeError(f"expected exactly two stored snapshots, found {len(rows)}")
     keys = [str(row.get("snapshot_key") or "") for row in rows]
@@ -139,34 +146,79 @@ def _audit_rows(rows: list[dict[str, Any]], expected_league: str, expected_event
 
     market_keys: set[str] = set()
     bookmaker_keys: set[str] = set()
+    missing_corner_event_ids: list[str] = []
+    event_last_costs: list[int | None] = []
+    featured_last_costs: list[int | None] = []
+    observed_remaining: list[int] = []
     per_event: list[dict[str, Any]] = []
     for row in rows:
         payload = dict(row.get("payload") or {})
         row_markets = {str(key) for key in (payload.get("provider_market_keys") or []) if key}
         books = list(payload.get("bookmakers") or [])
         row_books = {str(book.get("key") or book.get("title") or "") for book in books if isinstance(book, dict)}
+        event_id = str(row.get("event_id") or "")
         if not row_markets.intersection(CORNER_MARKETS):
-            raise RuntimeError(f"stored event {row.get('event_id')} has no corner market")
+            missing_corner_event_ids.append(event_id)
+            if require_corners:
+                raise RuntimeError(f"stored event {event_id} has no corner market")
         if not row_books:
-            raise RuntimeError(f"stored event {row.get('event_id')} has no bookmaker payload")
+            raise RuntimeError(f"stored event {event_id} has no bookmaker payload")
         market_keys.update(row_markets)
         bookmaker_keys.update(key for key in row_books if key)
+        event_quota = dict(payload.get("quota") or {})
+        featured_quota = dict(payload.get("featured_quota") or {})
+        event_last = event_quota.get("last_cost")
+        featured_last = featured_quota.get("last_cost")
+        event_last_costs.append(int(event_last) if event_last not in (None, "") else None)
+        featured_last_costs.append(int(featured_last) if featured_last not in (None, "") else None)
+        remaining = event_quota.get("remaining")
+        if remaining not in (None, ""):
+            observed_remaining.append(int(remaining))
         per_event.append({
-            "event_id": str(row.get("event_id") or ""),
+            "event_id": event_id,
             "home_team": str(row.get("home_team") or ""),
             "away_team": str(row.get("away_team") or ""),
             "kickoff_utc": str(row.get("kickoff_utc") or ""),
             "snapshot_time_utc": str(row.get("snapshot_time_utc") or ""),
             "provider_market_keys": sorted(row_markets),
             "bookmaker_count": len(row_books),
+            "event_last_cost": event_last_costs[-1],
+            "featured_last_cost": featured_last_costs[-1],
         })
     return {
         "unique_snapshot_keys": len(set(keys)),
         "unique_events": len(set(event_ids)),
         "provider_market_keys": sorted(market_keys),
         "bookmaker_keys": sorted(bookmaker_keys),
+        "missing_corner_event_ids": missing_corner_event_ids,
+        "event_last_costs": event_last_costs,
+        "featured_last_costs": featured_last_costs,
+        "observed_remaining_credits": min(observed_remaining) if observed_remaining else None,
         "events": per_event,
     }
+
+
+def _audit_existing_failed_canary(client: Any, baseline: int, result: dict[str, Any]) -> dict[str, Any]:
+    if baseline != EXPECTED_EVENTS:
+        result["blocker"] = "FIRST_CANARY_REQUIRES_EMPTY_SNAPSHOT_TABLE"
+        return result
+    rows = _load_canary_rows(client)
+    leagues = {str(row.get("league") or "") for row in rows}
+    event_ids = [str(row.get("event_id") or "") for row in rows]
+    if len(leagues) != 1 or not all(event_ids):
+        result["blocker"] = "EXISTING_CANARY_ROWS_NOT_CANONICAL"
+        return result
+    league = next(iter(leagues))
+    audit = _audit_rows(rows, league, event_ids, require_corners=False)
+    result["snapshot_count_after"] = baseline
+    result["post_collection"] = audit
+    result["provider_recheck_performed"] = False
+    if len(audit["missing_corner_event_ids"]) == EXPECTED_EVENTS:
+        result["status"] = "BLOCKED_NO_CORNER_MARKET"
+        result["blocker"] = "FIRST_PAID_CANARY_NO_CORNER_MARKET"
+        return result
+    result["blocker"] = "EXISTING_CANARY_ROWS_REQUIRE_MANUAL_REVIEW"
+    return result
 
 
 def run_canary(
@@ -193,8 +245,7 @@ def run_canary(
         "status": "BLOCKED",
     }
     if baseline != 0:
-        result["blocker"] = "FIRST_CANARY_REQUIRES_EMPTY_SNAPSHOT_TABLE"
-        return result
+        return _audit_existing_failed_canary(client, baseline, result)
 
     # Only after the irreversible first-canary baseline guard may live planner
     # and provider-aware modules be loaded or invoked.
@@ -242,7 +293,7 @@ def main() -> None:
     result: dict[str, Any]
     try:
         result = run_canary(supabase)
-        if result.get("status") != "PASSED":
+        if result.get("status") not in {"PASSED", "BLOCKED_NO_CORNER_MARKET"}:
             raise RuntimeError(str(result.get("blocker") or "canary blocked"))
     except Exception as exc:
         result = locals().get("result", {
