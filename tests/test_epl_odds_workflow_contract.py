@@ -30,3 +30,13 @@ def test_epl_odds_workflow_does_not_train_or_promote_models():
 
     for token in forbidden:
         assert token not in workflow
+
+
+def test_epl_odds_workflow_has_guarded_two_hour_schedule():
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+
+    assert 'cron: "17 */2 * * *"' in workflow
+    assert "odds_api_budget_guard.py --max-cost 1" in workflow
+    assert "scheduled_odds_snapshot.py" in workflow
+    assert "group: epl-odds-snapshots" in workflow
+    assert "cancel-in-progress: false" in workflow
