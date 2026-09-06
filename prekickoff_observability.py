@@ -4,10 +4,16 @@ Uses only pre-kickoff market snapshots and prediction-ledger state, so it is
 safe while prospective experiments remain behind an evaluation gate.
 """
 from __future__ import annotations
+
+import json
 import numpy as np
 import pandas as pd
 
 PROB_COLS = ["p_home", "p_draw", "p_away"]
+SNAPSHOT_TABLE = "odds_snapshots"
+LEDGER_TABLE = "league_prediction_ledger"
+PAGE_SIZE = 1000
+MAX_PAGES = 20
 
 
 def _fair_probabilities(frame: pd.DataFrame) -> pd.DataFrame:
@@ -82,3 +88,57 @@ def build_prekickoff_lineage(*, league: str, event_id: str,
             "prediction_modes": sorted(set(ledger["prediction_mode"].astype(str)))
                 if not ledger.empty and "prediction_mode" in ledger.columns else [],
             "outcome_reads": 0, "research_only": True}
+
+
+def _load_rows(client, table: str, *, league: str, event_id: str | None = None,
+               page_size: int = PAGE_SIZE, max_pages: int = MAX_PAGES) -> pd.DataFrame:
+    if page_size <= 0 or max_pages <= 0:
+        raise ValueError("page_size and max_pages must be positive")
+    rows: list[dict] = []
+    for page in range(max_pages):
+        start = page * page_size
+        query = client.table(table).select("*").eq("league", league)
+        if event_id is not None:
+            query = query.eq("event_id", event_id)
+        response = query.range(start, start + page_size - 1).execute()
+        batch = list(getattr(response, "data", None) or [])
+        rows.extend(batch)
+        if len(batch) < page_size:
+            return pd.DataFrame(rows)
+    raise RuntimeError(f"bounded pagination exhausted for {table}")
+
+
+def live_report(*, client, league: str, event_id: str | None = None) -> dict:
+    snapshots = _load_rows(client, SNAPSHOT_TABLE, league=league, event_id=event_id)
+    if event_id is None:
+        movement = analyze_market_movement(snapshots, league=league)
+        return {
+            "league": league,
+            "events": int(len(movement)),
+            "movement": movement.to_dict(orient="records"),
+            "outcome_reads": 0,
+            "research_only": True,
+        }
+    ledger = _load_rows(client, LEDGER_TABLE, league=league, event_id=event_id)
+    return build_prekickoff_lineage(
+        league=league, event_id=event_id, snapshots=snapshots, ledger=ledger
+    )
+
+
+def main() -> None:
+    import argparse
+    from database import supabase
+    from league_config import get_league_config
+
+    parser = argparse.ArgumentParser(description="Outcome-free pre-kickoff observability")
+    parser.add_argument("--league", required=True)
+    parser.add_argument("--event-id")
+    args = parser.parse_args()
+    get_league_config(args.league)
+    payload = live_report(client=supabase, league=args.league, event_id=args.event_id)
+    print(json.dumps(payload, indent=2, sort_keys=True, default=str))
+    print("PASS: OUTCOME-FREE PRE-KICKOFF OBSERVABILITY COMPLETE")
+
+
+if __name__ == "__main__":
+    main()
