@@ -163,7 +163,7 @@ def main() -> None:
         "pair_rows_unchanged": int(unchanged),
         "excluded": excluded,
         "outcome_tables_read": [],
-        "production_artifacts_modified": false if False else False,
+        "production_artifacts_modified": False,
     }
     (OUTPUT_DIR / "audit.json").write_text(
         json.dumps(audit, indent=2, sort_keys=True), encoding="utf-8"
