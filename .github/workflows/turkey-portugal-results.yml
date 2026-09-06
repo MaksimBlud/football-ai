@@ -8,6 +8,8 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/turkey-portugal-results.yml"
+      - "football_data_current_results.py"
+      - "update_turkey_portugal_results.py"
 
 permissions:
   contents: read
