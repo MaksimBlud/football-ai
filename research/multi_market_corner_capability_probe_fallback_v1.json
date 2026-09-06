@@ -1,0 +1,42 @@
+{
+  "schema_version": "MULTI_MARKET_CORNER_CAPABILITY_PROBE_FALLBACK_V1",
+  "research_only": true,
+  "active": false,
+  "automatic_activation_allowed": false,
+  "automatic_target_switching_allowed": false,
+  "paid_request_allowed_by_this_file": false,
+  "requires_separate_activation_pr": true,
+  "activation_conditions": {
+    "primary_target_must_be_expired": true,
+    "primary_probe_must_have_zero_provider_request_attempts": true,
+    "fresh_zero_cost_quota_preflight_required": true,
+    "hard_reserve_credits": 100,
+    "max_paid_requests": 1,
+    "max_paid_credits": 2,
+    "target_must_still_be_prospective": true
+  },
+  "selection_policy": "earliest_unambiguous_corner_source_ready_fixture_at_least_24h_after_rollover_plan_generation",
+  "selected_before_corner_response": true,
+  "target": {
+    "league": "LA_LIGA",
+    "event_id": "0817220a8e0794e15ecba51338bb6cf8",
+    "home_team": "Getafe",
+    "away_team": "Celta Vigo",
+    "commence_time_utc": "2026-09-07T17:00:00+00:00"
+  },
+  "source_rollover_proof": {
+    "workflow_run_id": 34013842380,
+    "artifact_id": 9983294632,
+    "artifact_zip_sha256": "72b573aedbbad340d5e7809b3b007e0842880ec12ffd26f45eed8bedf55da0ca",
+    "head_sha": "e7ef5e355862bc1cf21ab23b06952244aec16d2d",
+    "generated_at_utc": "2026-09-06T05:23:43.350945+00:00",
+    "active_target_seconds_remaining": 27376,
+    "eligible_candidate_count": 33,
+    "ambiguous_event_ids_excluded": [
+      "8f751e96142db860ba66bbea713baf50"
+    ],
+    "paid_provider_requests": 0,
+    "paid_provider_credits": 0,
+    "writes_performed": false
+  }
+}
