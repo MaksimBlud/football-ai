@@ -48,4 +48,42 @@ jobs:
           print("PASS: Turkey/Portugal public results Supabase secrets available; values not printed")
           PY
       - name: Sync immutable public finished results
-        run: python update_turkey_portugal_results.py "${{ matrix.league }}" --write
+        run: >-
+          python update_turkey_portugal_results.py "${{ matrix.league }}" --write
+          --status-json "artifacts/turkey_portugal_results_${{ matrix.league }}.json"
+      - name: Verify explicit provider-free result status
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          league=os.environ['MATRIX_LEAGUE']
+          path=Path(f'artifacts/turkey_portugal_results_{league}.json')
+          if not path.exists():
+              raise SystemExit('missing Turkey/Portugal results status artifact')
+          p=json.loads(path.read_text())
+          assert p['league']==league
+          assert p['paid_provider_requests']==0
+          assert p['status'] in {'WRITTEN','SOURCE_NOT_PUBLISHED','SOURCE_UNAVAILABLE'}
+          if p['status']=='SOURCE_UNAVAILABLE':
+              assert int(p['public_http_requests'])==3
+              assert int(p['http_status']) in {429,500,502,503,504}
+              assert int(p['inserted'])==0
+              assert int(p['conflicts'])==0
+          print('league=',league)
+          print('status=',p['status'])
+          print('public_http_requests=',p.get('public_http_requests'))
+          print('inserted=',p.get('inserted'))
+          print('unchanged=',p.get('unchanged'))
+          print('conflicts=',p.get('conflicts'))
+          PY
+        env:
+          MATRIX_LEAGUE: ${{ matrix.league }}
+      - name: Upload public results status
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: turkey-portugal-results-${{ matrix.league }}
+          path: artifacts/turkey_portugal_results_${{ matrix.league }}.json
+          if-no-files-found: error
