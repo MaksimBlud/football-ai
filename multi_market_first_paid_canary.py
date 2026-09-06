@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from multi_market_collector import TABLE, collect
+from multi_market_odds import fetch_quota_status
 from multi_market_policy import CORNER_SOURCE_READY_LEAGUES, HARD_RESERVE_CREDITS
 from multi_market_sampling_plan import build_live_plan
 
@@ -57,21 +58,20 @@ def _validate_plan(plan: dict[str, Any]) -> tuple[str, list[str]]:
     if int(plan.get("worst_case_remaining_credits") or -1) < HARD_RESERVE_CREDITS:
         raise RuntimeError("planner worst-case remaining crosses hard reserve")
     events = list(plan.get("events") or [])
-    if len(events) < EXPECTED_EVENTS:
-        raise RuntimeError("fewer than two canary fixtures fit the safe envelope")
-    first_two = events[:EXPECTED_EVENTS]
-    leagues = [str(row.get("league") or "") for row in first_two]
+    if len(events) != EXPECTED_EVENTS:
+        raise RuntimeError(f"canary plan must contain exactly two fixtures, found {len(events)}")
+    leagues = [str(row.get("league") or "") for row in events]
     if len(set(leagues)) != 1:
         raise RuntimeError("first two canary fixtures are not in the same league")
     league = leagues[0]
     if league not in set(CORNER_SOURCE_READY_LEAGUES) or league in PROHIBITED_LEAGUES:
         raise RuntimeError(f"canary league is not outcome-ready: {league}")
-    marginal = [int(row.get("worst_case_marginal_credits") or 0) for row in first_two]
+    marginal = [int(row.get("worst_case_marginal_credits") or 0) for row in events]
     if marginal != [4, 2]:
         raise RuntimeError(f"unexpected same-league marginal credit plan: {marginal}")
     if sum(marginal) > MAX_PAID_CREDITS:
         raise RuntimeError("two-event canary exceeds credit cap")
-    event_ids = [str(row.get("event_id") or "") for row in first_two]
+    event_ids = [str(row.get("event_id") or "") for row in events]
     if not all(event_ids) or len(set(event_ids)) != EXPECTED_EVENTS:
         raise RuntimeError("canary planner produced invalid/duplicate event ids")
     return league, event_ids
@@ -157,6 +157,7 @@ def run_canary(
     *,
     build_plan_fn: Callable[..., dict[str, Any]] = build_live_plan,
     collect_fn: Callable[..., dict[str, Any]] = collect,
+    fetch_quota_fn: Callable[[], dict[str, Any]] = fetch_quota_status,
 ) -> dict[str, Any]:
     baseline = _count_snapshots(client)
     result: dict[str, Any] = {
@@ -171,6 +172,7 @@ def run_canary(
         "preflight": None,
         "collection": None,
         "post_collection": None,
+        "quota_after": None,
         "status": "BLOCKED",
     }
     if baseline != 0:
@@ -200,8 +202,13 @@ def run_canary(
     audit = _audit_rows(rows, expected_league, expected_event_ids)
     if count_after != EXPECTED_EVENTS:
         raise RuntimeError(f"snapshot table count after canary is {count_after}, expected {EXPECTED_EVENTS}")
+    quota_after = dict(fetch_quota_fn())
+    remaining_after = int(quota_after.get("remaining") or -1)
+    if remaining_after < HARD_RESERVE_CREDITS:
+        raise RuntimeError("post-canary quota is below hard reserve")
     result["snapshot_count_after"] = count_after
     result["post_collection"] = audit
+    result["quota_after"] = quota_after
     result["status"] = "PASSED"
     return result
 
