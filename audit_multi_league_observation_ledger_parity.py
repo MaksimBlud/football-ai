@@ -1,11 +1,13 @@
 """Read-only observation / canonical-ledger parity health audit for live leagues.
 
 Snapshot-level gaps are diagnostics only when the event already has canonical
-ledger history.  A post-ledger-era observation event with no canonical ledger
-history is critical.  Historical gaps are never repaired here.
+ledger history. A post-ledger-era observation event with no canonical ledger
+history is critical. Historical gaps are never repaired here.
 
 The audit performs no writes, provider calls, outcome reads, model operations,
-training, promotion, or Structural V2 activation.
+training, promotion, or Structural V2 activation. All durable reads use the
+same deterministic PostgREST pagination primitive as generic persistence so
+health reporting remains complete after a league exceeds the server row cap.
 """
 
 from __future__ import annotations
@@ -15,6 +17,7 @@ from dataclasses import asdict, dataclass
 import pandas as pd
 
 from database import supabase
+from league_supabase_persistence import _fetch_league_rows
 
 GENERIC_OBSERVATION_TABLE = "league_structural_v2_observations"
 LA_LIGA_OBSERVATION_TABLE = "la_liga_structural_v2_observations"
@@ -123,8 +126,6 @@ def audit_frames(
             orphan_snapshot_rows=len(observations),
             orphan_snapshot_events=orphan_events,
             orphan_snapshots_on_covered_events=0,
-            # No ledger era exists yet, so this is diagnostic rather than a
-            # post-ledger canonical coverage failure.
             post_ledger_events_without_any_ledger=0,
             post_ledger_orphan_snapshots_without_any_ledger=0,
             future_orphan_snapshot_rows=future_rows,
@@ -196,22 +197,19 @@ def _observation_table(league: str) -> str:
 
 
 def load_frames(client, league: str) -> tuple[pd.DataFrame, pd.DataFrame]:
-    observation_response = (
-        client.table(_observation_table(league))
-        .select("league,event_id,snapshot_time_utc,commence_time_utc")
-        .eq("league", league)
-        .execute()
+    observation_rows = _fetch_league_rows(
+        client,
+        _observation_table(league),
+        league,
+        order_fields=("snapshot_time_utc", "event_id", "observation_key"),
     )
-    ledger_response = (
-        client.table(LEDGER_TABLE)
-        .select("league,event_id,snapshot_time_utc")
-        .eq("league", league)
-        .execute()
+    ledger_rows = _fetch_league_rows(
+        client,
+        LEDGER_TABLE,
+        league,
+        order_fields=("snapshot_time_utc", "event_id", "prediction_key"),
     )
-    return (
-        pd.DataFrame(observation_response.data or []),
-        pd.DataFrame(ledger_response.data or []),
-    )
+    return pd.DataFrame(observation_rows), pd.DataFrame(ledger_rows)
 
 
 def audit_live(client=supabase, *, audited_at_utc=None) -> MultiLeagueParityReport:
