@@ -11,9 +11,9 @@ GUARDED_PAID_WORKFLOWS = {
     "eredivisie-odds-snapshots.yml": 1,
     "rpl-odds-snapshots.yml": 1,
     "rpl-results.yml": 2,
-    # Two matrix jobs can each spend h2h=1 + scores=2. Each job reserves the
-    # workflow-wide worst case so concurrent preflights cannot cross reserve.
-    "turkey-portugal-market-only-cycle.yml": 6,
+    # Results are public CSV now. Two matrix jobs can each spend at most one
+    # h2h credit; each preflight reserves the workflow-wide worst case.
+    "turkey-portugal-market-only-cycle.yml": 2,
     # Current coverage audit worst case: 9 leagues * (3 featured + 4 event).
     "multi-market-coverage-audit.yml": 63,
 }
