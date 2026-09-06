@@ -34,6 +34,7 @@ from team_names import normalize_team_name
 GENERIC_OBSERVATION_TABLE = "league_structural_v2_observations"
 GENERIC_RESULTS_TABLE = "league_finished_results"
 PAGE_SIZE = 1000
+RESULT_STORAGE_TIMESTAMP_FIELDS = {"source_updated_at_utc", "persisted_at_utc"}
 
 
 def _response_rows(response: Any) -> list[dict]:
@@ -324,7 +325,11 @@ def _canonical_result_team(value, config: LeagueRuntimeConfig | None):
 
 
 def _canonical_result_payload(record: dict, config: LeagueRuntimeConfig | None) -> dict:
-    normalized = dict(record)
+    normalized = {
+        key: value
+        for key, value in dict(record).items()
+        if key not in RESULT_STORAGE_TIMESTAMP_FIELDS
+    }
     normalized["home_team"] = _canonical_result_team(
         normalized.get("home_team"), config
     )
