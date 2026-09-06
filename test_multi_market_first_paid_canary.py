@@ -1,12 +1,6 @@
-import sys
-import types
 from types import SimpleNamespace
 
 import pytest
-
-fake_database = types.ModuleType("database")
-fake_database.supabase = object()
-sys.modules.setdefault("database", fake_database)
 
 import multi_market_first_paid_canary as canary
 
@@ -94,6 +88,12 @@ def collection():
         "max_paid_requests": 3,
         "max_paid_credits": 6,
     }
+
+
+def test_import_is_independent_of_live_database_module():
+    assert canary.TABLE == "league_multi_market_snapshots"
+    assert canary._default_build_plan.__module__ == canary.__name__
+    assert canary._default_collect.__module__ == canary.__name__
 
 
 def test_nonempty_snapshot_table_blocks_before_planner_or_provider():
