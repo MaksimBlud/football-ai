@@ -6,9 +6,13 @@ from pathlib import Path
 import pandas as pd
 
 from epl_ai_market_pair_evaluation import (
+    AUDIT_BOOTSTRAP_SEED,
+    AUDIT_BOOTSTRAP_SIMULATIONS,
     EVALUATION_DELAY_HOURS,
+    FIRST_PERMITTED_OUTCOME_READ_UTC,
     FROZEN_MODEL_SHA256,
     PRIMARY_COHORT_SIZE,
+    primary_decision_from_audit,
     primary_evaluation_gate,
     select_frozen_evaluation_pairs,
 )
@@ -105,27 +109,41 @@ def test_primary_gate_stays_closed_below_preregistered_sample_without_outcomes()
     }
 
 
-def test_primary_gate_stays_closed_until_24h_after_last_cohort_kickoff():
+def test_primary_gate_stays_closed_after_cohort_maturity_until_fixed_wall_clock_gate():
     frame = pd.DataFrame(_cohort_rows())
     last_kickoff = pd.to_datetime(frame["kickoff_utc"], utc=True).max()
+    assert last_kickoff + pd.Timedelta(hours=EVALUATION_DELAY_HOURS) < FIRST_PERMITTED_OUTCOME_READ_UTC
     gate, cohort, excluded = primary_evaluation_gate(
         frame,
-        now_utc=last_kickoff + pd.Timedelta(hours=EVALUATION_DELAY_HOURS) - pd.Timedelta(seconds=1),
+        now_utc=FIRST_PERMITTED_OUTCOME_READ_UTC - pd.Timedelta(seconds=1),
     )
     assert excluded == []
     assert len(cohort) == PRIMARY_COHORT_SIZE
     assert gate["open"] is False
-    assert gate["reason"] == "COHORT_NOT_MATURE"
+    assert gate["reason"] == "PREREGISTERED_GATE_NOT_REACHED"
+    assert gate["gate_opens_at_utc"] == FIRST_PERMITTED_OUTCOME_READ_UTC.isoformat()
     assert gate["outcome_reads_allowed"] is False
 
 
-def test_primary_gate_opens_deterministically_after_preregistered_cohort_matures():
+def test_primary_gate_uses_later_cohort_maturity_when_cohort_finishes_after_fixed_date():
+    rows = _cohort_rows()
+    shift = pd.Timedelta(days=70)
+    for row in rows:
+        row["kickoff_utc"] = (pd.Timestamp(row["kickoff_utc"]) + shift).isoformat()
+    frame = pd.DataFrame(rows)
+    last_kickoff = pd.to_datetime(frame["kickoff_utc"], utc=True).max()
+    expected = last_kickoff + pd.Timedelta(hours=EVALUATION_DELAY_HOURS)
+    gate, _, _ = primary_evaluation_gate(frame, now_utc=expected - pd.Timedelta(seconds=1))
+    assert gate["open"] is False
+    assert gate["gate_opens_at_utc"] == expected.isoformat()
+
+
+def test_primary_gate_opens_deterministically_after_both_preregistered_gates_pass():
     rows = _cohort_rows(PRIMARY_COHORT_SIZE + 5)
     frame = pd.DataFrame(list(reversed(rows)))
-    first_hundred_last_kickoff = pd.to_datetime(rows[PRIMARY_COHORT_SIZE - 1]["kickoff_utc"], utc=True)
     gate, cohort, excluded = primary_evaluation_gate(
         frame,
-        now_utc=first_hundred_last_kickoff + pd.Timedelta(hours=EVALUATION_DELAY_HOURS),
+        now_utc=FIRST_PERMITTED_OUTCOME_READ_UTC,
     )
     assert excluded == []
     assert gate["open"] is True
@@ -134,18 +152,45 @@ def test_primary_gate_opens_deterministically_after_preregistered_cohort_matures
     assert cohort["event_id"].tolist() == [f"evt-{index:03d}" for index in range(PRIMARY_COHORT_SIZE)]
 
 
-def test_frozen_contract_hash_live_provenance_and_gate_are_machine_readable():
+def test_primary_decision_requires_both_metrics_to_clear_same_direction():
+    pass_result = {
+        "brier_delta_model_minus_market": {"ci95_low": -0.10, "ci95_high": -0.01},
+        "logloss_delta_model_minus_market": {"ci95_low": -0.08, "ci95_high": -0.001},
+    }
+    fail_result = {
+        "brier_delta_model_minus_market": {"ci95_low": 0.001, "ci95_high": 0.10},
+        "logloss_delta_model_minus_market": {"ci95_low": 0.01, "ci95_high": 0.20},
+    }
+    mixed_result = {
+        "brier_delta_model_minus_market": {"ci95_low": -0.10, "ci95_high": -0.01},
+        "logloss_delta_model_minus_market": {"ci95_low": -0.02, "ci95_high": 0.03},
+    }
+    assert primary_decision_from_audit(pass_result) == "PASS"
+    assert primary_decision_from_audit(fail_result) == "FAIL"
+    assert primary_decision_from_audit(mixed_result) == "INCONCLUSIVE"
+
+
+def test_frozen_contract_hash_live_provenance_readiness_and_decision_are_machine_readable():
     contract = json.loads(Path("research/epl_ai_market_pair_v1.json").read_text(encoding="utf-8"))
     assert contract["collection"]["frozen_model_artifact_sha256"] == FROZEN_MODEL_SHA256
     assert contract["activation_evidence"]["first_successful_run_id"] == 34032610966
     assert contract["activation_evidence"]["first_successful_pairs"] == 12
-    assert contract["evaluation"]["row_selection_timing"] == "frozen_before_target_outcomes_are_used_for_this_experiment"
-    assert contract["evaluation"]["primary_cohort_size"] == PRIMARY_COHORT_SIZE
-    assert contract["evaluation"]["evaluation_delay_hours_after_last_cohort_kickoff"] == EVALUATION_DELAY_HOURS
-    assert contract["evaluation"]["outcome_read_gate"] == "closed_until_primary_cohort_exists_and_is_mature"
-    assert contract["evaluation"]["interim_primary_evaluation"] is False
-    assert contract["evaluation"]["threshold_search"] is False
-    assert contract["evaluation"]["production_activation"] is False
+    evaluation = contract["evaluation"]
+    assert evaluation["row_selection_timing"] == "frozen_before_target_outcomes_are_used_for_this_experiment"
+    assert evaluation["primary_cohort_size"] == PRIMARY_COHORT_SIZE
+    assert evaluation["evaluation_delay_hours_after_last_cohort_kickoff"] == EVALUATION_DELAY_HOURS
+    assert evaluation["minimum_elapsed_calendar_days_from_first_live_collection"] == 56
+    assert evaluation["first_permitted_outcome_read_utc"] == "2026-11-01T12:16:54.672903+00:00"
+    assert evaluation["audit_parameters"] == {
+        "bootstrap_simulations": AUDIT_BOOTSTRAP_SIMULATIONS,
+        "bootstrap_seed": AUDIT_BOOTSTRAP_SEED,
+    }
+    assert evaluation["primary_decision_rule"]["PASS"].startswith("both Brier and log-loss")
+    assert evaluation["primary_decision_rule"]["FAIL"].startswith("both Brier and log-loss")
+    assert evaluation["interim_primary_evaluation"] is False
+    assert evaluation["optional_stopping_on_primary_metrics"] is False
+    assert evaluation["threshold_search"] is False
+    assert evaluation["production_activation"] is False
 
 
 def test_cycle_enforces_same_frozen_model_hash_and_stays_outcome_free():

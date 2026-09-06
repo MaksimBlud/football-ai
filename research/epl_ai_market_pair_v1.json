@@ -69,17 +69,29 @@
     "primary_cohort_size": 100,
     "primary_cohort_selection": "first 100 eligible selected events ordered by kickoff_utc ASC, event_id ASC, pair_key ASC",
     "evaluation_delay_hours_after_last_cohort_kickoff": 24,
-    "outcome_read_gate": "closed_until_primary_cohort_exists_and_is_mature",
-    "gate_semantics": "do not read target outcomes for this experiment until 100 eligible selected events exist and current UTC time is at least 24 hours after the latest kickoff among those first 100 events",
+    "minimum_elapsed_calendar_days_from_first_live_collection": 56,
+    "first_permitted_outcome_read_utc": "2026-11-01T12:16:54.672903+00:00",
+    "outcome_read_gate": "closed_until_primary_cohort_exists_and_both_maturity_and_fixed_wall_clock_gates_pass",
+    "gate_semantics": "do not read target outcomes for this experiment until 100 eligible selected events exist and current UTC time is at least the later of 24 hours after the latest kickoff among those first 100 events and 2026-11-01T12:16:54.672903Z",
+    "post_gate_settlement_requirement": "after the gate opens, require canonical settled outcomes for all 100 frozen primary-cohort fixtures before computing primary metrics; otherwise report WAIT_RESULTS without a primary verdict",
     "interim_primary_evaluation": false,
     "optional_stopping_on_primary_metrics": false,
     "paired_audit": "market_model_incremental_audit.py",
+    "audit_parameters": {
+      "bootstrap_simulations": 20000,
+      "bootstrap_seed": 20260901
+    },
     "primary_metrics": [
       "multiclass_brier",
       "multiclass_log_loss"
     ],
     "score_delta": "model_minus_market",
     "interpretation": "negative deltas favor the model",
+    "primary_decision_rule": {
+      "PASS": "both Brier and log-loss model-minus-market bootstrap 95% CI upper bounds are strictly below 0",
+      "FAIL": "both Brier and log-loss model-minus-market bootstrap 95% CI lower bounds are strictly above 0",
+      "INCONCLUSIVE": "all other combinations, including metric disagreement or confidence intervals crossing 0"
+    },
     "same_fixture_same_timestamp_required": true,
     "threshold_search": false,
     "subgroup_selection_for_primary_decision": false,
