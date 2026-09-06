@@ -27,6 +27,7 @@ from research_model_features import coerce_numeric_history_like_production
 OUTPUT_DIR = Path("artifacts/epl_ai_market_pair_v1")
 PAIR_TABLE = "epl_ai_market_pair_ledger"
 PAGE_SIZE = 1000
+FROZEN_MODEL_SHA256 = "1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5"
 
 LEDGER_COLUMNS = ",".join([
     "prediction_key", "league", "event_id", "home_team", "away_team",
@@ -87,6 +88,11 @@ def main() -> None:
     generated_at = pd.Timestamp.now(tz="UTC")
     code_commit_sha = os.getenv("GITHUB_SHA", "LOCAL_OR_UNKNOWN")
     bundle = load_model_bundle(MODEL_PATH)
+    if bundle.model_sha256 != FROZEN_MODEL_SHA256:
+        raise RuntimeError(
+            "Frozen EPL_AI_MARKET_PAIR_V1 production model hash changed: "
+            f"expected={FROZEN_MODEL_SHA256}, actual={bundle.model_sha256}"
+        )
 
     ledger = _read_paginated(
         "league_prediction_ledger", LEDGER_COLUMNS,
@@ -117,6 +123,7 @@ def main() -> None:
         "code_commit_sha": code_commit_sha,
         "model_artifact": str(MODEL_PATH),
         "model_artifact_sha256": bundle.model_sha256,
+        "frozen_model_artifact_sha256": FROZEN_MODEL_SHA256,
         "ledger_rows_read": int(len(ledger)),
         "odds_rows_read": int(len(odds)),
         "history_rows_read": int(len(history)),
