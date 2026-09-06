@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from pathlib import Path
+import re
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -10,7 +13,7 @@ from epl_ai_market_pair_collector import (
     canonical_market_candidates,
     history_as_of_market_snapshot,
 )
-from research_model_features import FEATURES
+from research_model_features import FEATURES, coerce_numeric_history_like_production
 
 
 class DummyModel:
@@ -88,6 +91,16 @@ def test_history_asof_excludes_results_not_safely_available():
     assert not ((asof["match_date"].dt.strftime("%Y-%m-%d") == "2026-09-03") & asof["match_time"].isna()).any()
 
 
+def test_numeric_history_coercion_matches_production_zero_fill():
+    history = _history().copy()
+    history.loc[0, "home_shots"] = None
+    history.loc[1, "away_shots_target"] = "not-a-number"
+    coerced = coerce_numeric_history_like_production(history)
+    assert coerced.loc[0, "home_shots"] == 0
+    assert coerced.loc[1, "away_shots_target"] == 0
+    assert history.loc[0, "home_shots"] is None or pd.isna(history.loc[0, "home_shots"])
+
+
 def test_canonical_market_candidate_uses_latest_observed_exact_snapshot():
     candidates = canonical_market_candidates(_ledger(), _odds(), now_utc="2026-09-04T17:00:00Z")
     assert len(candidates) == 1
@@ -109,13 +122,18 @@ def test_canonical_market_candidate_rejects_valid_but_price_mismatched_latest():
         canonical_market_candidates(ledger, _odds(), now_utc="2026-09-04T17:00:00Z")
 
 
-def test_build_pair_normalizes_team_uses_exact_odds_and_asof_history():
+def _build_one_pair():
     candidates = canonical_market_candidates(_ledger(), _odds(), now_utc="2026-09-04T17:00:00Z")
     pairs, excluded = build_pair_rows(
         candidates, _history(), _bundle(), generated_at_utc="2026-09-04T17:00:00Z", code_commit_sha="abc123"
     )
     assert excluded == []
     assert len(pairs) == 1
+    return pairs
+
+
+def test_build_pair_normalizes_team_uses_exact_odds_and_asof_history():
+    pairs = _build_one_pair()
     row = pairs.iloc[0]
     assert row["model_home_team"] == "Man United"
     assert row["model_away_team"] == "Arsenal"
@@ -125,6 +143,14 @@ def test_build_pair_normalizes_team_uses_exact_odds_and_asof_history():
     assert row["history_cutoff_utc"] == "2026-09-04T16:00:00+00:00"
     assert row["history_rows"] < len(_history())
     assert abs(row["model_home_prob"] + row["model_draw_prob"] + row["model_away_prob"] - 1.0) < 1e-9
+
+
+def test_pair_record_columns_are_declared_by_additive_sql_schema():
+    pairs = _build_one_pair()
+    ddl = Path("research/epl_ai_market_pair_ledger.sql").read_text(encoding="utf-8")
+    declared = set(re.findall(r"^\s{4}([a-z][a-z0-9_]*)\s+(?:text|timestamptz|date|integer|double precision)\b", ddl, flags=re.MULTILINE))
+    assert set(pairs.columns).issubset(declared)
+    assert {"market_home_odds", "market_draw_odds", "market_away_odds"}.issubset(declared)
 
 
 def test_build_pair_excludes_unknown_team_at_decision_time():
