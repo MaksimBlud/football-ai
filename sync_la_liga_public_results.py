@@ -17,7 +17,6 @@ from typing import Any, Callable
 import pandas as pd
 import requests
 
-from database import supabase
 from football_data_current_results import (
     DEFAULT_MAX_ATTEMPTS,
     PublicResultsSourceUnavailable,
@@ -25,7 +24,6 @@ from football_data_current_results import (
 )
 import la_liga_live_persistence as legacy
 import la_liga_results_updater as updater
-import persist_la_liga_finished_results as canonical_bridge
 
 LEAGUE = "LA_LIGA"
 OUTPUT = Path("artifacts/la_liga_results_status.json")
@@ -62,10 +60,22 @@ def fetch_normalized_results(
     }
 
 
+def persist_canonical_authority(client) -> dict[str, int]:
+    """Lazy live dependency so unit tests never require Supabase credentials."""
+    import persist_la_liga_finished_results as canonical_bridge
+    return canonical_bridge.persist_authoritative_results(client)
+
+
+def _live_client():
+    from database import supabase
+    return supabase
+
+
 def sync_results(
     *,
-    client=supabase,
+    client=None,
     fetch_fn: Callable[..., dict[str, Any]] = fetch_normalized_results,
+    bridge_fn: Callable[[Any], dict[str, int]] = persist_canonical_authority,
     write: bool = False,
 ) -> dict[str, Any]:
     """Sync current public results into legacy authority then canonical mirror."""
@@ -110,8 +120,10 @@ def sync_results(
             "writes_performed": False,
         }
 
+    if client is None:
+        client = _live_client()
     legacy_metrics = legacy.persist_results(client, frame)
-    bridge_metrics = canonical_bridge.persist_authoritative_results(client)
+    bridge_metrics = bridge_fn(client)
     result = {
         **base,
         "status": "WRITTEN",
