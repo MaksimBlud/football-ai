@@ -1,7 +1,8 @@
-"""Frozen row selection for EPL_AI_MARKET_PAIR_V1 evaluation.
+"""Frozen row selection and evaluation gate for EPL_AI_MARKET_PAIR_V1.
 
-This module is outcome-free. It selects the single preregistered paired row per event
-*before* any caller may join target results. It performs no fitting or threshold search.
+This module is outcome-free. It selects the preregistered paired evidence and decides
+whether the primary evaluation gate is open *before* any caller may join target results.
+It performs no fitting, outcome reads, threshold search, or subgroup selection.
 """
 from __future__ import annotations
 
@@ -10,6 +11,8 @@ import pandas as pd
 EXPERIMENT_ID = "EPL_AI_MARKET_PAIR_V1"
 LEAGUE = "EPL"
 FROZEN_MODEL_SHA256 = "1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5"
+PRIMARY_COHORT_SIZE = 100
+EVALUATION_DELAY_HOURS = 24
 
 REQUIRED_COLUMNS = {
     "pair_key",
@@ -88,7 +91,56 @@ def select_frozen_evaluation_pairs(frame: pd.DataFrame) -> tuple[pd.DataFrame, l
         )
         .groupby("event_id", as_index=False, sort=False)
         .head(1)
-        .sort_values(["kickoff_utc", "event_id"])
+        .sort_values(["kickoff_utc", "event_id", "pair_key"])
         .reset_index(drop=True)
     )
     return selected, excluded
+
+
+def primary_evaluation_gate(
+    frame: pd.DataFrame,
+    *,
+    now_utc: str | pd.Timestamp,
+) -> tuple[dict[str, object], pd.DataFrame, list[dict[str, str]]]:
+    """Return an outcome-free gate decision and the immutable primary cohort candidate.
+
+    The primary cohort is the first 100 eligible selected events ordered by kickoff,
+    event_id, then pair_key. No target outcome may be read until all 100 exist and the
+    latest kickoff in that cohort is at least 24 hours in the past. This prevents both
+    performance-based optional stopping and evaluation while fixture outcomes may still
+    be settling into canonical result tables.
+    """
+    selected, excluded = select_frozen_evaluation_pairs(frame)
+    cohort = selected.head(PRIMARY_COHORT_SIZE).copy().reset_index(drop=True)
+    now = pd.to_datetime(now_utc, utc=True, errors="coerce")
+    if pd.isna(now):
+        raise ValueError("now_utc is invalid")
+
+    if len(cohort) < PRIMARY_COHORT_SIZE:
+        return {
+            "open": False,
+            "reason": "INSUFFICIENT_PREREGISTERED_EVENTS",
+            "required_events": PRIMARY_COHORT_SIZE,
+            "eligible_events": int(len(cohort)),
+            "outcome_reads_allowed": False,
+        }, cohort, excluded
+
+    gate_opens_at = cohort["kickoff_utc"].max() + pd.Timedelta(hours=EVALUATION_DELAY_HOURS)
+    if now < gate_opens_at:
+        return {
+            "open": False,
+            "reason": "COHORT_NOT_MATURE",
+            "required_events": PRIMARY_COHORT_SIZE,
+            "eligible_events": PRIMARY_COHORT_SIZE,
+            "gate_opens_at_utc": gate_opens_at.isoformat(),
+            "outcome_reads_allowed": False,
+        }, cohort, excluded
+
+    return {
+        "open": True,
+        "reason": "PREREGISTERED_GATE_OPEN",
+        "required_events": PRIMARY_COHORT_SIZE,
+        "eligible_events": PRIMARY_COHORT_SIZE,
+        "gate_opens_at_utc": gate_opens_at.isoformat(),
+        "outcome_reads_allowed": True,
+    }, cohort, excluded
