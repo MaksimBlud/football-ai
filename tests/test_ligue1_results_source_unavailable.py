@@ -41,7 +41,7 @@ def test_ligue1_permanent_or_schema_errors_still_fail(monkeypatch):
         results.sync_results(write=True, client=object())
 
 
-def test_status_json_records_failed_non_transient_error(monkeypatch, tmp_path, capsys):
+def test_status_json_records_failed_non_transient_error(monkeypatch, tmp_path):
     monkeypatch.setattr(results, "sync_results", lambda write=False: (_ for _ in ()).throw(ValueError("bad schema")))
     status = tmp_path / "status.json"
     monkeypatch.setattr("sys.argv", ["update_ligue1_results.py", "--write", "--status-json", str(status)])
@@ -53,3 +53,17 @@ def test_status_json_records_failed_non_transient_error(monkeypatch, tmp_path, c
     assert '"status": "FAILED"' in text
     assert '"error_type": "ValueError"' in text
     assert '"paid_provider_requests": 0' in text
+
+
+def test_ligue1_results_workflow_is_provider_free_and_self_proving():
+    source = Path(".github/workflows/ligue1-results.yml").read_text(encoding="utf-8")
+    forbidden_secret = "THE_" + "ODDS_API_KEY"
+
+    assert forbidden_secret not in source
+    assert "update_ligue1_results.py --write --status-json" in source
+    assert "SOURCE_UNAVAILABLE" in source
+    assert "paid_provider_requests" in source
+    assert "actions/upload-artifact@v4" in source
+    assert "push:" in source
+    assert "'update_ligue1_results.py'" in source
+    assert "'.github/workflows/ligue1-results.yml'" in source
