@@ -13,15 +13,15 @@ on:
       max_paid_requests:
         description: 'Secondary cap on paid provider HTTP requests for this controlled manual run'
         required: true
-        default: '1'
+        default: '2'
         type: choice
-        options: ['1', '2', '3', '5']
+        options: ['2', '3', '5', '10']
       max_paid_credits:
         description: 'Maximum The Odds API credits for this controlled manual run'
         required: true
         default: '4'
         type: choice
-        options: ['4', '8', '12', '20']
+        options: ['4', '6', '8', '12', '20']
   pull_request:
     paths:
       - 'multi_market_policy.py'
