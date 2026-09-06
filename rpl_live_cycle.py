@@ -19,6 +19,7 @@ import pandas as pd
 from database import supabase
 import export_rpl_upcoming_matches as fixture_export
 import generate_rpl_market_shadow as market_shadow
+import league_dual_write_guard as dual_write_guard
 import league_supabase_persistence as persistence
 import persist_rpl_market_observations as observation_mirror
 import persist_rpl_prediction_ledger as prediction_ledger
@@ -58,14 +59,8 @@ def assert_market_only_runtime() -> None:
 
 
 def durable_counts() -> tuple[int, int]:
-    observations = persistence.fetch_observations(
-        supabase,
-        RPL_RUNTIME_CONFIG,
-    )
-    results = persistence.fetch_results(
-        supabase,
-        RPL_RUNTIME_CONFIG,
-    )
+    observations = persistence.fetch_observations(supabase, RPL_RUNTIME_CONFIG)
+    results = persistence.fetch_results(supabase, RPL_RUNTIME_CONFIG)
     return len(observations), len(results)
 
 
@@ -148,8 +143,6 @@ def run_cycle() -> RPLLiveCycleResult:
     if not (probabilities.sum(axis=1).sub(1.0).abs() <= 1e-12).all():
         raise RuntimeError("RPL market probabilities do not sum to one")
 
-    # Persist from the serialized CSV boundary to avoid float-representation
-    # identity drift between in-memory and durable observations.
     persisted_shadow = observation_mirror.load_market_shadow()
     if len(persisted_shadow) != len(latest):
         raise RuntimeError("Persisted RPL shadow row count disagrees with generated state")
@@ -160,15 +153,14 @@ def run_cycle() -> RPLLiveCycleResult:
     if len(durable_input) != len(ok):
         raise RuntimeError("Durable RPL observation count disagrees with OK shadow")
 
-    observation_metrics = persistence.persist_observations(
+    guarded = dual_write_guard.execute_dual_write(
         supabase,
+        persisted_shadow,
         durable_input,
         RPL_RUNTIME_CONFIG,
     )
-    if int(observation_metrics["conflicts"]) != 0:
-        raise RuntimeError("RPL observation persistence reported conflicts")
-    if int(observation_metrics["inserted"]) + int(observation_metrics["unchanged"]) != len(durable_input):
-        raise RuntimeError("RPL observation metrics do not cover input")
+    observation_metrics = guarded.observation_metrics
+    ledger_metrics = guarded.ledger_metrics
 
     observations_after, results_after = durable_counts()
     if results_after != results_before:
@@ -176,9 +168,6 @@ def run_cycle() -> RPLLiveCycleResult:
     if observations_after != observations_before + int(observation_metrics["inserted"]):
         raise RuntimeError("RPL durable observation count disagrees with metrics")
 
-    ledger_metrics = prediction_ledger.persist_current_predictions()
-    if int(ledger_metrics["conflicts"]) != 0:
-        raise RuntimeError("RPL prediction ledger reported conflicts")
     ledger_after = ledger_count()
     if ledger_after != ledger_before + int(ledger_metrics["inserted"]):
         raise RuntimeError("RPL prediction ledger count disagrees with metrics")

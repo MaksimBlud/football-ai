@@ -4,6 +4,7 @@ import pandas as pd
 from database import supabase
 import export_eredivisie_upcoming_matches as fixture_export
 import generate_eredivisie_market_shadow as market_shadow
+import league_dual_write_guard as dual_write_guard
 import league_supabase_persistence as persistence
 import persist_eredivisie_market_observations as observation_mirror
 import persist_eredivisie_prediction_ledger as prediction_ledger
@@ -37,12 +38,12 @@ def run_cycle():
     if probs.isna().any().any() or not (probs.sum(axis=1).sub(1.0).abs()<=1e-12).all(): raise RuntimeError("Eredivisie market probabilities invalid")
     persisted=observation_mirror.load_market_shadow()
     if len(persisted)!=len(latest) or set(persisted["event_id"].astype(str))!=set(latest["event_id"].astype(str)): raise RuntimeError("Persisted Eredivisie shadow mismatch")
-    durable=observation_mirror.build_market_only_observations(persisted); om=persistence.persist_observations(supabase,durable,EREDIVISIE_RUNTIME_CONFIG)
-    if int(om["conflicts"])!=0: raise RuntimeError("Eredivisie observation conflict")
+    durable=observation_mirror.build_market_only_observations(persisted)
+    if len(durable)!=len(ok): raise RuntimeError("Durable Eredivisie observation count mismatch")
+    guarded=dual_write_guard.execute_dual_write(supabase,persisted,durable,EREDIVISIE_RUNTIME_CONFIG)
+    om=guarded.observation_metrics; lm=guarded.ledger_metrics
     ob1,res1=durable_counts()
     if res1!=res0 or ob1!=ob0+int(om["inserted"]): raise RuntimeError("Eredivisie durable count mismatch")
-    lm=prediction_ledger.persist_current_predictions()
-    if int(lm["conflicts"])!=0: raise RuntimeError("Eredivisie ledger conflict")
     led1=ledger_count()
     if led1!=led0+int(lm["inserted"]): raise RuntimeError("Eredivisie ledger count mismatch")
     return EredivisieLiveCycleResult(len(snaps),len(upcoming),len(market_snaps),len(latest),len(ok),len(history),ob0,ob1,int(om["inserted"]),int(om["unchanged"]),int(om["conflicts"]),led0,led1,int(lm["inserted"]),int(lm["unchanged"]),int(lm["conflicts"]),res0,res1)

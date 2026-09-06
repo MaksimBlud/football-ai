@@ -8,6 +8,7 @@ import pandas as pd
 from database import supabase
 import export_serie_a_upcoming_matches as fixture_export
 import generate_serie_a_market_shadow as market_shadow
+import league_dual_write_guard as dual_write_guard
 import league_supabase_persistence as persistence
 import persist_serie_a_market_observations as observation_mirror
 import persist_serie_a_prediction_ledger as prediction_ledger
@@ -109,22 +110,23 @@ def run_cycle() -> SerieALiveCycleResult:
     if len(persisted_shadow) != len(latest) or set(persisted_shadow["event_id"].astype(str)) != set(latest["event_id"].astype(str)):
         raise RuntimeError("Persisted Serie A shadow disagrees with generated state")
     durable_input = observation_mirror.build_market_only_observations(persisted_shadow)
-    observation_metrics = persistence.persist_observations(
+    if len(durable_input) != len(ok):
+        raise RuntimeError("Durable Serie A observation count disagrees with OK shadow")
+
+    guarded = dual_write_guard.execute_dual_write(
         supabase,
+        persisted_shadow,
         durable_input,
         SERIE_A_RUNTIME_CONFIG,
     )
-    if int(observation_metrics["conflicts"]) != 0:
-        raise RuntimeError("Serie A observation conflict")
+    observation_metrics = guarded.observation_metrics
+    ledger_metrics = guarded.ledger_metrics
+
     observations_after, results_after = durable_counts()
     if results_after != results_before:
         raise RuntimeError("Serie A live cycle modified finished results")
     if observations_after != observations_before + int(observation_metrics["inserted"]):
         raise RuntimeError("Serie A durable observation count mismatch")
-
-    ledger_metrics = prediction_ledger.persist_current_predictions()
-    if int(ledger_metrics["conflicts"]) != 0:
-        raise RuntimeError("Serie A ledger conflict")
     ledger_after = ledger_count()
     if ledger_after != ledger_before + int(ledger_metrics["inserted"]):
         raise RuntimeError("Serie A ledger count mismatch")
