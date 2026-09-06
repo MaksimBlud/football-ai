@@ -1,11 +1,14 @@
 {
   "schema_version": "MULTI_MARKET_CORNER_CAPABILITY_PROBE_FALLBACK_V1",
   "research_only": true,
-  "active": false,
+  "active": true,
   "automatic_activation_allowed": false,
   "automatic_target_switching_allowed": false,
   "paid_request_allowed_by_this_file": false,
   "requires_separate_activation_pr": true,
+  "activated_by_separate_pr": true,
+  "activation_pr": 200,
+  "activation_merge_sha": "b387551319ae94e0dcfbdc0f7afbd8cf39e8edec",
   "activation_conditions": {
     "primary_target_must_be_expired": true,
     "primary_probe_must_have_zero_provider_request_attempts": true,
@@ -14,6 +17,32 @@
     "max_paid_requests": 1,
     "max_paid_credits": 2,
     "target_must_still_be_prospective": true
+  },
+  "activation_proof": {
+    "primary_target": {
+      "league": "LIGUE_1",
+      "event_id": "b292d9e6b90eb73e0547ace2a44728e8",
+      "home_team": "Troyes",
+      "away_team": "Strasbourg",
+      "commence_time_utc": "2026-09-06T13:00:00+00:00"
+    },
+    "primary_target_expired_before_activation": true,
+    "primary_probe_workflow_dispatch_runs_observed": 0,
+    "primary_provider_request_attempts_observed": 0,
+    "workflow_dispatch_history_checked_at_utc": "2026-09-06T14:25:00+00:00",
+    "fresh_zero_cost_readiness_run_id": 34039051536,
+    "fresh_zero_cost_readiness_artifact_id": 9991098557,
+    "fresh_zero_cost_readiness_artifact_zip_sha256": "65e885e9ce2e44d9eb47817e27c380363946c7aa4e52f6d888ed72f1c89db988",
+    "quota_remaining": 193,
+    "quota_used": 307,
+    "quota_last_cost": 0,
+    "quota_ready": true,
+    "provider_corner_capability_ready": false,
+    "provider_corner_capability_blocker": "PROVIDER_CORNER_CAPABILITY_UNPROVEN",
+    "target_verified_prospective_at_utc": "2026-09-06T14:24:55+00:00",
+    "paid_provider_requests": 0,
+    "paid_provider_credits": 0,
+    "writes_performed": false
   },
   "selection_policy": "earliest_unambiguous_corner_source_ready_fixture_at_least_24h_after_rollover_plan_generation",
   "selected_before_corner_response": true,
