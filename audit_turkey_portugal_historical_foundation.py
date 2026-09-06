@@ -6,7 +6,8 @@ Research-only contract:
 - never reads/writes Supabase;
 - never loads, trains, or promotes production models;
 - validates only seasons that are complete as of the audit date;
-- treats the current/in-progress season as availability-only.
+- treats the current/in-progress season as availability-only;
+- reports bounded transient public-source outages without inventing evidence.
 """
 
 from __future__ import annotations
@@ -29,6 +30,8 @@ from turkey_super_lig_runtime_config import TURKEY_SUPER_LIG_RUNTIME_CONFIG
 
 
 FOOTBALL_DATA_URL = "https://www.football-data.co.uk/mmz4281/{code}/{competition}.csv"
+TRANSIENT_HTTP_STATUSES = frozenset({429, 500, 502, 503, 504})
+DEFAULT_FETCH_ATTEMPTS = 4
 FEATURE_COLUMNS = {
     "home_prior_matches",
     "away_prior_matches",
@@ -50,6 +53,28 @@ FEATURE_COLUMNS = {
 }
 
 
+class HistoricalSourceUnavailable(RuntimeError):
+    """Bounded transient failure from the zero-cost Football-Data source."""
+
+    def __init__(
+        self,
+        *,
+        url: str,
+        attempts: int,
+        status_code: int | None = None,
+        detail: str = "",
+    ) -> None:
+        self.url = str(url)
+        self.attempts = int(attempts)
+        self.status_code = int(status_code) if status_code is not None else None
+        self.detail = str(detail)[:300]
+        status = f"HTTP {self.status_code}" if self.status_code is not None else "transport error"
+        super().__init__(
+            f"Football-Data historical source unavailable ({status}) "
+            f"after {self.attempts} attempt(s): {self.url}: {self.detail}"
+        )
+
+
 def season_is_complete(season: str, as_of: date) -> bool:
     """Conservatively classify European Aug-May seasons as completed after June."""
     _, end_year_raw = season.split("-", maxsplit=1)
@@ -62,24 +87,56 @@ def _fetch_csv(
     *,
     code: str,
     competition: str,
-    attempts: int = 4,
+    attempts: int = DEFAULT_FETCH_ATTEMPTS,
 ) -> tuple[pd.DataFrame, str]:
+    """Fetch one configured CSV with bounded retries only for transient outages."""
+    if attempts < 1:
+        raise ValueError("attempts must be >= 1")
+
     url = FOOTBALL_DATA_URL.format(code=code, competition=competition)
-    last_error: Exception | None = None
+    last_transport_error: requests.RequestException | None = None
 
     for attempt in range(1, attempts + 1):
         try:
             response = session.get(url, timeout=30)
-            response.raise_for_status()
-            if not response.text.strip():
-                raise ValueError("empty CSV response")
-            return pd.read_csv(StringIO(response.text)), url
-        except (requests.RequestException, ValueError, pd.errors.ParserError) as exc:
-            last_error = exc
-            if attempt < attempts:
-                time.sleep(float(attempt))
+        except requests.RequestException as exc:
+            last_transport_error = exc
+            if attempt == attempts:
+                raise HistoricalSourceUnavailable(
+                    url=url,
+                    attempts=attempt,
+                    detail=f"{type(exc).__name__}: {exc}",
+                ) from exc
+            time.sleep(float(attempt))
+            continue
 
-    raise RuntimeError(f"Unable to fetch {url}: {last_error}")
+        status_code = int(response.status_code)
+        if status_code in TRANSIENT_HTTP_STATUSES:
+            if attempt == attempts:
+                raise HistoricalSourceUnavailable(
+                    url=url,
+                    attempts=attempt,
+                    status_code=status_code,
+                    detail=str(getattr(response, "text", ""))[:300],
+                )
+            time.sleep(float(attempt))
+            continue
+
+        # Permanent HTTP failures are contract/runtime errors, not availability
+        # diagnostics, and must remain hard failures without repeated requests.
+        response.raise_for_status()
+
+        if not response.text.strip():
+            raise ValueError(f"empty CSV response from {url}")
+
+        try:
+            return pd.read_csv(StringIO(response.text)), url
+        except pd.errors.ParserError:
+            # Malformed content is not a transient provider-availability signal.
+            raise
+
+    # The loop always returns or raises. Keep an explicit guard for maintenance.
+    raise RuntimeError(f"Unable to fetch {url}: {last_transport_error}")
 
 
 def _canonical_team_collision_check(source: pd.DataFrame, config) -> None:
@@ -188,14 +245,7 @@ def audit_league(config, *, as_of: date, session: requests.Session) -> dict:
     }
 
 
-def run_audit(*, as_of: date) -> dict:
-    session = requests.Session()
-    session.headers.update({"User-Agent": "football-ai-research-historical-audit/1.0"})
-    configs: Iterable = (
-        TURKEY_SUPER_LIG_RUNTIME_CONFIG,
-        PRIMEIRA_LIGA_RUNTIME_CONFIG,
-    )
-    results = [audit_league(config, as_of=as_of, session=session) for config in configs]
+def _base_report(*, as_of: date) -> dict:
     return {
         "audit": "TURKEY_PORTUGAL_HISTORICAL_FOUNDATION_V1",
         "research_only": True,
@@ -205,6 +255,36 @@ def run_audit(*, as_of: date) -> dict:
         "production_model_operations": 0,
         "as_of": as_of.isoformat(),
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def run_audit(*, as_of: date) -> dict:
+    session = requests.Session()
+    session.headers.update({"User-Agent": "football-ai-research-historical-audit/1.0"})
+    configs: Iterable = (
+        TURKEY_SUPER_LIG_RUNTIME_CONFIG,
+        PRIMEIRA_LIGA_RUNTIME_CONFIG,
+    )
+    try:
+        results = [audit_league(config, as_of=as_of, session=session) for config in configs]
+    except HistoricalSourceUnavailable as exc:
+        return {
+            **_base_report(as_of=as_of),
+            "status": "SOURCE_UNAVAILABLE",
+            "leagues": [],
+            "source_unavailable": {
+                "url": exc.url,
+                "status_code": exc.status_code,
+                "attempts": exc.attempts,
+                "detail": exc.detail,
+            },
+        }
+    finally:
+        session.close()
+
+    return {
+        **_base_report(as_of=as_of),
+        "status": "COMPLETE",
         "leagues": results,
     }
 
