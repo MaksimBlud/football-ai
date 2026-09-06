@@ -1,0 +1,93 @@
+name: La Liga Results Sync
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "29 */12 * * *"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/la-liga-results.yml"
+      - "sync_la_liga_public_results.py"
+      - "la_liga_results_updater.py"
+      - "persist_la_liga_finished_results.py"
+      - "football_data_current_results.py"
+
+permissions:
+  contents: read
+
+jobs:
+  results:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install pandas requests supabase python-dotenv pytest
+      - name: Compile provider-free results sync
+        run: python -m py_compile sync_la_liga_public_results.py
+      - name: Run provider-free results regressions
+        run: pytest -q test_sync_la_liga_public_results.py
+      - name: Record production model hash before
+        run: sha256sum football_model_xgboost_elo.pkl > /tmp/model.before
+      - name: Sync public finished results into legacy and canonical authorities
+        run: >-
+          python sync_la_liga_public_results.py --write
+          --status-json artifacts/la_liga_results_status.json
+      - name: Verify explicit provider-free result status
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('artifacts/la_liga_results_status.json')
+          if not path.exists():
+              raise SystemExit('missing La Liga results status artifact')
+          p=json.loads(path.read_text())
+          assert p['league']=='LA_LIGA'
+          assert p['paid_provider_requests']==0
+          assert p['status'] in {'WRITTEN','SOURCE_UNAVAILABLE','FAILED'}
+          if p['status']=='SOURCE_UNAVAILABLE':
+              assert int(p['public_http_requests'])==3
+              assert int(p['http_status']) in {429,500,502,503,504}
+              assert p['writes_performed'] is False
+              assert int(p['legacy_inserted'])==0
+              assert int(p['canonical_inserted'])==0
+          if p['status']=='WRITTEN':
+              assert int(p['canonical_conflicts'])==0
+              assert int(p['legacy_inserted']) >= 0
+              assert int(p['legacy_unchanged']) >= 0
+              assert int(p['canonical_inserted']) >= 0
+              assert int(p['canonical_unchanged']) >= 0
+          if p['status']=='FAILED':
+              raise SystemExit(
+                  f"La Liga results sync failed: {p.get('error_type')}: {p.get('error')}"
+              )
+          print('status=',p['status'])
+          print('source_url=',p.get('source_url'))
+          print('public_http_requests=',p.get('public_http_requests'))
+          print('finished_rows=',p.get('finished_rows'))
+          print('legacy_inserted=',p.get('legacy_inserted'))
+          print('legacy_unchanged=',p.get('legacy_unchanged'))
+          print('canonical_inserted=',p.get('canonical_inserted'))
+          print('canonical_unchanged=',p.get('canonical_unchanged'))
+          print('writes_performed=',p.get('writes_performed'))
+          PY
+      - name: Verify production model unchanged
+        if: always()
+        run: |
+          sha256sum football_model_xgboost_elo.pkl > /tmp/model.after
+          diff -u /tmp/model.before /tmp/model.after
+      - name: Upload La Liga results status
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: la-liga-results-status
+          path: artifacts/la_liga_results_status.json
+          if-no-files-found: error
