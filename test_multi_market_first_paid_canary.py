@@ -1,6 +1,12 @@
+import sys
+import types
 from types import SimpleNamespace
 
 import pytest
+
+fake_database = types.ModuleType("database")
+fake_database.supabase = object()
+sys.modules.setdefault("database", fake_database)
 
 import multi_market_first_paid_canary as canary
 
