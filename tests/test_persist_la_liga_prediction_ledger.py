@@ -170,3 +170,49 @@ def test_persistence_is_idempotent_and_immutable():
     }
     assert len(client.ledger_rows) == 1
     assert ledger.ledger_count(client) == 1
+
+
+def test_transient_bridge_failure_retries_once_and_verifies(monkeypatch):
+    client = _client()
+    original = ledger.persist_predictions
+    calls = []
+
+    def flaky(client_arg, predictions):
+        calls.append(1)
+        if len(calls) == 1:
+            raise RuntimeError("temporary transport failure")
+        return original(client_arg, predictions)
+
+    monkeypatch.setattr(ledger, "persist_predictions", flaky)
+
+    result = ledger.persist_current_predictions(
+        client,
+        shadow=_shadow(),
+    )
+
+    assert len(calls) == 2
+    assert result == {
+        "inserted": 1,
+        "unchanged": 0,
+        "conflicts": 0,
+    }
+    assert ledger.ledger_count(client) == 1
+
+
+def test_immutable_bridge_conflict_never_retries(monkeypatch):
+    client = _client()
+    calls = []
+
+    def conflict(client_arg, predictions):
+        calls.append(1)
+        raise ledger.PredictionLedgerConflictError("immutable conflict")
+
+    monkeypatch.setattr(ledger, "persist_predictions", conflict)
+
+    with pytest.raises(ledger.PredictionLedgerConflictError):
+        ledger.persist_current_predictions(
+            client,
+            shadow=_shadow(),
+        )
+
+    assert len(calls) == 1

@@ -4,6 +4,11 @@ This is an additive research-only bridge from the existing La Liga market
 shadow and immutable Structural V2 observations into the shared prediction
 ledger. It does not replace La Liga's existing durable observations/results
 or activate Structural V2.
+
+The bridge is fail-closed: the complete current prediction plan is preflighted
+against immutable ledger state before append, one non-deterministic write
+failure may be replayed idempotently, and the whole plan is read-after-write
+verified. Historical snapshot gaps are never backfilled by this module.
 """
 
 from __future__ import annotations
@@ -13,7 +18,9 @@ from pathlib import Path
 import pandas as pd
 
 from database import supabase
+from league_dual_write_guard import preflight_predictions
 from league_prediction_ledger import (
+    PredictionLedgerConflictError,
     TABLE,
     build_market_only_predictions,
     persist_predictions,
@@ -143,6 +150,27 @@ def build_current_predictions(
     return predictions
 
 
+def _persist_once_with_retry(
+    client,
+    predictions: pd.DataFrame,
+) -> None:
+    try:
+        persist_predictions(
+            client,
+            predictions,
+        )
+    except PredictionLedgerConflictError:
+        raise
+    except Exception:
+        # A first attempt may have committed a prefix before a transport
+        # failure. The canonical ledger is append-only/idempotent, so one
+        # immediate replay is safe; final state is verified below.
+        persist_predictions(
+            client,
+            predictions,
+        )
+
+
 def persist_current_predictions(
     client=supabase,
     *,
@@ -153,10 +181,34 @@ def persist_current_predictions(
         shadow=shadow,
     )
 
-    return persist_predictions(
+    before = preflight_predictions(
         client,
         predictions,
     )
+
+    _persist_once_with_retry(
+        client,
+        predictions,
+    )
+
+    verified = preflight_predictions(
+        client,
+        predictions,
+    )
+
+    if (
+        verified["missing"] != 0
+        or verified["present"] != len(predictions)
+    ):
+        raise RuntimeError(
+            "La Liga ledger bridge read-after-write verification failed"
+        )
+
+    return {
+        "inserted": before["missing"],
+        "unchanged": before["present"],
+        "conflicts": 0,
+    }
 
 
 def ledger_count(client=supabase) -> int:
