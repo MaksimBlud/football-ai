@@ -170,6 +170,7 @@ def collect(now_utc=None, *, max_paid_requests=None, max_paid_credits=None):
         "provider_paid_requests": 0,
         "provider_paid_credits": 0,
         "inserted": 0,
+        "inserted_snapshot_keys": [],
         "skipped_recent": 0,
         "skipped_unsupported": 0,
         "quota_stop": False,
@@ -243,12 +244,15 @@ def collect(now_utc=None, *, max_paid_requests=None, max_paid_credits=None):
                 "quota": event_quota,
                 "featured_quota": featured_quota_by_league.get(league),
             }
-            row = {"snapshot_key": _key(league, event_id, snapshot_time), "league": league, "event_id": event_id,
+            snapshot_key = _key(league, event_id, snapshot_time)
+            row = {"snapshot_key": snapshot_key, "league": league, "event_id": event_id,
                    "home_team": str(event.get("home_team") or payload.get("home_team") or ""),
                    "away_team": str(event.get("away_team") or payload.get("away_team") or ""),
                    "kickoff_utc": kickoff.isoformat(), "snapshot_time_utc": snapshot_time.isoformat(),
                    "payload": stored, "provider": "THE_ODDS_API"}
-            supabase.table(TABLE).insert(row).execute(); summary["inserted"] += 1
+            supabase.table(TABLE).insert(row).execute()
+            summary["inserted"] += 1
+            summary["inserted_snapshot_keys"].append(snapshot_key)
 
         if current_remaining < HARD_RESERVE_CREDITS:
             summary["quota_stop"] = True; break
