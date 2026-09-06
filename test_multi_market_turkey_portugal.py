@@ -30,7 +30,7 @@ class _FakeSupabase:
         return _FakeTable(self.rows, name)
 
 
-def test_turkey_and_portugal_route_to_their_multi_market_sport_keys(monkeypatch):
+def test_unpublished_turkey_corner_source_cannot_reach_paid_multi_market(monkeypatch):
     fake_database = types.ModuleType("database")
     fake_database.supabase = _FakeSupabase()
     monkeypatch.setitem(sys.modules, "database", fake_database)
@@ -44,7 +44,6 @@ def test_turkey_and_portugal_route_to_their_multi_market_sport_keys(monkeypatch)
         {"league": "PRIMEIRA_LIGA", "event_id": "portugal-e1", "home_team": "Portugal Home", "away_team": "Portugal Away", "commence_time_utc": "2026-09-06T07:00:00Z", "snapshot_time_utc": "2026-09-05T07:00:00Z"},
     ]
     by_sport = {
-        "soccer_turkey_super_league": events[0],
         "soccer_portugal_primeira_liga": events[1],
     }
     featured_calls = []
@@ -78,24 +77,18 @@ def test_turkey_and_portugal_route_to_their_multi_market_sport_keys(monkeypatch)
     monkeypatch.setattr(collector, "fetch_sport_markets", fake_fetch_sport_markets)
     monkeypatch.setattr(collector, "fetch_event_markets", fake_fetch_event_markets)
 
-    # Each league contributes one complete first event: one 2-credit featured
-    # request plus one 2-credit event-only corners request.
-    summary = collector.collect(now, max_paid_requests=4, max_paid_credits=8)
+    summary = collector.collect(now, max_paid_requests=2, max_paid_credits=4)
 
-    assert featured_calls == [
-        "soccer_turkey_super_league",
-        "soccer_portugal_primeira_liga",
-    ]
-    assert event_calls == [
-        ("soccer_turkey_super_league", "turkey-e1"),
-        ("soccer_portugal_primeira_liga", "portugal-e1"),
-    ]
-    assert summary["eligible_events"] == 2
-    assert summary["fetched"] == 2
-    assert summary["featured_requests"] == 2
-    assert summary["event_requests"] == 2
-    assert summary["provider_paid_requests"] == 4
-    assert summary["provider_paid_credits"] == 8
-    assert summary["inserted"] == 2
+    assert featured_calls == ["soccer_portugal_primeira_liga"]
+    assert event_calls == [("soccer_portugal_primeira_liga", "portugal-e1")]
+    assert summary["source_events"] == 2
+    assert summary["eligible_events"] == 1
+    assert summary["skipped_no_corner_source"] == 1
+    assert summary["fetched"] == 1
+    assert summary["featured_requests"] == 1
+    assert summary["event_requests"] == 1
+    assert summary["provider_paid_requests"] == 2
+    assert summary["provider_paid_credits"] == 4
+    assert summary["inserted"] == 1
     assert summary["skipped_unsupported"] == 0
-    assert {row["league"] for row in fake_database.supabase.rows} == {"TURKEY_SUPER_LIG", "PRIMEIRA_LIGA"}
+    assert {row["league"] for row in fake_database.supabase.rows} == {"PRIMEIRA_LIGA"}
