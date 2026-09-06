@@ -1,0 +1,49 @@
+name: EPL Observation Ledger Parity PR Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'audit_epl_observation_ledger_parity.py'
+      - 'tests/test_epl_observation_ledger_parity.py'
+      - '.github/workflows/epl-live-cycle.yml'
+      - '.github/workflows/epl-observation-ledger-parity-pr.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  parity-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      SUPABASE_URL: https://example.supabase.co
+      SUPABASE_KEY: research-pr-validation-placeholder
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install test dependencies
+        run: pip install pytest pandas supabase python-dotenv
+
+      - name: Compile parity audit
+        run: python -m py_compile audit_epl_observation_ledger_parity.py
+
+      - name: Run parity audit tests
+        run: python -m pytest -q tests/test_epl_observation_ledger_parity.py
+
+      - name: Production artifact guard
+        run: |
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$'; then
+            echo "Production model artifact change detected"
+            exit 1
+          fi
+          echo "PASS: no .pkl changes in PR"
