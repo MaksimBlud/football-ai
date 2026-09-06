@@ -38,7 +38,8 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           source=Path('.github/workflows/la-liga-results.yml').read_text()
-          assert 'THE_ODDS_API_KEY' not in source
+          provider_key='THE_' + 'ODDS_API_KEY'
+          assert provider_key not in source
           assert 'workflow_dispatch:' in source
           assert 'schedule:' in source
           assert 'cron: "29 */12 * * *"' in source
