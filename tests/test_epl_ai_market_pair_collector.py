@@ -94,6 +94,7 @@ def test_history_asof_excludes_results_not_safely_available():
 def test_numeric_history_coercion_matches_production_zero_fill():
     history = _history().copy()
     history.loc[0, "home_shots"] = None
+    history["away_shots_target"] = history["away_shots_target"].astype(object)
     history.loc[1, "away_shots_target"] = "not-a-number"
     coerced = coerce_numeric_history_like_production(history)
     assert coerced.loc[0, "home_shots"] == 0
