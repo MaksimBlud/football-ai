@@ -49,14 +49,16 @@ jobs:
       - name: Evaluate Bundesliga predictions
         if: success()
         run: |
-          python - <<'PY'
+          status="$(python - <<'PY'
           import json
           from pathlib import Path
-          p=json.loads(Path('artifacts/bundesliga_results_status.json').read_text())
-          if p['status']!='WRITTEN':
-              print('SKIP evaluator: result status=',p['status'])
-              raise SystemExit(0)
+          print(json.loads(Path('artifacts/bundesliga_results_status.json').read_text())['status'])
           PY
+          )"
+          if [ "$status" != "WRITTEN" ]; then
+            echo "SKIP evaluator: result status=$status"
+            exit 0
+          fi
           python evaluate_bundesliga_predictions.py
       - name: Upload Bundesliga results status
         if: always()
