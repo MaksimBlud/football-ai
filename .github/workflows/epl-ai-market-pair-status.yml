@@ -1,0 +1,47 @@
+name: EPL AI Market Pair Collection Status
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "43 */6 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: epl-ai-market-pair-status
+  cancel-in-progress: true
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - run: pip install -r requirements.txt
+      - name: Check zero-cost credentials
+        run: |
+          python - <<'PY'
+          import os
+          missing=[name for name in ("SUPABASE_URL","SUPABASE_KEY") if not os.getenv(name)]
+          if missing:
+              raise SystemExit("Missing research credentials: "+", ".join(missing))
+          print("PASS: Supabase credentials available; no provider credential required")
+          PY
+      - name: Report outcome-free collection status
+        run: python report_epl_ai_market_pair_collection_status.py | tee /tmp/epl-pair-status.json.log
+      - name: Upload status log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: epl-ai-market-pair-status-${{ github.run_id }}
+          path: /tmp/epl-pair-status.json.log
+          if-no-files-found: error
+          retention-days: 30
