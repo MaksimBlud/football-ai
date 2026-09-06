@@ -8,6 +8,7 @@ on:
     paths:
       - '.github/workflows/ligue1-results.yml'
       - 'update_ligue1_results.py'
+      - 'tests/test_ligue1_results_workflow_contract.py'
 permissions:
   contents: read
 jobs:
@@ -48,6 +49,20 @@ jobs:
           print('unchanged=',p.get('unchanged'))
           print('conflicts=',p.get('conflicts'))
           PY
+      - name: Evaluate Ligue 1 predictions only after successful result sync
+        if: success()
+        run: |
+          status="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          print(json.loads(Path('artifacts/ligue1_results_status.json').read_text())['status'])
+          PY
+          )"
+          if [ "$status" != "WRITTEN" ]; then
+            echo "SKIP evaluator: result status=$status"
+            exit 0
+          fi
+          python evaluate_ligue1_predictions.py
       - name: Upload public results status
         if: always()
         uses: actions/upload-artifact@v4
@@ -55,4 +70,3 @@ jobs:
           name: ligue1-results-status
           path: artifacts/ligue1_results_status.json
           if-no-files-found: error
-      - run: python evaluate_ligue1_predictions.py
