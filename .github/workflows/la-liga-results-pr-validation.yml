@@ -1,0 +1,51 @@
+name: La Liga Results PR Validation
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/la-liga-results.yml"
+      - ".github/workflows/la-liga-results-pr-validation.yml"
+      - "sync_la_liga_public_results.py"
+      - "test_sync_la_liga_public_results.py"
+      - "la_liga_results_updater.py"
+      - "persist_la_liga_finished_results.py"
+      - "football_data_current_results.py"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install pandas requests supabase python-dotenv pytest
+      - name: Compile provider-free result modules
+        run: >-
+          python -m py_compile sync_la_liga_public_results.py
+          la_liga_results_updater.py persist_la_liga_finished_results.py
+      - name: Run provider-free La Liga results regressions
+        run: pytest -q test_sync_la_liga_public_results.py
+      - name: Verify workflow stays provider-free and scheduled
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          source=Path('.github/workflows/la-liga-results.yml').read_text()
+          assert 'THE_ODDS_API_KEY' not in source
+          assert 'workflow_dispatch:' in source
+          assert 'schedule:' in source
+          assert 'cron: "29 */12 * * *"' in source
+          assert 'push:' in source
+          assert 'sync_la_liga_public_results.py --write' in source
+          assert 'la_liga_results_status.json' in source
+          assert 'paid_provider_requests' in source
+          print('PASS: La Liga results workflow is provider-free and independently scheduled')
+          PY
+      - name: Enforce no production artifact changes
+        run: |
+          git diff --exit-code origin/${{ github.base_ref }}...HEAD -- '*.pkl'
