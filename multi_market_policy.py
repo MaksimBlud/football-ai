@@ -26,8 +26,10 @@ MIN_COLLECTION_REMAINING_CREDITS = HARD_RESERVE_CREDITS + FIRST_EVENT_MAX_CREDIT
 START_MIN_REQUESTS_REMAINING = MIN_COLLECTION_REMAINING_CREDITS
 HARD_RESERVE_REQUESTS = HARD_RESERVE_CREDITS
 
-# Current-season public Football-Data CSV corner outcomes have been live-audited
-# with complete HC/AC coverage for finished rows in these eight leagues.
+# Current-season public Football-Data CSV corner outcomes are only considered
+# ready after the provider has actually published the canonical season source.
+# Turkey 2026/27 (2627/T1.csv) is not published yet, so it must fail closed and
+# cannot reach the paid Multi-Market provider until a later audited code change.
 CORNER_SOURCE_READY_LEAGUES = (
     "EPL",
     "LA_LIGA",
@@ -35,6 +37,7 @@ CORNER_SOURCE_READY_LEAGUES = (
     "BUNDESLIGA",
     "LIGUE_1",
     "EREDIVISIE",
-    "TURKEY_SUPER_LIG",
     "PRIMEIRA_LIGA",
 )
+
+UNPUBLISHED_CURRENT_CORNER_SOURCE_LEAGUES = frozenset({"TURKEY_SUPER_LIG"})

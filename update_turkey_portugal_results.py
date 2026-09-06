@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import league_supabase_persistence as persistence
 from football_data_current_results import fetch_current_finished_results
+from multi_market_policy import UNPUBLISHED_CURRENT_CORNER_SOURCE_LEAGUES
 from turkey_portugal_market_only import config_for
 from turkey_super_lig_runtime_config import TURKEY_SUPER_LIG_RUNTIME_CONFIG
 from primeira_liga_runtime_config import PRIMEIRA_LIGA_RUNTIME_CONFIG
@@ -13,6 +14,19 @@ RUNTIME={"TURKEY_SUPER_LIG":TURKEY_SUPER_LIG_RUNTIME_CONFIG,"PRIMEIRA_LIGA":PRIM
 def sync_results(league: str, *, write: bool=False, client=None):
     config_for(league)
     runtime=RUNTIME[league]
+    if league in UNPUBLISHED_CURRENT_CORNER_SOURCE_LEAGUES:
+        source = runtime.finished_results_source
+        print(league,"PUBLIC FOOTBALL-DATA RESULTS")
+        print("source status: CURRENT_SEASON_NOT_PUBLISHED")
+        print("target source:", f"{source.season_code}/{source.competition_code}.csv")
+        return {
+            "status":"SOURCE_NOT_PUBLISHED",
+            "finished_rows":0,
+            "inserted":0,
+            "unchanged":0,
+            "conflicts":0,
+            "paid_provider_requests":0,
+        }
     provider=fetch_current_finished_results(runtime)
     frame=provider["frame"]
     print(league,"PUBLIC FOOTBALL-DATA RESULTS")
