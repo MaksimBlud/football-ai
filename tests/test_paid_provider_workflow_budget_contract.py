@@ -11,13 +11,8 @@ GUARDED_PAID_WORKFLOWS = {
     "eredivisie-odds-snapshots.yml": 1,
     "rpl-odds-snapshots.yml": 1,
     "rpl-results.yml": 2,
-    # Results are public CSV now. Two matrix jobs can each spend at most one
-    # h2h credit; each preflight reserves the workflow-wide worst case.
     "turkey-portugal-market-only-cycle.yml": 2,
-    # Current coverage audit worst case: 9 leagues * (3 featured + 4 event).
     "multi-market-coverage-audit.yml": 63,
-    # Preregistered diagnostic: exactly one event-only corner request, capped at
-    # two credits, with a fresh zero-cost provider preflight before the call.
     "multi-market-corner-capability-probe.yml": 2,
 }
 
@@ -32,10 +27,15 @@ def _read(name: str) -> str:
     return (WORKFLOW_DIR / name).read_text(encoding="utf-8")
 
 
+def _uses_provider_secret(source: str) -> bool:
+    """Detect credential exposure, not defensive mentions of the variable name."""
+    return "secrets.THE_ODDS_API_KEY" in source
+
+
 def test_all_guarded_paid_workflows_are_manual_only_and_guarded():
     for name, max_cost in GUARDED_PAID_WORKFLOWS.items():
         source = _read(name)
-        assert "THE_ODDS_API_KEY" in source, name
+        assert _uses_provider_secret(source), name
         assert "workflow_dispatch:" in source, name
         assert "cron:" not in source, name
         assert "push:" not in source, name
@@ -51,14 +51,20 @@ def test_multi_market_keeps_its_specialized_paid_latch_and_credit_cap():
     assert "paid_provider_requests" in source
 
 
-def test_every_workflow_with_provider_key_has_an_explicit_safety_classification():
+def test_every_workflow_with_provider_secret_has_an_explicit_safety_classification():
     classified = GUARDED_PAID_WORKFLOWS.keys() | SPECIALIZED_PAID_WORKFLOWS | ZERO_COST_QUOTA_WORKFLOWS
-    with_key = {
+    with_secret = {
         path.name
         for path in WORKFLOW_DIR.glob("*.yml")
-        if "THE_ODDS_API_KEY" in path.read_text(encoding="utf-8")
+        if _uses_provider_secret(path.read_text(encoding="utf-8"))
     }
-    assert with_key == classified
+    assert with_secret == classified
+
+
+def test_defensive_provider_name_mentions_do_not_count_as_secret_exposure():
+    source = _read("epl-ai-market-pair-pr-validation.yml")
+    assert "THE_ODDS_API_KEY" in source
+    assert not _uses_provider_secret(source)
 
 
 def test_zero_cost_quota_workflows_have_explicit_zero_cost_contracts():
