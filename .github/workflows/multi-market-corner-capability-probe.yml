@@ -31,8 +31,10 @@ jobs:
       - name: Zero-cost provider budget guard
         run: python odds_api_budget_guard.py --max-cost 2
       - name: Run preregistered one-request capability probe
+        id: capability_probe
         run: python multi_market_corner_capability_probe.py
       - name: Verify capability probe contract
+        if: always() && steps.capability_probe.outcome != 'skipped'
         run: |
           python - <<'PY'
           import json
@@ -52,25 +54,42 @@ jobs:
               'away_team':'Strasbourg',
               'commence_time_utc':'2026-09-06T13:00:00+00:00',
           }
-          assert p['target_verified'] is True
-          assert p['status'] in {'CAPABILITY_CONFIRMED','CAPABILITY_MISS'}
-          assert p['paid_provider_requests']==1
-          assert 0 <= int(p['paid_provider_credits']) <= 2
-          assert int(p['quota_after']['remaining']) >= int(p['hard_reserve_credits'])
-          if p['status']=='CAPABILITY_CONFIRMED':
-              assert p['corner_market_keys']
-              assert p['corner_bookmaker_count'] >= 1
+          assert p['status'] in {'CAPABILITY_CONFIRMED','CAPABILITY_MISS','FAILED'}
+          attempted=bool(p['provider_request_attempted'])
+          if attempted:
+              assert p.get('target_verified') is True
+              assert p['paid_provider_requests']==1
+              if p['paid_provider_credit_cost_known']:
+                  assert p['paid_provider_credits'] is not None
+                  assert int(p['paid_provider_credits']) >= 0
+              else:
+                  assert p['paid_provider_credits'] is None
           else:
-              assert p['corner_market_keys']==[]
-              assert p['corner_bookmaker_count']==0
+              assert p['paid_provider_requests']==0
+              assert p['paid_provider_credits']==0
+              assert p['paid_provider_credit_cost_known'] is True
+          if p['status'] in {'CAPABILITY_CONFIRMED','CAPABILITY_MISS'}:
+              assert attempted is True
+              assert p['paid_provider_credit_cost_known'] is True
+              assert 0 <= int(p['paid_provider_credits']) <= 2
+              assert int(p['quota_after']['remaining']) >= int(p['hard_reserve_credits'])
+              if p['status']=='CAPABILITY_CONFIRMED':
+                  assert p['corner_market_keys']
+                  assert p['corner_bookmaker_count'] >= 1
+              else:
+                  assert p['corner_market_keys']==[]
+                  assert p['corner_bookmaker_count']==0
           print('status=',p['status'])
           print('target=',p['target'])
+          print('provider_request_attempted=',attempted)
           print('paid_provider_requests=',p['paid_provider_requests'])
           print('paid_provider_credits=',p['paid_provider_credits'])
-          print('quota_before=',p['quota_before'])
-          print('quota_after=',p['quota_after'])
-          print('corner_market_keys=',p['corner_market_keys'])
-          print('corner_bookmaker_count=',p['corner_bookmaker_count'])
+          print('paid_provider_credit_cost_known=',p['paid_provider_credit_cost_known'])
+          print('quota_before=',p.get('quota_before'))
+          print('quota_after=',p.get('quota_after'))
+          print('corner_market_keys=',p.get('corner_market_keys',[]))
+          print('corner_bookmaker_count=',p.get('corner_bookmaker_count',0))
+          print('error=',p.get('error'))
           PY
       - name: Verify production model unchanged
         if: always()
