@@ -1,0 +1,97 @@
+name: Multi-Market Probe Rollover Status
+
+on:
+  schedule:
+    - cron: '27 5 * * *'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'multi_market_probe_rollover_plan.py'
+      - 'test_multi_market_probe_rollover_plan.py'
+      - 'multi_market_corner_capability_probe.py'
+      - 'multi_market_collector.py'
+      - 'multi_market_policy.py'
+      - '.github/workflows/multi-market-probe-rollover-status.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'multi_market_probe_rollover_plan.py'
+      - 'test_multi_market_probe_rollover_plan.py'
+      - 'multi_market_corner_capability_probe.py'
+      - 'multi_market_collector.py'
+      - 'multi_market_policy.py'
+      - '.github/workflows/multi-market-probe-rollover-status.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas pytest
+      - name: Compile rollover planner
+        run: python -m py_compile multi_market_probe_rollover_plan.py
+      - name: Run fail-closed rollover tests
+        run: pytest -q test_multi_market_probe_rollover_plan.py
+      - name: Guard production model artifacts
+        if: github.event_name == 'pull_request'
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$' && exit 1 || true
+
+  live-read-only-status:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas supabase python-dotenv
+      - name: Record production model hash before
+        run: sha256sum football_model_xgboost_elo.pkl > /tmp/model.before
+      - name: Build provider-free rollover plan
+        run: python multi_market_probe_rollover_plan.py
+      - name: Verify advisory-only contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path('artifacts/multi_market_probe_rollover_plan.json').read_text())
+          assert p['schema_version']=='MULTI_MARKET_PROBE_ROLLOVER_PLAN_V1'
+          assert p['research_only'] is True
+          assert p['read_only'] is True
+          assert p['advisory_only'] is True
+          assert p['writes_performed'] is False
+          assert p['paid_provider_requests']==0
+          assert p['paid_provider_credits']==0
+          assert p['automatic_target_switching_enabled'] is False
+          assert p['requires_separate_preregistration_pr'] is True
+          print('active_target_expired=',p['active_target_expired'])
+          print('active_target_seconds_remaining=',p['active_target_seconds_remaining'])
+          print('ambiguous_event_ids_excluded=',p['ambiguous_event_ids_excluded'])
+          print('proposed_candidate=',p['proposed_candidate'])
+          PY
+      - name: Verify production model unchanged
+        if: always()
+        run: |
+          sha256sum football_model_xgboost_elo.pkl > /tmp/model.after
+          diff -u /tmp/model.before /tmp/model.after
+      - name: Upload rollover status
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-market-probe-rollover-status
+          path: artifacts/multi_market_probe_rollover_plan.json
+          if-no-files-found: error
