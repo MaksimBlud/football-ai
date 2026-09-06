@@ -6,10 +6,21 @@ calling ``load_all_matches`` a second time.
 """
 from __future__ import annotations
 
+import pandas as pd
+
 LAST_MATCHES = 5
 INITIAL_ELO = 1500.0
 K_FACTOR = 20.0
 HOME_ADVANTAGE = 80.0
+
+NUMERIC_MATCH_COLUMNS = [
+    "home_goals",
+    "away_goals",
+    "home_shots",
+    "away_shots",
+    "home_shots_target",
+    "away_shots_target",
+]
 
 FEATURES = [
     "home_odds",
@@ -34,6 +45,22 @@ FEATURES = [
     "home_venue_goals_scored",
     "away_venue_goals_scored",
 ]
+
+
+def coerce_numeric_history_like_production(df: pd.DataFrame) -> pd.DataFrame:
+    """Mirror ``model_utils.load_all_matches`` numeric coercion without DB reads.
+
+    Historical production inference treats missing/non-numeric goals and shot statistics
+    as zero. Prospective research must reproduce that feature-input contract while keeping
+    its stricter point-in-time history cutoff in the collector.
+    """
+    missing = [column for column in NUMERIC_MATCH_COLUMNS if column not in df.columns]
+    if missing:
+        raise ValueError(f"matches history missing numeric columns: {missing}")
+    work = df.copy()
+    for column in NUMERIC_MATCH_COLUMNS:
+        work[column] = pd.to_numeric(work[column], errors="coerce").fillna(0)
+    return work
 
 
 def average(values):
