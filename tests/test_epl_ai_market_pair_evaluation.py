@@ -72,14 +72,25 @@ def test_selector_excludes_ambiguous_event_identity_fail_closed():
     assert excluded == [{"event_id": "evt-1", "reason": "AMBIGUOUS_EVENT_IDENTITY"}]
 
 
-def test_frozen_contract_hash_and_live_provenance_are_machine_readable():
+def test_frozen_contract_hash_live_provenance_and_readiness_gate_are_machine_readable():
     contract = json.loads(Path("research/epl_ai_market_pair_v1.json").read_text(encoding="utf-8"))
     assert contract["collection"]["frozen_model_artifact_sha256"] == FROZEN_MODEL_SHA256
     assert contract["activation_evidence"]["first_successful_run_id"] == 34032610966
     assert contract["activation_evidence"]["first_successful_pairs"] == 12
-    assert contract["evaluation"]["row_selection_timing"] == "frozen_before_target_outcomes_are_used_for_this_experiment"
-    assert contract["evaluation"]["threshold_search"] is False
-    assert contract["evaluation"]["production_activation"] is False
+    evaluation = contract["evaluation"]
+    assert evaluation["row_selection_timing"] == "frozen_before_target_outcomes_are_used_for_this_experiment"
+    gate = evaluation["readiness_gate"]
+    assert gate["minimum_unique_selected_events"] == 100
+    assert gate["minimum_elapsed_calendar_days_from_first_live_collection"] == 56
+    assert gate["first_permitted_outcome_read_utc"] == "2026-11-01T12:16:54.672903+00:00"
+    assert gate["outcome_free_event_maturity_buffer_hours_after_kickoff"] == 6
+    assert evaluation["audit_parameters"] == {"bootstrap_simulations": 20000, "bootstrap_seed": 20260901}
+    assert evaluation["primary_decision_rule"]["PASS"].startswith("both Brier and log-loss")
+    assert evaluation["primary_decision_rule"]["FAIL"].startswith("both Brier and log-loss")
+    assert evaluation["threshold_search"] is False
+    assert evaluation["optional_stopping"] is False
+    assert evaluation["interim_outcome_scoring_before_gate"] is False
+    assert evaluation["production_activation"] is False
 
 
 def test_cycle_enforces_same_frozen_model_hash_and_stays_outcome_free():
