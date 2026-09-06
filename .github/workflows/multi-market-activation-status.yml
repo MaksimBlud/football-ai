@@ -11,6 +11,8 @@ on:
       - 'multi_market_schema_probe.py'
       - 'multi_market_collector.py'
       - 'multi_market_odds.py'
+      - 'multi_market_sampling_plan.py'
+      - 'test_multi_market_sampling_plan.py'
       - 'supabase/migrations/20260905000*.sql'
       - '.github/workflows/multi-market-activation-status.yml'
   push:
@@ -21,6 +23,8 @@ on:
       - 'multi_market_schema_probe.py'
       - 'multi_market_collector.py'
       - 'multi_market_odds.py'
+      - 'multi_market_sampling_plan.py'
+      - 'test_multi_market_sampling_plan.py'
       - 'supabase/migrations/20260905000*.sql'
       - '.github/workflows/multi-market-activation-status.yml'
 
@@ -39,9 +43,9 @@ jobs:
           python-version: '3.12'
       - run: pip install pandas requests supabase python-dotenv pytest
       - name: Compile readiness modules
-        run: python -m py_compile multi_market_activation_status.py multi_market_schema_probe.py
+        run: python -m py_compile multi_market_activation_status.py multi_market_schema_probe.py multi_market_sampling_plan.py
       - name: Run mocked readiness tests
-        run: pytest -q test_multi_market_activation_status.py test_multi_market_schema_probe.py
+        run: pytest -q test_multi_market_activation_status.py test_multi_market_schema_probe.py test_multi_market_sampling_plan.py
       - name: Guard production model artifacts
         if: github.event_name == 'pull_request'
         run: |
@@ -66,30 +70,46 @@ jobs:
         run: sha256sum football_model_xgboost_elo.pkl > /tmp/model.before
       - name: Check exact schema and zero-cost quota readiness
         run: python multi_market_activation_status.py
+      - name: Build zero-cost reserve-preserving sampling plan
+        run: python multi_market_sampling_plan.py
       - name: Verify zero-cost/read-only contract
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
           p=json.loads(Path('artifacts/multi_market_activation_status.json').read_text())
+          plan=json.loads(Path('artifacts/multi_market_sampling_plan.json').read_text())
           assert p['schema_version']=='MULTI_MARKET_V2_READINESS_STATUS_V1'
           assert p['research_only'] is True
           assert p['read_only'] is True
           assert p['writes_performed'] is False
           assert p['paid_provider_requests']==0
           assert p['prospective_oos_evaluation_active'] is False
+          assert plan['schema_version']=='MULTI_MARKET_SAMPLING_PLAN_V1'
+          assert plan['research_only'] is True
+          assert plan['read_only'] is True
+          assert plan['writes_performed'] is False
+          assert plan['paid_provider_requests']==0
+          assert plan['paid_provider_credits']==0
+          assert plan['hard_reserve_preserved'] is True
+          assert int(plan['remaining_credits']) == int(p['quota']['remaining'])
           print('status=',p['status'])
           print('quota_ready=',p['quota_ready'])
           print('collection_ready=',p['collection_ready'])
+          print('planned_events=',plan['planned_events'])
+          print('planned_credits_worst_case=',plan['planned_credits_worst_case'])
+          print('worst_case_remaining_credits=',plan['worst_case_remaining_credits'])
           print('blockers=',p['blockers'])
           PY
       - name: Verify production model unchanged
         run: |
           sha256sum football_model_xgboost_elo.pkl > /tmp/model.after
           diff -u /tmp/model.before /tmp/model.after
-      - name: Upload readiness status
+      - name: Upload readiness status and sampling plan
         uses: actions/upload-artifact@v4
         with:
           name: multi-market-v2-readiness-status
-          path: artifacts/multi_market_activation_status.json
+          path: |
+            artifacts/multi_market_activation_status.json
+            artifacts/multi_market_sampling_plan.json
           if-no-files-found: error
