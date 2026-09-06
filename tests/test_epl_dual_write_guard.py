@@ -191,6 +191,11 @@ def test_scheduled_cycle_preflights_before_writes_and_restores(monkeypatch):
     )
     monkeypatch.setattr(
         scheduled.dual_write_guard,
+        "preflight_observations",
+        lambda client, frame, config: {"present": 1, "missing": 0},
+    )
+    monkeypatch.setattr(
+        scheduled.dual_write_guard,
         "persist_predictions_with_retry",
         persist_predictions,
     )
