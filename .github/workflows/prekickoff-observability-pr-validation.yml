@@ -1,0 +1,39 @@
+name: Pre-kickoff Observability PR Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'prekickoff_observability.py'
+      - 'tests/test_prekickoff_observability.py'
+      - '.github/workflows/prekickoff-observability-pr-validation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pytest numpy pandas
+      - run: python -m py_compile prekickoff_observability.py
+      - run: python -m pytest -q tests/test_prekickoff_observability.py
+      - name: Enforce outcome-free implementation
+        run: |
+          if grep -Ei 'finished_results|settlement|actual_result|result_table' prekickoff_observability.py; then
+            echo 'Outcome source reference detected'
+            exit 1
+          fi
+          echo 'PASS: observability module is outcome-free'
+      - name: Enforce no production artifact changes
+        run: |
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -E '\.pkl$'; then
+            echo 'Production model artifact change detected'
+            exit 1
+          fi
