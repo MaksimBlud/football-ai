@@ -225,8 +225,13 @@ def settle_predictions(
 
     identity = ["_match_date", "_home_key", "_away_key"]
     result_view = results[identity + ["result"]].copy()
-    if result_view.duplicated(subset=identity, keep=False).any():
-        raise ValueError("Duplicate finished-result fixture identity")
+    duplicate_mask = result_view.duplicated(subset=identity, keep=False)
+    if duplicate_mask.any():
+        duplicate_results = result_view.loc[duplicate_mask]
+        conflicts = duplicate_results.groupby(identity, dropna=False)["result"].nunique()
+        if (conflicts > 1).any():
+            raise ValueError("Conflicting finished-result fixture identity")
+        result_view = result_view.drop_duplicates(subset=identity, keep="first")
     result_view = result_view.rename(columns={"result": "actual_result"})
 
     settled = ledger.merge(result_view, on=identity, how="inner", validate="many_to_one")
