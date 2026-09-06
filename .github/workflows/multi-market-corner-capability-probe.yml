@@ -1,0 +1,86 @@
+name: Multi-Market Corner Capability Probe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas requests supabase python-dotenv pytest
+      - name: Compile preregistered probe
+        run: python -m py_compile multi_market_corner_capability_probe.py
+      - name: Run probe regressions
+        run: pytest -q test_multi_market_corner_capability_probe.py
+      - name: Record production model hash before
+        run: sha256sum football_model_xgboost_elo.pkl > /tmp/model.before
+      - name: Zero-cost provider budget guard
+        run: python odds_api_budget_guard.py --max-cost 2
+      - name: Run preregistered one-request capability probe
+        run: python multi_market_corner_capability_probe.py
+      - name: Verify capability probe contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path('artifacts/multi_market_corner_capability_probe.json').read_text())
+          assert p['schema_version']=='MULTI_MARKET_CORNER_CAPABILITY_PROBE_V1'
+          assert p['research_only'] is True
+          assert p['preregistered'] is True
+          assert p['writes_performed'] is False
+          assert p['max_paid_requests']==1
+          assert p['max_paid_credits']==2
+          assert p['hard_reserve_credits']==100
+          assert p['target']=={
+              'league':'LIGUE_1',
+              'event_id':'b292d9e6b90eb73e0547ace2a44728e8',
+              'home_team':'Troyes',
+              'away_team':'Strasbourg',
+              'commence_time_utc':'2026-09-06T13:00:00+00:00',
+          }
+          assert p['target_verified'] is True
+          assert p['status'] in {'CAPABILITY_CONFIRMED','CAPABILITY_MISS'}
+          assert p['paid_provider_requests']==1
+          assert 0 <= int(p['paid_provider_credits']) <= 2
+          assert int(p['quota_after']['remaining']) >= int(p['hard_reserve_credits'])
+          if p['status']=='CAPABILITY_CONFIRMED':
+              assert p['corner_market_keys']
+              assert p['corner_bookmaker_count'] >= 1
+          else:
+              assert p['corner_market_keys']==[]
+              assert p['corner_bookmaker_count']==0
+          print('status=',p['status'])
+          print('target=',p['target'])
+          print('paid_provider_requests=',p['paid_provider_requests'])
+          print('paid_provider_credits=',p['paid_provider_credits'])
+          print('quota_before=',p['quota_before'])
+          print('quota_after=',p['quota_after'])
+          print('corner_market_keys=',p['corner_market_keys'])
+          print('corner_bookmaker_count=',p['corner_bookmaker_count'])
+          PY
+      - name: Verify production model unchanged
+        if: always()
+        run: |
+          sha256sum football_model_xgboost_elo.pkl > /tmp/model.after
+          diff -u /tmp/model.before /tmp/model.after
+      - name: Upload capability probe artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-market-corner-capability-probe
+          path: artifacts/multi_market_corner_capability_probe.json
+          if-no-files-found: error

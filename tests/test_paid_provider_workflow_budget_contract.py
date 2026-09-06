@@ -16,6 +16,9 @@ GUARDED_PAID_WORKFLOWS = {
     "turkey-portugal-market-only-cycle.yml": 2,
     # Current coverage audit worst case: 9 leagues * (3 featured + 4 event).
     "multi-market-coverage-audit.yml": 63,
+    # Preregistered diagnostic: exactly one event-only corner request, capped at
+    # two credits, with a fresh zero-cost provider preflight before the call.
+    "multi-market-corner-capability-probe.yml": 2,
 }
 
 SPECIALIZED_PAID_WORKFLOWS = {"multi-market-cycle.yml"}
