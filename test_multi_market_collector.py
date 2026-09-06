@@ -62,11 +62,20 @@ def _events(now, count=2):
 
 def _prepare_collection(monkeypatch, now, *, quota_remaining=204, rows=None, event_count=2):
     fake = FakeSupabase(rows or [])
+    events = _events(now, event_count)
     monkeypatch.setattr(collector, "supabase", fake)
-    monkeypatch.setattr(collector, "load_future_events", lambda _now: _events(now, event_count))
+    monkeypatch.setattr(collector, "load_future_events", lambda _now: events)
     monkeypatch.setattr(collector, "load_latest_collection_times", lambda _ids: {})
     monkeypatch.setattr(collector, "fetch_quota_status", lambda: {"remaining": str(quota_remaining), "last_cost": "0"})
     monkeypatch.setattr(collector, "build_multi_market_card", lambda _payload: {})
+    monkeypatch.setattr(
+        collector,
+        "fetch_sport_markets",
+        lambda *_a, **_k: (
+            [{"id": e["event_id"], "home_team": e["home_team"], "away_team": e["away_team"], "bookmakers": []} for e in events],
+            {"remaining": str(quota_remaining - 2), "last_cost": "2"},
+        ),
+    )
     return fake
 
 
@@ -97,6 +106,7 @@ def test_recent_event_hidden_beyond_first_page_cannot_trigger_paid_fetch(monkeyp
     def forbidden_paid_fetch(*args, **kwargs):
         paid_calls.append((args, kwargs))
         raise AssertionError("recent event must not consume a paid request")
+    monkeypatch.setattr(collector, "fetch_sport_markets", forbidden_paid_fetch)
     monkeypatch.setattr(collector, "fetch_event_markets", forbidden_paid_fetch)
     summary = collector.collect(now)
     assert summary["fetched"] == 0
@@ -109,7 +119,8 @@ def test_remaining_below_reserve_plus_worst_case_blocks_before_paid_fetch(monkey
     now = datetime(2026, 9, 5, 13, 0, tzinfo=UTC)
     _prepare_collection(monkeypatch, now, quota_remaining=MIN_COLLECTION_REMAINING_CREDITS - 1)
     paid_calls = []
-    monkeypatch.setattr(collector, "fetch_event_markets", lambda *_a, **_k: paid_calls.append(1))
+    monkeypatch.setattr(collector, "fetch_sport_markets", lambda *_a, **_k: paid_calls.append("featured"))
+    monkeypatch.setattr(collector, "fetch_event_markets", lambda *_a, **_k: paid_calls.append("event"))
     summary = collector.collect(now)
     assert summary["quota_blocked"] is True
     assert summary["provider_paid_requests"] == 0
@@ -117,56 +128,75 @@ def test_remaining_below_reserve_plus_worst_case_blocks_before_paid_fetch(monkey
     assert paid_calls == []
 
 
-def test_four_credit_cycle_budget_allows_one_controlled_fetch_only(monkeypatch):
+def test_four_credit_cycle_collects_one_complete_event(monkeypatch):
     now = datetime(2026, 9, 5, 13, 0, tzinfo=UTC)
     _prepare_collection(monkeypatch, now)
-    paid_calls = []
-    def paid_fetch(*_args, **_kwargs):
-        paid_calls.append(1)
-        return {"bookmakers": []}, {"remaining": "203", "last_cost": "1"}
-    monkeypatch.setattr(collector, "fetch_event_markets", paid_fetch)
+    event_calls = []
+    def event_fetch(*_args, **_kwargs):
+        event_calls.append(1)
+        return {"bookmakers": []}, {"remaining": "200", "last_cost": "2"}
+    monkeypatch.setattr(collector, "fetch_event_markets", event_fetch)
     summary = collector.collect(now, max_paid_requests=5, max_paid_credits=4)
-    assert len(paid_calls) == 1
-    assert summary["provider_paid_requests"] == 1
-    assert summary["provider_paid_credits"] == 1
+    assert len(event_calls) == 1
+    assert summary["featured_requests"] == 1
+    assert summary["event_requests"] == 1
+    assert summary["provider_paid_requests"] == 2
+    assert summary["provider_paid_credits"] == 4
     assert summary["inserted"] == 1
     assert summary["credit_cap_stop"] is True
 
 
-def test_request_cap_remains_secondary_safety_limit(monkeypatch):
+def test_six_credits_collect_two_events_same_league_with_one_featured_request(monkeypatch):
     now = datetime(2026, 9, 5, 13, 0, tzinfo=UTC)
     _prepare_collection(monkeypatch, now)
-    paid_calls = []
-    def paid_fetch(*_args, **_kwargs):
-        paid_calls.append(1)
-        return {"bookmakers": []}, {"remaining": "203", "last_cost": "1"}
-    monkeypatch.setattr(collector, "fetch_event_markets", paid_fetch)
-    summary = collector.collect(now, max_paid_requests=1, max_paid_credits=8)
-    assert len(paid_calls) == 1
+    event_calls = []
+    monkeypatch.setattr(
+        collector,
+        "fetch_event_markets",
+        lambda *_a, **_k: (event_calls.append(1) or {"bookmakers": []}, {"remaining": "198", "last_cost": "2"}),
+    )
+    summary = collector.collect(now, max_paid_requests=3, max_paid_credits=6)
+    assert len(event_calls) == 2
+    assert summary["featured_requests"] == 1
+    assert summary["event_requests"] == 2
+    assert summary["provider_paid_requests"] == 3
+    assert summary["provider_paid_credits"] == 6
+    assert summary["inserted"] == 2
+
+
+def test_request_cap_requires_two_http_calls_for_first_complete_event(monkeypatch):
+    now = datetime(2026, 9, 5, 13, 0, tzinfo=UTC)
+    _prepare_collection(monkeypatch, now)
+    calls = []
+    monkeypatch.setattr(collector, "fetch_sport_markets", lambda *_a, **_k: calls.append("featured"))
+    monkeypatch.setattr(collector, "fetch_event_markets", lambda *_a, **_k: calls.append("event"))
+    summary = collector.collect(now, max_paid_requests=1, max_paid_credits=4)
+    assert calls == []
     assert summary["request_cap_stop"] is True
 
 
-def test_missing_last_cost_is_charged_conservatively_at_worst_case(monkeypatch):
+def test_missing_last_cost_is_charged_conservatively_for_event_leg(monkeypatch):
     now = datetime(2026, 9, 5, 13, 0, tzinfo=UTC)
     _prepare_collection(monkeypatch, now, event_count=1)
     monkeypatch.setattr(collector, "fetch_event_markets", lambda *_a, **_k: ({"bookmakers": []}, {"remaining": None, "last_cost": None}))
-    summary = collector.collect(now, max_paid_credits=4)
-    assert summary["provider_paid_requests"] == 1
+    summary = collector.collect(now, max_paid_requests=2, max_paid_credits=4)
+    assert summary["provider_paid_requests"] == 2
     assert summary["provider_paid_credits"] == 4
 
 
-def test_reserve_guard_uses_worst_case_before_next_call(monkeypatch):
+def test_reserve_guard_uses_complete_first_event_worst_case(monkeypatch):
     now = datetime(2026, 9, 5, 13, 0, tzinfo=UTC)
     _prepare_collection(monkeypatch, now, quota_remaining=HARD_RESERVE_CREDITS + 5)
     calls = []
-    def paid_fetch(*_a, **_k):
-        calls.append(1)
-        return {"bookmakers": []}, {"remaining": str(HARD_RESERVE_CREDITS + 3), "last_cost": "2"}
-    monkeypatch.setattr(collector, "fetch_event_markets", paid_fetch)
+    monkeypatch.setattr(
+        collector,
+        "fetch_event_markets",
+        lambda *_a, **_k: (calls.append(1) or {"bookmakers": []}, {"remaining": str(HARD_RESERVE_CREDITS + 1), "last_cost": "2"}),
+    )
     summary = collector.collect(now, max_paid_requests=5, max_paid_credits=8)
     assert len(calls) == 1
-    assert summary["provider_paid_requests"] == 1
-    assert summary["provider_paid_credits"] == 2
+    assert summary["provider_paid_requests"] == 2
+    assert summary["provider_paid_credits"] == 4
     assert summary["quota_stop"] is True
 
 
