@@ -32,6 +32,20 @@ RESULT_COLUMNS = (
 )
 
 
+class PublicResultsSourceUnavailable(RuntimeError):
+    """Bounded transient failure from the zero-cost public results source."""
+
+    def __init__(self, *, url: str, status_code: int, attempts: int, detail: str = ""):
+        self.url = str(url)
+        self.status_code = int(status_code)
+        self.attempts = int(attempts)
+        self.detail = str(detail)[:300]
+        super().__init__(
+            f"Football-Data current results HTTP {self.status_code} after {self.attempts} attempt(s): "
+            + self.detail
+        )
+
+
 def configured_current_csv_url(config: LeagueRuntimeConfig) -> str:
     source = config.finished_results_source
     if source.provider != PROVIDER:
@@ -102,9 +116,18 @@ def _fetch_csv_response(
             break
         sleep(float(attempt))
     assert response is not None
+    status_code = int(response.status_code)
+    detail = str(getattr(response, "text", ""))[:300]
+    attempts = max_attempts if status_code in TRANSIENT_HTTP_STATUSES else 1
+    if status_code in TRANSIENT_HTTP_STATUSES:
+        raise PublicResultsSourceUnavailable(
+            url=url,
+            status_code=status_code,
+            attempts=attempts,
+            detail=detail,
+        )
     raise RuntimeError(
-        f"Football-Data current results HTTP {response.status_code} after {max_attempts if response.status_code in TRANSIENT_HTTP_STATUSES else 1} attempt(s): "
-        + str(getattr(response, "text", ""))[:300]
+        f"Football-Data current results HTTP {status_code} after {attempts} attempt(s): " + detail
     )
 
 
