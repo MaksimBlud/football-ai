@@ -1,8 +1,8 @@
 """Read-only Multi-Market V2 lifecycle readiness status.
 
 This module combines exact live schema, a provider zero-cost quota preflight,
-bounded read-only evidence from already-persisted Multi-Market snapshots, and
-an optional separately review-approved provider capability attestation.
+read-only evidence from already-persisted Multi-Market snapshots, and an
+optional separately review-approved provider capability attestation.
 
 Infrastructure readiness and provider corner-market capability are kept
 separate. A diagnostic capability probe can never promote itself: its workflow
@@ -39,7 +39,7 @@ TABLE_SNAPSHOTS = "league_multi_market_snapshots"
 TABLE_SETTLEMENTS = "league_multi_market_settlements"
 TABLE_CORNERS = "league_corner_results"
 CORNER_MARKETS = frozenset({"alternate_totals_corners", "alternate_team_totals_corners"})
-CAPABILITY_SAMPLE_LIMIT = 100
+CAPABILITY_PAGE_SIZE = 1000
 
 
 def _safe_quota(fetch_quota: Callable[[], dict[str, Any]]) -> tuple[dict[str, Any] | None, str | None]:
@@ -59,35 +59,7 @@ def _quota_ready(quota: dict[str, Any] | None) -> bool:
         return False
 
 
-def _provider_corner_capability(client: Any, *, snapshots_ready: bool) -> dict[str, Any]:
-    """Inspect bounded immutable snapshot evidence without provider calls."""
-    result = {
-        "read_only": True,
-        "sample_limit": CAPABILITY_SAMPLE_LIMIT,
-        "rows_inspected": 0,
-        "corner_evidence_rows": 0,
-        "corner_evidence_leagues": [],
-        "corner_market_keys": [],
-        "capability_ready": False,
-        "error": None,
-    }
-    if not snapshots_ready:
-        result["error"] = "SNAPSHOT_TABLE_NOT_READY"
-        return result
-    try:
-        response = (
-            client.table(TABLE_SNAPSHOTS)
-            .select("league,event_id,payload")
-            .order("snapshot_time_utc", desc=True)
-            .limit(CAPABILITY_SAMPLE_LIMIT)
-            .execute()
-        )
-    except Exception as exc:
-        result["error"] = f"{type(exc).__name__}: {str(exc)[:400]}"
-        return result
-
-    rows = list(getattr(response, "data", None) or [])
-    result["rows_inspected"] = len(rows)
+def _corner_evidence(rows: list[dict[str, Any]]) -> tuple[int, set[str], set[str]]:
     evidence_leagues: set[str] = set()
     evidence_markets: set[str] = set()
     evidence_rows = 0
@@ -107,6 +79,72 @@ def _provider_corner_capability(client: Any, *, snapshots_ready: bool) -> dict[s
         league = str(row.get("league") or "")
         if league:
             evidence_leagues.add(league)
+    return evidence_rows, evidence_leagues, evidence_markets
+
+
+def _provider_corner_capability(client: Any, *, snapshots_ready: bool) -> dict[str, Any]:
+    """Inspect immutable snapshot evidence without provider calls or row-cap loss.
+
+    Pages are read newest-first and the scan stops as soon as any immutable
+    corner-market evidence is found. If no evidence exists, every snapshot row
+    is inspected so a PostgREST default/server row cap cannot turn historical
+    evidence into a false ``CAPABILITY_UNPROVEN`` state after the table grows.
+    """
+    result = {
+        "read_only": True,
+        "page_size": CAPABILITY_PAGE_SIZE,
+        "pages_inspected": 0,
+        "rows_inspected": 0,
+        "scan_complete": False,
+        "corner_evidence_rows": 0,
+        "corner_evidence_leagues": [],
+        "corner_market_keys": [],
+        "capability_ready": False,
+        "error": None,
+    }
+    if not snapshots_ready:
+        result["error"] = "SNAPSHOT_TABLE_NOT_READY"
+        return result
+
+    start = 0
+    evidence_rows = 0
+    evidence_leagues: set[str] = set()
+    evidence_markets: set[str] = set()
+
+    try:
+        while True:
+            response = (
+                client.table(TABLE_SNAPSHOTS)
+                .select("snapshot_key,league,event_id,payload")
+                .order("snapshot_time_utc", desc=True)
+                .order("snapshot_key", desc=True)
+                .range(start, start + CAPABILITY_PAGE_SIZE - 1)
+                .execute()
+            )
+            rows = list(getattr(response, "data", None) or [])
+            result["pages_inspected"] += 1
+            result["rows_inspected"] += len(rows)
+
+            page_evidence, page_leagues, page_markets = _corner_evidence(rows)
+            evidence_rows += page_evidence
+            evidence_leagues.update(page_leagues)
+            evidence_markets.update(page_markets)
+
+            if evidence_rows > 0:
+                # One immutable historical row is sufficient to prove that the
+                # provider/capture path has exposed an allowed corner market.
+                # Stop immediately rather than reading unrelated older history.
+                result["scan_complete"] = len(rows) < CAPABILITY_PAGE_SIZE
+                break
+
+            if len(rows) < CAPABILITY_PAGE_SIZE:
+                result["scan_complete"] = True
+                break
+
+            start += CAPABILITY_PAGE_SIZE
+    except Exception as exc:
+        result["error"] = f"{type(exc).__name__}: {str(exc)[:400]}"
+        return result
 
     result["corner_evidence_rows"] = evidence_rows
     result["corner_evidence_leagues"] = sorted(evidence_leagues)
