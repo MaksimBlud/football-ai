@@ -7,13 +7,16 @@ on:
       - "epl_ai_market_pair_collector.py"
       - "epl_ai_market_pair_cycle.py"
       - "epl_ai_market_pair_evaluation.py"
+      - "report_epl_ai_market_pair_collection_status.py"
       - "research_model_features.py"
       - "tests/test_epl_ai_market_pair_collector.py"
       - "tests/test_epl_ai_market_pair_evaluation.py"
+      - "tests/test_report_epl_ai_market_pair_collection_status.py"
       - "research/epl_ai_market_pair_v1.json"
       - "research/epl_ai_market_pair_ledger.sql"
       - ".github/workflows/epl-ai-market-pair-pr-validation.yml"
       - ".github/workflows/epl-ai-market-pair.yml"
+      - ".github/workflows/epl-ai-market-pair-status.yml"
 
 permissions:
   contents: read
@@ -28,10 +31,10 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install pandas numpy joblib pytest supabase python-dotenv xgboost
-      - name: Compile research collector and frozen evaluator
-        run: python -m py_compile research_model_features.py epl_ai_market_pair_collector.py epl_ai_market_pair_cycle.py epl_ai_market_pair_evaluation.py
+      - name: Compile research collector, status monitor and frozen evaluator
+        run: python -m py_compile research_model_features.py epl_ai_market_pair_collector.py epl_ai_market_pair_cycle.py epl_ai_market_pair_evaluation.py report_epl_ai_market_pair_collection_status.py
       - name: Run focused tests
-        run: python -m pytest -q tests/test_epl_ai_market_pair_collector.py tests/test_epl_ai_market_pair_evaluation.py
+        run: python -m pytest -q tests/test_epl_ai_market_pair_collector.py tests/test_epl_ai_market_pair_evaluation.py tests/test_report_epl_ai_market_pair_collection_status.py
       - name: Load tracked production artifact and verify frozen hash
         run: |
           python - <<'PY'
@@ -42,13 +45,17 @@ jobs:
               raise SystemExit(f"Frozen model hash mismatch: {bundle.model_sha256}")
           print("PASS: frozen production artifact loaded; SHA256=" + bundle.model_sha256)
           PY
-      - name: Enforce outcome-free scheduled collector
+      - name: Enforce outcome-free scheduled collector and status monitor
         run: |
-          if grep -E 'league_finished_results|la_liga_finished_results|league_corner_results' epl_ai_market_pair_cycle.py; then
-            echo "Forbidden outcome table reference in scheduled collector"
+          if grep -E 'league_finished_results|la_liga_finished_results|league_corner_results|actual_result|settlement' epl_ai_market_pair_cycle.py report_epl_ai_market_pair_collection_status.py; then
+            echo "Forbidden outcome reference in outcome-free EPL research path"
             exit 1
           fi
-          echo "PASS: scheduled collector has no target settlement-table references"
+          if grep -E 'THE_ODDS_API_KEY|the_odds_service|save_odds_snapshot' report_epl_ai_market_pair_collection_status.py .github/workflows/epl-ai-market-pair-status.yml; then
+            echo "Paid provider path detected in zero-cost status monitor"
+            exit 1
+          fi
+          echo "PASS: collector/status monitor remain outcome-free; status monitor is provider-free"
       - name: Enforce no production artifact changes
         run: |
           git fetch origin "${{ github.base_ref }}" --depth=1
