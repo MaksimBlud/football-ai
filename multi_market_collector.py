@@ -6,10 +6,20 @@ import pandas as pd
 from database import supabase
 from league_config import get_league_config
 from multi_market_card import build_multi_market_card
-from multi_market_odds import EVENT_MARKETS, fetch_event_markets, fetch_quota_status
+from multi_market_odds import (
+    EVENT_MARKETS,
+    FEATURED_CARD_MARKETS,
+    fetch_event_markets,
+    fetch_quota_status,
+    fetch_sport_markets,
+    index_sport_events,
+    merge_event_market_payloads,
+)
 from multi_market_policy import (
     DEFAULT_MAX_CREDITS_PER_MANUAL_CYCLE,
     EVENT_REQUEST_MAX_CREDITS,
+    FEATURED_REQUEST_MAX_CREDITS,
+    FIRST_EVENT_MAX_CREDITS,
     HARD_RESERVE_CREDITS,
     MIN_COLLECTION_REMAINING_CREDITS,
 )
@@ -98,6 +108,20 @@ def _key(league, event_id, ts):
     return hashlib.sha256(f"{league}|{event_id}|{ts.isoformat()}|MULTI_MARKET_V1".encode()).hexdigest()
 
 
+def _charge(summary, quota, worst_case, current_remaining):
+    last_cost = _int_quota(quota.get("last_cost"))
+    if last_cost is None:
+        last_cost = worst_case
+    summary["provider_paid_requests"] += 1
+    summary["provider_paid_credits"] += last_cost
+    after = _int_quota(quota.get("remaining"))
+    if after is not None:
+        current_remaining = after
+    else:
+        current_remaining -= last_cost
+    return current_remaining
+
+
 def collect(now_utc=None, *, max_paid_requests=None, max_paid_credits=None):
     now_utc = now_utc or datetime.now(UTC)
     request_cap = _request_cap(max_paid_requests)
@@ -122,6 +146,8 @@ def collect(now_utc=None, *, max_paid_requests=None, max_paid_credits=None):
         "quota_before": quota_before,
         "eligible_events": len(events),
         "fetched": 0,
+        "featured_requests": 0,
+        "event_requests": 0,
         "provider_paid_requests": 0,
         "provider_paid_credits": 0,
         "inserted": 0,
@@ -132,10 +158,15 @@ def collect(now_utc=None, *, max_paid_requests=None, max_paid_credits=None):
         "max_paid_credits": credit_cap,
         "request_cap_stop": False,
         "credit_cap_stop": False,
+        "featured_request_max_credits": FEATURED_REQUEST_MAX_CREDITS,
         "event_request_max_credits": EVENT_REQUEST_MAX_CREDITS,
+        "first_event_max_credits": FIRST_EVENT_MAX_CREDITS,
         "hard_reserve_credits": HARD_RESERVE_CREDITS,
     }
     current_remaining = remaining
+    featured_by_league: dict[str, dict[str, dict]] = {}
+    featured_quota_by_league: dict[str, dict] = {}
+
     for event in events:
         league, event_id = str(event["league"]), str(event["event_id"])
         config = get_league_config(league)
@@ -144,33 +175,55 @@ def collect(now_utc=None, *, max_paid_requests=None, max_paid_credits=None):
         previous = latest.get((league, event_id))
         if previous and now_utc - previous < timedelta(hours=MIN_INTERVAL_HOURS):
             summary["skipped_recent"] += 1; continue
-        if request_cap is not None and summary["provider_paid_requests"] >= request_cap:
+
+        needs_featured = league not in featured_by_league
+        needed_requests = 2 if needs_featured else 1
+        needed_credits = FIRST_EVENT_MAX_CREDITS if needs_featured else EVENT_REQUEST_MAX_CREDITS
+        if request_cap is not None and summary["provider_paid_requests"] + needed_requests > request_cap:
             summary["request_cap_stop"] = True; break
-        if summary["provider_paid_credits"] + EVENT_REQUEST_MAX_CREDITS > credit_cap:
+        if summary["provider_paid_credits"] + needed_credits > credit_cap:
             summary["credit_cap_stop"] = True; break
-        if current_remaining - EVENT_REQUEST_MAX_CREDITS < HARD_RESERVE_CREDITS:
+        if current_remaining - needed_credits < HARD_RESERVE_CREDITS:
             summary["quota_stop"] = True; break
 
-        payload, quota = fetch_event_markets(config.odds_api_sport_key, event_id, regions="eu", markets=EVENT_MARKETS)
-        summary["fetched"] += 1
-        summary["provider_paid_requests"] += 1
-        last_cost = _int_quota(quota.get("last_cost"))
-        if last_cost is None:
-            # Fail conservatively if the provider omits billing headers.
-            last_cost = EVENT_REQUEST_MAX_CREDITS
-        summary["provider_paid_credits"] += last_cost
-        after = _int_quota(quota.get("remaining"))
-        if after is not None:
-            current_remaining = after
-        else:
-            current_remaining -= last_cost
+        if needs_featured:
+            featured_payload, featured_quota = fetch_sport_markets(
+                config.odds_api_sport_key, regions="eu", markets=FEATURED_CARD_MARKETS
+            )
+            current_remaining = _charge(
+                summary, featured_quota, FEATURED_REQUEST_MAX_CREDITS, current_remaining
+            )
+            summary["featured_requests"] += 1
+            featured_by_league[league] = index_sport_events(featured_payload)
+            featured_quota_by_league[league] = featured_quota
+            if (
+                summary["provider_paid_credits"] + EVENT_REQUEST_MAX_CREDITS > credit_cap
+                or current_remaining - EVENT_REQUEST_MAX_CREDITS < HARD_RESERVE_CREDITS
+            ):
+                summary["quota_stop"] = current_remaining - EVENT_REQUEST_MAX_CREDITS < HARD_RESERVE_CREDITS
+                summary["credit_cap_stop"] = summary["provider_paid_credits"] + EVENT_REQUEST_MAX_CREDITS > credit_cap
+                break
 
-        snapshot_time, kickoff = datetime.now(UTC), _utc(event["commence_time_utc"])
+        corner_payload, event_quota = fetch_event_markets(
+            config.odds_api_sport_key, event_id, regions="eu", markets=EVENT_MARKETS
+        )
+        current_remaining = _charge(summary, event_quota, EVENT_REQUEST_MAX_CREDITS, current_remaining)
+        summary["fetched"] += 1
+        summary["event_requests"] += 1
+
+        payload = merge_event_market_payloads(featured_by_league[league].get(event_id), corner_payload)
+        snapshot_time, kickoff = now_utc, _utc(event["commence_time_utc"])
         if not pd.isna(kickoff) and snapshot_time < kickoff.to_pydatetime():
             card = build_multi_market_card(payload)
-            stored = {"schema_version": "MULTI_MARKET_V1", "research_only": True, "card": card,
-                      "provider_market_keys": sorted({m.get("key") for b in payload.get("bookmakers", []) for m in b.get("markets", []) if m.get("key")}),
-                      "bookmakers": payload.get("bookmakers", []), "quota": quota}
+            stored = {
+                "schema_version": "MULTI_MARKET_V1",
+                "research_only": True,
+                "card": card,
+                "provider_market_keys": sorted({m.get("key") for b in payload.get("bookmakers", []) for m in b.get("markets", []) if m.get("key")}),
+                "bookmakers": payload.get("bookmakers", []),
+                "quota": event_quota,
+                "featured_quota": featured_quota_by_league.get(league),
+            }
             row = {"snapshot_key": _key(league, event_id, snapshot_time), "league": league, "event_id": event_id,
                    "home_team": str(event.get("home_team") or payload.get("home_team") or ""),
                    "away_team": str(event.get("away_team") or payload.get("away_team") or ""),

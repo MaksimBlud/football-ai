@@ -7,11 +7,12 @@ from config import THE_ODDS_API_KEY
 from the_odds_service import BASE_URL
 
 FEATURED_MARKETS = ("h2h", "spreads", "totals")
-# Keep only markets actually consumed by Multi-Market Card V1. With one region,
-# this reduces the conservative request cost from seven credits to four.
+# Card V1 only needs spreads/totals from the league-level featured endpoint.
+# One request returns these markets for all upcoming events in the league.
+FEATURED_CARD_MARKETS = ("spreads", "totals")
+# Keep event-level requests only for markets unavailable from the featured
+# league endpoint. This amortizes handicap/goals cost across all league events.
 EVENT_MARKETS = (
-    "alternate_spreads",
-    "alternate_totals",
     "alternate_totals_corners",
     "alternate_team_totals_corners",
 )
@@ -47,6 +48,38 @@ def fetch_event_markets(sport_key: str, event_id: str, *, regions="eu", markets:
     if response.status_code != 200:
         raise RuntimeError(f"The Odds API event markets error HTTP {response.status_code}: {response.text[:500]}")
     return response.json(), _quota(response)
+
+
+def index_sport_events(events: Iterable[dict]) -> dict[str, dict]:
+    """Index one league-level featured response by canonical Odds API event id."""
+    return {str(event.get("id")): event for event in events if event.get("id")}
+
+
+def merge_event_market_payloads(featured_event: dict | None, event_markets: dict) -> dict:
+    """Merge featured spreads/totals with event-only corner markets by bookmaker.
+
+    The returned object keeps one bookmaker entry per key/title and never invents
+    markets. Event-level metadata wins when both payloads provide it.
+    """
+    featured_event = featured_event or {}
+    merged = dict(featured_event)
+    merged.update({k: v for k, v in event_markets.items() if k != "bookmakers"})
+    books: dict[str, dict] = {}
+    order: list[str] = []
+    for payload in (featured_event, event_markets):
+        for book in payload.get("bookmakers", []) or []:
+            key = str(book.get("key") or book.get("title") or "unknown")
+            if key not in books:
+                books[key] = {k: v for k, v in book.items() if k != "markets"}
+                books[key]["markets"] = []
+                order.append(key)
+            seen = {m.get("key") for m in books[key]["markets"]}
+            for market in book.get("markets", []) or []:
+                if market.get("key") not in seen:
+                    books[key]["markets"].append(market)
+                    seen.add(market.get("key"))
+    merged["bookmakers"] = [books[key] for key in order]
+    return merged
 
 
 def summarize_market_coverage(event: dict) -> dict[str, dict]:

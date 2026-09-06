@@ -16,6 +16,8 @@ from typing import Any, Callable
 from multi_market_policy import (
     CORNER_SOURCE_READY_LEAGUES,
     EVENT_REQUEST_MAX_CREDITS,
+    FEATURED_REQUEST_MAX_CREDITS,
+    FIRST_EVENT_MAX_CREDITS,
     HARD_RESERVE_CREDITS,
     MIN_COLLECTION_REMAINING_CREDITS,
 )
@@ -85,9 +87,11 @@ def build_status(client: Any, fetch_quota: Callable[[], dict[str, Any]]) -> dict
         "quota": quota,
         "quota_error": quota_error,
         "quota_threshold": MIN_COLLECTION_REMAINING_CREDITS,
-        "quota_threshold_semantics": "hard_reserve_plus_one_worst_case_event_request",
+        "quota_threshold_semantics": "hard_reserve_plus_one_complete_first_event",
         "hard_reserve_credits": HARD_RESERVE_CREDITS,
+        "featured_request_max_credits": FEATURED_REQUEST_MAX_CREDITS,
         "event_request_max_credits": EVENT_REQUEST_MAX_CREDITS,
+        "first_event_max_credits": FIRST_EVENT_MAX_CREDITS,
         "quota_ready": quota_ready,
         "collection_ready": collection_ready,
         "infrastructure_collection_ready": collection_ready,
