@@ -40,28 +40,15 @@ def sync_results(write=False):
     try:
         provider=fetch_current_finished_results(BUNDESLIGA_RUNTIME_CONFIG)
     except PublicResultsSourceUnavailable as exc:
-        out={
-            "league":LEAGUE,
-            "status":"SOURCE_UNAVAILABLE",
-            "source_url":exc.url,
-            "http_status":int(exc.status_code),
-            "public_http_requests":int(exc.attempts),
-            "inserted":0,
-            "unchanged":0,
-            "conflicts":0,
-            "finished_rows":0,
-            "writes_performed":False,
-            "paid_provider_requests":0,
-        }
-        print(json.dumps(out,indent=2,sort_keys=True))
-        return out
+        out={"league":LEAGUE,"status":"SOURCE_UNAVAILABLE","source_url":exc.url,"http_status":int(exc.status_code),"public_http_requests":int(exc.attempts),"inserted":0,"unchanged":0,"conflicts":0,"finished_rows":0,"writes_performed":False,"paid_provider_requests":0}
+        print(json.dumps(out,indent=2,sort_keys=True)); return out
     frame=provider["frame"]
     print("BUNDESLIGA FINISHED RESULTS SYNC — PUBLIC FOOTBALL-DATA CSV"); print("source:",provider["source_url"]); print("source rows:",provider["source_rows"]); print("finished rows:",len(frame)); print("paid provider requests:",provider["paid_provider_requests"])
     if not write:
         print("DRY RUN: no Supabase writes")
-        return {"league":LEAGUE,"status":"DRY_RUN","inserted":0,"unchanged":0,"conflicts":0,"finished_rows":len(frame),"writes_performed":False,"paid_provider_requests":0,"public_http_requests":int(provider.get("public_http_requests") or 1)}
+        return {"league":LEAGUE,"status":"DRY_RUN","source_url":provider["source_url"],"inserted":0,"unchanged":0,"conflicts":0,"finished_rows":len(frame),"writes_performed":False,"paid_provider_requests":0,"public_http_requests":int(provider.get("public_http_requests") or 1)}
     m=persistence.persist_results(supabase,frame,BUNDESLIGA_RUNTIME_CONFIG)
-    out={"league":LEAGUE,"status":"WRITTEN","inserted":int(m["inserted"]),"unchanged":int(m["unchanged"]),"conflicts":int(m["conflicts"]),"finished_rows":len(frame),"writes_performed":bool(int(m["inserted"])>0),"paid_provider_requests":0,"public_http_requests":int(provider.get("public_http_requests") or 1)}
+    out={"league":LEAGUE,"status":"WRITTEN","source_url":provider["source_url"],"inserted":int(m["inserted"]),"unchanged":int(m["unchanged"]),"conflicts":int(m["conflicts"]),"finished_rows":len(frame),"writes_performed":bool(int(m["inserted"])>0),"paid_provider_requests":0,"public_http_requests":int(provider.get("public_http_requests") or 1)}
     print("persistence:",out); print("production model used:",False); print("Structural V2 used:",False); return out
 
 def _write_status(path,value):
@@ -69,5 +56,12 @@ def _write_status(path,value):
     target=Path(path); target.parent.mkdir(parents=True,exist_ok=True); target.write_text(json.dumps(value,indent=2,sort_keys=True,default=str)+"\n",encoding="utf-8")
 
 def main():
-    p=argparse.ArgumentParser(); p.add_argument("--write",action="store_true"); p.add_argument("--status-json"); a=p.parse_args(); result=sync_results(write=a.write); _write_status(a.status_json,result)
+    p=argparse.ArgumentParser(); p.add_argument("--write",action="store_true"); p.add_argument("--status-json"); a=p.parse_args()
+    try:
+        result=sync_results(write=a.write)
+    except Exception as exc:
+        result={"league":LEAGUE,"status":"FAILED","error_type":type(exc).__name__,"error":str(exc)[:1000],"paid_provider_requests":0}
+        _write_status(a.status_json,result)
+        raise
+    _write_status(a.status_json,result); print(json.dumps(result,sort_keys=True))
 if __name__=="__main__": main()
