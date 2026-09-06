@@ -23,6 +23,26 @@ def _env_enabled(value: str | None) -> bool:
     return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _paid_request_count(collection: dict[str, Any]) -> int:
+    """Return authoritative provider HTTP request accounting.
+
+    ``fetched`` counts completed event payloads, not provider HTTP requests. Since
+    featured spreads/totals are amortized at league level, one completed event
+    can require two paid HTTP requests. Prefer the explicit request counter and
+    keep ``fetched`` only as a compatibility fallback for older collectors.
+    """
+    value = collection.get("provider_paid_requests")
+    if value is None:
+        value = collection.get("fetched")
+    try:
+        paid = int(value or 0)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("provider paid request count must be an integer") from exc
+    if paid < 0:
+        raise ValueError("provider paid request count must be non-negative")
+    return paid
+
+
 def run_cycle(
     client: Any,
     fetch_quota: Callable[[], dict[str, Any]],
@@ -58,7 +78,7 @@ def run_cycle(
         }
 
     collection = dict(collect_fn())
-    paid = int(collection.get("fetched") or collection.get("provider_paid_requests") or 0)
+    paid = _paid_request_count(collection)
     return {
         "schema_version": CYCLE_SCHEMA,
         "research_only": True,

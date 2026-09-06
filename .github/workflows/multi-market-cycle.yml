@@ -104,6 +104,8 @@ jobs:
           python - <<'PY'
           import json
           from pathlib import Path
+          from multi_market_policy import CORNER_SOURCE_READY_LEAGUES, HARD_RESERVE_CREDITS
+
           p=json.loads(Path('artifacts/multi_market_cycle_status.json').read_text())
           assert p['schema_version']=='MULTI_MARKET_V2_CYCLE_STATUS_V1'
           assert p['research_only'] is True
@@ -114,17 +116,22 @@ jobs:
           if p['action']=='COLLECTION_ATTEMPTED':
               assert p['collection_activation_enabled'] is True
               c=p['collection']
+              authoritative_requests=int(c.get('provider_paid_requests') or 0)
+              assert p['paid_provider_requests'] == authoritative_requests
               request_cap=c.get('max_paid_requests')
               credit_cap=c.get('max_paid_credits')
               if request_cap is not None:
-                  assert p['paid_provider_requests'] <= int(request_cap)
+                  assert authoritative_requests <= int(request_cap)
               if credit_cap is not None:
                   assert int(c.get('provider_paid_credits') or 0) <= int(credit_cap)
+              assert int(c.get('hard_reserve_credits') or HARD_RESERVE_CREDITS) == HARD_RESERVE_CREDITS
+              assert set(c.get('collection_leagues') or []).issubset(set(CORNER_SOURCE_READY_LEAGUES))
           print('action=',p['action'])
           print('activation_enabled=',p.get('collection_activation_enabled'))
           print('collection_called=',p['collection_called'])
           print('paid_provider_requests=',p['paid_provider_requests'])
           print('paid_provider_credits=',(p.get('collection') or {}).get('provider_paid_credits',0))
+          print('collection_leagues=',(p.get('collection') or {}).get('collection_leagues',[]))
           print('blockers=',p['readiness'].get('blockers'))
           PY
       - name: Verify production model unchanged
