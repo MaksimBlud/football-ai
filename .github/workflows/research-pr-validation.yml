@@ -98,6 +98,7 @@ jobs:
         run: |
           python -m pytest -q tests/test_evaluate_league_predictions.py
           python -m pytest -q tests/test_multi_league_evaluator_safety.py
+          python -m pytest -q tests/test_epl_result_alias_settlement.py
 
       - name: Run canonical data quality audit tests
         run: |
