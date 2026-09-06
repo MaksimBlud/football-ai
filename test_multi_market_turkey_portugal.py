@@ -43,29 +43,58 @@ def test_turkey_and_portugal_route_to_their_multi_market_sport_keys(monkeypatch)
         {"league": "TURKEY_SUPER_LIG", "event_id": "turkey-e1", "home_team": "Turkey Home", "away_team": "Turkey Away", "commence_time_utc": "2026-09-06T06:00:00Z", "snapshot_time_utc": "2026-09-05T07:00:00Z"},
         {"league": "PRIMEIRA_LIGA", "event_id": "portugal-e1", "home_team": "Portugal Home", "away_team": "Portugal Away", "commence_time_utc": "2026-09-06T07:00:00Z", "snapshot_time_utc": "2026-09-05T07:00:00Z"},
     ]
-    provider_calls = []
+    by_sport = {
+        "soccer_turkey_super_league": events[0],
+        "soccer_portugal_primeira_liga": events[1],
+    }
+    featured_calls = []
+    event_calls = []
 
     monkeypatch.setattr(collector, "fetch_quota_status", lambda: {"remaining": 1000})
     monkeypatch.setattr(collector, "load_future_events", lambda _now: events)
     monkeypatch.setattr(collector, "load_latest_collection_times", lambda _event_ids: {})
     monkeypatch.setattr(collector, "build_multi_market_card", lambda _payload: {"total_goals": {"point": 2.5}})
 
-    def fake_fetch_event_markets(sport_key, event_id, **_kwargs):
-        provider_calls.append((sport_key, event_id))
-        return {"home_team": "Home", "away_team": "Away", "bookmakers": []}, {"remaining": 999, "last_cost": 4}
+    def fake_fetch_sport_markets(sport_key, **_kwargs):
+        featured_calls.append(sport_key)
+        event = by_sport[sport_key]
+        return [{
+            "id": event["event_id"],
+            "home_team": event["home_team"],
+            "away_team": event["away_team"],
+            "bookmakers": [],
+        }], {"remaining": 998, "last_cost": 2}
 
+    def fake_fetch_event_markets(sport_key, event_id, **_kwargs):
+        event_calls.append((sport_key, event_id))
+        event = by_sport[sport_key]
+        return {
+            "id": event_id,
+            "home_team": event["home_team"],
+            "away_team": event["away_team"],
+            "bookmakers": [],
+        }, {"remaining": 996, "last_cost": 2}
+
+    monkeypatch.setattr(collector, "fetch_sport_markets", fake_fetch_sport_markets)
     monkeypatch.setattr(collector, "fetch_event_markets", fake_fetch_event_markets)
 
-    # This test proves routing for two leagues, so it explicitly grants the
-    # two-request worst-case budget. Production/manual default remains 4 credits.
-    summary = collector.collect(now, max_paid_requests=2, max_paid_credits=8)
+    # Each league contributes one complete first event: one 2-credit featured
+    # request plus one 2-credit event-only corners request.
+    summary = collector.collect(now, max_paid_requests=4, max_paid_credits=8)
 
-    assert provider_calls == [
+    assert featured_calls == [
+        "soccer_turkey_super_league",
+        "soccer_portugal_primeira_liga",
+    ]
+    assert event_calls == [
         ("soccer_turkey_super_league", "turkey-e1"),
         ("soccer_portugal_primeira_liga", "portugal-e1"),
     ]
     assert summary["eligible_events"] == 2
     assert summary["fetched"] == 2
+    assert summary["featured_requests"] == 2
+    assert summary["event_requests"] == 2
+    assert summary["provider_paid_requests"] == 4
     assert summary["provider_paid_credits"] == 8
     assert summary["inserted"] == 2
     assert summary["skipped_unsupported"] == 0
