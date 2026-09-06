@@ -1,0 +1,68 @@
+{
+  "research_block": "PROSPECTIVE_CORNERS10_INCREMENTAL_V1",
+  "status": "PREREGISTERED_EXTERNALLY_GATED_RESEARCH_ONLY",
+  "frozen_at_utc": "2026-09-06T05:30:00Z",
+  "hypothesis": "CORNERS10 may add prospective 1X2 predictive information beyond the market baseline despite adverse historical incremental results",
+  "historical_reference": "docs/HISTORICAL_FOOTBALL_SIGNAL_LAB_CLOSURE.md",
+  "leagues": ["EPL", "LA_LIGA", "SERIE_A"],
+  "activation_gates": {
+    "provider_corner_capability_must_be_separately_approved": true,
+    "prospective_collection_only": true,
+    "automatic_activation": false,
+    "automatic_promotion": false
+  },
+  "sample_contract": {
+    "post_activation_kickoffs_only": true,
+    "current_fixture_outcome_forbidden_from_features": true,
+    "future_outcomes_forbidden_before_evaluation_gate": true,
+    "canonical_fixture_identity_required": true,
+    "minimum_settled_eligible_fixtures_per_league": 100,
+    "minimum_calendar_months_per_league": 4,
+    "minimum_valid_monthly_test_blocks_per_league": 2,
+    "minimum_prior_training_fixtures_per_block": 60,
+    "minimum_test_fixtures_per_block": 20,
+    "scores_forbidden_before_all_leagues_ready": true
+  },
+  "feature_contract": {
+    "signal": "CORNERS10",
+    "rolling_window_matches": 10,
+    "rolling_state_must_use_only_prior_finished_matches": true,
+    "feature_definition_must_match_closed_historical_signal_family": true,
+    "no_post_freeze_feature_selection": true,
+    "no_post_outcome_parameter_search": true
+  },
+  "comparison": {
+    "baseline": "MARKET_MODEL",
+    "challenger": "MARKET_CORNERS10",
+    "same_rows_required": true,
+    "same_walk_forward_splits_required": true,
+    "model_family": "median_imputer_standard_scaler_multinomial_logistic_regression",
+    "split": "expanding_monthly_walk_forward"
+  },
+  "evaluation": {
+    "primary_metrics": ["multiclass_brier", "log_loss"],
+    "secondary_metric": "accuracy",
+    "paired_deltas": "MARKET_CORNERS10 minus MARKET_MODEL",
+    "lower_is_better_for_primary_metrics": true,
+    "report_per_league": true,
+    "report_pooled_micro": true,
+    "report_unweighted_league_macro": true,
+    "report_monthly_block_wins": true,
+    "no_threshold_search": true,
+    "no_feature_selection_after_results": true,
+    "no_league_weighting_after_results": true
+  },
+  "decision_rule": {
+    "PASS": "challenger has negative paired aggregate delta for both Brier and log loss in every league and pooled micro, with no league adverse on either primary metric",
+    "FAIL": "challenger is adverse on both primary metrics in pooled micro, or adverse on both primary metrics in at least two leagues",
+    "INCONCLUSIVE": "all other mature-sample outcomes",
+    "production_promotion_from_result": false
+  },
+  "execution": {
+    "evaluation_requires_explicit_manual_action": true,
+    "scheduled_outcome_scoring": false,
+    "supabase_writes": false,
+    "live_provider_calls": false,
+    "production_artifact_changes": false
+  }
+}
