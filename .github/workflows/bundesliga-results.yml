@@ -3,6 +3,12 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "19 */12 * * *"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/bundesliga-results.yml"
+      - "update_bundesliga_results.py"
+      - "football_data_current_results.py"
 permissions:
   contents: read
 jobs:
@@ -17,5 +23,53 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: "3.12", cache: pip}
       - run: pip install pandas requests supabase python-dotenv
-      - run: python update_bundesliga_results.py --write
-      - run: python evaluate_bundesliga_predictions.py
+      - name: Sync immutable public finished results
+        run: python update_bundesliga_results.py --write --status-json artifacts/bundesliga_results_status.json
+      - name: Verify explicit provider-free result status
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('artifacts/bundesliga_results_status.json')
+          if not path.exists():
+              raise SystemExit('missing Bundesliga results status artifact')
+          p=json.loads(path.read_text())
+          assert p['league']=='BUNDESLIGA'
+          assert p['paid_provider_requests']==0
+          assert p['status'] in {'WRITTEN','SOURCE_UNAVAILABLE','FAILED'}
+          if p['status']=='SOURCE_UNAVAILABLE':
+              assert int(p['public_http_requests'])==3
+              assert int(p['http_status']) in {429,500,502,503,504}
+              assert int(p['inserted'])==0
+              assert int(p['conflicts'])==0
+              assert p['writes_performed'] is False
+          if p['status']=='FAILED':
+              raise SystemExit(f"Bundesliga results sync failed: {p.get('error_type')}: {p.get('error')}")
+          print('status=',p['status'])
+          print('public_http_requests=',p.get('public_http_requests'))
+          print('inserted=',p.get('inserted'))
+          print('unchanged=',p.get('unchanged'))
+          print('conflicts=',p.get('conflicts'))
+          PY
+      - name: Evaluate Bundesliga predictions
+        if: success()
+        run: |
+          status="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          print(json.loads(Path('artifacts/bundesliga_results_status.json').read_text())['status'])
+          PY
+          )"
+          if [ "$status" != "WRITTEN" ]; then
+            echo "SKIP evaluator: result status=$status"
+            exit 0
+          fi
+          python evaluate_bundesliga_predictions.py
+      - name: Upload Bundesliga results status
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundesliga-results-status
+          path: artifacts/bundesliga_results_status.json
+          if-no-files-found: error
