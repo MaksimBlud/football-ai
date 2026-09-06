@@ -66,6 +66,13 @@
     "collector_reads_target_outcomes": false,
     "row_selection": "for each event_id, use exactly the row with the maximum market_snapshot_time_utc among rows carrying the frozen model hash; ties resolve by pair_key ascending; selection occurs before joining target outcomes",
     "row_selection_timing": "frozen_before_target_outcomes_are_used_for_this_experiment",
+    "primary_cohort_size": 100,
+    "primary_cohort_selection": "first 100 eligible selected events ordered by kickoff_utc ASC, event_id ASC, pair_key ASC",
+    "evaluation_delay_hours_after_last_cohort_kickoff": 24,
+    "outcome_read_gate": "closed_until_primary_cohort_exists_and_is_mature",
+    "gate_semantics": "do not read target outcomes for this experiment until 100 eligible selected events exist and current UTC time is at least 24 hours after the latest kickoff among those first 100 events",
+    "interim_primary_evaluation": false,
+    "optional_stopping_on_primary_metrics": false,
     "paired_audit": "market_model_incremental_audit.py",
     "primary_metrics": [
       "multiclass_brier",
