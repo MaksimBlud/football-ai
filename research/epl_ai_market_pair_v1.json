@@ -66,16 +66,35 @@
     "collector_reads_target_outcomes": false,
     "row_selection": "for each event_id, use exactly the row with the maximum market_snapshot_time_utc among rows carrying the frozen model hash; ties resolve by pair_key ascending; selection occurs before joining target outcomes",
     "row_selection_timing": "frozen_before_target_outcomes_are_used_for_this_experiment",
+    "readiness_gate": {
+      "minimum_unique_selected_events": 100,
+      "minimum_elapsed_calendar_days_from_first_live_collection": 56,
+      "first_permitted_outcome_read_utc": "2026-11-01T12:16:54.672903+00:00",
+      "outcome_free_event_maturity_buffer_hours_after_kickoff": 6,
+      "gate_policy": "do not read experiment target outcomes until both the wall-clock date and at least 100 frozen-selected event kickoffs plus the 6h maturity buffer have elapsed",
+      "post_gate_settlement_requirement": "after the gate opens, require at least 100 selected fixtures with canonical settled outcomes before computing primary metrics; otherwise report WAIT_RESULTS without a primary verdict"
+    },
     "paired_audit": "market_model_incremental_audit.py",
+    "audit_parameters": {
+      "bootstrap_simulations": 20000,
+      "bootstrap_seed": 20260901
+    },
     "primary_metrics": [
       "multiclass_brier",
       "multiclass_log_loss"
     ],
     "score_delta": "model_minus_market",
     "interpretation": "negative deltas favor the model",
+    "primary_decision_rule": {
+      "PASS": "both Brier and log-loss model-minus-market bootstrap 95% CI upper bounds are strictly below 0",
+      "FAIL": "both Brier and log-loss model-minus-market bootstrap 95% CI lower bounds are strictly above 0",
+      "INCONCLUSIVE": "all other combinations, including metric disagreement or confidence intervals crossing 0"
+    },
     "same_fixture_same_timestamp_required": true,
     "threshold_search": false,
     "subgroup_selection_for_primary_decision": false,
+    "optional_stopping": false,
+    "interim_outcome_scoring_before_gate": false,
     "production_activation": false,
     "model_promotion": false
   }
