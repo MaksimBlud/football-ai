@@ -1,7 +1,7 @@
 """Read-only, outcome-free diagnostics for canonical pre-kickoff state.
 
-Deliberately never reads results or settlement tables, so it is safe while
-prospective experiments remain behind an evaluation gate.
+Uses only pre-kickoff market snapshots and prediction-ledger state, so it is
+safe while prospective experiments remain behind an evaluation gate.
 """
 from __future__ import annotations
 import numpy as np
