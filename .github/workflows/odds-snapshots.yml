@@ -2,9 +2,16 @@ name: EPL Odds Snapshots
 
 on:
   workflow_dispatch:
+  schedule:
+    # Keep aligned with EPL Live Cycle, which runs the durable mirror at :47.
+    - cron: "17 */2 * * *"
 
 permissions:
   contents: read
+
+concurrency:
+  group: epl-odds-snapshots
+  cancel-in-progress: false
 
 jobs:
   collect-odds:
