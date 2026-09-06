@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from multi_market_activation_status import CORNER_SOURCE_READY_LEAGUES, build_status
 from multi_market_policy import (
     EVENT_REQUEST_MAX_CREDITS,
@@ -111,3 +113,12 @@ def test_only_audited_corner_source_leagues_are_marked_source_ready():
     assert tuple(status["corner_source_ready_leagues"]) == CORNER_SOURCE_READY_LEAGUES
     assert set(status["per_league_corner_readiness"]) == set(CORNER_SOURCE_READY_LEAGUES)
     assert all(v["source_ready"] for v in status["per_league_corner_readiness"].values())
+
+
+def test_policy_changes_self_trigger_read_only_sampling_plan_workflow():
+    workflow = Path(".github/workflows/multi-market-activation-status.yml").read_text()
+    assert workflow.count("'multi_market_policy.py'") >= 2
+    assert "Build zero-cost reserve-preserving sampling plan" in workflow
+    assert "python multi_market_sampling_plan.py" in workflow
+    assert "assert plan['paid_provider_requests']==0" in workflow
+    assert "assert plan['paid_provider_credits']==0" in workflow
