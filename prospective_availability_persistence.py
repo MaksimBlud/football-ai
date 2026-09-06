@@ -63,18 +63,26 @@ def _equal(left: dict, right: dict) -> bool:
     return _comparable(_record(left)) == _comparable(_record(right))
 
 
-def _fetch_all(client, table: str, *, league: str | None, order_column: str) -> list[dict]:
+def _fetch_all(
+    client,
+    table: str,
+    *,
+    league: str | None,
+    order_columns: tuple[str, ...],
+) -> list[dict]:
+    """Fetch every row using a stable total order across page boundaries."""
+    if not order_columns:
+        raise ValueError("order_columns must not be empty")
+
     rows = []
     start = 0
     while True:
         query = client.table(table).select("*")
         if league is not None:
             query = query.eq("league", league)
-        response = (
-            query.order(order_column, desc=False)
-            .range(start, start + PAGE_SIZE - 1)
-            .execute()
-        )
+        for column in order_columns:
+            query = query.order(column, desc=False)
+        response = query.range(start, start + PAGE_SIZE - 1).execute()
         page = _rows(response)
         rows.extend(page)
         if len(page) < PAGE_SIZE:
@@ -84,7 +92,14 @@ def _fetch_all(client, table: str, *, league: str | None, order_column: str) -> 
 
 
 def fetch_polls(client, league: str | None = None) -> pd.DataFrame:
-    frame = pd.DataFrame(_fetch_all(client, POLL_TABLE, league=league, order_column="observed_at_utc"))
+    frame = pd.DataFrame(
+        _fetch_all(
+            client,
+            POLL_TABLE,
+            league=league,
+            order_columns=("observed_at_utc", "poll_key"),
+        )
+    )
     for column in ("commence_time_utc", "observed_at_utc", "persisted_at_utc"):
         if column in frame.columns:
             frame[column] = pd.to_datetime(frame[column], utc=True, errors="coerce")
@@ -93,7 +108,12 @@ def fetch_polls(client, league: str | None = None) -> pd.DataFrame:
 
 def fetch_observations(client, league: str | None = None) -> pd.DataFrame:
     frame = pd.DataFrame(
-        _fetch_all(client, OBSERVATION_TABLE, league=league, order_column="observed_at_utc")
+        _fetch_all(
+            client,
+            OBSERVATION_TABLE,
+            league=league,
+            order_columns=("observed_at_utc", "observation_key"),
+        )
     )
     for column in (
         "commence_time_utc",
