@@ -44,7 +44,6 @@ jobs:
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-      THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -53,9 +52,19 @@ jobs:
       - run: pip install pandas requests supabase python-dotenv
       - name: Record production model hash before
         run: sha256sum football_model_xgboost_elo.pkl > /tmp/model.before
-      - name: Run guarded first-paid proof or read-only postmortem
+      - name: Prove retired canary has immutable two-row evidence before postmortem
+        run: |
+          python - <<'PY'
+          from database import supabase
+          r=(supabase.table('league_multi_market_snapshots')
+             .select('snapshot_key',count='exact').limit(0).execute())
+          assert int(r.count)==2, f'retired first canary requires exactly two immutable evidence rows, found {r.count}'
+          print('snapshot_count=',r.count)
+          print('provider_credentials_present=',False)
+          PY
+      - name: Run retired read-only canary postmortem
         run: python multi_market_first_paid_canary.py
-      - name: Verify canary proof contract
+      - name: Verify retired canary postmortem contract
         run: |
           python - <<'PY'
           import json
@@ -65,46 +74,23 @@ jobs:
           assert p['research_only'] is True
           assert p['production_promotion'] is False
           assert p['prospective_oos_evaluation_active'] is False
-          assert p['max_paid_requests']==3
-          assert p['max_paid_credits']==6
+          assert p['status']=='BLOCKED_NO_CORNER_MARKET'
+          assert p['blocker']=='FIRST_PAID_CANARY_NO_CORNER_MARKET'
+          assert p['snapshot_count_before']==2
+          assert p['snapshot_count_after']==2
+          assert p['provider_recheck_performed'] is False
+          assert p['preflight'] is None
+          assert p['collection'] is None
+          assert p['quota_after'] is None
           assert p['post_collection']['unique_events']==2
           assert p['post_collection']['unique_snapshot_keys']==2
-          if p['status']=='PASSED':
-              assert p['snapshot_count_before']==0
-              assert p['snapshot_count_after']==2
-              assert p['preflight']['paid_provider_requests']==0
-              assert p['preflight']['paid_provider_credits']==0
-              assert p['preflight']['hard_reserve_preserved'] is True
-              assert p['collection']['featured_requests']==1
-              assert p['collection']['event_requests']==2
-              assert p['collection']['provider_paid_requests']==3
-              assert 1 <= int(p['collection']['provider_paid_credits']) <= 6
-              assert int(p['quota_after']['remaining']) >= int(p['hard_reserve_credits'])
-              assert p['preflight']['expected_league'] not in {'RPL','TURKEY_SUPER_LIG'}
-              assert not p['post_collection']['missing_corner_event_ids']
-              print('status=PASSED')
-              print('league=',p['preflight']['expected_league'])
-              print('event_ids=',p['preflight']['expected_event_ids'])
-              print('paid_requests=',p['collection']['provider_paid_requests'])
-              print('paid_credits=',p['collection']['provider_paid_credits'])
-              print('quota_after=',p['quota_after'])
-          else:
-              assert p['status']=='BLOCKED_NO_CORNER_MARKET'
-              assert p['blocker']=='FIRST_PAID_CANARY_NO_CORNER_MARKET'
-              assert p['snapshot_count_before']==2
-              assert p['snapshot_count_after']==2
-              assert p['provider_recheck_performed'] is False
-              assert p['preflight'] is None
-              assert p['collection'] is None
-              assert p['quota_after'] is None
-              assert len(p['post_collection']['missing_corner_event_ids'])==2
-              assert p['post_collection']['event_last_costs']==[0,0]
-              assert all(cost==2 for cost in p['post_collection']['featured_last_costs'])
-              assert int(p['post_collection']['observed_remaining_credits']) >= int(p['hard_reserve_credits'])
-              print('status=BLOCKED_NO_CORNER_MARKET')
-              print('missing_corner_event_ids=',p['post_collection']['missing_corner_event_ids'])
-              print('event_last_costs=',p['post_collection']['event_last_costs'])
-              print('observed_remaining=',p['post_collection']['observed_remaining_credits'])
+          assert len(p['post_collection']['missing_corner_event_ids'])==2
+          assert p['post_collection']['event_last_costs']==[0,0]
+          assert all(cost==2 for cost in p['post_collection']['featured_last_costs'])
+          assert int(p['post_collection']['observed_remaining_credits']) >= int(p['hard_reserve_credits'])
+          print('status=',p['status'])
+          print('provider_recheck_performed=',p['provider_recheck_performed'])
+          print('missing_corner_event_ids=',p['post_collection']['missing_corner_event_ids'])
           print('market_keys=',p['post_collection']['provider_market_keys'])
           print('bookmakers=',p['post_collection']['bookmaker_keys'])
           PY
@@ -113,7 +99,7 @@ jobs:
         run: |
           sha256sum football_model_xgboost_elo.pkl > /tmp/model.after
           diff -u /tmp/model.before /tmp/model.after
-      - name: Upload first paid canary proof
+      - name: Upload first paid canary postmortem
         if: always()
         uses: actions/upload-artifact@v4
         with:

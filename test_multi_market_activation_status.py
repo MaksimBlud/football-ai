@@ -10,22 +10,44 @@ from multi_market_policy import (
 )
 
 
+CORNER_ROW = {
+    "league": "EPL",
+    "event_id": "e1",
+    "payload": {"provider_market_keys": ["spreads", "alternate_totals_corners"]},
+}
+NON_CORNER_ROW = {
+    "league": "EREDIVISIE",
+    "event_id": "e0",
+    "payload": {"provider_market_keys": ["spreads", "totals"]},
+}
+
+
 class Response:
-    def __init__(self, count=0):
+    def __init__(self, count=0, data=None):
         self.count = count
-        self.data = []
+        self.data = list(data or [])
 
 
 class Query:
     def __init__(self, client, table):
         self.client = client
         self.table_name = table
+        self.count_requested = False
+        self.columns = ""
+        self.limit_value = None
 
     def select(self, columns, count=None):
+        self.columns = columns
+        self.count_requested = count == "exact"
         self.client.calls.append(("select", self.table_name, columns, count))
         return self
 
+    def order(self, column, desc=False):
+        self.client.calls.append(("order", self.table_name, column, desc))
+        return self
+
     def limit(self, value):
+        self.limit_value = value
         self.client.calls.append(("limit", self.table_name, value))
         return self
 
@@ -33,13 +55,21 @@ class Query:
         self.client.calls.append(("execute", self.table_name))
         if self.table_name in self.client.missing:
             raise RuntimeError("PGRST205 missing relation")
-        return Response(self.client.counts.get(self.table_name, 0))
+        if self.count_requested:
+            return Response(self.client.counts.get(self.table_name, 0))
+        if self.table_name == "league_multi_market_snapshots" and self.columns == "league,event_id,payload":
+            rows = list(self.client.snapshot_rows)
+            if self.limit_value is not None:
+                rows = rows[: self.limit_value]
+            return Response(data=rows)
+        return Response()
 
 
 class Client:
-    def __init__(self, *, missing=(), counts=None):
+    def __init__(self, *, missing=(), counts=None, snapshot_rows=None):
         self.missing = set(missing)
         self.counts = counts or {}
+        self.snapshot_rows = [CORNER_ROW] if snapshot_rows is None else list(snapshot_rows)
         self.calls = []
 
     def table(self, name):
@@ -51,13 +81,16 @@ def quota(remaining):
     return {"remaining": str(remaining), "used": "10", "last_cost": "0"}
 
 
-def test_all_schema_and_minimum_credit_budget_is_ready_but_awaits_manual_activation():
+def test_schema_quota_and_observed_corner_capability_are_ready_but_await_manual_activation():
     status = build_status(Client(), lambda: quota(MIN_COLLECTION_REMAINING_CREDITS))
     assert status["quota_ready"] is True
+    assert status["infrastructure_collection_ready"] is True
+    assert status["provider_corner_capability_ready"] is True
     assert status["collection_ready"] is True
+    assert status["activation_ready"] is True
     assert status["manual_collection_activation_required"] is True
     assert status["scheduled_collection_enabled"] is False
-    assert status["status"] == "INFRASTRUCTURE_READY_AWAITING_MANUAL_ACTIVATION"
+    assert status["status"] == "READY_AWAITING_MANUAL_ACTIVATION"
     assert status["blockers"] == []
     assert status["quota_threshold"] == HARD_RESERVE_CREDITS + FIRST_EVENT_MAX_CREDITS
     assert status["featured_request_max_credits"] == FEATURED_REQUEST_MAX_CREDITS == 2
@@ -69,16 +102,32 @@ def test_all_schema_and_minimum_credit_budget_is_ready_but_awaits_manual_activat
     assert status["writes_performed"] is False
 
 
-def test_current_september_style_remaining_is_ready_without_crossing_reserve():
-    status = build_status(Client(), lambda: quota(204))
+def test_failed_eredivisie_canary_blocks_collection_activation_but_not_infrastructure():
+    status = build_status(Client(snapshot_rows=[NON_CORNER_ROW, NON_CORNER_ROW]), lambda: quota(193))
     assert status["quota_ready"] is True
-    assert status["collection_ready"] is True
+    assert status["infrastructure_collection_ready"] is True
+    assert status["provider_corner_capability_ready"] is False
+    assert status["provider_corner_capability"]["rows_inspected"] == 2
+    assert status["provider_corner_capability"]["corner_evidence_rows"] == 0
+    assert status["collection_ready"] is False
+    assert status["activation_ready"] is False
+    assert status["status"] == "INFRASTRUCTURE_READY_PROVIDER_CAPABILITY_UNPROVEN"
+    assert status["blockers"] == ["PROVIDER_CORNER_CAPABILITY_UNPROVEN"]
+
+
+def test_no_snapshot_evidence_is_unknown_not_activation_ready():
+    status = build_status(Client(snapshot_rows=[]), lambda: quota(204))
+    assert status["infrastructure_collection_ready"] is True
+    assert status["provider_corner_capability_ready"] is False
+    assert status["collection_ready"] is False
+    assert "PROVIDER_CORNER_CAPABILITY_UNPROVEN" in status["blockers"]
 
 
 def test_missing_all_tables_blocks_each_lifecycle_stage_even_with_high_quota():
     missing = {"league_multi_market_snapshots", "league_multi_market_settlements", "league_corner_results"}
     status = build_status(Client(missing=missing), lambda: quota(9999))
     assert status["quota_ready"] is True
+    assert status["infrastructure_collection_ready"] is False
     assert status["collection_ready"] is False
     assert status["status"] == "BLOCKED"
     assert status["goals_settlement_ready"] is False
@@ -90,6 +139,7 @@ def test_missing_all_tables_blocks_each_lifecycle_stage_even_with_high_quota():
 def test_low_quota_blocks_before_one_worst_case_event_call():
     status = build_status(Client(), lambda: quota(MIN_COLLECTION_REMAINING_CREDITS - 1))
     assert status["quota_ready"] is False
+    assert status["infrastructure_collection_ready"] is False
     assert status["collection_ready"] is False
     assert status["goals_settlement_ready"] is True
     assert status["corner_storage_ready"] is True
@@ -113,6 +163,17 @@ def test_only_audited_corner_source_leagues_are_marked_source_ready():
     assert tuple(status["corner_source_ready_leagues"]) == CORNER_SOURCE_READY_LEAGUES
     assert set(status["per_league_corner_readiness"]) == set(CORNER_SOURCE_READY_LEAGUES)
     assert all(v["source_ready"] for v in status["per_league_corner_readiness"].values())
+
+
+def test_provider_capability_probe_is_bounded_and_read_only():
+    status = build_status(Client(snapshot_rows=[CORNER_ROW] * 150), lambda: quota(999))
+    capability = status["provider_corner_capability"]
+    assert capability["read_only"] is True
+    assert capability["sample_limit"] == 100
+    assert capability["rows_inspected"] == 100
+    assert capability["corner_evidence_rows"] == 100
+    assert capability["corner_evidence_leagues"] == ["EPL"]
+    assert capability["corner_market_keys"] == ["alternate_totals_corners"]
 
 
 def test_policy_changes_self_trigger_read_only_sampling_plan_workflow():

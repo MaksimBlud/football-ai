@@ -70,7 +70,7 @@ jobs:
       - run: pip install pandas requests supabase python-dotenv
       - name: Record production model hash before
         run: sha256sum football_model_xgboost_elo.pkl > /tmp/model.before
-      - name: Check exact schema and zero-cost quota readiness
+      - name: Check exact schema, zero-cost quota, and stored provider capability
         run: python multi_market_activation_status.py
       - name: Build zero-cost reserve-preserving sampling plan
         run: python multi_market_sampling_plan.py
@@ -86,7 +86,17 @@ jobs:
           assert p['read_only'] is True
           assert p['writes_performed'] is False
           assert p['paid_provider_requests']==0
+          assert p['paid_provider_credits']==0
           assert p['prospective_oos_evaluation_active'] is False
+          assert p['provider_corner_capability']['read_only'] is True
+          assert p['provider_corner_capability']['rows_inspected'] <= p['provider_corner_capability']['sample_limit']
+          assert p['provider_corner_capability_ready'] == p['provider_corner_capability']['capability_ready']
+          assert p['collection_ready'] == (
+              p['infrastructure_collection_ready'] and p['provider_corner_capability_ready']
+          )
+          assert p['activation_ready'] == p['collection_ready']
+          if p['infrastructure_collection_ready'] and not p['provider_corner_capability_ready']:
+              assert 'PROVIDER_CORNER_CAPABILITY_UNPROVEN' in p['blockers']
           assert plan['schema_version']=='MULTI_MARKET_SAMPLING_PLAN_V1'
           assert plan['research_only'] is True
           assert plan['read_only'] is True
@@ -97,6 +107,9 @@ jobs:
           assert int(plan['remaining_credits']) == int(p['quota']['remaining'])
           print('status=',p['status'])
           print('quota_ready=',p['quota_ready'])
+          print('infrastructure_collection_ready=',p['infrastructure_collection_ready'])
+          print('provider_corner_capability_ready=',p['provider_corner_capability_ready'])
+          print('provider_corner_capability=',p['provider_corner_capability'])
           print('collection_ready=',p['collection_ready'])
           print('planned_events=',plan['planned_events'])
           print('planned_credits_worst_case=',plan['planned_credits_worst_case'])
@@ -104,10 +117,12 @@ jobs:
           print('blockers=',p['blockers'])
           PY
       - name: Verify production model unchanged
+        if: always()
         run: |
           sha256sum football_model_xgboost_elo.pkl > /tmp/model.after
           diff -u /tmp/model.before /tmp/model.after
       - name: Upload readiness status and sampling plan
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: multi-market-v2-readiness-status

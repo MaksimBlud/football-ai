@@ -6,27 +6,51 @@ from multi_market_cycle import run_cycle
 from multi_market_policy import MIN_COLLECTION_REMAINING_CREDITS
 
 
+CORNER_EVIDENCE_ROW = {
+    "league": "EPL",
+    "event_id": "capability-e1",
+    "payload": {"provider_market_keys": ["spreads", "alternate_totals_corners"]},
+}
+
+
 class FakeQuery:
-    def __init__(self, response=None, error=None):
+    def __init__(self, client, table_name, response=None, error=None):
+        self.client = client
+        self.table_name = table_name
         self.response = response
         self.error = error
+        self.columns = ""
+        self.count_requested = False
+        self.limit_value = None
 
-    def select(self, *args, **kwargs): return self
-    def limit(self, *args, **kwargs): return self
+    def select(self, columns="", *args, **kwargs):
+        self.columns = columns
+        self.count_requested = kwargs.get("count") == "exact"
+        return self
+    def order(self, *args, **kwargs): return self
+    def limit(self, value, *args, **kwargs):
+        self.limit_value = value
+        return self
     def execute(self):
         if self.error is not None:
             raise self.error
+        if self.table_name == "league_multi_market_snapshots" and self.columns == "league,event_id,payload":
+            rows = list(self.client.snapshot_rows)
+            if self.limit_value is not None:
+                rows = rows[: self.limit_value]
+            return SimpleNamespace(data=rows, count=len(rows))
         return self.response or SimpleNamespace(data=[], count=0)
 
 
 class FakeClient:
-    def __init__(self, table_errors=None):
+    def __init__(self, table_errors=None, *, capability_ready=True):
         self.table_errors = table_errors or {}
         self.tables = []
+        self.snapshot_rows = [CORNER_EVIDENCE_ROW] if capability_ready else []
 
     def table(self, name):
         self.tables.append(name)
-        return FakeQuery(error=self.table_errors.get(name))
+        return FakeQuery(self, name, error=self.table_errors.get(name))
 
 
 def test_cycle_does_not_call_collect_when_schema_blocked():
@@ -61,7 +85,27 @@ def test_cycle_does_not_call_collect_when_quota_below_credit_threshold():
     assert calls["collect"] == 0
 
 
-def test_204_credits_is_infrastructure_ready_but_still_requires_activation():
+def test_infrastructure_and_quota_ready_without_corner_evidence_blocks_cycle_even_if_enabled():
+    client = FakeClient(capability_ready=False)
+    calls = {"collect": 0}
+    result = run_cycle(
+        client,
+        lambda: {"remaining": "204", "last_cost": "0"},
+        lambda: calls.__setitem__("collect", calls["collect"] + 1) or {"fetched": 1},
+        collection_enabled=True,
+    )
+    assert result["action"] == "NOOP_BLOCKED"
+    assert result["readiness"]["quota_ready"] is True
+    assert result["readiness"]["infrastructure_collection_ready"] is True
+    assert result["readiness"]["provider_corner_capability_ready"] is False
+    assert result["readiness"]["collection_ready"] is False
+    assert "PROVIDER_CORNER_CAPABILITY_UNPROVEN" in result["readiness"]["blockers"]
+    assert result["collection_called"] is False
+    assert result["paid_provider_requests"] == 0
+    assert calls["collect"] == 0
+
+
+def test_204_credits_and_corner_capability_are_ready_but_still_require_activation():
     client = FakeClient()
     calls = {"collect": 0}
     result = run_cycle(
@@ -71,6 +115,8 @@ def test_204_credits_is_infrastructure_ready_but_still_requires_activation():
     )
     assert result["action"] == "NOOP_ACTIVATION_REQUIRED"
     assert result["readiness"]["quota_ready"] is True
+    assert result["readiness"]["provider_corner_capability_ready"] is True
+    assert result["readiness"]["collection_ready"] is True
     assert result["collection_called"] is False
     assert calls["collect"] == 0
 
