@@ -72,10 +72,11 @@
     },
     {
       "id": "PROSPECTIVE_CORNERS10_INCREMENTAL_V1",
-      "status": "PREREGISTERED_EXTERNALLY_GATED",
+      "status": "ACTIVE_EXTERNALLY_GATED",
       "hypothesis_family": "prospective_corners10_incremental_over_market",
       "sample_family": "prospective_post_capability_activation",
       "decision": "do_not_score_until_provider_capability_is_separately_approved_and_all_three_leagues_pass_frozen_readiness",
+      "status_document": "docs/PROSPECTIVE_CORNERS10_INCREMENTAL_V1_STATUS.md",
       "protocol_document": "research/prospective_corners10_incremental_v1.json",
       "scheduled_outcome_scoring": false,
       "evaluation_requires_explicit_manual_dispatch": true,
