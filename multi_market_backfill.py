@@ -114,6 +114,33 @@ def _identity(row: dict) -> tuple[str, str, str, str, str]:
     )
 
 
+def _snapshot_identity(row: dict) -> tuple[str, str, str]:
+    return (
+        str(row.get("home_team") or ""),
+        str(row.get("away_team") or ""),
+        str(row.get("kickoff_utc") or ""),
+    )
+
+
+def ambiguous_snapshot_events(snapshots: Iterable[dict]) -> set[tuple[str, str]]:
+    """Return event ids whose immutable history contains multiple fixture identities.
+
+    A provider can retain one event id while moving kickoff time/date. Finished
+    results currently identify fixtures only by league-local date and teams, so
+    automatically settling any version of such an event would require choosing
+    which kickoff identity is canonical after the fact. The backfill therefore
+    fails closed for the entire ambiguous event instead of making that choice.
+    """
+    identities: dict[tuple[str, str], set[tuple[str, str, str]]] = defaultdict(set)
+    for row in snapshots:
+        league = str(row.get("league") or "")
+        event_id = str(row.get("event_id") or "")
+        if not league or not event_id:
+            continue
+        identities[(league, event_id)].add(_snapshot_identity(row))
+    return {key for key, values in identities.items() if len(values) > 1}
+
+
 def _persist_in_chunks(
     records: list[dict],
     persist_fn: Callable[[Any, Iterable[dict]], dict],
@@ -157,6 +184,7 @@ def run_backfill(
         }
 
     snapshots = snapshot_loader(client)
+    ambiguous_events = ambiguous_snapshot_events(snapshots)
     existing_corners = corner_loader(client)
     leagues = sorted({str(row.get("league") or "") for row in snapshots if row.get("league")})
     unknown = [league for league in leagues if league not in CONFIG_BY_LEAGUE]
@@ -230,6 +258,10 @@ def run_backfill(
     settlement_skips: dict[str, int] = defaultdict(int)
     for snapshot in snapshots:
         league = str(snapshot.get("league") or "")
+        event_id = str(snapshot.get("event_id") or "")
+        if (league, event_id) in ambiguous_events:
+            settlement_skips["AMBIGUOUS_EVENT_IDENTITY"] += 1
+            continue
         try:
             result = match_finished_result(snapshot, finished_by_league.get(league, []))
         except SettlementIdentityError:
@@ -258,6 +290,8 @@ def run_backfill(
         "oos_evaluation_invoked": False,
         "snapshot_rows": len(snapshots),
         "leagues": leagues,
+        "ambiguous_snapshot_event_count": len(ambiguous_events),
+        "ambiguous_snapshot_events": [f"{league}:{event_id}" for league, event_id in sorted(ambiguous_events)],
         "finished_rows_by_league": {k: len(v) for k, v in finished_by_league.items()},
         "corner_status": corner_status,
         "generated_corner_rows": len(generated_corners),
