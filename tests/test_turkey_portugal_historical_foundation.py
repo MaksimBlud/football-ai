@@ -2,6 +2,7 @@ from datetime import date
 
 import pandas as pd
 import pytest
+import requests
 
 import audit_turkey_portugal_historical_foundation as audit
 from primeira_liga_runtime_config import PRIMEIRA_LIGA_RUNTIME_CONFIG
@@ -105,3 +106,91 @@ def test_alias_collision_is_rejected():
     finally:
         TURKEY_SUPER_LIG_RUNTIME_CONFIG.aliases.clear()
         TURKEY_SUPER_LIG_RUNTIME_CONFIG.aliases.update(original)
+
+
+class FakeResponse:
+    def __init__(self, status_code, text=""):
+        self.status_code = status_code
+        self.text = text
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise requests.HTTPError(f"HTTP {self.status_code}")
+
+
+class FakeSession:
+    def __init__(self, responses):
+        self.responses = list(responses)
+        self.calls = 0
+        self.headers = {}
+        self.closed = False
+
+    def get(self, url, timeout=30):
+        self.calls += 1
+        response = self.responses[min(self.calls - 1, len(self.responses) - 1)]
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    def close(self):
+        self.closed = True
+
+
+def test_transient_503_retries_bounded_then_reports_source_unavailable(monkeypatch):
+    session = FakeSession([FakeResponse(503, "temporarily unavailable")])
+    monkeypatch.setattr(audit.time, "sleep", lambda _seconds: None)
+
+    with pytest.raises(audit.HistoricalSourceUnavailable) as captured:
+        audit._fetch_csv(session, code="1617", competition="T1", attempts=3)
+
+    error = captured.value
+    assert session.calls == 3
+    assert error.status_code == 503
+    assert error.attempts == 3
+    assert error.url.endswith("/1617/T1.csv")
+
+
+def test_permanent_http_error_fails_immediately_without_retry(monkeypatch):
+    session = FakeSession([FakeResponse(404, "not found")])
+    monkeypatch.setattr(audit.time, "sleep", lambda _seconds: None)
+
+    with pytest.raises(requests.HTTPError, match="404"):
+        audit._fetch_csv(session, code="1617", competition="T1", attempts=4)
+
+    assert session.calls == 1
+
+
+def test_empty_csv_is_hard_failure_without_retry(monkeypatch):
+    session = FakeSession([FakeResponse(200, "")])
+    monkeypatch.setattr(audit.time, "sleep", lambda _seconds: None)
+
+    with pytest.raises(ValueError, match="empty CSV"):
+        audit._fetch_csv(session, code="1617", competition="T1", attempts=4)
+
+    assert session.calls == 1
+
+
+def test_run_audit_returns_diagnostic_status_for_transient_source_outage(monkeypatch):
+    session = FakeSession([])
+    monkeypatch.setattr(audit.requests, "Session", lambda: session)
+
+    def unavailable(*_args, **_kwargs):
+        raise audit.HistoricalSourceUnavailable(
+            url="https://www.football-data.co.uk/mmz4281/1617/T1.csv",
+            attempts=4,
+            status_code=503,
+            detail="Service Temporarily Unavailable",
+        )
+
+    monkeypatch.setattr(audit, "audit_league", unavailable)
+    report = audit.run_audit(as_of=date(2026, 9, 6))
+
+    assert report["status"] == "SOURCE_UNAVAILABLE"
+    assert report["research_only"] is True
+    assert report["odds_api_requests"] == 0
+    assert report["supabase_writes"] == 0
+    assert report["production_model_operations"] == 0
+    assert report["leagues"] == []
+    assert report["source_unavailable"]["status_code"] == 503
+    assert report["source_unavailable"]["attempts"] == 4
+    assert session.closed is True
