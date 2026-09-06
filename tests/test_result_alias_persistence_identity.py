@@ -82,6 +82,25 @@ def test_legacy_alias_existing_row_prevents_duplicate_canonical_insert():
     assert len(client.tables[persistence.GENERIC_RESULTS_TABLE]) == 1
 
 
+def test_alias_equivalent_existing_rows_ignore_storage_timestamp_differences():
+    first = result_row("Brighton Hove")
+    first["persisted_at_utc"] = "2026-09-06T05:00:56+00:00"
+    second = result_row("Brighton")
+    second["persisted_at_utc"] = "2026-09-06T15:42:33+00:00"
+    first["source_updated_at_utc"] = "2026-09-06T04:59:00+00:00"
+    second["source_updated_at_utc"] = "2026-09-06T15:41:00+00:00"
+    client = Client([first, second])
+
+    metrics = persistence.persist_results(
+        client,
+        pd.DataFrame([result_row("Brighton")]),
+        EPL_RUNTIME_CONFIG,
+    )
+
+    assert metrics == {"inserted": 0, "unchanged": 1, "conflicts": 0}
+    assert len(client.tables[persistence.GENERIC_RESULTS_TABLE]) == 2
+
+
 def test_alias_equivalent_existing_conflict_fails_closed():
     client = Client([result_row("Brighton Hove", home_goals=2, away_goals=1, result="H")])
     incoming = pd.DataFrame([result_row("Brighton")])
