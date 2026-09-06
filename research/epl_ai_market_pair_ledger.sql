@@ -1,4 +1,4 @@
--- Research only: EPL production-Football-AI-vs-market paired evidence.
+-- Research only: prospective EPL production-Football-AI-vs-market paired evidence.
 -- Deliberately contains no outcome/result columns.
 
 create table if not exists public.epl_ai_market_pair_ledger (
@@ -13,9 +13,10 @@ create table if not exists public.epl_ai_market_pair_ledger (
     kickoff_utc timestamptz not null,
     market_snapshot_time_utc timestamptz not null,
     model_generated_at_utc timestamptz not null,
-    market_home_odds double precision not null,
-    market_draw_odds double precision not null,
-    market_away_odds double precision not null,
+    history_cutoff_utc timestamptz not null,
+    home_odds double precision not null,
+    draw_odds double precision not null,
+    away_odds double precision not null,
     market_home_prob double precision not null,
     market_draw_prob double precision not null,
     market_away_prob double precision not null,
@@ -24,17 +25,15 @@ create table if not exists public.epl_ai_market_pair_ledger (
     model_away_prob double precision not null,
     model_artifact_sha256 text not null,
     code_commit_sha text not null,
-    history_cutoff_utc timestamptz not null,
     history_max_match_date date not null,
     history_rows integer not null check (history_rows > 0),
     created_at_utc timestamptz not null default now(),
     constraint epl_ai_pair_experiment_ck check (experiment_id = 'EPL_AI_MARKET_PAIR_V1'),
     constraint epl_ai_pair_league_ck check (league = 'EPL'),
     constraint epl_ai_pair_market_pre_kickoff_ck check (market_snapshot_time_utc < kickoff_utc),
+    constraint epl_ai_pair_model_pre_kickoff_ck check (model_generated_at_utc < kickoff_utc),
     constraint epl_ai_pair_history_cutoff_ck check (history_cutoff_utc = market_snapshot_time_utc),
-    constraint epl_ai_pair_market_odds_ck check (
-      market_home_odds > 1 and market_draw_odds > 1 and market_away_odds > 1
-    ),
+    constraint epl_ai_pair_odds_ck check (home_odds > 1 and draw_odds > 1 and away_odds > 1),
     constraint epl_ai_pair_market_prob_ck check (
       market_home_prob between 0 and 1 and market_draw_prob between 0 and 1 and market_away_prob between 0 and 1
       and abs((market_home_prob + market_draw_prob + market_away_prob) - 1.0) <= 0.000001
@@ -43,7 +42,7 @@ create table if not exists public.epl_ai_market_pair_ledger (
       model_home_prob between 0 and 1 and model_draw_prob between 0 and 1 and model_away_prob between 0 and 1
       and abs((model_home_prob + model_draw_prob + model_away_prob) - 1.0) <= 0.000001
     ),
-    constraint epl_ai_pair_model_hash_ck check (model_artifact_sha256 ~ '^[0-9a-f]{64}$')
+    constraint epl_ai_pair_model_sha_ck check (model_artifact_sha256 ~ '^[0-9a-f]{64}$')
 );
 
 create unique index if not exists epl_ai_market_pair_identity_uq
