@@ -9,6 +9,7 @@ This entry point is intentionally stricter than the recurring collector:
   corner-market/bookmaker payloads.
 
 It never enables scheduled collection, settlement, evaluation, or promotion.
+Live planner/provider dependencies are imported only after the empty-table guard.
 """
 from __future__ import annotations
 
@@ -16,17 +17,33 @@ import json
 from pathlib import Path
 from typing import Any, Callable
 
-from multi_market_collector import TABLE, collect
-from multi_market_odds import fetch_quota_status
 from multi_market_policy import CORNER_SOURCE_READY_LEAGUES, HARD_RESERVE_CREDITS
-from multi_market_sampling_plan import build_live_plan
 
 OUTPUT = Path("artifacts/multi_market_first_paid_canary.json")
+TABLE = "league_multi_market_snapshots"
 MAX_PAID_REQUESTS = 3
 MAX_PAID_CREDITS = 6
 EXPECTED_EVENTS = 2
 PROHIBITED_LEAGUES = frozenset({"RPL", "TURKEY_SUPER_LIG"})
 CORNER_MARKETS = frozenset({"alternate_totals_corners", "alternate_team_totals_corners"})
+
+
+def _default_build_plan(**kwargs: Any) -> dict[str, Any]:
+    from multi_market_sampling_plan import build_live_plan
+
+    return dict(build_live_plan(**kwargs))
+
+
+def _default_collect(**kwargs: Any) -> dict[str, Any]:
+    from multi_market_collector import collect
+
+    return dict(collect(**kwargs))
+
+
+def _default_fetch_quota() -> dict[str, Any]:
+    from multi_market_odds import fetch_quota_status
+
+    return dict(fetch_quota_status())
 
 
 def _count_snapshots(client: Any) -> int:
@@ -155,9 +172,9 @@ def _audit_rows(rows: list[dict[str, Any]], expected_league: str, expected_event
 def run_canary(
     client: Any,
     *,
-    build_plan_fn: Callable[..., dict[str, Any]] = build_live_plan,
-    collect_fn: Callable[..., dict[str, Any]] = collect,
-    fetch_quota_fn: Callable[[], dict[str, Any]] = fetch_quota_status,
+    build_plan_fn: Callable[..., dict[str, Any]] | None = None,
+    collect_fn: Callable[..., dict[str, Any]] | None = None,
+    fetch_quota_fn: Callable[[], dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     baseline = _count_snapshots(client)
     result: dict[str, Any] = {
@@ -178,6 +195,12 @@ def run_canary(
     if baseline != 0:
         result["blocker"] = "FIRST_CANARY_REQUIRES_EMPTY_SNAPSHOT_TABLE"
         return result
+
+    # Only after the irreversible first-canary baseline guard may live planner
+    # and provider-aware modules be loaded or invoked.
+    build_plan_fn = build_plan_fn or _default_build_plan
+    collect_fn = collect_fn or _default_collect
+    fetch_quota_fn = fetch_quota_fn or _default_fetch_quota
 
     plan = dict(build_plan_fn(max_paid_credits=MAX_PAID_CREDITS))
     expected_league, expected_event_ids = _validate_plan(plan)
