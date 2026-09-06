@@ -16,6 +16,7 @@ from multi_market_odds import (
     merge_event_market_payloads,
 )
 from multi_market_policy import (
+    CORNER_SOURCE_READY_LEAGUES,
     DEFAULT_MAX_CREDITS_PER_MANUAL_CYCLE,
     EVENT_REQUEST_MAX_CREDITS,
     FEATURED_REQUEST_MAX_CREDITS,
@@ -83,6 +84,20 @@ def load_future_events(now_utc):
     return f.sort_values("commence_time_utc").to_dict("records")
 
 
+def _batch_outcome_ready_events(events):
+    """Filter to settleable leagues and amortize featured cost deterministically.
+
+    Input is already kickoff-sorted. League order is therefore determined only
+    by the first upcoming fixture, never by outcomes or model performance. Once
+    a league is reached, all of its eligible fixtures are kept together so one
+    featured spreads/totals request can be reused before another league is paid.
+    """
+    ready = set(CORNER_SOURCE_READY_LEAGUES)
+    filtered = [event for event in events if str(event.get("league")) in ready]
+    league_order = list(dict.fromkeys(str(event["league"]) for event in filtered))
+    return [event for league in league_order for event in filtered if str(event["league"]) == league]
+
+
 def load_latest_collection_times(event_ids):
     """Return latest stored collection time for every requested event."""
     latest = {}
@@ -139,12 +154,16 @@ def collect(now_utc=None, *, max_paid_requests=None, max_paid_credits=None):
             "reason": f"remaining<{MIN_COLLECTION_REMAINING_CREDITS}",
         }
 
-    events = load_future_events(now_utc)
+    source_events = load_future_events(now_utc)
+    events = _batch_outcome_ready_events(source_events)
     latest = load_latest_collection_times([str(e["event_id"]) for e in events])
     summary = {
         "quota_blocked": False,
         "quota_before": quota_before,
+        "source_events": len(source_events),
         "eligible_events": len(events),
+        "skipped_no_corner_source": len(source_events) - len(events),
+        "collection_leagues": list(dict.fromkeys(str(e["league"]) for e in events)),
         "fetched": 0,
         "featured_requests": 0,
         "event_requests": 0,
