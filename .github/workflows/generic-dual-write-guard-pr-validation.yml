@@ -1,0 +1,53 @@
+name: Generic Dual Write Guard PR Validation
+
+on:
+  pull_request:
+    paths:
+      - 'league_dual_write_guard.py'
+      - 'bundesliga_live_cycle.py'
+      - 'serie_a_live_cycle.py'
+      - 'ligue1_live_cycle.py'
+      - 'eredivisie_live_cycle.py'
+      - 'rpl_live_cycle.py'
+      - 'tests/test_league_dual_write_guard.py'
+      - 'tests/test_generic_live_cycle_dual_write_contract.py'
+      - '.github/workflows/generic-dual-write-guard-pr-validation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_URL: https://example.supabase.co
+      SUPABASE_KEY: generic-dual-write-placeholder
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install pytest numpy pandas requests supabase python-dotenv
+      - name: Compile generic guard and live cycles
+        run: |
+          python -m py_compile league_dual_write_guard.py
+          python -m py_compile bundesliga_live_cycle.py
+          python -m py_compile serie_a_live_cycle.py
+          python -m py_compile ligue1_live_cycle.py
+          python -m py_compile eredivisie_live_cycle.py
+          python -m py_compile rpl_live_cycle.py
+      - name: Run generic dual-write guard tests
+        run: |
+          PYTHONPATH=. pytest -q tests/test_league_dual_write_guard.py tests/test_generic_live_cycle_dual_write_contract.py
+      - name: Guard production model artifacts
+        run: |
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -E '\.pkl$'; then
+            echo "Production model artifact change detected"
+            exit 1
+          fi
+          echo "PASS: no .pkl changes in PR"
