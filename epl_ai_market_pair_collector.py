@@ -20,7 +20,7 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from model_utils import (
+from research_model_features import (
     FEATURES,
     HOME_ADVANTAGE,
     INITIAL_ELO,
@@ -214,7 +214,6 @@ def _feature_frame_from_history(
     away_venue_matches = away_venue_history.get(away_team, [])
 
     values = {
-        # The production no-odds model is asserted not to consume these columns.
         "home_odds": 2.0,
         "draw_odds": 2.0,
         "away_odds": 2.0,
