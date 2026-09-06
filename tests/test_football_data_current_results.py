@@ -76,6 +76,77 @@ def test_fetch_reports_zero_paid_provider_requests():
     assert calls == [(configured_current_csv_url(SERIE_A_RUNTIME_CONFIG), 30)]
 
 
+def test_transient_503_is_retried_then_succeeds_without_paid_fallback():
+    csv = "Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR\n29/08/2026,A,B,1,0,H\n"
+    responses = [
+        SimpleNamespace(status_code=503, text="temporary"),
+        SimpleNamespace(status_code=503, text="temporary"),
+        SimpleNamespace(status_code=200, text=csv),
+    ]
+    sleeps = []
+
+    def fake_get(_url, timeout):
+        assert timeout == 30
+        return responses.pop(0)
+
+    result = fetch_current_finished_results(
+        TURKEY_SUPER_LIG_RUNTIME_CONFIG,
+        get=fake_get,
+        sleep=sleeps.append,
+    )
+    assert result["public_http_requests"] == 3
+    assert result["paid_provider_requests"] == 0
+    assert result["finished_rows"] == 1
+    assert sleeps == [1.0, 2.0]
+
+
+def test_transient_failures_stop_after_bounded_attempts():
+    calls = []
+    sleeps = []
+
+    def fake_get(_url, timeout):
+        calls.append(timeout)
+        return SimpleNamespace(status_code=503, text="temporary")
+
+    with pytest.raises(RuntimeError, match=r"HTTP 503 after 3 attempt\(s\)"):
+        fetch_current_finished_results(
+            PRIMEIRA_LIGA_RUNTIME_CONFIG,
+            get=fake_get,
+            sleep=sleeps.append,
+        )
+    assert calls == [30, 30, 30]
+    assert sleeps == [1.0, 2.0]
+
+
+def test_permanent_http_error_fails_immediately_without_retry():
+    calls = []
+    sleeps = []
+
+    def fake_get(_url, timeout):
+        calls.append(timeout)
+        return SimpleNamespace(status_code=404, text="not found")
+
+    with pytest.raises(RuntimeError, match=r"HTTP 404 after 1 attempt\(s\)"):
+        fetch_current_finished_results(
+            SERIE_A_RUNTIME_CONFIG,
+            get=fake_get,
+            sleep=sleeps.append,
+        )
+    assert calls == [30]
+    assert sleeps == []
+
+
+def test_invalid_retry_attempt_count_fails_closed_before_http():
+    calls = []
+    with pytest.raises(ValueError, match="max_attempts"):
+        fetch_current_finished_results(
+            SERIE_A_RUNTIME_CONFIG,
+            get=lambda *_a, **_k: calls.append(1),
+            max_attempts=0,
+        )
+    assert calls == []
+
+
 def test_non_csv_runtime_contract_is_rejected_without_http(monkeypatch):
     from dataclasses import replace
     from league_runtime_config import FinishedResultsSourceConfig

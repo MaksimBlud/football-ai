@@ -7,6 +7,7 @@ no competition or season URL is guessed at runtime.
 from __future__ import annotations
 
 from io import StringIO
+import time
 from typing import Callable
 
 import pandas as pd
@@ -17,6 +18,8 @@ from league_runtime_config import LeagueRuntimeConfig
 
 BASE_URL = "https://www.football-data.co.uk/mmz4281"
 PROVIDER = "FOOTBALL_DATA_CSV"
+TRANSIENT_HTTP_STATUSES = frozenset({429, 500, 502, 503, 504})
+DEFAULT_MAX_ATTEMPTS = 3
 RESULT_COLUMNS = (
     "league",
     "season",
@@ -80,30 +83,60 @@ def build_finished_frame(raw: pd.DataFrame, config: LeagueRuntimeConfig) -> pd.D
     return normalized.loc[:, RESULT_COLUMNS].copy()
 
 
+def _fetch_csv_response(
+    url: str,
+    *,
+    get: Callable,
+    timeout: int,
+    max_attempts: int,
+    sleep: Callable[[float], None],
+):
+    if max_attempts < 1:
+        raise ValueError("max_attempts must be >= 1")
+    response = None
+    for attempt in range(1, max_attempts + 1):
+        response = get(url, timeout=timeout)
+        if response.status_code == 200:
+            return response, attempt
+        if response.status_code not in TRANSIENT_HTTP_STATUSES or attempt == max_attempts:
+            break
+        sleep(float(attempt))
+    assert response is not None
+    raise RuntimeError(
+        f"Football-Data current results HTTP {response.status_code} after {max_attempts if response.status_code in TRANSIENT_HTTP_STATUSES else 1} attempt(s): "
+        + str(getattr(response, "text", ""))[:300]
+    )
+
+
 def fetch_current_finished_results(
     config: LeagueRuntimeConfig,
     *,
     get: Callable = requests.get,
     timeout: int = 30,
+    max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    sleep: Callable[[float], None] = time.sleep,
 ) -> dict:
     """Fetch and validate one explicitly configured public CSV source.
 
     ``paid_provider_requests`` is always zero because this path never calls
-    The Odds API. The public HTTP request count is reported separately.
+    The Odds API. Transient public HTTP 429/5xx responses are retried a bounded
+    number of times; permanent errors fail immediately. The public HTTP request
+    count reports the actual number of attempts.
     """
     url = configured_current_csv_url(config)
-    response = get(url, timeout=timeout)
-    if response.status_code != 200:
-        raise RuntimeError(
-            f"Football-Data current results HTTP {response.status_code}: "
-            + str(getattr(response, "text", ""))[:300]
-        )
+    response, attempts = _fetch_csv_response(
+        url,
+        get=get,
+        timeout=timeout,
+        max_attempts=max_attempts,
+        sleep=sleep,
+    )
     raw = pd.read_csv(StringIO(response.text))
     frame = build_finished_frame(raw, config)
     return {
         "frame": frame,
         "source_url": url,
-        "public_http_requests": 1,
+        "public_http_requests": attempts,
         "paid_provider_requests": 0,
         "source_rows": int(len(raw)),
         "finished_rows": int(len(frame)),
