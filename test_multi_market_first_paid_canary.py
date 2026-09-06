@@ -57,7 +57,10 @@ def plan(leagues=("EREDIVISIE", "EREDIVISIE")):
     }
 
 
-def stored(event_id):
+def stored(event_id, *, with_corners=True, event_last_cost=2, featured_last_cost=2, remaining=189):
+    markets = ["spreads", "totals"]
+    if with_corners:
+        markets.append("alternate_totals_corners")
     return {
         "snapshot_key": f"key-{event_id}",
         "league": "EREDIVISIE",
@@ -68,8 +71,10 @@ def stored(event_id):
         "snapshot_time_utc": "2026-09-06T03:10:00+00:00",
         "provider": "THE_ODDS_API",
         "payload": {
-            "provider_market_keys": ["spreads", "totals", "alternate_totals_corners"],
+            "provider_market_keys": markets,
             "bookmakers": [{"key": "book-a", "markets": []}],
+            "quota": {"remaining": str(remaining), "last_cost": str(event_last_cost)},
+            "featured_quota": {"remaining": str(remaining), "last_cost": str(featured_last_cost)},
         },
     }
 
@@ -96,7 +101,7 @@ def test_import_is_independent_of_live_database_module():
     assert canary._default_collect.__module__ == canary.__name__
 
 
-def test_nonempty_snapshot_table_blocks_before_planner_or_provider():
+def test_unrelated_nonempty_snapshot_table_blocks_before_planner_or_provider():
     client = Client([stored("old")])
     calls = []
     result = canary.run_canary(
@@ -107,6 +112,33 @@ def test_nonempty_snapshot_table_blocks_before_planner_or_provider():
     )
     assert result["status"] == "BLOCKED"
     assert result["blocker"] == "FIRST_CANARY_REQUIRES_EMPTY_SNAPSHOT_TABLE"
+    assert calls == []
+
+
+def test_existing_two_row_failed_canary_is_classified_read_only_without_provider_replay():
+    client = Client([
+        stored("e1", with_corners=False, event_last_cost=0, remaining=193),
+        stored("e2", with_corners=False, event_last_cost=0, remaining=193),
+    ])
+    calls = []
+    result = canary.run_canary(
+        client,
+        build_plan_fn=lambda **_kwargs: calls.append("plan"),
+        collect_fn=lambda **_kwargs: calls.append("collect"),
+        fetch_quota_fn=lambda: calls.append("quota"),
+    )
+    assert result["status"] == "BLOCKED_NO_CORNER_MARKET"
+    assert result["blocker"] == "FIRST_PAID_CANARY_NO_CORNER_MARKET"
+    assert result["provider_recheck_performed"] is False
+    assert result["snapshot_count_before"] == 2
+    assert result["snapshot_count_after"] == 2
+    assert result["post_collection"]["missing_corner_event_ids"] == ["e1", "e2"]
+    assert result["post_collection"]["event_last_costs"] == [0, 0]
+    assert result["post_collection"]["featured_last_costs"] == [2, 2]
+    assert result["post_collection"]["observed_remaining_credits"] == 193
+    assert result["preflight"] is None
+    assert result["collection"] is None
+    assert result["quota_after"] is None
     assert calls == []
 
 
@@ -136,6 +168,7 @@ def test_two_event_same_league_canary_uses_exact_caps_and_audits_rows():
     assert result["collection"]["provider_paid_credits"] == 6
     assert result["post_collection"]["unique_events"] == 2
     assert result["post_collection"]["unique_snapshot_keys"] == 2
+    assert result["post_collection"]["missing_corner_event_ids"] == []
     assert "alternate_totals_corners" in result["post_collection"]["provider_market_keys"]
     assert result["quota_after"]["remaining"] == "189"
 
@@ -152,12 +185,11 @@ def test_mixed_league_plan_fails_before_collection():
     assert calls == []
 
 
-def test_canary_rejects_missing_corner_market_after_write():
+def test_canary_rejects_missing_corner_market_after_write_on_first_attempt():
     client = Client()
 
     def collect_fn(**_kwargs):
-        bad = stored("e1")
-        bad["payload"]["provider_market_keys"] = ["spreads", "totals"]
+        bad = stored("e1", with_corners=False)
         client.rows.extend([bad, stored("e2")])
         return collection()
 
