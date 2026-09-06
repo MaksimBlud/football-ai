@@ -14,6 +14,9 @@ on:
       - 'multi_market_policy.py'
       - 'multi_market_sampling_plan.py'
       - 'test_multi_market_sampling_plan.py'
+      - 'multi_market_corner_capability_probe.py'
+      - 'test_multi_market_corner_capability_probe.py'
+      - '.github/workflows/multi-market-corner-capability-probe.yml'
       - 'supabase/migrations/20260905000*.sql'
       - '.github/workflows/multi-market-activation-status.yml'
   push:
@@ -27,6 +30,9 @@ on:
       - 'multi_market_policy.py'
       - 'multi_market_sampling_plan.py'
       - 'test_multi_market_sampling_plan.py'
+      - 'multi_market_corner_capability_probe.py'
+      - 'test_multi_market_corner_capability_probe.py'
+      - '.github/workflows/multi-market-corner-capability-probe.yml'
       - 'supabase/migrations/20260905000*.sql'
       - '.github/workflows/multi-market-activation-status.yml'
 
