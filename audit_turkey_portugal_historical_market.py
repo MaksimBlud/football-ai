@@ -8,25 +8,31 @@ from __future__ import annotations
 import argparse
 import json
 from datetime import date, datetime, timezone
-from io import StringIO
 from pathlib import Path
 
 import pandas as pd
 import requests
 
-from audit_turkey_portugal_historical_foundation import season_is_complete
+from audit_turkey_portugal_historical_foundation import (
+    HistoricalSourceUnavailable,
+    _fetch_csv as fetch_historical_csv,
+    season_is_complete,
+)
 from league_historical_market import CANDIDATES, choose_market_triplet, no_vig_probabilities
 from primeira_liga_runtime_config import PRIMEIRA_LIGA_RUNTIME_CONFIG
 from turkey_super_lig_runtime_config import TURKEY_SUPER_LIG_RUNTIME_CONFIG
 
-URL = "https://www.football-data.co.uk/mmz4281/{code}/{competition}.csv"
 CONFIGS = (TURKEY_SUPER_LIG_RUNTIME_CONFIG, PRIMEIRA_LIGA_RUNTIME_CONFIG)
 
 
 def fetch_frame(session: requests.Session, code: str, competition: str) -> pd.DataFrame:
-    response = session.get(URL.format(code=code, competition=competition), timeout=30)
-    response.raise_for_status()
-    return pd.read_csv(StringIO(response.text))
+    """Reuse the bounded zero-cost historical-source availability contract."""
+    frame, _url = fetch_historical_csv(
+        session,
+        code=code,
+        competition=competition,
+    )
+    return frame
 
 
 def audit_league(config, *, as_of: date, session: requests.Session) -> dict:
@@ -78,9 +84,7 @@ def audit_league(config, *, as_of: date, session: requests.Session) -> dict:
     }
 
 
-def run_audit(*, as_of: date) -> dict:
-    session = requests.Session()
-    session.headers.update({"User-Agent": "football-ai-historical-market-audit/1.0"})
+def _base_report(*, as_of: date) -> dict:
     return {
         "audit": "TURKEY_PORTUGAL_HISTORICAL_MARKET_V1",
         "research_only": True,
@@ -90,7 +94,33 @@ def run_audit(*, as_of: date) -> dict:
         "production_model_operations": 0,
         "as_of": as_of.isoformat(),
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
-        "leagues": [audit_league(config, as_of=as_of, session=session) for config in CONFIGS],
+    }
+
+
+def run_audit(*, as_of: date) -> dict:
+    session = requests.Session()
+    session.headers.update({"User-Agent": "football-ai-historical-market-audit/1.0"})
+    try:
+        leagues = [audit_league(config, as_of=as_of, session=session) for config in CONFIGS]
+    except HistoricalSourceUnavailable as exc:
+        return {
+            **_base_report(as_of=as_of),
+            "status": "SOURCE_UNAVAILABLE",
+            "leagues": [],
+            "source_unavailable": {
+                "url": exc.url,
+                "status_code": exc.status_code,
+                "attempts": exc.attempts,
+                "detail": exc.detail,
+            },
+        }
+    finally:
+        session.close()
+
+    return {
+        **_base_report(as_of=as_of),
+        "status": "COMPLETE",
+        "leagues": leagues,
     }
 
 
