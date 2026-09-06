@@ -20,7 +20,10 @@ from multi_market_policy import CORNER_SOURCE_READY_LEAGUES
 
 OUTPUT = Path("artifacts/multi_market_probe_rollover_plan.json")
 SCHEMA_VERSION = "MULTI_MARKET_PROBE_ROLLOVER_PLAN_V1"
+SOURCE_TABLE = "odds_snapshots"
 MIN_ROLLOVER_LEAD = timedelta(hours=24)
+ROLLOVER_LOOKAHEAD = timedelta(days=7)
+PAGE_SIZE = 1000
 
 
 def _ts(value: Any) -> pd.Timestamp:
@@ -40,7 +43,7 @@ def plan_rollover(events: Iterable[dict[str, Any]], *, now_utc: datetime) -> dic
     minimum_candidate_kickoff = now + MIN_ROLLOVER_LEAD
 
     identities: dict[str, set[tuple[str, str, str, str]]] = defaultdict(set)
-    normalized: list[dict[str, str]] = []
+    unique_rows: dict[tuple[str, str, str, str, str], dict[str, str]] = {}
     for raw in events:
         row = {
             "league": str(raw.get("league") or ""),
@@ -51,13 +54,16 @@ def plan_rollover(events: Iterable[dict[str, Any]], *, now_utc: datetime) -> dic
         }
         if not row["event_id"]:
             continue
-        normalized.append(row)
+        identity = (
+            row["league"], row["event_id"], row["home_team"], row["away_team"], row["commence_time_utc"]
+        )
+        unique_rows[identity] = row
         identities[row["event_id"]].add((row["league"], row["home_team"], row["away_team"], row["commence_time_utc"]))
 
     ambiguous_event_ids = sorted(event_id for event_id, values in identities.items() if len(values) != 1)
     ready = set(CORNER_SOURCE_READY_LEAGUES)
     candidates = []
-    for row in normalized:
+    for row in unique_rows.values():
         if row["event_id"] in ambiguous_event_ids:
             continue
         if row["league"] not in ready or row["league"] in PROHIBITED_LEAGUES:
@@ -83,6 +89,7 @@ def plan_rollover(events: Iterable[dict[str, Any]], *, now_utc: datetime) -> dic
         "active_target_expired": now >= target_kickoff,
         "active_target_seconds_remaining": seconds_remaining,
         "minimum_rollover_lead_hours": int(MIN_ROLLOVER_LEAD.total_seconds() // 3600),
+        "rollover_lookahead_hours": int(ROLLOVER_LOOKAHEAD.total_seconds() // 3600),
         "requires_separate_preregistration_pr": True,
         "automatic_target_switching_enabled": False,
         "ambiguous_event_ids_excluded": ambiguous_event_ids,
@@ -91,11 +98,33 @@ def plan_rollover(events: Iterable[dict[str, Any]], *, now_utc: datetime) -> dic
     }
 
 
+def load_rollover_events(client: Any, *, now_utc: datetime) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    start = 0
+    end_utc = now_utc + ROLLOVER_LOOKAHEAD
+    while True:
+        response = (
+            client.table(SOURCE_TABLE)
+            .select("league,event_id,home_team,away_team,commence_time_utc,snapshot_time_utc")
+            .gte("commence_time_utc", now_utc.isoformat())
+            .lte("commence_time_utc", end_utc.isoformat())
+            .order("snapshot_time_utc", desc=True)
+            .range(start, start + PAGE_SIZE - 1)
+            .execute()
+        )
+        batch = list(getattr(response, "data", None) or [])
+        rows.extend(dict(row) for row in batch)
+        if len(batch) < PAGE_SIZE:
+            break
+        start += PAGE_SIZE
+    return rows
+
+
 def build_live_plan(*, now_utc: datetime | None = None) -> dict[str, Any]:
-    from multi_market_collector import load_future_events
+    from database import supabase
 
     now_utc = now_utc or datetime.now(UTC)
-    plan = plan_rollover(load_future_events(now_utc), now_utc=now_utc)
+    plan = plan_rollover(load_rollover_events(supabase, now_utc=now_utc), now_utc=now_utc)
     plan["generated_at_utc"] = now_utc.isoformat()
     return plan
 
