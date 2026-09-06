@@ -5,10 +5,6 @@ on:
   schedule:
     - cron: "41 */12 * * *"
 
-concurrency:
-  group: turkey-portugal-public-results-${{ matrix.league }}
-  cancel-in-progress: false
-
 permissions:
   contents: read
 
@@ -20,6 +16,9 @@ jobs:
       fail-fast: false
       matrix:
         league: [TURKEY_SUPER_LIG, PRIMEIRA_LIGA]
+    concurrency:
+      group: turkey-portugal-public-results-${{ matrix.league }}
+      cancel-in-progress: false
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
