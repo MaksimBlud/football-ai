@@ -3,9 +3,9 @@ from types import SimpleNamespace
 import pandas as pd
 
 from report_epl_ai_market_pair_collection_status import (
+    ACTION_REQUIRED_EXIT_CODE,
     EXPERIMENT_ID,
     LEAGUE,
-    MANUAL_REVIEW_EXIT_CODE,
     PAIR_TABLE,
     SNAPSHOT_TABLE,
     _read_paginated,
@@ -59,10 +59,10 @@ def test_scheduler_interval_matches_production_cadence():
     assert _required_interval_hours(None) == 24
 
 
-def test_near_match_marks_manual_review_after_two_hours_not_twenty_four():
-    pairs = pd.DataFrame([{"event_id": "e1"}, {"event_id": "e1"}, {"event_id": "e2"}])
+def test_due_refresh_is_deferred_when_all_known_future_events_are_already_paired():
+    pairs = pd.DataFrame([{"event_id": "e1"}])
     snapshots = pd.DataFrame([
-        {"event_id": "e3", "snapshot_time_utc": "2026-09-06T10:00:00Z", "commence_time_utc": "2026-09-06T14:00:00Z"}
+        {"event_id": "e1", "snapshot_time_utc": "2026-09-06T10:00:00Z", "commence_time_utc": "2026-09-06T14:00:00Z"}
     ])
     out = build_status(
         pairs=pairs,
@@ -70,20 +70,51 @@ def test_near_match_marks_manual_review_after_two_hours_not_twenty_four():
         now_utc=pd.Timestamp("2026-09-06T13:00:00Z"),
         primary_cohort_size=100,
     )
-    assert out["collected_events"] == 2
-    assert out["remaining_events"] == 98
-    assert out["future_snapshot_events"] == 1
-    assert out["scheduler_required_interval_hours"] == 2
     assert out["scheduler_would_request_snapshot"] is True
-    assert out["collection_status"] == "MANUAL_REVIEW"
-    assert out["collection_status_reason"] == "SNAPSHOT_DUE"
-    assert out["automatic_paid_calls"] is False
-    assert out["outcome_reads"] == 0
+    assert out["snapshot_cadence_status"] == "DUE"
+    assert out["unpaired_future_snapshot_events"] == 0
+    assert out["collection_status"] == "DEFER_PAID_REFRESH"
+    assert out["paid_refresh_recommended"] is False
+    assert status_exit_code(out, fail_on_action=True) == 0
 
 
-def test_near_match_is_fresh_when_two_hour_cadence_not_due():
+def test_existing_unpaired_snapshot_event_requests_free_collection_first():
+    pairs = pd.DataFrame([{"event_id": "e1"}])
+    snapshots = pd.DataFrame([
+        {"event_id": "e2", "snapshot_time_utc": "2026-09-06T12:30:00Z", "commence_time_utc": "2026-09-06T14:00:00Z"}
+    ])
     out = build_status(
-        pairs=pd.DataFrame(),
+        pairs=pairs,
+        snapshots=snapshots,
+        now_utc=pd.Timestamp("2026-09-06T13:00:00Z"),
+        primary_cohort_size=100,
+    )
+    assert out["unpaired_future_snapshot_events"] == 1
+    assert out["collection_status"] == "FREE_COLLECTION_DUE"
+    assert out["paid_refresh_recommended"] is False
+    assert status_exit_code(out, fail_on_action=True) == ACTION_REQUIRED_EXIT_CODE
+
+
+def test_no_future_snapshot_coverage_and_due_cadence_requests_manual_acquisition_review():
+    out = build_status(
+        pairs=pd.DataFrame([{"event_id": "e1"}]),
+        snapshots=pd.DataFrame([
+            {"event_id": "old", "snapshot_time_utc": "2026-09-05T00:00:00Z", "commence_time_utc": "2026-09-05T01:00:00Z"}
+        ]),
+        now_utc=pd.Timestamp("2026-09-06T13:00:00Z"),
+        primary_cohort_size=100,
+    )
+    assert out["future_snapshot_events"] == 0
+    assert out["scheduler_required_interval_hours"] == 24
+    assert out["scheduler_would_request_snapshot"] is True
+    assert out["collection_status"] == "MANUAL_ACQUISITION_REVIEW"
+    assert out["paid_refresh_recommended"] is True
+    assert status_exit_code(out, fail_on_action=True) == ACTION_REQUIRED_EXIT_CODE
+
+
+def test_near_match_is_fresh_when_cadence_not_due_and_event_already_paired():
+    out = build_status(
+        pairs=pd.DataFrame([{"event_id": "e1"}]),
         snapshots=pd.DataFrame([
             {"event_id": "e1", "snapshot_time_utc": "2026-09-06T12:00:00Z", "commence_time_utc": "2026-09-06T14:00:00Z"}
         ]),
@@ -93,28 +124,20 @@ def test_near_match_is_fresh_when_two_hour_cadence_not_due():
     assert out["scheduler_required_interval_hours"] == 2
     assert out["scheduler_would_request_snapshot"] is False
     assert out["collection_status"] == "FRESH"
-    assert out["collection_status_reason"] == "CADENCE_NOT_DUE"
+    assert out["collection_status_reason"] == "NO_UNIQUE_EVENT_ACTION_NEEDED"
 
 
-def test_no_future_matches_uses_twenty_four_hour_cooldown():
+def test_completed_cohort_never_requests_collection_action():
+    pairs = pd.DataFrame([{"event_id": f"e{i}"} for i in range(100)])
     out = build_status(
-        pairs=pd.DataFrame(),
-        snapshots=pd.DataFrame([
-            {"event_id": "e1", "snapshot_time_utc": "2026-09-06T00:00:00Z", "commence_time_utc": "2026-09-06T01:00:00Z"}
-        ]),
+        pairs=pairs,
+        snapshots=pd.DataFrame(),
         now_utc=pd.Timestamp("2026-09-06T13:00:00Z"),
         primary_cohort_size=100,
     )
-    assert out["future_snapshot_events"] == 0
-    assert out["scheduler_required_interval_hours"] == 24
-    assert out["scheduler_would_request_snapshot"] is False
-    assert out["collection_status_reason"] == "NO_FUTURE_MATCH_COOLDOWN"
-
-
-def test_require_fresh_exit_code_is_actionable_but_does_not_trigger_any_call():
-    assert status_exit_code({"collection_status": "FRESH"}, require_fresh=True) == 0
-    assert status_exit_code({"collection_status": "MANUAL_REVIEW"}, require_fresh=False) == 0
-    assert status_exit_code({"collection_status": "MANUAL_REVIEW"}, require_fresh=True) == MANUAL_REVIEW_EXIT_CODE
+    assert out["remaining_events"] == 0
+    assert out["collection_status"] == "COHORT_COMPLETE"
+    assert status_exit_code(out, fail_on_action=True) == 0
 
 
 def test_live_status_reads_only_pair_and_snapshot_tables(monkeypatch, tmp_path):
@@ -123,7 +146,7 @@ def test_live_status_reads_only_pair_and_snapshot_tables(monkeypatch, tmp_path):
     monkeypatch.setattr("report_epl_ai_market_pair_collection_status.CONTRACT_PATH", contract)
     client = FakeClient({
         PAIR_TABLE: [{"experiment_id": EXPERIMENT_ID, "event_id": "e1"}],
-        SNAPSHOT_TABLE: [{"league": LEAGUE, "event_id": "e2", "snapshot_time_utc": "2026-09-06T12:00:00Z", "commence_time_utc": "2026-09-07T12:00:00Z"}],
+        SNAPSHOT_TABLE: [{"league": LEAGUE, "event_id": "e1", "snapshot_time_utc": "2026-09-06T12:00:00Z", "commence_time_utc": "2026-09-07T12:00:00Z"}],
     })
     out = load_live_status(client, now_utc=pd.Timestamp("2026-09-06T13:00:00Z"))
     assert [call[0] for call in client.calls] == [PAIR_TABLE, SNAPSHOT_TABLE]
