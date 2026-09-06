@@ -28,8 +28,12 @@ def test_results_workflow_is_provider_free_and_scheduled_for_both_leagues():
     assert "--write" in text
 
 
-def test_results_workflow_self_proves_on_main_only_when_its_contract_changes():
+def test_results_workflow_live_proves_only_its_runtime_contract_on_main():
     text = WORKFLOW.read_text(encoding="utf-8")
     on_block = text[:text.index("permissions:")]
-    assert "  push:\n    branches: [main]\n    paths:\n      - \".github/workflows/turkey-portugal-results.yml\"" in on_block
-    assert "update_turkey_portugal_results.py" not in on_block
+    assert "  push:\n    branches: [main]\n    paths:" in on_block
+    assert '      - ".github/workflows/turkey-portugal-results.yml"' in on_block
+    assert '      - "football_data_current_results.py"' in on_block
+    assert '      - "update_turkey_portugal_results.py"' in on_block
+    assert "turkey_portugal_operational_cycle.py" not in on_block
+    assert "scheduled_turkey_portugal_odds.py" not in on_block
