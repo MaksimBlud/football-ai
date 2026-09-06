@@ -1,5 +1,3 @@
-from types import SimpleNamespace
-
 import pandas as pd
 import pytest
 
@@ -48,8 +46,12 @@ def test_transient_source_outage_is_explicit_and_never_writes(monkeypatch):
 
     calls=[]
     monkeypatch.setattr(sync.legacy,"persist_results",lambda *_a,**_k: calls.append("legacy"))
-    monkeypatch.setattr(sync.canonical_bridge,"persist_authoritative_results",lambda *_a,**_k: calls.append("canonical"))
-    result=sync.sync_results(client=object(),fetch_fn=unavailable,write=True)
+    result=sync.sync_results(
+        client=object(),
+        fetch_fn=unavailable,
+        bridge_fn=lambda *_a,**_k:calls.append("canonical"),
+        write=True,
+    )
     assert result["status"]=="SOURCE_UNAVAILABLE"
     assert result["http_status"]==503
     assert result["public_http_requests"]==3
@@ -75,8 +77,12 @@ def test_success_persists_legacy_authority_before_canonical_bridge(monkeypatch):
 
     client=object()
     monkeypatch.setattr(sync.legacy,"persist_results",persist_legacy)
-    monkeypatch.setattr(sync.canonical_bridge,"persist_authoritative_results",bridge)
-    result=sync.sync_results(client=client,fetch_fn=lambda:_provider(frame),write=True)
+    result=sync.sync_results(
+        client=client,
+        fetch_fn=lambda:_provider(frame),
+        bridge_fn=bridge,
+        write=True,
+    )
     assert [name for name,_ in calls]==["legacy","canonical"]
     assert result["status"]=="WRITTEN"
     assert result["legacy_inserted"]==1
@@ -89,8 +95,12 @@ def test_success_persists_legacy_authority_before_canonical_bridge(monkeypatch):
 def test_idempotent_success_reports_no_new_writes(monkeypatch):
     frame=_frame()
     monkeypatch.setattr(sync.legacy,"persist_results",lambda *_a,**_k:{"input":1,"inserted":0,"unchanged":1})
-    monkeypatch.setattr(sync.canonical_bridge,"persist_authoritative_results",lambda *_a,**_k:{"input":1,"inserted":0,"unchanged":1,"conflicts":0})
-    result=sync.sync_results(client=object(),fetch_fn=lambda:_provider(frame),write=True)
+    result=sync.sync_results(
+        client=object(),
+        fetch_fn=lambda:_provider(frame),
+        bridge_fn=lambda _client:{"input":1,"inserted":0,"unchanged":1,"conflicts":0},
+        write=True,
+    )
     assert result["status"]=="WRITTEN"
     assert result["legacy_unchanged"]==1
     assert result["canonical_unchanged"]==1
@@ -104,6 +114,7 @@ def test_non_transient_fetch_failure_stays_hard_and_never_writes(monkeypatch):
         sync.sync_results(
             client=object(),
             fetch_fn=lambda:(_ for _ in ()).throw(RuntimeError("schema drift")),
+            bridge_fn=lambda *_a,**_k:calls.append("canonical"),
             write=True,
         )
     assert calls==[]
@@ -116,9 +127,13 @@ def test_persistence_failure_stays_hard_and_canonical_bridge_is_not_called(monke
         calls.append("legacy")
         raise RuntimeError("immutable conflict")
     monkeypatch.setattr(sync.legacy,"persist_results",fail_legacy)
-    monkeypatch.setattr(sync.canonical_bridge,"persist_authoritative_results",lambda *_a,**_k:calls.append("canonical"))
     with pytest.raises(RuntimeError,match="immutable conflict"):
-        sync.sync_results(client=object(),fetch_fn=lambda:_provider(frame),write=True)
+        sync.sync_results(
+            client=object(),
+            fetch_fn=lambda:_provider(frame),
+            bridge_fn=lambda *_a,**_k:calls.append("canonical"),
+            write=True,
+        )
     assert calls==["legacy"]
 
 
