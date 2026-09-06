@@ -43,6 +43,16 @@ def build_health_report(
                 "data_stage": coverage_row["data_stage"],
                 "duplicate_prediction_rows": audit_row["duplicate_prediction_rows"],
                 "duplicate_result_identities": audit_row["duplicate_result_identities"],
+                "alias_duplicate_result_rows": audit_row.get("alias_duplicate_result_rows", 0),
+                "pre_ledger_alias_duplicate_result_rows": audit_row.get(
+                    "pre_ledger_alias_duplicate_result_rows", 0
+                ),
+                "post_ledger_alias_duplicate_result_rows": audit_row.get(
+                    "post_ledger_alias_duplicate_result_rows", 0
+                ),
+                "alias_conflicting_result_rows": audit_row.get(
+                    "alias_conflicting_result_rows", 0
+                ),
                 "missing_event_ids": audit_row["missing_event_ids"],
                 "unlinked_finished_results": audit_row["unlinked_finished_results"],
                 "critical_failures": audit_row["critical_failures"],
@@ -63,6 +73,10 @@ def main() -> None:
             f"results={row['finished_result_rows']}, "
             f"settled={row['settled_fixtures']}, "
             f"latest_pre_kickoff={row['latest_pre_kickoff_fixtures']}, "
+            f"alias_duplicates={row['alias_duplicate_result_rows']}, "
+            f"pre_ledger_alias_duplicates={row['pre_ledger_alias_duplicate_result_rows']}, "
+            f"post_ledger_alias_duplicates={row['post_ledger_alias_duplicate_result_rows']}, "
+            f"alias_conflicts={row['alias_conflicting_result_rows']}, "
             f"critical={row['critical_failures']}, "
             f"unlinked_results={row['unlinked_finished_results']}, "
             f"stage={row['data_stage']}"
