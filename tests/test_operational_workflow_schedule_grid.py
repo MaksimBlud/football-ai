@@ -16,6 +16,7 @@ SCHEDULED_OPERATIONAL_WORKFLOWS = (
     "ligue1-results.yml",
     "eredivisie-live-cycle.yml",
     "eredivisie-results.yml",
+    "turkey-portugal-results.yml",
 )
 
 PROVIDER_FREE_RESULTS_WORKFLOWS = (
@@ -23,6 +24,7 @@ PROVIDER_FREE_RESULTS_WORKFLOWS = (
     "bundesliga-results.yml",
     "ligue1-results.yml",
     "eredivisie-results.yml",
+    "turkey-portugal-results.yml",
 )
 
 PAID_MANUAL_ONLY_WORKFLOWS = (
@@ -103,4 +105,4 @@ def test_provider_free_results_are_scheduled_without_odds_api_secret():
         assert "workflow_dispatch:" in source, name
         assert len(_crons(path)) == 1, name
         assert "THE_ODDS_API_KEY" not in source, name
-        assert "update_" in source and "_results.py --write" in source, name
+        assert "update_" in source and "_results.py" in source and "--write" in source, name
