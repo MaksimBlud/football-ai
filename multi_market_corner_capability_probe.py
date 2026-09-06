@@ -150,23 +150,48 @@ def run_probe(
     return result
 
 
+def _write_result(result: dict[str, Any]) -> None:
+    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    OUTPUT.write_text(json.dumps(result, indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
+    print(json.dumps(result, indent=2, sort_keys=True, default=str))
+
+
 def main() -> None:
     from database import supabase
     from league_config import get_league_config
     from multi_market_odds import fetch_event_markets, fetch_quota_status
 
-    config = get_league_config(TARGET["league"])
-    if not config.odds_api_sport_key:
-        raise RuntimeError("preregistered target league has no Odds API sport key")
-    result = run_probe(
-        supabase,
-        fetch_quota_status,
-        fetch_event_markets,
-        sport_key=config.odds_api_sport_key,
-    )
-    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT.write_text(json.dumps(result, indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
-    print(json.dumps(result, indent=2, sort_keys=True, default=str))
+    result: dict[str, Any] = {
+        "schema_version": "MULTI_MARKET_CORNER_CAPABILITY_PROBE_V1",
+        "research_only": True,
+        "preregistered": True,
+        "target": dict(TARGET),
+        "max_paid_requests": MAX_PAID_REQUESTS,
+        "max_paid_credits": MAX_PAID_CREDITS,
+        "hard_reserve_credits": HARD_RESERVE_CREDITS,
+        "writes_performed": False,
+        "paid_provider_requests": 0,
+        "paid_provider_credits": 0,
+        "status": "FAILED",
+    }
+    try:
+        config = get_league_config(TARGET["league"])
+        if not config.odds_api_sport_key:
+            raise RuntimeError("preregistered target league has no Odds API sport key")
+        result = run_probe(
+            supabase,
+            fetch_quota_status,
+            fetch_event_markets,
+            sport_key=config.odds_api_sport_key,
+        )
+    except Exception as exc:
+        result["status"] = "FAILED"
+        result["error_type"] = type(exc).__name__
+        result["error"] = str(exc)[:1000]
+        _write_result(result)
+        raise
+
+    _write_result(result)
     if result["status"] == "BLOCKED":
         raise SystemExit(3)
 
