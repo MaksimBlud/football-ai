@@ -61,3 +61,55 @@ def test_no_result_columns_are_required(monkeypatch):
         session=object(),
     )
     assert result["valid_market_rows"] == 20
+
+
+def test_fetch_frame_reuses_shared_bounded_source_contract(monkeypatch):
+    source = frame(2)
+    calls = []
+
+    def fake_shared_fetch(session, *, code, competition):
+        calls.append((session, code, competition))
+        return source.copy(), f"https://example.test/{code}/{competition}.csv"
+
+    marker = object()
+    monkeypatch.setattr(audit, "fetch_historical_csv", fake_shared_fetch)
+    result = audit.fetch_frame(marker, "1617", "T1")
+
+    assert calls == [(marker, "1617", "T1")]
+    assert result.equals(source)
+
+
+class FakeSession:
+    def __init__(self):
+        self.headers = {}
+        self.closed = False
+
+    def close(self):
+        self.closed = True
+
+
+def test_run_audit_reports_source_unavailable_without_relaxing_outcome_blind_contract(monkeypatch):
+    session = FakeSession()
+    monkeypatch.setattr(audit.requests, "Session", lambda: session)
+
+    def unavailable(*_args, **_kwargs):
+        raise audit.HistoricalSourceUnavailable(
+            url="https://www.football-data.co.uk/mmz4281/1617/T1.csv",
+            attempts=4,
+            status_code=503,
+            detail="Service Temporarily Unavailable",
+        )
+
+    monkeypatch.setattr(audit, "audit_league", unavailable)
+    report = audit.run_audit(as_of=date(2026, 9, 5))
+
+    assert report["status"] == "SOURCE_UNAVAILABLE"
+    assert report["research_only"] is True
+    assert report["outcomes_read"] is False
+    assert report["odds_api_requests"] == 0
+    assert report["supabase_operations"] == 0
+    assert report["production_model_operations"] == 0
+    assert report["leagues"] == []
+    assert report["source_unavailable"]["status_code"] == 503
+    assert report["source_unavailable"]["attempts"] == 4
+    assert session.closed is True
