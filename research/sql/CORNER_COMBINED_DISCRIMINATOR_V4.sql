@@ -1,0 +1,32 @@
+-- CORNER_COMBINED_DISCRIMINATOR_V4
+-- Read-only historical walk-forward linear probability model.
+-- Allowed historical outcomes end at 2025/2026.
+-- The model has exactly three predictors: fixed corner-state, shots pressure, shots-on-target pressure.
+-- For every test season, all coefficients are fitted only from earlier seasons.
+--
+-- Implementation note: PostgreSQL does not expose multiple OLS through regr_slope,
+-- so the fixed 3-variable normal equations are solved explicitly from centered
+-- cross-products. The resulting season-level coefficients and AUC values are
+-- pinned in research/reference/CORNER_COMBINED_DISCRIMINATOR_V4_EPL.csv.
+--
+-- Core feature definitions:
+-- corner_state = ((home_cf10 + away_ca10)/2) + ((away_cf10 + home_ca10)/2)
+-- shot_pressure = ((home_sf10 + away_sa10)/2) + ((away_sf10 + home_sa10)/2)
+-- sot_pressure  = ((home_stf10 + away_sta10)/2) + ((away_stf10 + home_sta10)/2)
+-- target = total_corners > 9.5
+--
+-- Frozen test seasons:
+-- 2019/2020, 2020/2021, 2021/2022, 2022/2023,
+-- 2023/2024, 2024/2025, 2025/2026.
+--
+-- Source fingerprint inherited from V1 historical store:
+-- historical EPL rows = 3800
+-- first date = 2016-08-13
+-- last date = 2026-05-24
+-- source_md5 = 4854d62ace5e66dc68ff5e6bb6d9b737
+--
+-- The exact executed query is intentionally represented by the frozen algebra
+-- above plus the pinned output. Any future recomputation must preserve these
+-- three features, the expanding earlier-season training rule, ordinary least
+-- squares, the 9.5 target and the fixed held-out seasons. A changed formula is
+-- a new experiment, not V4.
