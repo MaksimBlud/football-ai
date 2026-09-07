@@ -3,17 +3,25 @@ on:
   pull_request:
     paths:
       - 'season_invariant_corners_audit.py'
+      - 'historical_corners_early_drift.py'
       - 'research/SEASON_INVARIANT_CORNERS_V1.md'
+      - 'research/SEASON_INVARIANT_CORNERS_V1_RESULTS.md'
       - 'research/reference/SEASON_INVARIANT_CORNERS_V1_PR57.csv'
+      - 'research/reference/SEASON_INVARIANT_CORNERS_V1_EARLY_DRIFT_PR57_SUMMARY.csv'
       - 'tests/test_season_invariant_corners_audit.py'
+      - 'tests/test_historical_corners_early_drift.py'
       - '.github/workflows/season-invariant-corners-v1.yml'
   push:
     branches: [main]
     paths:
       - 'season_invariant_corners_audit.py'
+      - 'historical_corners_early_drift.py'
       - 'research/SEASON_INVARIANT_CORNERS_V1.md'
+      - 'research/SEASON_INVARIANT_CORNERS_V1_RESULTS.md'
       - 'research/reference/SEASON_INVARIANT_CORNERS_V1_PR57.csv'
+      - 'research/reference/SEASON_INVARIANT_CORNERS_V1_EARLY_DRIFT_PR57_SUMMARY.csv'
       - 'tests/test_season_invariant_corners_audit.py'
+      - 'tests/test_historical_corners_early_drift.py'
       - '.github/workflows/season-invariant-corners-v1.yml'
 jobs:
   validate:
@@ -24,14 +32,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: '3.11'}
-      - run: pip install pandas numpy pytest
+      - run: pip install pandas numpy 'scikit-learn==1.7.2' pytest
       - name: Snapshot production hashes
         run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
-      - name: Verify pinned PR57 evidence digest
+      - name: Verify pinned PR57 season evidence digest
         run: echo 'dbca91d70590a03acc892f65a72ae46518582d27282882f3dba17fbe47cbd01f  research/reference/SEASON_INVARIANT_CORNERS_V1_PR57.csv' | sha256sum -c -
+      - name: Verify pinned PR57 early-drift summary digest
+        run: echo '643c51418fd385e6a961ef356c8b7fe704c4bb749a7527262906c049b8962ca1  research/reference/SEASON_INVARIANT_CORNERS_V1_EARLY_DRIFT_PR57_SUMMARY.csv' | sha256sum -c -
       - name: Run regression tests
-        run: pytest -q tests/test_season_invariant_corners_audit.py
-      - name: Run preregistered invariant audit
+        run: pytest -q tests/test_season_invariant_corners_audit.py tests/test_historical_corners_early_drift.py
+      - name: Run invariant audit from pinned evidence
         run: python season_invariant_corners_audit.py --reference research/reference/SEASON_INVARIANT_CORNERS_V1_PR57.csv
       - name: Verify production hashes unchanged
         run: |
