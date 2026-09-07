@@ -1,0 +1,48 @@
+name: Corner Total Calibrated V2
+on:
+  pull_request:
+    paths:
+      - 'corner_total_calibrated_v2.py'
+      - 'research/CORNER_TOTAL_CALIBRATED_V2.md'
+      - 'research/CORNER_TOTAL_CALIBRATED_V2_RESULTS.md'
+      - 'research/reference/CORNER_TOTAL_CALIBRATED_V2_EPL.csv'
+      - 'research/sql/CORNER_TOTAL_CALIBRATED_V2.sql'
+      - 'tests/test_corner_total_calibrated_v2.py'
+      - '.github/workflows/corner-total-calibrated-v2.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'corner_total_calibrated_v2.py'
+      - 'research/CORNER_TOTAL_CALIBRATED_V2.md'
+      - 'research/CORNER_TOTAL_CALIBRATED_V2_RESULTS.md'
+      - 'research/reference/CORNER_TOTAL_CALIBRATED_V2_EPL.csv'
+      - 'research/sql/CORNER_TOTAL_CALIBRATED_V2.sql'
+      - 'tests/test_corner_total_calibrated_v2.py'
+      - '.github/workflows/corner-total-calibrated-v2.yml'
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install pandas pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Verify pinned historical evidence digest
+        run: echo '4b580cd83cf951245418713cb76571796df5204db7e07a38bb9b31765ace38a6  research/reference/CORNER_TOTAL_CALIBRATED_V2_EPL.csv' | sha256sum -c -
+      - name: Run regression tests
+        run: pytest -q tests/test_corner_total_calibrated_v2.py
+      - name: Run deterministic calibrated audit
+        run: python corner_total_calibrated_v2.py --reference research/reference/CORNER_TOTAL_CALIBRATED_V2_EPL.csv
+      - name: Verify production hashes unchanged
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        with:
+          name: corner-total-calibrated-v2
+          path: artifacts/corner_total_calibrated_v2/
+          retention-days: 30
