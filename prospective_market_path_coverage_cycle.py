@@ -8,7 +8,11 @@ import pandas as pd
 from database import supabase
 from prospective_market_path import LEAGUES
 from prospective_market_path_coverage import build_fixture_coverage, summarize_fixture_coverage
-from prospective_market_path_revisions import STATUS_SUPERSEDED, mark_superseded_revisions
+from prospective_market_path_revisions import (
+    STATUS_QUARANTINED_REVISION,
+    STATUS_SUPERSEDED,
+    mark_superseded_revisions,
+)
 
 PAGE_SIZE = 1000
 OUTPUT_DIR = Path("artifacts/prospective_market_path_v1")
@@ -45,7 +49,9 @@ def run() -> dict:
     coverage = mark_superseded_revisions(coverage, snapshots)
     summary = summarize_fixture_coverage(coverage)
     superseded_counts = coverage[coverage["status"] == STATUS_SUPERSEDED]["league"].value_counts().to_dict()
+    quarantined_counts = coverage[coverage["status"] == STATUS_QUARANTINED_REVISION]["league"].value_counts().to_dict()
     summary["superseded"] = summary["league"].map(lambda league: int(superseded_counts.get(league, 0)))
+    summary["quarantined_revision"] = summary["league"].map(lambda league: int(quarantined_counts.get(league, 0)))
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     coverage.to_csv(OUTPUT_DIR / "fixture_coverage_monitor.csv", index=False)
@@ -57,6 +63,10 @@ def run() -> dict:
         if not problem.empty:
             print("\nATTENTION: fixtures unavailable to frozen V1 path protocol:")
             print(problem[["league", "event_id", "home_team", "away_team", "kickoff_utc", "status", "reason"]].to_string(index=False))
+        quarantined = coverage[coverage["status"] == STATUS_QUARANTINED_REVISION]
+        if not quarantined.empty:
+            print("\nINFO: deterministic provider schedule revisions quarantined from frozen research:")
+            print(quarantined[["league", "event_id", "home_team", "away_team", "status", "reason"]].to_string(index=False))
         superseded = coverage[coverage["status"] == STATUS_SUPERSEDED]
         if not superseded.empty:
             print("\nINFO: stale provider schedule revisions excluded from operational risk counts:")
