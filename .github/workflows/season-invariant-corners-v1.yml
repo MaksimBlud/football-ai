@@ -1,0 +1,44 @@
+name: Season Invariant Corners V1
+on:
+  pull_request:
+    paths:
+      - 'season_invariant_corners_audit.py'
+      - 'research/SEASON_INVARIANT_CORNERS_V1.md'
+      - 'research/reference/SEASON_INVARIANT_CORNERS_V1_PR57.csv'
+      - 'tests/test_season_invariant_corners_audit.py'
+      - '.github/workflows/season-invariant-corners-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'season_invariant_corners_audit.py'
+      - 'research/SEASON_INVARIANT_CORNERS_V1.md'
+      - 'research/reference/SEASON_INVARIANT_CORNERS_V1_PR57.csv'
+      - 'tests/test_season_invariant_corners_audit.py'
+      - '.github/workflows/season-invariant-corners-v1.yml'
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install pandas numpy pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Verify pinned PR57 evidence digest
+        run: echo 'dbca91d70590a03acc892f65a72ae46518582d27282882f3dba17fbe47cbd01f  research/reference/SEASON_INVARIANT_CORNERS_V1_PR57.csv' | sha256sum -c -
+      - name: Run regression tests
+        run: pytest -q tests/test_season_invariant_corners_audit.py
+      - name: Run preregistered invariant audit
+        run: python season_invariant_corners_audit.py --reference research/reference/SEASON_INVARIANT_CORNERS_V1_PR57.csv
+      - name: Verify production hashes unchanged
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        with:
+          name: season-invariant-corners-v1
+          path: artifacts/season_invariant_corners_v1/
+          retention-days: 30
