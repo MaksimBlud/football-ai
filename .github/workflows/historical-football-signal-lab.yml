@@ -9,10 +9,13 @@ on:
       - 'historical_football_window_audit.py'
       - 'historical_football_market_incremental.py'
       - 'historical_corners_early_drift.py'
+      - 'season_invariant_corners_v1.py'
+      - 'research/SEASON_INVARIANT_CORNERS_V1.md'
       - 'tests/test_historical_football_signal_lab.py'
       - 'tests/test_historical_football_window_audit.py'
       - 'tests/test_historical_football_market_incremental.py'
       - 'tests/test_historical_corners_early_drift.py'
+      - 'tests/test_season_invariant_corners_v1.py'
       - '.github/workflows/historical-football-signal-lab.yml'
   pull_request:
     paths:
@@ -21,10 +24,13 @@ on:
       - 'historical_football_window_audit.py'
       - 'historical_football_market_incremental.py'
       - 'historical_corners_early_drift.py'
+      - 'season_invariant_corners_v1.py'
+      - 'research/SEASON_INVARIANT_CORNERS_V1.md'
       - 'tests/test_historical_football_signal_lab.py'
       - 'tests/test_historical_football_window_audit.py'
       - 'tests/test_historical_football_market_incremental.py'
       - 'tests/test_historical_corners_early_drift.py'
+      - 'tests/test_season_invariant_corners_v1.py'
       - '.github/workflows/historical-football-signal-lab.yml'
 jobs:
   validate:
@@ -38,8 +44,8 @@ jobs:
       - run: pip install pandas numpy requests 'scikit-learn==1.7.2' pytest
       - name: Snapshot production hashes
         run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
-      - name: Run signal, window, market and early-drift tests
-        run: pytest -q tests/test_historical_football_signal_lab.py tests/test_historical_football_window_audit.py tests/test_historical_football_market_incremental.py tests/test_historical_corners_early_drift.py
+      - name: Run signal, window, market, invariant and early-drift tests
+        run: pytest -q tests/test_historical_football_signal_lab.py tests/test_historical_football_window_audit.py tests/test_historical_football_market_incremental.py tests/test_historical_corners_early_drift.py tests/test_season_invariant_corners_v1.py
       - name: Run three-league signal lab
         run: python historical_football_signal_runner.py
       - name: Verify production hashes unchanged
