@@ -1,9 +1,9 @@
 """Zero-cost current-season finished results from configured Football-Data CSV.
 
 This module is deliberately independent of The Odds API and production models.
-It uses the explicitly configured ``FOOTBALL_DATA_CSV`` season/division as the
-primary source. If and only if that primary CSV exhausts bounded transient HTTP
-retries, it may fall back to Football-Data's official combined current-season
+It uses an explicitly configured Football-Data season/division CSV as primary.
+If and only if that primary CSV exhausts bounded transient HTTP retries, it may
+fall back to Football-Data's official combined current-season
 ``Latest_Results.csv`` and filter the exact configured division.
 """
 from __future__ import annotations
@@ -73,6 +73,13 @@ def configured_latest_results_csv_url(config: LeagueRuntimeConfig) -> str:
     return f"{BASE_URL}/{season_code}/Latest_Results.csv"
 
 
+def latest_results_csv_url(season_code: str) -> str:
+    value = str(season_code).strip()
+    if len(value) != 4 or not value.isdigit():
+        raise ValueError("Football-Data current season_code must be four digits")
+    return f"{BASE_URL}/{value}/Latest_Results.csv"
+
+
 def build_finished_frame(raw: pd.DataFrame, config: LeagueRuntimeConfig) -> pd.DataFrame:
     required = {"Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR"}
     missing = required - set(raw.columns)
@@ -109,25 +116,6 @@ def build_finished_frame(raw: pd.DataFrame, config: LeagueRuntimeConfig) -> pd.D
     return normalized.loc[:, RESULT_COLUMNS].copy()
 
 
-def build_latest_finished_frame(raw: pd.DataFrame, config: LeagueRuntimeConfig) -> tuple[pd.DataFrame, int]:
-    """Validate and filter Football-Data's combined latest-results CSV.
-
-    The combined feed must identify divisions explicitly. Only the exact
-    configured ``competition_code`` is accepted; a missing division is a hard
-    data-contract failure rather than a silent empty success.
-    """
-    if "Div" not in raw.columns:
-        raise ValueError("Missing Football-Data latest-results division column: Div")
-    _season_code, competition_code = _validated_source_parts(config)
-    divisions = raw["Div"].fillna("").astype(str).str.strip()
-    selected = raw.loc[divisions.eq(competition_code)].copy()
-    if selected.empty:
-        raise ValueError(
-            f"Football-Data latest-results CSV missing configured division {competition_code}"
-        )
-    return build_finished_frame(selected, config), int(len(selected))
-
-
 def _fetch_csv_response(
     url: str,
     *,
@@ -162,6 +150,84 @@ def _fetch_csv_response(
     )
 
 
+def fetch_division_raw_results(
+    *,
+    primary_url: str,
+    season_code: str,
+    competition_code: str,
+    get: Callable = requests.get,
+    timeout: int = 30,
+    max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    sleep: Callable[[float], None] = time.sleep,
+) -> dict:
+    """Fetch one division, with availability-only fallback to official latest CSV.
+
+    The primary response is returned unmodified. For fallback, ``Div`` is
+    mandatory and only the exact requested division is returned. CSV parse or
+    data-contract errors are hard failures and are never converted into another
+    provider path.
+    """
+    competition = str(competition_code).strip()
+    if not competition:
+        raise ValueError("Football-Data competition_code is required")
+    fallback_url = latest_results_csv_url(season_code)
+    try:
+        response, primary_attempts = _fetch_csv_response(
+            primary_url,
+            get=get,
+            timeout=timeout,
+            max_attempts=max_attempts,
+            sleep=sleep,
+        )
+    except PublicResultsSourceUnavailable as primary_error:
+        try:
+            fallback_response, fallback_attempts = _fetch_csv_response(
+                fallback_url,
+                get=get,
+                timeout=timeout,
+                max_attempts=max_attempts,
+                sleep=sleep,
+            )
+        except PublicResultsSourceUnavailable as fallback_error:
+            raise PublicResultsSourceUnavailable(
+                url=fallback_error.url,
+                status_code=fallback_error.status_code,
+                attempts=primary_error.attempts + fallback_error.attempts,
+                detail=(
+                    "primary and official Latest_Results.csv exhausted transient retries; "
+                    + fallback_error.detail
+                ),
+            ) from fallback_error
+        raw = pd.read_csv(StringIO(fallback_response.text))
+        if "Div" not in raw.columns:
+            raise ValueError("Missing Football-Data latest-results division column: Div")
+        divisions = raw["Div"].fillna("").astype(str).str.strip()
+        selected = raw.loc[divisions.eq(competition)].copy()
+        if selected.empty:
+            raise ValueError(
+                f"Football-Data latest-results CSV missing configured division {competition}"
+            )
+        return {
+            "raw": selected,
+            "source_url": fallback_url,
+            "primary_source_url": primary_url,
+            "fallback_used": True,
+            "primary_unavailable_status": primary_error.status_code,
+            "public_http_requests": primary_error.attempts + fallback_attempts,
+            "source_rows": int(len(selected)),
+        }
+
+    raw = pd.read_csv(StringIO(response.text))
+    return {
+        "raw": raw,
+        "source_url": primary_url,
+        "primary_source_url": primary_url,
+        "fallback_used": False,
+        "public_http_requests": primary_attempts,
+        "source_rows": int(len(raw)),
+    }
+
+
 def fetch_current_finished_results(
     config: LeagueRuntimeConfig,
     *,
@@ -173,52 +239,32 @@ def fetch_current_finished_results(
     """Fetch and validate one explicitly configured public results source.
 
     ``paid_provider_requests`` is always zero because this path never calls
-    The Odds API. The configured per-division CSV is always attempted first.
-    Only bounded transient availability exhaustion can activate the official
-    combined ``Latest_Results.csv`` fallback. Permanent HTTP errors and all
-    schema/semantic validation errors remain hard failures and never fall back.
+    The Odds API. Permanent HTTP errors and schema/semantic validation errors
+    remain hard failures and never activate a fallback.
     """
-    primary_url = configured_current_csv_url(config)
-    latest_url = configured_latest_results_csv_url(config)
-    try:
-        response, primary_attempts = _fetch_csv_response(
-            primary_url,
-            get=get,
-            timeout=timeout,
-            max_attempts=max_attempts,
-            sleep=sleep,
-        )
-    except PublicResultsSourceUnavailable as primary_error:
-        fallback_response, fallback_attempts = _fetch_csv_response(
-            latest_url,
-            get=get,
-            timeout=timeout,
-            max_attempts=max_attempts,
-            sleep=sleep,
-        )
-        raw = pd.read_csv(StringIO(fallback_response.text))
-        frame, selected_rows = build_latest_finished_frame(raw, config)
-        return {
-            "frame": frame,
-            "source_url": latest_url,
-            "primary_source_url": primary_url,
-            "fallback_used": True,
-            "primary_unavailable_status": primary_error.status_code,
-            "public_http_requests": primary_error.attempts + fallback_attempts,
-            "paid_provider_requests": 0,
-            "source_rows": selected_rows,
-            "finished_rows": int(len(frame)),
-        }
-
-    raw = pd.read_csv(StringIO(response.text))
-    frame = build_finished_frame(raw, config)
+    season_code, competition_code = _validated_source_parts(config)
+    fetched = fetch_division_raw_results(
+        primary_url=configured_current_csv_url(config),
+        season_code=season_code,
+        competition_code=competition_code,
+        get=get,
+        timeout=timeout,
+        max_attempts=max_attempts,
+        sleep=sleep,
+    )
+    frame = build_finished_frame(fetched["raw"], config)
     return {
         "frame": frame,
-        "source_url": primary_url,
-        "primary_source_url": primary_url,
-        "fallback_used": False,
-        "public_http_requests": primary_attempts,
+        "source_url": fetched["source_url"],
+        "primary_source_url": fetched["primary_source_url"],
+        "fallback_used": bool(fetched["fallback_used"]),
+        **(
+            {"primary_unavailable_status": fetched["primary_unavailable_status"]}
+            if fetched["fallback_used"]
+            else {}
+        ),
+        "public_http_requests": int(fetched["public_http_requests"]),
         "paid_provider_requests": 0,
-        "source_rows": int(len(raw)),
+        "source_rows": int(fetched["source_rows"]),
         "finished_rows": int(len(frame)),
     }
