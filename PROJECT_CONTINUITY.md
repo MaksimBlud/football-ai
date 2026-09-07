@@ -135,29 +135,26 @@ Production модель из-за этого результата не меня�
 - около 80 матчей — как более серьёзную проверку;
 - это не automatic promotion gate и не разрешение обходить frozen prospective embargo.
 
-## Текущий PR
+## Последний завершённый PR
 
 PR #212: `Add season-invariant CORNERS10 validation and early drift audit`.
 
-Он должен содержать:
-- один canonical invariant audit (`season_invariant_corners_audit.py`);
-- pinned PR57 historical evidence;
-- pinned early-drift summary;
-- regression tests против leakage;
-- отдельный provider-free CI;
-- этот continuity file.
+Merged в `main`:
+`f72952be44249cceceb6a81cb6ff02d885e588ff`.
 
-Он не должен зависеть от live Football-Data, Supabase writes или Odds API.
+Post-merge workflow `Season Invariant Corners V1` run `34140187178` завершился успешно. Проверены pinned historical evidence, regression tests, invariant audit и неизменность production `.pkl` hashes.
+
+Итог блока: **CLOSED / PORTABLE_STRONG**.
 
 ## Текущий следующий шаг
 
-1. Довести PR #212 до green CI.
-2. Проверить fresh `main` и exact PR head, затем merge.
-3. Post-merge подтвердить artifact/status и неизменность production `.pkl`.
-4. После закрытия этого блока НЕ строить новую production модель автоматически.
-5. Следующий реальный corner-related research step — отдельный corners-specific target/market experiment, где portable football corner signal может дать информацию, не поглощённую 1X2 market.
-6. Multi-Market bookmaker corners остаётся blocked до намеренного manual paid capability probe.
-7. Current-season drift monitor создавать только как отдельный prospective contract, который не пересекается с запрещённым outcome-peeking существующих frozen cohorts.
+1. Блок `SEASON_INVARIANT_CORNERS_V1` считать закрытым и не повторять его полный аудит без конкретной причины.
+2. Не менять production-модель автоматически: `CORNERS10` подтверждён как устойчивый football-state signal, но не как дополнительный 1X2 market edge.
+3. Следующий реальный corner-related research step — отдельный corners-specific target/market experiment, где football corner signal может давать информацию, не поглощённую 1X2 market.
+4. Перед проектированием такого эксперимента сначала использовать бесплатные исторические данные и заранее фиксировать target/features/decision rules, чтобы не подгонять их под результаты.
+5. Multi-Market bookmaker corners остаётся blocked до намеренного manual paid capability probe; автоматически его не запускать.
+6. Current-season drift monitor создавать только как отдельный prospective contract, который не пересекается с запрещённым outcome-peeking существующих frozen cohorts.
+7. Параллельно сохраняются старые operational priorities: provider-free settlement recovery, outcome-free sample health и manual-only market refresh по существующим frozen контурам.
 
 ## Журнал решений
 
@@ -170,3 +167,6 @@ PR #212: `Add season-invariant CORNERS10 validation and early drift audit`.
 - Подтверждено, что `CORNERS10` не показал historical incremental edge поверх fitted 1X2 market.
 - Historical early-drift audit показал: 20 матчей слишком шумно, 40 — early warning, около 80 — существенно более надёжный checkpoint.
 - Для reproducibility используются pinned prior artifacts, потому что Football-Data сейчас отдаёт 503; outage не маскируется.
+- PR #212 merged exact-head в `main`, merge SHA `f72952be44249cceceb6a81cb6ff02d885e588ff`.
+- Post-merge `Season Invariant Corners V1` workflow run `34140187178` green; production `.pkl` hashes unchanged.
+- Блок `SEASON_INVARIANT_CORNERS_V1` закрыт. Следующее corner-направление — отдельный corners-specific target/market experiment, а не повторный 1X2 test.
