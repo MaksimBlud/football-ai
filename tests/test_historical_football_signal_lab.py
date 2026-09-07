@@ -9,9 +9,12 @@ def test_features_are_strictly_pre_match():
     out=build_point_in_time_features(df,"EPL","2020-2021")
     assert out.iloc[0].home_prior_matches==0
     assert pd.isna(out.iloc[0].home_goals_for_5)
+    assert pd.isna(out.iloc[0].home_goals_for_15)
     assert out.iloc[1].away_prior_matches==1
     assert out.iloc[1].away_goals_for_5==5
+    assert out.iloc[1].away_goals_for_15==5
     assert out.iloc[1].away_corners_for_5==10
+    assert out.iloc[1].away_corners_for_15==10
 
 def test_home_away_orientation_is_correct():
     df=pd.DataFrame([_row("01/08/2020","A","B",2,1,7,3),_row("08/08/2020","B","C",0,3,4,9),_row("15/08/2020","C","A",1,1,5,6)])
@@ -28,3 +31,5 @@ def test_difference_features_exist():
     df=pd.DataFrame([_row("01/08/2020","A","B",1,0,4,2),_row("08/08/2020","A","B",0,1,2,4)])
     out=add_difference_features(build_point_in_time_features(df,"EPL","2020-2021"))
     assert "diff_points_5" in out.columns
+    assert "diff_points_15" in out.columns
+    assert "diff_corners_for_15" in out.columns
