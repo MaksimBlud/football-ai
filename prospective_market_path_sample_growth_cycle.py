@@ -7,7 +7,11 @@ import pandas as pd
 
 from database import supabase
 from prospective_market_path import LEAGUES, build_market_paths
-from prospective_market_path_sample_growth import readiness_without_outcomes, settled_identity_sample
+from prospective_market_path_sample_growth import (
+    annotate_settlement_health,
+    readiness_without_outcomes,
+    settled_identity_sample,
+)
 from prospective_market_path_settlement_lag import audit_settlement_lag
 
 PAGE_SIZE = 1000
@@ -53,12 +57,16 @@ def run() -> dict:
         settlement = audit_settlement_lag(paths, results_identity)
 
     sample = settled_identity_sample(paths, settlement) if not paths.empty else pd.DataFrame(columns=["league", "event_id", "kickoff_utc", "month"])
-    readiness = readiness_without_outcomes(sample)
+    readiness = annotate_settlement_health(readiness_without_outcomes(sample), settlement)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     sample[[c for c in ["league", "event_id", "kickoff_utc", "month"] if c in sample.columns]].to_csv(OUTPUT_DIR / "sample_growth_settled_identities.csv", index=False)
     readiness.to_csv(OUTPUT_DIR / "sample_growth_readiness.csv", index=False)
     print(readiness.to_string(index=False))
+    blocked = readiness[readiness["settlement_late"].astype(int) > 0]
+    if not blocked.empty:
+        print("\nATTENTION: sample growth is settlement-blocked for:")
+        print(blocked[["league", "settled_fixtures", "settlement_late", "potential_settled_fixtures_after_lag_clear"]].to_string(index=False))
     print("READ_ONLY_SAMPLE_GROWTH_AUDIT: result values not queried; no outcome scores; no Supabase writes")
     return {"readiness": readiness.to_dict(orient="records"), "settled_fixtures": int(len(sample))}
 

@@ -1,6 +1,12 @@
 import pandas as pd
 
-from prospective_market_path_sample_growth import readiness_without_outcomes, settled_identity_sample
+from prospective_market_path_sample_growth import (
+    SAMPLE_HEALTH_OK,
+    SAMPLE_HEALTH_SETTLEMENT_BLOCKED,
+    annotate_settlement_health,
+    readiness_without_outcomes,
+    settled_identity_sample,
+)
 
 
 def _paths(n=100):
@@ -51,3 +57,29 @@ def test_empty_sample_is_not_ready_for_any_league():
     readiness=readiness_without_outcomes(pd.DataFrame()).set_index('league')
     assert readiness['ready'].eq(False).all()
     assert readiness['settled_fixtures'].eq(0).all()
+
+
+def test_settlement_health_marks_late_identity_without_changing_frozen_readiness():
+    readiness = readiness_without_outcomes(pd.DataFrame()).set_index('league', drop=False)
+    audit = pd.DataFrame([
+        {'league':'LA_LIGA','event_id':'late-1','status':'SETTLEMENT_LATE'},
+        {'league':'LA_LIGA','event_id':'awaiting-1','status':'AWAITING_GRACE'},
+        {'league':'SERIE_A','event_id':'present-1','status':'SETTLED_IDENTITY_PRESENT'},
+    ])
+    annotated = annotate_settlement_health(readiness.reset_index(drop=True), audit).set_index('league')
+    assert int(annotated.loc['LA_LIGA','settlement_late']) == 1
+    assert annotated.loc['LA_LIGA','sample_health'] == SAMPLE_HEALTH_SETTLEMENT_BLOCKED
+    assert int(annotated.loc['LA_LIGA','potential_settled_fixtures_after_lag_clear']) == 1
+    assert bool(annotated.loc['LA_LIGA','ready']) is False
+    assert int(annotated.loc['SERIE_A','settlement_late']) == 0
+    assert annotated.loc['SERIE_A','sample_health'] == SAMPLE_HEALTH_OK
+
+
+def test_settlement_health_does_not_read_or_require_outcome_values():
+    readiness = readiness_without_outcomes(pd.DataFrame())
+    audit = pd.DataFrame([
+        {'league':'EPL','event_id':'e0','status':'SETTLEMENT_LATE'},
+    ])
+    annotated = annotate_settlement_health(readiness, audit)
+    assert 'result' not in annotated.columns
+    assert 'actual_result' not in annotated.columns
