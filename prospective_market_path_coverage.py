@@ -82,8 +82,6 @@ def _refresh_diagnostics(
         due = True
         reason = REFRESH_NO_SNAPSHOT
     elif age < 0:
-        # Preserve the frozen coverage result, but never recommend a paid action
-        # from a malformed/future-dated observation.
         due = False
         reason = REFRESH_FUTURE_TIMESTAMP
     elif age >= interval:
@@ -134,7 +132,7 @@ def build_fixture_coverage(
         return pd.DataFrame(columns=[
             "league", "event_id", "home_team", "away_team", "kickoff_utc", "cutoff_utc",
             "snapshot_count_before_cutoff", "first_snapshot_utc", "last_snapshot_utc",
-            "path_span_hours", "hours_until_cutoff", "status", "reason",
+            "path_span_hours", "hours_until_cutoff", "operationally_active", "status", "reason",
             "hours_since_last_snapshot", "refresh_interval_hours", "refresh_due", "refresh_reason",
         ])
 
@@ -143,6 +141,8 @@ def build_fixture_coverage(
         kickoff_values = pd.Series(group["commence_time_utc"].dropna().unique())
         if len(kickoff_values) != 1:
             last = group.sort_values("snapshot_time_utc").iloc[-1]
+            latest_candidate_kickoff = max(pd.Timestamp(value) for value in kickoff_values)
+            latest_candidate_cutoff = latest_candidate_kickoff - pd.Timedelta(hours=CUTOFF_HOURS)
             rows.append({
                 "league": str(league),
                 "event_id": str(event_id),
@@ -155,6 +155,7 @@ def build_fixture_coverage(
                 "last_snapshot_utc": pd.NaT,
                 "path_span_hours": 0.0,
                 "hours_until_cutoff": float("nan"),
+                "operationally_active": bool(now <= latest_candidate_cutoff),
                 "status": STATUS_CONFLICT,
                 "reason": "MULTIPLE_KICKOFFS_FOR_EVENT_ID",
                 "hours_since_last_snapshot": float("nan"),
@@ -214,6 +215,7 @@ def build_fixture_coverage(
             "last_snapshot_utc": last,
             "path_span_hours": span,
             "hours_until_cutoff": hours_until_cutoff,
+            "operationally_active": bool(now <= cutoff),
             "status": status,
             "reason": reason,
             **refresh,
@@ -229,8 +231,6 @@ def summarize_fixture_coverage(coverage: pd.DataFrame) -> pd.DataFrame:
         counts = frame["status"].value_counts().to_dict() if not frame.empty else {}
         refresh_due = 0
         if not frame.empty and "refresh_due" in frame.columns:
-            # Superseded revisions are marked after build_fixture_coverage(); do
-            # not turn those stale provider identities into manual paid advice.
             active = ~frame["status"].astype(str).eq("SUPERSEDED")
             refresh_due = int((frame["refresh_due"].fillna(False).astype(bool) & active).sum())
         rows.append({
