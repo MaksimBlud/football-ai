@@ -52,7 +52,7 @@ def _venue_mean(history, attr: str, n: int, home: bool) -> float:
 
 def _snapshot(history, prefix: str) -> dict[str, float]:
     out = {f"{prefix}_prior_matches": float(len(history))}
-    for n in (5, 10):
+    for n in (5, 10, 15):
         for attr in ("points", "goals_for", "goals_against", "corners_for", "corners_against", "yellow", "red"):
             out[f"{prefix}_{attr}_{n}"] = _mean(history, attr, n)
     venue_home = prefix == "home"
@@ -103,7 +103,11 @@ def build_point_in_time_features(matches: pd.DataFrame, league: str, season: str
 
 def add_difference_features(frame: pd.DataFrame) -> pd.DataFrame:
     out = frame.copy()
-    for suffix in ("points_5", "points_10", "goals_for_5", "goals_for_10", "goals_against_5", "goals_against_10", "corners_for_5", "corners_for_10", "corners_against_5", "corners_against_10", "yellow_5", "yellow_10", "red_5", "red_10", "points_venue5", "goals_for_venue5", "goals_against_venue5", "corners_for_venue5", "corners_against_venue5"):
+    suffixes = []
+    for n in (5, 10, 15):
+        suffixes.extend((f"points_{n}", f"goals_for_{n}", f"goals_against_{n}", f"corners_for_{n}", f"corners_against_{n}", f"yellow_{n}", f"red_{n}"))
+    suffixes.extend(("points_venue5", "goals_for_venue5", "goals_against_venue5", "corners_for_venue5", "corners_against_venue5"))
+    for suffix in suffixes:
         out[f"diff_{suffix}"] = out[f"home_{suffix}"] - out[f"away_{suffix}"]
     return out
 
