@@ -6,94 +6,167 @@
 
 Перед началом любой новой рабочей сессии:
 1. Прочитать этот файл целиком.
-2. Проверить текущий GitHub `main` и live Supabase как source of truth.
-3. Не начинать повторный полный аудит, если нет конкретной причины считать состояние проекта повреждённым или устаревшим.
+2. Коротко проверить текущий GitHub `main` и live Supabase как source of truth.
+3. Не начинать повторный полный аудит без конкретной причины.
 4. Продолжить с раздела **Текущий следующий шаг**.
-5. После каждого существенного решения, PR, merge, live-проверки или изменения направления обновить этот файл.
+5. После существенного решения, PR, merge или live-проверки обновлять этот файл.
 
-Важно: этот файл хранит решения, правила и краткую историю работы, но фактическим source of truth для кода и данных остаются текущий GitHub `main` и live Supabase.
+Этот файл хранит решения и контекст. Фактическим source of truth остаются GitHub `main` и live Supabase.
 
 ## Как общаться с пользователем
 
 - Всегда объяснять работу простым языком.
-- Не предполагать, что пользователь разбирается в программировании.
-- Технические термины использовать только когда они нужны и сразу объяснять их смысл.
-- В итогах прежде всего писать: что сделали, что выяснили, почему это важно и что делаем дальше.
+- Не предполагать знание программирования.
+- В итогах прежде всего писать: что сделали, что выяснили, почему это важно и что дальше.
 
 ## Постоянные правила проекта
 
-- Рабочий репозиторий: `MaksimBlud/football-ai`.
+- Репозиторий: `MaksimBlud/football-ai`.
 - Основная ветка: `main`.
-- Source of truth: текущий GitHub `main` + live Supabase.
-- Исторические отчёты и этот файл — контекст, а не замена фактической проверки состояния.
 - Не менять production `.pkl` как побочный эффект research/training.
-- Research/training не означает promotion модели в production.
-- Не делать automatic promotion моделей.
-- Не делать mass-clean, reset, mass-format и не удалять чужие/untracked изменения без необходимости.
-- Не обходить frozen/preregistered research contracts.
-- Prospective experiments не должны читать outcomes раньше разрешённого evaluation gate.
-- Не расходовать The Odds API credits, если ту же проверку можно выполнить бесплатно/read-only.
-- Live/платные действия выполнять только с budget/safety guards.
-- Найденные ошибки закрывать regression-тестами, а не обходными решениями.
-- Существенные изменения проводить отдельно: ветка → tests → PR → полный CI → fresh-main check → exact-head merge.
-- После merge самостоятельно переходить к следующему логическому шагу, если он безопасен и однозначен.
-- Учитывать параллельные изменения в `main` и не перетирать чужую работу.
+- Research/training != production promotion.
+- Никакого automatic model promotion.
+- Не делать mass-clean/reset/mass-format.
+- Не перетирать параллельные изменения в `main`.
+- Существенные изменения: отдельная ветка -> tests -> PR -> полный CI -> fresh-main check -> exact-head merge.
+- Frozen/preregistered contracts не обходить.
+- Prospective outcomes нельзя читать раньше разрешённого gate.
+- Максимально использовать бесплатные/read-only проверки.
+- The Odds API credits не тратить, если доказательство можно получить бесплатно.
+- Paid-provider workflows остаются manual-only.
+- Найденные баги закрывать regression-тестами.
+- Expected external/fail-closed red signal не делать искусственно green.
 
-## Важные уже принятые решения
+## Активные frozen / operational контуры
 
-- Production-модели защищены от случайной перезаписи при обычном training/research.
-- Multi-league research должен сохранять идентичность лиги и матча; нельзя смешивать одинаковые команды/время из разных лиг.
-- Research и production разделены.
-- `CORNERS10` рассматривается как football-state признак для улучшения прогноза 1X2, а не как модель рынка тотала угловых.
-- Ранее было установлено, что `CORNERS10` — наиболее устойчивый из протестированных football-only сигналов, но его incremental value относительно рынка требует строгой проверки.
-- Не ждать автоматически 100 новых матчей, если вопрос можно сначала проверить на исторических данных без нарушения prospective contracts.
+### EPL_AI_MARKET_PAIR_V1
 
-## Последнее подтверждённое состояние перед текущей работой
+Режим: **collect, don't peek**.
 
-На старте текущего блока GitHub `main` был зафиксирован на:
-`fa89b2027c071c1444fa0fcf1f1bd96e7f7abef9`
+- primary cohort: первые 100 eligible prospective events;
+- outcomes запрещено читать до 100 событий;
+- затем минимум 24 часа после kickoff последнего события cohort;
+- дополнительный embargo до `2026-11-01 12:16:54 UTC`;
+- никаких interim primary evaluations или performance-based optional stopping.
 
-Для нового исследования создана отдельная ветка:
-`research/season-invariant-corners-v1-protocol`
+Последнее известное состояние: около `12/100`. Перед использованием всегда подтвердить live metadata без чтения outcomes.
 
-Live Supabase показал, что для EPL имеется 10 полных сезонов 2016/17–2025/26, по 380 матчей с данными по угловым. Это позволяет провести сильную проверку переносимости сигнала между сезонами.
+### PROSPECTIVE_MARKET_PATH_V1
 
-Сопоставимая многолетняя история угловых для других лиг пока не подтверждена. Поэтому нельзя заявлять cross-league validation, пока не найден и не проверен воспроизводимый источник данных с достаточным покрытием.
+- Использует полную pre-cutoff market trajectory.
+- Schedule revisions с deterministic provider revision quarantined и исключены из frozen research sample.
+- Paid h2h refresh manual-only.
+- Перед любым платным refresh сначала бесплатно пересчитать league-level priority.
+- Уже прошедший research cutoff нельзя дополнять задним числом.
 
-## Текущий research-блок: season-invariant corners
+Последний known operational issue: market snapshots были stale с 2026-09-05; live future fixtures при этом существовали.
 
-Цель простыми словами: проверить, является ли информация об угловых устойчивым футбольным сигналом, который работает не только в одном конкретном сезоне.
+### Settlement / public results
 
-Основная схема проверки:
-- учимся/настраиваемся на остальных сезонах;
-- один сезон держим полностью отдельно;
-- проверяем результат на этом невиденном сезоне;
-- повторяем так для каждого доступного сезона;
-- только после этого решаем, действительно ли сигнал устойчив.
+- Serie A и La Liga используют provider-free Football-Data CSV для result sync.
+- На 2026-09-07 `I1.csv` и `SP1.csv` возвращали HTTP 503.
+- Правильное поведение: `SOURCE_UNAVAILABLE`, evaluator skipped, paid requests = 0.
+- Не увеличивать grace period и не включать paid fallback только ради green.
 
-Основное окно — `CORNERS10`.
-Окна 5 и 15 матчей разрешены только как заранее заданная проверка устойчивости, а не для выбора самого красивого результата после просмотра данных.
+### Multi-Market corners
 
-Cross-league часть является отдельным gated extension и запускается только после подтверждения достаточной и сопоставимой истории других лиг.
+- Paid acquisition manual-only.
+- Последний zero-cost quota proof: примерно 193 credits, hard reserve 100.
+- Infrastructure ready, но stored corner market capability evidence = 0.
+- Blocker: `PROVIDER_CORNER_CAPABILITY_UNPROVEN`.
+- Bounded paid capability probe нельзя запускать автоматически.
 
-Production `.pkl` этот research-блок не должен менять.
+## CORNERS10 — что теперь известно
+
+Важно различать:
+- `CORNERS10` — football-state признак для 1X2 модели;
+- букмекерский corner market из Multi-Market — отдельная ветка.
+
+### Historical football-only portability
+
+Блок: `SEASON_INVARIANT_CORNERS_V1`.
+
+Источник: ранее сохранённый Historical Football Signal Lab artifact PR #57. Использованы EPL, La Liga и Serie A, по 7 полностью held-out сезонов на лигу — суммарно 21 season test.
+
+Основной сравнительный baseline: `GOALS10`.
+
+Результат:
+- EPL: CORNERS10 лучше по Brier 6/7 сезонов, по log-loss 6/7;
+- La Liga: 5/7 и 5/7;
+- Serie A: 7/7 и 7/7;
+- суммарно: 18/21 выигрышей по Brier и 18/21 по log-loss.
+
+Итоговая historical portability classification: **PORTABLE_STRONG**.
+
+Простыми словами: информация об угловых действительно повторяется между сезонами и лигами и не выглядит случайностью одного сезона.
+
+### Window robustness
+
+- `CORNERS5` также поддерживает то же направление в EPL, La Liga и Serie A.
+- Это снижает риск, что эффект существует только при магическом окне ровно 10 матчей.
+- Fixed `CORNERS15` check остаётся pending, потому что старый artifact его не содержал, а текущий Football-Data source был недоступен (503).
+- Нельзя подменять источник или подбирать другое окно только ради завершения проверки.
+
+### Market incremental result
+
+Ранее PR #58 показал:
+- `MARKET_CORNERS10` не улучшил fitted `MARKET_MODEL` исторически;
+- EPL и La Liga: 0/7 season wins по Brier/log-loss;
+- Serie A: 2/7, но средний результат всё равно хуже рынка.
+
+Вывод: `CORNERS10` — реальный football signal, но **не доказанный дополнительный 1X2 edge поверх букмекерского рынка**.
+
+Production модель из-за этого результата не менять.
+
+### Early drift — новая схема вместо слепого ожидания 100 матчей
+
+На тех же старых held-out сезонах проведена historical pseudo-live проверка: смотрели результат после первых 20/40/80/160 матчей, при этом модель обучалась только на более ранних сезонах.
+
+Для `CORNERS10` vs `GOALS10`:
+- 20 матчей: направление совпадало с итогом сезона примерно 67% по Brier / 76% по log-loss;
+- 40 матчей: примерно 67% / 76%; это полезный early warning, но ещё шумный;
+- 80 матчей: примерно **81% / 90%**; это уже materially stronger checkpoint;
+- 160 матчей: примерно 81% / 86%; больше матчей не гарантирует монотонного улучшения каждого показателя.
+
+Новый рабочий принцип:
+- historical cross-season/cross-league robustness = основное доказательство существования устойчивого механизма;
+- fresh data = drift monitor, а не повторное открытие сигнала с нуля;
+- около 40 матчей можно использовать как раннее предупреждение;
+- около 80 матчей — как более серьёзную проверку;
+- это не automatic promotion gate и не разрешение обходить frozen prospective embargo.
+
+## Текущий PR
+
+PR #212: `Add season-invariant CORNERS10 validation and early drift audit`.
+
+Он должен содержать:
+- один canonical invariant audit (`season_invariant_corners_audit.py`);
+- pinned PR57 historical evidence;
+- pinned early-drift summary;
+- regression tests против leakage;
+- отдельный provider-free CI;
+- этот continuity file.
+
+Он не должен зависеть от live Football-Data, Supabase writes или Odds API.
 
 ## Текущий следующий шаг
 
-1. Зафиксировать preregistered historical contract для season-invariant corner signals.
-2. Реализовать историческую leave-one-season-out проверку EPL без изменения production моделей.
-3. Добавить regression-тесты, защищающие от leakage и подбора правил после просмотра test season.
-4. Запустить тесты и исследование.
-5. Интерпретировать результат простым языком.
-6. Если результат действительно устойчив — отдельно проверить incremental value относительно MARKET.
-7. Найти/проверить воспроизводимый historical corner source для других лиг и только затем запускать cross-league validation.
-8. Провести изменения через PR, CI, fresh-main check и exact-head merge.
-9. После каждого существенного шага обновлять этот файл.
+1. Довести PR #212 до green CI.
+2. Проверить fresh `main` и exact PR head, затем merge.
+3. Post-merge подтвердить artifact/status и неизменность production `.pkl`.
+4. После закрытия этого блока НЕ строить новую production модель автоматически.
+5. Следующий реальный corner-related research step — отдельный corners-specific target/market experiment, где portable football corner signal может дать информацию, не поглощённую 1X2 market.
+6. Multi-Market bookmaker corners остаётся blocked до намеренного manual paid capability probe.
+7. Current-season drift monitor создавать только как отдельный prospective contract, который не пересекается с запрещённым outcome-peeking существующих frozen cohorts.
 
 ## Журнал решений
 
 ### 2026-09-07
-- Пользователь попросил всегда объяснять работу простым языком, без предположения знания программирования.
-- Пользователь предложил создать постоянный файл в корне проекта, чтобы сохранять действия и решения между чатами и не повторять бесконечные аудиты.
-- Создан `PROJECT_CONTINUITY.md` как постоянная память проекта.
-- Установлено правило: в начале новой рабочей сессии сначала читать этот файл, затем делать только короткую проверку актуального `main`/live state и продолжать с последнего зафиксированного шага.
+
+- Пользователь попросил всегда объяснять работу простым языком.
+- Создан `PROJECT_CONTINUITY.md` для сохранения решений между чатами.
+- Принято решение отказаться от универсального правила «любая новая идея ждёт 100 свежих матчей».
+- Проверен `CORNERS10` на переносимость между сезонами и тремя лигами: historical result `PORTABLE_STRONG`.
+- Подтверждено, что `CORNERS10` не показал historical incremental edge поверх fitted 1X2 market.
+- Historical early-drift audit показал: 20 матчей слишком шумно, 40 — early warning, около 80 — существенно более надёжный checkpoint.
+- Для reproducibility используются pinned prior artifacts, потому что Football-Data сейчас отдаёт 503; outage не маскируется.
