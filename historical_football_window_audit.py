@@ -1,4 +1,4 @@
-"""Fixed Form-5 vs Form-10 football-signal ablation. Research only."""
+"""Fixed football-state window ablation and robustness checks. Research only."""
 from __future__ import annotations
 from pathlib import Path
 import numpy as np
@@ -13,10 +13,13 @@ from historical_football_signal_lab import add_difference_features, RESULT_TO_IN
 WINDOW_SETS={
  "FORM5":["diff_points_5","diff_points_venue5"],
  "FORM10":["diff_points_10","diff_points_venue5"],
+ "FORM15":["diff_points_15","diff_points_venue5"],
  "GOALS5":["diff_points_5","diff_points_venue5","diff_goals_for_5","diff_goals_against_5","diff_goals_for_venue5","diff_goals_against_venue5"],
  "GOALS10":["diff_points_10","diff_points_venue5","diff_goals_for_10","diff_goals_against_10","diff_goals_for_venue5","diff_goals_against_venue5"],
+ "GOALS15":["diff_points_15","diff_points_venue5","diff_goals_for_15","diff_goals_against_15","diff_goals_for_venue5","diff_goals_against_venue5"],
  "CORNERS5":["diff_points_5","diff_points_venue5","diff_goals_for_5","diff_goals_against_5","diff_corners_for_5","diff_corners_against_5","diff_corners_for_venue5","diff_corners_against_venue5"],
  "CORNERS10":["diff_points_10","diff_points_venue5","diff_goals_for_10","diff_goals_against_10","diff_corners_for_10","diff_corners_against_10","diff_corners_for_venue5","diff_corners_against_venue5"],
+ "CORNERS15":["diff_points_15","diff_points_venue5","diff_goals_for_15","diff_goals_against_15","diff_corners_for_15","diff_corners_against_15","diff_corners_for_venue5","diff_corners_against_venue5"],
 }
 ROBUSTNESS_BASELINES=("GOALS10","FORM10")
 
