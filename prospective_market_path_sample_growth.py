@@ -15,7 +15,11 @@ from prospective_market_path import (
     MIN_TRAIN,
     MIN_TEST,
 )
-from prospective_market_path_settlement_lag import STATUS_PRESENT
+from prospective_market_path_settlement_lag import STATUS_LATE, STATUS_PRESENT
+
+
+SAMPLE_HEALTH_OK = "OK"
+SAMPLE_HEALTH_SETTLEMENT_BLOCKED = "SETTLEMENT_BLOCKED"
 
 
 def settled_identity_sample(paths: pd.DataFrame, settlement_audit: pd.DataFrame) -> pd.DataFrame:
@@ -67,3 +71,33 @@ def readiness_without_outcomes(sample: pd.DataFrame) -> pd.DataFrame:
             "ready": bool(fixtures >= MIN_FIXTURES_PER_LEAGUE and len(months) >= MIN_MONTHS_PER_LEAGUE and valid_blocks >= MIN_TEST_BLOCKS),
         })
     return pd.DataFrame(rows)
+
+
+def annotate_settlement_health(readiness: pd.DataFrame, settlement_audit: pd.DataFrame) -> pd.DataFrame:
+    """Add outcome-free settlement-health context without changing readiness gates."""
+    required_readiness = {"league", "settled_fixtures", "ready"}
+    missing_readiness = required_readiness - set(readiness.columns)
+    if missing_readiness:
+        raise ValueError("readiness missing columns: " + ", ".join(sorted(missing_readiness)))
+    required_audit = {"league", "status"}
+    missing_audit = required_audit - set(settlement_audit.columns)
+    if missing_audit:
+        raise ValueError("settlement audit missing columns: " + ", ".join(sorted(missing_audit)))
+
+    output = readiness.copy()
+    late_counts = (
+        settlement_audit[settlement_audit["status"].astype(str).eq(STATUS_LATE)]
+        .groupby("league")
+        .size()
+        .to_dict()
+        if not settlement_audit.empty
+        else {}
+    )
+    output["settlement_late"] = output["league"].map(lambda league: int(late_counts.get(str(league), 0)))
+    output["sample_health"] = output["settlement_late"].map(
+        lambda count: SAMPLE_HEALTH_SETTLEMENT_BLOCKED if int(count) > 0 else SAMPLE_HEALTH_OK
+    )
+    output["potential_settled_fixtures_after_lag_clear"] = (
+        output["settled_fixtures"].astype(int) + output["settlement_late"].astype(int)
+    )
+    return output
