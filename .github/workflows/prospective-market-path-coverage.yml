@@ -63,11 +63,13 @@ jobs:
           import pandas as pd
           path='artifacts/prospective_market_path_v1/fixture_coverage_monitor.csv'
           frame=pd.read_csv(path)
-          bad=frame[frame['status'].astype(str).eq('IRRECOVERABLE')]
+          active=frame['operationally_active'].fillna(False).astype(str).str.lower().eq('true')
+          unavailable=frame['status'].astype(str).isin(['IRRECOVERABLE','CONFLICT'])
+          bad=frame[active & unavailable]
           if len(bad):
-              cols=['league','event_id','home_team','away_team','kickoff_utc','reason']
-              print('FAIL: active frozen-V1 fixtures became irrecoverable:')
+              cols=['league','event_id','home_team','away_team','kickoff_utc','status','reason']
+              print('FAIL: active frozen-V1 fixtures are unavailable to the path protocol:')
               print(bad[cols].to_string(index=False))
               raise SystemExit(1)
-          print('PASS: no active irrecoverable frozen-V1 fixtures')
+          print('PASS: no active unavailable frozen-V1 fixtures')
           PY
