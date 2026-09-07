@@ -1,0 +1,48 @@
+name: Corner Total Signal V1
+on:
+  pull_request:
+    paths:
+      - 'corner_total_signal_v1.py'
+      - 'research/CORNER_TOTAL_SIGNAL_V1.md'
+      - 'research/CORNER_TOTAL_SIGNAL_V1_RESULTS.md'
+      - 'research/reference/CORNER_TOTAL_SIGNAL_V1_EPL.csv'
+      - 'research/sql/CORNER_TOTAL_SIGNAL_V1.sql'
+      - 'tests/test_corner_total_signal_v1.py'
+      - '.github/workflows/corner-total-signal-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'corner_total_signal_v1.py'
+      - 'research/CORNER_TOTAL_SIGNAL_V1.md'
+      - 'research/CORNER_TOTAL_SIGNAL_V1_RESULTS.md'
+      - 'research/reference/CORNER_TOTAL_SIGNAL_V1_EPL.csv'
+      - 'research/sql/CORNER_TOTAL_SIGNAL_V1.sql'
+      - 'tests/test_corner_total_signal_v1.py'
+      - '.github/workflows/corner-total-signal-v1.yml'
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install pandas pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Verify pinned historical evidence digest
+        run: echo '2e6c73df0cdd10b58c9076690f2417a33f3391bafb71a22a163f46b1e4402165  research/reference/CORNER_TOTAL_SIGNAL_V1_EPL.csv' | sha256sum -c -
+      - name: Run regression tests
+        run: pytest -q tests/test_corner_total_signal_v1.py
+      - name: Run deterministic historical audit
+        run: python corner_total_signal_v1.py --reference research/reference/CORNER_TOTAL_SIGNAL_V1_EPL.csv
+      - name: Verify production hashes unchanged
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        with:
+          name: corner-total-signal-v1
+          path: artifacts/corner_total_signal_v1/
+          retention-days: 30
