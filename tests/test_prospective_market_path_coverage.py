@@ -38,6 +38,7 @@ def test_ready_fixture_meets_frozen_requirements():
     assert coverage.iloc[0].status == STATUS_READY
     assert coverage.iloc[0].snapshot_count_before_cutoff == 3
     assert coverage.iloc[0].path_span_hours >= 12
+    assert bool(coverage.iloc[0].operationally_active)
 
 
 def test_recoverable_fixture_has_enough_time_left():
@@ -45,6 +46,7 @@ def test_recoverable_fixture_has_enough_time_left():
     rows = [_row("e1", kickoff, "2026-09-12T18:00:00Z")]
     coverage = build_fixture_coverage(pd.DataFrame(rows), now_utc=pd.Timestamp("2026-09-12T20:00:00Z"))
     assert coverage.iloc[0].status == STATUS_RECOVERABLE
+    assert bool(coverage.iloc[0].operationally_active)
 
 
 def test_late_first_snapshot_is_irrecoverable_even_before_cutoff():
@@ -53,6 +55,7 @@ def test_late_first_snapshot_is_irrecoverable_even_before_cutoff():
     coverage = build_fixture_coverage(pd.DataFrame(rows), now_utc=pd.Timestamp("2026-09-12T07:00:00Z"))
     assert coverage.iloc[0].status == STATUS_IRRECOVERABLE
     assert coverage.iloc[0].reason == "INSUFFICIENT_REMAINING_SPAN_BEFORE_CUTOFF"
+    assert bool(coverage.iloc[0].operationally_active)
 
 
 def test_passed_cutoff_is_irrecoverable_if_not_ready():
@@ -64,18 +67,30 @@ def test_passed_cutoff_is_irrecoverable_if_not_ready():
     coverage = build_fixture_coverage(pd.DataFrame(rows), now_utc=pd.Timestamp("2026-09-12T13:00:00Z"))
     assert coverage.iloc[0].status == STATUS_IRRECOVERABLE
     assert coverage.iloc[0].reason == "CUTOFF_ALREADY_PASSED"
+    assert not bool(coverage.iloc[0].operationally_active)
     assert not bool(coverage.iloc[0].refresh_due)
     assert coverage.iloc[0].refresh_reason == REFRESH_CUTOFF_PASSED
 
 
-def test_conflicting_kickoffs_are_fail_closed():
+def test_conflicting_kickoffs_are_fail_closed_and_active_until_latest_candidate_cutoff():
     rows = [
         _row("e1", "2026-09-12T18:00:00Z", "2026-09-11T18:00:00Z", league="SERIE_A"),
         _row("e1", "2026-09-13T18:00:00Z", "2026-09-12T00:00:00Z", league="SERIE_A"),
     ]
     coverage = build_fixture_coverage(pd.DataFrame(rows), now_utc=pd.Timestamp("2026-09-12T01:00:00Z"))
     assert coverage.iloc[0].status == STATUS_CONFLICT
+    assert bool(coverage.iloc[0].operationally_active)
     assert not bool(coverage.iloc[0].refresh_due)
+
+
+def test_historical_conflict_stays_visible_but_is_not_active_health_risk():
+    rows = [
+        _row("e1", "2026-09-12T18:00:00Z", "2026-09-11T18:00:00Z", league="LA_LIGA"),
+        _row("e1", "2026-09-13T18:00:00Z", "2026-09-12T00:00:00Z", league="LA_LIGA"),
+    ]
+    coverage = build_fixture_coverage(pd.DataFrame(rows), now_utc=pd.Timestamp("2026-09-13T13:00:00Z"))
+    assert coverage.iloc[0].status == STATUS_CONFLICT
+    assert not bool(coverage.iloc[0].operationally_active)
 
 
 def test_ready_path_can_be_refresh_due_without_changing_frozen_status():
@@ -146,12 +161,13 @@ def test_superseded_refresh_due_is_not_counted_as_manual_advice():
     assert summary.loc[summary["league"] == "LA_LIGA", "manual_refresh_due"].iloc[0] == 0
 
 
-def test_workflow_uploads_diagnostics_before_health_gate():
+def test_workflow_uploads_diagnostics_before_fail_closed_active_health_gate():
     text = Path(".github/workflows/prospective-market-path-coverage.yml").read_text()
     upload = "name: Upload coverage artifacts"
     gate = "name: Enforce active coverage health"
     assert upload in text
     assert gate in text
     assert text.index(upload) < text.index(gate)
-    assert "eq('IRRECOVERABLE')" in text
+    assert "operationally_active" in text
+    assert "['IRRECOVERABLE','CONFLICT']" in text
     assert "if: always()" in text
