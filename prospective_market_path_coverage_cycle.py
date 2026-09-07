@@ -8,6 +8,7 @@ import pandas as pd
 from database import supabase
 from prospective_market_path import LEAGUES
 from prospective_market_path_coverage import build_fixture_coverage, summarize_fixture_coverage
+from prospective_market_path_refresh_priority import build_league_refresh_priority
 from prospective_market_path_revisions import (
     STATUS_QUARANTINED_REVISION,
     STATUS_SUPERSEDED,
@@ -48,6 +49,8 @@ def run() -> dict:
     coverage = build_fixture_coverage(snapshots)
     coverage = mark_superseded_revisions(coverage, snapshots)
     summary = summarize_fixture_coverage(coverage)
+    priority = build_league_refresh_priority(coverage)
+    summary = summary.merge(priority, on="league", how="left", validate="one_to_one")
     superseded_counts = coverage[coverage["status"] == STATUS_SUPERSEDED]["league"].value_counts().to_dict()
     quarantined_counts = coverage[coverage["status"] == STATUS_QUARANTINED_REVISION]["league"].value_counts().to_dict()
     summary["superseded"] = summary["league"].map(lambda league: int(superseded_counts.get(league, 0)))
