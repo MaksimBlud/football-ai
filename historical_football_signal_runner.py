@@ -7,6 +7,7 @@ import requests
 from historical_football_market_incremental import write_market_incremental_reports
 from historical_football_signal_lab import build_point_in_time_features, write_reports
 from historical_football_window_audit import write_window_reports
+from season_invariant_corners_audit import write_invariant_reports
 from league_runtime_config import EPL_RUNTIME_CONFIG, LA_LIGA_RUNTIME_CONFIG
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 
@@ -33,11 +34,18 @@ def download(config, league: str, raw_dir: Path):
 def main():
     p=argparse.ArgumentParser(); p.add_argument("--work-dir",type=Path,default=Path("artifacts/historical_football_signal_work")); p.add_argument("--output-dir",type=Path,default=Path("artifacts/historical_football_signal_lab")); a=p.parse_args()
     combined=pd.concat([download(cfg,league,a.work_dir/"raw"/league.lower()) for league,cfg in LEAGUES.items()],ignore_index=True)
-    paths=write_reports(combined,a.output_dir); window,robustness=write_window_reports(combined,a.output_dir); market,incremental=write_market_incremental_reports(combined,a.output_dir)
+    paths=write_reports(combined,a.output_dir)
+    window,robustness=write_window_reports(combined,a.output_dir)
+    market,incremental=write_market_incremental_reports(combined,a.output_dir)
+    window_detail=pd.read_csv(a.output_dir/"window_ablation.csv")
+    invariant_leagues,invariant_windows,invariant_overall=write_invariant_reports(window_detail,a.output_dir)
     print(f"HISTORICAL FOOTBALL SIGNAL LAB COMPLETE rows={len(combined)}")
     for k,v in paths.items(): print(f"{k}: {v}")
     print("WINDOW ABLATION"); print(window.to_string(index=False))
     print("PAIRED WINDOW ROBUSTNESS"); print(robustness.to_string(index=False))
+    print("SEASON-INVARIANT CORNERS BY LEAGUE"); print(invariant_leagues.to_string(index=False))
+    print("SEASON-INVARIANT CORNERS WINDOW ROBUSTNESS"); print(invariant_windows.to_string(index=False))
+    print("SEASON-INVARIANT CORNERS OVERALL"); print(invariant_overall.to_string(index=False))
     print("MARKET INCREMENTAL"); print(market.to_string(index=False))
     print("PAIRED MARKET INCREMENTAL"); print(incremental.to_string(index=False))
     print("Research only: no training promotion, Supabase writes, Structural changes, or .pkl changes.")
