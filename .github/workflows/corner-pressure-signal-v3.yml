@@ -1,0 +1,48 @@
+name: Corner Pressure Signal V3
+on:
+  pull_request:
+    paths:
+      - 'corner_pressure_signal_v3.py'
+      - 'research/CORNER_PRESSURE_SIGNAL_V3.md'
+      - 'research/CORNER_PRESSURE_SIGNAL_V3_RESULTS.md'
+      - 'research/reference/CORNER_PRESSURE_SIGNAL_V3_EPL.csv'
+      - 'research/sql/CORNER_PRESSURE_SIGNAL_V3.sql'
+      - 'tests/test_corner_pressure_signal_v3.py'
+      - '.github/workflows/corner-pressure-signal-v3.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'corner_pressure_signal_v3.py'
+      - 'research/CORNER_PRESSURE_SIGNAL_V3.md'
+      - 'research/CORNER_PRESSURE_SIGNAL_V3_RESULTS.md'
+      - 'research/reference/CORNER_PRESSURE_SIGNAL_V3_EPL.csv'
+      - 'research/sql/CORNER_PRESSURE_SIGNAL_V3.sql'
+      - 'tests/test_corner_pressure_signal_v3.py'
+      - '.github/workflows/corner-pressure-signal-v3.yml'
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install pandas pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Verify pinned historical evidence digest
+        run: echo 'a68791291672f7927dfbc21177fa05a816b5aed819c3b00dd4625eddb321c0ad  research/reference/CORNER_PRESSURE_SIGNAL_V3_EPL.csv' | sha256sum -c -
+      - name: Run regression tests
+        run: pytest -q tests/test_corner_pressure_signal_v3.py
+      - name: Run deterministic pressure audit
+        run: python corner_pressure_signal_v3.py --reference research/reference/CORNER_PRESSURE_SIGNAL_V3_EPL.csv
+      - name: Verify production hashes unchanged
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        with:
+          name: corner-pressure-signal-v3
+          path: artifacts/corner_pressure_signal_v3/
+          retention-days: 30
