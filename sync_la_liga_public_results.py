@@ -10,17 +10,15 @@ from __future__ import annotations
 
 import argparse
 import json
-from io import StringIO
 from pathlib import Path
 from typing import Any, Callable
 
-import pandas as pd
 import requests
 
 from football_data_current_results import (
     DEFAULT_MAX_ATTEMPTS,
     PublicResultsSourceUnavailable,
-    _fetch_csv_response,
+    fetch_division_raw_results,
 )
 import la_liga_live_persistence as legacy
 import la_liga_results_updater as updater
@@ -36,25 +34,33 @@ def fetch_normalized_results(
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
     sleep: Callable[[float], None] | None = None,
 ) -> dict[str, Any]:
-    """Fetch SP1 with bounded transient retries and legacy identity semantics."""
+    """Fetch SP1 with bounded official same-provider availability fallback."""
     if sleep is None:
         import time
         sleep = time.sleep
 
-    response, attempts = _fetch_csv_response(
-        updater.SOURCE_URL,
+    fetched = fetch_division_raw_results(
+        primary_url=updater.SOURCE_URL,
+        season_code=updater.SEASON_CODE,
+        competition_code=updater.COMPETITION,
         get=get,
         timeout=timeout,
         max_attempts=max_attempts,
         sleep=sleep,
     )
-    raw = pd.read_csv(StringIO(response.text))
-    normalized = updater.normalize_source(raw)
+    normalized = updater.normalize_source(fetched["raw"])
     return {
         "frame": normalized,
-        "source_url": updater.SOURCE_URL,
-        "public_http_requests": int(attempts),
-        "source_rows": int(len(raw)),
+        "source_url": fetched["source_url"],
+        "primary_source_url": fetched["primary_source_url"],
+        "fallback_used": bool(fetched["fallback_used"]),
+        **(
+            {"primary_unavailable_status": fetched["primary_unavailable_status"]}
+            if fetched["fallback_used"]
+            else {}
+        ),
+        "public_http_requests": int(fetched["public_http_requests"]),
+        "source_rows": int(fetched["source_rows"]),
         "finished_rows": int(len(normalized)),
         "paid_provider_requests": 0,
     }
@@ -103,11 +109,15 @@ def sync_results(
     base = {
         "league": LEAGUE,
         "source_url": str(provider["source_url"]),
+        "primary_source_url": str(provider.get("primary_source_url", provider["source_url"])),
+        "fallback_used": bool(provider.get("fallback_used", False)),
         "public_http_requests": int(provider["public_http_requests"]),
         "source_rows": int(provider["source_rows"]),
         "finished_rows": int(provider["finished_rows"]),
         "paid_provider_requests": 0,
     }
+    if "primary_unavailable_status" in provider:
+        base["primary_unavailable_status"] = int(provider["primary_unavailable_status"])
     if not write:
         return {
             **base,
