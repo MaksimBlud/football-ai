@@ -7,6 +7,7 @@ on:
       - ".github/workflows/la-liga-results-pr-validation.yml"
       - "sync_la_liga_public_results.py"
       - "test_sync_la_liga_public_results.py"
+      - "tests/test_football_data_current_results.py"
       - "la_liga_results_updater.py"
       - "persist_la_liga_finished_results.py"
       - "football_data_current_results.py"
@@ -29,10 +30,11 @@ jobs:
       - run: pip install pandas requests supabase python-dotenv pytest
       - name: Compile provider-free result modules
         run: >-
-          python -m py_compile sync_la_liga_public_results.py
-          la_liga_results_updater.py persist_la_liga_finished_results.py
+          python -m py_compile football_data_current_results.py
+          sync_la_liga_public_results.py la_liga_results_updater.py
+          persist_la_liga_finished_results.py
       - name: Run provider-free La Liga results regressions
-        run: pytest -q test_sync_la_liga_public_results.py
+        run: pytest -q test_sync_la_liga_public_results.py tests/test_football_data_current_results.py
       - name: Verify workflow stays provider-free and scheduled
         run: |
           python - <<'PY'
