@@ -1,8 +1,10 @@
 """Zero-cost current-season finished results from configured Football-Data CSV.
 
 This module is deliberately independent of The Odds API and production models.
-It only accepts an explicit ``FOOTBALL_DATA_CSV`` finished-results contract;
-no competition or season URL is guessed at runtime.
+It uses the explicitly configured ``FOOTBALL_DATA_CSV`` season/division as the
+primary source. If and only if that primary CSV exhausts bounded transient HTTP
+retries, it may fall back to Football-Data's official combined current-season
+``Latest_Results.csv`` and filter the exact configured division.
 """
 from __future__ import annotations
 
@@ -46,7 +48,7 @@ class PublicResultsSourceUnavailable(RuntimeError):
         )
 
 
-def configured_current_csv_url(config: LeagueRuntimeConfig) -> str:
+def _validated_source_parts(config: LeagueRuntimeConfig) -> tuple[str, str]:
     source = config.finished_results_source
     if source.provider != PROVIDER:
         raise ValueError(
@@ -58,7 +60,17 @@ def configured_current_csv_url(config: LeagueRuntimeConfig) -> str:
         raise ValueError("Football-Data current season_code must be four digits")
     if not competition_code:
         raise ValueError("Football-Data competition_code is required")
+    return season_code, competition_code
+
+
+def configured_current_csv_url(config: LeagueRuntimeConfig) -> str:
+    season_code, competition_code = _validated_source_parts(config)
     return f"{BASE_URL}/{season_code}/{competition_code}.csv"
+
+
+def configured_latest_results_csv_url(config: LeagueRuntimeConfig) -> str:
+    season_code, _competition_code = _validated_source_parts(config)
+    return f"{BASE_URL}/{season_code}/Latest_Results.csv"
 
 
 def build_finished_frame(raw: pd.DataFrame, config: LeagueRuntimeConfig) -> pd.DataFrame:
@@ -95,6 +107,25 @@ def build_finished_frame(raw: pd.DataFrame, config: LeagueRuntimeConfig) -> pd.D
         require_complete=False,
     )
     return normalized.loc[:, RESULT_COLUMNS].copy()
+
+
+def build_latest_finished_frame(raw: pd.DataFrame, config: LeagueRuntimeConfig) -> tuple[pd.DataFrame, int]:
+    """Validate and filter Football-Data's combined latest-results CSV.
+
+    The combined feed must identify divisions explicitly. Only the exact
+    configured ``competition_code`` is accepted; a missing division is a hard
+    data-contract failure rather than a silent empty success.
+    """
+    if "Div" not in raw.columns:
+        raise ValueError("Missing Football-Data latest-results division column: Div")
+    _season_code, competition_code = _validated_source_parts(config)
+    divisions = raw["Div"].fillna("").astype(str).str.strip()
+    selected = raw.loc[divisions.eq(competition_code)].copy()
+    if selected.empty:
+        raise ValueError(
+            f"Football-Data latest-results CSV missing configured division {competition_code}"
+        )
+    return build_finished_frame(selected, config), int(len(selected))
 
 
 def _fetch_csv_response(
@@ -139,27 +170,54 @@ def fetch_current_finished_results(
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
     sleep: Callable[[float], None] = time.sleep,
 ) -> dict:
-    """Fetch and validate one explicitly configured public CSV source.
+    """Fetch and validate one explicitly configured public results source.
 
     ``paid_provider_requests`` is always zero because this path never calls
-    The Odds API. Transient public HTTP 429/5xx responses are retried a bounded
-    number of times; permanent errors fail immediately. The public HTTP request
-    count reports the actual number of attempts.
+    The Odds API. The configured per-division CSV is always attempted first.
+    Only bounded transient availability exhaustion can activate the official
+    combined ``Latest_Results.csv`` fallback. Permanent HTTP errors and all
+    schema/semantic validation errors remain hard failures and never fall back.
     """
-    url = configured_current_csv_url(config)
-    response, attempts = _fetch_csv_response(
-        url,
-        get=get,
-        timeout=timeout,
-        max_attempts=max_attempts,
-        sleep=sleep,
-    )
+    primary_url = configured_current_csv_url(config)
+    latest_url = configured_latest_results_csv_url(config)
+    try:
+        response, primary_attempts = _fetch_csv_response(
+            primary_url,
+            get=get,
+            timeout=timeout,
+            max_attempts=max_attempts,
+            sleep=sleep,
+        )
+    except PublicResultsSourceUnavailable as primary_error:
+        fallback_response, fallback_attempts = _fetch_csv_response(
+            latest_url,
+            get=get,
+            timeout=timeout,
+            max_attempts=max_attempts,
+            sleep=sleep,
+        )
+        raw = pd.read_csv(StringIO(fallback_response.text))
+        frame, selected_rows = build_latest_finished_frame(raw, config)
+        return {
+            "frame": frame,
+            "source_url": latest_url,
+            "primary_source_url": primary_url,
+            "fallback_used": True,
+            "primary_unavailable_status": primary_error.status_code,
+            "public_http_requests": primary_error.attempts + fallback_attempts,
+            "paid_provider_requests": 0,
+            "source_rows": selected_rows,
+            "finished_rows": int(len(frame)),
+        }
+
     raw = pd.read_csv(StringIO(response.text))
     frame = build_finished_frame(raw, config)
     return {
         "frame": frame,
-        "source_url": url,
-        "public_http_requests": attempts,
+        "source_url": primary_url,
+        "primary_source_url": primary_url,
+        "fallback_used": False,
+        "public_http_requests": primary_attempts,
         "paid_provider_requests": 0,
         "source_rows": int(len(raw)),
         "finished_rows": int(len(frame)),
