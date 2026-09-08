@@ -92,6 +92,21 @@ def test_preregistration_does_not_change_active_probe_target():
     assert rollover["requires_separate_activation_pr"] is True
 
 
+def test_zero_paid_probe_history_closes_attempt_gate_without_activation():
+    rollover = load_rollover()
+    history = rollover["provider_attempt_history"]
+    assert history["source"] == "github_actions_workflow_dispatch_history"
+    assert history["repository_workflow_dispatch_runs_observed"] == 7
+    assert history["corner_capability_probe_workflow_dispatch_runs_observed"] == 0
+    assert history["current_active_target_provider_request_attempts_observed"] == 0
+    assert history["current_active_target"] == load_fallback()["target"]
+    assert history["current_active_target_expired"] is True
+    assert history["paid_provider_requests"] == 0
+    assert history["paid_provider_credits"] == 0
+    assert history["writes_performed"] is False
+    assert rollover["active"] is False
+
+
 def test_rollover_activation_conditions_preserve_paid_safety_boundary():
     p = load_rollover()["activation_conditions"]
     assert p["current_active_target_must_be_expired"] is True
