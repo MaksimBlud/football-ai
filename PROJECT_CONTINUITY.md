@@ -205,20 +205,27 @@ Post-merge live proof:
 - paid provider requests 0;
 - status `WRITTEN`;
 - evaluator then saw 30 finished-result rows and 19 settled fixtures;
-- latest-pre-kickoff MARKET_ONLY diagnostic: 19 fixtures, accuracy `0.6315789474`, log loss `0.89514645696`, multiclass Brier `0.52100247085`; this is an operational diagnostic, not a new research decision/promotion;
+- latest-pre-kickoff MARKET_ONLY diagnostic: 19 fixtures, accuracy `0.6315789474`, log loss `0.89514645696`, multiclass Brier `0.52100247085`; operational diagnostic only, not a promotion/research decision;
 - evaluator performed no Supabase writes and used no production model;
 - status artifact `10038563495`;
 - artifact ZIP SHA256 `9459ff69c5e18f3d047ef906c16f971fc0c475333bd2f118e55dc93455584b78`.
 
-**Independent live Supabase proof after both runs:**
+**Independent live Supabase proof:**
 - current-season canonical `league_finished_results`: La Liga 46 fixtures, Serie A 30 fixtures, latest date 2026-09-07;
 - exact prior settlement-lag audit run `34122752130` had 13 already-late identities: 7 La Liga + 6 Serie A;
-- identity-only recheck after recovery: La Liga `7/7 present, 0 missing`; Serie A `6/6 present, 0 missing`;
-- no outcome scores were needed for this closure check.
+- identity-only recheck: La Liga 7/7 present, 0 missing; Serie A 6/6 present, 0 missing.
 
-Conclusion: the specific external settlement blocker from Football-Data 503 is **removed**. ESPN fallback is live-proven for both leagues while preserving fail-closed behavior and zero paid-provider usage.
+**Direct red -> green settlement-lag rerun:**
+- the exact formerly failing audit run `34122752130` was rerun on 2026-09-08 as job `101917806223` against current live Supabase;
+- result = SUCCESS and `PASS: no late prospective market-path settlement identities`;
+- outcome-free summary: EPL `20 eligible / 10 settled / 10 awaiting grace / 0 late`; La Liga `18 / 10 / 8 / 0`; Serie A `22 / 9 / 13 / 0`;
+- result values/scores were not queried; Supabase writes = 0;
+- production `.pkl` hashes before/after unchanged;
+- artifact `10038654571`, ZIP SHA256 `c04cdee0f6de6276f6e72ced9ea56bac040763f2d59109f9927abd23ba39409f`.
 
-Non-blocking follow-up: La Liga-specific PR validator did not trigger on PR #224 path set; do not let this distract from research, but include common fallback/test paths in that validator the next time its workflow is touched or if another fallback regression appears.
+Conclusion: Football-Data 503 settlement blocker is **removed**. ESPN fallback is live-proven for both leagues, old late identities are gone, and current market-path settlement health has late=0 in all three leagues.
+
+Non-blocking follow-up: La Liga-specific PR validator did not trigger on PR #224 path set; include common fallback/test paths next time that workflow is touched or if another fallback regression appears. Do not prioritize this over research.
 
 ## Security follow-up
 
@@ -233,12 +240,11 @@ Do not enable RLS automatically; first perform a separate access-policy audit so
 
 ## Текущий следующий шаг
 
-1. Пересчитать **outcome-free** prospective market-path sample health после settlement recovery; использовать только result identities/statuses, не scores.
-2. Убедиться, что settlement-late blocker теперь 0 для восстановленных identities и понять новый settled sample size по EPL/La Liga/Serie A.
-3. Market snapshot staleness остаётся отдельной acquisition problem; paid h2h refresh manual-only.
-4. После outcome-free health check вернуться к bookmaker-corner capability только при наличии fresh zero-cost quota proof. Не запускать paid probe автоматически.
-5. Frozen EPL_AI_MARKET_PAIR_V1 и PROSPECTIVE_CORNERS10_INCREMENTAL_V1 продолжать без premature outcomes.
-6. RLS audit — отдельный follow-up после основных research/operational priorities.
+1. Settlement recovery считать закрытым: current outcome-free market-path health = late 0 для EPL/La Liga/Serie A.
+2. Проверить свежесть market acquisition после 2026-09-05 и бесплатно пересчитать league-level refresh priority; paid h2h refresh остаётся manual-only.
+3. После acquisition health check вернуться к bookmaker-corner capability только при fresh zero-cost quota proof. Paid corner probe не запускать автоматически.
+4. Frozen EPL_AI_MARKET_PAIR_V1 и PROSPECTIVE_CORNERS10_INCREMENTAL_V1 продолжать без premature outcomes.
+5. RLS audit — отдельный follow-up после основных research/operational priorities.
 
 ## Журнал решений
 
@@ -258,6 +264,7 @@ Do not enable RLS automatically; first perform a separate access-policy audit so
 - PR #223 merged; post-merge live proof честно выявил `Deportivo` identity gap и Serie A workflow import-path regression.
 - PR #224 merged `382814a00f1c04dbff776c0a5594b3c98909fe9a`; оба live result sync успешно прошли через ESPN fallback после 3x503 primary.
 - La Liga добавила 10 canonical results, Serie A 19; conflicts=0, paid requests=0.
-- Exact 13 previously late market-path identities из run `34122752130` теперь все присутствуют: 7/7 La Liga, 6/6 Serie A, missing=0.
+- Exact 13 previously late identities теперь все присутствуют: 7/7 La Liga, 6/6 Serie A, missing=0.
+- Тот же settlement-lag audit, который был red, повторно запущен и стал green: EPL late 0, La Liga late 0, Serie A late 0; scores not queried, no writes, production hashes unchanged.
 - `PROVIDER_FREE_RESULTS_FALLBACK_V1` закрыт как `LIVE_PROVEN`.
-- Следующий приоритет: outcome-free sample-health recalculation на восстановленном settlement.
+- Следующий приоритет: zero-cost market acquisition freshness/refresh-priority check.
