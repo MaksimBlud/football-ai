@@ -10,6 +10,8 @@ on:
       - "la_liga_results_updater.py"
       - "persist_la_liga_finished_results.py"
       - "football_data_current_results.py"
+      - "espn_current_results_fallback.py"
+      - "test_espn_current_results_fallback.py"
 
 permissions:
   contents: read
@@ -31,8 +33,9 @@ jobs:
         run: >-
           python -m py_compile sync_la_liga_public_results.py
           la_liga_results_updater.py persist_la_liga_finished_results.py
+          espn_current_results_fallback.py
       - name: Run provider-free La Liga results regressions
-        run: pytest -q test_sync_la_liga_public_results.py
+        run: pytest -q test_sync_la_liga_public_results.py test_espn_current_results_fallback.py
       - name: Verify workflow stays provider-free and scheduled
         run: |
           python - <<'PY'
