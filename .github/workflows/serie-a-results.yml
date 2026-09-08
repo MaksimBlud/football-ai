@@ -49,7 +49,7 @@ jobs:
       - name: Compile provider-free results sync
         run: python -m py_compile update_serie_a_results.py espn_current_results_fallback.py
       - name: Run provider-free results regressions
-        run: pytest -q tests/test_serie_a_results_source_availability.py test_espn_current_results_fallback.py
+        run: PYTHONPATH=. pytest -q tests/test_serie_a_results_source_availability.py test_espn_current_results_fallback.py
       - name: Sync immutable Serie A finished results from public sources
         run: python update_serie_a_results.py --write --status-json artifacts/serie_a_results_status.json
       - name: Verify explicit provider-free result status
