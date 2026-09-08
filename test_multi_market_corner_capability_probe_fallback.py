@@ -83,13 +83,16 @@ def test_rollover_v2_is_inactive_preregistration_with_durable_zero_cost_proof():
     assert live["writes_performed"] is False
 
 
-def test_preregistration_does_not_change_active_probe_target():
+def test_separate_activation_uses_exact_preregistered_rollover_target():
     historical = load_fallback()
     rollover = load_rollover()
-    assert probe.TARGET == historical["target"]
-    assert probe.TARGET != rollover["target"]
+    # Historical Getafe provenance remains immutable, while this separate
+    # activation PR must use exactly the previously preregistered V2 target.
+    assert probe.TARGET == rollover["target"]
+    assert probe.TARGET != historical["target"]
     assert rollover["active"] is False
     assert rollover["requires_separate_activation_pr"] is True
+    assert rollover["paid_request_allowed_by_this_file"] is False
 
 
 def test_zero_paid_probe_history_closes_attempt_gate_without_activation():
