@@ -11,7 +11,7 @@ import json
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
 import pandas as pd
 
@@ -33,13 +33,24 @@ def _ts(value: Any) -> pd.Timestamp:
     return parsed
 
 
-def plan_rollover(events: Iterable[dict[str, Any]], *, now_utc: datetime) -> dict[str, Any]:
+def plan_rollover(
+    events: Iterable[dict[str, Any]],
+    *,
+    now_utc: datetime,
+    active_target: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build an advisory rollover plan without ever switching the live target.
+
+    ``active_target`` exists for explicit contract tests and audits. Normal live
+    execution omits it and therefore always reflects the actual probe ``TARGET``.
+    """
     now = pd.Timestamp(now_utc)
     if now.tzinfo is None:
         now = now.tz_localize("UTC")
     else:
         now = now.tz_convert("UTC")
-    target_kickoff = _ts(TARGET["commence_time_utc"])
+    current_target = dict(TARGET if active_target is None else active_target)
+    target_kickoff = _ts(current_target["commence_time_utc"])
     minimum_candidate_kickoff = now + MIN_ROLLOVER_LEAD
 
     identities: dict[str, set[tuple[str, str, str, str]]] = defaultdict(set)
@@ -85,7 +96,7 @@ def plan_rollover(events: Iterable[dict[str, Any]], *, now_utc: datetime) -> dic
         "writes_performed": False,
         "paid_provider_requests": 0,
         "paid_provider_credits": 0,
-        "active_target": dict(TARGET),
+        "active_target": current_target,
         "active_target_expired": now >= target_kickoff,
         "active_target_seconds_remaining": seconds_remaining,
         "minimum_rollover_lead_hours": int(MIN_ROLLOVER_LEAD.total_seconds() // 3600),
