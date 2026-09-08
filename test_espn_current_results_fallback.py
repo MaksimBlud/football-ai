@@ -51,6 +51,15 @@ def test_completed_events_become_football_data_like_rows_and_future_is_ignored()
     ]
 
 
+def test_live_espn_deportivo_name_maps_to_existing_la_liga_identity():
+    payload = {"events": [event("Deportivo", "Barcelona", 1, 2)]}
+    frame = fallback.build_football_data_like_frame(payload, league="LA_LIGA")
+    row = frame.iloc[0]
+    assert row["HomeTeam"] == "Dep. A Coruna"
+    assert row["AwayTeam"] == "Barcelona"
+    assert row["FTR"] == "A"
+
+
 def test_serie_a_source_names_are_mapped_to_project_compatible_names():
     payload = {"events": [event("Internazionale", "Atalanta", 1, 1)]}
     frame = fallback.build_football_data_like_frame(payload, league="SERIE_A")
