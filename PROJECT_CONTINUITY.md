@@ -4,14 +4,14 @@
 
 ## Как использовать этот файл
 
-Перед началом любой новой рабочей сессии:
+Перед началом новой рабочей сессии:
 1. Прочитать этот файл целиком.
 2. Коротко проверить текущий GitHub `main` и live Supabase как source of truth.
-3. Не начинать повторный полный аудит без конкретной причины.
+3. Не начинать полный повторный аудит без конкретной причины.
 4. Продолжить с раздела **Текущий следующий шаг**.
 5. После существенного решения, PR, merge или live-проверки обновлять этот файл.
 
-Этот файл хранит решения и контекст. Фактическим source of truth остаются GitHub `main` и live Supabase.
+GitHub `main` и live Supabase всегда важнее этого файла, если состояние разошлось.
 
 ## Как общаться с пользователем
 
@@ -23,62 +23,49 @@
 
 - Репозиторий: `MaksimBlud/football-ai`.
 - Основная ветка: `main`.
+- Source of truth: текущий GitHub `main` + live Supabase.
 - Не менять production `.pkl` как побочный эффект research/training.
-- Research/training != production promotion.
-- Никакого automatic model promotion.
-- Не делать mass-clean/reset/mass-format.
-- Не перетирать параллельные изменения в `main`.
+- Research/training != production promotion; никакого automatic promotion.
+- Не делать mass-clean/reset/mass-format и не перетирать параллельную работу.
 - Существенные изменения: отдельная ветка -> tests -> PR -> полный CI -> fresh-main check -> exact-head merge.
 - Frozen/preregistered contracts не обходить.
 - Prospective outcomes нельзя читать раньше разрешённого gate.
 - Максимально использовать бесплатные/read-only проверки.
 - The Odds API credits не тратить, если доказательство можно получить бесплатно.
 - Paid-provider workflows остаются manual-only.
-- Найденные баги закрывать regression-тестами.
+- Найденные ошибки закрывать regression-тестами.
 - Expected external/fail-closed red signal не делать искусственно green.
+- Если PR head неожиданно изменился, не merge вслепую: сначала проверить параллельные изменения.
 
 ## Активные frozen / operational контуры
 
 ### EPL_AI_MARKET_PAIR_V1
 
 Режим: **collect, don't peek**.
-
-- primary cohort: первые 100 eligible prospective events;
-- outcomes запрещено читать до 100 событий;
-- затем минимум 24 часа после kickoff последнего события cohort;
-- дополнительный embargo до `2026-11-01 12:16:54 UTC`;
-- никаких interim primary evaluations или performance-based optional stopping.
+- Primary cohort: первые 100 eligible prospective events.
+- Outcomes запрещено читать до 100 событий.
+- Затем минимум 24 часа после kickoff последнего события cohort.
+- Дополнительный embargo до `2026-11-01 12:16:54 UTC`.
+- Никаких interim primary evaluations или performance-based optional stopping.
 
 Последнее известное состояние: около `12/100`. Перед использованием подтвердить live metadata без чтения outcomes.
 
 ### PROSPECTIVE_MARKET_PATH_V1
 
 - Использует полную pre-cutoff market trajectory.
-- Deterministic schedule revisions quarantined и исключены из frozen research sample.
+- Deterministic schedule revisions quarantined и исключены из frozen sample.
 - Paid h2h refresh manual-only.
-- Перед любым платным refresh сначала бесплатно пересчитать league-level priority.
-- Уже прошедший research cutoff нельзя дополнять задним числом.
+- Перед платным refresh сначала бесплатно пересчитать league-level priority.
+- Прошедший research cutoff нельзя дополнять задним числом.
 
-Последний known operational issue: market snapshots были stale с 2026-09-05; future fixtures при этом существовали.
+Последний known issue: market snapshots были stale с 2026-09-05, хотя future fixtures существовали.
 
 ### Settlement / public results
 
-- Serie A и La Liga используют provider-free Football-Data CSV для result sync.
+- Serie A и La Liga используют provider-free Football-Data CSV.
 - На 2026-09-07 `I1.csv` и `SP1.csv` возвращали HTTP 503.
 - Правильное поведение: `SOURCE_UNAVAILABLE`, evaluator skipped, paid requests = 0.
 - Не увеличивать grace period и не включать paid fallback только ради green.
-
-### Multi-Market bookmaker corners
-
-- Paid acquisition manual-only.
-- Последний известный zero-cost quota proof: примерно 193 credits, hard reserve 100.
-- Infrastructure ready, но corner market capability не доказана.
-- Blocker: `PROVIDER_CORNER_CAPABILITY_UNPROVEN`.
-- Bounded paid capability probe нельзя запускать автоматически.
-- На 2026-09-07 live Supabase содержит 2 старых `league_multi_market_snapshots`; оба имеют только provider market keys `spreads` и `totals`.
-- В обоих `total_corners = null`, `team_corners.home = null`, `team_corners.away = null`.
-- `league_corner_results` содержит 0 строк.
-- Следовательно, stored bookmaker corner-line evidence по-прежнему отсутствует.
 
 ## CORNERS — завершённые исследования
 
@@ -87,153 +74,157 @@
 - corner-total research — прогноз количества/тотала угловых;
 - bookmaker corner market — отдельный внешний источник данных.
 
-### 1. SEASON_INVARIANT_CORNERS_V1 — CLOSED / PORTABLE_STRONG
+### SEASON_INVARIANT_CORNERS_V1 — CLOSED / PORTABLE_STRONG
 
-Историческая проверка `CORNERS10` против `GOALS10` на полностью held-out сезонах EPL, La Liga и Serie A:
-- EPL: Brier/log-loss wins 6/7;
+Held-out EPL, La Liga, Serie A:
+- EPL: `CORNERS10` лучше `GOALS10` 6/7 сезонов по Brier и log-loss;
 - La Liga: 5/7;
 - Serie A: 7/7;
-- всего 18/21 wins по обеим основным метрикам.
+- всего 18/21 wins.
 
-Вывод: информация об угловых — устойчивый football-state signal и не выглядит случайностью одного сезона.
+Вывод: информация об угловых — устойчивый football-state signal, а не случайность одного сезона.
 
-`CORNERS5` поддерживает то же направление. `CORNERS15` остаётся отдельным pending robustness check и не нужен для уже принятого основного вывода.
+Но historical incremental test показал, что `MARKET_CORNERS10` в среднем не улучшает fitted 1X2 `MARKET_MODEL`. Поэтому дополнительный 1X2 bookmaker edge не доказан и production из-за этого не менять.
 
-Historical incremental test против 1X2 market показал, что `MARKET_CORNERS10` не улучшает fitted `MARKET_MODEL` в среднем. Поэтому `CORNERS10` не является доказанным дополнительным 1X2 bookmaker edge и production из-за него не менять.
-
-Early-drift historical audit:
+Early drift historical audit:
 - 20 матчей — слишком шумно;
 - около 40 — раннее предупреждение;
 - около 80 — существенно более надёжная проверка.
 
-Рабочий принцип: historical cross-season robustness = основное доказательство механизма; fresh data = drift monitor, а не новое открытие сигнала с нуля.
+PR #212 merged `f72952be44249cceceb6a81cb6ff02d885e588ff`.
+Docs closure PR #213 merged `3885922db15ec5613452c5f9dedf97601d8e6542`.
 
-PR #212 merged: `f72952be44249cceceb6a81cb6ff02d885e588ff`.
-Docs closure PR #213 merged: `3885922db15ec5613452c5f9dedf97601d8e6542`.
+### CORNER_TOTAL_SIGNAL_V1 — CLOSED / NOT_PORTABLE_TOTAL_SIGNAL
 
-### 2. CORNER_TOTAL_SIGNAL_V1 — CLOSED / NOT_PORTABLE_TOTAL_SIGNAL
-
-Впервые проверили сами тоталы угловых.
-
-Фиксированная формула использовала последние 10 EPL матчей обеих команд:
-- corners-for команды;
-- corners-against соперника;
-- сырое ожидаемое число угловых.
-
-Held-out seasons: 2019/20–2025/26, 2581 матч.
-
-Результат:
-- weighted delta MAE = `+0.040076` против простого historical mean baseline;
-- MAE wins = 2/7 сезонов;
-- weighted AUC для Over 9.5 ≈ `0.5053`.
-
-Вывод: сырое recent-corners average нельзя использовать как прямой прогноз тотала.
-
-PR #214 merged: `92633e3f011146a533b3cdce1ab26080efe1b139`.
-Post-merge CI green; production `.pkl` unchanged.
-
-### 3. CORNER_TOTAL_CALIBRATED_V2 — CLOSED / PORTABLE_CALIBRATED_TOTAL_SIGNAL
-
-Тот же самый V1 signal без новых признаков был честно откалиброван отдельно перед каждым test season только по более ранним сезонам.
-
-Результат:
-- weighted delta MAE ≈ `-0.007791`;
-- calibrated MAE wins = 6/7 сезонов;
-- fitted slopes примерно 0.03–0.24, то есть recent-corner signal нужно сильно shrink к среднему по лиге;
+EPL 2019/20–2025/26, 2581 held-out matches.
+- weighted delta MAE `+0.040076` против historical mean baseline;
+- MAE wins 2/7;
 - weighted AUC Over 9.5 ≈ `0.5053`.
 
-Вывод: recent corner-state содержит небольшой переносимый сигнал для **ожидаемого численного количества угловых**, но почти не умеет ранжировать конкретные Over/Under матчи.
+Вывод: сырое recent-corners average нельзя использовать как прямой прогноз тотала.
+PR #214 merged `92633e3f011146a533b3cdce1ab26080efe1b139`.
 
-Это research finding, не betting edge и не production model.
+### CORNER_TOTAL_CALIBRATED_V2 — CLOSED / PORTABLE_CALIBRATED_TOTAL_SIGNAL
 
-PR #215 merged: `8e206f4e97f8b5d0e64bc2951716ad8d971def61`.
-Post-merge CI green; production `.pkl` unchanged.
+Тот же V1 signal откалиброван перед каждым test season только на более ранних сезонах.
+- weighted delta MAE ≈ `-0.007791`;
+- wins 6/7;
+- fitted slopes примерно 0.03–0.24;
+- weighted AUC Over 9.5 ≈ `0.5053`.
 
-### 4. CORNER_PRESSURE_SIGNAL_V3 — CLOSED / NOT_PORTABLE_PRESSURE_DISCRIMINATOR
+Вывод: recent corner-state даёт небольшой переносимый сигнал для ожидаемого **численного количества угловых**, но почти не ранжирует конкретные Over/Under матчи.
+PR #215 merged `8e206f4e97f8b5d0e64bc2951716ad8d971def61`.
 
-Проверили, может ли атакующее давление отличать high-corner матчи от low-corner.
+### CORNER_PRESSURE_SIGNAL_V3 — CLOSED / NOT_PORTABLE_PRESSURE_DISCRIMINATOR
 
-Primary = all-shots pressure по последним 10 матчам:
-- weighted AUC Over 9.5 = `0.498357`;
-- positive seasons = 3/7.
+- all-shots pressure AUC `0.498357`, positive 3/7;
+- shots-on-target diagnostic AUC `0.512793`, positive 5/7, ниже frozen threshold 0.52.
 
-Secondary preregistered diagnostic = shots-on-target pressure:
-- weighted AUC = `0.512793`;
-- positive seasons = 5/7;
-- ниже frozen strength threshold 0.52 и не может заменить primary после просмотра результата.
+Вывод: простой pressure signal не является устойчивым discriminator.
+PR #216 merged `95386fffb6b386efa26feb0ad4860135ded99257`.
 
-Вывод: простой pressure signal не является устойчивым самостоятельным discriminator.
+### CORNER_COMBINED_DISCRIMINATOR_V4 — CLOSED / NOT_PORTABLE_COMBINED_DISCRIMINATOR
 
-PR #216 merged: `95386fffb6b386efa26feb0ad4860135ded99257`.
-Post-merge CI green; production `.pkl` unchanged.
+Финальный free historical combination test: corner-state + shots + shots-on-target; каждый test season обучался только на более ранних сезонах.
+- weighted AUC Over 9.5 `0.501691`;
+- positive seasons 3/7;
+- frozen success rule был AUC > 0.52 и минимум 5/7 positive seasons.
 
-### 5. CORNER_COMBINED_DISCRIMINATOR_V4 — CLOSED / NOT_PORTABLE_COMBINED_DISCRIMINATOR
+**STOP RULE:** больше не искать новые комбинации, веса, окна или thresholds на этих же held-out seasons. Это будет data mining/overfitting.
 
-V4 заранее объявлен **финальным free historical combination test**.
+PR #217 merged `9bb1e8ed244e10f53d87850cb552aa70e148e0eb`.
+Docs closure PR #218 merged `80de764865adf653c6b76329922a87ac38c5c78f`.
+Все corner research workflows проверяли неизменность production `.pkl`.
 
-Фиксированные inputs:
-- corner-state;
-- all-shots pressure;
-- shots-on-target pressure.
+## Multi-Market bookmaker corners — текущее состояние
 
-Для каждого test season коэффициенты обучались только на более ранних сезонах. Никаких дополнительных features/windows/interactions/threshold search.
+Цель следующего шага: получить **реальную букмекерскую линию на угловые**, а затем сравнивать её с football corner signal / calibrated V2 expected count.
 
-Результат на 2581 held-out matches:
-- weighted AUC Over 9.5 = `0.501691`;
-- positive seasons = 3/7;
-- frozen requirement был AUC > 0.52 и минимум 5/7 positive seasons.
+Что подтверждено бесплатно:
+- stored bookmaker corner-line evidence = 0;
+- 2 старых `league_multi_market_snapshots` содержат только `spreads` и `totals`;
+- `total_corners = null` и team-corners = null;
+- `league_corner_results` = 0;
+- blocker остаётся `PROVIDER_CORNER_CAPABILITY_UNPROVEN`.
 
-Вывод: комбинация доступных бесплатных historical signals не создаёт устойчивый Over/Under 9.5 selector.
+### Старый активный probe target
 
-**STOP RULE:** больше не искать новые комбинации, веса, окна или thresholds на этих же held-out seasons. Это будет data mining/overfitting, а не новое доказательство.
+`multi_market_corner_capability_probe.py` всё ещё указывает на:
+- LA_LIGA;
+- Getafe — Celta Vigo;
+- event_id `0817220a8e0794e15ecba51338bb6cf8`;
+- kickoff `2026-09-07T17:00:00Z`.
 
-PR #217 merged: `9bb1e8ed244e10f53d87850cb552aa70e148e0eb`.
-Post-merge `Corner Combined Discriminator V4` green; pinned evidence, tests, final audit и production `.pkl` hash check passed.
+Матч уже прошёл. Поэтому runtime fail-closed не позволит использовать его как prospective paid probe.
 
-## Итог corner research простыми словами
+### Новый preregistered target — INACTIVE
 
-Что доказано:
-- угловые действительно несут устойчивую информацию о состоянии футбольных команд;
-- эта информация переносится между сезонами и лигами для football-state/1X2 контекста;
-- recent corner-state после сильной калибровки немного улучшает прогноз среднего количества угловых.
+Новый target выбран только из сохранённых `odds_snapshots` по существующему zero-cost rollover policy:
+- BUNDESLIGA;
+- Union Berlin — FC Schalke 04;
+- event_id `115c6679a72c5a360640b6baaa16e78c`;
+- kickoff `2026-09-11T18:30:00Z`.
 
-Что НЕ доказано:
-- дополнительный 1X2 edge поверх букмекера;
-- устойчивый выбор матчей Over/Under 9.5 corners;
-- bookmaker corner edge.
+Live read-only identity proof:
+- 17 stored snapshots;
+- ровно 1 distinct identity;
+- identity conflict = false;
+- provider requests = 0;
+- writes = 0.
 
-Почему останавливаем historical перебор:
-- V1 raw total failed;
-- V2 count calibration passed, но ranking почти random;
-- V3 pressure failed;
-- V4 fixed combination failed;
-- дальнейший поиск на тех же сезонах создаст высокий риск подгонки.
+Machine-readable record:
+`research/multi_market_corner_capability_probe_rollover_v2.json`.
 
-Следующая meaningful corner evidence должна прийти из **новой информации**, а не из новых комбинаций старой:
-1. actual bookmaker corner lines/prices; или
-2. более богатые event/territorial данные (crosses, attacks, box entries и т.п.), которых сейчас нет в historical store.
+Критически важно:
+- `active = false`;
+- automatic activation = false;
+- automatic target switching = false;
+- этот record сам не разрешает paid request;
+- требуется отдельная activation PR;
+- требуется fresh zero-cost quota preflight;
+- max paid requests = 1;
+- max paid credits = 2;
+- hard reserve = 100.
+
+Последнее сохранённое значение квоты: `remaining=193`, timestamp `2026-09-06T03:09:57.315423Z`.
+Оно **устарело и не разрешает paid action**.
+
+### PR / parallel-work history 2026-09-08
+
+При rollover возник полезный safety case:
+- initial PR #219 после green неожиданно получил параллельные commits;
+- exact-head merge guard остановил blind merge;
+- среди промежуточных изменений был временный `.tmp` placeholder;
+- был создан clean PR #220 от известного проверенного SHA `f86196aea6612e02a638ea6774e9d076e34c8e61`;
+- параллельная ветка затем сама очистила временные файлы и сделала более строгий вариант: новый target остаётся inactive, старый expired probe target не заменяется автоматически;
+- финальный head `011cf5e463200a6998351bf411d2f30f1e333c7d` прошёл Multi-Market, Bundesliga, Ligue 1, Serie A, Eredivisie и Research PR Validation;
+- `main` после merge: `46cdd4d4bd4cdcd4dd9d4d07d795d868727feb3f`.
+
+На текущем `main` временный `research/multi_market_corner_capability_probe_rollover_v2.json.tmp` отсутствует, промежуточный `multi_market_corner_capability_probe_fallback_v2.json` отсутствует.
 
 ## Security notice из live Supabase
 
-Во время read-only проверки схемы обнаружено: RLS disabled на таблицах:
+Read-only проверка показала RLS disabled на:
 - `teams`;
 - `predictions`;
 - `match_statistics`;
 - `league_prediction_ledger`;
 - `epl_ai_market_pair_ledger`.
 
-Это потенциальный security gap, но **не исправлять автоматически**: включение RLS без корректных policies может сломать приложение или research workflows. Нужен отдельный access-policy audit перед изменениями.
+Это отдельный security follow-up. **Не включать RLS автоматически** без access-policy audit: можно сломать приложение/research workflows.
 
 ## Текущий следующий шаг
 
-1. Corner historical free-data block считать **CLOSED**. Не повторять V1–V4 и не делать новые same-data combinations без действительно нового источника информации.
-2. Следующий corner-specific gate = bookmaker corner market capability. Сейчас stored evidence = 0, blocker `PROVIDER_CORNER_CAPABILITY_UNPROVEN`.
-3. Bounded The Odds API corner capability probe остаётся **manual-only paid action**. Автоматически его не запускать.
-4. Если пользователь намеренно разрешает manual paid probe и budget guards проходят, сначала заново сделать zero-cost quota/readiness proof, затем использовать существующий preregistered bounded probe — не создавать обходной paid scheduler.
-5. Если provider подтверждает corner markets, следующий research block = сравнение football corner signal/V2 expected count с actual bookmaker corner line, с новым preregistered contract.
-6. Если provider corners не поддерживает, зафиксировать negative capability proof и искать другой источник corner-market/event data, а не возвращаться к historical feature mining.
-7. Отдельно от corners: провести access-policy/RLS audit пяти Supabase таблиц перед любыми security изменениями.
-8. Параллельно продолжаются прежние operational priorities: provider-free settlement recovery, outcome-free sample health, existing frozen prospective collection и manual-only market refresh.
+1. Historical corner block считать **CLOSED**; не повторять V1–V4 и не делать same-data mining.
+2. Дождаться/получить свежий zero-cost `Multi-Market V2 Readiness Status` на `main`.
+3. Fresh proof должен подтвердить `paid_provider_requests=0`, `paid_provider_credits=0`, `writes=false`, свежие quota fields и сохранение hard reserve.
+4. Проверить, что Union Berlin — Schalke всё ещё prospective и `active=false` до отдельной активации.
+5. Только после свежего безопасного quota proof можно готовить отдельную activation PR для нового target.
+6. Даже после activation paid capability probe остаётся **manual-only** и требует отдельного явного разрешения пользователя.
+7. Если разрешение дано: максимум 1 provider request / 2 credits, hard reserve 100, никаких Supabase writes или model changes.
+8. Если provider отдаёт corner markets — новый preregistered research block сравнивает football corner signal/V2 expected count с actual bookmaker line.
+9. Если provider corners не поддерживает — зафиксировать negative capability proof и искать другой источник, не возвращаясь к historical feature mining.
+10. Параллельно сохраняются прежние operational priorities: provider-free settlement recovery, outcome-free sample health, existing frozen prospective collection и manual-only market refresh.
 
 ## Журнал решений
 
@@ -244,13 +235,23 @@ Post-merge `Corner Combined Discriminator V4` green; pinned evidence, tests, fin
 - Отказались от универсального правила «каждая идея обязана сначала ждать 100 свежих матчей»; fresh data используется как drift evidence после strong historical portability work.
 - `SEASON_INVARIANT_CORNERS_V1`: `PORTABLE_STRONG`.
 - `CORNER_TOTAL_SIGNAL_V1`: `NOT_PORTABLE_TOTAL_SIGNAL`.
-- `CORNER_TOTAL_CALIBRATED_V2`: `PORTABLE_CALIBRATED_TOTAL_SIGNAL`, но Over/Under ranking остаётся около random.
+- `CORNER_TOTAL_CALIBRATED_V2`: `PORTABLE_CALIBRATED_TOTAL_SIGNAL`, но Over/Under ranking около random.
 - `CORNER_PRESSURE_SIGNAL_V3`: `NOT_PORTABLE_PRESSURE_DISCRIMINATOR`.
-- `CORNER_COMBINED_DISCRIMINATOR_V4`: `NOT_PORTABLE_COMBINED_DISCRIMINATOR`; activated stop-rule against further same-data feature mining.
-- PR #214 merged `92633e3f011146a533b3cdce1ab26080efe1b139`.
-- PR #215 merged `8e206f4e97f8b5d0e64bc2951716ad8d971def61`.
-- PR #216 merged `95386fffb6b386efa26feb0ad4860135ded99257`.
-- PR #217 merged `9bb1e8ed244e10f53d87850cb552aa70e148e0eb`.
-- Все corner research workflows проверяли неизменность production `.pkl`; post-merge proofs green.
-- Zero-cost live check подтвердил: stored Multi-Market snapshots не содержат total/team corner lines; bookmaker corner capability остаётся unproven.
-- Зафиксирован отдельный Supabase security follow-up: RLS disabled на пяти таблицах; не менять без отдельного policy audit.
+- `CORNER_COMBINED_DISCRIMINATOR_V4`: `NOT_PORTABLE_COMBINED_DISCRIMINATOR`; установлен stop-rule против дальнейшего same-data feature mining.
+- PR #214/#215/#216/#217 merged; все production `.pkl` guards green.
+- Zero-cost live check подтвердил отсутствие stored bookmaker corner lines.
+- Зафиксирован отдельный Supabase RLS follow-up.
+
+### 2026-09-08
+
+- Старый Getafe — Celta capability target подтверждён как expired и fail-closed.
+- Zero-cost rollover выбрал Union Berlin — FC Schalke 04 на 2026-09-11 как следующий clean prospective candidate.
+- Live Supabase identity recheck: 17 snapshots, 1 identity, conflict=0.
+- Новая цель preregistered, но оставлена `active=false`; отдельная activation PR обязательна.
+- Последнее `remaining=193` признано stale и не используется как разрешение на paid action.
+- Regression failure старого fallback provenance не обходился: исторический Getafe–Celta record сохранён, для нового target создан отдельный record.
+- Exact-head guard поймал параллельное изменение PR; blind merge не выполнялся.
+- Финальное параллельное состояние очищено от временных файлов и прошло полный CI.
+- Текущий `main`: `46cdd4d4bd4cdcd4dd9d4d07d795d868727feb3f`.
+- Readiness workflow имеет scheduled run `05:12 UTC`, manual dispatch через текущую GitHub-связь недоступен.
+- Создана одноразовая автоматическая **read-only** проверка после scheduled readiness; она не имеет права запускать paid capability probe.
