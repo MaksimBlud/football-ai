@@ -30,6 +30,7 @@ LEAGUES = {
 TEAM_ALIASES = {
     "LA_LIGA": {
         "Athletic Club": "Ath Bilbao",
+        "Deportivo": "Dep. A Coruna",
         "Deportivo La Coruna": "Dep. A Coruna",
         "Elche": "Elche",
         "Malaga": "Malaga",
