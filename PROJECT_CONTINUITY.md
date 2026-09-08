@@ -195,7 +195,30 @@ Post-merge proof on `main`:
 - production model unchanged;
 - **paid `Multi-Market Corner Capability Probe` did not auto-start**.
 
-Current corner-specific blocker is therefore exactly one thing: **the actual capability probe is a manual-only paid action**. It must not be dispatched automatically.
+### Manual capability probe — CLOSED / CAPABILITY_MISS
+
+User-authorized manual `Multi-Market Corner Capability Probe` run `34246732050` completed successfully on 2026-09-08 against the exact preregistered Union Berlin–Schalke target.
+
+Observed provider result:
+- status = `CAPABILITY_MISS`;
+- provider request attempted = true;
+- paid provider requests = 1;
+- paid provider credits = `0`;
+- quota before = remaining 193 / used 307 / last_cost 0;
+- quota after = remaining 193 / used 307 / last_cost 0;
+- corner market keys = `[]`;
+- corner bookmaker count = `0`;
+- target_verified = true;
+- writes_performed = false;
+- production model hash unchanged.
+
+Artifact:
+- id `10064303200`;
+- ZIP SHA256 `5a7de8b02e1b82a29dc71c2a8a94c6154a2485bbaa32dd30d8bd6d0ef78a0cfa`.
+
+Decision: The Odds API corner capability path for this exact target is a clean negative proof. Do not repeat the same probe against the same target. Historical corner V1–V4 remain closed.
+
+Zero-cost source audit selected **Sportmonks** as the primary next candidate because its official market catalog explicitly includes `Alternative Corners` market id `69`, and its pre-match odds API supports fixture+market retrieval. Its forever-free token is limited to Scottish Premiership and Danish Superliga, so free coverage may be used only for capability/schema proof; any paid league coverage remains a separate explicit decision. `CORNER_MARKET_SOURCE_AUDIT_20260908.md` records the source audit. OpticOdds remains secondary because documentation proves rich corner statistics and market discovery, but not yet an equally direct zero-cost bookmaker-corner-odds proof.
 
 ## Settlement / public results
 
@@ -279,14 +302,15 @@ Read-only audit ранее нашёл RLS disabled на:
 
 ## Текущий следующий шаг
 
-1. Corner target activation считать **CLOSED / LIVE-PROVEN**: PR #227 merged, paid probe не автостартовал.
-2. Corner-specific next gate = actual `Multi-Market Corner Capability Probe`, но он остаётся **manual-only paid action**. Автоматически не запускать.
-3. Если пользователь явно разрешит paid corner probe: перед provider boundary probe сам повторно проверит quota/reserve; максимум 1 request / 2 credits. После результата сначала durable artifact + reviewed capability attestation, и только потом новый preregistered market-vs-V2 research block.
-4. Если capability miss: зафиксировать negative proof и искать другой bookmaker/event source; не возвращаться к historical corner V1–V4 mining.
-5. Отдельный market acquisition blocker остаётся: snapshots stale с 2026-09-05; paid h2h refresh manual-only, priority = Serie A #1 -> La Liga #2 -> EPL #3.
-6. Пока paid actions не разрешены, продолжать бесплатные/read-only задачи: outcome-free prospective sample health, collection metadata, settlement health, и полезные source audits без premature outcome reads.
-7. Frozen `EPL_AI_MARKET_PAIR_V1`, `PROSPECTIVE_MARKET_PATH_V1`, `PROSPECTIVE_CORNERS10_INCREMENTAL_V1` продолжать без premature outcome reads/backfill.
-8. RLS access-policy audit — отдельный безопасный read-only follow-up после основных research/operational blockers.
+1. The Odds API corner capability probe считать **CLOSED / CAPABILITY_MISS**: run `34246732050`, exact target verified, corner markets/bookmakers = 0, provider requests 1, credits 0, quota осталось 193, writes=false, production unchanged.
+2. Не повторять тот же The Odds API probe на Union Berlin–Schalke и не возвращаться к historical corner V1–V4 mining.
+3. Primary next corner source = **Sportmonks free-plan capability proof**. Сначала research-only implementation + mocked regression tests; live free call возможен только при наличии отдельного `SPORTMONKS_API_TOKEN`, без покупки/апгрейда подписки.
+4. Для free capability proof использовать только Scottish Premiership или Danish Superliga, затем preregister exact future fixture и проверить реальный bookmaker corner line/price для documented `Alternative Corners` market id 69. Статистика corners сама по себе capability не доказывает.
+5. Если Sportmonks free capability подтвердится: отдельно провести coverage/cost audit для нужных research-лиг и не покупать paid coverage автоматически. Если miss — durable negative proof и переход к следующему документированному provider, вероятно OpticOdds.
+6. Отдельный market acquisition blocker остаётся: snapshots stale с 2026-09-05; paid h2h refresh manual-only, priority = Serie A #1 -> La Liga #2 -> EPL #3.
+7. Пока paid actions не разрешены, продолжать бесплатные/read-only задачи: outcome-free prospective sample health, collection metadata, settlement health, source audits и free-provider capability work без premature outcome reads.
+8. Frozen `EPL_AI_MARKET_PAIR_V1`, `PROSPECTIVE_MARKET_PATH_V1`, `PROSPECTIVE_CORNERS10_INCREMENTAL_V1` продолжать без premature outcome reads/backfill.
+9. RLS access-policy audit — отдельный безопасный read-only follow-up после основных research/operational blockers.
 
 ## Журнал ключевых решений
 
@@ -309,3 +333,5 @@ Read-only audit ранее нашёл RLS disabled на:
 - PR #227 активировал заранее зарегистрированный Union Berlin–Schalke target без paid provider call.
 - CI #227 обнаружил два stale activation/rollover regression-контракта; оба исправлены без ослабления safety и стали зелёными.
 - PR #227 merge `1b219e1f8dce3789dfb8efff2783ae2826846d2d`; post-merge автоматически запустились только бесплатные Readiness/Rollover workflows; paid corner probe не стартовал.
+- Manual run `34246732050` дал clean `CAPABILITY_MISS`: The Odds API не вернул corner markets/bookmakers для exact Union Berlin–Schalke target; request=1, credits=0, remaining=193, writes=false, production unchanged; artifact `10064303200`.
+- Zero-cost source audit выбрал Sportmonks как primary fallback candidate: documented `Alternative Corners` market id 69 + fixture/market pre-match odds endpoint; free proof ограничить Scottish Premiership/Danish Superliga, paid expansion не автоматизировать.
