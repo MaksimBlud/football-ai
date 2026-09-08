@@ -195,7 +195,42 @@ Post-merge proof on `main`:
 - production model unchanged;
 - **paid `Multi-Market Corner Capability Probe` did not auto-start**.
 
-Current corner-specific blocker is therefore exactly one thing: **the actual capability probe is a manual-only paid action**. It must not be dispatched automatically.
+### Manual corner capability probe — CLOSED / CAPABILITY_MISS
+
+User-triggered `Multi-Market Corner Capability Probe` run `34246732050` completed successfully on `main` SHA `aaca74ff724378cce39b2ae2c6501a6a9d854f1b`.
+
+Exact target remained the preregistered BUNDESLIGA Union Berlin vs FC Schalke 04 identity (`event_id=115c6679a72c5a360640b6baaa16e78c`, kickoff `2026-09-11T18:30:00+00:00`).
+
+Observed result:
+- `provider_request_attempted=true`;
+- `paid_provider_requests=1`;
+- `paid_provider_credits=0`, cost known;
+- quota `193 -> 193`, hard reserve 100 preserved;
+- `corner_market_keys=[]`;
+- `corner_bookmaker_count=0`;
+- status `CAPABILITY_MISS`;
+- `writes_performed=false`;
+- production model hash unchanged;
+- no production `.pkl` changes;
+- artifact `10064303200`;
+- artifact ZIP SHA256 `5a7de8b02e1b82a29dc71c2a8a94c6154a2485bbaa32dd30d8bd6d0ef78a0cfa`.
+
+A green workflow means the fail-closed probe contract passed; it does **not** mean corner capability was confirmed.
+
+Decision: The Odds API is not treated as a usable bookmaker corner-line source for this target at probe time. Do not rerun the same target merely to hunt for a different result.
+
+### Alternative corner-line source audit — ZERO-COST / READ-ONLY
+
+Public provider documentation was checked without signup, API keys, trial activation or paid calls.
+
+Priority:
+1. **SportsGameOdds** — strongest next candidate. Public docs explicitly expose `cornerKicks-all-game-ou-over/under`, full-match total-corner line/price fields and bookmaker breakdown; the soccer API lists `BUNDESLIGA` among supported league IDs. Exact live Union–Schalke availability still requires authenticated API access.
+2. **Sportmonks** — credible backup. Public odds catalogue documents corner markets including `Corner Match Bet`, `Corner Handicap`, `Team Corners` and `Alternative Corners`, and pre-match odds expose bookmaker/market/price fields. Exact Bundesliga live odds proof requires an API token and appropriate coverage.
+3. **Betfair Exchange** — structural fallback. Official developer material exposes corner market types such as `CORNER_ODDS`, corner over/under variants and `CORNER_MATCH_BET`, but account/app-key access and exchange-specific integration add friction.
+
+No account was created, no trial started and no provider credits were spent during this audit.
+
+Decision: if a new external capability probe is authorized later, SportsGameOdds is the first source to test. Do not return to historical corner V1–V4 mining while source capability is the blocker.
 
 ## Settlement / public results
 
@@ -279,14 +314,14 @@ Read-only audit ранее нашёл RLS disabled на:
 
 ## Текущий следующий шаг
 
-1. Corner target activation считать **CLOSED / LIVE-PROVEN**: PR #227 merged, paid probe не автостартовал.
-2. Corner-specific next gate = actual `Multi-Market Corner Capability Probe`, но он остаётся **manual-only paid action**. Автоматически не запускать.
-3. Если пользователь явно разрешит paid corner probe: перед provider boundary probe сам повторно проверит quota/reserve; максимум 1 request / 2 credits. После результата сначала durable artifact + reviewed capability attestation, и только потом новый preregistered market-vs-V2 research block.
-4. Если capability miss: зафиксировать negative proof и искать другой bookmaker/event source; не возвращаться к historical corner V1–V4 mining.
-5. Отдельный market acquisition blocker остаётся: snapshots stale с 2026-09-05; paid h2h refresh manual-only, priority = Serie A #1 -> La Liga #2 -> EPL #3.
-6. Пока paid actions не разрешены, продолжать бесплатные/read-only задачи: outcome-free prospective sample health, collection metadata, settlement health, и полезные source audits без premature outcome reads.
+1. The Odds API corner capability probe считать **CLOSED / CAPABILITY_MISS**; same-target rerun не делать.
+2. Следующий corner-specific path = alternate source capability. Priority: **SportsGameOdds -> Sportmonks -> Betfair Exchange**.
+3. До любого аккаунта/trial/paid external action использовать только free/read-only public proof. Новый signup/API-key/trial/paid action требует отдельного явного разрешения пользователя.
+4. Если alternate source реально отдаёт bookmaker total-corner line + price на prospective fixture: сначала durable proof/attestation, затем отдельный preregistered `V2 expected corners vs bookmaker corner line` experiment.
+5. Если viable source не находится, зафиксировать negative proof и переключиться на другой research direction; historical corner V1–V4 STOP RULE не нарушать.
+6. Отдельный market acquisition blocker остаётся: snapshots stale с 2026-09-05; paid h2h refresh manual-only, priority = Serie A -> La Liga -> EPL.
 7. Frozen `EPL_AI_MARKET_PAIR_V1`, `PROSPECTIVE_MARKET_PATH_V1`, `PROSPECTIVE_CORNERS10_INCREMENTAL_V1` продолжать без premature outcome reads/backfill.
-8. RLS access-policy audit — отдельный безопасный read-only follow-up после основных research/operational blockers.
+8. RLS access-policy audit — отдельный read-only follow-up после основных research/operational blockers.
 
 ## Журнал ключевых решений
 
@@ -309,3 +344,7 @@ Read-only audit ранее нашёл RLS disabled на:
 - PR #227 активировал заранее зарегистрированный Union Berlin–Schalke target без paid provider call.
 - CI #227 обнаружил два stale activation/rollover regression-контракта; оба исправлены без ослабления safety и стали зелёными.
 - PR #227 merge `1b219e1f8dce3789dfb8efff2783ae2826846d2d`; post-merge автоматически запустились только бесплатные Readiness/Rollover workflows; paid corner probe не стартовал.
+- User manually dispatched corner capability probe run `34246732050`; exact preregistered target verified.
+- Probe result `CAPABILITY_MISS`: one provider request, 0 credits, quota stayed 193, no corner market keys/bookmakers, no writes, production model unchanged.
+- The Odds API same-target corner probing is closed; do not rerun merely to hunt.
+- Zero-cost public source audit ranked SportsGameOdds first, Sportmonks second, Betfair Exchange third; no signup/trial/paid calls were performed.
