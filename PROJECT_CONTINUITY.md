@@ -155,7 +155,7 @@ Docs closure PR #218 merged `80de764865adf653c6b76329922a87ac38c5c78f`.
 - event_id `0817220a8e0794e15ecba51338bb6cf8`;
 - kickoff `2026-09-07T17:00:00Z`.
 
-Матч уже прошёл. Поэтому runtime fail-closed не позволит использовать его как prospective paid probe.
+Матч уже прошёл. Runtime fail-closed не позволит использовать его как prospective paid probe.
 
 ### Новый preregistered target — INACTIVE
 
@@ -186,21 +186,39 @@ Machine-readable record:
 - max paid credits = 2;
 - hard reserve = 100.
 
+### Закрытые activation guards
+
+PR #221 (`Record zero paid-probe attempts before corner rollover activation`) merged в `main` как `d14465600d7a4f02280afa3561568960789ef4a9`.
+
+Он **не активировал** Union–Schalke и не делал paid call. Он только сохранил read-only GitHub Actions proof:
+- repository workflow_dispatch runs observed = 7;
+- corner capability probe workflow_dispatch runs observed = 0;
+- current active Getafe–Celta provider attempts observed = 0;
+- current active target expired = true;
+- paid provider requests = 0;
+- paid provider credits = 0;
+- writes = false;
+- rollover остаётся `active=false`.
+
+Таким образом два activation conditions уже подтверждены:
+1. старая active target expired;
+2. по ней не было ни одной paid-provider попытки.
+
+Остаётся ключевой guard: **fresh zero-cost quota preflight**.
+
 Последнее сохранённое значение квоты: `remaining=193`, timestamp `2026-09-06T03:09:57.315423Z`.
-Оно **устарело и не разрешает paid action**.
+Оно устарело и **не разрешает paid action**.
 
-### PR / parallel-work history 2026-09-08
+### Parallel-work safety case 2026-09-08
 
-При rollover возник полезный safety case:
-- initial PR #219 после green неожиданно получил параллельные commits;
+Во время rollover:
+- initial PR #219 после одного green head неожиданно получил параллельные commits;
 - exact-head merge guard остановил blind merge;
 - среди промежуточных изменений был временный `.tmp` placeholder;
-- был создан clean PR #220 от известного проверенного SHA `f86196aea6612e02a638ea6774e9d076e34c8e61`;
-- параллельная ветка затем сама очистила временные файлы и сделала более строгий вариант: новый target остаётся inactive, старый expired probe target не заменяется автоматически;
-- финальный head `011cf5e463200a6998351bf411d2f30f1e333c7d` прошёл Multi-Market, Bundesliga, Ligue 1, Serie A, Eredivisie и Research PR Validation;
-- `main` после merge: `46cdd4d4bd4cdcd4dd9d4d07d795d868727feb3f`.
-
-На текущем `main` временный `research/multi_market_corner_capability_probe_rollover_v2.json.tmp` отсутствует, промежуточный `multi_market_corner_capability_probe_fallback_v2.json` отсутствует.
+- параллельная ветка затем сама очистила временные файлы и сохранила более строгую схему: новый target preregistered, но inactive;
+- финальный preregistration head `011cf5e463200a6998351bf411d2f30f1e333c7d` прошёл Multi-Market, Bundesliga, Ligue 1, Serie A, Eredivisie и Research PR Validation;
+- на `main` временный `.tmp` и промежуточный fallback-v2 отсутствуют;
+- clean PR #220 был создан из известного проверенного SHA, но фактическим source of truth остаётся текущее состояние `main`.
 
 ## Security notice из live Supabase
 
@@ -216,12 +234,12 @@ Read-only проверка показала RLS disabled на:
 ## Текущий следующий шаг
 
 1. Historical corner block считать **CLOSED**; не повторять V1–V4 и не делать same-data mining.
-2. Дождаться/получить свежий zero-cost `Multi-Market V2 Readiness Status` на `main`.
+2. Получить свежий zero-cost `Multi-Market V2 Readiness Status` на `main`.
 3. Fresh proof должен подтвердить `paid_provider_requests=0`, `paid_provider_credits=0`, `writes=false`, свежие quota fields и сохранение hard reserve.
 4. Проверить, что Union Berlin — Schalke всё ещё prospective и `active=false` до отдельной активации.
-5. Только после свежего безопасного quota proof можно готовить отдельную activation PR для нового target.
-6. Даже после activation paid capability probe остаётся **manual-only** и требует отдельного явного разрешения пользователя.
-7. Если разрешение дано: максимум 1 provider request / 2 credits, hard reserve 100, никаких Supabase writes или model changes.
+5. Если fresh quota safe, подготовить отдельную activation PR для Union–Schalke. Activation сама не должна делать provider call.
+6. После activation paid capability probe остаётся **manual-only** и требует отдельного явного разрешения пользователя.
+7. При разрешении: максимум 1 provider request / 2 credits, hard reserve 100, никаких Supabase writes или model changes.
 8. Если provider отдаёт corner markets — новый preregistered research block сравнивает football corner signal/V2 expected count с actual bookmaker line.
 9. Если provider corners не поддерживает — зафиксировать negative capability proof и искать другой источник, не возвращаясь к historical feature mining.
 10. Параллельно сохраняются прежние operational priorities: provider-free settlement recovery, outcome-free sample health, existing frozen prospective collection и manual-only market refresh.
@@ -251,7 +269,8 @@ Read-only проверка показала RLS disabled на:
 - Последнее `remaining=193` признано stale и не используется как разрешение на paid action.
 - Regression failure старого fallback provenance не обходился: исторический Getafe–Celta record сохранён, для нового target создан отдельный record.
 - Exact-head guard поймал параллельное изменение PR; blind merge не выполнялся.
-- Финальное параллельное состояние очищено от временных файлов и прошло полный CI.
-- Текущий `main`: `46cdd4d4bd4cdcd4dd9d4d07d795d868727feb3f`.
-- Readiness workflow имеет scheduled run `05:12 UTC`, manual dispatch через текущую GitHub-связь недоступен.
+- Временные параллельные файлы в финальном `main` отсутствуют.
+- PR #221 read-only проверкой подтвердил: corner capability workflow_dispatch attempts = 0; paid provider attempts = 0; rollover всё ещё inactive.
+- Текущий `main`: `d14465600d7a4f02280afa3561568960789ef4a9`.
+- Readiness workflow имеет scheduled run `05:12 UTC`; manual workflow dispatch через текущую GitHub-связь недоступен.
 - Создана одноразовая автоматическая **read-only** проверка после scheduled readiness; она не имеет права запускать paid capability probe.
