@@ -43,6 +43,24 @@
     "paid_provider_credits": 0,
     "writes_performed": false
   },
+  "provider_attempt_history": {
+    "source": "github_actions_workflow_dispatch_history",
+    "checked_at_utc": "2026-09-08T01:49:08+00:00",
+    "repository_workflow_dispatch_runs_observed": 7,
+    "corner_capability_probe_workflow_dispatch_runs_observed": 0,
+    "current_active_target_provider_request_attempts_observed": 0,
+    "current_active_target": {
+      "league": "LA_LIGA",
+      "event_id": "0817220a8e0794e15ecba51338bb6cf8",
+      "home_team": "Getafe",
+      "away_team": "Celta Vigo",
+      "commence_time_utc": "2026-09-07T17:00:00+00:00"
+    },
+    "current_active_target_expired": true,
+    "paid_provider_requests": 0,
+    "paid_provider_credits": 0,
+    "writes_performed": false
+  },
   "quota_state_at_preregistration": {
     "fresh_quota_confirmed": false,
     "last_stored_remaining": 193,
