@@ -74,14 +74,14 @@ def test_prohibited_and_non_source_ready_leagues_are_excluded():
 
 
 def test_expired_active_target_does_not_auto_promote_candidate():
-    now = datetime(2026, 9, 11, 18, 31, tzinfo=UTC)
+    now = datetime(2026, 9, 7, 17, 1, tzinfo=UTC)
     rows = [
         event(
             "BUNDESLIGA",
             "future-clean",
-            "Bayern Munich",
-            "RB Leipzig",
-            "2026-09-13T18:30:00+00:00",
+            "Union Berlin",
+            "FC Schalke 04",
+            "2026-09-11T18:30:00+00:00",
         )
     ]
     plan = plan_rollover(rows, now_utc=now)
