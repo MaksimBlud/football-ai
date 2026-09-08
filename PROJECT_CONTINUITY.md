@@ -131,7 +131,7 @@ PR #217 merge `9bb1e8ed244e10f53d87850cb552aa70e148e0eb`.
 
 Stored bookmaker corner-line evidence = 0.
 
-Inactive preregistered target:
+Preregistered target:
 - BUNDESLIGA, Union Berlin vs FC Schalke 04;
 - kickoff `2026-09-11T18:30:00Z`;
 - event_id `115c6679a72c5a360640b6baaa16e78c`;
@@ -143,7 +143,26 @@ Inactive preregistered target:
 PR #219 merge `46cdd4d4bd4cdcd4dd9d4d07d795d868727feb3f`.
 PR #221 merge `d14465600d7a4f02280afa3561568960789ef4a9`.
 
-Blocker before activation = **fresh zero-cost quota proof**. Old ~193 credits from 2026-09-06 is stale. Hard reserve 100; future bounded probe max 1 request / 2 credits; manual-only.
+### Fresh quota proof — CLOSED / READY
+
+Scheduled `Multi-Market V2 Readiness Status` run `34210743251` completed successfully on 2026-09-08.
+
+- fresh quota remaining = `193`;
+- used = `307`;
+- zero-cost quota request `last_cost=0`;
+- `quota_ready=true`;
+- threshold = `104` = hard reserve 100 + one complete first event 4 credits;
+- hard reserve = 100;
+- corner capability probe itself remains capped at 1 paid request / max 2 credits;
+- readiness paid provider requests = 0, paid credits = 0;
+- `writes_performed=false`;
+- production model hash unchanged;
+- readiness artifact `10049695923`;
+- artifact ZIP SHA256 `7f9085ddb4142bd53910a7baa4ea62134e17240981ec20c2439ec6ac06d07aed`.
+
+Readiness result: infrastructure is ready, but provider corner capability is still unproven. The only capability blocker is `PROVIDER_CORNER_CAPABILITY_UNPROVEN`.
+
+Activation implementation branch: `research/activate-corner-capability-target-v2`. It only switches the preregistered probe target and tests/workflow assertions to Union Berlin–Schalke. **It does not run the paid probe.** Paid capability probe remains manual-only after branch -> PR -> CI -> fresh-main -> exact-head merge.
 
 ## Settlement / public results
 
@@ -257,13 +276,14 @@ Read-only audit ранее нашёл RLS disabled на:
 
 ## Текущий следующий шаг
 
-1. Settlement recovery считать CLOSED / LIVE_PROVEN; settlement late=0 во всех трёх market-path лигах.
-2. Market acquisition blocker подтверждён: snapshots stale с 2026-09-05; priority = Serie A #1, La Liga #2, EPL #3.
-3. **Не запускать paid h2h refresh автоматически.** Перед любым manual paid refresh нужен fresh zero-cost quota proof + existing reserve/safety guards.
-4. Отдельно от h2h acquisition: bookmaker-corner capability target остаётся inactive до fresh quota proof; corner paid probe manual-only и не должен «заодно» запускаться с h2h refresh.
-5. Frozen `EPL_AI_MARKET_PAIR_V1`, `PROSPECTIVE_MARKET_PATH_V1`, `PROSPECTIVE_CORNERS10_INCREMENTAL_V1` продолжать без premature outcome reads/backfill.
-6. Если paid action не разрешён, следующий полезный бесплатный шаг — проверить outcome-free collection/sample metadata и наличие новых zero-cost public/event data; не заниматься новым historical corner feature mining.
-7. RLS audit — отдельный follow-up после основных research/operational priorities.
+1. Fresh zero-cost quota proof **получен и зелёный**: 193 credits, quota_ready=true, hard reserve 100, paid=0, production unchanged.
+2. Закончить activation PR `research/activate-corner-capability-target-v2`: tests -> PR -> полный CI -> fresh-main -> exact-head merge. Этот шаг не должен запускать provider request.
+3. После merge bookmaker-corner capability probe станет технически готов, но остаётся **manual-only paid action**: максимум 1 request / 2 credits, с повторным runtime quota/reserve check перед provider boundary.
+4. Не объединять corner probe с stale h2h acquisition refresh. Это отдельные paid intents.
+5. Market acquisition blocker остаётся: snapshots stale с 2026-09-05; при отдельном manual h2h решении priority = Serie A #1, La Liga #2, EPL #3.
+6. Frozen `EPL_AI_MARKET_PAIR_V1`, `PROSPECTIVE_MARKET_PATH_V1`, `PROSPECTIVE_CORNERS10_INCREMENTAL_V1` продолжать без premature outcome reads/backfill.
+7. Если capability probe когда-нибудь подтвердит corner markets — сначала durable artifact + reviewed attestation, затем новый preregistered market-vs-V2 research block. Если miss — фиксировать negative capability proof и искать другой источник; не возвращаться к historical V1–V4 feature mining.
+8. RLS audit — отдельный follow-up после основных research/operational priorities.
 
 ## Журнал решений
 
@@ -285,4 +305,7 @@ Read-only audit ранее нашёл RLS disabled на:
 - Exact 13 previously late identities закрыты; rerun того же settlement-lag audit стал green: late=0 EPL/LL/SA, no scores/no writes/production unchanged.
 - `PROVIDER_FREE_RESULTS_FALLBACK_V1` закрыт как `LIVE_PROVEN`.
 - Zero-cost market acquisition audit подтвердил staleness с 2026-09-05 и recomputed existing PR #210 priority: Serie A #1 (12 due), La Liga #2 (5), EPL #3 (10).
-- Решение: priority report не является permission to spend. Paid h2h refresh и bookmaker-corner probe остаются отдельными manual-only действиями после fresh quota proof.
+- Решение: priority report не является permission to spend. Paid h2h refresh и bookmaker-corner probe остаются отдельными manual-only действиями.
+- Scheduled readiness run `34210743251` дал свежий zero-cost quota proof: remaining 193, used 307, last_cost 0, quota_ready=true, hard reserve 100, readiness paid requests/credits 0, production unchanged.
+- Fresh-quota blocker закрыт. Единственный remaining bookmaker-corner capability blocker = `PROVIDER_CORNER_CAPABILITY_UNPROVEN`.
+- Начата отдельная activation-ветка `research/activate-corner-capability-target-v2`: только switch preregistered target на Union Berlin–Schalke + regression/workflow assertions; paid probe в этой ветке не запускается.
