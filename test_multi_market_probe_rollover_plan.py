@@ -14,8 +14,8 @@ def event(league, event_id, home, away, kickoff):
 
 
 def test_rollover_is_advisory_zero_cost_and_never_switches_target():
-    now = datetime(2026, 9, 6, 5, 15, tzinfo=UTC)
-    rows = [event("LA_LIGA", "clean", "Getafe", "Celta Vigo", "2026-09-07T17:00:00+00:00")]
+    now = datetime(2026, 9, 8, 13, 45, tzinfo=UTC)
+    rows = [event("BUNDESLIGA", "clean", "Union Berlin", "FC Schalke 04", "2026-09-11T18:30:00+00:00")]
     plan = plan_rollover(rows, now_utc=now)
     assert plan["research_only"] is True
     assert plan["read_only"] is True
@@ -31,10 +31,10 @@ def test_rollover_is_advisory_zero_cost_and_never_switches_target():
 
 
 def test_candidate_requires_at_least_24_hours_lead():
-    now = datetime(2026, 9, 6, 5, 15, tzinfo=UTC)
+    now = datetime(2026, 9, 8, 13, 45, tzinfo=UTC)
     rows = [
-        event("LIGUE_1", "too-soon", "Marseille", "Paris FC", "2026-09-06T18:45:00+00:00"),
-        event("LA_LIGA", "clean", "Getafe", "Celta Vigo", "2026-09-07T17:00:00+00:00"),
+        event("LIGUE_1", "too-soon", "Marseille", "Paris FC", "2026-09-09T02:00:00+00:00"),
+        event("BUNDESLIGA", "clean", "Union Berlin", "FC Schalke 04", "2026-09-11T18:30:00+00:00"),
     ]
     plan = plan_rollover(rows, now_utc=now)
     assert plan["minimum_rollover_lead_hours"] == 24
@@ -42,11 +42,11 @@ def test_candidate_requires_at_least_24_hours_lead():
 
 
 def test_ambiguous_event_identity_is_excluded_fail_closed():
-    now = datetime(2026, 9, 6, 5, 15, tzinfo=UTC)
+    now = datetime(2026, 9, 8, 13, 45, tzinfo=UTC)
     rows = [
-        event("SERIE_A", "dup", "Cagliari", "Lecce", "2026-09-07T16:00:00+00:00"),
-        event("SERIE_A", "dup", "Cagliari", "Lecce", "2026-09-07T16:30:00+00:00"),
-        event("LA_LIGA", "clean", "Getafe", "Celta Vigo", "2026-09-07T17:00:00+00:00"),
+        event("SERIE_A", "dup", "Cagliari", "Lecce", "2026-09-10T16:00:00+00:00"),
+        event("SERIE_A", "dup", "Cagliari", "Lecce", "2026-09-10T16:30:00+00:00"),
+        event("BUNDESLIGA", "clean", "Union Berlin", "FC Schalke 04", "2026-09-11T18:30:00+00:00"),
     ]
     plan = plan_rollover(rows, now_utc=now)
     assert plan["ambiguous_event_ids_excluded"] == ["dup"]
@@ -54,8 +54,8 @@ def test_ambiguous_event_identity_is_excluded_fail_closed():
 
 
 def test_repeated_snapshots_of_same_identity_are_deduplicated():
-    now = datetime(2026, 9, 6, 5, 15, tzinfo=UTC)
-    clean = event("LA_LIGA", "clean", "Getafe", "Celta Vigo", "2026-09-07T17:00:00+00:00")
+    now = datetime(2026, 9, 8, 13, 45, tzinfo=UTC)
+    clean = event("BUNDESLIGA", "clean", "Union Berlin", "FC Schalke 04", "2026-09-11T18:30:00+00:00")
     plan = plan_rollover([clean, dict(clean), dict(clean)], now_utc=now)
     assert plan["ambiguous_event_ids_excluded"] == []
     assert plan["eligible_candidate_count"] == 1
@@ -63,18 +63,25 @@ def test_repeated_snapshots_of_same_identity_are_deduplicated():
 
 
 def test_prohibited_and_non_source_ready_leagues_are_excluded():
-    now = datetime(2026, 9, 6, 5, 15, tzinfo=UTC)
+    now = datetime(2026, 9, 8, 13, 45, tzinfo=UTC)
     rows = [
-        event("EREDIVISIE", "ered", "A", "B", "2026-09-07T12:00:00+00:00"),
-        event("RPL", "rpl", "C", "D", "2026-09-07T13:00:00+00:00"),
-        event("LA_LIGA", "clean", "Getafe", "Celta Vigo", "2026-09-07T17:00:00+00:00"),
+        event("EREDIVISIE", "ered", "A", "B", "2026-09-10T12:00:00+00:00"),
+        event("RPL", "rpl", "C", "D", "2026-09-10T13:00:00+00:00"),
+        event("BUNDESLIGA", "clean", "Union Berlin", "FC Schalke 04", "2026-09-11T18:30:00+00:00"),
     ]
     plan = plan_rollover(rows, now_utc=now)
     assert plan["proposed_candidate"]["event_id"] == "clean"
 
 
 def test_expired_active_target_does_not_auto_promote_candidate():
-    now = datetime(2026, 9, 7, 17, 1, tzinfo=UTC)
+    now = datetime(2026, 9, 8, 13, 45, tzinfo=UTC)
+    expired_target = {
+        "league": "LA_LIGA",
+        "event_id": "expired-target",
+        "home_team": "Old Home",
+        "away_team": "Old Away",
+        "commence_time_utc": "2026-09-08T13:44:00+00:00",
+    }
     rows = [
         event(
             "BUNDESLIGA",
@@ -84,11 +91,13 @@ def test_expired_active_target_does_not_auto_promote_candidate():
             "2026-09-11T18:30:00+00:00",
         )
     ]
-    plan = plan_rollover(rows, now_utc=now)
+    plan = plan_rollover(rows, now_utc=now, active_target=expired_target)
+    assert plan["active_target"] == expired_target
     assert plan["active_target_expired"] is True
     assert plan["active_target_seconds_remaining"] == 0
     assert plan["proposed_candidate"]["event_id"] == "future-clean"
     assert plan["automatic_target_switching_enabled"] is False
+    assert plan["requires_separate_preregistration_pr"] is True
 
 
 class Response:
@@ -137,8 +146,8 @@ class Client:
 
 
 def test_live_loader_is_supabase_only_and_uses_seven_day_window():
-    now = datetime(2026, 9, 6, 5, 15, tzinfo=UTC)
-    rows = [event("LA_LIGA", "clean", "Getafe", "Celta Vigo", "2026-09-07T17:00:00+00:00")]
+    now = datetime(2026, 9, 8, 13, 45, tzinfo=UTC)
+    rows = [event("BUNDESLIGA", "clean", "Union Berlin", "FC Schalke 04", "2026-09-11T18:30:00+00:00")]
     client = Client(rows)
     loaded = load_rollover_events(client, now_utc=now)
     assert client.table_name == "odds_snapshots"
@@ -146,4 +155,4 @@ def test_live_loader_is_supabase_only_and_uses_seven_day_window():
     assert any(call[0] == "gte" and call[1] == "commence_time_utc" for call in client.query.calls)
     lte_calls = [call for call in client.query.calls if call[0] == "lte" and call[1] == "commence_time_utc"]
     assert len(lte_calls) == 1
-    assert lte_calls[0][2] == "2026-09-13T05:15:00+00:00"
+    assert lte_calls[0][2] == "2026-09-15T13:45:00+00:00"
