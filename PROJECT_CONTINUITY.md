@@ -232,6 +232,41 @@ No account was created, no trial started and no provider credits were spent duri
 
 Decision: if a new external capability probe is authorized later, SportsGameOdds is the first source to test. Do not return to historical corner V1–V4 mining while source capability is the blocker.
 
+### SportsGameOdds probe implementation — CLOSED / MERGED
+
+PR #230 added a separate fail-closed SportsGameOdds capability path without performing an authenticated provider call.
+
+Merge: `fdc7a4064fd4fd97b6a98af27b97931e593fc85b`.
+Exact PR head: `f70d9232403fa50434129f61db0ce188ff8302b8`.
+
+Contract:
+- `SportsGameOdds Corner Capability Probe` remains `workflow_dispatch` only; no `push` or `schedule` trigger;
+- exact prospective target remains BUNDESLIGA Union Berlin vs FC Schalke 04, kickoff `2026-09-11T18:30:00+00:00`;
+- fixed requested odd ids: `cornerKicks-all-game-ou-over` and `cornerKicks-all-game-ou-under`;
+- max authenticated provider requests = 1;
+- API key is supplied only through secret `SPORTSGAMEODDS_API_KEY` and sent in the `x-api-key` header, never committed or placed in query parameters;
+- capability requires one **available same bookmaker** offering both Over and Under at the same numeric total-corner line with explicit prices;
+- consensus-only line/price, one-sided markets, unavailable bookmakers, mismatched lines, missing exact target and ambiguous identity do not confirm capability;
+- no Supabase writes;
+- no production `.pkl` changes;
+- no account creation, trial activation or subscription change is implemented.
+
+CI proof:
+- all 6 PR workflows passed on exact head `f70d9232403fa50434129f61db0ce188ff8302b8`;
+- `Multi-Market V1/V2 PR Validation` run `34249514873` compiled the new probe and included `test_multi_market_sportsgameodds_corner_capability_probe.py` in focused tests;
+- focused result = **104 passed**;
+- production artifact guard passed.
+
+Fresh-main check immediately before merge confirmed `main=7cdd083425b4314f291712f4edc13803a1832626`, the same base against which PR CI ran. Merge used exact-head protection.
+
+Post-merge proof:
+- `main` became `fdc7a4064fd4fd97b6a98af27b97931e593fc85b`;
+- GitHub Actions reported 0 runs for the merge SHA and 0 push runs after the merge for these paths;
+- the workflow file on `main` still has only `workflow_dispatch`;
+- therefore SportsGameOdds provider requests = 0, external account/subscription actions = 0, Supabase writes = 0, production `.pkl` changes = 0, prospective outcomes read = 0.
+
+Current blocker is no longer implementation. It is the **external credential/live capability gate**: obtaining a SportsGameOdds account/API key and dispatching the one-request authenticated probe require separate explicit user permission and must not happen automatically.
+
 ## Settlement / public results
 
 ### PROVIDER_FREE_RESULTS_FALLBACK_V1 — CLOSED / LIVE_PROVEN
@@ -315,13 +350,14 @@ Read-only audit ранее нашёл RLS disabled на:
 ## Текущий следующий шаг
 
 1. The Odds API corner capability probe считать **CLOSED / CAPABILITY_MISS**; same-target rerun не делать.
-2. Следующий corner-specific path = alternate source capability. Priority: **SportsGameOdds -> Sportmonks -> Betfair Exchange**.
-3. До любого аккаунта/trial/paid external action использовать только free/read-only public proof. Новый signup/API-key/trial/paid action требует отдельного явного разрешения пользователя.
-4. Если alternate source реально отдаёт bookmaker total-corner line + price на prospective fixture: сначала durable proof/attestation, затем отдельный preregistered `V2 expected corners vs bookmaker corner line` experiment.
-5. Если viable source не находится, зафиксировать negative proof и переключиться на другой research direction; historical corner V1–V4 STOP RULE не нарушать.
+2. SportsGameOdds capability implementation считать **CLOSED / MERGED** через PR #230; workflow manual-only, provider call ещё не выполнялся.
+3. Следующий corner-specific gate = внешний credential/live proof: получение SportsGameOdds account/API key и один authenticated run требуют отдельного явного разрешения пользователя; автоматически не создавать account/key и не dispatch workflow.
+4. Если пользователь отдельно разрешит этот внешний шаг: использовать exact Union Berlin–Schalke target и максимум 1 provider request; capability подтверждать только по same-bookmaker paired Over/Under на одной corner line с явными ценами.
+5. Если SportsGameOdds live capability подтвердится: сохранить durable artifact/attestation, затем открыть отдельный preregistered `V2 expected corners vs bookmaker corner line` experiment. Если miss/нет доступа — durable negative proof и переход к Sportmonks, затем Betfair Exchange; historical corner V1–V4 STOP RULE не нарушать.
 6. Отдельный market acquisition blocker остаётся: snapshots stale с 2026-09-05; paid h2h refresh manual-only, priority = Serie A -> La Liga -> EPL.
 7. Frozen `EPL_AI_MARKET_PAIR_V1`, `PROSPECTIVE_MARKET_PATH_V1`, `PROSPECTIVE_CORNERS10_INCREMENTAL_V1` продолжать без premature outcome reads/backfill.
-8. RLS access-policy audit — отдельный read-only follow-up после основных research/operational blockers.
+8. Пока внешний SportsGameOdds gate закрыт, продолжать бесплатные/read-only задачи: outcome-free prospective sample health, collection metadata, settlement health и source/access audits.
+9. RLS access-policy audit — отдельный read-only follow-up после основных research/operational blockers.
 
 ## Журнал ключевых решений
 
@@ -348,3 +384,5 @@ Read-only audit ранее нашёл RLS disabled на:
 - Probe result `CAPABILITY_MISS`: one provider request, 0 credits, quota stayed 193, no corner market keys/bookmakers, no writes, production model unchanged.
 - The Odds API same-target corner probing is closed; do not rerun merely to hunt.
 - Zero-cost public source audit ranked SportsGameOdds first, Sportmonks second, Betfair Exchange third; no signup/trial/paid calls were performed.
+- PR #230 implemented the SportsGameOdds fallback probe as manual-only research infrastructure. Exact head `f70d9232403fa50434129f61db0ce188ff8302b8` passed all 6 PR workflows; Multi-Market validation run `34249514873` reported 104 focused tests passed and production artifact guard green.
+- PR #230 merged as `fdc7a4064fd4fd97b6a98af27b97931e593fc85b` after fresh-main/exact-head checks. Post-merge merge SHA had 0 Actions runs and the new workflow remained `workflow_dispatch` only, so no SportsGameOdds request/account/subscription/Supabase/model action occurred.
