@@ -1,0 +1,112 @@
+name: SportsGameOdds Corner Capability Probe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SPORTSGAMEODDS_API_KEY: ${{ secrets.SPORTSGAMEODDS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install requests pytest
+
+      - name: Compile SportsGameOdds probe
+        run: python -m py_compile multi_market_sportsgameodds_corner_capability_probe.py
+
+      - name: Run SportsGameOdds probe regressions
+        run: pytest -q test_multi_market_sportsgameodds_corner_capability_probe.py
+
+      - name: Record production model hash before
+        run: sha256sum football_model_xgboost_elo.pkl > /tmp/model.before
+
+      - name: Run manual one-request SportsGameOdds capability probe
+        id: capability_probe
+        run: python multi_market_sportsgameodds_corner_capability_probe.py
+
+      - name: Verify SportsGameOdds capability contract
+        if: always() && steps.capability_probe.outcome != 'skipped'
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          p = json.loads(Path('artifacts/sportsgameodds_corner_capability_probe.json').read_text())
+          assert p['schema_version'] == 'SPORTSGAMEODDS_CORNER_CAPABILITY_PROBE_V1'
+          assert p['research_only'] is True
+          assert p['preregistered'] is True
+          assert p['provider'] == 'SPORTSGAMEODDS'
+          assert p['provider_league_id'] == 'BUNDESLIGA'
+          assert p['target'] == {
+              'league': 'BUNDESLIGA',
+              'home_team': 'Union Berlin',
+              'away_team': 'FC Schalke 04',
+              'commence_time_utc': '2026-09-11T18:30:00+00:00',
+          }
+          assert p['requested_odd_ids'] == [
+              'cornerKicks-all-game-ou-over',
+              'cornerKicks-all-game-ou-under',
+          ]
+          assert p['max_provider_requests'] == 1
+          assert p['writes_performed'] is False
+          assert p['external_account_action_performed'] is False
+          assert p['subscription_change_performed'] is False
+          assert p['status'] in {'CAPABILITY_CONFIRMED', 'CAPABILITY_MISS', 'BLOCKED', 'FAILED'}
+
+          attempted = bool(p['provider_request_attempted'])
+          assert p['provider_requests'] == (1 if attempted else 0)
+          assert p['provider_requests'] <= 1
+
+          if p['status'] == 'CAPABILITY_CONFIRMED':
+              assert attempted is True
+              assert p['target_verified'] is True
+              assert p['provider_event_id']
+              assert p['paired_bookmaker_count'] >= 1
+              assert len(p['paired_bookmaker_evidence']) == p['paired_bookmaker_count']
+              for item in p['paired_bookmaker_evidence']:
+                  assert item['bookmaker_id']
+                  assert item['line']
+                  assert item['over_odds']
+                  assert item['under_odds']
+          elif p['status'] == 'CAPABILITY_MISS':
+              assert attempted is True
+              assert p['paired_bookmaker_count'] == 0
+              assert p['paired_bookmaker_evidence'] == []
+          elif p['status'] == 'BLOCKED':
+              assert attempted is False
+          elif not attempted:
+              assert p['provider_requests'] == 0
+
+          print('status=', p['status'])
+          print('target=', p['target'])
+          print('provider_request_attempted=', attempted)
+          print('provider_requests=', p['provider_requests'])
+          print('target_verified=', p.get('target_verified'))
+          print('paired_bookmaker_count=', p.get('paired_bookmaker_count'))
+          print('blocker=', p.get('blocker'))
+          print('error=', p.get('error'))
+          PY
+
+      - name: Verify production model unchanged
+        if: always()
+        run: |
+          sha256sum football_model_xgboost_elo.pkl > /tmp/model.after
+          diff -u /tmp/model.before /tmp/model.after
+
+      - name: Upload SportsGameOdds capability artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sportsgameodds-corner-capability-probe
+          path: artifacts/sportsgameodds_corner_capability_probe.json
+          if-no-files-found: error
