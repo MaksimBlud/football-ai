@@ -1,0 +1,56 @@
+{
+  "schema_version": "MULTI_MARKET_CORNER_CAPABILITY_PROBE_FALLBACK_V2",
+  "research_only": true,
+  "active": false,
+  "automatic_activation_allowed": false,
+  "automatic_target_switching_allowed": false,
+  "paid_request_allowed_by_this_file": false,
+  "requires_separate_activation_pr": true,
+  "activated_by_separate_pr": false,
+  "selection_policy": "earliest_unambiguous_corner_source_ready_fixture_at_least_24h_after_rollover_plan_generation",
+  "selected_before_corner_response": true,
+  "target": {
+    "league": "BUNDESLIGA",
+    "event_id": "115c6679a72c5a360640b6baaa16e78c",
+    "home_team": "Union Berlin",
+    "away_team": "FC Schalke 04",
+    "commence_time_utc": "2026-09-11T18:30:00+00:00"
+  },
+  "source_rollover_proof": {
+    "workflow_run_id": 34112118221,
+    "artifact_id": 10014773586,
+    "artifact_zip_sha256": "6b34164dc659bf438eea66d989890d0bfb12c8429a18f9d677af3fea4455aa7e",
+    "head_sha": "9265d90bb7c1eca806a86be874832517d694c35f",
+    "generated_at_utc": "2026-09-07T10:34:45.987049+00:00",
+    "active_target": {
+      "league": "LA_LIGA",
+      "event_id": "0817220a8e0794e15ecba51338bb6cf8",
+      "home_team": "Getafe",
+      "away_team": "Celta Vigo",
+      "commence_time_utc": "2026-09-07T17:00:00+00:00"
+    },
+    "active_target_expired_at_proof_time": false,
+    "active_target_seconds_remaining": 23114,
+    "eligible_candidate_count": 48,
+    "ambiguous_event_ids_excluded": [
+      "0eba3c2d3bcf1d1fe4ab3180a3d03152",
+      "15e3bf25540c88237a06c03df1cb334b",
+      "3d6fe1c993604abb0151a48ef96eab5a",
+      "6406438af00a2a42a81d6b2f1656d474",
+      "8f751e96142db860ba66bbea713baf50",
+      "fc0154734861d4a222bdb50e15d2bee2"
+    ],
+    "paid_provider_requests": 0,
+    "paid_provider_credits": 0,
+    "writes_performed": false
+  },
+  "activation_conditions": {
+    "current_active_target_must_be_expired": true,
+    "current_active_probe_must_have_zero_provider_request_attempts": true,
+    "fresh_zero_cost_quota_preflight_required": true,
+    "hard_reserve_credits": 100,
+    "max_paid_requests": 1,
+    "max_paid_credits": 2,
+    "target_must_still_be_prospective": true
+  }
+}
