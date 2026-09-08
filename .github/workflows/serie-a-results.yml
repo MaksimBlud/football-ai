@@ -9,6 +9,8 @@ on:
     paths:
       - ".github/workflows/serie-a-results.yml"
       - "update_serie_a_results.py"
+      - "espn_current_results_fallback.py"
+      - "test_espn_current_results_fallback.py"
       - "tests/test_serie_a_results_source_availability.py"
 
 concurrency:
@@ -33,7 +35,7 @@ jobs:
           cache: pip
       - run: |
           python -m pip install --upgrade pip
-          pip install pandas numpy requests supabase python-dotenv
+          pip install pandas numpy requests supabase python-dotenv pytest
       - name: Check required secrets
         run: |
           python - <<'PY'
@@ -44,7 +46,11 @@ jobs:
               raise SystemExit("Missing Serie A results secrets: " + ", ".join(missing))
           print("PASS: Serie A results Supabase secrets available; values not printed")
           PY
-      - name: Sync immutable Serie A finished results from public CSV
+      - name: Compile provider-free results sync
+        run: python -m py_compile update_serie_a_results.py espn_current_results_fallback.py
+      - name: Run provider-free results regressions
+        run: pytest -q tests/test_serie_a_results_source_availability.py test_espn_current_results_fallback.py
+      - name: Sync immutable Serie A finished results from public sources
         run: python update_serie_a_results.py --write --status-json artifacts/serie_a_results_status.json
       - name: Verify explicit provider-free result status
         if: always()
@@ -60,11 +66,23 @@ jobs:
           assert p['paid_provider_requests']==0
           assert p['status'] in {'WRITTEN','SOURCE_UNAVAILABLE'}
           if p['status']=='SOURCE_UNAVAILABLE':
-              assert int(p['public_http_requests'])==3
-              assert int(p['http_status']) in {429,500,502,503,504}
+              assert p['fallback_used'] is True
+              assert int(p['primary_public_http_requests'])==3
+              assert 1 <= int(p['fallback_public_http_requests']) <= 3
               assert int(p['inserted'])==0
               assert int(p['conflicts'])==0
+          if p['status']=='WRITTEN':
+              assert int(p['conflicts'])==0
+              if p['fallback_used']:
+                  assert p['source_provider']=='ESPN_SCOREBOARD_FALLBACK'
+                  assert int(p['primary_public_http_requests'])==3
+                  assert 1 <= int(p['fallback_public_http_requests']) <= 3
+              else:
+                  assert p['source_provider']=='FOOTBALL_DATA_CSV'
+                  assert int(p['fallback_public_http_requests'])==0
           print('status=',p['status'])
+          print('source_provider=',p.get('source_provider'))
+          print('fallback_used=',p.get('fallback_used'))
           print('public_http_requests=',p.get('public_http_requests'))
           print('inserted=',p.get('inserted'))
           print('unchanged=',p.get('unchanged'))

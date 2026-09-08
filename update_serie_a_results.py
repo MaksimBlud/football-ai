@@ -1,4 +1,8 @@
-"""Sync immutable Serie A finished results from configured public Football-Data CSV."""
+"""Sync immutable Serie A finished results from provider-free public sources.
+
+Football-Data remains primary. ESPN scoreboard is a keyless fallback used only
+after bounded transient primary-source exhaustion. No Odds API calls are made.
+"""
 
 from __future__ import annotations
 
@@ -10,7 +14,16 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 
-from football_data_current_results import PublicResultsSourceUnavailable, fetch_current_finished_results
+from espn_current_results_fallback import (
+    ESPNResultsSourceUnavailable,
+    PROVIDER as ESPN_PROVIDER,
+    fetch_football_data_like_results,
+)
+from football_data_current_results import (
+    PublicResultsSourceUnavailable,
+    build_finished_frame as build_public_finished_frame,
+    fetch_current_finished_results,
+)
 import league_supabase_persistence as persistence
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 
@@ -85,62 +98,116 @@ def build_finished_frame(events: list[dict]) -> pd.DataFrame:
     return frame
 
 
-def sync_results(*, write: bool, client=None) -> dict:
+def fetch_espn_finished_results() -> dict:
+    """Fetch zero-cost fallback and reuse the existing generic normalizer."""
+    provider = fetch_football_data_like_results(league=LEAGUE)
+    frame = build_public_finished_frame(provider["frame"], SERIE_A_RUNTIME_CONFIG)
+    return {
+        **provider,
+        "frame": frame,
+        "finished_rows": int(len(frame)),
+    }
+
+
+def _source_unavailable(primary: PublicResultsSourceUnavailable, fallback: ESPNResultsSourceUnavailable) -> dict:
+    return {
+        "status": "SOURCE_UNAVAILABLE",
+        "source_url": fallback.url,
+        "source_provider": ESPN_PROVIDER,
+        "http_status": fallback.status_code,
+        "primary_source_url": primary.url,
+        "primary_http_status": int(primary.status_code),
+        "primary_public_http_requests": int(primary.attempts),
+        "fallback_used": True,
+        "fallback_public_http_requests": int(fallback.attempts),
+        "inserted": 0,
+        "unchanged": 0,
+        "conflicts": 0,
+        "finished_rows": 0,
+        "public_http_requests": int(primary.attempts + fallback.attempts),
+        "paid_provider_requests": 0,
+    }
+
+
+def sync_results(
+    *,
+    write: bool,
+    client=None,
+    fetch_fn=None,
+    fallback_fn=None,
+) -> dict:
+    if fetch_fn is None:
+        fetch_fn = fetch_current_finished_results
+    if fallback_fn is None:
+        fallback_fn = fetch_espn_finished_results
+
+    primary_error: PublicResultsSourceUnavailable | None = None
     try:
-        provider = fetch_current_finished_results(SERIE_A_RUNTIME_CONFIG)
+        provider = fetch_fn(SERIE_A_RUNTIME_CONFIG)
+        fallback_used = False
     except PublicResultsSourceUnavailable as exc:
-        print("=" * 88)
-        print("SERIE A FINISHED RESULTS SYNC — PUBLIC FOOTBALL-DATA CSV")
-        print("=" * 88)
-        print("source status: TRANSIENT_UNAVAILABLE")
-        print("source:", exc.url)
-        print("HTTP status:", exc.status_code, "attempts:", exc.attempts)
-        return {
-            "status": "SOURCE_UNAVAILABLE",
-            "source_url": exc.url,
-            "http_status": exc.status_code,
-            "inserted": 0,
-            "unchanged": 0,
-            "conflicts": 0,
-            "finished_rows": 0,
-            "public_http_requests": exc.attempts,
-            "paid_provider_requests": 0,
-        }
+        primary_error = exc
+        try:
+            provider = fallback_fn()
+            fallback_used = True
+        except ESPNResultsSourceUnavailable as fallback_exc:
+            result = _source_unavailable(exc, fallback_exc)
+            print("=" * 88)
+            print("SERIE A FINISHED RESULTS SYNC — BOTH PUBLIC SOURCES UNAVAILABLE")
+            print("=" * 88)
+            print("primary:", exc.url, exc.status_code, "attempts:", exc.attempts)
+            print("fallback:", fallback_exc.url, fallback_exc.status_code, "attempts:", fallback_exc.attempts)
+            return result
 
     frame = provider["frame"]
+    source_provider = str(provider.get("source_provider") or "FOOTBALL_DATA_CSV")
+    total_requests = int(provider["public_http_requests"] + (primary_error.attempts if primary_error else 0))
+
     print("=" * 88)
-    print("SERIE A FINISHED RESULTS SYNC — PUBLIC FOOTBALL-DATA CSV")
+    print("SERIE A FINISHED RESULTS SYNC — PROVIDER-FREE PUBLIC RESULTS")
     print("=" * 88)
     print("source:", provider["source_url"])
+    print("source provider:", source_provider)
+    print("fallback used:", fallback_used)
     print("source rows:", provider["source_rows"])
     print("finished rows:", len(frame))
     print("paid provider requests:", provider["paid_provider_requests"])
     if not frame.empty:
         print(frame.to_string(index=False))
+
+    base = {
+        "source_url": provider["source_url"],
+        "source_provider": source_provider,
+        "fallback_used": bool(fallback_used),
+        "primary_public_http_requests": int(primary_error.attempts if primary_error else provider["public_http_requests"]),
+        "fallback_public_http_requests": int(provider["public_http_requests"] if fallback_used else 0),
+        "finished_rows": len(frame),
+        "public_http_requests": total_requests,
+        "paid_provider_requests": 0,
+    }
+    if primary_error is not None:
+        base["primary_source_url"] = primary_error.url
+        base["primary_http_status"] = int(primary_error.status_code)
+
     if not write:
         print("DRY RUN: no Supabase writes")
         return {
+            **base,
             "status": "DRY_RUN",
-            "source_url": provider["source_url"],
             "inserted": 0,
             "unchanged": 0,
             "conflicts": 0,
-            "finished_rows": len(frame),
-            "public_http_requests": int(provider["public_http_requests"]),
-            "paid_provider_requests": 0,
         }
+
     if client is None:
         from database import supabase as client
     metrics = persistence.persist_results(client, frame, SERIE_A_RUNTIME_CONFIG)
     result = {
+        **base,
         "status": "WRITTEN",
-        "source_url": provider["source_url"],
         "inserted": int(metrics["inserted"]),
         "unchanged": int(metrics["unchanged"]),
         "conflicts": int(metrics["conflicts"]),
-        "finished_rows": len(frame),
-        "public_http_requests": int(provider["public_http_requests"]),
-        "paid_provider_requests": 0,
     }
     print("persistence:", result)
     print("production model used:", False)
