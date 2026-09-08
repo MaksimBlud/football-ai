@@ -151,6 +151,7 @@ def test_non_transient_validation_error_still_fails_closed():
 
 def test_workflow_gates_evaluator_on_written_status():
     source = Path(".github/workflows/serie-a-results.yml").read_text(encoding="utf-8")
+    assert "python -m pytest -q tests/test_serie_a_results_source_availability.py" in source
     assert "--status-json artifacts/serie_a_results_status.json" in source
     assert "SOURCE_UNAVAILABLE" in source
     assert 'if [ "$status" != "WRITTEN" ]; then' in source
