@@ -1,0 +1,67 @@
+{
+  "schema_version": "MULTI_MARKET_CORNER_CAPABILITY_PROBE_ROLLOVER_V2",
+  "research_only": true,
+  "preregistered": true,
+  "active": false,
+  "selected_before_corner_response": true,
+  "automatic_activation_allowed": false,
+  "automatic_target_switching_allowed": false,
+  "paid_request_allowed_by_this_file": false,
+  "requires_separate_activation_pr": true,
+  "requires_explicit_manual_paid_action": true,
+  "requires_fresh_zero_cost_quota_preflight": true,
+  "hard_reserve_credits": 100,
+  "max_paid_requests": 1,
+  "max_paid_credits": 2,
+  "selection_policy": "earliest_unambiguous_corner_source_ready_non_prohibited_fixture_at_least_24h_ahead_within_seven_day_stored_snapshot_window",
+  "target": {
+    "league": "BUNDESLIGA",
+    "event_id": "115c6679a72c5a360640b6baaa16e78c",
+    "home_team": "Union Berlin",
+    "away_team": "FC Schalke 04",
+    "commence_time_utc": "2026-09-11T18:30:00+00:00"
+  },
+  "scheduled_zero_cost_rollover_proof": {
+    "workflow_run_id": 34112118221,
+    "artifact_id": 10014773586,
+    "artifact_zip_sha256": "6b34164dc659bf438eea66d989890d0bfb12c8429a18f9d677af3fea4455aa7e",
+    "head_sha": "9265d90bb7c1eca806a86be874832517d694c35f",
+    "generated_at_utc": "2026-09-07T10:34:45.987049+00:00",
+    "proposed_candidate_matches_target": true,
+    "eligible_candidate_count": 48,
+    "paid_provider_requests": 0,
+    "paid_provider_credits": 0,
+    "writes_performed": false
+  },
+  "live_identity_recheck": {
+    "source": "live_supabase.odds_snapshots",
+    "read_only": true,
+    "event_snapshot_count": 17,
+    "distinct_event_identity_count": 1,
+    "identity_conflict": false,
+    "paid_provider_requests": 0,
+    "paid_provider_credits": 0,
+    "writes_performed": false
+  },
+  "quota_state_at_preregistration": {
+    "fresh_quota_confirmed": false,
+    "last_stored_remaining": 193,
+    "last_stored_at_utc": "2026-09-06T03:09:57.315423+00:00",
+    "stale_value_authorizes_paid_action": false
+  },
+  "predecessor": {
+    "record": "multi_market_corner_capability_probe_fallback_v1.json",
+    "target_event_id": "0817220a8e0794e15ecba51338bb6cf8",
+    "target_kickoff_utc": "2026-09-07T17:00:00+00:00",
+    "expired_before_this_preregistration": true
+  },
+  "activation_conditions": {
+    "current_active_target_must_be_expired": true,
+    "current_active_probe_must_have_zero_provider_request_attempts": true,
+    "fresh_zero_cost_quota_preflight_required": true,
+    "hard_reserve_credits": 100,
+    "max_paid_requests": 1,
+    "max_paid_credits": 2,
+    "target_must_still_be_prospective": true
+  }
+}
