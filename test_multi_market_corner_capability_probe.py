@@ -8,9 +8,9 @@ import multi_market_corner_capability_probe as probe
 
 GOOD_ROW = {
     **probe.TARGET,
-    "snapshot_time_utc": "2026-09-06T14:00:00+00:00",
+    "snapshot_time_utc": "2026-09-07T14:00:00+00:00",
 }
-NOW = datetime(2026, 9, 6, 14, 15, tzinfo=UTC)
+NOW = datetime(2026, 9, 8, 1, 15, tzinfo=UTC)
 
 
 class Query:
@@ -45,11 +45,11 @@ class Client:
 
 def test_preregistered_rollover_target_is_exact_and_probe_eligible():
     assert probe.TARGET == {
-        "league": "LA_LIGA",
-        "event_id": "0817220a8e0794e15ecba51338bb6cf8",
-        "home_team": "Getafe",
-        "away_team": "Celta Vigo",
-        "commence_time_utc": "2026-09-07T17:00:00+00:00",
+        "league": "BUNDESLIGA",
+        "event_id": "115c6679a72c5a360640b6baaa16e78c",
+        "home_team": "Union Berlin",
+        "away_team": "FC Schalke 04",
+        "commence_time_utc": "2026-09-11T18:30:00+00:00",
     }
     assert probe.TARGET["league"] not in probe.PROHIBITED_LEAGUES
 
@@ -60,7 +60,7 @@ def test_missing_preregistered_target_blocks_before_quota_or_provider():
         Client(None),
         lambda: calls.append("quota"),
         lambda *_args, **_kwargs: calls.append("provider"),
-        sport_key="soccer_spain_la_liga",
+        sport_key="soccer_germany_bundesliga",
         now_utc=NOW,
     )
     assert result["status"] == "BLOCKED"
@@ -81,7 +81,7 @@ def test_target_identity_mismatch_fails_before_quota_or_provider():
             Client(bad),
             lambda: calls.append("quota"),
             lambda *_args, **_kwargs: calls.append("provider"),
-            sport_key="soccer_spain_la_liga",
+            sport_key="soccer_germany_bundesliga",
             now_utc=NOW,
         )
     assert calls == []
@@ -94,8 +94,8 @@ def test_past_target_fails_before_quota_or_provider():
             Client(),
             lambda: calls.append("quota"),
             lambda *_args, **_kwargs: calls.append("provider"),
-            sport_key="soccer_spain_la_liga",
-            now_utc=datetime(2026, 9, 7, 17, 0, tzinfo=UTC),
+            sport_key="soccer_germany_bundesliga",
+            now_utc=datetime(2026, 9, 11, 18, 30, tzinfo=UTC),
         )
     assert calls == []
 
@@ -106,7 +106,7 @@ def test_hard_reserve_blocks_before_paid_provider_call():
         Client(),
         lambda: {"remaining": "101", "used": "399", "last_cost": "0"},
         lambda *_args, **_kwargs: calls.append("provider"),
-        sport_key="soccer_spain_la_liga",
+        sport_key="soccer_germany_bundesliga",
         now_utc=NOW,
     )
     assert result["status"] == "BLOCKED"
@@ -127,7 +127,7 @@ def test_provider_exception_is_conservatively_accounted_as_one_attempt():
             Client(),
             lambda: {"remaining": "193", "used": "307", "last_cost": "0"},
             event_call,
-            sport_key="soccer_spain_la_liga",
+            sport_key="soccer_germany_bundesliga",
             now_utc=NOW,
         )
 
@@ -151,7 +151,7 @@ def test_empty_corner_payload_is_one_request_capability_miss_without_write():
         Client(),
         lambda: {"remaining": "193", "used": "307", "last_cost": "0"},
         event_call,
-        sport_key="soccer_spain_la_liga",
+        sport_key="soccer_germany_bundesliga",
         now_utc=NOW,
     )
     assert result["status"] == "CAPABILITY_MISS"
@@ -164,7 +164,7 @@ def test_empty_corner_payload_is_one_request_capability_miss_without_write():
     assert result["corner_bookmaker_keys"] == []
     assert result["writes_performed"] is False
     assert calls == [(
-        "soccer_spain_la_liga",
+        "soccer_germany_bundesliga",
         probe.TARGET["event_id"],
         {"regions": "eu", "markets": probe.CORNER_MARKETS},
     )]
@@ -181,7 +181,7 @@ def test_corner_payload_confirms_capability_inside_one_request_two_credit_cap():
         Client(),
         lambda: {"remaining": "193", "used": "307", "last_cost": "0"},
         lambda *_args, **_kwargs: (payload, {"remaining": "191", "used": "309", "last_cost": "2"}),
-        sport_key="soccer_spain_la_liga",
+        sport_key="soccer_germany_bundesliga",
         now_utc=NOW,
     )
     assert result["status"] == "CAPABILITY_CONFIRMED"
@@ -205,7 +205,7 @@ def test_provider_cost_above_cap_fails_closed_with_known_cost_preserved():
             Client(),
             lambda: {"remaining": "193", "used": "307", "last_cost": "0"},
             lambda *_args, **_kwargs: ({"bookmakers": []}, {"remaining": "190", "used": "310", "last_cost": "3"}),
-            sport_key="soccer_spain_la_liga",
+            sport_key="soccer_germany_bundesliga",
             now_utc=NOW,
         )
     result = caught.value.result
@@ -221,7 +221,7 @@ def test_provider_remaining_below_reserve_fails_closed():
             Client(),
             lambda: {"remaining": "193", "used": "307", "last_cost": "0"},
             lambda *_args, **_kwargs: ({"bookmakers": []}, {"remaining": "99", "used": "401", "last_cost": "2"}),
-            sport_key="soccer_spain_la_liga",
+            sport_key="soccer_germany_bundesliga",
             now_utc=NOW,
         )
     result = caught.value.result
