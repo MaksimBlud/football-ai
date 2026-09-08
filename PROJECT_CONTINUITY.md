@@ -4,18 +4,19 @@
 
 ## Как пользоваться
 
-Перед новой сессией:
+Перед новой рабочей сессией:
 1. Прочитать этот файл.
 2. Коротко сверить свежий `main` и live Supabase.
 3. Не повторять полный аудит без конкретной причины.
-4. Продолжить с **Текущий следующий шаг**.
+4. Продолжить с раздела **Текущий следующий шаг**.
 5. После существенного решения, PR, merge или live-proof обновить этот файл.
 
-## Стиль работы с пользователем
+## Стиль и приоритет работы
 
-- Объяснять простым языком, без предположения знания программирования.
-- Писать: что сделали, что выяснили, почему важно, что дальше.
-- Приоритет: максимально развивать проект без лишней технической дрочки. Инфраструктуру менять только когда она снимает реальный blocker, защищает данные/production или ускоряет research.
+- Объяснять пользователю простым языком: что сделали, что выяснили, почему важно, что дальше.
+- Приоритет пользователя: **максимально развивать проект без лишней технической дрочки**.
+- Инфраструктуру менять только когда она снимает реальный blocker, защищает данные/production или ускоряет research.
+- Без запроса подтверждения после каждого безопасного шага; останавливаться только на реальном safety/manual-paid gate.
 
 ## Постоянные правила
 
@@ -27,7 +28,7 @@
 - Frozen/preregistered contracts не ослаблять задним числом.
 - Prospective outcomes нельзя читать до разрешённого gate.
 - Максимально использовать free/read-only proof; The Odds API credits не тратить при наличии бесплатной проверки.
-- Paid-provider workflows остаются manual-only. Никогда не превращать priority/readiness report в автоматический paid trigger.
+- Paid-provider workflows остаются manual-only. Priority/readiness report никогда не является разрешением на расход credits.
 - Реальные баги закрывать regression-тестами.
 - Fail-closed red не превращать искусственно в green.
 - Если point-in-time history нельзя честно восстановить, не делать retrospective production replay.
@@ -37,29 +38,29 @@
 ### EPL_AI_MARKET_PAIR_V1
 
 Режим **collect, don't peek**.
-- frozen cohort = первые 100 eligible prospective events;
-- outcomes запрещены до 100 событий;
-- затем минимум 24h после последнего kickoff;
-- дополнительный embargo до `2026-11-01 12:16:54 UTC`;
-- никакого interim primary evaluation или performance-based optional stopping.
 
-Последнее известное состояние было около `12/100`; перед использованием обновлять только metadata без чтения outcomes.
+- Frozen cohort = первые 100 eligible prospective events.
+- Outcomes запрещены до 100 событий.
+- Затем минимум 24h после kickoff последнего события cohort.
+- Дополнительный embargo до `2026-11-01 12:16:54 UTC`.
+- Никакого interim primary evaluation или performance-based optional stopping.
+- Последнее известное состояние было около `12/100`; перед использованием обновлять только metadata без чтения outcomes.
 
 ### PROSPECTIVE_CORNERS10_INCREMENTAL_V1
 
 - Вопрос: добавляет ли `CORNERS10` prospective 1X2 информацию сверх market baseline.
-- Historical incremental evidence против market было неблагоприятным; это confirmation, не tuning.
+- Historical incremental evidence против рынка было неблагоприятным; это confirmation, не tuning.
 - Bookmaker corner capability должен быть доказан отдельно.
 - До activation sample не eligible, outcome scoring запрещён.
-- Frozen minimum: 100 settled eligible fixtures на лигу + 4 calendar months.
+- Frozen minimum: 100 settled eligible fixtures на лигу + минимум 4 calendar months.
 - Этот контракт нельзя ускорять задним числом.
 
 ### PROSPECTIVE_MARKET_PATH_V1
 
-- Полная pre-cutoff market trajectory.
+- Используется полная pre-cutoff market trajectory.
 - Deterministic schedule revisions quarantined и исключены из frozen sample.
 - Paid h2h refresh manual-only.
-- Перед любым платным refresh сначала бесплатный league-level priority + fresh quota proof.
+- Перед любым платным refresh: бесплатный league-level priority + fresh quota proof + existing budget/safety guards.
 - Прошедший cutoff нельзя backfill.
 - Settlement и market acquisition — разные контуры: settlement восстановлен, market snapshots остаются stale.
 
@@ -73,12 +74,12 @@
 ### SEASON_INVARIANT_CORNERS_V1 — PORTABLE_STRONG
 
 Held-out `CORNERS10` vs `GOALS10`:
-- EPL 6/7;
+- EPL 6/7 seasonal wins;
 - La Liga 5/7;
 - Serie A 7/7;
-- всего 18/21 wins по основным метрикам.
+- всего 18/21 по основным метрикам.
 
-Вывод: угловые несут устойчивую football-state информацию через сезоны/лиги. Но historical `MARKET + CORNERS10` не улучшил market baseline в среднем, поэтому дополнительный bookmaker 1X2 edge не доказан.
+Вывод: угловые несут устойчивую football-state информацию через сезоны и лиги. Но historical `MARKET + CORNERS10` не улучшил market baseline в среднем, поэтому дополнительный bookmaker 1X2 edge не доказан.
 
 Early drift historical guide:
 - 20 матчей слишком шумно;
@@ -103,7 +104,7 @@ PR #214 merge `92633e3f011146a533b3cdce1ab26080efe1b139`.
 - slopes ~0.03–0.24: recent-corner estimate требует strong shrink к среднему;
 - Over 9.5 AUC всё ещё ~`0.5053`.
 
-Вывод: небольшой portable signal для среднего expected corner count есть, но устойчивого match ranking нет.
+Вывод: небольшой portable signal для среднего expected corner count есть, но устойчивого выбора конкретных Over/Under матчей нет.
 
 PR #215 merge `8e206f4e97f8b5d0e64bc2951716ad8d971def61`.
 
@@ -125,44 +126,76 @@ Fixed inputs: corner-state + all-shots pressure + SOT pressure.
 
 PR #217 merge `9bb1e8ed244e10f53d87850cb552aa70e148e0eb`.
 
-Итог: угловые = устойчивый state signal; маленький calibrated expected-count signal есть; bookmaker edge, Over/Under selector и bookmaker-corner edge не доказаны. Следующая meaningful evidence должна прийти из новых bookmaker lines/prices или richer event/territorial data.
+Итог по historical corners: угловые = устойчивый state signal; маленький calibrated expected-count signal есть; bookmaker edge, Over/Under selector и bookmaker-corner edge не доказаны. Следующая meaningful evidence должна прийти из новых bookmaker lines/prices или richer event/territorial data.
 
 ## Bookmaker corner capability
 
 Stored bookmaker corner-line evidence = 0.
 
-Preregistered target:
-- BUNDESLIGA, Union Berlin vs FC Schalke 04;
-- kickoff `2026-09-11T18:30:00Z`;
-- event_id `115c6679a72c5a360640b6baaa16e78c`;
-- rollover run `34112118221`, artifact `10014773586`;
-- ZIP SHA256 `6b34164dc659bf438eea66d989890d0bfb12c8429a18f9d677af3fea4455aa7e`;
-- 17 stored snapshots, one identity, conflict=0;
-- observed paid capability-probe attempts = 0.
+### Preregistered target
 
-PR #219 merge `46cdd4d4bd4cdcd4dd9d4d07d795d868727feb3f`.
-PR #221 merge `d14465600d7a4f02280afa3561568960789ef4a9`.
+- League: `BUNDESLIGA`.
+- Match: Union Berlin vs FC Schalke 04.
+- Kickoff: `2026-09-11T18:30:00Z`.
+- event_id: `115c6679a72c5a360640b6baaa16e78c`.
+- Zero-cost rollover run `34112118221`, artifact `10014773586`.
+- Artifact ZIP SHA256 `6b34164dc659bf438eea66d989890d0bfb12c8429a18f9d677af3fea4455aa7e`.
+- 17 stored snapshots, exactly one identity, conflict=0.
+- Observed paid capability-probe attempts before activation = 0.
+
+PR #219 merge `46cdd4d4bd4cdcd4dd9d4d07d795d868727feb3f` — inactive rollover target preregistered.
+PR #221 merge `d14465600d7a4f02280afa3561568960789ef4a9` — zero-attempt proof recorded.
 
 ### Fresh quota proof — CLOSED / READY
 
-Scheduled `Multi-Market V2 Readiness Status` run `34210743251` completed successfully on 2026-09-08.
+Scheduled `Multi-Market V2 Readiness Status` run `34210743251` completed successfully on 2026-09-08:
 
-- fresh quota remaining = `193`;
+- remaining = `193` credits;
 - used = `307`;
-- zero-cost quota request `last_cost=0`;
+- zero-cost `/sports/` quota request `last_cost=0`;
 - `quota_ready=true`;
-- threshold = `104` = hard reserve 100 + one complete first event 4 credits;
+- readiness threshold = `104` = hard reserve 100 + complete first event worst-case 4;
 - hard reserve = 100;
-- corner capability probe itself remains capped at 1 paid request / max 2 credits;
+- corner capability probe cap = max 1 paid request / max 2 credits;
 - readiness paid provider requests = 0, paid credits = 0;
 - `writes_performed=false`;
 - production model hash unchanged;
-- readiness artifact `10049695923`;
+- artifact `10049695923`;
 - artifact ZIP SHA256 `7f9085ddb4142bd53910a7baa4ea62134e17240981ec20c2439ec6ac06d07aed`.
 
-Readiness result: infrastructure is ready, but provider corner capability is still unproven. The only capability blocker is `PROVIDER_CORNER_CAPABILITY_UNPROVEN`.
+Infrastructure readiness is green. Provider corner capability remains unproven.
 
-Activation implementation branch: `research/activate-corner-capability-target-v2`. It only switches the preregistered probe target and tests/workflow assertions to Union Berlin–Schalke. **It does not run the paid probe.** Paid capability probe remains manual-only after branch -> PR -> CI -> fresh-main -> exact-head merge.
+### PR #227 — target activation CLOSED / MERGED
+
+PR #227 switched the paid probe target from expired Getafe–Celta to the previously preregistered Union Berlin–Schalke target. It did **not** call the paid provider.
+
+Merge: `1b219e1f8dce3789dfb8efff2783ae2826846d2d`.
+
+Safety preserved:
+- probe remains `workflow_dispatch` only;
+- no `schedule` or `push` trigger for the paid probe;
+- max paid requests = 1;
+- max paid credits = 2;
+- fresh runtime quota preflight remains mandatory;
+- hard reserve 100 remains mandatory;
+- exact target/prospective identity checks remain mandatory;
+- no Supabase writes;
+- no production `.pkl` changes.
+
+CI found two stale regression contracts during activation; neither was bypassed:
+
+1. `Multi-Market Probe Rollover Status` still assumed the old Getafe target when testing an expired active target. Fix: rollover planner keeps the real current target by default, while tests/audits may inject an explicit synthetic expired target. Auto-switching remains disabled.
+2. `Multi-Market V1/V2 PR Validation` still asserted that the preregistered rollover target must differ from the active target. That was correct before activation but wrong inside the separate activation PR. Fix: historical Getafe provenance stays immutable, while the active probe must now equal the exact previously preregistered V2 target. The preregistration file itself still cannot authorize a paid request.
+
+Final exact head `f7d7705ab5471e2967c67fcceea9c092732980e7` passed all PR workflows, including Research PR Validation and production artifact guard.
+
+Post-merge proof on `main`:
+- only free/read-only `Multi-Market V2 Readiness Status` run `34234965186` and `Multi-Market Probe Rollover Status` run `34234965230` auto-started;
+- both completed successfully;
+- production model unchanged;
+- **paid `Multi-Market Corner Capability Probe` did not auto-start**.
+
+Current corner-specific blocker is therefore exactly one thing: **the actual capability probe is a manual-only paid action**. It must not be dispatched automatically.
 
 ## Settlement / public results
 
@@ -184,84 +217,54 @@ Operational solution:
 
 OpenFootball/footballcsv were rejected for live settlement because current Serie A data was stale.
 
-### PR #223 — initial fallback
+PR #223 merge `5befc9d53a0382a6178436ee55518a279c560e15` added the fallback. Live proof correctly exposed ESPN alias `Deportivo` and a Serie A workflow import-path defect; both failed closed with no harmful writes.
 
-Merge `5befc9d53a0382a6178436ee55518a279c560e15`.
-PR CI green, but live proof correctly found:
-- La Liga run `34179722049`: primary 3x503, ESPN activated, then safe `UnknownTeamError` on ESPN `Deportivo`; no writes, production hash unchanged; artifact `10038463816`.
-- Serie A run `34179722040`: production workflow test import-path error; sync never started.
+PR #224 merge `382814a00f1c04dbff776c0a5594b3c98909fe9a` closed both regressions.
 
-Decision: validation не ослаблять. Добавить только live-proven alias `Deportivo -> Dep. A Coruna` (existing normalizer -> `Deportivo La Coruña`) + regression test; Serie A production test command -> `PYTHONPATH=.`.
-
-### PR #224 — live regression fixes
-
-Merge `382814a00f1c04dbff776c0a5594b3c98909fe9a`.
-Full CI green; production `.pkl` checks green.
-
-**La Liga Results Sync run `34180001408` — SUCCESS**
-- primary: 3x HTTP 503;
-- ESPN fallback: 1 request;
+**La Liga live run `34180001408`**
+- primary 3x HTTP 503 -> ESPN fallback 1 request;
 - source/finished rows 41/41;
 - legacy inserted 10, unchanged 31;
 - canonical inserted 10, unchanged 36, conflicts 0;
-- public requests 4; paid requests 0;
-- status `WRITTEN`; production hash unchanged;
-- artifact `10038564675`, ZIP SHA256 `e912b26ec46dc034b8651c08a3bea00fd2314a50dd3354f478f48d090c2ce992`.
+- paid requests 0;
+- production hash unchanged.
 
-**Serie A Results Sync run `34180001418` — SUCCESS**
-- primary: 3x HTTP 503;
-- ESPN fallback: 1 request;
+**Serie A live run `34180001418`**
+- primary 3x HTTP 503 -> ESPN fallback 1 request;
 - source/finished rows 30/30;
 - inserted 19, unchanged 11, conflicts 0;
-- public requests 4; paid requests 0;
+- paid requests 0;
 - evaluator saw 30 result rows / 19 settled fixtures;
-- MARKET_ONLY diagnostic: 19 fixtures, accuracy `0.6315789474`, log loss `0.89514645696`, Brier `0.52100247085`; operational diagnostic only, not promotion/research decision;
-- evaluator no writes, no production model;
-- artifact `10038563495`, ZIP SHA256 `9459ff69c5e18f3d047ef906c16f971fc0c475333bd2f118e55dc93455584b78`.
+- no production model changes.
 
-**Independent Supabase proof**
-- current-season canonical results: La Liga 46, Serie A 30, latest date 2026-09-07;
-- prior settlement-lag audit `34122752130` had 13 already-late identities: 7 LL + 6 SA;
-- identity-only recheck: LL 7/7 present, SA 6/6 present, missing=0.
+Independent live proof:
+- canonical current-season results: La Liga 46, Serie A 30, latest date 2026-09-07;
+- all 13 identities that were previously already `SETTLEMENT_LATE` are now present: La Liga 7/7, Serie A 6/6, missing=0;
+- rerun of the same settlement-lag audit became green: EPL late 0, La Liga late 0, Serie A late 0; no scores read, no writes, production unchanged.
 
-**Direct red -> green rerun of same settlement-lag audit**
-- run `34122752130`, rerun job `101917806223` on 2026-09-08;
-- SUCCESS: `PASS: no late prospective market-path settlement identities`;
-- EPL `20 eligible / 10 settled / 10 awaiting / 0 late`;
-- La Liga `18 / 10 / 8 / 0`;
-- Serie A `22 / 9 / 13 / 0`;
-- scores not queried, Supabase writes=0, production hashes unchanged;
-- artifact `10038654571`, ZIP SHA256 `c04cdee0f6de6276f6e72ced9ea56bac040763f2d59109f9927abd23ba39409f`.
+Conclusion: Football-Data 503 settlement blocker is removed.
 
-Conclusion: Football-Data 503 settlement blocker removed; fallback live-proven; current settlement late=0 for EPL/La Liga/Serie A.
-
-Non-blocking follow-up: La Liga-specific PR validator did not trigger on PR #224 common fallback/test path set. Add those paths next time that workflow is naturally touched; do not prioritize over research.
+Non-blocking follow-up: La Liga-specific PR validator did not trigger on PR #224 common fallback/test path set. Add those paths next time that workflow is naturally touched; do not prioritize this over research.
 
 ## Market acquisition freshness — ZERO-COST AUDIT 2026-09-08
 
-Settlement восстановлен, но `odds_snapshots` acquisition остаётся stale. Read-only Supabase audit подтвердил:
+Settlement восстановлен, но `odds_snapshots` acquisition остаётся stale.
 
-- **EPL:** 1111 snapshot rows, 40 event_ids, latest snapshot `2026-09-05 15:19:42.729192+00`, future event_ids 10; next kickoff `2026-09-12 14:00Z`.
-- **La Liga:** 786 rows, 42 event_ids, latest `2026-09-05 15:21:32.51302+00`, future event_ids 14; next kickoff `2026-09-11 19:00Z`.
-- **Serie A:** 585 rows, 33 event_ids, latest `2026-09-05 15:08:05.114487+00`, future event_ids 14; next kickoff `2026-09-11 18:45Z`.
+Read-only audit:
+- **EPL:** latest snapshot `2026-09-05 15:19:42Z`, future event_ids 10; next kickoff `2026-09-12 14:00Z`.
+- **La Liga:** latest `2026-09-05 15:21:32Z`, future event_ids 14; next kickoff `2026-09-11 19:00Z`.
+- **Serie A:** latest `2026-09-05 15:08:05Z`, future event_ids 14; next kickoff `2026-09-11 18:45Z`.
 
 Использована существующая PR #210 логика `prospective_market_path_refresh_priority.py`, а не новый policy. PR #210 merge `9265d90bb7c1eca806a86be874832517d694c35f`.
 
-Эта логика read-only/provider-free и ранжирует только already-persisted coverage diagnostics: earliest active due cutoff -> больше due paths -> staleness ratio. Quarantined/superseded revisions не создают paid priority. Она **не разрешает расход credits**.
+Current zero-cost priority:
+1. **SERIE_A #1:** 12 due paths, earliest due cutoff ~82.17h.
+2. **LA_LIGA #2:** 5 due paths, earliest due cutoff ~82.42h; staleness relative to fixed 2h cadence особенно высокая.
+3. **EPL #3:** 10 due paths, earliest due cutoff ~101.42h.
 
-Live priority на 2026-09-08:
-1. **SERIE_A — rank 1:** `priority_due_paths=12`, earliest due cutoff ~`82.17h`, max staleness ratio ~`4.95`.
-2. **LA_LIGA — rank 2:** `priority_due_paths=5`, earliest due cutoff ~`82.42h`, max staleness ratio ~`29.61` (fixed 2h cadence делает staleness особенно высокой).
-3. **EPL — rank 3:** `priority_due_paths=10`, earliest due cutoff ~`101.42h`, max staleness ratio ~`4.94`.
+Historical pre-cutoff coverage already exists; проблема — отсутствие **свежих** snapshots перед будущими cutoff.
 
-Все перечисленные due fixtures уже имеют много pre-cutoff snapshots (обычно EPL/Serie A ~19, La Liga ~28), то есть frozen historical path coverage не потеряна. Проблема — именно отсутствие **свежих** market snapshots перед будущими cutoff, а не нехватка старой траектории.
-
-Ближайшие due paths:
-- Serie A: Venezia–Fiorentina, kickoff `2026-09-11 18:45Z`, cutoff `12:45Z`;
-- La Liga: Sevilla–Valencia, kickoff `2026-09-11 19:00Z`, cutoff `13:00Z`;
-- EPL: первые due fixtures kickoff `2026-09-12 14:00Z`, cutoff `08:00Z`.
-
-**Decision:** acquisition blocker подтверждён, но automatic paid refresh запрещён. Если пользователь отдельно разрешит manual paid h2h action, сначала нужен fresh zero-cost quota proof и existing budget/safety guards. Текущий order для одного осознанного refresh decision: Serie A -> La Liga -> EPL. Не объединять это автоматически с corner capability probe: это два разных paid intents.
+Decision: priority report is not permission to spend. Paid h2h refresh remains a separate manual-only intent and must not be bundled with the corner capability probe.
 
 ## Security follow-up
 
@@ -272,40 +275,37 @@ Read-only audit ранее нашёл RLS disabled на:
 - `league_prediction_ledger`;
 - `epl_ai_market_pair_ledger`.
 
-Не включать RLS автоматически; сначала отдельный access-policy audit.
+Не включать RLS автоматически; сначала отдельный access-policy audit, иначе можно сломать приложение/research.
 
 ## Текущий следующий шаг
 
-1. Fresh zero-cost quota proof **получен и зелёный**: 193 credits, quota_ready=true, hard reserve 100, paid=0, production unchanged.
-2. Закончить activation PR `research/activate-corner-capability-target-v2`: tests -> PR -> полный CI -> fresh-main -> exact-head merge. Этот шаг не должен запускать provider request.
-3. После merge bookmaker-corner capability probe станет технически готов, но остаётся **manual-only paid action**: максимум 1 request / 2 credits, с повторным runtime quota/reserve check перед provider boundary.
-4. Не объединять corner probe с stale h2h acquisition refresh. Это отдельные paid intents.
-5. Market acquisition blocker остаётся: snapshots stale с 2026-09-05; при отдельном manual h2h решении priority = Serie A #1, La Liga #2, EPL #3.
-6. Frozen `EPL_AI_MARKET_PAIR_V1`, `PROSPECTIVE_MARKET_PATH_V1`, `PROSPECTIVE_CORNERS10_INCREMENTAL_V1` продолжать без premature outcome reads/backfill.
-7. Если capability probe когда-нибудь подтвердит corner markets — сначала durable artifact + reviewed attestation, затем новый preregistered market-vs-V2 research block. Если miss — фиксировать negative capability proof и искать другой источник; не возвращаться к historical V1–V4 feature mining.
-8. RLS audit — отдельный follow-up после основных research/operational priorities.
+1. Corner target activation считать **CLOSED / LIVE-PROVEN**: PR #227 merged, paid probe не автостартовал.
+2. Corner-specific next gate = actual `Multi-Market Corner Capability Probe`, но он остаётся **manual-only paid action**. Автоматически не запускать.
+3. Если пользователь явно разрешит paid corner probe: перед provider boundary probe сам повторно проверит quota/reserve; максимум 1 request / 2 credits. После результата сначала durable artifact + reviewed capability attestation, и только потом новый preregistered market-vs-V2 research block.
+4. Если capability miss: зафиксировать negative proof и искать другой bookmaker/event source; не возвращаться к historical corner V1–V4 mining.
+5. Отдельный market acquisition blocker остаётся: snapshots stale с 2026-09-05; paid h2h refresh manual-only, priority = Serie A #1 -> La Liga #2 -> EPL #3.
+6. Пока paid actions не разрешены, продолжать бесплатные/read-only задачи: outcome-free prospective sample health, collection metadata, settlement health, и полезные source audits без premature outcome reads.
+7. Frozen `EPL_AI_MARKET_PAIR_V1`, `PROSPECTIVE_MARKET_PATH_V1`, `PROSPECTIVE_CORNERS10_INCREMENTAL_V1` продолжать без premature outcome reads/backfill.
+8. RLS access-policy audit — отдельный безопасный read-only follow-up после основных research/operational blockers.
 
-## Журнал решений
+## Журнал ключевых решений
 
 ### 2026-09-07
 
-- Создан `PROJECT_CONTINUITY.md`; пользователь попросил сохранять решения между чатами и объяснять работу просто.
-- Принят season-invariant research principle: historical portability first, fresh data as independent confirmation/drift monitor; универсальное правило «каждая идея ждёт 100 свежих матчей» отвергнуто для новых research blocks, existing frozen gates сохранены.
+- Создан `PROJECT_CONTINUITY.md`; решения должны сохраняться между чатами.
+- Принят season-invariant research principle: historical portability first, fresh data as independent confirmation/drift monitor; existing frozen gates сохранены.
 - Historical corner V1–V4 закрыты; включён STOP RULE против same-data feature mining.
-- Bookmaker corner capability остался external manual gate.
+- Bookmaker corner capability оставлен external manual gate.
 - Зафиксирован отдельный RLS follow-up.
 
 ### 2026-09-08
 
-- Приоритет подтверждён: развивать проект, не раздувая инфраструктуру без пользы.
+- Приоритет подтверждён: развивать проект без лишней технической дрочки.
 - ESPN выбран как keyless settlement fallback-only; Football-Data сохранён primary.
-- PR #223 merged; live proof выявил `Deportivo` alias gap и Serie A production workflow import issue.
-- PR #224 merged `382814a00f1c04dbff776c0a5594b3c98909fe9a`; оба live sync успешно прошли через ESPN после 3x503 primary.
-- La Liga добавила 10 canonical results, Serie A 19; conflicts=0, paid=0.
-- Exact 13 previously late identities закрыты; rerun того же settlement-lag audit стал green: late=0 EPL/LL/SA, no scores/no writes/production unchanged.
-- `PROVIDER_FREE_RESULTS_FALLBACK_V1` закрыт как `LIVE_PROVEN`.
-- Zero-cost market acquisition audit подтвердил staleness с 2026-09-05 и recomputed existing PR #210 priority: Serie A #1 (12 due), La Liga #2 (5), EPL #3 (10).
-- Решение: priority report не является permission to spend. Paid h2h refresh и bookmaker-corner probe остаются отдельными manual-only действиями.
-- Scheduled readiness run `34210743251` дал свежий zero-cost quota proof: remaining 193, used 307, last_cost 0, quota_ready=true, hard reserve 100, readiness paid requests/credits 0, production unchanged.
-- Fresh-quota blocker закрыт. Единственный remaining bookmaker-corner capability blocker = `PROVIDER_CORNER_CAPABILITY_UNPROVEN`.
-- Начата отдельная activation-ветка `research/activate-corner-capability-target-v2`: только switch preregistered target на Union Berlin–Schalke + regression/workflow assertions; paid probe в этой ветке не запускается.
+- PR #224 live-proven: La Liga +10 canonical results, Serie A +19, conflicts=0, paid=0; settlement late=0.
+- Zero-cost acquisition audit подтвердил staleness с 2026-09-05; priority Serie A -> La Liga -> EPL.
+- Scheduled readiness run `34210743251` дал fresh zero-cost quota proof: remaining 193, used 307, last_cost 0, quota_ready=true, hard reserve 100, production unchanged.
+- Fresh-quota blocker закрыт; remaining capability blocker = `PROVIDER_CORNER_CAPABILITY_UNPROVEN`.
+- PR #227 активировал заранее зарегистрированный Union Berlin–Schalke target без paid provider call.
+- CI #227 обнаружил два stale activation/rollover regression-контракта; оба исправлены без ослабления safety и стали зелёными.
+- PR #227 merge `1b219e1f8dce3789dfb8efff2783ae2826846d2d`; post-merge автоматически запустились только бесплатные Readiness/Rollover workflows; paid corner probe не стартовал.
