@@ -114,8 +114,8 @@ Fresh free/read-only proof 2026-09-09:
 - Frozen cohort = первые 100 eligible prospective EPL events.
 - Fresh outcome-free health 2026-09-09: `12/100`, 12 unique `pair_key`, 12 unique `event_id`, только EPL.
 - Integrity: history cutoff, model generation и market snapshot находятся до kickoff; invalid probability rows = 0; probability sums нормализованы.
-- Current cohort kickoff span: `2026-09-06 13:00 UTC` -> `2026-09-14 15:30 UTC`.
-- Cohort использует один model artifact SHA256 `e0f39e2b66514d92cd0b67e74da807c8ceebb3856ffed7fa047ff2a4922c2540` и один code commit `4c1bc43ff6157382a83fe467d33fa8fe54adf897`.
+- Current cohort kickoff span: `2026-09-06 13:00 UTC` -> `2026-09-14 19:00 UTC`.
+- Cohort использует один model artifact SHA256 `1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5` и один code commit `4c1bc43ff6157382a83fe467d33fa8fe54adf897`.
 - Outcomes запрещены до 100 событий.
 - После 100: минимум 24h после kickoff последнего cohort event.
 - Дополнительный embargo до `2026-11-01 12:16:54 UTC`.
@@ -505,3 +505,4 @@ Continuity follow-up PR #233 merge `7ca38b6b4c886e6ff6aed5142fa8756a781778e2`.
 - P0-B outcome-free health: `EPL_AI_MARKET_PAIR_V1 = 12/100`, 12 unique pair/event ids, temporal/probability invariants green, один model hash и один code commit; outcomes не читались; статус `HEALTHY / TIME-FROZEN_GATE`.
 - P0-C outcome-free trajectory health: frozen raw universe `68` event ids (`EPL 20 / LA_LIGA 24 / SERIE_A 24`), только 1 kickoff month на лигу; activation `100 + 4 months` не достигнут; 23 trajectory paths refresh-due; outcomes не читались.
 - Весь pass был read-only относительно Supabase и outcome-free; paid provider requests/credits = `0/0`; production model не изменён.
+- Post-merge live recheck at `2026-09-09 16:16:03 UTC` confirmed P0-A still has no snapshots newer than `2026-09-05 15:21:32.513020 UTC` and P0-B remains `12/100`; corrected authoritative P0-B metadata is last kickoff `2026-09-14 19:00 UTC` and model SHA256 `1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5`.
