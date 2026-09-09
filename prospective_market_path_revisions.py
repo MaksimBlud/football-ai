@@ -14,6 +14,7 @@ from team_names import normalize_team_name
 
 STATUS_SUPERSEDED = "SUPERSEDED"
 STATUS_QUARANTINED_REVISION = "QUARANTINED_REVISION"
+REFRESH_SUPERSEDED_PROVIDER_REVISION = "SUPERSEDED_PROVIDER_REVISION"
 
 
 def _monotonic_schedule_revision_ids(snapshots: pd.DataFrame) -> set[tuple[str, str]]:
@@ -95,6 +96,12 @@ def mark_superseded_revisions(coverage: pd.DataFrame, snapshots: pd.DataFrame) -
     stale_mask &= result["status"].astype(str) != "CONFLICT"
     result.loc[stale_mask, "status"] = STATUS_SUPERSEDED
     result.loc[stale_mask, "reason"] = "OLDER_PROVIDER_REVISION_FOR_SAME_FIXTURE_PAIR"
+    if "operationally_active" in result.columns:
+        result.loc[stale_mask, "operationally_active"] = False
+    if "refresh_due" in result.columns:
+        result.loc[stale_mask, "refresh_due"] = False
+    if "refresh_reason" in result.columns:
+        result.loc[stale_mask, "refresh_reason"] = REFRESH_SUPERSEDED_PROVIDER_REVISION
 
     quarantine_mask = result.apply(
         lambda row: (str(row["league"]), str(row["event_id"])) in quarantined_ids,
