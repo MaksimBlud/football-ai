@@ -336,6 +336,47 @@ Historical pre-cutoff coverage already exists; проблема — отсутс
 
 Decision: priority report is not permission to spend. Paid h2h refresh remains a separate manual-only intent and must not be bundled with the corner capability probe.
 
+### Prospective Market Status + live refresh priority — CLOSED / MERGED / LIVE_PROVEN 2026-09-09
+
+PR #232 closed revision-safety gaps and made the existing market-path coverage cycle operator-ready without adding any provider call, spend policy or outcome access.
+
+Merge: `a895012fdd65148672b9cfa4bc83ea229145346d`.
+Exact PR head: `e6a08fa3b1399fc07c31564fb04982aacaa3a0a6`.
+Branch base/fresh-main before merge: `2f13ba207d5cde19db55b9bf35a2b2eec54e707f`.
+
+Revision safety:
+- an older event id for the same normalized league/home/away pair is now `SUPERSEDED`, `operationally_active=false`, `refresh_due=false`, with explicit refresh reason `SUPERSEDED_PROVIDER_REVISION`;
+- live proof exposed a second edge case: tied-current provider event ids for one fixture pair can share the same latest observation time, so a last-seen winner cannot be chosen honestly;
+- tied-current ids are now all `QUARANTINED_REVISION`, inactive and not due; no canonical kickoff/event id is guessed;
+- the live examples were two Serie A pairs: Torino–AS Roma and Como–Parma, four event ids total;
+- internal hard `CONFLICT` remains fail-closed and is not masked by superseded logic.
+
+Market Status / live priority:
+- new `prospective_market_status.py` composes frozen fixture coverage, revision classification and existing league refresh priority;
+- it is explicitly read-only/provider-free and does not change frozen eligibility;
+- fixture live queue uses only already-existing `operationally_active`, `refresh_due` and collector cadence signals;
+- deterministic ordering is earliest cutoff, then higher staleness ratio, then stable league/kickoff/event identity tie-breakers;
+- `prospective_market_path_coverage_cycle.py` now emits existing coverage outputs plus `live_refresh_priority.csv` and prints a compact `PROSPECTIVE MARKET STATUS` operator view;
+- Supabase client creation was moved to the actual `_fetch_snapshots()` I/O boundary so the complete cycle can be regression-tested without network/secrets.
+
+CI proof on exact head `e6a08fa3b1399fc07c31564fb04982aacaa3a0a6`:
+- all 6 PR workflows passed;
+- focused `Prospective Market Path Coverage PR Validation` run `34366488263` passed;
+- focused tests = **24 passed**;
+- all 5 coverage/status modules compiled;
+- production `.pkl` before/after hash guard passed unchanged.
+
+Post-merge live read-only proof against Supabase `odds_snapshots` at `2026-09-09T14:56:23.614899Z`:
+- actionable refresh due = **23**;
+- pair-quarantined event ids = **4**;
+- league priority = **SERIE_A #1 (8 due) -> LA_LIGA #2 (5 due) -> EPL #3 (10 due)**;
+- top live fixture #1 = Serie A Venezia–Fiorentina (`event_id=a9656d25ca6b06be9e477a098333bd70`, kickoff `2026-09-11T18:45:00Z`);
+- #2 = La Liga Sevilla–Valencia (`event_id=79bc2eff76fa09664659765d5b1ded1a`);
+- #3 = La Liga Real Racing Club de Santander–Alavés (`event_id=50cc233d42943dcf77315adb0aaa6c09`);
+- no Supabase writes, no provider requests, no paid credits, no prospective outcome reads, no production `.pkl` changes.
+
+Decision: this status/priority is an operator signal only and **never authorizes paid h2h refresh**. A paid refresh still requires a separate explicit user instruction and existing quota/budget guards.
+
 ## Security follow-up
 
 Read-only audit ранее нашёл RLS disabled на:
@@ -354,7 +395,7 @@ Read-only audit ранее нашёл RLS disabled на:
 3. Следующий corner-specific gate = внешний credential/live proof: получение SportsGameOdds account/API key и один authenticated run требуют отдельного явного разрешения пользователя; автоматически не создавать account/key и не dispatch workflow.
 4. Если пользователь отдельно разрешит этот внешний шаг: использовать exact Union Berlin–Schalke target и максимум 1 provider request; capability подтверждать только по same-bookmaker paired Over/Under на одной corner line с явными ценами.
 5. Если SportsGameOdds live capability подтвердится: сохранить durable artifact/attestation, затем открыть отдельный preregistered `V2 expected corners vs bookmaker corner line` experiment. Если miss/нет доступа — durable negative proof и переход к Sportmonks, затем Betfair Exchange; historical corner V1–V4 STOP RULE не нарушать.
-6. Отдельный market acquisition blocker остаётся: snapshots stale с 2026-09-05; paid h2h refresh manual-only, priority = Serie A -> La Liga -> EPL.
+6. Market Status/live priority считать **CLOSED / MERGED / LIVE_PROVEN** через PR #232. Acquisition всё ещё stale с 2026-09-05; paid h2h refresh manual-only. Текущий read-only priority = Serie A -> La Liga -> EPL, 23 actionable paths после fail-closed revision quarantine.
 7. Frozen `EPL_AI_MARKET_PAIR_V1`, `PROSPECTIVE_MARKET_PATH_V1`, `PROSPECTIVE_CORNERS10_INCREMENTAL_V1` продолжать без premature outcome reads/backfill.
 8. Пока внешний SportsGameOdds gate закрыт, продолжать бесплатные/read-only задачи: outcome-free prospective sample health, collection metadata, settlement health и source/access audits.
 9. RLS access-policy audit — отдельный read-only follow-up после основных research/operational blockers.
@@ -386,3 +427,11 @@ Read-only audit ранее нашёл RLS disabled на:
 - Zero-cost public source audit ranked SportsGameOdds first, Sportmonks second, Betfair Exchange third; no signup/trial/paid calls were performed.
 - PR #230 implemented the SportsGameOdds fallback probe as manual-only research infrastructure. Exact head `f70d9232403fa50434129f61db0ce188ff8302b8` passed all 6 PR workflows; Multi-Market validation run `34249514873` reported 104 focused tests passed and production artifact guard green.
 - PR #230 merged as `fdc7a4064fd4fd97b6a98af27b97931e593fc85b` after fresh-main/exact-head checks. Post-merge merge SHA had 0 Actions runs and the new workflow remained `workflow_dispatch` only, so no SportsGameOdds request/account/subscription/Supabase/model action occurred.
+
+### 2026-09-09
+
+- PR #232 closed two market revision safety gaps: stale event ids now deactivate fail-closed, and tied-current event ids for one normalized fixture pair are all quarantined rather than guessed or double-refreshed.
+- Added read-only `prospective_market_status.py` and deterministic fixture-level live refresh queue using only existing cadence/due signals; operational coverage cycle now writes `live_refresh_priority.csv`.
+- Exact head `e6a08fa3b1399fc07c31564fb04982aacaa3a0a6` passed all 6 PR workflows; focused run `34366488263` = 24 passed and production hash guard green.
+- PR #232 exact-head merged as `a895012fdd65148672b9cfa4bc83ea229145346d` after fresh-main remained `2f13ba207d5cde19db55b9bf35a2b2eec54e707f`.
+- Post-merge Supabase read-only proof at `2026-09-09T14:56:23.614899Z`: 23 actionable due paths, 4 ambiguous event ids quarantined; priority Serie A -> La Liga -> EPL; top fixture Venezia–Fiorentina. No writes/provider spend/outcome reads/model changes.
