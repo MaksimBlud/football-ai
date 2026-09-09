@@ -1,6 +1,7 @@
 import pandas as pd
 
 from prospective_market_path_revisions import (
+    REFRESH_QUARANTINED_PAIR_REVISION,
     REFRESH_SUPERSEDED_PROVIDER_REVISION,
     STATUS_QUARANTINED_REVISION,
     STATUS_SUPERSEDED,
@@ -58,6 +59,55 @@ def test_older_provider_event_for_same_pair_is_superseded_and_deactivated():
     assert new.status == "READY"
     assert bool(new.operationally_active)
     assert bool(new.refresh_due)
+
+
+def test_tied_current_event_ids_for_same_pair_are_all_quarantined():
+    snapshots = pd.DataFrame([
+        {
+            "league": "SERIE_A",
+            "event_id": "old-kickoff-id",
+            "home_team": "Torino",
+            "away_team": "AS Roma",
+            "commence_time_utc": "2026-09-13T10:30:00Z",
+            "snapshot_time_utc": "2026-09-05T15:08:05Z",
+        },
+        {
+            "league": "SERIE_A",
+            "event_id": "new-kickoff-id",
+            "home_team": "Torino",
+            "away_team": "AS Roma",
+            "commence_time_utc": "2026-09-14T16:30:00Z",
+            "snapshot_time_utc": "2026-09-05T15:08:05Z",
+        },
+    ])
+    coverage = pd.DataFrame([
+        {
+            "league": "SERIE_A",
+            "event_id": "old-kickoff-id",
+            "status": "READY",
+            "reason": "ok",
+            "operationally_active": True,
+            "refresh_due": True,
+            "refresh_reason": "MANUAL_REFRESH_DUE_BY_EXISTING_CADENCE",
+        },
+        {
+            "league": "SERIE_A",
+            "event_id": "new-kickoff-id",
+            "status": "RECOVERABLE",
+            "reason": "ok",
+            "operationally_active": True,
+            "refresh_due": True,
+            "refresh_reason": "MANUAL_REFRESH_DUE_BY_EXISTING_CADENCE",
+        },
+    ])
+
+    result = mark_superseded_revisions(coverage, snapshots)
+
+    assert set(result["status"]) == {STATUS_QUARANTINED_REVISION}
+    assert set(result["reason"]) == {"AMBIGUOUS_ACTIVE_PROVIDER_EVENT_REVISIONS_RESEARCH_EXCLUDED"}
+    assert not result["operationally_active"].astype(bool).any()
+    assert not result["refresh_due"].astype(bool).any()
+    assert set(result["refresh_reason"]) == {REFRESH_QUARANTINED_PAIR_REVISION}
 
 
 def test_internal_event_conflict_is_not_hidden_by_superseded_marker():
