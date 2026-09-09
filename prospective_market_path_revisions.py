@@ -3,8 +3,8 @@
 A league home/away pairing should have one currently observed provider event.
 When the provider re-keys or reschedules a fixture, stale event ids may remain in
 immutable snapshot history. This module marks clearly superseded event ids and
-quarantines deterministic same-event schedule revisions without choosing a
-kickoff for frozen research.
+quarantines ambiguous provider revisions without choosing a kickoff for frozen
+research or paid refresh operations.
 """
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from team_names import normalize_team_name
 STATUS_SUPERSEDED = "SUPERSEDED"
 STATUS_QUARANTINED_REVISION = "QUARANTINED_REVISION"
 REFRESH_SUPERSEDED_PROVIDER_REVISION = "SUPERSEDED_PROVIDER_REVISION"
+REFRESH_QUARANTINED_PAIR_REVISION = "RESEARCH_QUARANTINED_PROVIDER_PAIR_REVISION"
 
 
 def _monotonic_schedule_revision_ids(snapshots: pd.DataFrame) -> set[tuple[str, str]]:
@@ -54,6 +55,31 @@ def _monotonic_schedule_revision_ids(snapshots: pd.DataFrame) -> set[tuple[str, 
     return quarantined
 
 
+def _ambiguous_current_pair_revision_ids(event_latest: pd.DataFrame) -> set[tuple[str, str]]:
+    """Return tied-current event ids for one normalized league/home/away pair.
+
+    A strict last-seen winner can safely make older ids SUPERSEDED. When two or
+    more distinct ids share the pair's latest observation time, selecting one is
+    guesswork. Quarantine every tied-current id so neither research nor manual
+    paid-refresh priority can double-count the same fixture pair.
+    """
+    if event_latest.empty:
+        return set()
+    current = event_latest[
+        event_latest["event_last_seen_utc"] == event_latest["pair_last_seen_utc"]
+    ].copy()
+    if current.empty:
+        return set()
+    current["_current_id_count"] = current.groupby(
+        ["league", "_home_key", "_away_key"]
+    )["event_id"].transform("nunique")
+    return set(
+        current.loc[current["_current_id_count"] > 1, ["league", "event_id"]]
+        .astype(str)
+        .itertuples(index=False, name=None)
+    )
+
+
 def mark_superseded_revisions(coverage: pd.DataFrame, snapshots: pd.DataFrame) -> pd.DataFrame:
     if coverage.empty or snapshots.empty:
         return coverage.copy()
@@ -86,6 +112,7 @@ def mark_superseded_revisions(coverage: pd.DataFrame, snapshots: pd.DataFrame) -
             ["league", "event_id"],
         ].itertuples(index=False, name=None)
     )
+    ambiguous_pair_ids = _ambiguous_current_pair_revision_ids(event_latest)
     quarantined_ids = _monotonic_schedule_revision_ids(snap)
 
     result = coverage.copy()
@@ -102,6 +129,20 @@ def mark_superseded_revisions(coverage: pd.DataFrame, snapshots: pd.DataFrame) -
         result.loc[stale_mask, "refresh_due"] = False
     if "refresh_reason" in result.columns:
         result.loc[stale_mask, "refresh_reason"] = REFRESH_SUPERSEDED_PROVIDER_REVISION
+
+    pair_quarantine_mask = result.apply(
+        lambda row: (str(row["league"]), str(row["event_id"])) in ambiguous_pair_ids,
+        axis=1,
+    )
+    pair_quarantine_mask &= result["status"].astype(str) != "CONFLICT"
+    result.loc[pair_quarantine_mask, "status"] = STATUS_QUARANTINED_REVISION
+    result.loc[pair_quarantine_mask, "reason"] = "AMBIGUOUS_ACTIVE_PROVIDER_EVENT_REVISIONS_RESEARCH_EXCLUDED"
+    if "operationally_active" in result.columns:
+        result.loc[pair_quarantine_mask, "operationally_active"] = False
+    if "refresh_due" in result.columns:
+        result.loc[pair_quarantine_mask, "refresh_due"] = False
+    if "refresh_reason" in result.columns:
+        result.loc[pair_quarantine_mask, "refresh_reason"] = REFRESH_QUARANTINED_PAIR_REVISION
 
     quarantine_mask = result.apply(
         lambda row: (str(row["league"]), str(row["event_id"])) in quarantined_ids,
