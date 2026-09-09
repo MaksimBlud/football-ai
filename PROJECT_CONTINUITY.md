@@ -89,16 +89,20 @@ Football AI должен стать системой, которая:
 - PR #232 merge `a895012fdd65148672b9cfa4bc83ea229145346d`;
 - continuity PR #233 merge `7ca38b6b4c886e6ff6aed5142fa8756a781778e2`.
 
-Последний live proof 2026-09-09:
-- actionable due paths = 23;
-- quarantined ambiguous event ids = 4;
-- priority = **SERIE_A -> LA_LIGA -> EPL**;
-- top path = Venezia vs Fiorentina;
-- snapshots всё ещё stale с 2026-09-05.
+Fresh free/read-only proof 2026-09-09:
+- Supabase checked at `2026-09-09 15:57:28.777877 UTC`;
+- latest snapshots remain stale: EPL `2026-09-05 15:19:42.729192 UTC`, LA_LIGA `2026-09-05 15:21:32.513020 UTC`, SERIE_A `2026-09-05 15:08:05.114487 UTC`;
+- actionable due paths = `23`: SERIE_A `8`, LA_LIGA `5`, EPL `10`;
+- current priority = **SERIE_A -> LA_LIGA -> EPL**;
+- top current path = **Torino vs Napoli**, kickoff `2026-09-11 18:45 UTC`, cutoff `2026-09-11 12:45 UTC`, status `READY`, 32 pre-cutoff snapshots, path span ~163.12h;
+- revision-danger paths remain excluded by the existing `SUPERSEDED` / `QUARANTINED_REVISION` rules;
+- fresh zero-cost quota proof via rerun of the already-proven read-only status job: remaining `193`, used `307`, last_cost `0`, hard reserve `100`;
+- paid provider requests `0`, provider credits spent `0`, Supabase writes `0`, production model hash unchanged before/after.
 
 Следующая стадия P0-A:
-- free/read-only fresh status + quota proof;
-- затем только при отдельном явном разрешении пользователя: controlled paid h2h refresh по текущему priority и existing budget/safety guards;
+- **free proof завершён**;
+- actual paid h2h refresh остаётся `MANUAL_PAID_GATE`;
+- только при отдельном явном разрешении пользователя выполнить controlled refresh по свежему priority и existing budget/safety guards;
 - после refresh — live verification и continuity.
 
 Важно: отсутствие explicit paid permission = gate, а не разрешение автоматически запускать collector.
@@ -108,17 +112,21 @@ Football AI должен стать системой, которая:
 Режим: **collect, don't peek**.
 
 - Frozen cohort = первые 100 eligible prospective EPL events.
-- Последнее известное состояние около `12/100`; перед использованием обновлять только metadata без outcome reads.
+- Fresh outcome-free health 2026-09-09: `12/100`, 12 unique `pair_key`, 12 unique `event_id`, только EPL.
+- Integrity: history cutoff, model generation и market snapshot находятся до kickoff; invalid probability rows = 0; probability sums нормализованы.
+- Current cohort kickoff span: `2026-09-06 13:00 UTC` -> `2026-09-14 15:30 UTC`.
+- Cohort использует один model artifact SHA256 `e0f39e2b66514d92cd0b67e74da807c8ceebb3856ffed7fa047ff2a4922c2540` и один code commit `4c1bc43ff6157382a83fe467d33fa8fe54adf897`.
 - Outcomes запрещены до 100 событий.
 - После 100: минимум 24h после kickoff последнего cohort event.
 - Дополнительный embargo до `2026-11-01 12:16:54 UTC`.
 - Никакого interim primary evaluation или performance-based optional stopping.
+- В fresh health pass outcome/result tables не читались.
 
 Цель: ответить на главный вопрос проекта — добавляет ли AI predictive value относительно рынка на честном prospective sample.
 
 До gate: только collection/identity/sample-health metadata.
 
-### P0-C. PROSPECTIVE_MARKET_PATH_V1 — ACTIVE
+### P0-C. PROSPECTIVE_MARKET_PATH_V1 — ACTIVE / DATA-GROWTH + P0-A FRESHNESS GATED
 
 Цель: исследовать полную pre-cutoff market trajectory, а не один closing price.
 
@@ -129,6 +137,21 @@ Football AI должен стать системой, которая:
 - прошедший cutoff нельзя backfill;
 - outcome peeking запрещён;
 - acquisition и settlement — разные контуры.
+
+Frozen activation contract:
+- `FREEZE_UTC = 2026-09-04 14:25:00 UTC`;
+- minimum 100 fixtures per league;
+- minimum 4 kickoff calendar months per league;
+- minimum 3 pre-cutoff snapshots and 12h path span for `READY` path quality.
+
+Fresh outcome-free trajectory health 2026-09-09:
+- raw frozen universe = `68` event ids: EPL `20`, LA_LIGA `24`, SERIE_A `24`;
+- each league currently spans only `1` kickoff calendar month versus required `4`;
+- actionable trajectory refresh due = `23`: EPL `10`, LA_LIGA `5`, SERIE_A `8`;
+- current acquisition priority remains **SERIE_A -> LA_LIGA -> EPL**;
+- source snapshots are still stale from 2026-09-05, so P0-A freshness is the immediate data-quality limiter;
+- activation gate `100 fixtures + 4 months per league` is not reached;
+- no outcome/result tables were read in this health pass.
 
 Зависимость: качество этого эксперимента напрямую зависит от P0-A freshness.
 
@@ -429,19 +452,23 @@ Continuity follow-up PR #233 merge `7ca38b6b4c886e6ff6aed5142fa8756a781778e2`.
 
 # Текущий execution pointer
 
-**Primary item: `P0-A Prospective data acquisition / market freshness`.**
+**Primary item: `P0-A Prospective data acquisition / market freshness` — `MANUAL_PAID_GATE`.**
 
-Текущая ситуация:
-- diagnostic/status/revision infrastructure закрыта;
-- реальные snapshots stale с 2026-09-05;
-- latest known read-only queue = 23 due paths;
-- priority = Serie A -> La Liga -> EPL;
-- actual paid h2h refresh остаётся `MANUAL_PAID_GATE`.
+Текущая ситуация после fresh pass 2026-09-09:
+- P0-A free/read-only status + quota proof завершён;
+- snapshots всё ещё stale с 2026-09-05;
+- fresh queue = 23 actionable due paths (`SERIE_A 8 / LA_LIGA 5 / EPL 10`);
+- priority = **SERIE_A -> LA_LIGA -> EPL**;
+- fresh top path = **Torino vs Napoli**;
+- quota = `193 remaining / 307 used / last_cost 0`, hard reserve `100`;
+- actual paid h2h refresh остаётся `MANUAL_PAID_GATE` и не запускался;
+- P0-B outcome-free health = `HEALTHY / 12/100 / TIME-FROZEN_GATE`;
+- P0-C outcome-free trajectory health = `68 raw frozen event ids / 1 kickoff month per league / DATA-GROWTH + P0-A FRESHNESS GATED`.
 
 Что делать дальше по roadmap:
-1. При следующем рабочем цикле сначала fresh-main + free/read-only live Market Status + quota proof.
-2. Если пользователь **явно разрешил paid h2h refresh** — выполнить controlled refresh по актуальному priority и existing guards, затем live proof/continuity.
-3. Если paid permission отсутствует — зафиксировать P0-A как временно gated и перейти только к следующему safe item `P0-B`/`P0-C`: outcome-free cohort/sample/trajectory health, без outcome reads.
+1. Без отдельного paid permission P0-A остаётся на `MANUAL_PAID_GATE`; не запускать paid collector автоматически.
+2. Продолжать только safe outcome-free collection/health P0-B и P0-C, сохраняя no-peek contract.
+3. При отдельном явном разрешении пользователя на paid h2h refresh вернуться к P0-A, сначала пересчитать fresh priority/quota, затем выполнить минимальный controlled refresh с existing guards и post-refresh live proof.
 4. Не переходить к SportsGameOdds, новым features, Candidate V2, API refactor или RLS, пока roadmap ordering не даёт для этого основания.
 
 ---
@@ -472,3 +499,9 @@ Continuity follow-up PR #233 merge `7ca38b6b4c886e6ff6aed5142fa8756a781778e2`.
 - Post-merge live Supabase proof: 23 due paths, 4 ambiguous ids quarantined, priority Serie A -> La Liga -> EPL, top path Venezia–Fiorentina.
 - PR #233 continuity merge `7ca38b6b4c886e6ff6aed5142fa8756a781778e2`.
 - Пользователь утвердил переход к единой master roadmap для всего проекта и запрет хаотичного переключения между областями; этот файл теперь определяет execution order.
+- Fresh P0-A free proof на current main `8bca2b71c49eecf3c9692a3800cd3079696465b0`: latest snapshots по EPL/La Liga/Serie A всё ещё 2026-09-05; 23 actionable due (`8/5/10`), current priority Serie A -> La Liga -> EPL, fresh top path Torino–Napoli.
+- Fresh zero-cost quota proof: rerun read-only status job `102543884064` в workflow run `34335760026`; quota `193 remaining / 307 used / last_cost 0`, hard reserve `100`; paid requests `0`, credits spent `0`, Supabase writes `0`, production hash unchanged.
+- P0-A free proof завершён и формально остановлен на `MANUAL_PAID_GATE`; paid h2h refresh не выполнялся и по-прежнему требует отдельного explicit permission.
+- P0-B outcome-free health: `EPL_AI_MARKET_PAIR_V1 = 12/100`, 12 unique pair/event ids, temporal/probability invariants green, один model hash и один code commit; outcomes не читались; статус `HEALTHY / TIME-FROZEN_GATE`.
+- P0-C outcome-free trajectory health: frozen raw universe `68` event ids (`EPL 20 / LA_LIGA 24 / SERIE_A 24`), только 1 kickoff month на лигу; activation `100 + 4 months` не достигнут; 23 trajectory paths refresh-due; outcomes не читались.
+- Весь pass был read-only относительно Supabase и outcome-free; paid provider requests/credits = `0/0`; production model не изменён.
