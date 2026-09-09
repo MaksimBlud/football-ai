@@ -9,6 +9,7 @@ on:
       - "prospective_market_path_revisions.py"
       - "prospective_market_status.py"
       - "tests/test_prospective_market_path_coverage.py"
+      - "tests/test_prospective_market_path_coverage_cycle.py"
       - "tests/test_prospective_market_path_refresh_priority.py"
       - "tests/test_prospective_market_path_revisions.py"
       - "tests/test_prospective_market_status.py"
@@ -34,7 +35,7 @@ jobs:
       - name: Compile coverage modules
         run: python -m py_compile prospective_market_path_coverage.py prospective_market_path_coverage_cycle.py prospective_market_path_refresh_priority.py prospective_market_path_revisions.py prospective_market_status.py
       - name: Run focused coverage tests
-        run: pytest -q tests/test_prospective_market_path_coverage.py tests/test_prospective_market_path_refresh_priority.py tests/test_prospective_market_path_revisions.py tests/test_prospective_market_status.py
+        run: pytest -q tests/test_prospective_market_path_coverage.py tests/test_prospective_market_path_coverage_cycle.py tests/test_prospective_market_path_refresh_priority.py tests/test_prospective_market_path_revisions.py tests/test_prospective_market_status.py
       - name: Verify production hashes unchanged
         run: |
           sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
