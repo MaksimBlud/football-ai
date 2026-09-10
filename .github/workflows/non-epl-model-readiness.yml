@@ -33,7 +33,7 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt pytest
       - run: python non_epl_model_readiness.py --json
-      - run: pytest -q tests/test_non_epl_model_readiness.py tests/test_train_la_liga_1x2_candidate.py
+      - run: python -m pytest -q tests/test_non_epl_model_readiness.py tests/test_train_la_liga_1x2_candidate.py
       - name: Production artifacts unchanged
         run: git diff --exit-code -- '*.pkl'
 
