@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'non_epl_model_readiness.py'
+      - 'normalize_la_liga_history_historical_only.py'
       - 'train_la_liga_1x2_candidate.py'
       - 'tests/test_non_epl_model_readiness.py'
       - 'tests/test_train_la_liga_1x2_candidate.py'
@@ -13,6 +14,7 @@ on:
     branches: [main]
     paths:
       - 'non_epl_model_readiness.py'
+      - 'normalize_la_liga_history_historical_only.py'
       - 'train_la_liga_1x2_candidate.py'
       - 'tests/test_non_epl_model_readiness.py'
       - 'tests/test_train_la_liga_1x2_candidate.py'
@@ -46,8 +48,14 @@ jobs:
           python-version: '3.12'
           cache: pip
       - run: pip install -r requirements.txt
-      - name: Build completed La Liga historical/OOS inputs
-        run: python league_model_pipeline.py --league LA_LIGA
+      - name: Build completed La Liga history
+        run: python build_la_liga_historical_dataset.py
+      - name: Normalize completed history only
+        run: python normalize_la_liga_history_historical_only.py
+      - name: Build point-in-time features
+        run: python build_la_liga_temporal_features.py
+      - name: Add point-in-time Elo
+        run: python add_la_liga_elo_features.py
       - name: Evaluate candidate artifact gate
         run: python train_la_liga_1x2_candidate.py
       - name: Record research result
@@ -66,5 +74,7 @@ jobs:
           name: la-liga-historical-candidate-proof
           path: |
             experiments/la_liga_candidate_artifact/latest.json
+            artifacts/candidates/la_liga/model.joblib
+            artifacts/candidates/la_liga/calibrator.json
             artifacts/candidates/la_liga/manifest.json
           if-no-files-found: ignore
