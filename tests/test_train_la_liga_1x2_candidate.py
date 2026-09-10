@@ -1,3 +1,7 @@
+import os
+import subprocess
+import sys
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -65,3 +69,16 @@ def test_historical_normalization_fails_if_aliasing_creates_duplicate_fixture():
     })
     with pytest.raises(RuntimeError,match="duplicate fixtures"):
         historical_norm.normalize_history(frame)
+
+
+def test_offline_feature_builder_import_does_not_require_supabase_credentials():
+    env=os.environ.copy()
+    for name in ("SUPABASE_URL","SUPABASE_KEY","SUPABASE_ANON_KEY","SUPABASE_SERVICE_ROLE_KEY"):
+        env.pop(name,None)
+    completed=subprocess.run(
+        [sys.executable,"-c","import feature_engineering; assert callable(feature_engineering.build_features)"],
+        env=env,
+        text=True,
+        capture_output=True,
+    )
+    assert completed.returncode==0, completed.stderr
