@@ -5,6 +5,7 @@ on:
     paths:
       - 'non_epl_model_readiness.py'
       - 'normalize_la_liga_history_historical_only.py'
+      - 'feature_engineering.py'
       - 'train_la_liga_1x2_candidate.py'
       - 'tests/test_non_epl_model_readiness.py'
       - 'tests/test_train_la_liga_1x2_candidate.py'
@@ -15,6 +16,7 @@ on:
     paths:
       - 'non_epl_model_readiness.py'
       - 'normalize_la_liga_history_historical_only.py'
+      - 'feature_engineering.py'
       - 'train_la_liga_1x2_candidate.py'
       - 'tests/test_non_epl_model_readiness.py'
       - 'tests/test_train_la_liga_1x2_candidate.py'
@@ -41,6 +43,8 @@ jobs:
 
   la-liga-historical-candidate-proof:
     runs-on: ubuntu-latest
+    env:
+      CANDIDATE_CODE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
