@@ -1,0 +1,84 @@
+name: Non-EPL Model Readiness
+
+on:
+  pull_request:
+    paths:
+      - 'non_epl_model_readiness.py'
+      - 'normalize_la_liga_history_historical_only.py'
+      - 'feature_engineering.py'
+      - 'train_la_liga_1x2_candidate.py'
+      - 'tests/test_non_epl_model_readiness.py'
+      - 'tests/test_train_la_liga_1x2_candidate.py'
+      - 'research/NON_EPL_MODEL_READINESS_V1.md'
+      - '.github/workflows/non-epl-model-readiness.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'non_epl_model_readiness.py'
+      - 'normalize_la_liga_history_historical_only.py'
+      - 'feature_engineering.py'
+      - 'train_la_liga_1x2_candidate.py'
+      - 'tests/test_non_epl_model_readiness.py'
+      - 'tests/test_train_la_liga_1x2_candidate.py'
+      - 'research/NON_EPL_MODEL_READINESS_V1.md'
+      - '.github/workflows/non-epl-model-readiness.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  readiness-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt pytest
+      - run: python non_epl_model_readiness.py --json
+      - run: python -m pytest -q tests/test_non_epl_model_readiness.py tests/test_train_la_liga_1x2_candidate.py
+      - name: Production artifacts unchanged
+        run: git diff --exit-code -- '*.pkl'
+
+  la-liga-historical-candidate-proof:
+    runs-on: ubuntu-latest
+    env:
+      CANDIDATE_CODE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Build completed La Liga history
+        run: python build_la_liga_historical_dataset.py
+      - name: Normalize completed history only
+        run: python normalize_la_liga_history_historical_only.py
+      - name: Build point-in-time features
+        run: python build_la_liga_temporal_features.py
+      - name: Add point-in-time Elo
+        run: python add_la_liga_elo_features.py
+      - name: Evaluate candidate artifact gate
+        run: python train_la_liga_1x2_candidate.py
+      - name: Record research result
+        if: always()
+        run: |
+          if [ -f experiments/la_liga_candidate_artifact/latest.json ]; then
+            cat experiments/la_liga_candidate_artifact/latest.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo 'production promotion: false' >> "$GITHUB_STEP_SUMMARY"
+      - name: Production artifacts unchanged
+        run: git diff --exit-code -- '*.pkl'
+      - name: Upload research-only proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: la-liga-historical-candidate-proof
+          path: |
+            experiments/la_liga_candidate_artifact/latest.json
+            artifacts/candidates/la_liga/model.joblib
+            artifacts/candidates/la_liga/calibrator.json
+            artifacts/candidates/la_liga/manifest.json
+          if-no-files-found: ignore
