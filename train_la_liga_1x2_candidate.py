@@ -24,8 +24,9 @@ def prod_state():
     return {n:(sha(ROOT/n) if (ROOT/n).exists() else None) for n in sweep.PRODUCTION_ARTIFACTS}
 
 def code_sha():
-    value=os.getenv("GITHUB_SHA","").strip()
-    if value: return value
+    for name in ("CANDIDATE_CODE_SHA","GITHUB_SHA"):
+        value=os.getenv(name,"").strip()
+        if value: return value
     p=subprocess.run(["git","rev-parse","HEAD"],cwd=ROOT,text=True,capture_output=True)
     if p.returncode or len(p.stdout.strip())<7: raise RuntimeError("code SHA unavailable")
     return p.stdout.strip()
