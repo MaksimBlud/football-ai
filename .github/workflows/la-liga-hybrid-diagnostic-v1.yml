@@ -1,0 +1,92 @@
+name: La Liga Hybrid Diagnostic V1
+
+on:
+  pull_request:
+    paths:
+      - 'league_model_sweep.py'
+      - 'league_model_diagnostics.py'
+      - 'build_la_liga_historical_dataset.py'
+      - 'normalize_la_liga_history_historical_only.py'
+      - 'build_la_liga_temporal_features.py'
+      - 'add_la_liga_elo_features.py'
+      - 'feature_engineering.py'
+      - 'tests/test_league_model_diagnostics_contract.py'
+      - 'research/LA_LIGA_HYBRID_DIAGNOSTIC_V1.md'
+      - '.github/workflows/la-liga-hybrid-diagnostic-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'league_model_sweep.py'
+      - 'league_model_diagnostics.py'
+      - 'build_la_liga_historical_dataset.py'
+      - 'normalize_la_liga_history_historical_only.py'
+      - 'build_la_liga_temporal_features.py'
+      - 'add_la_liga_elo_features.py'
+      - 'feature_engineering.py'
+      - 'tests/test_league_model_diagnostics_contract.py'
+      - 'research/LA_LIGA_HYBRID_DIAGNOSTIC_V1.md'
+      - '.github/workflows/la-liga-hybrid-diagnostic-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  frozen-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt pytest
+      - name: Verify pre-existing diagnostic implementation is unchanged
+        run: test "$(git hash-object league_model_diagnostics.py)" = "915a3a283653897a2eab9e9501f6e03ca8ef1464"
+      - run: python -m pytest -q tests/test_league_model_diagnostics_contract.py
+      - name: Production artifacts unchanged
+        run: git diff --exit-code -- '*.pkl'
+
+  completed-history-hybrid-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Build completed La Liga history
+        run: python build_la_liga_historical_dataset.py
+      - name: Normalize completed history only
+        run: python normalize_la_liga_history_historical_only.py
+      - name: Build point-in-time features
+        run: python build_la_liga_temporal_features.py
+      - name: Add point-in-time Elo
+        run: python add_la_liga_elo_features.py
+      - name: Reproduce frozen model sweep
+        run: python league_model_sweep.py --league LA_LIGA
+      - name: Run frozen hybrid diagnostic
+        run: python league_model_diagnostics.py --league LA_LIGA
+      - name: Record research result
+        if: always()
+        run: |
+          if [ -f experiments/league_model_diagnostics/la_liga_report.json ]; then
+            cat experiments/league_model_diagnostics/la_liga_report.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo 'candidate model saved: false' >> "$GITHUB_STEP_SUMMARY"
+          echo 'production promotion: false' >> "$GITHUB_STEP_SUMMARY"
+      - name: Production artifacts unchanged
+        run: git diff --exit-code -- '*.pkl'
+      - name: Upload research-only proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: la-liga-hybrid-diagnostic-v1
+          path: |
+            experiments/league_model_sweep/la_liga_report.json
+            experiments/league_model_sweep/la_liga_selection_table.csv
+            experiments/league_model_diagnostics/la_liga_report.json
+            experiments/league_model_diagnostics/la_liga_alpha_selection.csv
+            experiments/league_model_diagnostics/la_liga_selection_segments.csv
+            experiments/league_model_diagnostics/la_liga_holdout_segments.csv
+          if-no-files-found: error
