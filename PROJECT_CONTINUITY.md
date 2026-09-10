@@ -525,3 +525,53 @@ Continuity follow-up PR #233 merge `7ca38b6b4c886e6ff6aed5142fa8756a781778e2`.
 - Core `league_prediction_ledger` и structural observations live-healthy по 7 лигам (BUNDESLIGA, EPL, EREDIVISIE, LA_LIGA, LIGUE_1, RPL, SERIE_A) без post-kickoff timing violations; La Liga general/legacy structural split подтверждён как temporal-safe compatibility distinction.
 - P1-C: actual Multi-Market V2 live storage = только `2` EREDIVISIE events, оба pre-kickoff; policy при этом collection-ready для EPL/LA_LIGA/SERIE_A/BUNDESLIGA/LIGUE_1/EREDIVISIE/PRIMEIRA_LIGA. Итог: `CORE HEALTHY / CROSS-LEAGUE MULTI-MARKET NOT YET LIVE-PROVEN`.
 - P1 pass не расходовал provider credits, не писал в Supabase, не читал prospective outcomes и не менял production `.pkl`.
+
+---
+
+## 2026-09-10 addendum — P1-D Multi-league AI-vs-market readiness closure
+
+Status: **CLOSED / INTENTIONAL FAIL-CLOSED BOUNDARY**.
+
+Кейс `12 paired EPL events` против `~190 multi-league operational events` закрыт полностью и не является потерей 178 матчей.
+
+Fresh live outcome-free proof после merge PR #238:
+- `league_prediction_ledger` = `190` unique operational league-events: BUNDESLIGA `26`, EPL `30`, EREDIVISIE `30`, LA_LIGA `30`, LIGUE_1 `26`, RPL `15`, SERIE_A `33`;
+- все `190/190` находятся в `prediction_mode=MARKET_ONLY` и `structural_status=CALIBRATION_REQUIRED`;
+- `structural_applied_events=0` во всех 7 лигах;
+- `epl_ai_market_pair_ledger` = `12` paired-AI events, все EPL;
+- все `12/12` имеют валидный pre-kickoff timing, normalized model probabilities, `model_artifact_sha256` и `code_commit_sha`;
+- ни одна non-EPL league сейчас не имеет эквивалентного paired-AI provenance.
+
+Code-level root cause:
+- `league_prediction_ledger.build_market_only_predictions()` намеренно фиксирует `CALIBRATION_REQUIRED`, `MARKET_ONLY`, `structural_applied=False` и пустые structural probabilities;
+- `epl_ai_market_pair_collector.py` — отдельный EPL-only production-model replay path с `LEAGUE="EPL"` и tracked production-model provenance;
+- следовательно 190 operational events и 12 paired-AI events — два разных evidence layers.
+
+Закрывающее решение:
+- frozen `EPL_AI_MARKET_PAIR_V1` остаётся неизменным `12/100`; multi-league backfill в него запрещён;
+- уже собранные MARKET_ONLY rows нельзя задним числом считать prospective AI evidence;
+- EPL production model нельзя переносить на другие лиги только ради ускорения sample;
+- новый multi-league paired-AI primary experiment допустим только future-only после league-specific historical/OOS readiness и отдельного frozen activation manifest с model/hash/feature/history/calibration/market-cutoff/sample/no-peek/metric contracts;
+- `PROSPECTIVE_MARKET_PATH_V1` остаётся отдельным market-trajectory experiment и не переопределяется как AI-vs-market primary cohort.
+
+Guard/proof:
+- `multi_league_ai_market_readiness.py` добавляет outcome-free readiness audit и fail-closed запрет на самовольную activation нового primary cohort;
+- regression tests: `tests/test_multi_league_ai_market_readiness.py`;
+- contract: `research/MULTI_LEAGUE_AI_MARKET_READINESS_V1.md`;
+- PR #238 exact head `497af381c99d6eaaebdc257b4a1f8b48b088a8b0`;
+- 5/5 PR workflows green;
+- production-artifact guard green;
+- exact-head merge `97bddbb9c54f5233ef5a12e5944867bdcffee981`;
+- post-merge live proof совпал с readiness contract;
+- provider requests `0`, paid credits `0`, Supabase writes `0`, prospective outcome/settlement reads `0`, production `.pkl` changes `0`.
+
+### Execution pointer override after P1-D closure
+
+Этот addendum является более свежим pointer, чем расположенный выше `# Текущий execution pointer`.
+
+- Primary item по общей roadmap остаётся `P0-A Prospective data acquisition / market freshness — MANUAL_PAID_GATE`; отдельного explicit разрешения на paid h2h refresh в этом кейсе нет.
+- `P0-B EPL_AI_MARKET_PAIR_V1 = HEALTHY / 12/100 / TIME-FROZEN_GATE`; `12` — именно paired EPL AI sample, не общий multi-league operational count.
+- `P1-D = CLOSED / INTENTIONAL FAIL-CLOSED BOUNDARY`.
+- Для ускорения именно AI-vs-market evidence следующий safe research unblocker: league-specific AI/model-calibration readiness на completed historical/OOS data; после доказательства пригодности хотя бы одной non-EPL league — отдельная future-only preregistration multi-league paired cohort.
+- Уже накопленные 190 MARKET_ONLY operational events могут использоваться для infrastructure/readiness validation, но не backfill в новый prospective primary cohort.
+- P2 prospective outcomes/performance остаются закрыты до frozen sample/time gates; Candidate V2/API/RLS не открывать без roadmap основания.
