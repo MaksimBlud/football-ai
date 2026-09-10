@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+import normalize_la_liga_history_historical_only as historical_norm
 import train_la_liga_1x2_candidate as candidate
 
 
@@ -37,3 +38,30 @@ def test_candidate_outputs_are_ignored_research_paths():
     assert "experiments/la_liga_candidate_artifact" in str(candidate.REPORT).replace("\\","/")
     assert candidate.FINAL=="2025-2026"
     assert "2026-2027" not in candidate.SELECTION
+
+
+def test_historical_normalization_needs_no_upcoming_fixture_file():
+    frame=pd.DataFrame({
+        "league":["LA_LIGA"],
+        "season":["2025-2026"],
+        "match_date":["2026-05-01"],
+        "home_team":["Ath Madrid"],
+        "away_team":["Sociedad"],
+    })
+    result=historical_norm.normalize_history(frame)
+    assert result.loc[0,"home_team"]=="Atlético Madrid"
+    assert result.loc[0,"away_team"]=="Real Sociedad"
+    assert result.loc[0,"home_team_source"]=="Ath Madrid"
+    assert result.loc[0,"away_team_source"]=="Sociedad"
+
+
+def test_historical_normalization_fails_if_aliasing_creates_duplicate_fixture():
+    frame=pd.DataFrame({
+        "league":["LA_LIGA","LA_LIGA"],
+        "season":["2025-2026","2025-2026"],
+        "match_date":["2026-05-01","2026-05-01"],
+        "home_team":["Ath Madrid","Atlético Madrid"],
+        "away_team":["Sociedad","Real Sociedad"],
+    })
+    with pytest.raises(RuntimeError,match="duplicate fixtures"):
+        historical_norm.normalize_history(frame)
