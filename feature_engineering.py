@@ -1,7 +1,5 @@
 import pandas as pd
 
-from database import supabase
-
 
 OUTPUT = "data/features_engineered.csv"
 LAST_MATCHES = 5
@@ -15,6 +13,11 @@ def average(values):
 
 
 def load_matches():
+    # Database access belongs to the DB-loading surface only.  Keeping this
+    # import local lets the pure build_features() path run in historical/OOS
+    # jobs without Supabase credentials or client construction side effects.
+    from database import supabase
+
     print("Загружаю матчи из Supabase...")
 
     all_matches = []
