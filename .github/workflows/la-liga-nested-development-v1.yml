@@ -1,0 +1,90 @@
+name: La Liga Nested Development V1
+
+on:
+  pull_request:
+    paths:
+      - 'la_liga_nested_development_v1.py'
+      - 'league_model_sweep.py'
+      - 'league_model_diagnostics.py'
+      - 'build_la_liga_historical_dataset.py'
+      - 'normalize_la_liga_history_historical_only.py'
+      - 'build_la_liga_temporal_features.py'
+      - 'add_la_liga_elo_features.py'
+      - 'feature_engineering.py'
+      - 'tests/test_la_liga_nested_development_v1.py'
+      - 'research/LA_LIGA_NESTED_DEVELOPMENT_V1.md'
+      - 'PROJECT_CONTINUITY_ADDENDUM_20260910_LA_LIGA_NESTED_RESULT.md'
+      - '.github/workflows/la-liga-nested-development-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'la_liga_nested_development_v1.py'
+      - 'league_model_sweep.py'
+      - 'league_model_diagnostics.py'
+      - 'build_la_liga_historical_dataset.py'
+      - 'normalize_la_liga_history_historical_only.py'
+      - 'build_la_liga_temporal_features.py'
+      - 'add_la_liga_elo_features.py'
+      - 'feature_engineering.py'
+      - 'tests/test_la_liga_nested_development_v1.py'
+      - 'research/LA_LIGA_NESTED_DEVELOPMENT_V1.md'
+      - 'PROJECT_CONTINUITY_ADDENDUM_20260910_LA_LIGA_NESTED_RESULT.md'
+      - '.github/workflows/la-liga-nested-development-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  preregistered-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt pytest
+      - run: python -m pytest -q tests/test_la_liga_nested_development_v1.py
+      - name: Production artifacts unchanged
+        run: git diff --exit-code -- '*.pkl'
+
+  completed-history-development-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Build completed La Liga history
+        run: python build_la_liga_historical_dataset.py
+      - name: Normalize completed history only
+        run: python normalize_la_liga_history_historical_only.py
+      - name: Build point-in-time features
+        run: python build_la_liga_temporal_features.py
+      - name: Add point-in-time Elo
+        run: python add_la_liga_elo_features.py
+      - name: Run preregistered nested development protocol
+        run: python la_liga_nested_development_v1.py --league LA_LIGA
+      - name: Record research result
+        if: always()
+        run: |
+          if [ -f experiments/la_liga_nested_development_v1/report.json ]; then
+            cat experiments/la_liga_nested_development_v1/report.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo 'candidate model saved: false' >> "$GITHUB_STEP_SUMMARY"
+          echo 'production promotion: false' >> "$GITHUB_STEP_SUMMARY"
+      - name: Production artifacts unchanged
+        run: git diff --exit-code -- '*.pkl'
+      - name: Upload research-only proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: la-liga-nested-development-v1
+          path: |
+            experiments/la_liga_nested_development_v1/report.json
+            experiments/la_liga_nested_development_v1/outer_folds.csv
+            experiments/la_liga_nested_development_v1/final_model_selection.csv
+            experiments/la_liga_nested_development_v1/final_alpha_selection.csv
+          if-no-files-found: error
