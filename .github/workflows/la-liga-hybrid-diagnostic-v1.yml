@@ -12,6 +12,7 @@ on:
       - 'feature_engineering.py'
       - 'tests/test_league_model_diagnostics_contract.py'
       - 'research/LA_LIGA_HYBRID_DIAGNOSTIC_V1.md'
+      - 'PROJECT_CONTINUITY_ADDENDUM_20260910_LA_LIGA_HYBRID_RESULT.md'
       - '.github/workflows/la-liga-hybrid-diagnostic-v1.yml'
   push:
     branches: [main]
@@ -25,6 +26,7 @@ on:
       - 'feature_engineering.py'
       - 'tests/test_league_model_diagnostics_contract.py'
       - 'research/LA_LIGA_HYBRID_DIAGNOSTIC_V1.md'
+      - 'PROJECT_CONTINUITY_ADDENDUM_20260910_LA_LIGA_HYBRID_RESULT.md'
       - '.github/workflows/la-liga-hybrid-diagnostic-v1.yml'
 
 permissions:
