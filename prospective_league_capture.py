@@ -152,11 +152,10 @@ def capture_market_only(row: dict[str, Any], ledger_path: Path) -> CaptureResult
         comparable = {k: existing.get(k, "") for k in projection}
         if comparable != projection:
             raise ValueError("conflicting rewrite for an existing prospective observation")
-        observation_number = 1 + sum(
-            1
-            for r in current
-            if r.get("league") == projection["league"] and r.get("protocol") == PROTOCOL and r.get("canonical_key") < projection["canonical_key"]
-        )
+        try:
+            observation_number = int(existing["observation_number"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError("existing prospective row has invalid observation_number") from exc
         return CaptureResult(
             status="UNCHANGED",
             league=projection["league"],
@@ -168,9 +167,20 @@ def capture_market_only(row: dict[str, Any], ledger_path: Path) -> CaptureResult
             unchanged=True,
         )
 
-    league_count = sum(1 for r in current if r.get("league") == projection["league"] and r.get("protocol") == PROTOCOL)
-    if league_count >= TARGET_N:
+    league_rows = [
+        r for r in current if r.get("league") == projection["league"] and r.get("protocol") == PROTOCOL
+    ]
+    if len(league_rows) >= TARGET_N:
         raise ValueError(f"prospective target already reached for {projection['league']}: {TARGET_N}/{TARGET_N}")
+
+    existing_numbers: list[int] = []
+    for existing in league_rows:
+        try:
+            existing_numbers.append(int(existing["observation_number"]))
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError("existing prospective row has invalid observation_number") from exc
+    if sorted(existing_numbers) != list(range(1, len(existing_numbers) + 1)):
+        raise ValueError("ledger observation numbers are not contiguous; refusing to append")
 
     ledger_path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = [
@@ -187,7 +197,7 @@ def capture_market_only(row: dict[str, Any], ledger_path: Path) -> CaptureResult
         "draw_odds",
         "away_odds",
     ]
-    observation_number = league_count + 1
+    observation_number = len(league_rows) + 1
     new_row = dict(projection)
     new_row["observation_number"] = str(observation_number)
     write_header = not ledger_path.exists()
