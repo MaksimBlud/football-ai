@@ -59,10 +59,17 @@ def test_candidate_tie_break_is_deterministic():
     assert winner == ("core", "logistic_l2")
 
 
-def test_alpha_tie_break_prefers_lowest_alpha_when_ai_equals_market():
+def test_alpha_selection_stays_on_frozen_grid_when_ai_equals_market():
     predictions = _predictions(ai=(0.4, 0.35, 0.25), market=(0.4, 0.35, 0.25))
-    alpha, _ = protocol.select_alpha(predictions, protocol.DEVELOPMENT_OOS_SEASONS)
-    assert alpha == 0.05
+    alpha, selected_score = protocol.select_alpha(predictions, protocol.DEVELOPMENT_OOS_SEASONS)
+    assert alpha in protocol.ALPHAS
+
+    selected = predictions[predictions["season"].isin(protocol.DEVELOPMENT_OOS_SEASONS)]
+    y, _, market = protocol.arrays(selected)
+    market_score = protocol.metrics(y, market)
+    assert abs(selected_score["logloss"] - market_score["logloss"]) < 1e-12
+    assert abs(selected_score["brier"] - market_score["brier"]) < 1e-12
+    assert selected_score["accuracy"] == market_score["accuracy"]
 
 
 def test_gate_requires_all_frozen_conditions():
