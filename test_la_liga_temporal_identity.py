@@ -18,7 +18,7 @@ MARKET = {
 
 def row(
     observation_key: str,
-    persisted_at_utc: str,
+    persisted_at_utc: str | None,
     *,
     structural_score: float,
     market: dict | None = None,
@@ -87,17 +87,37 @@ class LaLigaTemporalIdentityTests(unittest.TestCase):
                 ]
             )
 
-    def test_invalid_persisted_timestamp_fails_closed(self):
+    def test_duplicate_without_valid_persisted_timestamp_fails_closed(self):
         with self.assertRaises(TemporalObservationConflictError):
             canonical_observation_key_map(
                 [
                     row(
                         "LA_LIGA:first",
-                        "not-a-time",
+                        None,
                         structural_score=0.326,
-                    )
+                    ),
+                    row(
+                        "LA_LIGA:later",
+                        "2026-09-11T15:45:20+00:00",
+                        structural_score=0.826,
+                    ),
                 ]
             )
+
+    def test_single_legacy_projection_needs_no_persistence_ordering(self):
+        candidate = row(
+            "LA_LIGA:only",
+            None,
+            structural_score=0.326,
+        )
+        candidate.pop("payload")
+        mapping, metrics = canonical_observation_key_map([candidate])
+        identity = (
+            "98222f8385c445cb0cbfae0ab9073abd",
+            "2026-09-04T16:29:24.526493+00:00",
+        )
+        self.assertEqual(mapping[identity], "LA_LIGA:only")
+        self.assertEqual(metrics.duplicate_temporal_rows, 0)
 
     def test_foreign_league_fails_closed(self):
         candidate = row(
