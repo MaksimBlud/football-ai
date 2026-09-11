@@ -125,7 +125,10 @@ def _load_rows(path: Path) -> list[dict[str, str]]:
     if not path.exists():
         return []
     with path.open("r", encoding="utf-8", newline="") as handle:
-        return list(csv.DictReader(handle))
+        reader = csv.DictReader(handle)
+        if reader.fieldnames != FIELDNAMES:
+            raise ValueError("ledger schema mismatch")
+        return list(reader)
 
 
 def _stable_projection(row: dict[str, Any]) -> dict[str, str]:
