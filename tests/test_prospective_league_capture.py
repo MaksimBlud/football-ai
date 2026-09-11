@@ -11,6 +11,8 @@ from prospective_league_capture import PROTOCOL, TARGET_N, capture_market_only, 
 def _row(**overrides):
     row = {
         "league": "SERIE_A",
+        "source_event_id": "event-serie-a-001",
+        "source_snapshot_time_utc": "2026-09-11T20:00:00+00:00",
         "home_team": "Inter",
         "away_team": "Juventus",
         "commence_time_utc": "2026-09-12T18:45:00+00:00",
@@ -29,6 +31,7 @@ def test_accepts_pre_match_market_only_for_both_leagues(tmp_path: Path):
     second = capture_market_only(
         _row(
             league="LA_LIGA",
+            source_event_id="event-la-liga-001",
             home_team="Real Sociedad",
             away_team="Villarreal",
             commence_time_utc="2026-09-13T16:30:00Z",
@@ -43,11 +46,30 @@ def test_accepts_pre_match_market_only_for_both_leagues(tmp_path: Path):
     rows = list(csv.DictReader(ledger.open(encoding="utf-8")))
     assert {r["league"] for r in rows} == {"SERIE_A", "LA_LIGA"}
     assert all(r["protocol"] == PROTOCOL for r in rows)
+    assert all(r["source_event_id"] for r in rows)
+    assert all(r["source_snapshot_time_utc"] for r in rows)
 
 
 def test_rejects_post_kickoff_capture():
     with pytest.raises(ValueError, match="strictly before kickoff"):
         validate_capture(_row(captured_at_utc="2026-09-12T18:45:00Z"))
+
+
+def test_rejects_source_snapshot_at_or_after_kickoff():
+    with pytest.raises(ValueError, match="source market snapshot must be strictly before kickoff"):
+        validate_capture(_row(source_snapshot_time_utc="2026-09-12T18:45:00Z"))
+
+
+def test_rejects_source_snapshot_later_than_capture_time():
+    with pytest.raises(ValueError, match="cannot be later than captured_at_utc"):
+        validate_capture(_row(source_snapshot_time_utc="2026-09-11T22:00:01Z"))
+
+
+def test_requires_source_provenance():
+    with pytest.raises(ValueError, match="source_event_id"):
+        validate_capture(_row(source_event_id=""))
+    with pytest.raises(ValueError, match="source_snapshot_time_utc"):
+        validate_capture(_row(source_snapshot_time_utc=""))
 
 
 def test_rejects_outcome_fields_at_capture_time():
@@ -73,6 +95,8 @@ def test_duplicate_is_idempotent_and_conflict_fails_closed(tmp_path: Path):
     assert again.unchanged is True
     with pytest.raises(ValueError, match="conflicting rewrite"):
         capture_market_only(_row(home_odds=1.95), ledger)
+    with pytest.raises(ValueError, match="conflicting rewrite"):
+        capture_market_only(_row(source_event_id="different-event"), ledger)
 
 
 def test_no_production_model_dependency():
