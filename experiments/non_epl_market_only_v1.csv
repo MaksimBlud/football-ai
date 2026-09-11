@@ -1,0 +1,3 @@
+league,protocol,target_n,observation_number,canonical_key,source_event_id,source_snapshot_time_utc,home_team,away_team,commence_time_utc,captured_at_utc,home_odds,draw_odds,away_odds
+SERIE_A,NON_EPL_MARKET_ONLY_V1,100,1,SERIE_A|venezia|fiorentina|2026-09-11T18:45:00+00:00|NON_EPL_MARKET_ONLY_V1,a9656d25ca6b06be9e477a098333bd70,2026-09-05T15:08:05.114487+00:00,Venezia,Fiorentina,2026-09-11T18:45:00+00:00,2026-09-11T02:12:02.819799+00:00,2.64111111111111,3.19333333333333,2.54
+LA_LIGA,NON_EPL_MARKET_ONLY_V1,100,1,LA_LIGA|sevilla|valencia|2026-09-11T19:00:00+00:00|NON_EPL_MARKET_ONLY_V1,79bc2eff76fa09664659765d5b1ded1a,2026-09-05T15:21:32.513020+00:00,Sevilla,Valencia,2026-09-11T19:00:00+00:00,2026-09-11T02:12:02.819799+00:00,2.248125,3.02875,3.24625
