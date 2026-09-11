@@ -9,6 +9,12 @@ The bridge is fail-closed: the complete current prediction plan is preflighted
 against immutable ledger state before append, one non-deterministic write
 failure may be replayed idempotently, and the whole plan is read-after-write
 verified. Historical snapshot gaps are never backfilled by this module.
+
+Durable Structural V2 observations are additionally canonicalized by temporal
+identity. If an old market snapshot was later reconstructed with newer
+structural history, the earliest actually persisted observation remains the
+prospective observation for that snapshot. Market-state disagreement under the
+same temporal identity is a hard conflict.
 """
 
 from __future__ import annotations
@@ -18,6 +24,7 @@ from pathlib import Path
 import pandas as pd
 
 from database import supabase
+from la_liga_temporal_identity import canonical_observation_key_map
 from league_dual_write_guard import preflight_predictions
 from league_prediction_ledger import (
     PredictionLedgerConflictError,
@@ -59,35 +66,28 @@ def observation_key_map(client) -> dict[tuple[str, str], str]:
         client
         .table(OBSERVATION_TABLE)
         .select(
-            "observation_key,event_id,snapshot_time_utc,league"
+            "observation_key,event_id,snapshot_time_utc,league,"
+            "persisted_at_utc,payload"
         )
         .eq("league", LEAGUE)
         .execute()
     )
 
-    result: dict[tuple[str, str], str] = {}
+    result, metrics = canonical_observation_key_map(
+        response.data or [],
+        league=LEAGUE,
+    )
 
-    for row in response.data or []:
-        if str(row.get("league")) != LEAGUE:
-            raise ValueError(
-                "Foreign league in La Liga durable observations"
-            )
-
-        snapshot = pd.to_datetime(
-            row.get("snapshot_time_utc"),
-            utc=True,
-            errors="coerce",
+    if metrics.duplicate_temporal_rows:
+        print(
+            "La Liga temporal observation canonicalization:",
+            {
+                "input": metrics.input,
+                "canonical": metrics.canonical,
+                "duplicate_temporal_rows": metrics.duplicate_temporal_rows,
+                "structural_drift_rows": metrics.structural_drift_rows,
+            },
         )
-
-        if pd.isna(snapshot):
-            continue
-
-        result[
-            (
-                str(row["event_id"]),
-                snapshot.isoformat(),
-            )
-        ] = str(row["observation_key"])
 
     return result
 

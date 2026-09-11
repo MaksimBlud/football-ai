@@ -1,0 +1,39 @@
+name: La Liga Prediction Ledger Catch-up
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "la_liga_temporal_identity.py"
+      - "persist_la_liga_prediction_ledger.py"
+      - "catch_up_la_liga_prediction_ledger.py"
+      - ".github/workflows/la-liga-prediction-ledger-catchup.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  catch-up:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: Install runtime dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy pandas supabase python-dotenv
+      - name: Compile zero-cost catch-up
+        run: |
+          python -m py_compile la_liga_temporal_identity.py
+          python -m py_compile persist_la_liga_prediction_ledger.py
+          python -m py_compile catch_up_la_liga_prediction_ledger.py
+      - name: Catch up canonical La Liga MARKET_ONLY ledger
+        run: python catch_up_la_liga_prediction_ledger.py
