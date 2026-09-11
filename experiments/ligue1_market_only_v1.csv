@@ -1,0 +1,2 @@
+league,protocol,target_n,observation_number,canonical_key,source_event_id,source_snapshot_time_utc,home_team,away_team,commence_time_utc,captured_at_utc,home_odds,draw_odds,away_odds
+LIGUE_1,LIGUE_1_MARKET_ONLY_V1,100,1,LIGUE_1|rennes|marseille|2026-09-11T18:45:00+00:00|LIGUE_1_MARKET_ONLY_V1,a7e7bf9a8226e86eab6e5c1cb0780a0f,2026-09-05T14:28:52.747994+00:00,Rennes,Marseille,2026-09-11T18:45:00+00:00,2026-09-11T02:56:46.132295+00:00,2.29631578947368,3.74157894736842,2.76263157894737
