@@ -5,10 +5,15 @@ from datetime import datetime, timezone
 import requests
 from config import THE_ODDS_API_KEY
 from database import supabase
+from odds_api_budget_guard import evaluate_budget
 from the_odds_service import BASE_URL
 from turkey_portugal_market_only import collect_snapshot, config_for
 
-QUOTA_START_FLOOR=500
+# The manual workflow runs Turkey and Portugal as two parallel one-credit h2h
+# collections. Reserve the complete two-credit envelope before either job is
+# allowed to start, on top of the shared hard reserve enforced by
+# odds_api_budget_guard.evaluate_budget().
+MAX_OPERATION_COST_CREDITS=2
 NO_FUTURE_MATCH_COOLDOWN_HOURS=24
 
 def parse_dt(value):
@@ -46,8 +51,9 @@ def recent_rows(league):
 def run(league):
     config_for(league); quota=zero_cost_quota()
     if quota["last_cost"]!=0: raise RuntimeError("Expected zero-cost sports quota preflight")
-    if quota["remaining"]<QUOTA_START_FLOOR:
-        print(f"{league}=BLOCKED_LOW_QUOTA remaining={quota['remaining']} floor={QUOTA_START_FLOOR}; paid requests=0"); return {"status":"BLOCKED_LOW_QUOTA","quota":quota}
+    budget=evaluate_budget(remaining=quota["remaining"],max_cost=MAX_OPERATION_COST_CREDITS)
+    if not budget["allowed"]:
+        print(f"{league}=BLOCKED_LOW_QUOTA remaining={quota['remaining']} floor={budget['minimum_required_credits']}; paid requests=0"); return {"status":"BLOCKED_LOW_QUOTA","quota":quota}
     now=datetime.now(timezone.utc); due,reason=should_collect(recent_rows(league),now)
     print("decision:",reason,"required:",due)
     if not due:return {"status":"NOT_DUE","quota":quota}
