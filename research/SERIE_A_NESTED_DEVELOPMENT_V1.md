@@ -18,6 +18,7 @@ Evaluate whether the already-completed Serie A historical record supports freezi
 - No Supabase access is required.
 - No paid Odds API request is permitted.
 - La Liga is excluded from execution and its closed/rejected protocols remain closed.
+- As in the pre-existing sweep family, fold metrics use only rows with the selected candidate features, target, and complete B365 1X2 benchmark prices. Individual historical rows with unavailable B365 prices are excluded from that fold rather than causing the whole season to be redefined or imputed.
 
 ## Frozen candidate family
 
