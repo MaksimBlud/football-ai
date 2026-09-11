@@ -5,7 +5,13 @@ from pathlib import Path
 
 import pytest
 
-from prospective_league_capture import PROTOCOL, TARGET_N, capture_market_only, validate_capture
+from prospective_league_capture import (
+    PROTOCOL,
+    TARGET_N,
+    capture_market_only,
+    validate_capture,
+    validate_ledger,
+)
 
 
 def _row(**overrides):
@@ -48,6 +54,7 @@ def test_accepts_pre_match_market_only_for_both_leagues(tmp_path: Path):
     assert all(r["protocol"] == PROTOCOL for r in rows)
     assert all(r["source_event_id"] for r in rows)
     assert all(r["source_snapshot_time_utc"] for r in rows)
+    assert validate_ledger(ledger) == {"SERIE_A": 1, "LA_LIGA": 1}
 
 
 def test_rejects_post_kickoff_capture():
@@ -97,6 +104,25 @@ def test_duplicate_is_idempotent_and_conflict_fails_closed(tmp_path: Path):
         capture_market_only(_row(home_odds=1.95), ledger)
     with pytest.raises(ValueError, match="conflicting rewrite"):
         capture_market_only(_row(source_event_id="different-event"), ledger)
+
+
+def test_ledger_sequence_corruption_fails_closed(tmp_path: Path):
+    ledger = tmp_path / "ledger.csv"
+    capture_market_only(_row(), ledger)
+    rows = list(csv.DictReader(ledger.open(encoding="utf-8")))
+    rows[0]["observation_number"] = "2"
+    with ledger.open("w", encoding="utf-8", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=rows[0].keys())
+        writer.writeheader()
+        writer.writerows(rows)
+    with pytest.raises(ValueError, match="not contiguous"):
+        validate_ledger(ledger)
+
+
+def test_committed_prospective_ledger_is_valid_when_present():
+    ledger = Path("experiments/non_epl_market_only_v1.csv")
+    if ledger.exists():
+        assert validate_ledger(ledger) == {"SERIE_A": 1, "LA_LIGA": 1}
 
 
 def test_no_production_model_dependency():
