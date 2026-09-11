@@ -31,7 +31,7 @@ MARKET_FIELDS = (
 
 
 class TemporalObservationConflictError(RuntimeError):
-    """Raised when one temporal identity has incompatible market payloads."""
+    """Raised when one temporal identity cannot be canonicalized safely."""
 
 
 @dataclass(frozen=True)
@@ -47,7 +47,7 @@ def _payload(value: Any) -> dict[str, Any]:
         value = json.loads(value)
     if not isinstance(value, dict):
         raise TemporalObservationConflictError(
-            "La Liga durable observation payload is not an object"
+            "La Liga duplicate durable observation payload is not an object"
         )
     return value
 
@@ -65,7 +65,7 @@ def _market_fingerprint(payload: dict[str, Any]) -> str:
     missing = [field for field in MARKET_FIELDS if field not in payload]
     if missing:
         raise TemporalObservationConflictError(
-            "La Liga durable observation lacks market fields: "
+            "La Liga duplicate durable observation lacks market fields: "
             + ", ".join(missing)
         )
     return json.dumps(
@@ -83,13 +83,19 @@ def canonical_observation_key_map(
 ) -> tuple[dict[tuple[str, str], str], CanonicalObservationMetrics]:
     """Return first-durable observation keys keyed by event/snapshot identity.
 
-    Duplicate structural reconstructions are retained in the database as audit
-    history but can never replace the observation that was first persisted for
-    the snapshot. Any disagreement in the market state is a hard conflict.
+    A singleton row needs no persistence ordering and remains compatible with
+    the original minimal observation projection. Ordering metadata and market
+    payload are required only when two rows claim the same temporal identity.
+    Duplicate structural reconstructions remain in durable storage as audit
+    history but can never replace the first prospective observation. Any market
+    disagreement under that identity is a hard conflict.
     """
 
-    prepared: list[dict[str, Any]] = []
+    grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    input_count = 0
+
     for source in rows:
+        input_count += 1
         row = dict(source)
         if str(row.get("league")) != league:
             raise TemporalObservationConflictError(
@@ -107,56 +113,59 @@ def canonical_observation_key_map(
             row.get("snapshot_time_utc"),
             field="snapshot_time_utc",
         )
-        persisted = _timestamp(
-            row.get("persisted_at_utc"),
-            field="persisted_at_utc",
-        )
-        payload = _payload(row.get("payload"))
-
-        prepared.append(
+        identity = (event_id, snapshot.isoformat())
+        grouped.setdefault(identity, []).append(
             {
-                "event_id": event_id,
-                "snapshot": snapshot,
-                "persisted": persisted,
                 "observation_key": observation_key,
-                "market_fingerprint": _market_fingerprint(payload),
+                "persisted_at_utc": row.get("persisted_at_utc"),
+                "payload": row.get("payload"),
             }
         )
 
-    prepared.sort(
-        key=lambda item: (
-            item["persisted"],
-            item["observation_key"],
-        )
-    )
-
     result: dict[tuple[str, str], str] = {}
-    market_by_identity: dict[tuple[str, str], str] = {}
     duplicate_temporal_rows = 0
     structural_drift_rows = 0
 
-    for item in prepared:
-        identity = (
-            item["event_id"],
-            item["snapshot"].isoformat(),
-        )
-        if identity not in result:
-            result[identity] = item["observation_key"]
-            market_by_identity[identity] = item["market_fingerprint"]
+    for identity, candidates in grouped.items():
+        if len(candidates) == 1:
+            result[identity] = candidates[0]["observation_key"]
             continue
 
-        duplicate_temporal_rows += 1
-        if market_by_identity[identity] != item["market_fingerprint"]:
-            raise TemporalObservationConflictError(
-                "Conflicting market payload for La Liga temporal identity: "
-                f"{identity[0]} @ {identity[1]}"
+        duplicate_temporal_rows += len(candidates) - 1
+        ordered: list[dict[str, Any]] = []
+        for candidate in candidates:
+            payload = _payload(candidate.get("payload"))
+            ordered.append(
+                {
+                    "observation_key": candidate["observation_key"],
+                    "persisted": _timestamp(
+                        candidate.get("persisted_at_utc"),
+                        field="persisted_at_utc",
+                    ),
+                    "market_fingerprint": _market_fingerprint(payload),
+                }
             )
 
-        if result[identity] != item["observation_key"]:
-            structural_drift_rows += 1
+        ordered.sort(
+            key=lambda item: (
+                item["persisted"],
+                item["observation_key"],
+            )
+        )
+        canonical = ordered[0]
+        result[identity] = canonical["observation_key"]
+
+        for candidate in ordered[1:]:
+            if candidate["market_fingerprint"] != canonical["market_fingerprint"]:
+                raise TemporalObservationConflictError(
+                    "Conflicting market payload for La Liga temporal identity: "
+                    f"{identity[0]} @ {identity[1]}"
+                )
+            if candidate["observation_key"] != canonical["observation_key"]:
+                structural_drift_rows += 1
 
     metrics = CanonicalObservationMetrics(
-        input=len(prepared),
+        input=input_count,
         canonical=len(result),
         duplicate_temporal_rows=duplicate_temporal_rows,
         structural_drift_rows=structural_drift_rows,
