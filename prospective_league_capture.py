@@ -101,13 +101,25 @@ def validate_capture(row: dict[str, Any]) -> dict[str, Any]:
         raise ValueError(f"unsupported league: {league!r}")
     normalized = dict(row)
     normalized["league"] = league
-    for field in ("home_team", "away_team", "commence_time_utc", "captured_at_utc"):
+    for field in (
+        "source_event_id",
+        "source_snapshot_time_utc",
+        "home_team",
+        "away_team",
+        "commence_time_utc",
+        "captured_at_utc",
+    ):
         if not str(normalized.get(field, "")).strip():
             raise ValueError(f"missing required field: {field}")
     kickoff = _parse_utc(str(normalized["commence_time_utc"]))
     captured = _parse_utc(str(normalized["captured_at_utc"]))
+    source_snapshot = _parse_utc(str(normalized["source_snapshot_time_utc"]))
     if captured >= kickoff:
         raise ValueError("prospective capture must happen strictly before kickoff")
+    if source_snapshot >= kickoff:
+        raise ValueError("source market snapshot must be strictly before kickoff")
+    if source_snapshot > captured:
+        raise ValueError("source market snapshot cannot be later than captured_at_utc")
     _validate_market(normalized)
     _validate_no_forbidden_fields(normalized)
     _validate_no_ai_fields(normalized)
@@ -130,6 +142,8 @@ def _stable_projection(row: dict[str, Any]) -> dict[str, str]:
         "protocol": PROTOCOL,
         "target_n": str(TARGET_N),
         "canonical_key": str(row["canonical_key"]),
+        "source_event_id": str(row["source_event_id"]).strip(),
+        "source_snapshot_time_utc": _parse_utc(str(row["source_snapshot_time_utc"])).isoformat(),
         "home_team": str(row["home_team"]).strip(),
         "away_team": str(row["away_team"]).strip(),
         "commence_time_utc": _parse_utc(str(row["commence_time_utc"])).isoformat(),
@@ -189,6 +203,8 @@ def capture_market_only(row: dict[str, Any], ledger_path: Path) -> CaptureResult
         "target_n",
         "observation_number",
         "canonical_key",
+        "source_event_id",
+        "source_snapshot_time_utc",
         "home_team",
         "away_team",
         "commence_time_utc",
