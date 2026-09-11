@@ -154,22 +154,49 @@ def _stable_projection(row: dict[str, Any]) -> dict[str, str]:
     }
 
 
+def validate_ledger(ledger_path: Path) -> dict[str, int]:
+    rows = _load_rows(ledger_path)
+    counts = {league: 0 for league in ALLOWED_LEAGUES}
+    seen_keys: set[str] = set()
+    for row in rows:
+        if row.get("protocol") != PROTOCOL:
+            raise ValueError("ledger contains unexpected protocol")
+        if row.get("target_n") != str(TARGET_N):
+            raise ValueError("ledger contains unexpected target_n")
+        normalized = validate_capture(row)
+        projection = _stable_projection(normalized)
+        for key, expected in projection.items():
+            if row.get(key, "") != expected:
+                raise ValueError(f"ledger row has non-canonical {key}")
+        canonical_key = projection["canonical_key"]
+        if canonical_key in seen_keys:
+            raise ValueError("ledger contains duplicate canonical keys")
+        seen_keys.add(canonical_key)
+        league = projection["league"]
+        counts[league] += 1
+        try:
+            observation_number = int(row["observation_number"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError("existing prospective row has invalid observation_number") from exc
+        if observation_number != counts[league]:
+            raise ValueError("ledger observation numbers are not contiguous; refusing to append")
+        if counts[league] > TARGET_N:
+            raise ValueError(f"prospective target exceeded for {league}: {counts[league]}/{TARGET_N}")
+    return counts
+
+
 def capture_market_only(row: dict[str, Any], ledger_path: Path) -> CaptureResult:
     normalized = validate_capture(row)
     current = _load_rows(ledger_path)
+    counts = validate_ledger(ledger_path) if ledger_path.exists() else {league: 0 for league in ALLOWED_LEAGUES}
     projection = _stable_projection(normalized)
     same_key = [r for r in current if r.get("canonical_key") == projection["canonical_key"]]
     if same_key:
-        if len(same_key) != 1:
-            raise ValueError("ledger contains duplicate canonical keys")
         existing = same_key[0]
         comparable = {k: existing.get(k, "") for k in projection}
         if comparable != projection:
             raise ValueError("conflicting rewrite for an existing prospective observation")
-        try:
-            observation_number = int(existing["observation_number"])
-        except (KeyError, TypeError, ValueError) as exc:
-            raise ValueError("existing prospective row has invalid observation_number") from exc
+        observation_number = int(existing["observation_number"])
         return CaptureResult(
             status="UNCHANGED",
             league=projection["league"],
@@ -181,20 +208,9 @@ def capture_market_only(row: dict[str, Any], ledger_path: Path) -> CaptureResult
             unchanged=True,
         )
 
-    league_rows = [
-        r for r in current if r.get("league") == projection["league"] and r.get("protocol") == PROTOCOL
-    ]
-    if len(league_rows) >= TARGET_N:
-        raise ValueError(f"prospective target already reached for {projection['league']}: {TARGET_N}/{TARGET_N}")
-
-    existing_numbers: list[int] = []
-    for existing in league_rows:
-        try:
-            existing_numbers.append(int(existing["observation_number"]))
-        except (KeyError, TypeError, ValueError) as exc:
-            raise ValueError("existing prospective row has invalid observation_number") from exc
-    if sorted(existing_numbers) != list(range(1, len(existing_numbers) + 1)):
-        raise ValueError("ledger observation numbers are not contiguous; refusing to append")
+    league = projection["league"]
+    if counts[league] >= TARGET_N:
+        raise ValueError(f"prospective target already reached for {league}: {TARGET_N}/{TARGET_N}")
 
     ledger_path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = [
@@ -213,7 +229,7 @@ def capture_market_only(row: dict[str, Any], ledger_path: Path) -> CaptureResult
         "draw_odds",
         "away_odds",
     ]
-    observation_number = len(league_rows) + 1
+    observation_number = counts[league] + 1
     new_row = dict(projection)
     new_row["observation_number"] = str(observation_number)
     write_header = not ledger_path.exists()
@@ -222,9 +238,10 @@ def capture_market_only(row: dict[str, Any], ledger_path: Path) -> CaptureResult
         if write_header:
             writer.writeheader()
         writer.writerow(new_row)
+    validate_ledger(ledger_path)
     return CaptureResult(
         status="INSERTED",
-        league=projection["league"],
+        league=league,
         protocol=PROTOCOL,
         observation_number=observation_number,
         target_n=TARGET_N,
