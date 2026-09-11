@@ -14,7 +14,8 @@ Enable pre-match prospective capture for Serie A and La Liga without overstating
 - Existing completed historical results remain development evidence only.
 - La Liga pure-AI v1, hybrid v1, and nested historical v1 remain closed/rejected and are not reopened by this protocol.
 - Serie A historical candidate-development work remains independent; prospective capture does not itself make Serie A AI-ready.
-- MARKET_ONLY observations may be captured prospectively for both leagues when the snapshot is taken before kickoff.
+- MARKET_ONLY observations may be captured prospectively for both leagues when the source market snapshot and the ledger capture both occur before kickoff.
+- Every observation must preserve immutable source provenance: `source_event_id` and `source_snapshot_time_utc`.
 - AI observations may be captured only when a league-specific frozen candidate manifest explicitly reports AI eligibility for the league. If not eligible, the capture tool must fail closed for AI while still allowing MARKET_ONLY capture.
 - A captured row must never be converted retrospectively from MARKET_ONLY into AI evidence after kickoff or after outcomes are known.
 - Outcome/settlement fields are forbidden at capture time.
@@ -28,12 +29,14 @@ The first pre-match row written under this contract is observation 1/100 for tha
 
 1. Canonical league is one of `SERIE_A` or `LA_LIGA`.
 2. Canonical fixture identity includes league, normalized home team, normalized away team, and UTC kickoff.
-3. `captured_at_utc < commence_time_utc`.
-4. Market 1X2 prices are present, finite, and positive.
-5. No result, score, settlement, realized outcome, or post-kickoff field is accepted.
-6. Duplicate canonical fixture/protocol rows are idempotent; conflicting rewrites fail closed.
-7. AI fields are forbidden unless a league-specific frozen eligibility manifest says AI is eligible.
-8. Production `.pkl` files are never read or written by this capture protocol.
+3. `source_event_id` is present and non-empty.
+4. `source_snapshot_time_utc` is timezone-aware and strictly before kickoff.
+5. `source_snapshot_time_utc <= captured_at_utc < commence_time_utc`.
+6. Market 1X2 prices are present, finite, and positive.
+7. No result, score, settlement, realized outcome, or post-kickoff field is accepted.
+8. Duplicate canonical fixture/protocol rows are idempotent only when market values and source provenance are identical; conflicting rewrites fail closed.
+9. AI fields are forbidden unless a league-specific frozen eligibility manifest says AI is eligible.
+10. Production `.pkl` files are never read or written by this capture protocol.
 
 ## Interpretation
 
