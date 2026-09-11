@@ -8,15 +8,6 @@ import pytest
 import serie_a_nested_development_v1 as protocol
 
 
-def _minimal_history(*, league: str = "SERIE_A", season: str = "2025-2026") -> pd.DataFrame:
-    return pd.DataFrame(
-        {
-            "league": [league] * 6,
-            "season": [season] * 6,
-        }
-    )
-
-
 def _prediction_grid(*, ai=(0.90, 0.05, 0.05), market=(0.35, 0.40, 0.25)) -> pd.DataFrame:
     rows = []
     for feature_set in protocol.FEATURE_SET_ORDER:
@@ -129,7 +120,9 @@ def test_nested_rejects_when_market_is_better():
 
 def test_source_has_no_prospective_or_production_write_surface():
     source = inspect.getsource(protocol).lower()
-    assert "supabase" not in source
+    assert "from database import" not in source
+    assert "import database" not in source
+    assert ".table(" not in source
     assert "odds_api" not in source
     assert "joblib.dump" not in source
     assert "pickle.dump" not in source
