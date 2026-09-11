@@ -161,10 +161,10 @@ def normalize_source(source: pd.DataFrame, *, season: str) -> pd.DataFrame:
     frame["league"] = "SERIE_A"
     if not set(frame["result"].astype(str)).issubset({"H", "D", "A"}):
         raise ValueError(f"Serie A {season}: unexpected result code")
-    if frame[["home_odds", "draw_odds", "away_odds"]].isna().any().any():
-        raise ValueError(f"Serie A {season}: missing B365 1X2 odds")
     if (frame[["home_odds", "draw_odds", "away_odds"]] <= 1.0).any().any():
         raise ValueError(f"Serie A {season}: invalid B365 1X2 odds")
+    if frame.duplicated(subset=["season", "match_date", "home_team", "away_team"]).any():
+        raise ValueError(f"Serie A {season}: duplicate canonical fixture after aliases")
     return frame
 
 
@@ -249,10 +249,9 @@ def generate_oos_predictions(frame: pd.DataFrame) -> pd.DataFrame:
             for season in DEVELOPMENT_OOS_SEASONS:
                 train = frame[frame["season"].astype(str) < season].copy()
                 test = frame[frame["season"].astype(str) == season].copy()
-                required_train = features + ["target", "home_odds", "draw_odds", "away_odds"]
-                required_test = required_train
-                train = train.dropna(subset=required_train)
-                test = test.dropna(subset=required_test)
+                required = features + ["target", "home_odds", "draw_odds", "away_odds"]
+                train = train.dropna(subset=required)
+                test = test.dropna(subset=required)
                 if train.empty or test.empty:
                     raise RuntimeError(f"{key} {season}: empty chronological train/test fold")
                 if train["season"].astype(str).max() >= season:
