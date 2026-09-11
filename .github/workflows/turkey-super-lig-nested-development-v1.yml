@@ -1,0 +1,88 @@
+name: Turkey Super Lig Nested Development V1
+
+on:
+  pull_request:
+    paths:
+      - 'turkey_super_lig_nested_development_v1.py'
+      - 'turkey_super_lig_nested_support.py'
+      - 'league_model_sweep.py'
+      - 'feature_engineering.py'
+      - 'league_offline_history.py'
+      - 'turkey_super_lig_runtime_config.py'
+      - 'tests/test_turkey_super_lig_nested_development_v1.py'
+      - 'research/TURKEY_SUPER_LIG_NESTED_DEVELOPMENT_V1.md'
+      - 'PROJECT_CONTINUITY_ADDENDUM_20260911_TURKEY_NESTED_RESULT.md'
+      - '.github/workflows/turkey-super-lig-nested-development-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'turkey_super_lig_nested_development_v1.py'
+      - 'turkey_super_lig_nested_support.py'
+      - 'league_model_sweep.py'
+      - 'feature_engineering.py'
+      - 'league_offline_history.py'
+      - 'turkey_super_lig_runtime_config.py'
+      - 'tests/test_turkey_super_lig_nested_development_v1.py'
+      - 'research/TURKEY_SUPER_LIG_NESTED_DEVELOPMENT_V1.md'
+      - 'PROJECT_CONTINUITY_ADDENDUM_20260911_TURKEY_NESTED_RESULT.md'
+      - '.github/workflows/turkey-super-lig-nested-development-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  preregistered-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt pytest
+      - name: Compile frozen runner
+        run: python -m py_compile turkey_super_lig_nested_development_v1.py turkey_super_lig_nested_support.py
+      - name: Run frozen-contract regression tests
+        run: python -m pytest -q tests/test_turkey_super_lig_nested_development_v1.py
+      - name: Production artifacts unchanged
+        run: |
+          git diff --exit-code -- '*.pkl'
+          test -z "$(git status --porcelain -- '*.pkl')"
+
+  completed-history-development-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Run frozen Turkey Super Lig nested historical development
+        run: python turkey_super_lig_nested_development_v1.py
+      - name: Record research result
+        if: always()
+        run: |
+          if [ -f experiments/turkey_super_lig_nested_development_v1/latest.json ]; then
+            cat experiments/turkey_super_lig_nested_development_v1/latest.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo 'all admitted historical seasons treated as development: true' >> "$GITHUB_STEP_SUMMARY"
+          echo '2022-2023 structurally excluded before result: true' >> "$GITHUB_STEP_SUMMARY"
+          echo '2026-2027 current source read: false' >> "$GITHUB_STEP_SUMMARY"
+          echo 'untouched holdout claimed: false' >> "$GITHUB_STEP_SUMMARY"
+          echo 'candidate model saved: false' >> "$GITHUB_STEP_SUMMARY"
+          echo 'prospective AI enabled: false' >> "$GITHUB_STEP_SUMMARY"
+          echo 'production promotion: false' >> "$GITHUB_STEP_SUMMARY"
+      - name: Prove no model artifact was changed or created
+        run: |
+          git diff --exit-code -- '*.pkl'
+          test -z "$(git status --porcelain -- '*.pkl')"
+          test -z "$(find experiments/turkey_super_lig_nested_development_v1 -type f -name '*.pkl' -print 2>/dev/null)"
+      - name: Upload research-only proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: turkey-super-lig-nested-development-v1
+          path: experiments/turkey_super_lig_nested_development_v1/latest.json
+          if-no-files-found: error
