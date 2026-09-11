@@ -1,0 +1,82 @@
+name: Serie A Nested Development V1
+
+on:
+  pull_request:
+    paths:
+      - 'serie_a_nested_development_v1.py'
+      - 'league_model_sweep.py'
+      - 'feature_engineering.py'
+      - 'league_offline_history.py'
+      - 'serie_a_runtime_config.py'
+      - 'tests/test_serie_a_nested_development_v1.py'
+      - 'research/SERIE_A_NESTED_DEVELOPMENT_V1.md'
+      - 'PROJECT_CONTINUITY_ADDENDUM_20260911_SERIE_A_NESTED_RESULT.md'
+      - '.github/workflows/serie-a-nested-development-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'serie_a_nested_development_v1.py'
+      - 'league_model_sweep.py'
+      - 'feature_engineering.py'
+      - 'league_offline_history.py'
+      - 'serie_a_runtime_config.py'
+      - 'tests/test_serie_a_nested_development_v1.py'
+      - 'research/SERIE_A_NESTED_DEVELOPMENT_V1.md'
+      - 'PROJECT_CONTINUITY_ADDENDUM_20260911_SERIE_A_NESTED_RESULT.md'
+      - '.github/workflows/serie-a-nested-development-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  preregistered-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt pytest
+      - name: Run frozen-contract regression tests
+        run: python -m pytest -q tests/test_serie_a_nested_development_v1.py
+      - name: Production artifacts unchanged
+        run: |
+          git diff --exit-code -- '*.pkl'
+          test -z "$(git status --porcelain -- '*.pkl')"
+
+  completed-history-development-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Run frozen Serie A nested historical development
+        run: python serie_a_nested_development_v1.py
+      - name: Record research result
+        if: always()
+        run: |
+          if [ -f experiments/serie_a_nested_development_v1/latest.json ]; then
+            cat experiments/serie_a_nested_development_v1/latest.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo 'all historical seasons treated as development: true' >> "$GITHUB_STEP_SUMMARY"
+          echo 'untouched holdout claimed: false' >> "$GITHUB_STEP_SUMMARY"
+          echo 'candidate model saved: false' >> "$GITHUB_STEP_SUMMARY"
+          echo 'prospective AI enabled: false' >> "$GITHUB_STEP_SUMMARY"
+          echo 'production promotion: false' >> "$GITHUB_STEP_SUMMARY"
+      - name: Prove no model artifact was created or changed
+        run: |
+          git diff --exit-code -- '*.pkl'
+          test -z "$(git status --porcelain -- '*.pkl')"
+          test -z "$(find experiments/serie_a_nested_development_v1 -type f -name '*.pkl' -print 2>/dev/null)"
+      - name: Upload research-only proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: serie-a-nested-development-v1
+          path: experiments/serie_a_nested_development_v1/latest.json
+          if-no-files-found: error
