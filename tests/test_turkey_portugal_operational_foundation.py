@@ -36,12 +36,15 @@ def test_finished_result_localizes_and_settles(league):
 
 
 def test_scheduler_blocks_paid_call_below_floor(monkeypatch):
-    monkeypatch.setattr(sched,"zero_cost_quota",lambda:{"remaining":215,"last_cost":0})
-    called=[]
-    monkeypatch.setattr(sched,"collect_snapshot",lambda *a,**k:called.append(True))
+    monkeypatch.setattr(sched,"zero_cost_quota",lambda:{"remaining":101,"last_cost":0})
+    recent_calls=[]
+    paid_calls=[]
+    monkeypatch.setattr(sched,"recent_rows",lambda *a,**k:recent_calls.append(True))
+    monkeypatch.setattr(sched,"collect_snapshot",lambda *a,**k:paid_calls.append(True))
     out=sched.run("TURKEY_SUPER_LIG")
     assert out["status"]=="BLOCKED_LOW_QUOTA"
-    assert called==[]
+    assert recent_calls==[]
+    assert paid_calls==[]
 
 
 def test_adaptive_intervals():
