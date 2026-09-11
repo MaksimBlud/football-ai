@@ -1,0 +1,54 @@
+name: All Leagues Capture Completeness Gate
+
+on:
+  pull_request:
+    paths:
+      - "all_leagues_capture_gate.py"
+      - "test_all_leagues_capture_gate.py"
+      - ".github/workflows/all-leagues-capture-completeness-gate.yml"
+  push:
+    branches: [main]
+    paths:
+      - "all_leagues_capture_gate.py"
+      - "test_all_leagues_capture_gate.py"
+      - ".github/workflows/all-leagues-capture-completeness-gate.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic-gate-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile gate and tests
+        run: python -m py_compile all_leagues_capture_gate.py test_all_leagues_capture_gate.py
+      - name: Run fail-closed regression suite
+        run: python -m unittest -v test_all_leagues_capture_gate.py
+      - name: Prove gate is network-free and has no provider dependency
+        run: |
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+
+          source = Path("all_leagues_capture_gate.py").read_text(encoding="utf-8")
+          tree = ast.parse(source)
+          forbidden_roots = {
+              "requests", "httpx", "urllib", "supabase", "the_odds_api", "odds_api"
+          }
+          imports = set()
+          for node in ast.walk(tree):
+              if isinstance(node, ast.Import):
+                  imports.update(alias.name.split(".")[0] for alias in node.names)
+              elif isinstance(node, ast.ImportFrom) and node.module:
+                  imports.add(node.module.split(".")[0])
+          bad = sorted(imports & forbidden_roots)
+          if bad:
+              raise SystemExit(f"network/provider dependency found: {bad}")
+          print("network_free=true")
+          PY
