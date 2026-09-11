@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 import persist_la_liga_prediction_ledger as ledger
+from la_liga_temporal_identity import TemporalObservationConflictError
 
 
 class FakeQuery:
@@ -103,6 +104,29 @@ def _client(*, linked=True):
             }
         )
     return FakeClient(observations)
+
+
+def _temporal_observation(
+    observation_key,
+    persisted_at_utc,
+    *,
+    home_probability=0.50,
+    structural_score=0.3,
+):
+    return {
+        "observation_key": observation_key,
+        "league": "LA_LIGA",
+        "event_id": "laliga-event-1",
+        "snapshot_time_utc": "2026-08-30T12:00:00+00:00",
+        "persisted_at_utc": persisted_at_utc,
+        "payload": {
+            "market_home_probability": home_probability,
+            "market_draw_probability": 0.30,
+            "market_away_probability": 0.20,
+            "market_argmax": "H",
+            "structural_score": structural_score,
+        },
+    }
 
 
 def test_builds_linked_market_only_prediction():
@@ -216,3 +240,46 @@ def test_immutable_bridge_conflict_never_retries(monkeypatch):
         )
 
     assert len(calls) == 1
+
+
+def test_temporal_structural_drift_keeps_first_durable_observation():
+    client = FakeClient(
+        [
+            _temporal_observation(
+                "LA_LIGA:later-reconstruction",
+                "2026-09-11T15:45:20+00:00",
+                structural_score=0.826,
+            ),
+            _temporal_observation(
+                "LA_LIGA:first-prospective",
+                "2026-08-30T12:01:00+00:00",
+                structural_score=0.326,
+            ),
+        ]
+    )
+
+    mapping = ledger.observation_key_map(client)
+
+    assert mapping[("laliga-event-1", "2026-08-30T12:00:00+00:00")] == (
+        "LA_LIGA:first-prospective"
+    )
+
+
+def test_temporal_market_drift_fails_closed():
+    client = FakeClient(
+        [
+            _temporal_observation(
+                "LA_LIGA:first-prospective",
+                "2026-08-30T12:01:00+00:00",
+                home_probability=0.50,
+            ),
+            _temporal_observation(
+                "LA_LIGA:later-conflict",
+                "2026-09-11T15:45:20+00:00",
+                home_probability=0.51,
+            ),
+        ]
+    )
+
+    with pytest.raises(TemporalObservationConflictError, match="market payload"):
+        ledger.observation_key_map(client)
