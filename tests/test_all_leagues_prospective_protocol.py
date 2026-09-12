@@ -1,12 +1,22 @@
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+from all_leagues_market_only_v1_1_gate import (
+    MIN_KICKOFF_MONTHS_PER_LEAGUE,
+    MIN_UNIQUE_EVENTS_PER_LEAGUE,
+    OUTCOME_DELAY_HOURS,
+    V1_1_FREEZE_UTC,
+    evaluate_gate,
+    select_event_rows,
+)
 
 
 ROOT = Path(__file__).parents[1]
 PROTOCOL = ROOT / "research" / "ALL_LEAGUES_PROSPECTIVE_CAPTURE_V1.md"
 SUCCESSOR_PROTOCOL = ROOT / "research" / "ALL_LEAGUES_PROSPECTIVE_CAPTURE_V1_1.md"
 SUCCESSOR_MANIFEST = ROOT / "research" / "ALL_LEAGUES_MARKET_ONLY_V1_1_MANIFEST.json"
+EVALUATION_GATE = ROOT / "research" / "ALL_LEAGUES_MARKET_ONLY_V1_1_EVALUATION_GATE.json"
 
 LEAGUES = (
     "EPL",
@@ -43,8 +53,40 @@ def _manifest() -> dict:
     return json.loads(SUCCESSOR_MANIFEST.read_text(encoding="utf-8"))
 
 
+def _gate_contract() -> dict:
+    return json.loads(EVALUATION_GATE.read_text(encoding="utf-8"))
+
+
 def _utc(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc)
+
+
+def _row(league: str, event_id: str, kickoff: datetime, prediction_time: datetime | None = None) -> dict:
+    prediction_time = prediction_time or kickoff - timedelta(days=1)
+    return {
+        "league": league,
+        "event_id": event_id,
+        "prediction_key": f"{league}:{event_id}",
+        "kickoff_utc": kickoff.isoformat(),
+        "prediction_time_utc": prediction_time.isoformat(),
+        "snapshot_time_utc": (prediction_time - timedelta(minutes=1)).isoformat(),
+        "prediction_mode": "MARKET_ONLY",
+        "structural_applied": False,
+        "market_home_prob": 0.4,
+        "market_draw_prob": 0.3,
+        "market_away_prob": 0.3,
+    }
+
+
+def _mature_rows() -> list[dict]:
+    rows = []
+    months = (9, 10, 11, 12)
+    for league in LEAGUES:
+        for month in months:
+            kickoff = datetime(2026, month, 15, 12, 0, tzinfo=timezone.utc)
+            for index in range(25):
+                rows.append(_row(league, f"{month:02d}-{index:02d}", kickoff))
+    return rows
 
 
 def test_protocol_freezes_exactly_all_eight_operational_leagues():
@@ -159,3 +201,104 @@ def test_successor_preserves_no_peek_paid_and_production_boundaries():
     assert "grants no paid API permission" in text
     assert "Production `.pkl` artifacts remain outside this research capture path" in text
     assert "A stricter existing league-specific gate wins" in text
+
+
+def test_v1_1_evaluation_gate_freezes_existing_project_sample_conventions():
+    gate = _gate_contract()
+
+    assert gate["schema_version"] == "all_leagues_market_only_v1_1_evaluation_gate_v1"
+    assert gate["experiment"] == "ALL_LEAGUES_MARKET_ONLY_V1_1"
+    assert set(gate["scope"]["leagues"]) == set(LEAGUES)
+    assert gate["sample_gate"]["minimum_unique_events_per_league"] == 100
+    assert gate["sample_gate"]["minimum_kickoff_calendar_months_per_league"] == 4
+    assert gate["outcome_embargo"]["minimum_delay_hours_after_latest_primary_prefix_kickoff"] == 24
+    assert gate["outcome_embargo"]["scores_results_winners_settlements_forbidden_before_gate"] is True
+    assert gate["outcome_embargo"]["common_gate_never_overrides_stricter_existing_gate"] is True
+    assert gate["evaluation"]["primary_metrics"] == ["multiclass_log_loss", "multiclass_brier"]
+    assert gate["evaluation"]["secondary_metrics"] == ["1x2_argmax_accuracy"]
+    assert gate["evaluation"]["primary_interpretation"].startswith("descriptive frozen market baseline")
+
+    assert MIN_UNIQUE_EVENTS_PER_LEAGUE == 100
+    assert MIN_KICKOFF_MONTHS_PER_LEAGUE == 4
+    assert OUTCOME_DELAY_HOURS == 24
+
+
+def test_seed_key_precedence_allows_frozen_pre_freeze_seed_but_not_other_pre_freeze_rows():
+    kickoff = datetime(2026, 9, 12, 14, 0, tzinfo=timezone.utc)
+    seed = _row("EPL", "seed", kickoff, prediction_time=V1_1_FREEZE_UTC - timedelta(hours=1))
+    old_nonseed = _row("EPL", "old", kickoff, prediction_time=V1_1_FREEZE_UTC - timedelta(hours=1))
+
+    selected = select_event_rows([seed, old_nonseed], seed_keys=frozenset({seed["prediction_key"]}))
+
+    assert [row["event_id"] for row in selected] == ["seed"]
+
+
+def test_future_event_uses_earliest_qualifying_post_freeze_prediction():
+    kickoff = datetime(2026, 9, 13, 14, 0, tzinfo=timezone.utc)
+    early = _row("EPL", "future", kickoff, prediction_time=V1_1_FREEZE_UTC + timedelta(hours=1))
+    late = dict(_row("EPL", "future", kickoff, prediction_time=V1_1_FREEZE_UTC + timedelta(hours=2)))
+    late["prediction_key"] = "EPL:future-late"
+
+    selected = select_event_rows([late, early], seed_keys=frozenset())
+
+    assert len(selected) == 1
+    assert selected[0]["prediction_key"] == early["prediction_key"]
+
+
+def test_gate_remains_sample_closed_until_every_league_has_100_events_and_four_months():
+    rows = _mature_rows()
+    rows.pop()  # Turkey Super Lig becomes 99/100.
+
+    result = evaluate_gate(
+        rows,
+        now_utc=datetime(2027, 1, 1, tzinfo=timezone.utc),
+        seed_keys=frozenset(),
+        stricter_gate_clear=True,
+    )
+
+    assert result["status"] == "SAMPLE_CLOSED"
+    assert result["outcome_read_allowed"] is False
+    assert result["per_league"]["TURKEY_SUPER_LIG"]["selected_events"] == 99
+    assert result["per_league"]["TURKEY_SUPER_LIG"]["sample_ready"] is False
+
+
+def test_gate_requires_24_hours_after_latest_mature_prefix_kickoff():
+    rows = _mature_rows()
+
+    result = evaluate_gate(
+        rows,
+        now_utc=datetime(2026, 12, 15, 13, 0, tzinfo=timezone.utc),
+        seed_keys=frozenset(),
+        stricter_gate_clear=True,
+    )
+
+    assert result["status"] == "TIME_CLOSED"
+    assert result["outcome_read_allowed"] is False
+    assert result["latest_primary_prefix_kickoff_utc"] == "2026-12-15T12:00:00Z"
+    assert result["outcome_read_not_before_utc"] == "2026-12-16T12:00:00Z"
+
+
+def test_gate_fails_closed_when_an_applicable_stricter_contract_is_not_clear():
+    result = evaluate_gate(
+        _mature_rows(),
+        now_utc=datetime(2026, 12, 17, 12, 0, tzinfo=timezone.utc),
+        seed_keys=frozenset(),
+        stricter_gate_clear=False,
+    )
+
+    assert result["status"] == "STRICTER_GATE_CLOSED"
+    assert result["outcome_read_allowed"] is False
+
+
+def test_gate_allows_outcome_read_only_after_sample_time_and_stricter_gates_clear():
+    result = evaluate_gate(
+        _mature_rows(),
+        now_utc=datetime(2026, 12, 17, 12, 0, tzinfo=timezone.utc),
+        seed_keys=frozenset(),
+        stricter_gate_clear=True,
+    )
+
+    assert result["status"] == "OUTCOME_READ_ALLOWED"
+    assert result["outcome_read_allowed"] is True
+    assert all(entry["sample_ready"] for entry in result["per_league"].values())
+    assert all(entry["primary_prefix_events"] == 100 for entry in result["per_league"].values())
