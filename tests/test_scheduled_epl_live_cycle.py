@@ -1,3 +1,4 @@
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -75,8 +76,6 @@ def test_inner_failure_is_preserved_when_results_are_unchanged(monkeypatch):
 
 
 def test_workflow_uses_scheduled_entrypoint():
-    from pathlib import Path
-
     source = (
         Path(__file__).parents[1]
         / ".github"
@@ -86,3 +85,22 @@ def test_workflow_uses_scheduled_entrypoint():
 
     assert "python3 scheduled_epl_live_cycle.py" in source
     assert "python3 epl_live_cycle.py" not in source
+
+
+def test_zero_cost_catchup_workflow_cannot_access_odds_provider():
+    source = (
+        Path(__file__).parents[1]
+        / ".github"
+        / "workflows"
+        / "epl-prediction-ledger-catchup.yml"
+    ).read_text()
+
+    assert "THE_ODDS_API_KEY" not in source
+    assert "SUPABASE_URL" in source
+    assert "SUPABASE_KEY" in source
+    assert "python3 scheduled_epl_live_cycle.py" in source
+    assert "save_epl_odds" not in source
+    assert "collect_snapshot" not in source
+    assert "odds-snapshots.yml" not in source
+    assert "push:" in source
+    assert "- main" in source
