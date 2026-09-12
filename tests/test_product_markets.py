@@ -73,7 +73,6 @@ def test_main_forecast_uses_probability_not_raw_ev():
 
     assert view["value_signal"]["status"] == "positive_raw_ev"
     assert view["value_signal"]["selection"]["code"] == "AWAY"
-    assert view["value_signal"]["raw_expected_value"] if False else True
     assert view["value_signal"]["selection"]["raw_expected_value"] > 0
     assert view["main_choice"]["selection"]["code"] == "HOME"
     assert view["bet_decision"]["status"] == "no_bet"
