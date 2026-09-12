@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
@@ -95,6 +96,42 @@ def market_snapshots():
     )
 
 
+class SnapshotQuery:
+    def __init__(self, rows):
+        self.rows = rows
+        self.filters = []
+        self.order_call = None
+        self.limit_value = None
+
+    def select(self, *_args, **_kwargs):
+        return self
+
+    def eq(self, column, value):
+        self.filters.append((column, value))
+        return self
+
+    def order(self, column, desc=False):
+        self.order_call = (column, bool(desc))
+        return self
+
+    def limit(self, value):
+        self.limit_value = value
+        return self
+
+    def execute(self):
+        return SimpleNamespace(data=list(self.rows))
+
+
+class SnapshotClient:
+    def __init__(self, rows):
+        self.query = SnapshotQuery(rows)
+        self.table_name = None
+
+    def table(self, name):
+        self.table_name = name
+        return self.query
+
+
 def test_epl_market_only_config():
     s = EPL_RUNTIME_CONFIG.structural_v2
 
@@ -105,6 +142,27 @@ def test_epl_market_only_config():
 
     assert s.structural_alpha is None
     assert s.edge_threshold is None
+
+
+def test_fetch_epl_snapshots_requests_newest_rows_first(monkeypatch):
+    client = SnapshotClient(
+        [
+            {
+                "league": "EPL",
+                "event_id": "newest",
+                "snapshot_time_utc": "2030-08-02T10:00:00Z",
+            }
+        ]
+    )
+    monkeypatch.setattr(market, "supabase", client)
+
+    fetched = market.fetch_epl_snapshots()
+
+    assert client.table_name == "odds_snapshots"
+    assert client.query.filters == [("league", "EPL")]
+    assert client.query.order_call == ("snapshot_time_utc", True)
+    assert client.query.limit_value == 10000
+    assert fetched["event_id"].tolist() == ["newest"]
 
 
 def test_fixture_export_deduplicates_and_aliases():
