@@ -65,7 +65,7 @@ def fetch_epl_snapshots() -> pd.DataFrame:
         )
         .order(
             "snapshot_time_utc",
-            desc=False,
+            desc=True,
         )
         .limit(10000)
         .execute()
