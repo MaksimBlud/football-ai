@@ -1,9 +1,11 @@
 """Deployment-safe Football AI product web application.
 
-This module intentionally does not import ``api.py`` or any model module. A clean
-web deployment reads immutable model outputs from Supabase and never needs local
-model artifacts or generated CSV files.
+The web deployment is read-only. It consumes immutable prediction snapshots and
+stored bookmaker snapshots from Supabase using a low-privilege publishable key
+when available. It never imports model code or production artifacts.
 """
+
+from functools import lru_cache
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
@@ -14,15 +16,29 @@ from product_snapshot_store import load_product_market_view
 app = FastAPI(
     title="Football AI Product",
     description="Read-only product view over durable model and market snapshots",
-    version="2.0.0",
+    version="2.1.0",
 )
 
 
+@lru_cache(maxsize=1)
 def _supabase_client():
-    # Lazy import keeps module import/CI independent from deployment secrets.
-    from database import supabase
+    from supabase import create_client
+    from config import SUPABASE_KEY, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL
 
-    return supabase
+    key = SUPABASE_PUBLISHABLE_KEY or SUPABASE_KEY
+    if not SUPABASE_URL or not key:
+        raise RuntimeError("Supabase web credentials are not configured")
+    return create_client(SUPABASE_URL, key)
+
+
+def _credential_mode() -> str:
+    from config import SUPABASE_KEY, SUPABASE_PUBLISHABLE_KEY
+
+    if SUPABASE_PUBLISHABLE_KEY:
+        return "publishable"
+    if SUPABASE_KEY:
+        return "server_fallback"
+    return "missing"
 
 
 @app.get("/")
@@ -40,6 +56,8 @@ def health():
     return {
         "status": "healthy",
         "mode": "durable-snapshot-reader",
+        "credential_mode": _credential_mode(),
+        "match_identity": "stable_product_match_id",
     }
 
 
@@ -55,15 +73,22 @@ def product_market_view():
 
 
 @app.get("/product-market-view/{match_id}")
-def product_market_match(match_id: int):
+def product_market_match(match_id: str):
     payload = product_market_view()
-    matches = payload["matches"]
+    match_id = str(match_id or "").strip()
+    if not match_id:
+        raise HTTPException(status_code=404, detail="Матч не найден")
 
-    if match_id < 0 or match_id >= len(matches):
-        raise HTTPException(
-            status_code=404,
-            detail="Матч не найден",
-        )
+    item = next(
+        (
+            match
+            for match in payload["matches"]
+            if match.get("match", {}).get("product_match_id") == match_id
+        ),
+        None,
+    )
+    if item is None:
+        raise HTTPException(status_code=404, detail="Матч не найден")
 
     return {
         "schema_version": payload["schema_version"],
@@ -72,5 +97,5 @@ def product_market_match(match_id: int):
         "market_readiness": payload["market_readiness"],
         "data_source": payload.get("data_source"),
         "match_id": match_id,
-        "match": matches[match_id],
+        "match": item,
     }
