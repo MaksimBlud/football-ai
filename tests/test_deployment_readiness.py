@@ -50,3 +50,13 @@ def test_product_frontend_exposes_no_dead_refresh_write_action():
     assert 'id="refresh"' not in html
     assert "function refresh()" not in html
     assert "Обновить данные и прогнозы" not in html
+
+
+def test_clean_web_deploy_has_only_public_supabase_defaults():
+    config = (ROOT / "config.py").read_text(encoding="utf-8")
+
+    assert "https://besxwboamipygwvrsblz.supabase.co" in config
+    assert "sb_publishable_" in config
+    assert 'SUPABASE_KEY = os.getenv("SUPABASE_KEY")' in config
+    assert "sb_secret_" not in config
+    assert "service_role API key" not in config
