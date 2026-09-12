@@ -21,7 +21,7 @@
   "sample_gate": {
     "unit": "unique league + canonical provider event_id",
     "seed_row_selection": "use exactly the immutable prediction_key frozen in the V1.1 127-key seed manifest",
-    "future_row_selection": "for each non-seed event, use the earliest qualifying immutable prediction created strictly after V1_1_FREEZE_UTC, ordered by prediction_time_utc ASC, snapshot_time_utc ASC, prediction_key ASC",
+    "future_row_selection": "for each non-seed event, require created_at_utc strictly after V1_1_FREEZE_UTC and select the earliest qualifying immutable prediction ordered by created_at_utc ASC, prediction_time_utc ASC, snapshot_time_utc ASC, prediction_key ASC",
     "event_order": "kickoff_utc ASC, event_id ASC, prediction_key ASC",
     "primary_prefix": "for each league, use the smallest deterministic prefix of selected events that contains at least 100 unique events and at least 4 distinct UTC kickoff calendar months",
     "minimum_unique_events_per_league": 100,
