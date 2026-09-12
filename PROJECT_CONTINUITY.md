@@ -687,3 +687,78 @@ PR/CI/merge proof:
 - Шесть матчей 2026-09-11 не входят в V1.1.
 - До applicable frozen evaluation gate читать outcomes/performance для common cohort запрещено.
 - Любой следующий paid odds refresh требует отдельного explicit permission; V1.1 freeze его не даёт.
+
+---
+
+## 2026-09-12 addendum — ALL_LEAGUES_MARKET_ONLY_V1_1 frozen evaluation gate
+
+Status: **FROZEN / SAMPLE_CLOSED / OUTCOME_READ_FORBIDDEN**.
+
+Evaluation gate для общего восьмилигового MARKET_ONLY cohort заморожен до первого kickoff seed и не может быть изменён по результатам матчей.
+
+Frozen sample/time contract:
+- каждая из 8 лиг должна иметь минимум `100` уникальных eligible events;
+- каждая лига должна покрывать минимум `4` distinct UTC kickoff calendar months;
+- все 8 лиг должны пройти sample gate одновременно;
+- для каждой лиги primary sample = минимальный deterministic prefix выбранных событий, упорядоченный `kickoff_utc ASC, event_id ASC, prediction_key ASC`, который одновременно достигает `>=100` событий и `>=4` месяцев;
+- outcomes остаются закрыты минимум до `24h` после самого позднего kickoff среди восьми frozen primary prefixes;
+- common gate никогда не ослабляет более строгий existing league-specific frozen gate: более строгий gate всегда имеет приоритет.
+
+Frozen row-selection semantics:
+- 127-event seed использует только exact immutable `prediction_key` из `research/ALL_LEAGUES_MARKET_ONLY_V1_1_MANIFEST.json`;
+- для любого нового non-seed event durable row admissible только если `created_at_utc > 2026-09-12T02:04:34Z` и все pre-kickoff MARKET_ONLY invariants green;
+- если для нового event есть несколько admissible rows, выбирается самая ранняя immutable запись по `created_at_utc ASC, prediction_time_utc ASC, snapshot_time_utc ASC, prediction_key ASC`;
+- membership, extension и replacement не могут зависеть от результата матча или вклада строки в метрику.
+
+Post-gate settlement contract:
+- после открытия outcome gate для каждого scored event нужен canonical finished outcome;
+- missing result => `WAIT_RESULTS`, без primary verdict;
+- postponed fixture сохраняется и ожидает canonical completion;
+- permanently cancelled/abandoned/void fixture можно исключить только после authoritative non-performance status;
+- replacement идёт следующим событием из того же deterministic event-order prefix до восстановления минимум 100 scorable events и минимум 4 kickoff months для лиги;
+- prediction correctness / metric contribution никогда не является причиной exclusion или replacement.
+
+Frozen evaluation:
+- primary metrics: `multiclass_log_loss`, `multiclass_brier`;
+- secondary: `1x2_argmax_accuracy`;
+- обязательный reporting: per-league, pooled micro, unweighted league macro, sample size и outcome-class counts;
+- MARKET_ONLY здесь является frozen descriptive market baseline, поэтому искусственный PASS/FAIL threshold для самого рынка не вводится;
+- threshold search, subgroup selection, league-weight search, interim primary evaluation и performance-based optional stopping запрещены;
+- automatic outcome scoring, production activation и model promotion отсутствуют.
+
+Implementation/proof:
+- contract: `research/ALL_LEAGUES_MARKET_ONLY_V1_1_EVALUATION_GATE.json`;
+- network-free/outcome-blind evaluator: `all_leagues_market_only_v1_1_gate.py`;
+- regression: expanded mandatory `tests/test_all_leagues_prospective_protocol.py`;
+- PR #263 exact head `2d11e1a190e30a4f5ada67ab04e236b90bb8c189`;
+- все 5 PR validation workflows green; all-leagues protocol/gate tests green; production-artifact guard green;
+- exact-head merge `a4288c5f925156edada37201a0cd6d0c350b89ad` at `2026-09-12T02:27:28Z`, до первого V1.1 seed kickoff `12:00Z`.
+
+Fresh outcome-blind live baseline после merge:
+- BUNDESLIGA `17` selected / `1` month / `sample_ready=false`;
+- EPL `20` / `1` / false;
+- EREDIVISIE `18` / `1` / false;
+- LA_LIGA `19` / `1` / false;
+- LIGUE_1 `17` / `1` / false;
+- PRIMEIRA_LIGA `9` / `1` / false;
+- SERIE_A `19` / `1` / false;
+- TURKEY_SUPER_LIG `8` / `1` / false;
+- post-freeze new future events at proof time = `0` in every league;
+- общий current status = `SAMPLE_CLOSED`, поэтому `outcome_read_allowed=false`.
+
+Safety proof этого шага:
+- outcome/result/score/settlement tables не читались;
+- paid-provider requests = `0`, credits spent = `0`;
+- Supabase writes = `0`;
+- production `.pkl` changes = `0`.
+
+### Execution pointer override after evaluation-gate freeze
+
+Этот раздел является самым свежим execution pointer для common eight-league MARKET_ONLY cohort.
+
+- `ALL_LEAGUES_MARKET_ONLY_V1_1 = FROZEN / 127-SEED + FUTURE CAPTURE / SAMPLE_CLOSED`.
+- Сейчас работаем строго в режиме **collect, don't peek**.
+- Outcome/performance access запрещён, пока **каждая из 8 лиг** не достигнет одновременно `>=100` deterministic eligible events и `>=4` kickoff calendar months, затем не пройдёт минимум `24h` после latest primary-prefix kickoff и не будут отдельно очищены все более строгие applicable frozen gates.
+- До этого разрешены только outcome-blind identity/timing/completeness/sample-health проверки и future capture по frozen правилам.
+- Любой новый реальный paid odds refresh остаётся отдельным `MANUAL_PAID_GATE` и требует свежего explicit разрешения пользователя.
+- После открытия gate evaluation остаётся отдельным explicit post-gate действием; automatic scoring/promotion запрещены.
