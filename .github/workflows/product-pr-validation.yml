@@ -34,6 +34,7 @@ jobs:
           python -m py_compile product_web.py
           python -m py_compile product_snapshot_store.py
           python -m py_compile publish_product_predictions.py
+          python -m py_compile bootstrap_product_predictions_from_pair_ledger.py
           python -m py_compile web_app.py
 
       - name: Validate web deployment config
@@ -67,6 +68,23 @@ jobs:
           assert "for delete" not in sql
           PY
 
+      - name: Validate public product read boundary
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          sql = Path(
+              "supabase/migrations/20260912091500_public_product_read_window.sql"
+          ).read_text(encoding="utf-8").lower()
+          assert "revoke all privileges" in sql
+          assert "grant select (" in sql
+          assert "to anon" in sql
+          assert "for select" in sql
+          assert "grant insert" not in sql
+          assert "grant update" not in sql
+          assert "grant delete" not in sql
+          PY
+
       - name: Run product tests
         run: |
           python -m pytest -q tests/test_product_markets.py
@@ -75,6 +93,7 @@ jobs:
           python -m pytest -q tests/test_product_snapshot_store.py
           python -m pytest -q tests/test_publish_product_predictions.py
           python -m pytest -q tests/test_deployment_readiness.py
+          python -m pytest -q tests/test_live_product_pipeline.py
 
       - name: Enforce no production artifact changes
         run: |

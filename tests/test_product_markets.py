@@ -7,12 +7,16 @@ from product_markets import (
     build_product_market_view,
     fair_odds,
     fixture_key,
+    product_match_id,
     raw_expected_value,
 )
 
 
 def sample_prediction(**overrides):
     row = {
+        "league": "EPL",
+        "event_id": "event-arsenal-coventry",
+        "commence_time_utc": "2026-09-12T14:00:00+00:00",
         "match_date": "2026-09-12",
         "match_time": "15:00",
         "home_team": "Arsenal",
@@ -70,8 +74,6 @@ def test_main_forecast_uses_probability_not_raw_ev():
     assert view["value_signal"]["status"] == "positive_raw_ev"
     assert view["value_signal"]["selection"]["code"] == "AWAY"
     assert view["value_signal"]["selection"]["raw_expected_value"] > 0
-
-    # Compatibility alias must follow forecast semantics, never value semantics.
     assert view["main_choice"]["selection"]["code"] == "HOME"
 
 
@@ -137,10 +139,7 @@ def test_research_markets_never_fabricate_selections():
 
 def test_nan_values_are_serialization_safe():
     view = build_product_match(
-        sample_prediction(
-            home_probability=math.nan,
-            expected_total_goals=math.nan,
-        )
+        sample_prediction(home_probability=math.nan, expected_total_goals=math.nan)
     )
 
     home = view["markets"]["1x2"]["selections"][0]
@@ -152,25 +151,42 @@ def test_nan_values_are_serialization_safe():
 def test_fixture_key_includes_scheduled_kickoff_fields():
     first = sample_prediction(match_date="2026-09-12", match_time="15:00")
     second = sample_prediction(match_date="2026-10-03", match_time="17:30")
-
     assert fixture_key(first) != fixture_key(second)
 
 
+def test_product_match_id_prefers_provider_event_id():
+    row = sample_prediction(event_id="provider-123")
+    assert product_match_id(row) == "event_provider-123"
+    assert build_product_match(row)["match"]["product_match_id"] == "event_provider-123"
+
+
+def test_product_match_id_has_deterministic_fixture_fallback():
+    row = sample_prediction(event_id=None)
+    first = product_match_id(row)
+    second = product_match_id(dict(row))
+    assert first == second
+    assert first.startswith("fixture_")
+
+
+def test_product_match_id_does_not_depend_on_list_order():
+    first = sample_prediction(event_id="event-a", home_team="Arsenal")
+    second = sample_prediction(event_id="event-b", home_team="Liverpool")
+    normal = build_product_market_view([first, second])
+    reversed_view = build_product_market_view([second, first])
+
+    normal_ids = {m["match"]["home_team"]: m["match"]["product_match_id"] for m in normal["matches"]}
+    reversed_ids = {m["match"]["home_team"]: m["match"]["product_match_id"] for m in reversed_view["matches"]}
+    assert normal_ids == reversed_ids
+
+
 def test_market_view_does_not_cross_match_same_teams_at_different_kickoffs():
-    first = sample_prediction(match_date="2026-09-12", match_time="15:00")
-    second = sample_prediction(match_date="2026-10-03", match_time="17:30")
+    first = sample_prediction(event_id="event-first", match_date="2026-09-12", match_time="15:00")
+    second = sample_prediction(event_id="event-second", match_date="2026-10-03", match_time="17:30")
     odds_by_fixture = {
-        fixture_key(first): {
-            "home_odds": 1.90,
-            "draw_odds": 4.00,
-            "away_odds": 7.00,
-        }
+        fixture_key(first): {"home_odds": 1.90, "draw_odds": 4.00, "away_odds": 7.00}
     }
 
-    payload = build_product_market_view(
-        [first, second],
-        odds_by_fixture=odds_by_fixture,
-    )
+    payload = build_product_market_view([first, second], odds_by_fixture=odds_by_fixture)
 
     first_market = payload["matches"][0]["markets"]["1x2"]
     second_market = payload["matches"][1]["markets"]["1x2"]
@@ -180,11 +196,11 @@ def test_market_view_does_not_cross_match_same_teams_at_different_kickoffs():
     assert payload["matches"][1]["value_signal"]["status"] == "none"
 
 
-def test_versioned_view_exposes_separate_forecast_and_value_policy():
+def test_versioned_view_exposes_separate_forecast_value_and_stable_identity_policy():
     payload = build_product_market_view([sample_prediction()])
 
     assert payload["schema_version"] == "product-market-view.v1"
-    assert "match_date" in payload["fixture_identity"]
+    assert "event_id" in payload["fixture_identity"]
     assert payload["market_readiness"]["1x2"]["status"] == "comparison_ready"
     assert payload["market_readiness"]["corners_total"]["status"] == "research_only"
     assert "Highest model probability" in payload["selection_policy"]["forecast"]

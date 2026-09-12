@@ -21,7 +21,7 @@ def test_match_list_consumes_unified_server_contract():
 def test_match_detail_consumes_same_unified_contract():
     html = read(MATCH_PATH)
 
-    assert "fetch(`/product-market-view/${id}`" in html
+    assert "fetch(`/product-market-view/${encodeURIComponent(id)}`" in html
     assert "/upcoming-round-match/" not in html
     assert "/upcoming-matches" not in html
     assert "product-market-view.v1" in html
@@ -72,7 +72,9 @@ def test_value_filter_is_not_named_as_forecast():
     assert "Value-сигналов" in html
 
 
-def test_list_links_to_server_indexed_match_card():
+def test_list_links_to_stable_server_match_card():
     html = read(INDEX_PATH)
 
-    assert "/match?id=${row.dataset.index}" in html
+    assert 'data-match-id="${esc(meta.product_match_id)}"' in html
+    assert "/match?id=${encodeURIComponent(row.dataset.matchId)}" in html
+    assert "row.dataset.index" not in html
