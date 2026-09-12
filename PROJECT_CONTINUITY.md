@@ -514,7 +514,7 @@ Continuity follow-up PR #233 merge `7ca38b6b4c886e6ff6aed5142fa8756a781778e2`.
 - Fresh zero-cost quota proof: rerun read-only status job `102543884064` в workflow run `34335760026`; quota `193 remaining / 307 used / last_cost 0`, hard reserve `100`; paid requests `0`, credits spent `0`, Supabase writes `0`, production hash unchanged.
 - P0-A free proof завершён и формально остановлен на `MANUAL_PAID_GATE`; paid h2h refresh не выполнялся и по-прежнему требует отдельного explicit permission.
 - P0-B outcome-free health: `EPL_AI_MARKET_PAIR_V1 = 12/100`, 12 unique pair/event ids, temporal/probability invariants green, один model hash и один code commit; outcomes не читались; статус `HEALTHY / TIME-FROZEN_GATE`.
-- P0-C outcome-free trajectory health: frozen raw universe `68` event ids (`EPL 20 / LA_LIGA 24 / SERIE_A 24`), только 1 kickoff month на лигу; activation `100 + 4 months` не достигнут; 23 trajectory paths refresh-due; outcomes не читались.
+- P0-C outcome-free trajectory health: frozen raw universe `68` event ids (`EPL 20 / LA_LIGA 24 / SERIE_A 24`), только 1 kickoff month per league; activation `100 + 4 months` не достигнут; 23 trajectory paths refresh-due; outcomes не читались.
 - Весь pass был read-only относительно Supabase и outcome-free; paid provider requests/credits = `0/0`; production model не изменён.
 - Post-merge live recheck at `2026-09-09 16:16:03 UTC` confirmed P0-A still has no snapshots newer than `2026-09-05 15:21:32.513020 UTC` and P0-B remains `12/100`; corrected authoritative P0-B metadata is last kickoff `2026-09-14 19:00 UTC` and model SHA256 `1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5`.
 
@@ -575,3 +575,72 @@ Guard/proof:
 - Для ускорения именно AI-vs-market evidence следующий safe research unblocker: league-specific AI/model-calibration readiness на completed historical/OOS data; после доказательства пригодности хотя бы одной non-EPL league — отдельная future-only preregistration multi-league paired cohort.
 - Уже накопленные 190 MARKET_ONLY operational events могут использоваться для infrastructure/readiness validation, но не backfill в новый prospective primary cohort.
 - P2 prospective outcomes/performance остаются закрыты до frozen sample/time gates; Candidate V2/API/RLS не открывать без roadmap основания.
+
+---
+
+## 2026-09-11 / 2026-09-12 UTC addendum — eight-league MARKET_ONLY readiness and common T0
+
+Status: **CLOSED / 8-OF-8 LIVE-PROVEN / COMMON MARKET_ONLY CAPTURE ACTIVE AFTER T0**.
+
+### Paid/manual eight-league pass
+
+Пользователь явно разрешил исходный bounded pass командой «запускай 8 лиг». Итоговый свежий набор 2026-09-11:
+- EPL `20`;
+- LA_LIGA `20`;
+- SERIE_A `20`;
+- BUNDESLIGA `18`;
+- LIGUE_1 `18`;
+- EREDIVISIE `19`;
+- TURKEY_SUPER_LIG `9`;
+- PRIMEIRA_LIGA `9`;
+- всего `133` provider events.
+
+The Odds API quota прошла `193 -> 185`: суммарная стоимость pass = `8` credits. Production model не изменён. Этот набор является bootstrap/readiness proof для общего восьмилигового контракта и **не** включается в новый common cohort задним числом.
+
+### Closing PR chain
+
+- PR #254 — Turkey/Portugal quota gate: удалён stale internal floor `500`; scheduler переведён на shared hard reserve `100` + полный двухкредитный envelope, effective minimum `102`; merge `b2b027944872571eb1745bcc72de1e5a4b8b4675`.
+- PR #255 — La Liga temporal canonicality + zero-cost ledger catch-up; merge `0b9adaafca8b8501ba2c994a16c2dd7e2c4120a3`. Live audit обнаружил `13` duplicated temporal identities / `19` extra structural reconstructions / `0` market-state conflicts. При structural-only drift сохраняется первая durable observation; market drift под той же temporal identity fail-closed.
+- PR #256 — deterministic all-leagues capture completeness gate; merge `c18a6fdc564ad62e95c6e888c35137af061349e2`. Gate network-free, работает по canonical provider event IDs, `MISSING/UNEXPECTED` fail-closed, raw DB row count не является coverage proof.
+- PR #257 — EPL newest-first Supabase window; merge `0a9e5ec648fae1b0917cd5465ed63d46b23ca157`. Исправлен PostgREST capped-window failure mode: market shadow читает newest-first, затем локально восстанавливает chronological order.
+- PR #258 — zero-cost EPL ledger catch-up; merge `ab96dc72c8102094117aff667ed993af18281e68`; push run `34665769480`, job `103477214341`. Workflow использовал только Supabase secrets, без Odds API credential; записал `20` новых EPL durable observations и `20` canonical predictions. Parity audit: `future_orphan_snapshot_rows=0`, `critical_failures=0`.
+- PR #259 — frozen common eight-league protocol `ALL_LEAGUES_MARKET_ONLY_V1`; merge/T0 `663806f6f57aa4faba6b303e6952f86d163892db`.
+
+### Final live readiness proof
+
+После EPL zero-cost catch-up read-only Supabase proof подтвердил exact fresh odds/ledger parity по всем восьми лигам:
+- BUNDESLIGA `18/18`;
+- EPL `20/20`;
+- EREDIVISIE `19/19`;
+- LA_LIGA `20/20`;
+- LIGUE_1 `18/18`;
+- PRIMEIRA_LIGA `9/9`;
+- SERIE_A `20/20`;
+- TURKEY_SUPER_LIG `9/9`.
+
+Итого: `133/133` fresh event IDs имеют canonical MARKET_ONLY ledger запись; `bad_timing=0` во всех восьми лигах; `non_market_only=0` во всех восьми лигах. La Liga/EPL recovery не делали новых provider requests и не тратили дополнительные credits. Production `.pkl` не изменён.
+
+### Common T0 / no-peek contract
+
+- `T0_COMMIT = 663806f6f57aa4faba6b303e6952f86d163892db`.
+- `T0_UTC = 2026-09-12T01:51:19Z`.
+- Общий cohort `ALL_LEAGUES_MARKET_ONLY_V1` начинается **строго после** `T0_UTC`.
+- 133 rows от 2026-09-11 остаются readiness/bootstrap evidence и не backfill в common cohort.
+- `expected_event_ids` для completeness должны быть frozen **до persistence-completeness evaluation** из authoritative pre-kickoff provider/fixture manifest и не могут копироваться из уже сохранённых `odds_snapshots`; circular completeness запрещён.
+- Capture = `MARKET_ONLY`, `structural_applied=false`, exact immutable provenance, prediction/snapshot strictly pre-kickoff.
+- Outcome/result source нельзя читать для решения capture/exclusion/retry/relabelling или tuning до applicable frozen evaluation gate.
+- Этот protocol не даёт paid-provider permission; paid refresh остаётся manual-only с existing budget guards.
+- После разрешённого evaluation gate frozen metrics: multiclass log loss, multiclass Brier score, 1X2 argmax accuracy — per league + pooled; более строгий existing league-specific gate всегда имеет приоритет.
+- Production promotion остаётся отдельным explicit/manual decision и не следует автоматически из research evidence.
+
+### Execution pointer override after eight-league activation
+
+Этот addendum является самым свежим execution pointer и переопределяет stale status выше только там, где статус изменился.
+
+- `ALL_LEAGUES_MARKET_ONLY_V1 = CAPTURE_READY / ACTIVE AFTER T0`.
+- Общая eight-league MARKET_ONLY infrastructure readiness = **CLOSED / 8-OF-8 LIVE-PROVEN**.
+- Следующая работа по этому common cohort: только future capture строго после T0 с no-peek, immutable provenance и non-circular completeness manifest.
+- Common cohort не оценивать до отдельно применимого frozen sample/time evaluation gate; interim outcome/performance peeking запрещён.
+- Existing `EPL_AI_MARKET_PAIR_V1` остаётся отдельным frozen EPL AI-vs-market experiment и не расширяется/backfill этим common market-only cohort.
+- P2 outcome/performance blocks остаются gated.
+- Любой следующий реальный paid refresh требует отдельного explicit permission; сам T0/protocol такого разрешения не создаёт.
