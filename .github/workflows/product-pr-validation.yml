@@ -32,6 +32,8 @@ jobs:
         run: |
           python -m py_compile product_markets.py
           python -m py_compile product_web.py
+          python -m py_compile product_snapshot_store.py
+          python -m py_compile publish_product_predictions.py
           python -m py_compile web_app.py
 
       - name: Validate web deployment config
@@ -49,11 +51,29 @@ jobs:
           assert "web_app.py" in vercel["functions"]
           PY
 
+      - name: Validate immutable Supabase snapshot migration
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          sql = Path(
+              "supabase/migrations/20260912071500_create_product_prediction_snapshots.sql"
+          ).read_text(encoding="utf-8").lower()
+          assert "create table if not exists public.product_prediction_snapshots" in sql
+          assert "enable row level security" in sql
+          assert "for insert" in sql
+          assert "for select" in sql
+          assert "for update" not in sql
+          assert "for delete" not in sql
+          PY
+
       - name: Run product tests
         run: |
           python -m pytest -q tests/test_product_markets.py
           python -m pytest -q tests/test_product_web.py
           python -m pytest -q tests/test_product_ui_contract.py
+          python -m pytest -q tests/test_product_snapshot_store.py
+          python -m pytest -q tests/test_publish_product_predictions.py
 
       - name: Enforce no production artifact changes
         run: |
