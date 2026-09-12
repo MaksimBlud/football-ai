@@ -41,6 +41,7 @@ jobs:
           python -m py_compile product_reliability.py
           python -m py_compile report_product_reliability.py
           python -m py_compile product_portfolio_risk.py
+          python -m py_compile report_product_portfolio_risk.py
           python -m py_compile web_app.py
 
       - name: Validate web deployment config
