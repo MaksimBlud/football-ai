@@ -98,7 +98,7 @@ def odds_for_event(
 def _decision_payload(prediction: Mapping[str, Any], odds: Mapping[str, Any] | None) -> dict[str, Any]:
     market = build_product_match(prediction, odds)
     return {
-        "framework_version": market.get("decision_framework_version"),
+        "framework_version": (market.get("decision_framework") or {}).get("framework_version"),
         "main_forecast": market.get("main_forecast"),
         "alternatives": market.get("alternatives"),
         "value_signal": market.get("value_signal"),
