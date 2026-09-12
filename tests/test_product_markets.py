@@ -6,6 +6,7 @@ from product_markets import (
     build_product_match,
     build_product_market_view,
     fair_odds,
+    fixture_key,
     raw_expected_value,
 )
 
@@ -127,10 +128,41 @@ def test_nan_values_are_serialization_safe():
     assert view["model_context"]["expected_total_goals"] is None
 
 
+def test_fixture_key_includes_scheduled_kickoff_fields():
+    first = sample_prediction(match_date="2026-09-12", match_time="15:00")
+    second = sample_prediction(match_date="2026-10-03", match_time="17:30")
+
+    assert fixture_key(first) != fixture_key(second)
+
+
+def test_market_view_does_not_cross_match_same_teams_at_different_kickoffs():
+    first = sample_prediction(match_date="2026-09-12", match_time="15:00")
+    second = sample_prediction(match_date="2026-10-03", match_time="17:30")
+    odds_by_fixture = {
+        fixture_key(first): {
+            "home_odds": 1.90,
+            "draw_odds": 4.00,
+            "away_odds": 7.00,
+        }
+    }
+
+    payload = build_product_market_view(
+        [first, second],
+        odds_by_fixture=odds_by_fixture,
+    )
+
+    first_market = payload["matches"][0]["markets"]["1x2"]
+    second_market = payload["matches"][1]["markets"]["1x2"]
+    assert first_market["selections"][0]["bookmaker_odds"] == pytest.approx(1.90)
+    assert second_market["selections"][0]["bookmaker_odds"] is None
+    assert payload["matches"][1]["main_choice"]["status"] == "no_bet"
+
+
 def test_versioned_view_exposes_readiness_and_selection_policy():
     payload = build_product_market_view([sample_prediction()])
 
     assert payload["schema_version"] == "product-market-view.v1"
+    assert "match_date" in payload["fixture_identity"]
     assert payload["market_readiness"]["1x2"]["status"] == "comparison_ready"
     assert payload["market_readiness"]["corners_total"]["status"] == "research_only"
     assert "reliability-aware" in payload["selection_policy"]["future"]
