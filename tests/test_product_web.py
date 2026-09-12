@@ -68,6 +68,7 @@ def test_server_assembly_attaches_price_only_to_exact_fixture():
     assert first_home["raw_expected_value"] == pytest.approx(0.14)
     assert first_item["main_forecast"]["status"] == "model_forecast"
     assert first_item["value_signal"]["status"] == "positive_raw_ev"
+    assert first_item["bet_decision"]["status"] == "no_bet"
 
     assert second_home["bookmaker_odds"] is None
     assert second_home["raw_expected_value"] is None
@@ -75,15 +76,20 @@ def test_server_assembly_attaches_price_only_to_exact_fixture():
     assert second_item["value_signal"]["status"] == "none"
 
 
-def test_adapter_never_creates_goal_total_bookmaker_price():
+def test_adapter_never_creates_goal_total_bookmaker_price_or_promotes_model_only_tier():
     payload = assemble_product_market_view(
-        [prediction(over_2_5_probability=0.70)],
+        [prediction(over_2_5_probability=0.70, under_2_5_probability=0.30)],
         [odds_row()],
     )
 
-    total = payload["matches"][0]["markets"]["total_goals"]
+    item = payload["matches"][0]
+    total = item["markets"]["total_goals"]
     assert total["display_selection"]["code"] == "OVER_2_5"
     assert total["display_selection"]["bookmaker_odds"] is None
+    assert total["readiness"]["decision_tier"] == 1
     assert total["readiness"]["eligible_for_main_forecast"] is True
     assert total["readiness"]["eligible_for_value"] is False
-    assert payload["matches"][0]["main_forecast"]["market"] == "total_goals"
+
+    assert item["main_forecast"]["market"] == "1x2"
+    assert item["alternatives"][0]["market"] == "total_goals"
+    assert item["confidence"]["level"] == "operational"

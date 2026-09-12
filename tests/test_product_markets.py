@@ -75,6 +75,7 @@ def test_main_forecast_uses_probability_not_raw_ev():
     assert view["value_signal"]["selection"]["code"] == "AWAY"
     assert view["value_signal"]["selection"]["raw_expected_value"] > 0
     assert view["main_choice"]["selection"]["code"] == "HOME"
+    assert view["bet_decision"]["status"] == "no_bet"
 
 
 def test_no_positive_priced_edge_keeps_forecast_but_no_value_signal():
@@ -105,7 +106,7 @@ def test_missing_bookmaker_prices_preserve_forecast_without_value():
     assert view["value_signal"]["status"] == "none"
 
 
-def test_goal_total_can_be_main_forecast_without_bookmaker_price():
+def test_higher_probability_model_only_total_stays_alternative_to_operational_1x2():
     view = build_product_match(
         sample_prediction(over_2_5_probability=0.72, under_2_5_probability=0.28),
         {
@@ -118,11 +119,32 @@ def test_goal_total_can_be_main_forecast_without_bookmaker_price():
     total = view["markets"]["total_goals"]
     assert total["display_selection"]["code"] == "OVER_2_5"
     assert total["display_selection"]["probability"] == pytest.approx(0.72)
-    assert total["readiness"]["status"] == "model_only"
-    assert total["readiness"]["eligible_for_main_forecast"] is True
-    assert total["readiness"]["eligible_for_value"] is False
+    assert total["readiness"]["decision_tier"] == 1
+    assert total["readiness"]["decision_confidence"] == "provisional"
+
+    assert view["main_forecast"]["market"] == "1x2"
+    assert view["main_forecast"]["selection"]["code"] == "HOME"
+    assert view["alternatives"][0]["market"] == "total_goals"
+    assert view["alternatives"][0]["selection"]["code"] == "OVER_2_5"
+    assert view["confidence"]["level"] == "operational"
+
+
+def test_model_only_total_can_be_provisional_main_when_operational_1x2_missing():
+    view = build_product_match(
+        sample_prediction(
+            home_probability=None,
+            draw_probability=None,
+            away_probability=None,
+            over_2_5_probability=0.72,
+            under_2_5_probability=0.28,
+        )
+    )
+
     assert view["main_forecast"]["market"] == "total_goals"
     assert view["main_forecast"]["selection"]["code"] == "OVER_2_5"
+    assert view["main_forecast"]["decision_tier"] == 1
+    assert view["confidence"]["level"] == "provisional"
+    assert view["bet_decision"]["status"] == "no_bet"
 
 
 def test_research_markets_never_fabricate_selections():
@@ -131,8 +153,10 @@ def test_research_markets_never_fabricate_selections():
     for market_name in ("handicap", "corners_total"):
         market = view["markets"][market_name]
         assert market["readiness"]["status"] == "research_only"
+        assert market["readiness"]["decision_tier"] == 0
         assert market["readiness"]["eligible_for_main_forecast"] is False
         assert market["readiness"]["eligible_for_value"] is False
+        assert market["readiness"]["eligible_for_bet_recommendation"] is False
         assert market["selections"] == []
         assert market["display_selection"] is None
 
@@ -196,13 +220,15 @@ def test_market_view_does_not_cross_match_same_teams_at_different_kickoffs():
     assert payload["matches"][1]["value_signal"]["status"] == "none"
 
 
-def test_versioned_view_exposes_separate_forecast_value_and_stable_identity_policy():
+def test_versioned_view_exposes_decision_framework_policy():
     payload = build_product_market_view([sample_prediction()])
 
     assert payload["schema_version"] == "product-market-view.v1"
+    assert payload["decision_framework_version"] == "product-decision.v1"
     assert "event_id" in payload["fixture_identity"]
     assert payload["market_readiness"]["1x2"]["status"] == "comparison_ready"
     assert payload["market_readiness"]["corners_total"]["status"] == "research_only"
-    assert "Highest model probability" in payload["selection_policy"]["forecast"]
+    assert "decision tier" in payload["selection_policy"]["forecast"]
     assert "never overrides forecast" in payload["selection_policy"]["value"]
+    assert "no_bet" in payload["selection_policy"]["bet_decision"]
     assert len(payload["matches"]) == 1
