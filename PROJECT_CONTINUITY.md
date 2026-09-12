@@ -644,3 +644,46 @@ The Odds API quota прошла `193 -> 185`: суммарная стоимос�
 - Existing `EPL_AI_MARKET_PAIR_V1` остаётся отдельным frozen EPL AI-vs-market experiment и не расширяется/backfill этим common market-only cohort.
 - P2 outcome/performance blocks остаются gated.
 - Любой следующий реальный paid refresh требует отдельного explicit permission; сам T0/protocol такого разрешения не создаёт.
+
+---
+
+## 2026-09-12 addendum — 127-event all-leagues successor seed freeze
+
+Status: **FROZEN / 127-SEED LIVE-PROVEN BEFORE FIRST KICKOFF / FUTURE CAPTURE ACTIVE**.
+
+После активации консервативного `ALL_LEAGUES_MARKET_ONLY_V1` read-only проверка показала, что из 133 readiness events только 6 матчей 2026-09-11 уже успели начаться, а 127 матчей всё ещё были полностью future относительно нового freeze. Чтобы не терять эти валидные untouched predictions, V1 не переписывался: создан отдельный successor protocol `ALL_LEAGUES_MARKET_ONLY_V1_1`.
+
+Frozen successor facts:
+- original V1 T0 = `2026-09-12T01:51:19Z`;
+- V1.1 freeze = `2026-09-12T02:04:34Z`;
+- first seed kickoff = `2026-09-12T12:00:00Z`;
+- seed membership = exact 127 immutable `prediction_key` values in `research/ALL_LEAGUES_MARKET_ONLY_V1_1_MANIFEST.json`;
+- league counts = BUNDESLIGA `17`, EPL `20`, EREDIVISIE `18`, LA_LIGA `19`, LIGUE_1 `17`, PRIMEIRA_LIGA `9`, SERIE_A `19`, TURKEY_SUPER_LIG `8`;
+- six already-started 2026-09-11 matches remain excluded and must never be backfilled into V1.1.
+
+Scientific guard:
+- no outcome/result/settlement source was read to select, filter, rank or relabel the 127 seed events;
+- all 127 exact keys already existed immutably before their kickoffs;
+- read-only live proof at `2026-09-12 02:09:06 UTC`: `127` immutable keys, `8` leagues, first kickoff `12:00 UTC`, `mode_violations=0`, `timing_violations=0`;
+- V1 remains frozen historical provenance; V1.1 is a successor, not a retroactive edit;
+- future V1.1 membership = exact 127-key seed + qualifying MARKET_ONLY captures created after V1.1 freeze;
+- paid provider permission is unchanged/manual-only;
+- interim outcome/performance peeking remains forbidden;
+- production `.pkl` remains outside this path.
+
+PR/CI/merge proof:
+- PR #261 exact head `31ca44ce457dca5a2d229f8c578a05cb93563cbd`;
+- all 5 PR validation workflows green, including expanded `tests/test_all_leagues_prospective_protocol.py` and production-artifact guard;
+- exact-head merge `ba3a99be3a8710b54fa3f85a160aae5238844050` at `2026-09-12T02:09:34Z`, still ~9h50m before first seed kickoff.
+
+### Execution pointer override after V1.1 freeze
+
+Этот раздел является самым свежим execution pointer для common eight-league MARKET_ONLY cohort.
+
+- `ALL_LEAGUES_MARKET_ONLY_V1` остаётся frozen historical predecessor.
+- `ALL_LEAGUES_MARKET_ONLY_V1_1 = FROZEN / 127-SEED + FUTURE CAPTURE`.
+- Common cohort currently starts with `127` untouched pre-kickoff MARKET_ONLY predictions across all 8 leagues.
+- Следующие новые common observations добавляются только future-only после `2026-09-12T02:04:34Z` и должны пройти исходные V1 no-peek/identity/completeness rules.
+- Шесть матчей 2026-09-11 не входят в V1.1.
+- До applicable frozen evaluation gate читать outcomes/performance для common cohort запрещено.
+- Любой следующий paid odds refresh требует отдельного explicit permission; V1.1 freeze его не даёт.
