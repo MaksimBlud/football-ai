@@ -11,6 +11,7 @@ mathematical comparison with bookmaker price, not evidence of profitability.
 
 from __future__ import annotations
 
+import hashlib
 import math
 from typing import Any, Mapping
 
@@ -137,13 +138,36 @@ def _readiness(market: str) -> dict[str, Any]:
 
 
 def fixture_key(row: Mapping[str, Any]) -> tuple[str, str, str, str]:
-    """Return the product fixture identity including scheduled kickoff fields."""
+    """Return the legacy product fixture identity including kickoff fields."""
     return (
         str(row.get("home_team_model") or row.get("home_team") or "").strip(),
         str(row.get("away_team_model") or row.get("away_team") or "").strip(),
         str(row.get("match_date") or "").strip(),
         str(row.get("match_time") or "").strip(),
     )
+
+
+def product_match_id(row: Mapping[str, Any]) -> str:
+    """Return a stable URL-safe identity that survives list reordering.
+
+    Provider ``event_id`` is preferred. A deterministic fixture hash is used only
+    when the upstream provider id is unavailable.
+    """
+    event_id = str(row.get("event_id") or "").strip()
+    if event_id:
+        return f"event_{event_id}"
+
+    kickoff = str(row.get("commence_time_utc") or "").strip()
+    if not kickoff:
+        kickoff = f"{row.get('match_date') or ''}T{row.get('match_time') or ''}"
+    parts = (
+        str(row.get("league") or "").strip(),
+        str(row.get("home_team_model") or row.get("home_team") or "").strip(),
+        str(row.get("away_team_model") or row.get("away_team") or "").strip(),
+        kickoff,
+    )
+    digest = hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()[:24]
+    return f"fixture_{digest}"
 
 
 def _build_main_forecast(
@@ -280,6 +304,10 @@ def build_product_match(
 
     return {
         "match": {
+            "product_match_id": product_match_id(prediction),
+            "event_id": prediction.get("event_id"),
+            "league": prediction.get("league"),
+            "commence_time_utc": prediction.get("commence_time_utc"),
             "match_date": prediction.get("match_date"),
             "match_time": prediction.get("match_time"),
             "home_team": home_team,
@@ -343,9 +371,7 @@ def build_product_market_view(
 
     return {
         "schema_version": "product-market-view.v1",
-        "fixture_identity": (
-            "home_team_model + away_team_model + match_date + match_time"
-        ),
+        "fixture_identity": "provider event_id; deterministic fixture hash fallback",
         "selection_policy": {
             "forecast": (
                 "Highest model probability among markets eligible for main forecast."
