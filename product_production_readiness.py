@@ -25,7 +25,6 @@ STATUS_REVIEWABLE = "REVIEWABLE"
 STATUS_OPERATIONAL = "OPERATIONAL"
 STATUS_BLOCKED = "BLOCKED"
 
-RELIABILITY_REVIEWABLE = "REVIEWABLE"
 RELIABILITY_NOT_ATTACHED = "NOT_ATTACHED"
 
 
@@ -95,7 +94,7 @@ MARKET_PRODUCTION_POLICY: dict[str, dict[str, Any]] = {
 
 # Explicit governance registry. Entries here are not generated from performance.
 # EPL/1X2 is the already-existing operational product baseline created before this
-# framework. Retaining it does not imply a reliability PASS.
+# framework. Retaining it does not imply a reliability PASS or promote any model.
 APPROVED_OPERATIONAL_SCOPES: dict[tuple[str, str], dict[str, str]] = {
     ("EPL", "1x2"): {
         "basis": "preexisting_operational_product_baseline",
@@ -109,6 +108,12 @@ APPROVED_OPERATIONAL_SCOPES: dict[tuple[str, str], dict[str, str]] = {
 
 def _text(value: Any) -> str:
     return str(value or "").strip()
+
+
+def _ratio(numerator: int, denominator: int) -> float | None:
+    if denominator <= 0:
+        return None
+    return numerator / denominator
 
 
 def _market_observation(
@@ -151,11 +156,13 @@ def _market_observation(
         "complete_model_probability_count": complete_model_probability_count,
         "complete_bookmaker_price_count": complete_bookmaker_price_count,
         "stable_identity_complete": fixture_count > 0 and stable_identity_count == fixture_count,
-        "model_probability_complete": (
-            fixture_count > 0 and complete_model_probability_count == fixture_count
+        "model_probability_available": complete_model_probability_count > 0,
+        "bookmaker_price_available": complete_bookmaker_price_count > 0,
+        "model_probability_coverage_ratio": _ratio(
+            complete_model_probability_count, fixture_count
         ),
-        "bookmaker_price_complete": (
-            fixture_count > 0 and complete_bookmaker_price_count == fixture_count
+        "bookmaker_price_coverage_ratio": _ratio(
+            complete_bookmaker_price_count, fixture_count
         ),
     }
 
@@ -218,9 +225,13 @@ def _objective_gates(
             "passed": bool(policy.get("model_probability_contract")),
             "reason": "Production model probability contract exists.",
         },
-        "live_model_coverage": {
-            "passed": observation.get("model_probability_complete") is True,
-            "reason": "All currently exposed fixtures have complete model probabilities.",
+        "live_model_availability": {
+            "passed": observation.get("model_probability_available") is True,
+            "reason": (
+                "At least one currently exposed fixture has a complete model probability "
+                "vector. Partial coverage is reported separately and has no invented "
+                "percentage threshold in v1."
+            ),
         },
         "stable_identity": {
             "passed": observation.get("stable_identity_complete") is True,
@@ -230,13 +241,16 @@ def _objective_gates(
             "passed": bool(policy.get("bookmaker_price_contract")) or not requires_prices,
             "reason": "Bookmaker-price contract exists when operational comparison requires it.",
         },
-        "live_price_coverage": {
+        "live_price_availability": {
             "passed": (
-                observation.get("bookmaker_price_complete") is True
+                observation.get("bookmaker_price_available") is True
                 if requires_prices
                 else True
             ),
-            "reason": "All currently exposed fixtures have complete required bookmaker prices.",
+            "reason": (
+                "At least one currently exposed fixture has the complete required price "
+                "vector. Partial price coverage is a warning, not an arbitrary fail threshold."
+            ),
         },
         "settlement_contract": {
             "passed": bool(policy.get("settlement_contract")),
@@ -258,6 +272,37 @@ def _objective_gates(
 
 def _blocking_gate_names(gates: Mapping[str, Mapping[str, Any]]) -> list[str]:
     return [name for name, payload in gates.items() if payload.get("passed") is not True]
+
+
+def _coverage_warnings(
+    policy: Mapping[str, Any], observation: Mapping[str, Any]
+) -> list[dict[str, Any]]:
+    warnings: list[dict[str, Any]] = []
+    fixture_count = int(observation.get("fixture_count") or 0)
+    if fixture_count <= 0:
+        return warnings
+
+    model_ratio = observation.get("model_probability_coverage_ratio")
+    if model_ratio is not None and 0 < float(model_ratio) < 1:
+        warnings.append(
+            {
+                "code": "PARTIAL_MODEL_COVERAGE",
+                "coverage_ratio": float(model_ratio),
+                "reason": "Some exposed fixtures do not have a complete model probability vector.",
+            }
+        )
+
+    if policy.get("requires_bookmaker_prices_for_operational"):
+        price_ratio = observation.get("bookmaker_price_coverage_ratio")
+        if price_ratio is not None and 0 < float(price_ratio) < 1:
+            warnings.append(
+                {
+                    "code": "PARTIAL_PRICE_COVERAGE",
+                    "coverage_ratio": float(price_ratio),
+                    "reason": "Some exposed fixtures do not have a complete bookmaker price vector.",
+                }
+            )
+    return warnings
 
 
 def evaluate_scope_readiness(
@@ -286,6 +331,7 @@ def evaluate_scope_readiness(
         approved_scope=approved_scope,
     )
     blockers = _blocking_gate_names(gates)
+    warnings = _coverage_warnings(policy, observation)
     baseline_stage = policy["baseline_stage"]
 
     if baseline_stage == STATUS_RESEARCH_ONLY:
@@ -334,6 +380,7 @@ def evaluate_scope_readiness(
         "reliability": reliability_payload,
         "gates": {name: dict(payload) for name, payload in gates.items()},
         "open_gates": blockers,
+        "coverage_warnings": warnings,
         "automatic_effects": {
             "changes_market_readiness": False,
             "changes_decision_tier": False,
@@ -396,6 +443,7 @@ def build_production_readiness_view(
             "reviewable_auto_promotes_to_operational": False,
             "reliability_pass_is_not_model_promotion": True,
             "existing_operational_baseline_can_be_blocked_by_technical_regression": True,
+            "partial_coverage_has_no_invented_percentage_threshold": True,
             "reads_research_outcomes": False,
         },
         "status_counts": counts,
