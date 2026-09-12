@@ -20,8 +20,10 @@ def observation(**overrides):
         "complete_model_probability_count": 10,
         "complete_bookmaker_price_count": 10,
         "stable_identity_complete": True,
-        "model_probability_complete": True,
-        "bookmaker_price_complete": True,
+        "model_probability_available": True,
+        "bookmaker_price_available": True,
+        "model_probability_coverage_ratio": 1.0,
+        "bookmaker_price_coverage_ratio": 1.0,
     }
     value.update(overrides)
     return value
@@ -79,20 +81,44 @@ def test_existing_epl_1x2_baseline_remains_operational_without_fake_reliability_
     assert result["automatic_effects"]["changes_decision_tier"] is False
 
 
-def test_existing_operational_scope_fails_closed_when_live_price_gate_regresses():
+def test_existing_operational_scope_fails_closed_when_all_live_prices_disappear():
     result = evaluate_scope_readiness(
         league="EPL",
         market="1x2",
         observation=observation(
             complete_bookmaker_price_count=0,
-            bookmaker_price_complete=False,
+            bookmaker_price_available=False,
+            bookmaker_price_coverage_ratio=0.0,
         ),
         reliability={"attached": False, "state": "NOT_ATTACHED", "reviewable": False},
     )
 
     assert result["status"] == STATUS_BLOCKED
-    assert "live_price_coverage" in result["open_gates"]
+    assert "live_price_availability" in result["open_gates"]
     assert result["approved_operational_scope"] is True
+
+
+def test_partial_price_coverage_is_warning_not_arbitrary_market_block():
+    result = evaluate_scope_readiness(
+        league="EPL",
+        market="1x2",
+        observation=observation(
+            complete_bookmaker_price_count=7,
+            bookmaker_price_available=True,
+            bookmaker_price_coverage_ratio=0.7,
+        ),
+        reliability={"attached": False, "state": "NOT_ATTACHED", "reviewable": False},
+    )
+
+    assert result["status"] == STATUS_OPERATIONAL
+    assert result["open_gates"] == []
+    assert result["coverage_warnings"] == [
+        {
+            "code": "PARTIAL_PRICE_COVERAGE",
+            "coverage_ratio": pytest.approx(0.7),
+            "reason": "Some exposed fixtures do not have a complete bookmaker price vector.",
+        }
+    ]
 
 
 def test_new_1x2_scope_with_all_objective_gates_is_only_reviewable_until_approved():
@@ -170,15 +196,16 @@ def test_live_product_view_exposes_four_epl_scope_states_without_reading_outcome
     assert readiness["schema_version"] == PRODUCTION_READINESS_VERSION
     assert readiness["policy"]["reads_research_outcomes"] is False
     assert readiness["policy"]["reviewable_auto_promotes_to_operational"] is False
+    assert readiness["policy"]["partial_coverage_has_no_invented_percentage_threshold"] is True
 
     by_market = {scope["market"]: scope for scope in readiness["scopes"]}
     assert by_market["1x2"]["status"] == STATUS_OPERATIONAL
     assert by_market["1x2"]["observation"]["fixture_count"] == 1
-    assert by_market["1x2"]["observation"]["bookmaker_price_complete"] is True
+    assert by_market["1x2"]["observation"]["bookmaker_price_available"] is True
     assert by_market["1x2"]["reliability"]["state"] == "NOT_ATTACHED"
 
     assert by_market["total_goals"]["status"] == STATUS_PROVISIONAL
-    assert by_market["total_goals"]["observation"]["model_probability_complete"] is False
+    assert by_market["total_goals"]["observation"]["model_probability_available"] is False
     assert by_market["handicap"]["status"] == STATUS_RESEARCH_ONLY
     assert by_market["corners_total"]["status"] == STATUS_RESEARCH_ONLY
 
