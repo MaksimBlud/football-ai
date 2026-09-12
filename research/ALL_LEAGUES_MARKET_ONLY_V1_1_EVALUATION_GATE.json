@@ -1,0 +1,79 @@
+{
+  "schema_version": "all_leagues_market_only_v1_1_evaluation_gate_v1",
+  "experiment": "ALL_LEAGUES_MARKET_ONLY_V1_1",
+  "status": "FROZEN_ON_FIRST_MERGE_TO_MAIN",
+  "scope": {
+    "leagues": [
+      "EPL",
+      "LA_LIGA",
+      "SERIE_A",
+      "BUNDESLIGA",
+      "LIGUE_1",
+      "EREDIVISIE",
+      "TURKEY_SUPER_LIG",
+      "PRIMEIRA_LIGA"
+    ],
+    "market": "1X2",
+    "evidence": "MARKET_ONLY",
+    "seed_manifest": "research/ALL_LEAGUES_MARKET_ONLY_V1_1_MANIFEST.json",
+    "successor_protocol": "research/ALL_LEAGUES_PROSPECTIVE_CAPTURE_V1_1.md"
+  },
+  "sample_gate": {
+    "unit": "unique league + canonical provider event_id",
+    "seed_row_selection": "use exactly the immutable prediction_key frozen in the V1.1 127-key seed manifest",
+    "future_row_selection": "for each non-seed event, use the earliest qualifying immutable prediction created strictly after V1_1_FREEZE_UTC, ordered by prediction_time_utc ASC, snapshot_time_utc ASC, prediction_key ASC",
+    "event_order": "kickoff_utc ASC, event_id ASC, prediction_key ASC",
+    "primary_prefix": "for each league, use the smallest deterministic prefix of selected events that contains at least 100 unique events and at least 4 distinct UTC kickoff calendar months",
+    "minimum_unique_events_per_league": 100,
+    "minimum_kickoff_calendar_months_per_league": 4,
+    "all_eight_leagues_must_pass": true,
+    "seed_events_remain_fixed": true,
+    "post_freeze_future_events_only": true,
+    "outcome_independent_membership": true
+  },
+  "outcome_embargo": {
+    "scores_results_winners_settlements_forbidden_before_gate": true,
+    "minimum_delay_hours_after_latest_primary_prefix_kickoff": 24,
+    "common_gate_never_overrides_stricter_existing_gate": true,
+    "interim_primary_evaluation": false,
+    "optional_stopping_on_metrics": false,
+    "performance_based_sample_extension": false,
+    "automatic_outcome_scoring": false,
+    "evaluation_requires_explicit_post_gate_action": true
+  },
+  "post_gate_settlement": {
+    "canonical_finished_outcome_required_for_every_scored_event": true,
+    "missing_result_status": "WAIT_RESULTS",
+    "permanent_cancel_abandon_void_policy": "exclude only after an authoritative non-performance status is available; never use prediction correctness or metric contribution as an exclusion reason",
+    "replacement_policy": "extend the same deterministic event-order prefix with the next eligible captured events until each league has at least 100 scorable events while retaining at least 4 kickoff calendar months",
+    "postponed_fixture_policy": "retain and wait for canonical completion unless it becomes authoritatively cancelled/abandoned/void",
+    "metric_dependent_replacement_forbidden": true
+  },
+  "evaluation": {
+    "primary_metrics": [
+      "multiclass_log_loss",
+      "multiclass_brier"
+    ],
+    "secondary_metrics": [
+      "1x2_argmax_accuracy"
+    ],
+    "report_per_league": true,
+    "report_pooled_micro": true,
+    "report_unweighted_league_macro": true,
+    "report_sample_size_and_outcome_class_counts": true,
+    "primary_interpretation": "descriptive frozen market baseline; no arbitrary PASS/FAIL threshold is introduced for MARKET_ONLY itself",
+    "threshold_search": false,
+    "league_weighting_search": false,
+    "subgroup_selection_for_primary_reporting": false,
+    "production_activation": false,
+    "model_promotion": false
+  },
+  "safety": {
+    "network_free_gate_evaluator": "all_leagues_market_only_v1_1_gate.py",
+    "gate_evaluator_reads_outcomes": false,
+    "paid_provider_permission": false,
+    "supabase_write_permission": false,
+    "production_artifact_changes": false,
+    "stricter_league_specific_contract_wins": true
+  }
+}
