@@ -28,11 +28,31 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest
 
-      - name: Compile product contract
-        run: python -m py_compile product_markets.py
+      - name: Compile product modules
+        run: |
+          python -m py_compile product_markets.py
+          python -m py_compile product_web.py
+          python -m py_compile web_app.py
 
-      - name: Run product contract tests
-        run: python -m pytest -q tests/test_product_markets.py
+      - name: Validate web deployment config
+        run: |
+          python - <<'PY'
+          import json
+          import tomllib
+
+          with open("pyproject.toml", "rb") as handle:
+              pyproject = tomllib.load(handle)
+          assert pyproject["tool"]["vercel"]["entrypoint"] == "web_app:app"
+
+          with open("vercel.json", encoding="utf-8") as handle:
+              vercel = json.load(handle)
+          assert "web_app.py" in vercel["functions"]
+          PY
+
+      - name: Run product tests
+        run: |
+          python -m pytest -q tests/test_product_markets.py
+          python -m pytest -q tests/test_product_web.py
 
       - name: Enforce no production artifact changes
         run: |
