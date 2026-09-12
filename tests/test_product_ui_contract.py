@@ -78,3 +78,14 @@ def test_list_links_to_stable_server_match_card():
     assert 'data-match-id="${esc(meta.product_match_id)}"' in html
     assert "/match?id=${encodeURIComponent(row.dataset.matchId)}" in html
     assert "row.dataset.index" not in html
+
+
+def test_ui_copy_uses_decision_tier_before_cross_market_probability():
+    index = read(INDEX_PATH)
+    detail = read(MATCH_PATH)
+    combined = index + detail
+
+    assert "decision tier" in index
+    assert "decision tier" in detail
+    assert "Главный прогноз определяется только вероятностью модели" not in combined
+    assert "Value / raw EV" in combined
