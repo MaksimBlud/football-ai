@@ -2,449 +2,96 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>Football AI — Анализ матча</title>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Football AI — карточка матча</title>
     <style>
-        body{
-            margin:0;
-            font-family:Arial,sans-serif;
-            background:#f1f5f9;
-            color:#111827;
-        }
-
-        .container{
-            max-width:1000px;
-            margin:30px auto;
-            padding:20px;
-        }
-
-        .back{
-            display:inline-block;
-            margin-bottom:20px;
-            color:#2563eb;
-            text-decoration:none;
-            font-weight:bold;
-        }
-
-        .panel{
-            background:#fff;
-            border-radius:16px;
-            padding:24px;
-            margin-bottom:20px;
-            box-shadow:0 3px 12px rgba(0,0,0,.08);
-        }
-
-        .subtitle{
-            color:#64748b;
-            margin-top:-5px;
-            margin-bottom:22px;
-        }
-
-        .grid-3{
-            display:grid;
-            grid-template-columns:repeat(3,1fr);
-            gap:12px;
-        }
-
-        .grid-2{
-            display:grid;
-            grid-template-columns:repeat(2,1fr);
-            gap:12px;
-        }
-
-        .card{
-            background:#f8fafc;
-            border-radius:12px;
-            padding:16px;
-            text-align:center;
-        }
-
-        .label{
-            color:#64748b;
-            margin-bottom:8px;
-        }
-
-        .value{
-            font-size:27px;
-            font-weight:bold;
-            color:#2563eb;
-        }
-
-        .prediction{
-            margin-top:18px;
-            padding:16px;
-            background:#eff6ff;
-            border-radius:12px;
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-        }
-
-        .prediction-value{
-            font-size:25px;
-            font-weight:bold;
-            color:#2563eb;
-        }
-
-        .market-row{
-            display:flex;
-            justify-content:space-between;
-            padding:11px 0;
-            border-bottom:1px solid #e5e7eb;
-        }
-
-        .market-row:last-child{
-            border-bottom:0;
-        }
-
-        .score{
-            font-size:36px;
-            font-weight:bold;
-            color:#2563eb;
-            text-align:center;
-        }
-
-        .note{
-            padding:14px;
-            border-radius:10px;
-            background:#fffbeb;
-            color:#92400e;
-            line-height:1.5;
-        }
-
-        .error{
-            display:none;
-            background:#fee2e2;
-            color:#991b1b;
-            padding:15px;
-            border-radius:10px;
-        }
-
-        @media(max-width:700px){
-            .grid-3,
-            .grid-2{
-                grid-template-columns:1fr;
-            }
-        }
+        :root{color-scheme:light;--bg:#f5f7fb;--panel:#fff;--ink:#111827;--muted:#64748b;--line:#e5e7eb;--blue:#2563eb;--blue-soft:#eff6ff;--green:#15803d;--green-soft:#ecfdf5;--amber:#92400e;--amber-soft:#fffbeb;--red:#b91c1c;--red-soft:#fef2f2;--slate-soft:#f8fafc}
+        *{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.shell{width:min(1180px,calc(100% - 32px));margin:0 auto;padding:26px 0 52px}.back{display:inline-flex;align-items:center;gap:7px;margin-bottom:18px;color:var(--blue);font-weight:800;text-decoration:none}.hero,.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(15,23,42,.05)}.hero{padding:24px;margin-bottom:16px}.eyebrow{color:var(--blue);font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}.hero-top{display:flex;justify-content:space-between;align-items:flex-start;gap:24px}.title{margin:0;font-size:clamp(28px,4vw,42px);line-height:1.08;letter-spacing:-.035em}.subtitle{margin:9px 0 0;color:var(--muted)}.main-choice{min-width:300px;max-width:380px;border:1px solid #bfdbfe;border-radius:14px;padding:15px;background:var(--blue-soft)}.main-choice.positive{border-color:#bbf7d0;background:var(--green-soft)}.choice-label{font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.choice-pick{font-size:24px;font-weight:950;margin:6px 0}.choice-copy{font-size:12px;line-height:1.5;color:var(--muted)}.choice-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}.choice-stat{padding:8px;border-radius:9px;background:rgba(255,255,255,.72)}.choice-stat span{display:block;color:var(--muted);font-size:10px}.choice-stat strong{display:block;margin-top:3px;font-size:14px}.section-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:16px}.panel{padding:20px}.panel.full{margin-bottom:16px}.panel-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:16px}.panel h2{margin:0;font-size:19px}.panel-note{color:var(--muted);font-size:12px;line-height:1.4;text-align:right;max-width:340px}.market-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.market-card{border:1px solid var(--line);background:var(--slate-soft);border-radius:12px;padding:14px}.market-card.best{border-color:#bfdbfe;background:var(--blue-soft)}.market-card h3{margin:0 0 5px;font-size:14px}.prob{font-size:26px;font-weight:950;color:var(--blue);margin-bottom:10px}.kv{display:grid;grid-template-columns:1fr auto;gap:6px 10px;font-size:12px}.kv span:nth-child(odd){color:var(--muted)}.kv span:nth-child(even){font-weight:800;text-align:right}.ev-positive{color:var(--green)}.ev-negative{color:var(--red)}.badge{display:inline-flex;border-radius:999px;padding:5px 8px;font-size:10px;font-weight:900;line-height:1;margin-top:10px}.badge-live{background:#dcfce7;color:#166534}.badge-prelim{background:#fef3c7;color:#92400e}.badge-research{background:#e2e8f0;color:#475569}.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.metric{border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--slate-soft)}.metric-label{font-size:12px;color:var(--muted);margin-bottom:5px}.metric-value{font-size:25px;font-weight:950}.two-way{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.research{height:100%;border:1px dashed #cbd5e1;border-radius:12px;padding:16px;background:var(--slate-soft)}.research h3{margin:0 0 7px;font-size:16px}.research p{margin:0;color:var(--muted);font-size:13px;line-height:1.55}.score{display:flex;align-items:center;justify-content:center;min-height:150px;border:1px solid var(--line);border-radius:12px;background:var(--slate-soft);text-align:center}.score strong{display:block;font-size:44px;color:var(--blue)}.score span{display:block;margin-top:5px;color:var(--muted);font-size:12px}.warning{padding:14px 16px;border:1px solid #fde68a;border-radius:12px;background:var(--amber-soft);color:var(--amber);font-size:12px;line-height:1.6}.error{display:none;padding:15px;border:1px solid #fecaca;border-radius:12px;background:var(--red-soft);color:#991b1b}.loading{padding:50px 20px;text-align:center;color:var(--muted)}@media(max-width:900px){.hero-top{flex-direction:column}.main-choice{min-width:0;width:100%;max-width:none}.section-grid{grid-template-columns:1fr}.market-grid,.metrics{grid-template-columns:1fr}.panel-note{text-align:left}.panel-head{flex-direction:column}}@media(max-width:560px){.two-way,.choice-grid{grid-template-columns:1fr}}
     </style>
 </head>
-
 <body>
-
-<div class="container">
-
-    <a class="back" href="/">← Назад к прогнозам</a>
-
-    <div id="error" class="error"></div>
-
-    <div id="content" style="display:none;">
-
-        <div class="panel">
-            <h1 id="match-title"></h1>
-
-            <div class="subtitle" id="match-date"></div>
-
-            <div class="grid-3">
-                <div class="card">
-                    <div class="label">Победа хозяев</div>
-                    <div class="value" id="home-prob"></div>
+    <main class="shell">
+        <a class="back" href="/">← Назад к списку матчей</a>
+        <div id="error" class="error"></div>
+        <div id="loading" class="loading">Загружаю карточку матча...</div>
+        <div id="content" style="display:none">
+            <section class="hero">
+                <div class="hero-top">
+                    <div>
+                        <div class="eyebrow">Football AI · карточка матча</div>
+                        <h1 class="title" id="match-title"></h1>
+                        <p class="subtitle" id="match-meta"></p>
+                    </div>
+                    <div class="main-choice" id="main-choice"></div>
                 </div>
+            </section>
 
-                <div class="card">
-                    <div class="label">Ничья</div>
-                    <div class="value" id="draw-prob"></div>
+            <section class="panel full">
+                <div class="panel-head">
+                    <div><h2>Исход матча · 1X2</h2></div>
+                    <div class="panel-note">Для каждого исхода: вероятность модели → fair odds → коэффициент букмекера → расчётный EV.</div>
                 </div>
+                <div class="market-grid" id="one-x-two"></div>
+            </section>
 
-                <div class="card">
-                    <div class="label">Победа гостей</div>
-                    <div class="value" id="away-prob"></div>
-                </div>
+            <div class="section-grid">
+                <section class="panel">
+                    <div class="panel-head"><h2>Ожидаемые голы</h2><span class="badge badge-prelim">goal-модель</span></div>
+                    <div class="metrics">
+                        <div class="metric"><div class="metric-label" id="home-xg-label"></div><div class="metric-value" id="home-xg"></div></div>
+                        <div class="metric"><div class="metric-label" id="away-xg-label"></div><div class="metric-value" id="away-xg"></div></div>
+                        <div class="metric"><div class="metric-label">Общий тотал</div><div class="metric-value" id="total-xg"></div></div>
+                    </div>
+                </section>
+                <section class="panel">
+                    <div class="panel-head"><h2>Самый вероятный счёт</h2><div class="panel-note">Модельное распределение счёта, не отдельная ставка.</div></div>
+                    <div class="score"><div><strong id="top-score"></strong><span id="top-score-prob"></span></div></div>
+                </section>
             </div>
 
-            <div
-                style="
-                    display:inline-block;
-                    margin-top:16px;
-                    padding:6px 10px;
-                    border-radius:999px;
-                    background:#e0f2fe;
-                    color:#075985;
-                    font-size:12px;
-                    font-weight:bold;
-                "
-            >
-                Калиброванные вероятности 1X2
+            <div class="section-grid">
+                <section class="panel">
+                    <div class="panel-head"><h2>Тотал голов 2.5</h2><span class="badge badge-prelim">предварительно</span></div>
+                    <div class="two-way" id="goals-total"></div>
+                </section>
+                <section class="panel">
+                    <div class="panel-head"><h2>Обе забьют</h2><span class="badge badge-prelim">предварительно</span></div>
+                    <div class="two-way" id="btts"></div>
+                </section>
             </div>
 
-            <div class="prediction">
-                <span>Прогноз модели</span>
-
-                <span
-                    class="prediction-value"
-                    id="prediction"
-                ></span>
-
-                <strong id="confidence"></strong>
+            <div class="section-grid">
+                <section class="panel"><div class="research"><h3>Фора на матч</h3><p>Пока не публикуем вероятность и value. Сначала нужна проверенная модель распределения разницы голов, затем реальные handicap-линии и корректный расчёт push / half-win / half-loss.</p><span class="badge badge-research">Исследование</span></div></section>
+                <section class="panel"><div class="research"><h3>Тотал угловых</h3><p>Пока не публикуем вероятность и value. CORNERS10 как полезный football-only сигнал не является доказательством качества модели именно для количества угловых.</p><span class="badge badge-research">Исследование</span></div></section>
             </div>
+
+            <div class="warning">Расчётный EV — это только <strong>p × bookmaker odds − 1</strong> для доступной 1X2-цены. Он не означает подтверждённую доходность. Тоталы голов и BTTS пока показываются как модельные оценки без букмекерской цены; форы и угловые — как явно незавершённые исследовательские направления.</div>
         </div>
+    </main>
 
-
-        <div class="panel">
-            <h2>Ожидаемые голы</h2>
-
-            <div class="grid-2">
-                <div class="card">
-                    <div
-                        class="label"
-                        id="home-xg-name"
-                    ></div>
-
-                    <div
-                        class="value"
-                        id="home-xg"
-                    ></div>
-                </div>
-
-                <div class="card">
-                    <div
-                        class="label"
-                        id="away-xg-name"
-                    ></div>
-
-                    <div
-                        class="value"
-                        id="away-xg"
-                    ></div>
-                </div>
-            </div>
-
-            <div class="market-row">
-                <span>Общий ожидаемый тотал</span>
-                <strong id="total-xg"></strong>
-            </div>
-        </div>
-
-
-        <div class="panel">
-            <h2>Тотал 2.5</h2>
-
-            <div class="market-row">
-                <span>Больше 2.5</span>
-                <strong id="over25"></strong>
-            </div>
-
-            <div class="market-row">
-                <span>Меньше 2.5</span>
-                <strong id="under25"></strong>
-            </div>
-        </div>
-
-
-        <div class="panel">
-            <h2>Обе забьют</h2>
-
-            <div class="market-row">
-                <span>Да</span>
-                <strong id="btts-yes"></strong>
-            </div>
-
-            <div class="market-row">
-                <span>Нет</span>
-                <strong id="btts-no"></strong>
-            </div>
-        </div>
-
-
-        <div class="panel">
-            <h2>Самый вероятный счёт</h2>
-
-            <div
-                class="score"
-                id="top-score"
-            ></div>
-
-            <p style="text-align:center;">
-                Вероятность:
-                <strong id="top-score-prob"></strong>
-            </p>
-        </div>
-
-
-        <div class="note">
-            Предварительный прогноз 1X2 рассчитан без
-            букмекерских коэффициентов.
-
-            Данные goal markets также являются
-            предварительными.
-
-            Value и ROI появятся после получения
-            реальных коэффициентов букмекера.
-        </div>
-
-    </div>
-</div>
-
-
-<script>
-    const params =
-        new URLSearchParams(window.location.search);
-
-    const matchId = params.get("id");
-
-    const predictionLabels = {
-        HOME: "1 — Победа хозяев",
-        DRAW: "X — Ничья",
-        AWAY: "2 — Победа гостей"
-    };
-
-
-    async function loadMatch() {
-        if (matchId === null) {
-            showError("Не указан ID матча.");
-            return;
-        }
-
-        try {
-            const response = await fetch(
-                `/upcoming-round-match/${matchId}`
-            );
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(
-                    data.detail ||
-                    "Не удалось загрузить матч"
-                );
-            }
-
-            renderMatch(data);
-
-        } catch (error) {
-            showError(error.message);
-        }
-    }
-
-
-    function percent(value) {
-        return `${(value * 100).toFixed(1)}%`;
-    }
-
-
-    function renderMatch(data) {
-        document.getElementById(
-            "match-title"
-        ).textContent =
-            `${data.home_team} — ${data.away_team}`;
-
-        document.getElementById(
-            "match-date"
-        ).textContent =
-            `${data.match_date} • ${data.match_time}`;
-
-        document.getElementById(
-            "home-prob"
-        ).textContent =
-            percent(data.home_probability);
-
-        document.getElementById(
-            "draw-prob"
-        ).textContent =
-            percent(data.draw_probability);
-
-        document.getElementById(
-            "away-prob"
-        ).textContent =
-            percent(data.away_probability);
-
-        document.getElementById(
-            "prediction"
-        ).textContent =
-            predictionLabels[data.prediction]
-            || data.prediction;
-
-        document.getElementById(
-            "confidence"
-        ).textContent =
-            `Уверенность ${percent(data.confidence)}`;
-
-        document.getElementById(
-            "home-xg-name"
-        ).textContent =
-            data.home_team;
-
-        document.getElementById(
-            "away-xg-name"
-        ).textContent =
-            data.away_team;
-
-        document.getElementById(
-            "home-xg"
-        ).textContent =
-            data.expected_home_goals.toFixed(2);
-
-        document.getElementById(
-            "away-xg"
-        ).textContent =
-            data.expected_away_goals.toFixed(2);
-
-        document.getElementById(
-            "total-xg"
-        ).textContent =
-            data.expected_total_goals.toFixed(2);
-
-        document.getElementById(
-            "over25"
-        ).textContent =
-            percent(data.over_2_5_probability);
-
-        document.getElementById(
-            "under25"
-        ).textContent =
-            percent(data.under_2_5_probability);
-
-        document.getElementById(
-            "btts-yes"
-        ).textContent =
-            percent(data.btts_yes_probability);
-
-        document.getElementById(
-            "btts-no"
-        ).textContent =
-            percent(data.btts_no_probability);
-
-        document.getElementById(
-            "top-score"
-        ).textContent =
-            data.top_score;
-
-        document.getElementById(
-            "top-score-prob"
-        ).textContent =
-            percent(data.top_score_probability);
-
-        document.getElementById(
-            "content"
-        ).style.display = "block";
-    }
-
-
-    function showError(message) {
-        const error =
-            document.getElementById("error");
-
-        error.textContent = message;
-        error.style.display = "block";
-    }
-
-
-    loadMatch();
-</script>
-
+    <script>
+        const params=new URLSearchParams(window.location.search);
+        const matchId=params.get("id");
+        const labels={HOME:"1 · Победа хозяев",DRAW:"X · Ничья",AWAY:"2 · Победа гостей"};
+        const shortLabels={HOME:"1",DRAW:"X",AWAY:"2"};
+        function numberOrNull(value){if(value===null||value===undefined||value==="")return null;const parsed=Number(value);return Number.isFinite(parsed)?parsed:null}
+        function percent(value){return Number.isFinite(value)?`${(value*100).toFixed(1)}%`:"—"}
+        function decimal(value){return Number.isFinite(value)?value.toFixed(2):"—"}
+        function fairOdds(probability){return Number.isFinite(probability)&&probability>0?1/probability:null}
+        function expectedValue(probability,odds){return Number.isFinite(probability)&&Number.isFinite(odds)?probability*odds-1:null}
+        function normalized(value){return String(value||"").toLowerCase().replace(/[^a-zа-яё0-9]+/gi," ").trim()}
+        function matchesOdds(data,row){const home=normalized(data.home_team_model||data.home_team),away=normalized(data.away_team_model||data.away_team);const rowHome=normalized(row.home_team_model||row.home_team),rowAway=normalized(row.away_team_model||row.away_team);if(home!==rowHome||away!==rowAway)return false;if(data.match_date&&row.match_date&&String(data.match_date)!==String(row.match_date))return false;return true}
+        function findOdds(data,rows){return rows.find(row=>matchesOdds(data,row))||rows.find(row=>normalized(data.home_team_model||data.home_team)===normalized(row.home_team_model||row.home_team)&&normalized(data.away_team_model||data.away_team)===normalized(row.away_team_model||row.away_team))||null}
+        function oneXTwoCandidates(data,odds){return[{side:"HOME",probability:numberOrNull(data.home_probability),odds:numberOrNull(odds?.home_odds)},{side:"DRAW",probability:numberOrNull(data.draw_probability),odds:numberOrNull(odds?.draw_odds)},{side:"AWAY",probability:numberOrNull(data.away_probability),odds:numberOrNull(odds?.away_odds)}].map(item=>({...item,fair:fairOdds(item.probability),ev:expectedValue(item.probability,item.odds)}))}
+        function bestCandidate(candidates){const priced=candidates.filter(item=>Number.isFinite(item.ev));if(priced.length)return[...priced].sort((a,b)=>b.ev-a.ev)[0];return[...candidates].sort((a,b)=>(b.probability||0)-(a.probability||0))[0]}
+        function marketCard(title,probability,options={}){const ev=options.ev,evClass=Number.isFinite(ev)&&ev>0?"ev-positive":"ev-negative";return`<div class="market-card ${options.best?"best":""}"><h3>${title}</h3><div class="prob">${percent(probability)}</div><div class="kv"><span>Fair odds</span><span>${decimal(fairOdds(probability))}</span><span>Букмекер</span><span>${decimal(options.odds)}</span><span>Расчётный EV</span><span class="${Number.isFinite(ev)?evClass:""}">${Number.isFinite(ev)?`${ev>=0?"+":""}${percent(ev)}`:"—"}</span></div>${options.badge?`<span class="badge ${options.badgeClass||"badge-research"}">${options.badge}</span>`:""}</div>`}
+        function modelOnlyCard(title,probability){return`<div class="market-card"><h3>${title}</h3><div class="prob">${percent(probability)}</div><div class="kv"><span>Fair odds</span><span>${decimal(fairOdds(probability))}</span><span>Букмекер</span><span>—</span><span>Расчётный EV</span><span>—</span></div></div>`}
+        function renderMainChoice(candidate){const node=document.getElementById("main-choice");if(!Number.isFinite(candidate.odds)||!Number.isFinite(candidate.ev)||candidate.ev<=0){node.innerHTML=`<div class="choice-label">Главный выбор модели</div><div class="choice-pick">Нет подходящей ставки</div><div class="choice-copy">Сейчас нет доступного 1X2-кандидата с положительным расчётным EV либо букмекерская цена для матча не найдена. Непрайсованные рынки в главный выбор не подмешиваются.</div>`;return}node.classList.add("positive");node.innerHTML=`<div class="choice-label">Главный выбор модели · текущий кандидат</div><div class="choice-pick">1X2 · ${shortLabels[candidate.side]}</div><div class="choice-grid"><div class="choice-stat"><span>Вероятность</span><strong>${percent(candidate.probability)}</strong></div><div class="choice-stat"><span>Fair / БК</span><strong>${decimal(candidate.fair)} / ${decimal(candidate.odds)}</strong></div><div class="choice-stat"><span>Расчётный EV</span><strong class="ev-positive">+${percent(candidate.ev)}</strong></div></div><div class="choice-copy" style="margin-top:10px">Кандидат по доступному рынку, а не доказанная ставка. Перед продуктовым статусом нужен подтверждённый validation gate.</div>`}
+        async function fetchJson(url){const response=await fetch(url);let payload=null;try{payload=await response.json()}catch(_){payload=null}if(!response.ok)throw new Error(payload?.detail||`Ошибка ${response.status}`);return payload}
+        async function loadMatch(){if(matchId===null){showError("Не указан ID матча.");return}try{const[data,upcoming]=await Promise.all([fetchJson(`/upcoming-round-match/${matchId}`),fetchJson("/upcoming-matches").catch(()=>[])]);renderMatch(data,Array.isArray(upcoming)?upcoming:[])}catch(error){showError(error.message)}}
+        function renderMatch(data,upcoming){const odds=findOdds(data,upcoming),candidates=oneXTwoCandidates(data,odds),best=bestCandidate(candidates);document.getElementById("match-title").textContent=`${data.home_team} — ${data.away_team}`;document.getElementById("match-meta").textContent=`${data.match_date||"—"} · ${data.match_time||"—"}`;renderMainChoice(best);document.getElementById("one-x-two").innerHTML=candidates.map(candidate=>marketCard(labels[candidate.side],candidate.probability,{odds:candidate.odds,ev:candidate.ev,best:candidate.side===best.side,badge:Number.isFinite(candidate.odds)?"Цена БК найдена":"Без цены БК",badgeClass:Number.isFinite(candidate.odds)?"badge-live":"badge-research"})).join("");document.getElementById("home-xg-label").textContent=data.home_team;document.getElementById("away-xg-label").textContent=data.away_team;document.getElementById("home-xg").textContent=decimal(numberOrNull(data.expected_home_goals));document.getElementById("away-xg").textContent=decimal(numberOrNull(data.expected_away_goals));document.getElementById("total-xg").textContent=decimal(numberOrNull(data.expected_total_goals));document.getElementById("top-score").textContent=data.top_score||"—";document.getElementById("top-score-prob").textContent=`Вероятность ${percent(numberOrNull(data.top_score_probability))}`;document.getElementById("goals-total").innerHTML=modelOnlyCard("ТБ 2.5",numberOrNull(data.over_2_5_probability))+modelOnlyCard("ТМ 2.5",numberOrNull(data.under_2_5_probability));document.getElementById("btts").innerHTML=modelOnlyCard("ОЗ · Да",numberOrNull(data.btts_yes_probability))+modelOnlyCard("ОЗ · Нет",numberOrNull(data.btts_no_probability));document.getElementById("loading").style.display="none";document.getElementById("content").style.display="block"}
+        function showError(message){document.getElementById("loading").style.display="none";const node=document.getElementById("error");node.textContent=message;node.style.display="block"}
+        loadMatch();
+    </script>
 </body>
 </html>
