@@ -17,6 +17,6 @@ def test_portfolio_endpoint_does_not_define_write_or_staking_side_effects():
     assert "insert(" not in source.lower()
     assert "update(" not in source.lower()
     assert "delete(" not in source.lower()
-    assert "kelly_sizing_enabled\": False" in module
+    assert '"kelly_sizing_enabled": False' in module
     assert '"stake_sizing_policy_defined": False' in module
     assert '"bankroll_policy_defined": False' in module
