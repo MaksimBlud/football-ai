@@ -86,8 +86,9 @@ def _validated_row(row: Mapping[str, object]) -> dict[str, object]:
     kickoff = _utc(row.get("kickoff_utc"), "kickoff_utc")
     prediction_time = _utc(row.get("prediction_time_utc"), "prediction_time_utc")
     snapshot_time = _utc(row.get("snapshot_time_utc"), "snapshot_time_utc")
-    if prediction_time >= kickoff or snapshot_time >= kickoff:
-        raise EvaluationGateInputError("Prediction and snapshot must both be strictly pre-kickoff")
+    created_at = _utc(row.get("created_at_utc"), "created_at_utc")
+    if prediction_time >= kickoff or snapshot_time >= kickoff or created_at >= kickoff:
+        raise EvaluationGateInputError("Prediction, snapshot and durable creation must all be strictly pre-kickoff")
     _validate_probabilities(row)
 
     return {
@@ -97,6 +98,7 @@ def _validated_row(row: Mapping[str, object]) -> dict[str, object]:
         "kickoff_utc": kickoff,
         "prediction_time_utc": prediction_time,
         "snapshot_time_utc": snapshot_time,
+        "created_at_utc": created_at,
     }
 
 
@@ -121,6 +123,7 @@ def select_event_rows(
             chosen = min(
                 seed,
                 key=lambda row: (
+                    row["created_at_utc"],
                     row["prediction_time_utc"],
                     row["snapshot_time_utc"],
                     row["prediction_key"],
@@ -132,7 +135,7 @@ def select_event_rows(
         future = [
             row
             for row in group
-            if row["prediction_time_utc"] > V1_1_FREEZE_UTC
+            if row["created_at_utc"] > V1_1_FREEZE_UTC
         ]
         if not future:
             continue
@@ -140,6 +143,7 @@ def select_event_rows(
             min(
                 future,
                 key=lambda row: (
+                    row["created_at_utc"],
                     row["prediction_time_utc"],
                     row["snapshot_time_utc"],
                     row["prediction_key"],
