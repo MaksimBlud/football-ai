@@ -246,8 +246,11 @@ def test_future_event_uses_earliest_qualifying_post_freeze_prediction():
 
 
 def test_gate_remains_sample_closed_until_every_league_has_100_events_and_four_months():
-    rows = _mature_rows()
-    rows.pop()  # Turkey Super Lig becomes 99/100.
+    rows = [
+        row
+        for row in _mature_rows()
+        if not (row["league"] == "TURKEY_SUPER_LIG" and row["event_id"] == "12-24")
+    ]
 
     result = evaluate_gate(
         rows,
