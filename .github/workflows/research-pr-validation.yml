@@ -119,6 +119,9 @@ jobs:
       - name: Run operational schedule grid tests
         run: python -m pytest -q tests/test_operational_workflow_schedule_grid.py
 
+      - name: Run all-leagues prospective protocol contract tests
+        run: python -m pytest -q tests/test_all_leagues_prospective_protocol.py
+
       - name: Run EPL live-cycle safety tests
         run: |
           python -m pytest -q tests/test_epl_live_cycle.py
