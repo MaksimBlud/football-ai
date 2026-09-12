@@ -11,13 +11,14 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
 from product_portfolio_risk import PORTFOLIO_RISK_SCHEMA_VERSION, build_portfolio_risk_view
+from product_production_readiness import PRODUCTION_READINESS_VERSION
 from product_snapshot_store import load_product_market_view
 
 
 app = FastAPI(
     title="Football AI Product",
     description="Read-only product view over durable model and market snapshots",
-    version="2.2.0",
+    version="2.3.0",
 )
 
 
@@ -60,6 +61,7 @@ def health():
         "credential_mode": _credential_mode(),
         "match_identity": "stable_product_match_id",
         "portfolio_risk_version": PORTFOLIO_RISK_SCHEMA_VERSION,
+        "production_readiness_version": PRODUCTION_READINESS_VERSION,
     }
 
 
@@ -78,6 +80,12 @@ def product_market_view():
 def portfolio_risk_view():
     """Return structural risk analysis without creating positions or stakes."""
     return build_portfolio_risk_view(product_market_view())
+
+
+@app.get("/production-readiness-view")
+def production_readiness_view():
+    """Return league/market readiness without promoting any scope."""
+    return product_market_view()["production_readiness"]
 
 
 @app.get("/product-market-view/{match_id}")
@@ -103,6 +111,7 @@ def product_market_match(match_id: str):
         "fixture_identity": payload["fixture_identity"],
         "selection_policy": payload["selection_policy"],
         "market_readiness": payload["market_readiness"],
+        "production_readiness": payload.get("production_readiness"),
         "data_source": payload.get("data_source"),
         "match_id": match_id,
         "match": item,
