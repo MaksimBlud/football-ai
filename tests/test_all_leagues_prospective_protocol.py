@@ -61,8 +61,15 @@ def _utc(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc)
 
 
-def _row(league: str, event_id: str, kickoff: datetime, prediction_time: datetime | None = None) -> dict:
+def _row(
+    league: str,
+    event_id: str,
+    kickoff: datetime,
+    prediction_time: datetime | None = None,
+    created_at: datetime | None = None,
+) -> dict:
     prediction_time = prediction_time or kickoff - timedelta(days=1)
+    created_at = created_at or prediction_time + timedelta(seconds=30)
     return {
         "league": league,
         "event_id": event_id,
@@ -70,6 +77,7 @@ def _row(league: str, event_id: str, kickoff: datetime, prediction_time: datetim
         "kickoff_utc": kickoff.isoformat(),
         "prediction_time_utc": prediction_time.isoformat(),
         "snapshot_time_utc": (prediction_time - timedelta(minutes=1)).isoformat(),
+        "created_at_utc": created_at.isoformat(),
         "prediction_mode": "MARKET_ONLY",
         "structural_applied": False,
         "market_home_prob": 0.4,
@@ -211,6 +219,7 @@ def test_v1_1_evaluation_gate_freezes_existing_project_sample_conventions():
     assert set(gate["scope"]["leagues"]) == set(LEAGUES)
     assert gate["sample_gate"]["minimum_unique_events_per_league"] == 100
     assert gate["sample_gate"]["minimum_kickoff_calendar_months_per_league"] == 4
+    assert "created_at_utc strictly after V1_1_FREEZE_UTC" in gate["sample_gate"]["future_row_selection"]
     assert gate["outcome_embargo"]["minimum_delay_hours_after_latest_primary_prefix_kickoff"] == 24
     assert gate["outcome_embargo"]["scores_results_winners_settlements_forbidden_before_gate"] is True
     assert gate["outcome_embargo"]["common_gate_never_overrides_stricter_existing_gate"] is True
@@ -225,24 +234,39 @@ def test_v1_1_evaluation_gate_freezes_existing_project_sample_conventions():
 
 def test_seed_key_precedence_allows_frozen_pre_freeze_seed_but_not_other_pre_freeze_rows():
     kickoff = datetime(2026, 9, 12, 14, 0, tzinfo=timezone.utc)
-    seed = _row("EPL", "seed", kickoff, prediction_time=V1_1_FREEZE_UTC - timedelta(hours=1))
-    old_nonseed = _row("EPL", "old", kickoff, prediction_time=V1_1_FREEZE_UTC - timedelta(hours=1))
+    before_freeze = V1_1_FREEZE_UTC - timedelta(hours=1)
+    seed = _row("EPL", "seed", kickoff, prediction_time=before_freeze, created_at=before_freeze)
+    old_nonseed = _row("EPL", "old", kickoff, prediction_time=before_freeze, created_at=before_freeze)
 
     selected = select_event_rows([seed, old_nonseed], seed_keys=frozenset({seed["prediction_key"]}))
 
     assert [row["event_id"] for row in selected] == ["seed"]
 
 
-def test_future_event_uses_earliest_qualifying_post_freeze_prediction():
+def test_future_event_uses_earliest_qualifying_post_freeze_durable_creation():
     kickoff = datetime(2026, 9, 13, 14, 0, tzinfo=timezone.utc)
-    early = _row("EPL", "future", kickoff, prediction_time=V1_1_FREEZE_UTC + timedelta(hours=1))
-    late = dict(_row("EPL", "future", kickoff, prediction_time=V1_1_FREEZE_UTC + timedelta(hours=2)))
-    late["prediction_key"] = "EPL:future-late"
+    early_created = _row(
+        "EPL",
+        "future",
+        kickoff,
+        prediction_time=V1_1_FREEZE_UTC + timedelta(hours=1),
+        created_at=V1_1_FREEZE_UTC + timedelta(hours=1, minutes=1),
+    )
+    late_created = dict(
+        _row(
+            "EPL",
+            "future",
+            kickoff,
+            prediction_time=V1_1_FREEZE_UTC + timedelta(minutes=30),
+            created_at=V1_1_FREEZE_UTC + timedelta(hours=2),
+        )
+    )
+    late_created["prediction_key"] = "EPL:future-late"
 
-    selected = select_event_rows([late, early], seed_keys=frozenset())
+    selected = select_event_rows([late_created, early_created], seed_keys=frozenset())
 
     assert len(selected) == 1
-    assert selected[0]["prediction_key"] == early["prediction_key"]
+    assert selected[0]["prediction_key"] == early_created["prediction_key"]
 
 
 def test_gate_remains_sample_closed_until_every_league_has_100_events_and_four_months():
