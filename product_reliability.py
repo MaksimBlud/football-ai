@@ -29,6 +29,8 @@ MIN_CALENDAR_MONTHS_FOR_REVIEW = 4
 WILSON_95_Z = 1.959963984540054
 UNIFORM_1X2_BRIER = 2.0 / 3.0
 UNIFORM_1X2_LOG_LOSS = math.log(3.0)
+OUTCOMES = ("HOME", "DRAW", "AWAY")
+OUTCOME_TO_INDEX = {outcome: index for index, outcome in enumerate(OUTCOMES)}
 
 EVIDENCE_NO_DATA = "NO_SETTLED_DATA"
 EVIDENCE_ACCUMULATING_SAMPLE = "ACCUMULATING_SAMPLE"
@@ -42,6 +44,8 @@ def _text(value: Any) -> str:
 
 
 def _finite_float(value: Any, *, label: str) -> float:
+    if value is None or (isinstance(value, str) and not value.strip()):
+        raise ValueError(f"{label} is required")
     parsed = float(value)
     if not math.isfinite(parsed):
         raise ValueError(f"{label} must be finite")
@@ -124,10 +128,76 @@ def _settlement_index(
     return indexed
 
 
+def _frozen_probability_vector(prediction: Mapping[str, Any]) -> tuple[float, float, float]:
+    vector = tuple(
+        _finite_float(prediction.get(key), label=key)
+        for key in ("home_probability", "draw_probability", "away_probability")
+    )
+    if any(value < 0.0 or value > 1.0 for value in vector):
+        raise ValueError("frozen registration probability outside [0,1]")
+    if not math.isclose(sum(vector), 1.0, abs_tol=1e-9):
+        raise ValueError("frozen registration probabilities do not sum to one")
+    return vector
+
+
+def _verify_settlement_metrics(
+    prediction: Mapping[str, Any],
+    settlement_payload: Mapping[str, Any],
+) -> tuple[float, float, float, bool, str, str]:
+    vector = _frozen_probability_vector(prediction)
+    actual_outcome = _text(settlement_payload.get("actual_outcome"))
+    if actual_outcome not in OUTCOME_TO_INDEX:
+        raise ValueError("settlement actual_outcome must be HOME, DRAW or AWAY")
+    actual_index = OUTCOME_TO_INDEX[actual_outcome]
+    model_index = max(range(3), key=lambda index: vector[index])
+    model_pick = OUTCOMES[model_index]
+    model_pick_probability = vector[model_index]
+    expected_correct = model_pick == actual_outcome
+
+    one_hot = [0.0, 0.0, 0.0]
+    one_hot[actual_index] = 1.0
+    expected_brier = sum((vector[i] - one_hot[i]) ** 2 for i in range(3))
+    expected_log_loss = -math.log(max(vector[actual_index], 1e-15))
+
+    stored_pick = _text(settlement_payload.get("model_pick"))
+    stored_probability = _finite_float(
+        settlement_payload.get("model_pick_probability"),
+        label="model_pick_probability",
+    )
+    stored_brier = _finite_float(
+        settlement_payload.get("multiclass_brier"), label="multiclass_brier"
+    )
+    stored_log_loss = _finite_float(
+        settlement_payload.get("log_loss"), label="log_loss"
+    )
+    stored_correct = settlement_payload.get("prediction_correct") is True
+
+    if stored_pick != model_pick:
+        raise ValueError("settlement model_pick disagrees with frozen probabilities")
+    if stored_correct != expected_correct:
+        raise ValueError("settlement prediction_correct disagrees with frozen probabilities")
+    for label, stored, expected in (
+        ("model_pick_probability", stored_probability, model_pick_probability),
+        ("multiclass_brier", stored_brier, expected_brier),
+        ("log_loss", stored_log_loss, expected_log_loss),
+    ):
+        if not math.isclose(stored, expected, rel_tol=1e-12, abs_tol=1e-12):
+            raise ValueError(f"settlement {label} disagrees with frozen probabilities")
+
+    return (
+        model_pick_probability,
+        expected_brier,
+        expected_log_loss,
+        expected_correct,
+        model_pick,
+        actual_outcome,
+    )
+
+
 def settled_reliability_records(
     events: Iterable[Mapping[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Join settled facts to their frozen registration provenance."""
+    """Join settled facts to their frozen registration provenance and verify scores."""
     rows = [dict(event) for event in events]
     registrations = _registration_index(rows)
     settlements = _settlement_index(rows)
@@ -152,20 +222,14 @@ def settled_reliability_records(
         if _text(settlement_payload.get("settlement_scope")) != MARKET_SCOPE:
             raise ValueError("unsupported settlement scope in reliability layer")
 
-        probability = _finite_float(
-            settlement_payload.get("model_pick_probability"),
-            label="model_pick_probability",
-        )
-        if probability < 0.0 or probability > 1.0:
-            raise ValueError("model_pick_probability outside [0,1]")
-        brier = _finite_float(
-            settlement_payload.get("multiclass_brier"), label="multiclass_brier"
-        )
-        log_loss = _finite_float(
-            settlement_payload.get("log_loss"), label="log_loss"
-        )
-        if brier < 0.0 or log_loss < 0.0:
-            raise ValueError("scoring-rule metrics must be non-negative")
+        (
+            probability,
+            brier,
+            log_loss,
+            prediction_correct,
+            model_pick,
+            actual_outcome,
+        ) = _verify_settlement_metrics(prediction, settlement_payload)
 
         decision = registration_payload.get("decision_at_registration")
         framework_version = None
@@ -185,10 +249,10 @@ def settled_reliability_records(
                 "model_1x2_sha256": _text(prediction.get("model_1x2_sha256")) or None,
                 "registration_mode": _text(registration_payload.get("registration_mode")),
                 "decision_framework_version": framework_version,
-                "model_pick": _text(settlement_payload.get("model_pick")),
+                "model_pick": model_pick,
                 "model_pick_probability": probability,
-                "actual_outcome": _text(settlement_payload.get("actual_outcome")),
-                "prediction_correct": settlement_payload.get("prediction_correct") is True,
+                "actual_outcome": actual_outcome,
+                "prediction_correct": prediction_correct,
                 "multiclass_brier": brier,
                 "log_loss": log_loss,
             }
