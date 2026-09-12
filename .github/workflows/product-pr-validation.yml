@@ -40,6 +40,7 @@ jobs:
           python -m py_compile advance_product_lifecycle.py
           python -m py_compile product_reliability.py
           python -m py_compile report_product_reliability.py
+          python -m py_compile product_portfolio_risk.py
           python -m py_compile web_app.py
 
       - name: Validate web deployment config
@@ -122,6 +123,8 @@ jobs:
           python -m pytest -q tests/test_product_lifecycle.py
           python -m pytest -q tests/test_product_lifecycle_grants.py
           python -m pytest -q tests/test_product_reliability.py
+          python -m pytest -q tests/test_product_portfolio_risk.py
+          python -m pytest -q tests/test_product_portfolio_risk_web_contract.py
 
       - name: Enforce no production artifact changes
         run: |
