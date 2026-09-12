@@ -1,12 +1,11 @@
 """Product-facing market contract for Football AI.
 
-The product has two independent concepts:
+Market construction and product decision are deliberately separate concerns:
+market selections expose model probability, fair odds, bookmaker price and raw
+EV; Product Decision Framework v1 decides how those markets become a main
+forecast, alternatives, confidence, value signal and no-bet state.
 
-* main forecast: the eligible selection with the highest model probability;
-* value signal: a separate price comparison based on raw EV.
-
-A value signal must never replace the model forecast. Positive raw EV is only a
-mathematical comparison with bookmaker price, not evidence of profitability.
+Value/raw EV never overrides the model forecast.
 """
 
 from __future__ import annotations
@@ -15,32 +14,44 @@ import hashlib
 import math
 from typing import Any, Mapping
 
+from product_decision import DECISION_FRAMEWORK_VERSION, build_product_decision
+
 
 MARKET_READINESS = {
     "1x2": {
         "status": "comparison_ready",
+        "decision_tier": 2,
+        "decision_confidence": "operational",
         "eligible_for_main_forecast": True,
         "eligible_for_value": True,
+        "eligible_for_bet_recommendation": False,
         "label": "Исход матча",
         "note": (
-            "Главный прогноз определяется вероятностью модели. Bookmaker price "
-            "и raw EV отображаются отдельно как дополнительный value-сигнал."
+            "Operational product market: прогноз и bookmaker comparison доступны. "
+            "Value/EV остаётся отдельным показателем и не меняет forecast."
         ),
     },
     "total_goals": {
         "status": "model_only",
+        "decision_tier": 1,
+        "decision_confidence": "provisional",
         "eligible_for_main_forecast": True,
         "eligible_for_value": False,
+        "eligible_for_bet_recommendation": False,
         "label": "Тотал голов",
         "note": (
-            "Вероятность и fair odds доступны для модельного прогноза, но "
-            "сопоставленная цена БК для линии тотала пока не подключена."
+            "Вероятность и fair odds могут использоваться как provisional forecast, "
+            "но рынок не может вытеснить operational market до прохождения отдельного "
+            "research/validation gate и подключения сопоставленной цены БК."
         ),
     },
     "handicap": {
         "status": "research_only",
+        "decision_tier": 0,
+        "decision_confidence": "unavailable",
         "eligible_for_main_forecast": False,
         "eligible_for_value": False,
+        "eligible_for_bet_recommendation": False,
         "label": "Фора",
         "note": (
             "Рынок остаётся research-only до отдельного проверенного расчёта "
@@ -49,8 +60,11 @@ MARKET_READINESS = {
     },
     "corners_total": {
         "status": "research_only",
+        "decision_tier": 0,
+        "decision_confidence": "unavailable",
         "eligible_for_main_forecast": False,
         "eligible_for_value": False,
+        "eligible_for_bet_recommendation": False,
         "label": "Тотал угловых",
         "note": (
             "Нужна отдельная модель распределения угловых и её prospective "
@@ -124,15 +138,6 @@ def _highest_probability(
     return max(available, key=lambda s: s["probability"])
 
 
-def _best_priced_selection(
-    selections: list[dict[str, Any]],
-) -> dict[str, Any] | None:
-    priced = [s for s in selections if s["raw_expected_value"] is not None]
-    if not priced:
-        return None
-    return max(priced, key=lambda s: s["raw_expected_value"])
-
-
 def _readiness(market: str) -> dict[str, Any]:
     return dict(MARKET_READINESS[market])
 
@@ -148,11 +153,7 @@ def fixture_key(row: Mapping[str, Any]) -> tuple[str, str, str, str]:
 
 
 def product_match_id(row: Mapping[str, Any]) -> str:
-    """Return a stable URL-safe identity that survives list reordering.
-
-    Provider ``event_id`` is preferred. A deterministic fixture hash is used only
-    when the upstream provider id is unavailable.
-    """
+    """Return a stable URL-safe identity that survives list reordering."""
     event_id = str(row.get("event_id") or "").strip()
     if event_id:
         return f"event_{event_id}"
@@ -168,80 +169,6 @@ def product_match_id(row: Mapping[str, Any]) -> str:
     )
     digest = hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()[:24]
     return f"fixture_{digest}"
-
-
-def _build_main_forecast(
-    market_selections: list[tuple[str, str, dict[str, Any] | None]],
-) -> dict[str, Any]:
-    eligible = []
-    for market, market_label, selection in market_selections:
-        if selection is None:
-            continue
-        if not MARKET_READINESS[market]["eligible_for_main_forecast"]:
-            continue
-        if selection.get("probability") is None:
-            continue
-        eligible.append((market, market_label, selection))
-
-    if not eligible:
-        return {
-            "status": "unavailable",
-            "market": None,
-            "market_label": None,
-            "selection": None,
-            "reason": "Нет доступного проверенного модельного прогноза.",
-        }
-
-    market, market_label, selection = max(
-        eligible,
-        key=lambda item: item[2]["probability"],
-    )
-    return {
-        "status": "model_forecast",
-        "market": market,
-        "market_label": market_label,
-        "selection": dict(selection),
-        "reason": (
-            "Выбран исход с максимальной вероятностью модели среди рынков, "
-            "допущенных к модельному прогнозу. Value/EV на выбор не влияет."
-        ),
-    }
-
-
-def _build_value_signal(one_x_two: list[dict[str, Any]]) -> dict[str, Any]:
-    if not MARKET_READINESS["1x2"]["eligible_for_value"]:
-        return {
-            "status": "unavailable",
-            "market": None,
-            "market_label": None,
-            "selection": None,
-            "reason": "Value comparison для этого рынка отключён.",
-        }
-
-    best = _best_priced_selection(one_x_two)
-    if (
-        best is None
-        or best["raw_expected_value"] is None
-        or best["raw_expected_value"] <= 0
-    ):
-        return {
-            "status": "none",
-            "market": "1x2",
-            "market_label": MARKET_READINESS["1x2"]["label"],
-            "selection": None,
-            "reason": "Нет положительного raw EV среди доступных 1X2 цен.",
-        }
-
-    return {
-        "status": "positive_raw_ev",
-        "market": "1x2",
-        "market_label": MARKET_READINESS["1x2"]["label"],
-        "selection": dict(best),
-        "reason": (
-            "Дополнительный value-сигнал по максимальному положительному raw EV. "
-            "Он не меняет главный прогноз модели."
-        ),
-    }
 
 
 def build_product_match(
@@ -288,19 +215,32 @@ def build_product_match(
         ),
     ]
 
-    best_1x2_forecast = _highest_probability(one_x_two)
-    best_total_forecast = _highest_probability(totals)
-    main_forecast = _build_main_forecast(
-        [
-            ("1x2", MARKET_READINESS["1x2"]["label"], best_1x2_forecast),
-            (
-                "total_goals",
-                MARKET_READINESS["total_goals"]["label"],
-                best_total_forecast,
-            ),
-        ]
-    )
-    value_signal = _build_value_signal(one_x_two)
+    markets = {
+        "1x2": {
+            "readiness": _readiness("1x2"),
+            "selections": one_x_two,
+            "display_selection": _highest_probability(one_x_two),
+        },
+        "total_goals": {
+            "readiness": _readiness("total_goals"),
+            "line": 2.5,
+            "selections": totals,
+            "display_selection": _highest_probability(totals),
+        },
+        "handicap": {
+            "readiness": _readiness("handicap"),
+            "selections": [],
+            "display_selection": None,
+        },
+        "corners_total": {
+            "readiness": _readiness("corners_total"),
+            "selections": [],
+            "display_selection": None,
+        },
+    }
+
+    decision = build_product_decision(markets)
+    main_forecast = decision["main_forecast"]
 
     return {
         "match": {
@@ -315,33 +255,15 @@ def build_product_match(
             "home_team_model": prediction.get("home_team_model"),
             "away_team_model": prediction.get("away_team_model"),
         },
+        "decision_framework": decision,
         "main_forecast": main_forecast,
-        "value_signal": value_signal,
-        # Temporary compatibility alias. Semantics are now forecast-first, never EV-first.
+        "alternatives": decision["alternatives"],
+        "confidence": decision["confidence"],
+        "bet_decision": decision["bet_decision"],
+        "value_signal": decision["value_signal"],
+        # Compatibility alias. Semantics remain forecast-first, never EV-first.
         "main_choice": dict(main_forecast),
-        "markets": {
-            "1x2": {
-                "readiness": _readiness("1x2"),
-                "selections": one_x_two,
-                "display_selection": best_1x2_forecast,
-            },
-            "total_goals": {
-                "readiness": _readiness("total_goals"),
-                "line": 2.5,
-                "selections": totals,
-                "display_selection": best_total_forecast,
-            },
-            "handicap": {
-                "readiness": _readiness("handicap"),
-                "selections": [],
-                "display_selection": None,
-            },
-            "corners_total": {
-                "readiness": _readiness("corners_total"),
-                "selections": [],
-                "display_selection": None,
-            },
-        },
+        "markets": markets,
         "model_context": {
             "prediction": prediction.get("prediction"),
             "prediction_strength": prediction.get("prediction_strength"),
@@ -371,18 +293,28 @@ def build_product_market_view(
 
     return {
         "schema_version": "product-market-view.v1",
+        "decision_framework_version": DECISION_FRAMEWORK_VERSION,
         "fixture_identity": "provider event_id; deterministic fixture hash fallback",
         "selection_policy": {
             "forecast": (
-                "Highest model probability among markets eligible for main forecast."
+                "Highest evidence/readiness decision tier first, then highest model "
+                "probability. Value/EV never changes forecast ranking."
+            ),
+            "alternatives": (
+                "Best remaining forecast-eligible candidates from different markets, "
+                "ordered by decision tier then model probability."
             ),
             "value": (
                 "Highest positive raw EV among priced value-eligible selections; "
                 "informational only and never overrides forecast."
             ),
-            "future": (
-                "Use research readiness, calibration and reliability as eligibility "
-                "and confidence controls without conflating forecast with value."
+            "confidence": (
+                "Product/readiness state only; not an empirical calibration or "
+                "statistical confidence claim."
+            ),
+            "bet_decision": (
+                "Framework v1 emits no_bet. Probability or positive raw EV alone "
+                "cannot create a betting recommendation."
             ),
         },
         "market_readiness": {key: dict(value) for key, value in MARKET_READINESS.items()},
