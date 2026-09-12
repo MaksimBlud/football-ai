@@ -58,7 +58,9 @@ MARKET_READINESS = {
 
 
 def _number(value: Any) -> float | None:
-    if value is None or value == "":
+    if value is None:
+        return None
+    if isinstance(value, str) and not value.strip():
         return None
     try:
         parsed = float(value)
@@ -147,6 +149,24 @@ def _best_priced_selection(
 
 def _readiness(market: str) -> dict[str, Any]:
     return dict(MARKET_READINESS[market])
+
+
+def fixture_key(row: Mapping[str, Any]) -> tuple[str, str, str, str]:
+    """Return the product fixture identity including scheduled kickoff fields."""
+    return (
+        str(
+            row.get("home_team_model")
+            or row.get("home_team")
+            or ""
+        ).strip(),
+        str(
+            row.get("away_team_model")
+            or row.get("away_team")
+            or ""
+        ).strip(),
+        str(row.get("match_date") or "").strip(),
+        str(row.get("match_time") or "").strip(),
+    )
 
 
 def build_product_match(
@@ -293,30 +313,25 @@ def build_product_match(
 
 def build_product_market_view(
     predictions: list[Mapping[str, Any]],
-    odds_by_pair: Mapping[tuple[str, str], Mapping[str, Any]] | None = None,
+    odds_by_fixture: Mapping[
+        tuple[str, str, str, str],
+        Mapping[str, Any],
+    ]
+    | None = None,
 ) -> dict[str, Any]:
     """Build the versioned response consumed by list and match-detail UIs."""
-    odds_by_pair = odds_by_pair or {}
+    odds_by_fixture = odds_by_fixture or {}
     matches = []
 
     for prediction in predictions:
-        pair = (
-            str(
-                prediction.get("home_team_model")
-                or prediction.get("home_team")
-                or ""
-            ).strip(),
-            str(
-                prediction.get("away_team_model")
-                or prediction.get("away_team")
-                or ""
-            ).strip(),
-        )
-        odds = odds_by_pair.get(pair)
+        odds = odds_by_fixture.get(fixture_key(prediction))
         matches.append(build_product_match(prediction, odds))
 
     return {
         "schema_version": "product-market-view.v1",
+        "fixture_identity": (
+            "home_team_model + away_team_model + match_date + match_time"
+        ),
         "selection_policy": {
             "current": (
                 "Highest positive raw EV among comparison-ready markets only."
