@@ -10,13 +10,14 @@ from functools import lru_cache
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
+from product_portfolio_risk import PORTFOLIO_RISK_SCHEMA_VERSION, build_portfolio_risk_view
 from product_snapshot_store import load_product_market_view
 
 
 app = FastAPI(
     title="Football AI Product",
     description="Read-only product view over durable model and market snapshots",
-    version="2.1.0",
+    version="2.2.0",
 )
 
 
@@ -58,6 +59,7 @@ def health():
         "mode": "durable-snapshot-reader",
         "credential_mode": _credential_mode(),
         "match_identity": "stable_product_match_id",
+        "portfolio_risk_version": PORTFOLIO_RISK_SCHEMA_VERSION,
     }
 
 
@@ -70,6 +72,12 @@ def product_market_view():
             status_code=503,
             detail="Не удалось загрузить сохранённые прогнозы.",
         ) from error
+
+
+@app.get("/portfolio-risk-view")
+def portfolio_risk_view():
+    """Return structural risk analysis without creating positions or stakes."""
+    return build_portfolio_risk_view(product_market_view())
 
 
 @app.get("/product-market-view/{match_id}")
