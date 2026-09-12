@@ -34,13 +34,19 @@ Every observed league/market scope has one of five states:
 The framework evaluates, as applicable:
 
 1. production model-probability contract;
-2. complete live model-probability coverage for currently exposed fixtures;
-3. stable `product_match_id` coverage;
+2. current live model-probability availability;
+3. complete stable `product_match_id` coverage;
 4. bookmaker-price contract;
-5. complete live bookmaker-price coverage;
+5. current live bookmaker-price availability;
 6. deterministic settlement contract;
 7. immutable lifecycle contract;
 8. empirical reliability evidence for a new scope.
+
+Coverage ratios are also reported. v1 deliberately does **not** invent a market-
+level pass threshold such as 80% or 90%. Zero availability of a required live
+function is a blocker; partial coverage is surfaced as `coverage_warnings` and
+must be improved operationally without pretending an arbitrary percentage is a
+scientific gate.
 
 A new operational scope must satisfy all applicable objective gates and then
 receive a separate explicit approval.
@@ -57,11 +63,13 @@ its new Product Reliability sample accumulates. It does **not** mean:
 - reliability PASS;
 - model promotion;
 - automatic approval for another league;
-- automatic approval for another 1X2 artifact;
+- automatic promotion of another model artifact;
 - betting readiness.
 
-If EPL/1X2 loses a critical live gate such as complete model probabilities,
-stable identity or bookmaker price coverage, the framework returns `BLOCKED`.
+Model promotion remains its own explicit/manual process. If EPL/1X2 loses a
+critical live function entirely — for example model probabilities or bookmaker
+prices disappear for the whole exposed window — or stable identity regresses,
+the framework returns `BLOCKED`.
 
 ## Reliability relationship
 
