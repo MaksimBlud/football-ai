@@ -17,10 +17,11 @@ PREDICTION_TABLE = "product_prediction_snapshots"
 ODDS_TABLE = "odds_snapshots"
 PREDICTION_SCHEMA_VERSION = "product-prediction.v1"
 
+# Deliberately contains only fields needed by the public product contract.
+# Model artifact hashes/version provenance stay server/service-role only.
 PREDICTION_COLUMNS = ",".join(
     [
         "snapshot_schema_version",
-        "run_id",
         "generated_at_utc",
         "league",
         "event_id",
@@ -46,11 +47,6 @@ PREDICTION_COLUMNS = ",".join(
         "btts_no_probability",
         "top_score",
         "top_score_probability",
-        "model_1x2_version",
-        "model_1x2_sha256",
-        "model_goals_version",
-        "model_goals_sha256",
-        "publisher_version",
     ]
 )
 
@@ -149,6 +145,9 @@ def _prediction_for_product(row: Mapping[str, Any]) -> dict[str, Any]:
     return {
         key: row.get(key)
         for key in (
+            "league",
+            "event_id",
+            "commence_time_utc",
             "match_date",
             "match_time",
             "home_team",
@@ -257,6 +256,8 @@ def load_product_market_view(
             .table(ODDS_TABLE)
             .select(ODDS_COLUMNS)
             .in_("event_id", event_ids)
+            .gte("commence_time_utc", now.isoformat())
+            .lt("commence_time_utc", horizon.isoformat())
             .order("snapshot_time_utc", desc=True)
             .limit(5000)
             .execute()
