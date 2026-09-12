@@ -1,0 +1,86 @@
+name: EPL Prediction Ledger Catch-up
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/epl-prediction-ledger-catchup.yml"
+      - "generate_epl_market_shadow.py"
+      - "persist_epl_prediction_ledger.py"
+      - "epl_live_cycle.py"
+      - "scheduled_epl_live_cycle.py"
+  workflow_dispatch:
+
+# Serialize with the scheduled EPL durable mirror. This workflow is a
+# one-shot/recovery entrypoint over the same Supabase-only live cycle; it never
+# owns or invokes paid odds collection.
+concurrency:
+  group: epl-live-cycle
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  catch-up:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Check required Supabase secrets
+        run: |
+          python - <<'PY'
+          import os
+
+          missing = [
+              name
+              for name in ("SUPABASE_URL", "SUPABASE_KEY")
+              if not os.getenv(name)
+          ]
+          if missing:
+              raise SystemExit(
+                  "Missing required secrets: " + ", ".join(missing)
+              )
+          print("Required Supabase secrets are configured.")
+          print("No odds-provider credential is used by this workflow.")
+          PY
+
+      - name: Verify EPL remains MARKET_ONLY
+        run: |
+          python - <<'PY'
+          from league_runtime_config import EPL_RUNTIME_CONFIG
+
+          structural = EPL_RUNTIME_CONFIG.structural_v2
+          if structural.calibration_status != "CALIBRATION_REQUIRED":
+              raise SystemExit("EPL Structural V2 unexpectedly active")
+          if structural.structural_alpha is not None:
+              raise SystemExit("EPL structural_alpha must be None")
+          if structural.edge_threshold is not None:
+              raise SystemExit("EPL edge_threshold must be None")
+          print("PASS: EPL remains MARKET_ONLY")
+          PY
+
+      - name: Catch up durable EPL market-only state
+        run: python3 scheduled_epl_live_cycle.py
+
+      - name: Audit durable observation / ledger parity
+        run: python3 audit_epl_observation_ledger_parity.py
