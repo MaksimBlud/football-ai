@@ -74,6 +74,7 @@ jobs:
           python -m pytest -q tests/test_product_ui_contract.py
           python -m pytest -q tests/test_product_snapshot_store.py
           python -m pytest -q tests/test_publish_product_predictions.py
+          python -m pytest -q tests/test_deployment_readiness.py
 
       - name: Enforce no production artifact changes
         run: |
