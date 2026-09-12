@@ -1,3 +1,4 @@
+import tomllib
 from pathlib import Path
 
 
@@ -23,3 +24,29 @@ def test_product_web_entrypoint_remains_explicit():
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
     assert 'entrypoint = "web_app:app"' in pyproject
+
+
+def test_vercel_web_dependencies_are_minimal_and_model_free():
+    with (ROOT / "pyproject.toml").open("rb") as handle:
+        pyproject = tomllib.load(handle)
+
+    dependencies = set(pyproject["project"]["dependencies"])
+    assert dependencies == {"fastapi", "supabase", "python-dotenv"}
+
+    forbidden = {
+        "xgboost",
+        "scikit-learn",
+        "pandas",
+        "numpy",
+        "joblib",
+    }
+    assert dependencies.isdisjoint(forbidden)
+
+
+def test_product_frontend_exposes_no_dead_refresh_write_action():
+    html = (ROOT / "static/index_v2.html").read_text(encoding="utf-8")
+
+    assert "/refresh-predictions" not in html
+    assert 'id="refresh"' not in html
+    assert "function refresh()" not in html
+    assert "Обновить данные и прогнозы" not in html
