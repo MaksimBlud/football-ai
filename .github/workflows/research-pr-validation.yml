@@ -74,6 +74,7 @@ jobs:
           python -m py_compile scheduled_rpl_odds_snapshot.py
           python -m py_compile update_rpl_results.py
           python -m py_compile evaluate_rpl_predictions.py
+          python -m py_compile all_leagues_market_only_v1_1_status.py
 
       - name: Run historical strategy lab tests
         run: |
@@ -120,7 +121,7 @@ jobs:
         run: python -m pytest -q tests/test_operational_workflow_schedule_grid.py
 
       - name: Run all-leagues prospective protocol contract tests
-        run: python -m pytest -q tests/test_all_leagues_prospective_protocol.py
+        run: python -m pytest -q tests/test_all_leagues_prospective_protocol.py tests/test_all_leagues_market_only_v1_1_status.py
 
       - name: Run EPL live-cycle safety tests
         run: |
