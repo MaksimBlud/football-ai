@@ -762,3 +762,51 @@ Safety proof этого шага:
 - До этого разрешены только outcome-blind identity/timing/completeness/sample-health проверки и future capture по frozen правилам.
 - Любой новый реальный paid odds refresh остаётся отдельным `MANUAL_PAID_GATE` и требует свежего explicit разрешения пользователя.
 - После открытия gate evaluation остаётся отдельным explicit post-gate действием; automatic scoring/promotion запрещены.
+
+---
+
+## 2026-09-12 addendum — V1.1 outcome-blind sample-health operations
+
+Status: **ACTIVE MONITORING / SAMPLE_CLOSED / OUTCOME_READ_FORBIDDEN**.
+
+Evaluation-gate block closure:
+- continuity-only PR #264 exact head `e1ba4ca50a1a789d967a78f374b586fa2bee400c` прошёл все 5 PR validation workflows;
+- exact-head merge #264 = `a2f98ce7bf08cc156dc2c9f3cc88898e6ea6babb` at `2026-09-12T02:32:12Z`;
+- fresh `main` после merge указывал ровно на этот commit, а `PROJECT_CONTINUITY.md` содержал frozen gate и execution pointer;
+- direct read-only Supabase proof at `2026-09-12 02:38:44 UTC` подтвердил `0` post-freeze rows/events во всех 8 лигах;
+- manifest/live integrity proof: все `127/127` frozen prediction keys найдены, `missing=0`, `league_mismatches=0`, `mode_mismatches=0`, `structural_mismatches=0`, `temporal_mismatches=0`.
+
+Operational sample-health monitor:
+- implementation: `all_leagues_market_only_v1_1_status.py`;
+- workflow: `.github/workflows/all-leagues-v1-1-sample-health.yml`;
+- regression: `tests/test_all_leagues_market_only_v1_1_status.py` плюс existing frozen protocol suite;
+- loader читает только exact 127 seed keys и qualifying post-freeze MARKET_ONLY metadata из `league_prediction_ledger`;
+- seed lookup chunked, future rows deterministic-paginated beyond the PostgREST row cap;
+- missing immutable seed, conflicting duplicate key или gate-invalid metadata fail closed;
+- workflow запускается после relevant `main` push, вручную и ежедневно at `05:37 UTC`;
+- workflow не получает Odds API credential и не имеет write permission.
+
+PR/CI/merge proof:
+- PR #265 exact head `0f2a9a617412d6b4d97d6e8eb9663294b750fd9e`;
+- full PR CI = `6/6` green: Research, Bundesliga, Serie A, Ligue 1, Eredivisie и новый All Leagues V1.1 Sample Health;
+- local focused regression = `22 passed`; production-artifact guard green;
+- fresh-main before merge = `a2f98ce7bf08cc156dc2c9f3cc88898e6ea6babb`;
+- exact-head merge #265 = `b2230cfd1d75250eda7d53eb52b4c9292c6195ab` at `2026-09-12T02:46:35Z`.
+
+Post-merge live proof on exact `main`:
+- GitHub Actions run `34668589351`, validate job and `live-outcome-blind-sample-health` job both green;
+- live checked at `2026-09-12T02:47:09.730317Z`;
+- source rows fetched = `127`; seed keys matched = `127/127`;
+- post-freeze candidate rows = `0`; post-freeze selected events = `0`;
+- selected baseline unchanged: BUNDESLIGA `17`, EPL `20`, EREDIVISIE `18`, LA_LIGA `19`, LIGUE_1 `17`, PRIMEIRA_LIGA `9`, SERIE_A `19`, TURKEY_SUPER_LIG `8`;
+- every league remains at `1` kickoff month and `sample_ready=false`;
+- official gate status remains `SAMPLE_CLOSED`, `outcome_read_allowed=false`;
+- outcome sources read `false`, provider requests `0`, Supabase writes `0`, production artifact changes `0`, stricter gates assumed clear `false`.
+
+### Execution pointer override after sample-health operationalization
+
+- Common V1.1 monitoring is now operational and runs outcome-blind from frozen metadata.
+- Current mode remains **collect, don't peek**; sample growth is `0` beyond the 127-event seed at this proof.
+- Paid future capture remains `MANUAL_PAID_GATE`: no collector may be triggered without a new explicit user permission.
+- Until new captures exist, the only valid automated action is the daily read-only health check; repeated ad-hoc checks should not be treated as progress.
+- Outcomes/performance remain forbidden until the complete frozen `100 events / 4 months / all 8 leagues / 24h / stricter-gates-clear` contract opens.
