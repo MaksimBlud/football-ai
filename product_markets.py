@@ -15,6 +15,10 @@ import math
 from typing import Any, Mapping
 
 from product_decision import DECISION_FRAMEWORK_VERSION, build_product_decision
+from product_production_readiness import (
+    PRODUCTION_READINESS_VERSION,
+    build_production_readiness_view,
+)
 
 
 MARKET_READINESS = {
@@ -291,9 +295,10 @@ def build_product_market_view(
         odds = odds_by_fixture.get(fixture_key(prediction))
         matches.append(build_product_match(prediction, odds))
 
-    return {
+    payload = {
         "schema_version": "product-market-view.v1",
         "decision_framework_version": DECISION_FRAMEWORK_VERSION,
+        "production_readiness_version": PRODUCTION_READINESS_VERSION,
         "fixture_identity": "provider event_id; deterministic fixture hash fallback",
         "selection_policy": {
             "forecast": (
@@ -320,3 +325,5 @@ def build_product_market_view(
         "market_readiness": {key: dict(value) for key, value in MARKET_READINESS.items()},
         "matches": matches,
     }
+    payload["production_readiness"] = build_production_readiness_view(payload)
+    return payload
