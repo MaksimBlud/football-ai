@@ -21,7 +21,7 @@ def test_match_list_consumes_unified_server_contract():
 def test_match_detail_consumes_same_unified_contract():
     html = read(MATCH_PATH)
 
-    assert "fetch(`/product-market-view/${matchId}`" in html
+    assert "fetch(`/product-market-view/${id}`" in html
     assert "/upcoming-round-match/" not in html
     assert "/upcoming-matches" not in html
     assert "product-market-view.v1" in html
@@ -45,16 +45,31 @@ def test_browser_does_not_recalculate_fair_odds_or_expected_value():
         assert fragment not in combined
 
 
-def test_product_semantics_remain_explicit_in_ui():
+def test_forecast_and_value_are_visibly_separate():
     index = read(INDEX_PATH)
     detail = read(MATCH_PATH)
 
-    assert "Нет подходящей ставки" in index
-    assert "Расчётный кандидат" in index
-    assert "research" in index.lower()
-    assert "Нет подходящей ставки" in detail
-    assert "Расчётный кандидат" in detail
-    assert "raw EV" in detail
+    assert "Главный прогноз модели" in index
+    assert "Value / EV (доп.)" in index
+    assert "m.main_forecast" in index
+    assert "m.value_signal" in index
+    assert "forecastBox(m.main_forecast)" in index
+    assert "valueBox(m.value_signal)" in index
+    assert "Главный выбор модели" not in index
+
+    assert "Главный прогноз модели" in detail
+    assert "Value / EV · дополнительный показатель" in detail
+    assert "item.main_forecast" in detail
+    assert "item.value_signal" in detail
+    assert "никогда не переопределяет" in detail
+
+
+def test_value_filter_is_not_named_as_forecast():
+    html = read(INDEX_PATH)
+
+    assert "Есть value-сигнал" in html
+    assert "Расчётных кандидатов" not in html
+    assert "Value-сигналов" in html
 
 
 def test_list_links_to_server_indexed_match_card():

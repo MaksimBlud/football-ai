@@ -1,13 +1,12 @@
 """Product-facing market contract for Football AI.
 
-This module deliberately contains no data fetching and no model execution. It only
-turns already-produced model probabilities plus optional bookmaker prices into a
-single, explicit product representation.
+The product has two independent concepts:
 
-Important: a positive raw EV is a mathematical comparison, not evidence of
-validated profitability. Market readiness is therefore carried separately from
-probability/price calculations and controls eligibility for the current main
-choice.
+* main forecast: the eligible selection with the highest model probability;
+* value signal: a separate price comparison based on raw EV.
+
+A value signal must never replace the model forecast. Positive raw EV is only a
+mathematical comparison with bookmaker price, not evidence of profitability.
 """
 
 from __future__ import annotations
@@ -19,26 +18,28 @@ from typing import Any, Mapping
 MARKET_READINESS = {
     "1x2": {
         "status": "comparison_ready",
-        "eligible_for_main_choice": True,
+        "eligible_for_main_forecast": True,
+        "eligible_for_value": True,
         "label": "Исход матча",
         "note": (
-            "Вероятности модели можно сравнивать с доступной ценой БК. "
-            "Положительный raw EV остаётся расчётным кандидатом, а не "
-            "подтверждённой прибыльной ставкой."
+            "Главный прогноз определяется вероятностью модели. Bookmaker price "
+            "и raw EV отображаются отдельно как дополнительный value-сигнал."
         ),
     },
     "total_goals": {
         "status": "model_only",
-        "eligible_for_main_choice": False,
+        "eligible_for_main_forecast": True,
+        "eligible_for_value": False,
         "label": "Тотал голов",
         "note": (
-            "Вероятность и fair odds доступны, но текущий продуктовый поток "
-            "ещё не содержит сопоставленную цену БК для линии тотала."
+            "Вероятность и fair odds доступны для модельного прогноза, но "
+            "сопоставленная цена БК для линии тотала пока не подключена."
         ),
     },
     "handicap": {
         "status": "research_only",
-        "eligible_for_main_choice": False,
+        "eligible_for_main_forecast": False,
+        "eligible_for_value": False,
         "label": "Фора",
         "note": (
             "Рынок остаётся research-only до отдельного проверенного расчёта "
@@ -47,7 +48,8 @@ MARKET_READINESS = {
     },
     "corners_total": {
         "status": "research_only",
-        "eligible_for_main_choice": False,
+        "eligible_for_main_forecast": False,
+        "eligible_for_value": False,
         "label": "Тотал угловых",
         "note": (
             "Нужна отдельная модель распределения угловых и её prospective "
@@ -108,43 +110,26 @@ def _selection(
         "probability": probability_value,
         "fair_odds": fair_odds(probability_value),
         "bookmaker_odds": odds_value,
-        "raw_expected_value": raw_expected_value(
-            probability_value,
-            odds_value,
-        ),
+        "raw_expected_value": raw_expected_value(probability_value, odds_value),
     }
 
 
 def _highest_probability(
     selections: list[dict[str, Any]],
 ) -> dict[str, Any] | None:
-    available = [
-        selection
-        for selection in selections
-        if selection["probability"] is not None
-    ]
+    available = [s for s in selections if s["probability"] is not None]
     if not available:
         return None
-    return max(
-        available,
-        key=lambda selection: selection["probability"],
-    )
+    return max(available, key=lambda s: s["probability"])
 
 
 def _best_priced_selection(
     selections: list[dict[str, Any]],
 ) -> dict[str, Any] | None:
-    priced = [
-        selection
-        for selection in selections
-        if selection["raw_expected_value"] is not None
-    ]
+    priced = [s for s in selections if s["raw_expected_value"] is not None]
     if not priced:
         return None
-    return max(
-        priced,
-        key=lambda selection: selection["raw_expected_value"],
-    )
+    return max(priced, key=lambda s: s["raw_expected_value"])
 
 
 def _readiness(market: str) -> dict[str, Any]:
@@ -154,19 +139,85 @@ def _readiness(market: str) -> dict[str, Any]:
 def fixture_key(row: Mapping[str, Any]) -> tuple[str, str, str, str]:
     """Return the product fixture identity including scheduled kickoff fields."""
     return (
-        str(
-            row.get("home_team_model")
-            or row.get("home_team")
-            or ""
-        ).strip(),
-        str(
-            row.get("away_team_model")
-            or row.get("away_team")
-            or ""
-        ).strip(),
+        str(row.get("home_team_model") or row.get("home_team") or "").strip(),
+        str(row.get("away_team_model") or row.get("away_team") or "").strip(),
         str(row.get("match_date") or "").strip(),
         str(row.get("match_time") or "").strip(),
     )
+
+
+def _build_main_forecast(
+    market_selections: list[tuple[str, str, dict[str, Any] | None]],
+) -> dict[str, Any]:
+    eligible = []
+    for market, market_label, selection in market_selections:
+        if selection is None:
+            continue
+        if not MARKET_READINESS[market]["eligible_for_main_forecast"]:
+            continue
+        if selection.get("probability") is None:
+            continue
+        eligible.append((market, market_label, selection))
+
+    if not eligible:
+        return {
+            "status": "unavailable",
+            "market": None,
+            "market_label": None,
+            "selection": None,
+            "reason": "Нет доступного проверенного модельного прогноза.",
+        }
+
+    market, market_label, selection = max(
+        eligible,
+        key=lambda item: item[2]["probability"],
+    )
+    return {
+        "status": "model_forecast",
+        "market": market,
+        "market_label": market_label,
+        "selection": dict(selection),
+        "reason": (
+            "Выбран исход с максимальной вероятностью модели среди рынков, "
+            "допущенных к модельному прогнозу. Value/EV на выбор не влияет."
+        ),
+    }
+
+
+def _build_value_signal(one_x_two: list[dict[str, Any]]) -> dict[str, Any]:
+    if not MARKET_READINESS["1x2"]["eligible_for_value"]:
+        return {
+            "status": "unavailable",
+            "market": None,
+            "market_label": None,
+            "selection": None,
+            "reason": "Value comparison для этого рынка отключён.",
+        }
+
+    best = _best_priced_selection(one_x_two)
+    if (
+        best is None
+        or best["raw_expected_value"] is None
+        or best["raw_expected_value"] <= 0
+    ):
+        return {
+            "status": "none",
+            "market": "1x2",
+            "market_label": MARKET_READINESS["1x2"]["label"],
+            "selection": None,
+            "reason": "Нет положительного raw EV среди доступных 1X2 цен.",
+        }
+
+    return {
+        "status": "positive_raw_ev",
+        "market": "1x2",
+        "market_label": MARKET_READINESS["1x2"]["label"],
+        "selection": dict(best),
+        "reason": (
+            "Дополнительный value-сигнал по максимальному положительному raw EV. "
+            "Он не меняет главный прогноз модели."
+        ),
+    }
 
 
 def build_product_match(
@@ -213,39 +264,19 @@ def build_product_match(
         ),
     ]
 
-    best_1x2 = _best_priced_selection(one_x_two)
-    current_main_choice = None
-    if (
-        best_1x2 is not None
-        and best_1x2["raw_expected_value"] is not None
-        and best_1x2["raw_expected_value"] > 0
-        and MARKET_READINESS["1x2"]["eligible_for_main_choice"]
-    ):
-        current_main_choice = {
-            "market": "1x2",
-            "market_label": MARKET_READINESS["1x2"]["label"],
-            "selection": dict(best_1x2),
-            "status": "provisional_candidate",
-            "reason": (
-                "Максимальный положительный raw EV среди текущих "
-                "comparison-ready рынков. Надёжность ещё не выражена "
-                "отдельным количественным весом."
+    best_1x2_forecast = _highest_probability(one_x_two)
+    best_total_forecast = _highest_probability(totals)
+    main_forecast = _build_main_forecast(
+        [
+            ("1x2", MARKET_READINESS["1x2"]["label"], best_1x2_forecast),
+            (
+                "total_goals",
+                MARKET_READINESS["total_goals"]["label"],
+                best_total_forecast,
             ),
-        }
-
-    if current_main_choice is None:
-        main_choice = {
-            "status": "no_bet",
-            "market": None,
-            "market_label": None,
-            "selection": None,
-            "reason": (
-                "Нет положительного raw EV среди рынков, которые сейчас "
-                "допущены к продуктовому сравнению, либо отсутствует цена БК."
-            ),
-        }
-    else:
-        main_choice = current_main_choice
+        ]
+    )
+    value_signal = _build_value_signal(one_x_two)
 
     return {
         "match": {
@@ -256,22 +287,21 @@ def build_product_match(
             "home_team_model": prediction.get("home_team_model"),
             "away_team_model": prediction.get("away_team_model"),
         },
-        "main_choice": main_choice,
+        "main_forecast": main_forecast,
+        "value_signal": value_signal,
+        # Temporary compatibility alias. Semantics are now forecast-first, never EV-first.
+        "main_choice": dict(main_forecast),
         "markets": {
             "1x2": {
                 "readiness": _readiness("1x2"),
                 "selections": one_x_two,
-                "display_selection": (
-                    dict(best_1x2)
-                    if best_1x2 is not None
-                    else _highest_probability(one_x_two)
-                ),
+                "display_selection": best_1x2_forecast,
             },
             "total_goals": {
                 "readiness": _readiness("total_goals"),
                 "line": 2.5,
                 "selections": totals,
-                "display_selection": _highest_probability(totals),
+                "display_selection": best_total_forecast,
             },
             "handicap": {
                 "readiness": _readiness("handicap"),
@@ -288,36 +318,20 @@ def build_product_match(
             "prediction": prediction.get("prediction"),
             "prediction_strength": prediction.get("prediction_strength"),
             "model_agreement": prediction.get("model_agreement"),
-            "expected_home_goals": _number(
-                prediction.get("expected_home_goals")
-            ),
-            "expected_away_goals": _number(
-                prediction.get("expected_away_goals")
-            ),
-            "expected_total_goals": _number(
-                prediction.get("expected_total_goals")
-            ),
-            "btts_yes_probability": _number(
-                prediction.get("btts_yes_probability")
-            ),
-            "btts_no_probability": _number(
-                prediction.get("btts_no_probability")
-            ),
+            "expected_home_goals": _number(prediction.get("expected_home_goals")),
+            "expected_away_goals": _number(prediction.get("expected_away_goals")),
+            "expected_total_goals": _number(prediction.get("expected_total_goals")),
+            "btts_yes_probability": _number(prediction.get("btts_yes_probability")),
+            "btts_no_probability": _number(prediction.get("btts_no_probability")),
             "top_score": prediction.get("top_score"),
-            "top_score_probability": _number(
-                prediction.get("top_score_probability")
-            ),
+            "top_score_probability": _number(prediction.get("top_score_probability")),
         },
     }
 
 
 def build_product_market_view(
     predictions: list[Mapping[str, Any]],
-    odds_by_fixture: Mapping[
-        tuple[str, str, str, str],
-        Mapping[str, Any],
-    ]
-    | None = None,
+    odds_by_fixture: Mapping[tuple[str, str, str, str], Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Build the versioned response consumed by list and match-detail UIs."""
     odds_by_fixture = odds_by_fixture or {}
@@ -333,17 +347,18 @@ def build_product_market_view(
             "home_team_model + away_team_model + match_date + match_time"
         ),
         "selection_policy": {
-            "current": (
-                "Highest positive raw EV among comparison-ready markets only."
+            "forecast": (
+                "Highest model probability among markets eligible for main forecast."
+            ),
+            "value": (
+                "Highest positive raw EV among priced value-eligible selections; "
+                "informational only and never overrides forecast."
             ),
             "future": (
-                "Replace raw-EV ordering with evidence/reliability-aware "
-                "ranking once each market has passed its research gate."
+                "Use research readiness, calibration and reliability as eligibility "
+                "and confidence controls without conflating forecast with value."
             ),
         },
-        "market_readiness": {
-            key: dict(value)
-            for key, value in MARKET_READINESS.items()
-        },
+        "market_readiness": {key: dict(value) for key, value in MARKET_READINESS.items()},
         "matches": matches,
     }

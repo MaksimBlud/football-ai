@@ -60,21 +60,12 @@ def odds_snapshot(**overrides):
 
 
 def test_prediction_identity_prefers_provider_event_id():
-    assert prediction_identity(prediction_snapshot()) == (
-        "event_id",
-        "event-1",
-    )
+    assert prediction_identity(prediction_snapshot()) == ("event_id", "event-1")
 
 
 def test_prediction_identity_has_safe_fixture_fallback():
     identity = prediction_identity(prediction_snapshot(event_id=None))
-
-    assert identity[:4] == (
-        "fixture",
-        "EPL",
-        "Arsenal",
-        "Coventry City",
-    )
+    assert identity[:4] == ("fixture", "EPL", "Arsenal", "Coventry City")
     assert identity[4] == "2026-09-13T14:00:00+00:00"
 
 
@@ -85,9 +76,7 @@ def test_latest_prediction_snapshot_wins_without_mutating_history():
         generated_at_utc="2026-09-12T07:00:00+00:00",
         home_probability=0.61,
     )
-
     selected = select_latest_prediction_snapshots([older, newer])
-
     assert len(selected) == 1
     assert selected[0]["run_id"] == "run-b"
     assert selected[0]["home_probability"] == pytest.approx(0.61)
@@ -97,7 +86,6 @@ def test_unknown_snapshot_schema_is_not_exposed():
     selected = select_latest_prediction_snapshots(
         [prediction_snapshot(snapshot_schema_version="future.v9")]
     )
-
     assert selected == []
 
 
@@ -107,9 +95,7 @@ def test_latest_market_price_is_selected_independently():
         snapshot_time_utc="2026-09-12T05:55:00+00:00",
         home_odds=1.90,
     )
-
     selected = select_latest_odds_by_event([older, newer])
-
     assert selected["event-1"]["home_odds"] == pytest.approx(1.90)
 
 
@@ -125,7 +111,8 @@ def test_product_view_joins_model_and_market_only_by_event_id():
     assert home["probability"] == pytest.approx(0.60)
     assert home["bookmaker_odds"] == pytest.approx(1.90)
     assert home["raw_expected_value"] == pytest.approx(0.14)
-    assert item["main_choice"]["status"] == "provisional_candidate"
+    assert item["main_forecast"]["status"] == "model_forecast"
+    assert item["value_signal"]["status"] == "positive_raw_ev"
     assert payload["data_source"]["join"] == "event_id"
 
 
@@ -135,9 +122,12 @@ def test_different_event_id_never_cross_matches_same_teams():
         [odds_snapshot(event_id="market-event")],
     )
 
-    home = payload["matches"][0]["markets"]["1x2"]["selections"][0]
+    item = payload["matches"][0]
+    home = item["markets"]["1x2"]["selections"][0]
     assert home["bookmaker_odds"] is None
     assert home["raw_expected_value"] is None
+    assert item["main_forecast"]["status"] == "model_forecast"
+    assert item["value_signal"]["status"] == "none"
 
 
 def test_timezone_naive_snapshot_is_rejected():

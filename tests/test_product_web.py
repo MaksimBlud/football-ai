@@ -55,24 +55,24 @@ def test_odds_index_uses_full_scheduled_fixture_identity():
 
 def test_server_assembly_attaches_price_only_to_exact_fixture():
     first = prediction()
-    second = prediction(
-        match_date="2026-10-03",
-        match_time="17:30",
-    )
+    second = prediction(match_date="2026-10-03", match_time="17:30")
 
-    payload = assemble_product_market_view(
-        [first, second],
-        [odds_row()],
-    )
+    payload = assemble_product_market_view([first, second], [odds_row()])
 
-    first_home = payload["matches"][0]["markets"]["1x2"]["selections"][0]
-    second_home = payload["matches"][1]["markets"]["1x2"]["selections"][0]
+    first_item = payload["matches"][0]
+    second_item = payload["matches"][1]
+    first_home = first_item["markets"]["1x2"]["selections"][0]
+    second_home = second_item["markets"]["1x2"]["selections"][0]
 
     assert first_home["bookmaker_odds"] == pytest.approx(1.90)
     assert first_home["raw_expected_value"] == pytest.approx(0.14)
+    assert first_item["main_forecast"]["status"] == "model_forecast"
+    assert first_item["value_signal"]["status"] == "positive_raw_ev"
+
     assert second_home["bookmaker_odds"] is None
     assert second_home["raw_expected_value"] is None
-    assert payload["matches"][1]["main_choice"]["status"] == "no_bet"
+    assert second_item["main_forecast"]["status"] == "model_forecast"
+    assert second_item["value_signal"]["status"] == "none"
 
 
 def test_adapter_never_creates_goal_total_bookmaker_price():
@@ -84,4 +84,6 @@ def test_adapter_never_creates_goal_total_bookmaker_price():
     total = payload["matches"][0]["markets"]["total_goals"]
     assert total["display_selection"]["code"] == "OVER_2_5"
     assert total["display_selection"]["bookmaker_odds"] is None
-    assert total["readiness"]["eligible_for_main_choice"] is False
+    assert total["readiness"]["eligible_for_main_forecast"] is True
+    assert total["readiness"]["eligible_for_value"] is False
+    assert payload["matches"][0]["main_forecast"]["market"] == "total_goals"
