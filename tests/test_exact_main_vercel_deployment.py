@@ -72,13 +72,20 @@ def test_exact_main_workflow_stages_verifies_then_promotes():
     assert "football-ai-real-epl-snapshot.vercel.app" in source
 
 
-def test_staged_vercel_curl_passes_token_as_global_cli_option():
+def test_staged_smoke_uses_masked_automation_bypass_not_beta_vercel_curl():
     source = WORKFLOW.read_text(encoding="utf-8")
 
-    assert 'vercel --token "$VERCEL_TOKEN" curl /health --deployment "$DEPLOYMENT_URL" >' in source
-    assert 'vercel --token "$VERCEL_TOKEN" curl "$path" --deployment "$DEPLOYMENT_URL" >' in source
-    assert 'vercel curl /health --deployment "$DEPLOYMENT_URL" --token' not in source
-    assert 'vercel curl "$path" --deployment "$DEPLOYMENT_URL" --token' not in source
+    assert "Resolve deployment protection bypass" in source
+    assert "/v1/projects/$EXPECTED_VERCEL_PROJECT_ID/protection-bypass?teamId=$EXPECTED_VERCEL_TEAM_ID" in source
+    assert 'metadata.get("scope") == "automation-bypass"' in source
+    assert 'if [ ! -s /tmp/vercel-bypass-secret ]; then' in source
+    assert 'echo "::add-mask::$BYPASS_SECRET"' in source
+    assert 'echo "VERCEL_AUTOMATION_BYPASS_SECRET=$BYPASS_SECRET" >> "$GITHUB_ENV"' in source
+    assert '-H "x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET"' in source
+    assert '"$DEPLOYMENT_URL/health"' in source
+    assert '"$DEPLOYMENT_URL$path"' in source
+    assert "vercel curl" not in source
+    assert 'vercel --token "$VERCEL_TOKEN" curl' not in source
 
 
 def test_exact_main_workflow_targets_only_the_known_vercel_project():
