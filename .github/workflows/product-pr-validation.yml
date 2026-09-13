@@ -60,6 +60,7 @@ jobs:
           with open("vercel.json", encoding="utf-8") as handle:
               vercel = json.load(handle)
           assert vercel["$schema"] == "https://openapi.vercel.sh/vercel.json"
+          assert vercel["framework"] == "fastapi"
           assert "functions" not in vercel
           PY
 
