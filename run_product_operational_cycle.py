@@ -225,9 +225,12 @@ def main() -> None:
         now=now,
         horizon_days=args.horizon_days,
     )
+    applied_predictions = 0
+    applied_lifecycle = 0
 
     if args.publish:
         _append_predictions(supabase, pending_predictions)
+        applied_predictions = len(pending_predictions)
         if pending_predictions:
             predictions, odds, results, lifecycle = load_live_inputs(supabase)
             lifecycle_plan = build_lifecycle_pass(
@@ -241,6 +244,7 @@ def main() -> None:
                 registration_mode=REGISTRATION_MODE_LIVE,
             )
         _append_lifecycle(supabase, lifecycle_plan["events"])
+        applied_lifecycle = len(lifecycle_plan["events"])
         predictions, odds, results, lifecycle = load_live_inputs(supabase)
     else:
         print("DRY RUN: no Supabase rows written.")
@@ -255,6 +259,10 @@ def main() -> None:
         horizon_days=args.horizon_days,
     )
     report["publish_mode"] = bool(args.publish)
+    report["applied"] = {
+        "product_prediction_snapshots": applied_predictions,
+        "lifecycle_events": applied_lifecycle,
+    }
 
     report_path = Path(args.report_path)
     report_path.parent.mkdir(parents=True, exist_ok=True)
