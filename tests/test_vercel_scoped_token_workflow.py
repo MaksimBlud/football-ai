@@ -15,17 +15,18 @@ def test_exact_main_workflow_supports_project_scoped_vercel_tokens():
     assert 'Authorization: Bearer $VERCEL_TOKEN' in source
     assert 'payload.get("id") == os.environ["VERCEL_PROJECT_ID"]' in source
     assert 'payload.get("accountId") == os.environ["EXPECTED_VERCEL_TEAM_ID"]' in source
-    assert 'vercel link --yes' in source
-    assert '--project="$VERCEL_PROJECT_ID"' in source
-    assert 'payload.get("projectId") == os.environ["VERCEL_PROJECT_ID"]' in source
-    assert 'payload.get("orgId") == os.environ["EXPECTED_VERCEL_TEAM_ID"]' in source
+    assert "vercel link --yes" not in source
+    assert "Materialize exact Vercel project link" in source
+    assert '"orgId": os.environ["EXPECTED_VERCEL_TEAM_ID"]' in source
+    assert '"projectId": os.environ["VERCEL_PROJECT_ID"]' in source
+    assert 'Path(".vercel/project.json")' in source
 
 
-def test_scoped_token_preflight_and_link_happen_before_pull_and_deploy():
+def test_scoped_token_preflight_and_materialized_link_happen_before_pull_and_deploy():
     source = WORKFLOW.read_text(encoding="utf-8")
 
     preflight = source.index("Verify scoped token can access exact project")
-    link = source.index("Link checkout to exact Vercel project")
+    link = source.index("Materialize exact Vercel project link")
     pull = source.index("Pull production project settings")
     deploy = source.index("Create staged production deployment from exact main")
 
