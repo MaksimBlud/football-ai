@@ -1,0 +1,95 @@
+name: Product Operational Automation
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Existing EPL AI pair collector runs at :23. This cycle only consumes
+    # already-durable outputs and stored market/results data; it never calls a
+    # paid provider. Leave a gap before the older EPL live-cycle at :47.
+    - cron: "37 */2 * * *"
+
+concurrency:
+  group: product-operational-automation-v1
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  product-cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install minimal operational dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install supabase python-dotenv
+
+      - name: Check private Supabase credential contract
+        run: |
+          python - <<'PY'
+          import os
+          from product_operational_automation import validate_private_supabase_credentials
+
+          validate_private_supabase_credentials(
+              supabase_url=os.getenv("SUPABASE_URL"),
+              supabase_key=os.getenv("SUPABASE_KEY"),
+          )
+          print("PASS: private Supabase credential contract; secret values not printed")
+          PY
+
+      - name: Run append-only product operational cycle
+        run: |
+          python run_product_operational_cycle.py \
+            --publish \
+            --report-path artifacts/product_operational_automation/report.json
+
+      - name: Add automation summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path("artifacts/product_operational_automation/report.json")
+          if not path.exists():
+              raise SystemExit("Operational report was not produced")
+          report = json.loads(path.read_text(encoding="utf-8"))
+          lines = [
+              "## Product Operational Automation v1",
+              f"- status: `{report.get('status')}`",
+              f"- prediction source: `{(report.get('prediction_source') or {}).get('state')}`",
+              f"- pending product snapshots: `{(report.get('pending') or {}).get('product_prediction_snapshots')}`",
+              f"- pending lifecycle events: `{(report.get('pending') or {}).get('lifecycle_events')}`",
+              "- paid provider calls: `false`",
+              "- model inference/training: `false`",
+          ]
+          summary = os.getenv("GITHUB_STEP_SUMMARY")
+          if summary:
+              with open(summary, "a", encoding="utf-8") as handle:
+                  handle.write("\n".join(lines) + "\n")
+          print("\n".join(lines))
+          PY
+
+      - name: Upload operational audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: product-operational-automation-${{ github.run_id }}
+          path: artifacts/product_operational_automation/report.json
+          if-no-files-found: error
+          retention-days: 30
