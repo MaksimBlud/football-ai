@@ -133,7 +133,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          vercel curl /health --deployment "$DEPLOYMENT_URL" --token "$VERCEL_TOKEN" > /tmp/staged-health.json
+          vercel curl /health --deployment "$DEPLOYMENT_URL" > /tmp/staged-health.json
           python - <<'PY'
           import json
           import os
@@ -151,7 +151,7 @@ jobs:
           set -euo pipefail
           for path in /product-market-view /portfolio-risk-view /production-readiness-view; do
             output="/tmp/$(echo "$path" | tr '/-' '__').json"
-            vercel curl "$path" --deployment "$DEPLOYMENT_URL" --token "$VERCEL_TOKEN" > "$output"
+            vercel curl "$path" --deployment "$DEPLOYMENT_URL" > "$output"
             ROUTE="$path" OUTPUT="$output" python - <<'PY'
           import json
           import os
