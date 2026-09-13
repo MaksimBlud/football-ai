@@ -39,17 +39,18 @@
 
 CORNERS10 остаётся полезным football-only signal для 1X2, но не доказательством качества corner-total prediction. Historical corner-total V1–V4 не переоткрывать на тех же данных без independent evidence.
 
-## Signal Discovery 2026-09-13 — BLOCKS 1–3 COMPLETE / RESEARCH-ONLY
+## Signal Discovery 2026-09-13 — BLOCKS 1–7 COMPLETE / RESEARCH-ONLY
 
-User explicitly authorized a bounded historical research pass for three candidate signal classes. This work is an explicit research diversion and **does not replace the accepted P0–P4 anti-jump strategy, alter frozen cohorts, open prospective outcomes or authorize Candidate V2/production changes**.
+User explicitly authorized a bounded historical Signal Discovery pass. The initial three candidate-signal tests were followed by explicit source-capability closure for lineup/tactical/true-xG ideas and one bounded interaction test. This work is an explicit research diversion and **does not replace the accepted P0–P4 anti-jump strategy, alter frozen cohorts, open prospective outcomes or authorize Candidate V2/production changes**.
 
 Common methodology:
 - existing Historical Football Signal Lab reused instead of creating a second incompatible research framework;
 - Football-Data seasons `2016-2017` through `2025-2026`, EPL + La Liga + Serie A, `11,400` historical fixtures total;
 - expanding-season walk-forward: first 3 seasons train, next season test, then expand; 7 evaluated seasons per league;
 - fixed feature contracts were coded before reading the new ablation results; no window/threshold search after results;
-- each candidate compared both with football-only `CORNERS10` and with `MARKET_MODEL` to separate football signal quality from incremental value beyond market;
+- each performance candidate compared both with football-only `CORNERS10` and/or an explicit main-effect baseline and with `MARKET_MODEL` where applicable, so football signal quality is separated from incremental value beyond market;
 - all features are point-in-time and current-match values/results cannot affect current-match features by regression contract;
+- capability gates deliberately fail closed rather than synthesizing unsupported lineup/tactical/xG data;
 - no frozen prospective target/outcome tables were read; no Supabase writes; no paid-provider calls; no training/promotion; production `.pkl` hashes were checked before/after every full historical run and remained unchanged.
 
 ### Block 1 — `TEAM_STRENGTH_TRAJECTORY_V1` — FOOTBALL-ONLY STRONG / MARKET-INCREMENTAL NOT PROVEN
@@ -144,11 +145,81 @@ PR #293:
 - artifact `10315020904`, digest `sha256:51e7f65f61873e318b3878eb37badd734af3c0d1a0e1893efbddcbe9ec7b387e`;
 - exact-head merge `2dfc375d51a6d0c825597c1280b77d5120c0bd00`.
 
+### Block 4 — `LINEUP_STRENGTH_CAPABILITY_V1` — DATA_GAP / FAIL-CLOSED
+
+Current Football-Data historical schema does not provide a supported point-in-time lineup/player-strength contract. The capability audit explicitly distinguishes lineup identity and explicit lineup-strength fields from generic team-strength aggregates; a field such as `TeamStrength` must not be relabeled as lineup strength.
+
+Experiment-ready requirements:
+- identifiable starting-XI/lineup data;
+- explicit player/lineup-strength information rather than team aggregates;
+- temporal provenance proving the information was available before the target fixture.
+
+Decision: current source is a **DATA_GAP**, not a negative performance result. Do not synthesize or backfill lineup strength from team-level features.
+
+PR #295:
+- head `ee3f765f4afa934d556451be7097dc0a2bc50494`;
+- Historical Football Signal Lab run `34750466337`, job `103705987342`;
+- all seven required validation workflows green; three-league lab and production `.pkl` hash guard green;
+- exact-head merge `c6872f5fe244fb4c42175e513d7bf6be97e69dfc`.
+
+### Block 5 — `TACTICAL_MATCHUP_CAPABILITY_V1` — DATA_GAP / FAIL-CLOSED
+
+Ordinary shots/corners/fouls/cards are team-stat proxies and are **not** silently relabeled as tactical-matchup data. A genuine tactical experiment requires explicit tactical context such as formation, possession/passing structure or pressing-type fields plus point-in-time provenance.
+
+Decision: current source does not satisfy that contract, so Tactical Matchup remains an explicit **DATA_GAP / capability gate**, not a performance claim.
+
+PR #296:
+- head `b26ae4b59a94657180553a883fc22d5f430ce9dc`;
+- Historical Football Signal Lab run `34750626439`;
+- all seven required validation workflows green;
+- exact-head merge `c33fc73d7ed78a1e50403315d22cb42a325290bd`.
+
+### Block 6 — `TRUE_XG_CAPABILITY_V1` — DATA_GAP / FAIL-CLOSED
+
+A supported true-xG experiment requires a genuine paired home/away xG schema. Shots/SOT are never synthesized into xG, and a partial xG field pair also fails closed. Temporal provenance is still required before a detected schema can become experiment-ready.
+
+Decision: current free historical source remains a **DATA_GAP** for true xG. `SHOT_QUALITY_PROXY_V1` stays a proxy and must never be relabeled as true xG.
+
+PR #297:
+- head `7e8cfbb3a5c1b9ca4d374ab4b814c83f53e2da1e`;
+- Historical Football Signal Lab run `34750911202`, job `103707181172`;
+- all seven required validation workflows green; full three-league run and production `.pkl` hash guard green;
+- exact-head merge `f9dcf4576164fb92b41fb7ce3dce39d1b1d69c43`.
+
+### Block 7 — `TRAJECTORY_SHOT_INTERACTIONS_V1` — NEGATIVE / CLOSED
+
+This was a bounded interaction test, not an open feature search. The baseline already contained the full `TEAM_STRENGTH_TRAJECTORY_V1` + `SHOT_QUALITY_PROXY_V1` main effects. The candidate added only two fixed, predeclared moderation terms:
+- `interaction_elo_delta_x_abs_sot_rate`;
+- `interaction_sot_rate_x_abs_performance_residual`.
+
+`REST_CONGESTION_V1` was intentionally excluded because that same-sample hypothesis is already CLOSED / NEGATIVE. Evidence tiers remained EPL + La Liga `PRIMARY`, Serie A `SOURCE_CAVEAT_SENSITIVITY`.
+
+PRIMARY incremental result over football main-effect baseline:
+- EPL: accuracy `-0.002256`, Brier `+0.000481`, log loss `+0.000745`; Brier/log-loss wins `3/7`;
+- La Liga: accuracy `-0.001504`, Brier `+0.001188`, log loss `+0.001955`; Brier/log-loss wins `0/7`.
+
+PRIMARY incremental result over market + main-effect baseline:
+- EPL: accuracy `+0.001504`, Brier `+0.000334`, log loss `+0.000515`; Brier/log-loss wins `3/7`;
+- La Liga: accuracy `-0.001504`, Brier `+0.000899`, log loss `+0.001462`; Brier wins `0/7`, log-loss wins `1/7`.
+
+Serie A sensitivity-only rows were also negative on Brier/log loss and do not upgrade the result.
+
+Decision: exact fixed interaction hypothesis is **NEGATIVE / CLOSED**. Do not search more same-sample interaction combinations, signs, thresholds or windows.
+
+PR #298:
+- head `87ce4a73b51c8205445168529a55f41b43b3c84a`;
+- Historical Signal Interactions run `34751127490`, job `103707737220`;
+- artifact `10316265623`, digest `sha256:98da9e518bc6d6ec5fd049f7db215b311521d27cacbf5d54ef7897ef5724d85c`;
+- all seven validation contours green, including interaction regressions, real historical run and production `.pkl` hash guard;
+- exact-head merge `63623a30441725247ba1092ec783e6b55667f174`.
+
 Signal-discovery conclusion:
 - strongest new football-only evidence = `TEAM_STRENGTH_TRAJECTORY_V1`;
 - `SHOT_QUALITY_PROXY_V1` is smaller but directionally useful football-only evidence in both PRIMARY leagues;
 - neither trajectory nor shot-quality proxy proved robust incremental value beyond the bookmaker market in this historical protocol;
 - league-only rest/congestion proxy is negative and closed;
+- lineup strength, tactical matchup and true xG are **current-source capability/data gates**, not fabricated negative performance results;
+- the fixed trajectory × shot-quality interaction hypothesis is negative and closed; no same-sample interaction mining is allowed;
 - no new prospective cohort was created and no frozen membership changed. Candidate V2/model promotion remains closed until the existing evidence gates permit a new, separately preregistered decision.
 
 ---
@@ -178,7 +249,7 @@ Path: immutable prediction snapshot -> Supabase -> independent odds join by prov
 
 Public alias: `https://football-ai-real-epl-snapshot.vercel.app`.
 
-Last exact public production deployment is older than repository contracts #278–#293. Do not claim later Decision/Lifecycle/Reliability/Readiness/Operational-Automation or signal-research changes are live there until exact-main redeploy.
+Last exact public production deployment is older than repository contracts #278–#298. Do not claim later Decision/Lifecycle/Reliability/Readiness/Operational-Automation or signal-research changes are live there until exact-main redeploy.
 
 ## Product Lifecycle v1 — CLOSED / LIVE RUNTIME-PROVEN
 
@@ -331,9 +402,9 @@ PR #289 — bootstrap cleanup:
 
 Product chain: #267–#277 foundation/live pipeline; #278 Decision Framework; #279 Lifecycle; #280 lifecycle security hardening; #281 Reliability; #282 Portfolio/Risk; #283 continuity correction; #284 Production Readiness; #286 Operational Automation v1; #287 pre-runtime continuity; #288 bounded runtime bootstrap; #289 bootstrap cleanup.
 
-Signal discovery chain: #291 `TEAM_STRENGTH_TRAJECTORY_V1`; #292 `REST_CONGESTION_V1`; #293 `SHOT_QUALITY_PROXY_V1`.
+Signal discovery chain: #291 `TEAM_STRENGTH_TRAJECTORY_V1`; #292 `REST_CONGESTION_V1`; #293 `SHOT_QUALITY_PROXY_V1`; #294 continuity for blocks 1–3; #295 `LINEUP_STRENGTH_CAPABILITY_V1`; #296 `TACTICAL_MATCHUP_CAPABILITY_V1`; #297 `TRUE_XG_CAPABILITY_V1`; #298 `TRAJECTORY_SHOT_INTERACTIONS_V1`.
 
-All substantive product/runtime and signal-research PRs above passed Product + required Research/league CI; signal PRs additionally passed the Historical Football Signal Lab and production hash guard before exact-head merge.
+All substantive product/runtime and signal-research PRs above passed Product + required Research/league CI; performance/capability signal PRs also passed their Historical Signal Lab/interaction workflow and production hash guard before exact-head merge.
 
 ---
 
@@ -347,8 +418,12 @@ All substantive product/runtime and signal-research PRs above passed Product + r
 - Candidate V2/model promotion stays closed until corresponding evidence gate.
 - `TEAM_STRENGTH_TRAJECTORY_V1`: retain as football-only candidate evidence; no production/prospective insertion without a new allowed contract.
 - `REST_CONGESTION_V1`: exact league-only proxy **CLOSED / NEGATIVE**; no same-sample retuning.
-- `SHOT_QUALITY_PROXY_V1`: football-only candidate evidence, market-incremental negative; true xG = separate `DATA_SOURCE_GATE`.
-- Signal Discovery blocks 1–3 requested on 2026-09-13 are complete; they do not alter any existing frozen sample or gate.
+- `SHOT_QUALITY_PROXY_V1`: football-only candidate evidence, market-incremental negative.
+- `LINEUP_STRENGTH_CAPABILITY_V1`: **DATA_GAP / FAIL-CLOSED** until a supported point-in-time lineup/player-strength source exists.
+- `TACTICAL_MATCHUP_CAPABILITY_V1`: **DATA_GAP / FAIL-CLOSED** until explicit tactical data with temporal provenance exists.
+- `TRUE_XG_CAPABILITY_V1`: **DATA_GAP / FAIL-CLOSED**; shots/SOT remain proxy-only.
+- `TRAJECTORY_SHOT_INTERACTIONS_V1`: exact fixed hypothesis **CLOSED / NEGATIVE**; no same-sample interaction retuning/mining.
+- Signal Discovery blocks 1–7 requested/completed on 2026-09-13 do not alter any existing frozen sample or gate.
 
 ## Product
 
@@ -390,18 +465,20 @@ Key facts and decisions:
 - PR #289 removed the temporary trigger, passed all six CI contours, exact-head merged as `26608134c1cb68a6ce68da5d8c3c304870d88f4c`, restoring production workflow to `workflow_dispatch + schedule`;
 - no Odds API credits, production model artifacts, training, inference, promotion, bets or stakes were used in this runtime-proof closure.
 
-Later on 2026-09-13 the user explicitly authorized Signal Discovery blocks 1–3. This bounded historical pass:
-- reused the existing leakage-safe three-league Historical Football Signal Lab;
-- tested trajectory, league-only rest/congestion, and shot-quality proxy signals with fixed predeclared contracts;
-- closed PRs #291/#292/#293 through branch -> regression tests -> full required CI -> fresh-main -> exact-head merge;
+Later on 2026-09-13 the user explicitly authorized the Signal Discovery pass, completed through blocks 1–7. This bounded historical pass:
+- reused the existing leakage-safe three-league Historical Football Signal Lab and a thin interaction extension over the same point-in-time inputs;
+- tested trajectory, league-only rest/congestion and shot-quality proxy with fixed predeclared contracts;
+- closed Lineup Strength, Tactical Matchup and True xG as explicit current-source `DATA_GAP / FAIL-CLOSED` capability gates rather than fabricating unsupported features;
+- tested only two fixed trajectory × shot-quality interaction terms on top of both main-effect families and closed that exact interaction hypothesis as negative; no same-sample combination search followed;
+- closed PRs #291/#292/#293/#295/#296/#297/#298 through branch -> regression tests -> full required CI -> fresh-main -> exact-head merge;
 - found trajectory strongly useful as football-only state but not robustly incremental over market;
 - found exact league-only rest/congestion proxy negative and closed it without same-data tuning;
-- found shots/SOT proxy modestly useful football-only in both PRIMARY leagues but negative over market; confirmed no true-xG columns in the downloaded source and kept true xG as a separate data-source gate;
+- found shots/SOT proxy modestly useful football-only in both PRIMARY leagues but negative over market; confirmed no supported true-xG pair in the current source and kept true xG as a separate data-source gate;
 - read no frozen prospective outcomes, made no Supabase writes, used no paid provider, and changed no production model artifact/training/promotion state.
 
 # Current checkpoint
 
-- Latest repository main after substantive Signal Discovery code: `2dfc375d51a6d0c825597c1280b77d5120c0bd00`; the following continuity update is documentation-only.
+- Latest repository main after substantive Signal Discovery code: `63623a30441725247ba1092ec783e6b55667f174`; the following continuity update is documentation-only.
 - Latest product/runtime behavior remains the previously proven Operational Automation contract; signal research did not alter product runtime or model artifacts.
 - Durable product snapshots: `20` total; duplicate event IDs `0`; future EPL coverage `13/13` at last live product proof.
 - Lifecycle: `20 registered / 7 market-observed / 7 settled = 34`; duplicate event keys `0`; pending eligible lifecycle facts `0` at last live product proof.
@@ -409,6 +486,6 @@ Later on 2026-09-13 the user explicitly authorized Signal Discovery blocks 1–3
 - Readiness: EPL 1X2 operational; goals provisional; handicap/corners research-only.
 - Operational Automation executor/runtime/idempotency is live-proven. Natural `event=schedule` occurrence is still an external scheduler observation, not an unproven runtime-code path.
 - Production workflow is restored to `workflow_dispatch + cron 37 */2 * * *`, `contents: read`, no Odds API key.
-- Signal Discovery status: trajectory = promising football-only / market-incremental unproven; rest proxy = negative/closed; shot-quality proxy = promising football-only / market-incremental negative; true xG = data-source gate.
+- Signal Discovery status: trajectory = promising football-only / market-incremental unproven; rest proxy = negative/closed; shot-quality proxy = promising football-only / market-incremental negative; lineup/tactical/true-xG = current-source data gates; fixed trajectory-shot interactions = negative/closed.
 - Public Vercel runtime still lags repository main; **exact-main redeploy resumes as the next product block**.
 - Research V1.1 outcome gate remains closed; no-peek is binding.
