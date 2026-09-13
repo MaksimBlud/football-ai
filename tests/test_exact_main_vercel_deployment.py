@@ -36,12 +36,18 @@ def test_web_health_wires_deployment_identity_without_changing_routes():
     assert '"deployment_git_sha": deployment_git_sha()' in source
 
 
-def test_exact_main_workflow_is_manual_and_fail_closed():
+def test_exact_main_workflow_has_bounded_bootstrap_and_fail_closed():
     source = WORKFLOW.read_text(encoding="utf-8")
 
     assert "workflow_dispatch:" in source
     assert "schedule:" not in source
-    assert "push:" not in source
+    assert "pull_request:" not in source
+    assert "push:" in source
+    assert "branches:" in source
+    assert "- main" in source
+    assert "paths:" in source
+    assert '- ".github/workflows/exact-main-vercel-deploy.yml"' in source
+    assert "paths-ignore:" not in source
     assert "VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}" in source
     assert 'if [ -z "${VERCEL_TOKEN:-}" ]' in source
     assert "VERCEL_TOKEN is not configured" in source
