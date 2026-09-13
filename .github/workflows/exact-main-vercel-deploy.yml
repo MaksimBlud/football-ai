@@ -2,6 +2,11 @@ name: Exact Main Vercel Deployment
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/exact-main-vercel-deploy.yml"
 
 permissions:
   contents: read
