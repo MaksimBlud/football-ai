@@ -59,7 +59,8 @@ jobs:
 
           with open("vercel.json", encoding="utf-8") as handle:
               vercel = json.load(handle)
-          assert "web_app.py" in vercel["functions"]
+          assert vercel["$schema"] == "https://openapi.vercel.sh/vercel.json"
+          assert "functions" not in vercel
           PY
 
       - name: Validate immutable Supabase snapshot migration
@@ -124,6 +125,7 @@ jobs:
           python -m pytest -q tests/test_publish_product_predictions.py
           python -m pytest -q tests/test_deployment_readiness.py
           python -m pytest -q tests/test_exact_main_vercel_deployment.py
+          python -m pytest -q tests/test_vercel_python_entrypoint_config.py
           python -m pytest -q tests/test_live_product_pipeline.py
           python -m pytest -q tests/test_product_lifecycle.py
           python -m pytest -q tests/test_product_lifecycle_grants.py
