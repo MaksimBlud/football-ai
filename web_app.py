@@ -10,6 +10,7 @@ from functools import lru_cache
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
+from deployment_identity import deployment_git_sha
 from product_portfolio_risk import PORTFOLIO_RISK_SCHEMA_VERSION, build_portfolio_risk_view
 from product_production_readiness import PRODUCTION_READINESS_VERSION
 from product_snapshot_store import load_product_market_view
@@ -62,6 +63,7 @@ def health():
         "match_identity": "stable_product_match_id",
         "portfolio_risk_version": PORTFOLIO_RISK_SCHEMA_VERSION,
         "production_readiness_version": PRODUCTION_READINESS_VERSION,
+        "deployment_git_sha": deployment_git_sha(),
     }
 
 
