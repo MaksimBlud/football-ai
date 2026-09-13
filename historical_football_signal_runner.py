@@ -12,6 +12,7 @@ from historical_rest_congestion import write_rest_reports
 from historical_shot_quality_profile import build_point_in_time_shot_quality, source_capability, write_shot_quality_reports
 from historical_lineup_strength_capability import write_lineup_capability_report
 from historical_tactical_matchup_capability import write_tactical_capability_report
+from historical_true_xg_capability import write_true_xg_capability_report
 from league_runtime_config import EPL_RUNTIME_CONFIG, LA_LIGA_RUNTIME_CONFIG
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 
@@ -46,6 +47,7 @@ def main():
     trajectory=write_trajectory_reports(combined,a.output_dir); rest=write_rest_reports(combined,a.output_dir); shot_quality=write_shot_quality_reports(combined,a.output_dir)
     lineup=write_lineup_capability_report(a.work_dir/"raw",a.output_dir)
     tactical=write_tactical_capability_report(a.work_dir/"raw",a.output_dir)
+    true_xg=write_true_xg_capability_report(a.work_dir/"raw",a.output_dir)
     print(f"HISTORICAL FOOTBALL SIGNAL LAB COMPLETE rows={len(combined)}")
     for k,v in paths.items(): print(f"{k}: {v}")
     print("WINDOW ABLATION"); print(window.to_string(index=False))
@@ -57,5 +59,6 @@ def main():
     print("SHOT QUALITY PROXY INCREMENTAL (true xG is a separate data-source gate)"); print(shot_quality.to_string(index=False))
     print("LINEUP STRENGTH SOURCE CAPABILITY (schema detection only; temporal provenance required)"); print(lineup.to_string(index=False))
     print("TACTICAL MATCHUP SOURCE CAPABILITY (team stats are not relabelled as tactics)"); print(tactical.to_string(index=False))
+    print("TRUE xG SOURCE CAPABILITY (shots/SOT are not synthesized into xG)"); print(true_xg.to_string(index=False))
     print("Research only: no training promotion, Supabase writes, Structural changes, or .pkl changes.")
 if __name__=="__main__": main()
