@@ -10,11 +10,13 @@ on:
       - 'historical_football_market_incremental.py'
       - 'historical_team_strength_trajectory.py'
       - 'historical_rest_congestion.py'
+      - 'historical_shot_quality_profile.py'
       - 'tests/test_historical_football_signal_lab.py'
       - 'tests/test_historical_football_window_audit.py'
       - 'tests/test_historical_football_market_incremental.py'
       - 'tests/test_historical_team_strength_trajectory.py'
       - 'tests/test_historical_rest_congestion.py'
+      - 'tests/test_historical_shot_quality_profile.py'
       - '.github/workflows/historical-football-signal-lab.yml'
   pull_request:
     paths:
@@ -24,11 +26,13 @@ on:
       - 'historical_football_market_incremental.py'
       - 'historical_team_strength_trajectory.py'
       - 'historical_rest_congestion.py'
+      - 'historical_shot_quality_profile.py'
       - 'tests/test_historical_football_signal_lab.py'
       - 'tests/test_historical_football_window_audit.py'
       - 'tests/test_historical_football_market_incremental.py'
       - 'tests/test_historical_team_strength_trajectory.py'
       - 'tests/test_historical_rest_congestion.py'
+      - 'tests/test_historical_shot_quality_profile.py'
       - '.github/workflows/historical-football-signal-lab.yml'
 jobs:
   validate:
@@ -43,7 +47,7 @@ jobs:
       - name: Snapshot production hashes
         run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
       - name: Run historical signal research tests
-        run: pytest -q tests/test_historical_football_signal_lab.py tests/test_historical_football_window_audit.py tests/test_historical_football_market_incremental.py tests/test_historical_team_strength_trajectory.py tests/test_historical_rest_congestion.py
+        run: pytest -q tests/test_historical_football_signal_lab.py tests/test_historical_football_window_audit.py tests/test_historical_football_market_incremental.py tests/test_historical_team_strength_trajectory.py tests/test_historical_rest_congestion.py tests/test_historical_shot_quality_profile.py
       - name: Run three-league signal lab
         run: python historical_football_signal_runner.py
       - name: Verify production hashes unchanged
