@@ -17,7 +17,7 @@ concurrency:
 
 env:
   EXPECTED_VERCEL_TEAM_ID: team_EDncljUUtFDTumz5hYleW8R3
-  VERCEL_PROJECT_ID: prj_lXttnTmlPncJPn2nKGSlid2vaxvg
+  EXPECTED_VERCEL_PROJECT_ID: prj_lXttnTmlPncJPn2nKGSlid2vaxvg
   PROD_BASE_URL: https://football-ai-real-epl-snapshot.vercel.app
 
 jobs:
@@ -62,7 +62,7 @@ jobs:
           set -euo pipefail
           curl -fsS \
             -H "Authorization: Bearer $VERCEL_TOKEN" \
-            "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID" \
+            "https://api.vercel.com/v9/projects/$EXPECTED_VERCEL_PROJECT_ID" \
             > /tmp/vercel-project.json
           python - <<'PY'
           import json
@@ -70,7 +70,7 @@ jobs:
           from pathlib import Path
 
           payload = json.loads(Path("/tmp/vercel-project.json").read_text(encoding="utf-8"))
-          assert payload.get("id") == os.environ["VERCEL_PROJECT_ID"], payload
+          assert payload.get("id") == os.environ["EXPECTED_VERCEL_PROJECT_ID"], payload
           assert payload.get("accountId") == os.environ["EXPECTED_VERCEL_TEAM_ID"], payload
           print("PASS: scoped token resolves the exact expected Vercel project/team")
           PY
@@ -88,12 +88,12 @@ jobs:
 
           payload = {
               "orgId": os.environ["EXPECTED_VERCEL_TEAM_ID"],
-              "projectId": os.environ["VERCEL_PROJECT_ID"],
+              "projectId": os.environ["EXPECTED_VERCEL_PROJECT_ID"],
           }
           path = Path(".vercel/project.json")
           path.write_text(json.dumps(payload, separators=(",", ":")) + "\n", encoding="utf-8")
           written = json.loads(path.read_text(encoding="utf-8"))
-          assert written.get("projectId") == os.environ["VERCEL_PROJECT_ID"], written
+          assert written.get("projectId") == os.environ["EXPECTED_VERCEL_PROJECT_ID"], written
           assert written.get("orgId") == os.environ["EXPECTED_VERCEL_TEAM_ID"], written
           print("PASS: exact local Vercel project link materialized without team discovery")
           PY
