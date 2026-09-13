@@ -72,11 +72,11 @@ def test_exact_main_workflow_stages_verifies_then_promotes():
     assert "football-ai-real-epl-snapshot.vercel.app" in source
 
 
-def test_staged_vercel_curl_uses_job_env_auth_without_forwarding_token():
+def test_staged_vercel_curl_passes_token_as_global_cli_option():
     source = WORKFLOW.read_text(encoding="utf-8")
 
-    assert 'vercel curl /health --deployment "$DEPLOYMENT_URL" >' in source
-    assert 'vercel curl "$path" --deployment "$DEPLOYMENT_URL" >' in source
+    assert 'vercel --token "$VERCEL_TOKEN" curl /health --deployment "$DEPLOYMENT_URL" >' in source
+    assert 'vercel --token "$VERCEL_TOKEN" curl "$path" --deployment "$DEPLOYMENT_URL" >' in source
     assert 'vercel curl /health --deployment "$DEPLOYMENT_URL" --token' not in source
     assert 'vercel curl "$path" --deployment "$DEPLOYMENT_URL" --token' not in source
 
