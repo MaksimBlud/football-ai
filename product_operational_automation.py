@@ -38,6 +38,7 @@ CYCLE_ACTION_REQUIRED = "ACTION_REQUIRED"
 
 PAIR_COLUMNS = ",".join(
     [
+        "pair_key",
         "experiment_id",
         "league",
         "event_id",
@@ -126,6 +127,29 @@ def _validate_pair_row(row: Mapping[str, Any]) -> None:
         raise ValueError(f"unexpected EPL model artifact SHA for event {event_id}")
 
 
+def _eligible_latest_pairs(
+    pair_rows: Iterable[Mapping[str, Any]],
+    *,
+    now: datetime,
+    horizon: datetime,
+) -> dict[str, dict[str, Any]]:
+    eligible: list[dict[str, Any]] = []
+    for raw in pair_rows:
+        row = dict(raw)
+        if _text(row.get("league")) != PAIR_LEAGUE:
+            continue
+        kickoff = _dt(row.get("kickoff_utc"))
+        if not (now < kickoff < horizon):
+            continue
+        _validate_pair_row(row)
+        eligible.append(row)
+    return _latest_by_event(
+        eligible,
+        event_field="event_id",
+        timestamp_field="model_generated_at_utc",
+    )
+
+
 def build_incremental_product_rows(
     pair_rows: Iterable[Mapping[str, Any]],
     product_rows: Iterable[Mapping[str, Any]],
@@ -133,43 +157,28 @@ def build_incremental_product_rows(
     now_utc: Any,
     horizon_days: int = 14,
 ) -> list[dict[str, Any]]:
-    """Bridge only genuinely newer durable AI generations into product snapshots."""
+    """Publish only the first automated product snapshot for a provider event.
+
+    Newer pair-ledger generations for an already-published event are deliberately
+    held. Automatic forecast revisions require a separate revision/evaluation
+    contract so one fixture cannot inflate Lifecycle/Reliability sample counts.
+    """
     if horizon_days < 1 or horizon_days > 30:
         raise ValueError("horizon_days must be between 1 and 30")
     now = _dt(now_utc)
     horizon = now + timedelta(days=horizon_days)
-
-    eligible_pairs: list[dict[str, Any]] = []
-    for raw in pair_rows:
-        row = dict(raw)
-        kickoff = _dt(row.get("kickoff_utc"))
-        if not (now < kickoff < horizon):
-            continue
-        _validate_pair_row(row)
-        eligible_pairs.append(row)
-
-    latest_pairs = _latest_by_event(
-        eligible_pairs,
-        event_field="event_id",
-        timestamp_field="model_generated_at_utc",
-    )
-    latest_products = _latest_by_event(
-        product_rows,
-        event_field="event_id",
-        timestamp_field="generated_at_utc",
-    )
+    latest_pairs = _eligible_latest_pairs(pair_rows, now=now, horizon=horizon)
+    published_event_ids = {
+        _text(row.get("event_id")) for row in product_rows if _text(row.get("event_id"))
+    }
 
     pending: list[dict[str, Any]] = []
     for event_id, pair in sorted(
         latest_pairs.items(), key=lambda item: _dt(item[1]["kickoff_utc"])
     ):
-        previous = latest_products.get(event_id)
+        if event_id in published_event_ids:
+            continue
         pair_generated = _dt(pair["model_generated_at_utc"])
-        if previous is not None:
-            previous_generated = _dt(previous["generated_at_utc"])
-            if pair_generated <= previous_generated:
-                continue
-
         run_id = f"pair-ledger-operational:{pair_generated.strftime('%Y%m%dT%H%M%SZ')}"
         snapshot = snapshot_from_pair_row(pair, run_id=run_id)
         snapshot["publisher_version"] = OPERATIONAL_PUBLISHER_VERSION
@@ -187,7 +196,7 @@ def source_coverage(
     now_utc: Any,
     horizon_days: int = 14,
 ) -> dict[str, Any]:
-    """Explain whether every known future EPL odds event has a validated AI source."""
+    """Explain future product coverage and held forecast revisions."""
     now = _dt(now_utc)
     horizon = now + timedelta(days=horizon_days)
 
@@ -206,16 +215,19 @@ def source_coverage(
     product_ids = future_event_ids(product_rows, "commence_time_utc")
     product_ids |= future_event_ids(pending_product_rows, "commence_time_utc")
 
-    valid_pair_ids: set[str] = set()
-    for raw in pair_rows:
-        row = dict(raw)
-        if _text(row.get("league")) != PAIR_LEAGUE:
-            continue
-        kickoff = _dt(row.get("kickoff_utc"))
-        if not (now < kickoff < horizon):
-            continue
-        _validate_pair_row(row)
-        valid_pair_ids.add(_text(row.get("event_id")))
+    latest_pairs = _eligible_latest_pairs(pair_rows, now=now, horizon=horizon)
+    valid_pair_ids = set(latest_pairs)
+    latest_products = _latest_by_event(
+        product_rows,
+        event_field="event_id",
+        timestamp_field="generated_at_utc",
+    )
+    revision_candidates = 0
+    for event_id in valid_pair_ids & set(latest_products):
+        if _dt(latest_pairs[event_id]["model_generated_at_utc"]) > _dt(
+            latest_products[event_id]["generated_at_utc"]
+        ):
+            revision_candidates += 1
 
     missing_product = odds_ids - product_ids
     ready_from_pair = missing_product & valid_pair_ids
@@ -237,6 +249,7 @@ def source_coverage(
         "ready_from_pair_ledger": len(ready_from_pair),
         "waiting_for_prediction_source": len(waiting),
         "waiting_event_ids": sorted(waiting),
+        "revision_candidates_held": revision_candidates,
         "coverage_ratio": (len(odds_ids & product_ids) / len(odds_ids)) if odds_ids else None,
     }
 
@@ -279,6 +292,7 @@ def build_operational_report(
             "research_target_outcomes_read": False,
             "betting_actions": False,
             "staking_actions": False,
+            "automatic_forecast_revisions": False,
             "prediction_bridge_source": PAIR_TABLE,
             "prediction_destination": PRODUCT_TABLE,
             "lifecycle_writes_append_only": True,
