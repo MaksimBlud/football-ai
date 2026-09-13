@@ -1,8 +1,11 @@
 """Run Product Operational Automation v1 from durable Supabase sources.
 
 Default mode is dry-run. ``--publish`` performs only two append-only operations:
-1. newer outcome-free EPL pair-ledger AI generations -> product snapshots;
+1. first eligible outcome-free EPL pair-ledger AI row for a new event -> product snapshot;
 2. missing product lifecycle facts from stored odds + canonical finished results.
+
+Automatic forecast revisions for an already-published event are deliberately
+held until a separate revision/evaluation contract exists.
 
 No provider call, inference, training, model promotion, research target read, bet,
 or stake occurs here.
@@ -55,7 +58,7 @@ def _fetch_pair_rows(client: Any, *, page_size: int = DEFAULT_PAGE_SIZE) -> list
         response = (
             client.table(PAIR_TABLE)
             .select(PAIR_COLUMNS)
-            .order("model_generated_at_utc")
+            .order("pair_key")
             .range(offset, offset + page_size - 1)
             .execute()
         )
