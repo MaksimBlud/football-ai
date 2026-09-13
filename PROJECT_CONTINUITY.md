@@ -284,6 +284,18 @@ This converts the former deployment uncertainty into a concrete infrastructure g
 
 Do not claim exact-main is live until this secret exists and the workflow completes staged SHA proof + product smoke + promotion + public SHA proof.
 
+## Post-merge public runtime proof — 2026-09-13 14:17 UTC
+
+After continuity PR #301 merged, a new read-only verification was performed against both Vercel deployment metadata and the public production alias:
+- current GitHub `main` after PR #301 = `142bfd1d1d0604cbf7b92f15909a243639f5c8a9`;
+- Vercel deployment listing from `2026-09-13T14:00:00Z` onward returned `0` deployments, consistent with the fail-closed credential stop;
+- public `/health` returned HTTP `200` but exposed only `status`, `mode`, `credential_mode`, and `match_identity`; the new `deployment_git_sha` field from PR #300 is absent;
+- public `/product-market-view` returned HTTP `200` and still serves the older product-market contract;
+- public `/portfolio-risk-view` returned HTTP `404`;
+- public `/production-readiness-view` returned HTTP `404`.
+
+Therefore the public alias is not merely unproven: these route/health observations positively demonstrate that it is **not running the PR #300 exact-main runtime contract**. No deployment was created by this post-check and production remained unchanged.
+
 ---
 
 # Durable PR reference — 2026-09-13
@@ -292,20 +304,22 @@ Product/runtime chain: #267–#277 foundation/live pipeline; #278 Decision Frame
 
 Signal discovery chain: #291 `TEAM_STRENGTH_TRAJECTORY_V1`; #292 `REST_CONGESTION_V1`; #293 `SHOT_QUALITY_PROXY_V1`; #294 blocks 1–3 continuity; #295 Lineup capability; #296 Tactical capability; #297 True xG capability; #298 fixed interactions; #299 blocks 4–7 continuity.
 
+Continuity chain: #301 records the exact-main deployment blocker and execution pointer; the current continuity-only follow-up records the post-merge public runtime proof.
+
 All substantive PRs were required to pass their applicable Product/Research/league CI and production artifact guards before exact-head merge.
 
 ---
 
 # Current checkpoint
 
-- Latest substantive repository `main`: PR #300 merge `4e2e8d5848d07ef6ba924e669833f20d807ddd32`; this continuity update is documentation-only.
+- Latest substantive repository change: PR #300 merge `4e2e8d5848d07ef6ba924e669833f20d807ddd32`; latest merged continuity checkpoint before this follow-up: PR #301 merge `142bfd1d1d0604cbf7b92f15909a243639f5c8a9`.
 - Production `.pkl` state was not changed by Signal Discovery or deployment work.
 - Signal Discovery blocks 1–7: **COMPLETE** with stop-rules above.
 - Frozen V1.1 and EPL paired-AI outcome gates remain closed; no-peek remains binding.
 - Product snapshots/lifecycle/reliability last proven state remains `20` snapshots, `34` lifecycle events (`20/7/7`), `7` exact-scope settled, `ACCUMULATING_SAMPLE / INCONCLUSIVE`.
 - Readiness remains EPL 1X2 operational; goals provisional; handicap/corners research-only.
 - Exact-main deployment contract is merged and CI-proven, but production deploy is **not complete** because `VERCEL_TOKEN` is missing from GitHub Actions.
-- The existing public Vercel alias must still be treated as lagging/unproven against current main.
+- Public production is positively proven to lag PR #300: `/health` lacks `deployment_git_sha`, `/product-market-view` is `200`, while `/portfolio-risk-view` and `/production-readiness-view` are `404`; no Vercel deployments appeared after `14:00 UTC` during the deployment attempt window.
 
 # Текущий execution pointer
 
