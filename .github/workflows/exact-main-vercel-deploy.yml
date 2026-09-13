@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  VERCEL_ORG_ID: team_EDncljUUtFDTumz5hYleW8R3
+  EXPECTED_VERCEL_TEAM_ID: team_EDncljUUtFDTumz5hYleW8R3
   VERCEL_PROJECT_ID: prj_lXttnTmlPncJPn2nKGSlid2vaxvg
   PROD_BASE_URL: https://football-ai-real-epl-snapshot.vercel.app
 
@@ -56,6 +56,25 @@ jobs:
           fi
           echo "PASS: Vercel token is configured; secret value not printed"
 
+      - name: Verify scoped token can access exact project
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID" \
+            > /tmp/vercel-project.json
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload = json.loads(Path("/tmp/vercel-project.json").read_text(encoding="utf-8"))
+          assert payload.get("id") == os.environ["VERCEL_PROJECT_ID"], payload
+          assert payload.get("accountId") == os.environ["EXPECTED_VERCEL_TEAM_ID"], payload
+          print("PASS: scoped token resolves the exact expected Vercel project/team")
+          PY
+
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
@@ -66,7 +85,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          vercel pull --yes --environment=production \
+            --project="$VERCEL_PROJECT_ID" \
+            --token="$VERCEL_TOKEN"
 
       - name: Create staged production deployment from exact main
         id: stage
@@ -74,6 +95,7 @@ jobs:
         run: |
           set -euo pipefail
           DEPLOYMENT_URL="$(vercel deploy --prod --skip-domain --yes \
+            --project="$VERCEL_PROJECT_ID" \
             --token="$VERCEL_TOKEN" \
             --env "DEPLOYMENT_GIT_SHA=$SOURCE_SHA" \
             --build-env "DEPLOYMENT_GIT_SHA=$SOURCE_SHA" \
