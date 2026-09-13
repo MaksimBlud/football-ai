@@ -39,6 +39,118 @@
 
 CORNERS10 остаётся полезным football-only signal для 1X2, но не доказательством качества corner-total prediction. Historical corner-total V1–V4 не переоткрывать на тех же данных без independent evidence.
 
+## Signal Discovery 2026-09-13 — BLOCKS 1–3 COMPLETE / RESEARCH-ONLY
+
+User explicitly authorized a bounded historical research pass for three candidate signal classes. This work is an explicit research diversion and **does not replace the accepted P0–P4 anti-jump strategy, alter frozen cohorts, open prospective outcomes or authorize Candidate V2/production changes**.
+
+Common methodology:
+- existing Historical Football Signal Lab reused instead of creating a second incompatible research framework;
+- Football-Data seasons `2016-2017` through `2025-2026`, EPL + La Liga + Serie A, `11,400` historical fixtures total;
+- expanding-season walk-forward: first 3 seasons train, next season test, then expand; 7 evaluated seasons per league;
+- fixed feature contracts were coded before reading the new ablation results; no window/threshold search after results;
+- each candidate compared both with football-only `CORNERS10` and with `MARKET_MODEL` to separate football signal quality from incremental value beyond market;
+- all features are point-in-time and current-match values/results cannot affect current-match features by regression contract;
+- no frozen prospective target/outcome tables were read; no Supabase writes; no paid-provider calls; no training/promotion; production `.pkl` hashes were checked before/after every full historical run and remained unchanged.
+
+### Block 1 — `TEAM_STRENGTH_TRAJECTORY_V1` — FOOTBALL-ONLY STRONG / MARKET-INCREMENTAL NOT PROVEN
+
+Fixed signals:
+- pre-match Elo level difference;
+- five-prior-match Elo trajectory difference;
+- five-prior-match performance-vs-Elo-expectation residual difference.
+
+Historical paired result vs `CORNERS10`:
+- EPL: accuracy `+0.003759`, Brier `-0.010168`, log loss `-0.012839`; Brier wins `7/7`, log-loss wins `6/7`;
+- La Liga: accuracy `+0.018421`, Brier `-0.012917`, log loss `-0.016970`; Brier/log-loss wins `7/7`;
+- Serie A: accuracy `+0.007895`, Brier `-0.009481`, log loss `-0.013597`; Brier/log-loss wins `7/7`.
+
+Historical paired result vs `MARKET_MODEL`:
+- EPL: Brier `+0.000235`, log loss `+0.000741`;
+- La Liga: Brier `+0.000092`, log loss `+0.000356`;
+- Serie A: Brier `-0.000435`, log loss `-0.000412`.
+
+Decision: trajectory is a **promising portable football-only candidate signal**, but it has no robust historical incremental edge beyond market and is not promoted or inserted into frozen prospective cohorts. Any future use must go through a separately justified Candidate/prospective contract after higher-priority evidence gates permit it.
+
+PR #291:
+- head `0c0332555bcf30af931ad3083ff8ce75e80d254d`;
+- all Product/Research/Serie A/Bundesliga/Ligue 1/Eredivisie + Historical Signal Lab validations green;
+- historical run `34747661915`, job `103698449664`; regression suite `13 passed`;
+- artifact `10315155019`, digest `sha256:0bbe33c5a7fb456860cb421a6ef75f7456fe1d2d32612e724573e51bd77386a3`;
+- exact-head merge `174775e5f80710aac36aa492b065ab6b1bc25ceb`.
+
+### Block 2 — `REST_CONGESTION_V1` — NEGATIVE / CLOSED
+
+Source limitation was declared before results: Football-Data league history does not provide full cup/European/travel calendar, therefore these are explicitly **league-schedule proxies**, not full physical congestion.
+
+Fixed signals:
+- relative rest days since prior league match;
+- relative league matches in prior 7 days;
+- relative league matches in prior 14 days.
+
+Historical paired result vs `CORNERS10`:
+- EPL: Brier `+0.002043`, log loss `+0.005107`;
+- La Liga: Brier `+0.000933`, log loss `+0.001509`;
+- Serie A: Brier `+0.002033`, log loss `+0.013757`.
+
+Historical paired result vs `MARKET_MODEL`:
+- EPL: Brier `+0.002429`, log loss `+0.007620`;
+- La Liga: Brier `+0.001607`, log loss `+0.002576`;
+- Serie A: Brier `+0.002104`, log loss `+0.015254`.
+
+Decision: exact `REST_CONGESTION_V1` is **historically negative and CLOSED**. Do not tune alternative windows/thresholds on the same sample. Reopen only with independent richer schedule evidence/source that includes cup/Europe/travel or another genuinely new hypothesis.
+
+PR #292:
+- head `a5467159b7baae1872277180e2677b5a54c61c44`;
+- all seven validation contours green; historical regression suite `16 passed`;
+- historical run `34747790372`, job `103698795459`;
+- artifact `10314692143`, digest `sha256:852025fcc582561efcc195f2bc4cb2d65124a78e3fb75dcd668b6294006741ed`;
+- exact-head merge `0eda74a2bc9dd5a0bbd8246add263b26ca79edd2`.
+
+### Block 3 — `SHOT_QUALITY_PROXY_V1` — FOOTBALL-ONLY PROMISING / MARKET-INCREMENTAL NEGATIVE; TRUE xG DATA-SOURCE GATE
+
+The free historical source exposes shots/shots-on-target but the actual 30 downloaded season files exposed **no detected true-xG column pair**. The implementation therefore deliberately uses only a `SHOT_QUALITY_PROXY` and never calls it xG.
+
+Fixed rolling-10 point-in-time profile:
+- shots for/against;
+- shots on target for/against;
+- aggregate SOT/shots attacking and conceding rates;
+- home-away differences for the six fields above.
+
+Evidence tiers were frozen before results:
+- EPL + La Liga = `PRIMARY`;
+- Serie A = `SOURCE_CAVEAT_SENSITIVITY` because the source documents a historical shots-definition inconsistency from 2018/19 onward.
+
+Source capability proof from the real 10-season downloads:
+- EPL: `shots_complete=True`, `true_xg_pair_detected=False`;
+- La Liga: `shots_complete=True`, `true_xg_pair_detected=False`;
+- Serie A: `shots_complete=True`, `true_xg_pair_detected=False`.
+
+PRIMARY historical paired result vs `CORNERS10`:
+- EPL: accuracy `-0.003008`, Brier `-0.001493`, log loss `-0.001770`; Brier/log-loss wins `5/7`;
+- La Liga: accuracy `+0.001880`, Brier `-0.004266`, log loss `-0.006725`; Brier/log-loss wins `7/7`.
+
+PRIMARY historical paired result vs `MARKET_MODEL`:
+- EPL: accuracy `-0.004511`, Brier `+0.002504`, log loss `+0.004006`;
+- La Liga: accuracy `+0.003383`, Brier `+0.001169`, log loss `+0.001616`.
+
+Serie A sensitivity-only result also improved `CORNERS10` on Brier/log loss but worsened `MARKET_MODEL`; it is not used to upgrade the evidence tier.
+
+Decision: free shot/SOT profile is a **promising football-only research candidate but historically market-incremental negative**. Do not promote it or start same-sample feature/window search. **True xG remains a separate `DATA_SOURCE_GATE`** requiring a supported source plus a new preregistered evaluation; proxy data must never be relabeled as xG.
+
+PR #293:
+- head `e3252edbbda71b975b65f01d8c20b268b134d534`;
+- all seven validation contours green; historical regression suite `20 passed`;
+- historical run `34747980991`, job `103699296490`;
+- artifact `10315020904`, digest `sha256:51e7f65f61873e318b3878eb37badd734af3c0d1a0e1893efbddcbe9ec7b387e`;
+- exact-head merge `2dfc375d51a6d0c825597c1280b77d5120c0bd00`.
+
+Signal-discovery conclusion:
+- strongest new football-only evidence = `TEAM_STRENGTH_TRAJECTORY_V1`;
+- `SHOT_QUALITY_PROXY_V1` is smaller but directionally useful football-only evidence in both PRIMARY leagues;
+- neither trajectory nor shot-quality proxy proved robust incremental value beyond the bookmaker market in this historical protocol;
+- league-only rest/congestion proxy is negative and closed;
+- no new prospective cohort was created and no frozen membership changed. Candidate V2/model promotion remains closed until the existing evidence gates permit a new, separately preregistered decision.
+
 ---
 
 # Product contracts
@@ -66,7 +178,7 @@ Path: immutable prediction snapshot -> Supabase -> independent odds join by prov
 
 Public alias: `https://football-ai-real-epl-snapshot.vercel.app`.
 
-Last exact public production deployment is older than repository contracts #278–#289. Do not claim later Decision/Lifecycle/Reliability/Readiness/Operational-Automation endpoints or fields are live there until exact-main redeploy.
+Last exact public production deployment is older than repository contracts #278–#293. Do not claim later Decision/Lifecycle/Reliability/Readiness/Operational-Automation or signal-research changes are live there until exact-main redeploy.
 
 ## Product Lifecycle v1 — CLOSED / LIVE RUNTIME-PROVEN
 
@@ -219,7 +331,9 @@ PR #289 — bootstrap cleanup:
 
 Product chain: #267–#277 foundation/live pipeline; #278 Decision Framework; #279 Lifecycle; #280 lifecycle security hardening; #281 Reliability; #282 Portfolio/Risk; #283 continuity correction; #284 Production Readiness; #286 Operational Automation v1; #287 pre-runtime continuity; #288 bounded runtime bootstrap; #289 bootstrap cleanup.
 
-All substantive product/runtime PRs above passed Product + required Research/league CI before exact-head merge.
+Signal discovery chain: #291 `TEAM_STRENGTH_TRAJECTORY_V1`; #292 `REST_CONGESTION_V1`; #293 `SHOT_QUALITY_PROXY_V1`.
+
+All substantive product/runtime and signal-research PRs above passed Product + required Research/league CI; signal PRs additionally passed the Historical Football Signal Lab and production hash guard before exact-head merge.
 
 ---
 
@@ -231,6 +345,10 @@ All substantive product/runtime PRs above passed Product + required Research/lea
 - `EPL_AI_MARKET_PAIR_V1`: separate frozen experiment; do not infer cohort membership from product bootstrap.
 - Any paid refresh = separate manual gate.
 - Candidate V2/model promotion stays closed until corresponding evidence gate.
+- `TEAM_STRENGTH_TRAJECTORY_V1`: retain as football-only candidate evidence; no production/prospective insertion without a new allowed contract.
+- `REST_CONGESTION_V1`: exact league-only proxy **CLOSED / NEGATIVE**; no same-sample retuning.
+- `SHOT_QUALITY_PROXY_V1`: football-only candidate evidence, market-incremental negative; true xG = separate `DATA_SOURCE_GATE`.
+- Signal Discovery blocks 1–3 requested on 2026-09-13 are complete; they do not alter any existing frozen sample or gate.
 
 ## Product
 
@@ -240,7 +358,7 @@ Current foundation:
 
 Operational Automation executor/runtime/idempotency block is now closed. The natural GitHub `schedule` event should still be observed when a later cron occurrence exists, but lack of that observation must not be confused with a failure of the already-proven runtime executor.
 
-Следующая safe последовательность:
+Следующая safe последовательность после завершения explicitly requested signal-research diversion:
 1. **Exact-main web deployment**: redeploy the public alias from then-current exact `main`, then smoke-check `/`, `/health`, `/api/product/markets`, `/api/product/reliability`, `/api/product/portfolio`, `/api/product/readiness` and verify the deployment commit SHA equals GitHub main.
 2. **Second markets through readiness gates**: goal total first. Close its live model probability, bookmaker-price, settlement, lifecycle and empirical-reliability contracts before any production activation.
 3. Handicap/corners stay research-only until their own probability/price/settlement/evidence contracts exist; CORNERS10 as a 1X2 signal is not a corner-total production model.
@@ -272,14 +390,25 @@ Key facts and decisions:
 - PR #289 removed the temporary trigger, passed all six CI contours, exact-head merged as `26608134c1cb68a6ce68da5d8c3c304870d88f4c`, restoring production workflow to `workflow_dispatch + schedule`;
 - no Odds API credits, production model artifacts, training, inference, promotion, bets or stakes were used in this runtime-proof closure.
 
+Later on 2026-09-13 the user explicitly authorized Signal Discovery blocks 1–3. This bounded historical pass:
+- reused the existing leakage-safe three-league Historical Football Signal Lab;
+- tested trajectory, league-only rest/congestion, and shot-quality proxy signals with fixed predeclared contracts;
+- closed PRs #291/#292/#293 through branch -> regression tests -> full required CI -> fresh-main -> exact-head merge;
+- found trajectory strongly useful as football-only state but not robustly incremental over market;
+- found exact league-only rest/congestion proxy negative and closed it without same-data tuning;
+- found shots/SOT proxy modestly useful football-only in both PRIMARY leagues but negative over market; confirmed no true-xG columns in the downloaded source and kept true xG as a separate data-source gate;
+- read no frozen prospective outcomes, made no Supabase writes, used no paid provider, and changed no production model artifact/training/promotion state.
+
 # Current checkpoint
 
-- Latest product/runtime code main before this continuity-only update: `26608134c1cb68a6ce68da5d8c3c304870d88f4c`.
-- Durable product snapshots: `20` total; duplicate event IDs `0`; future EPL coverage `13/13`.
-- Lifecycle: `20 registered / 7 market-observed / 7 settled = 34`; duplicate event keys `0`; pending eligible lifecycle facts `0`.
+- Latest repository main after substantive Signal Discovery code: `2dfc375d51a6d0c825597c1280b77d5120c0bd00`; the following continuity update is documentation-only.
+- Latest product/runtime behavior remains the previously proven Operational Automation contract; signal research did not alter product runtime or model artifacts.
+- Durable product snapshots: `20` total; duplicate event IDs `0`; future EPL coverage `13/13` at last live product proof.
+- Lifecycle: `20 registered / 7 market-observed / 7 settled = 34`; duplicate event keys `0`; pending eligible lifecycle facts `0` at last live product proof.
 - Reliability exact frozen EPL scope: `7` settled, `ACCUMULATING_SAMPLE / INCONCLUSIVE`; do not overinterpret descriptive metrics.
 - Readiness: EPL 1X2 operational; goals provisional; handicap/corners research-only.
 - Operational Automation executor/runtime/idempotency is live-proven. Natural `event=schedule` occurrence is still an external scheduler observation, not an unproven runtime-code path.
 - Production workflow is restored to `workflow_dispatch + cron 37 */2 * * *`, `contents: read`, no Odds API key.
-- Public Vercel runtime still lags repository main; **exact-main redeploy is the next product block**.
+- Signal Discovery status: trajectory = promising football-only / market-incremental unproven; rest proxy = negative/closed; shot-quality proxy = promising football-only / market-incremental negative; true xG = data-source gate.
+- Public Vercel runtime still lags repository main; **exact-main redeploy resumes as the next product block**.
 - Research V1.1 outcome gate remains closed; no-peek is binding.
