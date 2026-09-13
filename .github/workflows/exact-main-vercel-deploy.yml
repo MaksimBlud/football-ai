@@ -75,30 +75,34 @@ jobs:
           print("PASS: scoped token resolves the exact expected Vercel project/team")
           PY
 
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
-
-      - name: Record Vercel CLI version
-        run: vercel --version
-
-      - name: Link checkout to exact Vercel project
+      - name: Materialize exact Vercel project link
         shell: bash
         run: |
           set -euo pipefail
           rm -rf .vercel
-          vercel link --yes \
-            --project="$VERCEL_PROJECT_ID" \
-            --token="$VERCEL_TOKEN"
+          mkdir -p .vercel
           python - <<'PY'
           import json
           import os
           from pathlib import Path
 
-          payload = json.loads(Path(".vercel/project.json").read_text(encoding="utf-8"))
-          assert payload.get("projectId") == os.environ["VERCEL_PROJECT_ID"], payload
-          assert payload.get("orgId") == os.environ["EXPECTED_VERCEL_TEAM_ID"], payload
-          print("PASS: local Vercel link matches exact expected project/team")
+          payload = {
+              "orgId": os.environ["EXPECTED_VERCEL_TEAM_ID"],
+              "projectId": os.environ["VERCEL_PROJECT_ID"],
+          }
+          path = Path(".vercel/project.json")
+          path.write_text(json.dumps(payload, separators=(",", ":")) + "\n", encoding="utf-8")
+          written = json.loads(path.read_text(encoding="utf-8"))
+          assert written.get("projectId") == os.environ["VERCEL_PROJECT_ID"], written
+          assert written.get("orgId") == os.environ["EXPECTED_VERCEL_TEAM_ID"], written
+          print("PASS: exact local Vercel project link materialized without team discovery")
           PY
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Record Vercel CLI version
+        run: vercel --version
 
       - name: Pull production project settings
         shell: bash
