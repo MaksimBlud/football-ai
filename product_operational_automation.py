@@ -187,7 +187,7 @@ def source_coverage(
     now_utc: Any,
     horizon_days: int = 14,
 ) -> dict[str, Any]:
-    """Explain whether every known future EPL odds event has a durable AI source."""
+    """Explain whether every known future EPL odds event has a validated AI source."""
     now = _dt(now_utc)
     horizon = now + timedelta(days=horizon_days)
 
@@ -205,11 +205,21 @@ def source_coverage(
     odds_ids = future_event_ids(odds_rows, "commence_time_utc")
     product_ids = future_event_ids(product_rows, "commence_time_utc")
     product_ids |= future_event_ids(pending_product_rows, "commence_time_utc")
-    pair_ids = future_event_ids(pair_rows, "kickoff_utc")
+
+    valid_pair_ids: set[str] = set()
+    for raw in pair_rows:
+        row = dict(raw)
+        if _text(row.get("league")) != PAIR_LEAGUE:
+            continue
+        kickoff = _dt(row.get("kickoff_utc"))
+        if not (now < kickoff < horizon):
+            continue
+        _validate_pair_row(row)
+        valid_pair_ids.add(_text(row.get("event_id")))
 
     missing_product = odds_ids - product_ids
-    ready_from_pair = missing_product & pair_ids
-    waiting = missing_product - pair_ids
+    ready_from_pair = missing_product & valid_pair_ids
+    waiting = missing_product - valid_pair_ids
 
     if not odds_ids:
         state = SOURCE_NO_FUTURE_EVENTS
