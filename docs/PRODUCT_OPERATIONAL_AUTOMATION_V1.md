@@ -10,8 +10,8 @@ without adding a new forecasting or betting system.
 The scheduled cycle is:
 
 1. read already-produced outcome-free EPL AI rows from `epl_ai_market_pair_ledger`;
-2. append a product prediction snapshot only when that event has a strictly newer
-   model generation than the newest product snapshot;
+2. append the first eligible product prediction snapshot for a provider event
+   that has never been published to the product layer;
 3. reload Supabase so lifecycle facts use the real persisted snapshot id;
 4. append missing lifecycle facts from stored odds and canonical
    `league_finished_results`;
@@ -35,10 +35,20 @@ The product bridge additionally requires:
 
 A row that violates any invariant fails closed.
 
-For each provider event the newest durable pair generation is compared with the
-newest product generation. Equal or older generations are ignored. Therefore a
-new run id cannot duplicate unchanged fixture predictions merely because another
-fixture received a newer generation.
+### Forecast revision policy
+
+Operational Automation v1 publishes at most **one automatic product prediction
+snapshot per provider event**.
+
+If `epl_ai_market_pair_ledger` later contains a newer model generation for an
+event that already has a product prediction snapshot, the generation is reported
+as `revision_candidates_held` but is not automatically published.
+
+This is deliberate. Product Lifecycle and Reliability currently operate on
+immutable prediction snapshots. Publishing repeated revisions for one fixture
+without a canonical revision/evaluation rule could inflate the settled sample
+with several forecasts of the same match. A future revision policy must define
+which forecast is primary for evaluation before automatic revisions are enabled.
 
 ## Source states
 
@@ -79,8 +89,8 @@ web credentials are never a write fallback.
 
 Writes remain append-only:
 
-- `product_prediction_snapshots`: INSERT of a genuinely newer durable model
-  generation;
+- `product_prediction_snapshots`: INSERT only for an eligible provider event
+  with no existing product prediction snapshot;
 - `product_prediction_lifecycle_events`: INSERT of missing lifecycle facts.
 
 ## Schedule
@@ -107,6 +117,7 @@ Operational Automation v1 never:
 - changes a research gate;
 - promotes a model or market;
 - changes Decision Framework tiers;
+- automatically republishes forecast revisions for an already-published event;
 - creates a bet or stake.
 
 ## Deployment boundary
