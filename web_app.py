@@ -5,6 +5,7 @@ stored bookmaker snapshots from Supabase using a low-privilege publishable key
 when available. It never imports model code or production artifacts.
 """
 
+import os
 from functools import lru_cache
 
 from fastapi import FastAPI, HTTPException
@@ -43,6 +44,12 @@ def _credential_mode() -> str:
     return "missing"
 
 
+def _deployment_git_sha() -> str:
+    """Return the immutable source identity exposed by the deployed runtime."""
+    value = os.getenv("DEPLOYMENT_GIT_SHA") or os.getenv("VERCEL_GIT_COMMIT_SHA") or "unknown"
+    return value.strip() or "unknown"
+
+
 @app.get("/")
 def root():
     return FileResponse("static/index_v2.html")
@@ -62,6 +69,7 @@ def health():
         "match_identity": "stable_product_match_id",
         "portfolio_risk_version": PORTFOLIO_RISK_SCHEMA_VERSION,
         "production_readiness_version": PRODUCTION_READINESS_VERSION,
+        "deployment_git_sha": _deployment_git_sha(),
     }
 
 
