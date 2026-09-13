@@ -1,503 +1,221 @@
 # Football AI — Project Continuity
 
-Этот файл — постоянная память проекта между чатами. Фактический source of truth всегда свежий GitHub `main` + live Supabase. Git history хранит полный исторический detail; здесь держим только текущие контракты, доказанные решения, активные gates и официальный execution pointer.
+Этот файл — каноническая память проекта между чатами. Source of truth: **fresh GitHub `main` + live Supabase**. Git history хранит исторический detail; здесь фиксируются только binding rules, текущие contracts/gates, доказанные live facts и следующий execution pointer.
 
-## Как пользоваться
-
-Перед новой рабочей сессией:
-1. Прочитать этот файл.
-2. Коротко сверить свежий `main` и live Supabase.
-3. Не повторять полный аудит без конкретной причины.
-4. Продолжать с раздела **Текущий execution pointer**.
-5. После существенного решения, PR, merge или live-proof обновить этот файл отдельным continuity-only change/PR.
-
-`FOOTBALL_AI_MASTER_BACKUP_2026-08-19.md` — исторический backup/context, но не замена этому файлу. При конфликте приоритет: **fresh GitHub main + live Supabase -> PROJECT_CONTINUITY.md -> historical backup/reports**.
-
----
-
-# Постоянные правила
+## Правила работы
 
 - Repo: `MaksimBlud/football-ai`, default branch `main`.
-- Source of truth: fresh GitHub `main` + live Supabase.
-- Production `.pkl` нельзя менять как побочный эффект research/training.
-- Research/training != production promotion; automatic promotion запрещён.
+- Существенный change: fresh main -> branch -> tests -> PR -> полный CI -> fresh-main compare -> exact-head merge -> post-merge/live proof -> continuity-only update.
+- Production `.pkl` нельзя менять как побочный эффект research/training. Training/research != promotion. Automatic model promotion запрещён.
 - Не делать mass-clean/reset/mass-format и не перетирать параллельные изменения.
-- Существенные изменения: fresh main -> branch -> tests -> PR -> полный CI -> fresh-main compare -> exact-head merge -> post-merge/live proof -> continuity.
-- Frozen/preregistered contracts нельзя ослаблять задним числом.
-- Prospective outcomes нельзя читать до разрешённого frozen gate.
-- Максимально использовать zero-cost/read-only proof; Odds API credits не тратить при наличии бесплатной проверки.
-- Paid-provider workflows остаются manual-only и требуют отдельного explicit user permission.
-- Реальные баги закрывать regression-тестами.
-- Fail-closed red нельзя искусственно превращать в green.
-- Point-in-time history нельзя восстанавливать ретроспективно, если durable source её не сохранил.
-- Training is not promotion; research artifacts не становятся production автоматически.
-- Forecast, value, betting decision и portfolio exposure — разные сущности и не должны подменять друг друга.
+- Frozen/preregistered research contracts нельзя ослаблять задним числом; prospective outcomes нельзя читать до разрешённого gate.
+- Paid provider calls остаются manual-only и требуют explicit permission; сначала использовать zero-cost/read-only proof.
+- Реальные дефекты закрывать regression-тестами. Fail-closed red нельзя искусственно превращать в green.
+- Forecast, value, bet decision и portfolio exposure — разные сущности и не подменяют друг друга.
+- Unsupported markets/results нельзя синтезировать ради полноты UI.
 
 ---
 
-# MASTER ROADMAP — текущая структура
+# Research state
 
-Football AI развивается по двум параллельным линиям:
+## `ALL_LEAGUES_MARKET_ONLY_V1_1` — FROZEN / SAMPLE_CLOSED / COLLECT, DON'T PEEK
 
-1. **Research / evidence line** — prospective collection, frozen experiments, model/market evidence, future Candidate V2 validation.
-2. **Product line** — durable prediction delivery, decision semantics, lifecycle, reliability, portfolio/risk, production readiness, затем operational automation и exact-main deployment.
+- Freeze: `2026-09-12T02:04:34Z`; first seed kickoff: `2026-09-12T12:00:00Z`.
+- Frozen seed: exact `127` immutable keys across 8 leagues.
+- Gate: минимум `100` eligible events **в каждой** лиге + минимум `4` UTC kickoff months **в каждой** лиге; все 8 проходят одновременно.
+- Primary sample = deterministic kickoff/event/key prefix; outcomes закрыты минимум до 24h после latest primary-prefix kickoff.
+- Interim outcome peeking, threshold search, subgroup selection и performance-based optional stopping запрещены.
+- Primary metrics после открытия gate: multiclass log loss + multiclass Brier; secondary: argmax accuracy; report per league + pooled micro + unweighted league macro.
+- До gate разрешены только outcome-blind health/identity/completeness checks и frozen future-only capture.
 
-Research gates имеют приоритет над желанием быстрее увидеть performance. Product layer может развиваться поверх уже существующих immutable forecasts, но не имеет права читать forbidden prospective outcomes или автоматически менять research/model status.
+## `EPL_AI_MARKET_PAIR_V1` — separate frozen EPL experiment
 
----
+- Не смешивать с eight-league MARKET_ONLY cohort и не backfill его product rows как research evidence.
+- Production EPL model нельзя переносить на другие лиги ради ускорения sample.
+- Product bootstrap использовал durable paired-AI outputs, но это не меняет frozen research membership/gates.
+- Frozen model artifact SHA used by the product bridge: `1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5`.
 
-# RESEARCH STATE — действующие контракты
+## Historical corners — CLOSED / STOP RULE
 
-## R0. Paid market freshness / provider collection — MANUAL_PAID_GATE
-
-- Paid odds refresh не запускается без отдельного explicit user permission.
-- Existing budget/safety guards и hard reserve обязательны.
-- Read-only health/status/readiness не является разрешением тратить provider credits.
-- Последний eight-league readiness pass был явно разрешён и стоил 8 Odds API credits (`193 -> 185`).
-- Production `.pkl` при provider collection не меняются.
-
-## R1. `ALL_LEAGUES_MARKET_ONLY_V1_1` — FROZEN / SAMPLE_CLOSED / COLLECT, DON'T PEEK
-
-Frozen facts:
-- predecessor V1 T0: `2026-09-12T01:51:19Z`;
-- V1.1 freeze: `2026-09-12T02:04:34Z`;
-- first seed kickoff: `2026-09-12T12:00:00Z`;
-- seed: exact `127` immutable `prediction_key` из `research/ALL_LEAGUES_MARKET_ONLY_V1_1_MANIFEST.json`;
-- counts: BUNDESLIGA `17`, EPL `20`, EREDIVISIE `18`, LA_LIGA `19`, LIGUE_1 `17`, PRIMEIRA_LIGA `9`, SERIE_A `19`, TURKEY_SUPER_LIG `8`;
-- шесть уже начавшихся 2026-09-11 fixtures исключены навсегда из V1.1.
-
-Frozen evaluation gate:
-- минимум `100` unique eligible events в каждой из 8 лиг;
-- минимум `4` distinct UTC kickoff calendar months в каждой лиге;
-- все 8 лиг должны пройти gate одновременно;
-- primary sample = deterministic prefix `kickoff_utc ASC, event_id ASC, prediction_key ASC`;
-- outcomes закрыты минимум до `24h` после latest primary-prefix kickoff;
-- более строгие league-specific gates всегда имеют приоритет;
-- interim outcome/performance peeking, threshold search, subgroup selection и performance-based optional stopping запрещены.
-
-Frozen metrics после открытия gate:
-- primary: multiclass log loss, multiclass Brier;
-- secondary: 1X2 argmax accuracy;
-- report: per league + pooled micro + unweighted league macro + sample size + outcome-class counts.
-
-Operational monitor:
-- `all_leagues_market_only_v1_1_status.py`;
-- `.github/workflows/all-leagues-v1-1-sample-health.yml`;
-- daily read-only `05:37 UTC` + relevant main pushes/manual;
-- no Odds API credential, no write permission;
-- missing seed/conflicting duplicate/gate-invalid metadata fail closed.
-
-Last frozen baseline recorded before current product work:
-- `127/127` seed keys matched;
-- `0` post-freeze selected events at that proof;
-- all leagues = one kickoff month;
-- `sample_ready=false` for all;
-- `SAMPLE_CLOSED`, `outcome_read_allowed=false`.
-
-Не считать повторный ad-hoc read-only check прогрессом, если sample не изменился.
-
-## R2. `EPL_AI_MARKET_PAIR_V1` — SEPARATE FROZEN EPL AI-vs-market EXPERIMENT
-
-- Не смешивать с eight-league MARKET_ONLY cohort.
-- Не backfill MARKET_ONLY rows как paired-AI evidence.
-- EPL production model нельзя переносить на другие лиги ради ускорения sample.
-- Prior authoritative frozen health before product bootstrap: `12/100 / TIME-FROZEN_GATE`.
-- Product bootstrap 2026-09-12 использовал 20 future EPL rows из `epl_ai_market_pair_ledger`, но это **не переопределяет research cohort membership**.
-- Outcomes/primary evaluation не открывать до existing sample/time/embargo rules.
-
-## R3. Historical corners — CLOSED / STOP RULE
-
-- `SEASON_INVARIANT_CORNERS_V1`: portable strong football-only signal.
-- `CORNER_TOTAL_SIGNAL_V1`: not portable total signal.
-- `CORNER_TOTAL_CALIBRATED_V2`: small portable expected-count signal; не proven Over/Under discriminator.
-- `CORNER_PRESSURE_SIGNAL_V3`: not portable pressure discriminator.
-- `CORNER_COMBINED_DISCRIMINATOR_V4`: not portable combined discriminator.
-- Не делать новый same-data search windows/weights/thresholds/combinations без independent evidence.
-- `CORNERS10` для 1X2 не является доказательством corner-total prediction quality.
-
-## R4. SportsGameOdds corner capability — EXECUTION_SURFACE_GATE
-
-- The Odds API corner probe: `CAPABILITY_MISS`, 1 provider request, 0 credits.
-- SportsGameOdds bounded manual-only probe infrastructure существует.
-- Текущий connected GitHub surface не даёт безопасный `workflow_dispatch` action.
-- Не обходить gate изменением trigger.
-- Fallback при реальном miss/access failure: SportsGameOdds -> Sportmonks -> Betfair Exchange.
+CORNERS10 остаётся полезным football-only signal для 1X2, но не доказательством качества corner-total prediction. Historical corner-total V1–V4 не переоткрывать на тех же данных без independent evidence.
 
 ---
 
-# PRODUCT STATE — 2026-09-12
+# Product contracts
 
-## P0. Product semantics — CLOSED / CONTRACTED
+## Semantics — CLOSED
 
-Ключевой инвариант:
+Binding invariant: **forecast != value != bet != portfolio position**.
 
-**forecast != value != bet != portfolio position**
+- `main_forecast` отвечает «что вероятнее?» и определяется model probability внутри допустимого maturity/reliability tier.
+- `value_signal` — отдельный informational raw-EV signal и никогда не переопределяет forecast.
+- Current tiers: 1X2 operational; total goals provisional/model-only; handicap research-only; corners total research-only.
+- `bet_decision = no_bet` в Decision Framework v1.
+- Canonical regression: Liverpool–Fulham — Liverpool ~67.5% остаётся main forecast, Fulham positive raw EV остаётся только value signal.
 
-`product-decision.v1`:
-- `main_forecast` отвечает «что вероятнее?»;
-- `value_signal` — независимый informational price/raw-EV signal;
-- value никогда не переопределяет forecast;
-- cross-market ranking: сначала `decision_tier`/market maturity, затем probability;
-- provisional market с большей raw probability не вытесняет operational market автоматически;
-- alternatives идут из других forecast-eligible markets;
-- `bet_decision = no_bet` в Framework v1.
+## Durable product pipeline — LIVE-PROVEN
 
-Canonical regression: Liverpool–Fulham — Liverpool ~67.5% остаётся main forecast, Fulham ~16.8% с positive raw EV остаётся только value.
+Path: immutable prediction snapshot -> Supabase -> independent odds join by provider `event_id` -> server contract -> UI/API.
 
-Current decision tiers:
-- `1x2`: tier 2 / operational;
-- `total_goals`: tier 1 / provisional/model-only;
-- `handicap`: tier 0 / research-only;
-- `corners_total`: tier 0 / research-only.
+- First durable product publish: `pair-ledger-bootstrap:20260912T044914Z`, 20 EPL snapshots, 1X2-only.
+- Stable product identity: provider event ID first; deterministic fixture fallback only when event ID absent.
+- Odds and predictions remain independent sources; unsupported goal/BTTS/handicap/corner values не fabricated.
 
-PR #275 закрепил forecast/value separation.
-PR #278 merge `1d0dfd568274fd06f436bf39ff4f8062edfe93ee` добавил Product Decision Framework v1.
+## Public web — LIVE, BUT LAGS REPOSITORY MAIN
 
-## P1. Durable live product pipeline — CLOSED / LIVE-PROVEN
+Public alias: `https://football-ai-real-epl-snapshot.vercel.app`.
 
-Path:
+Last exact public production deployment is older than repository contracts #278–#286. Do not claim later Decision/Lifecycle/Reliability/Readiness/Operational-Automation endpoints or fields are live there until exact-main redeploy.
 
-immutable prediction snapshot -> Supabase -> independent odds join by `event_id` -> server contract -> UI/API.
+## Product Lifecycle v1 — CLOSED / LIVE INITIALIZED
 
-`product_prediction_snapshots`:
-- append-only;
-- RLS enabled;
-- public web uses publishable key, never service-role secret;
-- raw provenance не открыт public SELECT;
-- service role сохраняет append-only write path.
+Append-only facts: `PREDICTION_REGISTERED -> MARKET_OBSERVED -> SETTLED`.
 
-First real durable publish:
-- run `pair-ledger-bootstrap:20260912T044914Z`;
-- inserted `20/20` EPL snapshots;
-- source = existing durable paired-AI ledger, не новый inference;
-- artifact SHA `1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5`;
-- all 20 event IDs had independent stored 1X2 odds;
-- bootstrap intentionally 1X2-only; unsupported markets не fabricated.
+- Old probabilities never rewritten after result.
+- Market observation uses already-stored pre-kickoff prices; it is not called closing line unless qualified.
+- Settlement comes only from canonical finished-results source.
+- P&L/ROI remain null while no actual betting policy/positions exist.
+- Live state immediately before first Operational Automation runtime proof: `20 registered / 5 market-observed / 0 settled`.
 
-Stable match identity:
-- primary `event_<provider event_id>`;
-- fallback deterministic hash of league + model teams + kickoff;
-- detail endpoint uses stable ID, not list index;
-- legacy numeric detail ID returns 404.
+## Reliability / Calibration v1 — CLOSED / WAITING FOR SAMPLE
 
-PR #276 added stable ID/public read/bootstrap path.
-PR #277 merge `17abfb65dd75324809e7a93f35c3647bb53900da` added clean-deploy public Supabase config.
+Primary claim scope: exact model artifact × league × 1X2.
 
-## P2. Public product web — LIVE, BUT DEPLOYMENT LAGS MAIN
+Evidence-readiness gate: minimum `100` settled predictions exact scope + minimum `4` kickoff calendar months.
 
-Public alias:
-`https://football-ai-real-epl-snapshot.vercel.app`
+`REVIEWABLE != reliable != PASS != promotion`.
 
-Last exact production deployment remains from product main `17abfb65dd75324809e7a93f35c3647bb53900da`, deployment `dpl_5bWN15LSoByRPNURBotsk3TN3vnH`.
+Current state: `NO_SETTLED_DATA / INCONCLUSIVE`. Metrics after settlements include accuracy, multiclass Brier/log loss, skill/improvement vs uniform, calibration buckets and top-pick ECE.
 
-Repository contracts #278–#284 are ahead of that production runtime. Therefore:
-- do not claim `/portfolio-risk-view` or `/production-readiness-view` are already live on the main alias;
-- do not claim later Decision/Lifecycle/Readiness fields are deployed there until exact-main redeploy;
-- isolated proof deployments are not substitutes for production deployment.
+## Portfolio / Risk v1 — CLOSED / STRUCTURAL ONLY
 
-Fresh public feed proof `2026-09-12 16:03:36 UTC`:
-- `prediction_snapshot_count = 15` future EPL matches;
-- `priced_event_count = 15`;
-- all current 15 have stable product IDs;
-- all current 15 have full 1X2 model probabilities + stored 1X2 bookmaker prices;
-- goal-total model probabilities are currently absent from bootstrap rows;
-- handicap/corners selections remain absent.
+Only explicit future `bet_decision.status == bet` creates a structural position. Forecast/value alone never creates exposure. No staking/Kelly/bankroll policy exists in v1. Last live proof had zero actionable positions and `NO_ACTIONABLE_EXPOSURE`.
 
-## P3. Product Prediction Lifecycle — CLOSED / LIVE INITIALIZED
+## Production Readiness v1 — CLOSED / LIVE-DATA-PROVEN
 
-Version: `product-lifecycle.v1`.
+Current matrix:
+- EPL / 1X2 = `OPERATIONAL`;
+- EPL / Total Goals = `PROVISIONAL`;
+- EPL / Handicap = `RESEARCH_ONLY`;
+- EPL / Corners Total = `RESEARCH_ONLY`.
 
-Append-only facts:
-`PREDICTION_REGISTERED -> MARKET_OBSERVED -> SETTLED`
-
-Rules:
-- old probabilities never rewritten after result;
-- source prediction timestamp != lifecycle recorded timestamp;
-- legacy bootstrap marked honestly;
-- current Decision Framework not retroactively attached to old snapshot;
-- stored pre-kickoff market observation is not called closing line without qualification;
-- CLV remains null until closing qualification exists;
-- P&L/ROI remain null while no betting policy/actual bets exist.
-
-Last direct live proof:
-- `PREDICTION_REGISTERED = 20`;
-- `MARKET_OBSERVED = 5`;
-- `SETTLED = 0`;
-- no synthetic settlements.
-
-Lifecycle table:
-- RLS enabled;
-- final `service_role` table grants exactly `SELECT + INSERT`;
-- anon/authenticated no lifecycle access.
-
-PR #279 merge `dfed5784215717c93c60561dbbb58f03009badea`.
-PR #280 fixed inherited excess service-role privileges before bootstrap continued.
-
-## P4. Reliability / Calibration Layer — CLOSED / WAITING FOR SAMPLE
-
-Version: `product-reliability.v1`.
-
-Primary claim scope:
-`exact model_1x2_sha256 × league × 1X2`
-
-Prerecorded evidence-readiness gate:
-- minimum `100` settled predictions exact scope;
-- minimum `4` calendar months first-to-last kickoff.
-
-States: `NO_SETTLED_DATA`, `ACCUMULATING_SAMPLE`, `ACCUMULATING_TIME`, `REVIEWABLE`; mixed scopes = `DESCRIPTIVE_ONLY`.
-
-Binding meaning:
-**REVIEWABLE != reliable != PASS != promotion**
-
-v1 deliberately defines no post-outcome Brier/ECE/log-loss PASS threshold. Even reviewable slice stays `INCONCLUSIVE` until a later preregistered review.
-
-Metrics once settlements exist:
-- accuracy;
-- multiclass Brier/log loss;
-- Brier skill vs uniform 1X2;
-- log-loss improvement vs uniform;
-- calibration buckets + Wilson 95%;
-- top-pick ECE.
-
-Reliability re-computes scoring from frozen probabilities + actual outcome and fail-closes on mismatch/duplicate settlement.
-
-Current product state: `SETTLED = 0` -> `NO_SETTLED_DATA / INCONCLUSIVE`.
-
-PR #281 merge `4640a412c438f1ec5c23dc49b0fe7627b32a0dea`.
-
-## P5. Portfolio / Risk Layer — CLOSED / STRUCTURAL ONLY
-
-Version: `product-portfolio-risk.v1`.
-
-Risk exists only from explicit future `bet_decision.status == "bet"`.
-
-Rules:
-- forecast != position;
-- value/raw EV != position;
-- one fixture = max one actionable structural risk slot until covariance is validated;
-- exact duplicate actionable position -> block;
-- conflicting selections same fixture/market -> block;
-- multiple actionable positions same fixture -> block;
-- correlated probabilities/EV cannot be summed;
-- team/league concentration descriptive only.
-
-No staking policy in v1: bankroll/stake/Kelly/caps/monetary exposure remain undefined.
-
-Live proof on real feed:
-- matches `15`;
-- forecasts `15`;
-- value signals `14`;
-- all `bet_decision=no_bet`;
-- actionable positions `0`;
-- `NO_ACTIONABLE_EXPOSURE`;
-- `total_stake=null`.
-
-Proof project only: `football-ai-portfolio-risk-proof`, deployment `dpl_G1LT3MWkBPcZfeVXFaR9uHhqvhaj`; main product alias intentionally not switched.
-
-PR #282 merge `b057466362ec2b99f58cd392d7e289bdefaf82d8`.
-
-## P6. Product Production-Readiness Framework — CLOSED / MERGED / LIVE-DATA-PROVEN
-
-Version: `product-production-readiness.v1`.
-
-Purpose: one governance answer per concrete `league × market` scope — is it research-only, provisional, reviewable, operational, or blocked, and which gate is still open?
-
-Status vocabulary:
-- `RESEARCH_ONLY` — no approved production probability/price/settlement contract; good-looking results cannot bypass it;
-- `PROVISIONAL` — product/model contract exists but objective production gates remain open;
-- `REVIEWABLE` — all objective gates for a new scope are satisfied, but explicit approval is still required;
-- `OPERATIONAL` — scope is explicitly recorded as approved operational and current critical technical/live gates are healthy;
-- `BLOCKED` — an approved operational scope lost a critical required technical/live function.
-
-Governance invariants:
-- new scopes can automatically reach at most `REVIEWABLE`;
-- `REVIEWABLE` never auto-promotes to `OPERATIONAL`;
-- `OPERATIONAL` requires explicit approval/registry;
-- readiness never automatically changes `MARKET_READINESS`, `decision_tier`, forecast ranking, model promotion, market promotion, bet recommendation or stake;
-- Reliability evidence can be consumed only as already-approved summary; this layer itself does not read research outcomes or open frozen gates.
-
-Objective gates, as applicable:
-- production probability contract;
-- current live probability availability + coverage ratio;
-- complete stable `product_match_id` coverage;
-- bookmaker price contract;
-- current live bookmaker price availability + coverage ratio;
-- deterministic settlement contract;
-- immutable lifecycle contract;
-- empirical reliability reviewability for any new scope.
-
-Coverage semantics:
-- zero availability of a required live function is a blocker;
-- partial coverage is reported via `coverage_warnings`;
-- v1 deliberately does not invent an 80%/90% market pass threshold without evidence;
-- stable identity remains a strict complete structural gate.
-
-Existing baseline exception:
-- only `EPL × 1X2` is registered as pre-existing approved operational scope;
-- this preserves the already-live product contract while Product Reliability sample accumulates;
-- it is **not** a reliability PASS, not model promotion, not approval for another league/model artifact, and not betting readiness;
-- if required 1X2 live functionality disappears system-wide or stable identity regresses, approved EPL/1X2 fails closed to `BLOCKED`.
-
-Current v1 market policy:
-- 1X2 has probability + bookmaker-price + settlement + lifecycle contracts; new league/model scopes additionally require reviewable empirical reliability and explicit approval;
-- goal total has probability contract but does not yet have production bookmaker-price, product settlement or lifecycle contracts -> `PROVISIONAL`;
-- handicap -> `RESEARCH_ONLY` until model/price/Asian settlement contracts exist;
-- corners total -> `RESEARCH_ONLY`; CORNERS10 is not a corner-total production model.
-
-API/repository:
-- `product-market-view.v1` now carries `production_readiness_version` and `production_readiness`;
-- `web_app.py` contains read-only `GET /production-readiness-view`;
-- endpoint is in GitHub main but is **not yet claimed live on the lagging public production alias**.
-
-PR/CI/merge:
-- PR #284 exact head `c14f2b8a68f522f7f8cb7117aeef10279192121a`;
-- all 6 required CI contours green: Product, Research, Serie A, Bundesliga, Ligue 1, Eredivisie;
-- production `.pkl` guard green;
-- fresh-main before merge remained `b0b52cd601ffc0d91c17c0b7d3c9d8ee9847962e`, branch behind `0`;
-- exact-head merge `815904e6bada808f76edfc5a33850b4af1d2e2b2`.
-
-Outcome-blind live-data proof against the real public product feed at `2026-09-12 16:03:36 UTC`:
-- EPL future fixtures = `15`;
-- priced 1X2 events = `15`;
-- stable IDs = `15/15`;
-- complete 1X2 probability + price availability exists across the current window;
-- goal-total bootstrap probabilities/prices absent;
-- no research outcome/performance source was read.
-
-Resulting current readiness matrix:
-- `EPL / 1X2 = OPERATIONAL`;
-- `EPL / Total Goals = PROVISIONAL`;
-- `EPL / Handicap = RESEARCH_ONLY`;
-- `EPL / Corners Total = RESEARCH_ONLY`;
-- counts: `OPERATIONAL 1 / PROVISIONAL 1 / RESEARCH_ONLY 2 / REVIEWABLE 0 / BLOCKED 0`.
+New scopes can automatically reach at most `REVIEWABLE`; `OPERATIONAL` requires explicit approval. Readiness never auto-promotes a model/market, changes forecast ranking, creates a bet or opens a research gate.
 
 ---
 
-# Product PR chain — durable reference
+# Product Operational Automation v1 — MERGED / CI-PROVEN / FIRST RUNTIME PROOF PENDING
 
-- #267 product market dashboard
-- #268 match card alignment
-- #269 unified market contract
-- #270 product API + Vercel entrypoint
-- #271 UI server-contract consumption
-- #272 durable prediction snapshots
-- #273 Data API grant hardening
-- #274 Vercel preview readiness
-- #275 forecast/value separation
-- #276 stable product identity + live Supabase read + bootstrap path
-- #277 public clean-deploy Supabase config
-- #278 Product Decision Framework v1
-- #279 Product Lifecycle v1
-- #280 lifecycle grant hardening after live proof
-- #281 Reliability / Calibration v1
-- #282 Portfolio / Risk v1
-- #283 continuity consolidation/correction
-- #284 Product Production-Readiness Framework v1
+Version: `product-operational-automation.v1`.
 
-All substantive product PRs passed required Product + Research/league CI before exact-head merge.
+Purpose: connect already-approved durable product components into a repeatable scheduled cycle without creating a new forecasting, provider or betting system.
+
+Cycle:
+1. read already-produced outcome-free EPL AI rows from `epl_ai_market_pair_ledger`;
+2. publish a product snapshot only for a provider fixture that has no product prediction yet;
+3. reload durable state so lifecycle uses the real persisted prediction ID;
+4. append missing lifecycle facts from stored odds and canonical finished results;
+5. recompute read-only Reliability / Production Readiness summaries;
+6. emit audit report.
+
+Safety contract:
+- no paid-provider call;
+- no model inference/training/promotion;
+- no frozen research target read;
+- no bet/stake action;
+- existing private Supabase write path only; public web access never becomes a write fallback;
+- pair row must be EPL, exact frozen experiment, have provider event ID, be generated strictly pre-kickoff and match the frozen model SHA above.
+
+Forecast revision guard:
+- automation publishes only the **first** product forecast per provider fixture;
+- newer AI generations for already-published fixtures are held for a future explicit revision/evaluation contract;
+- this prevents repeated versions of one match from inflating Lifecycle/Reliability sample.
+
+Operational hardening:
+- lifecycle reads are paginated; regression covers `6001` rows and removes the old hidden `5000`-row cap;
+- source states: `NO_FUTURE_EVENTS`, `COVERED`, `READY_TO_INGEST_PREDICTIONS`, `WAITING_FOR_PREDICTION_SOURCE`;
+- missing model source fails closed; bookmaker probability is never substituted for model probability;
+- scheduled at minute `37` every two hours, after the existing EPL AI pair cycle and before the older EPL live-cycle.
+
+PR #286:
+- exact head `66a42a559f792d4f2d6fd187509c1b521c947f84`;
+- all six required CI contours green: Product, Research, Serie A, Bundesliga, Ligue 1, Eredivisie;
+- production artifact guard green;
+- exact-head merge `680ce8a694f6f49dd83452f0e3c776593c70a5e2` at `2026-09-13T05:33:24Z`.
+
+Live pre-runtime proof after merge:
+- future EPL odds events = `13`;
+- product-covered events = `13/13`;
+- future paired-AI events = `13`;
+- invalid pair timing = `0`;
+- one model SHA, exact frozen SHA;
+- product snapshots total = `20`;
+- lifecycle = `20 registered / 5 market-observed / 0 settled`;
+- equivalent plan found `0` missing registrations and `2` legitimate missing market observations;
+- canonical EPL finished-results source reaches `2026-09-12`.
+
+Runtime-proof boundary:
+- merge landed only ~4 minutes before the first `05:37 UTC` cron slot;
+- no durable effect appeared in that short activation window, so no successful scheduled run is claimed yet;
+- no manual lifecycle write was used to manufacture a green proof;
+- bounded follow-up verification is scheduled after the next cron window; success or failure must be verified from GitHub/live Supabase and this file updated again.
 
 ---
 
-# Supabase product security boundary
+# Durable PR reference
 
-- Public web reads with publishable key, never service-role secret.
-- Public RLS exposes only product-required future-window columns.
-- Public users have no product write permission.
-- Product prediction snapshots are append-only.
-- Lifecycle is service-role `SELECT + INSERT` only; no update/delete/truncate/trigger/reference privileges.
-- Odds and predictions remain separate sources joined by provider `event_id`.
-- Synthetic unsupported markets/results are forbidden.
+Product chain: #267–#277 foundation/live pipeline; #278 Decision Framework; #279 Lifecycle; #280 lifecycle security hardening; #281 Reliability; #282 Portfolio/Risk; #283 continuity correction; #284 Production Readiness; #286 Operational Automation v1.
 
-Separate historical security backlog remains on older tables (`teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, `epl_ai_market_pair_ledger`, etc.). Do not mix broad RLS migration into unrelated work; audit access flows first.
+All substantive product PRs passed Product + required Research/league CI before exact-head merge.
 
 ---
 
 # Текущий execution pointer
 
-## Research pointer
+## Research
 
 - `ALL_LEAGUES_MARKET_ONLY_V1_1`: **collect, don't peek / SAMPLE_CLOSED**.
-- До frozen gate разрешены только outcome-blind health/identity/completeness checks и future-only capture по frozen rules.
-- `EPL_AI_MARKET_PAIR_V1` остаётся separate frozen experiment; не backfill и не выводить membership из product bootstrap.
-- Любой paid provider refresh = отдельный `MANUAL_PAID_GATE`.
-- Candidate V2/model promotion не открывать до соответствующего evidence gate.
+- `EPL_AI_MARKET_PAIR_V1`: separate frozen experiment; do not infer cohort membership from product bootstrap.
+- Any paid refresh = separate manual gate.
+- Candidate V2/model promotion stays closed until corresponding evidence gate.
 
-## Product pointer
+## Product
 
-Current product foundation:
+Current foundation:
 
-`Prediction delivery -> Decision Framework -> Lifecycle -> Reliability evidence -> Portfolio/Risk -> Production Readiness`
+`Prediction delivery -> Decision Framework -> Lifecycle -> Reliability -> Portfolio/Risk -> Production Readiness -> Operational Automation`
 
-Все эти слои contracted/merged. Следующая safe работа, не требующая research outcomes:
+Следующая safe последовательность:
+1. **Close first real Operational Automation runtime proof** after the next scheduled cycle. This is an external time-gate only: do not fabricate proof, manually insert lifecycle rows for optics or weaken safety/research gates. If runtime fails, fix the real cause through branch -> regression -> PR -> full CI -> exact-head merge.
+2. **Exact-main web deployment**: public alias must be redeployed from then-current exact `main`, not from a proof runtime.
+3. **Second markets** through readiness gates: goal total first; handicap/corners only after their own model/price/settlement/evidence contracts.
 
-1. **Operational Automation v1** — автоматизировать future fixture/prediction publish, lifecycle advance, canonical result settlement, reliability/readiness refresh и monitoring, сохраняя paid/manual и no-peek gates.
-2. **Exact-main web deployment** — основной public alias отстаёт от repository contracts #278–#284; при следующем deployment публиковать exact current main, а не proof runtime.
-3. Затем подключать second markets по readiness gates: goal total first, потом handicap/corners только после их собственных model/price/settlement/evidence contracts.
-
-Betting/staking policy не является следующим автоматическим шагом и остаётся отдельным future contract до достаточного empirical evidence.
-
-## UI pointer
-
-UI можно шлифовать параллельно, но он не должен менять server-owned semantics:
-- main forecast = forecast, not value;
-- maturity/tier before cross-market probability ranking;
-- value separate;
-- readiness states and blockers explicit;
-- research-only/provisional/no-bet/no-data — нормальные product states, а не ошибки UI.
+Betting/staking policy remains a separate future contract until enough empirical evidence exists.
 
 ---
 
-# Closed historical/operational reference
+# 2026-09-13 audit trail
 
-Не переоткрывать без новой причины:
-- historical corners V1–V4 — closed under stop rule;
-- canonical public results/settlement fallback — live-proven;
-- market revision safety/canonical event identity — closed/live-proven;
-- eight-league MARKET_ONLY infrastructure readiness — 8-of-8 live-proven;
-- V1.1 freeze/evaluation gate/sample-health — frozen/operational, не менять по outcomes;
-- product Decision/Lifecycle/Reliability/Portfolio/Production-Readiness v1 — merged contracts;
-- production model promotion — всегда explicit/manual.
+Today Operational Automation v1 was designed, implemented, regression-tested, merged and live-data-audited.
 
----
+Key decisions:
+- reused existing durable sources instead of running ad-hoc inference;
+- kept missing prediction source as an explicit fail-closed state;
+- introduced first-prediction-only automation and held revisions to protect sample integrity;
+- fixed lifecycle pagination before the current odds table could exceed the old hidden cap;
+- added scheduled append-only orchestration with no paid-provider dependency;
+- PR #286 passed all six CI contours and exact-head merged as `680ce8a694f6f49dd83452f0e3c776593c70a5e2`;
+- live coverage after merge remained `13/13`, with zero invalid pair timing and exact frozen model provenance;
+- two market-observation lifecycle facts are legitimately waiting for the first successful scheduled cycle;
+- first short cron activation window is not being misreported as success;
+- a bounded follow-up check will close or repair the runtime proof and update continuity again.
 
-# 2026-09-12 key decisions / audit trail
+# Current checkpoint
 
-Research:
-- eight-league MARKET_ONLY readiness closed 8-of-8;
-- V1 T0 + V1.1 127-event successor seed frozen;
-- evaluation gate frozen before first seed kickoff;
-- daily outcome-blind sample-health operationalized;
-- outcome read remains forbidden.
-
-Product:
-- durable product snapshot pipeline + public Supabase read live-proven;
-- forecast/value semantic bug fixed;
-- stable match identity enabled;
-- first 20 real EPL durable snapshots published from existing paired-AI ledger;
-- Decision Framework v1 merged;
-- Lifecycle v1 merged and live initialized;
-- inherited lifecycle service-role privilege defect caught and fixed before continuing bootstrap;
-- Reliability/Calibration v1 gates preregistered before first product settlement;
-- Portfolio/Risk v1 proves current value signals do not create positions;
-- Production-Readiness v1 now gives explicit league/market governance statuses and never auto-promotes new scopes.
-
-Continuity:
-- earlier product work was mistakenly written only to MASTER BACKUP; PR #283 corrected that and restored `PROJECT_CONTINUITY.md` as canonical durable memory;
-- future substantial work is incomplete until this file is updated via continuity-only change/PR.
-
-Repository hygiene:
-- accidental temporary root `noop` was created in `3e92ab1ec6e2c350f4af8d556698d82ed6374c1e` and immediately removed in `f0cd0193fea4c64e0d77b080a0c8d0c05e096ace`; net tree returned to the intended product state.
-
----
-
-# Current source-of-truth checkpoint before this continuity PR
-
-- Product code main after PR #284: `815904e6bada808f76edfc5a33850b4af1d2e2b2`.
-- Product snapshots: 20 durable EPL rows from first bootstrap; current future public window = 15.
-- Current public 1X2 priced events = 15/15.
-- Lifecycle last direct proof: 20 registered / 5 market-observed / 0 settled.
+- GitHub product-code main: `680ce8a694f6f49dd83452f0e3c776593c70a5e2`.
+- Durable product snapshots: `20` total; current future EPL coverage `13/13`.
+- Lifecycle: `20 registered / 5 market-observed / 0 settled`; `2` market observations pending equivalent plan.
 - Reliability: `NO_SETTLED_DATA / INCONCLUSIVE`.
-- Portfolio: 15 future matches / 14 value signals / 0 actionable positions / `NO_ACTIONABLE_EXPOSURE`.
-- Production Readiness live-data matrix: EPL 1X2 operational; goals provisional; handicap/corners research-only.
-- Public Vercel production runtime still lags GitHub main; exact-main deployment remains a separate next operational step.
-- Research V1.1 outcome gate remains closed; no-peek is still binding.
+- Readiness: EPL 1X2 operational; goals provisional; handicap/corners research-only.
+- Operational Automation implementation is merged and CI-proven; first scheduled runtime execution is the only unclosed proof item in this block.
+- Public Vercel runtime still lags repository main.
+- Research V1.1 outcome gate remains closed; no-peek is binding.
