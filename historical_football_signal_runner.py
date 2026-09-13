@@ -9,6 +9,7 @@ from historical_football_signal_lab import build_point_in_time_features, write_r
 from historical_football_window_audit import write_window_reports
 from historical_team_strength_trajectory import write_trajectory_reports
 from historical_rest_congestion import write_rest_reports
+from historical_shot_quality_profile import build_point_in_time_shot_quality, source_capability, write_shot_quality_reports
 from league_runtime_config import EPL_RUNTIME_CONFIG, LA_LIGA_RUNTIME_CONFIG
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 
@@ -25,7 +26,11 @@ def download(config, league: str, raw_dir: Path):
         df=pd.read_csv(path); df["_season"]=season; raw_frames.append(df)
         print(f"{league} {season}: raw={len(df)}")
     raw=pd.concat(raw_frames,ignore_index=True)
+    capability=source_capability(raw)
+    print(f"{league}: shot_source shots_complete={capability['shots_complete']} true_xg_pair_detected={capability['true_xg_pair_detected']} true_xg_columns={capability['true_xg_columns']}")
     features=build_point_in_time_features(raw,league,"MULTI_SEASON")
+    shot_features=build_point_in_time_shot_quality(raw,league)
+    features=features.merge(shot_features,on=["league","match_date","home_team","away_team"],how="left",validate="one_to_one")
     keys=raw[["Date","HomeTeam","AwayTeam","_season"]].copy(); keys["match_date"]=pd.to_datetime(keys["Date"],dayfirst=True,errors="coerce")
     keys=keys.rename(columns={"HomeTeam":"home_team","AwayTeam":"away_team","_season":"season"})[["match_date","home_team","away_team","season"]].drop_duplicates()
     features=features.drop(columns=["season"]).merge(keys,on=["match_date","home_team","away_team"],how="left",validate="one_to_one")
@@ -36,7 +41,7 @@ def main():
     p=argparse.ArgumentParser(); p.add_argument("--work-dir",type=Path,default=Path("artifacts/historical_football_signal_work")); p.add_argument("--output-dir",type=Path,default=Path("artifacts/historical_football_signal_lab")); a=p.parse_args()
     combined=pd.concat([download(cfg,league,a.work_dir/"raw"/league.lower()) for league,cfg in LEAGUES.items()],ignore_index=True)
     paths=write_reports(combined,a.output_dir); window,robustness=write_window_reports(combined,a.output_dir); market,incremental=write_market_incremental_reports(combined,a.output_dir)
-    trajectory=write_trajectory_reports(combined,a.output_dir); rest=write_rest_reports(combined,a.output_dir)
+    trajectory=write_trajectory_reports(combined,a.output_dir); rest=write_rest_reports(combined,a.output_dir); shot_quality=write_shot_quality_reports(combined,a.output_dir)
     print(f"HISTORICAL FOOTBALL SIGNAL LAB COMPLETE rows={len(combined)}")
     for k,v in paths.items(): print(f"{k}: {v}")
     print("WINDOW ABLATION"); print(window.to_string(index=False))
@@ -45,5 +50,6 @@ def main():
     print("PAIRED MARKET INCREMENTAL"); print(incremental.to_string(index=False))
     print("TEAM STRENGTH TRAJECTORY INCREMENTAL"); print(trajectory.to_string(index=False))
     print("LEAGUE-SCHEDULE REST/CONGESTION INCREMENTAL"); print(rest.to_string(index=False))
+    print("SHOT QUALITY PROXY INCREMENTAL (true xG is a separate data-source gate)"); print(shot_quality.to_string(index=False))
     print("Research only: no training promotion, Supabase writes, Structural changes, or .pkl changes.")
 if __name__=="__main__": main()
