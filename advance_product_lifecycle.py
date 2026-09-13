@@ -27,6 +27,7 @@ from team_names import normalize_team_name
 PREDICTION_TABLE = "product_prediction_snapshots"
 ODDS_TABLE = "odds_snapshots"
 RESULT_TABLE = "league_finished_results"
+DEFAULT_PAGE_SIZE = 1000
 
 
 def _text(value: Any) -> str:
@@ -197,12 +198,29 @@ def build_lifecycle_pass(
     return {"events": pending, "counts": counters}
 
 
-def _fetch_all(client: Any, table: str, *, order: str | None = None, limit: int = 5000) -> list[dict[str, Any]]:
-    query = client.table(table).select("*")
-    if order:
-        query = query.order(order)
-    response = query.limit(limit).execute()
-    return response.data or []
+def _fetch_all(
+    client: Any,
+    table: str,
+    *,
+    order: str | None = None,
+    page_size: int = DEFAULT_PAGE_SIZE,
+) -> list[dict[str, Any]]:
+    """Read a complete table through deterministic Data API pagination."""
+    if page_size < 1:
+        raise ValueError("page_size must be >= 1")
+    rows: list[dict[str, Any]] = []
+    offset = 0
+    while True:
+        query = client.table(table).select("*")
+        if order:
+            query = query.order(order)
+        response = query.range(offset, offset + page_size - 1).execute()
+        page = response.data or []
+        rows.extend(page)
+        if len(page) < page_size:
+            break
+        offset += page_size
+    return rows
 
 
 def load_live_inputs(client: Any) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
