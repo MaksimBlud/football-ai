@@ -8,6 +8,7 @@ from historical_football_market_incremental import write_market_incremental_repo
 from historical_football_signal_lab import build_point_in_time_features, write_reports
 from historical_football_window_audit import write_window_reports
 from historical_team_strength_trajectory import write_trajectory_reports
+from historical_rest_congestion import write_rest_reports
 from league_runtime_config import EPL_RUNTIME_CONFIG, LA_LIGA_RUNTIME_CONFIG
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 
@@ -35,7 +36,7 @@ def main():
     p=argparse.ArgumentParser(); p.add_argument("--work-dir",type=Path,default=Path("artifacts/historical_football_signal_work")); p.add_argument("--output-dir",type=Path,default=Path("artifacts/historical_football_signal_lab")); a=p.parse_args()
     combined=pd.concat([download(cfg,league,a.work_dir/"raw"/league.lower()) for league,cfg in LEAGUES.items()],ignore_index=True)
     paths=write_reports(combined,a.output_dir); window,robustness=write_window_reports(combined,a.output_dir); market,incremental=write_market_incremental_reports(combined,a.output_dir)
-    trajectory=write_trajectory_reports(combined,a.output_dir)
+    trajectory=write_trajectory_reports(combined,a.output_dir); rest=write_rest_reports(combined,a.output_dir)
     print(f"HISTORICAL FOOTBALL SIGNAL LAB COMPLETE rows={len(combined)}")
     for k,v in paths.items(): print(f"{k}: {v}")
     print("WINDOW ABLATION"); print(window.to_string(index=False))
@@ -43,5 +44,6 @@ def main():
     print("MARKET INCREMENTAL"); print(market.to_string(index=False))
     print("PAIRED MARKET INCREMENTAL"); print(incremental.to_string(index=False))
     print("TEAM STRENGTH TRAJECTORY INCREMENTAL"); print(trajectory.to_string(index=False))
+    print("LEAGUE-SCHEDULE REST/CONGESTION INCREMENTAL"); print(rest.to_string(index=False))
     print("Research only: no training promotion, Supabase writes, Structural changes, or .pkl changes.")
 if __name__=="__main__": main()
