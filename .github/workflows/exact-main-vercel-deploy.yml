@@ -1,0 +1,192 @@
+name: Exact Main Vercel Deployment
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: exact-main-vercel-production
+  cancel-in-progress: false
+
+env:
+  VERCEL_ORG_ID: team_EDncljUUtFDTumz5hYleW8R3
+  VERCEL_PROJECT_ID: prj_lXttnTmlPncJPn2nKGSlid2vaxvg
+  PROD_BASE_URL: https://football-ai-real-epl-snapshot.vercel.app
+
+jobs:
+  deploy-exact-main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Capture exact main source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_SHA="$(git rev-parse HEAD)"
+          if ! [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Invalid Git source SHA"
+            exit 1
+          fi
+          echo "SOURCE_SHA=$SOURCE_SHA" >> "$GITHUB_ENV"
+          echo "Exact main source: $SOURCE_SHA"
+
+      - name: Check Vercel credential contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "::error::VERCEL_TOKEN is not configured"
+            exit 1
+          fi
+          echo "PASS: Vercel token is configured; secret value not printed"
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Record Vercel CLI version
+        run: vercel --version
+
+      - name: Pull production project settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Create staged production deployment from exact main
+        id: stage
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEPLOYMENT_URL="$(vercel deploy --prod --skip-domain --yes \
+            --token="$VERCEL_TOKEN" \
+            --env "DEPLOYMENT_GIT_SHA=$SOURCE_SHA" \
+            --build-env "DEPLOYMENT_GIT_SHA=$SOURCE_SHA" \
+            --meta "gitCommitSha=$SOURCE_SHA")"
+          if ! [[ "$DEPLOYMENT_URL" =~ ^https://.+\.vercel\.app$ ]]; then
+            echo "::error::Vercel did not return a deployment URL"
+            exit 1
+          fi
+          echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> "$GITHUB_ENV"
+          echo "deployment_url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
+          echo "Staged deployment: $DEPLOYMENT_URL"
+
+      - name: Verify staged deployment SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          vercel curl /health --deployment "$DEPLOYMENT_URL" --token "$VERCEL_TOKEN" > /tmp/staged-health.json
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload = json.loads(Path("/tmp/staged-health.json").read_text(encoding="utf-8"))
+          assert payload.get("status") == "healthy", payload
+          assert payload.get("deployment_git_sha") == os.environ["SOURCE_SHA"], payload
+          print("PASS: staged /health proves exact Git source SHA")
+          PY
+
+      - name: Smoke staged product routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in /product-market-view /portfolio-risk-view /production-readiness-view; do
+            output="/tmp/$(echo "$path" | tr '/-' '__').json"
+            vercel curl "$path" --deployment "$DEPLOYMENT_URL" --token "$VERCEL_TOKEN" > "$output"
+            ROUTE="$path" OUTPUT="$output" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          route = os.environ["ROUTE"]
+          payload = json.loads(Path(os.environ["OUTPUT"]).read_text(encoding="utf-8"))
+          assert isinstance(payload, dict), (route, type(payload))
+          assert "detail" not in payload, (route, payload)
+          if route == "/product-market-view":
+              assert isinstance(payload.get("matches"), list), payload
+              assert "market_readiness" in payload, payload
+              assert "production_readiness" in payload, payload
+          print(f"PASS: staged {route}")
+          PY
+          done
+
+      - name: Recheck main before production promotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=1
+          LATEST_MAIN="$(git rev-parse origin/main)"
+          if [ "$LATEST_MAIN" != "$SOURCE_SHA" ]; then
+            echo "::error::main moved during deployment; refusing promotion ($SOURCE_SHA -> $LATEST_MAIN)"
+            exit 1
+          fi
+          echo "PASS: staged source is still current main"
+
+      - name: Promote verified staged deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          vercel promote "$DEPLOYMENT_URL" --yes --token="$VERCEL_TOKEN"
+
+      - name: Verify public production exact SHA and routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --retry 5 --retry-all-errors --retry-delay 2 -fsS "$PROD_BASE_URL/health" > /tmp/prod-health.json
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload = json.loads(Path("/tmp/prod-health.json").read_text(encoding="utf-8"))
+          assert payload.get("status") == "healthy", payload
+          assert payload.get("deployment_git_sha") == os.environ["SOURCE_SHA"], payload
+          print("PASS: production /health proves exact Git source SHA")
+          PY
+
+          curl --retry 5 --retry-all-errors --retry-delay 2 -fsS -o /dev/null "$PROD_BASE_URL/"
+
+          for path in /product-market-view /portfolio-risk-view /production-readiness-view; do
+            output="/tmp/prod-$(echo "$path" | tr '/-' '__').json"
+            curl --retry 5 --retry-all-errors --retry-delay 2 -fsS "$PROD_BASE_URL$path" > "$output"
+            ROUTE="$path" OUTPUT="$output" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          route = os.environ["ROUTE"]
+          payload = json.loads(Path(os.environ["OUTPUT"]).read_text(encoding="utf-8"))
+          assert isinstance(payload, dict), (route, type(payload))
+          assert "detail" not in payload, (route, payload)
+          if route == "/product-market-view":
+              assert isinstance(payload.get("matches"), list), payload
+              assert "market_readiness" in payload, payload
+              assert "production_readiness" in payload, payload
+          print(f"PASS: production {route}")
+          PY
+          done
+
+      - name: Deployment summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Exact Main Vercel Deployment"
+            echo "- source SHA: \`${SOURCE_SHA:-unavailable}\`"
+            echo "- staged deployment: \`${DEPLOYMENT_URL:-not-created}\`"
+            echo "- production alias: \`$PROD_BASE_URL\`"
+            echo "- deployment strategy: staged production build -> smoke/SHA proof -> promote"
+            echo "- paid provider calls: \`false\`"
+            echo "- model inference/training/promotion: \`false\`"
+          } >> "$GITHUB_STEP_SUMMARY"
