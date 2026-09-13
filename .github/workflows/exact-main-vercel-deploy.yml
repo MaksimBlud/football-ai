@@ -81,12 +81,30 @@ jobs:
       - name: Record Vercel CLI version
         run: vercel --version
 
+      - name: Link checkout to exact Vercel project
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .vercel
+          vercel link --yes \
+            --project="$VERCEL_PROJECT_ID" \
+            --token="$VERCEL_TOKEN"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload = json.loads(Path(".vercel/project.json").read_text(encoding="utf-8"))
+          assert payload.get("projectId") == os.environ["VERCEL_PROJECT_ID"], payload
+          assert payload.get("orgId") == os.environ["EXPECTED_VERCEL_TEAM_ID"], payload
+          print("PASS: local Vercel link matches exact expected project/team")
+          PY
+
       - name: Pull production project settings
         shell: bash
         run: |
           set -euo pipefail
           vercel pull --yes --environment=production \
-            --project="$VERCEL_PROJECT_ID" \
             --token="$VERCEL_TOKEN"
 
       - name: Create staged production deployment from exact main
@@ -95,7 +113,6 @@ jobs:
         run: |
           set -euo pipefail
           DEPLOYMENT_URL="$(vercel deploy --prod --skip-domain --yes \
-            --project="$VERCEL_PROJECT_ID" \
             --token="$VERCEL_TOKEN" \
             --env "DEPLOYMENT_GIT_SHA=$SOURCE_SHA" \
             --build-env "DEPLOYMENT_GIT_SHA=$SOURCE_SHA" \
