@@ -27,6 +27,7 @@ GENERATION_2 = "2026-09-13T04:30:00+00:00"
 
 def pair_row(**overrides):
     row = {
+        "pair_key": "pair-1",
         "experiment_id": "EPL_AI_MARKET_PAIR_V1",
         "league": "EPL",
         "event_id": "event-1",
@@ -67,35 +68,40 @@ def odds_row(**overrides):
     return row
 
 
-def test_equal_pair_generation_is_idempotent_noop():
+def test_existing_product_event_is_idempotent_noop():
     pending = build_incremental_product_rows(
         [pair_row()], [product_row()], now_utc=NOW
     )
     assert pending == []
 
 
-def test_newer_pair_generation_creates_one_incremental_snapshot():
+def test_newer_pair_generation_is_held_for_already_published_fixture():
     pending = build_incremental_product_rows(
         [pair_row(model_generated_at_utc=GENERATION_2)],
         [product_row()],
         now_utc=NOW,
     )
+    coverage = source_coverage(
+        [odds_row()],
+        [product_row()],
+        [pair_row(model_generated_at_utc=GENERATION_2)],
+        now_utc=NOW,
+    )
+
+    assert pending == []
+    assert coverage["state"] == SOURCE_COVERED
+    assert coverage["revision_candidates_held"] == 1
+
+
+def test_first_pair_for_new_event_creates_one_product_snapshot():
+    pending = build_incremental_product_rows([pair_row()], [], now_utc=NOW)
 
     assert len(pending) == 1
     snapshot = pending[0]
     assert snapshot["event_id"] == "event-1"
-    assert snapshot["generated_at_utc"] == GENERATION_2
+    assert snapshot["generated_at_utc"] == GENERATION_1
     assert snapshot["publisher_version"] == OPERATIONAL_PUBLISHER_VERSION
     assert snapshot["run_id"].startswith("pair-ledger-operational:")
-
-
-def test_old_pair_generation_never_republishes_newer_product_snapshot():
-    pending = build_incremental_product_rows(
-        [pair_row()],
-        [product_row(generated_at_utc=GENERATION_2)],
-        now_utc=NOW,
-    )
-    assert pending == []
 
 
 def test_pair_bridge_fails_closed_on_post_kickoff_model_generation():
@@ -122,6 +128,7 @@ def test_known_odds_event_with_product_prediction_is_covered():
     assert coverage["known_future_odds_events"] == 1
     assert coverage["covered_product_events"] == 1
     assert coverage["waiting_for_prediction_source"] == 0
+    assert coverage["revision_candidates_held"] == 0
 
 
 def test_missing_product_with_valid_pair_is_ready_to_ingest_not_fabricated():
@@ -181,6 +188,7 @@ def test_cycle_status_distinguishes_noop_apply_and_action_required():
         "ready_from_pair_ledger": 0,
         "waiting_for_prediction_source": 0,
         "waiting_event_ids": [],
+        "revision_candidates_held": 0,
         "coverage_ratio": 1.0,
     }
     noop = build_operational_report(
@@ -207,6 +215,7 @@ def test_cycle_status_distinguishes_noop_apply_and_action_required():
     assert action["status"] == CYCLE_ACTION_REQUIRED
     assert noop["safety"]["paid_provider_calls"] is False
     assert noop["safety"]["model_inference"] is False
+    assert noop["safety"]["automatic_forecast_revisions"] is False
     assert noop["safety"]["betting_actions"] is False
 
 
