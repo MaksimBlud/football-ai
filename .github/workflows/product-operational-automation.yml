@@ -2,6 +2,11 @@ name: Product Operational Automation
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/product-operational-automation.yml"
   schedule:
     # Existing EPL AI pair collector runs at :23. This cycle only consumes
     # already-durable outputs and stored market/results data; it never calls a
