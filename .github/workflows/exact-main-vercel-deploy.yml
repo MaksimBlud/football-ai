@@ -75,6 +75,63 @@ jobs:
           print("PASS: scoped token resolves the exact expected Vercel project/team")
           PY
 
+      - name: Resolve deployment protection bypass
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path("/tmp/vercel-project.json").read_text(encoding="utf-8"))
+          protection = payload.get("protectionBypass") or {}
+          secret = next(
+              (
+                  key
+                  for key, metadata in protection.items()
+                  if isinstance(metadata, dict) and metadata.get("scope") == "automation-bypass"
+              ),
+              None,
+          )
+          if secret:
+              Path("/tmp/vercel-bypass-secret").write_text(secret, encoding="utf-8")
+          PY
+
+          if [ ! -s /tmp/vercel-bypass-secret ]; then
+            curl -fsS -X PATCH \
+              -H "Authorization: Bearer $VERCEL_TOKEN" \
+              -H "Content-Type: application/json" \
+              --data '{}' \
+              "https://api.vercel.com/v1/projects/$EXPECTED_VERCEL_PROJECT_ID/protection-bypass?teamId=$EXPECTED_VERCEL_TEAM_ID" \
+              > /tmp/vercel-protection-bypass.json
+            python - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path("/tmp/vercel-protection-bypass.json").read_text(encoding="utf-8"))
+          protection = payload.get("protectionBypass") or {}
+          secret = next(
+              (
+                  key
+                  for key, metadata in protection.items()
+                  if isinstance(metadata, dict) and metadata.get("scope") == "automation-bypass"
+              ),
+              None,
+          )
+          assert secret, payload
+          Path("/tmp/vercel-bypass-secret").write_text(secret, encoding="utf-8")
+          PY
+          fi
+
+          BYPASS_SECRET="$(cat /tmp/vercel-bypass-secret)"
+          if [ -z "$BYPASS_SECRET" ]; then
+            echo "::error::Vercel automation bypass secret is unavailable"
+            exit 1
+          fi
+          echo "::add-mask::$BYPASS_SECRET"
+          echo "VERCEL_AUTOMATION_BYPASS_SECRET=$BYPASS_SECRET" >> "$GITHUB_ENV"
+          echo "PASS: deployment protection automation bypass is available and masked"
+
       - name: Materialize exact Vercel project link
         shell: bash
         run: |
@@ -133,7 +190,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          vercel --token "$VERCEL_TOKEN" curl /health --deployment "$DEPLOYMENT_URL" > /tmp/staged-health.json
+          curl --retry 5 --retry-all-errors --retry-delay 2 -fsS \
+            -H "x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET" \
+            "$DEPLOYMENT_URL/health" \
+            > /tmp/staged-health.json
           python - <<'PY'
           import json
           import os
@@ -151,7 +211,10 @@ jobs:
           set -euo pipefail
           for path in /product-market-view /portfolio-risk-view /production-readiness-view; do
             output="/tmp/$(echo "$path" | tr '/-' '__').json"
-            vercel --token "$VERCEL_TOKEN" curl "$path" --deployment "$DEPLOYMENT_URL" > "$output"
+            curl --retry 5 --retry-all-errors --retry-delay 2 -fsS \
+              -H "x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET" \
+              "$DEPLOYMENT_URL$path" \
+              > "$output"
             ROUTE="$path" OUTPUT="$output" python - <<'PY'
           import json
           import os
