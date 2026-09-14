@@ -23,6 +23,24 @@ from team_names import normalize_team_name
 PUBLISHER_VERSION = "product-publisher.v1"
 DEFAULT_PREDICTIONS = Path("data/upcoming_round_predictions.csv")
 DEFAULT_FIXTURES = Path("data/upcoming_matches.csv")
+GOAL_ARTIFACT_BUNDLE_SCHEMA_VERSION = "goal-artifact-bundle.v1"
+GOAL_ARTIFACT_FILENAMES = (
+    "home_goals_model_no_odds.pkl",
+    "away_goals_model_no_odds.pkl",
+    "over_2_5_calibrator.pkl",
+    "btts_calibrator.pkl",
+)
+GOAL_OUTPUT_FIELDS = (
+    "expected_home_goals",
+    "expected_away_goals",
+    "expected_total_goals",
+    "over_2_5_probability",
+    "under_2_5_probability",
+    "btts_yes_probability",
+    "btts_no_probability",
+    "top_score",
+    "top_score_probability",
+)
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:
@@ -105,6 +123,51 @@ def _sha256(path: Path | None) -> str | None:
     return digest.hexdigest()
 
 
+def goal_artifact_bundle_sha256(
+    artifact_paths: Mapping[str, Path],
+) -> str:
+    """Return the canonical identity of the four-artifact goal inference bundle.
+
+    The v1 payload is UTF-8 text containing the schema version followed by one
+    ``filename:sha256`` line for each required artifact in fixed inference order.
+    This lets the existing ``model_goals_sha256`` column identify the complete
+    inference bundle without mutating or repackaging production artifacts.
+    """
+    missing = [
+        filename
+        for filename in GOAL_ARTIFACT_FILENAMES
+        if filename not in artifact_paths
+    ]
+    extra = sorted(set(artifact_paths) - set(GOAL_ARTIFACT_FILENAMES))
+    if missing or extra:
+        raise ValueError(
+            "goal artifact bundle must contain exactly the four required artifacts; "
+            f"missing={missing}, extra={extra}"
+        )
+
+    lines = [GOAL_ARTIFACT_BUNDLE_SCHEMA_VERSION]
+    for filename in GOAL_ARTIFACT_FILENAMES:
+        artifact_sha = _sha256(Path(artifact_paths[filename]))
+        if artifact_sha is None:
+            raise ValueError(f"goal artifact path is missing for {filename}")
+        lines.append(f"{filename}:{artifact_sha}")
+    payload = ("\n".join(lines) + "\n").encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _has_goal_outputs(row: Mapping[str, Any]) -> bool:
+    return any(_text(row.get(field)) for field in GOAL_OUTPUT_FIELDS)
+
+
+def _goal_bundle_paths(args: argparse.Namespace) -> dict[str, Path]:
+    return {
+        "home_goals_model_no_odds.pkl": args.home_goals_artifact,
+        "away_goals_model_no_odds.pkl": args.away_goals_artifact,
+        "over_2_5_calibrator.pkl": args.over_2_5_calibrator_artifact,
+        "btts_calibrator.pkl": args.btts_calibrator_artifact,
+    }
+
+
 def build_snapshot_rows(
     prediction_rows: Iterable[Mapping[str, Any]],
     fixture_rows: Iterable[Mapping[str, Any]],
@@ -122,6 +185,12 @@ def build_snapshot_rows(
 
     for raw_prediction in prediction_rows:
         prediction = dict(raw_prediction)
+        if _has_goal_outputs(prediction) and not _text(model_goals_sha256):
+            raise ValueError(
+                "Total Goals outputs require model_goals_sha256 for the complete "
+                "four-artifact goal inference bundle"
+            )
+
         key = _fixture_key(prediction)
         fixture = fixtures.get(key)
         if fixture is None:
@@ -256,7 +325,35 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model-1x2-version", default=None)
     parser.add_argument("--model-goals-version", default=None)
     parser.add_argument("--model-1x2-artifact", type=Path, default=None)
-    parser.add_argument("--model-goals-artifact", type=Path, default=None)
+    parser.add_argument(
+        "--model-goals-artifact",
+        type=Path,
+        default=None,
+        help=(
+            "Deprecated single-file goal provenance. Total Goals rows require the "
+            "complete four-artifact bundle options below."
+        ),
+    )
+    parser.add_argument(
+        "--home-goals-artifact",
+        type=Path,
+        default=Path("home_goals_model_no_odds.pkl"),
+    )
+    parser.add_argument(
+        "--away-goals-artifact",
+        type=Path,
+        default=Path("away_goals_model_no_odds.pkl"),
+    )
+    parser.add_argument(
+        "--over-2-5-calibrator-artifact",
+        type=Path,
+        default=Path("over_2_5_calibrator.pkl"),
+    )
+    parser.add_argument(
+        "--btts-calibrator-artifact",
+        type=Path,
+        default=Path("btts_calibrator.pkl"),
+    )
     parser.add_argument(
         "--publish",
         action="store_true",
@@ -269,9 +366,21 @@ def main() -> None:
     args = parse_args()
     generated_at = args.generated_at_utc or datetime.now(timezone.utc).isoformat()
     run_id = args.run_id or str(uuid.uuid4())
+    prediction_rows = _read_csv(args.input)
+    has_goal_outputs = any(_has_goal_outputs(row) for row in prediction_rows)
+
+    if args.model_goals_artifact is not None and has_goal_outputs:
+        raise ValueError(
+            "--model-goals-artifact cannot identify Total Goals inference by itself; "
+            "provide the complete four-artifact goal bundle instead"
+        )
+
+    model_goals_sha256 = None
+    if has_goal_outputs:
+        model_goals_sha256 = goal_artifact_bundle_sha256(_goal_bundle_paths(args))
 
     rows = build_snapshot_rows(
-        _read_csv(args.input),
+        prediction_rows,
         _read_csv(args.fixtures),
         league=args.league,
         run_id=run_id,
@@ -279,7 +388,7 @@ def main() -> None:
         model_1x2_version=args.model_1x2_version,
         model_1x2_sha256=_sha256(args.model_1x2_artifact),
         model_goals_version=args.model_goals_version,
-        model_goals_sha256=_sha256(args.model_goals_artifact),
+        model_goals_sha256=model_goals_sha256,
     )
 
     if args.publish:
