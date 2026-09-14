@@ -144,6 +144,7 @@ jobs:
           python -m pytest -q tests/test_product_operational_automation_workflow.py
           python -m pytest -q tests/test_total_goals_inference_contract.py
           python -m pytest -q tests/test_total_goals_artifact_registry.py
+          python -m pytest -q tests/test_register_total_goals_artifact_bundle.py
           python -m pytest -q tests/test_total_goals_artifact_registry_migration.py
 
       - name: Enforce no production artifact changes
