@@ -40,7 +40,7 @@ def test_history_as_of_snapshot_uses_four_hour_result_buffer():
     history = pd.DataFrame(
         [
             _history_row("2026-09-10", "12:00", "Alpha", "Beta"),
-            _history_row("2026-09-11", "12:00", "Gamma", "Delta"),
+            _history_row("2026-09-11", "14:00", "Gamma", "Delta"),
         ],
         columns=replay.HISTORY_COLUMNS,
     )
