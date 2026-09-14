@@ -254,17 +254,36 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl --retry 5 --retry-all-errors --retry-delay 2 -fsS "$PROD_BASE_URL/health" > /tmp/prod-health.json
-          python - <<'PY'
+
+          PUBLIC_SHA=""
+          for attempt in $(seq 1 12); do
+            if curl -fsS "$PROD_BASE_URL/health" > /tmp/prod-health.json; then
+              if CURRENT_SHA="$(python - <<'PY'
           import json
-          import os
           from pathlib import Path
 
           payload = json.loads(Path("/tmp/prod-health.json").read_text(encoding="utf-8"))
-          assert payload.get("status") == "healthy", payload
-          assert payload.get("deployment_git_sha") == os.environ["SOURCE_SHA"], payload
-          print("PASS: production /health proves exact Git source SHA")
+          if payload.get("status") != "healthy":
+              raise SystemExit(1)
+          print(payload.get("deployment_git_sha") or "")
           PY
+          )"; then
+                PUBLIC_SHA="$CURRENT_SHA"
+                if [ "$PUBLIC_SHA" = "$SOURCE_SHA" ]; then
+                  echo "PASS: production /health converged to exact Git source SHA on attempt $attempt"
+                  break
+                fi
+              fi
+            fi
+            echo "Waiting for production alias propagation ($attempt/12); observed SHA=${PUBLIC_SHA:-unavailable}"
+            sleep 5
+          done
+
+          if [ "$PUBLIC_SHA" != "$SOURCE_SHA" ]; then
+            echo "::error::Production alias did not converge to exact Git source SHA within 60 seconds"
+            cat /tmp/prod-health.json 2>/dev/null || true
+            exit 1
+          fi
 
           curl --retry 5 --retry-all-errors --retry-delay 2 -fsS -o /dev/null "$PROD_BASE_URL/"
 
