@@ -12,7 +12,9 @@ from total_goals_artifact_registry import (
     build_registry_manifest,
     create_privileged_supabase_client,
     materialize_registered_bundle,
+    normalize_expected_bundle_sha256,
     register_bundle,
+    validate_expected_bundle_sha256,
 )
 from total_goals_inference_contract import TOTAL_GOALS_ARTIFACTS
 
@@ -104,8 +106,10 @@ class FakeClient:
         self.rows = []
         self.bucket = FakeBucket()
         self.storage = FakeStorage(self.bucket)
+        self.table_calls = 0
 
     def table(self, table_name):
+        self.table_calls += 1
         assert table_name == REGISTRY_TABLE
         return FakeTable(self.rows)
 
@@ -127,6 +131,58 @@ def test_manifest_is_content_addressed_and_covers_all_four_artifacts(tmp_path):
     assert set(manifest["objects"]) == set(TOTAL_GOALS_ARTIFACTS)
     assert manifest["manifest_object"].endswith("/manifest.json")
     assert manifest["source_note"] == "existing production bundle"
+
+
+def test_expected_bundle_sha_normalizes_and_matches_manifest(tmp_path):
+    write_bundle(tmp_path)
+    manifest = build_registry_manifest(tmp_path)
+    expected = manifest["bundle_sha256"]
+
+    assert normalize_expected_bundle_sha256(expected.upper()) == expected
+    assert validate_expected_bundle_sha256(manifest, expected.upper()) == expected
+
+
+def test_expected_bundle_sha_rejects_invalid_or_mismatched_identity(tmp_path):
+    write_bundle(tmp_path)
+    manifest = build_registry_manifest(tmp_path)
+
+    with pytest.raises(ArtifactRegistryError, match="64-character"):
+        normalize_expected_bundle_sha256("abc")
+    with pytest.raises(ArtifactRegistryError, match="hexadecimal"):
+        normalize_expected_bundle_sha256("z" * 64)
+    with pytest.raises(ArtifactRegistryError, match="does not match expected SHA"):
+        validate_expected_bundle_sha256(manifest, "0" * 64)
+
+
+def test_expected_bundle_mismatch_fails_before_any_network_access(tmp_path):
+    write_bundle(tmp_path)
+    client = FakeClient()
+
+    with pytest.raises(ArtifactRegistryError, match="does not match expected SHA"):
+        register_bundle(
+            client,
+            tmp_path,
+            expected_bundle_sha256="0" * 64,
+        )
+
+    assert client.table_calls == 0
+    assert client.storage.requested == []
+    assert client.rows == []
+    assert client.bucket.objects == {}
+
+
+def test_expected_bundle_match_allows_registration(tmp_path):
+    write_bundle(tmp_path)
+    client = FakeClient()
+    expected = build_registry_manifest(tmp_path)["bundle_sha256"]
+
+    result = register_bundle(
+        client,
+        tmp_path,
+        expected_bundle_sha256=expected,
+    )
+    assert result["status"] == "REGISTERED"
+    assert result["manifest"]["bundle_sha256"] == expected
 
 
 def test_registration_uploads_once_without_upsert_then_is_idempotent(tmp_path):
