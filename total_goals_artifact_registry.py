@@ -1,8 +1,8 @@
 """Private immutable registry helpers for the Total Goals artifact bundle.
 
 The registry transports already-existing production artifacts; it does not train,
-promote, or execute them.  Network operations require an explicitly supplied
-privileged Supabase client.  Bundle identity is delegated to the frozen
+promote, or execute them. Network operations require an explicitly supplied
+privileged Supabase client. Bundle identity is delegated to the frozen
 ``total_goals_inference_contract``.
 """
 
@@ -67,6 +67,35 @@ def build_registry_manifest(root: str | Path, *, source_note: str | None = None)
         "feature_count": int(report["feature_count"]),
         "source_note": (source_note.strip() if source_note and source_note.strip() else None),
     }
+
+
+def normalize_expected_bundle_sha256(value: str) -> str:
+    """Normalize and validate an operator-supplied expected bundle identity."""
+
+    digest = str(value).strip().lower()
+    if len(digest) != 64:
+        raise ArtifactRegistryError("expected bundle SHA must be a 64-character SHA-256")
+    try:
+        int(digest, 16)
+    except ValueError as error:
+        raise ArtifactRegistryError("expected bundle SHA must be hexadecimal") from error
+    return digest
+
+
+def validate_expected_bundle_sha256(
+    manifest: Mapping[str, Any],
+    expected_bundle_sha256: str,
+) -> str:
+    """Fail before network access when local files are not the expected bundle."""
+
+    expected = normalize_expected_bundle_sha256(expected_bundle_sha256)
+    actual = str(manifest.get("bundle_sha256") or "").strip().lower()
+    if actual != expected:
+        raise ArtifactRegistryError(
+            "local Total Goals bundle does not match expected SHA: "
+            f"expected={expected}, actual={actual or 'missing'}"
+        )
+    return expected
 
 
 def registry_row(manifest: Mapping[str, Any]) -> dict[str, Any]:
@@ -152,7 +181,7 @@ def _sha256_bytes(payload: bytes) -> str:
 
 
 def verify_remote_bundle(client: Any, manifest: Mapping[str, Any]) -> None:
-    """Download and hash every private object; never trusts object names alone."""
+    """Download and hash every private object; never trust object names alone."""
 
     _validate_manifest_identity(manifest)
     bucket = client.storage.from_(STORAGE_BUCKET)
@@ -177,16 +206,21 @@ def register_bundle(
     root: str | Path,
     *,
     source_note: str | None = None,
+    expected_bundle_sha256: str | None = None,
 ) -> dict[str, Any]:
     """Upload once with no overwrite, verify bytes, then append metadata.
 
-    Existing matching registry rows are treated idempotently only after all
-    remote bytes re-verify.  Unregistered objects under the deterministic prefix
-    are a fail-closed partial-state blocker; this function never deletes them.
+    When ``expected_bundle_sha256`` is supplied it is checked against freshly
+    hashed local files before the first database or Storage request. Existing
+    matching registry rows are treated idempotently only after all remote bytes
+    re-verify. Unregistered objects under the deterministic prefix are a
+    fail-closed partial-state blocker; this function never deletes them.
     """
 
     root_path = Path(root)
     manifest = build_registry_manifest(root_path, source_note=source_note)
+    if expected_bundle_sha256 is not None:
+        validate_expected_bundle_sha256(manifest, expected_bundle_sha256)
     bundle_sha = manifest["bundle_sha256"]
 
     existing = _query_registered_row(client, bundle_sha)
