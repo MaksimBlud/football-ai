@@ -40,6 +40,8 @@ The earlier approximate count of 66 was not a valid current-round cohort: it inc
 
 All ten current-round EPL `MARKET_ONLY` event IDs have a matching row in `epl_ai_market_pair_ledger` whose model generation time precedes kickoff. These are already prospective AI-vs-market observations. They remain in `EPL_AI_MARKET_PAIR_V1`; they are excluded from reconstruction so evidence classes are not duplicated or relabelled.
 
+The older frozen EPL experiment also has an explicit no-peek gate: outcomes are forbidden until at least 100 eligible preregistered events exist, the maturity delay is satisfied, and the fixed wall-clock embargo has elapsed. Its fixed wall-clock floor is `2026-11-01T12:16:54.672903Z`. `REPLAY_DIAGNOSTIC_V1` is secondary and may **never** weaken or bypass that older gate.
+
 ### La Liga
 
 The only plausible pre-kickoff non-EPL candidate path was the research-only La Liga candidate builder. GitHub Actions run `34497901262` executed the historical candidate proof on 2026-09-10. At 2026-09-10T15:48:12Z the strict gate printed `REJECTED_NO_ARTIFACT`. The uploaded artifact contained only the historical report; no `model.joblib`, calibrator or candidate manifest was created. Therefore no immutable pre-kickoff La Liga AI artifact exists for this replay.
@@ -65,9 +67,11 @@ This zero is a research result, not an invitation to weaken eligibility after ou
 
 ## Evaluation plan
 
-Because `REPLAY_DIAGNOSTIC_V1` has no eligible reconstructed rows, no replay outcome evaluation will be manufactured. The immediate honest early diagnostic must instead use only already-genuine prospective paired evidence from the frozen `EPL_AI_MARKET_PAIR_V1` experiment.
+`REPLAY_DIAGNOSTIC_V1` has no eligible reconstructed rows, so no replay outcome evaluation will be manufactured. The already-genuine EPL pairs also cannot be used for an immediate secondary peek because the older `EPL_AI_MARKET_PAIR_V1` outcome-read embargo remains controlling.
 
-For any pooled paired evaluation, the only primary metrics are:
+Therefore, **as of this freeze there is no permitted settled AI sample to score**. The research status is `INCONCLUSIVE`: not because the observed metrics are mixed, but because honest evidence available under the frozen contracts has `N=0` evaluable outcomes at this time.
+
+When a governing outcome-read gate is legitimately open, the only pooled paired metrics are:
 
 - AI multiclass Brier score;
 - Market multiclass Brier score;
@@ -78,7 +82,7 @@ For any pooled paired evaluation, the only primary metrics are:
 - AI accuracy;
 - Market accuracy.
 
-Interpretation is frozen before reading outcomes:
+The descriptive interpretation remains:
 
 - `delta_brier < 0` **and** `delta_logloss < 0` → `EARLY_SIGNAL`;
 - `delta_brier > 0` **and** `delta_logloss > 0` → `WARNING`;
@@ -89,11 +93,11 @@ With small N these labels are descriptive only, not claims of statistical proof.
 ## Boundary with frozen experiments
 
 - `ALL_LEAGUES_MARKET_ONLY_V1_1` is unchanged and remains a MARKET_ONLY experiment under its original gate.
-- `EPL_AI_MARKET_PAIR_V1` is unchanged and remains the true prospective paired experiment.
+- `EPL_AI_MARKET_PAIR_V1` is unchanged and remains the true prospective paired experiment; its no-peek gate has priority over this diagnostic.
 - This contract does not promote any MARKET_ONLY row into prospective evidence.
 - This contract does not modify or promote any production `.pkl`.
 - No paid provider request is required.
 
 ## Next action after freeze
 
-After this outcome-free contract is merged, read canonical settlements only for already-existing valid prospective EPL pairs, evaluate the predeclared pooled metrics once, report the small-N status, and then harden future league capture so `AI_CAPTURE_READY` requires live durable AI-probability/provenance read-back rather than MARKET_ONLY success.
+Do **not** read EPL settlements before the older frozen gate opens. The next safe research action is to harden future multi-league capture so `AI_CAPTURE_READY` requires live durable AI-probability/provenance read-back rather than MARKET_ONLY success, while continuing collection toward the original EPL gate. Any future replay attempt for another league requires a model artifact and inference contract that demonstrably existed before the target kickoff.
