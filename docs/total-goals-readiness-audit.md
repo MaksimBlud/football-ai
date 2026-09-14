@@ -38,6 +38,32 @@ The production goal `.pkl` binaries are intentionally not tracked in Git, so the
 
 The evaluator currently derives season order from first occurrence in the input frame. A future hardening should make chronological season ordering/boundaries explicit rather than relying on upstream order.
 
+## Recovered controlled-inference input contract
+
+The original goal-model lineage was recovered from commit `bab8522d379131f30fdc4bbea9b03879e5c11f0f` (`Add calibrated no-odds predictions and match analysis`). `train_goal_models_no_odds.py` at that commit proves the exact ordered 18-feature schema used by both goal regressors. The same order is preserved by current `artifact_lifecycle.py` and is now frozen in `total_goals_inference_contract.py`.
+
+The historical feature builders also establish the intended causal semantics:
+
+- `feature_engineering.py` sorts completed matches chronologically, computes rolling team/venue features for the current row from history accumulated before that row, and only then appends the current result/statistics to history;
+- `add_elo_features.py` stores home/away Elo and the Elo difference before updating ratings with the current match result;
+- therefore the intended feature values are pre-match values, not post-result features.
+
+This evidence does not make the old live helper safe by itself. Current `goal_prediction_no_odds.py` delegates to `model_utils.build_match_features`, while the current helper has a different signature and reads live history without an explicit immutable `as_of_utc` cutoff. It must not be treated as the controlled production path.
+
+`total_goals_inference_contract.py` therefore requires future target kickoffs to be strictly after an explicit UTC `as_of_utc`, requires source observation timestamps to be strictly before that snapshot, freezes exact feature order, and can only identify the complete four-artifact bundle. It performs no network access, database writes, model loading, training, promotion, or publication.
+
+Historical ordering used `match_date` / `match_time` and did not itself prove timezone-aware timestamps. A future controlled feature materializer must provide explicit UTC source timestamps and preserve the strict `< as_of_utc < kickoff` boundary rather than inheriting that ambiguity.
+
+## Artifact availability evidence
+
+The four-artifact bundle is still a runtime availability blocker, not a Git-hosted asset:
+
+- no Git commit history exists for `home_goals_model_no_odds.pkl` (the same production binaries are intentionally ignored rather than versioned);
+- the repository has no GitHub Releases containing the bundle;
+- there were no GitHub Actions workflow runs at all during 2026-08-08 through 2026-08-10, the window in which this goal-model lineage was introduced, so the original binaries could not have been preserved there as workflow artifacts at creation time.
+
+These facts do **not** say that the production files never existed locally. They establish only that GitHub does not currently provide a provenance-preserving retrieval path for the original binary bundle. A runtime must therefore be given the actual four production files through an explicit artifact registry/transfer mechanism before controlled inference can run.
+
 ## Calibration provenance
 
 `calibrate_goal_markets.py` uses:
@@ -78,6 +104,7 @@ This provenance hardening does **not** make Total Goals operational. The scope r
 
 Open gates established by the current product/runtime contract:
 
+- the actual four production goal artifacts are not available through a proven portable runtime registry; controlled inference must fail closed until they are supplied and hashed;
 - current durable live prediction snapshots do not yet contain the required Total Goals model probabilities for the active fixtures;
 - the stored odds contract currently transports 1X2 prices only, so there is no proven bookmaker Over/Under 2.5 price contract or live coverage;
 - there is no proven Total Goals-specific settlement contract;
