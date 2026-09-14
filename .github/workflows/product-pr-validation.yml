@@ -46,6 +46,9 @@ jobs:
           python -m py_compile product_operational_automation.py
           python -m py_compile run_product_operational_cycle.py
           python -m py_compile total_goals_inference_contract.py
+          python -m py_compile total_goals_artifact_registry.py
+          python -m py_compile register_total_goals_artifact_bundle.py
+          python -m py_compile materialize_total_goals_artifact_bundle.py
           python -m py_compile web_app.py
 
       - name: Validate web deployment config
@@ -140,6 +143,8 @@ jobs:
           python -m pytest -q tests/test_product_operational_automation.py
           python -m pytest -q tests/test_product_operational_automation_workflow.py
           python -m pytest -q tests/test_total_goals_inference_contract.py
+          python -m pytest -q tests/test_total_goals_artifact_registry.py
+          python -m pytest -q tests/test_total_goals_artifact_registry_migration.py
 
       - name: Enforce no production artifact changes
         run: |
