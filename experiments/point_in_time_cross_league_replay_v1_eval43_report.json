@@ -1,0 +1,40 @@
+{
+  "experiment_id": "POINT_IN_TIME_CROSS_LEAGUE_REPLAY_V1_EVAL43",
+  "n": 43,
+  "rollover_next_sample_n": 4,
+  "model_brier": 0.6125651124394431,
+  "market_brier": 0.5975406259362642,
+  "delta_brier_ai_minus_market": 0.015024486503178891,
+  "model_log_loss": 1.0249478419454585,
+  "market_log_loss": 0.9958508866152331,
+  "delta_log_loss_ai_minus_market": 0.029096955330225382,
+  "model_accuracy": 0.3953488372093023,
+  "market_accuracy": 0.4883720930232558,
+  "model_correct_n": 17,
+  "market_correct_n": 21,
+  "disagreement_n": 10,
+  "disagreement_ai_correct_market_wrong": 0,
+  "disagreement_market_correct_ai_wrong": 4,
+  "disagreement_both_wrong": 6,
+  "status": "WARNING",
+  "bet_decision": "NO_BET",
+  "interpretation": "AI underperformed market on both primary probabilistic metrics; preregistered status WARNING.",
+  "selection_cutoff_utc": "2026-09-14T15:17:18Z",
+  "included_identities_sha256": "d83a0a7d4e835e17e3f12848c223326cc9bcc2a371588503f3c0c285c850f1f0",
+  "per_league": [
+    {"league":"BUNDESLIGA","n":9,"model_brier":0.5123338905318369,"market_brier":0.48321120966845466,"delta_brier":0.02912268086338221,"model_logloss":0.8772493798500231,"market_logloss":0.8331975894337717,"delta_logloss":0.0440517904162514,"model_accuracy":0.4444444444444444,"market_accuracy":0.5555555555555556,"model_correct":4,"market_correct":5},
+    {"league":"EREDIVISIE","n":9,"model_brier":0.6377302530188974,"market_brier":0.6263285177749809,"delta_brier":0.011401735243916522,"model_logloss":1.0686730529959643,"market_logloss":1.0370698860767797,"delta_logloss":0.031603166919184635,"model_accuracy":0.4444444444444444,"market_accuracy":0.4444444444444444,"model_correct":4,"market_correct":4},
+    {"league":"LA_LIGA","n":9,"model_brier":0.6385369792575993,"market_brier":0.5625102464729035,"delta_brier":0.07602673278469585,"model_logloss":1.0454778993379827,"market_logloss":0.9225536467068383,"delta_logloss":0.12292425263114436,"model_accuracy":0.4444444444444444,"market_accuracy":0.5555555555555556,"model_correct":4,"market_correct":5},
+    {"league":"LIGUE_1","n":9,"model_brier":0.6066714659436673,"market_brier":0.599244528914282,"delta_brier":0.00742693702938535,"model_logloss":1.0288691426908044,"market_logloss":1.005655304880824,"delta_logloss":0.02321383780998042,"model_accuracy":0.3333333333333333,"market_accuracy":0.4444444444444444,"model_correct":3,"market_correct":4},
+    {"league":"SERIE_A","n":7,"model_brier":0.6832644201760173,"market_brier":0.7503712358016222,"delta_brier":-0.06710681562560494,"model_logloss":1.1271905344873662,"market_logloss":1.2336142584705872,"delta_logloss":-0.106423723983221,"model_accuracy":0.2857142857142857,"market_accuracy":0.42857142857142855,"model_correct":2,"market_correct":3}
+  ],
+  "strongest_ai_relative_case": {"league":"SERIE_A","match":"Venezia - Fiorentina","score":"2-4","result":"A","model_actual_probability":0.5383926549793384,"market_actual_probability":0.371382381864824,"brier_delta_ai_minus_market":-0.2751995145966432},
+  "largest_ai_relative_miss": {"league":"LA_LIGA","match":"Celta Vigo - Málaga","score":"1-1","result":"D","model_actual_probability":0.143175978755235,"market_actual_probability":0.257980306862011,"brier_delta_ai_minus_market":0.3389551097320737},
+  "result_sources": {
+    "BUNDESLIGA": "structured soccer schedule source fetched 2026-09-14T15:28Z",
+    "LA_LIGA": "structured soccer schedule source fetched 2026-09-14T15:28Z",
+    "LIGUE_1": "structured soccer schedule source fetched 2026-09-14T15:28Z",
+    "SERIE_A": "structured soccer schedule source fetched 2026-09-14T15:28Z",
+    "EREDIVISIE": "TOTO Eredivisie results with corroborating web sources fetched 2026-09-14"
+  }
+}
