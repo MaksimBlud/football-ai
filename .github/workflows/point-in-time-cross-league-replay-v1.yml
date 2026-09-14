@@ -4,10 +4,11 @@ on:
   pull_request:
     paths:
       - 'point_in_time_cross_league_replay_v1.py'
+      - 'point_in_time_cross_league_replay_v1_freeze_guard.py'
       - 'tests/test_point_in_time_cross_league_replay_v1.py'
+      - 'tests/test_point_in_time_cross_league_replay_v1_freeze_guard.py'
       - 'research/POINT_IN_TIME_CROSS_LEAGUE_REPLAY_V1.md'
-      - 'experiments/point_in_time_cross_league_replay_v1.csv'
-      - 'experiments/point_in_time_cross_league_replay_v1_manifest.json'
+      - 'experiments/point_in_time_cross_league_replay_v1_predictions.json'
       - '.github/workflows/point-in-time-cross-league-replay-v1.yml'
   workflow_dispatch:
 
@@ -30,12 +31,20 @@ jobs:
       - run: pip install -r requirements.txt pytest
       - name: Compile and run replay regression tests
         run: |
-          python -m py_compile point_in_time_cross_league_replay_v1.py
-          python -m pytest -q tests/test_point_in_time_cross_league_replay_v1.py
-      - name: Reconstruct frozen 47-event AI replay
+          python -m py_compile point_in_time_cross_league_replay_v1.py point_in_time_cross_league_replay_v1_freeze_guard.py
+          python -m pytest -q \
+            tests/test_point_in_time_cross_league_replay_v1.py \
+            tests/test_point_in_time_cross_league_replay_v1_freeze_guard.py
+          python point_in_time_cross_league_replay_v1_freeze_guard.py
+      - name: Reconstruct exact frozen 47-event AI replay
         run: |
           python point_in_time_cross_league_replay_v1.py \
             --output artifacts/point_in_time_cross_league_replay_v1.csv \
+            --manifest artifacts/point_in_time_cross_league_replay_v1_manifest.json
+      - name: Verify replay is byte-for-byte frozen
+        run: |
+          python point_in_time_cross_league_replay_v1_freeze_guard.py \
+            --csv artifacts/point_in_time_cross_league_replay_v1.csv \
             --manifest artifacts/point_in_time_cross_league_replay_v1_manifest.json
       - name: Production artifacts unchanged
         run: |
