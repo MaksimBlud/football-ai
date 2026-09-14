@@ -3,6 +3,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "supabase/migrations/20260914030000_total_goals_artifact_registry.sql"
+HARDENING = ROOT / "supabase/migrations/20260914031500_model_artifact_registry_grant_hardening.sql"
 
 
 def test_registry_bucket_is_private_and_metadata_is_server_side_only():
@@ -40,3 +41,17 @@ def test_migration_does_not_grant_public_storage_object_access():
     assert "on storage.objects" not in sql
     assert "to anon" not in sql
     assert "to authenticated" not in sql
+
+
+def test_hardening_removes_all_service_role_privileges_then_restores_only_read_append():
+    sql = HARDENING.read_text(encoding="utf-8").lower()
+
+    assert "revoke all privileges" in sql
+    assert "from anon, authenticated, service_role" in sql
+    assert "grant select, insert" in sql
+    assert "to service_role" in sql
+    assert "grant truncate" not in sql
+    assert "grant update" not in sql
+    assert "grant delete" not in sql
+    assert "grant references" not in sql
+    assert "grant trigger" not in sql
