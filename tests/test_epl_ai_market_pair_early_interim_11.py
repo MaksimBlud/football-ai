@@ -37,6 +37,10 @@ def test_interim_rows_are_exact_prospective_completed_set():
 
 def test_interim_reuses_preexisting_latest_snapshot_rule():
     frame = pd.read_csv(RESULTS)
+    frame["experiment_id"] = "EPL_AI_MARKET_PAIR_V1"
+    frame["league"] = "EPL"
+    frame["provider_home_team"] = frame["home_team"]
+    frame["provider_away_team"] = frame["away_team"]
     late = frame.loc[frame["event_id"] == "14f6639178a943ac614c7b872bf6e4d6"].iloc[0].copy()
     early = late.copy()
     early["pair_key"] = "synthetic-earlier-pair"
