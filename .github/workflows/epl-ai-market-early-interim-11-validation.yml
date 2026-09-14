@@ -1,0 +1,33 @@
+name: EPL AI Market Early Interim 11 Validation
+
+on:
+  pull_request:
+    paths:
+      - 'epl_ai_market_pair_early_interim_11.py'
+      - 'experiments/epl_ai_market_pair_v1_early_interim_11_results.csv'
+      - 'experiments/epl_ai_market_pair_v1_early_interim_11_report.json'
+      - 'tests/test_epl_ai_market_pair_early_interim_11.py'
+      - '.github/workflows/epl-ai-market-early-interim-11-validation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  early-interim-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt pytest
+      - name: Compile early interim module
+        run: python -m py_compile epl_ai_market_pair_early_interim_11.py
+      - name: Run early interim tests
+        run: python -m pytest -q tests/test_epl_ai_market_pair_early_interim_11.py
+      - name: Production artifacts unchanged
+        run: |
+          git diff --exit-code -- '*.pkl'
+          test -z "$(git status --porcelain -- '*.pkl')"
