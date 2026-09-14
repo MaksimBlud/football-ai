@@ -22,6 +22,32 @@ def test_inventory_hash_is_sha256_shape():
     int(replay.INVENTORY_SHA256, 16)
 
 
+def test_older_epl_primary_gate_has_priority_over_replay_diagnostic():
+    current = replay.epl_primary_outcome_gate(
+        eligible_events=22,
+        now_utc="2026-09-14T13:50:00Z",
+    )
+    assert current["open"] is False
+    assert current["outcome_reads_allowed"] is False
+    assert current["reason"] == "INSUFFICIENT_PREREGISTERED_EVENTS"
+    assert current["required_events"] == 100
+
+    wall_clock_blocked = replay.epl_primary_outcome_gate(
+        eligible_events=100,
+        now_utc="2026-10-31T23:59:59Z",
+    )
+    assert wall_clock_blocked["open"] is False
+    assert wall_clock_blocked["outcome_reads_allowed"] is False
+    assert wall_clock_blocked["reason"] == "PREREGISTERED_GATE_NOT_REACHED"
+
+    open_gate = replay.epl_primary_outcome_gate(
+        eligible_events=100,
+        now_utc="2026-11-01T12:16:55Z",
+    )
+    assert open_gate["open"] is True
+    assert open_gate["outcome_reads_allowed"] is True
+
+
 def test_pooled_metrics_use_ai_minus_market_deltas():
     rows = [
         {"outcome": 0, "ai_probs": [0.7, 0.2, 0.1], "market_probs": [0.5, 0.3, 0.2]},

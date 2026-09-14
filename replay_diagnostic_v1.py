@@ -7,11 +7,14 @@ This module deliberately separates three evidence classes:
 3. MARKET_ONLY observations, which are never promoted to AI evidence.
 
 The current-round eligibility constants below were frozen before reading any
-settlement outcome values for this diagnostic.
+settlement outcome values for this diagnostic. The older frozen
+EPL_AI_MARKET_PAIR_V1 outcome-read gate always has priority over this secondary
+replay diagnostic.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from math import log
 from typing import Iterable, Mapping, Sequence
 
@@ -21,6 +24,11 @@ CAPTURE_START_UTC = "2026-09-11T00:00:00Z"
 CAPTURE_END_UTC = "2026-09-12T00:00:00Z"
 CURRENT_ROUND_END_UTC = "2026-09-15T00:00:00Z"
 INVENTORY_SHA256 = "4934dd8f5e6f287c79ecfad4e910158650fd171d26faae66d9000b23bc5e4828"
+
+# Imported conceptually from the older frozen EPL_AI_MARKET_PAIR_V1 contract.
+# REPLAY_DIAGNOSTIC_V1 may never weaken these conditions.
+EPL_PRIMARY_COHORT_SIZE = 100
+EPL_FIRST_PERMITTED_OUTCOME_READ_UTC = "2026-11-01T12:16:54.672903Z"
 
 SCOPE_LEAGUES = (
     "BUNDESLIGA",
@@ -100,6 +108,43 @@ class PooledMetrics:
     status: str
 
 
+def _parse_utc(value: str) -> datetime:
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        raise ValueError("UTC timestamp must be timezone-aware")
+    return parsed.astimezone(timezone.utc)
+
+
+def epl_primary_outcome_gate(*, eligible_events: int, now_utc: str) -> dict[str, object]:
+    """Mirror the older frozen EPL primary gate; this contract cannot weaken it."""
+    if eligible_events < EPL_PRIMARY_COHORT_SIZE:
+        return {
+            "open": False,
+            "outcome_reads_allowed": False,
+            "reason": "INSUFFICIENT_PREREGISTERED_EVENTS",
+            "required_events": EPL_PRIMARY_COHORT_SIZE,
+            "eligible_events": int(eligible_events),
+        }
+    now = _parse_utc(now_utc)
+    fixed_gate = _parse_utc(EPL_FIRST_PERMITTED_OUTCOME_READ_UTC)
+    if now < fixed_gate:
+        return {
+            "open": False,
+            "outcome_reads_allowed": False,
+            "reason": "PREREGISTERED_GATE_NOT_REACHED",
+            "required_events": EPL_PRIMARY_COHORT_SIZE,
+            "eligible_events": int(eligible_events),
+            "fixed_wall_clock_gate_utc": EPL_FIRST_PERMITTED_OUTCOME_READ_UTC,
+        }
+    return {
+        "open": True,
+        "outcome_reads_allowed": True,
+        "reason": "WALL_CLOCK_AND_SAMPLE_FLOORS_REACHED",
+        "required_events": EPL_PRIMARY_COHORT_SIZE,
+        "eligible_events": int(eligible_events),
+    }
+
+
 def validate_preregistered_contract() -> None:
     """Fail closed if frozen scope or eligibility is changed accidentally."""
     if tuple(CURRENT_ROUND_EVENT_COUNTS) != SCOPE_LEAGUES:
@@ -116,6 +161,10 @@ def validate_preregistered_contract() -> None:
         if league != "EPL"
     ):
         raise RuntimeError("non-EPL rows must not be promoted to prospective AI")
+    if EPL_PRIMARY_COHORT_SIZE != 100:
+        raise RuntimeError("older EPL primary sample gate must remain 100")
+    if EPL_FIRST_PERMITTED_OUTCOME_READ_UTC != "2026-11-01T12:16:54.672903Z":
+        raise RuntimeError("older EPL wall-clock outcome gate changed")
 
 
 def _normalize_probs(values: Sequence[float]) -> tuple[float, float, float]:
@@ -145,11 +194,13 @@ def _accuracy(outcome: int, probs: Sequence[float]) -> float:
 
 
 def evaluate_pooled(records: Iterable[Mapping[str, object]]) -> PooledMetrics:
-    """Evaluate only the predeclared pooled H/D/A metrics.
+    """Evaluate predeclared pooled H/D/A metrics after the governing gate opens.
 
     Required record keys: ``outcome`` (0=H, 1=D, 2=A), ``ai_probs`` and
-    ``market_probs``. This function performs no subgroup selection, threshold
-    tuning, betting decision, or optional stopping.
+    ``market_probs``. Callers are responsible for satisfying the governing
+    experiment's frozen outcome-read gate before obtaining any outcome values.
+    This function performs no subgroup selection, threshold tuning, betting
+    decision, or optional stopping.
     """
     rows = list(records)
     if not rows:
