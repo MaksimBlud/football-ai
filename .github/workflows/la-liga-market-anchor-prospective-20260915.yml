@@ -57,7 +57,7 @@ jobs:
       - name: Compile and regression tests
         run: |
           python -m py_compile la_liga_market_anchor_prospective_20260915.py evaluate_la_liga_market_anchor_prospective_20260915.py
-          pytest -q tests/test_la_liga_market_anchor_prospective_20260915.py
+          PYTHONPATH=. pytest -q tests/test_la_liga_market_anchor_prospective_20260915.py
 
       - name: Generate prospective freeze or validate canonical freeze
         shell: bash
