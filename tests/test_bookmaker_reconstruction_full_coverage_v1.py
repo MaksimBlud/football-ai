@@ -6,6 +6,7 @@ from bookmaker_reconstruction_full_coverage_v1 import (
     CANDIDATE_SOURCE,
     FINAL_SEASON,
     SEASONS,
+    _diagnostic_row,
     pair_mask,
     paired_bootstrap,
 )
@@ -34,6 +35,22 @@ def test_pair_mask_requires_b365_and_avg_but_not_ps():
         },
     ])
     assert pair_mask(frame).tolist() == [True, False]
+
+
+def test_missing_historical_avg_is_reported_not_synthesized_or_rejected():
+    frame = pd.DataFrame([{
+        "result": "H",
+        "B365_home_odds": 2.0, "B365_draw_odds": 3.5, "B365_away_odds": 4.0,
+        "AVG_home_odds": np.nan, "AVG_draw_odds": np.nan, "AVG_away_odds": np.nan,
+        "PS_home_odds": np.nan, "PS_draw_odds": np.nan, "PS_away_odds": np.nan,
+    }])
+    row = _diagnostic_row(frame, season="2016-2017")
+    assert row["status"] == "NO_PAIR_COVERAGE"
+    assert row["B365_available"] == 1
+    assert row["AVG_available"] == 0
+    assert row["pair_available"] == 0
+    assert row["pair_fraction"] == 0.0
+    assert "delta_brier" not in row
 
 
 def test_paired_bootstrap_is_deterministic():
