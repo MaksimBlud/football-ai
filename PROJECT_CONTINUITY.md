@@ -614,3 +614,79 @@ Supabase security advisor produced no new H2H security finding after hardening. 
 8. Production `.pkl`, betting/staking and automatic model promotion remain out of scope until a separately authorized gate is satisfied.
 
 Next research milestone: **prospectively prove which market reconstruction is the strongest stable prior on fresh bookmaker-level data, then test whether football information adds incremental value beyond that stronger prior without ever allowing the active output to degrade below the proven market fallback.**
+
+---
+
+# La Liga prospective Market Anchor micro-cohort — 2026-09-15
+
+## `LA_LIGA_MARKET_ANCHOR_PROSPECTIVE_20260915_V1` — FROZEN PRE-MATCH / OUTCOME-BLIND
+
+PR #338 merged to `main` as `3d03fbb1613b2858fc10acbff5cf1b08a13d2d32`.
+
+Purpose: create a genuinely forward, pre-match check of a La Liga analogue of the fixed Market Anchor residual architecture on the three 2026-09-15 fixtures, without transferring the Serie A artifact across leagues and without reading target outcomes.
+
+Frozen contract before first kickoff:
+- league = `LA_LIGA`;
+- feature set = exact historical `ALL_FOOTBALL`;
+- L2 = `1.0`;
+- training = La Liga `2016-2017..2025-2026`, `3800` rows;
+- training cutoff = `2026-06-30T23:59:59Z`;
+- target feature-history cutoff = `2026-09-15T00:00:00Z`;
+- active lambda = `0.0` (exact market fallback);
+- shadow lambda = `1.0`;
+- no feature/lambda/threshold/source tuning is authorized on these three outcomes;
+- Brier + LogLoss are primary; accuracy is secondary;
+- a directional micro-cohort win requires shadow to beat market on both pooled Brier and pooled LogLoss;
+- `n=3` can never authorize production promotion, betting or staking by itself.
+
+Durable market baseline:
+- all three market rows were captured in live Supabase at `2026-09-11T15:45:28.192487Z`;
+- all three used `19` bookmakers;
+- no paid Odds API refresh was made for this experiment.
+
+Canonical pre-kickoff freeze:
+- capture time = `2026-09-15T15:55:40.251172Z`;
+- first kickoff = `2026-09-15T17:00:00Z`;
+- candidate artifact SHA256 = `9c0f004e14c075851ae874528e7d587ad344b12cdd89e227be68e84801b9d614`;
+- freeze SHA256 = `58338f7f8823693aee81b5b0cf709e96c180af61c83204f904d55b972306d461`;
+- canonical file = `experiments/la_liga_market_anchor_prospective_20260915_freeze.json`.
+
+Frozen probabilities H/D/A:
+
+1. Rayo Vallecano vs Espanyol — event `b9a6e597fd597637efa24b92d51dda62`, kickoff `17:00Z`
+   - market / active lambda=0: `0.46932048598728 / 0.275291229511983 / 0.255388284500737`
+   - shadow lambda=1: `0.4499889040086503 / 0.3122695776275001 / 0.23774151836384952`
+
+2. Alavés vs Valencia — event `d6474326396cdd0e300afd0193c7c93d`, kickoff `18:00Z`
+   - market / active lambda=0: `0.447759791488515 / 0.304537995169928 / 0.247702213341557`
+   - shadow lambda=1: `0.5030653349939371 / 0.2749672990334827 / 0.22196736597258007`
+
+3. Elche CF vs Real Madrid — event `0b57607f4a514ee24df31b0c2db9ddc5`, kickoff `19:30Z`
+   - market / active lambda=0: `0.104522793893611 / 0.165700942434781 / 0.729776263671608`
+   - shadow lambda=1: `0.09562785290451811 / 0.18196752022617652 / 0.7224046268693054`
+
+Safety / proof:
+- freeze runner contains no result/score/outcome fields;
+- exact frozen historical source blobs are verified from commit `df19777087fb89af049eedce44ff93f0aa6e6360`;
+- six dedicated regression tests passed before freeze generation;
+- canonical freeze validation passed after the JSON was committed;
+- all seven applicable PR CI workflows were green on exact head `6f5835cb836cf83cec77df52f9c4b56540abf95b`;
+- tracked production `.pkl` hashes were unchanged;
+- `NO_BET`, no production promotion, no Supabase write and no paid provider call occurred.
+
+Outcome gate:
+- evaluator = `evaluate_la_liga_market_anchor_prospective_20260915.py`;
+- evaluation is fail-closed before `2026-09-15T21:30:00Z`;
+- all three final H/D/A outcomes are required at once; no one-match early peek is authorized;
+- evaluator validates the freeze SHA and cannot refit or retune the model.
+
+An exact one-time post-match check is scheduled for `2026-09-16 00:00 Europe/Warsaw` to verify all three finals and report market vs frozen shadow Brier, LogLoss, accuracy and per-match deltas without retuning.
+
+## Current execution pointer — this micro-cohort
+
+1. Do not modify or regenerate the canonical freeze.
+2. Do not inspect/evaluate target outcomes before the gate and do not evaluate a partial cohort.
+3. After all three fixtures are final and the gate is open, run the locked evaluator on exactly these three event IDs.
+4. Record pooled Brier/LogLoss first, accuracy second, plus per-match deltas and the predeclared dual-metric verdict.
+5. Regardless of result, do not tune on these three outcomes. Treat them as prospective directional evidence only.
+6. Keep active Market Anchor fail-closed to market and keep `NO_BET` / no production promotion unless a separately defined larger evidence gate is satisfied.
