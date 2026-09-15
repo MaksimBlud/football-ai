@@ -9,7 +9,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 import pandas as pd
 from fixture_identity import require_league
-from h2h_bookmaker_snapshot import save_h2h_bookmaker_snapshots
+from h2h_bookmaker_snapshot import capture_h2h_bookmaker_snapshots
 from save_odds_snapshot import DB_COLUMNS, DB_CONFLICT_TARGET, SUPABASE_TABLE
 from the_odds_service import aggregate_event_h2h, get_h2h_odds
 from turkey_super_lig_runtime_config import TURKEY_SUPER_LIG_RUNTIME_CONFIG
@@ -61,7 +61,7 @@ def collect_snapshot(league: str, *, persist: bool=True):
     if frame.empty: raise RuntimeError(f"No usable {league} h2h odds")
     persisted=save_supabase(league,frame) if persist else 0
     bookmaker_persisted=(
-        save_h2h_bookmaker_snapshots(
+        capture_h2h_bookmaker_snapshots(
             result["events"], league=cfg.identifier, snapshot_time_utc=now
         )
         if persist else 0
