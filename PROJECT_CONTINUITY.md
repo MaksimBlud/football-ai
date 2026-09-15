@@ -225,7 +225,7 @@ Previous public/runtime audit established that the deployed site lagged reposito
 ## Real repository web contract
 
 The actual Vercel runtime in fresh main is:
-- `pyproject.toml`: `[tool.vercel] entrypoint = \"web_app:app\"`;
+- `pyproject.toml`: `[tool.vercel] entrypoint = "web_app:app"`;
 - `vercel.json`: function `web_app.py`;
 - public routes: `/`, `/match`, `/health`, `/product-market-view`, `/portfolio-risk-view`, `/production-readiness-view`, `/product-market-view/{match_id}`.
 
