@@ -1,0 +1,37 @@
+{
+  "experiment_id": "LA_LIGA_MARKET_ANCHOR_PROSPECTIVE_20260915_V1",
+  "evidence_class": "PROSPECTIVE_MICRO_COHORT_EVALUATION",
+  "cohort_n": 3,
+  "freeze_sha256": "58338f7f8823693aee81b5b0cf709e96c180af61c83204f904d55b972306d461",
+  "final_outcomes": {
+    "b9a6e597fd597637efa24b92d51dda62": "H",
+    "d6474326396cdd0e300afd0193c7c93d": "A",
+    "0b57607f4a514ee24df31b0c2db9ddc5": "A"
+  },
+  "final_scores": {
+    "b9a6e597fd597637efa24b92d51dda62": "Rayo Vallecano 2-1 Espanyol",
+    "d6474326396cdd0e300afd0193c7c93d": "Alaves 0-1 Valencia",
+    "0b57607f4a514ee24df31b0c2db9ddc5": "Elche CF 2-3 Real Madrid"
+  },
+  "market": {
+    "brier": 0.4644053497095842,
+    "log_loss": 0.82233823060156,
+    "accuracy": 0.6666666666666666
+  },
+  "shadow_lambda_1": {
+    "brier": 0.5032927022177164,
+    "log_loss": 0.8763090447871039,
+    "accuracy": 0.6666666666666666
+  },
+  "delta_brier_vs_market": 0.0388873525081322,
+  "delta_log_loss_vs_market": 0.0539708141855439,
+  "delta_accuracy_vs_market": 0.0,
+  "dual_probabilistic_metric_win": false,
+  "per_match": [
+    {"event_id":"b9a6e597fd597637efa24b92d51dda62","home_team":"Rayo Vallecano","away_team":"Espanyol","result":"H","market_brier":0.42262918,"shadow_brier":0.45654552,"delta_brier":0.03391634,"market_log_loss":0.75646940,"shadow_log_loss":0.79853235,"delta_log_loss":0.04206295},
+    {"event_id":"d6474326396cdd0e300afd0193c7c93d","home_team":"Alaves","away_team":"Valencia","result":"A","market_brier":0.85918418,"shadow_brier":0.93401653,"delta_brier":0.07483235,"market_log_loss":1.39552801,"shadow_log_loss":1.50522491,"delta_log_loss":0.10969690},
+    {"event_id":"0b57607f4a514ee24df31b0c2db9ddc5","home_team":"Elche CF","away_team":"Real Madrid","result":"A","market_brier":0.11140268,"shadow_brier":0.11931606,"delta_brier":0.00791338,"market_log_loss":0.31501728,"shadow_log_loss":0.32516987,"delta_log_loss":0.01015259}
+  ],
+  "decision": "FAIL_DUAL_PROBABILISTIC_METRIC_WIN",
+  "interpretation_limit": "Three-match prospective micro-cohort only; insufficient for production promotion or betting decisions. No lambda/feature retuning is authorized from this sample."
+}
