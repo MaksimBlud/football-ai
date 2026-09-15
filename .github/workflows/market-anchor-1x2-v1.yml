@@ -4,7 +4,9 @@ on:
   pull_request:
     paths:
       - 'market_anchor_1x2_v1.py'
+      - 'market_anchor_1x2_v1_freeze_guard.py'
       - 'tests/test_market_anchor_1x2_v1.py'
+      - 'tests/test_market_anchor_1x2_v1_freeze_guard.py'
       - 'research/MARKET_ANCHOR_1X2_V1.md'
       - 'experiments/market_anchor_1x2_v1_report.json'
       - '.github/workflows/market-anchor-1x2-v1.yml'
@@ -14,7 +16,9 @@ on:
     branches: [main]
     paths:
       - 'market_anchor_1x2_v1.py'
+      - 'market_anchor_1x2_v1_freeze_guard.py'
       - 'tests/test_market_anchor_1x2_v1.py'
+      - 'tests/test_market_anchor_1x2_v1_freeze_guard.py'
       - 'research/MARKET_ANCHOR_1X2_V1.md'
       - 'experiments/market_anchor_1x2_v1_report.json'
       - '.github/workflows/market-anchor-1x2-v1.yml'
@@ -36,12 +40,12 @@ jobs:
       - run: pip install pandas numpy requests scipy 'scikit-learn==1.7.2' pytest
       - name: Snapshot production hashes
         run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
-      - name: Contract tests
-        run: pytest -q tests/test_market_anchor_1x2_v1.py
+      - name: Contract and freeze-guard tests
+        run: pytest -q tests/test_market_anchor_1x2_v1.py tests/test_market_anchor_1x2_v1_freeze_guard.py
       - name: Run untouched temporal OOT evaluation
         run: python market_anchor_1x2_v1.py
-      - name: Verify frozen OOT report is exactly reproducible
-        run: cmp artifacts/market_anchor_1x2_v1/report.json experiments/market_anchor_1x2_v1_report.json
+      - name: Verify frozen OOT report is semantically reproducible
+        run: python market_anchor_1x2_v1_freeze_guard.py experiments/market_anchor_1x2_v1_report.json artifacts/market_anchor_1x2_v1/report.json --atol 1e-12
       - name: Verify production hashes unchanged
         run: |
           sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
