@@ -55,11 +55,15 @@ jobs:
           assert r['production_promotion'] is False
           assert r['betting_enabled'] is False
           assert r['result'] == 'NO_BET'
-          assert len(r['seasons']) == 10
+          assert len(r['requested_historical_seasons']) == 10
+          assert r['historical_coverage_is_measured_not_assumed'] is True
           assert r['final_season'] == '2025-2026'
+          assert r['final_season_full_pair_coverage'] is True
           assert r['final_season_metrics']['matches'] == 1140
-          for row in r['coverage_by_season']:
-              assert row['pair_available'] == row['total_matches']
+          final=next(row for row in r['pooled_by_season'] if row['season']=='2025-2026')
+          assert final['status'] == 'FULL_PAIR_COVERAGE'
+          assert final['pair_available'] == final['total_matches'] == 1140
+          assert r['available_pooled_season_comparisons'] <= 10
           PY
       - name: Verify production hashes unchanged
         run: |
