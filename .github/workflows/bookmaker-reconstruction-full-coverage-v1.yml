@@ -1,0 +1,72 @@
+name: BOOKMAKER_RECONSTRUCTION_FULL_COVERAGE_V1
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'bookmaker_reconstruction_consensus_v1.py'
+      - 'bookmaker_reconstruction_full_coverage_v1.py'
+      - 'tests/test_bookmaker_reconstruction_full_coverage_v1.py'
+      - 'research/BOOKMAKER_RECONSTRUCTION_FULL_COVERAGE_V1.md'
+      - '.github/workflows/bookmaker-reconstruction-full-coverage-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'bookmaker_reconstruction_consensus_v1.py'
+      - 'bookmaker_reconstruction_full_coverage_v1.py'
+      - 'tests/test_bookmaker_reconstruction_full_coverage_v1.py'
+      - 'research/BOOKMAKER_RECONSTRUCTION_FULL_COVERAGE_V1.md'
+      - '.github/workflows/bookmaker-reconstruction-full-coverage-v1.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas numpy requests scipy 'scikit-learn==1.7.2' pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Contract tests
+        run: pytest -q tests/test_bookmaker_reconstruction_full_coverage_v1.py
+      - name: Run full-coverage diagnostic
+        run: python bookmaker_reconstruction_full_coverage_v1.py
+      - name: Assert diagnostic contract
+        run: |
+          python - <<'PY'
+          import json
+          r=json.load(open('artifacts/bookmaker_reconstruction_full_coverage_v1/report.json'))
+          assert r['experiment_id'] == 'BOOKMAKER_RECONSTRUCTION_FULL_COVERAGE_V1'
+          assert r['evidence_class'] == 'POST_OUTCOME_FULL_COVERAGE_DIAGNOSTIC'
+          assert r['baseline_source'] == 'B365'
+          assert r['fixed_candidate_source'] == 'AVG'
+          assert r['devig_method_fixed'] == 'PROPORTIONAL'
+          assert r['candidate_selected_from_outcomes'] is False
+          assert r['opened_2026_27_outcomes_used'] is False
+          assert r['research_only'] is True
+          assert r['production_promotion'] is False
+          assert r['betting_enabled'] is False
+          assert r['result'] == 'NO_BET'
+          assert len(r['seasons']) == 10
+          assert r['final_season'] == '2025-2026'
+          assert r['final_season_metrics']['matches'] == 1140
+          for row in r['coverage_by_season']:
+              assert row['pair_available'] == row['total_matches']
+          PY
+      - name: Verify production hashes unchanged
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bookmaker-reconstruction-full-coverage-v1
+          path: artifacts/bookmaker_reconstruction_full_coverage_v1/report.json
+          retention-days: 30
