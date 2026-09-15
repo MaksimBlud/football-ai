@@ -34,20 +34,15 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
-      - name: Snapshot production model hashes
+      - name: Snapshot tracked production artifact hashes
         shell: bash
         run: |
           set -euo pipefail
-          for f in \
-            football_model_xgboost_elo.pkl \
-            football_model_no_odds.pkl \
-            1x2_calibrator.pkl \
-            home_goals_model_no_odds.pkl \
-            away_goals_model_no_odds.pkl \
-            over_2_5_calibrator.pkl \
-            btts_calibrator.pkl; do
-            sha256sum "$f"
-          done | sort > /tmp/production_before.sha256
+          git ls-files '*.pkl' | sort > /tmp/tracked_pkls.txt
+          : > /tmp/production_before.sha256
+          while IFS= read -r f; do
+            test -z "$f" || sha256sum "$f" >> /tmp/production_before.sha256
+          done < /tmp/tracked_pkls.txt
 
       - name: Restore exact frozen historical primitives
         shell: bash
@@ -106,20 +101,16 @@ jobs:
           assert [x['event_id'] for x in report['predictions']] == [x['event_id'] for x in contract['targets']]
           PY
 
-      - name: Verify production model hashes unchanged
+      - name: Verify tracked production artifact hashes unchanged
         shell: bash
         run: |
           set -euo pipefail
-          for f in \
-            football_model_xgboost_elo.pkl \
-            football_model_no_odds.pkl \
-            1x2_calibrator.pkl \
-            home_goals_model_no_odds.pkl \
-            away_goals_model_no_odds.pkl \
-            over_2_5_calibrator.pkl \
-            btts_calibrator.pkl; do
-            sha256sum "$f"
-          done | sort > /tmp/production_after.sha256
+          git ls-files '*.pkl' | sort > /tmp/tracked_pkls_after.txt
+          diff -u /tmp/tracked_pkls.txt /tmp/tracked_pkls_after.txt
+          : > /tmp/production_after.sha256
+          while IFS= read -r f; do
+            test -z "$f" || sha256sum "$f" >> /tmp/production_after.sha256
+          done < /tmp/tracked_pkls_after.txt
           diff -u /tmp/production_before.sha256 /tmp/production_after.sha256
 
       - uses: actions/upload-artifact@v4
