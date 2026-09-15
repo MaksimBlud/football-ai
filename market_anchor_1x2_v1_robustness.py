@@ -18,6 +18,8 @@ from historical_football_signal_lab import FEATURE_SETS, RESULT_TO_INT
 from historical_football_signal_runner import LEAGUES, download
 from market_anchor_1x2_v1 import (
     TEST_SEASON,
+    TRAIN_SEASONS,
+    VALIDATION_SEASON,
     _market,
     _prepare,
     fit_residual_model,
@@ -77,6 +79,23 @@ def _fit_predict(train: pd.DataFrame, test: pd.DataFrame) -> tuple[np.ndarray, n
     return y_test, market_test, candidate
 
 
+def frozen_final_split(league: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Return the exact training/test split used by frozen V1 final OOT.
+
+    Validation selected feature/lambda but was not used to refit residual weights.
+    Including 2024-2025 here would create a different post-hoc model.
+    """
+    train = league[league["season"].isin(TRAIN_SEASONS)].copy()
+    test = league[league["season"] == TEST_SEASON].copy()
+    if len(train) == 0 or len(test) == 0:
+        raise RuntimeError("frozen V1 final split is incomplete")
+    if VALIDATION_SEASON in set(train["season"]):
+        raise RuntimeError("validation season must not refit frozen V1 residual weights")
+    if set(train["season"]) - set(TRAIN_SEASONS):
+        raise RuntimeError("unexpected season entered frozen V1 training split")
+    return train, test
+
+
 def evaluate_robustness(frame: pd.DataFrame) -> dict:
     frame = _prepare(frame)
     league = frame[frame["league"] == TARGET_LEAGUE].copy()
@@ -84,14 +103,16 @@ def evaluate_robustness(frame: pd.DataFrame) -> dict:
     if TEST_SEASON not in seasons:
         raise RuntimeError("frozen untouched test season missing")
 
-    final_idx = seasons.index(TEST_SEASON)
-    final_train = league[league["season"].isin(seasons[:final_idx])].copy()
-    final_test = league[league["season"] == TEST_SEASON].copy()
+    final_train, final_test = frozen_final_split(league)
     y, market, candidate = _fit_predict(final_train, final_test)
     db, dl = per_match_deltas(y, candidate, market)
 
+    # Earlier seasons are post-selection diagnostics only. They never alter V1 and
+    # never determine the frozen 2025-2026 candidate. The final OOT is deliberately
+    # excluded from this expanding-history loop because V1 did not refit on validation.
+    final_idx = seasons.index(TEST_SEASON)
     walk_forward = []
-    for i in range(3, len(seasons)):
+    for i in range(3, final_idx):
         test_season = seasons[i]
         train = league[league["season"].isin(seasons[:i])].copy()
         test = league[league["season"] == test_season].copy()
@@ -109,7 +130,6 @@ def evaluate_robustness(frame: pd.DataFrame) -> dict:
             "dual_metric_win": bool(sc["brier"] < sm["brier"] and sc["log_loss"] < sm["log_loss"]),
         })
 
-    prior_rows = [r for r in walk_forward if r["test_season"] != TEST_SEASON]
     return {
         "experiment_id": EXPERIMENT_ID,
         "parent_experiment_id": "MARKET_ANCHOR_1X2_V1",
@@ -119,6 +139,8 @@ def evaluate_robustness(frame: pd.DataFrame) -> dict:
         "frozen_feature_variant": FROZEN_FEATURE_VARIANT,
         "frozen_lambda": FROZEN_LAMBDA,
         "final_oot_season": TEST_SEASON,
+        "final_oot_training_seasons": list(TRAIN_SEASONS),
+        "validation_season_used_for_selection_not_refit": VALIDATION_SEASON,
         "final_oot_n": int(len(y)),
         "final_oot_market": score_probabilities(y, market),
         "final_oot_candidate": score_probabilities(y, candidate),
@@ -128,8 +150,8 @@ def evaluate_robustness(frame: pd.DataFrame) -> dict:
         "final_oot_candidate_better_match_fraction_log_loss": float((dl < 0).mean()),
         "retrospective_walk_forward_status": "POST_SELECTION_DESCRIPTIVE_ONLY_NOT_AN_INDEPENDENT_GATE",
         "retrospective_walk_forward": walk_forward,
-        "retrospective_prior_season_dual_wins": int(sum(r["dual_metric_win"] for r in prior_rows)),
-        "retrospective_prior_seasons": int(len(prior_rows)),
+        "retrospective_prior_season_dual_wins": int(sum(r["dual_metric_win"] for r in walk_forward)),
+        "retrospective_prior_seasons": int(len(walk_forward)),
         "production_promotion": False,
         "bet_decision": "NO_BET",
     }
