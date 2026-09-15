@@ -32,7 +32,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install test dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt pytest
       - name: Compile touched collectors
         run: |
           python -m py_compile \
