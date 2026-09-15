@@ -63,7 +63,7 @@ The first final-OOT execution occurred on PR #325 at head `9898fdea005b6344d638f
 GitHub Actions run: `34917928502`.
 Artifact: `10376584443` (`market-anchor-1x2-v1`).
 Artifact digest: `sha256:d015b35f305fe934e99559184425ec3b69f165e1f85e57294eddb5a06b771746`.
-Frozen report: `experiments/market_anchor_1x2_v1_first_oot_report.json`.
+Frozen report: `experiments/market_anchor_1x2_v1_report.json`.
 
 Pooled untouched 2025-2026 test (`n=1140`):
 
