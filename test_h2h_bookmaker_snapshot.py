@@ -3,9 +3,11 @@ from copy import deepcopy
 import pytest
 
 from h2h_bookmaker_snapshot import (
+    DB_CONFLICT_TARGET,
     SCHEMA_VERSION,
     TABLE,
     build_h2h_bookmaker_rows,
+    capture_h2h_bookmaker_snapshots,
     save_h2h_bookmaker_snapshots,
 )
 
@@ -153,13 +155,16 @@ class _Response:
 
 
 class _Table:
-    def __init__(self, sink):
+    def __init__(self, sink, *, fail=False):
         self.sink = sink
         self.rows = None
+        self.fail = fail
 
-    def insert(self, rows):
+    def upsert(self, rows, *, on_conflict=None):
+        if self.fail:
+            raise RuntimeError("simulated research sink failure")
         self.rows = rows
-        self.sink.append(("insert", rows))
+        self.sink.append(("upsert", on_conflict, rows))
         return self
 
     def execute(self):
@@ -167,16 +172,17 @@ class _Table:
 
 
 class _Client:
-    def __init__(self):
+    def __init__(self, *, fail=False):
         self.calls = []
         self.table_names = []
+        self.fail = fail
 
     def table(self, name):
         self.table_names.append(name)
-        return _Table(self.calls)
+        return _Table(self.calls, fail=self.fail)
 
 
-def test_save_only_inserts_already_fetched_events():
+def test_save_only_upserts_already_fetched_events_idempotently():
     client = _Client()
     count = save_h2h_bookmaker_snapshots(
         [_event()],
@@ -188,9 +194,24 @@ def test_save_only_inserts_already_fetched_events():
     assert count == 1
     assert client.table_names == [TABLE]
     assert len(client.calls) == 1
-    action, rows = client.calls[0]
-    assert action == "insert"
+    action, conflict_target, rows = client.calls[0]
+    assert action == "upsert"
+    assert conflict_target == DB_CONFLICT_TARGET
     assert rows[0]["payload"]["bookmakers"][0]["bookmaker_key"] == "book-a"
+
+
+def test_best_effort_capture_does_not_break_aggregate_collector(capsys):
+    client = _Client(fail=True)
+
+    count = capture_h2h_bookmaker_snapshots(
+        [_event()],
+        league="SERIE_A",
+        snapshot_time_utc=SNAPSHOT_TIME,
+        supabase_client=client,
+    )
+
+    assert count == 0
+    assert "research-only H2H bookmaker capture failed" in capsys.readouterr().out
 
 
 def test_invalid_snapshot_timestamp_fails_closed():
