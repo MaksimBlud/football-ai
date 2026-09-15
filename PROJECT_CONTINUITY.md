@@ -343,3 +343,50 @@ All substantive PRs were required to pass their applicable Product/Research/leag
 7. After exact-main live proof, close this deployment block in continuity and proceed to **Total Goals readiness** as the next product expansion block.
 
 Do **not** jump to Total Goals activation while exact-main public deployment remains blocked/unproven. Goal total work starts only after the deployment gate above is closed, unless a future explicitly approved roadmap change says otherwise.
+
+---
+
+# Continuity checkpoint — 2026-09-15 / PR #324–#325
+
+Full immutable detail for this checkpoint is recorded in `research/CONTINUITY_2026_09_15_MARKET_ANCHOR.md`. The facts below supersede older status language above where they conflict; older sections remain as historical context.
+
+## Research supersession
+
+- PR #324 merged as `57cace46bcf61557837a8235f1239b06813f39eb` and recorded a user-authorized early outcome read for 11 completed `EPL_AI_MARKET_PAIR_V1` fixtures. The predictions remain genuine prospective pre-kickoff records, but the former claim that the eventual 100-event EPL cohort can remain pristine/no-peek is retired. Do not describe that older EPL gate as still unopened.
+- The separate 43-match cross-league replay/debug result is retained only as retired/debug evidence after later identity/freezing review: AI Brier `0.6125651124` vs market `0.5975406259`; AI LogLoss `1.0249478419` vs market `0.9958508866`; accuracy `39.53%` vs `48.84%`. It is not prospective/frozen primary evidence.
+
+## `MARKET_ANCHOR_1X2_V1` — HISTORICAL OOT POSITIVE SIGN / RESEARCH-ONLY / NO_BET
+
+PR #325 final tested head: `ace9d9f346c78a1532b5956913fafe9c4bfb3ba5`.
+Exact-head merge: `5a818b0babf013d79227a78f3e62237e85c3d16f`.
+
+Architecture: `p = softmax(log(de-vigged_market) + lambda * football_residual)` with exact market identity at `lambda=0`. Train = 2016-2017..2023-2024; validation = 2024-2025; untouched OOT = 2025-2026; September 2026 opened outcomes are excluded.
+
+First frozen OOT (`n=1140`):
+- market Brier `0.5889962354`, candidate `0.5886577614`, delta `-0.0003384740`;
+- market LogLoss `0.9881046788`, candidate `0.9877190855`, delta `-0.0003855933`;
+- market accuracy `0.5263157895`, candidate `0.5271929825`;
+- EPL and La Liga fail closed to exact market (`lambda=0`);
+- Serie A selects `ALL_FOOTBALL`, `lambda=1.0`.
+
+Formal V1 gate is positive, but effect size is very small. Frozen report: `experiments/market_anchor_1x2_v1_report.json`. First OOT run `34917928502`; artifact `10376584443`; digest `sha256:d015b35f305fe934e99559184425ec3b69f165e1f85e57294eddb5a06b771746`.
+
+Corrected exact-Serie-A robustness (`n=380`) after fixing a diagnostic-only validation-refit bug:
+- Brier delta `-0.0010154220`, paired-bootstrap 95% interval `[-0.0051650435, +0.0032368771]`, probability better `0.6831`;
+- LogLoss delta `-0.0011567799`, paired-bootstrap 95% interval `[-0.0080689479, +0.0060389577]`, probability better `0.6317`;
+- frozen fixed configuration wins both metrics in only `2/6` earlier retrospective seasons.
+
+Both uncertainty intervals cross zero and historical persistence is weak. Therefore **no production promotion** and **NO_BET**. Corrected robustness run `34918346551`; artifact `10377595106`; digest `sha256:56ebad616726e6c3f690a4b2c05949e4a5971d1a3a60d828bf65bb054b9b4734`.
+
+A platform-dependent last-bit float drift (~`1e-16`) caused bytewise JSON `cmp` to fail. The frozen report was not rewritten. `market_anchor_1x2_v1_freeze_guard.py` now requires exact schema/keys/strings/bools/integers/selections/list order and finite float agreement within `1e-12`; material metric/status/selection drift remains fail-closed.
+
+All 8 exact-head PR workflows passed. Post-merge `main` proof also passed: main OOT run `34918844569` and robustness run `34918844547`, including production `.pkl` hash guards.
+
+## Research execution pointer after PR #325
+
+- Do not tune V1 on the now-open 2025-2026 OOT.
+- Do not promote V1 from this evidence.
+- Market-anchor is the preferred **research architecture** over unconstrained bookmaker-odds-as-features deformation because it can fail closed exactly to market, but it is not yet proven alpha.
+- Next legitimate evidence is fresh prospective validation of the frozen market-anchor construction, or a separately preregistered V2 with fresh evidence.
+- Forecast probability quality, value selection, bet decision and portfolio exposure remain separate; `NO_BET` is binding.
+- Product/deployment gates remain separate and are not relaxed by this research result.
