@@ -1,0 +1,1 @@
+This file is intentionally empty-placeholder-free; canonical continuity update is being prepared on an isolated documentation branch.
