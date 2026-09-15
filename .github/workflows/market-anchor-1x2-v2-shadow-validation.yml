@@ -16,6 +16,8 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,7 +26,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install test dependencies
-        run: pip install numpy pandas scipy scikit-learn pytest
+        run: pip install numpy pandas scipy scikit-learn requests pytest
       - name: Compile frozen V2 contract
         run: python -m py_compile market_anchor_1x2_v2_shadow.py tests/test_market_anchor_1x2_v2_shadow.py
       - name: Run V2 regression tests
