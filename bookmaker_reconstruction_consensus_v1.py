@@ -4,6 +4,10 @@ The existing historical market baseline prefers B365 whenever available, so it i
 not a bookmaker consensus. This experiment keeps de-vigging fixed to proportional
 normalization and isolates the source question: B365 vs Pinnacle/PS vs Football-Data
 average odds. Selection uses 2024-2025 only and 2025-2026 remains untouched OOT.
+
+Source coverage is reported before common-cohort filtering. Common-source scores are
+only comparable on fixtures where all three source triplets exist and must not be
+generalized to the full season when that common cohort is incomplete.
 """
 from __future__ import annotations
 
@@ -49,7 +53,12 @@ def raw_source_frame(raw: pd.DataFrame, league: str, season: str) -> pd.DataFram
         result = row.get("FTR")
         if result not in RESULT_TO_INT:
             continue
-        record: dict[str, object] = {"league": league, "season": season, "result": result}
+        record: dict[str, object] = {
+            "league": league,
+            "season": season,
+            "match_date": pd.to_datetime(row.get("Date"), dayfirst=True, errors="coerce"),
+            "result": result,
+        }
         for source, columns in SOURCES.items():
             odds = _decimal_triplet(row, columns)
             for outcome, value in zip(("home", "draw", "away"), odds or (np.nan, np.nan, np.nan)):
@@ -84,9 +93,62 @@ def source_columns(source: str) -> list[str]:
     return [f"{source}_{outcome}_odds" for outcome in ("home", "draw", "away")]
 
 
+def source_available(frame: pd.DataFrame, source: str) -> pd.Series:
+    values = frame[source_columns(source)].to_numpy(float)
+    mask = np.isfinite(values).all(axis=1) & (values > 1.0).all(axis=1)
+    return pd.Series(mask, index=frame.index, dtype=bool)
+
+
+def common_source_mask(frame: pd.DataFrame) -> pd.Series:
+    mask = pd.Series(True, index=frame.index, dtype=bool)
+    for source in SOURCES:
+        mask &= source_available(frame, source)
+    return mask
+
+
 def common_source_frame(frame: pd.DataFrame) -> pd.DataFrame:
-    required = [column for source in SOURCES for column in source_columns(source)]
-    return frame.dropna(subset=required).copy()
+    return frame.loc[common_source_mask(frame)].copy()
+
+
+def _coverage_row(frame: pd.DataFrame) -> dict[str, object]:
+    total = int(len(frame))
+    counts = {source: int(source_available(frame, source).sum()) for source in SOURCES}
+    common = int(common_source_mask(frame).sum())
+    return {
+        "total_matches": total,
+        "source_available": counts,
+        "source_fraction": {
+            source: (float(count / total) if total else 0.0)
+            for source, count in counts.items()
+        },
+        "common_all_sources": common,
+        "common_all_sources_fraction": float(common / total) if total else 0.0,
+    }
+
+
+def coverage_report(frame: pd.DataFrame) -> dict[str, object]:
+    finished = frame[frame["result"].isin(RESULT_TO_INT)].copy()
+    pooled_by_season = {
+        season: _coverage_row(group)
+        for season, group in finished.groupby("season", sort=True)
+    }
+    league_season = []
+    for (league, season), group in finished.groupby(["league", "season"], sort=True):
+        league_season.append({"league": str(league), "season": str(season), **_coverage_row(group)})
+
+    test = finished[finished["season"] == TEST_SEASON].copy()
+    test_monthly = []
+    dated = test.dropna(subset=["match_date"]).copy()
+    if not dated.empty:
+        dated["month"] = dated["match_date"].dt.to_period("M").astype(str)
+        for (league, month), group in dated.groupby(["league", "month"], sort=True):
+            test_monthly.append({"league": str(league), "month": str(month), **_coverage_row(group)})
+
+    return {
+        "pooled_by_season": pooled_by_season,
+        "league_season": league_season,
+        "test_monthly": test_monthly,
+    }
 
 
 def fair_probabilities(frame: pd.DataFrame, source: str) -> np.ndarray:
@@ -208,9 +270,13 @@ def _dispersion_segments(validation: pd.DataFrame, test: pd.DataFrame, candidate
 
 
 def evaluate_frame(frame: pd.DataFrame) -> dict:
-    clean = common_source_frame(frame[frame["result"].isin(RESULT_TO_INT)])
+    finished = frame[frame["result"].isin(RESULT_TO_INT)].copy()
+    coverage = coverage_report(finished)
+    clean = common_source_frame(finished)
     validation = clean[clean["season"] == VALIDATION_SEASON].copy()
     test = clean[clean["season"] == TEST_SEASON].copy()
+    full_validation = finished[finished["season"] == VALIDATION_SEASON]
+    full_test = finished[finished["season"] == TEST_SEASON]
     if validation.empty or test.empty:
         raise RuntimeError("missing common-source validation/OOT rows")
 
@@ -219,6 +285,8 @@ def evaluate_frame(frame: pd.DataFrame) -> dict:
     test_scores = _scores(test)
     baseline = test_scores[BASELINE_SOURCE]
     selected_test = test_scores[selected]
+    validation_fraction = float(len(validation) / len(full_validation)) if len(full_validation) else 0.0
+    test_fraction = float(len(test) / len(full_test)) if len(full_test) else 0.0
 
     league_reports = []
     for league, group in clean.groupby("league"):
@@ -239,7 +307,7 @@ def evaluate_frame(frame: pd.DataFrame) -> dict:
 
     return {
         "experiment_id": EXPERIMENT_ID,
-        "evidence_class": "HISTORICAL_TEMPORAL_OOT",
+        "evidence_class": "HISTORICAL_TEMPORAL_OOT_WITH_COVERAGE_DIAGNOSTIC",
         "research_only": True,
         "production_promotion": False,
         "betting_enabled": False,
@@ -251,8 +319,18 @@ def evaluate_frame(frame: pd.DataFrame) -> dict:
         "source_selection_metric": "2024-2025 pooled LogLoss, then Brier; 2025-2026 untouched",
         "validation_season": VALIDATION_SEASON,
         "untouched_test_season": TEST_SEASON,
+        "full_validation_n": int(len(full_validation)),
+        "full_test_n": int(len(full_test)),
         "common_source_validation_n": int(len(validation)),
         "common_source_test_n": int(len(test)),
+        "common_source_validation_fraction": validation_fraction,
+        "common_source_test_fraction": test_fraction,
+        "common_source_test_is_full_cohort": bool(len(test) == len(full_test)),
+        "coverage": coverage,
+        "coverage_interpretation": (
+            "common-source performance is a same-fixture diagnostic only; when common_source_test_is_full_cohort is false, "
+            "candidate-source OOT results must not be generalized to the full 2025-2026 market cohort"
+        ),
         "pooled_selected_on_validation": selected,
         "pooled_validation": validation_scores,
         "pooled_untouched_test": test_scores,
