@@ -80,6 +80,24 @@ League selection remained fail-closed:
 
 Interpretation is deliberately conservative: the sign is positive under the preregistered gate, but the pooled magnitude is very small. This is historical temporal OOT evidence for the market-anchored architecture, **not** production-quality proof, a betting signal, or permission to tune V1 on the opened 2025-2026 test. Any further model changes require a new version/protocol and fresh evidence.
 
+## Post-selection robustness diagnostic
+
+The robustness pass is diagnostic-only and does not alter V1. A regression discovered and fixed an initial implementation error where validation 2024-2025 would have been included in a post-hoc final refit. The corrected robustness path now exactly replays the frozen Serie A V1 training split: 2016-2017 through 2023-2024 only; validation is selection-only.
+
+Corrected run: `34918346551`.
+Artifact: `10377595106` (`market-anchor-1x2-v1-robustness`).
+Artifact digest: `sha256:56ebad616726e6c3f690a4b2c05949e4a5971d1a3a60d828bf65bb054b9b4734`.
+Frozen corrected report: `experiments/market_anchor_1x2_v1_robustness_report.json`.
+
+For the exact frozen Serie A 2025-2026 OOT (`n=380`):
+
+- Brier mean delta `-0.0010154220`, paired bootstrap 95% interval `[-0.0051650435, +0.0032368771]`, bootstrap probability better than market `0.6831`.
+- LogLoss mean delta `-0.0011567799`, paired bootstrap 95% interval `[-0.0080689479, +0.0060389577]`, bootstrap probability better than market `0.6317`.
+- Candidate beats market on per-match Brier in `53.68%` of fixtures and on per-match LogLoss in `57.63%`.
+- The fixed post-selection configuration wins both metrics in only `2/6` earlier retrospective seasons.
+
+Therefore robustness does **not** provide strong independent evidence of persistent superiority. The first OOT sign remains positive, but uncertainty spans zero and historical consistency is weak. V1 stays research-only / `NO_BET`; no production promotion follows from these results.
+
 ## Prohibited uses
 
 This protocol does not:
