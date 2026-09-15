@@ -1,10 +1,12 @@
 """Frozen prospective-shadow contract for MARKET_ANCHOR_1X2_V2.
 
-Research only. The candidate recipe is inherited from MARKET_ANCHOR_1X2_V1 and
-must never be re-selected using opened 2026-27 outcomes. The only primary cohort
-is Serie A. Shadow rows are outcome-free and must be captured strictly before
-kickoff. This module never reads, writes, trains, or promotes production .pkl
-artifacts.
+Research only. The Serie A residual recipe is inherited from MARKET_ANCHOR_1X2_V1
+without re-selection on opened 2026-27 outcomes. A stricter predeclared stability
+gate controls whether that residual may become active. The frozen V1 robustness
+evidence does not pass the gate, so V2 fails closed to the exact de-vigged market
+(lambda=0) while the lambda=1 residual remains diagnostic shadow-only. Shadow rows
+are outcome-free and must be captured strictly before kickoff. This module never
+reads, writes, trains, or promotes production .pkl artifacts.
 """
 from __future__ import annotations
 
@@ -31,7 +33,14 @@ EVIDENCE_CLASS = "PROSPECTIVE_SHADOW"
 SOURCE_EXPERIMENT_ID = "MARKET_ANCHOR_1X2_V1"
 PRIMARY_LEAGUE = "SERIE_A"
 FEATURE_VARIANT = "ALL_FOOTBALL"
-LAMBDA = 1.0
+SHADOW_RESIDUAL_LAMBDA = 1.0
+ACTIVE_LAMBDA = 0.0
+STABILITY_GATE_PASSED = False
+STABILITY_REQUIRED_PRIOR_SEASONS = 6
+STABILITY_MIN_DUAL_WINS = 4
+STABILITY_MAX_CI95_HIGH = 0.0
+STABILITY_MIN_PROBABILITY_BETTER = 0.95
+SOURCE_ROBUSTNESS_REPORT_BLOB_SHA = "96d2f462849a70276a2c27a2c0cc18ec0672b00a"
 REFIT_SEASONS = tuple(f"{y}-{y+1}" for y in range(2016, 2026))
 TRAINING_DATA_THROUGH = pd.Timestamp("2026-06-30T23:59:59Z")
 ADMISSION_NOT_BEFORE = pd.Timestamp("2026-09-16T00:00:00Z")
@@ -44,6 +53,7 @@ PROBABILITY_FIELDS = (
     ("market_home_probability", "market_draw_probability", "market_away_probability"),
     ("incumbent_home_probability", "incumbent_draw_probability", "incumbent_away_probability"),
     ("candidate_home_probability", "candidate_draw_probability", "candidate_away_probability"),
+    ("shadow_residual_home_probability", "shadow_residual_draw_probability", "shadow_residual_away_probability"),
 )
 REQUIRED_CAPTURE_FIELDS = frozenset(
     {
@@ -63,6 +73,8 @@ REQUIRED_CAPTURE_FIELDS = frozenset(
         "candidate_artifact_sha256",
         "incumbent_model_sha256",
         "code_commit_sha",
+        "active_lambda",
+        "stability_gate_passed",
     }
     | {name for triple in PROBABILITY_FIELDS for name in triple}
 )
@@ -94,6 +106,43 @@ def _finite_matrix(values: object, rows: int, cols: int, field: str) -> list[lis
     return [[float(x) for x in row] for row in arr]
 
 
+def stability_gate(report: Mapping) -> dict:
+    """Evaluate the frozen multi-period/uncertainty gate without tuning it."""
+    if report.get("experiment_id") != "MARKET_ANCHOR_1X2_V1_ROBUSTNESS":
+        raise ValueError("wrong robustness experiment")
+    if report.get("target_league") != PRIMARY_LEAGUE:
+        raise ValueError("robustness report must target Serie A")
+    if report.get("frozen_feature_variant") != FEATURE_VARIANT:
+        raise ValueError("robustness feature variant differs from frozen V2 recipe")
+    if float(report.get("frozen_lambda")) != SHADOW_RESIDUAL_LAMBDA:
+        raise ValueError("robustness lambda differs from frozen V2 residual recipe")
+
+    prior_seasons = int(report["retrospective_prior_seasons"])
+    dual_wins = int(report["retrospective_prior_season_dual_wins"])
+    brier = report["final_oot_brier_bootstrap"]
+    log_loss = report["final_oot_log_loss_bootstrap"]
+    checks = {
+        "required_prior_seasons": prior_seasons == STABILITY_REQUIRED_PRIOR_SEASONS,
+        "min_prior_dual_metric_wins": dual_wins >= STABILITY_MIN_DUAL_WINS,
+        "brier_ci95_entirely_better_than_market": float(brier["bootstrap_ci95_high"]) < STABILITY_MAX_CI95_HIGH,
+        "log_loss_ci95_entirely_better_than_market": float(log_loss["bootstrap_ci95_high"]) < STABILITY_MAX_CI95_HIGH,
+        "brier_probability_better_at_least_95pct": float(brier["bootstrap_probability_better_than_market"]) >= STABILITY_MIN_PROBABILITY_BETTER,
+        "log_loss_probability_better_at_least_95pct": float(log_loss["bootstrap_probability_better_than_market"]) >= STABILITY_MIN_PROBABILITY_BETTER,
+    }
+    return {
+        "passed": all(checks.values()),
+        "checks": checks,
+        "observed": {
+            "prior_seasons": prior_seasons,
+            "prior_dual_metric_wins": dual_wins,
+            "brier_ci95_high": float(brier["bootstrap_ci95_high"]),
+            "log_loss_ci95_high": float(log_loss["bootstrap_ci95_high"]),
+            "brier_probability_better_than_market": float(brier["bootstrap_probability_better_than_market"]),
+            "log_loss_probability_better_than_market": float(log_loss["bootstrap_probability_better_than_market"]),
+        },
+    }
+
+
 def candidate_recipe() -> dict:
     return {
         "experiment_id": EXPERIMENT_ID,
@@ -102,7 +151,9 @@ def candidate_recipe() -> dict:
         "primary_league": PRIMARY_LEAGUE,
         "feature_variant": FEATURE_VARIANT,
         "features": list(FEATURE_SETS[FEATURE_VARIANT]),
-        "lambda": LAMBDA,
+        "shadow_residual_lambda": SHADOW_RESIDUAL_LAMBDA,
+        "active_lambda": ACTIVE_LAMBDA,
+        "stability_gate_passed": STABILITY_GATE_PASSED,
         "l2_penalty": float(L2_PENALTY),
         "refit_seasons": list(REFIT_SEASONS),
         "training_data_through_utc": TRAINING_DATA_THROUGH.isoformat(),
@@ -127,7 +178,7 @@ def _training_fingerprint(frame: pd.DataFrame, features: list[str]) -> str:
 
 
 def fit_candidate_artifact(frame: pd.DataFrame) -> dict:
-    """Refit the already-selected V1 recipe on frozen pre-2026/27 Serie A history."""
+    """Refit the frozen residual recipe on pre-2026/27 Serie A history only."""
     prepared = _prepare(frame)
     prepared = prepared[(prepared["league"] == PRIMARY_LEAGUE) & prepared["season"].isin(REFIT_SEASONS)].copy()
     if prepared.empty:
@@ -180,7 +231,7 @@ def validate_candidate_artifact(artifact: Mapping) -> None:
         raise ValueError("candidate artifact sha256 mismatch")
 
 
-def predict_candidate(market_probabilities: np.ndarray, features: pd.DataFrame, artifact: Mapping) -> np.ndarray:
+def _artifact_residual_logits(features: pd.DataFrame, artifact: Mapping) -> np.ndarray:
     validate_candidate_artifact(artifact)
     names = list(artifact["features"])
     if list(features.columns) != names:
@@ -196,8 +247,20 @@ def predict_candidate(market_probabilities: np.ndarray, features: pd.DataFrame, 
     x = (x - np.asarray(artifact["scaler_mean"], dtype=float)) / np.asarray(artifact["scaler_scale"], dtype=float)
     x = np.column_stack([np.ones(len(x)), x])
     pair = x @ np.asarray(artifact["weights"], dtype=float)
-    residual = np.column_stack([pair[:, 0], np.zeros(len(x)), pair[:, 1]])
-    return market_anchored_probabilities(validate_probabilities(market_probabilities), residual, LAMBDA)
+    return np.column_stack([pair[:, 0], np.zeros(len(x)), pair[:, 1]])
+
+
+def predict_shadow_residual(market_probabilities: np.ndarray, features: pd.DataFrame, artifact: Mapping) -> np.ndarray:
+    residual = _artifact_residual_logits(features, artifact)
+    return market_anchored_probabilities(
+        validate_probabilities(market_probabilities), residual, SHADOW_RESIDUAL_LAMBDA
+    )
+
+
+def predict_candidate(market_probabilities: np.ndarray, features: pd.DataFrame, artifact: Mapping) -> np.ndarray:
+    """Return active V2 probabilities; currently exact market because the gate failed."""
+    residual = _artifact_residual_logits(features, artifact)
+    return market_anchored_probabilities(validate_probabilities(market_probabilities), residual, ACTIVE_LAMBDA)
 
 
 def write_candidate_artifact(frame: pd.DataFrame, output: Path) -> dict:
@@ -210,6 +273,7 @@ def write_candidate_artifact(frame: pd.DataFrame, output: Path) -> dict:
 def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
     validated: list[dict] = []
     seen_events: set[str] = set()
+    candidate_artifacts: set[str] = set()
     for raw in rows:
         row = dict(raw)
         missing = REQUIRED_CAPTURE_FIELDS - row.keys()
@@ -222,6 +286,10 @@ def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
             raise ValueError("wrong experiment identity")
         if row["league"] != PRIMARY_LEAGUE:
             raise ValueError("only Serie A counts as the V2 primary cohort")
+        if bool(row["stability_gate_passed"]) is not STABILITY_GATE_PASSED:
+            raise ValueError("shadow row stability gate state differs from frozen contract")
+        if float(row["active_lambda"]) != ACTIVE_LAMBDA:
+            raise ValueError("shadow row active lambda differs from frozen contract")
         event_id = str(row["event_id"]).strip()
         if not event_id or event_id in seen_events:
             raise ValueError("event_id must be non-empty and unique")
@@ -237,6 +305,8 @@ def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
 
         if kickoff < ADMISSION_NOT_BEFORE or capture < ADMISSION_NOT_BEFORE:
             raise ValueError("retroactive/backfilled rows are forbidden")
+        if min(market_time, incumbent_time, candidate_time) < ADMISSION_NOT_BEFORE:
+            raise ValueError("retroactive/backfilled prediction inputs are forbidden")
         if not (market_time <= capture < kickoff):
             raise ValueError("market and capture timestamps must be pre-kickoff")
         if not (incumbent_time <= capture < kickoff and candidate_time <= capture < kickoff):
@@ -246,8 +316,14 @@ def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
         if training_cutoff != TRAINING_DATA_THROUGH:
             raise ValueError("candidate training cutoff differs from frozen contract")
 
+        validated_probabilities = []
         for triple in PROBABILITY_FIELDS:
-            validate_probabilities(np.asarray([[float(row[name]) for name in triple]], dtype=float))
+            validated_probabilities.append(
+                validate_probabilities(np.asarray([[float(row[name]) for name in triple]], dtype=float))[0]
+            )
+        market_p, _, active_p, _ = validated_probabilities
+        if not np.allclose(active_p, market_p, atol=1e-12, rtol=0.0):
+            raise ValueError("active V2 candidate must equal market while stability gate is closed")
         if str(row["incumbent_model_sha256"]) != INCUMBENT_MODEL_SHA256:
             raise ValueError("incumbent model sha differs from frozen production comparator")
         for field in ("candidate_artifact_sha256", "code_commit_sha"):
@@ -255,7 +331,10 @@ def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
             expected = 64 if field.endswith("sha256") else 40
             if len(value) != expected or any(c not in "0123456789abcdef" for c in value):
                 raise ValueError(f"invalid {field}")
+        candidate_artifacts.add(str(row["candidate_artifact_sha256"]))
         validated.append(row)
+    if len(candidate_artifacts) > 1:
+        raise ValueError("one shadow capture batch cannot mix candidate artifacts")
     return validated
 
 
