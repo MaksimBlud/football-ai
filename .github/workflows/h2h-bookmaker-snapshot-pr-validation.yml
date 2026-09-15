@@ -5,6 +5,7 @@ on:
     paths:
       - "h2h_bookmaker_snapshot.py"
       - "test_h2h_bookmaker_snapshot.py"
+      - "test_h2h_bookmaker_migration.py"
       - "save_epl_odds_snapshot_with_bookmakers.py"
       - "scheduled_odds_snapshot.py"
       - "save_odds_snapshot.py"
@@ -16,6 +17,7 @@ on:
       - "save_rpl_odds_snapshot.py"
       - "turkey_portugal_market_only.py"
       - "supabase/migrations/20260915135000_league_h2h_bookmaker_snapshots.sql"
+      - "supabase/migrations/20260915142500_h2h_bookmaker_grant_hardening.sql"
       - ".github/workflows/h2h-bookmaker-snapshot-pr-validation.yml"
   workflow_dispatch:
 
@@ -48,9 +50,13 @@ jobs:
             save_ligue1_odds_snapshot.py \
             save_la_liga_odds_snapshot.py \
             save_rpl_odds_snapshot.py \
-            turkey_portugal_market_only.py
+            turkey_portugal_market_only.py \
+            test_h2h_bookmaker_migration.py
       - name: Run H2H bookmaker snapshot regression tests
-        run: python -m pytest -q test_h2h_bookmaker_snapshot.py
+        run: >-
+          python -m pytest -q
+          test_h2h_bookmaker_snapshot.py
+          test_h2h_bookmaker_migration.py
       - name: Prove production artifacts are unchanged
         run: |
           git diff --exit-code origin/${{ github.base_ref }}...HEAD -- \
