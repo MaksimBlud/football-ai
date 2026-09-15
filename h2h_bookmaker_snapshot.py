@@ -17,6 +17,7 @@ from the_odds_service import aggregate_event_h2h
 TABLE = "league_h2h_bookmaker_snapshots"
 SCHEMA_VERSION = "H2H_BOOKMAKER_V1"
 PROVIDER = "THE_ODDS_API"
+DB_CONFLICT_TARGET = "snapshot_key"
 
 
 def _utc(value) -> datetime | None:
@@ -144,7 +145,7 @@ def save_h2h_bookmaker_snapshots(
     snapshot_time_utc: str,
     supabase_client=None,
 ) -> int:
-    """Insert bookmaker-level rows using the caller's already-fetched events."""
+    """Idempotently persist bookmaker-level rows from already-fetched events."""
 
     rows = build_h2h_bookmaker_rows(
         events,
@@ -157,5 +158,42 @@ def save_h2h_bookmaker_snapshots(
     if supabase_client is None:
         from database import supabase as supabase_client
 
-    response = supabase_client.table(TABLE).insert(rows).execute()
+    response = (
+        supabase_client
+        .table(TABLE)
+        .upsert(rows, on_conflict=DB_CONFLICT_TARGET)
+        .execute()
+    )
     return len(response.data or [])
+
+
+def capture_h2h_bookmaker_snapshots(
+    events,
+    *,
+    league: str,
+    snapshot_time_utc: str,
+    supabase_client=None,
+) -> int:
+    """Best-effort research sink that must never break the aggregate collector.
+
+    Existing H2H aggregation remains the authoritative operational path. A
+    missing migration, transient database failure, or any other research-sink
+    error is reported but not re-raised, preventing a successful paid provider
+    read from being retried solely because optional research persistence failed.
+    """
+
+    try:
+        return save_h2h_bookmaker_snapshots(
+            events,
+            league=league,
+            snapshot_time_utc=snapshot_time_utc,
+            supabase_client=supabase_client,
+        )
+    except Exception as exc:
+        print(
+            "WARNING: research-only H2H bookmaker capture failed; "
+            "aggregate snapshot remains authoritative:",
+            type(exc).__name__,
+            str(exc)[:500],
+        )
+        return 0
