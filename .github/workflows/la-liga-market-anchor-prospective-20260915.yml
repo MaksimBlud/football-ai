@@ -1,0 +1,129 @@
+name: La Liga Market Anchor Prospective 20260915
+
+on:
+  pull_request:
+    paths:
+      - "la_liga_market_anchor_prospective_20260915.py"
+      - "evaluate_la_liga_market_anchor_prospective_20260915.py"
+      - "tests/test_la_liga_market_anchor_prospective_20260915.py"
+      - "research/LA_LIGA_MARKET_ANCHOR_PROSPECTIVE_20260915.md"
+      - "experiments/la_liga_market_anchor_prospective_20260915_contract.json"
+      - "experiments/la_liga_market_anchor_prospective_20260915_freeze.json"
+      - ".github/workflows/la-liga-market-anchor-prospective-20260915.yml"
+      - "PROJECT_CONTINUITY.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-freeze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Snapshot production model hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in \
+            football_model_xgboost_elo.pkl \
+            football_model_no_odds.pkl \
+            1x2_calibrator.pkl \
+            home_goals_model_no_odds.pkl \
+            away_goals_model_no_odds.pkl \
+            over_2_5_calibrator.pkl \
+            btts_calibrator.pkl; do
+            sha256sum "$f"
+          done | sort > /tmp/production_before.sha256
+
+      - name: Restore exact frozen historical primitives
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/frozen_market_anchor_source
+          git show df19777087fb89af049eedce44ff93f0aa6e6360:historical_football_signal_lab.py > /tmp/frozen_market_anchor_source/historical_football_signal_lab.py
+          git show df19777087fb89af049eedce44ff93f0aa6e6360:market_anchor_1x2_v1.py > /tmp/frozen_market_anchor_source/market_anchor_1x2_v1.py
+          test "$(git hash-object /tmp/frozen_market_anchor_source/historical_football_signal_lab.py)" = "401b3a0893371bfa4a488ec92a4a54af2678c8f7"
+          test "$(git hash-object /tmp/frozen_market_anchor_source/market_anchor_1x2_v1.py)" = "58c35bf3768f7bf2b951f19a37b9a5f46b6b9801"
+
+      - name: Compile and regression tests
+        run: |
+          python -m py_compile la_liga_market_anchor_prospective_20260915.py evaluate_la_liga_market_anchor_prospective_20260915.py
+          pytest -q tests/test_la_liga_market_anchor_prospective_20260915.py
+
+      - name: Generate prospective freeze or validate canonical freeze
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/la_liga_market_anchor_prospective_20260915
+          if test -f experiments/la_liga_market_anchor_prospective_20260915_freeze.json; then
+            python - <<'PY'
+          import json
+          import pandas as pd
+          from evaluate_la_liga_market_anchor_prospective_20260915 import validate_freeze
+          p='experiments/la_liga_market_anchor_prospective_20260915_freeze.json'
+          report=json.load(open(p, encoding='utf-8'))
+          validate_freeze(report)
+          if pd.Timestamp(report['capture_time_utc']) >= pd.Timestamp(report['first_kickoff_utc']):
+              raise SystemExit('canonical freeze is not pre-kickoff')
+          print(json.dumps(report, indent=2, sort_keys=True))
+          PY
+            cp experiments/la_liga_market_anchor_prospective_20260915_freeze.json artifacts/la_liga_market_anchor_prospective_20260915/freeze.json
+          else
+            python la_liga_market_anchor_prospective_20260915.py \
+              --frozen-source-dir /tmp/frozen_market_anchor_source \
+              --output artifacts/la_liga_market_anchor_prospective_20260915/freeze.json
+          fi
+
+      - name: Verify outcome blindness and contract identity
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path('artifacts/la_liga_market_anchor_prospective_20260915/freeze.json').read_text())
+          raw=json.dumps(report).lower()
+          for forbidden in ('"result"', '"outcome"', '"home_goals"', '"away_goals"', '"final_score"'):
+              if forbidden in raw:
+                  raise SystemExit(f'forbidden outcome key in freeze: {forbidden}')
+          contract=json.loads(Path('experiments/la_liga_market_anchor_prospective_20260915_contract.json').read_text())
+          assert report['experiment_id'] == contract['experiment_id']
+          assert report['cohort_n'] == contract['cohort_n'] == 3
+          assert report['active_lambda'] == contract['active_lambda'] == 0.0
+          assert report['shadow_lambda'] == contract['shadow_lambda'] == 1.0
+          assert [x['event_id'] for x in report['predictions']] == [x['event_id'] for x in contract['targets']]
+          PY
+
+      - name: Verify production model hashes unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in \
+            football_model_xgboost_elo.pkl \
+            football_model_no_odds.pkl \
+            1x2_calibrator.pkl \
+            home_goals_model_no_odds.pkl \
+            away_goals_model_no_odds.pkl \
+            over_2_5_calibrator.pkl \
+            btts_calibrator.pkl; do
+            sha256sum "$f"
+          done | sort > /tmp/production_after.sha256
+          diff -u /tmp/production_before.sha256 /tmp/production_after.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: la-liga-market-anchor-prospective-20260915
+          path: artifacts/la_liga_market_anchor_prospective_20260915/freeze.json
+          if-no-files-found: error
