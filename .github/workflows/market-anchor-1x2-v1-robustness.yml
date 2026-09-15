@@ -1,0 +1,57 @@
+name: MARKET_ANCHOR_1X2_V1 Robustness
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'market_anchor_1x2_v1.py'
+      - 'market_anchor_1x2_v1_robustness.py'
+      - 'tests/test_market_anchor_1x2_v1_robustness.py'
+      - '.github/workflows/market-anchor-1x2-v1-robustness.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'market_anchor_1x2_v1.py'
+      - 'market_anchor_1x2_v1_robustness.py'
+      - 'tests/test_market_anchor_1x2_v1_robustness.py'
+      - '.github/workflows/market-anchor-1x2-v1-robustness.yml'
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+jobs:
+  robustness:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install pandas numpy requests scipy 'scikit-learn==1.7.2' pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Robustness contract tests
+        run: pytest -q tests/test_market_anchor_1x2_v1_robustness.py
+      - name: Run frozen-config robustness diagnostics
+        run: python market_anchor_1x2_v1_robustness.py
+      - name: Verify production hashes unchanged
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - name: Publish robustness report to PR
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo '### MARKET_ANCHOR_1X2_V1 robustness report'
+            echo '```json'
+            cat artifacts/market_anchor_1x2_v1_robustness/report.json
+            echo '```'
+          } > /tmp/market-anchor-robustness.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/market-anchor-robustness.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: market-anchor-1x2-v1-robustness
+          path: artifacts/market_anchor_1x2_v1_robustness/report.json
+          retention-days: 30
