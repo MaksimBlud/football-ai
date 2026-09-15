@@ -12,6 +12,7 @@ from pathlib import Path
 import pandas as pd
 
 from fixture_identity import require_league
+from h2h_bookmaker_snapshot import capture_h2h_bookmaker_snapshots
 from league_config import LA_LIGA
 from save_odds_snapshot import (
     DB_COLUMNS,
@@ -283,6 +284,12 @@ def main() -> None:
         new_df
     )
 
+    bookmaker_rows = capture_h2h_bookmaker_snapshots(
+        result["events"],
+        league=LA_LIGA.identifier,
+        snapshot_time_utc=snapshot_time,
+    )
+
     print()
     print("=" * 72)
     print("LA LIGA ODDS SNAPSHOT SAVED")
@@ -316,6 +323,11 @@ def main() -> None:
     print(
         "Supabase rows processed:",
         inserted,
+    )
+
+    print(
+        "Bookmaker research rows:",
+        bookmaker_rows,
     )
 
     print(
