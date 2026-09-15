@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 from market_anchor_1x2_v1_robustness import (
     BOOTSTRAP_DRAWS,
@@ -6,6 +7,10 @@ from market_anchor_1x2_v1_robustness import (
     FROZEN_FEATURE_VARIANT,
     FROZEN_LAMBDA,
     TARGET_LEAGUE,
+    TEST_SEASON,
+    TRAIN_SEASONS,
+    VALIDATION_SEASON,
+    frozen_final_split,
     paired_bootstrap,
     per_match_deltas,
 )
@@ -35,3 +40,12 @@ def test_paired_bootstrap_is_deterministic_and_reports_direction():
     assert a["mean_delta"] < 0
     assert a["bootstrap_probability_better_than_market"] == 1.0
     assert a["bootstrap_ci95_high"] < 0
+
+
+def test_frozen_final_split_does_not_refit_on_validation_season():
+    seasons = list(TRAIN_SEASONS) + [VALIDATION_SEASON, TEST_SEASON]
+    frame = pd.DataFrame({"season": seasons, "row": range(len(seasons))})
+    train, test = frozen_final_split(frame)
+    assert list(train["season"]) == list(TRAIN_SEASONS)
+    assert VALIDATION_SEASON not in set(train["season"])
+    assert set(test["season"]) == {TEST_SEASON}
