@@ -12,7 +12,7 @@ from pathlib import Path
 import pandas as pd
 
 from fixture_identity import require_league
-from h2h_bookmaker_snapshot import save_h2h_bookmaker_snapshots
+from h2h_bookmaker_snapshot import capture_h2h_bookmaker_snapshots
 from league_runtime_config import RPL_RUNTIME_CONFIG
 from save_odds_snapshot import DB_COLUMNS, DB_CONFLICT_TARGET, SUPABASE_TABLE
 from the_odds_service import aggregate_event_h2h, get_h2h_odds
@@ -117,7 +117,7 @@ def main() -> None:
 
     combined = save_local_history(new_df)
     persisted = save_supabase(new_df)
-    bookmaker_rows = save_h2h_bookmaker_snapshots(
+    bookmaker_rows = capture_h2h_bookmaker_snapshots(
         result["events"], league=LEAGUE, snapshot_time_utc=snapshot_time
     )
 
