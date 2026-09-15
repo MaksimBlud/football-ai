@@ -1,0 +1,77 @@
+{
+  "active_lambda": 0.0,
+  "candidate_artifact_sha256": "9c0f004e14c075851ae874528e7d587ad344b12cdd89e227be68e84801b9d614",
+  "capture_time_utc": "2026-09-15T15:55:40.251172+00:00",
+  "cohort_n": 3,
+  "evidence_class": "PROSPECTIVE_SHADOW",
+  "experiment_id": "LA_LIGA_MARKET_ANCHOR_PROSPECTIVE_20260915_V1",
+  "feature_history_cutoff_utc": "2026-09-15T00:00:00+00:00",
+  "feature_variant": "ALL_FOOTBALL",
+  "first_kickoff_utc": "2026-09-15T17:00:00+00:00",
+  "football_data_sha256": {
+    "1617": "6f5794a69decfb863ecb6a0b865ffd3241eb5028035d9f19c48a299c5baa8f9a",
+    "1718": "5786719e06d1a5387cb90fac71597c890f496df19e8e1aa868bbc852f7e730fd",
+    "1819": "9b8cece2c85e90e382b30dc4fc5046534f12c6d2b0efa74cd7d1d52e90a0c201",
+    "1920": "a05d5d60eee0b1414c56d6d6817f860cdc620e206234069a1886c98a8cb318da",
+    "2021": "b4137db923101f464e8403c4973acbfaf7d71724ce93b4336fad580e894d9591",
+    "2122": "2d9e619700712823d15716c07715133f8c3b1a09046930dcfc785a38633dee2e",
+    "2223": "53348112526b5165539df240be350083989bb258f30c0ff7cacbc0165ca7e4b3",
+    "2324": "5323f596c7ed318e4bce95557a369d809d98501fa499ea5f41350cd45cf3c7d9",
+    "2425": "c086e96d6a53f6e6c0fce4e35db0d1728c773b4362323da0161a34769e315a36",
+    "2526": "4ca2e285f3ee0702f6bc55fcaa4f5a15cb3aef6220735a1d15398131e21d63f5",
+    "2627": "7db39b6061531c43a1fabaf2bed7e4b7808d93d54daa6695a92ecc6e029c50cb"
+  },
+  "freeze_sha256": "58338f7f8823693aee81b5b0cf709e96c180af61c83204f904d55b972306d461",
+  "l2_penalty": 1.0,
+  "league": "LA_LIGA",
+  "no_bet": true,
+  "outcomes_available_to_runner": false,
+  "predictions": [
+    {
+      "active_lambda_0_probabilities": [0.46932048598728, 0.275291229511983, 0.255388284500737],
+      "away_team": "Espanyol",
+      "bookmakers_count": 19,
+      "event_id": "b9a6e597fd597637efa24b92d51dda62",
+      "feature_min_prior_matches": 30,
+      "home_team": "Rayo Vallecano",
+      "kickoff_utc": "2026-09-15T17:00:00Z",
+      "market_probabilities": [0.46932048598728, 0.275291229511983, 0.255388284500737],
+      "market_snapshot_time_utc": "2026-09-11T15:45:28.192487Z",
+      "shadow_lambda_1_probabilities": [0.4499889040086503, 0.3122695776275001, 0.23774151836384952]
+    },
+    {
+      "active_lambda_0_probabilities": [0.447759791488515, 0.304537995169928, 0.247702213341557],
+      "away_team": "Valencia",
+      "bookmakers_count": 19,
+      "event_id": "d6474326396cdd0e300afd0193c7c93d",
+      "feature_min_prior_matches": 30,
+      "home_team": "Alavés",
+      "kickoff_utc": "2026-09-15T18:00:00Z",
+      "market_probabilities": [0.447759791488515, 0.304537995169928, 0.247702213341557],
+      "market_snapshot_time_utc": "2026-09-11T15:45:28.192487Z",
+      "shadow_lambda_1_probabilities": [0.5030653349939371, 0.2749672990334827, 0.22196736597258007]
+    },
+    {
+      "active_lambda_0_probabilities": [0.104522793893611, 0.165700942434781, 0.729776263671608],
+      "away_team": "Real Madrid",
+      "bookmakers_count": 19,
+      "event_id": "0b57607f4a514ee24df31b0c2db9ddc5",
+      "feature_min_prior_matches": 30,
+      "home_team": "Elche CF",
+      "kickoff_utc": "2026-09-15T19:30:00Z",
+      "market_probabilities": [0.104522793893611, 0.165700942434781, 0.729776263671608],
+      "market_snapshot_time_utc": "2026-09-11T15:45:28.192487Z",
+      "shadow_lambda_1_probabilities": [0.09562785290451811, 0.18196752022617652, 0.7224046268693054]
+    }
+  ],
+  "production_promotion": false,
+  "research_only": true,
+  "shadow_lambda": 1.0,
+  "source_commit": "df19777087fb89af049eedce44ff93f0aa6e6360",
+  "source_git_blobs": {
+    "historical_football_signal_lab.py": "401b3a0893371bfa4a488ec92a4a54af2678c8f7",
+    "market_anchor_1x2_v1.py": "58c35bf3768f7bf2b951f19a37b9a5f46b6b9801"
+  },
+  "training_data_through_utc": "2026-06-30T23:59:59+00:00",
+  "training_rows": 3800
+}
