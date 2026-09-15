@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from h2h_bookmaker_snapshot import save_h2h_bookmaker_snapshots
+from h2h_bookmaker_snapshot import capture_h2h_bookmaker_snapshots
 from league_config import EPL
 from save_odds_snapshot import build_snapshot_rows, save_local_history, save_supabase
 from the_odds_service import get_epl_h2h_odds
@@ -29,7 +29,7 @@ def main() -> None:
 
     combined = save_local_history(new_df)
     aggregate_rows = save_supabase(new_df)
-    bookmaker_rows = save_h2h_bookmaker_snapshots(
+    bookmaker_rows = capture_h2h_bookmaker_snapshots(
         events,
         league=EPL.identifier,
         snapshot_time_utc=snapshot_time,
