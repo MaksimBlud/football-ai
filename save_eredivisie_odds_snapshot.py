@@ -3,6 +3,7 @@ from datetime import datetime,timezone
 from pathlib import Path
 import pandas as pd
 from fixture_identity import require_league
+from h2h_bookmaker_snapshot import save_h2h_bookmaker_snapshots
 from save_odds_snapshot import DB_COLUMNS,DB_CONFLICT_TARGET,SUPABASE_TABLE
 from eredivisie_runtime_config import EREDIVISIE_RUNTIME_CONFIG
 from the_odds_service import aggregate_event_h2h,get_h2h_odds
@@ -45,6 +46,6 @@ def save_supabase(frame,supabase_client=None):
 def main():
     result=get_h2h_odds(SPORT_KEY,regions=REGION); now=datetime.now(timezone.utc).isoformat(); frame=build_snapshot_rows(result["events"],now)
     if frame.empty: raise RuntimeError("The Odds API returned no usable Eredivisie h2h odds")
-    history=save_local_history(frame); persisted=save_supabase(frame)
-    print("EREDIVISIE ODDS SNAPSHOT SAVED"); print("snapshot rows:",len(frame)); print("local history rows:",len(history)); print("Supabase response rows:",persisted); print("quota:",result["quota"]); print("Structural V2 used:",False); print("production model used:",False)
+    history=save_local_history(frame); persisted=save_supabase(frame); bookmaker_rows=save_h2h_bookmaker_snapshots(result["events"],league=LEAGUE,snapshot_time_utc=now)
+    print("EREDIVISIE ODDS SNAPSHOT SAVED"); print("snapshot rows:",len(frame)); print("local history rows:",len(history)); print("Supabase response rows:",persisted); print("bookmaker research rows:",bookmaker_rows); print("quota:",result["quota"]); print("Structural V2 used:",False); print("production model used:",False)
 if __name__=="__main__": main()
