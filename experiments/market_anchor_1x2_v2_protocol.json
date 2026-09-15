@@ -5,9 +5,10 @@
     "strictly_pre_kickoff_capture": true
   },
   "candidate_recipe": {
+    "active_lambda": 0.0,
+    "active_mode": "MARKET_FALLBACK",
     "feature_variant": "ALL_FOOTBALL",
     "l2_penalty": 1.0,
-    "lambda": 1.0,
     "market_anchor_formula": "softmax(log(de_vigged_market_probability) + lambda * residual_logits)",
     "refit_seasons": [
       "2016-2017",
@@ -21,18 +22,21 @@
       "2024-2025",
       "2025-2026"
     ],
+    "shadow_residual_lambda": 1.0,
+    "stability_gate_passed": false,
     "training_data_through": "2026-06-30",
     "use_opened_2026_27_outcomes_for_fit_or_selection": false
   },
   "comparators": [
     "DE_VIGGED_MARKET",
-    "FROZEN_PRODUCTION_INCUMBENT"
+    "FROZEN_PRODUCTION_INCUMBENT",
+    "INACTIVE_LAMBDA_1_RESIDUAL_SHADOW"
   ],
   "decision_policy": {
     "automatic_promotion": false,
     "betting_enabled": false,
     "result": "NO_BET",
-    "review_signal_requires": "candidate Brier and LogLoss both lower than market AND candidate Brier and LogLoss both lower than incumbent",
+    "review_signal_requires": "after the outcome-read gate, shadow residual Brier and LogLoss both lower than market AND both lower than incumbent; this may motivate a separately frozen future contract but cannot mutate V2 active lambda",
     "review_signal_only": true
   },
   "evidence_class": "PROSPECTIVE_SHADOW",
@@ -40,16 +44,17 @@
   "first_outcome_read_gate": {
     "completed_primary_events": 30,
     "outcome_read_before_gate": false,
-    "purpose": "diagnostic review only; not a production promotion gate"
+    "purpose": "diagnostic review only; not an activation or production promotion gate"
   },
   "primary_cohort": {
     "league": "SERIE_A",
     "other_leagues_count_toward_gate": false
   },
   "provenance": {
-    "frozen_from_main_commit": "35af594b9578f7f611699f3fa4740033657305ff",
+    "frozen_from_main_commit": "f5276b145ab24db69b84df1646c0bdca9efa9d40",
     "source_experiment": "MARKET_ANCHOR_1X2_V1",
-    "source_report_blob_sha": "9d5e1aad2a9cf5bb833cfea491c4f828d7cb72fd"
+    "source_report_blob_sha": "9d5e1aad2a9cf5bb833cfea491c4f828d7cb72fd",
+    "source_robustness_report_blob_sha": "96d2f462849a70276a2c27a2c0cc18ec0672b00a"
   },
   "research_only": true,
   "shadow_capture_forbidden_fields": [
@@ -59,5 +64,26 @@
     "away_goals",
     "score",
     "final_score"
-  ]
+  ],
+  "stability_gate": {
+    "effect_if_failed": "active lambda stays 0 and active V2 equals exact de-vigged market; lambda=1 residual remains diagnostic shadow-only",
+    "evaluation_source": "MARKET_ANCHOR_1X2_V1_ROBUSTNESS",
+    "observed": {
+      "brier_bootstrap_ci95_high": 0.003236877119355216,
+      "brier_bootstrap_probability_better_than_market": 0.6831,
+      "log_loss_bootstrap_ci95_high": 0.006038957657259541,
+      "log_loss_bootstrap_probability_better_than_market": 0.6317,
+      "prior_season_dual_metric_wins": 2,
+      "prior_seasons": 6
+    },
+    "passed": false,
+    "requirements": {
+      "brier_bootstrap_ci95_high_lt": 0.0,
+      "brier_bootstrap_probability_better_than_market_gte": 0.95,
+      "log_loss_bootstrap_ci95_high_lt": 0.0,
+      "log_loss_bootstrap_probability_better_than_market_gte": 0.95,
+      "min_dual_metric_wins": 4,
+      "required_prior_seasons": 6
+    }
+  }
 }
