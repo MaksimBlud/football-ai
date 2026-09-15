@@ -6,6 +6,7 @@ on:
       - 'market_anchor_1x2_v1.py'
       - 'tests/test_market_anchor_1x2_v1.py'
       - 'research/MARKET_ANCHOR_1X2_V1.md'
+      - 'experiments/market_anchor_1x2_v1_report.json'
       - '.github/workflows/market-anchor-1x2-v1.yml'
       - 'historical_football_signal_lab.py'
       - 'historical_football_signal_runner.py'
@@ -15,6 +16,7 @@ on:
       - 'market_anchor_1x2_v1.py'
       - 'tests/test_market_anchor_1x2_v1.py'
       - 'research/MARKET_ANCHOR_1X2_V1.md'
+      - 'experiments/market_anchor_1x2_v1_report.json'
       - '.github/workflows/market-anchor-1x2-v1.yml'
       - 'historical_football_signal_lab.py'
       - 'historical_football_signal_runner.py'
@@ -38,6 +40,8 @@ jobs:
         run: pytest -q tests/test_market_anchor_1x2_v1.py
       - name: Run untouched temporal OOT evaluation
         run: python market_anchor_1x2_v1.py
+      - name: Verify frozen OOT report is exactly reproducible
+        run: cmp artifacts/market_anchor_1x2_v1/report.json experiments/market_anchor_1x2_v1_report.json
       - name: Verify production hashes unchanged
         run: |
           sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
