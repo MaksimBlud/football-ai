@@ -127,7 +127,7 @@ else:
         print(
             "Cooldown поиска нового тура:",
             NO_FUTURE_MATCH_COOLDOWN_HOURS,
-            "час.",
+            "час."
         )
 
         if should_run:
@@ -204,7 +204,7 @@ else:
         print(
             "Требуемый интервал:",
             required_interval,
-            "час.",
+            "час."
         )
 
 
@@ -225,13 +225,13 @@ print(
     "Snapshot требуется."
 )
 print(
-    "Запускаю save_odds_snapshot.py..."
+    "Запускаю save_epl_odds_snapshot_with_bookmakers.py..."
 )
 
 from shadow_automation import run_with_shadow
 
 returncode = run_with_shadow(
-    ["save_odds_snapshot.py"],
+    ["save_epl_odds_snapshot_with_bookmakers.py"],
 )
 
 raise SystemExit(
