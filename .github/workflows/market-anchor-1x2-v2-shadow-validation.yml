@@ -1,0 +1,41 @@
+name: Market Anchor 1X2 V2 Shadow Validation
+
+on:
+  pull_request:
+    paths:
+      - "market_anchor_1x2_v2_shadow.py"
+      - "experiments/market_anchor_1x2_v2_protocol.json"
+      - "tests/test_market_anchor_1x2_v2_shadow.py"
+      - ".github/workflows/market-anchor-1x2-v2-shadow-validation.yml"
+      - "market_anchor_1x2_v1.py"
+      - "historical_football_signal_lab.py"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install test dependencies
+        run: pip install numpy pandas scipy scikit-learn pytest
+      - name: Compile frozen V2 contract
+        run: python -m py_compile market_anchor_1x2_v2_shadow.py tests/test_market_anchor_1x2_v2_shadow.py
+      - name: Run V2 regression tests
+        run: pytest -q tests/test_market_anchor_1x2_v2_shadow.py
+      - name: Assert no production model artifact changed
+        shell: bash
+        run: |
+          git fetch origin main
+          changed="$(git diff --name-only origin/main...HEAD -- '*.pkl')"
+          if [ -n "$changed" ]; then
+            echo "Production/model pickle changes are forbidden in this research block:"
+            echo "$changed"
+            exit 1
+          fi
