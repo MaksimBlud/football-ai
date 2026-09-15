@@ -1,0 +1,57 @@
+name: H2H Bookmaker Snapshot PR Validation
+
+on:
+  pull_request:
+    paths:
+      - "h2h_bookmaker_snapshot.py"
+      - "test_h2h_bookmaker_snapshot.py"
+      - "save_odds_snapshot.py"
+      - "save_serie_a_odds_snapshot.py"
+      - "save_bundesliga_odds_snapshot.py"
+      - "save_eredivisie_odds_snapshot.py"
+      - "save_ligue1_odds_snapshot.py"
+      - "save_la_liga_odds_snapshot.py"
+      - "save_rpl_odds_snapshot.py"
+      - "turkey_portugal_market_only.py"
+      - "supabase/migrations/20260915135000_league_h2h_bookmaker_snapshots.sql"
+      - ".github/workflows/h2h-bookmaker-snapshot-pr-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install test dependencies
+        run: pip install -r requirements.txt
+      - name: Compile touched collectors
+        run: |
+          python -m py_compile \
+            h2h_bookmaker_snapshot.py \
+            save_odds_snapshot.py \
+            save_serie_a_odds_snapshot.py \
+            save_bundesliga_odds_snapshot.py \
+            save_eredivisie_odds_snapshot.py \
+            save_ligue1_odds_snapshot.py \
+            save_la_liga_odds_snapshot.py \
+            save_rpl_odds_snapshot.py \
+            turkey_portugal_market_only.py
+      - name: Run H2H bookmaker snapshot regression tests
+        run: python -m pytest -q test_h2h_bookmaker_snapshot.py
+      - name: Prove production artifacts are unchanged
+        run: |
+          git diff --exit-code origin/${{ github.base_ref }}...HEAD -- \
+            football_model_xgboost_elo.pkl \
+            football_model_no_odds.pkl \
+            1x2_calibrator.pkl \
+            home_goals_model_no_odds.pkl \
+            away_goals_model_no_odds.pkl \
+            over_2_5_calibrator.pkl \
+            btts_calibrator.pkl
