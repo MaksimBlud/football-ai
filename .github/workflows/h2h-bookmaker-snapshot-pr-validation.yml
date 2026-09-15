@@ -5,6 +5,8 @@ on:
     paths:
       - "h2h_bookmaker_snapshot.py"
       - "test_h2h_bookmaker_snapshot.py"
+      - "save_epl_odds_snapshot_with_bookmakers.py"
+      - "scheduled_odds_snapshot.py"
       - "save_odds_snapshot.py"
       - "save_serie_a_odds_snapshot.py"
       - "save_bundesliga_odds_snapshot.py"
@@ -35,6 +37,8 @@ jobs:
         run: |
           python -m py_compile \
             h2h_bookmaker_snapshot.py \
+            save_epl_odds_snapshot_with_bookmakers.py \
+            scheduled_odds_snapshot.py \
             save_odds_snapshot.py \
             save_serie_a_odds_snapshot.py \
             save_bundesliga_odds_snapshot.py \
