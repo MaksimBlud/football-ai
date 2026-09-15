@@ -1,0 +1,66 @@
+name: BOOKMAKER_RECONSTRUCTION_DEVIG_V1 Robustness
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'bookmaker_reconstruction_devig_v1.py'
+      - 'bookmaker_reconstruction_devig_v1_robustness.py'
+      - 'tests/test_bookmaker_reconstruction_devig_v1_robustness.py'
+      - '.github/workflows/bookmaker-reconstruction-devig-v1-robustness.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'bookmaker_reconstruction_devig_v1.py'
+      - 'bookmaker_reconstruction_devig_v1_robustness.py'
+      - 'tests/test_bookmaker_reconstruction_devig_v1_robustness.py'
+      - '.github/workflows/bookmaker-reconstruction-devig-v1-robustness.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  robustness:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas numpy requests scipy 'scikit-learn==1.7.2' pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Robustness contract tests
+        run: pytest -q tests/test_bookmaker_reconstruction_devig_v1_robustness.py
+      - name: Run fixed-candidate robustness diagnostics
+        run: python bookmaker_reconstruction_devig_v1_robustness.py
+      - name: Assert frozen robustness contract
+        run: |
+          python - <<'PY'
+          import json
+          r=json.load(open('artifacts/bookmaker_reconstruction_devig_v1_robustness/report.json'))
+          assert r['experiment_id'] == 'BOOKMAKER_RECONSTRUCTION_DEVIG_V1_ROBUSTNESS'
+          assert r['source_experiment_id'] == 'BOOKMAKER_RECONSTRUCTION_DEVIG_V1'
+          assert r['baseline_method'] == 'PROPORTIONAL'
+          assert r['fixed_candidate_method'] == 'POWER'
+          assert r['candidate_reselected_in_robustness'] is False
+          assert r['retrospective_prior_seasons'] == 8
+          assert r['opened_2026_27_outcomes_used'] is False
+          assert r['research_only'] is True
+          assert r['production_promotion'] is False
+          assert r['betting_enabled'] is False
+          assert r['result'] == 'NO_BET'
+          assert r['final_oot_replay']['matches'] == 1140
+          PY
+      - name: Verify production hashes unchanged
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bookmaker-reconstruction-devig-v1-robustness
+          path: artifacts/bookmaker_reconstruction_devig_v1_robustness/report.json
+          retention-days: 30
