@@ -56,6 +56,30 @@ If either condition fails, active mode is `MARKET_FALLBACK` and active probabili
 
 Therefore "not worse than market" means an architectural fallback to equality with the market when incremental signal is not proven. It does **not** claim that any finite future realized sample is guaranteed to have lower loss than bookmakers.
 
+## First untouched OOT execution
+
+The first final-OOT execution occurred on PR #325 at head `9898fdea005b6344d638fb65c39e394886bced28`, before any result-specific tuning of this V1 construction.
+
+GitHub Actions run: `34917928502`.
+Artifact: `10376584443` (`market-anchor-1x2-v1`).
+Artifact digest: `sha256:d015b35f305fe934e99559184425ec3b69f165e1f85e57294eddb5a06b771746`.
+Frozen report: `experiments/market_anchor_1x2_v1_first_oot_report.json`.
+
+Pooled untouched 2025-2026 test (`n=1140`):
+
+- Market: Brier `0.5889962354`, LogLoss `0.9881046788`, accuracy `0.5263157895`.
+- Gated residual candidate: Brier `0.5886577614`, LogLoss `0.9877190855`, accuracy `0.5271929825`.
+- Delta candidate - market: Brier `-0.0003384740`; LogLoss `-0.0003855933`.
+- Formal V1 gate result: `residual_accepted=true`, `active_mode=RESIDUAL`.
+
+League selection remained fail-closed:
+
+- EPL: `MARKET`, `lambda=0.0`; test delta exactly zero.
+- La Liga: `MARKET`, `lambda=0.0`; test delta exactly zero.
+- Serie A: `ALL_FOOTBALL`, `lambda=1.0`; test Brier delta `-0.0010154220`, LogLoss delta `-0.0011567799`; accuracy `0.5421052632` vs market `0.5394736842`.
+
+Interpretation is deliberately conservative: the sign is positive under the preregistered gate, but the pooled magnitude is very small. This is historical temporal OOT evidence for the market-anchored architecture, **not** production-quality proof, a betting signal, or permission to tune V1 on the opened 2025-2026 test. Any further model changes require a new version/protocol and fresh evidence.
+
 ## Prohibited uses
 
 This protocol does not:
