@@ -1,6 +1,6 @@
 # BOOKMAKER_RECONSTRUCTION_FULL_COVERAGE_V1
 
-Post-outcome research diagnostic comparing the two historical 1X2 sources that retain full 2025-2026 coverage: B365 and Football-Data AVG.
+Post-outcome research diagnostic comparing the two 1X2 sources that retain full **2025-2026** coverage: B365 and Football-Data AVG.
 
 ## Why this exists
 
@@ -12,11 +12,17 @@ This diagnostic fixes:
 - candidate source: `AVG`
 - de-vig method: proportional normalization
 
-There is no outcome-based source selection in this experiment. AVG is evaluated because it is the full-coverage multi-book aggregate source identified by the coverage audit.
+There is no outcome-based source selection in this experiment. AVG is evaluated because it is the full-2025-2026-coverage multi-book aggregate source identified by the coverage audit.
+
+## Historical coverage contract
+
+The requested audit window is 2016-2017 through 2025-2026, but AVG availability is **measured, not assumed**. Older seasons without AVG are reported as `NO_PAIR_COVERAGE`; no AVG values are synthesized and such seasons do not enter performance metrics. Partially covered seasons are explicitly marked `PARTIAL_PAIR_COVERAGE` and use only same-fixture pairs.
+
+The only hard full-coverage requirement is the final 2025-2026 cohort: B365 and AVG must both exist for all 1,140 matches before final-season metrics or bootstrap diagnostics are accepted.
 
 ## Scope
 
-Measure B365 vs AVG on the same fixtures for every season from 2016-2017 through 2025-2026, pooled and by league. Report Brier and LogLoss deltas, season persistence, league-season persistence, full coverage, and paired bootstrap uncertainty for the final season.
+Report B365 vs AVG on every historically available same-fixture cohort, pooled and by league, including Brier and LogLoss deltas, season persistence, league-season persistence, measured coverage, and paired bootstrap uncertainty for the full final season.
 
 ## Evidence class
 
