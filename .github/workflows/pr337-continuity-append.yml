@@ -18,16 +18,20 @@ jobs:
         with:
           ref: research/market-anchor-v2-saved-cohort-replay
           fetch-depth: 0
-      - name: Append canonical replay checkpoint once
+      - name: Append canonical replay checkpoint and prove remote update
         shell: bash
         run: |
           set -euo pipefail
-          marker='## `MARKET_ANCHOR_V2_SAVED_COHORT_REPLAY` — EXACT FROZEN POST-OUTCOME DIAGNOSTIC'
-          if grep -Fq "$marker" PROJECT_CONTINUITY.md; then
-            echo 'Continuity checkpoint already present; no-op.'
-            exit 0
-          fi
-          cat >> PROJECT_CONTINUITY.md <<'EOF'
+          before="$(git rev-parse HEAD)"
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("PROJECT_CONTINUITY.md")
+          marker = "# Saved-cohort Market Anchor V2 replay — 2026-09-15"
+          text = path.read_text(encoding="utf-8")
+          if marker in text:
+              raise SystemExit("refusing no-op: replay continuity marker already exists before this helper run")
+          appendix = r'''
 
 ---
 
@@ -86,10 +90,18 @@ Canonical artifacts:
 6. Production `.pkl`, automatic model promotion, betting and staking remain out of scope.
 
 Next research milestone remains **fresh prospective proof**, not further optimization on the saved 10/47/58 outcomes.
-EOF
+'''
+          path.write_text(text.rstrip("\n") + appendix + "\n", encoding="utf-8")
+          assert marker in path.read_text(encoding="utf-8")
+          PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add PROJECT_CONTINUITY.md
           git diff --cached --check
+          git diff --cached --quiet && { echo 'expected continuity diff but found none'; exit 1; } || true
           git commit -m 'Record frozen V2 saved-cohort replay continuity'
+          after="$(git rev-parse HEAD)"
+          test "$after" != "$before"
           git push origin HEAD:refs/heads/research/market-anchor-v2-saved-cohort-replay
+          remote="$(git ls-remote origin refs/heads/research/market-anchor-v2-saved-cohort-replay | awk '{print $1}')"
+          test "$remote" = "$after"
