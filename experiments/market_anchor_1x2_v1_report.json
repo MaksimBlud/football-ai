@@ -1,0 +1,152 @@
+{
+  "acceptance_rule": "residual pooled OOT Brier < market AND residual pooled OOT LogLoss < market; otherwise exact market fallback",
+  "active_delta_brier": -0.0003384740138039355,
+  "active_delta_log_loss": -0.0003855932836709375,
+  "active_mode": "RESIDUAL",
+  "active_test": {
+    "accuracy": 0.5271929824561403,
+    "brier": 0.5886577613918851,
+    "log_loss": 0.9877190854806019
+  },
+  "evidence_class": "HISTORICAL_TEMPORAL_OOT",
+  "experiment_id": "MARKET_ANCHOR_1X2_V1",
+  "feature_variants": [
+    "FORM",
+    "FORM_GOALS",
+    "FORM_GOALS_CORNERS",
+    "ALL_FOOTBALL"
+  ],
+  "l2_penalty": 1.0,
+  "lambda_grid": [
+    0.0,
+    0.1,
+    0.25,
+    0.5,
+    0.75,
+    1.0
+  ],
+  "league_reports": [
+    {
+      "league": "EPL",
+      "selected_feature_variant": "MARKET",
+      "selected_lambda": 0.0,
+      "test_delta_brier": 0.0,
+      "test_delta_log_loss": 0.0,
+      "test_market": {
+        "accuracy": 0.48947368421052634,
+        "brier": 0.6115122077213377,
+        "log_loss": 1.0185474335944442
+      },
+      "test_n": 380,
+      "test_residual_candidate": {
+        "accuracy": 0.48947368421052634,
+        "brier": 0.6115122077213377,
+        "log_loss": 1.0185474335944442
+      },
+      "train_n": 3040,
+      "validation_candidates_evaluated": 24,
+      "validation_market": {
+        "accuracy": 0.5394736842105263,
+        "brier": 0.5786638026588309,
+        "log_loss": 0.9707576734366715
+      },
+      "validation_n": 380,
+      "validation_selected": {
+        "accuracy": 0.5394736842105263,
+        "brier": 0.5786638026588309,
+        "log_loss": 0.9707576734366715
+      }
+    },
+    {
+      "league": "LA_LIGA",
+      "selected_feature_variant": "MARKET",
+      "selected_lambda": 0.0,
+      "test_delta_brier": 0.0,
+      "test_delta_log_loss": 0.0,
+      "test_market": {
+        "accuracy": 0.55,
+        "brier": 0.5710378212308005,
+        "log_loss": 0.9636644004887207
+      },
+      "test_n": 380,
+      "test_residual_candidate": {
+        "accuracy": 0.55,
+        "brier": 0.5710378212308005,
+        "log_loss": 0.9636644004887207
+      },
+      "train_n": 3040,
+      "validation_candidates_evaluated": 24,
+      "validation_market": {
+        "accuracy": 0.5447368421052632,
+        "brier": 0.564041498230718,
+        "log_loss": 0.9534095113153103
+      },
+      "validation_n": 380,
+      "validation_selected": {
+        "accuracy": 0.5447368421052632,
+        "brier": 0.564041498230718,
+        "log_loss": 0.9534095113153103
+      }
+    },
+    {
+      "league": "SERIE_A",
+      "selected_feature_variant": "ALL_FOOTBALL",
+      "selected_lambda": 1.0,
+      "test_delta_brier": -0.0010154220414118065,
+      "test_delta_log_loss": -0.0011567798510132565,
+      "test_market": {
+        "accuracy": 0.5394736842105263,
+        "brier": 0.5844386772649285,
+        "log_loss": 0.9821022022096544
+      },
+      "test_n": 380,
+      "test_residual_candidate": {
+        "accuracy": 0.5421052631578948,
+        "brier": 0.5834232552235167,
+        "log_loss": 0.9809454223586411
+      },
+      "train_n": 3039,
+      "validation_candidates_evaluated": 24,
+      "validation_market": {
+        "accuracy": 0.5289473684210526,
+        "brier": 0.5684435318856402,
+        "log_loss": 0.9547660500390202
+      },
+      "validation_n": 380,
+      "validation_selected": {
+        "accuracy": 0.5289473684210526,
+        "brier": 0.5648966442617899,
+        "log_loss": 0.946415019441963
+      }
+    }
+  ],
+  "market_test": {
+    "accuracy": 0.5263157894736842,
+    "brier": 0.588996235405689,
+    "log_loss": 0.9881046787642729
+  },
+  "opened_2026_09_outcomes_used": false,
+  "production_promotion": false,
+  "research_only": true,
+  "residual_accepted": true,
+  "residual_candidate_test": {
+    "accuracy": 0.5271929824561403,
+    "brier": 0.5886577613918851,
+    "log_loss": 0.9877190854806019
+  },
+  "residual_delta_brier": -0.0003384740138039355,
+  "residual_delta_log_loss": -0.0003855932836709375,
+  "test_n": 1140,
+  "train_seasons": [
+    "2016-2017",
+    "2017-2018",
+    "2018-2019",
+    "2019-2020",
+    "2020-2021",
+    "2021-2022",
+    "2022-2023",
+    "2023-2024"
+  ],
+  "untouched_test_season": "2025-2026",
+  "validation_season": "2024-2025"
+}
