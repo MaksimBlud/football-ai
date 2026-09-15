@@ -8,7 +8,7 @@ PR #324 (`Record early exploratory EPL AI-market interim`) was merged as `57cace
 
 The user-authorized early read opened outcomes for 11 already-completed `EPL_AI_MARKET_PAIR_V1` fixtures. The underlying predictions remain genuine pre-kickoff prospective records, but the former claim that the full 100-event EPL cohort could remain pristine/no-peek is no longer valid. Do not describe that older primary gate as still pristine or unopened.
 
-A separate 43-match cross-league replay/debug evaluation produced AI underperformance versus market (AI Brier `0.6125651124` vs market `0.5975406259`; AI LogLoss `1.0249478419` vs market `0.9958508866`; accuracy `39.53%` vs `48.84%`). This result is retained only as historical/debug evidence because later identity/freezing review retired that replay contract as primary evidence. It must not be promoted to prospective/frozen proof.
+A separate 43-match cross-league replay evaluation produced AI underperformance versus market (AI Brier `0.6125651124` vs market `0.5975406259`; AI LogLoss `1.0249478419` vs market `0.9958508866`; accuracy `39.53%` vs `48.84%`). PR #322 froze the deterministic mature Eval43 cohort before outcome access and PR #323 recorded the allowed results. Eval43 therefore remains valid retrospective point-in-time replay research evidence; it was **not retired** by PR #324 or any later identity/freezing review. It is not prospective evidence and must never be relabeled as prospective proof.
 
 ## PR #325 — `MARKET_ANCHOR_1X2_V1`
 

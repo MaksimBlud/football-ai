@@ -346,47 +346,137 @@ Do **not** jump to Total Goals activation while exact-main public deployment rem
 
 ---
 
-# Continuity checkpoint — 2026-09-15 / PR #324–#325
+# Research cycle 2026-09-14/15 — OPENED EVIDENCE + MARKET_ANCHOR_1X2_V1
 
-Full immutable detail for this checkpoint is recorded in `research/CONTINUITY_2026_09_15_MARKET_ANCHOR.md`. The facts below supersede older status language above where they conflict; older sections remain as historical context.
+Этот раздел **суперседит устаревший research checkpoint выше**, где EPL outcome gate ещё считался полностью закрытым. Старую запись оставляем как исторический audit trail.
 
-## Research supersession
+## Eval43 cross-league replay — PR #322 / #323
 
-- PR #324 merged as `57cace46bcf61557837a8235f1239b06813f39eb` and recorded a user-authorized early outcome read for 11 completed `EPL_AI_MARKET_PAIR_V1` fixtures. The predictions remain genuine prospective pre-kickoff records, but the former claim that the eventual 100-event EPL cohort can remain pristine/no-peek is retired. Do not describe that older EPL gate as still unopened.
-- The separate 43-match cross-league replay/debug result is retained only as retired/debug evidence after later identity/freezing review: AI Brier `0.6125651124` vs market `0.5975406259`; AI LogLoss `1.0249478419` vs market `0.9958508866`; accuracy `39.53%` vs `48.84%`. It is not prospective/frozen primary evidence.
+PR #322 froze deterministic mature `43`-event evaluation cohort from the 47-event point-in-time replay; four not-yet-mature identities remained rollover. Merge: `23b86b03e0af66adf7ace06a87718373b8a18982`.
 
-## `MARKET_ANCHOR_1X2_V1` — HISTORICAL OOT POSITIVE SIGN / RESEARCH-ONLY / NO_BET
+PR #323 recorded the allowed Eval43 outcome join and fixed pooled metrics; merge: `28b7a4a3bf02e1cf13c0ca21b2dc53901413e68f`.
 
-PR #325 final tested head: `ace9d9f346c78a1532b5956913fafe9c4bfb3ba5`.
+Canonical report: `experiments/point_in_time_cross_league_replay_v1_eval43_report.json`.
+
+Eval43, `n=43`:
+- AI Brier `0.6125651124394431` vs Market `0.5975406259362642`; delta `+0.015024486503178891` — AI worse.
+- AI LogLoss `1.0249478419454585` vs Market `0.9958508866152331`; delta `+0.029096955330225382` — AI worse.
+- AI accuracy `17/43 = 39.53%`; Market `21/43 = 48.84%`.
+- top-1 disagreements `10`: AI correct / market wrong `0`; market correct / AI wrong `4`; both wrong `6`.
+- formal status `WARNING`; `bet_decision = NO_BET`.
+
+League deltas, AI-Market:
+- Bundesliga: Brier `+0.0291226809`, LogLoss `+0.0440517904`;
+- Eredivisie: `+0.0114017352`, `+0.0316031669`;
+- La Liga: `+0.0760267328`, `+0.1229242526`;
+- Ligue 1: `+0.0074269370`, `+0.0232138378`;
+- Serie A: Brier `-0.0671068156`, LogLoss `-0.1064237240` — the only positive league slice, too small for a standalone claim.
+
+Eval43 remains valid research evidence; it was **not retired**. Do not repeat the earlier transient claim that PR #324 invalidated its identity contract.
+
+## EPL early exploratory 11 — PR #324
+
+Under explicit user authorization, `11` already-settled prospective EPL paired-AI outcomes were opened early. PR #324 merge: `57cace46bcf61557837a8235f1239b06813f39eb`.
+
+Canonical report: `experiments/epl_ai_market_pair_v1_early_interim_11_report.json`.
+
+Exact exploratory metrics, `n=11`:
+- AI Brier `0.7387143340906316` vs Market `0.7153976428033418`; delta `+0.023316691287289748`.
+- AI LogLoss `1.1913041652574738` vs Market `1.1545062906860382`; delta `+0.036797874571435685`.
+- AI accuracy `2/11 = 18.18%`; Market `4/11 = 36.36%`.
+- top-1 disagreements `2`; AI wins `0`, market wins `2`.
+- `bet_decision = NO_BET`.
+
+The predictions themselves were genuinely frozen pre-outcome, but opening these outcomes before the original `2026-11-01T12:16:54.672903Z` gate means the old pristine 100-match EPL primary no-peek claim is **no longer available**. Do not present the 11 as a completed primary experiment and do not silently restore the old no-peek claim.
+
+## Architectural diagnosis
+
+Production `football_model_xgboost_elo.pkl` consumes bookmaker odds as ordinary model features together with football state. It therefore has no structural obligation to preserve bookmaker probabilities as a strong prior and can arbitrarily deform them. The 43-event replay and 11-event EPL exploratory evidence both showed the same practical failure mode: current AI probabilities were worse than market on Brier, LogLoss and top-1 accuracy.
+
+This motivated a new architecture rather than another unconstrained `market + features -> classifier` refit.
+
+## `MARKET_ANCHOR_1X2_V1` — historical temporal OOT / research-only
+
+PR #325 branch: `research/market-anchor-1x2-v1`, created from exact main `57cace46bcf61557837a8235f1239b06813f39eb`.
+
+Final exact tested head: `ace9d9f346c78a1532b5956913fafe9c4bfb3ba5`.
 Exact-head merge: `5a818b0babf013d79227a78f3e62237e85c3d16f`.
+All 8 final head checks completed without failure; production artifact guards stayed green.
 
-Architecture: `p = softmax(log(de-vigged_market) + lambda * football_residual)` with exact market identity at `lambda=0`. Train = 2016-2017..2023-2024; validation = 2024-2025; untouched OOT = 2025-2026; September 2026 opened outcomes are excluded.
+Architecture:
+- mandatory prior = de-vigged market H/D/A distribution `m`;
+- football-only residual logits `r(x)`;
+- candidate `p = softmax(log(m) + lambda * r(x))`;
+- `lambda = 0` is exact market identity, not an approximation;
+- regularized residual uses football-only state; market is an offset, not a trainable football feature;
+- fixed feature variants: `FORM`, `FORM_GOALS`, `FORM_GOALS_CORNERS`, `ALL_FOOTBALL`;
+- fixed lambda grid: `[0.0, 0.10, 0.25, 0.50, 0.75, 1.0]`;
+- train `2016-2017..2023-2024`;
+- validation `2024-2025`;
+- untouched final OOT `2025-2026`;
+- opened September 2026 outcomes are excluded from train, selection and final OOT;
+- within each league, non-zero residual is admissible on validation only if it improves **both** Brier and LogLoss; otherwise exact market fallback;
+- pooled final OOT accepts residual only if both Brier and LogLoss beat market; otherwise active output is exact market.
 
-First frozen OOT (`n=1140`):
-- market Brier `0.5889962354`, candidate `0.5886577614`, delta `-0.0003384740`;
-- market LogLoss `0.9881046788`, candidate `0.9877190855`, delta `-0.0003855933`;
-- market accuracy `0.5263157895`, candidate `0.5271929825`;
-- EPL and La Liga fail closed to exact market (`lambda=0`);
-- Serie A selects `ALL_FOOTBALL`, `lambda=1.0`.
+Canonical frozen OOT report: `experiments/market_anchor_1x2_v1_report.json`.
+First fixed OOT run: `34917928502`; artifact `10376584443`; digest `sha256:d015b35f305fe934e99559184425ec3b69f165e1f85e57294eddb5a06b771746`.
 
-Formal V1 gate is positive, but effect size is very small. Frozen report: `experiments/market_anchor_1x2_v1_report.json`. First OOT run `34917928502`; artifact `10376584443`; digest `sha256:d015b35f305fe934e99559184425ec3b69f165e1f85e57294eddb5a06b771746`.
+Untouched 2025-2026 pooled OOT, `n=1140`:
+- Market Brier `0.588996235405689`; active candidate `0.5886577613918851`; delta `-0.0003384740138039355`.
+- Market LogLoss `0.9881046787642729`; active candidate `0.9877190854806019`; delta `-0.0003855932836709375`.
+- Market accuracy `52.63%`; active candidate `52.72%`.
+- formal V1 gate: `residual_accepted = true`, `active_mode = RESIDUAL`.
 
-Corrected exact-Serie-A robustness (`n=380`) after fixing a diagnostic-only validation-refit bug:
-- Brier delta `-0.0010154220`, paired-bootstrap 95% interval `[-0.0051650435, +0.0032368771]`, probability better `0.6831`;
-- LogLoss delta `-0.0011567799`, paired-bootstrap 95% interval `[-0.0080689479, +0.0060389577]`, probability better `0.6317`;
-- frozen fixed configuration wins both metrics in only `2/6` earlier retrospective seasons.
+League selection remained fail-closed:
+- EPL: `MARKET`, `lambda=0`; exact market equality on final OOT.
+- La Liga: `MARKET`, `lambda=0`; exact market equality on final OOT.
+- Serie A: `ALL_FOOTBALL`, `lambda=1.0`; `n=380`; Brier `0.5844386773 -> 0.5834232552`, delta `-0.0010154220`; LogLoss `0.9821022022 -> 0.9809454224`, delta `-0.0011567799`; accuracy `53.95% -> 54.21%`.
 
-Both uncertainty intervals cross zero and historical persistence is weak. Therefore **no production promotion** and **NO_BET**. Corrected robustness run `34918346551`; artifact `10377595106`; digest `sha256:56ebad616726e6c3f690a4b2c05949e4a5971d1a3a60d828bf65bb054b9b4734`.
+Interpretation: the new architecture reached the user's minimum in a defensible structural sense — where incremental football signal is not proven, the active candidate falls back to exact market rather than degrading it. The pooled untouched V1 sign is also slightly positive, but the magnitude is small and **does not authorize production promotion**.
 
-A platform-dependent last-bit float drift (~`1e-16`) caused bytewise JSON `cmp` to fail. The frozen report was not rewritten. `market_anchor_1x2_v1_freeze_guard.py` now requires exact schema/keys/strings/bools/integers/selections/list order and finite float agreement within `1e-12`; material metric/status/selection drift remains fail-closed.
+## V1 robustness — corrected post-selection diagnostic
 
-All 8 exact-head PR workflows passed. Post-merge `main` proof also passed: main OOT run `34918844569` and robustness run `34918844547`, including production `.pkl` hash guards.
+A real implementation defect was found during robustness work: an initial diagnostic version would have refit the final Serie A model using validation 2024-2025, while frozen V1 final OOT used training only through 2023-2024. That path was rejected before being treated as authoritative. Regression tests now explicitly require the frozen split and prohibit validation from entering final refit.
 
-## Research execution pointer after PR #325
+Corrected robustness run: `34918346551`; job `104220736279`; artifact `10377595106`; digest `sha256:56ebad616726e6c3f690a4b2c05949e4a5971d1a3a60d828bf65bb054b9b4734`.
+Canonical report: `experiments/market_anchor_1x2_v1_robustness_report.json`.
 
-- Do not tune V1 on the now-open 2025-2026 OOT.
-- Do not promote V1 from this evidence.
-- Market-anchor is the preferred **research architecture** over unconstrained bookmaker-odds-as-features deformation because it can fail closed exactly to market, but it is not yet proven alpha.
-- Next legitimate evidence is fresh prospective validation of the frozen market-anchor construction, or a separately preregistered V2 with fresh evidence.
-- Forecast probability quality, value selection, bet decision and portfolio exposure remain separate; `NO_BET` is binding.
-- Product/deployment gates remain separate and are not relaxed by this research result.
+Exact frozen Serie A OOT (`n=380`):
+- Brier mean delta `-0.0010154220414116213`; paired bootstrap 95% CI `[-0.005165043497376611, +0.003236877119355216]`; bootstrap probability better than market `0.6831`.
+- LogLoss mean delta `-0.0011567798510132698`; 95% CI `[-0.008068947941734678, +0.006038957657259541]`; probability better than market `0.6317`.
+- candidate beats market per-match on Brier in `53.68%` and LogLoss in `57.63%` of fixtures.
+- fixed post-selection configuration wins both metrics in only `2/6` earlier retrospective seasons.
+
+Therefore V1's formal historical OOT acceptance remains true, but persistent superiority is **not robustly proven**: both uncertainty intervals cross zero and historical season stability is weak. Status stays research/shadow only, `NO_BET`, **NO PRODUCTION PROMOTION**.
+
+## Freeze/safety hardening in PR #325
+
+- `market_anchor_1x2_v1_freeze_guard.py` compares the complete frozen JSON structure and all non-floats exactly; finite floats may drift only within `1e-12` to avoid false failures from platform/library last-bit differences.
+- Separate regression tests cover the freeze guard.
+- Corrected robustness is cross-checked against the exact frozen Serie A V1 sample/training split.
+- Dedicated workflows snapshot production `.pkl` hashes before/after and fail on any change.
+- No paid Odds API calls, no Supabase writes, no model promotion, no bet/stake action occurred in this research block.
+
+---
+
+# Current checkpoint — 2026-09-15 (supersedes the stale checkpoint above)
+
+- Current substantive `main` after PR #325 = `5a818b0babf013d79227a78f3e62237e85c3d16f`.
+- Production `.pkl` artifacts remain unchanged by Eval43, EPL exploratory read, MARKET_ANCHOR V1 and robustness work.
+- Existing production XGBoost is **not** considered proven competitive with the market; opened 43-event replay and 11-event EPL exploratory evidence both favor market.
+- `MARKET_ANCHOR_1X2_V1` is the new research baseline architecture: exact market fallback by construction; historical OOT residual edge is positive but small and not robust enough for production.
+- EPL old pristine 100-match primary no-peek claim is no longer available after the authorized early 11-outcome read. Do not claim otherwise.
+- `ALL_LEAGUES_MARKET_ONLY_V1_1` remains a separate frozen collect/don't-peek experiment; its binding gate must not be weakened.
+- Product/deployment facts from the 2026-09-13 section remain unchanged unless separately re-verified; this research cycle did not deploy or promote a model.
+
+# Текущий execution pointer — research
+
+1. **Do not retune V1 on the now-opened 2025-2026 OOT or September-2026 Eval43/EPL outcomes.** Those samples are evidence, not reusable selection data.
+2. Define `MARKET_ANCHOR_1X2_V2` as a new preregistered contract with a stricter stability gate before any fresh prospective outcomes are read. Stability must be a requirement, not post-hoc decoration.
+3. V2 should keep the exact market fallback invariant. A football residual may become active only under predeclared multi-period / uncertainty requirements; otherwise `lambda=0`.
+4. Create a **new prospective 2026-2027 shadow cohort** after V2 freeze. Previously opened September-2026 outcomes are excluded from tuning and cannot be relabeled prospective evidence.
+5. Keep V1/Serie-A residual shadow-only while fresh prospective sample accumulates. `NO_BET`; no production `.pkl` promotion.
+6. Paid refresh remains manual-only; use already durable/future-only inputs and zero-cost/read-only checks first.
+7. Continue to search for genuinely supported point-in-time lineup/tactical/true-xG sources separately; do not fabricate them from generic aggregates.
+
+Minimum target going forward: **active probability output must never be allowed to abandon a proven market baseline without predeclared evidence that the residual adds value**. The next milestone is not a larger backtest score; it is a stable, prospective proof that any non-zero residual survives fresh data.
