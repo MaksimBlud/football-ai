@@ -225,7 +225,7 @@ Previous public/runtime audit established that the deployed site lagged reposito
 ## Real repository web contract
 
 The actual Vercel runtime in fresh main is:
-- `pyproject.toml`: `[tool.vercel] entrypoint = "web_app:app"`;
+- `pyproject.toml`: `[tool.vercel] entrypoint = \"web_app:app\"`;
 - `vercel.json`: function `web_app.py`;
 - public routes: `/`, `/match`, `/health`, `/product-market-view`, `/portfolio-risk-view`, `/production-readiness-view`, `/product-market-view/{match_id}`.
 
@@ -480,3 +480,137 @@ Therefore V1's formal historical OOT acceptance remains true, but persistent sup
 7. Continue to search for genuinely supported point-in-time lineup/tactical/true-xG sources separately; do not fabricate them from generic aggregates.
 
 Minimum target going forward: **active probability output must never be allowed to abandon a proven market baseline without predeclared evidence that the residual adds value**. The next milestone is not a larger backtest score; it is a stable, prospective proof that any non-zero residual survives fresh data.
+
+---
+
+# Research cycle 2026-09-15 — BOOKMAKER RECONSTRUCTION + LIVE H2H TRANSFERABILITY
+
+Этот раздел **суперседит research execution pointer выше** и фиксирует завершённый bookmaker-reconstruction/live-capture блок. Он не меняет product/deployment state и не разрешает production promotion.
+
+## Historical bookmaker reconstruction chain — PR #330–#333
+
+### PR #330 — `BOOKMAKER_RECONSTRUCTION_DEVIG_V1`
+
+Merge: `f1264785a0f1b0a4e2ad8f2f5b0843ed0782f3e3`.
+
+Fixed contract:
+- raw Football-Data decimal odds only; already de-vigged market probabilities are not reused because they have lost overround information;
+- fixed methods: `PROPORTIONAL`, `POWER`, `SHIN`;
+- selection season: `2024-2025`, primary selector LogLoss then Brier tie-break;
+- untouched OOT: `2025-2026`;
+- no 2026-2027 outcomes;
+- research-only / `NO_BET`; no Supabase writes, paid-provider calls, production `.pkl` writes or promotion.
+
+`POWER` was selected in the frozen V1 comparison, but one selected OOT season is not enough to claim persistent superiority.
+
+### PR #331 — de-vig robustness
+
+Merge: `b1cf18f19cca944e4d42d07e1593b34816c8ce49`.
+
+`POWER` vs `PROPORTIONAL` was replayed with no method re-selection across retrospective pre-validation seasons, the selection season and final OOT. This is robustness evidence only. The result does **not** justify replacing proportional de-vig in production by itself; persistent advantage must survive fresh evidence.
+
+### PR #332 — bookmaker source/consensus diagnostic
+
+Merge: `df6dafd1ea8b98b9c79b399d0fda91e76e06ffaf`.
+
+Fixed source comparison: B365 vs PS vs Football-Data `AVG` on common fixtures. Coverage audit found an important data limitation on 2025-2026 OOT:
+- B365 coverage = `1140/1140`;
+- AVG coverage = `1140/1140`;
+- PS coverage = `599/1140`;
+- PS is temporally truncated toward the first half of the season, so the common-source cohort is not representative of the full 2025-2026 season.
+
+Therefore the common-source performance comparison is diagnostic only; no post-hoc PS/AVG/B365 fallback or hybrid rule is authorized from it.
+
+### PR #333 — full-coverage AVG vs B365
+
+Merge: `8630e4ad338ea533b5b90c9c0aaef404cb7be5d9`.
+
+`AVG` was compared with B365 on the full-coverage same-fixture historical cohort using fixed proportional de-vig. `AVG` is a multi-book aggregate and remains available across the full 2025-2026 three-league cohort, unlike PS.
+
+**Evidence-class caveat is binding:** PR #333 is explicitly a **post-outcome diagnostic**, not a new untouched OOT experiment, because 2025-2026 outcomes had already been inspected in the preceding source work. Its results may motivate a separately frozen prospective source/consensus contract, but must not be used to declare AVG a proven production replacement after the fact.
+
+## PR #334 — `H2H_BOOKMAKER_V1` durable live capture
+
+Exact tested head: `0924353ac93d4a3865a175a8490298599b3e0b59`.
+Merge: `0c6f9e5afc22ed665ce66e3834c6247c57abfbb0`.
+
+Purpose: preserve bookmaker-level H2H quotes from the **same already-fetched The Odds API response** instead of discarding them after aggregate odds are computed.
+
+Binding safety/cost contract:
+- **zero additional provider requests** for bookmaker capture;
+- each league's existing collector/freshness/quota gate remains authoritative for whether a paid H2H request happens at all;
+- strict pre-kickoff persistence only;
+- research payload forbids outcome/result/score fields;
+- deterministic `snapshot_key` and payload hash;
+- idempotent `upsert` on `snapshot_key`;
+- research persistence is best-effort and cannot turn a successful paid aggregate snapshot into collector failure/retry;
+- separate table avoids coupling H2H research writes to Multi-Market freshness logic;
+- no new probability output, POWER/SHIN activation, model promotion, betting or staking is authorized.
+
+Wired collectors: EPL, Serie A, Bundesliga, Eredivisie, Ligue 1, La Liga, RPL, Turkey Super Lig and Primeira Liga. Manual-only collectors remain manual-only.
+
+Dedicated H2H PR workflow on final head passed compile, `7/7` regression tests and production `.pkl` diff guard. All eight PR validation workflows on the exact final head were green before merge.
+
+## Live Supabase migration + discovered privilege defect
+
+PR #334 migration created `public.league_h2h_bookmaker_snapshots` with:
+- primary key `snapshot_key`;
+- pre-kickoff check `snapshot_time_utc < kickoff_utc`;
+- mandatory `research_only=true` payload flag;
+- mandatory schema version `H2H_BOOKMAKER_V1`;
+- provider fixed to `THE_ODDS_API`;
+- bookmaker-count and payload-hash constraints;
+- RLS enabled;
+- service-role SELECT/INSERT policies.
+
+Post-merge live verification found a real Supabase default-privilege issue: despite the intended narrow grant, `service_role` inherited broader table privileges including UPDATE/DELETE/TRUNCATE. This was treated as a defect, not accepted as residual risk.
+
+## PR #335 — live grant hardening
+
+Merge: `f7e7bc98305a91c4a4cb0f7f189b3d9d2fbaf252`.
+
+Additive migration `20260915142500_h2h_bookmaker_grant_hardening.sql` now explicitly:
+- `REVOKE ALL` table privileges from `anon`, `authenticated`, and `service_role`;
+- grants back only `SELECT, INSERT` to `service_role`.
+
+A regression test protects the ordering and forbids grants of UPDATE/DELETE/TRUNCATE. Dedicated H2H CI and all applicable Research/Product/league validations were green before exact-head merge.
+
+### Final live Supabase proof
+
+After both merged migrations were applied:
+- table exists and `row_count = 0`;
+- RLS = enabled;
+- `anon` grants = none;
+- `authenticated` grants = none;
+- `service_role` grants = exactly `INSERT`, `SELECT`;
+- policies = service-role `INSERT` + `SELECT` only;
+- pre-kickoff, research-only, schema-version, provider, counts and payload-hash constraints are live;
+- migrations `league_h2h_bookmaker_snapshots` and `h2h_bookmaker_grant_hardening` are registered in live Supabase.
+
+`row_count=0` is expected at closure because **no paid Odds API call was made merely to manufacture a proof row**. The first rows should arrive only when an already-authorized existing collector performs its normal provider read and the same response contains usable H2H bookmaker quotes.
+
+Supabase security advisor produced no new H2H security finding after hardening. Performance advisor marked the two new H2H indexes unused, which is expected while the table is empty and is not a reason to remove them now.
+
+## Current checkpoint — bookmaker reconstruction block CLOSED
+
+- Current substantive `main` after PR #335 = `f7e7bc98305a91c4a4cb0f7f189b3d9d2fbaf252`.
+- Production `.pkl` artifacts were not changed by PR #330–#335.
+- No production model promotion occurred.
+- `MARKET_ANCHOR_1X2_V2` remains fail-closed to the market baseline; current active residual state is not promoted by this work.
+- `NO_BET` remains binding.
+- No prospective outcome gate was weakened or opened by this block.
+- No extra Odds API request was consumed for H2H bookmaker capture or live proof.
+- Historical findings around POWER and AVG are research evidence only; neither is authorized as a production baseline replacement without a new preregistered prospective transferability contract.
+
+# Текущий execution pointer — bookmaker reconstruction / market baseline
+
+1. **Collect forward bookmaker-level H2H evidence without increasing provider-call frequency.** `H2H_BOOKMAKER_V1` should piggyback only on provider responses that existing league collectors already decided to fetch.
+2. Do not backfill bookmaker-level point-in-time history from later states and do not synthesize missing books. Durable pre-kickoff rows are the evidence source.
+3. Before reading outcomes from the new H2H bookmaker rows, freeze a separate prospective transferability contract. At minimum predeclare candidate de-vig methods/source representations, cohort identity, minimum sample/time coverage, metrics and acceptance gate.
+4. Candidate baseline work should distinguish three separate questions: margin removal (`PROPORTIONAL`/`POWER`/`SHIN`), market representation (single book vs consensus/aggregate), and football residual value beyond that market baseline. Do not tune all three layers on the same opened sample.
+5. Keep exact-market fallback as the safety invariant for Market Anchor work. A non-zero football residual must earn activation under the predeclared stability/prospective gate; otherwise active probability remains the market baseline.
+6. Do not promote POWER, AVG, consensus weighting, dispersion features or any residual based solely on PR #330–#333 historical/post-outcome evidence.
+7. Continue zero-cost/read-only health checks while the live bookmaker sample accumulates. Any deliberate extra paid refresh remains a separate explicit manual gate.
+8. Production `.pkl`, betting/staking and automatic model promotion remain out of scope until a separately authorized gate is satisfied.
+
+Next research milestone: **prospectively prove which market reconstruction is the strongest stable prior on fresh bookmaker-level data, then test whether football information adds incremental value beyond that stronger prior without ever allowing the active output to degrade below the proven market fallback.**
