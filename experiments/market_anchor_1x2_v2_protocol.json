@@ -1,0 +1,63 @@
+{
+  "admission": {
+    "no_backfill": true,
+    "not_before_utc": "2026-09-16T00:00:00Z",
+    "strictly_pre_kickoff_capture": true
+  },
+  "candidate_recipe": {
+    "feature_variant": "ALL_FOOTBALL",
+    "l2_penalty": 1.0,
+    "lambda": 1.0,
+    "market_anchor_formula": "softmax(log(de_vigged_market_probability) + lambda * residual_logits)",
+    "refit_seasons": [
+      "2016-2017",
+      "2017-2018",
+      "2018-2019",
+      "2019-2020",
+      "2020-2021",
+      "2021-2022",
+      "2022-2023",
+      "2023-2024",
+      "2024-2025",
+      "2025-2026"
+    ],
+    "training_data_through": "2026-06-30",
+    "use_opened_2026_27_outcomes_for_fit_or_selection": false
+  },
+  "comparators": [
+    "DE_VIGGED_MARKET",
+    "FROZEN_PRODUCTION_INCUMBENT"
+  ],
+  "decision_policy": {
+    "automatic_promotion": false,
+    "betting_enabled": false,
+    "result": "NO_BET",
+    "review_signal_requires": "candidate Brier and LogLoss both lower than market AND candidate Brier and LogLoss both lower than incumbent",
+    "review_signal_only": true
+  },
+  "evidence_class": "PROSPECTIVE_SHADOW",
+  "experiment_id": "MARKET_ANCHOR_1X2_V2",
+  "first_outcome_read_gate": {
+    "completed_primary_events": 30,
+    "outcome_read_before_gate": false,
+    "purpose": "diagnostic review only; not a production promotion gate"
+  },
+  "primary_cohort": {
+    "league": "SERIE_A",
+    "other_leagues_count_toward_gate": false
+  },
+  "provenance": {
+    "frozen_from_main_commit": "35af594b9578f7f611699f3fa4740033657305ff",
+    "source_experiment": "MARKET_ANCHOR_1X2_V1",
+    "source_report_blob_sha": "9d5e1aad2a9cf5bb833cfea491c4f828d7cb72fd"
+  },
+  "research_only": true,
+  "shadow_capture_forbidden_fields": [
+    "result",
+    "outcome",
+    "home_goals",
+    "away_goals",
+    "score",
+    "final_score"
+  ]
+}
