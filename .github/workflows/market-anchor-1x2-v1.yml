@@ -18,6 +18,10 @@ on:
       - '.github/workflows/market-anchor-1x2-v1.yml'
       - 'historical_football_signal_lab.py'
       - 'historical_football_signal_runner.py'
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -51,6 +55,18 @@ jobs:
               assert abs(r['active_delta_brier']) <= 1e-15
               assert abs(r['active_delta_log_loss']) <= 1e-15
           PY
+      - name: Publish OOT report to PR
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo '### MARKET_ANCHOR_1X2_V1 OOT report'
+            echo '```json'
+            cat artifacts/market_anchor_1x2_v1/report.json
+            echo '```'
+          } > /tmp/market-anchor-report.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/market-anchor-report.md
       - uses: actions/upload-artifact@v4
         with:
           name: market-anchor-1x2-v1
