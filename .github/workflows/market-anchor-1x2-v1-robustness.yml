@@ -5,6 +5,7 @@ on:
     paths:
       - 'market_anchor_1x2_v1.py'
       - 'market_anchor_1x2_v1_robustness.py'
+      - 'experiments/market_anchor_1x2_v1_report.json'
       - 'tests/test_market_anchor_1x2_v1_robustness.py'
       - '.github/workflows/market-anchor-1x2-v1-robustness.yml'
   push:
@@ -12,6 +13,7 @@ on:
     paths:
       - 'market_anchor_1x2_v1.py'
       - 'market_anchor_1x2_v1_robustness.py'
+      - 'experiments/market_anchor_1x2_v1_report.json'
       - 'tests/test_market_anchor_1x2_v1_robustness.py'
       - '.github/workflows/market-anchor-1x2-v1-robustness.yml'
 permissions:
@@ -34,6 +36,20 @@ jobs:
         run: pytest -q tests/test_market_anchor_1x2_v1_robustness.py
       - name: Run frozen-config robustness diagnostics
         run: python market_anchor_1x2_v1_robustness.py
+      - name: Verify robustness exactly replays frozen Serie A OOT
+        run: |
+          python - <<'PY'
+          import json
+          frozen=json.load(open('experiments/market_anchor_1x2_v1_report.json'))
+          robust=json.load(open('artifacts/market_anchor_1x2_v1_robustness/report.json'))
+          serie=next(r for r in frozen['league_reports'] if r['league']=='SERIE_A')
+          assert robust['final_oot_n'] == serie['test_n']
+          assert robust['final_oot_training_seasons'] == frozen['train_seasons']
+          assert robust['validation_season_used_for_selection_not_refit'] == frozen['validation_season']
+          for metric in ('brier','log_loss','accuracy'):
+              assert abs(robust['final_oot_market'][metric] - serie['test_market'][metric]) <= 1e-12
+              assert abs(robust['final_oot_candidate'][metric] - serie['test_residual_candidate'][metric]) <= 1e-12
+          PY
       - name: Verify production hashes unchanged
         run: |
           sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
