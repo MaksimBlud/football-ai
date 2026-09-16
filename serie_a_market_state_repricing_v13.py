@@ -15,7 +15,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import brier_score_loss,log_loss,roc_auc_score,average_precision_score
-from bookmaker_reconstruction_devig_v1 import power_devig
+from bookmaker_reconstruction_devig_v1 import power
 
 EXPERIMENT_ID='SERIE_A_MARKET_STATE_REPRICING_V13'; MOVEMENT_QUANTILE=.75; C=.1
 SEASONS={'1617':'2016-2017','1718':'2017-2018','1819':'2018-2019','1920':'2019-2020','2021':'2020-2021','2122':'2021-2022','2223':'2022-2023','2324':'2023-2024','2425':'2024-2025','2526':'2025-2026'}
@@ -30,10 +30,8 @@ def load_history(work):
  return pd.concat(frames,ignore_index=True)
 def prep(raw):
  need=['B365H','B365D','B365A','B365CH','B365CD','B365CA'];x=raw.dropna(subset=need).copy()
- sp=[];cp=[]
- for row in x.itertuples(index=False):
-  sp.append(power_devig([row.B365H,row.B365D,row.B365A]));cp.append(power_devig([row.B365CH,row.B365CD,row.B365CA]))
- sp=np.asarray(sp);cp=np.asarray(cp);x[['standard_home_prob','standard_draw_prob','standard_away_prob']]=sp
+ so=x[['B365H','B365D','B365A']].to_numpy(float);co=x[['B365CH','B365CD','B365CA']].to_numpy(float)
+ sp=power(1.0/so);cp=power(1.0/co);x[['standard_home_prob','standard_draw_prob','standard_away_prob']]=sp
  x['target_home_vs_draw']=np.log(cp[:,0]/cp[:,1])-np.log(sp[:,0]/sp[:,1]);x['target_away_vs_draw']=np.log(cp[:,2]/cp[:,1])-np.log(sp[:,2]/sp[:,1]);x['movement_magnitude']=np.sqrt(x.target_home_vs_draw**2+x.target_away_vs_draw**2)
  ps=np.sort(sp,axis=1);x['favorite_prob']=sp.max(axis=1);x['market_entropy']=-np.sum(sp*np.log(np.clip(sp,1e-12,1)),axis=1);x['top_two_gap']=ps[:,-1]-ps[:,-2]
  return x,{'total_rows':len(raw),'paired_valid_rows':len(x),'paired_coverage':float(len(x)/len(raw))}
