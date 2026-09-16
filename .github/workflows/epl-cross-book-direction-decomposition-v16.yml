@@ -1,0 +1,29 @@
+name: EPL Cross Book Direction Decomposition V16
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: ['epl_cross_book_direction_decomposition_v16.py','epl_cross_book_direction_v15.py','tests/test_epl_cross_book_direction_decomposition_v16.py','.github/workflows/epl-cross-book-direction-decomposition-v16.yml']
+permissions: {contents: read}
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    env: {PYTHONPATH: .}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install pandas numpy requests scipy 'scikit-learn==1.7.2' pytest
+      - run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - run: pytest -q tests/test_epl_cross_book_direction_v15.py tests/test_epl_cross_book_direction_decomposition_v16.py
+      - run: python epl_cross_book_direction_decomposition_v16.py
+      - run: |
+          python - <<'PY'
+          import json
+          r=json.load(open('artifacts/epl_cross_book_direction_decomposition_v16/report.json'))
+          assert r['research_only'] and r['result']=='NO_BET' and r['v15_target_unchanged']
+          assert not r['feature_selection_on_2025_26'] and not r['production_promotion'] and not r['betting_enabled'] and not r['match_outcome_used']
+          assert r['fold_count']>=3 and r['coverage']['valid']>0
+          PY
+      - run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        with: {name: epl-cross-book-direction-decomposition-v16, path: artifacts/epl_cross_book_direction_decomposition_v16/report.json, retention-days: 30}
