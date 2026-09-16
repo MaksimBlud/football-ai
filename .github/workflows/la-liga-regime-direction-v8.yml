@@ -1,0 +1,29 @@
+name: La Liga Regime Direction V8
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: ['la_liga_regime_direction_v8.py','tests/test_la_liga_regime_direction_v8.py','.github/workflows/la-liga-regime-direction-v8.yml']
+permissions: {contents: read}
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    env: {PYTHONPATH: .}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install pandas numpy requests scipy 'scikit-learn==1.7.2' pytest
+      - run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - run: pytest -q tests/test_la_liga_regime_direction_v8.py tests/test_la_liga_market_movement_regimes_v7.py
+      - run: python la_liga_regime_direction_v8.py
+      - run: |
+          python - <<'PY'
+          import json
+          r=json.load(open('artifacts/la_liga_regime_direction_v8/report.json'))
+          assert r['experiment_id']=='LA_LIGA_REGIME_DIRECTION_V8' and r['research_only'] and r['result']=='NO_BET'
+          assert not r['production_promotion'] and not r['betting_enabled'] and not r['match_outcome_used'] and not r['opened_2026_27_data_used'] and not r['standard_is_labeled_opening']
+          if not r['direction_signal_accepted']: assert r['active_mode']=='CONSTANT_DIRECTION_FALLBACK'
+          PY
+      - run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        with: {name: la-liga-regime-direction-v8, path: artifacts/la_liga_regime_direction_v8/report.json, retention-days: 30}
