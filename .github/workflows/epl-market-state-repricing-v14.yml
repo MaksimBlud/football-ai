@@ -1,0 +1,29 @@
+name: EPL Market State Repricing V14
+on:
+ workflow_dispatch:
+ pull_request:
+  paths: ['epl_market_state_repricing_v14.py','tests/test_epl_market_state_repricing_v14.py','.github/workflows/epl-market-state-repricing-v14.yml']
+permissions: {contents: read}
+jobs:
+ research:
+  runs-on: ubuntu-latest
+  env: {PYTHONPATH: .}
+  steps:
+   - uses: actions/checkout@v4
+   - uses: actions/setup-python@v5
+     with: {python-version: '3.11'}
+   - run: pip install pandas numpy requests scipy 'scikit-learn==1.7.2' pytest
+   - run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+   - run: pytest -q tests/test_epl_market_state_repricing_v14.py
+   - run: python epl_market_state_repricing_v14.py
+   - run: |
+       python - <<'PY'
+       import json
+       r=json.load(open('artifacts/epl_market_state_repricing_v14/report.json'))
+       assert r['experiment_id']=='EPL_MARKET_STATE_REPRICING_V14' and r['research_only'] and r['result']=='NO_BET'
+       assert r['parameters_transferred_without_epl_tuning'] and not r['production_promotion'] and not r['betting_enabled'] and not r['match_outcome_used'] and not r['standard_is_labeled_opening']
+       assert r['fold_count']>=3 and r['coverage']['paired_valid_rows']>0
+       PY
+   - run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+   - uses: actions/upload-artifact@v4
+     with: {name: epl-market-state-repricing-v14, path: artifacts/epl_market_state_repricing_v14/report.json, retention-days: 30}
