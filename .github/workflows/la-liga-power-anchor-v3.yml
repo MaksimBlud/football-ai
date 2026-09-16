@@ -1,0 +1,60 @@
+name: La Liga POWER Anchor V3
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'la_liga_power_anchor_v3.py'
+      - 'tests/test_la_liga_power_anchor_v3.py'
+      - 'research/LA_LIGA_POWER_ANCHOR_V3.md'
+      - '.github/workflows/la-liga-power-anchor-v3.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas numpy requests scipy 'scikit-learn==1.7.2' pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Regression tests
+        run: pytest -q tests/test_la_liga_power_anchor_v3.py
+      - name: Run frozen historical V3
+        run: python la_liga_power_anchor_v3.py
+      - name: Assert research-only contract
+        run: |
+          python - <<'PY'
+          import json
+          r=json.load(open('artifacts/la_liga_power_anchor_v3/report.json'))
+          assert r['experiment_id'] == 'LA_LIGA_POWER_ANCHOR_V3'
+          assert r['league'] == 'LA_LIGA'
+          assert r['market_prior'] == 'POWER_DEVIG_RAW_DECIMAL_ODDS'
+          assert r['research_only'] is True
+          assert r['production_promotion'] is False
+          assert r['betting_enabled'] is False
+          assert r['result'] == 'NO_BET'
+          assert r['opened_2026_27_outcomes_used'] is False
+          assert r['validation_season'] == '2024-2025'
+          assert r['untouched_test_season'] == '2025-2026'
+          assert r['validation_candidates_evaluated'] == 24
+          if not r['residual_accepted']:
+              assert r['active_mode'] == 'POWER_MARKET_FALLBACK'
+              assert r['active_test'] == r['test_power_market']
+          PY
+      - name: Verify production hashes unchanged
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        with:
+          name: la-liga-power-anchor-v3
+          path: artifacts/la_liga_power_anchor_v3/report.json
+          retention-days: 30
