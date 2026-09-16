@@ -1,0 +1,29 @@
+name: Serie A Cross Book Direction V17
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: ['serie_a_cross_book_direction_v17.py','tests/test_serie_a_cross_book_direction_v17.py','.github/workflows/serie-a-cross-book-direction-v17.yml']
+permissions: {contents: read}
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    env: {PYTHONPATH: .}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install pandas numpy requests scipy 'scikit-learn==1.7.2' pytest
+      - run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - run: pytest -q tests/test_serie_a_cross_book_direction_v17.py
+      - run: python serie_a_cross_book_direction_v17.py
+      - run: |
+          python - <<'PY'
+          import json
+          r=json.load(open('artifacts/serie_a_cross_book_direction_v17/report.json'))
+          assert r['research_only'] and r['result']=='NO_BET' and r['parameters_transferred_without_serie_a_tuning']
+          assert not r['production_promotion'] and not r['betting_enabled'] and not r['match_outcome_used'] and not r['standard_is_labeled_opening']
+          assert r['features']==['disagree_home','disagree_draw','disagree_away'] and r['fold_count']>=3
+          PY
+      - run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        with: {name: serie-a-cross-book-direction-v17, path: artifacts/serie_a_cross_book_direction_v17/report.json, retention-days: 30}
