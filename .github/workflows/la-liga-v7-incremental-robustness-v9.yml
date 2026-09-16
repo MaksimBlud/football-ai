@@ -1,0 +1,30 @@
+name: La Liga V7 Incremental Robustness V9
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: ['la_liga_v7_incremental_robustness_v9.py','tests/test_la_liga_v7_incremental_robustness_v9.py','.github/workflows/la-liga-v7-incremental-robustness-v9.yml']
+permissions: {contents: read}
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    env: {PYTHONPATH: .}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install pandas numpy requests scipy 'scikit-learn==1.7.2' pytest
+      - run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - run: pytest -q tests/test_la_liga_v7_incremental_robustness_v9.py tests/test_la_liga_market_movement_regimes_v7.py
+      - run: python la_liga_v7_incremental_robustness_v9.py
+      - run: |
+          python - <<'PY'
+          import json
+          r=json.load(open('artifacts/la_liga_v7_incremental_robustness_v9/report.json'))
+          assert r['experiment_id']=='LA_LIGA_V7_INCREMENTAL_ROBUSTNESS_V9'
+          assert r['research_only'] and r['result']=='NO_BET' and r['v7_definition_unchanged']
+          assert not r['production_promotion'] and not r['betting_enabled'] and not r['match_outcome_used'] and not r['opened_2026_27_data_used']
+          assert r['validation_n']==380 and r['test_n']==380
+          PY
+      - run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        with: {name: la-liga-v7-incremental-robustness-v9, path: artifacts/la_liga_v7_incremental_robustness_v9/report.json, retention-days: 30}
