@@ -1,0 +1,20 @@
+name: Cross League Structural Break V19
+on:
+  pull_request:
+    paths:
+      - 'cross_league_structural_break_v19.py'
+      - 'tests/test_cross_league_structural_break_v19.py'
+      - '.github/workflows/cross-league-structural-break-v19.yml'
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas numpy requests scipy scikit-learn pytest
+      - run: python -m pytest -q tests/test_cross_league_structural_break_v19.py
+      - run: python cross_league_structural_break_v19.py --output /tmp/v19.json
+      - name: Enforce no production artifact changes
+        run: git diff --exit-code -- '*.pkl'
