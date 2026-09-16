@@ -1,0 +1,29 @@
+name: La Liga V7 Walkforward V10
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: ['la_liga_v7_walkforward_v10.py','tests/test_la_liga_v7_walkforward_v10.py','.github/workflows/la-liga-v7-walkforward-v10.yml']
+permissions: {contents: read}
+jobs:
+ research:
+  runs-on: ubuntu-latest
+  env: {PYTHONPATH: .}
+  steps:
+   - uses: actions/checkout@v4
+   - uses: actions/setup-python@v5
+     with: {python-version: '3.11'}
+   - run: pip install pandas numpy requests scipy 'scikit-learn==1.7.2' pytest
+   - run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+   - run: pytest -q tests/test_la_liga_v7_walkforward_v10.py
+   - run: python la_liga_v7_walkforward_v10.py
+   - run: |
+       python - <<'PY'
+       import json
+       r=json.load(open('artifacts/la_liga_v7_walkforward_v10/report.json'))
+       assert r['experiment_id']=='LA_LIGA_V7_WALKFORWARD_V10' and r['research_only'] and r['result']=='NO_BET'
+       assert not r['production_promotion'] and not r['betting_enabled'] and not r['match_outcome_used'] and not r['opened_2026_27_data_used']
+       assert r['fold_count'] >= 3
+       PY
+   - run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+   - uses: actions/upload-artifact@v4
+     with: {name: la-liga-v7-walkforward-v10, path: artifacts/la_liga_v7_walkforward_v10/report.json, retention-days: 30}
