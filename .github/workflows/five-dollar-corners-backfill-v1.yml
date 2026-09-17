@@ -1,0 +1,83 @@
+name: 5Dollar Corners Historical Backfill V1
+on:
+  pull_request:
+    paths:
+      - 'research/FIVE_DOLLAR_CORNERS_BACKFILL_V1.md'
+      - 'five_dollar_corners_backfill_v1.py'
+      - 'tests/test_five_dollar_corners_backfill_v1.py'
+      - '.github/workflows/five-dollar-corners-backfill-v1.yml'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Run only historical-access preflight or the full frozen backfill'
+        required: true
+        default: 'preflight'
+        type: choice
+        options:
+          - preflight
+          - backfill
+permissions: {contents: read}
+jobs:
+  offline-contract-tests:
+    runs-on: ubuntu-latest
+    env: {PYTHONPATH: .}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install requests pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile acquisition runner
+        run: python -m py_compile five_dollar_corners_backfill_v1.py
+      - name: Run backfill regression tests without provider access
+        run: pytest -q tests/test_five_dollar_corners_backfill_v1.py
+      - name: Assert frozen acquisition constants
+        run: |
+          python - <<'PY'
+          import five_dollar_corners_backfill_v1 as b
+          assert b.EXPERIMENT_ID == 'FIVE_DOLLAR_CORNERS_BACKFILL_V1'
+          assert b.LEAGUES == {'EPL':'4160026622','LA_LIGA':'4212821298','SERIE_A':'3405541143'}
+          assert b.SEASONS == ('2016-17','2017-18','2018-19','2019-20','2020-21','2021-22','2022-23','2023-24','2024-25','2025-26')
+          assert b.FORBIDDEN_SEASON == '2026-27'
+          assert b.PER_PAGE == 50
+          assert b.MAX_PROVIDER_REQUESTS == 300
+          assert b.REQUEST_INTERVAL_SECONDS >= 1.6
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+
+  manual-provider-run:
+    if: github.event_name == 'workflow_dispatch'
+    needs: offline-contract-tests
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+      FIVE_DOLLAR_FOOTBALL_API_KEY: ${{ secrets.FIVE_DOLLAR_FOOTBALL_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install requests
+      - name: Require secret without printing it
+        run: test -n "$FIVE_DOLLAR_FOOTBALL_API_KEY"
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Historical access preflight
+        if: inputs.mode == 'preflight'
+        run: python five_dollar_corners_backfill_v1.py --preflight-only
+      - name: Frozen 2016-17 through 2025-26 backfill
+        if: inputs.mode == 'backfill'
+        run: python five_dollar_corners_backfill_v1.py --output-dir artifacts/five_dollar_corners_backfill_v1
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - name: Upload immutable backfill artifact
+        if: always() && inputs.mode == 'backfill'
+        uses: actions/upload-artifact@v4
+        with:
+          name: five-dollar-corners-backfill-v1
+          path: artifacts/five_dollar_corners_backfill_v1
+          if-no-files-found: warn
+          retention-days: 90
