@@ -1,0 +1,48 @@
+name: CORNERS10 Bet365 Market V1
+on:
+  pull_request:
+    paths:
+      - 'research/CORNERS10_BET365_MARKET_V1.md'
+      - 'corners10_bet365_market_v1.py'
+      - 'tests/test_corners10_bet365_market_v1.py'
+      - '.github/workflows/corners10-bet365-market-v1.yml'
+permissions: {contents: read}
+jobs:
+  frozen-contract-tests:
+    runs-on: ubuntu-latest
+    env: {PYTHONPATH: .}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install pandas numpy scikit-learn==1.7.2 pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile frozen evaluator
+        run: python -m py_compile corners10_bet365_market_v1.py
+      - name: Run frozen V1 regression tests
+        run: pytest -q tests/test_corners10_bet365_market_v1.py
+      - name: Assert preregistered contract constants
+        run: |
+          python - <<'PY'
+          import corners10_bet365_market_v1 as v
+          assert v.EXPERIMENT_ID == 'CORNERS10_BET365_MARKET_V1'
+          assert v.LEAGUES == ('EPL', 'LA_LIGA', 'SERIE_A')
+          assert v.TRAIN_SEASONS == ('2016-17','2017-18','2018-19','2019-20','2020-21','2021-22','2022-23','2023-24')
+          assert v.VALIDATION_SEASON == '2024-25'
+          assert v.OOT_SEASON == '2025-26'
+          assert v.FORBIDDEN_SEASON == '2026-27'
+          assert (v.MIN_TRAIN, v.MIN_VALIDATION, v.MIN_OOT) == (600, 100, 100)
+          assert v.FEATURES == (
+              'market_logit','opening_line',
+              'home_corners_for_10','home_corners_against_10',
+              'away_corners_for_10','away_corners_against_10',
+              'home_corners_for_venue5','home_corners_against_venue5',
+              'away_corners_for_venue5','away_corners_against_venue5',
+          )
+          forbidden = {'HC','AC','total_corners','y_over','closing_line','closing_over','closing_under','FTHG','FTAG','FTR'}
+          assert not (set(v.FEATURES) & forbidden)
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
