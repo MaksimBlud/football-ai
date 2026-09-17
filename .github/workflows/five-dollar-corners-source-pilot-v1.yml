@@ -1,0 +1,82 @@
+name: 5Dollar Corners Source Pilot V1
+
+on:
+  pull_request:
+    paths:
+      - 'five_dollar_corners_source_pilot_v1.py'
+      - 'tests/test_five_dollar_corners_source_pilot_v1.py'
+      - 'research/FIVE_DOLLAR_CORNERS_SOURCE_PILOT_V1.md'
+      - '.github/workflows/five-dollar-corners-source-pilot-v1.yml'
+
+permissions: {contents: read}
+
+jobs:
+  qualify-source:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+      FIVE_DOLLAR_FOOTBALL_API_KEY: ${{ secrets.FIVE_DOLLAR_FOOTBALL_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install requests pytest
+
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+
+      - name: Compile and run offline regression tests
+        run: |
+          python -m py_compile five_dollar_corners_source_pilot_v1.py
+          pytest -q tests/test_five_dollar_corners_source_pilot_v1.py
+
+      - name: Require repository secret without printing it
+        run: |
+          python - <<'PY'
+          import os
+          value = os.getenv('FIVE_DOLLAR_FOOTBALL_API_KEY', '')
+          if not value.strip():
+              raise SystemExit('FIVE_DOLLAR_FOOTBALL_API_KEY repository secret is missing')
+          print('5Dollar API key is present; value is not printed')
+          PY
+
+      - name: Run frozen acquisition-only source pilot
+        run: python five_dollar_corners_source_pilot_v1.py --output-dir artifacts/five_dollar_corners_source_pilot_v1 > /tmp/five-dollar-pilot.log
+
+      - name: Assert frozen source gate
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('artifacts/five_dollar_corners_source_pilot_v1/report.json')
+          report = json.loads(p.read_text())
+          assert report['experiment_id'] == 'FIVE_DOLLAR_CORNERS_SOURCE_PILOT_V1'
+          assert report['acquisition_only'] is True
+          assert report['model_evaluation_performed'] is False
+          assert report['betting_enabled'] is False
+          assert report['fixtures_per_league'] == 5
+          assert report['coverage_pass_min'] == 4
+          assert report['provider_request_budget'] == 18
+          assert report['provider_requests'] <= 18
+          assert set(report['league_reports']) == {'EPL', 'LA_LIGA', 'SERIE_A'}
+          assert report['decision'] in {'SOURCE_QUALIFIED_FOR_BACKFILL', 'SOURCE_NOT_QUALIFIED'}
+          for league in report['league_reports'].values():
+              assert league['selected_fixtures'] <= 5
+              assert league['status'] in {'PASS', 'FAIL', 'INSUFFICIENT_FIXTURES'}
+          print(json.dumps(report, indent=2, sort_keys=True))
+          PY
+
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+
+      - name: Upload source pilot artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: five-dollar-corners-source-pilot-v1
+          path: |
+            artifacts/five_dollar_corners_source_pilot_v1
+            /tmp/five-dollar-pilot.log
+          if-no-files-found: warn
