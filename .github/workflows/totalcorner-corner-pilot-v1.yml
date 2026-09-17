@@ -1,0 +1,39 @@
+name: TotalCorner Corner Pilot V1
+on:
+  pull_request:
+    paths:
+      - 'totalcorner_corner_pilot_v1.py'
+      - 'totalcorner_corner_history.py'
+      - 'tests/test_totalcorner_corner_pilot_v1.py'
+      - 'research/TOTALCORNER_CORNER_PILOT_V1.md'
+      - '.github/workflows/totalcorner-corner-pilot-v1.yml'
+permissions: {contents: read}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env: {PYTHONPATH: .}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install pandas numpy requests scipy 'scikit-learn==1.7.2' pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Run pilot regression tests
+        run: pytest -q tests/test_totalcorner_corner_pilot_v1.py tests/test_totalcorner_corner_history.py
+      - name: Assert CI cannot call TotalCorner live
+        run: |
+          python - <<'PY'
+          import os
+          import totalcorner_corner_pilot_v1 as p
+          assert not os.getenv(p.TOKEN_ENV)
+          try:
+              p.TotalCornerClient()
+          except RuntimeError as exc:
+              assert p.TOKEN_ENV in str(exc)
+          else:
+              raise AssertionError('pilot client must fail closed without token')
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
