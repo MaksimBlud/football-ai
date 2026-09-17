@@ -1,0 +1,75 @@
+name: Cross-League Direct Markets V1
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'cross_league_direct_markets_v1.py'
+      - 'cross_league_direct_markets_transport.py'
+      - 'tests/test_cross_league_direct_markets_v1.py'
+      - '.github/workflows/cross-league-direct-markets-v1.yml'
+      - 'research/CROSS_LEAGUE_DIRECT_MARKETS_V1.md'
+permissions: {contents: read}
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    env: {PYTHONPATH: .}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install pandas numpy requests scipy 'scikit-learn==1.7.2' pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Run focused regression tests
+        run: pytest -q tests/test_cross_league_direct_markets_v1.py
+      - name: Run frozen direct-market V1
+        id: frozen_run
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python cross_league_direct_markets_transport.py 2>&1 | tee /tmp/cross-league-direct-markets-v1.log
+      - name: Assert frozen contract
+        if: steps.frozen_run.outcome == 'success'
+        run: |
+          python - <<'PY'
+          import json
+          r=json.load(open('artifacts/cross_league_direct_markets_v1/report.json'))
+          assert r['experiment_id']=='CROSS_LEAGUE_DIRECT_MARKETS_V1'
+          assert r['evidence_class']=='HISTORICAL_TEMPORAL_OOT'
+          assert r['research_only'] and not r['production_promotion'] and not r['betting_enabled']
+          assert r['result']=='NO_BET' and not r['opened_2026_27_outcomes_used']
+          assert r['validation_season']=='2024-2025' and r['test_season']=='2025-2026'
+          assert len(r['league_reports'])==6
+          seen={(x['league'],x['market']) for x in r['league_reports']}
+          assert seen=={(l,m) for l in ('EPL','LA_LIGA','SERIE_A') for m in ('OU25','AH')}
+          for x in r['league_reports']:
+              assert x['coverage']['train']>0 and x['coverage']['validation']>0 and x['coverage']['test']>0
+              assert x['replication_status'] in {'PASS','FAIL'}
+              assert x['final_active_mode'] in {'CANDIDATE','MARKET_FALLBACK'}
+              if not x['validation_admissible']:
+                  assert x['final_active_mode']=='MARKET_FALLBACK'
+          assert set(r['market_decisions'])=={'OU25','AH'}
+          for x in r['market_decisions'].values():
+              assert x['league_count']==3 and x['pooled_n']>0
+              assert x['decision'] in {'PILOT','SKIP'}
+          c=r['bookmaker_corners']
+          assert c['status']=='DATA_UNAVAILABLE' and c['decision']=='COLLECT'
+          assert not c['bookmaker_line_price_evaluated']
+          assert not c['post_match_corner_counts_substituted_for_prices']
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - name: Upload result or failure diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cross-league-direct-markets-v1
+          path: |
+            artifacts/cross_league_direct_markets_v1/report.json
+            /tmp/cross-league-direct-markets-v1.log
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Fail if frozen runner failed
+        if: steps.frozen_run.outcome != 'success'
+        run: exit 1
