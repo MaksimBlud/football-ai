@@ -33,7 +33,9 @@ def test_429_then_success_counts_both_http_attempts(monkeypatch):
         return responses.pop(0)
 
     sleeps = []
-    monotonic_values = iter([0.0, 10.0])
+    # The transport timestamps both the pacing check and the completed request
+    # for each HTTP attempt. Four values therefore cover a 429 + success pair.
+    monotonic_values = iter([0.0, 0.0, 10.0, 10.0])
     monkeypatch.setattr(retry.requests, "get", fake_get)
     monkeypatch.setattr(retry.time, "sleep", lambda seconds: sleeps.append(seconds))
     monkeypatch.setattr(retry.time, "monotonic", lambda: next(monotonic_values))
