@@ -1,6 +1,7 @@
 name: 5Dollar Corners Historical Backfill V1
 on:
   pull_request:
+    types: [opened, synchronize, reopened, edited]
     paths:
       - 'research/FIVE_DOLLAR_CORNERS_BACKFILL_V1.md'
       - 'five_dollar_corners_backfill_v1.py'
@@ -47,6 +48,85 @@ jobs:
       - name: Verify production hashes unchanged
         if: always()
         run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+
+  pr-provider-preflight:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.body, '[run-provider-preflight]')
+    needs: offline-contract-tests
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+      FIVE_DOLLAR_FOOTBALL_API_KEY: ${{ secrets.FIVE_DOLLAR_FOOTBALL_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install requests
+      - name: Require secret without printing it
+        run: test -n "$FIVE_DOLLAR_FOOTBALL_API_KEY"
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Run exactly one frozen historical-access request
+        run: |
+          mkdir -p artifacts/five_dollar_corners_backfill_preflight
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import five_dollar_corners_backfill_v1 as b
+          try:
+              result = b.preflight_history_access()
+              report = {
+                  'status': 'HISTORY_ACCESS_CONFIRMED',
+                  'preflight': result,
+              }
+          except b.HistoryAccessRequired as exc:
+              report = {
+                  'status': 'HISTORY_ACCESS_BLOCKED_BY_PLAN',
+                  'reason': str(exc),
+              }
+          except b.HistoryPreflightFailed as exc:
+              report = {
+                  'status': 'HISTORY_PREFLIGHT_FAILED',
+                  'reason': str(exc),
+              }
+          report.update({
+              'experiment_id': b.EXPERIMENT_ID,
+              'provider_requests': 1,
+              'research_only': True,
+              'model_evaluation_performed': False,
+              'betting_enabled': False,
+          })
+          path = Path('artifacts/five_dollar_corners_backfill_preflight/report.json')
+          path.write_text(json.dumps(report, indent=2, sort_keys=True) + '\n')
+          print(json.dumps(report, indent=2, sort_keys=True))
+          PY
+      - name: Assert preflight-only contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path('artifacts/five_dollar_corners_backfill_preflight/report.json').read_text())
+          assert report['experiment_id'] == 'FIVE_DOLLAR_CORNERS_BACKFILL_V1'
+          assert report['provider_requests'] == 1
+          assert report['research_only'] is True
+          assert report['model_evaluation_performed'] is False
+          assert report['betting_enabled'] is False
+          assert report['status'] in {
+              'HISTORY_ACCESS_CONFIRMED',
+              'HISTORY_ACCESS_BLOCKED_BY_PLAN',
+              'HISTORY_PREFLIGHT_FAILED',
+          }
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - name: Upload preflight artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: five-dollar-corners-backfill-preflight
+          path: artifacts/five_dollar_corners_backfill_preflight
+          if-no-files-found: warn
+          retention-days: 30
 
   manual-provider-run:
     if: github.event_name == 'workflow_dispatch'
