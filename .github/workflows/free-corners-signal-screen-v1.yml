@@ -5,7 +5,9 @@ on:
     types: [opened, synchronize, reopened, edited]
     paths:
       - 'free_corners_signal_screen_v1.py'
+      - 'free_corners_rate_limit_retry.py'
       - 'tests/test_free_corners_signal_screen_v1.py'
+      - 'tests/test_free_corners_rate_limit_retry.py'
       - 'research/FREE_CORNERS_SIGNAL_SCREEN_V1.md'
       - '.github/workflows/free-corners-signal-screen-v1.yml'
 
@@ -26,14 +28,15 @@ jobs:
       - run: pip install requests pandas numpy scipy scikit-learn==1.7.2 pytest
       - name: Snapshot production hashes
         run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
-      - name: Compile free screen
-        run: python -m py_compile free_corners_signal_screen_v1.py
+      - name: Compile free screen and rate-limit transport
+        run: python -m py_compile free_corners_signal_screen_v1.py free_corners_rate_limit_retry.py
       - name: Run regression tests
-        run: pytest -q tests/test_free_corners_signal_screen_v1.py
+        run: pytest -q tests/test_free_corners_signal_screen_v1.py tests/test_free_corners_rate_limit_retry.py
       - name: Assert frozen constants
         run: |
           python - <<'PY'
           import free_corners_signal_screen_v1 as s
+          import free_corners_rate_limit_retry as r
           assert s.EXPERIMENT_ID == 'FREE_CORNERS_SIGNAL_SCREEN_V1'
           assert len(s.LEAGUES) == 5
           assert s.FIXTURES_PER_LEAGUE == 11
@@ -41,6 +44,8 @@ jobs:
           assert s.MIN_POOLED_ROWS == 40
           assert s.BLEND_WEIGHT_FOOTBALL == 0.25
           assert s.REQUEST_INTERVAL_SECONDS >= 3.0
+          assert r.MAX_RATE_LIMIT_RETRIES == 2
+          assert r.MAX_RESET_WAIT_SECONDS <= 3700
           PY
       - name: Verify production hashes unchanged
         if: always()
@@ -52,6 +57,7 @@ jobs:
       contains(github.event.pull_request.body || '', '[run-free-corners-screen]')
     needs: offline-contract-tests
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     env:
       PYTHONPATH: .
       FIVE_DOLLAR_FOOTBALL_API_KEY: ${{ secrets.FIVE_DOLLAR_FOOTBALL_API_KEY }}
@@ -76,7 +82,7 @@ jobs:
           echo "Reusing prior source-pilot cache; API key and cached prices are not printed"
       - name: Run frozen free-only OOT screen
         run: |
-          python free_corners_signal_screen_v1.py \
+          python free_corners_rate_limit_retry.py \
             --cached-market-jsonl "$CACHE_PATH" \
             --output-dir artifacts/free_corners_signal_screen_v1 \
             > /tmp/free-corners-screen.log
