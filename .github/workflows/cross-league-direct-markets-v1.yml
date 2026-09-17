@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'cross_league_direct_markets_v1.py'
+      - 'cross_league_direct_markets_transport.py'
       - 'tests/test_cross_league_direct_markets_v1.py'
       - '.github/workflows/cross-league-direct-markets-v1.yml'
       - 'research/CROSS_LEAGUE_DIRECT_MARKETS_V1.md'
@@ -26,7 +27,7 @@ jobs:
         continue-on-error: true
         run: |
           set -o pipefail
-          python cross_league_direct_markets_v1.py 2>&1 | tee /tmp/cross-league-direct-markets-v1.log
+          python cross_league_direct_markets_transport.py 2>&1 | tee /tmp/cross-league-direct-markets-v1.log
       - name: Assert frozen contract
         if: steps.frozen_run.outcome == 'success'
         run: |
