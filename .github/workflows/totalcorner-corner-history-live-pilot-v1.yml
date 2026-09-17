@@ -1,0 +1,51 @@
+name: TotalCorner Corner History Live Pilot V1
+on:
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  live-pilot:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+      TOTALCORNER_TOKEN: ${{ secrets.TOTALCORNER_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install requests
+      - name: Require TotalCorner secret
+        run: test -n "${TOTALCORNER_TOKEN:-}"
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Run frozen acquisition-only pilot
+        run: python totalcorner_corner_history_pilot_v1.py --output-dir artifacts/totalcorner_corner_history_pilot_v1
+      - name: Assert acquisition-only report contract
+        run: |
+          python - <<'PY'
+          import json
+          r=json.load(open('artifacts/totalcorner_corner_history_pilot_v1/report.json'))
+          assert r['experiment_id']=='TOTALCORNER_CORNER_HISTORY_PILOT_V1'
+          assert r['research_only'] and r['acquisition_only']
+          assert not r['betting_enabled']
+          assert not r['model_evaluation_performed']
+          assert r['fixtures_per_league']==10
+          assert r['coverage_pass_min']==8
+          assert r['odds_history_requests'] <= 30
+          assert r['odds_history_request_budget']==30
+          assert r['decision'] in {'SOURCE_QUALIFIED','SOURCE_NOT_QUALIFIED'}
+          assert set(r['league_reports'])=={'EPL','SERIE_A','LA_LIGA'}
+          for x in r['league_reports'].values():
+              assert x['selected_fixtures'] <= 10
+              assert x['status'] in {'PASS','FAIL','INSUFFICIENT_FIXTURES'}
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - name: Upload pilot artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: totalcorner-corner-history-pilot-v1
+          path: artifacts/totalcorner_corner_history_pilot_v1
+          if-no-files-found: warn
+          retention-days: 30
