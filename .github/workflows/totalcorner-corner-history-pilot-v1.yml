@@ -1,0 +1,48 @@
+name: TotalCorner Corner History Pilot V1
+on:
+  pull_request:
+    paths:
+      - 'totalcorner_corner_history.py'
+      - 'totalcorner_corner_history_pilot_v1.py'
+      - 'tests/test_totalcorner_corner_history.py'
+      - 'tests/test_totalcorner_corner_history_pilot_v1.py'
+      - 'research/TOTALCORNER_CORNER_HISTORY_PILOT_V1.md'
+      - '.github/workflows/totalcorner-corner-history-pilot-v1.yml'
+permissions: {contents: read}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env: {PYTHONPATH: .}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install requests pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile acquisition modules
+        run: python -m py_compile totalcorner_corner_history.py totalcorner_corner_history_pilot_v1.py
+      - name: Run source and pilot regression tests
+        run: pytest -q tests/test_totalcorner_corner_history.py tests/test_totalcorner_corner_history_pilot_v1.py
+      - name: Assert frozen acquisition contract
+        run: |
+          python - <<'PY'
+          import os
+          import totalcorner_corner_history_pilot_v1 as p
+          assert p.EXPERIMENT_ID == 'TOTALCORNER_CORNER_HISTORY_PILOT_V1'
+          assert p.PILOT_DATES == ('20250523', '20250524', '20250525')
+          assert p.LEAGUES == {'EPL': '1', 'SERIE_A': '3', 'LA_LIGA': '5'}
+          assert p.FIXTURES_PER_LEAGUE == 10
+          assert p.COVERAGE_PASS_MIN == 8
+          assert p.MAX_ODDS_REQUESTS == 30
+          assert not os.getenv(p.TOKEN_ENV)
+          try:
+              p.run_pilot(__import__('pathlib').Path('/tmp/should-not-run'))
+          except RuntimeError as exc:
+              assert p.TOKEN_ENV in str(exc)
+          else:
+              raise AssertionError('pilot must fail closed without token')
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
