@@ -1,0 +1,85 @@
+name: 5Dollar Corners Backfill V1
+
+on:
+  pull_request:
+    paths:
+      - 'five_dollar_corners_backfill_v1.py'
+      - 'tests/test_five_dollar_corners_backfill_v1.py'
+      - '.github/workflows/five-dollar-corners-backfill-v1.yml'
+
+permissions: {contents: read}
+
+jobs:
+  backfill-contract-and-access-probe:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+      FIVE_DOLLAR_FOOTBALL_API_KEY: ${{ secrets.FIVE_DOLLAR_FOOTBALL_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install requests pytest
+
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+
+      - name: Compile and run offline backfill safety tests
+        run: |
+          python -m py_compile five_dollar_corners_backfill_v1.py
+          pytest -q tests/test_five_dollar_corners_backfill_v1.py
+
+      - name: Require repository secret without printing it
+        run: |
+          python - <<'PY'
+          import os
+          value = os.getenv('FIVE_DOLLAR_FOOTBALL_API_KEY', '')
+          if not value.strip():
+              raise SystemExit('FIVE_DOLLAR_FOOTBALL_API_KEY repository secret is missing')
+          print('5Dollar API key is present; value is not printed')
+          PY
+
+      - name: Probe frozen 2016-17 historical entitlement with exactly one request
+        run: |
+          python five_dollar_corners_backfill_v1.py \
+            --probe-only \
+            --output-dir artifacts/five_dollar_corners_backfill_v1 \
+            > /tmp/five-dollar-history-probe.log
+
+      - name: Assert acquisition-only probe contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('artifacts/five_dollar_corners_backfill_v1/entitlement_probe.json')
+          report = json.loads(p.read_text())
+          assert report['acquisition_id'] == 'FIVE_DOLLAR_CORNERS_BACKFILL_V1'
+          assert report['experiment_id'] == 'CORNERS10_BET365_MARKET_V1'
+          assert report['probe_league'] == 'EPL'
+          assert report['probe_season'] == '2016-17'
+          assert report['provider_requests'] == 1
+          assert report['research_only'] is True
+          assert report['model_evaluation_performed'] is False
+          assert report['betting_enabled'] is False
+          assert report['status'] in {
+              'HISTORY_ACCESS_BLOCKED_BY_PLAN',
+              'HISTORY_ACCESS_CONFIRMED',
+              'HISTORY_ACCESS_UNCONFIRMED_EMPTY',
+          }
+          print(json.dumps(report, indent=2, sort_keys=True))
+          PY
+
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+
+      - name: Upload entitlement probe artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: five-dollar-corners-backfill-v1-probe
+          path: |
+            artifacts/five_dollar_corners_backfill_v1
+            /tmp/five-dollar-history-probe.log
+          if-no-files-found: warn
