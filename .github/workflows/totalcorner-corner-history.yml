@@ -1,0 +1,38 @@
+name: TotalCorner Corner History Source Qualification
+on:
+  pull_request:
+    paths:
+      - 'totalcorner_corner_history.py'
+      - 'tests/test_totalcorner_corner_history.py'
+      - 'research/BOOKMAKER_CORNERS_SOURCE_AUDIT_V1.md'
+      - '.github/workflows/totalcorner-corner-history.yml'
+permissions: {contents: read}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env: {PYTHONPATH: .}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install requests pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Run source qualification regression tests
+        run: pytest -q tests/test_totalcorner_corner_history.py
+      - name: Verify no token is required in CI
+        run: |
+          python - <<'PY'
+          import os
+          import totalcorner_corner_history as tc
+          assert not os.getenv(tc.TOKEN_ENV)
+          try:
+              tc.fetch_match_corner_history('12345')
+          except RuntimeError as exc:
+              assert tc.TOKEN_ENV in str(exc)
+          else:
+              raise AssertionError('collector must fail closed without token')
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
