@@ -1,0 +1,68 @@
+name: TotalCorner Corner History Pilot Live
+on:
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+      TOTALCORNER_TOKEN: ${{ secrets.TOTALCORNER_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install requests pytest
+      - name: Require explicit TotalCorner token
+        run: |
+          if [ -z "$TOTALCORNER_TOKEN" ]; then
+            echo '::error::TOTALCORNER_TOKEN repository secret is required for this manual acquisition pilot.'
+            exit 1
+          fi
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Run frozen source and pilot regression tests
+        run: pytest -q tests/test_totalcorner_corner_history.py tests/test_totalcorner_corner_history_pilot_v1.py
+      - name: Run frozen 30-match acquisition pilot
+        id: pilot
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python totalcorner_corner_history_pilot_v1.py \
+            --output-dir artifacts/totalcorner_corner_history_pilot_v1 \
+            2>&1 | tee /tmp/totalcorner-corner-history-pilot-v1.log
+      - name: Assert acquisition-only report contract
+        if: steps.pilot.outcome == 'success'
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('artifacts/totalcorner_corner_history_pilot_v1/report.json')
+          r=json.loads(p.read_text())
+          assert r['experiment_id']=='TOTALCORNER_CORNER_HISTORY_PILOT_V1'
+          assert r['research_only'] and r['acquisition_only']
+          assert not r['betting_enabled'] and not r['model_evaluation_performed']
+          assert r['fixtures_per_league']==10 and r['coverage_pass_min']==8
+          assert r['odds_history_requests'] <= 30
+          assert set(r['league_reports'])=={'EPL','SERIE_A','LA_LIGA'}
+          assert r['decision'] in {'SOURCE_QUALIFIED','SOURCE_NOT_QUALIFIED'}
+          for league, x in r['league_reports'].items():
+              assert x['selected_fixtures'] <= 10
+              assert x['status'] in {'PASS','FAIL','INSUFFICIENT_FIXTURES'}
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - name: Upload raw acquisition and coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: totalcorner-corner-history-pilot-v1
+          path: |
+            artifacts/totalcorner_corner_history_pilot_v1
+            /tmp/totalcorner-corner-history-pilot-v1.log
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Fail if pilot runner failed
+        if: steps.pilot.outcome != 'success'
+        run: exit 1
