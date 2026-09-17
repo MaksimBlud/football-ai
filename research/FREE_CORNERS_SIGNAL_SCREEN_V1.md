@@ -8,17 +8,22 @@ This is a separate exploratory screen. It does not alter or replace the already-
 
 ## Free-only boundary
 
-Provider market source: 5DollarFootballAPI Free plan only.
+Provider market/current-season source: 5DollarFootballAPI Free plan only.
 
 - no subscription purchase;
 - no plan upgrade;
 - no `include=odds` bulk expansion;
 - hard provider budget: 60 requests for the live screen;
 - exactly 5 league-list requests plus at most 55 per-fixture corner-odds requests;
+- prior source-pilot odds may be reused from its immutable GitHub Actions artifact instead of being requested again;
 - no retries that exceed the hard budget;
 - no The Odds API spend.
 
-Football-state source: Football-Data CSV files, which are free public historical match-stat files.
+Historical football-state/training source: Football-Data CSV files, 2016-17 through 2025-26 only.
+
+### Pre-live amendment
+
+Before any new FREE_CORNERS_SIGNAL_SCREEN_V1 provider acquisition or aggregate metric was opened, the current 5Dollar fixture-list schema was re-checked using the already-completed source-pilot artifact. The fixture-list response already contains full-time corner counts. Therefore 2026-27 current-season rows use the 5Dollar league-list data directly rather than waiting for Football-Data's current-season CSV refresh. This removes a source-lag reconciliation problem without changing the test sample, model, features, market rule or verdict thresholds.
 
 ## Frozen leagues
 
@@ -30,38 +35,45 @@ Football-state source: Football-Data CSV files, which are free public historical
 
 ## Frozen time split
 
-Football model training data: 2016-17 through 2025-26 only.
+Football model training data: Football-Data 2016-17 through 2025-26 only.
 
-Market screen: 2026-27 only, using the most recent finished fixtures available to the Free plan at acquisition time.
+Market screen/current-season rolling updates: 5Dollar 2026-27 finished fixtures only.
 
 No 2026-27 row may enter model fitting.
 
 ## Frozen market sample
 
-For each league, request finished fixtures ordered newest first and deterministically select the first 11 unique fixture ids. Selection occurs before reading the fixture's corner odds or final corner outcome.
+For each league, make one fixture-list request for up to 50 finished current-season fixtures. From that response, deterministically select the 11 most recent unique fixture ids by kickoff time.
 
-Then request `GET /v1/fixtures/{id}/odds?market=corner` for those selected fixture ids.
+Selection is based only on league, finished status, fixture id and kickoff time. It occurs before the selected fixture's Bet365 corner prices are requested and does not depend on the realized corner result.
+
+Then request `GET /v1/fixtures/{id}/odds?market=corner` for selected fixture ids not already covered by the immutable 15-match source-pilot artifact.
 
 Maximum selected fixtures: 55.
 
-The league-list fixture payload may be retained for identity/date/outcome audit, but no fixture is selected or dropped because of its realized corner result.
+## Current-season identity and outcomes
 
-## Reconciliation
+The 5Dollar league-list payload is the authoritative 2026-27 fixture identity/current-season result source for this screen. It contains:
 
-Each selected provider fixture must reconcile uniquely to the 2026-27 Football-Data row using:
+- fixture id;
+- league id;
+- kickoff UTC;
+- home/away team names;
+- finished status;
+- full-time corner counts.
 
-- league;
-- kickoff calendar date, allowing at most +/- 1 day for timezone/source date convention;
-- canonical home team;
-- canonical away team.
-
-No fuzzy many-to-one matching is allowed. Ambiguous rows are rejected.
-
-Provider final corner totals may be used as an audit cross-check against Football-Data `HC + AC`; a disagreement rejects the row.
+Historical Football-Data team names and current 5Dollar team names are canonicalized before continuous rolling histories are built. Canonicalization may use only deterministic text normalization plus an explicit alias table committed before the live screen. No fuzzy many-to-one matching is allowed.
 
 ## Football-state construction
 
-Use continuous point-in-time rolling histories across season boundaries, so returning top-flight teams enter 2026-27 with prior-season history.
+For each league:
+
+1. load Football-Data top-flight rows from 2016-17 through 2025-26;
+2. canonicalize team names;
+3. append all available finished 2026-27 5Dollar league-list rows in chronological order;
+4. run the existing leakage-safe point-in-time rolling history builder continuously across the season boundary.
+
+Returning top-flight teams therefore enter 2026-27 with prior-season history. Promoted/re-entering teams without 10 prior top-flight matches remain ineligible until the frozen history requirement is met.
 
 A test row is eligible only if both teams have at least 10 prior top-flight matches in the continuous history.
 
@@ -80,7 +92,7 @@ No goals, cards, final score, same-match corners, closing odds or in-play data e
 
 ## Frozen football model
 
-Fit one independent model per league on 2016-17 through 2025-26.
+Fit one independent model per league on 2016-17 through 2025-26 only.
 
 Pipeline:
 
@@ -89,6 +101,8 @@ Pipeline:
 3. `PoissonRegressor(alpha=0.1, max_iter=2000)`
 
 Target: `HC + AC` total corners.
+
+Training rows require both teams to have at least 10 prior top-flight matches.
 
 No hyperparameter search, league-specific tuning or post-screen refit is allowed.
 
@@ -101,7 +115,8 @@ Require:
 - finite opening line;
 - finite opening Over and Under decimal odds, both > 1;
 - opening line fractional part is either `.0` or `.5`;
-- unique reconciled finished fixture;
+- selected finished fixture;
+- finite provider full-time home/away corner counts;
 - both teams have at least 10 prior top-flight matches.
 
 Quarter lines are excluded before outcome scoring.
