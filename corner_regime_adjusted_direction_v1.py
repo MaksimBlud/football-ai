@@ -20,6 +20,7 @@ import corner_repricing_direction_replication_v1 as replication
 
 EXPERIMENT_ID = "CORNER_REGIME_ADJUSTED_DIRECTION_V1"
 FIXTURES_PER_LEAGUE = 10
+MAX_FIXTURE_PAGES = 2
 MIN_TOTAL_ROWS = 30
 MIN_LEAGUES_WITH_PAIRS = 4
 MIN_REGIME_BLOCKS = 8
@@ -302,6 +303,77 @@ def evaluate_fresh_direction(fresh_frame: pd.DataFrame) -> tuple[pd.DataFrame, d
     return frame, report
 
 
+
+def acquire_third_holdout(
+    output_dir: Path,
+    *,
+    key: str,
+    excluded_ids: set[str],
+) -> tuple[pd.DataFrame, int, dict[str, list[dict[str, Any]]]]:
+    """Acquire the frozen third sample with bounded two-page fixture discovery.
+
+    Pagination changes only fixture-list discovery. No odds endpoint is called until
+    all five leagues have deterministically selected ten unseen fixture IDs.
+    """
+    client = replication.ProviderClient(key=key)
+    selected: dict[str, list[dict[str, Any]]] = {}
+
+    for league, league_id in replication.LEAGUES.items():
+        merged_rows: list[dict[str, Any]] = []
+        chosen: list[dict[str, Any]] = []
+        for page in range(1, MAX_FIXTURE_PAGES + 1):
+            payload = client.get(
+                f"/v1/leagues/{league_id}/fixtures",
+                params={
+                    "status": "finished",
+                    "order": "desc",
+                    "page": page,
+                    "per_page": replication.LIST_PER_PAGE,
+                },
+            )
+            _write_json(
+                output_dir / "raw" / "fixtures" / f"{league}_page_{page}.json",
+                payload,
+            )
+            data = payload.get("data")
+            if not isinstance(data, list):
+                raise RuntimeError(f"{league}: invalid fixture-list payload on page {page}")
+            merged_rows.extend(data)
+            chosen = replication.select_unseen_fixtures(
+                {"success": 1, "data": merged_rows},
+                league,
+                excluded_ids,
+            )
+            if len(chosen) == FIXTURES_PER_LEAGUE:
+                break
+
+        selected[league] = chosen
+        if len(chosen) != FIXTURES_PER_LEAGUE:
+            raise RuntimeError(
+                f"{league}: expected {FIXTURES_PER_LEAGUE} unseen fixtures after "
+                f"{MAX_FIXTURE_PAGES} pages, got {len(chosen)}"
+            )
+
+    _write_json(output_dir / "selected_fixtures.json", selected)
+
+    normalized_rows: list[dict[str, Any]] = []
+    for league in replication.LEAGUES:
+        for fixture in selected[league]:
+            fixture_id = fixture["fixture_id"]
+            payload = client.get(
+                f"/v1/fixtures/{fixture_id}/odds",
+                params={"market": "corner"},
+            )
+            _write_json(output_dir / "raw" / "odds" / f"{fixture_id}.json", payload)
+            row = replication.normalize_corner_odds(payload, fixture)
+            if row is None:
+                continue
+            normalized = replication._normalize_holdout_row(row)
+            if normalized is not None:
+                normalized_rows.append(normalized)
+
+    return pd.DataFrame(normalized_rows), client.request_count, selected
+
 def run(
     pilot_zip: Path,
     screen_zip: Path,
@@ -324,7 +396,7 @@ def run(
         raise RuntimeError("prior 50-row replication overlaps original V1 fixture IDs")
 
     excluded_ids = old_ids | previous_ids
-    fresh, request_count, selected = replication.acquire_fresh_holdout(
+    fresh, request_count, selected = acquire_third_holdout(
         output_dir,
         key=replication._require_key(key),
         excluded_ids=excluded_ids,
