@@ -690,3 +690,329 @@ An exact one-time post-match check is scheduled for `2026-09-16 00:00 Europe/War
 4. Record pooled Brier/LogLoss first, accuracy second, plus per-match deltas and the predeclared dual-metric verdict.
 5. Regardless of result, do not tune on these three outcomes. Treat them as prospective directional evidence only.
 6. Keep active Market Anchor fail-closed to market and keep `NO_BET` / no production promotion unless a separately defined larger evidence gate is satisfied.
+
+
+---
+
+# Continuity update — 2026-09-15 16:01:43Z → 2026-09-18 current
+
+Последнее сохранение `PROJECT_CONTINUITY.md` до этого блока было сделано commit `90262677902102ac33421109179d8bcf7649d86d` at `2026-09-15T16:01:43Z` (`Record La Liga prospective freeze continuity`). Всё ниже — работа после этой точки.
+
+Current canonical merged `main` before this continuity-only update: `17bf1ac9a2e1b27df54b519b2972860037eaf733`.
+
+Binding interpretation for this whole interval:
+- research/training never promoted production `.pkl`;
+- `NO_BET` remained binding;
+- no result below authorizes staking, automatic betting or model promotion;
+- historical/post-outcome diagnostics are not to be relabeled prospective;
+- opened OOT samples must not be retuned;
+- market-state movement research is distinct from predicting match outcomes or the final number of corners.
+
+## La Liga prospective three-match micro-cohort — evaluation completed
+
+PR #339 was a documentation-only continuity checkpoint after the already-frozen three-match La Liga prospective cohort.
+
+PR #340 merged as `f528d01ba08d10ebbdbe17946a5abd4f7f013230` and recorded the locked evaluation of `LA_LIGA_MARKET_ANCHOR_PROSPECTIVE_20260915_V1`.
+
+Final three-match result:
+- market Brier = `0.4644053497`;
+- shadow `lambda=1` Brier = `0.5032927022`;
+- market LogLoss = `0.8223382306`;
+- shadow LogLoss = `0.8763090448`;
+- both accuracies = `2/3`;
+- delta Brier vs market = `+0.0388873525` (worse);
+- delta LogLoss vs market = `+0.0539708142` (worse);
+- frozen dual probabilistic metric win = **false**.
+
+Decision: `FAIL_DUAL_PROBABILISTIC_METRIC_WIN`. The micro-cohort is prospective evidence that the fixed full football residual did not improve the market on these three matches. No lambda/feature retuning from this sample is authorized.
+
+## 1X2 market-state / repricing research chain — PR #341–#361
+
+This block moved the project away from trying to force a football residual over the market and toward asking whether **pre-close market state predicts the market's own later repricing**.
+
+Chronology:
+
+- **PR #341 — POWER Market Anchor V3**, merge `350a59910f05fcb6c4dd1c1b0bf4e4be4389175a`: tested the existing football residual on top of a fixed POWER de-vigged La Liga market prior. The global residual did not establish a production-worthy incremental win.
+- **PR #342 — Conditional Residual V4**, merge `0756347408ee3d53e8597fdf500832a7a4ba577b`: froze a small selective gate using pre-match residual disagreement + market entropy. The untouched OOT gate did not justify activation.
+- **PR #343 — Multi-Market Anchor V5**, merge `01310a0019fde188b37bf537885966c9ba08a60a`: tested whether O/U 2.5 and Asian Handicap prices add 1X2 information beyond the fixed POWER 1X2 prior. This remained research-only and did not authorize a production baseline change.
+- **PR #344 — Standard-to-Close Signal V6**, merge `4ba6603917e298fcfb042550d582f56795f90d20`: changed the target from match outcome to explicit Bet365 STANDARD→closing 1X2 movement. STANDARD fields were deliberately not mislabeled as opening prices.
+- **PR #345 — Market Movement Regimes V7**, merge `49310172395425a152b4fa4a2fa9390cf41bc2c5`: after the directional regression was not a sufficient path, reframed the task as classification of **material repricing** using a train-only 75th-percentile movement threshold and constant-prevalence baseline. This produced the accepted repricing-risk research signal that became the basis of the next robustness work.
+- **PR #346 — Regime Direction V8**, merge `8637964c4c80c3a83b1cd66fb7c5fcfb883c2124`: tested sign/direction inside the already-frozen material-movement regime without retuning V7. Direction was kept separate from magnitude/risk.
+- **PR #347 — Incremental Robustness V9**, merge `4c6b0a2bc5edbf5b0774f14fd4e68253c8dc0fcc`: decomposed the accepted V7 signal into MARKET_STATE vs FORM contribution. The robust research path increasingly pointed to market-state geometry, not to a new football residual.
+- **PR #348 — Walk-Forward Robustness V10**, merge `6c216d86b9b674cb5a84ffe8171635ec55d3490b`: expanding temporal folds re-tested the repricing-risk construction with all fitting performed only on earlier seasons.
+- **PR #349 — Market-State Decomposition V11**, merge `608cf3785dc66b092d30a2a30519ebd5602a91f3`: decomposed the market-state signal into fixed interpretable geometry: full probabilities, favorite strength, draw level, entropy, top-two gap and fixed combinations.
+- **PR #350 — Market-State Walk-Forward V12**, merge `4c76fa4d6749723d3d18f8a0229b7ae1d0065cf3`: walked the interpretable components forward across seasons, preserving the same V7 target construction.
+- **PR #351 — Serie A Repricing V13**, merge `a183000ed20933221cd0ff12e5b354708fcfec9a`: transferred the frozen La Liga repricing-risk construction to Serie A without Serie A tuning.
+- **PR #352 — EPL Repricing V14**, merge `548a6387b6c7624f6fc923ae17561f73f1f85bce`: independent EPL replication of the market-state repricing-risk question.
+- **PR #353 — EPL Cross-Book Direction V15**, merge `4950a63f2386a758d6f3425cb73b32c21870de26`: tested whether STANDARD Pinnacle-vs-Bet365 fair-probability disagreement predicts subsequent B365 repricing direction.
+- **PR #354 — EPL Direction Decomposition V16**, merge `80abfb8588dd10ed9a1019d184f03af7dabd8cd9`: decomposed the cross-book direction evidence without retuning.
+- **PR #355 — Serie A Direction V17**, merge `dd7655f34bd50bd7c7789a5e9bdd8c72c6e6d324`: transferred the frozen EPL disagreement-only direction signal to Serie A.
+- **PR #356 — La Liga Direction V18**, merge `f3824e94cf19e7ddfe6acc20ae4802ef7bc40bb2`: second independent league transfer of the same frozen cross-book direction construction.
+- **PR #357 — Structural Break V19**, merge `0d09aae8148bcaed441ab8f8fa9b26c314bdcd84`: identified a synchronized 2025-26 failure/break in the frozen cross-book direction behavior across EPL, Serie A and La Liga.
+- **PR #358 — Regime Calibration V20**, merge `49576124c40263f779ad19eee864a80d09c1ba05`: tested a predeclared two-season recent-history calibration against expanding history; it did not remove the need to treat the 2025-26 break as a real unresolved problem.
+- **PR #359 — Source Drift V21**, merge `b51fce06a63ead23dfb84bd24971678c5dd2b39a`: separated bookmaker-specific STANDARD→closing movement from cross-book disagreement and diagnosed the 2025-26 Pinnacle coverage break.
+- **PR #360 — Common-Support V22**, merge `b0d0b17e1e3afb4045b032d3002b5a6ad835a5a2`: tested whether Pinnacle availability alone selected a different Bet365 movement subset. Common-support selection did **not** explain away the directional break.
+- **PR #361 — Historical Cross-Book Closure V23**, merge `2799a1362d1fd8f1571852e9bc96a1c55e01bfd3`: formally closed the historical cross-book direction branch as **NO_BET**. The 2025-26 coverage break is a confounder, but not a sufficient explanation of the failed direction transfer. Any future direction work must use explicit timestamped prospective snapshots rather than further same-sample historical tuning.
+
+Synthesis of PR #341–#361:
+- strongest durable concept from this branch is **repricing-risk / movement magnitude**, not a stable universal direction classifier;
+- market-state geometry proved more interesting than forcing additional football residuals;
+- cross-book direction looked promising in earlier folds/transfers but failed a synchronized later-period robustness check;
+- therefore the historical direction path is closed and must not be reopened by threshold/window mining on the same data.
+
+## Direct O/U 2.5 and Asian Handicap research — PR #362–#366
+
+- **PR #362** (`Research market-anchored O/U 2.5 V1`) remains **open / non-merged**. It is not canonical `main` evidence and should not be treated as an active accepted experiment.
+- **PR #363**, merge `40aba10087558f213d595474764e948ef4031079`, became the canonical direct-market experiment across EPL, La Liga and Serie A: O/U 2.5 plus Asian Handicap, temporal train 2016-17..2023-24, validation 2024-25, untouched OOT 2025-26.
+- **PR #364**, merge `b342d34ae5f029fcf02716dda111abd5d1e1cac4`, recorded the frozen result:
+  - O/U 2.5 = **0/3 league PASS → SKIP**;
+  - Asian Handicap = **0/3 league PASS → SKIP**;
+  - EPL and Serie A AH were validation-admissible but reversed on untouched 2025-26;
+  - bookmaker corners = `DATA_UNAVAILABLE → COLLECT`.
+- **PR #365**, merge `a8bdf7859a5b7d08c3710d531b79897057fbf814`, froze and executed a separate O/U 2.5 **opening-to-closing movement** test: fixed Ridge(`alpha=1.0`), football-state candidate vs no-movement baseline, MAE+RMSE gate.
+- **PR #366**, merge `96ee5a27ff0481148d4270237cff902eced70696`, recorded:
+  - EPL FAIL;
+  - La Liga FAIL;
+  - Serie A FAIL;
+  - pass count `0/3`;
+  - pooled decision **SKIP**.
+
+Binding conclusion: direct O/U/AH outcome modeling did not beat the paired market under frozen V1, and the tested O/U closing-movement football-state model also failed. Do not retune these exact V1s on their opened OOT.
+
+## Bookmaker corners data-source qualification — PR #367–#378
+
+This block first solved the missing-data problem before any corner model-vs-market claim.
+
+- **PR #367**, merge `8e5c09f9d2d0fe9f440ae6969223d172396cc725`: audited historical corner-price sources and added a fail-closed TotalCorner parser/client. OddsPapi history was too shallow; 7M lacked a reproducible bulk contract; TotalCorner had suitable historical depth but required VIP/token.
+- **PR #368**, merge `60218392a7aea6bee73520215ceb72c1d066d416`: froze a 30-match TotalCorner acquisition-only pilot (10 each EPL/Serie A/La Liga; source qualification requires >=8/10 in every league).
+- **PR #369**, merge `77ab0c10529272fb7090f67c0dc25b164577dfbb`: added the manual-only TotalCorner live runner.
+- **PR #370** was closed **unmerged as a duplicate** of #369.
+- **PR #371**, merge `c8f0b38a314739f9d028355a68babeb785f90f2c`: temporarily closed the TotalCorner path as `CLOSED / COLLECT / EXTERNAL_CREDENTIAL_REQUIRED`.
+- **PR #372**, merge `5a7843f1517716e09cd3b173c8e178f0a69b9908`: qualified 5DollarFootballAPI using a frozen acquisition-only Bet365 corner pilot on five latest finished fixtures per league.
+- **PR #373**, merge `6ef875d8fd2bdf3f125f61012180bbe24e45fc7f`: immutable source result = **15/15 covered**, EPL 5/5, La Liga 5/5, Serie A 5/5; decision `SOURCE_QUALIFIED_FOR_BACKFILL`.
+- **PR #374**, merge `ad110a6cc7800284b8881ce48544925e8c0a27c3`: froze the first `CORNERS10 vs Bet365 opening corner market` experiment before backfill. Half-lines only, fixed rolling corner-state features, C=0.1, validation gate + untouched 2025-26 OOT, dual Brier/LogLoss acceptance.
+- **PR #375**, merge `b2965c78cc2585d2f3c542f54ab5ffe6aa2c21d0`: implemented fail-closed 2016-17..2025-26 historical 5Dollar backfill with preflight, raw/normalized separation, hard request budget and no model metrics during acquisition.
+- **PR #376** was closed **unmerged as a duplicate** of #375.
+- **PR #377**, merge `2cc81873ae5141ae4214551a360e9872f7049dc1`: added an explicit one-request PR-gated historical access preflight; full backfill remained manual-only.
+- **PR #378**, merge `f547aa7fc68288ee23dadc3704247647bcaf6da5`: one-request live preflight result = **`HISTORY_ACCESS_BLOCKED_BY_PLAN`** for the earliest frozen EPL 2016-17 bulk-odds window. No full historical backfill and no CORNERS10-vs-market evaluation were run.
+
+Binding conclusion: 5Dollar is qualified for currently exposed Bet365 corner opening/closing data, but the frozen deep historical backfill is blocked by the plan. Do not claim the unavailable 2016-17..2025-26 bookmaker-history experiment was executed.
+
+## Free corners football-vs-market screen — PR #379–#382
+
+Because the historical plan blocked the original backfill, a separate free-window screen was created instead of weakening the historical contract.
+
+### PR #379 — `FREE_CORNERS_SIGNAL_SCREEN_V1`
+
+Merge: `9a5c29a0b65ff67a191440ddd64907ca75da69d5`.
+
+Frozen screen:
+- five free top leagues;
+- 11 most recent finished fixtures per league, max 55;
+- Bet365 opening corner line/prices;
+- historical football corner model trained only on 2016-17..2025-26 public corner outcomes;
+- 2026-27 held out;
+- fixed 25% football / 75% market blend;
+- Brier, LogLoss and residual-alignment screen;
+- no ROI/betting/production use.
+
+Important implementation work inside this PR:
+- bounded provider rate-limit handling was added and regression-tested;
+- the final aggregate evaluation was converted to a **zero-provider-request offline replay** using immutable acquired Bet365 artifacts;
+- pinned Football-Data mirrors were used where official transport failed;
+- source-native missing corner rows were preserved rather than silently fabricated/dropped;
+- Serie A mirror season mapping was corrected before the final frozen replay.
+
+### PR #381 — immutable result
+
+Merge: `5ed605de71d8ebac8d69ff593402c531f421205f`.
+
+Result = **`NO_CLEAR_SIGNAL_SCREEN`**:
+- 55 selected fixtures;
+- 55 market rows;
+- 44 eligible evaluation rows;
+- all five leagues passed sample coverage gate;
+- pooled fixed blend improved Brier/LogLoss only marginally;
+- pooled residual alignment was near zero and its 90% bootstrap interval crossed zero;
+- only `2/5` leagues had positive residual alignment;
+- Serie A was retained only as a **post-result diagnostic hypothesis**, not a confirmed edge.
+
+### PR #382 — Serie A prospective replication
+
+Merge: `2fc3396f12879f745c5d23b9b9cb45a11dd8102c`.
+
+A separate prospective Serie A-only replication was preregistered:
+- fixtures from `2026-09-19T00:00:00Z` onward;
+- opening capture >=6h before kickoff;
+- same frozen model/blend;
+- first 30 eligible finished fixtures;
+- no performance metrics opened before the 30-row gate;
+- free plan only.
+
+This track was later judged to answer the **wrong question** for the intended market-movement research and was superseded before confirmatory evaluation.
+
+## Corner market-state repricing signal — PR #383–#386
+
+This is the most important new research result of the interval.
+
+### PR #383 — correctly scoped market-only corner repricing experiment
+
+Merge: `653b0c10433f522d0b8a2becdc3608a8f2bba57b`.
+
+The project returned to the same question that had been productive in 1X2:
+> can opening bookmaker state predict **how much the bookmaker's own corner market will be repriced by closing?**
+
+Frozen design:
+- market-only; no match outcomes, CORNERS10 or football-state inputs;
+- existing free Bet365 opening+closing corner artifacts;
+- proportional de-vig + Poisson-reconstructed comparable opening/closing market centre;
+- material move = top quartile;
+- fixed `q=.75`, LogisticRegression `C=.1`;
+- fixed interpretable opening-state variants;
+- leave-one-league-out across EPL, La Liga, Serie A, Bundesliga and Ligue 1;
+- Brier + LogLoss vs constant prevalence baseline.
+
+At the same time the Serie A football-model prospective collector from PR #382 was **paused/superseded** so it would not consume free quota answering a different question.
+
+### PR #384 — discovery result
+
+Merge: `ab81ccec5daf9e965a5c23ad55f34a27fed567b2`.
+
+Frozen verdict = **`STRONG_REPRICING_SIGNAL`**.
+
+Primary feature = `FAIR_CENTRE` (Poisson-reconstructed opening market centre):
+- `4/5` held-out leagues beat the constant baseline on **both** Brier and LogLoss;
+- pooled Brier = `0.18173669` vs baseline `0.19886364`;
+- pooled LogLoss = `0.53968369` vs baseline `0.58730361`;
+- pooled ROC AUC = `0.7458`;
+- coefficient was negative in all five folds: lower opening `FAIR_CENTRE` associated with higher probability of a material repricing.
+
+Interpretation limit: this established **repricing magnitude/risk**, not profitability and not a proven movement sign.
+
+Artifact: `10550262038`; digest `sha256:92177e4ddb39331b33e9c97fc75541b0371f744f17a9dd6a2355188839960b92`.
+
+### PR #385–#386 — fresh unseen replication
+
+PR #385 merge: `ed16e6551e2b567e147c76905c02642cbc7b0803`.
+PR #386 merge/current main: `17bf1ac9a2e1b27df54b519b2972860037eaf733`.
+
+Frozen before opening the new closing data:
+- old 55 rows immutable discovery/training only;
+- `FAIR_CENTRE` only as primary feature;
+- same market-centre reconstruction;
+- 10 previously unused fixtures per league = 50 new rows;
+- frozen V1 q75 threshold and LogisticRegression(`C=0.1`);
+- magnitude replication by pooled Brier + LogLoss;
+- separate high-risk direction diagnostic.
+
+Fresh 50-row result:
+- baseline Brier = `0.1826115702`;
+- frozen FAIR_CENTRE Brier = `0.1631186776`;
+- baseline LogLoss = `0.5516446554`;
+- frozen FAIR_CENTRE LogLoss = `0.5174742619`;
+- magnitude/risk signal therefore **replicated on previously unused fixtures**.
+
+Frozen high-risk direction gate also technically passed:
+- non-zero high-risk moves = `9`;
+- upward = `9`;
+- downward = `0`;
+- positive share = `1.00`;
+- one-sided binomial p vs 0.50 = `0.001953125`.
+
+Critical caveat:
+- non-high-risk non-zero rows = `12`;
+- upward among them = `11/12`;
+- overall non-zero fresh moves = `20` up vs `1` down.
+
+Therefore the supported claim is:
+> opening corner-market state, especially `FAIR_CENTRE`, contains replicated information about **whether the market will be materially repriced**.
+
+The unsupported/unfinished claim is:
+> `FAIR_CENTRE` uniquely predicts **the sign** of repricing.
+
+The fresh window had a broad upward market regime, so direction must be tested against a contemporaneous regime baseline, not against 50/50.
+
+Fresh replication artifact: `10551727936`; digest `sha256:ca3c0f96338cf213e1dc76dbf47e88d01f7ad551f18e83ef2c185d4bc9eb6ba3`.
+Provider requests: `55/60`.
+Paid subscription used: false.
+Match outcomes used: false.
+Production `.pkl` changed: false.
+
+## Non-canonical/open corner branch note — PR #380
+
+PR #380 (`Run free EPL corners market screen V2`) remains **open / non-merged**.
+
+It attempted a football-model-vs-opening-market EPL-only screen after V1 acquisition difficulties. That question is now **superseded** by the market-only repricing line in PR #383–#386. Do not treat PR #380 as current canonical direction and do not resume it merely because it remains open.
+
+## Active current work — PR #387 `CORNER_REGIME_ADJUSTED_DIRECTION_V1`
+
+Status at this continuity update:
+- PR #387 = **open / unmerged**;
+- head = `92df9d88b1998dd01f7496f7979acbca880a830d`;
+- canonical main remains `17bf1ac9a2e1b27df54b519b2972860037eaf733`;
+- dedicated final live workflow run `35361459609` is **in progress**;
+- offline contract on that head is green, including compile, focused regression tests, frozen-constant assertions and production `.pkl` hash guard.
+
+Purpose: determine whether `FAIR_CENTRE` contains **individual direction discrimination after removing a contemporaneous league-day market regime**.
+
+Frozen primary construction:
+- only candidate score: `direction_score = -opening_lambda`;
+- regime block = `(league, UTC kickoff date)`;
+- compare only pairs of matches inside the same regime block;
+- concordant pair = lower opening FAIR_CENTRE subsequently has the larger `centre_delta`;
+- primary effect = pooled within-block pairwise concordance;
+- null = **20,000** deterministic permutations, seed `20260918`, shuffling `centre_delta` only inside the same regime block;
+- this preserves the exact upward/downward regime of each league-day while destroying individual match assignment.
+
+Frozen sample gate:
+- >=30 eligible fresh rows;
+- >=4 leagues with at least one comparable pair;
+- >=8 contributing regime blocks;
+- >=40 comparable pairs.
+
+Frozen confirmation gate:
+- concordance >= `0.60`;
+- one-sided regime-preserving permutation p < `0.10`.
+
+Third-sample acquisition amendments were made **before any third-sample odds/closing data were opened**:
+1. run `35360780913` stopped in fixture metadata discovery because first-page Bundesliga exclusions left only 6 unseen IDs; no fixture odds request had occurred;
+2. pagination was added, but run `35361107211` proved from metadata that the Free Bundesliga inventory itself had only 27 finished fixtures and `has_more=false`; 21 were already consumed by the two earlier frozen samples, leaving exactly 6 unseen. Again, no third-sample odds request had occurred;
+3. final metadata-only frozen rule: up to 10 unseen fixtures per league, minimum 6, no cross-league backfill. Expected selection = **46**: EPL 10, La Liga 10, Serie A 10, Bundesliga 6, Ligue 1 10.
+
+The statistical feature, sign hypothesis, regime blocks, concordance threshold and permutation p-value gate were **not changed** by these metadata-only amendments.
+
+The live marker was removed from the PR body after the final run was triggered so no accidental repeated provider run should start from later PR events.
+
+Until the immutable final `report.json` from the currently running frozen execution exists, **do not claim regime-adjusted direction replication**.
+
+## Current research checkpoint — 2026-09-18
+
+Canonical merged facts:
+- strongest new replicated movement signal: **corner-market repricing magnitude/risk via opening FAIR_CENTRE**;
+- discovery: 55 rows, cross-league leave-one-league-out, strong pooled discrimination;
+- replication: independent 50-row fresh sample improved both Brier and LogLoss;
+- movement sign remains unresolved because the replication window was overwhelmingly upward market-wide;
+- PR #387 is the correct next test because it removes the common league-day regime before testing individual direction;
+- historical 1X2 cross-book direction branch is closed `NO_BET` after the 2025-26 structural break;
+- direct O/U 2.5 and AH V1 both ended `SKIP`;
+- O/U 2.5 football-state closing-movement V1 ended `SKIP`;
+- free corners football-vs-market screen ended `NO_CLEAR_SIGNAL_SCREEN`;
+- deep historical 5Dollar corner backfill is blocked by plan and must not be represented as completed;
+- no production `.pkl` promotion occurred in any of these blocks.
+
+## Current execution pointer
+
+1. Let the already-running PR #387 frozen live execution finish; do not create a parallel/replacement sample after odds access has begun.
+2. Read the immutable `report.json` only after the run completes and record the frozen verdict without changing feature/sign/sample/statistical gates.
+3. If PR #387 passes: treat it as evidence of individual direction discrimination **conditional on league-day regime**, still research-only / NO_BET.
+4. If PR #387 fails: keep the replicated magnitude/risk signal, but close the current FAIR_CENTRE direction hypothesis; do not rescue it with post-hoc thresholds, alternative signs or subgroup mining on the opened sample.
+5. Do not resume PR #380 as the canonical corner path; it answers a different, already-superseded football-model question.
+6. Do not treat open PR #362 as canonical direct-market evidence; merged PR #363–#366 are the source of truth for O/U/AH.
+7. Continue separating:
+   - probability of the match/corner outcome;
+   - probability of material market repricing;
+   - direction of repricing;
+   - betting/value profitability.
+   Evidence for one does not automatically prove the others.
+8. Production artifacts, automatic promotion, betting and staking remain out of scope unless a separate explicitly frozen evidence gate is satisfied.
+
