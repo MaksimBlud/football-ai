@@ -15,7 +15,10 @@ permissions:
 
 jobs:
   offline-contract:
-    if: github.event.action != 'edited' || contains(github.event.pull_request.body || '', '[run-corner-regime-direction]')
+    if: >-
+      github.event.action != 'edited' ||
+      contains(github.event.pull_request.body || '', '[run-corner-regime-direction]') ||
+      contains(github.event.pull_request.body || '', '[resume-corner-regime-direction]')
     runs-on: ubuntu-latest
     env:
       PYTHONPATH: .
@@ -121,3 +124,81 @@ jobs:
             /tmp/corner-regime-adjusted-direction-v1.log
           if-no-files-found: warn
           retention-days: 90
+
+  resume-live-third-sample:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(github.event.pull_request.body || '', '[resume-corner-regime-direction]')
+    needs: offline-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      PYTHONPATH: .
+      FIVE_DOLLAR_FOOTBALL_API_KEY: ${{ secrets.FIVE_DOLLAR_FOOTBALL_API_KEY }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests pandas numpy scipy scikit-learn==1.7.2
+      - name: Require free API key without printing it
+        run: test -n "$FIVE_DOLLAR_FOOTBALL_API_KEY"
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Download immutable prior and timeout artifacts
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10503575942/zip > /tmp/pilot.zip
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10506736726/zip > /tmp/screen.zip
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10551727936/zip > /tmp/previous-replication.zip
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10557603810/zip > /tmp/timeout-resume.zip
+      - name: Resume exact frozen third sample
+        run: |
+          python corner_regime_adjusted_direction_v1.py \
+            --pilot-zip /tmp/pilot.zip \
+            --screen-zip /tmp/screen.zip \
+            --previous-replication-zip /tmp/previous-replication.zip \
+            --resume-zip /tmp/timeout-resume.zip \
+            --output-dir artifacts/corner_regime_adjusted_direction_v1 \
+            > /tmp/corner-regime-adjusted-direction-v1-resume.log
+      - name: Assert resumed result contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/corner_regime_adjusted_direction_v1/report.json').read_text())
+          assert r['experiment_id']=='CORNER_REGIME_ADJUSTED_DIRECTION_V1'
+          assert r['research_only'] is True
+          assert r['betting_enabled'] is False
+          assert r['match_outcome_used'] is False
+          assert r['football_state_used'] is False
+          assert r['paid_subscription_used'] is False
+          assert r['prior_replication_closing_outcomes_used_for_tuning'] is False
+          assert r['previous_replication_excluded_fixture_ids'] == 50
+          assert r['selected_fixture_count'] == 46
+          assert r['resume_artifact_used'] is True
+          assert r['acquisition_mode'] == 'IMMUTABLE_SAME_SAMPLE_RESUME'
+          assert r['reused_raw_odds_responses'] == 17
+          assert r['missing_odds_files_at_resume_start'] == 29
+          assert r['provider_requests'] <= 60
+          assert r['verdict'] in {
+              'INDIVIDUAL_DIRECTION_DISCRIMINATION_REPLICATED',
+              'INDIVIDUAL_DIRECTION_DISCRIMINATION_NOT_CONFIRMED',
+              'SAMPLE_TOO_SMALL',
+          }
+          print(json.dumps(r, indent=2, sort_keys=True))
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - name: Upload immutable resumed third-sample result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: corner-regime-adjusted-direction-v1-resume
+          path: |
+            artifacts/corner_regime_adjusted_direction_v1
+            /tmp/corner-regime-adjusted-direction-v1-resume.log
+          if-no-files-found: warn
+          retention-days: 90
+
