@@ -1,0 +1,107 @@
+name: PR337 Continuity Append
+
+on:
+  push:
+    branches:
+      - research/market-anchor-v2-saved-cohort-replay
+    paths:
+      - ".github/workflows/pr337-continuity-append.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  append:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/market-anchor-v2-saved-cohort-replay
+          fetch-depth: 0
+      - name: Append canonical replay checkpoint and prove remote update
+        shell: bash
+        run: |
+          set -euo pipefail
+          before="$(git rev-parse HEAD)"
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("PROJECT_CONTINUITY.md")
+          marker = "# Saved-cohort Market Anchor V2 replay — 2026-09-15"
+          text = path.read_text(encoding="utf-8")
+          if marker in text:
+              raise SystemExit("refusing no-op: replay continuity marker already exists before this helper run")
+          appendix = r'''
+
+---
+
+# Saved-cohort Market Anchor V2 replay — 2026-09-15
+
+## `MARKET_ANCHOR_V2_SAVED_COHORT_REPLAY` — EXACT FROZEN POST-OUTCOME DIAGNOSTIC
+
+Purpose: answer whether the already-frozen `MARKET_ANCHOR_1X2_V2` football residual (`lambda=1`) would have improved the market on the previously saved old-model cohort, without recreating or tuning the model from known outcomes.
+
+Binding evidence caveat:
+- evidence class = `POST_OUTCOME_DIAGNOSTIC_REPLAY`;
+- outcomes were already known before this replay;
+- this is **not** untouched OOT and **not** prospective evidence;
+- no parameter, feature set, lambda or L2 value was selected from these replay outcomes;
+- the frozen V2 residual contract is Serie A-only, so only the `10` Serie A fixtures inside the saved `47`-event cross-league replay are contract-valid; applying it to the other saved leagues would be off-contract.
+
+Exact frozen reconstruction:
+- frozen V2 source commit = `df19777087fb89af049eedce44ff93f0aa6e6360`;
+- exact restored Git blobs: `historical_football_signal_lab.py=401b3a0893371bfa4a488ec92a4a54af2678c8f7`, `market_anchor_1x2_v1.py=58c35bf3768f7bf2b951f19a37b9a5f46b6b9801`, `market_anchor_1x2_v2_shadow.py=b2770d726ffafe7a3cef706b57d3391063cbfe1b`;
+- frozen recipe = `SERIE_A`, `ALL_FOOTBALL`, shadow `lambda=1.0`, active `lambda=0.0`, `L2=1.0`;
+- refit history = Serie A `2016-2017..2025-2026`, training rows `3799`;
+- candidate artifact SHA256 = `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`;
+- training fingerprint SHA256 = `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`;
+- target football history was cut strictly before `2026-09-11`; all ten fixtures had at least `30` prior team matches available to the frozen feature builder.
+
+Exact 10-match Serie A result:
+- saved market: accuracy `6/10 = 60%`, Brier `0.5662948173955555`, LogLoss `0.9674878846519602`;
+- frozen old production model: accuracy `5/10 = 50%`, Brier `0.5265153874268573`, LogLoss `0.906202231280792`;
+- frozen V2 shadow `lambda=1`: accuracy `6/10 = 60%`, Brier `0.561608308076011`, LogLoss `0.9612922293516798`.
+
+Frozen V2 shadow vs saved market:
+- accuracy delta `0.0`;
+- Brier delta `-0.004686509319544507` (better; about `0.83%` relative improvement);
+- LogLoss delta `-0.006195655300280434` (better; about `0.64%` relative improvement);
+- dual probabilistic metric result = **better than market on both Brier and LogLoss**.
+
+Interpretation:
+- this is encouraging directional evidence that the frozen football residual can improve the market anchor without changing top-1 accuracy on this small Serie A replay;
+- it does **not** satisfy the original stability/prospective gate because `n=10` is tiny and outcomes were already known;
+- the old production model is probabilistically better on this ten-match Serie A micro-slice despite lower accuracy, but it remains worse than market on the broader saved ~58-match evidence and is not resurrected by this subgroup;
+- original V2 stability gate remains failed; active `lambda` therefore remains `0.0` and active output remains exact market fallback;
+- `NO_BET`, no production promotion and no production `.pkl` modification remain binding.
+
+Canonical artifacts:
+- `experiments/market_anchor_v2_saved_cohort_replay_report.json`;
+- `research/MARKET_ANCHOR_V2_SAVED_COHORT_REPLAY.md`;
+- CI replay reconstructs exact frozen source from Git history, refits the frozen Serie A artifact, verifies safety invariants and production `.pkl` hashes.
+
+## Updated research execution pointer
+
+1. Do **not** tune lambda/features from these ten outcomes and do not generalize the Serie A residual to other leagues.
+2. Keep active Market Anchor output fail-closed to market (`active_lambda=0`) until a separately frozen prospective stability gate passes.
+3. Continue collecting fresh bookmaker-level H2H rows through `H2H_BOOKMAKER_V1` without increasing provider-call frequency.
+4. Freeze the prospective market-reconstruction/consensus contract before reading outcomes from those fresh rows.
+5. On fresh evidence, first establish the strongest stable market prior; only then test whether the already-defined football residual adds incremental Brier/LogLoss value beyond it.
+6. Production `.pkl`, automatic model promotion, betting and staking remain out of scope.
+
+Next research milestone remains **fresh prospective proof**, not further optimization on the saved 10/47/58 outcomes.
+'''
+          path.write_text(text.rstrip("\n") + appendix + "\n", encoding="utf-8")
+          assert marker in path.read_text(encoding="utf-8")
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add PROJECT_CONTINUITY.md
+          git diff --cached --check
+          git diff --cached --quiet && { echo 'expected continuity diff but found none'; exit 1; } || true
+          git commit -m 'Record frozen V2 saved-cohort replay continuity'
+          after="$(git rev-parse HEAD)"
+          test "$after" != "$before"
+          git push origin HEAD:refs/heads/research/market-anchor-v2-saved-cohort-replay
+          remote="$(git ls-remote origin refs/heads/research/market-anchor-v2-saved-cohort-replay | awk '{print $1}')"
+          test "$remote" = "$after"
