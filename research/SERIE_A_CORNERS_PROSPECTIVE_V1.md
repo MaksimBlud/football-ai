@@ -1,6 +1,8 @@
 # SERIE_A_CORNERS_PROSPECTIVE_V1
 
-Status: **PREREGISTERED / COLLECTING ONLY**
+Status: **PAUSED / SUPERSEDED FOR CURRENT RESEARCH SEQUENCE**
+
+Automatic collection is disabled. This experiment is retained only as a historical research record. The user-corrected continuation of the 1X2 -> handicap -> totals -> corners sequence is `CORNER_MARKET_STATE_REPRICING_V1`, which studies market-state -> future repricing rather than football-model -> match outcome.
 
 ## Purpose
 
