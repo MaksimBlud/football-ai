@@ -149,3 +149,17 @@ def test_load_replay_inputs_requires_exact_selected_market_ids(monkeypatch, tmp_
     assert got_selected["EPL"][0]["fixture_id"] == "123"
     assert current_rows[0]["fixture_id"] == "123"
     assert markets[0]["fixture_id"] == "123"
+
+
+def test_load_history_dir_preserves_source_native_missing_corner_row(monkeypatch, tmp_path):
+    monkeypatch.setattr(s, "LEAGUES", {"EPL": {"competition_code": "E0"}})
+    monkeypatch.setattr(s, "TRAIN_SEASONS", (("1617", "2016-17"),))
+    d = tmp_path / "EPL"
+    d.mkdir()
+    pd.DataFrame([
+        {"Date": "13/08/2016", "HomeTeam": "A", "AwayTeam": "B", "HC": 5, "AC": 4, "FTHG": 1, "FTAG": 0, "FTR": "H"},
+        {"Date": "20/08/2016", "HomeTeam": "B", "AwayTeam": "A", "HC": np.nan, "AC": np.nan, "FTHG": 0, "FTAG": 0, "FTR": "D"},
+    ]).to_csv(d / "1617.csv", index=False)
+    out = s._load_history_dir(tmp_path)["EPL"]
+    assert len(out) == 2
+    assert pd.isna(out.iloc[1]["HC"])
