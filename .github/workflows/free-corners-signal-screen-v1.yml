@@ -198,7 +198,8 @@ jobs:
                           f"data/raw/football_data/2425/{comp}.csv",
                       )
                   else:
-                      raw = fetch(repo_old, ref_old, f"data/raw/{comp} ({idx}).csv")
+                      source_idx = idx + 1 if comp == "I1" else idx
+                      raw = fetch(repo_old, ref_old, f"data/raw/{comp} ({source_idx}).csv")
                   path = target / f"{code}.csv"
                   path.write_bytes(raw)
                   frame = pd.read_csv(path)
