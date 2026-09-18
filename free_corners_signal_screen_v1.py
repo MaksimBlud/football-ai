@@ -318,8 +318,8 @@ def _load_history_dir(history_dir: Path) -> dict[str, pd.DataFrame]:
             frame["season"] = season
             frame["HomeTeam"] = frame["HomeTeam"].map(canonical_team)
             frame["AwayTeam"] = frame["AwayTeam"].map(canonical_team)
-            if pd.to_numeric(frame["HC"], errors="coerce").isna().any() or pd.to_numeric(frame["AC"], errors="coerce").isna().any():
-                raise RuntimeError(f"{league} {season}: invalid corner counts")
+            if pd.to_numeric(frame["HC"], errors="coerce").notna().sum() == 0 or pd.to_numeric(frame["AC"], errors="coerce").notna().sum() == 0:
+                raise RuntimeError(f"{league} {season}: no usable corner counts")
             frames.append(frame)
         result[league] = pd.concat(frames, ignore_index=True)
     return result
