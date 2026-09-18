@@ -85,6 +85,34 @@ With the current metadata this implies an expected selection of 46 fixtures: 10 
 
 No paid endpoint or subscription is allowed.
 
+
+### Post-open bounded-timeout resume amendment
+
+The final authorized live run `35361459609` froze the complete 46-fixture third-sample selection before any odds request, then opened part of the selected odds set before the 75-minute GitHub job timeout.
+
+Immutable timeout artifact:
+- artifact ID: `10557603810`;
+- digest: `sha256:5530abd643fa4bac1c6ca25609bd9979dd3e0e90ce1c05601d234aca807e406b`;
+- selected fixtures: **46 unique IDs**, exactly 10 EPL + 10 La Liga + 10 Serie A + 6 Bundesliga + 10 Ligue 1;
+- raw successful odds responses already preserved: **17**;
+- remaining selected fixture odds not yet preserved: **29**;
+- no `report.json` or aggregate statistical verdict was produced before timeout;
+- production artifact hash guard passed after cancellation.
+
+Because third-sample closing data are now partially opened, the selection and statistical contract are immutable. Any continuation is therefore restricted to an acquisition-only resume:
+
+- read the exact `selected_fixtures.json` from artifact `10557603810`;
+- reuse every raw odds response already present in that artifact;
+- make **no fixture-list/discovery requests**;
+- request odds only for selected fixture IDs whose raw odds file is absent;
+- do not replace, drop or backfill any selected fixture because of provider availability or market content;
+- after all reachable selected odds are assembled, run the already-frozen normalization and statistical evaluation unchanged;
+- do not change feature, sign, regime block, sample gates, concordance threshold, permutation count/seed or p-value gate;
+- any further provider limitation must fail closed and preserve the same selected fixture IDs for another technical resume.
+
+This amendment is purely operational recovery from a bounded provider wait/CI timeout. It does not use the partially opened movements to alter the hypothesis or analysis.
+
+
 ## Frozen market representation
 
 Use exactly the existing V1 reconstruction:
