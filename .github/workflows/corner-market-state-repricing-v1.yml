@@ -1,0 +1,76 @@
+name: Corner Market State Repricing V1
+
+on:
+  pull_request:
+    paths:
+      - 'corner_market_state_repricing_v1.py'
+      - 'tests/test_corner_market_state_repricing_v1.py'
+      - 'research/CORNER_MARKET_STATE_REPRICING_V1.md'
+      - '.github/workflows/corner-market-state-repricing-v1.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  frozen-repricing-screen:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas numpy scipy scikit-learn==1.7.2 pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile and regression-test frozen experiment
+        run: |
+          python -m py_compile corner_market_state_repricing_v1.py
+          pytest -q tests/test_corner_market_state_repricing_v1.py
+      - name: Download immutable free corner-market artifacts
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10503575942/zip > /tmp/pilot.zip
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10506736726/zip > /tmp/screen.zip
+      - name: Run frozen market-only repricing screen
+        run: |
+          python corner_market_state_repricing_v1.py \
+            --pilot-zip /tmp/pilot.zip \
+            --screen-zip /tmp/screen.zip \
+            --output-dir artifacts/corner_market_state_repricing_v1 \
+            > /tmp/corner-market-state-repricing-v1.log
+      - name: Assert disclosure contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/corner_market_state_repricing_v1/report.json').read_text())
+          assert r['experiment_id']=='CORNER_MARKET_STATE_REPRICING_V1'
+          assert r['research_only'] is True
+          assert r['betting_enabled'] is False
+          assert r['match_outcome_used'] is False
+          assert r['football_state_used'] is False
+          assert r['eligible_rows'] >= 40
+          assert r['verdict'] in {
+              'STRONG_REPRICING_SIGNAL',
+              'INDICATIVE_REPRICING_SIGNAL',
+              'NO_CLEAR_REPRICING_SIGNAL',
+              'SAMPLE_TOO_SMALL',
+          }
+          print(json.dumps(r, indent=2, sort_keys=True))
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - name: Upload immutable result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: corner-market-state-repricing-v1
+          path: |
+            artifacts/corner_market_state_repricing_v1
+            /tmp/corner-market-state-repricing-v1.log
+          if-no-files-found: warn
+          retention-days: 90
