@@ -53,6 +53,22 @@ For each league:
 
 Target selection = 50 previously unused fixtures.
 
+### Pre-odds fixture-discovery amendment
+
+The first live attempt on workflow run `35360780913` stopped during fixture-list discovery because the Bundesliga first page contained only 6 unseen IDs after the 105 frozen exclusions.
+
+That failed attempt opened **no fixture odds endpoint and no third-sample closing data**. The production hash guard passed.
+
+To implement the already-preregistered rule "select the first 10 remaining completed fixtures" without changing the statistical test:
+
+- request fixture-list page 1 first;
+- request page 2 only when page 1 does not contain 10 unseen IDs after exclusions;
+- merge the fixture metadata, apply the same deterministic kickoff-desc / fixture-ID-asc ordering, then select the first 10;
+- never request more than 2 fixture-list pages per league;
+- do not call any fixture odds endpoint until all five leagues have selected 10 unseen IDs.
+
+This keeps the worst-case provider budget at exactly 60 requests: 10 fixture-list requests + 50 odds requests.
+
 No paid endpoint or subscription is allowed.
 
 ## Frozen market representation
