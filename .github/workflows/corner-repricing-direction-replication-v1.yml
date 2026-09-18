@@ -1,0 +1,118 @@
+name: Corner Repricing Direction Replication V1
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    paths:
+      - 'corner_repricing_direction_replication_v1.py'
+      - 'tests/test_corner_repricing_direction_replication_v1.py'
+      - 'research/CORNER_REPRICING_DIRECTION_REPLICATION_V1.md'
+      - '.github/workflows/corner-repricing-direction-replication-v1.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  offline-contract:
+    if: github.event.action != 'edited' || contains(github.event.pull_request.body || '', '[run-corner-direction-replication]')
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests pandas numpy scipy scikit-learn==1.7.2 pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile frozen replication
+        run: python -m py_compile corner_repricing_direction_replication_v1.py
+      - name: Run regression tests
+        run: pytest -q tests/test_corner_repricing_direction_replication_v1.py tests/test_corner_market_state_repricing_v1.py
+      - name: Assert frozen constants
+        run: |
+          python - <<'PY'
+          import corner_repricing_direction_replication_v1 as r
+          assert r.EXPERIMENT_ID == 'CORNER_REPRICING_DIRECTION_REPLICATION_V1'
+          assert r.FIXTURES_PER_LEAGUE == 10
+          assert r.MAX_PROVIDER_REQUESTS == 60
+          assert r.MOVEMENT_QUANTILE == 0.75
+          assert r.LOGISTIC_C == 0.1
+          assert r.MIN_TOTAL_ROWS == 30
+          assert r.MIN_HIGH_RISK_NONZERO == 8
+          assert r.DIRECTION_MIN_POSITIVE_SHARE == 0.70
+          assert r.DIRECTION_MAX_PVALUE == 0.10
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+
+  live-free-replication:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(github.event.pull_request.body || '', '[run-corner-direction-replication]')
+    needs: offline-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      PYTHONPATH: .
+      FIVE_DOLLAR_FOOTBALL_API_KEY: ${{ secrets.FIVE_DOLLAR_FOOTBALL_API_KEY }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests pandas numpy scipy scikit-learn==1.7.2
+      - name: Require free API key without printing it
+        run: test -n "$FIVE_DOLLAR_FOOTBALL_API_KEY"
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Download immutable V1 source artifacts
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10503575942/zip > /tmp/pilot.zip
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10506736726/zip > /tmp/screen.zip
+      - name: Run frozen fresh free replication
+        run: |
+          python corner_repricing_direction_replication_v1.py \
+            --pilot-zip /tmp/pilot.zip \
+            --screen-zip /tmp/screen.zip \
+            --output-dir artifacts/corner_repricing_direction_replication_v1 \
+            > /tmp/corner-repricing-direction-replication-v1.log
+      - name: Assert result contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/corner_repricing_direction_replication_v1/report.json').read_text())
+          assert r['experiment_id']=='CORNER_REPRICING_DIRECTION_REPLICATION_V1'
+          assert r['research_only'] is True
+          assert r['betting_enabled'] is False
+          assert r['match_outcome_used'] is False
+          assert r['football_state_used'] is False
+          assert r['paid_subscription_used'] is False
+          assert r['provider_requests'] <= 60
+          assert r['selected_fixture_count'] == 50
+          assert r['verdict'] in {
+              'REPRICING_AND_DIRECTION_REPLICATED',
+              'REPRICING_REPLICATED_DIRECTION_NOT_CONFIRMED',
+              'NO_FRESH_REPLICATION',
+              'SAMPLE_TOO_SMALL',
+          }
+          print(json.dumps(r, indent=2, sort_keys=True))
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - name: Upload immutable fresh result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: corner-repricing-direction-replication-v1
+          path: |
+            artifacts/corner_repricing_direction_replication_v1
+            /tmp/corner-repricing-direction-replication-v1.log
+          if-no-files-found: warn
+          retention-days: 90
