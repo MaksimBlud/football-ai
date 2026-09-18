@@ -103,3 +103,49 @@ def test_cache_loader_uses_fixture_id(tmp_path):
     cache = s.load_market_cache(p)
     assert set(cache) == {"123"}
     assert cache["123"]["opening_line"] == 9.5
+
+
+def test_load_history_dir_reads_frozen_local_csv(monkeypatch, tmp_path):
+    monkeypatch.setattr(s, "LEAGUES", {"EPL": {"competition_code": "E0"}})
+    monkeypatch.setattr(s, "TRAIN_SEASONS", (("1617", "2016-17"),))
+    d = tmp_path / "EPL"
+    d.mkdir()
+    pd.DataFrame([{
+        "Date": "13/08/2016", "HomeTeam": "Man Utd", "AwayTeam": "Man City",
+        "HC": 5, "AC": 4, "FTHG": 1, "FTAG": 0, "FTR": "H"
+    }]).to_csv(d / "1617.csv", index=False)
+    out = s._load_history_dir(tmp_path)
+    assert list(out) == ["EPL"]
+    assert out["EPL"].iloc[0]["season"] == "2016-17"
+    assert out["EPL"].iloc[0]["HomeTeam"] == s.canonical_team("Man Utd")
+
+
+def test_load_replay_inputs_requires_exact_selected_market_ids(monkeypatch, tmp_path):
+    monkeypatch.setattr(s, "LEAGUES", {"EPL": {"competition_code": "E0"}})
+    monkeypatch.setattr(s, "FIXTURES_PER_LEAGUE", 1)
+    (tmp_path / "raw" / "fixtures").mkdir(parents=True)
+    (tmp_path / "normalized").mkdir(parents=True)
+    raw = {
+        "id": 123,
+        "kickoff_utc": "2026-09-10T18:00:00+00:00",
+        "status": "finished",
+        "teams": {"home": {"name": "Man Utd"}, "away": {"name": "Man City"}},
+        "goals": {"home": 1, "away": 0},
+        "corners": {"home": 5, "away": 4},
+        "cards": {"home": {"yellow": 1, "red": 0}, "away": {"yellow": 1, "red": 0}},
+    }
+    (tmp_path / "raw" / "fixtures" / "EPL.json").write_text(
+        __import__("json").dumps({"success": 1, "data": [raw]})
+    )
+    selected = {"EPL": [{
+        "fixture_id": "123", "league": "EPL", "kickoff_utc": raw["kickoff_utc"],
+        "provider_home_team": "Man Utd", "provider_away_team": "Man City",
+    }]}
+    (tmp_path / "selected_fixtures.json").write_text(__import__("json").dumps(selected))
+    (tmp_path / "normalized" / "opening_corner_markets.jsonl").write_text(
+        '{"fixture_id":"123","league":"EPL","opening_line":9.5,"opening_over":1.9,"opening_under":1.9}\n'
+    )
+    got_selected, current_rows, markets = s._load_replay_inputs(tmp_path)
+    assert got_selected["EPL"][0]["fixture_id"] == "123"
+    assert current_rows[0]["fixture_id"] == "123"
+    assert markets[0]["fixture_id"] == "123"
