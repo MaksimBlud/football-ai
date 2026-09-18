@@ -301,6 +301,61 @@ def _download_history(output_dir: Path) -> dict[str, pd.DataFrame]:
     return result
 
 
+def _load_history_dir(history_dir: Path) -> dict[str, pd.DataFrame]:
+    result: dict[str, pd.DataFrame] = {}
+    required = {"Date", "HomeTeam", "AwayTeam", "HC", "AC"}
+    for league in LEAGUES:
+        frames = []
+        for code, season in TRAIN_SEASONS:
+            path = history_dir / league / f"{code}.csv"
+            if not path.exists():
+                raise FileNotFoundError(path)
+            frame = pd.read_csv(path)
+            missing = required - set(frame.columns)
+            if missing:
+                raise RuntimeError(f"{league} {season}: missing historical columns {sorted(missing)}")
+            frame = frame.copy()
+            frame["season"] = season
+            frame["HomeTeam"] = frame["HomeTeam"].map(canonical_team)
+            frame["AwayTeam"] = frame["AwayTeam"].map(canonical_team)
+            if pd.to_numeric(frame["HC"], errors="coerce").isna().any() or pd.to_numeric(frame["AC"], errors="coerce").isna().any():
+                raise RuntimeError(f"{league} {season}: invalid corner counts")
+            frames.append(frame)
+        result[league] = pd.concat(frames, ignore_index=True)
+    return result
+
+
+def _load_replay_inputs(replay_dir: Path) -> tuple[dict[str, list[dict[str, Any]]], list[dict[str, Any]], list[dict[str, Any]]]:
+    selected_path = replay_dir / "selected_fixtures.json"
+    market_path = replay_dir / "normalized" / "opening_corner_markets.jsonl"
+    if not selected_path.exists() or not market_path.exists():
+        raise RuntimeError("offline replay artifact is incomplete")
+    selected = json.loads(selected_path.read_text())
+    current_rows: list[dict[str, Any]] = []
+    for league in LEAGUES:
+        fixture_path = replay_dir / "raw" / "fixtures" / f"{league}.json"
+        if not fixture_path.exists():
+            raise RuntimeError(f"offline replay missing fixture payload for {league}")
+        payload = json.loads(fixture_path.read_text())
+        for raw in payload.get("data", []):
+            if not isinstance(raw, dict):
+                continue
+            row = _fixture_row(raw, league)
+            if row is None:
+                continue
+            kickoff = pd.to_datetime(row["kickoff_utc"], utc=True)
+            if pd.Timestamp("2026-07-01", tz="UTC") <= kickoff < pd.Timestamp("2027-07-01", tz="UTC"):
+                current_rows.append(row)
+    markets = list(load_market_cache(market_path).values())
+    if any(len(selected.get(league, [])) != FIXTURES_PER_LEAGUE for league in LEAGUES):
+        raise RuntimeError("offline replay does not contain the frozen 11-per-league sample")
+    selected_ids = {str(row["fixture_id"]) for rows in selected.values() for row in rows}
+    market_ids = {str(row["fixture_id"]) for row in markets}
+    if selected_ids != market_ids:
+        raise RuntimeError("offline replay market rows do not exactly match frozen fixture ids")
+    return selected, current_rows, markets
+
+
 def _build_features(history: pd.DataFrame, current_rows: list[dict[str, Any]], league: str) -> pd.DataFrame:
     hist = history.copy()
     current = pd.DataFrame([r for r in current_rows if r["league"] == league])
@@ -418,9 +473,45 @@ def run_screen(output_dir: Path, cache_path: Path | None = None, key: str | None
     _write_json(output_dir / "report.json", report); return report
 
 
+def run_offline_replay(output_dir: Path, replay_dir: Path, history_dir: Path) -> dict[str, Any]:
+    selected, current_rows, markets = _load_replay_inputs(replay_dir)
+    history = _load_history_dir(history_dir)
+    feature_frames = {league: _build_features(history[league], current_rows, league) for league in LEAGUES}
+    models = _fit_models(feature_frames)
+    detail, result = evaluate(selected, markets, feature_frames, models)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    detail.to_csv(output_dir / "evaluation_rows.csv", index=False)
+    report = {
+        "experiment_id": EXPERIMENT_ID,
+        "research_only": True,
+        "betting_enabled": False,
+        "paid_subscription_used": False,
+        "provider_requests": 0,
+        "provider_request_budget": MAX_PROVIDER_REQUESTS,
+        "selected_fixtures": sum(len(v) for v in selected.values()),
+        "market_rows": len(markets),
+        "cache_rows_available": len(markets),
+        "offline_replay": True,
+        **result,
+    }
+    _write_json(output_dir / "report.json", report)
+    return report
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(); parser.add_argument("--output-dir", type=Path, default=Path("artifacts/free_corners_signal_screen_v1")); parser.add_argument("--cached-market-jsonl", type=Path); args = parser.parse_args()
-    print(json.dumps(run_screen(args.output_dir, args.cached_market_jsonl), indent=2, sort_keys=True))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--output-dir", type=Path, default=Path("artifacts/free_corners_signal_screen_v1"))
+    parser.add_argument("--cached-market-jsonl", type=Path)
+    parser.add_argument("--offline-replay-dir", type=Path)
+    parser.add_argument("--history-dir", type=Path)
+    args = parser.parse_args()
+    if args.offline_replay_dir is not None or args.history_dir is not None:
+        if args.offline_replay_dir is None or args.history_dir is None:
+            parser.error("--offline-replay-dir and --history-dir must be supplied together")
+        report = run_offline_replay(args.output_dir, args.offline_replay_dir, args.history_dir)
+    else:
+        report = run_screen(args.output_dir, args.cached_market_jsonl)
+    print(json.dumps(report, indent=2, sort_keys=True))
 
 
 if __name__ == "__main__": main()
