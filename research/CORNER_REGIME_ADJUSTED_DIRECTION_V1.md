@@ -69,6 +69,20 @@ To implement the already-preregistered rule "select the first 10 remaining compl
 
 This keeps the worst-case provider budget at exactly 60 requests: 10 fixture-list requests + 50 odds requests.
 
+### Metadata-only inventory amendment
+
+The second live attempt on workflow run `35361107211` again stopped before any fixture odds request. Its uploaded raw fixture metadata proved that the current Free Bundesliga inventory contains only **27** finished fixtures and reports `has_more=false`; after excluding the 21 Bundesliga fixture IDs already frozen in the first two samples, exactly **6** unseen Bundesliga fixtures remain.
+
+Because no third-sample odds or closing movement had been opened, the sample rule is amended once, using fixture metadata only:
+
+- select up to **10** unseen fixtures per league;
+- require at least **6** unseen fixtures in every league;
+- if a league's Free fixture inventory is exhausted below 10, take all available unseen fixtures and do **not** backfill the shortfall from another league;
+- all five league selections must be frozen before the first fixture odds request;
+- the statistical feature, direction hypothesis, regime blocks, concordance metric, permutation test and confirmation gates remain unchanged.
+
+With the current metadata this implies an expected selection of 46 fixtures: 10 each from EPL, La Liga, Serie A and Ligue 1, plus 6 Bundesliga fixtures.
+
 No paid endpoint or subscription is allowed.
 
 ## Frozen market representation
