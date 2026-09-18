@@ -21,6 +21,8 @@ def _fresh_row(fid, league, date, opening_lambda, delta):
 def test_frozen_contract_constants():
     assert m.EXPERIMENT_ID == "CORNER_REGIME_ADJUSTED_DIRECTION_V1"
     assert m.FIXTURES_PER_LEAGUE == 10
+    assert m.MAX_FIXTURE_PAGES == 2
+    assert len(m.replication.LEAGUES) * (m.MAX_FIXTURE_PAGES + m.FIXTURES_PER_LEAGUE) == m.replication.MAX_PROVIDER_REQUESTS
     assert m.MIN_TOTAL_ROWS == 30
     assert m.MIN_LEAGUES_WITH_PAIRS == 4
     assert m.MIN_REGIME_BLOCKS == 8
@@ -53,6 +55,90 @@ def test_prior_artifact_reader_uses_selected_fixture_metadata_only(tmp_path):
     assert len(fixture_ids) == 50
     assert "secret" not in fixture_ids
 
+
+
+def test_third_sample_paginates_fixture_metadata_before_any_odds(monkeypatch, tmp_path):
+    reverse_leagues = {value: key for key, value in m.replication.LEAGUES.items()}
+    excluded = set()
+
+    def fixture(fid, kickoff):
+        return {
+            "id": fid,
+            "status": "finished",
+            "kickoff_utc": kickoff,
+            "teams": {
+                "home": {"name": f"H{fid}"},
+                "away": {"name": f"A{fid}"},
+            },
+        }
+
+    page_payloads = {}
+    for league_num, (league, league_id) in enumerate(m.replication.LEAGUES.items()):
+        page1 = []
+        for idx in range(50):
+            fid = f"{league_num + 1}{idx:04d}"
+            page1.append(fixture(fid, f"2026-09-{28 - (idx % 20):02d}T12:00:00Z"))
+            if idx < 44:
+                excluded.add(fid)
+        page2 = [
+            fixture(
+                f"{league_num + 1}9{idx:03d}",
+                f"2026-08-{28 - idx:02d}T12:00:00Z",
+            )
+            for idx in range(10)
+        ]
+        page_payloads[(league_id, 1)] = {"success": 1, "data": page1}
+        page_payloads[(league_id, 2)] = {"success": 1, "data": page2}
+
+    class FakeClient:
+        last = None
+
+        def __init__(self, key):
+            self.key = key
+            self.request_count = 0
+            self.calls = []
+            FakeClient.last = self
+
+        def get(self, path, *, params):
+            self.request_count += 1
+            self.calls.append((path, dict(params)))
+            if "/leagues/" in path:
+                league_id = path.split("/")[3]
+                return page_payloads[(league_id, int(params["page"]))]
+            return {"success": 1, "data": []}
+
+    monkeypatch.setattr(m.replication, "ProviderClient", FakeClient)
+    monkeypatch.setattr(
+        m.replication,
+        "normalize_corner_odds",
+        lambda payload, selected_fixture: selected_fixture,
+    )
+    monkeypatch.setattr(
+        m.replication,
+        "_normalize_holdout_row",
+        lambda row: {
+            "fixture_id": row["fixture_id"],
+            "league": row["league"],
+            "kickoff_utc": row["kickoff_utc"],
+            "opening_lambda": 9.0,
+            "closing_lambda": 9.1,
+            "centre_delta": 0.1,
+            "movement_magnitude": 0.1,
+        },
+    )
+
+    fresh, request_count, selected = m.acquire_third_holdout(
+        tmp_path,
+        key="test",
+        excluded_ids=excluded,
+    )
+
+    assert len(fresh) == 50
+    assert sum(len(rows) for rows in selected.values()) == 50
+    assert request_count == m.replication.MAX_PROVIDER_REQUESTS
+    calls = FakeClient.last.calls
+    assert all("/leagues/" in path for path, _ in calls[:10])
+    assert all("/fixtures/" in path and "/odds" in path for path, _ in calls[10:])
 
 def test_pairwise_concordance_ignores_common_league_day_shift():
     rows = []
