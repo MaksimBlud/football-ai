@@ -1,0 +1,258 @@
+name: Free Corners Signal Screen V1
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    paths:
+      - 'free_corners_signal_screen_v1.py'
+      - 'free_corners_rate_limit_retry.py'
+      - 'tests/test_free_corners_signal_screen_v1.py'
+      - 'tests/test_free_corners_rate_limit_retry.py'
+      - 'research/FREE_CORNERS_SIGNAL_SCREEN_V1.md'
+      - '.github/workflows/free-corners-signal-screen-v1.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  offline-contract-tests:
+    if: github.event.action != 'edited' || contains(github.event.pull_request.body || '', '[run-free-corners-screen]') || contains(github.event.pull_request.body || '', '[run-free-corners-replay]')
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install requests pandas numpy scipy scikit-learn==1.7.2 pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile free screen and rate-limit transport
+        run: python -m py_compile free_corners_signal_screen_v1.py free_corners_rate_limit_retry.py
+      - name: Run regression tests
+        run: pytest -q tests/test_free_corners_signal_screen_v1.py tests/test_free_corners_rate_limit_retry.py
+      - name: Assert frozen constants
+        run: |
+          python - <<'PY'
+          import free_corners_signal_screen_v1 as s
+          import free_corners_rate_limit_retry as r
+          assert s.EXPERIMENT_ID == 'FREE_CORNERS_SIGNAL_SCREEN_V1'
+          assert len(s.LEAGUES) == 5
+          assert s.FIXTURES_PER_LEAGUE == 11
+          assert s.MAX_PROVIDER_REQUESTS == 60
+          assert s.MIN_POOLED_ROWS == 40
+          assert s.BLEND_WEIGHT_FOOTBALL == 0.25
+          assert s.REQUEST_INTERVAL_SECONDS >= 3.0
+          assert r.MAX_RATE_LIMIT_RETRIES == 2
+          assert r.MAX_RESET_WAIT_SECONDS <= 3700
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+
+  live-free-screen:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(github.event.pull_request.body || '', '[run-free-corners-screen]')
+    needs: offline-contract-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      PYTHONPATH: .
+      FIVE_DOLLAR_FOOTBALL_API_KEY: ${{ secrets.FIVE_DOLLAR_FOOTBALL_API_KEY }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install requests pandas numpy scipy scikit-learn==1.7.2
+      - name: Require free API key without printing it
+        run: test -n "$FIVE_DOLLAR_FOOTBALL_API_KEY"
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Reuse immutable 15-match source-pilot market cache
+        run: |
+          mkdir -p /tmp/five-dollar-pilot
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10503575942/zip > /tmp/five-dollar-pilot.zip
+          unzip -q /tmp/five-dollar-pilot.zip -d /tmp/five-dollar-pilot
+          CACHE=$(find /tmp/five-dollar-pilot -name bet365_corner_opening_closing.jsonl -type f | head -n 1)
+          test -n "$CACHE"
+          echo "CACHE_PATH=$CACHE" >> "$GITHUB_ENV"
+          echo "Reusing prior source-pilot cache; API key and cached prices are not printed"
+      - name: Run frozen free-only OOT screen
+        run: |
+          python free_corners_rate_limit_retry.py \
+            --cached-market-jsonl "$CACHE_PATH" \
+            --output-dir artifacts/free_corners_signal_screen_v1 \
+            > /tmp/free-corners-screen.log
+      - name: Assert free-only result contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/free_corners_signal_screen_v1/report.json').read_text())
+          assert r['experiment_id']=='FREE_CORNERS_SIGNAL_SCREEN_V1'
+          assert r['research_only'] is True
+          assert r['betting_enabled'] is False
+          assert r['paid_subscription_used'] is False
+          assert r['provider_requests'] <= 60
+          assert r['provider_request_budget'] == 60
+          assert r['selected_fixtures'] == 55
+          assert r['pooled']['verdict'] in {'STRONG_SIGNAL_SCREEN','INDICATIVE_SIGNAL_SCREEN','NO_CLEAR_SIGNAL_SCREEN','SAMPLE_TOO_SMALL'}
+          print(json.dumps(r, indent=2, sort_keys=True))
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - name: Upload free screen artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: free-corners-signal-screen-v1
+          path: |
+            artifacts/free_corners_signal_screen_v1
+            /tmp/free-corners-screen.log
+          if-no-files-found: warn
+          retention-days: 90
+
+
+  offline-artifact-replay:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(github.event.pull_request.body || '', '[run-free-corners-replay]')
+    needs: offline-contract-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONPATH: .
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install requests pandas numpy scipy scikit-learn==1.7.2 pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Reuse completed 55-match Bet365 acquisition artifact
+        run: |
+          mkdir -p /tmp/free-corners-acquisition
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10506736726/zip > /tmp/free-corners-acquisition.zip
+          unzip -q /tmp/free-corners-acquisition.zip -d /tmp/free-corners-acquisition
+          REPLAY_DIR=$(dirname "$(find /tmp/free-corners-acquisition -name selected_fixtures.json -type f | head -n 1)")
+          test -f "$REPLAY_DIR/normalized/opening_corner_markets.jsonl"
+          test "$(wc -l < "$REPLAY_DIR/normalized/opening_corner_markets.jsonl")" -eq 55
+          echo "REPLAY_DIR=$REPLAY_DIR" >> "$GITHUB_ENV"
+          echo "Reusing 55 frozen Bet365 market rows; no provider request will be made"
+      - name: Materialize free Football-Data corner history from fixed GitHub mirrors
+        run: |
+          python - <<'PY'
+          import base64
+          import os
+          from pathlib import Path
+          from urllib.parse import quote
+
+          import pandas as pd
+          import requests
+
+          token = os.environ["GH_TOKEN"]
+          headers = {
+              "Authorization": f"Bearer {token}",
+              "Accept": "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2022-11-28",
+          }
+          leagues = {
+              "EPL": "E0",
+              "LA_LIGA": "SP1",
+              "SERIE_A": "I1",
+              "BUNDESLIGA": "D1",
+              "LIGUE_1": "F1",
+          }
+          old = [
+              ("1617", 9), ("1718", 8), ("1819", 7), ("1920", 6),
+              ("2021", 5), ("2122", 4), ("2223", 3), ("2324", 2),
+              ("2425", 1),
+          ]
+          repo_old = "simonsoj90/football-corners"
+          ref_old = "9446a5e82e7a3e6d00ea92402549e03212f6011b"
+          repo_2526 = "devaskswhy/Ball_Knowledge"
+          ref_2526 = "8800a55381d84d0cf8845c6613a71e6f82fd9580"
+          root = Path("/tmp/free-corners-history")
+
+          def fetch(repo: str, ref: str, path: str) -> bytes:
+              encoded = quote(path, safe="/")
+              url = f"https://api.github.com/repos/{repo}/contents/{encoded}?ref={ref}"
+              response = requests.get(url, headers=headers, timeout=60)
+              response.raise_for_status()
+              payload = response.json()
+              return base64.b64decode(payload["content"])
+
+          for league, comp in leagues.items():
+              target = root / league
+              target.mkdir(parents=True, exist_ok=True)
+              for code, idx in old:
+                  if code == "2425":
+                      raw = fetch(
+                          "Mentat-Uran/ScoutFootball_for_World_Cup",
+                          "bc1c474bb74984638ddb1b196678ff0fe9d79896",
+                          f"data/raw/football_data/2425/{comp}.csv",
+                      )
+                  else:
+                      source_idx = idx + 1 if comp == "I1" else idx
+                      raw = fetch(repo_old, ref_old, f"data/raw/{comp} ({source_idx}).csv")
+                  path = target / f"{code}.csv"
+                  path.write_bytes(raw)
+                  frame = pd.read_csv(path)
+                  if not {"Date", "HomeTeam", "AwayTeam", "HC", "AC"} <= set(frame.columns):
+                      raise SystemExit(f"{league} {code}: mirror missing required corner columns")
+                  if len(frame) < 250:
+                      raise SystemExit(f"{league} {code}: incomplete historical match rows")
+              raw = fetch(repo_2526, ref_2526, f"data/2526/{comp}.csv")
+              path = target / "2526.csv"
+              path.write_bytes(raw)
+              frame = pd.read_csv(path)
+              expected = 380 if comp in {"E0", "SP1", "I1"} else 306
+              if not {"Date", "HomeTeam", "AwayTeam", "HC", "AC"} <= set(frame.columns):
+                  raise SystemExit(f"{league} 2526: mirror missing required corner columns")
+              if len(frame) != expected or frame[["HC", "AC"]].isna().any().any():
+                  raise SystemExit(f"{league} 2526: expected {expected} complete rows, got {len(frame)}")
+          print("Materialized frozen 2016-17..2025-26 HC/AC history for all five leagues")
+          PY
+      - name: Run frozen offline OOT replay
+        run: |
+          rm -rf artifacts/free_corners_signal_screen_v1
+          python free_corners_signal_screen_v1.py \
+            --offline-replay-dir "$REPLAY_DIR" \
+            --history-dir /tmp/free-corners-history \
+            --output-dir artifacts/free_corners_signal_screen_v1 \
+            > /tmp/free-corners-replay.log
+      - name: Assert frozen replay result contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/free_corners_signal_screen_v1/report.json').read_text())
+          assert r['experiment_id']=='FREE_CORNERS_SIGNAL_SCREEN_V1'
+          assert r['research_only'] is True
+          assert r['betting_enabled'] is False
+          assert r['paid_subscription_used'] is False
+          assert r['offline_replay'] is True
+          assert r['provider_requests'] == 0
+          assert r['selected_fixtures'] == 55
+          assert r['market_rows'] == 55
+          assert r['pooled']['verdict'] in {'STRONG_SIGNAL_SCREEN','INDICATIVE_SIGNAL_SCREEN','NO_CLEAR_SIGNAL_SCREEN','SAMPLE_TOO_SMALL'}
+          print(json.dumps(r, indent=2, sort_keys=True))
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - name: Upload frozen replay artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: free-corners-signal-screen-v1-replay
+          path: |
+            artifacts/free_corners_signal_screen_v1
+            /tmp/free-corners-replay.log
+          if-no-files-found: warn
+          retention-days: 90
