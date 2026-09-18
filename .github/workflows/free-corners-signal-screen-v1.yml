@@ -191,7 +191,14 @@ jobs:
               target = root / league
               target.mkdir(parents=True, exist_ok=True)
               for code, idx in old:
-                  raw = fetch(repo_old, ref_old, f"data/raw/{comp} ({idx}).csv")
+                  if league == "SERIE_A" and code == "2425":
+                      raw = fetch(
+                          "Mentat-Uran/ScoutFootball_for_World_Cup",
+                          "bc1c474bb74984638ddb1b196678ff0fe9d79896",
+                          "data/raw/football_data/2425/I1.csv",
+                      )
+                  else:
+                      raw = fetch(repo_old, ref_old, f"data/raw/{comp} ({idx}).csv")
                   path = target / f"{code}.csv"
                   path.write_bytes(raw)
                   frame = pd.read_csv(path)
