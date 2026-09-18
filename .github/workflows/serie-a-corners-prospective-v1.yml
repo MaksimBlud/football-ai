@@ -7,15 +7,6 @@ on:
       - 'tests/test_serie_a_corners_prospective_v1.py'
       - 'research/SERIE_A_CORNERS_PROSPECTIVE_V1.md'
       - '.github/workflows/serie-a-corners-prospective-v1.yml'
-  push:
-    branches: [main]
-    paths:
-      - 'serie_a_corners_prospective_v1.py'
-      - 'tests/test_serie_a_corners_prospective_v1.py'
-      - 'research/SERIE_A_CORNERS_PROSPECTIVE_V1.md'
-      - '.github/workflows/serie-a-corners-prospective-v1.yml'
-  schedule:
-    - cron: '17 4 * * *'
   workflow_dispatch:
 
 permissions:
