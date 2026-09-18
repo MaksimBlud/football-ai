@@ -37,6 +37,7 @@ jobs:
           import corner_regime_adjusted_direction_v1 as r
           assert r.EXPERIMENT_ID == 'CORNER_REGIME_ADJUSTED_DIRECTION_V1'
           assert r.FIXTURES_PER_LEAGUE == 10
+          assert r.MIN_SELECTED_PER_LEAGUE == 6
           assert r.MIN_TOTAL_ROWS == 30
           assert r.MIN_LEAGUES_WITH_PAIRS == 4
           assert r.MIN_REGIME_BLOCKS == 8
@@ -99,7 +100,7 @@ jobs:
           assert r['prior_replication_closing_outcomes_used_for_tuning'] is False
           assert r['previous_replication_excluded_fixture_ids'] == 50
           assert r['provider_requests'] <= 60
-          assert r['selected_fixture_count'] == 50
+          assert 30 <= r['selected_fixture_count'] <= 50
           assert r['verdict'] in {
               'INDIVIDUAL_DIRECTION_DISCRIMINATION_REPLICATED',
               'INDIVIDUAL_DIRECTION_DISCRIMINATION_NOT_CONFIRMED',
