@@ -191,11 +191,11 @@ jobs:
               target = root / league
               target.mkdir(parents=True, exist_ok=True)
               for code, idx in old:
-                  if league == "SERIE_A" and code == "2425":
+                  if code == "2425":
                       raw = fetch(
                           "Mentat-Uran/ScoutFootball_for_World_Cup",
                           "bc1c474bb74984638ddb1b196678ff0fe9d79896",
-                          "data/raw/football_data/2425/I1.csv",
+                          f"data/raw/football_data/2425/{comp}.csv",
                       )
                   else:
                       raw = fetch(repo_old, ref_old, f"data/raw/{comp} ({idx}).csv")
