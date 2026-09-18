@@ -2,6 +2,7 @@ import json
 import zipfile
 
 import pandas as pd
+import pytest
 
 import corner_regime_adjusted_direction_v1 as m
 
@@ -278,3 +279,118 @@ def test_sample_gate_fails_closed_with_too_few_regime_blocks():
     assert report["sample_gate_pass"] is False
     assert report["permutation_pvalue"] is None
     assert report["verdict"] == "SAMPLE_TOO_SMALL"
+
+def test_resume_reuses_frozen_selection_and_fetches_only_missing_odds(monkeypatch, tmp_path):
+    selected = {}
+    existing_ids = set()
+    for league_num, league in enumerate(m.replication.LEAGUES):
+        rows = []
+        for idx in range(m.MIN_SELECTED_PER_LEAGUE):
+            fixture_id = str((league_num + 1) * 1000 + idx)
+            rows.append(
+                {
+                    "fixture_id": fixture_id,
+                    "league": league,
+                    "kickoff_utc": "2026-09-10T12:00:00Z",
+                    "home_team": f"H{fixture_id}",
+                    "away_team": f"A{fixture_id}",
+                }
+            )
+            if idx < 2:
+                existing_ids.add(fixture_id)
+        selected[league] = rows
+
+    resume_zip = tmp_path / "resume.zip"
+    with zipfile.ZipFile(resume_zip, "w") as zf:
+        zf.writestr(
+            "artifacts/corner_regime_adjusted_direction_v1/selected_fixtures.json",
+            json.dumps(selected),
+        )
+        for fixture_id in sorted(existing_ids):
+            zf.writestr(
+                f"artifacts/corner_regime_adjusted_direction_v1/raw/odds/{fixture_id}.json",
+                json.dumps({"success": 1, "data": []}),
+            )
+
+    class FakeClient:
+        last = None
+
+        def __init__(self, key):
+            self.request_count = 0
+            self.calls = []
+            FakeClient.last = self
+
+        def get(self, path, *, params):
+            assert "/leagues/" not in path
+            assert path.endswith("/odds")
+            self.request_count += 1
+            self.calls.append((path, dict(params)))
+            return {"success": 1, "data": []}
+
+    monkeypatch.setattr(m.replication, "ProviderClient", FakeClient)
+    monkeypatch.setattr(m.replication, "normalize_corner_odds", lambda payload, fixture: fixture)
+    monkeypatch.setattr(
+        m.replication,
+        "_normalize_holdout_row",
+        lambda row: {
+            "fixture_id": row["fixture_id"],
+            "league": row["league"],
+            "kickoff_utc": row["kickoff_utc"],
+            "opening_lambda": 9.0,
+            "closing_lambda": 9.1,
+            "centre_delta": 0.1,
+            "movement_magnitude": 0.1,
+        },
+    )
+
+    fresh, requests, restored, reused, missing = m.resume_third_holdout(
+        tmp_path / "out",
+        key="test",
+        excluded_ids=set(),
+        resume_zip=resume_zip,
+    )
+
+    assert sum(len(rows) for rows in restored.values()) == 30
+    assert len(fresh) == 30
+    assert reused == 10
+    assert missing == 20
+    assert requests == 20
+    assert len(FakeClient.last.calls) == 20
+    assert all("/fixtures/" in path and "/odds" in path for path, _ in FakeClient.last.calls)
+    assert (tmp_path / "out" / "selected_fixtures.json").exists()
+    assert len(list((tmp_path / "out" / "raw" / "odds").glob("*.json"))) == 30
+
+
+def test_resume_rejects_overlap_with_prior_frozen_samples(tmp_path):
+    selected = {}
+    overlap_id = None
+    for league_num, league in enumerate(m.replication.LEAGUES):
+        rows = []
+        for idx in range(m.MIN_SELECTED_PER_LEAGUE):
+            fixture_id = str((league_num + 10) * 1000 + idx)
+            overlap_id = overlap_id or fixture_id
+            rows.append(
+                {
+                    "fixture_id": fixture_id,
+                    "league": league,
+                    "kickoff_utc": "2026-09-10T12:00:00Z",
+                    "home_team": f"H{fixture_id}",
+                    "away_team": f"A{fixture_id}",
+                }
+            )
+        selected[league] = rows
+
+    resume_zip = tmp_path / "resume-overlap.zip"
+    with zipfile.ZipFile(resume_zip, "w") as zf:
+        zf.writestr(
+            "artifacts/corner_regime_adjusted_direction_v1/selected_fixtures.json",
+            json.dumps(selected),
+        )
+
+    with pytest.raises(RuntimeError, match="overlaps a prior frozen sample"):
+        m.load_resume_state(
+            resume_zip,
+            tmp_path / "out-overlap",
+            excluded_ids={overlap_id},
+        )
+
