@@ -67,6 +67,75 @@ def load_previous_selected_fixture_ids(artifact_zip: Path) -> set[str]:
     return fixture_ids
 
 
+def load_resume_state(
+    resume_zip: Path,
+    output_dir: Path,
+    *,
+    excluded_ids: set[str],
+) -> tuple[dict[str, list[dict[str, Any]]], dict[str, dict[str, Any]]]:
+    """Restore the immutable selected fixture set and already captured raw odds.
+
+    This path is acquisition-only recovery after the bounded live-run timeout. It
+    never performs fixture discovery and rejects any selection overlap or raw odds
+    response that does not belong to the frozen selected IDs.
+    """
+    with zipfile.ZipFile(resume_zip) as zf:
+        selected_names = [name for name in zf.namelist() if name.endswith("selected_fixtures.json")]
+        if len(selected_names) != 1:
+            raise RuntimeError(
+                "resume artifact must contain exactly one selected_fixtures.json, "
+                f"got {len(selected_names)}"
+            )
+        selected = json.loads(zf.read(selected_names[0]).decode("utf-8"))
+        if not isinstance(selected, dict):
+            raise RuntimeError("resume selected_fixtures.json must be an object")
+
+        selected_ids: set[str] = set()
+        for league in replication.LEAGUES:
+            rows = selected.get(league)
+            if not isinstance(rows, list):
+                raise RuntimeError(f"resume selection missing league {league}")
+            if not MIN_SELECTED_PER_LEAGUE <= len(rows) <= FIXTURES_PER_LEAGUE:
+                raise RuntimeError(
+                    f"resume {league}: expected {MIN_SELECTED_PER_LEAGUE}..{FIXTURES_PER_LEAGUE} "
+                    f"selected fixtures, got {len(rows)}"
+                )
+            for row in rows:
+                if not isinstance(row, dict):
+                    raise RuntimeError(f"resume {league}: selected fixture is not an object")
+                fixture_id = str(row.get("fixture_id") or "").strip()
+                if not fixture_id:
+                    raise RuntimeError(f"resume {league}: selected fixture missing fixture_id")
+                if str(row.get("league") or "") != league:
+                    raise RuntimeError(f"resume {league}: selected fixture league mismatch")
+                if fixture_id in excluded_ids:
+                    raise RuntimeError("resume selection overlaps a prior frozen sample")
+                if fixture_id in selected_ids:
+                    raise RuntimeError("resume selection contains duplicate fixture IDs")
+                selected_ids.add(fixture_id)
+
+        raw_odds: dict[str, dict[str, Any]] = {}
+        for name in zf.namelist():
+            if "/raw/odds/" not in name or not name.endswith(".json"):
+                continue
+            fixture_id = Path(name).stem
+            if fixture_id not in selected_ids:
+                raise RuntimeError(
+                    f"resume artifact contains raw odds for non-selected fixture {fixture_id}"
+                )
+            if fixture_id in raw_odds:
+                raise RuntimeError(f"resume artifact duplicates raw odds for {fixture_id}")
+            payload = json.loads(zf.read(name).decode("utf-8"))
+            if not isinstance(payload, dict):
+                raise RuntimeError(f"resume raw odds for {fixture_id} must be an object")
+            raw_odds[fixture_id] = payload
+
+    _write_json(output_dir / "selected_fixtures.json", selected)
+    for fixture_id, payload in raw_odds.items():
+        _write_json(output_dir / "raw" / "odds" / f"{fixture_id}.json", payload)
+    return selected, raw_odds
+
+
 def _add_regime_columns(frame: pd.DataFrame) -> pd.DataFrame:
     out = frame.copy()
     kickoff = pd.to_datetime(out["kickoff_utc"], utc=True, errors="coerce")
@@ -373,6 +442,52 @@ def acquire_third_holdout(
 
     return pd.DataFrame(normalized_rows), client.request_count, selected
 
+
+def resume_third_holdout(
+    output_dir: Path,
+    *,
+    key: str,
+    excluded_ids: set[str],
+    resume_zip: Path,
+) -> tuple[pd.DataFrame, int, dict[str, list[dict[str, Any]]], int, int]:
+    """Resume only missing odds for the already frozen third-sample selection."""
+    selected, raw_odds = load_resume_state(
+        resume_zip,
+        output_dir,
+        excluded_ids=excluded_ids,
+    )
+    selected_count = sum(len(rows) for rows in selected.values())
+    reused_count = len(raw_odds)
+    missing_at_start = selected_count - reused_count
+    client = replication.ProviderClient(key=key)
+    normalized_rows: list[dict[str, Any]] = []
+
+    for league in replication.LEAGUES:
+        for fixture in selected[league]:
+            fixture_id = str(fixture["fixture_id"])
+            payload = raw_odds.get(fixture_id)
+            if payload is None:
+                payload = client.get(
+                    f"/v1/fixtures/{fixture_id}/odds",
+                    params={"market": "corner"},
+                )
+                _write_json(output_dir / "raw" / "odds" / f"{fixture_id}.json", payload)
+            row = replication.normalize_corner_odds(payload, fixture)
+            if row is None:
+                continue
+            normalized = replication._normalize_holdout_row(row)
+            if normalized is not None:
+                normalized_rows.append(normalized)
+
+    return (
+        pd.DataFrame(normalized_rows),
+        client.request_count,
+        selected,
+        reused_count,
+        missing_at_start,
+    )
+
+
 def run(
     pilot_zip: Path,
     screen_zip: Path,
@@ -380,6 +495,7 @@ def run(
     output_dir: Path,
     *,
     key: str | None = None,
+    resume_zip: Path | None = None,
 ) -> dict[str, Any]:
     v1_frame = v1.load_market_rows(pilot_zip, screen_zip)
     if len(v1_frame) != 55:
@@ -395,11 +511,29 @@ def run(
         raise RuntimeError("prior 50-row replication overlaps original V1 fixture IDs")
 
     excluded_ids = old_ids | previous_ids
-    fresh, request_count, selected = acquire_third_holdout(
-        output_dir,
-        key=replication._require_key(key),
-        excluded_ids=excluded_ids,
-    )
+    if resume_zip is None:
+        fresh, request_count, selected = acquire_third_holdout(
+            output_dir,
+            key=replication._require_key(key),
+            excluded_ids=excluded_ids,
+        )
+        acquisition_mode = "FRESH_DISCOVERY"
+        reused_raw_odds_responses = 0
+        missing_odds_files_at_resume_start = 0
+    else:
+        (
+            fresh,
+            request_count,
+            selected,
+            reused_raw_odds_responses,
+            missing_odds_files_at_resume_start,
+        ) = resume_third_holdout(
+            output_dir,
+            key=replication._require_key(key),
+            excluded_ids=excluded_ids,
+            resume_zip=resume_zip,
+        )
+        acquisition_mode = "IMMUTABLE_SAME_SAMPLE_RESUME"
     fresh_ids = set(fresh["fixture_id"].astype(str)) if not fresh.empty else set()
     if fresh_ids & excluded_ids:
         raise RuntimeError("third-sample eligible rows overlap a prior sample")
@@ -415,6 +549,10 @@ def run(
             "selected_fixture_count": int(sum(len(v) for v in selected.values())),
             "provider_requests": int(request_count),
             "provider_request_budget": replication.MAX_PROVIDER_REQUESTS,
+            "acquisition_mode": acquisition_mode,
+            "resume_artifact_used": bool(resume_zip is not None),
+            "reused_raw_odds_responses": int(reused_raw_odds_responses),
+            "missing_odds_files_at_resume_start": int(missing_odds_files_at_resume_start),
             "paid_subscription_used": False,
             "prior_replication_closing_outcomes_used_for_tuning": False,
         }
@@ -428,6 +566,7 @@ def main() -> None:
     parser.add_argument("--pilot-zip", type=Path, required=True)
     parser.add_argument("--screen-zip", type=Path, required=True)
     parser.add_argument("--previous-replication-zip", type=Path, required=True)
+    parser.add_argument("--resume-zip", type=Path)
     parser.add_argument(
         "--output-dir",
         type=Path,
@@ -439,6 +578,7 @@ def main() -> None:
         args.screen_zip,
         args.previous_replication_zip,
         args.output_dir,
+        resume_zip=args.resume_zip,
     )
     print(json.dumps(report, indent=2, sort_keys=True))
 
