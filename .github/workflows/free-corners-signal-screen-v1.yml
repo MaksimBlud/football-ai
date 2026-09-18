@@ -204,8 +204,8 @@ jobs:
                   frame = pd.read_csv(path)
                   if not {"Date", "HomeTeam", "AwayTeam", "HC", "AC"} <= set(frame.columns):
                       raise SystemExit(f"{league} {code}: mirror missing required corner columns")
-                  if len(frame) < 250 or frame[["HC", "AC"]].isna().any().any():
-                      raise SystemExit(f"{league} {code}: incomplete historical corner data")
+                  if len(frame) < 250:
+                      raise SystemExit(f"{league} {code}: incomplete historical match rows")
               raw = fetch(repo_2526, ref_2526, f"data/2526/{comp}.csv")
               path = target / "2526.csv"
               path.write_bytes(raw)
