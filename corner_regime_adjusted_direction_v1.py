@@ -20,6 +20,7 @@ import corner_repricing_direction_replication_v1 as replication
 
 EXPERIMENT_ID = "CORNER_REGIME_ADJUSTED_DIRECTION_V1"
 FIXTURES_PER_LEAGUE = 10
+MIN_SELECTED_PER_LEAGUE = 6
 MAX_FIXTURE_PAGES = 2
 MIN_TOTAL_ROWS = 30
 MIN_LEAGUES_WITH_PAIRS = 4
@@ -310,11 +311,7 @@ def acquire_third_holdout(
     key: str,
     excluded_ids: set[str],
 ) -> tuple[pd.DataFrame, int, dict[str, list[dict[str, Any]]]]:
-    """Acquire the frozen third sample with bounded two-page fixture discovery.
-
-    Pagination changes only fixture-list discovery. No odds endpoint is called until
-    all five leagues have deterministically selected ten unseen fixture IDs.
-    """
+    """Acquire the frozen third sample with bounded fixture discovery.\n\n    Up to ten unseen fixtures are selected per league, with a metadata-only minimum\n    of six when the Free current-season inventory is exhausted. No odds endpoint is\n    called until all five league selections are frozen.\n    """
     client = replication.ProviderClient(key=key)
     selected: dict[str, list[dict[str, Any]]] = {}
 
@@ -344,14 +341,16 @@ def acquire_third_holdout(
                 league,
                 excluded_ids,
             )
-            if len(chosen) == FIXTURES_PER_LEAGUE:
+            pagination = payload.get("pagination")
+            has_more = bool(pagination.get("has_more")) if isinstance(pagination, dict) else page < MAX_FIXTURE_PAGES
+            if len(chosen) == FIXTURES_PER_LEAGUE or not has_more:
                 break
 
         selected[league] = chosen
-        if len(chosen) != FIXTURES_PER_LEAGUE:
+        if len(chosen) < MIN_SELECTED_PER_LEAGUE:
             raise RuntimeError(
-                f"{league}: expected {FIXTURES_PER_LEAGUE} unseen fixtures after "
-                f"{MAX_FIXTURE_PAGES} pages, got {len(chosen)}"
+                f"{league}: requires at least {MIN_SELECTED_PER_LEAGUE} unseen fixtures, "
+                f"got {len(chosen)}"
             )
 
     _write_json(output_dir / "selected_fixtures.json", selected)
