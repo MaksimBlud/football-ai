@@ -48,8 +48,15 @@ def _expected_selection_hash(manifest: dict[str, Any]) -> str:
         "cohort_lock_gate": manifest.get("cohort_lock_gate"),
         "selected_blocks": manifest.get("selected_blocks"),
         "selected_fixture_ids": manifest.get("selected_fixture_ids"),
+        "selected_fixture_metadata": manifest.get("selected_fixture_metadata"),
     }
     return "sha256:" + hashlib.sha256(_canonical_json_bytes(identity)).hexdigest()
+
+
+def _expected_fixture_metadata_hash(manifest: dict[str, Any]) -> str:
+    return "sha256:" + hashlib.sha256(
+        _canonical_json_bytes(manifest.get("selected_fixture_metadata"))
+    ).hexdigest()
 
 
 def validate_lock_manifest(manifest: dict[str, Any]) -> None:
@@ -95,8 +102,11 @@ def validate_lock_manifest(manifest: dict[str, Any]) -> None:
 
     selected_blocks = manifest.get("selected_blocks")
     selected_ids = manifest.get("selected_fixture_ids")
+    selected_metadata = manifest.get("selected_fixture_metadata")
     if not isinstance(selected_blocks, list) or not isinstance(selected_ids, list):
         raise RuntimeError("selected blocks and fixture IDs must be lists")
+    if not isinstance(selected_metadata, list):
+        raise RuntimeError("selected fixture metadata must be a list")
 
     ordered_block_ids = [
         str(fid)
@@ -104,9 +114,15 @@ def validate_lock_manifest(manifest: dict[str, Any]) -> None:
         for fid in block.get("fixture_ids", [])
     ]
     normalized_ids = [str(fid) for fid in selected_ids]
+    metadata_ids = [str(row.get("fixture_id") or "") for row in selected_metadata]
+
     if normalized_ids != ordered_block_ids:
         raise RuntimeError(
             "selected fixture IDs do not equal ordered whole-block fixture IDs"
+        )
+    if normalized_ids != metadata_ids:
+        raise RuntimeError(
+            "selected fixture metadata does not match ordered selected fixture IDs"
         )
     if len(normalized_ids) != len(set(normalized_ids)):
         raise RuntimeError("selected fixture IDs contain duplicates")
@@ -115,6 +131,24 @@ def validate_lock_manifest(manifest: dict[str, Any]) -> None:
         raise RuntimeError("selected fixture count mismatch")
     if int(manifest.get("selected_block_count", -1)) != len(selected_blocks):
         raise RuntimeError("selected block count mismatch")
+
+    required_metadata_fields = {
+        "fixture_id",
+        "league",
+        "league_id",
+        "kickoff_utc",
+        "home_team",
+        "away_team",
+    }
+    for row in selected_metadata:
+        if not isinstance(row, dict):
+            raise RuntimeError("selected fixture metadata row must be an object")
+        if not required_metadata_fields.issubset(row):
+            raise RuntimeError("selected fixture metadata row is incomplete")
+
+    expected_metadata_hash = _expected_fixture_metadata_hash(manifest)
+    if manifest.get("fixture_metadata_sha256") != expected_metadata_hash:
+        raise RuntimeError("fixture_metadata_sha256 mismatch")
 
     expected_hash = _expected_selection_hash(manifest)
     if manifest.get("selection_sha256") != expected_hash:
@@ -125,13 +159,18 @@ def build_acquisition_plan(manifest: dict[str, Any]) -> dict[str, Any]:
     validate_lock_manifest(manifest)
 
     selected_ids = [str(fid) for fid in manifest["selected_fixture_ids"]]
+    selected_metadata = list(manifest["selected_fixture_metadata"])
     batches = []
     for start in range(0, len(selected_ids), MAX_ODDS_REQUESTS_PER_RUN):
         fixture_ids = selected_ids[start : start + MAX_ODDS_REQUESTS_PER_RUN]
+        fixture_metadata = selected_metadata[
+            start : start + MAX_ODDS_REQUESTS_PER_RUN
+        ]
         batches.append(
             {
                 "batch_index": len(batches) + 1,
                 "fixture_ids": fixture_ids,
+                "fixture_metadata": fixture_metadata,
                 "planned_requests": len(fixture_ids),
             }
         )
@@ -141,14 +180,22 @@ def build_acquisition_plan(manifest: dict[str, Any]) -> dict[str, Any]:
         for batch in batches
         for fixture_id in batch["fixture_ids"]
     ]
+    flattened_metadata = [
+        row
+        for batch in batches
+        for row in batch["fixture_metadata"]
+    ]
     if flattened != selected_ids:
         raise RuntimeError("deterministic batching changed fixture order or membership")
+    if flattened_metadata != selected_metadata:
+        raise RuntimeError("deterministic batching changed fixture metadata order")
 
     return {
         "plan_experiment_id": PLAN_EXPERIMENT_ID,
         "source_lock_experiment_id": manifest["lock_experiment_id"],
         "source_lock_status": manifest["lock_status"],
         "source_selection_sha256": manifest["selection_sha256"],
+        "source_fixture_metadata_sha256": manifest["fixture_metadata_sha256"],
         "source_workflow_run_id": manifest.get("source_workflow_run_id"),
         "source_artifact_id": manifest.get("source_artifact_id"),
         "source_artifact_digest": manifest.get("source_artifact_digest"),
@@ -162,6 +209,7 @@ def build_acquisition_plan(manifest: dict[str, Any]) -> dict[str, Any]:
         "future_cutoff_utc": manifest["future_cutoff_utc"],
         "selected_fixture_count": len(selected_ids),
         "selected_fixture_ids": selected_ids,
+        "selected_fixture_metadata": selected_metadata,
         "max_odds_requests_per_run": MAX_ODDS_REQUESTS_PER_RUN,
         "total_planned_odds_requests": len(selected_ids),
         "batch_count": len(batches),

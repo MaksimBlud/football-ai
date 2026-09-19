@@ -121,3 +121,22 @@ No odds endpoint, provider HTTP call, Supabase write, paid action or market-pric
 - no production promotion;
 - production `.pkl` hash guard required in CI.
 
+## Pre-first-lock fixture-metadata propagation amendment
+
+This amendment is frozen before any real V2 cohort lock exists.
+
+Because later odds normalization requires immutable fixture context, a valid lock and acquisition plan must carry exact ordered `selected_fixture_metadata` for every locked fixture:
+
+- fixture_id;
+- league;
+- league_id;
+- kickoff_utc;
+- home_team;
+- away_team.
+
+The odds-plan validator must recompute `selection_sha256` including this metadata and fail closed if fixture metadata is missing, reordered, duplicated or inconsistent with selected fixture IDs.
+
+The generated offline acquisition plan must preserve the same selected fixture metadata alongside the deterministic batches.
+
+This changes no live authorization and no statistical rule. It only ensures that future raw odds can be normalized against the exact metadata frozen before market-price access.
+

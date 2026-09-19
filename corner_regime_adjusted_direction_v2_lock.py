@@ -13,12 +13,23 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
+
+import corner_repricing_direction_replication_v1 as replication
 import corner_regime_adjusted_direction_v2 as v2
 import corner_regime_adjusted_direction_v2_metadata as metadata
 
 LOCK_EXPERIMENT_ID = "CORNER_REGIME_ADJUSTED_DIRECTION_V2_COHORT_LOCK"
 EXPECTED_PRIOR_EXCLUDED_IDS = 151
 _SHA256_RE = re.compile(r"^(?:sha256:)?([0-9a-fA-F]{64})$")
+_METADATA_FIELDS = (
+    "fixture_id",
+    "league",
+    "league_id",
+    "kickoff_utc",
+    "home_team",
+    "away_team",
+)
 
 
 def _canonical_json_bytes(payload: Any) -> bytes:
@@ -38,19 +49,38 @@ def _write_json(path: Path, payload: Any) -> None:
     )
 
 
-def load_cohort_plan(metadata_zip: Path) -> dict[str, Any]:
-    with zipfile.ZipFile(metadata_zip) as zf:
-        names = [name for name in zf.namelist() if name.endswith("cohort_plan.json")]
-        if len(names) != 1:
-            raise RuntimeError(
-                "metadata artifact must contain exactly one cohort_plan.json, "
-                f"got {len(names)}"
-            )
-        payload = json.loads(zf.read(names[0]).decode("utf-8"))
+def _read_exact_json_member(zf: zipfile.ZipFile, suffix: str) -> Any:
+    names = [name for name in zf.namelist() if name.endswith(suffix)]
+    if len(names) != 1:
+        raise RuntimeError(
+            f"metadata artifact must contain exactly one {suffix}, got {len(names)}"
+        )
+    return json.loads(zf.read(names[0]).decode("utf-8"))
 
+
+def load_cohort_plan(metadata_zip: Path) -> dict[str, Any]:
+    """Compatibility helper that reads only the cohort plan."""
+    with zipfile.ZipFile(metadata_zip) as zf:
+        payload = _read_exact_json_member(zf, "cohort_plan.json")
     if not isinstance(payload, dict):
         raise RuntimeError("cohort_plan.json must contain a JSON object")
     return payload
+
+
+def load_metadata_artifact(
+    metadata_zip: Path,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    with zipfile.ZipFile(metadata_zip) as zf:
+        plan = _read_exact_json_member(zf, "cohort_plan.json")
+        fixture_rows = _read_exact_json_member(zf, "future_fixture_metadata.json")
+
+    if not isinstance(plan, dict):
+        raise RuntimeError("cohort_plan.json must contain a JSON object")
+    if not isinstance(fixture_rows, list) or not all(
+        isinstance(row, dict) for row in fixture_rows
+    ):
+        raise RuntimeError("future_fixture_metadata.json must contain a list of objects")
+    return plan, fixture_rows
 
 
 def _normalize_digest(value: str) -> str:
@@ -187,14 +217,87 @@ def validate_locked_plan(plan: dict[str, Any]) -> dict[str, Any]:
     return expected
 
 
+def selected_fixture_metadata(
+    plan: dict[str, Any],
+    fixture_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Return exact selected fixture metadata in frozen fixture-ID order."""
+    validate_locked_plan(plan)
+
+    selected_ids = [str(value) for value in plan["selected_fixture_ids"]]
+    block_by_id: dict[str, dict[str, Any]] = {}
+    for block in plan["selected_blocks"]:
+        for fixture_id in block["fixture_ids"]:
+            key = str(fixture_id)
+            if key in block_by_id:
+                raise RuntimeError(f"selected fixture {key} appears in multiple blocks")
+            block_by_id[key] = block
+
+    metadata_by_id: dict[str, dict[str, Any]] = {}
+    for raw in fixture_rows:
+        fixture_id = str(raw.get("fixture_id") or "").strip()
+        if not fixture_id:
+            continue
+        if fixture_id in metadata_by_id:
+            raise RuntimeError(f"duplicate fixture metadata for {fixture_id}")
+        metadata_by_id[fixture_id] = raw
+
+    missing = [fixture_id for fixture_id in selected_ids if fixture_id not in metadata_by_id]
+    if missing:
+        raise RuntimeError(
+            "selected fixture metadata missing for IDs: " + ",".join(missing[:10])
+        )
+
+    cutoff = pd.Timestamp(v2.FUTURE_CUTOFF_UTC)
+    frozen_rows: list[dict[str, Any]] = []
+    for fixture_id in selected_ids:
+        raw = metadata_by_id[fixture_id]
+        block = block_by_id[fixture_id]
+        league = str(raw.get("league") or "").strip()
+        league_id = str(raw.get("league_id") or "").strip()
+        kickoff = pd.to_datetime(raw.get("kickoff_utc"), utc=True, errors="coerce")
+        home = str(raw.get("home_team") or "").strip()
+        away = str(raw.get("away_team") or "").strip()
+
+        if not fixture_id.isdigit():
+            raise RuntimeError(f"selected fixture ID is not numeric: {fixture_id}")
+        if league != str(block["league"]):
+            raise RuntimeError(f"{fixture_id}: fixture metadata league mismatch")
+        if league not in replication.LEAGUES:
+            raise RuntimeError(f"{fixture_id}: unsupported fixture metadata league {league}")
+        if league_id != str(replication.LEAGUES[league]):
+            raise RuntimeError(f"{fixture_id}: fixture metadata league_id mismatch")
+        if pd.isna(kickoff) or kickoff < cutoff:
+            raise RuntimeError(f"{fixture_id}: invalid or pre-cutoff kickoff_utc")
+        if kickoff.strftime("%Y-%m-%d") != str(block["kickoff_date_utc"]):
+            raise RuntimeError(f"{fixture_id}: kickoff date does not match selected block")
+        if not home or not away:
+            raise RuntimeError(f"{fixture_id}: missing home/away fixture metadata")
+
+        frozen_rows.append(
+            {
+                "fixture_id": fixture_id,
+                "league": league,
+                "league_id": league_id,
+                "kickoff_utc": kickoff.isoformat(),
+                "home_team": home,
+                "away_team": away,
+            }
+        )
+
+    return frozen_rows
+
+
 def build_lock_manifest(
     plan: dict[str, Any],
+    fixture_rows: list[dict[str, Any]],
     *,
     source_run_id: str,
     source_artifact_id: str,
     source_artifact_digest: str,
 ) -> dict[str, Any]:
     validate_locked_plan(plan)
+    frozen_metadata = selected_fixture_metadata(plan, fixture_rows)
 
     digest = _normalize_digest(source_artifact_digest)
     run_id = str(source_run_id).strip()
@@ -202,18 +305,23 @@ def build_lock_manifest(
     if not run_id or not artifact_id:
         raise ValueError("source run ID and artifact ID are required")
 
+    lock_gate = {
+        "minimum_blocks_per_league": v2.MIN_BLOCKS_PER_LEAGUE,
+        "minimum_total_blocks": v2.MIN_TOTAL_BLOCKS,
+        "minimum_metadata_potential_pairs": v2.MIN_METADATA_POTENTIAL_PAIRS,
+    }
     identity = {
         "future_cutoff_utc": v2.FUTURE_CUTOFF_UTC,
-        "cohort_lock_gate": {
-            "minimum_blocks_per_league": v2.MIN_BLOCKS_PER_LEAGUE,
-            "minimum_total_blocks": v2.MIN_TOTAL_BLOCKS,
-            "minimum_metadata_potential_pairs": v2.MIN_METADATA_POTENTIAL_PAIRS,
-        },
+        "cohort_lock_gate": lock_gate,
         "selected_blocks": plan["selected_blocks"],
         "selected_fixture_ids": plan["selected_fixture_ids"],
+        "selected_fixture_metadata": frozen_metadata,
     }
     selection_sha256 = "sha256:" + hashlib.sha256(
         _canonical_json_bytes(identity)
+    ).hexdigest()
+    fixture_metadata_sha256 = "sha256:" + hashlib.sha256(
+        _canonical_json_bytes(frozen_metadata)
     ).hexdigest()
 
     return {
@@ -232,7 +340,7 @@ def build_lock_manifest(
         "production_promotion_authorized": False,
         "future_cutoff_utc": v2.FUTURE_CUTOFF_UTC,
         "prior_excluded_fixture_ids": EXPECTED_PRIOR_EXCLUDED_IDS,
-        "cohort_lock_gate": identity["cohort_lock_gate"],
+        "cohort_lock_gate": lock_gate,
         "statistical_gate_unchanged_from_v1": plan[
             "statistical_gate_unchanged_from_v1"
         ],
@@ -240,6 +348,8 @@ def build_lock_manifest(
         "selected_block_count": int(plan["selected_block_count"]),
         "selected_fixture_ids": plan["selected_fixture_ids"],
         "selected_fixture_count": int(plan["selected_fixture_count"]),
+        "selected_fixture_metadata": frozen_metadata,
+        "fixture_metadata_sha256": fixture_metadata_sha256,
         "metadata_potential_pairs": int(plan["metadata_potential_pairs"]),
         "blocks_by_league": plan["blocks_by_league"],
         "selection_sha256": selection_sha256,
@@ -261,9 +371,10 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    plan = load_cohort_plan(args.metadata_zip)
+    plan, fixture_rows = load_metadata_artifact(args.metadata_zip)
     manifest = build_lock_manifest(
         plan,
+        fixture_rows,
         source_run_id=args.source_run_id,
         source_artifact_id=args.source_artifact_id,
         source_artifact_digest=args.source_artifact_digest,

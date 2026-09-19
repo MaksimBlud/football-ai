@@ -4,15 +4,18 @@ import pytest
 
 import corner_regime_adjusted_direction_v2 as v2
 import corner_regime_adjusted_direction_v2_lock as lock
-import corner_regime_adjusted_direction_v2_odds_plan as plan
 import corner_regime_adjusted_direction_v2_metadata as metadata
+import corner_regime_adjusted_direction_v2_odds_plan as plan
 
 
 def _fixture(fid, league, date):
     return {
         "fixture_id": str(fid),
         "league": league,
+        "league_id": str(metadata.replication.LEAGUES[league]),
         "kickoff_utc": f"{date}T15:00:00Z",
+        "home_team": f"H{fid}",
+        "away_team": f"A{fid}",
         "status": "finished",
     }
 
@@ -36,13 +39,14 @@ def _lock_manifest():
     )
     return lock.build_lock_manifest(
         metadata_plan,
+        rows,
         source_run_id="123",
         source_artifact_id="456",
         source_artifact_digest="d" * 64,
     )
 
 
-def test_valid_lock_builds_deterministic_batched_plan():
+def test_valid_lock_builds_deterministic_metadata_bound_batched_plan():
     manifest = _lock_manifest()
     result = plan.build_acquisition_plan(manifest)
 
@@ -54,15 +58,25 @@ def test_valid_lock_builds_deterministic_batched_plan():
     assert result["betting_enabled"] is False
     assert result["production_promotion_authorized"] is False
     assert result["selected_fixture_ids"] == manifest["selected_fixture_ids"]
+    assert result["selected_fixture_metadata"] == manifest["selected_fixture_metadata"]
+    assert result["source_fixture_metadata_sha256"] == manifest[
+        "fixture_metadata_sha256"
+    ]
     assert result["total_planned_odds_requests"] == result["selected_fixture_count"]
     assert result["max_odds_requests_per_run"] == 30
 
-    flattened = [
+    flattened_ids = [
         fixture_id
         for batch in result["batches"]
         for fixture_id in batch["fixture_ids"]
     ]
-    assert flattened == manifest["selected_fixture_ids"]
+    flattened_metadata = [
+        row
+        for batch in result["batches"]
+        for row in batch["fixture_metadata"]
+    ]
+    assert flattened_ids == manifest["selected_fixture_ids"]
+    assert flattened_metadata == manifest["selected_fixture_metadata"]
     assert all(batch["planned_requests"] <= 30 for batch in result["batches"])
     assert all(
         batch["batch_index"] == index
@@ -75,6 +89,20 @@ def test_tampered_selection_hash_fails_closed():
     manifest["selection_sha256"] = "sha256:" + "0" * 64
 
     with pytest.raises(RuntimeError, match="selection_sha256 mismatch"):
+        plan.validate_lock_manifest(manifest)
+
+
+def test_tampered_fixture_metadata_hash_or_order_fails_closed():
+    manifest = _lock_manifest()
+    manifest["fixture_metadata_sha256"] = "sha256:" + "0" * 64
+    with pytest.raises(RuntimeError, match="fixture_metadata_sha256 mismatch"):
+        plan.validate_lock_manifest(manifest)
+
+    manifest = _lock_manifest()
+    manifest["selected_fixture_metadata"] = list(
+        reversed(manifest["selected_fixture_metadata"])
+    )
+    with pytest.raises(RuntimeError, match="metadata does not match"):
         plan.validate_lock_manifest(manifest)
 
 
