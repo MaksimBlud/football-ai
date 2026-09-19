@@ -103,6 +103,52 @@ Live metadata execution must be:
 
 No automatic schedule is added.
 
+
+### Pre-live trigger amendment
+
+The connected GitHub tool available in this chat does not expose a `workflow_dispatch` action.
+
+Before the first live metadata request, the execution trigger is therefore expanded without changing the provider/data contract:
+
+- keep manual `workflow_dispatch` support;
+- additionally allow one explicit same-repository pull-request marker:
+  `[run-v2-metadata]`;
+- the marker may be added only after the exact PR head has passed the dedicated offline contract and all required repository validations;
+- only the repository's own PR head may receive secrets;
+- editing a PR without the marker must not start the live metadata job;
+- the marker must be removed immediately after the authorized live run starts so later PR events cannot repeat it accidentally.
+
+This trigger amendment changes **only how the metadata-only workflow is started**. It does not change:
+- endpoint allow-list;
+- 10-request cap;
+- cutoff;
+- 151-ID exclusion;
+- V2 cohort lock;
+- statistical gates;
+- prohibition on odds access.
+
+
+
+### Trigger-hardening correction after non-authoritative metadata start
+
+PR workflow run `35424207821` exposed a trigger bug: the PR body described the literal marker string in prose, so the original broad `contains(...)` condition started the metadata-only live job before the full repository validation set had completed.
+
+Evidence boundary:
+- this was fixture metadata only;
+- no market-price endpoint was available to the runner;
+- no V2 odds, FAIR_CENTRE, centre_delta or direction statistic could be opened;
+- any artifact/result from that premature trigger is **non-authoritative** and must not be used as the V2 cohort lock.
+
+Before any authoritative metadata run, trigger matching is hardened:
+
+- the exact execution marker must be the **first characters of the PR body**;
+- workflow condition uses `startsWith(...)`, not broad substring matching;
+- descriptive prose may not activate the live job;
+- an authoritative run is allowed only after all required CI on the exact hardened head is green.
+
+This correction changes only execution authorization. The provider/data/statistical contracts remain unchanged.
+
+
 ## Interpretation
 
 This live metadata check cannot produce a direction result.
