@@ -175,14 +175,14 @@ jobs:
                   chosen=pick(e,target)
                   if chosen:
                       x,d=chosen; c=x["current"]
-                      if 1.03-1e-9<=c["odds"]<=1.05+1e-9:
+                      if 1.03 <= round(c["odds"],2) <= 1.05:
                           strict.append({
                               "event_id":eid,"league":e["league"],"match":e["match"],
                               "kickoff_utc":e["kickoff"].isoformat(),
                               "timing":"STRICT_HT_INFERRED","target_93":target.isoformat(),
                               "signal_tick":x["ts"].isoformat(),"target_diff_sec":round(d,1),
                               "score_at_signal":f"{c['home']}-{c['away']}",
-                              "p_puntatore":c["p"],"no_goal_odds":c["odds"],
+                              "p_puntatore":c["p"],"no_goal_odds_raw":c["odds"],"no_goal_odds":round(c["odds"],2),
                           })
 
               # Broad: strict target where available, otherwise calibrated league median.
@@ -196,7 +196,7 @@ jobs:
               if not chosen:
                   diag["no_target_tick"]+=1; continue
               x,d=chosen; c=x["current"]
-              if 1.03-1e-9<=c["odds"]<=1.05+1e-9:
+              if 1.03 <= round(c["odds"],2) <= 1.05:
                   later=[q for q in e["ticks"] if q["current"] and q["ts"]>=x["ts"]]
                   last=later[-1] if later else x
                   broad.append({
@@ -205,7 +205,7 @@ jobs:
                       "timing":timing,"target_93":target.isoformat(),
                       "signal_tick":x["ts"].isoformat(),"target_diff_sec":round(d,1),
                       "score_at_signal":f"{c['home']}-{c['away']}",
-                      "p_puntatore":c["p"],"no_goal_odds":c["odds"],
+                      "p_puntatore":c["p"],"no_goal_odds_raw":c["odds"],"no_goal_odds":round(c["odds"],2),
                       "last_archive_tick":last["ts"].isoformat(),
                       "last_archive_score":f"{last['current']['home']}-{last['current']['away']}",
                       "archive_no_goal":bool(last["current"]["home"]==c["home"] and last["current"]["away"]==c["away"]),
