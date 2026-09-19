@@ -1632,3 +1632,147 @@ Repricing direction remains unresolved.
 
 `NO_BET`, no automatic model promotion and no production `.pkl` changes remain binding.
 
+
+---
+
+# Continuity update — 2026-09-19 — V2 offline odds-acquisition plan merged
+
+This section extends the V2 readiness chain after the immutable cohort-lock validator.
+
+## PR #397 — deterministic offline odds-acquisition plan
+
+Merged to `main` as:
+
+`3bd1f7565c722d03b083e93a3ce35b7a3d69739a`
+
+Purpose:
+
+prepare, before any V2 odds are opened, the exact deterministic request plan that may later be used only after a valid immutable V2 cohort lock exists.
+
+Preregistration:
+
+`research/CORNER_REGIME_ADJUSTED_DIRECTION_V2_ODDS_PLAN.md`
+
+Implementation:
+
+`corner_regime_adjusted_direction_v2_odds_plan.py`
+
+Regression coverage:
+
+`tests/test_corner_regime_adjusted_direction_v2_odds_plan.py`
+
+Dedicated CI:
+
+`.github/workflows/corner-regime-adjusted-direction-v2-odds-plan.yml`
+
+## Source requirement
+
+The planner accepts only a manifest from:
+
+`CORNER_REGIME_ADJUSTED_DIRECTION_V2_COHORT_LOCK`
+
+with:
+
+- `lock_status = IMMUTABLE_COHORT_LOCKED`;
+- `immutable = true`;
+- `research_only = true`;
+- `offline_only = true`;
+- `odds_acquisition_authorized = false`;
+- valid `selection_sha256`;
+- unchanged V2 cutoff/metadata gate;
+- unchanged V1/V2 statistical gate.
+
+It re-computes the frozen selection hash before building any request plan.
+
+Any tampering with:
+
+- selected fixture order;
+- selected fixture membership;
+- duplicate IDs;
+- lock gate;
+- statistical gate;
+- source selection hash;
+- prior authorization flags
+
+fails closed.
+
+## Frozen deterministic batching rule
+
+Maximum planned odds requests per future live run:
+
+**30**
+
+This is an operational safety cap fixed before any V2 market prices are opened. It responds to the earlier V1 bounded provider-rate-limit wait / 75-minute CI timeout and does not alter statistical sample membership.
+
+Rules:
+
+1. preserve exact ordered locked fixture IDs;
+2. split sequentially into chunks of at most 30 IDs;
+3. every locked fixture appears in exactly one batch;
+4. no reselection, replacement, backfill or dropping is allowed;
+5. total planned odds requests equals locked fixture count;
+6. any later partial acquisition must resume by requesting only missing IDs from the same immutable locked cohort.
+
+## Authorization boundary
+
+The generated acquisition plan explicitly contains:
+
+- `live_odds_acquisition_authorized = false`;
+- `requires_explicit_live_authorization = true`;
+- `fixture_reselection_allowed = false`;
+- `betting_enabled = false`;
+- `production_promotion_authorized = false`.
+
+PR #397 itself contains:
+
+- no provider HTTP transport;
+- no odds endpoint;
+- no market-price reads;
+- no Supabase writes;
+- no paid action;
+- no live marker;
+- no production model changes.
+
+Dedicated odds-plan CI and all repository validations passed, including production `.pkl` hash guards.
+
+## Current V2 execution pointer
+
+The authoritative V2 state remains:
+
+**`WAIT_FOR_COHORT`**
+
+The latest authoritative metadata artifact is still:
+
+- run `35424349695`;
+- artifact `10578826642`;
+- digest `sha256:d486527409bed8e4a0cc11ed562ac7574e9362f3c9c83808038b90918d9388e4`.
+
+It contains:
+
+- 0 normalized finished fixtures after cutoff;
+- 0 candidate future regime blocks;
+- 0 metadata potential pairs;
+- 0 locked fixtures.
+
+Therefore, despite the new offline readiness:
+
+- there is currently **no immutable V2 cohort lock**;
+- there is currently **no valid V2 odds-acquisition plan instance** generated from real future data;
+- no V2 odds endpoint may be opened;
+- no live acquisition workflow may be enabled yet.
+
+The next real live action remains another run of the **same metadata-only planner** after future matches have finished.
+
+Only if that returns `COHORT_LOCKED`:
+
+1. create/validate immutable cohort lock;
+2. generate deterministic offline acquisition plan from that lock;
+3. record both artifacts;
+4. only then create a separate live-capable odds-acquisition PR.
+
+The strongest confirmed corner result remains replicated **repricing magnitude/risk via FAIR_CENTRE**.
+
+Repricing direction remains unresolved.
+
+`NO_BET`, no automatic model promotion and no production `.pkl` changes remain binding.
+
