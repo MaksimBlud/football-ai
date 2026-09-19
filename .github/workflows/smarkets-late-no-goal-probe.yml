@@ -142,17 +142,12 @@ jobs:
                               "side":r.get("lato"),
                           }
 
-                  # Price-only market fingerprint: halftime should be frozen.
-                  fp=[]
-                  for r in rs:
-                      if r.get("mercato") not in CORE: continue
-                      fp.append((
-                          str(r.get("market_id")),str(r.get("contract_id")),
-                          str(r.get("stato_mercato")),
-                          r.get("p_banco"),r.get("p_puntatore")
-                      ))
-                  fp=tuple(sorted(fp,key=lambda z:(z[0],z[1])))
-                  ticks.append({"ts":ts,"current":cur,"fp":fp})
+                  # Halftime anchor: current-score price itself should freeze.
+                  # Full order books can still change while play is stopped.
+                  freeze_sig=None
+                  if cur and cur.get("p") is not None:
+                      freeze_sig=(cur["home"],cur["away"],round(float(cur["p"]),4))
+                  ticks.append({"ts":ts,"current":cur,"freeze_sig":freeze_sig})
 
               ticks.sort(key=lambda x:x["ts"])
               if len(ticks)<8:
@@ -164,10 +159,10 @@ jobs:
               if window:
                   start=0
                   for i in range(1,len(window)+1):
-                      if i==len(window) or window[i]["fp"]!=window[start]["fp"]:
+                      if i==len(window) or window[i]["freeze_sig"]!=window[start]["freeze_sig"]:
                           part=window[start:i]
                           dur=(part[-1]["ts"]-part[0]["ts"]).total_seconds()
-                          if len(part)>=3 and dur>=360:
+                          if part[0]["freeze_sig"] is not None and len(part)>=3 and dur>=360:
                               runs.append((dur,part))
                           start=i
               if not runs:
@@ -175,7 +170,7 @@ jobs:
               runs.sort(key=lambda x:x[0],reverse=True)
               freeze=runs[0][1]
               freeze_end=freeze[-1]["ts"]
-              next_ticks=[x for x in ticks if x["ts"]>freeze_end and x["fp"]!=freeze[-1]["fp"]]
+              next_ticks=[x for x in ticks if x["ts"]>freeze_end and x["freeze_sig"]!=freeze[-1]["freeze_sig"]]
               if not next_ticks:
                   diagnostics["no_restart_tick"]+=1; continue
               restart=next_ticks[0]["ts"]
