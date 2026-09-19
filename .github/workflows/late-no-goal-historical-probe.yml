@@ -1,0 +1,141 @@
+name: Late No Goal Historical Probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/late-no-goal-historical-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install requests
+      - name: Record production model hash before
+        run: sha256sum football_model_xgboost_elo.pkl > /tmp/model.before
+      - name: Probe one historical EPL totals snapshot
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          import requests
+
+          key=os.getenv("THE_ODDS_API_KEY")
+          if not key:
+              raise SystemExit("THE_ODDS_API_KEY missing")
+
+          out={
+              "schema_version":"LATE_NO_GOAL_HISTORICAL_PROBE_V1",
+              "research_only":True,
+              "production_promotion":False,
+              "sport":"soccer_epl",
+              "market":"totals",
+              "region":"eu",
+              "requested_snapshot":"2026-09-06T17:20:00Z",
+              "target_fixture":"Arsenal v Chelsea",
+              "hard_reserve_credits":100,
+              "max_probe_cost_credits":10,
+          }
+
+          pre=requests.get(
+              "https://api.the-odds-api.com/v4/sports/",
+              params={"apiKey":key},
+              timeout=30,
+          )
+          out["preflight_http_status"]=pre.status_code
+          out["quota_before"]={
+              "remaining":pre.headers.get("x-requests-remaining"),
+              "used":pre.headers.get("x-requests-used"),
+              "last_cost":pre.headers.get("x-requests-last"),
+          }
+          if pre.status_code != 200:
+              out["status"]="PREFLIGHT_FAILED"
+          else:
+              remaining=int(pre.headers.get("x-requests-remaining") or 0)
+              if remaining < 110:
+                  out["status"]="BLOCKED_HARD_RESERVE"
+              else:
+                  r=requests.get(
+                      "https://api.the-odds-api.com/v4/historical/sports/soccer_epl/odds/",
+                      params={
+                          "apiKey":key,
+                          "regions":"eu",
+                          "markets":"totals",
+                          "oddsFormat":"decimal",
+                          "dateFormat":"iso",
+                          "date":"2026-09-06T17:20:00Z",
+                      },
+                      timeout=30,
+                  )
+                  out["historical_http_status"]=r.status_code
+                  out["quota_after"]={
+                      "remaining":r.headers.get("x-requests-remaining"),
+                      "used":r.headers.get("x-requests-used"),
+                      "last_cost":r.headers.get("x-requests-last"),
+                  }
+                  try:
+                      payload=r.json()
+                  except Exception:
+                      payload={}
+                  if r.status_code != 200:
+                      out["status"]="HISTORICAL_UNAVAILABLE"
+                      out["provider_error_code"]=payload.get("error_code") if isinstance(payload,dict) else None
+                      out["provider_message"]=payload.get("message") if isinstance(payload,dict) else str(r.text[:300])
+                  else:
+                      out["status"]="HISTORICAL_AVAILABLE"
+                      out["snapshot_timestamp"]=payload.get("timestamp")
+                      events=payload.get("data") or []
+                      out["events_count"]=len(events)
+                      matches=[]
+                      for ev in events:
+                          home=str(ev.get("home_team") or "")
+                          away=str(ev.get("away_team") or "")
+                          if {home.lower(),away.lower()} != {"arsenal","chelsea"}:
+                              continue
+                          books=[]
+                          for book in ev.get("bookmakers") or []:
+                              for market in book.get("markets") or []:
+                                  if market.get("key")=="totals":
+                                      books.append({
+                                          "bookmaker":book.get("key"),
+                                          "last_update":market.get("last_update"),
+                                          "outcomes":market.get("outcomes") or [],
+                                      })
+                          matches.append({
+                              "id":ev.get("id"),
+                              "home_team":home,
+                              "away_team":away,
+                              "commence_time":ev.get("commence_time"),
+                              "bookmakers":books,
+                          })
+                      out["target_matches"]=matches
+
+          Path("artifacts").mkdir(exist_ok=True)
+          Path("artifacts/late_no_goal_historical_probe.json").write_text(
+              json.dumps(out,indent=2,ensure_ascii=False),
+              encoding="utf-8",
+          )
+          print(json.dumps(out,indent=2,ensure_ascii=False))
+          PY
+      - name: Verify production model unchanged
+        if: always()
+        run: |
+          sha256sum football_model_xgboost_elo.pkl > /tmp/model.after
+          diff -u /tmp/model.before /tmp/model.after
+      - name: Upload probe artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: late-no-goal-historical-probe
+          path: artifacts/late_no_goal_historical_probe.json
+          if-no-files-found: warn
