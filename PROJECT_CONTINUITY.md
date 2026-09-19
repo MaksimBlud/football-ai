@@ -1465,3 +1465,170 @@ The empty future cohort is expected at this time. The metadata check ran shortly
 9. `NO_BET`, no production promotion and no production `.pkl` changes remain binding.
 
 
+---
+
+# Continuity update — 2026-09-19 — V2 immutable cohort-lock readiness merged
+
+This section extends the current V2 `WAIT_FOR_COHORT` state with the next offline-only safety layer.
+
+## PR #395 — immutable cohort-lock validator
+
+Merged to `main` as:
+
+`65993504cce3e4cc6580702abd592c658a324f79`
+
+Purpose:
+
+prepare the exact fail-closed transition from a future authoritative metadata result:
+
+`COHORT_LOCKED`
+
+to an immutable lock manifest **before any V2 odds acquisition is allowed**.
+
+The validator is implemented in:
+
+`corner_regime_adjusted_direction_v2_lock.py`
+
+Preregistration:
+
+`research/CORNER_REGIME_ADJUSTED_DIRECTION_V2_COHORT_LOCK.md`
+
+Dedicated regression coverage:
+
+`tests/test_corner_regime_adjusted_direction_v2_lock.py`
+
+Dedicated CI:
+
+`.github/workflows/corner-regime-adjusted-direction-v2-lock.yml`
+
+## Lock validator contract
+
+Accepted source state:
+
+`COHORT_LOCKED`
+
+Rejected source state:
+
+`WAIT_FOR_COHORT`
+
+The validator rechecks all critical frozen conditions, including:
+
+- V2 experiment identity;
+- metadata-live experiment identity;
+- research-only / metadata-only flags;
+- no odds endpoint / no market prices;
+- future cutoff `2026-09-19T00:00:00Z`;
+- exact prior exclusion count = **151**;
+- metadata lock gate:
+  - >=2 blocks per league;
+  - >=12 blocks pooled;
+  - >=80 metadata potential pairs;
+- unchanged downstream statistical gate inherited from V1:
+  - >=30 eligible rows;
+  - >=4 leagues with comparable pairs;
+  - >=8 contributing regime blocks;
+  - >=40 actual comparable pairs;
+  - concordance >=0.60;
+  - 20,000 regime-preserving permutations;
+  - seed `20260918`;
+  - one-sided p <0.10.
+
+It then recomputes the deterministic earliest qualifying prefix from `candidate_blocks` and requires exact equality with the source plan's:
+
+- selected blocks;
+- selected fixture IDs;
+- selected block count;
+- selected fixture count;
+- metadata potential pairs;
+- blocks-by-league counts.
+
+Any reorder, removal, replacement, backfill, duplicate fixture ID or inconsistent pair total fails closed.
+
+## Immutable manifest identity
+
+For a valid future `COHORT_LOCKED` artifact the validator will emit:
+
+- exact source run/artifact provenance;
+- exact ordered selected blocks;
+- exact ordered selected fixture IDs;
+- selected counts;
+- frozen gates;
+- prior exclusion count;
+- deterministic `selection_sha256`.
+
+The selection hash is computed from canonical JSON containing only frozen selection identity:
+
+- cutoff;
+- lock-gate constants;
+- selected blocks;
+- selected fixture IDs.
+
+Regression tests confirm that the hash is stable to irrelevant source JSON key ordering.
+
+## Authorization boundary remains unchanged
+
+A valid lock manifest will explicitly contain:
+
+- `odds_acquisition_authorized = false`;
+- `betting_enabled = false`;
+- `production_promotion_authorized = false`.
+
+Therefore even after future `COHORT_LOCKED`:
+
+1. the exact cohort must first be materialized as this immutable lock manifest;
+2. only then may a **separate** odds-acquisition PR be designed;
+3. that later PR must consume the exact lock manifest and must not perform fixture reselection.
+
+PR #395 itself contains:
+
+- no provider HTTP transport;
+- no odds endpoint;
+- no market prices;
+- no Supabase writes;
+- no paid action;
+- no live marker;
+- no production promotion.
+
+Dedicated V2 cohort-lock CI and full repository validations passed, including production `.pkl` hash guard.
+
+## Current execution pointer
+
+Current authoritative V2 metadata state is still:
+
+**`WAIT_FOR_COHORT`**
+
+from run:
+
+`35424349695`
+
+artifact:
+
+`10578826642`
+
+digest:
+
+`sha256:d486527409bed8e4a0cc11ed562ac7574e9362f3c9c83808038b90918d9388e4`
+
+Current planner facts remain:
+
+- normalized finished future fixtures = 0;
+- candidate future regime blocks = 0;
+- metadata potential pairs = 0;
+- selected/locked fixtures = 0;
+- no V2 odds opened.
+
+Therefore:
+
+- do **not** run the cohort-lock validator against the current WAIT artifact as if it were a lock;
+- do **not** add or enable V2 odds acquisition yet;
+- do **not** lower metadata or statistical gates;
+- the next live action, when enough future matches have finished, is another run of the **same metadata-only planner**;
+- only the first authoritative future `COHORT_LOCKED` artifact may proceed to immutable lock validation;
+- after that lock is created, odds acquisition still requires a separate explicitly controlled PR.
+
+The strongest confirmed corner finding remains the replicated **repricing magnitude/risk signal via FAIR_CENTRE**.
+
+Repricing direction remains unresolved.
+
+`NO_BET`, no automatic model promotion and no production `.pkl` changes remain binding.
+
