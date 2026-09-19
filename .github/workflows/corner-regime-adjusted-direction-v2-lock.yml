@@ -1,0 +1,50 @@
+name: Corner Regime-Adjusted Direction V2 Cohort Lock
+
+on:
+  pull_request:
+    paths:
+      - 'corner_regime_adjusted_direction_v2_lock.py'
+      - 'tests/test_corner_regime_adjusted_direction_v2_lock.py'
+      - 'research/CORNER_REGIME_ADJUSTED_DIRECTION_V2_COHORT_LOCK.md'
+      - '.github/workflows/corner-regime-adjusted-direction-v2-lock.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  offline-contract:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests pandas numpy scipy scikit-learn==1.7.2 pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile cohort lock validator
+        run: python -m py_compile corner_regime_adjusted_direction_v2_lock.py
+      - name: Run cohort lock regression tests
+        run: pytest -q tests/test_corner_regime_adjusted_direction_v2_lock.py tests/test_corner_regime_adjusted_direction_v2.py
+      - name: Assert frozen lock constants
+        run: |
+          python - <<'PY'
+          import corner_regime_adjusted_direction_v2 as v2
+          import corner_regime_adjusted_direction_v2_lock as lock
+          assert lock.LOCK_EXPERIMENT_ID == 'CORNER_REGIME_ADJUSTED_DIRECTION_V2_COHORT_LOCK'
+          assert lock.EXPECTED_PRIOR_EXCLUDED_IDS == 151
+          assert v2.FUTURE_CUTOFF_UTC == '2026-09-19T00:00:00Z'
+          assert v2.MIN_BLOCKS_PER_LEAGUE == 2
+          assert v2.MIN_TOTAL_BLOCKS == 12
+          assert v2.MIN_METADATA_POTENTIAL_PAIRS == 80
+          assert v2.MIN_COMPARABLE_PAIRS == 40
+          assert v2.MIN_CONCORDANCE == 0.60
+          assert v2.PERMUTATIONS == 20_000
+          assert v2.PERMUTATION_SEED == 20_260_918
+          assert v2.MAX_PVALUE == 0.10
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
