@@ -126,3 +126,50 @@ The next live-capable PR, if ever created, must explicitly consume this exact lo
 - no production promotion;
 - production `.pkl` hash guard required in CI.
 
+## Pre-first-lock fixture-metadata identity hardening
+
+This amendment is frozen **before any authoritative V2 `COHORT_LOCKED` artifact exists and before any V2 odds are opened**.
+
+The metadata artifact already persists `future_fixture_metadata.json` containing the provider fixture metadata required later to normalize odds:
+
+- `fixture_id`;
+- `league`;
+- `league_id`;
+- `kickoff_utc`;
+- `home_team`;
+- `away_team`.
+
+The immutable lock must therefore bind these fields as part of sample identity, not only fixture IDs.
+
+Updated input contract:
+
+- metadata artifact must contain exactly one `cohort_plan.json`;
+- metadata artifact must contain exactly one `future_fixture_metadata.json`;
+- every locked fixture ID must appear exactly once in the metadata file;
+- league and league_id must match the frozen league mapping;
+- kickoff date must match the fixture's selected regime block;
+- kickoff must remain at/after the frozen future cutoff;
+- home/away names must be non-empty;
+- extra non-selected fixture metadata may exist in the source artifact but is not part of the lock identity.
+
+Updated `selection_sha256` identity:
+
+- frozen cutoff;
+- frozen metadata lock gate;
+- exact ordered selected blocks;
+- exact ordered selected fixture IDs;
+- exact ordered selected fixture metadata.
+
+The lock manifest must persist `selected_fixture_metadata` in the exact selected-fixture order.
+
+This hardening does not change:
+- sample membership;
+- block selection;
+- metadata lock thresholds;
+- statistical thresholds;
+- direction hypothesis;
+- provider request behavior;
+- authorization boundary.
+
+It only prevents later normalization from depending on mutable or re-fetched fixture metadata.
+
