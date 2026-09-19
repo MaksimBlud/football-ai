@@ -103,6 +103,31 @@ Live metadata execution must be:
 
 No automatic schedule is added.
 
+
+### Pre-live trigger amendment
+
+The connected GitHub tool available in this chat does not expose a `workflow_dispatch` action.
+
+Before the first live metadata request, the execution trigger is therefore expanded without changing the provider/data contract:
+
+- keep manual `workflow_dispatch` support;
+- additionally allow one explicit same-repository pull-request marker:
+  `[run-v2-metadata]`;
+- the marker may be added only after the exact PR head has passed the dedicated offline contract and all required repository validations;
+- only the repository's own PR head may receive secrets;
+- editing a PR without the marker must not start the live metadata job;
+- the marker must be removed immediately after the authorized live run starts so later PR events cannot repeat it accidentally.
+
+This trigger amendment changes **only how the metadata-only workflow is started**. It does not change:
+- endpoint allow-list;
+- 10-request cap;
+- cutoff;
+- 151-ID exclusion;
+- V2 cohort lock;
+- statistical gates;
+- prohibition on odds access.
+
+
 ## Interpretation
 
 This live metadata check cannot produce a direction result.
