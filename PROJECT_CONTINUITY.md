@@ -2430,7 +2430,35 @@ Interpretation:
 
 unauthenticated direct Betfair BASIC access is blocked in the tested path. No canonical project code/data resulted from this probe.
 
-## 18. Canonical corner research state at end of day
+## 18. PR #403 — public Smarkets live-archive probe (closed / unmerged)
+
+PR #403:
+
+`Probe public Smarkets live archive for late no-goal prices`
+
+State:
+
+**closed / NOT merged**
+
+Head:
+
+`029b03a29ff3b21c89708a0117908ad88a844cf7`
+
+Research-only public archive probe facts:
+
+- scanned **234** Smarkets live archive files;
+- covered **200** top-5 events in the final scan;
+- no provider keys used;
+- no paid requests used;
+- production model hash unchanged;
+- results were extracted externally;
+- PR deliberately closed without merge.
+
+Interpretation:
+
+this probe establishes only that the public Smarkets live archive was inspected through a zero-cost research path. Because the PR was not merged, it is not canonical main code/data and must not be treated as a durable project dataset unless its extracted result is separately materialized and reviewed.
+
+## 19. Canonical corner research state at end of day
 
 Strongest supported corner result:
 
@@ -2460,7 +2488,7 @@ No V2 raw odds artifact exists.
 
 No V2 statistical evaluation exists.
 
-## 19. Current V2 execution pointer
+## 20. Current V2 execution pointer
 
 Current authoritative metadata provenance:
 
@@ -2500,7 +2528,7 @@ If/when the first authoritative future run returns `COHORT_LOCKED`:
 6. raw acquisition must use the exact locked fixture IDs and immutable fixture metadata;
 7. only after full acquisition may the frozen offline evaluator produce the direction verdict.
 
-## 20. End-of-day safety state
+## 21. End-of-day safety state
 
 Still binding:
 
@@ -2518,7 +2546,7 @@ Still binding:
 - GitHub `main` + live Supabase remain source of truth;
 - Vercel must be checked when deployment/live-site state matters.
 
-## 21. Transfer-critical state
+## 22. Transfer-critical state
 
 For a new account/chat:
 
