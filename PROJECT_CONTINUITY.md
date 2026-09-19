@@ -1016,3 +1016,184 @@ Canonical merged facts:
    Evidence for one does not automatically prove the others.
 8. Production artifacts, automatic promotion, betting and staking remain out of scope unless a separate explicitly frozen evidence gate is satisfied.
 
+
+---
+
+# Continuity update — 2026-09-19 — CORNER_REGIME_ADJUSTED_DIRECTION_V1 CLOSED
+
+This section supersedes the prior execution pointer that left PR #387 in progress.
+
+## PR #387 — regime-adjusted corner direction V1
+
+Merged to `main` as:
+
+`47b9c42a909992e3f0a3cd114e57f452cb240870`
+
+Final implementation/result head before merge:
+
+`346fbfeae579c477a1f8eea65cd1c420c7d4847f`
+
+Purpose:
+
+test whether the previously observed FAIR_CENTRE direction pattern survives after removing a contemporaneous league-day market regime.
+
+The frozen primary construction remained:
+
+- candidate score = `-opening_lambda` / `-FAIR_CENTRE`;
+- regime block = same league + same UTC kickoff date;
+- primary statistic = within-regime unordered pairwise concordance;
+- 20,000 regime-preserving permutations;
+- RNG seed = `20260918`;
+- minimum eligible rows = 30;
+- minimum contributing leagues = 4;
+- minimum contributing regime blocks = 8;
+- minimum comparable pairs = 40;
+- confirmation requires concordance >= 0.60 and one-sided permutation p < 0.10.
+
+No threshold, feature, sign, regime definition or statistical gate was changed after opening third-sample data.
+
+## Third-sample acquisition and bounded-timeout recovery
+
+The final frozen selected cohort contains 46 previously unused fixtures:
+
+- EPL: 10;
+- La Liga: 10;
+- Serie A: 10;
+- Bundesliga: 6;
+- Ligue 1: 10.
+
+The Bundesliga reduction was frozen from metadata before third-sample odds were opened. The Free provider inventory contained only six unseen Bundesliga fixtures after excluding the previous 55-row discovery and 50-row replication samples. No cross-league backfill was allowed.
+
+Initial final live run:
+
+`35361459609`
+
+The run froze all 46 selected fixture IDs first and then began odds acquisition. It preserved 17 successful raw odds responses before the 75-minute GitHub Actions timeout was reached while using the bounded provider rate-limit path.
+
+Timeout artifact:
+
+- artifact ID: `10557603810`;
+- digest: `sha256:5530abd643fa4bac1c6ca25609bd9979dd3e0e90ce1c05601d234aca807e406b`.
+
+Important boundary:
+
+- no aggregate `report.json` existed at timeout;
+- therefore no statistical result had been opened;
+- production `.pkl` hash guard passed.
+
+Because closing data were partially opened at that point, the 46-fixture selection became immutable.
+
+A same-sample resume path was then added and regression-tested. It:
+
+- reads the exact selected fixture IDs from the timeout artifact;
+- reuses the 17 already-preserved raw odds responses;
+- performs no fixture discovery;
+- requests only the 29 missing fixture odds;
+- forbids replacement/backfill of selected fixtures;
+- runs the original frozen analysis unchanged.
+
+Final authorized resume run:
+
+`35369631434`
+
+Result artifact:
+
+- artifact ID: `10557706131`;
+- digest: `sha256:5ff43199cdf1bb73e6b87649c3e68aa57bac628c68888a06a809c5df473b8d1f`.
+
+Resume facts:
+
+- `acquisition_mode = IMMUTABLE_SAME_SAMPLE_RESUME`;
+- reused raw odds responses = 17;
+- provider requests during resume = 29;
+- selected fixture count = 46;
+- eligible normalized rows = 46;
+- production `.pkl` hash guard = PASS;
+- paid subscription used = false;
+- match outcomes used = false;
+- CORNERS10 / football-state used = false.
+
+No further provider run is authorized for V1.
+
+## Frozen statistical result
+
+Sample-gate components:
+
+- eligible rows = 46 — PASS vs minimum 30;
+- contributing leagues = 5 — PASS vs minimum 4;
+- contributing regime blocks = 9 — PASS vs minimum 8;
+- comparable within-regime pairs = **30 — FAIL vs frozen minimum 40**.
+
+Therefore the binding verdict is:
+
+**`SAMPLE_TOO_SMALL`**
+
+Because the sample gate failed, the frozen contract correctly did not run/interpret the 20,000-permutation confirmation statistic:
+
+- `permutation_pvalue = null`;
+- `direction_discrimination_confirmed = false`.
+
+The 40-pair threshold must not be weakened after seeing this sample.
+
+## Diagnostic-only effect
+
+Although it cannot be promoted to confirmation:
+
+- comparable pairs = 30;
+- concordant pairs = 21;
+- observed concordance = **0.70**.
+
+By league:
+
+- EPL = 4/11 = 0.3636;
+- La Liga = 4/6 = 0.6667;
+- Serie A = 5/5 = 1.00;
+- Bundesliga = 4/4 = 1.00;
+- Ligue 1 = 4/4 = 1.00.
+
+These numbers are diagnostics only because the preregistered comparable-pair sample gate failed.
+
+Movement diagnostics across 46 rows:
+
+- positive centre moves = 13;
+- negative = 5;
+- zero = 28;
+- positive share among non-zero = 0.7222;
+- top-minus-bottom regime-adjusted mean = +0.1252142136.
+
+This third window was much less one-sided than the prior 50-row replication, but there still were not enough comparable same-league/day pairs to authorize the frozen direction claim.
+
+## Binding interpretation
+
+The correct conclusion is **inconclusive direction evidence because of insufficient comparable-pair structure**.
+
+Do not restate V1 as:
+
+- direction replicated;
+- direction statistically failed;
+- p-value approximately significant;
+- 0.70 concordance confirmed the hypothesis.
+
+None of those statements is authorized.
+
+The separately replicated result that remains intact is:
+
+> opening FAIR_CENTRE contains out-of-sample information about the probability that the Bet365 corner market will later undergo a material repricing.
+
+That is a **repricing magnitude/risk** result, not a direction result.
+
+## Current execution pointer
+
+1. PR #387 is closed/merged. Do not rerun its provider workflow.
+2. Do not retune the 46-row third sample and do not weaken the 40-pair gate.
+3. If direction research continues, create a **new separately frozen future-data continuation** designed to accumulate enough untouched same-league/day blocks for the preregistered comparable-pair requirement.
+4. Preserve the separation between:
+   - repricing magnitude/risk;
+   - repricing direction;
+   - final match/corner outcome;
+   - tradable value/CLV;
+   - betting profitability.
+5. The strongest current corner result remains replicated repricing magnitude/risk via FAIR_CENTRE.
+6. Direction remains unresolved.
+7. `NO_BET`, no production promotion and no production `.pkl` changes remain binding.
+
