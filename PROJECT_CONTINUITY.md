@@ -1367,3 +1367,101 @@ The preregistration document was committed **before** planner implementation.
 8. `NO_BET`, no production promotion and no production `.pkl` changes remain binding.
 
 
+---
+
+# Continuity update — 2026-09-19 — V2 metadata check = WAIT_FOR_COHORT
+
+This section extends the V2 execution pointer after PR #390.
+
+## Metadata-only live planner path
+
+PR #392 merged as:
+
+`fa7745519fb7f919b0b064a46670e0b98b1660a6`
+
+It added the bounded metadata-only live inventory runner for `CORNER_REGIME_ADJUSTED_DIRECTION_V2`.
+
+Allowed live surface:
+
+- fixture-list metadata only;
+- no odds endpoint;
+- no market prices;
+- no match-outcome evaluation;
+- no Supabase writes;
+- no paid provider action;
+- maximum 2 fixture-list pages per league / 10 provider requests pooled;
+- exact exclusion of the 151 fixture IDs from the three prior corner samples.
+
+PR #393 merged as:
+
+`2043de27f4877355f3f5c1c3a510ce8bb6ccfa7d`
+
+It hardened the same-repo explicit metadata trigger because the connected GitHub integration did not expose `workflow_dispatch` directly.
+
+An accidental pre-full-CI metadata-only trigger occurred when the literal execution marker appeared in explanatory PR prose. That run is non-authoritative and must not be used as a cohort lock. Trigger matching was hardened before the authoritative execution. No odds endpoint was involved.
+
+## Authoritative V2 metadata check
+
+Authoritative workflow run:
+
+`35424349695`
+
+Tested PR head:
+
+`0746a721554b03ae28eca575b489fe4399e55385`
+
+Immutable artifact:
+
+- artifact ID: `10578826642`;
+- digest: `sha256:d486527409bed8e4a0cc11ed562ac7574e9362f3c9c83808038b90918d9388e4`.
+
+Safety/results:
+
+- provider requests = **5 / 10**;
+- live fixture metadata rows returned = **197**;
+- prior excluded fixture IDs = **151**;
+- odds endpoint used = false;
+- market prices opened = false;
+- paid subscription used = false;
+- production `.pkl` hash guard = PASS.
+
+Frozen future cutoff:
+
+`2026-09-19T00:00:00Z`
+
+Planner result:
+
+- normalized finished future fixtures = **0**;
+- candidate future regime blocks = **0**;
+- metadata potential pairs = **0**;
+- selected/locked fixtures = **0**.
+
+Binding status:
+
+**`WAIT_FOR_COHORT`**
+
+The empty future cohort is expected at this time. The metadata check ran shortly after the frozen cutoff, while the provider's currently finished inventory still ended before the cutoff (latest captured EPL finished fixture: `2026-09-18T19:00:00Z`).
+
+## Current V2 execution pointer
+
+1. V2 direction research is now in **WAIT_FOR_COHORT** state.
+2. Do not open any V2 corner odds while the planner returns WAIT_FOR_COHORT.
+3. Do not lower the metadata lock:
+   - all 5 leagues;
+   - >=2 blocks per league;
+   - >=12 blocks pooled;
+   - >=80 metadata potential pairs.
+4. Do not weaken the unchanged downstream V1 statistical gate:
+   - >=30 eligible rows;
+   - >=4 leagues with comparable pairs;
+   - >=8 contributing regime blocks;
+   - >=40 actual comparable pairs;
+   - concordance >=0.60;
+   - one-sided 20,000-permutation p <0.10.
+5. A future check may rerun the **same metadata-only planner** after more fixtures have finished.
+6. If a future metadata check first returns `COHORT_LOCKED`, save the exact fixture IDs/block membership immutably before creating any separate odds-acquisition PR.
+7. Even `COHORT_LOCKED` does not itself authorize betting, staking, production promotion or post-hoc retuning.
+8. The strongest confirmed corner result remains replicated **repricing magnitude/risk via FAIR_CENTRE**. Repricing direction remains unresolved.
+9. `NO_BET`, no production promotion and no production `.pkl` changes remain binding.
+
+
