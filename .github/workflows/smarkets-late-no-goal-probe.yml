@@ -25,220 +25,214 @@ jobs:
           python - <<'PY'
           import concurrent.futures as cf
           import datetime as dt
-          import gzip, json, re, urllib.request
+          import gzip, json, re, statistics, urllib.request
           from collections import defaultdict, Counter
           from pathlib import Path
 
-          OWNER="BTConomista"
-          REPO="Polymarket-oracle"
-          START="2026-08-15"
-          END="2026-09-19"
+          OWNER="BTConomista"; REPO="Polymarket-oracle"
+          START="2026-08-15"; END="2026-09-19"
           TOP5={"premier_league","la_liga","bundesliga","serie_a","ligue_1"}
           CORE={"1x2","risultato_esatto","ou25","ggng"}
           score_re=re.compile(r"^(\d+)\s*-\s*(\d+)$")
 
-          def get_json(url):
+          def read_json(url):
               req=urllib.request.Request(url,headers={"User-Agent":"football-ai-research"})
               with urllib.request.urlopen(req,timeout=60) as r:
                   return json.loads(r.read().decode("utf-8"))
 
-          tree=get_json(f"https://api.github.com/repos/{OWNER}/{REPO}/git/trees/main?recursive=1")
+          tree=read_json(f"https://api.github.com/repos/{OWNER}/{REPO}/git/trees/main?recursive=1")
           files=[]
           for x in tree.get("tree",[]):
               p=x.get("path","")
-              if not (p.startswith("data/smarkets_live/") and p.endswith(".json.gz")):
-                  continue
-              name=p.rsplit("/",1)[-1]
-              day=name[:10]
-              if START <= day <= END:
-                  files.append(p)
+              if p.startswith("data/smarkets_live/") and p.endswith(".json.gz"):
+                  day=p.rsplit("/",1)[-1][:10]
+                  if START <= day <= END: files.append(p)
           print("archive_files=",len(files))
 
           def fetch(path):
               url=f"https://raw.githubusercontent.com/{OWNER}/{REPO}/main/{path}"
               req=urllib.request.Request(url,headers={"User-Agent":"football-ai-research"})
               try:
-                  with urllib.request.urlopen(req,timeout=60) as r:
-                      raw=r.read()
+                  with urllib.request.urlopen(req,timeout=60) as r: raw=r.read()
                   return path,json.loads(gzip.decompress(raw).decode("utf-8")),None
               except Exception as e:
                   return path,None,f"{type(e).__name__}: {e}"
 
-          event_rows=defaultdict(list)
-          failures=[]
+          event_rows=defaultdict(list); failures=[]
           with cf.ThreadPoolExecutor(max_workers=12) as ex:
               for path,obj,err in ex.map(fetch,files):
-                  if err:
-                      failures.append((path,err)); continue
+                  if err: failures.append((path,err)); continue
                   for r in obj.get("righe") or []:
                       if r.get("fascia")!="campionato": continue
                       if r.get("lega") not in TOP5: continue
                       if r.get("fase")!="live": continue
                       if r.get("mercato") not in CORE: continue
                       eid=str(r.get("event_id") or "")
-                      if eid:
-                          event_rows[eid].append(r)
+                      if eid: event_rows[eid].append(r)
           print("download_failures=",len(failures))
           print("top5_events=",len(event_rows))
 
-          def parse_ts(s):
-              return dt.datetime.fromisoformat(str(s).replace("Z","+00:00"))
+          def pts(s): return dt.datetime.fromisoformat(str(s).replace("Z","+00:00"))
+          def tkey(r): return r.get("giro_utc") or r.get("istante_utc")
 
-          def tick_key(r):
-              return r.get("giro_utc") or r.get("istante_utc")
-
-          diagnostics=Counter()
-          results=[]
-          all_event_summaries=[]
-
-          for eid,rows in event_rows.items():
-              # De-duplicate overlapping collector sessions at contract/tick level.
+          def build_event(eid,rows):
               dedup={}
               for r in rows:
-                  k=(tick_key(r),r.get("market_id"),r.get("contract_id"))
-                  old=dedup.get(k)
-                  if old is None or str(r.get("istante_utc")) > str(old.get("istante_utc")):
+                  k=(tkey(r),r.get("market_id"),r.get("contract_id"))
+                  if k not in dedup or str(r.get("istante_utc"))>str(dedup[k].get("istante_utc")):
                       dedup[k]=r
               rows=list(dedup.values())
               sample=rows[0]
-              league=sample.get("lega")
-              match=sample.get("partita")
-              try:
-                  kickoff=parse_ts(sample.get("inizio"))
-              except Exception:
-                  diagnostics["bad_kickoff"]+=1; continue
-
+              try: kickoff=pts(sample.get("inizio"))
+              except Exception: return None
               grouped=defaultdict(list)
-              for r in rows:
-                  grouped[tick_key(r)].append(r)
-
+              for r in rows: grouped[tkey(r)].append(r)
               ticks=[]
-              for gts,rs in grouped.items():
-                  try: ts=parse_ts(gts)
+              for gs,rs in grouped.items():
+                  try: ts=pts(gs)
                   except Exception: continue
-                  exact=[r for r in rs if r.get("mercato")=="risultato_esatto"]
                   nums=[]
-                  for r in exact:
-                      if r.get("stato_mercato")!="live": continue
+                  for r in rs:
+                      if r.get("mercato")!="risultato_esatto" or r.get("stato_mercato")!="live": continue
                       m=score_re.match(str(r.get("contratto") or ""))
-                      if not m: continue
-                      nums.append((int(m.group(1)),int(m.group(2)),r))
+                      if m: nums.append((int(m.group(1)),int(m.group(2)),r))
                   cur=None
                   if nums:
-                      h=min(x[0] for x in nums)
-                      a=min(x[1] for x in nums)
-                      cr=[r for hh,aa,r in nums if hh==h and aa==a]
-                      if cr:
-                          r=cr[0]
-                          p=r.get("p_puntatore")
-                          try: p=float(p) if p is not None else None
+                      h=min(v[0] for v in nums); a=min(v[1] for v in nums)
+                      cs=[r for hh,aa,r in nums if hh==h and aa==a]
+                      if cs:
+                          r=cs[0]
+                          try: p=float(r.get("p_puntatore")) if r.get("p_puntatore") is not None else None
                           except Exception: p=None
-                          cur={
-                              "home":h,"away":a,
-                              "p":p,
-                              "odds":(1.0/p if p and p>0 else None),
-                              "p_banco":r.get("p_banco"),
-                              "p_mid":r.get("p_mid"),
-                              "side":r.get("lato"),
-                          }
-
-                  # Halftime anchor: current-score price itself should freeze.
-                  # Full order books can still change while play is stopped.
-                  freeze_sig=None
-                  if cur and cur.get("p") is not None:
-                      freeze_sig=(cur["home"],cur["away"],round(float(cur["p"]),4))
-                  ticks.append({"ts":ts,"current":cur,"freeze_sig":freeze_sig})
-
+                          cur={"home":h,"away":a,"p":p,"odds":(1/p if p and p>0 else None)}
+                  ticks.append({"ts":ts,"current":cur})
               ticks.sort(key=lambda x:x["ts"])
-              if len(ticks)<8:
-                  diagnostics["too_few_ticks"]+=1; continue
-
-              # Detect the longest exact frozen-book run around halftime.
-              window=[x for x in ticks if kickoff+dt.timedelta(minutes=42) <= x["ts"] <= kickoff+dt.timedelta(minutes=78)]
-              runs=[]
-              if window:
-                  start=0
-                  for i in range(1,len(window)+1):
-                      if i==len(window) or window[i]["freeze_sig"]!=window[start]["freeze_sig"]:
-                          part=window[start:i]
-                          dur=(part[-1]["ts"]-part[0]["ts"]).total_seconds()
-                          if part[0]["freeze_sig"] is not None and len(part)>=3 and dur>=360:
-                              runs.append((dur,part))
-                          start=i
-              if not runs:
-                  diagnostics["no_halftime_freeze"]+=1; continue
-              runs.sort(key=lambda x:x[0],reverse=True)
-              freeze=runs[0][1]
-              freeze_end=freeze[-1]["ts"]
-              next_ticks=[x for x in ticks if x["ts"]>freeze_end and x["freeze_sig"]!=freeze[-1]["freeze_sig"]]
-              if not next_ticks:
-                  diagnostics["no_restart_tick"]+=1; continue
-              restart=next_ticks[0]["ts"]
-
-              # Sanity gate for a normal second-half restart.
-              restart_from_ko=(restart-kickoff).total_seconds()/60
-              if not (55 <= restart_from_ko <= 75):
-                  diagnostics["restart_outside_gate"]+=1; continue
-
-              target=restart+dt.timedelta(minutes=48)  # 45+48 = minute 93
-              candidates=[x for x in ticks if x["current"] and x["current"].get("odds") is not None]
-              if not candidates:
-                  diagnostics["no_current_score_ticks"]+=1; continue
-              nearest=min(candidates,key=lambda x:abs((x["ts"]-target).total_seconds()))
-              diff=abs((nearest["ts"]-target).total_seconds())
-              if diff>180:
-                  diagnostics["no_tick_within_3m"]+=1; continue
-
-              cur=nearest["current"]
-              odds=cur["odds"]
-              signal=(1.03-1e-9 <= odds <= 1.05+1e-9)
-
-              last_cur=[x for x in ticks if x["current"]]
-              last=last_cur[-1] if last_cur else None
-              summary={
-                  "event_id":eid,"league":league,"match":match,
-                  "kickoff_utc":kickoff.isoformat(),
-                  "halftime_freeze_start":freeze[0]["ts"].isoformat(),
-                  "halftime_freeze_end":freeze[-1]["ts"].isoformat(),
-                  "second_half_restart":restart.isoformat(),
-                  "restart_min_from_kickoff":round(restart_from_ko,2),
-                  "target_93":target.isoformat(),
-                  "signal_tick":nearest["ts"].isoformat(),
-                  "target_diff_sec":round(diff,1),
-                  "score_at_signal":f"{cur['home']}-{cur['away']}",
-                  "p_puntatore":cur["p"],
-                  "no_goal_odds":odds,
-                  "signal_103_105":signal,
-                  "last_tick":last["ts"].isoformat() if last else None,
-                  "last_score":f"{last['current']['home']}-{last['current']['away']}" if last else None,
+              return {
+                  "event_id":eid,"league":sample.get("lega"),"match":sample.get("partita"),
+                  "kickoff":kickoff,"ticks":ticks
               }
-              all_event_summaries.append(summary)
-              if signal:
-                  results.append(summary)
 
-          print("diagnostics=",json.dumps(diagnostics,sort_keys=True))
-          print("qualified_events=",len(all_event_summaries))
-          print("signals_103_105=",len(results))
+          events={}
+          for eid,rows in event_rows.items():
+              e=build_event(eid,rows)
+              if e: events[eid]=e
+
+          def infer_restart(e):
+              ticks=e["ticks"]; ko=e["kickoff"]
+              w=[x for x in ticks if ko+dt.timedelta(minutes=42)<=x["ts"]<=ko+dt.timedelta(minutes=78) and x["current"] and x["current"]["p"] is not None]
+              if len(w)<3: return None
+              # Find stable current-score-price segments; halftime is the longest one.
+              runs=[]; start=0
+              def sig(x):
+                  c=x["current"]; return (c["home"],c["away"],round(float(c["p"]),4))
+              for i in range(1,len(w)+1):
+                  if i==len(w) or sig(w[i])!=sig(w[start]):
+                      part=w[start:i]
+                      dur=(part[-1]["ts"]-part[0]["ts"]).total_seconds()
+                      if len(part)>=3 and dur>=360: runs.append((dur,part))
+                      start=i
+              if not runs: return None
+              runs.sort(key=lambda z:z[0],reverse=True)
+              part=runs[0][1]; s=sig(part[-1]); end=part[-1]["ts"]
+              nxt=[x for x in ticks if x["ts"]>end and x["current"] and x["current"]["p"] is not None and sig(x)!=s]
+              if not nxt: return None
+              r=nxt[0]["ts"]; mins=(r-ko).total_seconds()/60
+              if 55<=mins<=75: return r
+              return None
+
+          strict_restarts={}
+          for eid,e in events.items():
+              r=infer_restart(e)
+              if r: strict_restarts[eid]=r
+
+          restart_minutes=defaultdict(list)
+          for eid,r in strict_restarts.items():
+              e=events[eid]
+              restart_minutes[e["league"]].append((r-e["kickoff"]).total_seconds()/60)
+          allmins=[v for xs in restart_minutes.values() for v in xs]
+          global_med=statistics.median(allmins) if allmins else 65.0
+          league_medians={}
+          for lg in TOP5:
+              xs=restart_minutes.get(lg,[])
+              league_medians[lg]=statistics.median(xs) if len(xs)>=5 else global_med
+          print("strict_restart_events=",len(strict_restarts))
+          print("global_restart_median=",round(global_med,3))
+          print("league_restart_medians=",json.dumps({k:round(v,3) for k,v in league_medians.items()},sort_keys=True))
+
+          def pick(e,target):
+              xs=[x for x in e["ticks"] if x["current"] and x["current"]["odds"] is not None]
+              if not xs: return None
+              x=min(xs,key=lambda y:abs((y["ts"]-target).total_seconds()))
+              d=abs((x["ts"]-target).total_seconds())
+              if d>180: return None
+              return x,d
+
+          strict=[]; broad=[]; diag=Counter()
+          for eid,e in events.items():
+              # Strict: inferred restart only.
+              if eid in strict_restarts:
+                  target=strict_restarts[eid]+dt.timedelta(minutes=48)
+                  chosen=pick(e,target)
+                  if chosen:
+                      x,d=chosen; c=x["current"]
+                      if 1.03-1e-9<=c["odds"]<=1.05+1e-9:
+                          strict.append({
+                              "event_id":eid,"league":e["league"],"match":e["match"],
+                              "kickoff_utc":e["kickoff"].isoformat(),
+                              "timing":"STRICT_HT_INFERRED","target_93":target.isoformat(),
+                              "signal_tick":x["ts"].isoformat(),"target_diff_sec":round(d,1),
+                              "score_at_signal":f"{c['home']}-{c['away']}",
+                              "p_puntatore":c["p"],"no_goal_odds":c["odds"],
+                          })
+
+              # Broad: strict target where available, otherwise calibrated league median.
+              if eid in strict_restarts:
+                  target=strict_restarts[eid]+dt.timedelta(minutes=48)
+                  timing="STRICT_HT_INFERRED"
+              else:
+                  target=e["kickoff"]+dt.timedelta(minutes=league_medians[e["league"]]+48)
+                  timing="LEAGUE_MEDIAN_HT_PROXY"
+              chosen=pick(e,target)
+              if not chosen:
+                  diag["no_target_tick"]+=1; continue
+              x,d=chosen; c=x["current"]
+              if 1.03-1e-9<=c["odds"]<=1.05+1e-9:
+                  later=[q for q in e["ticks"] if q["current"] and q["ts"]>=x["ts"]]
+                  last=later[-1] if later else x
+                  broad.append({
+                      "event_id":eid,"league":e["league"],"match":e["match"],
+                      "kickoff_utc":e["kickoff"].isoformat(),
+                      "timing":timing,"target_93":target.isoformat(),
+                      "signal_tick":x["ts"].isoformat(),"target_diff_sec":round(d,1),
+                      "score_at_signal":f"{c['home']}-{c['away']}",
+                      "p_puntatore":c["p"],"no_goal_odds":c["odds"],
+                      "last_archive_tick":last["ts"].isoformat(),
+                      "last_archive_score":f"{last['current']['home']}-{last['current']['away']}",
+                      "archive_no_goal":bool(last["current"]["home"]==c["home"] and last["current"]["away"]==c["away"]),
+                  })
+
+          print("strict_signals=",len(strict))
+          print("broad_signals=",len(broad))
           for lg in sorted(TOP5):
-              xs=[r for r in results if r["league"]==lg]
-              print("LEAGUE",lg,"signals=",len(xs))
-          for r in sorted(results,key=lambda x:(x["league"],x["kickoff_utc"],x["match"])):
-              print("SIGNAL",json.dumps(r,ensure_ascii=False,sort_keys=True))
+              s=[x for x in strict if x["league"]==lg]
+              b=[x for x in broad if x["league"]==lg]
+              print("LEAGUE",lg,"strict=",len(s),"broad=",len(b),
+                    "archive_no_goal=",sum(x["archive_no_goal"] for x in b))
+          for r in sorted(broad,key=lambda x:(x["league"],x["kickoff_utc"])):
+              print("BROAD_SIGNAL",json.dumps(r,ensure_ascii=False,sort_keys=True))
 
           artifact={
-              "schema_version":"SMARKETS_LATE_NO_GOAL_93_V1",
+              "schema_version":"SMARKETS_LATE_NO_GOAL_93_V2",
               "source_repo":f"{OWNER}/{REPO}",
               "date_range":[START,END],
-              "definition":"Current exact score back price as No Goal to FT; target minute 93 = inferred second-half restart + 48m",
-              "price_side":"p_puntatore",
-              "odds_band":[1.03,1.05],
-              "archive_files":len(files),
-              "download_failures":failures,
-              "top5_events":len(event_rows),
-              "diagnostics":dict(diagnostics),
-              "qualified_events":len(all_event_summaries),
-              "signals":results,
-              "event_summaries":all_event_summaries,
+              "archive_files":len(files),"download_failures":failures,
+              "top5_events":len(events),
+              "strict_restart_events":len(strict_restarts),
+              "global_restart_median":global_med,
+              "league_restart_medians":league_medians,
+              "strict_signals":strict,"broad_signals":broad,
+              "diagnostics":dict(diag),
+              "definition":"Current exact score back-equivalent price as No Goal to FT",
           }
           Path("artifacts").mkdir(exist_ok=True)
           Path("artifacts/smarkets_late_no_goal_scan.json").write_text(
