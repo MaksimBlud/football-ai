@@ -20,41 +20,59 @@ jobs:
           python-version: '3.12'
       - name: Record production model hash before
         run: sha256sum football_model_xgboost_elo.pkl > /tmp/model.before
-      - name: Download and inspect one public Smarkets live session
+      - name: Reconstruct one match timeline from public Smarkets live session
         run: |
           python - <<'PY'
-          import gzip, json, urllib.request
+          import gzip, json, re, urllib.request
+          from collections import defaultdict
           from pathlib import Path
 
           url = "https://raw.githubusercontent.com/BTConomista/Polymarket-oracle/main/data/smarkets_live/2026-08-21T18-53-14-g1.json.gz"
           raw = urllib.request.urlopen(url, timeout=30).read()
           obj = json.loads(gzip.decompress(raw).decode("utf-8"))
-          print("top_keys=", sorted(obj.keys()))
-          print("session_start=", obj.get("sessione_avvio_utc"))
-          print("session_end=", obj.get("sessione_fine_utc"))
-          print("giri=", obj.get("giri"))
           rows = obj.get("righe") or []
-          print("row_count=", len(rows))
-          print("row_keys=", sorted(rows[0].keys()) if rows else [])
-          names = sorted({str(r.get("partita")) for r in rows if r.get("partita")})
-          print("matches_count=", len(names))
-          print("matches_sample=", names[:50])
+          target = [r for r in rows if r.get("partita") == "Arsenal vs Coventry"]
 
-          target = [r for r in rows if "Arsenal" in str(r.get("partita")) or "Coventry" in str(r.get("partita"))]
-          print("target_rows=", len(target))
-          print("target_row_keys=", sorted(target[0].keys()) if target else [])
-          for r in target[-80:]:
-              print("TARGET", json.dumps(r, ensure_ascii=False, sort_keys=True))
+          by_time = defaultdict(list)
+          for r in target:
+              by_time[r.get("istante_utc")].append(r)
+
+          out=[]
+          score_re = re.compile(r"^(\d+)\s*-\s*(\d+)$")
+          for ts in sorted(by_time):
+              rs=by_time[ts]
+              exact=[r for r in rs if r.get("mercato")=="risultato_esatto"]
+              nums=[]
+              for r in exact:
+                  m=score_re.match(str(r.get("contratto") or ""))
+                  if m and r.get("stato_mercato")=="live":
+                      nums.append((int(m.group(1)),int(m.group(2)),r))
+              cur=None
+              if nums:
+                  mh=min(x[0] for x in nums)
+                  ma=min(x[1] for x in nums)
+                  candidates=[r for h,a,r in nums if h==mh and a==ma]
+                  if candidates:
+                      r=candidates[0]
+                      p=r.get("p_puntatore")
+                      cur={
+                          "score":f"{mh}-{ma}",
+                          "p_puntatore":p,
+                          "odds":(1/float(p) if p not in (None,0) else None),
+                          "p_banco":r.get("p_banco"),
+                          "p_mid":r.get("p_mid"),
+                          "side":r.get("lato"),
+                      }
+              states=sorted({(r.get("mercato"),r.get("stato_mercato")) for r in rs if r.get("mercato") in {"1x2","risultato_esatto","ou25","ggng"}})
+              out.append({"ts":ts,"current":cur,"states":states})
+
+          print("kickoff=2026-08-21T19:00:00Z")
+          for x in out:
+              print("TICK",json.dumps(x,ensure_ascii=False,sort_keys=True))
 
           Path("artifacts").mkdir(exist_ok=True)
           Path("artifacts/smarkets_late_no_goal_probe.json").write_text(
-              json.dumps({
-                  "top_keys": sorted(obj.keys()),
-                  "row_count": len(rows),
-                  "row_keys": sorted(rows[0].keys()) if rows else [],
-                  "matches": names,
-                  "target_rows": target[-200:],
-              }, ensure_ascii=False, indent=2),
+              json.dumps(out,ensure_ascii=False,indent=2),
               encoding="utf-8",
           )
           PY
