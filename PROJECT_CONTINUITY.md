@@ -1197,3 +1197,173 @@ That is a **repricing magnitude/risk** result, not a direction result.
 6. Direction remains unresolved.
 7. `NO_BET`, no production promotion and no production `.pkl` changes remain binding.
 
+
+---
+
+# Continuity update — 2026-09-19 — CORNER_REGIME_ADJUSTED_DIRECTION_V2 FROZEN
+
+This section supersedes the prior execution pointer that said direction research should continue only through a separately frozen future-data continuation.
+
+## PR #390 — future block-locked corner direction V2
+
+Merged to `main` as:
+
+`1431cec32bec5c039a4ac396d2ab383fdd77efcf`
+
+Final PR head:
+
+`c922ea39aeaa378ca9af9c1d3bedb289c7c6295a`
+
+Purpose:
+
+continue the unresolved FAIR_CENTRE direction question on **new future data only**, while fixing the sample-structure problem that caused V1 to end `SAMPLE_TOO_SMALL`.
+
+V2 does **not** change the statistical hypothesis or confirmation gate.
+
+The only design change is acquisition planning: fixture metadata must first lock sufficiently dense **whole league-day blocks** before any V2 corner opening/closing odds may be read.
+
+## Evidence boundary
+
+All previously opened corner samples are excluded from V2 tuning:
+
+- original 55-row repricing discovery;
+- fresh 50-row repricing replication;
+- 46-row V1 regime-adjusted direction sample.
+
+Prior samples may be used only for fixture-ID exclusion and to preserve the already-defined market representation/statistical contract.
+
+The V1 diagnostic observed concordance of 0.70 is **not** used as a V2 target, threshold or effect-size gate.
+
+## Future-only cutoff
+
+V2 candidate fixtures require:
+
+`kickoff_utc >= 2026-09-19T00:00:00Z`
+
+Leagues remain:
+
+- EPL;
+- La Liga;
+- Serie A;
+- Bundesliga;
+- Ligue 1.
+
+## Metadata-only cohort planner
+
+Before any V2 odds request:
+
+1. read fixture metadata only;
+2. retain finished fixtures after the future cutoff;
+3. exclude every prior corner-sample fixture ID;
+4. group fixtures by `(league, UTC kickoff date)`;
+5. discard metadata blocks with fewer than two fixtures because they cannot contribute a primary within-block pair;
+6. include **whole blocks**, never cherry-pick individual matches;
+7. order candidate blocks by UTC date ascending and frozen league order.
+
+For metadata block size `n`:
+
+`potential_pairs = n * (n - 1) / 2`
+
+No FAIR_CENTRE, opening odds, closing odds, centre_delta, outcome or football-state information enters the planner.
+
+## Frozen V2 cohort-lock gate
+
+A cohort may be locked only when the earliest deterministic block prefix contains all of:
+
+- all 5 leagues;
+- at least 2 metadata blocks per league;
+- at least 12 metadata blocks pooled;
+- at least 80 metadata potential pairs pooled.
+
+The 80-pair target is an operational 2x buffer over the unchanged 40-comparable-pair statistical minimum. It is not derived from V1's observed concordance.
+
+If the metadata inventory does not satisfy the lock:
+
+`WAIT_FOR_COHORT`
+
+No odds acquisition or statistical evaluation is authorized.
+
+Once the lock is reached:
+
+- selected block membership and fixture IDs become immutable;
+- later metadata must not change the earliest locked prefix;
+- fixtures may not be removed/replaced because later market data are inconvenient or missing.
+
+Regression tests explicitly verify this prefix stability.
+
+## Statistical contract remains unchanged from V1
+
+Primary candidate:
+
+`direction_score = -opening_lambda = -FAIR_CENTRE`
+
+Regime block:
+
+`league + UTC kickoff date`
+
+Primary statistic:
+
+within-regime unordered pairwise concordance.
+
+Frozen permutation test:
+
+- 20,000 permutations;
+- seed `20260918`;
+- shuffle `centre_delta` only inside each regime block.
+
+Frozen statistical sample gate:
+
+- >=30 eligible rows;
+- >=4 leagues with comparable pairs;
+- >=8 contributing regime blocks;
+- >=40 comparable pairs.
+
+Frozen confirmation gate:
+
+- sample gate passes;
+- concordance >=0.60;
+- one-sided permutation p <0.10.
+
+Verdicts remain:
+
+- `INDIVIDUAL_DIRECTION_DISCRIMINATION_REPLICATED`;
+- `INDIVIDUAL_DIRECTION_DISCRIMINATION_NOT_CONFIRMED`;
+- `SAMPLE_TOO_SMALL`.
+
+The 80 metadata potential-pair lock does not replace or weaken the 40 **actual comparable-pair** requirement.
+
+## Current implementation state
+
+PR #390 deliberately implemented **offline planning only**:
+
+- `corner_regime_adjusted_direction_v2.py` contains deterministic metadata normalization/block selection/cohort-lock logic;
+- regression tests protect cutoff, exclusions, whole-block selection, fail-closed WAIT state and stable earliest-prefix lock;
+- dedicated V2 CI passed;
+- general Research/Product/league validations passed;
+- production `.pkl` hash guard passed.
+
+Critically:
+
+- V2 currently has **no live odds transport**;
+- no provider odds endpoint exists in the V2 module;
+- no live marker exists;
+- no V2 opening/closing odds have been read;
+- no Supabase write occurred;
+- no paid provider action occurred.
+
+The preregistration document was committed **before** planner implementation.
+
+## Binding current execution pointer
+
+1. Treat PR #390 / merge `1431cec32bec5c039a4ac396d2ab383fdd77efcf` as the frozen V2 source of truth.
+2. Do not add live odds acquisition until the metadata-only planner can be run against future fixture inventory and either:
+   - returns `WAIT_FOR_COHORT`, in which case no odds call is allowed; or
+   - returns an immutable `COHORT_LOCKED` artifact satisfying the frozen metadata gate.
+3. The first live-capable change must consume the exact locked fixture IDs only and must preserve resume semantics for partial acquisition.
+4. Do not use V1's 0.70 diagnostic to alter V2 thresholds.
+5. Do not weaken the V2 metadata lock or the unchanged 40-comparable-pair statistical gate after future market data are opened.
+6. The strongest confirmed corner finding remains **repricing magnitude/risk via FAIR_CENTRE**.
+7. Repricing direction remains unresolved pending V2 future evidence.
+8. `NO_BET`, no production promotion and no production `.pkl` changes remain binding.
+
+
