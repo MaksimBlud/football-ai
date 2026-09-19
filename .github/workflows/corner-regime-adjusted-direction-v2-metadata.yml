@@ -19,7 +19,7 @@ jobs:
     if: >-
       github.event_name != 'pull_request' ||
       github.event.action != 'edited' ||
-      contains(github.event.pull_request.body || '', '[run-v2-metadata]')
+      startsWith(github.event.pull_request.body || '', '[run-v2-metadata]')
     runs-on: ubuntu-latest
     env:
       PYTHONPATH: .
@@ -54,7 +54,7 @@ jobs:
       (
         github.event_name == 'pull_request' &&
         github.event.pull_request.head.repo.full_name == github.repository &&
-        contains(github.event.pull_request.body || '', '[run-v2-metadata]')
+        startsWith(github.event.pull_request.body || '', '[run-v2-metadata]')
       )
     needs: offline-contract
     runs-on: ubuntu-latest
