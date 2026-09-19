@@ -1,0 +1,72 @@
+name: Smarkets Late No Goal Probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/smarkets-late-no-goal-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Record production model hash before
+        run: sha256sum football_model_xgboost_elo.pkl > /tmp/model.before
+      - name: Download and inspect one public Smarkets live session
+        run: |
+          python - <<'PY'
+          import gzip, json, urllib.request
+          from pathlib import Path
+
+          url = "https://raw.githubusercontent.com/BTConomista/Polymarket-oracle/main/data/smarkets_live/2026-08-21T18-53-14-g1.json.gz"
+          raw = urllib.request.urlopen(url, timeout=30).read()
+          obj = json.loads(gzip.decompress(raw).decode("utf-8"))
+          print("top_keys=", sorted(obj.keys()))
+          print("session_start=", obj.get("sessione_avvio_utc"))
+          print("session_end=", obj.get("sessione_fine_utc"))
+          print("giri=", obj.get("giri"))
+          rows = obj.get("righe") or []
+          print("row_count=", len(rows))
+          print("row_keys=", sorted(rows[0].keys()) if rows else [])
+          names = sorted({str(r.get("partita")) for r in rows if r.get("partita")})
+          print("matches_count=", len(names))
+          print("matches_sample=", names[:50])
+
+          target = [r for r in rows if "Arsenal" in str(r.get("partita")) or "Coventry" in str(r.get("partita"))]
+          print("target_rows=", len(target))
+          print("target_row_keys=", sorted(target[0].keys()) if target else [])
+          for r in target[-80:]:
+              print("TARGET", json.dumps(r, ensure_ascii=False, sort_keys=True))
+
+          Path("artifacts").mkdir(exist_ok=True)
+          Path("artifacts/smarkets_late_no_goal_probe.json").write_text(
+              json.dumps({
+                  "top_keys": sorted(obj.keys()),
+                  "row_count": len(rows),
+                  "row_keys": sorted(rows[0].keys()) if rows else [],
+                  "matches": names,
+                  "target_rows": target[-200:],
+              }, ensure_ascii=False, indent=2),
+              encoding="utf-8",
+          )
+          PY
+      - name: Verify production model unchanged
+        if: always()
+        run: |
+          sha256sum football_model_xgboost_elo.pkl > /tmp/model.after
+          diff -u /tmp/model.before /tmp/model.after
+      - name: Upload probe artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smarkets-late-no-goal-probe
+          path: artifacts/smarkets_late_no_goal_probe.json
+          if-no-files-found: error
