@@ -1776,3 +1776,166 @@ Repricing direction remains unresolved.
 
 `NO_BET`, no automatic model promotion and no production `.pkl` changes remain binding.
 
+
+---
+
+# Continuity update — 2026-09-19 — V2 lock fixture-metadata identity hardened
+
+This section extends the V2 pre-live safety chain after PR #397.
+
+## PR #399 — bind exact fixture metadata into immutable lock identity
+
+Merged to `main` as:
+
+`624b28d3f38004327c0e34e1f6922d0f1bade802`
+
+This hardening was frozen and implemented **before any real V2 `COHORT_LOCKED` artifact existed and before any V2 corner market prices were opened**.
+
+Reason:
+
+future odds normalization depends not only on provider fixture IDs, but also on exact fixture context:
+
+- league;
+- provider league ID;
+- kickoff UTC;
+- home team;
+- away team.
+
+The metadata-only live artifact already persists these fields in `future_fixture_metadata.json`.
+
+Without binding them into the immutable lock, a later evaluation could accidentally depend on re-fetched or drifted fixture metadata even while fixture IDs themselves remained frozen.
+
+## Updated immutable lock contract
+
+The future cohort-lock validator now requires the source metadata artifact to contain exactly one:
+
+- `cohort_plan.json`;
+- `future_fixture_metadata.json`.
+
+For every selected fixture it validates:
+
+- fixture ID appears exactly once;
+- fixture ID remains numeric/provider-native;
+- league matches the selected regime block;
+- league ID matches the frozen provider league mapping;
+- kickoff is valid and at/after `2026-09-19T00:00:00Z`;
+- kickoff UTC date matches the selected league-day regime block;
+- home team is non-empty;
+- away team is non-empty.
+
+Extra non-selected metadata rows may exist in the source artifact but do not enter the immutable cohort identity.
+
+## Updated selection identity
+
+The deterministic `selection_sha256` now binds:
+
+- future cutoff;
+- frozen metadata lock gate;
+- exact ordered selected blocks;
+- exact ordered selected fixture IDs;
+- exact ordered selected fixture metadata.
+
+The lock also records a dedicated:
+
+`fixture_metadata_sha256`
+
+for the canonical ordered metadata rows.
+
+The immutable manifest persists:
+
+`selected_fixture_metadata`
+
+in exact `selected_fixture_ids` order.
+
+Regression tests verify:
+
+- missing selected metadata fails closed;
+- duplicate metadata fails closed;
+- changed league ID fails closed;
+- changed kickoff/block membership fails closed;
+- missing home/away fails closed;
+- irrelevant source JSON key order does not change the lock hash;
+- extra non-selected metadata does not change the selected lock identity.
+
+## Offline odds-plan propagation
+
+The already-merged offline V2 odds acquisition planner was hardened in the same PR.
+
+It now:
+
+- requires `selected_fixture_metadata`;
+- recomputes and verifies `fixture_metadata_sha256`;
+- recomputes and verifies the metadata-bound `selection_sha256`;
+- requires metadata order to exactly match selected fixture-ID order;
+- carries immutable selected fixture metadata into the acquisition plan;
+- carries matching fixture metadata inside each deterministic <=30-request batch.
+
+This means a later live acquisition/evaluation path does not need to re-fetch fixture identity/context in order to interpret raw odds.
+
+## What did NOT change
+
+PR #399 does not change:
+
+- V2 future cutoff;
+- eligible leagues;
+- whole league-day block selection;
+- >=2 blocks per league metadata gate;
+- >=12 pooled block metadata gate;
+- >=80 metadata potential-pair gate;
+- >=40 actual comparable-pair statistical gate;
+- FAIR_CENTRE direction score;
+- 20,000 regime-preserving permutations;
+- seed `20260918`;
+- concordance >=0.60;
+- p <0.10 confirmation gate;
+- any historical/opened result.
+
+It also adds no:
+
+- provider HTTP transport;
+- odds endpoint;
+- market-price read;
+- live marker;
+- paid action;
+- Supabase write;
+- production promotion.
+
+Both dedicated V2 lock and V2 odds-plan workflows passed, as did all repository validations and production `.pkl` hash guards.
+
+## Current execution pointer
+
+The authoritative V2 state remains:
+
+**`WAIT_FOR_COHORT`**
+
+Latest authoritative metadata run/artifact remain:
+
+- run `35424349695`;
+- artifact `10578826642`;
+- digest `sha256:d486527409bed8e4a0cc11ed562ac7574e9362f3c9c83808038b90918d9388e4`.
+
+That artifact has:
+
+- 0 finished future fixtures after cutoff;
+- 0 candidate future regime blocks;
+- 0 metadata potential pairs;
+- 0 locked fixtures;
+- no V2 odds opened.
+
+Therefore the metadata-identity hardening is **readiness only**. No real V2 lock manifest or odds-plan instance exists yet.
+
+Next real live action remains another run of the same metadata-only planner after future fixtures have finished.
+
+Only after the first authoritative future `COHORT_LOCKED`:
+
+1. validate and materialize the metadata-bound immutable lock;
+2. generate the metadata-bound offline acquisition plan;
+3. record both artifacts and hashes;
+4. only then design a separate live-capable odds-acquisition PR.
+
+The strongest confirmed corner result remains replicated **repricing magnitude/risk via FAIR_CENTRE**.
+
+Repricing direction remains unresolved.
+
+`NO_BET`, no automatic model promotion and no production `.pkl` changes remain binding.
+
