@@ -1939,3 +1939,597 @@ Repricing direction remains unresolved.
 
 `NO_BET`, no automatic model promotion and no production `.pkl` changes remain binding.
 
+
+---
+
+# END-OF-DAY CONSOLIDATED SNAPSHOT — 2026-09-19
+
+This section is the **authoritative end-of-day transfer snapshot for 2026-09-19**. It consolidates all substantive project work performed today, including merged work, closed/unmerged probes, and the current unmerged WIP evaluator branch.
+
+Canonical merged `main` before this documentation-only update:
+
+`b78b4219aa6892e5bcc1eff1c802294c88e9ece0`
+
+The detailed historical context remains in the earlier sections of this file. The purpose of this section is to make cross-account/chat transfer safe without requiring reconstruction from individual PRs.
+
+## 1. PR #387 — V1 regime-adjusted corner direction closed
+
+PR #387 merged as:
+
+`47b9c42a909992e3f0a3cd114e57f452cb240870`
+
+Final frozen V1 verdict:
+
+**`SAMPLE_TOO_SMALL`**
+
+Final third-sample facts:
+
+- 46 selected / 46 eligible rows;
+- 5 contributing leagues;
+- 9 contributing league-day regime blocks;
+- only **30 actual comparable within-regime pairs**;
+- frozen minimum required = **40**;
+- diagnostic concordance = **21/30 = 0.70**;
+- permutation p-value was intentionally **not computed** because the preregistered sample gate failed;
+- `direction_discrimination_confirmed = false`.
+
+Correct interpretation:
+
+- this result is **inconclusive**, not a positive confirmation and not a statistical rejection;
+- V1 must not be rescued by lowering the 40-pair minimum after seeing the sample;
+- the separately replicated corner **repricing magnitude/risk** signal via `FAIR_CENTRE` remains intact;
+- repricing **direction** remains unresolved.
+
+The V1 acquisition required a same-sample timeout recovery:
+
+- timed-out run: `35361459609`;
+- timeout artifact: `10557603810`;
+- timeout artifact digest: `sha256:5530abd643fa4bac1c6ca25609bd9979dd3e0e90ce1c05601d234aca807e406b`;
+- 46 fixture IDs were already frozen;
+- 17 raw odds responses were preserved;
+- no statistical `report.json` existed yet.
+
+Same-sample resume:
+
+- run: `35369631434`;
+- final result artifact: `10557706131`;
+- digest: `sha256:5ff43199cdf1bb73e6b87649c3e68aa57bac628c68888a06a809c5df473b8d1f`;
+- reused raw odds responses: 17;
+- missing odds fetched during resume: 29;
+- no fixture reselection;
+- no threshold/sign/gate change;
+- production `.pkl` hash guards passed.
+
+## 2. Continuity after V1
+
+PR #389 recorded the final V1 state in continuity and merged as:
+
+`6f7b06163b5535a778ea406978431c9c6e25e08f`
+
+This means V1 is formally closed and must not be rerun or retuned.
+
+## 3. PR #390 — V2 future-data continuation preregistered and implemented offline-only
+
+PR #390 merged as:
+
+`1431cec32bec5c039a4ac396d2ab383fdd77efcf`
+
+Experiment:
+
+`CORNER_REGIME_ADJUSTED_DIRECTION_V2`
+
+V2 preserves the V1 statistical hypothesis and changes only prospective sample acquisition so the next untouched sample has enough same-day pair density.
+
+Frozen future cutoff:
+
+`2026-09-19T00:00:00Z`
+
+Frozen leagues:
+
+- EPL
+- LA_LIGA
+- SERIE_A
+- BUNDESLIGA
+- LIGUE_1
+
+Frozen metadata block:
+
+`(league, UTC kickoff date)`
+
+Frozen metadata cohort-lock gate:
+
+- all 5 leagues represented;
+- >=2 metadata blocks per league;
+- >=12 metadata blocks pooled;
+- >=80 metadata potential unordered pairs pooled.
+
+Selection rule:
+
+- whole blocks only;
+- candidate blocks ordered by UTC kickoff date ascending, then fixed league order;
+- stop at the first deterministic prefix that satisfies all metadata gates;
+- no cherry-picking individual matches;
+- no cross-league backfill.
+
+Frozen downstream statistical gate remains unchanged from V1:
+
+- >=30 eligible normalized rows;
+- >=4 leagues with comparable pairs;
+- >=8 contributing regime blocks;
+- >=40 actual comparable pairs;
+- direction score = `-opening_lambda` / `-FAIR_CENTRE`;
+- concordance >=0.60;
+- 20,000 regime-preserving permutations;
+- seed `20260918`;
+- one-sided p <0.10.
+
+Implementation is intentionally metadata/offline-first and did not open V2 odds.
+
+## 4. PR #391 — V2 continuity checkpoint
+
+PR #391 merged as:
+
+`af1fd3ca04b3874bf15f53aff9c40e78b4495296`
+
+It recorded the frozen V2 contract before any V2 odds access.
+
+## 5. PR #392 — metadata-only live planner
+
+PR #392 merged as:
+
+`fa7745519fb7f919b0b064a46670e0b98b1660a6`
+
+It added a bounded metadata-only live inventory path.
+
+Allowed provider surface:
+
+- fixture-list metadata only;
+- no odds endpoint;
+- no market prices;
+- no outcomes used for research evaluation;
+- no Supabase writes;
+- no paid provider action.
+
+Request budget:
+
+- max 2 fixture-list pages per league;
+- max 10 provider requests pooled.
+
+Prior frozen corner fixture IDs excluded:
+
+- 55 discovery fixtures;
+- 50 fresh repricing-replication fixtures;
+- 46 V1 regime-adjusted direction fixtures;
+- total = **151 excluded fixture IDs**.
+
+## 6. PR #393 — metadata trigger hardening
+
+PR #393 merged as:
+
+`2043de27f4877355f3f5c1c3a510ce8bb6ccfa7d`
+
+Purpose:
+
+allow controlled same-repository triggering of the metadata-only planner where direct `workflow_dispatch` was not available through the connected GitHub integration.
+
+Important incident:
+
+- a literal execution marker in explanatory PR prose accidentally triggered a metadata-only run before full CI;
+- that run is **non-authoritative**;
+- trigger matching was hardened before the authoritative run;
+- no odds endpoint was exposed and no market prices were opened.
+
+## 7. Authoritative V2 metadata run = WAIT_FOR_COHORT
+
+Authoritative run:
+
+`35424349695`
+
+Immutable artifact:
+
+`10578826642`
+
+Digest:
+
+`sha256:d486527409bed8e4a0cc11ed562ac7574e9362f3c9c83808038b90918d9388e4`
+
+Observed facts:
+
+- provider metadata requests: **5 / 10**;
+- fixture metadata rows returned: **197**;
+- prior excluded fixture IDs: **151**;
+- odds endpoint used: false;
+- market prices opened: false;
+- paid subscription used: false;
+- production `.pkl` hash guard: PASS;
+- normalized finished future fixtures at/after cutoff: **0**;
+- candidate future regime blocks: **0**;
+- metadata potential pairs: **0**;
+- locked fixtures: **0**.
+
+Binding state:
+
+**`WAIT_FOR_COHORT`**
+
+This is expected because the run happened almost immediately after the future cutoff; the latest captured EPL finished fixture was still `2026-09-18T19:00:00Z`.
+
+No V2 odds acquisition is authorized while the planner returns WAIT_FOR_COHORT.
+
+## 8. PR #394 — metadata result + continuity
+
+PR #394 merged as:
+
+`acdbf823b31b3eb6540afb411b1700833455bc4c`
+
+It created:
+
+`research/CORNER_REGIME_ADJUSTED_DIRECTION_V2_METADATA_RESULTS.md`
+
+and recorded the authoritative WAIT_FOR_COHORT result in `PROJECT_CONTINUITY.md`.
+
+## 9. PR #395 — immutable cohort-lock validator
+
+PR #395 merged as:
+
+`65993504cce3e4cc6580702abd592c658a324f79`
+
+It added an offline-only immutable lock validator:
+
+`corner_regime_adjusted_direction_v2_lock.py`
+
+Preregistration:
+
+`research/CORNER_REGIME_ADJUSTED_DIRECTION_V2_COHORT_LOCK.md`
+
+Purpose:
+
+when a future authoritative metadata artifact first returns `COHORT_LOCKED`, independently revalidate the frozen deterministic earliest qualifying prefix and produce an immutable lock manifest.
+
+Current WAIT_FOR_COHORT artifacts are rejected fail-closed.
+
+The lock does **not** authorize odds acquisition.
+
+## 10. PR #396 — lock-readiness continuity
+
+PR #396 merged as:
+
+`4ca0ca4790731a1feab13cf5dc81fab5bb32c524`
+
+It recorded cohort-lock readiness while preserving WAIT_FOR_COHORT as the authoritative state.
+
+## 11. PR #397 — offline odds acquisition plan
+
+PR #397 merged as:
+
+`3bd1f7565c722d03b083e93a3ce35b7a3d69739a`
+
+It added:
+
+`corner_regime_adjusted_direction_v2_odds_plan.py`
+
+Preregistration:
+
+`research/CORNER_REGIME_ADJUSTED_DIRECTION_V2_ODDS_PLAN.md`
+
+Purpose:
+
+for a future immutable V2 lock only, deterministically define the exact provider fixture IDs and batching that a later separately authorized live acquisition may use.
+
+Frozen operational batching:
+
+- preserve exact locked fixture order/membership;
+- max **30 odds requests per future live run**;
+- sequential deterministic batches;
+- no reselection;
+- no replacement;
+- no backfill;
+- partial acquisition may resume only missing IDs from the same immutable locked cohort.
+
+The offline plan explicitly sets:
+
+- `live_odds_acquisition_authorized = false`;
+- `requires_explicit_live_authorization = true`;
+- `fixture_reselection_allowed = false`;
+- `betting_enabled = false`;
+- `production_promotion_authorized = false`.
+
+No live provider transport exists in this block.
+
+## 12. PR #398 — odds-plan continuity
+
+PR #398 merged as:
+
+`f3f39c7b42925304620e51daf8c80edfbaee9228`
+
+It recorded the deterministic offline acquisition-plan readiness.
+
+## 13. PR #399 — fixture metadata bound into immutable lock identity
+
+PR #399 merged as:
+
+`624b28d3f38004327c0e34e1f6922d0f1bade802`
+
+This hardening happened **before any real V2 COHORT_LOCKED artifact and before any V2 market prices were opened**.
+
+Reason:
+
+future odds normalization requires immutable fixture context, not only fixture IDs.
+
+The lock now binds exact selected fixture metadata:
+
+- `fixture_id`;
+- `league`;
+- `league_id`;
+- `kickoff_utc`;
+- `home_team`;
+- `away_team`.
+
+Future lock input must contain exactly one:
+
+- `cohort_plan.json`;
+- `future_fixture_metadata.json`.
+
+The lock validates:
+
+- selected fixture ID appears exactly once;
+- league matches selected block;
+- league_id matches frozen provider mapping;
+- kickoff is valid and >= future cutoff;
+- kickoff UTC date matches selected regime block;
+- home/away names are non-empty.
+
+The immutable identity now includes:
+
+- cutoff;
+- metadata lock gate;
+- exact selected blocks;
+- exact selected fixture IDs;
+- exact selected fixture metadata.
+
+New hash:
+
+`fixture_metadata_sha256`
+
+The main:
+
+`selection_sha256`
+
+also includes selected fixture metadata.
+
+The offline odds plan was hardened in the same PR to propagate the immutable metadata without a later metadata re-fetch.
+
+## 14. PR #400 — fixture-metadata lock continuity
+
+PR #400 merged as current canonical main:
+
+`b78b4219aa6892e5bcc1eff1c802294c88e9ece0`
+
+It recorded the metadata-bound lock identity and offline odds-plan propagation in continuity.
+
+All dedicated V2 workflows and repository validations passed, including production `.pkl` hash guards.
+
+## 15. Current unmerged WIP — offline frozen evaluator
+
+A new branch exists:
+
+`research/corner-regime-v2-offline-evaluator`
+
+It is currently **ahead of main by 2 commits and unmerged**.
+
+Commits:
+
+1. `5a0832dc8efa198465014086c3272c87817105d5`
+   - `Preregister offline V2 frozen evaluator`
+2. `1d75e76025f6fd99121ee8c85d68b4df659310b9`
+   - `Implement offline V2 frozen evaluator`
+
+Files currently present only on that branch:
+
+- `research/CORNER_REGIME_ADJUSTED_DIRECTION_V2_EVALUATOR.md`;
+- `corner_regime_adjusted_direction_v2_evaluator.py`.
+
+Current evaluator design:
+
+- offline-only;
+- no provider HTTP transport;
+- consumes:
+  1. immutable V2 lock manifest;
+  2. deterministic V2 acquisition plan;
+  3. immutable raw-odds artifact;
+- validates lock/acquisition-plan identity;
+- verifies raw artifact SHA-256 supplied by provenance;
+- raw artifact must contain one response for every locked fixture ID;
+- duplicate raw responses fail closed;
+- non-locked raw responses fail closed;
+- if any locked raw response is missing:
+  - status = `ACQUISITION_INCOMPLETE`;
+  - `statistical_evaluation_performed = false`;
+  - no market normalization;
+  - no FAIR_CENTRE reconstruction;
+  - no concordance;
+  - no permutations;
+  - no direction verdict.
+
+Only after complete raw acquisition does it:
+
+- use the existing Bet365 full-time corner normalizer;
+- use immutable selected fixture metadata from the lock;
+- derive opening/closing market centre with the existing V1 representation;
+- run the already-frozen V1 regime-adjusted direction evaluator unchanged.
+
+Important current WIP status:
+
+- preregistration exists;
+- implementation file exists;
+- **tests have NOT yet been added**;
+- **dedicated CI has NOT yet been added**;
+- **no PR has been opened for the evaluator**;
+- therefore this branch is **not canonical main** and must not be treated as completed.
+
+The correct next coding step after transfer is:
+
+1. add fail-closed evaluator regression tests;
+2. add dedicated offline evaluator CI with production `.pkl` hash guard;
+3. verify there is no network/provider transport;
+4. compare branch vs fresh main;
+5. open separate PR;
+6. run full CI;
+7. fresh-main check;
+8. exact-head merge only if green;
+9. immediately update `PROJECT_CONTINUITY.md`.
+
+## 16. PR #401 — late no-goal historical totals probe (closed / unmerged)
+
+PR #401:
+
+`Guarded probe for late no-goal historical totals`
+
+State:
+
+**closed / NOT merged**
+
+Head:
+
+`58758a5748d21fc7350731918832b92a1c44493b`
+
+Result:
+
+- configured The Odds API key was on a Free plan;
+- historical odds endpoint was unavailable;
+- result status from provider path: `HISTORICAL_UNAVAILABLE_ON_FREE_USAGE_PLAN`;
+- no credits consumed: **185 -> 185**;
+- production model hash unchanged;
+- PR deliberately closed without merge.
+
+Interpretation:
+
+this is a research-access probe only. It does **not** add canonical code/data to main and must not be treated as a completed historical late-no-goal market dataset.
+
+## 17. PR #402 — Betfair BASIC direct-access probe (closed / unmerged)
+
+PR #402:
+
+`Probe Betfair BASIC direct access`
+
+State:
+
+**closed / NOT merged**
+
+Head:
+
+`0fd81f343e83bcfa0eae22b0355d27cbe362e4bd`
+
+Zero-cost probe result:
+
+- unauthenticated BASIC direct file access returned HTTP 403;
+- `DownloadFile` access returned HTTP 403;
+- `GetCollectionOptions` access returned HTTP 403;
+- no merge required.
+
+Interpretation:
+
+unauthenticated direct Betfair BASIC access is blocked in the tested path. No canonical project code/data resulted from this probe.
+
+## 18. Canonical corner research state at end of day
+
+Strongest supported corner result:
+
+> opening `FAIR_CENTRE` contains replicated out-of-sample information about whether the Bet365 corner market will later undergo a material repricing.
+
+This is a **repricing magnitude/risk** result.
+
+Not yet supported:
+
+> FAIR_CENTRE provides statistically confirmed individual repricing direction after controlling contemporaneous league-day market regime.
+
+V1 direction status:
+
+**inconclusive / SAMPLE_TOO_SMALL**
+
+V2 direction status:
+
+**WAIT_FOR_COHORT**
+
+No V2 odds have been opened.
+
+No real V2 immutable lock exists.
+
+No real V2 acquisition-plan instance exists from future data.
+
+No V2 raw odds artifact exists.
+
+No V2 statistical evaluation exists.
+
+## 19. Current V2 execution pointer
+
+Current authoritative metadata provenance:
+
+- run: `35424349695`;
+- artifact: `10578826642`;
+- digest: `sha256:d486527409bed8e4a0cc11ed562ac7574e9362f3c9c83808038b90918d9388e4`.
+
+Current state:
+
+**`WAIT_FOR_COHORT`**
+
+Next real live action is **not** an odds call.
+
+It is:
+
+> rerun the same metadata-only V2 planner later, after enough future matches have actually finished.
+
+Do not lower:
+
+- 5-league requirement;
+- >=2 blocks per league;
+- >=12 pooled blocks;
+- >=80 metadata potential pairs;
+- >=40 actual comparable pairs;
+- concordance >=0.60;
+- p <0.10;
+- 20,000 permutations;
+- seed `20260918`.
+
+If/when the first authoritative future run returns `COHORT_LOCKED`:
+
+1. create the metadata-bound immutable lock;
+2. verify `selection_sha256` and `fixture_metadata_sha256`;
+3. generate deterministic offline acquisition plan;
+4. record both artifacts;
+5. only then design a separate controlled live odds acquisition PR;
+6. raw acquisition must use the exact locked fixture IDs and immutable fixture metadata;
+7. only after full acquisition may the frozen offline evaluator produce the direction verdict.
+
+## 20. End-of-day safety state
+
+Still binding:
+
+- `NO_BET`;
+- research-only;
+- no automatic model promotion;
+- research/training != production promotion;
+- production `.pkl` must not change as a research side effect;
+- no mass clean/reset/format;
+- no post-result weakening of frozen gates;
+- no opened OOT retuning;
+- no synthetic replacement of missing selected fixtures;
+- free/read-only checks before paid actions;
+- no paid provider-plan upgrade without explicit user approval;
+- GitHub `main` + live Supabase remain source of truth;
+- Vercel must be checked when deployment/live-site state matters.
+
+## 21. Transfer-critical state
+
+For a new account/chat:
+
+- first read this entire `PROJECT_CONTINUITY.md`;
+- then read `AGENTS.md`;
+- then verify fresh GitHub `main`;
+- then inspect open branches/PRs;
+- do **not** assume the WIP evaluator branch is merged;
+- do **not** repeat closed V1 research;
+- do **not** open V2 odds while status is WAIT_FOR_COHORT;
+- do **not** treat PR #401 or #402 as canonical merged project state;
+- continue the current coding task from the WIP evaluator branch only after checking fresh main for conflicts.
+
+
