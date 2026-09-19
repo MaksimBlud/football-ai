@@ -128,6 +128,8 @@ def test_metadata_runner_has_no_market_price_endpoint():
 def test_workflow_requires_explicit_same_repo_marker_for_pr_live_run():
     workflow = Path(".github/workflows/corner-regime-adjusted-direction-v2-metadata.yml").read_text()
     assert "[run-v2-metadata]" in workflow
+    assert "startsWith(github.event.pull_request.body || '', '[run-v2-metadata]')" in workflow
+    assert "contains(github.event.pull_request.body || '', '[run-v2-metadata]')" not in workflow
     assert "github.event.pull_request.head.repo.full_name == github.repository" in workflow
     assert "github.event_name == 'workflow_dispatch'" in workflow
     assert "types: [opened, synchronize, reopened, edited]" in workflow
