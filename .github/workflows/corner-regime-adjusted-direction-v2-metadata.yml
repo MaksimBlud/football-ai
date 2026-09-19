@@ -1,0 +1,112 @@
+name: Corner Regime-Adjusted Direction V2 Metadata
+
+on:
+  pull_request:
+    paths:
+      - 'corner_regime_adjusted_direction_v2_metadata.py'
+      - 'tests/test_corner_regime_adjusted_direction_v2_metadata.py'
+      - 'research/CORNER_REGIME_ADJUSTED_DIRECTION_V2_METADATA_LIVE.md'
+      - '.github/workflows/corner-regime-adjusted-direction-v2-metadata.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  offline-contract:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests pandas numpy scipy scikit-learn==1.7.2 pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile metadata runner
+        run: python -m py_compile corner_regime_adjusted_direction_v2_metadata.py
+      - name: Run regression tests
+        run: pytest -q tests/test_corner_regime_adjusted_direction_v2_metadata.py tests/test_corner_regime_adjusted_direction_v2.py
+      - name: Assert metadata-only constants
+        run: |
+          python - <<'PY'
+          import corner_regime_adjusted_direction_v2_metadata as m
+          assert m.EXPERIMENT_ID == 'CORNER_REGIME_ADJUSTED_DIRECTION_V2_METADATA_LIVE'
+          assert m.MAX_PAGES_PER_LEAGUE == 2
+          assert m.MAX_METADATA_REQUESTS == 10
+          assert m.EXPECTED_EXCLUDED_IDS == 151
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+
+  live-metadata:
+    if: github.event_name == 'workflow_dispatch'
+    needs: offline-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      PYTHONPATH: .
+      FIVE_DOLLAR_FOOTBALL_API_KEY: ${{ secrets.FIVE_DOLLAR_FOOTBALL_API_KEY }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests pandas numpy scipy scikit-learn==1.7.2
+      - name: Require Free provider key without printing it
+        run: test -n "$FIVE_DOLLAR_FOOTBALL_API_KEY"
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Download immutable prior corner artifacts
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10503575942/zip > /tmp/pilot.zip
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10506736726/zip > /tmp/screen.zip
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10551727936/zip > /tmp/replication.zip
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10557706131/zip > /tmp/v1-direction.zip
+      - name: Run metadata-only future cohort planner
+        run: |
+          python corner_regime_adjusted_direction_v2_metadata.py \
+            --pilot-zip /tmp/pilot.zip \
+            --screen-zip /tmp/screen.zip \
+            --previous-replication-zip /tmp/replication.zip \
+            --v1-direction-zip /tmp/v1-direction.zip \
+            --output-dir artifacts/corner_regime_adjusted_direction_v2_metadata \
+            > /tmp/corner-regime-v2-metadata.log
+      - name: Assert metadata-only result contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/corner_regime_adjusted_direction_v2_metadata/cohort_plan.json').read_text())
+          assert r['metadata_live_experiment_id']=='CORNER_REGIME_ADJUSTED_DIRECTION_V2_METADATA_LIVE'
+          assert r['experiment_id']=='CORNER_REGIME_ADJUSTED_DIRECTION_V2'
+          assert r['research_only'] is True
+          assert r['metadata_only'] is True
+          assert r['odds_endpoint_used'] is False
+          assert r['market_prices_opened'] is False
+          assert r['match_outcome_used'] is False
+          assert r['football_state_used'] is False
+          assert r['paid_subscription_used'] is False
+          assert r['total_prior_excluded_fixture_ids']==151
+          assert r['provider_requests'] <= 10
+          assert r['status'] in {'WAIT_FOR_COHORT','COHORT_LOCKED'}
+          print(json.dumps(r, indent=2, sort_keys=True))
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - name: Upload immutable metadata result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: corner-regime-adjusted-direction-v2-metadata
+          path: |
+            artifacts/corner_regime_adjusted_direction_v2_metadata
+            /tmp/corner-regime-v2-metadata.log
+          if-no-files-found: warn
+          retention-days: 90
