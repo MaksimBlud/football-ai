@@ -1,0 +1,75 @@
+name: Betfair Basic Direct Access Probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/betfair-basic-direct-access-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe unauthenticated BASIC file and API endpoints
+        run: |
+          python - <<'PY'
+          import json, requests
+          from pathlib import Path
+
+          out={}
+          urls={
+            "direct_file":"https://historicdata.betfair.com/data/xds/historic/BASIC/28139610/1.130129050.bz2",
+            "download_file":"https://historicdata.betfair.com/api/DownloadFile?filePath=%2Fdata%2Fxds%2Fhistoric%2FBASIC%2F28139610%2F1.130129050.bz2",
+          }
+          for k,u in urls.items():
+              try:
+                  r=requests.get(u,timeout=30,allow_redirects=False)
+                  out[k]={
+                      "status":r.status_code,
+                      "location":r.headers.get("location"),
+                      "content_type":r.headers.get("content-type"),
+                      "content_length":r.headers.get("content-length"),
+                      "prefix_hex":r.content[:24].hex(),
+                  }
+              except Exception as e:
+                  out[k]={"error":repr(e)}
+
+          body={
+              "sport":"Soccer",
+              "plan":"Basic Plan",
+              "fromDay":1,"fromMonth":8,"fromYear":2026,
+              "toDay":31,"toMonth":8,"toYear":2026,
+              "eventId":None,"eventName":None,
+              "marketTypesCollection":["OVER_UNDER_05","OVER_UNDER_15","OVER_UNDER_25","OVER_UNDER_35","OVER_UNDER_45","OVER_UNDER_55"],
+              "countriesCollection":["GB","ES","DE","IT","FR"],
+              "fileTypeCollection":["M"],
+          }
+          try:
+              r=requests.post(
+                  "https://historicdata.betfair.com/api/GetCollectionOptions",
+                  json=body,timeout=30,allow_redirects=False,
+              )
+              out["collection_options_no_auth"]={
+                  "status":r.status_code,
+                  "location":r.headers.get("location"),
+                  "content_type":r.headers.get("content-type"),
+                  "body_prefix":r.text[:500],
+              }
+          except Exception as e:
+              out["collection_options_no_auth"]={"error":repr(e)}
+
+          Path("artifacts").mkdir(exist_ok=True)
+          Path("artifacts/betfair_basic_direct_access_probe.json").write_text(
+              json.dumps(out,indent=2),encoding="utf-8"
+          )
+          print(json.dumps(out,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: betfair-basic-direct-access-probe
+          path: artifacts/betfair_basic_direct_access_probe.json
