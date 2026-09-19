@@ -128,6 +128,27 @@ This trigger amendment changes **only how the metadata-only workflow is started*
 - prohibition on odds access.
 
 
+
+### Trigger-hardening correction after non-authoritative metadata start
+
+PR workflow run `35424207821` exposed a trigger bug: the PR body described the literal marker string in prose, so the original broad `contains(...)` condition started the metadata-only live job before the full repository validation set had completed.
+
+Evidence boundary:
+- this was fixture metadata only;
+- no market-price endpoint was available to the runner;
+- no V2 odds, FAIR_CENTRE, centre_delta or direction statistic could be opened;
+- any artifact/result from that premature trigger is **non-authoritative** and must not be used as the V2 cohort lock.
+
+Before any authoritative metadata run, trigger matching is hardened:
+
+- the exact execution marker must be the **first characters of the PR body**;
+- workflow condition uses `startsWith(...)`, not broad substring matching;
+- descriptive prose may not activate the live job;
+- an authoritative run is allowed only after all required CI on the exact hardened head is green.
+
+This correction changes only execution authorization. The provider/data/statistical contracts remain unchanged.
+
+
 ## Interpretation
 
 This live metadata check cannot produce a direction result.
