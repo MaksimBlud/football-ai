@@ -24,7 +24,13 @@ def _cohort(rows_per_league: list[int]) -> pd.DataFrame:
     for league, n in zip(LEAGUES, rows_per_league):
         for i in range(n):
             opening = 8.5 + i * 0.2
-            delta = 0.6 if i < max(1, math.ceil(n * 0.25)) else 0.05
+            wait_n = max(1, math.ceil(n * 0.25))
+            if i < wait_n:
+                delta = 0.6
+            elif i == wait_n:
+                delta = 0.5
+            else:
+                delta = 0.05
             rows.append(
                 {
                     "fixture_id": str(fixture),
