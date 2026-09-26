@@ -1,0 +1,119 @@
+name: Corner Repricing Timing Policy V1
+
+on:
+  pull_request:
+    paths:
+      - 'corner_repricing_timing_policy_v1.py'
+      - 'tests/test_corner_repricing_timing_policy_v1.py'
+      - 'research/CORNER_REPRICING_TIMING_POLICY_V1.md'
+      - '.github/workflows/corner-repricing-timing-policy-v1.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  offline-contract:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests pandas numpy scipy scikit-learn==1.7.2 pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile timing-policy audit
+        run: python -m py_compile corner_repricing_timing_policy_v1.py
+      - name: Run timing-policy regression tests
+        run: |
+          pytest -q             tests/test_corner_repricing_timing_policy_v1.py             tests/test_corner_repricing_direction_replication_v1.py
+      - name: Assert frozen policy constants
+        run: |
+          python - <<'PY'
+          import corner_repricing_timing_policy_v1 as t
+          assert t.EXPERIMENT_ID == 'CORNER_REPRICING_TIMING_POLICY_V1'
+          assert t.HIGH_RISK_FRACTION == 0.25
+          assert t.EXPECTED_ROWS == {'FRESH_50': 50, 'V1_46': 46, 'V2B_43': 43}
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+
+  secondary-audit:
+    needs: offline-contract
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests pandas numpy scipy scikit-learn==1.7.2
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Download immutable opened artifacts
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10550262038/zip > /tmp/discovery.zip
+          echo "92177e4ddb39331b33e9c97fc75541b0371f744f17a9dd6a2355188839960b92  /tmp/discovery.zip" | sha256sum -c -
+
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10551727936/zip > /tmp/fresh.zip
+          echo "ca3c0f96338cf213e1dc76dbf47e88d01f7ad551f18e83ef2c185d4bc9eb6ba3  /tmp/fresh.zip" | sha256sum -c -
+
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10557706131/zip > /tmp/v1.zip
+          echo "5ff43199cdf1bb73e6b87649c3e68aa57bac628c68888a06a809c5df473b8d1f  /tmp/v1.zip" | sha256sum -c -
+
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10899842049/zip > /tmp/v2b.zip
+          echo "7d4ecad191518cc551567ad1513b5f6c53121d56154a6de86b51b99d54f078ff  /tmp/v2b.zip" | sha256sum -c -
+      - name: Extract canonical CSV inputs
+        run: |
+          mkdir -p /tmp/discovery /tmp/fresh /tmp/v1 /tmp/v2b
+          unzip -q /tmp/discovery.zip -d /tmp/discovery
+          unzip -q /tmp/fresh.zip -d /tmp/fresh
+          unzip -q /tmp/v1.zip -d /tmp/v1
+          unzip -q /tmp/v2b.zip -d /tmp/v2b
+
+          DISCOVERY=$(find /tmp/discovery -name market_rows.csv -type f | head -n 1)
+          FRESH=$(find /tmp/fresh -name evaluation_rows.csv -type f | head -n 1)
+          V1=$(find /tmp/v1 -name evaluation_rows.csv -type f | head -n 1)
+          V2B=$(find /tmp/v2b -name evaluation_rows.csv -type f | head -n 1)
+
+          test -n "$DISCOVERY"; test -n "$FRESH"; test -n "$V1"; test -n "$V2B"
+          cp "$DISCOVERY" /tmp/discovery.csv
+          cp "$FRESH" /tmp/fresh.csv
+          cp "$V1" /tmp/v1.csv
+          cp "$V2B" /tmp/v2b.csv
+      - name: Run secondary timing-policy portability audit
+        run: |
+          python corner_repricing_timing_policy_v1.py             --discovery /tmp/discovery.csv             --fresh-50 /tmp/fresh.csv             --v1-46 /tmp/v1.csv             --v2b-43 /tmp/v2b.csv             --output-dir artifacts/corner_repricing_timing_policy_v1
+      - name: Assert audit is secondary and non-promotional
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/corner_repricing_timing_policy_v1/report.json').read_text())
+          assert r['experiment_id']=='CORNER_REPRICING_TIMING_POLICY_V1'
+          assert r['research_only'] is True
+          assert r['secondary_reuse_of_opened_data'] is True
+          assert r['confirmatory_replication'] is False
+          assert r['betting_enabled'] is False
+          assert r['production_promotion_authorized'] is False
+          assert r['provider_calls']==0
+          assert set(r['later_cohorts'])=={'FRESH_50','V1_46','V2B_43'}
+          print(json.dumps(r, indent=2, sort_keys=True))
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - name: Upload secondary timing-policy audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: corner-repricing-timing-policy-v1
+          path: artifacts/corner_repricing_timing_policy_v1
+          if-no-files-found: error
+          retention-days: 90
