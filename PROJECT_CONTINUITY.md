@@ -3159,4 +3159,87 @@ Only after the acquisition plan is frozen may live odds requests be made.
 
 The later statistical direction test remains unchanged and must still pass the >=40 actual comparable-pair gate after normalization.
 
+---
+
+# Continuity update — 2026-09-26 — V2B deterministic acquisition plan materialized
+
+PR #414 merged as:
+
+`8809fc7b61b2a1d9807a536a8d4de1a876cc2e2c`
+
+Canonical module:
+
+`corner_regime_adjusted_direction_v2b_odds_plan.py`
+
+Preregistration:
+
+`research/CORNER_REGIME_ADJUSTED_DIRECTION_V2B_ODDS_PLAN.md`
+
+Authoritative offline plan workflow run:
+
+`36220204953`
+
+Immutable acquisition-plan artifact:
+
+- artifact ID: `10899305926`;
+- digest: `sha256:8fe2203443f4e59a5800fd7315df6d333a19771e9827d3cad64ef4f658119c56`;
+- size: 3,142 bytes.
+
+Source immutable lock:
+
+- run `36219786013`;
+- artifact `10899325930`;
+- digest `sha256:ad6bba499cc12abf5ca10732d88e0403565e2582e6c6c8a642ca7bb81248726f`.
+
+The acquisition plan verifies and preserves:
+
+- `selection_sha256 = sha256:9f4470ee2e11d94e821e37bf1e3a5d9ebd40da893290d0c636c1ed3c62600f73`;
+- `fixture_metadata_sha256 = sha256:dd057a3fc9c6a069f4717ecc7f3863f1e7dc991e6b01e82a4c84f13c40271bbb`;
+- exact 43 fixture IDs;
+- exact immutable fixture metadata;
+- exact fixture order.
+
+Deterministic batches:
+
+- batch 1 = **30** fixture IDs;
+- batch 2 = **13** fixture IDs;
+- total planned odds requests = **43**.
+
+Resume rule:
+
+`REQUEST_ONLY_MISSING_IDS_FROM_SAME_LOCKED_COHORT`
+
+The plan explicitly forbids:
+
+- fixture reselection;
+- fixture replacement;
+- backfill;
+- provider fixture discovery.
+
+Authorization state in the plan remains:
+
+- `live_odds_acquisition_authorized = false`;
+- `requires_explicit_live_authorization = true`;
+- `fixture_reselection_allowed = false`;
+- `betting_enabled = false`;
+- `production_promotion_authorized = false`.
+
+No provider request was made while building the plan.
+
+## Current execution pointer
+
+The V2B cohort is locked and the deterministic acquisition plan is now frozen.
+
+The next step is a **separate controlled live odds-acquisition PR** that must:
+
+1. consume only artifact `10899305926`;
+2. verify its digest;
+3. consume only the exact locked fixture IDs;
+4. make no fixture-list/discovery requests;
+5. fetch only the corner odds endpoint for the planned IDs;
+6. preserve raw responses immutably;
+7. if partial, resume only missing IDs from the same cohort;
+8. never evaluate a partial acquisition;
+9. keep production `.pkl` unchanged.
+
 
