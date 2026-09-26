@@ -1,0 +1,133 @@
+name: Corner Regime-Adjusted Direction V2B Lock
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    paths:
+      - 'corner_regime_adjusted_direction_v2b.py'
+      - 'corner_regime_adjusted_direction_v2b_lock.py'
+      - 'tests/test_corner_regime_adjusted_direction_v2b.py'
+      - 'research/CORNER_REGIME_ADJUSTED_DIRECTION_V2B.md'
+      - '.github/workflows/corner-regime-adjusted-direction-v2b-lock.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  offline-contract:
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.action != 'edited' ||
+      startsWith(github.event.pull_request.body || '', '[run-v2b-lock]')
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests pandas numpy scipy scikit-learn==1.7.2 pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile V2B lock modules
+        run: |
+          python -m py_compile corner_regime_adjusted_direction_v2b.py
+          python -m py_compile corner_regime_adjusted_direction_v2b_lock.py
+      - name: Run V2B lock regression tests
+        run: pytest -q tests/test_corner_regime_adjusted_direction_v2b.py
+      - name: Assert V2B frozen operational gate
+        run: |
+          python - <<'PY'
+          import corner_regime_adjusted_direction_v2b as v
+          assert v.MIN_BLOCKS_PER_LEAGUE == 2
+          assert v.MIN_TOTAL_BLOCKS == 10
+          assert v.MIN_METADATA_POTENTIAL_PAIRS == 74
+          assert v.MIN_COMPARABLE_PAIRS == 40
+          assert v.MIN_CONCORDANCE == 0.60
+          assert v.PERMUTATIONS == 20_000
+          assert v.PERMUTATION_SEED == 20_260_918
+          assert v.MAX_PVALUE == 0.10
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+
+  materialize-lock:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        startsWith(github.event.pull_request.body || '', '[run-v2b-lock]')
+      )
+    needs: offline-contract
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests pandas numpy scipy scikit-learn==1.7.2
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Download immutable source metadata artifact
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10898297066/zip > /tmp/source-metadata.zip
+          echo "eb163d097dc2713b8f8f03370eacead91a15d3a38c0757e48b301d82e799446c  /tmp/source-metadata.zip" | sha256sum -c -
+      - name: Replan source metadata under V2B 10x74
+        run: |
+          python corner_regime_adjusted_direction_v2b.py             --metadata-zip /tmp/source-metadata.zip             --output-dir /tmp/v2b
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path('/tmp/v2b/cohort_plan.json').read_text())
+          assert p['experiment_id']=='CORNER_REGIME_ADJUSTED_DIRECTION_V2B'
+          assert p['status']=='COHORT_LOCKED'
+          assert p['locked'] is True
+          assert p['selected_block_count']==10
+          assert p['selected_fixture_count']==43
+          assert p['metadata_potential_pairs']==74
+          assert p['blocks_by_league']=={
+              'EPL':2,'LA_LIGA':2,'SERIE_A':2,'BUNDESLIGA':2,'LIGUE_1':2
+          }
+          PY
+          cd /tmp && zip -qr v2b-artifact.zip v2b
+      - name: Build immutable V2B cohort lock
+        run: |
+          mkdir -p artifacts/corner_regime_adjusted_direction_v2b_lock
+          python corner_regime_adjusted_direction_v2b_lock.py             --v2b-artifact-zip /tmp/v2b-artifact.zip             --source-metadata-workflow-run-id 36218898253             --source-metadata-artifact-id 10898297066             --source-metadata-artifact-digest eb163d097dc2713b8f8f03370eacead91a15d3a38c0757e48b301d82e799446c             --output artifacts/corner_regime_adjusted_direction_v2b_lock/cohort_lock.json
+      - name: Assert immutable lock identity
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          m=json.loads(Path('artifacts/corner_regime_adjusted_direction_v2b_lock/cohort_lock.json').read_text())
+          assert m['lock_status']=='IMMUTABLE_COHORT_LOCKED'
+          assert m['selected_block_count']==10
+          assert m['selected_fixture_count']==43
+          assert m['metadata_potential_pairs']==74
+          assert m['odds_acquisition_authorized'] is False
+          assert m['selection_sha256']=='sha256:9f4470ee2e11d94e821e37bf1e3a5d9ebd40da893290d0c636c1ed3c62600f73'
+          assert m['fixture_metadata_sha256']=='sha256:dd057a3fc9c6a069f4717ecc7f3863f1e7dc991e6b01e82a4c84f13c40271bbb'
+          print(json.dumps(m, indent=2, sort_keys=True))
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - name: Upload immutable V2B lock
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: corner-regime-adjusted-direction-v2b-lock
+          path: |
+            artifacts/corner_regime_adjusted_direction_v2b_lock
+            /tmp/v2b/cohort_plan.json
+            /tmp/v2b/future_fixture_metadata.json
+          if-no-files-found: error
+          retention-days: 90
