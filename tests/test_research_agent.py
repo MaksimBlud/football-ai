@@ -7,6 +7,19 @@ from research_agent import build_spec
 def _write_registry(root: Path, blocks: list[dict]) -> None:
     research = root / "research"
     research.mkdir()
+    docs = root / "docs"
+    docs.mkdir(exist_ok=True)
+    if not blocks:
+        (docs / "DUMMY_CLOSURE.md").write_text("closed", encoding="utf-8")
+        blocks = [{
+            "id": "DUMMY_CLOSED_SIGNAL",
+            "status": "CLOSED_RESEARCH_ONLY",
+            "hypothesis_family": "unrelated_dummy_family",
+            "sample_family": "historical",
+            "decision": "closed_for_test",
+            "retune_on_seen_sample": False,
+            "closure_document": "docs/DUMMY_CLOSURE.md",
+        }]
     (research / "signal_research_registry_v1.json").write_text(json.dumps({
         "registry_version": "SIGNAL_RESEARCH_REGISTRY_V1",
         "governance": {
