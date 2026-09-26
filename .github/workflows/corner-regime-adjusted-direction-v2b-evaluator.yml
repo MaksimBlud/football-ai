@@ -1,0 +1,134 @@
+name: Corner Regime-Adjusted Direction V2B Evaluator
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    paths:
+      - 'corner_regime_adjusted_direction_v2b_evaluator.py'
+      - 'tests/test_corner_regime_adjusted_direction_v2b_evaluator.py'
+      - 'research/CORNER_REGIME_ADJUSTED_DIRECTION_V2B_EVALUATOR.md'
+      - '.github/workflows/corner-regime-adjusted-direction-v2b-evaluator.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  offline-contract:
+    if: >-
+      github.event.action != 'edited' ||
+      startsWith(github.event.pull_request.body || '', '[run-v2b-evaluation]')
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests pandas numpy scipy scikit-learn==1.7.2 pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile V2B evaluator adapter
+        run: python -m py_compile corner_regime_adjusted_direction_v2b_evaluator.py
+      - name: Run V2B evaluator regression tests
+        run: |
+          pytest -q             tests/test_corner_regime_adjusted_direction_v2b_evaluator.py             tests/test_corner_regime_adjusted_direction_v2_evaluator.py             tests/test_corner_regime_adjusted_direction_v2b_odds_plan.py             tests/test_corner_regime_adjusted_direction_v1.py
+      - name: Assert frozen evaluator/statistical contract
+        run: |
+          python - <<'PY'
+          import corner_regime_adjusted_direction_v2b as v
+          import corner_regime_adjusted_direction_v2b_evaluator as e
+          assert e.EVALUATOR_EXPERIMENT_ID == 'CORNER_REGIME_ADJUSTED_DIRECTION_V2B_EVALUATOR'
+          assert e.EXPECTED_RAW_RUN_ID == '36222282829'
+          assert e.EXPECTED_RAW_ARTIFACT_ID == '10899611444'
+          assert e.EXPECTED_RAW_ARTIFACT_DIGEST == 'sha256:c2f5313efad4afb8663d9980f5ea004f52fe02827a83b5c99a8b775c35498a57'
+          assert v.MIN_TOTAL_ROWS == 30
+          assert v.MIN_LEAGUES_WITH_PAIRS == 4
+          assert v.MIN_REGIME_BLOCKS == 8
+          assert v.MIN_COMPARABLE_PAIRS == 40
+          assert v.MIN_CONCORDANCE == 0.60
+          assert v.PERMUTATIONS == 20_000
+          assert v.PERMUTATION_SEED == 20_260_918
+          assert v.MAX_PVALUE == 0.10
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+
+  evaluate:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.body || '', '[run-v2b-evaluation]')
+    needs: offline-contract
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests pandas numpy scipy scikit-learn==1.7.2
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Download and verify immutable V2B lock
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10899325930/zip > /tmp/lock.zip
+          echo "ad6bba499cc12abf5ca10732d88e0403565e2582e6c6c8a642ca7bb81248726f  /tmp/lock.zip" | sha256sum -c -
+          mkdir -p /tmp/lock
+          unzip -q /tmp/lock.zip -d /tmp/lock
+          LOCK_JSON=$(find /tmp/lock -name cohort_lock.json -type f | head -n 1)
+          test -n "$LOCK_JSON"
+          cp "$LOCK_JSON" /tmp/cohort_lock.json
+      - name: Download and verify immutable V2B acquisition plan
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10899305926/zip > /tmp/plan.zip
+          echo "8fe2203443f4e59a5800fd7315df6d333a19771e9827d3cad64ef4f658119c56  /tmp/plan.zip" | sha256sum -c -
+          mkdir -p /tmp/plan
+          unzip -q /tmp/plan.zip -d /tmp/plan
+          PLAN_JSON=$(find /tmp/plan -name acquisition_plan.json -type f | head -n 1)
+          test -n "$PLAN_JSON"
+          cp "$PLAN_JSON" /tmp/acquisition_plan.json
+      - name: Download and verify complete raw acquisition artifact
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10899611444/zip > /tmp/raw.zip
+          echo "c2f5313efad4afb8663d9980f5ea004f52fe02827a83b5c99a8b775c35498a57  /tmp/raw.zip" | sha256sum -c -
+      - name: Run frozen V2B offline evaluation
+        run: |
+          python corner_regime_adjusted_direction_v2b_evaluator.py             --lock-manifest /tmp/cohort_lock.json             --acquisition-plan /tmp/acquisition_plan.json             --raw-odds-zip /tmp/raw.zip             --raw-workflow-run-id 36222282829             --raw-artifact-id 10899611444             --raw-artifact-digest c2f5313efad4afb8663d9980f5ea004f52fe02827a83b5c99a8b775c35498a57             --output-dir artifacts/corner_regime_adjusted_direction_v2b_evaluator
+      - name: Assert frozen evaluation result contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/corner_regime_adjusted_direction_v2b_evaluator/report.json').read_text())
+          assert r['experiment_id']=='CORNER_REGIME_ADJUSTED_DIRECTION_V2B_EVALUATOR'
+          assert r['status']=='EVALUATED'
+          assert r['acquisition_complete'] is True
+          assert r['captured_locked_raw_responses']==43
+          assert r['missing_locked_fixture_ids']==[]
+          assert r['statistical_evaluation_performed'] is True
+          assert r['match_outcome_used'] is False
+          assert r['football_state_used'] is False
+          assert r['source_selection_sha256']=='sha256:9f4470ee2e11d94e821e37bf1e3a5d9ebd40da893290d0c636c1ed3c62600f73'
+          assert r['source_fixture_metadata_sha256']=='sha256:dd057a3fc9c6a069f4717ecc7f3863f1e7dc991e6b01e82a4c84f13c40271bbb'
+          assert r['verdict'] in {
+              'INDIVIDUAL_DIRECTION_DISCRIMINATION_REPLICATED',
+              'INDIVIDUAL_DIRECTION_DISCRIMINATION_NOT_CONFIRMED',
+              'SAMPLE_TOO_SMALL',
+          }
+          print(json.dumps(r, indent=2, sort_keys=True))
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - name: Upload immutable V2B evaluation result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: corner-regime-adjusted-direction-v2b-evaluation
+          path: artifacts/corner_regime_adjusted_direction_v2b_evaluator
+          if-no-files-found: error
+          retention-days: 90
