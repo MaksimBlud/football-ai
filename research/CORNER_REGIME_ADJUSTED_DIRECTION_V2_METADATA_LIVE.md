@@ -173,3 +173,32 @@ The unchanged statistical confirmation gate is still applied only after a later 
 - no production `.pkl` changes;
 - no Supabase writes;
 - no automatic live collection.
+
+### 2026-09-26 repeat metadata inventory invocation
+
+A second authoritative metadata-only inventory check is authorized after the passage of one week since the original `WAIT_FOR_COHORT` run.
+
+This invocation changes **no research or provider contract**.
+
+It preserves exactly:
+
+- future cutoff `2026-09-19T00:00:00Z`;
+- five frozen leagues;
+- 151 prior fixture-ID exclusions;
+- whole league-day block selection;
+- >=2 metadata blocks per league;
+- >=12 pooled metadata blocks;
+- >=80 metadata potential pairs;
+- maximum 2 fixture-list pages per league;
+- maximum 10 provider metadata requests;
+- fixture-list endpoint only;
+- no odds endpoint;
+- no market prices;
+- no outcomes;
+- no statistical evaluation;
+- no paid provider action.
+
+The PR carrying this note is an execution harness only. The exact head must pass all required CI before the body execution marker is added. The marker must be removed immediately after the authorized metadata-only run starts.
+
+The run result, not this invocation note, determines whether V2 remains `WAIT_FOR_COHORT` or advances to `COHORT_LOCKED`.
+
