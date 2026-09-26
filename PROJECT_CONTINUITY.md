@@ -2751,4 +2751,167 @@ If it first returns `COHORT_LOCKED`:
 - no weakening of metadata or statistical gates;
 - no opened-sample retuning.
 
+---
+
+# Continuity update — 2026-09-26 — second V2 metadata check remains WAIT_FOR_COHORT
+
+This section supersedes the previous execution pointer that referenced the 2026-09-19 zero-fixture metadata state.
+
+## PR #407 — execution harness only
+
+PR #407:
+
+`Run 2026-09-26 metadata-only V2 cohort recheck`
+
+Exact head:
+
+`62420be164e744be2db2a7b08da5921f53476746`
+
+The PR was used only to trigger the already-merged metadata-only workflow after all exact-head CI checks were green.
+
+The live marker was:
+
+- added only after required CI passed;
+- placed as the first PR-body line per the hardened trigger contract;
+- removed immediately after `live-metadata` entered `in_progress`.
+
+PR #407 was then closed **without merge** after the authoritative result was captured.
+
+No contract/code from this execution harness is canonical main.
+
+## Authoritative 2026-09-26 metadata-only run
+
+Workflow run:
+
+`36218178333`
+
+Immutable artifact:
+
+- artifact ID: `10898320900`;
+- digest: `sha256:276812a4c34c4c1fac5ea9c3f45e82c997bbda85a8fc629eb0c930f76577d635`;
+- size: 23,329 bytes.
+
+Safety:
+
+- provider requests = **5 / 10**;
+- fixture-list metadata only;
+- odds endpoint used = false;
+- market prices opened = false;
+- match outcomes used = false;
+- football-state used = false;
+- paid subscription used = false;
+- production `.pkl` hash guard = PASS.
+
+Frozen cutoff remains:
+
+`2026-09-19T00:00:00Z`
+
+Prior excluded fixture IDs remain:
+
+**151**
+
+## Current metadata inventory
+
+Observed:
+
+- live fixture metadata rows returned = **231**;
+- normalized finished future fixtures after cutoff = **43**;
+- qualifying league-day candidate blocks = **10**;
+- candidate fixtures inside those blocks = **43**;
+- metadata potential pairs = **74**.
+
+Blocks by league:
+
+- EPL = 2;
+- La Liga = 2;
+- Serie A = 2;
+- Bundesliga = 2;
+- Ligue 1 = 2.
+
+Therefore all five leagues now satisfy the frozen per-league requirement of >=2 blocks.
+
+The pooled lock gate still fails:
+
+- pooled qualifying blocks = **10 / 12**;
+- metadata potential pairs = **74 / 80**.
+
+Binding planner status remains:
+
+**`WAIT_FOR_COHORT`**
+
+No cohort has been locked:
+
+- selected blocks = 0;
+- selected fixture IDs = 0.
+
+## Interpretation
+
+V2 has progressed materially since the 2026-09-19 metadata run:
+
+- previous normalized future fixtures: 0;
+- current normalized future fixtures: 43;
+- previous candidate blocks: 0;
+- current candidate blocks: 10;
+- previous metadata potential pairs: 0;
+- current metadata potential pairs: 74.
+
+However, this is still **not** `COHORT_LOCKED`.
+
+Relative to the preregistered metadata gate, the current inventory is short by:
+
+- 2 qualifying pooled blocks;
+- 6 metadata potential pairs.
+
+This distance is descriptive only.
+
+Do not:
+
+- lower 12 pooled blocks;
+- lower 80 potential pairs;
+- manually choose two blocks;
+- open odds for the existing 43 fixtures;
+- pre-lock fixture IDs;
+- run the direction evaluator;
+- substitute current 74 potential pairs for the later >=40 actual comparable-pair statistical gate.
+
+## Current execution pointer
+
+The full pre-live V2 chain is now canonical and ready:
+
+1. metadata-only planner;
+2. metadata-bound immutable cohort-lock validator;
+3. deterministic offline odds-acquisition planner;
+4. frozen offline evaluator.
+
+The live state remains:
+
+**`WAIT_FOR_COHORT`**
+
+The next allowed live action is another run of the **same metadata-only planner** after more future matches have finished.
+
+Only when the first authoritative future result is exactly:
+
+`COHORT_LOCKED`
+
+may the project:
+
+1. materialize the exact metadata-bound immutable cohort lock;
+2. record `selection_sha256` and `fixture_metadata_sha256`;
+3. generate the deterministic offline acquisition plan;
+4. record lock + plan provenance;
+5. create a separate explicitly authorized live odds-acquisition PR.
+
+Until then:
+
+- no V2 odds;
+- no market-price reads;
+- no live acquisition workflow;
+- no direction statistic;
+- no betting/staking;
+- no production promotion.
+
+The strongest confirmed corner result remains replicated **repricing magnitude/risk via FAIR_CENTRE**.
+
+Regime-adjusted direction remains unresolved.
+
 
