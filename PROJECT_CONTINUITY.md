@@ -3594,3 +3594,187 @@ A safe next block is therefore to use already-opened datasets only for **hypothe
 
 No additional provider request is required to close or reinterpret V2B.
 
+---
+
+# Continuity update — 2026-09-26 — FAIR_CENTRE simple timing filter not portable
+
+After closing V2B direction as NOT CONFIRMED, a secondary retrospective portability audit tested whether the already-replicated FAIR_CENTRE repricing-risk signal could support a simple operational timing rule.
+
+Experiment:
+
+`CORNER_REPRICING_TIMING_POLICY_V1`
+
+Canonical implementation:
+
+`corner_repricing_timing_policy_v1.py`
+
+Contract:
+
+`research/CORNER_REPRICING_TIMING_POLICY_V1.md`
+
+Result:
+
+`research/CORNER_REPRICING_TIMING_POLICY_V1_RESULTS.md`
+
+Implementation/audit PR:
+
+- PR #420;
+- merged as `d22e025057443e9deb141e74481c786d00e907c0`.
+
+Authoritative audit run:
+
+`36225197468`
+
+Immutable artifact:
+
+- ID `10900099199`;
+- digest `sha256:2f3c41a393e7cfad67cc26f00bad1c5184372557244c1ae403451bb345617785`;
+- size 7,724 bytes.
+
+## Evidence boundary
+
+All three evaluation cohorts were already opened in prior research.
+
+Therefore this is:
+
+- secondary retrospective reuse;
+- not an untouched prospective replication;
+- not a new betting/execution validation.
+
+The frozen risk predictor was fitted only on the original 55-row discovery cohort.
+
+Frozen policy reused without search:
+
+- top 25% risk per league = `WAIT`;
+- remaining 75% = `STABLE_OPEN`.
+
+Frozen original-55 material-move threshold:
+
+`0.362835012901983`
+
+No provider calls were made.
+
+## Cohort results
+
+### Fresh 50
+
+WAIT versus STABLE_OPEN:
+
+- material-move prevalence = **53.33% vs 11.43%**;
+- risk ratio = **4.67**;
+- mean movement magnitude difference = **+0.230884**.
+
+Consistent with WAIT policy.
+
+### V1 46
+
+WAIT versus STABLE_OPEN:
+
+- material-move prevalence = **14.29% vs 28.13%**;
+- risk ratio = **0.508**;
+- mean movement magnitude difference = **-0.024117**.
+
+Both relationships reverse.
+
+This cohort is not consistent with the WAIT policy.
+
+### V2B 43
+
+WAIT versus STABLE_OPEN:
+
+- material-move prevalence = **23.08% vs 6.67%**;
+- risk ratio = **3.46**;
+- mean movement magnitude difference = **+0.136950**.
+
+Consistent with WAIT policy.
+
+## Pooled descriptive view
+
+Across 139 later rows:
+
+- WAIT rows = 42;
+- STABLE_OPEN rows = 97;
+- WAIT material-move prevalence = **30.95%**;
+- STABLE_OPEN material-move prevalence = **15.46%**;
+- pooled risk ratio = **2.00**;
+- WAIT minus STABLE mean movement magnitude = **+0.117011**.
+
+The pooled effect is favorable but cannot erase the complete reversal in V1_46.
+
+## Binding classification
+
+**`NOT_PORTABLE_AS_SIMPLE_WAIT_FILTER`**
+
+The simple rule:
+
+> top 25% FAIR_CENTRE risk => WAIT
+
+must not be promoted to product/betting/execution logic from current evidence.
+
+Do not:
+
+- tune the 25% cutoff on these opened cohorts;
+- discard V1_46;
+- weight cohorts post hoc;
+- claim the pooled RR=2.0 proves a stable timing edge.
+
+The stronger surviving conclusion remains narrower:
+
+> FAIR_CENTRE contains replicated information about repricing magnitude/risk, but neither a stable individual direction rule nor a portable simple WAIT/STABLE execution rule has been established.
+
+## Independent football-state direction idea
+
+A conceptually stronger future direction mechanism would use an independent football-only signal for the sign of movement and FAIR_CENTRE only for repricing risk/magnitude.
+
+The canonical football-only signal available in the repository is CORNERS10.
+
+However, current 2026/27 corner-history coverage is not sufficient to reconstruct exact point-in-time CORNERS10 for the opened market cohorts across all required leagues without introducing a new external data source:
+
+- `public.match_statistics` currently has 0 rows;
+- `public.league_corner_results` currently has 0 rows;
+- current EPL 2026/27 rows in `public.matches` have no populated home/away corner counts.
+
+Do not synthesize missing CORNERS10 histories from goals or later data.
+
+A future CORNERS10-vs-opening-market-centre direction experiment requires a timestamp-safe current-season corner-result source first.
+
+## Supabase security advisory discovered during read-only source audit
+
+A read-only Supabase schema inspection returned a critical advisory that Row Level Security is disabled on five public tables:
+
+- `public.teams`;
+- `public.predictions`;
+- `public.match_statistics`;
+- `public.league_prediction_ledger`;
+- `public.epl_ai_market_pair_ledger`.
+
+This is a security/configuration issue, not a corner-research result.
+
+Do **not** blindly enable RLS in production: enabling it without appropriate policies could break application/client access.
+
+Before remediation:
+
+1. identify which client/server roles read or write each table;
+2. define explicit select/insert/update policies where needed;
+3. test policies safely;
+4. then enable RLS through a reviewed migration.
+
+No RLS change was made during this audit.
+
+## Current research pointer
+
+Closed findings:
+
+- FAIR_CENTRE repricing magnitude/risk = replicated;
+- regime-adjusted individual direction = not confirmed;
+- simple top-25%-risk WAIT filter = not portable.
+
+The next useful direction research should introduce genuinely new independent information rather than keep tuning opening-market state on the same opened cohorts.
+
+Preferred candidate remains:
+
+**football-only expected corner pressure/total minus opening market centre**
+
+but only after a reliable point-in-time current-season corner-history source is established.
+
+
