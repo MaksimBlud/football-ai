@@ -1,0 +1,94 @@
+name: V2B CORNERS10 Replay Feasibility
+
+on:
+  pull_request:
+    paths:
+      - 'v2b_corners10_replay_feasibility.py'
+      - 'tests/test_v2b_corners10_replay_feasibility.py'
+      - 'research/V2B_CORNERS10_REPLAY_FEASIBILITY.md'
+      - '.github/workflows/v2b-corners10-replay-feasibility.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas requests pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile feasibility audit
+        run: python -m py_compile v2b_corners10_replay_feasibility.py
+      - name: Run feasibility regression tests
+        run: pytest -q tests/test_v2b_corners10_replay_feasibility.py
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+
+  live-zero-cost-feasibility:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: .
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas requests
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Download immutable V2B lock
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10899325930/zip > /tmp/lock.zip
+          echo "ad6bba499cc12abf5ca10732d88e0403565e2582e6c6c8a642ca7bb81248726f  /tmp/lock.zip" | sha256sum -c -
+          mkdir -p /tmp/lock
+          unzip -q /tmp/lock.zip -d /tmp/lock
+          LOCK_JSON=$(find /tmp/lock -name cohort_lock.json -type f | head -n 1)
+          test -n "$LOCK_JSON"
+          cp "$LOCK_JSON" /tmp/cohort_lock.json
+      - name: Run zero-cost point-in-time feasibility audit
+        run: |
+          python v2b_corners10_replay_feasibility.py             --lock-manifest /tmp/cohort_lock.json             --output artifacts/v2b_corners10_replay_feasibility.json
+      - name: Assert feasibility-only safety contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/v2b_corners10_replay_feasibility.json').read_text())
+          assert r['experiment_id']=='V2B_CORNERS10_REPLAY_FEASIBILITY'
+          assert r['research_only'] is True
+          assert r['source_feasibility_audit'] is True
+          assert r['direction_test_performed'] is False
+          assert r['v2b_odds_read'] is False
+          assert r['odds_api_requests']==0
+          assert r['supabase_operations']==0
+          assert r['production_model_operations']==0
+          assert r['locked_fixture_count']==43
+          assert r['status'] in {
+              'FULL_43_REPLAY_FEASIBLE',
+              'PARTIAL_REPLAY_FEASIBLE',
+              'IDENTITY_OR_SOURCE_GAPS',
+          }
+          print(json.dumps(r, indent=2, sort_keys=True))
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v2b-corners10-replay-feasibility
+          path: artifacts/v2b_corners10_replay_feasibility.json
+          if-no-files-found: error
+          retention-days: 90
