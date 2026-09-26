@@ -142,3 +142,89 @@ If the planner later returns `COHORT_LOCKED`, the exact selected fixture IDs and
 - no paid provider action;
 - no Supabase writes;
 - no automatic odds collection.
+
+---
+
+## Authoritative metadata recheck — 2026-09-26
+
+A second metadata-only inventory check was executed after one week of additional finished fixtures.
+
+Execution-harness PR:
+
+- PR #407;
+- closed **without merge** after the run;
+- exact head: `62420be164e744be2db2a7b08da5921f53476746`.
+
+Authoritative workflow run:
+
+`36218178333`
+
+Immutable artifact:
+
+- artifact ID: `10898320900`;
+- digest: `sha256:276812a4c34c4c1fac5ea9c3f45e82c997bbda85a8fc629eb0c930f76577d635`;
+- final size: 23,329 bytes.
+
+Safety proof:
+
+- provider requests = **5 / 10**;
+- fixture-list metadata only;
+- odds endpoint used = false;
+- market prices opened = false;
+- match outcomes used = false;
+- football-state used = false;
+- paid subscription used = false;
+- production `.pkl` before/after hash diff = clean.
+
+Observed future metadata:
+
+- live fixture metadata rows returned = **231**;
+- prior frozen fixture exclusions = **151**;
+- normalized finished future fixtures after cutoff = **43**;
+- candidate qualifying league-day blocks = **10**;
+- candidate fixtures in those blocks = **43**;
+- metadata potential pairs = **74**.
+
+Blocks by league:
+
+- EPL = **2**;
+- La Liga = **2**;
+- Serie A = **2**;
+- Bundesliga = **2**;
+- Ligue 1 = **2**.
+
+Therefore the per-league block gate is now satisfied for all five leagues.
+
+The remaining frozen pooled gates are not yet satisfied:
+
+- pooled blocks: **10 / 12**;
+- metadata potential pairs: **74 / 80**.
+
+Binding planner status remains:
+
+**`WAIT_FOR_COHORT`**
+
+No fixture cohort is locked:
+
+- selected blocks = 0;
+- selected fixtures = 0.
+
+### Distance to frozen metadata lock
+
+Relative to the preregistered aggregate thresholds, the current inventory is short by:
+
+- **2 qualifying pooled blocks**;
+- **6 metadata potential pairs**.
+
+This is descriptive only. The thresholds must not be lowered, and no ad-hoc block may be selected outside the deterministic planner.
+
+A later metadata-only check may use the same frozen contract after more matches have finished.
+
+Until the planner first returns `COHORT_LOCKED`:
+
+- no V2 odds acquisition;
+- no opening/closing market reads;
+- no cohort lock manifest;
+- no real acquisition-plan instance;
+- no V2 direction evaluation.
+
