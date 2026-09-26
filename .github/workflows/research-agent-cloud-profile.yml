@@ -1,0 +1,40 @@
+name: Research Agent Cloud Profile
+
+on:
+  pull_request:
+    paths:
+      - '.github/agents/football-ai-research.agent.md'
+      - 'tests/test_research_agent_cloud_profile.py'
+      - '.github/workflows/research-agent-cloud-profile.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Validate custom cloud agent profile contract
+        run: pytest -q tests/test_research_agent_cloud_profile.py
+      - name: Enforce no production artifact changes
+        run: |
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$'; then
+            echo "Production model artifact change detected"
+            exit 1
+          fi
+      - name: Verify production hashes unchanged
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
