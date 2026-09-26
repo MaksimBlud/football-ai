@@ -1,0 +1,92 @@
+name: Research Agent V1
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: Research question
+        required: true
+        type: string
+      hypothesis_family:
+        description: Stable snake_case hypothesis family
+        required: true
+        type: string
+  pull_request:
+    paths:
+      - 'research_agent.py'
+      - 'research_agent_safety.py'
+      - 'tests/test_research_agent.py'
+      - 'tests/test_research_agent_safety.py'
+      - 'docs/RESEARCH_AGENT_V1.md'
+      - '.github/workflows/research-agent-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile V1 coordinator and gates
+        run: python -m py_compile research_agent.py research_agent_safety.py
+      - name: Validate signal registry
+        run: python signal_research_registry_check.py
+      - name: Run focused V1 tests
+        run: pytest -q tests/test_research_agent.py tests/test_research_agent_safety.py
+      - name: Block forbidden V1 diff paths
+        if: github.event_name == 'pull_request'
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD > /tmp/changed-paths
+          python - <<'PY'
+          from pathlib import Path
+          from research_agent_safety import validate_changed_paths
+          result = validate_changed_paths(Path('/tmp/changed-paths').read_text().splitlines())
+          if not result.ok:
+              raise SystemExit('\n'.join(result.errors))
+          print('PASS: V1 changed paths are research-safe')
+          PY
+      - name: Verify production hashes unchanged
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+
+  manual-plan:
+    if: github.event_name == 'workflow_dispatch'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate research-only specification
+        env:
+          TASK: ${{ inputs.task }}
+          HYPOTHESIS_FAMILY: ${{ inputs.hypothesis_family }}
+        run: |
+          python research_agent.py \
+            --task "$TASK" \
+            --hypothesis-family "$HYPOTHESIS_FAMILY" \
+            --output artifacts/research_agent_v1/spec.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: research-agent-v1-spec
+          path: artifacts/research_agent_v1/spec.json
+          if-no-files-found: error
+          retention-days: 30
