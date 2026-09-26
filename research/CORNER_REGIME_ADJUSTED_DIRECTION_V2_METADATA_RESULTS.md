@@ -228,3 +228,58 @@ Until the planner first returns `COHORT_LOCKED`:
 - no real acquisition-plan instance;
 - no V2 direction evaluation.
 
+---
+
+## Immediate metadata recheck — 2026-09-26
+
+A further metadata-only check was executed immediately at user request, without waiting for another full league round.
+
+Execution-harness PR:
+
+- PR #409;
+- closed **without merge** after the run;
+- exact head: `8ebab42da35d69f11d199975011a2128b7f9c194`.
+
+Authoritative workflow run:
+
+`36218898253`
+
+Immutable artifact:
+
+- artifact ID: `10898297066`;
+- digest: `sha256:eb163d097dc2713b8f8f03370eacead91a15d3a38c0757e48b301d82e799446c`;
+- final size: 23,329 bytes.
+
+Safety proof:
+
+- provider requests = **5 / 10**;
+- fixture-list metadata only;
+- odds endpoint used = false;
+- market prices opened = false;
+- match outcomes used = false;
+- football-state used = false;
+- paid subscription used = false;
+- production `.pkl` before/after hash diff = clean.
+
+Observed future metadata was unchanged from run `36218178333`:
+
+- live fixture metadata rows returned = **231**;
+- normalized finished future fixtures after cutoff = **43**;
+- candidate qualifying league-day blocks = **10**;
+- candidate fixtures in those blocks = **43**;
+- metadata potential pairs = **74**;
+- blocks by league = EPL 2 / La Liga 2 / Serie A 2 / Bundesliga 2 / Ligue 1 2.
+
+Binding status remains:
+
+**`WAIT_FOR_COHORT`**
+
+The pooled frozen gate still lacks:
+
+- **2 qualifying blocks** versus 12 required;
+- **6 metadata potential pairs** versus 80 required.
+
+No cohort is locked and no V2 odds are authorized.
+
+This immediate rerun confirms that provider finished-fixture inventory had not changed between the two 2026-09-26 authoritative checks. Do not repeat metadata calls again until there is a plausible inventory change or a new operational reason.
+
