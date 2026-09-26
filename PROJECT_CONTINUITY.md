@@ -3777,4 +3777,115 @@ Preferred candidate remains:
 
 but only after a reliable point-in-time current-season corner-history source is established.
 
+---
+
+# Continuity update — 2026-09-26 — V2B CORNERS10 replay feasibility established
+
+A zero-cost source/identity feasibility audit was completed for the frozen 43-fixture V2B cohort.
+
+Experiment:
+
+`V2B_CORNERS10_REPLAY_FEASIBILITY`
+
+Workflow run:
+
+`36227211286`
+
+Immutable artifact:
+
+- ID `10900784704`;
+- digest `sha256:66c83b96f8c1143397aca660701d0a7f5950c3b59a1bd0158bbefe6501d7ecfb`;
+- size 2,634 bytes.
+
+Frozen cohort source remained the immutable V2B lock:
+
+- artifact `10899325930`;
+- digest `sha256:ad6bba499cc12abf5ca10732d88e0403565e2582e6c6c8a642ca7bb81248726f`;
+- 43 fixtures.
+
+## What was checked
+
+Only public/repository-owned Football-Data corner-result sources were used:
+
+- 2025/26 top-flight season;
+- 2026/27 top-flight season;
+- EPL, La Liga, Serie A, Bundesliga, Ligue 1.
+
+The audit used continuous point-in-time history across the season boundary and counted only matches strictly before each locked fixture.
+
+It did **not**:
+
+- read V2B odds;
+- compute opening/closing market features;
+- calculate centre_delta;
+- test direction;
+- make Odds API requests;
+- write Supabase;
+- modify production models.
+
+## Source/identity result
+
+All frozen fixtures matched uniquely:
+
+**43 / 43**
+
+Therefore provider-to-Football-Data fixture identity is no longer the blocker for this research path.
+
+## Canonical CORNERS10 availability
+
+Fixtures with >=10 prior top-flight corner-result matches for **both teams**:
+
+**31 / 43**
+
+By league:
+
+- EPL = 6 / 9;
+- La Liga = 6 / 9;
+- Serie A = 7 / 9;
+- Bundesliga = 6 / 8;
+- Ligue 1 = 6 / 8.
+
+Binding feasibility status:
+
+**`PARTIAL_REPLAY_FEASIBLE`**
+
+The 12 ineligible fixtures are caused by insufficient prior top-flight history, primarily promoted/returning clubs.
+
+Examples:
+
+- Hull = 4 prior top-flight matches;
+- Ipswich = 4;
+- Coventry = 4;
+- Racing Santander = 6;
+- Malaga = 6;
+- Deportivo A Coruna = 6;
+- Venezia = 4;
+- Frosinone = 4;
+- Schalke = 3;
+- Elversberg = 3;
+- Paderborn = 3;
+- Le Mans = 4;
+- Troyes = 4.
+
+No lower-division history was synthesized or used to fill those gaps.
+
+## Current research pointer
+
+The next safe research step is now possible offline:
+
+> construct the canonical pre-match CORNERS10 football-state signal for the exact 31 eligible V2B fixtures and explore whether an independent football-only signal explains the sign of already-opened market centre movement.
+
+Important boundary:
+
+- this will be hypothesis generation on an opened sample, not independent confirmation;
+- the eligible 31-fixture subset is frozen by the feasibility rule and must not be altered after viewing direction results;
+- the 12 ineligible fixtures must remain explicit and cannot be backfilled/replaced;
+- any promising mechanism must later be preregistered and tested on a new unseen market cohort before being treated as evidence.
+
+The previously closed findings remain unchanged:
+
+- FAIR_CENTRE repricing magnitude/risk = replicated;
+- regime-adjusted individual direction = not confirmed;
+- simple top-25%-risk WAIT filter = not portable.
+
 
