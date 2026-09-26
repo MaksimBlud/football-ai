@@ -98,7 +98,26 @@ def main() -> None:
 
     event = json.loads(args.event.read_text(encoding="utf-8"))
     issue = event["issue"]
-    plan = build_issue_plan(issue["title"], issue.get("body") or "")
+    try:
+        plan = build_issue_plan(issue["title"], issue.get("body") or "")
+    except ValueError as exc:
+        plan = {
+            "agent_version": "RESEARCH_AGENT_V2",
+            "task": issue["title"],
+            "hypothesis_family": "unknown",
+            "mode": "historical_read_only",
+            "decision": "INVALID_ISSUE",
+            "existing_block_id": None,
+            "research_only": True,
+            "automatic_promotion": False,
+            "supabase_writes": False,
+            "paid_odds_api_requests": False,
+            "arbitrary_command_execution": False,
+            "next_action": str(exc),
+            "independent_information_justification": None,
+            "issue_triggered": True,
+            "outcomes_read": False,
+        }
 
     args.output_json.parent.mkdir(parents=True, exist_ok=True)
     args.output_markdown.parent.mkdir(parents=True, exist_ok=True)
