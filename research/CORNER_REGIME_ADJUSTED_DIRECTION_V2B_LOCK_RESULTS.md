@@ -132,3 +132,29 @@ Next:
 4. only then create a separate controlled live odds-acquisition PR;
 5. after complete raw acquisition, run the frozen offline direction evaluator.
 
+## Deterministic offline acquisition plan
+
+PR #414 merged as:
+
+`8809fc7b61b2a1d9807a536a8d4de1a876cc2e2c`
+
+Plan workflow run:
+
+`36220204953`
+
+Immutable plan artifact:
+
+- ID `10899305926`;
+- digest `sha256:8fe2203443f4e59a5800fd7315df6d333a19771e9827d3cad64ef4f658119c56`;
+- size 3,142 bytes.
+
+Plan:
+
+- exact 43 locked fixture IDs;
+- batch 1 = 30;
+- batch 2 = 13;
+- total requests = 43;
+- no fixture discovery/reselection;
+- no provider call during plan construction;
+- live odds acquisition remains disabled until a separate controlled live PR.
+
