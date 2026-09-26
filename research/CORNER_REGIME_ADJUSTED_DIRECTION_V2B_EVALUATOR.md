@@ -173,3 +173,50 @@ However:
 - production `.pkl` hash guard required;
 - no post-result retuning.
 
+## Evaluation plumbing amendment after first execution attempt
+
+Authoritative evaluator workflow attempt:
+
+`36222975287`
+
+The raw artifact digest verification succeeded, but the evaluator reported:
+
+- captured raw responses = 0;
+- missing locked responses = 43;
+- status = `ACQUISITION_INCOMPLETE`;
+- statistical_evaluation_performed = false;
+- verdict = null.
+
+Therefore this attempt did **not** normalize any market row and did **not** run the direction statistic.
+
+Root cause was confirmed without inspecting market values:
+
+the GitHub artifact ZIP stores captured files as:
+
+`raw/odds/<fixture_id>.json`
+
+while the inherited V2 loader only recognized archive names containing:
+
+`/raw/odds/`
+
+with a preceding path component.
+
+The acquisition resume loader already normalizes archive member names with a synthetic leading slash, so the evaluator loader must use the same path-normalization rule.
+
+Allowed fix before re-evaluation:
+
+- normalize ZIP member names as `"/" + name.lstrip("/")`;
+- keep the same `/raw/odds/` semantic match;
+- add a regression test for root-level `raw/odds/<id>.json` artifact layout.
+
+Forbidden changes remain:
+
+- no normalizer change;
+- no fixture change;
+- no gate change;
+- no score/sign change;
+- no regime change;
+- no permutation change;
+- no result-dependent tuning.
+
+
