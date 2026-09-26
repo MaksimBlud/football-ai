@@ -1,6 +1,7 @@
 name: Multi-Market V2 Corner Outcome Audit
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'audit_multi_market_corner_outcomes.py'
@@ -43,7 +44,9 @@ jobs:
           fi
 
   live-zero-cost-audit:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      github.event_name == 'workflow_dispatch'
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 10
