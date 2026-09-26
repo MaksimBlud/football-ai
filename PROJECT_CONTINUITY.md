@@ -2561,3 +2561,194 @@ For a new account/chat:
 - continue the current coding task from the WIP evaluator branch only after checking fresh main for conflicts.
 
 
+---
+
+# Continuity update — 2026-09-26 — V2 offline frozen evaluator completed
+
+This section supersedes the 2026-09-19 transfer note that described the evaluator as WIP.
+
+## PR #405 — offline frozen evaluator
+
+Merged to `main` as:
+
+`3abb807dca9f88bdabb269998ff760f1f3cb9662`
+
+Final PR head:
+
+`b1006223094f978c5965d24a29e371723b0167e4`
+
+Canonical files now in `main`:
+
+- `research/CORNER_REGIME_ADJUSTED_DIRECTION_V2_EVALUATOR.md`;
+- `corner_regime_adjusted_direction_v2_evaluator.py`;
+- `tests/test_corner_regime_adjusted_direction_v2_evaluator.py`;
+- `.github/workflows/corner-regime-adjusted-direction-v2-evaluator.yml`.
+
+The old branch:
+
+`research/corner-regime-v2-offline-evaluator`
+
+is now historical/superseded. Do not continue from it. The canonical evaluator implementation is the one merged by PR #405 from:
+
+`research/corner-regime-v2-offline-evaluator-fresh`.
+
+## Frozen evaluator contract
+
+The evaluator is strictly offline-only.
+
+Required inputs:
+
+1. immutable V2 cohort-lock manifest;
+2. matching deterministic V2 offline odds-acquisition plan;
+3. immutable raw-odds artifact.
+
+Before any normalization/statistics it validates:
+
+- lock identity;
+- acquisition-plan identity;
+- `selection_sha256`;
+- `fixture_metadata_sha256`;
+- raw artifact SHA-256 provenance;
+- exact locked fixture membership;
+- no duplicate raw responses;
+- no raw responses for non-locked fixture IDs;
+- one raw response for every locked fixture ID.
+
+If any locked raw response is missing:
+
+`status = ACQUISITION_INCOMPLETE`
+
+and:
+
+`statistical_evaluation_performed = false`
+
+In that state the evaluator does **not**:
+
+- call the Bet365 corner normalizer;
+- reconstruct FAIR_CENTRE;
+- calculate centre_delta;
+- calculate pairwise concordance;
+- run permutations;
+- produce a direction verdict.
+
+This prevents a partial provider acquisition from silently becoming a smaller post-hoc evaluation sample.
+
+## Complete-acquisition path
+
+Only after every locked fixture has a captured raw odds response, the evaluator:
+
+- uses exact immutable `selected_fixture_metadata` from the lock;
+- uses the already-existing Bet365 full-time corner normalizer;
+- uses the unchanged opening/closing market-centre representation;
+- preserves selected cohort identity;
+- permits structurally invalid/missing market rows to become ineligible only at normalization;
+- never replaces/backfills an ineligible selected fixture;
+- invokes the already-frozen V1 regime-adjusted direction evaluator unchanged.
+
+Frozen downstream direction contract remains:
+
+- direction score = `-opening_lambda` / `-FAIR_CENTRE`;
+- regime block = league + UTC kickoff date;
+- within-block unordered pairwise concordance;
+- ties omitted;
+- >=30 eligible rows;
+- >=4 leagues with comparable pairs;
+- >=8 contributing regime blocks;
+- >=40 actual comparable pairs;
+- concordance >=0.60;
+- 20,000 regime-preserving permutations;
+- seed `20260918`;
+- one-sided p <0.10.
+
+Allowed evaluated verdicts remain:
+
+- `INDIVIDUAL_DIRECTION_DISCRIMINATION_REPLICATED`;
+- `INDIVIDUAL_DIRECTION_DISCRIMINATION_NOT_CONFIRMED`;
+- `SAMPLE_TOO_SMALL`.
+
+No new thresholds, feature search, sign changes or post-result tuning were introduced.
+
+## Regression/CI proof
+
+Dedicated evaluator regression tests cover:
+
+- incomplete acquisition stops before normalizer/statistics;
+- complete synthetic acquisition reaches the frozen evaluation orchestration;
+- structurally ineligible selected fixtures are reported without replacement;
+- non-locked raw fixture rejection;
+- duplicate raw response rejection;
+- lock/acquisition-plan mismatch rejection;
+- selection/fixture-metadata identity mismatch rejection;
+- raw artifact digest mismatch rejection;
+- no-network/no-live-transport source guard.
+
+Dedicated workflow:
+
+`Corner Regime-Adjusted Direction V2 Evaluator`
+
+passed fully.
+
+Full repository validations also passed:
+
+- Research PR Validation;
+- Product PR Validation;
+- Bundesliga PR Validation;
+- Serie A PR Validation;
+- Ligue 1 PR Validation;
+- Eredivisie PR Validation.
+
+Production `.pkl` hash guard passed.
+
+## Current V2 execution pointer after evaluator merge
+
+The live/prospective state is still the last authoritative metadata state:
+
+**`WAIT_FOR_COHORT`**
+
+Latest authoritative metadata provenance remains:
+
+- run `35424349695`;
+- artifact `10578826642`;
+- digest `sha256:d486527409bed8e4a0cc11ed562ac7574e9362f3c9c83808038b90918d9388e4`.
+
+That run occurred on 2026-09-19 and found:
+
+- 0 finished future fixtures after cutoff;
+- 0 candidate future regime blocks;
+- 0 metadata potential pairs;
+- 0 locked fixtures;
+- no V2 odds opened.
+
+Now that the offline evaluator is canonical, the full pre-live chain is ready:
+
+1. metadata-only planner;
+2. immutable metadata-bound cohort lock;
+3. deterministic offline odds-acquisition plan;
+4. frozen offline evaluator.
+
+The next real live action remains a **metadata-only** V2 inventory check using the same frozen planner. It must not open odds.
+
+If a future metadata check returns `WAIT_FOR_COHORT`, remain blocked and do not change gates.
+
+If it first returns `COHORT_LOCKED`:
+
+1. materialize/validate the immutable lock;
+2. record `selection_sha256` and `fixture_metadata_sha256`;
+3. generate the deterministic offline acquisition plan;
+4. record lock + plan;
+5. only then design a separately authorized live odds-acquisition PR;
+6. after complete raw acquisition, pass the immutable raw artifact to the canonical evaluator.
+
+## Safety remains binding
+
+- research-only;
+- `NO_BET`;
+- no automatic model promotion;
+- no production `.pkl` changes as research side effect;
+- no paid provider-plan upgrade without explicit approval;
+- no odds access while metadata state is WAIT_FOR_COHORT;
+- no fixture reselection/backfill after lock;
+- no weakening of metadata or statistical gates;
+- no opened-sample retuning.
+
+
