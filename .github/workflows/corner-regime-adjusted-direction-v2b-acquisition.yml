@@ -1,0 +1,196 @@
+name: Corner Regime-Adjusted Direction V2B Acquisition
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    paths:
+      - 'corner_regime_adjusted_direction_v2b_acquisition.py'
+      - 'tests/test_corner_regime_adjusted_direction_v2b_acquisition.py'
+      - 'research/CORNER_REGIME_ADJUSTED_DIRECTION_V2B_LIVE_ACQUISITION.md'
+      - '.github/workflows/corner-regime-adjusted-direction-v2b-acquisition.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  offline-contract:
+    if: >-
+      github.event.action != 'edited' ||
+      startsWith(github.event.pull_request.body || '', '[run-v2b-acquisition]')
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests pandas numpy scipy scikit-learn==1.7.2 pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile controlled acquisition module
+        run: python -m py_compile corner_regime_adjusted_direction_v2b_acquisition.py
+      - name: Run controlled acquisition regression tests
+        run: |
+          pytest -q             tests/test_corner_regime_adjusted_direction_v2b_acquisition.py             tests/test_corner_regime_adjusted_direction_v2b_odds_plan.py             tests/test_corner_regime_adjusted_direction_v2b.py
+      - name: Assert immutable acquisition provenance
+        run: |
+          python - <<'PY'
+          import corner_regime_adjusted_direction_v2b_acquisition as a
+          assert a.EXPECTED_LOCK_RUN_ID == '36219786013'
+          assert a.EXPECTED_LOCK_ARTIFACT_ID == '10899325930'
+          assert a.EXPECTED_LOCK_ARTIFACT_DIGEST == 'sha256:ad6bba499cc12abf5ca10732d88e0403565e2582e6c6c8a642ca7bb81248726f'
+          assert a.EXPECTED_PLAN_RUN_ID == '36220204953'
+          assert a.EXPECTED_PLAN_ARTIFACT_ID == '10899305926'
+          assert a.EXPECTED_PLAN_ARTIFACT_DIGEST == 'sha256:8fe2203443f4e59a5800fd7315df6d333a19771e9827d3cad64ef4f658119c56'
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+
+  batch-1:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.body || '', '[run-v2b-acquisition]')
+    needs: offline-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      PYTHONPATH: .
+      FIVE_DOLLAR_FOOTBALL_API_KEY: ${{ secrets.FIVE_DOLLAR_FOOTBALL_API_KEY }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests pandas numpy scipy scikit-learn==1.7.2
+      - name: Require provider key without printing it
+        run: test -n "$FIVE_DOLLAR_FOOTBALL_API_KEY"
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Download and verify immutable lock and plan
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10899325930/zip > /tmp/lock.zip
+          echo "ad6bba499cc12abf5ca10732d88e0403565e2582e6c6c8a642ca7bb81248726f  /tmp/lock.zip" | sha256sum -c -
+          mkdir -p /tmp/lock
+          unzip -q /tmp/lock.zip -d /tmp/lock
+          LOCK_JSON=$(find /tmp/lock -name cohort_lock.json -type f | head -n 1)
+          test -n "$LOCK_JSON"
+          cp "$LOCK_JSON" /tmp/cohort_lock.json
+
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10899305926/zip > /tmp/plan.zip
+          echo "8fe2203443f4e59a5800fd7315df6d333a19771e9827d3cad64ef4f658119c56  /tmp/plan.zip" | sha256sum -c -
+          mkdir -p /tmp/plan
+          unzip -q /tmp/plan.zip -d /tmp/plan
+          PLAN_JSON=$(find /tmp/plan -name acquisition_plan.json -type f | head -n 1)
+          test -n "$PLAN_JSON"
+          cp "$PLAN_JSON" /tmp/acquisition_plan.json
+      - name: Acquire frozen batch 1
+        run: |
+          python corner_regime_adjusted_direction_v2b_acquisition.py             --lock-manifest /tmp/cohort_lock.json             --acquisition-plan /tmp/acquisition_plan.json             --batch-index 1             --output-dir artifacts/corner_regime_adjusted_direction_v2b_acquisition
+      - name: Assert batch 1 partial contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/corner_regime_adjusted_direction_v2b_acquisition/report.json').read_text())
+          assert r['status']=='ACQUISITION_PARTIAL'
+          assert r['acquisition_complete'] is False
+          assert r['batch_index']==1
+          assert r['batch_planned_fixture_requests']==30
+          assert r['captured_locked_raw_responses']==30
+          assert r['missing_locked_fixture_count']==13
+          assert r['provider_http_requests_this_run']==30
+          assert r['fixture_discovery_performed'] is False
+          assert r['normalization_performed'] is False
+          assert r['statistical_evaluation_performed'] is False
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - name: Upload batch 1 raw artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: corner-regime-adjusted-direction-v2b-raw-batch1
+          path: artifacts/corner_regime_adjusted_direction_v2b_acquisition
+          if-no-files-found: error
+          retention-days: 90
+
+  batch-2:
+    needs: batch-1
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      PYTHONPATH: .
+      FIVE_DOLLAR_FOOTBALL_API_KEY: ${{ secrets.FIVE_DOLLAR_FOOTBALL_API_KEY }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests pandas numpy scipy scikit-learn==1.7.2
+      - name: Require provider key without printing it
+        run: test -n "$FIVE_DOLLAR_FOOTBALL_API_KEY"
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Download and verify immutable lock and plan
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10899325930/zip > /tmp/lock.zip
+          echo "ad6bba499cc12abf5ca10732d88e0403565e2582e6c6c8a642ca7bb81248726f  /tmp/lock.zip" | sha256sum -c -
+          mkdir -p /tmp/lock
+          unzip -q /tmp/lock.zip -d /tmp/lock
+          LOCK_JSON=$(find /tmp/lock -name cohort_lock.json -type f | head -n 1)
+          test -n "$LOCK_JSON"
+          cp "$LOCK_JSON" /tmp/cohort_lock.json
+
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10899305926/zip > /tmp/plan.zip
+          echo "8fe2203443f4e59a5800fd7315df6d333a19771e9827d3cad64ef4f658119c56  /tmp/plan.zip" | sha256sum -c -
+          mkdir -p /tmp/plan
+          unzip -q /tmp/plan.zip -d /tmp/plan
+          PLAN_JSON=$(find /tmp/plan -name acquisition_plan.json -type f | head -n 1)
+          test -n "$PLAN_JSON"
+          cp "$PLAN_JSON" /tmp/acquisition_plan.json
+      - name: Download batch 1 raw artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: corner-regime-adjusted-direction-v2b-raw-batch1
+          path: /tmp/batch1
+      - name: Build immutable same-run resume zip
+        run: |
+          cd /tmp/batch1
+          zip -qr /tmp/batch1-resume.zip .
+      - name: Acquire frozen batch 2 using batch 1 resume
+        run: |
+          python corner_regime_adjusted_direction_v2b_acquisition.py             --lock-manifest /tmp/cohort_lock.json             --acquisition-plan /tmp/acquisition_plan.json             --batch-index 2             --resume-zip /tmp/batch1-resume.zip             --output-dir artifacts/corner_regime_adjusted_direction_v2b_acquisition
+      - name: Assert acquisition complete without evaluation
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/corner_regime_adjusted_direction_v2b_acquisition/report.json').read_text())
+          assert r['status']=='ACQUISITION_COMPLETE'
+          assert r['acquisition_complete'] is True
+          assert r['batch_index']==2
+          assert r['batch_planned_fixture_requests']==13
+          assert r['captured_locked_raw_responses']==43
+          assert r['missing_locked_fixture_count']==0
+          assert r['provider_http_requests_this_run']==13
+          assert r['fixture_discovery_performed'] is False
+          assert r['normalization_performed'] is False
+          assert r['statistical_evaluation_performed'] is False
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - name: Upload complete raw acquisition artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: corner-regime-adjusted-direction-v2b-raw-complete
+          path: artifacts/corner_regime_adjusted_direction_v2b_acquisition
+          if-no-files-found: error
+          retention-days: 90
