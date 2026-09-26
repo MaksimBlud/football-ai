@@ -27,10 +27,10 @@ def _source_plan_and_metadata():
 
     league_ids = {
         "EPL": "4160026622",
-        "LA_LIGA": "3912661592",
-        "SERIE_A": "4021004796",
-        "BUNDESLIGA": "4249702231",
-        "LIGUE_1": "4484422602",
+        "LA_LIGA": "4212821298",
+        "SERIE_A": "3405541143",
+        "BUNDESLIGA": "686337048",
+        "LIGUE_1": "3614399544",
     }
 
     for league, date, size in BLOCK_SIZES:
