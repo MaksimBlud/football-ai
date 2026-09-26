@@ -143,7 +143,8 @@ def load_raw_odds(
 
     with zipfile.ZipFile(raw_odds_zip) as zf:
         for name in zf.namelist():
-            if "/raw/odds/" not in name or not name.endswith(".json"):
+            normalized_name = "/" + name.lstrip("/")
+            if "/raw/odds/" not in normalized_name or not name.endswith(".json"):
                 continue
             fixture_id = Path(name).stem
             if fixture_id not in selected:
