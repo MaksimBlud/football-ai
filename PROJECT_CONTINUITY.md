@@ -2976,3 +2976,187 @@ because this immediate duplicate check produced identical provider inventory, do
 
 All previously frozen V2 gates remain unchanged.
 
+---
+
+# Continuity update — 2026-09-26 — V2B 10/74 cohort is now immutably locked
+
+This section supersedes the prior V2 `WAIT_FOR_COHORT` execution pointer for the active direction experiment.
+
+## Why V2B was created
+
+At explicit user instruction, the operational metadata gate was changed from V2's:
+
+- 12 pooled qualifying blocks;
+- 80 metadata potential pairs;
+
+to a new experiment:
+
+`CORNER_REGIME_ADJUSTED_DIRECTION_V2B`
+
+with:
+
+- 10 pooled qualifying blocks;
+- 74 metadata potential pairs.
+
+This was done as a **new experiment**, not by rewriting V2 history.
+
+Important methodological note:
+
+- fixture metadata density had already been observed;
+- no V2B odds/market prices had been opened;
+- therefore V2B is a post-metadata / pre-odds operational amendment;
+- the downstream statistical direction gate remains unchanged.
+
+The original V2 remains historically valid as `WAIT_FOR_COHORT` under its original 12/80 metadata gate.
+
+## PR #411 — V2B implementation
+
+Merged as:
+
+`385df56a54d36a8326f02ae07c02dd868111dca1`
+
+Added:
+
+- `research/CORNER_REGIME_ADJUSTED_DIRECTION_V2B.md`;
+- `corner_regime_adjusted_direction_v2b.py`;
+- `corner_regime_adjusted_direction_v2b_lock.py`;
+- `tests/test_corner_regime_adjusted_direction_v2b.py`;
+- dedicated V2B offline CI.
+
+Frozen V2B metadata gate:
+
+- >=2 blocks per league;
+- >=10 pooled blocks;
+- >=74 metadata potential pairs.
+
+Frozen downstream statistical gate remains:
+
+- >=30 eligible normalized rows;
+- >=4 leagues with comparable pairs;
+- >=8 contributing blocks;
+- >=40 actual comparable pairs;
+- concordance >=0.60;
+- 20,000 regime-preserving permutations;
+- seed `20260918`;
+- p <0.10.
+
+## PR #412 — immutable lock materialization workflow
+
+Merged as:
+
+`277f53c3717c468c21ac704e1ca041bd5a91c007`
+
+Authoritative offline lock run:
+
+`36219786013`
+
+Immutable lock artifact:
+
+- artifact ID: `10899325930`;
+- digest: `sha256:ad6bba499cc12abf5ca10732d88e0403565e2582e6c6c8a642ca7bb81248726f`;
+- size: 9,198 bytes.
+
+Source immutable metadata artifact:
+
+- run `36218898253`;
+- artifact `10898297066`;
+- digest `sha256:eb163d097dc2713b8f8f03370eacead91a15d3a38c0757e48b301d82e799446c`.
+
+The source artifact digest was verified before replanning.
+
+No provider call was made while materializing the V2B lock.
+
+## Current V2B locked cohort
+
+Binding status:
+
+**`IMMUTABLE_COHORT_LOCKED`**
+
+Locked cohort:
+
+- selected blocks = **10**;
+- selected fixtures = **43**;
+- metadata potential pairs = **74**;
+- blocks by league:
+  - EPL = 2;
+  - La Liga = 2;
+  - Serie A = 2;
+  - Bundesliga = 2;
+  - Ligue 1 = 2.
+
+This exact 43-fixture cohort is now frozen.
+
+No fixture may be:
+
+- removed;
+- replaced;
+- reordered for selection purposes;
+- backfilled;
+- rediscovered from provider metadata.
+
+## Immutable hashes
+
+`selection_sha256`:
+
+`sha256:9f4470ee2e11d94e821e37bf1e3a5d9ebd40da893290d0c636c1ed3c62600f73`
+
+`fixture_metadata_sha256`:
+
+`sha256:dd057a3fc9c6a069f4717ecc7f3863f1e7dc991e6b01e82a4c84f13c40271bbb`
+
+These hashes bind the exact selected blocks, fixture IDs and immutable fixture metadata.
+
+Fixture metadata includes:
+
+- fixture_id;
+- league;
+- league_id;
+- kickoff_utc;
+- home_team;
+- away_team.
+
+## Safety state
+
+Lock materialization was:
+
+- offline-only;
+- no odds endpoint;
+- no market-price reads;
+- no outcomes;
+- no football-state inputs;
+- no paid action;
+- no Supabase writes;
+- no production model change.
+
+Production `.pkl` hash guard passed.
+
+The lock explicitly sets:
+
+- `odds_acquisition_authorized = false`;
+- `betting_enabled = false`;
+- `production_promotion_authorized = false`.
+
+## Current execution pointer
+
+The project no longer waits for additional finished fixtures for V2B.
+
+The next allowed step is now:
+
+**generate the deterministic offline odds-acquisition plan from immutable lock artifact `10899325930`.**
+
+That plan must:
+
+- consume only this immutable lock;
+- preserve exact 43 fixture IDs;
+- preserve immutable fixture metadata;
+- verify `selection_sha256`;
+- verify `fixture_metadata_sha256`;
+- define deterministic request batches;
+- prohibit fixture reselection/backfill;
+- keep live odds acquisition disabled until a separate controlled live PR is created.
+
+Only after the acquisition plan is frozen may live odds requests be made.
+
+The later statistical direction test remains unchanged and must still pass the >=40 actual comparable-pair gate after normalization.
+
+
