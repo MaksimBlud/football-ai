@@ -1,0 +1,114 @@
+name: Corner Regime-Adjusted Direction V2B Odds Plan
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    paths:
+      - 'corner_regime_adjusted_direction_v2b_odds_plan.py'
+      - 'tests/test_corner_regime_adjusted_direction_v2b_odds_plan.py'
+      - 'research/CORNER_REGIME_ADJUSTED_DIRECTION_V2B_ODDS_PLAN.md'
+      - '.github/workflows/corner-regime-adjusted-direction-v2b-odds-plan.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  offline-contract:
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.action != 'edited' ||
+      startsWith(github.event.pull_request.body || '', '[run-v2b-plan]')
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests pandas numpy scipy scikit-learn==1.7.2 pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile V2B odds-plan module
+        run: python -m py_compile corner_regime_adjusted_direction_v2b_odds_plan.py
+      - name: Run V2B odds-plan regression tests
+        run: |
+          pytest -q             tests/test_corner_regime_adjusted_direction_v2b_odds_plan.py             tests/test_corner_regime_adjusted_direction_v2b.py
+      - name: Assert frozen V2B plan constants
+        run: |
+          python - <<'PY'
+          import corner_regime_adjusted_direction_v2b_odds_plan as p
+          assert p.EXPECTED_SELECTED_FIXTURES == 43
+          assert p.EXPECTED_SELECTED_BLOCKS == 10
+          assert p.EXPECTED_METADATA_POTENTIAL_PAIRS == 74
+          assert p.MAX_ODDS_REQUESTS_PER_BATCH == 30
+          assert p.EXPECTED_SELECTION_SHA256 == 'sha256:9f4470ee2e11d94e821e37bf1e3a5d9ebd40da893290d0c636c1ed3c62600f73'
+          assert p.EXPECTED_FIXTURE_METADATA_SHA256 == 'sha256:dd057a3fc9c6a069f4717ecc7f3863f1e7dc991e6b01e82a4c84f13c40271bbb'
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+
+  materialize-plan:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        startsWith(github.event.pull_request.body || '', '[run-v2b-plan]')
+      )
+    needs: offline-contract
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests pandas numpy scipy scikit-learn==1.7.2
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Download immutable V2B lock artifact
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10899325930/zip > /tmp/v2b-lock.zip
+          echo "ad6bba499cc12abf5ca10732d88e0403565e2582e6c6c8a642ca7bb81248726f  /tmp/v2b-lock.zip" | sha256sum -c -
+          mkdir -p /tmp/v2b-lock
+          unzip -q /tmp/v2b-lock.zip -d /tmp/v2b-lock
+          LOCK_JSON=$(find /tmp/v2b-lock -name cohort_lock.json -type f | head -n 1)
+          test -n "$LOCK_JSON"
+          cp "$LOCK_JSON" /tmp/cohort_lock.json
+      - name: Build deterministic V2B acquisition plan
+        run: |
+          mkdir -p artifacts/corner_regime_adjusted_direction_v2b_odds_plan
+          python corner_regime_adjusted_direction_v2b_odds_plan.py             --lock-manifest /tmp/cohort_lock.json             --source-lock-workflow-run-id 36219786013             --source-lock-artifact-id 10899325930             --source-lock-artifact-digest ad6bba499cc12abf5ca10732d88e0403565e2582e6c6c8a642ca7bb81248726f             --output artifacts/corner_regime_adjusted_direction_v2b_odds_plan/acquisition_plan.json
+      - name: Assert exact 43-fixture 30+13 plan
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path('artifacts/corner_regime_adjusted_direction_v2b_odds_plan/acquisition_plan.json').read_text())
+          assert p['plan_experiment_id']=='CORNER_REGIME_ADJUSTED_DIRECTION_V2B_ODDS_PLAN'
+          assert p['selected_fixture_count']==43
+          assert p['total_planned_odds_requests']==43
+          assert p['batch_count']==2
+          assert [b['planned_requests'] for b in p['batches']]==[30,13]
+          assert p['source_selection_sha256']=='sha256:9f4470ee2e11d94e821e37bf1e3a5d9ebd40da893290d0c636c1ed3c62600f73'
+          assert p['source_fixture_metadata_sha256']=='sha256:dd057a3fc9c6a069f4717ecc7f3863f1e7dc991e6b01e82a4c84f13c40271bbb'
+          assert p['live_odds_acquisition_authorized'] is False
+          assert p['fixture_reselection_allowed'] is False
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - name: Upload immutable V2B acquisition plan
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: corner-regime-adjusted-direction-v2b-odds-plan
+          path: artifacts/corner_regime_adjusted_direction_v2b_odds_plan
+          if-no-files-found: error
+          retention-days: 90
