@@ -1,3 +1,4 @@
+from pathlib import Path
 from types import SimpleNamespace
 
 import pandas as pd
@@ -128,3 +129,14 @@ def test_run_audit_fetches_only_eight_explicitly_configured_csv_leagues():
         assert any(url.endswith(f"/2627/{code}.csv") for url in urls)
     by_league = {item["league"]: item for item in report["leagues"]}
     assert by_league["RPL"]["status"] == "SOURCE_NOT_CONFIGURED"
+
+
+def test_workflow_supports_manual_zero_cost_live_audit():
+    workflow = Path(".github/workflows/multi-market-corner-outcome-audit.yml").read_text(
+        encoding="utf-8"
+    )
+    assert "workflow_dispatch:" in workflow
+    assert "github.event_name == 'workflow_dispatch'" in workflow
+    assert "Run configured Football-Data corner audit" in workflow
+    assert "odds_api_requests" in workflow
+    assert "supabase_operations" in workflow
