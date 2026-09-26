@@ -1,15 +1,13 @@
-"""Offline frozen evaluator for CORNER_REGIME_ADJUSTED_DIRECTION_V2.
+"""Offline frozen evaluator adapter for CORNER_REGIME_ADJUSTED_DIRECTION_V2B.
 
-The evaluator cannot access the provider. It requires a complete immutable raw
-odds artifact for the exact locked cohort before any normalization/statistics.
+The statistical method is inherited unchanged from the already-frozen V1/V2
+evaluator. This module only validates V2B provenance and feeds the complete
+immutable raw artifact into the existing normalizer + direction statistic.
 """
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
-import re
-import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -17,151 +15,113 @@ import pandas as pd
 
 import corner_repricing_direction_replication_v1 as replication
 import corner_regime_adjusted_direction_v1 as direction_v1
-import corner_regime_adjusted_direction_v2 as v2
-import corner_regime_adjusted_direction_v2_odds_plan as odds_plan
+import corner_regime_adjusted_direction_v2_evaluator as frozen
+import corner_regime_adjusted_direction_v2b as v2b
+import corner_regime_adjusted_direction_v2b_odds_plan as odds_plan
 
-EVALUATOR_EXPERIMENT_ID = "CORNER_REGIME_ADJUSTED_DIRECTION_V2_EVALUATOR"
-_SHA256_RE = re.compile(r"^(?:sha256:)?([0-9a-fA-F]{64})$")
+EVALUATOR_EXPERIMENT_ID = "CORNER_REGIME_ADJUSTED_DIRECTION_V2B_EVALUATOR"
+
+EXPECTED_LOCK_RUN_ID = "36219786013"
+EXPECTED_LOCK_ARTIFACT_ID = "10899325930"
+EXPECTED_LOCK_ARTIFACT_DIGEST = (
+    "sha256:ad6bba499cc12abf5ca10732d88e0403565e2582e6c6c8a642ca7bb81248726f"
+)
+EXPECTED_PLAN_RUN_ID = "36220204953"
+EXPECTED_PLAN_ARTIFACT_ID = "10899305926"
+EXPECTED_PLAN_ARTIFACT_DIGEST = (
+    "sha256:8fe2203443f4e59a5800fd7315df6d333a19771e9827d3cad64ef4f658119c56"
+)
+EXPECTED_RAW_RUN_ID = "36222282829"
+EXPECTED_RAW_ARTIFACT_ID = "10899611444"
+EXPECTED_RAW_ARTIFACT_DIGEST = (
+    "sha256:c2f5313efad4afb8663d9980f5ea004f52fe02827a83b5c99a8b775c35498a57"
+)
 
 
 def _write_json(path: Path, payload: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
-
-
-def _normalize_digest(value: str) -> str:
-    match = _SHA256_RE.fullmatch(value.strip())
-    if not match:
-        raise ValueError("artifact digest must be a SHA-256 hex digest")
-    return "sha256:" + match.group(1).lower()
-
-
-def _file_sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return "sha256:" + digest.hexdigest()
+    frozen._write_json(path, payload)
 
 
 def load_json_object(path: Path, *, label: str) -> dict[str, Any]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise RuntimeError(f"{label} must contain a JSON object")
-    return payload
+    return frozen.load_json_object(path, label=label)
 
 
-def validate_acquisition_plan(
+def validate_lock_and_plan(
     lock_manifest: dict[str, Any],
     acquisition_plan: dict[str, Any],
 ) -> None:
     odds_plan.validate_lock_manifest(lock_manifest)
 
-    expected_exact = {
+    expected = {
         "plan_experiment_id": odds_plan.PLAN_EXPERIMENT_ID,
         "source_lock_experiment_id": lock_manifest["lock_experiment_id"],
-        "source_lock_status": lock_manifest["lock_status"],
+        "source_lock_status": "IMMUTABLE_COHORT_LOCKED",
+        "source_lock_workflow_run_id": EXPECTED_LOCK_RUN_ID,
+        "source_lock_artifact_id": EXPECTED_LOCK_ARTIFACT_ID,
+        "source_lock_artifact_digest": EXPECTED_LOCK_ARTIFACT_DIGEST,
         "source_selection_sha256": lock_manifest["selection_sha256"],
         "source_fixture_metadata_sha256": lock_manifest[
             "fixture_metadata_sha256"
         ],
         "research_only": True,
         "offline_only": True,
+        "post_metadata_pre_odds_amendment": True,
         "live_odds_acquisition_authorized": False,
         "requires_explicit_live_authorization": True,
         "fixture_reselection_allowed": False,
         "betting_enabled": False,
         "production_promotion_authorized": False,
-        "future_cutoff_utc": v2.FUTURE_CUTOFF_UTC,
-        "max_odds_requests_per_run": odds_plan.MAX_ODDS_REQUESTS_PER_RUN,
+        "future_cutoff_utc": v2b.FUTURE_CUTOFF_UTC,
+        "selected_fixture_count": 43,
+        "max_odds_requests_per_batch": odds_plan.MAX_ODDS_REQUESTS_PER_BATCH,
+        "total_planned_odds_requests": 43,
+        "batch_count": 2,
         "resume_rule": "REQUEST_ONLY_MISSING_IDS_FROM_SAME_LOCKED_COHORT",
     }
-    for key, expected in expected_exact.items():
-        if acquisition_plan.get(key) != expected:
+    for key, value in expected.items():
+        if acquisition_plan.get(key) != value:
             raise RuntimeError(
-                f"acquisition plan mismatch for {key}: "
-                f"expected {expected!r}, got {acquisition_plan.get(key)!r}"
+                f"V2B acquisition plan mismatch for {key}: "
+                f"expected {value!r}, got {acquisition_plan.get(key)!r}"
             )
 
     selected_ids = [str(value) for value in lock_manifest["selected_fixture_ids"]]
     selected_metadata = lock_manifest["selected_fixture_metadata"]
     if acquisition_plan.get("selected_fixture_ids") != selected_ids:
-        raise RuntimeError("acquisition plan fixture IDs differ from immutable lock")
+        raise RuntimeError("V2B acquisition plan fixture IDs differ from lock")
     if acquisition_plan.get("selected_fixture_metadata") != selected_metadata:
-        raise RuntimeError("acquisition plan fixture metadata differ from immutable lock")
-    if int(acquisition_plan.get("selected_fixture_count", -1)) != len(selected_ids):
-        raise RuntimeError("acquisition plan selected fixture count mismatch")
-    if int(acquisition_plan.get("total_planned_odds_requests", -1)) != len(
-        selected_ids
-    ):
-        raise RuntimeError("acquisition plan request count mismatch")
+        raise RuntimeError("V2B acquisition plan fixture metadata differ from lock")
 
     batches = acquisition_plan.get("batches")
-    if not isinstance(batches, list):
-        raise RuntimeError("acquisition plan batches must be a list")
+    if not isinstance(batches, list) or len(batches) != 2:
+        raise RuntimeError("V2B acquisition plan must contain exactly two batches")
 
     flattened_ids: list[str] = []
     flattened_metadata: list[dict[str, Any]] = []
     for expected_index, batch in enumerate(batches, start=1):
         if not isinstance(batch, dict):
-            raise RuntimeError("acquisition plan batch must be an object")
+            raise RuntimeError("V2B acquisition plan batch must be an object")
         if int(batch.get("batch_index", -1)) != expected_index:
-            raise RuntimeError("acquisition plan batch index mismatch")
+            raise RuntimeError("V2B acquisition plan batch index mismatch")
         fixture_ids = batch.get("fixture_ids")
         fixture_metadata = batch.get("fixture_metadata")
         if not isinstance(fixture_ids, list) or not isinstance(
             fixture_metadata, list
         ):
-            raise RuntimeError("acquisition plan batch payload is invalid")
-        if len(fixture_ids) > odds_plan.MAX_ODDS_REQUESTS_PER_RUN:
-            raise RuntimeError("acquisition plan batch exceeds frozen request cap")
+            raise RuntimeError("V2B acquisition plan batch payload invalid")
         if int(batch.get("planned_requests", -1)) != len(fixture_ids):
-            raise RuntimeError("acquisition plan batch request count mismatch")
+            raise RuntimeError("V2B acquisition plan batch request count mismatch")
         if len(fixture_ids) != len(fixture_metadata):
-            raise RuntimeError("acquisition batch metadata count mismatch")
+            raise RuntimeError("V2B acquisition plan batch metadata count mismatch")
         flattened_ids.extend(str(value) for value in fixture_ids)
         flattened_metadata.extend(fixture_metadata)
 
+    if [len(batch["fixture_ids"]) for batch in batches] != [30, 13]:
+        raise RuntimeError("V2B frozen batch sizes must be 30 + 13")
     if flattened_ids != selected_ids:
-        raise RuntimeError("acquisition plan batches alter locked fixture order")
+        raise RuntimeError("V2B batches alter locked fixture order/membership")
     if flattened_metadata != selected_metadata:
-        raise RuntimeError("acquisition plan batches alter locked fixture metadata")
-    if int(acquisition_plan.get("batch_count", -1)) != len(batches):
-        raise RuntimeError("acquisition plan batch count mismatch")
-
-
-def load_raw_odds(
-    raw_odds_zip: Path,
-    *,
-    selected_ids: list[str],
-) -> tuple[dict[str, dict[str, Any]], list[str]]:
-    selected = set(selected_ids)
-    raw_by_id: dict[str, dict[str, Any]] = {}
-
-    with zipfile.ZipFile(raw_odds_zip) as zf:
-        for name in zf.namelist():
-            normalized_name = "/" + name.lstrip("/")
-            if "/raw/odds/" not in normalized_name or not name.endswith(".json"):
-                continue
-            fixture_id = Path(name).stem
-            if fixture_id not in selected:
-                raise RuntimeError(
-                    f"raw odds artifact contains non-locked fixture {fixture_id}"
-                )
-            if fixture_id in raw_by_id:
-                raise RuntimeError(f"duplicate raw odds response for {fixture_id}")
-            payload = json.loads(zf.read(name).decode("utf-8"))
-            if not isinstance(payload, dict):
-                raise RuntimeError(
-                    f"raw odds response for {fixture_id} must be a JSON object"
-                )
-            raw_by_id[fixture_id] = payload
-
-    missing = [fixture_id for fixture_id in selected_ids if fixture_id not in raw_by_id]
-    return raw_by_id, missing
+        raise RuntimeError("V2B batches alter locked fixture metadata")
 
 
 def evaluate(
@@ -173,10 +133,18 @@ def evaluate(
     raw_artifact_id: str,
     raw_artifact_digest: str,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
-    validate_acquisition_plan(lock_manifest, acquisition_plan)
+    validate_lock_and_plan(lock_manifest, acquisition_plan)
 
-    expected_digest = _normalize_digest(raw_artifact_digest)
-    actual_digest = _file_sha256(raw_odds_zip)
+    if str(raw_workflow_run_id) != EXPECTED_RAW_RUN_ID:
+        raise RuntimeError("unexpected V2B raw workflow run ID")
+    if str(raw_artifact_id) != EXPECTED_RAW_ARTIFACT_ID:
+        raise RuntimeError("unexpected V2B raw artifact ID")
+
+    expected_digest = frozen._normalize_digest(raw_artifact_digest)
+    if expected_digest != EXPECTED_RAW_ARTIFACT_DIGEST:
+        raise RuntimeError("unexpected V2B raw artifact digest provenance")
+
+    actual_digest = frozen._file_sha256(raw_odds_zip)
     if actual_digest != expected_digest:
         raise RuntimeError(
             f"raw odds artifact digest mismatch: expected {expected_digest}, "
@@ -185,7 +153,7 @@ def evaluate(
 
     selected_ids = [str(value) for value in lock_manifest["selected_fixture_ids"]]
     selected_metadata = lock_manifest["selected_fixture_metadata"]
-    raw_by_id, missing = load_raw_odds(
+    raw_by_id, missing = frozen.load_raw_odds(
         raw_odds_zip,
         selected_ids=selected_ids,
     )
@@ -194,16 +162,23 @@ def evaluate(
         "experiment_id": EVALUATOR_EXPERIMENT_ID,
         "research_only": True,
         "offline_only": True,
+        "post_metadata_pre_odds_amendment": True,
         "betting_enabled": False,
         "production_promotion_authorized": False,
         "match_outcome_used": False,
         "football_state_used": False,
+        "source_lock_workflow_run_id": EXPECTED_LOCK_RUN_ID,
+        "source_lock_artifact_id": EXPECTED_LOCK_ARTIFACT_ID,
+        "source_lock_artifact_digest": EXPECTED_LOCK_ARTIFACT_DIGEST,
+        "source_plan_workflow_run_id": EXPECTED_PLAN_RUN_ID,
+        "source_plan_artifact_id": EXPECTED_PLAN_ARTIFACT_ID,
+        "source_plan_artifact_digest": EXPECTED_PLAN_ARTIFACT_DIGEST,
         "source_selection_sha256": lock_manifest["selection_sha256"],
         "source_fixture_metadata_sha256": lock_manifest[
             "fixture_metadata_sha256"
         ],
-        "source_raw_workflow_run_id": str(raw_workflow_run_id),
-        "source_raw_artifact_id": str(raw_artifact_id),
+        "source_raw_workflow_run_id": EXPECTED_RAW_RUN_ID,
+        "source_raw_artifact_id": EXPECTED_RAW_ARTIFACT_ID,
         "source_raw_artifact_digest": expected_digest,
         "locked_fixture_count": len(selected_ids),
         "captured_locked_raw_responses": len(raw_by_id),
@@ -259,18 +234,13 @@ def main() -> None:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("artifacts/corner_regime_adjusted_direction_v2_evaluator"),
+        default=Path("artifacts/corner_regime_adjusted_direction_v2b_evaluator"),
     )
     args = parser.parse_args()
 
-    lock_manifest = load_json_object(args.lock_manifest, label="lock manifest")
-    acquisition_plan = load_json_object(
-        args.acquisition_plan,
-        label="acquisition plan",
-    )
     rows, report = evaluate(
-        lock_manifest,
-        acquisition_plan,
+        load_json_object(args.lock_manifest, label="V2B lock manifest"),
+        load_json_object(args.acquisition_plan, label="V2B acquisition plan"),
         args.raw_odds_zip,
         raw_workflow_run_id=args.raw_workflow_run_id,
         raw_artifact_id=args.raw_artifact_id,
