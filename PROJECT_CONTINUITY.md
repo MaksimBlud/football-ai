@@ -2914,4 +2914,65 @@ The strongest confirmed corner result remains replicated **repricing magnitude/r
 
 Regime-adjusted direction remains unresolved.
 
+---
+
+# Continuity update — 2026-09-26 — immediate V2 metadata recheck unchanged
+
+At user request, the already-frozen metadata-only planner was run again immediately rather than waiting for another full league round.
+
+Execution harness:
+
+- PR #409;
+- exact head `8ebab42da35d69f11d199975011a2128b7f9c194`;
+- exact-head CI passed before live marker insertion;
+- marker was removed immediately after the live job was created;
+- PR #409 was closed **without merge** after the result.
+
+Authoritative run:
+
+`36218898253`
+
+Immutable artifact:
+
+- ID `10898297066`;
+- digest `sha256:eb163d097dc2713b8f8f03370eacead91a15d3a38c0757e48b301d82e799446c`;
+- size 23,329 bytes.
+
+Safety remained intact:
+
+- 5 metadata requests;
+- no odds endpoint;
+- no market prices;
+- no match outcomes;
+- no football-state input;
+- no paid subscription;
+- production `.pkl` unchanged.
+
+Result was exactly unchanged from the immediately preceding authoritative metadata check:
+
+- 231 provider fixture metadata rows;
+- 43 normalized future finished fixtures;
+- 10 qualifying league-day blocks;
+- 43 candidate fixtures in those blocks;
+- 74 metadata potential pairs;
+- 2 blocks in each of all five leagues.
+
+Binding state:
+
+**`WAIT_FOR_COHORT`**
+
+Frozen shortfall remains:
+
+- 10 / 12 pooled blocks;
+- 74 / 80 metadata potential pairs.
+
+No V2 cohort lock exists.
+
+No V2 odds acquisition is authorized.
+
+Operational note:
+
+because this immediate duplicate check produced identical provider inventory, do not spend further metadata requests repeatedly without a plausible provider-inventory change. The next metadata-only run should be triggered only when newly finished league-day inventory is reasonably expected or another specific operational reason exists.
+
+All previously frozen V2 gates remain unchanged.
 
