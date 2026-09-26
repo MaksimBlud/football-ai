@@ -3242,4 +3242,120 @@ The next step is a **separate controlled live odds-acquisition PR** that must:
 8. never evaluate a partial acquisition;
 9. keep production `.pkl` unchanged.
 
+---
+
+# Continuity update — 2026-09-26 — V2B raw odds acquisition complete
+
+PR #416 merged as:
+
+`5902c6fb99e34b03f97e20638ac824c25b6b6cd7`
+
+Canonical live-acquisition module/workflow:
+
+- `corner_regime_adjusted_direction_v2b_acquisition.py`;
+- `.github/workflows/corner-regime-adjusted-direction-v2b-acquisition.yml`;
+- `research/CORNER_REGIME_ADJUSTED_DIRECTION_V2B_LIVE_ACQUISITION.md`.
+
+The V2B cohort was already frozen before acquisition:
+
+- 10 league-day blocks;
+- 43 selected fixtures;
+- 74 metadata potential pairs;
+- `selection_sha256 = sha256:9f4470ee2e11d94e821e37bf1e3a5d9ebd40da893290d0c636c1ed3c62600f73`;
+- `fixture_metadata_sha256 = sha256:dd057a3fc9c6a069f4717ecc7f3863f1e7dc991e6b01e82a4c84f13c40271bbb`.
+
+Source immutable lock:
+
+- run `36219786013`;
+- artifact `10899325930`;
+- digest `sha256:ad6bba499cc12abf5ca10732d88e0403565e2582e6c6c8a642ca7bb81248726f`.
+
+Source deterministic acquisition plan:
+
+- run `36220204953`;
+- artifact `10899305926`;
+- digest `sha256:8fe2203443f4e59a5800fd7315df6d333a19771e9827d3cad64ef4f658119c56`.
+
+## Authoritative acquisition run
+
+Workflow run:
+
+`36222282829`
+
+Batch 1:
+
+- planned requests = 30;
+- captured raw responses = 30;
+- missing locked fixtures = 13;
+- status = `ACQUISITION_PARTIAL`;
+- no normalization;
+- no statistical evaluation;
+- artifact `10898524057`;
+- digest `sha256:5a15902ea9b73cc778bd8a116010f83edf24af38973dcf45de619e4a729f0fee`.
+
+Batch 2:
+
+- planned requests = 13;
+- used batch-1 raw artifact as same-run resume;
+- fetched only the 13 remaining locked IDs;
+- captured locked raw responses after completion = **43**;
+- missing locked fixtures = **0**;
+- status = `ACQUISITION_COMPLETE`;
+- no normalization;
+- no statistical evaluation.
+
+Final immutable complete raw artifact:
+
+- artifact ID `10899611444`;
+- digest `sha256:c2f5313efad4afb8663d9980f5ea004f52fe02827a83b5c99a8b775c35498a57`;
+- size 15,623 bytes.
+
+Total provider raw-odds requests:
+
+**43 = 30 + 13**
+
+There were no:
+
+- fixture-list requests;
+- provider fixture discovery;
+- reselection;
+- replacement;
+- backfill;
+- outcomes;
+- football-state features;
+- paid subscription use;
+- production `.pkl` changes.
+
+Production artifact hash guards passed.
+
+## Current execution pointer
+
+The V2B acquisition phase is complete.
+
+Do **not** make more provider requests for this locked cohort.
+
+The next step is now strictly offline:
+
+1. use complete raw artifact `10899611444`;
+2. verify digest `sha256:c2f5313efad4afb8663d9980f5ea004f52fe02827a83b5c99a8b775c35498a57`;
+3. use only immutable V2B lock `10899325930`;
+4. use only immutable V2B plan `10899305926`;
+5. normalize raw odds with the already-frozen Bet365 corner normalizer;
+6. preserve selected cohort identity;
+7. never backfill structurally ineligible rows;
+8. run the unchanged V1/V2 regime-adjusted direction statistic;
+9. preserve the unchanged statistical gate:
+   - >=30 eligible rows;
+   - >=4 leagues with comparable pairs;
+   - >=8 contributing regime blocks;
+   - >=40 actual comparable pairs;
+   - concordance >=0.60;
+   - 20,000 regime-preserving permutations;
+   - seed `20260918`;
+   - one-sided p <0.10.
+
+At this point no V2B statistical result has yet been inspected.
+
+The raw acquisition being complete does not imply signal confirmation.
+
 
