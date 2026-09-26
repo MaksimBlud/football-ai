@@ -173,3 +173,30 @@ The unchanged statistical confirmation gate is still applied only after a later 
 - no production `.pkl` changes;
 - no Supabase writes;
 - no automatic live collection.
+
+### 2026-09-26 immediate repeat metadata inventory invocation
+
+A further metadata-only inventory check is authorized immediately, without waiting for another full league round.
+
+This invocation exists only to test whether provider finished-fixture inventory has advanced enough since authoritative run `36218178333`.
+
+No research/provider contract changes:
+
+- future cutoff remains `2026-09-19T00:00:00Z`;
+- same five leagues;
+- same 151 prior fixture-ID exclusions;
+- whole league-day blocks only;
+- >=2 blocks per league;
+- >=12 pooled blocks;
+- >=80 metadata potential pairs;
+- maximum 2 fixture-list pages per league;
+- maximum 10 provider metadata requests;
+- fixture-list endpoint only;
+- no odds endpoint;
+- no market prices;
+- no outcomes;
+- no statistical evaluation;
+- no paid provider action.
+
+The execution marker may be added only after exact-head CI is green and must be removed immediately after the authoritative metadata-only live job starts.
+
