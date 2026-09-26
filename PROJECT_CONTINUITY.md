@@ -3358,4 +3358,239 @@ At this point no V2B statistical result has yet been inspected.
 
 The raw acquisition being complete does not imply signal confirmation.
 
+---
+
+# Continuity update — 2026-09-26 — V2B regime-adjusted corner direction final result
+
+The V2B direction block is now statistically evaluated and closed.
+
+Canonical evaluator implementation was merged through PR #418 as:
+
+`fbd66a5201a2bbcf1b51d25c7134b56f4fe04399`
+
+Preregistered evaluator contract:
+
+`research/CORNER_REGIME_ADJUSTED_DIRECTION_V2B_EVALUATOR.md`
+
+Canonical evaluator:
+
+`corner_regime_adjusted_direction_v2b_evaluator.py`
+
+## Frozen cohort and provenance
+
+The V2B cohort was frozen before any V2B corner odds were opened:
+
+- selected regime blocks = **10**;
+- selected fixtures = **43**;
+- metadata potential pairs = **74**;
+- two selected league-day blocks in each of EPL, La Liga, Serie A, Bundesliga and Ligue 1.
+
+Immutable cohort identity:
+
+- `selection_sha256 = sha256:9f4470ee2e11d94e821e37bf1e3a5d9ebd40da893290d0c636c1ed3c62600f73`;
+- `fixture_metadata_sha256 = sha256:dd057a3fc9c6a069f4717ecc7f3863f1e7dc991e6b01e82a4c84f13c40271bbb`.
+
+Immutable lock:
+
+- run `36219786013`;
+- artifact `10899325930`;
+- digest `sha256:ad6bba499cc12abf5ca10732d88e0403565e2582e6c6c8a642ca7bb81248726f`.
+
+Immutable acquisition plan:
+
+- run `36220204953`;
+- artifact `10899305926`;
+- digest `sha256:8fe2203443f4e59a5800fd7315df6d333a19771e9827d3cad64ef4f658119c56`;
+- frozen batching = 30 + 13.
+
+Complete raw acquisition:
+
+- run `36222282829`;
+- artifact `10899611444`;
+- digest `sha256:c2f5313efad4afb8663d9980f5ea004f52fe02827a83b5c99a8b775c35498a57`;
+- 43 / 43 locked raw responses;
+- zero missing;
+- no fixture discovery/reselection/replacement/backfill;
+- total provider odds requests = 43.
+
+## Important operational amendment
+
+Historical V2 expected a metadata stopping rule of 12 blocks / 80 metadata potential pairs.
+
+After metadata availability was observed but **before any V2B odds were opened**, V2B was separately preregistered with:
+
+- minimum 2 blocks per league unchanged;
+- pooled metadata gate = **10 blocks / 74 potential pairs**.
+
+Therefore V2B must **not** be described as a fully untouched replication of the original V2 12/80 metadata stopping rule.
+
+The final statistical direction test itself was **not weakened**:
+
+- >=30 eligible normalized rows;
+- >=4 leagues with comparable pairs;
+- >=8 contributing regime blocks;
+- >=40 actual comparable pairs;
+- concordance >=0.60;
+- 20,000 regime-preserving permutations;
+- seed `20260918`;
+- one-sided p <0.10.
+
+## First evaluator execution attempt was non-statistical
+
+Workflow run:
+
+`36222975287`
+
+Result artifact:
+
+- `10899821631`;
+- digest `sha256:ae0f6e2b88cd5df211699c56d9c513539cac2999915b60e87d78c74c189a5f1c`.
+
+The immutable source digests verified, but the inherited ZIP loader only matched paths containing `/raw/odds/`, while the GitHub artifact stored files as root-level `raw/odds/<fixture_id>.json`.
+
+Consequently that attempt reported:
+
+- captured raw responses = 0;
+- missing = 43;
+- status = `ACQUISITION_INCOMPLETE`;
+- statistical evaluation performed = false;
+- verdict = null.
+
+This attempt is **not** a statistical result.
+
+No normalizer, FAIR_CENTRE, concordance or permutation statistic was run.
+
+The only amendment was a path-normalization fix plus a regression test for root-level artifact layout. No sample/statistical parameter changed.
+
+## Authoritative successful evaluation
+
+Authoritative workflow run:
+
+`36223204711`
+
+Immutable evaluation artifact:
+
+- artifact ID `10899842049`;
+- digest `sha256:7d4ecad191518cc551567ad1513b5f6c53121d56154a6de86b51b99d54f078ff`;
+- size 4,120 bytes.
+
+Evaluation completeness:
+
+- locked fixtures = **43**;
+- captured locked raw responses = **43**;
+- eligible normalized rows = **43**;
+- ineligible selected fixtures = **0**;
+- missing selected fixtures = **0**.
+
+Rows by league:
+
+- EPL = 9;
+- La Liga = 9;
+- Serie A = 9;
+- Bundesliga = 8;
+- Ligue 1 = 8.
+
+Frozen sample gate result:
+
+- contributing leagues = **5**;
+- contributing regime blocks = **9**;
+- actual comparable pairs = **42**;
+- concordant pairs = **25**;
+- sample gate = **PASS**.
+
+Observed concordance:
+
+`25 / 42 = 0.5952380952380952`
+
+Frozen minimum:
+
+`0.60`
+
+Permutation result:
+
+- 20,000 permutations;
+- seed `20260918`;
+- one-sided p = **0.207939603019849**.
+
+Frozen maximum p-value:
+
+`< 0.10`
+
+## Final verdict
+
+**`INDIVIDUAL_DIRECTION_DISCRIMINATION_NOT_CONFIRMED`**
+
+`direction_discrimination_confirmed = false`
+
+This is **not** a `SAMPLE_TOO_SMALL` outcome.
+
+The frozen sample gate passed. The direction hypothesis failed the frozen confirmation gate because:
+
+- concordance = 0.595238 < 0.60;
+- p = 0.207940 > 0.10.
+
+## Diagnostics only
+
+League concordance:
+
+- Bundesliga = 5 / 7 = 0.7143;
+- EPL = 0 / 7 = 0.0000;
+- La Liga = 6 / 7 = 0.8571;
+- Ligue 1 = 6 / 9 = 0.6667;
+- Serie A = 8 / 12 = 0.6667.
+
+Overall centre-movement diagnostics:
+
+- positive = 9;
+- negative = 4;
+- zero = 30;
+- positive share among non-zero = 0.6923076923.
+
+Regime-adjusted top-minus-bottom score diagnostic:
+
+`0.14700833159517418`
+
+These diagnostics must not be used to exclude EPL, reverse the score, change thresholds or otherwise retune V2B after opening the sample.
+
+## Binding interpretation
+
+The replicated `FAIR_CENTRE` **repricing magnitude/risk** signal remains valid.
+
+What V2B does **not** confirm is a stronger claim:
+
+> after controlling for contemporaneous league-day market regime, lower opening FAIR_CENTRE does not currently show sufficient frozen evidence to predict the individual match's repricing direction.
+
+Therefore:
+
+- do not turn V2B into a live direction betting rule;
+- do not lower the concordance threshold;
+- do not relax the p-value gate;
+- do not exclude unfavorable leagues post hoc;
+- do not rerun a tuned version on these same 43 matches and call it replication.
+
+## Safety
+
+The complete block remained research-only:
+
+- no match outcomes;
+- no football-state/CORNERS10 inputs;
+- no betting/staking;
+- no production promotion;
+- no Supabase writes;
+- production `.pkl` hash guards passed;
+- no provider calls were made during evaluation.
+
+## Current execution pointer
+
+The V2B individual-direction hypothesis is now **closed as NOT CONFIRMED** on the frozen 43-match cohort.
+
+The next research step should not try to rescue this same direction rule on the opened sample.
+
+The strongest surviving corner-market finding is still:
+
+**opening FAIR_CENTRE carries replicated information about the probability/magnitude of material pre-match repricing, but not a confirmed regime-adjusted direction.**
+
+A safe next block is therefore to use already-opened datasets only for **hypothesis generation**, and preregister any new directional mechanism on a future unseen cohort before opening its odds.
+
+No additional provider request is required to close or reinterpret V2B.
 
