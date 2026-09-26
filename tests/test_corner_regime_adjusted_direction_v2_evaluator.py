@@ -308,3 +308,20 @@ def test_evaluator_module_has_no_network_or_live_transport():
     assert "ProviderClient" not in source
     assert "api.5dollarfootball.com" not in source
     assert "FIVE_DOLLAR_FOOTBALL_API_KEY" not in source
+
+def test_raw_loader_accepts_root_level_artifact_layout(tmp_path):
+    manifest, _ = _lock_and_plan()
+    selected_ids = manifest["selected_fixture_ids"][:2]
+    path = tmp_path / "root-layout.zip"
+    with zipfile.ZipFile(path, "w") as zf:
+        for fixture_id in selected_ids:
+            zf.writestr(
+                f"raw/odds/{fixture_id}.json",
+                json.dumps({"success": 1, "data": [{"fixture_id": fixture_id}]}),
+            )
+
+    raw_by_id, missing = evaluator.load_raw_odds(path, selected_ids=selected_ids)
+
+    assert sorted(raw_by_id) == sorted(selected_ids)
+    assert missing == []
+
