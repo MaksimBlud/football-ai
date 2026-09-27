@@ -53,8 +53,51 @@ jobs:
           fi
       - name: Snapshot production hashes
         run: sha256sum *.pkl 2>/dev/null | sort > /tmp/gemini-pkl-before || true
-      - name: Gemini action parser probe
+      - name: Run sandboxed Gemini edit pass
         uses: google-github-actions/run-gemini-cli@v0
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          prompt: 'V3 parser probe only'
+          gemini_model: ${{ vars.GEMINI_MODEL }}
+          github_issue_number: ${{ github.event.issue.number }}
+          settings: |-
+            {
+              "model": {
+                "maxSessionTurns": 30
+              },
+              "telemetry": {
+                "enabled": false
+              },
+              "tools": {
+                "core": [
+                  "list_directory",
+                  "read_file",
+                  "read_many_files",
+                  "glob",
+                  "grep_search",
+                  "write_file",
+                  "replace"
+                ]
+              }
+            }
+          prompt: |-
+            Read AGENTS.md and GEMINI.md first and obey both.
+
+            Work only on GitHub Issue #${{ github.event.issue.number }}.
+            The deterministic intake decision is READY_FOR_PREREGISTRATION.
+
+            Issue title:
+            ${{ github.event.issue.title }}
+
+            Issue body:
+            ${{ github.event.issue.body }}
+
+            You have no shell, GitHub, web, Supabase, deployment, or paid-API tool access.
+            You may edit only these issue-specific paths:
+            - research/agent_runs/issue_${{ github.event.issue.number }}/
+            - tests/agent_runs/issue_${{ github.event.issue.number }}/
+            - docs/agent_runs/issue_${{ github.event.issue.number }}/
+
+            Create a frozen preregistration first. Then implement only zero-cost historical/read-only
+            research possible from data and helpers already present in this repository.
+            Do not edit any file outside the three issue-specific directories.
+            If the full evaluation cannot be completed safely, document the blocker instead.
