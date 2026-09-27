@@ -5,9 +5,17 @@ on:
     types: [opened, edited, reopened]
   pull_request:
     paths:
+      - 'research_agent.py'
+      - 'research_agent_safety.py'
       - 'research_agent_issue.py'
+      - 'research_agent_gemini.py'
+      - 'GEMINI.md'
+      - 'tests/test_research_agent.py'
+      - 'tests/test_research_agent_safety.py'
       - 'tests/test_research_agent_issue.py'
+      - 'tests/test_research_agent_gemini.py'
       - 'docs/RESEARCH_AGENT_V2_ISSUE_INTAKE.md'
+      - 'docs/RESEARCH_AGENT_V3_GEMINI_FREE.md'
       - '.github/workflows/research-agent-v2-issue-intake.yml'
 
 permissions:
@@ -21,6 +29,9 @@ jobs:
     timeout-minutes: 10
     env:
       PYTHONPATH: .
+    outputs:
+      decision: ${{ steps.issue_plan.outputs.decision }}
+      hypothesis_family: ${{ steps.issue_plan.outputs.hypothesis_family }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,13 +43,13 @@ jobs:
       - run: pip install pytest
       - name: Snapshot production hashes
         run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
-      - name: Compile V2 issue intake
-        run: python -m py_compile research_agent_issue.py
+      - name: Compile research-agent modules
+        run: python -m py_compile research_agent.py research_agent_safety.py research_agent_issue.py research_agent_gemini.py
       - name: Validate signal registry
         run: python signal_research_registry_check.py
-      - name: Run focused V2 tests
-        run: pytest -q tests/test_research_agent_issue.py tests/test_research_agent.py tests/test_research_agent_safety.py
-      - name: Block forbidden V2 diff paths
+      - name: Run focused agent tests
+        run: pytest -q tests/test_research_agent.py tests/test_research_agent_safety.py tests/test_research_agent_issue.py tests/test_research_agent_gemini.py
+      - name: Block forbidden PR diff paths
         if: github.event_name == 'pull_request'
         run: |
           git diff --name-only origin/${{ github.base_ref }}...HEAD > /tmp/changed-paths
@@ -48,7 +59,7 @@ jobs:
           result = validate_changed_paths(Path('/tmp/changed-paths').read_text().splitlines())
           if not result.ok:
               raise SystemExit('\n'.join(result.errors))
-          print('PASS: V2 changed paths are research-safe')
+          print('PASS: research-agent PR paths are production-safe')
           PY
       - name: Build issue plan
         if: github.event_name == 'issues'
@@ -57,6 +68,12 @@ jobs:
             --event "$GITHUB_EVENT_PATH" \
             --output-json artifacts/research_agent_v2/plan.json \
             --output-markdown artifacts/research_agent_v2/comment.md
+      - name: Expose issue plan decision
+        id: issue_plan
+        if: github.event_name == 'issues'
+        run: |
+          echo "decision=$(jq -r '.decision' artifacts/research_agent_v2/plan.json)" >> "$GITHUB_OUTPUT"
+          echo "hypothesis_family=$(jq -r '.hypothesis_family' artifacts/research_agent_v2/plan.json)" >> "$GITHUB_OUTPUT"
       - name: Comment decision on issue
         if: github.event_name == 'issues'
         env:
@@ -75,3 +92,170 @@ jobs:
         run: |
           sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
           diff -u /tmp/pkl-before /tmp/pkl-after
+
+  gemini-research:
+    if: >-
+      github.event_name == 'issues' &&
+      github.event.issue.user.login == github.repository_owner &&
+      needs.validate.outputs.decision == 'READY_FOR_PREREGISTRATION' &&
+      vars.RESEARCH_GEMINI_ENABLED == 'true'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    env:
+      PYTHONPATH: .
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_TITLE: ${{ github.event.issue.title }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Verify Gemini Free credential is configured
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo 'GEMINI_API_KEY is missing. Add it under Settings > Secrets and variables > Actions.'
+            exit 1
+          fi
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/gemini-pkl-before || true
+      - name: Run sandboxed Gemini research edit pass
+        uses: google-github-actions/run-gemini-cli@v0
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          gemini_model: ${{ vars.GEMINI_MODEL }}
+          github_issue_number: ${{ github.event.issue.number }}
+          settings: |-
+            {
+              "model": {
+                "maxSessionTurns": 30
+              },
+              "telemetry": {
+                "enabled": false
+              },
+              "tools": {
+                "core": [
+                  "list_directory",
+                  "read_file",
+                  "read_many_files",
+                  "glob",
+                  "grep_search",
+                  "write_file",
+                  "replace"
+                ]
+              }
+            }
+          prompt: |-
+            Read AGENTS.md and GEMINI.md first and obey both.
+
+            Work only on GitHub Issue #${{ github.event.issue.number }}.
+            The deterministic intake gate returned READY_FOR_PREREGISTRATION.
+            Hypothesis family: ${{ needs.validate.outputs.hypothesis_family }}.
+
+            Issue title:
+            ${{ github.event.issue.title }}
+
+            Issue body:
+            ${{ github.event.issue.body }}
+
+            You have NO shell, GitHub, network, deployment, Supabase, or paid-API tool access.
+            You may edit only:
+            - research/agent_runs/issue_${{ github.event.issue.number }}/
+            - tests/agent_runs/issue_${{ github.event.issue.number }}/
+            - docs/agent_runs/issue_${{ github.event.issue.number }}/
+
+            First create a frozen preregistration. Then implement only zero-cost historical/read-only
+            research that is possible with data and helpers already present in this repository.
+            Do not modify any file outside the three issue-specific directories.
+            If the full evaluation cannot be completed safely, document the blocker instead of bypassing it.
+            Git branch, commit, push and PR creation are handled after your pass by deterministic workflow code.
+      - name: Capture Gemini changes
+        id: changed
+        run: |
+          git status --porcelain=v1 --untracked-files=all > /tmp/gemini-status
+          cat /tmp/gemini-status
+          if [ -s /tmp/gemini-status ]; then
+            echo 'has_changes=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'has_changes=false' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Validate Gemini issue sandbox
+        if: steps.changed.outputs.has_changes == 'true'
+        run: python research_agent_gemini.py validate-status --issue-number "$ISSUE_NUMBER" --status-file /tmp/gemini-status
+      - name: Install zero-cost research test dependencies
+        if: steps.changed.outputs.has_changes == 'true'
+        run: pip install pytest pandas numpy requests scikit-learn xgboost joblib
+      - name: Compile generated research code
+        if: steps.changed.outputs.has_changes == 'true'
+        run: |
+          find "research/agent_runs/issue_${ISSUE_NUMBER}" -type f -name '*.py' -print0 2>/dev/null \
+            | xargs -0 -r python -m py_compile
+      - name: Run generated focused tests
+        if: steps.changed.outputs.has_changes == 'true'
+        run: |
+          if [ -d "tests/agent_runs/issue_${ISSUE_NUMBER}" ]; then
+            pytest -q "tests/agent_runs/issue_${ISSUE_NUMBER}"
+          fi
+      - name: Revalidate changes after tests
+        if: steps.changed.outputs.has_changes == 'true'
+        run: |
+          git status --porcelain=v1 --untracked-files=all > /tmp/gemini-status-final
+          python research_agent_gemini.py validate-status --issue-number "$ISSUE_NUMBER" --status-file /tmp/gemini-status-final
+          git diff --check
+      - name: Verify production hashes unchanged
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/gemini-pkl-after || true
+          diff -u /tmp/gemini-pkl-before /tmp/gemini-pkl-after
+      - name: Comment when Gemini produced no changes
+        if: steps.changed.outputs.has_changes == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue comment "$ISSUE_NUMBER" --body 'Gemini Research Agent V3 completed safely but produced no repository changes.'
+      - name: Create validated research branch
+        if: steps.changed.outputs.has_changes == 'true'
+        run: |
+          BRANCH="agent/gemini-issue-${ISSUE_NUMBER}-${GITHUB_RUN_ID}"
+          echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
+          git switch -c "$BRANCH"
+          python research_agent_gemini.py stage-status --issue-number "$ISSUE_NUMBER" --status-file /tmp/gemini-status-final
+          git config user.name 'football-ai-research-bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m "Research agent: issue #${ISSUE_NUMBER}"
+          git push origin "$BRANCH"
+      - name: Open research pull request
+        if: steps.changed.outputs.has_changes == 'true'
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > /tmp/pr-body.md <<EOF
+          Automated zero-cost research implementation for Issue #${ISSUE_NUMBER}.
+
+          Safety properties:
+          - V2 intake decision: READY_FOR_PREREGISTRATION
+          - issue-specific sandbox only
+          - no production .pkl changes
+          - no Supabase writes
+          - no paid Odds API requests
+          - no automatic merge or production promotion
+
+          Review the generated preregistration, tests and research report before merge.
+          EOF
+          PR_URL=$(gh pr create --base main --head "$BRANCH" --title "Research Agent: ${ISSUE_TITLE}" --body-file /tmp/pr-body.md)
+          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+      - name: Link pull request from issue
+        if: steps.changed.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ steps.pr.outputs.pr_url }}
+        run: gh issue comment "$ISSUE_NUMBER" --body "Gemini Research Agent V3 created a validated research PR: $PR_URL"
