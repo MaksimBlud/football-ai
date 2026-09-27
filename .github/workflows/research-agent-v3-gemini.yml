@@ -101,3 +101,55 @@ jobs:
             research possible from data and helpers already present in this repository.
             Do not edit any file outside the three issue-specific directories.
             If the full evaluation cannot be completed safely, document the blocker instead.
+      - name: Capture Gemini changes
+        id: changed
+        run: |
+          git status --porcelain=v1 --untracked-files=all > /tmp/gemini-status
+          cat /tmp/gemini-status
+          if [ -s /tmp/gemini-status ]; then
+            echo 'has_changes=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'has_changes=false' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Validate issue sandbox
+        if: steps.changed.outputs.has_changes == 'true'
+        run: python research_agent_gemini.py validate-status --issue-number "$ISSUE_NUMBER" --status-file /tmp/gemini-status
+      - name: Install zero-cost research test dependencies
+        if: steps.changed.outputs.has_changes == 'true'
+        run: pip install pytest pandas numpy requests scikit-learn xgboost joblib
+      - name: Syntax-check generated Python without bytecode artifacts
+        if: steps.changed.outputs.has_changes == 'true'
+        run: |
+          python - <<'PY'
+          import ast
+          import os
+          from pathlib import Path
+
+          issue = os.environ['ISSUE_NUMBER']
+          roots = [
+              Path('research/agent_runs') / f'issue_{issue}',
+              Path('tests/agent_runs') / f'issue_{issue}',
+          ]
+          for root in roots:
+              if not root.is_dir():
+                  continue
+              for path in root.rglob('*.py'):
+                  ast.parse(path.read_text(encoding='utf-8'), filename=str(path))
+                  print(f'PASS syntax: {path}')
+          PY
+      - name: Run generated focused tests
+        if: steps.changed.outputs.has_changes == 'true'
+        run: |
+          if [ -d "tests/agent_runs/issue_${ISSUE_NUMBER}" ]; then
+            PYTHONDONTWRITEBYTECODE=1 pytest -q -p no:cacheprovider "tests/agent_runs/issue_${ISSUE_NUMBER}"
+          fi
+      - name: Revalidate final working tree
+        if: steps.changed.outputs.has_changes == 'true'
+        run: |
+          git status --porcelain=v1 --untracked-files=all > /tmp/gemini-status-final
+          python research_agent_gemini.py validate-status --issue-number "$ISSUE_NUMBER" --status-file /tmp/gemini-status-final
+          git diff --check
+      - name: Verify production hashes unchanged
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/gemini-pkl-after || true
+          diff -u /tmp/gemini-pkl-before /tmp/gemini-pkl-after
