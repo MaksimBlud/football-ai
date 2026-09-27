@@ -1,8 +1,6 @@
 name: Research Agent V3 Gemini Free
 
 on:
-  push:
-    branches: [feature/research-agent-v3-gemini-free]
   issues:
     types: [opened, edited, reopened]
   pull_request:
