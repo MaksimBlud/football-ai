@@ -19,7 +19,6 @@ permissions:
 
 jobs:
   preflight:
-    if: github.event_name == 'push' || github.event_name == 'pull_request' || (github.event_name == 'issues' && startsWith(github.event.issue.title, '[AGENT-RESEARCH]') && github.event.issue.user.login == github.repository_owner)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
