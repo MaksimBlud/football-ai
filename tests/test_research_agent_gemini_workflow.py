@@ -1,7 +1,7 @@
 from pathlib import Path
 
 
-WORKFLOW = Path(".github/workflows/research-agent-v2-issue-intake.yml")
+WORKFLOW = Path(".github/workflows/research-agent-v3-gemini.yml")
 
 
 def _text() -> str:
