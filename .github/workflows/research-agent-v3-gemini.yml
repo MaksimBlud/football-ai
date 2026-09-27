@@ -195,4 +195,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR_URL: ${{ steps.pr.outputs.pr_url }}
-        run: gh issue comment "$ISSUE_NUMBER" --body "Gemini Research Agent V3 created a validated research PR: $PR_URL"
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "Gemini Research Agent V3 created a validated research PR: $PR_URL"
