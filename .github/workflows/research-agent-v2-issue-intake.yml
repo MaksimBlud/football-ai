@@ -14,6 +14,7 @@ on:
       - 'tests/test_research_agent_safety.py'
       - 'tests/test_research_agent_issue.py'
       - 'tests/test_research_agent_gemini.py'
+      - 'tests/test_research_agent_gemini_workflow.py'
       - 'docs/RESEARCH_AGENT_V2_ISSUE_INTAKE.md'
       - 'docs/RESEARCH_AGENT_V3_GEMINI_FREE.md'
       - '.github/workflows/research-agent-v2-issue-intake.yml'
@@ -48,7 +49,7 @@ jobs:
       - name: Validate signal registry
         run: python signal_research_registry_check.py
       - name: Run focused agent tests
-        run: pytest -q tests/test_research_agent.py tests/test_research_agent_safety.py tests/test_research_agent_issue.py tests/test_research_agent_gemini.py
+        run: pytest -q tests/test_research_agent.py tests/test_research_agent_safety.py tests/test_research_agent_issue.py tests/test_research_agent_gemini.py tests/test_research_agent_gemini_workflow.py
       - name: Block forbidden PR diff paths
         if: github.event_name == 'pull_request'
         run: |
@@ -95,10 +96,12 @@ jobs:
 
   gemini-research:
     if: >-
-      github.event_name == 'issues' &&
-      github.event.issue.user.login == github.repository_owner &&
-      needs.validate.outputs.decision == 'READY_FOR_PREREGISTRATION' &&
-      vars.RESEARCH_GEMINI_ENABLED == 'true'
+      ${{
+        github.event_name == 'issues' &&
+        github.event.issue.user.login == github.repository_owner &&
+        needs.validate.outputs.decision == 'READY_FOR_PREREGISTRATION' &&
+        vars.RESEARCH_GEMINI_ENABLED == 'true'
+      }}
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -195,16 +198,24 @@ jobs:
       - name: Install zero-cost research test dependencies
         if: steps.changed.outputs.has_changes == 'true'
         run: pip install pytest pandas numpy requests scikit-learn xgboost joblib
-      - name: Compile generated research code
+      - name: Syntax-check generated research code without bytecode artifacts
         if: steps.changed.outputs.has_changes == 'true'
         run: |
-          find "research/agent_runs/issue_${ISSUE_NUMBER}" -type f -name '*.py' -print0 2>/dev/null \
-            | xargs -0 -r python -m py_compile
+          python - <<'PY'
+          import ast
+          import os
+          from pathlib import Path
+
+          root = Path('research/agent_runs') / f"issue_{os.environ['ISSUE_NUMBER']}"
+          for path in root.rglob('*.py') if root.is_dir() else []:
+              ast.parse(path.read_text(encoding='utf-8'), filename=str(path))
+              print(f'PASS syntax: {path}')
+          PY
       - name: Run generated focused tests
         if: steps.changed.outputs.has_changes == 'true'
         run: |
           if [ -d "tests/agent_runs/issue_${ISSUE_NUMBER}" ]; then
-            pytest -q "tests/agent_runs/issue_${ISSUE_NUMBER}"
+            PYTHONDONTWRITEBYTECODE=1 pytest -q -p no:cacheprovider "tests/agent_runs/issue_${ISSUE_NUMBER}"
           fi
       - name: Revalidate changes after tests
         if: steps.changed.outputs.has_changes == 'true'
