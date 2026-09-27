@@ -153,3 +153,19 @@ jobs:
         run: |
           sha256sum *.pkl 2>/dev/null | sort > /tmp/gemini-pkl-after || true
           diff -u /tmp/gemini-pkl-before /tmp/gemini-pkl-after
+      - name: Report no-change completion
+        if: steps.changed.outputs.has_changes == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue comment "$ISSUE_NUMBER" --body 'Gemini Research Agent V3 completed safely but produced no repository changes.'
+      - name: Create validated research branch
+        if: steps.changed.outputs.has_changes == 'true'
+        run: |
+          BRANCH="agent/gemini-issue-${ISSUE_NUMBER}-${GITHUB_RUN_ID}"
+          echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
+          git switch -c "$BRANCH"
+          python research_agent_gemini.py stage-status --issue-number "$ISSUE_NUMBER" --status-file /tmp/gemini-status-final
+          git config user.name 'football-ai-research-bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m "Research agent: issue #${ISSUE_NUMBER}"
+          git push origin "$BRANCH"
