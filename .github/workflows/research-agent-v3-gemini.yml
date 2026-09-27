@@ -169,3 +169,30 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m "Research agent: issue #${ISSUE_NUMBER}"
           git push origin "$BRANCH"
+      - name: Open research pull request
+        if: steps.changed.outputs.has_changes == 'true'
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          printf '%s\n' \
+            "Automated zero-cost research implementation for Issue #${ISSUE_NUMBER}." \
+            "" \
+            "Safety properties:" \
+            "- deterministic READY_FOR_PREREGISTRATION gate" \
+            "- issue-specific file sandbox" \
+            "- no production .pkl changes" \
+            "- no Supabase writes" \
+            "- no paid Odds API requests" \
+            "- no automatic merge or production promotion" \
+            "" \
+            "Note: PR checks created by GITHUB_TOKEN may require repository-owner approval in GitHub." \
+            > /tmp/pr-body.md
+          PR_URL=$(gh pr create --base main --head "$BRANCH" --title "Research Agent: ${ISSUE_TITLE}" --body-file /tmp/pr-body.md)
+          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+      - name: Link pull request from issue
+        if: steps.changed.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ steps.pr.outputs.pr_url }}
+        run: gh issue comment "$ISSUE_NUMBER" --body "Gemini Research Agent V3 created a validated research PR: $PR_URL"
