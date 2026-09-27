@@ -1,6 +1,8 @@
 name: Research Agent V3 Gemini Free
 
 on:
+  push:
+    branches: [feature/research-agent-v3-gemini-free]
   issues:
     types: [opened, edited, reopened]
   pull_request:
@@ -17,7 +19,7 @@ permissions:
 
 jobs:
   preflight:
-    if: github.event_name == 'pull_request' || (github.event_name == 'issues' && startsWith(github.event.issue.title, '[AGENT-RESEARCH]') && github.event.issue.user.login == github.repository_owner)
+    if: github.event_name == 'push' || github.event_name == 'pull_request' || (github.event_name == 'issues' && startsWith(github.event.issue.title, '[AGENT-RESEARCH]') && github.event.issue.user.login == github.repository_owner)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
