@@ -25,5 +25,31 @@ jobs:
     needs: preflight
     if: needs.preflight.outputs.run_gemini == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    env:
+      PYTHONPATH: .
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_TITLE: ${{ github.event.issue.title }}
     steps:
-      - run: echo GEMINI_JOB_SHAPE_OK
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Verify Gemini API key is configured
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo 'GEMINI_API_KEY is missing. Add it under Settings > Secrets and variables > Actions.'
+            exit 1
+          fi
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/gemini-pkl-before || true
