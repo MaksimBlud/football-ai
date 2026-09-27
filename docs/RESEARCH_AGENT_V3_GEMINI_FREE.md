@@ -8,7 +8,7 @@ Google Gemini CLI GitHub Action.
 After one-time credential setup, an owner-created `[AGENT-RESEARCH]` Issue can run
 entirely in GitHub Actions while the user's computer is off:
 
-Issue -> V2 deterministic intake -> Gemini file-edit pass -> deterministic safety/test
+Issue -> V3 deterministic intake (same registry/safety rules as V2) -> Gemini file-edit pass -> deterministic safety/test
 gates -> isolated branch -> pull request.
 
 ## Disabled by default
@@ -16,9 +16,10 @@ gates -> isolated branch -> pull request.
 The Gemini execution job runs only when all of these are true:
 
 1. the event is an Issue event;
-2. the Issue author is the repository owner;
-3. V2 returns `READY_FOR_PREREGISTRATION`;
-4. repository variable `RESEARCH_GEMINI_ENABLED` equals `true`.
+2. the Issue title starts with `[AGENT-RESEARCH]`;
+3. the Issue author is the repository owner;
+4. the standalone V3 preflight recomputes the same registry decision and gets `READY_FOR_PREREGISTRATION`;
+5. repository variable `RESEARCH_GEMINI_ENABLED` equals `true`.
 
 Until the variable is explicitly enabled, V2 continues to work but Gemini is skipped.
 
@@ -65,8 +66,8 @@ After Gemini exits, deterministic workflow code:
 ## Existing Issue #428
 
 After the secret and enable variable are configured, editing/reopening Issue #428 will
-re-run the V2 workflow. Because its hypothesis already passes the intake gate, the V3
-Gemini job can then execute automatically.
+run both the existing V2 intake and the standalone V3 workflow from `main`. V3 independently
+recomputes the deterministic intake decision before Gemini is allowed to execute.
 
 ## Failure behavior
 
