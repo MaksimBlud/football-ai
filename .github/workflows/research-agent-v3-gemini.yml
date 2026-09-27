@@ -7,6 +7,11 @@ on:
     types: [opened, edited, reopened]
   pull_request:
     paths:
+      - 'research_agent_gemini.py'
+      - 'GEMINI.md'
+      - 'tests/test_research_agent_gemini.py'
+      - 'tests/test_research_agent_gemini_workflow.py'
+      - 'docs/RESEARCH_AGENT_V3_GEMINI_FREE.md'
       - '.github/workflows/research-agent-v3-gemini.yml'
 
 permissions:
@@ -15,11 +20,77 @@ permissions:
 jobs:
   preflight:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
     outputs:
+      decision: ${{ steps.eligibility.outputs.decision }}
+      hypothesis_family: ${{ steps.eligibility.outputs.hypothesis_family }}
       run_gemini: ${{ steps.eligibility.outputs.run_gemini }}
+    env:
+      PYTHONPATH: .
     steps:
-      - id: eligibility
-        run: echo 'run_gemini=false' >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install pytest
+      - name: Compile V3 helper
+        run: python -m py_compile research_agent_gemini.py
+      - name: Run V3 contract tests
+        run: pytest -q tests/test_research_agent_gemini.py tests/test_research_agent_gemini_workflow.py
+      - name: Validate signal registry
+        if: github.event_name == 'issues'
+        run: python signal_research_registry_check.py
+      - name: Build deterministic issue plan
+        if: github.event_name == 'issues'
+        run: |
+          python research_agent_issue.py \
+            --event "$GITHUB_EVENT_PATH" \
+            --output-json /tmp/gemini-v3-plan.json \
+            --output-markdown /tmp/gemini-v3-plan.md
+      - name: Compute V3 eligibility
+        id: eligibility
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          RESEARCH_GEMINI_ENABLED: ${{ vars.RESEARCH_GEMINI_ENABLED }}
+        run: |
+          echo 'decision=NOT_ISSUE_EVENT' >> "$GITHUB_OUTPUT"
+          echo 'hypothesis_family=none' >> "$GITHUB_OUTPUT"
+          echo 'run_gemini=false' >> "$GITHUB_OUTPUT"
+
+          if [ "$EVENT_NAME" != 'issues' ]; then
+            exit 0
+          fi
+
+          DECISION=$(jq -r '.decision' /tmp/gemini-v3-plan.json)
+          FAMILY=$(jq -r '.hypothesis_family' /tmp/gemini-v3-plan.json)
+          ISSUE_AUTHOR=$(jq -r '.issue.user.login' "$GITHUB_EVENT_PATH")
+          ISSUE_TITLE=$(jq -r '.issue.title' "$GITHUB_EVENT_PATH")
+
+          echo "decision=$DECISION" >> "$GITHUB_OUTPUT"
+          echo "hypothesis_family=$FAMILY" >> "$GITHUB_OUTPUT"
+
+          case "$ISSUE_TITLE" in
+            '[AGENT-RESEARCH]'*) ;;
+            *) exit 0 ;;
+          esac
+
+          if [ "$ISSUE_AUTHOR" != "$REPOSITORY_OWNER" ]; then
+            exit 0
+          fi
+          if [ "$DECISION" != 'READY_FOR_PREREGISTRATION' ]; then
+            exit 0
+          fi
+          if [ "$RESEARCH_GEMINI_ENABLED" != 'true' ]; then
+            exit 0
+          fi
+
+          echo 'run_gemini=true' >> "$GITHUB_OUTPUT"
 
   gemini-research:
     needs: preflight
@@ -84,6 +155,7 @@ jobs:
 
             Work only on GitHub Issue #${{ github.event.issue.number }}.
             The deterministic intake decision is READY_FOR_PREREGISTRATION.
+            Hypothesis family: ${{ needs.preflight.outputs.hypothesis_family }}.
 
             Issue title:
             ${{ github.event.issue.title }}
