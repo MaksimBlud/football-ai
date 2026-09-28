@@ -34,7 +34,7 @@ def test_prepare_histories_keeps_valid_true_xg_rows():
 def test_snapshot_uses_only_matches_strictly_before_target():
     history=pd.DataFrame({
         "match_date":pd.to_datetime([
-            "2026-08-01","2026-08-08","2026-08-15","2026-08-22","2026-08-29","2026-09-19"
+            "2026-08-01","2026-08-08","2026-08-15","2026-08-22","2026-08-29","2026-09-19 12:00:00"
         ]),
         "xg":[1,2,3,4,5,99],
         "xga":[1,1,1,1,1,99],
