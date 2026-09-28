@@ -1,0 +1,111 @@
+name: V2B CORNERS10 Direction Hypothesis V1
+
+on:
+  pull_request:
+    paths:
+      - 'v2b_corners10_direction_hypothesis_v1.py'
+      - 'tests/test_v2b_corners10_direction_hypothesis_v1.py'
+      - 'research/V2B_CORNERS10_DIRECTION_HYPOTHESIS_V1.md'
+      - '.github/workflows/v2b-corners10-direction-hypothesis-v1.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  offline-contract:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas numpy requests pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile audit
+        run: python -m py_compile v2b_corners10_direction_hypothesis_v1.py
+      - name: Run regression tests
+        run: |
+          pytest -q             tests/test_v2b_corners10_direction_hypothesis_v1.py             tests/test_v2b_corners10_replay_feasibility.py
+      - name: Assert frozen exploratory contract
+        run: |
+          python - <<'PY'
+          import v2b_corners10_direction_hypothesis_v1 as a
+          assert a.EXPERIMENT_ID == 'V2B_CORNERS10_DIRECTION_HYPOTHESIS_V1'
+          assert a.EXPECTED_LOCKED == 43
+          assert a.EXPECTED_FEASIBLE == 31
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+
+  opened-sample-hypothesis:
+    needs: offline-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: .
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas numpy requests
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Download frozen feasibility artifact
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10900784704/zip > /tmp/feasibility.zip
+          echo "66c83b96f8c1143397aca660701d0a7f5950c3b59a1bd0158bbefe6501d7ecfb  /tmp/feasibility.zip" | sha256sum -c -
+          mkdir -p /tmp/feasibility
+          unzip -q /tmp/feasibility.zip -d /tmp/feasibility
+          FEASIBILITY=$(find /tmp/feasibility -name v2b_corners10_replay_feasibility.json -type f | head -n 1)
+          test -n "$FEASIBILITY"
+          cp "$FEASIBILITY" /tmp/feasibility.json
+      - name: Download frozen V2B evaluation artifact
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10899842049/zip > /tmp/v2b-evaluation.zip
+          echo "7d4ecad191518cc551567ad1513b5f6c53121d56154a6de86b51b99d54f078ff  /tmp/v2b-evaluation.zip" | sha256sum -c -
+          mkdir -p /tmp/v2b-evaluation
+          unzip -q /tmp/v2b-evaluation.zip -d /tmp/v2b-evaluation
+          MARKET=$(find /tmp/v2b-evaluation -name evaluation_rows.csv -type f | head -n 1)
+          test -n "$MARKET"
+          cp "$MARKET" /tmp/evaluation_rows.csv
+      - name: Run zero-cost opened-sample hypothesis audit
+        run: |
+          python v2b_corners10_direction_hypothesis_v1.py             --feasibility-report /tmp/feasibility.json             --market-rows /tmp/evaluation_rows.csv             --output-dir artifacts/v2b_corners10_direction_hypothesis_v1
+      - name: Assert exploratory-only safety contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/v2b_corners10_direction_hypothesis_v1/report.json').read_text())
+          assert r['experiment_id']=='V2B_CORNERS10_DIRECTION_HYPOTHESIS_V1'
+          assert r['research_only'] is True
+          assert r['opened_sample_hypothesis_generation'] is True
+          assert r['confirmatory_replication'] is False
+          assert r['betting_enabled'] is False
+          assert r['production_promotion_authorized'] is False
+          assert r['odds_api_requests']==0
+          assert r['frozen_eligible_fixture_count']==31
+          assert r['evaluated_rows']==31
+          assert r['classification'] in {
+              'PROMISING_DIRECTION_HYPOTHESIS',
+              'WEAK_OR_INCONSISTENT_DIRECTION_HYPOTHESIS',
+          }
+          print(json.dumps(r, indent=2, sort_keys=True))
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v2b-corners10-direction-hypothesis-v1
+          path: artifacts/v2b_corners10_direction_hypothesis_v1
+          if-no-files-found: error
+          retention-days: 90
