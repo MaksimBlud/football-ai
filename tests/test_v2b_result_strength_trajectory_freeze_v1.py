@@ -109,7 +109,12 @@ def test_trajectory_snapshot_does_not_depend_on_target_result():
         "away_performance_residual_5",
     ]
     for col in cols:
-        assert first.loc[10, col] == pytest.approx(second.loc[10, col])
+        left = first.loc[10, col]
+        right = second.loc[10, col]
+        if pd.isna(left) or pd.isna(right):
+            assert pd.isna(left) and pd.isna(right)
+        else:
+            assert left == pytest.approx(right)
 
 
 def test_preregistration_forbids_market_direction_inputs():
