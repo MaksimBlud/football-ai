@@ -41,12 +41,20 @@ TARGET_ALIASES = {
     },
     "LA_LIGA": {
         "CD Alaves": "Alaves",
+        "Deportivo A Coruna": "Deportivo La Coruna",
     },
     "SERIE_A": {
         "Inter Milan": "Inter",
+        "Parma": "Parma Calcio 1913",
     },
     "BUNDESLIGA": {
         "Borussia M'gladbach": "Borussia M.Gladbach",
+        "Cologne": "FC Cologne",
+        "Hamburg": "Hamburger SV",
+        "Mainz": "Mainz 05",
+        "RB Leipzig": "RasenBallsport Leipzig",
+        "SC Freiburg": "Freiburg",
+        "Schalke": "Schalke 04",
         "TSG Hoffenheim": "Hoffenheim",
     },
     "LIGUE_1": {
