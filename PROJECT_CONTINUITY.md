@@ -4278,3 +4278,96 @@ Still binding:
 - no automatic model promotion;
 - research/training != production promotion;
 - free/read-only feasibility checks before paid acquisition.
+
+
+---
+
+# Continuity update — 2026-09-28 — V2B true-xG source feasibility established
+
+A new independent Stage-B source family has passed point-in-time source feasibility.
+
+Experiment:
+
+`V2B_TRUE_XG5_REPLAY_FEASIBILITY_V1`
+
+Workflow run:
+
+`36438275056`
+
+Artifact:
+
+- ID `10976063737`;
+- digest `sha256:a5431c36071fe378791c7d4ace446133fcada6a5b2ba67e51b0dacea7a0de28c`.
+
+Source:
+
+public Understat true xG/npxG league history for 2025/26 + 2026/27.
+
+All five source leagues/seasons were fetched without paid credentials.
+
+## Identity and coverage
+
+After source-driven alias normalization:
+
+**43 / 43 V2B fixtures identity-matched**
+
+Strict five-prior-match true-xG feasibility:
+
+**34 / 43**
+
+By league:
+
+- EPL 6/9;
+- La Liga 9/9;
+- Serie A 7/9;
+- Bundesliga 6/8;
+- Ligue 1 6/8.
+
+The nine ineligible fixtures are caused by promoted/returning clubs with only 3-4
+prior top-flight xG rows. No lower-division backfill was used.
+
+## Safety boundary
+
+This feasibility audit did not read:
+
+- V2B market rows;
+- opening lambda / FAIR_CENTRE;
+- centre_delta;
+- observed direction.
+
+It made:
+
+- zero Odds API requests;
+- zero Supabase writes;
+- zero production-model operations.
+
+Production .pkl hashes remained unchanged.
+
+## Current execution pointer
+
+True xG/npxG is now the preferred next Stage-B candidate because:
+
+- it is genuinely richer than SHOTS10 counts;
+- source feasibility is established across all five V2B leagues;
+- exact point-in-time five-match features exist for 34 fixtures;
+- no market-direction result has been used to select an xG mapping.
+
+Next block:
+
+> freeze one simple, interpretable xG-based total-pressure mapping for the exact
+> 34-fixture xG5 cohort before any direction comparison.
+
+Do not:
+
+- search xG formulas after opening direction;
+- fit weights on V2B;
+- change league subset;
+- backfill lower divisions;
+- reopen closed CORNERS10/SHOTS10/result-Elo mappings.
+
+Still binding:
+
+- FAIR_CENTRE repricing magnitude/risk remains replicated;
+- individual direction remains unresolved;
+- NO_BET;
+- no automatic production promotion.
