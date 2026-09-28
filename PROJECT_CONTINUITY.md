@@ -4060,3 +4060,109 @@ Important:
 - do not inspect row-level V2B direction and then search signs/thresholds/formulas;
 - any V2B direction evaluation remains hypothesis generation only;
 - confirmation still requires a genuinely new unseen market cohort.
+
+
+---
+
+# Continuity update — 2026-09-28 — V2B result-strength Stage-B features frozen
+
+The next bounded corner-direction block has been completed without opening any new
+market-direction information.
+
+Experiment:
+
+`V2B_RESULT_STRENGTH_TRAJECTORY_FREEZE_V1`
+
+Primary mapping:
+
+`JOINT_PERFORMANCE_RESIDUAL_5_SIGN_V1`
+
+Formula frozen before direction evaluation:
+
+`stage_b_score = home_performance_residual_5 + away_performance_residual_5`
+
+- score > 0 -> UP;
+- score < 0 -> DOWN;
+- score == 0 -> NO_CALL.
+
+No fitted weights, thresholds, league-specific signs or subset search are allowed.
+
+## Authoritative zero-cost freeze
+
+Workflow run:
+
+`36434578760`
+
+Successful live-zero-cost job:
+
+`108969276571`
+
+Artifact:
+
+- ID `10975465958`;
+- digest `sha256:d30f4231e7e0a9149d0869ac6d775eac9d2182316593610f2b42637afc26dbe3`;
+- generated at branch head `b7c5f00a458931ff9a4264aeff4754ddad81a127`.
+
+Exact five-match eligible cohort:
+
+**34 / 43**
+
+By league:
+
+- EPL 6;
+- La Liga 9;
+- Serie A 7;
+- Bundesliga 6;
+- Ligue 1 6.
+
+Eligible fixture identity hash:
+
+`sha256:ccfd8c7cdc7b80a9ea2c725bc0da792ead21cd2232f495c6041eecc699edb1a1`
+
+Frozen feature-only calls:
+
+- UP = **16**;
+- DOWN = **18**;
+- NO_CALL = **0**.
+
+These counts are not market-direction results.
+
+## Safety proof
+
+The successful job confirmed:
+
+- direction test = false;
+- V2B odds read = false;
+- opening_lambda read = false;
+- centre_delta read = false;
+- Odds API requests = 0;
+- Supabase operations = 0;
+- production model operations = 0;
+- production `.pkl` hashes unchanged.
+
+The first CI attempt found only a test-harness issue involving NaN equality in the
+leakage regression. The test was corrected without weakening any research rule, and
+the repeated regression run passed.
+
+## Current execution pointer
+
+The exact Stage-B feature cohort and sign rule are now frozen.
+
+Next bounded block may evaluate this exact frozen mapping against the already-opened V2B
+market-direction artifact, but only as **hypothesis generation**.
+
+The evaluator must:
+
+1. consume the exact artifact ID/digest and eligible-fixture hash above;
+2. never alter the mapping after reading direction;
+3. preserve all leagues and all 34 eligible fixture identities;
+4. report zero movement separately from UP/DOWN-comparable rows;
+5. not introduce a Stage-A threshold based on the same opened outcomes;
+6. keep confirmation reserved for a genuinely new unseen cohort.
+
+Still binding:
+
+- FAIR_CENTRE repricing magnitude/risk = replicated;
+- reliable portable direction remains unconfirmed;
+- NO_BET;
+- no automatic production promotion.
