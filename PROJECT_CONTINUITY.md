@@ -4669,3 +4669,86 @@ Still binding:
 - reliable direction remains unconfirmed;
 - NO_BET;
 - no automatic production promotion.
+
+
+---
+
+# Continuity update — 2026-09-28 — territorial-depth Stage-B frozen
+
+After tactical-pressure source feasibility passed, one primary mapping was frozen before
+opening any new V2B direction comparison.
+
+Experiment:
+
+`V2B_DEEP_STAGE_B_FREEZE_V1`
+
+Mapping:
+
+`POOLED_2025_DEEP_ENVIRONMENT_SIGN_V1`
+
+PPDA was deliberately excluded from the primary mapping to avoid mixing an inverse
+pressure metric with absolute deep counts without an independent normalization contract.
+
+## Frozen artifact
+
+Workflow run:
+
+`36448872259`
+
+Artifact:
+
+- ID `10982056918`;
+- digest `sha256:e92112d98805a06e2452ce70c365735c2a2dd308a7a62be66b1081182fa7f812`.
+
+Pooled completed-2025/26 top-five baseline:
+
+**12.8561643836 deep environment**
+
+from **3,504** valid team-match rows.
+
+Exact cohort:
+
+**34 / 43**
+
+Eligible fixture hash:
+
+`sha256:ccfd8c7cdc7b80a9ea2c725bc0da792ead21cd2232f495c6041eecc699edb1a1`
+
+Frozen feature hash:
+
+`sha256:7d114e4fb36ef08dc9e2e7998bc4560ea1b10b28e6296743a68ca08bb073b483`
+
+Frozen calls:
+
+- UP = **28**;
+- DOWN = **6**;
+- NO_CALL = **0**.
+
+This imbalance was observed before market direction and must not be corrected post-hoc.
+
+## Current execution pointer
+
+Next bounded block:
+
+> evaluate this exact frozen deep/deep_allowed mapping against the already-opened V2B
+> market-direction artifact.
+
+The evaluator must include a constant-UP comparison and balanced-direction diagnostics so
+that an imbalanced 28/6 call distribution cannot create a misleading raw hit rate.
+
+Still prohibited:
+
+- move baseline;
+- switch to PPDA;
+- fit weights;
+- change horizon;
+- exclude leagues;
+- add Stage-A threshold from the same V2B outcomes.
+
+Still binding:
+
+- opened-sample hypothesis generation only;
+- FAIR_CENTRE repricing magnitude/risk remains replicated;
+- reliable individual direction remains unconfirmed;
+- NO_BET;
+- no automatic production promotion.
