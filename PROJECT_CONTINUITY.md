@@ -3983,3 +3983,80 @@ The next useful research step should introduce a genuinely different pre-match d
 
 No further tuning of the current CORNERS10 formula, thresholds or league subset is allowed on these opened rows.
 
+
+
+---
+
+# Continuity update — 2026-09-28 — Stage-B mechanism screen completed
+
+A bounded, zero-cost mechanism screen was completed for the proposed two-stage corner
+market direction structure.
+
+Research record:
+
+`research/CORNER_STAGE_B_MECHANISM_SCREEN_V1.md`
+
+No new provider odds were requested, no Supabase rows were written, and no direction
+model was fitted on V2B outcomes.
+
+Four mechanism families were screened:
+
+- `RESULT_STRENGTH_TRAJECTORY_5`;
+- `CORNER_TREND_5V5`;
+- `SHOT_QUALITY_TREND`;
+- `CROSS_MARKET_H2H_LEAD`.
+
+## Selected feasibility winner
+
+**`RESULT_STRENGTH_TRAJECTORY_5`**
+
+Reason:
+
+- it uses result/Elo state rather than corner-history level or opening corner-market state;
+- it reuses the existing leakage-safe team-strength trajectory implementation;
+- it is reconstructable from free prior completed-match data;
+- it avoids reopening the formally closed SHOTS10 family;
+- it does not require a new paid provider call.
+
+Using the already-frozen V2B prior-history counts, a strict five-prior-top-flight-match
+trajectory state is reconstructable for:
+
+**34 / 43 V2B fixtures**
+
+This is only a feasibility result. It is not a direction-accuracy result.
+
+The 34 comes from:
+- all 31 existing CORNERS10-feasible fixtures (both teams >=10 prior top-flight matches);
+- plus three La Liga fixtures whose promoted/returning side has 6 prior top-flight matches;
+- the remaining nine fixtures contain at least one team with only 3-4 prior top-flight matches.
+
+## Rejected / deferred candidates
+
+`CORNER_TREND_5V5`:
+- technically available for 31/43;
+- rejected as the primary next mechanism because it reuses the same corner-history family
+  and is too close to post-hoc retuning of the opened CORNERS10 signal.
+
+`SHOT_QUALITY_TREND`:
+- not selected because SHOTS10 / HS-AS-HST-AST feature-family retuning is already closed;
+- reopening requires genuinely richer information such as timestamp-safe true xG or
+  shot-location quality.
+
+`CROSS_MARKET_H2H_LEAD`:
+- conceptually independent, but not reconstructable for V2B from current durable data;
+- read-only live audit on 2026-09-28 found no rows in
+  `league_h2h_bookmaker_snapshots`, only 2 EREDIVISIE rows in
+  `league_multi_market_snapshots`, and top-five `odds_snapshots` ending on
+  2026-09-11, before the V2B cutoff 2026-09-19.
+
+## Current execution pointer
+
+Next bounded block:
+
+> reconstruct and freeze the exact 34-fixture `RESULT_STRENGTH_TRAJECTORY_5` V2B feature
+> cohort without reading V2B odds, then preregister one small interpretable Stage-B mapping.
+
+Important:
+- do not inspect row-level V2B direction and then search signs/thresholds/formulas;
+- any V2B direction evaluation remains hypothesis generation only;
+- confirmation still requires a genuinely new unseen market cohort.
