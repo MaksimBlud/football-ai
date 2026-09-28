@@ -1,0 +1,111 @@
+name: GOAL_MODEL_TIME_DECAY_V1
+
+on:
+  push:
+    branches:
+      - research/goal-model-time-decay-v1
+    paths:
+      - 'goal_model_time_decay_v1.py'
+      - 'tests/test_goal_model_time_decay_v1.py'
+      - 'research/GOAL_MODEL_TIME_DECAY_V1.md'
+      - 'experiments/goal_model_time_decay_v1_report.json'
+      - 'goal_model_time_decay_v1_freeze_guard.py'
+      - '.github/workflows/goal-model-time-decay-v1.yml'
+  pull_request:
+    paths:
+      - 'goal_model_time_decay_v1.py'
+      - 'tests/test_goal_model_time_decay_v1.py'
+      - 'research/GOAL_MODEL_TIME_DECAY_V1.md'
+      - 'experiments/goal_model_time_decay_v1_report.json'
+      - 'goal_model_time_decay_v1_freeze_guard.py'
+      - '.github/workflows/goal-model-time-decay-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas numpy scikit-learn xgboost supabase python-dotenv pytest
+      - name: Compile research runner
+        run: python -m py_compile goal_model_time_decay_v1.py
+      - name: Run contract tests
+        run: pytest -q tests/test_goal_model_time_decay_v1.py
+      - name: Production artifact diff guard
+        if: github.event_name == 'pull_request'
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$' && exit 1 || true
+
+  historical-research:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/research/goal-model-time-decay-v1'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PYTHONPATH: .
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas numpy scikit-learn xgboost supabase python-dotenv
+      - name: Check research credentials
+        run: |
+          python - <<'PY'
+          import os
+          missing=[name for name in ("SUPABASE_URL","SUPABASE_KEY") if not os.getenv(name)]
+          if missing:
+              raise SystemExit("Missing research credentials: "+", ".join(missing))
+          print("PASS: Supabase research credentials available; values not printed")
+          PY
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Run nested historical OOS experiment
+        run: python goal_model_time_decay_v1.py
+      - name: Verify report safety contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          report=json.loads(Path("artifacts/goal_model_time_decay_v1/report.json").read_text())
+          assert report["experiment_id"]=="GOAL_MODEL_TIME_DECAY_V1"
+          assert report["research_only"] is True
+          assert report["production_promotion"] is False
+          assert report["candidate_artifact_saved"] is False
+          assert report["supabase_writes"] is False
+          assert report["betting_enabled"] is False
+          assert report["source_rows"]==3800
+          assert report["excluded_seasons"]==["2026/2027"]
+          assert report["result"]["outer_fold_count"]==6
+          assert report["result"]["outer_test_seasons"]==[
+              "2020/2021","2021/2022","2022/2023",
+              "2023/2024","2024/2025","2025/2026"
+          ]
+          print("interpretation=",report["result"]["interpretation"])
+          print("selection_counts=",report["result"]["selection_counts"])
+          print("pooled=",report["result"]["pooled"])
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: goal-model-time-decay-v1-${{ github.run_id }}
+          path: artifacts/goal_model_time_decay_v1/report.json
+          if-no-files-found: error
+          retention-days: 90
