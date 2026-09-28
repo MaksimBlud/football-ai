@@ -35,11 +35,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install pandas numpy scikit-learn xgboost supabase python-dotenv pytest
+      - run: pip install 'pandas==3.0.6' 'numpy==2.5.3' 'scikit-learn==1.9.1' 'xgboost==3.4.1' supabase python-dotenv pytest
       - name: Compile research runner
-        run: python -m py_compile goal_model_time_decay_v1.py
+        run: python -m py_compile goal_model_time_decay_v1.py goal_model_time_decay_v1_freeze_guard.py
       - name: Run contract tests
-        run: pytest -q tests/test_goal_model_time_decay_v1.py
+        run: pytest -q tests/test_goal_model_time_decay_v1.py tests/test_goal_model_time_decay_v1_freeze_guard.py
       - name: Production artifact diff guard
         if: github.event_name == 'pull_request'
         run: |
@@ -59,7 +59,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install pandas numpy scikit-learn xgboost supabase python-dotenv
+      - run: pip install 'pandas==3.0.6' 'numpy==2.5.3' 'scikit-learn==1.9.1' 'xgboost==3.4.1' supabase python-dotenv
       - name: Check research credentials
         run: |
           python - <<'PY'
@@ -97,6 +97,12 @@ jobs:
           print("selection_counts=",report["result"]["selection_counts"])
           print("pooled=",report["result"]["pooled"])
           PY
+      - name: Verify frozen semantic result
+        run: |
+          python goal_model_time_decay_v1_freeze_guard.py \
+            experiments/goal_model_time_decay_v1_report.json \
+            artifacts/goal_model_time_decay_v1/report.json \
+            --atol 1e-12
       - name: Verify production hashes unchanged
         if: always()
         run: |
