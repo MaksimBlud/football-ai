@@ -32,7 +32,6 @@ from sklearn.metrics import (
 from xgboost import XGBRegressor
 
 from add_elo_features import add_elo_features
-from database import supabase
 from feature_engineering import build_features
 from poisson_utils import calculate_markets
 
@@ -105,6 +104,10 @@ def candidate_label(half_life_days: int | None) -> str:
 
 def load_historical_matches() -> pd.DataFrame:
     """Read the frozen experiment seasons from live Supabase, without writes."""
+    # Keep DB client construction off the import path so contract/unit tests can
+    # run on pull_request events where repository secrets are intentionally absent.
+    from database import supabase
+
     rows: list[dict] = []
     page_size = 1000
     start = 0
