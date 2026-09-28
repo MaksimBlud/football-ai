@@ -1,0 +1,147 @@
+{
+  "experiment_id": "GOAL_MODEL_TIME_DECAY_V1",
+  "frozen_result_schema": 1,
+  "first_run": {
+    "workflow_run_id": 36448380396,
+    "artifact_id": 10981876417,
+    "artifact_digest": "sha256:d1e81b25991ea460ccf3af12e1601ecfb0cc07edebd6223e64d577230625d439",
+    "head_sha": "efbc003eaca891aa7a3f1cf104c41f89de842487"
+  },
+  "source_rows": 3800,
+  "feature_rows": 3800,
+  "package_versions": {
+    "pandas": "3.0.6",
+    "numpy": "2.5.3",
+    "scikit_learn": "1.9.1",
+    "xgboost": "3.4.1"
+  },
+  "result": {
+    "outer_fold_count": 6,
+    "outer_test_seasons": [
+      "2020/2021",
+      "2021/2022",
+      "2022/2023",
+      "2023/2024",
+      "2024/2025",
+      "2025/2026"
+    ],
+    "selection_counts": {
+      "1460": 1,
+      "NONE": 5
+    },
+    "positive_folds": {
+      "score_nll": 0,
+      "logloss_1x2": 0,
+      "brier_1x2": 0,
+      "over_2_5_logloss": 0,
+      "over_2_5_brier": 0,
+      "btts_logloss": 1,
+      "btts_brier": 1
+    },
+    "pooled": {
+      "score_nll": {
+        "baseline": 2.999870881362933,
+        "candidate": 3.000308949115931,
+        "delta_candidate_minus_baseline": 0.0004380677529982613
+      },
+      "logloss_1x2": {
+        "baseline": 0.994623595482207,
+        "candidate": 0.9961418526087398,
+        "delta_candidate_minus_baseline": 0.0015182571265327516
+      },
+      "brier_1x2": {
+        "baseline": 0.5928195643918415,
+        "candidate": 0.5937755355503238,
+        "delta_candidate_minus_baseline": 0.0009559711584823383
+      },
+      "over_2_5_logloss": {
+        "baseline": 0.6879775506898663,
+        "candidate": 0.688102964758289,
+        "delta_candidate_minus_baseline": 0.0001254140684227023
+      },
+      "over_2_5_brier": {
+        "baseline": 0.24728794750296307,
+        "candidate": 0.24735713356048267,
+        "delta_candidate_minus_baseline": 0.00006918605751959905
+      },
+      "btts_logloss": {
+        "baseline": 0.6917430800329997,
+        "candidate": 0.6908256088390975,
+        "delta_candidate_minus_baseline": -0.0009174711939021751
+      },
+      "btts_brier": {
+        "baseline": 0.2492612877929405,
+        "candidate": 0.24881730330513802,
+        "delta_candidate_minus_baseline": -0.00044398448780247346
+      }
+    },
+    "paired_bootstrap": {
+      "score_nll": {
+        "mean_delta_candidate_minus_baseline": 0.00043806775299855716,
+        "ci95_low": -0.001197470226065566,
+        "ci95_high": 0.002088111427243152,
+        "bootstrap_probability_candidate_better": 0.296,
+        "samples": 5000,
+        "seed": 20260928
+      },
+      "logloss_1x2": {
+        "mean_delta_candidate_minus_baseline": 0.001518257126532681,
+        "ci95_low": 0.0005706631292921321,
+        "ci95_high": 0.002505257085409475,
+        "bootstrap_probability_candidate_better": 0.0012,
+        "samples": 5000,
+        "seed": 20260928
+      },
+      "brier_1x2": {
+        "mean_delta_candidate_minus_baseline": 0.0009559711584822593,
+        "ci95_low": 0.00037539075703713477,
+        "ci95_high": 0.001550655484448373,
+        "bootstrap_probability_candidate_better": 0.0008,
+        "samples": 5000,
+        "seed": 20260928
+      },
+      "over_2_5_logloss": {
+        "mean_delta_candidate_minus_baseline": 0.00012541406842266344,
+        "ci95_low": -0.0007458896796202767,
+        "ci95_high": 0.0010122926396605096,
+        "bootstrap_probability_candidate_better": 0.3814,
+        "samples": 5000,
+        "seed": 20260928
+      },
+      "over_2_5_brier": {
+        "mean_delta_candidate_minus_baseline": 0.00006918605751956166,
+        "ci95_low": -0.00034734708805650406,
+        "ci95_high": 0.0004901205673314012,
+        "bootstrap_probability_candidate_better": 0.3656,
+        "samples": 5000,
+        "seed": 20260928
+      },
+      "btts_logloss": {
+        "mean_delta_candidate_minus_baseline": -0.000917471193902167,
+        "ci95_low": -0.0016175062245670224,
+        "ci95_high": -0.0002066058200441465,
+        "bootstrap_probability_candidate_better": 0.993,
+        "samples": 5000,
+        "seed": 20260928
+      },
+      "btts_brier": {
+        "mean_delta_candidate_minus_baseline": -0.0004439844878025199,
+        "ci95_low": -0.0007861010378066391,
+        "ci95_high": -0.00009565680942571338,
+        "bootstrap_probability_candidate_better": 0.9924,
+        "samples": 5000,
+        "seed": 20260928
+      }
+    },
+    "selected_by_fold": [
+      {"test_season": "2020/2021", "selected_half_life_days": 1460},
+      {"test_season": "2021/2022", "selected_half_life_days": null},
+      {"test_season": "2022/2023", "selected_half_life_days": null},
+      {"test_season": "2023/2024", "selected_half_life_days": null},
+      {"test_season": "2024/2025", "selected_half_life_days": null},
+      {"test_season": "2025/2026", "selected_half_life_days": null}
+    ],
+    "signal_supported": false,
+    "interpretation": "NO_ROBUST_DECAY_SUPPORT"
+  }
+}
