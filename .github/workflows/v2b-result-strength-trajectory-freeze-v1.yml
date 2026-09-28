@@ -1,0 +1,116 @@
+name: V2B Result Strength Trajectory Freeze V1
+
+on:
+  pull_request:
+    paths:
+      - 'v2b_result_strength_trajectory_freeze_v1.py'
+      - 'tests/test_v2b_result_strength_trajectory_freeze_v1.py'
+      - 'research/V2B_RESULT_STRENGTH_TRAJECTORY_FREEZE_V1.md'
+      - '.github/workflows/v2b-result-strength-trajectory-freeze-v1.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas requests scikit-learn pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile trajectory freeze
+        run: python -m py_compile v2b_result_strength_trajectory_freeze_v1.py
+      - name: Run trajectory freeze regression tests
+        run: pytest -q tests/test_v2b_result_strength_trajectory_freeze_v1.py
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+
+  live-zero-cost-feature-freeze:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      PYTHONPATH: .
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas requests scikit-learn
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Download immutable V2B lock
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10899325930/zip > /tmp/lock.zip
+          echo "ad6bba499cc12abf5ca10732d88e0403565e2582e6c6c8a642ca7bb81248726f  /tmp/lock.zip" | sha256sum -c -
+          mkdir -p /tmp/lock
+          unzip -q /tmp/lock.zip -d /tmp/lock
+          LOCK_JSON=$(find /tmp/lock -name cohort_lock.json -type f | head -n 1)
+          test -n "$LOCK_JSON"
+          cp "$LOCK_JSON" /tmp/cohort_lock.json
+      - name: Download immutable five-match feasibility source
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10900784704/zip > /tmp/feasibility.zip
+          echo "66c83b96f8c1143397aca660701d0a7f5950c3b59a1bd0158bbefe6501d7ecfb  /tmp/feasibility.zip" | sha256sum -c -
+          mkdir -p /tmp/feasibility
+          unzip -q /tmp/feasibility.zip -d /tmp/feasibility
+          FEASIBILITY_JSON=$(find /tmp/feasibility -name v2b_corners10_replay_feasibility.json -type f | head -n 1)
+          test -n "$FEASIBILITY_JSON"
+          cp "$FEASIBILITY_JSON" /tmp/v2b_feasibility.json
+      - name: Run zero-cost point-in-time feature freeze
+        run: |
+          python v2b_result_strength_trajectory_freeze_v1.py \
+            --lock-manifest /tmp/cohort_lock.json \
+            --feasibility-report /tmp/v2b_feasibility.json \
+            --output artifacts/v2b_result_strength_trajectory_freeze_v1.json
+      - name: Assert no direction or market outcome was opened
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/v2b_result_strength_trajectory_freeze_v1.json').read_text())
+          assert r['experiment_id']=='V2B_RESULT_STRENGTH_TRAJECTORY_FREEZE_V1'
+          assert r['research_only'] is True
+          assert r['feature_freeze_only'] is True
+          assert r['primary_mapping_id']=='JOINT_PERFORMANCE_RESIDUAL_5_SIGN_V1'
+          assert r['locked_fixture_count']==43
+          assert r['eligible_fixture_count']==34
+          assert r['eligible_by_league']=={
+              'EPL':6,'LA_LIGA':9,'SERIE_A':7,'BUNDESLIGA':6,'LIGUE_1':6
+          }
+          assert r['direction_test_performed'] is False
+          assert r['v2b_odds_read'] is False
+          assert r['opening_lambda_read'] is False
+          assert r['centre_delta_read'] is False
+          assert r['odds_api_requests']==0
+          assert r['supabase_operations']==0
+          assert r['production_model_operations']==0
+          assert len(r['rows'])==34
+          forbidden={'opening_lambda','centre_delta','opening_odds','closing_odds'}
+          assert not any(forbidden & set(row) for row in r['rows'])
+          print(json.dumps({
+              'eligible_fixture_count':r['eligible_fixture_count'],
+              'eligible_by_league':r['eligible_by_league'],
+              'stage_b_calls':r['stage_b_calls'],
+              'eligible_fixture_sha256':r['eligible_fixture_sha256'],
+          }, indent=2, sort_keys=True))
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v2b-result-strength-trajectory-freeze-v1
+          path: artifacts/v2b_result_strength_trajectory_freeze_v1.json
+          if-no-files-found: error
+          retention-days: 90
