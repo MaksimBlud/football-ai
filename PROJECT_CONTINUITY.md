@@ -3888,4 +3888,98 @@ The previously closed findings remain unchanged:
 - regime-adjusted individual direction = not confirmed;
 - simple top-25%-risk WAIT filter = not portable.
 
+---
+
+# Continuity update — 2026-09-28 — V2B CORNERS10 direction hypothesis explored
+
+The next post-V2B hypothesis-generation block has been completed and merged through PR #430.
+
+Merge commit:
+
+`c4e32bbb186f97f1cac119d8107ebc38b568cc65`
+
+Experiment:
+
+`V2B_CORNERS10_DIRECTION_HYPOTHESIS_V1`
+
+This block used only the exact 31 fixtures previously frozen as CORNERS10-replay-feasible by PR #427.
+
+The other 12 V2B fixtures remained ineligible and were not replaced or backfilled.
+
+## Signal tested
+
+Using only prior top-flight corner history:
+
+`corners10_total = 0.5 * (home_for10 + home_against10 + away_for10 + away_against10)`
+
+`football_gap = corners10_total - opening_lambda`
+
+The sign of football_gap was compared with the already-opened V2B market `centre_delta`.
+
+This was hypothesis generation only, not independent confirmation.
+
+## Authoritative result
+
+Workflow run:
+
+`36427498130`
+
+Artifact:
+
+- ID `10971841803`;
+- digest `sha256:4bf2ef0c7defa48c6fef5cc96b56e08309a6cacdd0aed872e88759590264a4f1`;
+- size 2,647 bytes.
+
+Evaluated rows:
+
+**31**
+
+Observed zero-movement rows:
+
+**21**
+
+Comparable non-zero direction rows:
+
+**10**
+
+Concordant:
+
+**8 / 10 = 0.80**
+
+League diagnostics:
+
+- Bundesliga 2/2;
+- EPL 1/2;
+- La Liga 2/2;
+- Ligue 1 1/1;
+- Serie A 2/3.
+
+However, the preregistered exploratory consistency condition failed:
+
+- positive football-gap mean centre_delta = +0.132574;
+- negative football-gap mean centre_delta = **+0.032076**, not negative;
+- Pearson football_gap vs centre_delta = -0.138894;
+- Spearman = 0.013111.
+
+Final classification:
+
+**`WEAK_OR_INCONSISTENT_DIRECTION_HYPOTHESIS`**
+
+Do not interpret the 8/10 subset agreement as an 80% predictive direction edge. Only 10/31 eligible fixtures had non-zero movement, while the continuous relationship was weak and the negative-gap group did not move down on average.
+
+## Current corner-market research state
+
+Still supported:
+
+- FAIR_CENTRE repricing magnitude/risk = replicated.
+
+Not supported as reliable portable rules:
+
+- regime-adjusted individual direction;
+- simple top-25% FAIR_CENTRE WAIT filter;
+- current scalar CORNERS10 football-gap direction mechanism.
+
+The next useful research step should introduce a genuinely different pre-match direction mechanism or a more informative target structure, rather than tune this opened 31-fixture sample.
+
+No further tuning of the current CORNERS10 formula, thresholds or league subset is allowed on these opened rows.
 
