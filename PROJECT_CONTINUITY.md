@@ -4580,3 +4580,92 @@ Still binding:
 - individual direction remains unconfirmed;
 - NO_BET;
 - no automatic production promotion.
+
+
+---
+
+# Continuity update — 2026-09-28 — Understat tactical-pressure source feasible
+
+A new independent source family has passed point-in-time feasibility.
+
+Experiment:
+
+`V2B_UNDERSTAT_TACTICAL_PRESSURE5_FEASIBILITY_V1`
+
+Workflow run:
+
+`36444258107`
+
+Artifact:
+
+- ID `10979534783`;
+- digest `sha256:c44f2494d53e627c04aa21b5cc6d733fd4d7373004e959f77892b6af9c9d77a2`.
+
+Source:
+
+public Understat prior-match:
+
+- deep;
+- deep_allowed;
+- PPDA;
+- PPDA_allowed.
+
+All required fields were present across EPL, La Liga, Serie A, Bundesliga and Ligue 1.
+
+## Coverage
+
+Identity:
+
+**43 / 43 matched**
+
+Strict five-prior-tactical-match feasibility:
+
+**34 / 43**
+
+By league:
+
+- EPL 6/9;
+- La Liga 9/9;
+- Serie A 7/9;
+- Bundesliga 6/8;
+- Ligue 1 6/8.
+
+The same nine promoted/returning fixtures remain below five prior top-flight rows.
+No lower-division backfill was used.
+
+## Method safety
+
+Snapshots use only rows strictly before target kickoff.
+
+PPDA dicts are normalized as `att / def` with finite positive denominator; malformed
+values fail closed.
+
+No V2B market row, opening line, FAIR_CENTRE, centre_delta or observed direction was read.
+
+## Current execution pointer
+
+The source is suitable for one separately frozen Stage-B hypothesis.
+
+Next bounded block:
+
+> freeze one simple and interpretable tactical-pressure mapping for the exact 34-fixture
+> cohort before opening direction.
+
+Important:
+
+- lower PPDA means more aggressive pressing, so orientation must be frozen explicitly;
+- no fitted weights;
+- no league-specific threshold;
+- no outcome-based feature selection;
+- no Stage-A threshold selection on V2B.
+
+Still binding:
+
+- scalar CORNERS10 Stage B = closed;
+- result/Elo Stage B = closed;
+- absolute true-npxG Stage B = closed;
+- SHOTS10 same-family tuning = closed;
+- FAIR_CENTRE repricing magnitude/risk = replicated;
+- reliable direction remains unconfirmed;
+- NO_BET;
+- no automatic production promotion.
