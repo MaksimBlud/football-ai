@@ -4166,3 +4166,115 @@ Still binding:
 - reliable portable direction remains unconfirmed;
 - NO_BET;
 - no automatic production promotion.
+
+
+---
+
+# Continuity update — 2026-09-28 — V2B result-strength Stage-B evaluated and closed
+
+The frozen `JOINT_PERFORMANCE_RESIDUAL_5_SIGN_V1` Stage-B mapping has now been
+evaluated against the already-opened V2B market rows.
+
+Experiment:
+
+`V2B_RESULT_STRENGTH_TRAJECTORY_EVALUATOR_V1`
+
+Workflow run:
+
+`36436521309`
+
+Authoritative evaluator artifact:
+
+- ID `10975498533`;
+- digest `sha256:0cf19ad84659227ad85197c4d3e8f6453a6f67db65f213e521f35dd86c07f004`;
+- exact frozen feature cohort remained 34 fixtures.
+
+No provider call, Supabase write, model training or production promotion occurred.
+
+## Result
+
+Evaluated rows:
+
+**34**
+
+Observed V2B market movement inside those rows:
+
+- UP = 7;
+- DOWN = 3;
+- ZERO = 24.
+
+Direction-comparable rows:
+
+**10**
+
+Concordant:
+
+**6 / 10 = 0.60**
+
+Frozen consistency gate required pooled concordance **>0.60**, so this condition failed.
+
+By league:
+
+- Bundesliga 2/2 = 1.00;
+- EPL 1/2 = 0.50;
+- La Liga 1/2 = 0.50;
+- Ligue 1 0/1 = 0.00;
+- Serie A 2/3 = 0.6667.
+
+Supporting leagues with >=2 comparable rows and concordance >0.50:
+
+**2**, below the frozen requirement of >=3.
+
+Call-group mean centre movement:
+
+- frozen UP calls: **+0.126077**;
+- frozen DOWN calls: **+0.054838**.
+
+The DOWN group therefore moved upward on average instead of downward.
+
+Continuous association:
+
+- Pearson = +0.126471;
+- Spearman = +0.143616.
+
+Final classification:
+
+**`WEAK_OR_INCONSISTENT_DIRECTION_HYPOTHESIS`**
+
+## Binding conclusion
+
+The exact result/Elo residual Stage-B mapping is closed on V2B.
+
+Do not:
+
+- reverse its sign;
+- threshold its score;
+- change the five-match window;
+- fit weights after this result;
+- exclude unfavorable leagues;
+- combine it with a post-hoc Stage-A threshold on these same V2B outcomes.
+
+The Stage-A FAIR_CENTRE repricing magnitude/risk result remains separately supported.
+Reliable individual direction remains unresolved.
+
+## Current execution pointer
+
+Continue direction research only by introducing another genuinely independent
+point-in-time information family.
+
+Do not reopen the already-seen families by same-sample transformation:
+
+- CORNERS10;
+- SHOTS10 / HS-AS-HST-AST;
+- result/Elo residual Stage B;
+- FAIR_CENTRE opening-state direction.
+
+Next step: perform another bounded **source/mechanism feasibility screen** before any
+new direction outcome comparison.
+
+Still binding:
+
+- NO_BET;
+- no automatic model promotion;
+- research/training != production promotion;
+- free/read-only feasibility checks before paid acquisition.
