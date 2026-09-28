@@ -7,6 +7,7 @@ on:
     paths:
       - 'goal_model_time_decay_v1.py'
       - 'tests/test_goal_model_time_decay_v1.py'
+      - 'tests/test_goal_model_time_decay_v1_freeze_guard.py'
       - 'research/GOAL_MODEL_TIME_DECAY_V1.md'
       - 'experiments/goal_model_time_decay_v1_report.json'
       - 'goal_model_time_decay_v1_freeze_guard.py'
