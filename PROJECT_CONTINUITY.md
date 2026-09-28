@@ -4462,3 +4462,121 @@ Still binding:
 - opened-sample evaluation only;
 - NO_BET;
 - no automatic production promotion.
+
+
+---
+
+# Continuity update — 2026-09-28 — true-xG Stage-B evaluated and closed
+
+The exact frozen true-xG mapping has been evaluated on the opened V2B sample.
+
+Experiment:
+
+`V2B_TRUE_XG_STAGE_B_EVALUATOR_V1`
+
+Workflow run:
+
+`36443401120`
+
+Artifact:
+
+- ID `10978848942`;
+- digest `sha256:966521425bbed4a589e6e1c9b59d335b519ce2a0cd7784724f895c2e64d6358c`.
+
+## Result
+
+Frozen rows:
+
+**34**
+
+Observed movement:
+
+- UP 7;
+- DOWN 3;
+- ZERO 24.
+
+Comparable non-zero movers:
+
+**10**
+
+Frozen mapping concordance:
+
+**7 / 10 = 0.70**
+
+However, frozen calls were strongly imbalanced:
+
+- 30 UP;
+- 4 DOWN.
+
+All 10 comparable movers received an UP call. The four DOWN calls all had zero
+market movement.
+
+Therefore:
+
+- constant-UP baseline = **7/10 = 0.70**;
+- Stage-B excess over constant UP = **0.00**;
+- UP recall = 1.00;
+- DOWN recall = 0.00;
+- balanced accuracy = **0.50**.
+
+Frozen DOWN-call mean centre_delta:
+
+**0.000000**, not negative.
+
+Continuous score relationship:
+
+- Pearson = +0.325976;
+- Spearman = +0.097325.
+
+Final classification:
+
+**`WEAK_OR_INCONSISTENT_DIRECTION_HYPOTHESIS`**
+
+## Binding conclusion
+
+Close `POOLED_2025_NPXG_ENVIRONMENT_SIGN_V1`.
+
+Do not retune:
+
+- pooled baseline;
+- xG/npxG weights;
+- horizon;
+- league subset;
+- call balance;
+- Stage-A threshold.
+
+The 7/10 raw number is not a direction edge because it exactly equals the constant-UP
+baseline and provides no DOWN discrimination.
+
+Reliable individual direction remains unresolved.
+
+## Current execution pointer
+
+The following Stage-B families are now closed on this opened V2B sample:
+
+- scalar CORNERS10 football-gap;
+- result/Elo residual mapping;
+- absolute true-npxG environment mapping.
+
+SHOTS10 same-family retuning was already closed.
+
+Next work should be a **new source/time-provenance feasibility screen**, not another
+formula search on these families.
+
+Priority candidates:
+
+1. genuinely point-in-time squad availability / confirmed lineup state, if a historical
+   first-seen source exists;
+2. full-calendar congestion/travel including cup and European fixtures, not league-only
+   rest proxies;
+3. pre-match corner-market microstructure from independent books, if the existing locked
+   raw V2B artifact already contains cross-book information at the relevant timestamp.
+
+Do free/read-only source audits before any new paid acquisition.
+
+Still binding:
+
+- FAIR_CENTRE repricing magnitude/risk remains replicated;
+- individual direction remains unconfirmed;
+- NO_BET;
+- no automatic production promotion.
