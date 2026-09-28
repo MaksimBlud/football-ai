@@ -1,0 +1,110 @@
+name: V2B True xG Stage-B Freeze V1
+
+on:
+  pull_request:
+    paths:
+      - 'v2b_true_xg_stage_b_freeze_v1.py'
+      - 'tests/test_v2b_true_xg_stage_b_freeze_v1.py'
+      - 'research/V2B_TRUE_XG_STAGE_B_FREEZE_V1.md'
+      - '.github/workflows/v2b-true-xg-stage-b-freeze-v1.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas requests pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile true-xG Stage-B freeze
+        run: python -m py_compile v2b_true_xg_stage_b_freeze_v1.py
+      - name: Run true-xG Stage-B regression tests
+        run: pytest -q tests/test_v2b_true_xg_stage_b_freeze_v1.py
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+
+  zero-cost-feature-freeze:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: .
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas requests
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Download immutable true-xG feasibility artifact
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10976063737/zip > /tmp/xgfeas.zip
+          echo "a5431c36071fe378791c7d4ace446133fcada6a5b2ba67e51b0dacea7a0de28c  /tmp/xgfeas.zip" | sha256sum -c -
+          mkdir -p /tmp/xgfeas
+          unzip -q /tmp/xgfeas.zip -d /tmp/xgfeas
+          FEASIBILITY=$(find /tmp/xgfeas -name v2b_true_xg5_replay_feasibility_v1.json -type f | head -n 1)
+          test -n "$FEASIBILITY"
+          cp "$FEASIBILITY" /tmp/xg_feasibility.json
+      - name: Freeze xG Stage-B mapping without market outcomes
+        run: |
+          python v2b_true_xg_stage_b_freeze_v1.py \
+            --feasibility-report /tmp/xg_feasibility.json \
+            --output artifacts/v2b_true_xg_stage_b_freeze_v1.json
+      - name: Assert feature-only safety contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/v2b_true_xg_stage_b_freeze_v1.json').read_text())
+          assert r['experiment_id']=='V2B_TRUE_XG_STAGE_B_FREEZE_V1'
+          assert r['research_only'] is True
+          assert r['feature_freeze_only'] is True
+          assert r['primary_mapping_id']=='POOLED_2025_NPXG_ENVIRONMENT_SIGN_V1'
+          assert r['locked_fixture_count']==43
+          assert r['eligible_fixture_count']==34
+          assert r['eligible_by_league']=={
+              'EPL':6,'LA_LIGA':9,'SERIE_A':7,'BUNDESLIGA':6,'LIGUE_1':6
+          }
+          assert r['baseline_summary']['season_start']==2025
+          assert r['baseline_summary']['pooled_team_match_rows'] > 3000
+          assert r['market_rows_read'] is False
+          assert r['v2b_odds_read'] is False
+          assert r['opening_lambda_read'] is False
+          assert r['fair_centre_read'] is False
+          assert r['centre_delta_read'] is False
+          assert r['direction_test_performed'] is False
+          assert r['odds_api_requests']==0
+          assert r['supabase_operations']==0
+          assert r['production_model_operations']==0
+          assert len(r['rows'])==34
+          forbidden={'opening_lambda','fair_centre','centre_delta','observed_direction'}
+          assert not any(forbidden & set(row) for row in r['rows'])
+          print(json.dumps({
+              'baseline':r['baseline_summary']['pooled_total_npxg_environment'],
+              'stage_b_calls':r['stage_b_calls'],
+              'eligible_fixture_sha256':r['eligible_fixture_sha256'],
+              'frozen_feature_sha256':r['frozen_feature_sha256'],
+          },indent=2,sort_keys=True))
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v2b-true-xg-stage-b-freeze-v1
+          path: artifacts/v2b_true_xg_stage_b_freeze_v1.json
+          if-no-files-found: error
+          retention-days: 90

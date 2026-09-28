@@ -4371,3 +4371,94 @@ Still binding:
 - individual direction remains unresolved;
 - NO_BET;
 - no automatic production promotion.
+
+
+---
+
+# Continuity update — 2026-09-28 — true-xG Stage-B mapping frozen
+
+After true-xG source feasibility passed, one mapping was frozen before opening any
+new market-direction comparison.
+
+Experiment:
+
+`V2B_TRUE_XG_STAGE_B_FREEZE_V1`
+
+Mapping:
+
+`POOLED_2025_NPXG_ENVIRONMENT_SIGN_V1`
+
+Previous-season pooled top-five baseline:
+
+**2.8041087623 npxG**
+
+The baseline used 3,504 completed 2025/26 Understat team-match rows across EPL,
+La Liga, Serie A, Bundesliga and Ligue 1.
+
+Frozen formula:
+
+- expected home npxG = 0.5 * (home attack npxG5 + away npxGA5);
+- expected away npxG = 0.5 * (away attack npxG5 + home npxGA5);
+- joint expected npxG = sum;
+- score = joint expected npxG - 2.8041087623;
+- score >0 -> UP;
+- score <0 -> DOWN.
+
+No fitted weight, league-specific threshold, opening line, FAIR_CENTRE or market
+direction was used.
+
+## Frozen artifact
+
+Workflow run:
+
+`36442273923`
+
+Artifact:
+
+- ID `10978762060`;
+- digest `sha256:e48adcc90274fbb06b6d915d0e1bb521d75cbcc564a86a6290f17da3cd8f189f`.
+
+Exact cohort:
+
+**34 / 43**
+
+Eligible fixture hash:
+
+`sha256:ccfd8c7cdc7b80a9ea2c725bc0da792ead21cd2232f495c6041eecc699edb1a1`
+
+Frozen feature hash:
+
+`sha256:f4128f41a541788a4690bd8f1065cef468622494fe56de2a561a4ba07b59b0a5`
+
+Frozen calls:
+
+- UP = **30**;
+- DOWN = **4**;
+- NO_CALL = **0**.
+
+This strong UP imbalance was observed from feature values only. It is not a market
+result and does not authorize rebalancing or threshold adjustment.
+
+## Current execution pointer
+
+Next bounded block:
+
+> evaluate the exact frozen true-xG Stage-B artifact against the already-opened V2B
+> market-direction artifact.
+
+Because the frozen calls are 30/4, the evaluator must contextualize raw concordance
+rather than treating a high hit rate alone as evidence.
+
+Still prohibited:
+
+- change pooled baseline;
+- use league-specific xG thresholds;
+- switch to another xG formula after direction is opened;
+- combine Stage A through a post-hoc threshold;
+- claim confirmation from V2B.
+
+Still binding:
+
+- opened-sample evaluation only;
+- NO_BET;
+- no automatic production promotion.
