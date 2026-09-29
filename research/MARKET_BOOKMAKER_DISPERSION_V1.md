@@ -123,3 +123,51 @@ Any positive conclusion remains research-only and requires a separate prospectiv
 - no production .pkl changes;
 - no promotion;
 - JSON research artifact only.
+
+
+## First frozen execution
+
+First complete run:
+
+- workflow run: 36579445636
+- head: e1c19bbc8c2783142a7a55cda5fcfef327d39d82
+- artifact: 11039360977
+- artifact digest: sha256:e310ee3e89fddb866178f30c7c8cd31b39a8b7aebfa5f2ff0e3316511f6d48ff
+
+Environment:
+
+- pandas 3.0.6
+- numpy 2.5.3
+- scipy 1.16.2
+
+### Availability result
+
+Only BET365 passed the preregistered 90% coverage gate in every one of the seven seasons.
+
+- BET365: 2,660/2,660 valid; minimum season coverage 100%.
+- BETWAY: failed because 2024/25 coverage was 239/380 = 62.89%.
+- INTERWETTEN: no valid rows in 2024/25 and 2025/26.
+- PINNACLE: 2025/26 coverage was only 210/380 = 55.26%.
+- WILLIAM_HILL: no valid rows in 2025/26.
+- VCBET: no valid rows in 2024/25 and 2025/26.
+
+Therefore the minimum requirement of two continuously available individual bookmakers
+was not met.
+
+Frozen interpretation:
+
+INSUFFICIENT_SOURCE_DIVERSITY
+
+No consensus or dispersion-outcome/repricing test was executed after this gate, because
+doing so with a single bookmaker would violate the preregistered definition of
+cross-bookmaker dispersion.
+
+## Decision
+
+Do not construct a fake multi-bookmaker dispersion signal from BET365 versus Football-Data
+AVG. AVG is already an aggregate market statistic and is not an independent bookmaker.
+
+The next zero-cost research path is a separate aggregate-market hypothesis using the
+Football-Data Max-vs-Avg price spread. Max is not treated as a coherent bookmaker
+probability vector; it is only a market breadth/spread proxy and therefore requires its
+own frozen experiment.
