@@ -1,0 +1,112 @@
+name: MARKET_PROBABILITY_CALIBRATION_V1
+
+on:
+  push:
+    branches:
+      - research/market-probability-calibration-v1
+    paths:
+      - 'market_probability_calibration_v1.py'
+      - 'tests/test_market_probability_calibration_v1.py'
+      - 'market_probability_calibration_v1_freeze_guard.py'
+      - 'tests/test_market_probability_calibration_v1_freeze_guard.py'
+      - 'research/MARKET_PROBABILITY_CALIBRATION_V1.md'
+      - 'experiments/market_probability_calibration_v1_report.json'
+      - '.github/workflows/market-probability-calibration-v1.yml'
+  pull_request:
+    paths:
+      - 'market_probability_calibration_v1.py'
+      - 'tests/test_market_probability_calibration_v1.py'
+      - 'market_probability_calibration_v1_freeze_guard.py'
+      - 'tests/test_market_probability_calibration_v1_freeze_guard.py'
+      - 'research/MARKET_PROBABILITY_CALIBRATION_V1.md'
+      - 'experiments/market_probability_calibration_v1_report.json'
+      - '.github/workflows/market-probability-calibration-v1.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: market-probability-calibration-v1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'pandas==3.0.6' 'numpy==2.5.3' 'scipy==1.16.2' supabase python-dotenv pytest
+      - name: Compile research code
+        run: python -m py_compile market_probability_calibration_v1.py
+      - name: Run contract tests
+        run: pytest -q tests/test_market_probability_calibration_v1.py
+      - name: Production artifact diff guard
+        if: github.event_name == 'pull_request'
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$' && exit 1 || true
+
+  historical-research:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/research/market-probability-calibration-v1'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: .
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'pandas==3.0.6' 'numpy==2.5.3' 'scipy==1.16.2' supabase python-dotenv
+      - name: Check research credentials
+        run: |
+          python - <<'PY'
+          import os
+          missing=[name for name in ("SUPABASE_URL","SUPABASE_KEY") if not os.getenv(name)]
+          if missing:
+              raise SystemExit("Missing research credentials: "+", ".join(missing))
+          print("PASS: Supabase research credentials available; values not printed")
+          PY
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Run historical market calibration experiment
+        run: python market_probability_calibration_v1.py
+      - name: Verify safety contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/market_probability_calibration_v1/report.json').read_text())
+          assert r['experiment_id']=='MARKET_PROBABILITY_CALIBRATION_V1'
+          assert r['research_only'] is True
+          assert r['production_promotion'] is False
+          assert r['supabase_writes'] is False
+          assert r['odds_api_calls'] is False
+          assert r['candidate_artifact_saved'] is False
+          assert r['source_rows']==2660
+          assert r['result']['outer_fold_count']==4
+          assert r['result']['pooled_oos_matches']==1520
+          print('supported_candidates=',r['result']['supported_candidates'])
+          print('active_method=',r['result']['active_method'])
+          print('interpretation=',r['result']['interpretation'])
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: market-probability-calibration-v1-${{ github.run_id }}
+          path: artifacts/market_probability_calibration_v1/report.json
+          if-no-files-found: error
+          retention-days: 90
