@@ -1,0 +1,73 @@
+{
+  "experiment_id": "MARKET_MAX_AVG_SPREAD_REPLICATION_V2",
+  "frozen_result_schema": 1,
+  "first_successful_run": {
+    "workflow_run_id": 36585543053,
+    "artifact_id": 11041980670,
+    "artifact_digest": "sha256:a098303910b0ed5a0dca06e3f1db042575f9aa2754b322a74e9600776968df7f",
+    "head_sha": "dd5ba26b860b86ff393f24eba3261efa856ad620"
+  },
+  "package_versions": {
+    "pandas": "3.0.6",
+    "numpy": "2.5.3",
+    "requests": "2.32.5"
+  },
+  "result": {
+    "eligible_leagues": [
+      "LA_LIGA",
+      "SERIE_A",
+      "BUNDESLIGA",
+      "LIGUE_1"
+    ],
+    "prepared_rows": 9798,
+    "matched_rows": 4794,
+    "matched_cell_count": 28,
+    "raw_brier": {
+      "pooled_high_minus_low": -0.15908020631147024,
+      "negative_leagues": 4,
+      "league_count": 4,
+      "negative_cells": 28,
+      "negative_cell_fraction": 1,
+      "ci95_low": -0.17708750596521472,
+      "ci95_high": -0.1405500554862602,
+      "bootstrap_probability_negative": 1,
+      "supported": true
+    },
+    "excess_brier": {
+      "pooled_high_minus_low": -0.013690590605952808,
+      "negative_leagues": 3,
+      "league_count": 4,
+      "negative_cells": 23,
+      "negative_cell_fraction": 0.8214285714285714,
+      "ci95_low": -0.031014175024528093,
+      "ci95_high": 0.0046142874761501956,
+      "bootstrap_probability_negative": 0.9338,
+      "supported": false
+    },
+    "favorite_probability_diagnostic": {
+      "pooled_high_minus_low": 0.2079960491748884,
+      "by_league": {
+        "BUNDESLIGA": 0.2361564646421933,
+        "LA_LIGA": 0.20853583030412837,
+        "LIGUE_1": 0.18877252439623776,
+        "SERIE_A": 0.20530579361705753
+      }
+    },
+    "raw_brier_by_league": {
+      "BUNDESLIGA": -0.18715317352964383,
+      "LA_LIGA": -0.1805604919552225,
+      "LIGUE_1": -0.12649400624456408,
+      "SERIE_A": -0.1494524801745648
+    },
+    "excess_brier_by_league": {
+      "BUNDESLIGA": -0.007121636072503609,
+      "LA_LIGA": -0.0373976894860127,
+      "LIGUE_1": 0.0020940311380157096,
+      "SERIE_A": -0.011528690649462645
+    },
+    "signals_supported": [
+      "RAW_INVERSE_SPREAD_REPLICATION"
+    ],
+    "interpretation": "RAW_ONLY_SPREAD_REPLICATION"
+  }
+}
