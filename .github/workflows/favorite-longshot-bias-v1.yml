@@ -1,0 +1,100 @@
+name: FAVORITE_LONGSHOT_BIAS_V1
+
+on:
+  push:
+    branches:
+      - research/favorite-longshot-bias-v1
+    paths:
+      - 'favorite_longshot_bias_v1.py'
+      - 'tests/test_favorite_longshot_bias_v1.py'
+      - 'favorite_longshot_bias_v1_freeze_guard.py'
+      - 'tests/test_favorite_longshot_bias_v1_freeze_guard.py'
+      - 'research/FAVORITE_LONGSHOT_BIAS_V1.md'
+      - 'experiments/favorite_longshot_bias_v1_report.json'
+      - '.github/workflows/favorite-longshot-bias-v1.yml'
+  pull_request:
+    paths:
+      - 'favorite_longshot_bias_v1.py'
+      - 'tests/test_favorite_longshot_bias_v1.py'
+      - 'favorite_longshot_bias_v1_freeze_guard.py'
+      - 'tests/test_favorite_longshot_bias_v1_freeze_guard.py'
+      - 'research/FAVORITE_LONGSHOT_BIAS_V1.md'
+      - 'experiments/favorite_longshot_bias_v1_report.json'
+      - '.github/workflows/favorite-longshot-bias-v1.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: favorite-longshot-bias-v1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'pandas==3.0.6' 'numpy==2.5.3' 'requests==2.32.5' pytest
+      - name: Compile research code
+        run: python -m py_compile favorite_longshot_bias_v1.py
+      - name: Run contract tests
+        run: pytest -q tests/test_favorite_longshot_bias_v1.py
+      - name: Production artifact diff guard
+        if: github.event_name == 'pull_request'
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$' && exit 1 || true
+
+  historical-research:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/research/favorite-longshot-bias-v1'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'pandas==3.0.6' 'numpy==2.5.3' 'requests==2.32.5'
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Run zero-cost favorite-longshot experiment
+        run: python favorite_longshot_bias_v1.py
+      - name: Verify safety contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/favorite_longshot_bias_v1/report.json').read_text())
+          assert r['experiment_id']=='FAVORITE_LONGSHOT_BIAS_V1'
+          assert r['research_only'] is True
+          assert r['production_promotion'] is False
+          assert r['paid_odds_api_calls'] is False
+          assert r['supabase_reads'] is False
+          assert r['supabase_writes'] is False
+          assert r['candidate_artifact_saved'] is False
+          assert '2026/2027' not in r['season_codes']
+          print('eligible_leagues=',r['result']['eligible_leagues'])
+          print('supported=',r['result']['supported'])
+          print('interpretation=',r['result']['interpretation'])
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: favorite-longshot-bias-v1-${{ github.run_id }}
+          path: artifacts/favorite_longshot_bias_v1/report.json
+          if-no-files-found: error
+          retention-days: 90
