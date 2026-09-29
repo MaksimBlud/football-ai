@@ -108,3 +108,29 @@ Only a later block may compute route distance, and only from coordinates frozen 
 - no Supabase writes;
 - no model training/promotion;
 - production `.pkl` unchanged.
+
+
+## Explicit source-backed current-venue override
+
+One club requires a frozen current-venue override:
+
+- route label: `Freiburg`;
+- club: SC Freiburg;
+- current venue: Europa-Park-Stadion;
+- Wikidata venue QID: `Q64586775`.
+
+Reason:
+
+Wikidata's SC Freiburg club item exposes both the old Dreisamstadion and the newer
+Europa-Park-Stadion as active coordinate-bearing P115 values without a unique preferred
+selection. The current OpenFootball club/stadium data explicitly lists SC Freiburg at
+Europa-Park Stadion.
+
+This override is identity/source plumbing only. It is frozen before any market-direction
+join and does not depend on centre_delta or target outcomes.
+
+Source references:
+
+- https://github.com/openfootball/clubs/blob/master/europe/germany/de.clubs.txt
+- https://github.com/openfootball/clubs/blob/master/europe/germany/de.stadiums.txt
+- https://www.wikidata.org/wiki/Q64586775
