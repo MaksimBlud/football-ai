@@ -1,0 +1,106 @@
+name: V2B Travel-City Stage-B Evaluator V1
+
+on:
+  pull_request:
+    paths:
+      - 'v2b_travel_city_stage_b_evaluator_v1.py'
+      - 'tests/test_v2b_travel_city_stage_b_evaluator_v1.py'
+      - 'research/V2B_TRAVEL_CITY_STAGE_B_EVALUATOR_V1.md'
+      - 'research/V2B_TRAVEL_CITY_STAGE_B_EVALUATOR_V1_RESULTS.md'
+      - 'experiments/v2b_travel_city_stage_b_evaluator_v1_report.json'
+      - '.github/workflows/v2b-travel-city-stage-b-evaluator-v1.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas numpy pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile evaluator
+        run: python -m py_compile v2b_travel_city_stage_b_evaluator_v1.py
+      - name: Run evaluator regression tests
+        run: pytest -q tests/test_v2b_travel_city_stage_b_evaluator_v1.py
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+
+  offline-opened-sample-evaluation:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: .
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas numpy
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Download frozen travel-city Stage-B artifact
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/11046080870/zip > /tmp/travelfreeze.zip
+          echo "f9908bca9f20d7726cbd27d7f3a96329a4e0bb9af0b0deda97d336b15b440192  /tmp/travelfreeze.zip" | sha256sum -c -
+          mkdir -p /tmp/travelfreeze
+          unzip -q /tmp/travelfreeze.zip -d /tmp/travelfreeze
+          FEATURE=$(find /tmp/travelfreeze -name report.json -type f | head -n 1)
+          test -n "$FEATURE"
+          cp "$FEATURE" /tmp/travel_feature_freeze.json
+      - name: Download already-opened V2B market artifact
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10899842049/zip > /tmp/market.zip
+          echo "7d4ecad191518cc551567ad1513b5f6c53121d56154a6de86b51b99d54f078ff  /tmp/market.zip" | sha256sum -c -
+          mkdir -p /tmp/market
+          unzip -q /tmp/market.zip -d /tmp/market
+          MARKET=$(find /tmp/market -name evaluation_rows.csv -type f | head -n 1)
+          test -n "$MARKET"
+          cp "$MARKET" /tmp/market_rows.csv
+      - name: Evaluate frozen travel-city mapping
+        run: |
+          python v2b_travel_city_stage_b_evaluator_v1.py \
+            --feature-freeze /tmp/travel_feature_freeze.json \
+            --market-rows /tmp/market_rows.csv \
+            --output-dir artifacts/v2b_travel_city_stage_b_evaluator_v1
+      - name: Assert opened-sample safety contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/v2b_travel_city_stage_b_evaluator_v1/report.json').read_text())
+          assert r['experiment_id']=='V2B_TRAVEL_CITY_STAGE_B_EVALUATOR_V1'
+          assert r['research_only'] is True
+          assert r['opened_sample_hypothesis_generation'] is True
+          assert r['confirmatory_replication'] is False
+          assert r['evaluated_rows']==43
+          assert r['predicted_call_counts']=={'UP':21,'DOWN':21,'NO_CALL':1}
+          assert r['stage_a_threshold_selected'] is False
+          assert r['rest_feature_added'] is False
+          assert r['travel_rest_interaction_added'] is False
+          assert r['odds_api_requests']==0
+          assert r['supabase_operations']==0
+          assert r['production_model_operations']==0
+          print(json.dumps(r,indent=2,sort_keys=True))
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v2b-travel-city-stage-b-evaluator-v1
+          path: artifacts/v2b_travel_city_stage_b_evaluator_v1
+          if-no-files-found: error
+          retention-days: 90
