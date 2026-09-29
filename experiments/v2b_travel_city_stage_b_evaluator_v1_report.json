@@ -1,0 +1,105 @@
+{
+  "experiment_id": "V2B_TRAVEL_CITY_STAGE_B_EVALUATOR_V1",
+  "frozen_result_schema": 1,
+  "first_successful_run": {
+    "workflow_run_id": 36595762437,
+    "artifact_id": 11046326009,
+    "artifact_digest": "sha256:cf01a7bf151172c70f2478cc9f0d2b44efc8ca66011bda3346cd7fe8e0f1de5c",
+    "head_sha": "fcbebc147a623397ce0a3aa9eea66ce3db3db957"
+  },
+  "result": {
+    "evaluated_rows": 43,
+    "predicted_call_counts": {
+      "UP": 21,
+      "DOWN": 21,
+      "NO_CALL": 1
+    },
+    "observed_movement_counts": {
+      "UP": 9,
+      "DOWN": 4,
+      "ZERO": 30
+    },
+    "comparable_rows": 13,
+    "concordant_rows": 4,
+    "pooled_concordance": 0.3076923076923077,
+    "comparable_observed_counts": {
+      "UP": 9,
+      "DOWN": 4
+    },
+    "constant_direction_baseline": {
+      "direction": "UP",
+      "concordance": 0.6923076923076923,
+      "stage_b_excess_concordance": -0.3846153846153846
+    },
+    "balanced_direction_accuracy": {
+      "recall_up": 0.3333333333333333,
+      "recall_down": 0.25,
+      "balanced_accuracy": 0.29166666666666663
+    },
+    "supporting_leagues_with_at_least_2_comparable_rows": 1,
+    "call_group_mean_deltas_aligned": false,
+    "call_groups": {
+      "UP": {
+        "rows": 21,
+        "zero_movement_rows": 15,
+        "mean_centre_delta": 0.05363449333162676,
+        "median_centre_delta": 0,
+        "mean_movement_magnitude": 0.12953592697333724,
+        "mean_joint_travel_city_km": 336.9585322162314
+      },
+      "DOWN": {
+        "rows": 21,
+        "zero_movement_rows": 14,
+        "mean_centre_delta": 0.09038385182111563,
+        "median_centre_delta": 0,
+        "mean_movement_magnitude": 0.11300802796400164,
+        "mean_joint_travel_city_km": 1270.8235821117214
+      },
+      "NO_CALL": {
+        "rows": 1,
+        "zero_movement_rows": 1,
+        "mean_centre_delta": 0,
+        "median_centre_delta": 0,
+        "mean_movement_magnitude": 0,
+        "mean_joint_travel_city_km": 600.4646884282998
+      }
+    },
+    "by_league": {
+      "BUNDESLIGA": {
+        "rows": 8,
+        "comparable_rows": 2,
+        "concordant_rows": 2,
+        "concordance": 1
+      },
+      "EPL": {
+        "rows": 9,
+        "comparable_rows": 2,
+        "concordant_rows": 0,
+        "concordance": 0
+      },
+      "LA_LIGA": {
+        "rows": 9,
+        "comparable_rows": 2,
+        "concordant_rows": 0,
+        "concordance": 0
+      },
+      "LIGUE_1": {
+        "rows": 8,
+        "comparable_rows": 3,
+        "concordant_rows": 1,
+        "concordance": 0.3333333333333333
+      },
+      "SERIE_A": {
+        "rows": 9,
+        "comparable_rows": 4,
+        "concordant_rows": 1,
+        "concordance": 0.25
+      }
+    },
+    "continuous_correlations": {
+      "pearson": 0.0045152342228975476,
+      "spearman": -0.21961332023890187
+    },
+    "classification": "WEAK_OR_INCONSISTENT_DIRECTION_HYPOTHESIS"
+  }
+}
