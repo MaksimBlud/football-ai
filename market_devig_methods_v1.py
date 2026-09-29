@@ -511,6 +511,32 @@ def evaluate(frame: pd.DataFrame) -> dict:
         for key in ("logloss", "brier")
     }
 
+    alternative_bootstrap = {
+        method: {
+            key: bootstrap_delta(
+                losses[method],
+                losses["MULTIPLICATIVE"],
+                key,
+            )
+            for key in ("logloss", "brier")
+        }
+        for method in ALTERNATIVES
+    }
+
+    overall_deltas = {
+        method: {
+            "logloss": float(
+                reports[method]["overall"]["logloss"]
+                - reports["MULTIPLICATIVE"]["overall"]["logloss"]
+            ),
+            "brier": float(
+                reports[method]["overall"]["brier"]
+                - reports["MULTIPLICATIVE"]["overall"]["brier"]
+            ),
+        }
+        for method in ALTERNATIVES
+    }
+
     robust_support = bool(
         selected != "MULTIPLICATIVE"
         and validation_pass
@@ -556,6 +582,8 @@ def evaluate(frame: pd.DataFrame) -> dict:
             "passed": test_pass,
         },
         "paired_bootstrap_all_2660": bootstrap,
+        "alternative_bootstrap_all_2660": alternative_bootstrap,
+        "overall_deltas_vs_multiplicative": overall_deltas,
         "all_methods": reports,
         "robust_support": robust_support,
         "interpretation": (
