@@ -1,15 +1,15 @@
 # V2B TRAVEL / VENUE SOURCE FEASIBILITY V1
 
-Status: **SOURCE / VENUE PROVENANCE FEASIBILITY ONLY — NO DIRECTION TEST**.
+Status: **SOURCE / VENUE-CITY PROVENANCE FEASIBILITY ONLY — NO DIRECTION TEST**.
 
 ## Purpose
 
-Audit whether a reproducible pre-match travel feature can be reconstructed for the exact
+Audit whether a reproducible pre-match travel proxy can be reconstructed for the exact
 43-fixture V2B cohort **without reading market direction**.
 
 The upstream full-calendar load audit already reconstructed the true latest prior match
-date for both teams in every locked fixture. This block adds only venue identity and
-geographic provenance.
+date for both teams in every locked fixture. This block adds only previous-match host
+identity and geographic provenance.
 
 ## Immutable upstream source
 
@@ -22,57 +22,69 @@ Full-calendar feasibility artifact:
 - full-calendar feasible = 43/43;
 - direction not opened.
 
-## Previous-match venue reconstruction
+## Previous-match host reconstruction
 
 For each team-side:
 
 1. read the frozen `full_previous_match_date`;
 2. if that date is represented by a frozen non-league event, use the fixture label's
-   left-side club as the venue host;
+   left-side club as the host;
 3. otherwise reconstruct the league fixture from public Understat 2026/27 league
    schedule data for the exact previous date and team, and use the Understat home club
-   as the venue host.
+   as the host.
 
-The current target venue host is the locked target fixture's home team.
+The current target host is the locked target fixture's home team.
 
 No market field is needed for either step.
 
-## Geographic source
+## Geographic source contract
 
-Primary geographic source: **Wikidata public API**.
+### Technical correction before first result
 
-For every unique current/previous host club:
+The first source-audit workflow attempted live Wikidata entity search and was rate-limited
+with HTTP 429 before a single travel result/report was produced. No market direction or
+travel outcome was observed. Therefore the hypothesis is unchanged, but the source
+contract is corrected before the first result to remove a non-reproducible live-search
+dependency.
 
-- resolve the football-club entity;
-- read current home venue property `P115`;
-- resolve venue coordinates from `P625`;
-- prefer a current/non-ended home-venue statement when qualifiers are available;
-- retain entity IDs, venue IDs, labels and coordinates in the audit artifact.
+V1 now uses two bulk/offline public sources:
 
-Club search aliases may be frozen only for identity plumbing and may not depend on any
-market outcome.
+1. **openfootball/clubs**, pinned to commit
+   `ae3800227c449447b3a337fc0aac79a8f02f4c8b`, for club alias -> home city identity;
+2. **GeoNames cities500 bulk dump** for city coordinates.
+
+The workflow records the SHA-256 digest of both downloaded source archives in the audit
+artifact. No per-club geocoding API is used.
+
+Because this is city-level provenance, the feature is explicitly renamed a
+**venue-city travel proxy**, not exact stadium travel.
 
 ## Distance
 
-If both coordinates are available, compute great-circle distance with the haversine
-formula.
+For every unique host club:
+
+- resolve the club to one openfootball club record and country;
+- extract its home city;
+- resolve that city/country against GeoNames names/ASCII names/alternate names;
+- use the selected GeoNames WGS84 latitude/longitude.
 
 For each team-side:
 
-`travel_km_since_previous_match = distance(previous_match_venue, current_target_venue)`
+`travel_city_km_since_previous_match = distance(previous_host_city, target_host_city)`
 
-This is a **host-club home-venue proxy**. The audit does not claim that every historical
-fixture necessarily used that stadium; neutral-site or exceptional venue cases remain a
-limitation and must be flagged if discovered.
+Distance is great-circle haversine distance.
+
+This intentionally avoids claiming exact stadium coordinates. Same-city stadium changes
+therefore map to approximately zero city travel, which is appropriate for a travel-load
+proxy.
 
 ## Feasibility gates
 
-Primary full-cohort status `FULL_43_TRAVEL_PROXY_FEASIBLE` requires:
+Primary full-cohort status `FULL_43_TRAVEL_CITY_PROXY_FEASIBLE` requires:
 
-- 43/43 target current venue hosts resolved;
 - 86/86 previous-match host identities reconstructed;
-- 86/86 previous venue coordinates resolved;
-- 86/86 current venue coordinates resolved;
+- every unique previous/current host club resolved to exactly one club/country/city;
+- every resolved city matched to GeoNames coordinates;
 - finite non-negative travel distance for all 86 team-sides.
 
 Otherwise the audit reports the exact failure class and unresolved identities. No
