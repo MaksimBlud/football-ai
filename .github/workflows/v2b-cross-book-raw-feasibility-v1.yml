@@ -1,0 +1,82 @@
+name: V2B Cross-Book Raw Feasibility V1
+
+on:
+  pull_request:
+    paths:
+      - 'v2b_cross_book_raw_feasibility_v1.py'
+      - 'tests/test_v2b_cross_book_raw_feasibility_v1.py'
+      - 'research/V2B_CROSS_BOOK_RAW_FEASIBILITY_V1.md'
+      - '.github/workflows/v2b-cross-book-raw-feasibility-v1.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - run: python -m py_compile v2b_cross_book_raw_feasibility_v1.py
+      - run: pytest -q tests/test_v2b_cross_book_raw_feasibility_v1.py
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+
+  offline-source-audit:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Download immutable raw V2B artifact
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10899611444/zip > /tmp/v2b-raw.zip
+          echo "c2f5313efad4afb8663d9980f5ea004f52fe02827a83b5c99a8b775c35498a57  /tmp/v2b-raw.zip" | sha256sum -c -
+      - name: Audit cross-book support without direction
+        run: |
+          python v2b_cross_book_raw_feasibility_v1.py \
+            --raw-odds-zip /tmp/v2b-raw.zip \
+            --output artifacts/v2b_cross_book_raw_feasibility_v1.json
+      - name: Assert source-only contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/v2b_cross_book_raw_feasibility_v1.json').read_text())
+          assert r['experiment_id']=='V2B_CROSS_BOOK_RAW_FEASIBILITY_V1'
+          assert r['research_only'] is True
+          assert r['captured_raw_responses']==43
+          assert r['market_direction_evaluated'] is False
+          assert r['centre_delta_read'] is False
+          assert r['match_outcome_used'] is False
+          assert r['provider_requests']==0
+          assert r['supabase_operations']==0
+          assert r['production_model_operations']==0
+          print(json.dumps(r,indent=2,sort_keys=True))
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v2b-cross-book-raw-feasibility-v1
+          path: artifacts/v2b_cross_book_raw_feasibility_v1.json
+          if-no-files-found: error
+          retention-days: 90
