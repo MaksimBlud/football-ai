@@ -5370,3 +5370,104 @@ Still binding:
 - reliable individual direction remains unconfirmed;
 - NO_BET;
 - no automatic production promotion.
+
+
+---
+
+# Continuity update — 2026-09-29 — stadium coordinate layer fully feasible
+
+The travel source chain now has full stadium-level coordinate coverage for the frozen
+V2B cohort.
+
+Experiment:
+
+`V2B_TRAVEL_COORDINATE_FEASIBILITY_V1`
+
+Workflow run:
+
+`36596063770`
+
+Artifact:
+
+- ID `11046082462`;
+- digest `sha256:f6b334614adde392ad9195c00c883ecf2d1e4d5f1d810b87e86c4d21ae549b02`.
+
+## Result
+
+Unique previous/target venue labels:
+
+**93**
+
+Stadium coordinates resolved:
+
+**93 / 93**
+
+Club-coordinate fallbacks:
+
+**0**
+
+Ambiguous venues:
+
+**0**
+
+Unresolved club identities:
+
+**0**
+
+Team-side routes with both endpoints at stadium level:
+
+**86 / 86**
+
+Fixtures with both teams coordinate-feasible:
+
+**43 / 43**
+
+Final status:
+
+**`FULL_86_STADIUM_COORDINATE_FEASIBLE`**
+
+## Source contract
+
+Identity:
+
+`English Wikipedia title -> pageprops.wikibase_item`
+
+Coordinates:
+
+`Wikidata club P115 -> stadium P625`
+
+All identity/entity reads are batched. Final audit used only **6 public HTTP requests**.
+
+The five generic-title collisions Chelsea, Crystal Palace, Everton, Fulham and Liverpool
+were resolved to their football-club Wikipedia titles.
+
+SC Freiburg required one source-backed current-venue override to
+Europa-Park-Stadion (`Q64586775`) because Wikidata's club item exposed two active
+coordinate-bearing P115 values. OpenFootball independently identifies Europa-Park
+Stadion as SC Freiburg's current home.
+
+No market row or direction outcome was read.
+
+## Current execution pointer
+
+Next bounded block:
+
+> compute and freeze deterministic Haversine distance for all 86
+> previous-stadium -> target-stadium routes.
+
+Requirements:
+
+- consume only immutable coordinate artifact `11046082462`;
+- no road/rail/flight-mode assumptions;
+- no market rows or centre_delta;
+- preserve all 86 team-side routes;
+- report route-distance distribution and zero/shared-stadium cases;
+- do not define UP/DOWN until distance features are frozen.
+
+Still binding:
+
+- reliable individual corner-market direction remains unconfirmed;
+- full-calendar aggregate-rest Stage B is closed as weak/inconsistent;
+- FAIR_CENTRE repricing magnitude/risk remains replicated;
+- NO_BET;
+- no automatic production promotion.
