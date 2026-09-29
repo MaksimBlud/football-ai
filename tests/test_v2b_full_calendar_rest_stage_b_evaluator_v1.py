@@ -40,7 +40,7 @@ def _feature_payload():
         "primary_mapping_id":mod.PRIMARY_MAPPING_ID,
         "eligible_fixture_sha256":mod.EXPECTED_FEATURE_COHORT_SHA256,
         "frozen_feature_sha256":mod.EXPECTED_FEATURE_SHA256,
-        "eligible_fixture_count":43,
+        "locked_fixture_count":43,
         "stage_b_calls":{"UP":17,"DOWN":19,"NO_CALL":7},
         "market_rows_read":False,
         "v2b_odds_read":False,
