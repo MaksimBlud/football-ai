@@ -12,11 +12,11 @@ against the already-opened V2B corner-market direction rows.
 
 This is not independent confirmation. V2B market outcomes have already been opened in
 earlier research. The important protection is narrower: the territorial-depth formula, baseline,
-34-fixture membership and 30/4 calls were frozen before this territorial-depth-specific join.
+34-fixture membership and 28/6 calls were frozen before this territorial-depth-specific join.
 
 ## Frozen territorial-depth source
 
-Use the final feature-freeze artifact generated from the final PR #436 head:
+Use the final feature-freeze artifact generated from the final fresh-main PR #441 head:
 
 - artifact ID `10981992759`;
 - digest `sha256:48ba9a7a0097f9d3e7177a8c53eac9a0205045ae5dbe5cf93b9f1532f26a3297`;
