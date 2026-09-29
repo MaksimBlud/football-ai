@@ -4752,3 +4752,122 @@ Still binding:
 - reliable individual direction remains unconfirmed;
 - NO_BET;
 - no automatic production promotion.
+
+
+---
+
+# Continuity update — 2026-09-29 — territorial-depth Stage-B evaluated and closed
+
+The exact frozen `POOLED_2025_DEEP_ENVIRONMENT_SIGN_V1` mapping has now been
+evaluated against the already-opened V2B market-direction artifact.
+
+Experiment:
+
+`V2B_DEEP_STAGE_B_EVALUATOR_V1`
+
+Workflow run:
+
+`36579933258`
+
+Artifact:
+
+- ID `11039795640`;
+- digest `sha256:6bb5aa4131189a518b3e57a2878c615d67a2afe0e75ceb1d4c57975d6ee382f3`.
+
+## Result
+
+Frozen rows:
+
+**34**
+
+Observed movement:
+
+- UP = 7;
+- DOWN = 3;
+- ZERO = 24.
+
+Comparable non-zero movers:
+
+**10**
+
+Frozen deep mapping:
+
+**6 / 10 = 0.60**
+
+Constant always-UP baseline:
+
+**7 / 10 = 0.70**
+
+Stage-B excess over always-UP:
+
+**-0.10**
+
+Direction discrimination:
+
+- UP recall = 0.8571;
+- DOWN recall = 0.0000;
+- balanced accuracy = **0.4286**.
+
+Frozen DOWN-call group:
+
+- 6 rows;
+- 5 ZERO;
+- 1 observed UP;
+- 0 observed DOWN;
+- mean centre_delta = **+0.136056**, not negative.
+
+Continuous relationship:
+
+- Pearson = -0.005102;
+- Spearman = +0.100145.
+
+Final classification:
+
+**`WEAK_OR_INCONSISTENT_DIRECTION_HYPOTHESIS`**
+
+## Binding conclusion
+
+Close `POOLED_2025_DEEP_ENVIRONMENT_SIGN_V1`.
+
+Do not:
+
+- move the pooled deep baseline;
+- switch to PPDA on this sample;
+- reverse the sign;
+- fit weights or a threshold;
+- change the five-match horizon;
+- drop unfavorable leagues;
+- add a post-hoc Stage-A threshold.
+
+The 6/10 raw result is worse than the 7/10 constant-UP baseline and provides no DOWN
+discrimination.
+
+## Current execution pointer
+
+Reliable individual direction remains unresolved.
+
+Closed opened-sample Stage-B families now include:
+
+- CORNERS10 scalar gap;
+- result/Elo residual;
+- absolute true-npxG environment;
+- absolute deep/deep_allowed environment;
+- SHOTS10 same-family tuning.
+
+Next bounded direction block should be a **new source/time-provenance feasibility audit**,
+not another formula search on these opened feature families.
+
+Priority:
+
+1. inspect immutable raw V2B response structure for cross-book / market-microstructure
+   information already paid for and already stored;
+2. if insufficient, inspect full-calendar congestion/travel source feasibility;
+3. keep availability externally gated unless a genuine point-in-time first-seen source
+   becomes available.
+
+Still binding:
+
+- FAIR_CENTRE repricing magnitude/risk remains replicated;
+- individual direction remains unconfirmed;
+- NO_BET;
+- no automatic production promotion.
