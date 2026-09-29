@@ -1,0 +1,49 @@
+{
+  "experiment_id": "MARKET_MAX_AVG_SPREAD_V1",
+  "frozen_result_schema": 1,
+  "first_run": {
+    "workflow_run_id": 36580542534,
+    "artifact_id": 11039093220,
+    "artifact_digest": "sha256:d618c7a6ca643b780c8b2f20912145e3593abd6319c0bf188882363bd40c893e",
+    "head_sha": "028ef8fb2034d6c1dd6d9c20a558e9816c280483"
+  },
+  "source_rows": 2660,
+  "package_versions": {
+    "pandas": "3.0.6",
+    "numpy": "2.5.3",
+    "scipy": "1.16.2"
+  },
+  "result": {
+    "usable_rows": 2660,
+    "thresholds": {
+      "low_q25": 0.04177782395388535,
+      "high_q75": 0.06264317681762262,
+      "discovery_rows": 1900
+    },
+    "spread_summary": {
+      "mean": 0.05544244574488611,
+      "median": 0.04733353114869522,
+      "min": 0.01766256066858722,
+      "max": 0.26441811563939305
+    },
+    "repricing": {
+      "positive_seasons_all": 2,
+      "positive_discovery_seasons": 2,
+      "mean_high_minus_low": -0.0016934684860922117,
+      "ci95_low": -0.003470152065627049,
+      "ci95_high": 0.00008047300549135482,
+      "supported": false
+    },
+    "error": {
+      "positive_seasons_all": 0,
+      "positive_discovery_seasons": 0,
+      "mean_high_minus_low": -0.2144139276018417,
+      "ci95_low": -0.25599116928709365,
+      "ci95_high": -0.17239283541175687,
+      "supported": false,
+      "posthoc_inverse_direction": "HIGH spread had LOWER Brier than LOW spread in all 7 seasons; not preregistered and not accepted as V1 support"
+    },
+    "signals_supported": [],
+    "interpretation": "NO_MAX_AVG_SPREAD_SIGNAL"
+  }
+}
