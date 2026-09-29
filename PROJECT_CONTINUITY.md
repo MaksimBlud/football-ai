@@ -4870,3 +4870,92 @@ Still binding:
 - individual direction remains unconfirmed;
 - NO_BET;
 - no automatic production promotion.
+
+
+---
+
+# Continuity update — 2026-09-29 — existing V2B cross-book path closed
+
+The immutable raw V2B odds artifact has now been audited directly for bookmaker diversity.
+
+Experiment:
+
+`V2B_CROSS_BOOK_RAW_FEASIBILITY_V1`
+
+Workflow run:
+
+`36582565629`
+
+Audit artifact:
+
+- ID `11040276332`;
+- digest `sha256:e8f83be1ed950b53d32788b921b678971d8cb7bc4d8d4cf38a46104aea8626e2`.
+
+Immutable raw source:
+
+- artifact `10899611444`;
+- digest `sha256:c2f5313efad4afb8663d9980f5ea004f52fe02827a83b5c99a8b775c35498a57`.
+
+## Result
+
+Raw responses:
+
+**43 / 43**
+
+Bookmaker-count distribution:
+
+- 1 bookmaker = **43**;
+- >=2 bookmakers = **0**.
+
+Unique bookmaker:
+
+**Bet365**
+
+Bet365 coverage:
+
+**43 / 43**
+
+All 43 have Bet365 corner opening, closing and in-play structures, but these are states
+of one bookmaker and are not cross-book microstructure.
+
+Final status:
+
+**`INSUFFICIENT_CROSS_BOOK_DIVERSITY`**
+
+No direction target or centre_delta was read.
+
+No provider request, Supabase write or production model operation occurred.
+
+## Binding conclusion
+
+The already-paid V2B raw artifact cannot support:
+
+- bookmaker disagreement;
+- consensus-vs-sharp;
+- leader/laggard book;
+- cross-book dispersion;
+- multi-book direction.
+
+Do not create a synthetic second bookmaker from Bet365 or its opening/closing states.
+
+A future cross-book experiment would require a different source that demonstrably returns
+>=2 independent bookmaker corner lines at the same timestamp.
+
+## Current execution pointer
+
+Move to the next independent zero-cost source feasibility block:
+
+> full-calendar congestion / recovery / travel, including domestic cups and European
+> fixtures where point-in-time historical schedules are available.
+
+Do source coverage/time provenance first. Do not define a direction sign until feasibility
+is established.
+
+Still binding:
+
+- FAIR_CENTRE repricing magnitude/risk remains replicated;
+- individual direction remains unconfirmed;
+- CORNERS10 / SHOTS10 / result-Elo / absolute npxG / absolute deep Stage-B mappings are closed;
+- existing V2B cross-book path is now also closed;
+- NO_BET;
+- no automatic production promotion.
