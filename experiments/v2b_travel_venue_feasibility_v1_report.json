@@ -1,0 +1,56 @@
+{
+  "experiment_id": "V2B_TRAVEL_VENUE_FEASIBILITY_V1",
+  "frozen_result_schema": 1,
+  "first_full_run": {
+    "workflow_run_id": 36592526049,
+    "artifact_id": 11044402420,
+    "artifact_digest": "sha256:24eaa543e51f1d19ec34d5b348fa091b91d31e7eca2ceeac270338dbaab3ab04",
+    "head_sha": "962bb906f3a0552dc6e6cdd7d7a3b1affe470fcf"
+  },
+  "upstream": {
+    "artifact_id": 11041563442,
+    "artifact_digest": "sha256:93a2f808b7542a5f9c6429e2808e6f462f044404f3219adef5a1b80d880cf68c"
+  },
+  "bulk_sources": {
+    "openfootball_commit": "ae3800227c449447b3a337fc0aac79a8f02f4c8b",
+    "openfootball_archive_sha256": "sha256:9fb8f3376c154b57ef5499645ed4e4a9e4b4881e7b6d74ab6c08705887741816",
+    "geonames_archive_sha256": "sha256:12ee80f3497790fab8b90102682313bf1e0a740fcbd5950d1463a617df093baa"
+  },
+  "result": {
+    "status": "FULL_43_TRAVEL_CITY_PROXY_FEASIBLE",
+    "locked_fixture_count": 43,
+    "team_side_count": 86,
+    "understat_schedule_sources_ready": 5,
+    "previous_host_identity_reconstructed": 86,
+    "previous_club_city_resolved": 86,
+    "current_club_city_resolved_team_sides": 86,
+    "previous_city_coordinates_resolved": 86,
+    "current_city_coordinates_resolved_team_sides": 86,
+    "travel_distance_resolved_team_sides": 86,
+    "unique_venue_club_count": 91,
+    "club_city_resolved_count": 91,
+    "city_coordinate_resolved_count": 91,
+    "unresolved_clubs": [],
+    "unresolved_cities": [],
+    "distance_summary_km": {
+      "count": 86,
+      "mean": 399.580105689713,
+      "median": 316.6371391763306,
+      "max": 3695.691957559995,
+      "zero_or_near_zero_le_5km": 15
+    }
+  },
+  "safety": {
+    "market_rows_read": false,
+    "v2b_odds_read": false,
+    "opening_lambda_read": false,
+    "fair_centre_read": false,
+    "centre_delta_read": false,
+    "direction_test_performed": false,
+    "match_outcome_target_used": false,
+    "threshold_fitted_to_outcomes": false,
+    "odds_api_requests": 0,
+    "supabase_operations": 0,
+    "production_model_operations": 0
+  }
+}
