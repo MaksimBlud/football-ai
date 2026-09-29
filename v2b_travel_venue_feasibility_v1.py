@@ -114,6 +114,7 @@ CLUB_NAME_ALIASES = {
     "Athletic Club": "Athletic Bilbao",
     "CD Alaves": "Alaves",
     "Deportivo A Coruna": "Deportivo La Coruna",
+    "FC Cologne": "FC Köln",
     "Inter Milan": "Inter",
     "Man City": "Manchester City",
     "Man Utd": "Manchester United",
@@ -127,7 +128,21 @@ CLUB_NAME_ALIASES = {
 
 # City-name plumbing for a few club catalog localities that are football-ground
 # districts/suburbs rather than the intended travel-city centroid.
+# Source-plumbing exception: the pinned openfootball record for SV Elversberg
+# has aliases but no city field. The club's official guest information gives
+# the URSAPHARM-Arena address as 66583 Spiesen-Elversberg.
+CLUB_CITY_OVERRIDES = {
+    "Elversberg": {
+        "canonical": "SV Elversberg",
+        "city": "Spiesen-Elversberg",
+        "country_code": "DE",
+        "source": "SV_ELVERSBERG_OFFICIAL_ARENA_ADDRESS",
+        "source_url": "https://sv07elversberg.de/infos-fuer-gaestefans/",
+    },
+}
+
 CITY_NAME_ALIASES = {
+    ("ES", "villarreal"): "Vila-real",
     ("GB", "falmer"): "Brighton",
     ("GB", "westbridgford"): "Nottingham",
 }
@@ -488,6 +503,21 @@ def resolve_club_city(
     club_name: str,
     index: dict[str, list[dict[str, Any]]],
 ) -> dict[str, Any]:
+    override = CLUB_CITY_OVERRIDES.get(club_name)
+    if override is not None:
+        return {
+            "club_name": club_name,
+            "lookup_name": club_name,
+            "resolved": True,
+            "canonical": override["canonical"],
+            "city": override["city"],
+            "country_code": override["country_code"],
+            "source_path": override["source"],
+            "source_url": override["source_url"],
+            "candidate_count": 1,
+            "identity_override": True,
+        }
+
     lookup = CLUB_NAME_ALIASES.get(club_name, club_name)
     candidates = index.get(_identity_key(lookup), [])
     # Deduplicate repeated alias references to the same source row.
