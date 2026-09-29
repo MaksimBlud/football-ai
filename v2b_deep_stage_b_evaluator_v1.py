@@ -1,6 +1,6 @@
 """Evaluate the frozen territorial-depth Stage-B mapping on opened V2B market direction.
 
-Research-only hypothesis generation. The xG mapping is immutable before this
+Research-only hypothesis generation. The deep mapping is immutable before this
 join. V2B market direction is already an opened sample from earlier research,
 so this evaluator is explicitly non-confirmatory.
 """
