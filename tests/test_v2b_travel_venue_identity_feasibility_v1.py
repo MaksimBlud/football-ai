@@ -10,6 +10,7 @@ def test_target_aliases_cover_known_provider_variants():
     assert mod._matches_target("Man Utd", "Man United")
     assert mod._matches_target("Nottm Forest", "Nott'm Forest")
     assert mod._matches_target("Atletico Madrid", "Ath Madrid")
+    assert mod._matches_target("Rayo Vallecano", "Vallecano")
     assert mod._matches_target("AC Milan", "Milan")
     assert mod._matches_target("TSG Hoffenheim", "Hoffenheim")
     assert mod._matches_target("PSG", "Paris Saint-Germain")
