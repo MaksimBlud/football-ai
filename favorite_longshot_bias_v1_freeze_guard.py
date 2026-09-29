@@ -10,8 +10,13 @@ from pathlib import Path
 def projection(report: dict) -> dict:
     result = report["result"]
 
-    if "negative_bias_leagues" in result.get("standard", {}):
-        standard = result["standard"]
+    standard = result["standard"]
+    compact_frozen = (
+        "favorite_roi"
+        in standard["temporal"]["discovery"]
+    )
+
+    if compact_frozen:
         temporal = {}
         for split in ("discovery", "validation", "test"):
             row = standard["temporal"][split]
@@ -45,7 +50,6 @@ def projection(report: dict) -> dict:
             },
         }
 
-    standard = result["standard"]
     compact_temporal = {}
     for split in ("discovery", "validation", "test"):
         row = standard["temporal"][split]
