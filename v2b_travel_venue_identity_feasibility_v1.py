@@ -66,6 +66,7 @@ TARGET_VARIANTS: dict[str, tuple[str, ...]] = {
     "Deportivo A Coruna": ("Deportivo La Coruna", "La Coruna"),
     "Celta Vigo": ("Celta",),
     "Racing Santander": ("Santander",),
+    "Rayo Vallecano": ("Vallecano",),
     "Real Betis": ("Betis",),
     "Real Sociedad": ("Sociedad",),
     "AC Milan": ("Milan",),
