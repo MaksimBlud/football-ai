@@ -116,3 +116,17 @@ def test_scope_is_frozen_to_seven_completed_seasons():
     assert experiment.MIN_GROUP_ROWS_PER_CELL == 5
     assert experiment.MIN_MATCHED_CELLS == 20
     assert experiment.BOOTSTRAP_SAMPLES == 10000
+
+
+def test_replication_normalization_accepts_nonpositive_overround():
+    # sum(1/odds) < 1, but multiplicative normalization q/sum(q)
+    # is still a valid probability transform for this replication.
+    odds = np.array([3.4, 3.6, 3.8], dtype=float)
+    raw_sum = float((1.0 / odds).sum())
+    assert raw_sum < 1.0
+
+    p = experiment.normalized_inverse_probabilities(odds)
+
+    expected = (1.0 / odds) / raw_sum
+    assert np.allclose(p, expected, atol=1e-12)
+    assert np.isclose(p.sum(), 1.0, atol=1e-12)
