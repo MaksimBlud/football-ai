@@ -53,6 +53,14 @@ Middle rows are excluded from HIGH-vs-LOW contrasts.
 
 Avg odds are converted with the already-frozen MULTIPLICATIVE de-vig transform.
 
+## Matched-cell coverage
+
+A league-season cell enters a HIGH-vs-LOW contrast only if it contains at least **5 HIGH**
+and **5 LOW** rows under the transferred EPL thresholds.
+
+At least **20 matched league-season cells** across the eligible replication leagues are
+required; otherwise V2 fails closed as `INSUFFICIENT_MATCHED_CELL_COVERAGE`.
+
 ## Primary replication metric: raw Brier
 
 For each match:
@@ -67,7 +75,7 @@ RAW_INVERSE_SPREAD_REPLICATION requires:
 
 1. pooled HIGH-minus-LOW Brier < 0;
 2. stratified bootstrap 95% CI entirely below zero;
-3. negative HIGH-minus-LOW Brier in at least 3 of 4 eligible leagues;
+3. negative HIGH-minus-LOW Brier in at least 3 eligible leagues;
 4. negative effect in at least 60% of eligible league-season cells containing both groups.
 
 ## Primary confound-control metric: excess Brier
