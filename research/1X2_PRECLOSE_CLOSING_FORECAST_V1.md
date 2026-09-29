@@ -177,3 +177,113 @@ available before their true timing.
 - no `.pkl` creation;
 - no promotion;
 - JSON research output only.
+
+## First frozen execution
+
+First complete run:
+
+- workflow run: `36514670639`
+- head: `d6cb036250a12ff37df64fba6f07a1e1d807b06f`
+- artifact: `11010521032`
+- artifact digest:
+  `sha256:4fc3aea2fea56c1efa1256eea8301dace6b20ea9499035d2d997fe2e6daa69f4`
+
+Environment:
+
+- pandas `3.0.6`
+- numpy `2.5.3`
+- requests `2.32.5`
+- scikit-learn `1.9.1`
+
+### Selection result — 2023/24
+
+The frozen selector chose:
+
+`RIDGE_STATE_PLUS_CONSENSUS_A0.01`
+
+The Bet365-only STATE variants did **not** beat ZERO on both closing-distance metrics.
+The improvement appeared only after adding contemporaneous market-average information and
+Bet365-vs-average disagreement features.
+
+Validation:
+
+| Metric | ZERO | Candidate | Delta |
+| --- | ---: | ---: | ---: |
+| close MAE | 0.01625106 | **0.01608266** | **-0.00016839** |
+| close cross-entropy | 0.95350626 | **0.95336207** | **-0.00014419** |
+| realized outcome LogLoss | **0.90921248** | 0.90975646 | +0.00054398 |
+
+The candidate passed the preregistered closing-distance selection gate. Outcome LogLoss
+was deliberately not a selection metric.
+
+### Holdout 1 — 2024/25
+
+| Metric | ZERO | Candidate | Delta |
+| --- | ---: | ---: | ---: |
+| close MAE | 0.01707185 | **0.01707100** | **-0.00000085** |
+| close cross-entropy | 0.97097449 | **0.97094777** | **-0.00002672** |
+| outcome LogLoss | **0.97075767** | 0.97137479 | +0.00061711 |
+| outcome Brier | **0.57866380** | 0.57917178 | +0.00050798 |
+| max-move magnitude MAE | 0.02560777 | **0.01980044** | **-0.00580733** |
+
+Movement-component direction accuracy: **53.25%**.
+
+The primary closing-distance gate passed, but the candidate did not improve realized
+match-outcome probability quality in this season.
+
+### Holdout 2 — 2025/26
+
+| Metric | ZERO | Candidate | Delta |
+| --- | ---: | ---: | ---: |
+| close MAE | 0.01735239 | **0.01720323** | **-0.00014916** |
+| close cross-entropy | 1.00020401 | **1.00007775** | **-0.00012626** |
+| outcome LogLoss | 1.01854743 | **1.01627488** | **-0.00227255** |
+| outcome Brier | 0.61151221 | **0.61039310** | **-0.00111911** |
+| max-move magnitude MAE | 0.02602858 | **0.02046285** | **-0.00556573** |
+
+Movement-component direction accuracy: **55.53%**.
+
+This season passed the closing-distance gate and also improved the secondary realized
+outcome metrics.
+
+### Pooled 760-match bootstrap
+
+Candidate minus ZERO:
+
+**Close cross-entropy**
+
+- mean delta: `-0.00007649`
+- 95% CI: `[-0.00013686, -0.00001495]`
+- bootstrap probability candidate better: **99.12%**
+
+**Close MAE**
+
+- mean delta: `-0.00007501`
+- 95% CI: `[-0.00032192, +0.00017374]`
+- bootstrap probability candidate better: **71.57%**
+
+Therefore the strict frozen gate is **not** passed because the close-MAE confidence
+interval crosses zero.
+
+Frozen interpretation:
+
+`NO_ROBUST_PRECLOSE_TO_CLOSE_SIGNAL`
+
+## Research interpretation
+
+V1 does **not** justify production use of the predicted closing probabilities.
+
+However, it produced a narrower signal worth independent replication:
+
+> Bet365 first-set market state alone was insufficient; the selected model required
+> contemporaneous **market-consensus / Bet365-vs-average disagreement** features.
+
+That model then improved close cross-entropy in both holdouts, improved movement-magnitude
+MAE materially in both holdouts, and achieved modestly-above-chance movement-direction
+accuracy. The evidence is incomplete because probability MAE did not achieve the frozen
+bootstrap requirement and realized-outcome gains were inconsistent across the two
+holdouts.
+
+The next defensible test is therefore **not** to loosen the V1 threshold. It is to freeze
+this exact signal family and replicate it out of league (La Liga, Serie A, Bundesliga,
+Ligue 1) without retuning the feature set or Ridge alpha.
