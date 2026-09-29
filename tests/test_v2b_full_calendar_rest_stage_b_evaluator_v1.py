@@ -132,3 +132,11 @@ def test_identity_mismatch_fails_closed():
     market.loc[market.fixture_id=="1","home_team"]="WRONG"
     with pytest.raises(RuntimeError,match="identity mismatch"):
         mod.evaluate(feature,market)
+
+
+def test_frozen_row_count_uses_locked_fixture_contract():
+    payload=_feature_payload()
+    assert payload["locked_fixture_count"]==43
+    payload.pop("locked_fixture_count")
+    with pytest.raises(RuntimeError,match="locked row count"):
+        mod._validate_feature_freeze(payload)
