@@ -1,0 +1,104 @@
+{
+  "experiment_id": "V2B_FULL_CALENDAR_REST_STAGE_B_EVALUATOR_V1",
+  "frozen_result_schema": 1,
+  "first_successful_run": {
+    "workflow_run_id": 36589372388,
+    "artifact_id": 11042922504,
+    "artifact_digest": "sha256:20ddbd901fc5529f732c46bb47042a9dffe0a6463dfba6be201a3f19a21168a3",
+    "head_sha": "9f091899437ac7e78bd1a4f5057963770944f85d"
+  },
+  "result": {
+    "evaluated_rows": 43,
+    "predicted_call_counts": {
+      "UP": 17,
+      "DOWN": 19,
+      "NO_CALL": 7
+    },
+    "observed_movement_counts": {
+      "UP": 9,
+      "DOWN": 4,
+      "ZERO": 30
+    },
+    "zero_observed_movement_rows": 30,
+    "comparable_rows": 12,
+    "concordant_rows": 7,
+    "pooled_concordance": 0.5833333333333334,
+    "comparable_observed_counts": {
+      "UP": 8,
+      "DOWN": 4
+    },
+    "constant_direction_baseline": {
+      "direction": "UP",
+      "concordance": 0.6666666666666666,
+      "stage_b_excess_concordance": -0.08333333333333326
+    },
+    "balanced_direction_accuracy": {
+      "recall_up": 0.625,
+      "recall_down": 0.5,
+      "balanced_accuracy": 0.5625
+    },
+    "supporting_leagues_with_at_least_2_comparable_rows": 3,
+    "call_group_mean_deltas_aligned": false,
+    "call_groups": {
+      "UP": {
+        "rows": 17,
+        "zero_movement_rows": 10,
+        "mean_centre_delta": 0.10034153030414655,
+        "median_centre_delta": 0,
+        "mean_movement_magnitude": 0.1893672318359132
+      },
+      "DOWN": {
+        "rows": 19,
+        "zero_movement_rows": 14,
+        "mean_centre_delta": 0.02643381034173091,
+        "median_centre_delta": 0,
+        "mean_movement_magnitude": 0.05567596189102003
+      },
+      "NO_CALL": {
+        "rows": 7,
+        "zero_movement_rows": 6,
+        "mean_centre_delta": 0.11661954807774448,
+        "median_centre_delta": 0,
+        "mean_movement_magnitude": 0.11661954807774448
+      }
+    },
+    "by_league": {
+      "BUNDESLIGA": {
+        "rows": 8,
+        "comparable_rows": 2,
+        "concordant_rows": 2,
+        "concordance": 1
+      },
+      "EPL": {
+        "rows": 9,
+        "comparable_rows": 2,
+        "concordant_rows": 2,
+        "concordance": 1
+      },
+      "LA_LIGA": {
+        "rows": 9,
+        "comparable_rows": 2,
+        "concordant_rows": 0,
+        "concordance": 0
+      },
+      "LIGUE_1": {
+        "rows": 8,
+        "comparable_rows": 3,
+        "concordant_rows": 1,
+        "concordance": 0.3333333333333333
+      },
+      "SERIE_A": {
+        "rows": 9,
+        "comparable_rows": 3,
+        "concordant_rows": 2,
+        "concordance": 0.6666666666666666
+      }
+    },
+    "continuous_correlations": {
+      "pearson": 0.10262082716722488,
+      "spearman": 0.07858297915949573
+    },
+    "all_comparable_calls_same_direction": false,
+    "classification": "WEAK_OR_INCONSISTENT_DIRECTION_HYPOTHESIS"
+  }
+}
