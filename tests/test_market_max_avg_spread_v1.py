@@ -72,12 +72,11 @@ def test_assign_groups_uses_frozen_thresholds():
         data,
         {"low_q25": 0.015, "high_q75": 0.035},
     )
-    assert grouped["spread_group"].astype(object).tolist() == [
-        "LOW",
-        pd.NA,
-        pd.NA,
-        "HIGH",
-    ]
+    values = grouped["spread_group"].astype(object).tolist()
+    assert values[0] == "LOW"
+    assert pd.isna(values[1])
+    assert pd.isna(values[2])
+    assert values[3] == "HIGH"
 
 
 def test_frozen_temporal_scope():
