@@ -41,6 +41,11 @@ WIKIPEDIA_API = "https://en.wikipedia.org/w/api.php"
 FOOTBALL_CLUB_QID = "Q476028"
 
 SEARCH_ALIASES = {
+    "Chelsea": "Chelsea F.C.",
+    "Crystal Palace": "Crystal Palace F.C.",
+    "Everton": "Everton F.C.",
+    "Fulham": "Fulham F.C.",
+    "Liverpool": "Liverpool F.C.",
     "Alaves": "Deportivo Alaves",
     "Anderlecht": "RSC Anderlecht",
     "Angers": "Angers SCO",
@@ -118,6 +123,13 @@ SEARCH_ALIASES = {
     "Venezia": "Venezia FC",
     "Villarreal": "Villarreal CF",
     "Werder Bremen": "Werder Bremen",
+}
+
+# OpenFootball's current Germany club/stadium files identify Europa-Park Stadion as
+# SC Freiburg's current home. Wikidata club claims retain both old and new grounds
+# without an unambiguous preferred P115, so this one identity is frozen explicitly.
+HOME_VENUE_QID_OVERRIDES = {
+    "Freiburg": "Q64586775",  # Europa-Park-Stadion
 }
 
 
@@ -340,8 +352,34 @@ def _choose_club_candidate(query_label, search_results, entities):
     }
 
 
-def _resolve_coordinate(*, club, venue_entities):
+def _resolve_coordinate(*, club, venue_entities, forced_venue_qid=None):
     entity = club["entity"]
+    if forced_venue_qid is not None:
+        venue = venue_entities.get(str(forced_venue_qid))
+        coord = _claim_coordinate(venue or {})
+        if coord is None:
+            return {
+                "coordinate_status": "NO_COORDINATE",
+                "club_qid": club["qid"],
+                "club_label": club["search_label"],
+                "venue_qid": str(forced_venue_qid),
+                "venue_label": _label(venue or {}),
+                "latitude": None,
+                "longitude": None,
+                "active_home_venue_claim_count": len(_claim_item_ids(entity, "P115")),
+                "venue_selection": "EXPLICIT_SOURCE_BACKED_OVERRIDE",
+            }
+        return {
+            "coordinate_status": "STADIUM_COORDINATE",
+            "club_qid": club["qid"],
+            "club_label": club["search_label"],
+            "venue_qid": str(forced_venue_qid),
+            "venue_label": _label(venue or {}),
+            "latitude": coord[0],
+            "longitude": coord[1],
+            "active_home_venue_claim_count": len(_claim_item_ids(entity, "P115")),
+            "venue_selection": "EXPLICIT_SOURCE_BACKED_OVERRIDE",
+        }
     active_claims = [
         (qid, claim)
         for qid, claim in _claim_item_ids(entity, "P115")
@@ -499,7 +537,7 @@ def audit(route_payload, *, client):
         if club is not None
         for qid, claim in _claim_item_ids(club["entity"], "P115")
         if _claim_active_at(claim)
-    }
+    } | set(HOME_VENUE_QID_OVERRIDES.values())
     venue_entities = client.entities(sorted(venue_ids))
 
     coordinate_by_label = {}
@@ -522,7 +560,11 @@ def audit(route_payload, *, client):
             coordinate_by_label[label] = {
                 "input_label": label,
                 "wikipedia_title": title,
-                **_resolve_coordinate(club=club, venue_entities=venue_entities),
+                **_resolve_coordinate(
+                    club=club,
+                    venue_entities=venue_entities,
+                    forced_venue_qid=HOME_VENUE_QID_OVERRIDES.get(label),
+                ),
             }
 
     status_counts = {}
