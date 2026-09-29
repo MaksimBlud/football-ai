@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-import math
+import io
+import tarfile
+import zipfile
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -74,85 +77,171 @@ def test_league_latest_host_resolves_target_alias():
     assert host == "Manchester City"
 
 
-def test_haversine_zero_for_same_venue():
-    assert mod.haversine_km(51.5, -0.1, 51.5, -0.1) == pytest.approx(0.0)
+def test_extract_city_from_openfootball_club_line():
+    line = "Arsenal FC, 1886, @ Emirates Stadium, London (Highbury)"
+    assert mod._extract_city_from_club_line(line) == "London"
+
+
+def test_openfootball_parser_keeps_alias_and_country():
+    text = """Arsenal FC, 1886, @ Emirates Stadium, London (Highbury)
+  | Arsenal | FC Arsenal
+  | Arsenal Football Club
+"""
+    rows = mod._parse_club_file(
+        text,
+        country_code="GB",
+        source_path="europe/england/eng.clubs.txt",
+    )
+    assert len(rows) == 1
+    assert rows[0]["canonical"] == "Arsenal FC"
+    assert rows[0]["city"] == "London"
+    assert "Arsenal" in rows[0]["aliases"]
+
+
+def test_openfootball_archive_parser_reads_country_directory():
+    source = b"""Arsenal FC, 1886, @ Emirates Stadium, London
+  | Arsenal
+"""
+    buffer = io.BytesIO()
+    with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
+        info = tarfile.TarInfo(
+            name="clubs-test/europe/england/eng.clubs.txt"
+        )
+        info.size = len(source)
+        archive.addfile(info, io.BytesIO(source))
+
+    records = mod.parse_openfootball_archive(buffer.getvalue())
+    assert records[0]["country_code"] == "GB"
+    assert records[0]["city"] == "London"
+
+
+def test_club_resolver_uses_alias():
+    records = [
+        {
+            "canonical": "Manchester City FC",
+            "aliases": ["Manchester City", "Man City"],
+            "city": "Manchester",
+            "country_code": "GB",
+            "source_path": "eng.clubs.txt",
+        }
+    ]
+    result = mod.resolve_club_city(
+        "Man City",
+        mod.build_club_index(records),
+    )
+    assert result["resolved"] is True
+    assert result["city"] == "Manchester"
+    assert result["country_code"] == "GB"
+
+
+def test_geonames_archive_and_alias_resolution():
+    row = "\t".join(
+        [
+            "2643743",
+            "London",
+            "London",
+            "Londres,Londra",
+            "51.50853",
+            "-0.12574",
+            "P",
+            "PPLC",
+            "GB",
+            "",
+            "ENG",
+            "",
+            "",
+            "",
+            "7556900",
+            "",
+            "25",
+            "Europe/London",
+            "2026-01-01",
+        ]
+    )
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, mode="w") as archive:
+        archive.writestr("cities500.txt", row + "\n")
+
+    frame = mod.parse_geonames_archive(buffer.getvalue())
+    index = mod.build_city_index(frame)
+    result = mod.resolve_city_coordinate(
+        country_code="GB",
+        city="Londres",
+        index=index,
+    )
+    assert result["resolved"] is True
+    assert result["name"] == "London"
+    assert result["latitude"] == pytest.approx(51.50853)
+
+
+def test_city_alias_maps_falmer_to_brighton():
+    frame = pd.DataFrame(
+        [
+            {
+                "geonameid": 2654710,
+                "name": "Brighton",
+                "asciiname": "Brighton",
+                "alternatenames": "",
+                "latitude": 50.82838,
+                "longitude": -0.13947,
+                "feature_class": "P",
+                "feature_code": "PPL",
+                "country_code": "GB",
+                "cc2": "",
+                "admin1_code": "ENG",
+                "admin2_code": "",
+                "admin3_code": "",
+                "admin4_code": "",
+                "population": 290395,
+                "elevation": "",
+                "dem": 0,
+                "timezone": "Europe/London",
+                "modification_date": "2026-01-01",
+            }
+        ]
+    )
+    index = mod.build_city_index(frame)
+    result = mod.resolve_city_coordinate(
+        country_code="GB",
+        city="Falmer",
+        index=index,
+    )
+    assert result["resolved"] is True
+    assert result["lookup_city"] == "Brighton"
+
+
+def test_haversine_zero_for_same_city():
+    assert mod.haversine_km(
+        51.5,
+        -0.1,
+        51.5,
+        -0.1,
+    ) == pytest.approx(0.0)
 
 
 def test_haversine_is_symmetric_and_positive():
-    london_to_madrid = mod.haversine_km(51.5074, -0.1278, 40.4168, -3.7038)
-    madrid_to_london = mod.haversine_km(40.4168, -3.7038, 51.5074, -0.1278)
+    london_to_madrid = mod.haversine_km(
+        51.5074,
+        -0.1278,
+        40.4168,
+        -3.7038,
+    )
+    madrid_to_london = mod.haversine_km(
+        40.4168,
+        -3.7038,
+        51.5074,
+        -0.1278,
+    )
     assert london_to_madrid > 1000
     assert london_to_madrid == pytest.approx(madrid_to_london)
 
 
-def test_current_home_venue_prefers_nonended_statement():
-    resolver = mod.WikidataResolver.__new__(mod.WikidataResolver)
-    entity = {
-        "claims": {
-            "P115": [
-                {
-                    "rank": "normal",
-                    "mainsnak": {
-                        "datavalue": {
-                            "value": {"id": "QOLD"}
-                        }
-                    },
-                    "qualifiers": {
-                        "P582": [
-                            {
-                                "datavalue": {
-                                    "value": {
-                                        "time": "+2020-01-01T00:00:00Z"
-                                    }
-                                }
-                            }
-                        ]
-                    },
-                },
-                {
-                    "rank": "preferred",
-                    "mainsnak": {
-                        "datavalue": {
-                            "value": {"id": "QNEW"}
-                        }
-                    },
-                    "qualifiers": {
-                        "P580": [
-                            {
-                                "datavalue": {
-                                    "value": {
-                                        "time": "+2021-01-01T00:00:00Z"
-                                    }
-                                }
-                            }
-                        ]
-                    },
-                },
-            ]
-        }
-    }
-    assert resolver._current_home_venue_qid(entity) == "QNEW"
-
-
-def test_coordinate_parser_accepts_wikidata_p625():
-    entity = {
-        "claims": {
-            "P625": [
-                {
-                    "rank": "preferred",
-                    "mainsnak": {
-                        "datavalue": {
-                            "value": {
-                                "latitude": 51.555,
-                                "longitude": -0.108611,
-                            }
-                        }
-                    },
-                }
-            ]
-        }
-    }
-    assert mod.WikidataResolver._coordinate(entity) == (51.555, -0.108611)
+def test_source_contract_is_bulk_and_pinned():
+    assert mod.OPENFOOTBALL_COMMIT == (
+        "ae3800227c449447b3a337fc0aac79a8f02f4c8b"
+    )
+    assert "cities500.zip" in mod.GEONAMES_URL
+    assert "wikidata" not in mod.GEONAMES_URL.lower()
 
 
 def test_scope_is_exact_43_fixture_source_audit():
