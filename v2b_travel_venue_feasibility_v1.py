@@ -1,19 +1,25 @@
 """V2B_TRAVEL_VENUE_FEASIBILITY_V1.
 
-Source/provenance-only audit for reconstructing previous-match -> target-match
-travel distance on the frozen 43-fixture V2B cohort.
+Source-only audit for a venue-city travel proxy on the frozen 43-fixture V2B
+cohort. Previous-match host identity comes from the already-frozen full-calendar
+artifact plus public Understat league schedule. Club->city identity comes from a
+pinned openfootball/clubs archive; coordinates come from the GeoNames cities500
+bulk dump.
 
-No market rows, centre_delta, outcome labels, thresholds, betting or production
+No market rows, centre_delta, target outcomes, thresholds, betting or production
 artifacts are read or changed.
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
+import io
 import json
 import math
 import re
-import time
+import tarfile
 import unicodedata
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -36,60 +42,99 @@ EXPECTED_UPSTREAM_DIGEST = (
 EXPECTED_FIXTURES = 43
 EXPECTED_TEAM_SIDES = 86
 SEASON = 2026
-TARGET_DATE = pd.Timestamp("2026-09-20")
-WIKIDATA_API = "https://www.wikidata.org/w/api.php"
-USER_AGENT = "football-ai-travel-feasibility/1.0 (research-only)"
 
-SEARCH_ALIASES = {
-    "AC Milan": "AC Milan football club",
-    "Athletic Club": "Athletic Bilbao football club",
-    "Atletico Madrid": "Atlético Madrid football club",
-    "Bayer Leverkusen": "Bayer 04 Leverkusen football club",
-    "Borussia M'gladbach": "Borussia Mönchengladbach football club",
-    "Bournemouth": "AFC Bournemouth football club",
-    "Brighton": "Brighton & Hove Albion football club",
-    "CD Alaves": "Deportivo Alavés football club",
-    "Celta Vigo": "Celta de Vigo football club",
-    "Cologne": "1. FC Köln football club",
-    "Como": "Como 1907 football club",
-    "Coventry": "Coventry City football club",
-    "Deportivo A Coruna": "Deportivo La Coruña football club",
-    "Elversberg": "SV Elversberg football club",
-    "Hamburg": "Hamburger SV football club",
-    "Hull": "Hull City football club",
-    "Inter": "Inter Milan football club",
-    "Inter Milan": "Inter Milan football club",
-    "Ipswich": "Ipswich Town football club",
-    "Le Havre": "Le Havre AC football club",
-    "Le Mans": "Le Mans FC football club",
-    "Leeds": "Leeds United football club",
-    "Leverkusen": "Bayer 04 Leverkusen football club",
-    "Man City": "Manchester City football club",
-    "Man Utd": "Manchester United football club",
-    "Milan": "AC Milan football club",
-    "Nottm Forest": "Nottingham Forest football club",
-    "PSG": "Paris Saint-Germain football club",
-    "Paris Saint-Germain": "Paris Saint-Germain football club",
-    "Paderborn": "SC Paderborn 07 football club",
-    "Racing Santander": "Racing de Santander football club",
-    "RB Leipzig": "RB Leipzig football club",
-    "Real Betis": "Real Betis football club",
-    "Real Sociedad": "Real Sociedad football club",
-    "SC Freiburg": "SC Freiburg football club",
-    "Schalke": "FC Schalke 04 football club",
-    "Stuttgart": "VfB Stuttgart football club",
-    "Sunderland": "Sunderland AFC football club",
-    "TSG Hoffenheim": "TSG 1899 Hoffenheim football club",
-    "Tottenham": "Tottenham Hotspur football club",
-    "VfB Stuttgart": "VfB Stuttgart football club",
+OPENFOOTBALL_COMMIT = "ae3800227c449447b3a337fc0aac79a8f02f4c8b"
+OPENFOOTBALL_URL = (
+    "https://codeload.github.com/openfootball/clubs/tar.gz/"
+    + OPENFOOTBALL_COMMIT
+)
+GEONAMES_URL = "https://download.geonames.org/export/dump/cities500.zip"
+USER_AGENT = "football-ai-travel-feasibility/1.1 (research-only)"
+
+COUNTRY_DIR_TO_ISO = {
+    "albania": "AL",
+    "andorra": "AD",
+    "armenia": "AM",
+    "austria": "AT",
+    "azerbaijan": "AZ",
+    "belarus": "BY",
+    "belgium": "BE",
+    "bosnia-n-herzegovina": "BA",
+    "bulgaria": "BG",
+    "croatia": "HR",
+    "cyprus": "CY",
+    "czech-republic": "CZ",
+    "denmark": "DK",
+    "england": "GB",
+    "estonia": "EE",
+    "faroe-islands": "FO",
+    "finland": "FI",
+    "france": "FR",
+    "georgia": "GE",
+    "germany": "DE",
+    "gibraltar": "GI",
+    "greece": "GR",
+    "hungary": "HU",
+    "iceland": "IS",
+    "ireland": "IE",
+    "italy": "IT",
+    "kosovo": "XK",
+    "latvija": "LV",
+    "liechtenstein": "LI",
+    "lithuania": "LT",
+    "luxembourg": "LU",
+    "macedonia": "MK",
+    "malta": "MT",
+    "moldova": "MD",
+    "monaco": "MC",
+    "montenegro": "ME",
+    "netherlands": "NL",
+    "northern-ireland": "GB",
+    "norway": "NO",
+    "poland": "PL",
+    "portugal": "PT",
+    "romania": "RO",
+    "russia": "RU",
+    "san-marino": "SM",
+    "scotland": "GB",
+    "serbia": "RS",
+    "slovakia": "SK",
+    "slovenia": "SI",
+    "spain": "ES",
+    "sweden": "SE",
+    "switzerland": "CH",
+    "turkey": "TR",
+    "ukraine": "UA",
+    "wales": "GB",
 }
 
-FOOTBALL_DESCRIPTION_TERMS = (
-    "football club",
-    "association football",
-    "soccer club",
-    "professional football",
-)
+# Identity plumbing only. These convert provider/fixture-label names to aliases
+# used by the pinned club catalog. They are frozen before any direction join.
+CLUB_NAME_ALIASES = {
+    "Athletic Club": "Athletic Bilbao",
+    "CD Alaves": "Alaves",
+    "Deportivo A Coruna": "Deportivo La Coruna",
+    "Inter Milan": "Inter",
+    "Man City": "Manchester City",
+    "Man Utd": "Manchester United",
+    "Nottm Forest": "Nottingham Forest",
+    "PSG": "Paris Saint-Germain",
+    "RB Leipzig": "RB Leipzig",
+    "SC Freiburg": "SC Freiburg",
+    "TSG Hoffenheim": "Hoffenheim",
+    "VfB Stuttgart": "VfB Stuttgart",
+}
+
+# City-name plumbing for a few club catalog localities that are football-ground
+# districts/suburbs rather than the intended travel-city centroid.
+CITY_NAME_ALIASES = {
+    ("GB", "falmer"): "Brighton",
+    ("GB", "westbridgford"): "Nottingham",
+}
+
+
+def _sha256_bytes(payload: bytes) -> str:
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
 
 
 def _identity_key(value: Any) -> str:
@@ -139,7 +184,7 @@ def _understat_schedule(payload: dict[str, Any]) -> list[dict[str, Any]]:
     dates = payload.get("dates")
     if not isinstance(dates, list):
         return []
-    rows = []
+    rows: list[dict[str, Any]] = []
     for item in dates:
         if not isinstance(item, dict):
             continue
@@ -172,7 +217,10 @@ def _resolve_understat_target_name(
 ) -> str | None:
     desired = TARGET_ALIASES.get(league, {}).get(target_name, target_name)
     key = _identity_key(desired)
-    matches = sorted(title for title in source_titles if _identity_key(title) == key)
+    matches = sorted(
+        title for title in source_titles
+        if _identity_key(title) == key
+    )
     return matches[0] if len(matches) == 1 else None
 
 
@@ -182,7 +230,8 @@ def _nonleague_latest_host(load: dict[str, Any]) -> str | None:
     if not full_date or full_date == league_date:
         return None
     latest = [
-        event for event in (load.get("nonleague_events_14d") or [])
+        event
+        for event in (load.get("nonleague_events_14d") or [])
         if str(event.get("date")) == str(full_date)
     ]
     if len(latest) != 1:
@@ -203,12 +252,20 @@ def _league_latest_host(
 ) -> tuple[str | None, str | None]:
     schedule = schedules.get(league, [])
     titles = {row["home"] for row in schedule} | {row["away"] for row in schedule}
-    resolved = _resolve_understat_target_name(league, target_name, titles)
+    resolved = _resolve_understat_target_name(
+        league,
+        target_name,
+        titles,
+    )
     if resolved is None:
         return None, None
-    target_date = _date(previous_date)
+    try:
+        target_date = _date(previous_date)
+    except ValueError:
+        return resolved, None
     matches = [
-        row for row in schedule
+        row
+        for row in schedule
         if row["match_date"] == target_date
         and resolved in (row["home"], row["away"])
         and row["is_result"]
@@ -232,15 +289,15 @@ def reconstruct_previous_hosts(
         for side in ("home", "away"):
             target_team = str(fixture[f"{side}_team"])
             load = fixture.get(f"{side}_load")
+            resolved_understat = None
+
             if not isinstance(load, dict):
                 previous_host = None
                 source = "MISSING_LOAD"
-                resolved_understat = None
             else:
                 previous_host = _nonleague_latest_host(load)
                 if previous_host is not None:
                     source = "FROZEN_NONLEAGUE_MANIFEST"
-                    resolved_understat = None
                 else:
                     resolved_understat, previous_host = _league_latest_host(
                         league=str(fixture["league"]),
@@ -260,8 +317,11 @@ def reconstruct_previous_hosts(
                     "side": side,
                     "team": target_team,
                     "current_venue_host": current_host,
-                    "previous_match_date": None if not isinstance(load, dict)
-                    else load.get("full_previous_match_date"),
+                    "previous_match_date": (
+                        None
+                        if not isinstance(load, dict)
+                        else load.get("full_previous_match_date")
+                    ),
                     "previous_venue_host": previous_host,
                     "previous_venue_source": source,
                     "understat_target_title": resolved_understat,
@@ -273,189 +333,325 @@ def reconstruct_previous_hosts(
     return records, venue_clubs
 
 
-class WikidataResolver:
-    def __init__(self, session: requests.Session):
-        self.session = session
-        self.session.headers.update({"User-Agent": USER_AGENT})
-        self.club_cache: dict[str, dict[str, Any]] = {}
-        self.entity_cache: dict[str, dict[str, Any]] = {}
-
-    def _request(self, params: dict[str, Any]) -> dict[str, Any]:
-        response = self.session.get(WIKIDATA_API, params=params, timeout=30)
-        response.raise_for_status()
-        payload = response.json()
-        if not isinstance(payload, dict):
-            raise RuntimeError("invalid Wikidata response")
-        time.sleep(0.03)
-        return payload
-
-    def _search_club(self, club_name: str) -> tuple[str | None, dict[str, Any]]:
-        query = SEARCH_ALIASES.get(club_name, f"{club_name} football club")
-        payload = self._request(
-            {
-                "action": "wbsearchentities",
-                "search": query,
-                "language": "en",
-                "format": "json",
-                "limit": 10,
-                "type": "item",
-            }
-        )
-        results = payload.get("search") or []
-        accepted = []
-        for item in results:
-            description = str(item.get("description") or "").lower()
-            label = str(item.get("label") or "")
-            if any(term in description for term in FOOTBALL_DESCRIPTION_TERMS):
-                accepted.append(
-                    {
-                        "id": item.get("id"),
-                        "label": label,
-                        "description": item.get("description"),
-                        "match": item.get("match"),
-                    }
-                )
-        qid = str(accepted[0]["id"]) if accepted and accepted[0].get("id") else None
-        return qid, {
-            "query": query,
-            "accepted_candidates": accepted[:5],
-        }
-
-    def _entity(self, qid: str) -> dict[str, Any]:
-        if qid in self.entity_cache:
-            return self.entity_cache[qid]
-        payload = self._request(
-            {
-                "action": "wbgetentities",
-                "ids": qid,
-                "props": "claims|labels|aliases",
-                "languages": "en",
-                "format": "json",
-            }
-        )
-        entity = (payload.get("entities") or {}).get(qid)
-        if not isinstance(entity, dict):
-            raise RuntimeError(f"Wikidata entity missing: {qid}")
-        self.entity_cache[qid] = entity
-        return entity
-
-    @staticmethod
-    def _claim_time(statement: dict[str, Any], prop: str) -> pd.Timestamp | None:
-        qualifiers = statement.get("qualifiers") or {}
-        values = qualifiers.get(prop) or []
-        if not values:
-            return None
+def _download_bytes(
+    session: requests.Session,
+    url: str,
+    *,
+    attempts: int = 3,
+) -> bytes:
+    last_error: Exception | None = None
+    for _ in range(attempts):
         try:
-            raw = values[0]["datavalue"]["value"]["time"]
-            return pd.Timestamp(str(raw).lstrip("+")[:10])
-        except Exception:
-            return None
-
-    def _current_home_venue_qid(self, club_entity: dict[str, Any]) -> str | None:
-        claims = (club_entity.get("claims") or {}).get("P115") or []
-        candidates = []
-        for statement in claims:
-            mainsnak = statement.get("mainsnak") or {}
-            value = (mainsnak.get("datavalue") or {}).get("value") or {}
-            qid = value.get("id")
-            if not qid:
-                continue
-            end = self._claim_time(statement, "P582")
-            start = self._claim_time(statement, "P580")
-            if end is not None and end < TARGET_DATE:
-                continue
-            rank = str(statement.get("rank") or "normal")
-            candidates.append(
-                {
-                    "qid": str(qid),
-                    "rank": rank,
-                    "start": start,
-                    "end": end,
-                }
+            response = session.get(
+                url,
+                headers={"User-Agent": USER_AGENT},
+                timeout=90,
             )
-        if not candidates:
-            return None
-        candidates.sort(
-            key=lambda row: (
-                1 if row["rank"] == "preferred" else 0,
-                row["start"].value if row["start"] is not None else -1,
-            ),
-            reverse=True,
-        )
-        return str(candidates[0]["qid"])
+            response.raise_for_status()
+            if not response.content:
+                raise RuntimeError(f"empty bulk source: {url}")
+            return bytes(response.content)
+        except Exception as exc:  # pragma: no cover - live retry path
+            last_error = exc
+    raise RuntimeError(
+        f"bulk source download failed: {url}: {type(last_error).__name__}: {last_error}"
+    )
 
-    @staticmethod
-    def _coordinate(entity: dict[str, Any]) -> tuple[float, float] | None:
-        claims = (entity.get("claims") or {}).get("P625") or []
-        if not claims:
-            return None
-        ranked = sorted(
-            claims,
-            key=lambda statement: 1 if statement.get("rank") == "preferred" else 0,
-            reverse=True,
-        )
-        for statement in ranked:
-            value = ((statement.get("mainsnak") or {}).get("datavalue") or {}).get("value")
-            if not isinstance(value, dict):
-                continue
-            lat = value.get("latitude")
-            lon = value.get("longitude")
-            try:
-                lat_f = float(lat)
-                lon_f = float(lon)
-            except (TypeError, ValueError):
-                continue
-            if math.isfinite(lat_f) and math.isfinite(lon_f):
-                return lat_f, lon_f
+
+def _clean_city(value: str) -> str | None:
+    city = str(value).strip()
+    city = city.split("›", 1)[0].strip()
+    city = city.split("//", 1)[0].strip()
+    city = re.sub(r"\s*\([^)]*\)\s*$", "", city).strip()
+    city = city.strip(" ,;")
+    if not city or city.startswith("@"):
         return None
+    if re.fullmatch(r"(?:18|19|20)\d{2}", city):
+        return None
+    if re.fullmatch(r"[\d_]+", city):
+        return None
+    return city
 
-    @staticmethod
-    def _label(entity: dict[str, Any], fallback: str) -> str:
-        labels = entity.get("labels") or {}
-        return str((labels.get("en") or {}).get("value") or fallback)
 
-    def resolve_club_venue(self, club_name: str) -> dict[str, Any]:
-        if club_name in self.club_cache:
-            return self.club_cache[club_name]
+def _extract_city_from_club_line(line: str) -> str | None:
+    clean = line.split("##", 1)[0].split("#", 1)[0].strip()
+    parts = [part.strip() for part in clean.split(",")]
+    if len(parts) < 2:
+        return None
+    for token in reversed(parts[1:]):
+        city = _clean_city(token)
+        if city is None:
+            continue
+        if token.lstrip().startswith("@"):
+            continue
+        return city
+    return None
 
-        qid, search_meta = self._search_club(club_name)
-        record: dict[str, Any] = {
-            "club_name": club_name,
-            "search": search_meta,
-            "club_qid": qid,
-            "club_label": None,
-            "venue_qid": None,
-            "venue_label": None,
-            "latitude": None,
-            "longitude": None,
-            "resolved": False,
+
+def _parse_club_file(
+    text: str,
+    *,
+    country_code: str,
+    source_path: str,
+) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
+
+    for raw in text.splitlines():
+        stripped = raw.strip()
+        if not stripped or stripped.startswith(("#", "=")):
+            continue
+
+        if raw[:1].isspace():
+            if current is not None and stripped.startswith("|"):
+                alias_text = stripped.split("#", 1)[0]
+                for alias in alias_text.split("|"):
+                    value = alias.strip()
+                    if value:
+                        current["aliases"].append(value)
+            continue
+
+        if stripped.lower().startswith(("ii)", "iii)", "iv)")):
+            current = None
+            continue
+
+        clean = stripped.split("##", 1)[0].split("#", 1)[0].strip()
+        if not clean:
+            current = None
+            continue
+        canonical = clean.split(",", 1)[0].strip()
+        if not canonical or canonical.startswith(("-", "[")):
+            current = None
+            continue
+
+        city = _extract_city_from_club_line(clean)
+        current = {
+            "canonical": canonical,
+            "aliases": [],
+            "city": city,
+            "country_code": country_code,
+            "source_path": source_path,
         }
-        if qid is None:
-            self.club_cache[club_name] = record
-            return record
+        records.append(current)
 
-        try:
-            club_entity = self._entity(qid)
-            record["club_label"] = self._label(club_entity, club_name)
-            venue_qid = self._current_home_venue_qid(club_entity)
-            record["venue_qid"] = venue_qid
-            if venue_qid is None:
-                self.club_cache[club_name] = record
-                return record
-            venue_entity = self._entity(venue_qid)
-            record["venue_label"] = self._label(venue_entity, venue_qid)
-            coord = self._coordinate(venue_entity)
-            if coord is None:
-                self.club_cache[club_name] = record
-                return record
-            record["latitude"] = coord[0]
-            record["longitude"] = coord[1]
-            record["resolved"] = True
-        except Exception as exc:
-            record["error"] = f"{type(exc).__name__}:{str(exc)[:250]}"
+    return records
 
-        self.club_cache[club_name] = record
-        return record
+
+def parse_openfootball_archive(payload: bytes) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    with tarfile.open(fileobj=io.BytesIO(payload), mode="r:gz") as archive:
+        for member in archive.getmembers():
+            if not member.isfile() or not member.name.endswith(".clubs.txt"):
+                continue
+            parts = member.name.split("/")
+            try:
+                europe_index = parts.index("europe")
+            except ValueError:
+                continue
+            if europe_index + 1 >= len(parts):
+                continue
+            country_dir = parts[europe_index + 1]
+            country_code = COUNTRY_DIR_TO_ISO.get(country_dir)
+            if country_code is None:
+                continue
+            handle = archive.extractfile(member)
+            if handle is None:
+                continue
+            text = handle.read().decode("utf-8-sig", errors="replace")
+            records.extend(
+                _parse_club_file(
+                    text,
+                    country_code=country_code,
+                    source_path=member.name,
+                )
+            )
+    if not records:
+        raise RuntimeError("openfootball archive yielded no club records")
+    return records
+
+
+def build_club_index(
+    records: list[dict[str, Any]],
+) -> dict[str, list[dict[str, Any]]]:
+    index: dict[str, list[dict[str, Any]]] = {}
+    for record in records:
+        names = [record["canonical"], *record["aliases"]]
+        for name in names:
+            key = _identity_key(name)
+            if not key:
+                continue
+            index.setdefault(key, []).append(record)
+    return index
+
+
+def resolve_club_city(
+    club_name: str,
+    index: dict[str, list[dict[str, Any]]],
+) -> dict[str, Any]:
+    lookup = CLUB_NAME_ALIASES.get(club_name, club_name)
+    candidates = index.get(_identity_key(lookup), [])
+    # Deduplicate repeated alias references to the same source row.
+    unique: dict[tuple[str, str, str | None], dict[str, Any]] = {}
+    for record in candidates:
+        key = (
+            str(record["source_path"]),
+            str(record["canonical"]),
+            record["city"],
+        )
+        unique[key] = record
+    candidates = list(unique.values())
+
+    with_city = [row for row in candidates if row.get("city")]
+    if len(with_city) == 1:
+        row = with_city[0]
+        return {
+            "club_name": club_name,
+            "lookup_name": lookup,
+            "resolved": True,
+            "canonical": row["canonical"],
+            "city": row["city"],
+            "country_code": row["country_code"],
+            "source_path": row["source_path"],
+            "candidate_count": len(with_city),
+        }
+
+    return {
+        "club_name": club_name,
+        "lookup_name": lookup,
+        "resolved": False,
+        "canonical": None,
+        "city": None,
+        "country_code": None,
+        "source_path": None,
+        "candidate_count": len(with_city),
+        "candidates": [
+            {
+                "canonical": row["canonical"],
+                "city": row["city"],
+                "country_code": row["country_code"],
+                "source_path": row["source_path"],
+            }
+            for row in with_city[:10]
+        ],
+    }
+
+
+GEONAMES_COLUMNS = [
+    "geonameid",
+    "name",
+    "asciiname",
+    "alternatenames",
+    "latitude",
+    "longitude",
+    "feature_class",
+    "feature_code",
+    "country_code",
+    "cc2",
+    "admin1_code",
+    "admin2_code",
+    "admin3_code",
+    "admin4_code",
+    "population",
+    "elevation",
+    "dem",
+    "timezone",
+    "modification_date",
+]
+
+
+def parse_geonames_archive(payload: bytes) -> pd.DataFrame:
+    with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+        names = [name for name in archive.namelist() if name.endswith(".txt")]
+        if len(names) != 1:
+            raise RuntimeError(f"unexpected GeoNames archive members: {names}")
+        with archive.open(names[0]) as handle:
+            frame = pd.read_csv(
+                handle,
+                sep="\t",
+                names=GEONAMES_COLUMNS,
+                dtype={"country_code": "string"},
+                keep_default_na=False,
+                low_memory=False,
+            )
+    if frame.empty:
+        raise RuntimeError("GeoNames city frame is empty")
+    frame["population"] = pd.to_numeric(frame["population"], errors="coerce").fillna(0)
+    frame["latitude"] = pd.to_numeric(frame["latitude"], errors="coerce")
+    frame["longitude"] = pd.to_numeric(frame["longitude"], errors="coerce")
+    frame = frame[
+        frame["latitude"].notna()
+        & frame["longitude"].notna()
+        & frame["country_code"].ne("")
+    ].copy()
+    return frame
+
+
+def build_city_index(
+    frame: pd.DataFrame,
+) -> dict[tuple[str, str], list[dict[str, Any]]]:
+    index: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for row in frame.itertuples(index=False):
+        names = [row.name, row.asciiname]
+        if row.alternatenames:
+            names.extend(str(row.alternatenames).split(","))
+        record = {
+            "geonameid": int(row.geonameid),
+            "name": str(row.name),
+            "asciiname": str(row.asciiname),
+            "country_code": str(row.country_code),
+            "latitude": float(row.latitude),
+            "longitude": float(row.longitude),
+            "population": int(row.population),
+        }
+        seen: set[str] = set()
+        for name in names:
+            key = _identity_key(name)
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            index.setdefault((record["country_code"], key), []).append(record)
+    return index
+
+
+def resolve_city_coordinate(
+    *,
+    country_code: str,
+    city: str,
+    index: dict[tuple[str, str], list[dict[str, Any]]],
+) -> dict[str, Any]:
+    normalized = _identity_key(city)
+    lookup_city = CITY_NAME_ALIASES.get(
+        (country_code, normalized),
+        city,
+    )
+    candidates = index.get(
+        (country_code, _identity_key(lookup_city)),
+        [],
+    )
+    if not candidates:
+        return {
+            "resolved": False,
+            "requested_city": city,
+            "lookup_city": lookup_city,
+            "country_code": country_code,
+            "candidate_count": 0,
+        }
+
+    best = max(
+        candidates,
+        key=lambda row: (
+            int(row["population"]),
+            -int(row["geonameid"]),
+        ),
+    )
+    return {
+        "resolved": True,
+        "requested_city": city,
+        "lookup_city": lookup_city,
+        "country_code": country_code,
+        "candidate_count": len(candidates),
+        **best,
+    }
 
 
 def haversine_km(
@@ -488,156 +684,217 @@ def audit(
     if session is None:
         session = requests.Session()
 
-    payloads: dict[str, dict[str, Any]] = {}
-    source_errors: dict[str, str] = {}
+    understat_payloads: dict[str, dict[str, Any]] = {}
+    understat_errors: dict[str, str] = {}
+
     try:
         for league in LEAGUE_SLUGS:
             try:
-                payloads[league] = fetch_understat_league(
+                understat_payloads[league] = fetch_understat_league(
                     session,
                     league=league,
                     season=SEASON,
                 )
             except Exception as exc:
-                source_errors[league] = f"{type(exc).__name__}:{str(exc)[:250]}"
+                understat_errors[league] = (
+                    f"{type(exc).__name__}:{str(exc)[:250]}"
+                )
 
         schedules = {
             league: _understat_schedule(payload)
-            for league, payload in payloads.items()
+            for league, payload in understat_payloads.items()
         }
-        team_sides, venue_clubs = reconstruct_previous_hosts(rows, schedules)
+        team_sides, venue_clubs = reconstruct_previous_hosts(
+            rows,
+            schedules,
+        )
 
-        resolver = WikidataResolver(session)
-        venue_records = {
-            club: resolver.resolve_club_venue(club)
-            for club in sorted(venue_clubs)
-        }
+        openfootball_bytes = _download_bytes(
+            session,
+            OPENFOOTBALL_URL,
+        )
+        geonames_bytes = _download_bytes(
+            session,
+            GEONAMES_URL,
+        )
 
-        resolved_sides = 0
+        club_records = parse_openfootball_archive(openfootball_bytes)
+        club_index = build_club_index(club_records)
+        city_frame = parse_geonames_archive(geonames_bytes)
+        city_index = build_city_index(city_frame)
+
+        club_resolutions: dict[str, dict[str, Any]] = {}
+        for club in sorted(venue_clubs):
+            resolved = resolve_club_city(
+                club,
+                club_index,
+            )
+            if resolved["resolved"]:
+                resolved["city_coordinate"] = resolve_city_coordinate(
+                    country_code=str(resolved["country_code"]),
+                    city=str(resolved["city"]),
+                    index=city_index,
+                )
+            else:
+                resolved["city_coordinate"] = None
+            club_resolutions[club] = resolved
+
         previous_host_reconstructed = 0
-        previous_coordinates_resolved = 0
-        current_coordinates_resolved = 0
+        previous_club_city_resolved = 0
+        current_club_city_resolved = 0
+        previous_coordinate_resolved = 0
+        current_coordinate_resolved = 0
+        travel_resolved = 0
 
         for row in team_sides:
             previous_host = row["previous_venue_host"]
             current_host = row["current_venue_host"]
+
             if previous_host:
                 previous_host_reconstructed += 1
 
-            previous = venue_records.get(previous_host) if previous_host else None
-            current = venue_records.get(current_host)
+            previous = (
+                club_resolutions.get(str(previous_host))
+                if previous_host
+                else None
+            )
+            current = club_resolutions.get(str(current_host))
 
-            previous_ok = bool(previous and previous.get("resolved"))
-            current_ok = bool(current and current.get("resolved"))
-            previous_coordinates_resolved += int(previous_ok)
-            current_coordinates_resolved += int(current_ok)
+            previous_city_ok = bool(
+                previous
+                and previous.get("resolved")
+            )
+            current_city_ok = bool(
+                current
+                and current.get("resolved")
+            )
+            previous_club_city_resolved += int(previous_city_ok)
+            current_club_city_resolved += int(current_city_ok)
 
-            row["previous_venue"] = None if previous is None else {
-                key: previous.get(key)
-                for key in (
-                    "club_qid",
-                    "club_label",
-                    "venue_qid",
-                    "venue_label",
-                    "latitude",
-                    "longitude",
-                    "resolved",
-                )
-            }
-            row["current_venue"] = None if current is None else {
-                key: current.get(key)
-                for key in (
-                    "club_qid",
-                    "club_label",
-                    "venue_qid",
-                    "venue_label",
-                    "latitude",
-                    "longitude",
-                    "resolved",
-                )
-            }
+            previous_coord = (
+                previous.get("city_coordinate")
+                if previous_city_ok
+                else None
+            )
+            current_coord = (
+                current.get("city_coordinate")
+                if current_city_ok
+                else None
+            )
+            previous_coord_ok = bool(
+                previous_coord
+                and previous_coord.get("resolved")
+            )
+            current_coord_ok = bool(
+                current_coord
+                and current_coord.get("resolved")
+            )
+            previous_coordinate_resolved += int(previous_coord_ok)
+            current_coordinate_resolved += int(current_coord_ok)
 
-            if previous_ok and current_ok:
+            row["previous_club_city"] = previous
+            row["current_club_city"] = current
+
+            if previous_coord_ok and current_coord_ok:
                 distance = haversine_km(
-                    float(previous["latitude"]),
-                    float(previous["longitude"]),
-                    float(current["latitude"]),
-                    float(current["longitude"]),
+                    float(previous_coord["latitude"]),
+                    float(previous_coord["longitude"]),
+                    float(current_coord["latitude"]),
+                    float(current_coord["longitude"]),
                 )
-                row["travel_km_since_previous_match"] = distance
-                resolved_sides += 1
+                if not math.isfinite(distance) or distance < 0.0:
+                    raise RuntimeError("invalid travel distance")
+                row["travel_city_km_since_previous_match"] = distance
+                travel_resolved += 1
             else:
-                row["travel_km_since_previous_match"] = None
+                row["travel_city_km_since_previous_match"] = None
 
-        current_hosts = sorted({str(row["home_team"]) for row in rows})
-        current_hosts_resolved = sum(
-            bool(venue_records.get(host, {}).get("resolved"))
-            for host in current_hosts
-        )
         unresolved_clubs = sorted(
-            club for club, record in venue_records.items()
-            if not record.get("resolved")
+            club
+            for club, resolution in club_resolutions.items()
+            if not resolution.get("resolved")
+        )
+        unresolved_cities = sorted(
+            club
+            for club, resolution in club_resolutions.items()
+            if resolution.get("resolved")
+            and not (
+                resolution.get("city_coordinate")
+                and resolution["city_coordinate"].get("resolved")
+            )
         )
 
-        full = bool(
-            len(current_hosts) == EXPECTED_FIXTURES
-            and current_hosts_resolved == EXPECTED_FIXTURES
-            and previous_host_reconstructed == EXPECTED_TEAM_SIDES
-            and previous_coordinates_resolved == EXPECTED_TEAM_SIDES
-            and current_coordinates_resolved == EXPECTED_TEAM_SIDES
-            and resolved_sides == EXPECTED_TEAM_SIDES
-            and not source_errors
-        )
-
-        if source_errors:
+        if understat_errors:
             status = "UNDERSTAT_SOURCE_GAPS"
         elif previous_host_reconstructed < EXPECTED_TEAM_SIDES:
-            status = "PREVIOUS_VENUE_IDENTITY_GAPS"
+            status = "PREVIOUS_HOST_IDENTITY_GAPS"
         elif unresolved_clubs:
-            status = "WIKIDATA_VENUE_COORDINATE_GAPS"
-        elif full:
-            status = "FULL_43_TRAVEL_PROXY_FEASIBLE"
+            status = "OPENFOOTBALL_CLUB_CITY_GAPS"
+        elif unresolved_cities:
+            status = "GEONAMES_CITY_COORDINATE_GAPS"
+        elif travel_resolved == EXPECTED_TEAM_SIDES:
+            status = "FULL_43_TRAVEL_CITY_PROXY_FEASIBLE"
         else:
-            status = "PARTIAL_TRAVEL_PROXY_FEASIBILITY"
+            status = "PARTIAL_TRAVEL_CITY_PROXY_FEASIBILITY"
 
         distances = [
-            float(row["travel_km_since_previous_match"])
+            float(row["travel_city_km_since_previous_match"])
             for row in team_sides
-            if row["travel_km_since_previous_match"] is not None
+            if row["travel_city_km_since_previous_match"] is not None
         ]
 
-        report = {
+        return {
             "experiment_id": EXPERIMENT_ID,
             "generated_at_utc": datetime.now(timezone.utc).isoformat(),
             "research_only": True,
             "source_feasibility_audit": True,
             "travel_proxy_definition": (
-                "haversine(previous fixture host club current home venue, "
-                "target fixture home club current home venue)"
+                "haversine(previous fixture host club home-city centroid, "
+                "target fixture home club home-city centroid)"
             ),
-            "venue_model_limitation": (
-                "host-club current home venue proxy; neutral/exceptional historical "
-                "venues are not independently verified in V1"
-            ),
+            "geographic_precision": "CLUB_HOME_CITY_CENTROID_PROXY",
+            "openfootball_commit": OPENFOOTBALL_COMMIT,
+            "openfootball_archive_sha256": _sha256_bytes(openfootball_bytes),
+            "geonames_source": GEONAMES_URL,
+            "geonames_archive_sha256": _sha256_bytes(geonames_bytes),
             "upstream_artifact_id": EXPECTED_UPSTREAM_ARTIFACT_ID,
             "upstream_artifact_digest": EXPECTED_UPSTREAM_DIGEST,
             "locked_fixture_count": EXPECTED_FIXTURES,
             "team_side_count": EXPECTED_TEAM_SIDES,
-            "understat_schedule_sources_ready": len(payloads),
-            "understat_source_errors": source_errors,
-            "current_target_host_count": len(current_hosts),
-            "current_target_hosts_resolved": int(current_hosts_resolved),
-            "previous_host_identity_reconstructed": int(previous_host_reconstructed),
-            "previous_venue_coordinates_resolved": int(previous_coordinates_resolved),
-            "current_venue_coordinates_resolved_team_sides": int(
-                current_coordinates_resolved
+            "understat_schedule_sources_ready": len(understat_payloads),
+            "understat_source_errors": understat_errors,
+            "previous_host_identity_reconstructed": int(
+                previous_host_reconstructed
             ),
-            "travel_distance_resolved_team_sides": int(resolved_sides),
-            "unique_venue_club_count": len(venue_records),
-            "resolved_venue_club_count": int(
-                sum(bool(record.get("resolved")) for record in venue_records.values())
+            "previous_club_city_resolved": int(previous_club_city_resolved),
+            "current_club_city_resolved_team_sides": int(
+                current_club_city_resolved
             ),
-            "unresolved_venue_clubs": unresolved_clubs,
+            "previous_city_coordinates_resolved": int(
+                previous_coordinate_resolved
+            ),
+            "current_city_coordinates_resolved_team_sides": int(
+                current_coordinate_resolved
+            ),
+            "travel_distance_resolved_team_sides": int(travel_resolved),
+            "unique_venue_club_count": len(club_resolutions),
+            "club_city_resolved_count": int(
+                sum(
+                    bool(value.get("resolved"))
+                    for value in club_resolutions.values()
+                )
+            ),
+            "city_coordinate_resolved_count": int(
+                sum(
+                    bool(
+                        value.get("city_coordinate")
+                        and value["city_coordinate"].get("resolved")
+                    )
+                    for value in club_resolutions.values()
+                )
+            ),
+            "unresolved_clubs": unresolved_clubs,
+            "unresolved_cities": unresolved_cities,
             "status": status,
             "market_rows_read": False,
             "v2b_odds_read": False,
@@ -650,17 +907,22 @@ def audit(
             "odds_api_requests": 0,
             "supabase_operations": 0,
             "production_model_operations": 0,
-            "distance_summary_km": None if not distances else {
-                "count": len(distances),
-                "mean": float(pd.Series(distances).mean()),
-                "median": float(pd.Series(distances).median()),
-                "max": max(distances),
-                "zero_or_near_zero_le_5km": int(sum(value <= 5.0 for value in distances)),
-            },
-            "venue_records": venue_records,
+            "distance_summary_km": (
+                None
+                if not distances
+                else {
+                    "count": len(distances),
+                    "mean": float(pd.Series(distances).mean()),
+                    "median": float(pd.Series(distances).median()),
+                    "max": max(distances),
+                    "zero_or_near_zero_le_5km": int(
+                        sum(value <= 5.0 for value in distances)
+                    ),
+                }
+            ),
+            "club_resolutions": club_resolutions,
             "rows": team_sides,
         }
-        return report
     finally:
         if owned:
             session.close()
