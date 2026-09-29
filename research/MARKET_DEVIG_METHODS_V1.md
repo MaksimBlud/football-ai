@@ -160,3 +160,110 @@ The experiment:
 - modifies no production `.pkl`;
 - makes no production promotion;
 - writes only a JSON research report.
+
+## First frozen execution
+
+First complete execution after the protocol was frozen:
+
+- workflow run: `36512919586`
+- head: `893498d7b2b910cf858ca1b0ee57148b441a12f8`
+- artifact: `11009388000`
+- artifact digest: `sha256:dd3f8e6b86946da7e8a7ae7011d00fb0df0fdbf4555cb9f6f913603b7a9353dd`
+
+Environment:
+
+- pandas `3.0.6`
+- numpy `2.5.3`
+
+Observed mean historical overround: **4.4562%**.
+
+### Discovery result — 2019/20 to 2023/24
+
+Baseline MULTIPLICATIVE:
+
+- LogLoss: `0.9575651997`
+- Brier: `0.5664664060`
+
+Alternatives:
+
+| Method | Δ LogLoss | Δ Brier | joint season wins | Eligible |
+| --- | ---: | ---: | ---: | --- |
+| ADDITIVE | +0.0001922 | -0.0000670 | 2/5 | no |
+| POWER | +0.0000645 | -0.0000887 | 2/5 | no |
+| SHIN | +0.0000644 | -0.0000829 | 2/5 | no |
+
+All three alternatives failed the preregistered discovery gate because none improved
+both proper scoring rules and none reached three joint season wins.
+
+Frozen discovery selection:
+
+`MULTIPLICATIVE`
+
+### Temporal holdouts
+
+Even though discovery already failed closed, every deterministic method was retained as
+a diagnostic on the two later seasons.
+
+#### 2024/25
+
+| Method | LogLoss | Brier |
+| --- | ---: | ---: |
+| MULTIPLICATIVE | **0.9705521** | **0.5788986** |
+| ADDITIVE | 0.9707309 | 0.5793523 |
+| POWER | 0.9710260 | 0.5795112 |
+| SHIN | 0.9706346 | 0.5792037 |
+
+#### 2025/26
+
+| Method | LogLoss | Brier |
+| --- | ---: | ---: |
+| MULTIPLICATIVE | **1.0152524** | **0.6100247** |
+| ADDITIVE | 1.0163601 | 0.6112641 |
+| POWER | 1.0167239 | 0.6114091 |
+| SHIN | 1.0160282 | 0.6109019 |
+
+Thus every alternative was worse than MULTIPLICATIVE on both primary metrics in both
+holdout seasons.
+
+### Full 2,660-match diagnostic
+
+Relative to MULTIPLICATIVE:
+
+- ADDITIVE: LogLoss `+0.0003210`, Brier `+0.0001940`
+- POWER: LogLoss `+0.0003240`, Brier `+0.0002220`
+- SHIN: LogLoss `+0.0001686`, Brier `+0.0001097`
+
+Paired bootstrap intervals crossed zero for all three alternatives, but their bootstrap
+probability of being better than MULTIPLICATIVE was only approximately 24–33%, depending
+on method and metric. There is therefore no evidence supporting replacement of the current
+method.
+
+Overall calibration also explains the direction. MULTIPLICATIVE's average favorite
+forecast was slightly **below** the observed favorite rate, whereas Shin/Power/Additive
+shifted additional probability toward favorites and away from longshots. That correction
+is not helpful on this stored EPL average-odds sample.
+
+Mean fitted diagnostic parameters:
+
+- POWER `k = 1.04920`
+- SHIN `z = 0.02249`
+
+These parameters are descriptive only.
+
+## Decision
+
+Frozen interpretation:
+
+`KEEP_MULTIPLICATIVE`
+
+Active method remains:
+
+`MULTIPLICATIVE`
+
+Do not replace the current de-vig logic in `league_historical_market.py`,
+`feature_engineering.py`, or `market_anchor_1x2_v1.py` from V1 evidence.
+
+This result is specific to the stored Football-Data **average 1X2 odds** sample. It does
+not prove that Shin/Power cannot outperform on a single bookmaker, a sharper bookmaker,
+a closing-only line, a different league, or a different market. Those are separate
+hypotheses requiring separately frozen experiments.
