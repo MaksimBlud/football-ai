@@ -124,3 +124,63 @@ This is a research conclusion only and does not authorize production replacement
 - no .pkl writes;
 - no production promotion;
 - output only under artifacts/market_probability_calibration_v1/.
+
+
+## First frozen execution
+
+First complete run:
+
+- workflow run: 36578009799
+- head: b2834c0f6cd452dfa18cb643ed8574a450d5e6b7
+- artifact: 11037889167
+- artifact digest: sha256:0c14a97bf297554634576d62197e809162a0e1a7369c9f54fc10b4a189fef785
+
+Environment:
+
+- pandas 3.0.6
+- numpy 2.5.3
+- scipy 1.16.2
+
+The walk-forward evaluation covered 1,520 outer-OOS matches across 2022/23–2025/26.
+
+Pooled results:
+
+| Method | LogLoss | Brier | Accuracy |
+| --- | ---: | ---: | ---: |
+| RAW_MULTIPLICATIVE | **0.9652140** | **0.5739288** | **54.67%** |
+| TEMPERATURE | 0.9655033 | 0.5741885 | 54.67% |
+| CLASS_BIAS | 0.9671066 | 0.5750707 | 54.28% |
+| TEMPERATURE_BIAS | 0.9674557 | 0.5752947 | 54.34% |
+
+Candidate-minus-raw pooled deltas:
+
+- TEMPERATURE: LogLoss +0.0002893, Brier +0.0002597, joint season wins 0/4.
+- CLASS_BIAS: LogLoss +0.0018927, Brier +0.0011418, joint season wins 1/4.
+- TEMPERATURE_BIAS: LogLoss +0.0022417, Brier +0.0013658, joint season wins 0/4.
+
+Paired bootstrap:
+
+- TEMPERATURE LogLoss 95% CI: [-0.0002107, +0.0007883]
+- TEMPERATURE Brier 95% CI: [-0.0000694, +0.0005856]
+- CLASS_BIAS LogLoss 95% CI: [+0.0001511, +0.0035917]
+- CLASS_BIAS Brier 95% CI: [+0.0000641, +0.0021886]
+- TEMPERATURE_BIAS LogLoss 95% CI: [+0.0004660, +0.0039880]
+- TEMPERATURE_BIAS Brier 95% CI: [+0.0003441, +0.0023965]
+
+Thus no candidate passed the preregistered support gate. The bias-containing models were
+statistically worse on both proper scoring rules; temperature-only was also worse on the
+point estimates and never produced a joint seasonal win.
+
+Frozen interpretation:
+
+KEEP_RAW_MULTIPLICATIVE
+
+## Decision
+
+Do not add an outcome-trained calibration layer on top of the current Football-Data average
+1X2 multiplicative market probabilities from V1 evidence.
+
+This closes the simple favorite/longshot sharpness and global HOME/DRAW/AWAY bias hypotheses
+for this source. The next distinct question is whether disagreement between bookmakers,
+rather than a deterministic transformation of their average price, contains incremental
+information.
