@@ -5067,3 +5067,100 @@ Still binding:
 - existing V2B cross-book path is closed;
 - NO_BET;
 - no automatic production promotion.
+
+
+---
+
+# Continuity update — 2026-09-29 — full-calendar recovery Stage-B frozen
+
+The new full-calendar congestion source has now been converted into one frozen
+outcome-blind Stage-B hypothesis.
+
+Experiment:
+
+`V2B_FULL_CALENDAR_REST_STAGE_B_FREEZE_V1`
+
+Mapping:
+
+`JOINT_FULL_REST_COHORT_MEDIAN_SIGN_V1`
+
+Workflow run:
+
+`36588058549`
+
+Artifact:
+
+- ID `11042123742`;
+- digest `sha256:5157a50d2516aa7088eb1c89a0b95e8d31a8c328a6c0b8ee4488489ee8559918`.
+
+## Frozen mapping
+
+For each of all 43 V2B fixtures:
+
+`joint_full_rest_days = home_full_rest_days + away_full_rest_days`
+
+Feature-only cohort median:
+
+**11.0 days**
+
+`stage_b_score = joint_full_rest_days - 11.0`
+
+- positive -> UP;
+- negative -> DOWN;
+- zero -> NO_CALL.
+
+Frozen calls:
+
+- UP = **17**;
+- DOWN = **19**;
+- NO_CALL = **7**.
+
+Fixture identity hash:
+
+`sha256:c2891591d871b3ad8432915761f90065f6941f9055204d4d0b5327d71e4e52ea`
+
+Frozen feature hash:
+
+`sha256:d876b37f9315a535a0a92ef9ff2f06e62a3c70321c96982ba6395ec7be5feec6`
+
+## League distribution
+
+- EPL: 1 UP / 8 DOWN / 0 NO_CALL;
+- La Liga: 0 UP / 8 DOWN / 1 NO_CALL;
+- Serie A: 4 UP / 1 DOWN / 4 NO_CALL;
+- Bundesliga: 6 UP / 0 DOWN / 2 NO_CALL;
+- Ligue 1: 6 UP / 2 DOWN / 0 NO_CALL.
+
+This heterogeneity is frozen, not corrected.
+
+Do not introduce league-specific medians or a different load feature after direction is
+opened.
+
+## Safety proof
+
+The freeze read no V2B market row, opening line, FAIR_CENTRE or centre_delta.
+
+No Odds API request, Supabase write, model training or production promotion occurred.
+
+## Current execution pointer
+
+Next bounded block:
+
+> evaluate the exact frozen 43-fixture full-calendar rest Stage-B artifact against the
+> already-opened V2B market-direction artifact.
+
+Required:
+
+- preserve exact 17/19/7 calls;
+- keep NO_CALL and ZERO movement separate;
+- compare against constant directions on the same comparable subset;
+- report UP/DOWN recall, balanced accuracy, by-league results and continuous association;
+- no threshold/sign/window/league change.
+
+Still binding:
+
+- opened-sample hypothesis generation only;
+- FAIR_CENTRE repricing magnitude/risk remains replicated;
+- reliable individual direction remains unconfirmed;
+- NO_BET;
+- no automatic production promotion.
