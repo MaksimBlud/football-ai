@@ -15,9 +15,6 @@ import numpy as np
 import pandas as pd
 import requests
 
-from market_devig_methods_v1 import multiplicative_probabilities
-
-
 EXPERIMENT_ID = "MARKET_MAX_AVG_SPREAD_REPLICATION_V2"
 OUTPUT_DIR = Path("artifacts/market_max_avg_spread_replication_v2")
 OUTPUT_PATH = OUTPUT_DIR / "report.json"
@@ -165,6 +162,29 @@ def league_availability(frame: pd.DataFrame) -> dict:
     }
 
 
+def normalized_inverse_probabilities(odds: np.ndarray) -> np.ndarray:
+    """Multiplicative normalization without assuming a positive overround.
+
+    Football-Data average triplets can occasionally have sum(1/odds) <= 1 in
+    non-EPL leagues. The multiplicative transform itself is q / sum(q) and is
+    well-defined for any finite decimal odds > 1. This keeps the frozen
+    probability transformation while avoiding the EPL-specific overround gate.
+    """
+    values = np.asarray(odds, dtype=float)
+    if values.shape != (3,):
+        raise ValueError("1X2 odds must contain exactly three outcomes")
+    if not np.isfinite(values).all() or (values <= 1.0).any():
+        raise ValueError("Decimal odds must be finite and > 1")
+    inverse = 1.0 / values
+    total = float(inverse.sum())
+    if not np.isfinite(total) or total <= 0.0:
+        raise ValueError("Invalid inverse-odds total")
+    probabilities = inverse / total
+    if not np.isclose(probabilities.sum(), 1.0, atol=1e-12):
+        raise ValueError("Normalized probabilities do not sum to one")
+    return probabilities
+
+
 def probability_matrix(frame: pd.DataFrame) -> np.ndarray:
     odds = numeric_triplet(
         frame,
@@ -177,9 +197,7 @@ def probability_matrix(frame: pd.DataFrame) -> np.ndarray:
     )
 
     for index, row in enumerate(odds):
-        probabilities[index], _ = (
-            multiplicative_probabilities(row)
-        )
+        probabilities[index] = normalized_inverse_probabilities(row)
 
     return probabilities
 
