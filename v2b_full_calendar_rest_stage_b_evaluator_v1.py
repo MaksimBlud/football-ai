@@ -1,6 +1,6 @@
 """Evaluate the frozen full-calendar rest Stage-B mapping on opened V2B market direction.
 
-Research-only hypothesis generation. The deep mapping is immutable before this
+Research-only hypothesis generation. The full-calendar rest mapping is immutable before this
 join. V2B market direction is already an opened sample from earlier research,
 so this evaluator is explicitly non-confirmatory.
 """
@@ -76,6 +76,8 @@ def _validate_feature_freeze(payload: dict[str, Any]) -> pd.DataFrame:
         "fair_centre_read",
         "centre_delta_read",
         "direction_test_performed",
+        "match_outcome_target_used",
+        "threshold_fitted_to_outcomes",
     ):
         if payload.get(flag) is not False:
             raise RuntimeError(f"feature artifact safety flag changed: {flag}")
