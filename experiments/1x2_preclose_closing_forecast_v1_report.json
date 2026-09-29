@@ -1,0 +1,86 @@
+{
+  "experiment_id": "1X2_PRECLOSE_CLOSING_FORECAST_V1",
+  "frozen_result_schema": 1,
+  "first_run": {
+    "workflow_run_id": 36514670639,
+    "artifact_id": 11010521032,
+    "artifact_digest": "sha256:4fc3aea2fea56c1efa1256eea8301dace6b20ea9499035d2d997fe2e6daa69f4",
+    "head_sha": "d6cb036250a12ff37df64fba6f07a1e1d807b06f"
+  },
+  "source_rows": 2660,
+  "package_versions": {
+    "pandas": "3.0.6",
+    "numpy": "2.5.3",
+    "requests": "2.32.5",
+    "scikit_learn": "1.9.1"
+  },
+  "result": {
+    "selected_candidate": {
+      "candidate_id": "RIDGE_STATE_PLUS_CONSENSUS_A0.01",
+      "spec": {
+        "name": "RIDGE",
+        "feature_variant": "STATE_PLUS_CONSENSUS",
+        "alpha": 0.01
+      }
+    },
+    "validation": {
+      "zero_close_mae": 0.016251056010519262,
+      "candidate_close_mae": 0.01608266367062133,
+      "delta_close_mae": -0.00016839233989793184,
+      "zero_close_cross_entropy": 0.9535062649809645,
+      "candidate_close_cross_entropy": 0.9533620737050928,
+      "delta_close_cross_entropy": -0.00014419127587172986,
+      "zero_outcome_logloss": 0.9092124760895899,
+      "candidate_outcome_logloss": 0.9097564581063466,
+      "passed": true
+    },
+    "holdouts": {
+      "2024/2025": {
+        "zero_close_mae": 0.01707184762424803,
+        "candidate_close_mae": 0.017070995148654764,
+        "delta_close_mae": -8.524755932652617e-07,
+        "zero_close_cross_entropy": 0.9709744913981443,
+        "candidate_close_cross_entropy": 0.9709477722357893,
+        "delta_close_cross_entropy": -2.6719162354971182e-05,
+        "outcome_logloss_delta": 0.0006171118071282011,
+        "outcome_brier_delta": 0.0005079795496893968,
+        "max_move_mae_delta": -0.0058073337446321385,
+        "candidate_direction_accuracy": 0.5324561403508772,
+        "actual_mean_max_abs_move": 0.02560777143637205,
+        "actual_argmax_change_rate": 0.034210526315789476,
+        "passed_primary_gate": true
+      },
+      "2025/2026": {
+        "zero_close_mae": 0.017352388855648257,
+        "candidate_close_mae": 0.01720322585102306,
+        "delta_close_mae": -0.00014916300462519683,
+        "zero_close_cross_entropy": 1.0002040073256349,
+        "candidate_close_cross_entropy": 1.0000777484827366,
+        "delta_close_cross_entropy": -0.00012625884289829692,
+        "outcome_logloss_delta": -0.0022725489841328717,
+        "outcome_brier_delta": -0.0011191122121616548,
+        "max_move_mae_delta": -0.005565729184304216,
+        "candidate_direction_accuracy": 0.5552631578947368,
+        "actual_mean_max_abs_move": 0.026028583283472382,
+        "actual_argmax_change_rate": 0.039473684210526314,
+        "passed_primary_gate": true
+      }
+    },
+    "paired_bootstrap_760_holdout_matches": {
+      "close_mae": {
+        "mean_delta_candidate_minus_zero": -7.500774010923149e-05,
+        "ci95_low": -0.0003219169718242773,
+        "ci95_high": 0.00017374024458310816,
+        "bootstrap_probability_candidate_better": 0.7157
+      },
+      "close_cross_entropy": {
+        "mean_delta_candidate_minus_zero": -7.648900262652493e-05,
+        "ci95_low": -0.00013686314280194167,
+        "ci95_high": -1.4950287478865434e-05,
+        "bootstrap_probability_candidate_better": 0.9912
+      }
+    },
+    "robust_support": false,
+    "interpretation": "NO_ROBUST_PRECLOSE_TO_CLOSE_SIGNAL"
+  }
+}
