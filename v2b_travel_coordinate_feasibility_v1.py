@@ -37,6 +37,7 @@ EXPECTED_TEAM_SIDES = 86
 TARGET_DATE = date(2026, 9, 20)
 
 WIKIDATA_API = "https://www.wikidata.org/w/api.php"
+WIKIPEDIA_API = "https://en.wikipedia.org/w/api.php"
 FOOTBALL_CLUB_QID = "Q476028"
 
 SEARCH_ALIASES = {
@@ -126,9 +127,8 @@ def _key(value: Any) -> str:
     return "".join(ch.lower() for ch in text if ch.isalnum())
 
 
-def _query_label(label: str) -> str:
-    canonical = SEARCH_ALIASES.get(label, label)
-    return f"{canonical} football club"
+def _wikipedia_title(label: str) -> str:
+    return SEARCH_ALIASES.get(label, label)
 
 
 def _claim_item_ids(entity: dict[str, Any], prop: str) -> list[tuple[str, dict[str, Any]]]:
@@ -230,33 +230,60 @@ class WikidataClient:
         if self._owned:
             self.session.close()
 
-    def _get(self, params: dict[str, Any]) -> dict[str, Any]:
-        response = self.session.get(WIKIDATA_API, params=params, timeout=30)
+    def _get_url(self, url: str, params: dict[str, Any]) -> dict[str, Any]:
+        response = self.session.get(url, params=params, timeout=30)
         self.public_http_requests += 1
         response.raise_for_status()
         payload = response.json()
         if not isinstance(payload, dict):
-            raise RuntimeError("Wikidata response is not an object")
+            raise RuntimeError("coordinate-source response is not an object")
         return payload
 
-    def search(self, query: str, limit: int = 8) -> list[dict[str, Any]]:
-        payload = self._get(
-            {
-                "action": "wbsearchentities",
-                "search": query,
-                "language": "en",
-                "uselang": "en",
-                "type": "item",
-                "limit": limit,
-                "format": "json",
-                "origin": "*",
+    def _get(self, params: dict[str, Any]) -> dict[str, Any]:
+        return self._get_url(WIKIDATA_API, params)
+
+    def wikipedia_qids(self, titles: Iterable[str]) -> dict[str, str | None]:
+        unique = list(dict.fromkeys(str(x) for x in titles if str(x).strip()))
+        result: dict[str, str | None] = {}
+        for i in range(0, len(unique), 50):
+            batch = unique[i : i + 50]
+            payload = self._get_url(
+                WIKIPEDIA_API,
+                {
+                    "action": "query",
+                    "titles": "|".join(batch),
+                    "prop": "pageprops",
+                    "ppprop": "wikibase_item",
+                    "redirects": 1,
+                    "format": "json",
+                    "origin": "*",
+                },
+            )
+            query = payload.get("query") or {}
+            aliases = {title: title for title in batch}
+            for section in ("normalized", "redirects"):
+                for row in query.get(section) or []:
+                    if isinstance(row, dict) and row.get("from") and row.get("to"):
+                        aliases[str(row["from"])] = str(row["to"])
+            pages_by_title = {
+                str(page.get("title")): page
+                for page in (query.get("pages") or {}).values()
+                if isinstance(page, dict) and page.get("title")
             }
-        )
-        return [
-            item
-            for item in payload.get("search") or []
-            if isinstance(item, dict) and item.get("id")
-        ]
+            for original in batch:
+                current = original
+                seen: set[str] = set()
+                while current in aliases and aliases[current] != current and current not in seen:
+                    seen.add(current)
+                    current = aliases[current]
+                page = pages_by_title.get(current)
+                qid = None
+                if isinstance(page, dict):
+                    value = (page.get("pageprops") or {}).get("wikibase_item")
+                    if isinstance(value, str) and value.startswith("Q"):
+                        qid = value
+                result[original] = qid
+        return result
 
     def entities(self, ids: Iterable[str]) -> dict[str, dict[str, Any]]:
         unique = list(dict.fromkeys(str(x) for x in ids if str(x).startswith("Q")))
@@ -434,28 +461,41 @@ def audit(route_payload, *, client):
         }
     )
 
-    query_by_label = {label: _query_label(label) for label in labels}
-    searches_by_query = {}
-    for query in sorted(set(query_by_label.values())):
-        searches_by_query[query] = client.search(query)
-        time.sleep(0.05)
+    title_by_label = {label: _wikipedia_title(label) for label in labels}
+    qid_by_title = client.wikipedia_qids(sorted(set(title_by_label.values())))
+    club_qids = sorted({qid for qid in qid_by_title.values() if qid})
+    candidate_entities = client.entities(club_qids)
 
-    candidate_ids = {
-        str(item["id"])
-        for values in searches_by_query.values()
-        for item in values
-        if item.get("id")
-    }
-    candidate_entities = client.entities(sorted(candidate_ids))
-
-    clubs_by_query = {
-        query: _choose_club_candidate(query, values, candidate_entities)
-        for query, values in searches_by_query.items()
-    }
+    clubs_by_title = {}
+    for title, qid in qid_by_title.items():
+        entity = candidate_entities.get(str(qid)) if qid else None
+        if entity is None:
+            clubs_by_title[title] = None
+            continue
+        description = " ".join(
+            str(value.get("value") or "")
+            for value in (entity.get("descriptions") or {}).values()
+            if isinstance(value, dict)
+        ).lower()
+        footballish = (
+            "football" in description
+            or "soccer" in description
+            or FOOTBALL_CLUB_QID in {x for x, _ in _claim_item_ids(entity, "P31")}
+            or bool(_claim_item_ids(entity, "P115"))
+        )
+        if not footballish:
+            clubs_by_title[title] = None
+            continue
+        clubs_by_title[title] = {
+            "qid": str(qid),
+            "search_label": _label(entity) or title,
+            "description": description,
+            "entity": entity,
+        }
 
     venue_ids = {
         qid
-        for club in clubs_by_query.values()
+        for club in clubs_by_title.values()
         if club is not None
         for qid, claim in _claim_item_ids(club["entity"], "P115")
         if _claim_active_at(claim)
@@ -464,12 +504,12 @@ def audit(route_payload, *, client):
 
     coordinate_by_label = {}
     for label in labels:
-        query = query_by_label[label]
-        club = clubs_by_query.get(query)
+        title = title_by_label[label]
+        club = clubs_by_title.get(title)
         if club is None:
             coordinate_by_label[label] = {
                 "input_label": label,
-                "query": query,
+                "wikipedia_title": title,
                 "coordinate_status": "CLUB_IDENTITY_UNRESOLVED",
                 "club_qid": None,
                 "club_label": None,
@@ -481,7 +521,7 @@ def audit(route_payload, *, client):
         else:
             coordinate_by_label[label] = {
                 "input_label": label,
-                "query": query,
+                "wikipedia_title": title,
                 **_resolve_coordinate(club=club, venue_entities=venue_entities),
             }
 
@@ -545,7 +585,7 @@ def audit(route_payload, *, client):
         "source_feasibility_audit": True,
         "route_source_artifact_id": EXPECTED_ROUTE_ARTIFACT_ID,
         "route_source_artifact_digest": EXPECTED_ROUTE_ARTIFACT_DIGEST,
-        "coordinate_source": "WIKIDATA_API",
+        "coordinate_source": "ENWIKI_PAGEPROPS_TO_WIKIDATA",
         "coordinate_contract": (
             "club -> P115 home venue -> P625 coordinate; "
             "direct club P625 fallback is explicit only"
