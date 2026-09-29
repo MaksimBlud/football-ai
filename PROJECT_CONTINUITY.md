@@ -5370,3 +5370,134 @@ Still binding:
 - reliable individual direction remains unconfirmed;
 - NO_BET;
 - no automatic production promotion.
+
+
+---
+
+# Continuity update — 2026-09-29 — exact stadium coordinate layer complete; travel direction remains closed
+
+The exact travel route identities are now fully mapped to stadium-level coordinates
+without using market direction.
+
+Experiment:
+
+`V2B_TRAVEL_COORDINATE_FEASIBILITY_V1`
+
+Workflow run:
+
+`36596063770`
+
+Coordinate artifact:
+
+- ID `11046082462`;
+- digest `sha256:f6b334614adde392ad9195c00c883ecf2d1e4d5f1d810b87e86c4d21ae549b02`.
+
+Immutable route source:
+
+- `V2B_TRAVEL_VENUE_IDENTITY_FEASIBILITY_V1`;
+- artifact `11044111558`;
+- digest `sha256:8c895a500169760c1fe36fe5eeb40861d06d2aa23a4b26e15d3f580f3243837b`.
+
+## Coordinate result
+
+Unique previous/target venue labels:
+
+**93**
+
+Stadium coordinates:
+
+**93 / 93**
+
+Club-coordinate fallbacks:
+
+**0**
+
+Ambiguous active venues:
+
+**0**
+
+Unresolved club identities:
+
+**0**
+
+Team-side routes with both endpoints resolved at stadium level:
+
+**86 / 86**
+
+Fixtures with both teams fully coordinate-feasible:
+
+**43 / 43**
+
+Final status:
+
+**`FULL_86_STADIUM_COORDINATE_FEASIBLE`**
+
+The final audit used batched English-Wikipedia pageprops -> Wikidata QID resolution,
+then Wikidata club P115 -> stadium P625. Only 6 public HTTP requests were required.
+
+Five generic English title collisions were disambiguated as football-club titles:
+Chelsea, Crystal Palace, Everton, Fulham and Liverpool.
+
+SC Freiburg required one source-backed current-venue override to
+Europa-Park-Stadion (`Q64586775`) because Wikidata exposed two active
+coordinate-bearing P115 values. OpenFootball independently identifies
+Europa-Park-Stadion as SC Freiburg's current home.
+
+No market row, centre_delta or direction target was read by this coordinate audit.
+
+## Parallel travel-direction result now binding
+
+While the coordinate audit was running, `main` independently completed the
+city-centroid travel Stage-B path.
+
+Frozen mapping:
+
+`JOINT_TRAVEL_CITY_COHORT_MEDIAN_SIGN_V1`
+
+Opened-sample result:
+
+- comparable rows = **13**;
+- concordant = **4 / 13 = 30.77%**;
+- constant-UP baseline = **9 / 13 = 69.23%**;
+- excess vs constant-UP = **-38.46 pp**;
+- UP recall = **33.33%**;
+- DOWN recall = **25.00%**;
+- balanced accuracy = **29.17%**;
+- final = **`WEAK_OR_INCONSISTENT_DIRECTION_HYPOTHESIS`**.
+
+Therefore travel as an opened-sample corner-direction family is closed.
+
+Do not use the improved stadium coordinates to:
+
+- tune a new travel threshold on V2B;
+- reverse the travel sign;
+- switch to away-only/max travel;
+- add a travel/rest interaction;
+- choose favorable leagues;
+- combine travel with FAIR_CENTRE post hoc.
+
+## Current execution pointer
+
+Exact stadium Haversine distances may still be computed as reusable infrastructure for
+future unseen cohorts, but not as another direction test on the already-opened V2B sample.
+
+For current direction research, move to a genuinely different information family
+before any outcome join.
+
+Preferred next source-feasibility direction:
+
+1. **time-aligned market-path structure** using genuinely pre-move historical states if a
+   durable source exists;
+2. **cross-market relationships** from independent point-in-time markets if their
+   timestamps and source coverage can be proven;
+3. otherwise wait for an **unseen prospective cohort** rather than re-engineer opened
+   travel/schedule features.
+
+Still binding:
+
+- FAIR_CENTRE repricing magnitude/risk remains replicated;
+- individual corner-market direction remains unconfirmed;
+- full-calendar rest and travel-city directional mappings are closed;
+- exact stadium coordinate layer is infrastructure only on opened V2B;
+- NO_BET;
+- no automatic production promotion.
