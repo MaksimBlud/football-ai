@@ -1,0 +1,101 @@
+name: 1X2_PRECLOSE_CLOSING_FORECAST_V1
+
+on:
+  push:
+    branches:
+      - research/1x2-preclose-closing-forecast-v1
+    paths:
+      - 'preclose_closing_forecast_v1.py'
+      - 'tests/test_preclose_closing_forecast_v1.py'
+      - 'preclose_closing_forecast_v1_freeze_guard.py'
+      - 'tests/test_preclose_closing_forecast_v1_freeze_guard.py'
+      - 'research/1X2_PRECLOSE_CLOSING_FORECAST_V1.md'
+      - 'experiments/1x2_preclose_closing_forecast_v1_report.json'
+      - '.github/workflows/1x2-preclose-closing-forecast-v1.yml'
+  pull_request:
+    paths:
+      - 'preclose_closing_forecast_v1.py'
+      - 'tests/test_preclose_closing_forecast_v1.py'
+      - 'preclose_closing_forecast_v1_freeze_guard.py'
+      - 'tests/test_preclose_closing_forecast_v1_freeze_guard.py'
+      - 'research/1X2_PRECLOSE_CLOSING_FORECAST_V1.md'
+      - 'experiments/1x2_preclose_closing_forecast_v1_report.json'
+      - '.github/workflows/1x2-preclose-closing-forecast-v1.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preclose-closing-forecast-v1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'pandas==3.0.6' 'numpy==2.5.3' 'requests==2.32.5' 'scikit-learn==1.9.1' pytest
+      - name: Compile research code
+        run: python -m py_compile preclose_closing_forecast_v1.py
+      - name: Run contract tests
+        run: pytest -q tests/test_market_devig_methods_v1.py tests/test_preclose_closing_forecast_v1.py
+      - name: Production artifact diff guard
+        if: github.event_name == 'pull_request'
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$' && exit 1 || true
+
+  historical-research:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/research/1x2-preclose-closing-forecast-v1'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'pandas==3.0.6' 'numpy==2.5.3' 'requests==2.32.5' 'scikit-learn==1.9.1'
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Run pre-close to closing forecast experiment
+        run: python preclose_closing_forecast_v1.py
+      - name: Verify safety contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/1x2_preclose_closing_forecast_v1/report.json').read_text())
+          assert r['experiment_id']=='1X2_PRECLOSE_CLOSING_FORECAST_V1'
+          assert r['research_only'] is True
+          assert r['production_promotion'] is False
+          assert r['supabase_reads'] is False
+          assert r['supabase_writes'] is False
+          assert r['paid_api_calls'] is False
+          assert r['candidate_artifact_saved'] is False
+          assert r['source_rows']==2660
+          assert r['result']['holdout_seasons']==['2024/2025','2025/2026']
+          print('selected=',r['result']['selected_candidate']['candidate_id'])
+          print('validation_passed=',r['result']['validation_passed'])
+          print('interpretation=',r['result']['interpretation'])
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: preclose-closing-forecast-v1-${{ github.run_id }}
+          path: artifacts/1x2_preclose_closing_forecast_v1/report.json
+          if-no-files-found: error
+          retention-days: 90
