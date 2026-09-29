@@ -1,0 +1,64 @@
+{
+  "experiment_id": "MARKET_DEVIG_BOOKMAKER_TIMING_V1",
+  "frozen_result_schema": 1,
+  "first_run": {
+    "workflow_run_id": 36513803897,
+    "artifact_id": 11009517965,
+    "artifact_digest": "sha256:417440fc7776dd02cef619e51a1e831052b9ef9d64d08a0527eb079d440e1aac",
+    "head_sha": "0df53e6c710dc931c6a3ef56326d93600637ba16"
+  },
+  "source_rows": 2660,
+  "package_versions": {
+    "pandas": "3.0.6",
+    "numpy": "2.5.3",
+    "requests": "2.32.5"
+  },
+  "result": {
+    "availability": {
+      "AVG_STANDARD": {"eligible": true, "valid_rows_total": 2660, "test_coverage": 1.0},
+      "BET365_STANDARD": {"eligible": true, "valid_rows_total": 2660, "test_coverage": 1.0},
+      "PINNACLE_STANDARD": {"eligible": false, "valid_rows_total": 2490, "test_coverage": 0.5526315789473685},
+      "AVG_CLOSING": {"eligible": true, "valid_rows_total": 2660, "test_coverage": 1.0},
+      "BET365_CLOSING": {"eligible": true, "valid_rows_total": 2660, "test_coverage": 1.0},
+      "PINNACLE_CLOSING": {"eligible": false, "valid_rows_total": 2490, "test_coverage": 0.5526315789473685}
+    },
+    "source_decisions": {
+      "AVG_STANDARD": {"selected": "MULTIPLICATIVE", "robust_support": false, "interpretation": "KEEP_SOURCE_MULTIPLICATIVE"},
+      "BET365_STANDARD": {"selected": "MULTIPLICATIVE", "robust_support": false, "interpretation": "KEEP_SOURCE_MULTIPLICATIVE"},
+      "PINNACLE_STANDARD": {"selected": null, "robust_support": null, "interpretation": "SOURCE_UNAVAILABLE"},
+      "AVG_CLOSING": {"selected": "POWER", "robust_support": false, "interpretation": "KEEP_SOURCE_MULTIPLICATIVE"},
+      "BET365_CLOSING": {"selected": "MULTIPLICATIVE", "robust_support": false, "interpretation": "KEEP_SOURCE_MULTIPLICATIVE"},
+      "PINNACLE_CLOSING": {"selected": null, "robust_support": null, "interpretation": "SOURCE_UNAVAILABLE"}
+    },
+    "avg_closing_power": {
+      "discovery_delta_logloss": -0.00004075344793319502,
+      "discovery_delta_brier": -0.0001852713385852578,
+      "joint_season_wins": 3,
+      "validation_baseline": {"logloss": 0.9667334134817072, "brier": 0.5751877511794847},
+      "validation_candidate": {"logloss": 0.9670590337271576, "brier": 0.5756091010480604},
+      "validation_passed": false,
+      "test_baseline": {"logloss": 1.0117668726695337, "brier": 0.6077370146246498},
+      "test_candidate": {"logloss": 1.012780162608884, "brier": 0.6088195943816672},
+      "test_passed": false,
+      "bootstrap_logloss": {
+        "ci95_low": -0.0008755246239482261,
+        "ci95_high": 0.0012286739339580925,
+        "bootstrap_probability_candidate_better": 0.3824
+      },
+      "bootstrap_brier": {
+        "ci95_low": -0.0005088514545288826,
+        "ci95_high": 0.0006726947907784814,
+        "bootstrap_probability_candidate_better": 0.3941
+      }
+    },
+    "common_fixture_multiplicative": {
+      "common_rows": 2660,
+      "AVG_STANDARD": {"logloss": 0.9676615009323478, "brier": 0.5744650528895741, "accuracy": 0.5447368421052632, "mean_overround": 0.04456150359333903},
+      "BET365_STANDARD": {"logloss": 0.9688773361522854, "brier": 0.5748651032885556, "accuracy": 0.5447368421052632, "mean_overround": 0.05426020755363202},
+      "AVG_CLOSING": {"logloss": 0.9638784768420047, "brier": 0.5716831154571406, "accuracy": 0.5496240601503759, "mean_overround": 0.04270609180294437},
+      "BET365_CLOSING": {"logloss": 0.9640490568268768, "brier": 0.5716796698800353, "accuracy": 0.5496240601503759, "mean_overround": 0.05477996906242845}
+    },
+    "supported_sources": [],
+    "interpretation": "NO_SOURCE_SPECIFIC_DEVIG_SUPPORT"
+  }
+}

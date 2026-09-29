@@ -1,0 +1,109 @@
+name: MARKET_DEVIG_BOOKMAKER_TIMING_V1
+
+on:
+  push:
+    branches:
+      - research/market-devig-bookmaker-timing-v1
+    paths:
+      - 'market_devig_bookmaker_timing_v1.py'
+      - 'tests/test_market_devig_bookmaker_timing_v1.py'
+      - 'market_devig_bookmaker_timing_v1_freeze_guard.py'
+      - 'tests/test_market_devig_bookmaker_timing_v1_freeze_guard.py'
+      - 'research/MARKET_DEVIG_BOOKMAKER_TIMING_V1.md'
+      - 'experiments/market_devig_bookmaker_timing_v1_report.json'
+      - '.github/workflows/market-devig-bookmaker-timing-v1.yml'
+  pull_request:
+    paths:
+      - 'market_devig_bookmaker_timing_v1.py'
+      - 'tests/test_market_devig_bookmaker_timing_v1.py'
+      - 'market_devig_bookmaker_timing_v1_freeze_guard.py'
+      - 'tests/test_market_devig_bookmaker_timing_v1_freeze_guard.py'
+      - 'research/MARKET_DEVIG_BOOKMAKER_TIMING_V1.md'
+      - 'experiments/market_devig_bookmaker_timing_v1_report.json'
+      - '.github/workflows/market-devig-bookmaker-timing-v1.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: market-devig-bookmaker-timing-v1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'pandas==3.0.6' 'numpy==2.5.3' 'requests==2.32.5' pytest
+      - name: Compile research code
+        run: python -m py_compile market_devig_bookmaker_timing_v1.py market_devig_bookmaker_timing_v1_freeze_guard.py
+      - name: Run contract tests
+        run: pytest -q tests/test_market_devig_methods_v1.py tests/test_market_devig_bookmaker_timing_v1.py tests/test_market_devig_bookmaker_timing_v1_freeze_guard.py
+      - name: Production artifact diff guard
+        if: github.event_name == 'pull_request'
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$' && exit 1 || true
+
+  historical-research:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/research/market-devig-bookmaker-timing-v1'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'pandas==3.0.6' 'numpy==2.5.3' 'requests==2.32.5'
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Run source/timing de-vig experiment
+        run: python market_devig_bookmaker_timing_v1.py
+      - name: Verify safety contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/market_devig_bookmaker_timing_v1/report.json').read_text())
+          assert r['experiment_id']=='MARKET_DEVIG_BOOKMAKER_TIMING_V1'
+          assert r['research_only'] is True
+          assert r['production_promotion'] is False
+          assert r['supabase_reads'] is False
+          assert r['supabase_writes'] is False
+          assert r['paid_odds_api_calls'] is False
+          assert r['candidate_artifact_saved'] is False
+          assert r['source_rows']==2660
+          assert r['seasons'][-1]=='2025/2026'
+          print('eligible_sources=',[
+              k for k,v in r['result']['availability'].items() if v['eligible']
+          ])
+          print('supported_sources=',r['result']['supported_sources'])
+          print('interpretation=',r['result']['interpretation'])
+          PY
+      - name: Verify frozen semantic result
+        run: |
+          python market_devig_bookmaker_timing_v1_freeze_guard.py \
+            experiments/market_devig_bookmaker_timing_v1_report.json \
+            artifacts/market_devig_bookmaker_timing_v1/report.json \
+            --atol 1e-12
+      - name: Verify production hashes unchanged
+        if: always()
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: market-devig-bookmaker-timing-v1-${{ github.run_id }}
+          path: artifacts/market_devig_bookmaker_timing_v1/report.json
+          if-no-files-found: error
+          retention-days: 90
