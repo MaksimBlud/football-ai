@@ -30,11 +30,11 @@ def _time_snak(value):
     return {"datavalue": {"value": {"time": value}}}
 
 
-def test_query_aliases_are_identity_only():
-    assert mod._query_label("Man City") == "Manchester City football club"
-    assert mod._query_label("Ath Bilbao") == "Athletic Bilbao football club"
-    assert mod._query_label("Milan") == "AC Milan football club"
-    assert mod._query_label("Vallecano") == "Rayo Vallecano football club"
+def test_wikipedia_titles_are_identity_only():
+    assert mod._wikipedia_title("Man City") == "Manchester City"
+    assert mod._wikipedia_title("Ath Bilbao") == "Athletic Bilbao"
+    assert mod._wikipedia_title("Milan") == "AC Milan"
+    assert mod._wikipedia_title("Vallecano") == "Rayo Vallecano"
 
 
 def test_coordinate_prefers_preferred_claim():
