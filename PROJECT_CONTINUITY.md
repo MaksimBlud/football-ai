@@ -4959,3 +4959,111 @@ Still binding:
 - existing V2B cross-book path is now also closed;
 - NO_BET;
 - no automatic production promotion.
+
+---
+
+# Continuity update — 2026-09-29 — full-calendar congestion source feasible
+
+The exact V2B 14-day pre-match calendar has now been reconstructed with materially more
+complete information than the old league-only schedule proxy.
+
+Experiment:
+
+`V2B_FULL_CALENDAR_LOAD_FEASIBILITY_V1`
+
+Workflow run:
+
+`36586153137`
+
+Artifact:
+
+- ID `11041174634`;
+- digest `sha256:366ac99df321757c0a12bf306c0bbef0512632adb29023c7b5465b06dc61be87`.
+
+## Exact scope
+
+Targets:
+
+19–20 September 2026.
+
+Lookback:
+
+**14 days strictly before target date.**
+
+League source:
+
+Understat 2026/27.
+
+Frozen official non-league manifest:
+
+- UEFA Champions League;
+- UEFA Europa League;
+- Carabao Cup;
+- relevant Coppa Italia fixtures.
+
+Other top-five domestic/UEFA competitions were explicitly checked against their official
+2026/27 calendars and fall outside this exact target window.
+
+## Result
+
+Identity matched:
+
+**43 / 43**
+
+Full-calendar feasible:
+
+**43 / 43**
+
+Final status:
+
+**`FULL_43_RECONSTRUCTABLE_14D`**
+
+The source change is material:
+
+- 42/86 team-sides have >=1 non-league event in the 14-day window;
+- 27/43 V2B fixtures change their load profile vs league-only;
+- 25/86 team-sides have a different most-recent-match date;
+- mean rest reduction among those changed sides = 3.84 days;
+- home-minus-away rest differential changes in 15/43 fixtures.
+
+Changed V2B fixtures by league:
+
+- EPL 9/9;
+- La Liga 6/9;
+- Serie A 6/9;
+- Bundesliga 3/8;
+- Ligue 1 3/8.
+
+## Binding interpretation
+
+The prior negative league-only `SCHEDULE_V1` experiment does not close this family.
+The full-calendar source contains genuinely new information that the old experiment did
+not have.
+
+Do not yet claim direction value.
+
+No centre_delta, market row or V2B direction outcome was read.
+
+## Current execution pointer
+
+Next bounded block:
+
+> freeze one simple full-calendar recovery/load Stage-B mapping before any direction join.
+
+Requirements:
+
+- use only frozen full-calendar load fields;
+- no fitted weights;
+- no post-outcome choice between 7d/14d windows;
+- no league-specific threshold;
+- no FAIR_CENTRE combination;
+- keep travel separate until venue/distance provenance is audited.
+
+Still binding:
+
+- FAIR_CENTRE repricing magnitude/risk remains replicated;
+- reliable individual direction remains unconfirmed;
+- CORNERS10 / SHOTS10 / result-Elo / absolute npxG / absolute deep Stage-B mappings are closed;
+- existing V2B cross-book path is closed;
+- NO_BET;
+- no automatic production promotion.
