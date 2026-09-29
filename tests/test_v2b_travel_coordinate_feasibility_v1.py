@@ -32,6 +32,8 @@ def _time_snak(value):
 
 def test_wikipedia_titles_are_identity_only():
     assert mod._wikipedia_title("Man City") == "Manchester City"
+    assert mod._wikipedia_title("Chelsea") == "Chelsea F.C."
+    assert mod._wikipedia_title("Liverpool") == "Liverpool F.C."
     assert mod._wikipedia_title("Ath Bilbao") == "Athletic Bilbao"
     assert mod._wikipedia_title("Milan") == "AC Milan"
     assert mod._wikipedia_title("Vallecano") == "Rayo Vallecano"
@@ -126,3 +128,32 @@ def test_candidate_must_be_footballish():
     )
     assert chosen is not None
     assert chosen["qid"] == "QCLUB"
+
+
+def test_source_backed_home_venue_override_wins_ambiguity():
+    club = {
+        "qid": "QCLUB",
+        "search_label": "SC Freiburg",
+        "entity": {"claims": {"P115": [
+            _item_claim("QOLD"),
+            _item_claim("QNEW"),
+        ]}},
+    }
+    venues = {
+        "QOLD": {
+            "labels": {"en": {"value": "Old Ground"}},
+            "claims": {"P625": [_coord_claim(1, 2)]},
+        },
+        "QNEW": {
+            "labels": {"en": {"value": "Europa-Park-Stadion"}},
+            "claims": {"P625": [_coord_claim(3, 4)]},
+        },
+    }
+    out = mod._resolve_coordinate(
+        club=club,
+        venue_entities=venues,
+        forced_venue_qid="QNEW",
+    )
+    assert out["coordinate_status"] == "STADIUM_COORDINATE"
+    assert out["venue_qid"] == "QNEW"
+    assert out["venue_selection"] == "EXPLICIT_SOURCE_BACKED_OVERRIDE"
