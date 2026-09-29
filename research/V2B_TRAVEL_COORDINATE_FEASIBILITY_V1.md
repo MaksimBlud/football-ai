@@ -23,11 +23,11 @@ Use:
 
 ## Primary coordinate source
 
-Wikidata API.
+English Wikipedia pageprops + Wikidata entity API.
 
-Primary stadium-level contract:
+Identity and coordinate contract:
 
-`football club -> home venue (P115) -> coordinate location (P625)`
+`canonical club title -> English Wikipedia pageprops.wikibase_item -> Wikidata club -> home venue (P115) -> coordinate location (P625)`
 
 The target date for filtering dated home-venue claims is:
 
@@ -69,8 +69,7 @@ The route artifact contains provider aliases such as:
 - Vallecano;
 - Leverkusen.
 
-A frozen alias table maps only these identities to clearer club search labels. It does
-not change the route or choose values based on market outcomes.
+A frozen alias table maps only these identities to clearer English Wikipedia club titles. Redirects are resolved in batched Wikipedia API calls before Wikidata QIDs are fetched. It does not change the route or choose values based on market outcomes.
 
 ## Mandatory report
 
