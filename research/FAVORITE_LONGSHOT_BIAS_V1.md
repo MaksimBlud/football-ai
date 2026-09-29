@@ -172,3 +172,107 @@ Any future Football AI use must be a separate frozen experiment testing whether 
 - no production .pkl changes;
 - no production promotion;
 - JSON research artifact only.
+
+## First frozen execution
+
+Authoritative first successful run:
+
+- workflow run: 36587443157
+- head: c0afe33eb87c5213b60540a097b91232846ad6de
+- artifact: 11042317813
+- artifact digest: sha256:842ae1eeef126730b587e7a1df798c74d280e6ee10613b6913f3ec9c7715c8a8
+
+Environment:
+
+- pandas 3.0.6
+- numpy 2.5.3
+- requests 2.32.5
+
+All five leagues passed the primary Bet365 standard-price coverage gate.
+
+Primary sample:
+
+- 12,454 fixtures;
+- 37,362 offered 1X2 sides.
+
+### Frozen primary result
+
+Discovery 2019/20–2023/24:
+
+- FAVORITE ROI: -2.6493%;
+- LONGSHOT ROI: -8.9648%;
+- LONGSHOT minus FAVORITE: **-6.3155 pp**.
+
+Validation 2024/25:
+
+- FAVORITE ROI: -3.3290%;
+- LONGSHOT ROI: -18.4687%;
+- LONGSHOT minus FAVORITE: **-15.1397 pp**.
+
+Final temporal test 2025/26:
+
+- FAVORITE ROI: -5.1813%;
+- LONGSHOT ROI: -15.0701%;
+- LONGSHOT minus FAVORITE: **-9.8888 pp**.
+
+Overall:
+
+- FAVORITE: 6,197 offers, 3,986 wins, mean no-vig p 62.85%, ROI **-3.0910%**;
+- LONGSHOT: 6,771 offers, 917 wins, mean no-vig p 14.53%, ROI **-11.1712%**;
+- pooled LONGSHOT-minus-FAVORITE ROI delta: **-8.0802 pp**.
+
+Match-level stratified bootstrap:
+
+- 95% CI: **[-14.6717 pp, -1.4531 pp]**;
+- probability delta < 0: 99.11%.
+
+Cross-league direction:
+
+- EPL: +2.6272 pp;
+- La Liga: -15.7747 pp;
+- Serie A: -15.0291 pp;
+- Bundesliga: -4.2517 pp;
+- Ligue 1: -9.2057 pp.
+
+The required negative direction appears in **4/5 leagues**, so the preregistered cross-league gate passes even though EPL is an exception.
+
+Frozen interpretation:
+
+`FAVORITE_LONGSHOT_BIAS_SUPPORTED`
+
+### Calibration pattern
+
+The economic return pattern is consistent with a probability-dependent calibration pattern:
+
+- overall FAVORITE observed win rate is about +1.47 pp above the no-vig probability;
+- overall LONGSHOT observed win rate is about -0.99 pp below the no-vig probability.
+
+Probability-band diagnostics are not monotonic at the extreme tail: P_LT10 had a small positive realized ROI (+0.23%) on only 1,083 offers. This was not a selected threshold and does not overturn the frozen FAVORITE-vs-LONGSHOT result. It must not be turned into a post-hoc betting rule.
+
+### Closing-price diagnostic
+
+At Bet365 closing prices the same direction is stronger overall:
+
+- FAVORITE ROI: -2.6283%;
+- LONGSHOT ROI: -12.5423%;
+- delta: **-9.9139 pp**.
+
+The closing diagnostic is negative in all five leagues. It is descriptive only and is not treated as information available earlier than close.
+
+### Best-price / line-shopping diagnostic
+
+Using Football-Data Max odds for settlement prices while keeping cohort membership frozen from Bet365 standard probabilities:
+
+- FAVORITE ROI: +0.7518%;
+- LONGSHOT ROI: -2.8315%;
+- delta: **-3.5833 pp**.
+
+This shows that price shopping materially reduces the bookmaker drag, but does not remove the pooled FAVORITE-vs-LONGSHOT return gap. Max columns are not a coherent single-book source and this diagnostic is not a production strategy.
+
+## Decision for Football AI
+
+Do **not** interpret the result as 'bet favorites'. Favorites were still negative at the primary Bet365 standard prices.
+
+The actionable research implication is narrower: a model edge should not automatically face the same acceptance hurdle at every market probability. A +3 pp model-minus-market edge at p=0.65 and a +3 pp edge at p=0.15 may have different economic reliability because the low-probability region historically carries a much larger realized pricing drag.
+
+The next safe experiment should compare a frozen **single global edge threshold** with a **probability-band-aware edge threshold** using already-existing OOS model-vs-market predictions. That experiment must be selected on earlier seasons and evaluated on later untouched seasons; V1 itself does not authorize any production threshold change.
