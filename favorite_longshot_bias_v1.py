@@ -358,7 +358,12 @@ def league_report(side_rows: pd.DataFrame, eligible_leagues: list[str]) -> dict:
 
 
 def bootstrap_bias_delta(fixtures: pd.DataFrame) -> dict:
-    """Stratified match bootstrap, preserving all side records within a fixture."""
+    """Stratified match bootstrap, preserving all side records within a fixture.
+
+    Sampling is vectorized by league-season stratum. The statistical contract is
+    unchanged: each bootstrap draw resamples complete fixtures with replacement
+    inside every stratum and aggregates their FAVORITE/LONGSHOT contributions.
+    """
     required = {
         "league",
         "season",
@@ -370,32 +375,52 @@ def bootstrap_bias_delta(fixtures: pd.DataFrame) -> dict:
     if missing := required - set(fixtures.columns):
         raise ValueError("missing fixture columns: " + ", ".join(sorted(missing)))
 
-    strata: dict[tuple[str, str], pd.DataFrame] = {}
-    for (league, season), group in fixtures.groupby(
+    contribution_columns = [
+        "favorite_return_sum",
+        "favorite_count",
+        "longshot_return_sum",
+        "longshot_count",
+    ]
+    strata: list[np.ndarray] = []
+    for _, group in fixtures.groupby(
         ["league", "season"],
         sort=True,
     ):
-        strata[(str(league), str(season))] = group.reset_index(drop=True)
+        values = group[contribution_columns].to_numpy(dtype=float)
+        if len(values) == 0:
+            raise RuntimeError("empty bootstrap stratum")
+        strata.append(values)
 
-    def statistic(groups: list[pd.DataFrame]) -> float:
-        fav_return = sum(float(g["favorite_return_sum"].sum()) for g in groups)
-        fav_count = sum(int(g["favorite_count"].sum()) for g in groups)
-        long_return = sum(float(g["longshot_return_sum"].sum()) for g in groups)
-        long_count = sum(int(g["longshot_count"].sum()) for g in groups)
-        if fav_count <= 0 or long_count <= 0:
-            raise RuntimeError("bootstrap cohort count is zero")
-        return (long_return / long_count) - (fav_return / fav_count)
+    observed_totals = np.sum(
+        np.vstack(strata),
+        axis=0,
+    )
+    if observed_totals[1] <= 0 or observed_totals[3] <= 0:
+        raise RuntimeError("bootstrap cohort count is zero")
+    observed = (
+        observed_totals[2] / observed_totals[3]
+        - observed_totals[0] / observed_totals[1]
+    )
 
-    observed = statistic(list(strata.values()))
     rng = np.random.default_rng(BOOTSTRAP_SEED)
-    draws = np.empty(BOOTSTRAP_SAMPLES, dtype=float)
+    totals = np.zeros((BOOTSTRAP_SAMPLES, 4), dtype=float)
 
-    for draw in range(BOOTSTRAP_SAMPLES):
-        sampled_groups = []
-        for group in strata.values():
-            indices = rng.integers(0, len(group), size=len(group))
-            sampled_groups.append(group.iloc[indices])
-        draws[draw] = statistic(sampled_groups)
+    for values in strata:
+        n = len(values)
+        indices = rng.integers(
+            0,
+            n,
+            size=(BOOTSTRAP_SAMPLES, n),
+        )
+        totals += values[indices].sum(axis=1)
+
+    if (totals[:, 1] <= 0).any() or (totals[:, 3] <= 0).any():
+        raise RuntimeError("bootstrap draw produced empty cohort")
+
+    draws = (
+        totals[:, 2] / totals[:, 3]
+        - totals[:, 0] / totals[:, 1]
+    )
 
     return {
         "mean_bias_delta": float(observed),
