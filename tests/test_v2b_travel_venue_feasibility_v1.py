@@ -249,3 +249,33 @@ def test_scope_is_exact_43_fixture_source_audit():
     assert mod.EXPECTED_TEAM_SIDES == 86
     assert mod.SEASON == 2026
     assert mod.EXPERIMENT_ID == "V2B_TRAVEL_VENUE_FEASIBILITY_V1"
+
+
+def test_elversberg_city_override_is_source_plumbing_only():
+    result = mod.resolve_club_city("Elversberg", {})
+    assert result["resolved"] is True
+    assert result["city"] == "Spiesen-Elversberg"
+    assert result["country_code"] == "DE"
+    assert result["identity_override"] is True
+
+
+def test_fc_cologne_alias_targets_openfootball_german_alias():
+    records = [
+        {
+            "canonical": "1. FC Köln",
+            "aliases": ["Köln", "FC Köln"],
+            "city": "Köln",
+            "country_code": "DE",
+            "source_path": "de.clubs.txt",
+        }
+    ]
+    result = mod.resolve_club_city(
+        "FC Cologne",
+        mod.build_club_index(records),
+    )
+    assert result["resolved"] is True
+    assert result["canonical"] == "1. FC Köln"
+
+
+def test_villarreal_city_alias_uses_vila_real():
+    assert mod.CITY_NAME_ALIASES[("ES", "villarreal")] == "Vila-real"
