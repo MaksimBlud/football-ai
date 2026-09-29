@@ -99,7 +99,10 @@ jobs:
           print('status=',r['status'])
           print('previous_host_identity_reconstructed=',r['previous_host_identity_reconstructed'])
           print('travel_distance_resolved_team_sides=',r['travel_distance_resolved_team_sides'])
-          print('unresolved_venue_clubs=',r['unresolved_venue_clubs'])
+          print('unresolved_clubs=',r['unresolved_clubs'])
+          print('unresolved_cities=',r['unresolved_cities'])
+          print('openfootball_archive_sha256=',r['openfootball_archive_sha256'])
+          print('geonames_archive_sha256=',r['geonames_archive_sha256'])
           PY
       - name: Verify production hashes unchanged
         if: always()
