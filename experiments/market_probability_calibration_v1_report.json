@@ -1,0 +1,112 @@
+{
+  "experiment_id": "MARKET_PROBABILITY_CALIBRATION_V1",
+  "frozen_result_schema": 1,
+  "first_run": {
+    "workflow_run_id": 36578009799,
+    "artifact_id": 11037889167,
+    "artifact_digest": "sha256:0c14a97bf297554634576d62197e809162a0e1a7369c9f54fc10b4a189fef785",
+    "head_sha": "b2834c0f6cd452dfa18cb643ed8574a450d5e6b7"
+  },
+  "source_rows": 2660,
+  "package_versions": {
+    "pandas": "3.0.6",
+    "numpy": "2.5.3",
+    "scipy": "1.16.2"
+  },
+  "result": {
+    "pooled_oos_matches": 1520,
+    "outer_test_seasons": [
+      "2022/2023",
+      "2023/2024",
+      "2024/2025",
+      "2025/2026"
+    ],
+    "pooled_metrics": {
+      "RAW_MULTIPLICATIVE": {
+        "logloss": 0.9652139796338528,
+        "brier": 0.5739288492526113,
+        "accuracy": 0.5467105263157894
+      },
+      "TEMPERATURE": {
+        "logloss": 0.9655032970155785,
+        "brier": 0.5741885322441854,
+        "accuracy": 0.5467105263157894
+      },
+      "CLASS_BIAS": {
+        "logloss": 0.967106632414666,
+        "brier": 0.5750706606557459,
+        "accuracy": 0.5427631578947368
+      },
+      "TEMPERATURE_BIAS": {
+        "logloss": 0.9674557101671823,
+        "brier": 0.5752946627354056,
+        "accuracy": 0.5434210526315789
+      }
+    },
+    "candidate_decisions": {
+      "TEMPERATURE": {
+        "pooled_delta_vs_raw": {
+          "logloss": 0.00028931738172566224,
+          "brier": 0.0002596829915740839
+        },
+        "joint_season_wins": 0,
+        "paired_bootstrap": {
+          "logloss": {
+            "ci95_low": -0.00021067675199164346,
+            "ci95_high": 0.0007883020992251098,
+            "bootstrap_probability_candidate_better": 0.1284
+          },
+          "brier": {
+            "ci95_low": -0.0000693749606848485,
+            "ci95_high": 0.0005856303569628005,
+            "bootstrap_probability_candidate_better": 0.0616
+          }
+        },
+        "supported": false
+      },
+      "CLASS_BIAS": {
+        "pooled_delta_vs_raw": {
+          "logloss": 0.0018926527808131866,
+          "brier": 0.0011418114031345183
+        },
+        "joint_season_wins": 1,
+        "paired_bootstrap": {
+          "logloss": {
+            "ci95_low": 0.00015106097652543683,
+            "ci95_high": 0.0035916843578614275,
+            "bootstrap_probability_candidate_better": 0.0173
+          },
+          "brier": {
+            "ci95_low": 0.00006406956868456588,
+            "ci95_high": 0.002188600094731396,
+            "bootstrap_probability_candidate_better": 0.0183
+          }
+        },
+        "supported": false
+      },
+      "TEMPERATURE_BIAS": {
+        "pooled_delta_vs_raw": {
+          "logloss": 0.0022417305333295445,
+          "brier": 0.001365813482794298
+        },
+        "joint_season_wins": 0,
+        "paired_bootstrap": {
+          "logloss": {
+            "ci95_low": 0.0004659915380248415,
+            "ci95_high": 0.003988008678485235,
+            "bootstrap_probability_candidate_better": 0.0075
+          },
+          "brier": {
+            "ci95_low": 0.00034412485914803653,
+            "ci95_high": 0.00239652215196807,
+            "bootstrap_probability_candidate_better": 0.0052
+          }
+        },
+        "supported": false
+      }
+    },
+    "supported_candidates": [],
+    "active_method": "RAW_MULTIPLICATIVE",
+    "interpretation": "KEEP_RAW_MULTIPLICATIVE"
+  }
+}
