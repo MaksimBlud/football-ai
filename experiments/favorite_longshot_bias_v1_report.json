@@ -1,0 +1,143 @@
+{
+  "experiment_id": "FAVORITE_LONGSHOT_BIAS_V1",
+  "frozen_result_schema": 1,
+  "first_run": {
+    "workflow_run_id": 36587443157,
+    "artifact_id": 11042317813,
+    "artifact_digest": "sha256:842ae1eeef126730b587e7a1df798c74d280e6ee10613b6913f3ec9c7715c8a8",
+    "head_sha": "c0afe33eb87c5213b60540a097b91232846ad6de"
+  },
+  "source_rows": 12459,
+  "package_versions": {
+    "pandas": "3.0.6",
+    "numpy": "2.5.3",
+    "requests": "2.32.5"
+  },
+  "result": {
+    "eligible_leagues": [
+      "EPL",
+      "LA_LIGA",
+      "SERIE_A",
+      "BUNDESLIGA",
+      "LIGUE_1"
+    ],
+    "standard": {
+      "side_offers": 37362,
+      "fixtures": 12454,
+      "temporal": {
+        "discovery": {
+          "favorite_roi": -0.026493243243243238,
+          "longshot_roi": -0.08964847741671776,
+          "bias_delta": -0.06315523417347452
+        },
+        "validation": {
+          "favorite_roi": -0.03329004329004329,
+          "longshot_roi": -0.18468688845401174,
+          "bias_delta": -0.15139684516396845
+        },
+        "test": {
+          "favorite_roi": -0.05181272509003601,
+          "longshot_roi": -0.15070093457943926,
+          "bias_delta": -0.09888820948940324
+        },
+        "overall": {
+          "favorite": {
+            "offers": 6197,
+            "wins": 3986,
+            "mean_probability": 0.6284906987880579,
+            "observed_win_rate": 0.6432144586090044,
+            "calibration_gap": 0.014723759820946536,
+            "mean_odds": 1.5380183959980633,
+            "roi": -0.03091011779893496
+          },
+          "longshot": {
+            "offers": 6771,
+            "wins": 917,
+            "mean_probability": 0.14528654640718508,
+            "observed_win_rate": 0.13543051247969282,
+            "calibration_gap": -0.009856033927492264,
+            "mean_odds": 7.29720868409393,
+            "roi": -0.11171171171171171
+          },
+          "bias_delta": -0.08080159391277675
+        }
+      },
+      "by_league": {
+        "EPL": 0.026272149938042135,
+        "LA_LIGA": -0.1577473396528906,
+        "SERIE_A": -0.15029081339712919,
+        "BUNDESLIGA": -0.0425170818734424,
+        "LIGUE_1": -0.0920565077066342
+      },
+      "negative_bias_leagues": 4,
+      "bootstrap": {
+        "mean_bias_delta": -0.08080159391277675,
+        "ci95_low": -0.146717187260002,
+        "ci95_high": -0.014531473429306704,
+        "bootstrap_probability_negative": 0.9911,
+        "samples": 10000,
+        "seed": 20260929
+      },
+      "bands": {
+        "P60_PLUS": {
+          "offers": 3353,
+          "roi": -0.02575305696391291,
+          "calibration_gap": 0.019603406310094496
+        },
+        "P50_60": {
+          "offers": 2844,
+          "roi": -0.03699015471167368,
+          "calibration_gap": 0.008970787008670267
+        },
+        "P40_50": {
+          "offers": 4088,
+          "roi": -0.038285225048923684,
+          "calibration_gap": 0.006292780969309186
+        },
+        "P30_40": {
+          "offers": 5960,
+          "roi": -0.0706275167785235,
+          "calibration_gap": -0.0063754971952469375
+        },
+        "P20_30": {
+          "offers": 14346,
+          "roi": -0.05804823644221386,
+          "calibration_gap": -0.0008528411547621961
+        },
+        "P10_20": {
+          "offers": 5688,
+          "roi": -0.1334212376933896,
+          "calibration_gap": -0.012126242314075913
+        },
+        "P_LT10": {
+          "offers": 1083,
+          "roi": 0.0023084025854108957,
+          "calibration_gap": 0.002067276601489948
+        }
+      }
+    },
+    "closing_diagnostic": {
+      "overall": {
+        "favorite_roi": -0.026283383975691663,
+        "longshot_roi": -0.12542287844036698,
+        "bias_delta": -0.09913949446467532
+      },
+      "by_league": {
+        "EPL": -0.028130652383879184,
+        "LA_LIGA": -0.1519566656413843,
+        "SERIE_A": -0.1753445913567622,
+        "BUNDESLIGA": -0.042425323278302424,
+        "LIGUE_1": -0.09365346584395595
+      }
+    },
+    "max_line_shopping_diagnostic": {
+      "overall": {
+        "favorite_roi": 0.007518153945457478,
+        "longshot_roi": -0.028314872249298483,
+        "bias_delta": -0.03583302619475596
+      }
+    },
+    "supported": true,
+    "interpretation": "FAVORITE_LONGSHOT_BIAS_SUPPORTED"
+  }
+}
