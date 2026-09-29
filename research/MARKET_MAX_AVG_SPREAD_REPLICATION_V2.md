@@ -127,3 +127,106 @@ Only the confidence-adjusted result would justify a later prospective/integratio
 - no `.pkl` changes;
 - no production promotion;
 - JSON artifact only.
+
+## First successful execution
+
+The initial workflow attempt failed before replication scoring because the EPL-specific
+multiplicative helper required a strictly positive overround. Some non-EPL Football-Data
+average triplets have sum(1/odds) <= 1. The frozen probability transform itself is still
+q/sum(q), so the runner was corrected to apply that transform without the EPL-specific
+positive-overround gate. No replication result had been produced before this correction.
+
+First successful run:
+
+- workflow run: 36585543053
+- head: dd5ba26b860b86ff393f24eba3261efa856ad620
+- artifact: 11041980670
+- artifact digest: sha256:a098303910b0ed5a0dca06e3f1db042575f9aa2754b322a74e9600776968df7f
+
+All four replication leagues passed the frozen source gate:
+
+- La Liga: 2,660 valid rows;
+- Serie A: 2,659 valid rows;
+- Bundesliga: 2,142 valid rows;
+- Ligue 1: 2,337 valid rows.
+
+Prepared replication sample: **9,798 matches**.
+
+All 28 league-season cells contained both transferred EPL HIGH and LOW groups with at
+least five rows. The HIGH-vs-LOW comparison used **4,794 matches**.
+
+### Raw Brier replication
+
+The raw inverse spread effect reproduced very strongly:
+
+- pooled HIGH-minus-LOW Brier: **-0.1590802**;
+- 95% bootstrap CI: **[-0.1770875, -0.1405501]**;
+- negative effect in **4/4 leagues**;
+- negative effect in **28/28 league-season cells**;
+- bootstrap probability negative: **1.0000**.
+
+By league:
+
+- Bundesliga: -0.1871532;
+- La Liga: -0.1805605;
+- Ligue 1: -0.1264940;
+- Serie A: -0.1494525.
+
+Therefore:
+
+RAW_INVERSE_SPREAD_REPLICATION = true.
+
+### Confidence/sharpness control
+
+The HIGH spread group also had much stronger favorites.
+
+Pooled HIGH-minus-LOW favorite probability:
+
+**+0.2079960**, or about **+20.8 percentage points**.
+
+By league the difference was:
+
+- Bundesliga: +23.62 pp;
+- La Liga: +20.85 pp;
+- Ligue 1: +18.88 pp;
+- Serie A: +20.53 pp.
+
+After centering each realized Brier loss by the market's own expected Brier
+`1 - sum(p_i^2)`, the apparent spread effect shrank dramatically:
+
+- pooled HIGH-minus-LOW excess Brier: **-0.0136906**;
+- 95% bootstrap CI: **[-0.0310142, +0.0046143]**;
+- negative in 3/4 leagues;
+- negative in 23/28 cells;
+- bootstrap probability negative: 0.9338.
+
+The confidence-adjusted preregistered gate therefore **did not pass**.
+
+By league excess-Brier deltas:
+
+- Bundesliga: -0.0071216;
+- La Liga: -0.0373977;
+- Ligue 1: +0.0020940;
+- Serie A: -0.0115287.
+
+Frozen interpretation:
+
+RAW_ONLY_SPREAD_REPLICATION
+
+## Decision
+
+The EPL post-hoc raw effect is real and externally reproducible, but the evidence does not
+support Max-vs-Avg spread as an independent uncertainty signal after controlling for the
+sharpness/confidence of the market probability vector.
+
+Operationally, HIGH Max-vs-Avg spread is largely a proxy for **strong-favorite market
+structure**. Football AI already has the market probability itself, so adding spread as a
+standalone confidence signal would mostly duplicate information already present in the
+market prior.
+
+Do not promote Max-vs-Avg spread from V2.
+
+The next literature-driven research block should therefore move away from deterministic
+transformations of the same 1X2 price vector and toward information that can add genuinely
+orthogonal state: time-aligned market movement, cross-market structure, or football-state
+information not already encoded by the market prior.
