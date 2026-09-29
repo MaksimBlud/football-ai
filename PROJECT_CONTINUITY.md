@@ -5164,3 +5164,126 @@ Still binding:
 - reliable individual direction remains unconfirmed;
 - NO_BET;
 - no automatic production promotion.
+
+
+---
+
+# Continuity update — 2026-09-29 — full-calendar rest Stage-B evaluated and closed
+
+The exact frozen `JOINT_FULL_REST_COHORT_MEDIAN_SIGN_V1` mapping has now been evaluated
+against the already-opened V2B market-direction artifact.
+
+Experiment:
+
+`V2B_FULL_CALENDAR_REST_STAGE_B_EVALUATOR_V1`
+
+Workflow run:
+
+`36589336181`
+
+Artifact:
+
+- ID `11042867553`;
+- digest `sha256:f45c216801e991d1629ecba347cc522360aa55059b142dbe6b70cf11b570810b`.
+
+## Result
+
+All rows:
+
+**43**
+
+Frozen calls:
+
+- UP 17;
+- DOWN 19;
+- NO_CALL 7.
+
+Observed movement:
+
+- UP 9;
+- DOWN 4;
+- ZERO 30.
+
+Direction-comparable rows after excluding frozen NO_CALL and observed ZERO:
+
+**12**
+
+Frozen rest mapping:
+
+**7 / 12 = 0.5833**
+
+Constant always-UP baseline on the same comparable subset:
+
+**8 / 12 = 0.6667**
+
+Stage-B excess:
+
+**-0.0833**
+
+Direction discrimination:
+
+- UP recall = 0.625;
+- DOWN recall = 0.500;
+- balanced accuracy = **0.5625**.
+
+Frozen call-group means:
+
+- UP mean centre_delta = **+0.100342**;
+- DOWN mean centre_delta = **+0.026434**.
+
+The DOWN group mean has the wrong sign.
+
+Continuous association:
+
+- Pearson = +0.102621;
+- Spearman = +0.078583.
+
+Supporting leagues with >=2 comparable and concordance >0.50:
+
+**3**
+
+But pooled concordance and sign-alignment conditions fail.
+
+Final classification:
+
+**`WEAK_OR_INCONSISTENT_DIRECTION_HYPOTHESIS`**
+
+## Binding conclusion
+
+Close `JOINT_FULL_REST_COHORT_MEDIAN_SIGN_V1` on opened V2B.
+
+Do not:
+
+- move the 11-day threshold;
+- introduce league-specific medians;
+- reverse sign;
+- switch to home-away rest differential;
+- select 7d/14d counts;
+- reassign NO_CALL;
+- weight competitions;
+- exclude unfavorable leagues;
+- combine with FAIR_CENTRE post hoc.
+
+The full-calendar source remains a valid and materially improved schedule reconstruction,
+but this exact directional mechanism is not supported.
+
+## Current execution pointer
+
+Reliable individual direction remains unresolved.
+
+Next bounded research block should use a genuinely different source family, not another
+rest/congestion transformation on the opened V2B outcomes.
+
+Priority candidates:
+
+1. travel/venue burden with independently audited geography/distance provenance;
+2. point-in-time squad availability / confirmed lineup state if a first-seen historical
+   source becomes available.
+
+Still binding:
+
+- FAIR_CENTRE repricing magnitude/risk remains replicated;
+- full-calendar schedule source is feasible;
+- exact joint-rest direction mapping is closed;
+- NO_BET;
+- no automatic production promotion.
