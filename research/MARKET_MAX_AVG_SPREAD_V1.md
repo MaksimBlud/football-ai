@@ -101,3 +101,60 @@ Any positive result remains research-only and requires a separate prospective/in
 - no .pkl changes;
 - no production promotion;
 - JSON research artifact only.
+
+
+## First frozen execution
+
+First complete run:
+
+- workflow run: 36580542534
+- head: 028ef8fb2034d6c1dd6d9c20a558e9816c280483
+- artifact: 11039093220
+- artifact digest: sha256:d618c7a6ca643b780c8b2f20912145e3593abd6319c0bf188882363bd40c893e
+
+All 2,660 rows passed the frozen source/coverage gate.
+
+Discovery-only spread thresholds:
+
+- LOW q25 = 0.0417778
+- HIGH q75 = 0.0626432
+
+### Preregistered repricing hypothesis
+
+The predicted HIGH > LOW repricing effect did not reproduce.
+
+- positive discovery seasons: 2/5
+- positive seasons overall: 2/7
+- pooled HIGH-minus-LOW closing TV: -0.0016935
+- 95% bootstrap CI: [-0.0034702, +0.0000805]
+
+Result: no MAX_AVG_REPRICING_SIGNAL.
+
+### Preregistered error hypothesis
+
+The predicted HIGH > LOW market-error effect failed in the opposite direction.
+
+- positive discovery seasons: 0/5
+- positive seasons overall: 0/7
+- pooled HIGH-minus-LOW AVG_STANDARD Brier: -0.2144139
+- 95% bootstrap CI: [-0.2559912, -0.1723928]
+
+Result: no MAX_AVG_ERROR_SIGNAL under the frozen direction.
+
+Frozen V1 interpretation:
+
+NO_MAX_AVG_SPREAD_SIGNAL
+
+## Post-hoc observation — hypothesis generator only
+
+HIGH spread had **lower**, not higher, AVG_STANDARD Brier in every one of the seven EPL
+seasons. The pooled difference is large and the bootstrap interval is entirely negative.
+
+This inverse direction was not preregistered and therefore is **not** accepted as V1
+evidence.
+
+A likely confound is market confidence: Max-vs-Avg relative gaps may mechanically become
+larger in strong-favorite matches, which are already easier for the market to predict.
+
+The correct next step is a separate frozen replication on other leagues with explicit
+control for baseline favorite probability. V1 is not reinterpreted after seeing outcomes.
