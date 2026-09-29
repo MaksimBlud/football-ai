@@ -65,8 +65,8 @@ def _validate_feature_freeze(payload: dict[str, Any]) -> pd.DataFrame:
         raise RuntimeError("unexpected full-calendar rest eligible fixture hash")
     if payload.get("frozen_feature_sha256") != EXPECTED_FEATURE_SHA256:
         raise RuntimeError("unexpected frozen full-calendar rest feature hash")
-    if int(payload.get("eligible_fixture_count", -1)) != EXPECTED_ELIGIBLE:
-        raise RuntimeError("unexpected full-calendar rest eligible row count")
+    if int(payload.get("locked_fixture_count", -1)) != EXPECTED_ELIGIBLE:
+        raise RuntimeError("unexpected full-calendar rest locked row count")
     if payload.get("stage_b_calls") != EXPECTED_CALLS:
         raise RuntimeError("frozen full-calendar rest call distribution changed")
     for flag in (
