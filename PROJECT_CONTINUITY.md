@@ -5287,3 +5287,86 @@ Still binding:
 - exact joint-rest direction mapping is closed;
 - NO_BET;
 - no automatic production promotion.
+
+
+---
+
+# Continuity update — 2026-09-29 — travel venue identity fully feasible
+
+The first travel-specific source layer is now complete without using coordinates or
+market outcomes.
+
+Experiment:
+
+`V2B_TRAVEL_VENUE_IDENTITY_FEASIBILITY_V1`
+
+Workflow run:
+
+`36591494472`
+
+Artifact:
+
+- ID `11044111558`;
+- digest `sha256:8c895a500169760c1fe36fe5eeb40861d06d2aa23a4b26e15d3f580f3243837b`.
+
+## Result
+
+Immediately previous competitive fixture:
+
+**86 / 86 team-sides resolved**
+
+Both sides resolved:
+
+**43 / 43 V2B fixtures**
+
+Final status:
+
+**`FULL_86_VENUE_IDENTITY_FEASIBLE`**
+
+Previous fixture was away:
+
+**39 / 86 sides**
+
+Immediately previous fixture was non-league:
+
+**25 / 86 sides**
+
+Previous venue identity differs from target venue identity:
+
+**72 / 86 sides**
+
+The only first-pass identity gap was Rayo Vallecano because Football-Data uses
+`Vallecano`. Adding that alias alone closed coverage from 85/86 to 86/86.
+
+## Interpretation
+
+For every frozen V2B team-side we now have a deterministic route identity:
+
+`previous fixture venue -> target fixture venue`
+
+This does not yet represent kilometers.
+
+Do not infer distance from club-label inequality.
+
+## Current execution pointer
+
+Next bounded block:
+
+> audit public stadium/club coordinate coverage for the exact unique venue identities
+> present in the frozen route artifact.
+
+Requirements:
+
+- freeze coordinate source provenance;
+- distinguish stadium coordinates from city-level fallback;
+- report ambiguous/unresolved labels;
+- no market rows or direction outcomes;
+- no travel-direction formula until coordinate coverage is fixed.
+
+Still binding:
+
+- full-calendar aggregate-rest Stage B is closed as weak/inconsistent;
+- FAIR_CENTRE repricing magnitude/risk remains replicated;
+- reliable individual direction remains unconfirmed;
+- NO_BET;
+- no automatic production promotion.
