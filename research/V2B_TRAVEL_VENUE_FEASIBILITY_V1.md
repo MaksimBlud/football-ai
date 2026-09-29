@@ -7,35 +7,33 @@ Status: **SOURCE / VENUE-CITY PROVENANCE FEASIBILITY ONLY — NO DIRECTION TEST*
 Audit whether a reproducible pre-match travel proxy can be reconstructed for the exact
 43-fixture V2B cohort **without reading market direction**.
 
-The upstream full-calendar load audit already reconstructed the true latest prior match
-date for both teams in every locked fixture. This block adds only previous-match host
-identity and geographic provenance.
+The upstream route-identity audit has already frozen the immediately previous competitive
+fixture and both route endpoints for every team-side. This block adds **only geographic
+coordinates and distance**.
 
 ## Immutable upstream source
 
-Full-calendar feasibility artifact:
+Route-identity artifact from `V2B_TRAVEL_VENUE_IDENTITY_FEASIBILITY_V1`:
 
-- artifact ID `11041563442`;
-- digest `sha256:93a2f808b7542a5f9c6429e2808e6f462f044404f3219adef5a1b80d880cf68c`;
+- artifact ID `11044111558`;
+- digest `sha256:8c895a500169760c1fe36fe5eeb40861d06d2aa23a4b26e15d3f580f3243837b`;
 - locked fixtures = 43;
 - team-sides = 86;
-- full-calendar feasible = 43/43;
-- direction not opened.
+- previous competitive event resolved = 86/86;
+- final status = `FULL_86_VENUE_IDENTITY_FEASIBLE`;
+- coordinates and distance were not computed;
+- market direction was not opened.
 
-## Previous-match host reconstruction
+For each team-side this immutable artifact provides:
 
-For each team-side:
+- `previous_venue_label`;
+- `target_venue_label`;
+- previous HOME/AWAY role;
+- previous event date/source/competition;
+- target team and fixture identity.
 
-1. read the frozen `full_previous_match_date`;
-2. if that date is represented by a frozen non-league event, use the fixture label's
-   left-side club as the host;
-3. otherwise reconstruct the league fixture from public Understat 2026/27 league
-   schedule data for the exact previous date and team, and use the Understat home club
-   as the host.
-
-The current target host is the locked target fixture's home team.
-
-No market field is needed for either step.
+This coordinate block does not re-select or reconstruct the previous match. It consumes
+those frozen endpoints exactly.
 
 ## Geographic source contract
 
