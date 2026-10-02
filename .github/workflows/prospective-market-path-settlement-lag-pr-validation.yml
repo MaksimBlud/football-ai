@@ -5,7 +5,10 @@ on:
     paths:
       - "prospective_market_path_settlement_lag.py"
       - "prospective_market_path_settlement_lag_cycle.py"
+      - "prospective_market_path_revisions.py"
+      - "team_names.py"
       - "tests/test_prospective_market_path_settlement_lag.py"
+      - "tests/test_prospective_market_path_revisions.py"
       - ".github/workflows/prospective-market-path-settlement-lag*.yml"
 
 permissions:
@@ -26,9 +29,9 @@ jobs:
       - name: Snapshot production hashes
         run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
       - name: Compile settlement-lag modules
-        run: python -m py_compile prospective_market_path_settlement_lag.py prospective_market_path_settlement_lag_cycle.py
-      - name: Run focused settlement-lag tests
-        run: pytest -q tests/test_prospective_market_path_settlement_lag.py
+        run: python -m py_compile prospective_market_path_settlement_lag.py prospective_market_path_settlement_lag_cycle.py prospective_market_path_revisions.py team_names.py
+      - name: Run focused settlement/revision tests
+        run: pytest -q tests/test_prospective_market_path_settlement_lag.py tests/test_prospective_market_path_revisions.py
       - name: Verify result values are not queried
         run: |
           python - <<'PY'
