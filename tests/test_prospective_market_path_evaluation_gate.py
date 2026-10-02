@@ -55,3 +55,12 @@ def test_cycle_source_separates_readiness_and_outcome_loading():
     assert "def _run_sample_growth" in source
     assert "--evaluate" in source
     assert "from database import supabase" in source
+
+
+def test_explicit_evaluation_filters_provider_revisions_before_loading_outcomes():
+    source = Path("prospective_market_path_cycle.py").read_text()
+    revision_filter = "filter_research_paths_for_provider_revisions("
+    outcome_load = "results = load_results_for_explicit_evaluation()"
+    assert revision_filter in source
+    assert outcome_load in source
+    assert source.index(revision_filter) < source.index(outcome_load)
