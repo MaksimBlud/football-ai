@@ -75,3 +75,32 @@ def test_summary_preserves_all_three_research_leagues():
     summary = summarize_settlement_lag(audit)
     assert summary["league"].tolist() == ["EPL", "LA_LIGA", "SERIE_A"]
     assert summary.loc[summary["league"] == "EPL", "settlement_late"].iloc[0] == 1
+
+
+def test_league_identity_normalizes_atalanta_provider_alias():
+    paths = pd.DataFrame([
+        {
+            "league": "SERIE_A",
+            "event_id": "atalanta-event",
+            "home_team": "Atalanta BC",
+            "away_team": "Cagliari",
+            "kickoff_utc": "2026-09-12T18:45:00Z",
+        }
+    ])
+    results = pd.DataFrame([
+        {
+            "league": "SERIE_A",
+            "match_date": "2026-09-12",
+            "home_team": "Atalanta",
+            "away_team": "Cagliari",
+        }
+    ])
+
+    audit = audit_settlement_lag(
+        paths,
+        results,
+        now_utc=pd.Timestamp("2026-09-14T00:00:00Z"),
+    )
+
+    assert len(audit) == 1
+    assert audit.iloc[0].status == STATUS_PRESENT

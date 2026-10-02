@@ -8,6 +8,7 @@ import pandas as pd
 from database import supabase
 from prospective_market_path import LEAGUES, build_market_paths
 from prospective_market_path_settlement_lag import audit_settlement_lag, summarize_settlement_lag
+from prospective_market_path_revisions import filter_research_paths_for_provider_revisions
 
 PAGE_SIZE = 1000
 OUTPUT_DIR = Path("artifacts/prospective_market_path_v1")
@@ -46,22 +47,50 @@ def run() -> dict:
     results_identity = pd.concat([f for f in result_frames if not f.empty], ignore_index=True) if any(not f.empty for f in result_frames) else pd.DataFrame(columns=result_identity_columns.split(","))
 
     paths = build_market_paths(snapshots)
+    revision_audit = pd.DataFrame(
+        columns=["league", "event_id", "status", "reason", "research_path_eligible"]
+    )
     if paths.empty:
         audit = pd.DataFrame(columns=["league", "event_id", "home_team", "away_team", "kickoff_utc", "grace_deadline_utc", "status", "reason"])
     else:
+        paths, revision_audit = filter_research_paths_for_provider_revisions(
+            paths,
+            snapshots,
+        )
         audit = audit_settlement_lag(paths, results_identity)
     summary = summarize_settlement_lag(audit)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     audit.to_csv(OUTPUT_DIR / "settlement_lag_monitor.csv", index=False)
+    revision_audit.to_csv(
+        OUTPUT_DIR / "settlement_revision_identity_audit.csv",
+        index=False,
+    )
     summary.to_csv(OUTPUT_DIR / "settlement_lag_summary.csv", index=False)
     print(summary.to_string(index=False))
     late = audit[audit["status"].astype(str).eq("SETTLEMENT_LATE")] if not audit.empty else audit
     if not late.empty:
         print("\nATTENTION: eligible market-path fixtures missing canonical settlement identity after grace:")
         print(late[["league", "event_id", "home_team", "away_team", "kickoff_utc", "grace_deadline_utc", "reason"]].to_string(index=False))
+    excluded = (
+        revision_audit[
+            ~revision_audit["research_path_eligible"].fillna(False).astype(bool)
+        ]
+        if not revision_audit.empty
+        else revision_audit
+    )
+    if not excluded.empty:
+        print("\nINFO: provider revisions excluded before settlement identity audit:")
+        print(
+            excluded[["league", "event_id", "status", "reason"]]
+            .to_string(index=False)
+        )
     print("READ_ONLY_SETTLEMENT_LAG_AUDIT: result values not queried; no outcome scores; no Supabase writes")
-    return {"summary": summary.to_dict(orient="records"), "paths": int(len(audit))}
+    return {
+        "summary": summary.to_dict(orient="records"),
+        "paths": int(len(audit)),
+        "revision_exclusions": int(len(excluded)),
+    }
 
 
 if __name__ == "__main__":

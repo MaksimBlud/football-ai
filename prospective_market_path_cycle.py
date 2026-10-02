@@ -18,6 +18,9 @@ from prospective_market_path import (
     readiness_for_league,
     settle_market_paths,
 )
+from prospective_market_path_revisions import (
+    filter_research_paths_for_provider_revisions,
+)
 
 PAGE_SIZE = 1000
 OUTPUT_DIR = Path("artifacts/prospective_market_path_v1")
@@ -90,6 +93,10 @@ def run_explicit_evaluation() -> dict:
     if snapshots.empty:
         raise RuntimeError("No odds_snapshots available")
     paths = build_market_paths(snapshots)
+    paths, revision_audit = filter_research_paths_for_provider_revisions(
+        paths,
+        snapshots,
+    )
     results = load_results_for_explicit_evaluation()
     settled_frames = []
     readiness_rows = []
@@ -104,6 +111,10 @@ def run_explicit_evaluation() -> dict:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     readiness.to_csv(OUTPUT_DIR / "readiness.csv", index=False)
     paths.to_csv(OUTPUT_DIR / "eligible_path_coverage.csv", index=False)
+    revision_audit.to_csv(
+        OUTPUT_DIR / "evaluation_revision_identity_audit.csv",
+        index=False,
+    )
     print(readiness.to_string(index=False))
 
     if not bool(readiness["ready"].all()):
