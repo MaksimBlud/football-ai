@@ -7,9 +7,13 @@ on:
       - 'prospective_market_path_cycle.py'
       - 'prospective_market_path_sample_growth.py'
       - 'prospective_market_path_sample_growth_cycle.py'
+      - 'prospective_market_path_revisions.py'
+      - 'team_names.py'
       - 'research/prospective_market_path_v1.json'
       - 'tests/test_prospective_market_path.py'
       - 'tests/test_prospective_market_path_evaluation_gate.py'
+      - 'tests/test_prospective_market_path_revisions.py'
+      - 'tests/test_prospective_market_path_settlement_lag.py'
       - '.github/workflows/prospective-market-path-pr-validation.yml'
       - '.github/workflows/prospective-market-path-cycle.yml'
       - 'docs/PROSPECTIVE_MARKET_PATH_V1_STATUS.md'
@@ -33,9 +37,9 @@ jobs:
       - name: Snapshot production hashes
         run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
       - name: Compile prospective market path modules
-        run: python -m py_compile prospective_market_path.py prospective_market_path_cycle.py prospective_market_path_sample_growth.py prospective_market_path_sample_growth_cycle.py
+        run: python -m py_compile prospective_market_path.py prospective_market_path_cycle.py prospective_market_path_sample_growth.py prospective_market_path_sample_growth_cycle.py prospective_market_path_revisions.py prospective_market_path_settlement_lag.py prospective_market_path_settlement_lag_cycle.py team_names.py
       - name: Run focused contract tests
-        run: pytest -q tests/test_prospective_market_path.py tests/test_prospective_market_path_evaluation_gate.py
+        run: pytest -q tests/test_prospective_market_path.py tests/test_prospective_market_path_evaluation_gate.py tests/test_prospective_market_path_revisions.py tests/test_prospective_market_path_settlement_lag.py
       - name: Verify production hashes unchanged
         run: |
           sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
