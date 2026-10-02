@@ -5,6 +5,7 @@ from prospective_market_path_revisions import (
     REFRESH_SUPERSEDED_PROVIDER_REVISION,
     STATUS_QUARANTINED_REVISION,
     STATUS_SUPERSEDED,
+    filter_research_paths_for_provider_revisions,
     mark_superseded_revisions,
 )
 
@@ -227,3 +228,75 @@ def test_reappearing_kickoff_remains_hard_conflict():
     result = mark_superseded_revisions(coverage, snapshots)
     assert result.iloc[0].status == "CONFLICT"
     assert bool(result.iloc[0].operationally_active)
+
+
+def test_research_path_filter_excludes_superseded_provider_id_and_keeps_latest():
+    snapshots = pd.DataFrame([
+        {
+            "league": "LA_LIGA",
+            "event_id": "old",
+            "home_team": "Athletic Bilbao",
+            "away_team": "Elche CF",
+            "commence_time_utc": "2026-09-13T19:00:00Z",
+            "snapshot_time_utc": "2026-09-04T16:29:24Z",
+        },
+        {
+            "league": "LA_LIGA",
+            "event_id": "new",
+            "home_team": "Athletic Bilbao",
+            "away_team": "Elche CF",
+            "commence_time_utc": "2026-09-12T16:30:00Z",
+            "snapshot_time_utc": "2026-09-11T15:45:28Z",
+        },
+    ])
+    paths = pd.DataFrame([
+        {"league": "LA_LIGA", "event_id": "old", "kickoff_utc": "2026-09-13T19:00:00Z"},
+        {"league": "LA_LIGA", "event_id": "new", "kickoff_utc": "2026-09-12T16:30:00Z"},
+    ])
+
+    filtered, audit = filter_research_paths_for_provider_revisions(
+        paths,
+        snapshots,
+    )
+
+    assert filtered["event_id"].tolist() == ["new"]
+    old = audit.loc[audit["event_id"] == "old"].iloc[0]
+    new = audit.loc[audit["event_id"] == "new"].iloc[0]
+    assert old.status == STATUS_SUPERSEDED
+    assert not bool(old.research_path_eligible)
+    assert new.status == "READY"
+    assert bool(new.research_path_eligible)
+
+
+def test_research_path_filter_quarantines_tied_current_pair_revisions():
+    snapshots = pd.DataFrame([
+        {
+            "league": "SERIE_A",
+            "event_id": "a",
+            "home_team": "Torino",
+            "away_team": "AS Roma",
+            "commence_time_utc": "2026-09-13T10:30:00Z",
+            "snapshot_time_utc": "2026-09-05T15:08:05Z",
+        },
+        {
+            "league": "SERIE_A",
+            "event_id": "b",
+            "home_team": "Torino",
+            "away_team": "AS Roma",
+            "commence_time_utc": "2026-09-14T16:30:00Z",
+            "snapshot_time_utc": "2026-09-05T15:08:05Z",
+        },
+    ])
+    paths = pd.DataFrame([
+        {"league": "SERIE_A", "event_id": "a"},
+        {"league": "SERIE_A", "event_id": "b"},
+    ])
+
+    filtered, audit = filter_research_paths_for_provider_revisions(
+        paths,
+        snapshots,
+    )
+
+    assert filtered.empty
+    assert set(audit["status"]) == {STATUS_QUARANTINED_REVISION}
+    assert not audit["research_path_eligible"].astype(bool).any()
