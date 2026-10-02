@@ -158,3 +158,74 @@ def mark_superseded_revisions(coverage: pd.DataFrame, snapshots: pd.DataFrame) -
     if "refresh_reason" in result.columns:
         result.loc[quarantine_mask, "refresh_reason"] = "RESEARCH_QUARANTINED_PROVIDER_REVISION"
     return result
+
+
+def filter_research_paths_for_provider_revisions(
+    paths: pd.DataFrame,
+    snapshots: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Exclude provider event revisions already ineligible for frozen research.
+
+    build_market_paths deliberately operates at provider-event level and can still
+    emit an old event id when that id independently satisfies the frozen snapshot
+    count/span requirements. Operational coverage already classifies older ids for
+    the same normalized fixture pair as SUPERSEDED and tied-current ids as
+    QUARANTINED_REVISION.
+
+    Settlement/readiness/evaluation must consume the same identity policy; otherwise
+    stale provider ids can appear as false settlement-lag failures even when a newer
+    event id for the exact fixture pair is present.
+
+    This helper uses snapshot identity/timing only. It never reads result identities,
+    result values, closing prices, or any post-match outcome field.
+    """
+    required_paths = {"league", "event_id"}
+    missing_paths = required_paths - set(paths.columns)
+    if missing_paths:
+        raise ValueError(
+            "paths missing revision identity columns: "
+            + ", ".join(sorted(missing_paths))
+        )
+
+    if paths.empty:
+        audit = pd.DataFrame(
+            columns=[
+                "league",
+                "event_id",
+                "status",
+                "reason",
+                "research_path_eligible",
+            ]
+        )
+        return paths.copy(), audit
+
+    coverage = (
+        paths[["league", "event_id"]]
+        .astype(str)
+        .drop_duplicates()
+        .reset_index(drop=True)
+    )
+    coverage["status"] = "READY"
+    coverage["reason"] = "FROZEN_PATH_REQUIREMENTS_ALREADY_MET"
+
+    classified = mark_superseded_revisions(coverage, snapshots)
+    classified["research_path_eligible"] = ~classified["status"].astype(str).isin(
+        {STATUS_SUPERSEDED, STATUS_QUARANTINED_REVISION}
+    )
+
+    allowed = classified.loc[
+        classified["research_path_eligible"],
+        ["league", "event_id"],
+    ].drop_duplicates()
+
+    work = paths.copy()
+    work["league"] = work["league"].astype(str)
+    work["event_id"] = work["event_id"].astype(str)
+    filtered = work.merge(
+        allowed,
+        on=["league", "event_id"],
+        how="inner",
+        validate="many_to_one",
+    )
+
+    return filtered, classified
