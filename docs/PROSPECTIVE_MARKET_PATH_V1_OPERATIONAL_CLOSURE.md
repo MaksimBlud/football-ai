@@ -47,3 +47,30 @@ This block has no production activation path. It does not modify prediction ledg
 No additional Market Path V1 feature engineering, window tuning, eligibility tuning, model-family tuning, or retrospective probing is permitted while the prospective sample accumulates. Infrastructure changes are justified only to repair a concrete operational health failure without changing the frozen hypothesis.
 
 The implementation phase is therefore **CLOSED**. The scientific experiment remains **ACTIVE_ACCUMULATING** until the preregistered readiness gate is satisfied and the explicit manual evaluation is run once under the frozen protocol.
+
+
+## Post-closure operational repair — 2026-10-02
+
+The operational closure permits infrastructure fixes only for concrete health failures that leave the frozen scientific hypothesis unchanged. PR #462 is such a repair.
+
+A scheduled identity-only audit found six stale provider event revisions entering settlement/readiness even though the coverage subsystem already marked them `SUPERSEDED`, plus one `Atalanta BC` versus `Atalanta` identity mismatch. The repair unified settlement-lag, sample-growth and explicit evaluation with the already-existing provider-revision policy and added the missing team-name normalization. It did not alter any Market Path feature, cutoff, eligibility threshold, model, or outcome gate.
+
+Merge:
+
+`b2003667f6b779e2291980f64972d6010d4c9928`
+
+Post-merge live settlement-lag run `37026271275` returned:
+
+- EPL 20/20 settled, 0 late;
+- La Liga 15/15 settled, 0 late;
+- Serie A 19/19 settled, 0 late.
+
+Artifact `11234609485`, digest
+`sha256:6f350cb5fb783893d4780cce24169e85b87dcab06a57d5a574064ad582a49314`.
+
+Post-merge outcome-free sample-growth run `37026271205` returned 20 / 15 / 19 settled fixtures respectively, one calendar month in each league, zero valid test blocks, `ready=false` in all three leagues, and settlement health `OK`.
+
+Artifact `11235402989`, digest
+`sha256:ed087c3059060aa5a67297f2c571ee194e061501d736262864da3ff7fa0e21af`.
+
+No result values were queried by either monitor. The closure semantics are unchanged: the experiment continues accumulating prospectively and cannot be scored automatically.

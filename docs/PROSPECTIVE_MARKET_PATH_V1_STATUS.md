@@ -55,3 +55,49 @@ No Supabase rows are written by the Market Path research monitors, no prediction
 No further Market Path V1 feature engineering, cutoff changes, span changes, eligibility tuning, model-family tuning, or retrospective probing is permitted while the prospective sample accumulates. Future code changes are justified only by a concrete operational health failure and must preserve the frozen hypothesis.
 
 Therefore the **implementation phase is CLOSED**. The registry remains `ACTIVE_ACCUMULATING` only because the scientific experiment cannot be resolved until future data satisfy the preregistered gate. Reaching readiness will not trigger scoring automatically; evaluation remains a separate explicit manual action, and any future production promotion remains a separate explicit decision.
+
+
+## Operational identity repair — 2026-10-02
+
+A later scheduled settlement-lag audit exposed a concrete identity-plumbing defect without opening outcome values. Six stale provider event revisions were still entering the settlement/readiness path even though the coverage subsystem already classified those older event IDs as `SUPERSEDED`. A seventh row used `Atalanta BC` in provider snapshots while the canonical finished-result identity used `Atalanta`.
+
+PR #462 repaired only this operational identity path:
+
+- settlement-lag, sample-growth and explicit evaluation now reuse the existing provider-revision classifier before result identity matching;
+- `SUPERSEDED` and `QUARANTINED_REVISION` provider IDs are excluded consistently;
+- `Atalanta BC -> Atalanta` was added to the existing team-name normalization table;
+- explicit evaluation applies provider-revision filtering before outcome-value loading;
+- the frozen feature set, -6h cutoff, minimum snapshot/span requirements, model family and readiness thresholds are unchanged.
+
+Exact merge:
+
+`b2003667f6b779e2291980f64972d6010d4c9928`
+
+### Post-merge live proof
+
+Settlement-lag run `37026271275` passed with zero late identities:
+
+- EPL: 20 eligible / 20 settled / 0 late;
+- La Liga: 15 eligible / 15 settled / 0 late;
+- Serie A: 19 eligible / 19 settled / 0 late.
+
+The six stale provider IDs were reported explicitly as `SUPERSEDED / OLDER_PROVIDER_REVISION_FOR_SAME_FIXTURE_PAIR`. No result values were queried and no outcome score was computed.
+
+Artifact:
+
+- ID `11234609485`;
+- digest `sha256:6f350cb5fb783893d4780cce24169e85b87dcab06a57d5a574064ad582a49314`.
+
+The matching sample-growth run `37026271205` also passed:
+
+- EPL: 20 settled fixtures, 1 calendar month, 0 valid test blocks, `ready=false`;
+- La Liga: 15 settled fixtures, 1 calendar month, 0 valid test blocks, `ready=false`;
+- Serie A: 19 settled fixtures, 1 calendar month, 0 valid test blocks, `ready=false`;
+- settlement health = `OK` for all three leagues.
+
+Artifact:
+
+- ID `11235402989`;
+- digest `sha256:ed087c3059060aa5a67297f2c571ee194e061501d736262864da3ff7fa0e21af`.
+
+The scientific experiment therefore remains **ACTIVE_ACCUMULATING** and outcome scoring remains forbidden until the original all-three-league readiness gate is satisfied.
