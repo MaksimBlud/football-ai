@@ -5501,3 +5501,98 @@ Still binding:
 - exact stadium coordinate layer is infrastructure only on opened V2B;
 - NO_BET;
 - no automatic production promotion.
+
+
+---
+
+# Continuity update — 2026-10-02 — V2B raw source cannot support time-aligned corner paths
+
+A dedicated structural audit of the already-paid V2B raw corner artifact is complete.
+
+Experiment:
+
+`V2B_CORNER_MARKET_PATH_SOURCE_AUDIT_V1`
+
+Workflow run:
+
+`37025543210`
+
+Artifact:
+
+- ID `11234538332`;
+- digest `sha256:7b7be3476112b6f1cb2811d5d249c9cfb3f8bebc72c2752f47b533e07e4461d8`.
+
+Immutable raw source:
+
+- artifact `10899611444`;
+- digest `sha256:c2f5313efad4afb8663d9980f5ea004f52fe02827a83b5c99a8b775c35498a57`.
+
+## Structural finding
+
+Across all 43 V2B raw corner payloads:
+
+- exactly one bookmaker = **43/43**;
+- bookmaker = Bet365 in **43/43**;
+- `corner_line.opening` present = **43/43**;
+- `corner_line.closing` present = **43/43**;
+- `corner_line.inplay` present = **43/43**;
+- timestamp/date/update fields = **0/43**;
+- history/snapshot/timeline/sequence fields = **0/43**;
+- multiple bookmakers = **0/43**.
+
+Final status:
+
+**`NO_TIME_ALIGNED_PATH_SOURCE`**
+
+## Binding interpretation
+
+The V2B endpoint artifact cannot be used to construct honest pre-move path features.
+
+Do not derive or claim:
+
+- slope;
+- speed;
+- acceleration;
+- early path volatility;
+- revision count;
+- time since last move;
+- cross-book dispersion;
+- bookmaker lead/lag.
+
+`closing` and `inplay` are not permissible substitutes for timestamped pre-decision
+observations.
+
+No new provider request is justified for the same endpoint payloads.
+
+## Existing 1X2 path experiment
+
+`PROSPECTIVE_MARKET_PATH_V1` remains separately frozen and active for timestamped 1X2
+snapshots. It must not be expanded with new corner-path features.
+
+## Current execution pointer
+
+The next useful zero-cost block is source feasibility for a **new prospective corner-path
+collector**, not retrospective engineering on V2B.
+
+Before defining any Stage-B direction rule, prove whether current multi-market corner
+infrastructure can persist repeated timestamped observations containing:
+
+- fixture identity;
+- observation timestamp;
+- bookmaker;
+- corner line;
+- over/under prices;
+- at least three pre-kickoff observations across a useful span.
+
+If that prospective source is unavailable, move to another independent information
+family rather than reuse opened schedule/travel/xG/deep features.
+
+Still binding:
+
+- FAIR_CENTRE repricing magnitude/risk remains replicated;
+- reliable individual corner-market direction remains unconfirmed;
+- rest and travel directional mappings are closed on opened V2B;
+- exact stadium coordinate layer is infrastructure only;
+- V2B raw endpoint source has no time-aligned path;
+- NO_BET;
+- no automatic production promotion.
