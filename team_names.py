@@ -12,6 +12,7 @@ TEAM_NAME_MAP = {
     "Hull City": "Hull",
     "Leeds United": "Leeds",
     "AFC Bournemouth": "Bournemouth",
+    "Atalanta BC": "Atalanta",
 }
 
 
