@@ -28,6 +28,7 @@ on:
       - 'tests/test_research_orchestrator_v4_workflow.py'
       - 'docs/RESEARCH_ORCHESTRATOR_V4.md'
       - '.github/workflows/research-orchestrator-v4.yml'
+      - '.github/workflows/research-v4-heartbeat.yml'
       - '.github/workflows/research-agent-v3-gemini.yml'
 
 permissions:
@@ -358,7 +359,7 @@ jobs:
         uses: google-github-actions/run-gemini-cli@v0
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          gemini_model: gemini-2.5-flash-lite
+          gemini_model: gemini-3.6-flash
           github_issue_number: ${{ needs.preflight.outputs.issue_number }}
           settings: ${{ env.GEMINI_SETTINGS }}
           prompt: ${{ env.AGENT_PROMPT }}
