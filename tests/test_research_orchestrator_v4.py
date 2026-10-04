@@ -39,15 +39,9 @@ def test_transient_gemini_failures_wait(message):
         "invalid API key",
         "permission denied",
         "unauthenticated",
-        "unexpected parser failure",
-        "",
     ],
 )
-def test_non_transient_gemini_failures_block(message):
-    assert classify_model_errors([message]) == "BLOCKED"
-
-
-def test_continue_requires_next_step(tmp_path):
+def test_non_transient_gemini_failures_block(message):\n    assert classify_model_errors([message]) == "BLOCKED"\n\n\ndef test_unknown_or_hidden_action_error_waits_instead_of_false_block():\n    assert classify_model_errors([""]) == "QUOTA_WAIT"\n    assert classify_model_errors(["unexpected parser failure"]) == "QUOTA_WAIT"\n\n\ndef test_continue_requires_next_step(tmp_path):
     _write_state(tmp_path, 428, {"status": "CONTINUE", "summary": "more work remains"})
     with pytest.raises(ValueError, match="next_step"):
         load_state(428, tmp_path)
