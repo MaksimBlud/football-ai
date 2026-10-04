@@ -1,0 +1,108 @@
+name: Cross-Market Lead-Lag V1
+
+on:
+  push:
+    branches:
+      - research/cross-market-lead-lag-v1
+    paths:
+      - 'cross_market_lead_lag_v1.py'
+      - 'cross_market_lead_lag_transport.py'
+      - 'tests/test_cross_market_lead_lag_v1.py'
+      - 'research/CROSS_MARKET_LEAD_LAG_V1.md'
+      - 'research/CROSS_MARKET_LEAD_LAG_V1_RESULTS.md'
+      - 'experiments/cross_market_lead_lag_v1_report.json'
+      - '.github/workflows/cross-market-lead-lag-v1.yml'
+  pull_request:
+    paths:
+      - 'cross_market_lead_lag_v1.py'
+      - 'cross_market_lead_lag_transport.py'
+      - 'tests/test_cross_market_lead_lag_v1.py'
+      - 'research/CROSS_MARKET_LEAD_LAG_V1.md'
+      - 'research/CROSS_MARKET_LEAD_LAG_V1_RESULTS.md'
+      - 'experiments/cross_market_lead_lag_v1_report.json'
+      - '.github/workflows/cross-market-lead-lag-v1.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cross-market-lead-lag-v1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'pandas==3.0.6' 'numpy==2.5.3' 'scipy==1.18.1' 'scikit-learn==1.7.2' 'requests==2.32.5' pytest
+      - name: Compile research code
+        run: python -m py_compile cross_market_lead_lag_v1.py cross_market_lead_lag_transport.py
+      - name: Run frozen contract tests
+        run: pytest -q tests/test_cross_market_lead_lag_v1.py
+      - name: Production artifact diff guard
+        if: github.event_name == 'pull_request'
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$' && exit 1 || true
+
+  historical-open-close:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/research/cross-market-lead-lag-v1'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'pandas==3.0.6' 'numpy==2.5.3' 'scipy==1.18.1' 'scikit-learn==1.7.2' 'requests==2.32.5'
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Run frozen outcome-free open-close lead-lag proxy
+        run: python cross_market_lead_lag_transport.py
+      - name: Assert research and outcome-free contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/cross_market_lead_lag_v1/report.json').read_text())
+          assert r['experiment_id']=='CROSS_MARKET_LEAD_LAG_V1'
+          assert r['evidence_class']=='HISTORICAL_OPEN_CLOSE_LEAD_LAG_PROXY'
+          assert r['research_only'] is True
+          assert r['betting_enabled'] is False
+          assert r['production_promotion'] is False
+          assert r['match_outcomes_used'] is False
+          assert r['opened_2026_27_data_used'] is False
+          assert r['paid_odds_api_calls']==0
+          assert r['supabase_writes']==0
+          assert r['same_bookmaker']=='BET365'
+          assert r['primary_statistic']=='alignment_dot'
+          assert r['live_intraday_source_audit']['true_intraday_lead_lag_feasible'] is False
+          assert r['result']=='NO_BET'
+          print('reference=',r['reference_feature_only'])
+          print('validation_admissible=',r['validation_admissible'])
+          print('validation_perm=',r['validation']['permutation'])
+          print('test_gate=',r['test_gate'])
+          print('test_perm=',r['test']['permutation'])
+          print('decision=',r['decision'])
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cross-market-lead-lag-v1-${{ github.run_id }}
+          path: artifacts/cross_market_lead_lag_v1/report.json
+          if-no-files-found: error
+          retention-days: 90
