@@ -109,13 +109,9 @@ def test_groq_iteration_succeeds_only_after_fresh_state_write(tmp_path: Path, mo
         "id": "call_1",
         "type": "function",
         "function": {
-            "name": "write_file",
+            "name": "write_state",
             "arguments": (
-                '{"path":"research/agent_runs/issue_428/STATE.json",'
-                '"content":"{\\\"status\\\":\\\"CONTINUE\\\",'
-                '\\\"summary\\\":\\\"new\\\",'
-                '\\\"next_step\\\":\\\"next\\\",'
-                '\\\"blocker\\\":null}"}'
+                '{"status":"CONTINUE","summary":"new","next_step":"next"}'
             ),
         },
     }
@@ -162,9 +158,7 @@ def test_final_groq_turn_is_write_only_and_required(tmp_path: Path, monkeypatch)
 
     assert captured["tool_choice"] == "required"
     assert captured["parallel_tool_calls"] is False
-    assert {
-        tool["function"]["name"] for tool in captured["tools"]
-    } == {"write_file", "replace"}
+    assert [tool["function"]["name"] for tool in captured["tools"]] == ["write_state"]
 
 
 def test_write_state_builds_canonical_continue_state(tmp_path: Path):
@@ -225,10 +219,7 @@ def test_final_groq_turn_forces_write_state_only(tmp_path: Path, monkeypatch):
         max_turns=1,
     )
 
-    assert captured["tool_choice"] == {
-        "type": "function",
-        "function": {"name": "write_state"},
-    }
+    assert captured["tool_choice"] == "required"
     assert [tool["function"]["name"] for tool in captured["tools"]] == ["write_state"]
     assert (
         tmp_path / "research" / "agent_runs" / "issue_428" / "STATE.json"
