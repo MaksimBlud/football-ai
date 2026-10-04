@@ -57,6 +57,7 @@ PERMANENT_MARKERS = (
     "unauthenticated",
     "forbidden",
     "billing required",
+    "groq_api_key missing",
 )
 
 
