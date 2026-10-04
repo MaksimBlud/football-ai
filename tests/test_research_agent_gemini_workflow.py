@@ -24,6 +24,11 @@ def test_gemini_v3_trusts_headless_github_workspace():
     assert "GEMINI_CLI_TRUST_WORKSPACE: 'true'" in text
 
 
+def test_gemini_v3_uses_free_tier_high_volume_model():
+    text = _text()
+    assert "gemini_model: gemini-3.5-flash-lite" in text
+
+
 def test_gemini_v3_uses_official_action_and_secret():
     text = _text()
     assert "google-github-actions/run-gemini-cli@v0" in text
