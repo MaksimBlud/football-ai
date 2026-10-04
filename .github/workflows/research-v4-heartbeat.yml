@@ -1,0 +1,61 @@
+name: Research V4 Heartbeat
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '47 * * * *'
+  workflow_run:
+    workflows:
+      - Prospective Market Path Settlement Lag
+      - Product Operational Automation
+      - All Leagues V1.1 Sample Health
+      - Multi-Market Probe Rollover Status
+      - Multi-Market V2 Readiness Status
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: research-v4-heartbeat
+  cancel-in-progress: true
+
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: write
+      contents: read
+      issues: write
+    steps:
+      - name: Wake quota-waiting research issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue list --repo "$GITHUB_REPOSITORY" \
+            --state open \
+            --label research-v4-waiting \
+            --limit 100 \
+            --json number \
+            --jq '.[].number' > /tmp/issues
+
+          while read -r issue; do
+            [ -n "$issue" ] || continue
+
+            gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" \
+              --add-label research-v4-queued \
+              --remove-label research-v4-waiting >/dev/null
+
+            if gh workflow run research-orchestrator-v4.yml \
+              --repo "$GITHUB_REPOSITORY" \
+              -f issue_number="$issue" \
+              -f source=schedule; then
+              echo "redispatched issue #$issue"
+            else
+              gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" \
+                --add-label research-v4-waiting \
+                --remove-label research-v4-queued >/dev/null 2>&1 || true
+              exit 1
+            fi
+          done < /tmp/issues

@@ -22,6 +22,11 @@ Every issue gets one persistent branch:
 
 `agent/v4-issue-<ISSUE_NUMBER>`
 
+Before each worker pass, an existing persistent Issue branch is refreshed by merging the
+current `main` into it. This keeps long-lived research state while ensuring newly merged
+orchestrator/provider code is available to the next iteration. The refresh is pushed back
+to the Issue branch before model execution.
+
 Each successful research iteration must write:
 
 `research/agent_runs/issue_<N>/STATE.json`
@@ -60,6 +65,30 @@ technical appendix after it.
 
 A hard cap of 24 committed iterations prevents runaway loops.
 
+## Global Gemini queue
+
+All V4 worker jobs share one GitHub Actions concurrency group:
+
+`research-v4-global-gemini`
+
+The group uses `queue: max`, so only one Gemini worker runs at a time while up to
+100 additional workers may wait in GitHub's FIFO concurrency queue. This prevents
+different research directions from competing for the same project-level Gemini TPM/RPM
+quota.
+
+Each eligible Issue receives `research-v4-queued` before entering the queue. The label
+is removed only after the worker actually obtains the global queue slot. This gives a
+simple visible distinction:
+
+- `research-v4-queued` — waiting behind another research direction;
+- `research-v4-running` without `research-v4-queued` — currently active or between
+  autonomous continuation steps;
+- `research-v4-waiting` — waiting for provider quota/capacity recovery.
+
+The three-hour safety sweep now redispatches only `research-v4-waiting` Issues, rather
+than every running Issue, so it cannot create duplicate queue entries for healthy
+research loops.
+
 ## Per-Issue quota and work accounting
 
 Each persistent research branch now also contains:
@@ -70,7 +99,7 @@ This file is updated deterministically by the orchestrator, not by Gemini. It re
 
 - `runs_started` — V4 worker runs started for the Issue;
 - `model_passes_attempted` — total Gemini model passes;
-- `primary_passes`, `fallback1_passes`, `fallback2_passes`;
+- `groq_passes` plus historical Gemini `primary_passes` / fallback counters;
 - `successful_model_runs`;
 - `quota_waits`;
 - `short_retries_scheduled`;
@@ -94,25 +123,42 @@ provider's retry hint from the captured Gemini stderr. For errors such as
 redispatches the same Issue automatically.
 
 Short retries are bounded to three consecutive attempts. If Google reports a daily
-quota, or the short-retry budget is exhausted, V4 remains in `research-v4-waiting`
-and the three-hour scheduler becomes the fallback. This prevents a normal one-minute
-TPM/RPM reset from turning into a multi-hour pause while still avoiding runaway loops.
+quota, or the short-retry budget is exhausted, V4 remains in `research-v4-waiting`.
+
+Waiting tasks are now woken by a separate `Research V4 Heartbeat` workflow. It keeps
+its own hourly cron, but does not depend on that cron alone: it also listens for
+completion of several repository workflows whose scheduled execution has been observed
+live. Before dispatching V4, the heartbeat atomically moves an Issue from
+`research-v4-waiting` to `research-v4-queued`, preventing duplicate wakeups. If the
+dispatch itself fails, the waiting label is restored.
+
+This provides an independent cloud wake-up path even when the V4 workflow's own
+`schedule:` event is delayed or absent.
 
 ## Free-tier resilience
 
-The model order is intentionally spread across separate Gemini model quotas:
+V4 is now provider-diversified and **Groq-first**.
 
-1. `gemini-3.5-flash-lite`
-2. `gemini-3.1-flash-lite`
-3. `gemini-3.5-flash`
+1. Primary: Groq `openai/gpt-oss-120b` through a repository-local file-only agent.
+2. Emergency fallback: `gemini-3.6-flash` only when the Groq pass fails.
 
-Each model pass is limited to 16 session turns. If all model attempts fail with transient
-quota/capacity signals such as HTTP 429, HTTP 503, `RESOURCE_EXHAUSTED`, high demand,
-or retry-after messages, V4 captures the action's real `gemini-artifacts/stderr.log`, classifies that evidence, and adds `research-v4-waiting` while leaving
-`research-v4-running` in place.
+The Groq agent uses the OpenAI-compatible Chat Completions API and exposes only
+repository read/search tools plus write/replace tools constrained to the current
+Issue sandbox. It cannot write production artifacts, runtime code, Supabase, or
+deployment state. Its conversation is deliberately compact and capped at five
+turns so the free-tier token budget is not wasted on broad repository scans.
 
-The scheduler wakes every three hours and redispatches open Issues carrying
-`research-v4-running`. No paid fallback is configured.
+V4 no longer fires three Gemini models in sequence. This prevents a single failed
+research attempt from consuming several daily model quotas. Gemini remains an
+emergency provider rather than the normal execution path.
+
+If all available providers fail with transient quota/capacity signals such as HTTP
+429/503 or retry-after messages, V4 records the evidence and returns to
+`research-v4-waiting` for heartbeat recovery.
+
+The original three-hour V4 scheduler remains as a secondary safety path. The independent
+heartbeat is the primary recovery path for `research-v4-waiting` tasks. No paid fallback
+is configured.
 
 ## Labels
 

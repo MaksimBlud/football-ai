@@ -24,10 +24,13 @@ on:
   pull_request:
     paths:
       - 'research_orchestrator_v4.py'
+      - 'research_agent_groq.py'
       - 'tests/test_research_orchestrator_v4.py'
+      - 'tests/test_research_agent_groq.py'
       - 'tests/test_research_orchestrator_v4_workflow.py'
       - 'docs/RESEARCH_ORCHESTRATOR_V4.md'
       - '.github/workflows/research-orchestrator-v4.yml'
+      - '.github/workflows/research-v4-heartbeat.yml'
       - '.github/workflows/research-agent-v3-gemini.yml'
 
 permissions:
@@ -47,8 +50,8 @@ jobs:
           python-version: '3.12'
           cache: pip
       - run: pip install pytest
-      - run: python -m py_compile research_orchestrator_v4.py
-      - run: pytest -q tests/test_research_orchestrator_v4.py tests/test_research_orchestrator_v4_workflow.py
+      - run: python -m py_compile research_orchestrator_v4.py research_agent_groq.py
+      - run: pytest -q tests/test_research_orchestrator_v4.py tests/test_research_orchestrator_v4_workflow.py tests/test_research_agent_groq.py
 
   sweep:
     if: github.event_name == 'schedule'
@@ -63,7 +66,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh issue list --repo "$GITHUB_REPOSITORY" --state open --label research-v4-running --limit 20 --json number --jq '.[].number' > /tmp/issues
+          gh issue list --repo "$GITHUB_REPOSITORY" --state open --label research-v4-waiting --limit 20 --json number --jq '.[].number' > /tmp/issues
           while read -r issue; do
             [ -n "$issue" ] || continue
             gh workflow run research-orchestrator-v4.yml --repo "$GITHUB_REPOSITORY" -f issue_number="$issue" -f source=schedule
@@ -148,6 +151,7 @@ jobs:
               gh api -X POST "repos/$GITHUB_REPOSITORY/labels" -f name="$1" -f color="$2" >/dev/null
           }
           ensure_label research-v4-running 1f883d
+          ensure_label research-v4-queued fbca04
           ensure_label research-v4-waiting d4c5f9
           ensure_label research-v4-done 2da44e
           ensure_label research-v4-blocked d1242f
@@ -172,7 +176,7 @@ jobs:
             exit 0
           fi
 
-          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v4-running >/dev/null
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v4-running --add-label research-v4-queued >/dev/null
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-waiting >/dev/null 2>&1 || true
           if [ "$SOURCE" = 'manual' ]; then
             gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-done >/dev/null 2>&1 || true
@@ -189,8 +193,8 @@ jobs:
     needs: preflight
     if: needs.preflight.outputs.run_worker == 'true'
     concurrency:
-      group: research-v4-${{ needs.preflight.outputs.issue_number }}
-      cancel-in-progress: false
+      group: research-v4-global-gemini
+      queue: max
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -208,7 +212,7 @@ jobs:
       GEMINI_SETTINGS: |-
         {
           "model": {
-            "maxSessionTurns": 16
+            "maxSessionTurns": 8
           },
           "telemetry": {
             "enabled": false
@@ -272,17 +276,31 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
+      - name: Mark global queue slot active
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-queued >/dev/null 2>&1 || true
       - name: Restore persistent issue branch
         id: branch
         run: |
           git fetch origin main
           BRANCH=$(python research_orchestrator_v4.py branch-name --issue-number "$ISSUE_NUMBER")
+          git config user.name 'football-ai-research-bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
-            git fetch origin "$BRANCH:$BRANCH"
-            git switch "$BRANCH"
+            git fetch origin "$BRANCH:refs/remotes/origin/$BRANCH"
+            git switch -c "$BRANCH" --track "origin/$BRANCH"
+            BEFORE_REFRESH=$(git rev-parse HEAD)
+            git merge --no-edit origin/main
+            if [ "$(git rev-parse HEAD)" != "$BEFORE_REFRESH" ]; then
+              git push origin "$BRANCH"
+            fi
           else
             git switch -c "$BRANCH" origin/main
           fi
+          test -f research_agent_groq.py
+          grep -q '"groq_passes"' research_orchestrator_v4.py
           RESEARCH_COMMITS=$(git log --format='%s' origin/main..HEAD | grep -c "^Research V4 issue #${ISSUE_NUMBER} iteration " || true)
           NEXT_ITERATION=$((RESEARCH_COMMITS + 1))
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
@@ -305,71 +323,70 @@ jobs:
         run: |
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-running >/dev/null 2>&1 || true
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-waiting >/dev/null 2>&1 || true
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-queued >/dev/null 2>&1 || true
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v4-blocked >/dev/null
           gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body 'Research Orchestrator V4 stopped after 24 committed iterations to prevent a runaway loop.'
-      - name: Verify Gemini credential
+      - name: Verify model credentials
         if: steps.branch.outputs.maxed != 'true'
         env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          [ -n "$GEMINI_API_KEY" ] || { echo 'GEMINI_API_KEY missing'; exit 1; }
+          if [ -z "$GROQ_API_KEY" ] && [ -z "$GEMINI_API_KEY" ]; then
+            echo 'Neither GROQ_API_KEY nor GEMINI_API_KEY is configured'
+            exit 1
+          fi
+      - name: Fetch issue context for Groq
+        if: steps.branch.outputs.maxed != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER" > /tmp/v4-issue.json
       - name: Snapshot production hashes
         if: steps.branch.outputs.maxed != 'true'
         run: sha256sum *.pkl 2>/dev/null | sort > /tmp/v4-pkl-before || true
-      - name: Gemini primary pass
-        id: gemini_primary
+      - name: Groq primary pass
+        id: groq_primary
         if: steps.branch.outputs.maxed != 'true'
         continue-on-error: true
-        uses: google-github-actions/run-gemini-cli@v0
-        with:
-          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          gemini_model: gemini-3.5-flash-lite
-          github_issue_number: ${{ needs.preflight.outputs.issue_number }}
-          settings: ${{ env.GEMINI_SETTINGS }}
-          prompt: ${{ env.AGENT_PROMPT }}
-      - name: Save primary Gemini stderr
-        if: steps.branch.outputs.maxed != 'true' && steps.gemini_primary.outcome == 'failure'
-        run: cp gemini-artifacts/stderr.log /tmp/gemini-primary.err 2>/dev/null || true
-      - name: Gemini fallback pass 1
-        id: gemini_secondary
-        if: steps.branch.outputs.maxed != 'true' && steps.gemini_primary.outcome == 'failure'
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: |
+          if [ -z "$GROQ_API_KEY" ]; then
+            echo 'GROQ_API_KEY missing' >&2
+            exit 1
+          fi
+          python research_agent_groq.py \
+            --issue-number "$ISSUE_NUMBER" \
+            --issue-json /tmp/v4-issue.json \
+            --hypothesis-family "$HYPOTHESIS_FAMILY" \
+            --model openai/gpt-oss-120b \
+            --max-turns 5 \
+            2> >(tee /tmp/groq-primary.err >&2)
+      - name: Gemini emergency fallback
+        id: gemini_fallback
+        if: steps.branch.outputs.maxed != 'true' && steps.groq_primary.outcome == 'failure'
         continue-on-error: true
         uses: google-github-actions/run-gemini-cli@v0
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          gemini_model: gemini-3.1-flash-lite
+          gemini_model: gemini-3.6-flash
           github_issue_number: ${{ needs.preflight.outputs.issue_number }}
           settings: ${{ env.GEMINI_SETTINGS }}
           prompt: ${{ env.AGENT_PROMPT }}
-      - name: Save fallback 1 Gemini stderr
-        if: steps.branch.outputs.maxed != 'true' && steps.gemini_secondary.outcome == 'failure'
-        run: cp gemini-artifacts/stderr.log /tmp/gemini-secondary.err 2>/dev/null || true
-      - name: Gemini fallback pass 2
-        id: gemini_tertiary
-        if: steps.branch.outputs.maxed != 'true' && steps.gemini_primary.outcome == 'failure' && steps.gemini_secondary.outcome == 'failure'
-        continue-on-error: true
-        uses: google-github-actions/run-gemini-cli@v0
-        with:
-          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          gemini_model: gemini-3.5-flash
-          github_issue_number: ${{ needs.preflight.outputs.issue_number }}
-          settings: ${{ env.GEMINI_SETTINGS }}
-          prompt: ${{ env.AGENT_PROMPT }}
-      - name: Save fallback 2 Gemini stderr
-        if: steps.branch.outputs.maxed != 'true' && steps.gemini_tertiary.outcome == 'failure'
-        run: cp gemini-artifacts/stderr.log /tmp/gemini-tertiary.err 2>/dev/null || true
+      - name: Save Gemini fallback stderr
+        if: steps.branch.outputs.maxed != 'true' && steps.groq_primary.outcome == 'failure' && steps.gemini_fallback.outcome == 'failure'
+        run: cp gemini-artifacts/stderr.log /tmp/gemini-fallback.err 2>/dev/null || true
       - name: Classify model result
         id: model
         if: steps.branch.outputs.maxed != 'true'
         run: |
-          if [ "${{ steps.gemini_primary.outcome }}" = 'success' ] || [ "${{ steps.gemini_secondary.outcome }}" = 'success' ] || [ "${{ steps.gemini_tertiary.outcome }}" = 'success' ]; then
+          if [ "${{ steps.groq_primary.outcome }}" = 'success' ] || [ "${{ steps.gemini_fallback.outcome }}" = 'success' ]; then
             echo 'success=true' >> "$GITHUB_OUTPUT"
             echo 'failure_state=NONE' >> "$GITHUB_OUTPUT"
           else
             STATE=$(python research_orchestrator_v4.py classify-errors \
-              --file /tmp/gemini-primary.err \
-              --file /tmp/gemini-secondary.err \
-              --file /tmp/gemini-tertiary.err)
+              --file /tmp/groq-primary.err \
+              --file /tmp/gemini-fallback.err)
             echo 'success=false' >> "$GITHUB_OUTPUT"
             echo "failure_state=$STATE" >> "$GITHUB_OUTPUT"
           fi
@@ -378,18 +395,12 @@ jobs:
         run: |
           python research_orchestrator_v4.py usage-update \
             --issue-number "$ISSUE_NUMBER" \
-            --inc primary_passes \
+            --inc groq_passes \
             --inc model_passes_attempted
-          if [ "${{ steps.gemini_primary.outcome }}" = 'failure' ]; then
+          if [ "${{ steps.groq_primary.outcome }}" = 'failure' ]; then
             python research_orchestrator_v4.py usage-update \
               --issue-number "$ISSUE_NUMBER" \
               --inc fallback1_passes \
-              --inc model_passes_attempted
-          fi
-          if [ "${{ steps.gemini_primary.outcome }}" = 'failure' ] && [ "${{ steps.gemini_secondary.outcome }}" = 'failure' ]; then
-            python research_orchestrator_v4.py usage-update \
-              --issue-number "$ISSUE_NUMBER" \
-              --inc fallback2_passes \
               --inc model_passes_attempted
           fi
           if [ "${{ steps.model.outputs.success }}" = 'true' ]; then
@@ -406,9 +417,8 @@ jobs:
         if: steps.model.outputs.success == 'false' && steps.model.outputs.failure_state == 'QUOTA_WAIT'
         run: |
           DELAY=$(python research_orchestrator_v4.py retry-delay \
-            --file /tmp/gemini-primary.err \
-            --file /tmp/gemini-secondary.err \
-            --file /tmp/gemini-tertiary.err)
+            --file /tmp/groq-primary.err \
+            --file /tmp/gemini-fallback.err)
           ATTEMPT="${QUICK_RETRY_ATTEMPT:-0}"
           echo "delay_seconds=$DELAY" >> "$GITHUB_OUTPUT"
           if [ "$DELAY" -gt 0 ] && [ "$ATTEMPT" -lt 3 ]; then
@@ -453,6 +463,7 @@ jobs:
         run: |
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-running >/dev/null 2>&1 || true
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-waiting >/dev/null 2>&1 || true
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-queued >/dev/null 2>&1 || true
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v4-blocked >/dev/null
           gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Research Orchestrator V4 hit a non-transient model/API blocker. Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
       - name: Capture research changes
@@ -535,6 +546,7 @@ jobs:
         run: |
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v4-running >/dev/null
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-waiting >/dev/null 2>&1 || true
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-queued >/dev/null 2>&1 || true
           gh workflow run research-orchestrator-v4.yml --repo "$GITHUB_REPOSITORY" -f issue_number="$ISSUE_NUMBER" -f source=continuation
       - name: Open final research pull request
         id: final_pr
@@ -556,6 +568,7 @@ jobs:
         run: |
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-running >/dev/null 2>&1 || true
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-waiting >/dev/null 2>&1 || true
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-queued >/dev/null 2>&1 || true
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-blocked >/dev/null 2>&1 || true
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v4-done >/dev/null
           gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Research Orchestrator V4: DONE. Final report and validated research branch: $PR_URL"
@@ -568,6 +581,7 @@ jobs:
           BLOCKER=$(jq -r '.blocker' "research/agent_runs/issue_${ISSUE_NUMBER}/STATE.json")
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-running >/dev/null 2>&1 || true
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-waiting >/dev/null 2>&1 || true
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-queued >/dev/null 2>&1 || true
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v4-blocked >/dev/null
           gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Research Orchestrator V4: BLOCKED — $BLOCKER"
       - name: Persist usage-only run
