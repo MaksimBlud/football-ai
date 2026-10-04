@@ -5596,3 +5596,122 @@ Still binding:
 - V2B raw endpoint source has no time-aligned path;
 - NO_BET;
 - no automatic production promotion.
+
+---
+
+# Continuity update — 2026-10-04 — six remaining corner signal families closed
+
+Experiment:
+
+`CORNER_SIX_SIGNAL_SCREEN_V1`
+
+Authoritative workflow run:
+
+`37179398571`
+
+Artifact:
+
+- ID `11294063833`;
+- digest `sha256:92b958e6f5f8c911236f5e6451ed2f974d4e02af727637644dc2ad037cd78aa0`.
+
+Evidence:
+
+- V1_55 = 55;
+- REP50 = 50;
+- V1_46 = 46;
+- V2B_43 = 43;
+- total = **194 unique already-opened corner-market fixtures**.
+
+No new prospective fixture collection occurred.
+
+## Final six-family verdicts
+
+1. `OPENING_PRICE_PRESSURE_DIRECTION_V1`
+   -> **`NO_PORTABLE_OPENING_PRICE_PRESSURE_DIRECTION_SIGNAL`**
+
+   Pooled comparable 73, balanced accuracy 43.16%, Spearman -0.1101,
+   majority-direction baseline 79.45% vs signal raw accuracy 41.10%.
+
+2. `OPENING_PRESSURE_LINE_TRANSITION_V1`
+   -> **`NO_LINE_TRANSITION_MECHANICS_SIGNAL`**
+
+   Actual line-step balanced accuracy 58.05%, but any-line-move AUC only 0.4792 and only
+   2/4 cohorts were directionally positive. Not portable.
+
+3. `CROSS_MARKET_MATCH_SHAPE_CORNER_GAP_V1`
+   -> **`PROMISING_CROSS_MARKET_CORNER_DIRECTION_SIGNAL`**
+
+   Historical match-shape corner-count model won 2025/26 MAE vs league mean in 3/3:
+   EPL, La Liga, Serie A.
+
+   On saved corner cohorts:
+   - 117 usable rows;
+   - 56 non-zero comparable direction rows;
+   - balanced accuracy = 66.06%;
+   - pooled Pearson = +0.6815;
+   - pooled Spearman = +0.6239;
+   - Spearman positive in 4/4 cohorts.
+
+   Critical caveat:
+   raw accuracy = 78.57% vs always-UP majority = 80.36%.
+   DOWN recall = 45.45%, and V2B DOWN recall = 0%.
+
+   Therefore this is a **promising rank/direction hypothesis**, not a confirmed betting
+   edge or a 78.6% accuracy claim.
+
+4. `REFEREE_CORNER_BIAS_DIRECTION_V1`
+   -> **`NO_PORTABLE_REFEREE_CORNER_SIGNAL`**
+
+   Historical referee model failed even in EPL; referee field absent in La Liga and
+   Serie A source files. Current small direction diagnostic cannot override that gate.
+
+5. `CORNER_ENV_VOLATILITY_INCREMENTAL_REPRICING_V1`
+   -> **`NO_INCREMENTAL_VOLATILITY_REPRICING_SIGNAL`**
+
+   Eligible 84.
+   Volatility-vs-movement Spearman -0.0122.
+   FAIR_CENTRE+volatility lost Brier and LogLoss in **0/4** held-out cohorts.
+   Pooled deltas: +0.00548 Brier, +0.01224 LogLoss.
+
+6. `COACH_LINEUP_AVAILABILITY_REGIME_CHANGE_V1`
+   -> **`EXISTING_SOURCE_DATA_GAP_FOR_REGIME_CHANGE_SIGNAL`**
+
+   Existing Football-Data schemas expose no manager/coach/lineup/injury/suspension
+   point-in-time fields. Existing prospective availability lab remains externally gated
+   and retrospective injury reconstruction remains prohibited.
+
+## Binding interpretation
+
+Only family #3 survives this retrospective screen.
+
+Do not retune #3 on these opened 2026/27 corner movement cohorts:
+
+- no sign reversal;
+- no league selection;
+- no threshold search;
+- no dropping V2B;
+- no coefficient fitting to centre_delta;
+- no claim of tradable edge.
+
+#1, #2, #4 and #5 are closed for same-sample feature/window/sign retuning.
+
+#6 is source-gated rather than empirically rejected.
+
+## Current execution pointer
+
+For research without new data collection:
+
+- preserve `CROSS_MARKET_MATCH_SHAPE_CORNER_GAP_V1` as the best surviving Stage-B
+  hypothesis;
+- do not call it confirmed;
+- any further work on existing opened corner cohorts should be limited to method/safety
+  documentation, not tuning;
+- independent confirmation requires untouched evidence when the user later chooses to
+  resume new-data work.
+
+Still binding:
+
+- FAIR_CENTRE repricing magnitude/risk remains the strongest confirmed Stage-A signal;
+- individual Stage-B direction is not yet independently confirmed;
+- NO_BET;
+- no automatic production promotion.
