@@ -1,0 +1,460 @@
+name: Research Orchestrator V4
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Existing [AGENT-RESEARCH] issue number
+        required: true
+        type: string
+      source:
+        description: manual, continuation, or schedule
+        required: false
+        default: manual
+        type: string
+  schedule:
+    - cron: '23 */3 * * *'
+  pull_request:
+    paths:
+      - 'research_orchestrator_v4.py'
+      - 'tests/test_research_orchestrator_v4.py'
+      - 'tests/test_research_orchestrator_v4_workflow.py'
+      - 'docs/RESEARCH_ORCHESTRATOR_V4.md'
+      - '.github/workflows/research-orchestrator-v4.yml'
+      - '.github/workflows/research-agent-v3-gemini.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install pytest
+      - run: python -m py_compile research_orchestrator_v4.py
+      - run: pytest -q tests/test_research_orchestrator_v4.py tests/test_research_orchestrator_v4_workflow.py
+
+  sweep:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: write
+      contents: read
+      issues: read
+    steps:
+      - name: Resume queued research issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue list --repo "$GITHUB_REPOSITORY" --state open --label research-v4-running --limit 20 --json number --jq '.[].number' > /tmp/issues
+          while read -r issue; do
+            [ -n "$issue" ] || continue
+            gh workflow run research-orchestrator-v4.yml --repo "$GITHUB_REPOSITORY" -f issue_number="$issue" -f source=schedule
+          done < /tmp/issues
+
+  preflight:
+    if: github.event_name == 'issues' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    outputs:
+      issue_number: ${{ steps.eligibility.outputs.issue_number }}
+      issue_title: ${{ steps.eligibility.outputs.issue_title }}
+      hypothesis_family: ${{ steps.eligibility.outputs.hypothesis_family }}
+      run_worker: ${{ steps.eligibility.outputs.run_worker }}
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Compile deterministic helpers
+        run: python -m py_compile research_agent_issue.py research_orchestrator_v4.py
+      - name: Validate signal registry
+        run: python signal_research_registry_check.py
+      - name: Resolve and validate research issue
+        id: eligibility
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_ISSUE_NUMBER: ${{ inputs.issue_number }}
+          INPUT_SOURCE: ${{ inputs.source }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          RESEARCH_GEMINI_ENABLED: ${{ vars.RESEARCH_GEMINI_ENABLED }}
+        run: |
+          echo 'run_worker=false' >> "$GITHUB_OUTPUT"
+          if [ "$RESEARCH_GEMINI_ENABLED" != 'true' ]; then
+            exit 0
+          fi
+
+          if [ "$EVENT_NAME" = 'issues' ]; then
+            ISSUE_NUMBER=$(jq -r '.issue.number' "$GITHUB_EVENT_PATH")
+            SOURCE=issue
+          else
+            ISSUE_NUMBER="$INPUT_ISSUE_NUMBER"
+            SOURCE="${INPUT_SOURCE:-manual}"
+          fi
+          case "$ISSUE_NUMBER" in
+            ''|*[!0-9]*) exit 0 ;;
+          esac
+
+          gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER" > /tmp/issue.json
+          jq '{issue:.}' /tmp/issue.json > /tmp/event.json
+
+          TITLE=$(jq -r '.title' /tmp/issue.json)
+          AUTHOR=$(jq -r '.user.login' /tmp/issue.json)
+          ISSUE_STATE=$(jq -r '.state' /tmp/issue.json)
+          if [ "$AUTHOR" != "$REPOSITORY_OWNER" ] || [ "$ISSUE_STATE" != 'open' ]; then
+            exit 0
+          fi
+          case "$TITLE" in
+            '[AGENT-RESEARCH]'*) ;;
+            *) exit 0 ;;
+          esac
+
+          ensure_label() {
+            gh api "repos/$GITHUB_REPOSITORY/labels/$1" >/dev/null 2>&1 || \
+              gh api -X POST "repos/$GITHUB_REPOSITORY/labels" -f name="$1" -f color="$2" >/dev/null
+          }
+          ensure_label research-v4-running 1f883d
+          ensure_label research-v4-waiting d4c5f9
+          ensure_label research-v4-done 2da44e
+          ensure_label research-v4-blocked d1242f
+
+          HAS_DONE=$(jq -r '[.labels[].name] | index("research-v4-done") != null' /tmp/issue.json)
+          HAS_BLOCKED=$(jq -r '[.labels[].name] | index("research-v4-blocked") != null' /tmp/issue.json)
+          HAS_RUNNING=$(jq -r '[.labels[].name] | index("research-v4-running") != null' /tmp/issue.json)
+
+          if [ "$SOURCE" != 'manual' ] && { [ "$HAS_DONE" = 'true' ] || [ "$HAS_BLOCKED" = 'true' ]; }; then
+            exit 0
+          fi
+          if { [ "$SOURCE" = 'schedule' ] || [ "$SOURCE" = 'continuation' ]; } && [ "$HAS_RUNNING" != 'true' ]; then
+            exit 0
+          fi
+
+          python research_agent_issue.py --event /tmp/event.json --output-json /tmp/v4-plan.json --output-markdown /tmp/v4-plan.md
+          DECISION=$(jq -r '.decision' /tmp/v4-plan.json)
+          FAMILY=$(jq -r '.hypothesis_family' /tmp/v4-plan.json)
+          if [ "$DECISION" != 'READY_FOR_PREREGISTRATION' ]; then
+            gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v4-blocked >/dev/null
+            gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Research Orchestrator V4 blocked at deterministic intake: $DECISION"
+            exit 0
+          fi
+
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v4-running >/dev/null
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-waiting >/dev/null 2>&1 || true
+          if [ "$SOURCE" = 'manual' ]; then
+            gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-done >/dev/null 2>&1 || true
+            gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-blocked >/dev/null 2>&1 || true
+          fi
+
+          echo "issue_number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "issue_title=$TITLE" >> "$GITHUB_OUTPUT"
+          echo "hypothesis_family=$FAMILY" >> "$GITHUB_OUTPUT"
+          echo 'run_worker=true' >> "$GITHUB_OUTPUT"
+
+  worker:
+    needs: preflight
+    if: needs.preflight.outputs.run_worker == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      actions: write
+      contents: write
+      issues: write
+      pull-requests: write
+    env:
+      PYTHONPATH: .
+      GEMINI_CLI_TRUST_WORKSPACE: 'true'
+      ISSUE_NUMBER: ${{ needs.preflight.outputs.issue_number }}
+      ISSUE_TITLE: ${{ needs.preflight.outputs.issue_title }}
+      HYPOTHESIS_FAMILY: ${{ needs.preflight.outputs.hypothesis_family }}
+      GEMINI_SETTINGS: |-
+        {
+          "model": {
+            "maxSessionTurns": 8
+          },
+          "telemetry": {
+            "enabled": false
+          },
+          "tools": {
+            "core": [
+              "list_directory",
+              "read_file",
+              "read_many_files",
+              "glob",
+              "grep_search",
+              "write_file",
+              "replace"
+            ]
+          }
+        }
+      AGENT_PROMPT: |-
+        Read AGENTS.md and GEMINI.md first and obey both.
+
+        You are one iteration of Football AI Research Orchestrator V4.
+        Work only on Issue #${{ needs.preflight.outputs.issue_number }}.
+        Hypothesis family: ${{ needs.preflight.outputs.hypothesis_family }}.
+
+        Inspect all existing files under this issue's sandbox before deciding the next step.
+        Continue from prior STATE.json if it exists; do not repeat completed tests.
+
+        You may edit only:
+        - research/agent_runs/issue_${{ needs.preflight.outputs.issue_number }}/
+        - tests/agent_runs/issue_${{ needs.preflight.outputs.issue_number }}/
+        - docs/agent_runs/issue_${{ needs.preflight.outputs.issue_number }}/
+
+        Do one coherent, meaningful research iteration using only repository data/helpers.
+        Preserve frozen/preregistered contracts. No post-hoc threshold tuning on seen outcomes.
+        Use temporal/OOS methods, no leakage, and market baseline where appropriate.
+        Never modify production, .pkl artifacts, Supabase, deployment, or paid APIs.
+
+        Before finishing this iteration ALWAYS write:
+        research/agent_runs/issue_${{ needs.preflight.outputs.issue_number }}/STATE.json
+
+        STATE.json schema:
+        {
+          "status": "CONTINUE|DONE|BLOCKED",
+          "summary": "short factual status",
+          "next_step": "required when CONTINUE, otherwise null",
+          "blocker": "required when BLOCKED, otherwise null"
+        }
+
+        Use CONTINUE only when another preregistered/safe test is still logically needed.
+        Use DONE only when the direction is reasonably exhausted and write the complete final result to
+        docs/agent_runs/issue_${{ needs.preflight.outputs.issue_number }}/FINAL_REPORT.md.
+        FINAL_REPORT.md must contain a simple-language conclusion first and a technical appendix after it.
+        Use BLOCKED only for a genuine external blocker that cannot be solved safely from repository data.
+        Do not communicate intermediate progress to the user; the orchestrator handles continuation.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Restore persistent issue branch
+        id: branch
+        run: |
+          git fetch origin main
+          BRANCH=$(python research_orchestrator_v4.py branch-name --issue-number "$ISSUE_NUMBER")
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            git fetch origin "$BRANCH:$BRANCH"
+            git switch "$BRANCH"
+          else
+            git switch -c "$BRANCH" origin/main
+          fi
+          UNIQUE_COMMITS=$(git rev-list --count origin/main..HEAD)
+          NEXT_ITERATION=$((UNIQUE_COMMITS + 1))
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "iteration=$NEXT_ITERATION" >> "$GITHUB_OUTPUT"
+          if [ "$NEXT_ITERATION" -gt 24 ]; then
+            echo 'maxed=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'maxed=false' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Stop runaway iteration loop
+        if: steps.branch.outputs.maxed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-running >/dev/null 2>&1 || true
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-waiting >/dev/null 2>&1 || true
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v4-blocked >/dev/null
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body 'Research Orchestrator V4 stopped after 24 committed iterations to prevent a runaway loop.'
+      - name: Verify Gemini credential
+        if: steps.branch.outputs.maxed != 'true'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          [ -n "$GEMINI_API_KEY" ] || { echo 'GEMINI_API_KEY missing'; exit 1; }
+      - name: Snapshot production hashes
+        if: steps.branch.outputs.maxed != 'true'
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/v4-pkl-before || true
+      - name: Gemini primary pass
+        id: gemini_primary
+        if: steps.branch.outputs.maxed != 'true'
+        continue-on-error: true
+        uses: google-github-actions/run-gemini-cli@v0
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          gemini_model: gemini-3.5-flash-lite
+          github_issue_number: ${{ needs.preflight.outputs.issue_number }}
+          settings: ${{ env.GEMINI_SETTINGS }}
+          prompt: ${{ env.AGENT_PROMPT }}
+      - name: Gemini fallback pass 1
+        id: gemini_secondary
+        if: steps.branch.outputs.maxed != 'true' && steps.gemini_primary.outcome == 'failure'
+        continue-on-error: true
+        uses: google-github-actions/run-gemini-cli@v0
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          gemini_model: gemini-3.6-flash
+          github_issue_number: ${{ needs.preflight.outputs.issue_number }}
+          settings: ${{ env.GEMINI_SETTINGS }}
+          prompt: ${{ env.AGENT_PROMPT }}
+      - name: Gemini fallback pass 2
+        id: gemini_tertiary
+        if: steps.branch.outputs.maxed != 'true' && steps.gemini_primary.outcome == 'failure' && steps.gemini_secondary.outcome == 'failure'
+        continue-on-error: true
+        uses: google-github-actions/run-gemini-cli@v0
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          gemini_model: gemini-3.7-flash
+          github_issue_number: ${{ needs.preflight.outputs.issue_number }}
+          settings: ${{ env.GEMINI_SETTINGS }}
+          prompt: ${{ env.AGENT_PROMPT }}
+      - name: Classify model result
+        id: model
+        if: steps.branch.outputs.maxed != 'true'
+        env:
+          ERR_PRIMARY: ${{ steps.gemini_primary.outputs.gemini_errors }}
+          ERR_SECONDARY: ${{ steps.gemini_secondary.outputs.gemini_errors }}
+          ERR_TERTIARY: ${{ steps.gemini_tertiary.outputs.gemini_errors }}
+        run: |
+          if [ "${{ steps.gemini_primary.outcome }}" = 'success' ] || [ "${{ steps.gemini_secondary.outcome }}" = 'success' ] || [ "${{ steps.gemini_tertiary.outcome }}" = 'success' ]; then
+            echo 'success=true' >> "$GITHUB_OUTPUT"
+            echo 'failure_state=NONE' >> "$GITHUB_OUTPUT"
+          else
+            STATE=$(python research_orchestrator_v4.py classify-errors --env ERR_PRIMARY --env ERR_SECONDARY --env ERR_TERTIARY)
+            echo 'success=false' >> "$GITHUB_OUTPUT"
+            echo "failure_state=$STATE" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Enter quiet quota wait
+        if: steps.model.outputs.success == 'false' && steps.model.outputs.failure_state == 'QUOTA_WAIT'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v4-running --add-label research-v4-waiting >/dev/null
+      - name: Report permanent model blocker
+        if: steps.model.outputs.success == 'false' && steps.model.outputs.failure_state == 'BLOCKED'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-running >/dev/null 2>&1 || true
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-waiting >/dev/null 2>&1 || true
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v4-blocked >/dev/null
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Research Orchestrator V4 hit a non-transient model/API blocker. Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+      - name: Capture research changes
+        id: changed
+        if: steps.model.outputs.success == 'true'
+        run: |
+          git status --porcelain=v1 --untracked-files=all > /tmp/v4-status
+          cat /tmp/v4-status
+          if [ -s /tmp/v4-status ]; then echo 'has_changes=true' >> "$GITHUB_OUTPUT"; else echo 'has_changes=false' >> "$GITHUB_OUTPUT"; fi
+      - name: Block successful no-op
+        if: steps.model.outputs.success == 'true' && steps.changed.outputs.has_changes == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-running >/dev/null 2>&1 || true
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v4-blocked >/dev/null
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body 'Research Orchestrator V4 blocked because a successful model pass produced no research-state change.'
+      - name: Validate issue sandbox
+        if: steps.model.outputs.success == 'true' && steps.changed.outputs.has_changes == 'true'
+        run: python research_agent_gemini.py validate-status --issue-number "$ISSUE_NUMBER" --status-file /tmp/v4-status
+      - name: Install zero-cost research dependencies
+        if: steps.model.outputs.success == 'true' && steps.changed.outputs.has_changes == 'true'
+        run: pip install pytest pandas numpy requests scikit-learn xgboost joblib
+      - name: Syntax-check generated Python
+        if: steps.model.outputs.success == 'true' && steps.changed.outputs.has_changes == 'true'
+        run: |
+          python - <<'PY'
+          import ast, os
+          from pathlib import Path
+          issue = os.environ['ISSUE_NUMBER']
+          for base in ('research/agent_runs', 'tests/agent_runs'):
+              root = Path(base) / f'issue_{issue}'
+              if root.is_dir():
+                  for path in root.rglob('*.py'):
+                      ast.parse(path.read_text(encoding='utf-8'), filename=str(path))
+          PY
+      - name: Run issue-focused tests
+        if: steps.model.outputs.success == 'true' && steps.changed.outputs.has_changes == 'true'
+        run: |
+          if [ -d "tests/agent_runs/issue_${ISSUE_NUMBER}" ]; then
+            PYTHONDONTWRITEBYTECODE=1 pytest -q -p no:cacheprovider "tests/agent_runs/issue_${ISSUE_NUMBER}"
+          fi
+      - name: Revalidate working tree and production hashes
+        if: steps.model.outputs.success == 'true' && steps.changed.outputs.has_changes == 'true'
+        run: |
+          git status --porcelain=v1 --untracked-files=all > /tmp/v4-status-final
+          python research_agent_gemini.py validate-status --issue-number "$ISSUE_NUMBER" --status-file /tmp/v4-status-final
+          git diff --check
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/v4-pkl-after || true
+          diff -u /tmp/v4-pkl-before /tmp/v4-pkl-after
+      - name: Validate orchestrator state
+        id: state
+        if: steps.model.outputs.success == 'true' && steps.changed.outputs.has_changes == 'true'
+        run: python research_orchestrator_v4.py validate-state --issue-number "$ISSUE_NUMBER" --github-output "$GITHUB_OUTPUT"
+      - name: Commit and persist iteration
+        if: steps.model.outputs.success == 'true' && steps.changed.outputs.has_changes == 'true'
+        run: |
+          python research_agent_gemini.py stage-status --issue-number "$ISSUE_NUMBER" --status-file /tmp/v4-status-final
+          git config user.name 'football-ai-research-bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m "Research V4 issue #${ISSUE_NUMBER} iteration ${{ steps.branch.outputs.iteration }}"
+          git push origin "${{ steps.branch.outputs.branch }}"
+      - name: Continue autonomously
+        if: steps.state.outputs.status == 'CONTINUE'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v4-running >/dev/null
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-waiting >/dev/null 2>&1 || true
+          gh workflow run research-orchestrator-v4.yml --repo "$GITHUB_REPOSITORY" -f issue_number="$ISSUE_NUMBER" -f source=continuation
+      - name: Open final research pull request
+        id: final_pr
+        if: steps.state.outputs.status == 'DONE'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.branch.outputs.branch }}
+        run: |
+          PR_URL=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "$BRANCH" --json url --jq '.[0].url // empty')
+          if [ -z "$PR_URL" ]; then
+            PR_URL=$(gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title "Research V4 final: ${ISSUE_TITLE}" --body "Autonomous research for Issue #${ISSUE_NUMBER} reached DONE. Final report: docs/agent_runs/issue_${ISSUE_NUMBER}/FINAL_REPORT.md. No production promotion." )
+          fi
+          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+      - name: Publish only final completion
+        if: steps.state.outputs.status == 'DONE'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ steps.final_pr.outputs.pr_url }}
+        run: |
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-running >/dev/null 2>&1 || true
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-waiting >/dev/null 2>&1 || true
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-blocked >/dev/null 2>&1 || true
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v4-done >/dev/null
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Research Orchestrator V4: DONE. Final report and validated research branch: $PR_URL"
+          gh issue close "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --reason completed
+      - name: Publish true research blocker
+        if: steps.state.outputs.status == 'BLOCKED'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BLOCKER=$(jq -r '.blocker' "research/agent_runs/issue_${ISSUE_NUMBER}/STATE.json")
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-running >/dev/null 2>&1 || true
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-waiting >/dev/null 2>&1 || true
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v4-blocked >/dev/null
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Research Orchestrator V4: BLOCKED — $BLOCKER"
