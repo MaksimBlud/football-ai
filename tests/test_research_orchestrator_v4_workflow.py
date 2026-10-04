@@ -25,9 +25,18 @@ def test_v4_has_issue_dispatch_schedule_and_pr_contract_triggers():
 def test_v4_uses_three_free_model_fallbacks_and_short_sessions():
     text = _v4()
     assert "gemini_model: gemini-3.5-flash-lite" in text
-    assert "gemini_model: gemini-3.6-flash" in text
-    assert "gemini_model: gemini-3.7-flash" in text
-    assert '"maxSessionTurns": 8' in text
+    assert "gemini_model: gemini-3.1-flash-lite" in text
+    assert "gemini_model: gemini-3.5-flash" in text
+    assert '"maxSessionTurns": 16' in text
+
+
+def test_v4_captures_failed_model_stderr_for_transient_classification():
+    text = _v4()
+    assert "gemini-artifacts/stderr.log /tmp/gemini-primary.err" in text
+    assert "gemini-artifacts/stderr.log /tmp/gemini-secondary.err" in text
+    assert "gemini-artifacts/stderr.log /tmp/gemini-tertiary.err" in text
+    assert "--file /tmp/gemini-primary.err" in text
+    assert "steps.gemini_primary.outputs.gemini_errors" not in text
 
 
 def test_v4_persists_issue_branch_and_machine_state():

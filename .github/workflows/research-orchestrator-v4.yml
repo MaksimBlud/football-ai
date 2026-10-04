@@ -191,7 +191,7 @@ jobs:
       GEMINI_SETTINGS: |-
         {
           "model": {
-            "maxSessionTurns": 8
+            "maxSessionTurns": 16
           },
           "telemetry": {
             "enabled": false
@@ -303,6 +303,9 @@ jobs:
           github_issue_number: ${{ needs.preflight.outputs.issue_number }}
           settings: ${{ env.GEMINI_SETTINGS }}
           prompt: ${{ env.AGENT_PROMPT }}
+      - name: Save primary Gemini stderr
+        if: steps.branch.outputs.maxed != 'true' && steps.gemini_primary.outcome == 'failure'
+        run: cp gemini-artifacts/stderr.log /tmp/gemini-primary.err 2>/dev/null || true
       - name: Gemini fallback pass 1
         id: gemini_secondary
         if: steps.branch.outputs.maxed != 'true' && steps.gemini_primary.outcome == 'failure'
@@ -310,10 +313,13 @@ jobs:
         uses: google-github-actions/run-gemini-cli@v0
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          gemini_model: gemini-3.6-flash
+          gemini_model: gemini-3.1-flash-lite
           github_issue_number: ${{ needs.preflight.outputs.issue_number }}
           settings: ${{ env.GEMINI_SETTINGS }}
           prompt: ${{ env.AGENT_PROMPT }}
+      - name: Save fallback 1 Gemini stderr
+        if: steps.branch.outputs.maxed != 'true' && steps.gemini_secondary.outcome == 'failure'
+        run: cp gemini-artifacts/stderr.log /tmp/gemini-secondary.err 2>/dev/null || true
       - name: Gemini fallback pass 2
         id: gemini_tertiary
         if: steps.branch.outputs.maxed != 'true' && steps.gemini_primary.outcome == 'failure' && steps.gemini_secondary.outcome == 'failure'
@@ -321,23 +327,25 @@ jobs:
         uses: google-github-actions/run-gemini-cli@v0
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          gemini_model: gemini-3.7-flash
+          gemini_model: gemini-3.5-flash
           github_issue_number: ${{ needs.preflight.outputs.issue_number }}
           settings: ${{ env.GEMINI_SETTINGS }}
           prompt: ${{ env.AGENT_PROMPT }}
+      - name: Save fallback 2 Gemini stderr
+        if: steps.branch.outputs.maxed != 'true' && steps.gemini_tertiary.outcome == 'failure'
+        run: cp gemini-artifacts/stderr.log /tmp/gemini-tertiary.err 2>/dev/null || true
       - name: Classify model result
         id: model
         if: steps.branch.outputs.maxed != 'true'
-        env:
-          ERR_PRIMARY: ${{ steps.gemini_primary.outputs.gemini_errors }}
-          ERR_SECONDARY: ${{ steps.gemini_secondary.outputs.gemini_errors }}
-          ERR_TERTIARY: ${{ steps.gemini_tertiary.outputs.gemini_errors }}
         run: |
           if [ "${{ steps.gemini_primary.outcome }}" = 'success' ] || [ "${{ steps.gemini_secondary.outcome }}" = 'success' ] || [ "${{ steps.gemini_tertiary.outcome }}" = 'success' ]; then
             echo 'success=true' >> "$GITHUB_OUTPUT"
             echo 'failure_state=NONE' >> "$GITHUB_OUTPUT"
           else
-            STATE=$(python research_orchestrator_v4.py classify-errors --env ERR_PRIMARY --env ERR_SECONDARY --env ERR_TERTIARY)
+            STATE=$(python research_orchestrator_v4.py classify-errors \
+              --file /tmp/gemini-primary.err \
+              --file /tmp/gemini-secondary.err \
+              --file /tmp/gemini-tertiary.err)
             echo 'success=false' >> "$GITHUB_OUTPUT"
             echo "failure_state=$STATE" >> "$GITHUB_OUTPUT"
           fi

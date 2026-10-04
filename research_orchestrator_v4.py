@@ -93,6 +93,7 @@ def _main() -> None:
 
     classify = sub.add_parser("classify-errors")
     classify.add_argument("--env", action="append", default=[])
+    classify.add_argument("--file", action="append", default=[], type=Path)
 
     state = sub.add_parser("validate-state")
     state.add_argument("--issue-number", type=int, required=True)
@@ -106,6 +107,9 @@ def _main() -> None:
 
     if args.command == "classify-errors":
         texts = [os.environ.get(name, "") for name in args.env]
+        for path in args.file:
+            if path.is_file():
+                texts.append(path.read_text(encoding="utf-8", errors="replace"))
         print(classify_model_errors(texts))
         return
 
