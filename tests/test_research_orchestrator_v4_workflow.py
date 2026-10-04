@@ -4,6 +4,7 @@ from pathlib import Path
 V4 = Path(".github/workflows/research-orchestrator-v4.yml")
 V3 = Path(".github/workflows/research-agent-v3-gemini.yml")
 V2 = Path(".github/workflows/research-agent-v2-issue-intake.yml")
+HEARTBEAT = Path(".github/workflows/research-v4-heartbeat.yml")
 
 
 def _v4() -> str:
@@ -16,6 +17,10 @@ def _v3() -> str:
 
 def _v2() -> str:
     return V2.read_text(encoding="utf-8")
+
+
+def _heartbeat() -> str:
+    return HEARTBEAT.read_text(encoding="utf-8")
 
 
 def test_v4_globally_queues_gemini_workers_fifo():
@@ -53,22 +58,39 @@ def test_v4_has_issue_dispatch_schedule_and_pr_contract_triggers():
     assert "pull_request:" in on_block
 
 
-def test_v4_uses_three_free_model_fallbacks_and_short_sessions():
+def test_v4_uses_groq_primary_and_one_gemini_emergency_fallback():
     text = _v4()
-    assert "gemini_model: gemini-3.5-flash-lite" in text
-    assert "gemini_model: gemini-3.1-flash-lite" in text
-    assert "gemini_model: gemini-3.5-flash" in text
-    assert '"maxSessionTurns": 16' in text
+    assert "Groq primary pass" in text
+    assert "research_agent_groq.py" in text
+    assert "--model openai/gpt-oss-120b" in text
+    assert "GROQ_API_KEY" in text
+    assert "Gemini emergency fallback" in text
+    assert "gemini_model: gemini-3.6-flash" in text
+    assert "gemini_model: gemini-3.5-flash-lite" not in text
+    assert "gemini_model: gemini-3.1-flash-lite" not in text
+    assert "gemini_model: gemini-2.5-flash-lite" not in text
+    assert '"maxSessionTurns": 8' in text
 
 
-def test_v4_captures_failed_model_stderr_for_transient_classification():
+def test_v4_captures_provider_errors_for_transient_classification():
     text = _v4()
-    assert "gemini-artifacts/stderr.log /tmp/gemini-primary.err" in text
-    assert "gemini-artifacts/stderr.log /tmp/gemini-secondary.err" in text
-    assert "gemini-artifacts/stderr.log /tmp/gemini-tertiary.err" in text
-    assert "--file /tmp/gemini-primary.err" in text
-    assert "steps.gemini_primary.outputs.gemini_errors" not in text
+    assert "/tmp/groq-primary.err" in text
+    assert "gemini-artifacts/stderr.log /tmp/gemini-fallback.err" in text
+    assert "--file /tmp/groq-primary.err" in text
+    assert "--file /tmp/gemini-fallback.err" in text
 
+
+
+def test_v4_refreshes_persistent_issue_branch_from_main_before_model_work():
+    text = _v4()
+    restore = text.split("      - name: Restore persistent issue branch", 1)[1]
+    restore = restore.split("      - name: Start usage accounting", 1)[0]
+    assert 'git fetch origin "$BRANCH:refs/remotes/origin/$BRANCH"' in restore
+    assert 'git switch -c "$BRANCH" --track "origin/$BRANCH"' in restore
+    assert "git merge --no-edit origin/main" in restore
+    assert 'git push origin "$BRANCH"' in restore
+    assert "test -f research_agent_groq.py" in restore
+    assert 'grep -q \'"groq_passes"\' research_orchestrator_v4.py' in restore
 
 def test_v4_persists_per_issue_usage_without_spending_iteration_budget():
     text = _v4()
@@ -101,6 +123,36 @@ def test_v4_continues_without_user_and_retries_waiting_work():
     assert "research-v4-running" in text
     assert "research-v4-waiting" in text
     assert "source=schedule" in text
+
+
+def test_v4_heartbeat_wakes_waiting_issues_from_independent_live_workflows():
+    text = _heartbeat()
+    on_block = text.split("permissions:", 1)[0]
+    assert "workflow_dispatch:" in on_block
+    assert "schedule:" in on_block
+    assert "workflow_run:" in on_block
+    assert "Prospective Market Path Settlement Lag" in on_block
+    assert "Product Operational Automation" in on_block
+    assert "All Leagues V1.1 Sample Health" in on_block
+    assert "Multi-Market Probe Rollover Status" in on_block
+    assert "Multi-Market V2 Readiness Status" in on_block
+    assert "types: [completed]" in on_block
+
+
+def test_v4_heartbeat_claims_waiting_issue_before_dispatch_and_restores_on_failure():
+    text = _heartbeat()
+    assert "--label research-v4-waiting" in text
+    claim = '--add-label research-v4-queued \\\n              --remove-label research-v4-waiting'
+    assert claim in text
+    assert "gh workflow run research-orchestrator-v4.yml" in text
+    assert "-f source=schedule" in text
+    assert "--add-label research-v4-waiting" in text
+    assert "--remove-label research-v4-queued" in text
+
+
+def test_v4_contract_tracks_heartbeat_workflow_changes():
+    text = _v4()
+    assert "'.github/workflows/research-v4-heartbeat.yml'" in text
 
 
 def test_v4_prompt_forbids_unavailable_tools():
