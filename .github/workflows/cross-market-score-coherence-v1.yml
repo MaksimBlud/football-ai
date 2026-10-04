@@ -1,0 +1,107 @@
+name: Cross-Market Score Coherence V1
+
+on:
+  push:
+    branches:
+      - research/cross-market-score-coherence-v1
+    paths:
+      - 'cross_market_score_coherence_v1.py'
+      - 'cross_market_score_coherence_transport.py'
+      - 'tests/test_cross_market_score_coherence_v1.py'
+      - 'research/CROSS_MARKET_SCORE_COHERENCE_V1.md'
+      - 'research/CROSS_MARKET_SCORE_COHERENCE_V1_RESULTS.md'
+      - 'experiments/cross_market_score_coherence_v1_report.json'
+      - '.github/workflows/cross-market-score-coherence-v1.yml'
+  pull_request:
+    paths:
+      - 'cross_market_score_coherence_v1.py'
+      - 'cross_market_score_coherence_transport.py'
+      - 'tests/test_cross_market_score_coherence_v1.py'
+      - 'research/CROSS_MARKET_SCORE_COHERENCE_V1.md'
+      - 'research/CROSS_MARKET_SCORE_COHERENCE_V1_RESULTS.md'
+      - 'experiments/cross_market_score_coherence_v1_report.json'
+      - '.github/workflows/cross-market-score-coherence-v1.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cross-market-score-coherence-v1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'pandas==3.0.6' 'numpy==2.5.3' 'scipy==1.18.1' 'scikit-learn==1.7.2' 'requests==2.32.5' pytest
+      - name: Compile research code
+        run: python -m py_compile cross_market_score_coherence_v1.py cross_market_score_coherence_transport.py
+      - name: Run frozen contract tests
+        run: pytest -q tests/test_cross_market_score_coherence_v1.py
+      - name: Production artifact diff guard
+        if: github.event_name == 'pull_request'
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$' && exit 1 || true
+
+  historical-oot:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/research/cross-market-score-coherence-v1'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'pandas==3.0.6' 'numpy==2.5.3' 'scipy==1.18.1' 'scikit-learn==1.7.2' 'requests==2.32.5'
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Run frozen cross-market coherence experiment
+        run: python cross_market_score_coherence_transport.py
+      - name: Assert research and temporal safety contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/cross_market_score_coherence_v1/report.json').read_text())
+          assert r['experiment_id']=='CROSS_MARKET_SCORE_COHERENCE_V1'
+          assert r['evidence_class']=='HISTORICAL_TEMPORAL_OOT'
+          assert r['research_only'] is True
+          assert r['betting_enabled'] is False
+          assert r['production_promotion'] is False
+          assert r['opened_2026_27_outcomes_used'] is False
+          assert r['same_bookmaker']=='BET365'
+          assert r['validation_season']=='2024-2025'
+          assert r['test_season']=='2025-2026'
+          assert r['source_contract']['half_goal_ah_only'] is True
+          assert r['reconstruction_contract']['primary_feature']=='score_gap_tv'
+          assert r['reconstruction_contract']['primary_error_target']=='excess_brier'
+          assert r['result']=='NO_BET'
+          assert set(r['coverage'])=={'EPL','LA_LIGA','SERIE_A'}
+          print('validation_admissible=',r['validation_admissible'])
+          print('test_delta=',r['test']['pooled_excess_brier_high_minus_low'])
+          print('bootstrap=',r['test_stratified_bootstrap'])
+          print('decision=',r['decision'])
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cross-market-score-coherence-v1-${{ github.run_id }}
+          path: artifacts/cross_market_score_coherence_v1/report.json
+          if-no-files-found: error
+          retention-days: 90
