@@ -137,3 +137,30 @@ def test_groq_iteration_succeeds_only_after_fresh_state_write(tmp_path: Path, mo
     assert (
         tmp_path / "research" / "agent_runs" / "issue_428" / "STATE.json"
     ).is_file()
+
+
+def test_final_groq_turn_is_write_only_and_required(tmp_path: Path, monkeypatch):
+    captured = {}
+
+    def fake_request(api_key, payload, **kwargs):
+        captured.update(payload)
+        return {"choices": [{"message": {"content": "no write"}}]}
+
+    monkeypatch.setattr("research_agent_groq._request", fake_request)
+
+    with pytest.raises(GroqAgentError, match="retry after 65s"):
+        run_agent(
+            root=tmp_path,
+            issue_number=428,
+            issue_title="test",
+            issue_body="test body",
+            hypothesis_family="test_family",
+            api_key="fake",
+            max_turns=1,
+        )
+
+    assert captured["tool_choice"] == "required"
+    assert captured["parallel_tool_calls"] is False
+    assert {
+        tool["function"]["name"] for tool in captured["tools"]
+    } == {"write_file", "replace"}
