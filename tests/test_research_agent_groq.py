@@ -1,0 +1,77 @@
+from pathlib import Path
+
+import pytest
+
+from research_agent_groq import (
+    GroqAgentError,
+    _duration_seconds,
+    glob_files,
+    grep_search,
+    read_file,
+    replace_text,
+    write_file,
+)
+
+
+def test_groq_agent_write_is_issue_scoped(tmp_path: Path):
+    result = write_file(
+        tmp_path,
+        428,
+        "research/agent_runs/issue_428/STATE.json",
+        '{"status":"CONTINUE"}',
+    )
+    assert result["chars_written"] > 0
+    assert (tmp_path / "research/agent_runs/issue_428/STATE.json").is_file()
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "research/agent_runs/issue_481/STATE.json",
+        "research/OTHER.md",
+        "football_model_xgboost_elo.pkl",
+        "../outside.txt",
+        "/tmp/outside.txt",
+    ],
+)
+def test_groq_agent_rejects_writes_outside_issue_sandbox(tmp_path: Path, path: str):
+    with pytest.raises(GroqAgentError):
+        write_file(tmp_path, 428, path, "no")
+
+
+def test_groq_agent_read_search_and_replace(tmp_path: Path):
+    source = tmp_path / "research" / "example.txt"
+    source.parent.mkdir(parents=True)
+    source.write_text("alpha\nbeta signal\n", encoding="utf-8")
+
+    assert "beta signal" in read_file(tmp_path, "research/example.txt")["content"]
+    assert glob_files(tmp_path, "research/*.txt")["matches"] == ["research/example.txt"]
+    matches = grep_search(tmp_path, "SIGNAL", "research", "*.txt")["matches"]
+    assert matches[0]["line"] == 2
+
+    sandbox = tmp_path / "docs" / "agent_runs" / "issue_428" / "note.md"
+    sandbox.parent.mkdir(parents=True)
+    sandbox.write_text("old text", encoding="utf-8")
+    result = replace_text(
+        tmp_path,
+        428,
+        "docs/agent_runs/issue_428/note.md",
+        "old",
+        "new",
+    )
+    assert result["replacements"] == 1
+    assert sandbox.read_text(encoding="utf-8") == "new text"
+
+
+@pytest.mark.parametrize(
+    ("value", "seconds"),
+    [
+        ("3", 3.0),
+        ("750ms", 0.75),
+        ("8.5s", 8.5),
+        ("2m30s", 150.0),
+        ("1h2m3s", 3723.0),
+    ],
+)
+def test_groq_rate_limit_duration_parser(value: str, seconds: float):
+    assert _duration_seconds(value) == pytest.approx(seconds)
