@@ -130,7 +130,7 @@ The model order is intentionally spread across separate Gemini model quotas:
 2. `gemini-3.1-flash-lite`
 3. `gemini-3.5-flash`
 
-Each model pass is limited to 16 session turns. If all model attempts fail with transient
+Each model pass is limited to 8 session turns to stay below the observed free-tier per-minute input-token ceiling while preserving multi-iteration autonomy. If all model attempts fail with transient
 quota/capacity signals such as HTTP 429, HTTP 503, `RESOURCE_EXHAUSTED`, high demand,
 or retry-after messages, V4 captures the action's real `gemini-artifacts/stderr.log`, classifies that evidence, and adds `research-v4-waiting` while leaving
 `research-v4-running` in place.

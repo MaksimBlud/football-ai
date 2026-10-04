@@ -209,7 +209,7 @@ jobs:
       GEMINI_SETTINGS: |-
         {
           "model": {
-            "maxSessionTurns": 16
+            "maxSessionTurns": 8
           },
           "telemetry": {
             "enabled": false
