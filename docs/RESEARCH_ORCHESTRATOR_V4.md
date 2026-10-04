@@ -60,6 +60,32 @@ technical appendix after it.
 
 A hard cap of 24 committed iterations prevents runaway loops.
 
+## Per-Issue quota and work accounting
+
+Each persistent research branch now also contains:
+
+`research/agent_runs/issue_<N>/USAGE.json`
+
+This file is updated deterministically by the orchestrator, not by Gemini. It records:
+
+- `runs_started` — V4 worker runs started for the Issue;
+- `model_passes_attempted` — total Gemini model passes;
+- `primary_passes`, `fallback1_passes`, `fallback2_passes`;
+- `successful_model_runs`;
+- `quota_waits`;
+- `short_retries_scheduled`;
+- `research_iterations_committed`;
+- `done_runs` and `blocked_runs`;
+- `last_updated_utc`.
+
+Quota-only runs persist this file even when Gemini produces no research edits. These
+usage-only commits have subjects beginning with `Research V4 usage #` and do not count
+toward the 24 research-iteration safety cap. The cap counts only commits beginning with
+`Research V4 issue #<N> iteration`.
+
+This makes it possible to calculate actual free-tier consumption per research direction
+after several real tasks instead of estimating only from provider limits.
+
 ## Dynamic minute-quota retry
 
 When all model attempts fail with a transient quota/capacity error, V4 now reads the
