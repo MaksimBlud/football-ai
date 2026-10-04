@@ -241,7 +241,7 @@ TOOLS = [
                     "paths": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "maxItems": 6,
+                        "maxItems": 4,
                     }
                 },
                 "required": ["paths"],
