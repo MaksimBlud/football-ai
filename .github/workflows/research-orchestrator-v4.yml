@@ -377,7 +377,7 @@ jobs:
           fi
       - name: Gemini emergency fallback
         id: gemini_fallback
-        if: steps.branch.outputs.maxed != 'true' && steps.groq_state.outputs.failure_state == 'BLOCKED'
+        if: steps.branch.outputs.maxed != 'true' && steps.groq_state.outputs.failure_state == 'PERMANENT_BLOCKED'
         continue-on-error: true
         uses: google-github-actions/run-gemini-cli@v0
         with:
@@ -387,7 +387,7 @@ jobs:
           settings: ${{ env.GEMINI_SETTINGS }}
           prompt: ${{ env.AGENT_PROMPT }}
       - name: Save Gemini fallback stderr
-        if: steps.branch.outputs.maxed != 'true' && steps.groq_state.outputs.failure_state == 'BLOCKED' && steps.gemini_fallback.outcome == 'failure'
+        if: steps.branch.outputs.maxed != 'true' && steps.groq_state.outputs.failure_state == 'PERMANENT_BLOCKED' && steps.gemini_fallback.outcome == 'failure'
         run: cp gemini-artifacts/stderr.log /tmp/gemini-fallback.err 2>/dev/null || true
       - name: Classify model result
         id: model
@@ -396,9 +396,9 @@ jobs:
           if [ "${{ steps.groq_primary.outcome }}" = 'success' ] || [ "${{ steps.gemini_fallback.outcome }}" = 'success' ]; then
             echo 'success=true' >> "$GITHUB_OUTPUT"
             echo 'failure_state=NONE' >> "$GITHUB_OUTPUT"
-          elif [ "${{ steps.groq_state.outputs.failure_state }}" = 'QUOTA_WAIT' ]; then
+          elif [ "${{ steps.groq_state.outputs.failure_state }}" = 'TRANSIENT_QUOTA' ] || [ "${{ steps.groq_state.outputs.failure_state }}" = 'TOOL_FORMAT_RETRY' ]; then
             echo 'success=false' >> "$GITHUB_OUTPUT"
-            echo 'failure_state=QUOTA_WAIT' >> "$GITHUB_OUTPUT"
+            echo "failure_state=${{ steps.groq_state.outputs.failure_state }}" >> "$GITHUB_OUTPUT"
           else
             STATE=$(python research_orchestrator_v4.py classify-errors \
               --file /tmp/groq-primary.err \
@@ -413,7 +413,7 @@ jobs:
             --issue-number "$ISSUE_NUMBER" \
             --inc groq_passes \
             --inc model_passes_attempted
-          if [ "${{ steps.groq_state.outputs.failure_state }}" = 'BLOCKED' ]; then
+          if [ "${{ steps.groq_state.outputs.failure_state }}" = 'PERMANENT_BLOCKED' ]; then
             python research_orchestrator_v4.py usage-update \
               --issue-number "$ISSUE_NUMBER" \
               --inc fallback1_passes \
@@ -423,14 +423,14 @@ jobs:
             python research_orchestrator_v4.py usage-update \
               --issue-number "$ISSUE_NUMBER" \
               --inc successful_model_runs
-          elif [ "${{ steps.model.outputs.failure_state }}" = 'BLOCKED' ]; then
+          elif [ "${{ steps.model.outputs.failure_state }}" = 'PERMANENT_BLOCKED' ]; then
             python research_orchestrator_v4.py usage-update \
               --issue-number "$ISSUE_NUMBER" \
               --inc blocked_runs
           fi
       - name: Plan short quota retry
         id: retry
-        if: steps.model.outputs.success == 'false' && steps.model.outputs.failure_state == 'QUOTA_WAIT'
+        if: steps.model.outputs.success == 'false' && steps.model.outputs.failure_state == 'TRANSIENT_QUOTA'
         run: |
           DELAY=$(python research_orchestrator_v4.py retry-delay \
             --file /tmp/groq-primary.err \
@@ -444,7 +444,7 @@ jobs:
             echo 'short_retry=false' >> "$GITHUB_OUTPUT"
           fi
       - name: Record quota accounting
-        if: steps.model.outputs.success == 'false' && steps.model.outputs.failure_state == 'QUOTA_WAIT'
+        if: steps.model.outputs.success == 'false' && steps.model.outputs.failure_state == 'TRANSIENT_QUOTA'
         run: |
           python research_orchestrator_v4.py usage-update \
             --issue-number "$ISSUE_NUMBER" \
@@ -455,7 +455,7 @@ jobs:
               --inc short_retries_scheduled
           fi
       - name: Enter quiet quota wait
-        if: steps.model.outputs.success == 'false' && steps.model.outputs.failure_state == 'QUOTA_WAIT'
+        if: steps.model.outputs.success == 'false' && steps.model.outputs.failure_state == 'TRANSIENT_QUOTA'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -472,8 +472,48 @@ jobs:
             -f issue_number="$ISSUE_NUMBER" \
             -f source=quick-retry \
             -f quick_retry_attempt="$NEXT_ATTEMPT"
+      - name: Plan tool-format retry
+        id: format_retry
+        if: steps.model.outputs.success == 'false' && steps.model.outputs.failure_state == 'TOOL_FORMAT_RETRY'
+        run: |
+          ATTEMPT="${QUICK_RETRY_ATTEMPT:-0}"
+          if [ "$ATTEMPT" -lt 3 ]; then
+            echo 'short_retry=true' >> "$GITHUB_OUTPUT"
+            echo "next_attempt=$((ATTEMPT + 1))" >> "$GITHUB_OUTPUT"
+          else
+            echo 'short_retry=false' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Record tool-format retry accounting
+        if: steps.model.outputs.success == 'false' && steps.model.outputs.failure_state == 'TOOL_FORMAT_RETRY'
+        run: |
+          python research_orchestrator_v4.py usage-update \
+            --issue-number "$ISSUE_NUMBER" \
+            --inc tool_format_failures
+          if [ "${{ steps.format_retry.outputs.short_retry }}" = 'true' ]; then
+            python research_orchestrator_v4.py usage-update \
+              --issue-number "$ISSUE_NUMBER" \
+              --inc tool_format_retries_scheduled
+          fi
+      - name: Short tool-format redispatch
+        if: steps.format_retry.outputs.short_retry == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEXT_ATTEMPT: ${{ steps.format_retry.outputs.next_attempt }}
+        run: |
+          sleep 15
+          gh workflow run research-orchestrator-v4.yml --repo "$GITHUB_REPOSITORY" \
+            -f issue_number="$ISSUE_NUMBER" \
+            -f source=quick-retry \
+            -f quick_retry_attempt="$NEXT_ATTEMPT"
+      - name: Enter quiet tool-format wait
+        if: steps.model.outputs.success == 'false' && steps.model.outputs.failure_state == 'TOOL_FORMAT_RETRY' && steps.format_retry.outputs.short_retry != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v4-running --add-label research-v4-waiting >/dev/null
+
       - name: Report permanent model blocker
-        if: steps.model.outputs.success == 'false' && steps.model.outputs.failure_state == 'BLOCKED'
+        if: steps.model.outputs.success == 'false' && steps.model.outputs.failure_state == 'PERMANENT_BLOCKED'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
