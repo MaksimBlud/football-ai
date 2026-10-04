@@ -65,12 +65,12 @@ A hard cap of 24 committed iterations prevents runaway loops.
 The model order is intentionally spread across separate Gemini model quotas:
 
 1. `gemini-3.5-flash-lite`
-2. `gemini-3.6-flash`
-3. `gemini-3.7-flash`
+2. `gemini-3.1-flash-lite`
+3. `gemini-3.5-flash`
 
-Each model pass is limited to 8 session turns. If all model attempts fail with transient
+Each model pass is limited to 16 session turns. If all model attempts fail with transient
 quota/capacity signals such as HTTP 429, HTTP 503, `RESOURCE_EXHAUSTED`, high demand,
-or retry-after messages, V4 adds `research-v4-waiting` but leaves
+or retry-after messages, V4 captures the action's real `gemini-artifacts/stderr.log`, classifies that evidence, and adds `research-v4-waiting` while leaving
 `research-v4-running` in place.
 
 The scheduler wakes every three hours and redispatches open Issues carrying
