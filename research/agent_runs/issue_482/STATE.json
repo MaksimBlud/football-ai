@@ -1,6 +1,6 @@
 {
   "blocker": null,
-  "next_step": "Check availability of required Bet365 columns (B365H, B365D, B365A, B365>2.5, B365<2.5, AHh, B365AH, B365AHH, B365AHA, B365CH, B365CD, B365CA) in the Bundesliga and Ligue 1 CSV files for seasons 2019/20‑2025/26.",
+  "next_step": "Download CSV files for seasons 2019/20–2025/26 for Bundesliga and Ligue 1 from the pinned repositories and check that they contain all required Bet365 opening and closing fields and that AH lines are limited to exact half-goal values.",
   "status": "CONTINUE",
-  "summary": "Reviewed CROSS_MARKET_LEAD_LAG_V1 protocol and results. Ready to assess data coverage for Bundesliga and Ligue 1 seasons and draft frozen replication protocol."
+  "summary": "V1 protocol reviewed; primary statistic and null defined. Next step: fetch Bundesliga and Ligue 1 CSVs from pinned mirrors and verify required Bet365 columns and half-goal AH lines."
 }
