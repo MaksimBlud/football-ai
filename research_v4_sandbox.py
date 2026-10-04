@@ -13,7 +13,7 @@ from research_agent_safety import validate_changed_paths
 
 MAX_CONTEXT_CHARS = 22000
 TEXT_SUFFIXES = {".py", ".md", ".json", ".csv", ".txt", ".yml", ".yaml"}
-SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", ".pytest_cache", "artifacts"}
+SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", ".pytest_cache", "artifacts", "autonomous"}
 SKIP_SUFFIXES = {".pkl", ".joblib", ".parquet", ".zip", ".gz", ".png", ".jpg", ".jpeg", ".pdf"}
 BLOCKED_IMPORTS = {
     "requests", "urllib", "http", "socket", "ftplib", "subprocess",
