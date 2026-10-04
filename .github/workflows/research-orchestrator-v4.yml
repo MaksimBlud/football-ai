@@ -175,6 +175,9 @@ jobs:
   worker:
     needs: preflight
     if: needs.preflight.outputs.run_worker == 'true'
+    concurrency:
+      group: research-v4-${{ needs.preflight.outputs.issue_number }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -244,6 +247,7 @@ jobs:
         docs/agent_runs/issue_${{ needs.preflight.outputs.issue_number }}/FINAL_REPORT.md.
         FINAL_REPORT.md must contain a simple-language conclusion first and a technical appendix after it.
         Use BLOCKED only for a genuine external blocker that cannot be solved safely from repository data.
+        Never call update_topic or any tool outside the explicit tool allowlist above.
         Do not communicate intermediate progress to the user; the orchestrator handles continuation.
     steps:
       - uses: actions/checkout@v4
