@@ -60,6 +60,30 @@ technical appendix after it.
 
 A hard cap of 24 committed iterations prevents runaway loops.
 
+## Global Gemini queue
+
+All V4 worker jobs share one GitHub Actions concurrency group:
+
+`research-v4-global-gemini`
+
+The group uses `queue: max`, so only one Gemini worker runs at a time while up to
+100 additional workers may wait in GitHub's FIFO concurrency queue. This prevents
+different research directions from competing for the same project-level Gemini TPM/RPM
+quota.
+
+Each eligible Issue receives `research-v4-queued` before entering the queue. The label
+is removed only after the worker actually obtains the global queue slot. This gives a
+simple visible distinction:
+
+- `research-v4-queued` — waiting behind another research direction;
+- `research-v4-running` without `research-v4-queued` — currently active or between
+  autonomous continuation steps;
+- `research-v4-waiting` — waiting for provider quota/capacity recovery.
+
+The three-hour safety sweep now redispatches only `research-v4-waiting` Issues, rather
+than every running Issue, so it cannot create duplicate queue entries for healthy
+research loops.
+
 ## Per-Issue quota and work accounting
 
 Each persistent research branch now also contains:

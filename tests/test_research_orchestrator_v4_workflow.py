@@ -18,12 +18,30 @@ def _v2() -> str:
     return V2.read_text(encoding="utf-8")
 
 
-def test_v4_serializes_workers_per_issue():
+def test_v4_globally_queues_gemini_workers_fifo():
     text = _v4()
     worker = text.split("  worker:", 1)[1]
     assert "concurrency:" in worker
-    assert "group: research-v4-${{ needs.preflight.outputs.issue_number }}" in worker
-    assert "cancel-in-progress: false" in worker
+    assert "group: research-v4-global-gemini" in worker
+    assert "queue: max" in worker
+    assert "cancel-in-progress: true" not in worker
+
+
+def test_v4_queue_labels_are_visible_until_worker_starts():
+    text = _v4()
+    preflight = text.split("  preflight:", 1)[1].split("  worker:", 1)[0]
+    worker = text.split("  worker:", 1)[1]
+    assert "ensure_label research-v4-queued" in preflight
+    assert "--add-label research-v4-running --add-label research-v4-queued" in preflight
+    assert "Mark global queue slot active" in worker
+    assert "--remove-label research-v4-queued" in worker
+
+
+def test_v4_scheduler_retries_only_quota_waiting_issues():
+    text = _v4()
+    sweep = text.split("  sweep:", 1)[1].split("  preflight:", 1)[0]
+    assert "--label research-v4-waiting" in sweep
+    assert "--label research-v4-running --limit" not in sweep
 
 
 def test_v4_has_issue_dispatch_schedule_and_pr_contract_triggers():
