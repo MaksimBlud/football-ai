@@ -81,7 +81,11 @@ def test_v4_captures_provider_errors_for_transient_classification():
     assert "gemini-artifacts/stderr.log /tmp/gemini-fallback.err" in text
     assert "--file /tmp/groq-primary.err" in text
     assert "--file /tmp/gemini-fallback.err" in text
-    assert "failure_state=TRANSIENT_QUOTA" in text\n    assert "TOOL_FORMAT_RETRY" in text\n    assert "Plan tool-format retry" in text\n    assert "Short tool-format redispatch" in text\n    assert "tool_format_failures" in text
+    assert "failure_state=TRANSIENT_QUOTA" in text
+    assert "TOOL_FORMAT_RETRY" in text
+    assert "Plan tool-format retry" in text
+    assert "Short tool-format redispatch" in text
+    assert "tool_format_failures" in text
 
 
 
