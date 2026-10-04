@@ -1,13 +1,19 @@
+import io
+import urllib.error
+from email.message import Message
 from pathlib import Path
 
 import pytest
 
 from research_agent_groq import (
     GroqAgentError,
+    GroqToolFormatError,
     _duration_seconds,
+    _request,
     glob_files,
     grep_search,
     read_file,
+    record_progress,
     replace_text,
     run_agent,
     write_file,
@@ -79,6 +85,33 @@ def test_groq_rate_limit_duration_parser(value: str, seconds: float):
     assert _duration_seconds(value) == pytest.approx(seconds)
 
 
+def test_groq_long_retry_after_fails_fast_without_sleep(monkeypatch, capsys):
+    headers = Message()
+    headers["retry-after"] = "2296"
+    headers["x-ratelimit-remaining-requests"] = "941"
+    error = urllib.error.HTTPError(
+        "https://api.groq.com/openai/v1/chat/completions",
+        429,
+        "Too Many Requests",
+        headers,
+        io.BytesIO(b'{"error":{"message":"TPD rate limit"}}'),
+    )
+
+    def fail_request(*args, **kwargs):
+        raise error
+
+    slept = []
+    monkeypatch.setattr("research_agent_groq.urllib.request.urlopen", fail_request)
+    monkeypatch.setattr("research_agent_groq.time.sleep", lambda seconds: slept.append(seconds))
+
+    with pytest.raises(GroqAgentError, match="long quota wait"):
+        _request("fake", {"model": "test", "messages": []})
+
+    assert slept == []
+    stderr = capsys.readouterr().err
+    assert "GROQ_LONG_QUOTA_WAIT retry_after_seconds=2296.000" in stderr
+
+
 def test_existing_state_does_not_fake_new_groq_iteration(tmp_path: Path, monkeypatch):
     state = tmp_path / "research" / "agent_runs" / "issue_428" / "STATE.json"
     state.parent.mkdir(parents=True)
@@ -104,15 +137,13 @@ def test_existing_state_does_not_fake_new_groq_iteration(tmp_path: Path, monkeyp
         )
 
 
-def test_groq_iteration_succeeds_only_after_fresh_state_write(tmp_path: Path, monkeypatch):
+def test_state_only_does_not_count_as_research_iteration(tmp_path: Path, monkeypatch):
     tool_call = {
-        "id": "call_1",
+        "id": "call_state",
         "type": "function",
         "function": {
             "name": "write_state",
-            "arguments": (
-                '{"status":"CONTINUE","summary":"new","next_step":"next"}'
-            ),
+            "arguments": '{"status":"CONTINUE","summary":"new","next_step":"next"}',
         },
     }
     monkeypatch.setattr(
@@ -122,6 +153,63 @@ def test_groq_iteration_succeeds_only_after_fresh_state_write(tmp_path: Path, mo
         },
     )
 
+    with pytest.raises(GroqAgentError, match="no substantive research progress"):
+        run_agent(
+            root=tmp_path,
+            issue_number=428,
+            issue_title="test",
+            issue_body="test body",
+            hypothesis_family="test_family",
+            api_key="fake",
+            max_turns=1,
+        )
+
+
+def test_progress_then_state_completes_iteration(tmp_path: Path, monkeypatch):
+    responses = [
+        {
+            "choices": [{
+                "message": {
+                    "content": None,
+                    "tool_calls": [{
+                        "id": "call_progress",
+                        "type": "function",
+                        "function": {
+                            "name": "record_progress",
+                            "arguments": (
+                                '{"finding":"required columns are documented",'
+                                '"evidence":"research/protocol.md lists B365H/B365D/B365A",'
+                                '"next_action":"check target league coverage"}'
+                            ),
+                        },
+                    }],
+                }
+            }]
+        },
+        {
+            "choices": [{
+                "message": {
+                    "content": None,
+                    "tool_calls": [{
+                        "id": "call_state",
+                        "type": "function",
+                        "function": {
+                            "name": "write_state",
+                            "arguments": (
+                                '{"status":"CONTINUE","summary":"column contract captured",'
+                                '"next_step":"check target league coverage"}'
+                            ),
+                        },
+                    }],
+                }
+            }]
+        },
+    ]
+
+    def fake_request(*args, **kwargs):
+        return responses.pop(0)
+
+    monkeypatch.setattr("research_agent_groq._request", fake_request)
     run_agent(
         root=tmp_path,
         issue_number=428,
@@ -129,11 +217,11 @@ def test_groq_iteration_succeeds_only_after_fresh_state_write(tmp_path: Path, mo
         issue_body="test body",
         hypothesis_family="test_family",
         api_key="fake",
-        max_turns=1,
+        max_turns=2,
     )
-    assert (
-        tmp_path / "research" / "agent_runs" / "issue_428" / "STATE.json"
-    ).is_file()
+
+    assert (tmp_path / "research" / "agent_runs" / "issue_428" / "PROGRESS.md").is_file()
+    assert (tmp_path / "research" / "agent_runs" / "issue_428" / "STATE.json").is_file()
 
 
 def test_final_groq_turn_is_write_only_and_required(tmp_path: Path, monkeypatch):
@@ -159,6 +247,28 @@ def test_final_groq_turn_is_write_only_and_required(tmp_path: Path, monkeypatch)
     assert captured["tool_choice"] == "required"
     assert captured["parallel_tool_calls"] is False
     assert [tool["function"]["name"] for tool in captured["tools"]] == ["write_state"]
+
+
+def test_record_progress_appends_compact_evidence_checkpoint(tmp_path: Path):
+    first = record_progress(
+        tmp_path,
+        428,
+        "The frozen V1 statistic is alignment_dot.",
+        "research/CROSS_MARKET_LEAD_LAG_V1.md defines alignment_dot as dot(lead, move).",
+        "Check independent league column coverage.",
+    )
+    second = record_progress(
+        tmp_path,
+        428,
+        "The checkpoint is append-only within the iteration sandbox.",
+        "PROGRESS.md already exists after the first checkpoint.",
+    )
+    path = tmp_path / "research" / "agent_runs" / "issue_428" / "PROGRESS.md"
+    text = path.read_text(encoding="utf-8")
+    assert first["chars_appended"] > 0
+    assert second["chars_appended"] > 0
+    assert text.count("## Research checkpoint") == 2
+    assert "alignment_dot" in text
 
 
 def test_write_state_builds_canonical_continue_state(tmp_path: Path):
@@ -189,22 +299,37 @@ def test_write_state_validates_status_contract(tmp_path: Path):
         write_state(tmp_path, 428, "UNKNOWN", "summary")
 
 
-def test_final_groq_turn_forces_write_state_only(tmp_path: Path, monkeypatch):
-    captured = {}
+def test_tool_format_failure_recovers_state_then_requires_progress(tmp_path: Path, monkeypatch):
+    calls = []
 
     def fake_request(api_key, payload, **kwargs):
-        captured.update(payload)
-        tool_call = {
-            "id": "call_state",
-            "type": "function",
-            "function": {
-                "name": "write_state",
-                "arguments": (
-                    '{"status":"CONTINUE","summary":"checkpoint",'
-                    '"next_step":"next deterministic step","blocker":null}'
-                ),
-            },
-        }
+        calls.append((payload, kwargs))
+        if len(calls) == 1:
+            raise GroqToolFormatError("Groq tool_use_failed")
+        if len(calls) == 2:
+            tool_call = {
+                "id": "call_recovery_state",
+                "type": "function",
+                "function": {
+                    "name": "write_state",
+                    "arguments": (
+                        '{"status":"CONTINUE","summary":"checkpoint persisted after tool-format retry",'
+                        '"next_step":"persist concrete evidence"}'
+                    ),
+                },
+            }
+        else:
+            tool_call = {
+                "id": "call_progress",
+                "type": "function",
+                "function": {
+                    "name": "record_progress",
+                    "arguments": (
+                        '{"finding":"recovery preserved a concrete checkpoint",'
+                        '"evidence":"STATE.json was written by the state-only recovery call"}'
+                    ),
+                },
+            }
         return {"choices": [{"message": {"content": None, "tool_calls": [tool_call]}}]}
 
     monkeypatch.setattr("research_agent_groq._request", fake_request)
@@ -216,11 +341,65 @@ def test_final_groq_turn_forces_write_state_only(tmp_path: Path, monkeypatch):
         issue_body="test body",
         hypothesis_family="test_family",
         api_key="fake",
-        max_turns=1,
+        max_turns=2,
     )
 
-    assert captured["tool_choice"] == "required"
-    assert [tool["function"]["name"] for tool in captured["tools"]] == ["write_state"]
-    assert (
-        tmp_path / "research" / "agent_runs" / "issue_428" / "STATE.json"
-    ).is_file()
+    assert len(calls) == 3
+    recovery_payload, recovery_kwargs = calls[1]
+    assert [tool["function"]["name"] for tool in recovery_payload["tools"]] == ["write_state"]
+    assert recovery_payload["tool_choice"] == "required"
+    assert recovery_payload["max_completion_tokens"] == 500
+    assert recovery_kwargs["max_retries"] == 1
+    final_payload, _ = calls[2]
+    assert [tool["function"]["name"] for tool in final_payload["tools"]] == ["record_progress"]
+    assert (tmp_path / "research" / "agent_runs" / "issue_428" / "STATE.json").is_file()
+    assert (tmp_path / "research" / "agent_runs" / "issue_428" / "PROGRESS.md").is_file()
+
+
+def test_final_groq_turn_forces_state_after_progress(tmp_path: Path, monkeypatch):
+    captured = []
+    responses = [
+        {
+            "id": "call_progress",
+            "type": "function",
+            "function": {
+                "name": "record_progress",
+                "arguments": (
+                    '{"finding":"one concrete fact","evidence":"research/source.md line contract"}'
+                ),
+            },
+        },
+        {
+            "id": "call_state",
+            "type": "function",
+            "function": {
+                "name": "write_state",
+                "arguments": (
+                    '{"status":"CONTINUE","summary":"checkpoint",'
+                    '"next_step":"next deterministic step","blocker":null}'
+                ),
+            },
+        },
+    ]
+
+    def fake_request(api_key, payload, **kwargs):
+        captured.append(payload)
+        tool_call = responses.pop(0)
+        return {"choices": [{"message": {"content": None, "tool_calls": [tool_call]}}]}
+
+    monkeypatch.setattr("research_agent_groq._request", fake_request)
+
+    run_agent(
+        root=tmp_path,
+        issue_number=428,
+        issue_title="test",
+        issue_body="test body",
+        hypothesis_family="test_family",
+        api_key="fake",
+        max_turns=2,
+    )
+
+    assert captured[-1]["tool_choice"] == "required"
+    assert [tool["function"]["name"] for tool in captured[-1]["tools"]] == ["write_state"]
+    assert (tmp_path / "research" / "agent_runs" / "issue_428" / "PROGRESS.md").is_file()
+    assert (tmp_path / "research" / "agent_runs" / "issue_428" / "STATE.json").is_file()

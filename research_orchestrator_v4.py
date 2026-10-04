@@ -21,6 +21,8 @@ USAGE_COUNTERS = {
     "successful_model_runs",
     "quota_waits",
     "short_retries_scheduled",
+    "tool_format_failures",
+    "tool_format_retries_scheduled",
     "research_iterations_committed",
     "done_runs",
     "blocked_runs",
@@ -36,6 +38,12 @@ TRANSIENT_MARKERS = (
     "rate limit",
     "exhausted your daily quota",
 )
+TOOL_FORMAT_MARKERS = (
+    "tool_use_failed",
+    "failed to parse tool call arguments as json",
+    "groq_tool_format_error",
+    "groq_tool_format_retry",
+)
 DAILY_QUOTA_MARKERS = (
     "daily quota",
     "requests per day",
@@ -47,6 +55,10 @@ DAILY_QUOTA_MARKERS = (
 RETRY_DELAY_RE = re.compile(
     r"(?:please\s+retry\s+in|suggested\s+retry\s+after|retry\s+after)\s+"
     r"([0-9]+(?:\.[0-9]+)?)\s*(ms|milliseconds?|s|seconds?)",
+    re.IGNORECASE,
+)
+LONG_QUOTA_WAIT_RE = re.compile(
+    r"groq_long_quota_wait\s+retry_after_seconds=([0-9]+(?:\.[0-9]+)?)",
     re.IGNORECASE,
 )
 
@@ -141,13 +153,22 @@ def parse_usage_increment(value: str) -> tuple[str, int]:
     return key, amount
 
 
+def _last_marker_position(blob: str, markers: tuple[str, ...]) -> int:
+    return max((blob.rfind(marker) for marker in markers), default=-1)
+
+
 def classify_model_errors(texts: list[str]) -> str:
+    """Classify by the last decisive provider error, not any older stderr line."""
     blob = "\n".join(texts).lower()
-    if any(marker in blob for marker in PERMANENT_MARKERS):
-        return "BLOCKED"
-    if any(marker in blob for marker in TRANSIENT_MARKERS):
-        return "QUOTA_WAIT"
-    return "BLOCKED"
+    positions = {
+        "TRANSIENT_QUOTA": _last_marker_position(blob, TRANSIENT_MARKERS),
+        "TOOL_FORMAT_RETRY": _last_marker_position(blob, TOOL_FORMAT_MARKERS),
+        "PERMANENT_BLOCKED": _last_marker_position(blob, PERMANENT_MARKERS),
+    }
+    state = max(positions, key=positions.get)
+    if positions[state] < 0:
+        return "PERMANENT_BLOCKED"
+    return state
 
 
 def retry_delay_seconds(
@@ -160,6 +181,9 @@ def retry_delay_seconds(
 ) -> int | None:
     """Return a bounded short-retry delay, or None for a daily quota."""
     blob = "\n".join(texts).lower()
+
+    if LONG_QUOTA_WAIT_RE.search(blob):
+        return None
 
     delays: list[float] = []
     for match in RETRY_DELAY_RE.finditer(blob):

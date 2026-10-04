@@ -34,7 +34,7 @@ def test_branch_name_is_issue_scoped():
     ],
 )
 def test_transient_gemini_failures_wait(message):
-    assert classify_model_errors([message]) == "QUOTA_WAIT"
+    assert classify_model_errors([message]) == "TRANSIENT_QUOTA"
 
 
 @pytest.mark.parametrize(
@@ -48,7 +48,26 @@ def test_transient_gemini_failures_wait(message):
     ],
 )
 def test_non_transient_gemini_failures_block(message):
-    assert classify_model_errors([message]) == "BLOCKED"
+    assert classify_model_errors([message]) == "PERMANENT_BLOCKED"
+
+
+def test_latest_tool_format_error_wins_over_earlier_quota():
+    log = """
+GROQ_HTTP_ERROR status=429 retry_after='5' body=rate limit quota exceeded
+Please retry after 7s.
+GROQ_HTTP_ERROR status=400 retry_after=None body={"error":{"code":"tool_use_failed","message":"Failed to parse tool call arguments as JSON"}}
+GROQ_TOOL_FORMAT_ERROR retryable=true
+"""
+    assert classify_model_errors([log]) == "TOOL_FORMAT_RETRY"
+
+
+def test_latest_permanent_error_wins_over_earlier_quota():
+    log = """
+429 RESOURCE_EXHAUSTED quota exceeded
+Please retry after 5s.
+GROQ_API_KEY missing
+"""
+    assert classify_model_errors([log]) == "PERMANENT_BLOCKED"
 
 
 @pytest.mark.parametrize(
@@ -68,6 +87,15 @@ def test_daily_quota_does_not_short_retry():
     assert retry_delay_seconds(
         ["GenerateRequestsPerDayPerProjectPerModel-FreeTier daily quota"]
     ) is None
+
+
+def test_long_groq_retry_after_does_not_short_redispatch():
+    log = (
+        "GROQ_HTTP_ERROR status=429 retry_after='2296' body=TPD rate limit\n"
+        "GROQ_LONG_QUOTA_WAIT retry_after_seconds=2296.000"
+    )
+    assert classify_model_errors([log]) == "TRANSIENT_QUOTA"
+    assert retry_delay_seconds([log]) is None
 
 
 def test_minute_quota_retry_wins_when_another_fallback_hit_daily_quota():
