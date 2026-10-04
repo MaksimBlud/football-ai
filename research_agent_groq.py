@@ -25,6 +25,7 @@ MAX_GREP_RESULTS = 80
 MAX_LIST_ENTRIES = 120
 
 TRANSIENT_HTTP = {429, 500, 502, 503, 504}
+LONG_RETRY_SECONDS = 180.0
 
 
 class GroqAgentError(RuntimeError):
@@ -571,7 +572,16 @@ def _request(
             ):
                 print("GROQ_TOOL_FORMAT_ERROR retryable=true", file=sys.stderr)
                 raise GroqToolFormatError("Groq tool_use_failed") from exc
-            if exc.code not in TRANSIENT_HTTP or attempt >= max_retries:
+            if exc.code not in TRANSIENT_HTTP:
+                raise GroqAgentError(f"Groq API HTTP {exc.code}") from exc
+            delay = _duration_seconds(retry_after)
+            if delay is not None and delay > LONG_RETRY_SECONDS:
+                print(
+                    f"GROQ_LONG_QUOTA_WAIT retry_after_seconds={delay:.3f}",
+                    file=sys.stderr,
+                )
+                raise GroqAgentError("Groq long quota wait") from exc
+            if attempt >= max_retries:
                 raise GroqAgentError(f"Groq API HTTP {exc.code}") from exc
             if remaining_requests == "0":
                 if reset_requests:
@@ -580,7 +590,6 @@ def _request(
                         file=sys.stderr,
                     )
                 raise GroqAgentError("Groq daily quota exhausted") from exc
-            delay = _duration_seconds(retry_after)
             if delay is None:
                 delay = min(65.0, 10.0 * (attempt + 1))
             delay = min(max(delay + 2.0, 2.0), 75.0)
