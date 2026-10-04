@@ -60,6 +60,18 @@ technical appendix after it.
 
 A hard cap of 24 committed iterations prevents runaway loops.
 
+## Dynamic minute-quota retry
+
+When all model attempts fail with a transient quota/capacity error, V4 now reads the
+provider's retry hint from the captured Gemini stderr. For errors such as
+`Please retry in 56s`, it waits for that delay plus a small safety buffer and
+redispatches the same Issue automatically.
+
+Short retries are bounded to three consecutive attempts. If Google reports a daily
+quota, or the short-retry budget is exhausted, V4 remains in `research-v4-waiting`
+and the three-hour scheduler becomes the fallback. This prevents a normal one-minute
+TPM/RPM reset from turning into a multi-hour pause while still avoiding runaway loops.
+
 ## Free-tier resilience
 
 The model order is intentionally spread across separate Gemini model quotas:
