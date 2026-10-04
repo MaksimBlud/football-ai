@@ -26,6 +26,7 @@ on:
       - 'research_orchestrator_v4.py'
       - 'research_agent_groq.py'
       - 'tests/test_research_orchestrator_v4.py'
+      - 'tests/test_research_agent_groq.py'
       - 'tests/test_research_orchestrator_v4_workflow.py'
       - 'docs/RESEARCH_ORCHESTRATOR_V4.md'
       - '.github/workflows/research-orchestrator-v4.yml'
@@ -50,7 +51,7 @@ jobs:
           cache: pip
       - run: pip install pytest
       - run: python -m py_compile research_orchestrator_v4.py research_agent_groq.py
-      - run: pytest -q tests/test_research_orchestrator_v4.py tests/test_research_orchestrator_v4_workflow.py
+      - run: pytest -q tests/test_research_orchestrator_v4.py tests/test_research_orchestrator_v4_workflow.py tests/test_research_agent_groq.py
 
   sweep:
     if: github.event_name == 'schedule'
