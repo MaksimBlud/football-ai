@@ -286,12 +286,21 @@ jobs:
         run: |
           git fetch origin main
           BRANCH=$(python research_orchestrator_v4.py branch-name --issue-number "$ISSUE_NUMBER")
+          git config user.name 'football-ai-research-bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
-            git fetch origin "$BRANCH:$BRANCH"
-            git switch "$BRANCH"
+            git fetch origin "$BRANCH:refs/remotes/origin/$BRANCH"
+            git switch -c "$BRANCH" --track "origin/$BRANCH"
+            BEFORE_REFRESH=$(git rev-parse HEAD)
+            git merge --no-edit origin/main
+            if [ "$(git rev-parse HEAD)" != "$BEFORE_REFRESH" ]; then
+              git push origin "$BRANCH"
+            fi
           else
             git switch -c "$BRANCH" origin/main
           fi
+          test -f research_agent_groq.py
+          grep -q '"groq_passes"' research_orchestrator_v4.py
           RESEARCH_COMMITS=$(git log --format='%s' origin/main..HEAD | grep -c "^Research V4 issue #${ISSUE_NUMBER} iteration " || true)
           NEXT_ITERATION=$((RESEARCH_COMMITS + 1))
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
