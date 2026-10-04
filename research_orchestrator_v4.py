@@ -7,9 +7,23 @@ import math
 import os
 import re
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 VALID_STATUSES = {"CONTINUE", "DONE", "BLOCKED"}
+USAGE_COUNTERS = {
+    "runs_started",
+    "model_passes_attempted",
+    "primary_passes",
+    "fallback1_passes",
+    "fallback2_passes",
+    "successful_model_runs",
+    "quota_waits",
+    "short_retries_scheduled",
+    "research_iterations_committed",
+    "done_runs",
+    "blocked_runs",
+}
 TRANSIENT_MARKERS = (
     "429",
     "503",
@@ -63,6 +77,66 @@ def issue_root(issue_number: int, root: Path = Path(".")) -> Path:
 
 def docs_root(issue_number: int, root: Path = Path(".")) -> Path:
     return root / "docs" / "agent_runs" / f"issue_{issue_number}"
+
+
+def usage_path(issue_number: int, root: Path = Path(".")) -> Path:
+    return issue_root(issue_number, root) / "USAGE.json"
+
+
+def load_usage(issue_number: int, root: Path = Path(".")) -> dict[str, object]:
+    path = usage_path(issue_number, root)
+    if path.is_file():
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    else:
+        payload = {}
+
+    result: dict[str, object] = {
+        "schema_version": 1,
+        "issue_number": issue_number,
+        **{counter: 0 for counter in sorted(USAGE_COUNTERS)},
+        "last_updated_utc": None,
+    }
+    for key in result:
+        if key in payload:
+            result[key] = payload[key]
+    return result
+
+
+def update_usage(
+    issue_number: int,
+    increments: dict[str, int],
+    root: Path = Path("."),
+) -> dict[str, object]:
+    unknown = sorted(set(increments) - USAGE_COUNTERS)
+    if unknown:
+        raise ValueError(f"unknown usage counters: {unknown}")
+
+    usage = load_usage(issue_number, root)
+    for key, amount in increments.items():
+        if amount < 0:
+            raise ValueError(f"usage increment must be non-negative: {key}={amount}")
+        usage[key] = int(usage[key]) + amount
+    usage["last_updated_utc"] = datetime.now(UTC).isoformat()
+
+    path = usage_path(issue_number, root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(usage, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return usage
+
+
+def parse_usage_increment(value: str) -> tuple[str, int]:
+    key, sep, raw_amount = value.partition("=")
+    if not sep:
+        key, raw_amount = value, "1"
+    if key not in USAGE_COUNTERS:
+        raise ValueError(f"unknown usage counter: {key}")
+    amount = int(raw_amount)
+    if amount < 0:
+        raise ValueError(f"usage increment must be non-negative: {value}")
+    return key, amount
 
 
 def classify_model_errors(texts: list[str]) -> str:
@@ -144,6 +218,11 @@ def _main() -> None:
     retry.add_argument("--env", action="append", default=[])
     retry.add_argument("--file", action="append", default=[], type=Path)
 
+    usage = sub.add_parser("usage-update")
+    usage.add_argument("--issue-number", type=int, required=True)
+    usage.add_argument("--root", type=Path, default=Path("."))
+    usage.add_argument("--inc", action="append", default=[])
+
     state = sub.add_parser("validate-state")
     state.add_argument("--issue-number", type=int, required=True)
     state.add_argument("--root", type=Path, default=Path("."))
@@ -168,6 +247,15 @@ def _main() -> None:
 
     if args.command == "branch-name":
         print(branch_name(args.issue_number))
+        return
+
+    if args.command == "usage-update":
+        increments: dict[str, int] = {}
+        for value in args.inc:
+            key, amount = parse_usage_increment(value)
+            increments[key] = increments.get(key, 0) + amount
+        result = update_usage(args.issue_number, increments, args.root)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
         return
 
     result = load_state(args.issue_number, args.root)
