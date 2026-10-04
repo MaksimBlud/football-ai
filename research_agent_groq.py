@@ -209,6 +209,41 @@ def replace_text(
     }
 
 
+def record_progress(
+    root: Path,
+    issue_number: int,
+    finding: str,
+    evidence: str,
+    next_action: str | None = None,
+) -> dict[str, Any]:
+    finding = finding.strip()
+    evidence = evidence.strip()
+    next_action = next_action.strip() if next_action else None
+    if not finding:
+        raise GroqAgentError("progress finding must be non-empty")
+    if not evidence:
+        raise GroqAgentError("progress evidence must be non-empty")
+    if len(finding) > 1000 or len(evidence) > 1400 or (next_action and len(next_action) > 1000):
+        raise GroqAgentError("progress fields must stay compact")
+
+    path = f"research/agent_runs/issue_{issue_number}/PROGRESS.md"
+    target = _resolve_write(root, issue_number, path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    section = [
+        "## Research checkpoint",
+        "",
+        f"**Finding:** {finding}",
+        "",
+        f"**Evidence:** {evidence}",
+    ]
+    if next_action:
+        section.extend(["", f"**Next action:** {next_action}"])
+    text = "\n".join(section) + "\n\n"
+    with target.open("a", encoding="utf-8") as handle:
+        handle.write(text)
+    return {"path": path, "chars_appended": len(text)}
+
+
 def write_state(
     root: Path,
     issue_number: int,
@@ -329,6 +364,26 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "record_progress",
+            "description": (
+                "Append one compact, concrete research checkpoint to PROGRESS.md. "
+                "Use repository evidence, not a restatement of the plan."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "finding": {"type": "string", "maxLength": 1000},
+                    "evidence": {"type": "string", "maxLength": 1400},
+                    "next_action": {"type": "string", "maxLength": 1000},
+                },
+                "required": ["finding", "evidence"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "write_state",
             "description": (
                 "Write canonical STATE.json for this Issue. Use this before any long artifact. "
@@ -392,6 +447,9 @@ WRITE_TOOLS = [
 FINAL_TOOLS = [
     tool for tool in TOOLS if tool["function"]["name"] == "write_state"
 ]
+PROGRESS_TOOLS = [
+    tool for tool in TOOLS if tool["function"]["name"] == "record_progress"
+]
 
 
 def _tool_result(root: Path, issue_number: int, name: str, args: dict[str, Any]) -> Any:
@@ -409,6 +467,14 @@ def _tool_result(root: Path, issue_number: int, name: str, args: dict[str, Any])
             args["query"],
             args.get("path", "."),
             args.get("file_glob", "*"),
+        )
+    if name == "record_progress":
+        return record_progress(
+            root,
+            issue_number,
+            args["finding"],
+            args["evidence"],
+            args.get("next_action"),
         )
     if name == "write_state":
         return write_state(
@@ -535,6 +601,26 @@ def _message_from_api(message: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def _substantive_snapshot(root: Path, issue_number: int) -> dict[str, bytes]:
+    snapshot: dict[str, bytes] = {}
+    excluded = {
+        f"research/agent_runs/issue_{issue_number}/STATE.json",
+        f"research/agent_runs/issue_{issue_number}/USAGE.json",
+    }
+    for write_root in _allowed_write_roots(issue_number):
+        base = root / write_root
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*")):
+            if not path.is_file():
+                continue
+            rel = str(path.relative_to(root)).replace("\\", "/")
+            if rel in excluded or "__pycache__" in path.parts:
+                continue
+            snapshot[rel] = path.read_bytes()
+    return snapshot
+
+
 def run_agent(
     *,
     root: Path,
@@ -549,6 +635,7 @@ def run_agent(
     state_path = root / "research" / "agent_runs" / f"issue_{issue_number}" / "STATE.json"
     final_path = root / "docs" / "agent_runs" / f"issue_{issue_number}" / "FINAL_REPORT.md"
     initial_state = state_path.read_bytes() if state_path.is_file() else None
+    initial_substantive = _substantive_snapshot(root, issue_number)
 
     def state_updated() -> bool:
         if not state_path.is_file():
@@ -556,13 +643,22 @@ def run_agent(
         current = state_path.read_bytes()
         return initial_state is None or current != initial_state
 
+    def substantive_updated() -> bool:
+        return _substantive_snapshot(root, issue_number) != initial_substantive
+
+    def iteration_complete() -> bool:
+        return state_updated() and substantive_updated()
+
     system = (
         "You are Football AI Research Orchestrator V4. Work on exactly one research Issue. "
         "You have repository read/search tools and may write ONLY inside the three issue sandbox roots. "
         "Never modify production .pkl files, runtime/deployment, Supabase, paid APIs, or closed/frozen "
         "research contracts. No post-hoc threshold tuning. Use temporal/OOS and market baseline when relevant. "
         "A negative result is valid. Do one coherent research iteration, not the entire project at once. "
-        "Before finishing you MUST write STATE.json. CONTINUE requires next_step; BLOCKED requires blocker; "
+        "A committed CONTINUE iteration must persist concrete progress outside STATE.json; use record_progress "
+        "for a compact evidence-backed checkpoint, or write/replace a real protocol/code/result artifact. "
+        "Merely rephrasing the same next_step is not progress. Before finishing you MUST write STATE.json. "
+        "CONTINUE requires next_step; BLOCKED requires blocker; "
         "DONE requires a non-empty FINAL_REPORT.md with simple-language conclusion first. "
         "Prefer read_many_files/grep over broad scans to conserve free-tier tokens."
     )
@@ -596,32 +692,67 @@ Inspect only the files needed for the next logical step. Complete one meaningful
                 {
                     "role": "user",
                     "content": (
-                        "Execution phase: stop broad exploration. FIRST call write_state with a "
-                        "short CONTINUE/DONE/BLOCKED checkpoint based on what you learned. Do not "
-                        "attempt a long Markdown/code write before STATE is safely persisted. At most "
-                        "one additional targeted read/search is allowed if essential."
+                        "Execution phase: stop broad exploration. FIRST persist one concrete finding "
+                        "using record_progress (preferred) or a small protocol/code/result write. Cite "
+                        "the repository file/field/evidence you actually inspected. Do not merely "
+                        "rephrase STATE.next_step. After progress is persisted, update STATE.json."
                     ),
                 }
             )
-        if turn == max_turns:
+        if turn >= 3 and substantive_updated() and not state_updated():
             messages.append(
                 {
                     "role": "user",
                     "content": (
-                        "FINAL STATE TURN. No more reading, searching, or long artifact generation. "
-                        "You MUST call write_state now. Use CONTINUE with a concrete next_step if work "
-                        "remains; use BLOCKED with the exact blocker if a safe research step cannot "
-                        "be completed. Do not finish with prose only."
+                        "Concrete progress is already persisted. Now call write_state with a short "
+                        "CONTINUE/DONE/BLOCKED checkpoint. Do not do more exploration."
                     ),
                 }
             )
+        elif turn >= 3 and state_updated() and not substantive_updated():
+            messages.append(
+                {
+                    "role": "user",
+                    "content": (
+                        "STATE.json changed, but no substantive research artifact changed. Call "
+                        "record_progress now with a concrete finding and repository evidence; do not "
+                        "rewrite STATE again."
+                    ),
+                }
+            )
+        if turn == max_turns:
+            if state_updated() and not substantive_updated():
+                final_instruction = (
+                    "FINAL PROGRESS TURN. STATE.json is already updated but this iteration has no "
+                    "substantive artifact. Call record_progress now with a concrete evidence-backed "
+                    "finding. Do not rewrite STATE."
+                )
+            else:
+                final_instruction = (
+                    "FINAL STATE TURN. No more reading or broad exploration. Call write_state now. "
+                    "Use CONTINUE with a concrete next_step if work remains; use BLOCKED only for a "
+                    "genuine external blocker."
+                )
+            messages.append({"role": "user", "content": final_instruction})
 
         final_turn = turn == max_turns
+        if state_updated() and not substantive_updated():
+            forced_tools = PROGRESS_TOOLS
+        elif substantive_updated() and not state_updated():
+            forced_tools = FINAL_TOOLS
+        elif final_turn:
+            forced_tools = FINAL_TOOLS
+        else:
+            forced_tools = TOOLS
         payload = {
             "model": model,
             "messages": messages,
-            "tools": FINAL_TOOLS if final_turn else TOOLS,
-            "tool_choice": "required" if final_turn else "auto",
+            "tools": forced_tools,
+            "tool_choice": (
+                "required"
+                if final_turn or forced_tools in {FINAL_TOOLS, PROGRESS_TOOLS}
+                else "auto"
+            ),
             "parallel_tool_calls": False,
             "temperature": 0.1,
             "max_completion_tokens": 900,
@@ -682,7 +813,7 @@ Inspect only the files needed for the next logical step. Complete one meaningful
 
         tool_calls = raw_message.get("tool_calls") or []
         if not tool_calls:
-            if state_updated():
+            if iteration_complete():
                 return
             if turn >= max_turns:
                 break
@@ -723,7 +854,7 @@ Inspect only the files needed for the next logical step. Complete one meaningful
                 }
             )
 
-        if state_updated():
+        if iteration_complete():
             return
 
         # Keep the original contract plus only the most recent tool exchange to stay
@@ -752,6 +883,11 @@ Inspect only the files needed for the next logical step. Complete one meaningful
         raise GroqAgentError(
             f"Groq agent incomplete after {max_turns} turns: STATE.json not updated. "
             "Please retry after 65s."
+        )
+    if not substantive_updated():
+        raise GroqAgentError(
+            f"Groq agent incomplete after {max_turns} turns: no substantive research progress "
+            "was persisted outside STATE.json. Please retry after 65s."
         )
 
 
