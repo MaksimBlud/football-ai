@@ -175,7 +175,6 @@ jobs:
 
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v4-running --add-label research-v4-queued >/dev/null
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-waiting >/dev/null 2>&1 || true
-          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-queued >/dev/null 2>&1 || true
           if [ "$SOURCE" = 'manual' ]; then
             gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-done >/dev/null 2>&1 || true
             gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-blocked >/dev/null 2>&1 || true
