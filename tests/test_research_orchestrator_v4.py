@@ -67,6 +67,19 @@ def test_daily_quota_does_not_short_retry():
     ) is None
 
 
+def test_minute_quota_retry_wins_when_another_fallback_hit_daily_quota():
+    minute = (
+        "Quota exceeded for generate_content_free_tier_input_token_count; "
+        "Please retry in 58.283537871s."
+    )
+    daily = (
+        "You have exhausted your daily quota on this model. "
+        "GenerateRequestsPerDayPerProjectPerModel-FreeTier; "
+        "Please retry in 16h2m25s."
+    )
+    assert retry_delay_seconds([minute, daily]) == 69
+
+
 def test_retry_delay_uses_largest_hint_across_models():
     assert retry_delay_seconds(
         ["Please retry in 31.1s", "Please retry in 59.97s"]

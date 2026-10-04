@@ -84,8 +84,6 @@ def retry_delay_seconds(
 ) -> int | None:
     """Return a bounded short-retry delay, or None for a daily quota."""
     blob = "\n".join(texts).lower()
-    if any(marker in blob for marker in DAILY_QUOTA_MARKERS):
-        return None
 
     delays: list[float] = []
     for match in RETRY_DELAY_RE.finditer(blob):
@@ -97,10 +95,12 @@ def retry_delay_seconds(
 
     if delays:
         delay = math.ceil(max(delays)) + buffer_seconds
-    else:
-        delay = default_seconds
+        return max(min_seconds, min(max_seconds, delay))
 
-    return max(min_seconds, min(max_seconds, delay))
+    if any(marker in blob for marker in DAILY_QUOTA_MARKERS):
+        return None
+
+    return max(min_seconds, min(max_seconds, default_seconds))
 
 
 def load_state(issue_number: int, root: Path = Path(".")) -> AgentState:
