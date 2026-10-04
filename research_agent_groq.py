@@ -9,6 +9,7 @@ import argparse
 import fnmatch
 import hashlib
 import json
+import math
 import os
 import re
 import sys
@@ -16,6 +17,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import UTC, datetime, timedelta
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -40,6 +42,14 @@ class GroqAgentError(RuntimeError):
 
 class GroqToolFormatError(GroqAgentError):
     """Groq rejected malformed JSON arguments for a generated tool call."""
+
+
+class GroqLongQuotaWait(GroqAgentError):
+    """Provider supplied a long retry-after window that should survive across runs."""
+
+    def __init__(self, retry_after_seconds: float):
+        super().__init__(f"Groq long quota wait: {retry_after_seconds:.3f}s")
+        self.retry_after_seconds = retry_after_seconds
 
 
 
@@ -275,6 +285,37 @@ def fetch_pinned_github_files(
             )
         )
     return {"files": fetched}
+
+
+def write_quota_wait(
+    root: Path,
+    issue_number: int,
+    retry_after_seconds: float,
+    *,
+    buffer_seconds: int = 15,
+) -> dict[str, Any]:
+    if retry_after_seconds <= 0:
+        raise GroqAgentError("retry_after_seconds must be positive")
+    observed = datetime.now(UTC)
+    delay = math.ceil(retry_after_seconds) + buffer_seconds
+    not_before = observed + timedelta(seconds=delay)
+    path = f"research/agent_runs/issue_{issue_number}/QUOTA_WAIT.json"
+    target = _resolve_write(root, issue_number, path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "schema_version": 1,
+        "provider": "groq",
+        "retry_after_seconds": math.ceil(retry_after_seconds),
+        "buffer_seconds": buffer_seconds,
+        "observed_at_utc": observed.isoformat(),
+        "not_before_utc": not_before.isoformat(),
+        "not_before_epoch": int(not_before.timestamp()),
+    }
+    target.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return {"path": path, **payload}
 
 
 def write_file(root: Path, issue_number: int, path: str, content: str) -> dict[str, Any]:
@@ -723,7 +764,7 @@ def _request(
                     f"GROQ_LONG_QUOTA_WAIT retry_after_seconds={delay:.3f}",
                     file=sys.stderr,
                 )
-                raise GroqAgentError("Groq long quota wait") from exc
+                raise GroqLongQuotaWait(delay) from exc
             if attempt >= max_retries:
                 raise GroqAgentError(f"Groq API HTTP {exc.code}") from exc
             if remaining_requests == "0":
@@ -760,6 +801,7 @@ def _substantive_snapshot(root: Path, issue_number: int) -> dict[str, bytes]:
     excluded = {
         f"research/agent_runs/issue_{issue_number}/STATE.json",
         f"research/agent_runs/issue_{issue_number}/USAGE.json",
+        f"research/agent_runs/issue_{issue_number}/QUOTA_WAIT.json",
     }
     for write_root in _allowed_write_roots(issue_number):
         base = root / write_root
@@ -1086,6 +1128,15 @@ def main() -> None:
             model=args.model,
             max_turns=args.max_turns,
         )
+    except GroqLongQuotaWait as exc:
+        wait = write_quota_wait(args.root, args.issue_number, exc.retry_after_seconds)
+        print(
+            "GROQ_QUOTA_WAIT_STATE "
+            f"path={wait['path']} not_before_epoch={wait['not_before_epoch']}",
+            file=sys.stderr,
+        )
+        print(f"GROQ_AGENT_ERROR: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
     except GroqAgentError as exc:
         print(f"GROQ_AGENT_ERROR: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc
