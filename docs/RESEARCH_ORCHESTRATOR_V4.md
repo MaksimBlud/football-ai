@@ -124,11 +124,11 @@ TPM/RPM reset from turning into a multi-hour pause while still avoiding runaway 
 
 ## Free-tier resilience
 
-The model order is intentionally spread across separate Gemini model quotas:
+The model order is intentionally spread across separate Gemini model quotas. The final fallback uses the still-supported legacy 2.5 Flash-Lite free tier when the current-generation request bucket is exhausted:
 
 1. `gemini-3.5-flash-lite`
 2. `gemini-3.1-flash-lite`
-3. `gemini-3.5-flash`
+3. `gemini-2.5-flash-lite`
 
 Each model pass is limited to 8 session turns to stay below the observed free-tier per-minute input-token ceiling while preserving multi-iteration autonomy. If all model attempts fail with transient
 quota/capacity signals such as HTTP 429, HTTP 503, `RESOURCE_EXHAUSTED`, high demand,
