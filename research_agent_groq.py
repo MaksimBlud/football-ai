@@ -442,7 +442,9 @@ TOOLS = [
 ]
 
 WRITE_TOOLS = [
-    tool for tool in TOOLS if tool["function"]["name"] in {"write_file", "replace", "write_state"}
+    tool
+    for tool in TOOLS
+    if tool["function"]["name"] in {"record_progress", "write_file", "replace", "write_state"}
 ]
 FINAL_TOOLS = [
     tool for tool in TOOLS if tool["function"]["name"] == "write_state"
@@ -750,7 +752,7 @@ Inspect only the files needed for the next logical step. Complete one meaningful
             "tools": forced_tools,
             "tool_choice": (
                 "required"
-                if final_turn or forced_tools in {FINAL_TOOLS, PROGRESS_TOOLS}
+                if final_turn or forced_tools is FINAL_TOOLS or forced_tools is PROGRESS_TOOLS
                 else "auto"
             ),
             "parallel_tool_calls": False,
@@ -761,8 +763,10 @@ Inspect only the files needed for the next logical step. Complete one meaningful
         try:
             response = _request(api_key, payload)
         except GroqToolFormatError:
+            recover_progress = state_updated() and not substantive_updated()
+            recovery_mode = "record_progress_only" if recover_progress else "write_state_only"
             print(
-                f"GROQ_TOOL_FORMAT_RETRY turn={turn} mode=write_state_only",
+                f"GROQ_TOOL_FORMAT_RETRY turn={turn} mode={recovery_mode}",
                 file=sys.stderr,
             )
             recovery_messages = (
@@ -770,22 +774,25 @@ Inspect only the files needed for the next logical step. Complete one meaningful
                 if len(messages) <= 6
                 else list(messages[:2] + messages[-4:])
             )
-            recovery_messages.append(
-                {
-                    "role": "user",
-                    "content": (
-                        "TOOL FORMAT RECOVERY. The previous provider response failed while "
-                        "serializing a tool call. Do not recreate any long artifact. Call "
-                        "write_state only, with short fields (prefer <=500 characters each). "
-                        "Use CONTINUE with the smallest safe next_step unless an existing final "
-                        "report already proves DONE; use BLOCKED only for a genuine external blocker."
-                    ),
-                }
-            )
+            if recover_progress:
+                recovery_instruction = (
+                    "TOOL FORMAT RECOVERY. STATE.json is already updated. Call record_progress "
+                    "only, with short finding/evidence fields grounded in what you already read."
+                )
+                recovery_tools = PROGRESS_TOOLS
+            else:
+                recovery_instruction = (
+                    "TOOL FORMAT RECOVERY. The previous provider response failed while serializing "
+                    "a tool call. Do not recreate a long artifact. Call write_state only, with short "
+                    "fields (prefer <=500 characters each). Use CONTINUE unless a genuine external "
+                    "blocker exists."
+                )
+                recovery_tools = FINAL_TOOLS
+            recovery_messages.append({"role": "user", "content": recovery_instruction})
             recovery_payload = {
                 "model": model,
                 "messages": recovery_messages,
-                "tools": FINAL_TOOLS,
+                "tools": recovery_tools,
                 "tool_choice": "required",
                 "parallel_tool_calls": False,
                 "temperature": 0.0,
@@ -817,15 +824,19 @@ Inspect only the files needed for the next logical step. Complete one meaningful
                 return
             if turn >= max_turns:
                 break
-            messages.append(
-                {
-                    "role": "user",
-                    "content": (
-                        "You have not written STATE.json yet. Use the file tools now. "
-                        "A valid iteration cannot finish without STATE.json."
-                    ),
-                }
-            )
+            if substantive_updated() and not state_updated():
+                reminder = "Concrete progress exists; write STATE.json now."
+            elif state_updated() and not substantive_updated():
+                reminder = (
+                    "STATE.json exists but no concrete progress artifact changed; "
+                    "call record_progress now."
+                )
+            else:
+                reminder = (
+                    "Persist one concrete progress checkpoint and update STATE.json; "
+                    "both are required for a valid iteration."
+                )
+            messages.append({"role": "user", "content": reminder})
             continue
 
         remaining_tool_chars = MAX_TOOL_RESULT_CHARS
