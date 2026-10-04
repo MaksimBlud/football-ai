@@ -315,6 +315,10 @@ TOOLS = [
     },
 ]
 
+WRITE_TOOLS = [
+    tool for tool in TOOLS if tool["function"]["name"] in {"write_file", "replace"}
+]
+
 
 def _tool_result(root: Path, issue_number: int, name: str, args: dict[str, Any]) -> Any:
     if name == "list_directory":
@@ -389,7 +393,14 @@ def _request(
         try:
             with urllib.request.urlopen(request, timeout=180) as response:
                 raw = response.read().decode("utf-8")
-                return json.loads(raw)
+                result = json.loads(raw)
+                result["_groq_rate_limit"] = {
+                    "remaining_requests": response.headers.get("x-ratelimit-remaining-requests"),
+                    "reset_requests": response.headers.get("x-ratelimit-reset-requests"),
+                    "remaining_tokens": response.headers.get("x-ratelimit-remaining-tokens"),
+                    "reset_tokens": response.headers.get("x-ratelimit-reset-tokens"),
+                }
+                return result
         except urllib.error.HTTPError as exc:
             raw = exc.read().decode("utf-8", errors="replace")
             retry_after = exc.headers.get("retry-after")
@@ -443,7 +454,7 @@ def run_agent(
     hypothesis_family: str,
     api_key: str,
     model: str = DEFAULT_MODEL,
-    max_turns: int = 5,
+    max_turns: int = 4,
 ) -> None:
     state_path = root / "research" / "agent_runs" / f"issue_{issue_number}" / "STATE.json"
     final_path = root / "docs" / "agent_runs" / f"issue_{issue_number}" / "FINAL_REPORT.md"
@@ -490,17 +501,55 @@ Inspect only the files needed for the next logical step. Complete one meaningful
     ]
 
     for turn in range(1, max_turns + 1):
+        if turn == 2:
+            messages.append(
+                {
+                    "role": "user",
+                    "content": (
+                        "Execution phase: stop broad exploration. Use what you already learned to "
+                        "create the smallest useful research artifact(s) in the Issue sandbox and "
+                        "update STATE.json in this turn if possible. At most one additional targeted "
+                        "read/search is allowed."
+                    ),
+                }
+            )
+        if turn == max_turns:
+            messages.append(
+                {
+                    "role": "user",
+                    "content": (
+                        "FINAL WRITE TURN. No more reading or searching. You MUST use write_file or "
+                        "replace now and update research/agent_runs/issue_"
+                        f"{issue_number}/STATE.json. Use CONTINUE with a concrete next_step if work "
+                        "remains; use BLOCKED with the exact blocker if a safe research step cannot "
+                        "be completed. Do not finish with prose only."
+                    ),
+                }
+            )
+
+        final_turn = turn == max_turns
         payload = {
             "model": model,
             "messages": messages,
-            "tools": TOOLS,
-            "tool_choice": "auto",
-            "parallel_tool_calls": True,
+            "tools": WRITE_TOOLS if final_turn else TOOLS,
+            "tool_choice": "required" if final_turn else "auto",
+            "parallel_tool_calls": False,
             "temperature": 0.1,
-            "max_completion_tokens": 1000,
+            "max_completion_tokens": 900,
             "reasoning_effort": "low",
         }
         response = _request(api_key, payload)
+        usage = response.get("usage") or {}
+        rate = response.get("_groq_rate_limit") or {}
+        print(
+            "GROQ_USAGE "
+            f"turn={turn} prompt_tokens={usage.get('prompt_tokens')} "
+            f"completion_tokens={usage.get('completion_tokens')} "
+            f"total_tokens={usage.get('total_tokens')} "
+            f"remaining_tokens={rate.get('remaining_tokens')!r} "
+            f"reset_tokens={rate.get('reset_tokens')!r}",
+            file=sys.stderr,
+        )
         choices = response.get("choices") or []
         if not choices:
             raise GroqAgentError("Groq response had no choices")
@@ -531,6 +580,7 @@ Inspect only the files needed for the next logical step. Complete one meaningful
             function = call.get("function") or {}
             name = function.get("name", "")
             raw_args = function.get("arguments") or "{}"
+            print(f"GROQ_TOOL_CALL turn={turn} name={name}", file=sys.stderr)
             try:
                 args = json.loads(raw_args)
                 result = _tool_result(root, issue_number, name, args)
@@ -558,9 +608,27 @@ Inspect only the files needed for the next logical step. Complete one meaningful
         if len(messages) > 8:
             messages = messages[:2] + messages[-6:]
 
+        remaining_raw = rate.get("remaining_tokens")
+        reset_raw = rate.get("reset_tokens")
+        try:
+            remaining_tokens = int(remaining_raw) if remaining_raw is not None else None
+        except (TypeError, ValueError):
+            remaining_tokens = None
+        if turn < max_turns and remaining_tokens is not None and remaining_tokens < 6000:
+            reset_seconds = _duration_seconds(reset_raw)
+            if reset_seconds:
+                delay = min(max(reset_seconds + 2.0, 2.0), 75.0)
+                print(
+                    f"GROQ_TPM_PACING remaining_tokens={remaining_tokens} "
+                    f"retry after {delay:.0f}s",
+                    file=sys.stderr,
+                )
+                time.sleep(delay)
+
     if not state_updated():
         raise GroqAgentError(
-            f"Groq agent incomplete after {max_turns} turns: STATE.json not updated"
+            f"Groq agent incomplete after {max_turns} turns: STATE.json not updated. "
+            "Please retry after 65s."
         )
 
 
@@ -576,7 +644,7 @@ def main() -> None:
     parser.add_argument("--hypothesis-family", required=True)
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument("--model", default=DEFAULT_MODEL)
-    parser.add_argument("--max-turns", type=int, default=5)
+    parser.add_argument("--max-turns", type=int, default=4)
     args = parser.parse_args()
 
     api_key = os.environ.get("GROQ_API_KEY", "").strip()
