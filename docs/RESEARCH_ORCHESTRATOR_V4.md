@@ -22,6 +22,11 @@ Every issue gets one persistent branch:
 
 `agent/v4-issue-<ISSUE_NUMBER>`
 
+Before each worker pass, an existing persistent Issue branch is refreshed by merging the
+current `main` into it. This keeps long-lived research state while ensuring newly merged
+orchestrator/provider code is available to the next iteration. The refresh is pushed back
+to the Issue branch before model execution.
+
 Each successful research iteration must write:
 
 `research/agent_runs/issue_<N>/STATE.json`
