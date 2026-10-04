@@ -133,3 +133,19 @@ def test_replication_split_requires_both_frozen_leagues():
             pd.DataFrame(rows),
             experiment.VALIDATION_SEASON,
         )
+
+
+def test_replication_source_codes_are_frozen_explicitly():
+    assert experiment.COMPETITION_CODES == {
+        "BUNDESLIGA": "D1",
+        "LIGUE_1": "F1",
+    }
+    assert experiment.SEASON_CODES == {
+        "1920": "2019-2020",
+        "2021": "2020-2021",
+        "2122": "2021-2022",
+        "2223": "2022-2023",
+        "2324": "2023-2024",
+        "2425": "2024-2025",
+        "2526": "2025-2026",
+    }
