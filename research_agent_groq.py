@@ -7,12 +7,14 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import hashlib
 import json
 import os
 import re
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -23,6 +25,10 @@ MAX_READ_CHARS = 6_000
 MAX_TOOL_RESULT_CHARS = 12_000
 MAX_GREP_RESULTS = 80
 MAX_LIST_ENTRIES = 120
+MAX_PINNED_GITHUB_FILE_BYTES = 2_000_000
+PINNED_GITHUB_REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+FULL_COMMIT_RE = re.compile(r"^[0-9a-fA-F]{40}$")
+GIT_BLOB_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 
 TRANSIENT_HTTP = {429, 500, 502, 503, 504}
 LONG_RETRY_SECONDS = 180.0
@@ -175,6 +181,100 @@ def grep_search(
                 if len(results) >= MAX_GREP_RESULTS:
                     return {"matches": results, "truncated": True}
     return {"matches": results, "truncated": False}
+
+
+def fetch_pinned_github_file(
+    root: Path,
+    issue_number: int,
+    repository: str,
+    commit: str,
+    path: str,
+    destination: str,
+    expected_blob_sha: str | None = None,
+) -> dict[str, Any]:
+    repository = repository.strip()
+    commit = commit.strip()
+    source_path = _safe_rel(path)
+    if source_path == ".":
+        raise GroqAgentError("pinned GitHub source path must be a file path")
+    if not PINNED_GITHUB_REPO_RE.fullmatch(repository):
+        raise GroqAgentError(f"invalid public GitHub repository: {repository}")
+    if not FULL_COMMIT_RE.fullmatch(commit):
+        raise GroqAgentError("pinned GitHub source requires a full 40-hex commit SHA")
+    if expected_blob_sha is not None:
+        expected_blob_sha = expected_blob_sha.strip().lower()
+        if not GIT_BLOB_RE.fullmatch(expected_blob_sha):
+            raise GroqAgentError("expected_blob_sha must be a 40-hex Git blob SHA")
+
+    target = _resolve_write(root, issue_number, destination)
+    owner, repo_name = repository.split("/", 1)
+    encoded_path = "/".join(urllib.parse.quote(part, safe="") for part in PurePosixPath(source_path).parts)
+    url = (
+        "https://raw.githubusercontent.com/"
+        f"{urllib.parse.quote(owner, safe='')}/{urllib.parse.quote(repo_name, safe='')}/"
+        f"{commit}/{encoded_path}"
+    )
+    request = urllib.request.Request(
+        url,
+        headers={"User-Agent": "football-ai-research-v4"},
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            data = response.read(MAX_PINNED_GITHUB_FILE_BYTES + 1)
+    except (urllib.error.HTTPError, urllib.error.URLError) as exc:
+        raise GroqAgentError(f"failed to fetch pinned public GitHub source: {exc}") from exc
+
+    if len(data) > MAX_PINNED_GITHUB_FILE_BYTES:
+        raise GroqAgentError(
+            f"pinned public GitHub file exceeds {MAX_PINNED_GITHUB_FILE_BYTES} bytes"
+        )
+    git_blob_sha = hashlib.sha1(
+        f"blob {len(data)}\0".encode("ascii") + data,
+        usedforsecurity=False,
+    ).hexdigest()
+    if expected_blob_sha is not None and git_blob_sha != expected_blob_sha:
+        raise GroqAgentError(
+            f"Git blob SHA mismatch: expected {expected_blob_sha}, got {git_blob_sha}"
+        )
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(data)
+    return {
+        "repository": repository,
+        "commit": commit.lower(),
+        "source_path": source_path,
+        "destination": destination,
+        "bytes_written": len(data),
+        "git_blob_sha": git_blob_sha,
+    }
+
+
+def fetch_pinned_github_files(
+    root: Path,
+    issue_number: int,
+    files: list[dict[str, Any]],
+) -> dict[str, Any]:
+    if not 1 <= len(files) <= 4:
+        raise GroqAgentError("fetch_pinned_github_files accepts 1 to 4 files")
+    fetched = []
+    for item in files:
+        fetched.append(
+            fetch_pinned_github_file(
+                root,
+                issue_number,
+                str(item["repository"]),
+                str(item["commit"]),
+                str(item["path"]),
+                str(item["destination"]),
+                (
+                    str(item["expected_blob_sha"])
+                    if item.get("expected_blob_sha") is not None
+                    else None
+                ),
+            )
+        )
+    return {"files": fetched}
 
 
 def write_file(root: Path, issue_number: int, path: str, content: str) -> dict[str, Any]:
@@ -365,6 +465,46 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "fetch_pinned_github_files",
+            "description": (
+                "Fetch 1-4 immutable public GitHub files by full commit SHA into this Issue sandbox. "
+                "Optionally verify the exact Git blob SHA. Raw GitHub GET only; no auth or paid API."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "files": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 4,
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "repository": {"type": "string"},
+                                "commit": {
+                                    "type": "string",
+                                    "pattern": "^[0-9a-fA-F]{40}$",
+                                },
+                                "path": {"type": "string"},
+                                "destination": {"type": "string"},
+                                "expected_blob_sha": {
+                                    "type": "string",
+                                    "pattern": "^[0-9a-fA-F]{40}$",
+                                },
+                            },
+                            "required": ["repository", "commit", "path", "destination"],
+                            "additionalProperties": False,
+                        },
+                    }
+                },
+                "required": ["files"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "record_progress",
             "description": (
                 "Append one compact, concrete research checkpoint to PROGRESS.md. "
@@ -445,7 +585,8 @@ TOOLS = [
 WRITE_TOOLS = [
     tool
     for tool in TOOLS
-    if tool["function"]["name"] in {"record_progress", "write_file", "replace", "write_state"}
+    if tool["function"]["name"]
+    in {"fetch_pinned_github_files", "record_progress", "write_file", "replace", "write_state"}
 ]
 FINAL_TOOLS = [
     tool for tool in TOOLS if tool["function"]["name"] == "write_state"
@@ -471,6 +612,8 @@ def _tool_result(root: Path, issue_number: int, name: str, args: dict[str, Any])
             args.get("path", "."),
             args.get("file_glob", "*"),
         )
+    if name == "fetch_pinned_github_files":
+        return fetch_pinned_github_files(root, issue_number, args["files"])
     if name == "record_progress":
         return record_progress(
             root,
@@ -662,7 +805,8 @@ def run_agent(
 
     system = (
         "You are Football AI Research Orchestrator V4. Work on exactly one research Issue. "
-        "You have repository read/search tools and may write ONLY inside the three issue sandbox roots. "
+        "You have repository read/search tools plus a zero-cost pinned public GitHub source fetcher, "
+        "and may write ONLY inside the three issue sandbox roots. "
         "Never modify production .pkl files, runtime/deployment, Supabase, paid APIs, or closed/frozen "
         "research contracts. No post-hoc threshold tuning. Use temporal/OOS and market baseline when relevant. "
         "A negative result is valid. Do one coherent research iteration, not the entire project at once. "

@@ -142,11 +142,15 @@ V4 is now provider-diversified and **Groq-first**.
 1. Primary: Groq `openai/gpt-oss-120b` through a repository-local file-only agent.
 2. Emergency fallback: `gemini-3.6-flash` only when the Groq pass fails.
 
-The Groq agent uses the OpenAI-compatible Chat Completions API and exposes only
-repository read/search tools plus write/replace tools constrained to the current
-Issue sandbox. It cannot write production artifacts, runtime code, Supabase, or
-deployment state. Its conversation is deliberately compact and capped at four
-turns. A dedicated `record_progress` tool appends a short evidence-backed checkpoint
+The Groq agent uses the OpenAI-compatible Chat Completions API and exposes
+repository read/search tools plus writes constrained to the current Issue sandbox.
+For preregistered external datasets it also has a narrow zero-cost
+`fetch_pinned_github_files` tool: public `raw.githubusercontent.com` only, full
+40-hex commit SHA required, optional exact Git blob SHA verification, at most four
+files per call, and every downloaded byte must land inside the current Issue
+sandbox. There is no shell, authenticated external API, Supabase write, production
+artifact write, or deployment access. Its conversation is deliberately compact and
+capped at four turns. A dedicated `record_progress` tool appends a short evidence-backed checkpoint
 to the current Issue's `PROGRESS.md`; a `CONTINUE` iteration is not considered
 complete until both substantive sandbox progress and a fresh `STATE.json` exist.
 This prevents repeated state-only commits that merely rephrase the same next step.

@@ -1,3 +1,4 @@
+import hashlib
 import io
 import urllib.error
 from email.message import Message
@@ -10,6 +11,8 @@ from research_agent_groq import (
     GroqToolFormatError,
     _duration_seconds,
     _request,
+    fetch_pinned_github_file,
+    fetch_pinned_github_files,
     glob_files,
     grep_search,
     read_file,
@@ -45,6 +48,124 @@ def test_groq_agent_write_is_issue_scoped(tmp_path: Path):
 def test_groq_agent_rejects_writes_outside_issue_sandbox(tmp_path: Path, path: str):
     with pytest.raises(GroqAgentError):
         write_file(tmp_path, 428, path, "no")
+
+
+def test_fetch_pinned_github_file_verifies_blob_and_writes_only_sandbox(
+    tmp_path: Path, monkeypatch
+):
+    data = b"Date,HomeTeam,B365H\n01/01/2026,A,2.10\n"
+    expected = hashlib.sha1(
+        f"blob {len(data)}\0".encode("ascii") + data,
+        usedforsecurity=False,
+    ).hexdigest()
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self, limit):
+            assert limit > len(data)
+            return data
+
+    captured = {}
+
+    def fake_urlopen(request, timeout):
+        captured["url"] = request.full_url
+        captured["timeout"] = timeout
+        return Response()
+
+    monkeypatch.setattr("research_agent_groq.urllib.request.urlopen", fake_urlopen)
+    result = fetch_pinned_github_file(
+        tmp_path,
+        482,
+        "owner/repo",
+        "a" * 40,
+        "data/raw/D1_2025-26.csv",
+        "research/agent_runs/issue_482/sources/D1_2025-26.csv",
+        expected,
+    )
+
+    saved = tmp_path / "research" / "agent_runs" / "issue_482" / "sources" / "D1_2025-26.csv"
+    assert saved.read_bytes() == data
+    assert result["git_blob_sha"] == expected
+    assert captured["url"].startswith(
+        "https://raw.githubusercontent.com/owner/repo/" + "a" * 40
+    )
+    assert captured["timeout"] == 60
+
+
+def test_fetch_pinned_github_file_rejects_blob_mismatch_before_write(
+    tmp_path: Path, monkeypatch
+):
+    data = b"not-the-pinned-blob"
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self, limit):
+            return data
+
+    monkeypatch.setattr(
+        "research_agent_groq.urllib.request.urlopen",
+        lambda *args, **kwargs: Response(),
+    )
+    destination = "research/agent_runs/issue_482/sources/source.csv"
+    with pytest.raises(GroqAgentError, match="Git blob SHA mismatch"):
+        fetch_pinned_github_file(
+            tmp_path,
+            482,
+            "owner/repo",
+            "b" * 40,
+            "source.csv",
+            destination,
+            "0" * 40,
+        )
+    assert not (tmp_path / destination).exists()
+
+
+@pytest.mark.parametrize("commit", ["main", "abc123", "g" * 40])
+def test_fetch_pinned_github_file_requires_full_commit_sha(tmp_path: Path, commit: str):
+    with pytest.raises(GroqAgentError, match="full 40-hex commit SHA"):
+        fetch_pinned_github_file(
+            tmp_path,
+            482,
+            "owner/repo",
+            commit,
+            "source.csv",
+            "research/agent_runs/issue_482/source.csv",
+        )
+
+
+def test_fetch_pinned_github_files_batches_up_to_four(tmp_path: Path, monkeypatch):
+    calls = []
+
+    def fake_fetch(root, issue_number, repository, commit, path, destination, expected_blob_sha=None):
+        calls.append((repository, commit, path, destination, expected_blob_sha))
+        return {"destination": destination}
+
+    monkeypatch.setattr("research_agent_groq.fetch_pinned_github_file", fake_fetch)
+    files = [
+        {
+            "repository": "owner/repo",
+            "commit": "a" * 40,
+            "path": f"source_{i}.csv",
+            "destination": f"research/agent_runs/issue_482/sources/source_{i}.csv",
+        }
+        for i in range(4)
+    ]
+    result = fetch_pinned_github_files(tmp_path, 482, files)
+    assert len(result["files"]) == 4
+    assert len(calls) == 4
+
+    with pytest.raises(GroqAgentError, match="1 to 4 files"):
+        fetch_pinned_github_files(tmp_path, 482, files + [files[0]])
 
 
 def test_groq_agent_read_search_and_replace(tmp_path: Path):
