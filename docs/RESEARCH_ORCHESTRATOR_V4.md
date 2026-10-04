@@ -94,7 +94,7 @@ This file is updated deterministically by the orchestrator, not by Gemini. It re
 
 - `runs_started` — V4 worker runs started for the Issue;
 - `model_passes_attempted` — total Gemini model passes;
-- `primary_passes`, `fallback1_passes`, `fallback2_passes`;
+- `groq_passes` plus historical Gemini `primary_passes` / fallback counters;
 - `successful_model_runs`;
 - `quota_waits`;
 - `short_retries_scheduled`;
@@ -132,20 +132,24 @@ This provides an independent cloud wake-up path even when the V4 workflow's own
 
 ## Free-tier resilience
 
-The model order uses only currently supported models with Free Tier availability:
+V4 is now provider-diversified and **Groq-first**.
 
-1. `gemini-3.5-flash-lite`
-2. `gemini-3.1-flash-lite`
-3. `gemini-3.6-flash`
+1. Primary: Groq `openai/gpt-oss-120b` through a repository-local file-only agent.
+2. Emergency fallback: `gemini-3.6-flash` only when the Groq pass fails.
 
-The attempted `gemini-2.5-flash-lite` fallback was removed after live evidence showed
-Google returns `ModelNotFoundError` for this new project. It must not be treated as a
-usable fallback.
+The Groq agent uses the OpenAI-compatible Chat Completions API and exposes only
+repository read/search tools plus write/replace tools constrained to the current
+Issue sandbox. It cannot write production artifacts, runtime code, Supabase, or
+deployment state. Its conversation is deliberately compact and capped at five
+turns so the free-tier token budget is not wasted on broad repository scans.
 
-Each model pass is limited to 8 session turns to stay below the observed free-tier per-minute input-token ceiling while preserving multi-iteration autonomy. If all model attempts fail with transient
-quota/capacity signals such as HTTP 429, HTTP 503, `RESOURCE_EXHAUSTED`, high demand,
-or retry-after messages, V4 captures the action's real `gemini-artifacts/stderr.log`, classifies that evidence, and adds `research-v4-waiting` while leaving
-`research-v4-running` in place.
+V4 no longer fires three Gemini models in sequence. This prevents a single failed
+research attempt from consuming several daily model quotas. Gemini remains an
+emergency provider rather than the normal execution path.
+
+If all available providers fail with transient quota/capacity signals such as HTTP
+429/503 or retry-after messages, V4 records the evidence and returns to
+`research-v4-waiting` for heartbeat recovery.
 
 The original three-hour V4 scheduler remains as a secondary safety path. The independent
 heartbeat is the primary recovery path for `research-v4-waiting` tasks. No paid fallback

@@ -58,22 +58,26 @@ def test_v4_has_issue_dispatch_schedule_and_pr_contract_triggers():
     assert "pull_request:" in on_block
 
 
-def test_v4_uses_three_free_model_fallbacks_and_short_sessions():
+def test_v4_uses_groq_primary_and_one_gemini_emergency_fallback():
     text = _v4()
-    assert "gemini_model: gemini-3.5-flash-lite" in text
-    assert "gemini_model: gemini-3.1-flash-lite" in text
+    assert "Groq primary pass" in text
+    assert "research_agent_groq.py" in text
+    assert "--model openai/gpt-oss-120b" in text
+    assert "GROQ_API_KEY" in text
+    assert "Gemini emergency fallback" in text
     assert "gemini_model: gemini-3.6-flash" in text
+    assert "gemini_model: gemini-3.5-flash-lite" not in text
+    assert "gemini_model: gemini-3.1-flash-lite" not in text
     assert "gemini_model: gemini-2.5-flash-lite" not in text
     assert '"maxSessionTurns": 8' in text
 
 
-def test_v4_captures_failed_model_stderr_for_transient_classification():
+def test_v4_captures_provider_errors_for_transient_classification():
     text = _v4()
-    assert "gemini-artifacts/stderr.log /tmp/gemini-primary.err" in text
-    assert "gemini-artifacts/stderr.log /tmp/gemini-secondary.err" in text
-    assert "gemini-artifacts/stderr.log /tmp/gemini-tertiary.err" in text
-    assert "--file /tmp/gemini-primary.err" in text
-    assert "steps.gemini_primary.outputs.gemini_errors" not in text
+    assert "/tmp/groq-primary.err" in text
+    assert "gemini-artifacts/stderr.log /tmp/gemini-fallback.err" in text
+    assert "--file /tmp/groq-primary.err" in text
+    assert "--file /tmp/gemini-fallback.err" in text
 
 
 def test_v4_persists_per_issue_usage_without_spending_iteration_budget():
