@@ -4,6 +4,7 @@ import pytest
 
 from research_agent_groq import (
     GroqAgentError,
+    GroqToolFormatError,
     _duration_seconds,
     glob_files,
     grep_search,
@@ -187,6 +188,50 @@ def test_write_state_validates_status_contract(tmp_path: Path):
         write_state(tmp_path, 428, "BLOCKED", "summary")
     with pytest.raises(GroqAgentError, match="invalid state status"):
         write_state(tmp_path, 428, "UNKNOWN", "summary")
+
+
+def test_tool_format_failure_retries_with_state_only_prompt(tmp_path: Path, monkeypatch):
+    calls = []
+
+    def fake_request(api_key, payload, **kwargs):
+        calls.append((payload, kwargs))
+        if len(calls) == 1:
+            raise GroqToolFormatError("Groq tool_use_failed")
+        tool_call = {
+            "id": "call_recovery",
+            "type": "function",
+            "function": {
+                "name": "write_state",
+                "arguments": (
+                    '{"status":"CONTINUE","summary":"checkpoint persisted after tool-format retry",'
+                    '"next_step":"continue with a smaller research artifact"}'
+                ),
+            },
+        }
+        return {"choices": [{"message": {"content": None, "tool_calls": [tool_call]}}]}
+
+    monkeypatch.setattr("research_agent_groq._request", fake_request)
+
+    run_agent(
+        root=tmp_path,
+        issue_number=428,
+        issue_title="test",
+        issue_body="test body",
+        hypothesis_family="test_family",
+        api_key="fake",
+        max_turns=2,
+    )
+
+    assert len(calls) == 2
+    recovery_payload, recovery_kwargs = calls[1]
+    assert [tool["function"]["name"] for tool in recovery_payload["tools"]] == ["write_state"]
+    assert recovery_payload["tool_choice"] == "required"
+    assert recovery_payload["max_completion_tokens"] == 500
+    assert recovery_kwargs["max_retries"] == 1
+    assert "TOOL FORMAT RECOVERY" in recovery_payload["messages"][-1]["content"]
+    assert (
+        tmp_path / "research" / "agent_runs" / "issue_428" / "STATE.json"
+    ).is_file()
 
 
 def test_final_groq_turn_forces_write_state_only(tmp_path: Path, monkeypatch):
