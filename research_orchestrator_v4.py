@@ -30,8 +30,8 @@ DAILY_QUOTA_MARKERS = (
     "rpd",
 )
 RETRY_DELAY_RE = re.compile(
-    r"(?:please\\s+retry\\s+in|suggested\\s+retry\\s+after|retry\\s+after)\\s+"
-    r"([0-9]+(?:\\.[0-9]+)?)\\s*(ms|milliseconds?|s|seconds?)",
+    r"(?:please\s+retry\s+in|suggested\s+retry\s+after|retry\s+after)\s+"
+    r"([0-9]+(?:\.[0-9]+)?)\s*(ms|milliseconds?|s|seconds?)",
     re.IGNORECASE,
 )
 
