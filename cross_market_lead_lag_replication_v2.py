@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import requests
 
-from historical_football_signal_runner import BASE, LEAGUES
+from historical_football_signal_runner import BASE
 from cross_market_lead_lag_v1 import (
     BOOTSTRAP_DRAWS,
     MIN_ROWS_PER_LEAGUE,
@@ -31,19 +31,36 @@ VALIDATION_SEASON = "2024-2025"
 TEST_SEASON = "2025-2026"
 ALLOWED_SEASONS = set(REFERENCE_SEASONS) | {VALIDATION_SEASON, TEST_SEASON}
 
+SEASON_CODES = {
+    "1920": "2019-2020",
+    "2021": "2020-2021",
+    "2122": "2021-2022",
+    "2223": "2022-2023",
+    "2324": "2023-2024",
+    "2425": "2024-2025",
+    "2526": "2025-2026",
+}
+COMPETITION_CODES = {
+    "BUNDESLIGA": "D1",
+    "LIGUE_1": "F1",
+}
+
 
 def _download_league_raw(league: str) -> pd.DataFrame:
-    config = LEAGUES[league]
+    if league not in COMPETITION_CODES:
+        raise ValueError(f"unsupported replication league: {league}")
+
+    competition_code = COMPETITION_CODES[league]
     frames: list[pd.DataFrame] = []
 
-    for code, season in config.historical_source.season_codes.items():
+    for code, season in SEASON_CODES.items():
         if season not in ALLOWED_SEASONS:
             continue
 
         response = requests.get(
             BASE.format(
                 code=code,
-                comp=config.historical_source.competition_code,
+                comp=competition_code,
             ),
             timeout=60,
         )
