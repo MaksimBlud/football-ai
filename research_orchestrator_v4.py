@@ -55,7 +55,12 @@ def classify_model_errors(texts: list[str]) -> str:
         return "BLOCKED"
     if any(marker in blob for marker in TRANSIENT_MARKERS):
         return "QUOTA_WAIT"
-    # The official Gemini action does not reliably expose gemini_errors on failed\n    # steps. Unknown model-only failures are therefore treated as retryable.\n    return "QUOTA_WAIT"\n\n\ndef load_state(issue_number: int, root: Path = Path(".")) -> AgentState:
+    # The official action does not reliably expose gemini_errors on failed steps.
+    # Unknown model-only failures are safer to retry than to falsely terminal-block.
+    return "QUOTA_WAIT"
+
+
+def load_state(issue_number: int, root: Path = Path(".")) -> AgentState:
     path = issue_root(issue_number, root) / "STATE.json"
     if not path.is_file():
         raise ValueError(f"missing required state file: {path}")
