@@ -63,6 +63,12 @@ def test_v4_persists_issue_branch_and_machine_state():
 def test_v4_continues_without_user_and_retries_waiting_work():
     text = _v4()
     assert "source=continuation" in text
+    assert "source=quick-retry" in text
+    assert "quick_retry_attempt" in text
+    assert "retry-delay" in text
+    assert 'sleep "$DELAY_SECONDS"' in text
+    assert "NEXT_ATTEMPT" in text
+    assert "[ \"$ATTEMPT\" -lt 3 ]" in text
     assert "research-v4-running" in text
     assert "research-v4-waiting" in text
     assert "source=schedule" in text

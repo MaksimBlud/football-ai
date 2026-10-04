@@ -10,9 +10,14 @@ on:
         required: true
         type: string
       source:
-        description: manual, continuation, or schedule
+        description: manual, continuation, quick-retry, or schedule
         required: false
         default: manual
+        type: string
+      quick_retry_attempt:
+        description: Bounded short retry counter for minute quota resets
+        required: false
+        default: '0'
         type: string
   schedule:
     - cron: '23 */3 * * *'
@@ -76,6 +81,7 @@ jobs:
       issue_title: ${{ steps.eligibility.outputs.issue_title }}
       hypothesis_family: ${{ steps.eligibility.outputs.hypothesis_family }}
       run_worker: ${{ steps.eligibility.outputs.run_worker }}
+      quick_retry_attempt: ${{ steps.eligibility.outputs.quick_retry_attempt }}
     env:
       PYTHONPATH: .
     steps:
@@ -98,6 +104,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           INPUT_ISSUE_NUMBER: ${{ inputs.issue_number }}
           INPUT_SOURCE: ${{ inputs.source }}
+          INPUT_QUICK_RETRY_ATTEMPT: ${{ inputs.quick_retry_attempt }}
           REPOSITORY_OWNER: ${{ github.repository_owner }}
           RESEARCH_GEMINI_ENABLED: ${{ vars.RESEARCH_GEMINI_ENABLED }}
         run: |
@@ -109,12 +116,17 @@ jobs:
           if [ "$EVENT_NAME" = 'issues' ]; then
             ISSUE_NUMBER=$(jq -r '.issue.number' "$GITHUB_EVENT_PATH")
             SOURCE=issue
+            QUICK_RETRY_ATTEMPT=0
           else
             ISSUE_NUMBER="$INPUT_ISSUE_NUMBER"
             SOURCE="${INPUT_SOURCE:-manual}"
+            QUICK_RETRY_ATTEMPT="${INPUT_QUICK_RETRY_ATTEMPT:-0}"
           fi
           case "$ISSUE_NUMBER" in
             ''|*[!0-9]*) exit 0 ;;
+          esac
+          case "$QUICK_RETRY_ATTEMPT" in
+            ''|*[!0-9]*) QUICK_RETRY_ATTEMPT=0 ;;
           esac
 
           gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER" > /tmp/issue.json
@@ -147,7 +159,7 @@ jobs:
           if [ "$SOURCE" != 'manual' ] && { [ "$HAS_DONE" = 'true' ] || [ "$HAS_BLOCKED" = 'true' ]; }; then
             exit 0
           fi
-          if { [ "$SOURCE" = 'schedule' ] || [ "$SOURCE" = 'continuation' ]; } && [ "$HAS_RUNNING" != 'true' ]; then
+          if { [ "$SOURCE" = 'schedule' ] || [ "$SOURCE" = 'continuation' ] || [ "$SOURCE" = 'quick-retry' ]; } && [ "$HAS_RUNNING" != 'true' ]; then
             exit 0
           fi
 
@@ -170,6 +182,7 @@ jobs:
           echo "issue_number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
           echo "issue_title=$TITLE" >> "$GITHUB_OUTPUT"
           echo "hypothesis_family=$FAMILY" >> "$GITHUB_OUTPUT"
+          echo "quick_retry_attempt=$QUICK_RETRY_ATTEMPT" >> "$GITHUB_OUTPUT"
           echo 'run_worker=true' >> "$GITHUB_OUTPUT"
 
   worker:
@@ -191,6 +204,7 @@ jobs:
       ISSUE_NUMBER: ${{ needs.preflight.outputs.issue_number }}
       ISSUE_TITLE: ${{ needs.preflight.outputs.issue_title }}
       HYPOTHESIS_FAMILY: ${{ needs.preflight.outputs.hypothesis_family }}
+      QUICK_RETRY_ATTEMPT: ${{ needs.preflight.outputs.quick_retry_attempt }}
       GEMINI_SETTINGS: |-
         {
           "model": {
@@ -353,12 +367,40 @@ jobs:
             echo 'success=false' >> "$GITHUB_OUTPUT"
             echo "failure_state=$STATE" >> "$GITHUB_OUTPUT"
           fi
+      - name: Plan short quota retry
+        id: retry
+        if: steps.model.outputs.success == 'false' && steps.model.outputs.failure_state == 'QUOTA_WAIT'
+        run: |
+          DELAY=$(python research_orchestrator_v4.py retry-delay \
+            --file /tmp/gemini-primary.err \
+            --file /tmp/gemini-secondary.err \
+            --file /tmp/gemini-tertiary.err)
+          ATTEMPT="${QUICK_RETRY_ATTEMPT:-0}"
+          echo "delay_seconds=$DELAY" >> "$GITHUB_OUTPUT"
+          if [ "$DELAY" -gt 0 ] && [ "$ATTEMPT" -lt 3 ]; then
+            echo 'short_retry=true' >> "$GITHUB_OUTPUT"
+            echo "next_attempt=$((ATTEMPT + 1))" >> "$GITHUB_OUTPUT"
+          else
+            echo 'short_retry=false' >> "$GITHUB_OUTPUT"
+          fi
       - name: Enter quiet quota wait
         if: steps.model.outputs.success == 'false' && steps.model.outputs.failure_state == 'QUOTA_WAIT'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v4-running --add-label research-v4-waiting >/dev/null
+      - name: Short quota backoff and redispatch
+        if: steps.retry.outputs.short_retry == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DELAY_SECONDS: ${{ steps.retry.outputs.delay_seconds }}
+          NEXT_ATTEMPT: ${{ steps.retry.outputs.next_attempt }}
+        run: |
+          sleep "$DELAY_SECONDS"
+          gh workflow run research-orchestrator-v4.yml --repo "$GITHUB_REPOSITORY" \
+            -f issue_number="$ISSUE_NUMBER" \
+            -f source=quick-retry \
+            -f quick_retry_attempt="$NEXT_ATTEMPT"
       - name: Report permanent model blocker
         if: steps.model.outputs.success == 'false' && steps.model.outputs.failure_state == 'BLOCKED'
         env:

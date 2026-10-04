@@ -7,6 +7,7 @@ from research_orchestrator_v4 import (
     branch_name,
     classify_model_errors,
     load_state,
+    retry_delay_seconds,
 )
 
 
@@ -45,6 +46,31 @@ def test_transient_gemini_failures_wait(message):
 )
 def test_non_transient_gemini_failures_block(message):
     assert classify_model_errors([message]) == "BLOCKED"
+
+
+@pytest.mark.parametrize(
+    ("message", "expected"),
+    [
+        ("Please retry in 56.480131123s.", 67),
+        ("Suggested retry after 30s.", 45),
+        ("Please retry in 560ms.", 45),
+        ("503 UNAVAILABLE high demand", 75),
+    ],
+)
+def test_retry_delay_uses_provider_hint_with_bounds(message, expected):
+    assert retry_delay_seconds([message]) == expected
+
+
+def test_daily_quota_does_not_short_retry():
+    assert retry_delay_seconds(
+        ["GenerateRequestsPerDayPerProjectPerModel-FreeTier daily quota"]
+    ) is None
+
+
+def test_retry_delay_uses_largest_hint_across_models():
+    assert retry_delay_seconds(
+        ["Please retry in 31.1s", "Please retry in 59.97s"]
+    ) == 70
 
 
 def test_continue_requires_next_step(tmp_path):
