@@ -80,6 +80,18 @@ def test_v4_captures_provider_errors_for_transient_classification():
     assert "--file /tmp/gemini-fallback.err" in text
 
 
+
+def test_v4_refreshes_persistent_issue_branch_from_main_before_model_work():
+    text = _v4()
+    restore = text.split("      - name: Restore persistent issue branch", 1)[1]
+    restore = restore.split("      - name: Start usage accounting", 1)[0]
+    assert 'git fetch origin "$BRANCH:refs/remotes/origin/$BRANCH"' in restore
+    assert 'git switch -c "$BRANCH" --track "origin/$BRANCH"' in restore
+    assert "git merge --no-edit origin/main" in restore
+    assert 'git push origin "$BRANCH"' in restore
+    assert "test -f research_agent_groq.py" in restore
+    assert 'grep -q \'"groq_passes"\' research_orchestrator_v4.py' in restore
+
 def test_v4_persists_per_issue_usage_without_spending_iteration_budget():
     text = _v4()
     assert "usage-update" in text
