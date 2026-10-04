@@ -145,12 +145,18 @@ V4 is now provider-diversified and **Groq-first**.
 The Groq agent uses the OpenAI-compatible Chat Completions API and exposes only
 repository read/search tools plus write/replace tools constrained to the current
 Issue sandbox. It cannot write production artifacts, runtime code, Supabase, or
-deployment state. Its conversation is deliberately compact and capped at five
-turns so the free-tier token budget is not wasted on broad repository scans.
+deployment state. Its conversation is deliberately compact and capped at four
+turns. The final turn exposes only a dedicated `write_state` tool and requires a
+tool call. `write_state` accepts structured status/summary/next-step/blocker fields
+and writes canonical `STATE.json` itself, avoiding long nested JSON strings that can
+cause provider-side `tool_use_failed` errors.
+Successful Groq responses also expose TPM reset headers; V4 paces subsequent turns
+when the remaining token bucket is low.
 
-V4 no longer fires three Gemini models in sequence. This prevents a single failed
-research attempt from consuming several daily model quotas. Gemini remains an
-emergency provider rather than the normal execution path.
+V4 no longer fires three Gemini models in sequence. Transient Groq TPM/429/503
+conditions are retried through Groq and do **not** invoke Gemini. Gemini is reserved
+only for a permanent Groq blocker, preventing normal minute-window throttling from
+burning the tiny Gemini daily quota.
 
 If all available providers fail with transient quota/capacity signals such as HTTP
 429/503 or retry-after messages, V4 records the evidence and returns to
