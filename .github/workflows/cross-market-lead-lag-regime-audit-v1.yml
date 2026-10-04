@@ -1,0 +1,112 @@
+name: Cross-Market Lead-Lag Regime Audit V1
+
+on:
+  push:
+    branches:
+      - research/cross-market-lead-lag-regime-audit-v1
+    paths:
+      - 'cross_market_lead_lag_regime_audit_v1.py'
+      - 'tests/test_cross_market_lead_lag_regime_audit_v1.py'
+      - 'research/CROSS_MARKET_LEAD_LAG_REGIME_AUDIT_V1.md'
+      - 'research/CROSS_MARKET_LEAD_LAG_REGIME_AUDIT_V1_RESULTS.md'
+      - 'experiments/cross_market_lead_lag_regime_audit_v1_report.json'
+      - '.github/workflows/cross-market-lead-lag-regime-audit-v1.yml'
+  pull_request:
+    paths:
+      - 'cross_market_lead_lag_regime_audit_v1.py'
+      - 'tests/test_cross_market_lead_lag_regime_audit_v1.py'
+      - 'research/CROSS_MARKET_LEAD_LAG_REGIME_AUDIT_V1.md'
+      - 'research/CROSS_MARKET_LEAD_LAG_REGIME_AUDIT_V1_RESULTS.md'
+      - 'experiments/cross_market_lead_lag_regime_audit_v1_report.json'
+      - '.github/workflows/cross-market-lead-lag-regime-audit-v1.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cross-market-lead-lag-regime-audit-v1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'pandas==3.0.6' 'numpy==2.5.3' 'scipy==1.18.1' 'scikit-learn==1.7.2' 'requests==2.32.5' pytest
+      - name: Compile post-hoc audit
+        run: python -m py_compile cross_market_lead_lag_regime_audit_v1.py
+      - name: Run audit contract tests
+        run: pytest -q tests/test_cross_market_lead_lag_regime_audit_v1.py
+      - name: Production artifact diff guard
+        if: github.event_name == 'pull_request'
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.pkl$' && exit 1 || true
+
+  posthoc-regime-audit:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/research/cross-market-lead-lag-regime-audit-v1'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'pandas==3.0.6' 'numpy==2.5.3' 'scipy==1.18.1' 'scikit-learn==1.7.2' 'requests==2.32.5'
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Run zero-cost post-hoc regime audit
+        run: python cross_market_lead_lag_regime_audit_v1.py
+      - name: Assert post-hoc safety boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/cross_market_lead_lag_regime_audit_v1/report.json').read_text())
+          assert r['experiment_id']=='CROSS_MARKET_LEAD_LAG_REGIME_AUDIT_V1'
+          assert r['evidence_class']=='POSTHOC_REGIME_STABILITY_DIAGNOSTIC'
+          assert r['research_only'] is True
+          assert r['posthoc'] is True
+          assert r['confirmatory_support_allowed'] is False
+          assert r['betting_enabled'] is False
+          assert r['production_promotion'] is False
+          assert r['match_outcomes_used'] is False
+          assert r['opened_2026_27_data_used'] is False
+          assert r['paid_odds_api_calls']==0
+          assert r['supabase_writes']==0
+          assert r['inherited_statistic']=='alignment_dot'
+          assert r['leagues']==['EPL','LA_LIGA','SERIE_A','BUNDESLIGA','LIGUE_1']
+          assert r['seasons']==[
+              '2019-2020','2020-2021','2021-2022','2022-2023',
+              '2023-2024','2024-2025','2025-2026'
+          ]
+          assert r['formal_v1_v2_decisions_unchanged'] is True
+          assert r['result']=='NO_BET'
+          print('diagnostic_label=',r['diagnostic_label'])
+          print('target=',json.dumps(r['target_2025_26_exceptionality'],sort_keys=True))
+          print('season_means=',{
+              s:v['mean_alignment_dot']
+              for s,v in r['season_reports'].items()
+          })
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cross-market-lead-lag-regime-audit-v1-${{ github.run_id }}
+          path: artifacts/cross_market_lead_lag_regime_audit_v1/report.json
+          if-no-files-found: error
+          retention-days: 90
