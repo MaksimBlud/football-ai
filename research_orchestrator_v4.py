@@ -57,6 +57,10 @@ RETRY_DELAY_RE = re.compile(
     r"([0-9]+(?:\.[0-9]+)?)\s*(ms|milliseconds?|s|seconds?)",
     re.IGNORECASE,
 )
+LONG_QUOTA_WAIT_RE = re.compile(
+    r"groq_long_quota_wait\s+retry_after_seconds=([0-9]+(?:\.[0-9]+)?)",
+    re.IGNORECASE,
+)
 
 PERMANENT_MARKERS = (
     "invalid api key",
@@ -177,6 +181,9 @@ def retry_delay_seconds(
 ) -> int | None:
     """Return a bounded short-retry delay, or None for a daily quota."""
     blob = "\n".join(texts).lower()
+
+    if LONG_QUOTA_WAIT_RE.search(blob):
+        return None
 
     delays: list[float] = []
     for match in RETRY_DELAY_RE.finditer(blob):

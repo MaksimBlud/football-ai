@@ -89,6 +89,15 @@ def test_daily_quota_does_not_short_retry():
     ) is None
 
 
+def test_long_groq_retry_after_does_not_short_redispatch():
+    log = (
+        "GROQ_HTTP_ERROR status=429 retry_after='2296' body=TPD rate limit\n"
+        "GROQ_LONG_QUOTA_WAIT retry_after_seconds=2296.000"
+    )
+    assert classify_model_errors([log]) == "TRANSIENT_QUOTA"
+    assert retry_delay_seconds([log]) is None
+
+
 def test_minute_quota_retry_wins_when_another_fallback_hit_daily_quota():
     minute = (
         "Quota exceeded for generate_content_free_tier_input_token_count; "
