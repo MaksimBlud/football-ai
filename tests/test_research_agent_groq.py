@@ -9,6 +9,7 @@ from research_agent_groq import (
     grep_search,
     read_file,
     replace_text,
+    run_agent,
     write_file,
 )
 
@@ -75,3 +76,64 @@ def test_groq_agent_read_search_and_replace(tmp_path: Path):
 )
 def test_groq_rate_limit_duration_parser(value: str, seconds: float):
     assert _duration_seconds(value) == pytest.approx(seconds)
+
+
+def test_existing_state_does_not_fake_new_groq_iteration(tmp_path: Path, monkeypatch):
+    state = tmp_path / "research" / "agent_runs" / "issue_428" / "STATE.json"
+    state.parent.mkdir(parents=True)
+    state.write_text(
+        '{"status":"CONTINUE","summary":"old","next_step":"x","blocker":null}',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        "research_agent_groq._request",
+        lambda *args, **kwargs: {"choices": [{"message": {"content": "done"}}]},
+    )
+
+    with pytest.raises(GroqAgentError, match="STATE.json not updated"):
+        run_agent(
+            root=tmp_path,
+            issue_number=428,
+            issue_title="test",
+            issue_body="test body",
+            hypothesis_family="test_family",
+            api_key="fake",
+            max_turns=1,
+        )
+
+
+def test_groq_iteration_succeeds_only_after_fresh_state_write(tmp_path: Path, monkeypatch):
+    tool_call = {
+        "id": "call_1",
+        "type": "function",
+        "function": {
+            "name": "write_file",
+            "arguments": (
+                '{"path":"research/agent_runs/issue_428/STATE.json",'
+                '"content":"{\\\"status\\\":\\\"CONTINUE\\\",'
+                '\\\"summary\\\":\\\"new\\\",'
+                '\\\"next_step\\\":\\\"next\\\",'
+                '\\\"blocker\\\":null}"}'
+            ),
+        },
+    }
+    monkeypatch.setattr(
+        "research_agent_groq._request",
+        lambda *args, **kwargs: {
+            "choices": [{"message": {"content": None, "tool_calls": [tool_call]}}]
+        },
+    )
+
+    run_agent(
+        root=tmp_path,
+        issue_number=428,
+        issue_title="test",
+        issue_body="test body",
+        hypothesis_family="test_family",
+        api_key="fake",
+        max_turns=1,
+    )
+    assert (
+        tmp_path / "research" / "agent_runs" / "issue_428" / "STATE.json"
+    ).is_file()
