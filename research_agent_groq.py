@@ -337,8 +337,8 @@ TOOLS = [
                         "enum": ["CONTINUE", "DONE", "BLOCKED"],
                     },
                     "summary": {"type": "string", "maxLength": 1200},
-                    "next_step": {"type": ["string", "null"], "maxLength": 1200},
-                    "blocker": {"type": ["string", "null"], "maxLength": 1200},
+                    "next_step": {"type": "string", "maxLength": 1200},
+                    "blocker": {"type": "string", "maxLength": 1200},
                 },
                 "required": ["status", "summary"],
                 "additionalProperties": False,
@@ -609,11 +609,7 @@ Inspect only the files needed for the next logical step. Complete one meaningful
             "model": model,
             "messages": messages,
             "tools": FINAL_TOOLS if final_turn else TOOLS,
-            "tool_choice": (
-                {"type": "function", "function": {"name": "write_state"}}
-                if final_turn
-                else "auto"
-            ),
+            "tool_choice": "required" if final_turn else "auto",
             "parallel_tool_calls": False,
             "temperature": 0.1,
             "max_completion_tokens": 900,
