@@ -1,8 +1,6 @@
 name: Research Agent V2 Issue Intake
 
 on:
-  issues:
-    types: [opened, edited, reopened]
   pull_request:
     paths:
       - 'research_agent_issue.py'
