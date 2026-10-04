@@ -1,6 +1,6 @@
 {
   "blocker": null,
-  "next_step": "Assess data coverage and feasibility for Bundesliga and Ligue 1 seasons, ensuring required Bet365 columns and half-goal restrictions are present.",
+  "next_step": "Check availability of required Bet365 columns (B365H, B365D, B365A, B365>2.5, B365<2.5, AHh, B365AH, B365AHH, B365AHA, B365CH, B365CD, B365CA) in the Bundesliga and Ligue 1 CSV files for seasons 2019/20‑2025/26.",
   "status": "CONTINUE",
-  "summary": "V1 protocol reviewed. Next step: evaluate availability and compatibility of Bundesliga and Ligue 1 data (Bet365 fields, half-goal AH lines) for independent replication."
+  "summary": "Reviewed CROSS_MARKET_LEAD_LAG_V1 protocol and results. Ready to assess data coverage for Bundesliga and Ligue 1 seasons and draft frozen replication protocol."
 }
