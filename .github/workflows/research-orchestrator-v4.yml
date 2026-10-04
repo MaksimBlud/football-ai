@@ -159,6 +159,11 @@ jobs:
           HAS_DONE=$(jq -r '[.labels[].name] | index("research-v4-done") != null' /tmp/issue.json)
           HAS_BLOCKED=$(jq -r '[.labels[].name] | index("research-v4-blocked") != null' /tmp/issue.json)
           HAS_RUNNING=$(jq -r '[.labels[].name] | index("research-v4-running") != null' /tmp/issue.json)
+          HAS_V5=$(jq -r '[.labels[].name] | any(. == "research-v5-running" or . == "research-v5-done" or . == "research-v5-blocked")' /tmp/issue.json)
+          if [ "$HAS_V5" = 'true' ]; then
+            echo "Issue #$ISSUE_NUMBER is owned by no-API Research V5; V4 model worker skipped."
+            exit 0
+          fi
 
           if [ "$SOURCE" != 'manual' ] && { [ "$HAS_DONE" = 'true' ] || [ "$HAS_BLOCKED" = 'true' ]; }; then
             exit 0

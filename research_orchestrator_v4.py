@@ -23,6 +23,8 @@ USAGE_COUNTERS = {
     "short_retries_scheduled",
     "tool_format_failures",
     "tool_format_retries_scheduled",
+    "local_passes",
+    "local_iterations_committed",
     "research_iterations_committed",
     "done_runs",
     "blocked_runs",
