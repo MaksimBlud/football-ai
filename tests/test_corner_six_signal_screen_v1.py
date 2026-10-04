@@ -28,6 +28,17 @@ def _corner_frame():
                     "material_move": 1,
                 },
                 {
+                    "fixture_id": f"{cohort}-m",
+                    "cohort": cohort,
+                    "league": "EPL",
+                    "opening_price_pressure": 0.02,
+                    "centre_delta": 0.20,
+                    "line_delta": 0.5,
+                    "opening_lambda": 9.8,
+                    "movement_magnitude": 0.20,
+                    "material_move": 0,
+                },
+                {
                     "fixture_id": f"{cohort}-d",
                     "cohort": cohort,
                     "league": "EPL",
@@ -61,7 +72,7 @@ def test_direction_metrics_balanced_perfect_signal():
         score_col="opening_price_pressure",
         target_col="centre_delta",
     )
-    assert result["rows"] == 8
+    assert result["rows"] == 12
     assert result["accuracy"] == 1.0
     assert result["balanced_accuracy"] == 1.0
     assert result["recall_up"] == 1.0
@@ -78,7 +89,7 @@ def test_signal_2_separates_line_move_hazard_and_direction():
     frame = _corner_frame()
     result = mod.signal_2_line_transition(frame)
     assert result["pooled_direction"]["balanced_accuracy"] == 1.0
-    assert result["pooled_move_hazard"]["line_moves"] == 8
+    assert result["pooled_move_hazard"]["line_moves"] == 12
 
 
 def test_market_feature_row_devigs_prices():
