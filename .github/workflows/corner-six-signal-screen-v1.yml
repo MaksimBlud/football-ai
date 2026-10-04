@@ -1,0 +1,124 @@
+name: Corner Six Signal Screen V1
+
+on:
+  pull_request:
+    paths:
+      - 'corner_six_signal_screen_v1.py'
+      - 'tests/test_corner_six_signal_screen_v1.py'
+      - 'research/CORNER_SIX_SIGNAL_SCREEN_V1.md'
+      - '.github/workflows/corner-six-signal-screen-v1.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install numpy pandas scipy scikit-learn requests pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - run: python -m py_compile corner_six_signal_screen_v1.py
+      - run: pytest -q tests/test_corner_six_signal_screen_v1.py
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+
+  retrospective-six-signal-screen:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PYTHONPATH: .
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install numpy pandas scipy scikit-learn requests
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+
+      - name: Download immutable corner artifacts
+        run: |
+          set -euo pipefail
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10503575942/zip > /tmp/pilot.zip
+          echo "ed012ae16dc3835900e7696d572088056724990866485078fed250283b379fe0  /tmp/pilot.zip" | sha256sum -c -
+
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10506736726/zip > /tmp/backfill.zip
+          echo "b5d426ee99bb04d7b5eeae59f494cf0ba6b16aa15fe93fd28ec13e3fcdc3a441  /tmp/backfill.zip" | sha256sum -c -
+
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10551727936/zip > /tmp/rep50.zip
+          echo "ca3c0f96338cf213e1dc76dbf47e88d01f7ad551f18e83ef2c185d4bc9eb6ba3  /tmp/rep50.zip" | sha256sum -c -
+
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10557706131/zip > /tmp/v1_46.zip
+          echo "5ff43199cdf1bb73e6b87649c3e68aa57bac628c68888a06a809c5df473b8d1f  /tmp/v1_46.zip" | sha256sum -c -
+
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10899611444/zip > /tmp/v2b_raw.zip
+          echo "c2f5313efad4afb8663d9980f5ea004f52fe02827a83b5c99a8b775c35498a57  /tmp/v2b_raw.zip" | sha256sum -c -
+
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10899325930/zip > /tmp/v2b_lock.zip
+          echo "ad6bba499cc12abf5ca10732d88e0403565e2582e6c6c8a642ca7bb81248726f  /tmp/v2b_lock.zip" | sha256sum -c -
+
+      - name: Run all six frozen screens
+        run: |
+          python corner_six_signal_screen_v1.py \
+            --pilot-zip /tmp/pilot.zip \
+            --backfill-zip /tmp/backfill.zip \
+            --rep50-zip /tmp/rep50.zip \
+            --v1-zip /tmp/v1_46.zip \
+            --v2b-raw-zip /tmp/v2b_raw.zip \
+            --v2b-lock-zip /tmp/v2b_lock.zip \
+            --output-dir artifacts/corner_six_signal_screen_v1
+
+      - name: Assert six-signal and safety contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('artifacts/corner_six_signal_screen_v1/report.json')
+          r=json.loads(p.read_text())
+          assert r['experiment_id']=='CORNER_SIX_SIGNAL_SCREEN_V1'
+          assert r['research_only'] is True
+          assert r['no_new_prospective_matches_collected'] is True
+          assert r['corner_rows_total']==194
+          assert r['corner_rows_unique']==194
+          assert set(r['signals']) == {
+              '1_opening_price_pressure',
+              '2_line_transition_mechanics',
+              '3_cross_market_match_shape',
+              '4_referee',
+              '5_volatility',
+              '6_regime_change',
+          }
+          assert r['paid_odds_api_requests']==0
+          assert r['supabase_writes']==0
+          assert r['production_model_operations']==0
+          assert r['betting_enabled'] is False
+          assert r['production_promotion'] is False
+          print(json.dumps({
+              'verdicts': r['verdicts'],
+              'promising_signals': r['promising_signals'],
+              'corner_cohorts': r['corner_cohorts'],
+          }, indent=2, sort_keys=True))
+          PY
+
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: corner-six-signal-screen-v1
+          path: artifacts/corner_six_signal_screen_v1
+          if-no-files-found: error
+          retention-days: 90
