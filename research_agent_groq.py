@@ -204,6 +204,48 @@ def replace_text(
     }
 
 
+def write_state(
+    root: Path,
+    issue_number: int,
+    status: str,
+    summary: str,
+    next_step: str | None = None,
+    blocker: str | None = None,
+) -> dict[str, Any]:
+    normalized = status.strip().upper()
+    if normalized not in {"CONTINUE", "DONE", "BLOCKED"}:
+        raise GroqAgentError(f"invalid state status: {status}")
+    summary = summary.strip()
+    if not summary:
+        raise GroqAgentError("STATE summary must be non-empty")
+    if normalized == "CONTINUE":
+        if not next_step or not next_step.strip():
+            raise GroqAgentError("CONTINUE requires next_step")
+        blocker = None
+    elif normalized == "BLOCKED":
+        if not blocker or not blocker.strip():
+            raise GroqAgentError("BLOCKED requires blocker")
+        next_step = None
+    else:
+        next_step = None
+        blocker = None
+
+    path = f"research/agent_runs/issue_{issue_number}/STATE.json"
+    target = _resolve_write(root, issue_number, path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "status": normalized,
+        "summary": summary,
+        "next_step": next_step.strip() if next_step else None,
+        "blocker": blocker.strip() if blocker else None,
+    }
+    target.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return {"path": path, "state": payload}
+
+
 TOOLS = [
     {
         "type": "function",
@@ -282,6 +324,30 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "write_state",
+            "description": (
+                "Write canonical STATE.json for this Issue. Use this before any long artifact. "
+                "CONTINUE requires next_step; BLOCKED requires blocker."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": ["CONTINUE", "DONE", "BLOCKED"],
+                    },
+                    "summary": {"type": "string", "maxLength": 1200},
+                    "next_step": {"type": "string", "maxLength": 1200},
+                    "blocker": {"type": "string", "maxLength": 1200},
+                },
+                "required": ["status", "summary"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "write_file",
             "description": "Write a UTF-8 file. Writes are restricted to this Issue sandbox.",
             "parameters": {
@@ -316,7 +382,10 @@ TOOLS = [
 ]
 
 WRITE_TOOLS = [
-    tool for tool in TOOLS if tool["function"]["name"] in {"write_file", "replace"}
+    tool for tool in TOOLS if tool["function"]["name"] in {"write_file", "replace", "write_state"}
+]
+FINAL_TOOLS = [
+    tool for tool in TOOLS if tool["function"]["name"] == "write_state"
 ]
 
 
@@ -335,6 +404,15 @@ def _tool_result(root: Path, issue_number: int, name: str, args: dict[str, Any])
             args["query"],
             args.get("path", "."),
             args.get("file_glob", "*"),
+        )
+    if name == "write_state":
+        return write_state(
+            root,
+            issue_number,
+            args["status"],
+            args["summary"],
+            args.get("next_step"),
+            args.get("blocker"),
         )
     if name == "write_file":
         return write_file(root, issue_number, args["path"], args["content"])
@@ -506,10 +584,10 @@ Inspect only the files needed for the next logical step. Complete one meaningful
                 {
                     "role": "user",
                     "content": (
-                        "Execution phase: stop broad exploration. Use what you already learned to "
-                        "create the smallest useful research artifact(s) in the Issue sandbox and "
-                        "update STATE.json in this turn if possible. At most one additional targeted "
-                        "read/search is allowed."
+                        "Execution phase: stop broad exploration. FIRST call write_state with a "
+                        "short CONTINUE/DONE/BLOCKED checkpoint based on what you learned. Do not "
+                        "attempt a long Markdown/code write before STATE is safely persisted. At most "
+                        "one additional targeted read/search is allowed if essential."
                     ),
                 }
             )
@@ -518,9 +596,8 @@ Inspect only the files needed for the next logical step. Complete one meaningful
                 {
                     "role": "user",
                     "content": (
-                        "FINAL WRITE TURN. No more reading or searching. You MUST use write_file or "
-                        "replace now and update research/agent_runs/issue_"
-                        f"{issue_number}/STATE.json. Use CONTINUE with a concrete next_step if work "
+                        "FINAL STATE TURN. No more reading, searching, or long artifact generation. "
+                        "You MUST call write_state now. Use CONTINUE with a concrete next_step if work "
                         "remains; use BLOCKED with the exact blocker if a safe research step cannot "
                         "be completed. Do not finish with prose only."
                     ),
@@ -531,7 +608,7 @@ Inspect only the files needed for the next logical step. Complete one meaningful
         payload = {
             "model": model,
             "messages": messages,
-            "tools": WRITE_TOOLS if final_turn else TOOLS,
+            "tools": FINAL_TOOLS if final_turn else TOOLS,
             "tool_choice": "required" if final_turn else "auto",
             "parallel_tool_calls": False,
             "temperature": 0.1,
