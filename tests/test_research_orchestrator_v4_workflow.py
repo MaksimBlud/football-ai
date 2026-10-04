@@ -58,7 +58,7 @@ def test_v4_uses_three_free_model_fallbacks_and_short_sessions():
     assert "gemini_model: gemini-3.5-flash-lite" in text
     assert "gemini_model: gemini-3.1-flash-lite" in text
     assert "gemini_model: gemini-3.5-flash" in text
-    assert '"maxSessionTurns": 16' in text
+    assert '"maxSessionTurns": 8' in text
 
 
 def test_v4_captures_failed_model_stderr_for_transient_classification():
