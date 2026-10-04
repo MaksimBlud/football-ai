@@ -1,0 +1,62 @@
+{
+  "experiment_id": "CROSS_MARKET_LEAD_LAG_V1",
+  "frozen_result_schema": 1,
+  "first_run": {
+    "workflow_run_id": 37178316661,
+    "artifact_id": 11293204444,
+    "artifact_digest": "sha256:e5ea14c9a877cc578bebd05c2da9b2b347375b4dc9a10215c421c605b9b7a359",
+    "head_sha": "dd26f222465934c8b1ab086f974cc2d0f9990990"
+  },
+  "source_audit": {
+    "live_multi_market_rows": 2,
+    "live_unique_events": 2,
+    "snapshots_per_event": 1,
+    "league": "EREDIVISIE",
+    "provider_market_keys": [
+      "spreads",
+      "totals"
+    ],
+    "true_intraday_feasible": false
+  },
+  "result": {
+    "reference_rows": 1328,
+    "reference_mean_alignment_dot": 0.00014859824556977388,
+    "validation": {
+      "rows": 282,
+      "mean_alignment_dot": 0.00005291551826450863,
+      "positive_alignment_rate": 0.48936170212765956,
+      "positive_mean_alignment_leagues": 2,
+      "permutation_one_sided_p": 0.0004999500049995,
+      "bootstrap_ci95_low": -0.0000027355269123311955,
+      "bootstrap_ci95_high": 0.00011077791909845365,
+      "mean_gap_reduction_tv": -0.012922922267009463,
+      "admissible": true
+    },
+    "test": {
+      "rows": 256,
+      "mean_alignment_dot": 0.000045716184993877924,
+      "positive_alignment_rate": 0.49609375,
+      "positive_mean_alignment_leagues": 3,
+      "by_league_mean_alignment_dot": {
+        "EPL": 0.00006637090520236325,
+        "LA_LIGA": 0.000018720215326528787,
+        "SERIE_A": 0.000048957460160538226
+      },
+      "permutation_one_sided_p": 0.00019998000199980003,
+      "bootstrap_ci95_low": -0.000010729073790760249,
+      "bootstrap_ci95_high": 0.00010252444789146247,
+      "bootstrap_probability_positive": 0.946,
+      "mean_gap_reduction_tv": -0.014951769443835337,
+      "component_pearson": {
+        "home": 0.1378013383958607,
+        "draw": 0.15019638524024811,
+        "away": 0.19615708471787155
+      },
+      "gate": false
+    },
+    "supported": false,
+    "decision": "NO_OPEN_TO_CLOSE_CROSS_MARKET_LEAD_SIGNAL",
+    "interpretation": "SUGGESTIVE_MATCH_SPECIFIC_ALIGNMENT_BUT_FINAL_CI_CROSSES_ZERO",
+    "result": "NO_BET"
+  }
+}
