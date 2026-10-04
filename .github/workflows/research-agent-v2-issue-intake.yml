@@ -1,8 +1,6 @@
 name: Research Agent V2 Issue Intake
 
 on:
-  issues:
-    types: [opened, edited, reopened]
   pull_request:
     paths:
       - 'research_agent_issue.py'
@@ -16,7 +14,7 @@ permissions:
 
 jobs:
   validate:
-    if: github.event_name == 'pull_request' || startsWith(github.event.issue.title, '[AGENT-RESEARCH]')
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
