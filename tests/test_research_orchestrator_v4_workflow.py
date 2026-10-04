@@ -4,6 +4,7 @@ from pathlib import Path
 V4 = Path(".github/workflows/research-orchestrator-v4.yml")
 V3 = Path(".github/workflows/research-agent-v3-gemini.yml")
 V2 = Path(".github/workflows/research-agent-v2-issue-intake.yml")
+HEARTBEAT = Path(".github/workflows/research-v4-heartbeat.yml")
 
 
 def _v4() -> str:
@@ -16,6 +17,10 @@ def _v3() -> str:
 
 def _v2() -> str:
     return V2.read_text(encoding="utf-8")
+
+
+def _heartbeat() -> str:
+    return HEARTBEAT.read_text(encoding="utf-8")
 
 
 def test_v4_globally_queues_gemini_workers_fifo():
@@ -57,7 +62,8 @@ def test_v4_uses_three_free_model_fallbacks_and_short_sessions():
     text = _v4()
     assert "gemini_model: gemini-3.5-flash-lite" in text
     assert "gemini_model: gemini-3.1-flash-lite" in text
-    assert "gemini_model: gemini-2.5-flash-lite" in text
+    assert "gemini_model: gemini-3.6-flash" in text
+    assert "gemini_model: gemini-2.5-flash-lite" not in text
     assert '"maxSessionTurns": 8' in text
 
 
@@ -101,6 +107,36 @@ def test_v4_continues_without_user_and_retries_waiting_work():
     assert "research-v4-running" in text
     assert "research-v4-waiting" in text
     assert "source=schedule" in text
+
+
+def test_v4_heartbeat_wakes_waiting_issues_from_independent_live_workflows():
+    text = _heartbeat()
+    on_block = text.split("permissions:", 1)[0]
+    assert "workflow_dispatch:" in on_block
+    assert "schedule:" in on_block
+    assert "workflow_run:" in on_block
+    assert "Prospective Market Path Settlement Lag" in on_block
+    assert "Product Operational Automation" in on_block
+    assert "All Leagues V1.1 Sample Health" in on_block
+    assert "Multi-Market Probe Rollover Status" in on_block
+    assert "Multi-Market V2 Readiness Status" in on_block
+    assert "types: [completed]" in on_block
+
+
+def test_v4_heartbeat_claims_waiting_issue_before_dispatch_and_restores_on_failure():
+    text = _heartbeat()
+    assert "--label research-v4-waiting" in text
+    claim = '--add-label research-v4-queued \\\n              --remove-label research-v4-waiting'
+    assert claim in text
+    assert "gh workflow run research-orchestrator-v4.yml" in text
+    assert "-f source=schedule" in text
+    assert "--add-label research-v4-waiting" in text
+    assert "--remove-label research-v4-queued" in text
+
+
+def test_v4_contract_tracks_heartbeat_workflow_changes():
+    text = _v4()
+    assert "'.github/workflows/research-v4-heartbeat.yml'" in text
 
 
 def test_v4_prompt_forbids_unavailable_tools():
