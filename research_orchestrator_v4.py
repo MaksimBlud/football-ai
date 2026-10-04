@@ -14,6 +14,7 @@ VALID_STATUSES = {"CONTINUE", "DONE", "BLOCKED"}
 USAGE_COUNTERS = {
     "runs_started",
     "model_passes_attempted",
+    "groq_passes",
     "primary_passes",
     "fallback1_passes",
     "fallback2_passes",
