@@ -25,6 +25,10 @@ on:
       - '.github/workflows/research-orchestrator-v4.yml'
       - '.github/workflows/research-agent-v3-gemini.yml'
 
+concurrency:
+  group: research-v4-${{ github.event.issue.number || inputs.issue_number || github.run_id }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
@@ -244,8 +248,7 @@ jobs:
         docs/agent_runs/issue_${{ needs.preflight.outputs.issue_number }}/FINAL_REPORT.md.
         FINAL_REPORT.md must contain a simple-language conclusion first and a technical appendix after it.
         Use BLOCKED only for a genuine external blocker that cannot be solved safely from repository data.
-        Do not communicate intermediate progress to the user; the orchestrator handles continuation.
-    steps:
+        Never call update_topic or any tool not present in the explicit tool allowlist above.\n        Do not communicate intermediate progress to the user; the orchestrator handles continuation.\n    steps:
       - uses: actions/checkout@v4
         with:
           ref: main
