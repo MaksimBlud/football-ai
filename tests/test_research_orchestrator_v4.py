@@ -8,6 +8,9 @@ from research_orchestrator_v4 import (
     classify_model_errors,
     load_state,
     retry_delay_seconds,
+    load_usage,
+    parse_usage_increment,
+    update_usage,
 )
 
 
@@ -84,6 +87,43 @@ def test_retry_delay_uses_largest_hint_across_models():
     assert retry_delay_seconds(
         ["Please retry in 31.1s", "Please retry in 59.97s"]
     ) == 70
+
+
+def test_usage_accounting_persists_and_accumulates(tmp_path):
+    first = update_usage(
+        428,
+        {"runs_started": 1, "model_passes_attempted": 3, "quota_waits": 1},
+        tmp_path,
+    )
+    assert first["runs_started"] == 1
+    assert first["model_passes_attempted"] == 3
+    assert first["quota_waits"] == 1
+    assert first["last_updated_utc"]
+
+    second = update_usage(
+        428,
+        {"runs_started": 1, "short_retries_scheduled": 1},
+        tmp_path,
+    )
+    assert second["runs_started"] == 2
+    assert second["model_passes_attempted"] == 3
+    assert second["short_retries_scheduled"] == 1
+    assert load_usage(428, tmp_path) == second
+
+
+def test_usage_increment_parser_supports_default_one():
+    assert parse_usage_increment("runs_started") == ("runs_started", 1)
+    assert parse_usage_increment("model_passes_attempted=3") == (
+        "model_passes_attempted",
+        3,
+    )
+
+
+def test_usage_increment_parser_rejects_unknown_or_negative():
+    with pytest.raises(ValueError):
+        parse_usage_increment("not_a_counter=1")
+    with pytest.raises(ValueError):
+        parse_usage_increment("runs_started=-1")
 
 
 def test_continue_requires_next_step(tmp_path):

@@ -52,6 +52,17 @@ def test_v4_captures_failed_model_stderr_for_transient_classification():
     assert "steps.gemini_primary.outputs.gemini_errors" not in text
 
 
+def test_v4_persists_per_issue_usage_without_spending_iteration_budget():
+    text = _v4()
+    assert "usage-update" in text
+    assert "USAGE.json" in text
+    assert "Research V4 usage #" in text
+    assert "grep -c \"^Research V4 issue #" in text
+    assert "research_iterations_committed" in text
+    assert "model_passes_attempted" in text
+    assert "short_retries_scheduled" in text
+
+
 def test_v4_persists_issue_branch_and_machine_state():
     text = _v4()
     assert "research_orchestrator_v4.py branch-name" in text

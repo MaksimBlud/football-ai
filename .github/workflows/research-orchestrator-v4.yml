@@ -283,8 +283,8 @@ jobs:
           else
             git switch -c "$BRANCH" origin/main
           fi
-          UNIQUE_COMMITS=$(git rev-list --count origin/main..HEAD)
-          NEXT_ITERATION=$((UNIQUE_COMMITS + 1))
+          RESEARCH_COMMITS=$(git log --format='%s' origin/main..HEAD | grep -c "^Research V4 issue #${ISSUE_NUMBER} iteration " || true)
+          NEXT_ITERATION=$((RESEARCH_COMMITS + 1))
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
           echo "iteration=$NEXT_ITERATION" >> "$GITHUB_OUTPUT"
           if [ "$NEXT_ITERATION" -gt 24 ]; then
@@ -292,6 +292,12 @@ jobs:
           else
             echo 'maxed=false' >> "$GITHUB_OUTPUT"
           fi
+      - name: Start usage accounting
+        if: steps.branch.outputs.maxed != 'true'
+        run: |
+          python research_orchestrator_v4.py usage-update \
+            --issue-number "$ISSUE_NUMBER" \
+            --inc runs_started
       - name: Stop runaway iteration loop
         if: steps.branch.outputs.maxed == 'true'
         env:
@@ -367,6 +373,34 @@ jobs:
             echo 'success=false' >> "$GITHUB_OUTPUT"
             echo "failure_state=$STATE" >> "$GITHUB_OUTPUT"
           fi
+      - name: Record model pass accounting
+        if: steps.branch.outputs.maxed != 'true'
+        run: |
+          python research_orchestrator_v4.py usage-update \
+            --issue-number "$ISSUE_NUMBER" \
+            --inc primary_passes \
+            --inc model_passes_attempted
+          if [ "${{ steps.gemini_primary.outcome }}" = 'failure' ]; then
+            python research_orchestrator_v4.py usage-update \
+              --issue-number "$ISSUE_NUMBER" \
+              --inc fallback1_passes \
+              --inc model_passes_attempted
+          fi
+          if [ "${{ steps.gemini_primary.outcome }}" = 'failure' ] && [ "${{ steps.gemini_secondary.outcome }}" = 'failure' ]; then
+            python research_orchestrator_v4.py usage-update \
+              --issue-number "$ISSUE_NUMBER" \
+              --inc fallback2_passes \
+              --inc model_passes_attempted
+          fi
+          if [ "${{ steps.model.outputs.success }}" = 'true' ]; then
+            python research_orchestrator_v4.py usage-update \
+              --issue-number "$ISSUE_NUMBER" \
+              --inc successful_model_runs
+          elif [ "${{ steps.model.outputs.failure_state }}" = 'BLOCKED' ]; then
+            python research_orchestrator_v4.py usage-update \
+              --issue-number "$ISSUE_NUMBER" \
+              --inc blocked_runs
+          fi
       - name: Plan short quota retry
         id: retry
         if: steps.model.outputs.success == 'false' && steps.model.outputs.failure_state == 'QUOTA_WAIT'
@@ -382,6 +416,17 @@ jobs:
             echo "next_attempt=$((ATTEMPT + 1))" >> "$GITHUB_OUTPUT"
           else
             echo 'short_retry=false' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Record quota accounting
+        if: steps.model.outputs.success == 'false' && steps.model.outputs.failure_state == 'QUOTA_WAIT'
+        run: |
+          python research_orchestrator_v4.py usage-update \
+            --issue-number "$ISSUE_NUMBER" \
+            --inc quota_waits
+          if [ "${{ steps.retry.outputs.short_retry }}" = 'true' ]; then
+            python research_orchestrator_v4.py usage-update \
+              --issue-number "$ISSUE_NUMBER" \
+              --inc short_retries_scheduled
           fi
       - name: Enter quiet quota wait
         if: steps.model.outputs.success == 'false' && steps.model.outputs.failure_state == 'QUOTA_WAIT'
@@ -416,12 +461,14 @@ jobs:
         run: |
           git status --porcelain=v1 --untracked-files=all > /tmp/v4-status
           cat /tmp/v4-status
-          if [ -s /tmp/v4-status ]; then echo 'has_changes=true' >> "$GITHUB_OUTPUT"; else echo 'has_changes=false' >> "$GITHUB_OUTPUT"; fi
+          grep -v "research/agent_runs/issue_${ISSUE_NUMBER}/USAGE.json$" /tmp/v4-status > /tmp/v4-research-status || true
+          if [ -s /tmp/v4-research-status ]; then echo 'has_changes=true' >> "$GITHUB_OUTPUT"; else echo 'has_changes=false' >> "$GITHUB_OUTPUT"; fi
       - name: Block successful no-op
         if: steps.model.outputs.success == 'true' && steps.changed.outputs.has_changes == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          python research_orchestrator_v4.py usage-update --issue-number "$ISSUE_NUMBER" --inc blocked_runs
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-running >/dev/null 2>&1 || true
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v4-blocked >/dev/null
           gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body 'Research Orchestrator V4 blocked because a successful model pass produced no research-state change.'
@@ -462,6 +509,17 @@ jobs:
         id: state
         if: steps.model.outputs.success == 'true' && steps.changed.outputs.has_changes == 'true'
         run: python research_orchestrator_v4.py validate-state --issue-number "$ISSUE_NUMBER" --github-output "$GITHUB_OUTPUT"
+      - name: Record research iteration accounting
+        if: steps.model.outputs.success == 'true' && steps.changed.outputs.has_changes == 'true'
+        run: |
+          python research_orchestrator_v4.py usage-update \
+            --issue-number "$ISSUE_NUMBER" \
+            --inc research_iterations_committed
+          if [ "${{ steps.state.outputs.status }}" = 'DONE' ]; then
+            python research_orchestrator_v4.py usage-update --issue-number "$ISSUE_NUMBER" --inc done_runs
+          elif [ "${{ steps.state.outputs.status }}" = 'BLOCKED' ]; then
+            python research_orchestrator_v4.py usage-update --issue-number "$ISSUE_NUMBER" --inc blocked_runs
+          fi
       - name: Commit and persist iteration
         if: steps.model.outputs.success == 'true' && steps.changed.outputs.has_changes == 'true'
         run: |
@@ -512,3 +570,16 @@ jobs:
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v4-waiting >/dev/null 2>&1 || true
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v4-blocked >/dev/null
           gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Research Orchestrator V4: BLOCKED — $BLOCKER"
+      - name: Persist usage-only run
+        if: always() && steps.branch.outputs.maxed != 'true' && (steps.model.outputs.success == 'false' || (steps.model.outputs.success == 'true' && steps.changed.outputs.has_changes == 'false'))
+        run: |
+          USAGE="research/agent_runs/issue_${ISSUE_NUMBER}/USAGE.json"
+          if [ -f "$USAGE" ]; then
+            git config user.name 'football-ai-research-bot'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add "$USAGE"
+            if ! git diff --cached --quiet; then
+              git commit -m "Research V4 usage #${ISSUE_NUMBER} run ${GITHUB_RUN_ID}"
+              git push origin "${{ steps.branch.outputs.branch }}"
+            fi
+          fi
