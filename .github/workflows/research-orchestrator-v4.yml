@@ -413,7 +413,7 @@ jobs:
             --issue-number "$ISSUE_NUMBER" \
             --inc groq_passes \
             --inc model_passes_attempted
-          if [ "${{ steps.groq_state.outputs.failure_state }}" = 'BLOCKED' ]; then
+          if [ "${{ steps.groq_state.outputs.failure_state }}" = 'PERMANENT_BLOCKED' ]; then
             python research_orchestrator_v4.py usage-update \
               --issue-number "$ISSUE_NUMBER" \
               --inc fallback1_passes \
