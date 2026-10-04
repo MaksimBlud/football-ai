@@ -101,6 +101,7 @@ jobs:
       pull-requests: write
     env:
       PYTHONPATH: .
+      GEMINI_CLI_TRUST_WORKSPACE: 'true'
       ISSUE_NUMBER: ${{ github.event.issue.number }}
       ISSUE_TITLE: ${{ github.event.issue.title }}
     steps:

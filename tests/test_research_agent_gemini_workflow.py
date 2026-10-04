@@ -19,6 +19,11 @@ def test_gemini_v3_is_owner_gated_and_disabled_by_default():
     assert "echo \'run_gemini=true\'" in text
 
 
+def test_gemini_v3_trusts_headless_github_workspace():
+    text = _text()
+    assert "GEMINI_CLI_TRUST_WORKSPACE: 'true'" in text
+
+
 def test_gemini_v3_uses_official_action_and_secret():
     text = _text()
     assert "google-github-actions/run-gemini-cli@v0" in text
