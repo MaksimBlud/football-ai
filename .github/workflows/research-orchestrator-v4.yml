@@ -360,11 +360,24 @@ jobs:
             --issue-json /tmp/v4-issue.json \
             --hypothesis-family "$HYPOTHESIS_FAMILY" \
             --model openai/gpt-oss-120b \
-            --max-turns 5 \
+            --max-turns 4 \
             2> >(tee /tmp/groq-primary.err >&2)
+      - name: Classify Groq primary
+        id: groq_state
+        if: steps.branch.outputs.maxed != 'true'
+        run: |
+          if [ "${{ steps.groq_primary.outcome }}" = 'success' ]; then
+            echo 'success=true' >> "$GITHUB_OUTPUT"
+            echo 'failure_state=NONE' >> "$GITHUB_OUTPUT"
+          else
+            STATE=$(python research_orchestrator_v4.py classify-errors \
+              --file /tmp/groq-primary.err)
+            echo 'success=false' >> "$GITHUB_OUTPUT"
+            echo "failure_state=$STATE" >> "$GITHUB_OUTPUT"
+          fi
       - name: Gemini emergency fallback
         id: gemini_fallback
-        if: steps.branch.outputs.maxed != 'true' && steps.groq_primary.outcome == 'failure'
+        if: steps.branch.outputs.maxed != 'true' && steps.groq_state.outputs.failure_state == 'BLOCKED'
         continue-on-error: true
         uses: google-github-actions/run-gemini-cli@v0
         with:
@@ -374,7 +387,7 @@ jobs:
           settings: ${{ env.GEMINI_SETTINGS }}
           prompt: ${{ env.AGENT_PROMPT }}
       - name: Save Gemini fallback stderr
-        if: steps.branch.outputs.maxed != 'true' && steps.groq_primary.outcome == 'failure' && steps.gemini_fallback.outcome == 'failure'
+        if: steps.branch.outputs.maxed != 'true' && steps.groq_state.outputs.failure_state == 'BLOCKED' && steps.gemini_fallback.outcome == 'failure'
         run: cp gemini-artifacts/stderr.log /tmp/gemini-fallback.err 2>/dev/null || true
       - name: Classify model result
         id: model
@@ -383,6 +396,9 @@ jobs:
           if [ "${{ steps.groq_primary.outcome }}" = 'success' ] || [ "${{ steps.gemini_fallback.outcome }}" = 'success' ]; then
             echo 'success=true' >> "$GITHUB_OUTPUT"
             echo 'failure_state=NONE' >> "$GITHUB_OUTPUT"
+          elif [ "${{ steps.groq_state.outputs.failure_state }}" = 'QUOTA_WAIT' ]; then
+            echo 'success=false' >> "$GITHUB_OUTPUT"
+            echo 'failure_state=QUOTA_WAIT' >> "$GITHUB_OUTPUT"
           else
             STATE=$(python research_orchestrator_v4.py classify-errors \
               --file /tmp/groq-primary.err \
@@ -397,7 +413,7 @@ jobs:
             --issue-number "$ISSUE_NUMBER" \
             --inc groq_passes \
             --inc model_passes_attempted
-          if [ "${{ steps.groq_primary.outcome }}" = 'failure' ]; then
+          if [ "${{ steps.groq_state.outputs.failure_state }}" = 'BLOCKED' ]; then
             python research_orchestrator_v4.py usage-update \
               --issue-number "$ISSUE_NUMBER" \
               --inc fallback1_passes \
