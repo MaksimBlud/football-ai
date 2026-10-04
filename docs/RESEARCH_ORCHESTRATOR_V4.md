@@ -118,25 +118,38 @@ provider's retry hint from the captured Gemini stderr. For errors such as
 redispatches the same Issue automatically.
 
 Short retries are bounded to three consecutive attempts. If Google reports a daily
-quota, or the short-retry budget is exhausted, V4 remains in `research-v4-waiting`
-and the three-hour scheduler becomes the fallback. This prevents a normal one-minute
-TPM/RPM reset from turning into a multi-hour pause while still avoiding runaway loops.
+quota, or the short-retry budget is exhausted, V4 remains in `research-v4-waiting`.
+
+Waiting tasks are now woken by a separate `Research V4 Heartbeat` workflow. It keeps
+its own hourly cron, but does not depend on that cron alone: it also listens for
+completion of several repository workflows whose scheduled execution has been observed
+live. Before dispatching V4, the heartbeat atomically moves an Issue from
+`research-v4-waiting` to `research-v4-queued`, preventing duplicate wakeups. If the
+dispatch itself fails, the waiting label is restored.
+
+This provides an independent cloud wake-up path even when the V4 workflow's own
+`schedule:` event is delayed or absent.
 
 ## Free-tier resilience
 
-The model order is intentionally spread across separate Gemini model quotas. The final fallback uses the still-supported legacy 2.5 Flash-Lite free tier when the current-generation request bucket is exhausted:
+The model order uses only currently supported models with Free Tier availability:
 
 1. `gemini-3.5-flash-lite`
 2. `gemini-3.1-flash-lite`
-3. `gemini-2.5-flash-lite`
+3. `gemini-3.6-flash`
+
+The attempted `gemini-2.5-flash-lite` fallback was removed after live evidence showed
+Google returns `ModelNotFoundError` for this new project. It must not be treated as a
+usable fallback.
 
 Each model pass is limited to 8 session turns to stay below the observed free-tier per-minute input-token ceiling while preserving multi-iteration autonomy. If all model attempts fail with transient
 quota/capacity signals such as HTTP 429, HTTP 503, `RESOURCE_EXHAUSTED`, high demand,
 or retry-after messages, V4 captures the action's real `gemini-artifacts/stderr.log`, classifies that evidence, and adds `research-v4-waiting` while leaving
 `research-v4-running` in place.
 
-The scheduler wakes every three hours and redispatches open Issues carrying
-`research-v4-running`. No paid fallback is configured.
+The original three-hour V4 scheduler remains as a secondary safety path. The independent
+heartbeat is the primary recovery path for `research-v4-waiting` tasks. No paid fallback
+is configured.
 
 ## Labels
 
