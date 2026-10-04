@@ -146,9 +146,12 @@ The Groq agent uses the OpenAI-compatible Chat Completions API and exposes only
 repository read/search tools plus write/replace tools constrained to the current
 Issue sandbox. It cannot write production artifacts, runtime code, Supabase, or
 deployment state. Its conversation is deliberately compact and capped at four
-turns. The final turn exposes only a dedicated `write_state` tool and requires a
-tool call. `write_state` accepts structured status/summary/next-step/blocker fields
-and writes canonical `STATE.json` itself, avoiding long nested JSON strings that can
+turns. A dedicated `record_progress` tool appends a short evidence-backed checkpoint
+to the current Issue's `PROGRESS.md`; a `CONTINUE` iteration is not considered
+complete until both substantive sandbox progress and a fresh `STATE.json` exist.
+This prevents repeated state-only commits that merely rephrase the same next step.
+The final state write uses the dedicated `write_state` tool with structured
+status/summary/next-step/blocker fields, avoiding long nested JSON strings that can
 cause provider-side `tool_use_failed` errors.
 Successful Groq responses also expose TPM reset headers; V4 paces subsequent turns
 when the remaining token bucket is low.
