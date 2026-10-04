@@ -2,19 +2,15 @@ from pathlib import Path
 
 
 V4 = Path(".github/workflows/research-orchestrator-v4.yml")
-V3 = Path(".github/workflows/research-agent-v3-gemini.yml")
-
+V3 = Path(".github/workflows/research-agent-v3-gemini.yml")\nV2 = Path(".github/workflows/research-agent-v2-issue-intake.yml")\n
 
 def _v4() -> str:
     return V4.read_text(encoding="utf-8")
 
 
-def _v3() -> str:
-    return V3.read_text(encoding="utf-8")
+def _v3() -> str:\n    return V3.read_text(encoding="utf-8")\n\n\ndef _v2() -> str:\n    return V2.read_text(encoding="utf-8")\n
 
-
-def test_v4_has_issue_dispatch_schedule_and_pr_contract_triggers():
-    text = _v4()
+def test_v4_serializes_one_issue_but_allows_different_issues_in_parallel():\n    text = _v4()\n    assert "concurrency:" in text\n    assert "github.event.issue.number || inputs.issue_number || github.run_id" in text\n    assert "cancel-in-progress: false" in text\n\n\ndef test_v4_has_issue_dispatch_schedule_and_pr_contract_triggers():\n    text = _v4()
     on_block = text.split("permissions:", 1)[0]
     assert "issues:" in on_block
     assert "workflow_dispatch:" in on_block
@@ -74,8 +70,7 @@ def test_v4_never_auto_merges_or_promotes():
     assert "artifact_lifecycle.py promote" not in text
 
 
-def test_v3_no_longer_runs_on_issue_events():
-    text = _v3()
+def test_legacy_v2_no_longer_runs_on_issue_events():\n    text = _v2()\n    on_block = text.split("permissions:", 1)[0]\n    assert "issues:" not in on_block\n    assert "pull_request:" in on_block\n\n\ndef test_v3_no_longer_runs_on_issue_events():\n    text = _v3()
     on_block = text.split("permissions:", 1)[0]
     assert "issues:" not in on_block
     assert "pull_request:" in on_block
