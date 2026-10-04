@@ -1,16 +1,17 @@
 {
   "blocked_runs": 0,
   "done_runs": 0,
-  "fallback1_passes": 5,
+  "fallback1_passes": 6,
   "fallback2_passes": 5,
+  "groq_passes": 1,
   "issue_number": 482,
-  "last_updated_utc": "2026-10-04T13:52:20.914494+00:00",
-  "model_passes_attempted": 15,
+  "last_updated_utc": "2026-10-04T14:05:38.410875+00:00",
+  "model_passes_attempted": 17,
   "primary_passes": 5,
-  "quota_waits": 5,
+  "quota_waits": 6,
   "research_iterations_committed": 0,
-  "runs_started": 6,
+  "runs_started": 7,
   "schema_version": 1,
-  "short_retries_scheduled": 3,
+  "short_retries_scheduled": 4,
   "successful_model_runs": 0
 }
