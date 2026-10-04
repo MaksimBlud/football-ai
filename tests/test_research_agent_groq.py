@@ -1,3 +1,6 @@
+import io
+import urllib.error
+from email.message import Message
 from pathlib import Path
 
 import pytest
@@ -6,6 +9,7 @@ from research_agent_groq import (
     GroqAgentError,
     GroqToolFormatError,
     _duration_seconds,
+    _request,
     glob_files,
     grep_search,
     read_file,
@@ -79,6 +83,33 @@ def test_groq_agent_read_search_and_replace(tmp_path: Path):
 )
 def test_groq_rate_limit_duration_parser(value: str, seconds: float):
     assert _duration_seconds(value) == pytest.approx(seconds)
+
+
+def test_groq_long_retry_after_fails_fast_without_sleep(monkeypatch, capsys):
+    headers = Message()
+    headers["retry-after"] = "2296"
+    headers["x-ratelimit-remaining-requests"] = "941"
+    error = urllib.error.HTTPError(
+        "https://api.groq.com/openai/v1/chat/completions",
+        429,
+        "Too Many Requests",
+        headers,
+        io.BytesIO(b'{"error":{"message":"TPD rate limit"}}'),
+    )
+
+    def fail_request(*args, **kwargs):
+        raise error
+
+    slept = []
+    monkeypatch.setattr("research_agent_groq.urllib.request.urlopen", fail_request)
+    monkeypatch.setattr("research_agent_groq.time.sleep", lambda seconds: slept.append(seconds))
+
+    with pytest.raises(GroqAgentError, match="long quota wait"):
+        _request("fake", {"model": "test", "messages": []})
+
+    assert slept == []
+    stderr = capsys.readouterr().err
+    assert "GROQ_LONG_QUOTA_WAIT retry_after_seconds=2296.000" in stderr
 
 
 def test_existing_state_does_not_fake_new_groq_iteration(tmp_path: Path, monkeypatch):

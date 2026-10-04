@@ -161,8 +161,11 @@ the **last decisive provider error** as `TRANSIENT_QUOTA`, `TOOL_FORMAT_RETRY`, 
 `PERMANENT_BLOCKED`. This prevents an older TPM/429 line from masking a later
 HTTP 400 `tool_use_failed`.
 
-Transient Groq TPM/429/503 conditions are retried through Groq and do **not** invoke
-Gemini. A `tool_use_failed` response first gets an immediate state-only Groq retry
+Short Groq TPM/429/503 conditions are retried through Groq and do **not** invoke
+Gemini. When Groq supplies a long `retry-after` window (for example a TPD window
+measured in many minutes), the worker fails fast into quiet `research-v4-waiting`
+instead of sleeping/re-dispatching every minute; heartbeat recovery handles the
+later wake-up. A `tool_use_failed` response first gets an immediate state-only Groq retry
 that exposes only `write_state`; repeated format failures use bounded quick
 redispatches and never fall back to Gemini. Gemini is reserved only for
 `PERMANENT_BLOCKED`, preventing normal minute-window throttling or tool
