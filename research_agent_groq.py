@@ -19,7 +19,8 @@ from typing import Any
 
 API_URL = "https://api.groq.com/openai/v1/chat/completions"
 DEFAULT_MODEL = "openai/gpt-oss-120b"
-MAX_READ_CHARS = 16_000
+MAX_READ_CHARS = 6_000
+MAX_TOOL_RESULT_CHARS = 12_000
 MAX_GREP_RESULTS = 80
 MAX_LIST_ENTRIES = 120
 
@@ -104,9 +105,18 @@ def read_file(root: Path, path: str) -> dict[str, Any]:
 
 
 def read_many_files(root: Path, paths: list[str]) -> dict[str, Any]:
-    if len(paths) > 6:
-        raise GroqAgentError("read_many_files accepts at most 6 paths")
-    return {"files": [read_file(root, path) for path in paths]}
+    if len(paths) > 4:
+        raise GroqAgentError("read_many_files accepts at most 4 paths")
+    files: list[dict[str, Any]] = []
+    remaining = 8_000
+    for path in paths:
+        target = _resolve_repo(root, path)
+        content = _read_text(target, max_chars=min(2_500, remaining))
+        files.append({"path": path, "content": content})
+        remaining -= len(content)
+        if remaining <= 0:
+            break
+    return {"files": files, "truncated": len(files) < len(paths)}
 
 
 def glob_files(root: Path, pattern: str) -> dict[str, Any]:
@@ -456,8 +466,8 @@ def run_agent(
         "Prefer read_many_files/grep over broad scans to conserve free-tier tokens."
     )
     body = issue_body.strip()
-    if len(body) > 18_000:
-        body = body[:18_000] + "\n...[issue body truncated for token budget]"
+    if len(body) > 9_000:
+        body = body[:9_000] + "\n...[issue body truncated for Groq free-tier token budget]"
     user = f"""Issue #{issue_number}: {issue_title}
 Hypothesis family: {hypothesis_family}
 
@@ -487,7 +497,7 @@ Inspect only the files needed for the next logical step. Complete one meaningful
             "tool_choice": "auto",
             "parallel_tool_calls": True,
             "temperature": 0.1,
-            "max_completion_tokens": 1400,
+            "max_completion_tokens": 1000,
             "reasoning_effort": "low",
         }
         response = _request(api_key, payload)
@@ -515,6 +525,7 @@ Inspect only the files needed for the next logical step. Complete one meaningful
             )
             continue
 
+        remaining_tool_chars = MAX_TOOL_RESULT_CHARS
         for call in tool_calls:
             call_id = call.get("id")
             function = call.get("function") or {}
@@ -529,11 +540,13 @@ Inspect only the files needed for the next logical step. Complete one meaningful
                     {"error": type(exc).__name__, "message": str(exc)},
                     ensure_ascii=False,
                 )
+            clipped = content[: max(0, remaining_tool_chars)]
+            remaining_tool_chars -= len(clipped)
             messages.append(
                 {
                     "role": "tool",
                     "tool_call_id": call_id,
-                    "content": content[:20_000],
+                    "content": clipped or '{"truncated":true}',
                 }
             )
 
