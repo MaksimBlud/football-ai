@@ -1,0 +1,108 @@
+{
+  "experiment_id": "CROSS_MARKET_LEAD_LAG_REPLICATION_V2",
+  "frozen_result_schema": 1,
+  "first_successful_run": {
+    "workflow_run_id": 37178799308,
+    "artifact_id": 11294635923,
+    "artifact_digest": "sha256:85d697a58ee70365bf44c33cbb6860fb04091e5bbfcd0e40df2cbd309b1f6469",
+    "head_sha": "960861f2ecad900a43ae8cc22d2ce7245f57a4e3"
+  },
+  "inherited_contract": {
+    "source_experiment": "CROSS_MARKET_LEAD_LAG_V1",
+    "primary_statistic": "alignment_dot",
+    "permutation_draws": 10000,
+    "bootstrap_draws": 10000,
+    "seed": 20261004,
+    "half_goal_ah_only": true
+  },
+  "result": {
+    "reference": {
+      "rows": 749,
+      "mean_alignment_dot": 0.0001396399530115973,
+      "positive_alignment_rate": 0.5647530040053405,
+      "mean_gap_reduction_tv": -0.0142048569740845
+    },
+    "validation": {
+      "season": "2024-2025",
+      "rows": 137,
+      "rows_ok": true,
+      "mean_alignment_dot": 0.000012128151012796614,
+      "positive_alignment_rate": 0.48175182481751827,
+      "positive_mean_alignment_leagues": 1,
+      "by_league": {
+        "BUNDESLIGA": {
+          "rows": 64,
+          "mean_alignment_dot": -5.338845594110868e-7,
+          "positive_alignment_rate": 0.53125
+        },
+        "LIGUE_1": {
+          "rows": 73,
+          "mean_alignment_dot": 0.00002322911370623898,
+          "positive_alignment_rate": 0.4383561643835616
+        }
+      },
+      "permutation": {
+        "observed_mean_alignment_dot": 0.000012128151012796614,
+        "null_mean": -0.000029824242453869902,
+        "null_ci95_low": -0.00012253278942595656,
+        "null_ci95_high": 0.00006501667861982703,
+        "one_sided_p": 0.1932806719328067
+      },
+      "bootstrap": {
+        "mean": 0.000012217632569384421,
+        "ci95_low": -0.00008196999466573126,
+        "ci95_high": 0.00009961887301429277,
+        "probability_positive": 0.6099
+      },
+      "mean_gap_reduction_tv": -0.015660435679330533,
+      "admissible": false
+    },
+    "test": {
+      "season": "2025-2026",
+      "rows": 168,
+      "rows_ok": true,
+      "mean_alignment_dot": 0.00010680996910608444,
+      "positive_alignment_rate": 0.5297619047619048,
+      "positive_mean_alignment_leagues": 2,
+      "by_league": {
+        "BUNDESLIGA": {
+          "rows": 76,
+          "mean_alignment_dot": 0.00012494213363582873,
+          "positive_alignment_rate": 0.5394736842105263
+        },
+        "LIGUE_1": {
+          "rows": 92,
+          "mean_alignment_dot": 0.00009183122449455654,
+          "positive_alignment_rate": 0.5217391304347826
+        }
+      },
+      "permutation": {
+        "observed_mean_alignment_dot": 0.00010680996910608444,
+        "null_mean": 0.000011741818345970425,
+        "null_ci95_low": -0.00006405359898281116,
+        "null_ci95_high": 0.00008830664131243567,
+        "one_sided_p": 0.007599240075992401
+      },
+      "bootstrap": {
+        "mean": 0.00010660062921881348,
+        "ci95_low": 0.000036680819337470654,
+        "ci95_high": 0.00018326946356555203,
+        "probability_positive": 0.9986
+      },
+      "mean_gap_reduction_tv": -0.015680014535522306,
+      "gate": true
+    },
+    "supported": false,
+    "decision": "LEAD_LAG_REPLICATION_NOT_SUPPORTED",
+    "interpretation": "VALIDATION_FAILED_BUT_2025_26_OOT_STRONGLY_POSITIVE_IN_BOTH_REPLICATION_LEAGUES",
+    "result": "NO_BET"
+  },
+  "safety": {
+    "match_outcomes_used": false,
+    "opened_2026_27_data_used": false,
+    "paid_odds_api_calls": 0,
+    "supabase_writes": 0,
+    "production_model_operations": 0,
+    "production_promotion": false
+  }
+}
