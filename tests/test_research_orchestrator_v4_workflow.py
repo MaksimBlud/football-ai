@@ -66,7 +66,7 @@ def test_v4_uses_groq_primary_and_one_gemini_emergency_fallback():
     assert "GROQ_API_KEY" in text
     assert "Classify Groq primary" in text
     assert "Gemini emergency fallback" in text
-    assert "steps.groq_state.outputs.failure_state == 'BLOCKED'" in text
+    assert "steps.groq_state.outputs.failure_state == 'PERMANENT_BLOCKED'" in text
     assert "--max-turns 4" in text
     assert "gemini_model: gemini-3.6-flash" in text
     assert "gemini_model: gemini-3.5-flash-lite" not in text
@@ -81,7 +81,11 @@ def test_v4_captures_provider_errors_for_transient_classification():
     assert "gemini-artifacts/stderr.log /tmp/gemini-fallback.err" in text
     assert "--file /tmp/groq-primary.err" in text
     assert "--file /tmp/gemini-fallback.err" in text
-    assert "failure_state=QUOTA_WAIT" in text
+    assert "TRANSIENT_QUOTA" in text
+    assert "TOOL_FORMAT_RETRY" in text
+    assert "Plan tool-format retry" in text
+    assert "Short tool-format redispatch" in text
+    assert "tool_format_failures" in text
 
 
 

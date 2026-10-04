@@ -31,6 +31,11 @@ class GroqAgentError(RuntimeError):
     pass
 
 
+class GroqToolFormatError(GroqAgentError):
+    """Groq rejected malformed JSON arguments for a generated tool call."""
+
+
+
 def _safe_rel(path: str) -> str:
     candidate = PurePosixPath(path.replace("\\", "/"))
     if candidate.is_absolute() or ".." in candidate.parts:
@@ -491,6 +496,13 @@ def _request(
                 f"body={raw[:2000]}",
                 file=sys.stderr,
             )
+            lower_raw = raw.lower()
+            if exc.code == 400 and (
+                "tool_use_failed" in lower_raw
+                or "failed to parse tool call arguments as json" in lower_raw
+            ):
+                print("GROQ_TOOL_FORMAT_ERROR retryable=true", file=sys.stderr)
+                raise GroqToolFormatError("Groq tool_use_failed") from exc
             if exc.code not in TRANSIENT_HTTP or attempt >= max_retries:
                 raise GroqAgentError(f"Groq API HTTP {exc.code}") from exc
             if remaining_requests == "0":
@@ -615,7 +627,41 @@ Inspect only the files needed for the next logical step. Complete one meaningful
             "max_completion_tokens": 900,
             "reasoning_effort": "low",
         }
-        response = _request(api_key, payload)
+        try:
+            response = _request(api_key, payload)
+        except GroqToolFormatError:
+            print(
+                f"GROQ_TOOL_FORMAT_RETRY turn={turn} mode=write_state_only",
+                file=sys.stderr,
+            )
+            recovery_messages = (
+                list(messages)
+                if len(messages) <= 6
+                else list(messages[:2] + messages[-4:])
+            )
+            recovery_messages.append(
+                {
+                    "role": "user",
+                    "content": (
+                        "TOOL FORMAT RECOVERY. The previous provider response failed while "
+                        "serializing a tool call. Do not recreate any long artifact. Call "
+                        "write_state only, with short fields (prefer <=500 characters each). "
+                        "Use CONTINUE with the smallest safe next_step unless an existing final "
+                        "report already proves DONE; use BLOCKED only for a genuine external blocker."
+                    ),
+                }
+            )
+            recovery_payload = {
+                "model": model,
+                "messages": recovery_messages,
+                "tools": FINAL_TOOLS,
+                "tool_choice": "required",
+                "parallel_tool_calls": False,
+                "temperature": 0.0,
+                "max_completion_tokens": 500,
+                "reasoning_effort": "low",
+            }
+            response = _request(api_key, recovery_payload, max_retries=1)
         usage = response.get("usage") or {}
         rate = response.get("_groq_rate_limit") or {}
         print(
