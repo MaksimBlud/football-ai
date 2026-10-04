@@ -153,13 +153,20 @@ cause provider-side `tool_use_failed` errors.
 Successful Groq responses also expose TPM reset headers; V4 paces subsequent turns
 when the remaining token bucket is low.
 
-V4 no longer fires three Gemini models in sequence. Transient Groq TPM/429/503
-conditions are retried through Groq and do **not** invoke Gemini. Gemini is reserved
-only for a permanent Groq blocker, preventing normal minute-window throttling from
-burning the tiny Gemini daily quota.
+V4 no longer fires three Gemini models in sequence. Groq failures are classified by
+the **last decisive provider error** as `TRANSIENT_QUOTA`, `TOOL_FORMAT_RETRY`, or
+`PERMANENT_BLOCKED`. This prevents an older TPM/429 line from masking a later
+HTTP 400 `tool_use_failed`.
 
-If all available providers fail with transient quota/capacity signals such as HTTP
-429/503 or retry-after messages, V4 records the evidence and returns to
+Transient Groq TPM/429/503 conditions are retried through Groq and do **not** invoke
+Gemini. A `tool_use_failed` response first gets an immediate state-only Groq retry
+that exposes only `write_state`; repeated format failures use bounded quick
+redispatches and never fall back to Gemini. Gemini is reserved only for
+`PERMANENT_BLOCKED`, preventing normal minute-window throttling or tool
+serialization failures from burning the tiny Gemini daily quota.
+
+If a transient quota/capacity signal remains after retries, or repeated tool-format
+retries are exhausted, V4 records the evidence and returns to
 `research-v4-waiting` for heartbeat recovery.
 
 The original three-hour V4 scheduler remains as a secondary safety path. The independent
