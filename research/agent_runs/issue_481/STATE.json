@@ -1,6 +1,6 @@
 {
   "blocker": null,
-  "next_step": "Read relevant CSV/Parquet files from data directory for the three seasons and compute basic descriptive stats.",
+  "next_step": "Create diagnostic metric definitions and code skeleton to compute source coverage, AH composition, bookmaker overround, market magnitudes, and league composition for seasons 2023/24, 2024/25, 2025/26.",
   "status": "CONTINUE",
-  "summary": "Initialized research. Next step: load diagnostic data files for source coverage, AH composition, overround, and market magnitudes for seasons 2023/24, 2024/25, 2025/26."
+  "summary": "Initialized research. Next step: freeze diagnostic protocol by enumerating required metrics for each diagnostic family and implement data extraction scripts."
 }
