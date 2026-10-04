@@ -1,6 +1,6 @@
 {
   "blocker": null,
-  "next_step": "Check sample CSVs for Bundesliga and Ligue 1 to confirm presence of Bet365 opening O/U 2.5, Asian Handicap half‑goal lines, and closing 1X2 columns, and determine eligible seasons meeting minimum rows per league.",
+  "next_step": "Assess data coverage and feasibility for Bundesliga and Ligue 1 seasons, ensuring required Bet365 columns and half-goal restrictions are present.",
   "status": "CONTINUE",
-  "summary": "Reviewed V1 protocol, results, and code. Ready to assess data availability for Bundesliga and Ligue 1 and draft frozen replication protocol (seasons, fields, filters). Next step: verify that the pinned data files contain required Bet365 columns and half‑goal AH lines for the target leagues and seasons."
+  "summary": "V1 protocol reviewed. Next step: evaluate availability and compatibility of Bundesliga and Ligue 1 data (Bet365 fields, half-goal AH lines) for independent replication."
 }
