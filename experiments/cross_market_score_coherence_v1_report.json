@@ -3,8 +3,8 @@
   "frozen_result_schema": 1,
   "first_run": {
     "workflow_run_id": 37027753874,
-    "artifact_id": 11236122159,
-    "head_sha": "fcbebc147a623397ce0a3aa9eea66ce3db3db957"
+    "artifact_id": 11236122159,\n    "artifact_digest": "sha256:ab6e0e49eb13265aa888ff5c809b94cccae06dc3b46ad812ebd3a97cbc2b991e",
+    "head_sha": "7249a90e515b3a11af0fe214277157e8ec79c998"
   },
   "result": {
     "validation_admissible": false,
