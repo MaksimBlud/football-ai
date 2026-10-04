@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -19,6 +21,20 @@ TRANSIENT_MARKERS = (
     "rate limit",
     "exhausted your daily quota",
 )
+DAILY_QUOTA_MARKERS = (
+    "daily quota",
+    "requests per day",
+    "request per day",
+    "generate_requests_per_day",
+    "perdayperproject",
+    "rpd",
+)
+RETRY_DELAY_RE = re.compile(
+    r"(?:please\\s+retry\\s+in|suggested\\s+retry\\s+after|retry\\s+after)\\s+"
+    r"([0-9]+(?:\\.[0-9]+)?)\\s*(ms|milliseconds?|s|seconds?)",
+    re.IGNORECASE,
+)
+
 PERMANENT_MARKERS = (
     "invalid api key",
     "api key not valid",
@@ -58,6 +74,35 @@ def classify_model_errors(texts: list[str]) -> str:
     return "BLOCKED"
 
 
+def retry_delay_seconds(
+    texts: list[str],
+    *,
+    buffer_seconds: int = 10,
+    default_seconds: int = 75,
+    min_seconds: int = 45,
+    max_seconds: int = 120,
+) -> int | None:
+    """Return a bounded short-retry delay, or None for a daily quota."""
+    blob = "\n".join(texts).lower()
+    if any(marker in blob for marker in DAILY_QUOTA_MARKERS):
+        return None
+
+    delays: list[float] = []
+    for match in RETRY_DELAY_RE.finditer(blob):
+        value = float(match.group(1))
+        unit = match.group(2).lower()
+        if unit.startswith("ms") or unit.startswith("millisecond"):
+            value /= 1000.0
+        delays.append(value)
+
+    if delays:
+        delay = math.ceil(max(delays)) + buffer_seconds
+    else:
+        delay = default_seconds
+
+    return max(min_seconds, min(max_seconds, delay))
+
+
 def load_state(issue_number: int, root: Path = Path(".")) -> AgentState:
     path = issue_root(issue_number, root) / "STATE.json"
     if not path.is_file():
@@ -95,6 +140,10 @@ def _main() -> None:
     classify.add_argument("--env", action="append", default=[])
     classify.add_argument("--file", action="append", default=[], type=Path)
 
+    retry = sub.add_parser("retry-delay")
+    retry.add_argument("--env", action="append", default=[])
+    retry.add_argument("--file", action="append", default=[], type=Path)
+
     state = sub.add_parser("validate-state")
     state.add_argument("--issue-number", type=int, required=True)
     state.add_argument("--root", type=Path, default=Path("."))
@@ -105,12 +154,16 @@ def _main() -> None:
 
     args = parser.parse_args()
 
-    if args.command == "classify-errors":
+    if args.command in {"classify-errors", "retry-delay"}:
         texts = [os.environ.get(name, "") for name in args.env]
         for path in args.file:
             if path.is_file():
                 texts.append(path.read_text(encoding="utf-8", errors="replace"))
-        print(classify_model_errors(texts))
+        if args.command == "classify-errors":
+            print(classify_model_errors(texts))
+        else:
+            delay = retry_delay_seconds(texts)
+            print(0 if delay is None else delay)
         return
 
     if args.command == "branch-name":
