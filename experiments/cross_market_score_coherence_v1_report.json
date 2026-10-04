@@ -1,0 +1,99 @@
+{
+  "experiment_id": "CROSS_MARKET_SCORE_COHERENCE_V1",
+  "frozen_result_schema": 1,
+  "first_run": {
+    "workflow_run_id": 37027753874,
+    "artifact_id": 11236122159,
+    "head_sha": "fcbebc147a623397ce0a3aa9eea66ce3db3db957"
+  },
+  "result": {
+    "validation_admissible": false,
+    "validation": {
+      "season": "2024-2025",
+      "rows": 282,
+      "pooled_high_rows": 95,
+      "pooled_low_rows": 47,
+      "tail_counts_ok": false,
+      "pooled_excess_brier_high_minus_low": -0.052782443951246316,
+      "pooled_raw_brier_high_minus_low": -0.010670374175330566,
+      "positive_excess_brier_leagues": 0,
+      "by_league": {
+        "EPL": {
+          "high_rows": 38,
+          "low_rows": 19,
+          "excess_brier_high_minus_low": -0.11126967166886899
+        },
+        "LA_LIGA": {
+          "high_rows": 27,
+          "low_rows": 13,
+          "excess_brier_high_minus_low": -0.024464705058110277
+        },
+        "SERIE_A": {
+          "high_rows": 30,
+          "low_rows": 15,
+          "excess_brier_high_minus_low": -0.0037316777430199625
+        }
+      }
+    },
+    "test": {
+      "season": "2025-2026",
+      "rows": 256,
+      "pooled_high_rows": 83,
+      "pooled_low_rows": 61,
+      "tail_counts_ok": true,
+      "pooled_excess_brier_high_minus_low": 0.0004701099414998605,
+      "pooled_raw_brier_high_minus_low": 0.05182275986273732,
+      "positive_excess_brier_leagues": 1,
+      "by_league": {
+        "EPL": {
+          "high_rows": 24,
+          "low_rows": 26,
+          "excess_brier_high_minus_low": 0.1515197441431778
+        },
+        "LA_LIGA": {
+          "high_rows": 35,
+          "low_rows": 16,
+          "excess_brier_high_minus_low": -0.047115404814129756
+        },
+        "SERIE_A": {
+          "high_rows": 24,
+          "low_rows": 19,
+          "excess_brier_high_minus_low": -0.13108888532359741
+        }
+      }
+    },
+    "test_bootstrap": {
+      "samples": 10000,
+      "seed": 20261002,
+      "mean_delta": -0.000057686087167998415,
+      "ci95_low": -0.11312237205247261,
+      "ci95_high": 0.1108867832367975,
+      "bootstrap_probability_positive": 0.5006
+    },
+    "market_vs_synthetic": {
+      "validation_actual_market": {
+        "brier": 0.5417068638493509,
+        "log_loss": 0.9199376210510691,
+        "accuracy": 0.599290780141844
+      },
+      "validation_synthetic": {
+        "brier": 0.5400161750672003,
+        "log_loss": 0.9168791180655327,
+        "accuracy": 0.599290780141844
+      },
+      "test_actual_market": {
+        "brier": 0.6294244645404533,
+        "log_loss": 1.0465802621661626,
+        "accuracy": 0.4765625
+      },
+      "test_synthetic": {
+        "brier": 0.6316303510824712,
+        "log_loss": 1.0492610876850812,
+        "accuracy": 0.4765625
+      }
+    },
+    "supported": false,
+    "decision": "NO_INDEPENDENT_CROSS_MARKET_COHERENCE_SIGNAL",
+    "result": "NO_BET"
+  }
+}
