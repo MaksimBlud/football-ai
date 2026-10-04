@@ -1,0 +1,284 @@
+name: Research Orchestrator V5 Local
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Existing [AGENT-RESEARCH] issue number
+        required: true
+        type: string
+      source:
+        description: manual, continuation, or schedule
+        required: false
+        default: manual
+        type: string
+  schedule:
+    - cron: '11,41 * * * *'
+  pull_request:
+    paths:
+      - 'research_agent_v5.py'
+      - 'kickoff_calendar_context_v1.py'
+      - 'cross_market_lead_lag_anomaly_audit_v1.py'
+      - 'research_orchestrator_v4.py'
+      - 'tests/test_research_agent_v5.py'
+      - 'tests/test_research_agent_v5_helpers.py'
+      - '.github/workflows/research-orchestrator-v5-local.yml'
+      - '.github/workflows/research-orchestrator-v4.yml'
+      - 'docs/RESEARCH_ORCHESTRATOR_V5.md'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install pytest pandas numpy requests scikit-learn
+      - run: python -m py_compile research_agent_v5.py kickoff_calendar_context_v1.py cross_market_lead_lag_anomaly_audit_v1.py research_orchestrator_v4.py
+      - run: pytest -q tests/test_research_agent_v5.py tests/test_research_agent_v5_helpers.py
+
+  sweep:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: write
+      issues: read
+    steps:
+      - name: Resume V5 waiting issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue list --repo "$GITHUB_REPOSITORY" --state open --label research-v5-waiting --limit 20 --json number --jq '.[].number' > /tmp/issues
+          while read -r issue; do
+            [ -n "$issue" ] || continue
+            gh workflow run research-orchestrator-v5-local.yml --repo "$GITHUB_REPOSITORY" -f issue_number="$issue" -f source=schedule
+          done < /tmp/issues
+
+  preflight:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    outputs:
+      issue_number: ${{ steps.plan.outputs.issue_number }}
+      issue_title: ${{ steps.plan.outputs.issue_title }}
+      hypothesis_family: ${{ steps.plan.outputs.hypothesis_family }}
+      run_worker: ${{ steps.plan.outputs.run_worker }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Resolve supported research issue
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: |
+          echo 'run_worker=false' >> "$GITHUB_OUTPUT"
+          case "$ISSUE_NUMBER" in ''|*[!0-9]*) exit 0 ;; esac
+          gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER" > /tmp/v5-issue.json
+          TITLE=$(jq -r '.title' /tmp/v5-issue.json)
+          AUTHOR=$(jq -r '.user.login' /tmp/v5-issue.json)
+          STATE=$(jq -r '.state' /tmp/v5-issue.json)
+          [ "$AUTHOR" = "$REPOSITORY_OWNER" ] || exit 0
+          [ "$STATE" = "open" ] || exit 0
+          case "$TITLE" in '[AGENT-RESEARCH]'*) ;; *) exit 0 ;; esac
+
+          jq '{issue:.}' /tmp/v5-issue.json > /tmp/v5-event.json
+          python research_agent_issue.py --event /tmp/v5-event.json --output-json /tmp/v5-plan.json --output-markdown /tmp/v5-plan.md
+          [ "$(jq -r '.decision' /tmp/v5-plan.json)" = "READY_FOR_PREREGISTRATION" ] || exit 0
+          FAMILY=$(jq -r '.hypothesis_family' /tmp/v5-plan.json)
+          case "$FAMILY" in
+            kickoff_calendar_context|cross_market_lead_lag_2024_25_anomaly_audit|cross_market_lead_lag_independent_replication) ;;
+            *) exit 0 ;;
+          esac
+
+          ensure_label() {
+            gh api "repos/$GITHUB_REPOSITORY/labels/$1" >/dev/null 2>&1 ||               gh api -X POST "repos/$GITHUB_REPOSITORY/labels" -f name="$1" -f color="$2" >/dev/null
+          }
+          ensure_label research-v5-running 1f883d
+          ensure_label research-v5-queued fbca04
+          ensure_label research-v5-waiting d4c5f9
+          ensure_label research-v5-done 2da44e
+          ensure_label research-v5-blocked d1242f
+
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v5-running --add-label research-v5-queued >/dev/null
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v5-waiting >/dev/null 2>&1 || true
+          for label in research-v4-running research-v4-waiting research-v4-queued; do
+            gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label "$label" >/dev/null 2>&1 || true
+          done
+
+          echo "issue_number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "issue_title=$TITLE" >> "$GITHUB_OUTPUT"
+          echo "hypothesis_family=$FAMILY" >> "$GITHUB_OUTPUT"
+          echo 'run_worker=true' >> "$GITHUB_OUTPUT"
+
+  worker:
+    needs: preflight
+    if: needs.preflight.outputs.run_worker == 'true'
+    concurrency:
+      group: research-v5-global-local
+      queue: max
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      actions: write
+      contents: write
+      issues: write
+      pull-requests: write
+    env:
+      PYTHONPATH: .
+      ISSUE_NUMBER: ${{ needs.preflight.outputs.issue_number }}
+      ISSUE_TITLE: ${{ needs.preflight.outputs.issue_title }}
+      HYPOTHESIS_FAMILY: ${{ needs.preflight.outputs.hypothesis_family }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Restore persistent V5 issue branch
+        id: branch
+        run: |
+          git fetch origin main
+          BRANCH="agent/v5-issue-$ISSUE_NUMBER"
+          git config user.name 'football-ai-research-bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            git fetch origin "$BRANCH:refs/remotes/origin/$BRANCH"
+            git switch -c "$BRANCH" --track "origin/$BRANCH"
+            BEFORE=$(git rev-parse HEAD)
+            git merge --no-edit origin/main
+            if [ "$(git rev-parse HEAD)" != "$BEFORE" ]; then git push origin "$BRANCH"; fi
+          else
+            git switch -c "$BRANCH" origin/main
+          fi
+          COUNT=$(git log --format='%s' origin/main..HEAD | grep -c "^Research V5 issue #${ISSUE_NUMBER} iteration " || true)
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "iteration=$((COUNT + 1))" >> "$GITHUB_OUTPUT"
+          if [ "$COUNT" -ge 12 ]; then echo 'maxed=true' >> "$GITHUB_OUTPUT"; else echo 'maxed=false' >> "$GITHUB_OUTPUT"; fi
+      - name: Mark queue slot active
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v5-queued >/dev/null 2>&1 || true
+      - name: Install deterministic research dependencies
+        if: steps.branch.outputs.maxed != 'true'
+        run: pip install pandas numpy requests scikit-learn
+      - name: Start local accounting
+        if: steps.branch.outputs.maxed != 'true'
+        run: python research_orchestrator_v4.py usage-update --issue-number "$ISSUE_NUMBER" --inc runs_started --inc local_passes
+      - name: Snapshot production hashes
+        if: steps.branch.outputs.maxed != 'true'
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/v5-pkl-before || true
+      - name: Run deterministic no-API research pass
+        id: local
+        if: steps.branch.outputs.maxed != 'true'
+        continue-on-error: true
+        run: python research_agent_v5.py --issue-number "$ISSUE_NUMBER" --hypothesis-family "$HYPOTHESIS_FAMILY"
+      - name: Capture local research changes
+        id: changed
+        if: steps.local.outcome == 'success'
+        run: |
+          git status --porcelain=v1 --untracked-files=all > /tmp/v5-status
+          cat /tmp/v5-status
+          grep -v "research/agent_runs/issue_${ISSUE_NUMBER}/USAGE.json$" /tmp/v5-status > /tmp/v5-research-status || true
+          if [ -s /tmp/v5-research-status ]; then echo 'has_changes=true' >> "$GITHUB_OUTPUT"; else echo 'has_changes=false' >> "$GITHUB_OUTPUT"; fi
+      - name: Validate local sandbox and production
+        if: steps.local.outcome == 'success' && steps.changed.outputs.has_changes == 'true'
+        run: |
+          python research_agent_gemini.py validate-status --issue-number "$ISSUE_NUMBER" --status-file /tmp/v5-status
+          git diff --check
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/v5-pkl-after || true
+          diff -u /tmp/v5-pkl-before /tmp/v5-pkl-after
+      - name: Export state
+        id: state
+        if: steps.local.outcome == 'success' && steps.changed.outputs.has_changes == 'true'
+        run: python research_orchestrator_v4.py validate-state --issue-number "$ISSUE_NUMBER" --github-output "$GITHUB_OUTPUT"
+      - name: Record and persist local iteration
+        if: steps.local.outcome == 'success' && steps.changed.outputs.has_changes == 'true'
+        run: |
+          python research_orchestrator_v4.py usage-update --issue-number "$ISSUE_NUMBER" --inc research_iterations_committed --inc local_iterations_committed
+          if [ "${{ steps.state.outputs.status }}" = "DONE" ]; then
+            python research_orchestrator_v4.py usage-update --issue-number "$ISSUE_NUMBER" --inc done_runs
+          fi
+          git status --porcelain=v1 --untracked-files=all > /tmp/v5-status-final
+          python research_agent_gemini.py validate-status --issue-number "$ISSUE_NUMBER" --status-file /tmp/v5-status-final
+          python research_agent_gemini.py stage-status --issue-number "$ISSUE_NUMBER" --status-file /tmp/v5-status-final
+          git config user.name 'football-ai-research-bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m "Research V5 issue #${ISSUE_NUMBER} iteration ${{ steps.branch.outputs.iteration }}"
+          git push origin "${{ steps.branch.outputs.branch }}"
+      - name: Continue autonomously
+        if: steps.state.outputs.status == 'CONTINUE'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v5-running >/dev/null
+          gh workflow run research-orchestrator-v5-local.yml --repo "$GITHUB_REPOSITORY" -f issue_number="$ISSUE_NUMBER" -f source=continuation
+      - name: Open final research pull request
+        id: final_pr
+        if: steps.state.outputs.status == 'DONE'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.branch.outputs.branch }}
+        run: |
+          PR_URL=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "$BRANCH" --json url --jq '.[0].url // empty')
+          if [ -z "$PR_URL" ]; then
+            PR_URL=$(gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title "Research V5 final: ${ISSUE_TITLE}" --body "No-API deterministic research for Issue #${ISSUE_NUMBER} reached DONE. Final report: docs/agent_runs/issue_${ISSUE_NUMBER}/FINAL_REPORT.md. No production promotion.")
+          fi
+          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+      - name: Publish DONE
+        if: steps.state.outputs.status == 'DONE'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ steps.final_pr.outputs.pr_url }}
+        run: |
+          for label in research-v5-running research-v5-waiting research-v5-queued research-v5-blocked; do
+            gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label "$label" >/dev/null 2>&1 || true
+          done
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v5-done >/dev/null
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Research Orchestrator V5 Local: DONE without model API. $PR_URL"
+          gh issue close "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --reason completed
+      - name: Wait and retry local failure
+        if: steps.local.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v5-running --add-label research-v5-waiting >/dev/null
+          USAGE="research/agent_runs/issue_${ISSUE_NUMBER}/USAGE.json"
+          if [ -f "$USAGE" ]; then
+            git add "$USAGE"
+            if ! git diff --cached --quiet; then
+              git config user.name 'football-ai-research-bot'
+              git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+              git commit -m "Research V5 usage #${ISSUE_NUMBER} run ${GITHUB_RUN_ID}"
+              git push origin "${{ steps.branch.outputs.branch }}"
+            fi
+          fi
+      - name: Stop runaway local loop
+        if: steps.branch.outputs.maxed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v5-running >/dev/null 2>&1 || true
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v5-blocked >/dev/null
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Research V5 stopped after 12 committed deterministic iterations."
