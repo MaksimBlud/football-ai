@@ -3,6 +3,7 @@ from pathlib import Path
 
 V4 = Path(".github/workflows/research-orchestrator-v4.yml")
 V3 = Path(".github/workflows/research-agent-v3-gemini.yml")
+V2 = Path(".github/workflows/research-agent-v2-issue-intake.yml")
 
 
 def _v4() -> str:
@@ -11,6 +12,18 @@ def _v4() -> str:
 
 def _v3() -> str:
     return V3.read_text(encoding="utf-8")
+
+
+def _v2() -> str:
+    return V2.read_text(encoding="utf-8")
+
+
+def test_v4_serializes_workers_per_issue():
+    text = _v4()
+    worker = text.split("  worker:", 1)[1]
+    assert "concurrency:" in worker
+    assert "group: research-v4-${{ needs.preflight.outputs.issue_number }}" in worker
+    assert "cancel-in-progress: false" in worker
 
 
 def test_v4_has_issue_dispatch_schedule_and_pr_contract_triggers():
@@ -55,6 +68,12 @@ def test_v4_continues_without_user_and_retries_waiting_work():
     assert "source=schedule" in text
 
 
+def test_v4_prompt_forbids_unavailable_tools():
+    text = _v4()
+    prompt = text.split("AGENT_PROMPT: |-", 1)[1].split("    steps:", 1)[0]
+    assert "Never call update_topic" in prompt
+
+
 def test_v4_keeps_model_tools_file_only():
     text = _v4()
     settings = text.split("GEMINI_SETTINGS: |-", 1)[1].split("AGENT_PROMPT: |-", 1)[0]
@@ -81,6 +100,13 @@ def test_v4_never_auto_merges_or_promotes():
     text = _v4()
     assert "gh pr merge" not in text
     assert "artifact_lifecycle.py promote" not in text
+
+
+def test_legacy_v2_no_longer_runs_on_issue_events():
+    text = _v2()
+    on_block = text.split("permissions:", 1)[0]
+    assert "issues:" not in on_block
+    assert "pull_request:" in on_block
 
 
 def test_v3_no_longer_runs_on_issue_events():
