@@ -437,6 +437,13 @@ def run_agent(
 ) -> None:
     state_path = root / "research" / "agent_runs" / f"issue_{issue_number}" / "STATE.json"
     final_path = root / "docs" / "agent_runs" / f"issue_{issue_number}" / "FINAL_REPORT.md"
+    initial_state = state_path.read_bytes() if state_path.is_file() else None
+
+    def state_updated() -> bool:
+        if not state_path.is_file():
+            return False
+        current = state_path.read_bytes()
+        return initial_state is None or current != initial_state
 
     system = (
         "You are Football AI Research Orchestrator V4. Work on exactly one research Issue. "
@@ -493,7 +500,7 @@ Inspect only the files needed for the next logical step. Complete one meaningful
 
         tool_calls = raw_message.get("tool_calls") or []
         if not tool_calls:
-            if state_path.is_file():
+            if state_updated():
                 return
             if turn >= max_turns:
                 break
@@ -530,7 +537,7 @@ Inspect only the files needed for the next logical step. Complete one meaningful
                 }
             )
 
-        if state_path.is_file():
+        if state_updated():
             return
 
         # Keep the original contract plus only the most recent tool exchange to stay
@@ -538,9 +545,9 @@ Inspect only the files needed for the next logical step. Complete one meaningful
         if len(messages) > 8:
             messages = messages[:2] + messages[-6:]
 
-    if not state_path.is_file():
+    if not state_updated():
         raise GroqAgentError(
-            f"Groq agent incomplete after {max_turns} turns: STATE.json not written"
+            f"Groq agent incomplete after {max_turns} turns: STATE.json not updated"
         )
 
 
