@@ -25,10 +25,6 @@ on:
       - '.github/workflows/research-orchestrator-v4.yml'
       - '.github/workflows/research-agent-v3-gemini.yml'
 
-concurrency:
-  group: research-v4-${{ github.event.issue.number || inputs.issue_number || github.run_id }}
-  cancel-in-progress: false
-
 permissions:
   contents: read
 
