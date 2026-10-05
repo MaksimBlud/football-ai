@@ -19,6 +19,7 @@ on:
   pull_request:
     paths:
       - 'research_agent_v5.py'
+      - 'research/v5_recipe_registry.json'
       - 'kickoff_calendar_context_v1.py'
       - 'cross_market_lead_lag_anomaly_audit_v1.py'
       - 'research_orchestrator_v4.py'
@@ -47,6 +48,7 @@ jobs:
           cache: pip
       - run: pip install pytest pandas numpy requests scikit-learn
       - run: python -m py_compile research_agent_v5.py kickoff_calendar_context_v1.py cross_market_lead_lag_anomaly_audit_v1.py research_orchestrator_v4.py
+      - run: python research_agent_v5.py --list-families
       - run: pytest -q tests/test_research_agent_v5.py tests/test_research_agent_v5_helpers.py tests/test_research_orchestrator_v5_workflow.py
 
   sweep:
@@ -117,10 +119,10 @@ jobs:
           python research_agent_issue.py --event /tmp/v5-event.json --output-json /tmp/v5-plan.json --output-markdown /tmp/v5-plan.md
           [ "$(jq -r '.decision' /tmp/v5-plan.json)" = "READY_FOR_PREREGISTRATION" ] || exit 0
           FAMILY=$(jq -r '.hypothesis_family' /tmp/v5-plan.json)
-          case "$FAMILY" in
-            kickoff_calendar_context|cross_market_lead_lag_2024_25_anomaly_audit|cross_market_lead_lag_independent_replication) ;;
-            *) exit 0 ;;
-          esac
+          if ! python research_agent_v5.py --supports-family "$FAMILY"; then
+            echo "Hypothesis family $FAMILY has no deterministic V5 recipe."
+            exit 0
+          fi
 
           ensure_label() {
             gh api "repos/$GITHUB_REPOSITORY/labels/$1" >/dev/null 2>&1 ||               gh api -X POST "repos/$GITHUB_REPOSITORY/labels" -f name="$1" -f color="$2" >/dev/null
@@ -186,9 +188,11 @@ jobs:
             git switch -c "$BRANCH" origin/main
           fi
           COUNT=$(git log --format='%s' origin/main..HEAD | grep -c "^Research V5 issue #${ISSUE_NUMBER} iteration " || true)
+          MAX_ITERATIONS=$(python research_agent_v5.py --max-iterations "$HYPOTHESIS_FAMILY")
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
           echo "iteration=$((COUNT + 1))" >> "$GITHUB_OUTPUT"
-          if [ "$COUNT" -ge 12 ]; then echo 'maxed=true' >> "$GITHUB_OUTPUT"; else echo 'maxed=false' >> "$GITHUB_OUTPUT"; fi
+          echo "max_iterations=$MAX_ITERATIONS" >> "$GITHUB_OUTPUT"
+          if [ "$COUNT" -ge "$MAX_ITERATIONS" ]; then echo 'maxed=true' >> "$GITHUB_OUTPUT"; else echo 'maxed=false' >> "$GITHUB_OUTPUT"; fi
       - name: Mark queue slot active
         env:
           GH_TOKEN: ${{ github.token }}
@@ -300,4 +304,4 @@ jobs:
         run: |
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v5-running >/dev/null 2>&1 || true
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v5-blocked >/dev/null
-          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Research V5 stopped after 12 committed deterministic iterations."
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Research V5 stopped after the registered max_iterations=${{ steps.branch.outputs.max_iterations }} committed deterministic iterations."
