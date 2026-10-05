@@ -74,9 +74,7 @@ For each program:
 
 The initial ACTIVE programs are:
 
-- `cross_market_lead_lag` — current frozen replication is negative and the broad
-  2024/25 source/market anomaly audit did not explain the weakening; the Brain should
-  decide whether a mechanistically independent zero-cost follow-up remains.
+- `cross_market_lead_lag` — **PROGRAM_DONE** after failed independent replication, completed regime/anomaly diagnostics, and duplicate detection for the attempted temporal-stability follow-up. Further zero-cost steps would be cosmetic restatements; paid intraday data still requires explicit user approval.
 - `kickoff_calendar_context` — the pooled kickoff/day-of-week incremental OOS test is
   negative; the Brain may consider only preregistered heterogeneity/stability/mechanism
   checks that do not rescue the rejected pooled hypothesis post-hoc.
