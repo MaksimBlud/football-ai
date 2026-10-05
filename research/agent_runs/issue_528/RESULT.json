@@ -1,0 +1,91 @@
+{
+  "artifact_id": 11294063833,
+  "artifact_sha256": "92b958e6f5f8c911236f5e6451ed2f974d4e02af727637644dc2ad037cd78aa0",
+  "binary_direction": {
+    "always_up_accuracy": 0.7272727272727273,
+    "balanced_accuracy": 0.7291666666666667,
+    "down_recall": 0.8333333333333334,
+    "down_rows": 6,
+    "raw_accuracy": 0.6818181818181818,
+    "rows": 22,
+    "up_recall": 0.625,
+    "up_rows": 16
+  },
+  "binary_direction_status": "WEAK_BELOW_ALWAYS_UP_WITH_DOWN_SCARCITY",
+  "continuous_ranking_status": "CROSS_LEAGUE_TRANSFER_NOT_SUPPORTED",
+  "coverage_audit": {
+    "exact_same_fixture_join_required": true,
+    "expected_rows_by_league": {
+      "BUNDESLIGA": 35,
+      "LIGUE_1": 39
+    },
+    "historical_validation": {
+      "BUNDESLIGA": {
+        "mae_league_mean_baseline": 2.838636889814963,
+        "mae_match_shape_model": 2.8304835373168147,
+        "train_rows": 1835,
+        "validation_rows": 306
+      },
+      "LIGUE_1": {
+        "mae_league_mean_baseline": 2.8167611895037714,
+        "mae_match_shape_model": 2.8043836576524797,
+        "train_rows": 2026,
+        "validation_rows": 306
+      }
+    },
+    "joined_rows_by_league": {
+      "BUNDESLIGA": 35,
+      "LIGUE_1": 39
+    },
+    "movement_target_loaded": true,
+    "passed": true
+  },
+  "decision": "WEAK_OR_INCONSISTENT_CROSS_MARKET_CORNER_DIRECTION_HYPOTHESIS",
+  "experiment_id": "CORNER_CROSS_MARKET_MATCH_SHAPE_CROSS_LEAGUE_TRANSFER_V1",
+  "falsification": {
+    "mechanical_opening_component_pearson_nonzero": 0.7690433971270064,
+    "permutation": {
+      "draws": 10000,
+      "one_sided_p": 0.41245875412458755,
+      "seed": 20261005
+    },
+    "permutation_p": 0.41245875412458755,
+    "residual_pearson_nonzero": 0.15196834217929853,
+    "residual_spearman_nonzero": 0.050254093732354614
+  },
+  "interpretation_guard": "Bundesliga/Ligue 1 are independent of #522, but their movements were opened previously for other hypotheses. This is cross-league falsification, not untouched confirmation or a betting edge; NO_BET remains binding.",
+  "leave_one_league_out": {
+    "BUNDESLIGA": -0.19090909090909092,
+    "LIGUE_1": 0.19090909090909092
+  },
+  "nonzero_movement_rows": 22,
+  "raw_continuous": {
+    "by_league": {
+      "BUNDESLIGA": {
+        "pearson": 0.7083086553582941,
+        "rows": 11,
+        "spearman": 0.790909090909091
+      },
+      "LIGUE_1": {
+        "pearson": 0.7287986049028593,
+        "rows": 11,
+        "spearman": 0.6818181818181819
+      }
+    },
+    "pooled_pearson": 0.7387860277777588,
+    "pooled_spearman": 0.733691076983739
+  },
+  "rows": 74,
+  "safety": {
+    "frozen_sign_changed": false,
+    "movement_target_read_before_coverage_gate": false,
+    "new_prospective_rows_collected": 0,
+    "no_bet": true,
+    "paid_odds_api_calls": 0,
+    "production_model_operations": 0,
+    "production_promotion": false,
+    "research_only": true,
+    "supabase_writes": 0,
+    "threshold_search_used": false
+  }
+}
