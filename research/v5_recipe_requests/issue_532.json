@@ -1,0 +1,40 @@
+{
+  "decision": "NEEDS_DETERMINISTIC_RECIPE",
+  "engine": "V5_DETERMINISTIC_NO_API",
+  "expected_lifecycle": [
+    "PREREGISTRATION",
+    "DETERMINISTIC_EVALUATION",
+    "RESULT.json",
+    "FINAL_REPORT.md",
+    "DONE"
+  ],
+  "hypothesis_family": "bookmaker_price_formation_v1",
+  "independent_information_justification": "The mechanism is motivated by Levitt (2004): a bookmaker need not merely clear equal money on both sides and may choose prices that exploit bettor biases or retain exposure. This Football AI test does NOT assume Levitt's US point-spread result transfers to European football. It tests observable implications using multi-bookmaker point-in-time odds. Existing cross-market lead-lag work is different: this issue decomposes SAME-market movement into consensus/common vs bookmaker-specific components and margin changes.",
+  "issue_number": 532,
+  "issue_title": "[AGENT-RESEARCH] 1. BOOKMAKER_PRICE_FORMATION_V1 — отделить информацию рынка от bookmaker-specific repricing",
+  "mode": "historical_read_only",
+  "prohibited": [
+    "model-generated shell commands",
+    "automatic threshold retuning on seen outcomes",
+    "paid Odds API calls",
+    "Supabase writes",
+    "production .pkl writes",
+    "automatic promotion"
+  ],
+  "required_implementation": {
+    "evaluator": "Add a deterministic Python evaluator that consumes only preregistered allowed inputs and returns machine-readable results.",
+    "handler": "Add a reviewed Research V5 handler that freezes the protocol before evaluation and writes only inside the current Issue sandbox.",
+    "registry": "Register the family in research/v5_recipe_registry.json with a bounded max_iterations and the exact no-API safety contract.",
+    "tests": "Add unit tests for the evaluator/handler and workflow contract tests covering fail-closed safety, temporal/OOS rules, and DONE/CONTINUE state."
+  },
+  "research_question": "Can opening-to-closing football odds movement be decomposed into a common market-information component and a bookmaker-specific pricing/risk/margin component, and do those components behave differently out of sample?",
+  "safety": {
+    "automatic_promotion": false,
+    "model_api": false,
+    "outcomes_read_during_scaffold": false,
+    "paid_odds_api": false,
+    "production_operations": false,
+    "supabase_writes": false
+  },
+  "schema_version": 1
+}
