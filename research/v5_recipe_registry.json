@@ -332,6 +332,63 @@
         ],
         "preregistration_markdown": "# Frozen favourite-longshot cross-league transport\n\nStatus: **PREREGISTERED / CROSS-LEAGUE FALSIFICATION / RESEARCH ONLY / NO_BET**.\n\nReuse Issue #534 exactly: Multiplicative 1X2 no-vig probabilities, frozen probability bins, longshot p<0.30, favourite p>=0.60, opening/closing horizons and deterministic fixture-cluster bootstrap. Target only Bundesliga and Ligue 1 from zero-cost Football-Data, with reference 2019/20-2023/24, validation 2024/25 and untouched OOT 2025/26. Support requires positive closing slope in each league in validation and OOT, pooled validation and OOT bootstrap CIs fully above zero, negative longshot and positive favourite gaps in both splits, and non-contradictory bookmaker signs. Otherwise return NO_CROSS_LEAGUE_FAVOURITE_LONGSHOT_CONFIRMATION. Do not change bins, method, thresholds or parent #534's negative decision."
       }
+    },
+    {
+      "hypothesis_family": "bookmaker_price_formation_v1",
+      "handler": "pipeline",
+      "max_iterations": 4,
+      "description": "Frozen OOS decomposition of common market movement, bookmaker-specific repricing and total-margin movement.",
+      "safety": {
+        "model_api": false,
+        "paid_odds_api": false,
+        "supabase_writes": false,
+        "production_operations": false,
+        "automatic_promotion": false
+      },
+      "pipeline": {
+        "evaluator_module": "bookmaker_price_formation_v1",
+        "decision_path": "decision",
+        "summary_path": "interpretation_guard",
+        "report_title": "common versus bookmaker-specific opening-to-closing repricing",
+        "report_fields": [
+          "source_audit",
+          "validation.common_information",
+          "test.common_information",
+          "test.pooled_decomposition",
+          "test.by_bookmaker",
+          "formal_gate",
+          "decision"
+        ],
+        "preregistration_markdown": "# Frozen bookmaker price-formation decomposition\n\nStatus: **PREREGISTERED / TEMPORAL OOS / MATCHED FIXTURES / RESEARCH ONLY / NO_BET**.\n\nUse only same-fixture Bet365 and Pinnacle opening and closing 1X2 odds from the zero-cost Football-Data transport for EPL, La Liga and Serie A. Source/header coverage is audited before FTR is read. Reference is 2019/20-2023/24, validation is 2024/25 and untouched test is 2025/26.\n\nMultiplicatively de-vig each book. Consensus is the simple mean of the two books present at each horizon. COMMON_MOVE is closing minus opening consensus. Each book's residual is book fair probability minus consensus; BOOK_SPECIFIC_MOVE is closing residual minus opening residual. OVERROUND_MOVE is closing minus opening raw implied sum. No result enters those features.\n\nPrimary common-information test is fixture-level closing-consensus minus opening-consensus Log Loss on untouched 2025/26 with a deterministic league-stratified 5000-draw bootstrap. Support requires negative mean and CI upper bound below zero, with negative league means in at least two of three leagues.\n\nBook-specific movement is non-trivial only when its pooled and each-book squared-movement share is at least 5% of total book movement. To prevent pure margin movement being mislabeled, at least 25% of bookmaker-specific component variance must remain after linear projection on OVERROUND_MOVE. These thresholds are frozen before execution. Book-close versus close-consensus Log Loss/Brier, residual persistence and margin association are reported as diagnostics and cannot rescue a failed common-information gate.\n\nPassing returns SUPPORTED_PRICE_COMPONENT_DECOMPOSITION; otherwise NO_STABLE_BOOKMAKER_SPECIFIC_PRICE_COMPONENT. Missing paired source coverage returns BLOCKED_BY_SOURCE_GAP. The result is observational and cannot identify bettor flow, liabilities or bookmaker intent. No production feature, paid API, Supabase write or automatic promotion."
+      }
+    },
+    {
+      "hypothesis_family": "bookmaker_margin_market_type_transport_v1",
+      "handler": "pipeline",
+      "max_iterations": 4,
+      "description": "Outcome-free same-fixture transport of Bet365/Pinnacle margin allocation from 1X2 to opening Asian Handicap.",
+      "safety": {
+        "model_api": false,
+        "paid_odds_api": false,
+        "supabase_writes": false,
+        "production_operations": false,
+        "automatic_promotion": false
+      },
+      "pipeline": {
+        "evaluator_module": "bookmaker_margin_market_type_transport_v1",
+        "decision_path": "decision",
+        "summary_path": "interpretation_guard",
+        "report_title": "Bet365 versus Pinnacle margin allocation across 1X2 and Asian Handicap",
+        "report_fields": [
+          "source_audit",
+          "validation.paired",
+          "test.paired",
+          "test.by_league",
+          "formal_gate",
+          "decision"
+        ],
+        "preregistration_markdown": "# Frozen bookmaker margin market-type transport\n\nStatus: **PREREGISTERED / OUTCOME-FREE / MATCHED FIXTURES / RESEARCH ONLY / NO_BET**.\n\nTransport Issue #535 from 1X2 to the exact same fixtures' opening Asian Handicap market. Frozen books are Bet365 (B365AHH/B365AHA) and Pinnacle (PAHH/PAHA). Use AHh, with B365AH only as the documented schema fallback. Only exact half-goal lines are eligible; no push lines, bookmaker substitution or synthetic closing snapshot.\n\nLeagues are EPL, La Liga and Serie A. Reference is 2019/20-2023/24, validation is 2024/25 and untouched temporal test is 2025/26. The source gate audits both books, the shared line and the opening 1X2 fields before any derived price effect. Match outcomes are not read.\n\nFor each book compute two-way AH overround, multiplicative fair probabilities and allocation tilt relative to the mean two-book fair consensus. Favourite/underdog is determined from the frozen AH-line sign. Primary AH statistic is underdog tilt minus favourite tilt; paired effect is Bet365 minus Pinnacle. Reproduce the frozen #535 opening 1X2 effect on the identical subset and report AH minus 1X2 with a bootstrap CI.\n\nSupport requires the AH effect to have the same non-zero sign in validation and test, the test CI to exclude zero, and at least two of three leagues to share the pooled test sign. Total overround and AH-minus-1X2 must be reported separately. Otherwise return NO_STABLE_CROSS_MARKET_MARGIN_STRUCTURE; source failure returns BLOCKED_BY_SOURCE_GAP. A failure does not negate #535. No causal intent, betting edge, production weighting, paid API, Supabase or promotion."
+      }
     }
   ]
 }
