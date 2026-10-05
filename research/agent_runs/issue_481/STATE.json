@@ -1,7 +1,7 @@
 {
   "blocker": null,
   "engine": "V5_DETERMINISTIC_NO_API",
-  "next_step": "Run deterministic 2024/25 source/market anomaly audit.",
+  "next_step": "Render final report and close.",
   "status": "CONTINUE",
-  "summary": "Frozen anomaly protocol written."
+  "summary": "Anomaly audit complete: NO_OBSERVABLE_SOURCE_MARKET_EXPLANATION."
 }
