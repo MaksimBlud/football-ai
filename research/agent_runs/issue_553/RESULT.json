@@ -1,0 +1,748 @@
+{
+  "decision": "BLOCKED_BY_SOURCE_GAP",
+  "experiment_id": "BOOKMAKER_PRICE_FORMATION_CROSS_BOOK_TRANSPORT_V1",
+  "formal_gate": {
+    "reason": "NO_QUALIFYING_ADDITIONAL_BOOKMAKER",
+    "supported": false
+  },
+  "interpretation_guard": "No predeclared third bookmaker met the frozen >=90% opening+closing coverage gate in both leagues and both OOS seasons; outcomes were not read.",
+  "paid_odds_api_calls": 0,
+  "parent_issue": 532,
+  "production_operations": false,
+  "production_promotion": false,
+  "reference": {},
+  "research_only": true,
+  "result": "RESEARCH_ONLY_NO_BET",
+  "source_audit": {
+    "anchor_consensus_columns_present": true,
+    "candidate_bookmakers": [
+      "BET365",
+      "PINNACLE",
+      "BW",
+      "IW",
+      "WH",
+      "VC",
+      "AVG"
+    ],
+    "coverage": {
+      "AVG": {
+        "BUNDESLIGA:2024-2025": {
+          "coverage": 1.0,
+          "missing_columns": [],
+          "rows": 306,
+          "valid_opening_closing_rows": 306
+        },
+        "BUNDESLIGA:2025-2026": {
+          "coverage": 1.0,
+          "missing_columns": [],
+          "rows": 306,
+          "valid_opening_closing_rows": 306
+        },
+        "LIGUE_1:2024-2025": {
+          "coverage": 1.0,
+          "missing_columns": [],
+          "rows": 306,
+          "valid_opening_closing_rows": 306
+        },
+        "LIGUE_1:2025-2026": {
+          "coverage": 1.0,
+          "missing_columns": [],
+          "rows": 306,
+          "valid_opening_closing_rows": 306
+        }
+      },
+      "BET365": {
+        "BUNDESLIGA:2024-2025": {
+          "coverage": 1.0,
+          "missing_columns": [],
+          "rows": 306,
+          "valid_opening_closing_rows": 306
+        },
+        "BUNDESLIGA:2025-2026": {
+          "coverage": 1.0,
+          "missing_columns": [],
+          "rows": 306,
+          "valid_opening_closing_rows": 306
+        },
+        "LIGUE_1:2024-2025": {
+          "coverage": 1.0,
+          "missing_columns": [],
+          "rows": 306,
+          "valid_opening_closing_rows": 306
+        },
+        "LIGUE_1:2025-2026": {
+          "coverage": 1.0,
+          "missing_columns": [],
+          "rows": 306,
+          "valid_opening_closing_rows": 306
+        }
+      },
+      "BW": {
+        "BUNDESLIGA:2024-2025": {
+          "coverage": 0.6176470588235294,
+          "missing_columns": [],
+          "rows": 306,
+          "valid_opening_closing_rows": 189
+        },
+        "BUNDESLIGA:2025-2026": {
+          "coverage": 1.0,
+          "missing_columns": [],
+          "rows": 306,
+          "valid_opening_closing_rows": 306
+        },
+        "LIGUE_1:2024-2025": {
+          "coverage": 0.6176470588235294,
+          "missing_columns": [],
+          "rows": 306,
+          "valid_opening_closing_rows": 189
+        },
+        "LIGUE_1:2025-2026": {
+          "coverage": 1.0,
+          "missing_columns": [],
+          "rows": 306,
+          "valid_opening_closing_rows": 306
+        }
+      },
+      "IW": {
+        "BUNDESLIGA:2024-2025": {
+          "coverage": 0.0,
+          "missing_columns": [
+            "IWA",
+            "IWCA",
+            "IWCD",
+            "IWCH",
+            "IWD",
+            "IWH"
+          ],
+          "rows": 306,
+          "valid_opening_closing_rows": 0
+        },
+        "BUNDESLIGA:2025-2026": {
+          "coverage": 0.0,
+          "missing_columns": [
+            "IWA",
+            "IWCA",
+            "IWCD",
+            "IWCH",
+            "IWD",
+            "IWH"
+          ],
+          "rows": 306,
+          "valid_opening_closing_rows": 0
+        },
+        "LIGUE_1:2024-2025": {
+          "coverage": 0.0,
+          "missing_columns": [
+            "IWA",
+            "IWCA",
+            "IWCD",
+            "IWCH",
+            "IWD",
+            "IWH"
+          ],
+          "rows": 306,
+          "valid_opening_closing_rows": 0
+        },
+        "LIGUE_1:2025-2026": {
+          "coverage": 0.0,
+          "missing_columns": [
+            "IWA",
+            "IWCA",
+            "IWCD",
+            "IWCH",
+            "IWD",
+            "IWH"
+          ],
+          "rows": 306,
+          "valid_opening_closing_rows": 0
+        }
+      },
+      "PINNACLE": {
+        "BUNDESLIGA:2024-2025": {
+          "coverage": 1.0,
+          "missing_columns": [],
+          "rows": 306,
+          "valid_opening_closing_rows": 306
+        },
+        "BUNDESLIGA:2025-2026": {
+          "coverage": 0.4869281045751634,
+          "missing_columns": [],
+          "rows": 306,
+          "valid_opening_closing_rows": 149
+        },
+        "LIGUE_1:2024-2025": {
+          "coverage": 1.0,
+          "missing_columns": [],
+          "rows": 306,
+          "valid_opening_closing_rows": 306
+        },
+        "LIGUE_1:2025-2026": {
+          "coverage": 0.5,
+          "missing_columns": [],
+          "rows": 306,
+          "valid_opening_closing_rows": 153
+        }
+      },
+      "VC": {
+        "BUNDESLIGA:2024-2025": {
+          "coverage": 0.0,
+          "missing_columns": [
+            "VCA",
+            "VCCA",
+            "VCCD",
+            "VCCH",
+            "VCD",
+            "VCH"
+          ],
+          "rows": 306,
+          "valid_opening_closing_rows": 0
+        },
+        "BUNDESLIGA:2025-2026": {
+          "coverage": 0.0,
+          "missing_columns": [
+            "VCA",
+            "VCCA",
+            "VCCD",
+            "VCCH",
+            "VCD",
+            "VCH"
+          ],
+          "rows": 306,
+          "valid_opening_closing_rows": 0
+        },
+        "LIGUE_1:2024-2025": {
+          "coverage": 0.0,
+          "missing_columns": [
+            "VCA",
+            "VCCA",
+            "VCCD",
+            "VCCH",
+            "VCD",
+            "VCH"
+          ],
+          "rows": 306,
+          "valid_opening_closing_rows": 0
+        },
+        "LIGUE_1:2025-2026": {
+          "coverage": 0.0,
+          "missing_columns": [
+            "VCA",
+            "VCCA",
+            "VCCD",
+            "VCCH",
+            "VCD",
+            "VCH"
+          ],
+          "rows": 306,
+          "valid_opening_closing_rows": 0
+        }
+      },
+      "WH": {
+        "BUNDESLIGA:2024-2025": {
+          "coverage": 0.7647058823529411,
+          "missing_columns": [],
+          "rows": 306,
+          "valid_opening_closing_rows": 234
+        },
+        "BUNDESLIGA:2025-2026": {
+          "coverage": 0.0,
+          "missing_columns": [
+            "WHA",
+            "WHCA",
+            "WHCD",
+            "WHCH",
+            "WHD",
+            "WHH"
+          ],
+          "rows": 306,
+          "valid_opening_closing_rows": 0
+        },
+        "LIGUE_1:2024-2025": {
+          "coverage": 0.7647058823529411,
+          "missing_columns": [],
+          "rows": 306,
+          "valid_opening_closing_rows": 234
+        },
+        "LIGUE_1:2025-2026": {
+          "coverage": 0.0,
+          "missing_columns": [
+            "WHA",
+            "WHCA",
+            "WHCD",
+            "WHCH",
+            "WHD",
+            "WHH"
+          ],
+          "rows": 306,
+          "valid_opening_closing_rows": 0
+        }
+      }
+    },
+    "coverage_threshold": 0.9,
+    "eligible_additional_bookmakers": [],
+    "excluded_bookmakers": [
+      "IW",
+      "WH",
+      "VC"
+    ],
+    "included_bookmakers": [
+      "BET365",
+      "PINNACLE",
+      "BW",
+      "AVG"
+    ],
+    "outcome_read_before_audit": false,
+    "predeclared_additional_bookmakers": [
+      "BW",
+      "IW",
+      "WH",
+      "VC"
+    ],
+    "source_files": {
+      "BUNDESLIGA:2019-2020": {
+        "bookmakers": {
+          "AVG": {
+            "missing_required_columns": []
+          },
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "BW": {
+            "missing_required_columns": []
+          },
+          "IW": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          },
+          "VC": {
+            "missing_required_columns": []
+          },
+          "WH": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "BUNDESLIGA:2020-2021": {
+        "bookmakers": {
+          "AVG": {
+            "missing_required_columns": []
+          },
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "BW": {
+            "missing_required_columns": []
+          },
+          "IW": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          },
+          "VC": {
+            "missing_required_columns": []
+          },
+          "WH": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "BUNDESLIGA:2021-2022": {
+        "bookmakers": {
+          "AVG": {
+            "missing_required_columns": []
+          },
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "BW": {
+            "missing_required_columns": []
+          },
+          "IW": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          },
+          "VC": {
+            "missing_required_columns": []
+          },
+          "WH": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "BUNDESLIGA:2022-2023": {
+        "bookmakers": {
+          "AVG": {
+            "missing_required_columns": []
+          },
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "BW": {
+            "missing_required_columns": []
+          },
+          "IW": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          },
+          "VC": {
+            "missing_required_columns": []
+          },
+          "WH": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "BUNDESLIGA:2023-2024": {
+        "bookmakers": {
+          "AVG": {
+            "missing_required_columns": []
+          },
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "BW": {
+            "missing_required_columns": []
+          },
+          "IW": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          },
+          "VC": {
+            "missing_required_columns": []
+          },
+          "WH": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "BUNDESLIGA:2024-2025": {
+        "bookmakers": {
+          "AVG": {
+            "missing_required_columns": []
+          },
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "BW": {
+            "missing_required_columns": []
+          },
+          "IW": {
+            "missing_required_columns": [
+              "IWA",
+              "IWCA",
+              "IWCD",
+              "IWCH",
+              "IWD",
+              "IWH"
+            ]
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          },
+          "VC": {
+            "missing_required_columns": [
+              "VCA",
+              "VCCA",
+              "VCCD",
+              "VCCH",
+              "VCD",
+              "VCH"
+            ]
+          },
+          "WH": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "BUNDESLIGA:2025-2026": {
+        "bookmakers": {
+          "AVG": {
+            "missing_required_columns": []
+          },
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "BW": {
+            "missing_required_columns": []
+          },
+          "IW": {
+            "missing_required_columns": [
+              "IWA",
+              "IWCA",
+              "IWCD",
+              "IWCH",
+              "IWD",
+              "IWH"
+            ]
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          },
+          "VC": {
+            "missing_required_columns": [
+              "VCA",
+              "VCCA",
+              "VCCD",
+              "VCCH",
+              "VCD",
+              "VCH"
+            ]
+          },
+          "WH": {
+            "missing_required_columns": [
+              "WHA",
+              "WHCA",
+              "WHCD",
+              "WHCH",
+              "WHD",
+              "WHH"
+            ]
+          }
+        },
+        "has_outcome_column": true
+      },
+      "LIGUE_1:2019-2020": {
+        "bookmakers": {
+          "AVG": {
+            "missing_required_columns": []
+          },
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "BW": {
+            "missing_required_columns": []
+          },
+          "IW": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          },
+          "VC": {
+            "missing_required_columns": []
+          },
+          "WH": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "LIGUE_1:2020-2021": {
+        "bookmakers": {
+          "AVG": {
+            "missing_required_columns": []
+          },
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "BW": {
+            "missing_required_columns": []
+          },
+          "IW": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          },
+          "VC": {
+            "missing_required_columns": []
+          },
+          "WH": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "LIGUE_1:2021-2022": {
+        "bookmakers": {
+          "AVG": {
+            "missing_required_columns": []
+          },
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "BW": {
+            "missing_required_columns": []
+          },
+          "IW": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          },
+          "VC": {
+            "missing_required_columns": []
+          },
+          "WH": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "LIGUE_1:2022-2023": {
+        "bookmakers": {
+          "AVG": {
+            "missing_required_columns": []
+          },
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "BW": {
+            "missing_required_columns": []
+          },
+          "IW": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          },
+          "VC": {
+            "missing_required_columns": []
+          },
+          "WH": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "LIGUE_1:2023-2024": {
+        "bookmakers": {
+          "AVG": {
+            "missing_required_columns": []
+          },
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "BW": {
+            "missing_required_columns": []
+          },
+          "IW": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          },
+          "VC": {
+            "missing_required_columns": []
+          },
+          "WH": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "LIGUE_1:2024-2025": {
+        "bookmakers": {
+          "AVG": {
+            "missing_required_columns": []
+          },
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "BW": {
+            "missing_required_columns": []
+          },
+          "IW": {
+            "missing_required_columns": [
+              "IWA",
+              "IWCA",
+              "IWCD",
+              "IWCH",
+              "IWD",
+              "IWH"
+            ]
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          },
+          "VC": {
+            "missing_required_columns": [
+              "VCA",
+              "VCCA",
+              "VCCD",
+              "VCCH",
+              "VCD",
+              "VCH"
+            ]
+          },
+          "WH": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "LIGUE_1:2025-2026": {
+        "bookmakers": {
+          "AVG": {
+            "missing_required_columns": []
+          },
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "BW": {
+            "missing_required_columns": []
+          },
+          "IW": {
+            "missing_required_columns": [
+              "IWA",
+              "IWCA",
+              "IWCD",
+              "IWCH",
+              "IWD",
+              "IWH"
+            ]
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          },
+          "VC": {
+            "missing_required_columns": [
+              "VCA",
+              "VCCA",
+              "VCCD",
+              "VCCH",
+              "VCD",
+              "VCH"
+            ]
+          },
+          "WH": {
+            "missing_required_columns": [
+              "WHA",
+              "WHCA",
+              "WHCD",
+              "WHCH",
+              "WHD",
+              "WHH"
+            ]
+          }
+        },
+        "has_outcome_column": true
+      }
+    },
+    "source_gate_passed": false,
+    "transport_leagues": [
+      "BUNDESLIGA",
+      "LIGUE_1"
+    ],
+    "validation_test_column_gate_passed": true
+  },
+  "supabase_writes": 0,
+  "supported": false,
+  "test": {},
+  "validation": {}
+}
