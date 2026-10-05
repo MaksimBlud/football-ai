@@ -210,3 +210,72 @@ requires the explicit `research-v4-model-opt-in` label; it is no longer automati
 
 This preserves the working autonomous deterministic path while preventing a new research
 direction from silently returning the project to provider quota dependence.
+
+
+## Registry / intake / scaffold completion
+
+Subsequent no-API infrastructure merges:
+
+- PR #504 — registry-driven V5 routing and per-family iteration budgets;
+- PR #505 — no-API V5 is the default intake path; unsupported families no longer
+  silently fall back to Groq/Gemini;
+- PR #506 — unsupported families are automatically scaffolded on
+  `agent/v5-scaffold-<Issue>`.
+
+Current no-API intake contract:
+
+`Issue -> V5 registry lookup -> supported: deterministic V5 -> unsupported: needs-recipe + deterministic scaffold`
+
+V4 model fallback requires the explicit Issue label:
+
+`research-v4-model-opt-in`
+
+Without that label, an unsupported family cannot start Groq/Gemini.
+
+### Live scaffold proof — Issue #507
+
+Temporary infrastructure proof Issue #507 used the unsupported family:
+
+`v5_scaffold_live_proof_20261005`
+
+Observed live result:
+
+- V5 preflight: success;
+- Issue label: `research-v5-needs-recipe`;
+- V5 deterministic scaffold job: success;
+- persistent branch: `agent/v5-scaffold-507`;
+- machine-readable scaffold:
+  `research/v5_recipe_requests/issue_507.json`;
+- human-readable scaffold:
+  `docs/v5_recipe_requests/issue_507.md`;
+- V5 research worker: skipped;
+- V4 model worker: skipped;
+- model API calls: 0;
+- outcomes read during scaffold: 0;
+- paid Odds API: 0;
+- Supabase writes: 0;
+- production operations: 0.
+
+The temporary proof Issue was closed after success. The scaffold branch is retained as
+durable evidence.
+
+## Final research artifacts merged to main
+
+The completed no-API research result PRs were manually exact-head merged after their
+green validation suites:
+
+- #499 — Issue #482 independent Bundesliga/Ligue 1 replication;
+- #501 — Issue #481 2024/25 lead-lag anomaly audit;
+- #502 — Issue #428 kickoff/calendar O/U 2.5 research.
+
+These merges only publish validated research artifacts. They do not promote a production
+model and do not alter production `.pkl` files.
+
+Current main after the result merges:
+
+`a18b65df5243e687879cadba8f3f1a4c34dbcf39`
+
+At this checkpoint, the practical model-provider quota blocker is removed from the
+default research path. Supported families execute deterministically; unsupported families
+fail closed and receive a deterministic implementation scaffold instead of consuming
+model quota.
