@@ -41,13 +41,14 @@
     {
       "program_id": "kickoff_calendar_context",
       "title": "Kickoff and calendar context research program",
-      "status": "ACTIVE",
+      "status": "PROGRAM_DONE",
       "objective": "Determine whether kickoff time, weekday, calendar slot or related pre-kickoff context contains stable incremental information beyond market baselines.",
       "completed_issue_numbers": [
         428,
-        514
+        514,
+        523
       ],
-      "current_frontier": "The pooled kickoff/calendar OOS test is negative and the preregistered EPL/La Liga/Serie A heterogeneity follow-up (#514) also found no stable validation+OOT pairwise heterogeneity. The pooled null remains binding; the next Brain cycle may consider only a genuinely independent temporal-stability, market-movement mechanism, cross-league transport, or close-direction step.",
+      "current_frontier": "The pooled kickoff/calendar OOS test is negative, the preregistered league-heterogeneity follow-up (#514) found no stable validation+OOT pairwise heterogeneity, and the independent outcome-free opening-to-closing market-movement mechanism (#523) also failed its OOT bootstrap gate. The pooled null remains binding and the zero-cost mechanistic frontier is exhausted.",
       "allowed_follow_up_classes": [
         "preregistered_league_heterogeneity",
         "temporal_stability",
@@ -61,7 +62,8 @@
         "Do not treat a subgroup win as rescuing the rejected pooled hypothesis.",
         "Do not use paid data without fresh explicit user approval.",
         "Mark PROGRAM_DONE when remaining follow-ups would be threshold mining or restatements of the rejected pooled test."
-      ]
+      ],
+      "program_done_reason": "Issue #523 tested the last genuinely independent zero-cost mechanism allowed by the program: Bet365 O/U 2.5 opening-to-closing repricing with a frozen temporal OOS design. Calendar features reduced MSE only microscopically in validation and OOT, while the OOT paired-bootstrap 95% CI crossed zero (-8.102e-06 to +3.630e-06). Together with the negative pooled outcome test (#428) and negative preregistered league heterogeneity (#514), remaining zero-cost follow-ups would be threshold/weekday/league mining, cosmetic temporal restatements, or require new paid/prospective data. The stop rule therefore requires PROGRAM_DONE."
     },
     {
       "program_id": "corner_market_direction",
