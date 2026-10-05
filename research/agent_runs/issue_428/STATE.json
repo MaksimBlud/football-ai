@@ -1,7 +1,7 @@
 {
   "blocker": null,
   "engine": "V5_DETERMINISTIC_NO_API",
-  "next_step": "Run deterministic kickoff-calendar O/U 2.5 evaluation.",
+  "next_step": "Render final report and close.",
   "status": "CONTINUE",
-  "summary": "Frozen kickoff-calendar OOS protocol written."
+  "summary": "Kickoff-calendar evaluation complete: NO_KICKOFF_CALENDAR_OOS_SIGNAL."
 }

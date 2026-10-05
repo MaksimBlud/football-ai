@@ -1,0 +1,196 @@
+{
+  "coverage": {
+    "EPL": {
+      "2019-2020": {
+        "missing_required_columns": [],
+        "source_rows": 380,
+        "usable_rows": 380
+      },
+      "2020-2021": {
+        "missing_required_columns": [],
+        "source_rows": 380,
+        "usable_rows": 380
+      },
+      "2021-2022": {
+        "missing_required_columns": [],
+        "source_rows": 380,
+        "usable_rows": 379
+      },
+      "2022-2023": {
+        "missing_required_columns": [],
+        "source_rows": 380,
+        "usable_rows": 380
+      },
+      "2023-2024": {
+        "missing_required_columns": [],
+        "source_rows": 380,
+        "usable_rows": 380
+      },
+      "2024-2025": {
+        "missing_required_columns": [],
+        "source_rows": 380,
+        "usable_rows": 380
+      },
+      "2025-2026": {
+        "missing_required_columns": [],
+        "source_rows": 380,
+        "usable_rows": 380
+      }
+    },
+    "LA_LIGA": {
+      "2019-2020": {
+        "missing_required_columns": [],
+        "source_rows": 380,
+        "usable_rows": 380
+      },
+      "2020-2021": {
+        "missing_required_columns": [],
+        "source_rows": 380,
+        "usable_rows": 380
+      },
+      "2021-2022": {
+        "missing_required_columns": [],
+        "source_rows": 380,
+        "usable_rows": 380
+      },
+      "2022-2023": {
+        "missing_required_columns": [],
+        "source_rows": 380,
+        "usable_rows": 380
+      },
+      "2023-2024": {
+        "missing_required_columns": [],
+        "source_rows": 380,
+        "usable_rows": 380
+      },
+      "2024-2025": {
+        "missing_required_columns": [],
+        "source_rows": 380,
+        "usable_rows": 380
+      },
+      "2025-2026": {
+        "missing_required_columns": [],
+        "source_rows": 380,
+        "usable_rows": 380
+      }
+    },
+    "SERIE_A": {
+      "2019-2020": {
+        "missing_required_columns": [],
+        "source_rows": 380,
+        "usable_rows": 380
+      },
+      "2020-2021": {
+        "missing_required_columns": [],
+        "source_rows": 380,
+        "usable_rows": 377
+      },
+      "2021-2022": {
+        "missing_required_columns": [],
+        "source_rows": 380,
+        "usable_rows": 379
+      },
+      "2022-2023": {
+        "missing_required_columns": [],
+        "source_rows": 380,
+        "usable_rows": 380
+      },
+      "2023-2024": {
+        "missing_required_columns": [],
+        "source_rows": 380,
+        "usable_rows": 380
+      },
+      "2024-2025": {
+        "missing_required_columns": [],
+        "source_rows": 380,
+        "usable_rows": 380
+      },
+      "2025-2026": {
+        "missing_required_columns": [],
+        "source_rows": 380,
+        "usable_rows": 380
+      }
+    }
+  },
+  "decision": "NO_KICKOFF_CALENDAR_OOS_SIGNAL",
+  "evidence_class": "TEMPORAL_OOS_CALENDAR_INCREMENTAL",
+  "experiment_id": "KICKOFF_CALENDAR_CONTEXT_V1",
+  "leagues": [
+    "EPL",
+    "LA_LIGA",
+    "SERIE_A"
+  ],
+  "opened_2026_27_data_used": false,
+  "paid_odds_api_calls": 0,
+  "production_promotion": false,
+  "reference_rows": 5695,
+  "reference_seasons": [
+    "2019-2020",
+    "2020-2021",
+    "2021-2022",
+    "2022-2023",
+    "2023-2024"
+  ],
+  "research_only": true,
+  "result": "RESEARCH_ONLY",
+  "supabase_writes": 0,
+  "supported": false,
+  "test": {
+    "baseline": {
+      "auc": 0.5655158191516539,
+      "brier": 0.24791197415630592,
+      "log_loss": 0.6891830486542778
+    },
+    "bootstrap": {
+      "ci95_high": 0.004388259664684446,
+      "ci95_low": -0.0014696915159004966,
+      "draws": 5000,
+      "mean": 0.00151450499504018,
+      "probability_below_zero": 0.152,
+      "seed": 20261004
+    },
+    "by_league_rows": {
+      "EPL": 380,
+      "LA_LIGA": 380,
+      "SERIE_A": 380
+    },
+    "calendar": {
+      "auc": 0.5626471647414056,
+      "brier": 0.24865214176642153,
+      "log_loss": 0.6906748587253381
+    },
+    "calendar_minus_baseline_log_loss": 0.001491810071060251,
+    "market_direct": {
+      "auc": 0.566686981172147,
+      "brier": 0.2472978680195987,
+      "log_loss": 0.6878383551904478
+    },
+    "rows": 1140
+  },
+  "test_season": "2025-2026",
+  "validation": {
+    "baseline": {
+      "auc": 0.6100110553042364,
+      "brier": 0.24084848537054662,
+      "log_loss": 0.6745050146190892
+    },
+    "by_league_rows": {
+      "EPL": 380,
+      "LA_LIGA": 380,
+      "SERIE_A": 380
+    },
+    "calendar": {
+      "auc": 0.6087099784129018,
+      "brier": 0.24117107165669613,
+      "log_loss": 0.6751930412882411
+    },
+    "calendar_minus_baseline_log_loss": 0.0006880266691519088,
+    "market_direct": {
+      "auc": 0.6092535052089267,
+      "brier": 0.24054401976991582,
+      "log_loss": 0.6738497918431997
+    },
+    "rows": 1140
+  },
+  "validation_season": "2024-2025"
+}
