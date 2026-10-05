@@ -1,0 +1,1356 @@
+{
+  "allocation_measure": "q_i / (market_consensus_p_i * bookmaker_implied_sum) - 1",
+  "decision": "SUPPORTED_BOOKMAKER_MARGIN_HETEROGENEITY",
+  "evidence_class": "TEMPORAL_OOS_BOOKMAKER_MARGIN_STRUCTURE",
+  "experiment_id": "BOOKMAKER_MARGIN_STRUCTURE_V1",
+  "formal_gate": {
+    "gates": {
+      "alternate_consensus_oot_ci_excludes_zero": true,
+      "alternate_consensus_same_sign": true,
+      "at_least_two_leagues_same_oot_sign": true,
+      "oot_allocation_ci_excludes_zero": true,
+      "opening_and_closing_oot_same_sign": true,
+      "validation_allocation_ci_excludes_zero": true,
+      "validation_and_oot_same_sign": true
+    },
+    "matching_oot_leagues": 3,
+    "supported": true
+  },
+  "interpretation_guard": "Bet365 and Pinnacle show a stable same-fixture difference in how 1X2 margin is allocated between longshots and favourites after each bookmaker's total overround is removed. The pattern transfers from validation to untouched OOT, survives an alternate consensus, and is not merely a total-margin difference. This is observational market-structure evidence only, not a causal claim or betting edge.",
+  "paid_odds_api_calls": 0,
+  "primary_allocation_contrast": "longshot_allocation_tilt - favourite_allocation_tilt",
+  "primary_pair": "BET365_MINUS_PINNACLE",
+  "production_operations": false,
+  "production_promotion": false,
+  "reference": {
+    "closing": {
+      "book_summary": {
+        "BET365": {
+          "mean_draw_allocation_tilt": -0.00940337137623963,
+          "mean_fair_tv_vs_market_consensus": 0.00844907267983383,
+          "mean_fl_allocation_contrast": -0.0009061004871700584,
+          "mean_overround": 0.05537322169492469,
+          "rows": 5700
+        },
+        "PINNACLE": {
+          "mean_draw_allocation_tilt": -0.0002952959088813449,
+          "mean_fair_tv_vs_market_consensus": 0.0071703308895690035,
+          "mean_fl_allocation_contrast": -0.018443001237274544,
+          "mean_overround": 0.026402369882569384,
+          "rows": 5700
+        }
+      },
+      "by_league": {
+        "alt_fl_allocation_contrast": {
+          "EPL": 0.015057945912631909,
+          "LA_LIGA": 0.018494202382364672,
+          "SERIE_A": 0.01749194541380104
+        },
+        "draw_allocation_tilt": {
+          "EPL": -0.003547892521981751,
+          "LA_LIGA": -0.01242473969584459,
+          "SERIE_A": -0.01135159418424851
+        },
+        "fl_allocation_contrast": {
+          "EPL": 0.015963961780062055,
+          "LA_LIGA": 0.0188239212112859,
+          "SERIE_A": 0.0178228192589655
+        },
+        "overround": {
+          "EPL": 0.028229561521459105,
+          "LA_LIGA": 0.0291696165302064,
+          "SERIE_A": 0.029513377385400396
+        }
+      },
+      "draw_specific": {
+        "BET365": {
+          "flat_stake_return": -0.04221228070175439,
+          "mean_allocation_tilt": -0.00940337137623963,
+          "rows": 5700
+        },
+        "PINNACLE": {
+          "flat_stake_return": -0.023957894736842105,
+          "mean_allocation_tilt": -0.0002952959088813449,
+          "rows": 5700
+        }
+      },
+      "economic_bins": {
+        "BET365": [
+          {
+            "bin": "0-20%",
+            "flat_stake_return": -0.1112657450076805,
+            "mean_allocation_tilt": 0.010992500207239202,
+            "mean_consensus_probability": 0.14356827882757534,
+            "rows": 3255
+          },
+          {
+            "bin": "20-30%",
+            "flat_stake_return": -0.08522592056600739,
+            "mean_allocation_tilt": -0.006780425040350805,
+            "mean_consensus_probability": 0.2574437375117716,
+            "rows": 6219
+          },
+          {
+            "bin": "30-40%",
+            "flat_stake_return": -0.059911714770797965,
+            "mean_allocation_tilt": 0.0006750572401098218,
+            "mean_consensus_probability": 0.34000309141981,
+            "rows": 2945
+          },
+          {
+            "bin": "40-50%",
+            "flat_stake_return": -0.03187571921749137,
+            "mean_allocation_tilt": 0.008110895034496454,
+            "mean_consensus_probability": 0.4467772346222912,
+            "rows": 1738
+          },
+          {
+            "bin": "50-60%",
+            "flat_stake_return": -0.015504047093451056,
+            "mean_allocation_tilt": 0.0036878696239737553,
+            "mean_consensus_probability": 0.5492735551401844,
+            "rows": 1359
+          },
+          {
+            "bin": "60-70%",
+            "flat_stake_return": 0.016418918918918928,
+            "mean_allocation_tilt": 0.0008847905435065096,
+            "mean_consensus_probability": 0.6475328075544174,
+            "rows": 888
+          },
+          {
+            "bin": "70-80%",
+            "flat_stake_return": -0.05233521657250469,
+            "mean_allocation_tilt": -0.003237603563674076,
+            "mean_consensus_probability": 0.7425961286133376,
+            "rows": 531
+          },
+          {
+            "bin": "80%+",
+            "flat_stake_return": -0.06963636363636364,
+            "mean_allocation_tilt": -0.005517282786624224,
+            "mean_consensus_probability": 0.8366319514432544,
+            "rows": 165
+          }
+        ],
+        "PINNACLE": [
+          {
+            "bin": "0-20%",
+            "flat_stake_return": -0.05755145929339478,
+            "mean_allocation_tilt": -0.02489268747607443,
+            "mean_consensus_probability": 0.14356827882757534,
+            "rows": 3255
+          },
+          {
+            "bin": "20-30%",
+            "flat_stake_return": -0.06346197137803505,
+            "mean_allocation_tilt": -0.00304388103402784,
+            "mean_consensus_probability": 0.2574437375117716,
+            "rows": 6219
+          },
+          {
+            "bin": "30-40%",
+            "flat_stake_return": -0.033375212224108664,
+            "mean_allocation_tilt": -0.00020620771476013826,
+            "mean_consensus_probability": 0.34000309141981,
+            "rows": 2945
+          },
+          {
+            "bin": "40-50%",
+            "flat_stake_return": 0.001150747986191018,
+            "mean_allocation_tilt": 0.0034240714518939015,
+            "mean_consensus_probability": 0.4467772346222912,
+            "rows": 1738
+          },
+          {
+            "bin": "50-60%",
+            "flat_stake_return": 0.01054451802796173,
+            "mean_allocation_tilt": 0.005782793429339326,
+            "mean_consensus_probability": 0.5492735551401844,
+            "rows": 1359
+          },
+          {
+            "bin": "60-70%",
+            "flat_stake_return": 0.03917792792792793,
+            "mean_allocation_tilt": 0.00597374709294985,
+            "mean_consensus_probability": 0.6475328075544174,
+            "rows": 888
+          },
+          {
+            "bin": "70-80%",
+            "flat_stake_return": -0.03913370998116758,
+            "mean_allocation_tilt": 0.007815469089217326,
+            "mean_consensus_probability": 0.7425961286133376,
+            "rows": 531
+          },
+          {
+            "bin": "80%+",
+            "flat_stake_return": -0.05963636363636368,
+            "mean_allocation_tilt": 0.007914570783041116,
+            "mean_consensus_probability": 0.8366319514432544,
+            "rows": 165
+          }
+        ]
+      },
+      "fixtures": 5700,
+      "paired": {
+        "alt_fl_allocation_contrast": {
+          "ci95_high": 0.018985798994415458,
+          "ci95_low": 0.015128091854696612,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": 0.01701469790293254,
+          "rows": 5700
+        },
+        "draw_allocation_tilt": {
+          "ci95_high": -0.008230160925857427,
+          "ci95_low": -0.010007933839772293,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": -0.009108075467358284,
+          "rows": 5700
+        },
+        "fl_allocation_contrast": {
+          "ci95_high": 0.01955212582945854,
+          "ci95_low": 0.015608970982444865,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": 0.017536900750104483,
+          "rows": 5700
+        },
+        "overround": {
+          "ci95_high": 0.02916997420717707,
+          "ci95_low": 0.028768275227405143,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": 0.0289708518123553,
+          "rows": 5700
+        }
+      }
+    },
+    "opening": {
+      "book_summary": {
+        "BET365": {
+          "mean_draw_allocation_tilt": -0.004117928437803418,
+          "mean_fair_tv_vs_market_consensus": 0.007880011676743254,
+          "mean_fl_allocation_contrast": -0.00572726344846594,
+          "mean_overround": 0.05449199499901322,
+          "rows": 5694
+        },
+        "PINNACLE": {
+          "mean_draw_allocation_tilt": -0.0023139167448591406,
+          "mean_fair_tv_vs_market_consensus": 0.005727980222203224,
+          "mean_fl_allocation_contrast": -0.01882765268969525,
+          "mean_overround": 0.028615368816292848,
+          "rows": 5694
+        }
+      },
+      "by_league": {
+        "alt_fl_allocation_contrast": {
+          "EPL": 0.009498906166877083,
+          "LA_LIGA": 0.015112283588339591,
+          "SERIE_A": 0.013437538938713233
+        },
+        "draw_allocation_tilt": {
+          "EPL": -0.0006011906691212662,
+          "LA_LIGA": -0.0029865183029281614,
+          "SERIE_A": -0.0018262283013387372
+        },
+        "fl_allocation_contrast": {
+          "EPL": 0.010196367251708954,
+          "LA_LIGA": 0.015456763832331128,
+          "SERIE_A": 0.013652629188919619
+        },
+        "overround": {
+          "EPL": 0.02557189489653501,
+          "LA_LIGA": 0.0261261839019488,
+          "SERIE_A": 0.025932281665259026
+        }
+      },
+      "draw_specific": {
+        "BET365": {
+          "flat_stake_return": -0.04134527572883737,
+          "mean_allocation_tilt": -0.004117928437803418,
+          "rows": 5694
+        },
+        "PINNACLE": {
+          "flat_stake_return": -0.021728134878819808,
+          "mean_allocation_tilt": -0.0023139167448591406,
+          "rows": 5694
+        }
+      },
+      "economic_bins": {
+        "BET365": [
+          {
+            "bin": "0-20%",
+            "flat_stake_return": -0.08064205457463884,
+            "mean_allocation_tilt": 0.0005874875908130768,
+            "mean_consensus_probability": 0.1437056224506497,
+            "rows": 3115
+          },
+          {
+            "bin": "20-30%",
+            "flat_stake_return": -0.08829314124647668,
+            "mean_allocation_tilt": -0.004321422526942412,
+            "mean_consensus_probability": 0.2572301258199913,
+            "rows": 6386
+          },
+          {
+            "bin": "30-40%",
+            "flat_stake_return": -0.06937478763166835,
+            "mean_allocation_tilt": -0.0003264291885505553,
+            "mean_consensus_probability": 0.34195344973592623,
+            "rows": 2943
+          },
+          {
+            "bin": "40-50%",
+            "flat_stake_return": -0.04141723356009071,
+            "mean_allocation_tilt": 0.006652165236038387,
+            "mean_consensus_probability": 0.4472499319155312,
+            "rows": 1764
+          },
+          {
+            "bin": "50-60%",
+            "flat_stake_return": -0.010068233510235017,
+            "mean_allocation_tilt": 0.004628826383552989,
+            "mean_consensus_probability": 0.5491707641935515,
+            "rows": 1319
+          },
+          {
+            "bin": "60-70%",
+            "flat_stake_return": 0.030608108108108108,
+            "mean_allocation_tilt": 0.0018108277628335633,
+            "mean_consensus_probability": 0.6480645125625719,
+            "rows": 888
+          },
+          {
+            "bin": "70-80%",
+            "flat_stake_return": -0.07406189555125724,
+            "mean_allocation_tilt": -0.00014578086827645324,
+            "mean_consensus_probability": 0.7415907465701697,
+            "rows": 517
+          },
+          {
+            "bin": "80%+",
+            "flat_stake_return": -0.019066666666666694,
+            "mean_allocation_tilt": -0.0042288233281146835,
+            "mean_consensus_probability": 0.8341838600286534,
+            "rows": 150
+          }
+        ],
+        "PINNACLE": [
+          {
+            "bin": "0-20%",
+            "flat_stake_return": -0.047059390048154105,
+            "mean_allocation_tilt": -0.022776829982888352,
+            "mean_consensus_probability": 0.1437056224506497,
+            "rows": 3115
+          },
+          {
+            "bin": "20-30%",
+            "flat_stake_return": -0.06525837770122142,
+            "mean_allocation_tilt": -0.004863790744333193,
+            "mean_consensus_probability": 0.2572301258199913,
+            "rows": 6386
+          },
+          {
+            "bin": "30-40%",
+            "flat_stake_return": -0.044580360176690446,
+            "mean_allocation_tilt": -0.0001634264335774384,
+            "mean_consensus_probability": 0.34195344973592623,
+            "rows": 2943
+          },
+          {
+            "bin": "40-50%",
+            "flat_stake_return": -0.014852607709750573,
+            "mean_allocation_tilt": 0.0048300414940768074,
+            "mean_consensus_probability": 0.4472499319155312,
+            "rows": 1764
+          },
+          {
+            "bin": "50-60%",
+            "flat_stake_return": 0.01173616376042455,
+            "mean_allocation_tilt": 0.007544213702734466,
+            "mean_consensus_probability": 0.5491707641935515,
+            "rows": 1319
+          },
+          {
+            "bin": "60-70%",
+            "flat_stake_return": 0.04944819819819819,
+            "mean_allocation_tilt": 0.007118503914920136,
+            "mean_consensus_probability": 0.6480645125625719,
+            "rows": 888
+          },
+          {
+            "bin": "70-80%",
+            "flat_stake_return": -0.060986460348162456,
+            "mean_allocation_tilt": 0.006755287494444895,
+            "mean_consensus_probability": 0.7415907465701697,
+            "rows": 517
+          },
+          {
+            "bin": "80%+",
+            "flat_stake_return": -0.008400000000000034,
+            "mean_allocation_tilt": 0.005787019196496674,
+            "mean_consensus_probability": 0.8341838600286534,
+            "rows": 150
+          }
+        ]
+      },
+      "fixtures": 5694,
+      "paired": {
+        "alt_fl_allocation_contrast": {
+          "ci95_high": 0.014416569361643233,
+          "ci95_low": 0.011025897608956847,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": 0.012681232007531728,
+          "rows": 5694
+        },
+        "draw_allocation_tilt": {
+          "ci95_high": -0.0008940121360127235,
+          "ci95_low": -0.002700548637480571,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": -0.001804011692944277,
+          "rows": 5694
+        },
+        "fl_allocation_contrast": {
+          "ci95_high": 0.014839331608160256,
+          "ci95_low": 0.011422160061436351,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": 0.013100389241229306,
+          "rows": 5694
+        },
+        "overround": {
+          "ci95_high": 0.026092958177141568,
+          "ci95_low": 0.025658033125297172,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": 0.02587662618272037,
+          "rows": 5694
+        }
+      }
+    }
+  },
+  "research_only": true,
+  "result": "RESEARCH_ONLY_NO_BET",
+  "source_audit": {
+    "external_consensus": "Football-Data Avg 1X2 columns",
+    "frozen_bookmakers": [
+      "BET365",
+      "PINNACLE"
+    ],
+    "intraday_snapshot_gaps": {
+      "1h": "No exact timestamped 1h snapshot in frozen source.",
+      "24h": "No exact timestamped 24h snapshot in frozen source.",
+      "6h": "No exact timestamped 6h snapshot in frozen source."
+    },
+    "outcome_read_after_audit": true,
+    "outcome_read_before_audit": false,
+    "source_files": {
+      "EPL:2019-2020": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "EPL:2020-2021": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "EPL:2021-2022": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "EPL:2022-2023": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "EPL:2023-2024": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "EPL:2024-2025": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "EPL:2025-2026": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "LA_LIGA:2019-2020": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "LA_LIGA:2020-2021": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "LA_LIGA:2021-2022": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "LA_LIGA:2022-2023": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "LA_LIGA:2023-2024": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "LA_LIGA:2024-2025": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "LA_LIGA:2025-2026": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "SERIE_A:2019-2020": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "SERIE_A:2020-2021": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "SERIE_A:2021-2022": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "SERIE_A:2022-2023": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "SERIE_A:2023-2024": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "SERIE_A:2024-2025": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "SERIE_A:2025-2026": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      }
+    },
+    "validation_test_column_gate_passed": true
+  },
+  "supabase_writes": 0,
+  "supported": true,
+  "temporal_design": {
+    "intraday_24h_6h_1h": "SOURCE_GAP_NO_EXACT_TIMESTAMPED_SNAPSHOTS",
+    "opening_sensitivity": true,
+    "primary_horizon": "closing",
+    "reference": [
+      "2019-2020",
+      "2020-2021",
+      "2021-2022",
+      "2022-2023",
+      "2023-2024"
+    ],
+    "untouched_test": "2025-2026",
+    "validation": "2024-2025"
+  },
+  "test": {
+    "closing": {
+      "book_summary": {
+        "BET365": {
+          "mean_draw_allocation_tilt": -0.004805253452979671,
+          "mean_fair_tv_vs_market_consensus": 0.008171937322160658,
+          "mean_fl_allocation_contrast": -0.00036023228729516963,
+          "mean_overround": 0.05616125473130386,
+          "rows": 596
+        },
+        "PINNACLE": {
+          "mean_draw_allocation_tilt": 0.0010513976974621153,
+          "mean_fair_tv_vs_market_consensus": 0.010057624965214701,
+          "mean_fl_allocation_contrast": -0.02071328311818062,
+          "mean_overround": 0.030259471325085895,
+          "rows": 596
+        }
+      },
+      "by_league": {
+        "alt_fl_allocation_contrast": {
+          "EPL": 0.018054594579518125,
+          "LA_LIGA": 0.01548380870597197,
+          "SERIE_A": 0.027965173833092317
+        },
+        "draw_allocation_tilt": {
+          "EPL": -0.007761178659370611,
+          "LA_LIGA": -0.0024546776066340955,
+          "SERIE_A": -0.007066854430041751
+        },
+        "fl_allocation_contrast": {
+          "EPL": 0.017855803998438394,
+          "LA_LIGA": 0.015365916138584432,
+          "SERIE_A": 0.02773690515899894
+        },
+        "overround": {
+          "EPL": 0.026010840679020743,
+          "LA_LIGA": 0.025228734807674975,
+          "SERIE_A": 0.026425172846811427
+        }
+      },
+      "draw_specific": {
+        "BET365": {
+          "flat_stake_return": -0.012281879194630864,
+          "mean_allocation_tilt": -0.004805253452979671,
+          "rows": 596
+        },
+        "PINNACLE": {
+          "flat_stake_return": 0.005704697986577194,
+          "mean_allocation_tilt": 0.0010513976974621153,
+          "rows": 596
+        }
+      },
+      "economic_bins": {
+        "BET365": [
+          {
+            "bin": "0-20%",
+            "flat_stake_return": -0.29,
+            "mean_allocation_tilt": 0.0036993412747201894,
+            "mean_consensus_probability": 0.14757547520269135,
+            "rows": 300
+          },
+          {
+            "bin": "20-30%",
+            "flat_stake_return": -0.02618827160493826,
+            "mean_allocation_tilt": -0.003451659639396328,
+            "mean_consensus_probability": 0.2590466338184136,
+            "rows": 648
+          },
+          {
+            "bin": "30-40%",
+            "flat_stake_return": -0.08700831024930748,
+            "mean_allocation_tilt": -0.0005115013849885522,
+            "mean_consensus_probability": 0.33705304890876947,
+            "rows": 361
+          },
+          {
+            "bin": "40-50%",
+            "flat_stake_return": 0.011176470588235286,
+            "mean_allocation_tilt": 0.005843787917024246,
+            "mean_consensus_probability": 0.4478436956433201,
+            "rows": 204
+          },
+          {
+            "bin": "50-60%",
+            "flat_stake_return": -0.07695312499999998,
+            "mean_allocation_tilt": 0.0009106017320565729,
+            "mean_consensus_probability": 0.5469754578959245,
+            "rows": 128
+          },
+          {
+            "bin": "60-70%",
+            "flat_stake_return": -0.06712765957446808,
+            "mean_allocation_tilt": -0.0016098881360586126,
+            "mean_consensus_probability": 0.6465374237535809,
+            "rows": 94
+          },
+          {
+            "bin": "70-80%",
+            "flat_stake_return": 0.017608695652173923,
+            "mean_allocation_tilt": 0.0018009216152659504,
+            "mean_consensus_probability": 0.7458435063182661,
+            "rows": 46
+          },
+          {
+            "bin": "80%+",
+            "flat_stake_return": 0.1614285714285714,
+            "mean_allocation_tilt": -0.001784587303278462,
+            "mean_consensus_probability": 0.8189566319146138,
+            "rows": 7
+          }
+        ],
+        "PINNACLE": [
+          {
+            "bin": "0-20%",
+            "flat_stake_return": -0.24756666666666666,
+            "mean_allocation_tilt": -0.03201652253433696,
+            "mean_consensus_probability": 0.14757547520269135,
+            "rows": 300
+          },
+          {
+            "bin": "20-30%",
+            "flat_stake_return": 0.000879629629629641,
+            "mean_allocation_tilt": -0.0029815330560187658,
+            "mean_consensus_probability": 0.2590466338184136,
+            "rows": 648
+          },
+          {
+            "bin": "30-40%",
+            "flat_stake_return": -0.06204986149584487,
+            "mean_allocation_tilt": 0.001103540022352922,
+            "mean_consensus_probability": 0.33705304890876947,
+            "rows": 361
+          },
+          {
+            "bin": "40-50%",
+            "flat_stake_return": 0.04323529411764703,
+            "mean_allocation_tilt": 3.0230650403179943e-05,
+            "mean_consensus_probability": 0.4478436956433201,
+            "rows": 204
+          },
+          {
+            "bin": "50-60%",
+            "flat_stake_return": -0.06023437500000001,
+            "mean_allocation_tilt": 0.008149988397364421,
+            "mean_consensus_probability": 0.5469754578959245,
+            "rows": 128
+          },
+          {
+            "bin": "60-70%",
+            "flat_stake_return": -0.053723404255319136,
+            "mean_allocation_tilt": 0.010448088860812353,
+            "mean_consensus_probability": 0.6465374237535809,
+            "rows": 94
+          },
+          {
+            "bin": "70-80%",
+            "flat_stake_return": 0.027608695652173942,
+            "mean_allocation_tilt": 0.010367719439298373,
+            "mean_consensus_probability": 0.7458435063182661,
+            "rows": 46
+          },
+          {
+            "bin": "80%+",
+            "flat_stake_return": 0.17714285714285707,
+            "mean_allocation_tilt": 0.002706976949697713,
+            "mean_consensus_probability": 0.8189566319146138,
+            "rows": 7
+          }
+        ]
+      },
+      "fixtures": 596,
+      "paired": {
+        "alt_fl_allocation_contrast": {
+          "ci95_high": 0.027561656965930607,
+          "ci95_low": 0.013364681216130594,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": 0.02053611630431848,
+          "rows": 596
+        },
+        "draw_allocation_tilt": {
+          "ci95_high": -0.0032178653418021338,
+          "ci95_low": -0.008544453330497132,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": -0.005856651150441787,
+          "rows": 596
+        },
+        "fl_allocation_contrast": {
+          "ci95_high": 0.027325389839300388,
+          "ci95_low": 0.01323450245722342,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": 0.020353050830885445,
+          "rows": 596
+        },
+        "overround": {
+          "ci95_high": 0.026473634293964057,
+          "ci95_low": 0.02530634439148414,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": 0.025901783406217977,
+          "rows": 596
+        }
+      }
+    },
+    "opening": {
+      "book_summary": {
+        "BET365": {
+          "mean_draw_allocation_tilt": -0.001278945995309202,
+          "mean_fair_tv_vs_market_consensus": 0.00732052010861756,
+          "mean_fl_allocation_contrast": -0.0012628665207702282,
+          "mean_overround": 0.055524189621546864,
+          "rows": 599
+        },
+        "PINNACLE": {
+          "mean_draw_allocation_tilt": -0.0036612464144369834,
+          "mean_fair_tv_vs_market_consensus": 0.00797030803082172,
+          "mean_fl_allocation_contrast": -0.007649330152462288,
+          "mean_overround": 0.03526771363340538,
+          "rows": 599
+        }
+      },
+      "by_league": {
+        "alt_fl_allocation_contrast": {
+          "EPL": 0.011642837655632385,
+          "LA_LIGA": 0.00992179510327846,
+          "SERIE_A": -0.0030060661161706716
+        },
+        "draw_allocation_tilt": {
+          "EPL": 0.002081554622206689,
+          "LA_LIGA": 0.003421509390881905,
+          "SERIE_A": 0.0017160310275872825
+        },
+        "fl_allocation_contrast": {
+          "EPL": 0.01205495822160843,
+          "LA_LIGA": 0.009626598067779227,
+          "SERIE_A": -0.002627382729822502
+        },
+        "overround": {
+          "EPL": 0.019927680008088672,
+          "LA_LIGA": 0.02057654171373986,
+          "SERIE_A": 0.020299249656506452
+        }
+      },
+      "draw_specific": {
+        "BET365": {
+          "flat_stake_return": 0.0027712854757929737,
+          "mean_allocation_tilt": -0.001278945995309202,
+          "rows": 599
+        },
+        "PINNACLE": {
+          "flat_stake_return": 0.02287145242070118,
+          "mean_allocation_tilt": -0.0036612464144369834,
+          "rows": 599
+        }
+      },
+      "economic_bins": {
+        "BET365": [
+          {
+            "bin": "0-20%",
+            "flat_stake_return": -0.20328719723183392,
+            "mean_allocation_tilt": 0.003481495351054322,
+            "mean_consensus_probability": 0.14679591521073626,
+            "rows": 289
+          },
+          {
+            "bin": "20-30%",
+            "flat_stake_return": -0.08177583697234353,
+            "mean_allocation_tilt": -0.003676847655819582,
+            "mean_consensus_probability": 0.2585229079453246,
+            "rows": 687
+          },
+          {
+            "bin": "30-40%",
+            "flat_stake_return": -0.017243401759530798,
+            "mean_allocation_tilt": 0.000170142620672748,
+            "mean_consensus_probability": 0.33975519420308553,
+            "rows": 341
+          },
+          {
+            "bin": "40-50%",
+            "flat_stake_return": -0.02825000000000001,
+            "mean_allocation_tilt": 0.005083149254443742,
+            "mean_consensus_probability": 0.4464540042701134,
+            "rows": 200
+          },
+          {
+            "bin": "50-60%",
+            "flat_stake_return": -0.12584615384615383,
+            "mean_allocation_tilt": 0.0021316144296805797,
+            "mean_consensus_probability": 0.5465574471880679,
+            "rows": 130
+          },
+          {
+            "bin": "60-70%",
+            "flat_stake_return": -0.011428571428571432,
+            "mean_allocation_tilt": -0.00042868182591293433,
+            "mean_consensus_probability": 0.6476371247566849,
+            "rows": 98
+          },
+          {
+            "bin": "70-80%",
+            "flat_stake_return": 0.017446808510638304,
+            "mean_allocation_tilt": -0.0012053812247701016,
+            "mean_consensus_probability": 0.7488595235346619,
+            "rows": 47
+          },
+          {
+            "bin": "80%+",
+            "flat_stake_return": 0.15599999999999992,
+            "mean_allocation_tilt": 0.00231128822779314,
+            "mean_consensus_probability": 0.8212233403302545,
+            "rows": 5
+          }
+        ],
+        "PINNACLE": [
+          {
+            "bin": "0-20%",
+            "flat_stake_return": -0.19013840830449827,
+            "mean_allocation_tilt": -0.00784629914198218,
+            "mean_consensus_probability": 0.14679591521073626,
+            "rows": 289
+          },
+          {
+            "bin": "20-30%",
+            "flat_stake_return": -0.06013100436681223,
+            "mean_allocation_tilt": -0.0069995936583316515,
+            "mean_consensus_probability": 0.2585229079453246,
+            "rows": 687
+          },
+          {
+            "bin": "30-40%",
+            "flat_stake_return": 0.0017302052785923671,
+            "mean_allocation_tilt": -0.0003409298259904537,
+            "mean_consensus_probability": 0.33975519420308553,
+            "rows": 341
+          },
+          {
+            "bin": "40-50%",
+            "flat_stake_return": -0.006800000000000006,
+            "mean_allocation_tilt": 0.005423570152713628,
+            "mean_consensus_probability": 0.4464540042701134,
+            "rows": 200
+          },
+          {
+            "bin": "50-60%",
+            "flat_stake_return": -0.11361538461538462,
+            "mean_allocation_tilt": 0.007484932269432646,
+            "mean_consensus_probability": 0.5465574471880679,
+            "rows": 130
+          },
+          {
+            "bin": "60-70%",
+            "flat_stake_return": 6.797283824235652e-18,
+            "mean_allocation_tilt": 0.006857761771873764,
+            "mean_consensus_probability": 0.6476371247566849,
+            "rows": 98
+          },
+          {
+            "bin": "70-80%",
+            "flat_stake_return": 0.024893617021276605,
+            "mean_allocation_tilt": 0.005919308347137067,
+            "mean_consensus_probability": 0.7488595235346619,
+            "rows": 47
+          },
+          {
+            "bin": "80%+",
+            "flat_stake_return": 0.16799999999999993,
+            "mean_allocation_tilt": 0.0017512400048031562,
+            "mean_consensus_probability": 0.8212233403302545,
+            "rows": 5
+          }
+        ]
+      },
+      "fixtures": 599,
+      "paired": {
+        "alt_fl_allocation_contrast": {
+          "ci95_high": 0.010669137422295284,
+          "ci95_low": 0.0017063440910334443,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": 0.006208684405623198,
+          "rows": 599
+        },
+        "draw_allocation_tilt": {
+          "ci95_high": 0.005196966331425699,
+          "ci95_low": -0.0006320373488724838,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": 0.0023823004191277815,
+          "rows": 599
+        },
+        "fl_allocation_contrast": {
+          "ci95_high": 0.010877027969023331,
+          "ci95_low": 0.0018564560989236785,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": 0.00638646363169206,
+          "rows": 599
+        },
+        "overround": {
+          "ci95_high": 0.020823940080127383,
+          "ci95_low": 0.01969891140737272,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": 0.020256475988141478,
+          "rows": 599
+        }
+      }
+    }
+  },
+  "validation": {
+    "closing": {
+      "book_summary": {
+        "BET365": {
+          "mean_draw_allocation_tilt": -0.0031248839611299757,
+          "mean_fair_tv_vs_market_consensus": 0.007883072475107588,
+          "mean_fl_allocation_contrast": 0.009691486171865125,
+          "mean_overround": 0.05609419030352578,
+          "rows": 1140
+        },
+        "PINNACLE": {
+          "mean_draw_allocation_tilt": 0.0019140108924292436,
+          "mean_fair_tv_vs_market_consensus": 0.006786370379662237,
+          "mean_fl_allocation_contrast": -0.0234767027373526,
+          "mean_overround": 0.029982321689175587,
+          "rows": 1140
+        }
+      },
+      "by_league": {
+        "alt_fl_allocation_contrast": {
+          "EPL": 0.02981692688893396,
+          "LA_LIGA": 0.03689332095929974,
+          "SERIE_A": 0.03179286191941432
+        },
+        "draw_allocation_tilt": {
+          "EPL": 0.003062983084846872,
+          "LA_LIGA": -0.009121493485613528,
+          "SERIE_A": -0.009058174159911003
+        },
+        "fl_allocation_contrast": {
+          "EPL": 0.030553663000245472,
+          "LA_LIGA": 0.03716195388076281,
+          "SERIE_A": 0.031788949846644904
+        },
+        "overround": {
+          "EPL": 0.025594418029180728,
+          "LA_LIGA": 0.026529602710265037,
+          "SERIE_A": 0.02621158510360484
+        }
+      },
+      "draw_specific": {
+        "BET365": {
+          "flat_stake_return": -0.03621929824561404,
+          "mean_allocation_tilt": -0.0031248839611299757,
+          "rows": 1140
+        },
+        "PINNACLE": {
+          "flat_stake_return": -0.022254385964912287,
+          "mean_allocation_tilt": 0.0019140108924292436,
+          "rows": 1140
+        }
+      },
+      "economic_bins": {
+        "BET365": [
+          {
+            "bin": "0-20%",
+            "flat_stake_return": -0.26756352765321373,
+            "mean_allocation_tilt": 0.022056053678298528,
+            "mean_consensus_probability": 0.14477646238714373,
+            "rows": 669
+          },
+          {
+            "bin": "20-30%",
+            "flat_stake_return": -0.06426369863013699,
+            "mean_allocation_tilt": -0.0018723956382749787,
+            "mean_consensus_probability": 0.25556722062414056,
+            "rows": 1168
+          },
+          {
+            "bin": "30-40%",
+            "flat_stake_return": -0.029237947122861586,
+            "mean_allocation_tilt": -0.00121469775736269,
+            "mean_consensus_probability": 0.3371582087728393,
+            "rows": 643
+          },
+          {
+            "bin": "40-50%",
+            "flat_stake_return": -0.023478260869565212,
+            "mean_allocation_tilt": 0.0047187764462286565,
+            "mean_consensus_probability": 0.4470138173684255,
+            "rows": 345
+          },
+          {
+            "bin": "50-60%",
+            "flat_stake_return": -0.01933098591549295,
+            "mean_allocation_tilt": 0.0008521042950888858,
+            "mean_consensus_probability": 0.5471575867433768,
+            "rows": 284
+          },
+          {
+            "bin": "60-70%",
+            "flat_stake_return": -0.0346060606060606,
+            "mean_allocation_tilt": -0.00602455217112263,
+            "mean_consensus_probability": 0.6500803169895996,
+            "rows": 165
+          },
+          {
+            "bin": "70-80%",
+            "flat_stake_return": 0.04301724137931036,
+            "mean_allocation_tilt": -0.007293824986596429,
+            "mean_consensus_probability": 0.7412771436266046,
+            "rows": 116
+          },
+          {
+            "bin": "80%+",
+            "flat_stake_return": 0.037333333333333295,
+            "mean_allocation_tilt": -0.011498435707087062,
+            "mean_consensus_probability": 0.8328460713957738,
+            "rows": 30
+          }
+        ],
+        "PINNACLE": [
+          {
+            "bin": "0-20%",
+            "flat_stake_return": -0.21152466367713002,
+            "mean_allocation_tilt": -0.027273549287704306,
+            "mean_consensus_probability": 0.14477646238714373,
+            "rows": 669
+          },
+          {
+            "bin": "20-30%",
+            "flat_stake_return": -0.038775684931506856,
+            "mean_allocation_tilt": -0.0041871854061343115,
+            "mean_consensus_probability": 0.25556722062414056,
+            "rows": 1168
+          },
+          {
+            "bin": "30-40%",
+            "flat_stake_return": -0.008413685847589412,
+            "mean_allocation_tilt": 0.0013200494821570664,
+            "mean_consensus_probability": 0.3371582087728393,
+            "rows": 643
+          },
+          {
+            "bin": "40-50%",
+            "flat_stake_return": 0.0028115942028985436,
+            "mean_allocation_tilt": 0.004624340631673497,
+            "mean_consensus_probability": 0.4470138173684255,
+            "rows": 345
+          },
+          {
+            "bin": "50-60%",
+            "flat_stake_return": 0.0010915492957746496,
+            "mean_allocation_tilt": 0.004850053643520099,
+            "mean_consensus_probability": 0.5471575867433768,
+            "rows": 284
+          },
+          {
+            "bin": "60-70%",
+            "flat_stake_return": -0.023757575757575772,
+            "mean_allocation_tilt": 0.0075760193609148135,
+            "mean_consensus_probability": 0.6500803169895996,
+            "rows": 165
+          },
+          {
+            "bin": "70-80%",
+            "flat_stake_return": 0.049913793103448297,
+            "mean_allocation_tilt": 0.0080117830544106,
+            "mean_consensus_probability": 0.7412771436266046,
+            "rows": 116
+          },
+          {
+            "bin": "80%+",
+            "flat_stake_return": 0.0383333333333333,
+            "mean_allocation_tilt": 0.00805583326673335,
+            "mean_consensus_probability": 0.8328460713957738,
+            "rows": 30
+          }
+        ]
+      },
+      "fixtures": 1140,
+      "paired": {
+        "alt_fl_allocation_contrast": {
+          "ci95_high": 0.03712867653269145,
+          "ci95_low": 0.028794061449349616,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": 0.03283436992254934,
+          "rows": 1140
+        },
+        "draw_allocation_tilt": {
+          "ci95_high": -0.003047480746752759,
+          "ci95_low": -0.006981186128349248,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": -0.00503889485355922,
+          "rows": 1140
+        },
+        "fl_allocation_contrast": {
+          "ci95_high": 0.03750795764818959,
+          "ci95_low": 0.02903500729008222,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": 0.03316818890921773,
+          "rows": 1140
+        },
+        "overround": {
+          "ci95_high": 0.026512006731799768,
+          "ci95_low": 0.025711962111018716,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": 0.026111868614350203,
+          "rows": 1140
+        }
+      }
+    },
+    "opening": {
+      "book_summary": {
+        "BET365": {
+          "mean_draw_allocation_tilt": 0.005287699828242268,
+          "mean_fair_tv_vs_market_consensus": 0.007828168916381833,
+          "mean_fl_allocation_contrast": 0.0005414942707301912,
+          "mean_overround": 0.055677167963898516,
+          "rows": 1140
+        },
+        "PINNACLE": {
+          "mean_draw_allocation_tilt": -0.0017115237234030256,
+          "mean_fair_tv_vs_market_consensus": 0.005164600522894127,
+          "mean_fl_allocation_contrast": -0.013041941177690867,
+          "mean_overround": 0.0357776713565643,
+          "rows": 1140
+        }
+      },
+      "by_league": {
+        "alt_fl_allocation_contrast": {
+          "EPL": 0.015197498246113968,
+          "LA_LIGA": 0.015246935268393035,
+          "SERIE_A": 0.007579672254755977
+        },
+        "draw_allocation_tilt": {
+          "EPL": 0.010374389647235905,
+          "LA_LIGA": 0.0038592112814009815,
+          "SERIE_A": 0.006764069726298996
+        },
+        "fl_allocation_contrast": {
+          "EPL": 0.016343904799142665,
+          "LA_LIGA": 0.016144995705563568,
+          "SERIE_A": 0.00826140584055694
+        },
+        "overround": {
+          "EPL": 0.019306252679103873,
+          "LA_LIGA": 0.02112666342268226,
+          "SERIE_A": 0.01926557372021648
+        }
+      },
+      "draw_specific": {
+        "BET365": {
+          "flat_stake_return": -0.025921052631578952,
+          "mean_allocation_tilt": 0.005287699828242268,
+          "rows": 1140
+        },
+        "PINNACLE": {
+          "flat_stake_return": -0.005263157894736847,
+          "mean_allocation_tilt": -0.0017115237234030256,
+          "rows": 1140
+        }
+      },
+      "economic_bins": {
+        "BET365": [
+          {
+            "bin": "0-20%",
+            "flat_stake_return": -0.2660060975609756,
+            "mean_allocation_tilt": 0.013002915552572835,
+            "mean_consensus_probability": 0.14604812966076072,
+            "rows": 656
+          },
+          {
+            "bin": "20-30%",
+            "flat_stake_return": -0.05177485620377979,
+            "mean_allocation_tilt": -0.0005297767286258242,
+            "mean_consensus_probability": 0.2551837835336526,
+            "rows": 1217
+          },
+          {
+            "bin": "30-40%",
+            "flat_stake_return": -0.037196110210696916,
+            "mean_allocation_tilt": -0.0006954978079248293,
+            "mean_consensus_probability": 0.3406703935470141,
+            "rows": 617
+          },
+          {
+            "bin": "40-50%",
+            "flat_stake_return": 0.0063719512195121834,
+            "mean_allocation_tilt": 0.004953031039469265,
+            "mean_consensus_probability": 0.44711586756583055,
+            "rows": 328
+          },
+          {
+            "bin": "50-60%",
+            "flat_stake_return": -0.05428082191780821,
+            "mean_allocation_tilt": 0.002117021228681425,
+            "mean_consensus_probability": 0.5481113513029265,
+            "rows": 292
+          },
+          {
+            "bin": "60-70%",
+            "flat_stake_return": -0.05598837209302326,
+            "mean_allocation_tilt": -0.004146736484516309,
+            "mean_consensus_probability": 0.649867298233924,
+            "rows": 172
+          },
+          {
+            "bin": "70-80%",
+            "flat_stake_return": 0.035377358490566065,
+            "mean_allocation_tilt": -0.007723530613419754,
+            "mean_consensus_probability": 0.7399560875626601,
+            "rows": 106
+          },
+          {
+            "bin": "80%+",
+            "flat_stake_return": 0.04562499999999996,
+            "mean_allocation_tilt": -0.011502173082290863,
+            "mean_consensus_probability": 0.8289090576141922,
+            "rows": 32
+          }
+        ],
+        "PINNACLE": [
+          {
+            "bin": "0-20%",
+            "flat_stake_return": -0.2416615853658536,
+            "mean_allocation_tilt": -0.01617102202067099,
+            "mean_consensus_probability": 0.14604812966076072,
+            "rows": 656
+          },
+          {
+            "bin": "20-30%",
+            "flat_stake_return": -0.02997534921939194,
+            "mean_allocation_tilt": -0.004531283497819529,
+            "mean_consensus_probability": 0.2551837835336526,
+            "rows": 1217
+          },
+          {
+            "bin": "30-40%",
+            "flat_stake_return": -0.019918962722852516,
+            "mean_allocation_tilt": 2.6956586345450407e-06,
+            "mean_consensus_probability": 0.3406703935470141,
+            "rows": 617
+          },
+          {
+            "bin": "40-50%",
+            "flat_stake_return": 0.0275,
+            "mean_allocation_tilt": 0.0042471194637333535,
+            "mean_consensus_probability": 0.44711586756583055,
+            "rows": 328
+          },
+          {
+            "bin": "50-60%",
+            "flat_stake_return": -0.04208904109589043,
+            "mean_allocation_tilt": 0.007360443558406708,
+            "mean_consensus_probability": 0.5481113513029265,
+            "rows": 292
+          },
+          {
+            "bin": "60-70%",
+            "flat_stake_return": -0.04947674418604653,
+            "mean_allocation_tilt": 0.005715247251828064,
+            "mean_consensus_probability": 0.649867298233924,
+            "rows": 172
+          },
+          {
+            "bin": "70-80%",
+            "flat_stake_return": 0.038490566037735874,
+            "mean_allocation_tilt": 0.005321231842061281,
+            "mean_consensus_probability": 0.7399560875626601,
+            "rows": 106
+          },
+          {
+            "bin": "80%+",
+            "flat_stake_return": 0.044999999999999964,
+            "mean_allocation_tilt": 0.0048834506023115905,
+            "mean_consensus_probability": 0.8289090576141922,
+            "rows": 32
+          }
+        ]
+      },
+      "fixtures": 1140,
+      "paired": {
+        "alt_fl_allocation_contrast": {
+          "ci95_high": 0.016300927549935496,
+          "ci95_low": 0.008999178013536894,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": 0.012674701923087658,
+          "rows": 1140
+        },
+        "draw_allocation_tilt": {
+          "ci95_high": 0.009323007173120073,
+          "ci95_low": 0.00458261769254989,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": 0.006999223551645293,
+          "rows": 1140
+        },
+        "fl_allocation_contrast": {
+          "ci95_high": 0.017318972950889255,
+          "ci95_low": 0.00985275396414646,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": 0.013583435448421057,
+          "rows": 1140
+        },
+        "overround": {
+          "ci95_high": 0.020333485427507698,
+          "ci95_low": 0.0194731653924167,
+          "draws": 5000,
+          "mean_delta_bet365_minus_pinnacle": 0.019899496607334206,
+          "rows": 1140
+        }
+      }
+    }
+  }
+}
