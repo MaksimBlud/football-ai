@@ -276,6 +276,62 @@
         ],
         "preregistration_markdown": "# Frozen bookmaker margin-structure protocol\n\nStatus: **PREREGISTERED / TEMPORAL OOS / MATCHED FIXTURES / RESEARCH ONLY / NO_BET**.\n\nQuestion: do Bet365 and Pinnacle differ systematically not only in total 1X2 overround but in where they allocate price pressure across favourite, middle and longshot outcomes?\n\nFrozen scope:\n- leagues: EPL, La Liga, Serie A;\n- bookmakers: Bet365 and Pinnacle only;\n- primary market: 1X2;\n- horizons: opening and closing;\n- reference: 2019/20-2023/24;\n- validation: 2024/25;\n- untouched OOT: 2025/26.\n\nOutcome-free source audit must pass before FTR is read. Required on every validation/test league-season:\n- Bet365 opening + closing 1X2;\n- Pinnacle opening + closing 1X2;\n- Football-Data market-average opening + closing 1X2 (AvgH/AvgD/AvgA and AvgCH/AvgCD/AvgCA).\n\nNo bookmaker may be added or removed after outcomes. Exact 24h/6h/1h snapshots are unavailable in the frozen source and must be reported as SOURCE_GAP, never interpolated.\n\nPrimary external consensus:\n- multiplicatively de-vigged Football-Data market-average odds.\n\nFor each bookmaker and fixture:\n- q_i = 1 / odds_i;\n- S = sum(q_i);\n- total overround = S - 1;\n- uniform-margin expected implied probability around consensus = consensus_p_i * S;\n- allocation_tilt_i = q_i / (consensus_p_i * S) - 1.\n\nThis construction removes each bookmaker's total overround before asking where the remaining relative price tilt sits.\n\nFrozen rank is determined from external consensus fair probabilities:\n- favourite = highest consensus p;\n- longshot = lowest consensus p;\n- middle = remaining outcome.\n\nPrimary allocation statistic:\nfl_allocation_contrast = longshot_allocation_tilt - favourite_allocation_tilt.\n\nPrimary paired effect:\nBet365 minus Pinnacle on the same fixture.\n\nSecondary:\n- draw allocation tilt;\n- total overround difference;\n- bookmaker fair-probability TV distance to market consensus;\n- historical flat-stake return by frozen consensus-probability bins (diagnostic only).\n\nConsensus sensitivity:\nrecompute the favourite-longshot allocation contrast using the mean of Bet365 and Pinnacle de-vigged fair probabilities as an alternate consensus. This sensitivity cannot create a positive result when the primary external-consensus gate fails.\n\nInference:\ndeterministic league-stratified fixture bootstrap, 5000 draws.\n\nSUPPORTED_BOOKMAKER_MARGIN_HETEROGENEITY requires all:\n1. validation closing primary allocation CI excludes zero;\n2. untouched OOT closing primary allocation CI excludes zero;\n3. validation and OOT primary effects have the same non-zero sign;\n4. OOT opening and closing primary effects have the same non-zero sign;\n5. alternate-consensus OOT allocation CI excludes zero;\n6. alternate-consensus OOT effect has the same sign as the primary OOT effect;\n7. at least two of three OOT league effects have the pooled OOT sign.\n\nOtherwise return NO_STABLE_BOOKMAKER_MARGIN_HETEROGENEITY. Missing source coverage returns BLOCKED_BY_SOURCE_GAP.\n\nThe draw result is always reported separately. Total overround cannot rescue a failed allocation gate. Observational pricing differences must not be interpreted as causal evidence about bettor demand, bookmaker liabilities, or intent.\n\nNo production weighting/calibration change, no paid API, no Supabase, no promotion."
       }
+    },
+    {
+      "hypothesis_family": "power_devig_cross_league_transport_v1",
+      "handler": "pipeline",
+      "max_iterations": 4,
+      "description": "Transport the frozen Power de-vig candidate to Bundesliga and Ligue 1 without reselection or retuning.",
+      "safety": {
+        "model_api": false,
+        "paid_odds_api": false,
+        "supabase_writes": false,
+        "production_operations": false,
+        "automatic_promotion": false
+      },
+      "pipeline": {
+        "evaluator_module": "power_devig_cross_league_transport_v1",
+        "decision_path": "decision",
+        "summary_path": "interpretation_guard",
+        "report_title": "Power de-vig Bundesliga/Ligue 1 frozen transport",
+        "report_fields": [
+          "source_audit",
+          "validation_closing_log_loss_delta_vs_multiplicative",
+          "confirmation",
+          "transfer_gate",
+          "decision"
+        ],
+        "preregistration_markdown": "# Frozen Power de-vig cross-league transport\n\nStatus: **PREREGISTERED / CROSS-LEAGUE FALSIFICATION / RESEARCH ONLY / NO_BET**.\n\nTransport the exact Power implementation selected in Issue #533 to Bundesliga and Ligue 1. Compare only Power against Multiplicative on zero-cost Football-Data opening and closing 1X2 odds for Bet365 and Pinnacle. Validation is 2024/25 and untouched OOT is 2025/26. Do not reselect a method or tune an exponent. Support requires negative pooled closing Log Loss delta in both splits, OOT fixture-cluster bootstrap CI fully below zero, non-worse OOT Brier/RPS and opening Log Loss, and negative OOT closing Log Loss deltas in both leagues and both bookmakers. Otherwise return POWER_CROSS_LEAGUE_TRANSPORT_NOT_SUPPORTED. A pass cannot overturn the failed #533 parent gate or authorize production."
+      }
+    },
+    {
+      "hypothesis_family": "favourite_longshot_cross_league_v1",
+      "handler": "pipeline",
+      "max_iterations": 4,
+      "description": "Transport the frozen favourite-longshot calibration protocol to Bundesliga and Ligue 1.",
+      "safety": {
+        "model_api": false,
+        "paid_odds_api": false,
+        "supabase_writes": false,
+        "production_operations": false,
+        "automatic_promotion": false
+      },
+      "pipeline": {
+        "evaluator_module": "favourite_longshot_cross_league_v1",
+        "decision_path": "decision",
+        "summary_path": "interpretation_guard",
+        "report_title": "favourite-longshot Bundesliga/Ligue 1 frozen transport",
+        "report_fields": [
+          "source_audit",
+          "validation.closing.residual_slope",
+          "validation.closing.regions",
+          "test.closing.residual_slope",
+          "test.closing.regions",
+          "transfer_gate",
+          "decision"
+        ],
+        "preregistration_markdown": "# Frozen favourite-longshot cross-league transport\n\nStatus: **PREREGISTERED / CROSS-LEAGUE FALSIFICATION / RESEARCH ONLY / NO_BET**.\n\nReuse Issue #534 exactly: Multiplicative 1X2 no-vig probabilities, frozen probability bins, longshot p<0.30, favourite p>=0.60, opening/closing horizons and deterministic fixture-cluster bootstrap. Target only Bundesliga and Ligue 1 from zero-cost Football-Data, with reference 2019/20-2023/24, validation 2024/25 and untouched OOT 2025/26. Support requires positive closing slope in each league in validation and OOT, pooled validation and OOT bootstrap CIs fully above zero, negative longshot and positive favourite gaps in both splits, and non-contradictory bookmaker signs. Otherwise return NO_CROSS_LEAGUE_FAVOURITE_LONGSHOT_CONFIRMATION. Do not change bins, method, thresholds or parent #534's negative decision."
+      }
     }
   ]
 }
