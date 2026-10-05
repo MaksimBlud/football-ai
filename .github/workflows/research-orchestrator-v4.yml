@@ -25,6 +25,8 @@ on:
     paths:
       - 'research_orchestrator_v4.py'
       - 'research_agent_groq.py'
+      - 'research_agent_v5.py'
+      - 'research/v5_recipe_registry.json'
       - 'tests/test_research_orchestrator_v4.py'
       - 'tests/test_research_agent_groq.py'
       - 'tests/test_research_orchestrator_v4_workflow.py'
