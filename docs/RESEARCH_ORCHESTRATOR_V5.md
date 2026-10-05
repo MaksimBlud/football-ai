@@ -128,3 +128,26 @@ all existing V4 sandbox, quota and production-safety gates.
 
 For the normal Football AI workflow, prefer adding a reviewed deterministic recipe instead
 of opting back into V4.
+
+
+## Automatic scaffold for unsupported families
+
+When an otherwise valid `[AGENT-RESEARCH]` Issue names a family that is not yet in
+`research/v5_recipe_registry.json`, V5 does not call Groq/Gemini and does not silently
+drop the request.
+
+The workflow now:
+
+1. labels the Issue `research-v5-needs-recipe`;
+2. creates or refreshes `agent/v5-scaffold-<Issue>`;
+3. writes `research/v5_recipe_requests/issue_<Issue>.json`;
+4. writes a human-readable `docs/v5_recipe_requests/issue_<Issue>.md`;
+5. leaves the research fail-closed until reviewed deterministic evaluator/handler/tests
+   and a registry entry are merged.
+
+The scaffold contains only Issue metadata, the independent-information justification,
+the standard no-API safety contract, the expected lifecycle and the implementation
+checklist. It does not read outcomes and cannot execute arbitrary code.
+
+After the recipe is merged, editing/reopening the same Issue lets normal V5 intake claim
+it and continue autonomously.
