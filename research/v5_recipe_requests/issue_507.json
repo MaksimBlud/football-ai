@@ -1,0 +1,40 @@
+{
+  "decision": "NEEDS_DETERMINISTIC_RECIPE",
+  "engine": "V5_DETERMINISTIC_NO_API",
+  "expected_lifecycle": [
+    "PREREGISTRATION",
+    "DETERMINISTIC_EVALUATION",
+    "RESULT.json",
+    "FINAL_REPORT.md",
+    "DONE"
+  ],
+  "hypothesis_family": "v5_scaffold_live_proof_20261005",
+  "independent_information_justification": "Infrastructure-only live proof for the deterministic recipe intake path; it does not inspect match outcomes or retune any prior signal.",
+  "issue_number": 507,
+  "issue_title": "[AGENT-RESEARCH] V5 no-API scaffold live proof",
+  "mode": "historical_read_only",
+  "prohibited": [
+    "model-generated shell commands",
+    "automatic threshold retuning on seen outcomes",
+    "paid Odds API calls",
+    "Supabase writes",
+    "production .pkl writes",
+    "automatic promotion"
+  ],
+  "required_implementation": {
+    "evaluator": "Add a deterministic Python evaluator that consumes only preregistered allowed inputs and returns machine-readable results.",
+    "handler": "Add a reviewed Research V5 handler that freezes the protocol before evaluation and writes only inside the current Issue sandbox.",
+    "registry": "Register the family in research/v5_recipe_registry.json with a bounded max_iterations and the exact no-API safety contract.",
+    "tests": "Add unit tests for the evaluator/handler and workflow contract tests covering fail-closed safety, temporal/OOS rules, and DONE/CONTINUE state."
+  },
+  "research_question": "Can an unsupported research family be fail-closed and scaffolded autonomously without any model API?",
+  "safety": {
+    "automatic_promotion": false,
+    "model_api": false,
+    "outcomes_read_during_scaffold": false,
+    "paid_odds_api": false,
+    "production_operations": false,
+    "supabase_writes": false
+  },
+  "schema_version": 1
+}
