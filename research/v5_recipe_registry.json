@@ -66,6 +66,33 @@
         ],
         "preregistration_markdown": "# Frozen kickoff/calendar O/U 2.5 protocol\n\nStatus: **PREREGISTERED / TEMPORAL OOS / RESEARCH ONLY**.\n\nLeagues: EPL, La Liga, Serie A. No 2026/27.\nReference/train: through 2023/24; validation: 2024/25; untouched test: 2025/26.\nTarget: FTHG + FTAG > 2.5.\nBaseline: league + devigged Bet365 O/U 2.5 probability.\nCalendar extension: weekday, kickoff-hour sin/cos and frozen time-slot buckets.\nEstimator: fixed regularized logistic regression.\nPrimary metric: log loss; Brier/AUC diagnostics.\nSupport requires lower calendar-model log loss in validation and OOT plus OOT paired bootstrap 95% CI for calendar-minus-baseline delta entirely below zero.\nNo production model, paid API, Supabase or automatic promotion."
       }
+    },
+    {
+      "hypothesis_family": "kickoff_calendar_league_heterogeneity_v1",
+      "handler": "pipeline",
+      "max_iterations": 4,
+      "description": "Preregistered three-league heterogeneity audit for the already-negative kickoff/calendar pooled O/U 2.5 result.",
+      "safety": {
+        "model_api": false,
+        "paid_odds_api": false,
+        "supabase_writes": false,
+        "production_operations": false,
+        "automatic_promotion": false
+      },
+      "pipeline": {
+        "evaluator_module": "kickoff_calendar_league_heterogeneity_v1",
+        "decision_path": "decision",
+        "summary_path": "interpretation_guard",
+        "report_title": "kickoff/calendar preregistered league heterogeneity",
+        "report_fields": [
+          "validation.pooled_calendar_minus_baseline_log_loss",
+          "test.pooled_calendar_minus_baseline_log_loss",
+          "stable_heterogeneity_pairs",
+          "pairwise_bonferroni_ci_level",
+          "pooled_null_rescued"
+        ],
+        "preregistration_markdown": "# Frozen kickoff/calendar league-heterogeneity protocol\n\nStatus: **PREREGISTERED / DIAGNOSTIC / POOLED NULL NOT RESCUABLE**.\n\nFixed leagues: EPL, La Liga, Serie A.\nReference/train: 2019/20–2023/24; validation: 2024/25; untouched test: 2025/26.\nUse exactly the parent market baseline and calendar feature design.\nCompute per-match calendar-minus-baseline log-loss deltas for all three leagues.\nTest all three predeclared league pairs; no pair may be selected after seeing results.\nUse Bonferroni familywise alpha 0.05 across the three pairwise comparisons (98.3333% bootstrap CI per pair).\nStable heterogeneity requires the same pairwise difference to exclude zero in both validation and OOT with the same sign.\nAny league-specific result is diagnostic only and cannot rescue the rejected pooled kickoff/calendar hypothesis.\nNo arbitrary kickoff cutoffs, league selection, paid data, Supabase, production operation or promotion."
+      }
     }
   ]
 }
