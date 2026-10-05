@@ -1,7 +1,7 @@
 {
   "blocker": null,
   "engine": "V5_DETERMINISTIC_NO_API",
-  "next_step": "Render final report and close.",
-  "status": "CONTINUE",
-  "summary": "Anomaly audit complete: NO_OBSERVABLE_SOURCE_MARKET_EXPLANATION."
+  "next_step": null,
+  "status": "DONE",
+  "summary": "2024/25 anomaly audit completed: NO_OBSERVABLE_SOURCE_MARKET_EXPLANATION."
 }
