@@ -34,4 +34,3 @@ def test_power_transport_fails_on_one_league(monkeypatch):
     monkeypatch.setattr(mod.parent, "evaluate", lambda: report)
     result = mod.evaluate()
     assert result["decision"] == "POWER_CROSS_LEAGUE_TRANSPORT_NOT_SUPPORTED"
-
