@@ -87,4 +87,9 @@ The initial ACTIVE programs are:
   is unsupported, the decision remains NO_BET, and further free variants would retune or
   threshold-mine already-opened movements.
 
+- `bookmaker_market_microstructure_1_price_formation` — **ACTIVE**. Issue #532 did not establish a stable bookmaker-specific price component; Issue #553 now performs the one independent cross-bookmaker/cross-league transport allowed by the remaining frontier.
+- `bookmaker_market_microstructure_2_devig` — **PROGRAM_DONE** after the original comparison (#533) and independent Bundesliga/Ligue 1 transport (#540) both failed their frozen confirmation gates. No de-vig winner is promoted.
+- `bookmaker_market_microstructure_3_favourite_longshot` — **PROGRAM_DONE** after the original audit (#534) and independent Bundesliga/Ligue 1 transport (#542) both failed their frozen stability gates. No betting or calibration rule is supported.
+- `bookmaker_market_microstructure_4_margin_structure` — **ACTIVE**. The supported 1X2 bookmaker-margin heterogeneity from #535 is being tested on the independent Asian Handicap representation in #548.
+
 Infrastructure live-proof Issues are not scientific programs.
