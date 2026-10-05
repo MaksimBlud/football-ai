@@ -1,7 +1,7 @@
 {
   "blocker": null,
   "engine": "V5_DETERMINISTIC_NO_API",
-  "next_step": "Render final report and close the research direction.",
-  "status": "CONTINUE",
-  "summary": "Deterministic evaluation complete: NO_CROSS_LEAGUE_FAVOURITE_LONGSHOT_CONFIRMATION."
+  "next_step": null,
+  "status": "DONE",
+  "summary": "Deterministic pipeline completed: NO_CROSS_LEAGUE_FAVOURITE_LONGSHOT_CONFIRMATION."
 }
