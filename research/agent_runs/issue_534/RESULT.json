@@ -1,0 +1,1858 @@
+{
+  "decision": "NO_STABLE_FAVOURITE_LONGSHOT_BIAS",
+  "evidence_class": "TEMPORAL_OOS_FAVOURITE_LONGSHOT_CALIBRATION",
+  "experiment_id": "FAVOURITE_LONGSHOT_BIAS_V1",
+  "formal_gate": {
+    "gates": {
+      "at_least_two_leagues_positive_test_slope": true,
+      "both_bookmakers_positive_test_slope": true,
+      "test_closing_slope_ci_above_zero": false,
+      "test_longshot_negative_favourite_positive": true,
+      "validation_closing_slope_ci_above_zero": false,
+      "validation_longshot_negative_favourite_positive": true
+    },
+    "supported": false
+  },
+  "interpretation_guard": "The frozen favourite-longshot pattern did not clear every stability gate on validation and untouched OOT data. Bin-level deviations may still exist descriptively, but they must not be converted into a live probability correction or betting rule from this sample.",
+  "paid_odds_api_calls": 0,
+  "primary_devig": "multiplicative",
+  "probability_bins": [
+    {
+      "label": "0-20%",
+      "left_inclusive": 0.0,
+      "right_exclusive": 0.2
+    },
+    {
+      "label": "20-30%",
+      "left_inclusive": 0.2,
+      "right_exclusive": 0.3
+    },
+    {
+      "label": "30-40%",
+      "left_inclusive": 0.3,
+      "right_exclusive": 0.4
+    },
+    {
+      "label": "40-50%",
+      "left_inclusive": 0.4,
+      "right_exclusive": 0.5
+    },
+    {
+      "label": "50-60%",
+      "left_inclusive": 0.5,
+      "right_exclusive": 0.6
+    },
+    {
+      "label": "60-70%",
+      "left_inclusive": 0.6,
+      "right_exclusive": 0.7
+    },
+    {
+      "label": "70-80%",
+      "left_inclusive": 0.7,
+      "right_exclusive": 0.8
+    },
+    {
+      "label": "80%+",
+      "left_inclusive": 0.8,
+      "right_exclusive": 1.01
+    }
+  ],
+  "production_operations": false,
+  "production_promotion": false,
+  "reference": {
+    "closing": {
+      "bins": [
+        {
+          "average_raw_odds": 7.5609396474454735,
+          "bin": "0-20%",
+          "calibration_gap_realized_minus_implied": -0.008592367841152415,
+          "flat_stake_return": -0.08647893636092023,
+          "frequency_ci95_high": 0.1435964130341721,
+          "frequency_ci95_low": 0.12721343965828946,
+          "gap_ci95_high_approx": -0.00019165244665764192,
+          "gap_ci95_low_approx": -0.016574625822540268,
+          "left_inclusive": 0.0,
+          "mean_implied_probability": 0.14378806548082973,
+          "realized_frequency": 0.13519569763967731,
+          "right_exclusive": 0.2,
+          "rows": 6694,
+          "wins": 905
+        },
+        {
+          "average_raw_odds": 3.782918325883787,
+          "bin": "20-30%",
+          "calibration_gap_realized_minus_implied": -0.007303369899780365,
+          "flat_stake_return": -0.07196424217797644,
+          "frequency_ci95_high": 0.25754338443118424,
+          "frequency_ci95_low": 0.2422470693984243,
+          "gap_ci95_high_approx": 0.00042286703038801887,
+          "gap_ci95_low_approx": -0.01487344800237192,
+          "left_inclusive": 0.2,
+          "mean_implied_probability": 0.2571205174007962,
+          "realized_frequency": 0.24981714750101586,
+          "right_exclusive": 0.3,
+          "rows": 12305,
+          "wins": 3074
+        },
+        {
+          "average_raw_odds": 2.8498258620689656,
+          "bin": "30-40%",
+          "calibration_gap_realized_minus_implied": -0.005553431604809922,
+          "flat_stake_return": -0.053879310344827576,
+          "frequency_ci95_high": 0.34707878305345896,
+          "frequency_ci95_low": 0.32279503869126536,
+          "gap_ci95_high_approx": 0.0066977652417524736,
+          "gap_ci95_low_approx": -0.01758597912044113,
+          "left_inclusive": 0.3,
+          "mean_implied_probability": 0.3403810178117065,
+          "realized_frequency": 0.33482758620689657,
+          "right_exclusive": 0.4,
+          "rows": 5800,
+          "wins": 1942
+        },
+        {
+          "average_raw_odds": 2.1536854190585535,
+          "bin": "40-50%",
+          "calibration_gap_realized_minus_implied": 0.013779661428656387,
+          "flat_stake_return": -0.008622273249138928,
+          "frequency_ci95_high": 0.4787001542915277,
+          "frequency_ci95_low": 0.4456083318833963,
+          "gap_ci95_high_approx": 0.03036730136886373,
+          "gap_ci95_low_approx": -0.0027245210392676245,
+          "left_inclusive": 0.4,
+          "mean_implied_probability": 0.44833285292266395,
+          "realized_frequency": 0.46211251435132034,
+          "right_exclusive": 0.5,
+          "rows": 3484,
+          "wins": 1610
+        },
+        {
+          "average_raw_odds": 1.7502935711631364,
+          "bin": "50-60%",
+          "calibration_gap_realized_minus_implied": 0.02037608371839883,
+          "flat_stake_return": -0.00331103678929766,
+          "frequency_ci95_high": 0.5893785241657782,
+          "frequency_ci95_low": 0.5520027057959768,
+          "gap_ci95_high_approx": 0.03896308057091058,
+          "gap_ci95_low_approx": 0.001587262201109163,
+          "left_inclusive": 0.5,
+          "mean_implied_probability": 0.5504154435948676,
+          "realized_frequency": 0.5707915273132664,
+          "right_exclusive": 0.6,
+          "rows": 2691,
+          "wins": 1536
+        },
+        {
+          "average_raw_odds": 1.4840504939626782,
+          "bin": "60-70%",
+          "calibration_gap_realized_minus_implied": 0.04756526820728091,
+          "flat_stake_return": 0.02989023051591658,
+          "frequency_ci95_high": 0.7160933129590661,
+          "frequency_ci95_low": 0.6738638744847323,
+          "gap_ci95_high_approx": 0.06826889949785087,
+          "gap_ci95_low_approx": 0.026039461023517063,
+          "left_inclusive": 0.6,
+          "mean_implied_probability": 0.6478244134612152,
+          "realized_frequency": 0.6953896816684961,
+          "right_exclusive": 0.7,
+          "rows": 1822,
+          "wins": 1267
+        },
+        {
+          "average_raw_odds": 1.2925757575757577,
+          "bin": "70-80%",
+          "calibration_gap_realized_minus_implied": -0.006451539488604108,
+          "flat_stake_return": -0.047755681818181794,
+          "frequency_ci95_high": 0.7624122594799441,
+          "frequency_ci95_low": 0.7093564148238141,
+          "gap_ci95_high_approx": 0.01921829574891576,
+          "gap_ci95_low_approx": -0.03383754890721424,
+          "left_inclusive": 0.7,
+          "mean_implied_probability": 0.7431939637310283,
+          "realized_frequency": 0.7367424242424242,
+          "right_exclusive": 0.8,
+          "rows": 1056,
+          "wins": 778
+        },
+        {
+          "average_raw_odds": 1.1473275862068966,
+          "bin": "80%+",
+          "calibration_gap_realized_minus_implied": -0.0088973977700596,
+          "flat_stake_return": -0.05103448275862071,
+          "frequency_ci95_high": 0.8636412981320745,
+          "frequency_ci95_low": 0.7843778431147039,
+          "gap_ci95_high_approx": 0.02715769346546315,
+          "gap_ci95_low_approx": -0.05210576155190738,
+          "left_inclusive": 0.8,
+          "mean_implied_probability": 0.8364836046666113,
+          "realized_frequency": 0.8275862068965517,
+          "right_exclusive": 1.01,
+          "rows": 348,
+          "wins": 288
+        }
+      ],
+      "by_bookmaker": {
+        "BET365": {
+          "mean_calibration_gap": 1.6718270692454843e-18,
+          "residual_slope": 0.06909318677017746,
+          "rows": 17100
+        },
+        "PINNACLE": {
+          "mean_calibration_gap": -1.5582077538598687e-19,
+          "residual_slope": 0.05703007716685976,
+          "rows": 17100
+        }
+      },
+      "by_league": {
+        "EPL": {
+          "mean_calibration_gap": 9.251858538542971e-19,
+          "residual_slope": 0.03997103432408698,
+          "rows": 11400
+        },
+        "LA_LIGA": {
+          "mean_calibration_gap": -2.921639538487254e-20,
+          "residual_slope": 0.08402038916751312,
+          "rows": 11400
+        },
+        "SERIE_A": {
+          "mean_calibration_gap": 1.0420514353937874e-18,
+          "residual_slope": 0.0706417990915641,
+          "rows": 11400
+        }
+      },
+      "by_outcome_type": {
+        "A": {
+          "mean_calibration_gap": -0.00013627987698831682,
+          "residual_slope": 0.09458204248726268,
+          "rows": 11400
+        },
+        "D": {
+          "mean_calibration_gap": 0.0029118642445288053,
+          "residual_slope": 0.15111253754418863,
+          "rows": 11400
+        },
+        "H": {
+          "mean_calibration_gap": -0.0027755843675404844,
+          "residual_slope": 0.07654521001690115,
+          "rows": 11400
+        }
+      },
+      "fixtures": 5700,
+      "regions": {
+        "favourite_p_ge_0_60": {
+          "flat_stake_return": -0.004256044637321752,
+          "gap": 0.02379255999681318,
+          "mean_p": 0.6993940488066586,
+          "rows": 3226,
+          "win_rate": 0.7231866088034717
+        },
+        "longshot_p_lt_0_30": {
+          "flat_stake_return": -0.07707826727722511,
+          "gap": -0.007757528130189567,
+          "mean_p": 0.2171896035025776,
+          "rows": 18999,
+          "win_rate": 0.20943207537238803
+        }
+      },
+      "residual_slope": {
+        "ci95_high": 0.11084050625959506,
+        "ci95_low": 0.014692944803546892,
+        "draws": 5000,
+        "slope": 0.06298878484838513,
+        "valid_draws": 5000
+      },
+      "rows": 34200
+    },
+    "opening": {
+      "bins": [
+        {
+          "average_raw_odds": 7.520948984338658,
+          "bin": "0-20%",
+          "calibration_gap_realized_minus_implied": -0.005680081953364863,
+          "flat_stake_return": -0.07129167312761668,
+          "frequency_ci95_high": 0.14663952750306236,
+          "frequency_ci95_low": 0.12980325668812165,
+          "gap_ci95_high_approx": 0.0029535531632809975,
+          "gap_ci95_low_approx": -0.013882717651659715,
+          "left_inclusive": 0.0,
+          "mean_implied_probability": 0.14368597433978136,
+          "realized_frequency": 0.1380058923864165,
+          "right_exclusive": 0.2,
+          "rows": 6449,
+          "wins": 890
+        },
+        {
+          "average_raw_odds": 3.7766134513554097,
+          "bin": "20-30%",
+          "calibration_gap_realized_minus_implied": -0.007563575569187575,
+          "flat_stake_return": -0.07462815142653915,
+          "frequency_ci95_high": 0.257360624822203,
+          "frequency_ci95_low": 0.24227757317493936,
+          "gap_ci95_high_approx": 5.3905334577109e-05,
+          "gap_ci95_low_approx": -0.015029146312686537,
+          "left_inclusive": 0.2,
+          "mean_implied_probability": 0.2573067194876259,
+          "realized_frequency": 0.24974314391843833,
+          "right_exclusive": 0.3,
+          "rows": 12653,
+          "wins": 3160
+        },
+        {
+          "average_raw_odds": 2.833324017467249,
+          "bin": "30-40%",
+          "calibration_gap_realized_minus_implied": -0.004325977187140784,
+          "flat_stake_return": -0.05318253275109171,
+          "frequency_ci95_high": 0.3501732402781789,
+          "frequency_ci95_low": 0.3256774507649853,
+          "gap_ci95_high_approx": 0.008030669204575236,
+          "gap_ci95_low_approx": -0.01646512030861841,
+          "left_inclusive": 0.3,
+          "mean_implied_probability": 0.3421425710736037,
+          "realized_frequency": 0.3378165938864629,
+          "right_exclusive": 0.4,
+          "rows": 5725,
+          "wins": 1934
+        },
+        {
+          "average_raw_odds": 2.153385180995475,
+          "bin": "40-50%",
+          "calibration_gap_realized_minus_implied": 0.0049056793680347655,
+          "flat_stake_return": -0.028718891402714934,
+          "frequency_ci95_high": 0.4695037969585754,
+          "frequency_ci95_low": 0.43670669188331573,
+          "gap_ci95_high_approx": 0.021355177684076243,
+          "gap_ci95_low_approx": -0.011441927391183437,
+          "left_inclusive": 0.4,
+          "mean_implied_probability": 0.44814861927449917,
+          "realized_frequency": 0.45305429864253394,
+          "right_exclusive": 0.5,
+          "rows": 3536,
+          "wins": 1602
+        },
+        {
+          "average_raw_odds": 1.7503311762466691,
+          "bin": "50-60%",
+          "calibration_gap_realized_minus_implied": 0.026252242801558356,
+          "flat_stake_return": 0.007209744956223823,
+          "frequency_ci95_high": 0.5950938261663337,
+          "frequency_ci95_low": 0.5573288896364472,
+          "gap_ci95_high_approx": 0.045023267292977676,
+          "gap_ci95_low_approx": 0.007258330763091236,
+          "left_inclusive": 0.5,
+          "mean_implied_probability": 0.550070558873356,
+          "realized_frequency": 0.5763228016749143,
+          "right_exclusive": 0.6,
+          "rows": 2627,
+          "wins": 1514
+        },
+        {
+          "average_raw_odds": 1.4809071156979903,
+          "bin": "60-70%",
+          "calibration_gap_realized_minus_implied": 0.04539657219171467,
+          "flat_stake_return": 0.02451385116784356,
+          "frequency_ci95_high": 0.7148123998373136,
+          "frequency_ci95_low": 0.6727547792183112,
+          "gap_ci95_high_approx": 0.06602103069279797,
+          "gap_ci95_low_approx": 0.023963410073795544,
+          "left_inclusive": 0.6,
+          "mean_implied_probability": 0.6487913691445156,
+          "realized_frequency": 0.6941879413362303,
+          "right_exclusive": 0.7,
+          "rows": 1841,
+          "wins": 1278
+        },
+        {
+          "average_raw_odds": 1.2932642998027613,
+          "bin": "70-80%",
+          "calibration_gap_realized_minus_implied": -0.016493171651778438,
+          "flat_stake_return": -0.06184418145956606,
+          "frequency_ci95_high": 0.7524042731369015,
+          "frequency_ci95_low": 0.697567572705038,
+          "gap_ci95_high_approx": 0.01007283718532026,
+          "gap_ci95_low_approx": -0.044763863246543245,
+          "left_inclusive": 0.7,
+          "mean_implied_probability": 0.7423314359515812,
+          "realized_frequency": 0.7258382642998028,
+          "right_exclusive": 0.8,
+          "rows": 1014,
+          "wins": 736
+        },
+        {
+          "average_raw_odds": 1.1514329268292682,
+          "bin": "80%+",
+          "calibration_gap_realized_minus_implied": 0.012002598034918766,
+          "flat_stake_return": -0.028841463414634182,
+          "frequency_ci95_high": 0.8797157654122888,
+          "frequency_ci95_low": 0.8013323495615424,
+          "gap_ci95_high_approx": 0.04720616832525637,
+          "gap_ci95_low_approx": -0.031177247525490004,
+          "left_inclusive": 0.8,
+          "mean_implied_probability": 0.8325095970870324,
+          "realized_frequency": 0.8445121951219512,
+          "right_exclusive": 1.01,
+          "rows": 328,
+          "wins": 277
+        }
+      ],
+      "by_bookmaker": {
+        "BET365": {
+          "mean_calibration_gap": 2.2735829303072072e-18,
+          "residual_slope": 0.06738075393872618,
+          "rows": 17091
+        },
+        "PINNACLE": {
+          "mean_calibration_gap": -3.5746555645933504e-20,
+          "residual_slope": 0.05831157152081131,
+          "rows": 17082
+        }
+      },
+      "by_league": {
+        "EPL": {
+          "mean_calibration_gap": 8.375366676996795e-19,
+          "residual_slope": 0.023974926745476955,
+          "rows": 11400
+        },
+        "LA_LIGA": {
+          "mean_calibration_gap": 1.3450160424745114e-18,
+          "residual_slope": 0.10485887135716909,
+          "rows": 11391
+        },
+        "SERIE_A": {
+          "mean_calibration_gap": 1.8435437678277508e-18,
+          "residual_slope": 0.07195337851432494,
+          "rows": 11382
+        }
+      },
+      "by_outcome_type": {
+        "A": {
+          "mean_calibration_gap": -0.0015226604602715677,
+          "residual_slope": 0.09259090950134388,
+          "rows": 11391
+        },
+        "D": {
+          "mean_calibration_gap": 0.004065951062873366,
+          "residual_slope": 0.20223279580764714,
+          "rows": 11391
+        },
+        "H": {
+          "mean_calibration_gap": -0.0025432906026017946,
+          "residual_slope": 0.07745390722455692,
+          "rows": 11391
+        }
+      },
+      "fixtures": 5697,
+      "regions": {
+        "favourite_p_ge_0_60": {
+          "flat_stake_return": -0.008495130380144515,
+          "gap": 0.022239354541469192,
+          "mean_p": 0.6975218770011007,
+          "rows": 3183,
+          "win_rate": 0.7197612315425699
+        },
+        "longshot_p_lt_0_30": {
+          "flat_stake_return": -0.07350172756779395,
+          "gap": -0.006927691874891617,
+          "mean_p": 0.21894737567763478,
+          "rows": 19102,
+          "win_rate": 0.21201968380274316
+        }
+      },
+      "residual_slope": {
+        "ci95_high": 0.11094241038309208,
+        "ci95_low": 0.014325214110971143,
+        "draws": 5000,
+        "slope": 0.06280399210489597,
+        "valid_draws": 5000
+      },
+      "rows": 34173
+    },
+    "time_path": {
+      "classification": "BIAS_PERSISTS_AND_AMPLIFIES_BY_CLOSE",
+      "closing_minus_opening_slope": 0.0001847927434891622,
+      "closing_slope": 0.06298878484838513,
+      "closing_supported": true,
+      "opening_slope": 0.06280399210489597,
+      "opening_supported": true
+    }
+  },
+  "research_only": true,
+  "result": "RESEARCH_ONLY_NO_BET",
+  "season_diagnostics": {
+    "2019-2020": {
+      "closing": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": -0.036325925925925914,
+            "gap": 0.0030388763809545694,
+            "mean_p": 0.7080722347301566,
+            "rows": 675,
+            "win_rate": 0.7111111111111111
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.03836788244555235,
+            "gap": -0.0032651242033369943,
+            "mean_p": 0.21475817064783975,
+            "rows": 3811,
+            "win_rate": 0.21149304644450276
+          }
+        },
+        "residual_slope": 0.01161161715472457,
+        "rows": 6840
+      },
+      "opening": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": -0.025766312594840662,
+            "gap": 0.011108507539898005,
+            "mean_p": 0.705128214766627,
+            "rows": 659,
+            "win_rate": 0.716236722306525
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.03880585314868043,
+            "gap": -0.0030280905481235576,
+            "mean_p": 0.21729514045666812,
+            "rows": 3827,
+            "win_rate": 0.21426704990854456
+          }
+        },
+        "residual_slope": 0.017849497095023266,
+        "rows": 6834
+      }
+    },
+    "2020-2021": {
+      "closing": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": 0.015141579731743677,
+            "gap": 0.03325584309587448,
+            "mean_p": 0.6955071971425756,
+            "rows": 671,
+            "win_rate": 0.7287630402384501
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.05130400628436762,
+            "gap": -0.006428678789007186,
+            "mean_p": 0.21669314592700142,
+            "rows": 3819,
+            "win_rate": 0.21026446713799424
+          }
+        },
+        "residual_slope": 0.04137588083450747,
+        "rows": 6840
+      },
+      "opening": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": -0.009956140350877196,
+            "gap": 0.017947641522755853,
+            "mean_p": 0.6896546976585307,
+            "rows": 684,
+            "win_rate": 0.7076023391812866
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.033801631149697454,
+            "gap": -0.003011691307690273,
+            "mean_p": 0.21795512724560134,
+            "rows": 3801,
+            "win_rate": 0.21494343593791107
+          }
+        },
+        "residual_slope": 0.034332238581791116,
+        "rows": 6828
+      }
+    },
+    "2021-2022": {
+      "closing": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": -0.02841726618705035,
+            "gap": 0.005723701909571832,
+            "mean_p": 0.6978734203925865,
+            "rows": 695,
+            "win_rate": 0.7035971223021583
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.05083879423328965,
+            "gap": -0.0037288422376824393,
+            "mean_p": 0.21526226294541506,
+            "rows": 3815,
+            "win_rate": 0.21153342070773262
+          }
+        },
+        "residual_slope": 0.029990213683875565,
+        "rows": 6840
+      },
+      "opening": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": -0.024743975903614462,
+            "gap": 0.009278182613526975,
+            "mean_p": 0.6985531426876779,
+            "rows": 664,
+            "win_rate": 0.7078313253012049
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.06648249027237355,
+            "gap": -0.006956630755548671,
+            "mean_p": 0.21785157238978992,
+            "rows": 3855,
+            "win_rate": 0.21089494163424125
+          }
+        },
+        "residual_slope": 0.041478484052101416,
+        "rows": 6831
+      }
+    },
+    "2022-2023": {
+      "closing": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": 0.005052631578947381,
+            "gap": 0.03263161304458839,
+            "mean_p": 0.6936841764290959,
+            "rows": 570,
+            "win_rate": 0.7263157894736842
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.09496158940397352,
+            "gap": -0.008812963880562269,
+            "mean_p": 0.22205799699314505,
+            "rows": 3775,
+            "win_rate": 0.21324503311258278
+          }
+        },
+        "residual_slope": 0.07444579847646218,
+        "rows": 6840
+      },
+      "opening": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": -0.01762152777777777,
+            "gap": 0.016547224344529488,
+            "mean_p": 0.6952583312110261,
+            "rows": 576,
+            "win_rate": 0.7118055555555556
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.07417235943247502,
+            "gap": -0.005266472287243723,
+            "mean_p": 0.22255496414220957,
+            "rows": 3806,
+            "win_rate": 0.21728849185496585
+          }
+        },
+        "residual_slope": 0.053852393053892354,
+        "rows": 6840
+      }
+    },
+    "2023-2024": {
+      "closing": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": 0.028455284552845527,
+            "gap": 0.04847299839459429,
+            "mean_p": 0.7011204975403651,
+            "rows": 615,
+            "win_rate": 0.7495934959349594
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.1507885684043398,
+            "gap": -0.01664363390459253,
+            "mean_p": 0.21722579849840043,
+            "rows": 3779,
+            "win_rate": 0.2005821645938079
+          }
+        },
+        "residual_slope": 0.16417950039708876,
+        "rows": 6840
+      },
+      "opening": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": 0.038883333333333325,
+            "gap": 0.0591654295955133,
+            "mean_p": 0.69916790373782,
+            "rows": 600,
+            "win_rate": 0.7583333333333333
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.1543273013375295,
+            "gap": -0.01637419982116209,
+            "mean_p": 0.2191017109672413,
+            "rows": 3813,
+            "win_rate": 0.2027275111460792
+          }
+        },
+        "residual_slope": 0.1703576302902638,
+        "rows": 6840
+      }
+    },
+    "2024-2025": {
+      "closing": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": 0.002472089314194584,
+            "gap": 0.035610737829315675,
+            "mean_p": 0.7012313674338422,
+            "rows": 627,
+            "win_rate": 0.7368421052631579
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.11643631436314363,
+            "gap": -0.012057152346880456,
+            "mean_p": 0.21476717944715146,
+            "rows": 3690,
+            "win_rate": 0.202710027100271
+          }
+        },
+        "residual_slope": 0.08998476217321483,
+        "rows": 6840
+      },
+      "opening": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": -0.010950080515297902,
+            "gap": 0.02755929259101053,
+            "mean_p": 0.6986886945265418,
+            "rows": 621,
+            "win_rate": 0.7262479871175523
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.11475186766275347,
+            "gap": -0.009980564571005546,
+            "mean_p": 0.21622389434688602,
+            "rows": 3748,
+            "win_rate": 0.20624332977588047
+          }
+        },
+        "residual_slope": 0.0814940542053254,
+        "rows": 6840
+      }
+    },
+    "2025-2026": {
+      "closing": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": -0.020812064965197212,
+            "gap": 0.021015445006637323,
+            "mean_p": 0.686641167522365,
+            "rows": 431,
+            "win_rate": 0.7076566125290024
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.08518854242204496,
+            "gap": -0.0030347847993139887,
+            "mean_p": 0.22275922279786367,
+            "rows": 2758,
+            "win_rate": 0.21972443799854968
+          }
+        },
+        "residual_slope": 0.05597187607022545,
+        "rows": 5208
+      },
+      "opening": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": 0.002990867579908674,
+            "gap": 0.03660917230752658,
+            "mean_p": 0.6848520149070852,
+            "rows": 438,
+            "win_rate": 0.7214611872146118
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.0784539357571479,
+            "gap": -0.0025403847758889153,
+            "mean_p": 0.2242135227921261,
+            "rows": 2833,
+            "win_rate": 0.2216731380162372
+          }
+        },
+        "residual_slope": 0.05026093654858667,
+        "rows": 5217
+      }
+    }
+  },
+  "source_audit": {
+    "candidate_bookmakers": [
+      "BET365",
+      "PINNACLE"
+    ],
+    "excluded_bookmakers": [],
+    "included_bookmakers": [
+      "BET365",
+      "PINNACLE"
+    ],
+    "intraday_snapshot_gaps": {
+      "1h": "No exact timestamped 1h snapshot in frozen Football-Data source.",
+      "24h": "No exact timestamped 24h snapshot in frozen Football-Data source.",
+      "6h": "No exact timestamped 6h snapshot in frozen Football-Data source."
+    },
+    "outcome_read_after_audit": true,
+    "outcome_read_before_audit": false,
+    "source_files": {
+      "EPL:2019-2020": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        }
+      },
+      "EPL:2020-2021": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        }
+      },
+      "EPL:2021-2022": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        }
+      },
+      "EPL:2022-2023": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        }
+      },
+      "EPL:2023-2024": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        }
+      },
+      "EPL:2024-2025": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        }
+      },
+      "EPL:2025-2026": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        }
+      },
+      "LA_LIGA:2019-2020": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        }
+      },
+      "LA_LIGA:2020-2021": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        }
+      },
+      "LA_LIGA:2021-2022": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        }
+      },
+      "LA_LIGA:2022-2023": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        }
+      },
+      "LA_LIGA:2023-2024": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        }
+      },
+      "LA_LIGA:2024-2025": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        }
+      },
+      "LA_LIGA:2025-2026": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        }
+      },
+      "SERIE_A:2019-2020": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        }
+      },
+      "SERIE_A:2020-2021": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        }
+      },
+      "SERIE_A:2021-2022": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        }
+      },
+      "SERIE_A:2022-2023": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        }
+      },
+      "SERIE_A:2023-2024": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        }
+      },
+      "SERIE_A:2024-2025": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        }
+      },
+      "SERIE_A:2025-2026": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        }
+      }
+    },
+    "validation_test_column_gate_passed": true
+  },
+  "supabase_writes": 0,
+  "supported": false,
+  "temporal_design": {
+    "intraday_24h_6h_1h": "SOURCE_GAP_NO_EXACT_TIMESTAMPED_SNAPSHOTS",
+    "primary_horizons": [
+      "opening",
+      "closing"
+    ],
+    "reference": [
+      "2019-2020",
+      "2020-2021",
+      "2021-2022",
+      "2022-2023",
+      "2023-2024"
+    ],
+    "untouched_test": "2025-2026",
+    "validation": "2024-2025"
+  },
+  "test": {
+    "closing": {
+      "bins": [
+        {
+          "average_raw_odds": 7.098595890410959,
+          "bin": "0-20%",
+          "calibration_gap_realized_minus_implied": -0.012665421699280699,
+          "flat_stake_return": -0.1838584474885845,
+          "frequency_ci95_high": 0.15891329376483052,
+          "frequency_ci95_low": 0.11368292958450836,
+          "gap_ci95_high_approx": 0.01154467571851786,
+          "gap_ci95_low_approx": -0.033685688461804295,
+          "left_inclusive": 0.0,
+          "mean_implied_probability": 0.14736861804631265,
+          "realized_frequency": 0.13470319634703196,
+          "right_exclusive": 0.2,
+          "rows": 876,
+          "wins": 118
+        },
+        {
+          "average_raw_odds": 3.747518597236982,
+          "bin": "20-30%",
+          "calibration_gap_realized_minus_implied": 0.0014479133539117561,
+          "flat_stake_return": -0.03926142401700319,
+          "frequency_ci95_high": 0.27957458850473005,
+          "frequency_ci95_low": 0.24000326584652354,
+          "gap_ci95_high_approx": 0.021723883367674723,
+          "gap_ci95_low_approx": -0.017847439290531786,
+          "left_inclusive": 0.2,
+          "mean_implied_probability": 0.2578507051370553,
+          "realized_frequency": 0.2592986184909671,
+          "right_exclusive": 0.3,
+          "rows": 1882,
+          "wins": 488
+        },
+        {
+          "average_raw_odds": 2.8525925925925923,
+          "bin": "30-40%",
+          "calibration_gap_realized_minus_implied": -0.006242751610737729,
+          "flat_stake_return": -0.0641690408357075,
+          "frequency_ci95_high": 0.3604334181241795,
+          "frequency_ci95_low": 0.3036600019086261,
+          "gap_ci95_high_approx": 0.022756668412777015,
+          "gap_ci95_low_approx": -0.034016747802776415,
+          "left_inclusive": 0.3,
+          "mean_implied_probability": 0.3376767497114025,
+          "realized_frequency": 0.33143399810066476,
+          "right_exclusive": 0.4,
+          "rows": 1053,
+          "wins": 349
+        },
+        {
+          "average_raw_odds": 2.1489236111111114,
+          "bin": "40-50%",
+          "calibration_gap_realized_minus_implied": 0.025836969241409047,
+          "flat_stake_return": 0.014687499999999985,
+          "frequency_ci95_high": 0.5130409144475502,
+          "frequency_ci95_low": 0.43177158642970187,
+          "gap_ci95_high_approx": 0.06665566146673702,
+          "gap_ci95_low_approx": -0.014613666551111293,
+          "left_inclusive": 0.4,
+          "mean_implied_probability": 0.44638525298081316,
+          "realized_frequency": 0.4722222222222222,
+          "right_exclusive": 0.5,
+          "rows": 576,
+          "wins": 272
+        },
+        {
+          "average_raw_odds": 1.7525384615384616,
+          "bin": "50-60%",
+          "calibration_gap_realized_minus_implied": -0.023067172200762598,
+          "flat_stake_return": -0.09246153846153844,
+          "frequency_ci95_high": 0.5721804412256573,
+          "frequency_ci95_low": 0.47352322860610346,
+          "gap_ci95_high_approx": 0.02603634594797155,
+          "gap_ci95_low_approx": -0.07262086667158224,
+          "left_inclusive": 0.5,
+          "mean_implied_probability": 0.5461440952776857,
+          "realized_frequency": 0.5230769230769231,
+          "right_exclusive": 0.6,
+          "rows": 390,
+          "wins": 204
+        },
+        {
+          "average_raw_odds": 1.478303249097473,
+          "bin": "60-70%",
+          "calibration_gap_realized_minus_implied": -0.0036299687003278347,
+          "flat_stake_return": -0.05166064981949459,
+          "frequency_ci95_high": 0.6967313489001319,
+          "frequency_ci95_low": 0.5845661501647705,
+          "gap_ci95_high_approx": 0.05050210222146467,
+          "gap_ci95_low_approx": -0.061663096513896676,
+          "left_inclusive": 0.6,
+          "mean_implied_probability": 0.6462292466786672,
+          "realized_frequency": 0.6425992779783394,
+          "right_exclusive": 0.7,
+          "rows": 277,
+          "wins": 178
+        },
+        {
+          "average_raw_odds": 1.27984496124031,
+          "bin": "70-80%",
+          "calibration_gap_realized_minus_implied": 0.05161029731449773,
+          "flat_stake_return": 0.019922480620155055,
+          "frequency_ci95_high": 0.8585805917496613,
+          "frequency_ci95_low": 0.7210577281210392,
+          "gap_ci95_high_approx": 0.11174127666105826,
+          "gap_ci95_low_approx": -0.02578158696756383,
+          "left_inclusive": 0.7,
+          "mean_implied_probability": 0.746839315088603,
+          "realized_frequency": 0.7984496124031008,
+          "right_exclusive": 0.8,
+          "rows": 129,
+          "wins": 103
+        },
+        {
+          "average_raw_odds": 1.158,
+          "bin": "80%+",
+          "calibration_gap_realized_minus_implied": 0.13621719097124996,
+          "flat_stake_return": 0.11079999999999995,
+          "frequency_ci95_high": 0.9929037664980127,
+          "frequency_ci95_low": 0.8045593626380625,
+          "gap_ci95_high_approx": 0.1691209574692627,
+          "gap_ci95_low_approx": -0.019223446390687515,
+          "left_inclusive": 0.8,
+          "mean_implied_probability": 0.82378280902875,
+          "realized_frequency": 0.96,
+          "right_exclusive": 1.01,
+          "rows": 25,
+          "wins": 24
+        }
+      ],
+      "by_bookmaker": {
+        "BET365": {
+          "mean_calibration_gap": 3.4410421231072104e-18,
+          "residual_slope": 0.053828682758384545,
+          "rows": 3420
+        },
+        "PINNACLE": {
+          "mean_calibration_gap": -3.259883042104067e-18,
+          "residual_slope": 0.05989051271335042,
+          "rows": 1788
+        }
+      },
+      "by_league": {
+        "EPL": {
+          "mean_calibration_gap": 1.5994738490362425e-18,
+          "residual_slope": -0.04933156529998864,
+          "rows": 1770
+        },
+        "LA_LIGA": {
+          "mean_calibration_gap": -2.0197719344706485e-18,
+          "residual_slope": 0.19582042503917518,
+          "rows": 1704
+        },
+        "SERIE_A": {
+          "mean_calibration_gap": -6.4026702688878695e-19,
+          "residual_slope": 0.02908885192331432,
+          "rows": 1734
+        }
+      },
+      "by_outcome_type": {
+        "A": {
+          "mean_calibration_gap": -0.00782792377022455,
+          "residual_slope": 0.05133325934304129,
+          "rows": 1736
+        },
+        "D": {
+          "mean_calibration_gap": 0.004126257378949062,
+          "residual_slope": -0.011548692290335151,
+          "rows": 1736
+        },
+        "H": {
+          "mean_calibration_gap": 0.003701666391275486,
+          "residual_slope": 0.08538731397637427,
+          "rows": 1736
+        }
+      },
+      "fixtures": 1140,
+      "regions": {
+        "favourite_p_ge_0_60": {
+          "flat_stake_return": -0.020812064965197212,
+          "gap": 0.021015445006637323,
+          "mean_p": 0.686641167522365,
+          "rows": 431,
+          "win_rate": 0.7076566125290024
+        },
+        "longshot_p_lt_0_30": {
+          "flat_stake_return": -0.08518854242204496,
+          "gap": -0.0030347847993139887,
+          "mean_p": 0.22275922279786367,
+          "rows": 2758,
+          "win_rate": 0.21972443799854968
+        }
+      },
+      "residual_slope": {
+        "ci95_high": 0.17687254488923132,
+        "ci95_low": -0.06470818859824672,
+        "draws": 5000,
+        "slope": 0.05597187607022545,
+        "valid_draws": 5000
+      },
+      "rows": 5208
+    },
+    "opening": {
+      "bins": [
+        {
+          "average_raw_odds": 7.014334862385321,
+          "bin": "0-20%",
+          "calibration_gap_realized_minus_implied": -0.004101137464941146,
+          "flat_stake_return": -0.13235091743119265,
+          "frequency_ci95_high": 0.1693916671568786,
+          "frequency_ci95_low": 0.12271765953014575,
+          "gap_ci95_high_approx": 0.020795116847900752,
+          "gap_ci95_low_approx": -0.025878890778832084,
+          "left_inclusive": 0.0,
+          "mean_implied_probability": 0.14859655030897784,
+          "realized_frequency": 0.1444954128440367,
+          "right_exclusive": 0.2,
+          "rows": 872,
+          "wins": 126
+        },
+        {
+          "average_raw_odds": 3.7463437021927586,
+          "bin": "20-30%",
+          "calibration_gap_realized_minus_implied": -0.0018463631823888438,
+          "flat_stake_return": -0.054487506374298826,
+          "frequency_ci95_high": 0.2757716391842062,
+          "frequency_ci95_low": 0.23716616264007162,
+          "gap_ci95_high_approx": 0.01793343510431611,
+          "gap_ci95_low_approx": -0.02067204143981849,
+          "left_inclusive": 0.2,
+          "mean_implied_probability": 0.2578382040798901,
+          "realized_frequency": 0.25599184089750127,
+          "right_exclusive": 0.3,
+          "rows": 1961,
+          "wins": 502
+        },
+        {
+          "average_raw_odds": 2.8282215447154475,
+          "bin": "30-40%",
+          "calibration_gap_realized_minus_implied": -0.0017368428089364896,
+          "flat_stake_return": -0.05572154471544715,
+          "frequency_ci95_high": 0.3685564784746198,
+          "frequency_ci95_low": 0.30952951684325725,
+          "gap_ci95_high_approx": 0.028405001519341833,
+          "gap_ci95_low_approx": -0.03062196011202073,
+          "left_inclusive": 0.3,
+          "mean_implied_probability": 0.340151476955278,
+          "realized_frequency": 0.3384146341463415,
+          "right_exclusive": 0.4,
+          "rows": 984,
+          "wins": 333
+        },
+        {
+          "average_raw_odds": 2.142408376963351,
+          "bin": "40-50%",
+          "calibration_gap_realized_minus_implied": 0.022350825366892257,
+          "flat_stake_return": 0.002757417102966838,
+          "frequency_ci95_high": 0.5103894837777455,
+          "frequency_ci95_low": 0.428935265744325,
+          "gap_ci95_high_approx": 0.06328132136104264,
+          "gap_ci95_low_approx": -0.01817289667237787,
+          "left_inclusive": 0.4,
+          "mean_implied_probability": 0.44710816241670287,
+          "realized_frequency": 0.4694589877835951,
+          "right_exclusive": 0.5,
+          "rows": 573,
+          "wins": 269
+        },
+        {
+          "average_raw_odds": 1.7473521850899743,
+          "bin": "50-60%",
+          "calibration_gap_realized_minus_implied": -0.05124904116154039,
+          "flat_stake_return": -0.1405655526992288,
+          "frequency_ci95_high": 0.5456237361368919,
+          "frequency_ci95_low": 0.44673959534801316,
+          "gap_ci95_high_approx": -0.0017692638935431493,
+          "gap_ci95_low_approx": -0.10065340468242184,
+          "left_inclusive": 0.5,
+          "mean_implied_probability": 0.547393000030435,
+          "realized_frequency": 0.4961439588688946,
+          "right_exclusive": 0.6,
+          "rows": 389,
+          "wins": 193
+        },
+        {
+          "average_raw_odds": 1.4795744680851064,
+          "bin": "60-70%",
+          "calibration_gap_realized_minus_implied": 0.02855462838568812,
+          "flat_stake_return": -0.0019148936170212908,
+          "frequency_ci95_high": 0.7258247833708406,
+          "frequency_ci95_low": 0.617022613239581,
+          "gap_ci95_high_approx": 0.08062054650830175,
+          "gap_ci95_low_approx": -0.02818162362295784,
+          "left_inclusive": 0.6,
+          "mean_implied_probability": 0.6452042368625388,
+          "realized_frequency": 0.6737588652482269,
+          "right_exclusive": 0.7,
+          "rows": 282,
+          "wins": 190
+        },
+        {
+          "average_raw_odds": 1.2763503649635037,
+          "bin": "70-80%",
+          "calibration_gap_realized_minus_implied": 0.03453622640850362,
+          "flat_stake_return": -0.007591240875912396,
+          "frequency_ci95_high": 0.8420848300564137,
+          "frequency_ci95_low": 0.7046291889884262,
+          "gap_ci95_high_approx": 0.09559915865469826,
+          "gap_ci95_low_approx": -0.04185648241328921,
+          "left_inclusive": 0.7,
+          "mean_implied_probability": 0.7464856714017154,
+          "realized_frequency": 0.781021897810219,
+          "right_exclusive": 0.8,
+          "rows": 137,
+          "wins": 107
+        },
+        {
+          "average_raw_odds": 1.1521052631578945,
+          "bin": "80%+",
+          "calibration_gap_realized_minus_implied": 0.17110259199829603,
+          "flat_stake_return": 0.15210526315789466,
+          "frequency_ci95_high": 1.0,
+          "frequency_ci95_low": 0.8318207759473837,
+          "gap_ci95_high_approx": 0.17110259199829603,
+          "gap_ci95_low_approx": 0.0029233679456797113,
+          "left_inclusive": 0.8,
+          "mean_implied_probability": 0.828897408001704,
+          "realized_frequency": 1.0,
+          "right_exclusive": 1.01,
+          "rows": 19,
+          "wins": 19
+        }
+      ],
+      "by_bookmaker": {
+        "BET365": {
+          "mean_calibration_gap": 6.979472230830663e-19,
+          "residual_slope": 0.03860338646042723,
+          "rows": 3420
+        },
+        "PINNACLE": {
+          "mean_calibration_gap": 2.471281078742697e-19,
+          "residual_slope": 0.07190794057117024,
+          "rows": 1797
+        }
+      },
+      "by_league": {
+        "EPL": {
+          "mean_calibration_gap": 1.6621983137043305e-18,
+          "residual_slope": -0.07357690148065942,
+          "rows": 1770
+        },
+        "LA_LIGA": {
+          "mean_calibration_gap": -4.552759913518509e-19,
+          "residual_slope": 0.2019198504638551,
+          "rows": 1707
+        },
+        "SERIE_A": {
+          "mean_calibration_gap": -1.0208947352875003e-18,
+          "residual_slope": 0.03243378279775896,
+          "rows": 1740
+        }
+      },
+      "by_outcome_type": {
+        "A": {
+          "mean_calibration_gap": -0.0063236209577659346,
+          "residual_slope": 0.06381349122260965,
+          "rows": 1739
+        },
+        "D": {
+          "mean_calibration_gap": 0.007945670557052293,
+          "residual_slope": -0.03150216463740403,
+          "rows": 1739
+        },
+        "H": {
+          "mean_calibration_gap": -0.0016220495992863607,
+          "residual_slope": 0.09436575267855701,
+          "rows": 1739
+        }
+      },
+      "fixtures": 1140,
+      "regions": {
+        "favourite_p_ge_0_60": {
+          "flat_stake_return": 0.002990867579908674,
+          "gap": 0.03660917230752658,
+          "mean_p": 0.6848520149070852,
+          "rows": 438,
+          "win_rate": 0.7214611872146118
+        },
+        "longshot_p_lt_0_30": {
+          "flat_stake_return": -0.0784539357571479,
+          "gap": -0.0025403847758889153,
+          "mean_p": 0.2242135227921261,
+          "rows": 2833,
+          "win_rate": 0.2216731380162372
+        }
+      },
+      "residual_slope": {
+        "ci95_high": 0.1729432435079886,
+        "ci95_low": -0.07233569145815626,
+        "draws": 5000,
+        "slope": 0.05026093654858667,
+        "valid_draws": 5000
+      },
+      "rows": 5217
+    },
+    "time_path": {
+      "classification": "NO_CLEAR_TIME_PATH",
+      "closing_minus_opening_slope": 0.005710939521638779,
+      "closing_slope": 0.05597187607022545,
+      "closing_supported": false,
+      "opening_slope": 0.05026093654858667,
+      "opening_supported": false
+    }
+  },
+  "validation": {
+    "closing": {
+      "bins": [
+        {
+          "average_raw_odds": 7.366509775524983,
+          "bin": "0-20%",
+          "calibration_gap_realized_minus_implied": -0.020473355193755538,
+          "flat_stake_return": -0.20340333091962345,
+          "frequency_ci95_high": 0.14377653069252233,
+          "frequency_ci95_low": 0.10884549805480646,
+          "gap_ci95_high_approx": -0.0019683668618414585,
+          "gap_ci95_low_approx": -0.036899399499557325,
+          "left_inclusive": 0.0,
+          "mean_implied_probability": 0.1457448975543638,
+          "realized_frequency": 0.12527154236060825,
+          "right_exclusive": 0.2,
+          "rows": 1381,
+          "wins": 173
+        },
+        {
+          "average_raw_odds": 3.7896795149415325,
+          "bin": "20-30%",
+          "calibration_gap_realized_minus_implied": -0.0070234684440937944,
+          "flat_stake_return": -0.0644218276310091,
+          "frequency_ci95_high": 0.26707154268008243,
+          "frequency_ci95_low": 0.23181326173233585,
+          "gap_ci95_high_approx": 0.011022522048894645,
+          "gap_ci95_low_approx": -0.024235758898851933,
+          "left_inclusive": 0.2,
+          "mean_implied_probability": 0.2560490206311878,
+          "realized_frequency": 0.249025552187094,
+          "right_exclusive": 0.3,
+          "rows": 2309,
+          "wins": 575
+        },
+        {
+          "average_raw_odds": 2.8709535256410255,
+          "bin": "30-40%",
+          "calibration_gap_realized_minus_implied": 0.0004876408446549685,
+          "flat_stake_return": -0.03536057692307692,
+          "frequency_ci95_high": 0.3640346802494222,
+          "frequency_ci95_low": 0.3116431005595989,
+          "gap_ci95_high_approx": 0.02718257750433356,
+          "gap_ci95_low_approx": -0.02520900218548977,
+          "left_inclusive": 0.3,
+          "mean_implied_probability": 0.33685210274508864,
+          "realized_frequency": 0.3373397435897436,
+          "right_exclusive": 0.4,
+          "rows": 1248,
+          "wins": 421
+        },
+        {
+          "average_raw_odds": 2.154033850493653,
+          "bin": "40-50%",
+          "calibration_gap_realized_minus_implied": 0.027826438556850963,
+          "flat_stake_return": 0.022637517630465447,
+          "frequency_ci95_high": 0.5121105473005036,
+          "frequency_ci95_low": 0.4387901760413976,
+          "gap_ci95_high_approx": 0.06461963747935745,
+          "gap_ci95_low_approx": -0.008700733779748615,
+          "left_inclusive": 0.4,
+          "mean_implied_probability": 0.4474909098211462,
+          "realized_frequency": 0.47531734837799716,
+          "right_exclusive": 0.5,
+          "rows": 709,
+          "wins": 337
+        },
+        {
+          "average_raw_odds": 1.755,
+          "bin": "50-60%",
+          "calibration_gap_realized_minus_implied": 0.003225156943588714,
+          "flat_stake_return": -0.03141342756183746,
+          "frequency_ci95_high": 0.5917293351393194,
+          "frequency_ci95_low": 0.5100533609109696,
+          "gap_ci95_high_approx": 0.043717742966300266,
+          "gap_ci95_low_approx": -0.03795823126204945,
+          "left_inclusive": 0.5,
+          "mean_implied_probability": 0.5480115921730191,
+          "realized_frequency": 0.5512367491166078,
+          "right_exclusive": 0.6,
+          "rows": 566,
+          "wins": 312
+        },
+        {
+          "average_raw_odds": 1.4771732522796353,
+          "bin": "60-70%",
+          "calibration_gap_realized_minus_implied": 0.001783925710267198,
+          "flat_stake_return": -0.041823708206686946,
+          "frequency_ci95_high": 0.6999747412020183,
+          "frequency_ci95_low": 0.5974641666515028,
+          "gap_ci95_high_approx": 0.05130273986061373,
+          "gap_ci95_low_approx": -0.051207834689901754,
+          "left_inclusive": 0.6,
+          "mean_implied_probability": 0.6486720013414046,
+          "realized_frequency": 0.6504559270516718,
+          "right_exclusive": 0.7,
+          "rows": 329,
+          "wins": 214
+        },
+        {
+          "average_raw_odds": 1.2945991561181431,
+          "bin": "70-80%",
+          "calibration_gap_realized_minus_implied": 0.07808308803790831,
+          "flat_stake_return": 0.059282700421940934,
+          "frequency_ci95_high": 0.8624196290649843,
+          "frequency_ci95_low": 0.7645488369930923,
+          "gap_ci95_high_approx": 0.12193731625901072,
+          "gap_ci95_low_approx": 0.024066524187118743,
+          "left_inclusive": 0.7,
+          "mean_implied_probability": 0.7404823128059735,
+          "realized_frequency": 0.8185654008438819,
+          "right_exclusive": 0.8,
+          "rows": 237,
+          "wins": 194
+        },
+        {
+          "average_raw_odds": 1.1529508196721314,
+          "bin": "80%+",
+          "calibration_gap_realized_minus_implied": 0.053038183529815375,
+          "flat_stake_return": 0.020655737704917996,
+          "frequency_ci95_high": 0.9432879733926779,
+          "frequency_ci95_low": 0.7815569152759893,
+          "gap_ci95_high_approx": 0.11108025528314902,
+          "gap_ci95_low_approx": -0.05065080283353962,
+          "left_inclusive": 0.8,
+          "mean_implied_probability": 0.8322077181095289,
+          "realized_frequency": 0.8852459016393442,
+          "right_exclusive": 1.01,
+          "rows": 61,
+          "wins": 54
+        }
+      ],
+      "by_bookmaker": {
+        "BET365": {
+          "mean_calibration_gap": 6.817158923136926e-19,
+          "residual_slope": 0.10089631203847385,
+          "rows": 3420
+        },
+        "PINNACLE": {
+          "mean_calibration_gap": 1.460819769243627e-18,
+          "residual_slope": 0.07957182291608386,
+          "rows": 3420
+        }
+      },
+      "by_league": {
+        "EPL": {
+          "mean_calibration_gap": 1.4851667653976875e-18,
+          "residual_slope": -0.015544236917870762,
+          "rows": 2280
+        },
+        "LA_LIGA": {
+          "mean_calibration_gap": 9.008388577002366e-19,
+          "residual_slope": 0.15538097521918454,
+          "rows": 2280
+        },
+        "SERIE_A": {
+          "mean_calibration_gap": 1.8503717077085942e-18,
+          "residual_slope": 0.15044523255447714,
+          "rows": 2280
+        }
+      },
+      "by_outcome_type": {
+        "A": {
+          "mean_calibration_gap": 0.014403727701062567,
+          "residual_slope": 0.1860036311727938,
+          "rows": 2280
+        },
+        "D": {
+          "mean_calibration_gap": 0.0076606837838396075,
+          "residual_slope": 0.25062510047810027,
+          "rows": 2280
+        },
+        "H": {
+          "mean_calibration_gap": -0.02206441148490218,
+          "residual_slope": 0.14101898572349092,
+          "rows": 2280
+        }
+      },
+      "fixtures": 1140,
+      "regions": {
+        "favourite_p_ge_0_60": {
+          "flat_stake_return": 0.002472089314194584,
+          "gap": 0.035610737829315675,
+          "mean_p": 0.7012313674338422,
+          "rows": 627,
+          "win_rate": 0.7368421052631579
+        },
+        "longshot_p_lt_0_30": {
+          "flat_stake_return": -0.11643631436314363,
+          "gap": -0.012057152346880456,
+          "mean_p": 0.21476717944715146,
+          "rows": 3690,
+          "win_rate": 0.202710027100271
+        }
+      },
+      "residual_slope": {
+        "ci95_high": 0.19282461506263326,
+        "ci95_low": -0.01591561586792562,
+        "draws": 5000,
+        "slope": 0.08998476217321483,
+        "valid_draws": 5000
+      },
+      "rows": 6840
+    },
+    "opening": {
+      "bins": [
+        {
+          "average_raw_odds": 7.208574593796159,
+          "bin": "0-20%",
+          "calibration_gap_realized_minus_implied": -0.025608893166581714,
+          "flat_stake_return": -0.2408714918759232,
+          "frequency_ci95_high": 0.1395815780782887,
+          "frequency_ci95_low": 0.10480737960525668,
+          "gap_ci95_high_approx": -0.007149914792872053,
+          "gap_ci95_low_approx": -0.04192411326590406,
+          "left_inclusive": 0.0,
+          "mean_implied_probability": 0.14673149287116075,
+          "realized_frequency": 0.12112259970457903,
+          "right_exclusive": 0.2,
+          "rows": 1354,
+          "wins": 164
+        },
+        {
+          "average_raw_odds": 3.789143692564745,
+          "bin": "20-30%",
+          "calibration_gap_realized_minus_implied": -0.001141484822296257,
+          "flat_stake_return": -0.04342105263157896,
+          "frequency_ci95_high": 0.27221566032856964,
+          "frequency_ci95_low": 0.23734324079311672,
+          "gap_ci95_high_approx": 0.01668821059399267,
+          "gap_ci95_low_approx": -0.01818420894146025,
+          "left_inclusive": 0.2,
+          "mean_implied_probability": 0.255527449734577,
+          "realized_frequency": 0.2543859649122807,
+          "right_exclusive": 0.3,
+          "rows": 2394,
+          "wins": 609
+        },
+        {
+          "average_raw_odds": 2.83823336072309,
+          "bin": "30-40%",
+          "calibration_gap_realized_minus_implied": 0.003290631529931698,
+          "flat_stake_return": -0.028307313064913724,
+          "frequency_ci95_high": 0.37060188757070184,
+          "frequency_ci95_low": 0.3173182782729143,
+          "gap_ci95_high_approx": 0.030424975961767464,
+          "gap_ci95_low_approx": -0.022858633336020062,
+          "left_inclusive": 0.3,
+          "mean_implied_probability": 0.3401769116089344,
+          "realized_frequency": 0.34346754313886607,
+          "right_exclusive": 0.4,
+          "rows": 1217,
+          "wins": 418
+        },
+        {
+          "average_raw_odds": 2.1490181268882176,
+          "bin": "40-50%",
+          "calibration_gap_realized_minus_implied": 0.02537976732932945,
+          "flat_stake_return": 0.007990936555891231,
+          "frequency_ci95_high": 0.5108887165928022,
+          "frequency_ci95_low": 0.4350443587315228,
+          "gap_ci95_high_approx": 0.06345881624841565,
+          "gap_ci95_low_approx": -0.01238554161286376,
+          "left_inclusive": 0.4,
+          "mean_implied_probability": 0.44742990034438657,
+          "realized_frequency": 0.472809667673716,
+          "right_exclusive": 0.5,
+          "rows": 662,
+          "wins": 313
+        },
+        {
+          "average_raw_odds": 1.743462837837838,
+          "bin": "50-60%",
+          "calibration_gap_realized_minus_implied": -0.0008670088358642136,
+          "flat_stake_return": -0.044172297297297304,
+          "frequency_ci95_high": 0.5886257356955025,
+          "frequency_ci95_low": 0.5087155941857637,
+          "gap_ci95_high_approx": 0.038772240373151745,
+          "gap_ci95_low_approx": -0.041137901136586996,
+          "left_inclusive": 0.5,
+          "mean_implied_probability": 0.5498534953223507,
+          "realized_frequency": 0.5489864864864865,
+          "right_exclusive": 0.6,
+          "rows": 592,
+          "wins": 325
+        },
+        {
+          "average_raw_odds": 1.4737168141592922,
+          "bin": "60-70%",
+          "calibration_gap_realized_minus_implied": -0.00609247774165933,
+          "flat_stake_return": -0.05430678466076696,
+          "frequency_ci95_high": 0.6922035260397776,
+          "frequency_ci95_low": 0.5907260832719448,
+          "gap_ci95_high_approx": 0.04304320169044873,
+          "gap_ci95_low_approx": -0.05843424107738415,
+          "left_inclusive": 0.6,
+          "mean_implied_probability": 0.6491603243493289,
+          "realized_frequency": 0.6430678466076696,
+          "right_exclusive": 0.7,
+          "rows": 339,
+          "wins": 218
+        },
+        {
+          "average_raw_odds": 1.2933936651583713,
+          "bin": "70-80%",
+          "calibration_gap_realized_minus_implied": 0.062070343865593625,
+          "flat_stake_return": 0.03678733031674211,
+          "frequency_ci95_high": 0.8482117357834134,
+          "frequency_ci95_low": 0.7433161821441447,
+          "gap_ci95_high_approx": 0.10937710227344133,
+          "gap_ci95_low_approx": 0.004481548634172716,
+          "left_inclusive": 0.7,
+          "mean_implied_probability": 0.738834633509972,
+          "realized_frequency": 0.8009049773755657,
+          "right_exclusive": 0.8,
+          "rows": 221,
+          "wins": 177
+        },
+        {
+          "average_raw_odds": 1.1519672131147543,
+          "bin": "80%+",
+          "calibration_gap_realized_minus_implied": 0.08954302719907936,
+          "flat_stake_return": 0.0570491803278688,
+          "frequency_ci95_high": 0.9644804333931265,
+          "frequency_ci95_low": 0.8220533819707465,
+          "gap_ci95_high_approx": 0.13599067370695994,
+          "gap_ci95_low_approx": -0.00643637771542005,
+          "left_inclusive": 0.8,
+          "mean_implied_probability": 0.8284897596861666,
+          "realized_frequency": 0.9180327868852459,
+          "right_exclusive": 1.01,
+          "rows": 61,
+          "wins": 56
+        }
+      ],
+      "by_bookmaker": {
+        "BET365": {
+          "mean_calibration_gap": -2.824251553871012e-18,
+          "residual_slope": 0.0892432268673198,
+          "rows": 3420
+        },
+        "PINNACLE": {
+          "mean_calibration_gap": 1.8503717077085942e-18,
+          "residual_slope": 0.07401897375391712,
+          "rows": 3420
+        }
+      },
+      "by_league": {
+        "EPL": {
+          "mean_calibration_gap": -1.3147377923192644e-18,
+          "residual_slope": -0.027668884328156226,
+          "rows": 2280
+        },
+        "LA_LIGA": {
+          "mean_calibration_gap": 1.0225738384705388e-18,
+          "residual_slope": 0.14710685294640818,
+          "rows": 2280
+        },
+        "SERIE_A": {
+          "mean_calibration_gap": -2.1425356615573198e-18,
+          "residual_slope": 0.1457439138512449,
+          "rows": 2280
+        }
+      },
+      "by_outcome_type": {
+        "A": {
+          "mean_calibration_gap": 0.0125000247049837,
+          "residual_slope": 0.1887474621434342,
+          "rows": 2280
+        },
+        "D": {
+          "mean_calibration_gap": 0.01116087663852279,
+          "residual_slope": 0.24119828891972342,
+          "rows": 2280
+        },
+        "H": {
+          "mean_calibration_gap": -0.02366090134350649,
+          "residual_slope": 0.13807946173402602,
+          "rows": 2280
+        }
+      },
+      "fixtures": 1140,
+      "regions": {
+        "favourite_p_ge_0_60": {
+          "flat_stake_return": -0.010950080515297902,
+          "gap": 0.02755929259101053,
+          "mean_p": 0.6986886945265418,
+          "rows": 621,
+          "win_rate": 0.7262479871175523
+        },
+        "longshot_p_lt_0_30": {
+          "flat_stake_return": -0.11475186766275347,
+          "gap": -0.009980564571005546,
+          "mean_p": 0.21622389434688602,
+          "rows": 3748,
+          "win_rate": 0.20624332977588047
+        }
+      },
+      "residual_slope": {
+        "ci95_high": 0.18616089293149626,
+        "ci95_low": -0.026058801053133265,
+        "draws": 5000,
+        "slope": 0.0814940542053254,
+        "valid_draws": 5000
+      },
+      "rows": 6840
+    },
+    "time_path": {
+      "classification": "NO_CLEAR_TIME_PATH",
+      "closing_minus_opening_slope": 0.008490707967889422,
+      "closing_slope": 0.08998476217321483,
+      "closing_supported": false,
+      "opening_slope": 0.0814940542053254,
+      "opening_supported": false
+    }
+  }
+}
