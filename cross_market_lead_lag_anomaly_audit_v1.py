@@ -150,7 +150,11 @@ def evaluate() -> dict[str, Any]:
             local = raw[raw["season"].astype(str) == season]
             schema[league][season] = {
                 "source_rows": int(len(local)),
-                "missing_required_columns": [c for c in REQUIRED_COLUMNS if c not in raw.columns],
+                "missing_required_columns": [
+                    c
+                    for c in REQUIRED_COLUMNS
+                    if c not in local.columns or local[c].notna().sum() == 0
+                ],
             }
 
     combined = pd.concat(frames, ignore_index=True)
@@ -165,7 +169,7 @@ def evaluate() -> dict[str, Any]:
         ref_lines = _line_distribution(ref)
         for season in SEASONS:
             local = data[(data["league"] == league) & (data["season"] == season)]
-            cov = coverage[league]["by_season"][season]
+            cov = coverage[league][season]
             source_rows = int(cov["source_rows"])
             reconstructed = int(cov["reconstructed_rows"])
             cell = {
