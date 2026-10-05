@@ -5,14 +5,76 @@ from pathlib import Path
 
 import pytest
 
-from research_agent_v5 import LocalResearchError, run
+from research_agent_v5 import (
+    LocalResearchError,
+    load_recipe_registry,
+    max_iterations_for_family,
+    run,
+    supports_family,
+)
 
 
 def _read(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _write_registry(root: Path) -> None:
+    path = root / "research" / "v5_recipe_registry.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "engine": "V5_DETERMINISTIC_NO_API",
+                "recipes": [
+                    {
+                        "hypothesis_family": "cross_market_lead_lag_independent_replication",
+                        "handler": "replication",
+                        "max_iterations": 2,
+                        "description": "test",
+                        "safety": {
+                            "model_api": False,
+                            "paid_odds_api": False,
+                            "supabase_writes": False,
+                            "production_operations": False,
+                            "automatic_promotion": False,
+                        },
+                    },
+                    {
+                        "hypothesis_family": "cross_market_lead_lag_2024_25_anomaly_audit",
+                        "handler": "anomaly",
+                        "max_iterations": 4,
+                        "description": "test",
+                        "safety": {
+                            "model_api": False,
+                            "paid_odds_api": False,
+                            "supabase_writes": False,
+                            "production_operations": False,
+                            "automatic_promotion": False,
+                        },
+                    },
+                    {
+                        "hypothesis_family": "kickoff_calendar_context",
+                        "handler": "kickoff",
+                        "max_iterations": 4,
+                        "description": "test",
+                        "safety": {
+                            "model_api": False,
+                            "paid_odds_api": False,
+                            "supabase_writes": False,
+                            "production_operations": False,
+                            "automatic_promotion": False,
+                        },
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 def test_v5_replication_closes_from_canonical_main(tmp_path: Path):
+    _write_registry(tmp_path)
     canonical = {
         "experiment_id": "CROSS_MARKET_LEAD_LAG_REPLICATION_V2",
         "result": {
@@ -60,6 +122,7 @@ def test_v5_replication_closes_from_canonical_main(tmp_path: Path):
 
 
 def test_v5_replication_fails_closed_on_safety_mismatch(tmp_path: Path):
+    _write_registry(tmp_path)
     path = tmp_path / "experiments" / "cross_market_lead_lag_replication_v2_report.json"
     path.parent.mkdir(parents=True)
     path.write_text(
@@ -83,6 +146,7 @@ def test_v5_replication_fails_closed_on_safety_mismatch(tmp_path: Path):
 
 
 def test_v5_anomaly_state_machine(tmp_path: Path, monkeypatch):
+    _write_registry(tmp_path)
     family = "cross_market_lead_lag_2024_25_anomaly_audit"
     run(tmp_path, 481, family)
     state = _read(tmp_path / "research/agent_runs/issue_481/STATE.json")
@@ -108,6 +172,7 @@ def test_v5_anomaly_state_machine(tmp_path: Path, monkeypatch):
 
 
 def test_v5_kickoff_state_machine(tmp_path: Path, monkeypatch):
+    _write_registry(tmp_path)
     family = "kickoff_calendar_context"
     run(tmp_path, 428, family)
     state = _read(tmp_path / "research/agent_runs/issue_428/STATE.json")
@@ -135,5 +200,25 @@ def test_v5_kickoff_state_machine(tmp_path: Path, monkeypatch):
 
 
 def test_v5_rejects_unknown_family(tmp_path: Path):
-    with pytest.raises(LocalResearchError, match="no V5 deterministic handler"):
+    _write_registry(tmp_path)
+    with pytest.raises(LocalResearchError, match="no V5 deterministic recipe"):
         run(tmp_path, 999, "unknown")
+
+
+def test_v5_recipe_registry_support_and_iteration_budget(tmp_path: Path):
+    _write_registry(tmp_path)
+    payload = load_recipe_registry(tmp_path)
+    assert payload["schema_version"] == 1
+    assert supports_family(tmp_path, "kickoff_calendar_context") is True
+    assert supports_family(tmp_path, "not_registered") is False
+    assert max_iterations_for_family(tmp_path, "cross_market_lead_lag_independent_replication") == 2
+
+
+def test_v5_recipe_registry_fails_closed_on_unsafe_recipe(tmp_path: Path):
+    _write_registry(tmp_path)
+    path = tmp_path / "research" / "v5_recipe_registry.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["recipes"][0]["safety"]["model_api"] = True
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(LocalResearchError, match="safety contract mismatch"):
+        load_recipe_registry(tmp_path)
