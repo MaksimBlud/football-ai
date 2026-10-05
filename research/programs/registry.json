@@ -122,11 +122,11 @@
       "title": "2. De-vig method OOS research program",
       "status": "ACTIVE",
       "objective": "Determine whether Multiplicative, Additive, Power or Shin transforms bookmaker 1X2 odds into the most accurate and stable out-of-sample fair probabilities for Football AI.",
-      "completed_issue_numbers": [],
-      "active_issue_numbers": [
+      "completed_issue_numbers": [
         533
       ],
-      "current_frontier": "Issue #533 is the active preregistered child. Implement the four standard transforms deterministically, freeze numerical behavior and temporal splits, then compare paired OOS Log Loss/Brier/RPS/calibration on the same fixtures at opening and closing.",
+      "active_issue_numbers": [],
+      "current_frontier": "Issue #533 completed the frozen Bet365/Pinnacle EPL-La Liga-Serie A temporal OOS comparison. Power was selected on 2024/25 validation and was directionally better than Multiplicative on untouched 2025/26 closing Log Loss, Brier and RPS, improved both bookmakers and two of three leagues, and also improved opening Log Loss. However the preregistered fixture-cluster bootstrap 95% CI for the primary closing Log Loss delta crossed zero (-0.0020972 to +0.0008733), so confirmation failed and the formal decision is NO_STABLE_DEVIG_WINNER. Shin was not the validation winner. Any follow-up must be genuinely independent (e.g. new league/bookmaker transport) and cannot reinterpret this failed gate or promote Power from the same data.",
       "allowed_follow_up_classes": [
         "method_implementation_audit",
         "paired_oos_comparison",
