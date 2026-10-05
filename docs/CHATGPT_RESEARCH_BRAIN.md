@@ -79,7 +79,10 @@ The initial ACTIVE programs are:
   negative preregistered league heterogeneity, and the negative outcome-free
   opening-to-closing market-movement mechanism. Remaining zero-cost variants would
   be threshold/weekday/league mining or cosmetic restatements of the rejected signal.
-- `corner_market_direction` — **ACTIVE** with Issue #522 as its frozen child for
-  independent falsification of the retrospective cross-market match-shape signal.
+- `corner_market_direction` — **ACTIVE**. Issue #522 completed: continuous ranking survived
+  the frozen falsification (including residualization and leave-one-group checks), while
+  binary classification remained below always-UP with weak DOWN recall. Issue #528 is the
+  preregistered Bundesliga/Ligue 1 cross-league transport child; it cannot claim untouched
+  confirmation because the reused movements were opened previously for other hypotheses.
 
 Infrastructure live-proof Issues are not scientific programs.
