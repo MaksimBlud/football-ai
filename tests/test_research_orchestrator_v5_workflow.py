@@ -23,3 +23,12 @@ def test_v5_routes_supported_families_without_model_api():
     assert "cross_market_lead_lag_independent_replication" in registry
     assert "kickoff_calendar_context|" not in v5
     assert "kickoff_calendar_context|" not in v4
+
+
+def test_v5_unknown_family_fails_closed_without_model_api():
+    text = Path(".github/workflows/research-orchestrator-v5-local.yml").read_text(encoding="utf-8")
+    assert "research-v5-needs-recipe" in text
+    assert "has no deterministic V5 recipe; fail-closed without model API" in text
+    assert "research-v4-model-opt-in" in text
+    assert "Groq" not in text
+    assert "Gemini" not in text
