@@ -1,0 +1,394 @@
+{
+  "decision": "NO_STABLE_BOOKMAKER_SPECIFIC_PRICE_COMPONENT",
+  "evidence_class": "TEMPORAL_OOS_PRICE_COMPONENT_DECOMPOSITION",
+  "experiment_id": "BOOKMAKER_PRICE_FORMATION_V1",
+  "formal_gate": {
+    "frozen_thresholds": {
+      "minimum_specific_variance_share": 0.05,
+      "minimum_variance_after_margin_fraction": 0.25
+    },
+    "gates": {
+      "at_least_two_leagues_common_improvement": false,
+      "both_books_have_nontrivial_specific_variance": true,
+      "common_move_ci95_upper_below_zero": false,
+      "common_move_improves_oot_log_loss": true,
+      "source_gate": true,
+      "specific_variance_not_explained_by_margin": true,
+      "specific_variance_share_ge_0_05": true
+    },
+    "negative_oot_leagues": 1,
+    "supported": false
+  },
+  "interpretation_guard": "The frozen OOT gates did not jointly establish stable common information plus non-trivial bookmaker-specific repricing beyond margin movement.",
+  "paid_odds_api_calls": 0,
+  "production_operations": false,
+  "production_promotion": false,
+  "reference": {
+    "by_bookmaker": {
+      "BET365": {
+        "decomposition": {
+          "mean_residual_close_norm_sq": 6.436208282336613e-05,
+          "mean_residual_open_norm_sq": 5.27623363485615e-05,
+          "mean_residual_persistence_dot": 1.2030766810707127e-05,
+          "specific_move_margin_correlation": -0.009067221017533954,
+          "specific_variance_share": 0.05175172063307171,
+          "variance_after_margin_fraction": 1.0
+        },
+        "incremental_close_brier_vs_consensus": {
+          "ci95_high": 0.0004206413726491745,
+          "ci95_low": -3.4263958384557106e-05,
+          "draws": 5000,
+          "mean": 0.00019377944808026974,
+          "rows": 5694
+        },
+        "incremental_close_log_loss_vs_consensus": {
+          "ci95_high": 0.0008220102615511424,
+          "ci95_low": 2.561731989013417e-05,
+          "draws": 5000,
+          "mean": 0.0004219861310625162,
+          "rows": 5694
+        },
+        "rows": 5694
+      },
+      "PINNACLE": {
+        "decomposition": {
+          "mean_residual_close_norm_sq": 6.436208282336614e-05,
+          "mean_residual_open_norm_sq": 5.27623363485615e-05,
+          "mean_residual_persistence_dot": 1.2030766810707132e-05,
+          "specific_move_margin_correlation": 0.013558131941866508,
+          "specific_variance_share": 0.05136286129202884,
+          "variance_after_margin_fraction": 1.0
+        },
+        "incremental_close_brier_vs_consensus": {
+          "ci95_high": 0.00016396902106796557,
+          "ci95_low": -0.0002916612256615136,
+          "draws": 5000,
+          "mean": -6.505528243353765e-05,
+          "rows": 5694
+        },
+        "incremental_close_log_loss_vs_consensus": {
+          "ci95_high": 0.00021793677068793245,
+          "ci95_low": -0.0005949108584013517,
+          "draws": 5000,
+          "mean": -0.00018721853419856907,
+          "rows": 5694
+        },
+        "rows": 5694
+      }
+    },
+    "common_information": {
+      "brier": {
+        "ci95_high": -0.0007589988983202915,
+        "ci95_low": -0.003242712161262662,
+        "draws": 5000,
+        "mean": -0.001992151599305652,
+        "rows": 5694
+      },
+      "by_league_log_loss": {
+        "EPL": -0.004710949915952974,
+        "LA_LIGA": -0.0014187409233521197,
+        "SERIE_A": -0.0033215441687301506
+      },
+      "log_loss": {
+        "ci95_high": -0.0012777975817494444,
+        "ci95_low": -0.00503364180984424,
+        "draws": 5000,
+        "mean": -0.003151233870739501,
+        "rows": 5694
+      }
+    },
+    "fixtures": 5694,
+    "pooled_decomposition": {
+      "mean_residual_close_norm_sq": 6.436208282336613e-05,
+      "mean_residual_open_norm_sq": 5.27623363485615e-05,
+      "mean_residual_persistence_dot": 1.2030766810707132e-05,
+      "specific_move_margin_correlation": -0.0006316208587473603,
+      "specific_variance_share": 0.05155655774138847,
+      "variance_after_margin_fraction": 1.0
+    }
+  },
+  "research_only": true,
+  "result": "RESEARCH_ONLY_NO_BET",
+  "source_audit": {
+    "external_consensus": "Football-Data Avg 1X2 columns",
+    "frozen_bookmakers": [
+      "BET365",
+      "PINNACLE"
+    ],
+    "intraday_snapshot_gaps": {
+      "1h": "No exact timestamped 1h snapshot in frozen source.",
+      "24h": "No exact timestamped 24h snapshot in frozen source.",
+      "6h": "No exact timestamped 6h snapshot in frozen source."
+    },
+    "outcome_read_after_audit": true,
+    "outcome_read_before_audit": false,
+    "source_files": {
+      "EPL:2019-2020": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "EPL:2020-2021": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "EPL:2021-2022": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "EPL:2022-2023": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "EPL:2023-2024": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "EPL:2024-2025": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "EPL:2025-2026": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "LA_LIGA:2019-2020": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "LA_LIGA:2020-2021": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "LA_LIGA:2021-2022": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "LA_LIGA:2022-2023": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "LA_LIGA:2023-2024": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "LA_LIGA:2024-2025": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "LA_LIGA:2025-2026": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "SERIE_A:2019-2020": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "SERIE_A:2020-2021": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "SERIE_A:2021-2022": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "SERIE_A:2022-2023": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "SERIE_A:2023-2024": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "SERIE_A:2024-2025": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "SERIE_A:2025-2026": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      }
+    },
+    "validation_test_column_gate_passed": true
+  },
+  "supabase_writes": 0,
+  "supported": false,
+  "temporal_design": {
+    "reference": [
+      "2019-2020",
+      "2020-2021",
+      "2021-2022",
+      "2022-2023",
+      "2023-2024"
+    ],
+    "untouched_test": "2025-2026",
+    "validation": "2024-2025"
+  },
+  "test": {
+    "by_bookmaker": {
+      "BET365": {
+        "decomposition": {
+          "mean_residual_close_norm_sq": 0.00011845142161258504,
+          "mean_residual_open_norm_sq": 4.504006291921762e-05,
+          "mean_residual_persistence_dot": 1.0745058735211816e-05,
+          "specific_move_margin_correlation": 0.023754944983234726,
+          "specific_variance_share": 0.09435287850941548,
+          "variance_after_margin_fraction": 1.0
+        },
+        "incremental_close_brier_vs_consensus": {
+          "ci95_high": 0.0007061484718001368,
+          "ci95_low": -0.0011978044480761237,
+          "draws": 5000,
+          "mean": -0.00021555104789277161,
+          "rows": 596
+        },
+        "incremental_close_log_loss_vs_consensus": {
+          "ci95_high": 0.0012452433058791604,
+          "ci95_low": -0.0017045555330770608,
+          "draws": 5000,
+          "mean": -0.00019345521100016738,
+          "rows": 596
+        },
+        "rows": 596
+      },
+      "PINNACLE": {
+        "decomposition": {
+          "mean_residual_close_norm_sq": 0.00011845142161258501,
+          "mean_residual_open_norm_sq": 4.5040062919217656e-05,
+          "mean_residual_persistence_dot": 1.074505873521182e-05,
+          "specific_move_margin_correlation": -0.04551254579679451,
+          "specific_variance_share": 0.12497926914787912,
+          "variance_after_margin_fraction": 1.0
+        },
+        "incremental_close_brier_vs_consensus": {
+          "ci95_high": 0.0014405213440044993,
+          "ci95_low": -0.00046512429324192594,
+          "draws": 5000,
+          "mean": 0.00045245389111793006,
+          "rows": 596
+        },
+        "incremental_close_log_loss_vs_consensus": {
+          "ci95_high": 0.002077490357306264,
+          "ci95_low": -0.0009082884256302742,
+          "draws": 5000,
+          "mean": 0.0005324947761532766,
+          "rows": 596
+        },
+        "rows": 596
+      }
+    },
+    "common_information": {
+      "brier": {
+        "ci95_high": 0.00354467912320585,
+        "ci95_low": -0.0026213055860893806,
+        "draws": 5000,
+        "mean": 0.000454392252475069,
+        "rows": 596
+      },
+      "by_league_log_loss": {
+        "EPL": -0.004196090790200497,
+        "LA_LIGA": 0.004298087761465754,
+        "SERIE_A": 0.00010111452442934963
+      },
+      "log_loss": {
+        "ci95_high": 0.00442109907188924,
+        "ci95_low": -0.004521720832034039,
+        "draws": 5000,
+        "mean": -8.912397810324051e-05,
+        "rows": 596
+      }
+    },
+    "fixtures": 596,
+    "pooled_decomposition": {
+      "mean_residual_close_norm_sq": 0.00011845142161258501,
+      "mean_residual_open_norm_sq": 4.5040062919217636e-05,
+      "mean_residual_persistence_dot": 1.0745058735211816e-05,
+      "specific_move_margin_correlation": 0.004768363299494423,
+      "specific_variance_share": 0.10752781955639773,
+      "variance_after_margin_fraction": 1.0000000000000002
+    }
+  },
+  "validation": {
+    "by_bookmaker": {
+      "BET365": {
+        "decomposition": {
+          "mean_residual_close_norm_sq": 5.618389235617786e-05,
+          "mean_residual_open_norm_sq": 5.1378428217005456e-05,
+          "mean_residual_persistence_dot": 1.996597799329919e-05,
+          "specific_move_margin_correlation": -0.011127328448126217,
+          "specific_variance_share": 0.03771490142777517,
+          "variance_after_margin_fraction": 1.0
+        },
+        "incremental_close_brier_vs_consensus": {
+          "ci95_high": 0.0010243139153873885,
+          "ci95_low": 0.0001504825899951187,
+          "draws": 5000,
+          "mean": 0.000583183987461628,
+          "rows": 1140
+        },
+        "incremental_close_log_loss_vs_consensus": {
+          "ci95_high": 0.0018517256643051491,
+          "ci95_low": 0.00017801573466733774,
+          "draws": 5000,
+          "mean": 0.0010321311099647638,
+          "rows": 1140
+        },
+        "rows": 1140
+      },
+      "PINNACLE": {
+        "decomposition": {
+          "mean_residual_close_norm_sq": 5.618389235617788e-05,
+          "mean_residual_open_norm_sq": 5.137842821700546e-05,
+          "mean_residual_persistence_dot": 1.996597799329917e-05,
+          "specific_move_margin_correlation": -0.07324157661953977,
+          "specific_variance_share": 0.038109128711792874,
+          "variance_after_margin_fraction": 1.0
+        },
+        "incremental_close_brier_vs_consensus": {
+          "ci95_high": -3.975719686731824e-05,
+          "ci95_low": -0.0009113761330052402,
+          "draws": 5000,
+          "mean": -0.00047081620274927195,
+          "rows": 1140
+        },
+        "incremental_close_log_loss_vs_consensus": {
+          "ci95_high": 8.614143538691104e-05,
+          "ci95_low": -0.0016675783151268025,
+          "draws": 5000,
+          "mean": -0.0008117822846246094,
+          "rows": 1140
+        },
+        "rows": 1140
+      }
+    },
+    "common_information": {
+      "brier": {
+        "ci95_high": 0.00044461418112614514,
+        "ci95_low": -0.00502658738629307,
+        "draws": 5000,
+        "mean": -0.0023077217299400034,
+        "rows": 1140
+      },
+      "by_league_log_loss": {
+        "EPL": -0.003454534292816132,
+        "LA_LIGA": -0.006295400485123277,
+        "SERIE_A": 0.0003864058485534826
+      },
+      "log_loss": {
+        "ci95_high": 0.0008625772670009384,
+        "ci95_low": -0.007171044655923987,
+        "draws": 5000,
+        "mean": -0.0031211763097953094,
+        "rows": 1140
+      }
+    },
+    "fixtures": 1140,
+    "pooled_decomposition": {
+      "mean_residual_close_norm_sq": 5.618389235617786e-05,
+      "mean_residual_open_norm_sq": 5.1378428217005456e-05,
+      "mean_residual_persistence_dot": 1.9965977993299178e-05,
+      "specific_move_margin_correlation": -0.027179440112962878,
+      "specific_variance_share": 0.03791099022877268,
+      "variance_after_margin_fraction": 1.0000000000000002
+    }
+  }
+}
