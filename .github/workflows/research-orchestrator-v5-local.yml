@@ -119,10 +119,6 @@ jobs:
           python research_agent_issue.py --event /tmp/v5-event.json --output-json /tmp/v5-plan.json --output-markdown /tmp/v5-plan.md
           [ "$(jq -r '.decision' /tmp/v5-plan.json)" = "READY_FOR_PREREGISTRATION" ] || exit 0
           FAMILY=$(jq -r '.hypothesis_family' /tmp/v5-plan.json)
-          if ! python research_agent_v5.py --supports-family "$FAMILY"; then
-            echo "Hypothesis family $FAMILY has no deterministic V5 recipe."
-            exit 0
-          fi
 
           ensure_label() {
             gh api "repos/$GITHUB_REPOSITORY/labels/$1" >/dev/null 2>&1 ||               gh api -X POST "repos/$GITHUB_REPOSITORY/labels" -f name="$1" -f color="$2" >/dev/null
@@ -132,7 +128,22 @@ jobs:
           ensure_label research-v5-waiting d4c5f9
           ensure_label research-v5-done 2da44e
           ensure_label research-v5-blocked d1242f
+          ensure_label research-v5-needs-recipe 8250df
 
+          if ! python research_agent_v5.py --supports-family "$FAMILY"; then
+            HAS_NEEDS_RECIPE=$(jq -r '[.labels[].name] | index("research-v5-needs-recipe") != null' /tmp/v5-issue.json)
+            gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v5-needs-recipe >/dev/null
+            for label in research-v4-running research-v4-waiting research-v4-queued; do
+              gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label "$label" >/dev/null 2>&1 || true
+            done
+            if [ "$HAS_NEEDS_RECIPE" != "true" ]; then
+              gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Research V5 no-API intake: hypothesis family `$FAMILY` has no reviewed deterministic recipe yet. Model/API fallback is disabled by default; add a V5 recipe/handler, or explicitly opt into V4 with the `research-v4-model-opt-in` label."
+            fi
+            echo "Hypothesis family $FAMILY has no deterministic V5 recipe; fail-closed without model API."
+            exit 0
+          fi
+
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v5-needs-recipe >/dev/null 2>&1 || true
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v5-running --add-label research-v5-queued >/dev/null
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label research-v5-waiting >/dev/null 2>&1 || true
           for label in research-v4-running research-v4-waiting research-v4-queued; do

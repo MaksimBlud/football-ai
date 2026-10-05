@@ -209,3 +209,19 @@ def test_v3_no_longer_runs_on_issue_events():
     on_block = text.split("permissions:", 1)[0]
     assert "issues:" not in on_block
     assert "pull_request:" in on_block
+
+
+def test_v4_model_fallback_requires_explicit_opt_in():
+    text = _v4()
+    on_block = text.split("permissions:", 1)[0]
+    assert "types: [opened, edited, reopened, labeled]" in on_block
+    assert "ensure_label research-v4-model-opt-in" in text
+    assert "MODEL_OPT_IN=" in text
+    assert "V4 model fallback is not explicitly opted in; skipping all model APIs." in text
+
+
+def test_v4_contract_tracks_v5_registry_routing():
+    text = _v4()
+    assert "'research_agent_v5.py'" in text
+    assert "'research/v5_recipe_registry.json'" in text
+    assert 'research_agent_v5.py --supports-family "$FAMILY"' in text

@@ -191,3 +191,22 @@ For a new research direction:
 4. then hand the Issue to V5 for autonomous execution to DONE.
 
 Production remains untouched.
+
+
+## Registry-driven no-API routing update
+
+PR #504 merged as `b5015d33406897b17fbdb348cefb943f83d72e79`.
+
+V5 family routing and per-family iteration budgets now come from the fail-closed registry:
+
+`research/v5_recipe_registry.json`
+
+Both V5 and V4 consult the same registry. Adding a reviewed deterministic family no longer
+requires a YAML routing case.
+
+The default policy for a new unsupported `[AGENT-RESEARCH]` Issue is no-API:
+it receives `research-v5-needs-recipe` and stops without Groq/Gemini. V4 model fallback
+requires the explicit `research-v4-model-opt-in` label; it is no longer automatic.
+
+This preserves the working autonomous deterministic path while preventing a new research
+direction from silently returning the project to provider quota dependence.

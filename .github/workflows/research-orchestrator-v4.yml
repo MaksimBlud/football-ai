@@ -2,7 +2,7 @@ name: Research Orchestrator V4
 
 on:
   issues:
-    types: [opened, edited, reopened]
+    types: [opened, edited, reopened, labeled]
   workflow_dispatch:
     inputs:
       issue_number:
@@ -25,6 +25,8 @@ on:
     paths:
       - 'research_orchestrator_v4.py'
       - 'research_agent_groq.py'
+      - 'research_agent_v5.py'
+      - 'research/v5_recipe_registry.json'
       - 'tests/test_research_orchestrator_v4.py'
       - 'tests/test_research_agent_groq.py'
       - 'tests/test_research_orchestrator_v4_workflow.py'
@@ -155,6 +157,7 @@ jobs:
           ensure_label research-v4-waiting d4c5f9
           ensure_label research-v4-done 2da44e
           ensure_label research-v4-blocked d1242f
+          ensure_label research-v4-model-opt-in c2e0c6
 
           HAS_DONE=$(jq -r '[.labels[].name] | index("research-v4-done") != null' /tmp/issue.json)
           HAS_BLOCKED=$(jq -r '[.labels[].name] | index("research-v4-blocked") != null' /tmp/issue.json)
@@ -177,6 +180,11 @@ jobs:
           FAMILY=$(jq -r '.hypothesis_family' /tmp/v4-plan.json)
           if python research_agent_v5.py --supports-family "$FAMILY"; then
             echo "Hypothesis family $FAMILY is owned by no-API Research V5; V4 model worker skipped."
+            exit 0
+          fi
+          MODEL_OPT_IN=$(jq -r '[.labels[].name] | index("research-v4-model-opt-in") != null' /tmp/issue.json)
+          if [ "$MODEL_OPT_IN" != 'true' ]; then
+            echo "Hypothesis family $FAMILY has no V5 recipe and V4 model fallback is not explicitly opted in; skipping all model APIs."
             exit 0
           fi
           if [ "$DECISION" != 'READY_FOR_PREREGISTRATION' ]; then

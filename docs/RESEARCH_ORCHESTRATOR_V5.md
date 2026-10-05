@@ -41,6 +41,12 @@ Adding a deterministic family therefore does **not** require another YAML routin
 A code change only needs to add the reviewed deterministic evaluator/handler and one
 registry recipe with tests. Unknown or unsafe registry entries fail closed.
 
+
+An open `[AGENT-RESEARCH]` Issue whose family is not registered is labeled
+`research-v5-needs-recipe` and stops **without** invoking any model provider.
+The legacy V4 model worker is no longer an automatic fallback. It can run an unsupported
+family only when the Issue explicitly carries `research-v4-model-opt-in`.
+
 Current registry recipes are:
 
 - `kickoff_calendar_context`;
@@ -107,3 +113,18 @@ The intended extension path is:
 No provider key, quota configuration, V4 routing case or new workflow branch is needed.
 The registry deliberately does not allow Issue text to name arbitrary Python modules,
 shell commands or packages. Executable handlers remain repository-reviewed code.
+
+
+## No-API default for new research Issues
+
+The default intake policy is now fail-closed:
+
+`new Issue -> V5 registry lookup -> supported: deterministic V5 / unsupported: needs-recipe`
+
+An unsupported Issue does not silently consume Groq/Gemini quota. To use the old model
+worker for a specific unsupported direction, add the explicit label
+`research-v4-model-opt-in`. The V4 workflow listens for the label event and then applies
+all existing V4 sandbox, quota and production-safety gates.
+
+For the normal Football AI workflow, prefer adding a reviewed deterministic recipe instead
+of opting back into V4.
