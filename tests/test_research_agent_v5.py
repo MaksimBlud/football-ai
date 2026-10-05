@@ -42,7 +42,7 @@ def _write_registry(root: Path) -> None:
                     },
                     {
                         "hypothesis_family": "cross_market_lead_lag_2024_25_anomaly_audit",
-                        "handler": "anomaly",
+                        "handler": "pipeline",
                         "max_iterations": 4,
                         "description": "test",
                         "safety": {
@@ -52,10 +52,18 @@ def _write_registry(root: Path) -> None:
                             "production_operations": False,
                             "automatic_promotion": False,
                         },
+                        "pipeline": {
+                            "evaluator_module": "cross_market_lead_lag_anomaly_audit_v1",
+                            "decision_path": "diagnostic_label",
+                            "summary_path": "summary.plain_language",
+                            "report_title": "anomaly audit",
+                            "report_fields": ["rows", "diagnostic_label"],
+                            "preregistration_markdown": "# Frozen anomaly protocol",
+                        },
                     },
                     {
                         "hypothesis_family": "kickoff_calendar_context",
-                        "handler": "kickoff",
+                        "handler": "pipeline",
                         "max_iterations": 4,
                         "description": "test",
                         "safety": {
@@ -64,6 +72,16 @@ def _write_registry(root: Path) -> None:
                             "supabase_writes": False,
                             "production_operations": False,
                             "automatic_promotion": False,
+                        },
+                        "pipeline": {
+                            "evaluator_module": "kickoff_calendar_context_v1",
+                            "decision_path": "decision",
+                            "report_title": "kickoff calendar",
+                            "report_fields": [
+                                "validation.calendar_minus_baseline_log_loss",
+                                "test.calendar_minus_baseline_log_loss"
+                            ],
+                            "preregistration_markdown": "# Frozen kickoff protocol",
                         },
                     },
                 ],
@@ -221,4 +239,17 @@ def test_v5_recipe_registry_fails_closed_on_unsafe_recipe(tmp_path: Path):
     payload["recipes"][0]["safety"]["model_api"] = True
     path.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(LocalResearchError, match="safety contract mismatch"):
+        load_recipe_registry(tmp_path)
+
+
+def test_v5_pipeline_recipe_fails_closed_on_bad_result_path(tmp_path: Path):
+    _write_registry(tmp_path)
+    path = tmp_path / "research" / "v5_recipe_registry.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    for recipe in payload["recipes"]:
+        if recipe["handler"] == "pipeline":
+            recipe["pipeline"]["decision_path"] = "../escape"
+            break
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(LocalResearchError, match="invalid decision_path"):
         load_recipe_registry(tmp_path)
