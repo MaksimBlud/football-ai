@@ -22,6 +22,7 @@ Each program records:
 - objective;
 - `ACTIVE / PROGRAM_DONE / BLOCKED` status;
 - completed child Issue numbers;
+- active child Issue numbers, so the Brain cannot duplicate work while a child is running;
 - current scientific frontier;
 - allowed follow-up classes;
 - explicit stop rules.
@@ -82,3 +83,15 @@ The initial ACTIVE programs are:
   checks that do not rescue the rejected pooled hypothesis post-hoc.
 
 Infrastructure live-proof Issues are not scientific programs.
+
+
+## First live Brain cycle
+
+The first live Brain cycle opened one child per ACTIVE program, respecting the portfolio
+limit:
+
+- Issue #515: frozen temporal stability of cross-market lead-lag;
+- Issue #516: preregistered league heterogeneity of kickoff/calendar context.
+
+Both were initially fail-closed as `research-v5-needs-recipe`. The Brain then added
+deterministic evaluators and V5 recipes rather than opting into V4/model APIs.
