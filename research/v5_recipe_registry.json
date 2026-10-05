@@ -245,6 +245,37 @@
         ],
         "preregistration_markdown": "# Frozen favourite-longshot bias protocol\n\nStatus: **PREREGISTERED / TEMPORAL OOS / RESEARCH ONLY / NO_BET**.\n\nPrimary market: 1X2. Frozen leagues: EPL, La Liga, Serie A. Frozen bookmakers: Bet365 and Pinnacle. Primary no-vig representation: multiplicative/proportional normalization.\n\nOutcome-free header/source audit must complete before reading FTR. Both bookmakers must have exact opening and closing 1X2 columns for all validation/test league-seasons. Missing coverage fails closed; no proxy bookmaker and no paid source.\n\nTemporal design:\n- reference/descriptive: 2019/20-2023/24;\n- validation: 2024/25;\n- untouched OOT: 2025/26.\n\nPrimary horizons: opening and closing. Exact 24h/6h/1h snapshots are evaluated only if an honest timestamped source exists. The current frozen Football-Data source does not provide those exact snapshots, so they must be reported as SOURCE_GAP and never interpolated.\n\nFrozen probability bins, left-inclusive/right-exclusive:\n0-20%, 20-30%, 30-40%, 40-50%, 50-60%, 60-70%, 70-80%, 80%+.\n\nFor every bin report N, mean fair probability, realized frequency, 95% frequency interval, calibration gap, average raw odds and historical flat-stake return. Historical return is diagnostic only and cannot authorize betting.\n\nPrimary structural statistic: slope of calibration residual (y - p) on fair probability p, with deterministic league-stratified fixture-cluster bootstrap. Positive slope is the classic favourite-longshot direction: low-p outcomes are overestimated while high-p outcomes are underestimated.\n\nFrozen aggregate regions:\n- longshot: p < 0.30;\n- favourite: p >= 0.60.\n\nSTABLE_FAVOURITE_LONGSHOT_BIAS requires all:\n1. validation closing residual-slope 95% CI lower bound > 0;\n2. untouched OOT closing residual-slope 95% CI lower bound > 0;\n3. validation longshot gap < 0 and favourite gap > 0;\n4. OOT longshot gap < 0 and favourite gap > 0;\n5. positive OOT slope for both frozen bookmakers;\n6. positive OOT slope in at least two of three frozen leagues.\n\nOtherwise return NO_STABLE_FAVOURITE_LONGSHOT_BIAS. Source failure returns BLOCKED_BY_SOURCE_GAP.\n\nOpening versus closing is reported as a frozen time-path diagnostic and cannot rescue a failed primary gate. League/bookmaker/outcome-type/season breakdowns are diagnostics only. No post-hoc bin changes, no probability correction fitted on this OOT sample, no production promotion."
       }
+    },
+    {
+      "hypothesis_family": "bookmaker_margin_structure_v1",
+      "handler": "pipeline",
+      "max_iterations": 4,
+      "description": "Matched-fixture OOS comparison of Bet365 vs Pinnacle total overround and favourite/longshot margin allocation relative to market-average consensus.",
+      "safety": {
+        "model_api": false,
+        "paid_odds_api": false,
+        "supabase_writes": false,
+        "production_operations": false,
+        "automatic_promotion": false
+      },
+      "pipeline": {
+        "evaluator_module": "bookmaker_margin_structure_v1",
+        "decision_path": "decision",
+        "summary_path": "interpretation_guard",
+        "report_title": "bookmaker-specific 1X2 margin allocation on matched fixtures",
+        "report_fields": [
+          "source_audit",
+          "validation.closing.paired.overround",
+          "validation.closing.paired.fl_allocation_contrast",
+          "test.closing.paired.overround",
+          "test.closing.paired.fl_allocation_contrast",
+          "test.closing.paired.draw_allocation_tilt",
+          "test.closing.draw_specific",
+          "formal_gate",
+          "decision"
+        ],
+        "preregistration_markdown": "# Frozen bookmaker margin-structure protocol\n\nStatus: **PREREGISTERED / TEMPORAL OOS / MATCHED FIXTURES / RESEARCH ONLY / NO_BET**.\n\nQuestion: do Bet365 and Pinnacle differ systematically not only in total 1X2 overround but in where they allocate price pressure across favourite, middle and longshot outcomes?\n\nFrozen scope:\n- leagues: EPL, La Liga, Serie A;\n- bookmakers: Bet365 and Pinnacle only;\n- primary market: 1X2;\n- horizons: opening and closing;\n- reference: 2019/20-2023/24;\n- validation: 2024/25;\n- untouched OOT: 2025/26.\n\nOutcome-free source audit must pass before FTR is read. Required on every validation/test league-season:\n- Bet365 opening + closing 1X2;\n- Pinnacle opening + closing 1X2;\n- Football-Data market-average opening + closing 1X2 (AvgH/AvgD/AvgA and AvgCH/AvgCD/AvgCA).\n\nNo bookmaker may be added or removed after outcomes. Exact 24h/6h/1h snapshots are unavailable in the frozen source and must be reported as SOURCE_GAP, never interpolated.\n\nPrimary external consensus:\n- multiplicatively de-vigged Football-Data market-average odds.\n\nFor each bookmaker and fixture:\n- q_i = 1 / odds_i;\n- S = sum(q_i);\n- total overround = S - 1;\n- uniform-margin expected implied probability around consensus = consensus_p_i * S;\n- allocation_tilt_i = q_i / (consensus_p_i * S) - 1.\n\nThis construction removes each bookmaker's total overround before asking where the remaining relative price tilt sits.\n\nFrozen rank is determined from external consensus fair probabilities:\n- favourite = highest consensus p;\n- longshot = lowest consensus p;\n- middle = remaining outcome.\n\nPrimary allocation statistic:\nfl_allocation_contrast = longshot_allocation_tilt - favourite_allocation_tilt.\n\nPrimary paired effect:\nBet365 minus Pinnacle on the same fixture.\n\nSecondary:\n- draw allocation tilt;\n- total overround difference;\n- bookmaker fair-probability TV distance to market consensus;\n- historical flat-stake return by frozen consensus-probability bins (diagnostic only).\n\nConsensus sensitivity:\nrecompute the favourite-longshot allocation contrast using the mean of Bet365 and Pinnacle de-vigged fair probabilities as an alternate consensus. This sensitivity cannot create a positive result when the primary external-consensus gate fails.\n\nInference:\ndeterministic league-stratified fixture bootstrap, 5000 draws.\n\nSUPPORTED_BOOKMAKER_MARGIN_HETEROGENEITY requires all:\n1. validation closing primary allocation CI excludes zero;\n2. untouched OOT closing primary allocation CI excludes zero;\n3. validation and OOT primary effects have the same non-zero sign;\n4. OOT opening and closing primary effects have the same non-zero sign;\n5. alternate-consensus OOT allocation CI excludes zero;\n6. alternate-consensus OOT effect has the same sign as the primary OOT effect;\n7. at least two of three OOT league effects have the pooled OOT sign.\n\nOtherwise return NO_STABLE_BOOKMAKER_MARGIN_HETEROGENEITY. Missing source coverage returns BLOCKED_BY_SOURCE_GAP.\n\nThe draw result is always reported separately. Total overround cannot rescue a failed allocation gate. Observational pricing differences must not be interpreted as causal evidence about bettor demand, bookmaker liabilities, or intent.\n\nNo production weighting/calibration change, no paid API, no Supabase, no promotion."
+      }
     }
   ]
 }
