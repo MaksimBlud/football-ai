@@ -27,8 +27,16 @@ def test_v5_routes_supported_families_without_model_api():
     assert "devig_method_oos_v1.py" in v5
     assert "favourite_longshot_bias_v1" in registry
     assert "favourite_longshot_bias_v1.py" in v5
+    assert "power_devig_cross_league_transport_v1" in registry
+    assert "power_devig_cross_league_transport_v1.py" in v5
+    assert "favourite_longshot_cross_league_v1" in registry
+    assert "favourite_longshot_cross_league_v1.py" in v5
     assert "bookmaker_margin_structure_v1" in registry
     assert "bookmaker_margin_structure_v1.py" in v5
+    assert "bookmaker_price_formation_v1" in registry
+    assert "bookmaker_price_formation_v1.py" in v5
+    assert "bookmaker_margin_market_type_transport_v1" in registry
+    assert "bookmaker_margin_market_type_transport_v1.py" in v5
     assert "kickoff_calendar_context|" not in v5
     assert "kickoff_calendar_context|" not in v4
 
