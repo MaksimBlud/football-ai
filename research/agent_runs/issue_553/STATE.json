@@ -1,0 +1,7 @@
+{
+  "blocker": null,
+  "engine": "V5_DETERMINISTIC_NO_API",
+  "next_step": "Run the registered deterministic evaluator.",
+  "status": "CONTINUE",
+  "summary": "Frozen deterministic protocol written for bookmaker_price_formation_cross_book_transport_v1."
+}
