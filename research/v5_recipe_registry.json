@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "engine": "V5_DETERMINISTIC_NO_API",
+  "recipes": [
+    {
+      "hypothesis_family": "cross_market_lead_lag_independent_replication",
+      "handler": "replication",
+      "max_iterations": 2,
+      "description": "Consume the frozen canonical Bundesliga/Ligue 1 replication and close the direction fail-closed.",
+      "safety": {
+        "model_api": false,
+        "paid_odds_api": false,
+        "supabase_writes": false,
+        "production_operations": false,
+        "automatic_promotion": false
+      }
+    },
+    {
+      "hypothesis_family": "cross_market_lead_lag_2024_25_anomaly_audit",
+      "handler": "anomaly",
+      "max_iterations": 4,
+      "description": "Preregister, compute and report the outcome-free 2024/25 source/market anomaly audit.",
+      "safety": {
+        "model_api": false,
+        "paid_odds_api": false,
+        "supabase_writes": false,
+        "production_operations": false,
+        "automatic_promotion": false
+      }
+    },
+    {
+      "hypothesis_family": "kickoff_calendar_context",
+      "handler": "kickoff",
+      "max_iterations": 4,
+      "description": "Preregister, compute and report temporal OOS kickoff/calendar information for O/U 2.5.",
+      "safety": {
+        "model_api": false,
+        "paid_odds_api": false,
+        "supabase_writes": false,
+        "production_operations": false,
+        "automatic_promotion": false
+      }
+    }
+  ]
+}
