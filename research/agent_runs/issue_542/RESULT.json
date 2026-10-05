@@ -1,0 +1,1790 @@
+{
+  "decision": "NO_CROSS_LEAGUE_FAVOURITE_LONGSHOT_CONFIRMATION",
+  "evidence_class": "INDEPENDENT_CROSS_LEAGUE_FAVOURITE_LONGSHOT_TRANSPORT",
+  "experiment_id": "FAVOURITE_LONGSHOT_CROSS_LEAGUE_V1",
+  "formal_gate": {
+    "gates": {
+      "bookmaker_signs_not_contradictory": true,
+      "both_leagues_positive_test_slope": true,
+      "both_leagues_positive_validation_slope": false,
+      "test_pooled_ci_above_zero": false,
+      "test_region_direction": true,
+      "validation_pooled_ci_above_zero": false,
+      "validation_region_direction": false
+    },
+    "supported": false
+  },
+  "interpretation_guard": "The frozen favourite-longshot pattern did not clear every Bundesliga/Ligue 1 transport gate. The negative parent #534 decision remains binding.",
+  "paid_odds_api_calls": 0,
+  "parent_issue": 534,
+  "primary_devig": "multiplicative",
+  "probability_bins": [
+    {
+      "label": "0-20%",
+      "left_inclusive": 0.0,
+      "right_exclusive": 0.2
+    },
+    {
+      "label": "20-30%",
+      "left_inclusive": 0.2,
+      "right_exclusive": 0.3
+    },
+    {
+      "label": "30-40%",
+      "left_inclusive": 0.3,
+      "right_exclusive": 0.4
+    },
+    {
+      "label": "40-50%",
+      "left_inclusive": 0.4,
+      "right_exclusive": 0.5
+    },
+    {
+      "label": "50-60%",
+      "left_inclusive": 0.5,
+      "right_exclusive": 0.6
+    },
+    {
+      "label": "60-70%",
+      "left_inclusive": 0.6,
+      "right_exclusive": 0.7
+    },
+    {
+      "label": "70-80%",
+      "left_inclusive": 0.7,
+      "right_exclusive": 0.8
+    },
+    {
+      "label": "80%+",
+      "left_inclusive": 0.8,
+      "right_exclusive": 1.01
+    }
+  ],
+  "production_operations": false,
+  "production_promotion": false,
+  "reference": {
+    "closing": {
+      "bins": [
+        {
+          "average_raw_odds": 7.711875719217491,
+          "bin": "0-20%",
+          "calibration_gap_realized_minus_implied": -0.006129983088471097,
+          "flat_stake_return": -0.06680955120828538,
+          "frequency_ci95_high": 0.1484716514773825,
+          "frequency_ci95_low": 0.12563320936416505,
+          "gap_ci95_high_approx": 0.005690345028727284,
+          "gap_ci95_low_approx": -0.017148097084490166,
+          "left_inclusive": 0.0,
+          "mean_implied_probability": 0.14278130644865522,
+          "realized_frequency": 0.13665132336018412,
+          "right_exclusive": 0.2,
+          "rows": 3476,
+          "wins": 475
+        },
+        {
+          "average_raw_odds": 3.787398666666667,
+          "bin": "20-30%",
+          "calibration_gap_realized_minus_implied": 0.009616664511693185,
+          "flat_stake_return": -0.0039000000000000076,
+          "frequency_ci95_high": 0.27625295620191087,
+          "frequency_ci95_low": 0.25625315826611533,
+          "gap_ci95_high_approx": 0.019736287380270723,
+          "gap_ci95_low_approx": -0.00026351055552481517,
+          "left_inclusive": 0.2,
+          "mean_implied_probability": 0.25651666882164015,
+          "realized_frequency": 0.26613333333333333,
+          "right_exclusive": 0.3,
+          "rows": 7500,
+          "wins": 1996
+        },
+        {
+          "average_raw_odds": 2.8244405594405597,
+          "bin": "30-40%",
+          "calibration_gap_realized_minus_implied": -0.008900780446664924,
+          "flat_stake_return": -0.06307692307692306,
+          "frequency_ci95_high": 0.3510716873594939,
+          "frequency_ci95_low": 0.3181180119880642,
+          "gap_ci95_high_approx": 0.007778027065403648,
+          "gap_ci95_low_approx": -0.025175648306026033,
+          "left_inclusive": 0.3,
+          "mean_implied_probability": 0.34329366029409025,
+          "realized_frequency": 0.33439287984742533,
+          "right_exclusive": 0.4,
+          "rows": 3146,
+          "wins": 1052
+        },
+        {
+          "average_raw_odds": 2.1498242451554757,
+          "bin": "40-50%",
+          "calibration_gap_realized_minus_implied": -0.012242062133440867,
+          "flat_stake_return": -0.0618431726002704,
+          "frequency_ci95_high": 0.45741123128580596,
+          "frequency_ci95_low": 0.4161739950087038,
+          "gap_ci95_high_approx": 0.008485978525956783,
+          "gap_ci95_low_approx": -0.0327512577511454,
+          "left_inclusive": 0.4,
+          "mean_implied_probability": 0.4489252527598492,
+          "realized_frequency": 0.4366831906264083,
+          "right_exclusive": 0.5,
+          "rows": 2219,
+          "wins": 969
+        },
+        {
+          "average_raw_odds": 1.7638961937716262,
+          "bin": "50-60%",
+          "calibration_gap_realized_minus_implied": -0.005532643309261176,
+          "flat_stake_return": -0.05028373702422146,
+          "frequency_ci95_high": 0.566038655332745,
+          "frequency_ci95_low": 0.5147155219360597,
+          "gap_ci95_high_approx": 0.020021582957739925,
+          "gap_ci95_low_approx": -0.031301550438945336,
+          "left_inclusive": 0.5,
+          "mean_implied_probability": 0.5460170723750051,
+          "realized_frequency": 0.5404844290657439,
+          "right_exclusive": 0.6,
+          "rows": 1445,
+          "wins": 781
+        },
+        {
+          "average_raw_odds": 1.487433537832311,
+          "bin": "60-70%",
+          "calibration_gap_realized_minus_implied": 0.01971469536695747,
+          "flat_stake_return": -0.012546012269938647,
+          "frequency_ci95_high": 0.6945120975170357,
+          "frequency_ci95_low": 0.635480079009266,
+          "gap_ci95_high_approx": 0.04858262110485201,
+          "gap_ci95_low_approx": -0.010449397402917726,
+          "left_inclusive": 0.6,
+          "mean_implied_probability": 0.6459294764121837,
+          "realized_frequency": 0.6656441717791411,
+          "right_exclusive": 0.7,
+          "rows": 978,
+          "wins": 651
+        },
+        {
+          "average_raw_odds": 1.286937618147448,
+          "bin": "70-80%",
+          "calibration_gap_realized_minus_implied": -0.0010513537416100283,
+          "flat_stake_return": -0.04313799621928165,
+          "frequency_ci95_high": 0.7800963044772418,
+          "frequency_ci95_low": 0.705976983763559,
+          "gap_ci95_high_approx": 0.03424343844829714,
+          "gap_ci95_low_approx": -0.03987588226538563,
+          "left_inclusive": 0.7,
+          "mean_implied_probability": 0.7458528660289446,
+          "realized_frequency": 0.7448015122873346,
+          "right_exclusive": 0.8,
+          "rows": 529,
+          "wins": 394
+        },
+        {
+          "average_raw_odds": 1.137008547008547,
+          "bin": "80%+",
+          "calibration_gap_realized_minus_implied": -0.027266272737394348,
+          "flat_stake_return": -0.07538461538461538,
+          "frequency_ci95_high": 0.8606156833362815,
+          "frequency_ci95_low": 0.7616475702353991,
+          "gap_ci95_high_approx": 0.017110094359570893,
+          "gap_ci95_low_approx": -0.08185801874131149,
+          "left_inclusive": 0.8,
+          "mean_implied_probability": 0.8435055889767106,
+          "realized_frequency": 0.8162393162393162,
+          "right_exclusive": 1.01,
+          "rows": 234,
+          "wins": 191
+        }
+      ],
+      "by_bookmaker": {
+        "BET365": {
+          "mean_calibration_gap": 1.063366654399223e-18,
+          "residual_slope": -0.005453397584199352,
+          "rows": 9762
+        },
+        "PINNACLE": {
+          "mean_calibration_gap": -1.7054117121738196e-20,
+          "residual_slope": -0.01234162717114254,
+          "rows": 9765
+        }
+      },
+      "by_league": {
+        "BUNDESLIGA": {
+          "mean_calibration_gap": 4.232876455542536e-19,
+          "residual_slope": -0.02508901800902344,
+          "rows": 9180
+        },
+        "LIGUE_1": {
+          "mean_calibration_gap": 7.24268427198203e-19,
+          "residual_slope": 0.009074070136954823,
+          "rows": 10347
+        }
+      },
+      "by_outcome_type": {
+        "A": {
+          "mean_calibration_gap": 0.0028206055491023676,
+          "residual_slope": 0.02760370421066922,
+          "rows": 6509
+        },
+        "D": {
+          "mean_calibration_gap": 0.006394064685138344,
+          "residual_slope": 0.013769721956304872,
+          "rows": 6509
+        },
+        "H": {
+          "mean_calibration_gap": -0.009214670234240713,
+          "residual_slope": 0.0015552005952480107,
+          "rows": 6509
+        }
+      },
+      "fixtures": 3255,
+      "regions": {
+        "favourite_p_ge_0_60": {
+          "flat_stake_return": -0.030287191269385408,
+          "gap": 0.00709046416945569,
+          "mean_p": 0.7028463537512796,
+          "rows": 1741,
+          "win_rate": 0.7099368179207353
+        },
+        "longshot_p_lt_0_30": {
+          "flat_stake_return": -0.023822886297376094,
+          "gap": 0.004629843533361266,
+          "mean_p": 0.2204977074870469,
+          "rows": 10976,
+          "win_rate": 0.22512755102040816
+        }
+      },
+      "residual_slope": {
+        "ci95_high": 0.05612819833752394,
+        "ci95_low": -0.07830206573424342,
+        "draws": 5000,
+        "slope": -0.00892464853864652,
+        "valid_draws": 5000
+      },
+      "rows": 19527
+    },
+    "opening": {
+      "bins": [
+        {
+          "average_raw_odds": 7.630616337363609,
+          "bin": "0-20%",
+          "calibration_gap_realized_minus_implied": -0.009103235592343217,
+          "flat_stake_return": -0.07142730757888528,
+          "frequency_ci95_high": 0.14606566004919808,
+          "frequency_ci95_low": 0.12311965240369806,
+          "gap_ci95_high_approx": 0.002783716111234097,
+          "gap_ci95_low_approx": -0.020162291534265922,
+          "left_inclusive": 0.0,
+          "mean_implied_probability": 0.14328194393796398,
+          "realized_frequency": 0.13417870834562076,
+          "right_exclusive": 0.2,
+          "rows": 3391,
+          "wins": 455
+        },
+        {
+          "average_raw_odds": 3.7883333333333336,
+          "bin": "20-30%",
+          "calibration_gap_realized_minus_implied": 0.009712893058653138,
+          "flat_stake_return": -0.0024391201885310284,
+          "frequency_ci95_high": 0.2761963061409627,
+          "frequency_ci95_low": 0.2563770900426271,
+          "gap_ci95_high_approx": 0.019740044970760096,
+          "gap_ci95_low_approx": -7.917112757549472e-05,
+          "left_inclusive": 0.2,
+          "mean_implied_probability": 0.2564562611702026,
+          "realized_frequency": 0.26616915422885573,
+          "right_exclusive": 0.3,
+          "rows": 7638,
+          "wins": 2033
+        },
+        {
+          "average_raw_odds": 2.809973941368078,
+          "bin": "30-40%",
+          "calibration_gap_realized_minus_implied": -0.00908764228773562,
+          "flat_stake_return": -0.06347557003257329,
+          "frequency_ci95_high": 0.3527328344393857,
+          "frequency_ci95_low": 0.31933873675130037,
+          "gap_ci95_high_approx": 0.007814573259141921,
+          "gap_ci95_low_approx": -0.0255795244289434,
+          "left_inclusive": 0.3,
+          "mean_implied_probability": 0.34491826118024377,
+          "realized_frequency": 0.33583061889250815,
+          "right_exclusive": 0.4,
+          "rows": 3070,
+          "wins": 1031
+        },
+        {
+          "average_raw_odds": 2.1571466198419667,
+          "bin": "40-50%",
+          "calibration_gap_realized_minus_implied": -0.004876479590843474,
+          "flat_stake_return": -0.0475943810359965,
+          "frequency_ci95_high": 0.46296949903683804,
+          "frequency_ci95_low": 0.42221095511469287,
+          "gap_ci95_high_approx": 0.015599604169436176,
+          "gap_ci95_low_approx": -0.025158939752708998,
+          "left_inclusive": 0.4,
+          "mean_implied_probability": 0.44736989486740186,
+          "realized_frequency": 0.4424934152765584,
+          "right_exclusive": 0.5,
+          "rows": 2278,
+          "wins": 1008
+        },
+        {
+          "average_raw_odds": 1.7583241379310344,
+          "bin": "50-60%",
+          "calibration_gap_realized_minus_implied": -0.013229887628348536,
+          "flat_stake_return": -0.06248275862068965,
+          "frequency_ci95_high": 0.5600321781581022,
+          "frequency_ci95_low": 0.5087511127525287,
+          "gap_ci95_high_approx": 0.012319531909064096,
+          "gap_ci95_low_approx": -0.03896153349650944,
+          "left_inclusive": 0.5,
+          "mean_implied_probability": 0.5477126462490381,
+          "realized_frequency": 0.5344827586206896,
+          "right_exclusive": 0.6,
+          "rows": 1450,
+          "wins": 775
+        },
+        {
+          "average_raw_odds": 1.4784535005224662,
+          "bin": "60-70%",
+          "calibration_gap_realized_minus_implied": 0.021018888027799942,
+          "flat_stake_return": -0.011891327063740856,
+          "frequency_ci95_high": 0.6998832801463459,
+          "frequency_ci95_low": 0.6404434168316853,
+          "gap_ci95_high_approx": 0.05005577318981991,
+          "gap_ci95_low_approx": -0.00938409012484076,
+          "left_inclusive": 0.6,
+          "mean_implied_probability": 0.649827506956526,
+          "realized_frequency": 0.670846394984326,
+          "right_exclusive": 0.7,
+          "rows": 957,
+          "wins": 642
+        },
+        {
+          "average_raw_odds": 1.2916831683168315,
+          "bin": "70-80%",
+          "calibration_gap_realized_minus_implied": 0.00949791984018078,
+          "flat_stake_return": -0.029188118811881172,
+          "frequency_ci95_high": 0.7881159761182382,
+          "frequency_ci95_low": 0.7130224346374331,
+          "gap_ci95_high_approx": 0.04513864843366655,
+          "gap_ci95_low_approx": -0.02995489304713861,
+          "left_inclusive": 0.7,
+          "mean_implied_probability": 0.7429773276845717,
+          "realized_frequency": 0.7524752475247525,
+          "right_exclusive": 0.8,
+          "rows": 505,
+          "wins": 380
+        },
+        {
+          "average_raw_odds": 1.1416157205240172,
+          "bin": "80%+",
+          "calibration_gap_realized_minus_implied": -0.043836293702435136,
+          "flat_stake_return": -0.09611353711790395,
+          "frequency_ci95_high": 0.8420003340827814,
+          "frequency_ci95_low": 0.7377933190052642,
+          "gap_ci95_high_approx": 0.003404215052835391,
+          "gap_ci95_low_approx": -0.10080280002468178,
+          "left_inclusive": 0.8,
+          "mean_implied_probability": 0.838596119029946,
+          "realized_frequency": 0.7947598253275109,
+          "right_exclusive": 1.01,
+          "rows": 229,
+          "wins": 182
+        }
+      ],
+      "by_bookmaker": {
+        "BET365": {
+          "mean_calibration_gap": 2.269592103829478e-18,
+          "residual_slope": -0.005187237928864855,
+          "rows": 9759
+        },
+        "PINNACLE": {
+          "mean_calibration_gap": -1.291221572855367e-18,
+          "residual_slope": -0.010046501230214985,
+          "rows": 9759
+        }
+      },
+      "by_league": {
+        "BUNDESLIGA": {
+          "mean_calibration_gap": -1.935029236819445e-19,
+          "residual_slope": -0.02745308262053163,
+          "rows": 9180
+        },
+        "LIGUE_1": {
+          "mean_calibration_gap": -6.282457626288611e-19,
+          "residual_slope": 0.014718286026093779,
+          "rows": 10338
+        }
+      },
+      "by_outcome_type": {
+        "A": {
+          "mean_calibration_gap": 0.002209775413893249,
+          "residual_slope": 0.036117183595831326,
+          "rows": 6506
+        },
+        "D": {
+          "mean_calibration_gap": 0.007325740593607316,
+          "residual_slope": 0.021554896923588553,
+          "rows": 6506
+        },
+        "H": {
+          "mean_calibration_gap": -0.009535516007500565,
+          "residual_slope": 0.0018415993452984513,
+          "rows": 6506
+        }
+      },
+      "fixtures": 3254,
+      "regions": {
+        "favourite_p_ge_0_60": {
+          "flat_stake_return": -0.02846244825547013,
+          "gap": 0.008795395685415874,
+          "mean_p": 0.7032093352430289,
+          "rows": 1691,
+          "win_rate": 0.7120047309284447
+        },
+        "longshot_p_lt_0_30": {
+          "flat_stake_return": -0.023650376280714484,
+          "gap": 0.003927645778253358,
+          "mean_p": 0.22165944280638714,
+          "rows": 11029,
+          "win_rate": 0.2255870885846405
+        }
+      },
+      "residual_slope": {
+        "ci95_high": 0.0607219118824655,
+        "ci95_low": -0.07781149087078713,
+        "draws": 5000,
+        "slope": -0.007630695954121853,
+        "valid_draws": 5000
+      },
+      "rows": 19518
+    },
+    "time_path": {
+      "classification": "NO_CLEAR_TIME_PATH",
+      "closing_minus_opening_slope": -0.0012939525845246666,
+      "closing_slope": -0.00892464853864652,
+      "closing_supported": false,
+      "opening_slope": -0.007630695954121853,
+      "opening_supported": false
+    }
+  },
+  "research_only": true,
+  "result": "RESEARCH_ONLY_NO_BET",
+  "season_diagnostics": {
+    "2019-2020": {
+      "closing": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": -0.05019354838709676,
+            "gap": -0.0024027831013859746,
+            "mean_p": 0.7120802024562247,
+            "rows": 310,
+            "win_rate": 0.7096774193548387
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.05000524658971669,
+            "gap": -0.0011065049855344955,
+            "mean_p": 0.2172660013129217,
+            "rows": 1906,
+            "win_rate": 0.2161594963273872
+          }
+        },
+        "residual_slope": -0.00733408003025394,
+        "rows": 3510
+      },
+      "opening": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": -0.06579310344827585,
+            "gap": -0.013883728178027188,
+            "mean_p": 0.7173320040400961,
+            "rows": 290,
+            "win_rate": 0.7034482758620689
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.04211598746081504,
+            "gap": -0.0028720149353058666,
+            "mean_p": 0.21865048933446993,
+            "rows": 1914,
+            "win_rate": 0.21577847439916406
+          }
+        },
+        "residual_slope": -0.0015173041763122236,
+        "rows": 3510
+      }
+    },
+    "2020-2021": {
+      "closing": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": -0.02214876033057851,
+            "gap": 0.011607623659469768,
+            "mean_p": 0.704645819866701,
+            "rows": 363,
+            "win_rate": 0.7162534435261708
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": 0.001805006587615287,
+            "gap": 0.008258222556302902,
+            "mean_p": 0.22055161494918676,
+            "rows": 2277,
+            "win_rate": 0.22880983750548967
+          }
+        },
+        "residual_slope": -0.014598489835672957,
+        "rows": 4113
+      },
+      "opening": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": -0.013189655172413793,
+            "gap": 0.01572340386350002,
+            "mean_p": 0.7084145271709827,
+            "rows": 348,
+            "win_rate": 0.7241379310344828
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.0005034722222222315,
+            "gap": 0.00472592225808019,
+            "mean_p": 0.2222706055196976,
+            "rows": 2304,
+            "win_rate": 0.2269965277777778
+          }
+        },
+        "residual_slope": -0.025106209403957063,
+        "rows": 4104
+      }
+    },
+    "2021-2022": {
+      "closing": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": 0.003097112860892397,
+            "gap": 0.028467634537147624,
+            "mean_p": 0.7038158300297815,
+            "rows": 381,
+            "win_rate": 0.7322834645669292
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": 0.00885990744636096,
+            "gap": 0.012414118822549197,
+            "mean_p": 0.22107347057585214,
+            "rows": 2377,
+            "win_rate": 0.23348758939840134
+          }
+        },
+        "residual_slope": -0.050548502034143426,
+        "rows": 4116
+      },
+      "opening": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": -0.007437325905292474,
+            "gap": 0.024623808854995932,
+            "mean_p": 0.6996101744319121,
+            "rows": 359,
+            "win_rate": 0.724233983286908
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": 0.021536523929471033,
+            "gap": 0.01829228334055691,
+            "mean_p": 0.22352131867455644,
+            "rows": 2382,
+            "win_rate": 0.24181360201511334
+          }
+        },
+        "residual_slope": -0.04030459242246231,
+        "rows": 4116
+      }
+    },
+    "2022-2023": {
+      "closing": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": -0.046803278688524574,
+            "gap": -0.007265359764628165,
+            "mean_p": 0.698522190365721,
+            "rows": 366,
+            "win_rate": 0.6912568306010929
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.049112068965517244,
+            "gap": -0.004109767943119846,
+            "mean_p": 0.2217821817362233,
+            "rows": 2320,
+            "win_rate": 0.21767241379310345
+          }
+        },
+        "residual_slope": 0.018743302897802957,
+        "rows": 4116
+      },
+      "opening": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": -0.03722371967654986,
+            "gap": -0.00014033032074545204,
+            "mean_p": 0.6982535378679152,
+            "rows": 371,
+            "win_rate": 0.6981132075471698
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.049506437768240354,
+            "gap": -0.00425830616326936,
+            "mean_p": 0.22142568813751828,
+            "rows": 2330,
+            "win_rate": 0.21716738197424892
+          }
+        },
+        "residual_slope": 0.012907259926570916,
+        "rows": 4116
+      }
+    },
+    "2023-2024": {
+      "closing": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": -0.041059190031152645,
+            "gap": 0.0021456274369630046,
+            "mean_p": 0.6956736872047815,
+            "rows": 321,
+            "win_rate": 0.6978193146417445
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.03692748091603054,
+            "gap": 0.006750233564283892,
+            "mean_p": 0.22130320155021993,
+            "rows": 2096,
+            "win_rate": 0.22805343511450382
+          }
+        },
+        "residual_slope": 0.013848989001271511,
+        "rows": 3672
+      },
+      "opening": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": -0.024705882352941178,
+            "gap": 0.014364290715854766,
+            "mean_p": 0.6946140374575198,
+            "rows": 323,
+            "win_rate": 0.7089783281733746
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.054797522629823715,
+            "gap": 0.002037232698964442,
+            "mean_p": 0.2218789178489155,
+            "rows": 2099,
+            "win_rate": 0.22391615054787994
+          }
+        },
+        "residual_slope": 0.019815756750288623,
+        "rows": 3672
+      }
+    },
+    "2024-2025": {
+      "closing": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": -0.0621584699453552,
+            "gap": -0.00963230648133473,
+            "mean_p": 0.7008891370824276,
+            "rows": 366,
+            "win_rate": 0.6912568306010929
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.05110380460310006,
+            "gap": -0.00036257238548384474,
+            "mean_p": 0.21783556440051438,
+            "rows": 2129,
+            "win_rate": 0.21747299201503054
+          }
+        },
+        "residual_slope": 0.01014570375562904,
+        "rows": 3672
+      },
+      "opening": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": -0.07828488372093023,
+            "gap": -0.016023657199553898,
+            "mean_p": 0.6991631920832748,
+            "rows": 344,
+            "win_rate": 0.6831395348837209
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.05350189035916824,
+            "gap": -0.00015296535590691995,
+            "mean_p": 0.2189620390799145,
+            "rows": 2116,
+            "win_rate": 0.21880907372400757
+          }
+        },
+        "residual_slope": 0.019685815332318446,
+        "rows": 3672
+      }
+    },
+    "2025-2026": {
+      "closing": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": 0.08448598130841123,
+            "gap": 0.09080940743105004,
+            "mean_p": 0.7035831159334359,
+            "rows": 214,
+            "win_rate": 0.794392523364486
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.13951581665590704,
+            "gap": -0.016154692113267255,
+            "mean_p": 0.2233851633850555,
+            "rows": 1549,
+            "win_rate": 0.20723047127178826
+          }
+        },
+        "residual_slope": 0.1504696076565474,
+        "rows": 2742
+      },
+      "opening": {
+        "regions": {
+          "favourite_p_ge_0_60": {
+            "flat_stake_return": 0.05147465437788019,
+            "gap": 0.07110881200077923,
+            "mean_p": 0.7030847363863175,
+            "rows": 217,
+            "win_rate": 0.7741935483870968
+          },
+          "longshot_p_lt_0_30": {
+            "flat_stake_return": -0.11946998722860794,
+            "gap": -0.009362766963057628,
+            "mean_p": 0.22328358433215087,
+            "rows": 1566,
+            "win_rate": 0.21392081736909324
+          }
+        },
+        "residual_slope": 0.15572584433491357,
+        "rows": 2745
+      }
+    }
+  },
+  "source_audit": {
+    "candidate_bookmakers": [
+      "BET365",
+      "PINNACLE"
+    ],
+    "excluded_bookmakers": [],
+    "included_bookmakers": [
+      "BET365",
+      "PINNACLE"
+    ],
+    "intraday_snapshot_gaps": {
+      "1h": "No exact timestamped 1h snapshot in frozen Football-Data source.",
+      "24h": "No exact timestamped 24h snapshot in frozen Football-Data source.",
+      "6h": "No exact timestamped 6h snapshot in frozen Football-Data source."
+    },
+    "outcome_read_after_audit": true,
+    "outcome_read_before_audit": false,
+    "source_files": {
+      "BUNDESLIGA:2019-2020": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "BUNDESLIGA:2020-2021": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "BUNDESLIGA:2021-2022": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "BUNDESLIGA:2022-2023": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "BUNDESLIGA:2023-2024": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "BUNDESLIGA:2024-2025": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "BUNDESLIGA:2025-2026": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "LIGUE_1:2019-2020": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "LIGUE_1:2020-2021": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "LIGUE_1:2021-2022": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "LIGUE_1:2022-2023": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "LIGUE_1:2023-2024": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "LIGUE_1:2024-2025": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      },
+      "LIGUE_1:2025-2026": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true
+      }
+    },
+    "transport_leagues": [
+      "BUNDESLIGA",
+      "LIGUE_1"
+    ],
+    "validation_test_column_gate_passed": true
+  },
+  "supabase_writes": 0,
+  "supported": false,
+  "temporal_design": {
+    "intraday_24h_6h_1h": "SOURCE_GAP_NO_EXACT_TIMESTAMPED_SNAPSHOTS",
+    "primary_horizons": [
+      "opening",
+      "closing"
+    ],
+    "reference": [
+      "2019-2020",
+      "2020-2021",
+      "2021-2022",
+      "2022-2023",
+      "2023-2024"
+    ],
+    "untouched_test": "2025-2026",
+    "validation": "2024-2025"
+  },
+  "test": {
+    "closing": {
+      "bins": [
+        {
+          "average_raw_odds": 7.446103603603603,
+          "bin": "0-20%",
+          "calibration_gap_realized_minus_implied": -0.03559176376485913,
+          "flat_stake_return": -0.2748873873873874,
+          "frequency_ci95_high": 0.14291455010225934,
+          "frequency_ci95_low": 0.08449061039555245,
+          "gap_ci95_high_approx": -0.003037574022960149,
+          "gap_ci95_low_approx": -0.061461513729667044,
+          "left_inclusive": 0.0,
+          "mean_implied_probability": 0.1459521241252195,
+          "realized_frequency": 0.11036036036036036,
+          "right_exclusive": 0.2,
+          "rows": 444,
+          "wins": 49
+        },
+        {
+          "average_raw_odds": 3.792235294117647,
+          "bin": "20-30%",
+          "calibration_gap_realized_minus_implied": -0.008344683232446581,
+          "flat_stake_return": -0.08512217194570136,
+          "frequency_ci95_high": 0.2724031892453309,
+          "frequency_ci95_low": 0.22166334701437007,
+          "gap_ci95_high_approx": 0.017904659859038163,
+          "gap_ci95_low_approx": -0.03283518237192268,
+          "left_inclusive": 0.2,
+          "mean_implied_probability": 0.25449852938629275,
+          "realized_frequency": 0.24615384615384617,
+          "right_exclusive": 0.3,
+          "rows": 1105,
+          "wins": 272
+        },
+        {
+          "average_raw_odds": 2.784009324009324,
+          "bin": "30-40%",
+          "calibration_gap_realized_minus_implied": 0.015534967861742965,
+          "flat_stake_return": -0.003519813519813519,
+          "frequency_ci95_high": 0.4078081075772158,
+          "frequency_ci95_low": 0.3172644390216624,
+          "gap_ci95_high_approx": 0.06203771413359749,
+          "gap_ci95_low_approx": -0.028505954421955915,
+          "left_inclusive": 0.3,
+          "mean_implied_probability": 0.3457703934436183,
+          "realized_frequency": 0.3613053613053613,
+          "right_exclusive": 0.4,
+          "rows": 429,
+          "wins": 155
+        },
+        {
+          "average_raw_odds": 2.1307098765432095,
+          "bin": "40-50%",
+          "calibration_gap_realized_minus_implied": -0.008655333668297516,
+          "flat_stake_return": -0.06228395061728395,
+          "frequency_ci95_high": 0.4957995474938496,
+          "frequency_ci95_low": 0.3882907681828407,
+          "gap_ci95_high_approx": 0.04578618913419402,
+          "gap_ci95_low_approx": -0.06172259017681486,
+          "left_inclusive": 0.4,
+          "mean_implied_probability": 0.45001335835965556,
+          "realized_frequency": 0.44135802469135804,
+          "right_exclusive": 0.5,
+          "rows": 324,
+          "wins": 143
+        },
+        {
+          "average_raw_odds": 1.7558407079646017,
+          "bin": "50-60%",
+          "calibration_gap_realized_minus_implied": 0.0076558928718891694,
+          "flat_stake_return": -0.03163716814159291,
+          "frequency_ci95_high": 0.6164908911304038,
+          "frequency_ci95_low": 0.4879289125166097,
+          "gap_ci95_high_approx": 0.07104943886954962,
+          "gap_ci95_low_approx": -0.05751253974424447,
+          "left_inclusive": 0.5,
+          "mean_implied_probability": 0.5454414522608542,
+          "realized_frequency": 0.5530973451327433,
+          "right_exclusive": 0.6,
+          "rows": 226,
+          "wins": 125
+        },
+        {
+          "average_raw_odds": 1.4841739130434783,
+          "bin": "60-70%",
+          "calibration_gap_realized_minus_implied": 0.1311267828005448,
+          "flat_stake_return": 0.14843478260869566,
+          "frequency_ci95_high": 0.8407836327911129,
+          "frequency_ci95_low": 0.6893343969366545,
+          "gap_ci95_high_approx": 0.19799737211339685,
+          "gap_ci95_low_approx": 0.0465481362589385,
+          "left_inclusive": 0.6,
+          "mean_implied_probability": 0.642786260677716,
+          "realized_frequency": 0.7739130434782608,
+          "right_exclusive": 0.7,
+          "rows": 115,
+          "wins": 89
+        },
+        {
+          "average_raw_odds": 1.2777777777777777,
+          "bin": "70-80%",
+          "calibration_gap_realized_minus_implied": 0.045542879786549806,
+          "flat_stake_return": 0.01291666666666668,
+          "frequency_ci95_high": 0.869479450178993,
+          "frequency_ci95_low": 0.6843073658064066,
+          "gap_ci95_high_approx": 0.12335566329887615,
+          "gap_ci95_low_approx": -0.061816421073710215,
+          "left_inclusive": 0.7,
+          "mean_implied_probability": 0.7461237868801168,
+          "realized_frequency": 0.7916666666666666,
+          "right_exclusive": 0.8,
+          "rows": 72,
+          "wins": 57
+        },
+        {
+          "average_raw_odds": 1.125185185185185,
+          "bin": "80%+",
+          "calibration_gap_realized_minus_implied": 0.03979799346483126,
+          "flat_stake_return": 0.002962962962962941,
+          "frequency_ci95_high": 0.9614796517169016,
+          "frequency_ci95_low": 0.7194219918172017,
+          "gap_ci95_high_approx": 0.11238875629284406,
+          "gap_ci95_low_approx": -0.1296689036068559,
+          "left_inclusive": 0.8,
+          "mean_implied_probability": 0.8490908954240576,
+          "realized_frequency": 0.8888888888888888,
+          "right_exclusive": 1.01,
+          "rows": 27,
+          "wins": 24
+        }
+      ],
+      "by_bookmaker": {
+        "BET365": {
+          "mean_calibration_gap": -1.3605674321386722e-18,
+          "residual_slope": 0.11780414576102391,
+          "rows": 1836
+        },
+        "PINNACLE": {
+          "mean_calibration_gap": -1.225411726959334e-19,
+          "residual_slope": 0.2150620032148853,
+          "rows": 906
+        }
+      },
+      "by_league": {
+        "BUNDESLIGA": {
+          "mean_calibration_gap": -3.273734559792128e-18,
+          "residual_slope": 0.23515904576106464,
+          "rows": 1365
+        },
+        "LIGUE_1": {
+          "mean_calibration_gap": -1.6125243640162041e-19,
+          "residual_slope": 0.06953070043806338,
+          "rows": 1377
+        }
+      },
+      "by_outcome_type": {
+        "A": {
+          "mean_calibration_gap": -0.016228356255226305,
+          "residual_slope": 0.1274726091642453,
+          "rows": 914
+        },
+        "D": {
+          "mean_calibration_gap": -0.005330723196455128,
+          "residual_slope": 0.28538291815888334,
+          "rows": 914
+        },
+        "H": {
+          "mean_calibration_gap": 0.021559079451681437,
+          "residual_slope": 0.1587745414619847,
+          "rows": 914
+        }
+      },
+      "fixtures": 612,
+      "regions": {
+        "favourite_p_ge_0_60": {
+          "flat_stake_return": 0.08448598130841123,
+          "gap": 0.09080940743105004,
+          "mean_p": 0.7035831159334359,
+          "rows": 214,
+          "win_rate": 0.794392523364486
+        },
+        "longshot_p_lt_0_30": {
+          "flat_stake_return": -0.13951581665590704,
+          "gap": -0.016154692113267255,
+          "mean_p": 0.2233851633850555,
+          "rows": 1549,
+          "win_rate": 0.20723047127178826
+        }
+      },
+      "residual_slope": {
+        "ci95_high": 0.3010285070600532,
+        "ci95_low": -0.006598519101078773,
+        "draws": 5000,
+        "slope": 0.1504696076565474,
+        "valid_draws": 5000
+      },
+      "rows": 2742
+    },
+    "opening": {
+      "bins": [
+        {
+          "average_raw_odds": 7.475854214123006,
+          "bin": "0-20%",
+          "calibration_gap_realized_minus_implied": -0.038011551942426086,
+          "flat_stake_return": -0.28400911161731207,
+          "frequency_ci95_high": 0.13946837589929828,
+          "frequency_ci95_low": 0.08147177519055257,
+          "gap_ci95_high_approx": -0.005604679459984302,
+          "gap_ci95_low_approx": -0.06360128016873001,
+          "left_inclusive": 0.0,
+          "mean_implied_probability": 0.14507305535928258,
+          "realized_frequency": 0.1070615034168565,
+          "right_exclusive": 0.2,
+          "rows": 439,
+          "wins": 47
+        },
+        {
+          "average_raw_odds": 3.7988731144631767,
+          "bin": "20-30%",
+          "calibration_gap_realized_minus_implied": 0.0017967863696333186,
+          "flat_stake_return": -0.05537710736468501,
+          "frequency_ci95_high": 0.28181112791556695,
+          "frequency_ci95_low": 0.23094108354419488,
+          "gap_ci95_high_approx": 0.028062217745714935,
+          "gap_ci95_low_approx": -0.02280782662565714,
+          "left_inclusive": 0.2,
+          "mean_implied_probability": 0.253748910169852,
+          "realized_frequency": 0.25554569653948533,
+          "right_exclusive": 0.3,
+          "rows": 1127,
+          "wins": 288
+        },
+        {
+          "average_raw_odds": 2.7543203883495146,
+          "bin": "30-40%",
+          "calibration_gap_realized_minus_implied": -0.02594272570444678,
+          "flat_stake_return": -0.12332524271844661,
+          "frequency_ci95_high": 0.3694202473499936,
+          "frequency_ci95_low": 0.2794844087320412,
+          "gap_ci95_high_approx": 0.0206619876649643,
+          "gap_ci95_low_approx": -0.0692738509529881,
+          "left_inclusive": 0.3,
+          "mean_implied_probability": 0.3487582596850293,
+          "realized_frequency": 0.32281553398058255,
+          "right_exclusive": 0.4,
+          "rows": 412,
+          "wins": 133
+        },
+        {
+          "average_raw_odds": 2.1276073619631903,
+          "bin": "40-50%",
+          "calibration_gap_realized_minus_implied": 0.009774252622750557,
+          "flat_stake_return": -0.02368098159509203,
+          "frequency_ci95_high": 0.5143764415746891,
+          "frequency_ci95_low": 0.4067978095550517,
+          "gap_ci95_high_approx": 0.06402799481093657,
+          "gap_ci95_low_approx": -0.04355063720870084,
+          "left_inclusive": 0.4,
+          "mean_implied_probability": 0.4503484467637525,
+          "realized_frequency": 0.4601226993865031,
+          "right_exclusive": 0.5,
+          "rows": 326,
+          "wins": 150
+        },
+        {
+          "average_raw_odds": 1.7533928571428572,
+          "bin": "50-60%",
+          "calibration_gap_realized_minus_implied": 0.03006016738926165,
+          "flat_stake_return": 0.005223214285714294,
+          "frequency_ci95_high": 0.6387972709169388,
+          "frequency_ci95_low": 0.5104293017006337,
+          "gap_ci95_high_approx": 0.09296458116334338,
+          "gap_ci95_low_approx": -0.035403388052961726,
+          "left_inclusive": 0.5,
+          "mean_implied_probability": 0.5458326897535954,
+          "realized_frequency": 0.5758928571428571,
+          "right_exclusive": 0.6,
+          "rows": 224,
+          "wins": 129
+        },
+        {
+          "average_raw_odds": 1.4743333333333333,
+          "bin": "60-70%",
+          "calibration_gap_realized_minus_implied": 0.1040098610461826,
+          "flat_stake_return": 0.0985,
+          "frequency_ci95_high": 0.8189017834319043,
+          "frequency_ci95_low": 0.665588633358744,
+          "gap_ci95_high_approx": 0.17291164447808693,
+          "gap_ci95_low_approx": 0.01959849440492656,
+          "left_inclusive": 0.6,
+          "mean_implied_probability": 0.6459901389538174,
+          "realized_frequency": 0.75,
+          "right_exclusive": 0.7,
+          "rows": 120,
+          "wins": 90
+        },
+        {
+          "average_raw_odds": 1.2743055555555556,
+          "bin": "70-80%",
+          "calibration_gap_realized_minus_implied": 0.03075352276659349,
+          "flat_stake_return": -0.0054166666666666495,
+          "frequency_ci95_high": 0.858325564604242,
+          "frequency_ci95_low": 0.6690904506199482,
+          "gap_ci95_high_approx": 0.11130130959305773,
+          "gap_ci95_low_approx": -0.0779338043912361,
+          "left_inclusive": 0.7,
+          "mean_implied_probability": 0.7470242550111843,
+          "realized_frequency": 0.7777777777777778,
+          "right_exclusive": 0.8,
+          "rows": 72,
+          "wins": 56
+        },
+        {
+          "average_raw_odds": 1.1208,
+          "bin": "80%+",
+          "calibration_gap_realized_minus_implied": 0.02940700957729836,
+          "flat_stake_return": -0.01040000000000001,
+          "frequency_ci95_high": 0.9583318284955964,
+          "frequency_ci95_low": 0.7004420607907267,
+          "gap_ci95_high_approx": 0.10773883807289475,
+          "gap_ci95_low_approx": -0.15015092963197496,
+          "left_inclusive": 0.8,
+          "mean_implied_probability": 0.8505929904227016,
+          "realized_frequency": 0.88,
+          "right_exclusive": 1.01,
+          "rows": 25,
+          "wins": 22
+        }
+      ],
+      "by_bookmaker": {
+        "BET365": {
+          "mean_calibration_gap": 2.479256209674914e-18,
+          "residual_slope": 0.12536712891015578,
+          "rows": 1836
+        },
+        "PINNACLE": {
+          "mean_calibration_gap": 3.480897271927058e-18,
+          "residual_slope": 0.2154087237084138,
+          "rows": 909
+        }
+      },
+      "by_league": {
+        "BUNDESLIGA": {
+          "mean_calibration_gap": 2.921639538487254e-18,
+          "residual_slope": 0.22234974930798207,
+          "rows": 1368
+        },
+        "LIGUE_1": {
+          "mean_calibration_gap": 1.6125243640162042e-18,
+          "residual_slope": 0.09049657991655598,
+          "rows": 1377
+        }
+      },
+      "by_outcome_type": {
+        "A": {
+          "mean_calibration_gap": -0.014778340600211147,
+          "residual_slope": 0.14745129731699785,
+          "rows": 915
+        },
+        "D": {
+          "mean_calibration_gap": -0.00258219565609528,
+          "residual_slope": 0.3758383094966725,
+          "rows": 915
+        },
+        "H": {
+          "mean_calibration_gap": 0.017360536256306448,
+          "residual_slope": 0.17737963196137882,
+          "rows": 915
+        }
+      },
+      "fixtures": 612,
+      "regions": {
+        "favourite_p_ge_0_60": {
+          "flat_stake_return": 0.05147465437788019,
+          "gap": 0.07110881200077923,
+          "mean_p": 0.7030847363863175,
+          "rows": 217,
+          "win_rate": 0.7741935483870968
+        },
+        "longshot_p_lt_0_30": {
+          "flat_stake_return": -0.11946998722860794,
+          "gap": -0.009362766963057628,
+          "mean_p": 0.22328358433215087,
+          "rows": 1566,
+          "win_rate": 0.21392081736909324
+        }
+      },
+      "residual_slope": {
+        "ci95_high": 0.30859767085750356,
+        "ci95_low": -0.0015423649061449731,
+        "draws": 5000,
+        "slope": 0.15572584433491357,
+        "valid_draws": 5000
+      },
+      "rows": 2745
+    },
+    "time_path": {
+      "classification": "NO_CLEAR_TIME_PATH",
+      "closing_minus_opening_slope": -0.005256236678366166,
+      "closing_slope": 0.1504696076565474,
+      "closing_supported": false,
+      "opening_slope": 0.15572584433491357,
+      "opening_supported": false
+    }
+  },
+  "transfer_gate": {
+    "gates": {
+      "bookmaker_signs_not_contradictory": true,
+      "both_leagues_positive_test_slope": true,
+      "both_leagues_positive_validation_slope": false,
+      "test_pooled_ci_above_zero": false,
+      "test_region_direction": true,
+      "validation_pooled_ci_above_zero": false,
+      "validation_region_direction": false
+    },
+    "supported": false
+  },
+  "validation": {
+    "closing": {
+      "bins": [
+        {
+          "average_raw_odds": 7.620320781032078,
+          "bin": "0-20%",
+          "calibration_gap_realized_minus_implied": 0.007019059860664395,
+          "flat_stake_return": -0.045244072524407236,
+          "frequency_ci95_high": 0.17866712651230024,
+          "frequency_ci95_low": 0.12631180627599634,
+          "gap_ci95_high_approx": 0.035058571310203124,
+          "gap_ci95_low_approx": -0.01729674892610078,
+          "left_inclusive": 0.0,
+          "mean_implied_probability": 0.14360855520209712,
+          "realized_frequency": 0.1506276150627615,
+          "right_exclusive": 0.2,
+          "rows": 717,
+          "wins": 108
+        },
+        {
+          "average_raw_odds": 3.7964022662889523,
+          "bin": "20-30%",
+          "calibration_gap_realized_minus_implied": -0.004110894142203614,
+          "flat_stake_return": -0.054079320113314455,
+          "frequency_ci95_high": 0.2746983125208523,
+          "frequency_ci95_low": 0.22948346176853648,
+          "gap_ci95_high_approx": 0.019170987783747817,
+          "gap_ci95_low_approx": -0.026043862968568005,
+          "left_inclusive": 0.2,
+          "mean_implied_probability": 0.2555273247371045,
+          "realized_frequency": 0.2514164305949009,
+          "right_exclusive": 0.3,
+          "rows": 1412,
+          "wins": 355
+        },
+        {
+          "average_raw_odds": 2.7965191146881287,
+          "bin": "30-40%",
+          "calibration_gap_realized_minus_implied": -0.00813326489556443,
+          "flat_stake_return": -0.059738430583501,
+          "frequency_ci95_high": 0.3807171354873911,
+          "frequency_ci95_low": 0.29782385355313584,
+          "gap_ci95_high_approx": 0.03455570157774218,
+          "gap_ci95_low_approx": -0.04833758035651309,
+          "left_inclusive": 0.3,
+          "mean_implied_probability": 0.34616143390964893,
+          "realized_frequency": 0.3380281690140845,
+          "right_exclusive": 0.4,
+          "rows": 497,
+          "wins": 168
+        },
+        {
+          "average_raw_odds": 2.15460396039604,
+          "bin": "40-50%",
+          "calibration_gap_realized_minus_implied": -0.004174908468651095,
+          "flat_stake_return": -0.04695544554455447,
+          "frequency_ci95_high": 0.4918187060795629,
+          "frequency_ci95_low": 0.3953923682113817,
+          "gap_ci95_high_approx": 0.04457449068021874,
+          "gap_ci95_low_approx": -0.051851847187962485,
+          "left_inclusive": 0.4,
+          "mean_implied_probability": 0.44724421539934417,
+          "realized_frequency": 0.4430693069306931,
+          "right_exclusive": 0.5,
+          "rows": 404,
+          "wins": 179
+        },
+        {
+          "average_raw_odds": 1.7585144927536231,
+          "bin": "50-60%",
+          "calibration_gap_realized_minus_implied": 0.03632694367860234,
+          "flat_stake_return": 0.024420289855072472,
+          "frequency_ci95_high": 0.6399630686574058,
+          "frequency_ci95_low": 0.5244157199390118,
+          "gap_ci95_high_approx": 0.09295667900267479,
+          "gap_ci95_low_approx": -0.022590669715719214,
+          "left_inclusive": 0.5,
+          "mean_implied_probability": 0.547006389654731,
+          "realized_frequency": 0.5833333333333334,
+          "right_exclusive": 0.6,
+          "rows": 276,
+          "wins": 161
+        },
+        {
+          "average_raw_odds": 1.486323529411765,
+          "bin": "60-70%",
+          "calibration_gap_realized_minus_implied": -0.05206207339450908,
+          "flat_stake_return": -0.12151960784313726,
+          "frequency_ci95_high": 0.6582237265330936,
+          "frequency_ci95_low": 0.5246079386005832,
+          "gap_ci95_high_approx": 0.013024398236623713,
+          "gap_ci95_low_approx": -0.12059138969588667,
+          "left_inclusive": 0.6,
+          "mean_implied_probability": 0.6451993282964699,
+          "realized_frequency": 0.5931372549019608,
+          "right_exclusive": 0.7,
+          "rows": 204,
+          "wins": 121
+        },
+        {
+          "average_raw_odds": 1.2928318584070797,
+          "bin": "70-80%",
+          "calibration_gap_realized_minus_implied": 0.055911236138360465,
+          "flat_stake_return": 0.02876106194690268,
+          "frequency_ci95_high": 0.8603666972078668,
+          "frequency_ci95_low": 0.7130598987645332,
+          "gap_ci95_high_approx": 0.11981775635507685,
+          "gap_ci95_low_approx": -0.027489042088256754,
+          "left_inclusive": 0.7,
+          "mean_implied_probability": 0.74054894085279,
+          "realized_frequency": 0.7964601769911505,
+          "right_exclusive": 0.8,
+          "rows": 113,
+          "wins": 90
+        },
+        {
+          "average_raw_odds": 1.1393877551020408,
+          "bin": "80%+",
+          "calibration_gap_realized_minus_implied": 0.015862635034216366,
+          "flat_stake_return": -0.024693877551020454,
+          "frequency_ci95_high": 0.9290357627959323,
+          "frequency_ci95_low": 0.7333229377608557,
+          "gap_ci95_high_approx": 0.08775554068729152,
+          "gap_ci95_low_approx": -0.10795728434778507,
+          "left_inclusive": 0.8,
+          "mean_implied_probability": 0.8412802221086407,
+          "realized_frequency": 0.8571428571428571,
+          "right_exclusive": 1.01,
+          "rows": 49,
+          "wins": 42
+        }
+      ],
+      "by_bookmaker": {
+        "BET365": {
+          "mean_calibration_gap": 2.05596856412066e-18,
+          "residual_slope": 0.021257373029599718,
+          "rows": 1836
+        },
+        "PINNACLE": {
+          "mean_calibration_gap": 2.116438227771268e-18,
+          "residual_slope": -0.00046271022841719604,
+          "rows": 1836
+        }
+      },
+      "by_league": {
+        "BUNDESLIGA": {
+          "mean_calibration_gap": 9.372797865844187e-19,
+          "residual_slope": -0.07710126909541692,
+          "rows": 1836
+        },
+        "LIGUE_1": {
+          "mean_calibration_gap": 1.390802263963976e-18,
+          "residual_slope": 0.10421461830085409,
+          "rows": 1836
+        }
+      },
+      "by_outcome_type": {
+        "A": {
+          "mean_calibration_gap": 0.03280844084378795,
+          "residual_slope": 0.03486228239845434,
+          "rows": 1224
+        },
+        "D": {
+          "mean_calibration_gap": -0.012194068843048033,
+          "residual_slope": -0.23223528072807215,
+          "rows": 1224
+        },
+        "H": {
+          "mean_calibration_gap": -0.020614372000739917,
+          "residual_slope": 0.06679441043464562,
+          "rows": 1224
+        }
+      },
+      "fixtures": 612,
+      "regions": {
+        "favourite_p_ge_0_60": {
+          "flat_stake_return": -0.0621584699453552,
+          "gap": -0.00963230648133473,
+          "mean_p": 0.7008891370824276,
+          "rows": 366,
+          "win_rate": 0.6912568306010929
+        },
+        "longshot_p_lt_0_30": {
+          "flat_stake_return": -0.05110380460310006,
+          "gap": -0.00036257238548384474,
+          "mean_p": 0.21783556440051438,
+          "rows": 2129,
+          "win_rate": 0.21747299201503054
+        }
+      },
+      "residual_slope": {
+        "ci95_high": 0.1482317087262252,
+        "ci95_low": -0.1366754057019276,
+        "draws": 5000,
+        "slope": 0.01014570375562904,
+        "valid_draws": 5000
+      },
+      "rows": 3672
+    },
+    "opening": {
+      "bins": [
+        {
+          "average_raw_odds": 7.337618364418938,
+          "bin": "0-20%",
+          "calibration_gap_realized_minus_implied": -0.001607041440390533,
+          "flat_stake_return": -0.07766140602582498,
+          "frequency_ci95_high": 0.17298655285918574,
+          "frequency_ci95_low": 0.12071961453431222,
+          "gap_ci95_high_approx": 0.026472768233716304,
+          "gap_ci95_low_approx": -0.025794170091157212,
+          "left_inclusive": 0.0,
+          "mean_implied_probability": 0.14651378462546943,
+          "realized_frequency": 0.1449067431850789,
+          "right_exclusive": 0.2,
+          "rows": 697,
+          "wins": 101
+        },
+        {
+          "average_raw_odds": 3.7997181113460186,
+          "bin": "20-30%",
+          "calibration_gap_realized_minus_implied": 0.0005612637003897802,
+          "flat_stake_return": -0.04163495419309373,
+          "frequency_ci95_high": 0.27843062226786014,
+          "frequency_ci95_low": 0.23311017822579222,
+          "gap_ci95_high_approx": 0.023882654114832036,
+          "gap_ci95_low_approx": -0.021437789927235884,
+          "left_inclusive": 0.2,
+          "mean_implied_probability": 0.2545479681530281,
+          "realized_frequency": 0.2551092318534179,
+          "right_exclusive": 0.3,
+          "rows": 1419,
+          "wins": 362
+        },
+        {
+          "average_raw_odds": 2.7968253968253967,
+          "bin": "30-40%",
+          "calibration_gap_realized_minus_implied": -0.009890957774526143,
+          "flat_stake_return": -0.0664484126984127,
+          "frequency_ci95_high": 0.37764208590758497,
+          "frequency_ci95_low": 0.2954842468942228,
+          "gap_ci95_high_approx": 0.03243366781559853,
+          "gap_ci95_low_approx": -0.04972417119776362,
+          "left_inclusive": 0.3,
+          "mean_implied_probability": 0.34520841809198644,
+          "realized_frequency": 0.3353174603174603,
+          "right_exclusive": 0.4,
+          "rows": 504,
+          "wins": 169
+        },
+        {
+          "average_raw_odds": 2.16593984962406,
+          "bin": "40-50%",
+          "calibration_gap_realized_minus_implied": -0.00011499004769482957,
+          "flat_stake_return": -0.04122807017543861,
+          "frequency_ci95_high": 0.49266420557385954,
+          "frequency_ci95_low": 0.3956293178094185,
+          "gap_ci95_high_approx": 0.048940192969773755,
+          "gap_ci95_low_approx": -0.04809469479466727,
+          "left_inclusive": 0.4,
+          "mean_implied_probability": 0.4437240126040858,
+          "realized_frequency": 0.44360902255639095,
+          "right_exclusive": 0.5,
+          "rows": 399,
+          "wins": 177
+        },
+        {
+          "average_raw_odds": 1.7514239482200649,
+          "bin": "50-60%",
+          "calibration_gap_realized_minus_implied": 0.035167432094294404,
+          "flat_stake_return": 0.017734627831715213,
+          "frequency_ci95_high": 0.636166354201597,
+          "frequency_ci95_low": 0.5268555169795841,
+          "gap_ci95_high_approx": 0.0888095144512312,
+          "gap_ci95_low_approx": -0.02050132277078165,
+          "left_inclusive": 0.5,
+          "mean_implied_probability": 0.5473568397503658,
+          "realized_frequency": 0.5825242718446602,
+          "right_exclusive": 0.6,
+          "rows": 309,
+          "wins": 180
+        },
+        {
+          "average_raw_odds": 1.4766331658291458,
+          "bin": "60-70%",
+          "calibration_gap_realized_minus_implied": -0.049616243346352173,
+          "flat_stake_return": -0.13035175879396985,
+          "frequency_ci95_high": 0.6636335014592188,
+          "frequency_ci95_low": 0.5286348850271693,
+          "gap_ci95_high_approx": 0.016027308364122916,
+          "gap_ci95_low_approx": -0.11897130806792666,
+          "left_inclusive": 0.6,
+          "mean_implied_probability": 0.6476061930950959,
+          "realized_frequency": 0.5979899497487438,
+          "right_exclusive": 0.7,
+          "rows": 199,
+          "wins": 119
+        },
+        {
+          "average_raw_odds": 1.2840909090909092,
+          "bin": "70-80%",
+          "calibration_gap_realized_minus_implied": 0.028318948872288474,
+          "flat_stake_return": -0.008636363636363616,
+          "frequency_ci95_high": 0.841053714766499,
+          "frequency_ci95_low": 0.6859950477981386,
+          "gap_ci95_high_approx": 0.0966453909115148,
+          "gap_ci95_low_approx": -0.05841327605684565,
+          "left_inclusive": 0.7,
+          "mean_implied_probability": 0.7444083238549842,
+          "realized_frequency": 0.7727272727272727,
+          "right_exclusive": 0.8,
+          "rows": 110,
+          "wins": 85
+        },
+        {
+          "average_raw_odds": 1.1242857142857143,
+          "bin": "80%+",
+          "calibration_gap_realized_minus_implied": 0.03561171352359538,
+          "flat_stake_return": -0.001142857142857163,
+          "frequency_ci95_high": 0.9546482066690264,
+          "frequency_ci95_low": 0.7404853135378618,
+          "gap_ci95_high_approx": 0.10454563447833609,
+          "gap_ci95_low_approx": -0.10961725865282845,
+          "left_inclusive": 0.8,
+          "mean_implied_probability": 0.8501025721906903,
+          "realized_frequency": 0.8857142857142857,
+          "right_exclusive": 1.01,
+          "rows": 35,
+          "wins": 31
+        }
+      ],
+      "by_bookmaker": {
+        "BET365": {
+          "mean_calibration_gap": -6.046966365060766e-19,
+          "residual_slope": 0.02983717401897132,
+          "rows": 1836
+        },
+        "PINNACLE": {
+          "mean_calibration_gap": -3.144422509831598e-18,
+          "residual_slope": 0.009902021213826256,
+          "rows": 1836
+        }
+      },
+      "by_league": {
+        "BUNDESLIGA": {
+          "mean_calibration_gap": 7.861056274578995e-19,
+          "residual_slope": -0.07368283764927384,
+          "rows": 1836
+        },
+        "LIGUE_1": {
+          "mean_calibration_gap": -2.2373775550724832e-18,
+          "residual_slope": 0.12397254481196851,
+          "rows": 1836
+        }
+      },
+      "by_outcome_type": {
+        "A": {
+          "mean_calibration_gap": 0.03136952591235817,
+          "residual_slope": 0.04126148788384227,
+          "rows": 1224
+        },
+        "D": {
+          "mean_calibration_gap": -0.011112392740069942,
+          "residual_slope": -0.18613253933582785,
+          "rows": 1224
+        },
+        "H": {
+          "mean_calibration_gap": -0.020257133172288236,
+          "residual_slope": 0.08445531346808365,
+          "rows": 1224
+        }
+      },
+      "fixtures": 612,
+      "regions": {
+        "favourite_p_ge_0_60": {
+          "flat_stake_return": -0.07828488372093023,
+          "gap": -0.016023657199553898,
+          "mean_p": 0.6991631920832748,
+          "rows": 344,
+          "win_rate": 0.6831395348837209
+        },
+        "longshot_p_lt_0_30": {
+          "flat_stake_return": -0.05350189035916824,
+          "gap": -0.00015296535590691995,
+          "mean_p": 0.2189620390799145,
+          "rows": 2116,
+          "win_rate": 0.21880907372400757
+        }
+      },
+      "residual_slope": {
+        "ci95_high": 0.15966232020359838,
+        "ci95_low": -0.13207831566902473,
+        "draws": 5000,
+        "slope": 0.019685815332318446,
+        "valid_draws": 5000
+      },
+      "rows": 3672
+    },
+    "time_path": {
+      "classification": "NO_CLEAR_TIME_PATH",
+      "closing_minus_opening_slope": -0.009540111576689407,
+      "closing_slope": 0.01014570375562904,
+      "closing_supported": false,
+      "opening_slope": 0.019685815332318446,
+      "opening_supported": false
+    }
+  }
+}

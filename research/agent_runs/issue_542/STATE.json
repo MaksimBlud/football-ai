@@ -1,7 +1,7 @@
 {
   "blocker": null,
   "engine": "V5_DETERMINISTIC_NO_API",
-  "next_step": "Run the registered deterministic evaluator.",
+  "next_step": "Render final report and close the research direction.",
   "status": "CONTINUE",
-  "summary": "Frozen deterministic protocol written for favourite_longshot_cross_league_v1."
+  "summary": "Deterministic evaluation complete: NO_CROSS_LEAGUE_FAVOURITE_LONGSHOT_CONFIRMATION."
 }
