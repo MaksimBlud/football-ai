@@ -125,8 +125,10 @@
       "completed_issue_numbers": [
         533
       ],
-      "active_issue_numbers": [],
-      "current_frontier": "Issue #533 completed the frozen Bet365/Pinnacle EPL-La Liga-Serie A temporal OOS comparison. Power was selected on 2024/25 validation and was directionally better than Multiplicative on untouched 2025/26 closing Log Loss, Brier and RPS, improved both bookmakers and two of three leagues, and also improved opening Log Loss. However the preregistered fixture-cluster bootstrap 95% CI for the primary closing Log Loss delta crossed zero (-0.0020972 to +0.0008733), so confirmation failed and the formal decision is NO_STABLE_DEVIG_WINNER. Shin was not the validation winner. Any follow-up must be genuinely independent (e.g. new league/bookmaker transport) and cannot reinterpret this failed gate or promote Power from the same data.",
+      "active_issue_numbers": [
+        540
+      ],
+      "current_frontier": "Issue #533 completed the frozen Bet365/Pinnacle EPL-La Liga-Serie A comparison with NO_STABLE_DEVIG_WINNER. Power was directionally better than Multiplicative on untouched 2025/26 but the paired fixture-cluster 95% CI crossed zero. Issue #540 is the active independent cross-league transport to Bundesliga/Ligue 1; the failed #533 gate remains binding and Power cannot be promoted from the original sample.",
       "allowed_follow_up_classes": [
         "method_implementation_audit",
         "paired_oos_comparison",
@@ -147,11 +149,13 @@
       "title": "3. Favourite-longshot bias research program",
       "status": "ACTIVE",
       "objective": "Test whether favourite-longshot calibration and return distortions are stable in Football AI historical data and how they change from opening toward closing.",
-      "completed_issue_numbers": [],
-      "active_issue_numbers": [
+      "completed_issue_numbers": [
         534
       ],
-      "current_frontier": "Issue #534 is the active preregistered child. Use fixed probability bins and a frozen trend/calibration test on chronological OOS data; opening and closing are primary, while 24h/6h/1h are evaluated only if exact existing snapshots are available.",
+      "active_issue_numbers": [
+        542
+      ],
+      "current_frontier": "Issue #534 completed the frozen EPL/La Liga/Serie A temporal OOS audit with NO_STABLE_FAVOURITE_LONGSHOT_BIAS. The classic direction was visible in point estimates (longshots negative gap, favourites positive gap, positive slopes for both books and 2/3 leagues), but validation and untouched OOT bootstrap CIs both crossed zero. Issue #542 is the active independent Bundesliga/Ligue 1 transport; #534 remains formally negative and cannot be rescued post-hoc.",
       "allowed_follow_up_classes": [
         "calibration_replication",
         "temporal_stability",
@@ -172,11 +176,13 @@
       "title": "4. Bookmaker margin structure research program",
       "status": "ACTIVE",
       "objective": "Test whether bookmakers systematically differ in total 1X2 margin and in how that margin is allocated across favourites, draws and longshots on the same matches.",
-      "completed_issue_numbers": [],
-      "active_issue_numbers": [
+      "completed_issue_numbers": [
         535
       ],
-      "current_frontier": "Issue #535 is the active preregistered child. Freeze an outcome-free common-fixture coverage rule before choosing the bookmaker set, then run paired opening/closing OOS comparisons of overround, margin allocation, expected-loss curves and draw-specific behavior.",
+      "active_issue_numbers": [
+        548
+      ],
+      "current_frontier": "Issue #535 completed the matched-fixture Bet365/Pinnacle 1X2 study with SUPPORTED_BOOKMAKER_MARGIN_HETEROGENEITY. On untouched 2025/26 closing prices, the Bet365-minus-Pinnacle allocation contrast was +0.02035 with a 95% CI of [+0.01323, +0.02733]; validation, opening, alternate-consensus and all three league-sign gates agreed. The result is observational market structure, not intent or a betting edge. Issue #548 is the active independent market-type transport: it freezes same-fixture opening Asian Handicap Bet365/Pinnacle fields and tests whether the 1X2 allocation signature generalizes without changing the parent result.",
       "allowed_follow_up_classes": [
         "source_feasibility",
         "paired_bookmaker_comparison",
