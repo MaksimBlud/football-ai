@@ -79,10 +79,12 @@ The initial ACTIVE programs are:
   negative preregistered league heterogeneity, and the negative outcome-free
   opening-to-closing market-movement mechanism. Remaining zero-cost variants would
   be threshold/weekday/league mining or cosmetic restatements of the rejected signal.
-- `corner_market_direction` — **ACTIVE**. Issue #522 completed: continuous ranking survived
-  the frozen falsification (including residualization and leave-one-group checks), while
-  binary classification remained below always-UP with weak DOWN recall. Issue #528 is the
-  preregistered Bundesliga/Ligue 1 cross-league transport child; it cannot claim untouched
-  confirmation because the reused movements were opened previously for other hypotheses.
+- `corner_market_direction` — **PROGRAM_DONE**. Issue #522 found an encouraging
+  same-sample continuous rank association, but binary direction stayed below always-UP.
+  The independent zero-cost Bundesliga/Ligue 1 transport in Issue #528 failed after removing
+  the mechanical opening-line component (residual Spearman 0.0503; permutation p=0.4125),
+  produced opposing league-held-out signs, and again lost to always-UP. Cross-league transfer
+  is unsupported, the decision remains NO_BET, and further free variants would retune or
+  threshold-mine already-opened movements.
 
 Infrastructure live-proof Issues are not scientific programs.
