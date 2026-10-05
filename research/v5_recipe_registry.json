@@ -187,6 +187,34 @@
         ],
         "preregistration_markdown": "# Frozen Bundesliga/Ligue 1 corner match-shape transport\n\nStatus: **PREREGISTERED / CROSS-LEAGUE FALSIFICATION / OPENED FOR OTHER HYPOTHESES / NO_BET**.\n\nUse only Bundesliga and Ligue 1 rows from authoritative artifact 11294063833 (SHA-256 92b958e6f5f8c911236f5e6451ed2f974d4e02af727637644dc2ad037cd78aa0): exactly 35 Bundesliga and 39 Ligue 1 fixtures across all four frozen cohorts. Before reading closing corner state or centre_delta, require an exact same-fixture join for all 74 rows to free Football-Data 2026/27 opening 1X2/O-U2.5/AH inputs; otherwise fail closed without a proxy.\n\nFor each league, use the exact #522 pipeline: SimpleImputer(median), StandardScaler and Ridge(alpha=1.0); train 2019/20-2024/25 on actual total corners, validate without tuning on 2025/26, then refit through 2025/26. Frozen score: expected total corners minus opening corner FAIR_CENTRE. No feature, alpha, sign, threshold, cohort, league or row selection.\n\nPrimary set is every non-zero movement row. Support requires positive Spearman separately in Bundesliga and Ligue 1 and pooled; positive pooled residual Spearman controlling for opening FAIR_CENTRE and league; a one-sided 10,000-draw within-league permutation p <= 0.05; and both leave-one-league-out signs positive. Binary UP/DOWN metrics versus always-UP are secondary only.\n\nThese league rows were excluded from #522 but their movements were opened for other hypotheses, so a pass supports only future untouched confirmation. No paid API, Supabase, production operation, betting claim or promotion."
       }
+    },
+    {
+      "hypothesis_family": "devig_method_oos_v1",
+      "handler": "pipeline",
+      "max_iterations": 4,
+      "description": "Select a de-vig candidate on 2024/25 and confirm it on untouched 2025/26 using paired Bet365/Pinnacle 1X2 opening and closing odds.",
+      "safety": {
+        "model_api": false,
+        "paid_odds_api": false,
+        "supabase_writes": false,
+        "production_operations": false,
+        "automatic_promotion": false
+      },
+      "pipeline": {
+        "evaluator_module": "devig_method_oos_v1",
+        "decision_path": "decision",
+        "summary_path": "interpretation_guard",
+        "report_title": "Multiplicative vs Additive vs Power vs Shin OOS comparison",
+        "report_fields": [
+          "source_audit",
+          "reference_rows",
+          "validation_winner",
+          "confirmation",
+          "supported",
+          "decision"
+        ],
+        "preregistration_markdown": "# Frozen de-vig method OOS protocol\n\nStatus: **PREREGISTERED / TEMPORAL OOS / RESEARCH ONLY / NO_BET**.\n\nQuestion: which standard 1X2 margin-removal transform is most accurate for Football AI: Multiplicative, Additive, Power, or Shin?\n\nFrozen source scope: EPL, La Liga, Serie A; free Football-Data historical transport only. Frozen bookmakers: Bet365 and Pinnacle (PS columns). Opening and closing 1X2 are both evaluated. A bookmaker is eligible only when its required opening+closing columns exist for every validation/test league-season. Source/header audit is completed before reading FTR outcomes. No proxy bookmaker, interpolation, paid API, Supabase or production source is permitted.\n\nTemporal design: 2019/20-2023/24 reference only; 2024/25 validation selects at most one alternative candidate; 2025/26 is untouched confirmation and must not select the winner.\n\nTransforms are exact standard definitions. Invalid rows are reported, never silently clipped. Method coverage must be at least 99%.\n\nPrimary horizon: closing. The validation candidate is the eligible alternative with the lowest pooled validation closing Log Loss, but only if it beats Multiplicative. If no alternative beats Multiplicative in validation, final status is NO_STABLE_DEVIG_WINNER.\n\nUntouched 2025/26 confirmation requires all of:\n1. candidate closing Log Loss delta vs Multiplicative < 0;\n2. fixture-cluster paired-bootstrap 95% CI upper bound < 0;\n3. closing Brier and RPS deltas <= 0;\n4. opening Log Loss sensitivity delta <= 0;\n5. negative Log Loss delta in both frozen bookmakers;\n6. negative Log Loss delta in at least two of three frozen leagues;\n7. candidate validity coverage >= 99%.\n\nPassing returns PROJECT_BEST_DEVIG_CANDIDATE. Failing returns NO_STABLE_DEVIG_WINNER. Missing multi-bookmaker source coverage returns BLOCKED_BY_SOURCE_GAP.\n\nEven a pass creates only a research candidate for a separate untouched promotion study. No production replacement, automatic promotion or betting claim."
+      }
     }
   ]
 }
