@@ -1,0 +1,37 @@
+{
+  "canonical_source": "experiments/cross_market_lead_lag_replication_v2_report.json",
+  "engine": "V5_DETERMINISTIC_NO_API",
+  "formal_decision": "LEAD_LAG_REPLICATION_NOT_SUPPORTED",
+  "oot_2025_26": {
+    "bootstrap_ci95": [
+      3.6680819337470654e-05,
+      0.00018326946356555203
+    ],
+    "gate": true,
+    "mean_alignment_dot": 0.00010680996910608444,
+    "permutation_p": 0.007599240075992401,
+    "positive_leagues": 2,
+    "rows": 168
+  },
+  "paid_collection_justified": false,
+  "product_decision": "CLOSE_DIRECTION",
+  "safety": {
+    "match_outcomes_used": false,
+    "opened_2026_27_data_used": false,
+    "paid_odds_api_calls": 0,
+    "production_model_operations": 0,
+    "production_promotion": false,
+    "supabase_writes": 0
+  },
+  "validation": {
+    "admissible": false,
+    "bootstrap_ci95": [
+      -8.196999466573126e-05,
+      9.961887301429277e-05
+    ],
+    "mean_alignment_dot": 1.2128151012796614e-05,
+    "permutation_p": 0.1932806719328067,
+    "positive_leagues": 1,
+    "rows": 137
+  }
+}
