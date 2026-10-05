@@ -15,10 +15,13 @@
     {
       "program_id": "cross_market_lead_lag",
       "title": "Cross-market lead-lag research program",
-      "status": "ACTIVE",
+      "status": "PROGRAM_DONE",
       "objective": "Determine whether pre-match cross-market dynamics contain stable, independent and economically useful information beyond contemporaneous bookmaker market state.",
-      "completed_issue_numbers": [481, 482],
-      "current_frontier": "Independent Bundesliga/Ligue 1 replication failed the frozen validation gate, while the 2024/25 source/market anomaly audit found no broad observable source-market explanation.",
+      "completed_issue_numbers": [
+        481,
+        482
+      ],
+      "current_frontier": "Program closed after failed independent replication, completed seven-season regime audit, completed 2024/25 source/market anomaly audit, and duplicate detection on Issue #513. No genuinely independent zero-cost preregisterable follow-up remains without reformulating the rejected statistic or requiring new paid intraday data.",
       "allowed_follow_up_classes": [
         "mechanism_test",
         "temporal_stability",
@@ -32,14 +35,17 @@
         "Do not use match outcomes that were reserved for an untouched evaluation before the gate is frozen.",
         "Do not request paid timestamped/intraday data without fresh explicit user approval.",
         "Mark PROGRAM_DONE when no genuinely independent zero-cost preregisterable follow-up remains."
-      ]
+      ],
+      "program_done_reason": "The zero-cost evidence stack is exhausted: V1/V2 remain unsupported/NO_BET; temporal regime stability was already audited; the 2024/25 source/market explanation was not supported; the proposed next temporal-stability child #513 duplicated existing work. Remaining options are cosmetic transforms of the rejected signal or fresh timestamped intraday data, which requires explicit user approval."
     },
     {
       "program_id": "kickoff_calendar_context",
       "title": "Kickoff and calendar context research program",
       "status": "ACTIVE",
       "objective": "Determine whether kickoff time, weekday, calendar slot or related pre-kickoff context contains stable incremental information beyond market baselines.",
-      "completed_issue_numbers": [428],
+      "completed_issue_numbers": [
+        428
+      ],
       "current_frontier": "The pooled EPL/La Liga/Serie A kickoff-calendar extension failed to improve validation and untouched OOT log loss, so the primary pooled signal is negative.",
       "allowed_follow_up_classes": [
         "preregistered_league_heterogeneity",
