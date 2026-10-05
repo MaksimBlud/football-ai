@@ -57,6 +57,21 @@ CONTINUOUS = (
 )
 
 
+def _coverage_cell(coverage: dict[str, Any], season: str) -> dict[str, int]:
+    cell = coverage.get(season)
+    if not isinstance(cell, dict):
+        raise RuntimeError(f"missing V1 coverage for season {season}")
+    return cell
+
+
+def _missing_required_columns(local: pd.DataFrame) -> list[str]:
+    return [
+        column
+        for column in REQUIRED_COLUMNS
+        if column not in local.columns or local[column].notna().sum() == 0
+    ]
+
+
 def _overround(prices: tuple[float, ...] | np.ndarray) -> float:
     values = np.asarray(prices, dtype=float)
     return float(np.sum(1.0 / values) - 1.0)
@@ -150,11 +165,7 @@ def evaluate() -> dict[str, Any]:
             local = raw[raw["season"].astype(str) == season]
             schema[league][season] = {
                 "source_rows": int(len(local)),
-                "missing_required_columns": [
-                    c
-                    for c in REQUIRED_COLUMNS
-                    if c not in local.columns or local[c].notna().sum() == 0
-                ],
+                "missing_required_columns": _missing_required_columns(local),
             }
 
     combined = pd.concat(frames, ignore_index=True)
@@ -169,7 +180,7 @@ def evaluate() -> dict[str, Any]:
         ref_lines = _line_distribution(ref)
         for season in SEASONS:
             local = data[(data["league"] == league) & (data["season"] == season)]
-            cov = coverage[league][season]
+            cov = _coverage_cell(coverage[league], season)
             source_rows = int(cov["source_rows"])
             reconstructed = int(cov["reconstructed_rows"])
             cell = {
