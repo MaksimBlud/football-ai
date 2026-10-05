@@ -6,6 +6,7 @@ zero-cost transports only; it never needs an LLM provider key.
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import re
 from pathlib import Path
@@ -25,6 +26,52 @@ SAFE_RECIPE_CONTRACT = {
     "production_operations": False,
     "automatic_promotion": False,
 }
+
+EVALUATOR_MODULE_RE = re.compile(r"^[a-z][a-z0-9_]*$")
+RESULT_PATH_RE = re.compile(r"^[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)*$")
+
+
+def _validate_pipeline_recipe(family: str, recipe: dict[str, Any]) -> None:
+    pipeline = recipe.get("pipeline")
+    if not isinstance(pipeline, dict):
+        raise LocalResearchError(f"V5 pipeline recipe {family} requires pipeline config")
+    module = str(pipeline.get("evaluator_module", ""))
+    if not EVALUATOR_MODULE_RE.fullmatch(module):
+        raise LocalResearchError(
+            f"V5 pipeline recipe {family} has invalid evaluator_module {module!r}"
+        )
+    preregistration = pipeline.get("preregistration_markdown")
+    if not isinstance(preregistration, str) or not preregistration.strip():
+        raise LocalResearchError(
+            f"V5 pipeline recipe {family} requires preregistration_markdown"
+        )
+    if len(preregistration) > 20000:
+        raise LocalResearchError(
+            f"V5 pipeline recipe {family} preregistration_markdown is too large"
+        )
+    decision_path = str(pipeline.get("decision_path", ""))
+    if not RESULT_PATH_RE.fullmatch(decision_path):
+        raise LocalResearchError(
+            f"V5 pipeline recipe {family} has invalid decision_path"
+        )
+    summary_path = pipeline.get("summary_path")
+    if summary_path is not None and not RESULT_PATH_RE.fullmatch(str(summary_path)):
+        raise LocalResearchError(
+            f"V5 pipeline recipe {family} has invalid summary_path"
+        )
+    fields = pipeline.get("report_fields", [])
+    if not isinstance(fields, list) or any(
+        not isinstance(path, str) or not RESULT_PATH_RE.fullmatch(path)
+        for path in fields
+    ):
+        raise LocalResearchError(
+            f"V5 pipeline recipe {family} has invalid report_fields"
+        )
+    title = pipeline.get("report_title")
+    if title is not None and (not isinstance(title, str) or not title.strip()):
+        raise LocalResearchError(
+            f"V5 pipeline recipe {family} has invalid report_title"
+        )
 
 
 def load_recipe_registry(root: Path) -> dict[str, Any]:
@@ -54,6 +101,8 @@ def load_recipe_registry(root: Path) -> dict[str, Any]:
             raise LocalResearchError(
                 f"V5 recipe {family} references unknown handler {handler!r}"
             )
+        if handler == "pipeline":
+            _validate_pipeline_recipe(family, recipe)
         if not isinstance(max_iterations, int) or not 1 <= max_iterations <= 20:
             raise LocalResearchError(
                 f"V5 recipe {family} max_iterations must be in 1..20"
@@ -130,6 +179,23 @@ def _progress(root: Path, issue: int, finding: str, evidence: str, next_action: 
         handle.write("\n".join(lines) + "\n\n")
 
 
+def _result_value(payload: dict[str, Any], dotted_path: str) -> Any:
+    current: Any = payload
+    for part in dotted_path.split("."):
+        if not isinstance(current, dict) or part not in current:
+            raise LocalResearchError(
+                f"result path {dotted_path!r} is missing at {part!r}"
+            )
+        current = current[part]
+    return current
+
+
+def _render_value(value: Any) -> str:
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True)
+    return str(value)
+
+
 def _state(root: Path, issue: int, status: str, summary: str, next_step: str | None = None) -> None:
     status = status.upper()
     if status == "CONTINUE" and not next_step:
@@ -143,6 +209,108 @@ def _state(root: Path, issue: int, status: str, summary: str, next_step: str | N
             "blocker": None,
             "engine": "V5_DETERMINISTIC_NO_API",
         },
+    )
+
+
+def _pipeline(root: Path, issue: int, recipe: dict[str, Any]) -> None:
+    pipeline = recipe["pipeline"]
+    box = _issue_root(root, issue)
+    prereg_path = box / "PREREGISTRATION.md"
+    result_path = box / "RESULT.json"
+    family = recipe["hypothesis_family"]
+    title = pipeline.get("report_title") or family
+
+    if not prereg_path.is_file():
+        prereg = str(pipeline["preregistration_markdown"]).strip()
+        _text(prereg_path, prereg)
+        _progress(
+            root,
+            issue,
+            f"Frozen deterministic protocol written for {family}.",
+            "PREREGISTRATION.md was persisted before evaluator execution.",
+            "Run the registered deterministic evaluator.",
+        )
+        _state(
+            root,
+            issue,
+            "CONTINUE",
+            f"Frozen deterministic protocol written for {family}.",
+            "Run the registered deterministic evaluator.",
+        )
+        return
+
+    if not result_path.is_file():
+        module_name = str(pipeline["evaluator_module"])
+        module = importlib.import_module(module_name)
+        evaluator = getattr(module, "evaluate", None)
+        if not callable(evaluator):
+            raise LocalResearchError(
+                f"registered evaluator {module_name}.evaluate is not callable"
+            )
+        report = evaluator()
+        if not isinstance(report, dict):
+            raise LocalResearchError(
+                f"registered evaluator {module_name}.evaluate must return a dict"
+            )
+        decision = _result_value(report, str(pipeline["decision_path"]))
+        _json(result_path, report)
+        _progress(
+            root,
+            issue,
+            f"Registered deterministic evaluator completed for {family}.",
+            f"RESULT.json decision={_render_value(decision)}.",
+            "Render the final report from the frozen deterministic result.",
+        )
+        _state(
+            root,
+            issue,
+            "CONTINUE",
+            f"Deterministic evaluation complete: {_render_value(decision)}.",
+            "Render final report and close the research direction.",
+        )
+        return
+
+    report = _load(result_path)
+    decision = _result_value(report, str(pipeline["decision_path"]))
+    summary = ""
+    summary_path = pipeline.get("summary_path")
+    if summary_path:
+        summary = _render_value(_result_value(report, str(summary_path)))
+
+    field_lines: list[str] = []
+    for dotted_path in pipeline.get("report_fields", []):
+        field_lines.append(
+            f"- `{dotted_path}`: {_render_value(_result_value(report, dotted_path))}"
+        )
+    fields_md = "\n".join(field_lines) if field_lines else "- See RESULT.json."
+
+    final = f"""# Research V5 final report — Issue #{issue}
+
+## Вывод простым языком
+
+Детерминированное исследование **{title}** завершено без внешней LLM/API-квоты.
+
+Финальное решение: **{_render_value(decision)}**.
+
+{summary}
+
+## Technical appendix
+
+Full reproducible result:
+`research/agent_runs/issue_{issue}/RESULT.json`.
+
+Key registered result fields:
+{fields_md}
+
+Safety contract: model API = false; paid Odds API = false; Supabase writes = false;
+production operations = false; automatic promotion = false.
+"""
+    _text(_docs_root(root, issue) / "FINAL_REPORT.md", final)
+    _state(
+        root,
+        issue,
+        "DONE",
+        f"Deterministic pipeline completed: {_render_value(decision)}.",
     )
 
 
@@ -387,8 +555,7 @@ Full result: `research/agent_runs/issue_{issue}/RESULT.json`.
 
 BUILTIN_HANDLERS = {
     "replication": _replication,
-    "anomaly": _anomaly,
-    "kickoff": _kickoff,
+    "pipeline": _pipeline,
 }
 
 
@@ -398,8 +565,11 @@ def run(root: Path, issue_number: int, hypothesis_family: str) -> None:
         raise LocalResearchError(
             f"no V5 deterministic recipe for {hypothesis_family!r}"
         )
-    handler = BUILTIN_HANDLERS[recipe["handler"]]
-    handler(root, issue_number)
+    handler_name = recipe["handler"]
+    if handler_name == "pipeline":
+        _pipeline(root, issue_number, recipe)
+    else:
+        BUILTIN_HANDLERS[handler_name](root, issue_number)
 
 
 def main() -> None:
