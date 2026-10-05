@@ -17,7 +17,7 @@
     },
     {
       "hypothesis_family": "cross_market_lead_lag_2024_25_anomaly_audit",
-      "handler": "anomaly",
+      "handler": "pipeline",
       "max_iterations": 4,
       "description": "Preregister, compute and report the outcome-free 2024/25 source/market anomaly audit.",
       "safety": {
@@ -26,11 +26,24 @@
         "supabase_writes": false,
         "production_operations": false,
         "automatic_promotion": false
+      },
+      "pipeline": {
+        "evaluator_module": "cross_market_lead_lag_anomaly_audit_v1",
+        "decision_path": "diagnostic_label",
+        "summary_path": "summary.plain_language",
+        "report_title": "2024/25 lead-lag source/market anomaly audit",
+        "report_fields": [
+          "rows",
+          "diagnostic_label",
+          "broad_shift_families",
+          "schema_breaks_2024_25"
+        ],
+        "preregistration_markdown": "# Frozen 2024/25 anomaly audit\n\nStatus: **PREREGISTERED / POST-HOC / OUTCOME-FREE / NO_BET**.\n\nBefore calculation, freeze these diagnostic families:\n1. source coverage/schema and reconstruction eligibility;\n2. exact half-goal AH-line composition;\n3. opening/closing 1X2, O/U 2.5 and AH overround;\n4. gap_open_tv, open_to_close_move_tv, gap_reduction_tv, lead/move norms and AH residual;\n5. league/sample composition and leave-one-league-out decomposition.\n\nCompare 2024/25 only with 2023/24, 2025/26 and pooled 2019/20–2023/24.\nDo not retune alignment, choose components/leagues/thresholds, use outcomes, use 2026/27, paid APIs, Supabase or production."
       }
     },
     {
       "hypothesis_family": "kickoff_calendar_context",
-      "handler": "kickoff",
+      "handler": "pipeline",
       "max_iterations": 4,
       "description": "Preregister, compute and report temporal OOS kickoff/calendar information for O/U 2.5.",
       "safety": {
@@ -39,6 +52,19 @@
         "supabase_writes": false,
         "production_operations": false,
         "automatic_promotion": false
+      },
+      "pipeline": {
+        "evaluator_module": "kickoff_calendar_context_v1",
+        "decision_path": "decision",
+        "report_title": "kickoff time / weekday incremental O/U 2.5 audit",
+        "report_fields": [
+          "reference_rows",
+          "validation.calendar_minus_baseline_log_loss",
+          "test.calendar_minus_baseline_log_loss",
+          "test.bootstrap.ci95_low",
+          "test.bootstrap.ci95_high"
+        ],
+        "preregistration_markdown": "# Frozen kickoff/calendar O/U 2.5 protocol\n\nStatus: **PREREGISTERED / TEMPORAL OOS / RESEARCH ONLY**.\n\nLeagues: EPL, La Liga, Serie A. No 2026/27.\nReference/train: through 2023/24; validation: 2024/25; untouched test: 2025/26.\nTarget: FTHG + FTAG > 2.5.\nBaseline: league + devigged Bet365 O/U 2.5 probability.\nCalendar extension: weekday, kickoff-hour sin/cos and frozen time-slot buckets.\nEstimator: fixed regularized logistic regression.\nPrimary metric: log loss; Brier/AUC diagnostics.\nSupport requires lower calendar-model log loss in validation and OOT plus OOT paired bootstrap 95% CI for calendar-minus-baseline delta entirely below zero.\nNo production model, paid API, Supabase or automatic promotion."
       }
     }
   ]
