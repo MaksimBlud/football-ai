@@ -91,6 +91,106 @@
         "Mark PROGRAM_DONE when independent zero-cost evidence is exhausted or fails to support future confirmation."
       ],
       "program_done_reason": "The program's final permitted independent zero-cost test failed. Issue #528 transported the frozen match-shape signal without retuning to Bundesliga and Ligue 1 and found that the apparent raw correlation was dominated by the mechanical opening-line component; residual association was negligible and non-significant, league-held-out signs were inconsistent, and classification did not beat trivial UP skew. Existing work already covers same-sample falsification (#522), cross-league FAIR_CENTRE holdout (#385), historical CORNERS10/xG/shots/deep/rest/travel/volatility families, and the six-signal screen. Further zero-cost children would retune the already-opened movements, threshold-mine, or restate the same signal; genuinely fresh prospective or paid data is outside current authority. The stop rule therefore requires PROGRAM_DONE."
+    },
+    {
+      "program_id": "bookmaker_market_microstructure_1_price_formation",
+      "title": "1. Bookmaker price formation research program",
+      "status": "ACTIVE",
+      "objective": "Test whether football odds movement contains separable common-information, bookmaker-specific repricing and margin components, without claiming unobserved bet-flow causality.",
+      "completed_issue_numbers": [],
+      "active_issue_numbers": [
+        532
+      ],
+      "current_frontier": "Issue #532 is the active preregistered child. Start with an outcome-free same-fixture multi-bookmaker source/coverage audit, freeze the opening-to-closing decomposition, then evaluate common versus bookmaker-specific movement on chronological OOS data. Intermediate 24h/6h/1h horizons are allowed only when exact existing snapshots are available.",
+      "allowed_follow_up_classes": [
+        "source_feasibility",
+        "price_component_decomposition",
+        "temporal_stability",
+        "cross_bookmaker_transport",
+        "economic_value_if_statistically_supported"
+      ],
+      "stop_rules": [
+        "Do not infer bettor flow, bookmaker liabilities or intent from observational odds alone.",
+        "Do not fabricate/interpolate missing 24h, 6h or 1h snapshots.",
+        "Do not select bookmakers, leagues or probability bands after reading OOT outcomes.",
+        "Do not use paid data without fresh explicit user approval.",
+        "Do not promote any resulting feature to production inside this program."
+      ]
+    },
+    {
+      "program_id": "bookmaker_market_microstructure_2_devig",
+      "title": "2. De-vig method OOS research program",
+      "status": "ACTIVE",
+      "objective": "Determine whether Multiplicative, Additive, Power or Shin transforms bookmaker 1X2 odds into the most accurate and stable out-of-sample fair probabilities for Football AI.",
+      "completed_issue_numbers": [],
+      "active_issue_numbers": [
+        533
+      ],
+      "current_frontier": "Issue #533 is the active preregistered child. Implement the four standard transforms deterministically, freeze numerical behavior and temporal splits, then compare paired OOS Log Loss/Brier/RPS/calibration on the same fixtures at opening and closing.",
+      "allowed_follow_up_classes": [
+        "method_implementation_audit",
+        "paired_oos_comparison",
+        "bookmaker_transport",
+        "league_transport",
+        "calibration_stability"
+      ],
+      "stop_rules": [
+        "Do not add post-hoc de-vig variants after OOT results are read.",
+        "Do not silently clip mathematically invalid probabilities; report coverage/failure explicitly.",
+        "Do not select a winner from OOT and reuse the same OOT as confirmation.",
+        "Do not use paid data without fresh explicit user approval.",
+        "Any winner is research-only and requires a separate untouched promotion study."
+      ]
+    },
+    {
+      "program_id": "bookmaker_market_microstructure_3_favourite_longshot",
+      "title": "3. Favourite-longshot bias research program",
+      "status": "ACTIVE",
+      "objective": "Test whether favourite-longshot calibration and return distortions are stable in Football AI historical data and how they change from opening toward closing.",
+      "completed_issue_numbers": [],
+      "active_issue_numbers": [
+        534
+      ],
+      "current_frontier": "Issue #534 is the active preregistered child. Use fixed probability bins and a frozen trend/calibration test on chronological OOS data; opening and closing are primary, while 24h/6h/1h are evaluated only if exact existing snapshots are available.",
+      "allowed_follow_up_classes": [
+        "calibration_replication",
+        "temporal_stability",
+        "cross_league_transport",
+        "cross_bookmaker_transport",
+        "opening_closing_comparison"
+      ],
+      "stop_rules": [
+        "Do not change probability bins after seeing outcomes.",
+        "Do not cherry-pick leagues, bookmakers, seasons or outcome types to rescue a pooled null.",
+        "Do not fabricate/interpolate missing intraday snapshots.",
+        "Do not use paid data without fresh explicit user approval.",
+        "Do not fit and validate a probability correction on the same untouched OOT sample."
+      ]
+    },
+    {
+      "program_id": "bookmaker_market_microstructure_4_margin_structure",
+      "title": "4. Bookmaker margin structure research program",
+      "status": "ACTIVE",
+      "objective": "Test whether bookmakers systematically differ in total 1X2 margin and in how that margin is allocated across favourites, draws and longshots on the same matches.",
+      "completed_issue_numbers": [],
+      "active_issue_numbers": [
+        535
+      ],
+      "current_frontier": "Issue #535 is the active preregistered child. Freeze an outcome-free common-fixture coverage rule before choosing the bookmaker set, then run paired opening/closing OOS comparisons of overround, margin allocation, expected-loss curves and draw-specific behavior.",
+      "allowed_follow_up_classes": [
+        "source_feasibility",
+        "paired_bookmaker_comparison",
+        "draw_pricing_mechanism",
+        "market_type_comparison",
+        "temporal_stability"
+      ],
+      "stop_rules": [
+        "Do not compare bookmakers on non-matched fixture populations and call it a bookmaker effect.",
+        "Do not choose bookmakers after reading outcome performance.",
+        "Do not make causal claims about demand elasticity or bookmaker intent from observational prices alone.",
+        "Do not use paid data without fresh explicit user approval.",
+        "Any weighting/calibration change is research-only and requires a separate untouched promotion study."
+      ]
     }
   ]
 }
