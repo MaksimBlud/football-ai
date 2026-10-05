@@ -1,0 +1,60 @@
+{
+  "artifact_id": 11294063833,
+  "artifact_sha256": "92b958e6f5f8c911236f5e6451ed2f974d4e02af727637644dc2ad037cd78aa0",
+  "binary_direction": {
+    "always_up_accuracy": 0.8035714285714286,
+    "balanced_accuracy": 0.6606060606060606,
+    "down_recall": 0.45454545454545453,
+    "down_rows": 11,
+    "raw_accuracy": 0.7857142857142857,
+    "rows": 56,
+    "up_recall": 0.8666666666666667,
+    "up_rows": 45
+  },
+  "binary_direction_status": "WEAK_BELOW_ALWAYS_UP_WITH_DOWN_SCARCITY",
+  "continuous_ranking_status": "ROBUST_WITHIN_OPENED_SAMPLE_REQUIRES_UNTOUCHED_CONFIRMATION",
+  "decision": "SUPPORTED_FOR_FUTURE_CONFIRMATION",
+  "experiment_id": "CORNER_CROSS_MARKET_MATCH_SHAPE_DIRECTION_V1",
+  "falsification": {
+    "mechanical_opening_component_pearson_nonzero": 0.5377898433369729,
+    "permutation": {
+      "draws": 10000,
+      "one_sided_p": 0.00019998000199980003,
+      "seed": 20261005
+    },
+    "permutation_p": 0.00019998000199980003,
+    "residual_pearson_nonzero": 0.6474732155753334,
+    "residual_spearman_all_rows": 0.43105269863412893,
+    "residual_spearman_nonzero": 0.5596035543403964
+  },
+  "interpretation_guard": "The same already-opened sample was used for falsification, not independent confirmation. Binary direction remains weaker than always-UP and DOWN has only 11 rows. A positive result supports only a future untouched confirmation; it is not a betting edge and NO_BET remains binding.",
+  "leave_one_cohort_out": {
+    "REP50": 0.5091159549469249,
+    "V1_46": 0.6296896523782514,
+    "V1_55": 0.47799227799227806,
+    "V2B_43": 0.5367998263135041
+  },
+  "leave_one_league_out": {
+    "EPL": 0.4818011257035648,
+    "LA_LIGA": 0.4569900687547746,
+    "SERIE_A": 0.6400043768464821
+  },
+  "nonzero_movement_rows": 56,
+  "raw_continuous": {
+    "pearson_nonzero": 0.6814560336821388,
+    "spearman_all_rows": 0.4784084844769024,
+    "spearman_nonzero": 0.6238528982684476
+  },
+  "rows": 117,
+  "safety": {
+    "frozen_sign_changed": false,
+    "new_prospective_rows_collected": 0,
+    "no_bet": true,
+    "paid_odds_api_calls": 0,
+    "production_model_operations": 0,
+    "production_promotion": false,
+    "research_only": true,
+    "supabase_writes": 0,
+    "threshold_search_used": false
+  }
+}
