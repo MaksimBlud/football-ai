@@ -1,7 +1,7 @@
 {
   "blocker": null,
   "engine": "V5_DETERMINISTIC_NO_API",
-  "next_step": "Run the registered deterministic evaluator.",
+  "next_step": "Render final report and close the research direction.",
   "status": "CONTINUE",
-  "summary": "Frozen deterministic protocol written for bookmaker_price_formation_v1."
+  "summary": "Deterministic evaluation complete: NO_STABLE_BOOKMAKER_SPECIFIC_PRICE_COMPONENT."
 }
