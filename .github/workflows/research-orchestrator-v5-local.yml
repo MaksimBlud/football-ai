@@ -1,6 +1,8 @@
 name: Research Orchestrator V5 Local
 
 on:
+  issues:
+    types: [opened, edited, reopened]
   workflow_dispatch:
     inputs:
       issue_number:
@@ -65,7 +67,7 @@ jobs:
           done < /tmp/issues
 
   preflight:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'issues'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -87,10 +89,16 @@ jobs:
         id: plan
         env:
           GH_TOKEN: ${{ github.token }}
-          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_ISSUE_NUMBER: ${{ inputs.issue_number }}
           REPOSITORY_OWNER: ${{ github.repository_owner }}
         run: |
           echo 'run_worker=false' >> "$GITHUB_OUTPUT"
+          if [ "$EVENT_NAME" = "issues" ]; then
+            ISSUE_NUMBER=$(jq -r '.issue.number' "$GITHUB_EVENT_PATH")
+          else
+            ISSUE_NUMBER="$INPUT_ISSUE_NUMBER"
+          fi
           case "$ISSUE_NUMBER" in ''|*[!0-9]*) exit 0 ;; esac
           gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER" > /tmp/v5-issue.json
           TITLE=$(jq -r '.title' /tmp/v5-issue.json)
@@ -99,6 +107,10 @@ jobs:
           [ "$AUTHOR" = "$REPOSITORY_OWNER" ] || exit 0
           [ "$STATE" = "open" ] || exit 0
           case "$TITLE" in '[AGENT-RESEARCH]'*) ;; *) exit 0 ;; esac
+          if [ "$EVENT_NAME" = "issues" ]; then
+            HAS_V5=$(jq -r '[.labels[].name] | any(. == "research-v5-running" or . == "research-v5-done" or . == "research-v5-blocked")' /tmp/v5-issue.json)
+            [ "$HAS_V5" = "false" ] || exit 0
+          fi
 
           jq '{issue:.}' /tmp/v5-issue.json > /tmp/v5-event.json
           python research_agent_issue.py --event /tmp/v5-event.json --output-json /tmp/v5-plan.json --output-markdown /tmp/v5-plan.md
