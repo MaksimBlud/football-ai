@@ -44,9 +44,10 @@
       "status": "ACTIVE",
       "objective": "Determine whether kickoff time, weekday, calendar slot or related pre-kickoff context contains stable incremental information beyond market baselines.",
       "completed_issue_numbers": [
-        428
+        428,
+        514
       ],
-      "current_frontier": "The pooled EPL/La Liga/Serie A kickoff-calendar extension failed to improve validation and untouched OOT log loss, so the primary pooled signal is negative.",
+      "current_frontier": "The pooled kickoff/calendar OOS test is negative and the preregistered EPL/La Liga/Serie A heterogeneity follow-up (#514) also found no stable validation+OOT pairwise heterogeneity. The pooled null remains binding; the next Brain cycle may consider only a genuinely independent temporal-stability, market-movement mechanism, cross-league transport, or close-direction step.",
       "allowed_follow_up_classes": [
         "preregistered_league_heterogeneity",
         "temporal_stability",
