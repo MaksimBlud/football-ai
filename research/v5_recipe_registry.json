@@ -93,6 +93,35 @@
         ],
         "preregistration_markdown": "# Frozen kickoff/calendar league-heterogeneity protocol\n\nStatus: **PREREGISTERED / DIAGNOSTIC / POOLED NULL NOT RESCUABLE**.\n\nFixed leagues: EPL, La Liga, Serie A.\nReference/train: 2019/20–2023/24; validation: 2024/25; untouched test: 2025/26.\nUse exactly the parent market baseline and calendar feature design.\nCompute per-match calendar-minus-baseline log-loss deltas for all three leagues.\nTest all three predeclared league pairs; no pair may be selected after seeing results.\nUse Bonferroni familywise alpha 0.05 across the three pairwise comparisons (98.3333% bootstrap CI per pair).\nStable heterogeneity requires the same pairwise difference to exclude zero in both validation and OOT with the same sign.\nAny league-specific result is diagnostic only and cannot rescue the rejected pooled kickoff/calendar hypothesis.\nNo arbitrary kickoff cutoffs, league selection, paid data, Supabase, production operation or promotion."
       }
+    },
+    {
+      "hypothesis_family": "kickoff_calendar_market_movement_v1",
+      "handler": "pipeline",
+      "max_iterations": 4,
+      "description": "Outcome-free temporal OOS test of kickoff/calendar information for Bet365 O/U 2.5 opening-to-closing repricing.",
+      "safety": {
+        "model_api": false,
+        "paid_odds_api": false,
+        "supabase_writes": false,
+        "production_operations": false,
+        "automatic_promotion": false
+      },
+      "pipeline": {
+        "evaluator_module": "kickoff_calendar_market_movement_v1",
+        "decision_path": "decision",
+        "summary_path": "interpretation_guard",
+        "report_title": "kickoff/calendar opening-to-closing O/U 2.5 movement",
+        "report_fields": [
+          "reference_rows",
+          "validation.calendar_minus_baseline_mse",
+          "test.calendar_minus_baseline_mse",
+          "test.bootstrap.ci95_low",
+          "test.bootstrap.ci95_high",
+          "source_gaps",
+          "match_outcomes_used"
+        ],
+        "preregistration_markdown": "# Frozen kickoff/calendar market-movement protocol\n\nStatus: **PREREGISTERED / OUTCOME-FREE / TEMPORAL OOS / RESEARCH ONLY**.\n\nFixed leagues: EPL, La Liga, Serie A.\nSource: the same pinned/public Football-Data transport used by Issues #428 and #514.\nRequired fields: Date, Time, Bet365 opening O/U 2.5 odds and Bet365 closing O/U 2.5 odds. Fail closed without substitution if the exact source contract is unavailable.\nReference/train: 2019/20–2023/24; validation: 2024/25; untouched OOT test: 2025/26.\nTarget: closing minus opening no-vig Bet365 Over-2.5 probability.\nBaseline: league plus opening no-vig Over-2.5 probability.\nCalendar extension: frozen weekday indicators, kickoff-hour sin/cos and the same four slots as #428.\nEstimator: StandardScaler plus Ridge(alpha=1.0), fixed for baseline and extension.\nPrimary metric: per-match squared-error loss. Support requires lower MSE in validation and OOT plus an OOT league-stratified paired-bootstrap 95% CI for calendar-minus-baseline squared-error loss entirely below zero.\nMAE and non-zero-movement sign accuracy are secondary diagnostics only.\nMatch outcomes must not be loaded or used. No arbitrary cutoff/league/threshold selection, paid data, Supabase, production operation, betting claim or promotion."
+      }
     }
   ]
 }
