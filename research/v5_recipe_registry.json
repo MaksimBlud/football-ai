@@ -66,6 +66,65 @@
         ],
         "preregistration_markdown": "# Frozen kickoff/calendar O/U 2.5 protocol\n\nStatus: **PREREGISTERED / TEMPORAL OOS / RESEARCH ONLY**.\n\nLeagues: EPL, La Liga, Serie A. No 2026/27.\nReference/train: through 2023/24; validation: 2024/25; untouched test: 2025/26.\nTarget: FTHG + FTAG > 2.5.\nBaseline: league + devigged Bet365 O/U 2.5 probability.\nCalendar extension: weekday, kickoff-hour sin/cos and frozen time-slot buckets.\nEstimator: fixed regularized logistic regression.\nPrimary metric: log loss; Brier/AUC diagnostics.\nSupport requires lower calendar-model log loss in validation and OOT plus OOT paired bootstrap 95% CI for calendar-minus-baseline delta entirely below zero.\nNo production model, paid API, Supabase or automatic promotion."
       }
+    },
+    {
+      "hypothesis_family": "cross_market_lead_lag_temporal_stability_v1",
+      "handler": "pipeline",
+      "max_iterations": 4,
+      "description": "Test frozen alignment_dot temporal stability across 2019/20-2025/26 without rescuing the failed replication gate.",
+      "safety": {
+        "model_api": false,
+        "paid_odds_api": false,
+        "supabase_writes": false,
+        "production_operations": false,
+        "automatic_promotion": false
+      },
+      "pipeline": {
+        "evaluator_module": "cross_market_lead_lag_temporal_stability_v1",
+        "decision_path": "decision",
+        "summary_path": "summary.plain_language",
+        "report_title": "frozen cross-market lead-lag temporal stability",
+        "report_fields": [
+          "rows",
+          "positive_season_count",
+          "ci_above_zero_season_count",
+          "temporal_heterogeneity_permutation.p_value",
+          "temporal_instability_detected",
+          "strict_stability_pattern",
+          "parent_replication_decision_unchanged",
+          "replication_gate_rescued"
+        ],
+        "preregistration_markdown": "# Frozen cross-market lead-lag temporal stability V1\n\nStatus: **PREREGISTERED / OUTCOME-FREE / NO_BET / NO_RESCUE**.\n\nPreserve the existing `alignment_dot` statistic exactly across EPL, La Liga, Serie A, Bundesliga and Ligue 1 for seasons 2019/20-2025/26.\n\nPrimary temporal-instability test: an omnibus within-league season-label permutation of between-season alignment variance at alpha 0.05.\n\nStrict descriptive stability pattern (not a rescue gate): no significant temporal heterogeneity, positive pooled season mean in at least 6/7 seasons, and a stratified-bootstrap 95% CI above zero in at least 4/7 seasons.\n\nThe failed independent replication validation decision in Issue #482 remains binding under every outcome. Do not change the statistic, choose seasons after seeing results, use match outcomes, use 2026/27, paid APIs, Supabase or production."
+      }
+    },
+    {
+      "hypothesis_family": "kickoff_calendar_league_heterogeneity_v1",
+      "handler": "pipeline",
+      "max_iterations": 4,
+      "description": "Preregistered EPL/La Liga/Serie A heterogeneity audit of calendar-minus-market log-loss deltas after the negative pooled test.",
+      "safety": {
+        "model_api": false,
+        "paid_odds_api": false,
+        "supabase_writes": false,
+        "production_operations": false,
+        "automatic_promotion": false
+      },
+      "pipeline": {
+        "evaluator_module": "kickoff_calendar_league_heterogeneity_v1",
+        "decision_path": "decision",
+        "summary_path": "summary.plain_language",
+        "report_title": "kickoff/calendar league heterogeneity",
+        "report_fields": [
+          "heterogeneity_supported",
+          "heterogeneity_pairs",
+          "parent_pooled_decision_unchanged",
+          "pooled_signal_rescued",
+          "league_results.EPL.test_calendar_minus_baseline_log_loss",
+          "league_results.LA_LIGA.test_calendar_minus_baseline_log_loss",
+          "league_results.SERIE_A.test_calendar_minus_baseline_log_loss"
+        ],
+        "preregistration_markdown": "# Preregistered kickoff/calendar league heterogeneity V1\n\nStatus: **PREREGISTERED / TEMPORAL OOS / HETEROGENEITY ONLY / NO RESCUE**.\n\nFit the same market-baseline and calendar-extension logistic models separately within EPL, La Liga and Serie A using reference seasons 2019/20-2023/24; evaluate validation 2024/25 and untouched OOT 2025/26.\n\nPrimary heterogeneity rule: for each of the three league pairs, bootstrap the OOT difference in per-match calendar-minus-baseline log loss with Bonferroni familywise alpha 0.05. A pair supports heterogeneity only if its adjusted OOT interval excludes zero and validation/OOT differences have the same sign.\n\nAny subgroup result is heterogeneity evidence only. It cannot rescue or overturn the negative pooled Issue #428 result. No arbitrary time cutoffs, weekday selection, league dropping, 2026/27, paid APIs, Supabase or production."
+      }
     }
   ]
 }
