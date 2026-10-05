@@ -1,0 +1,40 @@
+{
+  "decision": "NEEDS_DETERMINISTIC_RECIPE",
+  "engine": "V5_DETERMINISTIC_NO_API",
+  "expected_lifecycle": [
+    "PREREGISTRATION",
+    "DETERMINISTIC_EVALUATION",
+    "RESULT.json",
+    "FINAL_REPORT.md",
+    "DONE"
+  ],
+  "hypothesis_family": "kickoff_calendar_market_movement_v1",
+  "independent_information_justification": "Issues #428 and #514 tested match-outcome log loss and between-league heterogeneity. This follow-up uses a mechanistically distinct, outcome-free target: the change in no-vig Bet365 Over-2.5 probability from opening to closing. Repository code search, continuity, research modules, and prior kickoff/calendar Issues found no existing experiment that asks this materially equivalent question.",
+  "issue_number": 523,
+  "issue_title": "[AGENT-RESEARCH] Kickoff/calendar opening-to-closing total movement",
+  "mode": "historical_read_only",
+  "prohibited": [
+    "model-generated shell commands",
+    "automatic threshold retuning on seen outcomes",
+    "paid Odds API calls",
+    "Supabase writes",
+    "production .pkl writes",
+    "automatic promotion"
+  ],
+  "required_implementation": {
+    "evaluator": "Add a deterministic Python evaluator that consumes only preregistered allowed inputs and returns machine-readable results.",
+    "handler": "Add a reviewed Research V5 handler that freezes the protocol before evaluation and writes only inside the current Issue sandbox.",
+    "registry": "Register the family in research/v5_recipe_registry.json with a bounded max_iterations and the exact no-API safety contract.",
+    "tests": "Add unit tests for the evaluator/handler and workflow contract tests covering fail-closed safety, temporal/OOS rules, and DONE/CONTINUE state."
+  },
+  "research_question": "Do frozen kickoff/calendar features predict Bet365 O/U 2.5 opening-to-closing market movement out of sample, beyond league and the opening no-vig Over probability, without using match outcomes?",
+  "safety": {
+    "automatic_promotion": false,
+    "model_api": false,
+    "outcomes_read_during_scaffold": false,
+    "paid_odds_api": false,
+    "production_operations": false,
+    "supabase_writes": false
+  },
+  "schema_version": 1
+}
