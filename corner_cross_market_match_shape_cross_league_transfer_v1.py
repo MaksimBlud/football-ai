@@ -232,7 +232,8 @@ def _permutation(frame: pd.DataFrame) -> dict[str, Any]:
     hits = 0
     for _ in range(PERMUTATION_DRAWS):
         shuffled = frame.copy()
-        values = shuffled["centre_delta"].to_numpy(float)
+        # pandas 3 may expose a read-only view; permutation needs an owned array.
+        values = shuffled["centre_delta"].to_numpy(dtype=float, copy=True)
         for indices in groups:
             values[indices] = rng.permutation(values[indices])
         shuffled["centre_delta"] = values
@@ -330,3 +331,4 @@ def evaluate() -> dict[str, Any]:
 if __name__ == "__main__":
     import json
     print(json.dumps(evaluate(), indent=2, sort_keys=True))
+
