@@ -75,8 +75,11 @@ For each program:
 The initial ACTIVE programs are:
 
 - `cross_market_lead_lag` — **PROGRAM_DONE** after failed independent replication, completed regime/anomaly diagnostics, and duplicate detection for the attempted temporal-stability follow-up. Further zero-cost steps would be cosmetic restatements; paid intraday data still requires explicit user approval.
-- `kickoff_calendar_context` — the pooled kickoff/day-of-week incremental OOS test is
-  negative; the Brain may consider only preregistered heterogeneity/stability/mechanism
-  checks that do not rescue the rejected pooled hypothesis post-hoc.
+- `kickoff_calendar_context` — **PROGRAM_DONE** after the negative pooled OOS test,
+  negative preregistered league heterogeneity, and the negative outcome-free
+  opening-to-closing market-movement mechanism. Remaining zero-cost variants would
+  be threshold/weekday/league mining or cosmetic restatements of the rejected signal.
+- `corner_market_direction` — **ACTIVE** with Issue #522 as its frozen child for
+  independent falsification of the retrospective cross-market match-shape signal.
 
 Infrastructure live-proof Issues are not scientific programs.
