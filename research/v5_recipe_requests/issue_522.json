@@ -1,0 +1,40 @@
+{
+  "decision": "NEEDS_DETERMINISTIC_RECIPE",
+  "engine": "V5_DETERMINISTIC_NO_API",
+  "expected_lifecycle": [
+    "PREREGISTRATION",
+    "DETERMINISTIC_EVALUATION",
+    "RESULT.json",
+    "FINAL_REPORT.md",
+    "DONE"
+  ],
+  "hypothesis_family": "corner_cross_market_match_shape_direction_v1",
+  "independent_information_justification": "Используется независимая от закрытых CORNERS10/xG/shots/deep/rest/travel/volatility семей информация: согласованность opening corner market с одновременной pre-match оценкой матча в Bet365 1X2, O/U 2.5 и Asian Handicap. Основной frozen candidate уже прошёл retrospective multi-cohort screen за счёт исторически обученного match-shape expected corners и gap относительно opening FAIR_CENTRE. Новое направление не должно ретюнить открытые 2026/27 corner outcomes; задача — автономно исчерпать zero-cost независимые проверки, переносимость и falsification этого механизма.",
+  "issue_number": 522,
+  "issue_title": "[AGENT-RESEARCH] Довести cross-market match-shape сигнал угловых до DONE",
+  "mode": "historical_read_only",
+  "prohibited": [
+    "model-generated shell commands",
+    "automatic threshold retuning on seen outcomes",
+    "paid Odds API calls",
+    "Supabase writes",
+    "production .pkl writes",
+    "automatic promotion"
+  ],
+  "required_implementation": {
+    "evaluator": "Add a deterministic Python evaluator that consumes only preregistered allowed inputs and returns machine-readable results.",
+    "handler": "Add a reviewed Research V5 handler that freezes the protocol before evaluation and writes only inside the current Issue sandbox.",
+    "registry": "Register the family in research/v5_recipe_registry.json with a bounded max_iterations and the exact no-API safety contract.",
+    "tests": "Add unit tests for the evaluator/handler and workflow contract tests covering fail-closed safety, temporal/OOS rules, and DONE/CONTINUE state."
+  },
+  "research_question": "Автономно довести до DONE направление CROSS_MARKET_MATCH_SHAPE_CORNER_GAP_V1: проверить, является ли расхождение между cross-market match-shape expectation и opening corner FAIR_CENTRE переносимым Stage-B сигналом направления рынка угловых, не ретюня уже открытые 194 corner-market матча и не собирая новые prospective матчи. Production не трогать.",
+  "safety": {
+    "automatic_promotion": false,
+    "model_api": false,
+    "outcomes_read_during_scaffold": false,
+    "paid_odds_api": false,
+    "production_operations": false,
+    "supabase_writes": false
+  },
+  "schema_version": 1
+}
