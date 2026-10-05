@@ -31,6 +31,7 @@ on:
       - 'research_orchestrator_v4.py'
       - 'tests/test_research_agent_v5.py'
       - 'tests/test_research_program_controller.py'
+      - 'tests/test_research_program_active_children.py'
       - 'tests/test_research_brain_first_followups.py'
       - 'tests/test_research_v5_recipe_scaffold.py'
       - 'tests/test_research_agent_v5_helpers.py'
@@ -60,7 +61,7 @@ jobs:
       - run: python research_agent_v5.py --list-families
       - run: python research_program_controller.py --validate
       - run: python research_program_controller.py --brain-context > /tmp/research-brain-context.json
-      - run: pytest -q tests/test_research_agent_v5.py tests/test_research_v5_recipe_scaffold.py tests/test_research_program_controller.py tests/test_research_brain_first_followups.py tests/test_research_agent_v5_helpers.py tests/test_research_orchestrator_v5_workflow.py
+      - run: pytest -q tests/test_research_agent_v5.py tests/test_research_v5_recipe_scaffold.py tests/test_research_program_controller.py tests/test_research_program_active_children.py tests/test_research_brain_first_followups.py tests/test_research_agent_v5_helpers.py tests/test_research_orchestrator_v5_workflow.py
 
   sweep:
     if: github.event_name == 'schedule'
