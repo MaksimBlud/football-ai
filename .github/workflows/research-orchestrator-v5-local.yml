@@ -28,6 +28,7 @@ on:
       - 'kickoff_calendar_league_heterogeneity_v1.py'
       - 'kickoff_calendar_market_movement_v1.py'
       - 'corner_cross_market_match_shape_direction_v1.py'
+      - 'corner_cross_market_match_shape_cross_league_transfer_v1.py'
       - 'cross_market_lead_lag_anomaly_audit_v1.py'
       - 'research_orchestrator_v4.py'
       - 'tests/test_research_agent_v5.py'
@@ -37,6 +38,7 @@ on:
       - 'tests/test_kickoff_calendar_league_heterogeneity_v1.py'
       - 'tests/test_kickoff_calendar_market_movement_v1.py'
       - 'tests/test_corner_cross_market_match_shape_direction_v1.py'
+      - 'tests/test_corner_cross_market_match_shape_cross_league_transfer_v1.py'
       - 'tests/test_research_orchestrator_v5_workflow.py'
       - '.github/workflows/research-orchestrator-v5-local.yml'
       - '.github/workflows/research-orchestrator-v4.yml'
@@ -59,11 +61,11 @@ jobs:
           python-version: '3.12'
           cache: pip
       - run: pip install pytest pandas numpy requests scikit-learn
-      - run: python -m py_compile research_agent_v5.py research_v5_recipe_scaffold.py research_program_controller.py kickoff_calendar_context_v1.py kickoff_calendar_league_heterogeneity_v1.py kickoff_calendar_market_movement_v1.py corner_cross_market_match_shape_direction_v1.py cross_market_lead_lag_anomaly_audit_v1.py research_orchestrator_v4.py
+      - run: python -m py_compile research_agent_v5.py research_v5_recipe_scaffold.py research_program_controller.py kickoff_calendar_context_v1.py kickoff_calendar_league_heterogeneity_v1.py kickoff_calendar_market_movement_v1.py corner_cross_market_match_shape_direction_v1.py corner_cross_market_match_shape_cross_league_transfer_v1.py cross_market_lead_lag_anomaly_audit_v1.py research_orchestrator_v4.py
       - run: python research_agent_v5.py --list-families
       - run: python research_program_controller.py --validate
       - run: python research_program_controller.py --brain-context > /tmp/research-brain-context.json
-      - run: pytest -q tests/test_research_agent_v5.py tests/test_research_v5_recipe_scaffold.py tests/test_research_program_controller.py tests/test_research_agent_v5_helpers.py tests/test_kickoff_calendar_league_heterogeneity_v1.py tests/test_kickoff_calendar_market_movement_v1.py tests/test_corner_cross_market_match_shape_direction_v1.py tests/test_research_orchestrator_v5_workflow.py
+      - run: pytest -q tests/test_research_agent_v5.py tests/test_research_v5_recipe_scaffold.py tests/test_research_program_controller.py tests/test_research_agent_v5_helpers.py tests/test_kickoff_calendar_league_heterogeneity_v1.py tests/test_kickoff_calendar_market_movement_v1.py tests/test_corner_cross_market_match_shape_direction_v1.py tests/test_corner_cross_market_match_shape_cross_league_transfer_v1.py tests/test_research_orchestrator_v5_workflow.py
 
   sweep:
     if: github.event_name == 'schedule'

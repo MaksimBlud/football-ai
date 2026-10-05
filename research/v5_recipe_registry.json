@@ -153,6 +153,40 @@
         ],
         "preregistration_markdown": "# Frozen corner match-shape falsification protocol\n\nStatus: **PREREGISTERED / SAME OPENED SAMPLE / FALSIFICATION ONLY / NO_BET**.\n\nSource: authoritative artifact 11294063833, SHA-256 92b958e6f5f8c911236f5e6451ed2f974d4e02af727637644dc2ad037cd78aa0. Use all 117 usable rows; the 56 non-zero movement rows are the frozen primary direction-comparable set. No new prospective rows.\n\nFrozen score and sign are unchanged: match_shape_gap = historical Ridge expected corners minus opening FAIR_CENTRE; positive predicts UP and negative predicts DOWN. No threshold search, sign reversal, alpha/feature changes, cohort/league selection, or V2B exclusion.\n\nPrimary falsification residualizes both match_shape_gap and centre_delta against opening_lambda plus fixed cohort and league effects. Support for future confirmation requires positive residual Spearman on both the 56 non-zero rows and all 117 rows; a one-sided 10,000-draw within-cohort-and-league permutation p <= 0.05 on the non-zero rows; and positive residual Spearman in every predeclared leave-one-cohort-out and leave-one-league-out diagnostic. Diagnostics cannot rescue a failed gate.\n\nReport binary direction separately against always-UP, including UP/DOWN recall and class counts. The shared negative opening_lambda component is reported explicitly. Because outcomes were already opened, even a passing result is only SUPPORTED_FOR_FUTURE_CONFIRMATION and requires a genuinely untouched sample. Otherwise return WEAK_OR_INCONSISTENT_CROSS_MARKET_CORNER_DIRECTION_HYPOTHESIS; unavailable or unverifiable frozen evidence returns BLOCKED_BY_EXISTING_SOURCE_GAP. No paid API, Supabase, production operation, betting claim, or promotion."
       }
+    },
+    {
+      "hypothesis_family": "corner_cross_market_match_shape_cross_league_transfer_v1",
+      "handler": "pipeline",
+      "max_iterations": 4,
+      "description": "Transport the frozen match-shape gap to Bundesliga and Ligue 1 after an outcome-free exact-coverage audit.",
+      "safety": {
+        "model_api": false,
+        "paid_odds_api": false,
+        "supabase_writes": false,
+        "production_operations": false,
+        "automatic_promotion": false
+      },
+      "pipeline": {
+        "evaluator_module": "corner_cross_market_match_shape_cross_league_transfer_v1",
+        "decision_path": "decision",
+        "summary_path": "interpretation_guard",
+        "report_title": "corner match-shape Bundesliga/Ligue 1 transport",
+        "report_fields": [
+          "coverage_audit",
+          "rows",
+          "nonzero_movement_rows",
+          "binary_direction_status",
+          "continuous_ranking_status",
+          "raw_continuous.by_league",
+          "raw_continuous.pooled_spearman",
+          "falsification.mechanical_opening_component_pearson_nonzero",
+          "falsification.residual_pearson_nonzero",
+          "falsification.residual_spearman_nonzero",
+          "falsification.permutation_p",
+          "leave_one_league_out"
+        ],
+        "preregistration_markdown": "# Frozen Bundesliga/Ligue 1 corner match-shape transport\n\nStatus: **PREREGISTERED / CROSS-LEAGUE FALSIFICATION / OPENED FOR OTHER HYPOTHESES / NO_BET**.\n\nUse only Bundesliga and Ligue 1 rows from authoritative artifact 11294063833 (SHA-256 92b958e6f5f8c911236f5e6451ed2f974d4e02af727637644dc2ad037cd78aa0): exactly 35 Bundesliga and 39 Ligue 1 fixtures across all four frozen cohorts. Before reading closing corner state or centre_delta, require an exact same-fixture join for all 74 rows to free Football-Data 2026/27 opening 1X2/O-U2.5/AH inputs; otherwise fail closed without a proxy.\n\nFor each league, use the exact #522 pipeline: SimpleImputer(median), StandardScaler and Ridge(alpha=1.0); train 2019/20-2024/25 on actual total corners, validate without tuning on 2025/26, then refit through 2025/26. Frozen score: expected total corners minus opening corner FAIR_CENTRE. No feature, alpha, sign, threshold, cohort, league or row selection.\n\nPrimary set is every non-zero movement row. Support requires positive Spearman separately in Bundesliga and Ligue 1 and pooled; positive pooled residual Spearman controlling for opening FAIR_CENTRE and league; a one-sided 10,000-draw within-league permutation p <= 0.05; and both leave-one-league-out signs positive. Binary UP/DOWN metrics versus always-UP are secondary only.\n\nThese league rows were excluded from #522 but their movements were opened for other hypotheses, so a pass supports only future untouched confirmation. No paid API, Supabase, production operation, betting claim or promotion."
+      }
     }
   ]
 }
