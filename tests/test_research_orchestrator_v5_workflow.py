@@ -21,6 +21,8 @@ def test_v5_routes_supported_families_without_model_api():
     assert "kickoff_calendar_context" in registry
     assert "cross_market_lead_lag_2024_25_anomaly_audit" in registry
     assert "cross_market_lead_lag_independent_replication" in registry
+    assert "corner_cross_market_match_shape_cross_league_transfer_v1" in registry
+    assert "corner_cross_market_match_shape_cross_league_transfer_v1.py" in v5
     assert "kickoff_calendar_context|" not in v5
     assert "kickoff_calendar_context|" not in v4
 
