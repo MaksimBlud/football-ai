@@ -19,11 +19,13 @@ on:
   pull_request:
     paths:
       - 'research_agent_v5.py'
+      - 'research_v5_recipe_scaffold.py'
       - 'research/v5_recipe_registry.json'
       - 'kickoff_calendar_context_v1.py'
       - 'cross_market_lead_lag_anomaly_audit_v1.py'
       - 'research_orchestrator_v4.py'
       - 'tests/test_research_agent_v5.py'
+      - 'tests/test_research_v5_recipe_scaffold.py'
       - 'tests/test_research_agent_v5_helpers.py'
       - 'tests/test_research_orchestrator_v5_workflow.py'
       - '.github/workflows/research-orchestrator-v5-local.yml'
@@ -47,9 +49,9 @@ jobs:
           python-version: '3.12'
           cache: pip
       - run: pip install pytest pandas numpy requests scikit-learn
-      - run: python -m py_compile research_agent_v5.py kickoff_calendar_context_v1.py cross_market_lead_lag_anomaly_audit_v1.py research_orchestrator_v4.py
+      - run: python -m py_compile research_agent_v5.py research_v5_recipe_scaffold.py kickoff_calendar_context_v1.py cross_market_lead_lag_anomaly_audit_v1.py research_orchestrator_v4.py
       - run: python research_agent_v5.py --list-families
-      - run: pytest -q tests/test_research_agent_v5.py tests/test_research_agent_v5_helpers.py tests/test_research_orchestrator_v5_workflow.py
+      - run: pytest -q tests/test_research_agent_v5.py tests/test_research_v5_recipe_scaffold.py tests/test_research_agent_v5_helpers.py tests/test_research_orchestrator_v5_workflow.py
 
   sweep:
     if: github.event_name == 'schedule'
@@ -81,6 +83,7 @@ jobs:
       issue_title: ${{ steps.plan.outputs.issue_title }}
       hypothesis_family: ${{ steps.plan.outputs.hypothesis_family }}
       run_worker: ${{ steps.plan.outputs.run_worker }}
+      scaffold_required: ${{ steps.plan.outputs.scaffold_required }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -97,6 +100,7 @@ jobs:
           REPOSITORY_OWNER: ${{ github.repository_owner }}
         run: |
           echo 'run_worker=false' >> "$GITHUB_OUTPUT"
+          echo 'scaffold_required=false' >> "$GITHUB_OUTPUT"
           if [ "$EVENT_NAME" = "issues" ]; then
             ISSUE_NUMBER=$(jq -r '.issue.number' "$GITHUB_EVENT_PATH")
           else
@@ -137,9 +141,13 @@ jobs:
               gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label "$label" >/dev/null 2>&1 || true
             done
             if [ "$HAS_NEEDS_RECIPE" != "true" ]; then
-              gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Research V5 no-API intake: hypothesis family `$FAMILY` has no reviewed deterministic recipe yet. Model/API fallback is disabled by default; add a V5 recipe/handler, or explicitly opt into V4 with the `research-v4-model-opt-in` label."
+              gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Research V5 no-API intake: hypothesis family `$FAMILY` has no reviewed deterministic recipe yet. A deterministic scaffold will be created automatically. Model/API fallback remains disabled unless `research-v4-model-opt-in` is explicitly added."
             fi
-            echo "Hypothesis family $FAMILY has no deterministic V5 recipe; fail-closed without model API."
+            echo "issue_number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
+            echo "issue_title=$TITLE" >> "$GITHUB_OUTPUT"
+            echo "hypothesis_family=$FAMILY" >> "$GITHUB_OUTPUT"
+            echo 'scaffold_required=true' >> "$GITHUB_OUTPUT"
+            echo "Hypothesis family $FAMILY has no deterministic V5 recipe; creating no-API scaffold."
             exit 0
           fi
 
@@ -154,6 +162,56 @@ jobs:
           echo "issue_title=$TITLE" >> "$GITHUB_OUTPUT"
           echo "hypothesis_family=$FAMILY" >> "$GITHUB_OUTPUT"
           echo 'run_worker=true' >> "$GITHUB_OUTPUT"
+
+  scaffold:
+    needs: preflight
+    if: needs.preflight.outputs.scaffold_required == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      issues: write
+    env:
+      PYTHONPATH: .
+      ISSUE_NUMBER: ${{ needs.preflight.outputs.issue_number }}
+      HYPOTHESIS_FAMILY: ${{ needs.preflight.outputs.hypothesis_family }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build persistent no-API recipe scaffold
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BRANCH="agent/v5-scaffold-${ISSUE_NUMBER}"
+          git config user.name 'football-ai-research-bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin main
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            git fetch origin "$BRANCH:refs/remotes/origin/$BRANCH"
+            git switch -c "$BRANCH" --track "origin/$BRANCH"
+            git merge --no-edit origin/main
+          else
+            git switch -c "$BRANCH" origin/main
+          fi
+
+          gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER" > /tmp/v5-scaffold-issue.json
+          mkdir -p research/v5_recipe_requests docs/v5_recipe_requests
+          python research_v5_recipe_scaffold.py             --issue-json /tmp/v5-scaffold-issue.json             --output-json "research/v5_recipe_requests/issue_${ISSUE_NUMBER}.json"             --output-markdown "docs/v5_recipe_requests/issue_${ISSUE_NUMBER}.md"
+
+          git diff --check
+          git add "research/v5_recipe_requests/issue_${ISSUE_NUMBER}.json"                   "docs/v5_recipe_requests/issue_${ISSUE_NUMBER}.md"
+          if git diff --cached --quiet; then
+            echo "No scaffold changes to persist."
+          else
+            git commit -m "Research V5 scaffold issue #${ISSUE_NUMBER}"
+            git push origin "$BRANCH"
+            gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Research V5 created a no-API recipe scaffold on branch `$BRANCH`: `research/v5_recipe_requests/issue_${ISSUE_NUMBER}.json`. The Issue remains fail-closed until a reviewed deterministic handler and registry recipe are merged."
+          fi
 
   worker:
     needs: preflight
