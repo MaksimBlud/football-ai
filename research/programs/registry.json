@@ -62,6 +62,32 @@
         "Do not use paid data without fresh explicit user approval.",
         "Mark PROGRAM_DONE when remaining follow-ups would be threshold mining or restatements of the rejected pooled test."
       ]
+    },
+    {
+      "program_id": "corner_market_direction",
+      "title": "Cross-market corner direction research program",
+      "status": "ACTIVE",
+      "objective": "Determine whether the frozen cross-market match-shape gap contains stable, transferable information about pre-match corner-market direction or ranking beyond trivial UP skew.",
+      "completed_issue_numbers": [],
+      "active_issue_numbers": [
+        522
+      ],
+      "current_frontier": "Issue #522 is the active frozen child. The retrospective 194-fixture screen found a promising continuous association but binary raw accuracy did not beat the always-UP baseline and DOWN discrimination was weak. The program must now exhaust genuinely independent zero-cost replication/falsification without retuning the opened 2026/27 cohorts.",
+      "allowed_follow_up_classes": [
+        "independent_replication_and_falsification",
+        "cross_league_transport",
+        "temporal_stability",
+        "rank_value_falsification",
+        "down_weakness_diagnostic",
+        "source_feasibility"
+      ],
+      "stop_rules": [
+        "Do not retune match_shape_gap, its sign, Ridge alpha, FAIR_CENTRE definition or thresholds on the already-opened 194 corner movements.",
+        "Do not exclude weak cohorts or leagues post-hoc and do not use closing/in-play information as pre-match features.",
+        "Do not collect new prospective matches inside Issue #522.",
+        "Do not use paid data without fresh explicit user approval.",
+        "Mark PROGRAM_DONE when independent zero-cost evidence is exhausted or fails to support future confirmation."
+      ]
     }
   ]
 }
