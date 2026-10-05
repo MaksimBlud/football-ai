@@ -1,7 +1,7 @@
 {
   "blocker": null,
   "engine": "V5_DETERMINISTIC_NO_API",
-  "next_step": "Render final report and close the research direction.",
-  "status": "CONTINUE",
-  "summary": "Deterministic evaluation complete: WEAK_OR_INCONSISTENT_CROSS_MARKET_CORNER_DIRECTION_HYPOTHESIS."
+  "next_step": null,
+  "status": "DONE",
+  "summary": "Deterministic pipeline completed: WEAK_OR_INCONSISTENT_CROSS_MARKET_CORNER_DIRECTION_HYPOTHESIS."
 }
