@@ -215,6 +215,36 @@
         ],
         "preregistration_markdown": "# Frozen de-vig method OOS protocol\n\nStatus: **PREREGISTERED / TEMPORAL OOS / RESEARCH ONLY / NO_BET**.\n\nQuestion: which standard 1X2 margin-removal transform is most accurate for Football AI: Multiplicative, Additive, Power, or Shin?\n\nFrozen source scope: EPL, La Liga, Serie A; free Football-Data historical transport only. Frozen bookmakers: Bet365 and Pinnacle (PS columns). Opening and closing 1X2 are both evaluated. A bookmaker is eligible only when its required opening+closing columns exist for every validation/test league-season. Source/header audit is completed before reading FTR outcomes. No proxy bookmaker, interpolation, paid API, Supabase or production source is permitted.\n\nTemporal design: 2019/20-2023/24 reference only; 2024/25 validation selects at most one alternative candidate; 2025/26 is untouched confirmation and must not select the winner.\n\nTransforms are exact standard definitions. Invalid rows are reported, never silently clipped. Method coverage must be at least 99%.\n\nPrimary horizon: closing. The validation candidate is the eligible alternative with the lowest pooled validation closing Log Loss, but only if it beats Multiplicative. If no alternative beats Multiplicative in validation, final status is NO_STABLE_DEVIG_WINNER.\n\nUntouched 2025/26 confirmation requires all of:\n1. candidate closing Log Loss delta vs Multiplicative < 0;\n2. fixture-cluster paired-bootstrap 95% CI upper bound < 0;\n3. closing Brier and RPS deltas <= 0;\n4. opening Log Loss sensitivity delta <= 0;\n5. negative Log Loss delta in both frozen bookmakers;\n6. negative Log Loss delta in at least two of three frozen leagues;\n7. candidate validity coverage >= 99%.\n\nPassing returns PROJECT_BEST_DEVIG_CANDIDATE. Failing returns NO_STABLE_DEVIG_WINNER. Missing multi-bookmaker source coverage returns BLOCKED_BY_SOURCE_GAP.\n\nEven a pass creates only a research candidate for a separate untouched promotion study. No production replacement, automatic promotion or betting claim."
       }
+    },
+    {
+      "hypothesis_family": "favourite_longshot_bias_v1",
+      "handler": "pipeline",
+      "max_iterations": 4,
+      "description": "Frozen temporal OOS favourite-longshot calibration audit on Bet365/Pinnacle 1X2 opening and closing odds.",
+      "safety": {
+        "model_api": false,
+        "paid_odds_api": false,
+        "supabase_writes": false,
+        "production_operations": false,
+        "automatic_promotion": false
+      },
+      "pipeline": {
+        "evaluator_module": "favourite_longshot_bias_v1",
+        "decision_path": "decision",
+        "summary_path": "interpretation_guard",
+        "report_title": "favourite-longshot calibration by frozen probability bins and market time",
+        "report_fields": [
+          "source_audit",
+          "validation.closing.residual_slope",
+          "validation.closing.regions",
+          "test.closing.residual_slope",
+          "test.closing.regions",
+          "test.time_path",
+          "formal_gate",
+          "decision"
+        ],
+        "preregistration_markdown": "# Frozen favourite-longshot bias protocol\n\nStatus: **PREREGISTERED / TEMPORAL OOS / RESEARCH ONLY / NO_BET**.\n\nPrimary market: 1X2. Frozen leagues: EPL, La Liga, Serie A. Frozen bookmakers: Bet365 and Pinnacle. Primary no-vig representation: multiplicative/proportional normalization.\n\nOutcome-free header/source audit must complete before reading FTR. Both bookmakers must have exact opening and closing 1X2 columns for all validation/test league-seasons. Missing coverage fails closed; no proxy bookmaker and no paid source.\n\nTemporal design:\n- reference/descriptive: 2019/20-2023/24;\n- validation: 2024/25;\n- untouched OOT: 2025/26.\n\nPrimary horizons: opening and closing. Exact 24h/6h/1h snapshots are evaluated only if an honest timestamped source exists. The current frozen Football-Data source does not provide those exact snapshots, so they must be reported as SOURCE_GAP and never interpolated.\n\nFrozen probability bins, left-inclusive/right-exclusive:\n0-20%, 20-30%, 30-40%, 40-50%, 50-60%, 60-70%, 70-80%, 80%+.\n\nFor every bin report N, mean fair probability, realized frequency, 95% frequency interval, calibration gap, average raw odds and historical flat-stake return. Historical return is diagnostic only and cannot authorize betting.\n\nPrimary structural statistic: slope of calibration residual (y - p) on fair probability p, with deterministic league-stratified fixture-cluster bootstrap. Positive slope is the classic favourite-longshot direction: low-p outcomes are overestimated while high-p outcomes are underestimated.\n\nFrozen aggregate regions:\n- longshot: p < 0.30;\n- favourite: p >= 0.60.\n\nSTABLE_FAVOURITE_LONGSHOT_BIAS requires all:\n1. validation closing residual-slope 95% CI lower bound > 0;\n2. untouched OOT closing residual-slope 95% CI lower bound > 0;\n3. validation longshot gap < 0 and favourite gap > 0;\n4. OOT longshot gap < 0 and favourite gap > 0;\n5. positive OOT slope for both frozen bookmakers;\n6. positive OOT slope in at least two of three frozen leagues.\n\nOtherwise return NO_STABLE_FAVOURITE_LONGSHOT_BIAS. Source failure returns BLOCKED_BY_SOURCE_GAP.\n\nOpening versus closing is reported as a frozen time-path diagnostic and cannot rescue a failed primary gate. League/bookmaker/outcome-type/season breakdowns are diagnostics only. No post-hoc bin changes, no probability correction fitted on this OOT sample, no production promotion."
+      }
     }
   ]
 }

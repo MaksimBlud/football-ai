@@ -25,6 +25,8 @@ def test_v5_routes_supported_families_without_model_api():
     assert "corner_cross_market_match_shape_cross_league_transfer_v1.py" in v5
     assert "devig_method_oos_v1" in registry
     assert "devig_method_oos_v1.py" in v5
+    assert "favourite_longshot_bias_v1" in registry
+    assert "favourite_longshot_bias_v1.py" in v5
     assert "kickoff_calendar_context|" not in v5
     assert "kickoff_calendar_context|" not in v4
 
