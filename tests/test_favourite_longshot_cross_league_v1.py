@@ -40,4 +40,3 @@ def test_favourite_longshot_transport_fails_crossing_ci(monkeypatch):
     monkeypatch.setattr(mod.parent, "evaluate", lambda: report)
     result = mod.evaluate()
     assert result["decision"] == "NO_CROSS_LEAGUE_FAVOURITE_LONGSHOT_CONFIRMATION"
-
