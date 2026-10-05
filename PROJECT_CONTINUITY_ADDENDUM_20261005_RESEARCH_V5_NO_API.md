@@ -279,3 +279,70 @@ At this checkpoint, the practical model-provider quota blocker is removed from t
 default research path. Supported families execute deterministically; unsupported families
 fail closed and receive a deterministic implementation scaffold instead of consuming
 model quota.
+
+
+## Generic declarative pipeline completion
+
+PR #509 merged as:
+
+`bb335eb7afc5530d321b189ae6b9e721cbc65229`
+
+The common V5 lifecycle is now implemented once:
+
+`PREREGISTRATION -> registered evaluator -> RESULT.json -> FINAL_REPORT.md -> DONE`
+
+The following recipes now use the shared `pipeline` handler:
+
+- `cross_market_lead_lag_2024_25_anomaly_audit`;
+- `kickoff_calendar_context`.
+
+A pipeline recipe declares reviewed deterministic metadata only:
+
+- evaluator module;
+- frozen preregistration text;
+- decision path;
+- optional summary/report fields;
+- bounded max iterations;
+- mandatory no-API/no-production safety contract.
+
+No workflow routing change or new orchestration state machine is required for another
+research family that fits this lifecycle.
+
+### Live generic-pipeline proof — Issue #510
+
+Temporary Issue #510 exercised the registered `kickoff_calendar_context` recipe through
+the new common pipeline.
+
+Observed live chain:
+
+1. iteration 1 — `PREREGISTRATION.md` + `STATE=CONTINUE`;
+2. iteration 2 — deterministic evaluator + `RESULT.json` + `STATE=CONTINUE`;
+3. iteration 3 — `FINAL_REPORT.md` + `STATE=DONE` + Issue close.
+
+Final accounting:
+
+- local passes: 3;
+- local committed iterations: 3;
+- research iterations committed: 3;
+- model passes attempted: 0;
+- Groq passes: 0;
+- quota waits: 0;
+- done runs: 1;
+- V4 model worker: skipped;
+- final Issue label: `research-v5-done`.
+
+Persistent proof branch:
+
+`agent/v5-issue-510`
+
+The temporary Issue closed successfully. Its research branch is intentionally not merged
+because #510 duplicates the already-canonical #428 kickoff/calendar result and exists only
+as infrastructure proof.
+
+Current main after the generic-pipeline merge:
+
+`bb335eb7afc5530d321b189ae6b9e721cbc65229`
+
+The default autonomous research path therefore no longer depends on an LLM/API quota for
+registered deterministic families, and common three-phase research no longer needs
+family-specific orchestration code.
