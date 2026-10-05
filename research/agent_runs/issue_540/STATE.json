@@ -1,7 +1,7 @@
 {
   "blocker": null,
   "engine": "V5_DETERMINISTIC_NO_API",
-  "next_step": "Render final report and close the research direction.",
-  "status": "CONTINUE",
-  "summary": "Deterministic evaluation complete: POWER_CROSS_LEAGUE_TRANSPORT_NOT_SUPPORTED."
+  "next_step": null,
+  "status": "DONE",
+  "summary": "Deterministic pipeline completed: POWER_CROSS_LEAGUE_TRANSPORT_NOT_SUPPORTED."
 }
