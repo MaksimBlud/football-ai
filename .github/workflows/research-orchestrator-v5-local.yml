@@ -24,6 +24,7 @@ on:
       - 'research_orchestrator_v4.py'
       - 'tests/test_research_agent_v5.py'
       - 'tests/test_research_agent_v5_helpers.py'
+      - 'tests/test_research_orchestrator_v5_workflow.py'
       - '.github/workflows/research-orchestrator-v5-local.yml'
       - '.github/workflows/research-orchestrator-v4.yml'
       - 'docs/RESEARCH_ORCHESTRATOR_V5.md'
@@ -46,7 +47,7 @@ jobs:
           cache: pip
       - run: pip install pytest pandas numpy requests scikit-learn
       - run: python -m py_compile research_agent_v5.py kickoff_calendar_context_v1.py cross_market_lead_lag_anomaly_audit_v1.py research_orchestrator_v4.py
-      - run: pytest -q tests/test_research_agent_v5.py tests/test_research_agent_v5_helpers.py
+      - run: pytest -q tests/test_research_agent_v5.py tests/test_research_agent_v5_helpers.py tests/test_research_orchestrator_v5_workflow.py
 
   sweep:
     if: github.event_name == 'schedule'
