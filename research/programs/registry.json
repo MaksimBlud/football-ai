@@ -68,15 +68,13 @@
     {
       "program_id": "corner_market_direction",
       "title": "Cross-market corner direction research program",
-      "status": "ACTIVE",
+      "status": "PROGRAM_DONE",
       "objective": "Determine whether the frozen cross-market match-shape gap contains stable, transferable information about pre-match corner-market direction or ranking beyond trivial UP skew.",
       "completed_issue_numbers": [
-        522
-      ],
-      "active_issue_numbers": [
+        522,
         528
       ],
-      "current_frontier": "Issue #522 completed the frozen same-sample falsification: the continuous match-shape gap remained robust (nonzero-movement Spearman 0.624; opening-FAIR_CENTRE-residualized Spearman 0.560; deterministic permutation p=0.00020; all leave-one-cohort and leave-one-league signs positive), but binary accuracy 0.786 remained below the 0.804 always-UP baseline and DOWN recall was only 0.455. Because #522 used already-opened EPL/La Liga/Serie A movements, it supports only future confirmation, not an untouched claim. Issue #528 is the active preregistered cross-league transport/falsification on Bundesliga and Ligue 1, with an outcome-free coverage gate and no retuning.",
+      "current_frontier": "Issue #522 found an encouraging continuous same-sample rank association after frozen residualization, but binary direction remained below the always-UP baseline. The genuinely independent zero-cost cross-league transport in Issue #528 passed its outcome-free coverage gate (74/74 Bundesliga and Ligue 1 matches) but did not transfer after controlling for the mechanical opening component: residual Spearman was 0.0503, deterministic permutation p=0.4125, the two leave-one-league residual signs opposed each other, and binary accuracy 0.6818 remained below the 0.7273 always-UP baseline. The program therefore ends NO_BET with cross-league transfer unsupported.",
       "allowed_follow_up_classes": [
         "independent_replication_and_falsification",
         "cross_league_transport",
@@ -91,7 +89,8 @@
         "Do not collect new prospective matches inside Issue #522.",
         "Do not use paid data without fresh explicit user approval.",
         "Mark PROGRAM_DONE when independent zero-cost evidence is exhausted or fails to support future confirmation."
-      ]
+      ],
+      "program_done_reason": "The program's final permitted independent zero-cost test failed. Issue #528 transported the frozen match-shape signal without retuning to Bundesliga and Ligue 1 and found that the apparent raw correlation was dominated by the mechanical opening-line component; residual association was negligible and non-significant, league-held-out signs were inconsistent, and classification did not beat trivial UP skew. Existing work already covers same-sample falsification (#522), cross-league FAIR_CENTRE holdout (#385), historical CORNERS10/xG/shots/deep/rest/travel/volatility families, and the six-signal screen. Further zero-cost children would retune the already-opened movements, threshold-mine, or restate the same signal; genuinely fresh prospective or paid data is outside current authority. The stop rule therefore requires PROGRAM_DONE."
     }
   ]
 }
