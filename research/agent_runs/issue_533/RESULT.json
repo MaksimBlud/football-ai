@@ -1,0 +1,2758 @@
+{
+  "confirmation": {
+    "candidate": "power",
+    "closing_deltas_vs_multiplicative": {
+      "brier": -0.00029854135985510436,
+      "log_loss": -0.0007860741725889916,
+      "rps": -0.0001474663279977418
+    },
+    "confirmed": false,
+    "gate": {
+      "at_least_two_bookmakers": true,
+      "at_least_two_leagues_improve": true,
+      "bootstrap_ci95_upper_below_zero": false,
+      "both_bookmakers_improve": true,
+      "brier_not_worse": true,
+      "closing_log_loss_improves": true,
+      "coverage_ge_0_99": true,
+      "opening_sensitivity_not_worse": true,
+      "rps_not_worse": true
+    },
+    "method_valid_coverage": 1.0,
+    "opening_log_loss_delta_vs_multiplicative": -0.0006024589682740423,
+    "paired_fixture_cluster_bootstrap": {
+      "ci95_high": 0.000873253635634476,
+      "ci95_low": -0.0020971749994396164,
+      "draws": 5000,
+      "mean_delta": -0.0006238025790822821
+    },
+    "stability": {
+      "by_bookmaker": {
+        "BET365": -0.0007575758422600436,
+        "PINNACLE": -0.0008405844017416772
+      },
+      "by_league": {
+        "EPL": 0.0004513572037638343,
+        "LA_LIGA": -0.0024562348787616505,
+        "SERIE_A": -0.00040793097352687574
+      }
+    }
+  },
+  "decision": "NO_STABLE_DEVIG_WINNER",
+  "evidence_class": "TEMPORAL_OOS_DEVIG_COMPARISON",
+  "experiment_id": "DEVIG_METHOD_OOS_V1",
+  "interpretation_guard": "No alternative de-vig method cleared every frozen validation-selection and untouched OOT confirmation gate against multiplicative normalization. Do not replace the current market anchor on these results.",
+  "methods": [
+    "multiplicative",
+    "additive",
+    "power",
+    "shin"
+  ],
+  "paid_odds_api_calls": 0,
+  "primary_horizon": "closing",
+  "production_operations": false,
+  "production_promotion": false,
+  "reference_rows": 22791,
+  "research_only": true,
+  "result": "RESEARCH_ONLY_NO_BET",
+  "source_audit": {
+    "candidate_bookmakers": [
+      "BET365",
+      "PINNACLE"
+    ],
+    "excluded_bookmakers": [],
+    "included_bookmakers": [
+      "BET365",
+      "PINNACLE"
+    ],
+    "outcome_read_after_audit": true,
+    "outcome_read_before_audit": false,
+    "source_files": {
+      "EPL:2019-2020": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true,
+        "rows": 380
+      },
+      "EPL:2020-2021": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true,
+        "rows": 380
+      },
+      "EPL:2021-2022": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true,
+        "rows": 380
+      },
+      "EPL:2022-2023": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true,
+        "rows": 380
+      },
+      "EPL:2023-2024": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true,
+        "rows": 380
+      },
+      "EPL:2024-2025": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true,
+        "rows": 380
+      },
+      "EPL:2025-2026": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true,
+        "rows": 380
+      },
+      "LA_LIGA:2019-2020": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true,
+        "rows": 380
+      },
+      "LA_LIGA:2020-2021": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true,
+        "rows": 380
+      },
+      "LA_LIGA:2021-2022": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true,
+        "rows": 380
+      },
+      "LA_LIGA:2022-2023": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true,
+        "rows": 380
+      },
+      "LA_LIGA:2023-2024": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true,
+        "rows": 380
+      },
+      "LA_LIGA:2024-2025": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true,
+        "rows": 380
+      },
+      "LA_LIGA:2025-2026": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true,
+        "rows": 380
+      },
+      "SERIE_A:2019-2020": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true,
+        "rows": 380
+      },
+      "SERIE_A:2020-2021": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true,
+        "rows": 380
+      },
+      "SERIE_A:2021-2022": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true,
+        "rows": 380
+      },
+      "SERIE_A:2022-2023": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true,
+        "rows": 380
+      },
+      "SERIE_A:2023-2024": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true,
+        "rows": 380
+      },
+      "SERIE_A:2024-2025": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true,
+        "rows": 380
+      },
+      "SERIE_A:2025-2026": {
+        "bookmakers": {
+          "BET365": {
+            "missing_required_columns": []
+          },
+          "PINNACLE": {
+            "missing_required_columns": []
+          }
+        },
+        "has_outcome_column": true,
+        "rows": 380
+      }
+    },
+    "validation_test_column_gate_passed": true
+  },
+  "supabase_writes": 0,
+  "supported": false,
+  "temporal_design": {
+    "reference": [
+      "2019-2020",
+      "2020-2021",
+      "2021-2022",
+      "2022-2023",
+      "2023-2024"
+    ],
+    "test_selects_candidate": false,
+    "untouched_test": "2025-2026",
+    "validation": "2024-2025",
+    "validation_selects_candidate": true
+  },
+  "test": {
+    "closing": {
+      "by_bookmaker": {
+        "BET365": {
+          "additive": {
+            "brier": 0.5872719093931956,
+            "calibration": {
+              "A": {
+                "ece": 0.017065376066811775,
+                "intercept": -0.04659111216523684,
+                "slope": 0.9745592247114907
+              },
+              "D": {
+                "ece": 0.018642114513797443,
+                "intercept": -0.03626133716909057,
+                "slope": 0.9415096908069143
+              },
+              "H": {
+                "ece": 0.02472400201637034,
+                "intercept": 0.015403090892756701,
+                "slope": 1.0543624672475886
+              }
+            },
+            "entropy": 0.9846851210040022,
+            "log_loss": 0.9843651598970873,
+            "rows": 1140,
+            "rps": 0.19865618779090352
+          },
+          "multiplicative": {
+            "brier": 0.5875332712294612,
+            "calibration": {
+              "A": {
+                "ece": 0.009759125794621615,
+                "intercept": -0.00284365158225446,
+                "slope": 1.0457614794602133
+              },
+              "D": {
+                "ece": 0.013483083310200063,
+                "intercept": 0.007668435763770496,
+                "slope": 1.0045199525688542
+              },
+              "H": {
+                "ece": 0.023451997529131623,
+                "intercept": 0.05995859536023994,
+                "slope": 1.1258130647886788
+              }
+            },
+            "entropy": 0.9968935875611024,
+            "log_loss": 0.9850855390629328,
+            "rows": 1140,
+            "rps": 0.19878913713461235
+          },
+          "power": {
+            "brier": 0.5872352463465709,
+            "calibration": {
+              "A": {
+                "ece": 0.01626906404350675,
+                "intercept": -0.04804615214858153,
+                "slope": 0.9762770628204914
+              },
+              "D": {
+                "ece": 0.019237640377759085,
+                "intercept": -0.050807776667600266,
+                "slope": 0.9223425632701704
+              },
+              "H": {
+                "ece": 0.02527604203981412,
+                "intercept": 0.011440623778648023,
+                "slope": 1.0499884705111295
+              }
+            },
+            "entropy": 0.9839618652639609,
+            "log_loss": 0.9843279632206728,
+            "rows": 1140,
+            "rps": 0.19865350769088477
+          },
+          "shin": {
+            "brier": 0.5872937475148359,
+            "calibration": {
+              "A": {
+                "ece": 0.014961566983231252,
+                "intercept": -0.03555657071823333,
+                "slope": 0.9928719097141414
+              },
+              "D": {
+                "ece": 0.017547478142924317,
+                "intercept": -0.025745522074316508,
+                "slope": 0.9565489059978498
+              },
+              "H": {
+                "ece": 0.028011402983851217,
+                "intercept": 0.026445608751225935,
+                "slope": 1.0723640352390469
+              }
+            },
+            "entropy": 0.9879382724185272,
+            "log_loss": 0.9844850901501605,
+            "rows": 1140,
+            "rps": 0.19867131834570168
+          }
+        },
+        "PINNACLE": {
+          "additive": {
+            "brier": 0.5826818454416568,
+            "calibration": {
+              "A": {
+                "ece": 0.020274874470017107,
+                "intercept": 0.020479694060304563,
+                "slope": 1.1048584419734906
+              },
+              "D": {
+                "ece": 0.0178920419545368,
+                "intercept": 0.050807324789605306,
+                "slope": 0.9828173270335256
+              },
+              "H": {
+                "ece": 0.04302828258625522,
+                "intercept": 0.001326388413203635,
+                "slope": 1.0814425968873203
+              }
+            },
+            "entropy": 0.9844008158260094,
+            "log_loss": 0.9753370660800317,
+            "rows": 596,
+            "rps": 0.1931880748392169
+          },
+          "multiplicative": {
+            "brier": 0.5829768904050552,
+            "calibration": {
+              "A": {
+                "ece": 0.02043893088707907,
+                "intercept": 0.04862034567062993,
+                "slope": 1.1514788293419909
+              },
+              "D": {
+                "ece": 0.016093728051390633,
+                "intercept": 0.07902568667579277,
+                "slope": 1.022252632213406
+              },
+              "H": {
+                "ece": 0.039234739545444174,
+                "intercept": 0.027586498125205652,
+                "slope": 1.1228861941801442
+              }
+            },
+            "entropy": 0.9918402229773756,
+            "log_loss": 0.9762072881940833,
+            "rows": 596,
+            "rps": 0.19335539152794448
+          },
+          "power": {
+            "brier": 0.582677361153019,
+            "calibration": {
+              "A": {
+                "ece": 0.02156387333233528,
+                "intercept": 0.02024648909901736,
+                "slope": 1.107473943186951
+              },
+              "D": {
+                "ece": 0.01851612311092201,
+                "intercept": 0.03955250787840445,
+                "slope": 0.9682610060904361
+              },
+              "H": {
+                "ece": 0.04305476559454902,
+                "intercept": -0.0007600170825131179,
+                "slope": 1.0796162450223794
+              }
+            },
+            "entropy": 0.9841236234166141,
+            "log_loss": 0.9753667037923417,
+            "rows": 596,
+            "rps": 0.1931852841796985
+          },
+          "shin": {
+            "brier": 0.5827419448518324,
+            "calibration": {
+              "A": {
+                "ece": 0.020920785436494015,
+                "intercept": 0.02756488679425644,
+                "slope": 1.1167548974025732
+              },
+              "D": {
+                "ece": 0.017067594684719977,
+                "intercept": 0.05759355976369829,
+                "slope": 0.9922972593161689
+              },
+              "H": {
+                "ece": 0.04466583079281247,
+                "intercept": 0.007865520335377662,
+                "slope": 1.0918454904256683
+              }
+            },
+            "entropy": 0.9863350288863751,
+            "log_loss": 0.975540259026491,
+            "rows": 596,
+            "rps": 0.19322421227864936
+          }
+        }
+      },
+      "by_league": {
+        "EPL": {
+          "additive": {
+            "brier": 0.6027300432714059,
+            "calibration": {
+              "A": {
+                "ece": 0.04770268412948928,
+                "intercept": -0.18293096017673977,
+                "slope": 0.9182306552673709
+              },
+              "D": {
+                "ece": 0.026593863199809553,
+                "intercept": -0.264165096271763,
+                "slope": 0.6446113709802315
+              },
+              "H": {
+                "ece": 0.06424985106511244,
+                "intercept": -0.01180879291346745,
+                "slope": 0.9647329337460636
+              }
+            },
+            "entropy": 0.98713889257006,
+            "log_loss": 1.0042450652042059,
+            "rows": 590,
+            "rps": 0.202920032255593
+          },
+          "multiplicative": {
+            "brier": 0.6021519804216497,
+            "calibration": {
+              "A": {
+                "ece": 0.04139951266976302,
+                "intercept": -0.14904787735462496,
+                "slope": 0.9737272026125753
+              },
+              "D": {
+                "ece": 0.024196404944978284,
+                "intercept": -0.2339218776231651,
+                "slope": 0.6852856534968526
+              },
+              "H": {
+                "ece": 0.0638356081221701,
+                "intercept": 0.021898301417051028,
+                "slope": 1.0177636229602693
+              }
+            },
+            "entropy": 0.9971864424112802,
+            "log_loss": 1.0039934869107114,
+            "rows": 590,
+            "rps": 0.20274906816881996
+          },
+          "power": {
+            "brier": 0.6028064976240181,
+            "calibration": {
+              "A": {
+                "ece": 0.04591955694753289,
+                "intercept": -0.18414152670739312,
+                "slope": 0.9187143889954665
+              },
+              "D": {
+                "ece": 0.02724212711017963,
+                "intercept": -0.2748364870635496,
+                "slope": 0.6325051295560724
+              },
+              "H": {
+                "ece": 0.06533789152169188,
+                "intercept": -0.014720445564106715,
+                "slope": 0.9611411434261978
+              }
+            },
+            "entropy": 0.986513932461254,
+            "log_loss": 1.004444844114475,
+            "rows": 590,
+            "rps": 0.20293679114740892
+          },
+          "shin": {
+            "brier": 0.602550554796931,
+            "calibration": {
+              "A": {
+                "ece": 0.043641050059473774,
+                "intercept": -0.17440389568739942,
+                "slope": 0.9324293067174785
+              },
+              "D": {
+                "ece": 0.02527876007740666,
+                "intercept": -0.25675998521383264,
+                "slope": 0.6545086347724469
+              },
+              "H": {
+                "ece": 0.06479588636558416,
+                "intercept": -0.003424863291392745,
+                "slope": 0.9780878652805449
+              }
+            },
+            "entropy": 0.9897900547527474,
+            "log_loss": 1.0041452914339188,
+            "rows": 590,
+            "rps": 0.20286226601685778
+          }
+        },
+        "LA_LIGA": {
+          "additive": {
+            "brier": 0.5670791555605078,
+            "calibration": {
+              "A": {
+                "ece": 0.03211269273787888,
+                "intercept": -0.17847935921864938,
+                "slope": 0.9421205441194445
+              },
+              "D": {
+                "ece": 0.015960412271790472,
+                "intercept": 0.40774622761694873,
+                "slope": 1.453147451343311
+              },
+              "H": {
+                "ece": 0.05710391042488871,
+                "intercept": 0.2338947892119007,
+                "slope": 1.3427300127495265
+              }
+            },
+            "entropy": 0.9874111166944253,
+            "log_loss": 0.9572632040987387,
+            "rows": 568,
+            "rps": 0.1922639331069408
+          },
+          "multiplicative": {
+            "brier": 0.5682320823054617,
+            "calibration": {
+              "A": {
+                "ece": 0.03919620225081721,
+                "intercept": -0.14147489448937167,
+                "slope": 1.0017635284169362
+              },
+              "D": {
+                "ece": 0.014099578956741701,
+                "intercept": 0.46890972097934785,
+                "slope": 1.5398196605809342
+              },
+              "H": {
+                "ece": 0.06404098371190978,
+                "intercept": 0.2838632384569361,
+                "slope": 1.423200879723152
+              }
+            },
+            "entropy": 0.9978665453415466,
+            "log_loss": 0.9592808198090033,
+            "rows": 568,
+            "rps": 0.19274145239005888
+          },
+          "power": {
+            "brier": 0.5668652821076804,
+            "calibration": {
+              "A": {
+                "ece": 0.032572784574407015,
+                "intercept": -0.17940194616906577,
+                "slope": 0.9439391724296097
+              },
+              "D": {
+                "ece": 0.01846199694242353,
+                "intercept": 0.3917334360334729,
+                "slope": 1.4311576844429368
+              },
+              "H": {
+                "ece": 0.056703411151697275,
+                "intercept": 0.23049023493320545,
+                "slope": 1.33757270024689
+              }
+            },
+            "entropy": 0.9866881722375593,
+            "log_loss": 0.9568245849302417,
+            "rows": 568,
+            "rps": 0.1922135592794755
+          },
+          "shin": {
+            "brier": 0.5673346133457071,
+            "calibration": {
+              "A": {
+                "ece": 0.032743889318121985,
+                "intercept": -0.16908311799041115,
+                "slope": 0.9574954386104461
+              },
+              "D": {
+                "ece": 0.01794814919278278,
+                "intercept": 0.4226323420000309,
+                "slope": 1.4741448517146825
+              },
+              "H": {
+                "ece": 0.059024087307559696,
+                "intercept": 0.24634065954112566,
+                "slope": 1.3630177763129232
+              }
+            },
+            "entropy": 0.990178317999167,
+            "log_loss": 0.9577221813874632,
+            "rows": 568,
+            "rps": 0.19237082015834986
+          }
+        },
+        "SERIE_A": {
+          "additive": {
+            "brier": 0.5866032365103333,
+            "calibration": {
+              "A": {
+                "ece": 0.053179438323303636,
+                "intercept": 0.26237674583344084,
+                "slope": 1.1601827189145784
+              },
+              "D": {
+                "ece": 0.02143536695725343,
+                "intercept": -0.1379727451398075,
+                "slope": 0.8291198308854846
+              },
+              "H": {
+                "ece": 0.05526870353800491,
+                "intercept": -0.18041604628416258,
+                "slope": 0.9537760375985155
+              }
+            },
+            "entropy": 0.9792084139759427,
+            "log_loss": 0.9813963412937948,
+            "rows": 578,
+            "rps": 0.19494708243989803
+          },
+          "multiplicative": {
+            "brier": 0.5868800427071332,
+            "calibration": {
+              "A": {
+                "ece": 0.057353092134456135,
+                "intercept": 0.3080797306210933,
+                "slope": 1.2352567460077102
+              },
+              "D": {
+                "ece": 0.01570528688599966,
+                "intercept": -0.10960767875857842,
+                "slope": 0.871871099075299
+              },
+              "H": {
+                "ece": 0.04343826195021235,
+                "intercept": -0.1464648752608201,
+                "slope": 1.0080013613274867
+              }
+            },
+            "entropy": 0.9904277922794443,
+            "log_loss": 0.9819885732985872,
+            "rows": 578,
+            "rps": 0.19508708392206883
+          },
+          "power": {
+            "brier": 0.5866584329532131,
+            "calibration": {
+              "A": {
+                "ece": 0.05409273664161775,
+                "intercept": 0.26123777184852454,
+                "slope": 1.1639316998772538
+              },
+              "D": {
+                "ece": 0.021525639150056508,
+                "intercept": -0.15367684699097195,
+                "slope": 0.8078659494862501
+              },
+              "H": {
+                "ece": 0.05715403104326186,
+                "intercept": -0.18396885662085719,
+                "slope": 0.951420010874013
+              }
+            },
+            "entropy": 0.9788444705435017,
+            "log_loss": 0.9815806423250604,
+            "rows": 578,
+            "rps": 0.19497131434428303
+          },
+          "shin": {
+            "brier": 0.5866404560346958,
+            "calibration": {
+              "A": {
+                "ece": 0.05549868137113892,
+                "intercept": 0.27397746189859973,
+                "slope": 1.1796074809853285
+              },
+              "D": {
+                "ece": 0.020465289517410678,
+                "intercept": -0.13126303048980872,
+                "slope": 0.8391963938019463
+              },
+              "H": {
+                "ece": 0.05527657144924162,
+                "intercept": -0.17198210701003072,
+                "slope": 0.9675484183395984
+              }
+            },
+            "entropy": 0.9821935827781189,
+            "log_loss": 0.9814932113786864,
+            "rows": 578,
+            "rps": 0.19496811528077182
+          }
+        }
+      },
+      "common_coverage": 1.0,
+      "common_rows": 1736,
+      "method_valid_coverage": {
+        "additive": 1.0,
+        "multiplicative": 1.0,
+        "power": 1.0,
+        "shin": 1.0
+      },
+      "pooled": {
+        "additive": {
+          "brier": 0.5856960579443954,
+          "calibration": {
+            "A": {
+              "ece": 0.01710124918343804,
+              "intercept": -0.023834865274771987,
+              "slope": 1.018356800279296
+            },
+            "D": {
+              "ece": 0.018384601123636535,
+              "intercept": -0.0016320889707842979,
+              "slope": 0.9597646753289997
+            },
+            "H": {
+              "ece": 0.030659602537769483,
+              "intercept": 0.010614615702723117,
+              "slope": 1.0638565096543469
+            }
+          },
+          "entropy": 0.9845875139267651,
+          "log_loss": 0.9812656530336282,
+          "rows": 1736,
+          "rps": 0.19677888633974847
+        },
+        "multiplicative": {
+          "brier": 0.5859689838035708,
+          "calibration": {
+            "A": {
+              "ece": 0.012787385619939003,
+              "intercept": 0.015404596961841441,
+              "slope": 1.082380052304049
+            },
+            "D": {
+              "ece": 0.014192836396966281,
+              "intercept": 0.03635692234067431,
+              "slope": 1.0143900666112158
+            },
+            "H": {
+              "ece": 0.025848726590836056,
+              "intercept": 0.04892211979368498,
+              "slope": 1.1247375412947869
+            }
+          },
+          "entropy": 0.995158676678671,
+          "log_loss": 0.9820374759766228,
+          "rows": 1736,
+          "rps": 0.19692363461066417
+        },
+        "power": {
+          "brier": 0.5856704424437156,
+          "calibration": {
+            "A": {
+              "ece": 0.016552996001985083,
+              "intercept": -0.02491231913453019,
+              "slope": 1.0203402121514198
+            },
+            "D": {
+              "ece": 0.0189899305326929,
+              "intercept": -0.01530054374118101,
+              "slope": 0.9418782767039342
+            },
+            "H": {
+              "ece": 0.03104548928256561,
+              "intercept": 0.007280838947501982,
+              "slope": 1.0603413729567936
+            }
+          },
+          "entropy": 0.984017399744941,
+          "log_loss": 0.9812514018040339,
+          "rows": 1736,
+          "rps": 0.19677616828266647
+        },
+        "shin": {
+          "brier": 0.5857310318540353,
+          "calibration": {
+            "A": {
+              "ece": 0.016939070255720615,
+              "intercept": -0.013898936922723808,
+              "slope": 1.034845540686898
+            },
+            "D": {
+              "ece": 0.017382725527089214,
+              "intercept": 0.007555528931292665,
+              "slope": 0.972915848754712
+            },
+            "H": {
+              "ece": 0.03372916736987706,
+              "intercept": 0.020148333472102174,
+              "slope": 1.0792469705763361
+            }
+          },
+          "entropy": 0.9873878500998851,
+          "log_loss": 0.9814141688657672,
+          "rows": 1736,
+          "rps": 0.19680122893558463
+        }
+      },
+      "source_rows": 1736
+    },
+    "opening": {
+      "by_bookmaker": {
+        "BET365": {
+          "additive": {
+            "brier": 0.5888904859828468,
+            "calibration": {
+              "A": {
+                "ece": 0.0178956890829202,
+                "intercept": -0.043670937826124016,
+                "slope": 0.9648149050868433
+              },
+              "D": {
+                "ece": 0.011188196490820495,
+                "intercept": -0.06983095834993608,
+                "slope": 0.8961627489430006
+              },
+              "H": {
+                "ece": 0.027057612150949924,
+                "intercept": -0.009901071366983113,
+                "slope": 1.0476242655715866
+              }
+            },
+            "entropy": 0.9839056532885088,
+            "log_loss": 0.987773440374422,
+            "rows": 1140,
+            "rps": 0.19927461914229427
+          },
+          "multiplicative": {
+            "brier": 0.588996235405689,
+            "calibration": {
+              "A": {
+                "ece": 0.014813459295530634,
+                "intercept": -0.000735438879744601,
+                "slope": 1.0348333744364002
+              },
+              "D": {
+                "ece": 0.006430673025038695,
+                "intercept": -0.02058738495105161,
+                "slope": 0.9628409056994802
+              },
+              "H": {
+                "ece": 0.034374830080058,
+                "intercept": 0.033625702044051776,
+                "slope": 1.1174355728870686
+              }
+            },
+            "entropy": 0.9959931182578525,
+            "log_loss": 0.9881046787642731,
+            "rows": 1140,
+            "rps": 0.1993565750927273
+          },
+          "power": {
+            "brier": 0.5888423826258433,
+            "calibration": {
+              "A": {
+                "ece": 0.017438735280459774,
+                "intercept": -0.04432008216013787,
+                "slope": 0.9675928310450435
+              },
+              "D": {
+                "ece": 0.011325280441444905,
+                "intercept": -0.08154074138902292,
+                "slope": 0.880306461977406
+              },
+              "H": {
+                "ece": 0.027137063800710903,
+                "intercept": -0.013687951641801258,
+                "slope": 1.04296005873914
+              }
+            },
+            "entropy": 0.9832071071494782,
+            "log_loss": 0.9876736647247754,
+            "rows": 1140,
+            "rps": 0.19926656768324044
+          },
+          "shin": {
+            "brier": 0.5888727063218469,
+            "calibration": {
+              "A": {
+                "ece": 0.015216226342519347,
+                "intercept": -0.03282534405984315,
+                "slope": 0.9828545070850916
+              },
+              "D": {
+                "ece": 0.010231100490406684,
+                "intercept": -0.057835674710879414,
+                "slope": 0.9122606903183279
+              },
+              "H": {
+                "ece": 0.025958796474097257,
+                "intercept": 0.0008928622712098985,
+                "slope": 1.0651833785712752
+              }
+            },
+            "entropy": 0.9871214580535406,
+            "log_loss": 0.9877880833309708,
+            "rows": 1140,
+            "rps": 0.19927678590401654
+          }
+        },
+        "PINNACLE": {
+          "additive": {
+            "brier": 0.5818195519067164,
+            "calibration": {
+              "A": {
+                "ece": 0.03423222328361348,
+                "intercept": 0.05605187960685322,
+                "slope": 1.1479539182669345
+              },
+              "D": {
+                "ece": 0.022587128144703778,
+                "intercept": 0.061958441709118336,
+                "slope": 0.9635384904975799
+              },
+              "H": {
+                "ece": 0.0562679287645606,
+                "intercept": -0.024874196491033625,
+                "slope": 1.1252356502171146
+              }
+            },
+            "entropy": 0.9851121268235593,
+            "log_loss": 0.9746291634122859,
+            "rows": 599,
+            "rps": 0.1925194086121445
+          },
+          "multiplicative": {
+            "brier": 0.5821387267637591,
+            "calibration": {
+              "A": {
+                "ece": 0.03199694003356189,
+                "intercept": 0.08962643956036884,
+                "slope": 1.2033903954027787
+              },
+              "D": {
+                "ece": 0.01644118723182173,
+                "intercept": 0.09462793318496386,
+                "slope": 1.0088309309590522
+              },
+              "H": {
+                "ece": 0.049211763422717644,
+                "intercept": 0.006949479160049869,
+                "slope": 1.1756001553855222
+              }
+            },
+            "entropy": 0.9935335082750795,
+            "log_loss": 0.9756071367526963,
+            "rows": 599,
+            "rps": 0.19272317357842558
+          },
+          "power": {
+            "brier": 0.5818218369449767,
+            "calibration": {
+              "A": {
+                "ece": 0.032057181048382566,
+                "intercept": 0.05550058647615621,
+                "slope": 1.1500157918839382
+              },
+              "D": {
+                "ece": 0.023572155385155797,
+                "intercept": 0.05035413930486742,
+                "slope": 0.9489446011238092
+              },
+              "H": {
+                "ece": 0.05896471202534243,
+                "intercept": -0.02743756383366379,
+                "slope": 1.122129805240574
+              }
+            },
+            "entropy": 0.9846868192540513,
+            "log_loss": 0.9746783886044474,
+            "rows": 599,
+            "rps": 0.19251808541867452
+          },
+          "shin": {
+            "brier": 0.5818812599193911,
+            "calibration": {
+              "A": {
+                "ece": 0.034527437444895594,
+                "intercept": 0.06449110915448489,
+                "slope": 1.1620824507261698
+              },
+              "D": {
+                "ece": 0.021294636531559722,
+                "intercept": 0.06981685975190151,
+                "slope": 0.974431742620367
+              },
+              "H": {
+                "ece": 0.051566222182638156,
+                "intercept": -0.016956932385142634,
+                "slope": 1.1378532362020748
+              }
+            },
+            "entropy": 0.9873099151943301,
+            "log_loss": 0.9748563639405249,
+            "rows": 599,
+            "rps": 0.19256291785191135
+          }
+        }
+      },
+      "by_league": {
+        "EPL": {
+          "additive": {
+            "brier": 0.6051847098178489,
+            "calibration": {
+              "A": {
+                "ece": 0.05275981387676913,
+                "intercept": -0.18468232206460666,
+                "slope": 0.8971662880808191
+              },
+              "D": {
+                "ece": 0.03432140559650141,
+                "intercept": -0.4790085065192946,
+                "slope": 0.44694730290690343
+              },
+              "H": {
+                "ece": 0.044563400788613,
+                "intercept": -0.04020628859373203,
+                "slope": 0.9578824579443482
+              }
+            },
+            "entropy": 0.9847307955502579,
+            "log_loss": 1.0084492743375746,
+            "rows": 590,
+            "rps": 0.20358687874277115
+          },
+          "multiplicative": {
+            "brier": 0.6044457929001709,
+            "calibration": {
+              "A": {
+                "ece": 0.052634911047132846,
+                "intercept": -0.15167673129024425,
+                "slope": 0.9520430402830998
+              },
+              "D": {
+                "ece": 0.027392819314749312,
+                "intercept": -0.4568759833959013,
+                "slope": 0.4765088452155527
+              },
+              "H": {
+                "ece": 0.05246276924696463,
+                "intercept": -0.005344022865835112,
+                "slope": 1.01180984056992
+              }
+            },
+            "entropy": 0.9953866415073801,
+            "log_loss": 1.0079621607179228,
+            "rows": 590,
+            "rps": 0.2033896518384768
+          },
+          "power": {
+            "brier": 0.6052509246467972,
+            "calibration": {
+              "A": {
+                "ece": 0.052932860209334694,
+                "intercept": -0.18566117358051393,
+                "slope": 0.8979035944537809
+              },
+              "D": {
+                "ece": 0.03568050017562855,
+                "intercept": -0.4732799949282597,
+                "slope": 0.4499267535603419
+              },
+              "H": {
+                "ece": 0.043558844135349044,
+                "intercept": -0.043238851546730926,
+                "slope": 0.9537733821440139
+              }
+            },
+            "entropy": 0.9840269705588175,
+            "log_loss": 1.008619771160065,
+            "rows": 590,
+            "rps": 0.20359976621224535
+          },
+          "shin": {
+            "brier": 0.604961565067553,
+            "calibration": {
+              "A": {
+                "ece": 0.04806514889190528,
+                "intercept": -0.1764038372313965,
+                "slope": 0.9111856681301431
+              },
+              "D": {
+                "ece": 0.033265724387343966,
+                "intercept": -0.47295963377625605,
+                "slope": 0.45468523821409507
+              },
+              "H": {
+                "ece": 0.04602888247832234,
+                "intercept": -0.03153817849042603,
+                "slope": 0.971420566193283
+              }
+            },
+            "entropy": 0.9875418930025751,
+            "log_loss": 1.0082862355508135,
+            "rows": 590,
+            "rps": 0.20352162327160025
+          }
+        },
+        "LA_LIGA": {
+          "additive": {
+            "brier": 0.5661383209049218,
+            "calibration": {
+              "A": {
+                "ece": 0.042646785882883474,
+                "intercept": -0.1658809952184552,
+                "slope": 0.9741198004180363
+              },
+              "D": {
+                "ece": 0.023504471936925238,
+                "intercept": 0.5980825364740736,
+                "slope": 1.6066044370044965
+              },
+              "H": {
+                "ece": 0.06218070257325617,
+                "intercept": 0.2201272058526321,
+                "slope": 1.3417563446023317
+              }
+            },
+            "entropy": 0.9871854162431806,
+            "log_loss": 0.9556016775612963,
+            "rows": 569,
+            "rps": 0.19175779558493547
+          },
+          "multiplicative": {
+            "brier": 0.5674219981691573,
+            "calibration": {
+              "A": {
+                "ece": 0.05651549331073112,
+                "intercept": -0.12686108089916145,
+                "slope": 1.036833550115944
+              },
+              "D": {
+                "ece": 0.009016275550366534,
+                "intercept": 0.6698280510816763,
+                "slope": 1.706830929094169
+              },
+              "H": {
+                "ece": 0.07297259112819968,
+                "intercept": 0.27101772118693246,
+                "slope": 1.424404090688832
+              }
+            },
+            "entropy": 0.9979475865656531,
+            "log_loss": 0.9578801469457491,
+            "rows": 569,
+            "rps": 0.19229598254590563
+          },
+          "power": {
+            "brier": 0.5659395828782784,
+            "calibration": {
+              "A": {
+                "ece": 0.03670472261613155,
+                "intercept": -0.16694218529390853,
+                "slope": 0.9759325496091498
+              },
+              "D": {
+                "ece": 0.02383920356736175,
+                "intercept": 0.5696356093780519,
+                "slope": 1.5722312443924111
+              },
+              "H": {
+                "ece": 0.061125304750545194,
+                "intercept": 0.21677095792526044,
+                "slope": 1.3366169021582275
+              }
+            },
+            "entropy": 0.986477701414434,
+            "log_loss": 0.9552251515888404,
+            "rows": 569,
+            "rps": 0.19170725903355695
+          },
+          "shin": {
+            "brier": 0.5664289079289616,
+            "calibration": {
+              "A": {
+                "ece": 0.040080792004650735,
+                "intercept": -0.15600700020402464,
+                "slope": 0.990260693436087
+              },
+              "D": {
+                "ece": 0.021271331852939182,
+                "intercept": 0.6148634366369419,
+                "slope": 1.6302047115507468
+              },
+              "H": {
+                "ece": 0.06164011314773402,
+                "intercept": 0.23280213786565798,
+                "slope": 1.362613903504481
+              }
+            },
+            "entropy": 0.9900386145134786,
+            "log_loss": 0.9561348640021916,
+            "rows": 569,
+            "rps": 0.19188061531834288
+          }
+        },
+        "SERIE_A": {
+          "additive": {
+            "brier": 0.5873334176295466,
+            "calibration": {
+              "A": {
+                "ece": 0.05298838029345412,
+                "intercept": 0.2981140251317026,
+                "slope": 1.1774999611714625
+              },
+              "D": {
+                "ece": 0.010927845690054092,
+                "intercept": -0.18950151560891312,
+                "slope": 0.7625928878281745
+              },
+              "H": {
+                "ece": 0.0708316327781506,
+                "intercept": -0.21066952429469385,
+                "slope": 0.9898686111467098
+              }
+            },
+            "entropy": 0.9810947198261899,
+            "log_loss": 0.9847278698607824,
+            "rows": 580,
+            "rps": 0.19528577143935652
+          },
+          "multiplicative": {
+            "brier": 0.5873632257321135,
+            "calibration": {
+              "A": {
+                "ece": 0.05615742918849941,
+                "intercept": 0.3476027615135998,
+                "slope": 1.2580695349102111
+              },
+              "D": {
+                "ece": 0.006943827913270547,
+                "intercept": -0.1556477894292011,
+                "slope": 0.8096505773866401
+              },
+              "H": {
+                "ece": 0.06603060862173245,
+                "intercept": -0.1745275489922087,
+                "slope": 1.0488231188130879
+              }
+            },
+            "entropy": 0.9921524672853688,
+            "log_loss": 0.9846491901214324,
+            "rows": 580,
+            "rps": 0.19532994469976628
+          },
+          "power": {
+            "brier": 0.5873688419381927,
+            "calibration": {
+              "A": {
+                "ece": 0.052525167316738286,
+                "intercept": 0.29823916331360545,
+                "slope": 1.18274223267866
+              },
+              "D": {
+                "ece": 0.01142951474846332,
+                "intercept": -0.19911698980336817,
+                "slope": 0.7484937207878792
+              },
+              "H": {
+                "ece": 0.0714152869112984,
+                "intercept": -0.21422094638008113,
+                "slope": 0.9864482137715014
+              }
+            },
+            "entropy": 0.9806927278432186,
+            "log_loss": 0.9847785453824471,
+            "rows": 580,
+            "rps": 0.19530504805062326
+          },
+          "shin": {
+            "brier": 0.5873041170641127,
+            "calibration": {
+              "A": {
+                "ece": 0.05383773624990161,
+                "intercept": 0.3107029641179946,
+                "slope": 1.1983444622881894
+              },
+              "D": {
+                "ece": 0.009788675305013914,
+                "intercept": -0.1810063701679263,
+                "slope": 0.7741724314839135
+              },
+              "H": {
+                "ece": 0.07031965359877854,
+                "intercept": -0.20170729821670422,
+                "slope": 1.0047246948541693
+              }
+            },
+            "entropy": 0.984026573884054,
+            "log_loss": 0.984634069664576,
+            "rows": 580,
+            "rps": 0.19528085496119396
+          }
+        }
+      },
+      "common_coverage": 1.0,
+      "common_rows": 1739,
+      "method_valid_coverage": {
+        "additive": 1.0,
+        "multiplicative": 1.0,
+        "power": 1.0,
+        "shin": 1.0
+      },
+      "pooled": {
+        "additive": {
+          "brier": 0.5864548968444901,
+          "calibration": {
+            "A": {
+              "ece": 0.016423225446191115,
+              "intercept": -0.010460447240262297,
+              "slope": 1.025052810107138
+            },
+            "D": {
+              "ece": 0.015114568003572675,
+              "intercept": -0.019504555169291397,
+              "slope": 0.9235392843334992
+            },
+            "H": {
+              "ece": 0.03323204786176361,
+              "intercept": -0.015083687927294066,
+              "slope": 1.0742903136757909
+            }
+          },
+          "entropy": 0.9843212241036297,
+          "log_loss": 0.9832458832149513,
+          "rows": 1739,
+          "rps": 0.19694778124260495
+        },
+        "multiplicative": {
+          "brier": 0.5866341608360995,
+          "calibration": {
+            "A": {
+              "ece": 0.01634089939993499,
+              "intercept": 0.030308685465793447,
+              "slope": 1.0916305970177194
+            },
+            "D": {
+              "ece": 0.00916225323169235,
+              "intercept": 0.022681193599170344,
+              "slope": 0.9817885657672548
+            },
+            "H": {
+              "ece": 0.03811474237758909,
+              "intercept": 0.024672197594666292,
+              "slope": 1.1377429406386343
+            }
+          },
+          "entropy": 0.9951459035484328,
+          "log_loss": 0.9837998899977782,
+          "rows": 1739,
+          "rps": 0.19707169441011274
+        },
+        "power": {
+          "brier": 0.5864241498122498,
+          "calibration": {
+            "A": {
+              "ece": 0.014685945092388967,
+              "intercept": -0.011086605752314254,
+              "slope": 1.0275986189685893
+            },
+            "D": {
+              "ece": 0.015218366731221912,
+              "intercept": -0.031382882939305676,
+              "slope": 0.9078812539119064
+            },
+            "H": {
+              "ece": 0.03418250278795093,
+              "intercept": -0.018473140364096242,
+              "slope": 1.0701098246672784
+            }
+          },
+          "entropy": 0.983716795217701,
+          "log_loss": 0.9831974310295041,
+          "rows": 1739,
+          "rps": 0.19694204734024162
+        },
+        "shin": {
+          "brier": 0.5864644967789654,
+          "calibration": {
+            "A": {
+              "ece": 0.014032975783201198,
+              "intercept": -0.0001475293212510046,
+              "slope": 1.042187056461931
+            },
+            "D": {
+              "ece": 0.01404194470469694,
+              "intercept": -0.009203445639174954,
+              "slope": 0.9376526522404085
+            },
+            "H": {
+              "ece": 0.031043665194730008,
+              "intercept": -0.0052006717032737045,
+              "slope": 1.0902695474924222
+            }
+          },
+          "entropy": 0.9871863722728235,
+          "log_loss": 0.9833337418043021,
+          "rows": 1739,
+          "rps": 0.19696418845536157
+        }
+      },
+      "source_rows": 1739
+    }
+  },
+  "validation": {
+    "closing": {
+      "by_bookmaker": {
+        "BET365": {
+          "additive": {
+            "brier": 0.5673352574142546,
+            "calibration": {
+              "A": {
+                "ece": 0.025669627520351557,
+                "intercept": 0.18273973717086556,
+                "slope": 1.1501815283727062
+              },
+              "D": {
+                "ece": 0.016253985996984226,
+                "intercept": 0.30328026136712416,
+                "slope": 1.2149831223906515
+              },
+              "H": {
+                "ece": 0.03754226453587318,
+                "intercept": -0.10882599001459786,
+                "slope": 1.1591926909884207
+              }
+            },
+            "entropy": 0.9677540202015944,
+            "log_loss": 0.9549629945232136,
+            "rows": 1140,
+            "rps": 0.1891731695512118
+          },
+          "multiplicative": {
+            "brier": 0.5681312360589886,
+            "calibration": {
+              "A": {
+                "ece": 0.02724770248717471,
+                "intercept": 0.2353821414572318,
+                "slope": 1.237409492122116
+              },
+              "D": {
+                "ece": 0.01196618479708922,
+                "intercept": 0.37232582144946214,
+                "slope": 1.3082071284169317
+              },
+              "H": {
+                "ece": 0.037977038907914366,
+                "intercept": -0.05895580657783718,
+                "slope": 1.239197182840495
+              }
+            },
+            "entropy": 0.9818666996863241,
+            "log_loss": 0.9565386846408445,
+            "rows": 1140,
+            "rps": 0.18957686175688393
+          },
+          "power": {
+            "brier": 0.5673137429180372,
+            "calibration": {
+              "A": {
+                "ece": 0.02605070299032464,
+                "intercept": 0.18160879015482245,
+                "slope": 1.1532288097082108
+              },
+              "D": {
+                "ece": 0.016780106934655446,
+                "intercept": 0.2682541984176867,
+                "slope": 1.174887058889749
+              },
+              "H": {
+                "ece": 0.036197912167866254,
+                "intercept": -0.1137733224137677,
+                "slope": 1.1529755702778335
+              }
+            },
+            "entropy": 0.9668210888694042,
+            "log_loss": 0.9549197501818386,
+            "rows": 1140,
+            "rps": 0.1891621810172051
+          },
+          "shin": {
+            "brier": 0.5674907251697565,
+            "calibration": {
+              "A": {
+                "ece": 0.026935984998179036,
+                "intercept": 0.1962609210779812,
+                "slope": 1.1730272471850658
+              },
+              "D": {
+                "ece": 0.015599531166060021,
+                "intercept": 0.31901856546826035,
+                "slope": 1.2364336392903184
+              },
+              "H": {
+                "ece": 0.03645724946808195,
+                "intercept": -0.09645547226370237,
+                "slope": 1.179360256020838
+              }
+            },
+            "entropy": 0.9715200530434658,
+            "log_loss": 0.9552694758742901,
+            "rows": 1140,
+            "rps": 0.18925593432018437
+          }
+        },
+        "PINNACLE": {
+          "additive": {
+            "brier": 0.5667373895695299,
+            "calibration": {
+              "A": {
+                "ece": 0.02131147094382647,
+                "intercept": 0.18882519868420913,
+                "slope": 1.1360695342938671
+              },
+              "D": {
+                "ece": 0.014720910076228107,
+                "intercept": 0.28092751974927327,
+                "slope": 1.2209800952731056
+              },
+              "H": {
+                "ece": 0.031119954482520733,
+                "intercept": -0.10028916172145479,
+                "slope": 1.1515364753580932
+              }
+            },
+            "entropy": 0.9674943513712079,
+            "log_loss": 0.9540365003309188,
+            "rows": 1140,
+            "rps": 0.1890592647309501
+          },
+          "multiplicative": {
+            "brier": 0.5670772358687778,
+            "calibration": {
+              "A": {
+                "ece": 0.024554431833508597,
+                "intercept": 0.22007810287100532,
+                "slope": 1.1879613155045547
+              },
+              "D": {
+                "ece": 0.016434715087160164,
+                "intercept": 0.3225967142469715,
+                "slope": 1.2761783063275558
+              },
+              "H": {
+                "ece": 0.03649425224832259,
+                "intercept": -0.07186235041937919,
+                "slope": 1.1986940171785145
+              }
+            },
+            "entropy": 0.9759018196850865,
+            "log_loss": 0.9546947712462551,
+            "rows": 1140,
+            "rps": 0.18922584316393284
+          },
+          "power": {
+            "brier": 0.566730414245182,
+            "calibration": {
+              "A": {
+                "ece": 0.020941933526825912,
+                "intercept": 0.18887044950604465,
+                "slope": 1.139249074035568
+              },
+              "D": {
+                "ece": 0.0120054051386158,
+                "intercept": 0.2597712760933587,
+                "slope": 1.1962579870636745
+              },
+              "H": {
+                "ece": 0.03156770965079228,
+                "intercept": -0.10283992124467559,
+                "slope": 1.1486707004503136
+              }
+            },
+            "entropy": 0.9671042318448027,
+            "log_loss": 0.9539829601423616,
+            "rows": 1140,
+            "rps": 0.1890565234243578
+          },
+          "shin": {
+            "brier": 0.5668061573039259,
+            "calibration": {
+              "A": {
+                "ece": 0.02179746633861654,
+                "intercept": 0.196845935696412,
+                "slope": 1.1495345107748984
+              },
+              "D": {
+                "ece": 0.013569050166815458,
+                "intercept": 0.2907057012828003,
+                "slope": 1.2340026626177507
+              },
+              "H": {
+                "ece": 0.030681622882488113,
+                "intercept": -0.09321016665170635,
+                "slope": 1.1634113841183429
+              }
+            },
+            "entropy": 0.969681966955897,
+            "log_loss": 0.9541597673496914,
+            "rows": 1140,
+            "rps": 0.18909405916113353
+          }
+        }
+      },
+      "by_league": {
+        "EPL": {
+          "additive": {
+            "brier": 0.5756677049564114,
+            "calibration": {
+              "A": {
+                "ece": 0.049568217078515206,
+                "intercept": 0.17329984277636612,
+                "slope": 1.0312681748261114
+              },
+              "D": {
+                "ece": 0.019549308148906826,
+                "intercept": -0.048312391853059425,
+                "slope": 0.8821926230545348
+              },
+              "H": {
+                "ece": 0.049107062073705895,
+                "intercept": -0.21587167883458894,
+                "slope": 1.0433449274329136
+              }
+            },
+            "entropy": 0.9528535667141266,
+            "log_loss": 0.9671059044207153,
+            "rows": 760,
+            "rps": 0.19623812493360035
+          },
+          "multiplicative": {
+            "brier": 0.5754270455690389,
+            "calibration": {
+              "A": {
+                "ece": 0.056640488184621675,
+                "intercept": 0.20890491287313234,
+                "slope": 1.0924406262718451
+              },
+              "D": {
+                "ece": 0.014447617234930769,
+                "intercept": -0.001387688549959012,
+                "slope": 0.9411444333330733
+              },
+              "H": {
+                "ece": 0.04950852285236042,
+                "intercept": -0.180338579981024,
+                "slope": 1.100502301076878
+              }
+            },
+            "entropy": 0.9651882652707369,
+            "log_loss": 0.9670903937795831,
+            "rows": 760,
+            "rps": 0.19618802220086534
+          },
+          "power": {
+            "brier": 0.5757357319738533,
+            "calibration": {
+              "A": {
+                "ece": 0.04720699096207899,
+                "intercept": 0.17254514521311703,
+                "slope": 1.0328344717502922
+              },
+              "D": {
+                "ece": 0.020248656183043886,
+                "intercept": -0.07951264717636704,
+                "slope": 0.85209898781099
+              },
+              "H": {
+                "ece": 0.050383472040064624,
+                "intercept": -0.21969769682872736,
+                "slope": 1.037907803564408
+              }
+            },
+            "entropy": 0.9518636248509746,
+            "log_loss": 0.9672050382778906,
+            "rows": 760,
+            "rps": 0.19624622718631982
+          },
+          "shin": {
+            "brier": 0.5755709320728232,
+            "calibration": {
+              "A": {
+                "ece": 0.05109448520183207,
+                "intercept": 0.18235059762309905,
+                "slope": 1.0471353636668268
+              },
+              "D": {
+                "ece": 0.01775433664988287,
+                "intercept": -0.03740856657987836,
+                "slope": 0.8960190489585887
+              },
+              "H": {
+                "ece": 0.04937323683529566,
+                "intercept": -0.20702256290138893,
+                "slope": 1.0578030824501121
+              }
+            },
+            "entropy": 0.9561024097452966,
+            "log_loss": 0.9670470001649975,
+            "rows": 760,
+            "rps": 0.19620979539006264
+          }
+        },
+        "LA_LIGA": {
+          "additive": {
+            "brier": 0.5585968725376947,
+            "calibration": {
+              "A": {
+                "ece": 0.03726846580410834,
+                "intercept": 0.1520533053420108,
+                "slope": 1.1066509423028525
+              },
+              "D": {
+                "ece": 0.011728390645028513,
+                "intercept": 0.4277406835056281,
+                "slope": 1.4578022147195009
+              },
+              "H": {
+                "ece": 0.05340569585932548,
+                "intercept": 0.00646042135351141,
+                "slope": 1.230017924623962
+              }
+            },
+            "entropy": 0.9704003915092612,
+            "log_loss": 0.9455911913271665,
+            "rows": 760,
+            "rps": 0.18720530424005222
+          },
+          "multiplicative": {
+            "brier": 0.5595987393449976,
+            "calibration": {
+              "A": {
+                "ece": 0.0422496148709047,
+                "intercept": 0.20002334668791003,
+                "slope": 1.182158601862427
+              },
+              "D": {
+                "ece": 0.014856450909979642,
+                "intercept": 0.48960322206240114,
+                "slope": 1.5435043040727847
+              },
+              "H": {
+                "ece": 0.04849494362255469,
+                "intercept": 0.04871948454203326,
+                "slope": 1.3003919467833018
+              }
+            },
+            "entropy": 0.9816279974558187,
+            "log_loss": 0.9466841215547546,
+            "rows": 760,
+            "rps": 0.18763427854752457
+          },
+          "power": {
+            "brier": 0.5584710185923215,
+            "calibration": {
+              "A": {
+                "ece": 0.037641296218611175,
+                "intercept": 0.1527555251820122,
+                "slope": 1.111774978926068
+              },
+              "D": {
+                "ece": 0.005606124190778067,
+                "intercept": 0.40161303707425877,
+                "slope": 1.4238455286338356
+              },
+              "H": {
+                "ece": 0.05306804918188847,
+                "intercept": 0.002810983753554962,
+                "slope": 1.225283869218159
+              }
+            },
+            "entropy": 0.969774631315644,
+            "log_loss": 0.9450913135070841,
+            "rows": 760,
+            "rps": 0.1871741596401615
+          },
+          "shin": {
+            "brier": 0.5588149945393228,
+            "calibration": {
+              "A": {
+                "ece": 0.03635133594689289,
+                "intercept": 0.1649584997976904,
+                "slope": 1.1270373312334792
+              },
+              "D": {
+                "ece": 0.009945303397829395,
+                "intercept": 0.44224218813896504,
+                "slope": 1.4779131925336468
+              },
+              "H": {
+                "ece": 0.05112991590025944,
+                "intercept": 0.01700124295386285,
+                "slope": 1.2479056772752393
+              }
+            },
+            "entropy": 0.9733785083521984,
+            "log_loss": 0.9457245882621077,
+            "rows": 760,
+            "rps": 0.18729958537384211
+          }
+        },
+        "SERIE_A": {
+          "additive": {
+            "brier": 0.5668443929815709,
+            "calibration": {
+              "A": {
+                "ece": 0.03520156126507155,
+                "intercept": 0.23758175516223937,
+                "slope": 1.3118835842667398
+              },
+              "D": {
+                "ece": 0.022621983504078146,
+                "intercept": 0.56178845851841,
+                "slope": 1.4421222908828433
+              },
+              "H": {
+                "ece": 0.04374731154117978,
+                "intercept": -0.09240776961841897,
+                "slope": 1.2203149894463081
+              }
+            },
+            "entropy": 0.9796185991358156,
+            "log_loss": 0.9508021465333172,
+            "rows": 760,
+            "rps": 0.18390522224959033
+          },
+          "multiplicative": {
+            "brier": 0.5677869229776132,
+            "calibration": {
+              "A": {
+                "ece": 0.04007082179927631,
+                "intercept": 0.28043758491567333,
+                "slope": 1.3828791140467793
+              },
+              "D": {
+                "ece": 0.02182877638729681,
+                "intercept": 0.6268538217340578,
+                "slope": 1.5297983371835975
+              },
+              "H": {
+                "ece": 0.045123799070975405,
+                "intercept": -0.05235118759579954,
+                "slope": 1.2834237985468606
+              }
+            },
+            "entropy": 0.9898365163305608,
+            "log_loss": 0.9530756684963119,
+            "rows": 760,
+            "rps": 0.18438175663283526
+          },
+          "power": {
+            "brier": 0.5668594851786538,
+            "calibration": {
+              "A": {
+                "ece": 0.03747006450795611,
+                "intercept": 0.23652738354624114,
+                "slope": 1.3150113123244649
+              },
+              "D": {
+                "ece": 0.024249657382236858,
+                "intercept": 0.5207901062787514,
+                "slope": 1.394076305473719
+              },
+              "H": {
+                "ece": 0.04526168454872449,
+                "intercept": -0.0959816405369544,
+                "slope": 1.2173699601839694
+              }
+            },
+            "entropy": 0.9792497249046915,
+            "log_loss": 0.9510577137013259,
+            "rows": 760,
+            "rps": 0.18390766983586307
+          },
+          "shin": {
+            "brier": 0.5670593970983779,
+            "calibration": {
+              "A": {
+                "ece": 0.03748143727054659,
+                "intercept": 0.24834950582801635,
+                "slope": 1.3300702495671473
+              },
+              "D": {
+                "ece": 0.021623198446396968,
+                "intercept": 0.5764414635512464,
+                "slope": 1.4620928375947198
+              },
+              "H": {
+                "ece": 0.043318895919897335,
+                "intercept": -0.08243147996724608,
+                "slope": 1.236257057769976
+              }
+            },
+            "entropy": 0.982322111901549,
+            "log_loss": 0.9513722764088671,
+            "rows": 760,
+            "rps": 0.18401560945807202
+          }
+        }
+      },
+      "common_coverage": 1.0,
+      "common_rows": 2280,
+      "method_valid_coverage": {
+        "additive": 1.0,
+        "multiplicative": 1.0,
+        "power": 1.0,
+        "shin": 1.0
+      },
+      "pooled": {
+        "additive": {
+          "brier": 0.5670363234918924,
+          "calibration": {
+            "A": {
+              "ece": 0.022919659003568855,
+              "intercept": 0.18573626913749824,
+              "slope": 1.1430095105445293
+            },
+            "D": {
+              "ece": 0.015487448036606169,
+              "intercept": 0.28986368739549956,
+              "slope": 1.215867049240551
+            },
+            "H": {
+              "ece": 0.03433110950919697,
+              "intercept": -0.10455694244817382,
+              "slope": 1.155302903166068
+            }
+          },
+          "entropy": 0.9676241857864014,
+          "log_loss": 0.9544997474270662,
+          "rows": 2280,
+          "rps": 0.18911621714108098
+        },
+        "multiplicative": {
+          "brier": 0.5676042359638832,
+          "calibration": {
+            "A": {
+              "ece": 0.025872054268431435,
+              "intercept": 0.2273064619520319,
+              "slope": 1.2119409791079712
+            },
+            "D": {
+              "ece": 0.014200449942124696,
+              "intercept": 0.34545612007988136,
+              "slope": 1.2903944376447998
+            },
+            "H": {
+              "ece": 0.036426437094560386,
+              "intercept": -0.06552766702842491,
+              "slope": 1.21838473087273
+            }
+          },
+          "entropy": 0.9788842596857054,
+          "log_loss": 0.9556167279435497,
+          "rows": 2280,
+          "rps": 0.1894013524604084
+        },
+        "power": {
+          "brier": 0.5670220785816096,
+          "calibration": {
+            "A": {
+              "ece": 0.022917581556933443,
+              "intercept": 0.1851902157789903,
+              "slope": 1.1461193483074656
+            },
+            "D": {
+              "ece": 0.014392756036635625,
+              "intercept": 0.26170641397015826,
+              "slope": 1.1833125525278152
+            },
+            "H": {
+              "ece": 0.03388281090932928,
+              "intercept": -0.10831219473472882,
+              "slope": 1.1507672271682063
+            }
+          },
+          "entropy": 0.9669626603571034,
+          "log_loss": 0.9544513551621002,
+          "rows": 2280,
+          "rps": 0.18910935222078143
+        },
+        "shin": {
+          "brier": 0.5671484412368412,
+          "calibration": {
+            "A": {
+              "ece": 0.022970257837218053,
+              "intercept": 0.19646276264107657,
+              "slope": 1.161072719744022
+            },
+            "D": {
+              "ece": 0.014584290666437742,
+              "intercept": 0.302828756613013,
+              "slope": 1.2333312217835801
+            },
+            "H": {
+              "ece": 0.03356943617528505,
+              "intercept": -0.09483244617627618,
+              "slope": 1.1712771803946538
+            }
+          },
+          "entropy": 0.9706010099996815,
+          "log_loss": 0.9547146216119907,
+          "rows": 2280,
+          "rps": 0.18917499674065894
+        }
+      },
+      "source_rows": 2280
+    },
+    "opening": {
+      "by_bookmaker": {
+        "BET365": {
+          "additive": {
+            "brier": 0.5698066187935825,
+            "calibration": {
+              "A": {
+                "ece": 0.02210883437621931,
+                "intercept": 0.17530388588833712,
+                "slope": 1.1459078436234014
+              },
+              "D": {
+                "ece": 0.016709883763918194,
+                "intercept": 0.2800452979552922,
+                "slope": 1.1805156485175252
+              },
+              "H": {
+                "ece": 0.039079776499484,
+                "intercept": -0.11778503162691364,
+                "slope": 1.1496031465653627
+              }
+            },
+            "entropy": 0.9683540237802837,
+            "log_loss": 0.9583193493363087,
+            "rows": 1140,
+            "rps": 0.19014062471260926
+          },
+          "multiplicative": {
+            "brier": 0.5703829442583964,
+            "calibration": {
+              "A": {
+                "ece": 0.026919055499128985,
+                "intercept": 0.22690113538261503,
+                "slope": 1.231756299120774
+              },
+              "D": {
+                "ece": 0.01454700521683264,
+                "intercept": 0.35382352803018857,
+                "slope": 1.2769868700307179
+              },
+              "H": {
+                "ece": 0.03212595309804487,
+                "intercept": -0.06842892480592289,
+                "slope": 1.2295243738807873
+              }
+            },
+            "entropy": 0.9823355863385762,
+            "log_loss": 0.9596444115970006,
+            "rows": 1140,
+            "rps": 0.19046295103984862
+          },
+          "power": {
+            "brier": 0.5698170486003765,
+            "calibration": {
+              "A": {
+                "ece": 0.02175073159281757,
+                "intercept": 0.1742280133592813,
+                "slope": 1.1487650643951277
+              },
+              "D": {
+                "ece": 0.018872448655190752,
+                "intercept": 0.2442225851140187,
+                "slope": 1.1405633491988716
+              },
+              "H": {
+                "ece": 0.040003886775771366,
+                "intercept": -0.12261452165852618,
+                "slope": 1.1434569010047535
+              }
+            },
+            "entropy": 0.9674311538008544,
+            "log_loss": 0.9583131639058401,
+            "rows": 1140,
+            "rps": 0.19013768449712032
+          },
+          "shin": {
+            "brier": 0.5699061304920625,
+            "calibration": {
+              "A": {
+                "ece": 0.02502599378811683,
+                "intercept": 0.18850187491604378,
+                "slope": 1.168304766441987
+              },
+              "D": {
+                "ece": 0.015439504435850137,
+                "intercept": 0.2970202042260055,
+                "slope": 1.2028422760926263
+              },
+              "H": {
+                "ece": 0.03653148174081604,
+                "intercept": -0.10555062618841987,
+                "slope": 1.1697326711216998
+              }
+            },
+            "entropy": 0.9720828062837517,
+            "log_loss": 0.9585682658545037,
+            "rows": 1140,
+            "rps": 0.19020255483522544
+          }
+        },
+        "PINNACLE": {
+          "additive": {
+            "brier": 0.5690907579928014,
+            "calibration": {
+              "A": {
+                "ece": 0.03060922328575051,
+                "intercept": 0.18174398396189234,
+                "slope": 1.153500156878885
+              },
+              "D": {
+                "ece": 0.016537246435604565,
+                "intercept": 0.27280946865636657,
+                "slope": 1.1787220430205854
+              },
+              "H": {
+                "ece": 0.03898294461959333,
+                "intercept": -0.11436344317515673,
+                "slope": 1.147108238150149
+              }
+            },
+            "entropy": 0.9683334886453502,
+            "log_loss": 0.9568838990768395,
+            "rows": 1140,
+            "rps": 0.18994728553631332
+          },
+          "multiplicative": {
+            "brier": 0.5694313602009717,
+            "calibration": {
+              "A": {
+                "ece": 0.029268868669715585,
+                "intercept": 0.21768379976576402,
+                "slope": 1.2131780948684778
+              },
+              "D": {
+                "ece": 0.017218512990149724,
+                "intercept": 0.32454053866275573,
+                "slope": 1.245450190172331
+              },
+              "H": {
+                "ece": 0.037607629971250514,
+                "intercept": -0.08079706645267462,
+                "slope": 1.2030141269559131
+              }
+            },
+            "entropy": 0.9781414207216306,
+            "log_loss": 0.957768380116043,
+            "rows": 1140,
+            "rps": 0.19013514343661783
+          },
+          "power": {
+            "brier": 0.569112140948233,
+            "calibration": {
+              "A": {
+                "ece": 0.029406716197099527,
+                "intercept": 0.18104992405144607,
+                "slope": 1.1555527919134347
+              },
+              "D": {
+                "ece": 0.018116928224393654,
+                "intercept": 0.24491380874259572,
+                "slope": 1.1482325319095619
+              },
+              "H": {
+                "ece": 0.038866589954765884,
+                "intercept": -0.11748806499929021,
+                "slope": 1.1430632121110325
+              }
+            },
+            "entropy": 0.9677311462114437,
+            "log_loss": 0.9569375061601988,
+            "rows": 1140,
+            "rps": 0.18994724418050757
+          },
+          "shin": {
+            "brier": 0.5691545933472184,
+            "calibration": {
+              "A": {
+                "ece": 0.027225745429927763,
+                "intercept": 0.19086991038106424,
+                "slope": 1.1688633186400874
+              },
+              "D": {
+                "ece": 0.016269864436438297,
+                "intercept": 0.28478625599377877,
+                "slope": 1.194307405871968
+              },
+              "H": {
+                "ece": 0.03536096729853275,
+                "intercept": -0.10601925933293906,
+                "slope": 1.1611717154762564
+              }
+            },
+            "entropy": 0.9708959089065362,
+            "log_loss": 0.9570696167221112,
+            "rows": 1140,
+            "rps": 0.18998497078420826
+          }
+        }
+      },
+      "by_league": {
+        "EPL": {
+          "additive": {
+            "brier": 0.5792277813641573,
+            "calibration": {
+              "A": {
+                "ece": 0.04396111870821536,
+                "intercept": 0.1557320776313577,
+                "slope": 1.0285397945541155
+              },
+              "D": {
+                "ece": 0.02181477907494546,
+                "intercept": -0.3030594540886035,
+                "slope": 0.6629676594057278
+              },
+              "H": {
+                "ece": 0.05019982019327222,
+                "intercept": -0.21505674001991779,
+                "slope": 1.0328667212766514
+              }
+            },
+            "entropy": 0.9537305469835115,
+            "log_loss": 0.9707691958930462,
+            "rows": 760,
+            "rps": 0.19740256477567855
+          },
+          "multiplicative": {
+            "brier": 0.5787174382880413,
+            "calibration": {
+              "A": {
+                "ece": 0.0457378899897639,
+                "intercept": 0.19442972336034245,
+                "slope": 1.0943851363207961
+              },
+              "D": {
+                "ece": 0.016123199238949927,
+                "intercept": -0.2668127776274295,
+                "slope": 0.7091890922069305
+              },
+              "H": {
+                "ece": 0.0616639949701876,
+                "intercept": -0.17717295715551667,
+                "slope": 1.0961444830798677
+              }
+            },
+            "entropy": 0.9669203349015345,
+            "log_loss": 0.9705308364530489,
+            "rows": 760,
+            "rps": 0.19726176465296363
+          },
+          "power": {
+            "brier": 0.5793806127471094,
+            "calibration": {
+              "A": {
+                "ece": 0.04141152032448335,
+                "intercept": 0.15440671180577223,
+                "slope": 1.0288874353755992
+              },
+              "D": {
+                "ece": 0.023278299538209767,
+                "intercept": -0.3275771463720515,
+                "slope": 0.6396167788054894
+              },
+              "H": {
+                "ece": 0.04908199768811737,
+                "intercept": -0.2192380336656787,
+                "slope": 1.0264691504805228
+              }
+            },
+            "entropy": 0.9525751228976677,
+            "log_loss": 0.9710177876593246,
+            "rows": 760,
+            "rps": 0.19742943277853392
+          },
+          "shin": {
+            "brier": 0.5790584600913202,
+            "calibration": {
+              "A": {
+                "ece": 0.04904412057132812,
+                "intercept": 0.1655433801953685,
+                "slope": 1.0455644164590954
+              },
+              "D": {
+                "ece": 0.020462247581828397,
+                "intercept": -0.29460898298231003,
+                "slope": 0.6738422163628563
+              },
+              "H": {
+                "ece": 0.05635889233467852,
+                "intercept": -0.20565138045707343,
+                "slope": 1.0488216836373379
+              }
+            },
+            "entropy": 0.9572071473145756,
+            "log_loss": 0.9706461395060534,
+            "rows": 760,
+            "rps": 0.1973488501259218
+          }
+        },
+        "LA_LIGA": {
+          "additive": {
+            "brier": 0.5627435007905927,
+            "calibration": {
+              "A": {
+                "ece": 0.04514976566013778,
+                "intercept": 0.1227024367082772,
+                "slope": 1.1000255974671973
+              },
+              "D": {
+                "ece": 0.02284255510869562,
+                "intercept": 0.6102183734883868,
+                "slope": 1.6087912750734021
+              },
+              "H": {
+                "ece": 0.04292870182931699,
+                "intercept": 0.0020649386473931184,
+                "slope": 1.1975319271973561
+              }
+            },
+            "entropy": 0.9735380206356989,
+            "log_loss": 0.9516042270834435,
+            "rows": 760,
+            "rps": 0.1893420189676465
+          },
+          "multiplicative": {
+            "brier": 0.5637669984912352,
+            "calibration": {
+              "A": {
+                "ece": 0.050824195323986195,
+                "intercept": 0.16905420868491794,
+                "slope": 1.1744054466846547
+              },
+              "D": {
+                "ece": 0.024147195597548642,
+                "intercept": 0.683298601214091,
+                "slope": 1.7090862394869635
+              },
+              "H": {
+                "ece": 0.03988718450442907,
+                "intercept": 0.04558423420990592,
+                "slope": 1.2690409476305329
+              }
+            },
+            "entropy": 0.9850733744814167,
+            "log_loss": 0.9529262064507859,
+            "rows": 760,
+            "rps": 0.18977806130447297
+          },
+          "power": {
+            "brier": 0.5626098388623653,
+            "calibration": {
+              "A": {
+                "ece": 0.04471775333658589,
+                "intercept": 0.12274682673471791,
+                "slope": 1.1040913310236733
+              },
+              "D": {
+                "ece": 0.02110712862504385,
+                "intercept": 0.5791624737386865,
+                "slope": 1.5700591880397974
+              },
+              "H": {
+                "ece": 0.0428405635233542,
+                "intercept": -0.0015937222012734466,
+                "slope": 1.1932886061986396
+              }
+            },
+            "entropy": 0.972864560640095,
+            "log_loss": 0.9511381894453528,
+            "rows": 760,
+            "rps": 0.18931044946006892
+          },
+          "shin": {
+            "brier": 0.5629662777582733,
+            "calibration": {
+              "A": {
+                "ece": 0.04925389358728337,
+                "intercept": 0.1349202384695774,
+                "slope": 1.1197887768306138
+              },
+              "D": {
+                "ece": 0.02421444348665406,
+                "intercept": 0.6272835065389513,
+                "slope": 1.6322905262465395
+              },
+              "H": {
+                "ece": 0.03913939957071896,
+                "intercept": 0.01290185281305799,
+                "slope": 1.2156625132816783
+              }
+            },
+            "entropy": 0.9765953327441869,
+            "log_loss": 0.9518213273577562,
+            "rows": 760,
+            "rps": 0.1894378265325194
+          }
+        },
+        "SERIE_A": {
+          "additive": {
+            "brier": 0.566374783024826,
+            "calibration": {
+              "A": {
+                "ece": 0.039120789551978154,
+                "intercept": 0.26265483472940526,
+                "slope": 1.3418620320034784
+              },
+              "D": {
+                "ece": 0.02802871541363443,
+                "intercept": 0.5761681639363067,
+                "slope": 1.4158520771479883
+              },
+              "H": {
+                "ece": 0.0592206524414238,
+                "intercept": -0.1262398598549557,
+                "slope": 1.239650752214152
+              }
+            },
+            "entropy": 0.9777627010192407,
+            "log_loss": 0.9504314496432325,
+            "rows": 760,
+            "rps": 0.18338728163005885
+          },
+          "multiplicative": {
+            "brier": 0.5672370199097755,
+            "calibration": {
+              "A": {
+                "ece": 0.042861147426832925,
+                "intercept": 0.3093947150941108,
+                "slope": 1.4197791898939436
+              },
+              "D": {
+                "ece": 0.024643264630405354,
+                "intercept": 0.6524400288851813,
+                "slope": 1.5147597386495057
+              },
+              "H": {
+                "ece": 0.05632891523028454,
+                "intercept": -0.08280183929145771,
+                "slope": 1.3086050739992954
+              }
+            },
+            "entropy": 0.9887218012073588,
+            "log_loss": 0.9526621446657308,
+            "rows": 760,
+            "rps": 0.18385731575726302
+          },
+          "power": {
+            "brier": 0.5664033327134399,
+            "calibration": {
+              "A": {
+                "ece": 0.03930934505530101,
+                "intercept": 0.2619382683847709,
+                "slope": 1.3455711626652394
+              },
+              "D": {
+                "ece": 0.02937057743957481,
+                "intercept": 0.5281965578763852,
+                "slope": 1.3622635394528417
+              },
+              "H": {
+                "ece": 0.05917209774975541,
+                "intercept": -0.1301626032408153,
+                "slope": 1.23560414159673
+              }
+            },
+            "entropy": 0.9773037664806847,
+            "log_loss": 0.9507200279943813,
+            "rows": 760,
+            "rps": 0.18338751077783894
+          },
+          "shin": {
+            "brier": 0.5665663479093278,
+            "calibration": {
+              "A": {
+                "ece": 0.03980386825507421,
+                "intercept": 0.27438387463788805,
+                "slope": 1.361806527791753
+              },
+              "D": {
+                "ece": 0.02720092897631018,
+                "intercept": 0.5932418528056689,
+                "slope": 1.4382537355186955
+              },
+              "H": {
+                "ece": 0.056570735540746715,
+                "intercept": -0.11544341762750913,
+                "slope": 1.2570013259449264
+              }
+            },
+            "entropy": 0.9806655927266691,
+            "log_loss": 0.9509893570011123,
+            "rows": 760,
+            "rps": 0.18349461177070936
+          }
+        }
+      },
+      "common_coverage": 1.0,
+      "common_rows": 2280,
+      "method_valid_coverage": {
+        "additive": 1.0,
+        "multiplicative": 1.0,
+        "power": 1.0,
+        "shin": 1.0
+      },
+      "pooled": {
+        "additive": {
+          "brier": 0.5694486883931921,
+          "calibration": {
+            "A": {
+              "ece": 0.02600211591312803,
+              "intercept": 0.1785064915028466,
+              "slope": 1.1496875911721882
+            },
+            "D": {
+              "ece": 0.016623565099761393,
+              "intercept": 0.27625398712509974,
+              "slope": 1.1794611463822362
+            },
+            "H": {
+              "ece": 0.03903136055953868,
+              "intercept": -0.1160740932709031,
+              "slope": 1.1483401757320202
+            }
+          },
+          "entropy": 0.968343756212817,
+          "log_loss": 0.957601624206574,
+          "rows": 2280,
+          "rps": 0.1900439551244613
+        },
+        "multiplicative": {
+          "brier": 0.569907152229684,
+          "calibration": {
+            "A": {
+              "ece": 0.027936664861060237,
+              "intercept": 0.2222167570115666,
+              "slope": 1.222348672855407
+            },
+            "D": {
+              "ece": 0.01588275910349117,
+              "intercept": 0.3381504426567346,
+              "slope": 1.2602505085988152
+            },
+            "H": {
+              "ece": 0.03470901023119263,
+              "intercept": -0.07466540945767902,
+              "slope": 1.2160069464012548
+            }
+          },
+          "entropy": 0.9802385035301033,
+          "log_loss": 0.9587063958565217,
+          "rows": 2280,
+          "rps": 0.19029904723823324
+        },
+        "power": {
+          "brier": 0.5694645947743048,
+          "calibration": {
+            "A": {
+              "ece": 0.02470547683192342,
+              "intercept": 0.17762192008138236,
+              "slope": 1.1521424089606878
+            },
+            "D": {
+              "ece": 0.018494688439792205,
+              "intercept": 0.24450076659064965,
+              "slope": 1.144320835713727
+            },
+            "H": {
+              "ece": 0.039435238365268646,
+              "intercept": -0.12005507995531516,
+              "slope": 1.143243663219053
+            }
+          },
+          "entropy": 0.9675811500061492,
+          "log_loss": 0.9576253350330194,
+          "rows": 2280,
+          "rps": 0.19004246433881394
+        },
+        "shin": {
+          "brier": 0.5695303619196405,
+          "calibration": {
+            "A": {
+              "ece": 0.02545751975336139,
+              "intercept": 0.1896832684718947,
+              "slope": 1.1685817300501198
+            },
+            "D": {
+              "ece": 0.015541076041118948,
+              "intercept": 0.2906217825214574,
+              "slope": 1.1983236158727082
+            },
+            "H": {
+              "ece": 0.03589620454236854,
+              "intercept": -0.10578144909326467,
+              "slope": 1.165418129605001
+            }
+          },
+          "entropy": 0.971489357595144,
+          "log_loss": 0.9578189412883072,
+          "rows": 2280,
+          "rps": 0.19009376280971685
+        }
+      },
+      "source_rows": 2280
+    }
+  },
+  "validation_winner": "power"
+}
