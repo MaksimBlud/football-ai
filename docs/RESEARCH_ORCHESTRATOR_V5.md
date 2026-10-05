@@ -151,3 +151,26 @@ checklist. It does not read outcomes and cannot execute arbitrary code.
 
 After the recipe is merged, editing/reopening the same Issue lets normal V5 intake claim
 it and continue autonomously.
+
+
+## Generic declarative pipeline
+
+V5 now has a reusable `pipeline` handler for the common lifecycle:
+
+`PREREGISTRATION -> deterministic evaluator -> RESULT.json -> FINAL_REPORT.md -> DONE`.
+
+A pipeline recipe declares only reviewed metadata:
+
+- `evaluator_module` — a repository Python module exposing `evaluate()`;
+- `preregistration_markdown` — the frozen protocol written before evaluation;
+- `decision_path` — the deterministic result field that becomes the final decision;
+- optional `summary_path`, `report_title`, and `report_fields`.
+
+The workflow and orchestration code do not need another family-specific branch.
+The existing `kickoff_calendar_context` and
+`cross_market_lead_lag_2024_25_anomaly_audit` recipes use this common pipeline.
+
+The registry parser rejects malformed module names, result paths, unsafe safety contracts,
+unknown handlers, duplicate families, and invalid iteration budgets. Evaluators still
+require normal repository review and tests; Issue text cannot inject a module, command,
+or arbitrary Python expression.
