@@ -18,9 +18,30 @@ For supported hypothesis families:
 5. redispatch itself on `CONTINUE`;
 6. create a final PR and close the Issue on `DONE`.
 
-## Supported families
+## Recipe registry
 
-Initial V5 handlers:
+Supported deterministic families are no longer hard-coded in either GitHub Actions
+workflow. The source of truth is:
+
+`research/v5_recipe_registry.json`
+
+Each recipe declares:
+
+- `hypothesis_family`;
+- a reviewed built-in deterministic handler;
+- a per-family `max_iterations` runaway guard;
+- the mandatory no-API/no-production safety contract.
+
+At intake, V5 calls `research_agent_v5.py --supports-family`. V4 calls the same
+registry check and automatically yields ownership when V5 supports the family.
+The worker obtains its iteration budget from
+`research_agent_v5.py --max-iterations`.
+
+Adding a deterministic family therefore does **not** require another YAML routing edit.
+A code change only needs to add the reviewed deterministic evaluator/handler and one
+registry recipe with tests. Unknown or unsafe registry entries fail closed.
+
+Current registry recipes are:
 
 - `kickoff_calendar_context`;
 - `cross_market_lead_lag_2024_25_anomaly_audit`;
@@ -69,3 +90,20 @@ A `CONTINUE` state immediately dispatches the next V5 iteration. A scheduled swe
 minutes 11 and 41 recovers any Issue left in `research-v5-waiting`.
 
 No user computer needs to remain online.
+
+
+## Adding the next no-API research family
+
+The intended extension path is:
+
+1. implement a deterministic Python evaluator that consumes only preregistered,
+   allowed inputs and returns a machine-readable result;
+2. add a small reviewed V5 handler that freezes the protocol before evaluation and
+   writes only inside the current Issue sandbox;
+3. register the family in `research/v5_recipe_registry.json`;
+4. add unit/contract tests;
+5. merge through normal research-infrastructure CI.
+
+No provider key, quota configuration, V4 routing case or new workflow branch is needed.
+The registry deliberately does not allow Issue text to name arbitrary Python modules,
+shell commands or packages. Executable handlers remain repository-reviewed code.

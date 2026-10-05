@@ -175,12 +175,10 @@ jobs:
           python research_agent_issue.py --event /tmp/event.json --output-json /tmp/v4-plan.json --output-markdown /tmp/v4-plan.md
           DECISION=$(jq -r '.decision' /tmp/v4-plan.json)
           FAMILY=$(jq -r '.hypothesis_family' /tmp/v4-plan.json)
-          case "$FAMILY" in
-            kickoff_calendar_context|cross_market_lead_lag_2024_25_anomaly_audit|cross_market_lead_lag_independent_replication)
-              echo "Hypothesis family $FAMILY is owned by no-API Research V5; V4 model worker skipped."
-              exit 0
-              ;;
-          esac
+          if python research_agent_v5.py --supports-family "$FAMILY"; then
+            echo "Hypothesis family $FAMILY is owned by no-API Research V5; V4 model worker skipped."
+            exit 0
+          fi
           if [ "$DECISION" != 'READY_FOR_PREREGISTRATION' ]; then
             gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v4-blocked >/dev/null
             gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Research Orchestrator V4 blocked at deterministic intake: $DECISION"

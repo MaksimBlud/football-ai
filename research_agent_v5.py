@@ -7,12 +7,81 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
 
 class LocalResearchError(RuntimeError):
     pass
+
+
+RECIPE_REGISTRY = Path("research/v5_recipe_registry.json")
+FAMILY_RE = re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
+SAFE_RECIPE_CONTRACT = {
+    "model_api": False,
+    "paid_odds_api": False,
+    "supabase_writes": False,
+    "production_operations": False,
+    "automatic_promotion": False,
+}
+
+
+def load_recipe_registry(root: Path) -> dict[str, Any]:
+    path = root / RECIPE_REGISTRY
+    payload = _load(path)
+    if payload.get("schema_version") != 1:
+        raise LocalResearchError("unsupported V5 recipe registry schema")
+    if payload.get("engine") != "V5_DETERMINISTIC_NO_API":
+        raise LocalResearchError("V5 recipe registry engine mismatch")
+    recipes = payload.get("recipes")
+    if not isinstance(recipes, list) or not recipes:
+        raise LocalResearchError("V5 recipe registry must contain recipes")
+
+    seen: set[str] = set()
+    for recipe in recipes:
+        if not isinstance(recipe, dict):
+            raise LocalResearchError("V5 recipe entry must be an object")
+        family = str(recipe.get("hypothesis_family", ""))
+        handler = str(recipe.get("handler", ""))
+        max_iterations = recipe.get("max_iterations")
+        if not FAMILY_RE.fullmatch(family):
+            raise LocalResearchError(f"invalid V5 hypothesis_family: {family!r}")
+        if family in seen:
+            raise LocalResearchError(f"duplicate V5 hypothesis_family: {family}")
+        seen.add(family)
+        if handler not in BUILTIN_HANDLERS:
+            raise LocalResearchError(
+                f"V5 recipe {family} references unknown handler {handler!r}"
+            )
+        if not isinstance(max_iterations, int) or not 1 <= max_iterations <= 20:
+            raise LocalResearchError(
+                f"V5 recipe {family} max_iterations must be in 1..20"
+            )
+        if recipe.get("safety") != SAFE_RECIPE_CONTRACT:
+            raise LocalResearchError(f"V5 recipe {family} safety contract mismatch")
+    return payload
+
+
+def recipe_for_family(root: Path, hypothesis_family: str) -> dict[str, Any] | None:
+    family = hypothesis_family.strip()
+    for recipe in load_recipe_registry(root)["recipes"]:
+        if recipe["hypothesis_family"] == family:
+            return recipe
+    return None
+
+
+def supports_family(root: Path, hypothesis_family: str) -> bool:
+    return recipe_for_family(root, hypothesis_family) is not None
+
+
+def max_iterations_for_family(root: Path, hypothesis_family: str) -> int:
+    recipe = recipe_for_family(root, hypothesis_family)
+    if recipe is None:
+        raise LocalResearchError(
+            f"no V5 deterministic recipe for {hypothesis_family!r}"
+        )
+    return int(recipe["max_iterations"])
 
 
 def _issue_root(root: Path, issue: int) -> Path:
@@ -316,26 +385,44 @@ Full result: `research/agent_runs/issue_{issue}/RESULT.json`.
     _state(root, issue, "DONE", f"Kickoff-calendar OOS research completed: {report['decision']}.")
 
 
-HANDLERS = {
-    "cross_market_lead_lag_independent_replication": _replication,
-    "cross_market_lead_lag_2024_25_anomaly_audit": _anomaly,
-    "kickoff_calendar_context": _kickoff,
+BUILTIN_HANDLERS = {
+    "replication": _replication,
+    "anomaly": _anomaly,
+    "kickoff": _kickoff,
 }
 
 
 def run(root: Path, issue_number: int, hypothesis_family: str) -> None:
-    handler = HANDLERS.get(hypothesis_family)
-    if handler is None:
-        raise LocalResearchError(f"no V5 deterministic handler for {hypothesis_family!r}")
+    recipe = recipe_for_family(root, hypothesis_family)
+    if recipe is None:
+        raise LocalResearchError(
+            f"no V5 deterministic recipe for {hypothesis_family!r}"
+        )
+    handler = BUILTIN_HANDLERS[recipe["handler"]]
     handler(root, issue_number)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--issue-number", type=int, required=True)
-    parser.add_argument("--hypothesis-family", required=True)
+    parser.add_argument("--issue-number", type=int)
+    parser.add_argument("--hypothesis-family")
+    parser.add_argument("--supports-family")
+    parser.add_argument("--max-iterations")
+    parser.add_argument("--list-families", action="store_true")
     parser.add_argument("--root", type=Path, default=Path("."))
     args = parser.parse_args()
+
+    if args.list_families:
+        for recipe in load_recipe_registry(args.root)["recipes"]:
+            print(recipe["hypothesis_family"])
+        return
+    if args.supports_family is not None:
+        raise SystemExit(0 if supports_family(args.root, args.supports_family) else 1)
+    if args.max_iterations is not None:
+        print(max_iterations_for_family(args.root, args.max_iterations))
+        return
+    if args.issue_number is None or not args.hypothesis_family:
+        parser.error("--issue-number and --hypothesis-family are required for a research pass")
     run(args.root, args.issue_number, args.hypothesis_family)
 
 
