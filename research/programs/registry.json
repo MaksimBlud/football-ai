@@ -70,11 +70,13 @@
       "title": "Cross-market corner direction research program",
       "status": "ACTIVE",
       "objective": "Determine whether the frozen cross-market match-shape gap contains stable, transferable information about pre-match corner-market direction or ranking beyond trivial UP skew.",
-      "completed_issue_numbers": [],
-      "active_issue_numbers": [
+      "completed_issue_numbers": [
         522
       ],
-      "current_frontier": "Issue #522 is the active frozen child. The retrospective 194-fixture screen found a promising continuous association but binary raw accuracy did not beat the always-UP baseline and DOWN discrimination was weak. The program must now exhaust genuinely independent zero-cost replication/falsification without retuning the opened 2026/27 cohorts.",
+      "active_issue_numbers": [
+        528
+      ],
+      "current_frontier": "Issue #522 completed the frozen same-sample falsification: the continuous match-shape gap remained robust (nonzero-movement Spearman 0.624; opening-FAIR_CENTRE-residualized Spearman 0.560; deterministic permutation p=0.00020; all leave-one-cohort and leave-one-league signs positive), but binary accuracy 0.786 remained below the 0.804 always-UP baseline and DOWN recall was only 0.455. Because #522 used already-opened EPL/La Liga/Serie A movements, it supports only future confirmation, not an untouched claim. Issue #528 is the active preregistered cross-league transport/falsification on Bundesliga and Ligue 1, with an outcome-free coverage gate and no retuning.",
       "allowed_follow_up_classes": [
         "independent_replication_and_falsification",
         "cross_league_transport",
