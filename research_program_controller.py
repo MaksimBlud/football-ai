@@ -90,6 +90,20 @@ def validate_registry(root: Path = Path(".")) -> dict[str, Any]:
         if len(set(completed)) != len(completed):
             raise ProgramRegistryError(f"duplicate completed issue in {program_id}")
 
+        active = program.get("active_child_issue_numbers", [])
+        if not isinstance(active, list) or any(
+            not isinstance(number, int) or number <= 0 for number in active
+        ):
+            raise ProgramRegistryError(
+                f"active_child_issue_numbers must be positive integers for {program_id}"
+            )
+        if len(set(active)) != len(active):
+            raise ProgramRegistryError(f"duplicate active child issue in {program_id}")
+        if set(active) & set(completed):
+            raise ProgramRegistryError(
+                f"active/completed child overlap in {program_id}"
+            )
+
         followups = program.get("allowed_follow_up_classes")
         if not isinstance(followups, list) or not followups:
             raise ProgramRegistryError(
@@ -151,6 +165,7 @@ def build_brain_context(root: Path = Path(".")) -> dict[str, Any]:
                 "objective": program["objective"],
                 "current_frontier": program["current_frontier"],
                 "completed_issue_numbers": program["completed_issue_numbers"],
+                "active_child_issue_numbers": program.get("active_child_issue_numbers", []),
                 "merged_completed_issue_states": merged,
                 "allowed_follow_up_classes": program["allowed_follow_up_classes"],
                 "stop_rules": program["stop_rules"],
