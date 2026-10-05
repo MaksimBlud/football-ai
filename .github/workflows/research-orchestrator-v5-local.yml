@@ -24,6 +24,7 @@ on:
       - 'research_orchestrator_v4.py'
       - 'tests/test_research_agent_v5.py'
       - 'tests/test_research_agent_v5_helpers.py'
+      - 'tests/test_research_orchestrator_v5_workflow.py'
       - '.github/workflows/research-orchestrator-v5-local.yml'
       - '.github/workflows/research-orchestrator-v4.yml'
       - 'docs/RESEARCH_ORCHESTRATOR_V5.md'
@@ -46,7 +47,7 @@ jobs:
           cache: pip
       - run: pip install pytest pandas numpy requests scikit-learn
       - run: python -m py_compile research_agent_v5.py kickoff_calendar_context_v1.py cross_market_lead_lag_anomaly_audit_v1.py research_orchestrator_v4.py
-      - run: pytest -q tests/test_research_agent_v5.py tests/test_research_agent_v5_helpers.py
+      - run: pytest -q tests/test_research_agent_v5.py tests/test_research_agent_v5_helpers.py tests/test_research_orchestrator_v5_workflow.py
 
   sweep:
     if: github.event_name == 'schedule'
@@ -246,7 +247,7 @@ jobs:
         run: |
           gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label research-v5-running >/dev/null
           gh workflow run research-orchestrator-v5-local.yml --repo "$GITHUB_REPOSITORY" -f issue_number="$ISSUE_NUMBER" -f source=continuation
-      - name: Open final research pull request
+      - name: Publish final research reference
         id: final_pr
         if: steps.state.outputs.status == 'DONE'
         env:
@@ -255,7 +256,13 @@ jobs:
         run: |
           PR_URL=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "$BRANCH" --json url --jq '.[0].url // empty')
           if [ -z "$PR_URL" ]; then
-            PR_URL=$(gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title "Research V5 final: ${ISSUE_TITLE}" --body "No-API deterministic research for Issue #${ISSUE_NUMBER} reached DONE. Final report: docs/agent_runs/issue_${ISSUE_NUMBER}/FINAL_REPORT.md. No production promotion.")
+            if PR_URL=$(gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title "Research V5 final: ${ISSUE_TITLE}" --body "No-API deterministic research for Issue #${ISSUE_NUMBER} reached DONE. Final report: docs/agent_runs/issue_${ISSUE_NUMBER}/FINAL_REPORT.md. No production promotion." 2>/tmp/v5-pr-create.err); then
+              echo "Final research PR created: $PR_URL"
+            else
+              cat /tmp/v5-pr-create.err >&2 || true
+              PR_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/tree/$BRANCH"
+              echo "GitHub Actions cannot create PRs in this repository; using durable final branch reference: $PR_URL"
+            fi
           fi
           echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
       - name: Publish DONE
