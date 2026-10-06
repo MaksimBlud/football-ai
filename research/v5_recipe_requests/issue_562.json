@@ -1,0 +1,40 @@
+{
+  "decision": "NEEDS_DETERMINISTIC_RECIPE",
+  "engine": "V5_DETERMINISTIC_NO_API",
+  "expected_lifecycle": [
+    "PREREGISTRATION",
+    "DETERMINISTIC_EVALUATION",
+    "RESULT.json",
+    "FINAL_REPORT.md",
+    "DONE"
+  ],
+  "hypothesis_family": "market_residual_process_divergence_v1",
+  "independent_information_justification": "Earlier repository work already closed generic SHOTS10 incremental modelling on EPL/La Liga/Serie A and tested different trajectory/shot interactions on those seen samples. This child does not retune those results. It freezes a distinct process-vs-results representation and evaluates it only on Bundesliga and Ligue 1, which were outside the SHOTS10 historical market-incremental sample. The target is 1X2 outcome probability beyond the market baseline, not corner-market direction or generic AI-vs-market disagreement.",
+  "issue_number": 562,
+  "issue_title": "[AGENT-RESEARCH] Market residual process-vs-results divergence",
+  "mode": "historical_read_only",
+  "prohibited": [
+    "model-generated shell commands",
+    "automatic threshold retuning on seen outcomes",
+    "paid Odds API calls",
+    "Supabase writes",
+    "production .pkl writes",
+    "automatic promotion"
+  ],
+  "required_implementation": {
+    "evaluator": "Add a deterministic Python evaluator that consumes only preregistered allowed inputs and returns machine-readable results.",
+    "handler": "Add a reviewed Research V5 handler that freezes the protocol before evaluation and writes only inside the current Issue sandbox.",
+    "registry": "Register the family in research/v5_recipe_registry.json with a bounded max_iterations and the exact no-API safety contract.",
+    "tests": "Add unit tests for the evaluator/handler and workflow contract tests covering fail-closed safety, temporal/OOS rules, and DONE/CONTINUE state."
+  },
+  "research_question": "Does a frozen recent process-vs-results divergence signal add stable out-of-sample information to bookmaker 1X2 probabilities on Bundesliga and Ligue 1?",
+  "safety": {
+    "automatic_promotion": false,
+    "model_api": false,
+    "outcomes_read_during_scaffold": false,
+    "paid_odds_api": false,
+    "production_operations": false,
+    "supabase_writes": false
+  },
+  "schema_version": 1
+}
