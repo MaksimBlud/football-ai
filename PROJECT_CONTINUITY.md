@@ -5715,3 +5715,100 @@ Still binding:
 - individual Stage-B direction is not yet independently confirmed;
 - NO_BET;
 - no automatic production promotion.
+
+---
+
+# Continuity update — 2026-10-04 — Research Agent V4 Groq checkpoint persistence is live
+
+Research Agent V4 now has a live Groq-first persistence path and a stricter definition
+of a committed research iteration.
+
+Infrastructure merges:
+
+- PR #490 — `Harden Research V4 Groq tool-format recovery`;
+  merge `fb91c6a515a5fed22d4cdd631d6439a09b647b40`.
+- PR #491 — `Require substantive Research V4 progress`;
+  merge `011f27d15e5082fbd8dc827e30295e2050b6df5a`.
+
+## Live proof already obtained on issue #482
+
+Run `37208997447` used Groq `openai/gpt-oss-120b` and:
+
+- read the required repository context;
+- wrote canonical `STATE.json`;
+- passed orchestrator state validation;
+- incremented `research_iterations_committed` from 0 to 1;
+- committed `Research V4 issue #482 iteration 1`
+  (`853ca380c6915b582f1059b0f14c46334723244b`);
+- dispatched the next run automatically with `source=continuation`.
+
+Further autonomous commits were created for the same issue:
+
+- iteration 2: `83b20993fff8c19b4e1f6ec177a8d8d77396e8df`;
+- iteration 3: `7b0e9d8c52b033dfa78351d2a3a15c425cc86f90`.
+
+This proves that V4 can persist state and continue without a manual reopen.
+
+## Provider error handling now binding
+
+Groq HTTP 400 `tool_use_failed` is treated as a tool-serialization retry, not quota.
+The agent first retries with a compact dedicated state/progress tool rather than sending
+a large Markdown/JSON payload through `write_file(content=...)`.
+
+Provider stderr is classified by the **last decisive error**:
+
+- `TRANSIENT_QUOTA`;
+- `TOOL_FORMAT_RETRY`;
+- `PERMANENT_BLOCKED`.
+
+An earlier TPM/429 line can no longer mask a later HTTP 400 tool-format failure.
+Gemini is reserved for `PERMANENT_BLOCKED`.
+
+Post-merge run `37212594961` provided live proof of the transient path: Groq returned
+TPD HTTP 429, V4 classified it as `TRANSIENT_QUOTA`, skipped Gemini, entered the
+quota-wait path and automatically dispatched a quick retry.
+
+## Meaningful-progress contract
+
+The first three successful #482 commits showed a new weakness: they mostly changed
+`STATE.json` while restating the same data-coverage next step. That is no longer
+accepted as a committed research iteration.
+
+After PR #491, a successful iteration requires:
+
+1. a fresh/changed `STATE.json`; and
+2. substantive Issue-sandbox progress outside `STATE.json`/usage accounting.
+
+The compact `record_progress` tool appends evidence-backed checkpoints to
+`research/agent_runs/issue_<N>/PROGRESS.md`. Protocol/code/result artifacts also
+qualify. Merely rephrasing `next_step` does not.
+
+Issue #482 has already merged the new main into its persistent branch
+(`edf2a8d0fadf9bdffd57c54ad4b5e631676f6bea`) and autonomous quick-retry runs are
+running from main `011f27d15e5082fbd8dc827e30295e2050b6df5a`.
+
+## Current external limit
+
+Groq free tier is currently at the 200k tokens/day boundary. Live provider headers
+reported approximately `Used 199k / Limit 200000` and a provider retry window of
+roughly 35 minutes. This is an external temporary quota condition, not a V4 code
+failure. The waiting/heartbeat/quick-retry paths must handle it without Gemini.
+
+Still binding:
+
+- research only;
+- no production `.pkl` changes;
+- no automatic model promotion;
+- no Supabase writes;
+- no paid Odds API calls;
+- temporal/OOS/no-leakage contracts remain mandatory;
+- production promotion and automatic merge remain prohibited for research outputs.
+
+## Current execution pointer
+
+After Groq TPD recovers, the next #482 iteration must demonstrate the new contract by
+persisting a concrete coverage/protocol finding in `PROGRESS.md` (or another real
+Issue artifact), updating `STATE.json`, committing the iteration and dispatching the
+next continuation automatically. The next research task is still the frozen,
+outcome-free Bundesliga/Ligue 1 Bet365 column/coverage feasibility check.
+
