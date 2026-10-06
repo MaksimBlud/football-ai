@@ -251,8 +251,10 @@
       "status": "ACTIVE",
       "objective": "Determine whether a football-only probability estimate from an independent point-in-time source beats bookmaker 1X2 consensus on a frozen, mechanistically specified disagreement class.",
       "completed_issue_numbers": [],
-      "active_issue_numbers": [],
-      "current_frontier": "Duplicate audit excludes the existing odds-consuming Football AI, Elo/result trajectory, Football-Data shots/SOT, market-anchored La Liga residual and cross-book disagreement families. A genuinely independent path remains: prior-match Understat deep/deep_allowed/PPDA/PPDA_allowed passed zero-cost point-in-time feasibility across five leagues but has never been tested as a football-only 1X2 estimate against average-bookmaker consensus. The first child must freeze one symmetric tactical-pressure disagreement rule before outcome evaluation.",
+      "active_issue_numbers": [
+        568
+      ],
+      "current_frontier": "Issue #568 is the sole active child. It freezes a football-only five-league 1X2 estimate from prior-match Understat deep/deep_allowed/PPDA/PPDA_allowed, with average-bookmaker consensus as control and symmetric top-1 disagreement as the only test class. Development is 2019/20–2023/24, validation 2024/25 and untouched test 2025/26; all feature, support, uncertainty and cross-league gates are frozen before reserved outcomes.",
       "allowed_follow_up_classes": [
         "source_feasibility",
         "independent_football_estimate",
