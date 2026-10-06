@@ -1,0 +1,390 @@
+{
+  "decision": "NO_STABLE_CROSS_MARKET_MARGIN_STRUCTURE",
+  "evidence_class": "OUTCOME_FREE_CROSS_MARKET_MARGIN_TRANSPORT",
+  "experiment_id": "BOOKMAKER_MARGIN_MARKET_TYPE_TRANSPORT_V1",
+  "formal_gate": {
+    "gates": {
+      "at_least_two_leagues_same_sign": true,
+      "cross_market_contrast_reported": true,
+      "source_gate": true,
+      "test_ci_excludes_zero": false,
+      "total_overround_reported": true,
+      "validation_and_test_same_sign": true
+    },
+    "matching_test_leagues": 2,
+    "supported": false
+  },
+  "interpretation_guard": "The supported 1X2 parent effect did not clear every frozen Asian Handicap transport gate; the parent result is unchanged.",
+  "paid_odds_api_calls": 0,
+  "production_operations": false,
+  "production_promotion": false,
+  "reference": {
+    "by_league": {
+      "ah_allocation_delta": {
+        "EPL": -0.003461360195177754,
+        "LA_LIGA": -0.0032245665800368366,
+        "SERIE_A": -0.0018345388858947511
+      },
+      "ah_minus_x1_allocation_delta": {
+        "EPL": -0.020687632332488763,
+        "LA_LIGA": -0.02629088488970217,
+        "SERIE_A": -0.025836099660538188
+      },
+      "ah_overround_delta": {
+        "EPL": 0.004603167190897115,
+        "LA_LIGA": 0.0018100626204147607,
+        "SERIE_A": 0.0021360507333933187
+      },
+      "x1_allocation_delta": {
+        "EPL": 0.01722627213731101,
+        "LA_LIGA": 0.02306631830966533,
+        "SERIE_A": 0.024001560774643434
+      }
+    },
+    "fixtures": 1329,
+    "paired": {
+      "ah_allocation_delta": {
+        "ci95_high": -0.0018282347112158646,
+        "ci95_low": -0.0038856058305595637,
+        "draws": 5000,
+        "mean": -0.0028501724002665536,
+        "rows": 1329
+      },
+      "ah_minus_x1_allocation_delta": {
+        "ci95_high": -0.020565423521459514,
+        "ci95_low": -0.027748507553084563,
+        "draws": 5000,
+        "mean": -0.024185053187902563,
+        "rows": 1329
+      },
+      "ah_overround_delta": {
+        "ci95_high": 0.003387776641866492,
+        "ci95_low": 0.0024055535666661835,
+        "draws": 5000,
+        "mean": 0.0028924232871381933,
+        "rows": 1329
+      },
+      "x1_allocation_delta": {
+        "ci95_high": 0.025053628057135853,
+        "ci95_low": 0.017547574435274913,
+        "draws": 5000,
+        "mean": 0.021334880787636006,
+        "rows": 1329
+      }
+    }
+  },
+  "research_only": true,
+  "result": "RESEARCH_ONLY_NO_BET",
+  "source_audit": {
+    "external_consensus": "Football-Data Avg 1X2 columns",
+    "frozen_bookmakers": [
+      "BET365",
+      "PINNACLE"
+    ],
+    "intraday_snapshot_gaps": {
+      "1h": "No exact timestamped 1h snapshot in frozen source.",
+      "24h": "No exact timestamped 24h snapshot in frozen source.",
+      "6h": "No exact timestamped 6h snapshot in frozen source."
+    },
+    "outcome_columns_not_read": true,
+    "outcome_read_before_audit": false,
+    "paired_opening_ah_gate_passed": true,
+    "source_files": {
+      "EPL:2019-2020": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "EPL:2020-2021": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "EPL:2021-2022": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "EPL:2022-2023": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "EPL:2023-2024": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "EPL:2024-2025": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "EPL:2025-2026": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "LA_LIGA:2019-2020": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "LA_LIGA:2020-2021": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "LA_LIGA:2021-2022": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "LA_LIGA:2022-2023": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "LA_LIGA:2023-2024": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "LA_LIGA:2024-2025": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "LA_LIGA:2025-2026": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "SERIE_A:2019-2020": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "SERIE_A:2020-2021": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "SERIE_A:2021-2022": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "SERIE_A:2022-2023": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "SERIE_A:2023-2024": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "SERIE_A:2024-2025": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      },
+      "SERIE_A:2025-2026": {
+        "has_outcome_column": true,
+        "missing_required_price_columns": []
+      }
+    },
+    "source_files_ah": {
+      "EPL:2019-2020": {
+        "has_ah_line": true,
+        "missing_ah_price_columns": []
+      },
+      "EPL:2020-2021": {
+        "has_ah_line": true,
+        "missing_ah_price_columns": []
+      },
+      "EPL:2021-2022": {
+        "has_ah_line": true,
+        "missing_ah_price_columns": []
+      },
+      "EPL:2022-2023": {
+        "has_ah_line": true,
+        "missing_ah_price_columns": []
+      },
+      "EPL:2023-2024": {
+        "has_ah_line": true,
+        "missing_ah_price_columns": []
+      },
+      "EPL:2024-2025": {
+        "has_ah_line": true,
+        "missing_ah_price_columns": []
+      },
+      "EPL:2025-2026": {
+        "has_ah_line": true,
+        "missing_ah_price_columns": []
+      },
+      "LA_LIGA:2019-2020": {
+        "has_ah_line": true,
+        "missing_ah_price_columns": []
+      },
+      "LA_LIGA:2020-2021": {
+        "has_ah_line": true,
+        "missing_ah_price_columns": []
+      },
+      "LA_LIGA:2021-2022": {
+        "has_ah_line": true,
+        "missing_ah_price_columns": []
+      },
+      "LA_LIGA:2022-2023": {
+        "has_ah_line": true,
+        "missing_ah_price_columns": []
+      },
+      "LA_LIGA:2023-2024": {
+        "has_ah_line": true,
+        "missing_ah_price_columns": []
+      },
+      "LA_LIGA:2024-2025": {
+        "has_ah_line": true,
+        "missing_ah_price_columns": []
+      },
+      "LA_LIGA:2025-2026": {
+        "has_ah_line": true,
+        "missing_ah_price_columns": []
+      },
+      "SERIE_A:2019-2020": {
+        "has_ah_line": true,
+        "missing_ah_price_columns": []
+      },
+      "SERIE_A:2020-2021": {
+        "has_ah_line": true,
+        "missing_ah_price_columns": []
+      },
+      "SERIE_A:2021-2022": {
+        "has_ah_line": true,
+        "missing_ah_price_columns": []
+      },
+      "SERIE_A:2022-2023": {
+        "has_ah_line": true,
+        "missing_ah_price_columns": []
+      },
+      "SERIE_A:2023-2024": {
+        "has_ah_line": true,
+        "missing_ah_price_columns": []
+      },
+      "SERIE_A:2024-2025": {
+        "has_ah_line": true,
+        "missing_ah_price_columns": []
+      },
+      "SERIE_A:2025-2026": {
+        "has_ah_line": true,
+        "missing_ah_price_columns": []
+      }
+    },
+    "validation_test_column_gate_passed": true
+  },
+  "supabase_writes": 0,
+  "supported": false,
+  "temporal_design": {
+    "primary_horizon": "opening",
+    "reference": [
+      "2019-2020",
+      "2020-2021",
+      "2021-2022",
+      "2022-2023",
+      "2023-2024"
+    ],
+    "untouched_test": "2025-2026",
+    "validation": "2024-2025"
+  },
+  "test": {
+    "by_league": {
+      "ah_allocation_delta": {
+        "EPL": -0.0049010219867221235,
+        "LA_LIGA": -0.0020940300746780075,
+        "SERIE_A": 0.0002899963686851104
+      },
+      "ah_minus_x1_allocation_delta": {
+        "EPL": -0.011458121813626657,
+        "LA_LIGA": -0.02226417520716136,
+        "SERIE_A": -0.005148536543159971
+      },
+      "ah_overround_delta": {
+        "EPL": 0.01520260878583754,
+        "LA_LIGA": 0.017053566607974982,
+        "SERIE_A": 0.01674830534044715
+      },
+      "x1_allocation_delta": {
+        "EPL": 0.006557099826904534,
+        "LA_LIGA": 0.020170145132483355,
+        "SERIE_A": 0.005438532911845082
+      }
+    },
+    "fixtures": 136,
+    "paired": {
+      "ah_allocation_delta": {
+        "ci95_high": 0.0009715328711882354,
+        "ci95_low": -0.005305296228734681,
+        "draws": 5000,
+        "mean": -0.002270171731634581,
+        "rows": 136
+      },
+      "ah_minus_x1_allocation_delta": {
+        "ci95_high": -0.004291547492243208,
+        "ci95_low": -0.01948164926885229,
+        "draws": 5000,
+        "mean": -0.011919390969879455,
+        "rows": 136
+      },
+      "ah_overround_delta": {
+        "ci95_high": 0.017326868262525812,
+        "ci95_low": 0.015268661127101683,
+        "draws": 5000,
+        "mean": 0.01624722901749409,
+        "rows": 136
+      },
+      "x1_allocation_delta": {
+        "ci95_high": 0.01756291237485447,
+        "ci95_low": 0.001833947687394779,
+        "draws": 5000,
+        "mean": 0.009649219238244872,
+        "rows": 136
+      }
+    }
+  },
+  "validation": {
+    "by_league": {
+      "ah_allocation_delta": {
+        "EPL": -0.0019630948451972194,
+        "LA_LIGA": 0.001551073388767758,
+        "SERIE_A": -0.002210970345674479
+      },
+      "ah_minus_x1_allocation_delta": {
+        "EPL": -0.030368497839229323,
+        "LA_LIGA": -0.015571158917948379,
+        "SERIE_A": -0.010162072982318077
+      },
+      "ah_overround_delta": {
+        "EPL": 0.002296851223006057,
+        "LA_LIGA": 0.004919808437435637,
+        "SERIE_A": 0.0043367915473298616
+      },
+      "x1_allocation_delta": {
+        "EPL": 0.028405402994032103,
+        "LA_LIGA": 0.017122232306716133,
+        "SERIE_A": 0.007951102636643599
+      }
+    },
+    "fixtures": 281,
+    "paired": {
+      "ah_allocation_delta": {
+        "ci95_high": 0.0007340622069088173,
+        "ci95_low": -0.002642881234971786,
+        "draws": 5000,
+        "mean": -0.0010008080779184572,
+        "rows": 281
+      },
+      "ah_minus_x1_allocation_delta": {
+        "ci95_high": -0.011611088374675825,
+        "ci95_low": -0.026067681501939104,
+        "draws": 5000,
+        "mean": -0.018754195507988312,
+        "rows": 281
+      },
+      "ah_overround_delta": {
+        "ci95_high": 0.004854392250835581,
+        "ci95_low": 0.002824486394237688,
+        "draws": 5000,
+        "mean": 0.0038068954879329794,
+        "rows": 281
+      },
+      "x1_allocation_delta": {
+        "ci95_high": 0.025120447625250838,
+        "ci95_low": 0.010394095660503491,
+        "draws": 5000,
+        "mean": 0.017753387430069854,
+        "rows": 281
+      }
+    }
+  }
+}
