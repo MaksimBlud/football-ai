@@ -221,6 +221,29 @@
         "Do not use paid data, Supabase writes, production model operations or automatic promotion."
       ],
       "program_done_reason": "The only preregistered independent cross-league representation in this direction failed its untouched-test, uncertainty and cross-league consistency gates after passing source/leakage checks. Source feasibility, process-result divergence, cross-league validation and temporal stability were all completed by Issue #562. Economic-value work is forbidden because the full probability gate failed. Further changes to window, formula, sign, thresholds, league subset or feature subset would be post-hoc retuning of opened outcomes, so no genuinely independent allowed follow-up remains."
+    },
+    {
+      "program_id": "team_change_faster_than_market",
+      "title": "Direction 2: team change faster than market",
+      "status": "PROGRAM_DONE",
+      "objective": "Determine whether genuinely point-in-time abrupt team changes are incorporated slowly enough to add stable 1X2 probability information beyond the bookmaker market.",
+      "completed_issue_numbers": [],
+      "current_frontier": "The repository already proves an exact source gap for manager/coach, confirmed lineup, player availability and tactical-state history: existing Football-Data schemas contain none of those fields with pre-kickoff provenance. The separately frozen prospective availability lab remains externally gated by absent Supabase tables and unavailable free-plan injury coverage, and this Brain may not write Supabase. Zero-cost process proxies are not independent: TEAM_STRENGTH_TRAJECTORY_V1, SHOT_QUALITY_PROXY_V1, closed trajectory×shot interactions and Issue #562 already cover leakage-safe trajectory/process families without stable market-incremental support.",
+      "allowed_follow_up_classes": [
+        "source_feasibility",
+        "manager_change",
+        "player_availability",
+        "lineup_or_tactical_shift",
+        "sharp_process_shift"
+      ],
+      "stop_rules": [
+        "Require a genuine archived pre-kickoff timestamp or first-seen timestamp for every abrupt-change observation.",
+        "Do not reconstruct historical availability from later injury start/end dates, present-day rosters or post-match sources.",
+        "Do not relabel generic team aggregates, rolling form, shots or SOT as manager, lineup, tactical or availability information.",
+        "Do not reopen tested trajectory/process families with post-hoc windows, thresholds, signs, interactions or change-points on opened outcomes.",
+        "Do not use paid data or Supabase writes without fresh explicit user approval."
+      ],
+      "program_done_reason": "All permitted mechanisms are either already source-gated or materially answered. Manager, lineup, availability and tactical changes lack a zero-cost timestamp-safe historical source; the valid prospective availability experiment already exists but cannot activate under current schema/provider authority; and sharp-process substitutes duplicate opened trajectory/SOT families that failed to establish stable value beyond market. A new child would therefore invent an unsafe proxy, duplicate an externally gated experiment or expand an opened family post-hoc. Reopening requires a genuinely new archived or prospectively accumulated point-in-time source."
     }
   ]
 }
