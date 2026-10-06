@@ -174,15 +174,13 @@
     {
       "program_id": "bookmaker_market_microstructure_4_margin_structure",
       "title": "4. Bookmaker margin structure research program",
-      "status": "ACTIVE",
+      "status": "PROGRAM_DONE",
       "objective": "Test whether bookmakers systematically differ in total 1X2 margin and in how that margin is allocated across favourites, draws and longshots on the same matches.",
       "completed_issue_numbers": [
-        535
-      ],
-      "active_issue_numbers": [
+        535,
         548
       ],
-      "current_frontier": "Issue #535 completed the matched-fixture Bet365/Pinnacle 1X2 study with SUPPORTED_BOOKMAKER_MARGIN_HETEROGENEITY. On untouched 2025/26 closing prices, the Bet365-minus-Pinnacle allocation contrast was +0.02035 with a 95% CI of [+0.01323, +0.02733]; validation, opening, alternate-consensus and all three league-sign gates agreed. The result is observational market structure, not intent or a betting edge. Issue #548 is the active independent market-type transport: it freezes same-fixture opening Asian Handicap Bet365/Pinnacle fields and tests whether the 1X2 allocation signature generalizes without changing the parent result.",
+      "current_frontier": "Issue #535 established stable matched-fixture Bet365/Pinnacle 1X2 margin-allocation heterogeneity, including a separate draw-pricing report, opening/closing comparison, temporal validation/OOT stability and alternate-consensus sensitivity. Issue #548 then completed the independent same-fixture Asian Handicap transport: the source gate passed and the validation/OOT pooled signs agreed, but the untouched-test AH effect was -0.00227 with a 95% CI of [-0.00531, +0.00097], so NO_STABLE_CROSS_MARKET_MARGIN_STRUCTURE. The supported 1X2 result remains observational and market-specific; no betting edge or production change is supported.",
       "allowed_follow_up_classes": [
         "source_feasibility",
         "paired_bookmaker_comparison",
@@ -196,7 +194,8 @@
         "Do not make causal claims about demand elasticity or bookmaker intent from observational prices alone.",
         "Do not use paid data without fresh explicit user approval.",
         "Any weighting/calibration change is research-only and requires a separate untouched promotion study."
-      ]
+      ],
+      "program_done_reason": "All permitted zero-cost independent classes are exhausted. Issue #535 already completed source feasibility, matched bookmaker comparison, draw-specific pricing, opening-versus-closing temporal stability and alternate-consensus checks. Issue #548 completed the remaining independent market-type comparison and failed its frozen untouched-test CI gate. Repeating the 1X2 result, subdividing the already-opened outcomes, changing bookmakers after outcome inspection or retuning the AH contract would not be independent; broader exact timestamp/bookmaker coverage would require new data outside the current zero-cost source. The program therefore closes research-only with the supported 1X2 structural result unchanged and no production or betting authorization."
     }
   ]
 }
