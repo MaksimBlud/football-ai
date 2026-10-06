@@ -24,8 +24,10 @@ def _half_goal(value: Any) -> float | None:
         line = float(value)
     except (TypeError, ValueError):
         return None
+    if not math.isfinite(line):
+        return None
     twice = round(line * 2.0)
-    if not math.isfinite(line) or abs(line * 2.0 - twice) > 1e-9 or twice % 2 == 0:
+    if abs(line * 2.0 - twice) > 1e-9 or twice % 2 == 0:
         return None
     return line
 
