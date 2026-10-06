@@ -80,5 +80,6 @@ def test_evaluate_fails_closed_before_outcomes_without_third_book(monkeypatch):
     monkeypatch.setattr(mod, "_build_rows", lambda *_args: (_ for _ in ()).throw(AssertionError("outcomes read")))
     result = mod.evaluate()
     assert result["decision"] == "BLOCKED_BY_SOURCE_GAP"
+    assert result["included_bookmakers"] == []
     assert result["source_audit"]["outcome_read_before_audit"] is False
 
