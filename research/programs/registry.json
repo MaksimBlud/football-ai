@@ -244,6 +244,30 @@
         "Do not use paid data or Supabase writes without fresh explicit user approval."
       ],
       "program_done_reason": "All permitted mechanisms are either already source-gated or materially answered. Manager, lineup, availability and tactical changes lack a zero-cost timestamp-safe historical source; the valid prospective availability experiment already exists but cannot activate under current schema/provider authority; and sharp-process substitutes duplicate opened trajectory/SOT families that failed to establish stable value beyond market. A new child would therefore invent an unsafe proxy, duplicate an externally gated experiment or expand an opened family post-hoc. Reopening requires a genuinely new archived or prospectively accumulated point-in-time source."
+    },
+    {
+      "program_id": "independent_information_source_disagreement",
+      "title": "Direction 3: disagreement among independent information sources",
+      "status": "ACTIVE",
+      "objective": "Determine whether a football-only probability estimate from an independent point-in-time source beats bookmaker 1X2 consensus on a frozen, mechanistically specified disagreement class.",
+      "completed_issue_numbers": [],
+      "active_issue_numbers": [],
+      "current_frontier": "Duplicate audit excludes the existing odds-consuming Football AI, Elo/result trajectory, Football-Data shots/SOT, market-anchored La Liga residual and cross-book disagreement families. A genuinely independent path remains: prior-match Understat deep/deep_allowed/PPDA/PPDA_allowed passed zero-cost point-in-time feasibility across five leagues but has never been tested as a football-only 1X2 estimate against average-bookmaker consensus. The first child must freeze one symmetric tactical-pressure disagreement rule before outcome evaluation.",
+      "allowed_follow_up_classes": [
+        "source_feasibility",
+        "independent_football_estimate",
+        "mechanism_specific_disagreement",
+        "cross_league_validation",
+        "temporal_stability"
+      ],
+      "stop_rules": [
+        "Use bookmaker consensus as the control and keep the football estimate independent of bookmaker odds.",
+        "Do not select disagreement type, outcome side, quantile, threshold, league subset or sign after outcomes are inspected.",
+        "Do not reuse the project's odds-consuming AI model as an independent information source.",
+        "Do not train a market-correction or blend-weight model inside Direction 3; that architecture is reserved for Direction 4.",
+        "Do not use 2026/27 outcomes, paid data, Supabase writes, production model operations or automatic promotion.",
+        "Mark PROGRAM_DONE if the frozen independent source fails validation/untouched-test gates or no further genuinely independent zero-cost source remains."
+      ]
     }
   ]
 }
