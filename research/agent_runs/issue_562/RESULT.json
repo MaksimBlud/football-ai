@@ -1,0 +1,298 @@
+{
+  "decision": "NO_STABLE_MARKET_RESIDUAL_PROCESS_DIVERGENCE",
+  "evidence_class": "TEMPORAL_OOS_MARKET_INCREMENTAL_PROCESS_DIVERGENCE",
+  "experiment_id": "MARKET_RESIDUAL_PROCESS_DIVERGENCE_V1",
+  "feature_contract": {
+    "divergence": "sot_share_5 - points_rate_5",
+    "points_rate": "points_won / 15",
+    "same_season_only": true,
+    "sot_share": "sum(SOT_for) / (sum(SOT_for) + sum(SOT_against))",
+    "window": 5
+  },
+  "formal_gate": {
+    "gates": {
+      "no_positive_test_league_log_loss_delta": false,
+      "source_and_leakage_checks_pass": true,
+      "test_brier_improves": false,
+      "test_log_loss_ci95_upper_below_zero": false,
+      "test_log_loss_improves": false,
+      "validation_brier_improves": true,
+      "validation_log_loss_improves": true
+    },
+    "supported": false
+  },
+  "interpretation_guard": "The frozen process-vs-results representation did not pass every validation, untouched-test, uncertainty and cross-league gate; do not retune it on these outcomes.",
+  "paid_odds_api_calls": 0,
+  "production_operations": false,
+  "production_promotion": false,
+  "research_only": true,
+  "result": "RESEARCH_ONLY_NO_BET",
+  "source_audit": {
+    "coverage": {
+      "BUNDESLIGA:2019-2020": {
+        "eligible_rows": 261,
+        "raw_rows": 306
+      },
+      "BUNDESLIGA:2020-2021": {
+        "eligible_rows": 261,
+        "raw_rows": 306
+      },
+      "BUNDESLIGA:2021-2022": {
+        "eligible_rows": 261,
+        "raw_rows": 306
+      },
+      "BUNDESLIGA:2022-2023": {
+        "eligible_rows": 261,
+        "raw_rows": 306
+      },
+      "BUNDESLIGA:2023-2024": {
+        "eligible_rows": 261,
+        "raw_rows": 306
+      },
+      "BUNDESLIGA:2024-2025": {
+        "eligible_rows": 251,
+        "raw_rows": 306
+      },
+      "BUNDESLIGA:2025-2026": {
+        "eligible_rows": 261,
+        "raw_rows": 306
+      },
+      "LIGUE_1:2019-2020": {
+        "eligible_rows": 229,
+        "raw_rows": 279
+      },
+      "LIGUE_1:2020-2021": {
+        "eligible_rows": 329,
+        "raw_rows": 380
+      },
+      "LIGUE_1:2021-2022": {
+        "eligible_rows": 329,
+        "raw_rows": 380
+      },
+      "LIGUE_1:2022-2023": {
+        "eligible_rows": 329,
+        "raw_rows": 380
+      },
+      "LIGUE_1:2023-2024": {
+        "eligible_rows": 261,
+        "raw_rows": 306
+      },
+      "LIGUE_1:2024-2025": {
+        "eligible_rows": 261,
+        "raw_rows": 306
+      },
+      "LIGUE_1:2025-2026": {
+        "eligible_rows": 261,
+        "raw_rows": 306
+      }
+    },
+    "files": {
+      "BUNDESLIGA:2019-2020": {
+        "market_triplet": [
+          "B365H",
+          "B365D",
+          "B365A"
+        ],
+        "missing_required_columns": []
+      },
+      "BUNDESLIGA:2020-2021": {
+        "market_triplet": [
+          "B365H",
+          "B365D",
+          "B365A"
+        ],
+        "missing_required_columns": []
+      },
+      "BUNDESLIGA:2021-2022": {
+        "market_triplet": [
+          "B365H",
+          "B365D",
+          "B365A"
+        ],
+        "missing_required_columns": []
+      },
+      "BUNDESLIGA:2022-2023": {
+        "market_triplet": [
+          "B365H",
+          "B365D",
+          "B365A"
+        ],
+        "missing_required_columns": []
+      },
+      "BUNDESLIGA:2023-2024": {
+        "market_triplet": [
+          "B365H",
+          "B365D",
+          "B365A"
+        ],
+        "missing_required_columns": []
+      },
+      "BUNDESLIGA:2024-2025": {
+        "market_triplet": [
+          "B365H",
+          "B365D",
+          "B365A"
+        ],
+        "missing_required_columns": []
+      },
+      "BUNDESLIGA:2025-2026": {
+        "market_triplet": [
+          "B365H",
+          "B365D",
+          "B365A"
+        ],
+        "missing_required_columns": []
+      },
+      "LIGUE_1:2019-2020": {
+        "market_triplet": [
+          "B365H",
+          "B365D",
+          "B365A"
+        ],
+        "missing_required_columns": []
+      },
+      "LIGUE_1:2020-2021": {
+        "market_triplet": [
+          "B365H",
+          "B365D",
+          "B365A"
+        ],
+        "missing_required_columns": []
+      },
+      "LIGUE_1:2021-2022": {
+        "market_triplet": [
+          "B365H",
+          "B365D",
+          "B365A"
+        ],
+        "missing_required_columns": []
+      },
+      "LIGUE_1:2022-2023": {
+        "market_triplet": [
+          "B365H",
+          "B365D",
+          "B365A"
+        ],
+        "missing_required_columns": []
+      },
+      "LIGUE_1:2023-2024": {
+        "market_triplet": [
+          "B365H",
+          "B365D",
+          "B365A"
+        ],
+        "missing_required_columns": []
+      },
+      "LIGUE_1:2024-2025": {
+        "market_triplet": [
+          "B365H",
+          "B365D",
+          "B365A"
+        ],
+        "missing_required_columns": []
+      },
+      "LIGUE_1:2025-2026": {
+        "market_triplet": [
+          "B365H",
+          "B365D",
+          "B365A"
+        ],
+        "missing_required_columns": []
+      }
+    },
+    "header_gate_passed": true,
+    "leagues": [
+      "BUNDESLIGA",
+      "LIGUE_1"
+    ],
+    "outcome_read_after_audit": true,
+    "outcome_read_before_audit": false,
+    "required_columns": [
+      "AS",
+      "AST",
+      "AwayTeam",
+      "B365A",
+      "B365D",
+      "B365H",
+      "Date",
+      "FTR",
+      "HS",
+      "HST",
+      "HomeTeam"
+    ],
+    "seasons": [
+      "2019-2020",
+      "2020-2021",
+      "2021-2022",
+      "2022-2023",
+      "2023-2024",
+      "2024-2025",
+      "2025-2026"
+    ]
+  },
+  "supabase_writes": 0,
+  "supported": false,
+  "temporal_design": {
+    "development": [
+      "2019-2020",
+      "2020-2021",
+      "2021-2022",
+      "2022-2023",
+      "2023-2024"
+    ],
+    "opened_2026_27_outcomes": false,
+    "untouched_test": "2025-2026",
+    "validation": "2024-2025"
+  },
+  "test": {
+    "bootstrap": {
+      "ci95_high": 0.010103681804154538,
+      "ci95_low": 0.0003463041449498434,
+      "draws": 5000
+    },
+    "by_league": {
+      "BUNDESLIGA": {
+        "candidate_minus_market_brier": -6.045048424721501e-05,
+        "candidate_minus_market_log_loss": -0.0008175256477337083,
+        "rows": 261
+      },
+      "LIGUE_1": {
+        "candidate_minus_market_brier": 0.005917352819325867,
+        "candidate_minus_market_log_loss": 0.011224917695008302,
+        "rows": 261
+      }
+    },
+    "candidate_accuracy": 0.5383141762452107,
+    "candidate_brier": 0.584341185081724,
+    "candidate_log_loss": 0.9826910587364593,
+    "candidate_minus_market_brier": 0.0029284511675393265,
+    "candidate_minus_market_log_loss": 0.005203696023637298,
+    "market_model_accuracy": 0.5402298850574713,
+    "market_model_brier": 0.5814127339141847,
+    "market_model_log_loss": 0.9774873627128221,
+    "rows": 522
+  },
+  "validation": {
+    "by_league": {
+      "BUNDESLIGA": {
+        "candidate_minus_market_brier": -0.0005811253304431896,
+        "candidate_minus_market_log_loss": -0.0011183933665545663,
+        "rows": 251
+      },
+      "LIGUE_1": {
+        "candidate_minus_market_brier": 0.00032630802092637796,
+        "candidate_minus_market_log_loss": 0.0002458474992366957,
+        "rows": 261
+      }
+    },
+    "candidate_accuracy": 0.517578125,
+    "candidate_brier": 0.585656037198834,
+    "candidate_log_loss": 0.9850973021496015,
+    "candidate_minus_market_brier": -0.00011854700093643741,
+    "candidate_minus_market_log_loss": -0.00042295026895394235,
+    "market_model_accuracy": 0.521484375,
+    "market_model_brier": 0.5857745841997704,
+    "market_model_log_loss": 0.9855202524185553,
+    "rows": 512
+  }
+}
