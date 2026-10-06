@@ -95,15 +95,13 @@
     {
       "program_id": "bookmaker_market_microstructure_1_price_formation",
       "title": "1. Bookmaker price formation research program",
-      "status": "ACTIVE",
+      "status": "PROGRAM_DONE",
       "objective": "Test whether football odds movement contains separable common-information, bookmaker-specific repricing and margin components, without claiming unobserved bet-flow causality.",
       "completed_issue_numbers": [
-        532
-      ],
-      "active_issue_numbers": [
+        532,
         553
       ],
-      "current_frontier": "Issue #532 completed the frozen EPL/La Liga/Serie A Bet365/Pinnacle decomposition with NO_STABLE_BOOKMAKER_SPECIFIC_PRICE_COMPONENT. Bookmaker-specific variance was non-trivial and not explained by overround alone, but common movement did not deliver stable untouched-OOT outcome improvement and only one league improved. Issue #553 is the active independent cross-bookmaker/cross-league transport to Bundesliga/Ligue 1 and requires at least one additional exact opening+closing bookmaker beyond Bet365/Pinnacle; #532 remains binding.",
+      "current_frontier": "Issue #532 completed the frozen Bet365/Pinnacle opening-to-closing decomposition across EPL, La Liga and Serie A with NO_STABLE_BOOKMAKER_SPECIFIC_PRICE_COMPONENT. Bookmaker-specific variance was non-trivial and not explained by overround alone, but common movement did not pass the untouched-OOT stability gate and only one league improved. Issue #553 then attempted the independent Bundesliga/Ligue 1 cross-book transport, but correctly stopped before reading outcomes: none of BW, IW, WH or VC met the frozen >=90% paired opening+closing coverage requirement in both OOS seasons and both leagues, so the terminal result is BLOCKED_BY_SOURCE_GAP. No economic-value or production claim is supported.",
       "allowed_follow_up_classes": [
         "source_feasibility",
         "price_component_decomposition",
@@ -117,7 +115,8 @@
         "Do not select bookmakers, leagues or probability bands after reading OOT outcomes.",
         "Do not use paid data without fresh explicit user approval.",
         "Do not promote any resulting feature to production inside this program."
-      ]
+      ],
+      "program_done_reason": "All permitted zero-cost independent classes are exhausted. Issue #532 completed price-component decomposition and temporal stability; Issue #553 completed source feasibility for cross-bookmaker transport and proved the available source cannot satisfy its preregistered third-book gate. The economic_value_if_statistically_supported class is unavailable because #532 did not establish stable statistical support and #553 could not pass its outcome-free source gate. Repeating Bet365/Pinnacle, lowering the frozen coverage threshold, choosing books or leagues after inspection, or reusing opened outcomes would be duplicate or post-hoc; broader exact opening/closing coverage requires new data, and paid data is prohibited without fresh explicit approval. The program closes research-only with no production or betting authorization."
     },
     {
       "program_id": "bookmaker_market_microstructure_2_devig",
