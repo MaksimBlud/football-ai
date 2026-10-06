@@ -1,0 +1,1041 @@
+{
+  "control_contract": {
+    "devig": "multiplicative",
+    "odds_fields": [
+      "AvgH",
+      "AvgD",
+      "AvgA"
+    ],
+    "source": "Football-Data average bookmaker 1X2"
+  },
+  "decision": "NO_STABLE_INDEPENDENT_TACTICAL_DISAGREEMENT_EDGE",
+  "disagreement_contract": "football_argmax != market_argmax",
+  "evidence_class": "INDEPENDENT_FOOTBALL_ESTIMATE_VS_MARKET_DISAGREEMENT",
+  "experiment_id": "INDEPENDENT_TACTICAL_PRESSURE_DISAGREEMENT_V1",
+  "feature_contract": {
+    "features": [
+      "home_deep_last5",
+      "home_deep_allowed_last5",
+      "home_ppda_last5",
+      "home_ppda_allowed_last5",
+      "away_deep_last5",
+      "away_deep_allowed_last5",
+      "away_ppda_last5",
+      "away_ppda_allowed_last5",
+      "diff_deep_last5",
+      "diff_deep_allowed_last5",
+      "diff_ppda_last5",
+      "diff_ppda_allowed_last5"
+    ],
+    "fields": [
+      "deep",
+      "deep_allowed",
+      "ppda",
+      "ppda_allowed"
+    ],
+    "same_season_only": true,
+    "source": "Understat public league team history",
+    "uses_bookmaker_inputs": false,
+    "window": 5
+  },
+  "formal_gate": {
+    "gates": {
+      "at_least_four_negative_test_leagues": false,
+      "no_test_league_delta_above_0_01": false,
+      "test_brier_improves": false,
+      "test_log_loss_ci95_upper_below_zero": false,
+      "test_log_loss_improves": false,
+      "validation_brier_improves": false,
+      "validation_log_loss_improves": false
+    },
+    "supported": false
+  },
+  "interpretation_guard": "The frozen independent tactical estimate failed at least one preregistered validation, untouched-test, uncertainty or cross-league gate; do not tune the disagreement class on these outcomes.",
+  "paid_odds_api_calls": 0,
+  "production_operations": false,
+  "production_promotion": false,
+  "research_only": true,
+  "result": "RESEARCH_ONLY_NO_BET",
+  "source_audit": {
+    "coverage": {
+      "BUNDESLIGA:2019": {
+        "eligible_rows": 232,
+        "identity_matched_rows": 272,
+        "raw_rows": 306
+      },
+      "BUNDESLIGA:2020": {
+        "eligible_rows": 205,
+        "identity_matched_rows": 240,
+        "raw_rows": 306
+      },
+      "BUNDESLIGA:2021": {
+        "eligible_rows": 178,
+        "identity_matched_rows": 210,
+        "raw_rows": 306
+      },
+      "BUNDESLIGA:2022": {
+        "eligible_rows": 232,
+        "identity_matched_rows": 272,
+        "raw_rows": 306
+      },
+      "BUNDESLIGA:2023": {
+        "eligible_rows": 205,
+        "identity_matched_rows": 240,
+        "raw_rows": 306
+      },
+      "BUNDESLIGA:2024": {
+        "eligible_rows": 205,
+        "identity_matched_rows": 240,
+        "raw_rows": 306
+      },
+      "BUNDESLIGA:2025": {
+        "eligible_rows": 205,
+        "identity_matched_rows": 240,
+        "raw_rows": 306
+      },
+      "EPL:2019": {
+        "eligible_rows": 266,
+        "identity_matched_rows": 306,
+        "raw_rows": 380
+      },
+      "EPL:2020": {
+        "eligible_rows": 208,
+        "identity_matched_rows": 240,
+        "raw_rows": 380
+      },
+      "EPL:2021": {
+        "eligible_rows": 236,
+        "identity_matched_rows": 272,
+        "raw_rows": 380
+      },
+      "EPL:2022": {
+        "eligible_rows": 237,
+        "identity_matched_rows": 272,
+        "raw_rows": 380
+      },
+      "EPL:2023": {
+        "eligible_rows": 296,
+        "identity_matched_rows": 342,
+        "raw_rows": 380
+      },
+      "EPL:2024": {
+        "eligible_rows": 266,
+        "identity_matched_rows": 306,
+        "raw_rows": 380
+      },
+      "EPL:2025": {
+        "eligible_rows": 266,
+        "identity_matched_rows": 306,
+        "raw_rows": 380
+      },
+      "LA_LIGA:2019": {
+        "eligible_rows": 297,
+        "identity_matched_rows": 342,
+        "raw_rows": 380
+      },
+      "LA_LIGA:2020": {
+        "eligible_rows": 262,
+        "identity_matched_rows": 306,
+        "raw_rows": 380
+      },
+      "LA_LIGA:2021": {
+        "eligible_rows": 328,
+        "identity_matched_rows": 380,
+        "raw_rows": 380
+      },
+      "LA_LIGA:2022": {
+        "eligible_rows": 297,
+        "identity_matched_rows": 342,
+        "raw_rows": 380
+      },
+      "LA_LIGA:2023": {
+        "eligible_rows": 329,
+        "identity_matched_rows": 380,
+        "raw_rows": 380
+      },
+      "LA_LIGA:2024": {
+        "eligible_rows": 297,
+        "identity_matched_rows": 342,
+        "raw_rows": 380
+      },
+      "LA_LIGA:2025": {
+        "eligible_rows": 296,
+        "identity_matched_rows": 342,
+        "raw_rows": 380
+      },
+      "LIGUE_1:2019": {
+        "eligible_rows": 229,
+        "identity_matched_rows": 279,
+        "raw_rows": 279
+      },
+      "LIGUE_1:2020": {
+        "eligible_rows": 330,
+        "identity_matched_rows": 380,
+        "raw_rows": 380
+      },
+      "LIGUE_1:2021": {
+        "eligible_rows": 296,
+        "identity_matched_rows": 342,
+        "raw_rows": 380
+      },
+      "LIGUE_1:2022": {
+        "eligible_rows": 296,
+        "identity_matched_rows": 342,
+        "raw_rows": 380
+      },
+      "LIGUE_1:2023": {
+        "eligible_rows": 232,
+        "identity_matched_rows": 272,
+        "raw_rows": 306
+      },
+      "LIGUE_1:2024": {
+        "eligible_rows": 261,
+        "identity_matched_rows": 306,
+        "raw_rows": 306
+      },
+      "LIGUE_1:2025": {
+        "eligible_rows": 261,
+        "identity_matched_rows": 306,
+        "raw_rows": 306
+      },
+      "SERIE_A:2019": {
+        "eligible_rows": 266,
+        "identity_matched_rows": 306,
+        "raw_rows": 380
+      },
+      "SERIE_A:2020": {
+        "eligible_rows": 295,
+        "identity_matched_rows": 342,
+        "raw_rows": 380
+      },
+      "SERIE_A:2021": {
+        "eligible_rows": 296,
+        "identity_matched_rows": 342,
+        "raw_rows": 380
+      },
+      "SERIE_A:2022": {
+        "eligible_rows": 297,
+        "identity_matched_rows": 342,
+        "raw_rows": 380
+      },
+      "SERIE_A:2023": {
+        "eligible_rows": 297,
+        "identity_matched_rows": 342,
+        "raw_rows": 380
+      },
+      "SERIE_A:2024": {
+        "eligible_rows": 297,
+        "identity_matched_rows": 342,
+        "raw_rows": 380
+      },
+      "SERIE_A:2025": {
+        "eligible_rows": 297,
+        "identity_matched_rows": 342,
+        "raw_rows": 380
+      }
+    },
+    "disagreement_support": {
+      "minimum_per_league_disagreements": 8,
+      "minimum_split_disagreements": 50,
+      "passed": true,
+      "splits": {
+        "test": {
+          "by_league": {
+            "BUNDESLIGA": 52,
+            "EPL": 66,
+            "LA_LIGA": 64,
+            "LIGUE_1": 51,
+            "SERIE_A": 53
+          },
+          "disagreement_rows": 286,
+          "eligible_rows": 1325,
+          "support_gate_passed": true
+        },
+        "validation": {
+          "by_league": {
+            "BUNDESLIGA": 49,
+            "EPL": 50,
+            "LA_LIGA": 66,
+            "LIGUE_1": 44,
+            "SERIE_A": 59
+          },
+          "disagreement_rows": 268,
+          "eligible_rows": 1326,
+          "support_gate_passed": true
+        }
+      }
+    },
+    "football_data_files": {
+      "BUNDESLIGA:2019": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "BUNDESLIGA:2020": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "BUNDESLIGA:2021": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "BUNDESLIGA:2022": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "BUNDESLIGA:2023": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "BUNDESLIGA:2024": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "BUNDESLIGA:2025": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "EPL:2019": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "EPL:2020": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "EPL:2021": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "EPL:2022": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "EPL:2023": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "EPL:2024": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "EPL:2025": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "LA_LIGA:2019": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "LA_LIGA:2020": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "LA_LIGA:2021": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "LA_LIGA:2022": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "LA_LIGA:2023": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "LA_LIGA:2024": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "LA_LIGA:2025": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "LIGUE_1:2019": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "LIGUE_1:2020": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "LIGUE_1:2021": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "LIGUE_1:2022": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "LIGUE_1:2023": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "LIGUE_1:2024": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "LIGUE_1:2025": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "SERIE_A:2019": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "SERIE_A:2020": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "SERIE_A:2021": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "SERIE_A:2022": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "SERIE_A:2023": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "SERIE_A:2024": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      },
+      "SERIE_A:2025": {
+        "market_triplet": [
+          "AvgH",
+          "AvgD",
+          "AvgA"
+        ],
+        "missing_required_columns": []
+      }
+    },
+    "header_and_schema_gate_passed": true,
+    "opened_2026_27_outcomes": false,
+    "outcome_read_before_audit": false,
+    "required_understat_fields": [
+      "deep",
+      "deep_allowed",
+      "ppda",
+      "ppda_allowed"
+    ],
+    "reserved_outcomes_read_after_support_gate": true,
+    "reserved_outcomes_read_before_support_gate": false,
+    "understat_files": {
+      "BUNDESLIGA:2019": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 18,
+        "valid_tactical_rows": 612
+      },
+      "BUNDESLIGA:2020": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 18,
+        "valid_tactical_rows": 612
+      },
+      "BUNDESLIGA:2021": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 18,
+        "valid_tactical_rows": 612
+      },
+      "BUNDESLIGA:2022": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 18,
+        "valid_tactical_rows": 612
+      },
+      "BUNDESLIGA:2023": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 18,
+        "valid_tactical_rows": 612
+      },
+      "BUNDESLIGA:2024": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 18,
+        "valid_tactical_rows": 610
+      },
+      "BUNDESLIGA:2025": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 18,
+        "valid_tactical_rows": 612
+      },
+      "EPL:2019": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "EPL:2020": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "EPL:2021": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "EPL:2022": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "EPL:2023": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "EPL:2024": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "EPL:2025": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "LA_LIGA:2019": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "LA_LIGA:2020": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "LA_LIGA:2021": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "LA_LIGA:2022": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "LA_LIGA:2023": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "LA_LIGA:2024": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "LA_LIGA:2025": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "LIGUE_1:2019": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 558
+      },
+      "LIGUE_1:2020": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "LIGUE_1:2021": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "LIGUE_1:2022": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "LIGUE_1:2023": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 18,
+        "valid_tactical_rows": 612
+      },
+      "LIGUE_1:2024": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 18,
+        "valid_tactical_rows": 612
+      },
+      "LIGUE_1:2025": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 18,
+        "valid_tactical_rows": 612
+      },
+      "SERIE_A:2019": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "SERIE_A:2020": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "SERIE_A:2021": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "SERIE_A:2022": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "SERIE_A:2023": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "SERIE_A:2024": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      },
+      "SERIE_A:2025": {
+        "required_fields_seen": {
+          "deep": true,
+          "deep_allowed": true,
+          "ppda": true,
+          "ppda_allowed": true
+        },
+        "schema_ready": true,
+        "team_count": 20,
+        "valid_tactical_rows": 760
+      }
+    }
+  },
+  "supabase_writes": 0,
+  "supported": false,
+  "temporal_design": {
+    "development": [
+      "2019-2020",
+      "2020-2021",
+      "2021-2022",
+      "2022-2023",
+      "2023-2024"
+    ],
+    "opened_2026_27_outcomes": false,
+    "test_model_refit_on_validation": false,
+    "untouched_test": "2025-2026",
+    "validation": "2024-2025"
+  },
+  "test": {
+    "bootstrap": {
+      "ci95_high": 0.13018482853477317,
+      "ci95_low": 0.05261516247418429,
+      "draws": 5000
+    },
+    "by_league": {
+      "BUNDESLIGA": {
+        "football_minus_market_brier": 0.07756704238679771,
+        "football_minus_market_log_loss": 0.10735681366583928,
+        "rows": 52
+      },
+      "EPL": {
+        "football_minus_market_brier": 0.10184136513039357,
+        "football_minus_market_log_loss": 0.14067053714049593,
+        "rows": 66
+      },
+      "LA_LIGA": {
+        "football_minus_market_brier": 0.06326195598498069,
+        "football_minus_market_log_loss": 0.08766116717265078,
+        "rows": 64
+      },
+      "LIGUE_1": {
+        "football_minus_market_brier": 0.03478451015577035,
+        "football_minus_market_log_loss": 0.05153697292857881,
+        "rows": 51
+      },
+      "SERIE_A": {
+        "football_minus_market_brier": 0.03592190624228623,
+        "football_minus_market_log_loss": 0.05350329747955155,
+        "rows": 53
+      }
+    },
+    "football_brier": 0.6963646887542039,
+    "football_log_loss": 1.1392913727948086,
+    "football_minus_market_brier": 0.06462116270819468,
+    "football_minus_market_log_loss": 0.09070344351999922,
+    "market_brier": 0.6317435260460091,
+    "market_log_loss": 1.0485879292748097,
+    "rows": 286
+  },
+  "validation": {
+    "by_league": {
+      "BUNDESLIGA": {
+        "football_minus_market_brier": -0.002303203825845746,
+        "football_minus_market_log_loss": -0.003164342878242215,
+        "rows": 49
+      },
+      "EPL": {
+        "football_minus_market_brier": 0.1021274485148189,
+        "football_minus_market_log_loss": 0.1431067800486736,
+        "rows": 50
+      },
+      "LA_LIGA": {
+        "football_minus_market_brier": 0.04760560002911889,
+        "football_minus_market_log_loss": 0.06710391205796791,
+        "rows": 66
+      },
+      "LIGUE_1": {
+        "football_minus_market_brier": -0.011494703757432188,
+        "football_minus_market_log_loss": -0.015677246512556454,
+        "rows": 44
+      },
+      "SERIE_A": {
+        "football_minus_market_brier": 0.0871315650068968,
+        "football_minus_market_log_loss": 0.12592784362079212,
+        "rows": 59
+      }
+    },
+    "football_brier": 0.6952083012904512,
+    "football_log_loss": 1.1380683838462193,
+    "football_minus_market_brier": 0.04765104630700091,
+    "football_minus_market_log_loss": 0.06779510568768636,
+    "market_brier": 0.6475572549834503,
+    "market_log_loss": 1.0702732781585327,
+    "rows": 268
+  }
+}
