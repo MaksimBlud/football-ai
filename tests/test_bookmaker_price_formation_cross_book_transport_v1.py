@@ -81,5 +81,7 @@ def test_evaluate_fails_closed_before_outcomes_without_third_book(monkeypatch):
     result = mod.evaluate()
     assert result["decision"] == "BLOCKED_BY_SOURCE_GAP"
     assert result["included_bookmakers"] == []
+    assert result["validation"] == {"common_information": {}, "by_bookmaker": {}}
+    assert result["test"] == {"common_information": {}, "by_bookmaker": {}}
     assert result["source_audit"]["outcome_read_before_audit"] is False
 
