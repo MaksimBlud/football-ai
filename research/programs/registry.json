@@ -195,6 +195,33 @@
         "Any weighting/calibration change is research-only and requires a separate untouched promotion study."
       ],
       "program_done_reason": "All permitted zero-cost independent classes are exhausted. Issue #535 already completed source feasibility, matched bookmaker comparison, draw-specific pricing, opening-versus-closing temporal stability and alternate-consensus checks. Issue #548 completed the remaining independent market-type comparison and failed its frozen untouched-test CI gate. Repeating the 1X2 result, subdividing the already-opened outcomes, changing bookmakers after outcome inspection or retuning the AH contract would not be independent; broader exact timestamp/bookmaker coverage would require new data outside the current zero-cost source. The program therefore closes research-only with the supported 1X2 structural result unchanged and no production or betting authorization."
+    },
+    {
+      "program_id": "market_residual_process_divergence",
+      "title": "Market-residual process-vs-results divergence research program",
+      "status": "ACTIVE",
+      "objective": "Determine whether a fixed mismatch between recent results and shots-on-target process contains stable incremental 1X2 information beyond bookmaker market probabilities.",
+      "completed_issue_numbers": [],
+      "active_issue_numbers": [
+        562
+      ],
+      "current_frontier": "Issue #562 is the first frozen child. It tests a five-match strict same-season process-vs-results divergence on Bundesliga and Ligue 1 only, using the market as the paired baseline. This is deliberately independent of the closed EPL/La Liga/Serie A SHOTS10 sample and does not retune the prior generic shot family.",
+      "allowed_follow_up_classes": [
+        "cross_league_replication",
+        "temporal_stability",
+        "independent_process_representation",
+        "source_feasibility",
+        "prospective_confirmation",
+        "economic_value_if_statistically_supported"
+      ],
+      "stop_rules": [
+        "Do not retune the five-match window, points normalization, SOT-share formula, sign, league subset or probability bands after Issue #562 outcomes are read.",
+        "Do not reuse EPL/La Liga/Serie A outcomes from the closed SHOTS10 or historical interaction blocks to rescue a failed independent Bundesliga/Ligue 1 result.",
+        "Do not add xG, corners, injuries, schedule or other feature families as a rescue combination inside the same opened child.",
+        "Do not evaluate betting economics unless incremental probability information first clears a preregistered independent statistical gate.",
+        "Do not use paid data without fresh explicit user approval.",
+        "Mark PROGRAM_DONE when independent zero-cost evidence fails and no genuinely untouched preregisterable follow-up remains."
+      ]
     }
   ]
 }
