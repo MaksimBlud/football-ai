@@ -28,25 +28,25 @@
     "coverage": {
       "AVG": {
         "BUNDESLIGA:2024-2025": {
-          "coverage": 1.0,
+          "coverage": 1,
           "missing_columns": [],
           "rows": 306,
           "valid_opening_closing_rows": 306
         },
         "BUNDESLIGA:2025-2026": {
-          "coverage": 1.0,
+          "coverage": 1,
           "missing_columns": [],
           "rows": 306,
           "valid_opening_closing_rows": 306
         },
         "LIGUE_1:2024-2025": {
-          "coverage": 1.0,
+          "coverage": 1,
           "missing_columns": [],
           "rows": 306,
           "valid_opening_closing_rows": 306
         },
         "LIGUE_1:2025-2026": {
-          "coverage": 1.0,
+          "coverage": 1,
           "missing_columns": [],
           "rows": 306,
           "valid_opening_closing_rows": 306
@@ -54,25 +54,25 @@
       },
       "BET365": {
         "BUNDESLIGA:2024-2025": {
-          "coverage": 1.0,
+          "coverage": 1,
           "missing_columns": [],
           "rows": 306,
           "valid_opening_closing_rows": 306
         },
         "BUNDESLIGA:2025-2026": {
-          "coverage": 1.0,
+          "coverage": 1,
           "missing_columns": [],
           "rows": 306,
           "valid_opening_closing_rows": 306
         },
         "LIGUE_1:2024-2025": {
-          "coverage": 1.0,
+          "coverage": 1,
           "missing_columns": [],
           "rows": 306,
           "valid_opening_closing_rows": 306
         },
         "LIGUE_1:2025-2026": {
-          "coverage": 1.0,
+          "coverage": 1,
           "missing_columns": [],
           "rows": 306,
           "valid_opening_closing_rows": 306
@@ -86,7 +86,7 @@
           "valid_opening_closing_rows": 189
         },
         "BUNDESLIGA:2025-2026": {
-          "coverage": 1.0,
+          "coverage": 1,
           "missing_columns": [],
           "rows": 306,
           "valid_opening_closing_rows": 306
@@ -98,7 +98,7 @@
           "valid_opening_closing_rows": 189
         },
         "LIGUE_1:2025-2026": {
-          "coverage": 1.0,
+          "coverage": 1,
           "missing_columns": [],
           "rows": 306,
           "valid_opening_closing_rows": 306
@@ -106,7 +106,7 @@
       },
       "IW": {
         "BUNDESLIGA:2024-2025": {
-          "coverage": 0.0,
+          "coverage": 0,
           "missing_columns": [
             "IWA",
             "IWCA",
@@ -119,7 +119,7 @@
           "valid_opening_closing_rows": 0
         },
         "BUNDESLIGA:2025-2026": {
-          "coverage": 0.0,
+          "coverage": 0,
           "missing_columns": [
             "IWA",
             "IWCA",
@@ -132,7 +132,7 @@
           "valid_opening_closing_rows": 0
         },
         "LIGUE_1:2024-2025": {
-          "coverage": 0.0,
+          "coverage": 0,
           "missing_columns": [
             "IWA",
             "IWCA",
@@ -145,7 +145,7 @@
           "valid_opening_closing_rows": 0
         },
         "LIGUE_1:2025-2026": {
-          "coverage": 0.0,
+          "coverage": 0,
           "missing_columns": [
             "IWA",
             "IWCA",
@@ -160,7 +160,7 @@
       },
       "PINNACLE": {
         "BUNDESLIGA:2024-2025": {
-          "coverage": 1.0,
+          "coverage": 1,
           "missing_columns": [],
           "rows": 306,
           "valid_opening_closing_rows": 306
@@ -172,7 +172,7 @@
           "valid_opening_closing_rows": 149
         },
         "LIGUE_1:2024-2025": {
-          "coverage": 1.0,
+          "coverage": 1,
           "missing_columns": [],
           "rows": 306,
           "valid_opening_closing_rows": 306
@@ -186,7 +186,7 @@
       },
       "VC": {
         "BUNDESLIGA:2024-2025": {
-          "coverage": 0.0,
+          "coverage": 0,
           "missing_columns": [
             "VCA",
             "VCCA",
@@ -199,7 +199,7 @@
           "valid_opening_closing_rows": 0
         },
         "BUNDESLIGA:2025-2026": {
-          "coverage": 0.0,
+          "coverage": 0,
           "missing_columns": [
             "VCA",
             "VCCA",
@@ -212,7 +212,7 @@
           "valid_opening_closing_rows": 0
         },
         "LIGUE_1:2024-2025": {
-          "coverage": 0.0,
+          "coverage": 0,
           "missing_columns": [
             "VCA",
             "VCCA",
@@ -225,7 +225,7 @@
           "valid_opening_closing_rows": 0
         },
         "LIGUE_1:2025-2026": {
-          "coverage": 0.0,
+          "coverage": 0,
           "missing_columns": [
             "VCA",
             "VCCA",
@@ -246,7 +246,7 @@
           "valid_opening_closing_rows": 234
         },
         "BUNDESLIGA:2025-2026": {
-          "coverage": 0.0,
+          "coverage": 0,
           "missing_columns": [
             "WHA",
             "WHCA",
@@ -265,7 +265,7 @@
           "valid_opening_closing_rows": 234
         },
         "LIGUE_1:2025-2026": {
-          "coverage": 0.0,
+          "coverage": 0,
           "missing_columns": [
             "WHA",
             "WHCA",
@@ -744,6 +744,12 @@
   },
   "supabase_writes": 0,
   "supported": false,
-  "test": {},
-  "validation": {}
+  "test": {
+    "common_information": {},
+    "by_bookmaker": {}
+  },
+  "validation": {
+    "common_information": {},
+    "by_bookmaker": {}
+  }
 }
