@@ -5,6 +5,7 @@
     "reason": "NO_QUALIFYING_ADDITIONAL_BOOKMAKER",
     "supported": false
   },
+  "included_bookmakers": [],
   "interpretation_guard": "No predeclared third bookmaker met the frozen >=90% opening+closing coverage gate in both leagues and both OOS seasons; outcomes were not read.",
   "paid_odds_api_calls": 0,
   "parent_issue": 532,
