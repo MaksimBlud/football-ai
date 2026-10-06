@@ -195,6 +195,31 @@
         "Any weighting/calibration change is research-only and requires a separate untouched promotion study."
       ],
       "program_done_reason": "All permitted zero-cost independent classes are exhausted. Issue #535 already completed source feasibility, matched bookmaker comparison, draw-specific pricing, opening-versus-closing temporal stability and alternate-consensus checks. Issue #548 completed the remaining independent market-type comparison and failed its frozen untouched-test CI gate. Repeating the 1X2 result, subdividing the already-opened outcomes, changing bookmakers after outcome inspection or retuning the AH contract would not be independent; broader exact timestamp/bookmaker coverage would require new data outside the current zero-cost source. The program therefore closes research-only with the supported 1X2 structural result unchanged and no production or betting authorization."
+    },
+    {
+      "program_id": "market_residual_process_divergence",
+      "title": "Direction 1: result versus process divergence",
+      "status": "ACTIVE",
+      "objective": "Determine whether a frozen mismatch between recent points and shots-on-target process adds stable 1X2 probability information beyond a fitted bookmaker market baseline.",
+      "completed_issue_numbers": [],
+      "active_issue_numbers": [
+        562
+      ],
+      "current_frontier": "Issue #562 is the active independent Bundesliga/Ligue 1 temporal-OOS test. It freezes exact same-season five-match points-rate versus SOT-share divergence, compares market-only and market-plus-divergence multinomial models on identical fixtures, and reserves 2025/26 as untouched test. Prior SHOTS10 failures on EPL/La Liga/Serie A remain binding and are not being retuned.",
+      "allowed_follow_up_classes": [
+        "source_feasibility",
+        "process_result_divergence",
+        "cross_league_validation",
+        "temporal_stability",
+        "economic_value_if_statistically_supported"
+      ],
+      "stop_rules": [
+        "Do not change the five-match window, points normalization, SOT-share formula, sign, thresholds or league scope after outcomes are read.",
+        "Do not use 2026/27 outcomes in this program.",
+        "Do not reinterpret prior generic SHOTS10 failures as support for this distinct frozen representation.",
+        "Do not open economic-value or production work unless the full validation and untouched-test probability gate is supported.",
+        "Do not use paid data, Supabase writes, production model operations or automatic promotion."
+      ]
     }
   ]
 }

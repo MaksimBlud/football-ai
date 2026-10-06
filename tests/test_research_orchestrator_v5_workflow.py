@@ -39,6 +39,8 @@ def test_v5_routes_supported_families_without_model_api():
     assert "bookmaker_price_formation_cross_book_transport_v1.py" in v5
     assert "bookmaker_margin_market_type_transport_v1" in registry
     assert "bookmaker_margin_market_type_transport_v1.py" in v5
+    assert "market_residual_process_divergence_v1" in registry
+    assert "market_residual_process_divergence_v1.py" in v5
     assert "kickoff_calendar_context|" not in v5
     assert "kickoff_calendar_context|" not in v4
 

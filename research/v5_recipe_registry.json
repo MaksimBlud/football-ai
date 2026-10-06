@@ -419,6 +419,37 @@
         ],
         "preregistration_markdown": "# Frozen bookmaker margin market-type transport\n\nStatus: **PREREGISTERED / OUTCOME-FREE / MATCHED FIXTURES / RESEARCH ONLY / NO_BET**.\n\nTransport Issue #535 from 1X2 to the exact same fixtures' opening Asian Handicap market. Frozen books are Bet365 (B365AHH/B365AHA) and Pinnacle (PAHH/PAHA). Use AHh, with B365AH only as the documented schema fallback. Only exact half-goal lines are eligible; no push lines, bookmaker substitution or synthetic closing snapshot.\n\nLeagues are EPL, La Liga and Serie A. Reference is 2019/20-2023/24, validation is 2024/25 and untouched temporal test is 2025/26. The source gate audits both books, the shared line and the opening 1X2 fields before any derived price effect. Match outcomes are not read.\n\nFor each book compute two-way AH overround, multiplicative fair probabilities and allocation tilt relative to the mean two-book fair consensus. Favourite/underdog is determined from the frozen AH-line sign. Primary AH statistic is underdog tilt minus favourite tilt; paired effect is Bet365 minus Pinnacle. Reproduce the frozen #535 opening 1X2 effect on the identical subset and report AH minus 1X2 with a bootstrap CI.\n\nSupport requires the AH effect to have the same non-zero sign in validation and test, the test CI to exclude zero, and at least two of three leagues to share the pooled test sign. Total overround and AH-minus-1X2 must be reported separately. Otherwise return NO_STABLE_CROSS_MARKET_MARGIN_STRUCTURE; source failure returns BLOCKED_BY_SOURCE_GAP. A failure does not negate #535. No causal intent, betting edge, production weighting, paid API, Supabase or promotion."
       }
+    },
+    {
+      "hypothesis_family": "market_residual_process_divergence_v1",
+      "handler": "pipeline",
+      "max_iterations": 4,
+      "description": "Frozen Bundesliga/Ligue 1 temporal-OOS test of five-match SOT-process versus points divergence beyond a fitted 1X2 market baseline.",
+      "safety": {
+        "model_api": false,
+        "paid_odds_api": false,
+        "supabase_writes": false,
+        "production_operations": false,
+        "automatic_promotion": false
+      },
+      "pipeline": {
+        "evaluator_module": "market_residual_process_divergence_v1",
+        "decision_path": "decision",
+        "summary_path": "interpretation_guard",
+        "report_title": "market residual process-vs-results divergence",
+        "report_fields": [
+          "source_audit",
+          "validation.candidate_minus_market_log_loss",
+          "validation.candidate_minus_market_brier",
+          "test.candidate_minus_market_log_loss",
+          "test.candidate_minus_market_brier",
+          "test.bootstrap",
+          "test.by_league",
+          "formal_gate",
+          "decision"
+        ],
+        "preregistration_markdown": "# Frozen market-residual process-vs-results divergence\n\nStatus: **PREREGISTERED / TEMPORAL OOS / CROSS-LEAGUE / RESEARCH ONLY / NO_BET**.\n\nFormal leagues are Bundesliga and Ligue 1 from zero-cost Football-Data only. Required fields are Date, HomeTeam, AwayTeam, FTR, HS, AS, HST, AST and the exact Bet365 B365H/B365D/B365A 1X2 triplet. Audit all file headers before reading outcomes. Use no 2026/27 outcomes.\n\nFor each team use exactly its previous five same-season league matches, with no prior-season carryover and with the current fixture appended only after its features are frozen. points_rate_5 = points_won / 15. sot_share_5 = sum(SOT_for) / (sum(SOT_for) + sum(SOT_against)). process_result_divergence_5 = sot_share_5 - points_rate_5. Fixture features are home divergence, away divergence and home-minus-away divergence. Rows without five valid prior matches or a positive SOT denominator are ineligible. No window, cutoff, sign, threshold, league or feature-subset search.\n\nPaired models use identical fixtures. MARKET_MODEL uses multiplicatively de-vigged Bet365 1X2 probabilities. MARKET_PLUS_PROCESS_DIVERGENCE uses those probabilities plus the three frozen divergence features. Both use median imputation, StandardScaler and multinomial LogisticRegression with fixed default regularization and max_iter=2000.\n\nDevelopment is 2019/20-2023/24, validation is 2024/25 and untouched test is 2025/26. Refit in expanding temporal order and never train on the evaluated season. Primary deltas are candidate minus baseline for multiclass Log Loss and Brier; negative is better. Support requires both deltas negative in validation and test, the league-stratified 5000-draw untouched-test Log Loss bootstrap CI wholly below zero, and no positive untouched-test Log Loss delta in either league. Accuracy is diagnostic only.\n\nPassing returns SUPPORTED_MARKET_RESIDUAL_PROCESS_DIVERGENCE. Otherwise return NO_STABLE_MARKET_RESIDUAL_PROCESS_DIVERGENCE; source failure returns BLOCKED_BY_SOURCE_GAP. A pass is research evidence only and cannot authorize betting, production or promotion. No paid API, Supabase write, production .pkl operation, post-hoc gate change or model API."
+      }
     }
   ]
 }
