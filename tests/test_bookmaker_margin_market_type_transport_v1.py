@@ -23,6 +23,12 @@ def test_half_goal_gate_rejects_push_lines():
     assert mod._half_goal(-1.0) is None
 
 
+def test_half_goal_gate_rejects_non_finite_lines():
+    assert mod._half_goal(float("nan")) is None
+    assert mod._half_goal(float("inf")) is None
+    assert mod._half_goal(float("-inf")) is None
+
+
 def test_market_type_gate_passes_complete_transport():
     gate = mod._formal_gate(_report(), _report(), True)
     assert gate["supported"] is True
