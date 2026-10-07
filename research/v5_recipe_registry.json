@@ -481,6 +481,36 @@
         ],
         "preregistration_markdown": "# Frozen independent tactical-pressure disagreement\n\nStatus: **PREREGISTERED / INDEPENDENT FOOTBALL SOURCE / TEMPORAL OOS / CROSS-LEAGUE / RESEARCH ONLY / NO_BET**.\n\nThe football-only estimate uses zero-cost prior-match Understat deep, deep_allowed, PPDA and PPDA_allowed and never consumes odds. Football-Data AvgH/AvgD/AvgA are used only as the multiplicatively de-vigged average-bookmaker 1X2 control. Formal leagues are EPL, La Liga, Serie A, Bundesliga and Ligue 1. Audit every source/schema and deterministic identity mapping before reading reserved outcomes. Do not use 2026/27 outcomes.\n\nFor each fixture and team, use exactly the previous five same-season completed Understat matches, excluding all matches on the target calendar day. Frozen features are home and away last-five means for all four fields plus four signed home-minus-away contrasts. No window, field, side, sign, league or threshold selection. Fit one StandardScaler plus multinomial LogisticRegression football-only model on 2019/20-2023/24 outcomes. Do not refit on validation. Validation is 2024/25 and untouched test is 2025/26.\n\nThe disagreement class is symmetric and fixed: football-only argmax differs from market-control argmax. There is no magnitude threshold or chosen outcome side. Before reading validation/test outcomes, both splits must have at least 50 disagreement fixtures pooled and at least 8 in every league; otherwise return BLOCKED_LOW_DISAGREEMENT_SAMPLE.\n\nPrimary deltas are football-only minus raw market control for multiclass Log Loss and Brier on disagreement fixtures; negative is better. Support requires both deltas negative in validation and test, the league-stratified 5000-draw test Log Loss bootstrap CI wholly below zero, negative test Log Loss delta in at least four of five leagues, and no league delta above +0.01. Full-sample metrics are diagnostic only and cannot rescue failure.\n\nPassing returns SUPPORTED_INDEPENDENT_TACTICAL_DISAGREEMENT_EDGE. Otherwise return NO_STABLE_INDEPENDENT_TACTICAL_DISAGREEMENT_EDGE; source failure returns BLOCKED_BY_SOURCE_GAP. Do not blend estimates or learn a market correction here; that belongs only to roadmap Direction 4. No paid API, Supabase write, production .pkl operation, model API, promotion, betting authorization or post-hoc gate change."
       }
+    },
+    {
+      "hypothesis_family": "multi_market_1x2_repricing_vector_v1",
+      "handler": "pipeline",
+      "max_iterations": 4,
+      "description": "Preregister, compute and report the direct multi-market state -> future 1X2 repricing-vector falsification.",
+      "safety": {
+        "model_api": false,
+        "paid_odds_api": false,
+        "supabase_writes": false,
+        "production_operations": false,
+        "automatic_promotion": false
+      },
+      "pipeline": {
+        "evaluator_module": "multi_market_1x2_repricing_vector_v1",
+        "decision_path": "decision",
+        "summary_path": "interpretation_guard",
+        "report_title": "multi-market state to future 1X2 repricing vector",
+        "report_fields": [
+          "source_audit.eligible_leagues",
+          "validation.candidate_minus_baseline_mse",
+          "validation.candidate_minus_baseline_mae",
+          "test.candidate_minus_baseline_mse",
+          "test.candidate_minus_baseline_mae",
+          "test.bootstrap.ci95_low",
+          "test.bootstrap.ci95_high",
+          "formal_gate.supported"
+        ],
+        "preregistration_markdown": "# Frozen multi-market 1X2 repricing-vector protocol\n\nStatus: **PREREGISTERED / RETROSPECTIVE FALSIFICATION / OUTCOME-FREE / NO_BET**.\n\nQuestion: does direct joint Bet365 STANDARD/PRE-CLOSE 1X2 + O/U 2.5 + Asian Handicap state predict the later continuous 1X2 closing repricing vector better than an otherwise identical 1X2-only baseline?\n\nFrozen leagues: EPL, La Liga, Serie A, Bundesliga, Ligue 1.\nReference: 2019/20-2023/24; validation: 2024/25; retrospective test: 2025/26. No 2026/27 outcomes and no match outcomes are required.\n\nSource terminology: Football-Data standard odds are not claimed to be exact timestamped opening odds. They are STANDARD/PRE-CLOSE state. Explicit Bet365 closing 1X2 fields define the later target.\n\nBefore any closing movement is computed, audit the zero-cost Football-Data/pinned-mirror source. A league is usable only when validation and test each have >=100 paired eligible fixtures and at least three reference seasons have >=100 eligible fixtures. At least four of five leagues must pass unchanged or the result is BLOCKED_BY_SOURCE_GAP.\n\nMarket transforms are frozen:\n- 1X2: existing project POWER de-vig;\n- O/U 2.5: proportional two-way no-vig;\n- Asian Handicap: proportional two-way no-vig;\n- AH line: use AHh where finite with B365AH only as the existing schema fallback. Do not subset lines after results.\n\nTarget is exactly two log-ratio coordinates:\nmove_home_vs_draw = log(p_close_home/p_close_draw) - log(p_state_home/p_state_draw)\nmove_away_vs_draw = log(p_close_away/p_close_draw) - log(p_state_away/p_state_draw).\n\nBoth models use SimpleImputer(median) -> StandardScaler -> separate Ridge(alpha=10.0) regressors for the two coordinates.\nBaseline features: p_home, p_draw, p_away.\nCandidate features: baseline plus p_over_2_5, ah_line, p_ah_home.\nNo hyperparameter, feature-subset, interaction, sign, line-scope or league search.\n\nTemporal fitting is frozen before evaluator execution:\n- validation model fit: reference seasons only;\n- retrospective-test model fit: expanding history through validation, i.e. reference + 2024/25;\n- baseline and candidate always use the same train/evaluation rows and the same fitting rule.\n\nPrimary paired fixture loss is mean squared error across the two target coordinates. MAE is secondary but binding in the support gate. Pearson/Spearman, coordinate sign accuracy and strongest-move-coordinate accuracy are diagnostics only.\n\nUse a deterministic 5,000-draw league-stratified bootstrap on 2025/26 candidate-minus-baseline per-fixture squared-error loss. Negative is better.\n\nREPRICING_STATE_SUPPORTED_FOR_PROSPECTIVE_CONFIRMATION requires all:\n1. pooled 2024/25 candidate MSE < baseline MSE;\n2. pooled 2024/25 candidate MAE < baseline MAE;\n3. pooled 2025/26 candidate MSE < baseline MSE;\n4. pooled 2025/26 candidate MAE < baseline MAE;\n5. 2025/26 bootstrap 95% CI upper bound < 0;\n6. 2025/26 candidate MSE delta is positive in at most one eligible league;\n7. source/leakage/safety gates pass.\n\nHistorical closing targets through 2025/26 were already opened by related research, so a PASS is not untouched confirmation. It only justifies a separately frozen prospective confirmation.\n\nCorners are not part of this child. Do not use old #385/#522/#528 corner movements to tune or rescue #573. Corner augmentation, if ever allowed, must be a separate preregistered child with point-in-time source coverage and a future target not opened when frozen.\n\nNo paid Odds API, no purchased data, no Supabase writes, no production operations, no production .pkl changes, no automatic promotion, and no post-hoc weakening of any gate."
+      }
     }
   ]
 }
