@@ -1,0 +1,668 @@
+{
+  "decision": "NO_STABLE_MULTI_MARKET_REPRICING_SIGNAL",
+  "evidence_class": "RETROSPECTIVE_PREREGISTERED_MARKET_REPRICING_REPRESENTATION",
+  "experiment_id": "MULTI_MARKET_1X2_REPRICING_VECTOR_V1",
+  "formal_gate": {
+    "gates": {
+      "at_least_four_eligible_leagues": true,
+      "source_gate_passed": true,
+      "test_mae_improves": true,
+      "test_mse_ci95_upper_below_zero": true,
+      "test_mse_improves": true,
+      "test_positive_mse_leagues_at_most_one": false,
+      "validation_mae_improves": false,
+      "validation_mse_improves": true
+    },
+    "positive_test_mse_leagues": 3,
+    "supported": false
+  },
+  "interpretation_guard": "The frozen direct multi-market representation failed at least one validation, retrospective-test, uncertainty or cross-league gate. Do not rescue it by changing features, Ridge alpha, AH scope, target coordinates, league subset, sign rules or by adding corners to the same opened history.",
+  "match_outcomes_used": false,
+  "opened_2026_27_outcomes_used": false,
+  "paid_odds_api_calls": 0,
+  "production_operations": false,
+  "production_promotion": false,
+  "representation_contract": {
+    "ah_devig": "PROPORTIONAL",
+    "baseline_features": [
+      "p_home",
+      "p_draw",
+      "p_away"
+    ],
+    "candidate_features": [
+      "p_home",
+      "p_draw",
+      "p_away",
+      "p_over_2_5",
+      "ah_line",
+      "p_ah_home"
+    ],
+    "one_x_two_devig": "POWER",
+    "ou25_devig": "PROPORTIONAL",
+    "ridge_alpha": 10.0,
+    "standard_odds_are_exact_opening": false,
+    "targets": [
+      "move_home_vs_draw",
+      "move_away_vs_draw"
+    ]
+  },
+  "research_only": true,
+  "result": "RESEARCH_ONLY_NO_BET",
+  "source_audit": {
+    "closing_movement_computed_during_audit": false,
+    "eligible_leagues": [
+      "EPL",
+      "LA_LIGA",
+      "SERIE_A",
+      "BUNDESLIGA",
+      "LIGUE_1"
+    ],
+    "excluded_leagues": {},
+    "files": {
+      "BUNDESLIGA:2019-2020": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 306,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 306
+      },
+      "BUNDESLIGA:2020-2021": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 306,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 306
+      },
+      "BUNDESLIGA:2021-2022": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 306,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 306
+      },
+      "BUNDESLIGA:2022-2023": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 306,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 306
+      },
+      "BUNDESLIGA:2023-2024": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 306,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 306
+      },
+      "BUNDESLIGA:2024-2025": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 0.9967320261437909,
+        "eligible_rows": 305,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 306
+      },
+      "BUNDESLIGA:2025-2026": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 306,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 306
+      },
+      "EPL:2019-2020": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 380,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "EPL:2020-2021": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 380,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "EPL:2021-2022": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 0.9973684210526316,
+        "eligible_rows": 379,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "EPL:2022-2023": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 380,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "EPL:2023-2024": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 380,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "EPL:2024-2025": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 380,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "EPL:2025-2026": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 0.9973684210526316,
+        "eligible_rows": 379,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "LA_LIGA:2019-2020": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 0.9736842105263158,
+        "eligible_rows": 370,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "LA_LIGA:2020-2021": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 380,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "LA_LIGA:2021-2022": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 0.9973684210526316,
+        "eligible_rows": 379,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "LA_LIGA:2022-2023": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 380,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "LA_LIGA:2023-2024": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 380,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "LA_LIGA:2024-2025": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 380,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "LA_LIGA:2025-2026": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 0.9894736842105263,
+        "eligible_rows": 376,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "LIGUE_1:2019-2020": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 279,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 279
+      },
+      "LIGUE_1:2020-2021": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 0.9842105263157894,
+        "eligible_rows": 374,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "LIGUE_1:2021-2022": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 380,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "LIGUE_1:2022-2023": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 380,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "LIGUE_1:2023-2024": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 306,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 306
+      },
+      "LIGUE_1:2024-2025": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 306,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 306
+      },
+      "LIGUE_1:2025-2026": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 306,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 306
+      },
+      "SERIE_A:2019-2020": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 380,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "SERIE_A:2020-2021": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 0.9921052631578947,
+        "eligible_rows": 377,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "SERIE_A:2021-2022": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 0.9973684210526316,
+        "eligible_rows": 379,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "SERIE_A:2022-2023": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 380,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "SERIE_A:2023-2024": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 380,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "SERIE_A:2024-2025": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 380,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      },
+      "SERIE_A:2025-2026": {
+        "ah_line_columns": [
+          "AHh"
+        ],
+        "cell_usable": true,
+        "eligible_fraction": 1.0,
+        "eligible_rows": 380,
+        "minimum_required_rows": 100,
+        "missing_required_columns": [],
+        "raw_rows": 380
+      }
+    },
+    "frozen_cells": {
+      "BUNDESLIGA": [
+        "2019-2020",
+        "2020-2021",
+        "2021-2022",
+        "2022-2023",
+        "2023-2024",
+        "2024-2025",
+        "2025-2026"
+      ],
+      "EPL": [
+        "2019-2020",
+        "2020-2021",
+        "2021-2022",
+        "2022-2023",
+        "2023-2024",
+        "2024-2025",
+        "2025-2026"
+      ],
+      "LA_LIGA": [
+        "2019-2020",
+        "2020-2021",
+        "2021-2022",
+        "2022-2023",
+        "2023-2024",
+        "2024-2025",
+        "2025-2026"
+      ],
+      "LIGUE_1": [
+        "2019-2020",
+        "2020-2021",
+        "2021-2022",
+        "2022-2023",
+        "2023-2024",
+        "2024-2025",
+        "2025-2026"
+      ],
+      "SERIE_A": [
+        "2019-2020",
+        "2020-2021",
+        "2021-2022",
+        "2022-2023",
+        "2023-2024",
+        "2024-2025",
+        "2025-2026"
+      ]
+    },
+    "match_outcomes_used": false,
+    "minimum_cell_rows": 100,
+    "minimum_eligible_leagues": 4,
+    "minimum_reference_seasons": 3,
+    "outcome_columns_loaded": false,
+    "source_gate_passed": true,
+    "standard_odds_are_exact_opening": false,
+    "standard_state_name": "STANDARD/PRE-CLOSE"
+  },
+  "supabase_writes": 0,
+  "supported": false,
+  "temporal_design": {
+    "historical_closing_targets_previously_opened_by_related_research": true,
+    "reference": [
+      "2019-2020",
+      "2020-2021",
+      "2021-2022",
+      "2022-2023",
+      "2023-2024"
+    ],
+    "test": "2025-2026",
+    "test_fit": "reference_plus_validation",
+    "untouched_confirmation_claim": false,
+    "validation": "2024-2025",
+    "validation_fit": "reference_only"
+  },
+  "test": {
+    "baseline_diagnostics": {
+      "coordinates": {
+        "move_away_vs_draw": {
+          "nonzero_rows": 1690,
+          "pearson": 0.08360890322910025,
+          "sign_accuracy_nonzero": 0.5301775147928994,
+          "spearman": 0.09224050085830476
+        },
+        "move_home_vs_draw": {
+          "nonzero_rows": 1692,
+          "pearson": 0.015073124538050008,
+          "sign_accuracy_nonzero": 0.5011820330969267,
+          "spearman": 0.03421046198594009
+        }
+      },
+      "strongest_move_coordinate_accuracy": 0.4922724670864339
+    },
+    "baseline_mae": 0.08692382078718269,
+    "baseline_mse": 0.01297415767268196,
+    "bootstrap": {
+      "ci95_high": -3.946866651291164e-06,
+      "ci95_low": -0.0001562419179007653,
+      "draws": 5000,
+      "mean": -7.920434492721793e-05,
+      "seed": 20261007
+    },
+    "by_league": {
+      "BUNDESLIGA": {
+        "candidate_minus_baseline_mae": 0.00012599283712350093,
+        "candidate_minus_baseline_mse": 8.990863452683673e-05,
+        "rows": 306
+      },
+      "EPL": {
+        "candidate_minus_baseline_mae": 0.00018636703024380388,
+        "candidate_minus_baseline_mse": 5.736926611867619e-05,
+        "rows": 379
+      },
+      "LA_LIGA": {
+        "candidate_minus_baseline_mae": -0.00028819512411176615,
+        "candidate_minus_baseline_mse": -0.0001617485271357544,
+        "rows": 376
+      },
+      "LIGUE_1": {
+        "candidate_minus_baseline_mae": 0.0004633425065056216,
+        "candidate_minus_baseline_mse": 6.906908895872587e-05,
+        "rows": 306
+      },
+      "SERIE_A": {
+        "candidate_minus_baseline_mae": -0.0008930485594720089,
+        "candidate_minus_baseline_mse": -0.0003909710509275857,
+        "rows": 380
+      }
+    },
+    "candidate_diagnostics": {
+      "coordinates": {
+        "move_away_vs_draw": {
+          "nonzero_rows": 1690,
+          "pearson": 0.08470282915920835,
+          "sign_accuracy_nonzero": 0.5230769230769231,
+          "spearman": 0.08996830094452254
+        },
+        "move_home_vs_draw": {
+          "nonzero_rows": 1692,
+          "pearson": 0.10664389899385898,
+          "sign_accuracy_nonzero": 0.5301418439716312,
+          "spearman": 0.09967230682233554
+        }
+      },
+      "strongest_move_coordinate_accuracy": 0.5220377790497996
+    },
+    "candidate_mae": 0.08681119909304848,
+    "candidate_minus_baseline_mae": -0.00011262169413421543,
+    "candidate_minus_baseline_mse": -7.956285650255627e-05,
+    "candidate_mse": 0.012894594816179402,
+    "rows": 1747
+  },
+  "validation": {
+    "baseline_diagnostics": {
+      "coordinates": {
+        "move_away_vs_draw": {
+          "nonzero_rows": 1704,
+          "pearson": -0.024196342385489112,
+          "sign_accuracy_nonzero": 0.5269953051643192,
+          "spearman": 0.023759974920001276
+        },
+        "move_home_vs_draw": {
+          "nonzero_rows": 1704,
+          "pearson": 0.04359582049939563,
+          "sign_accuracy_nonzero": 0.4642018779342723,
+          "spearman": 0.05817595123611372
+        }
+      },
+      "strongest_move_coordinate_accuracy": 0.4934323243860651
+    },
+    "baseline_mae": 0.09112733121250453,
+    "baseline_mse": 0.0143629569081186,
+    "by_league": {
+      "BUNDESLIGA": {
+        "candidate_minus_baseline_mae": 0.0006155198253610192,
+        "candidate_minus_baseline_mse": 0.00014313364609303938,
+        "rows": 305
+      },
+      "EPL": {
+        "candidate_minus_baseline_mae": 0.000653736927760225,
+        "candidate_minus_baseline_mse": -4.25710746039476e-05,
+        "rows": 380
+      },
+      "LA_LIGA": {
+        "candidate_minus_baseline_mae": -0.000629065251317645,
+        "candidate_minus_baseline_mse": -0.00021513361712141587,
+        "rows": 380
+      },
+      "LIGUE_1": {
+        "candidate_minus_baseline_mae": 0.0004621001555066395,
+        "candidate_minus_baseline_mse": 0.0001195262124105948,
+        "rows": 306
+      },
+      "SERIE_A": {
+        "candidate_minus_baseline_mae": -0.00014758601237702798,
+        "candidate_minus_baseline_mse": -0.00020020975864166275,
+        "rows": 380
+      }
+    },
+    "candidate_diagnostics": {
+      "coordinates": {
+        "move_away_vs_draw": {
+          "nonzero_rows": 1704,
+          "pearson": -0.008844224239963618,
+          "sign_accuracy_nonzero": 0.4953051643192488,
+          "spearman": -0.0006887945158660569
+        },
+        "move_home_vs_draw": {
+          "nonzero_rows": 1704,
+          "pearson": 0.13472851233353564,
+          "sign_accuracy_nonzero": 0.5164319248826291,
+          "spearman": 0.11041095653606313
+        }
+      },
+      "strongest_move_coordinate_accuracy": 0.5231296402055968
+    },
+    "candidate_mae": 0.09128862689877813,
+    "candidate_minus_baseline_mae": 0.0001612956862735878,
+    "candidate_minus_baseline_mse": -5.3556086855197575e-05,
+    "candidate_mse": 0.014309400821263404,
+    "rows": 1751
+  }
+}
