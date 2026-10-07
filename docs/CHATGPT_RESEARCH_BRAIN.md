@@ -72,8 +72,12 @@ For each program:
 
 ## Current portfolio
 
-All prior research programs are **PROGRAM_DONE**. The currently active scientific program is:
+All registered scientific research programs are **PROGRAM_DONE**.
 
-- `multi_market_repricing_state` — **ACTIVE**. Issue #573 tests whether the joint Bet365 STANDARD/PRE-CLOSE state from 1X2 + O/U 2.5 + Asian Handicap predicts the later continuous 1X2 closing repricing vector better than an otherwise identical 1X2-only baseline. This is not the old `alignment_dot`: no synthetic score reconstruction is used, no match outcomes are used, and binary UP/DOWN is diagnostic only. Because historical closing movements through 2025/26 were already opened by earlier work, #573 is a preregistered retrospective falsification/representation test; a positive result may justify only a separately frozen prospective confirmation. Corner-market augmentation remains a separate later child/source-gated question and may not retune old corner cohorts.
+Latest closed program:
+
+- `multi_market_repricing_state` — **PROGRAM_DONE** after Issue #573. The zero-cost five-league source gate passed, and the direct 1X2 + O/U 2.5 + Asian Handicap representation showed a small pooled 2025/26 improvement, but it failed the frozen stability contract: validation MAE worsened and 2025/26 MSE worsened in 3 of 5 leagues. Final decision: **NO_STABLE_MULTI_MARKET_REPRICING_SIGNAL / NO_BET**.
+- Per the preregistered stop rule, corners must not be used as a post-hoc rescue on the same opened history, and the representation must not be retuned by league, feature subset, Ridge alpha, AH scope, target coordinates or sign rules.
+- A future restart would require genuinely new prospectively frozen information or a new independent research question, not another transformation of the rejected #573 statistic.
 
 Infrastructure live-proof Issues are not scientific programs.
