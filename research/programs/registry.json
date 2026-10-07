@@ -296,6 +296,35 @@
         "Mark PROGRAM_DONE when the correction architecture is already materially answered and no independently supported admissible feature family exists."
       ],
       "program_done_reason": "A new child is not scientifically admissible. The correction architecture with an exact zero-correction fallback already exists in MARKET_ANCHOR V1/V2 and was extended through V3/V4; rerunning it would duplicate existing work. More importantly, the roadmap's prerequisite is unsatisfied: directions 1 and 3 failed their frozen market-incremental gates, direction 2 is source-blocked, and prior football residual families did not establish stable independent value beyond market. With no eligible non-zero input, zero correction is the binding answer. Reopening requires a genuinely new timestamp-safe football feature family that first earns independent support on a separate untouched OOS gate."
+    },
+    {
+      "program_id": "multi_market_repricing_state",
+      "title": "Multi-market state -> future 1X2 repricing",
+      "status": "ACTIVE",
+      "objective": "Determine whether joint pre-close 1X2, O/U 2.5 and Asian Handicap market state contains stable incremental information about future 1X2 closing repricing beyond 1X2 market geometry alone, and only then assess whether a separately frozen corner opening state adds further information.",
+      "completed_issue_numbers": [],
+      "active_issue_numbers": [
+        573
+      ],
+      "current_frontier": "Issue #573 is the first frozen child. It is a retrospective preregistered representation/falsification test on five leagues using standard/pre-close Bet365 1X2 + O/U 2.5 + Asian Handicap to predict the continuous two-coordinate future 1X2 closing repricing vector, compared against an identical 1X2-only Ridge baseline. Historical closing movements through 2025/26 were previously opened by related work, so a positive result can justify only a separate prospective confirmation. Corner opening state is reserved for a separate child/source gate and may not be mixed into #573 or used to retune old #385/#522/#528 movements.",
+      "allowed_follow_up_classes": [
+        "source_feasibility",
+        "multi_market_repricing_vector",
+        "temporal_stability",
+        "cross_league_transport",
+        "prospective_confirmation",
+        "corner_market_augmentation",
+        "economic_value_if_statistically_supported"
+      ],
+      "stop_rules": [
+        "Do not reinterpret the closed CROSS_MARKET_LEAD_LAG alignment statistic as support for #573 and do not change #573 Ridge alpha, market feature set, target coordinates, league scope, source fields, line scope or support gates after target values are opened.",
+        "Do not mine HOME/DRAW/AWAY sign thresholds or feature subsets; binary direction is diagnostic only.",
+        "Do not call Football-Data standard odds exact timestamped opening unless provenance explicitly proves that; use STANDARD/PRE-CLOSE terminology.",
+        "Do not reuse the already-opened corner movement cohorts #385/#522/#528 to tune a corner augmentation.",
+        "Any corner augmentation must be a separate preregistered child with a point-in-time source gate and a future target not opened when the contract is frozen.",
+        "Do not use paid data without fresh explicit user approval; do not write Supabase; do not modify/promote production .pkl artifacts.",
+        "If #573 fails its frozen support gate, do not rescue it by retuning the same historical representation. Further work requires genuinely new prospective information; otherwise mark PROGRAM_DONE."
+      ]
     }
   ]
 }
