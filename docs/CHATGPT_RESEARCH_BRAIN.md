@@ -72,24 +72,8 @@ For each program:
 
 ## Current portfolio
 
-The initial ACTIVE programs are:
+All prior research programs are **PROGRAM_DONE**. The currently active scientific program is:
 
-- `cross_market_lead_lag` — **PROGRAM_DONE** after failed independent replication, completed regime/anomaly diagnostics, and duplicate detection for the attempted temporal-stability follow-up. Further zero-cost steps would be cosmetic restatements; paid intraday data still requires explicit user approval.
-- `kickoff_calendar_context` — **PROGRAM_DONE** after the negative pooled OOS test,
-  negative preregistered league heterogeneity, and the negative outcome-free
-  opening-to-closing market-movement mechanism. Remaining zero-cost variants would
-  be threshold/weekday/league mining or cosmetic restatements of the rejected signal.
-- `corner_market_direction` — **PROGRAM_DONE**. Issue #522 found an encouraging
-  same-sample continuous rank association, but binary direction stayed below always-UP.
-  The independent zero-cost Bundesliga/Ligue 1 transport in Issue #528 failed after removing
-  the mechanical opening-line component (residual Spearman 0.0503; permutation p=0.4125),
-  produced opposing league-held-out signs, and again lost to always-UP. Cross-league transfer
-  is unsupported, the decision remains NO_BET, and further free variants would retune or
-  threshold-mine already-opened movements.
-
-- `bookmaker_market_microstructure_1_price_formation` — **ACTIVE**. Issue #532 did not establish a stable bookmaker-specific price component; Issue #553 now performs the one independent cross-bookmaker/cross-league transport allowed by the remaining frontier.
-- `bookmaker_market_microstructure_2_devig` — **PROGRAM_DONE** after the original comparison (#533) and independent Bundesliga/Ligue 1 transport (#540) both failed their frozen confirmation gates. No de-vig winner is promoted.
-- `bookmaker_market_microstructure_3_favourite_longshot` — **PROGRAM_DONE** after the original audit (#534) and independent Bundesliga/Ligue 1 transport (#542) both failed their frozen stability gates. No betting or calibration rule is supported.
-- `bookmaker_market_microstructure_4_margin_structure` — **ACTIVE**. The supported 1X2 bookmaker-margin heterogeneity from #535 is being tested on the independent Asian Handicap representation in #548.
+- `multi_market_repricing_state` — **ACTIVE**. Issue #573 tests whether the joint Bet365 STANDARD/PRE-CLOSE state from 1X2 + O/U 2.5 + Asian Handicap predicts the later continuous 1X2 closing repricing vector better than an otherwise identical 1X2-only baseline. This is not the old `alignment_dot`: no synthetic score reconstruction is used, no match outcomes are used, and binary UP/DOWN is diagnostic only. Because historical closing movements through 2025/26 were already opened by earlier work, #573 is a preregistered retrospective falsification/representation test; a positive result may justify only a separately frozen prospective confirmation. Corner-market augmentation remains a separate later child/source-gated question and may not retune old corner cohorts.
 
 Infrastructure live-proof Issues are not scientific programs.
