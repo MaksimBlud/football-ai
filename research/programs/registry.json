@@ -300,13 +300,13 @@
     {
       "program_id": "multi_market_repricing_state",
       "title": "Multi-market state -> future 1X2 repricing",
-      "status": "ACTIVE",
+      "status": "PROGRAM_DONE",
       "objective": "Determine whether joint pre-close 1X2, O/U 2.5 and Asian Handicap market state contains stable incremental information about future 1X2 closing repricing beyond 1X2 market geometry alone, and only then assess whether a separately frozen corner opening state adds further information.",
-      "completed_issue_numbers": [],
-      "active_issue_numbers": [
+      "completed_issue_numbers": [
         573
       ],
-      "current_frontier": "Issue #573 is the first frozen child. It is a retrospective preregistered representation/falsification test on five leagues using standard/pre-close Bet365 1X2 + O/U 2.5 + Asian Handicap to predict the continuous two-coordinate future 1X2 closing repricing vector, compared against an identical 1X2-only Ridge baseline. Historical closing movements through 2025/26 were previously opened by related work, so a positive result can justify only a separate prospective confirmation. Corner opening state is reserved for a separate child/source gate and may not be mixed into #573 or used to retune old #385/#522/#528 movements. Duplicate audit additionally confirms that epl_market_state_repricing_v14.py and serie_a_market_state_repricing_v13.py are 1X2-only market-geometry repricing-risk models, while La Liga V11/V12 decompose/walk forward the same 1X2-only geometry. None uses direct O/U+AH state as incremental inputs to a continuous future 1X2 repricing-vector target against an identical 1X2-only baseline.",
+      "active_issue_numbers": [],
+      "current_frontier": "Issue #573 completed with NO_STABLE_MULTI_MARKET_REPRICING_SIGNAL. The five-league zero-cost source gate passed. The direct 1X2+O/U2.5+AH representation improved pooled validation MSE but worsened validation MAE; on 2025/26 it improved pooled MSE and MAE with a league-stratified bootstrap 95% CI entirely below zero, but the MSE delta was positive in 3/5 leagues (Bundesliga, EPL, Ligue 1), violating the frozen cross-league stability gate. By the preregistered stop rule, the failed historical representation may not be rescued with corner augmentation or retuning on the same opened history. No genuinely independent zero-cost prospective follow-up is currently available, so the parent program is PROGRAM_DONE / NO_BET.",
       "allowed_follow_up_classes": [
         "source_feasibility",
         "multi_market_repricing_vector",

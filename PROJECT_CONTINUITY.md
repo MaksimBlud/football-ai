@@ -5715,3 +5715,93 @@ Still binding:
 - individual Stage-B direction is not yet independently confirmed;
 - NO_BET;
 - no automatic production promotion.
+
+---
+
+# Continuity update — 2026-10-07 — multi-market 1X2 repricing representation closed
+
+Research program:
+
+`multi_market_repricing_state`
+
+Child Issue:
+
+`#573 — Multi-market state -> future 1X2 repricing vector`
+
+Deterministic V5 result:
+
+**`NO_STABLE_MULTI_MARKET_REPRICING_SIGNAL`**
+
+## Frozen design
+
+The experiment compared an identical temporal Ridge pipeline on exactly the same fixtures:
+
+- baseline: Bet365 STANDARD/PRE-CLOSE 1X2 state only;
+- candidate: the same 1X2 state plus O/U 2.5 and Asian Handicap state;
+- target: later Bet365 closing 1X2 repricing in two log-ratio coordinates;
+- reference: 2019/20–2023/24;
+- validation: 2024/25;
+- retrospective test: 2025/26;
+- five leagues: EPL, La Liga, Serie A, Bundesliga, Ligue 1;
+- no match outcomes;
+- no paid API;
+- no Supabase writes;
+- no production operation or promotion.
+
+All five leagues passed the preregistered zero-cost source/coverage gate.
+
+## Validation 2024/25
+
+Candidate minus 1X2-only baseline:
+
+- MSE = **-0.00005356** (better);
+- MAE = **+0.00016130** (worse).
+
+Therefore the validation gate was already not fully passed.
+
+## Retrospective test 2025/26
+
+Candidate minus baseline:
+
+- MSE = **-0.00007956** (better);
+- MAE = **-0.00011262** (better);
+- league-stratified 5,000-draw bootstrap 95% CI for MSE delta =
+  **[-0.00015624, -0.00000395]**.
+
+However the cross-league stability gate failed:
+
+- Bundesliga MSE delta = **+0.00008991**;
+- EPL = **+0.00005737**;
+- Ligue 1 = **+0.00006907**;
+- La Liga = **-0.00016175**;
+- Serie A = **-0.00039097**.
+
+The candidate worsened MSE in **3 of 5 leagues**, while the frozen contract allowed at most one.
+
+## Binding interpretation
+
+The pooled effect is interesting but not portable enough to count as a stable signal.
+
+Do not rescue #573 on the same opened history by:
+
+- adding corner-market state;
+- selecting only La Liga / Serie A;
+- changing Ridge alpha;
+- changing the market feature subset;
+- changing AH line scope;
+- changing target coordinates;
+- mining sign thresholds;
+- reversing signs or dropping unfavorable leagues.
+
+Historical closing targets through 2025/26 were already opened by related research, so they cannot be reused for iterative tuning.
+
+Parent program status:
+
+**`PROGRAM_DONE`**
+
+Product status:
+
+**NO_BET**
+
+A future restart requires genuinely new prospectively frozen information or a new independent research question.
+
