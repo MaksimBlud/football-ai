@@ -1,0 +1,40 @@
+{
+  "decision": "NEEDS_DETERMINISTIC_RECIPE",
+  "engine": "V5_DETERMINISTIC_NO_API",
+  "expected_lifecycle": [
+    "PREREGISTRATION",
+    "DETERMINISTIC_EVALUATION",
+    "RESULT.json",
+    "FINAL_REPORT.md",
+    "DONE"
+  ],
+  "hypothesis_family": "multi_market_1x2_repricing_vector_v1",
+  "independent_information_justification": "This is materially distinct from prior work. CROSS_MARKET_LEAD_LAG_V1/#482 reconstructed a synthetic 1X2 from O/U+AH and tested a single alignment_dot against the later 1X2 move, with exact half-goal AH restrictions. LA_LIGA_MULTIMARKET_ANCHOR_V5 used 1X2+O/U+AH to predict the MATCH OUTCOME, not future market movement. The older market_movement_predictability_test used 1X2 plus football-state features, not O/U/AH joint market state. CORNER_MARKET_STATE_REPRICING_V1/#385 and #522/#528 targeted the corner market, not 1X2 closing repricing. This child freezes a direct multivariate market-state -> continuous 1X2 repricing prediction and compares it against an otherwise identical 1X2-only repricing baseline. No synthetic score reconstruction, alignment_dot, match result, goal result or corner outcome is used.",
+  "issue_number": 573,
+  "issue_title": "[AGENT-RESEARCH] Multi-market state -> future 1X2 repricing vector",
+  "mode": "historical_read_only",
+  "prohibited": [
+    "model-generated shell commands",
+    "automatic threshold retuning on seen outcomes",
+    "paid Odds API calls",
+    "Supabase writes",
+    "production .pkl writes",
+    "automatic promotion"
+  ],
+  "required_implementation": {
+    "evaluator": "Add a deterministic Python evaluator that consumes only preregistered allowed inputs and returns machine-readable results.",
+    "handler": "Add a reviewed Research V5 handler that freezes the protocol before evaluation and writes only inside the current Issue sandbox.",
+    "registry": "Register the family in research/v5_recipe_registry.json with a bounded max_iterations and the exact no-API safety contract.",
+    "tests": "Add unit tests for the evaluator/handler and workflow contract tests covering fail-closed safety, temporal/OOS rules, and DONE/CONTINUE state."
+  },
+  "research_question": "Does the joint Bet365 pre-close market state from 1X2 + O/U 2.5 + Asian Handicap predict the subsequent continuous 1X2 closing repricing vector better than contemporaneous 1X2 market geometry alone, across the five major leagues, without using match outcomes?",
+  "safety": {
+    "automatic_promotion": false,
+    "model_api": false,
+    "outcomes_read_during_scaffold": false,
+    "paid_odds_api": false,
+    "production_operations": false,
+    "supabase_writes": false
+  },
+  "schema_version": 1
+}
