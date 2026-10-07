@@ -248,13 +248,13 @@
     {
       "program_id": "independent_information_source_disagreement",
       "title": "Direction 3: disagreement among independent information sources",
-      "status": "ACTIVE",
+      "status": "PROGRAM_DONE",
       "objective": "Determine whether a football-only probability estimate from an independent point-in-time source beats bookmaker 1X2 consensus on a frozen, mechanistically specified disagreement class.",
-      "completed_issue_numbers": [],
-      "active_issue_numbers": [
+      "completed_issue_numbers": [
         568
       ],
-      "current_frontier": "Issue #568 is the sole active child. It freezes a football-only five-league 1X2 estimate from prior-match Understat deep/deep_allowed/PPDA/PPDA_allowed, with average-bookmaker consensus as control and symmetric top-1 disagreement as the only test class. Development is 2019/20–2023/24, validation 2024/25 and untouched test 2025/26; all feature, support, uncertainty and cross-league gates are frozen before reserved outcomes.",
+      "active_issue_numbers": [],
+      "current_frontier": "Issue #568 completed the frozen five-league temporal-OOS test after passing all source/schema and disagreement-support gates. The independent Understat tactical-pressure estimate was materially worse than average-bookmaker consensus on the preregistered disagreement class: validation log-loss delta +0.067795 and Brier delta +0.047651; untouched-test log-loss delta +0.090703 and Brier delta +0.064621. The 5,000-draw league-stratified test log-loss CI was entirely harmful [+0.052615, +0.130185], and all five test leagues were worse than market. The result is NO_STABLE_INDEPENDENT_TACTICAL_DISAGREEMENT_EDGE / NO_BET.",
       "allowed_follow_up_classes": [
         "source_feasibility",
         "independent_football_estimate",
@@ -269,7 +269,33 @@
         "Do not train a market-correction or blend-weight model inside Direction 3; that architecture is reserved for Direction 4.",
         "Do not use 2026/27 outcomes, paid data, Supabase writes, production model operations or automatic promotion.",
         "Mark PROGRAM_DONE if the frozen independent source fails validation/untouched-test gates or no further genuinely independent zero-cost source remains."
-      ]
+      ],
+      "program_done_reason": "The sole independent zero-cost source family passed feasibility/support checks but failed every frozen validation, untouched-test, uncertainty and cross-league performance gate in Issue #568. Its stop rule directly requires PROGRAM_DONE after such a failure. Retuning disagreement type, side, magnitude, threshold, league set, model or tactical fields on the opened outcomes is forbidden; the project's odds-consuming model is not independent; and repository audit found no further genuinely independent timestamp-safe zero-cost source that is not already tested, source-gated or materially equivalent."
+    },
+    {
+      "program_id": "market_error_correction_architecture",
+      "title": "Direction 4: market-error correction architecture",
+      "status": "PROGRAM_DONE",
+      "objective": "Determine whether independently supported football information can improve 1X2 probabilities through a bounded correction to bookmaker market probabilities, with exact zero correction as fallback and a separate untouched OOS gate.",
+      "completed_issue_numbers": [],
+      "active_issue_numbers": [],
+      "current_frontier": "The requested architecture is already materially implemented and tested. MARKET_ANCHOR_1X2_V1 uses p = softmax(log(market) + lambda * football_residual) with lambda=0 as exact market identity; its tiny 2025/26 OOT improvement was not robust (both paired-bootstrap intervals crossed zero and the fixed configuration won both metrics in only 2/6 earlier seasons). MARKET_ANCHOR_1X2_V2 therefore remains active lambda 0 with the non-zero residual shadow-only. La Liga POWER Anchor V3 found no production-worthy global residual, Conditional Residual V4 reversed on untouched OOT, and later work attributed the robust signal to market-state geometry rather than football residual information. Roadmap directions 1 and 3 failed their market-incremental gates, while direction 2 was blocked by the absence of timestamp-safe zero-cost abrupt-change data. No independently supported football feature family remains eligible for a new non-zero correction.",
+      "allowed_follow_up_classes": [
+        "duplicate_audit",
+        "supported_feature_eligibility",
+        "market_correction_architecture",
+        "temporal_stability",
+        "untouched_oos_validation"
+      ],
+      "stop_rules": [
+        "Use only football feature families that already earned independent stable support beyond a market control; do not treat football-only predictive quality as market-incremental support.",
+        "Keep zero correction as the exact fallback and do not authorize a non-zero correction from validation-only, uncertainty-crossing or post-hoc evidence.",
+        "Do not retune MARKET_ANCHOR V1/V2, La Liga POWER Anchor V3, Conditional Residual V4, disagreement thresholds or feature subsets on already-opened outcomes.",
+        "Require a separate untouched OOS gate for any genuinely new supported feature family.",
+        "Do not use paid data, Supabase writes, production model operations, production .pkl changes or automatic promotion.",
+        "Mark PROGRAM_DONE when the correction architecture is already materially answered and no independently supported admissible feature family exists."
+      ],
+      "program_done_reason": "A new child is not scientifically admissible. The correction architecture with an exact zero-correction fallback already exists in MARKET_ANCHOR V1/V2 and was extended through V3/V4; rerunning it would duplicate existing work. More importantly, the roadmap's prerequisite is unsatisfied: directions 1 and 3 failed their frozen market-incremental gates, direction 2 is source-blocked, and prior football residual families did not establish stable independent value beyond market. With no eligible non-zero input, zero correction is the binding answer. Reopening requires a genuinely new timestamp-safe football feature family that first earns independent support on a separate untouched OOS gate."
     }
   ]
 }
