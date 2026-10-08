@@ -1,0 +1,7 @@
+{
+  "blocker": null,
+  "engine": "V5_DETERMINISTIC_NO_API",
+  "next_step": "Run the registered deterministic evaluator.",
+  "status": "CONTINUE",
+  "summary": "Frozen deterministic protocol written for website_goal_total_oos_readiness_v1."
+}
