@@ -529,7 +529,14 @@
         "decision_path": "decision",
         "summary_path": "interpretation_guard",
         "report_title": "website O/U 2.5 untouched-evidence source readiness",
-        "report_fields": ["market", "evidence_ready", "source_audit", "missing_prerequisites", "safety", "no_bet"],
+        "report_fields": [
+          "market",
+          "evidence_ready",
+          "source_audit",
+          "missing_prerequisites",
+          "safety",
+          "no_bet"
+        ],
         "preregistration_markdown": "# Frozen website O/U 2.5 source-readiness protocol\n\nStatus: **PREREGISTERED / PHASE ZERO / OUTCOME-FREE / NO_BET**.\n\nAudit the existing Total Goals lineage and method-selection scope, the complete four-artifact runtime bundle, a timestamp-safe pre-match feature/inference contract, immutable pre-kickoff O/U 2.5 forecasts, and exact paired bookmaker Over/Under 2.5 prices. Inspect repository contracts and file availability only. Do not load production .pkl files, query Supabase, call an odds API, train/refit/promote a model, or read any match outcome.\n\nThe 2023/24-2025/26 rows selected the calibrator method and the final calibrator was refit on all available OOS rows; they are not untouched evidence for that refit. Reserved 2026/27 outcomes remain unread. Do not reconstruct historical forecasts with post-result features, substitute 1X2 prices, synthesize timestamps, tune thresholds, or reinterpret opened history.\n\nReturn GOAL_OU25_EVIDENCE_READY only if every independent provenance and source prerequisite is already present. Otherwise return BLOCKED_BY_UNTOUCHED_DATA_OR_PROVENANCE with an exact checklist. Either decision remains research-only and NO_BET and cannot authorize evaluation, deployment, promotion, or product readiness."
       }
     },
@@ -550,8 +557,44 @@
         "decision_path": "decision",
         "summary_path": "interpretation_guard",
         "report_title": "website BTTS untouched-evidence source readiness",
-        "report_fields": ["market", "evidence_ready", "source_audit", "missing_prerequisites", "safety", "no_bet"],
+        "report_fields": [
+          "market",
+          "evidence_ready",
+          "source_audit",
+          "missing_prerequisites",
+          "safety",
+          "no_bet"
+        ],
         "preregistration_markdown": "# Frozen website BTTS source-readiness protocol\n\nStatus: **PREREGISTERED / PHASE ZERO / OUTCOME-FREE / NO_BET**.\n\nIndependently audit the BTTS artifact/calibrator lineage, the complete four-artifact runtime bundle, the point-in-time feature/inference contract, immutable pre-kickoff BTTS forecasts, and exact paired bookmaker BTTS YES/NO prices. Inspect repository contracts and file availability only. Do not load production .pkl files, query Supabase, call an odds API, train/refit/promote a model, or read any match outcome.\n\nThe 2023/24-2025/26 rows selected the BTTS calibrator method and the final calibrator was refit on all available OOS rows; they are not untouched evidence for that refit. Reserved 2026/27 outcomes remain unread. Do not pool BTTS with O/U 2.5, borrow another market's readiness, reconstruct historical forecasts, synthesize prices/timestamps, or tune a subgroup after seeing results.\n\nReturn BTTS_EVIDENCE_READY only if every independent provenance and source prerequisite is already present. Otherwise return BLOCKED_BY_UNTOUCHED_DATA_OR_PROVENANCE with an exact checklist. Either decision remains research-only and NO_BET and cannot authorize evaluation, deployment, promotion, or product readiness."
+      }
+    },
+    {
+      "hypothesis_family": "point_in_time_snapshot_cadence_v1",
+      "handler": "pipeline",
+      "max_iterations": 3,
+      "description": "Audit timestamp-safe repository evidence and frozen 30-day league-wide H2H collection policies without provider, outcome or database access.",
+      "safety": {
+        "model_api": false,
+        "paid_odds_api": false,
+        "supabase_writes": false,
+        "production_operations": false,
+        "automatic_promotion": false
+      },
+      "pipeline": {
+        "evaluator_module": "point_in_time_snapshot_cadence_v1",
+        "decision_path": "decision",
+        "summary_path": "interpretation_guard",
+        "report_title": "point-in-time league-wide 1X2 snapshot cadence audit",
+        "report_fields": [
+          "source_gate.available_leagues",
+          "source_gate.available_league_count",
+          "source_gate.complete_fixture_universe_available",
+          "policy_arithmetic.P1_fixed_12h",
+          "policy_arithmetic.P2_fixed_9h",
+          "workflow_audit",
+          "safety"
+        ],
+        "preregistration_markdown": "# Frozen point-in-time 1X2 snapshot cadence protocol\n\nStatus: **PREREGISTERED / OUTCOME-FREE / SOURCE-GATED / RESEARCH ONLY / NO_BET**.\n\nFixed leagues: EPL, La Liga, Serie A, Bundesliga and Ligue 1. Fixed market: grouped pre-match H2H only. Fixed 30-day allowance: 500 credits, 100-credit hard reserve, 400 spendable; one league-wide batch is the planning unit and costs one credit. No paid provider call is permitted to verify that assumption.\n\nCompare exactly P0 current 12h/6h/4h/2h adaptive logic, P1 full five-league sweep every 12h, P2 full sweep every 9h and P3 T-72/T-48/T-24/T-12/T-6/T-3/T-1 league windows. Before comparison, require repository timestamp provenance for league, event_id, snapshot_time_utc and commence_time_utc. Snapshot-only rows cannot prove missed-fixture coverage; fail closed without a complete timestamp-safe fixture universe.\n\nUse only source coverage, scheduled opportunities, freshness and deterministic credit arithmetic. Do not load outcomes, 2026/27 reserved targets, odds values for performance, ROI, CLV or betting fields. No API/network call, Supabase read/write, production workflow/schedule change, .pkl operation, deployment or automatic promotion."
       }
     }
   ]

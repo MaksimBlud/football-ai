@@ -361,8 +361,10 @@
       "status": "ACTIVE",
       "objective": "Determine, without calling a paid provider or reading match outcomes, which deterministic pre-kickoff league-wide 1X2 snapshot schedule gives timely future-site coverage under a 500-credit monthly allowance, a protected 100-credit reserve, and the planning contract of one credit per league-wide H2H batch.",
       "completed_issue_numbers": [],
-      "active_issue_numbers": [],
-      "current_frontier": "Fresh-main duplicate audit found no materially equivalent scientific program or research Issue. Website Issues #578-#583 cover implementation/live-pipeline work, not outcome-free cadence optimization. The repository currently has an EPL-only manual workflow, a budget guard with a hard reserve and max-cost=1, and a nearest-kickoff scheduler using 12h/6h/4h/2h intervals; it does not contain a frozen multi-league allocation study. The user-supplied quota assumptions imply 400 spendable credits per month, but provider cost semantics remain a planning assumption until independently evidenced without a paid odds request. First child must freeze a deterministic source/coverage evaluator and compare the existing scheduler with candidate league-batch schedules using only timestamps, fixture coverage and credit arithmetic.",
+      "active_issue_numbers": [
+        594
+      ],
+      "current_frontier": "Issue #594 is the sole active child. Fresh-main audit corrected the operational fact pattern: EPL, Bundesliga, Serie A and Ligue 1 each have manual-dispatch snapshot workflows protected by max-cost=1 budget guards; La Liga has a manual-only collector and no workflow. None is scheduled by cron. The repository does not commit portable multi-league snapshot CSV history, so the deterministic evaluator must report the exact timestamp/source blocker while preserving the useful fixed arithmetic: five-league 12-hour sweeps cost 300 credits per 30 days, and 9-hour sweeps consume the full 400-credit spendable ceiling.",
       "allowed_follow_up_classes": [
         "duplicate_audit",
         "source_and_cost_contract_feasibility",
