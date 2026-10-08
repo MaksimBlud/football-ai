@@ -1,7 +1,7 @@
 {
   "blocker": null,
   "engine": "V5_DETERMINISTIC_NO_API",
-  "next_step": "Render final report and close the research direction.",
-  "status": "CONTINUE",
-  "summary": "Deterministic evaluation complete: BLOCKED_BY_UNTOUCHED_DATA_OR_PROVENANCE."
+  "next_step": null,
+  "status": "DONE",
+  "summary": "Deterministic pipeline completed: BLOCKED_BY_UNTOUCHED_DATA_OR_PROVENANCE."
 }
