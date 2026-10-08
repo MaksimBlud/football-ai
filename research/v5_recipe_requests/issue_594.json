@@ -1,0 +1,40 @@
+{
+  "decision": "NEEDS_DETERMINISTIC_RECIPE",
+  "engine": "V5_DETERMINISTIC_NO_API",
+  "expected_lifecycle": [
+    "PREREGISTRATION",
+    "DETERMINISTIC_EVALUATION",
+    "RESULT.json",
+    "FINAL_REPORT.md",
+    "DONE"
+  ],
+  "hypothesis_family": "point_in_time_snapshot_cadence_v1",
+  "independent_information_justification": "Existing website Issues #578-#583 concern implementation, stale live feeds and publication. Existing research studies concern odds quality, repricing or model performance. None freezes and evaluates the acquisition schedule itself under a monthly credit constraint. This child uses only fixture/snapshot timestamps, league identity, event identity, source provenance and deterministic credit arithmetic. It cannot make a performance, ROI, CLV or betting claim and does not reopen #584/#585 or any PROGRAM_DONE family.",
+  "issue_number": 594,
+  "issue_title": "[AGENT-RESEARCH] SNAPSHOT-CADENCE-1 — outcome-free league-wide 1X2 collection schedule",
+  "mode": "historical_read_only",
+  "prohibited": [
+    "model-generated shell commands",
+    "automatic threshold retuning on seen outcomes",
+    "paid Odds API calls",
+    "Supabase writes",
+    "production .pkl writes",
+    "automatic promotion"
+  ],
+  "required_implementation": {
+    "evaluator": "Add a deterministic Python evaluator that consumes only preregistered allowed inputs and returns machine-readable results.",
+    "handler": "Add a reviewed Research V5 handler that freezes the protocol before evaluation and writes only inside the current Issue sandbox.",
+    "registry": "Register the family in research/v5_recipe_registry.json with a bounded max_iterations and the exact no-API safety contract.",
+    "tests": "Add unit tests for the evaluator/handler and workflow contract tests covering fail-closed safety, temporal/OOS rules, and DONE/CONTINUE state."
+  },
+  "research_question": "Under a frozen 500-credit monthly allowance, a protected 100-credit reserve, and the planning contract that one league-wide H2H request costs one credit, which deterministic pre-kickoff collection cadence gives the five major leagues the most timely and complete 1X2 snapshot opportunities without reading outcomes or calling the paid odds endpoint?",
+  "safety": {
+    "automatic_promotion": false,
+    "model_api": false,
+    "outcomes_read_during_scaffold": false,
+    "paid_odds_api": false,
+    "production_operations": false,
+    "supabase_writes": false
+  },
+  "schema_version": 1
+}
