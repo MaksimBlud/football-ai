@@ -1,0 +1,7 @@
+{
+  "blocker": null,
+  "engine": "V5_DETERMINISTIC_NO_API",
+  "next_step": null,
+  "status": "DONE",
+  "summary": "Deterministic pipeline completed: BLOCKED_BY_TIMESTAMP_COVERAGE."
+}
