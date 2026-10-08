@@ -511,6 +511,48 @@
         ],
         "preregistration_markdown": "# Frozen multi-market 1X2 repricing-vector protocol\n\nStatus: **PREREGISTERED / RETROSPECTIVE FALSIFICATION / OUTCOME-FREE / NO_BET**.\n\nQuestion: does direct joint Bet365 STANDARD/PRE-CLOSE 1X2 + O/U 2.5 + Asian Handicap state predict the later continuous 1X2 closing repricing vector better than an otherwise identical 1X2-only baseline?\n\nFrozen leagues: EPL, La Liga, Serie A, Bundesliga, Ligue 1.\nReference: 2019/20-2023/24; validation: 2024/25; retrospective test: 2025/26. No 2026/27 outcomes and no match outcomes are required.\n\nSource terminology: Football-Data standard odds are not claimed to be exact timestamped opening odds. They are STANDARD/PRE-CLOSE state. Explicit Bet365 closing 1X2 fields define the later target.\n\nBefore any closing movement is computed, audit the zero-cost Football-Data/pinned-mirror source. A league is usable only when validation and test each have >=100 paired eligible fixtures and at least three reference seasons have >=100 eligible fixtures. At least four of five leagues must pass unchanged or the result is BLOCKED_BY_SOURCE_GAP.\n\nMarket transforms are frozen:\n- 1X2: existing project POWER de-vig;\n- O/U 2.5: proportional two-way no-vig;\n- Asian Handicap: proportional two-way no-vig;\n- AH line: use AHh where finite with B365AH only as the existing schema fallback. Do not subset lines after results.\n\nTarget is exactly two log-ratio coordinates:\nmove_home_vs_draw = log(p_close_home/p_close_draw) - log(p_state_home/p_state_draw)\nmove_away_vs_draw = log(p_close_away/p_close_draw) - log(p_state_away/p_state_draw).\n\nBoth models use SimpleImputer(median) -> StandardScaler -> separate Ridge(alpha=10.0) regressors for the two coordinates.\nBaseline features: p_home, p_draw, p_away.\nCandidate features: baseline plus p_over_2_5, ah_line, p_ah_home.\nNo hyperparameter, feature-subset, interaction, sign, line-scope or league search.\n\nTemporal fitting is frozen before evaluator execution:\n- validation model fit: reference seasons only;\n- retrospective-test model fit: expanding history through validation, i.e. reference + 2024/25;\n- baseline and candidate always use the same train/evaluation rows and the same fitting rule.\n\nPrimary paired fixture loss is mean squared error across the two target coordinates. MAE is secondary but binding in the support gate. Pearson/Spearman, coordinate sign accuracy and strongest-move-coordinate accuracy are diagnostics only.\n\nUse a deterministic 5,000-draw league-stratified bootstrap on 2025/26 candidate-minus-baseline per-fixture squared-error loss. Negative is better.\n\nREPRICING_STATE_SUPPORTED_FOR_PROSPECTIVE_CONFIRMATION requires all:\n1. pooled 2024/25 candidate MSE < baseline MSE;\n2. pooled 2024/25 candidate MAE < baseline MAE;\n3. pooled 2025/26 candidate MSE < baseline MSE;\n4. pooled 2025/26 candidate MAE < baseline MAE;\n5. 2025/26 bootstrap 95% CI upper bound < 0;\n6. 2025/26 candidate MSE delta is positive in at most one eligible league;\n7. source/leakage/safety gates pass.\n\nHistorical closing targets through 2025/26 were already opened by related research, so a PASS is not untouched confirmation. It only justifies a separately frozen prospective confirmation.\n\nCorners are not part of this child. Do not use old #385/#522/#528 corner movements to tune or rescue #573. Corner augmentation, if ever allowed, must be a separate preregistered child with point-in-time source coverage and a future target not opened when frozen.\n\nNo paid Odds API, no purchased data, no Supabase writes, no production operations, no production .pkl changes, no automatic promotion, and no post-hoc weakening of any gate."
       }
+    },
+    {
+      "hypothesis_family": "website_goal_total_oos_readiness_v1",
+      "handler": "pipeline",
+      "max_iterations": 3,
+      "description": "Outcome-free provenance and source-readiness audit for an independent O/U 2.5 website evidence cohort.",
+      "safety": {
+        "model_api": false,
+        "paid_odds_api": false,
+        "supabase_writes": false,
+        "production_operations": false,
+        "automatic_promotion": false
+      },
+      "pipeline": {
+        "evaluator_module": "website_goal_total_oos_readiness_v1",
+        "decision_path": "decision",
+        "summary_path": "interpretation_guard",
+        "report_title": "website O/U 2.5 untouched-evidence source readiness",
+        "report_fields": ["market", "evidence_ready", "source_audit", "missing_prerequisites", "safety", "no_bet"],
+        "preregistration_markdown": "# Frozen website O/U 2.5 source-readiness protocol\n\nStatus: **PREREGISTERED / PHASE ZERO / OUTCOME-FREE / NO_BET**.\n\nAudit the existing Total Goals lineage and method-selection scope, the complete four-artifact runtime bundle, a timestamp-safe pre-match feature/inference contract, immutable pre-kickoff O/U 2.5 forecasts, and exact paired bookmaker Over/Under 2.5 prices. Inspect repository contracts and file availability only. Do not load production .pkl files, query Supabase, call an odds API, train/refit/promote a model, or read any match outcome.\n\nThe 2023/24-2025/26 rows selected the calibrator method and the final calibrator was refit on all available OOS rows; they are not untouched evidence for that refit. Reserved 2026/27 outcomes remain unread. Do not reconstruct historical forecasts with post-result features, substitute 1X2 prices, synthesize timestamps, tune thresholds, or reinterpret opened history.\n\nReturn GOAL_OU25_EVIDENCE_READY only if every independent provenance and source prerequisite is already present. Otherwise return BLOCKED_BY_UNTOUCHED_DATA_OR_PROVENANCE with an exact checklist. Either decision remains research-only and NO_BET and cannot authorize evaluation, deployment, promotion, or product readiness."
+      }
+    },
+    {
+      "hypothesis_family": "website_btts_oos_readiness_v1",
+      "handler": "pipeline",
+      "max_iterations": 3,
+      "description": "Outcome-free provenance and source-readiness audit for an independent BTTS website evidence cohort.",
+      "safety": {
+        "model_api": false,
+        "paid_odds_api": false,
+        "supabase_writes": false,
+        "production_operations": false,
+        "automatic_promotion": false
+      },
+      "pipeline": {
+        "evaluator_module": "website_btts_oos_readiness_v1",
+        "decision_path": "decision",
+        "summary_path": "interpretation_guard",
+        "report_title": "website BTTS untouched-evidence source readiness",
+        "report_fields": ["market", "evidence_ready", "source_audit", "missing_prerequisites", "safety", "no_bet"],
+        "preregistration_markdown": "# Frozen website BTTS source-readiness protocol\n\nStatus: **PREREGISTERED / PHASE ZERO / OUTCOME-FREE / NO_BET**.\n\nIndependently audit the BTTS artifact/calibrator lineage, the complete four-artifact runtime bundle, the point-in-time feature/inference contract, immutable pre-kickoff BTTS forecasts, and exact paired bookmaker BTTS YES/NO prices. Inspect repository contracts and file availability only. Do not load production .pkl files, query Supabase, call an odds API, train/refit/promote a model, or read any match outcome.\n\nThe 2023/24-2025/26 rows selected the BTTS calibrator method and the final calibrator was refit on all available OOS rows; they are not untouched evidence for that refit. Reserved 2026/27 outcomes remain unread. Do not pool BTTS with O/U 2.5, borrow another market's readiness, reconstruct historical forecasts, synthesize prices/timestamps, or tune a subgroup after seeing results.\n\nReturn BTTS_EVIDENCE_READY only if every independent provenance and source prerequisite is already present. Otherwise return BLOCKED_BY_UNTOUCHED_DATA_OR_PROVENANCE with an exact checklist. Either decision remains research-only and NO_BET and cannot authorize evaluation, deployment, promotion, or product readiness."
+      }
     }
   ]
 }
