@@ -329,14 +329,14 @@
     {
       "program_id": "website_goal_markets_validation_v1",
       "title": "Website MVP goal-market independent source-readiness program",
-      "status": "ACTIVE",
+      "status": "PROGRAM_DONE",
       "objective": "Establish whether O/U 2.5 and BTTS no-odds models have a timestamp-safe, independently testable untouched OOS record paired with actual bookmaker prices; produce source feasibility evidence before any claim of model quality or production expansion.",
-      "completed_issue_numbers": [],
-      "active_issue_numbers": [
+      "completed_issue_numbers": [
         584,
         585
       ],
-      "current_frontier": "Two child Issues #584 (O/U 2.5) and #585 (BTTS) were opened on 2026-10-08 and reached V5 no-API intake with research-v5-needs-recipe. Their new families require independently reviewed deterministic evaluators/recipes. Existing 2023/24–2025/26 calibrator method-selection rows are not an untouched OOS sample; the live product table has no goal-model predictions and live odds snapshots provide only 1X2 prices. Source feasibility and provenance come first, without inspecting embargoed 2026/27 outcomes.",
+      "active_issue_numbers": [],
+      "current_frontier": "Issues #584 (O/U 2.5) and #585 (BTTS) completed independent deterministic source-readiness audits and both returned BLOCKED_BY_UNTOUCHED_DATA_OR_PROVENANCE. The repository has inference/lineage contracts, but lacks a portable complete four-artifact runtime bundle, immutable timestamped pre-match goal forecasts, exact paired bookmaker prices for each goal market, and an untouched post-refit target cohort. The 2023/24–2025/26 rows selected/refit the calibrators and cannot confirm them; reserved 2026/27 outcomes remain unread. Both final V5 artifact sets are merged in main via PRs #588 and #589. No model-quality, website-readiness, deployment or betting claim is supported.",
       "allowed_follow_up_classes": [
         "source_feasibility",
         "artifact_bundle_lineage",
@@ -352,7 +352,8 @@
         "Do not substitute 1X2 bookmaker odds for O/U or BTTS paired prices; do not synthesize missing pre-match timestamps or forecasts.",
         "If independent timestamp-safe untouched data do not exist, report BLOCKED_BY_UNTOUCHED_DATA_OR_PROVENANCE with exact prerequisites instead of searching post-hoc seasons or thresholds.",
         "If both child source-feasibility lines are blocked and no independent zero-cost preregisterable step remains, mark PROGRAM_DONE with blockers; no speculative performance claim."
-      ]
+      ],
+      "program_done_reason": "Both registered independent source-feasibility lines reached the program's explicit blocking condition. Neither O/U 2.5 nor BTTS has the required timestamp-safe forecast-and-price record or untouched post-refit outcomes, and the shared four-artifact runtime bundle is not portably present in the repository. Substituting 1X2 prices, reconstructing historical forecasts, reopening calibrator-selection seasons, or reading reserved 2026/27 outcomes would violate the frozen stop rules. Paid data and Supabase writes are outside current authority. Therefore no independent zero-cost preregisterable follow-up remains and the program closes PROGRAM_DONE / research-only / NO_BET."
     }
   ]
 }
