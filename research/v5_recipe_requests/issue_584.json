@@ -1,0 +1,40 @@
+{
+  "decision": "NEEDS_DETERMINISTIC_RECIPE",
+  "engine": "V5_DETERMINISTIC_NO_API",
+  "expected_lifecycle": [
+    "PREREGISTRATION",
+    "DETERMINISTIC_EVALUATION",
+    "RESULT.json",
+    "FINAL_REPORT.md",
+    "DONE"
+  ],
+  "hypothesis_family": "website_goal_total_oos_readiness_v1",
+  "independent_information_justification": "Existing total-goals-readiness-audit.md audited artifacts, historical feature schemas, source gates and calibrator selection on 2023/24–2025/26, but did NOT establish a new untouched post-refit model+market OOS comparison. This child tests the feasibility of independent immutable pre-kickoff forecasts, goals results and contemporaneous O/U 2.5 prices under a separately frozen evaluation design, not a retune of total-goals calibrators or a claim about 1X2 research.",
+  "issue_number": 584,
+  "issue_title": "[AGENT-RESEARCH] WEBSITE-MVP-R1 — Goal O/U 2.5 product readiness and untouched-OOS feasibility",
+  "mode": "historical_read_only",
+  "prohibited": [
+    "model-generated shell commands",
+    "automatic threshold retuning on seen outcomes",
+    "paid Odds API calls",
+    "Supabase writes",
+    "production .pkl writes",
+    "automatic promotion"
+  ],
+  "required_implementation": {
+    "evaluator": "Add a deterministic Python evaluator that consumes only preregistered allowed inputs and returns machine-readable results.",
+    "handler": "Add a reviewed Research V5 handler that freezes the protocol before evaluation and writes only inside the current Issue sandbox.",
+    "registry": "Register the family in research/v5_recipe_registry.json with a bounded max_iterations and the exact no-API safety contract.",
+    "tests": "Add unit tests for the evaluator/handler and workflow contract tests covering fail-closed safety, temporal/OOS rules, and DONE/CONTINUE state."
+  },
+  "research_question": "Can Football AI's existing no-odds goal-model O/U 2.5 probability be independently and point-in-time validated against a contemporaneous bookmaker market baseline, without conflating calibrated method-selection data with untouched out-of-sample evidence?",
+  "safety": {
+    "automatic_promotion": false,
+    "model_api": false,
+    "outcomes_read_during_scaffold": false,
+    "paid_odds_api": false,
+    "production_operations": false,
+    "supabase_writes": false
+  },
+  "schema_version": 1
+}
