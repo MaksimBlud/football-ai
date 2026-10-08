@@ -325,6 +325,34 @@
         "Do not use paid data without fresh explicit user approval; do not write Supabase; do not modify/promote production .pkl artifacts.",
         "If #573 fails its frozen support gate, do not rescue it by retuning the same historical representation. Further work requires genuinely new prospective information; otherwise mark PROGRAM_DONE."
       ]
+    },
+    {
+      "program_id": "website_goal_markets_validation_v1",
+      "title": "Website MVP goal-market independent source-readiness program",
+      "status": "ACTIVE",
+      "objective": "Establish whether O/U 2.5 and BTTS no-odds models have a timestamp-safe, independently testable untouched OOS record paired with actual bookmaker prices; produce source feasibility evidence before any claim of model quality or production expansion.",
+      "completed_issue_numbers": [],
+      "active_issue_numbers": [
+        584,
+        585
+      ],
+      "current_frontier": "Two child Issues #584 (O/U 2.5) and #585 (BTTS) were opened on 2026-10-08 and reached V5 no-API intake with research-v5-needs-recipe. Their new families require independently reviewed deterministic evaluators/recipes. Existing 2023/24–2025/26 calibrator method-selection rows are not an untouched OOS sample; the live product table has no goal-model predictions and live odds snapshots provide only 1X2 prices. Source feasibility and provenance come first, without inspecting embargoed 2026/27 outcomes.",
+      "allowed_follow_up_classes": [
+        "source_feasibility",
+        "artifact_bundle_lineage",
+        "point_in_time_prediction_archive",
+        "market_price_coverage",
+        "untouched_oos_evaluation_if_eligible",
+        "close_direction"
+      ],
+      "stop_rules": [
+        "Do not evaluate an old calibration method-selection sample as if it were untouched evidence for the subsequently refit deployed model.",
+        "Do not read 2026/27 reserved all-leagues frozen cohort outcomes or weaken any sample-closed/preregistered gate.",
+        "No production model changes, no .pkl mutation/training/promotion, no Supabase writes and no paid Odds API without new explicit user approval.",
+        "Do not substitute 1X2 bookmaker odds for O/U or BTTS paired prices; do not synthesize missing pre-match timestamps or forecasts.",
+        "If independent timestamp-safe untouched data do not exist, report BLOCKED_BY_UNTOUCHED_DATA_OR_PROVENANCE with exact prerequisites instead of searching post-hoc seasons or thresholds.",
+        "If both child source-feasibility lines are blocked and no independent zero-cost preregisterable step remains, mark PROGRAM_DONE with blockers; no speculative performance claim."
+      ]
     }
   ]
 }
