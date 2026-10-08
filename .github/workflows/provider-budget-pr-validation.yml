@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - 'odds_api_budget_guard.py'
+      - 'odds_h2h_batch_dry_run.py'
+      - 'tests/test_odds_h2h_batch_dry_run.py'
+      - 'docs/WEBSITE_H2H_BATCH_BUDGET_DRY_RUN_V1.md'
       - 'tests/test_odds_api_budget_guard.py'
       - 'tests/test_paid_provider_workflow_budget_contract.py'
       - '.github/workflows/*odds-snapshots.yml'
@@ -36,9 +39,9 @@ jobs:
           python-version: '3.12'
       - run: pip install pytest requests python-dotenv
       - name: Compile budget guard
-        run: python -m py_compile odds_api_budget_guard.py
+        run: python -m py_compile odds_api_budget_guard.py odds_h2h_batch_dry_run.py
       - name: Run budget guard tests
-        run: pytest -q tests/test_odds_api_budget_guard.py tests/test_paid_provider_workflow_budget_contract.py
+        run: pytest -q tests/test_odds_api_budget_guard.py tests/test_paid_provider_workflow_budget_contract.py tests/test_odds_h2h_batch_dry_run.py
       - name: Enforce no production artifact changes
         run: |
           git fetch origin "${{ github.base_ref }}" --depth=1
