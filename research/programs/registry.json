@@ -354,6 +354,32 @@
         "If both child source-feasibility lines are blocked and no independent zero-cost preregisterable step remains, mark PROGRAM_DONE with blockers; no speculative performance claim."
       ],
       "program_done_reason": "Both registered independent source-feasibility lines reached the program's explicit blocking condition. Neither O/U 2.5 nor BTTS has the required timestamp-safe forecast-and-price record or untouched post-refit outcomes, and the shared four-artifact runtime bundle is not portably present in the repository. Substituting 1X2 prices, reconstructing historical forecasts, reopening calibrator-selection seasons, or reading reserved 2026/27 outcomes would violate the frozen stop rules. Paid data and Supabase writes are outside current authority. Therefore no independent zero-cost preregisterable follow-up remains and the program closes PROGRAM_DONE / research-only / NO_BET."
+    },
+    {
+      "program_id": "point_in_time_snapshot_cadence",
+      "title": "Point-in-time 1X2 snapshot cadence and quota allocation",
+      "status": "ACTIVE",
+      "objective": "Determine, without calling a paid provider or reading match outcomes, which deterministic pre-kickoff league-wide 1X2 snapshot schedule gives timely future-site coverage under a 500-credit monthly allowance, a protected 100-credit reserve, and the planning contract of one credit per league-wide H2H batch.",
+      "completed_issue_numbers": [],
+      "active_issue_numbers": [],
+      "current_frontier": "Fresh-main duplicate audit found no materially equivalent scientific program or research Issue. Website Issues #578-#583 cover implementation/live-pipeline work, not outcome-free cadence optimization. The repository currently has an EPL-only manual workflow, a budget guard with a hard reserve and max-cost=1, and a nearest-kickoff scheduler using 12h/6h/4h/2h intervals; it does not contain a frozen multi-league allocation study. The user-supplied quota assumptions imply 400 spendable credits per month, but provider cost semantics remain a planning assumption until independently evidenced without a paid odds request. First child must freeze a deterministic source/coverage evaluator and compare the existing scheduler with candidate league-batch schedules using only timestamps, fixture coverage and credit arithmetic.",
+      "allowed_follow_up_classes": [
+        "duplicate_audit",
+        "source_and_cost_contract_feasibility",
+        "outcome_free_cadence_simulation",
+        "pre_kickoff_coverage_optimization",
+        "prospective_snapshot_collection_if_manually_authorized",
+        "close_direction"
+      ],
+      "stop_rules": [
+        "Do not call The Odds API odds endpoints, spend credits or purchase data without fresh explicit user approval.",
+        "Treat 500 monthly credits, a 100-credit reserve and one credit per league-wide H2H batch as frozen planning inputs; fail closed if repository evidence contradicts them.",
+        "Do not read match outcomes, reserved 2026/27 targets or optimize cadence against model performance, ROI or closing-line results.",
+        "Do not write Supabase, modify or promote production .pkl artifacts, deploy the website or change production collection schedules inside this research program.",
+        "Use only pre-kickoff fixture timestamps, observation timestamps, source lineage, coverage and deterministic credit arithmetic; do not reconstruct missing point-in-time snapshots.",
+        "Keep website builder Issues #578-#583 outside this scientific program and do not duplicate their implementation tasks.",
+        "If no timestamp-safe fixture/snapshot metadata can support an offline evaluator, report WAITING_FOR_NEW_EVIDENCE or BLOCKED with exact prerequisites instead of inventing data."
+      ]
     }
   ]
 }
