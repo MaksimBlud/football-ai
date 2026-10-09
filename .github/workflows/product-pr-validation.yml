@@ -26,7 +26,7 @@ jobs:
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest
+          pip install pytest requests
 
       - name: Compile product modules
         run: |
@@ -50,6 +50,7 @@ jobs:
           python -m py_compile register_total_goals_artifact_bundle.py
           python -m py_compile materialize_total_goals_artifact_bundle.py
           python -m py_compile web_app.py
+          python -m py_compile product_fixture_schedule.py
 
       - name: Validate web deployment config
         run: |
@@ -126,6 +127,7 @@ jobs:
           python -m pytest -q tests/test_product_markets.py
           python -m pytest -q tests/test_product_web.py
           python -m pytest -q tests/test_product_ui_contract.py
+          python -m pytest -q tests/test_product_fixture_schedule.py
           python -m pytest -q tests/test_product_snapshot_store.py
           python -m pytest -q tests/test_publish_product_predictions.py
           python -m pytest -q tests/test_deployment_readiness.py
