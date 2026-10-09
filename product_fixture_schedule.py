@@ -10,7 +10,28 @@ from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from zoneinfo import ZoneInfo
 
-import requests
+import json
+from types import SimpleNamespace
+from urllib.parse import urlencode
+from urllib.request import HTTPRedirectHandler, Request, build_opener
+
+
+class _NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _public_get(url, *, params, timeout, allow_redirects):
+    """Single keyless request, bounded body and no redirects or secret headers."""
+    if url != ESPN_URL or allow_redirects is not False:
+        raise ValueError("only the fixed keyless ESPN URL is allowed")
+    request = Request(url + "?" + urlencode(params), headers={"User-Agent": "FootballAI-Fixtures/1.0"})
+    with build_opener(_NoRedirect()).open(request, timeout=timeout) as response:
+        status = int(response.status)
+        payload = json.loads(response.read(2_000_001).decode("utf-8"))
+        if status != 200 or len(json.dumps(payload)) > 2_000_000:
+            raise ValueError("invalid keyless schedule response")
+    return SimpleNamespace(status_code=status, json=lambda: payload)
 
 ESPN_URL = "https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard"
 OFFICIAL_SCHEDULE_URL = "https://www.premierleague.com/en/news/4688862/fixture-amendments-for-premier-league-matches-in-october-and-november"
@@ -117,12 +138,12 @@ def official_week_6_fallback(*, now_utc):
     return rows
 
 
-def fetch_upcoming_fixtures(*, now_utc=None, get=requests.get):
+def fetch_upcoming_fixtures(*, now_utc=None, get=None):
     now = _utc(now_utc or datetime.now(timezone.utc))
     from_date = now.date().strftime("%Y%m%d")
     until_date = (now + timedelta(days=14)).date().strftime("%Y%m%d")
     try:
-        response = get(
+        response = (get or _public_get)(
             ESPN_URL, params={"dates": from_date + "-" + until_date},
             timeout=12, allow_redirects=False,
         )
@@ -139,7 +160,7 @@ def fetch_upcoming_fixtures(*, now_utc=None, get=requests.get):
             "has_model_forecasts": False,
             "has_bookmaker_odds": False,
         }
-    except (requests.RequestException, ValueError, TypeError, KeyError, RuntimeError):
+    except (OSError, ValueError, TypeError, KeyError, RuntimeError):
         fixtures = official_week_6_fallback(now_utc=now)
         return {
             "schema_version": "public-fixtures.v1",
