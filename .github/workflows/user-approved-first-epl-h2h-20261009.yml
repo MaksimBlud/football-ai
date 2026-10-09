@@ -1,0 +1,53 @@
+name: User Approved First EPL H2H Snapshot 2026-10-09
+
+# Single-use request authorized in chat on 2026-10-09.
+# No schedule, no workflow_dispatch, no promotion and no permanent activation.
+on:
+  push:
+    branches:
+      - dev/user-approved-first-epl-h2h-20261009
+    paths:
+      - ".github/workflows/user-approved-first-epl-h2h-20261009.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: one-time-epl-h2h-20261009
+  cancel-in-progress: false
+
+jobs:
+  capture-once:
+    if: github.run_attempt == 1 && github.event.head_commit.message == 'ops: run first user-approved EPL H2H snapshot 2026-10-09'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install existing collector dependencies
+        run: pip install -r requirements.txt
+      - name: Check required private settings without printing values
+        run: |
+          python - <<'PY'
+          import os
+          missing = [key for key in ("THE_ODDS_API_KEY", "SUPABASE_URL", "SUPABASE_KEY") if not os.getenv(key)]
+          if missing:
+              raise SystemExit("Missing required secret names: " + ", ".join(missing))
+          print("PASS: collector credentials present (values hidden)")
+          PY
+      - name: Zero-credit The Odds API budget preflight
+        run: python odds_api_budget_guard.py --max-cost 1
+      - name: Exactly one authorized EPL H2H paid request and persist snapshot
+        run: python save_epl_odds_snapshot_with_bookmakers.py
+      - name: State single-use operation scope
+        if: always()
+        run: |
+          echo "Only one approved paid H2H request can be attempted during this workflow."
+          echo "No automatic next run, no model inference/training/promotion, no deployment."
