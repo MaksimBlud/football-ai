@@ -1,0 +1,71 @@
+name: First Site Forecast Pipeline 2026-10-09
+
+# User-approved one-time data processing after the one-credit EPL H2H fetch.
+# This workflow NEVER receives a paid provider key, trains, or promotes a model.
+on:
+  push:
+    branches:
+      - dev/user-approved-first-site-forecasts-20261009
+    paths:
+      - ".github/workflows/first-site-forecasts-20261009.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: first-site-forecast-pipeline-20261009
+  cancel-in-progress: false
+
+jobs:
+  produce-future-proofs:
+    if: "github.run_attempt == 1 && github.event.head_commit.message == 'ops: run approved forecast pipeline 2026-10-09'"
+    runs-on: ubuntu-latest
+    timeout-minutes: 23
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install existing project dependencies
+        run: pip install -r requirements.txt
+      - name: Ensure approved private destination without printing keys
+        run: |
+          python - <<'PY'
+          import os
+          from product_operational_automation import validate_private_supabase_credentials
+          validate_private_supabase_credentials(
+              supabase_url=os.getenv("SUPABASE_URL"),
+              supabase_key=os.getenv("SUPABASE_KEY"),
+          )
+          assert not os.getenv("THE_ODDS_API_KEY"), "Paid provider must not be available"
+          print("PASS: private Supabase access, paid provider disabled")
+          PY
+      - name: Stage 1 - persist existing EPL MARKET_ONLY market data (zero paid requests)
+        run: python scheduled_epl_live_cycle.py
+      - name: Stage 2 - audit observation/ledger write parity
+        run: python audit_epl_observation_ledger_parity.py
+      - name: Stage 3 - immutable production model read-only inference in research pair collector
+        run: python epl_ai_market_pair_cycle.py
+      - name: Stage 4 - append already-generated model predictions to public product snapshots
+        run: |
+          python run_product_operational_cycle.py --publish --report-path artifacts/product_operational_automation/first_user_approved_report.json
+      - name: Attach clear forecast provenance summary
+        if: always()
+        run: |
+          if [ -f artifacts/product_operational_automation/first_user_approved_report.json ]; then
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("artifacts/product_operational_automation/first_user_approved_report.json").read_text())
+          print("source:", (r.get("prediction_source") or {}).get("state"))
+          print("status:", r.get("status"))
+          print("pending:", r.get("pending"))
+          print("No paid provider request or model training/promotion in this job.")
+          PY
+          else
+            echo "Product report was not produced; earlier stage failed or stopped."
+          fi
