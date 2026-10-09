@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   capture-once:
-    if: github.run_attempt == 1 && github.event.head_commit.message == 'ops: run first user-approved EPL H2H snapshot 2026-10-09'
+    if: "github.run_attempt == 1 && github.event.head_commit.message == 'ops: approved single EPL snapshot attempt fixed yaml'"
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
