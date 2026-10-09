@@ -358,13 +358,13 @@
     {
       "program_id": "point_in_time_snapshot_cadence",
       "title": "Point-in-time 1X2 snapshot cadence and quota allocation",
-      "status": "ACTIVE",
+      "status": "BLOCKED",
       "objective": "Determine, without calling a paid provider or reading match outcomes, which deterministic pre-kickoff league-wide 1X2 snapshot schedule gives timely future-site coverage under a 500-credit monthly allowance, a protected 100-credit reserve, and the planning contract of one credit per league-wide H2H batch.",
-      "completed_issue_numbers": [],
-      "active_issue_numbers": [
+      "completed_issue_numbers": [
         594
       ],
-      "current_frontier": "Issue #594 is the sole active child. Fresh-main audit corrected the operational fact pattern: EPL, Bundesliga, Serie A and Ligue 1 each have manual-dispatch snapshot workflows protected by max-cost=1 budget guards; La Liga has a manual-only collector and no workflow. None is scheduled by cron. The repository does not commit portable multi-league snapshot CSV history, so the deterministic evaluator must report the exact timestamp/source blocker while preserving the useful fixed arithmetic: five-league 12-hour sweeps cost 300 credits per 30 days, and 9-hour sweeps consume the full 400-credit spendable ceiling.",
+      "active_issue_numbers": [],
+      "current_frontier": "Issue #594 completed with BLOCKED_BY_TIMESTAMP_COVERAGE. Fresh main contains zero usable timestamp-safe snapshot histories across the five frozen leagues and no complete timestamp-safe fixture universe, so P0/P3 replay and empirical coverage comparison are impossible without inventing data. The only supported result is deterministic quota arithmetic: five-league 12-hour sweeps cost 300 credits per 30 days and leave 100 spendable credits plus the separate 100-credit hard reserve; 9-hour sweeps cost the full 400-credit spendable ceiling. Scientific state is WAITING_FOR_NEW_EVIDENCE.",
       "allowed_follow_up_classes": [
         "duplicate_audit",
         "source_and_cost_contract_feasibility",
@@ -381,7 +381,8 @@
         "Use only pre-kickoff fixture timestamps, observation timestamps, source lineage, coverage and deterministic credit arithmetic; do not reconstruct missing point-in-time snapshots.",
         "Keep website builder Issues #578-#583 outside this scientific program and do not duplicate their implementation tasks.",
         "If no timestamp-safe fixture/snapshot metadata can support an offline evaluator, report WAITING_FOR_NEW_EVIDENCE or BLOCKED with exact prerequisites instead of inventing data."
-      ]
+      ],
+      "program_done_reason": "BLOCKED / WAITING_FOR_NEW_EVIDENCE after Issue #594. Resume only when a genuinely point-in-time, portable pre-kickoff fixture-and-snapshot history exists for at least two frozen leagues, including league, event_id, commence_time_utc and snapshot_time_utc plus a complete fixture universe, or when the user gives fresh explicit approval for prospective paid snapshot collection. Do not rerun the same evaluator, infer missed fixtures from snapshot-only rows, or spend The Odds API credits automatically."
     }
   ]
 }
