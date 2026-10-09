@@ -6,12 +6,19 @@
 <title>Football AI — матчи и рынки</title>
 <style>
 :root{--bg:#f4f6fa;--panel:#fff;--ink:#111827;--muted:#64748b;--line:#e2e8f0;--blue:#2563eb;--blue-soft:#eff6ff;--green:#15803d;--green-soft:#ecfdf5;--amber:#a16207;--slate:#f8fafc;--red:#b91c1c}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif}.shell{width:min(1600px,calc(100% - 28px));margin:auto;padding:28px 0 50px}.top{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}.eyebrow{font-size:12px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--blue)}h1{margin:7px 0 0;font-size:clamp(30px,4vw,46px);letter-spacing:-.04em}.lead{max-width:900px;color:var(--muted);line-height:1.55}.btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer}.readiness{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0}.ready{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}.ready h3{font-size:14px;margin:0 0 7px}.ready p{margin:0;color:var(--muted);font-size:11px;line-height:1.45}.panel{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 12px 30px rgba(15,23,42,.05)}.panel-head{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:15px 18px;border-bottom:1px solid var(--line)}.stats{display:flex;gap:24px;flex-wrap:wrap}.stat{font-size:11px;color:var(--muted)}.stat strong{display:block;font-size:20px;color:var(--ink);margin-top:3px}.schema{font:11px ui-monospace,monospace;color:var(--muted)}.filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 18px;background:var(--slate);border-bottom:1px solid var(--line)}.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;font-weight:800;cursor:pointer}.chip.active{background:#111827;color:#fff}.search{margin-left:auto;min-width:260px;border:1px solid var(--line);border-radius:9px;padding:8px 11px}.table-wrap{overflow:auto}table{width:100%;min-width:1580px;border-collapse:collapse}th,td{padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}th{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}tbody tr{cursor:pointer}tbody tr:hover{background:#fbfdff}.match{min-width:215px}.date{font-size:11px;color:var(--muted);margin-bottom:5px}.teams{font-size:15px;font-weight:900}.box{min-width:185px;border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff}.box.forecast{background:var(--blue-soft);border-color:#bfdbfe}.box.value{background:var(--green-soft);border-color:#bbf7d0}.box.research{background:var(--slate);color:var(--muted)}.boxtop{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px}.pick{font-weight:900;font-size:13px}.prob{font-weight:950;color:var(--blue)}.kv{display:grid;grid-template-columns:1fr auto;gap:4px 8px;font-size:11px}.kv span:nth-child(odd){color:var(--muted)}.kv span:nth-child(even){font-weight:800;text-align:right}.positive{color:var(--green)!important}.negative{color:var(--red)!important}.badge{display:inline-block;margin-top:8px;padding:4px 7px;border-radius:999px;font-size:9px;font-weight:900;text-transform:uppercase;background:#e2e8f0;color:#475569}.badge.forecast{background:#dbeafe;color:#1d4ed8}.badge.value{background:#dcfce7;color:#166534}.foot{padding:13px 18px 17px;background:var(--slate);color:var(--muted);font-size:11px;line-height:1.55}.loading{padding:38px;text-align:center;color:var(--muted)}@media(max-width:1000px){.readiness{grid-template-columns:repeat(2,1fr)}.top{flex-direction:column}.search{margin-left:0}}@media(max-width:620px){.readiness{grid-template-columns:1fr}}
+.fixture-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;padding:16px}.fixture-card{border:1px solid var(--line);border-radius:12px;padding:16px;background:#fff}.fixture-card .teams{margin:9px 0;font-size:17px}.fixture-meta{font-size:11px;color:var(--muted)}.fixture-card .fixture-status{color:var(--amber);font-size:12px;font-weight:800;margin:8px 0 4px}
 </style>
 </head>
 <body>
 <main class="shell">
 <header class="top"><div><div class="eyebrow">Football AI · product view</div><h1>Матчи и оценка рынков</h1><p class="lead">Главный прогноз определяется сначала зрелостью рынка (decision tier), затем вероятностью модели. Value / raw EV — отдельный дополнительный показатель цены и никогда не переопределяет прогноз.</p></div><button id="reload" class="btn">Перезагрузить</button></header>
 <section id="readiness" class="readiness"></section>
+<section id="fixtures-section" class="panel" hidden>
+  <div class="panel-head"><div><strong>Ближайшие матчи АПЛ</strong><div class="stat">Расписание отдельно от прогнозов модели. Коэффициенты пока не получены.</div></div><div class="stat"><strong id="fixtures-count">—</strong> встреч</div></div>
+  <div class="fixture-grid" id="fixtures-grid"></div>
+  <div class="foot" id="fixtures-source"></div>
+</section>
+
 <section class="panel">
 <div class="panel-head"><div class="stats"><div class="stat">Матчей<strong id="count-all">—</strong></div><div class="stat">С ценой БК<strong id="count-priced">—</strong></div><div class="stat">Value-сигналов<strong id="count-value">—</strong></div></div><div id="schema" class="schema">—</div></div>
 <div class="filters"><button class="chip active" data-filter="all">Все матчи</button><button class="chip" data-filter="priced">Есть цена БК</button><button class="chip" data-filter="value">Есть value-сигнал</button><input id="search" class="search" placeholder="Поиск команды…"></div>
@@ -20,7 +27,7 @@
 </section>
 </main>
 <script>
-const state={payload:null,filter:'all',query:''};
+const state={payload:null,fixtures:null,filter:'all',query:''};
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=v=>v!==null&&v!==undefined&&Number.isFinite(Number(v));
@@ -38,8 +45,43 @@ function researchBox(r){return `<div class="box research"><div class="pick">${es
 function readinessCard(k,r){return `<article class="ready"><h3>${esc(names[k]||r.label)}</h3><p>${esc(r.note||'')}</p></article>`}
 function rowHtml(m){const meta=m.match,one=m.markets['1x2'],goals=m.markets.total_goals;return `<tr data-match-id="${esc(meta.product_match_id)}"><td class="match"><div class="date">${esc(meta.match_date||'—')} · ${esc(meta.match_time||'—')}</div><div class="teams">${esc(meta.home_team)} — ${esc(meta.away_team)}</div></td><td>${forecastBox(m.main_forecast)}</td><td>${marketBox(one.display_selection,one.readiness)}</td><td>${valueBox(m.value_signal)}</td><td>${researchBox(m.markets.handicap.readiness)}</td><td>${marketBox(goals.display_selection,goals.readiness)}</td><td>${researchBox(m.markets.corners_total.readiness)}</td></tr>`}
 function render(){const p=state.payload;if(!p)return;const q=state.query.toLowerCase().trim();const rows=p.matches.filter(match=>{const teams=`${match.match.home_team} ${match.match.away_team}`.toLowerCase();if(q&&!teams.includes(q))return false;if(state.filter==='priced'&&!priced(match))return false;if(state.filter==='value'&&!hasValue(match))return false;return true});$('body').innerHTML=rows.length?rows.map(rowHtml).join(''):'<tr><td colspan="7" class="loading">По выбранному фильтру матчей нет.</td></tr>';document.querySelectorAll('#body tr[data-match-id]').forEach(row=>row.addEventListener('click',()=>location.href=`/match?id=${encodeURIComponent(row.dataset.matchId)}`));$('count-all').textContent=p.matches.length;$('count-priced').textContent=p.matches.filter(priced).length;$('count-value').textContent=p.matches.filter(hasValue).length}
-async function load(){$('body').innerHTML='<tr><td colspan="7" class="loading">Загружаю market view…</td></tr>';try{const response=await fetch('/product-market-view',{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);const p=await response.json();if(p.schema_version!=='product-market-view.v1')throw new Error(`Неожиданная схема: ${p.schema_version||'нет версии'}`);state.payload=p;$('schema').textContent=`${p.schema_version} · ${p.decision_framework_version||'decision framework'} · forecast ≠ value`;$('readiness').innerHTML=Object.entries(p.market_readiness).map(([k,r])=>readinessCard(k,r)).join('');render()}catch(e){$('body').innerHTML=`<tr><td colspan="7" class="loading">Ошибка загрузки: ${esc(e.message)}</td></tr>`}}
-document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.filter=b.dataset.filter;render()}));$('search').addEventListener('input',e=>{state.query=e.target.value;render()});$('reload').addEventListener('click',load);load();
+
+function renderFixtures(){
+  const target=$('fixtures-section');
+  const f=state.fixtures;
+  if(!f||!Array.isArray(f.fixtures)||f.fixtures.length===0||(state.payload&&state.payload.matches.length>0)){
+    target.hidden=true;
+    return;
+  }
+  target.hidden=false;
+  $('fixtures-count').textContent=f.fixtures.length;
+  $('fixtures-source').textContent=f.source_mode==='official_published_schedule_fallback'
+    ?'Источник: опубликованный календарь Премьер-лиги (резервный вариант). Время начала — лондонское.'
+    :'Источник: бесплатный публичный календарь ESPN. Время начала — лондонское.';
+  $('fixtures-grid').innerHTML=f.fixtures.map(m=>`
+    <article class="fixture-card">
+      <div class="fixture-meta">${esc(m.match_date_uk)} · ${esc(m.match_time_uk)} (Лондон) · АПЛ</div>
+      <div class="teams">${esc(m.home_team)} — ${esc(m.away_team)}</div>
+      <div class="fixture-status">Ожидается прогноз модели</div>
+      <div class="fixture-meta">Букмекерские коэффициенты ещё не загружены</div>
+    </article>`).join('');
+}
+async function loadFixtures(){
+  try{
+    const response=await fetch('/upcoming-fixtures',{cache:'no-store'});
+    if(!response.ok)throw new Error('Schedule HTTP '+response.status);
+    const data=await response.json();
+    if(data.schema_version!=='public-fixtures.v1'||!Array.isArray(data.fixtures))throw new Error('Invalid fixture schema');
+    state.fixtures=data;
+    renderFixtures();
+  }catch(error){
+    state.fixtures=null;
+    renderFixtures();
+  }
+}
+
+async function load(){$('body').innerHTML='<tr><td colspan="7" class="loading">Загружаю market view…</td></tr>';try{const response=await fetch('/product-market-view',{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);const p=await response.json();if(p.schema_version!=='product-market-view.v1')throw new Error(`Неожиданная схема: ${p.schema_version||'нет версии'}`);state.payload=p;$('schema').textContent=`${p.schema_version} · ${p.decision_framework_version||'decision framework'} · forecast ≠ value`;$('readiness').innerHTML=Object.entries(p.market_readiness).map(([k,r])=>readinessCard(k,r)).join('');render();renderFixtures()}catch(e){$('body').innerHTML=`<tr><td colspan="7" class="loading">Ошибка загрузки: ${esc(e.message)}</td></tr>`}}
+document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.filter=b.dataset.filter;render()}));$('search').addEventListener('input',e=>{state.query=e.target.value;render()});$('reload').addEventListener('click',()=>{load();loadFixtures()});load();loadFixtures();
 </script>
 </body>
 </html>
