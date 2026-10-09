@@ -135,3 +135,31 @@ def test_timezone_naive_snapshot_is_rejected():
         select_latest_prediction_snapshots(
             [prediction_snapshot(generated_at_utc="2026-09-12T07:00:00")]
         )
+
+
+@pytest.mark.parametrize("invalid_quote", [
+    {"home_odds": None},
+    {"draw_odds": 1.0},
+    {"away_odds": float("nan")},
+    {"home_odds": "not-a-number"},
+    {"away_odds": float("inf")},
+])
+def test_incomplete_or_invalid_h2h_quote_is_not_counted_as_priced(invalid_quote):
+    payload = build_product_view_from_snapshot_rows(
+        [prediction_snapshot()], [odds_snapshot(**invalid_quote)],
+    )
+    assert payload["data_source"]["priced_event_count"] == 0
+    item = payload["matches"][0]
+    assert item["match"]["market_snapshot_status"] == "no_verified_prekickoff_quote"
+    assert item["markets"]["1x2"]["selections"][0]["bookmaker_odds"] is None
+
+
+def test_older_complete_h2h_quote_survives_newer_incomplete_quote():
+    payload = build_product_view_from_snapshot_rows(
+        [prediction_snapshot()], [
+            odds_snapshot(home_odds=1.85),
+            odds_snapshot(snapshot_time_utc="2026-09-12T05:55:00+00:00", draw_odds=None),
+        ],
+    )
+    assert payload["data_source"]["priced_event_count"] == 1
+    assert payload["matches"][0]["markets"]["1x2"]["selections"][0]["bookmaker_odds"] == pytest.approx(1.85)
