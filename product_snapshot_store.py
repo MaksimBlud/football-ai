@@ -7,6 +7,8 @@ This keeps model output and market price as separate data sources.
 
 from __future__ import annotations
 
+import math
+
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Mapping
 
@@ -163,6 +165,14 @@ def _market_matches_prediction(
         expected = " ".join(str(prediction.get(side) or "").split()).casefold()
         actual = " ".join(str(odds.get(side) or "").split()).casefold()
         if not expected or actual != expected:
+            return False
+    # A 1X2 snapshot is priced only when all three decimal odds are valid.
+    for outcome in ("home_odds", "draw_odds", "away_odds"):
+        try:
+            decimal_price = float(odds.get(outcome))
+        except (TypeError, ValueError):
+            return False
+        if not math.isfinite(decimal_price) or decimal_price <= 1.0:
             return False
     return True
 
