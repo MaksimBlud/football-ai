@@ -318,11 +318,18 @@ def load_product_market_view(
         .select(PREDICTION_COLUMNS)
         .gte("commence_time_utc", now.isoformat())
         .lt("commence_time_utc", horizon.isoformat())
+        .lte("generated_at_utc", now.isoformat())
         .order("generated_at_utc", desc=True)
         .limit(1000)
         .execute()
     )
     prediction_rows = prediction_response.data or []
+    # A truncated newest-first page is not a complete as-of view.
+    # Fail closed rather than present partial or future-tainted coverage.
+    if len(prediction_rows) >= 1000:
+        raise ValueError("Prediction snapshot query reached the 1000-row limit")
+    if any(_parse_datetime(row.get("generated_at_utc")) > now for row in prediction_rows):
+        raise ValueError("Prediction query returned a future-dated snapshot")
     latest_predictions = select_latest_prediction_snapshots(prediction_rows)
 
     event_ids = sorted(
@@ -342,11 +349,16 @@ def load_product_market_view(
             .in_("event_id", event_ids)
             .gte("commence_time_utc", now.isoformat())
             .lt("commence_time_utc", horizon.isoformat())
+            .lte("snapshot_time_utc", now.isoformat())
             .order("snapshot_time_utc", desc=True)
             .limit(5000)
             .execute()
         )
         odds_rows = odds_response.data or []
+        if len(odds_rows) >= 5000:
+            raise ValueError("Odds snapshot query reached the 5000-row limit")
+        if any(_parse_datetime(row.get("snapshot_time_utc")) > now for row in odds_rows):
+            raise ValueError("Odds query returned a future-dated snapshot")
 
     return build_product_view_from_snapshot_rows(
         latest_predictions,
