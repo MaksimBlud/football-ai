@@ -89,3 +89,66 @@ def test_ui_copy_uses_decision_tier_before_cross_market_probability():
     assert "decision tier" in detail
     assert "Главный прогноз определяется только вероятностью модели" not in combined
     assert "Value / raw EV" in combined
+
+
+def test_mobile_layout_has_real_cards_not_horizontal_1580px_table():
+    html = read(INDEX_PATH)
+    assert 'id="mobile-match-list"' in html
+    assert 'class="mobile-match-card" role="listitem"' in html
+    assert '@media(max-width:900px)' in html
+    assert '.table-wrap{display:none}' in html
+    assert '.mobile-match-list{display:grid' in html
+    assert 'rows.map(mobileCardHtml)' in html
+
+
+def test_mobile_market_prices_and_probabilities_use_server_selections_only():
+    html = read(INDEX_PATH)
+    assert "const one=m.markets['1x2'];" in html
+    assert "f.status==='model_forecast'" in html
+    assert "pct(f.selection.probability)" in html
+    assert "pct(s.probability)" in html
+    assert "dec(s.bookmaker_odds)" in html
+    assert "bookmaker_odds)||1" not in html
+    assert 'Raw EV не доказывает прибыльность.' in html
+
+
+def test_mobile_navigation_is_keyboard_accessible_and_uses_stable_match_id():
+    html = read(INDEX_PATH)
+    assert 'const url=' in html
+    assert "encodeURIComponent(String(meta.product_match_id||''))" in html
+    assert '<a class="mobile-card-link" href="' in html
+    assert '.mobile-card-link:focus-visible' in html
+    assert 'role="list"' in html
+
+
+def test_mobile_and_desktop_fail_closed_together_on_http_error():
+    html = read(INDEX_PATH)
+    assert "state.payload=null;$('mobile-match-list').innerHTML" in html
+    assert "if(p.schema_version!=='product-market-view.v1'||!Array.isArray(p.matches)" in html
+    assert "Ошибка загрузки. Данные не обновлены." in html
+    assert 'role="alert"' in html
+
+
+def test_live_odds_freshness_not_fabricated_when_api_lacks_timestamp():
+    html = read(INDEX_PATH)
+    assert 'id="source-note"' in html
+    assert 'время его фиксации в публичном API не указано' in html
+    assert 'Коэффициенты — сохранённый снимок, не live-линия' in html
+    assert 'Время матчей — Великобритания (UK)' in html
+
+
+def test_match_list_inline_js_is_syntactically_valid_when_node_available(tmp_path):
+    import re
+    import shutil
+    import subprocess
+    import pytest
+
+    if shutil.which("node") is None:
+        pytest.skip("Node is not installed in this local environment")
+    html = read(INDEX_PATH)
+    match = re.search(r"<script>(.*?)</script>", html, re.S)
+    assert match, "Missing inline script"
+    script = tmp_path / "product_index_v2.js"
+    script.write_text(match.group(1), encoding="utf-8")
+    result = subprocess.run(["node", "--check", str(script)], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr

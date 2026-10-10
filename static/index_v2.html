@@ -6,16 +6,50 @@
 <title>Football AI — матчи и рынки</title>
 <style>
 :root{--bg:#f4f6fa;--panel:#fff;--ink:#111827;--muted:#64748b;--line:#e2e8f0;--blue:#2563eb;--blue-soft:#eff6ff;--green:#15803d;--green-soft:#ecfdf5;--amber:#a16207;--slate:#f8fafc;--red:#b91c1c}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif}.shell{width:min(1600px,calc(100% - 28px));margin:auto;padding:28px 0 50px}.top{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}.eyebrow{font-size:12px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--blue)}h1{margin:7px 0 0;font-size:clamp(30px,4vw,46px);letter-spacing:-.04em}.lead{max-width:900px;color:var(--muted);line-height:1.55}.btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer}.readiness{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0}.ready{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}.ready h3{font-size:14px;margin:0 0 7px}.ready p{margin:0;color:var(--muted);font-size:11px;line-height:1.45}.panel{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 12px 30px rgba(15,23,42,.05)}.panel-head{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:15px 18px;border-bottom:1px solid var(--line)}.stats{display:flex;gap:24px;flex-wrap:wrap}.stat{font-size:11px;color:var(--muted)}.stat strong{display:block;font-size:20px;color:var(--ink);margin-top:3px}.schema{font:11px ui-monospace,monospace;color:var(--muted)}.filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 18px;background:var(--slate);border-bottom:1px solid var(--line)}.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;font-weight:800;cursor:pointer}.chip.active{background:#111827;color:#fff}.search{margin-left:auto;min-width:260px;border:1px solid var(--line);border-radius:9px;padding:8px 11px}.table-wrap{overflow:auto}table{width:100%;min-width:1580px;border-collapse:collapse}th,td{padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}th{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}tbody tr{cursor:pointer}tbody tr:hover{background:#fbfdff}.match{min-width:215px}.date{font-size:11px;color:var(--muted);margin-bottom:5px}.teams{font-size:15px;font-weight:900}.box{min-width:185px;border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff}.box.forecast{background:var(--blue-soft);border-color:#bfdbfe}.box.value{background:var(--green-soft);border-color:#bbf7d0}.box.research{background:var(--slate);color:var(--muted)}.boxtop{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px}.pick{font-weight:900;font-size:13px}.prob{font-weight:950;color:var(--blue)}.kv{display:grid;grid-template-columns:1fr auto;gap:4px 8px;font-size:11px}.kv span:nth-child(odd){color:var(--muted)}.kv span:nth-child(even){font-weight:800;text-align:right}.positive{color:var(--green)!important}.negative{color:var(--red)!important}.badge{display:inline-block;margin-top:8px;padding:4px 7px;border-radius:999px;font-size:9px;font-weight:900;text-transform:uppercase;background:#e2e8f0;color:#475569}.badge.forecast{background:#dbeafe;color:#1d4ed8}.badge.value{background:#dcfce7;color:#166534}.foot{padding:13px 18px 17px;background:var(--slate);color:var(--muted);font-size:11px;line-height:1.55}.loading{padding:38px;text-align:center;color:var(--muted)}@media(max-width:1000px){.readiness{grid-template-columns:repeat(2,1fr)}.top{flex-direction:column}.search{margin-left:0}}@media(max-width:620px){.readiness{grid-template-columns:1fr}}
+
+/* Compact, accessible match cards: narrow screens must not scroll a 1580px table. */
+.mobile-match-list{display:none}
+.source-note{color:var(--muted);font-size:12px;margin:10px 0 0;line-height:1.5}
+.mobile-match-card{border:1px solid var(--line);border-radius:15px;background:var(--panel);padding:16px;box-shadow:0 5px 20px rgba(15,23,42,.045)}
+.mobile-match-card .mobile-meta{font-size:12px;color:var(--muted);margin-bottom:7px}
+.mobile-match-card h3{font-size:18px;line-height:1.3;margin:0 0 10px;letter-spacing:-.025em}
+.mobile-match-card .mobile-pick{background:var(--blue-soft);border:1px solid #bfdbfe;padding:11px;border-radius:11px}
+.mobile-match-card .mobile-pick b{font-size:14px;display:block;margin:5px 0}
+.mobile-match-card .mobile-pick span{font-size:12px;color:var(--muted)}
+.mobile-market{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:12px 0}
+.mobile-market-item{background:var(--slate);border:1px solid var(--line);border-radius:9px;padding:9px 5px;text-align:center;min-width:0}
+.mobile-market-item .outcome{display:block;font-size:11px;color:var(--muted)}
+.mobile-market-item strong{display:block;font-size:17px;margin:5px 0;color:var(--ink)}
+.mobile-market-item .odds{display:block;font-size:11px;color:var(--muted)}
+.mobile-card-link{display:inline-flex;align-items:center;justify-content:center;min-height:42px;width:100%;border:1px solid #bfdbfe;border-radius:9px;color:#1d4ed8;text-decoration:none;font-size:13px;font-weight:850}
+.mobile-card-link:focus-visible,.btn:focus-visible,.chip:focus-visible,.search:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
+.mobile-card-note{font-size:11px;color:var(--muted);margin:9px 0;line-height:1.5}
+@media(max-width:900px){
+  .table-wrap{display:none}
+  .mobile-match-list{display:grid;gap:12px;padding:14px;background:var(--slate)}
+  .filters{align-items:stretch}
+  .search{width:100%;min-width:0;margin-left:0}
+  .panel-head{align-items:flex-start}
+  .stats{gap:14px}
+  .schema{display:none}
+}
+@media(max-width:400px){
+  .mobile-match-list{padding:9px}
+  .mobile-match-card{padding:11px}
+  .mobile-match-card h3{font-size:16px}
+  .mobile-market-item strong{font-size:15px}
+}
 </style>
 </head>
 <body>
 <main class="shell">
-<header class="top"><div><div class="eyebrow">Football AI · product view</div><h1>Матчи и оценка рынков</h1><p class="lead">Главный прогноз определяется сначала зрелостью рынка (decision tier), затем вероятностью модели. Value / raw EV — отдельный дополнительный показатель цены и никогда не переопределяет прогноз.</p></div><button id="reload" class="btn">Перезагрузить</button></header>
+<header class="top"><div><div class="eyebrow">Football AI · product view</div><h1>Матчи и оценка рынков</h1><p class="lead">Главный прогноз определяется сначала зрелостью рынка (decision tier), затем вероятностью модели. Value / raw EV — отдельный дополнительный показатель цены и никогда не переопределяет прогноз.</p><p id="source-note" class="source-note" role="status" aria-live="polite">Проверяем доступность прогнозов и котировок. Рыночные цены не обновляются в реальном времени.</p></div><button id="reload" class="btn">Перезагрузить</button></header>
 <section id="readiness" class="readiness"></section>
 <section class="panel">
 <div class="panel-head"><div class="stats"><div class="stat">Матчей<strong id="count-all">—</strong></div><div class="stat">С ценой БК<strong id="count-priced">—</strong></div><div class="stat">Value-сигналов<strong id="count-value">—</strong></div></div><div id="schema" class="schema">—</div></div>
 <div class="filters"><button class="chip active" data-filter="all">Все матчи</button><button class="chip" data-filter="priced">Есть цена БК</button><button class="chip" data-filter="value">Есть value-сигнал</button><input id="search" class="search" placeholder="Поиск команды…"></div>
 <div class="table-wrap"><table><thead><tr><th>Матч</th><th>Главный прогноз модели</th><th>Исход матча</th><th>Value / EV (доп.)</th><th>Фора</th><th>Тотал голов</th><th>Тотал угловых</th></tr></thead><tbody id="body"><tr><td colspan="7" class="loading">Загружаю market view…</td></tr></tbody></table></div>
+<div id="mobile-match-list" class="mobile-match-list" role="list" aria-live="polite" aria-label="Карточки предстоящих матчей"><div class="loading">Загружаю матчи…</div></div>
 <div class="foot">Главный прогноз: сначала decision tier рынка, затем максимальная вероятность модели среди кандидатов этого уровня. Value / raw EV = отдельная метрика bookmaker price и не влияет на выбор прогноза. Положительный EV не является доказанной прибыльностью.</div>
 </section>
 </main>
@@ -37,8 +71,40 @@ function marketBox(s,r){if(!s)return researchBox(r);return `<div class="box"><di
 function researchBox(r){return `<div class="box research"><div class="pick">${esc(r.label||'Исследование')}</div><div style="font-size:11px;margin-top:7px;line-height:1.45">${esc(r.note||'Проверенный прогноз пока недоступен.')}</div><span class="badge">${esc(r.status||'research_only')}</span></div>`}
 function readinessCard(k,r){return `<article class="ready"><h3>${esc(names[k]||r.label)}</h3><p>${esc(r.note||'')}</p></article>`}
 function rowHtml(m){const meta=m.match,one=m.markets['1x2'],goals=m.markets.total_goals;return `<tr data-match-id="${esc(meta.product_match_id)}"><td class="match"><div class="date">${esc(meta.match_date||'—')} · ${esc(meta.match_time||'—')}</div><div class="teams">${esc(meta.home_team)} — ${esc(meta.away_team)}</div></td><td>${forecastBox(m.main_forecast)}</td><td>${marketBox(one.display_selection,one.readiness)}</td><td>${valueBox(m.value_signal)}</td><td>${researchBox(m.markets.handicap.readiness)}</td><td>${marketBox(goals.display_selection,goals.readiness)}</td><td>${researchBox(m.markets.corners_total.readiness)}</td></tr>`}
-function render(){const p=state.payload;if(!p)return;const q=state.query.toLowerCase().trim();const rows=p.matches.filter(match=>{const teams=`${match.match.home_team} ${match.match.away_team}`.toLowerCase();if(q&&!teams.includes(q))return false;if(state.filter==='priced'&&!priced(match))return false;if(state.filter==='value'&&!hasValue(match))return false;return true});$('body').innerHTML=rows.length?rows.map(rowHtml).join(''):'<tr><td colspan="7" class="loading">По выбранному фильтру матчей нет.</td></tr>';document.querySelectorAll('#body tr[data-match-id]').forEach(row=>row.addEventListener('click',()=>location.href=`/match?id=${encodeURIComponent(row.dataset.matchId)}`));$('count-all').textContent=p.matches.length;$('count-priced').textContent=p.matches.filter(priced).length;$('count-value').textContent=p.matches.filter(hasValue).length}
-async function load(){$('body').innerHTML='<tr><td colspan="7" class="loading">Загружаю market view…</td></tr>';try{const response=await fetch('/product-market-view',{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);const p=await response.json();if(p.schema_version!=='product-market-view.v1')throw new Error(`Неожиданная схема: ${p.schema_version||'нет версии'}`);state.payload=p;$('schema').textContent=`${p.schema_version} · ${p.decision_framework_version||'decision framework'} · forecast ≠ value`;$('readiness').innerHTML=Object.entries(p.market_readiness).map(([k,r])=>readinessCard(k,r)).join('');render()}catch(e){$('body').innerHTML=`<tr><td colspan="7" class="loading">Ошибка загрузки: ${esc(e.message)}</td></tr>`}}
+
+/* Market odds and model probabilities come ONLY from the unified API contract.
+   A missing price is shown as unavailable; the browser never computes odds/EV. */
+function mobileCardHtml(m){
+  const meta=m.match;
+  const one=m.markets['1x2'];
+  const f=m.main_forecast;
+  const pick=f&&f.status==='model_forecast'&&f.selection
+    ?'<div class="mobile-pick"><span>Главный прогноз модели · '+esc(f.market_label)+'</span><b>'+esc(f.selection.label)+'</b><strong>'+pct(f.selection.probability)+'</strong></div>'
+    :'<div class="mobile-pick"><span>Прогноз модели пока недоступен</span></div>';
+  const outcomes={HOME:'П1',DRAW:'X',AWAY:'П2'};
+  const tiles=(Array.isArray(one.selections)?one.selections:[]).map(s=>
+    '<div class="mobile-market-item"><span class="outcome">'+esc(outcomes[s.code]||s.code)+'</span><strong>'+pct(s.probability)+'</strong><span class="odds">БК '+dec(s.bookmaker_odds)+'</span></div>'
+  ).join('');
+  const url='/match?id='+encodeURIComponent(String(meta.product_match_id||''));
+  return '<article class="mobile-match-card" role="listitem">'
+    +'<div class="mobile-meta">'+esc(meta.match_date||'Дата не указана')+' · '+esc(meta.match_time||'—')+' (UK) · '+esc(meta.league||'АПЛ')+'</div>'
+    +'<h3>'+esc(meta.home_team)+' — '+esc(meta.away_team)+'</h3>'
+    +pick
+    +'<div class="mobile-market" aria-label="Вероятности модели и коэффициенты 1X2">'+tiles+'</div>'
+    +'<div class="mobile-card-note">Вероятности рассчитаны моделью. БК — сохранённые коэффициенты, не live-линия. Raw EV не доказывает прибыльность.</div>'
+    +'<a class="mobile-card-link" href="'+esc(url)+'">Подробный прогноз матча →</a>'
+    +'</article>';
+}
+function updateSourceNote(p){
+  const n=p.matches.length;
+  $('source-note').textContent=n
+    ?'Данные загружены: '+n+' предстоящих матчей. Коэффициенты — сохранённый снимок, не live-линия; время его фиксации в публичном API не указано. Время матчей — Великобритания (UK).'
+    :'Сейчас нет доступных предстоящих матчей. Не показываем вымышленные прогнозы.';
+}
+
+function render(){const p=state.payload;if(!p)return;const q=state.query.toLowerCase().trim();const rows=p.matches.filter(match=>{const teams=`${match.match.home_team} ${match.match.away_team}`.toLowerCase();if(q&&!teams.includes(q))return false;if(state.filter==='priced'&&!priced(match))return false;if(state.filter==='value'&&!hasValue(match))return false;return true});$('body').innerHTML=rows.length?rows.map(rowHtml).join(''):'<tr><td colspan="7" class="loading">По выбранному фильтру матчей нет.</td></tr>';
+$('mobile-match-list').innerHTML=rows.length?rows.map(mobileCardHtml).join(''):'<div class="loading" role="status">По выбранному фильтру матчей нет.</div>';document.querySelectorAll('#body tr[data-match-id]').forEach(row=>row.addEventListener('click',()=>location.href=`/match?id=${encodeURIComponent(row.dataset.matchId)}`));$('count-all').textContent=p.matches.length;$('count-priced').textContent=p.matches.filter(priced).length;$('count-value').textContent=p.matches.filter(hasValue).length}
+async function load(){$('body').innerHTML='<tr><td colspan="7" class="loading">Загружаю market view…</td></tr>';state.payload=null;$('mobile-match-list').innerHTML='<div class="loading" role="status">Загружаю матчи…</div>';$('source-note').textContent='Обновляем прогнозы и сохранённые коэффициенты…';try{const response=await fetch('/product-market-view',{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);const p=await response.json();if(p.schema_version!=='product-market-view.v1'||!Array.isArray(p.matches)||!p.market_readiness)throw new Error('Неверный формат данных матчей');state.payload=p;updateSourceNote(p);$('schema').textContent=`${p.schema_version} · ${p.decision_framework_version||'decision framework'} · forecast ≠ value`;$('readiness').innerHTML=Object.entries(p.market_readiness).map(([k,r])=>readinessCard(k,r)).join('');render()}catch(e){state.payload=null;$('body').innerHTML=`<tr><td colspan="7" class="loading">Ошибка загрузки: ${esc(e.message)}</td></tr>`;$('mobile-match-list').innerHTML='<div class="loading" role="alert">Матчи не загрузились. Нажмите «Перезагрузить», чтобы повторить.</div>';$('source-note').textContent='Ошибка загрузки. Данные не обновлены.'}}
 document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.filter=b.dataset.filter;render()}));$('search').addEventListener('input',e=>{state.query=e.target.value;render()});$('reload').addEventListener('click',load);load();
 </script>
 </body>
