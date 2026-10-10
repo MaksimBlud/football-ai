@@ -68,11 +68,13 @@ const names={"1x2":"1X2",total_goals:'Тотал голов',handicap:'Фора'
    An absent/invalid timestamp is never treated as fresh or as live market data. */
 function marketVerified(m){
   if(!m||m.market_snapshot_status!=='verified_prekickoff')return false;
+  if(typeof m.market_snapshot_time_utc!=='string'||typeof m.commence_time_utc!=='string')return false;
+  if(!/[zZ]|[+-]\d\d:\d\d$/.test(m.market_snapshot_time_utc)||!/[zZ]|[+-]\d\d:\d\d$/.test(m.commence_time_utc))return false;
   const quote=new Date(m.market_snapshot_time_utc),kickoff=new Date(m.commence_time_utc);
   return Number.isFinite(quote.getTime())&&Number.isFinite(kickoff.getTime())&&quote.getTime()<kickoff.getTime()&&quote.getTime()<=Date.now();
 }
 function utcStamp(raw){
-  if(typeof raw!=='string'||!/[zZ]|[+-]\\d\\d:\\d\\d$/.test(raw))return 'время не указано';
+  if(typeof raw!=='string'||!/[zZ]|[+-]\d\d:\d\d$/.test(raw))return 'время не указано';
   const time=new Date(raw);
   return Number.isFinite(time.getTime())?time.toLocaleString('ru-RU',{timeZone:'UTC',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})+' UTC':'время не указано';
 }
