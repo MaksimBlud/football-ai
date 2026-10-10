@@ -152,3 +152,53 @@ def test_match_list_inline_js_is_syntactically_valid_when_node_available(tmp_pat
     script.write_text(match.group(1), encoding="utf-8")
     result = subprocess.run(["node", "--check", str(script)], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
+
+
+def test_match_page_displays_server_verified_snapshot_provenance():
+    html = read(MATCH_PATH)
+    assert 'id="sources-heading"' in html
+    assert 'id="source-status"' in html
+    assert 'id="model-snapshot-time"' in html
+    assert 'id="market-snapshot-time"' in html
+    assert 'role="status"' in html
+    assert "m.prediction_generated_at_utc" in html
+    assert "m.market_snapshot_time_utc" in html
+    assert "m.market_snapshot_status==='verified_prekickoff'" in html
+    assert "m.market_snapshot_status==='ambiguous_fixture'" in html
+    assert 'function renderSources(m)' in html
+    assert "renderSources(m);$('forecast')" in html
+
+
+def test_match_page_never_fabricates_a_live_quote_or_missing_timestamp():
+    html = read(MATCH_PATH)
+    assert "verified?utcTimestamp(m.market_snapshot_time_utc):'Нет проверенного снимка'" in html
+    assert "function utcTimestamp(raw)" in html
+    assert "return 'Время не указано'" in html
+    assert "timeZone:'UTC'" in html
+    assert "Коэффициенты — сохранённый снимок, не live-линия" in html
+    assert "положительный Raw EV не гарантирует прибыль" in html
+    assert "Нет проверенной предматчевой линии" in html
+    assert "Время не указано" in html
+
+
+def test_match_page_snapshot_display_is_responsive():
+    html = read(MATCH_PATH)
+    assert '.source-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))' in html
+    assert '.hero-grid,.grid,.source-grid{grid-template-columns:1fr}' in html
+    assert 'overflow-wrap:anywhere' in html
+
+
+def test_match_page_inline_js_is_syntactically_valid_when_node_available(tmp_path):
+    import re
+    import shutil
+    import subprocess
+    import pytest
+
+    if shutil.which("node") is None:
+        pytest.skip("Node is not installed in this local environment")
+    match = re.search(r"<script>(.*?)</script>", read(MATCH_PATH), re.S)
+    assert match, "Missing match page inline script"
+    script = tmp_path / "match_detail.js"
+    script.write_text(match.group(1), encoding="utf-8")
+    result = subprocess.run(["node", "--check", str(script)], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
