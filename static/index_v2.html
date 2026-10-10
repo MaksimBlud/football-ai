@@ -24,6 +24,7 @@
 .mobile-card-link{display:inline-flex;align-items:center;justify-content:center;min-height:42px;width:100%;border:1px solid #bfdbfe;border-radius:9px;color:#1d4ed8;text-decoration:none;font-size:13px;font-weight:850}
 .mobile-card-link:focus-visible,.btn:focus-visible,.chip:focus-visible,.search:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
 .mobile-card-note{font-size:11px;color:var(--muted);margin:9px 0;line-height:1.5}
+.market-provenance{font-size:11px;color:var(--muted);line-height:1.5;margin-top:6px;overflow-wrap:anywhere}
 @media(max-width:900px){
   .table-wrap{display:none}
   .mobile-match-list{display:grid;gap:12px;padding:14px;background:var(--slate)}
@@ -57,20 +58,37 @@
 const state={payload:null,filter:'all',query:''};
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const num=v=>v!==null&&v!==undefined&&Number.isFinite(Number(v));
+const num=v=>typeof v==='number'&&Number.isFinite(v);
 const pct=v=>num(v)?`${(Number(v)*100).toFixed(1)}%`:'—';
 const dec=v=>num(v)?Number(v).toFixed(2):'—';
 const ev=v=>num(v)?`${Number(v)>=0?'+':''}${pct(v)}`:'—';
 const evClass=v=>num(v)?(Number(v)>0?'positive':'negative'):'';
 const names={"1x2":"1X2",total_goals:'Тотал голов',handicap:'Фора',corners_total:'Тотал угловых'};
-function priced(m){return m.markets['1x2'].selections.some(s=>num(s.bookmaker_odds))}
-function hasValue(m){return m.value_signal&&m.value_signal.status==='positive_raw_ev'&&m.value_signal.selection}
+/* Only the backend-verified pre-kickoff snapshot may be shown as a bookmaker quote.
+   An absent/invalid timestamp is never treated as fresh or as live market data. */
+function marketVerified(m){
+  if(!m||m.market_snapshot_status!=='verified_prekickoff')return false;
+  const quote=new Date(m.market_snapshot_time_utc),kickoff=new Date(m.commence_time_utc);
+  return Number.isFinite(quote.getTime())&&Number.isFinite(kickoff.getTime())&&quote.getTime()<kickoff.getTime()&&quote.getTime()<=Date.now();
+}
+function utcStamp(raw){
+  if(typeof raw!=='string'||!/[zZ]|[+-]\\d\\d:\\d\\d$/.test(raw))return 'время не указано';
+  const time=new Date(raw);
+  return Number.isFinite(time.getTime())?time.toLocaleString('ru-RU',{timeZone:'UTC',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})+' UTC':'время не указано';
+}
+function marketSourceLabel(m){
+  if(marketVerified(m))return 'БК: сохранённый снимок '+utcStamp(m.market_snapshot_time_utc)+' (не live)';
+  return m&&m.market_snapshot_status==='ambiguous_fixture'?'БК: неоднозначная привязка события, линия не подтверждена':'БК: нет проверенной предматчевой линии';
+}
+function safeQuote(s,m){return marketVerified(m)?dec(s.bookmaker_odds):'—'}
+function priced(m){return marketVerified(m.match)&&m.markets['1x2'].selections.some(s=>num(s.bookmaker_odds))}
+function hasValue(m){return marketVerified(m.match)&&m.value_signal&&m.value_signal.status==='positive_raw_ev'&&m.value_signal.selection}
 function forecastBox(f){if(!f||f.status!=='model_forecast'||!f.selection)return researchBox({label:'Прогноз недоступен',status:'unavailable',note:f?.reason||''});const s=f.selection;return `<div class="box forecast"><div class="boxtop"><span class="pick">${esc(f.market_label)} · ${esc(s.label)}</span><span class="prob">${pct(s.probability)}</span></div><div class="kv"><span>Fair odds модели</span><span>${dec(s.fair_odds)}</span></div><span class="badge forecast">MODEL FORECAST</span></div>`}
 function valueBox(v){if(!v||v.status!=='positive_raw_ev'||!v.selection)return `<div class="box research"><div class="pick">Нет value-сигнала</div><div style="font-size:11px;margin-top:7px">${esc(v?.reason||'Нет положительного raw EV.')}</div><span class="badge">NO VALUE</span></div>`;const s=v.selection;return `<div class="box value"><div class="boxtop"><span class="pick">${esc(s.label)}</span><span class="prob">${pct(s.probability)}</span></div><div class="kv"><span>Букмекер</span><span>${dec(s.bookmaker_odds)}</span><span>Raw EV</span><span class="${evClass(s.raw_expected_value)}">${ev(s.raw_expected_value)}</span></div><span class="badge value">VALUE · ДОП. СИГНАЛ</span></div>`}
-function marketBox(s,r){if(!s)return researchBox(r);return `<div class="box"><div class="boxtop"><span class="pick">${esc(s.label)}</span><span class="prob">${pct(s.probability)}</span></div><div class="kv"><span>Fair odds</span><span>${dec(s.fair_odds)}</span><span>Букмекер</span><span>${dec(s.bookmaker_odds)}</span><span>Raw EV</span><span class="${evClass(s.raw_expected_value)}">${ev(s.raw_expected_value)}</span></div><span class="badge">${esc(r.status)}</span></div>`}
+function marketBox(s,r,m){if(!s)return researchBox(r);const ok=marketVerified(m);return `<div class="box"><div class="boxtop"><span class="pick">${esc(s.label)}</span><span class="prob">${pct(s.probability)}</span></div><div class="kv"><span>Fair odds</span><span>${dec(s.fair_odds)}</span><span>Букмекер</span><span>${safeQuote(s,m)}</span><span>Raw EV</span><span class="${ok?evClass(s.raw_expected_value):''}">${ok?ev(s.raw_expected_value):'—'}</span></div><span class="badge">${esc(r.status)}</span></div>`
 function researchBox(r){return `<div class="box research"><div class="pick">${esc(r.label||'Исследование')}</div><div style="font-size:11px;margin-top:7px;line-height:1.45">${esc(r.note||'Проверенный прогноз пока недоступен.')}</div><span class="badge">${esc(r.status||'research_only')}</span></div>`}
 function readinessCard(k,r){return `<article class="ready"><h3>${esc(names[k]||r.label)}</h3><p>${esc(r.note||'')}</p></article>`}
-function rowHtml(m){const meta=m.match,one=m.markets['1x2'],goals=m.markets.total_goals;return `<tr data-match-id="${esc(meta.product_match_id)}"><td class="match"><div class="date">${esc(meta.match_date||'—')} · ${esc(meta.match_time||'—')}</div><div class="teams">${esc(meta.home_team)} — ${esc(meta.away_team)}</div></td><td>${forecastBox(m.main_forecast)}</td><td>${marketBox(one.display_selection,one.readiness)}</td><td>${valueBox(m.value_signal)}</td><td>${researchBox(m.markets.handicap.readiness)}</td><td>${marketBox(goals.display_selection,goals.readiness)}</td><td>${researchBox(m.markets.corners_total.readiness)}</td></tr>`}
+function rowHtml(m){const meta=m.match,one=m.markets['1x2'],goals=m.markets.total_goals;return `<tr data-match-id="${esc(meta.product_match_id)}"><td class="match"><div class="date">${esc(meta.match_date||'—')} · ${esc(meta.match_time||'—')}</div><div class="teams">${esc(meta.home_team)} — ${esc(meta.away_team)}</div><div class="market-provenance">${esc(marketSourceLabel(meta))}</div></td><td>${forecastBox(m.main_forecast)}</td><td>${marketBox(one.display_selection,one.readiness,meta)}</td><td>${valueBox(marketVerified(meta)?m.value_signal:null)}</td><td>${researchBox(m.markets.handicap.readiness)}</td><td>${marketBox(goals.display_selection,goals.readiness,meta)}</td><td>${researchBox(m.markets.corners_total.readiness)}</td></tr>`
 
 /* Market odds and model probabilities come ONLY from the unified API contract.
    A missing price is shown as unavailable; the browser never computes odds/EV. */
@@ -83,7 +101,7 @@ function mobileCardHtml(m){
     :'<div class="mobile-pick"><span>Прогноз модели пока недоступен</span></div>';
   const outcomes={HOME:'П1',DRAW:'X',AWAY:'П2'};
   const tiles=(Array.isArray(one.selections)?one.selections:[]).map(s=>
-    '<div class="mobile-market-item"><span class="outcome">'+esc(outcomes[s.code]||s.code)+'</span><strong>'+pct(s.probability)+'</strong><span class="odds">БК '+dec(s.bookmaker_odds)+'</span></div>'
+    '<div class="mobile-market-item"><span class="outcome">'+esc(outcomes[s.code]||s.code)+'</span><strong>'+pct(s.probability)+'</strong><span class="odds">БК '+safeQuote(s,meta)+'</span></div>'
   ).join('');
   const url='/match?id='+encodeURIComponent(String(meta.product_match_id||''));
   return '<article class="mobile-match-card" role="listitem">'
@@ -91,6 +109,7 @@ function mobileCardHtml(m){
     +'<h3>'+esc(meta.home_team)+' — '+esc(meta.away_team)+'</h3>'
     +pick
     +'<div class="mobile-market" aria-label="Вероятности модели и коэффициенты 1X2">'+tiles+'</div>'
+    +'<div class="market-provenance">Модель: '+esc(utcStamp(meta.prediction_generated_at_utc))+' · '+esc(marketSourceLabel(meta))+'</div>'
     +'<div class="mobile-card-note">Вероятности рассчитаны моделью. БК — сохранённые коэффициенты, не live-линия. Raw EV не доказывает прибыльность.</div>'
     +'<a class="mobile-card-link" href="'+esc(url)+'">Подробный прогноз матча →</a>'
     +'</article>';
@@ -98,7 +117,7 @@ function mobileCardHtml(m){
 function updateSourceNote(p){
   const n=p.matches.length;
   $('source-note').textContent=n
-    ?'Данные загружены: '+n+' предстоящих матчей. Коэффициенты — сохранённый снимок, не live-линия; время его фиксации в публичном API не указано. Время матчей — Великобритания (UK).'
+    ?'Данные загружены: '+n+' предстоящих матчей. Проверенных предматчевых снимков БК: '+p.matches.filter(m=>marketVerified(m.match)).length+'. Коэффициенты — сохранённый снимок, не live-линия; время каждого снимка — в карточке матча. Время матчей — Великобритания (UK).'
     :'Сейчас нет доступных предстоящих матчей. Не показываем вымышленные прогнозы.';
 }
 
