@@ -123,7 +123,7 @@ def test_mobile_navigation_is_keyboard_accessible_and_uses_stable_match_id():
 
 def test_mobile_and_desktop_fail_closed_together_on_http_error():
     html = read(INDEX_PATH)
-    assert "state.payload=null;$('mobile-match-list').innerHTML" in html
+    assert "state.payload=null;state.fixtures=null;$('public-fixtures').hidden=true;$('mobile-match-list').innerHTML" in html
     assert "if(p.schema_version!=='product-market-view.v1'||!Array.isArray(p.matches)" in html
     assert "Ошибка загрузки. Данные не обновлены." in html
     assert 'role="alert"' in html
