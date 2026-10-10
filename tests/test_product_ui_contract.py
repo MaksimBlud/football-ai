@@ -54,7 +54,7 @@ def test_forecast_and_value_are_visibly_separate():
     assert "m.main_forecast" in index
     assert "m.value_signal" in index
     assert "forecastBox(m.main_forecast)" in index
-    assert "valueBox(m.value_signal)" in index
+    assert "valueBox(marketVerified(meta)?m.value_signal:null)" in index
     assert "Главный выбор модели" not in index
 
     assert "Главный прогноз модели" in detail
