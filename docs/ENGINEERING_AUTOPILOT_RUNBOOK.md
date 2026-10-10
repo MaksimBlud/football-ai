@@ -1,54 +1,64 @@
-# Football AI — migration to independent GitHub Actions
+# Football AI — ChatGPT brain + GitHub execution, without AI APIs
 
-Status on 2026-10-10: **STAGED; NOT LIVE**. ChatGPT Backend/Frontend scheduled
-tasks have repeatedly disabled themselves after ~64 seconds. GitHub Actions
-is independent of that scheduler and supports deterministic commit/PR steps.
+## Current architecture
 
-## Completed in this branch
+GitHub Actions is **not** an AI model. It cannot autonomously invoke the ChatGPT
+conversation, even with a scheduled workflow. There is no integration in this
+repository that can call the ChatGPT consumer model from GitHub without using a
+separately configured model service. We deliberately **do not** use Gemini,
+Groq, OpenAI API, paid provider credits, or a local model.
 
-- `engineering_autopilot_guard.py` enforces a narrow code allowlist:
-  frontend: `static/match.html`, `tests/test_product_ui_contract.py`;
-  backend: `product_snapshot_store.py`, `tests/test_product_snapshot_store.py`.
-- Guard forbids other paths, added/deleted/renamed files, symlinks, missing
-  changes, and oversized diffs. Runner-created Gemini logs are ignored but
-  **never staged**.
-- `tests/test_engineering_autopilot_guard.py`: eight independent safety tests.
-- The scheduled workflow design was prepared and syntax-tested locally, but
-  **GitHub workflow-file creation was blocked by OpenAI's connector safety
-  checks**. Do not misreport migration as deployed or attempt to bypass that
-  restriction. The workflow file must be installed through an authorized
-  repository-owner workflow.
+The independently scheduled `.github/workflows/football-ai-engineering-autopilot.yml`
+is now an **hourly read-only engineering checkpoint**. It:
 
-## Intended runner
+- Reads current `main`, live GitHub issue #581 (backend) and #582 (frontend),
+  and open pull requests through GitHub's built-in read-only token.
+- Reports exact main SHA, task status, and PR links in its GitHub Actions job
+  summary. It makes zero model calls and zero code modifications.
+- Validates the workflow and safety guard when the workflow itself changes.
+- Uses GitHub's own scheduling instead of the ChatGPT task scheduler.
+- Does not pretend that green CI means an AI wrote new code.
 
-- GitHub Actions schedule: minute 17 UTC, once per hour; separate backend and
-  frontend jobs with concurrency guards.
-- Manual dispatch provides `probe` (NO model call) and `execute` modes.
-- Free Gemini coding is opt-in only, using an explicitly confirmed **non-billed**
-  Google AI Studio key. Required: `GEMINI_API_KEY` repository secret plus
-  `FOOTBALL_AI_ENGINEERING_FREE_TIER_ENABLED=true` repository variable.
-- Model tools limited to repository file read/search/edit; Git/GitHub commands,
-  test execution, hash checks and draft PR creation are deterministic runner
-  steps after validating every modified path.
-- Until PR #598 is resolved, the backend role refuses duplicate PRs.
-- No automatic merge, paid The Odds API calls, live Supabase write, model .pkl
-  modification, or production Vercel deployment.
-- A draft PR created with `GITHUB_TOKEN` may not trigger usual `pull_request`
-  CI checks. Do not merge until all required checks are independently confirmed.
+The **coding/decision-making component** is ChatGPT. It can work in this chat
+or during an available ChatGPT scheduled-task invocation using the connected
+GitHub tools. Its actual run duration, availability and ability to mutate
+GitHub from a scheduled invocation must be established by real SHA/PR/CI proof.
+It cannot be awakened by GitHub Actions alone.
 
-## Verification and cutover gates
+## Proven no-API development loop (interactive)
 
-1. Repository owner installs the prepared workflow file into the existing
-   `dev/engineering-actions-autopilot-20261010` branch.
-2. CI for the workflow and guard passes.
-3. Merge to `main` only after checks, then manually run `probe` in Actions.
-4. Confirm the selected Gemini key is strictly free and not billed before
-   enabling the variable. Without confirmation, leave the model gate closed.
-5. Verify a scheduled job, scoped code change, green focused tests, pushed
-   branch, and draft PR on GitHub. Verify required CI separately.
-6. **Only then** disable the old ChatGPT Backend/Frontend schedules and
-   related watchdog; retain Research Brain and Signal Scout until separately
-   proven migrated.
+1. Read GitHub fresh `main`, open issues, PRs and required CI.
+2. Implement one bounded scope in a dedicated dev branch with the ChatGPT
+   GitHub connector. Do not require a separate model API.
+3. Add regression tests; open a PR. GitHub Actions performs six project
+   validation jobs on PR heads.
+4. Confirm required checks **on the exact PR head SHA** and compare to the
+   fresh current `main`. Merge only through safe exact-head PR merge.
+5. Verify `main` and record the result. Do not automatically deploy Vercel,
+   change production .pkl files, write Supabase, or call paid The Odds API.
+6. A paused ChatGPT task is **not** proof the GitHub checkpoint failed;
+   conversely, a successful checkpoint is **not** proof of autonomous coding.
 
-A GitHub workflow is not a substitute for a configured AI model; a green
-heartbeat without code or research results is not successful autonomous work.
+## Actual verified progress
+
+- PR #603 installed the first scheduled GitHub Actions workflow, but that
+  version depended on free-tier Gemini; it was not a working no-API coder.
+- PR #598 was subsequently merged with database-side as-of filters, event and
+  kickoff identity checks, price sanity checks and regression tests.
+- PR #604 was subsequently merged with explicit model/market snapshot
+  provenance and clearer unavailable/ambiguous market states on match detail.
+- This revision removes external AI dependencies from the independent hourly
+  workflow rather than creating hourly missing-key failures.
+
+## Safety and remaining limitation
+
+The checkpoint uses only `contents: read`, `issues: read`, and
+`pull-requests: read`. It never creates commits, PRs or issues by itself.
+The separate ChatGPT builder automations may perform code/PR work when they
+actually run and have GitHub write capability; their known scheduler
+self-disabling issue is **not resolved** by this workflow.
+
+The goal of completely autonomous around-the-clock ChatGPT coding without
+a model API or an always-on local model remains **unmet**. No configured,
+verifiable way for GitHub Actions to awaken this consumer ChatGPT conversation
+has been established. Do not claim otherwise.
