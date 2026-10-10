@@ -316,7 +316,7 @@ def load_product_market_view(
         supabase_client
         .table(PREDICTION_TABLE)
         .select(PREDICTION_COLUMNS)
-        .gte("commence_time_utc", now.isoformat())
+        .gt("commence_time_utc", now.isoformat())
         .lt("commence_time_utc", horizon.isoformat())
         .lte("generated_at_utc", now.isoformat())
         .order("generated_at_utc", desc=True)
@@ -347,7 +347,7 @@ def load_product_market_view(
             .table(ODDS_TABLE)
             .select(ODDS_COLUMNS)
             .in_("event_id", event_ids)
-            .gte("commence_time_utc", now.isoformat())
+            .gt("commence_time_utc", now.isoformat())
             .lt("commence_time_utc", horizon.isoformat())
             .lte("snapshot_time_utc", now.isoformat())
             .order("snapshot_time_utc", desc=True)
