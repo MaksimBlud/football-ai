@@ -14,6 +14,7 @@ from deployment_identity import deployment_git_sha
 from product_portfolio_risk import PORTFOLIO_RISK_SCHEMA_VERSION, build_portfolio_risk_view
 from product_production_readiness import PRODUCTION_READINESS_VERSION
 from product_snapshot_store import load_product_market_view
+from product_fixture_schedule import live_upcoming_fixtures
 
 
 app = FastAPI(
@@ -65,6 +66,12 @@ def health():
         "production_readiness_version": PRODUCTION_READINESS_VERSION,
         "deployment_git_sha": deployment_git_sha(),
     }
+
+
+@app.get("/upcoming-fixtures")
+def upcoming_fixtures():
+    """Keyless schedule-only view; no AI probabilities or bookmaker prices."""
+    return live_upcoming_fixtures()
 
 
 @app.get("/product-market-view")

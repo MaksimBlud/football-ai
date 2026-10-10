@@ -40,12 +40,24 @@
   .mobile-match-card h3{font-size:16px}
   .mobile-market-item strong{font-size:15px}
 }
+
+/* Schedule-only fallback: never render probabilities or market prices from fixtures. */
+.fixtures-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(275px,100%),1fr));gap:12px;padding:15px}
+.fixture-card{border:1px solid var(--line);border-radius:12px;background:#fff;padding:14px}
+.fixture-card strong{display:block;font-size:16px;margin:8px 0}
+.fixture-meta,.fixture-source{font-size:12px;color:var(--muted);line-height:1.5}
+.fixture-status{font-size:12px;font-weight:850;color:var(--amber);margin-top:6px}
 </style>
 </head>
 <body>
 <main class="shell">
 <header class="top"><div><div class="eyebrow">Football AI · product view</div><h1>Матчи и оценка рынков</h1><p class="lead">Главный прогноз определяется сначала зрелостью рынка (decision tier), затем вероятностью модели. Value / raw EV — отдельный дополнительный показатель цены и никогда не переопределяет прогноз.</p><p id="source-note" class="source-note" role="status" aria-live="polite">Проверяем доступность прогнозов и котировок. Рыночные цены не обновляются в реальном времени.</p></div><button id="reload" class="btn">Перезагрузить</button></header>
 <section id="readiness" class="readiness"></section>
+<section id="public-fixtures" class="panel" hidden aria-label="Расписание АПЛ без прогнозов">
+<div class="panel-head"><div><strong>Ближайшие матчи АПЛ · только расписание</strong><p class="source-note">Прогнозы модели и коэффициенты не подставляются из календаря.</p></div><div class="stat">Матчей<strong id="fixtures-count">0</strong></div></div>
+<div id="fixtures-grid" class="fixtures-grid" role="list"></div>
+<div id="fixtures-source" class="foot" role="status"></div>
+</section>
 <section class="panel">
 <div class="panel-head"><div class="stats"><div class="stat">Матчей<strong id="count-all">—</strong></div><div class="stat">С ценой БК<strong id="count-priced">—</strong></div><div class="stat">Value-сигналов<strong id="count-value">—</strong></div></div><div id="schema" class="schema">—</div></div>
 <div class="filters"><button class="chip active" data-filter="all">Все матчи</button><button class="chip" data-filter="priced">Есть цена БК</button><button class="chip" data-filter="value">Есть value-сигнал</button><input id="search" class="search" placeholder="Поиск команды…"></div>
@@ -55,7 +67,7 @@
 </section>
 </main>
 <script>
-const state={payload:null,filter:'all',query:''};
+const state={payload:null,fixtures:null,filter:'all',query:''};
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=v=>typeof v==='number'&&Number.isFinite(v);
@@ -125,7 +137,38 @@ function updateSourceNote(p){
 
 function render(){const p=state.payload;if(!p)return;const q=state.query.toLowerCase().trim();const rows=p.matches.filter(match=>{const teams=`${match.match.home_team} ${match.match.away_team}`.toLowerCase();if(q&&!teams.includes(q))return false;if(state.filter==='priced'&&!priced(match))return false;if(state.filter==='value'&&!hasValue(match))return false;return true});$('body').innerHTML=rows.length?rows.map(rowHtml).join(''):'<tr><td colspan="7" class="loading">По выбранному фильтру матчей нет.</td></tr>';
 $('mobile-match-list').innerHTML=rows.length?rows.map(mobileCardHtml).join(''):'<div class="loading" role="status">По выбранному фильтру матчей нет.</div>';document.querySelectorAll('#body tr[data-match-id]').forEach(row=>row.addEventListener('click',()=>location.href=`/match?id=${encodeURIComponent(row.dataset.matchId)}`));$('count-all').textContent=p.matches.length;$('count-priced').textContent=p.matches.filter(priced).length;$('count-value').textContent=p.matches.filter(hasValue).length}
-async function load(){$('body').innerHTML='<tr><td colspan="7" class="loading">Загружаю market view…</td></tr>';state.payload=null;$('mobile-match-list').innerHTML='<div class="loading" role="status">Загружаю матчи…</div>';$('source-note').textContent='Обновляем прогнозы и сохранённые коэффициенты…';try{const response=await fetch('/product-market-view',{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);const p=await response.json();if(p.schema_version!=='product-market-view.v1'||!Array.isArray(p.matches)||!p.market_readiness)throw new Error('Неверный формат данных матчей');state.payload=p;updateSourceNote(p);$('schema').textContent=`${p.schema_version} · ${p.decision_framework_version||'decision framework'} · forecast ≠ value`;$('readiness').innerHTML=Object.entries(p.market_readiness).map(([k,r])=>readinessCard(k,r)).join('');render()}catch(e){state.payload=null;$('body').innerHTML=`<tr><td colspan="7" class="loading">Ошибка загрузки: ${esc(e.message)}</td></tr>`;$('mobile-match-list').innerHTML='<div class="loading" role="alert">Матчи не загрузились. Нажмите «Перезагрузить», чтобы повторить.</div>';$('source-note').textContent='Ошибка загрузки. Данные не обновлены.'}}
+/* Independent schedule-only fallback. Never use a calendar event as an AI prediction. */
+function renderSchedule(){
+  const box=$('public-fixtures'),data=state.fixtures;
+  if(!data||!Array.isArray(data.fixtures)||!data.fixtures.length||(state.payload&&state.payload.matches.length)){
+    box.hidden=true;return;
+  }
+  box.hidden=false;
+  $('fixtures-count').textContent=String(data.fixtures.length);
+  $('fixtures-source').textContent=data.source_mode==='espn_public_schedule'
+    ?'Источник: публичный календарь ESPN. Время начала — Великобритания (UK). Нет прогнозов AI и цен БК.'
+    :'Источник: опубликованное расписание Премьер-лиги (временный резерв). Время — Великобритания (UK). Нет прогнозов AI и цен БК.';
+  $('fixtures-grid').innerHTML=data.fixtures.map(m=>'<article class="fixture-card" role="listitem">'
+    +'<div class="fixture-meta">'+esc(m.match_date_uk)+' · '+esc(m.match_time_uk)+' (UK)</div>'
+    +'<strong>'+esc(m.home_team)+' — '+esc(m.away_team)+'</strong>'
+    +'<div class="fixture-status">AI-прогноз отсутствует</div>'
+    +'<div class="fixture-meta">Коэффициенты букмекера отсутствуют</div>'
+    +'</article>').join('');
+}
+async function loadSchedule(){
+  try{
+    const response=await fetch('/upcoming-fixtures',{cache:'no-store'});
+    if(!response.ok)throw new Error('schedule HTTP '+response.status);
+    const data=await response.json();
+    if(data.schema_version!=='public-fixtures.v1'||!Array.isArray(data.fixtures)||data.fixtures.length>100||
+       !['espn_public_schedule','official_published_schedule_fallback','unavailable'].includes(data.source_mode)||
+       data.has_model_forecasts!==false||data.has_bookmaker_odds!==false||
+       data.fixtures.some(m=>m.league!=='EPL'||m.model_forecast_status!=='not_available'||m.bookmaker_odds_status!=='not_available'))
+      throw new Error('invalid schedule-only contract');
+    state.fixtures=data;renderSchedule();
+  }catch(error){state.fixtures=null;renderSchedule()}
+}
+async function load(){$('body').innerHTML='<tr><td colspan="7" class="loading">Загружаю market view…</td></tr>';state.payload=null;state.fixtures=null;$('public-fixtures').hidden=true;$('mobile-match-list').innerHTML='<div class="loading" role="status">Загружаю матчи…</div>';$('source-note').textContent='Обновляем прогнозы и сохранённые коэффициенты…';try{const response=await fetch('/product-market-view',{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);const p=await response.json();if(p.schema_version!=='product-market-view.v1'||!Array.isArray(p.matches)||!p.market_readiness)throw new Error('Неверный формат данных матчей');state.payload=p;updateSourceNote(p);$('schema').textContent=`${p.schema_version} · ${p.decision_framework_version||'decision framework'} · forecast ≠ value`;$('readiness').innerHTML=Object.entries(p.market_readiness).map(([k,r])=>readinessCard(k,r)).join('');render();if(!p.matches.length)loadSchedule()}catch(e){state.payload=null;$('body').innerHTML=`<tr><td colspan="7" class="loading">Ошибка загрузки: ${esc(e.message)}</td></tr>`;$('mobile-match-list').innerHTML='<div class="loading" role="alert">Матчи не загрузились. Нажмите «Перезагрузить», чтобы повторить.</div>';$('source-note').textContent='Ошибка загрузки. Данные не обновлены.';loadSchedule()}}
 document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.filter=b.dataset.filter;render()}));$('search').addEventListener('input',e=>{state.query=e.target.value;render()});$('reload').addEventListener('click',load);load();
 </script>
 </body>

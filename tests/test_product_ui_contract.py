@@ -123,7 +123,7 @@ def test_mobile_navigation_is_keyboard_accessible_and_uses_stable_match_id():
 
 def test_mobile_and_desktop_fail_closed_together_on_http_error():
     html = read(INDEX_PATH)
-    assert "state.payload=null;$('mobile-match-list').innerHTML" in html
+    assert "state.payload=null;state.fixtures=null;$('public-fixtures').hidden=true;$('mobile-match-list').innerHTML" in html
     assert "if(p.schema_version!=='product-market-view.v1'||!Array.isArray(p.matches)" in html
     assert "Ошибка загрузки. Данные не обновлены." in html
     assert 'role="alert"' in html
@@ -267,3 +267,34 @@ def test_list_provenance_is_consistent_on_mobile_and_desktop():
     assert "неоднозначная привязка события" in html
     assert "function marketVerified(m)" in html
     assert "const num=v=>typeof v==='number'&&Number.isFinite(v);" in html
+
+
+def test_schedule_only_fallback_is_visible_without_inventing_model_or_odds():
+    html = read(INDEX_PATH)
+    assert 'id="public-fixtures"' in html
+    assert 'id="fixtures-grid"' in html
+    assert 'aria-label="Расписание АПЛ без прогнозов"' in html
+    assert "function renderSchedule()" in html
+    assert "async function loadSchedule()" in html
+    assert "fetch('/upcoming-fixtures'" in html
+    assert "if(!p.matches.length)loadSchedule()" in html
+    assert "state.payload&&state.payload.matches.length" in html
+    assert "Прогнозы модели и коэффициенты не подставляются из календаря" in html
+    assert "AI-прогноз отсутствует" in html
+    assert "Коэффициенты букмекера отсутствуют" in html
+    assert "публичный календарь ESPN" in html
+    assert "опубликованное расписание Премьер-лиги" in html
+
+
+def test_schedule_only_frontend_refuses_unsupported_ai_or_market_fields():
+    html = read(INDEX_PATH)
+    assert "data.schema_version!=='public-fixtures.v1'" in html
+    assert "data.has_model_forecasts!==false" in html
+    assert "data.has_bookmaker_odds!==false" in html
+    assert "m.model_forecast_status!=='not_available'" in html
+    assert "m.bookmaker_odds_status!=='not_available'" in html
+    assert "m.league!=='EPL'" in html
+    assert "data.fixtures.length>100" in html
+    assert "state.fixtures=null;renderSchedule()" in html
+    assert "const box=$('public-fixtures'),data=state.fixtures;" in html
+    assert "esc(m.home_team)" in html and "esc(m.away_team)" in html
