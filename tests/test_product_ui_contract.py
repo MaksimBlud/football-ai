@@ -129,10 +129,18 @@ def test_mobile_and_desktop_fail_closed_together_on_http_error():
     assert 'role="alert"' in html
 
 
-def test_live_odds_freshness_not_fabricated_when_api_lacks_timestamp():
+def test_list_uses_backend_verified_market_timestamps_not_invented_live_prices():
     html = read(INDEX_PATH)
     assert 'id="source-note"' in html
-    assert 'время его фиксации в публичном API не указано' in html
+    assert "function marketVerified(m)" in html
+    assert "m.market_snapshot_status!=='verified_prekickoff'" in html
+    assert "function marketSourceLabel(m)" in html
+    assert "function safeQuote(s,m)" in html
+    assert "marketVerified(m.match)" in html
+    assert 'safeQuote(s,meta)' in html
+    assert "marketBox(one.display_selection,one.readiness,meta)" in html
+    assert "valueBox(marketVerified(meta)?m.value_signal:null)" in html
+    assert "время каждого снимка — в карточке матча" in html
     assert 'Коэффициенты — сохранённый снимок, не live-линия' in html
     assert 'Время матчей — Великобритания (UK)' in html
 
@@ -202,3 +210,60 @@ def test_match_page_inline_js_is_syntactically_valid_when_node_available(tmp_pat
     script.write_text(match.group(1), encoding="utf-8")
     result = subprocess.run(["node", "--check", str(script)], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
+
+
+def test_list_market_quote_guards_are_runtime_verified_with_node(tmp_path):
+    import re
+    import shutil
+    import subprocess
+
+    import pytest
+
+    if shutil.which("node") is None:
+        pytest.skip("Node is not installed in this environment")
+    html = read(INDEX_PATH)
+    helper = re.search(r"const num=.*?(?=function forecastBox\()", html, re.S)
+    assert helper, "Missing market display helpers"
+    check = helper.group(0) + """
+const assert = require('node:assert/strict');
+const originalNow = Date.now;
+Date.now = () => Date.parse('2026-10-10T12:00:00Z');
+const verified = {
+  market_snapshot_status:'verified_prekickoff',
+  market_snapshot_time_utc:'2026-10-10T10:00:00+00:00',
+  commence_time_utc:'2026-10-11T15:00:00+00:00'
+};
+assert.equal(marketVerified(verified), true);
+assert.equal(safeQuote({bookmaker_odds:1.85}, verified), '1.85');
+assert.equal(safeQuote({bookmaker_odds:'1.85'}, verified), '—');
+assert.match(marketSourceLabel(verified), /UTC.*не live/);
+assert.equal(marketVerified({...verified, market_snapshot_status:'ambiguous_fixture'}), false);
+assert.equal(marketVerified({...verified, market_snapshot_time_utc:null}), false);
+assert.equal(marketVerified({...verified, market_snapshot_time_utc:'garbage'}), false);
+assert.equal(marketVerified({...verified, market_snapshot_time_utc:'2026-10-11T15:00:00+00:00'}), false);
+assert.equal(marketVerified({...verified, market_snapshot_time_utc:'2026-10-10T13:00:00+00:00'}), false);
+assert.equal(marketVerified({...verified, commence_time_utc:'2026-10-11T15:00:00'}), false);
+assert.equal(safeQuote({bookmaker_odds:1.85}, {...verified,market_snapshot_status:'unverified'}), '—');
+assert.equal(priced({match:verified,markets:{'1x2':{selections:[{bookmaker_odds:1.85}]}}}), true);
+assert.equal(priced({match:{...verified,market_snapshot_status:'unverified'},markets:{'1x2':{selections:[{bookmaker_odds:1.85}]}}}), false);
+assert.equal(hasValue({match:{...verified,market_snapshot_status:'unverified'},value_signal:{status:'positive_raw_ev',selection:{}}}), false);
+assert.equal(pct('0.4'), '—');
+Date.now = originalNow;
+"""
+    source = tmp_path / "list_market_guards.js"
+    source.write_text(check, encoding="utf-8")
+    result = subprocess.run(["node", str(source)], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+
+
+def test_list_provenance_is_consistent_on_mobile_and_desktop():
+    html = read(INDEX_PATH)
+    assert 'market-provenance' in html
+    assert 'marketSourceLabel(meta)' in html
+    assert 'utcStamp(meta.prediction_generated_at_utc)' in html
+    assert ".market-provenance{font-size:" in html
+    assert "время не указано" in html
+    assert "нет проверенной предматчевой линии" in html
+    assert "неоднозначная привязка события" in html
+    assert "function marketVerified(m)" in html
+    assert "const num=v=>typeof v==='number'&&Number.isFinite(v);" in html
