@@ -41,3 +41,26 @@ New independent mechanisms proposed: **1 (IDEA only)**. Source rights and publis
 
 ## Safety
 No reserved future outcome reads, match-result tests, paid provider calls, Supabase writes/DDL, model .pkl/training/promotion, registry changes, changes to other agents/prompts, main writes, production deployment, or betting actions. This file is an exploratory scout-only branch report, not a new frozen program.
+
+
+## Follow-up audit — 2026-10-10, 14:18 UTC cycle (outcome-free)
+
+**Status remains BLOCKED_BY_SOURCE; not DATA_FEASIBLE.** Fresh main registry re-read: 14 programs, 13 PROGRAM_DONE and 1 BLOCKED. Open issue search showed product/development #578–#583 and Brain 24h #600; no Scout candidate Issue. No closed-family thresholds or OOT cohorts reopened.
+
+### New directly relevant scientific evidence
+Kobayashi, Gildersleve, Uno & Lambiotte (2021), *Modeling Collective Anticipation and Response on Wikipedia*, ICWSM 15(1), 315–326, DOI https://doi.org/10.1609/icwsm.v15i1.18063, explicitly models anticipatory growth **and post-event response** around football events. The abstract reports that the match's actual result influences **post-event** attention dynamics; it does **not** establish that pre-event attention predicts the result or beats bookmaker probabilities. This materially increases the need to forbid all event-day/post-match windows and to control for predictable fixture-driven traffic.
+
+### Official measurement/provenance caveats rechecked
+- https://doc.wikimedia.org/generated-data-platform/aqs/analytics-api/documentation/troubleshooting.html : loading is usually within hours but can take >=24h; a 404 is ambiguous between true zero and not-yet-loaded; zero days may be omitted from timeseries. No historical first-seen receipt is returned.
+- https://doc.wikimedia.org/generated-data-platform/aqs/analytics-api/concepts/page-views.html : article redirects are **not counted as views of the destination article**. Renames/alternate spellings can create artificial shocks; a current redirect map is not an as-of historical mapping.
+- https://doc.wikimedia.org/generated-data-platform/aqs/analytics-api/documentation/access-policy.html : pageview data CC0, mandatory identifiable User-Agent and rate limits.
+- Attempted actual per-article API read for Arsenal F.C. August 2026 through the available web fetch: **DisabledError**; container direct HTTPS request: DNS failure. No JSON/HTTP 200 response, no verified counts, no coverage statistics and no durable T-minus receipt. These are **runtime access failures**, not evidence that the API is empty.
+
+### Pre-registered falsification requirements for any future Brain handoff
+1. Hold out entire fixture dates; exclude all article observations whose **first-seen receipt** is later than prediction T, not just dates labelled before T.
+2. Use negative controls that preserve **club popularity, upcoming-fixture proximity and league-week**. Also control prior fixture results and current market fair 1X2; otherwise event anticipation is merely a schedule proxy.
+3. Audit title redirects/renames as of T, 404 vs true zero, delayed loads and API revisions; no retroactive imputation.
+4. Match full timestamped 1X2 fair market quotes at the same T; compare paired multiclass LogLoss and Brier vs market+popularity+fixture controls.
+5. STOP before outcome testing if source response, first-seen historical provenance, club join coverage, or matched market odds remain unavailable. No Scout candidate Issue until that outcome-free feasibility gate passes.
+
+**Cycle delta:** one newly cited peer-reviewed paper directly relevant to leakage/confounding; two verified official data semantics (404 ambiguity and redirect nonaggregation); 0 verified pageview series; 0 DATA_FEASIBLE; 0 new Scout Issues; 0 Research Brain handoffs; 0 confirmed signals. Prior run-duration telemetry remains absent, so no 24-hour speedup claim. No reserved outcome reads, paid API, Supabase write, registry edit, production/model/deployment change.
