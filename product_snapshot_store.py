@@ -7,6 +7,8 @@ This keeps model output and market price as separate data sources.
 
 from __future__ import annotations
 
+import math
+
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Mapping
 
@@ -107,6 +109,9 @@ def select_latest_prediction_snapshots(
 
         identity = prediction_identity(row)
         generated_at = _parse_datetime(row.get("generated_at_utc"))
+        # An at/after-kickoff model result cannot be shown as a pre-match forecast.
+        if generated_at >= _parse_datetime(row.get("commence_time_utc")):
+            continue
         current = latest.get(identity)
         if current is None or generated_at > _parse_datetime(
             current.get("generated_at_utc")
@@ -139,6 +144,37 @@ def select_latest_odds_by_event(
             latest[event_id] = row
 
     return latest
+
+
+def _market_matches_prediction(
+    odds: Mapping[str, Any], prediction: Mapping[str, Any],
+) -> bool:
+    """Fail closed unless the quote belongs to the exact pre-match fixture."""
+    event_id = str(prediction.get("event_id") or "").strip()
+    if not event_id or event_id != str(odds.get("event_id") or "").strip():
+        return False
+    try:
+        kickoff = _parse_datetime(prediction.get("commence_time_utc"))
+        if _parse_datetime(odds.get("commence_time_utc")) != kickoff:
+            return False
+        if _parse_datetime(odds.get("snapshot_time_utc")) >= kickoff:
+            return False
+    except (ValueError, TypeError, OverflowError):
+        return False
+    for side in ("home_team", "away_team"):
+        expected = " ".join(str(prediction.get(side) or "").split()).casefold()
+        actual = " ".join(str(odds.get(side) or "").split()).casefold()
+        if not expected or actual != expected:
+            return False
+    # A 1X2 snapshot is priced only when all three decimal odds are valid.
+    for outcome in ("home_odds", "draw_odds", "away_odds"):
+        try:
+            decimal_price = float(odds.get(outcome))
+        except (TypeError, ValueError):
+            return False
+        if not math.isfinite(decimal_price) or decimal_price <= 1.0:
+            return False
+    return True
 
 
 def _prediction_for_product(row: Mapping[str, Any]) -> dict[str, Any]:
@@ -179,7 +215,28 @@ def build_product_view_from_snapshot_rows(
 ) -> dict[str, Any]:
     """Join immutable model snapshots to independent market snapshots."""
     latest_predictions = select_latest_prediction_snapshots(prediction_rows)
-    latest_odds = select_latest_odds_by_event(odds_rows)
+    prediction_by_event = {
+        str(row["event_id"]).strip(): row
+        for row in latest_predictions
+        if str(row.get("event_id") or "").strip()
+    }
+    # Filter before latest-selection. A newer invalid quote must not mask
+    # an older, still-valid pre-kickoff quote for the same provider event.
+    eligible_odds = [
+        row for row in odds_rows
+        if _market_matches_prediction(
+            row, prediction_by_event.get(str(row.get("event_id") or "").strip(), {})
+        )
+    ]
+    latest_odds = select_latest_odds_by_event(eligible_odds)
+
+    # The product adapter still indexes prices by legacy fixture_key.
+    # Ambiguous keys must remain unpriced, even when event IDs differ.
+    fixture_counts: dict[tuple[str, str, str, str], int] = {}
+    for snapshot in latest_predictions:
+        key = fixture_key(snapshot)
+        fixture_counts[key] = fixture_counts.get(key, 0) + 1
+    ambiguous_fixtures = {key for key, count in fixture_counts.items() if count > 1}
 
     predictions: list[dict[str, Any]] = []
     odds_by_fixture: dict[tuple[str, str, str, str], dict[str, Any]] = {}
@@ -190,7 +247,7 @@ def build_product_view_from_snapshot_rows(
 
         event_id = str(snapshot.get("event_id") or "").strip()
         odds = latest_odds.get(event_id) if event_id else None
-        if odds is not None:
+        if odds is not None and fixture_key(prediction) not in ambiguous_fixtures:
             odds_by_fixture[fixture_key(prediction)] = {
                 "home_odds": odds.get("home_odds"),
                 "draw_odds": odds.get("draw_odds"),
@@ -201,6 +258,30 @@ def build_product_view_from_snapshot_rows(
         predictions,
         odds_by_fixture=odds_by_fixture,
     )
+    # Verify adapter order and identity before attaching source provenance.
+    for item, snapshot in zip(payload["matches"], latest_predictions, strict=True):
+        metadata = item["match"]
+        if (
+            metadata.get("event_id") != snapshot.get("event_id")
+            or metadata.get("commence_time_utc") != snapshot.get("commence_time_utc")
+        ):
+            raise ValueError("Product fixture provenance alignment failed")
+        event_id = str(snapshot.get("event_id") or "").strip()
+        ambiguous = fixture_key(snapshot) in ambiguous_fixtures
+        quote = latest_odds.get(event_id) if event_id and not ambiguous else None
+        metadata["prediction_generated_at_utc"] = _parse_datetime(
+            snapshot.get("generated_at_utc")
+        ).isoformat()
+        metadata["market_snapshot_time_utc"] = (
+            _parse_datetime(quote.get("snapshot_time_utc")).isoformat()
+            if quote is not None else None
+        )
+        metadata["market_snapshot_status"] = (
+            "ambiguous_fixture" if ambiguous
+            else "verified_prekickoff" if quote is not None
+            else "no_verified_prekickoff_quote"
+        )
+
     payload["data_source"] = {
         "predictions": PREDICTION_TABLE,
         "odds": ODDS_TABLE,
@@ -209,7 +290,10 @@ def build_product_view_from_snapshot_rows(
         "priced_event_count": sum(
             1
             for row in latest_predictions
-            if str(row.get("event_id") or "").strip() in latest_odds
+            if (
+                str(row.get("event_id") or "").strip() in latest_odds
+                and fixture_key(row) not in ambiguous_fixtures
+            )
         ),
     }
     return payload
@@ -234,11 +318,18 @@ def load_product_market_view(
         .select(PREDICTION_COLUMNS)
         .gte("commence_time_utc", now.isoformat())
         .lt("commence_time_utc", horizon.isoformat())
+        .lte("generated_at_utc", now.isoformat())
         .order("generated_at_utc", desc=True)
         .limit(1000)
         .execute()
     )
     prediction_rows = prediction_response.data or []
+    # A truncated newest-first page is not a complete as-of view.
+    # Fail closed rather than present partial or future-tainted coverage.
+    if len(prediction_rows) >= 1000:
+        raise ValueError("Prediction snapshot query reached the 1000-row limit")
+    if any(_parse_datetime(row.get("generated_at_utc")) > now for row in prediction_rows):
+        raise ValueError("Prediction query returned a future-dated snapshot")
     latest_predictions = select_latest_prediction_snapshots(prediction_rows)
 
     event_ids = sorted(
@@ -258,11 +349,16 @@ def load_product_market_view(
             .in_("event_id", event_ids)
             .gte("commence_time_utc", now.isoformat())
             .lt("commence_time_utc", horizon.isoformat())
+            .lte("snapshot_time_utc", now.isoformat())
             .order("snapshot_time_utc", desc=True)
             .limit(5000)
             .execute()
         )
         odds_rows = odds_response.data or []
+        if len(odds_rows) >= 5000:
+            raise ValueError("Odds snapshot query reached the 5000-row limit")
+        if any(_parse_datetime(row.get("snapshot_time_utc")) > now for row in odds_rows):
+            raise ValueError("Odds query returned a future-dated snapshot")
 
     return build_product_view_from_snapshot_rows(
         latest_predictions,
