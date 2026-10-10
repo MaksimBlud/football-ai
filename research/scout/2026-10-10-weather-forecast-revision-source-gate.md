@@ -48,3 +48,26 @@ Provisional feature definition (Research Brain alone may freeze):
 ## Safety
 
 No reserved outcomes, football result tests, paid API calls, Supabase writes/DDL, production .pkl/model training/promotion, registry edits, other-agent prompt edits, direct main write, production deployment, or fabricated economic claims. This document is a Scout branch source-gate report only.
+
+
+## Additional source-provenance gate — 2026-10-10, NOAA/NCAR historical-vs-operational distinction
+
+**Decision remains `IDEA / BLOCKED_BY_SOURCE_AND_MARKET_BASELINE`; no new candidate and no Research Brain handoff.** This is a continuation of the existing weather-revision hypothesis, not an additional hypothesis.
+
+### Verified official source metadata (outcome-free)
+
+- NSF NCAR GDEX historical full-run dataset `d084001`: https://gdex.k8s.ucar.edu/datasets/d084001/ (DOI `10.5065/D65D8PWK`). Its published documentation explicitly says it **will stop updating in early 2026** in favor of a continuously updated AWS copy. Do not assume the archived historical collection is guaranteed to cover 2026/27 simply because a metadata landing page displays an extended date range. GDEX advertises GFS cycles 00/06/12/18 UTC and 3-hourly forecast steps, which are the correct forecast-run class; forecast initialization is **not** proof of time of availability.
+- Current NOAA NODD GFS public AWS listing: https://registry.opendata.aws/noaa-gfs-bdp-pds/ . Its documentation confirms four daily 6-hourly runs, public no-account S3 listing, and open use with attribution/no-endorsement requirements. This confirms a *potential prospective collection source*, not archived 2025/26 object completeness or immutable first-seen timestamps.
+- **Do not confuse** the older Unidata `noaa-gfs-pds` bucket with the NOAA NODD bucket. https://registry.opendata.aws/noaa-gfs-pds/ explicitly marks the old source **deprecated** and describes a **rolling four-week archive**; this is not proof of historical 2025/26 full-run availability.
+- GDEX and AWS pages do not provide an auditable first-seen receipt log for the precise `f036/f048` objects used at a fixed `T = kickoff - 36h`. An attempted read of a specific public 2025-09-20 NOAA NODD `.idx` object did not succeed in the current environment; no existence or historical availability claim is made on that basis.
+- Previously inspected GDEX historical catalogs for 2025-09-20, 2025-10-04, and 2025-10-05 show named full forecast horizons; their current last-modified dates are not original first-seen evidence. The 2026-09 catalog could not be independently fetched during this audit. No GRIB or football outcomes were downloaded.
+
+### Remaining deterministic feasibility gate
+
+Before a candidate Issue, require (1) real historical full-run forecast index responses for a *predeclared* fixture universe; (2) source first-seen or independently established publication schedule with a conservative lag, proving both runs available by T; (3) original fixed stadium coordinates, matching valid-time and accumulation semantics; (4) all three legally usable contemporaneous 1X2 market prices with observed receipt <= T. Existing main's `point_in_time_snapshot_cadence` remains `BLOCKED_BY_TIMESTAMP_COVERAGE`; do not substitute late/opening/closing quotes for same-T snapshots.
+
+If these gates ever pass, **Research Brain alone** freezes temporal validation/OOT, paired multiclass LogLoss/Brier against fair market + absolute weather-level baseline, negative controls (time-shift, permutation, missingness-only), uncertainty and STOP/SUCCESS. Scout performs no outcome test and does not read reserved 2026/27 outcomes.
+
+### Productivity and safety
+
+Fresh-main audit: 14 programs, 13 `PROGRAM_DONE`, one `BLOCKED`; no open `[SIGNAL-SCOUT][CANDIDATE]` Issue. This audit: 0 new candidates, 0 `DATA_FEASIBLE`, 0 new Scout Issues, 0 Research Brain handoffs. The existing 24-hour Research Brain tracker #600 also records zero admitted candidates, but no reliable per-cycle elapsed times are available for an acceleration claim. No paid odds requests, Supabase write/DDL, production model changes, deployment, registry changes, frozen-gate weakening, or result reads.
