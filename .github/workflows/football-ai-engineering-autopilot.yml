@@ -1,37 +1,34 @@
-name: Football AI Engineering Autopilot
+name: Football AI Engineering Checkpoint (No API)
 
+# This GitHub job is a deterministic source-of-truth heartbeat, NOT an AI coder.
+# ChatGPT works separately through its connected GitHub tools or scheduled tasks.
 on:
   schedule:
     - cron: '17 * * * *'
   workflow_dispatch:
     inputs:
       role:
-        description: Engineering role to execute
         type: choice
         required: true
-        default: frontend
+        default: both
         options: [frontend, backend, both]
-      mode:
-        description: Probe without model calls, or execute an approved free-tier pass
-        type: choice
-        required: true
-        default: probe
-        options: [probe, execute]
   pull_request:
     paths:
       - '.github/workflows/football-ai-engineering-autopilot.yml'
       - 'engineering_autopilot_guard.py'
       - 'tests/test_engineering_autopilot_guard.py'
-      - 'docs/ENGINEERING_AUTOPILOT_RUNBOOK.md'
+      - 'tests/test_engineering_autopilot_workflow.py'
 
 permissions:
   contents: read
+  issues: read
+  pull-requests: read
 
 jobs:
   contract:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 6
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,170 +36,54 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m pip install pytest pyyaml
-      - run: PYTHONPATH=. python -m pytest -q tests/test_engineering_autopilot_guard.py
-      - name: Verify workflow safety configuration
-        run: |
-          python - <<'PY'
-          import yaml
-          from pathlib import Path
-          workflow = yaml.safe_load(Path('.github/workflows/football-ai-engineering-autopilot.yml').read_text())
-          assert workflow['permissions']['contents'] == 'read'
-          assert workflow['jobs']['agent']['permissions'] == {'contents':'write','pull-requests':'write','issues':'read'}
-          assert workflow['jobs']['agent']['timeout-minutes'] <= 30
-          assert 'pull_request' in Path('.github/workflows/football-ai-engineering-autopilot.yml').read_text()
-          print('PASS fail-closed agent contract')
-          PY
+      - run: python -m pip install -q pytest pyyaml
+      - run: PYTHONPATH=. python -m pytest -q tests/test_engineering_autopilot_guard.py tests/test_engineering_autopilot_workflow.py
+      - run: python -m py_compile engineering_autopilot_guard.py
 
-  agent:
+  checkpoint:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        role: [frontend, backend]
+    timeout-minutes: 6
     concurrency:
-      group: football-ai-engineering-${{ matrix.role }}
+      group: football-ai-engineering-checkpoint
       cancel-in-progress: false
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: read
-    env:
-      PYTHONPATH: .
-      ROLE: ${{ matrix.role }}
-      FREE_TIER_ENABLED: ${{ vars.FOOTBALL_AI_ENGINEERING_FREE_TIER_ENABLED }}
-      IS_PROBE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'probe' }}
-      SELECTED_ROLE: ${{ github.event_name == 'workflow_dispatch' && inputs.role || 'both' }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
-          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Verify role selection and GitHub capabilities
-        id: preflight
+      - name: Check source and protected guard without third-party AI
+        run: |
+          set -euo pipefail
+          python -m py_compile engineering_autopilot_guard.py
+          git diff --check
+          echo "## Football AI / no-API engineering checkpoint" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Main SHA: $(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- External AI calls: 0 (no model invoked)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Code modifications: 0 (read-only checkpoint)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- This check is **not** proof of autonomous coding." >> "$GITHUB_STEP_SUMMARY"
+      - name: Read open engineering tasks and pull requests
         env:
           GH_TOKEN: ${{ github.token }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ROLE_FILTER: ${{ inputs.role || 'both' }}
         shell: bash
         run: |
           set -euo pipefail
-          echo "## Engineering runner / ${ROLE}" >> "$GITHUB_STEP_SUMMARY"
-          if [[ "$SELECTED_ROLE" != 'both' && "$SELECTED_ROLE" != "$ROLE" ]]; then
-            echo 'skip=true' >> "$GITHUB_OUTPUT"
-            echo 'SKIPPED_BY_ROLE_SELECTION' >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-          echo 'skip=false' >> "$GITHUB_OUTPUT"
-          python -m py_compile engineering_autopilot_guard.py
-          gh api "repos/$GITHUB_REPOSITORY" --jq '.full_name' > /dev/null
-          case "$ROLE" in
-            frontend) issue=582 ;;
-            backend) issue=581 ;;
-            *) exit 2 ;;
-          esac
-          gh issue view "$issue" --repo "$GITHUB_REPOSITORY" --json number,state,title > /tmp/task.json
-          if [[ "$(jq -r .state /tmp/task.json)" != 'OPEN' ]]; then
-            echo "ISSUE_${issue}_NOT_OPEN" >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-          if [[ "$IS_PROBE" == 'true' ]]; then
-            echo 'PROBE_ONLY: GitHub read and safety checks passed; no model call, commit or push.' >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-          # A free-tier key may still be connected to billing. Explicit opt-in
-          # is required before making ANY model request.
-          if [[ "$FREE_TIER_ENABLED" != 'true' || -z "$GEMINI_API_KEY" ]]; then
-            echo 'BLOCKED_CONFIG: requires a user-confirmed free-tier GEMINI_API_KEY and FOOTBALL_AI_ENGINEERING_FREE_TIER_ENABLED=true.' >> "$GITHUB_STEP_SUMMARY"
-            echo '::error::Engineering AI not authorized/configured (fail closed, no model calls).'
-            exit 1
-          fi
-          # Do not spawn duplicate work on top of an unfinished task PR.
-          if [[ "$ROLE" == 'backend' && "$(gh pr view 598 --repo "$GITHUB_REPOSITORY" --json state --jq .state)" == 'OPEN' ]]; then
-            echo 'BLOCKED_EXISTING_PR_598: review/merge existing backend draft before starting a new branch.' >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-          existing=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json title --jq ".[] | select(.title | contains(\"[AI-AUTOPILOT][$ROLE]\")) | .title")
-          if [[ -n "$existing" ]]; then
-            echo 'BLOCKED_EXISTING_AGENT_PR: review existing draft before starting another.' >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-      - name: Snapshot production artifact integrity
-        if: steps.preflight.outputs.skip == 'false' && env.IS_PROBE != 'true'
-        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/production-artifacts-before || true
-      - name: Gemini free-tier scoped coding pass
-        if: steps.preflight.outputs.skip == 'false' && env.IS_PROBE != 'true'
-        uses: google-github-actions/run-gemini-cli@v0
-        with:
-          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          gemini_model: ${{ vars.FOOTBALL_AI_ENGINEERING_GEMINI_MODEL || 'gemini-2.5-flash-lite' }}
-          settings: |-
-            {
-              "model":{"maxSessionTurns":16},
-              "telemetry":{"enabled":false},
-              "tools":{"core":["list_directory","read_file","read_many_files","glob","grep_search","write_file","replace"]}
-            }
-          prompt: |-
-            Read AGENTS.md before modifying files. This is a *bounded*, free-tier,
-            repository-only coding pass. You have no shell, remote services or git tools.
-            You are working on engineering role: ${{ matrix.role }}.
-            You may ONLY MODIFY existing files for your role:
-            - frontend: static/match.html and tests/test_product_ui_contract.py
-            - backend: product_snapshot_store.py and tests/test_product_snapshot_store.py
-            Do not change any other files, .pkl, workflows, build scripts or AGENTS.md.
-            For frontend, advance Issue #582: mobile match page, display of pre-match
-            model probabilities vs timestamped stored bookmaker snapshots, honest empty
-            markets. Add or update focused contract tests, avoid mock or invented prices.
-            For backend, advance Issue #581: as-of database filtering and saturated
-            pagination correctness. Never claim non-atomic multi-page reads are atomic.
-            If you cannot safely improve exactly these files, explain rather than edit.
-            Production and paid Odds API/model training are strictly prohibited.
-      - name: Validate every generated file before staging
-        id: changes
-        if: steps.preflight.outputs.skip == 'false' && env.IS_PROBE != 'true'
-        run: python engineering_autopilot_guard.py --role "$ROLE"
-      - name: Focused tests and production hash invariants
-        if: steps.changes.outputs.has_changes == 'true'
-        run: |
-          set -euo pipefail
-          python -m pip install -q pytest fastapi supabase pandas numpy
-          if [[ "$ROLE" == 'frontend' ]]; then
-            python -m pytest -q tests/test_product_ui_contract.py
-          else
-            python -m pytest -q tests/test_product_snapshot_store.py
-          fi
-          PYTHONPATH=. python -m pytest -q tests/test_engineering_autopilot_guard.py
-          sha256sum *.pkl 2>/dev/null | sort > /tmp/production-artifacts-after || true
-          diff -u /tmp/production-artifacts-before /tmp/production-artifacts-after
-          git diff --check
-          python engineering_autopilot_guard.py --role "$ROLE"
-      - name: Commit only allowlisted paths and open draft PR
-        if: steps.changes.outputs.has_changes == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          git config user.name 'football-ai-engineering-bot'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          BRANCH="agent/engineering-${ROLE}-${GITHUB_RUN_ID}"
-          git switch -c "$BRANCH"
-          if [[ "$ROLE" == 'frontend' ]]; then
-            git add -- static/match.html tests/test_product_ui_contract.py
-            issue=582
-          else
-            git add -- product_snapshot_store.py tests/test_product_snapshot_store.py
-            issue=581
-          fi
-          git diff --cached --check
-          git commit -m "engineering(${ROLE}): bounded follow-up for #${issue}"
-          gh auth setup-git
-          git push origin "HEAD:refs/heads/$BRANCH"
-          gh pr create --repo "$GITHUB_REPOSITORY" --draft --base main --head "$BRANCH" \
-            --title "[AI-AUTOPILOT][${ROLE}] Bounded Issue #${issue} update" \
-            --body "Automated free-tier scoped coding pass for Issue #${issue}. Safe-path validation, role-specific tests and production .pkl hash checks passed. This is a DRAFT, not an approved merge. GitHub-token-created PRs may not trigger ordinary pull_request CI; check required CI before manually merging. No paid Odds API, Supabase writes, model promotion or Vercel production deployment."
-          echo 'Draft PR created; full required PR CI is NOT automatically guaranteed by GITHUB_TOKEN events.' >> "$GITHUB_STEP_SUMMARY"
+          for entry in frontend:582 backend:581; do
+            ROLE="${entry%%:*}"
+            ISSUE="${entry##*:}"
+            if [[ "$ROLE_FILTER" != both && "$ROLE_FILTER" != "$ROLE" ]]; then
+              continue
+            fi
+            DATA=$(gh issue view "$ISSUE" --repo "$GITHUB_REPOSITORY" --json title,state,url)
+            STATE=$(jq -r '.state' <<< "$DATA")
+            TITLE=$(jq -r '.title' <<< "$DATA")
+            URL=$(jq -r '.url' <<< "$DATA")
+            echo "- $ROLE: [$TITLE]($URL) — $STATE" >> "$GITHUB_STEP_SUMMARY"
+          done
+          echo '### Open pull requests (read-only)' >> "$GITHUB_STEP_SUMMARY"
+          gh pr list --repo "$GITHUB_REPOSITORY" --state open --limit 15 --json number,title,url --jq '.[] | "- [#\(.number) \(.title)](\(.url))"' >> "$GITHUB_STEP_SUMMARY"
+          echo "CHECKPOINT_COMPLETED — see GitHub job summary. No AI/paid API calls were made."
