@@ -232,6 +232,12 @@ class _FakeSnapshotQuery:
         self.filters.append(lambda row: str(row[column]) > value)
         return self
 
+
+    def gt(self, column, value):
+        self.calls.append(("gt", column, value))
+        self.filters.append(lambda row: str(row[column]) > value)
+        return self
+
     def lt(self, column, value):
         self.calls.append(("lt", column, value))
         self.filters.append(lambda row: str(row[column]) < value)
@@ -359,3 +365,22 @@ def test_exact_kickoff_is_not_upcoming_in_model_or_market_queries():
     assert [row["match"]["event_id"] for row in payload["matches"]] == ["still-upcoming"]
     for table in ("product_prediction_snapshots", "odds_snapshots"):
         assert ("gt", "commence_time_utc", now.isoformat()) in fake.queries[table].calls
+
+
+def test_only_exact_kickoff_snapshots_do_not_trigger_market_query():
+    """A match that starts now cannot be a pending pre-match forecast."""
+    from product_snapshot_store import load_product_market_view
+
+    now = datetime(2026, 9, 13, 14, tzinfo=timezone.utc)
+    fake = _FakeSnapshotClient(
+        [prediction_snapshot(event_id="kickoff-now")],
+        [odds_snapshot(event_id="kickoff-now")],
+    )
+    payload = load_product_market_view(fake, now_utc=now)
+    assert payload["matches"] == []
+    assert payload["data_source"]["prediction_snapshot_count"] == 0
+    assert payload["data_source"]["priced_event_count"] == 0
+    assert "odds_snapshots" not in fake.queries
+    assert ("gt", "commence_time_utc", now.isoformat()) in (
+        fake.queries["product_prediction_snapshots"].calls
+    )
