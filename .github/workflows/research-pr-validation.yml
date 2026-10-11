@@ -1,6 +1,12 @@
 name: Research PR Validation
 
 on:
+  workflow_dispatch:
+    inputs:
+      expected_head_sha:
+        description: 'Exact 40-character branch head for autonomous draft PR CI'
+        required: true
+        type: string
   pull_request:
     branches:
       - main
@@ -18,8 +24,20 @@ jobs:
       SUPABASE_KEY: research-pr-validation-placeholder
 
     steps:
+      - name: Require exact head SHA for bot draft validation
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          EXPECTED_HEAD: ${{ inputs.expected_head_sha }}
+          ACTION_HEAD: ${{ github.sha }}
+        run: |
+          if [[ ! "$EXPECTED_HEAD" =~ ^[0-9a-f]{40}$ || "$EXPECTED_HEAD" != "$ACTION_HEAD" ]]; then
+            echo 'FAIL_CLOSED: expected PR head does not match workflow_dispatch SHA'
+            exit 1
+          fi
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -172,8 +190,8 @@ jobs:
 
       - name: Enforce no production artifact changes
         run: |
-          git fetch origin "${{ github.base_ref }}" --depth=1
-          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -E '\.pkl$'; then
+          git fetch origin "${{ github.base_ref || 'main' }}"
+          if git diff --name-only "origin/${{ github.base_ref || 'main' }}...HEAD" | grep -E '\.pkl$'; then
             echo "Production model artifact change detected"
             exit 1
           fi

@@ -47,6 +47,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      actions: write  # Only relay job may dispatch the six existing validation workflows
     runs-on: ubuntu-latest
     timeout-minutes: 6
     concurrency:
@@ -76,5 +77,5 @@ jobs:
           echo "- No AI/model API calls or additional model quota." >> "$GITHUB_STEP_SUMMARY"
           echo "- Draft PR only; never auto-merge or deploy." >> "$GITHUB_STEP_SUMMARY"
           echo "- GITHUB_TOKEN PR creation may be disabled by repository settings." >> "$GITHUB_STEP_SUMMARY"
-          echo "- GITHUB_TOKEN-created PR may not trigger pull_request CI." >> "$GITHUB_STEP_SUMMARY"
+          echo "- Six pinned workflow_dispatch CI requests may be sent; verify all check results." >> "$GITHUB_STEP_SUMMARY"
           echo "- CI must be verified at exact PR head before merge." >> "$GITHUB_STEP_SUMMARY"
