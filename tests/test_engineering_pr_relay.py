@@ -86,7 +86,7 @@ def mocked_api(role="frontend", complete=True, posted=None):
         if "/matching-refs/heads/dev/backend-" in url:
             return []
         if url.endswith("/commits/" + head):
-            return {"commit":{"committer":{"date":datetime.now(timezone.utc).isoformat()}}}
+            return {"commit":{"committer":{"date":(datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()}}}
         if "/compare/main..." in url:
             return comparison(role, files=safe_files(role) if complete else [safe_files(role)[1]])
         if url.startswith("repos/MaksimBlud/football-ai/pulls?"):
