@@ -129,6 +129,10 @@ def bot_draft_matches(pr: dict, branch: str, head_sha: str) -> bool:
     )
 
 
+class LegacyBranchDispatchBlocked(RuntimeError):
+    """Branch predates pinned CI workflow_dispatch and requires safe rebasing."""
+
+
 def dispatch_exact_head_ci(repo: str, branch: str, head_sha: str) -> int:
     """Dispatch actual existing validation workflows (never forge check statuses)."""
     result = api(f"repos/{repo}/commits/{head_sha}/check-runs?per_page=100")
@@ -143,11 +147,23 @@ def dispatch_exact_head_ci(repo: str, branch: str, head_sha: str) -> int:
             continue
         # A dispatch is a trusted GitHub action supported with GITHUB_TOKEN.
         # Workflow input independently refuses any mismatch of github.sha.
-        api(
-            f"repos/{repo}/actions/workflows/{workflow}/dispatches",
-            method="POST",
-            payload={"ref": branch, "inputs": {"expected_head_sha": head_sha}},
-        )
+        try:
+            api(
+                f"repos/{repo}/actions/workflows/{workflow}/dispatches",
+                method="POST",
+                payload={"ref": branch, "inputs": {"expected_head_sha": head_sha}},
+            )
+        except RuntimeError as exc:
+            if (
+                "HTTP 422" in str(exc)
+                and "does not have 'workflow_dispatch' trigger" in str(exc)
+            ):
+                raise LegacyBranchDispatchBlocked(
+                    f"PR_RELAY_CI_LEGACY_REF_BLOCKED {branch} {head_sha}: "
+                    "ref predates workflow_dispatch; preserve draft, "
+                    "do not auto-rebase or create synthetic success."
+                ) from exc
+            raise
         count += 1
         print(f"PR_RELAY_CI_DISPATCHED: {workflow} {head_sha}")
     return count
@@ -242,9 +258,14 @@ def relay(repo: str, checkout_sha: str, *, dry_run: bool = False) -> list[str]:
                             "No unsafe token or CI bypass was attempted."
                         ) from exc
                     print(f"PR_RELAY_DRAFT_CREATED: {pr['html_url']}")
-                results.append(pr["html_url"])
                 # No merge is attempted: actual six CI workflows decide readiness.
-                dispatched = dispatch_exact_head_ci(repo, branch, head_sha)
+                try:
+                    dispatched = dispatch_exact_head_ci(repo, branch, head_sha)
+                except LegacyBranchDispatchBlocked as exc:
+                    print(str(exc))
+                    # Keep bot draft open and scan next eligible agent branch.
+                    continue
+                results.append(pr["html_url"])
                 print(f"PR_RELAY_CI_REQUEST_COUNT: {dispatched} {head_sha}")
 
             # At most one candidate per role per run.
