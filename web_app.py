@@ -16,6 +16,7 @@ from product_production_readiness import PRODUCTION_READINESS_VERSION
 from product_snapshot_store import load_product_market_view
 from product_fixture_schedule import live_upcoming_fixtures
 from product_source_health import load_website_source_health
+from product_public_history import load_public_product_history
 
 
 app = FastAPI(
@@ -36,6 +37,21 @@ def _supabase_client():
     return create_client(SUPABASE_URL, key)
 
 
+@lru_cache(maxsize=1)
+def _private_lifecycle_client():
+    """Server-only private credential; public publishable keys cannot read lifecycle."""
+    from supabase import create_client
+    from config import SUPABASE_KEY, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL
+
+    if (
+        not SUPABASE_URL or not SUPABASE_KEY
+        or str(SUPABASE_KEY).startswith("sb_publishable_")
+        or SUPABASE_KEY == SUPABASE_PUBLISHABLE_KEY
+    ):
+        raise RuntimeError("Private lifecycle credential is unavailable")
+    return create_client(SUPABASE_URL, SUPABASE_KEY)
+
+
 def _credential_mode() -> str:
     from config import SUPABASE_KEY, SUPABASE_PUBLISHABLE_KEY
 
@@ -54,6 +70,23 @@ def root():
 @app.get("/match")
 def match_page():
     return FileResponse("static/match.html")
+
+
+@app.get("/history")
+def history_page():
+    return FileResponse("static/history.html")
+
+
+@app.get("/product-history")
+def product_history():
+    """Only verified aggregate product lifecycle metrics cross the HTTP boundary."""
+    try:
+        return load_public_product_history(_private_lifecycle_client())
+    except Exception as error:
+        raise HTTPException(
+            status_code=503,
+            detail="Публичная история прогнозов пока недоступна.",
+        ) from error
 
 
 @app.get("/health")
