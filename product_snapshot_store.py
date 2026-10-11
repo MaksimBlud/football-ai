@@ -96,6 +96,25 @@ def prediction_identity(row: Mapping[str, Any]) -> tuple[str, ...]:
     )
 
 
+def _valid_1x2_probabilities(row: Mapping[str, Any]) -> bool:
+    """Never publish a malformed 1X2 distribution as an operational forecast."""
+    values = []
+    for field in ("home_probability", "draw_probability", "away_probability"):
+        value = row.get(field)
+        if value is None or isinstance(value, bool):
+            return False
+        try:
+            probability = float(value)
+        except (TypeError, ValueError, OverflowError):
+            return False
+        if not math.isfinite(probability) or not 0 <= probability <= 1:
+            return False
+        values.append(probability)
+
+    # Stored predictions may be rounded to 2 decimal places per outcome.
+    return math.isclose(sum(values), 1.0, rel_tol=0.0, abs_tol=0.015)
+
+
 def select_latest_prediction_snapshots(
     rows: Iterable[Mapping[str, Any]],
 ) -> list[dict[str, Any]]:
@@ -105,6 +124,9 @@ def select_latest_prediction_snapshots(
     for raw in rows:
         row = dict(raw)
         if row.get("snapshot_schema_version") != PREDICTION_SCHEMA_VERSION:
+            continue
+
+        if not _valid_1x2_probabilities(row):
             continue
 
         identity = prediction_identity(row)

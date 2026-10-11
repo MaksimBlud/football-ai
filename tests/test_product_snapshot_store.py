@@ -89,6 +89,48 @@ def test_unknown_snapshot_schema_is_not_exposed():
     assert selected == []
 
 
+@pytest.mark.parametrize("bad_probabilities", [
+    {"home_probability": 0.85},  # 0.85 + 0.24 + 0.16 != 1
+    {"home_probability": -0.01},
+    {"home_probability": 1.01},
+    {"draw_probability": None},
+    {"away_probability": float("nan")},
+    {"draw_probability": float("inf")},
+    {"home_probability": True},
+    {"away_probability": "unparseable"},
+])
+def test_invalid_1x2_snapshot_is_excluded_before_latest_selection(bad_probabilities):
+    older = prediction_snapshot(home_probability=0.60)
+    newest = prediction_snapshot(
+        generated_at_utc="2026-09-12T07:00:00+00:00",
+        **bad_probabilities,
+    )
+    selected = select_latest_prediction_snapshots([older, newest])
+    assert len(selected) == 1
+    assert selected[0]["generated_at_utc"] == "2026-09-12T06:00:00+00:00"
+    assert selected[0]["home_probability"] == pytest.approx(0.60)
+
+
+def test_public_product_view_omits_only_invalid_model_snapshots():
+    invalid = prediction_snapshot(event_id="bad", home_probability=0.95)
+    valid = prediction_snapshot(event_id="good", home_probability=0.60)
+    payload = build_product_view_from_snapshot_rows(
+        [invalid, valid],
+        [odds_snapshot(event_id="good")],
+    )
+    assert payload["data_source"]["prediction_snapshot_count"] == 1
+    assert payload["data_source"]["priced_event_count"] == 1
+    assert len(payload["matches"]) == 1
+    assert payload["matches"][0]["match"]["event_id"] == "good"
+
+
+def test_rounded_1x2_probabilities_still_pass_public_validation():
+    row = prediction_snapshot(
+        home_probability=0.33, draw_probability=0.33, away_probability=0.33,
+    )
+    assert select_latest_prediction_snapshots([row]) == [row]
+
+
 def test_latest_market_price_is_selected_independently():
     older = odds_snapshot(home_odds=1.80)
     newer = odds_snapshot(
