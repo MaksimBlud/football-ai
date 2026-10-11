@@ -52,7 +52,11 @@ def test_code_plus_tests_are_required_no_production_changes():
 
 def test_behind_main_malformed_branch_and_oversize_are_skipped():
     branch = "dev/backend-581-ready"
-    assert not eligible("backend", branch, comparison("backend", behind_by=1), "a" * 40)
+    assert eligible("backend", branch, comparison("backend", behind_by=1), "a" * 40)
+    assert eligible("backend", branch, comparison("backend", behind_by=6), "a" * 40)
+    assert not eligible("backend", branch, comparison("backend", behind_by=7), "a" * 40)
+    assert not eligible("backend", branch, comparison("backend", behind_by=-1), "a" * 40)
+    assert not eligible("backend", branch, comparison("backend", behind_by=None), "a" * 40)
     assert not eligible("backend", branch, comparison("backend", ahead_by=0), "a" * 40)
     assert not eligible("backend", branch, comparison("backend", ahead_by=7), "a" * 40)
     assert not eligible("backend", branch, comparison("backend", base_commit={"sha":"b"*40}), "a" * 40)
@@ -72,7 +76,7 @@ def test_only_recent_commits_are_eligible():
     assert not fresh_commit("invalid", now)
 
 
-def mocked_api(role="frontend", complete=True, posted=None):
+def mocked_api(role="frontend", complete=True, posted=None, behind=0):
     main, head = "a" * 40, "b" * 40
     def fake_api(url, method="GET", payload=None):
         if method == "POST":
@@ -88,7 +92,7 @@ def mocked_api(role="frontend", complete=True, posted=None):
         if url.endswith("/commits/" + head):
             return {"commit":{"committer":{"date":(datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()}}}
         if "/compare/main..." in url:
-            return comparison(role, files=safe_files(role) if complete else [safe_files(role)[1]])
+            return comparison(role, behind_by=behind, files=safe_files(role) if complete else [safe_files(role)[1]])
         if url.startswith("repos/MaksimBlud/football-ai/pulls?"):
             return []
         if "/git/ref/heads/" in url:
@@ -119,3 +123,22 @@ def test_real_handoff_is_draft_only(monkeypatch):
     assert posted[0]["draft"] is True
     assert posted[0]["base"] == "main"
     assert "GITHUB_TOKEN" in posted[0]["body"]
+
+
+def test_relay_can_create_draft_for_recent_branch_behind_main(monkeypatch):
+    """A recent diverged branch gets review, not automatic rebase or merge."""
+    posted = []
+    monkeypatch.setattr(relay_mod, "api", mocked_api(behind=2, posted=posted))
+    assert relay("MaksimBlud/football-ai", "a" * 40) == [
+        "https://github.com/MaksimBlud/football-ai/pull/700"
+    ]
+    assert len(posted) == 1
+    assert posted[0]["draft"] is True
+    assert "main lag=2" in posted[0]["body"]
+
+
+def test_relay_rejects_branch_beyond_main_lag_limit(monkeypatch):
+    posted = []
+    monkeypatch.setattr(relay_mod, "api", mocked_api(behind=7, posted=posted))
+    assert relay("MaksimBlud/football-ai", "a" * 40) == []
+    assert not posted
