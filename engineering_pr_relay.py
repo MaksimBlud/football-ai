@@ -34,6 +34,7 @@ ROLE_FILES = {
 MAX_FILES = 3
 MAX_CHANGED_LINES = 450
 MAX_BRANCH_AGE = timedelta(hours=4)
+MAX_BEHIND_COMMITS = 6  # Allow reviewable drift; merge is still forbidden without full CI.
 
 
 def qualified_branch(branch: str, role: str) -> bool:
@@ -65,10 +66,11 @@ def safe_change_set(role: str, files: list[dict]) -> bool:
 
 
 def eligible(role: str, branch: str, comparison: dict, main_sha: str) -> bool:
-    """Require an up-to-date branch with a bounded, reviewed-by-CI draft diff."""
+    """Permit small main drift for DRAFT review; never merge or rebase automatically."""
     return (
         qualified_branch(branch, role)
-        and comparison.get("behind_by") == 0
+        and isinstance(comparison.get("behind_by"), int)
+        and 0 <= comparison["behind_by"] <= MAX_BEHIND_COMMITS
         and 1 <= comparison.get("ahead_by", 0) <= 6
         and comparison.get("base_commit", {}).get("sha") == main_sha
         and safe_change_set(role, comparison.get("files", []))
@@ -158,7 +160,8 @@ def relay(repo: str, checkout_sha: str, *, dry_run: bool = False) -> list[str]:
                 f"- Source agent branch: \u0060{branch}\u0060\n"
                 f"- Exact head at relay: \u0060{head_sha}\u0060\n"
                 f"- Base main: \u0060{current_main}\u0060\n"
-                "- Checked: fresh head, behind_by=0, bounded scope, product code "
+                f"- Checked: recent head, main lag={comparison['behind_by']} "
+                f"(max {MAX_BEHIND_COMMITS}); bounded scope, product code "
                 "AND regression tests, no production artifacts.\n\n"
                 "**Not an AI run, not an evaluation or passing-CI claim.** "
                 "GitHub's GITHUB_TOKEN-created PR may not trigger pull_request "
