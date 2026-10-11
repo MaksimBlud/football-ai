@@ -142,3 +142,26 @@ def test_relay_rejects_branch_beyond_main_lag_limit(monkeypatch):
     monkeypatch.setattr(relay_mod, "api", mocked_api(behind=7, posted=posted))
     assert relay("MaksimBlud/football-ai", "a" * 40) == []
     assert not posted
+
+
+def test_403_gate_names_exact_repository_toggle(monkeypatch):
+    """Actionable blocker, without any fallback token, extra API calls or merge."""
+    original = mocked_api(posted=[])
+    posts = []
+
+    def rejects_actions_pr(url, method="GET", payload=None):
+        if method == "POST":
+            posts.append(payload)
+            raise RuntimeError(
+                "GitHub POST pulls failed: GitHub Actions is not permitted "
+                "to create or approve pull requests (HTTP 403)"
+            )
+        return original(url, method=method, payload=payload)
+
+    monkeypatch.setattr(relay_mod, "api", rejects_actions_pr)
+    with pytest.raises(RuntimeError, match="PR_RELAY_WRITE_BLOCKED") as error:
+        relay("MaksimBlud/football-ai", "a" * 40)
+    assert "Settings > Actions > General > Workflow permissions" in str(error.value)
+    assert "Allow GitHub Actions to create and approve pull requests" in str(error.value)
+    assert len(posts) == 1
+    assert posts[0]["draft"] is True
