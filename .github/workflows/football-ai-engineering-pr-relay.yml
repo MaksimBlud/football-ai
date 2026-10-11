@@ -5,6 +5,13 @@ name: Football AI Safe PR Relay (No AI API)
 on:
   schedule:
     - cron: '43 * * * *'
+  # Immediate, limited live proof after this workflow's safe main merge.
+  push:
+    branches: [main]
+    paths:
+      - 'engineering_pr_relay.py'
+      - '.github/workflows/football-ai-engineering-pr-relay.yml'
+      - 'tests/test_engineering_pr_relay.py'
   workflow_dispatch:
   pull_request:
     paths:
