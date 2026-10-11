@@ -7,7 +7,7 @@
 </style>
 </head>
 <body>
-<main class="shell"><a class="back" href="/">← Назад к списку матчей</a><div id="error" class="error" role="alert" tabindex="-1"></div><div id="loading" class="loading" role="status">Загружаю карточку…</div><div id="content" hidden>
+<main class="shell"><a class="back" href="/">← Назад к списку матчей</a><div id="error" class="error" role="alert" tabindex="-1"></div><div id="loading" class="loading" role="status" aria-live="polite" aria-atomic="true">Загружаю карточку…</div><div id="content" hidden>
 <section class="hero"><div class="eyebrow">Football AI · match view</div><h1 id="title"></h1><p id="meta" class="subtitle"></p><div class="hero-grid"><div id="forecast" class="summary forecast"></div><div id="value" class="summary value"></div></div></section>
 <section class="panel" aria-labelledby="sources-heading"><h2 id="sources-heading">Источники и время данных</h2><div id="source-status" class="source-alert" role="status"></div><div class="source-grid"><div class="source-item"><span class="label">AI-прогноз · сохранённый снимок</span><strong id="model-snapshot-time">Не указано</strong></div><div class="source-item"><span class="label">Коэффициенты · сохранённая предматчевая линия</span><strong id="market-snapshot-time">Не указано</strong></div></div><p class="source-disclaimer">Время отображается в UTC. Коэффициенты — сохранённый снимок, не live-линия; положительный Raw EV не гарантирует прибыль.</p></section>
 <section class="panel"><div class="panel-head"><h2>Исход матча · 1X2</h2><div id="one-note" class="note"></div></div><div id="one-cards" class="cards"></div></section>
