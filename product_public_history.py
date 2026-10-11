@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections import Counter
 from datetime import datetime, timezone
+import re
 from typing import Any, Mapping
 
 from product_lifecycle import (
@@ -79,7 +80,7 @@ def _sanitized_scope(report: Mapping[str, Any], records: list[dict[str, Any]]) -
         row for row in records
         if row["league"] == league and row["model_1x2_sha256"] == sha
     ]
-    if not league or not isinstance(sha, str) or len(sha) != 64:
+    if not league or not isinstance(sha, str) or re.fullmatch(r"[0-9a-f]{64}", sha) is None:
         raise ValueError("incomplete exact-model provenance")
     n = len(scoped)
     if report["settled_predictions"] != n:
@@ -107,7 +108,9 @@ def build_public_product_history(
     events: list[Mapping[str, Any]], *, now_utc: datetime | None = None,
 ) -> dict[str, Any]:
     now = _parse_utc(now_utc or datetime.now(timezone.utc))
-    rows = [dict(row) for row in events]
+    # Product history can contain other operational leagues in the future.
+    # Explicitly scope to EPL rather than either mixing or rejecting them.
+    rows = [dict(row) for row in events if row.get("league") == PUBLIC_LEAGUE]
     if len(rows) >= MAX_EVENTS:
         raise ValueError("bounded lifecycle aggregation exceeded")
     ids: set[int] = set()
@@ -120,9 +123,6 @@ def build_public_product_history(
             EVENT_PREDICTION_REGISTERED, EVENT_MARKET_OBSERVED, EVENT_SETTLED
         ):
             raise ValueError("unrecognized product lifecycle event")
-        if row.get("league") != PUBLIC_LEAGUE:
-            # Do not mix research or market-only histories into EPL product.
-            raise ValueError("non-EPL event in EPL public history source")
         if _parse_utc(row["recorded_at_utc"]) > now:
             raise ValueError("future lifecycle event in as-of historical report")
         if _parse_utc(row["source_prediction_created_at_utc"]) >= _parse_utc(row["commence_time_utc"]):
