@@ -192,7 +192,7 @@ def _market_matches_prediction(
     for outcome in ("home_odds", "draw_odds", "away_odds"):
         try:
             decimal_price = float(odds.get(outcome))
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError):
             return False
         if not math.isfinite(decimal_price) or decimal_price <= 1.0:
             return False
