@@ -185,6 +185,7 @@ def test_timezone_naive_snapshot_is_rejected():
     {"away_odds": float("nan")},
     {"home_odds": "not-a-number"},
     {"away_odds": float("inf")},
+    {"home_odds": 10 ** 10000},  # int-to-float conversion overflows
 ])
 def test_incomplete_or_invalid_h2h_quote_is_not_counted_as_priced(invalid_quote):
     payload = build_product_view_from_snapshot_rows(
@@ -201,6 +202,20 @@ def test_older_complete_h2h_quote_survives_newer_incomplete_quote():
         [prediction_snapshot()], [
             odds_snapshot(home_odds=1.85),
             odds_snapshot(snapshot_time_utc="2026-09-12T05:55:00+00:00", draw_odds=None),
+        ],
+    )
+    assert payload["data_source"]["priced_event_count"] == 1
+    assert payload["matches"][0]["markets"]["1x2"]["selections"][0]["bookmaker_odds"] == pytest.approx(1.85)
+
+
+def test_older_complete_h2h_quote_survives_newer_overflow_quote():
+    payload = build_product_view_from_snapshot_rows(
+        [prediction_snapshot()], [
+            odds_snapshot(home_odds=1.85),
+            odds_snapshot(
+                snapshot_time_utc="2026-09-12T05:55:00+00:00",
+                home_odds=10 ** 10000,
+            ),
         ],
     )
     assert payload["data_source"]["priced_event_count"] == 1

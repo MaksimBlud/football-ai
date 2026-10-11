@@ -36,6 +36,17 @@ MAX_CHANGED_LINES = 450
 MAX_BRANCH_AGE = timedelta(hours=4)
 MAX_BEHIND_COMMITS = 6  # Allow reviewable drift; merge is still forbidden without full CI.
 
+# Existing on-PR validation contracts, deliberately reused rather than weakening CI.
+# GitHub Actions GITHUB_TOKEN-created PRs do not fire pull_request workflows.
+CI_WORKFLOWS = (
+    ("product-pr-validation.yml", "product-contract-tests"),
+    ("research-pr-validation.yml", "targeted-research-tests"),
+    ("bundesliga-pr-validation.yml", "bundesliga-validation"),
+    ("ligue1-pr-validation.yml", "ligue1-validation"),
+    ("serie-a-pr-validation.yml", "serie-a-validation"),
+    ("eredivisie-pr-validation.yml", "validate"),
+)
+
 
 def qualified_branch(branch: str, role: str) -> bool:
     """No arbitrary branch names or non-product roles are accepted."""
@@ -101,8 +112,61 @@ def api(endpoint: str, method: str = "GET", payload: dict | None = None):
         raise RuntimeError(
             f"GitHub {method} {endpoint} failed: {result.stderr.strip()[:700]}"
         )
-    return json.loads(result.stdout)
+    return json.loads(result.stdout) if result.stdout.strip() else {}
 
+
+
+
+def bot_draft_matches(pr: dict, branch: str, head_sha: str) -> bool:
+    """Do not use relay privileges on a human-authored or mismatched PR."""
+    return (
+        pr.get("state") == "open"
+        and pr.get("draft") is True
+        and pr.get("user", {}).get("login") == "github-actions[bot]"
+        and pr.get("head", {}).get("ref") == branch
+        and pr.get("head", {}).get("sha") == head_sha
+        and pr.get("base", {}).get("ref") == "main"
+    )
+
+
+class LegacyBranchDispatchBlocked(RuntimeError):
+    """Branch predates pinned CI workflow_dispatch and requires safe rebasing."""
+
+
+def dispatch_exact_head_ci(repo: str, branch: str, head_sha: str) -> int:
+    """Dispatch actual existing validation workflows (never forge check statuses)."""
+    result = api(f"repos/{repo}/commits/{head_sha}/check-runs?per_page=100")
+    observed = {
+        run.get("name") for run in result.get("check_runs", [])
+        if run.get("head_sha") == head_sha
+    }
+    count = 0
+    for workflow, check_name in CI_WORKFLOWS:
+        if check_name in observed:
+            print(f"PR_RELAY_CI_ALREADY_TRIGGERED: {check_name} {head_sha}")
+            continue
+        # A dispatch is a trusted GitHub action supported with GITHUB_TOKEN.
+        # Workflow input independently refuses any mismatch of github.sha.
+        try:
+            api(
+                f"repos/{repo}/actions/workflows/{workflow}/dispatches",
+                method="POST",
+                payload={"ref": branch, "inputs": {"expected_head_sha": head_sha}},
+            )
+        except RuntimeError as exc:
+            if (
+                "HTTP 422" in str(exc)
+                and "does not have 'workflow_dispatch' trigger" in str(exc)
+            ):
+                raise LegacyBranchDispatchBlocked(
+                    f"PR_RELAY_CI_LEGACY_REF_BLOCKED {branch} {head_sha}: "
+                    "ref predates workflow_dispatch; preserve draft, "
+                    "do not auto-rebase or create synthetic success."
+                ) from exc
+            raise
+        count += 1
+        print(f"PR_RELAY_CI_DISPATCHED: {workflow} {head_sha}")
+    return count
 
 def relay(repo: str, checkout_sha: str, *, dry_run: bool = False) -> list[str]:
     now = datetime.now(timezone.utc)
@@ -142,7 +206,10 @@ def relay(repo: str, checkout_sha: str, *, dry_run: bool = False) -> list[str]:
                 f"repos/{repo}/pulls?state=all&head="
                 + quote(f"{owner}:{branch}", safe="")
             )
-            if existing:
+            if existing and (
+                len(existing) != 1
+                or not bot_draft_matches(existing[0], branch, head_sha)
+            ):
                 continue
 
             # Prevent stale-branch / concurrent-main races immediately before write.
@@ -172,20 +239,34 @@ def relay(repo: str, checkout_sha: str, *, dry_run: bool = False) -> list[str]:
                 print(f"PR_RELAY_DRY_RUN: {role} {branch} {head_sha}")
                 results.append(branch)
             else:
+                if existing:
+                    pr = existing[0]
+                    print(f"PR_RELAY_RESUMED_BOT_DRAFT: {pr['html_url']}")
+                else:
+                    try:
+                        pr = api(
+                            f"repos/{repo}/pulls", method="POST",
+                            payload={"title": title, "head": branch,
+                                     "base": "main", "draft": True, "body": body},
+                        )
+                    except RuntimeError as exc:
+                        raise RuntimeError(
+                            f"PR_RELAY_WRITE_BLOCKED for {branch}: {exc}. "
+                            "For GitHub HTTP 403, check repository Settings > Actions > "
+                            "General > Workflow permissions > "
+                            "'Allow GitHub Actions to create and approve pull requests'. "
+                            "No unsafe token or CI bypass was attempted."
+                        ) from exc
+                    print(f"PR_RELAY_DRAFT_CREATED: {pr['html_url']}")
+                # No merge is attempted: actual six CI workflows decide readiness.
                 try:
-                    pr = api(
-                        f"repos/{repo}/pulls", method="POST",
-                        payload={"title": title, "head": branch,
-                                 "base": "main", "draft": True, "body": body},
-                    )
-                except RuntimeError as exc:
-                    raise RuntimeError(
-                        f"PR_RELAY_WRITE_BLOCKED for {branch}: {exc}. "
-                        "GitHub repository Actions setting may prohibit Actions "
-                        "from creating PRs; no unsafe workaround was attempted."
-                    ) from exc
-                print(f"PR_RELAY_DRAFT_CREATED: {pr['html_url']}")
+                    dispatched = dispatch_exact_head_ci(repo, branch, head_sha)
+                except LegacyBranchDispatchBlocked as exc:
+                    print(str(exc))
+                    # Keep bot draft open and scan next eligible agent branch.
+                    continue
                 results.append(pr["html_url"])
+                print(f"PR_RELAY_CI_REQUEST_COUNT: {dispatched} {head_sha}")
 
             # At most one candidate per role per run.
             break
@@ -203,8 +284,8 @@ def main() -> int:
         raise ValueError("Missing GH_TOKEN")
     results = relay(repo, sha, dry_run="--dry-run" in sys.argv)
     print(
-        f"PR_RELAY_SUMMARY: {len(results)} draft candidates. "
-        "PR creation using GITHUB_TOKEN does not prove CI triggered; "
+        f"PR_RELAY_SUMMARY: {len(results)} draft handoffs. "
+        "Check actual exact-head workflow_dispatch outcomes before any merge; "
         "NO_AUTO_MERGE, NO_AI_API, NO_PRODUCTION_WRITE."
     )
     return 0
