@@ -126,6 +126,7 @@ jobs:
           python -m pytest -q tests/test_product_markets.py
           python -m pytest -q tests/test_product_web.py
           python -m pytest -q tests/test_product_ui_contract.py
+          python -m pytest -q tests/test_match_detail_error_accessibility.py
           python -m pytest -q tests/test_product_snapshot_store.py
           python -m pytest -q tests/test_publish_product_predictions.py
           python -m pytest -q tests/test_deployment_readiness.py
