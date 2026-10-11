@@ -79,13 +79,13 @@ MARKET_READINESS = {
 
 
 def _number(value: Any) -> float | None:
-    if value is None:
+    if value is None or isinstance(value, bool):
         return None
     if isinstance(value, str) and not value.strip():
         return None
     try:
         parsed = float(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return None
     if not math.isfinite(parsed):
         return None
@@ -97,7 +97,10 @@ def fair_odds(probability: Any) -> float | None:
     probability_value = _number(probability)
     if probability_value is None or not 0 < probability_value <= 1:
         return None
-    return 1.0 / probability_value
+    implied_price = 1.0 / probability_value
+    # Extremely small positive probabilities can overflow to infinity.
+    # The public JSON contract must never expose non-finite decimal odds.
+    return implied_price if math.isfinite(implied_price) else None
 
 
 def raw_expected_value(probability: Any, bookmaker_odds: Any) -> float | None:

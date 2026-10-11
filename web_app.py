@@ -15,6 +15,7 @@ from product_portfolio_risk import PORTFOLIO_RISK_SCHEMA_VERSION, build_portfoli
 from product_production_readiness import PRODUCTION_READINESS_VERSION
 from product_snapshot_store import load_product_market_view
 from product_fixture_schedule import live_upcoming_fixtures
+from product_source_health import load_website_source_health
 
 
 app = FastAPI(
@@ -72,6 +73,18 @@ def health():
 def upcoming_fixtures():
     """Keyless schedule-only view; no AI probabilities or bookmaker prices."""
     return live_upcoming_fixtures()
+
+
+@app.get("/source-health")
+def source_health():
+    """Read-only bounded public diagnostic; never collects prices or runs AI."""
+    try:
+        return load_website_source_health(_supabase_client())
+    except Exception as error:
+        raise HTTPException(
+            status_code=503,
+            detail="Не удалось проверить свежесть источников прогнозов.",
+        ) from error
 
 
 @app.get("/product-market-view")

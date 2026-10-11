@@ -48,6 +48,44 @@ def test_fair_odds_and_raw_ev_for_simple_market():
     assert raw_expected_value(0.60, 1.90) == pytest.approx(0.14)
 
 
+def test_extreme_numeric_inputs_fail_closed_in_public_product_view():
+    # Python raises OverflowError converting an arbitrarily large int to float.
+    assert fair_odds(10**500) is None
+    assert raw_expected_value(0.5, 10**500) is None
+    # A boolean is not a probability or a bookmaker price.
+    assert fair_odds(True) is None
+    assert raw_expected_value(True, 2.0) is None
+
+    view = build_product_match(
+        sample_prediction(home_probability=True, expected_home_goals=10**500),
+        {"home_odds": 10**500},
+    )
+    selection = view["markets"]["1x2"]["selections"][0]
+    assert selection["probability"] is None
+    assert selection["fair_odds"] is None
+    assert selection["bookmaker_odds"] is None
+    assert selection["raw_expected_value"] is None
+    assert view["model_context"]["expected_home_goals"] is None
+
+
+def test_tiny_probability_does_not_emit_infinite_fair_odds_or_invalid_json():
+    import json
+
+    assert fair_odds(5e-324) is None
+    payload = build_product_market_view([
+        sample_prediction(
+            home_probability=5e-324,
+            draw_probability=0.90,
+            away_probability=0.10,
+        ),
+    ])
+    home = payload["matches"][0]["markets"]["1x2"]["selections"][0]
+    assert home["probability"] == 5e-324
+    assert home["fair_odds"] is None
+    # Mirrors strict JSON serialization used by public HTTP clients.
+    json.dumps(payload, allow_nan=False)
+
+
 def test_main_forecast_uses_probability_not_raw_ev():
     view = build_product_match(
         sample_prediction(
