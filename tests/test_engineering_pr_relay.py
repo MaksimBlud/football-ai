@@ -243,3 +243,35 @@ def test_api_accepts_empty_204_response(monkeypatch):
     monkeypatch.setattr(relay_mod.subprocess, "run", fake_run)
     assert relay_mod.api("repos/owner/repo/actions/workflows/test.yml/dispatches",
                          method="POST", payload={"ref": "feature"}) == {}
+
+
+
+def test_legacy_dispatch_422_preserves_draft_and_skips_safely(monkeypatch):
+    posted = []
+    original = mocked_api(posted=posted, existing_bot=True)
+
+    def refuses_legacy_workflow(url, method="GET", payload=None):
+        if method == "POST" and "/actions/workflows/" in url:
+            raise RuntimeError(
+                "GitHub POST dispatches failed: "
+                "Workflow does not have 'workflow_dispatch' trigger (HTTP 422)"
+            )
+        return original(url, method=method, payload=payload)
+
+    monkeypatch.setattr(relay_mod, "api", refuses_legacy_workflow)
+    assert relay("MaksimBlud/football-ai", "a" * 40) == []
+    # No fabricated result, no new PR, no credential or merge bypass.
+    assert not posted
+
+
+def test_unexpected_ci_dispatch_failure_remains_visible(monkeypatch):
+    original = mocked_api(posted=[], existing_bot=True)
+
+    def refuses_all(url, method="GET", payload=None):
+        if method == "POST" and "/actions/workflows/" in url:
+            raise RuntimeError("GitHub unexpected 401")
+        return original(url, method=method, payload=payload)
+
+    monkeypatch.setattr(relay_mod, "api", refuses_all)
+    with pytest.raises(RuntimeError, match="401"):
+        relay("MaksimBlud/football-ai", "a" * 40)
