@@ -73,7 +73,7 @@ def lifecycle_pair(snapshot_id=1, *, model=MODEL_A, league="EPL",
     ]
 
 
-def single(*overrides):
+def single(**overrides):
     return build_public_product_history(lifecycle_pair(**overrides), now_utc=NOW)
 
 
