@@ -245,7 +245,7 @@ def relay(repo: str, checkout_sha: str, *, dry_run: bool = False) -> list[str]:
                 results.append(pr["html_url"])
                 # No merge is attempted: actual six CI workflows decide readiness.
                 dispatched = dispatch_exact_head_ci(repo, branch, head_sha)
-                print(f"PR_RELAY_CI_REQUEST_COUNT: {dispatched} {head_sha}
+                print(f"PR_RELAY_CI_REQUEST_COUNT: {dispatched} {head_sha}")
 
             # At most one candidate per role per run.
             break
