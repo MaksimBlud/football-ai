@@ -33,7 +33,7 @@ jobs:
       - name: Enforce never auto-merge
         run: |
           ! grep -q 'gh pr merge' engineering_pr_relay.py
-          ! grep -q 'contents: write' .github/workflows/football-ai-engineering-pr-relay.yml
+          ! grep -Eq '^[[:space:]]*contents: write([[:space:]]|$)' .github/workflows/football-ai-engineering-pr-relay.yml
 
   relay:
     if: github.event_name != 'pull_request'
