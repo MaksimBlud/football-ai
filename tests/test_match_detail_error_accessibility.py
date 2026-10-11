@@ -49,6 +49,7 @@ async function check(search, fetchImpl, expected) {
 
 (async () => {
   await check('', () => {throw Error('fetch must not run');}, /идентификатор/);
+  await check('?id=' + 'a'.repeat(161), () => {throw Error('fetch must not run');}, /идентификатор/);
   await check('?id=fixture-1', () => Promise.reject(Error('offline')), /Не удалось загрузить/);
   await check('?id=fixture-1', () => Promise.resolve({ok:false,status:503}), /HTTP 503/);
 })().catch(err => {console.error(err); process.exitCode = 1;});
