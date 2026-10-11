@@ -181,8 +181,10 @@ def relay(repo: str, checkout_sha: str, *, dry_run: bool = False) -> list[str]:
                 except RuntimeError as exc:
                     raise RuntimeError(
                         f"PR_RELAY_WRITE_BLOCKED for {branch}: {exc}. "
-                        "GitHub repository Actions setting may prohibit Actions "
-                        "from creating PRs; no unsafe workaround was attempted."
+                        "For GitHub HTTP 403, check repository Settings > Actions > "
+                        "General > Workflow permissions > "
+                        "'Allow GitHub Actions to create and approve pull requests'. "
+                        "No unsafe token or CI bypass was attempted."
                     ) from exc
                 print(f"PR_RELAY_DRAFT_CREATED: {pr['html_url']}")
                 results.append(pr["html_url"])
