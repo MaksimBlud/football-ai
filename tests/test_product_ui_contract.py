@@ -298,3 +298,79 @@ def test_schedule_only_frontend_refuses_unsupported_ai_or_market_fields():
     assert "state.fixtures=null;renderSchedule()" in html
     assert "const box=$('public-fixtures'),data=state.fixtures;" in html
     assert "esc(m.home_team)" in html and "esc(m.away_team)" in html
+
+
+def test_match_detail_accessibility_and_explicit_local_time_contract():
+    html = read(MATCH_PATH)
+    assert 'id="error" class="error" role="alert"' in html
+    assert 'id="loading" class="loading" role="status"' in html
+    assert '.back:focus-visible{outline:3px' in html
+    assert '.panel-head{flex-wrap:wrap}' in html
+    assert 'function localKickoff(m)' in html
+    assert 'местное время устройства' in html
+    assert 'часовой пояс не подтверждён' in html
+    assert "const num=v=>typeof v==='number'&&Number.isFinite(v);" in html
+
+
+def test_match_detail_market_quote_guards_execute_in_node(tmp_path):
+    import re
+    import shutil
+    import subprocess
+
+    import pytest
+
+    if shutil.which("node") is None:
+        pytest.skip("Node is not available")
+
+    html = read(MATCH_PATH)
+    match = re.search(r"<script>(.*?)</script>", html, re.S)
+    assert match, "Missing match detail inline script"
+    # The page calls load() on startup; evaluate only the helper definitions.
+    helpers, separator, startup = match.group(1).rpartition("load();")
+    assert separator and not startup.strip(), "Unexpected script startup"
+    cases = r"""
+const assert = require('node:assert/strict');
+const originalNow = Date.now;
+Date.now = () => Date.parse('2026-10-10T12:00:00Z');
+const verified = {
+    market_snapshot_status: 'verified_prekickoff',
+    market_snapshot_time_utc: '2026-10-10T10:00:00+00:00',
+    commence_time_utc: '2026-10-11T15:00:00+00:00'
+};
+const readiness = {status:'comparison_ready'};
+const selection = {label:'Home',probability:0.60,fair_odds:1.67,
+    bookmaker_odds:1.85,raw_expected_value:0.11};
+const signal = {status:'positive_raw_ev',selection};
+assert.equal(num(1.85), true);
+assert.equal(num('1.85'), false);
+assert.equal(num(NaN), false);
+assert.equal(marketVerified(verified), true);
+assert.match(selectionCard(selection,readiness,false,verified), />1\.85</);
+assert.match(valueHtml(signal,verified), />1\.85</);
+assert.equal(utcTimestamp('2026-10-10T10:00:00'), 'Время не указано');
+assert.match(utcTimestamp(verified.market_snapshot_time_utc), /UTC/);
+assert.match(localKickoff(verified), /местное время устройства/);
+assert.match(localKickoff({match_date:'2026-10-11',match_time:'15:00'}),
+    /часовой пояс не подтверждён/);
+const unsafe = [
+    {...verified,market_snapshot_status:'ambiguous_fixture'},
+    {...verified,market_snapshot_status:'unverified'},
+    {...verified,market_snapshot_time_utc:'2026-10-11T15:00:00+00:00'},
+    {...verified,market_snapshot_time_utc:'2026-10-10T13:00:00+00:00'},
+    {...verified,market_snapshot_time_utc:null},
+    {...verified,commence_time_utc:'2026-10-11T15:00:00'},
+];
+for (const meta of unsafe) {
+    assert.equal(marketVerified(meta), false);
+    assert.doesNotMatch(selectionCard(selection,readiness,false,meta), />1\.85</);
+    assert.doesNotMatch(valueHtml(signal,meta), />1\.85</);
+}
+const invalidPrice = {...selection,bookmaker_odds:'1.85'};
+assert.doesNotMatch(selectionCard(invalidPrice,readiness,false,verified), />1\.85</);
+assert.doesNotMatch(valueHtml({status:'positive_raw_ev',selection:invalidPrice},verified), />1\.85</);
+Date.now = originalNow;
+"""
+    script = tmp_path / "match_detail_quote_guards.js"
+    script.write_text(helpers + "\n" + cases, encoding="utf-8")
+    result = subprocess.run(["node", str(script)], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
