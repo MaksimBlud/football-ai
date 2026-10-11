@@ -8,6 +8,7 @@ import pytest
 
 from research_agent_groq import (
     GroqAgentError,
+    GroqLongQuotaWait,
     GroqToolFormatError,
     _duration_seconds,
     _request,
@@ -20,6 +21,7 @@ from research_agent_groq import (
     replace_text,
     run_agent,
     write_file,
+    write_quota_wait,
     write_state,
 )
 
@@ -206,6 +208,18 @@ def test_groq_rate_limit_duration_parser(value: str, seconds: float):
     assert _duration_seconds(value) == pytest.approx(seconds)
 
 
+def test_write_quota_wait_persists_future_not_before(tmp_path: Path):
+    result = write_quota_wait(tmp_path, 482, 651.2, buffer_seconds=15)
+    path = tmp_path / "research" / "agent_runs" / "issue_482" / "QUOTA_WAIT.json"
+    payload = __import__("json").loads(path.read_text(encoding="utf-8"))
+
+    assert result["provider"] == "groq"
+    assert payload["retry_after_seconds"] == 652
+    assert payload["buffer_seconds"] == 15
+    assert payload["not_before_epoch"] > 0
+    assert payload["not_before_utc"] > payload["observed_at_utc"]
+
+
 def test_groq_long_retry_after_fails_fast_without_sleep(monkeypatch, capsys):
     headers = Message()
     headers["retry-after"] = "2296"
@@ -225,8 +239,9 @@ def test_groq_long_retry_after_fails_fast_without_sleep(monkeypatch, capsys):
     monkeypatch.setattr("research_agent_groq.urllib.request.urlopen", fail_request)
     monkeypatch.setattr("research_agent_groq.time.sleep", lambda seconds: slept.append(seconds))
 
-    with pytest.raises(GroqAgentError, match="long quota wait"):
+    with pytest.raises(GroqLongQuotaWait, match="long quota wait") as exc_info:
         _request("fake", {"model": "test", "messages": []})
+    assert exc_info.value.retry_after_seconds == pytest.approx(2296.0)
 
     assert slept == []
     stderr = capsys.readouterr().err

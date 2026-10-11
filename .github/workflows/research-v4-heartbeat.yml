@@ -43,6 +43,20 @@ jobs:
           while read -r issue; do
             [ -n "$issue" ] || continue
 
+            WAIT_PATH="research/agent_runs/issue_${issue}/QUOTA_WAIT.json"
+            WAIT_BRANCH="agent/v4-issue-${issue}"
+            WAIT_JSON=$(gh api -X GET -H "Accept: application/vnd.github.raw+json" \
+              "repos/$GITHUB_REPOSITORY/contents/$WAIT_PATH" -f ref="$WAIT_BRANCH" 2>/dev/null || true)
+            NOT_BEFORE=$(printf '%s' "$WAIT_JSON" | jq -r '.not_before_epoch // 0' 2>/dev/null || echo 0)
+            case "$NOT_BEFORE" in
+              ''|*[!0-9]*) NOT_BEFORE=0 ;;
+            esac
+            NOW=$(date -u +%s)
+            if [ "$NOT_BEFORE" -gt "$NOW" ]; then
+              echo "quota wait: skip issue #$issue until epoch $NOT_BEFORE"
+              continue
+            fi
+
             gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" \
               --add-label research-v4-queued \
               --remove-label research-v4-waiting >/dev/null
