@@ -52,6 +52,7 @@ jobs:
           python -m py_compile product_markets.py
           python -m py_compile product_web.py
           python -m py_compile product_snapshot_store.py
+          python -m py_compile product_source_health.py
           python -m py_compile publish_product_predictions.py
           python -m py_compile bootstrap_product_predictions_from_pair_ledger.py
           python -m py_compile product_lifecycle.py
@@ -146,6 +147,7 @@ jobs:
           python -m pytest -q tests/test_product_ui_contract.py
           python -m pytest -q tests/test_match_detail_error_accessibility.py
           python -m pytest -q tests/test_product_snapshot_store.py
+          python -m pytest -q tests/test_product_source_health.py
           python -m pytest -q tests/test_publish_product_predictions.py
           python -m pytest -q tests/test_deployment_readiness.py
           python -m pytest -q tests/test_exact_main_vercel_deployment.py
