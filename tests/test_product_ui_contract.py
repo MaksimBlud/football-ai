@@ -277,8 +277,8 @@ def test_schedule_only_fallback_is_visible_without_inventing_model_or_odds():
     assert "function renderSchedule()" in html
     assert "async function loadSchedule()" in html
     assert "fetch('/upcoming-fixtures'" in html
-    assert "if(!p.matches.length)loadSchedule()" in html
-    assert "state.payload&&state.payload.matches.length" in html
+    assert "render();loadSchedule()" in html
+    assert "uncoveredFixtures(data,state.payload)" in html
     assert "Прогнозы модели и коэффициенты не подставляются из календаря" in html
     assert "AI-прогноз отсутствует" in html
     assert "Коэффициенты букмекера отсутствуют" in html
