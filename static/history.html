@@ -83,24 +83,53 @@ function assertHistory(data){
      (s.accuracy!==null&&(!number(s.accuracy)||s.accuracy<0||s.accuracy>1))))
     throw new Error('Неверная выборка модели');
 }
+async function verifiedHistory(){
+  const response=await fetch('/product-history',{cache:'no-store'});
+  if(response.ok){
+    const live=await response.json();
+    assertHistory(live);
+    return live;
+  }
+  // The production browser is anonymous. Raw settled outcomes MUST remain
+  // inaccessible to publishable credentials. A 503 means explicitly-private
+  // lifecycle access is unavailable: display only the reviewed dated snapshot.
+  if(response.status!==503)throw new Error('history HTTP '+response.status);
+  const archived=await fetch('/public-history-snapshot',{cache:'no-store'});
+  if(!archived.ok)throw new Error('verified history snapshot HTTP '+archived.status);
+  const data=await archived.json();assertHistory(data);
+  if(data.source_mode!=='verified_static_snapshot'||
+    data.verification?.mismatched_recorded_scores!==0||
+    data.verification?.invalid_pre_match_probabilities!==0||
+    data.verification?.unique_settled_match_ids!==data.settled_unique_fixtures||
+    data.verification?.unique_settled_prediction_ids!==data.settled_unique_fixtures||
+    data.events.settled!==data.settled_unique_fixtures||
+    data.model_scopes.reduce((total,scope)=>total+scope.settled_unique_fixtures,0)!==data.settled_unique_fixtures||
+    Number.isNaN(Date.parse(data.as_of_utc))||
+    Date.parse(data.as_of_utc)>Date.now()+60000)
+    throw new Error('недостоверный исторический снимок');
+  return data;
+}
 async function load(){
   $('history').hidden=true;
   $('status').hidden=false;
   $('status').textContent='Загружаем проверенную историю прогнозов…';
   try{
-    const response=await fetch('/product-history',{cache:'no-store'});
-    if(!response.ok)throw new Error('history HTTP '+response.status);
-    const data=await response.json();assertHistory(data);
+    const data=await verifiedHistory();
     $('count-settled').textContent=data.settled_unique_fixtures;
     $('count-registered').textContent=data.events.prediction_registered;
     $('count-market').textContent=data.events.market_observed;
-    $('updated').textContent='Последний зафиксированный факт: '+utc(data.last_lifecycle_fact_utc)+' · проверено: '+utc(data.as_of_utc);
+    const dated=data.source_mode==='verified_static_snapshot';
+    $('updated').textContent=(dated?'СОХРАНЁННЫЙ СРЕЗ, НЕ LIVE · данные по состоянию на: ':'Актуальная проверка данных: ')
+      +utc(data.as_of_utc)+' · последний зафиксированный факт: '+utc(data.last_lifecycle_fact_utc);
+    $('status').textContent=dated
+      ?'Доступна проверенная сохранённая статистика на '+utc(data.as_of_utc)+'. Данные не обновляются онлайн. Точность 1X2 не доказывает преимущество над букмекером.'
+      :'Показана проверенная серверная статистика.';
+    $('status').hidden=!dated;
     const list=$('models');list.replaceChildren(...data.model_scopes.map(metricCard));
     if(!data.model_scopes.length){const empty=document.createElement('p');empty.className='note';empty.textContent='Пока нет завершённых прогнозов с подтверждённой историей.';list.appendChild(empty)}
-    $('status').hidden=true;
     $('history').hidden=false;
   }catch(e){
-    $('status').textContent='История временно недоступна: сервер не подтвердил доступ к защищённым результатам. Не показываем вымышленные показатели.';
+    $('status').textContent='История временно недоступна: ни защищённый источник, ни проверенный исторический снимок не прошли проверку. Неподтверждённые показатели не отображаются.';
   }
 }
 $('reload').addEventListener('click',load);

@@ -77,6 +77,16 @@ def history_page():
     return FileResponse("static/history.html")
 
 
+@app.get("/public-history-snapshot")
+def public_history_snapshot():
+    """Serve an audited aggregate-only JSON snapshot; never raw lifecycle."""
+    return FileResponse(
+        "static/public_history_snapshot.json",
+        media_type="application/json",
+        headers={"Cache-Control": "no-cache, max-age=0"},
+    )
+
+
 @app.get("/product-history")
 def product_history():
     """Only verified aggregate product lifecycle metrics cross the HTTP boundary."""
