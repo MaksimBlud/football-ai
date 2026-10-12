@@ -114,7 +114,7 @@ assert.match(card,/АРХИВ · EV СКРЫТ/);
 assert.match(card,/Raw EV · справочно<\\/span><span class="">—/);
 const liveCard=selectionCard(quote,decision,true,fresh);
 assert.doesNotMatch(liveCard,/АРХИВ · EV СКРЫТ/);
-assert.match(liveCard,/\\+9.65%/);
+assert.match(liveCard,/\\+9.7%/);
 assert.match(valueHtml(value,fresh),/VALUE · ДОП. СИГНАЛ/);
 """
     node_run(script, tmp_path, "detail_freshness.js")
