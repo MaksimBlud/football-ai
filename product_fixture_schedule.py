@@ -158,11 +158,11 @@ def parse_espn_schedule(payload, *, now_utc, horizon_days=14):
     return sorted(found.values(), key=lambda f: (f["kickoff_utc"], f["schedule_id"]))
 
 
-def official_week_6_fallback(*, now_utc):
-    """Time-limited, explicitly attributed October schedule, never inferred prices."""
+def _official_fallback_rows(*, now_utc, published_fixtures):
+    """Bounded official source rows, without AI or bookmaker invention."""
     now = _utc(now_utc)
     rows = []
-    for local_str, home, away in OFFICIAL_WEEK_6 + OFFICIAL_WEEKS_7_8:
+    for local_str, home, away in published_fixtures:
         kickoff = datetime.fromisoformat(local_str).replace(tzinfo=LONDON)
         if now < kickoff.astimezone(timezone.utc) < now + timedelta(days=14):
             rows.append(_fixture(
@@ -171,6 +171,18 @@ def official_week_6_fallback(*, now_utc):
                 source="premier_league_official_published_schedule",
             ))
     return rows
+
+
+def official_week_6_fallback(*, now_utc):
+    """Legacy narrow October 10–12 reference, preserved for exact old contracts."""
+    return _official_fallback_rows(now_utc=now_utc, published_fixtures=OFFICIAL_WEEK_6)
+
+
+def official_october_fallback(*, now_utc):
+    """Current October 10–25 schedule; ambiguous broadcast fixtures excluded."""
+    return _official_fallback_rows(
+        now_utc=now_utc, published_fixtures=OFFICIAL_WEEK_6 + OFFICIAL_WEEKS_7_8
+    )
 
 
 def fetch_upcoming_fixtures(*, now_utc=None, get=None):
@@ -196,7 +208,7 @@ def fetch_upcoming_fixtures(*, now_utc=None, get=None):
             "has_bookmaker_odds": False,
         }
     except (OSError, ValueError, TypeError, KeyError, RuntimeError):
-        fixtures = official_week_6_fallback(now_utc=now)
+        fixtures = official_october_fallback(now_utc=now)
         return {
             "schema_version": "public-fixtures.v1",
             "source_mode": "official_published_schedule_fallback" if fixtures else "unavailable",
