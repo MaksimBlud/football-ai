@@ -6,6 +6,7 @@ from product_fixture_schedule import (
     OFFICIAL_SCHEDULE_URL,
     OFFICIAL_WEEKS_7_8,
     fetch_upcoming_fixtures,
+    official_october_fallback,
     official_week_6_fallback,
 )
 
@@ -14,7 +15,7 @@ AS_OF = datetime(2026, 10, 12, 14, 0, tzinfo=timezone.utc)
 
 
 def test_official_october_fallback_has_future_rounds_without_duplicates():
-    fixtures = official_week_6_fallback(now_utc=AS_OF)
+    fixtures = official_october_fallback(now_utc=AS_OF)
     assert len(OFFICIAL_WEEKS_7_8) == 17
     assert len(fixtures) == 18  # 1 remaining week-6 + 10 week-7 + 7 week-8
     assert len({f["schedule_id"] for f in fixtures}) == len(fixtures)
@@ -34,7 +35,7 @@ def test_official_october_fallback_has_future_rounds_without_duplicates():
 
 
 def test_sources_do_not_invent_ambiguous_broadcast_fixture():
-    fixtures = official_week_6_fallback(now_utc=AS_OF)
+    fixtures = official_october_fallback(now_utc=AS_OF)
     assert not any(f["home_team"] == "Liverpool" and
                    f["away_team"] == "Brighton and Hove Albion"
                    and f["match_date_uk"] in {"2026-10-24", "2026-10-25"}
@@ -45,16 +46,21 @@ def test_sources_do_not_invent_ambiguous_broadcast_fixture():
 
 
 def test_london_dst_transition_is_explicit_not_server_timezone():
-    fixtures = official_week_6_fallback(now_utc=AS_OF)
+    fixtures = official_october_fallback(now_utc=AS_OF)
     assert next(f for f in fixtures if f["home_team"] == "Coventry City" and
                 f["match_date_uk"] == "2026-10-24")["kickoff_utc"] == "2026-10-24T14:00:00+00:00"
     assert next(f for f in fixtures if f["home_team"] == "Hull City" and
                 f["match_date_uk"] == "2026-10-25")["kickoff_utc"] == "2026-10-25T14:00:00+00:00"
 
 
+def test_legacy_week_6_fallback_still_expires_on_october_13():
+    assert len(official_week_6_fallback(now_utc=datetime(2026,10,10,10,tzinfo=timezone.utc)))==10
+    assert official_week_6_fallback(now_utc=datetime(2026,10,13,tzinfo=timezone.utc))==[]
+
+
 def test_fallback_expires_after_october_and_never_creates_future_fixtures():
     late=datetime(2026, 11, 3, 10, tzinfo=timezone.utc)
-    assert official_week_6_fallback(now_utc=late) == []
+    assert official_october_fallback(now_utc=late) == []
     def offline(*args, **kwargs):
         raise OSError("no free schedule connectivity")
     payload=fetch_upcoming_fixtures(now_utc=late, get=offline)
