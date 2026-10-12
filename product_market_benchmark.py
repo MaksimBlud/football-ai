@@ -150,7 +150,7 @@ def build_product_market_benchmark(
         shas = {r["model_1x2_sha256"] for r in selected}
     if len(shas) > 1:
         raise ValueError("cannot pool different 1X2 model artifacts")
-    if selected and (len(shas) != 1 or len(next(iter(shas))) != 64):
+    if selected and (len(shas) != 1 or len(next(iter(shas))) != 64 or\n                     any(c not in "0123456789abcdef" for c in next(iter(shas)))):
         raise ValueError("settled predictions missing model artifact SHA")
 
     source = {}
@@ -212,7 +212,7 @@ def build_product_market_benchmark(
         "by_registration_mode": {mode: _summary([x for x in rows if x["mode"] == mode]) for mode in MODES},
         "sample_gate_minimum": MIN_SETTLED_FIXTURES_FOR_REVIEW,
         "calendar_gate_months": MIN_CALENDAR_MONTHS_FOR_REVIEW,
-        "reviewable": False if n < MIN_SETTLED_FIXTURES_FOR_REVIEW else False,
+        "reviewable": False,  # Benchmark is descriptive; frozen reliability gate remains separate.
         "verdict": "DESCRIPTIVE_ONLY_INCONCLUSIVE",
         "no_bet": True,
         "roi": None, "clv": None, "promotion": False,
