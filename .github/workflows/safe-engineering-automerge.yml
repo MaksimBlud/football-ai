@@ -1,0 +1,102 @@
+name: Safe Engineering Agent Auto-Merge
+
+# Runs PRIVILEGED code from current trusted main only, never from a PR head.
+# Strictly limited to same-repo github-actions[bot] relay PRs, verified on exact
+# head by all six existing real CI checks, with a bounded code+test allowlist.
+# No paid provider calls, research promotions, model artifacts, or deployment.
+on:
+  workflow_run:
+    workflows:
+      - Product PR Validation
+      - Research PR Validation
+      - Bundesliga PR Validation
+      - Ligue 1 PR Validation
+      - Serie A PR Validation
+      - Eredivisie PR Validation
+    types: [completed]
+  schedule:
+    - cron: '13,43 * * * *'
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Attempt strictly verified auto-merge (default dry run)'
+        required: false
+        type: boolean
+        default: false
+  pull_request:
+    branches: [main]
+    paths:
+      - safe_agent_automerge.py
+      - tests/test_safe_agent_automerge.py
+      - .github/workflows/safe-engineering-automerge.yml
+      - engineering_pr_relay.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: safe-engineering-automerge
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -q pytest
+      - run: python -m py_compile safe_agent_automerge.py
+      - run: PYTHONPATH=. python -m pytest -q tests/test_safe_agent_automerge.py
+
+  merge-safe-agent-pr:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: read
+    steps:
+      - name: Checkout trusted main, never untrusted PR head
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Verify trusted source and synthetic safety regressions
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          python -m pip install -q pytest
+          python -m py_compile safe_agent_automerge.py
+          PYTHONPATH=. python -m pytest -q tests/test_safe_agent_automerge.py
+      - name: Verify real six-check eligibility then squash merge at exact head
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          MANUAL_APPLY: ${{ inputs.apply || false }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "workflow_dispatch" && "$MANUAL_APPLY" != "true" ]]; then
+            python safe_agent_automerge.py
+          else
+            python safe_agent_automerge.py --apply
+          fi
+      - name: Document safety boundary
+        if: always()
+        run: |
+          echo "## Safe agent auto-merge" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Only same-repository github-actions[bot] engineering relay drafts" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Exact 6/6 GitHub Actions checks and exact PR head" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Newest main only; behind_by=0; one PR per run; no force merges" >> "$GITHUB_STEP_SUMMARY"
+          echo "- No production deployment, model promotion or provider calls" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Unrelated/sensitive PRs are NEVER automatically merged" >> "$GITHUB_STEP_SUMMARY"
