@@ -199,14 +199,22 @@ def test_offline_calendar_fallback_expires_without_fabricating_predictions():
     result = fetch_upcoming_fixtures(now_utc=SCHEDULE_TEST_NOW, get=offline)
     assert result["source_mode"] == "official_published_schedule_fallback"
     assert result["source_url"] == OFFICIAL_SCHEDULE_URL
-    assert len(result["fixtures"]) == 10
+    assert len(result["fixtures"]) == 20  # dated week 6 plus week 7 inside 14 days
     assert result["has_model_forecasts"] is False
+    assert result["has_bookmaker_odds"] is False
     result_after = fetch_upcoming_fixtures(
         now_utc=datetime(2026, 10, 13, tzinfo=timezone.utc),
         get=offline,
     )
-    assert result_after["source_mode"] == "unavailable"
-    assert result_after["fixtures"] == []
+    assert result_after["source_mode"] == "official_published_schedule_fallback"
+    assert len(result_after["fixtures"]) == 17  # future week 7/8 only
+    assert all(m["match_date_uk"] >= "2026-10-17" for m in result_after["fixtures"])
+    expired = fetch_upcoming_fixtures(
+        now_utc=datetime(2026, 11, 3, tzinfo=timezone.utc),
+        get=offline,
+    )
+    assert expired["source_mode"] == "unavailable"
+    assert expired["fixtures"] == []
 
 
 def test_public_calendar_route_is_separate_from_prediction_snapshots():
