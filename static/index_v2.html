@@ -160,7 +160,7 @@ $('mobile-match-list').innerHTML=rows.length?rows.map(mobileCardHtml).join(''):'
    Different providers may have different event IDs; match only exact teams
    and exact timezone-qualified kickoff. Never infer an AI forecast from schedule. */
 function scheduleMatchIdentity(kickoff,home,away){
-  if(typeof kickoff!=='string'||!/(Z|[+-]\\d\\d:\\d\\d)$/i.test(kickoff))return null;
+  if(typeof kickoff!=='string'||!/(Z|[+-]\d\d:\d\d)$/i.test(kickoff))return null;
   const time=Date.parse(kickoff);
   if(!Number.isFinite(time)||typeof home!=='string'||typeof away!=='string')return null;
   const norm=name=>name.normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g,'');
