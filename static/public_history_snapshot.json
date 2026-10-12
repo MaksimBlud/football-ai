@@ -1,0 +1,58 @@
+{
+  "schema_version": "public-product-history.v1",
+  "source_mode": "verified_static_snapshot",
+  "as_of_utc": "2026-10-12T03:01:11.309155+00:00",
+  "last_lifecycle_fact_utc": "2026-10-11T19:09:09.602836+00:00",
+  "league": "EPL",
+  "market": "1x2",
+  "events": {
+    "prediction_registered": 40,
+    "market_observed": 29,
+    "settled": 29
+  },
+  "settled_unique_fixtures": 29,
+  "model_scopes": [
+    {
+      "league": "EPL",
+      "model_1x2_sha256": "1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5",
+      "settled_unique_fixtures": 29,
+      "correct_picks": 10,
+      "accuracy": 0.3448275862068966,
+      "multiclass_brier": 0.674421440939774,
+      "log_loss": 1.1083571968605448,
+      "accuracy_wilson_95": {
+        "lower": 0.19940718526674994,
+        "upper": 0.5265489590952386
+      },
+      "first_kickoff_utc": "2026-09-12T14:00:00+00:00",
+      "last_kickoff_utc": "2026-10-11T15:30:00+00:00",
+      "evidence_state": "ACCUMULATING_SAMPLE",
+      "reviewable": false,
+      "reliability_status": "INCONCLUSIVE"
+    }
+  ],
+  "policy": {
+    "minimum_settled_fixtures_for_review": 100,
+    "minimum_calendar_months_for_review": 4,
+    "reliability_verdict": "INCONCLUSIVE",
+    "evaluated_market": "1x2_model_probability",
+    "betting_action": "NO_BET",
+    "roi": null,
+    "clv": null,
+    "staking": null,
+    "prediction_sources": "immutable_product_lifecycle_only",
+    "contains_raw_outcomes": false,
+    "includes_market_only_research": false,
+    "automatic_model_promotion": false
+  },
+  "verification": {
+    "source": "live Supabase immutable product_prediction_lifecycle_events read-only aggregate",
+    "verified_at_utc": "2026-10-12T03:01:11.309155+00:00",
+    "independently_recomputed_brier_logloss": true,
+    "mismatched_recorded_scores": 0,
+    "invalid_pre_match_probabilities": 0,
+    "unique_settled_match_ids": 29,
+    "unique_settled_prediction_ids": 29,
+    "data_refresh": "manual_reviewed_snapshot; not live"
+  }
+}
