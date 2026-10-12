@@ -122,7 +122,7 @@ async function load(){
     $('updated').textContent=(dated?'СОХРАНЁННЫЙ СРЕЗ, НЕ LIVE · данные по состоянию на: ':'Актуальная проверка данных: ')
       +utc(data.as_of_utc)+' · последний зафиксированный факт: '+utc(data.last_lifecycle_fact_utc);
     $('status').textContent=dated
-      ?'Доступна проверенная сохранённая статистика на '+utc(data.as_of_utc)+'. Данные НЕ обновляются онлайн. Точность 1X2 не доказывает преимущество над букмекером.'
+      ?'Доступна проверенная сохранённая статистика на '+utc(data.as_of_utc)+'. Данные не обновляются онлайн. Точность 1X2 не доказывает преимущество над букмекером.'
       :'Показана проверенная серверная статистика.';
     $('status').hidden=!dated;
     const list=$('models');list.replaceChildren(...data.model_scopes.map(metricCard));
