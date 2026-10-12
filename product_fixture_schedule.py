@@ -1,8 +1,8 @@
 """Read-only upcoming EPL fixtures, independent of AI predictions and bookmaker odds.
 
 ESPN's public/keyless scoreboard is a *schedule* source, never an AI or odds
-source. The fixed PL matchweek-6 fallback is from the official published
-2026-10-10--12 schedule, expires automatically and is labelled as such.
+source. The fixed PL October fallback is from officially published 2026-10-10--25
+broadcast-amended schedule. It expires automatically and is labelled as such.
 """
 from __future__ import annotations
 
@@ -50,6 +50,32 @@ OFFICIAL_WEEK_6 = (
     ("2026-10-11T14:00:00", "Hull City", "Everton"),
     ("2026-10-11T16:30:00", "Liverpool", "Manchester City"),
     ("2026-10-12T20:00:00", "Coventry City", "Newcastle United"),
+)
+
+# Official Premier League broadcast-amended matchweeks 7 and 8.
+# Source: https://www.premierleague.com/en/news/4688862/fixture-amendments-for-premier-league-matches-in-october-and-november
+# Source dated 17 Aug 2026; only explicitly timed, unambiguous fixtures.
+# The PL announcement prints Liverpool v Brighton on both 24 and 25 October,
+# and some 25 Oct dates remain conditioned on UEFA fixtures; do not guess.
+# This static safety fallback expires after the final listed kickoff.
+OFFICIAL_WEEKS_7_8 = (
+    ("2026-10-17T12:30:00", "Everton", "Chelsea"),
+    ("2026-10-17T15:00:00", "Brentford", "Liverpool"),
+    ("2026-10-17T15:00:00", "Fulham", "Hull City"),
+    ("2026-10-17T15:00:00", "Manchester City", "Ipswich Town"),
+    ("2026-10-17T17:30:00", "Newcastle United", "Aston Villa"),
+    ("2026-10-18T14:00:00", "Bournemouth", "Sunderland"),
+    ("2026-10-18T14:00:00", "Brighton and Hove Albion", "Crystal Palace"),
+    ("2026-10-18T14:00:00", "Leeds United", "Manchester United"),
+    ("2026-10-18T16:30:00", "Nottingham Forest", "Arsenal"),
+    ("2026-10-19T20:00:00", "Tottenham Hotspur", "Coventry City"),
+    ("2026-10-23T20:00:00", "Ipswich Town", "Nottingham Forest"),
+    ("2026-10-24T12:30:00", "Aston Villa", "Manchester City"),
+    ("2026-10-24T15:00:00", "Arsenal", "Everton"),
+    ("2026-10-24T15:00:00", "Coventry City", "Fulham"),
+    ("2026-10-24T17:30:00", "Chelsea", "Tottenham Hotspur"),
+    ("2026-10-25T14:00:00", "Hull City", "Brentford"),
+    ("2026-10-25T16:30:00", "Sunderland", "Leeds United"),
 )
 
 
@@ -133,10 +159,10 @@ def parse_espn_schedule(payload, *, now_utc, horizon_days=14):
 
 
 def official_week_6_fallback(*, now_utc):
-    """Time-limited, explicitly attributed schedule, never inferred prices."""
+    """Time-limited, explicitly attributed October schedule, never inferred prices."""
     now = _utc(now_utc)
     rows = []
-    for local_str, home, away in OFFICIAL_WEEK_6:
+    for local_str, home, away in OFFICIAL_WEEK_6 + OFFICIAL_WEEKS_7_8:
         kickoff = datetime.fromisoformat(local_str).replace(tzinfo=LONDON)
         if now < kickoff.astimezone(timezone.utc) < now + timedelta(days=14):
             rows.append(_fixture(
