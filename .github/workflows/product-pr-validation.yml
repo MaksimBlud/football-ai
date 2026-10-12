@@ -59,6 +59,7 @@ jobs:
           python -m py_compile advance_product_lifecycle.py
           python -m py_compile product_reliability.py
           python -m py_compile product_public_history.py
+          python -m py_compile safe_agent_automerge.py
           python -m py_compile report_product_reliability.py
           python -m py_compile product_portfolio_risk.py
           python -m py_compile report_product_portfolio_risk.py
@@ -159,6 +160,7 @@ jobs:
           python -m pytest -q tests/test_product_lifecycle_grants.py
           python -m pytest -q tests/test_product_reliability.py
           python -m pytest -q tests/test_product_public_history.py
+          python -m pytest -q tests/test_safe_agent_automerge.py
           python -m pytest -q tests/test_product_portfolio_risk.py
           python -m pytest -q tests/test_product_portfolio_risk_web_contract.py
           python -m pytest -q tests/test_product_production_readiness.py
