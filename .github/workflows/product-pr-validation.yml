@@ -62,6 +62,7 @@ jobs:
           python -m py_compile safe_agent_automerge.py
           python -m py_compile report_product_reliability.py
           python -m py_compile product_market_benchmark.py report_product_market_benchmark.py
+          python -m py_compile epl_market_floor_v1.py
           python -m py_compile product_portfolio_risk.py
           python -m py_compile report_product_portfolio_risk.py
           python -m py_compile product_production_readiness.py
@@ -164,6 +165,7 @@ jobs:
           python -m pytest -q tests/test_product_lifecycle_grants.py
           python -m pytest -q tests/test_product_reliability.py
           python -m pytest -q tests/test_product_market_benchmark.py
+          python -m pytest -q tests/test_epl_market_floor_v1.py
           python -m pytest -q tests/test_product_public_history.py
           python -m pytest -q tests/test_public_history_static_snapshot.py
           python -m pytest -q tests/test_safe_agent_automerge.py
