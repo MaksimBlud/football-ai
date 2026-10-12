@@ -54,7 +54,7 @@ def test_forecast_and_value_are_visibly_separate():
     assert "m.main_forecast" in index
     assert "m.value_signal" in index
     assert "forecastBox(m.main_forecast)" in index
-    assert "valueBox(marketVerified(meta)?m.value_signal:null)" in index
+    assert "valueBox(marketQuoteFresh(meta)?m.value_signal:null)" in index
     assert "Главный выбор модели" not in index
 
     assert "Главный прогноз модели" in detail
@@ -139,7 +139,7 @@ def test_list_uses_backend_verified_market_timestamps_not_invented_live_prices()
     assert "marketVerified(m.match)" in html
     assert 'safeQuote(s,meta)' in html
     assert "marketBox(one.display_selection,one.readiness,meta)" in html
-    assert "valueBox(marketVerified(meta)?m.value_signal:null)" in html
+    assert "valueBox(marketQuoteFresh(meta)?m.value_signal:null)" in html
     assert "время каждого снимка — в карточке матча" in html
     assert 'Коэффициенты — сохранённый снимок, не live-линия' in html
     assert 'Время матчей — Великобритания (UK)' in html
