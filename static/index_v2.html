@@ -54,7 +54,7 @@
 <header class="top"><div><div class="eyebrow">Football AI · product view</div><h1>Матчи и оценка рынков</h1><p class="lead">Главный прогноз определяется сначала зрелостью рынка (decision tier), затем вероятностью модели. Value / raw EV — отдельный дополнительный показатель цены и никогда не переопределяет прогноз.</p><p id="source-note" class="source-note" role="status" aria-live="polite">Проверяем доступность прогнозов и котировок. Рыночные цены не обновляются в реальном времени.</p></div><nav aria-label="Навигация по сайту" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><a class="btn" href="/history" style="display:inline-flex;text-decoration:none;align-items:center">История прогнозов</a><button id="reload" class="btn">Перезагрузить</button></nav></header>
 <section id="readiness" class="readiness"></section>
 <section id="public-fixtures" class="panel" hidden aria-label="Расписание АПЛ без прогнозов">
-<div class="panel-head"><div><strong>Ближайшие матчи АПЛ · только расписание</strong><p class="source-note">Прогнозы модели и коэффициенты не подставляются из календаря.</p></div><div class="stat">Матчей<strong id="fixtures-count">0</strong></div></div>
+<div class="panel-head"><div><strong>Другие ближайшие матчи АПЛ · пока без AI-прогноза</strong><p class="source-note">Здесь только матчи из опубликованного календаря, которых нет в списке с подтверждённым прогнозом. Прогнозы модели и коэффициенты не подставляются из календаря.</p></div><div class="stat">Матчей<strong id="fixtures-count">0</strong></div></div>
 <div id="fixtures-grid" class="fixtures-grid" role="list"></div>
 <div id="fixtures-source" class="foot" role="status"></div>
 </section>
@@ -156,18 +156,39 @@ function updateSourceNote(p){
 
 function render(){const p=state.payload;if(!p)return;const q=state.query.toLowerCase().trim();const rows=p.matches.filter(match=>{const teams=`${match.match.home_team} ${match.match.away_team}`.toLowerCase();if(q&&!teams.includes(q))return false;if(state.filter==='priced'&&!priced(match))return false;if(state.filter==='value'&&!hasValue(match))return false;return true});$('body').innerHTML=rows.length?rows.map(rowHtml).join(''):'<tr><td colspan="7" class="loading">По выбранному фильтру матчей нет.</td></tr>';
 $('mobile-match-list').innerHTML=rows.length?rows.map(mobileCardHtml).join(''):'<div class="loading" role="status">По выбранному фильтру матчей нет.</div>';document.querySelectorAll('#body tr[data-match-id]').forEach(row=>row.addEventListener('click',()=>location.href=`/match?id=${encodeURIComponent(row.dataset.matchId)}`));$('count-all').textContent=p.matches.length;$('count-priced').textContent=p.matches.filter(priced).length;$('count-value').textContent=p.matches.filter(hasValue).length}
-/* Independent schedule-only fallback. Never use a calendar event as an AI prediction. */
+/* Independent keyless schedule: show fixtures not covered by verified AI rows.
+   Different providers may have different event IDs; match only exact teams
+   and exact timezone-qualified kickoff. Never infer an AI forecast from schedule. */
+function scheduleMatchIdentity(kickoff,home,away){
+  if(typeof kickoff!=='string'||!/(Z|[+-]\\d\\d:\\d\\d)$/i.test(kickoff))return null;
+  const time=Date.parse(kickoff);
+  if(!Number.isFinite(time)||typeof home!=='string'||typeof away!=='string')return null;
+  const norm=name=>name.normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g,'');
+  const h=norm(home),a=norm(away);
+  return h&&a&&h!==a?time+'|'+h+'|'+a:null;
+}
+function uncoveredFixtures(data,payload){
+  if(!data||!Array.isArray(data.fixtures))return [];
+  const known=new Set((Array.isArray(payload?.matches)?payload.matches:[])
+    .map(item=>scheduleMatchIdentity(item.match?.commence_time_utc,item.match?.home_team,item.match?.away_team))
+    .filter(Boolean));
+  const seen=new Set();
+  return data.fixtures.filter(m=>{
+    const key=scheduleMatchIdentity(m.kickoff_utc,m.home_team,m.away_team);
+    if(!key||known.has(key)||seen.has(key)||Date.parse(m.kickoff_utc)<=Date.now())return false;
+    seen.add(key);return true;
+  });
+}
 function renderSchedule(){
   const box=$('public-fixtures'),data=state.fixtures;
-  if(!data||!Array.isArray(data.fixtures)||!data.fixtures.length||(state.payload&&state.payload.matches.length)){
-    box.hidden=true;return;
-  }
+  const extra=uncoveredFixtures(data,state.payload);
+  if(!extra.length){box.hidden=true;return}
   box.hidden=false;
-  $('fixtures-count').textContent=String(data.fixtures.length);
+  $('fixtures-count').textContent=String(extra.length);
   $('fixtures-source').textContent=data.source_mode==='espn_public_schedule'
     ?'Источник: публичный календарь ESPN. Время начала — Великобритания (UK). Нет прогнозов AI и цен БК.'
     :'Источник: опубликованное расписание Премьер-лиги (временный резерв). Время — Великобритания (UK). Нет прогнозов AI и цен БК.';
-  $('fixtures-grid').innerHTML=data.fixtures.map(m=>'<article class="fixture-card" role="listitem">'
+  $('fixtures-grid').innerHTML=extra.map(m=>'<article class="fixture-card" role="listitem">'
     +'<div class="fixture-meta">'+esc(m.match_date_uk)+' · '+esc(m.match_time_uk)+' (UK)</div>'
     +'<strong>'+esc(m.home_team)+' — '+esc(m.away_team)+'</strong>'
     +'<div class="fixture-status">AI-прогноз отсутствует</div>'
@@ -187,7 +208,7 @@ async function loadSchedule(){
     state.fixtures=data;renderSchedule();
   }catch(error){state.fixtures=null;renderSchedule()}
 }
-async function load(){$('body').innerHTML='<tr><td colspan="7" class="loading">Загружаю market view…</td></tr>';state.payload=null;state.fixtures=null;$('public-fixtures').hidden=true;$('mobile-match-list').innerHTML='<div class="loading" role="status">Загружаю матчи…</div>';$('source-note').textContent='Обновляем прогнозы и сохранённые коэффициенты…';try{const response=await fetch('/product-market-view',{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);const p=await response.json();if(p.schema_version!=='product-market-view.v1'||!Array.isArray(p.matches)||!p.market_readiness)throw new Error('Неверный формат данных матчей');state.payload=p;updateSourceNote(p);$('schema').textContent=`${p.schema_version} · ${p.decision_framework_version||'decision framework'} · forecast ≠ value`;$('readiness').innerHTML=Object.entries(p.market_readiness).map(([k,r])=>readinessCard(k,r)).join('');render();if(!p.matches.length)loadSchedule()}catch(e){state.payload=null;$('body').innerHTML=`<tr><td colspan="7" class="loading">Ошибка загрузки: ${esc(e.message)}</td></tr>`;$('mobile-match-list').innerHTML='<div class="loading" role="alert">Матчи не загрузились. Нажмите «Перезагрузить», чтобы повторить.</div>';$('source-note').textContent='Ошибка загрузки. Данные не обновлены.';loadSchedule()}}
+async function load(){$('body').innerHTML='<tr><td colspan="7" class="loading">Загружаю market view…</td></tr>';state.payload=null;state.fixtures=null;$('public-fixtures').hidden=true;$('mobile-match-list').innerHTML='<div class="loading" role="status">Загружаю матчи…</div>';$('source-note').textContent='Обновляем прогнозы и сохранённые коэффициенты…';try{const response=await fetch('/product-market-view',{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);const p=await response.json();if(p.schema_version!=='product-market-view.v1'||!Array.isArray(p.matches)||!p.market_readiness)throw new Error('Неверный формат данных матчей');state.payload=p;updateSourceNote(p);$('schema').textContent=`${p.schema_version} · ${p.decision_framework_version||'decision framework'} · forecast ≠ value`;$('readiness').innerHTML=Object.entries(p.market_readiness).map(([k,r])=>readinessCard(k,r)).join('');render();loadSchedule()}catch(e){state.payload=null;$('body').innerHTML=`<tr><td colspan="7" class="loading">Ошибка загрузки: ${esc(e.message)}</td></tr>`;$('mobile-match-list').innerHTML='<div class="loading" role="alert">Матчи не загрузились. Нажмите «Перезагрузить», чтобы повторить.</div>';$('source-note').textContent='Ошибка загрузки. Данные не обновлены.';loadSchedule()}}
 document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.filter=b.dataset.filter;render()}));$('search').addEventListener('input',e=>{state.query=e.target.value;render()});$('reload').addEventListener('click',load);load();
 </script>
 </body>
