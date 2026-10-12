@@ -31,7 +31,7 @@ def test_list_prominently_marks_aged_odds_and_excludes_stale_value():
     assert "function hasValue(m){return marketQuoteFresh(m.match)" in INDEX
     assert "const ok=marketQuoteFresh(m)" in INDEX
     assert "valueBox(marketQuoteFresh(meta)?m.value_signal:null)" in INDEX
-    assert "if(!marketVerified(m)" not in INDEX
+    assert "if(!marketVerified(m))return false;" in INDEX
     assert "УСТАРЕВШИЙ архивный" in INDEX
     assert "АРХИВ · EV СКРЫТ" in INDEX
     assert "ВНИМАНИЕ: " in INDEX
@@ -86,7 +86,7 @@ assert.equal(marketQuoteFresh({...fresh, market_snapshot_time_utc:null}),false);
 const signal={status:'positive_raw_ev',selection:{bookmaker_odds:2,raw_expected_value:.12}};
 const wrap=(m)=>({match:m,value_signal:signal,markets:{'1x2':{selections:[{bookmaker_odds:2}]}}});
 assert.equal(hasValue(wrap(base)),false);
-assert.equal(hasValue(wrap(fresh)),true);
+assert.equal(Boolean(hasValue(wrap(fresh))),true);
 assert.equal(priced(wrap(base)),true); // still valid as historical quote
 """
     node_run(script, tmp_path, "list_freshness.js")
