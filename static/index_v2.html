@@ -60,10 +60,10 @@
 </section>
 <section class="panel">
 <div class="panel-head"><div class="stats"><div class="stat">Матчей<strong id="count-all">—</strong></div><div class="stat">С ценой БК<strong id="count-priced">—</strong></div><div class="stat">Value-сигналов<strong id="count-value">—</strong></div></div><div id="schema" class="schema">—</div></div>
-<div class="filters"><button class="chip active" data-filter="all">Все матчи</button><button class="chip" data-filter="priced">Есть цена БК</button><button class="chip" data-filter="value">Есть value-сигнал</button><input id="search" class="search" placeholder="Поиск команды…"></div>
+<div class="filters"><button class="chip active" data-filter="all">Все матчи</button><button class="chip" data-filter="priced">Есть цена БК</button><button class="chip" data-filter="value">Есть value-сигнал · за 24 ч</button><input id="search" class="search" placeholder="Поиск команды…"></div>
 <div class="table-wrap"><table><thead><tr><th>Матч</th><th>Главный прогноз модели</th><th>Исход матча</th><th>Value / EV (доп.)</th><th>Фора</th><th>Тотал голов</th><th>Тотал угловых</th></tr></thead><tbody id="body"><tr><td colspan="7" class="loading">Загружаю market view…</td></tr></tbody></table></div>
 <div id="mobile-match-list" class="mobile-match-list" role="list" aria-live="polite" aria-label="Карточки предстоящих матчей"><div class="loading">Загружаю матчи…</div></div>
-<div class="foot">Главный прогноз: сначала decision tier рынка, затем максимальная вероятность модели среди кандидатов этого уровня. Value / raw EV = отдельная метрика bookmaker price и не влияет на выбор прогноза. Положительный EV не является доказанной прибыльностью.</div>
+<div class="foot">Главный прогноз: сначала decision tier рынка, затем максимальная вероятность модели среди кандидатов этого уровня. Value / raw EV = отдельная метрика bookmaker price и не влияет на выбор прогноза. Положительный EV не является доказанной прибыльностью. Показатель Value не отображается при возрасте снимка БК более 24 часов; это ограничение интерфейса, не оценка модели.</div>
 </section>
 </main>
 <script>
