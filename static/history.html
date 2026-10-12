@@ -94,7 +94,7 @@ async function verifiedHistory(){
   // inaccessible to publishable credentials. A 503 means explicitly-private
   // lifecycle access is unavailable: display only the reviewed dated snapshot.
   if(response.status!==503)throw new Error('history HTTP '+response.status);
-  const archived=await fetch('/static/public_history_snapshot.json',{cache:'no-store'});
+  const archived=await fetch('/public-history-snapshot',{cache:'no-store'});
   if(!archived.ok)throw new Error('verified history snapshot HTTP '+archived.status);
   const data=await archived.json();assertHistory(data);
   if(data.source_mode!=='verified_static_snapshot'||
