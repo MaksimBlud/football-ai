@@ -150,7 +150,8 @@ def build_product_market_benchmark(
         shas = {r["model_1x2_sha256"] for r in selected}
     if len(shas) > 1:
         raise ValueError("cannot pool different 1X2 model artifacts")
-    if selected and (len(shas) != 1 or len(next(iter(shas))) != 64 or\n                     any(c not in "0123456789abcdef" for c in next(iter(shas)))):
+    if selected and (len(shas) != 1 or len(next(iter(shas))) != 64 or
+                     any(c not in "0123456789abcdef" for c in next(iter(shas)))):
         raise ValueError("settled predictions missing model artifact SHA")
 
     source = {}
