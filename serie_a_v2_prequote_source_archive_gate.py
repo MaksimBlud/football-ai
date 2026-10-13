@@ -19,7 +19,7 @@ import zipfile
 import pandas as pd
 
 from serie_a_v2_live_diagnostic_report import _source_codes, PUBLIC_BASE
-from serie_a_v2_frozen_shadow_preview import FROZEN_SHA, parse_utc
+from serie_a_v2_frozen_shadow_preview import FROZEN_SHA, parse_utc, _guard_outcome_free
 from serie_a_v2_asof_feature_manifest import REQUIRED, _validate_history
 
 ARCHIVE_REPORT = "serie_a_v2_real_quote_diagnostic.json"
@@ -115,6 +115,7 @@ def verify_archive(archive_path: Path, quotes: list[Mapping[str, Any]], *,
     seen_quotes = set()
     evidence = []
     for q in quotes:
+        _guard_outcome_free(q)
         if q.get("league") != "SERIE_A":
             raise ValueError("only Serie A quote identities allowed")
         event = q.get("event_id")
