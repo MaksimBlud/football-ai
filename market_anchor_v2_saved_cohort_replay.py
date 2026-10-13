@@ -266,7 +266,7 @@ def validate_targets() -> None:
             raise RuntimeError(f"invalid outcome for {row['event_id']}")
 
 
-def replay(source_dir: Path) -> dict[str, Any]:
+def replay(source_dir: Path, *, save_research_candidate: bool = False) -> dict[str, Any]:
     validate_targets()
     lab, v1, v2 = load_frozen_modules(source_dir)
     training, historical_hashes, historical_by_code = build_training_frame(lab)
@@ -334,15 +334,75 @@ def replay(source_dir: Path) -> dict[str, Any]:
         ),
         "predictions": predictions,
     }
+    assert_same_frozen_replay(report)
+    if save_research_candidate:
+        # The research model is a JSON residual with weights, not a production .pkl.
+        # Never write anywhere supplied by users; the fixed path is gitignored.
+        output = Path(__file__).resolve().parent / (
+            "artifacts/market_anchor_v2_saved_cohort_replay/candidate_model.json"
+        )
+        output.parent.mkdir(parents=True, exist_ok=True)
+        v2.validate_candidate_artifact(artifact)
+        if artifact["artifact_sha256"] != report["candidate_artifact_sha256"]:
+            raise RuntimeError("recovered V2 weights differ from frozen SHA")
+        output.write_text(json.dumps(artifact, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print("RESEARCH_CANDIDATE_JSON=" + json.dumps(artifact, sort_keys=True))
     return report
+
+
+
+def assert_same_frozen_replay(report: dict[str, Any]) -> None:
+    """Require byte-identified frozen inputs and numerically identical saved findings.
+
+    Old observations are already open: this is a *post-outcome diagnostic* replay.
+    No changed training source, quote, candidate or reported result is accepted.
+    """
+    expected_path = Path(__file__).resolve().parent / (
+        "experiments/market_anchor_v2_saved_cohort_replay_report.json"
+    )
+    expected = json.loads(expected_path.read_text(encoding="utf-8"))
+    required = (
+        "experiment_id", "evidence_class", "frozen_v2_commit",
+        "parent_replay_commit", "contract_scope", "cohort_n",
+        "feature_variant", "l2_penalty", "shadow_lambda", "active_lambda",
+        "stability_gate_passed", "training_rows", "training_fingerprint_sha256",
+        "candidate_artifact_sha256", "frozen_source_git_blobs",
+        "football_data_sha256", "history_cutoff_date",
+        "outcomes_were_known_before_this_replay",
+        "parameter_selection_from_replay_outcomes",
+        "research_only", "no_bet", "production_promotion",
+    )
+    for key in required:
+        if report.get(key) != expected.get(key):
+            raise ValueError("frozen V2 artifact/protocol provenance drift: " + key)
+    if report["active_lambda"] != 0.0 or report["stability_gate_passed"] is not False:
+        raise ValueError("frozen Serie A research candidate must remain inactive")
+    # Last-bit float differences across dependencies are not new findings.
+    for name in ("market", "old_model", "shadow_lambda_1"):
+        for metric in ("accuracy", "brier", "log_loss"):
+            actual, frozen = float(report[name][metric]), float(expected[name][metric])
+            if not (np.isfinite(actual) and abs(actual - frozen) <= 1e-9):
+                raise ValueError("frozen V2 replay metric drift: " + name + "." + metric)
+    if len(report.get("predictions", [])) != len(expected["predictions"]):
+        raise ValueError("frozen V2 event count changed")
+    for actual, frozen in zip(report["predictions"], expected["predictions"]):
+        for field in ("event_id", "home_team", "away_team", "result", "feature_min_prior_matches"):
+            if actual[field] != frozen[field]:
+                raise ValueError("frozen V2 replay event drift: " + field)
+        for field in ("market", "old_model", "shadow_lambda_1"):
+            if not np.allclose(actual[field], frozen[field], atol=1e-9, rtol=0):
+                raise ValueError("frozen V2 replay probabilities drift: " + field)
+
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--frozen-source-dir", type=Path, required=True)
+    parser.add_argument("--save-research-candidate", action="store_true",
+                        help="Write the exact verified weights to ignored research artifacts only")
     parser.add_argument("--output", type=Path, default=Path("artifacts/market_anchor_v2_saved_cohort_replay/report.json"))
     args = parser.parse_args()
-    report = replay(args.frozen_source_dir)
+    report = replay(args.frozen_source_dir, save_research_candidate=args.save_research_candidate)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2, sort_keys=True))
