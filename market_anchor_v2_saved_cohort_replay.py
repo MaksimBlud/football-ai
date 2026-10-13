@@ -361,6 +361,26 @@ def assert_same_frozen_replay(report: dict[str, Any]) -> None:
         "experiments/market_anchor_v2_saved_cohort_replay_report.json"
     )
     expected = json.loads(expected_path.read_text(encoding="utf-8"))
+    if report.get("candidate_artifact_sha256") != expected.get("candidate_artifact_sha256"):
+        # Diagnostics contain hashes and counts only; no retroactive model acceptance.
+        print("FROZEN_RECONSTRUCTION_DIAGNOSTIC=" + json.dumps({
+            "expected_candidate_sha": expected.get("candidate_artifact_sha256"),
+            "observed_candidate_sha": report.get("candidate_artifact_sha256"),
+            "expected_training_fingerprint": expected.get("training_fingerprint_sha256"),
+            "observed_training_fingerprint": report.get("training_fingerprint_sha256"),
+            "expected_training_rows": expected.get("training_rows"),
+            "observed_training_rows": report.get("training_rows"),
+            "source_digests": {
+                key: {
+                    "expected": expected.get("football_data_sha256", {}).get(key),
+                    "observed": report.get("football_data_sha256", {}).get(key),
+                }
+                for key in sorted(set(expected.get("football_data_sha256", {}))
+                                  | set(report.get("football_data_sha256", {})))
+                if expected.get("football_data_sha256", {}).get(key) !=
+                   report.get("football_data_sha256", {}).get(key)
+            },
+        }, sort_keys=True), flush=True)
     required = (
         "experiment_id", "evidence_class", "frozen_v2_commit",
         "parent_replay_commit", "contract_scope", "cohort_n",
