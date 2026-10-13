@@ -505,8 +505,10 @@ def restore_frozen_candidate_from_training_history(source_dir: Path) -> Path:
     (output.parent / "recovery_manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    print("PASS: frozen V2 training-only candidate and fingerprint recovered")
-    print("RESEARCH_CANDIDATE_JSON=" + json.dumps(model, sort_keys=True))
+    print("PASS: original SHA-pinned V2 model preserved; training-only refit within strict tolerance")
+    print("REFIT_SHA_EXACT_MATCH=" + str(refit_exact_sha_match))
+    print("REFIT_MAX_NUMERIC_DELTA=" + json.dumps(numerical_diffs, sort_keys=True))
+    print("RESEARCH_CANDIDATE_JSON=" + json.dumps(original, sort_keys=True))
     return output
 
 
