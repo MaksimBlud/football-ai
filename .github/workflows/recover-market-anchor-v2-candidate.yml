@@ -9,6 +9,7 @@ on:
       - "market_anchor_v2_saved_cohort_replay.py"
       - "tests/test_market_anchor_v2_saved_cohort_replay.py"
       - "experiments/market_anchor_v2_saved_cohort_replay_report.json"
+      - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
       - "research/MARKET_ANCHOR_V2_SAVED_COHORT_REPLAY.md"
       - ".github/workflows/recover-market-anchor-v2-candidate.yml"
 
@@ -58,6 +59,8 @@ jobs:
           root = Path("artifacts/market_anchor_v2_saved_cohort_replay")
           candidate = json.loads((root / "candidate_model.json").read_text())
           manifest = json.loads((root / "recovery_manifest.json").read_text())
+          durable = json.loads(Path("research/models/market_anchor_v2_serie_a_frozen_candidate.json").read_text())
+          assert durable == candidate, "saved research candidate must exactly match reconstructed original weights"
           frozen = json.loads(Path("experiments/market_anchor_v2_saved_cohort_replay_report.json").read_text())
           assert candidate["artifact_sha256"] == frozen["candidate_artifact_sha256"]
           assert candidate["training_fingerprint_sha256"] == frozen["training_fingerprint_sha256"]
