@@ -61,8 +61,8 @@ def _stats_asof(frame: pd.DataFrame, *, before_day: datetime) -> dict[str, deque
     """Strictly exclude ALL same-UTC-calendar-day matches: historic data have no reliable kickoff clock."""
     histories: dict[str, deque] = defaultdict(lambda: deque(maxlen=30))
     usable = frame.loc[frame["_match_date"] < pd.Timestamp(before_day.date())]
-    for match in usable.itertuples(index=False):
-        row = match._asdict()
+    for _, match in usable.iterrows():
+        row = match.to_dict()
         home, away = row["_home"], row["_away"]
         hg, ag = float(row["FTHG"]), float(row["FTAG"])
         hp, ap = (3.0, 0.0) if hg > ag else ((0.0, 3.0) if hg < ag else (1.0, 1.0))
