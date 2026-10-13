@@ -1,7 +1,7 @@
 """Free, outcome-blind, non-admissible LIVE Serie A V2 research diagnostic.
 
 This reads already-persisted 1X2 quotes and publicly accessible Football-Data
-history; it NEVER calls the paid Odds API or inserts into Supabase. Crucially,
+history completed before the 2026/27 protected prospective cohort; it NEVER\ncalls the paid Odds API or inserts into Supabase. Crucially,
 newly downloaded history CANNOT be represented as verified at older quote time.
 The 19-feature V2 outputs are DIAGNOSTIC ONLY, not prospective observations.
 """
@@ -25,15 +25,17 @@ from serie_a_v2_frozen_shadow_preview import (
 
 PUBLIC_BASE = "https://www.football-data.co.uk/mmz4281"
 PAID_PROVIDER_REQUESTS = 0
-MAX_PUBLIC_SOURCE_FILES = len(SERIE_A_RUNTIME_CONFIG.historical_source.season_codes) + 1
+MAX_PUBLIC_SOURCE_FILES = len(SERIE_A_RUNTIME_CONFIG.historical_source.season_codes)
 
 
 def _source_codes() -> list[str]:
     historical = list(SERIE_A_RUNTIME_CONFIG.historical_source.season_codes)
     current = SERIE_A_RUNTIME_CONFIG.finished_results_source.season_code
-    if current in historical:
-        raise RuntimeError("current Serie A season duplicated in history contract")
-    return historical + [current]
+    # Hard embargo: no downloading 2026/27 scoreboard/CSV until the frozen
+    # prospective outcome-read gate. Filtering after download is not enough.
+    if current in historical or any(code >= current for code in historical):
+        raise RuntimeError("protected Serie A prospective season cannot be read")
+    return historical
 
 
 def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -> tuple[pd.DataFrame, list[dict]]:
@@ -60,12 +62,8 @@ def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -
         if missing:
             raise RuntimeError(f"Public Serie A source {code} missing stats: {sorted(missing)}")
         outcome = frame["FTR"].fillna("").astype(str).str.strip()
-        if code != SERIE_A_RUNTIME_CONFIG.finished_results_source.season_code and not outcome.isin(("H","D","A")).all():
-            raise RuntimeError(f"Historical Serie A season {code} includes unverified outcomes")
-        if code == SERIE_A_RUNTIME_CONFIG.finished_results_source.season_code:
-            if not outcome.isin(("H","D","A","")).all():
-                raise RuntimeError("Current public Serie A data has an invalid result field")
-            frame = frame.loc[outcome.isin(("H","D","A"))].copy()
+        if not outcome.isin(("H", "D", "A")).all():
+            raise RuntimeError(f"Historical pre-freeze Serie A season {code} has missing/invalid results")
         frame = frame.loc[:, list(sorted(required))].copy()
         all_frames.append(frame)
         audit.append({
@@ -100,6 +98,9 @@ def make_report(quotes: list[dict], history: pd.DataFrame, source_audit: list[di
         "as_of_utc": as_of_utc.astimezone(timezone.utc).isoformat(),
         "frozen_candidate_sha256": manifest["candidate_sha256"],
         "historical_source": "FOOTBALL_DATA_CSV",
+        "protect_2026_27_prospective_outcomes": True,
+        "2026_27_public_results_downloaded": False,
+        "history_stale_without_2026_27_form": True,
         "public_source_files": source_audit,
         "public_http_requests": len(source_audit),
         "paid_provider_requests": 0,
