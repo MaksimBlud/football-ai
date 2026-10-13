@@ -10,6 +10,8 @@ on:
       - ".github/workflows/serie-a-results.yml"
       - "update_serie_a_results.py"
       - "league_supabase_persistence.py"
+      - "evaluate_serie_a_predictions.py"
+      - "tests/test_serie_a_operational.py"
       - "tests/test_league_supabase_persistence.py"
       - "espn_current_results_fallback.py"
       - "test_espn_current_results_fallback.py"

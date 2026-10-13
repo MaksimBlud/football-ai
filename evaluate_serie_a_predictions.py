@@ -31,8 +31,27 @@ def settle_serie_a_predictions(ledger: pd.DataFrame, results: pd.DataFrame) -> p
     results["_away_key"] = results["away_team"].map(lambda value: normalize_team_name(str(value)))
     identity = ["_match_date", "_home_key", "_away_key"]
     result_view = results[identity + ["result"]].copy()
-    if result_view.duplicated(subset=identity, keep=False).any():
-        raise ValueError("Duplicate Serie A finished-result fixture identity")
+    duplicate_mask = result_view.duplicated(subset=identity, keep=False)
+    if duplicate_mask.any():
+        # Legacy provider rows sometimes carry two raw spellings of the
+        # same club. Never multiply one settlement or choose between
+        # inconsistent scores; source/provenance rows stay immutable.
+        score_columns = ("home_goals", "away_goals")
+        if not set(score_columns).issubset(results.columns):
+            raise ValueError("Duplicate Serie A result cannot be verified without goals")
+        check = results.loc[duplicate_mask, identity + [
+            "home_team", "away_team", "result", *score_columns,
+        ]].copy()
+        for field in score_columns:
+            check[field] = pd.to_numeric(check[field], errors="coerce")
+        if check[list(score_columns)].isna().any().any():
+            raise ValueError("Duplicate Serie A result has unknown goals")
+        for _, group in check.groupby(identity, sort=False, dropna=False):
+            distinct_raw_teams = group[["home_team", "away_team"]].drop_duplicates()
+            distinct_outcomes = group[["result", *score_columns]].drop_duplicates()
+            if len(distinct_raw_teams) < 2 or len(distinct_outcomes) != 1:
+                raise ValueError("Conflicting duplicate Serie A finished-result fixture identity")
+        result_view = result_view.drop_duplicates(subset=identity, keep="first")
     result_view = result_view.rename(columns={"result": "actual_result"})
     settled = ledger.merge(result_view, on=identity, how="inner", validate="many_to_one")
     if settled.empty:
