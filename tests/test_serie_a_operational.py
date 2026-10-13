@@ -101,3 +101,69 @@ def test_operational_sources_do_not_reference_production_model():
         source = open(path, encoding="utf-8").read()
         for token in forbidden:
             assert token not in source
+
+
+def _alias_ledger_and_results():
+    ledger = pd.DataFrame([{
+        "league": "SERIE_A",
+        "event_id": "synthetic-atalanta-bologna",
+        "home_team": "Atalanta",
+        "away_team": "Bologna",
+        "kickoff_utc": "2026-08-31T18:45:00Z",
+        "snapshot_time_utc": "2026-08-31T10:00:00Z",
+        "market_home_prob": 0.5,
+        "market_draw_prob": 0.3,
+        "market_away_prob": 0.2,
+        "market_pick": "H",
+        "prediction_mode": "MARKET_ONLY",
+        "structural_applied": False,
+    }])
+    base = {
+        "league": "SERIE_A",
+        "match_date": "2026-08-31",
+        "home_team": "Atalanta",
+        "away_team": "Bologna",
+        "home_goals": 2,
+        "away_goals": 0,
+        "result": "H",
+    }
+    results = pd.DataFrame([
+        {**base, "source": None, "match_time": None},
+        {**base, "home_team": "Atalanta BC",
+         "source": "the-odds-api", "match_time": "20:45"},
+    ])
+    return ledger, results
+
+
+def test_evaluator_settles_identical_legacy_alias_only_once():
+    ledger, finished = _alias_ledger_and_results()
+    settled = evaluator.settle_serie_a_predictions(ledger, finished)
+    assert len(settled) == 1
+    assert settled.iloc[0]["actual_result"] == "H"
+    assert bool(settled.iloc[0]["prediction_correct"]) is True
+    assert len(finished) == 2  # original immutable rows are not modified
+
+
+def test_evaluator_rejects_alias_rows_with_disagreeing_scores():
+    import pytest
+    ledger, finished = _alias_ledger_and_results()
+    finished.loc[1, "home_goals"] = 1
+    with pytest.raises(ValueError, match="Conflicting duplicate"):
+        evaluator.settle_serie_a_predictions(ledger, finished)
+
+
+def test_evaluator_rejects_exact_raw_name_duplicate():
+    import pytest
+    ledger, finished = _alias_ledger_and_results()
+    finished.loc[1, "home_team"] = "Atalanta"
+    with pytest.raises(ValueError, match="Conflicting duplicate"):
+        evaluator.settle_serie_a_predictions(ledger, finished)
+
+
+def test_evaluator_rejects_unverified_alias_duplicate_without_scores():
+    import pytest
+    ledger, finished = _alias_ledger_and_results()
+    with pytest.raises(ValueError, match="cannot be verified"):
+        evaluator.settle_serie_a_predictions(ledger, finished.drop(
+            columns=["home_goals", "away_goals"
+        ))
