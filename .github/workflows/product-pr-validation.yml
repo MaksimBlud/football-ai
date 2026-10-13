@@ -64,6 +64,7 @@ jobs:
           python -m py_compile product_market_benchmark.py report_product_market_benchmark.py
           python -m py_compile epl_market_floor_v1.py
           python -m py_compile epl_poisson_market_blend_v1.py
+          python -m py_compile serie_a_v2_frozen_shadow_preview.py
           python -m py_compile product_portfolio_risk.py
           python -m py_compile report_product_portfolio_risk.py
           python -m py_compile product_production_readiness.py
