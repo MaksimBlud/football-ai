@@ -12,7 +12,6 @@ from datetime import datetime, timezone
 import hashlib
 from io import BytesIO
 import json
-import math
 from pathlib import Path
 
 import pandas as pd
@@ -37,10 +36,12 @@ def _source_codes() -> list[str]:
     return historical + [current]
 
 
-def fetch_public_history(*, get=requests.get) -> tuple[pd.DataFrame, list[dict]]:
+def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -> tuple[pd.DataFrame, list[dict]]:
     """Explicit, bounded configured public URLs; never odds API, never cache guess."""
     all_frames = []
     audit = []
+    if capture_dir is not None:
+        capture_dir.mkdir(parents=True, exist_ok=True)
     for code in _source_codes():
         if len(code) != 4 or not code.isdigit():
             raise ValueError("unexpected historical season code")
@@ -50,6 +51,8 @@ def fetch_public_history(*, get=requests.get) -> tuple[pd.DataFrame, list[dict]]
             raise RuntimeError(f"Public Serie A CSV unavailable: season={code}, http={response.status_code}")
         body = response.content
         capture = datetime.now(timezone.utc)
+        if capture_dir is not None:
+            (capture_dir / f"serie_a_{code}.csv").write_bytes(body)
         frame = pd.read_csv(BytesIO(body), low_memory=False)
         required = {"Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR",
                     "HC", "AC", "HY", "AY", "HR", "AR"}
@@ -69,6 +72,7 @@ def fetch_public_history(*, get=requests.get) -> tuple[pd.DataFrame, list[dict]]
             "season_code": code,
             "source_url": url,
             "csv_sha256": hashlib.sha256(body).hexdigest(),
+            "archived_source_name": f"serie_a_{code}.csv",
             "source_observed_at_utc": capture.isoformat(),
             "completed_source_rows": len(frame),
         })
@@ -120,13 +124,12 @@ def make_report(quotes: list[dict], history: pd.DataFrame, source_audit: list[di
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--output", type=Path, required=True)
+    p.add_argument("--raw-source-dir", type=Path, required=True)
     args = p.parse_args()
     from database import supabase
     now = datetime.now(timezone.utc)
     quotes = fetch_saved_upcoming_serie_a_quotes(supabase, now=now)
-    if not quotes:
-        raise RuntimeError("No future stored Serie A quotes; do not create synthetic prices")
-    history, sources = fetch_public_history()
+    history, sources = fetch_public_history(capture_dir=args.raw_source_dir)
     report = make_report(quotes, history, sources, as_of_utc=datetime.now(timezone.utc))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True)+"\n", encoding="utf-8")
