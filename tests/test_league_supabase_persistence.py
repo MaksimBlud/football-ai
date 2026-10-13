@@ -627,3 +627,84 @@ def test_observation_payload_datetime_representation_is_canonical():
         ==
         "2026-08-23T15:37:20.071911+00:00"
     )
+
+
+def _serie_a_alias_pair(*, other_score=False):
+    from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
+
+    first = {
+        "league": "SERIE_A",
+        "season": "2026-2027",
+        "match_date": "2026-08-31",
+        "home_team": "Atalanta",
+        "away_team": "Bologna",
+        "home_goals": 2,
+        "away_goals": 0,
+        "result": "H",
+        "source": None,
+        "source_competition": None,
+        "match_time": None,
+    }
+    second = {
+        **first,
+        "home_team": "Atalanta BC",
+        "source": "the-odds-api",
+        "source_competition": "soccer_italy_serie_a",
+        "match_time": "20:45",
+    }
+    if other_score:
+        second["home_goals"] = 1
+    return SERIE_A_RUNTIME_CONFIG, first, second
+
+
+def test_serie_a_legacy_alias_duplicate_same_score_is_idempotent_and_not_rewritten():
+    config, first, second = _serie_a_alias_pair()
+    client = FakeClient()
+    client.tables[adapter.GENERIC_RESULTS_TABLE] = [first.copy(), second.copy()]
+    original_rows = [row.copy() for row in client.tables[adapter.GENERIC_RESULTS_TABLE]]
+    incoming = pd.DataFrame([{k: first[k] for k in (
+        "league", "season", "match_date", "home_team", "away_team",
+        "home_goals", "away_goals", "result",
+    )}])
+    metrics = adapter.persist_results(client, incoming, config)
+    assert metrics == {"inserted": 0, "unchanged": 1, "conflicts": 0}
+    assert client.tables[adapter.GENERIC_RESULTS_TABLE] == original_rows
+
+
+def test_serie_a_alias_duplicate_with_different_score_remains_fatal_and_unmodified():
+    config, first, second = _serie_a_alias_pair(other_score=True)
+    client = FakeClient()
+    client.tables[adapter.GENERIC_RESULTS_TABLE] = [first.copy(), second.copy()]
+    before = [r.copy() for r in client.tables[adapter.GENERIC_RESULTS_TABLE]]
+    incoming = pd.DataFrame([first])
+    with pytest.raises(PersistenceConflictError, match="alias-equivalent"):
+        adapter.persist_results(client, incoming, config)
+    assert client.tables[adapter.GENERIC_RESULTS_TABLE] == before
+
+
+def test_serie_a_exact_team_identity_with_different_source_metadata_still_conflicts():
+    config, first, second = _serie_a_alias_pair()
+    second["home_team"] = first["home_team"]
+    client = FakeClient()
+    client.tables[adapter.GENERIC_RESULTS_TABLE] = [first.copy(), second.copy()]
+    with pytest.raises(PersistenceConflictError, match="alias-equivalent"):
+        adapter.persist_results(client, pd.DataFrame([first]), config)
+
+
+def test_legacy_alias_exception_not_applied_to_other_leagues():
+    _config, first, second = _serie_a_alias_pair()
+    first["league"] = "LA_LIGA"
+    second["league"] = "LA_LIGA"
+    client = FakeClient()
+    client.tables[adapter.GENERIC_RESULTS_TABLE] = [first.copy(), second.copy()]
+    with pytest.raises(PersistenceConflictError, match="alias-equivalent"):
+        adapter.persist_results(client, pd.DataFrame([first]), CONFIG)
+
+
+def test_serie_a_alias_conflict_with_unexpected_non_metadata_field_is_fatal():
+    config, first, second = _serie_a_alias_pair()
+    second["unexpected_semantic_field"] = "diff"
+    client = FakeClient()
+    client.tables[adapter.GENERIC_RESULTS_TABLE] = [first.copy(), second.copy()]
+    with pytest.raises(PersistenceConflictError, match="alias-equivalent"):
+        adapter.persist_results(client, pd.DataFrame([first]), config)
