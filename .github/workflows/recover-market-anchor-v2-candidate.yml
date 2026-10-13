@@ -1,0 +1,103 @@
+name: Recover Frozen Market Anchor V2 Candidate
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "market_anchor_v2_saved_cohort_replay.py"
+      - "tests/test_market_anchor_v2_saved_cohort_replay.py"
+      - "experiments/market_anchor_v2_saved_cohort_replay_report.json"
+      - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
+      - "research/MARKET_ANCHOR_V2_SAVED_COHORT_REPLAY.md"
+      - ".github/workflows/recover-market-anchor-v2-candidate.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: .
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pinned, free offline replay dependencies
+        run: pip install numpy pandas requests scipy 'scikit-learn==1.7.2' pytest
+      - name: Snapshot production model file hashes (read only)
+        run: sha256sum ./*.pkl 2>/dev/null | sort > /tmp/recovery-pkl-before || true
+      - name: Assert synthetic frozen replay guards
+        run: |
+          python -m py_compile market_anchor_v2_saved_cohort_replay.py
+          python -m pytest -q tests/test_market_anchor_v2_saved_cohort_replay.py
+      - name: Restore exact Sep-2026 model code from frozen Git commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/frozen-market-anchor-v2
+          for file in historical_football_signal_lab.py market_anchor_1x2_v1.py market_anchor_1x2_v2_shadow.py; do
+            git show df19777087fb89af049eedce44ff93f0aa6e6360:"$file" > "/tmp/frozen-market-anchor-v2/$file"
+          done
+      - name: Rebuild September candidate from fixed 2016-2026 training input only
+        run: |
+          python market_anchor_v2_saved_cohort_replay.py \
+            --frozen-source-dir /tmp/frozen-market-anchor-v2 \
+            --restore-candidate-only \
+            --save-research-candidate
+      - name: Prove frozen checksum, immutable recipe and research-only status
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("artifacts/market_anchor_v2_saved_cohort_replay")
+          candidate = json.loads((root / "candidate_model.json").read_text())
+          manifest = json.loads((root / "recovery_manifest.json").read_text())
+          durable = json.loads(Path("research/models/market_anchor_v2_serie_a_frozen_candidate.json").read_text())
+          assert durable == candidate, "saved research candidate must exactly match reconstructed original weights"
+          frozen = json.loads(Path("experiments/market_anchor_v2_saved_cohort_replay_report.json").read_text())
+          assert candidate["artifact_sha256"] == frozen["candidate_artifact_sha256"]
+          assert candidate["training_fingerprint_sha256"] == frozen["training_fingerprint_sha256"]
+          assert candidate["training_rows"] == frozen["training_rows"] == 3799
+          assert manifest["candidate_artifact_sha256"] == candidate["artifact_sha256"]
+          assert manifest["training_files_match_september"] is True
+          assert manifest["training_rows"] == 3799
+          assert manifest["source_of_output_weights"] == "git_archived_exact_sha_original_not_refit"
+          assert manifest["refit_numeric_tolerance"] == 1e-8
+          assert all(diff <= manifest["refit_numeric_tolerance"]
+                     for diff in manifest["refit_numeric_max_absolute_difference"].values())
+          print("Refit exact checksum match:", manifest["refit_exact_sha_match"])
+          print("Refit max absolute numeric deviations:", manifest["refit_numeric_max_absolute_difference"])
+          assert manifest["scope"] == "SERIE_A_ONLY"
+          assert manifest["evidence"] == "EXACT_FROZEN_TRAINING_ARTIFACT_RECOVERY_ONLY"
+          assert manifest["replayed_september_target_fixtures"] is False
+          assert manifest["active_lambda"] == 0.0
+          assert manifest["no_bet"] is True
+          assert manifest["production_promotion"] is False
+          assert frozen["stability_gate_passed"] is False
+          assert all(manifest["training_csv_sha256"][k] == frozen["football_data_sha256"][k]
+                     for k in manifest["training_csv_sha256"])
+          print("PASS: recovered Serie A research candidate weights match frozen digest")
+          PY
+      - name: Assert production pickle files still match
+        run: |
+          sha256sum ./*.pkl 2>/dev/null | sort > /tmp/recovery-pkl-after || true
+          diff -u /tmp/recovery-pkl-before /tmp/recovery-pkl-after
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frozen-market-anchor-v2-serie-a-candidate
+          path: |
+            artifacts/market_anchor_v2_saved_cohort_replay/candidate_model.json
+            artifacts/market_anchor_v2_saved_cohort_replay/recovery_manifest.json
+            experiments/market_anchor_v2_saved_cohort_replay_report.json
+          retention-days: 30
