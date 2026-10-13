@@ -1,0 +1,41 @@
+name: Serie A Frozen V2 Shadow Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "serie_a_v2_frozen_shadow_preview.py"
+      - "tests/test_serie_a_v2_frozen_shadow_preview.py"
+      - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
+      - ".github/workflows/serie-a-frozen-v2-shadow-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  shadow-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: .
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install offline model-check dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest numpy pandas scipy scikit-learn requests
+      - name: Run actual restored V2 weights against strict synthetic fixture inputs
+        run: |
+          python -m py_compile serie_a_v2_frozen_shadow_preview.py
+          python -m pytest -q tests/test_serie_a_v2_frozen_shadow_preview.py
+      - name: Verify no production model hashes changed
+        run: |
+          test -f research/models/market_anchor_v2_serie_a_frozen_candidate.json
+          git diff --exit-code -- '*.pkl'
