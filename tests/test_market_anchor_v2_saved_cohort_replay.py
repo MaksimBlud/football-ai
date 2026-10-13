@@ -47,3 +47,62 @@ def test_frozen_source_blob_pins_cover_every_restored_module():
         "market_anchor_1x2_v1.py": "58c35bf3768f7bf2b951f19a37b9a5f46b6b9801",
         "market_anchor_1x2_v2_shadow.py": "b2770d726ffafe7a3cef706b57d3391063cbfe1b",
     }
+
+
+def test_saved_replay_report_is_provenance_locked():
+    import json
+    from pathlib import Path
+    frozen = json.loads(
+        Path("experiments/market_anchor_v2_saved_cohort_replay_report.json").read_text()
+    )
+    replay.assert_same_frozen_replay(frozen)
+    assert frozen["candidate_artifact_sha256"] == (
+        "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
+    )
+    assert frozen["training_fingerprint_sha256"] == (
+        "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098"
+    )
+
+
+def test_provenance_and_outcome_tampering_are_rejected():
+    import json
+    from copy import deepcopy
+    from pathlib import Path
+    import pytest
+    good = json.loads(
+        Path("experiments/market_anchor_v2_saved_cohort_replay_report.json").read_text()
+    )
+    for key, replacement in [
+        ("candidate_artifact_sha256", "0" * 64),
+        ("training_fingerprint_sha256", "a" * 64),
+        ("active_lambda", 1.0),
+        ("stability_gate_passed", True),
+        ("football_data_sha256", {}),
+        ("production_promotion", True),
+    ]:
+        bad = deepcopy(good)
+        bad[key] = replacement
+        with pytest.raises(ValueError, match="provenance drift"):
+            replay.assert_same_frozen_replay(bad)
+    for changed_field in ("result", "event_id"):
+        bad = deepcopy(good)
+        bad["predictions"][0][changed_field] = "tampered"
+        with pytest.raises(ValueError, match="event drift"):
+            replay.assert_same_frozen_replay(bad)
+    bad = deepcopy(good)
+    bad["predictions"][0]["shadow_lambda_1"][0] += .01
+    with pytest.raises(ValueError, match="probabilities drift"):
+        replay.assert_same_frozen_replay(bad)
+
+
+def test_candidate_export_cannot_target_production_paths():
+    from pathlib import Path
+    code = Path("market_anchor_v2_saved_cohort_replay.py").read_text()
+    assert "save_research_candidate: bool = False" in code
+    assert "--save-research-candidate" in code
+    assert '"artifacts/market_anchor_v2_saved_cohort_replay/candidate_model.json"' in code
+    assert "v2.validate_candidate_artifact(artifact)" in code
+    assert "assert_same_frozen_replay(report)" in code
+    assert 'if artifact["artifact_sha256"] != report["candidate_artifact_sha256"]:' in code
+    for dangerous in ["joblib.dump(", "pickle.dump(", "os.system(", ".upsert(", "supabase.table(", "api.the-odds-api.com"]:
+        assert dangerous not in code
