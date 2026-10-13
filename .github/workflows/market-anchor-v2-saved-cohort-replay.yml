@@ -1,0 +1,67 @@
+name: Market Anchor V2 Saved Cohort Replay
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "market_anchor_v2_saved_cohort_replay.py"
+      - "tests/test_market_anchor_v2_saved_cohort_replay.py"
+      - ".github/workflows/market-anchor-v2-saved-cohort-replay.yml"
+      - "experiments/market_anchor_v2_saved_cohort_replay_report.json"
+      - "PROJECT_CONTINUITY.md"
+
+permissions:
+  contents: read
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install frozen replay dependencies
+        run: pip install numpy pandas requests scipy 'scikit-learn==1.7.2' pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Run local replay contract tests
+        run: pytest -q tests/test_market_anchor_v2_saved_cohort_replay.py
+      - name: Restore exact frozen V2 source from Git history
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/frozen-v2
+          git show df19777087fb89af049eedce44ff93f0aa6e6360:historical_football_signal_lab.py > /tmp/frozen-v2/historical_football_signal_lab.py
+          git show df19777087fb89af049eedce44ff93f0aa6e6360:market_anchor_1x2_v1.py > /tmp/frozen-v2/market_anchor_1x2_v1.py
+          git show df19777087fb89af049eedce44ff93f0aa6e6360:market_anchor_1x2_v2_shadow.py > /tmp/frozen-v2/market_anchor_1x2_v2_shadow.py
+      - name: Run exact frozen Serie A replay
+        run: python market_anchor_v2_saved_cohort_replay.py --frozen-source-dir /tmp/frozen-v2
+      - name: Assert diagnostic safety contract
+        run: |
+          python - <<'PY'
+          import json
+          report=json.load(open('artifacts/market_anchor_v2_saved_cohort_replay/report.json'))
+          assert report['evidence_class'] == 'POST_OUTCOME_DIAGNOSTIC_REPLAY'
+          assert report['contract_scope'] == 'SERIE_A_ONLY'
+          assert report['cohort_n'] == 10
+          assert report['shadow_lambda'] == 1.0
+          assert report['active_lambda'] == 0.0
+          assert report['stability_gate_passed'] is False
+          assert report['parameter_selection_from_replay_outcomes'] is False
+          assert report['no_bet'] is True
+          assert report['production_promotion'] is False
+          PY
+      - name: Verify production hashes unchanged
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - uses: actions/upload-artifact@v4
+        with:
+          name: market-anchor-v2-saved-cohort-replay
+          path: artifacts/market_anchor_v2_saved_cohort_replay/report.json
+          retention-days: 30

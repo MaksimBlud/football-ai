@@ -1,0 +1,164 @@
+{
+  "active_lambda": 0.0,
+  "candidate_artifact_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+  "cohort_n": 10,
+  "contract_scope": "SERIE_A_ONLY",
+  "contract_scope_reason": "The frozen V2 residual primary cohort is Serie A; applying it to the other saved leagues would be off-contract.",
+  "evidence_class": "POST_OUTCOME_DIAGNOSTIC_REPLAY",
+  "experiment_id": "MARKET_ANCHOR_V2_SAVED_COHORT_REPLAY",
+  "feature_variant": "ALL_FOOTBALL",
+  "football_data_sha256": {
+    "1617": "39eb2bc1812897e01c280b711b3b8f5c15d3dee111aa09fbdf2e4abd7404bca3",
+    "1718": "664a8874d3a33923036120c4162e72f13887e0897b51effe27f89969c79c335d",
+    "1819": "2baea8a1fb31096960b5f5797d31dbb6b454eb41b00845e6b0b79feb82a0e3d0",
+    "1920": "f33233e0c428ebe4f7cb854c4a504e0b59c4e009ee8b679269486e26afdc575b",
+    "2021": "c09196fa18877547442807d375317299947abdd6d51a5e0df044cc6026e13f36",
+    "2122": "6a9555d5a90e652a883fd2862a52545c06e264016cd770347c067a6d7c993170",
+    "2223": "9960837f37a97ae700f876c87b85a8b7a2f5a5d05a53077830c21b9db8880c45",
+    "2324": "343a89db026fe4204ebeabd663cdfee8d02a45457828fc1cb63fa630ca170723",
+    "2425": "79d87a5b18771e066ac7419b7876bfd9771a68ca117a9712375d6bc9685abee3",
+    "2526": "709ae279617d16af226312bcceac941e71241745ddaf950bdac2b83afad4fcbb",
+    "2627": "058bb14deaf7ee1f04b1629a23a75dd2f9168306c90a50352abfaf9fba538f83"
+  },
+  "frozen_source_git_blobs": {
+    "historical_football_signal_lab.py": "401b3a0893371bfa4a488ec92a4a54af2678c8f7",
+    "market_anchor_1x2_v1.py": "58c35bf3768f7bf2b951f19a37b9a5f46b6b9801",
+    "market_anchor_1x2_v2_shadow.py": "b2770d726ffafe7a3cef706b57d3391063cbfe1b"
+  },
+  "frozen_v2_commit": "df19777087fb89af049eedce44ff93f0aa6e6360",
+  "history_cutoff_date": "2026-09-11",
+  "interpretation_limit": "Post-outcome diagnostic only; not untouched OOT or prospective evidence.",
+  "l2_penalty": 1.0,
+  "market": {
+    "accuracy": 0.6,
+    "brier": 0.5662948173955555,
+    "log_loss": 0.9674878846519602
+  },
+  "no_bet": true,
+  "old_model": {
+    "accuracy": 0.5,
+    "brier": 0.5265153874268573,
+    "log_loss": 0.906202231280792
+  },
+  "outcomes_were_known_before_this_replay": true,
+  "parameter_selection_from_replay_outcomes": false,
+  "parent_replay_commit": "57cace46bcf61557837a8235f1239b06813f39eb",
+  "parent_replay_total_events": 47,
+  "predictions": [
+    {
+      "away_team": "Fiorentina",
+      "event_id": "a9656d25ca6b06be9e477a098333bd70",
+      "feature_min_prior_matches": 30,
+      "home_team": "Venezia",
+      "market": [0.347195829018205, 0.281422174186932, 0.371381996794863],
+      "old_model": [0.2372110003648549, 0.2243963446558066, 0.5383926549793384],
+      "result": "A",
+      "shadow_lambda_1": [0.34168088069094693, 0.3083826545359112, 0.34993646477314183]
+    },
+    {
+      "away_team": "Frosinone",
+      "event_id": "3dba40cdf22e962c0f6f6c940ef01850",
+      "feature_min_prior_matches": 30,
+      "home_team": "Genoa",
+      "market": [0.445403244400048, 0.282980928929109, 0.271615826670843],
+      "old_model": [0.3334816594874364, 0.2821909105124798, 0.3843274300000837],
+      "result": "D",
+      "shadow_lambda_1": [0.43199413876510306, 0.3093081321815905, 0.25869772905330657]
+    },
+    {
+      "away_team": "AC Milan",
+      "event_id": "b412817739a87e18bf391bf6ccff6560",
+      "feature_min_prior_matches": 30,
+      "home_team": "Lazio",
+      "market": [0.281318981610276, 0.299624870383391, 0.419056148006334],
+      "old_model": [0.2839135910246846, 0.2934240786261582, 0.4226623303491572],
+      "result": "D",
+      "shadow_lambda_1": [0.2735024896142323, 0.31565637816546693, 0.41084113222030066]
+    },
+    {
+      "away_team": "Cagliari",
+      "event_id": "fd30ca2b96bfa088e51bffddeb3b6e56",
+      "feature_min_prior_matches": 30,
+      "home_team": "Atalanta BC",
+      "market": [0.599241512092612, 0.237932289673021, 0.162826198234367],
+      "old_model": [0.5754179358482361, 0.2043052911758422, 0.2202767729759216],
+      "result": "A",
+      "shadow_lambda_1": [0.5538877849553424, 0.2681025177277241, 0.17800969731693336]
+    },
+    {
+      "away_team": "Monza",
+      "event_id": "e66df35062d3cc1c59258406374c2e76",
+      "feature_min_prior_matches": 30,
+      "home_team": "Lecce",
+      "market": [0.358238198691022, 0.307047489045547, 0.334714312263432],
+      "old_model": [0.3413350385825347, 0.3025469274087825, 0.3561180340086828],
+      "result": "H",
+      "shadow_lambda_1": [0.35433373885554864, 0.3022137372868778, 0.34345252385757363]
+    },
+    {
+      "away_team": "Bologna",
+      "event_id": "27eaaab4498bb2984321e5f81f0ff9fd",
+      "feature_min_prior_matches": 30,
+      "home_team": "Napoli",
+      "market": [0.529471343018315, 0.267441816899981, 0.203086840081704],
+      "old_model": [0.5386763375603061, 0.2388650548119859, 0.2224586076277079],
+      "result": "H",
+      "shadow_lambda_1": [0.5300373348796039, 0.289273752168081, 0.1806889129523151]
+    },
+    {
+      "away_team": "Juventus",
+      "event_id": "0a91f850039ce571eb6e90b2eed15548",
+      "feature_min_prior_matches": 30,
+      "home_team": "Sassuolo",
+      "market": [0.182743963070909, 0.242218002399942, 0.575038034529149],
+      "old_model": [0.2073271932401416, 0.2628998536735729, 0.5297729530862854],
+      "result": "H",
+      "shadow_lambda_1": [0.15417309852396482, 0.22781015906187488, 0.6180167424141604]
+    },
+    {
+      "away_team": "AS Roma",
+      "event_id": "17a081148b714450797ef8d6a29d16e6",
+      "feature_min_prior_matches": 30,
+      "home_team": "Torino",
+      "market": [0.162349921031296, 0.235421660599638, 0.602228418369067],
+      "old_model": [0.1335925499675437, 0.2143672470559849, 0.6520402029764713],
+      "result": "A",
+      "shadow_lambda_1": [0.12600545091989065, 0.24002186112708346, 0.6339726879530259]
+    },
+    {
+      "away_team": "Parma",
+      "event_id": "9da3aa4b46166eb4ccd1e600d67080a6",
+      "feature_min_prior_matches": 30,
+      "home_team": "Como",
+      "market": [0.774299209903783, 0.155769910752818, 0.0699308793433981],
+      "old_model": [0.6703084111213684, 0.2181374281644821, 0.1115541607141494],
+      "result": "H",
+      "shadow_lambda_1": [0.7988134548504329, 0.15390550178409743, 0.04728104336546985]
+    },
+    {
+      "away_team": "Udinese",
+      "event_id": "7ea3ea9925ae0f1d149965fb9769c7dc",
+      "feature_min_prior_matches": 30,
+      "home_team": "Inter Milan",
+      "market": [0.758308448454786, 0.157106223942894, 0.08458532760232],
+      "old_model": [0.7089131474494934, 0.1738733053207397, 0.1172135472297668],
+      "result": "H",
+      "shadow_lambda_1": [0.7496846774392929, 0.17159320748161913, 0.0787221150790881]
+    }
+  ],
+  "production_promotion": false,
+  "research_only": true,
+  "shadow_delta_accuracy_vs_market": 0.0,
+  "shadow_delta_brier_vs_market": -0.004686509319544507,
+  "shadow_delta_log_loss_vs_market": -0.006195655300280434,
+  "shadow_dual_metric_better_than_market": true,
+  "shadow_lambda": 1.0,
+  "shadow_lambda_1": {
+    "accuracy": 0.6,
+    "brier": 0.561608308076011,
+    "log_loss": 0.9612922293516798
+  },
+  "stability_gate_passed": false,
+  "training_fingerprint_sha256": "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098",
+  "training_rows": 3799
+}
