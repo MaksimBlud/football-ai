@@ -22,6 +22,10 @@ jobs:
     timeout-minutes: 20
     env:
       PYTHONPATH: .
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -68,6 +72,12 @@ jobs:
           assert manifest["candidate_artifact_sha256"] == candidate["artifact_sha256"]
           assert manifest["training_files_match_september"] is True
           assert manifest["training_rows"] == 3799
+          assert manifest["source_of_output_weights"] == "git_archived_exact_sha_original_not_refit"
+          assert manifest["refit_numeric_tolerance"] == 1e-8
+          assert all(diff <= manifest["refit_numeric_tolerance"]
+                     for diff in manifest["refit_numeric_max_absolute_difference"].values())
+          print("Refit exact checksum match:", manifest["refit_exact_sha_match"])
+          print("Refit max absolute numeric deviations:", manifest["refit_numeric_max_absolute_difference"])
           assert manifest["scope"] == "SERIE_A_ONLY"
           assert manifest["evidence"] == "EXACT_FROZEN_TRAINING_ARTIFACT_RECOVERY_ONLY"
           assert manifest["replayed_september_target_fixtures"] is False
