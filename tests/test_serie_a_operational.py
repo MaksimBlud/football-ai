@@ -165,5 +165,5 @@ def test_evaluator_rejects_unverified_alias_duplicate_without_scores():
     ledger, finished = _alias_ledger_and_results()
     with pytest.raises(ValueError, match="cannot be verified"):
         evaluator.settle_serie_a_predictions(ledger, finished.drop(
-            columns=["home_goals", "away_goals"
+            columns=["home_goals", "away_goals"]
         ))
