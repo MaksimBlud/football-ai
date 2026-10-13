@@ -1,0 +1,71 @@
+name: Serie A V2 Free Real-Quote Diagnostic
+
+on:
+  workflow_dispatch:
+  # Independent public CSV source observations. ZERO paid API calls.
+  schedule:
+    - cron: "13 6 * * *"
+  push:
+    branches: [main]
+    paths:
+      - "serie_a_v2_live_diagnostic_report.py"
+      - "serie_a_v2_asof_feature_manifest.py"
+      - "serie_a_v2_frozen_shadow_preview.py"
+      - "tests/test_serie_a_v2_live_diagnostic_report.py"
+      - ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
+
+concurrency:
+  group: serie-a-v2-free-diagnostic
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  free-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install read-only diagnostic dependencies
+        run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
+      - name: Offline regression tests
+        run: |
+          python -m py_compile serie_a_v2_live_diagnostic_report.py
+          python -m pytest -q tests/test_serie_a_v2_live_diagnostic_report.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_frozen_shadow_preview.py
+      - name: Verify source access, no paid credentials
+        run: |
+          python - <<'PY'
+          from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, PAID_PROVIDER_REQUESTS
+          assert PUBLIC_BASE == "https://www.football-data.co.uk/mmz4281"
+          assert PAID_PROVIDER_REQUESTS == 0
+          print("PASS: public-only source; no paid provider key in workflow")
+          PY
+      - name: Fetch and SHA-archive public source, preview original frozen V2 diagnostics
+        run: |
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_KEY"
+          python serie_a_v2_live_diagnostic_report.py \
+            --output artifacts/serie_a_v2_real_quote_diagnostic.json \
+            --raw-source-dir artifacts/serie_a_v2_source_capture
+      - name: Archive diagnostic and exact public CSV bytes for provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: serie-a-v2-free-real-quote-diagnostic
+          path: |
+            artifacts/serie_a_v2_real_quote_diagnostic.json
+            artifacts/serie_a_v2_source_capture/
+          if-no-files-found: warn
+          retention-days: 90
