@@ -54,6 +54,9 @@ def test_real_frozen_model_diagnostic_never_relabels_later_source_as_prospective
     assert report["eligible_for_frozen_prospective_cohort"] is False
     assert report["eligible_for_product_publication"] is False
     assert report["no_bet"] is True
+    assert report["protect_2026_27_prospective_outcomes"] is True
+    assert report["2026_27_public_results_downloaded"] is False
+    assert report["history_stale_without_2026_27_form"] is True
     row = report["diagnostic_previews"][0]
     assert row["market_1x2"]==pytest.approx(row["active_market_fallback_1x2"])
     assert row["model_candidate_sha256"]==report["frozen_candidate_sha256"]
@@ -72,29 +75,26 @@ def test_missing_source_stats_fail_closed_and_do_not_impute_fake_history():
         make_report([quote()],history_fixture().drop(columns=["HC"]),source_audit(),as_of_utc=NOW)
 
 
-def test_public_free_source_is_bounded_and_current_unfinished_rows_excluded():
-    current = _source_codes()[-1]
-    frame=history_fixture()
-    future=frame.iloc[0].copy()
-    future["Date"]="24/10/2026"
-    future["FTR"]=None
-    future["FTHG"]=None
-    future["FTAG"]=None
-    csv_completed=frame.to_csv(index=False).encode()
-    csv_with_future=pd.concat([frame,pd.DataFrame([future])]).to_csv(index=False).encode()
-    calls=[]
+def test_public_free_history_never_downloads_protected_2026_27_outcomes():
+    # The current-season CSV includes frozen-prospective outcomes and must
+    # NOT be fetched, even if its rows might later be filtered in-memory.
+    current = "2627"
+    assert current not in _source_codes()
+    assert len(_source_codes()) == 10
+    csv_completed = history_fixture().to_csv(index=False).encode()
+    calls = []
     class Response:
-        status_code=200
-        def __init__(self,raw): self.content=raw
-    def fake_get(url,timeout):
-        calls.append((url,timeout))
-        assert url.startswith(PUBLIC_BASE+"/") and url.endswith("/I1.csv")
-        return Response(csv_with_future if f"/{current}/" in url else csv_completed)
-    history, audit=fetch_public_history(get=fake_get)
-    assert len(calls)==len(_source_codes())
-    assert len(audit)==len(calls)
-    assert len(history)==3*len(calls)
-    assert len(history[history["FTR"].isna()])==0
+        status_code = 200
+        content = csv_completed
+    def fake_get(url, timeout):
+        calls.append((url, timeout))
+        assert url.startswith(PUBLIC_BASE + "/") and url.endswith("/I1.csv")
+        assert f"/{current}/" not in url
+        return Response()
+    history, audit = fetch_public_history(get=fake_get)
+    assert len(calls) == 10
+    assert len(audit) == len(calls)
+    assert len(history) == 3*len(calls)
     assert all(x["csv_sha256"] and x["source_observed_at_utc"] for x in audit)
 
 
