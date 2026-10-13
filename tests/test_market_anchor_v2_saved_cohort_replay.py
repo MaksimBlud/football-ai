@@ -106,3 +106,21 @@ def test_candidate_export_cannot_target_production_paths():
     assert 'if artifact["artifact_sha256"] != report["candidate_artifact_sha256"]:' in code
     for dangerous in ["joblib.dump(", "pickle.dump(", "os.system(", ".upsert(", "supabase.table(", "api.the-odds-api.com"]:
         assert dangerous not in code
+
+
+def test_original_frozen_weights_restoration_does_not_read_mutable_2026_27():
+    from pathlib import Path
+    src = Path("market_anchor_v2_saved_cohort_replay.py").read_text()
+    frozen_function = src.split(
+        "def restore_frozen_candidate_from_training_history(", 1
+    )[1].split("\ndef main()", 1)[0]
+    assert "build_training_frame(_lab)" in frozen_function
+    assert "build_target_features(" not in frozen_function
+    assert "CURRENT_SEASON_CODE" not in frozen_function
+    assert 'historical_hashes.get(season) != frozen_hashes.get(season)' in frozen_function
+    assert 'model["artifact_sha256"]' not in frozen_function or (
+        '("training_fingerprint_sha256", "artifact_sha256")' in frozen_function
+    )
+    assert '"replayed_september_target_fixtures": False' in frozen_function
+    assert '"production_promotion": False' in frozen_function
+    assert "--restore-candidate-only" in src
