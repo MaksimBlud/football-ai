@@ -88,12 +88,21 @@ The dedicated recovery job therefore:
 3. Refits the exact **3,799-row training recipe**, validates the frozen
    training-fingerprint SHA256 and model-artifact SHA256. No model is accepted
    without byte-identical model-digest proof.
-4. Saves the **actual learned coefficients, scaler and imputer** into
-   `artifacts/market_anchor_v2_saved_cohort_replay/candidate_model.json`,
-   plus `recovery_manifest.json`. Those paths are research-only and ignored
-   by Git; a successful GitHub Actions recovery uploads both as an artifact
-   for 30 days. The artifact can be regenerated from the pinned training
-   recipe later.
+4. Validates and preserves the **original SHA-pinned** learned
+   coefficients, scaler and imputer already recovered and durably committed
+   at `research/models/market_anchor_v2_serie_a_frozen_candidate.json`.
+   New SciPy L-BFGS/BLAS training runs may have last-bit numerical differences,
+   even with the same input files and training fingerprint. A refit must agree
+   field-for-field on the recipe and within an explicitly declared
+   **1e-8 maximum absolute coefficient/scaler/imputer tolerance**; otherwise
+   recovery fails. It never overwrites the original with numerically new
+   weights. The workflow pins BLAS threads and reports whether the refit SHA
+   matched exactly; a tiny numerical deviation is disclosed, not silently
+   misrepresented as exact byte-wise reproducibility.
+   The proven original is copied into the ignored research artifact path,
+   and `recovery_manifest.json` reports refit exactness and deviations.
+   A successful Actions run uploads the model and manifest for 30 days;
+   the permanent original remains in Git even if downloads expire.
 5. Does **not fetch 2026/27 data, score known target outcomes, evaluate a
    new candidate or modify any production model or database.**
 
@@ -104,7 +113,7 @@ Frozen training fingerprint:
 `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`.
 
 **Recovery proof (13 October 2026):** the training-only GitHub Actions job
-`38344465318` completed SUCCESS. It recovered the original **exact**
+`38344465318` completed SUCCESS. That run reproduced the original **exact**
 September model-artifact SHA256 and 3,799-row training fingerprint, without
 accessing or re-evaluating the now-changing 2026/27 CSV. The resulting 4 KB
 JSON weights, imputer and scaler were also saved **permanently in Git**:
@@ -121,3 +130,11 @@ MARKET_ANCHOR V2 stability gate: `active_lambda=0`, `shadow_lambda=1`,
 `NO_BET` and **Serie A scope only** are unchanged. A full September target
 replay is still a separate historically versioned exercise, and a genuinely
 new prospective evaluation is needed before production promotion.
+
+**Re-run evidence caveat:** a subsequent job `38344649970`
+recomputed the same 3,799-row training fingerprint, but the refitted JSON
+artifact SHA differed. This prompted strict archiving of the original
+SHA-verified model and explicit numerical tolerance checks. It is NOT
+acceptable to replace the original by a new re-fit merely because input
+fingerprints matched. Until the latest end-to-end recovery job passes,
+claims about reproducibility of later optimizer runs are unproven.
