@@ -103,6 +103,19 @@ Frozen expected candidate SHA256:
 Frozen training fingerprint:
 `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`.
 
+**Recovery proof (13 October 2026):** the training-only GitHub Actions job
+`38344465318` completed SUCCESS. It recovered the original **exact**
+September model-artifact SHA256 and 3,799-row training fingerprint, without
+accessing or re-evaluating the now-changing 2026/27 CSV. The resulting 4 KB
+JSON weights, imputer and scaler were also saved **permanently in Git**:
+
+`research/models/market_anchor_v2_serie_a_frozen_candidate.json`
+
+This is a versioned, inspectable research artifact rather than a temporary
+Codespaces file or expiring workflow attachment. The dedicated regression
+check now reconstructs the original candidate and requires the JSON object
+in Git to match it field-for-field. Future data/source drift fails closed.
+
 Recovering the original training artifact **does not reopen** the failed
 MARKET_ANCHOR V2 stability gate: `active_lambda=0`, `shadow_lambda=1`,
 `NO_BET` and **Serie A scope only** are unchanged. A full September target
