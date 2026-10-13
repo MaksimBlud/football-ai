@@ -36,7 +36,7 @@ def csv_history(code):
     ).encode()
 
 
-def make_archive(tmp_path, *, change=None, flags=None, observed=OBSERVED):
+def make_archive(tmp_path, *, change=None, flags=None, observed=OBSERVED, rehash_changes=False):
     audits = []
     raw_by_path = {}
     for code in _source_codes():
@@ -53,6 +53,10 @@ def make_archive(tmp_path, *, change=None, flags=None, observed=OBSERVED):
         })
     if change is not None:
         raw_by_path.update(change)
+        if rehash_changes:
+            for item in audits:
+                source_name = SOURCE_DIR + item['archived_source_name']
+                item['csv_sha256'] = hashlib.sha256(raw_by_path[source_name]).hexdigest()
     report = {
         "frozen_candidate_sha256": FROZEN_SHA,
         "2026_27_public_results_downloaded": False,
@@ -129,8 +133,8 @@ def test_protected_season_file_and_future_result_hidden_in_old_season_rejected(t
     name = SOURCE_DIR + "serie_a_2526.csv"
     forged = csv_history("2526").replace(b"01/10/2025", b"01/10/2026")
     archive, digest = make_archive(tmp_path, change={name: forged})
-    # Before date gate, the digest check already fails if content was changed.
-    with pytest.raises(ValueError, match="CSV SHA256 mismatch"):
+    archive, digest = make_archive(tmp_path, change={name: forged}, rehash_changes=True)
+    with pytest.raises(ValueError, match="protected prospective season result"):
         verify_archive(archive, [quote()], as_of_utc=AFTER)
 
 
@@ -140,3 +144,11 @@ def test_quote_order_duplicate_and_future_clock_fail_closed(tmp_path):
         verify_archive(archive, [quote(), quote()], as_of_utc=AFTER)
     with pytest.raises(ValueError, match="invalid quote timing"):
         verify_archive(archive, [quote("2026-10-18T00:00:00Z")], as_of_utc=AFTER)
+
+
+
+def test_quote_outcome_field_is_never_read_as_source_timing_evidence(tmp_path):
+    archive, digest = make_archive(tmp_path)
+    malicious = {**quote(), "result": "H"}
+    with pytest.raises(ValueError, match="outcomes or settlement fields forbidden"):
+        verify_archive(archive, [malicious], as_of_utc=AFTER)
