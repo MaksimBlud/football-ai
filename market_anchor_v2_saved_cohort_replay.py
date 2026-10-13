@@ -415,13 +415,80 @@ def assert_same_frozen_replay(report: dict[str, Any]) -> None:
 
 
 
+
+def restore_frozen_candidate_from_training_history(source_dir: Path) -> Path:
+    """Recover the old Serie A JSON weights WITHOUT reading current-season results.
+
+    The 2026/27 Football-Data CSV is intentionally NOT fetched: it grows over
+    time and its full-file SHA naturally differs from September. All ten
+    TRAIN_SEASONS source file hashes, the model artifact SHA, and the fixed
+    training fingerprint MUST still match their immutable September reference.
+    """
+    _lab, _v1, v2 = load_frozen_modules(source_dir)
+    from_file = Path(__file__).resolve().parent / (
+        "experiments/market_anchor_v2_saved_cohort_replay_report.json"
+    )
+    reference = json.loads(from_file.read_text(encoding="utf-8"))
+    training, historical_hashes, _ = build_training_frame(_lab)
+    frozen_hashes = reference["football_data_sha256"]
+    for season in TRAIN_SEASONS:
+        if historical_hashes.get(season) != frozen_hashes.get(season):
+            raise ValueError("frozen V2 training CSV sha256 changed: " + season)
+    model = v2.fit_candidate_artifact(training)
+    v2.validate_candidate_artifact(model)
+    if int(model["training_rows"]) != int(reference["training_rows"]) or int(model["training_rows"]) != 3799:
+        raise ValueError("frozen V2 training count changed")
+    for key in ("training_fingerprint_sha256", "artifact_sha256"):
+        expected = reference["candidate_artifact_sha256"] if key == "artifact_sha256" else reference[key]
+        if model[key] != expected:
+            raise ValueError("frozen V2 original training artifact mismatch: " + key)
+    if model.get("primary_league") not in (None, "SERIE_A") or v2.ACTIVE_LAMBDA != 0:
+        raise ValueError("frozen V2 scope or closed-gate lambda changed")
+    output = Path(__file__).resolve().parent / (
+        "artifacts/market_anchor_v2_saved_cohort_replay/candidate_model.json"
+    )
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(model, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest = {
+        "schema_version": "frozen-market-anchor-v2-candidate-recovery.v1",
+        "candidate_artifact_sha256": model["artifact_sha256"],
+        "training_fingerprint_sha256": model["training_fingerprint_sha256"],
+        "training_rows": model["training_rows"],
+        "training_csv_sha256": historical_hashes,
+        "training_files_match_september": True,
+        "frozen_source_commit": FROZEN_V2_COMMIT,
+        "scope": "SERIE_A_ONLY",
+        "shadow_lambda": 1.0,
+        "active_lambda": 0.0,
+        "evidence": "EXACT_FROZEN_TRAINING_ARTIFACT_RECOVERY_ONLY",
+        "replayed_september_target_fixtures": False,
+        "current_2627_csv_sha_equal_to_september": "NOT_CHECKED_NOT_REQUIRED_FOR_TRAINING",
+        "production_promotion": False,
+        "no_bet": True,
+        "provider_paid_calls": 0,
+    }
+    (output.parent / "recovery_manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    print("PASS: frozen V2 training-only candidate and fingerprint recovered")
+    print("RESEARCH_CANDIDATE_JSON=" + json.dumps(model, sort_keys=True))
+    return output
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--frozen-source-dir", type=Path, required=True)
+    parser.add_argument("--restore-candidate-only", action="store_true",
+                        help="Reconstruct September weights from 2016-2026 training sources only")
     parser.add_argument("--save-research-candidate", action="store_true",
                         help="Write the exact verified weights to ignored research artifacts only")
     parser.add_argument("--output", type=Path, default=Path("artifacts/market_anchor_v2_saved_cohort_replay/report.json"))
     args = parser.parse_args()
+    if args.restore_candidate_only:
+        if not args.save_research_candidate:
+            parser.error("--restore-candidate-only requires --save-research-candidate")
+        restore_frozen_candidate_from_training_history(args.frozen_source_dir)
+        return
     report = replay(args.frozen_source_dir, save_research_candidate=args.save_research_candidate)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
