@@ -140,6 +140,13 @@ def test_durable_recovered_serie_a_candidate_is_frozen_and_not_production():
     assert recovered["primary_league"] == "SERIE_A"
     assert recovered["feature_variant"] == "ALL_FOOTBALL"
     assert recovered["artifact_sha256"] == old["candidate_artifact_sha256"]
+    # The exact Python JSON decimal literals matter to the frozen SHA;
+    # do NOT pass through JavaScript Number/JSON.stringify when storing weights.
+    import hashlib
+    body = dict(recovered)
+    supplied = body.pop("artifact_sha256")
+    raw = json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    assert hashlib.sha256(raw.encode("utf-8")).hexdigest() == supplied
     assert recovered["training_fingerprint_sha256"] == old["training_fingerprint_sha256"]
     assert recovered["training_rows"] == old["training_rows"] == 3799
     assert recovered["active_lambda"] == 0.0
