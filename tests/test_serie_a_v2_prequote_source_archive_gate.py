@@ -132,7 +132,6 @@ def test_protected_season_file_and_future_result_hidden_in_old_season_rejected(t
     # Recreate valid member set but inject a 2026/27 outcome in the 2025/26 CSV.
     name = SOURCE_DIR + "serie_a_2526.csv"
     forged = csv_history("2526").replace(b"01/10/2025", b"01/10/2026")
-    archive, digest = make_archive(tmp_path, change={name: forged})
     archive, digest = make_archive(tmp_path, change={name: forged}, rehash_changes=True)
     with pytest.raises(ValueError, match="protected prospective season result"):
         verify_archive(archive, [quote()], as_of_utc=AFTER)
