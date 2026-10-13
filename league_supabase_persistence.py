@@ -339,6 +339,40 @@ def _canonical_result_payload(record: dict, config: LeagueRuntimeConfig | None) 
     return normalized
 
 
+# Legacy Serie A rows can store the SAME fixture under two original
+# team names, with distinct per-source metadata. Do not delete or rewrite
+# either immutable record. This exception applies ONLY when the raw names
+# differ, every non-provenance field (including goals/result) agrees, and
+# the league is Serie A. Real score or identity discrepancies stay fatal.
+_LEGACY_RESULT_SOURCE_METADATA = frozenset({
+    "match_time", "source", "source_competition",
+})
+
+
+def _same_legacy_serie_a_alias_outcome(
+    first: dict,
+    second: dict,
+    config: LeagueRuntimeConfig,
+) -> bool:
+    if config.identity.identifier != "SERIE_A":
+        return False
+    if (
+        first.get("home_team") == second.get("home_team")
+        and first.get("away_team") == second.get("away_team")
+    ):
+        return False
+    left = _canonical_result_payload(first, config)
+    right = _canonical_result_payload(second, config)
+    if _result_key(first, config) != _result_key(second, config):
+        return False
+    return immutable_payload_equal(
+        {key: value for key, value in left.items()
+         if key not in _LEGACY_RESULT_SOURCE_METADATA},
+        {key: value for key, value in right.items()
+         if key not in _LEGACY_RESULT_SOURCE_METADATA},
+    )
+
+
 def _result_key(
     record: dict,
     config: LeagueRuntimeConfig | None = None,
@@ -373,7 +407,9 @@ def persist_results(
             comparable_left = {
                 column: left.get(column) for column in right.keys()
             }
-            if not immutable_payload_equal(comparable_left, right):
+            if not immutable_payload_equal(comparable_left, right) and not (
+                _same_legacy_serie_a_alias_outcome(previous, record, config)
+            ):
                 raise PersistenceConflictError(
                     "Existing alias-equivalent finished-result conflict for "
                     + repr(key)
