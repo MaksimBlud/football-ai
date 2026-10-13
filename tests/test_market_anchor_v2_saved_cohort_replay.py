@@ -124,3 +124,31 @@ def test_original_frozen_weights_restoration_does_not_read_mutable_2026_27():
     assert '"replayed_september_target_fixtures": False' in frozen_function
     assert '"production_promotion": False' in frozen_function
     assert "--restore-candidate-only" in src
+
+
+def test_durable_recovered_serie_a_candidate_is_frozen_and_not_production():
+    import json
+    from pathlib import Path
+    recovered = json.loads(
+        Path("research/models/market_anchor_v2_serie_a_frozen_candidate.json").read_text()
+    )
+    old = json.loads(
+        Path("experiments/market_anchor_v2_saved_cohort_replay_report.json").read_text()
+    )
+    assert recovered["primary_league"] == "SERIE_A"
+    assert recovered["feature_variant"] == "ALL_FOOTBALL"
+    assert recovered["artifact_sha256"] == old["candidate_artifact_sha256"]
+    assert recovered["training_fingerprint_sha256"] == old["training_fingerprint_sha256"]
+    assert recovered["training_rows"] == old["training_rows"] == 3799
+    assert recovered["active_lambda"] == 0.0
+    assert recovered["shadow_residual_lambda"] == 1.0
+    assert recovered["stability_gate_passed"] is False
+    assert recovered["automatic_promotion"] is False
+    assert recovered["research_only"] is True
+    assert len(recovered["weights"]) == len(recovered["features"]) + 1
+    assert all(len(w) == 2 for w in recovered["weights"])
+    assert len(recovered["imputer_medians"]) == len(recovered["features"])
+    assert len(recovered["scaler_mean"]) == len(recovered["features"])
+    assert len(recovered["scaler_scale"]) == len(recovered["features"])
+    assert all(isinstance(x, (float, int)) for row in recovered["weights"] for x in row)
+
