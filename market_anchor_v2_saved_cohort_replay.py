@@ -438,24 +438,59 @@ def restore_frozen_candidate_from_training_history(source_dir: Path) -> Path:
     v2.validate_candidate_artifact(model)
     if int(model["training_rows"]) != int(reference["training_rows"]) or int(model["training_rows"]) != 3799:
         raise ValueError("frozen V2 training count changed")
-    for key in ("training_fingerprint_sha256", "artifact_sha256"):
-        expected = reference["candidate_artifact_sha256"] if key == "artifact_sha256" else reference[key]
-        if model[key] != expected:
-            raise ValueError("frozen V2 original training artifact mismatch: " + key)
+    if model["training_fingerprint_sha256"] != reference["training_fingerprint_sha256"]:
+        raise ValueError("frozen V2 original training data fingerprint differs")
     if model.get("primary_league") not in (None, "SERIE_A") or v2.ACTIVE_LAMBDA != 0:
         raise ValueError("frozen V2 scope or closed-gate lambda changed")
+
+    # Canonical weights were recovered in a successful 2026-10-13 CI run
+    # using the exact archived training data and SHA. SciPy L-BFGS/BLAS may
+    # yield tiny different floating-point values on later repeat fits.
+    # Never replace the SHA-pinned original with a numerically new model.
+    frozen_path = Path(__file__).resolve().parent / (
+        "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
+    )
+    original = json.loads(frozen_path.read_text(encoding="utf-8"))
+    v2.validate_candidate_artifact(original)  # verifies internal JSON SHA256
+    if original["artifact_sha256"] != reference["candidate_artifact_sha256"]:
+        raise ValueError("archived September original SHA256 mismatch")
+    if original["training_fingerprint_sha256"] != reference["training_fingerprint_sha256"]:
+        raise ValueError("archived September fingerprint mismatch")
+
+    if set(model) != set(original):
+        raise ValueError("refit candidate schema changed")
+    for field in original:
+        if field in ("artifact_sha256", "weights", "scaler_mean",
+                     "scaler_scale", "imputer_medians"):
+            continue
+        if model[field] != original[field]:
+            raise ValueError("refit recipe changed: " + field)
+    numerical_keys = ("weights", "scaler_mean", "scaler_scale", "imputer_medians")
+    numerical_diffs = {
+        field: float(np.max(np.abs(np.asarray(model[field], dtype=float) -
+                                   np.asarray(original[field], dtype=float))))
+        for field in numerical_keys
+    }
+    if not all(np.isfinite(d) and d <= 1e-8 for d in numerical_diffs.values()):
+        raise ValueError("refit candidate differs materially from exact frozen weights")
+    refit_exact_sha_match = model["artifact_sha256"] == original["artifact_sha256"]
+    # Durable original is the only accepted artifact; refit does NOT overwrite it.
     output = Path(__file__).resolve().parent / (
         "artifacts/market_anchor_v2_saved_cohort_replay/candidate_model.json"
     )
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(model, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    output.write_text(json.dumps(original, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     manifest = {
         "schema_version": "frozen-market-anchor-v2-candidate-recovery.v1",
-        "candidate_artifact_sha256": model["artifact_sha256"],
-        "training_fingerprint_sha256": model["training_fingerprint_sha256"],
+        "candidate_artifact_sha256": original["artifact_sha256"],
+        "training_fingerprint_sha256": original["training_fingerprint_sha256"],
         "training_rows": model["training_rows"],
         "training_csv_sha256": historical_hashes,
         "training_files_match_september": True,
+        "source_of_output_weights": "git_archived_exact_sha_original_not_refit",
+        "refit_exact_sha_match": refit_exact_sha_match,
+        "refit_numeric_max_absolute_difference": numerical_diffs,
+        "refit_numeric_tolerance": 1e-8,
         "frozen_source_commit": FROZEN_V2_COMMIT,
         "scope": "SERIE_A_ONLY",
         "shadow_lambda": 1.0,
