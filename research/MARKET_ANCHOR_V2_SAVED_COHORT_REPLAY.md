@@ -58,3 +58,42 @@ No betting is enabled, no production model is promoted, and no production `.pkl`
 - The next meaningful proof must come from a fresh prospective cohort, ideally against the stronger bookmaker-consensus baseline now being captured at bookmaker level.
 
 Canonical machine-readable result: `experiments/market_anchor_v2_saved_cohort_replay_report.json`.
+
+## Research artifact restoration from abandoned PR #337 — 2026-10-13
+
+The earlier PR #337 contained the exact frozen replay and **passed** its
+dedicated historical reconstruction check, but also shipped an unrelated
+`pr337-continuity-append.yml` that failed with a Python multiline-string
+syntax error. The result never entered `main`. Rather than rewrite or
+retune the research, this recovery branch copies the identical frozen
+report, cohort, loader and tests from PR #337 onto fresh `main`, **without**
+the broken continuity-writing workflow.
+
+The new `Recover Frozen Market Anchor V2 Candidate` workflow:
+1. Restores the 15 September frozen source commit and validates the three
+   exact Git blob hashes.
+2. Refits the **unchanged Serie A** 2016–2026 residual from the public
+   historical files only, with pinned dependencies.
+3. Verifies all saved source-file SHA256 hashes, the exact `3799` training
+   observations, the training fingerprint, the candidate artifact SHA256,
+   every fixed event and its saved result, and all three comparator metrics.
+4. Writes the actual **JSON candidate weights**, including scaling and
+   imputation, only to the ignored path
+   `artifacts/market_anchor_v2_saved_cohort_replay/candidate_model.json`.
+   This is a research candidate, **not** a `.pkl` promotion.
+5. Uploads those weights and the replay report to a GitHub Actions artifact
+   (30-day retention); the weights can be deterministically regenerated
+   later from the frozen recipe if the temporary download expires.
+6. Refuses promotion, paid provider requests, SQL writes or changes to
+   production model files. Verifies production `.pkl` hashes before/after.
+
+**Frozen expected candidate SHA256:**
+`a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+
+**Frozen training fingerprint:**
+`f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`.
+
+A passing artifact-recovery job proves that the previously built V2 weights
+can be recovered. It **does not** reopen the failed V2 stability gate, turn
+the shadow into production or claim model outperformance on unseen games.
+The artifact applies only to Serie A, not to EPL or all five leagues.
