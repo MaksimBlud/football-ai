@@ -118,9 +118,11 @@ def test_original_frozen_weights_restoration_does_not_read_mutable_2026_27():
     assert "build_target_features(" not in frozen_function
     assert "CURRENT_SEASON_CODE" not in frozen_function
     assert 'historical_hashes.get(season) != frozen_hashes.get(season)' in frozen_function
-    assert 'model["artifact_sha256"]' not in frozen_function or (
-        '("training_fingerprint_sha256", "artifact_sha256")' in frozen_function
-    )
+    assert 'refit_exact_sha_match = model["artifact_sha256"] == original["artifact_sha256"]' in frozen_function
+    assert 'v2.validate_candidate_artifact(original)' in frozen_function
+    assert 'output.write_text(json.dumps(original,' in frozen_function
+    assert 'numerical_diffs' in frozen_function
+    assert 'if not all(np.isfinite(d) and d <= 1e-8' in frozen_function
     assert '"replayed_september_target_fixtures": False' in frozen_function
     assert '"production_promotion": False' in frozen_function
     assert "--restore-candidate-only" in src
