@@ -77,12 +77,57 @@ def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -
     return pd.concat(all_frames, ignore_index=True), audit
 
 
+# Freeze rule is stronger than merely omitting this season from the remote
+# downloader. A caller may pass a concatenated frame or forged source audit.
+# Disallow 2026/27 rows, even if later excluded by the as-of feature cutoff.
+PROTECTED_SEASON_START = datetime(2026, 7, 1)
+
+
+def _assert_original_v2_source_embargo(history: pd.DataFrame, audit: list[dict], *,
+                                      as_of_utc: datetime) -> None:
+    codes = _source_codes()
+    if len(audit) != len(codes):
+        raise ValueError("original V2 source audit must include exact pre-freeze seasons")
+    seen = set()
+    for source in audit:
+        code = source.get("season_code")
+        if code not in codes or code in seen:
+            raise ValueError("original V2 source audit includes a protected or duplicate season")
+        seen.add(code)
+        expected_url = (
+            f"{PUBLIC_BASE}/{code}/"
+            f"{SERIE_A_RUNTIME_CONFIG.historical_source.competition_code}.csv"
+        )
+        if (source.get("source_url") != expected_url
+                or source.get("archived_source_name") != f"serie_a_{code}.csv"):
+            raise ValueError("original V2 source audit has an unexpected URL or source file")
+        sha = source.get("csv_sha256")
+        if not isinstance(sha, str) or len(sha) != 64 or any(x not in "0123456789abcdef" for x in sha):
+            raise ValueError("original V2 source audit contains invalid SHA256")
+        collected = parse_utc(source["source_observed_at_utc"])
+        if collected > as_of_utc:
+            raise ValueError("original V2 source observation in the future")
+        nrows = source.get("completed_source_rows")
+        if not isinstance(nrows, int) or isinstance(nrows, bool) or nrows <= 0:
+            raise ValueError("original V2 source audit has no completed rows")
+    if "Date" not in history.columns or history.empty:
+        raise ValueError("original V2 historical dates missing")
+    dates = pd.to_datetime(history["Date"], dayfirst=True, format="mixed", errors="raise")
+    if dates.isna().any() or dates.dt.tz is not None:
+        raise ValueError("original V2 date-only historical record invalid")
+    if (dates >= PROTECTED_SEASON_START).any():
+        raise ValueError("protected Serie A 2026/27 outcomes cannot enter original V2 diagnostic")
+
+
 def make_report(quotes: list[dict], history: pd.DataFrame, source_audit: list[dict], *,
                 as_of_utc: datetime) -> dict:
     if not source_audit:
         raise ValueError("history provenance required")
     if as_of_utc.tzinfo is None:
         raise ValueError("as-of timestamp needs UTC timezone")
+    _assert_original_v2_source_embargo(
+        history, source_audit, as_of_utc=as_of_utc.astimezone(timezone.utc)
+    )
     quote_times = [parse_utc(q["snapshot_time_utc"]) for q in quotes]
     source_times = [parse_utc(entry["source_observed_at_utc"]) for entry in source_audit]
     manifest = build_manifest(history, quotes)
