@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+import market_anchor_1x2_v2_shadow as v2
 import serie_a_v2_frozen_shadow_preview as v2_preview
 
 NOW = datetime(2026, 10, 13, 15, 0, tzinfo=timezone.utc)
@@ -70,6 +71,15 @@ def test_actual_sha_restored_candidate_is_used_and_shadow_is_not_active_market()
     assert row["eligible_for_frozen_prospective_cohort"] is False
     assert row["eligible_for_product_publication"] is False
     assert row["no_bet"] is True
+
+
+def test_frozen_candidate_rejects_weight_tamper_with_stale_sha():
+    original = v2_preview.load_verified_original()
+    tampered = deepcopy(original)
+    tampered["weights"][0][0] += 1e-12
+
+    with pytest.raises(ValueError, match="candidate artifact sha256 mismatch"):
+        v2.validate_candidate_artifact(tampered)
 
 
 def test_absence_of_future_quotes_is_truthfully_empty():
