@@ -57,6 +57,8 @@ def test_v2_bookmaker_atalanta_identity_joins_verified_10_season_team_history(qu
     assert row["history_coverage"][atalanta_side]["historical_team"] == "Atalanta"
     assert row["history_coverage"][atalanta_side]["prior_matches_in_frozen_30_match_window"] == 2
     assert row["history_coverage"][atalanta_side]["prior_matches_at_fixture_venue_in_window"] == 1
+    assert row["history_coverage"][atalanta_side]["last_historical_match_date"] == "2025-10-04"
+    assert row["history_coverage"][atalanta_side]["days_since_last_historical_match"] > 360
     preview = shadow_preview([quote], [row], as_of_utc=ASOF)
     assert preview["scored"] == 1
     assert preview["blocked"]["ALL_FEATURES_MEDIAN_IMPUTED"] == 0
