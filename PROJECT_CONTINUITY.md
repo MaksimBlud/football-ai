@@ -1,6 +1,15 @@
 # Football AI — Project Continuity
 
 
+## 2026-10-14 — V2-only automatic forward capture reacts to manual bookmaker updates, verified on main
+
+- [PR #661](https://github.com/MaksimBlud/football-ai/pull/661) MERGED after **8/8 exact-head CI successful**, resulting main `9e0d01528ab076afe11bfc2ebb48501f54a5ca6a`. `.github/workflows/serie-a-v2-forward-preview.yml` now subscribes via GitHub `workflow_run` **only** to completion of the *existing manual* `Serie A Odds Snapshots` job. Its own job only runs when upstream `conclusion=success`, `head_branch=main`, and original upstream event is exactly `workflow_dispatch`. This does not schedule/dispatch the paid collector; source budget guard and 100-credit hard reserve untouched. The free V2 workflow still has only actions:read/contents:read and no paid key, and retains independent daily/manual/push triggers.
+- Postmerge [run 38578317477](https://github.com/MaksimBlud/football-ai/actions/runs/38578317477) has actual **SUCCESS** from push on exact merged main; **44 regression tests PASS**. It inspected **20 stored future Serie A quotes**, produced **0 retroactive original V2 previews** because all 20 book prices predate the first authentic source archive. `blocked_no_prior_source=20`, `paid_provider_calls=0`, `supabase_writes=0`, `eligible_for_frozen_prospective_cohort=false`, `no_bet=true`. Read-only proof artifact ID **11900748314**, ZIP SHA256 `567bea3b712fc74dcec953da21b33eff5722c3f6f35a00921a318863a8df665d`. The workflow_run **event linkage itself** has not yet been exercised by a *new successful manual quote job*, so do not claim that specific event was runtime proven.
+- The **next scientifically relevant evidence** must be a genuine new recorded quote after a verified old-season archive and before kickoff; the existing 20 Oct-13 quotes cannot be retrospectively enrolled. Do not spend additional paid The Odds API credits without fresh explicit user consent. Even a fresh quote is V2 research-only; current 2026/27 form and independent matched incumbent unavailable, failed frozen stability gate remains. No 2026/27 protected outcomes before predeclared 30-completed-primary-event gate, no retuning/fake scorecard, no production activation.
+- Existing hourly ChatGPT Research Brain scheduled task ID `6ac31ef916488191b118045c75c2ed0f` was explicitly re-scoped 2026-10-14T14:10:48Z to work **exclusively on original V2 recovery/testing**, same hourly schedule and no changes to other agent tasks. The task must not auto-merge PRs (HUMAN-MERGE), start paid provider calls, or claim work continued between its scheduled runs. The user's interactive development merges #660/#661 are separately auditable and now complete.
+
+
+
 ## 2026-10-14 — Original V2 forward archive-to-quote workflow LIVE success; next automatic quote-trigger wiring
 
 - [PR #660](https://github.com/MaksimBlud/football-ai/pull/660) **merged** into main `670022823a46439f65d10d01e7c90bfe8afda0f5`, after **8/8 exact-head GitHub CI SUCCESS** and zero old-model/production model changes.
