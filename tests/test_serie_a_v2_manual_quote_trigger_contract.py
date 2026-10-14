@@ -46,6 +46,8 @@ def test_free_original_v2_still_preserves_archive_proof_and_no_bet():
     free = FREE.read_text(encoding="utf-8")
     runner = Path("serie_a_v2_forward_capture.py").read_text(encoding="utf-8")
     assert "tests/test_serie_a_v2_forward_capture.py" in free
+    assert "serie_a_v2_asof_feature_manifest.py" in free
+    assert "tests/test_serie_a_v2_asof_feature_manifest.py" in free
     assert "serie_a_v2_forward_capture.py" in free
     assert "--sources-output-dir" in free
     assert "actions/upload-artifact@v4" in free
