@@ -1,0 +1,70 @@
+name: Serie A V2 Original Forward-Only Preview
+
+on:
+  workflow_dispatch:
+  # Free read-only pipeline AFTER the existing 06:13 UTC source archive.
+  schedule:
+    - cron: "8 8 * * *"
+  push:
+    branches: [main]
+    paths:
+      - "serie_a_v2_forward_capture.py"
+      - "serie_a_v2_prequote_source_archive_gate.py"
+      - "serie_a_v2_live_diagnostic_report.py"
+      - "tests/test_serie_a_v2_forward_capture.py"
+      - ".github/workflows/serie-a-v2-forward-preview.yml"
+
+concurrency:
+  group: serie-a-v2-original-forward-preview
+  cancel-in-progress: false
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  original-v2-forward-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      GITHUB_TOKEN: ${{ github.token }}
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install V2-only read-only dependencies
+        run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
+      - name: Test original V2, old-season embargo, and source-before-quote rules
+        run: |
+          python -m py_compile serie_a_v2_forward_capture.py
+          python -m pytest -q \
+            tests/test_serie_a_v2_forward_capture.py \
+            tests/test_serie_a_v2_prequote_source_archive_gate.py \
+            tests/test_serie_a_v2_live_diagnostic_report.py \
+            tests/test_serie_a_v2_frozen_shadow_preview.py
+      - name: Generate actual original frozen V2 source-verified read-only preview
+        run: |
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_KEY"
+          test -n "$GITHUB_TOKEN"
+          python serie_a_v2_forward_capture.py \
+            --output artifacts/serie_a_v2_forward_source_checked.json \
+            --sources-output-dir artifacts/serie_a_v2_forward_original_sources
+      - name: Save immutable original V2 predictions and exact older source bytes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: serie-a-v2-original-forward-source-checked
+          path: |
+            artifacts/serie_a_v2_forward_source_checked.json
+            artifacts/serie_a_v2_forward_original_sources/
+          if-no-files-found: warn
+          retention-days: 90
