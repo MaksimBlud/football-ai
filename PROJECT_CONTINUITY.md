@@ -1,6 +1,16 @@
 # Football AI — Project Continuity
 
 
+## 2026-10-14 — User scoped model recovery to original frozen Serie A V2 ONLY
+
+**User directive:** do not revive, troubleshoot, optimize, retrain, or otherwise investigate the obsolete XGBoost 1X2 model. The sole model recovery/test priority here is the original `MARKET_ANCHOR_1X2_V2`, whose weights, exact 19-feature contract, candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, `active_lambda=0`, `shadow_residual_lambda=1`, failed stability gate and `NO_BET` remain frozen. Market-only baseline is still an appropriate **external comparator**, not an alternative legacy AI model. Do not claim new V2 outperforms market until legitimate prospective evidence exists. The already-open V2-only [PR #657](https://github.com/MaksimBlud/football-ai/pull/657) passed all 8 checks on `c530cf5e4907093c56b4521f81048d149dfebd84` and awaits owner HUMAN-MERGE; do not silently declare it merged.
+
+**New separate V2-only research fix pending exact-head CI:** a calculation-time protected-season check added directly to `serie_a_v2_live_diagnostic_report.make_report()`: previously only upstream downloader excluded `2627/I1.csv`, while arbitrary in-memory 2026/27 rows could bypass it. Enforce pre-2026-07-01 date cutoff and exact ten canonical source-audit entries, valid SHA/URL/name/timestamp metadata **before any V2 inference**. Positive test fixtures now use only pre-freeze historical results; adversarial regression cases reject directly injected protected results, false season manifests, wrong URLs, invalid hashes, future source timestamps. Full technical note: `research/SERIE_A_V2_INFERENCE_OUTCOME_EMBARGO_20261014.md`. No incumbent XGBoost analysis, .pkl modification, retraining, paid API calls, research threshold relaxation, Supabase writes, or protected outcomes read.
+
+**Next V2-only step after merge:** verify the full old-season archive SHA and the source-before-quote gate for **new** quotes (not the 20 already captured) and independently capture same-information-time frozen V2 probabilities as diagnostic evidence. Continue to honor no-peek 30-result outcomes gate and missing 2026/27-form limitation. Do not retrofit the old 20 shadow outputs as prospective forecasts.
+
+
+
 ## 2026-10-13 — Original Serie A V2 real-quote free diagnostic, outcome embargo tightened and rerun
 
 - **PR #654 MERGED** to main `2e0538f5652d0d1dc804be7925b680305ab3da12`, after **7/7 full CI successful**: new `serie_a_v2_live_diagnostic_report.py` + tests + free, daily GitHub Actions `.github/workflows/serie-a-v2-free-real-quote-diagnostic.yml`. Reads already-persisted Serie A odds, downloads configured public Football-Data CSV, captures raw source bytes with sha256 + observed time, computes actual original SHA-pinned 19-feature frozen V2 (inactive residual) diagnostic, never calls paid Odds API, never mutates Supabase/production.
