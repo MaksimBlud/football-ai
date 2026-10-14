@@ -32,3 +32,6 @@ It requires identical feature names/order and numerical equality for every one o
 
 The test is structural evidence only. It does not make the date-only source fresh, validate the six stale-form fixtures, admit the existing October quotes, or establish Brier/LogLoss superiority over market.
 
+The online manifest additionally pins the original feature-builder Git blob
+`401b3a0893371bfa4a488ec92a4a54af2678c8f7` at runtime and fails closed on source drift. This prevents a misleading case where both compared current code paths change together while the frozen candidate weights remain unchanged.
+
