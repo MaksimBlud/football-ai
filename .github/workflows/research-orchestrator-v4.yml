@@ -71,6 +71,19 @@ jobs:
           gh issue list --repo "$GITHUB_REPOSITORY" --state open --label research-v4-waiting --limit 20 --json number --jq '.[].number' > /tmp/issues
           while read -r issue; do
             [ -n "$issue" ] || continue
+            WAIT_PATH="research/agent_runs/issue_${issue}/QUOTA_WAIT.json"
+            WAIT_BRANCH="agent/v4-issue-${issue}"
+            WAIT_JSON=$(gh api -X GET -H "Accept: application/vnd.github.raw+json" \
+              "repos/$GITHUB_REPOSITORY/contents/$WAIT_PATH" -f ref="$WAIT_BRANCH" 2>/dev/null || true)
+            NOT_BEFORE=$(printf '%s' "$WAIT_JSON" | jq -r '.not_before_epoch // 0' 2>/dev/null || echo 0)
+            case "$NOT_BEFORE" in
+              ''|*[!0-9]*) NOT_BEFORE=0 ;;
+            esac
+            NOW=$(date -u +%s)
+            if [ "$NOT_BEFORE" -gt "$NOW" ]; then
+              echo "skip issue #$issue until epoch $NOT_BEFORE"
+              continue
+            fi
             gh workflow run research-orchestrator-v4.yml --repo "$GITHUB_REPOSITORY" -f issue_number="$issue" -f source=schedule
           done < /tmp/issues
 
@@ -661,10 +674,12 @@ jobs:
         if: always() && steps.branch.outputs.maxed != 'true' && (steps.model.outputs.success == 'false' || (steps.model.outputs.success == 'true' && steps.changed.outputs.has_changes == 'false'))
         run: |
           USAGE="research/agent_runs/issue_${ISSUE_NUMBER}/USAGE.json"
-          if [ -f "$USAGE" ]; then
+          QUOTA_WAIT="research/agent_runs/issue_${ISSUE_NUMBER}/QUOTA_WAIT.json"
+          if [ -f "$USAGE" ] || [ -f "$QUOTA_WAIT" ]; then
             git config user.name 'football-ai-research-bot'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add "$USAGE"
+            [ -f "$USAGE" ] && git add "$USAGE"
+            [ -f "$QUOTA_WAIT" ] && git add "$QUOTA_WAIT"
             if ! git diff --cached --quiet; then
               git commit -m "Research V4 usage #${ISSUE_NUMBER} run ${GITHUB_RUN_ID}"
               git push origin "${{ steps.branch.outputs.branch }}"
