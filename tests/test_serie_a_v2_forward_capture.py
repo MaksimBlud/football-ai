@@ -147,6 +147,7 @@ def test_future_quote_clock_rejected_without_external_requests():
         prepare_forward_capture(
             [quote("2026-10-15T06:00:00Z")], metadata, as_of_utc=NOW,
             load_archive=lambda _: raw,
+            verify_parent_run=fake_verified_parent_run,
         )
 
 
@@ -176,7 +177,7 @@ def test_github_source_catalog_requires_main_sha_and_does_not_trust_missing_dige
     def invalid(url,headers,timeout):
         return Response({"artifacts": [
             {"id": 125, "name": ARTIFACT_NAME,"expired":False,
-             "workflow_run":{"head_branch":"main"},
+             "workflow_run":{"head_branch":"main", "id":456,"head_sha":"a"*40},
              "digest":None, "created_at":"2026-10-13T15:00:00Z"},
         ]})
     with pytest.raises(ValueError,match="missing GitHub source archive SHA256 digest"):
