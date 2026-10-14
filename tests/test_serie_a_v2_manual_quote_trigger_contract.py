@@ -1,0 +1,57 @@
+"""Prevent event wiring from accidentally turning V2 into paid automated odds calls.
+
+These are static safety regressions complementing the existing paid workflow
+budget contract. The V2 trigger observes a successful *already manual* run;
+it MUST NOT schedule or dispatch a new paid odds workflow.
+"""
+from pathlib import Path
+
+PAID = Path(".github/workflows/serie-a-odds-snapshots.yml")
+FREE = Path(".github/workflows/serie-a-v2-forward-preview.yml")
+
+
+def test_original_paid_serie_a_collector_remains_dispatch_only():
+    paid = PAID.read_text(encoding="utf-8")
+    header = paid.split("concurrency:", 1)[0]
+    assert "name: Serie A Odds Snapshots" in header
+    assert "workflow_dispatch:" in header
+    assert "schedule:" not in header
+    assert "workflow_run:" not in header
+    assert "push:" not in header
+    assert "repository_dispatch:" not in header
+    assert "odds_api_budget_guard.py --max-cost 1" in paid
+    assert "THE_ODDS_API_KEY:" in paid
+
+
+def test_free_original_v2_observes_manual_paid_result_without_starting_provider():
+    free = FREE.read_text(encoding="utf-8")
+    assert 'name: Serie A V2 Original Forward-Only Preview' in free
+    assert 'workflow_run:' in free
+    assert '"Serie A Odds Snapshots"' in free
+    assert 'completed' in free
+    assert "github.event.workflow_run.conclusion == 'success'" in free
+    assert "github.event.workflow_run.head_branch == 'main'" in free
+    assert "github.event.workflow_run.event == 'workflow_dispatch'" in free
+    assert "github.event_name != 'workflow_run'" in free
+    assert 'schedule:' in free
+    assert 'actions: read' in free
+    assert 'contents: read' in free
+    assert 'THE_ODDS_API_KEY' not in free
+    assert 'scheduled_serie_a_odds_snapshot.py' not in free
+    assert 'odds_api_budget_guard.py' not in free
+    assert 'requests.post' not in free
+
+
+def test_free_original_v2_still_preserves_archive_proof_and_no_bet():
+    free = FREE.read_text(encoding="utf-8")
+    runner = Path("serie_a_v2_forward_capture.py").read_text(encoding="utf-8")
+    assert "tests/test_serie_a_v2_forward_capture.py" in free
+    assert "serie_a_v2_forward_capture.py" in free
+    assert "--sources-output-dir" in free
+    assert "actions/upload-artifact@v4" in free
+    assert "verify_archive(" in runner
+    assert "github_artifact_sha256=" in runner
+    assert '"eligible_for_frozen_prospective_cohort": False' in runner
+    assert '"no_bet": True' in runner
+    assert '"paid_provider_calls": 0' in runner
+    assert '"supabase_writes": 0' in runner
