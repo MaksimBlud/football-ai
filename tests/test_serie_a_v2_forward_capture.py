@@ -7,11 +7,14 @@ import zipfile
 
 import pytest
 
+from serie_a_v2_frozen_shadow_preview import parse_utc
+
 from serie_a_v2_live_diagnostic_report import _source_codes, PUBLIC_BASE
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
 from serie_a_v2_forward_capture import (
     ARTIFACT_NAME, ARCHIVE_REPORT, SOURCE_DIR,
-    discover_archives, prepare_forward_capture,
+    discover_archives, prepare_forward_capture, verify_source_run,
+    SOURCE_WORKFLOW_PATH,
 )
 
 NOW = datetime(2026, 10, 14, 7, 0, tzinfo=timezone.utc)
@@ -61,10 +64,21 @@ def make_source_archive():
     raw = bio.getvalue()
     metadata = [{
         "artifact_id": 123,
+        "run_id": 456,
+        "head_sha": "a" * 40,
         "created_at": datetime(2026, 10, 13, 15, 0, tzinfo=timezone.utc),
         "sha256": hashlib.sha256(raw).hexdigest(),
     }]
     return raw, metadata
+
+
+def fake_verified_parent_run(archive, quote_time):
+    assert archive["run_id"] == 456
+    assert archive["head_sha"] == "a" * 40
+    assert quote_time.tzinfo is not None
+    return {"run_completed_at_utc": "2026-10-13T15:01:00Z",
+            "workflow_path": SOURCE_WORKFLOW_PATH, "run_id": 456}
+
 
 
 def test_forward_v2_scores_only_after_real_prior_archive_and_never_promotes():
@@ -73,6 +87,7 @@ def test_forward_v2_scores_only_after_real_prior_archive_and_never_promotes():
     report = prepare_forward_capture(
         [quote()], metadata, as_of_utc=NOW,
         load_archive=lambda artifact_id: calls.append(artifact_id) or raw,
+        verify_parent_run=fake_verified_parent_run,
     )
     assert calls == [123]
     assert report["quotes_seen"] == report["future_quotes_checked"] == 1
@@ -99,6 +114,7 @@ def test_original_october_13_quote_is_not_backfilled_from_later_archive():
     report = prepare_forward_capture(
         [quote("2026-10-13T14:48:53Z")], metadata,
         as_of_utc=NOW, load_archive=cannot_download,
+        verify_parent_run=fake_verified_parent_run,
     )
     assert report["v2_diagnostic_previews_captured"] == 0
     assert report["blocked_no_prior_source"] == 1
@@ -111,6 +127,7 @@ def test_wrong_archive_bytes_fail_sha_gate():
         prepare_forward_capture(
             [quote()], metadata, as_of_utc=NOW,
             load_archive=lambda _: raw+b"tampered",
+            verify_parent_run=fake_verified_parent_run,
         )
 
 
@@ -120,6 +137,7 @@ def test_source_capture_refuses_protected_result_fields_before_any_download():
         prepare_forward_capture(
             [{**quote(), "result": "H"}], metadata, as_of_utc=NOW,
             load_archive=lambda _: raw,
+            verify_parent_run=fake_verified_parent_run,
         )
 
 
@@ -143,11 +161,11 @@ def test_github_source_catalog_requires_main_sha_and_does_not_trust_missing_dige
         calls.append(url)
         return Response({"artifacts": [
             {"id": 123, "name": ARTIFACT_NAME,"expired":False,
-             "workflow_run":{"head_branch":"main"},
+             "workflow_run":{"head_branch":"main", "id":456,"head_sha":"a"*40},
              "digest":"sha256:"+"a"*64,
              "created_at":"2026-10-13T15:00:00Z"},
             {"id": 124,"name":ARTIFACT_NAME,"expired":False,
-             "workflow_run":{"head_branch":"research-tampered"},
+             "workflow_run":{"head_branch":"research-tampered", "id":457,"head_sha":"b"*40},
              "digest":"sha256:"+"b"*64,
              "created_at":"2026-10-13T14:00:00Z"},
         ]})
@@ -163,3 +181,77 @@ def test_github_source_catalog_requires_main_sha_and_does_not_trust_missing_dige
         ]})
     with pytest.raises(ValueError,match="missing GitHub source archive SHA256 digest"):
         discover_archives(token="test-token",get=invalid)
+
+
+def test_successful_exact_source_workflow_and_prequote_completion_required():
+    _, artifacts = make_source_archive()
+    meta = artifacts[0]
+    class Response:
+        def __init__(self, data): self.data = data
+        def raise_for_status(self): pass
+        def json(self): return self.data
+    valid = {
+        "id": 456, "path": SOURCE_WORKFLOW_PATH,
+        "head_branch": "main", "head_sha": "a"*40,
+        "status": "completed", "conclusion": "success",
+        "event": "push",
+        "created_at": "2026-10-13T14:40:00Z",
+        "updated_at": "2026-10-13T15:01:00Z",
+    }
+    hits = []
+    def get(url, headers, timeout):
+        hits.append(url)
+        return Response(valid)
+    result = verify_source_run(meta, quote_time=parse_utc("2026-10-14T06:00:00Z"),
+                               token="test-token", get=get)
+    assert hits == ["https://api.github.com/repos/MaksimBlud/football-ai/actions/runs/456"]
+    assert result["workflow_path"] == SOURCE_WORKFLOW_PATH
+    assert result["run_completed_at_utc"] == "2026-10-13T15:01:00+00:00"
+    for altered, expected in [
+        ({"path":".github/workflows/other.yml"}, "verified original V2 collector"),
+        ({"head_sha":"b"*40}, "verified original V2 collector"),
+        ({"conclusion":"failure"}, "verified original V2 collector"),
+        ({"status":"in_progress"}, "verified original V2 collector"),
+        ({"event":"workflow_run"}, "verified original V2 collector"),
+        ({"updated_at":"2026-10-14T06:01:00Z"}, "not successfully finished before quote"),
+    ]:
+        def bad_get(url,headers,timeout):
+            return Response({**valid,**altered})
+        with pytest.raises(ValueError, match=expected):
+            verify_source_run(meta, quote_time=parse_utc("2026-10-14T06:00:00Z"),
+                              token="test-token", get=bad_get)
+
+
+def test_forward_v2_refuses_unknown_or_late_parent_workflow_before_zip_download():
+    raw, metadata = make_source_archive()
+    download = []
+    with pytest.raises(ValueError, match="verified source workflow provenance"):
+        prepare_forward_capture(
+            [quote()], metadata, as_of_utc=NOW,
+            load_archive=lambda _: download.append(True) or raw,
+            verify_parent_run=lambda a, qt: None,
+        )
+    assert download == []
+    with pytest.raises(ValueError, match="source workflow finished after another quote"):
+        prepare_forward_capture(
+            [quote()], metadata, as_of_utc=NOW,
+            load_archive=lambda _: download.append(True) or raw,
+            verify_parent_run=lambda a, qt:
+                {"run_completed_at_utc":"2026-10-14T06:01:00Z"},
+        )
+    assert download == []
+
+
+def test_catalog_rejects_missing_parent_run_identity_even_with_valid_digest():
+    class Response:
+        def raise_for_status(self): pass
+        def json(self):
+            return {"artifacts":[
+                {"id": 234,"name":ARTIFACT_NAME,"expired":False,
+                 "workflow_run":{"head_branch":"main"},
+                 "digest":"sha256:"+"a"*64,
+                 "created_at":"2026-10-13T15:00:00Z"},
+            ]}
+    with pytest.raises(ValueError,match="missing GitHub parent run identity"):
+        discover_archives(token="test-token",
+                          get=lambda url,headers,timeout:Response())
