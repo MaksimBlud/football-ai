@@ -21,6 +21,7 @@ from serie_a_v2_frozen_shadow_preview import load_verified_original, parse_utc
 
 STATS = ("HC", "AC", "HY", "AY", "HR", "AR")
 REQUIRED = frozenset(("Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR", *STATS))
+FROZEN_FEATURE_BUILDER_GIT_BLOB_SHA = "401b3a0893371bfa4a488ec92a4a54af2678c8f7"
 
 # Only the restored original Serie A V2 feature source. Bookmaker fixture
 # labels are not training team IDs: all 10 verified historical I1 seasons call
@@ -28,6 +29,22 @@ REQUIRED = frozenset(("Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR", *ST
 # "Atalanta BC". Keep this adapter local to V2; other league/product models
 # and the frozen candidate's feature order/weights remain untouched.
 V2_HISTORICAL_TEAM_ALIASES = {"Atalanta BC": "Atalanta"}
+
+
+def _git_blob_sha1(path: Path) -> str:
+    payload = path.read_bytes()
+    return hashlib.sha1(f"blob {len(payload)}\\0".encode("ascii") + payload).hexdigest()
+
+
+def _verify_original_feature_builder(path: Path | None = None) -> str:
+    source = path or Path(__file__).resolve().parent / "historical_football_signal_lab.py"
+    actual = _git_blob_sha1(source)
+    if actual != FROZEN_FEATURE_BUILDER_GIT_BLOB_SHA:
+        raise ValueError(
+            "original V2 feature builder source drift: "
+            f"{actual} != {FROZEN_FEATURE_BUILDER_GIT_BLOB_SHA}"
+        )
+    return actual
 
 
 def _canonical(team: str) -> str:
@@ -82,6 +99,7 @@ def _stats_asof(frame: pd.DataFrame, *, before_day: datetime) -> dict[str, deque
 
 
 def build_manifest(history: pd.DataFrame, quotes: list[dict]) -> dict:
+    _verify_original_feature_builder()
     original = load_verified_original()
     names = list(original["features"])
     if names != list(FEATURE_SETS["ALL_FOOTBALL"]):
