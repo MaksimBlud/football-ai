@@ -1,0 +1,78 @@
+name: MARKET_ANCHOR_OU25_V1
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'market_anchor_ou25_v1.py'
+      - 'tests/test_market_anchor_ou25_v1.py'
+      - 'research/MARKET_ANCHOR_OU25_V1.md'
+      - '.github/workflows/market-anchor-ou25-v1.yml'
+      - 'historical_football_signal_lab.py'
+      - 'historical_football_signal_runner.py'
+  push:
+    branches: [main]
+    paths:
+      - 'market_anchor_ou25_v1.py'
+      - 'tests/test_market_anchor_ou25_v1.py'
+      - 'research/MARKET_ANCHOR_OU25_V1.md'
+      - '.github/workflows/market-anchor-ou25-v1.yml'
+      - 'historical_football_signal_lab.py'
+      - 'historical_football_signal_runner.py'
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install pandas numpy requests scipy 'scikit-learn==1.7.2' pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Contract tests
+        run: pytest -q tests/test_market_anchor_ou25_v1.py
+      - name: Run fixed historical O/U 2.5 temporal OOT
+        run: python market_anchor_ou25_v1.py
+      - name: Verify fail-closed active output and source coverage
+        run: |
+          python - <<'PY'
+          import json
+          report=json.load(open('artifacts/market_anchor_ou25_v1/report.json'))
+          assert report['market'] == 'OVER_UNDER_2_5'
+          assert report['market_price_family'] == 'STANDARD_NON_CLOSING'
+          assert report['roi_threshold_search_performed'] is False
+          assert report['active_delta_brier'] <= 1e-15
+          assert report['active_delta_log_loss'] <= 1e-15
+          assert len(report['source_coverage']) == 30
+          assert all(row['coverage'] >= report['min_market_coverage'] for row in report['source_coverage'])
+          if not report['residual_accepted']:
+              assert report['active_mode'] == 'MARKET_FALLBACK'
+              assert abs(report['active_delta_brier']) <= 1e-15
+              assert abs(report['active_delta_log_loss']) <= 1e-15
+          PY
+      - name: Verify production hashes unchanged
+        run: |
+          sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true
+          diff -u /tmp/pkl-before /tmp/pkl-after
+      - name: Publish O/U OOT report to PR
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo '### MARKET_ANCHOR_OU25_V1 OOT report'
+            echo '```json'
+            cat artifacts/market_anchor_ou25_v1/report.json
+            echo '```'
+          } > /tmp/market-anchor-ou25-report.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/market-anchor-ou25-report.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: market-anchor-ou25-v1
+          path: artifacts/market_anchor_ou25_v1/report.json
+          retention-days: 30
