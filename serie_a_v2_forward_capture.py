@@ -29,6 +29,7 @@ from serie_a_v2_prequote_source_archive_gate import (
 
 REPOSITORY = "MaksimBlud/football-ai"
 ARTIFACT_NAME = "serie-a-v2-free-real-quote-diagnostic"
+SOURCE_WORKFLOW_PATH = ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
 GITHUB_API = f"https://api.github.com/repos/{REPOSITORY}"
 SCHEMA_VERSION = "SERIE_A_ORIGINAL_V2_FORWARD_SOURCE_BEFORE_QUOTE_V1"
 
@@ -68,6 +69,12 @@ def discover_archives(*, token: str, get=requests.get) -> list[dict]:
             flow = item.get("workflow_run")
             if not isinstance(flow, dict) or flow.get("head_branch") != "main":
                 continue
+            run_id = flow.get("id")
+            head_sha = flow.get("head_sha")
+            if (type(run_id) is not int or run_id <= 0
+                    or not isinstance(head_sha, str)
+                    or not re.fullmatch(r"[0-9a-f]{40}", head_sha)):
+                raise ValueError("source artifact missing GitHub parent run identity")
             artifact_id = item.get("id")
             if not isinstance(artifact_id, int) or artifact_id <= 0 or artifact_id in seen_ids:
                 raise ValueError("invalid or duplicate GitHub artifact id")
@@ -78,12 +85,46 @@ def discover_archives(*, token: str, get=requests.get) -> list[dict]:
             created = parse_utc(item["created_at"])
             out.append({
                 "artifact_id": artifact_id,
+                "run_id": run_id,
+                "head_sha": head_sha,
                 "created_at": created,
                 "sha256": digest.removeprefix("sha256:"),
             })
         if len(items) < 100:
             break
     return sorted(out, key=lambda x: (x["created_at"], x["artifact_id"]), reverse=True)
+
+
+def verify_source_run(archive: dict, *, quote_time: datetime,
+                      token: str, get=requests.get) -> dict:
+    """Authenticate artifact parent as our exact successful public CSV collector.
+
+    The artifact name+main branch alone are NOT evidence that its bytes came
+    from the verified source workflow. A successful parent run must also have
+    finished BEFORE the saved bookmaker quote, not only before inspection.
+    """
+    run_id = archive["run_id"]
+    if type(run_id) is not int or run_id <= 0:
+        raise ValueError("source archive is missing a parent GitHub run")
+    j = _github_json(f"{GITHUB_API}/actions/runs/{run_id}", token=token, get=get)
+    if (j.get("id") != run_id or j.get("path") != SOURCE_WORKFLOW_PATH
+            or j.get("head_branch") != "main"
+            or j.get("head_sha") != archive["head_sha"]
+            or j.get("status") != "completed" or j.get("conclusion") != "success"
+            or j.get("event") not in ("push", "schedule", "workflow_dispatch")):
+        raise ValueError("source artifact parent run is not the verified original V2 collector")
+    completed = parse_utc(j["updated_at"])
+    if not completed < quote_time:
+        raise ValueError("source workflow was not successfully finished before quote")
+    created = parse_utc(j["created_at"])
+    if not created <= archive["created_at"] or not archive["created_at"] <= completed:
+        raise ValueError("source workflow and archived artifact times conflict")
+    return {
+        "run_id": run_id,
+        "run_head_sha": archive["head_sha"],
+        "workflow_path": SOURCE_WORKFLOW_PATH,
+        "run_completed_at_utc": completed.isoformat(),
+    }
 
 
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
@@ -106,7 +147,7 @@ def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
 
 def prepare_forward_capture(
     quotes: list[dict], archive_metadata: list[dict], *,
-    as_of_utc: datetime, load_archive,
+    as_of_utc: datetime, load_archive, verify_parent_run,
     write_archives_to: Path | None = None,
 ) -> dict:
     """Only score quotes with a GitHub source ZIP strictly older than the quote.
@@ -122,6 +163,7 @@ def prepare_forward_capture(
     if write_archives_to is not None:
         write_archives_to.mkdir(parents=True, exist_ok=True)
     rows, cache = [], {}
+    verified_runs = {}
     used_archives = {}
     for q in quotes:
         _guard_outcome_free(q)
@@ -151,6 +193,12 @@ def prepare_forward_capture(
             continue
         chosen = max(candidates, key=lambda a: (a["created_at"], a["artifact_id"]))
         artifact_id = chosen["artifact_id"]
+        if artifact_id not in verified_runs:
+            verified_runs[artifact_id] = verify_parent_run(chosen, quote_time)
+        if not isinstance(verified_runs[artifact_id], dict) or not verified_runs[artifact_id].get("run_completed_at_utc"):
+            raise ValueError("missing verified source workflow provenance")
+        if not parse_utc(verified_runs[artifact_id]["run_completed_at_utc"]) < quote_time:
+            raise ValueError("source workflow finished after another quote")
         if artifact_id not in cache:
             raw = load_archive(artifact_id)
             if not isinstance(raw, bytes):
@@ -189,6 +237,7 @@ def prepare_forward_capture(
             record["v2_preview"] = scored["diagnostic_previews"][0]
             record["source_artifact_id"] = artifact_id
             record["source_artifact_sha256"] = chosen["sha256"]
+            record["verified_source_workflow_run"] = verified_runs[artifact_id]
             used_archives[artifact_id] = chosen["sha256"]
         rows.append(record)
     return {
@@ -202,6 +251,7 @@ def prepare_forward_capture(
         "blocked_no_prior_source": sum(
             r["status"] == "NO_EARLIER_SOURCE_ARCHIVE" for r in rows),
         "archived_sources_used": used_archives,
+        "source_workflow_run_attestation_required": True,
         "rows": rows,
         "uses_original_frozen_v2": True,
         "independent_incumbent_asof_verified": False,
@@ -230,6 +280,7 @@ def main() -> None:
     report = prepare_forward_capture(
         quotes, archives, as_of_utc=datetime.now(timezone.utc),
         load_archive=lambda artifact_id: get_archive(artifact_id, token=token),
+        verify_parent_run=lambda a, qt: verify_source_run(a, quote_time=qt, token=token),
         write_archives_to=args.sources_output_dir,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
