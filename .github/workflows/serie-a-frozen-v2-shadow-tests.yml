@@ -12,6 +12,7 @@ on:
       - "tests/test_serie_a_v2_prequote_source_archive_gate.py"
       - "serie_a_v2_forward_capture.py"
       - "tests/test_serie_a_v2_forward_capture.py"
+      - "tests/test_serie_a_v2_manual_quote_trigger_contract.py"
       - "tests/test_serie_a_v2_live_diagnostic_report.py"
       - "tests/test_serie_a_v2_asof_feature_manifest.py"
       - "tests/test_serie_a_v2_frozen_shadow_preview.py"
@@ -42,7 +43,7 @@ jobs:
       - name: Run actual restored V2 weights against strict synthetic fixture inputs
         run: |
           python -m py_compile serie_a_v2_frozen_shadow_preview.py serie_a_v2_asof_feature_manifest.py serie_a_v2_live_diagnostic_report.py serie_a_v2_prequote_source_archive_gate.py serie_a_v2_forward_capture.py
-          python -m pytest -q tests/test_serie_a_v2_frozen_shadow_preview.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_live_diagnostic_report.py tests/test_serie_a_v2_prequote_source_archive_gate.py tests/test_serie_a_v2_forward_capture.py
+          python -m pytest -q tests/test_serie_a_v2_frozen_shadow_preview.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_live_diagnostic_report.py tests/test_serie_a_v2_prequote_source_archive_gate.py tests/test_serie_a_v2_forward_capture.py tests/test_serie_a_v2_manual_quote_trigger_contract.py
       - name: Verify no production model hashes changed
         run: |
           test -f research/models/market_anchor_v2_serie_a_frozen_candidate.json
