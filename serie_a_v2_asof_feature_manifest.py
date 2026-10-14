@@ -136,6 +136,10 @@ def build_manifest(history: pd.DataFrame, quotes: list[dict]) -> dict:
                 "last_historical_match_date": (
                     team_rows.max().date().isoformat() if not team_rows.empty else None
                 ),
+                "days_since_last_historical_match": (
+                    (quote_time.date() - team_rows.max().date()).days
+                    if not team_rows.empty else None
+                ),
                 "source_contains_no_2026_27_results": bool(
                     not (usable["_match_date"] >= pd.Timestamp("2026-07-01")).any()
                 ),
