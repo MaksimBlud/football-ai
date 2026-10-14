@@ -33,7 +33,7 @@ V2_HISTORICAL_TEAM_ALIASES = {"Atalanta BC": "Atalanta"}
 
 def _git_blob_sha1(path: Path) -> str:
     payload = path.read_bytes()
-    return hashlib.sha1(f"blob {len(payload)}\\0".encode("ascii") + payload).hexdigest()
+    return hashlib.sha1(f"blob {len(payload)}\0".encode("ascii") + payload).hexdigest()
 
 
 def _verify_original_feature_builder(path: Path | None = None) -> str:
