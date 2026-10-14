@@ -145,7 +145,8 @@ def shadow_preview(
 
     previews = []
     blocked = {"EXPIRED_FIXTURE": 0, "FUTURE_QUOTE": 0, "STALE_MARKET": 0,
-               "NO_FEATURES": 0, "INVALID_FEATURE_CUTOFF": 0, "INVALID_MARKET": 0}
+               "NO_FEATURES": 0, "INVALID_FEATURE_CUTOFF": 0, "INVALID_MARKET": 0,
+               "ALL_FEATURES_MEDIAN_IMPUTED": 0}
     for ident, (snapshot, row) in sorted(latest.items(), key=lambda p: (p[0][3], p[0][0])):
         event_id, home, away, kickoff = ident
         if not now < kickoff:
@@ -179,6 +180,15 @@ def shadow_preview(
             if not math.isfinite(value):
                 raise ValueError("non-finite model feature")
             vector.append(value)
+        # The frozen imputer legitimately fills isolated missing values.
+        # If ALL 19 inputs are absent, the result would be solely based on
+        # learned medians, not actual team history: never call it a V2
+        # prediction. This is a semantic empty-input safeguard, not a
+        # post-hoc performance threshold or retraining.
+        missing_names = [name for name, v in zip(feature_keys, vector) if np.isnan(v)]
+        if len(missing_names) == len(feature_keys):
+            blocked["ALL_FEATURES_MEDIAN_IMPUTED"] += 1
+            continue
         try:
             market = _market(row)
         except (TypeError, ValueError, OverflowError):
@@ -197,6 +207,16 @@ def shadow_preview(
             "home_team": home, "away_team": away,
             "kickoff_utc": kickoff.isoformat(), "market_snapshot_time_utc": snapshot.isoformat(),
             "feature_history_cutoff_utc": cutoff.isoformat(),
+            "observed_frozen_feature_count": len(feature_keys) - len(missing_names),
+            "median_imputed_frozen_feature_count": len(missing_names),
+            "median_imputed_feature_names": missing_names,
+            "historical_team_coverage": (
+                feature.get("history_coverage") if isinstance(feature.get("history_coverage"), Mapping)
+                else None
+            ),
+            "source_data_quality": (
+                "PARTIAL_MEDIAN_IMPUTATION" if missing_names else "ALL_FROZEN_FEATURES_OBSERVED"
+            ),
             "market_1x2": list(market),
             "active_market_fallback_1x2": active.tolist(),
             "shadow_v2_residual_1x2": shadow.tolist(),

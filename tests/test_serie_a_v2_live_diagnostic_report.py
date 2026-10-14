@@ -141,3 +141,31 @@ def test_upstream_status_failure_is_not_filled_with_guessed_data():
         content=b""
     with pytest.raises(RuntimeError,match="unavailable"):
         fetch_public_history(get=lambda url,timeout: BadResponse())
+
+
+
+def test_real_quote_diagnostic_distinguishes_original_v2_partial_imputation():
+    report = make_report([quote()], history_fixture(), source_audit(), as_of_utc=NOW)
+    assert report["feature_rows_with_missing_values"] == 1
+    assert report["feature_rows_all_median_imputed"] == 0
+    assert report["feature_rows_with_all_19_observed"] == 0
+    coverage = report["per_fixture_feature_coverage"][0]
+    assert coverage["event_id"] == quote()["event_id"]
+    assert coverage["observed_frozen_feature_count"] > 0
+    assert coverage["observed_frozen_feature_count"] < 19
+    assert coverage["median_imputed_frozen_feature_count"] + coverage["observed_frozen_feature_count"] == 19
+    assert report["diagnostic_previews"][0]["median_imputed_frozen_feature_count"] == coverage["median_imputed_frozen_feature_count"]
+    assert report["diagnostic_previews"][0]["no_bet"] is True
+
+
+def test_real_quote_diagnostic_refuses_both_teams_without_prior_match_history():
+    unseen = {**quote(), "home_team": "Unseen Home", "away_team": "Unseen Away"}
+    report = make_report([unseen], history_fixture(), source_audit(), as_of_utc=NOW)
+    assert report["quoted_fixtures"] == 1
+    assert report["feature_rows_with_missing_values"] == 1
+    assert report["feature_rows_all_median_imputed"] == 1
+    assert report["diagnostic_scored"] == 0
+    assert report["diagnostic_blocked"]["ALL_FEATURES_MEDIAN_IMPUTED"] == 1
+    assert report["per_fixture_feature_coverage"][0]["observed_frozen_feature_count"] == 0
+    assert report["no_bet"] is True
+    assert report["supabase_writes"] == report["paid_provider_requests"] == 0

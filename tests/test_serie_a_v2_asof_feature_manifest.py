@@ -89,3 +89,28 @@ def test_latest_saved_quote_is_used_without_duplicate_feature_identity():
     earlier = {**QUOTE, "snapshot_time_utc": "2026-10-13T10:00:00Z"}
     report = build_manifest(history(), [QUOTE, earlier])
     assert len(report["feature_manifests"]) == 1
+
+
+
+def test_v2_history_coverage_explicitly_reports_frozen_median_imputation():
+    row = build_manifest(history(), [QUOTE])["feature_manifests"][0]
+    assert row["observed_frozen_feature_count"] == 14
+    assert row["median_imputed_frozen_feature_count"] == 5
+    assert row["history_coverage"]["home"]["historical_team"] == "Alpha"
+    assert row["history_coverage"]["home"]["prior_matches_in_frozen_30_match_window"] == 2
+    assert row["history_coverage"]["home"]["prior_matches_at_fixture_venue_in_window"] == 2
+    assert row["history_coverage"]["home"]["last_historical_match_date"] == "2026-10-12"
+    assert row["history_coverage"]["away"]["prior_matches_in_frozen_30_match_window"] == 1
+    assert row["history_coverage"]["away"]["prior_matches_at_fixture_venue_in_window"] == 0
+    assert row["history_coverage"]["away"]["last_historical_match_date"] == "2026-10-11"
+
+
+def test_never_invent_observed_history_for_unseen_clubs():
+    fixture = {**QUOTE, "event_id": "new-teams", "home_team": "Never Played Home",
+               "away_team": "Never Played Away"}
+    row = build_manifest(history(), [fixture])["feature_manifests"][0]
+    assert row["observed_frozen_feature_count"] == 0
+    assert row["median_imputed_frozen_feature_count"] == 19
+    assert all(value is None for value in row["features"].values())
+    assert row["history_coverage"]["home"]["prior_matches_in_frozen_30_match_window"] == 0
+    assert row["history_coverage"]["away"]["last_historical_match_date"] is None

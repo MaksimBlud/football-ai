@@ -108,6 +108,30 @@ def build_manifest(history: pd.DataFrame, quotes: list[dict]) -> dict:
         histories = _stats_asof(frame, before_day=quote_time)
         home = _canonical(row["home_team"])
         away = _canonical(row["away_team"])
+        # Exposure is descriptive, not a new trained feature/selection gate.
+        # The old-season source may be many months stale; preserve the exact
+        # number of historical matches and last *date-only* sample for audit.
+        usable = frame.loc[frame["_match_date"] < pd.Timestamp(quote_time.date())]
+        history_coverage = {}
+        for role, team, venue in (("home", home, True), ("away", away, False)):
+            team_rows = usable.loc[
+                (usable["_home"] == team) | (usable["_away"] == team),
+                "_match_date",
+            ]
+            prior_history = histories[team]
+            history_coverage[role] = {
+                "historical_team": team,
+                "prior_matches_in_frozen_30_match_window": len(prior_history),
+                "prior_matches_at_fixture_venue_in_window": sum(
+                    m.venue_home is venue for m in prior_history
+                ),
+                "last_historical_match_date": (
+                    team_rows.max().date().isoformat() if not team_rows.empty else None
+                ),
+                "source_contains_no_2026_27_results": bool(
+                    not (usable["_match_date"] >= pd.Timestamp("2026-07-01")).any()
+                ),
+            }
         sides = {}
         sides.update(_snapshot(histories[home], "home"))
         sides.update(_snapshot(histories[away], "away"))
@@ -123,6 +147,10 @@ def build_manifest(history: pd.DataFrame, quotes: list[dict]) -> dict:
             "commence_time_utc": parse_utc(row["commence_time_utc"]).isoformat(),
             "feature_history_cutoff_utc": cutoff.isoformat(),
             "features": values,
+            # Not used by the original 19-feature candidate; diagnostic only.
+            "history_coverage": history_coverage,
+            "observed_frozen_feature_count": sum(v is not None for v in values.values()),
+            "median_imputed_frozen_feature_count": sum(v is None for v in values.values()),
         })
     return {
         "schema_version": "SERIE_A_V2_DATE_ONLY_DIAGNOSTIC_FEATURES_V1",
