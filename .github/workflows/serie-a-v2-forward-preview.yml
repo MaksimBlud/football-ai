@@ -2,6 +2,13 @@ name: Serie A V2 Original Forward-Only Preview
 
 on:
   workflow_dispatch:
+  # A user-triggered, budget-guarded paid snapshot may automatically awaken
+  # ONLY this no-cost V2 reader. This does NOT schedule or trigger the paid job.
+  workflow_run:
+    workflows:
+      - "Serie A Odds Snapshots"
+    types:
+      - completed
   # Free read-only pipeline AFTER the existing 06:13 UTC source archive.
   schedule:
     - cron: "8 8 * * *"
@@ -24,6 +31,9 @@ permissions:
 
 jobs:
   original-v2-forward-preview:
+    # Ignore failed or non-main upstream runs and forbid triggering through
+    # unrelated paid-provider schedules or untrusted branches.
+    if: ${{ github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.event == 'workflow_dispatch') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
