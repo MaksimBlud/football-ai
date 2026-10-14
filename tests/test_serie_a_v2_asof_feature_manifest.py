@@ -114,3 +114,44 @@ def test_never_invent_observed_history_for_unseen_clubs():
     assert all(value is None for value in row["features"].values())
     assert row["history_coverage"]["home"]["prior_matches_in_frozen_30_match_window"] == 0
     assert row["history_coverage"]["away"]["last_historical_match_date"] is None
+
+def test_online_manifest_matches_original_frozen_feature_builder_on_same_history():
+    """Guard exact 19-feature calculation parity; no model values or outcomes are tuned."""
+    from historical_football_signal_lab import (
+        FEATURE_SETS,
+        add_difference_features,
+        build_point_in_time_features,
+    )
+
+    prior = history().iloc[:3].copy()
+    target = pd.DataFrame([{
+        "Date": "13/10/2026",
+        "HomeTeam": "Alpha",
+        "AwayTeam": "Beta",
+        "FTHG": 1,
+        "FTAG": 0,
+        "FTR": "H",
+        "HC": 5,
+        "AC": 3,
+        "HY": 2,
+        "AY": 1,
+        "HR": 0,
+        "AR": 0,
+    }])
+    original_rows = build_point_in_time_features(
+        pd.concat([prior, target], ignore_index=True),
+        "SERIE_A",
+        "SYNTHETIC_PARITY_ONLY",
+    )
+    original = add_difference_features(original_rows).iloc[-1]
+    manifest = build_manifest(prior, [QUOTE])["feature_manifests"][0]["features"]
+
+    assert list(manifest) == list(FEATURE_SETS["ALL_FOOTBALL"])
+    for feature in FEATURE_SETS["ALL_FOOTBALL"]:
+        expected = original[feature]
+        actual = manifest[feature]
+        if pd.isna(expected):
+            assert actual is None
+        else:
+            assert actual == pytest.approx(float(expected), abs=1e-12)
+
