@@ -19,6 +19,7 @@ on:
       - "serie_a_v2_prequote_source_archive_gate.py"
       - "serie_a_v2_live_diagnostic_report.py"
       - "tests/test_serie_a_v2_forward_capture.py"
+      - "tests/test_serie_a_v2_manual_quote_trigger_contract.py"
       - ".github/workflows/serie-a-v2-forward-preview.yml"
 
 concurrency:
@@ -57,6 +58,7 @@ jobs:
           python -m py_compile serie_a_v2_forward_capture.py
           python -m pytest -q \
             tests/test_serie_a_v2_forward_capture.py \
+            tests/test_serie_a_v2_manual_quote_trigger_contract.py \
             tests/test_serie_a_v2_prequote_source_archive_gate.py \
             tests/test_serie_a_v2_live_diagnostic_report.py \
             tests/test_serie_a_v2_frozen_shadow_preview.py
