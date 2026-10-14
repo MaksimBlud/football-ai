@@ -131,7 +131,18 @@ def make_report(quotes: list[dict], history: pd.DataFrame, source_audit: list[di
     quote_times = [parse_utc(q["snapshot_time_utc"]) for q in quotes]
     source_times = [parse_utc(entry["source_observed_at_utc"]) for entry in source_audit]
     manifest = build_manifest(history, quotes)
-    preview = shadow_preview(quotes, manifest["feature_manifests"], as_of_utc=as_of_utc)
+    original_inputs = manifest["feature_manifests"]
+    # Completeness is reported on exact original 19-feature vectors, not a
+    # tuned threshold, new predictor, or an additional eligibility gate.
+    missingness = [{
+        "event_id": item["event_id"],
+        "home_team": item["home_team"],
+        "away_team": item["away_team"],
+        "observed_frozen_feature_count": item["observed_frozen_feature_count"],
+        "median_imputed_frozen_feature_count": item["median_imputed_frozen_feature_count"],
+        "history_coverage": item["history_coverage"],
+    } for item in original_inputs]
+    preview = shadow_preview(quotes, original_inputs, as_of_utc=as_of_utc)
     late_source_quotes = sum(any(t > quote for t in source_times) for quote in quote_times)
     # Date-only cutoff from original historical builder is NOT proof that this
     # downloaded file existed when the quotation was captured.
@@ -161,6 +172,16 @@ def make_report(quotes: list[dict], history: pd.DataFrame, source_audit: list[di
         "history_rows": int(len(history)),
         "feature_count": manifest["feature_count"],
         "quoted_fixtures": len(quotes),
+        "feature_rows_with_missing_values": sum(
+            x["median_imputed_frozen_feature_count"] > 0 for x in missingness
+        ),
+        "feature_rows_all_median_imputed": sum(
+            x["observed_frozen_feature_count"] == 0 for x in missingness
+        ),
+        "feature_rows_with_all_19_observed": sum(
+            x["observed_frozen_feature_count"] == manifest["feature_count"] for x in missingness
+        ),
+        "per_fixture_feature_coverage": missingness,
         "diagnostic_scored": preview["scored"],
         "diagnostic_blocked": preview["blocked"],
         "diagnostic_previews": preview["previews"],
@@ -183,7 +204,9 @@ def main() -> None:
         "mode", "historical_source", "public_http_requests", "paid_provider_requests",
         "supabase_writes", "quoted_fixtures", "history_rows", "feature_count",
         "quotes_with_source_observed_after_quote", "diagnostic_scored",
-        "diagnostic_blocked", "eligible_for_frozen_prospective_cohort",
+        "diagnostic_blocked", "feature_rows_with_missing_values",
+        "feature_rows_all_median_imputed", "feature_rows_with_all_19_observed",
+        "eligible_for_frozen_prospective_cohort",
         "eligible_for_product_publication", "no_bet",
     )}
     print(json.dumps(summary, indent=2, sort_keys=True))
