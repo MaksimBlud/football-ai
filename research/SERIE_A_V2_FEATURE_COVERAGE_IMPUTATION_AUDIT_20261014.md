@@ -20,3 +20,15 @@ All public history remains **pre-2026/27 only**. Missing current-season form is 
 ## Expected checks
 
 The resulting original V2 forward-only source archive workflow continues to reject any fixture with no preceding source ZIP, regardless of feature coverage. The separate offline/date-only diagnostic can calculate research-only probabilities for matches with at least one nonmissing V2 feature, and provides explicit count of median-imputed inputs. Partial missingness is not proof of model quality, only transparency.
+
+## Original-builder parity regression
+
+A new deterministic regression constructs one synthetic pre-match state twice:
+
+1. through the exact original `historical_football_signal_lab.build_point_in_time_features` plus `add_difference_features` path used by the frozen V2 recipe;
+2. through the current read-only `serie_a_v2_asof_feature_manifest.build_manifest` path.
+
+It requires identical feature names/order and numerical equality for every one of the original 19 inputs (absolute tolerance `1e-12`), including identical missing-value semantics. This closes an implementation-equivalence gap without fitting coefficients, changing medians/weights, reading 2026/27 outcomes, or claiming current-form/prospective validity.
+
+The test is structural evidence only. It does not make the date-only source fresh, validate the six stale-form fixtures, admit the existing October quotes, or establish Brier/LogLoss superiority over market.
+
