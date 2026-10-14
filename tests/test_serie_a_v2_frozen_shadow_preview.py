@@ -177,3 +177,28 @@ def test_research_no_promotion_or_outcome_read_source():
     assert '"eligible_for_frozen_prospective_cohort": False' in src
     assert '"eligible_for_product_publication": False' in src
     assert '"market_fallback_is_ai_model": False' in src
+
+
+
+def test_entirely_imputed_inputs_are_not_treated_as_real_v2_forecasts():
+    candidate = v2_preview.load_verified_original()
+    missing = features(features={name: None for name in candidate["features"]})
+    report = v2_preview.shadow_preview([market()], [missing], as_of_utc=NOW)
+    assert report["scored"] == 0
+    assert report["blocked"]["ALL_FEATURES_MEDIAN_IMPUTED"] == 1
+    assert report["previews"] == []
+    assert report["no_bet"] is True
+
+
+def test_preserve_exact_frozen_predictions_with_explicit_imputation_diagnostics():
+    report = v2_preview.shadow_preview([market()], [features()], as_of_utc=NOW)
+    row = report["previews"][0]
+    original = v2_preview.load_verified_original()
+    assert row["observed_frozen_feature_count"] == 15
+    assert row["median_imputed_frozen_feature_count"] == 4
+    assert row["observed_frozen_feature_count"] + row["median_imputed_frozen_feature_count"] == len(original["features"])
+    assert row["source_data_quality"] == "PARTIAL_MEDIAN_IMPUTATION"
+    assert row["median_imputed_feature_names"] == [original["features"][i] for i in (0, 6, 12, 18)]
+    assert row["historical_team_coverage"] is None
+    assert row["market_1x2"] == pytest.approx(row["active_market_fallback_1x2"])
+    assert row["no_bet"] is True
