@@ -14,9 +14,9 @@ NOW = datetime(2026,10,13,15,1,tzinfo=timezone.utc)
 def history_fixture():
     rows = []
     for date, home, away, home_goals, away_goals, result in [
-        ("10/10/2026","Inter Milan","Genoa",2,0,"H"),
-        ("11/10/2026","Napoli","Lecce",1,1,"D"),
-        ("13/10/2026","Inter Milan","Lecce",4,0,"H"),
+        ("10/10/2025","Inter Milan","Genoa",2,0,"H"),
+        ("11/10/2025","Napoli","Lecce",1,1,"D"),
+        ("13/10/2025","Inter Milan","Lecce",4,0,"H"),
     ]:
         rows.append({
             "Date":date, "HomeTeam":home, "AwayTeam":away,
@@ -37,11 +37,14 @@ def quote():
 
 
 def source_audit(observed_at="2026-10-13T15:00:00Z"):
-    return [{"season_code":"2627",
-             "source_url":f"{PUBLIC_BASE}/2627/I1.csv",
-             "source_observed_at_utc":observed_at,
-             "csv_sha256":"f"*64,
-             "completed_source_rows":3}]
+    return [{
+        "season_code": code,
+        "source_url": f"{PUBLIC_BASE}/{code}/I1.csv",
+        "archived_source_name": f"serie_a_{code}.csv",
+        "source_observed_at_utc": observed_at,
+        "csv_sha256": "f" * 64,
+        "completed_source_rows": 3,
+    } for code in _source_codes()]
 
 
 def test_real_frozen_model_diagnostic_never_relabels_later_source_as_prospective():
@@ -62,12 +65,46 @@ def test_real_frozen_model_diagnostic_never_relabels_later_source_as_prospective
     assert row["model_candidate_sha256"]==report["frozen_candidate_sha256"]
 
 
-def test_same_day_future_outcome_changes_never_affect_diagnostic():
-    before=make_report([quote()],history_fixture(),source_audit(),as_of_utc=NOW)
-    modified=history_fixture()
-    modified.loc[2,"FTHG"]=8
-    after=make_report([quote()],modified,source_audit(),as_of_utc=NOW)
-    assert before["diagnostic_previews"]==after["diagnostic_previews"]
+def test_injected_2026_27_results_are_rejected_before_v2_prediction():
+    modified = history_fixture()
+    modified.loc[2, "Date"] = "13/10/2026"
+    with pytest.raises(ValueError, match="protected Serie A 2026/27 outcomes"):
+        make_report([quote()], modified, source_audit(), as_of_utc=NOW)
+
+
+def test_injected_protected_season_audit_rejected_without_source_use():
+    bad_audit = source_audit()
+    bad_audit[-1] = {**bad_audit[-1], "season_code": "2627",
+                     "source_url": f"{PUBLIC_BASE}/2627/I1.csv",
+                     "archived_source_name": "serie_a_2627.csv"}
+    with pytest.raises(ValueError, match="protected or duplicate season"):
+        make_report([quote()], history_fixture(), bad_audit, as_of_utc=NOW)
+
+
+def test_missing_or_forged_source_audit_fails_closed():
+    with pytest.raises(ValueError, match="exact pre-freeze seasons"):
+        make_report([quote()], history_fixture(), source_audit()[:-1], as_of_utc=NOW)
+    bad = source_audit()
+    bad[0]["csv_sha256"] = "bad"
+    with pytest.raises(ValueError, match="invalid SHA256"):
+        make_report([quote()], history_fixture(), bad, as_of_utc=NOW)
+    wrong_url = source_audit()
+    wrong_url[0]["source_url"] = "https://example.invalid/1617/I1.csv"
+    with pytest.raises(ValueError, match="unexpected URL"):
+        make_report([quote()], history_fixture(), wrong_url, as_of_utc=NOW)
+
+
+def test_future_source_observation_is_not_claimed_as_known():
+    with pytest.raises(ValueError, match="observation in the future"):
+        make_report([quote()], history_fixture(),
+                    source_audit("2026-10-14T15:00:00Z"), as_of_utc=NOW)
+
+
+def test_first_protected_2026_27_day_is_an_excluded_result():
+    modified = history_fixture()
+    modified.loc[0, "Date"] = "01/07/2026"
+    with pytest.raises(ValueError, match="protected Serie A 2026/27 outcomes"):
+        make_report([quote()], modified, source_audit(), as_of_utc=NOW)
 
 
 def test_missing_source_stats_fail_closed_and_do_not_impute_fake_history():
