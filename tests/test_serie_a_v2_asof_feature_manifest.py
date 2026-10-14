@@ -155,3 +155,15 @@ def test_online_manifest_matches_original_frozen_feature_builder_on_same_history
         else:
             assert actual == pytest.approx(float(expected), abs=1e-12)
 
+def test_original_feature_builder_source_is_runtime_pinned_and_drift_fails_closed(tmp_path):
+    from serie_a_v2_asof_feature_manifest import (
+        FROZEN_FEATURE_BUILDER_GIT_BLOB_SHA,
+        _verify_original_feature_builder,
+    )
+
+    assert _verify_original_feature_builder() == FROZEN_FEATURE_BUILDER_GIT_BLOB_SHA
+    drifted = tmp_path / "historical_football_signal_lab.py"
+    drifted.write_text("# changed feature definitions\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="feature builder source drift"):
+        _verify_original_feature_builder(drifted)
+
