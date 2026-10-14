@@ -22,12 +22,20 @@ from serie_a_v2_frozen_shadow_preview import load_verified_original, parse_utc
 STATS = ("HC", "AC", "HY", "AY", "HR", "AR")
 REQUIRED = frozenset(("Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR", *STATS))
 
+# Only the restored original Serie A V2 feature source. Bookmaker fixture
+# labels are not training team IDs: all 10 verified historical I1 seasons call
+# this club "Atalanta", whereas the saved 2026 bookmaker fixtures use
+# "Atalanta BC". Keep this adapter local to V2; other league/product models
+# and the frozen candidate's feature order/weights remain untouched.
+V2_HISTORICAL_TEAM_ALIASES = {"Atalanta BC": "Atalanta"}
+
 
 def _canonical(team: str) -> str:
     if not isinstance(team, str) or not team.strip():
         raise ValueError("empty team identity")
     value = team.strip()
-    return SERIE_A_RUNTIME_CONFIG.aliases.get(value, value)
+    known = SERIE_A_RUNTIME_CONFIG.aliases.get(value, value)
+    return V2_HISTORICAL_TEAM_ALIASES.get(known, known)
 
 
 def _validate_history(history: pd.DataFrame) -> pd.DataFrame:
@@ -127,6 +135,10 @@ def build_manifest(history: pd.DataFrame, quotes: list[dict]) -> dict:
                 ),
                 "last_historical_match_date": (
                     team_rows.max().date().isoformat() if not team_rows.empty else None
+                ),
+                "days_since_last_historical_match": (
+                    (quote_time.date() - team_rows.max().date()).days
+                    if not team_rows.empty else None
                 ),
                 "source_contains_no_2026_27_results": bool(
                     not (usable["_match_date"] >= pd.Timestamp("2026-07-01")).any()
