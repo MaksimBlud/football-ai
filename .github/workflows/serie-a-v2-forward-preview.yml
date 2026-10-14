@@ -19,6 +19,8 @@ on:
       - "serie_a_v2_prequote_source_archive_gate.py"
       - "serie_a_v2_live_diagnostic_report.py"
       - "tests/test_serie_a_v2_forward_capture.py"
+      - "serie_a_v2_attest_real_source.py"
+      - "tests/test_serie_a_v2_attest_real_source.py"
       - "tests/test_serie_a_v2_manual_quote_trigger_contract.py"
       - ".github/workflows/serie-a-v2-forward-preview.yml"
 
@@ -55,13 +57,18 @@ jobs:
         run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
       - name: Test original V2, old-season embargo, and source-before-quote rules
         run: |
-          python -m py_compile serie_a_v2_forward_capture.py
+          python -m py_compile serie_a_v2_forward_capture.py serie_a_v2_attest_real_source.py
           python -m pytest -q \
             tests/test_serie_a_v2_forward_capture.py \
+            tests/test_serie_a_v2_attest_real_source.py \
             tests/test_serie_a_v2_manual_quote_trigger_contract.py \
             tests/test_serie_a_v2_prequote_source_archive_gate.py \
             tests/test_serie_a_v2_live_diagnostic_report.py \
             tests/test_serie_a_v2_frozen_shadow_preview.py
+      - name: Attest original historical source ZIP from real GitHub Actions (no quotes read)
+        run: |
+          python serie_a_v2_attest_real_source.py \
+            --output artifacts/serie_a_v2_real_source_attestation.json
       - name: Generate actual original frozen V2 source-verified read-only preview
         run: |
           test -n "$SUPABASE_URL"
@@ -77,6 +84,7 @@ jobs:
           name: serie-a-v2-original-forward-source-checked
           path: |
             artifacts/serie_a_v2_forward_source_checked.json
+            artifacts/serie_a_v2_real_source_attestation.json
             artifacts/serie_a_v2_forward_original_sources/
           if-no-files-found: warn
           retention-days: 90
