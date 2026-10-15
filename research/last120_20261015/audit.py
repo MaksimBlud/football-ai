@@ -37,7 +37,7 @@ def find_day(day):
  return ret
 
 def minute(goal):
- s=str(goal.get('timeStr') or goal.get('time') or '').strip().replace("'",'')
+ s=str(goal.get('timeStr') or goal.get('time') or '').strip().replace("'",'').replace(' ','')
  m=re.match(r'^(\d+)(?:\+(\d+))?$',s)
  return int(m[1])+int(m[2] or 0) if m else None
 
