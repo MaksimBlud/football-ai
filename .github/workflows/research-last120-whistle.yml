@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/research-last120-whistle.yml
       - research/last120_20261015/audit.py
+      - research/last120_20261015/opta_probe.py
   workflow_dispatch:
 permissions:
   contents: read
@@ -19,6 +20,10 @@ jobs:
         run: python3 -m py_compile research/last120_20261015/audit.py
       - name: Fetch and classify last 120 seconds (read only)
         run: python3 -u research/last120_20261015/audit.py
+      - name: Probe public Opta event-second dataset
+        run: |
+          python3 -m pip install -q pyarrow==21.0.0
+          python3 -u research/last120_20261015/opta_probe.py
       - name: Upload full audit evidence
         if: always()
         uses: actions/upload-artifact@v4
