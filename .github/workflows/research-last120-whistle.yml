@@ -32,5 +32,8 @@ jobs:
           path: |
             research/last120_20261015/summary.json
             research/last120_20261015/matches.json
+            research/last120_20261015/opta_resolution.json
+            research/last120_20261015/combined_matches.json
+            research/last120_20261015/combined_summary.json
           if-no-files-found: warn
           retention-days: 7
