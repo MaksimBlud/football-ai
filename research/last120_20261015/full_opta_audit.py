@@ -87,6 +87,10 @@ def assess(m,fixture,events):
             a=sum(str(e['team_id'])==teams[1] for e in before)
             base['score_at_window_start']=[h,a]
             base['score_gap_at_window_start']=abs(h-a)
+    if not late and base.get('score_gap_at_window_start') is None:
+        h,a=int(fixture['home_score']),int(fixture['away_score'])
+        base['score_at_window_start']=[h,a]
+        base['score_gap_at_window_start']=abs(h-a)
     return base,'GOAL' if late else 'NO_GOAL','SAME_SOURCE_OPTA_GOAL_AND_FINAL_END'
 
 with tempfile.TemporaryDirectory() as td:
@@ -154,6 +158,18 @@ with tempfile.TemporaryDirectory() as td:
         subset=[m for m in final if m.get('score_gap_at_window_start') is not None and
             (str(m['score_gap_at_window_start'])==gap if gap!='3+' else m['score_gap_at_window_start']>=3)]
         report['by_score_gap'][gap]=dict(collections.Counter(x['result'] for x in subset))
-    (ROOT/'all_opta_matches.json').write_text(json.dumps(final,ensure_ascii=False,indent=2))
+    report['positive_matches']=[{'league':m['league'],'date':m['date'],'home':m['home'],
+        'away':m['away'],'score':m['score'],'seconds_to_whistle':m.get('opta_seconds_to_whistle',[]),
+        'goal_events':m.get('opta_late_goal_count',0)}
+        for m in sorted(final,key=lambda v:(v['league'],v['date'],v['home'])) if m['result']=='GOAL']
+    report['total_goals_last_120s']=sum(v.get('opta_late_goal_count',0) for v in final if v['result']=='GOAL')
+    minute_bins=collections.Counter()
+    for match in final:
+        if match['result']=='UNKNOWN':continue
+        for elapsed in match.get('opta_goal_event_seconds',[]):
+            if elapsed>=5400:
+                minute_bins[1+int((elapsed-5400)//60)]+=1
+    report['goal_counts_by_stoppage_minute']={f'90+{m}':minute_bins[m] for m in sorted(minute_bins)}
+        (ROOT/'all_opta_matches.json').write_text(json.dumps(final,ensure_ascii=False,indent=2))
     (ROOT/'all_opta_summary.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
     print('COMPLETE_OPTA_AUDIT='+json.dumps(report,ensure_ascii=False),flush=True)
