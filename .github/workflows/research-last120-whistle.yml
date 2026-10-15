@@ -8,6 +8,7 @@ on:
       - research/last120_20261015/audit.py
       - research/last120_20261015/opta_probe.py
       - research/last120_20261015/whistle_probe.py
+      - research/last120_20261015/full_opta_audit.py
   workflow_dispatch:
 permissions:
   contents: read
@@ -27,6 +28,8 @@ jobs:
           python3 -u research/last120_20261015/opta_probe.py
       - name: Check final whistle and goal seconds from same Opta provider
         run: python3 -u research/last120_20261015/whistle_probe.py
+      - name: Replay all matches with single-source Opta clocks
+        run: python3 -u research/last120_20261015/full_opta_audit.py
       - name: Upload full audit evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -40,5 +43,7 @@ jobs:
             research/last120_20261015/combined_summary.json
             research/last120_20261015/same_provider_whistle.json
             research/last120_20261015/final_matches.json
+            research/last120_20261015/all_opta_matches.json
+            research/last120_20261015/all_opta_summary.json
           if-no-files-found: warn
           retention-days: 7
