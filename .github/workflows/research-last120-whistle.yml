@@ -1,0 +1,30 @@
+name: Research Last 120 Seconds 2026-27
+on:
+  push:
+    branches:
+      - research/last120-whistle-20261015
+    paths:
+      - .github/workflows/research-last120-whistle.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate collector
+        run: python3 -m py_compile research/last120_20261015/audit.py
+      - name: Fetch and classify last 120 seconds (read only)
+        run: python3 -u research/last120_20261015/audit.py
+      - name: Upload full audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: last120-202627-evidence
+          path: |
+            research/last120_20261015/summary.json
+            research/last120_20261015/matches.json
+          if-no-files-found: warn
+          retention-days: 7
