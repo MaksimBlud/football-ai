@@ -5,6 +5,7 @@ on:
       - research/last120-whistle-20261015
     paths:
       - .github/workflows/research-last120-whistle.yml
+      - research/last120_20261015/audit.py
   workflow_dispatch:
 permissions:
   contents: read
