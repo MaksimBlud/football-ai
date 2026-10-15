@@ -65,6 +65,34 @@ def audit(item):
    if any((m-1)*60>=cutoff and (m-1)*60<endsec for m in mins):ans='GOAL';reason='PROVEN_BY_MINUTE_RANGE'
    elif all(m*60<=cutoff for m in mins):ans='NO_GOAL';reason='PROVEN_BY_MINUTE_RANGE'
    else:ans='UNKNOWN';reason='BOUNDARY_SECOND_UNKNOWN'
+  if ans=='UNKNOWN' and reason=='BOUNDARY_SECOND_UNKNOWN' and item['league']=='LA_LIGA':
+   try:
+    url='https://raw.githubusercontent.com/RShiri/XLALIGA/main/laliga_dashboard/matches_detail/'+item['id']+'.js'
+    with urllib.request.urlopen(url,timeout=14) as response:js=response.read().decode('utf-8')
+    detailed=json.loads(js[js.index('{'):js.rindex('}')+1])
+    if len(detailed.get('goals') or [])==n:
+     candidates=[m for m in mins if (m-1)*60<cutoff<m*60]
+     if len(candidates)==1:
+      shots=[v for v in detailed.get('shots',[]) if v.get('goal') and v.get('min')==candidates[0]-1 and isinstance(v.get('sec'),(int,float))]
+      if len(shots)==1:
+       exact=shots[0]['min']*60+shots[0]['sec']
+       if exact<endsec:
+        ans='GOAL' if exact>=cutoff else 'NO_GOAL'
+        reason='CROSS_VERIFIED_EXACT_LALIGA_SHOT_SECOND'
+        out['exact_goal_elapsed_seconds']=exact
+   except Exception as error:out['cross_source_error']=str(error)[:120]
+  if ans=='NO_GOAL':
+   out['score_difference_at_120s_start']=abs(int(teams[0]['score'])-int(teams[1]['score']))
+  elif ans=='GOAL':
+   known=[(i,m) for i,m in enumerate(mins) if (m-1)*60>=cutoff and (m-1)*60<endsec]
+   if not known and out.get('exact_goal_elapsed_seconds') is not None:
+    known=[(i,m) for i,m in enumerate(mins) if m-1==int(out['exact_goal_elapsed_seconds']//60)]
+   if known:
+    idx,_=min(known,key=lambda y:y[1])
+    if not any(((m-1)*60<cutoff<m*60) for m in mins[:idx]):
+     ev=goals[idx]
+     if ev.get('homeScore') is not None and ev.get('awayScore') is not None:
+      out['score_difference_at_120s_start']=abs(int(ev['homeScore'])-int(ev['awayScore']))
   out.update(result=ans,reason=reason)
  except Exception as error:out.update(result='UNKNOWN',reason='FETCH_ERROR',error=str(error)[:160])
  return out
@@ -84,6 +112,11 @@ def main():
   league=[x for x in result if x['league']==name]
   summary['leagues'][name]={'matches':len(league),'status':dict(Counter(x['result'] for x in league)),
     'unknown_reasons':dict(Counter(x['reason'] for x in league if x['result']=='UNKNOWN'))}
+ breakdown={}
+ for gap in range(4):
+  seen=[x for x in result if x.get('score_difference_at_120s_start') is not None and min(3,x['score_difference_at_120s_start'])==gap]
+  breakdown[str(gap)+'+' if gap==3 else str(gap)]=dict(Counter(x['result'] for x in seen))
+ summary['by_score_gap_at_120s_start']=breakdown
  (OUTPUT/'summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2))
  (OUTPUT/'matches.json').write_text(json.dumps(sorted(result,key=lambda r:(r['league'],r['date'],r['id'])),ensure_ascii=False,indent=2))
  print('LAST120_SUMMARY='+json.dumps(summary,ensure_ascii=False),flush=True)
