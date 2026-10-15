@@ -13,10 +13,11 @@ with tempfile.TemporaryDirectory() as temp:
  root=pathlib.Path(temp)
  f=root/'fixtures.parquet'; download('opta_fixtures.parquet',f)
  pf=pq.ParquetFile(f);print('FIXTURES_SCHEMA',str(pf.schema_arrow),flush=True)
- t=pf.read();rows=[v for v in t.to_pylist() if str(v.get('match_date')) in wanted_dates and str(v.get('season','')).startswith('2026')]
+ t=pf.read();all_rows=t.to_pylist();print('OPTA_FIXTURE_SAMPLE='+json.dumps(all_rows[-6:],default=str,ensure_ascii=False),flush=True)
+ rows=[v for v in all_rows if any(date in str(v.get('match_date','')) for date in wanted_dates) and str(v.get('season','')).startswith('2026')]
  print('FIXTURES_IN_TARGET_DATES',len(rows),flush=True)
  for target in targets:
-  close=[sample(v) for v in rows if str(v.get('match_date'))==target['date'] and
+  close=[sample(v) for v in rows if target['date'] in str(v.get('match_date','')) and
     target['home'].lower().split()[0] in str(v.get('home_team','')).lower() and
     target['away'].lower().split()[0] in str(v.get('away_team','')).lower()]
   print('OPTA_TARGET_FIXTURE='+json.dumps({'target':{k:target[k] for k in ('id','league','date','home','away','score')},'matches':close},default=str,ensure_ascii=False),flush=True)
