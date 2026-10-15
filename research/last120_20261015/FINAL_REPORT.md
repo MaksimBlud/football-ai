@@ -10,7 +10,7 @@ For each completed match take the exact second-half-ending timestamp *inside Opt
 
 A match is positive if `final_end_seconds - 120 <= goal_seconds <= final_end_seconds` for one or more goals. Distinct matches, not goals, form the denominator. No conversion of 90+4/90+5 to final 120s. Exclude unavailable/unverifiable cases rather than inferring no goal.
 
-Strict matching used competition + local calendar date + home/away final score + both team identities, allowing explicitly normalized Auxerre / Rennes official names. All 297 matches joined one-to-one, 0 duplicates in the final keyed sample, all goals reconciled against final results, and period-end records present.
+Fixture reconciliation required competition, local calendar date and both final-score values. We preferred matching both team identities; when a candidate was otherwise unique and one team name matched, a guarded one-team fallback was allowed. French name variants Auxerre/Auxerroise and Rennes/Rennais were explicitly normalized. All 297 were joined one-to-one without identifier collisions; goal-event counts agreed with final scores and the second-period end event was present.
 
 ## Final results
 
