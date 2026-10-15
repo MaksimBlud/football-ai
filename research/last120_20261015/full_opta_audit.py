@@ -16,7 +16,10 @@ LEAGUES={'EPL':'EPL','LA_LIGA':'La_Liga','BUNDESLIGA':'Bundesliga',
 OLD=json.loads((ROOT/'final_matches.json').read_text())
 
 def norm(x):
-    return ''.join(c for c in unicodedata.normalize('NFKD',str(x)).lower() if c.isalnum())
+    s=''.join(c for c in unicodedata.normalize('NFKD',str(x)).lower() if c.isalnum())
+    if 'auxerroise' in s or 'auxerre' in s: return 'auxerre'
+    if 'rennais' in s or 'rennes' in s: return 'rennes'
+    return s
 
 def same_team(a,b):
     x,y=norm(a),norm(b)
