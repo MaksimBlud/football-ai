@@ -54,7 +54,7 @@ def audit(item):
   goals=[x for x in events if x.get('type')=='Goal' and not x.get('isPenaltyShootoutEvent')]
   teams=(doc.get('header') or {}).get('teams') or []
   n=sum(int(x['score']) for x in teams) if len(teams)==2 and all(x.get('score') is not None for x in teams) else None
-  mins=[minute(x) for x in goals];out.update({'goal_minutes':mins,'final_clock_seconds':endsec,
+  mins=[minute(x) for x in goals];out['unparsed_goal_clocks']=[{'time':x.get('time'),'timeStr':x.get('timeStr'),'overloadTime':x.get('overloadTime')} for x in goals if minute(x) is None];out.update({'goal_minutes':mins,'final_clock_seconds':endsec,
    'second_half_started':start.isoformat() if start else None,'game_ended':end.isoformat() if end else None})
   if not status.get('finished') or n is None or n!=len(goals):ans='UNKNOWN';reason='GOALS_VS_SCORE_MISMATCH'
   elif any(m is None for m in mins):ans='UNKNOWN';reason='MINUTE_MISSING'
