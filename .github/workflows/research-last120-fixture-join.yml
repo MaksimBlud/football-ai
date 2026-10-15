@@ -1,0 +1,27 @@
+name: Last120 Opta Fixture Join Check
+on:
+  push:
+    branches: [research/last120-whistle-20261015]
+    paths: [.github/workflows/research-last120-fixture-join.yml]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Fetch public fixture catalog and show exact unresolved candidates
+        run: |
+          python -m pip -q install pyarrow==21.0.0
+          python - <<'PY'
+          import tempfile,urllib.request,pyarrow.parquet as pq
+          link='https://github.com/peteowen1/pannadata/releases/download/opta-latest/opta_fixtures.parquet'
+          with tempfile.TemporaryDirectory() as d:
+            p=d+'/fixtures.parquet';urllib.request.urlretrieve(link,p)
+            a=pq.read_table(p).to_pylist()
+          for dt,h,a2,hs,vs in [('2026-09-20','Auxerre','Brest','2','1'),('2026-10-11','Rennes','Auxerre','4','1')]:
+            filtered=[x for x in a if x.get('competition')=='Ligue_1' and dt in str(x.get('match_date','')) and x.get('season')=='2026-2027']
+            print('TARGET',dt,h,a2,hs,vs,'ALL_LEAGUE_DATE',len(filtered),flush=True)
+            for v in filtered:
+              print('POSSIBLE',v['match_id'],v['home_team'],v['away_team'],v['home_score'],v['away_score'],v['match_date'],v['match_status'],flush=True)
+          PY
