@@ -170,6 +170,6 @@ with tempfile.TemporaryDirectory() as td:
             if elapsed>=5400:
                 minute_bins[1+int((elapsed-5400)//60)]+=1
     report['goal_counts_by_stoppage_minute']={f'90+{m}':minute_bins[m] for m in sorted(minute_bins)}
-        (ROOT/'all_opta_matches.json').write_text(json.dumps(final,ensure_ascii=False,indent=2))
+    (ROOT/'all_opta_matches.json').write_text(json.dumps(final,ensure_ascii=False,indent=2))
     (ROOT/'all_opta_summary.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
     print('COMPLETE_OPTA_AUDIT='+json.dumps(report,ensure_ascii=False),flush=True)
