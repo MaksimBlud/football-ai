@@ -38,7 +38,7 @@ def find_day(day):
 
 def minute(goal):
  s=str(goal.get('timeStr') or goal.get('time') or '').strip().replace("'",'')
- m=re.match(r'^(\\d+)(?:\\+(\\d+))?$',s)
+ m=re.match(r'^(\d+)(?:\+(\d+))?$',s)
  return int(m[1])+int(m[2] or 0) if m else None
 
 def audit(item):
