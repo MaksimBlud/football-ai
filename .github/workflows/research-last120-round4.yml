@@ -1,0 +1,40 @@
+name: Research Last120 Four Random Matches per Round
+on:
+  push:
+    branches:
+      - research/last120-whistle-20261015
+    paths:
+      - .github/workflows/research-last120-round4.yml
+      - research/last120_20261015/round4_probability.py
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  exact-historical-risk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download frozen 297-match research evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: last120-202627-evidence
+          repository: MaksimBlud/football-ai
+          run-id: 38764264517
+          github-token: ${{ github.token }}
+          path: evidence
+      - name: Verify evidence and collector
+        run: |
+          test -s evidence/all_opta_matches.json
+          python3 -m py_compile research/last120_20261015/round4_probability.py
+      - name: Calculate exact per-tour four-match probabilities
+        run: python3 -u research/last120_20261015/round4_probability.py
+      - name: Archive full combination accounting
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: last120-four-random-matches-202627
+          path: research/last120_20261015/round4_results/
+          if-no-files-found: warn
+          retention-days: 7
