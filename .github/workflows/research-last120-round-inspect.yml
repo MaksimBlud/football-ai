@@ -1,0 +1,37 @@
+name: Research Last120 Round Inspection
+on:
+  push:
+    branches: [research/last120-whistle-20261015]
+    paths: [.github/workflows/research-last120-round-inspect.yml]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Read available match and league round identifiers
+        run: |
+          python - <<'PY'
+          import json,urllib.request
+          for match_id in [5795371,5868058,5881160,5749651,5802905]:
+            for endpoint in [f'matchDetails?matchId={match_id}',f'leagueDataForMatch?matchId={match_id}&leagueId=47']:
+              if 'leagueDataForMatch' in endpoint and match_id!=5795371:continue
+              url='https://www.fotmob.com/api/data/'+endpoint
+              try:
+                req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0','Accept':'application/json'})
+                with urllib.request.urlopen(req,timeout=10) as f: data=json.load(f)
+                print('MATCH_ID',match_id,'ENDPOINT',endpoint,flush=True)
+                for section in ('general','header','content','matchFacts','leagueName','seasonName','currentRound'):
+                  v=data.get(section)
+                  if isinstance(v,dict):
+                    print('SECTION',section,'KEYS',list(v.keys()),flush=True)
+                    if section in ('general','header'):
+                      print('VALUES',section,json.dumps(v,ensure_ascii=False)[:1400],flush=True)
+                    if section=='content':
+                      print('MATCH_FACTS_KEYS',list(v.get('matchFacts',{}).keys()),flush=True)
+                      print('MATCH_FACTS_INFO',json.dumps(v.get('matchFacts',{}).get('info'),ensure_ascii=False)[:700],flush=True)
+                  else:
+                    print('SECTION',section,'VALUE',repr(v)[:300],flush=True)
+              except Exception as e: print('ERROR',match_id,str(e)[:200],flush=True)
+          PY
