@@ -111,7 +111,7 @@ for name,info in tables.items():
 ROOT.joinpath("robustness.json").write_text(json.dumps(stat,ensure_ascii=False,indent=2))
 print("SCREEN_FDR="+json.dumps({"N":stat["multiple_testing"]["n_prespecified"],
  "below_05":stat["multiple_testing"]["fdr_below_05"],
- "top":list(adjusted.items())[:12]},ensure_ascii=False),flush=True)
+ "top":sorted(adjusted.items(),key=lambda kv:kv[1]["fisher_p"])[:14]},ensure_ascii=False),flush=True)
 print("CMH_DRAW85="+json.dumps(stat["cmh_draw85"],ensure_ascii=False),flush=True)
 print("CRITERIA_PERIODS="+json.dumps({k:v["by_period"] for k,v in tables.items()},ensure_ascii=False),flush=True)
 print("CRITERIA_BY_LEAGUE="+json.dumps({k:v["by_league_heldout"] for k,v in tables.items()},ensure_ascii=False),flush=True)
