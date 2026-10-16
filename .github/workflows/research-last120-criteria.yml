@@ -1,0 +1,29 @@
+name: Research No Goal Last120 Criteria and Temporal Holdout
+on:
+  push:
+    branches: [research/last120-criteria-20261016]
+    paths:
+      - .github/workflows/research-last120-criteria.yml
+      - research/last120_criteria_20261016/analyze.py
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies
+        run: python3 -m pip install -q pyarrow==21.0.0 pandas==2.3.3 scipy scikit-learn
+      - name: Validate read-only research script
+        run: python3 -m py_compile research/last120_criteria_20261016/analyze.py
+      - name: Audit and test preregistered goal filters
+        run: python3 -u research/last120_criteria_20261016/analyze.py
+      - name: Preserve evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: no-goal-120s-selection-criteria
+          path: research/last120_criteria_20261016/results/
+          if-no-files-found: warn
+          retention-days: 10
