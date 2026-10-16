@@ -1,0 +1,15 @@
+name: Research RPL Match Source Discovery
+on:
+  push:
+    branches: [research/last120-whistle-20261015]
+    paths: [.github/workflows/research-rpl-discovery.yml, research/last120_20261015/rpl_discovery.py]
+permissions:
+  contents: read
+jobs:
+  discovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Query Russian Premier League read-only match coverage
+        run: python3 -u research/last120_20261015/rpl_discovery.py
