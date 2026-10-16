@@ -1,0 +1,26 @@
+name: RPL 2026-27 Last120 and Four Random Per Round
+on:
+  push:
+    branches: [research/last120-whistle-20261015]
+    paths: [.github/workflows/research-rpl-round4.yml, research/last120_20261015/rpl_round4.py]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit-rpl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify analysis code
+        run: python3 -m py_compile research/last120_20261015/rpl_round4.py
+      - name: Read only league fixtures and verify final two minutes
+        run: python3 -u research/last120_20261015/rpl_round4.py
+      - name: Archive individual match results and round combinations
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpl-final120-round4-evidence
+          path: research/last120_20261015/rpl_results/
+          if-no-files-found: warn
+          retention-days: 7
