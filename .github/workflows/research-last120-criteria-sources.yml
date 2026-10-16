@@ -1,0 +1,16 @@
+name: Research Last120 Criteria Source Check
+on:
+  push:
+    branches: [research/last120-criteria-20261016]
+    paths:
+      - .github/workflows/research-last120-criteria-sources.yml
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m pip install -q pyarrow==21.0.0
+      - run: python3 -u research/last120_criteria_20261016/inspect_sources.py
