@@ -11,7 +11,7 @@
 
 5 European leagues, 5 seasons: `2022-2023`, `2023-2024`, `2024-2025`, `2025-2026`, partial `2026-2027` through 14 October. Opta fixture universe 7358, valid exact-second outcomes **7350**, with **412 goal-bearing matches and 6938 matches without such goals**. Exactly 8 failed goal-count/final-whistle quality checks: four implausible final timestamps, three goal count mismatches, one inconsistent end timestamps.
 
-**587 of 7350 matches have team attribution of goal events that disagrees with final home/away split**, often involving own goals. They **remain in the total outcome sample** but are deliberately **excluded from LIVE85/90 score-gap comparisons**, because reconstructing the 85' score from these team IDs would be unreliable. They remain eligible for pre-match factors and non-score events. This filtering uses a postmatch *data quality check* and could induce selection bias; score-based results therefore apply to the reliable subset, not all 7350 matches. Never claim independent live trading validation.
+**587 of 7350 matches have team attribution of goal events that disagrees with final home/away split**, potentially involving own-goal attribution (cause not independently verified for every affected record). They **remain in the total outcome sample** but are deliberately **excluded from LIVE85/90 score-gap comparisons**, because reconstructing the 85' score from these team IDs would be unreliable. They remain eligible for pre-match factors and non-score events. This filtering uses a postmatch *data quality check* and could induce selection bias; score-based results therefore apply to the reliable subset, not all 7350 matches. Never claim independent live trading validation.
 
 Outcome (all seconds-verified games) by season:
 
