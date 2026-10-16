@@ -2,7 +2,7 @@ name: Research RPL Match Source Discovery
 on:
   push:
     branches: [research/last120-whistle-20261015]
-    paths: [.github/workflows/research-rpl-discovery.yml, research/last120_20261015/rpl_discovery.py]
+    paths: [.github/workflows/research-rpl-discovery.yml, research/last120_20261015/rpl_discovery.py, research/last120_20261015/rpl_borderline_probe.py]
 permissions:
   contents: read
 jobs:
@@ -13,3 +13,5 @@ jobs:
       - uses: actions/checkout@v4
       - name: Query Russian Premier League read-only match coverage
         run: python3 -u research/last120_20261015/rpl_discovery.py
+      - name: Inspect four borderline goal events
+        run: python3 -u research/last120_20261015/rpl_borderline_probe.py
