@@ -1,0 +1,46 @@
+name: Research Final 180 Seconds Six Leagues
+on:
+  push:
+    branches:
+      - research/last120-whistle-20261015
+    paths:
+      - .github/workflows/research-last180-sixleagues.yml
+      - research/last120_20261015/last180.py
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Load validated five-league seconds and round IDs
+        uses: actions/download-artifact@v4
+        with:
+          name: last120-four-random-matches-202627
+          repository: MaksimBlud/football-ai
+          run-id: 38919719912
+          github-token: ${{ github.token }}
+          path: inputs/big5
+      - name: Load RPL inspected goal minutes and end clocks
+        uses: actions/download-artifact@v4
+        with:
+          name: rpl-final120-round4-evidence
+          repository: MaksimBlud/football-ai
+          run-id: 38921339010
+          github-token: ${{ github.token }}
+          path: inputs/rpl
+      - name: Validate and calculate full match and tour risk
+        run: |
+          python3 -m py_compile research/last120_20261015/last180.py
+          python3 -u research/last120_20261015/last180.py
+      - name: Preserve full machine-readable audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: final180-six-leagues-202627
+          path: research/last120_20261015/last180_results/
+          if-no-files-found: warn
+          retention-days: 7
