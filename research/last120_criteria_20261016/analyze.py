@@ -83,16 +83,15 @@ with tempfile.TemporaryDirectory() as temp:
             reasons[reason]+=1
             continue
         home_id,away_id=str(f["home_team_id"]),str(f["away_team_id"])
-        if any(str(g.get("team_id")) not in (home_id,away_id) for g in goals):
-            reasons["GOAL_TEAM_UNKNOWN"]+=1
-            continue
-        if sum(str(g["team_id"])==home_id for g in goals)!=int(f["home_score"]):
-            reasons["HOME_SCORE_MISMATCH"]+=1
-            continue
-        if sum(str(g["team_id"])==away_id for g in goals)!=int(f["away_score"]):
-            reasons["AWAY_SCORE_MISMATCH"]+=1
-            continue
+        # Own-goal Opta attribution can be the scorer's side, not the beneficiary's
+        # side. It must NOT invalidate the match outcome or pre-match features.
+        # It DOES invalidate reconstructing its in-play score gap from event team IDs.
+        score_valid=(all(str(g.get("team_id")) in (home_id,away_id) for g in goals)
+            and sum(str(g["team_id"])==home_id for g in goals)==int(f["home_score"])
+            and sum(str(g["team_id"])==away_id for g in goals)==int(f["away_score"]))
+        if not score_valid:reasons["SCORE_TEAM_ATTRIBUTION_UNRELIABLE_LIVE_GAP_ONLY"]+=1
         verified[key]={"final":final,"goals":goals,"events":events,
+            "score_team_valid":int(score_valid),
             "y":int(any(final-120<=sec(g)<=final for g in goals)),
             "end_vs_90":(final-5400)/60}
     print("VERIFY_MATCHES",len(verified),"REASONS",dict(reasons),flush=True)
@@ -130,13 +129,13 @@ with tempfile.TemporaryDirectory() as temp:
         v=verified[k];ev=v["events"];goals=v["goals"]
         def at(t):
             earlier=[g for g in goals if sec(g)<t]
-            h=sum(str(g["team_id"])==str(f["home_team_id"]) for g in earlier)
-            a=len(earlier)-h
+            h=sum(str(g["team_id"])==str(f["home_team_id"]) for g in earlier) if v["score_team_valid"] else None
+            a=len(earlier)-h if h is not None else None
             shots=[e for e in ev if int(e["type_id"]) in (13,14,15,16) and int(e.get("period_id") or 0) in (1,2) and sec(e) is not None and sec(e)<t]
             last10=sum(t-600<=sec(e)<t for e in shots)
             last15=sum(t-900<=sec(e)<t for e in shots)
             recent_goals=sum(t-900<=sec(e)<t for e in earlier)
-            return {"goals":len(earlier),"gap":abs(h-a),
+            return {"goals":len(earlier),"gap":abs(h-a) if h is not None else None,
                     "home_goals":h,"away_goals":a,"shots10":last10,
                     "shots15":last15,"recent_goals15":recent_goals}
         at85=at(85*60);at90=at(90*60)
@@ -146,7 +145,7 @@ with tempfile.TemporaryDirectory() as temp:
              "home":f["home_team"],"away":f["away_team"],
              "goal_last120":v["y"],"final_min":v["final"]/60,
              "last120_goals":sum(v["final"]-120<=sec(g)<=v["final"] for g in goals),
-             "pre_available":int(k in prematch)}
+             "pre_available":int(k in prematch),"score_team_valid":v["score_team_valid"]}
         for timing,snapshot in (("85",at85),("90",at90)):
             row.update({f"{timing}_{kk}":vv for kk,vv in snapshot.items()})
         row.update(prematch.get(k,{}))
@@ -191,6 +190,8 @@ with tempfile.TemporaryDirectory() as temp:
     # Define all filters before looking at held-out outcomes.
     def select_rows(df,name):
         if name.startswith("PRE_"):eligible=df[df["pre_available"]==1]
+        elif "score_draw" in name or "score_gap" in name or name.endswith("_gap_eq1") or name.endswith("_gap_ge2"):
+            eligible=df[df["score_team_valid"]==1]
         else:eligible=df
         selected=eligible.loc[eligible.apply(tests[name],axis=1)]
         return eligible,selected
