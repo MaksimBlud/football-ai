@@ -44,8 +44,12 @@ for m in big5:
 for m in rpl:
     mins=m.get("goal_minutes")
     finish=m.get("final_second_estimate")
-    if mins is None or finish is None or any(x is None for x in mins):
-        status="UNKNOWN";reason="INCOMPLETE_CLOCK_OR_GOAL_MINUTES"
+    if mins is None or any(x is None for x in mins):
+        status="UNKNOWN";reason="INCOMPLETE_GOAL_MINUTES"
+    elif not mins or max(mins) <= 87:
+        status="NO_GOAL";reason="ALL_GOALS_FINISHED_BEFORE_87TH_MINUTE"
+    elif finish is None:
+        status="UNKNOWN";reason="NO_FINAL_WHISTLE_TIMESTAMP_WITH_LATE_GOALS"
     else:
         cutoff=finish-180
         if any((x-1)*60 >= cutoff for x in mins):
