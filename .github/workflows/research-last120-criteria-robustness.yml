@@ -1,0 +1,35 @@
+name: Research Last120 Criteria Robustness and Leakage Checks
+on:
+  push:
+    branches: [research/last120-criteria-20261016]
+    paths:
+      - .github/workflows/research-last120-criteria-robustness.yml
+      - research/last120_criteria_20261016/robustness.py
+  workflow_dispatch:
+permissions: {contents: read, actions: read}
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Load frozen historical features and screen results
+        uses: actions/download-artifact@v4
+        with:
+          name: no-goal-120s-selection-criteria
+          repository: MaksimBlud/football-ai
+          run-id: 38927461294
+          github-token: ${{ github.token }}
+          path: inputs
+      - name: Dependencies
+        run: python3 -m pip install -q pandas==2.3.3 scipy
+      - name: Independent multiplicity and league-level validation
+        run: python3 -u research/last120_criteria_20261016/robustness.py
+      - name: Save robust findings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: last120-criteria-robustness
+          path: research/last120_criteria_20261016/results/robustness.json
+          if-no-files-found: warn
+          retention-days: 10
