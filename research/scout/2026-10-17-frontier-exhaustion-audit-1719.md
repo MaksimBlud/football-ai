@@ -43,6 +43,41 @@ Resume candidate creation only after at least one of:
 
 For any future candidate, Research Brain must freeze the feature definition, paired Brier/LogLoss comparison, temporal train/validation/untouched OOT split, negative controls and STOP/SUCCESS criteria before any reserved outcomes are read.
 
+
+## One genuinely distinct research IDEA screened: pairwise lineup familiarity
+**Status: IDEA → BLOCKED_BY_SOURCE. Not a candidate and not a signal.**
+
+### Mechanism
+Instead of rating the individual quality of the likely XI, estimate relational familiarity from the minutes/starts that player pairs have shared for the same club, with a separately defined prior-team familiarity component. The hypothesis is that coordinated pairs may reduce adaptation costs after a lineup change even when individual player-strength ratings are unchanged. This is conceptually different from additive lineup-strength or team-strength trajectory, but is correlated with lineup continuity; Research Brain would need to test that incremental distinction only after source gates pass.
+
+### Scientific evidence
+Pasarakonda et al., *How Team Familiarity Mitigates Negative Consequences of Team Composition Disruptions: An Analysis of Premier League Teams* (first online 2023-08-03; journal issue 2025), analyse 2,280 EPL games. They distinguish current-team from prior-team familiarity and report that familiarity modifies the effect of team-composition disruption. This supports plausibility, not a forecast edge over bookmaker fair probabilities.
+- Article: https://journals.sagepub.com/doi/10.1177/10596011231193176
+- DOI: https://doi.org/10.1177/10596011231193176
+
+### Outcome-free source feasibility
+The official StatsBomb Open Data repository supplies events and lineup JSON files and asks researchers to attribute StatsBomb and use its logo. README describes the data as freely available for research projects and genuine interest in football analytics; it does not provide a standard blanket commercial-use license.
+- README: https://github.com/hudl/open-data
+- Season/competition metadata: https://github.com/hudl/open-data/blob/master/data/competitions.json
+
+The current metadata contains 80 competition-season rows, but not a continuous multi-season archive for the five frozen major leagues. Examples of its own `match_available` metadata:
+- Bundesliga 2023/24: 2024-09-28T20:46:38Z (after the season had finished).
+- Premier League 2015/16: 2025-12-17T14:38:00Z.
+- Ligue 1 2022/23: 2026-04-06T18:51:07Z.
+- Ligue 1 2021/22: 2026-04-25T22:22:46Z.
+
+These release times mean the archive cannot be treated as if all same-season lineups had been publicly available before subsequent matches. A commit timestamp or season-level `match_available` value is not proof of per-match first-publication time; that would need separate immutable file-history evidence. The available coverage is also too discontinuous to support the proposed untouched multi-season OOT as specified.
+
+### Blocking gates
+1. **Timestamp gate:** no proven per-match first-seen history demonstrating lineup data was available before each prediction cutoff.
+2. **Coverage gate:** the public archive has discontinuous season coverage; no complete frozen-league fixture universe has been joined outcome-free.
+3. **Rights gate:** research access is clear, but rights for feature extraction in a potentially commercial Football AI product are not established.
+4. **Baseline gate:** Issue #594 remains blocked; no matched full-coverage fair 1X2 baseline with exact pre-kickoff snapshot timestamps is available.
+5. **Duplicate/independence gate:** relational familiarity is distinct from individual lineup strength in mechanism, but incremental independence from the closed lineup/trajectory families is unproven.
+
+### Future preregistration contract (not run)
+If the source/rights/baseline gates are later cleared, freeze: (a) weighted pairwise shared minutes in the prior 365 days, with no current-match lineup/outcome leakage; (b) prior-team familiarity kept as a separate negative/diagnostic control; (c) same-fixture fair 1X2 baseline; (d) temporal train/validation/untouched OOT split; (e) paired Brier and LogLoss; (f) negative controls using shuffled player identities and pair links, plus a simple lineup-continuity baseline. STOP if source timestamps, legal use, full fixture coverage or baseline fail, or if validation does not improve both metrics. SUCCESS only after Research Brain independently confirms improvement on untouched OOT. No outcomes were read and no evaluator was run for this IDEA.
+
 ## Operational ledger
 - New candidate Issues: 0.
 - Research Brain handoffs: 0.
