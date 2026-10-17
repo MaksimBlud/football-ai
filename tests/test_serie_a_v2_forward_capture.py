@@ -215,6 +215,7 @@ def test_successful_exact_source_workflow_and_prequote_completion_required():
         ({"status":"in_progress"}, "verified original V2 collector"),
         ({"event":"workflow_run"}, "verified original V2 collector"),
         ({"updated_at":"2026-10-14T06:01:00Z"}, "not successfully finished before quote"),
+        ({"updated_at":"2026-10-14T06:00:00Z"}, "not successfully finished before quote"),
     ]:
         def bad_get(url,headers,timeout):
             return Response({**valid,**altered})
@@ -256,3 +257,25 @@ def test_catalog_rejects_missing_parent_run_identity_even_with_valid_digest():
     with pytest.raises(ValueError,match="missing GitHub parent run identity"):
         discover_archives(token="test-token",
                           get=lambda url,headers,timeout:Response())
+
+
+
+def test_source_artifact_created_at_exact_quote_time_is_not_prior():
+    raw, metadata = make_source_archive()
+    metadata[0]["created_at"] = parse_utc("2026-10-14T06:00:00Z")
+    downloads = []
+
+    report = prepare_forward_capture(
+        [quote("2026-10-14T06:00:00Z")],
+        metadata,
+        as_of_utc=NOW,
+        load_archive=lambda artifact_id: downloads.append(artifact_id) or raw,
+        verify_parent_run=lambda *_: pytest.fail("equal-time archive must be rejected before parent verification"),
+    )
+
+    assert downloads == []
+    assert report["blocked_no_prior_source"] == 1
+    assert report["v2_diagnostic_previews_captured"] == 0
+    assert report["rows"][0]["status"] == "NO_EARLIER_SOURCE_ARCHIVE"
+    assert report["eligible_for_frozen_prospective_cohort"] is False
+    assert report["no_bet"] is True
