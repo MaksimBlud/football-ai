@@ -1,0 +1,15 @@
+# LAST120 offline fixture selector (research-only)
+
+**Open [index.html](index.html) locally in a browser.** Self-contained, no backend, paid APIs, tracking, bets, model changes or Supabase writes. Embedded frozen 52-fixture schedule for 17–19 October 2026 covering EPL, RPL, La Liga, Serie A, Bundesliga and Ligue 1, originally sourced from [open-matchday](https://github.com/oladeeayo/open-matchday). Check real fixture dates and time zones; the RPL source has no clock times. Add subsequent fixtures using CSV import.
+
+**What it selects:** after a manually verified **score snapshot from exactly 85:00**, tied matches in the five Opta-validated European leagues become research candidates, with 0:0 flagged as a smaller-sample subcategory. A lead of 2+ is excluded from the lower-risk group; a one-goal lead gives no signal. For the RPL a tie is clearly marked **UNVALIDATED HYPOTHESIS**. Blank or unverified 85:00 inputs cannot produce a candidate. No automated live collection is performed; one explicit manual score check is necessary.
+
+**Strict outcome definition:** goal in the **actual final 120 seconds** relative to the second-half whistle, measured using Opta type-16 goal and type-30 end-event timestamps, not any fixed 90+ minute. The exact future final two-minute start cannot be identified at 85:00; the tied-at-85 criterion is a tested association with a future outcome, not an entry-time or betting claim.
+
+**Validated research:** [original last-120 seconds audit](../last120_20261015/FINAL_REPORT.md) lives in another research branch `research/last120-whistle-20261015`; [selection criteria report](https://github.com/MaksimBlud/football-ai/blob/research/last120-criteria-20261016/research/last120_criteria_20261016/FINAL_REPORT.md) is in `research/last120-criteria-20261016`. They find 412/7350 exact final-two-minute positives over five seasons; for 2024/25–25/26 ties at 85:00 are 22/845 (2.60%) vs nonties 151/2389 (6.32%). The pretrained **prematch-only** models gave AUC near random (0.505/0.492), hence no credible pre-kickoff match ranking is claimed. 2026/27 RPL coverage has seconds-uncertain events; no transfer of the tied-at-85 effect is warranted.
+
+**Import CSV columns:** `league,date,time,home,away,round,score85_home,score85_away,verified85`. Date YYYY-MM-DD; leave scores empty / verified85=false until exactly 85:00. All data is locally stored where the browser permits, with full CSV export for a durable backup.
+
+**Checks performed before commit (headless Chromium):** no premature selections; invalid 85:00 confirmation rejected; 0:0 tie selects; RPL tie marked hypothesis; 3:0 excludes; candidate filtering; CSV export/import; reset; no JavaScript runtime errors. Static fixture count 52. Browser-run persistence could not be verified under the sandbox's restricted origin; CSV export is supported independently.
+
+**Safety:** no production .pkl changes; no paid Odds API; no auto-promotion or merge; no pretense that this is a no-live pregame model.
