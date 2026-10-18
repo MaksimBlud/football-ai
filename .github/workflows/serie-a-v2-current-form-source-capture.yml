@@ -24,11 +24,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      SUPABASE_URL: \${{ secrets.SUPABASE_URL }}
-      SUPABASE_KEY: \${{ secrets.SUPABASE_KEY }}
-      GITHUB_REPOSITORY: \${{ github.repository }}
-      GITHUB_SHA: \${{ github.sha }}
-      GITHUB_RUN_ID: \${{ github.run_id }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      GITHUB_SHA: ${{ github.sha }}
+      GITHUB_RUN_ID: ${{ github.run_id }}
       PYTHONPATH: .
       OPENBLAS_NUM_THREADS: "1"
       OMP_NUM_THREADS: "1"
