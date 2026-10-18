@@ -776,6 +776,9 @@ def main() -> None:
     if not token or not url or not key:
         raise RuntimeError("GitHub actions:read and Supabase read-only credentials are required")
     now = datetime.now(timezone.utc)
+    client = create_client(url, key)
+    fixture_metadata = fetch_saved_serie_a_fixture_metadata(client)
+    quotes = fetch_saved_upcoming_serie_a_quotes(client, now=now)
     archives = discover_archives(token=token)
     raw_cache = {}
 
@@ -793,9 +796,8 @@ def main() -> None:
         load_archive=load_cached_archive,
         verify_parent_run=verify_parent,
         write_sources_to=args.sources_output_dir,
+        fixture_metadata=fixture_metadata,
     )
-    client = create_client(url, key)
-    quotes = fetch_saved_upcoming_serie_a_quotes(client, now=now)
     report = prepare_forward_capture(
         quotes,
         archives,
@@ -803,8 +805,10 @@ def main() -> None:
         load_archive=load_cached_archive,
         verify_parent_run=verify_parent,
         write_sources_to=args.sources_output_dir,
+        fixture_metadata=fixture_metadata,
     )
     report["latest_source_archive_verification"] = source_verification
+    report["supabase_reads"] = 2
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
                            encoding="utf-8")
@@ -812,6 +816,8 @@ def main() -> None:
         "mode": report["mode"],
         "candidate_sha256": report["candidate_sha256"],
         "quotes_seen": report["quotes_seen"],
+        "supabase_reads": report["supabase_reads"],
+        "fixture_metadata_rows_seen": report["fixture_metadata_rows_seen"],
         "latest_source_archive_verification": report["latest_source_archive_verification"],
         "v2_current_form_shadow_captured": report["v2_current_form_shadow_captured"],
         "blocked": report["blocked"],
