@@ -287,6 +287,8 @@ def main() -> None:
     args = parser.parse_args()
     if os.environ.get("GITHUB_REPOSITORY") != REPOSITORY:
         raise RuntimeError("current-form source capture must run in the original GitHub repository")
+    if os.environ.get("GITHUB_REF") != "refs/heads/main":
+        raise RuntimeError("current-form V2 source/forecast workflow must run from main")
     url, key = os.environ.get("SUPABASE_URL", ""), os.environ.get("SUPABASE_KEY", "")
     if not url or not key:
         raise RuntimeError("Supabase read-only source gate credentials are missing")
