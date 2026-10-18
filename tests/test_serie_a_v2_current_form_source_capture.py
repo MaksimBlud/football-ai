@@ -196,6 +196,10 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert report["current_season_code"] == CURRENT_CODE == "2627"
     assert report["current_season"] == CURRENT_SEASON == "2026-2027"
     assert report["current_season_completed_prior_day_rows"] == 30
+    assert report["schema_version"] == "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V1_1"
+    assert report["policy_revision"] == "1.1"
+    assert report["current_season_latest_match_date"] == "2026-08-30"
+    assert report["current_season_days_since_latest_match_at_capture"] == 49
     assert report["current_season_source_sha256"] == hashlib.sha256(raw).hexdigest()
     assert (tmp_path / CURRENT_FILENAME).read_bytes() == raw
     assert (tmp_path / MANIFEST_FILENAME).exists()
