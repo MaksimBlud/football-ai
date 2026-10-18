@@ -301,6 +301,119 @@ def verify_and_load_archive(
         }
 
 
+def fetch_saved_serie_a_fixture_metadata(client: Any) -> list[dict]:
+    """Read saved fixture identity/timing only; never odds prices or result fields."""
+    response = (
+        client.table("odds_snapshots")
+        .select("event_id,league,home_team,away_team,commence_time_utc,snapshot_time_utc")
+        .eq("league", "SERIE_A")
+        .gte("commence_time_utc", "2026-07-01T00:00:00+00:00")
+        .order("snapshot_time_utc", desc=True)
+        .limit(1000)
+        .execute()
+    )
+    rows = response.data or []
+    if not isinstance(rows, list):
+        raise ValueError("saved Serie A fixture metadata response is malformed")
+    if len(rows) >= 1000:
+        raise ValueError("saved Serie A fixture metadata exceeds safe completeness-check bound")
+    return rows
+
+
+def _latest_fixture_metadata(rows: list[dict], *, as_of_utc: datetime) -> list[dict]:
+    latest: dict[str, dict] = {}
+    latest_snapshot: dict[str, datetime] = {}
+    for row in rows:
+        _guard_outcome_free(row)
+        if row.get("league") != "SERIE_A":
+            raise ValueError("fixture metadata query returned a non-Serie A event")
+        event_id = row.get("event_id")
+        if not isinstance(event_id, str) or not event_id.strip():
+            raise ValueError("fixture metadata has no event_id")
+        home, away = _canonical_team(row.get("home_team")), _canonical_team(row.get("away_team"))
+        if home == away:
+            raise ValueError("fixture metadata has identical canonical teams")
+        kickoff = parse_utc(row["commence_time_utc"])
+        snapshot = parse_utc(row["snapshot_time_utc"])
+        if snapshot > as_of_utc:
+            raise ValueError("fixture metadata contains a snapshot from the future")
+        old = latest.get(event_id)
+        if old is not None and (
+            old["canonical_home_team"] != home or old["canonical_away_team"] != away
+        ):
+            raise ValueError("one event_id maps to conflicting canonical team identities")
+        if event_id not in latest or snapshot > latest_snapshot[event_id]:
+            latest[event_id] = {
+                **row,
+                "canonical_home_team": home,
+                "canonical_away_team": away,
+                "parsed_kickoff_utc": kickoff,
+                "parsed_snapshot_utc": snapshot,
+            }
+            latest_snapshot[event_id] = snapshot
+    return list(latest.values())
+
+
+def assess_source_schedule_completeness(
+    source_meta: Mapping[str, Any],
+    fixture_metadata: list[dict] | None,
+    *,
+    as_of_utc: datetime,
+) -> dict:
+    """Fail closed if known prior-day scheduled fixtures are absent from current-form CSV."""
+    if as_of_utc.tzinfo is None:
+        raise ValueError("schedule completeness clock must be timezone-aware")
+    source_time = parse_utc(source_meta["latest_source_observed_at_utc"])
+    base = {
+        "metadata_available": bool(fixture_metadata),
+        "source_observed_at_utc": source_time.isoformat(),
+        "source_latest_match_date": source_meta["current_season_latest_match_date"],
+        "checked_at_utc": as_of_utc.astimezone(timezone.utc).isoformat(),
+        "checked_prior_day_fixture_count": 0,
+        "gap_count": 0,
+        "gaps": [],
+    }
+    if not fixture_metadata:
+        return {**base, "complete": False, "status": "SCHEDULE_METADATA_UNAVAILABLE"}
+    rows = _latest_fixture_metadata(fixture_metadata, as_of_utc=as_of_utc.astimezone(timezone.utc))
+    current_keys = {tuple(key) for key in source_meta.get("current_season_fixture_keys", [])}
+    gaps = []
+    checked = set()
+    for row in rows:
+        kickoff = row["parsed_kickoff_utc"]
+        # Date-only source: same-calendar-day matches are deliberately excluded.
+        if kickoff.date() < date(2026, 7, 1) or kickoff.date() >= source_time.date():
+            continue
+        key = (
+            kickoff.date().isoformat(),
+            row["canonical_home_team"],
+            row["canonical_away_team"],
+        )
+        if key in checked:
+            continue
+        checked.add(key)
+        if key not in current_keys:
+            gaps.append({
+                "event_id": row["event_id"],
+                "home_team": row["home_team"],
+                "away_team": row["away_team"],
+                "canonical_home_team": row["canonical_home_team"],
+                "canonical_away_team": row["canonical_away_team"],
+                "kickoff_utc": kickoff.isoformat(),
+                "missing_fixture_key": list(key),
+            })
+    gaps.sort(key=lambda item: (item["kickoff_utc"], item["event_id"]))
+    return {
+        **base,
+        "metadata_available": True,
+        "checked_prior_day_fixture_count": len(checked),
+        "gap_count": len(gaps),
+        "gaps": gaps,
+        "complete": len(gaps) == 0,
+        "status": "COMPLETE" if not gaps else "CURRENT_FORM_SOURCE_BEHIND_SCHEDULE",
+    }
+
+
 def verify_latest_source_archive(
     archive_metadata: list[dict],
     *,
