@@ -7,9 +7,12 @@ on:
   push:
     branches: [main]
     paths:
+      - "serie_a_v2_current_form_source_capture.py"
       - "serie_a_v2_current_form_forward_capture.py"
+      - "tests/test_serie_a_v2_current_form_source_capture.py"
       - "tests/test_serie_a_v2_current_form_forward_capture.py"
       - "tests/test_serie_a_v2_manual_quote_trigger_contract.py"
+      - "experiments/market_anchor_1x2_v2_current_form_policy_v1_1.json"
       - ".github/workflows/serie-a-v2-current-form-forward-preview.yml"
   workflow_run:
     workflows:
