@@ -11,6 +11,7 @@ from serie_a_v2_current_form_forward_capture import (
     MANIFEST_FILENAME,
     SOURCE_WORKFLOW_PATH,
     prepare_forward_capture,
+    verify_latest_source_archive,
 )
 from serie_a_v2_current_form_source_capture import (
     CURRENT_CODE, CURRENT_FILENAME, CURRENT_SEASON, CURRENT_URL, REQUIRED_COLUMNS,
@@ -205,6 +206,45 @@ def test_current_form_v2_scores_only_future_quote_with_prequote_source_and_stays
     assert report["production_or_supabase_writes"] == 0
     assert report["paid_provider_calls"] == 0
     assert len(list(tmp_path.glob("current-form-source-artifact-*.zip"))) == 1
+
+
+def test_real_archive_verification_is_reported_even_without_any_fresh_quote(tmp_path):
+    raw, archives = make_archive()
+    report = verify_latest_source_archive(
+        archives,
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        load_archive=lambda artifact_id: raw,
+        verify_parent_run=valid_parent,
+        write_sources_to=tmp_path,
+    )
+    assert report["status"] == "VERIFIED"
+    assert report["verified"] is True
+    assert report["artifact_id"] == 9876
+    assert report["artifact_sha256"] == hashlib.sha256(raw).hexdigest()
+    assert report["feature_input_gate_count"] == 30
+    assert report["historical_old_season_file_count"] == 10
+    assert report["source_file_count"] == 11
+    assert report["current_season_history_rows"] == 30
+    assert report["fresh_for_new_quote"] is True
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
+    assert report["paid_provider_calls"] == report["supabase_writes"] == 0
+    assert len(list(tmp_path.glob("current-form-source-artifact-*.zip"))) == 1
+
+
+def test_missing_source_artifact_is_explicitly_reported_without_reading_outcomes():
+    report = verify_latest_source_archive(
+        [],
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        load_archive=lambda _artifact_id: (_ for _ in ()).throw(
+            AssertionError("no source artifact should be downloaded")
+        ),
+        verify_parent_run=valid_parent,
+    )
+    assert report["status"] == "NO_SOURCE_ARCHIVE"
+    assert report["verified"] is False
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
 
 
 def test_precontract_quote_is_never_backfilled_from_a_later_source_archive():
