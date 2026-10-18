@@ -12,6 +12,7 @@ from serie_a_v2_current_form_forward_capture import (
     SOURCE_WORKFLOW_PATH,
     prepare_forward_capture,
     verify_latest_source_archive,
+    verify_source_run,
 )
 from serie_a_v2_current_form_source_capture import (
     CURRENT_CODE, CURRENT_FILENAME, CURRENT_SEASON, CURRENT_URL, REQUIRED_COLUMNS,
@@ -317,3 +318,99 @@ def test_unverified_parent_cannot_admit_quote():
     assert report["v2_current_form_shadow_captured"] == 0
     assert report["blocked"]["SOURCE_PARENT_UNVERIFIED"] == 1
     assert report["rows"][0]["status"] == "SOURCE_PARENT_UNVERIFIED"
+
+class _FakeGitHubResponse:
+    def __init__(self, payload):
+        self.payload = payload
+
+    def raise_for_status(self):
+        return None
+
+    def json(self):
+        return self.payload
+
+
+def _verify_real_parent(completed_at, quote_time, **overrides):
+    run = {
+        "id": 123,
+        "path": SOURCE_WORKFLOW_PATH,
+        "head_branch": "main",
+        "head_sha": HEAD,
+        "status": "completed",
+        "conclusion": "success",
+        "event": "schedule",
+        "created_at": PARENT_CREATED,
+        "updated_at": completed_at,
+    }
+    run.update(overrides)
+    archive = {
+        "run_id": 123,
+        "head_sha": HEAD,
+        "created_at": ARTIFACT_CREATED,
+    }
+
+    def fake_get(url, **kwargs):
+        assert url.endswith("/actions/runs/123")
+        assert kwargs["headers"]["Authorization"] == "Bearer test-token"
+        return _FakeGitHubResponse(run)
+
+    return verify_source_run(
+        archive,
+        quote_time=quote_time,
+        token="test-token",
+        get=fake_get,
+    )
+
+
+def test_real_parent_verifier_accepts_completion_one_second_before_quote():
+    quote_time = datetime(2026, 10, 18, 6, 32, 1, tzinfo=timezone.utc)
+    parent = _verify_real_parent("2026-10-18T06:32:00+00:00", quote_time)
+    assert parent["run_id"] == 123
+    assert parent["workflow_path"] == SOURCE_WORKFLOW_PATH
+    assert parent["run_completed_at_utc"] == "2026-10-18T06:32:00+00:00"
+
+
+def test_real_parent_verifier_rejects_completion_equal_to_quote_time():
+    quote_time = datetime(2026, 10, 18, 6, 32, 0, tzinfo=timezone.utc)
+    with pytest.raises(ValueError, match="did not finish strictly before quote"):
+        _verify_real_parent("2026-10-18T06:32:00+00:00", quote_time)
+
+
+def test_real_parent_verifier_rejects_completion_after_quote_time():
+    quote_time = datetime(2026, 10, 18, 6, 32, 0, tzinfo=timezone.utc)
+    with pytest.raises(ValueError, match="did not finish strictly before quote"):
+        _verify_real_parent("2026-10-18T06:32:01+00:00", quote_time)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("path", ".github/workflows/unrelated.yml"),
+        ("head_sha", "b" * 40),
+        ("head_branch", "research/untrusted"),
+        ("status", "in_progress"),
+        ("conclusion", "failure"),
+        ("event", "pull_request"),
+    ],
+)
+def test_real_parent_verifier_rejects_wrong_parent_identity(field, value):
+    quote_time = datetime(2026, 10, 18, 6, 33, 0, tzinfo=timezone.utc)
+    with pytest.raises(
+        ValueError, match="not a successful main current-form source run"
+    ):
+        _verify_real_parent(
+            "2026-10-18T06:32:00+00:00",
+            quote_time,
+            **{field: value},
+        )
+
+
+def test_real_parent_verifier_rejects_parent_created_after_archive():
+    quote_time = datetime(2026, 10, 18, 6, 33, 0, tzinfo=timezone.utc)
+    with pytest.raises(ValueError, match="did not finish strictly before quote"):
+        _verify_real_parent(
+            "2026-10-18T06:32:00+00:00",
+            quote_time,
+            created_at="2026-10-18T06:35:00+00:00",
+        )
+
