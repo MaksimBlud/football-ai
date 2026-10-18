@@ -203,11 +203,20 @@ def classify_minute(t,doc,source_label=None):
         row.update(result="UNKNOWN",reason="WHISTLE_OR_HALF_START_MISSING");return row
     cutoff=endsec-120
     # Displayed goal minute m occupies [(m-1)*60,m*60). Never guess the second.
+    guard=15.0  # conservative tolerance for minute rounding vs wall-clock derived whistle
     definitely_late=[m for m in minutes if (m-1)*60>=cutoff and (m-1)*60<endsec]
     if definitely_late:
-        row.update(result="GOAL",reason="MINUTE_INTERVAL_ENTIRELY_INSIDE_LAST120",last120_boundary_elapsed_sec=round(cutoff,2));return row
+        margin=min((m-1)*60-cutoff for m in definitely_late)
+        row["boundary_margin_sec"]=round(margin,2)
+        if margin>=guard:
+            row.update(result="GOAL",reason="GOAL_MINUTE_INTERVAL_INSIDE_LAST120_WITH_15S_GUARD",last120_boundary_elapsed_sec=round(cutoff,2));return row
+        row.update(result="UNKNOWN",reason="GOAL_MINUTE_INTERVAL_WITHIN_15S_OF_CUTOFF",last120_boundary_elapsed_sec=round(cutoff,2));return row
     if all(m*60<=cutoff for m in minutes):
-        row.update(result="NO_GOAL",reason="ALL_GOAL_MINUTE_INTERVALS_BEFORE_BOUNDARY",last120_boundary_elapsed_sec=round(cutoff,2));return row
+        margin=min((cutoff-m*60 for m in minutes),default=float("inf"))
+        row["boundary_margin_sec"]=round(margin,2) if math.isfinite(margin) else None
+        if margin>=guard:
+            row.update(result="NO_GOAL",reason="ALL_GOAL_MINUTE_INTERVALS_BEFORE_BOUNDARY_WITH_15S_GUARD",last120_boundary_elapsed_sec=round(cutoff,2));return row
+        row.update(result="UNKNOWN",reason="LAST_GOAL_MINUTE_WITHIN_15S_OF_CUTOFF",last120_boundary_elapsed_sec=round(cutoff,2));return row
     row.update(result="UNKNOWN",reason="DISPLAYED_MINUTE_OVERLAPS_120S_BOUNDARY",last120_boundary_elapsed_sec=round(cutoff,2))
     return row
 
