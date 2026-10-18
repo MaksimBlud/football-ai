@@ -114,3 +114,138 @@ def test_never_invent_observed_history_for_unseen_clubs():
     assert all(value is None for value in row["features"].values())
     assert row["history_coverage"]["home"]["prior_matches_in_frozen_30_match_window"] == 0
     assert row["history_coverage"]["away"]["last_historical_match_date"] is None
+
+def test_online_manifest_matches_original_frozen_feature_builder_on_same_history():
+    """Guard exact 19-feature calculation parity; no model values or outcomes are tuned."""
+    from historical_football_signal_lab import (
+        FEATURE_SETS,
+        add_difference_features,
+        build_point_in_time_features,
+    )
+
+    prior = history().iloc[:3].copy()
+    target = pd.DataFrame([{
+        "Date": "13/10/2026",
+        "HomeTeam": "Alpha",
+        "AwayTeam": "Beta",
+        "FTHG": 1,
+        "FTAG": 0,
+        "FTR": "H",
+        "HC": 5,
+        "AC": 3,
+        "HY": 2,
+        "AY": 1,
+        "HR": 0,
+        "AR": 0,
+    }])
+    original_rows = build_point_in_time_features(
+        pd.concat([prior, target], ignore_index=True),
+        "SERIE_A",
+        "SYNTHETIC_PARITY_ONLY",
+    )
+    original = add_difference_features(original_rows).iloc[-1]
+    manifest = build_manifest(prior, [QUOTE])["feature_manifests"][0]["features"]
+
+    assert list(manifest) == list(FEATURE_SETS["ALL_FOOTBALL"])
+    for feature in FEATURE_SETS["ALL_FOOTBALL"]:
+        expected = original[feature]
+        actual = manifest[feature]
+        if pd.isna(expected):
+            assert actual is None
+        else:
+            assert actual == pytest.approx(float(expected), abs=1e-12)
+
+def test_original_feature_builder_source_is_runtime_pinned_and_drift_fails_closed(tmp_path):
+    from serie_a_v2_asof_feature_manifest import (
+        FROZEN_FEATURE_BUILDER_GIT_BLOB_SHA,
+        _verify_original_feature_builder,
+    )
+
+    assert _verify_original_feature_builder() == FROZEN_FEATURE_BUILDER_GIT_BLOB_SHA
+    drifted = tmp_path / "historical_football_signal_lab.py"
+    drifted.write_text("# changed feature definitions\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="feature builder source drift"):
+        _verify_original_feature_builder(drifted)
+
+def test_online_manifest_matches_original_builder_after_frozen_30_match_truncation():
+    """Exercise the exact rolling-window and venue semantics beyond the short fixture."""
+    from historical_football_signal_lab import (
+        FEATURE_SETS,
+        add_difference_features,
+        build_point_in_time_features,
+    )
+
+    rows = []
+    start = pd.Timestamp("2026-08-01")
+    for i in range(36):
+        day = (start + pd.Timedelta(days=i)).strftime("%d/%m/%Y")
+        alpha_home = i % 2 == 0
+        beta_home = i % 3 == 0
+        alpha_hg, alpha_ag = ((i % 4) + 1, i % 2) if alpha_home else (i % 2, (i % 4) + 1)
+        beta_hg, beta_ag = ((i % 3) + 1, i % 2) if beta_home else (i % 2, (i % 3) + 1)
+        rows.extend([
+            {
+                "Date": day,
+                "HomeTeam": "Alpha" if alpha_home else f"Alpha Opponent {i}",
+                "AwayTeam": f"Alpha Opponent {i}" if alpha_home else "Alpha",
+                "FTHG": alpha_hg,
+                "FTAG": alpha_ag,
+                "FTR": "H" if alpha_hg > alpha_ag else ("A" if alpha_hg < alpha_ag else "D"),
+                "HC": 2 + (i % 7),
+                "AC": 1 + (i % 5),
+                "HY": i % 4,
+                "AY": (i + 1) % 4,
+                "HR": i % 2,
+                "AR": (i + 1) % 2,
+            },
+            {
+                "Date": day,
+                "HomeTeam": "Beta" if beta_home else f"Beta Opponent {i}",
+                "AwayTeam": f"Beta Opponent {i}" if beta_home else "Beta",
+                "FTHG": beta_hg,
+                "FTAG": beta_ag,
+                "FTR": "H" if beta_hg > beta_ag else ("A" if beta_hg < beta_ag else "D"),
+                "HC": 1 + (i % 6),
+                "AC": 2 + (i % 4),
+                "HY": (i + 2) % 5,
+                "AY": i % 5,
+                "HR": (i + 1) % 2,
+                "AR": i % 2,
+            },
+        ])
+
+    prior = pd.DataFrame(rows)
+    target = pd.DataFrame([{
+        "Date": "13/10/2026",
+        "HomeTeam": "Alpha",
+        "AwayTeam": "Beta",
+        "FTHG": 0,
+        "FTAG": 0,
+        "FTR": "D",
+        "HC": 0,
+        "AC": 0,
+        "HY": 0,
+        "AY": 0,
+        "HR": 0,
+        "AR": 0,
+    }])
+    original_rows = build_point_in_time_features(
+        pd.concat([prior, target], ignore_index=True),
+        "SERIE_A",
+        "SYNTHETIC_30_MATCH_PARITY_ONLY",
+    )
+    original = add_difference_features(original_rows).iloc[-1]
+    manifest_row = build_manifest(prior, [QUOTE])["feature_manifests"][0]
+    manifest = manifest_row["features"]
+
+    assert manifest_row["history_coverage"]["home"]["prior_matches_in_frozen_30_match_window"] == 30
+    assert manifest_row["history_coverage"]["away"]["prior_matches_in_frozen_30_match_window"] == 30
+    assert list(manifest) == list(FEATURE_SETS["ALL_FOOTBALL"])
+    for feature in FEATURE_SETS["ALL_FOOTBALL"]:
+        expected = original[feature]
+        actual = manifest[feature]
+        if pd.isna(expected):
+            assert actual is None
+        else:
+            assert actual == pytest.approx(float(expected), abs=1e-12)
+
