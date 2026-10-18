@@ -29,7 +29,7 @@ from serie_a_v2_current_form_source_capture import (
     REQUIRED_COLUMNS, validate_current_season_csv,
 )
 from serie_a_v2_frozen_shadow_preview import (
-    FROZEN_SHA, fetch_saved_upcoming_serie_a_quotes, parse_utc, shadow_preview,
+    FROZEN_SHA, fetch_saved_upcoming_serie_a_quotes, parse_utc, shadow_preview, _guard_outcome_free,
 )
 from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes
 from serie_a_v2_prequote_source_archive_gate import MAX_ZIP_BYTES
@@ -223,6 +223,11 @@ def verify_and_load_archive(
             frame = pd.read_csv(BytesIO(body), low_memory=False)
             if not set(REQUIRED_COLUMNS).issubset(frame.columns):
                 raise ValueError("frozen historical source lacks original V2 statistics")
+            if len(frame) != item.get("completed_source_rows"):
+                raise ValueError("frozen historical source row count mismatch")
+            dates = pd.to_datetime(frame["Date"], dayfirst=True, format="mixed", errors="raise")
+            if (dates >= OLD_CUTOFF).any():
+                raise ValueError("old-season archive contains protected-season rows")
             old_frames.append(frame.loc[:, list(REQUIRED_COLUMNS)].copy())
         current_item = by_code[CURRENT_CODE]
         if (current_item.get("archived_source_name") != CURRENT_FILENAME
@@ -239,15 +244,14 @@ def verify_and_load_archive(
         current_frame, _excluded = validate_current_season_csv(
             current_raw, captured_at=current_observed
         )
-        if len(current_frame) != manifest.get("current_season_completed_prior_day_rows"):
+        if (len(current_frame) != manifest.get("current_season_completed_prior_day_rows")
+                or current_item.get("completed_source_rows") != len(current_frame)):
             raise ValueError("current-season completed row count mismatch")
+        current_dates = pd.to_datetime(current_frame["Date"], dayfirst=True, format="mixed", errors="raise")
+        if current_dates.empty or (current_dates < OLD_CUTOFF).any():
+            raise ValueError("current-season archive contains pre-2026/27 rows or no usable rows")
         source_times.append(current_observed)
         history = pd.concat(old_frames + [current_frame], ignore_index=True)
-        dates = pd.to_datetime(history["Date"], dayfirst=True, format="mixed", errors="raise")
-        if (dates.loc[history["Date"].notna()] >= OLD_CUTOFF).any() and not (
-            (pd.to_datetime(current_frame["Date"], dayfirst=True, format="mixed") >= OLD_CUTOFF).all()
-        ):
-            raise ValueError("old-season archive contains protected-season rows")
         latest_source = max(source_times)
         declared_latest = parse_utc(manifest["current_season_source_observed_at_utc"])
         declared_archive = parse_utc(manifest["source_archive_created_at_utc"])
@@ -270,6 +274,7 @@ def _latest_quotes(quotes: list[dict], *, now: datetime) -> list[dict]:
     latest = {}
     seen = set()
     for q in quotes:
+        _guard_outcome_free(q)
         if q.get("league") != "SERIE_A":
             raise ValueError("current-form forward capture accepts Serie A only")
         event = q.get("event_id")
