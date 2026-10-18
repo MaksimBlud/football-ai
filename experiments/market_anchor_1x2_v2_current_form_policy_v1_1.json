@@ -55,7 +55,7 @@
     "schedule_source": "Existing saved Serie A odds_snapshots fixture metadata only",
     "metadata_fields": ["event_id", "league", "home_team", "away_team", "commence_time_utc", "snapshot_time_utc"],
     "odds_values_or_result_fields_read": false,
-    "deduplicate": "Latest saved snapshot per event_id, then canonical fixture date/home/away identity.",
+    "deduplicate": "Latest saved snapshot per event_id whose snapshot_time_utc is at or before the source observation timestamp, then canonical fixture date/home/away identity.",
     "rule": "For every fixture with latest saved kickoff on a calendar date strictly before the current-season source observation date, require the canonical (kickoff UTC date, home team, away team) identity in the completed current-season CSV. Any missing fixture or unavailable schedule metadata blocks all current-form forecasts until a new source archive passes.",
     "same_day_fixtures": "Not used as features and excluded from schedule-gap blocking because the public source is date-only.",
     "failure_action": "Block forecast admission; preserve source and gap report; do not infer postponements or outcomes.",
