@@ -225,7 +225,7 @@ def main():
         joins.extend(join_errors)
         print("OPTА_JOIN",json.dumps({"matched":len(selected),"eligible_big5":sum(t["league"] in OPTA_CODE for t in targets),"errors":join_errors},ensure_ascii=False),flush=True)
         day_inventory=collections.Counter((str(f.get("competition")),str(f.get("season")),str(f.get("match_status"))) for f in fixtures if DAY in str(f.get("match_date") or ""))
-        print("OPTA_FIXTURE_DAY_INVENTORY",json.dumps(dict(day_inventory),ensure_ascii=False),flush=True)
+        print("OPTA_FIXTURE_DAY_INVENTORY",json.dumps([{"competition":k[0],"season":k[1],"status":k[2],"count":v} for k,v in day_inventory.items()],ensure_ascii=False),flush=True)
         events_by_id=collections.defaultdict(list)
         for league,code in OPTA_CODE.items():
             required={str(x["fixture"]["match_id"]) for fid,x in selected.items() if next(t for t in targets if t["fotmob_id"]==fid)["league"]==league}
