@@ -270,6 +270,71 @@ def verify_and_load_archive(
         }
 
 
+def verify_latest_source_archive(
+    archive_metadata: list[dict],
+    *,
+    as_of_utc: datetime,
+    load_archive,
+    verify_parent_run,
+    write_sources_to: Path | None = None,
+) -> dict:
+    """Verify the latest successful main source artifact even when all quotes are stale."""
+    if as_of_utc.tzinfo is None:
+        raise ValueError("source verification clock must be timezone-aware")
+    now = as_of_utc.astimezone(timezone.utc)
+    candidates = sorted(
+        (item for item in archive_metadata if item["created_at"] < now),
+        key=lambda item: (item["created_at"], item["artifact_id"]),
+        reverse=True,
+    )
+    if not candidates:
+        return {
+            "status": "NO_SOURCE_ARCHIVE",
+            "verified": False,
+            "verified_at_utc": now.isoformat(),
+            "target_outcomes_read": False,
+            "target_outcomes_scored": False,
+            "paid_provider_calls": 0,
+            "supabase_writes": 0,
+        }
+    archive = candidates[0]
+    parent = verify_parent_run(archive, quote_time=now)
+    raw = load_archive(archive["artifact_id"])
+    history, source_meta = verify_and_load_archive(raw, archive, parent)
+    if write_sources_to is not None:
+        write_sources_to.mkdir(parents=True, exist_ok=True)
+        (write_sources_to / f"current-form-source-artifact-{archive['artifact_id']}.zip").write_bytes(raw)
+    latest_source = parse_utc(source_meta["latest_source_observed_at_utc"])
+    age_seconds = (now - latest_source).total_seconds()
+    if age_seconds < 0:
+        raise ValueError("source archive contains a source timestamp after verification time")
+    manifest = source_meta["manifest"]
+    return {
+        "status": "VERIFIED",
+        "verified": True,
+        "verified_at_utc": now.isoformat(),
+        "artifact_id": archive["artifact_id"],
+        "artifact_sha256": source_meta["artifact_sha256"],
+        "source_archive_created_at_utc": source_meta["archive_created_at_utc"],
+        "latest_source_observed_at_utc": source_meta["latest_source_observed_at_utc"],
+        "source_age_seconds_at_verification": int(age_seconds),
+        "fresh_for_new_quote": age_seconds <= MAX_SOURCE_AGE.total_seconds(),
+        "parent_run": source_meta["parent_run"],
+        "feature_input_gate_count": manifest["feature_source_gate"]["observed_completed_primary_events"],
+        "historical_old_season_file_count": manifest["historical_old_season_file_count"],
+        "source_file_count": manifest["source_file_count"],
+        "historical_match_rows": source_meta["historical_match_rows"],
+        "current_season_history_rows": source_meta["current_season_history_rows"],
+        "candidate_sha256": FROZEN_SHA,
+        "target_outcomes_read": False,
+        "target_outcomes_scored": False,
+        "target_outcome_evaluation_gate_open": False,
+        "paid_provider_calls": 0,
+        "supabase_writes": 0,
+        "no_bet": True,
+    }
+
+
 def _latest_quotes(quotes: list[dict], *, now: datetime) -> list[dict]:
     latest = {}
     seen = set()
@@ -493,19 +558,35 @@ def main() -> None:
     if not token or not url or not key:
         raise RuntimeError("GitHub actions:read and Supabase read-only credentials are required")
     now = datetime.now(timezone.utc)
+    archives = discover_archives(token=token)
+    raw_cache = {}
+
+    def load_cached_archive(artifact_id: int) -> bytes:
+        if artifact_id not in raw_cache:
+            raw_cache[artifact_id] = get_archive(artifact_id, token=token)
+        return raw_cache[artifact_id]
+
+    def verify_parent(archive: Mapping[str, Any], *, quote_time: datetime) -> dict:
+        return verify_source_run(archive, quote_time=quote_time, token=token)
+
+    source_verification = verify_latest_source_archive(
+        archives,
+        as_of_utc=now,
+        load_archive=load_cached_archive,
+        verify_parent_run=verify_parent,
+        write_sources_to=args.sources_output_dir,
+    )
     client = create_client(url, key)
     quotes = fetch_saved_upcoming_serie_a_quotes(client, now=now)
-    archives = discover_archives(token=token)
     report = prepare_forward_capture(
         quotes,
         archives,
         as_of_utc=now,
-        load_archive=lambda artifact_id: get_archive(artifact_id, token=token),
-        verify_parent_run=lambda archive, quote_time: verify_source_run(
-            archive, quote_time=quote_time, token=token
-        ),
+        load_archive=load_cached_archive,
+        verify_parent_run=verify_parent,
         write_sources_to=args.sources_output_dir,
     )
+    report["latest_source_archive_verification"] = source_verification
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
                            encoding="utf-8")
@@ -513,6 +594,7 @@ def main() -> None:
         "mode": report["mode"],
         "candidate_sha256": report["candidate_sha256"],
         "quotes_seen": report["quotes_seen"],
+        "latest_source_archive_verification": report["latest_source_archive_verification"],
         "v2_current_form_shadow_captured": report["v2_current_form_shadow_captured"],
         "blocked": report["blocked"],
         "target_outcomes_read": report["target_outcomes_read"],
