@@ -1,0 +1,119 @@
+name: Free Corners EPL Market Screen V2
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    paths:
+      - 'free_corners_epl_market_screen_v2.py'
+      - 'tests/test_free_corners_epl_market_screen_v2.py'
+      - 'research/FREE_CORNERS_EPL_MARKET_SCREEN_V2.md'
+      - 'research/FREE_CORNERS_EPL_MARKET_SCREEN_V2_RESULTS.md'
+      - 'research/reference/FREE_CORNERS_EPL_MARKET_SCREEN_V2_SEED.json'
+      - '.github/workflows/free-corners-epl-market-screen-v2.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  offline-contract-tests:
+    if: github.event.action != 'edited' || contains(github.event.pull_request.body || '', '[run-free-corners-epl-v2]')
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install requests scipy pytest
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Compile V2
+        run: python -m py_compile free_corners_epl_market_screen_v2.py
+      - name: Run V2 regression tests
+        run: pytest -q tests/test_free_corners_epl_market_screen_v2.py
+      - name: Assert frozen free-only contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import free_corners_epl_market_screen_v2 as s
+          seed=json.loads(Path('research/reference/FREE_CORNERS_EPL_MARKET_SCREEN_V2_SEED.json').read_text())
+          assert s.EXPERIMENT_ID == 'FREE_CORNERS_EPL_MARKET_SCREEN_V2'
+          assert s.SOURCE_ARTIFACT_ID == 10506736726
+          assert s.EXPECTED_FINISHED_FIXTURES == 40
+          assert s.MAX_PROVIDER_REQUESTS == 45
+          assert s.MIN_NON_PUSH_ROWS == 25
+          assert s.BLEND_FOOTBALL_WEIGHT == 0.25
+          assert seed['last_training_date'] == '2026-05-24'
+          assert seed['historical_rows_with_corners'] == 3800
+          assert seed['eligible_training_rows'] == 3564
+          assert seed['teams']['Coventry']['n'] == 0
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+
+  live-free-epl-screen:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(github.event.pull_request.body || '', '[run-free-corners-epl-v2]')
+    needs: offline-contract-tests
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+      FIVE_DOLLAR_FOOTBALL_API_KEY: ${{ secrets.FIVE_DOLLAR_FOOTBALL_API_KEY }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install requests scipy
+      - name: Require free API key without printing it
+        run: test -n "$FIVE_DOLLAR_FOOTBALL_API_KEY"
+      - name: Snapshot production hashes
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-before || true
+      - name: Reuse frozen current-season source artifact
+        run: |
+          mkdir -p /tmp/free-corners-v1
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/10506736726/zip > /tmp/free-corners-v1.zip
+          unzip -q /tmp/free-corners-v1.zip -d /tmp/free-corners-v1
+          EPL_PATH=$(find /tmp/free-corners-v1 -path '*/artifacts/free_corners_signal_screen_v1/raw/fixtures/EPL.json' -type f | head -n 1)
+          test -n "$EPL_PATH"
+          SOURCE_DIR=$(dirname "$(dirname "$(dirname "$EPL_PATH")")")
+          test -f "$SOURCE_DIR/normalized/opening_corner_markets.jsonl"
+          echo "SOURCE_ARTIFACT_DIR=$SOURCE_DIR" >> "$GITHUB_ENV"
+          echo "Frozen V1 fixture/market cache found; prices are not printed"
+      - name: Run frozen free EPL OOT screen
+        run: |
+          python free_corners_epl_market_screen_v2.py             --source-artifact-dir "$SOURCE_ARTIFACT_DIR"             --output-dir artifacts/free_corners_epl_market_screen_v2             > /tmp/free-corners-epl-v2.log
+      - name: Assert V2 result contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/free_corners_epl_market_screen_v2/report.json').read_text())
+          assert r['experiment_id'] == 'FREE_CORNERS_EPL_MARKET_SCREEN_V2'
+          assert r['research_only'] is True
+          assert r['betting_enabled'] is False
+          assert r['paid_subscription_used'] is False
+          assert r['fixture_count'] == 40
+          assert r['provider_requests'] <= 45
+          assert r['provider_request_budget'] == 45
+          assert r['source_artifact_id'] == 10506736726
+          assert r['verdict'] in {'INDICATIVE_INCREMENTAL_SIGNAL','NO_CLEAR_INCREMENTAL_SIGNAL','SAMPLE_TOO_SMALL'}
+          print(json.dumps(r, indent=2, sort_keys=True))
+          PY
+      - name: Verify production hashes unchanged
+        if: always()
+        run: sha256sum *.pkl 2>/dev/null | sort > /tmp/pkl-after || true; diff -u /tmp/pkl-before /tmp/pkl-after
+      - name: Upload V2 result artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: free-corners-epl-market-screen-v2
+          path: |
+            artifacts/free_corners_epl_market_screen_v2
+            /tmp/free-corners-epl-v2.log
+          if-no-files-found: warn
+          retention-days: 90
