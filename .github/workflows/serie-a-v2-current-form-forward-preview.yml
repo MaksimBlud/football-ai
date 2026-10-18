@@ -1,0 +1,72 @@
+name: Serie A V2 Current-Form Forward-Only Preview
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "18 8 * * *"
+  workflow_run:
+    workflows:
+      - "Serie A V2 Current-Form Source Capture"
+      - "Serie A Odds Snapshots"
+    types:
+      - completed
+
+concurrency:
+  group: serie-a-v2-current-form-forward-only
+  cancel-in-progress: false
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  current-form-forward-preview:
+    if: ${{ github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && ((github.event.workflow_run.name == 'Serie A V2 Current-Form Source Capture' && github.event.workflow_run.event != 'pull_request') || (github.event.workflow_run.name == 'Serie A Odds Snapshots' && github.event.workflow_run.event == 'workflow_dispatch'))) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      GITHUB_TOKEN: ${{ github.token }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      GITHUB_REF: ${{ github.ref }}
+      PYTHONPATH: .
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install read-only original V2 dependencies
+        run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
+      - name: Test frozen model, current-form source integrity, and no-outcome capture
+        run: |
+          python -m py_compile serie_a_v2_current_form_source_capture.py serie_a_v2_current_form_forward_capture.py
+          python -m pytest -q \
+            tests/test_serie_a_v2_current_form_source_capture.py \
+            tests/test_serie_a_v2_current_form_forward_capture.py \
+            tests/test_serie_a_v2_asof_feature_manifest.py \
+            tests/test_serie_a_v2_atalanta_alias.py \
+            tests/test_serie_a_v2_frozen_shadow_preview.py \
+            tests/test_serie_a_v2_manual_quote_trigger_contract.py
+      - name: Generate read-only current-form V2 shadow from already saved quotes
+        run: |
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_KEY"
+          test -n "$GITHUB_TOKEN"
+          python serie_a_v2_current_form_forward_capture.py \
+            --output artifacts/serie_a_v2_current_form_forward_preview.json \
+            --sources-output-dir artifacts/serie_a_v2_current_form_sources_used
+      - name: Archive pre-kickoff V2 shadow and exact source ZIPs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: serie-a-v2-current-form-forward-preview
+          path: |
+            artifacts/serie_a_v2_current_form_forward_preview.json
+            artifacts/serie_a_v2_current_form_sources_used/
+          if-no-files-found: warn
+          retention-days: 90
