@@ -27,7 +27,7 @@ from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes, fetch_
 
 REPOSITORY = "MaksimBlud/football-ai"
 WORKFLOW_PATH = ".github/workflows/serie-a-v2-current-form-source-capture.yml"
-SCHEMA_VERSION = "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V1"
+SCHEMA_VERSION = "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V1_1"
 CURRENT_CODE = SERIE_A_RUNTIME_CONFIG.finished_results_source.season_code
 CURRENT_SEASON = SERIE_A_RUNTIME_CONFIG.finished_results_source.season
 CURRENT_URL = f"{PUBLIC_BASE}/{CURRENT_CODE}/{SERIE_A_RUNTIME_CONFIG.finished_results_source.competition_code}.csv"
@@ -198,6 +198,11 @@ def capture_source_archive(
         raise RuntimeError(
             "public current-season source has fewer completed prior-day matches than the feature-source gate"
         )
+    current_dates = pd.to_datetime(current_rows["Date"], dayfirst=True, format="mixed", errors="raise")
+    latest_match_date = current_dates.max().date()
+    days_since_latest_match = (observed_at.date() - latest_match_date).days
+    if days_since_latest_match < 0:
+        raise ValueError("current-season latest match date is after source observation date")
     current_path = output_dir / CURRENT_FILENAME
     current_path.write_bytes(raw)
     audits = list(old_audit) + [{
@@ -215,6 +220,8 @@ def capture_source_archive(
         raise ValueError("current season unexpectedly appeared in frozen old-season source list")
     report = {
         "schema_version": SCHEMA_VERSION,
+        "policy_revision": "1.1",
+        "policy_path": "experiments/market_anchor_1x2_v2_current_form_policy_v1_1.json",
         "experiment_id": "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY",
         "mode": "RESEARCH_ONLY_CURRENT_FORM_SOURCE_ARCHIVE",
         "repository": REPOSITORY,
@@ -233,6 +240,8 @@ def capture_source_archive(
         "current_season_source_observed_at_utc": observed_at.isoformat(),
         "current_season_completed_prior_day_rows": len(current_rows),
         "current_season_total_csv_rows": audits[-1]["total_source_rows"],
+        "current_season_latest_match_date": latest_match_date.isoformat(),
+        "current_season_days_since_latest_match_at_capture": days_since_latest_match,
         "current_season_excluded_incomplete_or_same_day_rows": excluded_rows,
         "feature_source_gate": {
             "type": "CURRENT_FORM_FEATURE_INPUT_ONLY",
