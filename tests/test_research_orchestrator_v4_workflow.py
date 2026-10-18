@@ -47,6 +47,9 @@ def test_v4_scheduler_retries_only_quota_waiting_issues():
     sweep = text.split("  sweep:", 1)[1].split("  preflight:", 1)[0]
     assert "--label research-v4-waiting" in sweep
     assert "--label research-v4-running --limit" not in sweep
+    assert "QUOTA_WAIT.json" in sweep
+    assert "not_before_epoch" in sweep
+    assert 'if [ "$NOT_BEFORE" -gt "$NOW" ]' in sweep
 
 
 def test_v4_has_issue_dispatch_schedule_and_pr_contract_triggers():
@@ -104,6 +107,8 @@ def test_v4_persists_per_issue_usage_without_spending_iteration_budget():
     text = _v4()
     assert "usage-update" in text
     assert "USAGE.json" in text
+    assert "QUOTA_WAIT.json" in text
+    assert 'git add "$QUOTA_WAIT"' in text
     assert "Research V4 usage #" in text
     assert "grep -c \"^Research V4 issue #" in text
     assert "research_iterations_committed" in text
@@ -150,7 +155,12 @@ def test_v4_heartbeat_wakes_waiting_issues_from_independent_live_workflows():
 def test_v4_heartbeat_claims_waiting_issue_before_dispatch_and_restores_on_failure():
     text = _heartbeat()
     assert "--label research-v4-waiting" in text
+    assert "QUOTA_WAIT.json" in text
+    assert "not_before_epoch" in text
+    assert 'if [ "$NOT_BEFORE" -gt "$NOW" ]' in text
+    assert "quota wait: skip issue" in text
     claim = '--add-label research-v4-queued \\\n              --remove-label research-v4-waiting'
+    assert text.index("quota wait: skip issue") < text.index(claim)
     assert claim in text
     assert "gh workflow run research-orchestrator-v4.yml" in text
     assert "-f source=schedule" in text

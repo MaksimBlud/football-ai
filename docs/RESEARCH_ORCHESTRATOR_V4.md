@@ -168,8 +168,10 @@ HTTP 400 `tool_use_failed`.
 Short Groq TPM/429/503 conditions are retried through Groq and do **not** invoke
 Gemini. When Groq supplies a long `retry-after` window (for example a TPD window
 measured in many minutes), the worker fails fast into quiet `research-v4-waiting`
-instead of sleeping/re-dispatching every minute; heartbeat recovery handles the
-later wake-up. A `tool_use_failed` response first gets an immediate state-only Groq retry
+and persists `QUOTA_WAIT.json` with a buffered `not_before_epoch` on the persistent
+Issue branch. Both the hourly/independent heartbeat and the fallback V4 schedule
+read that file and skip the Issue until the provider window has actually reopened,
+instead of sleeping or re-dispatching every minute. A `tool_use_failed` response first gets an immediate state-only Groq retry
 that exposes only `write_state`; repeated format failures use bounded quick
 redispatches and never fall back to Gemini. Gemini is reserved only for
 `PERMANENT_BLOCKED`, preventing normal minute-window throttling or tool
