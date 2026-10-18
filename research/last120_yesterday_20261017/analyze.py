@@ -109,17 +109,28 @@ def pick_optas(targets,fixtures):
         for f in fixtures:
             season=str(f.get("season") or "").replace("/","-")
             date_text=str(f.get("match_date") or "")
-            score=(int(f["home_score"]),int(f["away_score"])) if f.get("home_score") is not None and f.get("away_score") is not None else None
+            has_score=f.get("home_score") is not None and f.get("away_score") is not None
+            score=(int(f["home_score"]),int(f["away_score"])) if has_score else None
+            status=str(f.get("match_status") or "").lower()
             if str(f.get("competition")) != OPTA_CODE[t["league"]]: continue
             if DAY not in date_text or season not in ("2026-2027","2026-27","2026-2027 "): continue
-            if str(f.get("match_status") or "").lower() not in ("played","finished","complete","completed"): continue
-            if score != (t["home_goals"],t["away_goals"]): continue
+            # Public fixture snapshot can lag on setting status=Played. Permit a uniquely
+            # matched Fixture row only when both teams/date agree; exact event counts and,
+            # when present, Opta score are checked before classification.
+            if status not in ("played","finished","complete","completed","fixture"): continue
+            if score is not None and score != (t["home_goals"],t["away_goals"]): continue
             eligible.append(f)
         strict=[f for f in eligible if same_team(t["home"],f.get("home_team","")) and same_team(t["away"],f.get("away_team",""))]
         chosen=strict[0] if len(strict)==1 else None
-        method="JOIN_BOTH_TEAMS_DATE_SCORE"
-        if chosen is None and len(eligible)==1 and (same_team(t["home"],eligible[0].get("home_team","")) or same_team(t["away"],eligible[0].get("away_team",""))):
-            chosen=eligible[0]; method="GUARDED_UNIQUE_DATE_SCORE_ONE_TEAM"
+        if chosen is not None:
+            method=("JOIN_BOTH_TEAMS_DATE_SCORE" if chosen.get("home_score") is not None and chosen.get("away_score") is not None
+                    else "JOIN_BOTH_TEAMS_DATE_SCORE_VALIDATED_BY_EVENT_COUNT")
+        else:
+            # One-team fallback is allowed only if the Opta record already has the score.
+            scored=[f for f in eligible if f.get("home_score") is not None and f.get("away_score") is not None]
+            scored_strict=[f for f in scored if same_team(t["home"],f.get("home_team","")) and same_team(t["away"],f.get("away_team",""))]
+            chosen=scored[0] if len(scored)==1 and len(scored_strict)==1 else None
+            method="GUARDED_UNIQUE_DATE_SCORE_ONE_TEAM"
         if chosen is None:
             errors.append({"league":t["league"],"home":t["home"],"away":t["away"],"score":t["score"],"why":f"OPT_JOIN_UNRESOLVED eligible={len(eligible)} strict={len(strict)}"})
             continue
@@ -138,8 +149,15 @@ def classify_opta(t,f,events,join_method):
     end_events=[e for e in events if int(e.get("type_id") or 0)==30 and int(e.get("period_id") or 0)==2 and evsec(e) is not None]
     goals=[e for e in events if int(e.get("type_id") or 0)==16 and int(e.get("period_id") or 0) in (1,2) and evsec(e) is not None]
     goal_total=t["home_goals"]+t["away_goals"]
-    row.update(opta_fixture_id=str(f.get("match_id")),score_verified=(int(f["home_score"])==t["home_goals"] and int(f["away_score"])==t["away_goals"]),
+    has_fixture_score=f.get("home_score") is not None and f.get("away_score") is not None
+    fixture_score=(int(f["home_score"]),int(f["away_score"])) if has_fixture_score else None
+    row.update(opta_fixture_id=str(f.get("match_id")),
+               fixture_score_verified=(fixture_score==(t["home_goals"],t["away_goals"])) if fixture_score is not None else None,
+               opta_match_status=str(f.get("match_status") or ""),
                opta_goal_events=len(goals), expected_goal_events=goal_total, final_end_events=len(end_events))
+    if fixture_score is not None and fixture_score!=(t["home_goals"],t["away_goals"]):
+        row.update(result="UNKNOWN",reason="OPTA_FIXTURE_SCORE_MISMATCH")
+        return row
     if len(goals)!=goal_total or not end_events:
         row.update(result="UNKNOWN",reason="SAME_SOURCE_GOAL_COUNT_OR_END_MISSING")
         return row
