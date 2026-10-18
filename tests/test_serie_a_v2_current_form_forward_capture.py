@@ -57,7 +57,7 @@ def make_current_csv():
     return (header + "\n" + "\n".join(rows) + "\n").encode()
 
 
-def make_archive():
+def make_archive(*, legacy=False):
     files = {}
     source_files = []
     for code in _source_codes():
@@ -89,7 +89,9 @@ def make_archive():
         "excluded_incomplete_or_same_day_rows": 0,
     })
     manifest = {
-        "schema_version": "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V1",
+        "schema_version": "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V1_1",
+        "policy_revision": "1.1",
+        "policy_path": "experiments/market_anchor_1x2_v2_current_form_policy_v1_1.json",
         "experiment_id": "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY",
         "mode": "RESEARCH_ONLY_CURRENT_FORM_SOURCE_ARCHIVE",
         "repository": "MaksimBlud/football-ai",
@@ -109,6 +111,8 @@ def make_archive():
         "current_season_completed_prior_day_rows": 30,
         "current_season_total_csv_rows": 30,
         "current_season_excluded_incomplete_or_same_day_rows": 0,
+        "current_season_latest_match_date": "2026-08-30",
+        "current_season_days_since_latest_match_at_capture": 49,
         "feature_source_gate": {
             "type": "CURRENT_FORM_FEATURE_INPUT_ONLY",
             "primary_league": "SERIE_A",
@@ -148,6 +152,14 @@ def make_archive():
         "target_outcomes_scored": False,
         "model_refit_or_promotion": False,
     }
+    if legacy:
+        manifest["schema_version"] = "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V1"
+        for key in (
+            "policy_revision", "policy_path",
+            "current_season_latest_match_date",
+            "current_season_days_since_latest_match_at_capture",
+        ):
+            manifest.pop(key, None)
     files[MANIFEST_FILENAME] = (json.dumps(manifest, sort_keys=True) + "\n").encode()
     bio = BytesIO()
     with zipfile.ZipFile(bio, "w", zipfile.ZIP_DEFLATED) as z:
@@ -162,6 +174,37 @@ def make_archive():
         "sha256": hashlib.sha256(raw).hexdigest(),
     }
     return raw, [meta]
+
+
+def schedule_metadata(*, include_gap=False):
+    rows = [
+        {
+            "event_id": "known-prior-fixture",
+            "league": "SERIE_A",
+            "home_team": "Juventus",
+            "away_team": "Napoli",
+            "commence_time_utc": "2026-08-10T18:00:00Z",
+            "snapshot_time_utc": "2026-08-09T12:00:00Z",
+        },
+        {
+            "event_id": "v2-current-form-test-event",
+            "league": "SERIE_A",
+            "home_team": "Juventus",
+            "away_team": "Napoli",
+            "commence_time_utc": "2026-10-19T18:00:00Z",
+            "snapshot_time_utc": "2026-10-19T05:30:00Z",
+        },
+    ]
+    if include_gap:
+        rows.append({
+            "event_id": "missing-prior-day-fixture",
+            "league": "SERIE_A",
+            "home_team": "Atalanta BC",
+            "away_team": "Frosinone",
+            "commence_time_utc": "2026-10-16T18:45:00Z",
+            "snapshot_time_utc": "2026-10-13T14:48:53Z",
+        })
+    return rows
 
 
 def valid_parent(archive, *, quote_time):
@@ -184,6 +227,7 @@ def test_current_form_v2_scores_only_future_quote_with_prequote_source_and_stays
         load_archive=lambda artifact_id: raw,
         verify_parent_run=valid_parent,
         write_sources_to=tmp_path,
+        fixture_metadata=schedule_metadata(),
     )
     assert report["quotes_seen"] == 1
     assert report["v2_current_form_shadow_captured"] == 1
@@ -216,8 +260,9 @@ def test_real_archive_verification_is_reported_even_without_any_fresh_quote(tmp_
         load_archive=lambda artifact_id: raw,
         verify_parent_run=valid_parent,
         write_sources_to=tmp_path,
+        fixture_metadata=schedule_metadata(),
     )
-    assert report["status"] == "VERIFIED"
+    assert report["status"] == "VERIFIED_FRESH"
     assert report["verified"] is True
     assert report["artifact_id"] == 9876
     assert report["artifact_sha256"] == hashlib.sha256(raw).hexdigest()
@@ -225,6 +270,9 @@ def test_real_archive_verification_is_reported_even_without_any_fresh_quote(tmp_
     assert report["historical_old_season_file_count"] == 10
     assert report["source_file_count"] == 11
     assert report["current_season_history_rows"] == 30
+    assert report["current_season_latest_match_date"] == "2026-08-30"
+    assert report["current_season_days_since_latest_match_at_capture"] == 49
+    assert report["source_schedule_completeness"]["complete"] is True
     assert report["fresh_for_new_quote"] is True
     assert report["target_outcomes_read"] is False
     assert report["target_outcomes_scored"] is False
