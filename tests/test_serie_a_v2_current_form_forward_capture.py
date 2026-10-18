@@ -10,6 +10,7 @@ from serie_a_v2_current_form_forward_capture import (
     ARTIFACT_NAME,
     MANIFEST_FILENAME,
     SOURCE_WORKFLOW_PATH,
+    fetch_saved_serie_a_fixture_metadata,
     prepare_forward_capture,
     verify_latest_source_archive,
 )
@@ -293,6 +294,92 @@ def test_missing_source_artifact_is_explicitly_reported_without_reading_outcomes
     assert report["verified"] is False
     assert report["target_outcomes_read"] is False
     assert report["target_outcomes_scored"] is False
+
+
+
+
+def test_missing_prior_day_schedule_fixture_blocks_fresh_quote():
+    raw, archives = make_archive()
+    report = prepare_forward_capture(
+        [quote()], archives,
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        load_archive=lambda _artifact_id: raw,
+        verify_parent_run=valid_parent,
+        fixture_metadata=schedule_metadata(include_gap=True),
+    )
+    assert report["v2_current_form_shadow_captured"] == 0
+    assert report["blocked"]["CURRENT_FORM_SOURCE_BEHIND_SCHEDULE"] == 1
+    row = report["rows"][0]
+    assert row["status"] == "CURRENT_FORM_SOURCE_BEHIND_SCHEDULE"
+    assert row["source_schedule_completeness"]["gap_count"] == 1
+    assert row["source_schedule_completeness"]["gaps"][0]["event_id"] == "missing-prior-day-fixture"
+    assert row["source_schedule_completeness"]["gaps"][0]["missing_fixture_key"] == [
+        "2026-10-16", "Atalanta", "Frosinone"
+    ]
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
+
+
+def test_schedule_metadata_unavailable_blocks_fresh_quote():
+    raw, archives = make_archive()
+    report = prepare_forward_capture(
+        [quote()], archives,
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        load_archive=lambda _artifact_id: raw,
+        verify_parent_run=valid_parent,
+        fixture_metadata=[],
+    )
+    assert report["v2_current_form_shadow_captured"] == 0
+    assert report["blocked"]["SCHEDULE_METADATA_UNAVAILABLE"] == 1
+    assert report["rows"][0]["status"] == "SCHEDULE_METADATA_UNAVAILABLE"
+
+
+def test_legacy_source_archive_is_verified_but_never_admitted_to_new_policy():
+    raw, archives = make_archive(legacy=True)
+    verification = verify_latest_source_archive(
+        archives,
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        load_archive=lambda _artifact_id: raw,
+        verify_parent_run=valid_parent,
+        fixture_metadata=schedule_metadata(),
+    )
+    assert verification["verified"] is True
+    assert verification["policy_revision"] == "1.0_LEGACY"
+    assert verification["status"] == "VERIFIED_LEGACY_POLICY_NOT_ELIGIBLE"
+    assert verification["fresh_for_new_quote"] is False
+
+    report = prepare_forward_capture(
+        [quote()], archives,
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        load_archive=lambda _artifact_id: raw,
+        verify_parent_run=valid_parent,
+        fixture_metadata=schedule_metadata(),
+    )
+    assert report["v2_current_form_shadow_captured"] == 0
+    assert report["blocked"]["LEGACY_SOURCE_POLICY_NOT_ELIGIBLE"] == 1
+    assert report["rows"][0]["status"] == "LEGACY_SOURCE_POLICY_NOT_ELIGIBLE"
+
+
+def test_schedule_metadata_query_selects_only_identity_and_time_fields():
+    class FakeQuery:
+        def __init__(self):
+            self.selected = None
+        def table(self, _name): return self
+        def select(self, fields): self.selected = fields; return self
+        def eq(self, *_args): return self
+        def gte(self, *_args): return self
+        def order(self, *_args, **_kwargs): return self
+        def limit(self, *_args): return self
+        def execute(self): return type("Response", (), {"data": schedule_metadata()})()
+
+    client = FakeQuery()
+    rows = fetch_saved_serie_a_fixture_metadata(client)
+    assert len(rows) == 2
+    assert client.selected == (
+        "event_id,league,home_team,away_team,commence_time_utc,snapshot_time_utc"
+    )
+    assert not any("score" in field.lower() or "result" in field.lower()
+                   for field in client.selected.split(","))
 
 
 def test_precontract_quote_is_never_backfilled_from_a_later_source_archive():
