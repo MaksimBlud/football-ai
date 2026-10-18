@@ -1,0 +1,60 @@
+name: Serie A V2 Current-Form Source Capture
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "50 5 * * *"
+  push:
+    branches: [main]
+    paths:
+      - "serie_a_v2_current_form_source_capture.py"
+      - "experiments/market_anchor_1x2_v2_current_form_policy.json"
+      - "tests/test_serie_a_v2_current_form_source_capture.py"
+      - ".github/workflows/serie-a-v2-current-form-source-capture.yml"
+
+concurrency:
+  group: serie-a-v2-current-form-source-capture
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  capture-current-form:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      GITHUB_SHA: ${{ github.sha }}
+      GITHUB_RUN_ID: ${{ github.run_id }}
+      PYTHONPATH: .
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install read-only V2 source dependencies
+        run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
+      - name: Validate feature-input gate and source integrity rules
+        run: |
+          python -m py_compile serie_a_v2_current_form_source_capture.py
+          python -m pytest -q tests/test_serie_a_v2_current_form_source_capture.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_atalanta_alias.py
+      - name: Capture frozen historical seasons plus gated current-form source
+        run: |
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_KEY"
+          python serie_a_v2_current_form_source_capture.py \
+            --output-dir artifacts/serie_a_v2_current_form_source_capture
+      - name: Archive source bytes and gate manifest for future quotes only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: serie-a-v2-current-form-source-capture
+          path: artifacts/serie_a_v2_current_form_source_capture/
+          if-no-files-found: warn
+          retention-days: 90
