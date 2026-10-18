@@ -16,6 +16,7 @@ from serie_a_v2_current_form_source_capture import (
     REQUIRED_COLUMNS,
     capture_source_archive,
     count_unique_completed_primary_events,
+    read_completed_primary_event_count,
     validate_current_season_csv,
 )
 from serie_a_v2_live_diagnostic_report import _source_codes
@@ -89,6 +90,15 @@ def test_gate_counts_unique_primary_fixture_metadata_only_and_normalizes_aliases
     assert count_unique_completed_primary_events(
         rows, before_date=date(2026, 10, 18)
     ) == 2
+
+
+def test_live_feature_gate_query_selects_only_fixture_metadata_not_scores():
+    client = FakeQuery(event_rows(30))
+    count = read_completed_primary_event_count(
+        client, now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+    )
+    assert count == 30
+    assert client.selected == "match_date,home_team,away_team"
 
 
 def test_current_csv_uses_only_completed_rows_strictly_before_capture_day():
