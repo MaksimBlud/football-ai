@@ -427,6 +427,7 @@ def verify_latest_source_archive(
     load_archive,
     verify_parent_run,
     write_sources_to: Path | None = None,
+    fixture_metadata: list[dict] | None = None,
 ) -> dict:
     """Verify the latest successful main source artifact even when all quotes are stale."""
     if as_of_utc.tzinfo is None:
@@ -459,8 +460,24 @@ def verify_latest_source_archive(
     if age_seconds < 0:
         raise ValueError("source archive contains a source timestamp after verification time")
     manifest = source_meta["manifest"]
+    schedule_check = assess_source_schedule_completeness(
+        source_meta, fixture_metadata, as_of_utc=now
+    )
+    policy_current = source_meta["policy_revision"] == CURRENT_FORM_POLICY_REVISION
+    source_age_fresh = age_seconds <= MAX_SOURCE_AGE.total_seconds()
+    eligible = policy_current and source_age_fresh and schedule_check["complete"]
+    if not schedule_check["metadata_available"]:
+        status = "VERIFIED_SCHEDULE_METADATA_UNAVAILABLE"
+    elif schedule_check["gap_count"]:
+        status = "VERIFIED_WITH_SCHEDULE_GAPS"
+    elif not policy_current:
+        status = "VERIFIED_LEGACY_POLICY_NOT_ELIGIBLE"
+    elif not source_age_fresh:
+        status = "VERIFIED_SOURCE_CONTENT_TOO_OLD"
+    else:
+        status = "VERIFIED_FRESH"
     return {
-        "status": "VERIFIED",
+        "status": status,
         "verified": True,
         "verified_at_utc": now.isoformat(),
         "artifact_id": archive["artifact_id"],
@@ -468,7 +485,13 @@ def verify_latest_source_archive(
         "source_archive_created_at_utc": source_meta["archive_created_at_utc"],
         "latest_source_observed_at_utc": source_meta["latest_source_observed_at_utc"],
         "source_age_seconds_at_verification": int(age_seconds),
-        "fresh_for_new_quote": age_seconds <= MAX_SOURCE_AGE.total_seconds(),
+        "fresh_for_new_quote": eligible,
+        "eligible_for_new_quote": eligible,
+        "policy_revision": source_meta["policy_revision"],
+        "source_manifest_schema": source_meta["source_manifest_schema"],
+        "current_season_latest_match_date": source_meta["current_season_latest_match_date"],
+        "current_season_days_since_latest_match_at_capture": source_meta["current_season_days_since_latest_match_at_capture"],
+        "source_schedule_completeness": schedule_check,
         "parent_run": source_meta["parent_run"],
         "feature_input_gate_count": manifest["feature_source_gate"]["observed_completed_primary_events"],
         "historical_old_season_file_count": manifest["historical_old_season_file_count"],
