@@ -1,0 +1,17 @@
+name: Research Last120 Offline Selector
+on:
+  pull_request:
+    paths:
+      - 'research/last120_selector_20261017/**'
+      - '.github/workflows/research-last120-selector.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  selector:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Regression checks (Node built-ins only)
+        run: node research/last120_selector_20261017/test_selector.cjs
