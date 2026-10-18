@@ -1,0 +1,33 @@
+name: Research Yesterday Last 120 Seconds (2026-10-17)
+on:
+  push:
+    branches:
+      - research/last120-yesterday-20261018
+    paths:
+      - '.github/workflows/research-last120-yesterday.yml'
+      - 'research/last120_yesterday_20261017/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile research script
+        run: python -m py_compile research/last120_yesterday_20261017/analyze.py
+      - name: Install Parquet reader (free)
+        run: python -m pip install --disable-pip-version-check pyarrow==21.0.0
+      - name: Fetch Oct 17 fixtures and classify last 120 seconds
+        run: python -u research/last120_yesterday_20261017/analyze.py
+      - name: Upload auditable report
+        uses: actions/upload-artifact@v4
+        with:
+          name: last120-yesterday-2026-10-17
+          path: research/last120_yesterday_20261017/evidence/
+          if-no-files-found: error
+          retention-days: 14
