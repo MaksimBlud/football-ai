@@ -77,6 +77,15 @@ def test_current_form_v2_is_a_separate_predeclared_forward_only_cohort():
     assert policy["safety"]["supabase_writes"] is False
     assert policy["safety"]["paid_provider_calls"] == 0
 
+    revised = json.loads(Path("experiments/market_anchor_1x2_v2_current_form_policy_v1_1.json").read_text(encoding="utf-8"))
+    assert revised["policy_revision"] == "1.1"
+    assert revised["amendment_effective_before_first_eligible_forecast"] is True
+    assert revised["source_schedule_completeness_gate"]["required"] is True
+    assert revised["source_schedule_completeness_gate"]["odds_values_or_result_fields_read"] is False
+    assert revised["source_schedule_completeness_gate"]["no_target_outcome_read"] is True
+    assert revised["quote_admission"]["source_manifest_must_attest_policy_revision"] == "1.1"
+    assert revised["target_outcome_evaluation_gate"] == policy["target_outcome_evaluation_gate"]
+
 
 def test_current_form_source_capture_and_forward_preview_never_trigger_paid_odds():
     source = Path(".github/workflows/serie-a-v2-current-form-source-capture.yml").read_text(encoding="utf-8")
