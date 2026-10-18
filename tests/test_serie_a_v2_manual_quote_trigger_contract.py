@@ -68,8 +68,8 @@ def test_current_form_v2_is_a_separate_predeclared_forward_only_cohort():
     assert policy["feature_source"]["current_season_results_allowed_only_as_lagged_inputs"] is True
     assert policy["feature_source"]["same_calendar_day_matches_excluded"] is True
     assert policy["feature_source"]["must_be_archived_before_quote"] is True
-    assert policy["feature_source_gate"]["count_query_reads_score_or_result_fields"] is False
-    assert policy["feature_source_gate"]["does_not_open_target_outcome_evaluation_gate"] is True
+    assert policy["feature_input_gate"]["count_query_reads_score_or_result_fields"] is False
+    assert policy["feature_input_gate"]["does_not_open_target_outcome_evaluation_gate"] is True
     assert policy["target_outcome_evaluation_gate"]["minimum_completed_eligible_prospective_forecasts"] == 30
     assert policy["target_outcome_evaluation_gate"]["target_outcomes_read_before_gate"] is False
     assert policy["target_outcome_evaluation_gate"]["review_signal_requires"].startswith("After 30 eligible forward forecasts")
