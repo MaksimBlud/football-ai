@@ -7,7 +7,7 @@ strictly as lagged features; target outcomes are never read or scored here.
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from io import BytesIO
 import hashlib
 import json
@@ -26,7 +26,7 @@ from serie_a_v2_asof_feature_manifest import build_manifest
 from serie_a_v2_current_form_source_capture import (
     CURRENT_CODE, CURRENT_FILENAME, CURRENT_SEASON, CURRENT_URL,
     MANIFEST_FILENAME, MIN_COMPLETED_FEATURE_SOURCE_EVENTS,
-    REQUIRED_COLUMNS, validate_current_season_csv,
+    REQUIRED_COLUMNS, _canonical_team, validate_current_season_csv,
 )
 from serie_a_v2_frozen_shadow_preview import (
     FROZEN_SHA, fetch_saved_upcoming_serie_a_quotes, parse_utc, shadow_preview, _guard_outcome_free,
@@ -38,7 +38,10 @@ REPOSITORY = "MaksimBlud/football-ai"
 GITHUB_API = f"https://api.github.com/repos/{REPOSITORY}"
 ARTIFACT_NAME = "serie-a-v2-current-form-source-capture"
 SOURCE_WORKFLOW_PATH = ".github/workflows/serie-a-v2-current-form-source-capture.yml"
-SCHEMA_VERSION = "SERIE_A_V2_CURRENT_FORM_FORWARD_CAPTURE_V1"
+SCHEMA_VERSION = "SERIE_A_V2_CURRENT_FORM_FORWARD_CAPTURE_V1_1"
+SOURCE_MANIFEST_V1 = "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V1"
+SOURCE_MANIFEST_V1_1 = "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V1_1"
+CURRENT_FORM_POLICY_REVISION = "1.1"
 MAX_QUOTE_AGE = timedelta(hours=24)
 MAX_SOURCE_AGE = timedelta(hours=24)
 MAX_ARCHIVE_BYTES = 16_000_000
@@ -160,7 +163,8 @@ def verify_and_load_archive(
         if len(names) != len(expected) or set(names) != expected:
             raise ValueError("current-form archive has unexpected/missing files")
         manifest = json.loads(z.read(MANIFEST_FILENAME))
-        if (manifest.get("schema_version") != "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V1"
+        manifest_schema = manifest.get("schema_version")
+        if (manifest_schema not in (SOURCE_MANIFEST_V1, SOURCE_MANIFEST_V1_1)
                 or manifest.get("experiment_id") != "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY"
                 or manifest.get("workflow_path") != SOURCE_WORKFLOW_PATH
                 or manifest.get("git_sha") != archive.get("head_sha")
@@ -174,6 +178,12 @@ def verify_and_load_archive(
                 or manifest.get("source_file_count") != 11
                 or manifest.get("historical_old_season_file_count") != 10):
             raise ValueError("current-form source manifest violates frozen candidate/season contract")
+        policy_revision = manifest.get("policy_revision", "1.0_LEGACY")
+        if ((manifest_schema == SOURCE_MANIFEST_V1_1 and policy_revision != CURRENT_FORM_POLICY_REVISION)
+                or (manifest_schema == SOURCE_MANIFEST_V1 and policy_revision not in (None, "1.0", "1.0_LEGACY"))):
+            raise ValueError("current-form source policy revision is inconsistent with its schema")
+        if (manifest.get("original_feature_builder_git_blob_sha1") != "401b3a0893371bfa4a488ec92a4a54af2678c8f7"):
+            raise ValueError("current-form source manifest does not pin the original feature builder")
         gate = manifest.get("feature_source_gate")
         if (not isinstance(gate, dict)
                 or gate.get("type") != "CURRENT_FORM_FEATURE_INPUT_ONLY"
@@ -250,6 +260,23 @@ def verify_and_load_archive(
         current_dates = pd.to_datetime(current_frame["Date"], dayfirst=True, format="mixed", errors="raise")
         if current_dates.empty or (current_dates < OLD_CUTOFF).any():
             raise ValueError("current-season archive contains pre-2026/27 rows or no usable rows")
+        latest_match_date = current_dates.max().date()
+        days_since_latest_match = (current_observed.date() - latest_match_date).days
+        if days_since_latest_match < 0:
+            raise ValueError("current-season latest match date is after source observation")
+        if manifest_schema == SOURCE_MANIFEST_V1_1 and (
+            manifest.get("current_season_latest_match_date") != latest_match_date.isoformat()
+            or manifest.get("current_season_days_since_latest_match_at_capture") != days_since_latest_match
+            or manifest.get("policy_path") != "experiments/market_anchor_1x2_v2_current_form_policy_v1_1.json"
+        ):
+            raise ValueError("current-form source latest-match date or policy revision does not match CSV")
+        current_fixture_keys = []
+        for (_, row), match_day in zip(current_frame.iterrows(), current_dates):
+            current_fixture_keys.append((
+                match_day.date().isoformat(),
+                _canonical_team(row["HomeTeam"]),
+                _canonical_team(row["AwayTeam"]),
+            ))
         source_times.append(current_observed)
         history = pd.concat(old_frames + [current_frame], ignore_index=True)
         latest_source = max(source_times)
@@ -267,6 +294,10 @@ def verify_and_load_archive(
             "parent_run": dict(parent),
             "historical_match_rows": len(history),
             "current_season_history_rows": len(current_frame),
+            "current_season_latest_match_date": latest_match_date.isoformat(),
+            "current_season_days_since_latest_match_at_capture": days_since_latest_match,
+            "current_season_fixture_keys": current_fixture_keys,
+            "policy_revision": policy_revision,
         }
 
 
