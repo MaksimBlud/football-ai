@@ -270,6 +270,11 @@ def verify_and_load_archive(
             or manifest.get("policy_path") != "experiments/market_anchor_1x2_v2_current_form_policy_v1_1.json"
         ):
             raise ValueError("current-form source latest-match date or policy revision does not match CSV")
+        if manifest_schema == SOURCE_MANIFEST_V1 and (
+            manifest.get("current_season_latest_match_date") is not None
+            or manifest.get("current_season_days_since_latest_match_at_capture") is not None
+        ):
+            raise ValueError("legacy source manifest unexpectedly contains V1.1-only fields")
         current_fixture_keys = []
         for (_, row), match_day in zip(current_frame.iterrows(), current_dates):
             current_fixture_keys.append((
@@ -298,6 +303,7 @@ def verify_and_load_archive(
             "current_season_days_since_latest_match_at_capture": days_since_latest_match,
             "current_season_fixture_keys": current_fixture_keys,
             "policy_revision": policy_revision,
+            "source_manifest_schema": manifest_schema,
         }
 
 
