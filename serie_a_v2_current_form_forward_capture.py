@@ -326,7 +326,9 @@ def fetch_saved_serie_a_fixture_metadata(client: Any) -> list[dict]:
     return rows
 
 
-def _latest_fixture_metadata(rows: list[dict], *, as_of_utc: datetime) -> list[dict]:
+def _latest_fixture_metadata(
+    rows: list[dict], *, as_of_utc: datetime, not_after_utc: datetime | None = None
+) -> list[dict]:
     latest: dict[str, dict] = {}
     latest_snapshot: dict[str, datetime] = {}
     for row in rows:
@@ -343,6 +345,8 @@ def _latest_fixture_metadata(rows: list[dict], *, as_of_utc: datetime) -> list[d
         snapshot = parse_utc(row["snapshot_time_utc"])
         if snapshot > as_of_utc:
             raise ValueError("fixture metadata contains a snapshot from the future")
+        if not_after_utc is not None and snapshot > not_after_utc:
+            continue
         old = latest.get(event_id)
         if old is not None and (
             old["canonical_home_team"] != home or old["canonical_away_team"] != away
@@ -381,7 +385,14 @@ def assess_source_schedule_completeness(
     }
     if not fixture_metadata:
         return {**base, "complete": False, "status": "SCHEDULE_METADATA_UNAVAILABLE"}
-    rows = _latest_fixture_metadata(fixture_metadata, as_of_utc=as_of_utc.astimezone(timezone.utc))
+    rows = _latest_fixture_metadata(
+        fixture_metadata,
+        as_of_utc=as_of_utc.astimezone(timezone.utc),
+        not_after_utc=source_time,
+    )
+    if not rows:
+        return {**base, "metadata_available": False, "complete": False,
+                "status": "SCHEDULE_METADATA_UNAVAILABLE"}
     current_keys = {tuple(key) for key in source_meta.get("current_season_fixture_keys", [])}
     gaps = []
     checked = set()
@@ -409,6 +420,9 @@ def assess_source_schedule_completeness(
                 "missing_fixture_key": list(key),
             })
     gaps.sort(key=lambda item: (item["kickoff_utc"], item["event_id"]))
+    if not checked:
+        return {**base, "metadata_available": False, "complete": False,
+                "status": "SCHEDULE_METADATA_INSUFFICIENT"}
     return {
         **base,
         "metadata_available": True,
