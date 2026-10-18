@@ -6,6 +6,10 @@ on:
     paths:
       - '.github/workflows/research-last120-yesterday.yml'
       - 'research/last120_yesterday_20261017/**'
+  pull_request:
+    paths:
+      - '.github/workflows/research-last120-yesterday.yml'
+      - 'research/last120_yesterday_20261017/**'
   workflow_dispatch:
 permissions:
   contents: read
