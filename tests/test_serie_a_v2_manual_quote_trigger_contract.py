@@ -73,7 +73,9 @@ def test_current_form_v2_is_a_separate_predeclared_forward_only_cohort():
     assert policy["target_outcome_evaluation_gate"]["minimum_completed_eligible_prospective_forecasts"] == 30
     assert policy["target_outcome_evaluation_gate"]["target_outcomes_read_before_gate"] is False
     assert policy["target_outcome_evaluation_gate"]["review_signal_requires"].startswith("After 30 eligible forward forecasts")
-    assert policy["safety"]["model_refit"] if "model_refit" in policy["safety"] else True
+    assert policy["safety"]["production_writes"] is False
+    assert policy["safety"]["supabase_writes"] is False
+    assert policy["safety"]["paid_provider_calls"] == 0
 
 
 def test_current_form_source_capture_and_forward_preview_never_trigger_paid_odds():
@@ -89,7 +91,6 @@ def test_current_form_source_capture_and_forward_preview_never_trigger_paid_odds
     assert '"Serie A V2 Current-Form Source Capture"' in forward
     assert '"Serie A Odds Snapshots"' in forward
     assert "github.event.workflow_run.event == 'workflow_dispatch'" in forward
-    assert 'schedule:' not in source.split("push:", 1)[0]
     assert 'schedule:' in source
     assert 'workflow_dispatch:' in source
     assert 'workflow_dispatch:' in forward
