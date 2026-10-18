@@ -94,3 +94,5 @@ def test_current_form_source_capture_and_forward_preview_never_trigger_paid_odds
     assert 'schedule:' in source
     assert 'workflow_dispatch:' in source
     assert 'workflow_dispatch:' in forward
+    assert 'push:' in forward
+    assert '"serie_a_v2_current_form_forward_capture.py"' in forward
