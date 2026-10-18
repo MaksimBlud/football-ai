@@ -4,6 +4,13 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "18 8 * * *"
+  push:
+    branches: [main]
+    paths:
+      - "serie_a_v2_current_form_forward_capture.py"
+      - "tests/test_serie_a_v2_current_form_forward_capture.py"
+      - "tests/test_serie_a_v2_manual_quote_trigger_contract.py"
+      - ".github/workflows/serie-a-v2-current-form-forward-preview.yml"
   workflow_run:
     workflows:
       - "Serie A V2 Current-Form Source Capture"
