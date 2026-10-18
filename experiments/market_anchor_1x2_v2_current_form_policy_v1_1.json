@@ -1,0 +1,96 @@
+{
+  "schema_version": "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY_V1_1",
+  "policy_revision": "1.1",
+  "parent_policy_path": "experiments/market_anchor_1x2_v2_current_form_policy.json",
+  "experiment_id": "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY",
+  "status": "PREREGISTERED_RESEARCH_ONLY",
+  "amendment_reason": "Before any eligible prospective forecast was captured, live source inspection showed that a file downloaded on 2026-10-18 contained completed matches only through 2026-10-12, while saved fixture metadata included 2026-10-16 and 2026-10-17 kickoffs. This is a source completeness safeguard, not an outcome/performance-driven threshold.",
+  "amendment_effective_before_first_eligible_forecast": true,
+  "frozen_original_candidate": {
+    "path": "research/models/market_anchor_v2_serie_a_frozen_candidate.json",
+    "artifact_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "active_lambda": 0.0,
+    "shadow_residual_lambda": 1.0,
+    "active_mode": "MARKET_FALLBACK",
+    "stability_gate_passed": false,
+    "automatic_promotion": false,
+    "model_refit": false,
+    "weight_or_feature_order_changes": false
+  },
+  "parent_contract": {
+    "path": "experiments/market_anchor_1x2_v2_protocol.json",
+    "git_blob_sha1": "65729e9639720e67624c1481190aa22ae606f151",
+    "unchanged": true,
+    "no_backfill_from_precontract_quotes": true
+  },
+  "feature_source": {
+    "provider": "FOOTBALL_DATA_CSV",
+    "competition_code": "I1",
+    "seasons": [
+      "2016-2017", "2017-2018", "2018-2019", "2019-2020", "2020-2021",
+      "2021-2022", "2022-2023", "2023-2024", "2024-2025", "2025-2026", "2026-2027"
+    ],
+    "original_feature_count": 19,
+    "current_season_results_allowed_only_as_lagged_inputs": true,
+    "must_be_archived_before_quote": true,
+    "must_be_archived_before_kickoff": true,
+    "same_calendar_day_matches_excluded": true,
+    "unplayed_or_future_fixtures_used": false,
+    "target_fixture_or_future_result_used_as_feature": false,
+    "as_of_join": "Only completed source rows with match_date strictly before the quote's UTC calendar date may contribute to the original 19-feature builder.",
+    "identity_alias_adapter": "V2-local only; Atalanta BC -> Atalanta; global league aliases unchanged."
+  },
+  "feature_input_gate": {
+    "type": "LAGGED_FEATURE_SOURCE_ONLY",
+    "primary_league": "SERIE_A",
+    "season": "2026-2027",
+    "minimum_completed_primary_events": 30,
+    "count_query_selects_only": ["match_date", "home_team", "away_team"],
+    "count_query_reads_score_or_result_fields": false,
+    "purpose": "Permit archived current-season match data as lagged features for future quotes only.",
+    "does_not_open_target_outcome_evaluation_gate": true
+  },
+  "source_schedule_completeness_gate": {
+    "required": true,
+    "schedule_source": "Existing saved Serie A odds_snapshots fixture metadata only",
+    "metadata_fields": ["event_id", "league", "home_team", "away_team", "commence_time_utc", "snapshot_time_utc"],
+    "odds_values_or_result_fields_read": false,
+    "deduplicate": "Latest saved snapshot per event_id, then canonical fixture date/home/away identity.",
+    "rule": "For every fixture with latest saved kickoff on a calendar date strictly before the current-season source observation date, require the canonical (kickoff UTC date, home team, away team) identity in the completed current-season CSV. Any missing fixture or unavailable schedule metadata blocks all current-form forecasts until a new source archive passes.",
+    "same_day_fixtures": "Not used as features and excluded from schedule-gap blocking because the public source is date-only.",
+    "failure_action": "Block forecast admission; preserve source and gap report; do not infer postponements or outcomes.",
+    "no_target_outcome_read": true
+  },
+  "quote_admission": {
+    "strictly_pre_kickoff": true,
+    "source_archive_and_parent_run_must_complete_before_quote": true,
+    "source_manifest_must_attest_policy_revision": "1.1",
+    "quote_source": "Existing saved SERIE_A 1X2 quote observations; this workflow never calls an odds provider.",
+    "max_quote_age_hours": 24,
+    "max_current_form_archive_age_hours": 24,
+    "require_exact_event_identity": true,
+    "require_source_sha256_and_github_artifact_digest": true,
+    "backfill": false
+  },
+  "target_outcome_evaluation_gate": {
+    "minimum_completed_eligible_prospective_forecasts": 30,
+    "target_outcomes_read_before_gate": false,
+    "target_outcomes_used_for_training_or_selection": false,
+    "purpose_after_gate": "Diagnostic review only; never fit, select, tune thresholds, or automatically promote.",
+    "required_comparison": [
+      "DE_VIGGED_MARKET",
+      "FROZEN_PRODUCTION_INCUMBENT",
+      "INACTIVE_LAMBDA_1_RESIDUAL_SHADOW"
+    ],
+    "review_signal_requires": "After 30 eligible forward forecasts have completed, residual shadow Brier AND LogLoss must each beat both de-vigged market and frozen incumbent. This signal cannot mutate the frozen candidate or active lambda."
+  },
+  "safety": {
+    "research_only": true,
+    "no_bet": true,
+    "product_publication": false,
+    "production_writes": false,
+    "supabase_writes": false,
+    "paid_provider_calls": 0,
+    "protected_target_outcomes_read": false
+  }
+}
