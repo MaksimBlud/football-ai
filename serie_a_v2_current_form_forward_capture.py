@@ -542,6 +542,7 @@ def prepare_forward_capture(
     load_archive,
     verify_parent_run,
     write_sources_to: Path | None = None,
+    fixture_metadata: list[dict] | None = None,
 ) -> dict:
     if as_of_utc.tzinfo is None:
         raise ValueError("current-form forward clock must be timezone-aware")
@@ -558,6 +559,9 @@ def prepare_forward_capture(
         "EXPIRED_FIXTURE": 0,
         "NO_FEATURES": 0,
         "ALL_FEATURES_MEDIAN_IMPUTED": 0,
+        "CURRENT_FORM_SOURCE_BEHIND_SCHEDULE": 0,
+        "SCHEDULE_METADATA_UNAVAILABLE": 0,
+        "LEGACY_SOURCE_POLICY_NOT_ELIGIBLE": 0,
     }
     cache: dict[int, tuple[pd.DataFrame, dict]] = {}
     parent_cache: dict[tuple[int, datetime], dict] = {}
@@ -622,8 +626,45 @@ def prepare_forward_capture(
                 "parent_run": source_meta["parent_run"],
                 "historical_match_rows": source_meta["historical_match_rows"],
                 "current_season_history_rows": source_meta["current_season_history_rows"],
+                "current_season_latest_match_date": source_meta["current_season_latest_match_date"],
+                "current_season_days_since_latest_match_at_capture": source_meta["current_season_days_since_latest_match_at_capture"],
+                "policy_revision": source_meta["policy_revision"],
             }
         history, source_meta = cache[artifact_id]
+        schedule_check = assess_source_schedule_completeness(
+            source_meta, fixture_metadata, as_of_utc=now
+        )
+        if not schedule_check["metadata_available"]:
+            blocked["SCHEDULE_METADATA_UNAVAILABLE"] += 1
+            report_rows.append({
+                **base, "status": "SCHEDULE_METADATA_UNAVAILABLE",
+                "source_artifact_id": artifact_id,
+                "source_schedule_completeness": schedule_check,
+                "v2_preview": None,
+            })
+            continue
+        if schedule_check["gap_count"]:
+            blocked["CURRENT_FORM_SOURCE_BEHIND_SCHEDULE"] += 1
+            report_rows.append({
+                **base, "status": "CURRENT_FORM_SOURCE_BEHIND_SCHEDULE",
+                "source_artifact_id": artifact_id,
+                "source_archive_sha256": source_meta["artifact_sha256"],
+                "current_season_latest_match_date": source_meta["current_season_latest_match_date"],
+                "current_season_days_since_latest_match_at_capture": source_meta["current_season_days_since_latest_match_at_capture"],
+                "source_schedule_completeness": schedule_check,
+                "v2_preview": None,
+            })
+            continue
+        if source_meta["policy_revision"] != CURRENT_FORM_POLICY_REVISION:
+            blocked["LEGACY_SOURCE_POLICY_NOT_ELIGIBLE"] += 1
+            report_rows.append({
+                **base, "status": "LEGACY_SOURCE_POLICY_NOT_ELIGIBLE",
+                "source_artifact_id": artifact_id,
+                "source_manifest_schema": source_meta["source_manifest_schema"],
+                "source_policy_revision": source_meta["policy_revision"],
+                "v2_preview": None,
+            })
+            continue
         source_time = parse_utc(source_meta["latest_source_observed_at_utc"])
         if source_time >= quote_time or quote_time - source_time > MAX_SOURCE_AGE:
             blocked["SOURCE_ARCHIVE_TOO_OLD"] += 1
@@ -683,6 +724,9 @@ def prepare_forward_capture(
             "source_archive_created_at_utc": source_meta["archive_created_at_utc"],
             "source_observed_at_utc": source_meta["latest_source_observed_at_utc"],
             "source_age_at_quote_seconds": int((quote_time - source_time).total_seconds()),
+            "current_season_latest_match_date": source_meta["current_season_latest_match_date"],
+            "current_season_days_since_latest_match_at_capture": source_meta["current_season_days_since_latest_match_at_capture"],
+            "source_schedule_completeness": schedule_check,
             "historical_match_rows": source_meta["historical_match_rows"],
             "current_season_history_rows": source_meta["current_season_history_rows"],
             "observed_frozen_feature_count": preview["observed_frozen_feature_count"],
@@ -697,6 +741,7 @@ def prepare_forward_capture(
         "candidate_sha256": FROZEN_SHA,
         "as_of_utc": now.isoformat(),
         "quotes_seen": len(latest_quotes),
+        "fixture_metadata_rows_seen": len(fixture_metadata or []),
         "v2_current_form_shadow_captured": scored,
         "blocked": blocked,
         "rows": report_rows,
