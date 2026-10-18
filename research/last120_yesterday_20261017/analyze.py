@@ -179,9 +179,9 @@ def classify_opta(t,f,events,join_method):
     row.update(result=result,reason=reason)
     return row
 
-def classify_rpl(t,doc):
+def classify_minute(t,doc,source_label=None):
     row={k:v for k,v in t.items() if k!="list_halfs"}
-    row["source"]="FotMob match event minute + recorded second-half start/final-whistle timestamps (minute-level; conservative)"
+    row["source"]=source_label or "FotMob displayed goal minute + final-whistle timestamps (minute-level; conservative)"
     header=doc.get("header") or {}; status=header.get("status") or {}
     halfs=status.get("halfs") or t.get("list_halfs") or {}
     start=parse_datetime(halfs.get("secondHalfStarted")); end=parse_datetime(halfs.get("gameEnded"))
@@ -224,6 +224,8 @@ def main():
         selected,join_errors=pick_optas(targets,fixtures)
         joins.extend(join_errors)
         print("OPTА_JOIN",json.dumps({"matched":len(selected),"eligible_big5":sum(t["league"] in OPTA_CODE for t in targets),"errors":join_errors},ensure_ascii=False),flush=True)
+        day_inventory=collections.Counter((str(f.get("competition")),str(f.get("season")),str(f.get("match_status"))) for f in fixtures if DAY in str(f.get("match_date") or ""))
+        print("OPTA_FIXTURE_DAY_INVENTORY",json.dumps(dict(day_inventory),ensure_ascii=False),flush=True)
         events_by_id=collections.defaultdict(list)
         for league,code in OPTA_CODE.items():
             required={str(x["fixture"]["match_id"]) for fid,x in selected.items() if next(t for t in targets if t["fotmob_id"]==fid)["league"]==league}
@@ -243,16 +245,31 @@ def main():
             print("OPTA_EVENTS_LOADED",league,len(required),sum(len(events_by_id[x]) for x in required),flush=True)
             p.unlink(missing_ok=True)
         for t in targets:
-            if t["league"]=="RPL":
-                try: row=classify_rpl(t,fotmob("matchDetails",matchId=t["fotmob_id"]))
-                except Exception as e:
-                    row={k:v for k,v in t.items() if k!="list_halfs"};row.update(source="FotMob minute-level",result="UNKNOWN",reason="DETAIL_FETCH_ERROR",error=str(e)[:180])
-                final_rows.append(row); continue
             hit=selected.get(t["fotmob_id"])
-            if not hit:
-                row={k:v for k,v in t.items() if k!="list_halfs"};row.update(source="Opta",result="UNKNOWN",reason="OPTА_FIXTURE_JOIN_FAILED");final_rows.append(row);continue
-            fid=str(hit["fixture"]["match_id"])
-            final_rows.append(classify_opta(t,hit["fixture"],events_by_id[fid],hit["method"]))
+            opta_row=None
+            if t["league"] in OPTA_CODE and hit:
+                mid=str(hit["fixture"]["match_id"])
+                opta_row=classify_opta(t,hit["fixture"],events_by_id[mid],hit["method"])
+                if opta_row["result"] in ("GOAL","NO_GOAL"):
+                    opta_row["precision"]="EXACT_OPTА_SECONDS"
+                    final_rows.append(opta_row)
+                    continue
+            try:
+                doc=fotmob("matchDetails",matchId=t["fotmob_id"])
+                fallback_reason=(opta_row or {}).get("reason") or ("OPTA_FIXTURE_JOIN_FAILED" if t["league"] in OPTA_CODE else "RPL_HAS_NO_VERIFIED_OPTА_SECOND_STREAM")
+                row=classify_minute(t,doc,source_label="FotMob minute intervals + observed second-half start/whistle time; conservative")
+                row["precision"]="MINUTE_INTERVAL_ONLY"
+                if t["league"] in OPTA_CODE:
+                    row["exact_opta_status"]=(opta_row or {}).get("result","UNKNOWN")
+                    row["exact_opta_reason"]=fallback_reason
+                row["classification_rule"]="GOAL only if displayed minute interval is entirely inside last 120s; NO_GOAL only if every goal minute interval ends before cutoff; else UNKNOWN"
+            except Exception as error:
+                if opta_row is not None and opta_row.get("result")=="UNKNOWN":
+                    row=opta_row
+                else:
+                    row={k:v for k,v in t.items() if k!="list_halfs"}
+                    row.update(source="FotMob matchDetails unavailable",precision="UNVERIFIED",result="UNKNOWN",reason="DETAIL_FETCH_ERROR",error=str(error)[:180])
+            final_rows.append(row)
     by_league={}
     for league in LEAGUES.values():
         z=[x for x in final_rows if x["league"]==league]
