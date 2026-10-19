@@ -256,3 +256,51 @@ def test_catalog_rejects_missing_parent_run_identity_even_with_valid_digest():
     with pytest.raises(ValueError,match="missing GitHub parent run identity"):
         discover_archives(token="test-token",
                           get=lambda url,headers,timeout:Response())
+
+def test_source_run_creation_after_archive_is_rejected():
+    _, artifacts = make_source_archive()
+    meta = artifacts[0]
+    run = {
+        "id": 456, "path": SOURCE_WORKFLOW_PATH,
+        "head_branch": "main", "head_sha": "a" * 40,
+        "status": "completed", "conclusion": "success", "event": "push",
+        "created_at": "2026-10-13T15:00:01Z",
+        "updated_at": "2026-10-13T15:01:00Z",
+    }
+
+    class Response:
+        def raise_for_status(self): pass
+        def json(self): return run
+
+    with pytest.raises(ValueError, match="source workflow and archived artifact times conflict"):
+        verify_source_run(
+            meta,
+            quote_time=parse_utc("2026-10-14T06:00:00Z"),
+            token="test-token",
+            get=lambda url, headers, timeout: Response(),
+        )
+
+
+def test_archive_created_after_parent_run_completion_is_rejected():
+    _, artifacts = make_source_archive()
+    meta = artifacts[0]
+    run = {
+        "id": 456, "path": SOURCE_WORKFLOW_PATH,
+        "head_branch": "main", "head_sha": "a" * 40,
+        "status": "completed", "conclusion": "success", "event": "push",
+        "created_at": "2026-10-13T14:40:00Z",
+        "updated_at": "2026-10-13T14:59:59Z",
+    }
+
+    class Response:
+        def raise_for_status(self): pass
+        def json(self): return run
+
+    with pytest.raises(ValueError, match="source workflow and archived artifact times conflict"):
+        verify_source_run(
+            meta,
+            quote_time=parse_utc("2026-10-14T06:00:00Z"),
+            token="test-token",
+            get=lambda url, headers, timeout: Response(),
+        )
+
