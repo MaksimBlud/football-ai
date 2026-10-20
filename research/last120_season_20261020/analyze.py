@@ -67,7 +67,7 @@ def parse_datetime(s):
     except ValueError: return None
 def classify_rpl(t,doc):
     header=doc.get("header") or {}; status=header.get("status") or {}
-    halfs=status.get("halfs") or {}
+    halfs=status.get("halfs") or t.get("list_halfs") or {}
     start=parse_datetime(halfs.get("secondHalfStarted")); end=parse_datetime(halfs.get("gameEnded"))
     ev=((doc.get("content") or {}).get("matchFacts") or {}).get("events") or {}
     events=ev.get("events") or []
@@ -135,7 +135,7 @@ def main():
                     h=(m.get("home") or {}).get("name"); a=(m.get("away") or {}).get("name")
                     sc=re.fullmatch(r"\s*(\d+)\s*[-–:]\s*(\d+)\s*",str(st.get("scoreStr") or ""))
                     if not h or not a or not sc: continue
-                    rpl_targets[str(m.get("id"))]={"fotmob_id":str(m.get("id")),"date":day.isoformat(),"home":h,"away":a,"home_goals":int(sc.group(1)),"away_goals":int(sc.group(2))}
+                    rpl_targets[str(m.get("id"))]={"fotmob_id":str(m.get("id")),"date":day.isoformat(),"home":h,"away":a,"home_goals":int(sc.group(1)),"away_goals":int(sc.group(2)),"list_halfs":st.get("halfs") or {}}
         except Exception as e: print("RPL_DAY_FETCH_ERROR",datekey,str(e)[:120],flush=True)
         day+=dt.timedelta(days=1)
     print("RPL_TARGETS",len(rpl_targets),flush=True)
