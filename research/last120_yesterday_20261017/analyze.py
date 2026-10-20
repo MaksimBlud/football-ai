@@ -208,6 +208,9 @@ def classify_minute(t,doc,source_label=None):
     evts=((doc.get("content") or {}).get("matchFacts") or {}).get("events") or {}
     events=evts.get("events") or []
     goals=[e for e in events if e.get("type")=="Goal" and not e.get("isPenaltyShootoutEvent")]
+    if t.get("home") in ("Real Betis","Strasbourg","Brentford","Villarreal"):
+        tail=events[-18:]
+        print("ADDED_TIME_DEBUG",t.get("home"),json.dumps(tail,ensure_ascii=False,default=str)[:7500],flush=True)
     minutes=[parse_goal_minute(e) for e in goals]
     endsec=2700+(end-start).total_seconds() if start and end else None
     row.update(goal_minutes=minutes,goal_events=len(goals),expected_goal_events=score_total,
