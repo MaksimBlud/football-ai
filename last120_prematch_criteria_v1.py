@@ -35,14 +35,94 @@ GROUPS = [
 ["mainz 05","mainz"],["tsg hoffenheim","hoffenheim"],["rb leipzig","leipzig"],["union berlin","fc union berlin"],
 ["parma calcio","parma"],["internazionale","inter","inter milan"],["ac milan","milan"],["as roma","roma"],
 ["hellas verona","verona"],["ssc napoli","napoli"],["juventus fc","juventus"],["stade rennais","rennes"],
-["strasbourg alsace","strasbourg"]
+["strasbourg alsace","strasbourg"],
+["real betis balompie","real betis","betis"],
+["reial club deportiu espanyol de barcelona","rcd espanyol","espanyol barcelona","espanyol"],
+["real club celta de vigo","celta de vigo","celta vigo","celta"],
+["real sociedad de futbol","real sociedad","sociedad"],
+["club atletico de madrid","atletico de madrid","atletico madrid","at madrid"],
+["real madrid cf","real madrid"],
+["real valladolid cf","real valladolid","valladolid"],
+["real club deportivo mallorca","rcd mallorca","mallorca"],
+["deportivo alaves","alaves"],
+["rayo vallecano de madrid","rayo vallecano"],
+["ca osasuna","osasuna"],
+["ud las palmas","las palmas"],
+["girona fc","girona"],
+["valencia cf","valencia"],
+["sevilla fc","sevilla"],
+["getafe cf","getafe"],
+["cd leganes","leganes"],
+["villarreal cf","villarreal"],
+["athletic club","ath bilbao","athletic bilbao"],
+["bochum","vfl bochum 1848","vfl bochum"],
+["holstein kiel","kieler sv holstein 1900","holstein kiel"],
+["heidenheim","1 fc heidenheim 1846","fc heidenheim"],
+["wolfsburg","vfl wolfsburg"],
+["stuttgart","vfb stuttgart 1893","vfb stuttgart"],
+["mainz 05","1 fsv mainz 05","mainz"],
+["augsburg","fc augsburg"],
+["bayern munich","fc bayern munchen","bayern munchen","bayern"],
+["freiburg","sc freiburg"],
+["union berlin","1 fc union berlin","fc union berlin"],
+["st pauli","fc st pauli"],
+["borussia monchengladbach","borussia vfl monchengladbach","m'gladbach","gladbach"],
+["leipzig","rasenballsport leipzig","rb leipzig"],
+["paris saint germain","paris saint-germain fc","psg","paris sg"],
+["olympique de marseille","marseille","om"],
+["olympique lyonnais","lyon"],
+["stade de reims","reims"],
+["stade brestois 29","brest"],
+["racing club de lens","lens"],
+["ogc nice cote d azur","nice"],
+["rc strasbourg alsace","strasbourg"],
+["as saint etienne","saint etienne","st etienne"],
+["as monaco fc","monaco"],
+["montpellier hsc","montpellier"],
+["le havre ac","le havre"],
+["fc nantes","nantes"],
+["toulouse fc","toulouse"],
+["angers sporting club de l ouest","angers"],
+["fc internazionalemilano","fc internazionale milano","inter milan","internazionale","inter"],
+["parma calcio 1913","parma calcio","parma"],
+["cagliari calcio","cagliari"],
+["calcio como 1907","como"],
+["torino fc","torino"],
+["ss lazio","lazio"],
+["bologna fc 1909","bologna"],
+["ac monza","monza"],
+["us lecce","lecce"],
+["genoa cfc","genoa"],
+["acf fiorentina","fiorentina"],
+["ssc napoli","napoli"],
+["udinese calcio","udinese"]
 ]
 def norm(s):
     x=unicodedata.normalize("NFKD",str(s)).encode("ascii","ignore").decode().lower()
     return re.sub(r"[^a-z0-9]+","",x)
 ALIASES={norm(a):norm(g[0]) for g in GROUPS for a in g}
 def team(s):
-    x=norm(s); return ALIASES.get(x,x)
+    x=norm(s)
+    if x in ALIASES:
+        return ALIASES[x]
+    # Provider names often prepend competition/company forms (FC, VfL, RCD)
+    # or append FC/CF and foundation-year digits. Try conservative variants;
+    # if no explicit alias matches, return the cleaned key for exact joins.
+    variants = [x]
+    y = re.sub(r"^(?:\\d+)?(?:fc|cf|sc|afc|fsv|vfl|vfb|sv|tsg|acf|rcd|rc|cd|ud|ca|us|ss)", "", x)
+    y = re.sub(r"(?:fc|cf|afc|calcio|footballclub)$", "", y)
+    y = re.sub(r"\\d+$", "", y)
+    y = re.sub(r"(?:defutbol|balompie)$", "", y)
+    variants.extend([y])
+    # Handles "Real Club Deportivo Mallorca", "Real Sociedad de Fútbol",
+    # and legal registered team names that differ from Football-Data labels.
+    for prefix in ("realclubdeportivo", "reialclubdeportiu", "clubdeportivo", "realclub", "realclubcelta", "clubatletico", "associationjeunesse", "racingclub", "rasenballsport", "borussiavfl", "fcinternazionale", "internazionalemilano"):
+        if y.startswith(prefix):
+            variants.append(y[len(prefix):])
+    for v in variants:
+        if v in ALIASES:
+            return ALIASES[v]
+    return y
 def download(url,path,timeout=180):
     req=urllib.request.Request(url,headers={"User-Agent":"FootballAI-Research/1.0"})
     last=None
