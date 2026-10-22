@@ -1,0 +1,48 @@
+name: LAST120 Pre-match Criteria Research
+
+on:
+  push:
+    branches:
+      - research/last120-prematch-criteria-20261021
+    paths:
+      - last120_prematch_criteria_v1.py
+      - .github/workflows/last120-prematch-criteria-v1.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: Install research dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy pandas pyarrow scipy scikit-learn
+      - name: Compile research runner
+        run: python -m py_compile last120_prematch_criteria_v1.py
+      - name: Record production artifact hashes
+        run: |
+          find . -maxdepth 1 -name '*.pkl' -print0 | sort -z | xargs -0 -r sha256sum > /tmp/pkl-before.sha256
+          cat /tmp/pkl-before.sha256
+      - name: Run pre-match criteria study
+        run: python last120_prematch_criteria_v1.py
+      - name: Verify production artifacts unchanged
+        run: |
+          find . -maxdepth 1 -name '*.pkl' -print0 | sort -z | xargs -0 -r sha256sum > /tmp/pkl-after.sha256
+          diff -u /tmp/pkl-before.sha256 /tmp/pkl-after.sha256
+          echo "PASS: production .pkl hashes unchanged"
+      - name: Upload complete research output
+        uses: actions/upload-artifact@v4
+        with:
+          name: last120-prematch-criteria-v1
+          path: artifacts/last120_prematch_criteria_v1/
+          if-no-files-found: error
+          retention-days: 30
