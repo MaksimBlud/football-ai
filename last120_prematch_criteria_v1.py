@@ -109,9 +109,9 @@ def team(s):
     # or append FC/CF and foundation-year digits. Try conservative variants;
     # if no explicit alias matches, return the cleaned key for exact joins.
     variants = [x]
-    y = re.sub(r"^(?:\\d+)?(?:fc|cf|sc|afc|fsv|vfl|vfb|sv|tsg|acf|rcd|rc|cd|ud|ca|us|ss)", "", x)
+    y = re.sub(r"^(?:\d+)?(?:fc|cf|sc|afc|fsv|vfl|vfb|sv|tsg|acf|rcd|rc|cd|ud|ca|us|ss)", "", x)
     y = re.sub(r"(?:fc|cf|afc|calcio|footballclub)$", "", y)
-    y = re.sub(r"\\d+$", "", y)
+    y = re.sub(r"\d+$", "", y)
     y = re.sub(r"(?:defutbol|balompie)$", "", y)
     variants.extend([y])
     # Handles "Real Club Deportivo Mallorca", "Real Sociedad de Fútbol",
@@ -221,10 +221,10 @@ def join_odds(targets,odds):
                 cand["identity"]=cand.apply(lambda z: SequenceMatcher(None,hk,z["home_key"]).ratio()+SequenceMatcher(None,ak,z["away_key"]).ratio()-0.08*abs((z["date_key"]-d).days),axis=1)
                 exact=cand[(cand["home_key"]==hk)&(cand["away_key"]==ak)]
                 if len(exact)==1: chosen=exact.iloc[0]
-                elif len(cand)==1 and cand.iloc[0]["identity"]>=1.72: chosen=cand.iloc[0]
+                elif len(cand)==1 and cand.iloc[0]["identity"]>=1.90: chosen=cand.iloc[0]
                 elif len(cand)>1:
                     c=cand.sort_values("identity",ascending=False)
-                    if c.iloc[0]["identity"]>=1.82 and c.iloc[0]["identity"]-c.iloc[1]["identity"]>=0.08: chosen=c.iloc[0]
+                    if c.iloc[0]["identity"]>=1.92 and c.iloc[0]["identity"]-c.iloc[1]["identity"]>=0.12: chosen=c.iloc[0]
         r["odds_join_status"]="MATCHED" if chosen is not None else "UNMATCHED"
         if chosen is None: misses[f"{t['league']}|{t['season']}"]+=1
         else:
