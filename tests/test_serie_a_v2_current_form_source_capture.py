@@ -214,8 +214,8 @@ def _capture_for_clock_regression(tmp_path, clock):
         for code in _source_codes():
             filename = f"serie_a_{code}.csv"
             body = (
-                "Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HC,AC,HY,AY,HR,AR\\n"
-                f"01/10/{2000 + int(code[:2])},Juventus,Napoli,1,0,H,5,3,2,1,0,0\\n"
+                "Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HC,AC,HY,AY,HR,AR\n"
+                f"01/10/{2000 + int(code[:2])},Juventus,Napoli,1,0,H,5,3,2,1,0,0\n"
             ).encode()
             (capture_dir / filename).write_bytes(body)
             audits.append({
@@ -250,15 +250,24 @@ def _capture_for_clock_regression(tmp_path, clock):
     "clock_values, expected_message",
     [
         (
-            [datetime(2026, 10, 18, 8, 1), datetime(2026, 10, 18, 8, 2, tzinfo=timezone.utc)],
+            [
+                datetime(2026, 10, 18, 8, 1),
+                datetime(2026, 10, 18, 8, 2, tzinfo=timezone.utc),
+            ],
             "current-season source observation clock must be timezone-aware",
         ),
         (
-            [datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc), datetime(2026, 10, 18, 8, 2)],
+            [
+                datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc),
+                datetime(2026, 10, 18, 8, 2),
+            ],
             "source archive creation clock must be timezone-aware",
         ),
         (
-            [datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc), datetime(2026, 10, 18, 8, 0, tzinfo=timezone.utc)],
+            [
+                datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc),
+                datetime(2026, 10, 18, 8, 0, tzinfo=timezone.utc),
+            ],
             "source archive creation time precedes source observation time",
         ),
     ],
