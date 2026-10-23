@@ -106,6 +106,7 @@ def test_current_form_runtime_dependencies_trigger_read_only_reaudit():
     forward_header = forward.split("concurrency:", 1)[0]
 
     source_dependencies = (
+        "serie_a_v2_asof_feature_manifest.py",
         "historical_football_signal_lab.py",
         "serie_a_runtime_config.py",
         "serie_a_v2_frozen_shadow_preview.py",
