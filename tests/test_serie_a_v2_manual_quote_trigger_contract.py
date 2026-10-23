@@ -96,3 +96,43 @@ def test_current_form_source_capture_and_forward_preview_never_trigger_paid_odds
     assert 'workflow_dispatch:' in forward
     assert 'push:' in forward
     assert '"serie_a_v2_current_form_forward_capture.py"' in forward
+
+
+def test_current_form_runtime_dependencies_trigger_read_only_reaudit():
+    """Runtime dependencies must rerun free V2 source/forward proof after main changes."""
+    source = Path(".github/workflows/serie-a-v2-current-form-source-capture.yml").read_text(encoding="utf-8")
+    forward = Path(".github/workflows/serie-a-v2-current-form-forward-preview.yml").read_text(encoding="utf-8")
+    source_header = source.split("concurrency:", 1)[0]
+    forward_header = forward.split("concurrency:", 1)[0]
+
+    source_dependencies = (
+        "historical_football_signal_lab.py",
+        "serie_a_runtime_config.py",
+        "serie_a_v2_frozen_shadow_preview.py",
+        "serie_a_v2_live_diagnostic_report.py",
+        "research/models/market_anchor_v2_serie_a_frozen_candidate.json",
+        "tests/test_serie_a_v2_asof_feature_manifest.py",
+        "tests/test_serie_a_v2_atalanta_alias.py",
+    )
+    forward_dependencies = (
+        "serie_a_v2_current_form_source_capture.py",
+        "serie_a_v2_asof_feature_manifest.py",
+        "serie_a_v2_frozen_shadow_preview.py",
+        "serie_a_v2_live_diagnostic_report.py",
+        "historical_football_signal_lab.py",
+        "serie_a_runtime_config.py",
+        "experiments/market_anchor_1x2_v2_current_form_policy.json",
+        "research/models/market_anchor_v2_serie_a_frozen_candidate.json",
+        "tests/test_serie_a_v2_current_form_source_capture.py",
+        "tests/test_serie_a_v2_asof_feature_manifest.py",
+        "tests/test_serie_a_v2_atalanta_alias.py",
+        "tests/test_serie_a_v2_frozen_shadow_preview.py",
+    )
+    for path in source_dependencies:
+        assert f'"{path}"' in source_header
+    for path in forward_dependencies:
+        assert f'"{path}"' in forward_header
+
+    # Dependency coverage must not accidentally change the existing cadence.
+    assert '- cron: "50 5 * * *"' in source_header
+    assert '- cron: "18 8 * * *"' in forward_header
