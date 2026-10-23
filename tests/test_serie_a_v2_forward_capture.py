@@ -81,6 +81,38 @@ def fake_verified_parent_run(archive, quote_time):
 
 
 
+@pytest.mark.parametrize("conflict", ["home_team", "kickoff"])
+def test_same_original_event_id_cannot_change_fixture_identity(conflict):
+    raw, metadata = make_source_archive()
+    first = quote(ts="2026-10-14T06:00:00Z")
+    second = quote(ts="2026-10-14T06:01:00Z")
+    if conflict == "home_team":
+        second["home_team"] = "Inter"
+    else:
+        second["commence_time_utc"] = "2026-10-21T18:00:00Z"
+
+    calls = []
+
+    def load_archive(artifact_id):
+        calls.append(("load_archive", artifact_id))
+        return raw
+
+    def verify_parent_run(archive, quote_time):
+        calls.append(("verify_parent_run", archive["artifact_id"]))
+        return fake_verified_parent_run(archive, quote_time)
+
+    with pytest.raises(ValueError, match="conflicting fixture identity for same original V2 event_id"):
+        prepare_forward_capture(
+            [first, second],
+            metadata,
+            as_of_utc=NOW,
+            load_archive=load_archive,
+            verify_parent_run=verify_parent_run,
+        )
+
+    assert calls == []
+
+
 def test_forward_v2_scores_only_after_real_prior_archive_and_never_promotes():
     raw, metadata = make_source_archive()
     calls = []
