@@ -245,7 +245,7 @@ def test_capture_rejects_invalid_or_reversed_source_clock_before_current_archive
             filename = f"serie_a_{code}.csv"
             body = (
                 "Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HC,AC,HY,AY,HR,AR\\n"
-                f"01/10/{2000 + int(code[:2])},Juventus,Napoli,1,0,H,5,3,2,1,0,0\\n"
+                f"01/10/{2000 + int(code[:2])},Juventus,Napoli,1,0,H,5,3,2,1,0,0\n"
             ).encode()
             (capture_dir / filename).write_bytes(body)
             audits.append({
