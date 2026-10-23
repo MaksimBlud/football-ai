@@ -62,7 +62,7 @@ class FakeQuery:
         return SimpleNamespace(data=self.rows)
 
 
-def current_csv(n=30, *, same_day=False, future_unplayed=False, future_completed=False):
+def current_csv(n=30, *, same_day=False, future_unplayed=False, future_completed=False, old_season_completed=False):
     header = ",".join(REQUIRED_COLUMNS)
     rows = []
     start = date(2026, 8, 1)
@@ -77,6 +77,8 @@ def current_csv(n=30, *, same_day=False, future_unplayed=False, future_completed
         rows.append("20/10/2026,Future Home,Future Away,,,,,,,,,")
     if future_completed:
         rows.append("20/10/2026,Future Home,Future Away,1,0,H,4,2,1,0,0,0")
+    if old_season_completed:
+        rows.append("01/05/2026,Old Season Home,Old Season Away,1,0,H,5,3,2,1,0,0")
     return (header + "\n" + "\n".join(rows) + "\n").encode()
 
 
@@ -111,6 +113,37 @@ def test_current_csv_uses_only_completed_rows_strictly_before_capture_day():
     assert excluded == 2
     assert not frame["Date"].str.contains("18/10/2026").any()
     assert not frame["Date"].str.contains("20/10/2026").any()
+
+
+def test_current_csv_rejects_completed_row_before_current_season_start():
+    with pytest.raises(ValueError, match="before season start"):
+        validate_current_season_csv(
+            current_csv(n=30, old_season_completed=True),
+            captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+        )
+
+
+@pytest.mark.parametrize(
+    ("original", "replacement", "field"),
+    [
+        (
+            "01/08/2026,Home 0,Away 0,1,0,H,5,3,2,1,0,0",
+            "01/08/2026,Home 0,Away 0,1.5,0,H,5,3,2,1,0,0",
+            "FTHG",
+        ),
+        (
+            "01/08/2026,Home 0,Away 0,1,0,H,5,3,2,1,0,0",
+            "01/08/2026,Home 0,Away 0,1,0,H,5.5,3,2,1,0,0",
+            "HC",
+        ),
+    ],
+)
+def test_current_csv_rejects_non_integer_goal_and_stat_counts(original, replacement, field):
+    raw = current_csv(n=30).decode().replace(original, replacement, 1).encode()
+    with pytest.raises(ValueError, match=f"non-integer {field}"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
 
 
 def test_current_csv_rejects_completed_future_result_and_missing_stats():
