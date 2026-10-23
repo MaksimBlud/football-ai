@@ -182,7 +182,7 @@ def _rewrite_source_manifest(raw, mutate):
         files = {name: source.read(name) for name in source.namelist()}
     manifest = json.loads(files[MANIFEST_FILENAME])
     mutate(manifest)
-    files[MANIFEST_FILENAME] = (json.dumps(manifest, sort_keys=True) + "\\n").encode()
+    files[MANIFEST_FILENAME] = (json.dumps(manifest, sort_keys=True) + "\n").encode()
     output = BytesIO()
     with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as target:
         for name, body in files.items():
