@@ -279,7 +279,11 @@ def verify_latest_source_archive(
     write_sources_to: Path | None = None,
 ) -> dict:
     """Verify the latest successful main source artifact even when all quotes are stale."""
-    if as_of_utc.tzinfo is None:
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
         raise ValueError("source verification clock must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
     candidates = sorted(
