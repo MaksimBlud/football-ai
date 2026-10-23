@@ -137,6 +137,10 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     future_completed = frame["_parsed_date"].gt(cutoff) & valid_result
     if future_completed.any():
         raise ValueError("current-season source contains a completed result after capture date")
+    season_start = date(int(CURRENT_SEASON[:4]), 7, 1)
+    pre_season_completed = frame["_parsed_date"].lt(season_start) & valid_result
+    if pre_season_completed.any():
+        raise ValueError("current-season source contains a completed row before season start")
     completed = frame.loc[frame["_parsed_date"].lt(cutoff) & valid_result].copy()
     completed["FTR"] = ftr.loc[completed.index]
     if completed.empty:
@@ -145,6 +149,8 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
         completed[field] = pd.to_numeric(completed[field], errors="coerce")
         if completed[field].isna().any() or (completed[field] < 0).any():
             raise ValueError("completed current-season match has missing/invalid " + field)
+        if not completed[field].map(lambda value: float(value).is_integer()).all():
+            raise ValueError("completed current-season match has non-integer " + field)
     if ((completed["FTHG"] > completed["FTAG"]) != (completed["FTR"] == "H")).any() or (
         (completed["FTHG"] < completed["FTAG"]) != (completed["FTR"] == "A")
     ).any():
