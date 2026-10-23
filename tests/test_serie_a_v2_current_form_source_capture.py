@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone, tzinfo
 from pathlib import Path
 from types import SimpleNamespace
 import hashlib
@@ -204,3 +204,39 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert report["target_outcome_evaluation_gate"]["outcome_gate_open"] is False
     assert report["paid_provider_calls"] == report["supabase_writes"] == 0
     assert report["model_refit_or_promotion"] is False
+
+
+class _NoOffsetClockTimezone(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+    def tzname(self, dt):
+        return "NO_OFFSET"
+
+
+def test_source_capture_rejects_timezone_without_offset_before_any_source_access(tmp_path):
+    invalid_now = datetime(2026, 10, 23, 8, 0, tzinfo=_NoOffsetClockTimezone())
+
+    class NoReadClient:
+        def table(self, *_args, **_kwargs):
+            pytest.fail("invalid source capture clock must be rejected before Supabase access")
+
+    def forbidden_get(*_args, **_kwargs):
+        pytest.fail("invalid source capture clock must be rejected before HTTP access")
+
+    def forbidden_history(*_args, **_kwargs):
+        pytest.fail("invalid source capture clock must be rejected before history fetch")
+
+    with pytest.raises(ValueError, match="source capture clock must be timezone-aware"):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=NoReadClient(),
+            now=invalid_now,
+            get=forbidden_get,
+            history_fetch=forbidden_history,
+        )
+
+    assert list(tmp_path.iterdir()) == []

@@ -175,7 +175,11 @@ def capture_source_archive(
     clock=lambda: datetime.now(timezone.utc),
 ) -> dict:
     """Capture the ten frozen historical seasons plus the gated current-season source."""
-    if now.tzinfo is None:
+    if (
+        not isinstance(now, datetime)
+        or now.tzinfo is None
+        or now.utcoffset() is None
+    ):
         raise ValueError("source capture clock must be timezone-aware")
     at = now.astimezone(timezone.utc)
     gate_count = read_completed_primary_event_count(client, now=at)
