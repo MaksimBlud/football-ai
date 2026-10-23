@@ -15,6 +15,7 @@ import json
 import os
 from pathlib import Path
 from typing import Any, Mapping
+from urllib.parse import urlsplit
 
 import pandas as pd
 import requests
@@ -41,6 +42,31 @@ REQUIRED_COLUMNS = (
 )
 NUMERIC_COLUMNS = ("FTHG", "FTAG", "HC", "AC", "HY", "AY", "HR", "AR")
 V2_ONLY_ALIASES = {"Atalanta BC": "Atalanta"}
+
+
+def validate_current_source_response_url(final_url: Any) -> None:
+    """Fail closed if the CSV request follows a redirect outside the pinned source URL."""
+    if not isinstance(final_url, str) or not final_url.strip():
+        raise ValueError("current-season source response URL is missing")
+    requested = urlsplit(CURRENT_URL)
+    observed = urlsplit(final_url)
+    try:
+        observed_port = observed.port
+    except ValueError as exc:
+        raise ValueError("current-season source response URL has an invalid port") from exc
+    if (
+        requested.scheme != "https"
+        or requested.hostname != "www.football-data.co.uk"
+        or observed.scheme != "https"
+        or observed.hostname != requested.hostname
+        or observed_port not in (None, 443)
+        or observed.username is not None
+        or observed.password is not None
+        or observed.path != requested.path
+        or observed.query
+        or observed.fragment
+    ):
+        raise ValueError("current-season source response left the approved HTTPS source URL")
 
 
 def _canonical_team(value: Any) -> str:
@@ -191,6 +217,7 @@ def capture_source_archive(
         raise ValueError("original frozen historical source archive incomplete")
     response = get(CURRENT_URL, timeout=30)
     response.raise_for_status()
+    validate_current_source_response_url(getattr(response, "url", None))
     raw = response.content
     observed_at = clock().astimezone(timezone.utc)
     current_rows, excluded_rows = validate_current_season_csv(raw, captured_at=observed_at)
