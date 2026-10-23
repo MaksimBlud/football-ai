@@ -125,8 +125,9 @@ def test_public_free_history_never_downloads_protected_2026_27_outcomes():
         def __init__(self, url):
             self.url = url
             self.content = csv_completed
-    def fake_get(url, timeout):
+    def fake_get(url, timeout, allow_redirects):
         calls.append((url, timeout))
+        assert allow_redirects is False
         assert url.startswith(PUBLIC_BASE + "/") and url.endswith("/I1.csv")
         assert f"/{current}/" not in url
         return Response(url)
@@ -153,7 +154,8 @@ def test_historical_source_redirects_fail_before_body_read_or_csv_write(tmp_path
             body_reads.append(self.url)
             raise AssertionError("unapproved response body must not be read")
 
-    def fake_get(url, timeout):
+    def fake_get(url, timeout, allow_redirects):
+        assert allow_redirects is False
         if redirect_kind == "cross_origin":
             final_url = url.replace("www.football-data.co.uk", "attacker.invalid")
         elif redirect_kind == "https_downgrade":
@@ -174,12 +176,37 @@ def test_historical_source_redirects_fail_before_body_read_or_csv_write(tmp_path
     assert list(tmp_path.glob("*.csv")) == []
 
 
+def test_historical_http_redirect_is_not_followed_or_read(tmp_path):
+    requests_seen = []
+    body_reads = []
+
+    class RedirectResponse:
+        status_code = 302
+        def __init__(self, url):
+            self.url = url
+        @property
+        def content(self):
+            body_reads.append(self.url)
+            raise AssertionError("redirect response body must not be read")
+
+    def fake_get(url, timeout, allow_redirects):
+        requests_seen.append((url, timeout, allow_redirects))
+        return RedirectResponse(url)
+
+    with pytest.raises(RuntimeError, match="unavailable"):
+        fetch_public_history(get=fake_get, capture_dir=tmp_path)
+    assert len(requests_seen) == 1
+    assert requests_seen[0][2] is False
+    assert body_reads == []
+    assert list(tmp_path.glob("*.csv")) == []
+
+
 def test_upstream_status_failure_is_not_filled_with_guessed_data():
     class BadResponse:
         status_code=503
         content=b""
     with pytest.raises(RuntimeError,match="unavailable"):
-        fetch_public_history(get=lambda url,timeout: BadResponse())
+        fetch_public_history(get=lambda url, timeout, allow_redirects: BadResponse())
 
 
 
