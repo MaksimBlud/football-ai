@@ -331,7 +331,7 @@ def test_feature_source_gate_clock_is_offset_aware_and_precedes_source(gate_chec
         files = {name: original.read(name) for name in original.namelist()}
     manifest = json.loads(files[MANIFEST_FILENAME])
     manifest["feature_source_gate"]["checked_at_utc"] = gate_checked_at
-    files[MANIFEST_FILENAME] = (json.dumps(manifest, sort_keys=True) + "\\n").encode()
+    files[MANIFEST_FILENAME] = (json.dumps(manifest, sort_keys=True) + "\n").encode()
     buffer = BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as rewritten:
         for name, body in files.items():
