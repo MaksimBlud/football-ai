@@ -215,8 +215,6 @@ def capture_source_archive(
             "public current-season source has fewer completed prior-day matches than the feature-source gate"
         )
     archive_created_at = _validated_archive_created_at(observed_at, clock())
-    current_path = output_dir / CURRENT_FILENAME
-    current_path.write_bytes(raw)
     audits = list(old_audit) + [{
         "season_code": CURRENT_CODE,
         "season": CURRENT_SEASON,
@@ -290,6 +288,8 @@ def capture_source_archive(
         "target_outcomes_scored": False,
         "model_refit_or_promotion": False,
     }
+    current_path = output_dir / CURRENT_FILENAME
+    current_path.write_bytes(raw)
     manifest_path = output_dir / MANIFEST_FILENAME
     manifest_path.write_text(
         json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
