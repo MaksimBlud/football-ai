@@ -204,3 +204,71 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert report["target_outcome_evaluation_gate"]["outcome_gate_open"] is False
     assert report["paid_provider_calls"] == report["supabase_writes"] == 0
     assert report["model_refit_or_promotion"] is False
+
+
+def _capture_for_clock_regression(tmp_path, clock):
+    raw = current_csv(n=30)
+
+    def fake_history(*, get, capture_dir):
+        audits = []
+        for code in _source_codes():
+            filename = f"serie_a_{code}.csv"
+            body = (
+                "Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HC,AC,HY,AY,HR,AR\\n"
+                f"01/10/{2000 + int(code[:2])},Juventus,Napoli,1,0,H,5,3,2,1,0,0\\n"
+            ).encode()
+            (capture_dir / filename).write_bytes(body)
+            audits.append({
+                "season_code": code,
+                "source_url": f"https://www.football-data.co.uk/mmz4281/{code}/I1.csv",
+                "archived_source_name": filename,
+                "csv_sha256": hashlib.sha256(body).hexdigest(),
+                "source_observed_at_utc": "2026-10-18T08:00:00+00:00",
+                "completed_source_rows": 1,
+            })
+        return pd.DataFrame([{"historical": 1}]), audits
+
+    class Response:
+        status_code = 200
+        url = CURRENT_URL
+        content = raw
+
+        def raise_for_status(self):
+            return None
+
+    return capture_source_archive(
+        output_dir=tmp_path,
+        client=FakeQuery(event_rows(30)),
+        now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+        get=lambda _url, timeout: Response(),
+        history_fetch=fake_history,
+        clock=clock,
+    )
+
+
+@pytest.mark.parametrize(
+    "clock_values, expected_message",
+    [
+        (
+            [datetime(2026, 10, 18, 8, 1), datetime(2026, 10, 18, 8, 2, tzinfo=timezone.utc)],
+            "current-season source observation clock must be timezone-aware",
+        ),
+        (
+            [datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc), datetime(2026, 10, 18, 8, 2)],
+            "source archive creation clock must be timezone-aware",
+        ),
+        (
+            [datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc), datetime(2026, 10, 18, 8, 0, tzinfo=timezone.utc)],
+            "source archive creation time precedes source observation time",
+        ),
+    ],
+)
+def test_invalid_source_clock_fails_before_current_csv_or_manifest_write(
+    tmp_path, clock_values, expected_message
+):
+    times = iter(clock_values)
+    with pytest.raises(ValueError, match=expected_message):
+        _capture_for_clock_regression(tmp_path, lambda: next(times))
+
+    assert not (tmp_path / CURRENT_FILENAME).exists()
+    assert not (tmp_path / MANIFEST_FILENAME).exists()
