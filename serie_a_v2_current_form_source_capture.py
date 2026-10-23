@@ -214,6 +214,7 @@ def capture_source_archive(
         raise RuntimeError(
             "public current-season source has fewer completed prior-day matches than the feature-source gate"
         )
+    archive_created_at = _validated_archive_created_at(observed_at, clock())
     current_path = output_dir / CURRENT_FILENAME
     current_path.write_bytes(raw)
     audits = list(old_audit) + [{
@@ -229,7 +230,6 @@ def capture_source_archive(
     }]
     if any(item["season_code"] == CURRENT_CODE for item in old_audit):
         raise ValueError("current season unexpectedly appeared in frozen old-season source list")
-    archive_created_at = _validated_archive_created_at(observed_at, clock())
     report = {
         "schema_version": SCHEMA_VERSION,
         "experiment_id": "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY",
