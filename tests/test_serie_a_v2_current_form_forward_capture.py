@@ -208,6 +208,38 @@ def test_current_form_v2_scores_only_future_quote_with_prequote_source_and_stays
     assert len(list(tmp_path.glob("current-form-source-artifact-*.zip"))) == 1
 
 
+@pytest.mark.parametrize("conflict", ["home_team", "kickoff"])
+def test_same_event_id_cannot_represent_conflicting_fixture_identity(conflict):
+    raw, archives = make_archive()
+    first = quote(snapshot="2026-10-19T05:30:00Z")
+    second = quote(snapshot="2026-10-19T05:31:00Z")
+    if conflict == "home_team":
+        second["home_team"] = "Inter"
+    else:
+        second["commence_time_utc"] = "2026-10-20T18:00:00Z"
+
+    calls = []
+
+    def load_archive(artifact_id):
+        calls.append(("load_archive", artifact_id))
+        return raw
+
+    def verify_parent_run(archive, *, quote_time):
+        calls.append(("verify_parent_run", archive["artifact_id"]))
+        return valid_parent(archive, quote_time=quote_time)
+
+    with pytest.raises(ValueError, match="conflicting fixture identity for same current-form event_id"):
+        prepare_forward_capture(
+            [first, second],
+            archives,
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            load_archive=load_archive,
+            verify_parent_run=verify_parent_run,
+        )
+
+    assert calls == []
+
+
 def test_real_archive_verification_is_reported_even_without_any_fresh_quote(tmp_path):
     raw, archives = make_archive()
     report = verify_latest_source_archive(
