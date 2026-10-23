@@ -1,5 +1,5 @@
 """Real original V2 JSON weights; strict read-only preview and refusal tests."""
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, tzinfo
 from copy import deepcopy
 import json
 from pathlib import Path
@@ -220,3 +220,31 @@ def test_preserve_exact_frozen_predictions_with_explicit_imputation_diagnostics(
     assert row["historical_team_coverage"] is None
     assert row["market_1x2"] == pytest.approx(row["active_market_fallback_1x2"])
     assert row["no_bet"] is True
+
+
+
+class _NoOffsetTimezone(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+    def tzname(self, dt):
+        return "NO_OFFSET"
+
+
+def test_shadow_preview_rejects_offsetless_clock_before_model_load():
+    invalid_clock = datetime(2026, 10, 13, 15, 0, tzinfo=_NoOffsetTimezone())
+    with pytest.raises(ValueError, match="as_of_utc must be timezone-aware"):
+        v2_preview.shadow_preview([], [], as_of_utc=invalid_clock)
+
+
+def test_saved_quote_reader_rejects_offsetless_clock_before_database_read():
+    class NoReadClient:
+        def table(self, *_args, **_kwargs):
+            pytest.fail("Supabase must not be queried for an invalid clock")
+
+    invalid_clock = datetime(2026, 10, 13, 15, 0, tzinfo=_NoOffsetTimezone())
+    with pytest.raises(ValueError, match="now must be timezone-aware"):
+        v2_preview.fetch_saved_upcoming_serie_a_quotes(NoReadClient(), now=invalid_clock)

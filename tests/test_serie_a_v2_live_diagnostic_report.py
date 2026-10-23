@@ -1,5 +1,5 @@
 """Tests for actual historical-source + stored-market, always research-only."""
-from datetime import datetime, timezone
+from datetime import datetime, timezone, tzinfo
 
 import pandas as pd
 import pytest
@@ -169,3 +169,21 @@ def test_real_quote_diagnostic_refuses_both_teams_without_prior_match_history():
     assert report["per_fixture_feature_coverage"][0]["observed_frozen_feature_count"] == 0
     assert report["no_bet"] is True
     assert report["supabase_writes"] == report["paid_provider_requests"] == 0
+
+
+
+class _NoOffsetTimezone(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+    def tzname(self, dt):
+        return "NO_OFFSET"
+
+
+def test_live_diagnostic_rejects_offsetless_clock_before_feature_build():
+    invalid_clock = datetime(2026, 10, 13, 15, 1, tzinfo=_NoOffsetTimezone())
+    with pytest.raises(ValueError, match="as-of timestamp needs UTC timezone"):
+        make_report([], history_fixture(), [{}], as_of_utc=invalid_clock)

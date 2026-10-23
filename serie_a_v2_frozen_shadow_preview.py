@@ -106,7 +106,11 @@ def shadow_preview(
     This module cannot verify that source; it marks every preview NOT eligible
     for the strict preregistered prospective V2 cohort. Do not persist it.
     """
-    if as_of_utc.tzinfo is None:
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
         raise ValueError("as_of_utc must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
     original = load_verified_original()
@@ -248,6 +252,8 @@ def shadow_preview(
 
 def fetch_saved_upcoming_serie_a_quotes(client: Any, *, now: datetime) -> list[dict]:
     """Read *existing* observations only. No odds provider call or DB write."""
+    if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError("now must be timezone-aware")
     items = (
         client.table("odds_snapshots")
         .select(",".join(MARKET_KEYS))
