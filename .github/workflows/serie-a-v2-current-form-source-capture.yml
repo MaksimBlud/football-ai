@@ -12,6 +12,7 @@ on:
       - "historical_football_signal_lab.py"
       - "serie_a_runtime_config.py"
       - "serie_a_v2_frozen_shadow_preview.py"
+      - "serie_a_v2_asof_feature_manifest.py"
       - "serie_a_v2_live_diagnostic_report.py"
       - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
       - "tests/test_serie_a_v2_current_form_source_capture.py"
