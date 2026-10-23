@@ -374,7 +374,11 @@ def prepare_forward_capture(
     verify_parent_run,
     write_sources_to: Path | None = None,
 ) -> dict:
-    if as_of_utc.tzinfo is None:
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
         raise ValueError("current-form forward clock must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
     if write_sources_to is not None:
