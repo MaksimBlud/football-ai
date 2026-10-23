@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - "serie_a_v2_frozen_shadow_preview.py"
+      - "market_anchor_1x2_v2_shadow.py"
+      - "market_anchor_1x2_v1.py"
       - "serie_a_v2_asof_feature_manifest.py"
       - "serie_a_v2_live_diagnostic_report.py"
       - "serie_a_v2_prequote_source_archive_gate.py"
@@ -24,6 +26,7 @@ on:
       - "tests/test_serie_a_v2_current_form_source_capture.py"
       - "tests/test_serie_a_v2_current_form_forward_capture.py"
       - "experiments/market_anchor_1x2_v2_current_form_policy.json"
+      - "experiments/market_anchor_1x2_v2_protocol.json"
       - "research/SERIE_A_V2_CURRENT_FORM_FORWARD_ONLY_CONTRACT_20261018.md"
       - ".github/workflows/serie-a-v2-current-form-source-capture.yml"
       - ".github/workflows/serie-a-v2-current-form-forward-preview.yml"
