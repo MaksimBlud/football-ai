@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone, tzinfo
 from io import BytesIO
 import hashlib
 import json
@@ -317,3 +317,25 @@ def test_unverified_parent_cannot_admit_quote():
     assert report["v2_current_form_shadow_captured"] == 0
     assert report["blocked"]["SOURCE_PARENT_UNVERIFIED"] == 1
     assert report["rows"][0]["status"] == "SOURCE_PARENT_UNVERIFIED"
+
+
+class _NoOffsetTimezone(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+    def tzname(self, dt):
+        return "NO_OFFSET"
+
+
+def test_source_verification_clock_rejects_tzinfo_without_offset():
+    invalid_clock = datetime(2026, 10, 19, 5, 40, tzinfo=_NoOffsetTimezone())
+    with pytest.raises(ValueError, match="source verification clock must be timezone-aware"):
+        verify_latest_source_archive(
+            [],
+            as_of_utc=invalid_clock,
+            load_archive=lambda _artifact_id: pytest.fail("no archive should be loaded"),
+            verify_parent_run=lambda *_args, **_kwargs: pytest.fail("no parent run should be checked"),
+        )
