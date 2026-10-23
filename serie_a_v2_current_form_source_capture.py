@@ -132,7 +132,11 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     are never converted to features. The returned frame contains no incomplete
     fixtures and exactly the original V2 builder's required columns.
     """
-    if captured_at.tzinfo is None:
+    if (
+        not isinstance(captured_at, datetime)
+        or captured_at.tzinfo is None
+        or captured_at.utcoffset() is None
+    ):
         raise ValueError("current-season source capture clock must be timezone-aware")
     if not raw or len(raw) > MAX_CURRENT_CSV_BYTES:
         raise ValueError("current-season CSV is empty or exceeds size limit")
