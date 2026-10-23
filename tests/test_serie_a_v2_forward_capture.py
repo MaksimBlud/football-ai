@@ -2,7 +2,7 @@
 import hashlib
 from io import BytesIO
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timezone, tzinfo
 import zipfile
 
 import pytest
@@ -256,3 +256,26 @@ def test_catalog_rejects_missing_parent_run_identity_even_with_valid_digest():
     with pytest.raises(ValueError,match="missing GitHub parent run identity"):
         discover_archives(token="test-token",
                           get=lambda url,headers,timeout:Response())
+
+
+
+class _NoOffsetTimezone(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+    def tzname(self, dt):
+        return "NO_OFFSET"
+
+
+def test_original_forward_clock_rejects_tzinfo_without_offset_before_archive_access():
+    invalid_clock = datetime(2026, 10, 14, 7, 0, tzinfo=_NoOffsetTimezone())
+    with pytest.raises(ValueError, match="as_of_utc must be timezone-aware"):
+        prepare_forward_capture(
+            [], [],
+            as_of_utc=invalid_clock,
+            load_archive=lambda _artifact_id: pytest.fail("archive must not be loaded"),
+            verify_parent_run=lambda *_args, **_kwargs: pytest.fail("parent must not be checked"),
+        )
