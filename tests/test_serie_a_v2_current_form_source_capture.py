@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone, tzinfo
 from pathlib import Path
 from types import SimpleNamespace
 import hashlib
@@ -281,3 +281,24 @@ def test_invalid_source_clock_fails_before_current_csv_or_manifest_write(
 
     assert not (tmp_path / CURRENT_FILENAME).exists()
     assert not (tmp_path / MANIFEST_FILENAME).exists()
+
+
+
+class _NoOffsetTimezone(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+    def tzname(self, dt):
+        return "NO_OFFSET"
+
+
+def test_validate_current_season_csv_rejects_offsetless_clock_before_parsing():
+    invalid_clock = datetime(2026, 10, 23, 10, 0, tzinfo=_NoOffsetTimezone())
+
+    with pytest.raises(
+        ValueError, match="current-season source capture clock must be timezone-aware"
+    ):
+        validate_current_season_csv(b"this is deliberately not a CSV", captured_at=invalid_clock)
