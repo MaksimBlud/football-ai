@@ -165,6 +165,15 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     return result, len(frame) - len(completed)
 
 
+
+def _clock_to_utc(clock, *, label: str) -> datetime:
+    """Require a real UTC offset before recording a source/archive timestamp."""
+    value = clock()
+    if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError(f"{label} clock must be timezone-aware with a real UTC offset")
+    return value.astimezone(timezone.utc)
+
+
 def capture_source_archive(
     *,
     output_dir: Path,
@@ -191,13 +200,16 @@ def capture_source_archive(
         raise ValueError("original frozen historical source archive incomplete")
     response = get(CURRENT_URL, timeout=30)
     response.raise_for_status()
+    observed_at = _clock_to_utc(clock, label="source observation")
     raw = response.content
-    observed_at = clock().astimezone(timezone.utc)
     current_rows, excluded_rows = validate_current_season_csv(raw, captured_at=observed_at)
     if len(current_rows) < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
         raise RuntimeError(
             "public current-season source has fewer completed prior-day matches than the feature-source gate"
         )
+    archive_created_at = _clock_to_utc(clock, label="source archive creation")
+    if archive_created_at < observed_at:
+        raise ValueError("source archive creation timestamp precedes source observation")
     current_path = output_dir / CURRENT_FILENAME
     current_path.write_bytes(raw)
     audits = list(old_audit) + [{
@@ -221,7 +233,7 @@ def capture_source_archive(
         "workflow_path": WORKFLOW_PATH,
         "git_sha": os.environ.get("GITHUB_SHA", ""),
         "workflow_run_id": os.environ.get("GITHUB_RUN_ID", ""),
-        "source_archive_created_at_utc": clock().astimezone(timezone.utc).isoformat(),
+        "source_archive_created_at_utc": archive_created_at.isoformat(),
         "frozen_candidate_sha256": FROZEN_SHA,
         "original_feature_builder_git_blob_sha1": "401b3a0893371bfa4a488ec92a4a54af2678c8f7",
         "feature_count": len(FEATURE_SETS["ALL_FOOTBALL"]),
