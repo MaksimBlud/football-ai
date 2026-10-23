@@ -85,7 +85,7 @@ def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -
         if len(code) != 4 or not code.isdigit():
             raise ValueError("unexpected historical season code")
         url = f"{PUBLIC_BASE}/{code}/{SERIE_A_RUNTIME_CONFIG.historical_source.competition_code}.csv"
-        response = get(url, timeout=30)
+        response = get(url, timeout=30, allow_redirects=False)
         if response.status_code != 200:
             raise RuntimeError(f"Public Serie A CSV unavailable: season={code}, http={response.status_code}")
         _assert_approved_final_source_url(response, url)
