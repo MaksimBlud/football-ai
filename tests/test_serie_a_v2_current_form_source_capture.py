@@ -101,6 +101,36 @@ def test_live_feature_gate_query_selects_only_fixture_metadata_not_scores():
     assert client.selected == "match_date,home_team,away_team"
 
 
+def test_current_season_fetch_rejects_cross_origin_redirect_before_reading_csv(tmp_path):
+    def fake_history(*, get, capture_dir):
+        return pd.DataFrame([{"historical": 1}]), [
+            {"season_code": code} for code in _source_codes()
+        ]
+
+    class RedirectedResponse:
+        url = "https://attacker.invalid/mmz4281/2627/I1.csv"
+
+        def raise_for_status(self):
+            return None
+
+        @property
+        def content(self):
+            pytest.fail("redirected source body must not be read")
+
+    with pytest.raises(ValueError, match="left the approved HTTPS source URL"):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=FakeQuery(event_rows(30)),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=lambda _url, timeout: RedirectedResponse(),
+            history_fetch=fake_history,
+            clock=lambda: pytest.fail("source clock must not be read after redirect rejection"),
+        )
+
+    assert not (tmp_path / CURRENT_FILENAME).exists()
+    assert not (tmp_path / MANIFEST_FILENAME).exists()
+
+
 def test_current_csv_uses_only_completed_rows_strictly_before_capture_day():
     raw = current_csv(n=30, same_day=True, future_unplayed=True)
     frame, excluded = validate_current_season_csv(
