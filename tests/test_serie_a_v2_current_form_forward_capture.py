@@ -339,3 +339,15 @@ def test_source_verification_clock_rejects_tzinfo_without_offset():
             load_archive=lambda _artifact_id: pytest.fail("no archive should be loaded"),
             verify_parent_run=lambda *_args, **_kwargs: pytest.fail("no parent run should be checked"),
         )
+
+
+def test_forward_capture_clock_rejects_tzinfo_without_offset():
+    invalid_clock = datetime(2026, 10, 19, 5, 40, tzinfo=_NoOffsetTimezone())
+    with pytest.raises(ValueError, match="current-form forward clock must be timezone-aware"):
+        prepare_forward_capture(
+            [],
+            [],
+            as_of_utc=invalid_clock,
+            load_archive=lambda _artifact_id: pytest.fail("no archive should be loaded"),
+            verify_parent_run=lambda *_args, **_kwargs: pytest.fail("no parent run should be checked"),
+        )
