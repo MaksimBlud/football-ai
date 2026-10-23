@@ -10,6 +10,8 @@ on:
       - "serie_a_v2_current_form_source_capture.py"
       - "serie_a_v2_live_diagnostic_report.py"
       - "serie_a_v2_frozen_shadow_preview.py"
+      - "market_anchor_1x2_v2_shadow.py"
+      - "market_anchor_1x2_v1.py"
       - "serie_a_v2_asof_feature_manifest.py"
       - "historical_football_signal_lab.py"
       - "serie_a_runtime_config.py"
