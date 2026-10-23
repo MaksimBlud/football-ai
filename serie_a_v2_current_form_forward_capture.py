@@ -257,6 +257,11 @@ def verify_and_load_archive(
         declared_archive = parse_utc(manifest["source_archive_created_at_utc"])
         if latest_source != declared_latest or declared_archive < latest_source:
             raise ValueError("source observation and archive timestamps conflict")
+        gate_checked = parse_utc(gate["checked_at_utc"])
+        if not gate_checked <= latest_source <= declared_archive:
+            raise ValueError(
+                "feature-source gate timestamp must precede current source observation and archive creation"
+            )
         if declared_archive > archive["created_at"] or archive["created_at"] > parse_utc(parent["run_completed_at_utc"]):
             raise ValueError("source archive artifact timing conflicts with parent run")
         return history, {
