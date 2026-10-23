@@ -34,12 +34,18 @@ REQUIRED_SOURCE_AUDIT_PATHS = {
 
 
 def _source_push_paths(workflow_text: str) -> set[str]:
-    marker = "  push:\n"
-    assert marker in workflow_text
-    push_block = workflow_text.split(marker, 1)[1].split("\n\nconcurrency:", 1)[0]
-    paths_match = re.search(r"(?m)^    paths:\n((?:^      - \"[^\"]+\"\n?)+)", push_block)
-    assert paths_match, "source capture workflow must declare an explicit path filter"
-    return set(re.findall(r'(?m)^      - "([^"]+)"$', paths_match.group(1)))
+    lines = workflow_text.splitlines()
+    push_index = lines.index("  push:")
+    end_index = lines.index("concurrency:")
+    push_block = lines[push_index + 1:end_index]
+    paths_index = push_block.index("    paths:")
+    paths = set()
+    for line in push_block[paths_index + 1:]:
+        match = re.match(r'^\s*- "([^"]+)"\s*$', line)
+        if match:
+            paths.add(match.group(1))
+    assert paths, "source capture workflow must declare an explicit path filter"
+    return paths
 
 
 def test_current_form_source_capture_reaudits_all_frozen_v2_dependencies():
