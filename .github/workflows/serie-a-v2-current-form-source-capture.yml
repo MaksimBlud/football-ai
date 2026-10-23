@@ -9,7 +9,14 @@ on:
     paths:
       - "serie_a_v2_current_form_source_capture.py"
       - "experiments/market_anchor_1x2_v2_current_form_policy.json"
+      - "historical_football_signal_lab.py"
+      - "serie_a_runtime_config.py"
+      - "serie_a_v2_frozen_shadow_preview.py"
+      - "serie_a_v2_live_diagnostic_report.py"
+      - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
       - "tests/test_serie_a_v2_current_form_source_capture.py"
+      - "tests/test_serie_a_v2_asof_feature_manifest.py"
+      - "tests/test_serie_a_v2_atalanta_alias.py"
       - ".github/workflows/serie-a-v2-current-form-source-capture.yml"
 
 concurrency:
