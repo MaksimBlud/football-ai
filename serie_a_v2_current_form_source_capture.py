@@ -43,6 +43,22 @@ NUMERIC_COLUMNS = ("FTHG", "FTAG", "HC", "AC", "HY", "AY", "HR", "AR")
 V2_ONLY_ALIASES = {"Atalanta BC": "Atalanta"}
 
 
+def _require_aware_utc(value: datetime, *, label: str) -> datetime:
+    """Fail closed unless a timestamp has an explicit, valid UTC offset."""
+    if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError(f"{label} must be timezone-aware")
+    return value.astimezone(timezone.utc)
+
+
+def _validated_archive_created_at(observed_at: datetime, created_at: datetime) -> datetime:
+    """Require the archive timestamp to be aware and not precede source observation."""
+    observed = _require_aware_utc(observed_at, label="current-season source observation clock")
+    created = _require_aware_utc(created_at, label="source archive creation clock")
+    if created < observed:
+        raise ValueError("source archive creation time precedes source observation time")
+    return created
+
+
 def _canonical_team(value: Any) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError("completed primary event has an empty team identity")
@@ -116,7 +132,11 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     are never converted to features. The returned frame contains no incomplete
     fixtures and exactly the original V2 builder's required columns.
     """
-    if captured_at.tzinfo is None:
+    if (
+        not isinstance(captured_at, datetime)
+        or captured_at.tzinfo is None
+        or captured_at.utcoffset() is None
+    ):
         raise ValueError("current-season source capture clock must be timezone-aware")
     if not raw or len(raw) > MAX_CURRENT_CSV_BYTES:
         raise ValueError("current-season CSV is empty or exceeds size limit")
@@ -175,9 +195,7 @@ def capture_source_archive(
     clock=lambda: datetime.now(timezone.utc),
 ) -> dict:
     """Capture the ten frozen historical seasons plus the gated current-season source."""
-    if now.tzinfo is None:
-        raise ValueError("source capture clock must be timezone-aware")
-    at = now.astimezone(timezone.utc)
+    at = _require_aware_utc(now, label="source capture clock")
     gate_count = read_completed_primary_event_count(client, now=at)
     if gate_count < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
         raise RuntimeError(
@@ -192,14 +210,15 @@ def capture_source_archive(
     response = get(CURRENT_URL, timeout=30)
     response.raise_for_status()
     raw = response.content
-    observed_at = clock().astimezone(timezone.utc)
+    observed_at = _require_aware_utc(
+        clock(), label="current-season source observation clock"
+    )
     current_rows, excluded_rows = validate_current_season_csv(raw, captured_at=observed_at)
     if len(current_rows) < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
         raise RuntimeError(
             "public current-season source has fewer completed prior-day matches than the feature-source gate"
         )
-    current_path = output_dir / CURRENT_FILENAME
-    current_path.write_bytes(raw)
+    archive_created_at = _validated_archive_created_at(observed_at, clock())
     audits = list(old_audit) + [{
         "season_code": CURRENT_CODE,
         "season": CURRENT_SEASON,
@@ -221,7 +240,7 @@ def capture_source_archive(
         "workflow_path": WORKFLOW_PATH,
         "git_sha": os.environ.get("GITHUB_SHA", ""),
         "workflow_run_id": os.environ.get("GITHUB_RUN_ID", ""),
-        "source_archive_created_at_utc": clock().astimezone(timezone.utc).isoformat(),
+        "source_archive_created_at_utc": archive_created_at.isoformat(),
         "frozen_candidate_sha256": FROZEN_SHA,
         "original_feature_builder_git_blob_sha1": "401b3a0893371bfa4a488ec92a4a54af2678c8f7",
         "feature_count": len(FEATURE_SETS["ALL_FOOTBALL"]),
@@ -273,6 +292,8 @@ def capture_source_archive(
         "target_outcomes_scored": False,
         "model_refit_or_promotion": False,
     }
+    current_path = output_dir / CURRENT_FILENAME
+    current_path.write_bytes(raw)
     manifest_path = output_dir / MANIFEST_FILENAME
     manifest_path.write_text(
         json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
