@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone, tzinfo
 from pathlib import Path
 from types import SimpleNamespace
 import hashlib
@@ -61,6 +61,28 @@ class FakeQuery:
     def execute(self):
         return SimpleNamespace(data=self.rows)
 
+
+
+class _NoOffsetTimezone(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+    def tzname(self, dt):
+        return "NO_OFFSET"
+
+
+def test_feature_source_gate_rejects_timezone_without_offset_before_supabase_read():
+    invalid_clock = datetime(2026, 10, 19, 5, 40, tzinfo=_NoOffsetTimezone())
+
+    class NoReadClient:
+        def table(self, *_args, **_kwargs):
+            pytest.fail("Supabase must not be queried for an invalid feature-source gate clock")
+
+    with pytest.raises(ValueError, match="feature-source gate clock must be timezone-aware"):
+        read_completed_primary_event_count(NoReadClient(), now=invalid_clock)
 
 def current_csv(n=30, *, same_day=False, future_unplayed=False, future_completed=False):
     header = ",".join(REQUIRED_COLUMNS)
