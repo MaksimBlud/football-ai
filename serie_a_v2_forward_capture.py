@@ -166,9 +166,6 @@ def prepare_forward_capture(
     from serie_a_v2_frozen_shadow_preview import _guard_outcome_free
     if write_archives_to is not None:
         write_archives_to.mkdir(parents=True, exist_ok=True)
-    rows, cache = [], {}
-    verified_runs = {}
-    used_archives = {}
     identity_by_event_id = {}
     for q in quotes:
         _guard_outcome_free(q)
@@ -187,9 +184,16 @@ def prepare_forward_capture(
         if prior_identity is not None and prior_identity != event_identity:
             raise ValueError("conflicting fixture identity for same original V2 event_id")
         identity_by_event_id[event] = event_identity
+
+    rows, cache = [], {}
+    verified_runs = {}
+    used_archives = {}
+    for q in quotes:
+        quote_time = parse_utc(q["snapshot_time_utc"])
+        kickoff = parse_utc(q["commence_time_utc"])
         if not now < kickoff:
             continue
-        key = (event, quote_time)
+        key = (q["event_id"], quote_time)
         if any((r["event_id"], r["quote_time_utc"]) == (q["event_id"], quote_time.isoformat()) for r in rows):
             raise ValueError("duplicate saved quote observation")
         record = {
