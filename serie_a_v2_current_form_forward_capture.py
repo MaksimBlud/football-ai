@@ -342,6 +342,7 @@ def verify_latest_source_archive(
 def _latest_quotes(quotes: list[dict], *, now: datetime) -> list[dict]:
     latest = {}
     seen = set()
+    identity_by_event_id = {}
     for q in quotes:
         _guard_outcome_free(q)
         if q.get("league") != "SERIE_A":
@@ -354,6 +355,11 @@ def _latest_quotes(quotes: list[dict], *, now: datetime) -> list[dict]:
         snapshot = parse_utc(q["snapshot_time_utc"])
         if snapshot > now or not snapshot < kickoff:
             raise ValueError("invalid current-form quote timing")
+        event_identity = (home, away, kickoff)
+        prior_identity = identity_by_event_id.get(event)
+        if prior_identity is not None and prior_identity != event_identity:
+            raise ValueError("conflicting fixture identity for same current-form event_id")
+        identity_by_event_id[event] = event_identity
         identity = (event, home, away, kickoff)
         key = (*identity, snapshot)
         if key in seen:
