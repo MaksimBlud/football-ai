@@ -1,5 +1,5 @@
 """Free actual-source attestation behavior with synthetic pre-2026 history only."""
-from datetime import datetime, timezone
+from datetime import datetime, timezone, tzinfo
 import hashlib
 from io import BytesIO
 import json
@@ -133,4 +133,28 @@ def test_invalid_datetime_is_not_silently_assumed_utc():
             token="test-token",now=datetime(2026,10,14,16),
             discover=lambda **kwargs:meta,
             load=lambda *a,**kw:raw,verify_run=valid_parent,
+        )
+
+
+
+class _NoOffsetTimezone(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+    def tzname(self, dt):
+        return "NO_OFFSET"
+
+
+def test_no_offset_timezone_is_not_silently_assumed_utc():
+    invalid_clock = datetime(2026, 10, 14, 16, tzinfo=_NoOffsetTimezone())
+    with pytest.raises(ValueError, match="aware UTC clock"):
+        attest_latest_source(
+            token="test-token",
+            now=invalid_clock,
+            discover=lambda **kwargs: pytest.fail("archive discovery must not run"),
+            load=lambda *args, **kwargs: pytest.fail("archive must not load"),
+            verify_run=lambda *args, **kwargs: pytest.fail("parent verification must not run"),
         )

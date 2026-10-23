@@ -156,23 +156,41 @@ def prepare_forward_capture(
     admission: frozen incumbent, current-season form and outcome gate still
     missing. All resulting original-V2 probabilities are diagnostic only.
     """
-    if as_of_utc.tzinfo is None:
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
         raise ValueError("as_of_utc must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
     from serie_a_v2_frozen_shadow_preview import _guard_outcome_free
     if write_archives_to is not None:
         write_archives_to.mkdir(parents=True, exist_ok=True)
-    rows, cache = [], {}
-    verified_runs = {}
-    used_archives = {}
+    identity_by_event_id = {}
     for q in quotes:
         _guard_outcome_free(q)
         if q.get("league") != "SERIE_A":
             raise ValueError("forward capture accepts Serie A quotes only")
+        event = q.get("event_id")
+        home, away = q.get("home_team"), q.get("away_team")
+        if not all(isinstance(value, str) and value.strip() for value in (event, home, away)):
+            raise ValueError("quote identity is incomplete")
         quote_time = parse_utc(q["snapshot_time_utc"])
         kickoff = parse_utc(q["commence_time_utc"])
         if quote_time > now or not quote_time < kickoff:
             raise ValueError("invalid stored quote timing")
+        event_identity = (home, away, kickoff)
+        prior_identity = identity_by_event_id.get(event)
+        if prior_identity is not None and prior_identity != event_identity:
+            raise ValueError("conflicting fixture identity for same original V2 event_id")
+        identity_by_event_id[event] = event_identity
+
+    rows, cache = [], {}
+    verified_runs = {}
+    used_archives = {}
+    for q in quotes:
+        quote_time = parse_utc(q["snapshot_time_utc"])
+        kickoff = parse_utc(q["commence_time_utc"])
         if not now < kickoff:
             continue
         key = (q["event_id"], quote_time)

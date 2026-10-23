@@ -2,7 +2,7 @@
 import hashlib
 from io import BytesIO
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timezone, tzinfo
 import zipfile
 
 import pytest
@@ -79,6 +79,38 @@ def fake_verified_parent_run(archive, quote_time):
     return {"run_completed_at_utc": "2026-10-13T15:01:00Z",
             "workflow_path": SOURCE_WORKFLOW_PATH, "run_id": 456}
 
+
+
+@pytest.mark.parametrize("conflict", ["home_team", "kickoff"])
+def test_same_original_event_id_cannot_change_fixture_identity(conflict):
+    raw, metadata = make_source_archive()
+    first = quote(ts="2026-10-14T06:00:00Z")
+    second = quote(ts="2026-10-14T06:01:00Z")
+    if conflict == "home_team":
+        second["home_team"] = "Inter"
+    else:
+        second["commence_time_utc"] = "2026-10-21T18:00:00Z"
+
+    calls = []
+
+    def load_archive(artifact_id):
+        calls.append(("load_archive", artifact_id))
+        return raw
+
+    def verify_parent_run(archive, quote_time):
+        calls.append(("verify_parent_run", archive["artifact_id"]))
+        return fake_verified_parent_run(archive, quote_time)
+
+    with pytest.raises(ValueError, match="conflicting fixture identity for same original V2 event_id"):
+        prepare_forward_capture(
+            [first, second],
+            metadata,
+            as_of_utc=NOW,
+            load_archive=load_archive,
+            verify_parent_run=verify_parent_run,
+        )
+
+    assert calls == []
 
 
 def test_forward_v2_scores_only_after_real_prior_archive_and_never_promotes():
@@ -256,3 +288,26 @@ def test_catalog_rejects_missing_parent_run_identity_even_with_valid_digest():
     with pytest.raises(ValueError,match="missing GitHub parent run identity"):
         discover_archives(token="test-token",
                           get=lambda url,headers,timeout:Response())
+
+
+
+class _NoOffsetTimezone(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+    def tzname(self, dt):
+        return "NO_OFFSET"
+
+
+def test_original_forward_clock_rejects_tzinfo_without_offset_before_archive_access():
+    invalid_clock = datetime(2026, 10, 14, 7, 0, tzinfo=_NoOffsetTimezone())
+    with pytest.raises(ValueError, match="as_of_utc must be timezone-aware"):
+        prepare_forward_capture(
+            [], [],
+            as_of_utc=invalid_clock,
+            load_archive=lambda _artifact_id: pytest.fail("archive must not be loaded"),
+            verify_parent_run=lambda *_args, **_kwargs: pytest.fail("parent must not be checked"),
+        )
