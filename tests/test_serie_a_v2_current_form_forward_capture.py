@@ -11,6 +11,7 @@ from serie_a_v2_current_form_forward_capture import (
     MANIFEST_FILENAME,
     SOURCE_WORKFLOW_PATH,
     prepare_forward_capture,
+    verify_and_load_archive,
     verify_latest_source_archive,
 )
 from serie_a_v2_current_form_source_capture import (
@@ -174,6 +175,49 @@ def valid_parent(archive, *, quote_time):
         "run_created_at_utc": PARENT_CREATED,
         "run_completed_at_utc": PARENT_COMPLETED,
     }
+
+
+def _rewrite_source_manifest(raw, mutate):
+    with zipfile.ZipFile(BytesIO(raw), "r") as source:
+        files = {name: source.read(name) for name in source.namelist()}
+    manifest = json.loads(files[MANIFEST_FILENAME])
+    mutate(manifest)
+    files[MANIFEST_FILENAME] = (json.dumps(manifest, sort_keys=True) + "\\n").encode()
+    output = BytesIO()
+    with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as target:
+        for name, body in files.items():
+            target.writestr(name, body)
+    return output.getvalue()
+
+
+@pytest.mark.parametrize(
+    "target, field, value, expected_error",
+    [
+        ("feature_policy", "future_or_unplayed_fixtures_used", True, "feature policy"),
+        ("feature_policy", "same_calendar_day_matches_excluded", False, "feature policy"),
+        ("feature_source_gate", "metadata_fields_read",
+         ["match_date", "home_team", "away_team", "home_goals"], "fixture metadata"),
+        ("manifest", "eligible_for_product_publication", True, "eligibility"),
+        ("manifest", "eligible_for_current_form_forward_shadow", True, "eligibility"),
+        ("manifest", "no_bet", False, "eligibility"),
+    ],
+)
+def test_archive_loader_rejects_manifest_safety_contract_drift(
+    target, field, value, expected_error
+):
+    raw, archives = make_archive()
+    def mutate(manifest):
+        container = manifest if target == "manifest" else manifest[target]
+        container[field] = value
+
+    tampered = _rewrite_source_manifest(raw, mutate)
+    archive = {**archives[0], "sha256": hashlib.sha256(tampered).hexdigest()}
+    parent = valid_parent(
+        archive,
+        quote_time=datetime(2026, 10, 19, 5, 30, tzinfo=timezone.utc),
+    )
+    with pytest.raises(ValueError, match=expected_error):
+        verify_and_load_archive(tampered, archive, parent)
 
 
 def test_current_form_v2_scores_only_future_quote_with_prequote_source_and_stays_no_bet(tmp_path):
