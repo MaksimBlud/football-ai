@@ -8,6 +8,7 @@ from pathlib import Path
 
 PAID = Path(".github/workflows/serie-a-odds-snapshots.yml")
 FREE = Path(".github/workflows/serie-a-v2-forward-preview.yml")
+SHADOW = Path(".github/workflows/serie-a-frozen-v2-shadow-tests.yml")
 
 
 def test_original_paid_serie_a_collector_remains_dispatch_only():
@@ -105,9 +106,12 @@ def test_original_forward_runtime_dependencies_trigger_read_only_reaudit():
     header = free.split("concurrency:", 1)[0]
     dependencies = (
         "serie_a_v2_frozen_shadow_preview.py",
+        "market_anchor_1x2_v2_shadow.py",
+        "market_anchor_1x2_v1.py",
         "historical_football_signal_lab.py",
         "serie_a_runtime_config.py",
         "research/models/market_anchor_v2_serie_a_frozen_candidate.json",
+        "experiments/market_anchor_1x2_v2_protocol.json",
         "tests/test_serie_a_v2_live_diagnostic_report.py",
         "tests/test_serie_a_v2_frozen_shadow_preview.py",
         "tests/test_serie_a_v2_prequote_source_archive_gate.py",
@@ -117,6 +121,17 @@ def test_original_forward_runtime_dependencies_trigger_read_only_reaudit():
     assert '- cron: "8 8 * * *"' in header
     assert "THE_ODDS_API_KEY" not in header
     assert "odds_api_budget_guard.py" not in header
+
+def test_frozen_v2_shadow_ci_triggers_on_core_math_and_protocol_changes():
+    shadow = SHADOW.read_text(encoding="utf-8")
+    header = shadow.split("permissions:", 1)[0]
+    for path in (
+        "market_anchor_1x2_v2_shadow.py",
+        "market_anchor_1x2_v1.py",
+        "experiments/market_anchor_1x2_v2_protocol.json",
+    ):
+        assert f'"{path}"' in header
+
 
 def test_current_form_runtime_dependencies_trigger_read_only_reaudit():
     """Runtime dependencies must rerun free V2 source/forward proof after main changes."""
@@ -130,8 +145,11 @@ def test_current_form_runtime_dependencies_trigger_read_only_reaudit():
         "historical_football_signal_lab.py",
         "serie_a_runtime_config.py",
         "serie_a_v2_frozen_shadow_preview.py",
+        "market_anchor_1x2_v2_shadow.py",
+        "market_anchor_1x2_v1.py",
         "serie_a_v2_live_diagnostic_report.py",
         "research/models/market_anchor_v2_serie_a_frozen_candidate.json",
+        "experiments/market_anchor_1x2_v2_protocol.json",
         "tests/test_serie_a_v2_asof_feature_manifest.py",
         "tests/test_serie_a_v2_atalanta_alias.py",
     )
@@ -139,11 +157,14 @@ def test_current_form_runtime_dependencies_trigger_read_only_reaudit():
         "serie_a_v2_current_form_source_capture.py",
         "serie_a_v2_asof_feature_manifest.py",
         "serie_a_v2_frozen_shadow_preview.py",
+        "market_anchor_1x2_v2_shadow.py",
+        "market_anchor_1x2_v1.py",
         "serie_a_v2_live_diagnostic_report.py",
         "historical_football_signal_lab.py",
         "serie_a_runtime_config.py",
         "experiments/market_anchor_1x2_v2_current_form_policy.json",
         "research/models/market_anchor_v2_serie_a_frozen_candidate.json",
+        "experiments/market_anchor_1x2_v2_protocol.json",
         "tests/test_serie_a_v2_current_form_source_capture.py",
         "tests/test_serie_a_v2_asof_feature_manifest.py",
         "tests/test_serie_a_v2_atalanta_alias.py",
