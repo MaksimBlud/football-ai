@@ -268,3 +268,18 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert report["target_outcome_evaluation_gate"]["outcome_gate_open"] is False
     assert report["paid_provider_calls"] == report["supabase_writes"] == 0
     assert report["model_refit_or_promotion"] is False
+
+def test_current_csv_rejects_reversed_duplicate_fixture_after_v2_alias_normalization():
+    raw = current_csv(n=30).decode()
+    raw = raw.replace(
+        "01/08/2026,Home 0,Away 0,1,0,H,5,3,2,1,0,0",
+        "01/08/2026,Atalanta,Juventus,1,0,H,5,3,2,1,0,0",
+        1,
+    )
+    raw += "01/08/2026,Juventus,Atalanta BC,0,1,A,3,5,1,2,0,0\\n"
+    with pytest.raises(ValueError, match="reversed duplicate fixture identity"):
+        validate_current_season_csv(
+            raw.encode(),
+            captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+        )
+
