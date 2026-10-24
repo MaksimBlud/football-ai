@@ -26,7 +26,7 @@ from serie_a_v2_asof_feature_manifest import build_manifest
 from serie_a_v2_current_form_source_capture import (
     CURRENT_CODE, CURRENT_FILENAME, CURRENT_SEASON, CURRENT_URL,
     MANIFEST_FILENAME, MIN_COMPLETED_FEATURE_SOURCE_EVENTS,
-    REQUIRED_COLUMNS, validate_current_season_csv,
+    REQUIRED_COLUMNS, V2_ONLY_ALIASES, validate_current_season_csv,
 )
 from serie_a_v2_frozen_shadow_preview import (
     FROZEN_SHA, fetch_saved_upcoming_serie_a_quotes, parse_utc, shadow_preview, _guard_outcome_free,
@@ -43,6 +43,22 @@ MAX_QUOTE_AGE = timedelta(hours=24)
 MAX_SOURCE_AGE = timedelta(hours=24)
 MAX_ARCHIVE_BYTES = 16_000_000
 OLD_CUTOFF = pd.Timestamp("2026-07-01")
+
+# Used only to detect duplicate fixture identities across provider event IDs.
+# This does not rewrite display labels or any frozen model feature.
+_TEAM_IDENTITY_ALIASES = {
+    " ".join(str(alias).split()).casefold(): " ".join(str(canonical).split()).casefold()
+    for alias, canonical in SERIE_A_RUNTIME_CONFIG.aliases.items()
+}
+_TEAM_IDENTITY_ALIASES.update({
+    " ".join(str(alias).split()).casefold(): " ".join(str(canonical).split()).casefold()
+    for alias, canonical in V2_ONLY_ALIASES.items()
+})
+
+
+def _fixture_team_identity(value: str) -> str:
+    normalized = " ".join(value.split()).casefold()
+    return _TEAM_IDENTITY_ALIASES.get(normalized, normalized)
 
 
 def _github_json(url: str, *, token: str, get=requests.get) -> dict:
@@ -279,7 +295,11 @@ def verify_latest_source_archive(
     write_sources_to: Path | None = None,
 ) -> dict:
     """Verify the latest successful main source artifact even when all quotes are stale."""
-    if as_of_utc.tzinfo is None:
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
         raise ValueError("source verification clock must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
     candidates = sorted(
@@ -338,6 +358,8 @@ def verify_latest_source_archive(
 def _latest_quotes(quotes: list[dict], *, now: datetime) -> list[dict]:
     latest = {}
     seen = set()
+    identity_by_event_id = {}
+    event_id_by_fixture = {}
     for q in quotes:
         _guard_outcome_free(q)
         if q.get("league") != "SERIE_A":
@@ -350,7 +372,19 @@ def _latest_quotes(quotes: list[dict], *, now: datetime) -> list[dict]:
         snapshot = parse_utc(q["snapshot_time_utc"])
         if snapshot > now or not snapshot < kickoff:
             raise ValueError("invalid current-form quote timing")
-        identity = (event, home, away, kickoff)
+        event_key = event.strip()
+        home_key = _fixture_team_identity(home)
+        away_key = _fixture_team_identity(away)
+        event_identity = (home_key, away_key, kickoff)
+        prior_identity = identity_by_event_id.get(event_key)
+        if prior_identity is not None and prior_identity != event_identity:
+            raise ValueError("conflicting fixture identity for same current-form event_id")
+        identity_by_event_id[event_key] = event_identity
+        prior_event_id = event_id_by_fixture.get(event_identity)
+        if prior_event_id is not None and prior_event_id != event_key:
+            raise ValueError("conflicting event IDs for same current-form fixture")
+        event_id_by_fixture[event_identity] = event_key
+        identity = (event_key, home_key, away_key, kickoff)
         key = (*identity, snapshot)
         if key in seen:
             raise ValueError("duplicate exact current-form quote observation")
@@ -370,7 +404,11 @@ def prepare_forward_capture(
     verify_parent_run,
     write_sources_to: Path | None = None,
 ) -> dict:
-    if as_of_utc.tzinfo is None:
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
         raise ValueError("current-form forward clock must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
     if write_sources_to is not None:
