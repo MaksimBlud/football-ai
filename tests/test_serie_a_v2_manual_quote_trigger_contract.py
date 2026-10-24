@@ -5,6 +5,7 @@ budget contract. The V2 trigger observes a successful *already manual* run;
 it MUST NOT schedule or dispatch a new paid odds workflow.
 """
 from pathlib import Path
+import re
 
 PAID = Path(".github/workflows/serie-a-odds-snapshots.yml")
 FREE = Path(".github/workflows/serie-a-v2-forward-preview.yml")
@@ -96,3 +97,46 @@ def test_current_form_source_capture_and_forward_preview_never_trigger_paid_odds
     assert 'workflow_dispatch:' in forward
     assert 'push:' in forward
     assert '"serie_a_v2_current_form_forward_capture.py"' in forward
+
+def test_current_form_forward_reaudits_all_frozen_dependencies_on_main_push():
+    forward = Path(".github/workflows/serie-a-v2-current-form-forward-preview.yml").read_text(encoding="utf-8")
+    lines = forward.splitlines()
+    push_index = lines.index("  push:")
+    end_index = lines.index("concurrency:")
+    push_block = lines[push_index + 1:end_index]
+    paths_index = push_block.index("    paths:")
+    actual = set()
+    for line in push_block[paths_index + 1:]:
+        match = re.match(r'^\\s*- "([^"]+)"\\s*$', line)
+        if match:
+            actual.add(match.group(1))
+
+    required = {
+        "serie_a_v2_current_form_forward_capture.py",
+        "serie_a_v2_current_form_source_capture.py",
+        "serie_a_v2_frozen_shadow_preview.py",
+        "market_anchor_1x2_v2_shadow.py",
+        "serie_a_v2_asof_feature_manifest.py",
+        "serie_a_v2_live_diagnostic_report.py",
+        "serie_a_v2_prequote_source_archive_gate.py",
+        "serie_a_runtime_config.py",
+        "historical_football_signal_lab.py",
+        "research/models/market_anchor_v2_serie_a_frozen_candidate.json",
+        "experiments/market_anchor_1x2_v2_current_form_policy.json",
+        "experiments/market_anchor_1x2_v2_protocol.json",
+        "tests/test_serie_a_v2_current_form_source_capture.py",
+        "tests/test_serie_a_v2_current_form_forward_capture.py",
+        "tests/test_serie_a_v2_prequote_source_archive_gate.py",
+        "tests/test_serie_a_v2_asof_feature_manifest.py",
+        "tests/test_serie_a_v2_atalanta_alias.py",
+        "tests/test_serie_a_v2_frozen_shadow_preview.py",
+        "tests/test_serie_a_v2_live_diagnostic_report.py",
+        "tests/test_serie_a_v2_manual_quote_trigger_contract.py",
+        ".github/workflows/serie-a-v2-current-form-forward-preview.yml",
+    }
+    missing = required - actual
+    assert not missing, f"frozen V2 forward dependencies would skip the live audit: {sorted(missing)}"
+    assert 'cron: "18 8 * * *"' in forward
+    assert "tests/test_serie_a_v2_prequote_source_archive_gate.py" in forward
+    assert "tests/test_serie_a_v2_live_diagnostic_report.py" in forward
+
