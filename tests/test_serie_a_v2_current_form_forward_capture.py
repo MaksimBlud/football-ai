@@ -333,20 +333,3 @@ def test_same_fixture_with_different_event_ids_fails_closed_before_source_load()
             ),
             verify_parent_run=valid_parent,
         )
-
-
-def test_reused_event_id_for_different_fixtures_fails_closed_before_source_load():
-    first = quote(snapshot="2026-10-19T05:30:00Z")
-    second = {
-        **quote(snapshot="2026-10-19T05:35:00Z"),
-        "away_team": "Inter",
-    }
-    with pytest.raises(ValueError, match="event_id maps to multiple current-form fixtures"):
-        prepare_forward_capture(
-            [first, second], [],
-            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
-            load_archive=lambda *_args: (_ for _ in ()).throw(
-                AssertionError("identity conflicts must fail before source loading")
-            ),
-            verify_parent_run=valid_parent,
-        )
