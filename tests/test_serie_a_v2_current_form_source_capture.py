@@ -109,6 +109,15 @@ def test_gate_rejects_same_fixture_repeated_with_reversed_home_away_roles():
         )
 
 
+def test_gate_rejects_pre_season_metadata_rows_instead_of_counting_toward_30_event_gate():
+    rows = event_rows(30)
+    rows[0]["match_date"] = "2026-06-30"
+    with pytest.raises(ValueError, match="pre-season fixture identity"):
+        count_unique_completed_primary_events(
+            rows, before_date=date(2026, 10, 18)
+        )
+
+
 def test_live_feature_gate_query_selects_only_fixture_metadata_not_scores():
     client = FakeQuery(event_rows(30))
     count = read_completed_primary_event_count(
