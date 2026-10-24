@@ -125,7 +125,15 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     if missing:
         raise ValueError("current-season source lacks required original V2 statistics: "
                          + ", ".join(sorted(missing)))
-    nonblank_dates = frame["Date"].notna()
+    missing_date = frame["Date"].isna() | frame["Date"].astype(str).str.strip().eq("")
+    payload_columns = ["HomeTeam", "AwayTeam", "FTR", *NUMERIC_COLUMNS]
+    has_payload = frame.loc[:, payload_columns].apply(
+        lambda column: column.notna() & column.astype(str).str.strip().ne(""),
+        axis=0,
+    ).any(axis=1)
+    if (missing_date & has_payload).any():
+        raise ValueError("current-season source contains populated fixture row without date")
+    nonblank_dates = ~missing_date
     parsed_dates = pd.to_datetime(frame["Date"], dayfirst=True, format="mixed", errors="coerce")
     if parsed_dates.loc[nonblank_dates].isna().any():
         raise ValueError("current-season source contains an unparseable fixture date")
