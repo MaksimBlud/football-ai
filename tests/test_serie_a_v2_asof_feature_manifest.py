@@ -249,3 +249,50 @@ def test_online_manifest_matches_original_builder_after_frozen_30_match_truncati
         else:
             assert actual == pytest.approx(float(expected), abs=1e-12)
 
+
+
+def test_free_diagnostic_push_paths_cover_frozen_transitive_dependencies():
+    """Keep source-provenance diagnostics wired to the original V2 runtime contract."""
+    from pathlib import Path
+
+    workflow = Path(".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml").read_text(encoding="utf-8")
+    push = workflow.split("  push:\\n", 1)[1].split("\\n\\nconcurrency:", 1)[0]
+    required_paths = (
+        "serie_a_v2_live_diagnostic_report.py",
+        "serie_a_v2_asof_feature_manifest.py",
+        "serie_a_v2_frozen_shadow_preview.py",
+        "serie_a_v2_prequote_source_archive_gate.py",
+        "market_anchor_1x2_v2_shadow.py",
+        "historical_football_signal_lab.py",
+        "serie_a_runtime_config.py",
+        "research/models/market_anchor_v2_serie_a_frozen_candidate.json",
+        "experiments/market_anchor_1x2_v2_protocol.json",
+        "tests/test_serie_a_v2_live_diagnostic_report.py",
+        "tests/test_serie_a_v2_asof_feature_manifest.py",
+        "tests/test_serie_a_v2_atalanta_alias.py",
+        "tests/test_serie_a_v2_frozen_shadow_preview.py",
+        "tests/test_serie_a_v2_prequote_source_archive_gate.py",
+        ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml",
+    )
+    for path in required_paths:
+        assert f'"{path}"' in push, f"missing push trigger for frozen dependency: {path}"
+
+
+def test_free_diagnostic_runs_the_asof_trigger_regression():
+    from pathlib import Path
+
+    workflow = Path(".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml").read_text(encoding="utf-8")
+    step = workflow.split("- name: Offline regression tests", 1)[1].split(
+        "- name: Verify source access", 1
+    )[0]
+    assert "tests/test_serie_a_v2_asof_feature_manifest.py" in step
+
+
+def test_free_diagnostic_workflow_never_dispatches_paid_quote_collection():
+    from pathlib import Path
+
+    workflow = Path(".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml").read_text(encoding="utf-8")
+    assert "THE_ODDS_API_KEY" not in workflow
+    assert "scheduled_serie_a_odds_snapshot.py" not in workflow
+    assert "odds_api_budget_guard.py" not in workflow
+    assert "requests.post" not in workflow
