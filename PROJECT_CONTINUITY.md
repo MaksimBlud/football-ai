@@ -1,6 +1,17 @@
 # Football AI — Project Continuity
 
 
+## 2026-10-24 22:51 UTC — independent source-artifact rehash and alias-count reconciliation
+
+Independent read-only verification downloaded the actual artifacts from the successful main runs linked below; this is an artifact-integrity check, not a forecast-quality claim.
+
+- Source artifact from run [40083623116](https://github.com/MaksimBlud/football-ai/actions/runs/40083623116), artifact ID `12555164699`: downloaded ZIP SHA-256 independently recomputed as `2e3c92c071c9ff12c4930f750436edee226195f5a7ffd25efb919f20228a0327`. All **11/11 CSV files** matched the SHA-256 values in the manifest, including current-season `serie_a_2627.csv` (`8d4a049abd91d687a63b95051828c00a440c7444e1614a52025addf76a0fb763)). The manifest pins candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, original builder blob SHA-1 `401b3a0893371bfa4a488ec92a4a54af2678c8f7`, and explicitly records no target-outcome reads/scoring, no paid calls, and no Supabase writes.
+- Forward artifact from run [40083677053](https://github.com/MaksimBlud/football-ai/actions/runs/40083677053), artifact ID `12555978823`: downloaded ZIP SHA-256 `9f00a985857341404dc645fde82fb0f60cfdf65b7a7c92fc4505a1b4ea4087d0`. Its nested copy of source artifact `12555164699` independently hashes to the exact same `2e3c92...` value as the separately downloaded source ZIP. The forward verifier recorded source artifact status `VERIFIED`, parent source run ID/SHA match, and source/parent timestamps before verification. It saw **9** saved Serie A quotes, blocked **9/9** as `STALE_MARKET_QUOTE`, and captured **0** prospective forecasts.
+- The nine quote timestamps are all `2026-10-13T14:48:53.042620Z`; the source observation was `2026-10-24T09:52:22.660107Z`. Thus those quotes are source-after-quote and stale; they must not be backfilled.
+- Metadata-only Supabase reconciliation on 2026-10-24 (selected only `match_date,home_team,away_team`, no score/result columns): **73** raw Serie A 2026/27 fixture identities canonicalize to **70** unique fixtures. Exactly three duplicate groups are the already-known `Atalanta` / `Atalanta BC` aliases on 2026-08-23 (vs Sassuolo), 2026-08-31 (vs Bologna), and 2026-09-05 (AS Roma vs Atalanta). This matches the source archive's 70 canonical current-season rows; it is not 73 independent events.
+- Fresh read-only `public.odds_snapshots` audit at 2026-10-24 22:51 UTC: **0** strictly pre-kickoff snapshots in the last 24 hours for every listed league. Serie A has 5 future events with saved but stale pre-kickoff quotes; all other checked leagues have 0 future events with saved pre-kickoff quotes. Latest saved strictly pre-kickoff quote remains Serie A `2026-10-13T14:48:53Z`, EPL `2026-10-09T15:25:57Z`, and September dates for the other leagues.
+- No current/protected 2026/27 scores were selected or read in this audit. The feature-input gate is open (70 canonical metadata fixtures versus threshold 30), but the separate outcome-evaluation gate remains CLOSED until 30 eligible prospective forecasts have completed. No model changes, Supabase writes/DDL, paid calls, schedule changes, production `.pkl` changes, or promotion.
+
 ## 2026-10-24 — confirmed current-form source and forward runtime; no eligible quotes
 
 Latest verified runtime is on unchanged `main` SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This proves that the free source/archive/forward pipeline runs; it does **not** prove V2 quality or scientific completion.
