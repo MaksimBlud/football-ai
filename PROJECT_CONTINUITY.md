@@ -1,6 +1,33 @@
 # Football AI — Project Continuity
 
 
+## 2026-10-24 — confirmed current-form source and forward runtime; no eligible quotes
+
+Latest verified runtime is on unchanged `main` SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This proves that the free source/archive/forward pipeline runs; it does **not** prove V2 quality or scientific completion.
+
+- **Current-Form Source Capture**, run [40083623116](https://github.com/MaksimBlud/football-ai/actions/runs/40083623116), completed 2026-10-24 09:52:26 UTC. Source artifact `12555164699`, ZIP SHA-256 `2e3c92c071c9ff12c4930f750436edee226195f5a7ffd25efb919f20228a0327`. It contains ten frozen historical CSVs plus `2627/I1.csv`, 3,870 historical rows and 70 completed prior-day current-season rows. The feature-input gate read only `match_date,home_team,away_team` metadata and counted 70 canonicalized fixtures. No target outcomes were read/scored, no paid provider calls, no Supabase writes.
+- **Current-Form Forward-Only Preview**, run [40083677053](https://github.com/MaksimBlud/football-ai/actions/runs/40083677053), completed 2026-10-24 09:53:13 UTC. Output artifact `12555978823`, ZIP SHA-256 `9f00a985857341404dc645fde82fb0f60cfdf65b7a7c92fc4505a1b4ea4087d0`. It independently verified source artifact `12555164699`, the GitHub digest, parent workflow success, frozen candidate SHA and source timing. Source observation was `2026-10-24T09:52:22.660107Z`; archive upload `09:52:23Z`; parent workflow completion `09:52:26Z`; independent verification `09:53:05.779226Z`.
+- The forward preview saw **9** saved Serie A quote observations; all 9 were blocked as stale, and **0** new prospective shadow forecasts were captured. No October 13 quote was backfilled.
+- **Free real-quote diagnostic**, run [40087601602](https://github.com/MaksimBlud/football-ai/actions/runs/40087601602), completed 2026-10-24 10:53:00 UTC. **53 tests passed**; 9 quotes were seen, all 9 blocked as stale, all 9 had source observation after quote, 9/9 feature rows had all 19 historical features observed, zero feature rows had missing values, and the old-season history contained 3,800 matches. Completeness does not imply freshness or model superiority.
+- Read-only Supabase audit of `public.odds_snapshots` filtered to `SERIE_A`: 625 snapshots total, 620 strictly pre-kickoff, 5 at/after kickoff, latest `2026-10-13 14:48:53.04262+00`, zero in the preceding 24 hours, 9 future-event pre-match snapshots, zero fresh future quotes, and zero quotes later than the latest source observation.
+- **Current blocker:** no fresh pre-kickoff quote after the verified source archive. Do not create retrospective forecasts. The separate target-outcome evaluation gate remains closed until 30 eligible prospective forecasts have completed; Brier/LogLoss superiority is not established.
+
+Frozen candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, original 19 features/weights unchanged, `active_lambda=0` market fallback and `shadow_lambda=1` research-only. No production `.pkl`, Supabase data/schema, schedules, or protected target outcomes were changed.
+
+
+## 2026-10-23 — verified live source/forward runtime; no fresh odds; historical-source redirect hardening
+
+This entry supersedes the 2026-10-18 note that first post-merge current-form runtime proof was still pending. Source and forward workflows have now completed successfully on the unchanged `main` SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`; this proves pipeline operation, **not** V2 superiority or scientific completion.
+
+- **Current-form Source Capture**, run [39939989504](https://github.com/MaksimBlud/football-ai/actions/runs/39939989504), completed 2026-10-23 10:34:41 UTC. Artifact `12495866495`, ZIP SHA-256 `7a250834472f44f9a580dac56890e1b18f5fdd84e0face81c7f795a69ebe09b8`. It archived 10 frozen historical CSVs plus `2627/I1.csv`; 3,870 historical rows, 70 usable current-season rows, 70 canonicalized fixture identities in the feature-input gate. Zero paid calls, zero Supabase writes, zero target-outcome scoring.
+- **Original old-season Forward Preview**, run [39960183606](https://github.com/MaksimBlud/football-ai/actions/runs/39960183606), completed 2026-10-23 13:19:38 UTC. Output artifact `12503294545`, digest `38817f1ab215a0eb841e6e2fb711ccaea5924bb5ae91cef23d4f537e9544a780`. Its source attestation verified 10 pre-prospective CSVs / 3,800 historical fixtures; all 10 saved quotes were blocked as having no earlier source archive; zero forecasts created.
+- **Current-form Forward Preview**, run [39961413096](https://github.com/MaksimBlud/football-ai/actions/runs/39961413096), completed 2026-10-23 13:28:34 UTC. Output artifact `12505125890`, digest `b9bacb3ee6956030ea900aa3e10e23e8e20482784d4e7cddcee56212d18699c5`. The source archive and parent run were verified, but all 10 quotes were stale and no new shadow forecast was captured. No target outcomes were read/scored; no paid calls or database writes.
+- Read-only Supabase odds audit at 2026-10-23 15:48 UTC: 3,966 snapshots total, 3,915 strictly pre-kickoff, 51 at/after kickoff, latest snapshot 2026-10-13 14:48:53 UTC, zero snapshots in the preceding 24 hours, zero fresh future pre-kickoff quotes. A separate metadata-only query returned 73 raw date/home/away identities through 2026-10-19; the source workflow canonicalizes club aliases and therefore records 70 unique identities. The query did not select score/result fields.
+- **Current blocker:** no new eligible quote after a verified source archive, so the prospective cohort remains empty. Do not backfill the October 13 quotes or open target outcomes. The separate evaluation gate remains closed until 30 eligible prospective forecasts have completed; Brier/LogLoss superiority is not established.
+- **Source provenance follow-up:** PR #683 hardens the original 10-season CSV fetch against redirects by disabling automatic redirect following and checking the final URL. It is research-only and must remain HUMAN-MERGE. PRs #681 and #682 are also still open; no PR was merged by this task.
+
+Frozen candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 original features/weights, `active_lambda=0` market fallback and `shadow_lambda=1` research-only. No production `.pkl`, model weights, Supabase data/schema, schedules, or protected target outcomes were changed.
+
 ## 2026-10-18 — Original V2: preregistered current-form forward-only source and quote pipeline (runtime proof pending)
 
 PRs #668 and #669 are now merged to main: exact original feature-builder parity is pinned to `historical_football_signal_lab.py` Git blob `401b3a0893371bfa4a488ec92a4a54af2678c8f7`, and the original lambda-1 shadow vector is pinned to an exact 1e-12 reference; stale SHA weight tampering fails closed. Latest main before this new branch: `a3db1325f9ad29d2cbf412e0f8e1d7a43642acbf`.
@@ -13,6 +40,32 @@ New code/workflows under review: `serie_a_v2_current_form_source_capture.py` plu
 
 **Not yet verified:** new branch CI and first post-merge live source/forward runs. Expected first live run must capture 11 source CSVs only after the gate and prove hashes; existing Oct13 quotes must remain blocked as stale/source-after-quote. No prospective result metrics can be claimed until new pre-kickoff quotes and the 30-event target outcome gate are satisfied.
 
+
+## 2026-10-24 15:51 UTC — follow-up exact-head CI and live odds audit
+
+This follow-up is recorded on the open documentation/source-attestation PR branch only; `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No merge, main write, Supabase write/DDL, paid odds request, protected target-outcome read, model change, or production artifact change occurred.
+
+- **Current-form source URL guard, PR #682:** exact head `d0d745d919212b3e9d81dc558d574db020b17bd2`; 7/7 PR-triggered checks succeeded, including frozen V2 tests [40055904560](https://github.com/MaksimBlud/football-ai/actions/runs/40055904560) and Research Validation [40055904562](https://github.com/MaksimBlud/football-ai/actions/runs/40055904562). It disables redirects for the current-season CSV and rejects a non-approved final URL before reading the response body. PR remains open.
+- **Current-season CSV integrity, PR #688:** exact head `636c3608652f285425bc15a1e77bc9724112c958`; 7/7 checks succeeded, including 93 frozen V2 tests [40100649574](https://github.com/MaksimBlud/football-ai/actions/runs/40100649574) and Research Validation [40100649587](https://github.com/MaksimBlud/football-ai/actions/runs/40100649587). Added fail-closed checks for pre-season rows, malformed populated rows, non-integer counts, and reversed duplicate fixtures. PR remains open.
+- **Forward dependency triggers, PR #691:** exact head `c1b57fefde840bddab54efe764df149e16f3c676`; 7/7 checks succeeded, including frozen V2 tests [40068913027](https://github.com/MaksimBlud/football-ai/actions/runs/40068913027). The push-path contract now covers the frozen feature builder, source capture, policy/config, and relevant regression tests. PR remains open.
+- These PRs still share source/workflow surfaces. Their individual green CI is not proof that a combined integration is green; preserve HUMAN-MERGE and run complete CI on any reconciled exact head.
+
+**Fresh read-only `public.odds_snapshots` audit at approximately 2026-10-24 15:51 UTC**, grouped by league and filtered only by quote time/kickoff (no match-result fields):
+| League | Snapshots | Strictly pre-kickoff | At/after kickoff | Latest saved quote (UTC) | Last 24h | Future pre-match / fresh future |
+|---|---:|---:|---:|---|---:|---:|
+| Serie A | 625 | 620 | 5 | 2026-10-13 14:48:53 | 0 | 7 / 0 |
+| EPL | 1,151 | 1,135 | 16 | 2026-10-09 15:25:57 | 0 | 0 / 0 |
+| Bundesliga | 404 | 394 | 10 | 2026-09-11 15:49:52 | 0 | 0 / 0 |
+| La Liga | 806 | 798 | 8 | 2026-09-11 15:45:28 | 0 | 0 / 0 |
+| Ligue 1 | 394 | 387 | 7 | 2026-09-11 15:49:24 | 0 | 0 / 0 |
+| Eredivisie | 412 | 410 | 2 | 2026-09-11 15:50:20 | 0 | 0 / 0 |
+| RPL | 156 | 153 | 3 | 2026-09-05 15:07:55 | 0 | 0 / 0 |
+| Primeira Liga | 9 | 9 | 0 | 2026-09-11 16:06:24 | 0 | 0 / 0 |
+| Turkey Super Lig | 9 | 9 | 0 | 2026-09-11 16:06:26 | 0 | 0 / 0 |
+
+The external-data blocker remains unchanged: **zero fresh saved odds snapshots across every listed league in the preceding 24 hours**. The seven Serie A future-event quotes are historical snapshots, not fresh eligible quotes. Latest verified source/forward runtime remains the 09:52–09:53 UTC successful pair above; it admitted zero new prospective forecasts because the saved quotes were stale/source-after-quote. Do not backfill them.
+
+Next: reconcile the open source-capture and forward-trigger PRs as one reviewed integration, run exact-head full CI, and wait for genuinely new free/pre-authorized pre-kickoff quotes. The 30-completed-prospective-forecast target-outcome gate remains CLOSED; no Brier/LogLoss superiority claim is permitted.
 
 ## 2026-10-14 — Original V2: actual 20/20 feature coverage restored, real runtime proof and stale-form limit
 
