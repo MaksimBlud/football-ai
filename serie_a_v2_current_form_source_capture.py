@@ -134,6 +134,14 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     cutoff = captured_at.astimezone(timezone.utc).date()
     ftr = frame["FTR"].fillna("").astype(str).str.strip().str.upper()
     valid_result = ftr.isin(("H", "D", "A"))
+    has_statistics = frame.loc[:, list(NUMERIC_COLUMNS)].notna().any(axis=1)
+    malformed_prior_result = (
+        frame["_parsed_date"].lt(cutoff) & ~valid_result & has_statistics
+    )
+    if malformed_prior_result.any():
+        raise ValueError(
+            "past current-season row has statistics but invalid full-time result marker"
+        )
     future_completed = frame["_parsed_date"].gt(cutoff) & valid_result
     if future_completed.any():
         raise ValueError("current-season source contains a completed result after capture date")
