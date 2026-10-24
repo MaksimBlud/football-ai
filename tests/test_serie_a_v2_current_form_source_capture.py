@@ -276,7 +276,7 @@ def test_current_csv_rejects_reversed_duplicate_fixture_after_v2_alias_normaliza
         "01/08/2026,Atalanta,Juventus,1,0,H,5,3,2,1,0,0",
         1,
     )
-    raw += "01/08/2026,Juventus,Atalanta BC,0,1,A,3,5,1,2,0,0\\n"
+    raw += "01/08/2026,Juventus,Atalanta BC,0,1,A,3,5,1,2,0,0\n"
     with pytest.raises(ValueError, match="reversed duplicate fixture identity"):
         validate_current_season_csv(
             raw.encode(),
