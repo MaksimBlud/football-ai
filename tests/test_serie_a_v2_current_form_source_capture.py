@@ -62,7 +62,7 @@ class FakeQuery:
         return SimpleNamespace(data=self.rows)
 
 
-def current_csv(n=30, *, same_day=False, future_unplayed=False, future_completed=False, old_season_completed=False):
+def current_csv(n=30, *, same_day=False, future_unplayed=False, future_completed=False, old_season_completed=False, invalid_past_result=False):
     header = ",".join(REQUIRED_COLUMNS)
     rows = []
     start = date(2026, 8, 1)
@@ -79,6 +79,8 @@ def current_csv(n=30, *, same_day=False, future_unplayed=False, future_completed
         rows.append("20/10/2026,Future Home,Future Away,1,0,H,4,2,1,0,0,0")
     if old_season_completed:
         rows.append("01/05/2026,Old Season Home,Old Season Away,1,0,H,5,3,2,1,0,0")
+    if invalid_past_result:
+        rows.append("15/09/2026,Malformed Home,Malformed Away,1,0,X,5,3,2,1,0,0")
     return (header + "\n" + "\n".join(rows) + "\n").encode()
 
 
@@ -159,6 +161,14 @@ def test_current_csv_rejects_completed_future_result_and_missing_stats():
     with pytest.raises(ValueError, match="missing/invalid HC"):
         validate_current_season_csv(
             broken, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
+def test_current_csv_rejects_past_statistics_with_invalid_result_marker():
+    with pytest.raises(ValueError, match="statistics but invalid full-time result marker"):
+        validate_current_season_csv(
+            current_csv(n=30, invalid_past_result=True),
+            captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
         )
 
 
