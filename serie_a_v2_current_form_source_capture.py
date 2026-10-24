@@ -215,8 +215,10 @@ def capture_source_archive(
     old_history, old_audit = history_fetch(get=get, capture_dir=output_dir)
     if old_history.empty or len(old_audit) != len(_source_codes()):
         raise ValueError("original frozen historical source archive incomplete")
-    response = get(CURRENT_URL, timeout=30)
+    response = get(CURRENT_URL, timeout=30, allow_redirects=False)
     response.raise_for_status()
+    if getattr(response, "status_code", None) != 200:
+        raise ValueError("current-season source returned non-200 status; redirects are not followed")
     validate_current_source_response_url(getattr(response, "url", None))
     raw = response.content
     observed_at = clock().astimezone(timezone.utc)
