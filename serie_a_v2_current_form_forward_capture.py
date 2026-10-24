@@ -338,7 +338,6 @@ def verify_latest_source_archive(
 def _latest_quotes(quotes: list[dict], *, now: datetime) -> list[dict]:
     latest = {}
     seen = set()
-    event_to_fixture = {}
     fixture_to_event = {}
     for q in quotes:
         _guard_outcome_free(q)
@@ -353,18 +352,14 @@ def _latest_quotes(quotes: list[dict], *, now: datetime) -> list[dict]:
         if snapshot > now or not snapshot < kickoff:
             raise ValueError("invalid current-form quote timing")
 
-        # Enforce event identity in both directions before any source archive is
-        # loaded or any shadow preview is computed. Multiple snapshots may share
-        # one event/fixture, but a fixture cannot silently split across provider
-        # IDs and one provider ID cannot silently identify multiple fixtures.
+        # Multiple snapshots may share one event/fixture, but one exact fixture
+        # must not silently split across multiple provider event IDs. This
+        # reverse-direction check complements the event_id -> fixture guard in
+        # PR #676 and runs before any source archive is loaded.
         fixture = (home, away, kickoff)
-        prior_fixture = event_to_fixture.get(event)
-        if prior_fixture is not None and prior_fixture != fixture:
-            raise ValueError("event_id maps to multiple current-form fixtures")
         prior_event = fixture_to_event.get(fixture)
         if prior_event is not None and prior_event != event:
             raise ValueError("current-form fixture maps to multiple event_ids")
-        event_to_fixture[event] = fixture
         fixture_to_event[fixture] = event
 
         identity = (event, home, away, kickoff)
