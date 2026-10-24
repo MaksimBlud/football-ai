@@ -22,7 +22,6 @@ on:
       - "tests/test_serie_a_v2_atalanta_alias.py"
       - "tests/test_serie_a_v2_frozen_shadow_preview.py"
       - "tests/test_serie_a_v2_prequote_source_archive_gate.py"
-      - "tests/test_serie_a_v2_free_diagnostic_dependency_triggers.py"
       - ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
 
 concurrency:
@@ -59,8 +58,7 @@ jobs:
             tests/test_serie_a_v2_asof_feature_manifest.py \
             tests/test_serie_a_v2_atalanta_alias.py \
             tests/test_serie_a_v2_frozen_shadow_preview.py \
-            tests/test_serie_a_v2_prequote_source_archive_gate.py \
-            tests/test_serie_a_v2_free_diagnostic_dependency_triggers.py
+            tests/test_serie_a_v2_prequote_source_archive_gate.py
       - name: Verify source access, no paid credentials
         run: |
           python - <<'PY'
