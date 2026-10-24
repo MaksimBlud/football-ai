@@ -256,7 +256,7 @@ def test_free_diagnostic_push_paths_cover_frozen_transitive_dependencies():
     from pathlib import Path
 
     workflow = Path(".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml").read_text(encoding="utf-8")
-    push = workflow.split("  push:\\n", 1)[1].split("\\n\\nconcurrency:", 1)[0]
+    push = workflow.split("  push:\n", 1)[1].split("\n\nconcurrency:", 1)[0]
     required_paths = (
         "serie_a_v2_live_diagnostic_report.py",
         "serie_a_v2_asof_feature_manifest.py",
