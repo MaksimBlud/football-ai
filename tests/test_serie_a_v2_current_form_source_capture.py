@@ -101,6 +101,55 @@ def test_live_feature_gate_query_selects_only_fixture_metadata_not_scores():
     assert client.selected == "match_date,home_team,away_team"
 
 
+@pytest.mark.parametrize(
+    ("status_code", "response_url", "expected_error"),
+    [
+        (302, CURRENT_URL, "non-200 status; redirects are not followed"),
+        (200, "https://attacker.invalid/mmz4281/2627/I1.csv",
+         "left the approved HTTPS source URL"),
+    ],
+)
+def test_current_season_fetch_rejects_redirects_before_reading_csv(
+    tmp_path, status_code, response_url, expected_error
+):
+    def fake_history(*, get, capture_dir):
+        return pd.DataFrame([{"historical": 1}]), [
+            {"season_code": code} for code in _source_codes()
+        ]
+
+    class RedirectedResponse:
+        def __init__(self):
+            self.status_code = status_code
+            self.url = response_url
+
+        def raise_for_status(self):
+            return None
+
+        @property
+        def content(self):
+            pytest.fail("unapproved response body must not be read")
+
+    def no_redirect_get(url, timeout, allow_redirects):
+        assert url == CURRENT_URL
+        assert timeout == 30
+        assert allow_redirects is False
+        return RedirectedResponse()
+
+    with pytest.raises(ValueError, match=expected_error):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=FakeQuery(event_rows(30)),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=no_redirect_get,
+            history_fetch=fake_history,
+            clock=lambda: pytest.fail("source clock must not be read after redirect rejection"),
+        )
+
+    assert not (tmp_path / CURRENT_FILENAME).exists()
+    assert not (tmp_path / MANIFEST_FILENAME).exists()
+
+
+
 def test_current_csv_uses_only_completed_rows_strictly_before_capture_day():
     raw = current_csv(n=30, same_day=True, future_unplayed=True)
     frame, excluded = validate_current_season_csv(
@@ -184,7 +233,11 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
         output_dir=tmp_path,
         client=FakeQuery(event_rows(30)),
         now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
-        get=lambda url, timeout: Response(),
+        get=lambda url, timeout, allow_redirects: (
+            Response()
+            if url == CURRENT_URL and timeout == 30 and allow_redirects is False
+            else pytest.fail("current source must use approved URL with redirects disabled")
+        ),
         history_fetch=fake_history,
         clock=lambda: next(source_times),
     )
