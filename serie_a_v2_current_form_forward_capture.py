@@ -343,6 +343,7 @@ def _latest_quotes(quotes: list[dict], *, now: datetime) -> list[dict]:
     latest = {}
     seen = set()
     identity_by_event_id = {}
+    event_id_by_fixture = {}
     for q in quotes:
         _guard_outcome_free(q)
         if q.get("league") != "SERIE_A":
@@ -360,6 +361,10 @@ def _latest_quotes(quotes: list[dict], *, now: datetime) -> list[dict]:
         if prior_identity is not None and prior_identity != event_identity:
             raise ValueError("conflicting fixture identity for same current-form event_id")
         identity_by_event_id[event] = event_identity
+        prior_event_id = event_id_by_fixture.get(event_identity)
+        if prior_event_id is not None and prior_event_id != event:
+            raise ValueError("conflicting event IDs for same current-form fixture")
+        event_id_by_fixture[event_identity] = event
         identity = (event, home, away, kickoff)
         key = (*identity, snapshot)
         if key in seen:
