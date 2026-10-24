@@ -1,5 +1,18 @@
 # Football AI — Project Continuity
 
+## 2026-10-24 — Original V2 current-form source/forward runtime proof reconciled
+
+This entry supersedes the 2026-10-18 note below that said first post-merge runtime proof was still pending. Read-only audit verified the real GitHub Actions runs on exact main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`:
+
+- [Current-Form Source Capture run 39939989504](https://github.com/MaksimBlud/football-ai/actions/runs/39939989504) SUCCESS, created artifact `12495866495` (`serie-a-v2-current-form-source-capture`), ZIP SHA-256 `7a250834472f44f9a580dac56890e1b18f5fdd84e0face81c7f795a69ebe09b8`. The manifest reports the frozen candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 10 historical CSVs / 3,870 matches, 70 current-season completed prior-day rows, 11 source files, no paid provider calls, no Supabase writes, and no target outcomes scored.
+- [Current-Form Forward-Only Preview run 39961413096](https://github.com/MaksimBlud/football-ai/actions/runs/39961413096) SUCCESS, 53 tests passed. It independently verified source artifact/parent-run provenance, saw 10 saved quotes, blocked all 10 as `STALE_MARKET_QUOTE`, and captured **0** V2 current-form shadow forecasts. It read no target outcomes and made no paid calls or production/Supabase writes. This is pipeline/runtime evidence, not model-quality evidence.
+- Read-only Supabase audit on 2026-10-24 UTC: `public.odds_snapshots` has 3,966 rows; 3,915 snapshots are strictly pre-kickoff and 51 are at/after kickoff; 0 snapshots were recorded in the preceding 24 hours; latest snapshot is `2026-10-13 14:48:53+00`. Thus no fresh quote currently supports a new prospective shadow forecast.
+- The metadata-only Serie A 2026/27 feature-input gate currently counts 73 unique completed event identities dated before the current UTC date using only `match_date, home_team, away_team`. This exceeds the 30-event source gate but **does not** open the separate evaluation gate. Evaluation remains CLOSED until 30 eligible prospective forecasts from this cohort have completed.
+- PR [#688](https://github.com/MaksimBlud/football-ai/pull/688) is still open on exact head `3b0a0d0fdcd9c31af15d7273d2a153d4c42aeca4`; its 7/7 PR checks passed, including 90 Original V2 Shadow Tests and the production-model-hash guard. It now rejects populated current-form rows with missing fixture dates in addition to out-of-season, fractional-count and malformed-result rows. It has not been merged; coordinate its shared source-capture file with open PRs #682, #685 and #686 and rerun exact-head CI after any base update.
+- The free source workflow remains on its existing daily schedule. No paid odds request/cron was added, no Supabase writes/DDL occurred, no production `.pkl` or original weights changed, and no auto-promotion occurred.
+
+Frozen contract remains: original 19 features and candidate SHA unchanged; `active_lambda=0` is the market fallback; `shadow_lambda=1` is research-only; `NO_BET`; no threshold tuning. Do not claim V2 beats market without an authorized independent Brier/LogLoss evaluation after the 30-completed-forecast gate.
+
 
 ## 2026-10-18 — Original V2: preregistered current-form forward-only source and quote pipeline (runtime proof pending)
 
