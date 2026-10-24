@@ -56,6 +56,7 @@ def count_unique_completed_primary_events(
 ) -> int:
     """Count fixture identities only; never request or inspect goal/result fields."""
     unique: set[tuple[str, str, str]] = set()
+    direction_by_pair: dict[tuple[str, str, str], tuple[str, str, str]] = {}
     for row in rows:
         match_date = row.get("match_date")
         if isinstance(match_date, date):
@@ -73,7 +74,16 @@ def count_unique_completed_primary_events(
         away = _canonical_team(row.get("away_team"))
         if home == away:
             raise ValueError("invalid primary event identity in gate metadata")
-        unique.add((parsed_date.isoformat(), home, away))
+        date_key = parsed_date.isoformat()
+        directional = (date_key, home, away)
+        unordered_pair = (date_key, *sorted((home, away)))
+        previous_direction = direction_by_pair.get(unordered_pair)
+        if previous_direction is not None and previous_direction != directional:
+            raise ValueError(
+                "primary event metadata contains a reversed duplicate fixture identity"
+            )
+        direction_by_pair[unordered_pair] = directional
+        unique.add(directional)
     return len(unique)
 
 
