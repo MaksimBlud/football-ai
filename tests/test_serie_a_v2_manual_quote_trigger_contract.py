@@ -5,7 +5,6 @@ budget contract. The V2 trigger observes a successful *already manual* run;
 it MUST NOT schedule or dispatch a new paid odds workflow.
 """
 from pathlib import Path
-import re
 
 PAID = Path(".github/workflows/serie-a-odds-snapshots.yml")
 FREE = Path(".github/workflows/serie-a-v2-forward-preview.yml")
@@ -107,9 +106,9 @@ def test_current_form_forward_reaudits_all_frozen_dependencies_on_main_push():
     paths_index = push_block.index("    paths:")
     actual = set()
     for line in push_block[paths_index + 1:]:
-        match = re.match(r'^\s*- "([^"]+)"\s*
-        if match:
-            actual.add(match.group(1))
+        stripped = line.strip()
+        if stripped.startswith('- "') and stripped.endswith('"'):
+            actual.add(stripped[3:-1])
 
     required = {
         "serie_a_v2_current_form_forward_capture.py",
