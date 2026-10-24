@@ -385,11 +385,26 @@ def test_forward_capture_clock_rejects_tzinfo_without_offset():
         )
 
 
-def test_same_fixture_cannot_be_split_across_multiple_event_ids():
-    first = quote(snapshot="2026-10-19T05:30:00Z")
+@pytest.mark.parametrize(
+    ("first_home", "first_away", "second_home", "second_away"),
+    [
+        ("Juventus", "Napoli", " JUVENTUS ", " Napoli "),
+        ("Atalanta", "Fiorentina", "Atalanta BC", " FIORENTINA "),
+    ],
+)
+def test_same_fixture_cannot_be_split_across_multiple_event_ids(
+    first_home, first_away, second_home, second_away
+):
+    first = {
+        **quote(snapshot="2026-10-19T05:30:00Z"),
+        "home_team": first_home,
+        "away_team": first_away,
+    }
     second = {
         **quote(snapshot="2026-10-19T05:35:00Z"),
         "event_id": "another-provider-event-id",
+        "home_team": second_home,
+        "away_team": second_away,
     }
     with pytest.raises(ValueError, match="conflicting event IDs for same current-form fixture"):
         prepare_forward_capture(
