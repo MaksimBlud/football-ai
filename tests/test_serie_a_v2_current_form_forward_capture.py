@@ -383,3 +383,19 @@ def test_forward_capture_clock_rejects_tzinfo_without_offset():
             load_archive=lambda _artifact_id: pytest.fail("no archive should be loaded"),
             verify_parent_run=lambda *_args, **_kwargs: pytest.fail("no parent run should be checked"),
         )
+
+
+def test_same_fixture_cannot_be_split_across_multiple_event_ids():
+    first = quote(snapshot="2026-10-19T05:30:00Z")
+    second = {
+        **quote(snapshot="2026-10-19T05:35:00Z"),
+        "event_id": "another-provider-event-id",
+    }
+    with pytest.raises(ValueError, match="conflicting event IDs for same current-form fixture"):
+        prepare_forward_capture(
+            [first, second],
+            [],
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            load_archive=lambda *_args: pytest.fail("identity conflict must fail before source load"),
+            verify_parent_run=lambda *_args, **_kwargs: pytest.fail("identity conflict must fail before parent check"),
+        )
