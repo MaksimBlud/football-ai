@@ -98,6 +98,17 @@ def test_gate_counts_unique_primary_fixture_metadata_only_and_normalizes_aliases
     ) == 2
 
 
+def test_gate_rejects_same_fixture_repeated_with_reversed_home_away_roles():
+    rows = [
+        {"match_date": "2026-10-01", "home_team": "Atalanta", "away_team": "Juventus"},
+        {"match_date": "2026-10-01", "home_team": "Juventus", "away_team": "Atalanta BC"},
+    ]
+    with pytest.raises(ValueError, match="reversed duplicate fixture identity"):
+        count_unique_completed_primary_events(
+            rows, before_date=date(2026, 10, 18)
+        )
+
+
 def test_live_feature_gate_query_selects_only_fixture_metadata_not_scores():
     client = FakeQuery(event_rows(30))
     count = read_completed_primary_event_count(
