@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone, tzinfo
 from pathlib import Path
 from types import SimpleNamespace
 import hashlib
@@ -34,6 +34,17 @@ def event_rows(n=30):
     ]
 
 
+class _NoOffsetTimezone(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+    def tzname(self, dt):
+        return "NO_OFFSET"
+
+
 class FakeQuery:
     def __init__(self, rows):
         self.rows = rows
@@ -62,7 +73,7 @@ class FakeQuery:
         return SimpleNamespace(data=self.rows)
 
 
-def current_csv(n=30, *, same_day=False, future_unplayed=False, future_completed=False):
+def current_csv(n=30, *, same_day=False, future_unplayed=False, future_completed=False, old_season_completed=False, invalid_past_result=False, missing_date_with_stats=False):
     header = ",".join(REQUIRED_COLUMNS)
     rows = []
     start = date(2026, 8, 1)
@@ -77,6 +88,12 @@ def current_csv(n=30, *, same_day=False, future_unplayed=False, future_completed
         rows.append("20/10/2026,Future Home,Future Away,,,,,,,,,")
     if future_completed:
         rows.append("20/10/2026,Future Home,Future Away,1,0,H,4,2,1,0,0,0")
+    if old_season_completed:
+        rows.append("01/05/2026,Old Season Home,Old Season Away,1,0,H,5,3,2,1,0,0")
+    if invalid_past_result:
+        rows.append("15/09/2026,Malformed Home,Malformed Away,1,0,X,5,3,2,1,0,0")
+    if missing_date_with_stats:
+        rows.append(",Missing Date Home,Missing Date Away,1,0,H,5,3,2,1,0,0")
     return (header + "\n" + "\n".join(rows) + "\n").encode()
 
 
@@ -90,6 +107,52 @@ def test_gate_counts_unique_primary_fixture_metadata_only_and_normalizes_aliases
     assert count_unique_completed_primary_events(
         rows, before_date=date(2026, 10, 18)
     ) == 2
+
+
+def test_gate_rejects_same_fixture_repeated_with_reversed_home_away_roles():
+    rows = [
+        {"match_date": "2026-10-01", "home_team": "Atalanta", "away_team": "Juventus"},
+        {"match_date": "2026-10-01", "home_team": "Juventus", "away_team": "Atalanta BC"},
+    ]
+    with pytest.raises(ValueError, match="reversed duplicate fixture identity"):
+        count_unique_completed_primary_events(
+            rows, before_date=date(2026, 10, 18)
+        )
+
+
+def test_gate_rejects_pre_season_metadata_rows_instead_of_counting_toward_30_event_gate():
+    rows = event_rows(30)
+    rows[0]["match_date"] = "2026-06-30"
+    with pytest.raises(ValueError, match="pre-season fixture identity"):
+        count_unique_completed_primary_events(
+            rows, before_date=date(2026, 10, 18)
+        )
+
+
+def test_feature_gate_rejects_tzinfo_without_offset_before_supabase_read():
+    class ForbiddenClient:
+        def table(self, *_args, **_kwargs):
+            pytest.fail("Supabase must not be queried with an offsetless gate clock")
+
+    with pytest.raises(
+        ValueError,
+        match="feature-source gate clock must be timezone-aware with a real UTC offset",
+    ):
+        read_completed_primary_event_count(
+            ForbiddenClient(),
+            now=datetime(2026, 10, 18, 8, tzinfo=_NoOffsetTimezone()),
+        )
+
+
+def test_current_csv_rejects_tzinfo_without_offset_before_parsing_bytes():
+    with pytest.raises(
+        ValueError,
+        match="current-season source capture clock must be timezone-aware with a real UTC offset",
+    ):
+        validate_current_season_csv(
+            b"not a CSV",
+            captured_at=datetime(2026, 10, 18, 8, tzinfo=_NoOffsetTimezone()),
+        )
 
 
 def test_live_feature_gate_query_selects_only_fixture_metadata_not_scores():
@@ -113,6 +176,37 @@ def test_current_csv_uses_only_completed_rows_strictly_before_capture_day():
     assert not frame["Date"].str.contains("20/10/2026").any()
 
 
+def test_current_csv_rejects_completed_row_before_current_season_start():
+    with pytest.raises(ValueError, match="before season start"):
+        validate_current_season_csv(
+            current_csv(n=30, old_season_completed=True),
+            captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+        )
+
+
+@pytest.mark.parametrize(
+    ("original", "replacement", "field"),
+    [
+        (
+            "01/08/2026,Home 0,Away 0,1,0,H,5,3,2,1,0,0",
+            "01/08/2026,Home 0,Away 0,1.5,0,H,5,3,2,1,0,0",
+            "FTHG",
+        ),
+        (
+            "01/08/2026,Home 0,Away 0,1,0,H,5,3,2,1,0,0",
+            "01/08/2026,Home 0,Away 0,1,0,H,5.5,3,2,1,0,0",
+            "HC",
+        ),
+    ],
+)
+def test_current_csv_rejects_non_integer_goal_and_stat_counts(original, replacement, field):
+    raw = current_csv(n=30).decode().replace(original, replacement, 1).encode()
+    with pytest.raises(ValueError, match=f"non-integer {field}"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
 def test_current_csv_rejects_completed_future_result_and_missing_stats():
     with pytest.raises(ValueError, match="completed result after capture date"):
         validate_current_season_csv(
@@ -126,6 +220,22 @@ def test_current_csv_rejects_completed_future_result_and_missing_stats():
     with pytest.raises(ValueError, match="missing/invalid HC"):
         validate_current_season_csv(
             broken, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
+def test_current_csv_rejects_past_statistics_with_invalid_result_marker():
+    with pytest.raises(ValueError, match="statistics but invalid full-time result marker"):
+        validate_current_season_csv(
+            current_csv(n=30, invalid_past_result=True),
+            captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+        )
+
+
+def test_current_csv_rejects_populated_row_without_fixture_date():
+    with pytest.raises(ValueError, match="populated fixture row without date"):
+        validate_current_season_csv(
+            current_csv(n=30, missing_date_with_stats=True),
+            captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
         )
 
 
@@ -204,3 +314,18 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert report["target_outcome_evaluation_gate"]["outcome_gate_open"] is False
     assert report["paid_provider_calls"] == report["supabase_writes"] == 0
     assert report["model_refit_or_promotion"] is False
+
+def test_current_csv_rejects_reversed_duplicate_fixture_after_v2_alias_normalization():
+    raw = current_csv(n=30).decode()
+    raw = raw.replace(
+        "01/08/2026,Home 0,Away 0,1,0,H,5,3,2,1,0,0",
+        "01/08/2026,Atalanta,Juventus,1,0,H,5,3,2,1,0,0",
+        1,
+    )
+    raw += "01/08/2026,Juventus,Atalanta BC,0,1,A,3,5,1,2,0,0\n"
+    with pytest.raises(ValueError, match="reversed duplicate fixture identity"):
+        validate_current_season_csv(
+            raw.encode(),
+            captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+        )
+

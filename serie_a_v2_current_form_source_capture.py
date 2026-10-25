@@ -30,6 +30,7 @@ WORKFLOW_PATH = ".github/workflows/serie-a-v2-current-form-source-capture.yml"
 SCHEMA_VERSION = "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V1"
 CURRENT_CODE = SERIE_A_RUNTIME_CONFIG.finished_results_source.season_code
 CURRENT_SEASON = SERIE_A_RUNTIME_CONFIG.finished_results_source.season
+CURRENT_SEASON_START = date(int(CURRENT_SEASON[:4]), 7, 1)
 CURRENT_URL = f"{PUBLIC_BASE}/{CURRENT_CODE}/{SERIE_A_RUNTIME_CONFIG.finished_results_source.competition_code}.csv"
 CURRENT_FILENAME = f"serie_a_{CURRENT_CODE}.csv"
 MANIFEST_FILENAME = "serie_a_v2_current_form_source_manifest.json"
@@ -56,6 +57,7 @@ def count_unique_completed_primary_events(
 ) -> int:
     """Count fixture identities only; never request or inspect goal/result fields."""
     unique: set[tuple[str, str, str]] = set()
+    direction_by_pair: dict[tuple[str, str, str], tuple[str, str, str]] = {}
     for row in rows:
         match_date = row.get("match_date")
         if isinstance(match_date, date):
@@ -67,20 +69,33 @@ def count_unique_completed_primary_events(
                 raise ValueError("invalid primary event date in gate metadata") from exc
         else:
             raise ValueError("missing primary event date in gate metadata")
+        if parsed_date < CURRENT_SEASON_START:
+            raise ValueError("primary event metadata contains a pre-season fixture identity")
         if parsed_date >= before_date:
             continue
         home = _canonical_team(row.get("home_team"))
         away = _canonical_team(row.get("away_team"))
         if home == away:
             raise ValueError("invalid primary event identity in gate metadata")
-        unique.add((parsed_date.isoformat(), home, away))
+        date_key = parsed_date.isoformat()
+        directional = (date_key, home, away)
+        unordered_pair = (date_key, *sorted((home, away)))
+        previous_direction = direction_by_pair.get(unordered_pair)
+        if previous_direction is not None and previous_direction != directional:
+            raise ValueError(
+                "primary event metadata contains a reversed duplicate fixture identity"
+            )
+        direction_by_pair[unordered_pair] = directional
+        unique.add(directional)
     return len(unique)
 
 
 def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
     """Read only event date/team metadata; no goals, result or settlement columns."""
-    if now.tzinfo is None:
-        raise ValueError("feature-source gate clock must be timezone-aware")
+    if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError(
+            "feature-source gate clock must be timezone-aware with a real UTC offset"
+        )
     cutoff = now.astimezone(timezone.utc).date().isoformat()
     rows: list[dict[str, Any]] = []
     start = 0
@@ -91,7 +106,7 @@ def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
             .select("match_date,home_team,away_team")
             .eq("league", "SERIE_A")
             .eq("season", CURRENT_SEASON)
-            .gte("match_date", "2026-07-01")
+            .gte("match_date", CURRENT_SEASON_START.isoformat())
             .lt("match_date", cutoff)
             .range(start, start + page_size - 1)
             .execute()
@@ -116,8 +131,14 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     are never converted to features. The returned frame contains no incomplete
     fixtures and exactly the original V2 builder's required columns.
     """
-    if captured_at.tzinfo is None:
-        raise ValueError("current-season source capture clock must be timezone-aware")
+    if (
+        not isinstance(captured_at, datetime)
+        or captured_at.tzinfo is None
+        or captured_at.utcoffset() is None
+    ):
+        raise ValueError(
+            "current-season source capture clock must be timezone-aware with a real UTC offset"
+        )
     if not raw or len(raw) > MAX_CURRENT_CSV_BYTES:
         raise ValueError("current-season CSV is empty or exceeds size limit")
     frame = pd.read_csv(BytesIO(raw), low_memory=False)
@@ -125,7 +146,15 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     if missing:
         raise ValueError("current-season source lacks required original V2 statistics: "
                          + ", ".join(sorted(missing)))
-    nonblank_dates = frame["Date"].notna()
+    missing_date = frame["Date"].isna() | frame["Date"].astype(str).str.strip().eq("")
+    payload_columns = ["HomeTeam", "AwayTeam", "FTR", *NUMERIC_COLUMNS]
+    has_payload = frame.loc[:, payload_columns].apply(
+        lambda column: column.notna() & column.astype(str).str.strip().ne(""),
+        axis=0,
+    ).any(axis=1)
+    if (missing_date & has_payload).any():
+        raise ValueError("current-season source contains populated fixture row without date")
+    nonblank_dates = ~missing_date
     parsed_dates = pd.to_datetime(frame["Date"], dayfirst=True, format="mixed", errors="coerce")
     if parsed_dates.loc[nonblank_dates].isna().any():
         raise ValueError("current-season source contains an unparseable fixture date")
@@ -134,9 +163,20 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     cutoff = captured_at.astimezone(timezone.utc).date()
     ftr = frame["FTR"].fillna("").astype(str).str.strip().str.upper()
     valid_result = ftr.isin(("H", "D", "A"))
+    has_statistics = frame.loc[:, list(NUMERIC_COLUMNS)].notna().any(axis=1)
+    malformed_prior_result = (
+        frame["_parsed_date"].lt(cutoff) & ~valid_result & has_statistics
+    )
+    if malformed_prior_result.any():
+        raise ValueError(
+            "past current-season row has statistics but invalid full-time result marker"
+        )
     future_completed = frame["_parsed_date"].gt(cutoff) & valid_result
     if future_completed.any():
         raise ValueError("current-season source contains a completed result after capture date")
+    pre_season_completed = frame["_parsed_date"].lt(CURRENT_SEASON_START) & valid_result
+    if pre_season_completed.any():
+        raise ValueError("current-season source contains a completed row before season start")
     completed = frame.loc[frame["_parsed_date"].lt(cutoff) & valid_result].copy()
     completed["FTR"] = ftr.loc[completed.index]
     if completed.empty:
@@ -145,17 +185,29 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
         completed[field] = pd.to_numeric(completed[field], errors="coerce")
         if completed[field].isna().any() or (completed[field] < 0).any():
             raise ValueError("completed current-season match has missing/invalid " + field)
+        if not completed[field].map(lambda value: float(value).is_integer()).all():
+            raise ValueError("completed current-season match has non-integer " + field)
     if ((completed["FTHG"] > completed["FTAG"]) != (completed["FTR"] == "H")).any() or (
         (completed["FTHG"] < completed["FTAG"]) != (completed["FTR"] == "A")
     ).any():
         raise ValueError("current-season result does not match full-time goals")
     identities = []
+    direction_by_pair: dict[tuple[str, str, str], tuple[str, str, str]] = {}
     for _, row in completed.iterrows():
         home = _canonical_team(row["HomeTeam"])
         away = _canonical_team(row["AwayTeam"])
         if home == away:
             raise ValueError("current-season fixture has identical canonical teams")
-        identities.append((row["_parsed_date"].isoformat(), home, away))
+        date_key = row["_parsed_date"].isoformat()
+        identity = (date_key, home, away)
+        unordered_pair = (date_key, *sorted((home, away)))
+        previous_direction = direction_by_pair.get(unordered_pair)
+        if previous_direction is not None and previous_direction != identity:
+            raise ValueError(
+                "current-season source has reversed duplicate fixture identity"
+            )
+        direction_by_pair[unordered_pair] = identity
+        identities.append(identity)
     if len(identities) != len(set(identities)):
         raise ValueError("current-season source has duplicate fixture identities")
     completed["Date"] = completed["_parsed_date"].map(
