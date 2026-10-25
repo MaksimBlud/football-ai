@@ -20,7 +20,7 @@ import pandas as pd
 import requests
 
 from serie_a_v2_frozen_shadow_preview import (
-    fetch_saved_upcoming_serie_a_quotes, parse_utc,
+    MAX_QUOTE_AGE, fetch_saved_upcoming_serie_a_quotes, parse_utc,
 )
 from serie_a_v2_live_diagnostic_report import make_report
 from serie_a_v2_prequote_source_archive_gate import (
@@ -150,7 +150,7 @@ def prepare_forward_capture(
     as_of_utc: datetime, load_archive, verify_parent_run,
     write_archives_to: Path | None = None,
 ) -> dict:
-    """Only score quotes with a GitHub source ZIP strictly older than the quote.
+    """Only score fresh quotes with a GitHub source ZIP strictly older than the quote.
 
     A source-before-quote check is necessary but not sufficient for prospective
     admission: frozen incumbent, current-season form and outcome gate still
@@ -205,6 +205,10 @@ def prepare_forward_capture(
             "eligible_for_frozen_prospective_cohort": False,
             "no_bet": True,
         }
+        if now - quote_time > MAX_QUOTE_AGE:
+            record["status"] = "STALE_MARKET_QUOTE"
+            rows.append(record)
+            continue
         candidates = [a for a in archive_metadata if a["created_at"] < quote_time]
         if not candidates:
             rows.append(record)
@@ -268,6 +272,8 @@ def prepare_forward_capture(
             r["v2_preview"] is not None for r in rows),
         "blocked_no_prior_source": sum(
             r["status"] == "NO_EARLIER_SOURCE_ARCHIVE" for r in rows),
+        "blocked_stale_market_quote": sum(
+            r["status"] == "STALE_MARKET_QUOTE" for r in rows),
         "archived_sources_used": used_archives,
         "source_workflow_run_attestation_required": True,
         "rows": rows,
@@ -306,6 +312,7 @@ def main() -> None:
     print(json.dumps({k: report[k] for k in (
         "mode", "quotes_seen", "future_quotes_checked",
         "v2_diagnostic_previews_captured", "blocked_no_prior_source",
+        "blocked_stale_market_quote",
         "eligible_for_frozen_prospective_cohort", "paid_provider_calls",
         "supabase_writes", "no_bet",
     )}, sort_keys=True))
