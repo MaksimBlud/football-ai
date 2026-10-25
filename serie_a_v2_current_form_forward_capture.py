@@ -28,6 +28,9 @@ from serie_a_v2_current_form_source_capture import (
     MANIFEST_FILENAME, MIN_COMPLETED_FEATURE_SOURCE_EVENTS,
     REQUIRED_COLUMNS, validate_current_season_csv,
 )
+from serie_a_v2_current_form_source_capture import (
+    _current_source_fixture_identities, _fixture_identity_sha256,
+)
 from serie_a_v2_frozen_shadow_preview import (
     FROZEN_SHA, fetch_saved_upcoming_serie_a_quotes, parse_utc, shadow_preview, _guard_outcome_free,
 )
@@ -185,6 +188,30 @@ def verify_and_load_archive(
                 or gate.get("score_or_result_fields_selected_for_gate") is not False
                 or gate.get("passed") is not True):
             raise ValueError("current-form feature input gate is not authenticated/open")
+        gate_identity_count = gate.get("gate_fixture_identity_count")
+        gate_covered_count = gate.get("gate_fixture_identities_covered_by_current_source")
+        gate_missing_count = gate.get("gate_fixture_identities_missing_from_current_source")
+        current_identity_count = gate.get("current_source_fixture_identity_count")
+        gate_identity_sha256 = gate.get("gate_fixture_identity_sha256")
+        current_identity_sha256 = gate.get("current_source_fixture_identity_sha256")
+        if (
+            type(gate_identity_count) is not int
+            or gate_identity_count != gate.get("observed_completed_primary_events")
+            or gate_identity_count < MIN_COMPLETED_FEATURE_SOURCE_EVENTS
+            or type(gate_covered_count) is not int
+            or gate_covered_count != gate_identity_count
+            or type(gate_missing_count) is not int
+            or gate_missing_count != 0
+            or type(current_identity_count) is not int
+            or current_identity_count < gate_identity_count
+            or not isinstance(gate_identity_sha256, str)
+            or not re.fullmatch(r"[0-9a-f]{64}", gate_identity_sha256)
+            or not isinstance(current_identity_sha256, str)
+            or not re.fullmatch(r"[0-9a-f]{64}", current_identity_sha256)
+        ):
+            raise ValueError(
+                "current-form feature source gate identity attestation is missing or inconsistent"
+            )
         evaluation_gate = manifest.get("target_outcome_evaluation_gate")
         if (not isinstance(evaluation_gate, dict)
                 or evaluation_gate.get("minimum_completed_eligible_prospective_forecasts") != 30
@@ -250,6 +277,13 @@ def verify_and_load_archive(
         current_dates = pd.to_datetime(current_frame["Date"], dayfirst=True, format="mixed", errors="raise")
         if current_dates.empty or (current_dates < OLD_CUTOFF).any():
             raise ValueError("current-season archive contains pre-2026/27 rows or no usable rows")
+        actual_current_identities = _current_source_fixture_identities(current_frame)
+        actual_current_identity_sha256 = _fixture_identity_sha256(actual_current_identities)
+        if (
+            current_identity_count != len(actual_current_identities)
+            or current_identity_sha256 != actual_current_identity_sha256
+        ):
+            raise ValueError("current-form source fixture identity digest/count mismatch")
         source_times.append(current_observed)
         history = pd.concat(old_frames + [current_frame], ignore_index=True)
         latest_source = max(source_times)
@@ -267,6 +301,15 @@ def verify_and_load_archive(
             "parent_run": dict(parent),
             "historical_match_rows": len(history),
             "current_season_history_rows": len(current_frame),
+            "feature_source_gate_attestation": {
+                "verified": True,
+                "gate_fixture_identity_sha256": gate_identity_sha256,
+                "gate_fixture_identity_count": gate_identity_count,
+                "gate_fixture_identities_covered_by_current_source": gate_covered_count,
+                "gate_fixture_identities_missing_from_current_source": gate_missing_count,
+                "current_source_fixture_identity_sha256": actual_current_identity_sha256,
+                "current_source_fixture_identity_count": len(actual_current_identities),
+            },
         }
 
 
@@ -321,6 +364,7 @@ def verify_latest_source_archive(
         "fresh_for_new_quote": age_seconds <= MAX_SOURCE_AGE.total_seconds(),
         "parent_run": source_meta["parent_run"],
         "feature_input_gate_count": manifest["feature_source_gate"]["observed_completed_primary_events"],
+        "feature_source_gate_attestation": source_meta["feature_source_gate_attestation"],
         "historical_old_season_file_count": manifest["historical_old_season_file_count"],
         "source_file_count": manifest["source_file_count"],
         "historical_match_rows": source_meta["historical_match_rows"],
