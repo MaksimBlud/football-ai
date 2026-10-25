@@ -1,3 +1,11 @@
+## 2026-10-25 11:19 UTC — repeated free V2 diagnostic confirms the saved quote set is still inadmissible
+
+Read-only live diagnostic [run 40188307975](https://github.com/MaksimBlud/football-ai/actions/runs/40188307975) completed SUCCESS on main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc` at `2026-10-25T11:19:24Z`. The offline regression step passed **53 tests**. Artifact `12597311958` (`serie-a-v2-free-real-quote-diagnostic`, 425,565 bytes) was uploaded with ZIP SHA-256 `4d3719b599772e7baffd651a2e78442a75ee21fa02ddce6aa809b64e060474d7`.
+
+The report inspected five already-saved future Serie A quotes: `STALE_MARKET=5`, `FUTURE_QUOTE=0`, and `quotes_with_source_observed_after_quote=5`. It remained `RESEARCH_ONLY_UNVERIFIED_PROVENANCE_NO_BET`; `eligible_for_frozen_prospective_cohort=false`, `eligible_for_product_publication=false`, `no_bet=true`, and `supabase_writes=0`. No new prospective shadow forecast was admitted, no outcome evaluation was performed, and no paid provider was invoked.
+
+This is a new runtime confirmation after the 10:12 source-capture/forward handoff, not new model-quality evidence: all five saved quotes remain stale and their source observation is later than quote time. The frozen 30-eligible-prospective-forecast evaluation gate remains CLOSED; no Brier/LogLoss superiority claim is justified.
+
 
 
 ## 2026-10-25 10:51 UTC — independent current-season fixture-identity parity
