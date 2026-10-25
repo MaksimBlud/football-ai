@@ -1,3 +1,17 @@
+
+
+## 2026-10-25 10:13 UTC — first verified current-form source archive and live forward run
+
+This is a source/clock integrity result, **not** a forecast-quality result. Verified against actual GitHub Actions artifacts downloaded and rehashed independently.
+
+- Free source run [40183765742](https://github.com/MaksimBlud/football-ai/actions/runs/40183765742) completed SUCCESS on main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc` at `2026-10-25T10:12:39Z`; workflow path `.github/workflows/serie-a-v2-current-form-source-capture.yml`. Artifact ID `12595098381`, 434,562 bytes, independently computed ZIP SHA-256 `6268eab2b690fb5feb02287a1c0af55afb510afe6a86b73b1bcb33094fa6ff22`.
+- The archive contains exactly 11 CSVs plus its manifest: ten frozen historical seasons (380 completed rows each; 3,800 total) and current-season `serie_a_2627.csv` (70 rows). Independently recomputed SHA-256 for all 11 CSV byte streams matches the manifest **11/11**; no mismatches. Current CSV SHA-256: `8d4a049abd91d687a63b95051828c00a440c7444e1614a52025addf76a0fb763`. Candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; original feature-builder blob SHA-1 remains `401b3a0893371bfa4a488ec92a4a54af2678c8f7`.
+- The feature-input gate metadata reports 70 completed primary events, selects only `match_date, home_team, away_team`, and selects no score/result fields. This gate is **not** the separate evaluation gate. No target outcomes were read/scored for evaluation; no paid provider calls or Supabase writes.
+- Read-only forward run [40183828436](https://github.com/MaksimBlud/football-ai/actions/runs/40183828436) completed SUCCESS on the same main SHA, starting `10:12:41Z`, after the parent source run completed at `10:12:39Z`. Artifact ID `12595197971`, independently computed ZIP SHA-256 `b1d8b109350d29b2ab55b845eb385f5daf9b2b469db573b9b5fc3d939f736076`. It independently verified source artifact ID/SHA, parent run ID/path/SHA/completion time, candidate SHA, 11 files, and source age 43 seconds at verification.
+- The forward run inspected five stored future Serie A quotes; all five were rejected as `STALE_MARKET_QUOTE` because their common snapshot timestamp is `2026-10-13T14:48:53.042620Z`. It emitted **0** current-form shadow forecasts; `active_lambda=0`, research `shadow_residual_lambda=1`, `NO_BET`; product publication false. No outcomes read/scored, paid calls, production writes, or Supabase writes.
+- Read-only Supabase quote audit at `2026-10-25T10:51Z` found **0** strictly pre-kickoff snapshots saved within the preceding 24 hours in each of the nine checked leagues. Latest saved pre-kickoff Serie A quote remains `2026-10-13T14:48:53.042620Z`; five future Serie A fixtures have only stale quotes. No database mutation was performed.
+
+**Interpretation:** the free current-form source-capture and source-attestation-to-forward handoff now have a real successful runtime proof with matching archive/CSV hashes and correct parent-completion ordering. This does not create any eligible prospective forecast because no fresh quote exists. The 30-eligible-prospective-forecast outcome gate remains CLOSED; no Brier/LogLoss comparison or V2-over-market claim is justified.
 # Football AI — Project Continuity
 
 
