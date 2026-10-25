@@ -185,7 +185,10 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
         output_dir=tmp_path,
         client=FakeQuery(event_rows(30)),
         now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
-        get=lambda url, timeout: Response(),
+        get=lambda url, timeout, allow_redirects: (
+            Response() if (url == CURRENT_URL and timeout == 30 and allow_redirects is False)
+            else pytest.fail("current-season source request must disable redirects")
+        ),
         history_fetch=fake_history,
         clock=lambda: next(source_times),
     )
@@ -236,3 +239,89 @@ def test_frozen_candidate_is_verified_before_gate_reads_or_source_requests(monke
     assert calls == ["candidate"]
     assert client.selected is None
     assert list(tmp_path.iterdir()) == []
+
+def _fake_history_for_redirect_test(tmp_path):
+    audits = []
+    for code in _source_codes():
+        filename = f"serie_a_{code}.csv"
+        body = (
+            "Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HC,AC,HY,AY,HR,AR\\n"
+            f"01/10/{2000 + int(code[:2])},Juventus,Napoli,1,0,H,5,3,2,1,0,0\\n"
+        ).encode()
+        (tmp_path / filename).write_bytes(body)
+        audits.append({
+            "season_code": code,
+            "source_url": f"https://www.football-data.co.uk/mmz4281/{code}/I1.csv",
+            "archived_source_name": filename,
+            "csv_sha256": hashlib.sha256(body).hexdigest(),
+            "source_observed_at_utc": "2026-10-18T08:00:00+00:00",
+            "completed_source_rows": 1,
+        })
+    return pd.DataFrame([{"historical": 1}]), audits
+
+
+def test_current_source_url_must_be_exact_approved_https_before_gate_reads(monkeypatch, tmp_path):
+    monkeypatch.setattr(source_capture, "CURRENT_URL", "https://evil.example/2627/I1.csv")
+    client = FakeQuery(event_rows(MIN_COMPLETED_FEATURE_SOURCE_EVENTS))
+
+    def forbidden_history(**_kwargs):
+        raise AssertionError("unapproved current URL must be rejected before historical downloads")
+
+    def forbidden_get(*_args, **_kwargs):
+        raise AssertionError("unapproved current URL must be rejected before HTTP request")
+
+    with pytest.raises(ValueError, match="approved HTTPS Football-Data URL"):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=client,
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=forbidden_get,
+            history_fetch=forbidden_history,
+        )
+
+    assert client.selected is None
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize(
+    ("status_code", "final_url", "message"),
+    [
+        (302, CURRENT_URL, "direct HTTP 200"),
+        (200, "https://evil.example/2627/I1.csv", "response URL differs"),
+    ],
+)
+def test_current_source_redirect_or_final_url_mismatch_fails_before_body_access(
+    tmp_path, status_code, final_url, message
+):
+    class Response:
+        url = final_url
+
+        def __init__(self):
+            self.status_code = status_code
+
+        @property
+        def content(self):
+            raise AssertionError("unapproved response body must never be read")
+
+        def raise_for_status(self):
+            raise AssertionError("response must be rejected before raise_for_status")
+
+    requests_seen = []
+
+    def fake_get(url, *, timeout, allow_redirects):
+        requests_seen.append((url, timeout, allow_redirects))
+        return Response()
+
+    with pytest.raises(ValueError, match=message):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=FakeQuery(event_rows(MIN_COMPLETED_FEATURE_SOURCE_EVENTS)),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=fake_get,
+            history_fetch=lambda **_kwargs: _fake_history_for_redirect_test(tmp_path),
+        )
+
+    assert requests_seen == [(CURRENT_URL, 30, False)]
+    assert not (tmp_path / CURRENT_FILENAME).exists()
+    assert not (tmp_path / MANIFEST_FILENAME).exists()
+
