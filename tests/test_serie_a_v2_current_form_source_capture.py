@@ -245,8 +245,8 @@ def _fake_history_for_redirect_test(tmp_path):
     for code in _source_codes():
         filename = f"serie_a_{code}.csv"
         body = (
-            "Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HC,AC,HY,AY,HR,AR\\n"
-            f"01/10/{2000 + int(code[:2])},Juventus,Napoli,1,0,H,5,3,2,1,0,0\\n"
+            "Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HC,AC,HY,AY,HR,AR\n"
+            f"01/10/{2000 + int(code[:2])},Juventus,Napoli,1,0,H,5,3,2,1,0,0\n"
         ).encode()
         (tmp_path / filename).write_bytes(body)
         audits.append({
