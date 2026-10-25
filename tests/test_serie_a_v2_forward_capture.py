@@ -2,12 +2,12 @@
 import hashlib
 from io import BytesIO
 import json
-from datetime import datetime, timezone, tzinfo
+from datetime import datetime, timedelta, timezone, tzinfo
 import zipfile
 
 import pytest
 
-from serie_a_v2_frozen_shadow_preview import parse_utc
+from serie_a_v2_frozen_shadow_preview import MAX_QUOTE_AGE, parse_utc
 
 from serie_a_v2_live_diagnostic_report import _source_codes, PUBLIC_BASE
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
@@ -152,6 +152,32 @@ def test_original_october_13_quote_is_not_backfilled_from_later_archive():
     assert report["blocked_no_prior_source"] == 1
     assert report["rows"][0]["v2_preview"] is None
 
+
+
+def test_stale_original_quote_is_blocked_before_source_parent_or_archive_access():
+    raw, metadata = make_source_archive()
+    stale_time = (NOW - MAX_QUOTE_AGE - timedelta(minutes=1)).isoformat().replace("+00:00", "Z")
+    metadata[0]["created_at"] = parse_utc(stale_time) - timedelta(hours=1)
+    calls = []
+
+    report = prepare_forward_capture(
+        [quote(stale_time)],
+        metadata,
+        as_of_utc=NOW,
+        load_archive=lambda artifact_id: calls.append(("archive", artifact_id)) or raw,
+        verify_parent_run=lambda archive, quote_time: (
+            calls.append(("parent", archive["artifact_id"]))
+            or fake_verified_parent_run(archive, quote_time)
+        ),
+    )
+
+    assert calls == []
+    assert report["quotes_seen"] == report["future_quotes_checked"] == 1
+    assert report["v2_diagnostic_previews_captured"] == 0
+    assert report["blocked_stale_market_quote"] == 1
+    assert report["blocked_no_prior_source"] == 0
+    assert report["rows"][0]["status"] == "STALE_MARKET_QUOTE"
+    assert report["rows"][0]["v2_preview"] is None
 
 def test_wrong_archive_bytes_fail_sha_gate():
     raw, metadata = make_source_archive()
