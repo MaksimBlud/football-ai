@@ -175,8 +175,8 @@ def test_gate_open_rejects_csv_missing_a_gate_fixture_before_current_source_writ
         for code in _source_codes():
             filename = f"serie_a_{code}.csv"
             body = (
-                "Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HC,AC,HY,AY,HR,AR\\n"
-                f"01/10/{2000 + int(code[:2])},Juventus,Napoli,1,0,H,5,3,2,1,0,0\\n"
+                "Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HC,AC,HY,AY,HR,AR\n"
+                f"01/10/{2000 + int(code[:2])},Juventus,Napoli,1,0,H,5,3,2,1,0,0\n"
             ).encode()
             (capture_dir / filename).write_bytes(body)
             audits.append({
