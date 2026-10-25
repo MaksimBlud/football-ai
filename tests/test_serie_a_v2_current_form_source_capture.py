@@ -5,6 +5,7 @@ import hashlib
 
 import pandas as pd
 import pytest
+import serie_a_v2_current_form_source_capture as source_capture
 
 from serie_a_v2_current_form_source_capture import (
     CURRENT_CODE,
@@ -204,3 +205,34 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert report["target_outcome_evaluation_gate"]["outcome_gate_open"] is False
     assert report["paid_provider_calls"] == report["supabase_writes"] == 0
     assert report["model_refit_or_promotion"] is False
+
+
+def test_frozen_candidate_is_verified_before_gate_reads_or_source_requests(monkeypatch, tmp_path):
+    calls = []
+    client = FakeQuery(event_rows(MIN_COMPLETED_FEATURE_SOURCE_EVENTS))
+
+    def reject_candidate():
+        calls.append("candidate")
+        raise ValueError("frozen V2 candidate integrity failure")
+
+    def forbidden_history(**_kwargs):
+        calls.append("history")
+        raise AssertionError("historical sources must not be downloaded for an invalid candidate")
+
+    def forbidden_get(*_args, **_kwargs):
+        calls.append("http")
+        raise AssertionError("current-season source must not be requested for an invalid candidate")
+
+    monkeypatch.setattr(source_capture, "load_verified_original", reject_candidate)
+    with pytest.raises(ValueError, match="frozen V2 candidate integrity failure"):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=client,
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=forbidden_get,
+            history_fetch=forbidden_history,
+        )
+
+    assert calls == ["candidate"]
+    assert client.selected is None
+    assert list(tmp_path.iterdir()) == []
