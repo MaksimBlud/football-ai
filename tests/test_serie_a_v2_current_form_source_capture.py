@@ -17,6 +17,7 @@ from serie_a_v2_current_form_source_capture import (
     capture_source_archive,
     count_unique_completed_primary_events,
     read_completed_primary_event_count,
+    read_completed_primary_event_identities,
     validate_current_season_csv,
 )
 from serie_a_v2_live_diagnostic_report import _source_codes
@@ -101,6 +102,17 @@ def test_live_feature_gate_query_selects_only_fixture_metadata_not_scores():
     assert client.selected == "match_date,home_team,away_team"
 
 
+def test_gate_identity_reader_returns_canonical_metadata_only():
+    client = FakeQuery([
+        {"match_date": "2026-10-01", "home_team": "Atalanta BC", "away_team": "Juventus"},
+    ])
+    identities = read_completed_primary_event_identities(
+        client, now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+    )
+    assert identities == {("2026-10-01", "Atalanta", "Juventus")}
+    assert client.selected == "match_date,home_team,away_team"
+
+
 def test_current_csv_uses_only_completed_rows_strictly_before_capture_day():
     raw = current_csv(n=30, same_day=True, future_unplayed=True)
     frame, excluded = validate_current_season_csv(
@@ -148,6 +160,55 @@ def test_closed_feature_source_gate_stops_before_any_public_download(tmp_path):
     assert calls == []
 
 
+def test_gate_open_rejects_csv_missing_a_gate_fixture_before_current_source_write(tmp_path):
+    raw = current_csv(n=30).replace(
+        b"01/08/2026,Home 0,Away 0,1,0,H,5,3,2,1,0,0",
+        b"01/08/2026,Other Home,Other Away,1,0,H,5,3,2,1,0,0",
+    )
+    source_times = iter([
+        datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc),
+        datetime(2026, 10, 18, 8, 2, tzinfo=timezone.utc),
+    ])
+
+    def fake_history(*, get, capture_dir):
+        audits = []
+        for code in _source_codes():
+            filename = f"serie_a_{code}.csv"
+            body = (
+                "Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HC,AC,HY,AY,HR,AR\\n"
+                f"01/10/{2000 + int(code[:2])},Juventus,Napoli,1,0,H,5,3,2,1,0,0\\n"
+            ).encode()
+            (capture_dir / filename).write_bytes(body)
+            audits.append({
+                "season_code": code,
+                "source_url": f"https://www.football-data.co.uk/mmz4281/{code}/I1.csv",
+                "archived_source_name": filename,
+                "csv_sha256": hashlib.sha256(body).hexdigest(),
+                "source_observed_at_utc": "2026-10-18T08:00:00+00:00",
+                "completed_source_rows": 1,
+            })
+        return pd.DataFrame([{"historical": 1}]), audits
+
+    class Response:
+        status_code = 200
+        url = CURRENT_URL
+        content = raw
+        def raise_for_status(self):
+            return None
+
+    with pytest.raises(RuntimeError, match="omits 1 completed fixture identities"):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=FakeQuery(event_rows(30)),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=lambda url, timeout: Response(),
+            history_fetch=fake_history,
+            clock=lambda: next(source_times),
+        )
+    assert not (tmp_path / CURRENT_FILENAME).exists()
+    assert not (tmp_path / MANIFEST_FILENAME).exists()
+
+
 def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_path):
     raw = current_csv(n=30)
     source_times = iter([
@@ -191,6 +252,11 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert report["feature_source_gate"]["passed"] is True
     assert report["feature_source_gate"]["observed_completed_primary_events"] == 30
     assert report["feature_source_gate"]["score_or_result_fields_selected_for_gate"] is False
+    assert report["feature_source_gate"]["gate_fixture_identity_count"] == 30
+    assert report["feature_source_gate"]["gate_fixture_identities_covered_by_current_source"] == 30
+    assert report["feature_source_gate"]["gate_fixture_identities_missing_from_current_source"] == 0
+    assert len(report["feature_source_gate"]["gate_fixture_identity_sha256"]) == 64
+    assert len(report["feature_source_gate"]["current_source_fixture_identity_sha256"]) == 64
     assert report["historical_old_season_file_count"] == 10
     assert report["source_file_count"] == 11
     assert report["current_season_code"] == CURRENT_CODE == "2627"
