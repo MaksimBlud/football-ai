@@ -104,8 +104,8 @@ def test_current_form_forward_preview_reaudits_frozen_runtime_dependencies():
 
     workflow_path = Path(".github/workflows/serie-a-v2-current-form-forward-preview.yml")
     workflow = workflow_path.read_text(encoding="utf-8")
-    push = workflow.split("  push:\\n", 1)[1].split("\\n  workflow_run:", 1)[0]
-    paths_block = push.split("    paths:\\n", 1)[1]
+    push = workflow.split("  push:\n", 1)[1].split("\n  workflow_run:", 1)[0]
+    paths_block = push.split("    paths:\n", 1)[1]
     declared_paths = set(re.findall(r'^      - "([^"]+)"$', paths_block, flags=re.MULTILINE))
     required_paths = {
         "serie_a_v2_current_form_forward_capture.py",
