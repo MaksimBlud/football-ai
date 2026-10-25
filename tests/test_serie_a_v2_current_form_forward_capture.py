@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone, tzinfo
 from io import BytesIO
 import hashlib
 import json
@@ -30,6 +30,14 @@ ARTIFACT_CREATED = datetime(2026, 10, 18, 6, 31, tzinfo=timezone.utc)
 PARENT_CREATED = "2026-10-18T06:00:00+00:00"
 PARENT_COMPLETED = "2026-10-18T06:32:00+00:00"
 HEAD = "a" * 40
+
+
+class OffsetlessTZ(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
 
 
 def quote(
@@ -273,6 +281,31 @@ def test_missing_source_artifact_is_explicitly_reported_without_reading_outcomes
     assert report["verified"] is False
     assert report["target_outcomes_read"] is False
     assert report["target_outcomes_scored"] is False
+
+
+def test_latest_source_verification_rejects_offsetless_clock_before_callbacks(tmp_path):
+    raw, archives = make_archive()
+    callbacks = []
+
+    def load_archive(_artifact_id):
+        callbacks.append("load_archive")
+        return raw
+
+    def verify_parent_run(_archive, *, quote_time):
+        callbacks.append("verify_parent_run")
+        return valid_parent(_archive, quote_time=quote_time)
+
+    with pytest.raises(ValueError, match="explicit UTC offset"):
+        verify_latest_source_archive(
+            archives,
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=OffsetlessTZ()),
+            load_archive=load_archive,
+            verify_parent_run=verify_parent_run,
+            write_sources_to=tmp_path,
+        )
+
+    assert callbacks == []
+    assert list(tmp_path.iterdir()) == []
 
 
 def _rewrite_gate_manifest(raw: bytes, archives: list[dict], *, field: str, value: Any, remove: bool = False):
