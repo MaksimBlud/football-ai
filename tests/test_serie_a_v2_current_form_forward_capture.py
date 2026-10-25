@@ -246,7 +246,13 @@ def test_real_archive_verification_is_reported_even_without_any_fresh_quote(tmp_
     assert attestation["gate_fixture_identities_covered_by_current_source"] == 30
     assert attestation["gate_fixture_identities_missing_from_current_source"] == 0
     assert attestation["current_source_fixture_identity_count"] == 30
-    assert attestation["current_source_fixture_identity_sha256"] == current_identity_sha256
+    expected_frame, _ = validate_current_season_csv(
+        make_current_csv(), captured_at=datetime.fromisoformat(SOURCE_OBSERVED)
+    )
+    expected_identity_sha256 = _fixture_identity_sha256(
+        _current_source_fixture_identities(expected_frame)
+    )
+    assert attestation["current_source_fixture_identity_sha256"] == expected_identity_sha256
     assert report["fresh_for_new_quote"] is True
     assert report["target_outcomes_read"] is False
     assert report["target_outcomes_scored"] is False
@@ -278,7 +284,7 @@ def _rewrite_gate_manifest(raw: bytes, archives: list[dict], *, field: str, valu
         gate.pop(field, None)
     else:
         gate[field] = value
-    files[MANIFEST_FILENAME] = (json.dumps(manifest, sort_keys=True) + "\\n").encode()
+    files[MANIFEST_FILENAME] = (json.dumps(manifest, sort_keys=True) + "\n").encode()
     buffer = BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as rewritten:
         for name, body in files.items():
