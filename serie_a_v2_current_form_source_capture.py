@@ -51,10 +51,67 @@ def _canonical_team(value: Any) -> str:
     return V2_ONLY_ALIASES.get(known, known)
 
 
+def count_unique_completed_primary_events(
+    rows: list[Mapping[str, Any]], *, before_date: date
+) -> int:
+    """Count fixture identities only; never request or inspect goal/result fields."""
+    unique: set[tuple[str, str, str]] = set()
+    for row in rows:
+        match_date = row.get("match_date")
+        if isinstance(match_date, date):
+            parsed_date = match_date
+        elif isinstance(match_date, str):
+            try:
+                parsed_date = date.fromisoformat(match_date[:10])
+            except ValueError as exc:
+                raise ValueError("invalid primary event date in gate metadata") from exc
+        else:
+            raise ValueError("missing primary event date in gate metadata")
+        if parsed_date >= before_date:
+            continue
+        home = _canonical_team(row.get("home_team"))
+        away = _canonical_team(row.get("away_team"))
+        if home == away:
+            raise ValueError("invalid primary event identity in gate metadata")
+        unique.add((parsed_date.isoformat(), home, away))
+    return len(unique)
+
+
+def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
+    """Read only event date/team metadata; no goals, result or settlement columns."""
+    if now.tzinfo is None:
+        raise ValueError("feature-source gate clock must be timezone-aware")
+    cutoff = now.astimezone(timezone.utc).date().isoformat()
+    rows: list[dict[str, Any]] = []
+    start = 0
+    page_size = 1000
+    while True:
+        response = (
+            client.table("league_finished_results")
+            .select("match_date,home_team,away_team")
+            .eq("league", "SERIE_A")
+            .eq("season", CURRENT_SEASON)
+            .gte("match_date", "2026-07-01")
+            .lt("match_date", cutoff)
+            .range(start, start + page_size - 1)
+            .execute()
+        )
+        page = response.data or []
+        if not isinstance(page, list):
+            raise ValueError("Supabase feature-source gate returned malformed event metadata")
+        rows.extend(page)
+        if len(page) < page_size:
+            break
+        start += page_size
+        if start > 10000:
+            raise ValueError("Supabase feature-source gate pagination exceeded safety bound")
+    return count_unique_completed_primary_events(rows, before_date=now.astimezone(timezone.utc).date())
+
+
 def _primary_event_identities(
     rows: list[Mapping[str, Any]], *, before_date: date
 ) -> set[tuple[str, str, str]]:
-    """Normalize metadata-only event identities without inspecting target outcomes."""
+    """Canonical event identities used to prove that the source CSV covers the gate."""
     unique: set[tuple[str, str, str]] = set()
     for row in rows:
         match_date = row.get("match_date")
@@ -79,19 +136,12 @@ def _primary_event_identities(
     return unique
 
 
-def count_unique_completed_primary_events(
-    rows: list[Mapping[str, Any]], *, before_date: date
-) -> int:
-    """Count fixture identities only; never request or inspect goal/result fields."""
-    return len(_primary_event_identities(rows, before_date=before_date))
-
-
-def _read_completed_primary_event_rows(
+def read_completed_primary_event_identities(
     client: Any, *, now: datetime
-) -> tuple[list[dict[str, Any]], date]:
-    """Read paginated fixture metadata only and return its strict UTC date cutoff."""
-    if now.tzinfo is None:
-        raise ValueError("feature-source gate clock must be timezone-aware")
+) -> set[tuple[str, str, str]]:
+    """Read only date/team metadata and return canonical identities for source parity."""
+    if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError("feature-source gate clock must have an explicit UTC offset")
     cutoff_date = now.astimezone(timezone.utc).date()
     cutoff = cutoff_date.isoformat()
     rows: list[dict[str, Any]] = []
@@ -103,7 +153,7 @@ def _read_completed_primary_event_rows(
             .select("match_date,home_team,away_team")
             .eq("league", "SERIE_A")
             .eq("season", CURRENT_SEASON)
-            .gte("match_date", "2026-07-01")
+            .gte("match_date", date(int(CURRENT_SEASON[:4]), 7, 1).isoformat())
             .lt("match_date", cutoff)
             .range(start, start + page_size - 1)
             .execute()
@@ -117,20 +167,7 @@ def _read_completed_primary_event_rows(
         start += page_size
         if start > 10000:
             raise ValueError("Supabase feature-source gate pagination exceeded safety bound")
-    return rows, cutoff_date
-
-
-def read_completed_primary_event_identities(
-    client: Any, *, now: datetime
-) -> set[tuple[str, str, str]]:
-    """Return canonical completed fixture identities from metadata-only Supabase reads."""
-    rows, cutoff_date = _read_completed_primary_event_rows(client, now=now)
     return _primary_event_identities(rows, before_date=cutoff_date)
-
-
-def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
-    """Read only event date/team metadata; no goals, result or settlement columns."""
-    return len(read_completed_primary_event_identities(client, now=now))
 
 
 def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[pd.DataFrame, int]:
