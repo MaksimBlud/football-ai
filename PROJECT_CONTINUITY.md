@@ -1,5 +1,17 @@
 
 
+## 2026-10-25 10:51 UTC — independent current-season fixture-identity parity
+
+A separate read-only audit compared the archived current-season CSV against `public.league_finished_results` using only `match_date, home_team, away_team`; no goal/result columns were selected. Both sides were normalized with the frozen Serie A aliases (`Inter → Inter Milan`, `Milan → AC Milan`, `Roma → AS Roma`, `Verona → Hellas Verona`, V2-local `Atalanta BC → Atalanta`), deduplicated, sorted, and serialized as ISO-date + tab-separated home/away names.
+
+- Supabase metadata: **70 unique identities**, SHA-256 `afc5b86fc2b116d4c2a46abd5dcd2453b64b13101abe618dd28cb66424e4fb73`.
+- Archived `serie_a_2627.csv`: **70 unique identities**, independently recomputed SHA-256 exactly the same `afc5b86fc2b116d4c2a46abd5dcd2453b64b13101abe618dd28cb66424e4fb73`.
+- Result: exact identity-set parity, **70/70**, with no extra or missing fixture identities under the frozen normalization.
+- This is an input-integrity check only. It does not open target outcomes for evaluation and does not satisfy the separate 30-eligible-prospective-forecast evaluation gate.
+- Open [PR #694](https://github.com/MaksimBlud/football-ai/pull/694) adds this gate-identity digest/count to the source manifest and requires the forward reader to verify it. Its tested head remains separate from main; no merge or database write was performed.
+
+
+
 ## 2026-10-25 10:13 UTC — first verified current-form source archive and live forward run
 
 This is a source/clock integrity result, **not** a forecast-quality result. Verified against actual GitHub Actions artifacts downloaded and rehashed independently.
