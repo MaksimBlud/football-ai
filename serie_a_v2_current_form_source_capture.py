@@ -22,7 +22,7 @@ from supabase import create_client
 
 from historical_football_signal_lab import FEATURE_SETS
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
-from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
+from serie_a_v2_frozen_shadow_preview import FROZEN_SHA, load_verified_original
 from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes, fetch_public_history
 
 REPOSITORY = "MaksimBlud/football-ai"
@@ -178,6 +178,11 @@ def capture_source_archive(
     if now.tzinfo is None:
         raise ValueError("source capture clock must be timezone-aware")
     at = now.astimezone(timezone.utc)
+    # Authenticate the exact frozen candidate before any external metadata read or source request.
+    # A source manifest must never claim the pinned SHA if the local artifact is invalid.
+    candidate = load_verified_original()
+    if candidate["artifact_sha256"] != FROZEN_SHA:
+        raise ValueError("current-form source capture frozen candidate attestation mismatch")
     gate_count = read_completed_primary_event_count(client, now=at)
     if gate_count < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
         raise RuntimeError(
@@ -222,9 +227,9 @@ def capture_source_archive(
         "git_sha": os.environ.get("GITHUB_SHA", ""),
         "workflow_run_id": os.environ.get("GITHUB_RUN_ID", ""),
         "source_archive_created_at_utc": clock().astimezone(timezone.utc).isoformat(),
-        "frozen_candidate_sha256": FROZEN_SHA,
+        "frozen_candidate_sha256": candidate["artifact_sha256"],
         "original_feature_builder_git_blob_sha1": "401b3a0893371bfa4a488ec92a4a54af2678c8f7",
-        "feature_count": len(FEATURE_SETS["ALL_FOOTBALL"]),
+        "feature_count": len(candidate["features"]),
         "historical_season_codes": list(_source_codes()),
         "current_season_code": CURRENT_CODE,
         "current_season": CURRENT_SEASON,
