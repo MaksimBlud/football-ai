@@ -19,6 +19,7 @@ from serie_a_v2_current_form_source_capture import (
     read_completed_primary_event_count,
     read_completed_primary_event_identities,
     validate_current_season_csv,
+    _current_source_fixture_identities,
 )
 from serie_a_v2_live_diagnostic_report import _source_codes
 
@@ -270,3 +271,32 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert report["target_outcome_evaluation_gate"]["outcome_gate_open"] is False
     assert report["paid_provider_calls"] == report["supabase_writes"] == 0
     assert report["model_refit_or_promotion"] is False
+
+
+def test_gate_and_current_csv_share_all_configured_team_aliases():
+    """Real Serie A source short names must equal canonical metadata identities."""
+    metadata = [
+        {"match_date": "2026-08-22", "home_team": "Inter Milan", "away_team": "Monza"},
+        {"match_date": "2026-08-23", "home_team": "Torino", "away_team": "AC Milan"},
+        {"match_date": "2026-08-24", "home_team": "AS Roma", "away_team": "Fiorentina"},
+        {"match_date": "2026-08-25", "home_team": "Atalanta", "away_team": "Sassuolo"},
+        # Supabase also contains this provider alias for the same canonical event.
+        {"match_date": "2026-08-25", "home_team": "Atalanta BC", "away_team": "Sassuolo"},
+    ]
+    client = FakeQuery(metadata)
+    as_of = datetime(2026, 10, 25, 19, 0, tzinfo=timezone.utc)
+    gate_identities = read_completed_primary_event_identities(client, now=as_of)
+    assert client.selected == "match_date,home_team,away_team"
+
+    raw = (
+        ",".join(REQUIRED_COLUMNS) + "\\n"
+        "22/08/2026,Inter,Monza,1,0,H,5,3,2,1,0,0\\n"
+        "23/08/2026,Torino,Milan,1,1,D,4,4,1,1,0,0\\n"
+        "24/08/2026,Roma,Fiorentina,0,2,A,2,5,2,1,0,0\\n"
+        "25/08/2026,Atalanta,Sassuolo,2,0,H,5,3,2,1,0,0\\n"
+    ).encode()
+    frame, _ = validate_current_season_csv(raw, captured_at=as_of)
+    source_identities = _current_source_fixture_identities(frame)
+
+    assert len(gate_identities) == 4
+    assert source_identities == gate_identities
