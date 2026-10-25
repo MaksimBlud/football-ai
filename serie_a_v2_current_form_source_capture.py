@@ -208,7 +208,7 @@ def _current_source_fixture_identities(
 def _fixture_identity_sha256(
     identities: set[tuple[str, str, str]],
 ) -> str:
-    payload = "\\n".join("\\t".join(identity) for identity in sorted(identities))
+    payload = "\n".join("\t".join(identity) for identity in sorted(identities))
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
