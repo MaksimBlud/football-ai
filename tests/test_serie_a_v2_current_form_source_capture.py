@@ -289,11 +289,11 @@ def test_gate_and_current_csv_share_all_configured_team_aliases():
     assert client.selected == "match_date,home_team,away_team"
 
     raw = (
-        ",".join(REQUIRED_COLUMNS) + "\\n"
-        "22/08/2026,Inter,Monza,1,0,H,5,3,2,1,0,0\\n"
-        "23/08/2026,Torino,Milan,1,1,D,4,4,1,1,0,0\\n"
-        "24/08/2026,Roma,Fiorentina,0,2,A,2,5,2,1,0,0\\n"
-        "25/08/2026,Atalanta,Sassuolo,2,0,H,5,3,2,1,0,0\\n"
+        ",".join(REQUIRED_COLUMNS) + "\n"
+        "22/08/2026,Inter,Monza,1,0,H,5,3,2,1,0,0\n"
+        "23/08/2026,Torino,Milan,1,1,D,4,4,1,1,0,0\n"
+        "24/08/2026,Roma,Fiorentina,0,2,A,2,5,2,1,0,0\n"
+        "25/08/2026,Atalanta,Sassuolo,2,0,H,5,3,2,1,0,0\n"
     ).encode()
     frame, _ = validate_current_season_csv(raw, captured_at=as_of)
     source_identities = _current_source_fixture_identities(frame)
