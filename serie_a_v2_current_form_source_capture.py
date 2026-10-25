@@ -15,6 +15,7 @@ import json
 import os
 from pathlib import Path
 from typing import Any, Mapping
+from urllib.parse import urlsplit
 
 import pandas as pd
 import requests
@@ -22,7 +23,7 @@ from supabase import create_client
 
 from historical_football_signal_lab import FEATURE_SETS
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
-from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
+from serie_a_v2_frozen_shadow_preview import FROZEN_SHA, load_verified_original
 from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes, fetch_public_history
 
 REPOSITORY = "MaksimBlud/football-ai"
@@ -41,6 +42,26 @@ REQUIRED_COLUMNS = (
 )
 NUMERIC_COLUMNS = ("FTHG", "FTAG", "HC", "AC", "HY", "AY", "HR", "AR")
 V2_ONLY_ALIASES = {"Atalanta BC": "Atalanta"}
+
+
+def _assert_approved_current_url(url: str) -> None:
+    """Fail closed unless the current-season source is the exact public CSV endpoint."""
+    parts = urlsplit(url)
+    expected_path = (
+        f"/mmz4281/{CURRENT_CODE}/"
+        f"{SERIE_A_RUNTIME_CONFIG.finished_results_source.competition_code}.csv"
+    )
+    if (
+        parts.scheme != "https"
+        or parts.hostname != "www.football-data.co.uk"
+        or parts.port not in (None, 443)
+        or parts.username is not None
+        or parts.password is not None
+        or parts.path != expected_path
+        or parts.query
+        or parts.fragment
+    ):
+        raise ValueError("current-season source URL is not the approved HTTPS Football-Data URL")
 
 
 def _canonical_team(value: Any) -> str:
@@ -178,6 +199,12 @@ def capture_source_archive(
     if now.tzinfo is None:
         raise ValueError("source capture clock must be timezone-aware")
     at = now.astimezone(timezone.utc)
+    # Authenticate the exact frozen candidate before any external metadata read or source request.
+    # A source manifest must never claim the pinned SHA if the local artifact is invalid.
+    candidate = load_verified_original()
+    if candidate["artifact_sha256"] != FROZEN_SHA:
+        raise ValueError("current-form source capture frozen candidate attestation mismatch")
+    _assert_approved_current_url(CURRENT_URL)
     gate_count = read_completed_primary_event_count(client, now=at)
     if gate_count < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
         raise RuntimeError(
@@ -189,7 +216,13 @@ def capture_source_archive(
     old_history, old_audit = history_fetch(get=get, capture_dir=output_dir)
     if old_history.empty or len(old_audit) != len(_source_codes()):
         raise ValueError("original frozen historical source archive incomplete")
-    response = get(CURRENT_URL, timeout=30)
+    response = get(CURRENT_URL, timeout=30, allow_redirects=False)
+    # A 3xx response is not rejected by requests.Response.raise_for_status();
+    # explicitly require a direct 200 and the exact approved final URL before body access.
+    if getattr(response, "status_code", None) != 200:
+        raise ValueError("current-season source must return a direct HTTP 200 response")
+    if getattr(response, "url", None) != CURRENT_URL:
+        raise ValueError("current-season source response URL differs from approved HTTPS URL")
     response.raise_for_status()
     raw = response.content
     observed_at = clock().astimezone(timezone.utc)
@@ -222,9 +255,9 @@ def capture_source_archive(
         "git_sha": os.environ.get("GITHUB_SHA", ""),
         "workflow_run_id": os.environ.get("GITHUB_RUN_ID", ""),
         "source_archive_created_at_utc": clock().astimezone(timezone.utc).isoformat(),
-        "frozen_candidate_sha256": FROZEN_SHA,
+        "frozen_candidate_sha256": candidate["artifact_sha256"],
         "original_feature_builder_git_blob_sha1": "401b3a0893371bfa4a488ec92a4a54af2678c8f7",
-        "feature_count": len(FEATURE_SETS["ALL_FOOTBALL"]),
+        "feature_count": len(candidate["features"]),
         "historical_season_codes": list(_source_codes()),
         "current_season_code": CURRENT_CODE,
         "current_season": CURRENT_SEASON,
