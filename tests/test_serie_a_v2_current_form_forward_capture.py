@@ -16,6 +16,9 @@ from serie_a_v2_current_form_forward_capture import (
 from serie_a_v2_current_form_source_capture import (
     CURRENT_CODE, CURRENT_FILENAME, CURRENT_SEASON, CURRENT_URL, REQUIRED_COLUMNS,
 )
+from serie_a_v2_current_form_source_capture import (
+    _current_source_fixture_identities, _fixture_identity_sha256, validate_current_season_csv,
+)
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
 from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes
 
@@ -77,6 +80,11 @@ def make_archive():
         })
     current = make_current_csv()
     files[CURRENT_FILENAME] = current
+    current_frame, _ = validate_current_season_csv(
+        current, captured_at=datetime.fromisoformat(SOURCE_OBSERVED)
+    )
+    current_identities = _current_source_fixture_identities(current_frame)
+    current_identity_sha256 = _fixture_identity_sha256(current_identities)
     source_files.append({
         "season_code": CURRENT_CODE,
         "season": CURRENT_SEASON,
@@ -118,6 +126,12 @@ def make_archive():
             "checked_at_utc": "2026-10-18T06:00:00+00:00",
             "metadata_fields_read": ["match_date", "home_team", "away_team"],
             "score_or_result_fields_selected_for_gate": False,
+            "gate_fixture_identity_sha256": current_identity_sha256,
+            "gate_fixture_identity_count": len(current_identities),
+            "gate_fixture_identities_covered_by_current_source": len(current_identities),
+            "gate_fixture_identities_missing_from_current_source": 0,
+            "current_source_fixture_identity_sha256": current_identity_sha256,
+            "current_source_fixture_identity_count": len(current_identities),
             "passed": True,
         },
         "feature_policy": {
@@ -225,6 +239,13 @@ def test_real_archive_verification_is_reported_even_without_any_fresh_quote(tmp_
     assert report["historical_old_season_file_count"] == 10
     assert report["source_file_count"] == 11
     assert report["current_season_history_rows"] == 30
+    attestation = report["feature_source_gate_attestation"]
+    assert attestation["verified"] is True
+    assert attestation["gate_fixture_identity_count"] == 30
+    assert attestation["gate_fixture_identities_covered_by_current_source"] == 30
+    assert attestation["gate_fixture_identities_missing_from_current_source"] == 0
+    assert attestation["current_source_fixture_identity_count"] == 30
+    assert attestation["current_source_fixture_identity_sha256"] == current_identity_sha256
     assert report["fresh_for_new_quote"] is True
     assert report["target_outcomes_read"] is False
     assert report["target_outcomes_scored"] is False
@@ -245,6 +266,51 @@ def test_missing_source_artifact_is_explicitly_reported_without_reading_outcomes
     assert report["verified"] is False
     assert report["target_outcomes_read"] is False
     assert report["target_outcomes_scored"] is False
+
+
+def _rewrite_gate_manifest(raw: bytes, archives: list[dict], *, field: str, value: Any, remove: bool = False):
+    with zipfile.ZipFile(BytesIO(raw), "r") as original:
+        files = {name: original.read(name) for name in original.namelist()}
+    manifest = json.loads(files[MANIFEST_FILENAME])
+    gate = manifest["feature_source_gate"]
+    if remove:
+        gate.pop(field, None)
+    else:
+        gate[field] = value
+    files[MANIFEST_FILENAME] = (json.dumps(manifest, sort_keys=True) + "\\n").encode()
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as rewritten:
+        for name, body in files.items():
+            rewritten.writestr(name, body)
+    tampered = buffer.getvalue()
+    archives[0]["sha256"] = hashlib.sha256(tampered).hexdigest()
+    return tampered
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "remove", "message"),
+    [
+        ("gate_fixture_identity_sha256", "not-a-sha256", False, "identity attestation"),
+        ("gate_fixture_identity_count", 29, False, "identity attestation"),
+        ("gate_fixture_identities_covered_by_current_source", 29, False, "identity attestation"),
+        ("gate_fixture_identities_missing_from_current_source", 1, False, "identity attestation"),
+        ("current_source_fixture_identity_count", 31, False, "identity digest/count mismatch"),
+        ("current_source_fixture_identity_sha256", "0" * 64, False, "identity digest/count mismatch"),
+        ("gate_fixture_identity_sha256", "", True, "identity attestation"),
+    ],
+)
+def test_forward_reader_rejects_missing_or_inconsistent_gate_identity_attestation(
+    field, value, remove, message
+):
+    raw, archives = make_archive()
+    tampered = _rewrite_gate_manifest(raw, archives, field=field, value=value, remove=remove)
+    with pytest.raises(ValueError, match=message):
+        verify_latest_source_archive(
+            archives,
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            load_archive=lambda _artifact_id: tampered,
+            verify_parent_run=valid_parent,
+        )
 
 
 def test_precontract_quote_is_never_backfilled_from_a_later_source_archive():
