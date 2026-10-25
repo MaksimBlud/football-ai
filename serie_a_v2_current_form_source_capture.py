@@ -51,14 +51,16 @@ def _canonical_team(value: Any) -> str:
     return V2_ONLY_ALIASES.get(known, known)
 
 
-def count_unique_completed_primary_events(
+def _primary_event_identities(
     rows: list[Mapping[str, Any]], *, before_date: date
-) -> int:
-    """Count fixture identities only; never request or inspect goal/result fields."""
+) -> set[tuple[str, str, str]]:
+    """Normalize metadata-only event identities without inspecting target outcomes."""
     unique: set[tuple[str, str, str]] = set()
     for row in rows:
         match_date = row.get("match_date")
-        if isinstance(match_date, date):
+        if isinstance(match_date, datetime):
+            parsed_date = match_date.date()
+        elif isinstance(match_date, date):
             parsed_date = match_date
         elif isinstance(match_date, str):
             try:
@@ -74,14 +76,24 @@ def count_unique_completed_primary_events(
         if home == away:
             raise ValueError("invalid primary event identity in gate metadata")
         unique.add((parsed_date.isoformat(), home, away))
-    return len(unique)
+    return unique
 
 
-def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
-    """Read only event date/team metadata; no goals, result or settlement columns."""
+def count_unique_completed_primary_events(
+    rows: list[Mapping[str, Any]], *, before_date: date
+) -> int:
+    """Count fixture identities only; never request or inspect goal/result fields."""
+    return len(_primary_event_identities(rows, before_date=before_date))
+
+
+def _read_completed_primary_event_rows(
+    client: Any, *, now: datetime
+) -> tuple[list[dict[str, Any]], date]:
+    """Read paginated fixture metadata only and return its strict UTC date cutoff."""
     if now.tzinfo is None:
         raise ValueError("feature-source gate clock must be timezone-aware")
-    cutoff = now.astimezone(timezone.utc).date().isoformat()
+    cutoff_date = now.astimezone(timezone.utc).date()
+    cutoff = cutoff_date.isoformat()
     rows: list[dict[str, Any]] = []
     start = 0
     page_size = 1000
@@ -105,7 +117,20 @@ def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
         start += page_size
         if start > 10000:
             raise ValueError("Supabase feature-source gate pagination exceeded safety bound")
-    return count_unique_completed_primary_events(rows, before_date=now.astimezone(timezone.utc).date())
+    return rows, cutoff_date
+
+
+def read_completed_primary_event_identities(
+    client: Any, *, now: datetime
+) -> set[tuple[str, str, str]]:
+    """Return canonical completed fixture identities from metadata-only Supabase reads."""
+    rows, cutoff_date = _read_completed_primary_event_rows(client, now=now)
+    return _primary_event_identities(rows, before_date=cutoff_date)
+
+
+def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
+    """Read only event date/team metadata; no goals, result or settlement columns."""
+    return len(read_completed_primary_event_identities(client, now=now))
 
 
 def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[pd.DataFrame, int]:
@@ -165,6 +190,28 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     return result, len(frame) - len(completed)
 
 
+def _current_source_fixture_identities(
+    frame: pd.DataFrame,
+) -> set[tuple[str, str, str]]:
+    """Canonical fixture identities in the already validated current-season CSV."""
+    identities: set[tuple[str, str, str]] = set()
+    for _, row in frame.iterrows():
+        parsed_date = pd.to_datetime(
+            row["Date"], dayfirst=True, format="mixed", errors="raise"
+        ).date()
+        home = _canonical_team(row["HomeTeam"])
+        away = _canonical_team(row["AwayTeam"])
+        identities.add((parsed_date.isoformat(), home, away))
+    return identities
+
+
+def _fixture_identity_sha256(
+    identities: set[tuple[str, str, str]],
+) -> str:
+    payload = "\\n".join("\\t".join(identity) for identity in sorted(identities))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
 def capture_source_archive(
     *,
     output_dir: Path,
@@ -178,7 +225,8 @@ def capture_source_archive(
     if now.tzinfo is None:
         raise ValueError("source capture clock must be timezone-aware")
     at = now.astimezone(timezone.utc)
-    gate_count = read_completed_primary_event_count(client, now=at)
+    gate_identities = read_completed_primary_event_identities(client, now=at)
+    gate_count = len(gate_identities)
     if gate_count < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
         raise RuntimeError(
             "current-form feature-source gate closed: "
@@ -197,6 +245,13 @@ def capture_source_archive(
     if len(current_rows) < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
         raise RuntimeError(
             "public current-season source has fewer completed prior-day matches than the feature-source gate"
+        )
+    source_identities = _current_source_fixture_identities(current_rows)
+    missing_gate_identities = gate_identities - source_identities
+    if missing_gate_identities:
+        raise RuntimeError(
+            "current-form CSV omits "
+            f"{len(missing_gate_identities)} completed fixture identities used by the metadata gate"
         )
     current_path = output_dir / CURRENT_FILENAME
     current_path.write_bytes(raw)
@@ -243,6 +298,12 @@ def capture_source_archive(
             "checked_at_utc": at.isoformat(),
             "metadata_fields_read": ["match_date", "home_team", "away_team"],
             "score_or_result_fields_selected_for_gate": False,
+            "gate_fixture_identity_sha256": _fixture_identity_sha256(gate_identities),
+            "gate_fixture_identity_count": gate_count,
+            "gate_fixture_identities_covered_by_current_source": len(gate_identities & source_identities),
+            "gate_fixture_identities_missing_from_current_source": len(missing_gate_identities),
+            "current_source_fixture_identity_sha256": _fixture_identity_sha256(source_identities),
+            "current_source_fixture_identity_count": len(source_identities),
             "passed": True,
         },
         "feature_policy": {
