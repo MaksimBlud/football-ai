@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone, tzinfo
 from pathlib import Path
 from types import SimpleNamespace
 import hashlib
@@ -32,6 +32,17 @@ def event_rows(n=30):
         }
         for i in range(n)
     ]
+
+
+class _NoOffsetTimezone(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+    def tzname(self, dt):
+        return "NO_OFFSET"
 
 
 class FakeQuery:
@@ -115,6 +126,32 @@ def test_gate_rejects_pre_season_metadata_rows_instead_of_counting_toward_30_eve
     with pytest.raises(ValueError, match="pre-season fixture identity"):
         count_unique_completed_primary_events(
             rows, before_date=date(2026, 10, 18)
+        )
+
+
+def test_feature_gate_rejects_tzinfo_without_offset_before_supabase_read():
+    class ForbiddenClient:
+        def table(self, *_args, **_kwargs):
+            pytest.fail("Supabase must not be queried with an offsetless gate clock")
+
+    with pytest.raises(
+        ValueError,
+        match="feature-source gate clock must be timezone-aware with a real UTC offset",
+    ):
+        read_completed_primary_event_count(
+            ForbiddenClient(),
+            now=datetime(2026, 10, 18, 8, tzinfo=_NoOffsetTimezone()),
+        )
+
+
+def test_current_csv_rejects_tzinfo_without_offset_before_parsing_bytes():
+    with pytest.raises(
+        ValueError,
+        match="current-season source capture clock must be timezone-aware with a real UTC offset",
+    ):
+        validate_current_season_csv(
+            b"not a CSV",
+            captured_at=datetime(2026, 10, 18, 8, tzinfo=_NoOffsetTimezone()),
         )
 
 

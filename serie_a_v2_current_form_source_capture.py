@@ -92,8 +92,10 @@ def count_unique_completed_primary_events(
 
 def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
     """Read only event date/team metadata; no goals, result or settlement columns."""
-    if now.tzinfo is None:
-        raise ValueError("feature-source gate clock must be timezone-aware")
+    if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError(
+            "feature-source gate clock must be timezone-aware with a real UTC offset"
+        )
     cutoff = now.astimezone(timezone.utc).date().isoformat()
     rows: list[dict[str, Any]] = []
     start = 0
@@ -129,8 +131,14 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     are never converted to features. The returned frame contains no incomplete
     fixtures and exactly the original V2 builder's required columns.
     """
-    if captured_at.tzinfo is None:
-        raise ValueError("current-season source capture clock must be timezone-aware")
+    if (
+        not isinstance(captured_at, datetime)
+        or captured_at.tzinfo is None
+        or captured_at.utcoffset() is None
+    ):
+        raise ValueError(
+            "current-season source capture clock must be timezone-aware with a real UTC offset"
+        )
     if not raw or len(raw) > MAX_CURRENT_CSV_BYTES:
         raise ValueError("current-season CSV is empty or exceeds size limit")
     frame = pd.read_csv(BytesIO(raw), low_memory=False)
