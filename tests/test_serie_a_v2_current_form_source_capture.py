@@ -404,3 +404,63 @@ def test_source_capture_rejects_timezone_without_real_offset_before_any_io(tmp_p
         )
 
     assert list(tmp_path.iterdir()) == []
+
+
+def _valid_fake_history_for_clock_tests():
+    audits = [
+        {"season_code": code, "csv_sha256": "0" * 64}
+        for code in _source_codes()
+    ]
+    return pd.DataFrame([{"historical": 1}]), audits
+
+
+def test_source_observation_clock_without_offset_fails_before_reading_csv_body(tmp_path):
+    class Response:
+        status_code = 200
+
+        def raise_for_status(self):
+            return None
+
+        @property
+        def content(self):
+            pytest.fail("source bytes must not be consumed with an invalid observation clock")
+
+    with pytest.raises(ValueError, match="source observation clock must have a real UTC offset"):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=FakeQuery(event_rows(MIN_COMPLETED_FEATURE_SOURCE_EVENTS)),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=lambda *_args, **_kwargs: Response(),
+            history_fetch=lambda **_kwargs: _valid_fake_history_for_clock_tests(),
+            clock=lambda: datetime(2026, 10, 18, 8, tzinfo=_NoOffsetTimezone()),
+        )
+
+    assert not (tmp_path / CURRENT_FILENAME).exists()
+    assert not (tmp_path / MANIFEST_FILENAME).exists()
+
+
+def test_archive_creation_clock_without_offset_fails_before_current_source_write(tmp_path):
+    clocks = iter([
+        datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc),
+        datetime(2026, 10, 18, 8, 2, tzinfo=_NoOffsetTimezone()),
+    ])
+
+    class Response:
+        status_code = 200
+        content = current_csv(n=MIN_COMPLETED_FEATURE_SOURCE_EVENTS)
+
+        def raise_for_status(self):
+            return None
+
+    with pytest.raises(ValueError, match="source archive creation clock must have a real UTC offset"):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=FakeQuery(event_rows(MIN_COMPLETED_FEATURE_SOURCE_EVENTS)),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=lambda *_args, **_kwargs: Response(),
+            history_fetch=lambda **_kwargs: _valid_fake_history_for_clock_tests(),
+            clock=lambda: next(clocks),
+        )
+
+    assert not (tmp_path / CURRENT_FILENAME).exists()
+    assert not (tmp_path / MANIFEST_FILENAME).exists()
