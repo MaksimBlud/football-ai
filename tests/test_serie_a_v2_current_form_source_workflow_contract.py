@@ -23,6 +23,8 @@ def test_current_form_push_filter_covers_frozen_source_dependencies():
         "historical_football_signal_lab.py",
         "serie_a_runtime_config.py",
         "serie_a_v2_frozen_shadow_preview.py",
+        "market_anchor_1x2_v2_shadow.py",
+        "market_anchor_1x2_v1.py",
         "serie_a_v2_live_diagnostic_report.py",
         "serie_a_v2_asof_feature_manifest.py",
         "tests/test_historical_football_signal_lab.py",
@@ -56,6 +58,10 @@ def test_current_form_source_workflow_runs_frozen_feature_regressions():
         f"current-form source workflow omits regression tests: "
         f"{sorted(name for name in required_tests if name not in validation)}"
     )
+
+    compile_line = next(line for line in validation.splitlines() if "python -m py_compile " in line)
+    assert "market_anchor_1x2_v2_shadow.py" in compile_line
+    assert "market_anchor_1x2_v1.py" in compile_line
 
 
 def test_original_forward_push_filter_covers_frozen_v2_dependencies():
@@ -101,4 +107,9 @@ def test_frozen_shadow_ci_runs_this_contract_and_tracks_original_forward_workflo
     paths_block = text.split("    paths:\n", 1)[1].split("\n\npermissions:", 1)[0]
     assert '"tests/test_serie_a_v2_current_form_source_workflow_contract.py"' in paths_block
     assert '".github/workflows/serie-a-v2-forward-preview.yml"' in paths_block
+    assert '"market_anchor_1x2_v2_shadow.py"' in paths_block
+    assert '"market_anchor_1x2_v1.py"' in paths_block
     assert "tests/test_serie_a_v2_current_form_source_workflow_contract.py" in text
+    compile_line = next(line for line in text.splitlines() if "python -m py_compile " in line)
+    assert "market_anchor_1x2_v2_shadow.py" in compile_line
+    assert "market_anchor_1x2_v1.py" in compile_line
