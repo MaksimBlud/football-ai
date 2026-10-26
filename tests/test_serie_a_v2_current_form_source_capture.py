@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone, tzinfo
 from pathlib import Path
 from types import SimpleNamespace
 import hashlib
@@ -34,6 +34,17 @@ def event_rows(n=30):
         }
         for i in range(n)
     ]
+
+
+class _NoOffsetTimezone(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+    def tzname(self, dt):
+        return "NO_OFFSET"
 
 
 class FakeQuery:
@@ -350,3 +361,46 @@ def test_gate_and_current_csv_share_all_configured_team_aliases():
 
     assert len(gate_identities) == 4
     assert source_identities == gate_identities
+
+
+def test_gate_count_rejects_timezone_without_real_offset_before_supabase_read():
+    class ForbiddenClient:
+        def table(self, *_args, **_kwargs):
+            pytest.fail("Supabase must not be queried with an offsetless gate clock")
+
+    with pytest.raises(ValueError, match="real UTC offset"):
+        read_completed_primary_event_count(
+            ForbiddenClient(),
+            now=datetime(2026, 10, 18, 8, tzinfo=_NoOffsetTimezone()),
+        )
+
+
+def test_current_csv_validator_rejects_timezone_without_real_offset():
+    with pytest.raises(ValueError, match="real UTC offset"):
+        validate_current_season_csv(
+            current_csv(n=MIN_COMPLETED_FEATURE_SOURCE_EVENTS),
+            captured_at=datetime(2026, 10, 18, 8, tzinfo=_NoOffsetTimezone()),
+        )
+
+
+def test_source_capture_rejects_timezone_without_real_offset_before_any_io(tmp_path):
+    class ForbiddenClient:
+        def table(self, *_args, **_kwargs):
+            pytest.fail("Supabase must not be queried with an offsetless capture clock")
+
+    def forbidden_history(**_kwargs):
+        pytest.fail("historical CSVs must not be downloaded with an offsetless capture clock")
+
+    def forbidden_get(*_args, **_kwargs):
+        pytest.fail("current-season CSV must not be requested with an offsetless capture clock")
+
+    with pytest.raises(ValueError, match="real UTC offset"):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=ForbiddenClient(),
+            now=datetime(2026, 10, 18, 8, tzinfo=_NoOffsetTimezone()),
+            get=forbidden_get,
+            history_fetch=forbidden_history,
+        )
+
+    assert list(tmp_path.iterdir()) == []
