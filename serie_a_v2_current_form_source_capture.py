@@ -15,6 +15,7 @@ import json
 import os
 from pathlib import Path
 from typing import Any, Mapping
+from urllib.parse import urlsplit
 
 import pandas as pd
 import requests
@@ -22,7 +23,7 @@ from supabase import create_client
 
 from historical_football_signal_lab import FEATURE_SETS
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
-from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
+from serie_a_v2_frozen_shadow_preview import FROZEN_SHA, load_verified_original
 from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes, fetch_public_history
 
 REPOSITORY = "MaksimBlud/football-ai"
@@ -42,6 +43,25 @@ REQUIRED_COLUMNS = (
 )
 NUMERIC_COLUMNS = ("FTHG", "FTAG", "HC", "AC", "HY", "AY", "HR", "AR")
 V2_ONLY_ALIASES = {"Atalanta BC": "Atalanta"}
+
+def _assert_approved_current_url(url: str) -> None:
+    """Fail closed unless the current-season source is the exact public CSV endpoint."""
+    parts = urlsplit(url)
+    expected_path = (
+        f"/mmz4281/{CURRENT_CODE}/"
+        f"{SERIE_A_RUNTIME_CONFIG.finished_results_source.competition_code}.csv"
+    )
+    if (
+        parts.scheme != "https"
+        or parts.hostname != "www.football-data.co.uk"
+        or parts.port not in (None, 443)
+        or parts.username is not None
+        or parts.password is not None
+        or parts.path != expected_path
+        or parts.query
+        or parts.fragment
+    ):
+        raise ValueError("current-season source URL is not the approved HTTPS Football-Data URL")
 
 
 def _canonical_team(value: Any) -> str:
@@ -196,7 +216,9 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
         or captured_at.tzinfo is None
         or captured_at.utcoffset() is None
     ):
-        raise ValueError("current-season source capture clock must have a real UTC offset")
+        raise ValueError(
+            "current-season source capture clock must be timezone-aware with a real UTC offset"
+        )
     if not raw or len(raw) > MAX_CURRENT_CSV_BYTES:
         raise ValueError("current-season CSV is empty or exceeds size limit")
     frame = pd.read_csv(BytesIO(raw), low_memory=False)
@@ -204,7 +226,15 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     if missing:
         raise ValueError("current-season source lacks required original V2 statistics: "
                          + ", ".join(sorted(missing)))
-    nonblank_dates = frame["Date"].notna()
+    missing_date = frame["Date"].isna() | frame["Date"].astype(str).str.strip().eq("")
+    payload_columns = ["HomeTeam", "AwayTeam", "FTR", *NUMERIC_COLUMNS]
+    has_payload = frame.loc[:, payload_columns].apply(
+        lambda column: column.notna() & column.astype(str).str.strip().ne(""),
+        axis=0,
+    ).any(axis=1)
+    if (missing_date & has_payload).any():
+        raise ValueError("current-season source contains populated fixture row without date")
+    nonblank_dates = ~missing_date
     parsed_dates = pd.to_datetime(frame["Date"], dayfirst=True, format="mixed", errors="coerce")
     if parsed_dates.loc[nonblank_dates].isna().any():
         raise ValueError("current-season source contains an unparseable fixture date")
@@ -213,9 +243,20 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     cutoff = captured_at.astimezone(timezone.utc).date()
     ftr = frame["FTR"].fillna("").astype(str).str.strip().str.upper()
     valid_result = ftr.isin(("H", "D", "A"))
+    has_statistics = frame.loc[:, list(NUMERIC_COLUMNS)].notna().any(axis=1)
+    malformed_prior_result = (
+        frame["_parsed_date"].lt(cutoff) & ~valid_result & has_statistics
+    )
+    if malformed_prior_result.any():
+        raise ValueError(
+            "past current-season row has statistics but invalid full-time result marker"
+        )
     future_completed = frame["_parsed_date"].gt(cutoff) & valid_result
     if future_completed.any():
         raise ValueError("current-season source contains a completed result after capture date")
+    pre_season_completed = frame["_parsed_date"].lt(CURRENT_SEASON_START) & valid_result
+    if pre_season_completed.any():
+        raise ValueError("current-season source contains a completed row before season start")
     completed = frame.loc[frame["_parsed_date"].lt(cutoff) & valid_result].copy()
     completed["FTR"] = ftr.loc[completed.index]
     if completed.empty:
@@ -224,28 +265,36 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
         completed[field] = pd.to_numeric(completed[field], errors="coerce")
         if completed[field].isna().any() or (completed[field] < 0).any():
             raise ValueError("completed current-season match has missing/invalid " + field)
+        if not completed[field].map(lambda value: float(value).is_integer()).all():
+            raise ValueError("completed current-season match has non-integer " + field)
     if ((completed["FTHG"] > completed["FTAG"]) != (completed["FTR"] == "H")).any() or (
         (completed["FTHG"] < completed["FTAG"]) != (completed["FTR"] == "A")
     ).any():
         raise ValueError("current-season result does not match full-time goals")
-    identities: set[tuple[str, str, str]] = set()
+    identities = []
+    direction_by_pair: dict[tuple[str, str, str], tuple[str, str, str]] = {}
     for _, row in completed.iterrows():
         home = _canonical_team(row["HomeTeam"])
         away = _canonical_team(row["AwayTeam"])
         if home == away:
             raise ValueError("current-season fixture has identical canonical teams")
-        identity = (row["_parsed_date"].isoformat(), home, away)
-        if identity in identities:
-            raise ValueError("current-season source has duplicate fixture identities")
-        if (identity[0], away, home) in identities:
-            raise ValueError("current-season source has reversed duplicate fixture identities")
-        identities.add(identity)
+        date_key = row["_parsed_date"].isoformat()
+        identity = (date_key, home, away)
+        unordered_pair = (date_key, *sorted((home, away)))
+        previous_direction = direction_by_pair.get(unordered_pair)
+        if previous_direction is not None and previous_direction != identity:
+            raise ValueError(
+                "current-season source has reversed duplicate fixture identity"
+            )
+        direction_by_pair[unordered_pair] = identity
+        identities.append(identity)
+    if len(identities) != len(set(identities)):
+        raise ValueError("current-season source has duplicate fixture identities")
     completed["Date"] = completed["_parsed_date"].map(
         lambda value: value.strftime("%d/%m/%Y")
     )
     result = completed.loc[:, list(REQUIRED_COLUMNS)].copy()
     return result, len(frame) - len(completed)
-
 
 def _current_source_fixture_identities(
     frame: pd.DataFrame,
@@ -282,6 +331,12 @@ def capture_source_archive(
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("source capture clock must have a real UTC offset")
     at = now.astimezone(timezone.utc)
+    # Authenticate the frozen candidate and exact source URL before any metadata read,
+    # network request, or filesystem output. The manifest must attest the verified artifact.
+    candidate = load_verified_original()
+    if candidate["artifact_sha256"] != FROZEN_SHA:
+        raise ValueError("current-form source capture frozen candidate attestation mismatch")
+    _assert_approved_current_url(CURRENT_URL)
     gate_identities = read_completed_primary_event_identities(client, now=at)
     gate_count = len(gate_identities)
     if gate_count < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
@@ -294,7 +349,13 @@ def capture_source_archive(
     old_history, old_audit = history_fetch(get=get, capture_dir=output_dir)
     if old_history.empty or len(old_audit) != len(_source_codes()):
         raise ValueError("original frozen historical source archive incomplete")
-    response = get(CURRENT_URL, timeout=30)
+    response = get(CURRENT_URL, timeout=30, allow_redirects=False)
+    # requests.raise_for_status() accepts 3xx responses; reject redirects and unexpected
+    # final URLs before reading response bytes into the frozen source archive.
+    if getattr(response, "status_code", None) != 200:
+        raise ValueError("current-season source must return a direct HTTP 200 response")
+    if getattr(response, "url", None) != CURRENT_URL:
+        raise ValueError("current-season source response URL differs from approved HTTPS URL")
     response.raise_for_status()
     observed_clock = clock()
     if (
@@ -349,9 +410,9 @@ def capture_source_archive(
         "git_sha": os.environ.get("GITHUB_SHA", ""),
         "workflow_run_id": os.environ.get("GITHUB_RUN_ID", ""),
         "source_archive_created_at_utc": archive_created_at.isoformat(),
-        "frozen_candidate_sha256": FROZEN_SHA,
+        "frozen_candidate_sha256": candidate["artifact_sha256"],
         "original_feature_builder_git_blob_sha1": "401b3a0893371bfa4a488ec92a4a54af2678c8f7",
-        "feature_count": len(FEATURE_SETS["ALL_FOOTBALL"]),
+        "feature_count": len(candidate["features"]),
         "historical_season_codes": list(_source_codes()),
         "current_season_code": CURRENT_CODE,
         "current_season": CURRENT_SEASON,
