@@ -6,12 +6,13 @@ import zipfile
 from typing import Any
 
 import pytest
+import serie_a_v2_current_form_forward_capture as forward_capture_module
 
 from serie_a_v2_current_form_forward_capture import (
     ARTIFACT_NAME,
     MANIFEST_FILENAME,
     SOURCE_WORKFLOW_PATH,
-    prepare_forward_capture,
+    prepare_forward_capture as _prepare_forward_capture,
     verify_latest_source_archive,
 )
 from serie_a_v2_current_form_source_capture import (
@@ -187,6 +188,19 @@ def make_archive():
     return raw, [meta]
 
 
+def _fixture_current_gate_identities():
+    current_frame, _ = validate_current_season_csv(
+        make_current_csv(), captured_at=datetime.fromisoformat(SOURCE_OBSERVED)
+    )
+    return _current_source_fixture_identities(current_frame)
+
+
+def prepare_forward_capture(*args, **kwargs):
+    """Existing unit fixtures model a live metadata gate that matches their source archive."""
+    kwargs.setdefault("current_gate_identities", _fixture_current_gate_identities())
+    return _prepare_forward_capture(*args, **kwargs)
+
+
 def valid_parent(archive, *, quote_time):
     assert archive["run_id"] == 123
     assert quote_time.tzinfo is not None
@@ -238,6 +252,7 @@ def test_real_archive_verification_is_reported_even_without_any_fresh_quote(tmp_
         as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
         load_archive=lambda artifact_id: raw,
         verify_parent_run=valid_parent,
+        current_gate_identities=_fixture_current_gate_identities(),
         write_sources_to=tmp_path,
     )
     assert report["status"] == "VERIFIED"
@@ -266,6 +281,46 @@ def test_real_archive_verification_is_reported_even_without_any_fresh_quote(tmp_
     assert report["target_outcomes_scored"] is False
     assert report["paid_provider_calls"] == report["supabase_writes"] == 0
     assert len(list(tmp_path.glob("current-form-source-artifact-*.zip"))) == 1
+
+
+
+
+def test_forward_capture_fails_closed_when_new_completed_fixture_is_missing_from_archive(monkeypatch):
+    raw, archives = make_archive()
+    current_gate = _fixture_current_gate_identities() | {
+        ("2026-09-01", "Newly Completed Home", "Newly Completed Away")
+    }
+    monkeypatch.setattr(
+        forward_capture_module,
+        "shadow_preview",
+        lambda *_args, **_kwargs: pytest.fail("stale source must be blocked before inference"),
+    )
+    report = _prepare_forward_capture(
+        [quote()], archives,
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        load_archive=lambda _artifact_id: raw,
+        verify_parent_run=valid_parent,
+        current_gate_identities=current_gate,
+    )
+    assert report["v2_current_form_shadow_captured"] == 0
+    assert report["blocked"]["SOURCE_GATE_STALE"] == 1
+    assert report["rows"][0]["status"] == "SOURCE_GATE_STALE"
+    assert report["rows"][0]["source_gate_freshness"]["missing_identity_count"] == 1
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
+    assert report["production_or_supabase_writes"] == 0
+    assert report["paid_provider_calls"] == 0
+
+    verification = verify_latest_source_archive(
+        archives,
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        load_archive=lambda _artifact_id: raw,
+        verify_parent_run=valid_parent,
+        current_gate_identities=current_gate,
+    )
+    assert verification["fresh_for_current_feature_gate"] is False
+    assert verification["fresh_for_new_quote"] is False
+    assert verification["feature_source_gate_freshness"]["missing_identity_count"] == 1
 
 
 def test_missing_source_artifact_is_explicitly_reported_without_reading_outcomes():
