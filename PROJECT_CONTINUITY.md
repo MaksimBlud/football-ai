@@ -1,5 +1,16 @@
 # Football AI — Project Continuity
 
+## 2026-10-26 15:13 UTC — second live forward proof, still no admissible quotes
+
+Fresh read-only verification on unchanged `main` SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`:
+
+- **Current-form forward-only preview** [run 40347056896](https://github.com/MaksimBlud/football-ai/actions/runs/40347056896) completed SUCCESS at 15:13:20Z; its six-file regression suite passed **53 tests**. The runtime report verified current-form source artifact `12647281024`, ZIP SHA-256 `0ecfd702f0cd24f21894e93b0cbe63c65340a3eb48d3180e27652a3ad43c5e9b`, successful parent run `40316117199`, parent SHA equal to main, source observation `2026-10-26T11:35:37.712979Z`, and the frozen candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`. Gate count/current-season rows = **70**, frozen history = **3,870 matches across 10 old-season CSVs**. At verification time source age was 13,054 seconds (~3 h 38 min), below the fixed 24-hour source-age cap. The run saw **0 saved quotes**, captured **0** current-form shadow forecasts, read/scored **0** target outcomes, made **0** paid-provider calls and **0** production/Supabase writes. Artifact `12661661676`, uploaded ZIP SHA-256 `14dcf23a9787e491d5de5304473daf1ab5dca647d2371835951f1fce798906bf`.
+- **Original frozen V2 forward-only preview** [run 40346041505](https://github.com/MaksimBlud/football-ai/actions/runs/40346041505) completed SUCCESS at 15:07:09Z; **71 tests passed**. The independent real-source attestation verified artifact `12651690084` and SHA, 10 pre-prospective source files / 3,800 historical matches. Its original V2 quote pass saw **0 quotes** and generated **0** previews. No paid calls, Supabase writes, or protected-outcome reads. Artifact `12660854128`, uploaded ZIP SHA-256 `8916346ea8b9051879f021f9cc64e3c07c7ffd8b71896890a3eb6b71b5ad84c5`.
+
+The separate read-only Supabase aggregate at 15:51Z still returns **0** future pre-kickoff quote rows and **0** such rows in the last 24 hours; latest stored quote remains `2026-10-13 14:48:53.04262+00`. These runs prove the source/forward code executes and authenticates the old source, not `source-before-quote` for a new market observation and not model quality. Do not relax freshness, backfill old quotes, open the protected 30-completed-event evaluation gate, or claim V2 beats market. No main merge or schedule change was performed.
+
+---
+
 ## 2026-10-26 — schedule-observation note — 2026-10-26 13:05 UTC
 
 The source-capture workflow on fresh `main` declares cron `50 5 * * *` (05:50 UTC). Its successful scheduled run `40316117199` was created/started at `2026-10-26T11:34:50Z`, **5 h 44 min 50 s after the nominal cron time**. This is one observed schedule-time discrepancy, not enough evidence to conclude a persistent outage or to change the schedule. The run itself completed successfully at 11:35:41Z and produced source artifact `12647281024`; the chained forward preview `40316226164` completed successfully but had zero saved quotes and zero forecasts. Do not change workflow schedules or other agents on the basis of this single observation; monitor subsequent scheduled runs and preserve HUMAN-MERGE.
