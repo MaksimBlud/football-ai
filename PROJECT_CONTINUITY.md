@@ -1,3 +1,17 @@
+## 2026-10-26 — Forward-only clock guard closes custom offsetless-tzinfo path
+
+Fresh main rechecked: `40887ebb215730190d7a6c7a1693373ec4afcdfc`; frozen original V2 candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`. Main was not changed.
+
+Updated existing HUMAN-MERGE PR #696 on branch `research/v2-current-form-dependency-recheck-20261025`, exact head `2a4059860fcb7da2eab39b538b4e264ef6fc8192`. Review found that the new `verify_latest_source_archive` helper and `prepare_forward_capture` entry point only checked `tzinfo is None`. A custom tzinfo with `utcoffset() is None` could still be normalized using the runner's local timezone. Both entry points now reject non-datetime, naive, and offsetless clocks before callbacks or output writes. Regression coverage tests both entry points and proves source callbacks/output writes do not occur for an invalid clock.
+
+Exact-head CI for #696: **7/7 SUCCESS**. Original V2 shadow job [run 40289658905](https://github.com/MaksimBlud/football-ai/actions/runs/40289658905) reports **96 tests passed** and confirms `git diff --exit-code -- '*.pkl'`. Other exact-head successful runs: [Research](https://github.com/MaksimBlud/football-ai/actions/runs/40289659034), [Product](https://github.com/MaksimBlud/football-ai/actions/runs/40289659162), [Eredivisie](https://github.com/MaksimBlud/football-ai/actions/runs/40289658892), [Bundesliga](https://github.com/MaksimBlud/football-ai/actions/runs/40289658889), [Serie A](https://github.com/MaksimBlud/football-ai/actions/runs/40289659001), [Ligue 1](https://github.com/MaksimBlud/football-ai/actions/runs/40289659018). PR remains open and unmerged.
+
+Read-only Supabase `public.odds_snapshots` audit at **2026-10-26 08:04:02 UTC**: 0 quote rows for future kickoffs in the prior 24 hours; 0 saved future-kickoff quote rows of any age; latest future-kickoff quote is null; latest quote in the table is `2026-10-13 14:48:53 UTC`. No score/result fields were queried. The source-capture workflow YAML still specifies daily `05:50 UTC`, but the queried set of 111 main-branch workflow runs created on Oct 26 contains no `Serie A V2 Current-Form Source Capture` or `Serie A V2 Current-Form Forward-Only Preview` run. Therefore no new on-main source artifact or forward runtime proof is claimed for Oct 26. Last documented live source/forward evidence remains the Oct 25 runs below.
+
+No model feature/weight/lambda changes, production `.pkl` edits, Supabase writes/DDL, paid calls, target-outcome reads, evaluation-gate opening, or merges. The 30-completed-prospective-forecast evaluation gate remains CLOSED; no Brier/LogLoss comparison is available.
+
+---
+
 ## 2026-10-26 — Source-gate parity and transitive CI dependency hardening (runtime still blocked)
 
 Latest checked `main` is still `40887ebb215730190d7a6c7a1693373ec4afcdfc` (commit 2026-10-18); this document update is on the existing documentation PR branch only. The frozen original candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`. No production model, frozen feature contract, weights, lambda settings, or main-branch files were changed.
