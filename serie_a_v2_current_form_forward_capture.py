@@ -535,8 +535,12 @@ def prepare_forward_capture(
     current_gate_identities: set[tuple[str, str, str]] | None = None,
     write_sources_to: Path | None = None,
 ) -> dict:
-    if as_of_utc.tzinfo is None:
-        raise ValueError("current-form forward clock must be timezone-aware")
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
+        raise ValueError("current-form forward clock must have an explicit UTC offset")
     now = as_of_utc.astimezone(timezone.utc)
     if write_sources_to is not None:
         write_sources_to.mkdir(parents=True, exist_ok=True)
