@@ -1,6 +1,17 @@
 # Football AI — Project Continuity
 
 
+## 2026-10-26 19:56 UTC — original historical CSV redirects fail closed; no fresh quotes
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. New V2-only PR [#700](https://github.com/MaksimBlud/football-ai/pull/700) adds exact HTTPS host/path validation for the ten frozen pre-2026/27 Football-Data CSVs, disables automatic redirects, and requires the final response URL to equal the approved URL before response bytes are read. Offline regressions cover HTTP redirects, unexpected final URLs, and an unapproved endpoint. Existing current-form source/forward workflow path filters now include this shared historical-source reader and test; cron cadence is unchanged.
+
+PR #700 exact head `d2a6608ef8c11d2e517f8aec5637d12206760346` has **7/7 exact-head CI SUCCESS**: Research [40391014094](https://github.com/MaksimBlud/football-ai/actions/runs/40391014094), Serie A [40391014224](https://github.com/MaksimBlud/football-ai/actions/runs/40391014224), Ligue 1 [40391014341](https://github.com/MaksimBlud/football-ai/actions/runs/40391014341), Bundesliga [40391014365](https://github.com/MaksimBlud/football-ai/actions/runs/40391014365), Original Frozen V2 Shadow [40391014350](https://github.com/MaksimBlud/football-ai/actions/runs/40391014350), Product [40391014439](https://github.com/MaksimBlud/football-ai/actions/runs/40391014439), Eredivisie [40391014491](https://github.com/MaksimBlud/football-ai/actions/runs/40391014491). PR remains open for HUMAN-MERGE; no main change or merge.
+
+Fresh read-only Supabase checks at this iteration: `public.odds_snapshots` contains **3,966** rows; latest snapshot is still `2026-10-13 14:48:53.04262+00`; selecting future kickoff rows returned **0**. Serie A 2026/27 metadata-only query returned **73 raw rows** (only match date/team identity fields were selected; no score/result fields). This does not establish new source-before-quote observations because no quote exists. No paid provider calls, Supabase writes/DDL, protected outcome reads, model changes, or schedule cadence changes.
+
+Scientific status remains unchanged: original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 features and weights frozen, `active_lambda=0` market fallback, `shadow_lambda=1` research only. The 30-prospective-completed-event evaluation gate remains closed; no Brier/LogLoss or superiority claim is available.
+
+---
 ## 2026-10-26 18:56 UTC — separate original-path clock guards still await HUMAN-MERGE
 
 Fresh GitHub reads reconfirmed `main` at `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The current-form integration [PR #699](https://github.com/MaksimBlud/football-ai/pull/699), exact head `ee19d3ef9619fbc0a3b237d45cdc3523ffe10bdf`, has **7/7 exact-head CI SUCCESS** (all seven workflow runs completed successfully). Its changed-file list is limited to the current-form source/forward modules and their tests; it does **not** change the separate original-path modules below.
