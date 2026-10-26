@@ -164,6 +164,18 @@ def test_current_csv_uses_only_completed_rows_strictly_before_capture_day():
     assert not frame["Date"].str.contains("20/10/2026").any()
 
 
+def test_current_csv_rejects_reversed_duplicate_fixture_identity():
+    raw = (
+        ",".join(REQUIRED_COLUMNS) + "\n"
+        "01/08/2026,Atalanta BC,Juventus,1,0,H,5,3,2,1,0,0\n"
+        "01/08/2026,Juventus,Atalanta,0,1,A,4,6,1,2,0,0\n"
+    ).encode()
+    with pytest.raises(ValueError, match="reversed duplicate fixture identities"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
 def test_current_csv_rejects_completed_future_result_and_missing_stats():
     with pytest.raises(ValueError, match="completed result after capture date"):
         validate_current_season_csv(
