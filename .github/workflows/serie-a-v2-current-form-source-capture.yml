@@ -8,6 +8,8 @@ on:
     branches: [main]
     paths:
       - "serie_a_v2_current_form_source_capture.py"
+      - "serie_a_v2_live_diagnostic_report.py"
+      - "tests/test_serie_a_v2_live_diagnostic_report.py"
       - "experiments/market_anchor_1x2_v2_current_form_policy.json"
       - "tests/test_serie_a_v2_current_form_source_capture.py"
       - ".github/workflows/serie-a-v2-current-form-source-capture.yml"

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
+from urllib.parse import urlsplit
 import hashlib
 from io import BytesIO
 import json
@@ -38,6 +39,28 @@ def _source_codes() -> list[str]:
     return historical
 
 
+def _assert_approved_history_url(url: str, *, season_code: str) -> None:
+    """Require the exact HTTPS Football-Data CSV endpoint before making a request."""
+    parts = urlsplit(url)
+    expected_path = (
+        f"/mmz4281/{season_code}/"
+        f"{SERIE_A_RUNTIME_CONFIG.historical_source.competition_code}.csv"
+    )
+    expected_url = f"{PUBLIC_BASE}/{season_code}/{SERIE_A_RUNTIME_CONFIG.historical_source.competition_code}.csv"
+    if (
+        parts.scheme != "https"
+        or parts.hostname != "www.football-data.co.uk"
+        or parts.port not in (None, 443)
+        or parts.username is not None
+        or parts.password is not None
+        or parts.path != expected_path
+        or parts.query
+        or parts.fragment
+        or url != expected_url
+    ):
+        raise ValueError("historical source URL is not the approved HTTPS Football-Data endpoint")
+
+
 def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -> tuple[pd.DataFrame, list[dict]]:
     """Explicit, bounded configured public URLs; never odds API, never cache guess."""
     all_frames = []
@@ -48,9 +71,15 @@ def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -
         if len(code) != 4 or not code.isdigit():
             raise ValueError("unexpected historical season code")
         url = f"{PUBLIC_BASE}/{code}/{SERIE_A_RUNTIME_CONFIG.historical_source.competition_code}.csv"
-        response = get(url, timeout=30)
+        _assert_approved_history_url(url, season_code=code)
+        # Do not let requests follow a redirect to a different host/path. A
+        # successful status alone is not source provenance; require the exact
+        # approved final URL before touching response bytes.
+        response = get(url, timeout=30, allow_redirects=False)
         if response.status_code != 200:
             raise RuntimeError(f"Public Serie A CSV unavailable: season={code}, http={response.status_code}")
+        if getattr(response, "url", None) != url:
+            raise RuntimeError(f"Public Serie A CSV returned an unexpected final URL: season={code}")
         body = response.content
         capture = datetime.now(timezone.utc)
         if capture_dir is not None:
