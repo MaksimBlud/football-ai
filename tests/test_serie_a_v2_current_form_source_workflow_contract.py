@@ -69,8 +69,16 @@ def test_original_forward_push_filter_covers_frozen_v2_dependencies():
     required = {
         "serie_a_v2_forward_capture.py",
         "serie_a_v2_prequote_source_archive_gate.py",
+        "tests/test_serie_a_v2_prequote_source_archive_gate.py",
         "serie_a_v2_live_diagnostic_report.py",
+        "tests/test_serie_a_v2_live_diagnostic_report.py",
         "serie_a_v2_asof_feature_manifest.py",
+        "tests/test_serie_a_v2_asof_feature_manifest.py",
+        "tests/test_serie_a_v2_atalanta_alias.py",
+        "serie_a_v2_attest_real_source.py",
+        "tests/test_serie_a_v2_attest_real_source.py",
+        "tests/test_serie_a_v2_forward_capture.py",
+        "tests/test_serie_a_v2_manual_quote_trigger_contract.py",
         "serie_a_v2_frozen_shadow_preview.py",
         "market_anchor_1x2_v2_shadow.py",
         "market_anchor_1x2_v1.py",
@@ -92,6 +100,13 @@ def test_original_forward_workflow_runs_frozen_dependency_regressions():
     validation = text.split("      - name: Test original V2, old-season embargo, and source-before-quote rules", 1)[1]
     validation = validation.split("      - name: Attest original historical source ZIP from real GitHub Actions", 1)[0]
     required_tests = {
+        "tests/test_serie_a_v2_forward_capture.py",
+        "tests/test_serie_a_v2_attest_real_source.py",
+        "tests/test_serie_a_v2_manual_quote_trigger_contract.py",
+        "tests/test_serie_a_v2_prequote_source_archive_gate.py",
+        "tests/test_serie_a_v2_live_diagnostic_report.py",
+        "tests/test_serie_a_v2_asof_feature_manifest.py",
+        "tests/test_serie_a_v2_atalanta_alias.py",
         "tests/test_serie_a_v2_frozen_shadow_preview.py",
         "tests/test_historical_football_signal_lab.py",
         "tests/test_serie_a_v2_current_form_source_workflow_contract.py",
