@@ -1,3 +1,23 @@
+## 2026-10-26 09:09 UTC — current-form source clocks hardened; runtime-data blocker persists
+
+Fresh `main` verified at `40887ebb215730190d7a6c7a1693373ec4afcdfc`; frozen original candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`. No main update or merge was performed.
+
+**New code proof in existing PR #694:** exact head `c9022e5a6ca5711c3b37ff3c48886bc9919652f4`, base `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Current-form source capture now rejects a non-datetime, missing tzinfo, or `utcoffset() is None` for the metadata gate clock, CSV cutoff clock, capture-entry clock, source-observation clock, and archive-creation clock. Five regressions prove invalid clocks fail before the relevant Supabase read, body consumption, or current-source/manifest write. Exact-head CI is **7/7 SUCCESS**: [V2 shadow](https://github.com/MaksimBlud/football-ai/actions/runs/40297046024), [Research](https://github.com/MaksimBlud/football-ai/actions/runs/40297046036), [Serie A](https://github.com/MaksimBlud/football-ai/actions/runs/40297046058), [Bundesliga](https://github.com/MaksimBlud/football-ai/actions/runs/40297046048), [Ligue 1](https://github.com/MaksimBlud/football-ai/actions/runs/40297046103), [Eredivisie](https://github.com/MaksimBlud/football-ai/actions/runs/40297046134), [Product](https://github.com/MaksimBlud/football-ai/actions/runs/40297046061). PR remains open, HUMAN-MERGE only.
+
+**Current-form workflow trigger coverage:** open PR #698 head `5678cb090cb19ebba67e2fb31edd35c6c7fe9938` passed **7/7** exact-head CI. PR #696 head `2a4059860fcb7da2eab39b538b4e264ef6fc8192` also passed **7/7**. #694 and #696 overlap on `serie_a_v2_current_form_forward_capture.py` and its tests; reconcile those before any manual merge. #698 changes the distinct current-form forward workflow and manual-trigger contract test. No PR is to be auto-merged.
+
+**Current live-data blocker (read-only, 2026-10-26 09:08–09:09 UTC):**
+- Supabase feature-input metadata query selected only `match_date, home_team, away_team` and returned **73** unique Serie A 2026/27 fixture identities (first 2026-08-22, last 2026-10-19). No score/result columns were read.
+- `public.odds_snapshots` query used only league, snapshot/kickoff timestamps, event IDs and market prices. It found **0** future-kickoff pre-match snapshots in the last 24 hours and **0** future-kickoff pre-match snapshots of any age across all nine leagues. Latest saved Serie A snapshot remains 2026-10-13 14:48:53 UTC; EPL 2026-10-09 15:25:57 UTC; RPL 2026-09-05 15:07:55 UTC.
+- The Oct 26 `main` Actions run list contained 119 runs but no `Serie A V2 Current-Form Source Capture` or `Serie A V2 Current-Form Forward-Only Preview` run. Their YAML schedules remain 05:50 UTC and 08:18 UTC; reason for missing executions is not established.
+- Last verified live source capture remains run [40183765742](https://github.com/MaksimBlud/football-ai/actions/runs/40183765742) with 70 current-season source rows, while metadata now reports 73 identities. The current-form parity gate must fail closed until a new successful capture includes every eligible identity. Last verified current-form forward preview remains run [40196498784](https://github.com/MaksimBlud/football-ai/actions/runs/40196498784); it admitted **0** forecasts because its saved quotes were stale.
+
+No new predictions were created; no protected 2026/27 outcomes were read; no Supabase writes/DDL, paid provider calls, production `.pkl` changes, refit, promotion, or bets occurred. The separate 30-eligible-prospective-completed-event evaluation gate remains CLOSED; Brier/LogLoss comparison and any V2 superiority claim remain unavailable.
+
+**Security note:** Supabase schema advisory still reports RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. No setting was changed; admin policy review is required before enabling RLS.
+
+---
+
 ## 2026-10-26 — Forward-only clock guard closes custom offsetless-tzinfo path
 
 Fresh main rechecked: `40887ebb215730190d7a6c7a1693373ec4afcdfc`; frozen original V2 candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`. Main was not changed.
