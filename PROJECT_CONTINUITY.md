@@ -1,3 +1,22 @@
+## 2026-10-26 — Source-gate parity and transitive CI dependency hardening (runtime still blocked)
+
+Latest checked `main` is still `40887ebb215730190d7a6c7a1693373ec4afcdfc` (commit 2026-10-18); this document update is on the existing documentation PR branch only. The frozen original candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`. No production model, frozen feature contract, weights, lambda settings, or main-branch files were changed.
+
+**Exact-head CI results for open V2 PRs (not merged):**
+- PR #694 head `6e68c032a108c3962005ed625ee1a5ed854575b8`: **7/7 checks SUCCESS**; the original V2 shadow job ran **100 tests PASS**. Added defensive source-gate checks for pre-season metadata and reversed duplicate fixtures after V2-local alias normalization, in both count and identity paths.
+- PR #693 head `41531ee98403e49dc4a48d0c4c1ceefa089306d2`: **7/7 checks SUCCESS**; **89 tests PASS**. The free diagnostic now triggers and compiles both `market_anchor_1x2_v2_shadow.py` and its transitive dependency `market_anchor_1x2_v1.py`.
+- PR #698 head `5678cb090cb19ebba67e2fb31edd35c6c7fe9938`: **7/7 checks SUCCESS**; **86 tests PASS**. The current-form forward workflow now triggers and compiles both residual/runtime modules.
+- PR #696 head `783b4a0a8dfb7b9baf2ecd49bcb04dd884d6a523`: exact-head CI was still running when this entry was written; **do not treat it as ready until all checks finish successfully**. It extends the same dependency coverage to the original forward and current-form source-capture workflows and the frozen-shadow PR path filter.
+- PRs #693, #694, #696 and #698 remain open and unmerged. HUMAN-MERGE remains mandatory. These branches all target the same main base, so re-check conflicts, exact head SHA and full CI after any manual integration.
+
+**Fresh read-only odds audit (Supabase `public.odds_snapshots` only):** grouped by league using `snapshot_time_utc`, `commence_time_utc`, `event_id`, and `league`; no score/result columns were read. There are **0 pre-match quote rows in the last 24 hours** and **0 saved quote events whose kickoff is still in the future**. Latest saved pre-match snapshots are Serie A 2026-10-13 14:48:53 UTC, EPL 2026-10-09 15:25:57 UTC, RPL 2026-09-05 15:07:55 UTC, and the other six queried leagues last on 2026-09-11. Therefore there is no current admissible quote to pair with the source archive; do not backfill or relax the 24-hour/source-before-quote rules.
+
+**Scientific state unchanged:** active lambda remains 0 (market anchor); lambda 1 remains research-only shadow. The separate prospective outcome gate remains closed until 30 eligible forecasts from the preregistered cohort have completed. No protected 2026/27 target outcomes were read; no Brier/LogLoss comparison or V2-over-market claim is available. No paid odds calls, Supabase writes/DDL, production `.pkl` edits, refit, threshold tuning, or promotion occurred.
+
+**Next:** finish exact-head CI for #696; keep the three passing PRs unmerged until integration order/conflicts are checked; after HUMAN-MERGE, read fresh main and verify the live source archive/parent-run SHA and source-before-quote ordering. Wait for a genuinely new, user-authorized pre-kickoff quote saved after the source archive; only then capture prospective frozen V2 shadow, still NO_BET and outcome-blind until the separate 30-completed-forecast gate.
+
+---
+
 ## 2026-10-25 — Reconciled live source/forward proof and current data blocker
 
 Fresh main inspected for this update: `40887ebb215730190d7a6c7a1693373ec4afcdfc` (PR #673; the original V2 candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`). The live source and forward workflows have now run on this exact main; this supersedes the October 18 statement below that first post-merge runtime proof was still pending.
