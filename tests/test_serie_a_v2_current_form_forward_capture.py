@@ -425,6 +425,32 @@ def test_latest_source_verification_rejects_offsetless_clock_before_callbacks(tm
     assert list(tmp_path.iterdir()) == []
 
 
+def test_forward_capture_rejects_offsetless_clock_before_callbacks_or_output(tmp_path):
+    raw, archives = make_archive()
+    callbacks = []
+
+    def load_archive(_artifact_id):
+        callbacks.append("load_archive")
+        return raw
+
+    def verify_parent_run(_archive, *, quote_time):
+        callbacks.append("verify_parent_run")
+        return valid_parent(_archive, quote_time=quote_time)
+
+    with pytest.raises(ValueError, match="explicit UTC offset"):
+        prepare_forward_capture(
+            [quote()],
+            archives,
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=OffsetlessTZ()),
+            load_archive=load_archive,
+            verify_parent_run=verify_parent_run,
+            write_sources_to=tmp_path,
+        )
+
+    assert callbacks == []
+    assert not tmp_path.exists()
+
+
 def _rewrite_gate_manifest(raw: bytes, archives: list[dict], *, field: str, value: Any, remove: bool = False):
     with zipfile.ZipFile(BytesIO(raw), "r") as original:
         files = {name: original.read(name) for name in original.namelist()}
