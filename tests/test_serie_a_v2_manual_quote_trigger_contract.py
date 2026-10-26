@@ -112,6 +112,8 @@ def test_current_form_forward_preview_reaudits_frozen_runtime_dependencies():
         "serie_a_v2_current_form_source_capture.py",
         "serie_a_v2_asof_feature_manifest.py",
         "serie_a_v2_frozen_shadow_preview.py",
+        "market_anchor_1x2_v2_shadow.py",
+        "market_anchor_1x2_v1.py",
         "serie_a_v2_live_diagnostic_report.py",
         "serie_a_v2_prequote_source_archive_gate.py",
         "serie_a_runtime_config.py",
@@ -130,6 +132,10 @@ def test_current_form_forward_preview_reaudits_frozen_runtime_dependencies():
         ".github/workflows/serie-a-v2-current-form-forward-preview.yml",
     }
     assert required_paths <= declared_paths
+
+    compile_command = workflow.split("python -m py_compile ", 1)[1].split("\n", 1)[0]
+    assert "market_anchor_1x2_v2_shadow.py" in compile_command
+    assert "market_anchor_1x2_v1.py" in compile_command
 
     test_step = workflow.split("name: Test frozen model, current-form source integrity, and no-outcome capture", 1)[1].split("      - name:", 1)[0]
     for required_test in (
