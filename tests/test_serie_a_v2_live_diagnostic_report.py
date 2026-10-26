@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 import pandas as pd
 import pytest
+import serie_a_v2_live_diagnostic_report as report_module
 
 from serie_a_v2_live_diagnostic_report import (
     PUBLIC_BASE, _source_codes, fetch_public_history, make_report,
@@ -122,14 +123,18 @@ def test_public_free_history_never_downloads_protected_2026_27_outcomes():
     calls = []
     class Response:
         status_code = 200
-        content = csv_completed
-    def fake_get(url, timeout):
-        calls.append((url, timeout))
+        def __init__(self, url):
+            self.url = url
+            self.content = csv_completed
+    def fake_get(url, timeout, allow_redirects):
+        calls.append((url, timeout, allow_redirects))
         assert url.startswith(PUBLIC_BASE + "/") and url.endswith("/I1.csv")
         assert f"/{current}/" not in url
-        return Response()
+        assert allow_redirects is False
+        return Response(url)
     history, audit = fetch_public_history(get=fake_get)
     assert len(calls) == 10
+    assert all(call[2] is False for call in calls)
     assert len(audit) == len(calls)
     assert len(history) == 3*len(calls)
     assert all(x["csv_sha256"] and x["source_observed_at_utc"] for x in audit)
@@ -137,10 +142,50 @@ def test_public_free_history_never_downloads_protected_2026_27_outcomes():
 
 def test_upstream_status_failure_is_not_filled_with_guessed_data():
     class BadResponse:
-        status_code=503
-        content=b""
-    with pytest.raises(RuntimeError,match="unavailable"):
-        fetch_public_history(get=lambda url,timeout: BadResponse())
+        status_code = 503
+        url = "https://www.football-data.co.uk/mmz4281/1617/I1.csv"
+        content = b""
+    with pytest.raises(RuntimeError, match="unavailable"):
+        fetch_public_history(get=lambda url, timeout, allow_redirects: BadResponse())
+
+
+def test_public_history_rejects_redirect_before_reading_response_bytes():
+    calls = []
+    class RedirectResponse:
+        status_code = 302
+        url = "https://www.football-data.co.uk/mmz4281/1617/I1.csv"
+        @property
+        def content(self):
+            raise AssertionError("redirect body must not be read")
+    def fake_get(url, timeout, allow_redirects):
+        calls.append((url, allow_redirects))
+        return RedirectResponse()
+    with pytest.raises(RuntimeError, match="unavailable"):
+        fetch_public_history(get=fake_get)
+    assert calls and all(allow_redirects is False for _, allow_redirects in calls)
+
+
+def test_public_history_rejects_unexpected_final_url_before_reading_response_bytes():
+    class WrongFinalURL:
+        status_code = 200
+        url = "https://example.invalid/attacker.csv"
+        @property
+        def content(self):
+            raise AssertionError("unexpected final URL bytes must not be read")
+    with pytest.raises(RuntimeError, match="unexpected final URL"):
+        fetch_public_history(
+            get=lambda url, timeout, allow_redirects: WrongFinalURL()
+        )
+
+
+def test_public_history_rejects_unapproved_source_endpoint_before_network(monkeypatch):
+    calls = []
+    monkeypatch.setattr(report_module, "PUBLIC_BASE", "http://example.invalid/mmz4281")
+    with pytest.raises(ValueError, match="approved HTTPS Football-Data endpoint"):
+        fetch_public_history(
+            get=lambda url, timeout, allow_redirects: calls.append(url)
+        )
+    assert calls == []
 
 
 
