@@ -1,20 +1,25 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone, tzinfo
 from io import BytesIO
 import hashlib
 import json
 import zipfile
+from typing import Any
 
 import pytest
+import serie_a_v2_current_form_forward_capture as forward_capture_module
 
 from serie_a_v2_current_form_forward_capture import (
     ARTIFACT_NAME,
     MANIFEST_FILENAME,
     SOURCE_WORKFLOW_PATH,
-    prepare_forward_capture,
+    prepare_forward_capture as _prepare_forward_capture,
     verify_latest_source_archive,
 )
 from serie_a_v2_current_form_source_capture import (
     CURRENT_CODE, CURRENT_FILENAME, CURRENT_SEASON, CURRENT_URL, REQUIRED_COLUMNS,
+)
+from serie_a_v2_current_form_source_capture import (
+    _current_source_fixture_identities, _fixture_identity_sha256, validate_current_season_csv,
 )
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
 from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes
@@ -26,6 +31,14 @@ ARTIFACT_CREATED = datetime(2026, 10, 18, 6, 31, tzinfo=timezone.utc)
 PARENT_CREATED = "2026-10-18T06:00:00+00:00"
 PARENT_COMPLETED = "2026-10-18T06:32:00+00:00"
 HEAD = "a" * 40
+
+
+class OffsetlessTZ(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
 
 
 def quote(
@@ -77,6 +90,11 @@ def make_archive():
         })
     current = make_current_csv()
     files[CURRENT_FILENAME] = current
+    current_frame, _ = validate_current_season_csv(
+        current, captured_at=datetime.fromisoformat(SOURCE_OBSERVED)
+    )
+    current_identities = _current_source_fixture_identities(current_frame)
+    current_identity_sha256 = _fixture_identity_sha256(current_identities)
     source_files.append({
         "season_code": CURRENT_CODE,
         "season": CURRENT_SEASON,
@@ -118,6 +136,12 @@ def make_archive():
             "checked_at_utc": "2026-10-18T06:00:00+00:00",
             "metadata_fields_read": ["match_date", "home_team", "away_team"],
             "score_or_result_fields_selected_for_gate": False,
+            "gate_fixture_identity_sha256": current_identity_sha256,
+            "gate_fixture_identity_count": len(current_identities),
+            "gate_fixture_identities_covered_by_current_source": len(current_identities),
+            "gate_fixture_identities_missing_from_current_source": 0,
+            "current_source_fixture_identity_sha256": current_identity_sha256,
+            "current_source_fixture_identity_count": len(current_identities),
             "passed": True,
         },
         "feature_policy": {
@@ -162,6 +186,19 @@ def make_archive():
         "sha256": hashlib.sha256(raw).hexdigest(),
     }
     return raw, [meta]
+
+
+def _fixture_current_gate_identities():
+    current_frame, _ = validate_current_season_csv(
+        make_current_csv(), captured_at=datetime.fromisoformat(SOURCE_OBSERVED)
+    )
+    return _current_source_fixture_identities(current_frame)
+
+
+def prepare_forward_capture(*args, **kwargs):
+    """Existing unit fixtures model a live metadata gate that matches their source archive."""
+    kwargs.setdefault("current_gate_identities", _fixture_current_gate_identities())
+    return _prepare_forward_capture(*args, **kwargs)
 
 
 def valid_parent(archive, *, quote_time):
@@ -215,6 +252,7 @@ def test_real_archive_verification_is_reported_even_without_any_fresh_quote(tmp_
         as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
         load_archive=lambda artifact_id: raw,
         verify_parent_run=valid_parent,
+        current_gate_identities=_fixture_current_gate_identities(),
         write_sources_to=tmp_path,
     )
     assert report["status"] == "VERIFIED"
@@ -225,11 +263,64 @@ def test_real_archive_verification_is_reported_even_without_any_fresh_quote(tmp_
     assert report["historical_old_season_file_count"] == 10
     assert report["source_file_count"] == 11
     assert report["current_season_history_rows"] == 30
+    attestation = report["feature_source_gate_attestation"]
+    assert attestation["verified"] is True
+    assert attestation["gate_fixture_identity_count"] == 30
+    assert attestation["gate_fixture_identities_covered_by_current_source"] == 30
+    assert attestation["gate_fixture_identities_missing_from_current_source"] == 0
+    assert attestation["current_source_fixture_identity_count"] == 30
+    expected_frame, _ = validate_current_season_csv(
+        make_current_csv(), captured_at=datetime.fromisoformat(SOURCE_OBSERVED)
+    )
+    expected_identity_sha256 = _fixture_identity_sha256(
+        _current_source_fixture_identities(expected_frame)
+    )
+    assert attestation["current_source_fixture_identity_sha256"] == expected_identity_sha256
     assert report["fresh_for_new_quote"] is True
     assert report["target_outcomes_read"] is False
     assert report["target_outcomes_scored"] is False
     assert report["paid_provider_calls"] == report["supabase_writes"] == 0
     assert len(list(tmp_path.glob("current-form-source-artifact-*.zip"))) == 1
+
+
+
+
+def test_forward_capture_fails_closed_when_new_completed_fixture_is_missing_from_archive(monkeypatch):
+    raw, archives = make_archive()
+    current_gate = _fixture_current_gate_identities() | {
+        ("2026-09-01", "Newly Completed Home", "Newly Completed Away")
+    }
+    monkeypatch.setattr(
+        forward_capture_module,
+        "shadow_preview",
+        lambda *_args, **_kwargs: pytest.fail("stale source must be blocked before inference"),
+    )
+    report = _prepare_forward_capture(
+        [quote()], archives,
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        load_archive=lambda _artifact_id: raw,
+        verify_parent_run=valid_parent,
+        current_gate_identities=current_gate,
+    )
+    assert report["v2_current_form_shadow_captured"] == 0
+    assert report["blocked"]["SOURCE_GATE_STALE"] == 1
+    assert report["rows"][0]["status"] == "SOURCE_GATE_STALE"
+    assert report["rows"][0]["source_gate_freshness"]["missing_identity_count"] == 1
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
+    assert report["production_or_supabase_writes"] == 0
+    assert report["paid_provider_calls"] == 0
+
+    verification = verify_latest_source_archive(
+        archives,
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        load_archive=lambda _artifact_id: raw,
+        verify_parent_run=valid_parent,
+        current_gate_identities=current_gate,
+    )
+    assert verification["fresh_for_current_feature_gate"] is False
+    assert verification["fresh_for_new_quote"] is False
+    assert verification["feature_source_gate_freshness"]["missing_identity_count"] == 1
 
 
 def test_missing_source_artifact_is_explicitly_reported_without_reading_outcomes():
@@ -245,6 +336,138 @@ def test_missing_source_artifact_is_explicitly_reported_without_reading_outcomes
     assert report["verified"] is False
     assert report["target_outcomes_read"] is False
     assert report["target_outcomes_scored"] is False
+
+
+
+def test_latest_failed_source_artifact_is_skipped_for_previous_verified_archive(tmp_path):
+    raw, archives = make_archive()
+    previous = archives[0]
+    failed = {
+        **previous,
+        "artifact_id": 9877,
+        "run_id": 456,
+        "created_at": previous["created_at"] + timedelta(minutes=1),
+    }
+    loaded = []
+
+    def verify_parent(archive, *, quote_time):
+        if archive["run_id"] == 456:
+            raise ValueError("artifact parent is not a successful main current-form source run")
+        return valid_parent(archive, quote_time=quote_time)
+
+    report = verify_latest_source_archive(
+        [previous, failed],
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        load_archive=lambda artifact_id: (loaded.append(artifact_id), raw)[1],
+        verify_parent_run=verify_parent,
+        current_gate_identities=_fixture_current_gate_identities(),
+        write_sources_to=tmp_path,
+    )
+
+    assert report["status"] == "VERIFIED"
+    assert report["artifact_id"] == previous["artifact_id"]
+    assert loaded == [previous["artifact_id"]]
+    assert report["unverified_parent_artifact_ids"] == [failed["artifact_id"]]
+    assert report["unverified_parent_artifact_count"] == 1
+
+
+def test_only_failed_source_artifacts_are_reported_without_download():
+    _raw, archives = make_archive()
+    failed = {
+        **archives[0],
+        "artifact_id": 9877,
+        "run_id": 456,
+        "created_at": archives[0]["created_at"] + timedelta(minutes=1),
+    }
+
+    report = verify_latest_source_archive(
+        [failed],
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        load_archive=lambda _artifact_id: (_ for _ in ()).throw(
+            AssertionError("unverified failed-run artifact must not be downloaded")
+        ),
+        verify_parent_run=lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            ValueError("artifact parent is not a successful main current-form source run")
+        ),
+        current_gate_identities=_fixture_current_gate_identities(),
+    )
+
+    assert report["status"] == "NO_SOURCE_ARCHIVE"
+    assert report["verified"] is False
+    assert report["source_archive_rejection_reason"] == "NO_VERIFIED_SUCCESSFUL_SOURCE_PARENT"
+    assert report["unverified_parent_artifact_count"] == 1
+    assert report["unverified_parent_artifact_ids"] == [failed["artifact_id"]]
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
+
+def test_latest_source_verification_rejects_offsetless_clock_before_callbacks(tmp_path):
+    raw, archives = make_archive()
+    callbacks = []
+
+    def load_archive(_artifact_id):
+        callbacks.append("load_archive")
+        return raw
+
+    def verify_parent_run(_archive, *, quote_time):
+        callbacks.append("verify_parent_run")
+        return valid_parent(_archive, quote_time=quote_time)
+
+    with pytest.raises(ValueError, match="explicit UTC offset"):
+        verify_latest_source_archive(
+            archives,
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=OffsetlessTZ()),
+            load_archive=load_archive,
+            verify_parent_run=verify_parent_run,
+            write_sources_to=tmp_path,
+        )
+
+    assert callbacks == []
+    assert list(tmp_path.iterdir()) == []
+
+
+def _rewrite_gate_manifest(raw: bytes, archives: list[dict], *, field: str, value: Any, remove: bool = False):
+    with zipfile.ZipFile(BytesIO(raw), "r") as original:
+        files = {name: original.read(name) for name in original.namelist()}
+    manifest = json.loads(files[MANIFEST_FILENAME])
+    gate = manifest["feature_source_gate"]
+    if remove:
+        gate.pop(field, None)
+    else:
+        gate[field] = value
+    files[MANIFEST_FILENAME] = (json.dumps(manifest, sort_keys=True) + "\n").encode()
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as rewritten:
+        for name, body in files.items():
+            rewritten.writestr(name, body)
+    tampered = buffer.getvalue()
+    archives[0]["sha256"] = hashlib.sha256(tampered).hexdigest()
+    return tampered
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "remove", "message"),
+    [
+        ("gate_fixture_identity_sha256", "not-a-sha256", False, "identity attestation"),
+        ("gate_fixture_identity_count", 29, False, "identity attestation"),
+        ("gate_fixture_identities_covered_by_current_source", 29, False, "identity attestation"),
+        ("gate_fixture_identities_missing_from_current_source", 1, False, "identity attestation"),
+        ("current_source_fixture_identity_count", 31, False, "identity digest/count mismatch"),
+        ("current_source_fixture_identity_sha256", "0" * 64, False, "identity digest/count mismatch"),
+        ("gate_fixture_identity_sha256", "", True, "identity attestation"),
+    ],
+)
+def test_forward_reader_rejects_missing_or_inconsistent_gate_identity_attestation(
+    field, value, remove, message
+):
+    raw, archives = make_archive()
+    tampered = _rewrite_gate_manifest(raw, archives, field=field, value=value, remove=remove)
+    with pytest.raises(ValueError, match=message):
+        verify_latest_source_archive(
+            archives,
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            load_archive=lambda _artifact_id: tampered,
+            verify_parent_run=valid_parent,
+        )
 
 
 def test_precontract_quote_is_never_backfilled_from_a_later_source_archive():

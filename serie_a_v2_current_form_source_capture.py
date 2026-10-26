@@ -30,6 +30,7 @@ WORKFLOW_PATH = ".github/workflows/serie-a-v2-current-form-source-capture.yml"
 SCHEMA_VERSION = "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V1"
 CURRENT_CODE = SERIE_A_RUNTIME_CONFIG.finished_results_source.season_code
 CURRENT_SEASON = SERIE_A_RUNTIME_CONFIG.finished_results_source.season
+CURRENT_SEASON_START = date(int(CURRENT_SEASON[:4]), 7, 1)
 CURRENT_URL = f"{PUBLIC_BASE}/{CURRENT_CODE}/{SERIE_A_RUNTIME_CONFIG.finished_results_source.competition_code}.csv"
 CURRENT_FILENAME = f"serie_a_{CURRENT_CODE}.csv"
 MANIFEST_FILENAME = "serie_a_v2_current_form_source_manifest.json"
@@ -58,7 +59,9 @@ def count_unique_completed_primary_events(
     unique: set[tuple[str, str, str]] = set()
     for row in rows:
         match_date = row.get("match_date")
-        if isinstance(match_date, date):
+        if isinstance(match_date, datetime):
+            parsed_date = match_date.date()
+        elif isinstance(match_date, date):
             parsed_date = match_date
         elif isinstance(match_date, str):
             try:
@@ -67,20 +70,25 @@ def count_unique_completed_primary_events(
                 raise ValueError("invalid primary event date in gate metadata") from exc
         else:
             raise ValueError("missing primary event date in gate metadata")
+        if parsed_date < CURRENT_SEASON_START:
+            raise ValueError("primary event metadata contains a pre-season fixture identity")
         if parsed_date >= before_date:
             continue
         home = _canonical_team(row.get("home_team"))
         away = _canonical_team(row.get("away_team"))
         if home == away:
             raise ValueError("invalid primary event identity in gate metadata")
-        unique.add((parsed_date.isoformat(), home, away))
+        identity = (parsed_date.isoformat(), home, away)
+        if (identity[0], away, home) in unique:
+            raise ValueError("primary event metadata contains a reversed duplicate fixture identity")
+        unique.add(identity)
     return len(unique)
 
 
 def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
     """Read only event date/team metadata; no goals, result or settlement columns."""
-    if now.tzinfo is None:
-        raise ValueError("feature-source gate clock must be timezone-aware")
+    if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError("feature-source gate clock must have a real UTC offset")
     cutoff = now.astimezone(timezone.utc).date().isoformat()
     rows: list[dict[str, Any]] = []
     start = 0
@@ -91,7 +99,7 @@ def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
             .select("match_date,home_team,away_team")
             .eq("league", "SERIE_A")
             .eq("season", CURRENT_SEASON)
-            .gte("match_date", "2026-07-01")
+            .gte("match_date", CURRENT_SEASON_START.isoformat())
             .lt("match_date", cutoff)
             .range(start, start + page_size - 1)
             .execute()
@@ -108,6 +116,73 @@ def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
     return count_unique_completed_primary_events(rows, before_date=now.astimezone(timezone.utc).date())
 
 
+def _primary_event_identities(
+    rows: list[Mapping[str, Any]], *, before_date: date
+) -> set[tuple[str, str, str]]:
+    """Canonical event identities used to prove that the source CSV covers the gate."""
+    unique: set[tuple[str, str, str]] = set()
+    for row in rows:
+        match_date = row.get("match_date")
+        if isinstance(match_date, datetime):
+            parsed_date = match_date.date()
+        elif isinstance(match_date, date):
+            parsed_date = match_date
+        elif isinstance(match_date, str):
+            try:
+                parsed_date = date.fromisoformat(match_date[:10])
+            except ValueError as exc:
+                raise ValueError("invalid primary event date in gate metadata") from exc
+        else:
+            raise ValueError("missing primary event date in gate metadata")
+        if parsed_date < CURRENT_SEASON_START:
+            raise ValueError("primary event metadata contains a pre-season fixture identity")
+        if parsed_date >= before_date:
+            continue
+        home = _canonical_team(row.get("home_team"))
+        away = _canonical_team(row.get("away_team"))
+        if home == away:
+            raise ValueError("invalid primary event identity in gate metadata")
+        identity = (parsed_date.isoformat(), home, away)
+        if (identity[0], away, home) in unique:
+            raise ValueError("primary event metadata contains a reversed duplicate fixture identity")
+        unique.add(identity)
+    return unique
+
+
+def read_completed_primary_event_identities(
+    client: Any, *, now: datetime
+) -> set[tuple[str, str, str]]:
+    """Read only date/team metadata and return canonical identities for source parity."""
+    if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError("feature-source gate clock must have an explicit UTC offset")
+    cutoff_date = now.astimezone(timezone.utc).date()
+    cutoff = cutoff_date.isoformat()
+    rows: list[dict[str, Any]] = []
+    start = 0
+    page_size = 1000
+    while True:
+        response = (
+            client.table("league_finished_results")
+            .select("match_date,home_team,away_team")
+            .eq("league", "SERIE_A")
+            .eq("season", CURRENT_SEASON)
+            .gte("match_date", CURRENT_SEASON_START.isoformat())
+            .lt("match_date", cutoff)
+            .range(start, start + page_size - 1)
+            .execute()
+        )
+        page = response.data or []
+        if not isinstance(page, list):
+            raise ValueError("Supabase feature-source gate returned malformed event metadata")
+        rows.extend(page)
+        if len(page) < page_size:
+            break
+        start += page_size
+        if start > 10000:
+            raise ValueError("Supabase feature-source gate pagination exceeded safety bound")
+    return _primary_event_identities(rows, before_date=cutoff_date)
+
+
 def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[pd.DataFrame, int]:
     """Return only completed, fully observed rows strictly before capture day.
 
@@ -116,8 +191,12 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     are never converted to features. The returned frame contains no incomplete
     fixtures and exactly the original V2 builder's required columns.
     """
-    if captured_at.tzinfo is None:
-        raise ValueError("current-season source capture clock must be timezone-aware")
+    if (
+        not isinstance(captured_at, datetime)
+        or captured_at.tzinfo is None
+        or captured_at.utcoffset() is None
+    ):
+        raise ValueError("current-season source capture clock must have a real UTC offset")
     if not raw or len(raw) > MAX_CURRENT_CSV_BYTES:
         raise ValueError("current-season CSV is empty or exceeds size limit")
     frame = pd.read_csv(BytesIO(raw), low_memory=False)
@@ -149,20 +228,45 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
         (completed["FTHG"] < completed["FTAG"]) != (completed["FTR"] == "A")
     ).any():
         raise ValueError("current-season result does not match full-time goals")
-    identities = []
+    identities: set[tuple[str, str, str]] = set()
     for _, row in completed.iterrows():
         home = _canonical_team(row["HomeTeam"])
         away = _canonical_team(row["AwayTeam"])
         if home == away:
             raise ValueError("current-season fixture has identical canonical teams")
-        identities.append((row["_parsed_date"].isoformat(), home, away))
-    if len(identities) != len(set(identities)):
-        raise ValueError("current-season source has duplicate fixture identities")
+        identity = (row["_parsed_date"].isoformat(), home, away)
+        if identity in identities:
+            raise ValueError("current-season source has duplicate fixture identities")
+        if (identity[0], away, home) in identities:
+            raise ValueError("current-season source has reversed duplicate fixture identities")
+        identities.add(identity)
     completed["Date"] = completed["_parsed_date"].map(
         lambda value: value.strftime("%d/%m/%Y")
     )
     result = completed.loc[:, list(REQUIRED_COLUMNS)].copy()
     return result, len(frame) - len(completed)
+
+
+def _current_source_fixture_identities(
+    frame: pd.DataFrame,
+) -> set[tuple[str, str, str]]:
+    """Canonical fixture identities in the already validated current-season CSV."""
+    identities: set[tuple[str, str, str]] = set()
+    for _, row in frame.iterrows():
+        parsed_date = pd.to_datetime(
+            row["Date"], dayfirst=True, format="mixed", errors="raise"
+        ).date()
+        home = _canonical_team(row["HomeTeam"])
+        away = _canonical_team(row["AwayTeam"])
+        identities.add((parsed_date.isoformat(), home, away))
+    return identities
+
+
+def _fixture_identity_sha256(
+    identities: set[tuple[str, str, str]],
+) -> str:
+    payload = "\n".join("\t".join(identity) for identity in sorted(identities))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def capture_source_archive(
@@ -175,10 +279,11 @@ def capture_source_archive(
     clock=lambda: datetime.now(timezone.utc),
 ) -> dict:
     """Capture the ten frozen historical seasons plus the gated current-season source."""
-    if now.tzinfo is None:
-        raise ValueError("source capture clock must be timezone-aware")
+    if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError("source capture clock must have a real UTC offset")
     at = now.astimezone(timezone.utc)
-    gate_count = read_completed_primary_event_count(client, now=at)
+    gate_identities = read_completed_primary_event_identities(client, now=at)
+    gate_count = len(gate_identities)
     if gate_count < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
         raise RuntimeError(
             "current-form feature-source gate closed: "
@@ -191,13 +296,35 @@ def capture_source_archive(
         raise ValueError("original frozen historical source archive incomplete")
     response = get(CURRENT_URL, timeout=30)
     response.raise_for_status()
+    observed_clock = clock()
+    if (
+        not isinstance(observed_clock, datetime)
+        or observed_clock.tzinfo is None
+        or observed_clock.utcoffset() is None
+    ):
+        raise ValueError("source observation clock must have a real UTC offset")
+    observed_at = observed_clock.astimezone(timezone.utc)
     raw = response.content
-    observed_at = clock().astimezone(timezone.utc)
     current_rows, excluded_rows = validate_current_season_csv(raw, captured_at=observed_at)
     if len(current_rows) < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
         raise RuntimeError(
             "public current-season source has fewer completed prior-day matches than the feature-source gate"
         )
+    source_identities = _current_source_fixture_identities(current_rows)
+    missing_gate_identities = gate_identities - source_identities
+    if missing_gate_identities:
+        raise RuntimeError(
+            "current-form CSV omits "
+            f"{len(missing_gate_identities)} completed fixture identities used by the metadata gate"
+        )
+    archive_clock = clock()
+    if (
+        not isinstance(archive_clock, datetime)
+        or archive_clock.tzinfo is None
+        or archive_clock.utcoffset() is None
+    ):
+        raise ValueError("source archive creation clock must have a real UTC offset")
+    archive_created_at = archive_clock.astimezone(timezone.utc)
     current_path = output_dir / CURRENT_FILENAME
     current_path.write_bytes(raw)
     audits = list(old_audit) + [{
@@ -221,7 +348,7 @@ def capture_source_archive(
         "workflow_path": WORKFLOW_PATH,
         "git_sha": os.environ.get("GITHUB_SHA", ""),
         "workflow_run_id": os.environ.get("GITHUB_RUN_ID", ""),
-        "source_archive_created_at_utc": clock().astimezone(timezone.utc).isoformat(),
+        "source_archive_created_at_utc": archive_created_at.isoformat(),
         "frozen_candidate_sha256": FROZEN_SHA,
         "original_feature_builder_git_blob_sha1": "401b3a0893371bfa4a488ec92a4a54af2678c8f7",
         "feature_count": len(FEATURE_SETS["ALL_FOOTBALL"]),
@@ -243,6 +370,12 @@ def capture_source_archive(
             "checked_at_utc": at.isoformat(),
             "metadata_fields_read": ["match_date", "home_team", "away_team"],
             "score_or_result_fields_selected_for_gate": False,
+            "gate_fixture_identity_sha256": _fixture_identity_sha256(gate_identities),
+            "gate_fixture_identity_count": gate_count,
+            "gate_fixture_identities_covered_by_current_source": len(gate_identities & source_identities),
+            "gate_fixture_identities_missing_from_current_source": len(missing_gate_identities),
+            "current_source_fixture_identity_sha256": _fixture_identity_sha256(source_identities),
+            "current_source_fixture_identity_count": len(source_identities),
             "passed": True,
         },
         "feature_policy": {
