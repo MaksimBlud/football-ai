@@ -94,6 +94,23 @@ def test_gate_counts_unique_primary_fixture_metadata_only_and_normalizes_aliases
     ) == 2
 
 
+
+def test_gate_count_rejects_preseason_metadata_rows():
+    with pytest.raises(ValueError, match="pre-season fixture identity"):
+        count_unique_completed_primary_events(
+            [{"match_date": "2026-06-30", "home_team": "Home", "away_team": "Away"}],
+            before_date=date(2026, 10, 18),
+        )
+
+
+def test_gate_count_rejects_reversed_duplicate_after_alias_normalization():
+    rows = [
+        {"match_date": "2026-08-22", "home_team": "Atalanta BC", "away_team": "Juventus"},
+        {"match_date": "2026-08-22", "home_team": "Juventus", "away_team": "Atalanta"},
+    ]
+    with pytest.raises(ValueError, match="reversed duplicate fixture identity"):
+        count_unique_completed_primary_events(rows, before_date=date(2026, 10, 18))
+
 def test_live_feature_gate_query_selects_only_fixture_metadata_not_scores():
     client = FakeQuery(event_rows(30))
     count = read_completed_primary_event_count(
@@ -113,6 +130,27 @@ def test_gate_identity_reader_returns_canonical_metadata_only():
     assert identities == {("2026-10-01", "Atalanta", "Juventus")}
     assert client.selected == "match_date,home_team,away_team"
 
+
+
+def test_gate_identity_reader_rejects_preseason_metadata_rows():
+    client = FakeQuery([
+        {"match_date": "2026-06-30", "home_team": "Home", "away_team": "Away"},
+    ])
+    with pytest.raises(ValueError, match="pre-season fixture identity"):
+        read_completed_primary_event_identities(
+            client, now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
+def test_gate_identity_reader_rejects_reversed_duplicate_after_alias_normalization():
+    client = FakeQuery([
+        {"match_date": "2026-08-22", "home_team": "Atalanta BC", "away_team": "Juventus"},
+        {"match_date": "2026-08-22", "home_team": "Juventus", "away_team": "Atalanta"},
+    ])
+    with pytest.raises(ValueError, match="reversed duplicate fixture identity"):
+        read_completed_primary_event_identities(
+            client, now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
 
 def test_current_csv_uses_only_completed_rows_strictly_before_capture_day():
     raw = current_csv(n=30, same_day=True, future_unplayed=True)
