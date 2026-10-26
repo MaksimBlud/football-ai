@@ -187,7 +187,7 @@ def test_current_csv_rejects_reversed_duplicate_fixture_identity():
         "01/08/2026,Atalanta BC,Juventus,1,0,H,5,3,2,1,0,0\n"
         "01/08/2026,Juventus,Atalanta,0,1,A,4,6,1,2,0,0\n"
     ).encode()
-    with pytest.raises(ValueError, match="reversed duplicate fixture identities"):
+    with pytest.raises(ValueError, match="reversed duplicate fixture identity"):
         validate_current_season_csv(
             raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
         )
