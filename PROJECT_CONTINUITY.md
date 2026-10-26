@@ -94,6 +94,18 @@ Fresh main inspected for this update: `40887ebb215730190d7a6c7a1693373ec4afcdfc`
 
 # Football AI — Project Continuity
 
+## 2026-10-26 — Additional live source/forward proof and free diagnostic
+
+Fresh read-only audit on 2026-10-26 confirms that the original V2 source/forward pipeline ran on the unchanged `main` SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`:
+
+- [Source Capture run 40316117199](https://github.com/MaksimBlud/football-ai/actions/runs/40316117199) completed SUCCESS at 2026-10-26T11:35:41Z. 19 tests passed; gate count 70; current-season prior-day rows 70; historical source 10 CSV / 3,870 matches; total source files 11; candidate SHA remained `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`. Source artifact `12647281024`, ZIP SHA-256 `0ecfd702f0cd24f21894e93b0cbe63c65340a3eb48d3180e27652a3ad43c5e9b`.
+- [Current-Form Forward-Only Preview run 40316226164](https://github.com/MaksimBlud/football-ai/actions/runs/40316226164) completed SUCCESS. 53 tests passed; source archive and parent workflow provenance verified; source age was 40 seconds at verification; 0 saved quotes were eligible, 0 shadow forecasts were captured, 0 target outcomes were read/scored, 0 paid provider calls, and 0 Supabase writes. Forward artifact `12647321126`, ZIP SHA-256 `c4148dbcdb2151edcf069b1735a4213d2ca6a49e5ebd5492bc1fb036a79f1d4e`.
+- [Free real-quote diagnostic run 40325839042](https://github.com/MaksimBlud/football-ai/actions/runs/40325839042) completed SUCCESS at 12:52Z; 53 tests passed and a new diagnostic/source artifact `12651690084` was uploaded (ZIP SHA-256 `f58de4b962978f86574ccaf761a7f4b2ca3e8e00a182ce305d61cdb9fb68e537`). The report explicitly says `quoted_fixtures=0`, `diagnostic_scored=0`, `eligible_for_frozen_prospective_cohort=false`, `eligible_for_product_publication=false`, and `mode=RESEARCH_ONLY_UNVERIFIED_PROVENANCE_NO_BET`.
+- Read-only Supabase odds audit at `2026-10-26T14:01:11Z` found 0 future prematch snapshots total and 0 in the previous 24 hours; latest valid prematch snapshot remains `2026-10-13T14:48:53Z`. This blocks new prospective inference. No target outcomes were queried.
+
+This is genuine runtime/source-provenance evidence, **not** a prediction-quality result. Since there were no eligible quotes, the run does not demonstrate source-before-quote for a new market observation and does not count toward the 30-primary-completed-event evaluation gate. The current main still lacks the unmerged hardening in PRs #694/#695/#688/#692; those remain separate review work. No weights/features, active lambda, production artifacts, database rows/schema, or protected outcomes were changed.
+
+
 
 ## 2026-10-18 — Original V2: preregistered current-form forward-only source and quote pipeline (runtime proof pending)
 
