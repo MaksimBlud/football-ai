@@ -36,7 +36,14 @@ FORBIDDEN = frozenset((
     "ft_away_goals", "home_goals_scored", "away_goals_scored",
     "actual_result", "actual_outcome", "settled_result", "settled_outcome",
     "match_result", "result_code", "home_result", "away_result",
-    "target_result", "target_outcome", "winner", "winning_team"
+    "target_result", "target_outcome", "winner", "winning_team",
+    # Additional common JSON/API spellings of final scores and full-time outcomes.
+    "final_home_score", "final_away_score", "home_final_score", "away_final_score",
+    "final_home_goals", "final_away_goals", "home_final_goals", "away_final_goals",
+    "full_time_result", "full_time_score", "final_result", "final_outcome",
+    "ft_result", "ft_score", "home_score_ft", "away_score_ft", "scoreline", "score_line",
+    "home_team_goals", "away_team_goals", "goals_home", "goals_away",
+    "home_goal_count", "away_goal_count", "winning_side"
 ))
 MARKET_KEYS = (
     "event_id", "league", "home_team", "away_team", "commence_time_utc",
