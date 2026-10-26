@@ -338,6 +338,68 @@ def test_missing_source_artifact_is_explicitly_reported_without_reading_outcomes
     assert report["target_outcomes_scored"] is False
 
 
+
+def test_latest_failed_source_artifact_is_skipped_for_previous_verified_archive(tmp_path):
+    raw, archives = make_archive()
+    previous = archives[0]
+    failed = {
+        **previous,
+        "artifact_id": 9877,
+        "run_id": 456,
+        "created_at": previous["created_at"] + timedelta(minutes=1),
+    }
+    loaded = []
+
+    def verify_parent(archive, *, quote_time):
+        if archive["run_id"] == 456:
+            raise ValueError("artifact parent is not a successful main current-form source run")
+        return valid_parent(archive, quote_time=quote_time)
+
+    report = verify_latest_source_archive(
+        [previous, failed],
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        load_archive=lambda artifact_id: (loaded.append(artifact_id), raw)[1],
+        verify_parent_run=verify_parent,
+        current_gate_identities=_fixture_current_gate_identities(),
+        write_sources_to=tmp_path,
+    )
+
+    assert report["status"] == "VERIFIED"
+    assert report["artifact_id"] == previous["artifact_id"]
+    assert loaded == [previous["artifact_id"]]
+    assert report["unverified_parent_artifact_ids"] == [failed["artifact_id"]]
+    assert report["unverified_parent_artifact_count"] == 1
+
+
+def test_only_failed_source_artifacts_are_reported_without_download():
+    _raw, archives = make_archive()
+    failed = {
+        **archives[0],
+        "artifact_id": 9877,
+        "run_id": 456,
+        "created_at": archives[0]["created_at"] + timedelta(minutes=1),
+    }
+
+    report = verify_latest_source_archive(
+        [failed],
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        load_archive=lambda _artifact_id: (_ for _ in ()).throw(
+            AssertionError("unverified failed-run artifact must not be downloaded")
+        ),
+        verify_parent_run=lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            ValueError("artifact parent is not a successful main current-form source run")
+        ),
+        current_gate_identities=_fixture_current_gate_identities(),
+    )
+
+    assert report["status"] == "NO_SOURCE_ARCHIVE"
+    assert report["verified"] is False
+    assert report["source_archive_rejection_reason"] == "NO_VERIFIED_SUCCESSFUL_SOURCE_PARENT"
+    assert report["unverified_parent_artifact_count"] == 1
+    assert report["unverified_parent_artifact_ids"] == [failed["artifact_id"]]
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
+
 def test_latest_source_verification_rejects_offsetless_clock_before_callbacks(tmp_path):
     raw, archives = make_archive()
     callbacks = []
