@@ -160,6 +160,8 @@ def test_feature_identity_and_frozen_feature_list_cannot_be_guessed():
 @pytest.mark.parametrize("field", [
     "FTR", "FTHG", "FTAG", "homeScore", "awayScore",
     "Full Time Home Goals", "ActualResult", "Settled Outcome",
+    "FinalHomeScore", "FinalAwayScore", "FullTimeResult", "scoreLine",
+    "homeScoreFT", "awayFinalGoals", "goalsHome",
 ])
 def test_common_score_result_aliases_are_rejected_in_market_payload(field):
     row = market()
@@ -170,6 +172,7 @@ def test_common_score_result_aliases_are_rejected_in_market_payload(field):
 
 @pytest.mark.parametrize("field", [
     "FTR", "FTHG", "FTAG", "homeScore", "ActualResult", "Final Score",
+    "Final Home Score", "fullTimeResult", "score_line", "homeTeamGoals",
 ])
 def test_common_score_result_aliases_are_rejected_in_feature_payload(field):
     item = features()
