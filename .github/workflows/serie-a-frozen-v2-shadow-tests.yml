@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - "serie_a_v2_frozen_shadow_preview.py"
+      - "market_anchor_1x2_v2_shadow.py"
+      - "market_anchor_1x2_v1.py"
       - "serie_a_v2_asof_feature_manifest.py"
       - "serie_a_v2_live_diagnostic_report.py"
       - "serie_a_v2_prequote_source_archive_gate.py"
@@ -55,7 +57,7 @@ jobs:
           python -m pip install pytest numpy pandas scipy scikit-learn requests supabase
       - name: Run actual restored V2 weights against strict synthetic fixture inputs
         run: |
-          python -m py_compile serie_a_v2_frozen_shadow_preview.py serie_a_v2_asof_feature_manifest.py serie_a_v2_live_diagnostic_report.py serie_a_v2_prequote_source_archive_gate.py serie_a_v2_forward_capture.py serie_a_v2_attest_real_source.py serie_a_v2_current_form_source_capture.py serie_a_v2_current_form_forward_capture.py
+          python -m py_compile serie_a_v2_frozen_shadow_preview.py serie_a_v2_asof_feature_manifest.py serie_a_v2_live_diagnostic_report.py serie_a_v2_prequote_source_archive_gate.py serie_a_v2_forward_capture.py serie_a_v2_attest_real_source.py serie_a_v2_current_form_source_capture.py serie_a_v2_current_form_forward_capture.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py
           python -m pytest -q tests/test_serie_a_v2_frozen_shadow_preview.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_atalanta_alias.py tests/test_serie_a_v2_live_diagnostic_report.py tests/test_serie_a_v2_prequote_source_archive_gate.py tests/test_serie_a_v2_forward_capture.py tests/test_serie_a_v2_manual_quote_trigger_contract.py tests/test_serie_a_v2_attest_real_source.py tests/test_serie_a_v2_current_form_source_capture.py tests/test_serie_a_v2_current_form_forward_capture.py tests/test_serie_a_v2_current_form_source_workflow_contract.py tests/test_historical_football_signal_lab.py
       - name: Verify no production model hashes changed
         run: |
