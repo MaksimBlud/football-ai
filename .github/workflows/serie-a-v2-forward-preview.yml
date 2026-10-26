@@ -17,7 +17,9 @@ on:
     paths:
       - "serie_a_v2_forward_capture.py"
       - "serie_a_v2_prequote_source_archive_gate.py"
+      - "tests/test_serie_a_v2_prequote_source_archive_gate.py"
       - "serie_a_v2_live_diagnostic_report.py"
+      - "tests/test_serie_a_v2_live_diagnostic_report.py"
       - "serie_a_v2_asof_feature_manifest.py"
       - "serie_a_v2_frozen_shadow_preview.py"
       - "market_anchor_1x2_v2_shadow.py"
