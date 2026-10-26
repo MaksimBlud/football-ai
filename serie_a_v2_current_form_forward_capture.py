@@ -416,8 +416,45 @@ def verify_latest_source_archive(
             "paid_provider_calls": 0,
             "supabase_writes": 0,
         }
-    archive = candidates[0]
-    parent = verify_parent_run(archive, quote_time=now)
+    rejected_parent_artifact_ids: list[int] = []
+    archive = None
+    parent = None
+    # A failed source workflow can still upload a partial diagnostic artifact
+    # because the workflow's artifact step uses if: always(). Skip only the
+    # explicit parent-run rejection; integrity/timestamp failures remain fatal.
+    for candidate in candidates:
+        try:
+            candidate_parent = verify_parent_run(candidate, quote_time=now)
+        except ValueError as exc:
+            if str(exc) != "artifact parent is not a successful main current-form source run":
+                raise
+            rejected_id = candidate.get("artifact_id")
+            if type(rejected_id) is int and rejected_id > 0:
+                rejected_parent_artifact_ids.append(rejected_id)
+            continue
+        archive = candidate
+        parent = candidate_parent
+        break
+    if archive is None:
+        return {
+            "status": "NO_SOURCE_ARCHIVE",
+            "verified": False,
+            "verified_at_utc": now.isoformat(),
+            "fresh_for_new_quote": False,
+            "fresh_for_current_feature_gate": False,
+            "feature_source_gate_freshness": _current_gate_freshness(
+                current_gate_identities, None
+            ),
+            "source_archive_rejection_reason": (
+                "NO_VERIFIED_SUCCESSFUL_SOURCE_PARENT" if rejected_parent_artifact_ids else None
+            ),
+            "unverified_parent_artifact_count": len(rejected_parent_artifact_ids),
+            "unverified_parent_artifact_ids": sorted(rejected_parent_artifact_ids),
+            "target_outcomes_read": False,
+            "target_outcomes_scored": False,
+            "paid_provider_calls": 0,
+            "supabase_writes": 0,
+        }
     raw = load_archive(archive["artifact_id"])
     history, source_meta = verify_and_load_archive(raw, archive, parent)
     if write_sources_to is not None:
@@ -457,6 +494,8 @@ def verify_latest_source_archive(
         "paid_provider_calls": 0,
         "supabase_writes": 0,
         "no_bet": True,
+        "unverified_parent_artifact_count": len(rejected_parent_artifact_ids),
+        "unverified_parent_artifact_ids": sorted(rejected_parent_artifact_ids),
     }
 
 
