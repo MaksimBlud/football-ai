@@ -224,15 +224,18 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
         (completed["FTHG"] < completed["FTAG"]) != (completed["FTR"] == "A")
     ).any():
         raise ValueError("current-season result does not match full-time goals")
-    identities = []
+    identities: set[tuple[str, str, str]] = set()
     for _, row in completed.iterrows():
         home = _canonical_team(row["HomeTeam"])
         away = _canonical_team(row["AwayTeam"])
         if home == away:
             raise ValueError("current-season fixture has identical canonical teams")
-        identities.append((row["_parsed_date"].isoformat(), home, away))
-    if len(identities) != len(set(identities)):
-        raise ValueError("current-season source has duplicate fixture identities")
+        identity = (row["_parsed_date"].isoformat(), home, away)
+        if identity in identities:
+            raise ValueError("current-season source has duplicate fixture identities")
+        if (identity[0], away, home) in identities:
+            raise ValueError("current-season source has reversed duplicate fixture identities")
+        identities.add(identity)
     completed["Date"] = completed["_parsed_date"].map(
         lambda value: value.strftime("%d/%m/%Y")
     )
