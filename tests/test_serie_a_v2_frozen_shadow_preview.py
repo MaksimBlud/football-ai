@@ -156,6 +156,35 @@ def test_feature_identity_and_frozen_feature_list_cannot_be_guessed():
         v2_preview.shadow_preview([market()], [features(), features()], as_of_utc=NOW)
 
 
+
+@pytest.mark.parametrize("field", [
+    "FTR", "FTHG", "FTAG", "homeScore", "awayScore",
+    "Full Time Home Goals", "ActualResult", "Settled Outcome",
+])
+def test_common_score_result_aliases_are_rejected_in_market_payload(field):
+    row = market()
+    row[field] = "H"
+    with pytest.raises(ValueError, match="outcomes or settlement fields"):
+        v2_preview.shadow_preview([row], [features()], as_of_utc=NOW)
+
+
+@pytest.mark.parametrize("field", [
+    "FTR", "FTHG", "FTAG", "homeScore", "ActualResult", "Final Score",
+])
+def test_common_score_result_aliases_are_rejected_in_feature_payload(field):
+    item = features()
+    item["features"][field] = "H"
+    with pytest.raises(ValueError, match="result fields cannot be provided as model features"):
+        v2_preview.shadow_preview([market()], [item], as_of_utc=NOW)
+
+
+def test_nested_outcome_alias_is_rejected_before_inference():
+    row = market()
+    row["diagnostic"] = {"details": [{"Full Time Home Goals": 1}]}
+    with pytest.raises(ValueError, match="outcomes or settlement fields"):
+        v2_preview.shadow_preview([row], [features()], as_of_utc=NOW)
+
+
 def test_fallback_uses_latest_qualified_observation_only():
     earlier = market(snapshot_time_utc="2026-10-13T12:00:00Z",home_odds=3.0)
     report = v2_preview.shadow_preview([market(),earlier], [features()], as_of_utc=NOW)
