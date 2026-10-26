@@ -30,6 +30,7 @@ WORKFLOW_PATH = ".github/workflows/serie-a-v2-current-form-source-capture.yml"
 SCHEMA_VERSION = "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V1"
 CURRENT_CODE = SERIE_A_RUNTIME_CONFIG.finished_results_source.season_code
 CURRENT_SEASON = SERIE_A_RUNTIME_CONFIG.finished_results_source.season
+CURRENT_SEASON_START = date(int(CURRENT_SEASON[:4]), 7, 1)
 CURRENT_URL = f"{PUBLIC_BASE}/{CURRENT_CODE}/{SERIE_A_RUNTIME_CONFIG.finished_results_source.competition_code}.csv"
 CURRENT_FILENAME = f"serie_a_{CURRENT_CODE}.csv"
 MANIFEST_FILENAME = "serie_a_v2_current_form_source_manifest.json"
@@ -58,7 +59,9 @@ def count_unique_completed_primary_events(
     unique: set[tuple[str, str, str]] = set()
     for row in rows:
         match_date = row.get("match_date")
-        if isinstance(match_date, date):
+        if isinstance(match_date, datetime):
+            parsed_date = match_date.date()
+        elif isinstance(match_date, date):
             parsed_date = match_date
         elif isinstance(match_date, str):
             try:
@@ -67,13 +70,18 @@ def count_unique_completed_primary_events(
                 raise ValueError("invalid primary event date in gate metadata") from exc
         else:
             raise ValueError("missing primary event date in gate metadata")
+        if parsed_date < CURRENT_SEASON_START:
+            raise ValueError("primary event metadata contains a pre-season fixture identity")
         if parsed_date >= before_date:
             continue
         home = _canonical_team(row.get("home_team"))
         away = _canonical_team(row.get("away_team"))
         if home == away:
             raise ValueError("invalid primary event identity in gate metadata")
-        unique.add((parsed_date.isoformat(), home, away))
+        identity = (parsed_date.isoformat(), home, away)
+        if (identity[0], away, home) in unique:
+            raise ValueError("primary event metadata contains a reversed duplicate fixture identity")
+        unique.add(identity)
     return len(unique)
 
 
@@ -91,7 +99,7 @@ def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
             .select("match_date,home_team,away_team")
             .eq("league", "SERIE_A")
             .eq("season", CURRENT_SEASON)
-            .gte("match_date", "2026-07-01")
+            .gte("match_date", CURRENT_SEASON_START.isoformat())
             .lt("match_date", cutoff)
             .range(start, start + page_size - 1)
             .execute()
@@ -126,13 +134,18 @@ def _primary_event_identities(
                 raise ValueError("invalid primary event date in gate metadata") from exc
         else:
             raise ValueError("missing primary event date in gate metadata")
+        if parsed_date < CURRENT_SEASON_START:
+            raise ValueError("primary event metadata contains a pre-season fixture identity")
         if parsed_date >= before_date:
             continue
         home = _canonical_team(row.get("home_team"))
         away = _canonical_team(row.get("away_team"))
         if home == away:
             raise ValueError("invalid primary event identity in gate metadata")
-        unique.add((parsed_date.isoformat(), home, away))
+        identity = (parsed_date.isoformat(), home, away)
+        if (identity[0], away, home) in unique:
+            raise ValueError("primary event metadata contains a reversed duplicate fixture identity")
+        unique.add(identity)
     return unique
 
 
@@ -153,7 +166,7 @@ def read_completed_primary_event_identities(
             .select("match_date,home_team,away_team")
             .eq("league", "SERIE_A")
             .eq("season", CURRENT_SEASON)
-            .gte("match_date", date(int(CURRENT_SEASON[:4]), 7, 1).isoformat())
+            .gte("match_date", CURRENT_SEASON_START.isoformat())
             .lt("match_date", cutoff)
             .range(start, start + page_size - 1)
             .execute()
