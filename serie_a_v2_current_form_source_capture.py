@@ -296,8 +296,15 @@ def capture_source_archive(
         raise ValueError("original frozen historical source archive incomplete")
     response = get(CURRENT_URL, timeout=30)
     response.raise_for_status()
+    observed_clock = clock()
+    if (
+        not isinstance(observed_clock, datetime)
+        or observed_clock.tzinfo is None
+        or observed_clock.utcoffset() is None
+    ):
+        raise ValueError("source observation clock must have a real UTC offset")
+    observed_at = observed_clock.astimezone(timezone.utc)
     raw = response.content
-    observed_at = clock().astimezone(timezone.utc)
     current_rows, excluded_rows = validate_current_season_csv(raw, captured_at=observed_at)
     if len(current_rows) < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
         raise RuntimeError(
@@ -310,6 +317,14 @@ def capture_source_archive(
             "current-form CSV omits "
             f"{len(missing_gate_identities)} completed fixture identities used by the metadata gate"
         )
+    archive_clock = clock()
+    if (
+        not isinstance(archive_clock, datetime)
+        or archive_clock.tzinfo is None
+        or archive_clock.utcoffset() is None
+    ):
+        raise ValueError("source archive creation clock must have a real UTC offset")
+    archive_created_at = archive_clock.astimezone(timezone.utc)
     current_path = output_dir / CURRENT_FILENAME
     current_path.write_bytes(raw)
     audits = list(old_audit) + [{
@@ -333,7 +348,7 @@ def capture_source_archive(
         "workflow_path": WORKFLOW_PATH,
         "git_sha": os.environ.get("GITHUB_SHA", ""),
         "workflow_run_id": os.environ.get("GITHUB_RUN_ID", ""),
-        "source_archive_created_at_utc": clock().astimezone(timezone.utc).isoformat(),
+        "source_archive_created_at_utc": archive_created_at.isoformat(),
         "frozen_candidate_sha256": FROZEN_SHA,
         "original_feature_builder_git_blob_sha1": "401b3a0893371bfa4a488ec92a4a54af2678c8f7",
         "feature_count": len(FEATURE_SETS["ALL_FOOTBALL"]),
