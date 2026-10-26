@@ -1,5 +1,21 @@
 # Football AI — Project Continuity
 
+
+## 2026-10-26 18:56 UTC — separate original-path clock guards still await HUMAN-MERGE
+
+Fresh GitHub reads reconfirmed `main` at `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The current-form integration [PR #699](https://github.com/MaksimBlud/football-ai/pull/699), exact head `ee19d3ef9619fbc0a3b237d45cdc3523ffe10bdf`, has **7/7 exact-head CI SUCCESS** (all seven workflow runs completed successfully). Its changed-file list is limited to the current-form source/forward modules and their tests; it does **not** change the separate original-path modules below.
+
+A fresh source scan found that unchanged `main` still checks only `tzinfo is None` in the following original V2 entry points, without rejecting a custom `tzinfo` whose `utcoffset()` is `None`:
+
+- `serie_a_v2_attest_real_source.py::attest_latest_source` and `serie_a_v2_forward_capture.py::prepare_forward_capture`: covered by open PR [#677](https://github.com/MaksimBlud/football-ai/pull/677), exact head `cc8b13d44b38b2e12ae5d1bc840221a7f6b96c8c`, **7/7 exact-head CI SUCCESS**. That PR also validates all snapshots for stable event identity before any source callback and blocks stale quotes before source selection.
+- `serie_a_v2_prequote_source_archive_gate.py::verify_archive`, `serie_a_v2_frozen_shadow_preview.py::shadow_preview/fetch_saved_upcoming_serie_a_quotes`, and `serie_a_v2_live_diagnostic_report.py::make_report`: covered by open PR [#678](https://github.com/MaksimBlud/football-ai/pull/678), exact head `82dbfaa39a0e41ce93ff5539078663994777210b`, **7/7 exact-head CI SUCCESS**.
+
+Both PRs remain open and unmerged. Their guards are not live on `main`; review and manual merge are still required. No duplicate branch was created. Current-form-only PRs #675, #676, #679 and #680 also remain open and touch files that overlap PR #699; reconcile exact diffs rather than merging overlapping branches independently.
+
+**Fresh read-only runtime/data check:** current-form forward run [40347056896](https://github.com/MaksimBlud/football-ai/actions/runs/40347056896) verified source artifact `12647281024` and its SHA, the successful parent run, 70 feature-input-gate identities, 3,870 old-season match rows and frozen candidate SHA; 53 tests passed, but it saw **0 saved quotes and captured 0 shadows**. Original forward run [40346041505](https://github.com/MaksimBlud/football-ai/actions/runs/40346041505) passed 71 tests and also saw 0 quotes. A read-only per-league aggregate of `public.odds_snapshots` during this audit found **0 future-kickoff pre-match snapshots of any age** and **0 within 24 hours** across all nine leagues. No quote means no new forecast and no actual new quote-level source-before-quote proof.
+
+No protected target outcomes were read, no Supabase writes/DDL or paid calls were made, and no schedule, frozen feature/weight contract, production artifact, or `main` ref changed. The separate 30-eligible-prospective-completed-forecast evaluation gate remains CLOSED; Brier/LogLoss and any superiority claim remain unavailable.
+
 ## 2026-10-26 — metadata identity audit and open-PR CI status
 
 A fresh read-only Supabase query selected only `match_date,home_team,away_team` from the Serie A 2026/27 feature-input metadata; no score/result fields were selected. It returned **73 raw rows and 70 canonical fixture identities** after the V2-local `Atalanta BC → Atalanta` alias. The three duplicated representations are 2026-08-23 Atalanta–Sassuolo, 2026-08-31 Atalanta–Bologna, and 2026-09-05 AS Roma–Atalanta. Thus 73 raw rows versus the earlier 70-row source archive is explained by aliases at the count level, but exact source/metadata set parity still must be proven by the runtime identity check.
