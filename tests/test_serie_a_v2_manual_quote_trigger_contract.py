@@ -96,3 +96,51 @@ def test_current_form_source_capture_and_forward_preview_never_trigger_paid_odds
     assert 'workflow_dispatch:' in forward
     assert 'push:' in forward
     assert '"serie_a_v2_current_form_forward_capture.py"' in forward
+
+
+def test_current_form_forward_preview_reaudits_frozen_runtime_dependencies():
+    """Changes to any frozen/runtime input must re-run the free forward-only audit."""
+    import re
+
+    workflow_path = Path(".github/workflows/serie-a-v2-current-form-forward-preview.yml")
+    workflow = workflow_path.read_text(encoding="utf-8")
+    push = workflow.split("  push:\n", 1)[1].split("\n  workflow_run:", 1)[0]
+    paths_block = push.split("    paths:\n", 1)[1]
+    declared_paths = set(re.findall(r'^      - "([^"]+)"$', paths_block, flags=re.MULTILINE))
+    required_paths = {
+        "serie_a_v2_current_form_forward_capture.py",
+        "serie_a_v2_current_form_source_capture.py",
+        "serie_a_v2_asof_feature_manifest.py",
+        "serie_a_v2_frozen_shadow_preview.py",
+        "market_anchor_1x2_v2_shadow.py",
+        "market_anchor_1x2_v1.py",
+        "serie_a_v2_live_diagnostic_report.py",
+        "serie_a_v2_prequote_source_archive_gate.py",
+        "serie_a_runtime_config.py",
+        "historical_football_signal_lab.py",
+        "experiments/market_anchor_1x2_v2_current_form_policy.json",
+        "research/models/market_anchor_v2_serie_a_frozen_candidate.json",
+        "tests/test_serie_a_v2_current_form_source_capture.py",
+        "tests/test_serie_a_v2_current_form_forward_capture.py",
+        "tests/test_serie_a_v2_asof_feature_manifest.py",
+        "tests/test_serie_a_v2_atalanta_alias.py",
+        "tests/test_serie_a_v2_frozen_shadow_preview.py",
+        "tests/test_serie_a_v2_prequote_source_archive_gate.py",
+        "tests/test_serie_a_v2_live_diagnostic_report.py",
+        "tests/test_historical_football_signal_lab.py",
+        "tests/test_serie_a_v2_manual_quote_trigger_contract.py",
+        ".github/workflows/serie-a-v2-current-form-forward-preview.yml",
+    }
+    assert required_paths <= declared_paths
+
+    compile_command = workflow.split("python -m py_compile ", 1)[1].split("\n", 1)[0]
+    assert "market_anchor_1x2_v2_shadow.py" in compile_command
+    assert "market_anchor_1x2_v1.py" in compile_command
+
+    test_step = workflow.split("name: Test frozen model, current-form source integrity, and no-outcome capture", 1)[1].split("      - name:", 1)[0]
+    for required_test in (
+        "tests/test_serie_a_v2_prequote_source_archive_gate.py",
+        "tests/test_serie_a_v2_live_diagnostic_report.py",
+        "tests/test_historical_football_signal_lab.py",
+    ):
+        assert required_test in test_step
