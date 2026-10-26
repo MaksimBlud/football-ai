@@ -448,7 +448,7 @@ def test_forward_capture_rejects_offsetless_clock_before_callbacks_or_output(tmp
         )
 
     assert callbacks == []
-    assert not tmp_path.exists()
+    assert list(tmp_path.iterdir()) == []
 
 
 def _rewrite_gate_manifest(raw: bytes, archives: list[dict], *, field: str, value: Any, remove: bool = False):
