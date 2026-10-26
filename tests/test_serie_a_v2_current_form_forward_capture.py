@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone, tzinfo
 from io import BytesIO
 import hashlib
 import json
@@ -26,6 +26,17 @@ ARTIFACT_CREATED = datetime(2026, 10, 18, 6, 31, tzinfo=timezone.utc)
 PARENT_CREATED = "2026-10-18T06:00:00+00:00"
 PARENT_COMPLETED = "2026-10-18T06:32:00+00:00"
 HEAD = "a" * 40
+
+
+class OffsetlessTZ(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+    def tzname(self, dt):
+        return "offsetless"
 
 
 def quote(
@@ -317,3 +328,27 @@ def test_unverified_parent_cannot_admit_quote():
     assert report["v2_current_form_shadow_captured"] == 0
     assert report["blocked"]["SOURCE_PARENT_UNVERIFIED"] == 1
     assert report["rows"][0]["status"] == "SOURCE_PARENT_UNVERIFIED"
+
+@pytest.mark.parametrize("entrypoint", ["prepare", "verify_latest"])
+def test_offsetless_as_of_clock_fails_closed_before_source_callbacks(entrypoint, tmp_path):
+    raw, archives = make_archive()
+    invalid_now = datetime(2026, 10, 19, 5, 40, tzinfo=OffsetlessTZ())
+
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("invalid clock must be rejected before source callbacks")
+
+    with pytest.raises(ValueError, match="explicit UTC offset"):
+        if entrypoint == "prepare":
+            prepare_forward_capture(
+                [quote()], archives, as_of_utc=invalid_now,
+                load_archive=forbidden, verify_parent_run=forbidden,
+                write_sources_to=tmp_path,
+            )
+        else:
+            verify_latest_source_archive(
+                archives, as_of_utc=invalid_now,
+                load_archive=forbidden, verify_parent_run=forbidden,
+                write_sources_to=tmp_path,
+            )
+
+    assert list(tmp_path.iterdir()) == []
