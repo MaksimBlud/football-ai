@@ -1,3 +1,9 @@
+## 2026-10-26 — schedule-observation note — 2026-10-26 13:05 UTC
+
+The source-capture workflow on fresh `main` declares cron `50 5 * * *` (05:50 UTC). Its successful scheduled run `40316117199` was created/started at `2026-10-26T11:34:50Z`, **5 h 44 min 50 s after the nominal cron time**. This is one observed schedule-time discrepancy, not enough evidence to conclude a persistent outage or to change the schedule. The run itself completed successfully at 11:35:41Z and produced source artifact `12647281024`; the chained forward preview `40316226164` completed successfully but had zero saved quotes and zero forecasts. Do not change workflow schedules or other agents on the basis of this single observation; monitor subsequent scheduled runs and preserve HUMAN-MERGE.
+
+---
+
 ## 2026-10-26 11:57 UTC — fresh live current-form source and forward run
 
 Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; original frozen candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`. No main change or merge was performed.
