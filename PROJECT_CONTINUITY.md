@@ -1,5 +1,19 @@
 # Football AI — Project Continuity
 
+## 2026-10-26 16:48 UTC — fresh metadata identity audit and open-PR CI status
+
+A fresh read-only Supabase query selected only `match_date,home_team,away_team` from the Serie A 2026/27 feature-input metadata; it did not select or inspect score/result fields. It returned **73 raw rows but 70 canonical fixture identities** after the V2-local `Atalanta BC → Atalanta` alias. The three duplicated representations are 2026-08-23 Atalanta–Sassuolo, 2026-08-31 Atalanta–Bologna, and 2026-09-05 AS Roma–Atalanta. The raw-row difference is therefore explained by alias duplicates; it does not by itself prove exact source/metadata set parity.
+
+A separate read-only `public.odds_snapshots` aggregate still found **0 future pre-kickoff quote rows**, **0 such rows in the last 24 hours**, and no future event IDs with saved snapshots. The latest stored snapshot remains `2026-10-13 14:48:53.04262+00`. No target outcomes were selected, and no Supabase write/DDL was executed.
+
+The current `main` source-capture code still validates a count, not exact identity coverage. Open PR [#699](https://github.com/MaksimBlud/football-ai/pull/699) adds a fail-closed canonical identity set-difference check. Its exact head `8e658ac9411fc9e1081f015013c77092d38f21fa` has **7/7 exact-head CI SUCCESS** (runs 40345533303, 40345533392, 40345533254, 40345533452, 40345533492, 40345533764, 40345533446); it remains open and requires HUMAN-MERGE. Related workflow dependency-trigger PRs #693 (`41531ee98403e49dc4a48d0c4c1ceefa089306d2`), #696 (`c9edeace674dfad8d58dc44e474331c52b3dc5d8`), and #698 (`5678cb090cb19ebba67e2fb31edd35c6c7fe9938`) also have recorded 7/7 exact-head CI success but remain open. Do not infer live deployment from PR CI.
+
+The documentation-only update in this PR is on head `1c59e5f58686c9552f0a2f9ab0d9ee84df145672`; its seven PR-validation workflows completed SUCCESS (run IDs 40354188995, 40354188653, 40354188832, 40354188667, 40354188605, 40354188602, 40354188789). It remains unmerged. Main SHA remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+
+**Current blocker:** no eligible saved pre-match quotes means no new forecast observations. The 30-completed-prospective-event outcome gate remains closed. Do not backfill October 13 quotes, change the frozen 19-feature/weight contract, or claim V2 superiority.
+
+---
+
 ## 2026-10-24 — Original V2 current-form source/forward runtime proof reconciled
 
 This entry supersedes the 2026-10-18 note below that said first post-merge runtime proof was still pending. Read-only audit verified the real GitHub Actions runs on exact main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`:
