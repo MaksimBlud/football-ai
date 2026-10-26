@@ -263,6 +263,7 @@ def test_free_diagnostic_push_paths_cover_frozen_transitive_dependencies():
         "serie_a_v2_frozen_shadow_preview.py",
         "serie_a_v2_prequote_source_archive_gate.py",
         "market_anchor_1x2_v2_shadow.py",
+        "market_anchor_1x2_v1.py",
         "historical_football_signal_lab.py",
         "serie_a_runtime_config.py",
         "research/models/market_anchor_v2_serie_a_frozen_candidate.json",
@@ -296,3 +297,14 @@ def test_free_diagnostic_workflow_never_dispatches_paid_quote_collection():
     assert "scheduled_serie_a_odds_snapshot.py" not in workflow
     assert "odds_api_budget_guard.py" not in workflow
     assert "requests.post" not in workflow
+
+def test_free_diagnostic_compiles_frozen_transitive_runtime_dependencies():
+    from pathlib import Path
+
+    workflow = Path(".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml").read_text(encoding="utf-8")
+    step = workflow.split("- name: Offline regression tests", 1)[1].split(
+        "- name: Verify source access", 1
+    )[0]
+    compile_line = next(line for line in step.splitlines() if "python -m py_compile " in line)
+    assert "market_anchor_1x2_v2_shadow.py" in compile_line
+    assert "market_anchor_1x2_v1.py" in compile_line
