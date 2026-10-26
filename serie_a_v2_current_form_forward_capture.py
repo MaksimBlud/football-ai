@@ -30,6 +30,7 @@ from serie_a_v2_current_form_source_capture import (
 )
 from serie_a_v2_current_form_source_capture import (
     _current_source_fixture_identities, _fixture_identity_sha256,
+    read_completed_primary_event_identities,
 )
 from serie_a_v2_frozen_shadow_preview import (
     FROZEN_SHA, fetch_saved_upcoming_serie_a_quotes, parse_utc, shadow_preview, _guard_outcome_free,
@@ -301,6 +302,7 @@ def verify_and_load_archive(
             "parent_run": dict(parent),
             "historical_match_rows": len(history),
             "current_season_history_rows": len(current_frame),
+            "current_source_fixture_identities": actual_current_identities,
             "feature_source_gate_attestation": {
                 "verified": True,
                 "gate_fixture_identity_sha256": gate_identity_sha256,
@@ -313,12 +315,77 @@ def verify_and_load_archive(
         }
 
 
+def _current_gate_freshness(
+    current_gate_identities: set[tuple[str, str, str]] | None,
+    source_meta: Mapping[str, Any] | None,
+    *,
+    before_date_exclusive: str | None = None,
+) -> dict:
+    """Check that the archived current-season source covers all gate fixtures known by the cutoff."""
+    if current_gate_identities is None or not isinstance(current_gate_identities, set):
+        return {
+            "checked": False,
+            "fresh": False,
+            "reason": "CURRENT_GATE_NOT_SUPPLIED",
+            "metadata_fields_read": ["match_date", "home_team", "away_team"],
+            "target_outcomes_read": False,
+        }
+    if any(
+        not isinstance(identity, tuple)
+        or len(identity) != 3
+        or not isinstance(identity[0], str)
+        or not isinstance(identity[1], str)
+        or not isinstance(identity[2], str)
+        for identity in current_gate_identities
+    ):
+        return {
+            "checked": True,
+            "fresh": False,
+            "reason": "CURRENT_GATE_IDENTITIES_MALFORMED",
+            "current_gate_identity_count": len(current_gate_identities),
+            "metadata_fields_read": ["match_date", "home_team", "away_team"],
+            "target_outcomes_read": False,
+        }
+    gate = {
+        identity for identity in current_gate_identities
+        if before_date_exclusive is None or identity[0] < before_date_exclusive
+    }
+    source_ids = (
+        source_meta.get("current_source_fixture_identities")
+        if isinstance(source_meta, Mapping) else None
+    )
+    if not isinstance(source_ids, set):
+        source_ids = set()
+    missing = gate - source_ids
+    attestation = (
+        source_meta.get("feature_source_gate_attestation", {})
+        if isinstance(source_meta, Mapping) else {}
+    )
+    fresh = source_meta is not None and not missing
+    return {
+        "checked": True,
+        "fresh": fresh,
+        "reason": "MATCH" if fresh else "SOURCE_ARCHIVE_MISSING_CURRENT_GATE_FIXTURES",
+        "cutoff_date_exclusive_utc": before_date_exclusive,
+        "current_gate_identity_count": len(gate),
+        "current_gate_identity_sha256": _fixture_identity_sha256(gate),
+        "source_current_identity_count": len(source_ids),
+        "source_gate_identity_count_at_capture": attestation.get("gate_fixture_identity_count"),
+        "source_gate_identity_sha256_at_capture": attestation.get("gate_fixture_identity_sha256"),
+        "missing_identity_count": len(missing),
+        "missing_identity_sha256": _fixture_identity_sha256(missing),
+        "metadata_fields_read": ["match_date", "home_team", "away_team"],
+        "target_outcomes_read": False,
+    }
+
+
 def verify_latest_source_archive(
     archive_metadata: list[dict],
     *,
     as_of_utc: datetime,
     load_archive,
     verify_parent_run,
+    current_gate_identities: set[tuple[str, str, str]] | None = None,
     write_sources_to: Path | None = None,
 ) -> dict:
     """Verify the latest successful main source artifact even when all quotes are stale."""
@@ -339,6 +406,11 @@ def verify_latest_source_archive(
             "status": "NO_SOURCE_ARCHIVE",
             "verified": False,
             "verified_at_utc": now.isoformat(),
+            "fresh_for_new_quote": False,
+            "fresh_for_current_feature_gate": False,
+            "feature_source_gate_freshness": _current_gate_freshness(
+                current_gate_identities, None
+            ),
             "target_outcomes_read": False,
             "target_outcomes_scored": False,
             "paid_provider_calls": 0,
@@ -356,6 +428,7 @@ def verify_latest_source_archive(
     if age_seconds < 0:
         raise ValueError("source archive contains a source timestamp after verification time")
     manifest = source_meta["manifest"]
+    gate_freshness = _current_gate_freshness(current_gate_identities, source_meta)
     return {
         "status": "VERIFIED",
         "verified": True,
@@ -365,7 +438,11 @@ def verify_latest_source_archive(
         "source_archive_created_at_utc": source_meta["archive_created_at_utc"],
         "latest_source_observed_at_utc": source_meta["latest_source_observed_at_utc"],
         "source_age_seconds_at_verification": int(age_seconds),
-        "fresh_for_new_quote": age_seconds <= MAX_SOURCE_AGE.total_seconds(),
+        "fresh_for_new_quote": (
+            age_seconds <= MAX_SOURCE_AGE.total_seconds() and gate_freshness["fresh"]
+        ),
+        "fresh_for_current_feature_gate": gate_freshness["fresh"],
+        "feature_source_gate_freshness": gate_freshness,
         "parent_run": source_meta["parent_run"],
         "feature_input_gate_count": manifest["feature_source_gate"]["observed_completed_primary_events"],
         "feature_source_gate_attestation": source_meta["feature_source_gate_attestation"],
@@ -416,6 +493,7 @@ def prepare_forward_capture(
     as_of_utc: datetime,
     load_archive,
     verify_parent_run,
+    current_gate_identities: set[tuple[str, str, str]] | None = None,
     write_sources_to: Path | None = None,
 ) -> dict:
     if as_of_utc.tzinfo is None:
@@ -429,6 +507,7 @@ def prepare_forward_capture(
         "NO_EARLIER_SOURCE_ARCHIVE": 0,
         "SOURCE_PARENT_UNVERIFIED": 0,
         "SOURCE_ARCHIVE_TOO_OLD": 0,
+        "SOURCE_GATE_STALE": 0,
         "STALE_MARKET_QUOTE": 0,
         "EXPIRED_FIXTURE": 0,
         "NO_FEATURES": 0,
@@ -506,6 +585,21 @@ def prepare_forward_capture(
                 **base, "status": "SOURCE_ARCHIVE_TOO_OLD",
                 "source_artifact_id": artifact_id,
                 "source_observed_at_utc": source_time.isoformat(),
+                "v2_preview": None,
+            })
+            continue
+        gate_freshness = _current_gate_freshness(
+            current_gate_identities,
+            source_meta,
+            before_date_exclusive=quote_time.date().isoformat(),
+        )
+        if not gate_freshness["fresh"]:
+            blocked["SOURCE_GATE_STALE"] += 1
+            report_rows.append({
+                **base,
+                "status": "SOURCE_GATE_STALE",
+                "source_artifact_id": artifact_id,
+                "source_gate_freshness": gate_freshness,
                 "v2_preview": None,
             })
             continue
@@ -606,6 +700,8 @@ def main() -> None:
     if not token or not url or not key:
         raise RuntimeError("GitHub actions:read and Supabase read-only credentials are required")
     now = datetime.now(timezone.utc)
+    client = create_client(url, key)
+    current_gate_identities = read_completed_primary_event_identities(client, now=now)
     archives = discover_archives(token=token)
     raw_cache = {}
 
@@ -622,9 +718,9 @@ def main() -> None:
         as_of_utc=now,
         load_archive=load_cached_archive,
         verify_parent_run=verify_parent,
+        current_gate_identities=current_gate_identities,
         write_sources_to=args.sources_output_dir,
     )
-    client = create_client(url, key)
     quotes = fetch_saved_upcoming_serie_a_quotes(client, now=now)
     report = prepare_forward_capture(
         quotes,
@@ -632,6 +728,7 @@ def main() -> None:
         as_of_utc=now,
         load_archive=load_cached_archive,
         verify_parent_run=verify_parent,
+        current_gate_identities=current_gate_identities,
         write_sources_to=args.sources_output_dir,
     )
     report["latest_source_archive_verification"] = source_verification
