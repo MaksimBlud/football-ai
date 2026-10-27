@@ -1,3 +1,22 @@
+## 2026-10-27 — exact current-form gate/source identity comparison (09:50 UTC)
+
+- Downloaded the existing read-only source artifact #12647281024 from [run #40316117199](https://github.com/MaksimBlud/football-ai/actions/runs/40316117199). Recomputed archive ZIP SHA-256 exactly matches the recorded digest: `0ecfd702f0cd24f21894e93b0cbe63c65340a3eb48d3180e27652a3ad43c5e9b`. The ZIP contains 10 historical CSVs, `serie_a_2627.csv`, and the manifest.
+- Inspected only `Date`, `HomeTeam`, and `AwayTeam` from the current-season CSV; no score/result columns were parsed. It contains 70 unique canonical fixture identities dated 2026-08-22 through 2026-10-19. Canonical identity-set SHA-256: `afc5b86fc2b116d4c2a46abd5dcd2453b64b13101abe618dd28cb66424e4fb73`.
+- A fresh read-only query of `public.league_finished_results` selected only `match_date,home_team,away_team` for `SERIE_A`, season `2026-2027`, dates before 2026-10-27. It returned 83 rows / 80 unique canonical identities / 3 duplicate alias rows, spanning 2026-08-22 through 2026-10-25.
+- Recomputed the same sorted identity-set SHA-256 over live metadata strictly through 2026-10-19; it is exactly `afc5b86fc2b116d4c2a46abd5dcd2453b64b13101abe618dd28cb66424e4fb73`. Therefore the archive's 70 identities match the earlier metadata set exactly; all ten additional current gate identities are later fixtures:
+  - 2026-10-23 — Torino vs Monza
+  - 2026-10-24 — Cagliari vs Bologna
+  - 2026-10-24 — Como vs Sassuolo
+  - 2026-10-24 — Lazio vs Parma
+  - 2026-10-24 — Napoli vs AS Roma
+  - 2026-10-25 — Atalanta vs Frosinone
+  - 2026-10-25 — Genoa vs Venezia
+  - 2026-10-25 — Inter Milan vs Fiorentina
+  - 2026-10-25 — Lecce vs Juventus
+  - 2026-10-25 — Udinese vs AC Milan
+- This is a confirmed source freshness/coverage gap, not a guessed set difference. The Oct-26 archive's current-season CSV is stale relative to the latest completed-fixture metadata even though its archive timestamp is Oct-26. PR #699's current HEAD `3dc49392e905a2e3958180701a17b6bf7971204b` adds the identity-set attestation and fail-closed coverage checks; its exact-head CI is 7/7 SUCCESS (182 V2 shadow tests). Keep HUMAN-MERGE; no main merge.
+- Odds audit remains unchanged: 3,966 saved snapshots, latest 2026-10-13 14:48:53 UTC, zero last-24h snapshots, zero future pre-kickoff snapshots. No forecasts or outcome evaluation are available. Evaluation gate remains closed until 30 eligible prospective forecasts complete.
+
 # Football AI — Project Continuity
 
 ## 2026-10-27 — gate/source identity proof strengthened; live gate has advanced (09:24 UTC)
