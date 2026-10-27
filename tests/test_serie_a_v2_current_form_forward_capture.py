@@ -14,6 +14,7 @@ from serie_a_v2_current_form_forward_capture import (
     SOURCE_WORKFLOW_PATH,
     _latest_quotes,
     prepare_forward_capture as _prepare_forward_capture,
+    verify_and_load_archive,
     verify_latest_source_archive,
 )
 from serie_a_v2_current_form_source_capture import (
