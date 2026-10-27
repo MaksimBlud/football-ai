@@ -62,13 +62,28 @@ each lower than both the de-vigged market and the frozen production incumbent.
 It is diagnostic only. There is no fitting, selection, threshold tuning,
 promotion, product publication, or betting.
 
-## Current blocker
+## Current blockers
 
-The existing current-form forward artifact currently emits the market and
-lambda-one shadow vectors, but does not include the frozen-incumbent vector in
-its per-event preview. This evaluator deliberately requires that third
-pre-existing vector; it does not revive or load the legacy model. Until the
-incumbent vector is independently available from a valid pre-match record, the
-prospective comparison cannot complete even after 30 events. No target outcome
-was read or scored while implementing or testing this helper; all tests use
-synthetic forecasts/outcomes only.
+There are two independent blockers; neither may be bypassed by substituting a
+market vector or loading the legacy production model.
+
+1. The current-form forward artifact does not yet emit a frozen-incumbent
+   vector in its per-event preview. The evaluator requires that comparator as a
+   separate, pre-existing vector.
+2. The frozen policy names `FROZEN_PRODUCTION_INCUMBENT` but does not pin its
+   exact model version and artifact SHA-256. Accordingly,
+   `FROZEN_INCUMBENT_REFERENCE` remains unset and the evaluator returns
+   `EVALUATION_BLOCKED_UNPINNED_INCUMBENT` without invoking the outcome
+   callback, even if 30 eligible completed forecasts and a vector are supplied.
+   Each row must also provide incumbent provenance (model version, artifact
+   SHA-256, unique source-record ID, generation time, and history cutoff), with
+   the history cutoff no later than generation and generation no later than
+   the market quote. Legacy XGBoost incumbent evidence is rejected.
+
+This is an additional fail-closed guard, not a change to the frozen model or
+current cohort policy. Reopening the outcome gate requires a separately
+approved prospective protocol amendment that pins a permitted, non-legacy
+incumbent identity; do not silently edit the existing frozen policy in place.
+
+No target outcome was read or scored while implementing or testing this
+helper; all tests use synthetic forecasts/outcomes only.
