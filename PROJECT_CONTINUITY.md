@@ -1,3 +1,16 @@
+# Football AI — Project Continuity
+
+## 2026-10-27 — current-form gate freshness recheck (07:55 UTC)
+
+- Re-read `main` workflow `.github/workflows/serie-a-v2-current-form-source-capture.yml`: daily cron remains `50 5 * * *`; schedule unchanged. Inspected all **129** Actions runs created since `2026-10-27T00:00:00Z` (both pages); none was for current-form source capture or current-form forward preview as of 07:55 UTC. This records an absent run in the queried window, not a claim that GitHub cannot deliver a delayed schedule run later.
+- Latest source capture remains [run 40316117199](https://github.com/MaksimBlud/football-ai/actions/runs/40316117199), completed `2026-10-26T11:35:41Z` on main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`; source artifact `12647281024`, ZIP SHA-256 `0ecfd702f0cd24f21894e93b0cbe63c65340a3eb48d3180e27652a3ad43c5e9b`. Runtime log: 19 tests passed, ten frozen historical CSVs, 70 current-season completed prior-day rows, gate count 70, 3,870 combined historical rows, zero paid provider calls, zero Supabase writes, no target-outcome scoring.
+- Paired [forward preview run 40316226164](https://github.com/MaksimBlud/football-ai/actions/runs/40316226164) verified that source artifact and parent run, but `quotes_seen=0`, `v2_current_form_shadow_captured=0`; no target outcomes were read or scored. Output artifact `12647321126`, ZIP SHA-256 `c4148dbcdb2151edcf069b1735a4213d2ca6a49e5ebd5492bc1fb036a79f1d4e`.
+- Fresh read-only query of `public.league_finished_results` selected only `match_date,home_team,away_team` (no score/result fields). For Serie A 2026/27 before 2026-10-27 it now returns **83 raw rows, 80 canonical ordered fixture identities, 3 duplicate rows after Atalanta alias normalization**. The latest source artifact contains 70 current-season rows; its count is therefore 10 below the present gate. Exact identity-set parity has not been recomputed from a fresh archive, so the older archive cannot be assumed to cover today's gate. PR #699's gate identity/count/digest checks must fail closed until a fresh capture covers the current identity set.
+- Fresh read-only `public.odds_snapshots` audit: **3,966** rows, latest snapshot `2026-10-13T14:48:53.042620Z`, **0** snapshots in the last 24 hours and **0** future events with snapshots saved strictly before kickoff. No eligible new quote or prospective forecast; the 30-primary-completed-event outcome gate remains CLOSED.
+- No Supabase writes/DDL, paid calls, model/weight/contract or production `.pkl` changes, protected outcome reads, PR merges or schedule edits. HUMAN-MERGE remains mandatory.
+
+---
+
 ## 2026-10-27 04:10 UTC — current-form gate/source clock ordering integrated on PR branch; no new quote
 
 Current `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No merge or main change was performed.
