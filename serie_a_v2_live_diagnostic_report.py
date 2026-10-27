@@ -152,7 +152,11 @@ def make_report(quotes: list[dict], history: pd.DataFrame, source_audit: list[di
                 as_of_utc: datetime) -> dict:
     if not source_audit:
         raise ValueError("history provenance required")
-    if as_of_utc.tzinfo is None:
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
         raise ValueError("as-of timestamp needs UTC timezone")
     _assert_original_v2_source_embargo(
         history, source_audit, as_of_utc=as_of_utc.astimezone(timezone.utc)
