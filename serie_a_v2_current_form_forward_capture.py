@@ -30,7 +30,7 @@ from serie_a_v2_current_form_source_capture import (
 )
 from serie_a_v2_current_form_source_capture import (
     _canonical_team, _current_source_fixture_identities, _fixture_identity_sha256,
-    read_completed_primary_event_identities,
+    _primary_event_identities, read_completed_primary_event_identities,
 )
 from serie_a_v2_frozen_shadow_preview import (
     FROZEN_SHA, fetch_saved_upcoming_serie_a_quotes, parse_utc, shadow_preview, _guard_outcome_free,
@@ -213,6 +213,31 @@ def verify_and_load_archive(
             raise ValueError(
                 "current-form feature source gate identity attestation is missing or inconsistent"
             )
+        gate_checked_at = parse_utc(gate.get("checked_at_utc"))
+        raw_gate_identities = gate.get("gate_fixture_identities")
+        if not isinstance(raw_gate_identities, list) or len(raw_gate_identities) != gate_identity_count:
+            raise ValueError("current-form feature-source gate identity list is missing or inconsistent")
+        gate_identity_rows = []
+        for identity in raw_gate_identities:
+            if (
+                not isinstance(identity, list)
+                or len(identity) != 3
+                or not all(isinstance(value, str) and value.strip() for value in identity)
+            ):
+                raise ValueError("current-form feature-source gate identity list is malformed")
+            gate_identity_rows.append({
+                "match_date": identity[0],
+                "home_team": identity[1],
+                "away_team": identity[2],
+            })
+        gate_identities = _primary_event_identities(
+            gate_identity_rows, before_date=gate_checked_at.date()
+        )
+        if (
+            len(gate_identities) != gate_identity_count
+            or _fixture_identity_sha256(gate_identities) != gate_identity_sha256
+        ):
+            raise ValueError("current-form feature-source gate identity digest/count mismatch")
         evaluation_gate = manifest.get("target_outcome_evaluation_gate")
         if (not isinstance(evaluation_gate, dict)
                 or evaluation_gate.get("minimum_completed_eligible_prospective_forecasts") != 30
@@ -301,6 +326,17 @@ def verify_and_load_archive(
             or current_identity_sha256 != actual_current_identity_sha256
         ):
             raise ValueError("current-form source fixture identity digest/count mismatch")
+        covered_gate_identities = gate_identities & actual_current_identities
+        missing_gate_identities = gate_identities - actual_current_identities
+        if (
+            len(covered_gate_identities) != gate_identity_count
+            or missing_gate_identities
+            or gate_covered_count != len(covered_gate_identities)
+            or gate_missing_count != len(missing_gate_identities)
+        ):
+            raise ValueError(
+                "current-form source fixture identities do not cover the feature-source gate"
+            )
         source_times.append(current_observed)
         history = pd.concat(old_frames + [current_frame], ignore_index=True)
         latest_source = max(source_times)
