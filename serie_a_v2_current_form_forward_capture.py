@@ -361,16 +361,34 @@ def _current_gate_freshness(
         source_meta.get("feature_source_gate_attestation", {})
         if isinstance(source_meta, Mapping) else {}
     )
-    fresh = source_meta is not None and not missing
+    captured_gate_count = attestation.get("gate_fixture_identity_count")
+    gate_meets_minimum = len(gate) >= MIN_COMPLETED_FEATURE_SOURCE_EVENTS
+    captured_gate_count_valid = (
+        type(captured_gate_count) is int
+        and captured_gate_count >= MIN_COMPLETED_FEATURE_SOURCE_EVENTS
+        and len(gate) >= captured_gate_count
+    )
+    if not isinstance(source_meta, Mapping):
+        reason = "SOURCE_ARCHIVE_NOT_AVAILABLE"
+    elif not gate_meets_minimum:
+        reason = "CURRENT_GATE_BELOW_MINIMUM"
+    elif not captured_gate_count_valid:
+        reason = "CURRENT_GATE_COUNT_BELOW_CAPTURED_GATE"
+    elif missing:
+        reason = "SOURCE_ARCHIVE_MISSING_CURRENT_GATE_FIXTURES"
+    else:
+        reason = "MATCH"
+    fresh = reason == "MATCH"
     return {
         "checked": True,
         "fresh": fresh,
-        "reason": "MATCH" if fresh else "SOURCE_ARCHIVE_MISSING_CURRENT_GATE_FIXTURES",
+        "reason": reason,
+        "minimum_completed_primary_events": MIN_COMPLETED_FEATURE_SOURCE_EVENTS,
         "cutoff_date_exclusive_utc": before_date_exclusive,
         "current_gate_identity_count": len(gate),
         "current_gate_identity_sha256": _fixture_identity_sha256(gate),
         "source_current_identity_count": len(source_ids),
-        "source_gate_identity_count_at_capture": attestation.get("gate_fixture_identity_count"),
+        "source_gate_identity_count_at_capture": captured_gate_count,
         "source_gate_identity_sha256_at_capture": attestation.get("gate_fixture_identity_sha256"),
         "missing_identity_count": len(missing),
         "missing_identity_sha256": _fixture_identity_sha256(missing),
