@@ -139,6 +139,7 @@ def make_archive():
             "metadata_fields_read": ["match_date", "home_team", "away_team"],
             "score_or_result_fields_selected_for_gate": False,
             "gate_fixture_identity_sha256": current_identity_sha256,
+            "gate_fixture_identities": [list(identity) for identity in sorted(current_identities)],
             "gate_fixture_identity_count": len(current_identities),
             "gate_fixture_identities_covered_by_current_source": len(current_identities),
             "gate_fixture_identities_missing_from_current_source": 0,
@@ -745,4 +746,45 @@ def test_archive_loader_rejects_manifest_safety_contract_drift(
         quote_time=datetime(2026, 10, 19, 5, 30, tzinfo=timezone.utc),
     )
     with pytest.raises(ValueError, match=expected_error):
+        verify_and_load_archive(tampered, archive, parent)
+
+
+def test_archive_loader_recomputes_gate_identity_coverage_against_current_source():
+    raw, archives = make_archive()
+
+    def mutate(manifest):
+        gate = manifest["feature_source_gate"]
+        identities = [list(identity) for identity in gate["gate_fixture_identities"]]
+        # Replace one real source fixture with a different, valid metadata-only identity.
+        identities[0] = [identities[0][0], "Unrelated Home", "Unrelated Away"]
+        identity_set = {tuple(identity) for identity in identities}
+        gate["gate_fixture_identities"] = identities
+        gate["gate_fixture_identity_count"] = len(identity_set)
+        gate["observed_completed_primary_events"] = len(identity_set)
+        gate["gate_fixture_identity_sha256"] = _fixture_identity_sha256(identity_set)
+        # Simulate a manifest that self-claims full coverage despite the missing fixture.
+        gate["gate_fixture_identities_covered_by_current_source"] = len(identity_set)
+        gate["gate_fixture_identities_missing_from_current_source"] = 0
+
+    tampered = _rewrite_source_manifest(raw, mutate)
+    archive = {**archives[0], "sha256": hashlib.sha256(tampered).hexdigest()}
+    parent = valid_parent(
+        archive,
+        quote_time=datetime(2026, 10, 19, 5, 30, tzinfo=timezone.utc),
+    )
+    with pytest.raises(ValueError, match="source fixture identities do not cover the feature-source gate"):
+        verify_and_load_archive(tampered, archive, parent)
+
+
+def test_archive_loader_rejects_missing_gate_identity_list():
+    raw, archives = make_archive()
+    tampered = _rewrite_source_manifest(
+        raw, lambda manifest: manifest["feature_source_gate"].pop("gate_fixture_identities")
+    )
+    archive = {**archives[0], "sha256": hashlib.sha256(tampered).hexdigest()}
+    parent = valid_parent(
+        archive,
+        quote_time=datetime(2026, 10, 19, 5, 30, tzinfo=timezone.utc),
+    )
+    with pytest.raises(ValueError, match="gate identity list is missing or inconsistent"):
         verify_and_load_archive(tampered, archive, parent)
