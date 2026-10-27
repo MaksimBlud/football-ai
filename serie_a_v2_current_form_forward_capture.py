@@ -502,6 +502,8 @@ def verify_latest_source_archive(
 def _latest_quotes(quotes: list[dict], *, now: datetime) -> list[dict]:
     latest = {}
     seen = set()
+    event_to_fixture = {}
+    fixture_to_event = {}
     for q in quotes:
         _guard_outcome_free(q)
         if q.get("league") != "SERIE_A":
@@ -510,11 +512,27 @@ def _latest_quotes(quotes: list[dict], *, now: datetime) -> list[dict]:
         home, away = q.get("home_team"), q.get("away_team")
         if not all(isinstance(x, str) and x.strip() for x in (event, home, away)):
             raise ValueError("quote identity is incomplete")
+        event_key = event.strip()
+        home_key, away_key = home.strip().casefold(), away.strip().casefold()
         kickoff = parse_utc(q["commence_time_utc"])
         snapshot = parse_utc(q["snapshot_time_utc"])
         if snapshot > now or not snapshot < kickoff:
             raise ValueError("invalid current-form quote timing")
-        identity = (event, home, away, kickoff)
+
+        # A provider event ID must identify exactly one fixture, and a fixture
+        # (ordered teams + UTC kickoff) must not be split across provider IDs.
+        # Validate this before selecting a latest quote or building any features.
+        fixture_identity = (home_key, away_key, kickoff)
+        previous_fixture = event_to_fixture.get(event_key)
+        if previous_fixture is not None and previous_fixture != fixture_identity:
+            raise ValueError("event_id maps to conflicting fixture identity")
+        previous_event = fixture_to_event.get(fixture_identity)
+        if previous_event is not None and previous_event != event_key:
+            raise ValueError("fixture identity maps to conflicting event_id")
+        event_to_fixture[event_key] = fixture_identity
+        fixture_to_event[fixture_identity] = event_key
+
+        identity = (event_key, home_key, away_key, kickoff)
         key = (*identity, snapshot)
         if key in seen:
             raise ValueError("duplicate exact current-form quote observation")
