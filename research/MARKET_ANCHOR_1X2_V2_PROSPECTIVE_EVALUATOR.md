@@ -17,7 +17,7 @@ not contain scores or results.
 
 ## Eligibility checks before the outcome gate
 
-Every row must attest the exact frozen candidate SHA, original
+Every row must carry the upstream `SOURCE_ARCHIVE_AND_PARENT_RUN_VERIFIED_BEFORE_QUOTE` evidence marker and attest the exact frozen candidate SHA, original
 `active_lambda=0`, research-only `shadow_residual_lambda=1`, NO_BET status,
 primary league, source artifact SHA-256 and parent-run SHA, and the ordered
 timestamps:
