@@ -35,6 +35,7 @@ def make_forecasts(n=30):
             "no_bet": True,
             "eligible_for_current_form_forward_shadow": True,
             "eligible_for_product_publication": False,
+            "shadow_evidence_status": "SOURCE_ARCHIVE_AND_PARENT_RUN_VERIFIED_BEFORE_QUOTE",
             "source_artifact_id": 123456,
             "source_archive_sha256": "a" * 64,
             "source_observed_at_utc": "2026-09-02T00:30:00Z",
@@ -118,6 +119,7 @@ def test_future_forecasts_do_not_count_toward_completed_gate():
     ("shadow_residual_lambda", 0.0),
     ("no_bet", False),
     ("eligible_for_product_publication", True),
+    ("shadow_evidence_status", "UNVERIFIED_SOURCE"),
     ("source_archive_sha256", "bad"),
 ])
 def test_contract_or_source_provenance_drift_fails_before_outcome_read(field, value):
