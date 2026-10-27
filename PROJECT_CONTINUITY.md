@@ -1,3 +1,20 @@
+# Football AI — Project Continuity
+
+## 2026-10-27 15:47 UTC — current-form forward runtime and incumbent-vector audit
+
+Fresh verification on unchanged `main` SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`:
+
+- [Serie A V2 Current-Form Forward-Only Preview run #40522068472](https://github.com/MaksimBlud/football-ai/actions/runs/40522068472) completed SUCCESS at `2026-10-27T14:33:05Z` on that exact main SHA. Its actual job log records **53 tests passed**, then verifies source artifact `12730175586`, ZIP SHA-256 `f0fb3565d2e5f44faadf488820c36327cb9d0d7b83b3da826af9b877f0804986`, from source parent run `40493535578`. Source observation was `11:06:30.975279Z`, archive creation `11:06:32Z`, and parent completed `11:06:34Z`; the artifact was verified at `14:32:58.534370Z` (~12,387 seconds old, within the frozen 24-hour limit).
+- The same actual run reports `quotes_seen=0`, `v2_current_form_shadow_captured=0`, target outcomes read/scored `false`, paid provider calls `0`, and writes `0`. This proves safe real archive/parent verification and no-quote behavior on old main, **not** the new gate-identity-set/SHA guard in PR #699; that guard still requires post-merge runtime proof.
+- Fresh read-only Supabase query in this audit: `public.odds_snapshots` has **3,966** rows; latest snapshot `2026-10-13T14:48:53.042620Z`; zero rows in the preceding 24 hours and zero future pre-kickoff snapshots. Serie A has 625 saved rows, with the same latest timestamp and zero future pre-kickoff snapshots. No new eligible quote exists, so no new forecast can be admitted.
+- Identity-only feature-gate query against `public.league_finished_results` found **83 unique** `SERIE_A` fixtures for season `2026-2027`, from `2026-08-22` through `2026-10-25`. The query selected only league/season/date/team identity fields; this count does not open the separate target-outcome evaluation gate.
+- Read-only incumbent-source audit: `public.product_prediction_snapshots` contains **40** strictly pre-kickoff records, all `EPL` / `EPL_AI_MARKET_PAIR_V1` with model SHA `1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5`; there are **no Serie A 2026/27 snapshots** in that table. These EPL vectors cannot be reused for the preregistered Serie A primary cohort. PR #701 correctly fails closed if the required same-event `incumbent_1x2` vector is absent; do not load or revive the legacy production model.
+- PR #699 remains open for HUMAN-MERGE at exact HEAD `f603a222e4134d72af2343a27c50342c74e2f8a7` with 7/7 checks successful. PR #701 remains open at exact HEAD `6c006cd3a8a3f920fdf8ea29a287131a5a90e6fc` with 6/6 checks successful. Neither has been merged; the new source identity-set guard has not yet run on main.
+
+No target outcomes were queried, read, or scored in this audit. No paid provider calls, Supabase writes/DDL, production `.pkl` changes, refit, promotion, or schedule changes. The original candidate SHA, 19-feature/weight contract, `active_lambda=0`, `shadow_lambda=1`, and 30-eligible-completed-prospective-forecast evaluation gate remain unchanged.
+
+---
+
 ## 2026-10-27 12:13 UTC — consolidated V2 guard head and dependency-trigger CI
 
 - Original V2 guard PR [#699](https://github.com/MaksimBlud/football-ai/pull/699) is still OPEN and requires HUMAN-MERGE. Latest exact HEAD: `f603a222e4134d72af2343a27c50342c74e2f8a7`; base `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Main was not modified.
