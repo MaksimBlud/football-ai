@@ -181,6 +181,11 @@ def _validate_forecast(row: Any) -> tuple[tuple[str, str, str], dict[str, tuple[
         raise ValueError("incumbent source record ID is missing")
     incumbent_generated = _utc(evidence["generated_at_utc"], "incumbent_evidence.generated_at_utc")
     incumbent_history_cutoff = _utc(evidence["history_cutoff_utc"], "incumbent_evidence.history_cutoff_utc")
+    if incumbent_history_cutoff > observed:
+        raise ValueError(
+            "incumbent history cutoff must not follow the authenticated V2 source observation "
+            "for same-information-time comparison"
+        )
     if incumbent_history_cutoff > incumbent_generated or incumbent_generated > quote_time:
         raise ValueError("incumbent history cutoff/generated time must not follow the quote")
     if kickoff.date().isoformat() != identity[0]:
