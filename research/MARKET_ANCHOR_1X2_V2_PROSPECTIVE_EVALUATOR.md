@@ -76,9 +76,12 @@ market vector or loading the legacy production model.
    `EVALUATION_BLOCKED_UNPINNED_INCUMBENT` without invoking the outcome
    callback, even if 30 eligible completed forecasts and a vector are supplied.
    Each row must also provide incumbent provenance (model version, artifact
-   SHA-256, unique source-record ID, generation time, and history cutoff), with
-   the history cutoff no later than generation and generation no later than
-   the market quote. Legacy XGBoost incumbent evidence is rejected.
+   SHA-256, unique source-record ID, generation time, and history cutoff). The
+   incumbent history cutoff must be no later than the authenticated V2 source
+   observation, so the comparator cannot use historical information that was not
+   available to the V2 source archive; it must also be no later than incumbent
+   generation, and generation must be no later than the market quote. Legacy
+   XGBoost incumbent evidence is rejected.
 
 This is an additional fail-closed guard, not a change to the frozen model or
 current cohort policy. Reopening the outcome gate requires a separately
