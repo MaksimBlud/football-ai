@@ -698,3 +698,50 @@ def test_feature_source_gate_clock_is_offset_aware_and_precedes_source(gate_chec
             load_archive=lambda _artifact_id: tampered,
             verify_parent_run=valid_parent,
         )
+
+def _rewrite_source_manifest(raw, mutate):
+    with zipfile.ZipFile(BytesIO(raw), "r") as source:
+        files = {name: source.read(name) for name in source.namelist()}
+    manifest = json.loads(files[MANIFEST_FILENAME])
+    mutate(manifest)
+    files[MANIFEST_FILENAME] = (json.dumps(manifest, sort_keys=True) + "\n").encode()
+    output = BytesIO()
+    with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as target:
+        for name, body in files.items():
+            target.writestr(name, body)
+    return output.getvalue()
+
+
+@pytest.mark.parametrize(
+    "target, field, value, expected_error",
+    [
+        ("feature_policy", "future_or_unplayed_fixtures_used", True, "feature policy"),
+        ("feature_policy", "model_weights_or_feature_definitions_changed", True, "feature policy"),
+        ("feature_policy", "model_refit", True, "feature policy"),
+        ("feature_policy", "model_selection", True, "feature policy"),
+        ("manifest", "feature_policy", None, "feature policy"),
+        ("feature_policy", "same_calendar_day_matches_excluded", False, "feature policy"),
+        ("feature_source_gate", "metadata_fields_read",
+         ["match_date", "home_team", "away_team", "home_goals"], "fixture metadata"),
+        ("manifest", "eligible_for_product_publication", True, "eligibility"),
+        ("manifest", "eligible_for_frozen_old_season_cohort", True, "eligibility"),
+        ("manifest", "eligible_for_current_form_forward_shadow", True, "eligibility"),
+        ("manifest", "no_bet", False, "eligibility"),
+    ],
+)
+def test_archive_loader_rejects_manifest_safety_contract_drift(
+    target, field, value, expected_error
+):
+    raw, archives = make_archive()
+    def mutate(manifest):
+        container = manifest if target == "manifest" else manifest[target]
+        container[field] = value
+
+    tampered = _rewrite_source_manifest(raw, mutate)
+    archive = {**archives[0], "sha256": hashlib.sha256(tampered).hexdigest()}
+    parent = valid_parent(
+        archive,
+        quote_time=datetime(2026, 10, 19, 5, 30, tzinfo=timezone.utc),
+    )
+    with pytest.raises(ValueError, match=expected_error):
+        verify_and_load_archive(tampered, archive, parent)

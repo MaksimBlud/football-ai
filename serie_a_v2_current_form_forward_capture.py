@@ -219,6 +219,22 @@ def verify_and_load_archive(
                 or evaluation_gate.get("outcomes_read_for_evaluation") is not False
                 or evaluation_gate.get("outcome_gate_open") is not False):
             raise ValueError("target outcome evaluation gate unexpectedly opened or changed")
+        feature_policy = manifest.get("feature_policy")
+        if (not isinstance(feature_policy, dict)
+                or feature_policy.get("use_current_season_matches_only_as_lagged_features") is not True
+                or feature_policy.get("same_calendar_day_matches_excluded") is not True
+                or feature_policy.get("future_or_unplayed_fixtures_used") is not False
+                or feature_policy.get("model_weights_or_feature_definitions_changed") is not False
+                or feature_policy.get("model_refit") is not False
+                or feature_policy.get("model_selection") is not False):
+            raise ValueError("current-form feature policy violates lagged-only frozen contract")
+        if gate.get("metadata_fields_read") != ["match_date", "home_team", "away_team"]:
+            raise ValueError("current-form feature-source gate must read only fixture metadata")
+        if (manifest.get("eligible_for_frozen_old_season_cohort") is not False
+                or manifest.get("eligible_for_current_form_forward_shadow") is not False
+                or manifest.get("eligible_for_product_publication") is not False
+                or manifest.get("no_bet") is not True):
+            raise ValueError("current-form source archive cannot assert forecast/publication eligibility")
         if (manifest.get("target_outcomes_read") is not False
                 or manifest.get("target_outcomes_scored") is not False
                 or manifest.get("model_refit_or_promotion") is not False
