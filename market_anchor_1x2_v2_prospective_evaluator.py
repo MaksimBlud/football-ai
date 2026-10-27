@@ -30,6 +30,7 @@ REQUIRED_FIELDS = frozenset({
     "match_date", "home_team", "away_team", "candidate_sha256",
     "active_lambda", "shadow_residual_lambda", "no_bet",
     "eligible_for_current_form_forward_shadow", "eligible_for_product_publication",
+    "shadow_evidence_status",
     "source_artifact_id", "source_archive_sha256", "source_observed_at_utc",
     "source_archive_created_at_utc", "source_parent_run_id", "source_parent_run_sha",
     "source_parent_run_completed_at_utc", "quote_time_utc",
@@ -131,6 +132,8 @@ def _validate_forecast(row: Any) -> tuple[tuple[str, str, str], dict[str, tuple[
         raise ValueError("forecast is not marked eligible for the current-form research shadow")
     if row["eligible_for_product_publication"] is not False:
         raise ValueError("research forecast cannot claim product-publication eligibility")
+    if row["shadow_evidence_status"] != "SOURCE_ARCHIVE_AND_PARENT_RUN_VERIFIED_BEFORE_QUOTE":
+        raise ValueError("forecast lacks the verified source-archive/parent-before-quote evidence marker")
     if not isinstance(row["event_id"], str) or not row["event_id"].strip():
         raise ValueError("forecast event_id is missing")
     if type(row["source_artifact_id"]) is not int or row["source_artifact_id"] <= 0:
