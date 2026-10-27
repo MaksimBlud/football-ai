@@ -12,6 +12,7 @@ from serie_a_v2_current_form_forward_capture import (
     ARTIFACT_NAME,
     MANIFEST_FILENAME,
     SOURCE_WORKFLOW_PATH,
+    _latest_quotes,
     prepare_forward_capture as _prepare_forward_capture,
     verify_latest_source_archive,
 )
@@ -566,3 +567,26 @@ def test_unverified_parent_cannot_admit_quote():
     assert report["v2_current_form_shadow_captured"] == 0
     assert report["blocked"]["SOURCE_PARENT_UNVERIFIED"] == 1
     assert report["rows"][0]["status"] == "SOURCE_PARENT_UNVERIFIED"
+
+
+
+def test_latest_quotes_rejects_event_id_reused_for_a_different_fixture():
+    now = datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc)
+    first = quote(snapshot="2026-10-19T05:30:00Z")
+    conflicting = {
+        **quote(snapshot="2026-10-19T05:31:00Z"),
+        "home_team": "AC Milan",
+    }
+    with pytest.raises(ValueError, match="event_id maps to conflicting fixture identity"):
+        _latest_quotes([first, conflicting], now=now)
+
+
+def test_latest_quotes_rejects_same_fixture_split_across_event_ids():
+    now = datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc)
+    first = quote(snapshot="2026-10-19T05:30:00Z")
+    duplicate_fixture = {
+        **quote(snapshot="2026-10-19T05:31:00Z"),
+        "event_id": "different-provider-event-id",
+    }
+    with pytest.raises(ValueError, match="fixture identity maps to conflicting event_id"):
+        _latest_quotes([first, duplicate_fixture], now=now)
