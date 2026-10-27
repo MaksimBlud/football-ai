@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+import market_anchor_1x2_v2_prospective_evaluator as evaluator
 from market_anchor_1x2_v2_prospective_evaluator import (
     EXPERIMENT_ID,
     FROZEN_CANDIDATE_SHA256,
@@ -53,6 +54,13 @@ def make_forecasts(n=30):
             "market_1x2": [0.50, 0.30, 0.20],
             "active_market_fallback_1x2": [0.50, 0.30, 0.20],
             "incumbent_1x2": [0.55, 0.25, 0.20],
+            "incumbent_evidence": {
+                "model_version": "frozen-incumbent-test-v1",
+                "artifact_sha256": "c" * 64,
+                "source_record_id": f"incumbent-snapshot-{i}",
+                "generated_at_utc": "2026-10-18T08:55:00Z",
+                "history_cutoff_utc": "2026-10-18T08:30:00Z",
+            },
             "shadow_v2_residual_1x2": [0.70, 0.20, 0.10],
         })
     return rows
@@ -60,6 +68,16 @@ def make_forecasts(n=30):
 
 def identities(rows):
     return {(row["match_date"], row["home_team"], row["away_team"]) for row in rows}
+
+
+TEST_INCUMBENT_REFERENCE = {
+    "model_version": "frozen-incumbent-test-v1",
+    "artifact_sha256": "c" * 64,
+}
+
+
+def pin_test_incumbent(monkeypatch):
+    monkeypatch.setattr(evaluator, "FROZEN_INCUMBENT_REFERENCE", dict(TEST_INCUMBENT_REFERENCE))
 
 
 def test_29_completed_primary_forecasts_do_not_call_outcome_loader():
@@ -78,7 +96,8 @@ def test_29_completed_primary_forecasts_do_not_call_outcome_loader():
     assert called == []
 
 
-def test_exact_30_gate_scores_all_three_frozen_comparators_after_lazy_read():
+def test_exact_30_gate_scores_all_three_frozen_comparators_after_lazy_read(monkeypatch):
+    pin_test_incumbent(monkeypatch)
     rows = make_forecasts(30)
     called = []
 
@@ -247,7 +266,8 @@ def test_market_fallback_must_equal_market_at_frozen_lambda_zero():
     assert called == []
 
 
-def test_review_signal_requires_shadow_to_beat_both_comparators_on_both_metrics():
+def test_review_signal_requires_shadow_to_beat_both_comparators_on_both_metrics(monkeypatch):
+    pin_test_incumbent(monkeypatch)
     rows = make_forecasts(30)
     for row in rows:
         row["incumbent_1x2"] = [0.80, 0.10, 0.10]
@@ -257,7 +277,8 @@ def test_review_signal_requires_shadow_to_beat_both_comparators_on_both_metrics(
     assert report["review_signal"] is False
 
 
-def test_outcome_loader_must_return_exactly_the_gated_fixture_set():
+def test_outcome_loader_must_return_exactly_the_gated_fixture_set(monkeypatch):
+    pin_test_incumbent(monkeypatch)
     rows = make_forecasts(30)
     called = []
     def incomplete_loader(keys):
@@ -268,6 +289,63 @@ def test_outcome_loader_must_return_exactly_the_gated_fixture_set():
     assert len(called) == 1
 
 
+def test_30_completed_forecasts_do_not_read_outcomes_without_pinned_incumbent(monkeypatch):
+    monkeypatch.setattr(evaluator, "FROZEN_INCUMBENT_REFERENCE", None)
+    rows = make_forecasts(30)
+    called = []
+    report = evaluate_after_gate(
+        rows,
+        identities(rows),
+        lambda keys: called.append(keys) or {key: "H" for key in keys},
+    )
+    assert report["status"] == "EVALUATION_BLOCKED_UNPINNED_INCUMBENT"
+    assert report["eligible_completed_forecasts"] == 30
+    assert report["frozen_incumbent_reference_pinned"] is False
+    assert report["outcome_read_gate_open"] is False
+    assert report["target_outcomes_read"] is False
+    assert report["metrics"] is None
+    assert called == []
+
+
+def test_incumbent_evidence_must_match_frozen_reference_before_outcome_read(monkeypatch):
+    pin_test_incumbent(monkeypatch)
+    rows = make_forecasts(30)
+    rows[0]["incumbent_evidence"]["artifact_sha256"] = "d" * 64
+    called = []
+    with pytest.raises(ValueError, match="does not match the frozen incumbent reference"):
+        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+    assert called == []
+
+
+def test_legacy_xgboost_incumbent_evidence_is_rejected_before_outcome_read():
+    rows = make_forecasts(30)
+    rows[0]["incumbent_evidence"]["model_version"] = "legacy-xgboost-production"
+    called = []
+    with pytest.raises(ValueError, match="legacy XGBoost incumbent evidence is forbidden"):
+        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+    assert called == []
+
+
+def test_duplicate_incumbent_source_record_id_fails_closed(monkeypatch):
+    pin_test_incumbent(monkeypatch)
+    rows = make_forecasts(30)
+    rows[1]["incumbent_evidence"]["source_record_id"] = rows[0]["incumbent_evidence"]["source_record_id"]
+    called = []
+    with pytest.raises(ValueError, match="duplicate incumbent source record ID"):
+        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+    assert called == []
+
+
+def test_incumbent_prediction_must_not_follow_quote(monkeypatch):
+    pin_test_incumbent(monkeypatch)
+    rows = make_forecasts(30)
+    rows[0]["incumbent_evidence"]["generated_at_utc"] = "2026-10-18T09:01:00Z"
+    called = []
+    with pytest.raises(ValueError, match="must not follow the quote"):
+        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+    assert called == []
+
+
 def test_current_form_policy_matches_evaluator_frozen_constants():
     root = Path(__file__).resolve().parents[1]
     policy = json.loads((root / "experiments/market_anchor_1x2_v2_current_form_policy.json").read_text())
@@ -276,6 +354,8 @@ def test_current_form_policy_matches_evaluator_frozen_constants():
     assert policy["frozen_original_candidate"]["active_lambda"] == 0.0
     assert policy["frozen_original_candidate"]["shadow_residual_lambda"] == 1.0
     assert policy["target_outcome_evaluation_gate"]["minimum_completed_eligible_prospective_forecasts"] == MIN_COMPLETED_ELIGIBLE_FORECASTS
+    assert evaluator.FROZEN_INCUMBENT_REFERENCE is None
+    assert "frozen_incumbent_reference" not in policy["target_outcome_evaluation_gate"]
     assert set(policy["target_outcome_evaluation_gate"]["required_comparison"]) == {
         "DE_VIGGED_MARKET", "FROZEN_PRODUCTION_INCUMBENT", "INACTIVE_LAMBDA_1_RESIDUAL_SHADOW"
     }
