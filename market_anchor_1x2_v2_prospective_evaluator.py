@@ -19,6 +19,9 @@ EVIDENCE_CLASS = "PROSPECTIVE_SHADOW"
 FROZEN_CANDIDATE_SHA256 = "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
 ACTIVE_LAMBDA = 0.0
 SHADOW_RESIDUAL_LAMBDA = 1.0
+# The frozen policy names a production incumbent but does not pin its exact model version/artifact SHA.
+# Keep target-outcome evaluation fail-closed until a separately approved protocol amendment pins it.
+FROZEN_INCUMBENT_REFERENCE: dict[str, str] | None = None
 MIN_COMPLETED_ELIGIBLE_FORECASTS = 30
 MAX_SOURCE_AGE = timedelta(hours=24)
 MAX_QUOTE_AGE = timedelta(hours=24)
@@ -40,7 +43,7 @@ REQUIRED_FIELDS = frozenset({
     "source_archive_created_at_utc", "source_parent_run_id", "source_parent_run_sha",
     "source_parent_run_completed_at_utc", "quote_time_utc",
     "forecast_captured_at_utc", "kickoff_utc", "market_1x2",
-    "active_market_fallback_1x2", "incumbent_1x2", "shadow_v2_residual_1x2",
+    "active_market_fallback_1x2", "incumbent_1x2", "incumbent_evidence", "shadow_v2_residual_1x2",
 })
 
 
@@ -114,7 +117,7 @@ def _sha_fixture_set(identities: Iterable[tuple[str, str, str]]) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
-def _validate_forecast(row: Any) -> tuple[tuple[str, str, str], dict[str, tuple[float, float, float]]]:
+def _validate_forecast(row: Any) -> tuple[tuple[str, str, str], dict[str, tuple[float, float, float]], dict[str, Any]]:
     if not isinstance(row, Mapping):
         raise ValueError("each forecast must be a mapping")
     _guard_no_outcomes(row)
@@ -157,6 +160,29 @@ def _validate_forecast(row: Any) -> tuple[tuple[str, str, str], dict[str, tuple[
     quote_time = _utc(row["quote_time_utc"], "quote_time_utc")
     captured = _utc(row["forecast_captured_at_utc"], "forecast_captured_at_utc")
     kickoff = _utc(row["kickoff_utc"], "kickoff_utc")
+    evidence = row["incumbent_evidence"]
+    if not isinstance(evidence, Mapping):
+        raise ValueError("incumbent_evidence must include frozen model and per-event source provenance")
+    missing_evidence = {"model_version", "artifact_sha256", "source_record_id", "generated_at_utc", "history_cutoff_utc"} - set(evidence)
+    if missing_evidence:
+        raise ValueError("incumbent evidence missing fields: " + ", ".join(sorted(missing_evidence)))
+    incumbent_version = evidence["model_version"]
+    if not isinstance(incumbent_version, str) or not incumbent_version.strip():
+        raise ValueError("incumbent model version is missing")
+    incumbent_version = incumbent_version.strip()
+    version_key = incumbent_version.casefold()
+    if "xgboost" in version_key or re.search(r"(^|[-_])xgb($|[-_])", version_key):
+        raise ValueError("legacy XGBoost incumbent evidence is forbidden by the V2-only research contract")
+    incumbent_sha = evidence["artifact_sha256"]
+    if not isinstance(incumbent_sha, str) or not _SHA256.fullmatch(incumbent_sha):
+        raise ValueError("incumbent artifact SHA-256 is missing or malformed")
+    incumbent_source_id = evidence["source_record_id"]
+    if not isinstance(incumbent_source_id, str) or not incumbent_source_id.strip():
+        raise ValueError("incumbent source record ID is missing")
+    incumbent_generated = _utc(evidence["generated_at_utc"], "incumbent_evidence.generated_at_utc")
+    incumbent_history_cutoff = _utc(evidence["history_cutoff_utc"], "incumbent_evidence.history_cutoff_utc")
+    if incumbent_history_cutoff > incumbent_generated or incumbent_generated > quote_time:
+        raise ValueError("incumbent history cutoff/generated time must not follow the quote")
     if kickoff.date().isoformat() != identity[0]:
         raise ValueError("kickoff UTC date does not match canonical fixture match_date")
     fixture_date = date.fromisoformat(identity[0])
@@ -177,7 +203,32 @@ def _validate_forecast(row: Any) -> tuple[tuple[str, str, str], dict[str, tuple[
     shadow = _probabilities(row["shadow_v2_residual_1x2"], field="shadow_v2_residual_1x2")
     if any(not math.isclose(a, b, rel_tol=0.0, abs_tol=1e-12) for a, b in zip(market, active)):
         raise ValueError("active_lambda=0 must remain exactly the de-vigged market vector")
-    return identity, {"market": market, "incumbent": incumbent, "shadow": shadow}
+    return identity, {"market": market, "incumbent": incumbent, "shadow": shadow}, {
+        "model_version": incumbent_version,
+        "artifact_sha256": incumbent_sha,
+        "source_record_id": incumbent_source_id.strip(),
+        "generated_at_utc": incumbent_generated,
+        "history_cutoff_utc": incumbent_history_cutoff,
+    }
+
+
+def _validated_frozen_incumbent_reference(value: Any) -> dict[str, str] | None:
+    """Validate the incumbent identity pinned by a separately approved protocol."""
+    if value is None:
+        return None
+    if not isinstance(value, Mapping) or set(value) != {"model_version", "artifact_sha256"}:
+        raise ValueError("frozen incumbent reference must pin exactly model_version and artifact_sha256")
+    version = value["model_version"]
+    digest = value["artifact_sha256"]
+    if not isinstance(version, str) or not version.strip():
+        raise ValueError("frozen incumbent reference has no model_version")
+    version = version.strip()
+    version_key = version.casefold()
+    if "xgboost" in version_key or re.search(r"(^|[-_])xgb($|[-_])", version_key):
+        raise ValueError("legacy XGBoost incumbent reference is forbidden by the V2-only research contract")
+    if not isinstance(digest, str) or not _SHA256.fullmatch(digest):
+        raise ValueError("frozen incumbent reference has no valid artifact SHA-256")
+    return {"model_version": version, "artifact_sha256": digest}
 
 
 def _score(probabilities: tuple[float, float, float], outcome: str) -> tuple[float, float]:
@@ -205,22 +256,27 @@ def evaluate_after_gate(
     if isinstance(completed_fixture_identities, (str, bytes, Mapping)):
         raise ValueError("completed gate input must be fixture identities only, not outcome rows")
     completed = {_identity(item, label="completed metadata identity") for item in completed_fixture_identities}
-    normalized: list[tuple[tuple[str, str, str], dict[str, tuple[float, float, float]]]] = []
+    normalized: list[tuple[tuple[str, str, str], dict[str, tuple[float, float, float]], dict[str, Any]]] = []
     seen_ids: set[str] = set()
     seen_fixtures: set[tuple[str, str, str]] = set()
+    seen_incumbent_records: set[str] = set()
     for row in forecast_rows:
-        identity, vectors = _validate_forecast(row)
+        identity, vectors, incumbent_evidence = _validate_forecast(row)
         event_id = row["event_id"].strip()
         if event_id in seen_ids:
             raise ValueError("duplicate provider event_id in prospective forecast cohort")
         if identity in seen_fixtures:
             raise ValueError("duplicate canonical fixture identity in prospective forecast cohort")
+        source_record_id = incumbent_evidence["source_record_id"]
+        if source_record_id in seen_incumbent_records:
+            raise ValueError("duplicate incumbent source record ID in prospective forecast cohort")
         seen_ids.add(event_id)
         seen_fixtures.add(identity)
-        normalized.append((identity, vectors))
+        seen_incumbent_records.add(source_record_id)
+        normalized.append((identity, vectors, incumbent_evidence))
 
-    eligible_completed = [(identity, vectors) for identity, vectors in normalized if identity in completed]
-    completed_ids = frozenset(identity for identity, _ in eligible_completed)
+    eligible_completed = [(identity, vectors, evidence) for identity, vectors, evidence in normalized if identity in completed]
+    completed_ids = frozenset(identity for identity, _, _ in eligible_completed)
     common = {
         "experiment_id": EXPERIMENT_ID,
         "evidence_class": "PROSPECTIVE_FROZEN_GATE_EVALUATION",
@@ -232,6 +288,7 @@ def evaluate_after_gate(
         "primary_season_end": PRIMARY_SEASON_END.isoformat(),
         "active_lambda": ACTIVE_LAMBDA,
         "shadow_residual_lambda": SHADOW_RESIDUAL_LAMBDA,
+        "frozen_incumbent_reference_pinned": FROZEN_INCUMBENT_REFERENCE is not None,
         "minimum_completed_eligible_forecasts": MIN_COMPLETED_ELIGIBLE_FORECASTS,
         "eligible_completed_forecasts": len(eligible_completed),
         "completed_fixture_identity_sha256": _sha_fixture_set(completed_ids),
@@ -251,6 +308,23 @@ def evaluate_after_gate(
             "review_signal": False,
         }
 
+    incumbent_reference = _validated_frozen_incumbent_reference(FROZEN_INCUMBENT_REFERENCE)
+    if incumbent_reference is None:
+        return {
+            **common,
+            "status": "EVALUATION_BLOCKED_UNPINNED_INCUMBENT",
+            "reason": "FROZEN_INCUMBENT_IDENTITY_NOT_PINNED_IN_PREREGISTERED_POLICY",
+            "outcome_read_gate_open": False,
+            "target_outcomes_read": False,
+            "target_outcomes_scored": False,
+            "metrics": None,
+            "review_signal": False,
+        }
+    for _, _, evidence in eligible_completed:
+        if (evidence["model_version"] != incumbent_reference["model_version"]
+                or evidence["artifact_sha256"] != incumbent_reference["artifact_sha256"]):
+            raise ValueError("incumbent evidence does not match the frozen incumbent reference")
+
     # The first point at which this function may request target outcomes.
     outcomes = outcome_loader(completed_ids)
     if not isinstance(outcomes, Mapping) or set(outcomes) != set(completed_ids):
@@ -262,7 +336,7 @@ def evaluate_after_gate(
         name: {"brier": 0.0, "log_loss": 0.0}
         for name in ("market", "incumbent", "shadow")
     }
-    for identity, vectors in eligible_completed:
+    for identity, vectors, _evidence in eligible_completed:
         outcome = outcomes[identity]
         for name, probabilities in vectors.items():
             brier, log_loss = _score(probabilities, outcome)
