@@ -432,6 +432,7 @@ def capture_source_archive(
             "metadata_fields_read": ["match_date", "home_team", "away_team"],
             "score_or_result_fields_selected_for_gate": False,
             "gate_fixture_identity_sha256": _fixture_identity_sha256(gate_identities),
+            "gate_fixture_identities": [list(identity) for identity in sorted(gate_identities)],
             "gate_fixture_identity_count": gate_count,
             "gate_fixture_identities_covered_by_current_source": len(gate_identities & source_identities),
             "gate_fixture_identities_missing_from_current_source": len(missing_gate_identities),
