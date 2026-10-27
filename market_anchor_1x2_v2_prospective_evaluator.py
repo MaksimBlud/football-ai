@@ -152,6 +152,8 @@ def _validate_forecast(row: Any) -> tuple[tuple[str, str, str], dict[str, tuple[
     quote_time = _utc(row["quote_time_utc"], "quote_time_utc")
     captured = _utc(row["forecast_captured_at_utc"], "forecast_captured_at_utc")
     kickoff = _utc(row["kickoff_utc"], "kickoff_utc")
+    if kickoff.date().isoformat() != identity[0]:
+        raise ValueError("kickoff UTC date does not match canonical fixture match_date")
     if not (observed <= archive_created <= parent_completed < quote_time <= captured < kickoff):
         raise ValueError("source observation/archive/parent/quote/capture/kickoff ordering is invalid")
     if quote_time - observed > MAX_SOURCE_AGE:
