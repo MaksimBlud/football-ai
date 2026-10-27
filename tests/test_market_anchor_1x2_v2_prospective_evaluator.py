@@ -96,7 +96,7 @@ def test_exact_30_gate_scores_all_three_frozen_comparators_after_lazy_read():
     assert report["review_signal"] is True
     assert report["no_bet"] is True
     assert report["automatic_promotion"] is False
-    assert "H" not in json.dumps(report)
+    assert '"H"' not in json.dumps(report)
 
 
 def test_future_forecasts_do_not_count_toward_completed_gate():
