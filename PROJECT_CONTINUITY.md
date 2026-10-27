@@ -1,5 +1,28 @@
 # Football AI — Project Continuity
 
+## 2026-10-27 18:56 UTC — original V2 evaluator: preregistration cutoff enforced
+
+Fresh GitHub state:
+- `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no merge or main mutation occurred.
+- [PR #701](https://github.com/MaksimBlud/football-ai/pull/701) current exact HEAD: `7e92e9838d6a459fdafc7a7ec6d05d662c0f9346`, base `40887ebb215730190d7a6c7a1693373ec4afcdfc`, open and not merged.
+- Exact-head validation: **6/6 SUCCESS** — [Research #40564441879](https://github.com/MaksimBlud/football-ai/actions/runs/40564441879), [Serie A #40564441940](https://github.com/MaksimBlud/football-ai/actions/runs/40564441940), [Bundesliga #40564442109](https://github.com/MaksimBlud/football-ai/actions/runs/40564442109), [Ligue 1 #40564441989](https://github.com/MaksimBlud/football-ai/actions/runs/40564441989), [Eredivisie #40564443793](https://github.com/MaksimBlud/football-ai/actions/runs/40564443793), [Product #40564442100](https://github.com/MaksimBlud/football-ai/actions/runs/40564442100). Research's prospective evaluator test step and no-production-artifact guard passed.
+- [PR #699](https://github.com/MaksimBlud/football-ai/pull/699) remains open at `fb2e584f08cd4a139a2c9c4fc2e056c98c1fd0b8`; exact-head CI was 7/7 SUCCESS. Its new source/identity guards still require a real post-HUMAN-MERGE run on the resulting main SHA.
+
+### New fail-closed evaluator boundary
+
+The current-form policy was introduced by main commit `9df6f63db10e0128aff89c38fb8c6d88703ef8b8`, committed at `2026-10-18T08:15:32Z`. PR #701 now pins that cutoff and rejects any quote at or before the freeze timestamp, plus any fixture date outside the frozen 2026/27 season (`2026-07-01` through `2027-06-30`). New synthetic regressions verify both rejection paths occur before the lazy outcome loader can run. This prevents pre-contract quotes, including October 13 snapshots, from being counted just because their local source/quote timestamps look ordered. No original feature, weight, candidate SHA, lambda, or evaluation threshold changed.
+
+### Fresh read-only data check (2026-10-27)
+
+- `public.odds_snapshots`: 3,966 total; 625 Serie A; latest `2026-10-13T14:48:53.042620Z`; zero rows in the last 24 hours; zero future pre-kickoff rows.
+- `public.predictions`: 0 rows.
+- No new eligible prospective quote or shadow forecast exists. The evaluator still lacks a same-event, already-recorded incumbent vector for the Serie A primary cohort. Do not substitute market probabilities, load/revive the legacy XGBoost model, or read protected outcomes early.
+- The existing source archive/current metadata identity parity remains 80/80 canonical fixture IDs, sorted-set SHA-256 `a19ac284b11337ea54591025683a721e0bd2c9815820309b3797188826055f27`; that proves identity parity only, not a fresh quote or model quality.
+
+Safety remains binding: `active_lambda=0` is the market; `shadow_lambda=1` is research-only; the 30-eligible-completed-prospective-forecast outcome gate remains CLOSED. No target outcomes read/scored, no paid calls, no Supabase writes/DDL, no production `.pkl` changes, no model refit/promotion/bets, and no schedule changes. HUMAN-MERGE only.
+
+---
+
 ## 2026-10-27 15:47 UTC — current-form forward runtime and incumbent-vector audit
 
 Fresh verification on unchanged `main` SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`:
