@@ -324,6 +324,49 @@ def test_forward_capture_fails_closed_when_new_completed_fixture_is_missing_from
     assert verification["feature_source_gate_freshness"]["missing_identity_count"] == 1
 
 
+@pytest.mark.parametrize("gate_size", [0, 29])
+def test_forward_capture_fails_closed_when_current_gate_is_empty_or_below_minimum(monkeypatch, gate_size):
+    raw, archives = make_archive()
+    identities = sorted(_fixture_current_gate_identities())
+    current_gate = set(identities[:gate_size])
+
+    monkeypatch.setattr(
+        forward_capture_module,
+        "shadow_preview",
+        lambda *_args, **_kwargs: pytest.fail("incomplete current gate must block before inference"),
+    )
+    report = _prepare_forward_capture(
+        [quote()], archives,
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        load_archive=lambda _artifact_id: raw,
+        verify_parent_run=valid_parent,
+        current_gate_identities=current_gate,
+    )
+    assert report["v2_current_form_shadow_captured"] == 0
+    assert report["blocked"]["SOURCE_GATE_STALE"] == 1
+    assert report["rows"][0]["status"] == "SOURCE_GATE_STALE"
+    freshness = report["rows"][0]["source_gate_freshness"]
+    assert freshness["fresh"] is False
+    assert freshness["reason"] == "CURRENT_GATE_BELOW_MINIMUM"
+    assert freshness["current_gate_identity_count"] == gate_size
+    assert freshness["minimum_completed_primary_events"] == 30
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
+    assert report["production_or_supabase_writes"] == 0
+    assert report["paid_provider_calls"] == 0
+
+    verification = verify_latest_source_archive(
+        archives,
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        load_archive=lambda _artifact_id: raw,
+        verify_parent_run=valid_parent,
+        current_gate_identities=current_gate,
+    )
+    assert verification["fresh_for_current_feature_gate"] is False
+    assert verification["fresh_for_new_quote"] is False
+    assert verification["feature_source_gate_freshness"]["reason"] == "CURRENT_GATE_BELOW_MINIMUM"
+
+
 def test_missing_source_artifact_is_explicitly_reported_without_reading_outcomes():
     report = verify_latest_source_archive(
         [],
