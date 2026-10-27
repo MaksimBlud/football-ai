@@ -180,7 +180,7 @@ def test_precontract_quote_is_rejected_before_outcome_read():
     row["source_parent_run_completed_at_utc"] = "2026-10-18T07:40:00Z"
     row["quote_time_utc"] = "2026-10-18T08:00:00Z"
     row["forecast_captured_at_utc"] = "2026-10-18T08:01:00Z"
-    row["incumbent_evidence"]["history_cutoff_utc"] = "2026-10-18T07:45:00Z"
+    row["incumbent_evidence"]["history_cutoff_utc"] = "2026-10-18T07:25:00Z"
     row["incumbent_evidence"]["generated_at_utc"] = "2026-10-18T07:50:00Z"
     called = []
     with pytest.raises(ValueError, match="preregistration time"):
@@ -344,6 +344,18 @@ def test_incumbent_prediction_must_not_follow_quote(monkeypatch):
     rows[0]["incumbent_evidence"]["generated_at_utc"] = "2026-10-18T09:01:00Z"
     called = []
     with pytest.raises(ValueError, match="must not follow the quote"):
+        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+    assert called == []
+
+
+def test_incumbent_history_cutoff_must_not_exceed_v2_source_observation():
+    rows = make_forecasts(30)
+    # This comparator was generated before the market quote, but its declared
+    # history cutoff is later than the source observation used by V2.
+    # It therefore has an information-time advantage and must fail closed.
+    rows[0]["incumbent_evidence"]["history_cutoff_utc"] = "2026-10-18T08:31:00Z"
+    called = []
+    with pytest.raises(ValueError, match="same-information-time comparison"):
         evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
     assert called == []
 
