@@ -24,6 +24,13 @@ timestamps:
 
 `source observation <= archive creation <= successful parent completion < quote time <= forecast capture < kickoff`.
 
+The separate cohort is pinned to main commit `9df6f63db10e0128aff89c38fb8c6d88703ef8b8`, frozen at
+`2026-10-18T08:15:32Z`. Every accepted quote must be strictly later than that
+commit time; pre-contract quotes (including the saved October 13 observations)
+are ineligible even if their timestamps otherwise look valid. The fixture date
+must also fall inside the frozen 2026/27 season (`2026-07-01` through
+`2027-06-30`). These are fixed contract boundaries, not tuned thresholds.
+
 The source observation-to-quote and quote-to-capture intervals must each be
 within the preregistered 24-hour limits. The market vector must exactly match
 the active lambda-zero fallback within the original 1e-12 invariant. Market,

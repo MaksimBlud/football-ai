@@ -22,6 +22,11 @@ SHADOW_RESIDUAL_LAMBDA = 1.0
 MIN_COMPLETED_ELIGIBLE_FORECASTS = 30
 MAX_SOURCE_AGE = timedelta(hours=24)
 MAX_QUOTE_AGE = timedelta(hours=24)
+# Exact main commit that introduced/froze the separate current-form cohort.
+COHORT_PREREGISTRATION_COMMIT_SHA = "9df6f63db10e0128aff89c38fb8c6d88703ef8b8"
+COHORT_FROZEN_AT_UTC = datetime(2026, 10, 18, 8, 15, 32, tzinfo=timezone.utc)
+PRIMARY_SEASON_START = date(2026, 7, 1)
+PRIMARY_SEASON_END = date(2027, 6, 30)
 RESULT_INDEX = {"H": 0, "D": 1, "A": 2}
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 _SHA1 = re.compile(r"[0-9a-f]{40}\Z")
@@ -154,6 +159,11 @@ def _validate_forecast(row: Any) -> tuple[tuple[str, str, str], dict[str, tuple[
     kickoff = _utc(row["kickoff_utc"], "kickoff_utc")
     if kickoff.date().isoformat() != identity[0]:
         raise ValueError("kickoff UTC date does not match canonical fixture match_date")
+    fixture_date = date.fromisoformat(identity[0])
+    if not PRIMARY_SEASON_START <= fixture_date <= PRIMARY_SEASON_END:
+        raise ValueError("forecast fixture date is outside the frozen 2026/27 primary season")
+    if quote_time <= COHORT_FROZEN_AT_UTC:
+        raise ValueError("quote predates or equals the frozen cohort preregistration time")
     if not (observed <= archive_created <= parent_completed < quote_time <= captured < kickoff):
         raise ValueError("source observation/archive/parent/quote/capture/kickoff ordering is invalid")
     if quote_time - observed > MAX_SOURCE_AGE:
@@ -216,6 +226,10 @@ def evaluate_after_gate(
         "evidence_class": "PROSPECTIVE_FROZEN_GATE_EVALUATION",
         "primary_league": PRIMARY_LEAGUE,
         "frozen_candidate_sha256": FROZEN_CANDIDATE_SHA256,
+        "cohort_preregistration_commit_sha": COHORT_PREREGISTRATION_COMMIT_SHA,
+        "cohort_frozen_at_utc": COHORT_FROZEN_AT_UTC.isoformat().replace("+00:00", "Z"),
+        "primary_season_start": PRIMARY_SEASON_START.isoformat(),
+        "primary_season_end": PRIMARY_SEASON_END.isoformat(),
         "active_lambda": ACTIVE_LAMBDA,
         "shadow_residual_lambda": SHADOW_RESIDUAL_LAMBDA,
         "minimum_completed_eligible_forecasts": MIN_COMPLETED_ELIGIBLE_FORECASTS,

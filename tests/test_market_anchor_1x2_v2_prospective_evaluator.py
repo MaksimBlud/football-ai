@@ -12,13 +12,17 @@ from market_anchor_1x2_v2_prospective_evaluator import (
     EXPERIMENT_ID,
     FROZEN_CANDIDATE_SHA256,
     MIN_COMPLETED_ELIGIBLE_FORECASTS,
+    COHORT_PREREGISTRATION_COMMIT_SHA,
+    COHORT_FROZEN_AT_UTC,
+    PRIMARY_SEASON_START,
+    PRIMARY_SEASON_END,
     evaluate_after_gate,
 )
 
 
 def make_forecasts(n=30):
     rows = []
-    start = date(2026, 10, 1)
+    start = date(2026, 10, 20)
     for i in range(n):
         match_date = (start + timedelta(days=i)).isoformat()
         rows.append({
@@ -38,13 +42,13 @@ def make_forecasts(n=30):
             "shadow_evidence_status": "SOURCE_ARCHIVE_AND_PARENT_RUN_VERIFIED_BEFORE_QUOTE",
             "source_artifact_id": 123456,
             "source_archive_sha256": "a" * 64,
-            "source_observed_at_utc": "2026-09-02T00:30:00Z",
-            "source_archive_created_at_utc": "2026-09-02T00:35:00Z",
+            "source_observed_at_utc": "2026-10-18T08:30:00Z",
+            "source_archive_created_at_utc": "2026-10-18T08:35:00Z",
             "source_parent_run_id": 654321,
             "source_parent_run_sha": "b" * 40,
-            "source_parent_run_completed_at_utc": "2026-09-02T00:40:00Z",
-            "quote_time_utc": "2026-09-02T01:00:00Z",
-            "forecast_captured_at_utc": "2026-09-02T01:01:00Z",
+            "source_parent_run_completed_at_utc": "2026-10-18T08:40:00Z",
+            "quote_time_utc": "2026-10-18T09:00:00Z",
+            "forecast_captured_at_utc": "2026-10-18T09:01:00Z",
             "kickoff_utc": f"{match_date}T18:00:00Z",
             "market_1x2": [0.50, 0.30, 0.20],
             "active_market_fallback_1x2": [0.50, 0.30, 0.20],
@@ -133,7 +137,7 @@ def test_contract_or_source_provenance_drift_fails_before_outcome_read(field, va
 
 def test_source_after_quote_fails_before_outcome_read():
     rows = make_forecasts(30)
-    rows[0]["source_archive_created_at_utc"] = "2026-09-02T01:00:00Z"
+    rows[0]["source_archive_created_at_utc"] = "2026-10-18T09:00:00Z"
     called = []
     with pytest.raises(ValueError, match="ordering"):
         evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
@@ -147,6 +151,37 @@ def test_offsetless_clock_fails_before_outcome_read():
     with pytest.raises(ValueError, match="UTC offset"):
         evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
     assert called == []
+
+
+def test_precontract_quote_is_rejected_before_outcome_read():
+    rows = make_forecasts(30)
+    row = rows[0]
+    row["source_observed_at_utc"] = "2026-10-18T07:30:00Z"
+    row["source_archive_created_at_utc"] = "2026-10-18T07:35:00Z"
+    row["source_parent_run_completed_at_utc"] = "2026-10-18T07:40:00Z"
+    row["quote_time_utc"] = "2026-10-18T08:00:00Z"
+    row["forecast_captured_at_utc"] = "2026-10-18T08:01:00Z"
+    called = []
+    with pytest.raises(ValueError, match="preregistration time"):
+        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+    assert called == []
+
+
+def test_forecast_outside_frozen_2026_27_season_is_rejected_before_outcome_read():
+    rows = make_forecasts(30)
+    rows[0]["match_date"] = "2027-07-01"
+    rows[0]["kickoff_utc"] = "2027-07-01T18:00:00Z"
+    called = []
+    with pytest.raises(ValueError, match="outside the frozen 2026/27 primary season"):
+        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+    assert called == []
+
+
+def test_preregistration_cutoff_and_season_are_explicitly_pinned():
+    assert COHORT_PREREGISTRATION_COMMIT_SHA == "9df6f63db10e0128aff89c38fb8c6d88703ef8b8"
+    assert COHORT_FROZEN_AT_UTC.isoformat() == "2026-10-18T08:15:32+00:00"
+    assert PRIMARY_SEASON_START.isoformat() == "2026-07-01"
+    assert PRIMARY_SEASON_END.isoformat() == "2027-06-30"
 
 
 def test_kickoff_utc_date_must_match_fixture_identity_before_outcome_read():
