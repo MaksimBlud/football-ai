@@ -230,3 +230,44 @@ def test_live_diagnostic_rejects_offsetless_clock_before_feature_build():
     invalid_clock = datetime(2026, 10, 13, 15, 1, tzinfo=_NoOffsetTimezone())
     with pytest.raises(ValueError, match="as-of timestamp needs UTC timezone"):
         make_report([], history_fixture(), [{}], as_of_utc=invalid_clock)
+
+@pytest.mark.parametrize(
+    "redirect_kind",
+    ["cross_origin", "https_downgrade", "path_change", "query_added", "credentials", "nonstandard_port"],
+)
+def test_historical_source_final_url_mutations_fail_before_body_read_or_csv_write(tmp_path, redirect_kind):
+    """Each source URL mutation must fail before reading bytes or persisting a CSV."""
+    body_reads = []
+
+    class MutatedResponse:
+        status_code = 200
+
+        def __init__(self, url):
+            self.url = url
+
+        @property
+        def content(self):
+            body_reads.append(self.url)
+            raise AssertionError("unapproved final response body must not be read")
+
+    def fake_get(url, timeout, allow_redirects):
+        assert allow_redirects is False
+        if redirect_kind == "cross_origin":
+            final_url = url.replace("www.football-data.co.uk", "attacker.invalid")
+        elif redirect_kind == "https_downgrade":
+            final_url = url.replace("https://", "http://", 1)
+        elif redirect_kind == "path_change":
+            final_url = url.replace("/I1.csv", "/other.csv")
+        elif redirect_kind == "query_added":
+            final_url = url + "?redirected=1"
+        elif redirect_kind == "credentials":
+            final_url = url.replace("https://", "https://user@")
+        else:
+            final_url = url.replace("www.football-data.co.uk", "www.football-data.co.uk:444")
+        return MutatedResponse(final_url)
+
+    with pytest.raises(RuntimeError, match="unexpected final URL"):
+        fetch_public_history(get=fake_get, capture_dir=tmp_path)
+    assert body_reads == []
+    assert list(tmp_path.glob("*.csv")) == []
+
