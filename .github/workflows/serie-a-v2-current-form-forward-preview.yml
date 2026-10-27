@@ -18,6 +18,7 @@ on:
       - "serie_a_runtime_config.py"
       - "historical_football_signal_lab.py"
       - "experiments/market_anchor_1x2_v2_current_form_policy.json"
+      - "experiments/market_anchor_1x2_v2_protocol.json"
       - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
       - "tests/test_serie_a_v2_current_form_source_capture.py"
       - "tests/test_serie_a_v2_current_form_forward_capture.py"
@@ -28,6 +29,7 @@ on:
       - "tests/test_serie_a_v2_live_diagnostic_report.py"
       - "tests/test_historical_football_signal_lab.py"
       - "tests/test_serie_a_v2_manual_quote_trigger_contract.py"
+      - "tests/test_serie_a_v2_current_form_dependency_triggers.py"
       - ".github/workflows/serie-a-v2-current-form-forward-preview.yml"
   workflow_run:
     workflows:
@@ -79,7 +81,8 @@ jobs:
             tests/test_serie_a_v2_prequote_source_archive_gate.py \
             tests/test_serie_a_v2_live_diagnostic_report.py \
             tests/test_historical_football_signal_lab.py \
-            tests/test_serie_a_v2_manual_quote_trigger_contract.py
+            tests/test_serie_a_v2_manual_quote_trigger_contract.py \
+            tests/test_serie_a_v2_current_form_dependency_triggers.py
       - name: Generate read-only current-form V2 shadow from already saved quotes
         run: |
           test -n "$SUPABASE_URL"

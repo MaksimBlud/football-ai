@@ -9,6 +9,7 @@ on:
     paths:
       - "serie_a_v2_current_form_source_capture.py"
       - "experiments/market_anchor_1x2_v2_current_form_policy.json"
+      - "experiments/market_anchor_1x2_v2_protocol.json"
       - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
       - "historical_football_signal_lab.py"
       - "serie_a_runtime_config.py"
@@ -24,6 +25,7 @@ on:
       - "tests/test_serie_a_v2_atalanta_alias.py"
       - "tests/test_serie_a_v2_current_form_source_capture.py"
       - "tests/test_serie_a_v2_current_form_source_workflow_contract.py"
+      - "tests/test_serie_a_v2_current_form_dependency_triggers.py"
       - ".github/workflows/serie-a-v2-current-form-source-capture.yml"
 
 concurrency:
@@ -57,7 +59,7 @@ jobs:
       - name: Validate feature-input gate and source integrity rules
         run: |
           python -m py_compile serie_a_v2_current_form_source_capture.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py
-          python -m pytest -q tests/test_serie_a_v2_current_form_source_capture.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_atalanta_alias.py tests/test_serie_a_v2_frozen_shadow_preview.py tests/test_serie_a_v2_live_diagnostic_report.py tests/test_historical_football_signal_lab.py tests/test_serie_a_v2_current_form_source_workflow_contract.py
+          python -m pytest -q tests/test_serie_a_v2_current_form_source_capture.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_atalanta_alias.py tests/test_serie_a_v2_frozen_shadow_preview.py tests/test_serie_a_v2_live_diagnostic_report.py tests/test_historical_football_signal_lab.py tests/test_serie_a_v2_current_form_source_workflow_contract.py tests/test_serie_a_v2_current_form_dependency_triggers.py
       - name: Capture frozen historical seasons plus gated current-form source
         run: |
           test -n "$SUPABASE_URL"
