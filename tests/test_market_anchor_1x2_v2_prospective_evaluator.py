@@ -180,6 +180,8 @@ def test_precontract_quote_is_rejected_before_outcome_read():
     row["source_parent_run_completed_at_utc"] = "2026-10-18T07:40:00Z"
     row["quote_time_utc"] = "2026-10-18T08:00:00Z"
     row["forecast_captured_at_utc"] = "2026-10-18T08:01:00Z"
+    row["incumbent_evidence"]["history_cutoff_utc"] = "2026-10-18T07:45:00Z"
+    row["incumbent_evidence"]["generated_at_utc"] = "2026-10-18T07:50:00Z"
     called = []
     with pytest.raises(ValueError, match="preregistration time"):
         evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
