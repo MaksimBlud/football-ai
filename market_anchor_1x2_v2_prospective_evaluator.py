@@ -23,8 +23,8 @@ MIN_COMPLETED_ELIGIBLE_FORECASTS = 30
 MAX_SOURCE_AGE = timedelta(hours=24)
 MAX_QUOTE_AGE = timedelta(hours=24)
 RESULT_INDEX = {"H": 0, "D": 1, "A": 2}
-_SHA256 = re.compile(r"[0-9a-f]{64}\\Z")
-_SHA1 = re.compile(r"[0-9a-f]{40}\\Z")
+_SHA256 = re.compile(r"[0-9a-f]{64}\Z")
+_SHA1 = re.compile(r"[0-9a-f]{40}\Z")
 REQUIRED_FIELDS = frozenset({
     "experiment_id", "evidence_class", "league", "event_id",
     "match_date", "home_team", "away_team", "candidate_sha256",
