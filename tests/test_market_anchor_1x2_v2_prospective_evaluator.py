@@ -149,6 +149,15 @@ def test_offsetless_clock_fails_before_outcome_read():
     assert called == []
 
 
+def test_kickoff_utc_date_must_match_fixture_identity_before_outcome_read():
+    rows = make_forecasts(30)
+    rows[0]["kickoff_utc"] = "2026-10-02T18:00:00Z"
+    called = []
+    with pytest.raises(ValueError, match="kickoff UTC date"):
+        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+    assert called == []
+
+
 def test_stale_source_or_quote_fails_before_outcome_read():
     rows = make_forecasts(30)
     rows[0]["source_observed_at_utc"] = "2026-08-31T00:00:00Z"
