@@ -669,3 +669,32 @@ def test_latest_quotes_collapses_same_event_alias_variants_to_latest_snapshot():
     assert selected[0]["snapshot_time_utc"] == "2026-10-19T05:31:00Z"
     assert selected[0]["home_team"] == "Atalanta"
 
+@pytest.mark.parametrize(
+    ("gate_checked_at", "error"),
+    [
+        ("2026-10-18T06:26:00+00:00", "feature-source gate timestamp"),
+        ("2026-10-18T06:00:00", "naive clock-time not allowed"),
+    ],
+)
+def test_feature_source_gate_clock_is_offset_aware_and_precedes_source(gate_checked_at, error):
+    raw, archives = make_archive()
+    with zipfile.ZipFile(BytesIO(raw), "r") as original:
+        files = {name: original.read(name) for name in original.namelist()}
+    manifest = json.loads(files[MANIFEST_FILENAME])
+    manifest["feature_source_gate"]["checked_at_utc"] = gate_checked_at
+    files[MANIFEST_FILENAME] = (json.dumps(manifest, sort_keys=True) + "\n").encode()
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as rewritten:
+        for name, body in files.items():
+            rewritten.writestr(name, body)
+    tampered = buffer.getvalue()
+    # Recompute the outer digest so this test reaches the temporal-contract check.
+    archives[0]["sha256"] = hashlib.sha256(tampered).hexdigest()
+    with pytest.raises(ValueError, match=error):
+        prepare_forward_capture(
+            [quote()],
+            archives,
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            load_archive=lambda _artifact_id: tampered,
+            verify_parent_run=valid_parent,
+        )
