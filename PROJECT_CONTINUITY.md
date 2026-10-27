@@ -1,3 +1,5 @@
+# Football AI — Project Continuity
+
 ## 2026-10-27 — exact current-form gate/source identity comparison (09:50 UTC)
 
 - Downloaded the existing read-only source artifact #12647281024 from [run #40316117199](https://github.com/MaksimBlud/football-ai/actions/runs/40316117199). Recomputed archive ZIP SHA-256 exactly matches the recorded digest: `0ecfd702f0cd24f21894e93b0cbe63c65340a3eb48d3180e27652a3ad43c5e9b`. The ZIP contains 10 historical CSVs, `serie_a_2627.csv`, and the manifest.
@@ -16,8 +18,6 @@
   - 2026-10-25 — Udinese vs AC Milan
 - This is a confirmed source freshness/coverage gap, not a guessed set difference. The Oct-26 archive's current-season CSV is stale relative to the latest completed-fixture metadata even though its archive timestamp is Oct-26. PR #699's current HEAD `3dc49392e905a2e3958180701a17b6bf7971204b` adds the identity-set attestation and fail-closed coverage checks; its exact-head CI is 7/7 SUCCESS (182 V2 shadow tests). Keep HUMAN-MERGE; no main merge.
 - Odds audit remains unchanged: 3,966 saved snapshots, latest 2026-10-13 14:48:53 UTC, zero last-24h snapshots, zero future pre-kickoff snapshots. No forecasts or outcome evaluation are available. Evaluation gate remains closed until 30 eligible prospective forecasts complete.
-
-# Football AI — Project Continuity
 
 ## 2026-10-27 — gate/source identity proof strengthened; live gate has advanced (09:24 UTC)
 
