@@ -21,6 +21,7 @@ from serie_a_v2_current_form_source_capture import (
     read_completed_primary_event_identities,
     validate_current_season_csv,
     _current_source_fixture_identities,
+    _fixture_identity_sha256,
 )
 from serie_a_v2_live_diagnostic_report import _source_codes
 
@@ -324,6 +325,14 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert report["feature_source_gate"]["gate_fixture_identities_covered_by_current_source"] == 30
     assert report["feature_source_gate"]["gate_fixture_identities_missing_from_current_source"] == 0
     assert len(report["feature_source_gate"]["gate_fixture_identity_sha256"]) == 64
+    gate_identities = {
+        tuple(identity) for identity in report["feature_source_gate"]["gate_fixture_identities"]
+    }
+    assert len(gate_identities) == 30
+    assert report["feature_source_gate"]["gate_fixture_identities"] == [
+        list(identity) for identity in sorted(gate_identities)
+    ]
+    assert _fixture_identity_sha256(gate_identities) == report["feature_source_gate"]["gate_fixture_identity_sha256"]
     assert len(report["feature_source_gate"]["current_source_fixture_identity_sha256"]) == 64
     assert report["historical_old_season_file_count"] == 10
     assert report["source_file_count"] == 11
