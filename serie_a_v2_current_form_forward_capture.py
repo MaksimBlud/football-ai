@@ -29,7 +29,7 @@ from serie_a_v2_current_form_source_capture import (
     REQUIRED_COLUMNS, validate_current_season_csv,
 )
 from serie_a_v2_current_form_source_capture import (
-    _current_source_fixture_identities, _fixture_identity_sha256,
+    _canonical_team, _current_source_fixture_identities, _fixture_identity_sha256,
     read_completed_primary_event_identities,
 )
 from serie_a_v2_frozen_shadow_preview import (
@@ -513,7 +513,7 @@ def _latest_quotes(quotes: list[dict], *, now: datetime) -> list[dict]:
         if not all(isinstance(x, str) and x.strip() for x in (event, home, away)):
             raise ValueError("quote identity is incomplete")
         event_key = event.strip()
-        home_key, away_key = home.strip().casefold(), away.strip().casefold()
+        home_key, away_key = _canonical_team(home).casefold(), _canonical_team(away).casefold()
         kickoff = parse_utc(q["commence_time_utc"])
         snapshot = parse_utc(q["snapshot_time_utc"])
         if snapshot > now or not snapshot < kickoff:

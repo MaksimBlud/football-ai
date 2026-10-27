@@ -590,3 +590,39 @@ def test_latest_quotes_rejects_same_fixture_split_across_event_ids():
     }
     with pytest.raises(ValueError, match="fixture identity maps to conflicting event_id"):
         _latest_quotes([first, duplicate_fixture], now=now)
+
+
+def test_latest_quotes_rejects_same_fixture_split_across_event_ids_when_team_alias_changes():
+    now = datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc)
+    first = {
+        **quote(snapshot="2026-10-19T05:30:00Z"),
+        "home_team": "Atalanta BC",
+        "away_team": "Juventus",
+    }
+    duplicate_fixture = {
+        **quote(snapshot="2026-10-19T05:31:00Z"),
+        "event_id": "different-provider-event-id",
+        "home_team": "Atalanta",
+        "away_team": "Juventus",
+    }
+    with pytest.raises(ValueError, match="fixture identity maps to conflicting event_id"):
+        _latest_quotes([first, duplicate_fixture], now=now)
+
+
+def test_latest_quotes_collapses_same_event_alias_variants_to_latest_snapshot():
+    now = datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc)
+    first = {
+        **quote(snapshot="2026-10-19T05:30:00Z"),
+        "home_team": "Atalanta BC",
+        "away_team": "Juventus",
+    }
+    later = {
+        **quote(snapshot="2026-10-19T05:31:00Z"),
+        "home_team": "Atalanta",
+        "away_team": "Juventus",
+    }
+    selected = _latest_quotes([first, later], now=now)
+    assert len(selected) == 1
+    assert selected[0]["snapshot_time_utc"] == "2026-10-19T05:31:00Z"
+    assert selected[0]["home_team"] == "Atalanta"
+
