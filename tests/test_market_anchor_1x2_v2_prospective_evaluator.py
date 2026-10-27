@@ -188,6 +188,7 @@ def test_duplicate_event_or_fixture_identity_fails_closed():
     rows[1]["match_date"] = rows[0]["match_date"]
     rows[1]["home_team"] = rows[0]["home_team"]
     rows[1]["away_team"] = rows[0]["away_team"]
+    rows[1]["kickoff_utc"] = rows[0]["kickoff_utc"]
     with pytest.raises(ValueError, match="duplicate canonical fixture"):
         evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
     assert called == []
