@@ -14,6 +14,7 @@ from serie_a_v2_free_fixture_feature_preview import (
     EVENTS_URL,
     FROZEN_SHA,
     SPORT_KEY,
+    MAX_RESPONSE_BYTES,
     _validated_future_events,
     build_feature_readiness_preview,
     capture_free_fixture_preview,
@@ -101,14 +102,25 @@ def event(event_id="serie-a-event-1", **overrides):
 def response_for(payload, *, cost="0", status=200, history=()):
     raw = json.dumps(payload, separators=(",", ":")).encode()
     url = EVENTS_URL + "?apiKey=REDACTED&dateFormat=iso"
-    return SimpleNamespace(
-        status_code=status,
-        headers={"x-requests-last": cost} if cost is not None else {},
-        content=raw,
-        url=url,
-        history=history,
-        json=lambda: payload,
-    )
+
+    class FakeResponse:
+        def __init__(self):
+            self.status_code = status
+            self.headers = {"x-requests-last": cost} if cost is not None else {}
+            self.content = raw
+            self.url = url
+            self.history = history
+            self.iter_content_called = False
+            self.closed = False
+
+        def iter_content(self, chunk_size):
+            self.iter_content_called = True
+            yield self.content
+
+        def close(self):
+            self.closed = True
+
+    return FakeResponse()
 
 
 def test_source_gate_and_order_fail_before_provider_request():
@@ -160,7 +172,10 @@ def test_exactly_one_zero_credit_events_request_and_original_19_features_only():
     assert len(calls) == 1
     assert calls[0][0] == EVENTS_URL
     assert calls[0][1]["allow_redirects"] is False
+    assert calls[0][1]["stream"] is True
     assert calls[0][1]["timeout"] == 20
+    assert response.closed is True
+    assert response.iter_content_called is True
     assert calls[0][1]["params"]["apiKey"] == API_KEY
     assert calls[0][1]["params"]["dateFormat"] == "iso"
     assert report["status"] == "CAPTURED"
@@ -198,6 +213,8 @@ def test_nonzero_or_unattested_provider_cost_fails_closed(cost):
             clock=lambda: RECEIVED,
         )
     assert len(calls) == 1
+    assert response.iter_content_called is False
+    assert response.closed is True
 
 
 def test_redirect_or_non_200_response_fails_closed():
@@ -211,6 +228,8 @@ def test_redirect_or_non_200_response_fails_closed():
             get=lambda *a, **k: redirected,
             clock=lambda: RECEIVED,
         )
+    assert redirected.closed is True
+    assert redirected.iter_content_called is False
     not_ok = response_for([], status=302)
     with pytest.raises(RuntimeError, match="HTTP 302"):
         capture_free_fixture_preview(
@@ -221,6 +240,43 @@ def test_redirect_or_non_200_response_fails_closed():
             get=lambda *a, **k: not_ok,
             clock=lambda: RECEIVED,
         )
+    assert not_ok.closed is True
+    assert not_ok.iter_content_called is False
+
+
+def test_oversized_response_is_bounded_and_closed():
+    class OversizedResponse:
+        status_code = 200
+        headers = {"x-requests-last": "0"}
+        url = EVENTS_URL
+        history = ()
+
+        def __init__(self):
+            self.closed = False
+            self.chunks_requested = 0
+
+        def iter_content(self, chunk_size):
+            assert chunk_size == 64 * 1024
+            self.chunks_requested += 1
+            yield b"x" * (MAX_RESPONSE_BYTES + 1)
+            self.chunks_requested += 1
+            yield b"must-not-be-consumed"
+
+        def close(self):
+            self.closed = True
+
+    response = OversizedResponse()
+    with pytest.raises(ValueError, match="exceeds the size limit"):
+        capture_free_fixture_preview(
+            api_key=API_KEY,
+            source_attestation=source_attestation(),
+            history=history_frame(),
+            request_started_at=STARTED,
+            get=lambda *a, **k: response,
+            clock=lambda: RECEIVED,
+        )
+    assert response.chunks_requested == 1
+    assert response.closed is True
 
 
 def test_provider_odds_or_outcome_fields_are_rejected():

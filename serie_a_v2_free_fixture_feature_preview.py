@@ -228,6 +228,82 @@ def build_feature_readiness_preview(
     }
 
 
+def _read_bounded_response_body(response: Any) -> bytes:
+    """Read a streamed HTTP body without buffering more than the frozen cap."""
+    iterator = getattr(response, "iter_content", None)
+    if not callable(iterator):
+        raise ValueError("provider response does not support bounded streaming")
+    chunks: list[bytes] = []
+    total = 0
+    try:
+        for chunk in iterator(chunk_size=64 * 1024):
+            if not chunk:
+                continue
+            if not isinstance(chunk, bytes):
+                raise ValueError("provider response stream yielded non-byte content")
+            total += len(chunk)
+            if total > MAX_RESPONSE_BYTES:
+                raise ValueError("provider response body exceeds the size limit")
+            chunks.append(chunk)
+    except ValueError:
+        raise
+    except Exception as exc:
+        # Streaming exceptions may contain the request URL and its API key.
+        raise RuntimeError(
+            f"free events response body read failed ({type(exc).__name__}); credentials redacted"
+        ) from None
+    raw = b"".join(chunks)
+    if not raw:
+        raise ValueError("provider response body is empty")
+    return raw
+
+
+def _consume_zero_credit_events_response(
+    response: Any, *, started: datetime, clock: Callable[[], datetime]
+) -> tuple[datetime, bytes, Any]:
+    """Validate metadata and quota before reading a bounded response body."""
+    try:
+        received = _utc(clock())
+        if received < started:
+            raise ValueError("response clock precedes request start")
+        if getattr(response, "history", None):
+            raise ValueError("provider redirect rejected")
+        if getattr(response, "status_code", None) != 200:
+            raise RuntimeError(
+                f"free events endpoint returned HTTP {getattr(response, 'status_code', 'unknown')}"
+            )
+        parsed_url = urlsplit(str(getattr(response, "url", "")))
+        if (
+            parsed_url.scheme != "https"
+            or parsed_url.netloc != "api.the-odds-api.com"
+            or parsed_url.path != f"/v4/sports/{SPORT_KEY}/events"
+        ):
+            raise ValueError("provider response URL is outside the pinned HTTPS events endpoint")
+        last_cost = getattr(response, "headers", {}).get("x-requests-last")
+        try:
+            cost = float(last_cost)
+        except (TypeError, ValueError):
+            raise ValueError(
+                "provider did not attest the last request's quota cost; failing closed"
+            ) from None
+        if not math.isfinite(cost) or cost != 0.0:
+            raise ValueError("provider did not attest a zero-credit request; refusing to continue")
+        raw = _read_bounded_response_body(response)
+        try:
+            payload = json.loads(raw)
+        except Exception:
+            raise ValueError("provider events response is not valid JSON") from None
+        return received, raw, payload
+    finally:
+        close = getattr(response, "close", None)
+        if callable(close):
+            try:
+                close()
+            except Exception:
+                # Cleanup failure must not replace the evidence/validation error.
+                pass
+
+
 def capture_free_fixture_preview(
     *,
     api_key: str,
@@ -254,38 +330,16 @@ def capture_free_fixture_preview(
             },
             timeout=20,
             allow_redirects=False,
+            stream=True,
         )
     except Exception as exc:
         # Never propagate a requests exception string: it may contain the query key.
-        raise RuntimeError(f"free events request failed ({type(exc).__name__}); credentials redacted") from None
-    received = _utc(clock())
-    if received < started:
-        raise ValueError("response clock precedes request start")
-    if getattr(response, "history", None):
-        raise ValueError("provider redirect rejected")
-    if getattr(response, "status_code", None) != 200:
-        raise RuntimeError(f"free events endpoint returned HTTP {getattr(response, 'status_code', 'unknown')}")
-    parsed_url = urlsplit(str(getattr(response, "url", "")))
-    if (
-        parsed_url.scheme != "https"
-        or parsed_url.netloc != "api.the-odds-api.com"
-        or parsed_url.path != f"/v4/sports/{SPORT_KEY}/events"
-    ):
-        raise ValueError("provider response URL is outside the pinned HTTPS events endpoint")
-    raw = getattr(response, "content", b"")
-    if not isinstance(raw, bytes) or not raw or len(raw) > MAX_RESPONSE_BYTES:
-        raise ValueError("provider response body is empty or exceeds the size limit")
-    last_cost = getattr(response, "headers", {}).get("x-requests-last")
-    try:
-        cost = float(last_cost)
-    except (TypeError, ValueError):
-        raise ValueError("provider did not attest the last request's quota cost; failing closed") from None
-    if not math.isfinite(cost) or cost != 0.0:
-        raise ValueError("provider did not attest a zero-credit request; refusing to continue")
-    try:
-        payload = response.json()
-    except Exception:
-        raise ValueError("provider events response is not valid JSON") from None
+        raise RuntimeError(
+            f"free events request failed ({type(exc).__name__}); credentials redacted"
+        ) from None
+    received, raw, payload = _consume_zero_credit_events_response(
+        response, started=started, clock=clock
+    )
     fixtures = _validated_future_events(payload, observed_at=received)
     feature_preview = build_feature_readiness_preview(history, fixtures, as_of_utc=started)
     source_age_at_start = int((started - source_observed).total_seconds())
