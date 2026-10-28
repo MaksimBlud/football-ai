@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   capture-free-fixture-metadata:
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
