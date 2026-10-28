@@ -1,0 +1,43 @@
+name: Serie A V2 Free Fixture Feature Preview Tests
+
+on:
+  pull_request:
+    paths:
+      - "serie_a_v2_free_fixture_feature_preview.py"
+      - "tests/test_serie_a_v2_free_fixture_feature_preview.py"
+      - "research/SERIE_A_V2_FREE_FIXTURE_FEATURE_PREVIEW_20261028.md"
+      - ".github/workflows/serie-a-v2-free-fixture-feature-preview.yml"
+      - ".github/workflows/serie-a-v2-free-fixture-feature-preview-tests.yml"
+  push:
+    branches: [main, "research/**"]
+    paths:
+      - "serie_a_v2_free_fixture_feature_preview.py"
+      - "tests/test_serie_a_v2_free_fixture_feature_preview.py"
+      - "research/SERIE_A_V2_FREE_FIXTURE_FEATURE_PREVIEW_20261028.md"
+      - ".github/workflows/serie-a-v2-free-fixture-feature-preview.yml"
+      - ".github/workflows/serie-a-v2-free-fixture-feature-preview-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  offline-contract-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: .
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install offline test dependencies
+        run: python -m pip install pandas numpy scipy scikit-learn requests supabase pytest
+      - name: Compile and run mocked-provider contract tests (no provider calls)
+        run: |
+          python -m py_compile serie_a_v2_free_fixture_feature_preview.py
+          python -m pytest -q tests/test_serie_a_v2_free_fixture_feature_preview.py
