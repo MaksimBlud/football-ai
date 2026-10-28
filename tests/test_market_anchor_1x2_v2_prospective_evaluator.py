@@ -55,6 +55,11 @@ def make_forecasts(n=30):
             "active_market_fallback_1x2": [0.50, 0.30, 0.20],
             "incumbent_1x2": [0.55, 0.25, 0.20],
             "incumbent_evidence": {
+                "league": "SERIE_A",
+                "match_date": match_date,
+                "home_team": f"Home {i}",
+                "away_team": f"Away {i}",
+                "kickoff_utc": f"{match_date}T18:00:00Z",
                 "model_version": "frozen-incumbent-test-v1",
                 "artifact_sha256": "c" * 64,
                 "source_record_id": f"incumbent-snapshot-{i}",
@@ -412,6 +417,54 @@ def test_unknown_nested_incumbent_evidence_fields_fail_closed_before_outcome_rea
     rows[0]["incumbent_evidence"]["home_winner_flag"] = True
     called = []
     with pytest.raises(ValueError, match="incumbent evidence contains unapproved fields"):
+        evaluate_after_gate(
+            rows,
+            identities(rows),
+            lambda keys: called.append(keys) or {item: "H" for item in keys},
+        )
+    assert called == []
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("league", "EPL"),
+        ("match_date", "2026-10-25"),
+        ("home_team", "Different Home"),
+        ("away_team", "Different Away"),
+    ],
+)
+def test_incumbent_evidence_must_match_same_canonical_fixture_before_outcome_read(field, value):
+    rows = make_forecasts(30)
+    rows[0]["incumbent_evidence"][field] = value
+    called = []
+    with pytest.raises(ValueError, match="incumbent evidence event identity does not match forecast"):
+        evaluate_after_gate(
+            rows,
+            identities(rows),
+            lambda keys: called.append(keys) or {item: "H" for item in keys},
+        )
+    assert called == []
+
+
+def test_incumbent_evidence_kickoff_must_match_exact_forecast_event_before_outcome_read():
+    rows = make_forecasts(30)
+    rows[0]["incumbent_evidence"]["kickoff_utc"] = "2026-10-20T19:00:00Z"
+    called = []
+    with pytest.raises(ValueError, match="incumbent evidence event identity does not match forecast"):
+        evaluate_after_gate(
+            rows,
+            identities(rows),
+            lambda keys: called.append(keys) or {item: "H" for item in keys},
+        )
+    assert called == []
+
+
+def test_incumbent_evidence_requires_explicit_fixture_identity_fields():
+    rows = make_forecasts(30)
+    del rows[0]["incumbent_evidence"]["home_team"]
+    called = []
+    with pytest.raises(ValueError, match="incumbent evidence missing fields"):
         evaluate_after_gate(
             rows,
             identities(rows),
