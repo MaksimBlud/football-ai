@@ -85,6 +85,7 @@ def test_original_forward_push_filter_covers_frozen_v2_dependencies():
         "historical_football_signal_lab.py",
         "serie_a_runtime_config.py",
         "research/models/market_anchor_v2_serie_a_frozen_candidate.json",
+        "experiments/market_anchor_1x2_v2_protocol.json",
         "tests/test_serie_a_v2_frozen_shadow_preview.py",
         "tests/test_historical_football_signal_lab.py",
         "tests/test_serie_a_v2_current_form_source_workflow_contract.py",
