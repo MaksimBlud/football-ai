@@ -1,3 +1,19 @@
+## 2026-10-28 16:52 UTC — source-fixture feasibility cross-check: no Serie A future-fixture feed in current stores
+
+Fresh read-only verification against unchanged `main` `40887ebb215730190d7a6c7a1693373ec4afcdfc` adds an independent source-feasibility check beyond the earlier quote-count audit.
+
+- Downloaded current-form source artifact **12812553701** and independently recomputed ZIP SHA-256: `fb5f38f6c569de63dce7d9c1c58533ea873665e132d51bfc878ead7a684df6df`, matching GitHub's artifact digest.
+- The archived `serie_a_2627.csv` is 38,144 bytes, SHA-256 `6cf59ded608d3d23da083b1f8510d2ca22b219f0927f64addeaadfde1b495e11`, with **80 rows** and latest fixture date **2026-10-25**; there are **zero future fixture rows** available in that CSV. This check is about row count/date/team metadata, not target-outcome evaluation.
+- The current-form forward artifact **12825974332** was downloaded and its ZIP SHA-256 independently recomputed as `3659cc9e56f34da38abe86844a63b02686abd91153662a73bc2f5af3a171608e`, matching GitHub metadata. Its report at `2026-10-28T15:07:31Z` verifies source artifact #12812553701 (age 12,312 seconds), but records `quotes_seen=0`, `rows=[]`, and `v2_current_form_shadow_captured=0`.
+- A read-only schema/metadata audit of `public.matches` found rows only for EPL seasons 2016/17–2026/27; the 2026/27 EPL partition has 80 rows through 2026-10-25 and zero future-dated rows. The query selected only league, season, date aggregates and counts; no scores or result fields. This table is not a Serie A future-fixture source.
+- Read-only `public.odds_snapshots` aggregate remains 3,966 rows, latest snapshot `2026-10-13T14:48:53.042620Z`, zero snapshots in the last 24 hours or seven days, and zero future events with a saved quote strictly before kickoff.
+
+**Newly narrowed blocker:** the verified current-form archive is intact, but the archived Football-Data CSV has no upcoming Serie A fixture rows, the existing `public.matches` table is EPL-only, and no saved admissible Serie A quote exists. Thus this run cannot compute a source-backed feature vector for an upcoming Serie A fixture without another independently approved free fixture source or a genuinely new permitted quote. Do not fabricate a quote, use stale October 13 prices, call the paid provider, add a paid schedule, relax the 24-hour gates, or read target outcomes for scoring.
+
+No target outcomes were scored, no Supabase writes/DDL, paid requests, production `.pkl` changes, refit, promotion, schedule changes, or merges occurred. Frozen candidate SHA and 19-feature/weight contract remain unchanged; `active_lambda=0` is the market and `shadow_lambda=1` is research-only. The 30-eligible-prospective-forecast outcome gate remains closed and the incumbent reference remains unpinned.
+
+---
+
 ## 2026-10-28 13:53 UTC — no verified zero-cost source for new pre-kickoff quotes; paid collector intentionally not dispatched
 
 Fresh read-only audit of current `main` (`40887ebb215730190d7a6c7a1693373ec4afcdfc`) and the current-form source artifact confirms the source archive is healthy but cannot supply a new quote cohort by itself.
