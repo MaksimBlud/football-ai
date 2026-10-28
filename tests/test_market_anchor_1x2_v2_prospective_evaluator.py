@@ -1,7 +1,7 @@
 """Offline tests for the gated original MARKET_ANCHOR_1X2_V2 evaluator."""
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 import json
 import math
 from pathlib import Path
@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 import market_anchor_1x2_v2_prospective_evaluator as evaluator
+from market_anchor_1x2_v2_completed_fixture_gate import read_completed_fixture_gate
 from market_anchor_1x2_v2_prospective_evaluator import (
     EXPERIMENT_ID,
     FROZEN_CANDIDATE_SHA256,
@@ -580,3 +581,129 @@ def test_incumbent_evidence_requires_explicit_fixture_identity_fields():
             lambda keys: called.append(keys) or {item: "H" for item in keys},
         )
     assert called == []
+
+
+
+class _GateResponse:
+    def __init__(self, data):
+        self.data = data
+
+
+class _GateQuery:
+    def __init__(self, client):
+        self.client = client
+        self.start = 0
+        self.end = 999
+
+    def select(self, columns):
+        self.client.select_calls.append(columns)
+        return self
+
+    def eq(self, field, value):
+        self.client.filters[field] = value
+        return self
+
+    def gte(self, field, value):
+        self.client.filters[("gte", field)] = value
+        return self
+
+    def lt(self, field, value):
+        self.client.filters[("lt", field)] = value
+        return self
+
+    def range(self, start, end):
+        self.start, self.end = start, end
+        self.client.ranges.append((start, end))
+        return self
+
+    def execute(self):
+        return _GateResponse(self.client.rows[self.start:self.end + 1])
+
+
+class _GateClient:
+    def __init__(self, rows):
+        self.rows = list(rows)
+        self.table_calls = []
+        self.select_calls = []
+        self.filters = {}
+        self.ranges = []
+
+    def table(self, name):
+        self.table_calls.append(name)
+        return _GateQuery(self)
+
+
+def _metadata_rows(count=30, *, match_day="2026-10-10"):
+    return [
+        {
+            "match_date": (date.fromisoformat(match_day) + timedelta(days=i // 2)).isoformat(),
+            "home_team": f"Gate Home {i}",
+            "away_team": f"Gate Away {i}",
+        }
+        for i in range(count)
+    ]
+
+
+def test_supabase_gate_reader_builds_attestation_from_actual_identity_only_rows():
+    rows = _metadata_rows()
+    client = _GateClient(rows)
+    captured_at = datetime(2026, 10, 28, 4, 0, tzinfo=timezone.utc)
+
+    identities, attestation = read_completed_fixture_gate(client, captured_at=captured_at)
+
+    assert client.table_calls == ["league_finished_results"]
+    assert client.select_calls == ["match_date,home_team,away_team"]
+    assert client.filters == {
+        "league": "SERIE_A",
+        "season": "2026-2027",
+        ("gte", "match_date"): "2026-07-01",
+        ("lt", "match_date"): "2026-10-28",
+    }
+    assert len(identities) == 30
+    assert attestation["completed_fixture_identity_count"] == 30
+    assert attestation["completed_fixture_identity_sha256"] == evaluator._sha_fixture_set(identities)
+    assert attestation["selected_columns"] == ["match_date", "home_team", "away_team"]
+    assert attestation["outcome_columns_selected"] is False
+    assert attestation["target_outcomes_read"] is False
+    assert evaluator._validate_completed_fixture_gate_attestation(attestation, identities)[
+        "cutoff_date_exclusive_utc"
+    ] == "2026-10-28"
+
+
+def test_supabase_gate_reader_rejects_result_field_in_actual_response():
+    rows = _metadata_rows(1)
+    rows[0]["result"] = "H"
+    client = _GateClient(rows)
+    with pytest.raises(ValueError, match="outside the frozen identity-only allowlist"):
+        read_completed_fixture_gate(
+            client,
+            captured_at=datetime(2026, 10, 28, 4, 0, tzinfo=timezone.utc),
+        )
+
+
+def test_supabase_gate_reader_rejects_same_day_identity_even_if_query_returns_it():
+    rows = _metadata_rows(1, match_day="2026-10-28")
+    with pytest.raises(ValueError, match="same-day or future identity"):
+        read_completed_fixture_gate(
+            _GateClient(rows),
+            captured_at=datetime(2026, 10, 28, 4, 0, tzinfo=timezone.utc),
+        )
+
+
+def test_supabase_gate_reader_rejects_reversed_duplicate_identity():
+    rows = [
+        {"match_date": "2026-10-10", "home_team": "Home", "away_team": "Away"},
+        {"match_date": "2026-10-10", "home_team": "Away", "away_team": "Home"},
+    ]
+    with pytest.raises(ValueError, match="reversed duplicate identity"):
+        read_completed_fixture_gate(
+            _GateClient(rows),
+            captured_at=datetime(2026, 10, 28, 4, 0, tzinfo=timezone.utc),
+        )
+
+
+def test_supabase_gate_reader_requires_offset_aware_clock_before_query():
+    client = _GateClient(_metadata_rows())
+    with pytest.raises(ValueError, match="real UTC offset"):
+        read_completed_fixture_gate(client, captured_at=datetime(2026, 10, 28, 4, 0))
+    assert client.table_calls == []
