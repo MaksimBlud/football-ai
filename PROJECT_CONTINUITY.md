@@ -1,3 +1,15 @@
+## 2026-10-28 08:55 UTC — current-form scheduled runtime gap and source/metadata coverage mismatch
+
+**Fresh source of truth:** `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Current-form source workflow blob `9722416862b42d55ff7181003353c39620f23cf2` declares `05:50 UTC` daily; forward-preview workflow blob `6ebbcaff290a78e9ccffa4ac9a09bc0982eaff35` declares `08:18 UTC` daily and listens for successful source-capture completion.
+
+**Observed runtime:** the latest successful source-capture run in the fresh scheduled-main run history is [#40493535578](https://github.com/MaksimBlud/football-ai/actions/runs/40493535578), created 2026-10-27 11:05:44 UTC and completed 11:06:34 UTC. Its verified source artifact is `12730175586`, ZIP SHA-256 `f0fb3565d2e5f44faadf488820c36327cb9d0d7b83b3da826af9b877f0804986`. The latest current-form forward preview is [#40522068472](https://github.com/MaksimBlud/football-ai/actions/runs/40522068472), completed 2026-10-27 14:33:05 UTC; artifact `12740943343`, SHA-256 `d23b1f70e6da5845e9dc6c18e54174b1da9aa4a9e21402ca94ab7cb0d2ae3bd8`. The fresh scheduled-main run pages show no source-capture run after Oct 27 11:05 UTC and no current-form forward run after Oct 27 14:32 UTC, so neither expected Oct 28 schedule has a confirmed run yet. This does not prove whether GitHub skipped or disabled either workflow; no settings or schedule were changed.
+
+**New coverage discrepancy:** the Oct 27 forward artifact reports `current_season_history_rows=80` and `feature_input_gate_count=80`. A fresh read-only Supabase query at 2026-10-28 08:54 UTC selected only `match_date, home_team, away_team` and returned 83 Serie A 2026/27 metadata rows, 83 unique fixture identities, latest date 2026-10-25. The three-row count difference does not prove which fixtures differ, but it means the older archive is not sufficient evidence of current identity coverage. PR #699 adds a canonical identity-set digest and fails closed when any metadata-gate fixture is absent from the downloaded current-season CSV; after HUMAN-MERGE, run a fresh capture and verify its identity-set evidence before claiming coverage.
+
+**Quote availability:** read-only `public.odds_snapshots` audit at 2026-10-28 08:54:29 UTC returned 3,966 snapshots, latest 2026-10-13 14:48:53 UTC, zero snapshots in the prior 24 hours, and zero future events with a saved snapshot strictly before kickoff. The forward run itself reports `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `target_outcomes_read=false`, `target_outcomes_scored=false`, `paid_provider_calls=0`, and `production_or_supabase_writes=0`.
+
+**Next:** manual review only for #699/#701/#697. Do not change schedules, dispatch paid collectors, write to Supabase, or loosen source/quote-age gates. The evaluation gate remains closed and no Brier/LogLoss claim is possible.
+
 ## 2026-10-28 05:01 UTC — original V2: identity-only evaluation-gate reader CI proof
 
 **Source of truth re-read:** default branch `main` is still `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This entry documents research-branch work only; it does not imply any PR merge or main change.
