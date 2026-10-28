@@ -85,7 +85,17 @@ def _guard_no_outcomes(value: Any, *, path: str = "forecast") -> None:
         for key, child in value.items():
             normalized = re.sub(r"[^a-z0-9]", "", str(key).casefold())
             if any(token in normalized for token in ("result", "outcome", "score")) or normalized in {
+                # Common football-data result aliases that do not contain the
+                # words "result", "outcome", or "score" after normalization.
                 "fthg", "ftag", "ftr", "homegoals", "awaygoals", "finalscore",
+                "homegoal", "awaygoal", "goalshome", "goalsaway",
+                "homeftgoal", "awayftgoal", "homeftgoals", "awayftgoals",
+                "fulltimehomegoal", "fulltimeawaygoal", "fulltimehomegoals", "fulltimeawaygoals",
+                "finalhomegoal", "finalawaygoal", "finalhomegoals", "finalawaygoals",
+                "homefinalgoal", "awayfinalgoal", "homefinalgoals", "awayfinalgoals",
+                "winner", "winningteam", "winnerteam", "matchwinner",
+                "homewin", "awaywin", "ishomewin", "isawaywin", "isdraw", "draw",
+                "drawresult", "matchdraw",
                 "settlement", "settledresult",
             }:
                 raise ValueError(f"outcome/score field forbidden in forecast input: {path}.{key}")
