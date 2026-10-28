@@ -196,15 +196,6 @@ def _validate_forecast(row: Any) -> tuple[tuple[str, str, str], dict[str, tuple[
     missing_evidence = allowed_evidence_fields - set(evidence)
     if missing_evidence:
         raise ValueError("incumbent evidence missing fields: " + ", ".join(sorted(missing_evidence)))
-    incumbent_kickoff = _utc(evidence["kickoff_utc"], "incumbent_evidence.kickoff_utc")
-    if (
-        evidence["league"] != row["league"]
-        or evidence["match_date"] != row["match_date"]
-        or evidence["home_team"] != row["home_team"]
-        or evidence["away_team"] != row["away_team"]
-        or incumbent_kickoff != kickoff
-    ):
-        raise ValueError("incumbent evidence event identity does not match forecast")
     incumbent_version = evidence["model_version"]
     if not isinstance(incumbent_version, str) or not incumbent_version.strip():
         raise ValueError("incumbent model version is missing")
@@ -240,6 +231,18 @@ def _validate_forecast(row: Any) -> tuple[tuple[str, str, str], dict[str, tuple[
         raise ValueError("source observation is older than the frozen 24-hour quote-time limit")
     if captured - quote_time > MAX_QUOTE_AGE:
         raise ValueError("market quote is older than the frozen 24-hour capture-time limit")
+
+    # Validate the comparator's event identity after the forecast's own date and
+    # kickoff checks, preserving the more specific fail-closed diagnostics.
+    incumbent_kickoff = _utc(evidence["kickoff_utc"], "incumbent_evidence.kickoff_utc")
+    if (
+        evidence["league"] != row["league"]
+        or evidence["match_date"] != row["match_date"]
+        or evidence["home_team"] != row["home_team"]
+        or evidence["away_team"] != row["away_team"]
+        or incumbent_kickoff != kickoff
+    ):
+        raise ValueError("incumbent evidence event identity does not match forecast")
 
     market = _probabilities(row["market_1x2"], field="market_1x2")
     active = _probabilities(row["active_market_fallback_1x2"], field="active_market_fallback_1x2")
