@@ -391,3 +391,30 @@ def test_current_form_policy_matches_evaluator_frozen_constants():
     assert set(policy["target_outcome_evaluation_gate"]["required_comparison"]) == {
         "DE_VIGGED_MARKET", "FROZEN_PRODUCTION_INCUMBENT", "INACTIVE_LAMBDA_1_RESIDUAL_SHADOW"
     }
+
+
+@pytest.mark.parametrize("key", ["home_winner_flag", "home_won", "match_decision", "winner_code"])
+def test_unknown_top_level_fields_fail_closed_before_outcome_read(key):
+    rows = make_rows(30)
+    rows[0][key] = True
+    called = []
+    with pytest.raises(ValueError, match="unapproved fields"):
+        evaluate_after_gate(
+            rows,
+            identities(rows),
+            lambda keys: called.append(keys) or {item: "H" for item in keys},
+        )
+    assert called == []
+
+
+def test_unknown_nested_incumbent_evidence_fields_fail_closed_before_outcome_read():
+    rows = make_rows(30)
+    rows[0]["incumbent_evidence"]["home_winner_flag"] = True
+    called = []
+    with pytest.raises(ValueError, match="incumbent evidence contains unapproved fields"):
+        evaluate_after_gate(
+            rows,
+            identities(rows),
+            lambda keys: called.append(keys) or {item: "H" for item in keys},
+        )
+    assert called == []
