@@ -97,7 +97,7 @@ def _validated_future_events(payload: Any, *, observed_at: datetime) -> list[dic
         raise ValueError("free events endpoint did not return a JSON array")
     fixtures: list[dict] = []
     seen_ids: set[str] = set()
-    seen_identities: set[tuple[str, str, str, str]] = set()
+    seen_identities: set[tuple[str, str, str]] = set()
     for item in payload:
         if not isinstance(item, dict):
             raise ValueError("free events endpoint returned a non-object event")
@@ -118,7 +118,7 @@ def _validated_future_events(payload: Any, *, observed_at: datetime) -> list[dic
         canonical_home, canonical_away = _canonical(home), _canonical(away)
         if canonical_home == canonical_away:
             raise ValueError("event has identical canonical home and away teams")
-        identity = (kickoff.isoformat(), canonical_home, canonical_away, event_id)
+        identity = (kickoff.isoformat(), canonical_home, canonical_away)
         if event_id in seen_ids or identity in seen_identities:
             raise ValueError("duplicate future event identity from provider")
         seen_ids.add(event_id)
