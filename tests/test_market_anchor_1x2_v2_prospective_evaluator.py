@@ -707,3 +707,32 @@ def test_supabase_gate_reader_requires_offset_aware_clock_before_query():
     with pytest.raises(ValueError, match="real UTC offset"):
         read_completed_fixture_gate(client, captured_at=datetime(2026, 10, 28, 4, 0))
     assert client.table_calls == []
+
+def test_supabase_gate_reader_collapses_live_atalanta_alias_duplicates_to_80_identities():
+    # Mirrors the read-only live audit: 83 raw metadata rows include three
+    # Atalanta BC/Atalanta aliases for the same three fixtures. The V2-local
+    # canonicalizer must produce 80 identities, not inflate the gate count.
+    rows = _metadata_rows(77, match_day="2026-07-10")
+    rows.extend([
+        {"match_date": "2026-08-23", "home_team": "Atalanta", "away_team": "Sassuolo"},
+        {"match_date": "2026-08-23", "home_team": "Atalanta BC", "away_team": "Sassuolo"},
+        {"match_date": "2026-08-31", "home_team": "Atalanta", "away_team": "Bologna"},
+        {"match_date": "2026-08-31", "home_team": "Atalanta BC", "away_team": "Bologna"},
+        {"match_date": "2026-09-05", "home_team": "AS Roma", "away_team": "Atalanta"},
+        {"match_date": "2026-09-05", "home_team": "AS Roma", "away_team": "Atalanta BC"},
+    ])
+    assert len(rows) == 83
+    client = _GateClient(rows)
+
+    identities, attestation = read_completed_fixture_gate(
+        client,
+        captured_at=datetime(2026, 10, 28, 9, 49, tzinfo=timezone.utc),
+    )
+
+    assert len(identities) == 80
+    assert attestation["completed_fixture_identity_count"] == 80
+    assert attestation["completed_fixture_identity_sha256"] == evaluator._sha_fixture_set(identities)
+    assert client.select_calls == ["match_date,home_team,away_team"]
+    assert attestation["outcome_columns_selected"] is False
+    assert attestation["target_outcomes_read"] is False
+
