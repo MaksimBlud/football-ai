@@ -39,7 +39,8 @@ never loads or executes the production incumbent; it requires its already
 recorded probability vector as a comparator. If that vector is unavailable,
 evaluation fails closed rather than silently substituting the market.
 
-Outcome/score fields are forbidden recursively in forecast-only payloads.
+Outcome/score fields are forbidden recursively in forecast-only payloads. The evaluator also enforces an exact allowlist for normalized top-level forecast fields and nested incumbent evidence; unknown fields fail closed even when their spelling is not in the current outcome-alias denylist. Regression tests prove unknown fields are rejected before the lazy outcome callback can run.
+
 Duplicate provider event IDs and duplicate canonical fixture identities are
 rejected.
 
