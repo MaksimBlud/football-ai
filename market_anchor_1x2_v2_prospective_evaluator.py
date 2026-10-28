@@ -131,6 +131,15 @@ def _validate_forecast(row: Any) -> tuple[tuple[str, str, str], dict[str, tuple[
     if not isinstance(row, Mapping):
         raise ValueError("each forecast must be a mapping")
     _guard_no_outcomes(row)
+    # This evaluator accepts a normalized, versioned forecast schema—not arbitrary
+    # upstream payloads. Reject every unapproved key so an unknown target alias
+    # cannot bypass a denylist and travel into the scoring cohort.
+    extra_fields = set(row) - REQUIRED_FIELDS
+    if extra_fields:
+        raise ValueError(
+            "forecast contains unapproved fields: "
+            + ", ".join(sorted(str(key) for key in extra_fields))
+        )
     missing = REQUIRED_FIELDS - set(row)
     if missing:
         raise ValueError("forecast missing required fields: " + ", ".join(sorted(missing)))
@@ -173,7 +182,17 @@ def _validate_forecast(row: Any) -> tuple[tuple[str, str, str], dict[str, tuple[
     evidence = row["incumbent_evidence"]
     if not isinstance(evidence, Mapping):
         raise ValueError("incumbent_evidence must include frozen model and per-event source provenance")
-    missing_evidence = {"model_version", "artifact_sha256", "source_record_id", "generated_at_utc", "history_cutoff_utc"} - set(evidence)
+    allowed_evidence_fields = {
+        "model_version", "artifact_sha256", "source_record_id",
+        "generated_at_utc", "history_cutoff_utc",
+    }
+    extra_evidence = set(evidence) - allowed_evidence_fields
+    if extra_evidence:
+        raise ValueError(
+            "incumbent evidence contains unapproved fields: "
+            + ", ".join(sorted(str(key) for key in extra_evidence))
+        )
+    missing_evidence = allowed_evidence_fields - set(evidence)
     if missing_evidence:
         raise ValueError("incumbent evidence missing fields: " + ", ".join(sorted(missing_evidence)))
     incumbent_version = evidence["model_version"]
