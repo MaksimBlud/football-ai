@@ -1,3 +1,16 @@
+## 2026-10-28 13:53 UTC — no verified zero-cost source for new pre-kickoff quotes; paid collector intentionally not dispatched
+
+Fresh read-only audit of current `main` (`40887ebb215730190d7a6c7a1693373ec4afcdfc`) and the current-form source artifact confirms the source archive is healthy but cannot supply a new quote cohort by itself.
+
+- Supabase `public.odds_snapshots` read-only aggregate: **3,966** rows; latest `snapshot_time_utc=2026-10-13T14:48:53.042620Z`; **0** rows in the last 24 hours, **0** in the last 7 days, and **0** future events with a saved snapshot strictly before `commence_time_utc`. The same result grouped by all nine stored leagues shows zero rows in the last 24 hours and zero future pre-kickoff rows for every league.
+- Independently downloaded source artifact #12812553701 (parent run #40681895214) hashes to ZIP SHA-256 `fb5f38f6c569de63dce7d9c1c58533ea873665e132d51bfc878ead7a684df6df`; the manifest has 11 source entries and all **11/11** CSV SHA-256 values match. The current-season CSV was inspected only for fixture dates/team identities and pre-match odds fields: it has **0 rows dated 2026-10-28 or later**. No score/result columns were selected for this check.
+- The only existing `Serie A Odds Snapshots` workflow at `.github/workflows/serie-a-odds-snapshots.yml` has **workflow_dispatch only** (no schedule), requires `THE_ODDS_API_KEY`, and runs `odds_api_budget_guard.py --max-cost 1` before `scheduled_serie_a_odds_snapshot.py`. It was not dispatched because paid The Odds API requests are prohibited. No new free pre-kickoff quote path is evidenced by the repository or saved data.
+- Current-form source capture #40681895214 completed SUCCESS at 11:42:25 UTC on exact main SHA; forward preview #40682031414 completed SUCCESS at 11:43:13 UTC but found `quotes_seen=0` and captured zero new shadow forecasts. Free diagnostic #40690314722 completed SUCCESS at 12:45:21 UTC but does not create quote data. These are source/infrastructure proofs, not model-performance evidence.
+
+**Blocker/action:** do not invoke the paid/manual quote workflow, add a paid schedule, relax source/quote freshness, scrape an unapproved source, or fabricate quotes. Continue only free source verification and frozen V2 regression/audit work until a genuinely admissible pre-kickoff quote is available under existing authorization. No target outcomes were read, no Supabase writes/DDL occurred, no model/weight/production artifact changed, no merge or schedule change occurred. The 30-eligible-prospective-forecast outcome gate remains CLOSED; incumbent reference remains unpinned, so no Brier/LogLoss claim is available.
+
+---
+
 ## 2026-10-28 11:43 UTC — fresh source archive independently byte-verified; forward preview still has no quotes
 
 **Source of truth re-read:** `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The previously missing scheduled source-capture did run successfully later that morning; do not treat the earlier 05:50/08:18 absence window as the latest runtime state.
