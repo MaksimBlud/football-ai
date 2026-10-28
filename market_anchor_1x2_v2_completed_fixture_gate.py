@@ -20,7 +20,17 @@ from market_anchor_1x2_v2_prospective_evaluator import (
     PRIMARY_SEASON_START,
     _sha_fixture_set,
 )
-from serie_a_v2_current_form_source_capture import _canonical_team
+from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
+
+V2_ONLY_ALIASES = {"Atalanta BC": "Atalanta"}
+
+
+def _canonical_team(value: Any) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("completed-fixture metadata has an empty team identity")
+    value = value.strip()
+    known = SERIE_A_RUNTIME_CONFIG.aliases.get(value, value)
+    return V2_ONLY_ALIASES.get(known, known)
 
 PAGE_SIZE = 1000
 MAX_ROWS = 10000
