@@ -36,8 +36,11 @@ within the preregistered 24-hour limits. The market vector must exactly match
 the active lambda-zero fallback within the original 1e-12 invariant. Market,
 frozen-incumbent, and lambda-one shadow vectors are all required. The helper
 never loads or executes the production incumbent; it requires its already
-recorded probability vector as a comparator. If that vector is unavailable,
-evaluation fails closed rather than silently substituting the market.
+recorded probability vector as a comparator. Incumbent evidence must also
+attest the same league, canonical match date/home/away identity, and exact UTC
+kickoff as the V2 forecast; missing or mismatched identity fails before the
+lazy outcome callback. If the incumbent vector is unavailable, evaluation
+fails closed rather than silently substituting the market.
 
 Outcome/score fields are forbidden recursively in forecast-only payloads. The evaluator also enforces an exact allowlist for normalized top-level forecast fields and nested incumbent evidence; unknown fields fail closed even when their spelling is not in the current outcome-alias denylist. Regression tests prove unknown fields are rejected before the lazy outcome callback can run.
 
