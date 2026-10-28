@@ -1,3 +1,27 @@
+## 2026-10-28 05:01 UTC — original V2: identity-only evaluation-gate reader CI proof
+
+**Source of truth re-read:** default branch `main` is still `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This entry documents research-branch work only; it does not imply any PR merge or main change.
+
+PR #701 adds `market_anchor_1x2_v2_completed_fixture_gate.py`, a read-only adapter that queries only `match_date,home_team,away_team` from `public.league_finished_results` for Serie A 2026/27. It constructs the evaluator's digest-bound attestation from the actual returned metadata rows, pins the existing query-contract SHA `181d76b75c092d46b57535591abbb4e625c3e54e9b0f876402c9a3e0ed2457fb`, applies the existing V2-local team alias, validates exact row keys, real UTC offset, season/date cutoff, reversed-duplicate identities and the identity-set SHA. It has no score/outcome selection, network call, model load or database write. The pure evaluator remains database-free.
+
+Exact PR #701 HEAD: `e28c74cac7455c0a9d813c52f0754577358cba48`. **6/6 required CI checks SUCCESS**:
+- Research PR Validation [#40635404169](https://github.com/MaksimBlud/football-ai/actions/runs/40635404169) — **67 evaluator tests passed**, including five new metadata-adapter regressions.
+- Serie A [#40635404138](https://github.com/MaksimBlud/football-ai/actions/runs/40635404138)
+- Bundesliga [#40635404153](https://github.com/MaksimBlud/football-ai/actions/runs/40635404153)
+- Ligue 1 [#40635404292](https://github.com/MaksimBlud/football-ai/actions/runs/40635404292)
+- Eredivisie [#40635404159](https://github.com/MaksimBlud/football-ai/actions/runs/40635404159)
+- Product [#40635404280](https://github.com/MaksimBlud/football-ai/actions/runs/40635404280)
+
+A first implementation exposed an unnecessary transitive scikit-learn import through the full source-capture module; the adapter now imports only the lightweight Serie A runtime configuration, and the final exact-head Research suite passes. This is test evidence, not yet a live invocation of the adapter against Supabase.
+
+Fresh read-only Supabase checks on 2026-10-28:
+- `public.odds_snapshots`: 3,966 rows; latest `snapshot_time_utc=2026-10-13T14:48:53.042620Z`; zero rows in the last 24 hours; zero future pre-kickoff rows.
+- `public.matches`: zero rows with `match_date > current_date`.
+- `public.league_finished_results` metadata-only query for Serie A 2026/27, selecting only date/home/away: 83 rows, 83 raw distinct identity triples, latest date 2026-10-25. These are identity counts, not target-outcome scoring.
+- The existing source artifact still reflects the earlier 80-event gate snapshot; a fresh daily source capture must re-check coverage of all then-current identities before any future quote can be admitted.
+
+The prospective evaluation gate remains CLOSED. No fresh admissible quote or future fixture exists, and `FROZEN_INCUMBENT_REFERENCE` remains unpinned; the evaluator must not substitute market probabilities for the missing incumbent. No 2026/27 target outcomes were read, and Brier/LogLoss were not computed. Original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19-feature contract, weights, `active_lambda=0`, and research-only `shadow_lambda=1` remain unchanged. HUMAN-MERGE only; no production `.pkl`, Supabase writes/DDL, paid calls, auto-promotion, or schedule changes.
+
 ## 2026-10-28 04:05 UTC — evaluator gate attestation and fresh read-only source/quote audit
 
 **Original V2 only.** PR #701's updated exact HEAD `29229dbce2ce9096eb717b59d80db296ec2621e0` adds a required digest-bound completed-fixture identity attestation to the pure prospective evaluator. The evaluator now rejects missing/extra attestation fields, wrong source table/query contract, selected columns beyond `match_date, home_team, away_team`, identity count/digest mismatch, and identities on/after the UTC date-only cutoff. It still never loads the target outcomes before the gate and cannot score until the separately pinned incumbent exists. This is a structural contract check: the eventual capture caller must build the attestation directly from the actual metadata-only query result; the pure helper cannot independently prove which SQL the caller executed. Exact-head Research CI #40630182112 and the five league/product checks #40630182099, #40630182109, #40630182123, #40630182131, #40630182138 all completed SUCCESS; evaluator tests **62 passed**. [PR #701](https://github.com/MaksimBlud/football-ai/pull/701).
