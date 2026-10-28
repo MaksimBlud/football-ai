@@ -77,7 +77,7 @@ class FakeQuery:
         return SimpleNamespace(data=self.rows)
 
 
-def current_csv(n=30, *, same_day=False, future_unplayed=False, future_completed=False, old_season_completed=False, invalid_past_result=False, missing_date_with_stats=False):
+def current_csv(n=30, *, same_day=False, future_unplayed=False, future_completed=False, old_season_completed=False, post_season_completed=False, invalid_past_result=False, missing_date_with_stats=False):
     header = ",".join(REQUIRED_COLUMNS)
     rows = []
     start = date(2026, 8, 1)
@@ -94,6 +94,8 @@ def current_csv(n=30, *, same_day=False, future_unplayed=False, future_completed
         rows.append("20/10/2026,Future Home,Future Away,1,0,H,4,2,1,0,0,0")
     if old_season_completed:
         rows.append("01/05/2026,Old Season Home,Old Season Away,1,0,H,5,3,2,1,0,0")
+    if post_season_completed:
+        rows.append("01/07/2027,Post Season Home,Post Season Away,1,0,H,5,3,2,1,0,0")
     if invalid_past_result:
         rows.append("15/09/2026,Malformed Home,Malformed Away,1,0,X,5,3,2,1,0,0")
     if missing_date_with_stats:
@@ -118,6 +120,14 @@ def test_gate_count_rejects_preseason_metadata_rows():
         count_unique_completed_primary_events(
             [{"match_date": "2026-06-30", "home_team": "Home", "away_team": "Away"}],
             before_date=date(2026, 10, 18),
+        )
+
+
+def test_gate_count_rejects_postseason_metadata_rows():
+    with pytest.raises(ValueError, match="post-season fixture identity"):
+        count_unique_completed_primary_events(
+            [{"match_date": "2027-07-01", "home_team": "Home", "away_team": "Away"}],
+            before_date=date(2027, 8, 1),
         )
 
 
@@ -160,6 +170,16 @@ def test_gate_identity_reader_rejects_preseason_metadata_rows():
         )
 
 
+def test_gate_identity_reader_rejects_postseason_metadata_rows():
+    client = FakeQuery([
+        {"match_date": "2027-07-01", "home_team": "Home", "away_team": "Away"},
+    ])
+    with pytest.raises(ValueError, match="post-season fixture identity"):
+        read_completed_primary_event_identities(
+            client, now=datetime(2027, 8, 1, 8, tzinfo=timezone.utc)
+        )
+
+
 def test_gate_identity_reader_rejects_reversed_duplicate_after_alias_normalization():
     client = FakeQuery([
         {"match_date": "2026-08-22", "home_team": "Atalanta BC", "away_team": "Juventus"},
@@ -191,6 +211,14 @@ def test_current_csv_rejects_reversed_duplicate_fixture_identity():
     with pytest.raises(ValueError, match="reversed duplicate fixture identity"):
         validate_current_season_csv(
             raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
+def test_current_csv_rejects_completed_postseason_row():
+    with pytest.raises(ValueError, match="completed row after season end"):
+        validate_current_season_csv(
+            current_csv(n=30, post_season_completed=True),
+            captured_at=datetime(2027, 8, 1, 8, tzinfo=timezone.utc),
         )
 
 
