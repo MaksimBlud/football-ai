@@ -33,6 +33,17 @@ PRIMARY_SEASON_END = date(2027, 6, 30)
 RESULT_INDEX = {"H": 0, "D": 1, "A": 2}
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 _SHA1 = re.compile(r"[0-9a-f]{40}\Z")
+
+COMPLETED_FIXTURE_GATE_SCHEMA = "MARKET_ANCHOR_1X2_V2_COMPLETED_FIXTURE_IDENTITY_GATE_V1"
+COMPLETED_FIXTURE_GATE_SOURCE_TABLE = "public.league_finished_results"
+COMPLETED_FIXTURE_GATE_COLUMNS = ("match_date", "home_team", "away_team")
+COMPLETED_FIXTURE_GATE_QUERY_CONTRACT_ID = "SERIE_A_COMPLETED_FIXTURE_IDENTITIES_V1"
+COMPLETED_FIXTURE_GATE_QUERY_CONTRACT = (
+    "SELECT match_date, home_team, away_team FROM public.league_finished_results "
+    "WHERE league = 'SERIE_A' AND season = '2026-2027' "
+    "AND match_date >= DATE '2026-07-01' AND match_date < :cutoff_date_exclusive"
+)
+COMPLETED_FIXTURE_GATE_QUERY_CONTRACT_SHA256 = "181d76b75c092d46b57535591abbb4e625c3e54e9b0f876402c9a3e0ed2457fb"
 REQUIRED_FIELDS = frozenset({
     "experiment_id", "evidence_class", "league", "event_id",
     "match_date", "home_team", "away_team", "candidate_sha256",
@@ -125,6 +136,70 @@ def _sha_fixture_set(identities: Iterable[tuple[str, str, str]]) -> str:
     canonical = sorted(tuple(item) for item in identities)
     payload = json.dumps(canonical, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
+
+
+def _validate_completed_fixture_gate_attestation(
+    attestation: Mapping[str, Any] | None,
+    completed_identities: set[tuple[str, str, str]],
+) -> dict[str, str]:
+    """Require a digest-bound attestation for the frozen identity-only completed-fixture query."""
+    if not isinstance(attestation, Mapping):
+        raise ValueError("completed fixture gate requires an explicit metadata-only attestation")
+    required = {
+        "schema_version", "source_table", "selected_columns", "league", "season",
+        "query_contract_id", "query_contract_sha256", "captured_at_utc",
+        "cutoff_date_exclusive_utc", "completed_fixture_identity_count",
+        "completed_fixture_identity_sha256", "outcome_columns_selected", "target_outcomes_read",
+    }
+    extra = set(attestation) - required
+    missing = required - set(attestation)
+    if extra or missing:
+        raise ValueError(
+            "completed fixture gate attestation has unapproved/missing fields: "
+            f"extra={sorted(str(key) for key in extra)}, missing={sorted(missing)}"
+        )
+    selected_columns = attestation["selected_columns"]
+    if not isinstance(selected_columns, (list, tuple)) or tuple(selected_columns) != COMPLETED_FIXTURE_GATE_COLUMNS:
+        raise ValueError("completed fixture gate attestation differs from the frozen identity-only query contract")
+    if (
+        attestation["schema_version"] != COMPLETED_FIXTURE_GATE_SCHEMA
+        or attestation["source_table"] != COMPLETED_FIXTURE_GATE_SOURCE_TABLE
+        or attestation["league"] != PRIMARY_LEAGUE
+        or attestation["season"] != "2026-2027"
+        or attestation["query_contract_id"] != COMPLETED_FIXTURE_GATE_QUERY_CONTRACT_ID
+        or attestation["query_contract_sha256"] != COMPLETED_FIXTURE_GATE_QUERY_CONTRACT_SHA256
+        or attestation["outcome_columns_selected"] is not False
+        or attestation["target_outcomes_read"] is not False
+    ):
+        raise ValueError("completed fixture gate attestation differs from the frozen identity-only query contract")
+    captured_at = _utc(attestation["captured_at_utc"], "completed fixture gate captured_at_utc")
+    cutoff_text = attestation["cutoff_date_exclusive_utc"]
+    if not isinstance(cutoff_text, str):
+        raise ValueError("completed fixture gate cutoff must be a canonical ISO date")
+    try:
+        cutoff_date = date.fromisoformat(cutoff_text)
+    except ValueError as exc:
+        raise ValueError("completed fixture gate cutoff must be a canonical ISO date") from exc
+    if cutoff_date.isoformat() != cutoff_text or captured_at.date() != cutoff_date:
+        raise ValueError("completed fixture gate cutoff date must match its UTC capture date")
+    count = attestation["completed_fixture_identity_count"]
+    digest = attestation["completed_fixture_identity_sha256"]
+    if type(count) is not int or count != len(completed_identities):
+        raise ValueError("completed fixture gate identity count does not match supplied identities")
+    if not isinstance(digest, str) or not _SHA256.fullmatch(digest):
+        raise ValueError("completed fixture gate identity digest is malformed")
+    if digest != _sha_fixture_set(completed_identities):
+        raise ValueError("completed fixture gate identity digest does not match supplied identities")
+    for identity in completed_identities:
+        match_day = date.fromisoformat(identity[0])
+        if not (PRIMARY_SEASON_START <= match_day <= PRIMARY_SEASON_END):
+            raise ValueError("completed fixture gate contains an identity outside the frozen 2026/27 primary season")
+        if match_day >= cutoff_date:
+            raise ValueError("completed fixture gate contains a fixture not completed before the metadata cutoff date")
+    return {
+        "captured_at_utc": captured_at.isoformat().replace("+00:00", "Z"),
+        "cutoff_date_exclusive_utc": cutoff_text,
+    }
 
 
 def _validate_forecast(row: Any) -> tuple[tuple[str, str, str], dict[str, tuple[float, float, float]], dict[str, Any]]:
@@ -291,18 +366,24 @@ def evaluate_after_gate(
     forecast_rows: Iterable[Mapping[str, Any]],
     completed_fixture_identities: Iterable[tuple[str, str, str]],
     outcome_loader: Callable[[frozenset[tuple[str, str, str]]], Mapping[tuple[str, str, str], str]],
+    *,
+    completed_fixture_gate_attestation: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Score only after >=30 unique eligible completed primary-cohort fixtures.
 
     completed_fixture_identities must come from a metadata-only query selecting
-    match_date, home_team, away_team. outcome_loader must be lazy: it is called
-    exactly once only after the gate opens, with only the matched forecast keys.
+    match_date, home_team, away_team, accompanied by a digest-bound attestation
+    for the frozen identity-only query contract. outcome_loader must be lazy:
+    it is called exactly once only after the gate opens, with matched forecast keys.
     """
     if not callable(outcome_loader):
         raise ValueError("outcome_loader must be a lazy callable, not preloaded outcomes")
     if isinstance(completed_fixture_identities, (str, bytes, Mapping)):
         raise ValueError("completed gate input must be fixture identities only, not outcome rows")
     completed = {_identity(item, label="completed metadata identity") for item in completed_fixture_identities}
+    gate_attestation = _validate_completed_fixture_gate_attestation(
+        completed_fixture_gate_attestation, completed
+    )
     normalized: list[tuple[tuple[str, str, str], dict[str, tuple[float, float, float]], dict[str, Any]]] = []
     seen_ids: set[str] = set()
     seen_fixtures: set[tuple[str, str, str]] = set()
@@ -338,6 +419,13 @@ def evaluate_after_gate(
         "frozen_incumbent_reference_pinned": FROZEN_INCUMBENT_REFERENCE is not None,
         "minimum_completed_eligible_forecasts": MIN_COMPLETED_ELIGIBLE_FORECASTS,
         "eligible_completed_forecasts": len(eligible_completed),
+        "completed_metadata_fixture_count": len(completed),
+        "completed_metadata_fixture_identity_sha256": _sha_fixture_set(completed),
+        "completed_fixture_gate_attestation_verified": True,
+        "completed_fixture_gate_source_table": COMPLETED_FIXTURE_GATE_SOURCE_TABLE,
+        "completed_fixture_gate_query_contract_sha256": COMPLETED_FIXTURE_GATE_QUERY_CONTRACT_SHA256,
+        "completed_fixture_gate_captured_at_utc": gate_attestation["captured_at_utc"],
+        "completed_fixture_gate_cutoff_date_exclusive_utc": gate_attestation["cutoff_date_exclusive_utc"],
         "completed_fixture_identity_sha256": _sha_fixture_set(completed_ids),
         "no_bet": True,
         "automatic_promotion": False,
