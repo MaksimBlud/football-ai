@@ -75,6 +75,40 @@ def identities(rows):
     return {(row["match_date"], row["home_team"], row["away_team"]) for row in rows}
 
 
+def make_completed_gate_attestation(completed, *, captured_at_utc="2026-11-19T00:00:00Z"):
+    normalized = {tuple(item) for item in completed}
+    captured = evaluator._utc(captured_at_utc, "test captured_at_utc")
+    return {
+        "schema_version": evaluator.COMPLETED_FIXTURE_GATE_SCHEMA,
+        "source_table": evaluator.COMPLETED_FIXTURE_GATE_SOURCE_TABLE,
+        "selected_columns": list(evaluator.COMPLETED_FIXTURE_GATE_COLUMNS),
+        "league": evaluator.PRIMARY_LEAGUE,
+        "season": "2026-2027",
+        "query_contract_id": evaluator.COMPLETED_FIXTURE_GATE_QUERY_CONTRACT_ID,
+        "query_contract_sha256": evaluator.COMPLETED_FIXTURE_GATE_QUERY_CONTRACT_SHA256,
+        "captured_at_utc": captured.isoformat().replace("+00:00", "Z"),
+        "cutoff_date_exclusive_utc": captured.date().isoformat(),
+        "completed_fixture_identity_count": len(normalized),
+        "completed_fixture_identity_sha256": evaluator._sha_fixture_set(normalized),
+        "outcome_columns_selected": False,
+        "target_outcomes_read": False,
+    }
+
+
+def evaluate_with_gate_attestation(rows, completed, outcome_loader, *, attestation=None):
+    completed_set = set(completed)
+    evidence = (
+        make_completed_gate_attestation(completed_set)
+        if attestation is None else attestation
+    )
+    return evaluate_after_gate(
+        rows,
+        completed_set,
+        outcome_loader,
+        completed_fixture_gate_attestation=evidence,
+    )
+
+
 TEST_INCUMBENT_REFERENCE = {
     "model_version": "frozen-incumbent-test-v1",
     "artifact_sha256": "c" * 64,
@@ -85,10 +119,74 @@ def pin_test_incumbent(monkeypatch):
     monkeypatch.setattr(evaluator, "FROZEN_INCUMBENT_REFERENCE", dict(TEST_INCUMBENT_REFERENCE))
 
 
+def test_missing_completed_fixture_gate_attestation_fails_before_outcome_read():
+    rows = make_forecasts(30)
+    called = []
+    with pytest.raises(ValueError, match="explicit metadata-only attestation"):
+        evaluate_after_gate(
+            rows,
+            identities(rows),
+            lambda keys: called.append(keys) or {key: "H" for key in keys},
+        )
+    assert called == []
+
+
+def test_completed_fixture_gate_attestation_rejects_future_fixture_identities():
+    rows = make_forecasts(30)
+    completed = identities(rows)
+    attestation = make_completed_gate_attestation(
+        completed, captured_at_utc="2026-10-28T03:00:00Z"
+    )
+    called = []
+    with pytest.raises(ValueError, match="not completed before the metadata cutoff"):
+        evaluate_after_gate(
+            rows,
+            completed,
+            lambda keys: called.append(keys) or {key: "H" for key in keys},
+            completed_fixture_gate_attestation=attestation,
+        )
+    assert called == []
+
+
+def test_completed_fixture_gate_attestation_digest_and_query_contract_are_enforced():
+    rows = make_forecasts(30)
+    completed = identities(rows)
+    called = []
+    attestation = make_completed_gate_attestation(completed)
+    attestation["completed_fixture_identity_sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="digest does not match"):
+        evaluate_after_gate(
+            rows,
+            completed,
+            lambda keys: called.append(keys) or {key: "H" for key in keys},
+            completed_fixture_gate_attestation=attestation,
+        )
+    assert called == []
+    attestation = make_completed_gate_attestation(completed)
+    attestation["selected_columns"] = ["match_date", "home_team", "away_team", "result"]
+    with pytest.raises(ValueError, match="frozen identity-only query contract"):
+        evaluate_after_gate(
+            rows,
+            completed,
+            lambda keys: called.append(keys) or {key: "H" for key in keys},
+            completed_fixture_gate_attestation=attestation,
+        )
+    assert called == []
+
+
+def test_completed_fixture_query_contract_sha_is_pinned():
+    assert evaluator.COMPLETED_FIXTURE_GATE_QUERY_CONTRACT_SHA256 == "181d76b75c092d46b57535591abbb4e625c3e54e9b0f876402c9a3e0ed2457fb"
+    assert evaluator.COMPLETED_FIXTURE_GATE_QUERY_CONTRACT == (
+        "SELECT match_date, home_team, away_team FROM public.league_finished_results "
+        "WHERE league = 'SERIE_A' AND season = '2026-2027' "
+        "AND match_date >= DATE '2026-07-01' AND match_date < :cutoff_date_exclusive"
+    )
+
+
 def test_29_completed_primary_forecasts_do_not_call_outcome_loader():
     rows = make_forecasts(30)
     called = []
-    report = evaluate_after_gate(
+    report = evaluate_with_gate_attestation(
         rows,
         identities(rows[:29]),
         lambda keys: called.append(keys) or {key: "H" for key in keys},
@@ -110,7 +208,7 @@ def test_exact_30_gate_scores_all_three_frozen_comparators_after_lazy_read(monke
         called.append(keys)
         return {key: "H" for key in keys}
 
-    report = evaluate_after_gate(rows, identities(rows), loader)
+    report = evaluate_with_gate_attestation(rows, identities(rows), loader)
     assert len(called) == 1
     assert called[0] == frozenset(identities(rows))
     assert report["status"] == "EVALUATED_RESEARCH_ONLY"
@@ -131,7 +229,7 @@ def test_exact_30_gate_scores_all_three_frozen_comparators_after_lazy_read(monke
 def test_future_forecasts_do_not_count_toward_completed_gate():
     rows = make_forecasts(30)
     called = []
-    report = evaluate_after_gate(
+    report = evaluate_with_gate_attestation(
         rows,
         identities(rows[:20]),
         lambda keys: called.append(keys) or {key: "H" for key in keys},
@@ -155,7 +253,7 @@ def test_contract_or_source_provenance_drift_fails_before_outcome_read(field, va
     rows[0][field] = value
     called = []
     with pytest.raises(ValueError):
-        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+        evaluate_with_gate_attestation(rows, identities(rows), lambda keys: called.append(keys) or {})
     assert called == []
 
 
@@ -164,7 +262,7 @@ def test_source_after_quote_fails_before_outcome_read():
     rows[0]["source_archive_created_at_utc"] = "2026-10-18T09:00:00Z"
     called = []
     with pytest.raises(ValueError, match="ordering"):
-        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+        evaluate_with_gate_attestation(rows, identities(rows), lambda keys: called.append(keys) or {})
     assert called == []
 
 
@@ -173,7 +271,7 @@ def test_offsetless_clock_fails_before_outcome_read():
     rows[0]["quote_time_utc"] = "2026-09-02T01:00:00"
     called = []
     with pytest.raises(ValueError, match="UTC offset"):
-        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+        evaluate_with_gate_attestation(rows, identities(rows), lambda keys: called.append(keys) or {})
     assert called == []
 
 
@@ -189,17 +287,23 @@ def test_precontract_quote_is_rejected_before_outcome_read():
     row["incumbent_evidence"]["generated_at_utc"] = "2026-10-18T07:50:00Z"
     called = []
     with pytest.raises(ValueError, match="preregistration time"):
-        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+        evaluate_with_gate_attestation(rows, identities(rows), lambda keys: called.append(keys) or {})
     assert called == []
 
 
 def test_forecast_outside_frozen_2026_27_season_is_rejected_before_outcome_read():
     rows = make_forecasts(30)
+    original_completed = identities(rows)
     rows[0]["match_date"] = "2027-07-01"
     rows[0]["kickoff_utc"] = "2027-07-01T18:00:00Z"
     called = []
     with pytest.raises(ValueError, match="outside the frozen 2026/27 primary season"):
-        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+        evaluate_after_gate(
+            rows,
+            original_completed,
+            lambda keys: called.append(keys) or {},
+            completed_fixture_gate_attestation=make_completed_gate_attestation(original_completed),
+        )
     assert called == []
 
 
@@ -215,7 +319,7 @@ def test_kickoff_utc_date_must_match_fixture_identity_before_outcome_read():
     rows[0]["kickoff_utc"] = "2026-10-02T18:00:00Z"
     called = []
     with pytest.raises(ValueError, match="kickoff UTC date"):
-        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+        evaluate_with_gate_attestation(rows, identities(rows), lambda keys: called.append(keys) or {})
     assert called == []
 
 
@@ -225,7 +329,7 @@ def test_stale_source_or_quote_fails_before_outcome_read():
     rows[0]["incumbent_evidence"]["history_cutoff_utc"] = "2026-08-30T00:00:00Z"
     called = []
     with pytest.raises(ValueError, match="24-hour"):
-        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+        evaluate_with_gate_attestation(rows, identities(rows), lambda keys: called.append(keys) or {})
     assert called == []
 
 
@@ -234,7 +338,7 @@ def test_forecast_payload_with_outcome_fields_is_rejected_before_outcome_read():
     rows[0]["result"] = "H"
     called = []
     with pytest.raises(ValueError, match="outcome/score field"):
-        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+        evaluate_with_gate_attestation(rows, identities(rows), lambda keys: called.append(keys) or {})
     assert called == []
 
 
@@ -251,7 +355,7 @@ def test_common_target_outcome_aliases_are_rejected_before_outcome_read(key):
     rows[0][key] = 1
     called = []
     with pytest.raises(ValueError, match="outcome/score field"):
-        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+        evaluate_with_gate_attestation(rows, identities(rows), lambda keys: called.append(keys) or {})
     assert called == []
 
 
@@ -260,7 +364,7 @@ def test_duplicate_event_or_fixture_identity_fails_closed():
     rows[1]["event_id"] = rows[0]["event_id"]
     called = []
     with pytest.raises(ValueError, match="duplicate provider event_id"):
-        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+        evaluate_with_gate_attestation(rows, identities(rows), lambda keys: called.append(keys) or {})
     assert called == []
 
     rows = make_forecasts(30)
@@ -274,7 +378,7 @@ def test_duplicate_event_or_fixture_identity_fails_closed():
     rows[1]["incumbent_evidence"]["away_team"] = rows[1]["away_team"]
     rows[1]["incumbent_evidence"]["kickoff_utc"] = rows[1]["kickoff_utc"]
     with pytest.raises(ValueError, match="duplicate canonical fixture"):
-        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+        evaluate_with_gate_attestation(rows, identities(rows), lambda keys: called.append(keys) or {})
     assert called == []
 
 
@@ -283,7 +387,7 @@ def test_missing_incumbent_vector_is_not_silently_replaced_by_market():
     del rows[0]["incumbent_1x2"]
     called = []
     with pytest.raises(ValueError, match="missing required fields"):
-        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+        evaluate_with_gate_attestation(rows, identities(rows), lambda keys: called.append(keys) or {})
     assert called == []
 
 
@@ -292,7 +396,7 @@ def test_market_fallback_must_equal_market_at_frozen_lambda_zero():
     rows[0]["active_market_fallback_1x2"] = [0.51, 0.29, 0.20]
     called = []
     with pytest.raises(ValueError, match="exactly the de-vigged market"):
-        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+        evaluate_with_gate_attestation(rows, identities(rows), lambda keys: called.append(keys) or {})
     assert called == []
 
 
@@ -301,7 +405,7 @@ def test_review_signal_requires_shadow_to_beat_both_comparators_on_both_metrics(
     rows = make_forecasts(30)
     for row in rows:
         row["incumbent_1x2"] = [0.80, 0.10, 0.10]
-    report = evaluate_after_gate(rows, identities(rows), lambda keys: {key: "H" for key in keys})
+    report = evaluate_with_gate_attestation(rows, identities(rows), lambda keys: {key: "H" for key in keys})
     assert report["shadow_beats_market_on_both_metrics"] is True
     assert report["shadow_beats_incumbent_on_both_metrics"] is False
     assert report["review_signal"] is False
@@ -315,7 +419,7 @@ def test_outcome_loader_must_return_exactly_the_gated_fixture_set(monkeypatch):
         called.append(keys)
         return {next(iter(keys)): "H"}
     with pytest.raises(ValueError, match="exactly one outcome"):
-        evaluate_after_gate(rows, identities(rows), incomplete_loader)
+        evaluate_with_gate_attestation(rows, identities(rows), incomplete_loader)
     assert len(called) == 1
 
 
@@ -323,7 +427,7 @@ def test_30_completed_forecasts_do_not_read_outcomes_without_pinned_incumbent(mo
     monkeypatch.setattr(evaluator, "FROZEN_INCUMBENT_REFERENCE", None)
     rows = make_forecasts(30)
     called = []
-    report = evaluate_after_gate(
+    report = evaluate_with_gate_attestation(
         rows,
         identities(rows),
         lambda keys: called.append(keys) or {key: "H" for key in keys},
@@ -343,7 +447,7 @@ def test_incumbent_evidence_must_match_frozen_reference_before_outcome_read(monk
     rows[0]["incumbent_evidence"]["artifact_sha256"] = "d" * 64
     called = []
     with pytest.raises(ValueError, match="does not match the frozen incumbent reference"):
-        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+        evaluate_with_gate_attestation(rows, identities(rows), lambda keys: called.append(keys) or {})
     assert called == []
 
 
@@ -352,7 +456,7 @@ def test_legacy_xgboost_incumbent_evidence_is_rejected_before_outcome_read():
     rows[0]["incumbent_evidence"]["model_version"] = "legacy-xgboost-production"
     called = []
     with pytest.raises(ValueError, match="legacy XGBoost incumbent evidence is forbidden"):
-        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+        evaluate_with_gate_attestation(rows, identities(rows), lambda keys: called.append(keys) or {})
     assert called == []
 
 
@@ -362,7 +466,7 @@ def test_duplicate_incumbent_source_record_id_fails_closed(monkeypatch):
     rows[1]["incumbent_evidence"]["source_record_id"] = rows[0]["incumbent_evidence"]["source_record_id"]
     called = []
     with pytest.raises(ValueError, match="duplicate incumbent source record ID"):
-        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+        evaluate_with_gate_attestation(rows, identities(rows), lambda keys: called.append(keys) or {})
     assert called == []
 
 
@@ -372,7 +476,7 @@ def test_incumbent_prediction_must_not_follow_quote(monkeypatch):
     rows[0]["incumbent_evidence"]["generated_at_utc"] = "2026-10-18T09:01:00Z"
     called = []
     with pytest.raises(ValueError, match="must not follow the quote"):
-        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+        evaluate_with_gate_attestation(rows, identities(rows), lambda keys: called.append(keys) or {})
     assert called == []
 
 
@@ -384,7 +488,7 @@ def test_incumbent_history_cutoff_must_not_exceed_v2_source_observation():
     rows[0]["incumbent_evidence"]["history_cutoff_utc"] = "2026-10-18T08:31:00Z"
     called = []
     with pytest.raises(ValueError, match="same-information-time comparison"):
-        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+        evaluate_with_gate_attestation(rows, identities(rows), lambda keys: called.append(keys) or {})
     assert called == []
 
 
@@ -409,7 +513,7 @@ def test_unknown_top_level_fields_fail_closed_before_outcome_read(key):
     rows[0][key] = True
     called = []
     with pytest.raises(ValueError, match="unapproved fields"):
-        evaluate_after_gate(
+        evaluate_with_gate_attestation(
             rows,
             identities(rows),
             lambda keys: called.append(keys) or {item: "H" for item in keys},
@@ -422,7 +526,7 @@ def test_unknown_nested_incumbent_evidence_fields_fail_closed_before_outcome_rea
     rows[0]["incumbent_evidence"]["home_winner_flag"] = True
     called = []
     with pytest.raises(ValueError, match="incumbent evidence contains unapproved fields"):
-        evaluate_after_gate(
+        evaluate_with_gate_attestation(
             rows,
             identities(rows),
             lambda keys: called.append(keys) or {item: "H" for item in keys},
@@ -444,7 +548,7 @@ def test_incumbent_evidence_must_match_same_canonical_fixture_before_outcome_rea
     rows[0]["incumbent_evidence"][field] = value
     called = []
     with pytest.raises(ValueError, match="incumbent evidence event identity does not match forecast"):
-        evaluate_after_gate(
+        evaluate_with_gate_attestation(
             rows,
             identities(rows),
             lambda keys: called.append(keys) or {item: "H" for item in keys},
@@ -457,7 +561,7 @@ def test_incumbent_evidence_kickoff_must_match_exact_forecast_event_before_outco
     rows[0]["incumbent_evidence"]["kickoff_utc"] = "2026-10-20T19:00:00Z"
     called = []
     with pytest.raises(ValueError, match="incumbent evidence event identity does not match forecast"):
-        evaluate_after_gate(
+        evaluate_with_gate_attestation(
             rows,
             identities(rows),
             lambda keys: called.append(keys) or {item: "H" for item in keys},
@@ -470,7 +574,7 @@ def test_incumbent_evidence_requires_explicit_fixture_identity_fields():
     del rows[0]["incumbent_evidence"]["home_team"]
     called = []
     with pytest.raises(ValueError, match="incumbent evidence missing fields"):
-        evaluate_after_gate(
+        evaluate_with_gate_attestation(
             rows,
             identities(rows),
             lambda keys: called.append(keys) or {item: "H" for item in keys},
