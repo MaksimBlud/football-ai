@@ -13,6 +13,8 @@ import math
 import re
 from typing import Any, Callable, Iterable, Mapping
 
+from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
+
 EXPERIMENT_ID = "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY"
 PRIMARY_LEAGUE = "SERIE_A"
 EVIDENCE_CLASS = "PROSPECTIVE_SHADOW"
@@ -70,6 +72,17 @@ def _utc(value: Any, field: str) -> datetime:
     return parsed.astimezone(timezone.utc)
 
 
+V2_ONLY_TEAM_ALIASES = {"Atalanta BC": "Atalanta"}
+
+
+def _canonical_team(value: str) -> str:
+    # Keep the evaluator's fixture keys identical to the read-only metadata
+    # adapter. Provider-facing row labels and incumbent evidence remain intact;
+    # only the comparison key is canonicalized.
+    configured = SERIE_A_RUNTIME_CONFIG.aliases.get(value, value)
+    return V2_ONLY_TEAM_ALIASES.get(configured, configured)
+
+
 def _identity(value: Any, *, label: str) -> tuple[str, str, str]:
     if not isinstance(value, (tuple, list)) or len(value) != 3:
         raise ValueError(f"{label} must be (ISO date, canonical home team, canonical away team)")
@@ -84,9 +97,9 @@ def _identity(value: Any, *, label: str) -> tuple[str, str, str]:
         raise ValueError(f"{label} date must use canonical YYYY-MM-DD form")
     if not isinstance(home, str) or not home.strip() or not isinstance(away, str) or not away.strip():
         raise ValueError(f"{label} teams must be non-empty canonical strings")
-    home, away = home.strip(), away.strip()
+    home, away = _canonical_team(home.strip()), _canonical_team(away.strip())
     if home.casefold() == away.casefold():
-        raise ValueError(f"{label} cannot have identical teams")
+        raise ValueError(f"{label} cannot have identical canonical teams")
     return raw_date, home, away
 
 
