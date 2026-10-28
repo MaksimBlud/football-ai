@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 from types import SimpleNamespace
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -261,3 +262,14 @@ def test_feature_readiness_uses_date_only_cutoff_and_never_emits_probabilities()
     assert report["model_probabilities_emitted"] is False
     assert "brier_score" not in json.dumps(report).lower()
     assert "log_loss" not in json.dumps(report).lower()
+
+
+def test_live_workflow_is_manual_main_only_before_secret_exposure():
+    workflow_path = Path(".github/workflows/serie-a-v2-free-fixture-feature-preview.yml")
+    workflow = workflow_path.read_text(encoding="utf-8")
+    main_only_guard = "if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}"
+    assert "workflow_dispatch:" in workflow
+    assert "schedule:" not in workflow
+    assert "workflow_run:" not in workflow
+    assert main_only_guard in workflow
+    assert workflow.index(main_only_guard) < workflow.index("THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}")
