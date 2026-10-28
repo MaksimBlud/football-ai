@@ -233,6 +233,23 @@ def test_forecast_payload_with_outcome_fields_is_rejected_before_outcome_read():
     assert called == []
 
 
+@pytest.mark.parametrize("key", [
+    "home_goal", "away_goal", "goals_home", "goals_away",
+    "home_ft_goals", "away_ft_goals",
+    "full_time_home_goals", "full_time_away_goals",
+    "final_home_goals", "final_away_goals",
+    "winner", "winning_team", "match_winner",
+    "home_win", "away_win", "is_draw", "draw",
+])
+def test_common_target_outcome_aliases_are_rejected_before_outcome_read(key):
+    rows = make_forecasts(30)
+    rows[0][key] = 1
+    called = []
+    with pytest.raises(ValueError, match="outcome/score field"):
+        evaluate_after_gate(rows, identities(rows), lambda keys: called.append(keys) or {})
+    assert called == []
+
+
 def test_duplicate_event_or_fixture_identity_fails_closed():
     rows = make_forecasts(30)
     rows[1]["event_id"] = rows[0]["event_id"]
