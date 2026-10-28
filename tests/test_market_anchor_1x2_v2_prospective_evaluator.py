@@ -736,3 +736,36 @@ def test_supabase_gate_reader_collapses_live_atalanta_alias_duplicates_to_80_ide
     assert attestation["outcome_columns_selected"] is False
     assert attestation["target_outcomes_read"] is False
 
+
+def test_forecast_aliases_match_canonical_completed_gate_identities_before_outcome_gate():
+    rows = make_forecasts(30)
+    # Preserve provider-facing labels in each forecast and its incumbent evidence.
+    # The metadata gate canonicalizes these two labels to the historic club name.
+    rows[0]["home_team"] = "Atalanta BC"
+    rows[0]["incumbent_evidence"]["home_team"] = "Atalanta BC"
+    rows[1]["away_team"] = "Atalanta BC"
+    rows[1]["incumbent_evidence"]["away_team"] = "Atalanta BC"
+
+    completed = set()
+    for row in rows:
+        home = "Atalanta" if row["home_team"] == "Atalanta BC" else row["home_team"]
+        away = "Atalanta" if row["away_team"] == "Atalanta BC" else row["away_team"]
+        completed.add((row["match_date"], home, away))
+
+    attestation = make_completed_gate_attestation(
+        completed, captured_at_utc="2026-11-19T00:00:00Z"
+    )
+    outcome_calls = []
+
+    report = evaluate_after_gate(
+        rows,
+        completed,
+        lambda identities: outcome_calls.append(identities),
+        completed_fixture_gate_attestation=attestation,
+    )
+
+    assert report["eligible_completed_forecasts"] == 30
+    assert report["status"] == "EVALUATION_BLOCKED_UNPINNED_INCUMBENT"
+    assert report["outcome_read_gate_open"] is False
+    assert report["target_outcomes_read"] is False
+    assert outcome_calls == []
