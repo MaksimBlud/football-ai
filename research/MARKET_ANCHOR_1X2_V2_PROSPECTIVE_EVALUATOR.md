@@ -11,9 +11,7 @@ The helper has no Supabase, network, filesystem, or model-loading code. It
 accepts normalized forecast-only rows, a set of completed fixture identities,
 and a lazy outcome-loader callback. The callback is never invoked until at
 least 30 **unique eligible completed Serie A prospective forecasts** match the
-metadata-only completed-fixture set. The completed-fixture set must come from
-a read-only query selecting only `match_date, home_team, away_team`; it must
-not contain scores or results.
+metadata-only completed-fixture set. The completed-fixture set must be accompanied by an explicit digest-bound attestation for the frozen identity-only query contract: source table `public.league_finished_results`, exact columns `match_date, home_team, away_team`, Serie A 2026/27 date bounds, a fixed query-contract SHA-256, the UTC capture/cutoff date, unique identity count and identity-set SHA-256. The evaluator rejects unknown attestation fields, any score/result-column claim, digest/count mismatches, and fixture identities on or after the date-only cutoff. This is a structural caller contract, not a claim that the pure helper cryptographically proves which upstream SQL actually ran; the capture caller must build the attestation directly from the metadata-only response.
 
 ## Eligibility checks before the outcome gate
 
