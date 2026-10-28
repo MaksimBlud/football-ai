@@ -184,7 +184,8 @@ def _validate_forecast(row: Any) -> tuple[tuple[str, str, str], dict[str, tuple[
         raise ValueError("incumbent_evidence must include frozen model and per-event source provenance")
     allowed_evidence_fields = {
         "model_version", "artifact_sha256", "source_record_id",
-        "generated_at_utc", "history_cutoff_utc",
+        "generated_at_utc", "history_cutoff_utc", "league",
+        "match_date", "home_team", "away_team", "kickoff_utc",
     }
     extra_evidence = set(evidence) - allowed_evidence_fields
     if extra_evidence:
@@ -195,6 +196,15 @@ def _validate_forecast(row: Any) -> tuple[tuple[str, str, str], dict[str, tuple[
     missing_evidence = allowed_evidence_fields - set(evidence)
     if missing_evidence:
         raise ValueError("incumbent evidence missing fields: " + ", ".join(sorted(missing_evidence)))
+    incumbent_kickoff = _utc(evidence["kickoff_utc"], "incumbent_evidence.kickoff_utc")
+    if (
+        evidence["league"] != row["league"]
+        or evidence["match_date"] != row["match_date"]
+        or evidence["home_team"] != row["home_team"]
+        or evidence["away_team"] != row["away_team"]
+        or incumbent_kickoff != kickoff
+    ):
+        raise ValueError("incumbent evidence event identity does not match forecast")
     incumbent_version = evidence["model_version"]
     if not isinstance(incumbent_version, str) or not incumbent_version.strip():
         raise ValueError("incumbent model version is missing")
