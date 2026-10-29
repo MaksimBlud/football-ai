@@ -304,6 +304,61 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     result = completed.loc[:, list(REQUIRED_COLUMNS)].copy()
     return result, len(frame) - len(completed)
 
+
+def _read_bounded_current_source_body(response: Any) -> bytes:
+    """Consume the pinned current-season CSV with a hard in-memory byte bound.
+
+    requests.get(stream=True) is required: checking response.content after a
+    normal eager request does not bound the bytes buffered in memory. The
+    response is closed on every success and failure path.
+    """
+    try:
+        if getattr(response, "status_code", None) != 200:
+            raise ValueError("current-season source must return a direct HTTP 200 response")
+        if getattr(response, "url", None) != CURRENT_URL:
+            raise ValueError("current-season source response URL differs from approved HTTPS URL")
+        response.raise_for_status()
+
+        headers = getattr(response, "headers", {}) or {}
+        declared_length = headers.get("Content-Length")
+        if declared_length is not None:
+            try:
+                declared_bytes = int(declared_length)
+            except (TypeError, ValueError):
+                raise ValueError("current-season source has an invalid Content-Length") from None
+            if declared_bytes < 0:
+                raise ValueError("current-season source has a negative Content-Length")
+            if declared_bytes > MAX_CURRENT_CSV_BYTES:
+                raise ValueError("current-season source exceeds size limit")
+
+        iterator = getattr(response, "iter_content", None)
+        if not callable(iterator):
+            raise ValueError("current-season source response does not support bounded streaming")
+        chunks: list[bytes] = []
+        total = 0
+        for chunk in iterator(chunk_size=64 * 1024):
+            if not chunk:
+                continue
+            if not isinstance(chunk, bytes):
+                raise ValueError("current-season source stream yielded non-byte content")
+            total += len(chunk)
+            if total > MAX_CURRENT_CSV_BYTES:
+                raise ValueError("current-season source exceeds size limit")
+            chunks.append(chunk)
+        raw = b"".join(chunks)
+        if not raw:
+            raise ValueError("current-season source response body is empty")
+        return raw
+    finally:
+        close = getattr(response, "close", None)
+        if callable(close):
+            try:
+                close()
+            except Exception:
+                # Do not replace the source-integrity error with a cleanup error.
+                pass
+
+
 def _current_source_fixture_identities(
     frame: pd.DataFrame,
 ) -> set[tuple[str, str, str]]:
@@ -357,18 +412,12 @@ def capture_source_archive(
     old_history, old_audit = history_fetch(get=get, capture_dir=output_dir)
     if old_history.empty or len(old_audit) != len(_source_codes()):
         raise ValueError("original frozen historical source archive incomplete")
-    response = get(CURRENT_URL, timeout=30, allow_redirects=False)
-    # requests.raise_for_status() accepts 3xx responses; reject redirects and unexpected
-    # final URLs before reading response bytes into the frozen source archive.
-    if getattr(response, "status_code", None) != 200:
-        raise ValueError("current-season source must return a direct HTTP 200 response")
-    if getattr(response, "url", None) != CURRENT_URL:
-        raise ValueError("current-season source response URL differs from approved HTTPS URL")
-    response.raise_for_status()
-    # Accessing requests.Response.content downloads/consumes the response body.
-    # Timestamp observation only after all source bytes are available so a slow
-    # response cannot understate source age or cross the UTC-day feature cutoff.
-    raw = response.content
+    response = get(
+        CURRENT_URL, timeout=30, allow_redirects=False, stream=True
+    )
+    # Stream and enforce the actual decompressed byte cap before materializing the
+    # CSV. The observation clock is sampled only after the complete bounded body.
+    raw = _read_bounded_current_source_body(response)
     observed_clock = clock()
     if (
         not isinstance(observed_clock, datetime)
