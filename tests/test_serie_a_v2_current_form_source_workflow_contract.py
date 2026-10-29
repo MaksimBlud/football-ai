@@ -141,7 +141,7 @@ def test_secret_bearing_v2_workflows_only_run_on_main_ref():
     }
     for workflow_path, guard in expected_guards.items():
         text = workflow_path.read_text(encoding="utf-8")
-        job_block = text.split("\\njobs:\\n", 1)[1].split("\\n      steps:", 1)[0]
+        job_block = text.split("\njobs:\n", 1)[1].split("\n      steps:", 1)[0]
         assert guard in job_block, (
             f"{workflow_path.name} must fail closed outside refs/heads/main before "
             "its secret-bearing job can run"
