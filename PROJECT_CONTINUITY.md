@@ -1,3 +1,16 @@
+## 2026-10-29 — Fresh verified current-form source archive; no admissible quotes
+
+Fresh main re-check: `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No main mutation or merge.
+
+**Current-form source capture:** [run 40868280531](https://github.com/MaksimBlud/football-ai/actions/runs/40868280531) completed SUCCESS on the exact main SHA. Artifact `12894054589`, ZIP SHA-256 `b4b1144ca28414ccf7a5a7a5c02fde4611e8e0f1a37997012de031a38baa14b0`; downloaded bytes independently hash to the same digest. The archive has ten frozen historical CSVs (3,800 completed rows) plus the current `2627/I1.csv` source (88 rows), with manifest SHA-256 `d2fa45e92d662ab8a79421475361ac694cace2deb75fbe799b6c04baaabe9691`. The feature-input gate used only `match_date,home_team,away_team`, counted 80 unique completed primary fixture identities, and did not select score/result columns. Manifest records 19 frozen features and candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+
+**Current-form forward preview:** [run 40868414740](https://github.com/MaksimBlud/football-ai/actions/runs/40868414740) completed SUCCESS. Artifact `12894613085`, ZIP SHA-256 `37f0c83da317d90621bb967508dab3f8568f34edeba01d77d41059e2f9cca00d`; local hash matches GitHub's artifact digest. The report independently verifies source artifact `12894054589` and its digest, source parent run `40868280531`, current source age 45 seconds at verification, and `fresh_for_new_quote=true`. It also reports `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `target_outcomes_read=false`, `target_outcomes_scored=false`, `paid_provider_calls=0`, and `production_or_supabase_writes=0`. Thus source provenance is live-proven, but there was no eligible saved quote and no new forecast.
+
+**Independent free diagnostic:** [run 40877079065](https://github.com/MaksimBlud/football-ai/actions/runs/40877079065) completed SUCCESS; 53 offline tests passed, artifact `12899100578`, ZIP SHA-256 `fda6c48dc59c2ca5b82310756a37742d69023a8e6c1a38d795a240d9390c3d4b`, locally re-hashed to the same digest. The report shows 3,800 old-season history rows, zero source-observed-after-quote cases, zero paid provider requests, and zero Supabase writes. It is a diagnostic only, not a prediction-quality evaluation.
+
+The saved quote table remains stale (last observed snapshot 2026-10-13 14:48:53 UTC in the prior metadata-only audit); no target outcomes were opened. The 30-primary-completed-forecast outcome gate remains CLOSED, the frozen incumbent is still unpinned, and no Brier/LogLoss comparison is authorized yet. No model weights/features/lambdas, production artifact, schedule, or Supabase data changed.
+
+
 ## 2026-10-29 — Original V2 forward-capture timing regression fixed; exact-head CI verified
 
 Main was re-read and remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no merge or main write occurred in this iteration.
