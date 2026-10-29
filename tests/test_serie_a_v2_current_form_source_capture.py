@@ -457,7 +457,9 @@ def _valid_fake_history_for_clock_tests():
     return pd.DataFrame([{"historical": 1}]), audits
 
 
-def test_source_observation_clock_without_offset_fails_before_reading_csv_body(tmp_path):
+def test_source_observation_clock_without_offset_fails_after_body_read_before_write(tmp_path):
+    body_read = False
+
     class Response:
         status_code = 200
         url = CURRENT_URL
@@ -467,7 +469,13 @@ def test_source_observation_clock_without_offset_fails_before_reading_csv_body(t
 
         @property
         def content(self):
-            pytest.fail("source bytes must not be consumed with an invalid observation clock")
+            nonlocal body_read
+            body_read = True
+            return current_csv(n=MIN_COMPLETED_FEATURE_SOURCE_EVENTS)
+
+    def invalid_clock():
+        assert body_read, "observation clock must follow complete response-body consumption"
+        return datetime(2026, 10, 18, 8, tzinfo=_NoOffsetTimezone())
 
     with pytest.raises(ValueError, match="source observation clock must have a real UTC offset"):
         capture_source_archive(
@@ -476,11 +484,55 @@ def test_source_observation_clock_without_offset_fails_before_reading_csv_body(t
             now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
             get=lambda *_args, **_kwargs: Response(),
             history_fetch=lambda **_kwargs: _valid_fake_history_for_clock_tests(),
-            clock=lambda: datetime(2026, 10, 18, 8, tzinfo=_NoOffsetTimezone()),
+            clock=invalid_clock,
         )
 
+    assert body_read
     assert not (tmp_path / CURRENT_FILENAME).exists()
     assert not (tmp_path / MANIFEST_FILENAME).exists()
+
+
+def test_source_observation_timestamp_and_date_cutoff_follow_body_completion(tmp_path):
+    raw = current_csv(n=MIN_COMPLETED_FEATURE_SOURCE_EVENTS, same_day=True)
+    body_read = False
+    source_times = iter([
+        datetime(2026, 10, 19, 0, 0, 1, tzinfo=timezone.utc),
+        datetime(2026, 10, 19, 0, 0, 2, tzinfo=timezone.utc),
+    ])
+
+    class Response:
+        status_code = 200
+        url = CURRENT_URL
+
+        def raise_for_status(self):
+            return None
+
+        @property
+        def content(self):
+            nonlocal body_read
+            body_read = True
+            return raw
+
+    def clock_after_body():
+        assert body_read, "source clock must be sampled after the response body is complete"
+        return next(source_times)
+
+    report = capture_source_archive(
+        output_dir=tmp_path,
+        client=FakeQuery(event_rows(MIN_COMPLETED_FEATURE_SOURCE_EVENTS)),
+        now=datetime(2026, 10, 18, 23, 59, 59, tzinfo=timezone.utc),
+        get=lambda *_args, **_kwargs: Response(),
+        history_fetch=lambda **_kwargs: _valid_fake_history_for_clock_tests(),
+        clock=clock_after_body,
+    )
+
+    assert body_read
+    assert report["current_season_source_observed_at_utc"] == "2026-10-19T00:00:01+00:00"
+    assert report["source_archive_created_at_utc"] == "2026-10-19T00:00:02+00:00"
+    # The response completed after midnight, so the prior UTC day is available
+    # to the source validator; the gate itself remains the earlier metadata-only snapshot.
+    assert report["current_season_completed_prior_day_rows"] == MIN_COMPLETED_FEATURE_SOURCE_EVENTS + 1
+    assert (tmp_path / MANIFEST_FILENAME).exists()
 
 
 def test_archive_creation_clock_without_offset_fails_before_current_source_write(tmp_path):
