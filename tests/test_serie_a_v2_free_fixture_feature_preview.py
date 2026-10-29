@@ -329,3 +329,48 @@ def test_live_workflow_is_manual_main_only_before_secret_exposure():
     assert "workflow_run:" not in workflow
     assert main_only_guard in workflow
     assert workflow.index(main_only_guard) < workflow.index("THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}")
+
+def test_capture_timestamp_is_after_body_and_events_starting_during_body_are_excluded():
+    response = response_for([event(commence_time="2026-10-28T10:03:30Z")])
+    clock_values = iter([RECEIVED, datetime(2026, 10, 28, 10, 4, tzinfo=UTC)])
+    report = capture_free_fixture_preview(
+        api_key=API_KEY,
+        source_attestation=source_attestation(),
+        history=history_frame(),
+        request_started_at=STARTED,
+        get=lambda *a, **k: response,
+        clock=lambda: next(clock_values),
+    )
+    assert report["captured_at_utc"] == "2026-10-28T10:04:00+00:00"
+    assert report["future_fixture_count"] == 0
+    assert report["status"] == "NO_UPCOMING_FIXTURES"
+    assert response.closed is True
+
+
+def test_source_freshness_is_rechecked_after_slow_response_body():
+    source = source_attestation(
+        source_archive_created_at_utc="2026-10-27T10:05:00Z",
+        latest_source_observed_at_utc="2026-10-27T10:04:00Z",
+        parent_run={
+            "run_id": 54321,
+            "run_head_sha": "b" * 40,
+            "run_completed_at_utc": "2026-10-27T10:06:00Z",
+        },
+    )
+    started = datetime(2026, 10, 28, 10, 3, tzinfo=UTC)
+    response = response_for([event()])
+    clock_values = iter([
+        datetime(2026, 10, 28, 10, 3, 30, tzinfo=UTC),
+        datetime(2026, 10, 28, 10, 5, tzinfo=UTC),
+    ])
+    with pytest.raises(ValueError, match="fresh throughout"):
+        capture_free_fixture_preview(
+            api_key=API_KEY,
+            source_attestation=source,
+            history=history_frame(),
+            request_started_at=started,
+            get=lambda *a, **k: response,
+            clock=lambda: next(clock_values),
+        )
+    assert response.closed is True
+
