@@ -1,3 +1,17 @@
+## 2026-10-29 19:56 UTC — later metadata reveals source-gate drift
+
+This update supersedes the earlier 2026-10-29 15:55 UTC statement that the archived 80-identity source matched the current metadata gate. A later read-only audit recorded on PR #694 at 2026-10-29 18:52:22 UTC found a changed metadata set.
+
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no merge or main mutation.
+- Source capture run [40868280531](https://github.com/MaksimBlud/football-ai/actions/runs/40868280531) completed SUCCESS at 2026-10-29 11:49:54 UTC. Source artifact `12894054589` SHA-256 `b4b1144ca28414ccf7a5a7a5c02fde4611e8e0f1a37997012de031a38baa14b0`; all 11 CSV byte hashes matched the manifest. At capture, the manifest recorded 80 completed current-season rows and 80 feature-input-gate identities.
+- A later metadata-only query selecting exactly `match_date, home_team, away_team`, with the same V2-local alias normalization and no score/result fields, returned 88 canonical identities through 2026-10-28: 3 dated 2026-10-27 and 5 dated 2026-10-28.
+- Therefore the artifact's captured gate set is behind the later observed metadata set by eight identities. Do not use that artifact for any new forward inference unless the live gate/source coverage is re-established; do not weaken the fixed freshness or source-before-quote rules.
+- Latest confirmed current-form forward run [40899523036](https://github.com/MaksimBlud/football-ai/actions/runs/40899523036) completed SUCCESS at 2026-10-29 15:15:14 UTC, but captured zero quotes and zero shadow forecasts. The latest 100 repository workflow runs inspected at 19:56 UTC showed no newer V2 source-capture or forward-preview run. This is a safe no-quote runtime result, not prediction-quality evidence.
+- PR #694 current HEAD `2fd95bb07befb00b6efb4a14815ad925d50cac71` has 7/7 successful exact-head CI checks; its Original V2 suite reported 109 passing tests. PR #699 HEAD `e50ad26c3d6b4c9bac8d584dead0ab043b4f3792` is a descendant of #694 (compare: 35 commits ahead, 0 behind) and also has 7/7 successful checks. Treat #699 as the integrated review target; do not merge overlapping #694 separately. HUMAN-MERGE only.
+- No fresh admissible saved odds, new eligible forecasts, target-outcome reads/scoring, paid calls, Supabase writes/DDL, production `.pkl` changes, or model/contract changes occurred in this audit.
+
+The frozen candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; original 19 features/weights and `active_lambda=0` / `shadow_lambda=1` semantics remain unchanged. The 30-primary-completed-forecast outcome gate stays closed, and no Brier/LogLoss superiority claim is permitted.
+
 ## 2026-10-29 15:55 UTC — latest original and current-form forward runtime — source attested, zero quotes, no outcomes
 
 Fresh read-only check of `main`: `40887ebb215730190d7a6c7a1693373ec4afcdfc`; PR #697 remains documentation-only and unmerged.
