@@ -1,3 +1,24 @@
+## 2026-10-29 — Original V2 forward-capture timing regression fixed; exact-head CI verified
+
+Main was re-read and remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no merge or main write occurred in this iteration.
+
+PR [#702](https://github.com/MaksimBlud/football-ai/pull/702) now has HEAD `ce589718afb2aebf02ee36872f17169e83bb2a9d` (base is the unchanged main above). Review found that the free fixture metadata probe timestamped a response at header receipt before the streamed response body was fully consumed. A kickoff occurring during a slow body read could be incorrectly classified as future, and the 24-hour source freshness recheck could use an early timestamp. The capture timestamp now occurs after bounded body consumption and JSON parsing; clock rollback fails closed. Two mocked regressions cover a kickoff during body download and source freshness crossing 24 hours during download.
+
+Exact-head GitHub Actions evidence: **7/7 SUCCESS** on the exact PR HEAD. Dedicated mocked-provider test run [40803360928](https://github.com/MaksimBlud/football-ai/actions/runs/40803360928) passed **15 tests**. CI did not call The Odds API. PR remains open for HUMAN-MERGE; no model weights, feature order, candidate SHA, lambdas, evaluation gate, schedule, production artifact, or Supabase data were changed.
+
+Fresh read-only Supabase checks (metadata only; no score/result columns selected):
+- `public.odds_snapshots`: 3,966 rows across 9 leagues; no rows in the previous 24 hours or 7 days; zero rows for future fixtures where snapshot time is strictly before kickoff. Latest Serie A snapshot is `2026-10-13T14:48:53Z`.
+- `public.league_finished_results`: 83 Serie A 2026/27 metadata rows through 2026-10-25; 80 unique fixture identities after the existing V2-only `Atalanta BC -> Atalanta` alias. The query selected only `match_date, home_team, away_team` and aggregate counts, not outcomes.
+- These data confirm the source-input gate is open but do not create any new prospective quote or forecast.
+
+Existing main forward workflows were checked by run/job metadata: original forward run [40711770789](https://github.com/MaksimBlud/football-ai/actions/runs/40711770789) and current-form forward run [40712651474](https://github.com/MaksimBlud/football-ai/actions/runs/40712651474) both completed successfully on main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`, with artifacts `12826501542` and `12825974332` respectively. This pass verified job steps and artifact metadata, not the artifact JSON contents; do not infer a new prediction count from that check.
+
+Scientific status remains unchanged: frozen original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features and weights unchanged; `active_lambda=0` market-only, `shadow_lambda=1` research-only. No fresh admissible odds, no new eligible prospective forecasts, no pinned frozen incumbent, no Brier/LogLoss evaluation. Target-outcome gate remains closed; no target outcomes were read.
+
+Open review targets: [#699](https://github.com/MaksimBlud/football-ai/pull/699) source/clock/identity guards; [#701](https://github.com/MaksimBlud/football-ai/pull/701) evaluator that intentionally refuses outcome access while the incumbent reference is unpinned; [#702](https://github.com/MaksimBlud/football-ai/pull/702) free fixture metadata preview. No PR was merged.
+
+---
+
 ## 2026-10-28 16:52 UTC — source-fixture feasibility cross-check: no Serie A future-fixture feed in current stores
 
 Fresh read-only verification against unchanged `main` `40887ebb215730190d7a6c7a1693373ec4afcdfc` adds an independent source-feasibility check beyond the earlier quote-count audit.
