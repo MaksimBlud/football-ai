@@ -5,6 +5,7 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 CURRENT_SOURCE_WORKFLOW = ROOT / ".github" / "workflows" / "serie-a-v2-current-form-source-capture.yml"
 ORIGINAL_FORWARD_WORKFLOW = ROOT / ".github" / "workflows" / "serie-a-v2-forward-preview.yml"
+CURRENT_FORWARD_WORKFLOW = ROOT / ".github" / "workflows" / "serie-a-v2-current-form-forward-preview.yml"
 FROZEN_SHADOW_WORKFLOW = ROOT / ".github" / "workflows" / "serie-a-frozen-v2-shadow-tests.yml"
 
 
@@ -129,3 +130,21 @@ def test_frozen_shadow_ci_runs_this_contract_and_tracks_original_forward_workflo
     compile_line = next(line for line in text.splitlines() if "python -m py_compile " in line)
     assert "market_anchor_1x2_v2_shadow.py" in compile_line
     assert "market_anchor_1x2_v1.py" in compile_line
+
+
+def test_secret_bearing_v2_workflows_only_run_on_main_ref():
+    """Manual dispatch from a feature ref must not receive Supabase secrets."""
+    expected_guards = {
+        CURRENT_SOURCE_WORKFLOW: "if: ${{ github.ref == 'refs/heads/main' }}",
+        ORIGINAL_FORWARD_WORKFLOW: "if: ${{ github.ref == 'refs/heads/main' && (",
+        CURRENT_FORWARD_WORKFLOW: "if: ${{ github.ref == 'refs/heads/main' && (",
+    }
+    for workflow_path, guard in expected_guards.items():
+        text = workflow_path.read_text(encoding="utf-8")
+        job_block = text.split("\\njobs:\\n", 1)[1].split("\\n      steps:", 1)[0]
+        assert guard in job_block, (
+            f"{workflow_path.name} must fail closed outside refs/heads/main before "
+            "its secret-bearing job can run"
+        )
+        assert "SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}" in job_block
+        assert job_block.index(guard) < job_block.index("env:")
