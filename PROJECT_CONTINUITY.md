@@ -6751,7 +6751,7 @@ The metadata-only query on `public.league_finished_results` selected only `match
 
 ### Binding disposition
 
-The source artifact has crossed the 24-hour freshness boundary, and no fresh strictly pre-kickoff quote or new eligible V2 forecast exists. Keep the source/quote and 30-completed-prospective-forecast outcome gates closed. Frozen candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; original 19 features/weights unchanged; `active_lambda=0` market, `shadow_lambda=1` research only. No target outcomes read/scored, no paid provider request, no Supabase writes/DDL, no production `.pkl` change, no schedule change and no merge. HUMAN-MERGE only.
+No fresh strictly pre-kickoff quote or new eligible V2 forecast exists. At the 2026-10-29 21:55 UTC audit, the latest source archive was approximately 10 hours old (so it had NOT crossed the 24-hour age limit); its current-gate freshness remains unproven because the captured manifest recorded only 80 gate identities and omitted the exact gate identity-set SHA. Keep source/gate attestation and the 30-completed-prospective-forecast outcome gates closed. Frozen candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; original 19 features/weights unchanged; `active_lambda=0` market, `shadow_lambda=1` research only. No target outcomes read/scored, no paid provider request, no Supabase writes/DDL, no production `.pkl` change, no schedule change and no merge. HUMAN-MERGE only.
 
 ## 2026-10-29 — current-form archive identity parity and gate-time mismatch
 
@@ -6786,3 +6786,16 @@ from the same run, and require every gate identity to be present before attestin
 Do not infer source correctness from row counts alone. This is source-integrity evidence only,
 not a V2 forecast or model-quality result. No outcomes read, no paid calls, no Supabase writes,
 no production artifact/model changes, no main mutation, and no merge.
+
+
+## 2026-10-29 — corrected source-age interpretation and raw metadata count (21:55 UTC)
+
+Fresh read-only Supabase queries selected only the saved-odds timestamps/kickoff timestamps and the Serie A 2026/27 fixture metadata fields. No score/result/settlement columns were selected.
+
+- `public.odds_snapshots`: 3,966 total; latest `2026-10-13T14:48:53.042620Z`; zero snapshots in the prior 24 hours or 7 days; zero future rows with `snapshot_time_utc < commence_time_utc`.
+- `public.league_finished_results` for `league='SERIE_A'`, season dates from 2026-07-01: 91 rows and 91 raw (date, home, away) tuples, dated 2026-08-22 through 2026-10-28. Applying the existing V2-local canonical team aliases yields 88 fixture identities, consistent with the prior identity-only archive comparison.
+- Correction to the earlier paragraph: at this audit the source archive from run 40868280531 was about 10 hours old, **not older than 24 hours**. The active blocker is not elapsed archive age; it is that the manifest records a gate count of 80 without the exact gate identity-set SHA, while the latest canonical metadata set now contains 88 identities. A current 88-to-88 identity parity result does not retroactively prove which exact 80 identities were seen at gate time.
+- Original current-form forward-only run 40899523036 and original forward-only run 40898762675 both completed SUCCESS on main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`, but produced no admissible forecasts because no fresh saved pre-kickoff quotes exist.
+- PR #699 HEAD `e50ad26c3d6b4c9bac8d584dead0ab043b4f3792` was rechecked directly through GitHub's commit check-runs API: all seven named checks completed SUCCESS on that exact SHA (last completion 2026-10-29 03:54:20 UTC). It remains open and unmerged under HUMAN-MERGE.
+
+This note corrects source-age wording only; no code, frozen weights/features, gates, workflow schedules, Supabase data, or production artifacts were changed. No outcomes were read or scored, no paid requests were made, and no merge occurred.
