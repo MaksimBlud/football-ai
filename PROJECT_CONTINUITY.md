@@ -6678,3 +6678,36 @@ Read-only verification on unchanged main `40887ebb215730190d7a6c7a1693373ec4afcd
 - No workflow was dispatched or rescheduled; no paid provider call, Supabase write/DDL, production model change, outcome read, model refit, or promotion occurred.
 
 Interpretation: the existing source archive's 80 canonical fixture identities exactly match the current metadata gate; the remaining blocker is the lack of fresh, admissible pre-kickoff market quotes and the unpinned incumbent required by the frozen evaluator. The original 19-feature contract/weights, candidate SHA, `active_lambda=0`, `shadow_lambda=1`, and NO_BET behavior remain unchanged.
+
+
+## 2026-10-29 11:54 UTC — source freshness crossed the 24-hour gate
+
+Fresh main/continuity/open-PR review and read-only Supabase audit. Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main mutation or merge.
+
+### Actual source and forward runtime
+
+- Latest confirmed current-form source artifact remains **12812553701**, from successful main run [40681895214](https://github.com/MaksimBlud/football-ai/actions/runs/40681895214). GitHub artifact digest and independently verified ZIP SHA-256: `fb5f38f6c569de63dce7d9c1c58533ea873665e132d51bfc878ead7a684df6df`; the prior byte-level audit verified all 11 CSV digests against the manifest.
+- Source observation: `2026-10-28T11:42:18.949888Z`; artifact created `2026-10-28T11:42:21Z`. At audit time `2026-10-29T11:54:09Z`, source age was **24h 11m 50s**, beyond the frozen 24-hour maximum. Treat this artifact as stale for any new quote; do not relax freshness or backfill.
+- Last confirmed current-form forward run [40712651474](https://github.com/MaksimBlud/football-ai/actions/runs/40712651474) succeeded on main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`, but `quotes_seen=0` and `v2_current_form_shadow_captured=0`. Last confirmed original forward run [40711770789](https://github.com/MaksimBlud/football-ai/actions/runs/40711770789) also completed successfully with no admissible saved quote. These are no-quote fail-closed proofs, not model-quality evidence. No newer source artifact was confirmed in this audit.
+
+### Read-only Supabase evidence
+
+Audit time: `2026-10-29T11:54:09.027257Z`. Query against `public.odds_snapshots` used only timestamps, league, kickoff and aggregate counts; no target outcomes:
+
+- Total saved snapshots: **3,966**; latest snapshot `2026-10-13T14:48:53.042620Z`.
+- Snapshots in prior 24 hours: **0**; prior 7 days: **0**.
+- Future events with a snapshot strictly before kickoff: **0**; future non-pre-match snapshots: **0**.
+- Serie A: **625** snapshots; latest also `2026-10-13T14:48:53.042620Z`.
+
+The metadata-only query on `public.league_finished_results` selected only `match_date, home_team, away_team` for Serie A 2026/27 before the UTC audit date. It returned **83** raw directional identities, dated 2026-08-22 through 2026-10-25. The established V2-local alias normalization yields **80** canonical fixture identities. No score/result columns were selected.
+
+### Exact open-PR state rechecked
+
+- [PR #699](https://github.com/MaksimBlud/football-ai/pull/699), HEAD `e50ad26c3d6b4c9bac8d584dead0ab043b4f3792`: **7/7** required checks SUCCESS. Consolidates source, clock, identity, target-field and workflow guards; remains unmerged.
+- [PR #702](https://github.com/MaksimBlud/football-ai/pull/702), HEAD `b890514dda0c9a388c6855fa0d843a21a62a7306`: **7/7** required checks SUCCESS; dedicated mocked suite **17 passed**. It remains manual-dispatch-only and emits feature readiness, not probabilities. Official API documentation states that GET `/v4/sports/{sport}/events` does not count against usage quota ([documentation](https://the-odds-api.com/liveapi/guides/v4/)); no provider request was made in this audit or by CI.
+- [PR #701](https://github.com/MaksimBlud/football-ai/pull/701), HEAD `29229dbce2ce9096eb717b59d80db296ec2621e0`: **6/6** required checks SUCCESS, evaluator suite **62 passed**. Outcome evaluation remains blocked by the intentionally unpinned non-legacy incumbent reference.
+- This update is documentation-only; it does not alter code, workflow schedules, source/feature policy, the frozen candidate, or any gate.
+
+### Binding disposition
+
+The source artifact has crossed the 24-hour freshness boundary, and no fresh strictly pre-kickoff quote or new eligible V2 forecast exists. Keep the source/quote and 30-completed-prospective-forecast outcome gates closed. Frozen candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; original 19 features/weights unchanged; `active_lambda=0` market, `shadow_lambda=1` research only. No target outcomes read/scored, no paid provider request, no Supabase writes/DDL, no production `.pkl` change, no schedule change and no merge. HUMAN-MERGE only.
