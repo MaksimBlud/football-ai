@@ -258,6 +258,16 @@ def _read_bounded_response_body(response: Any) -> bytes:
     return raw
 
 
+def _reject_duplicate_json_object_keys(pairs: list[tuple[str, Any]]) -> dict:
+    """Reject ambiguous JSON objects instead of silently keeping the last duplicate key."""
+    parsed = {}
+    for key, value in pairs:
+        if key in parsed:
+            raise ValueError("duplicate JSON object key")
+        parsed[key] = value
+    return parsed
+
+
 def _consume_zero_credit_events_response(
     response: Any, *, started: datetime, clock: Callable[[], datetime]
 ) -> tuple[datetime, bytes, Any]:
@@ -290,9 +300,11 @@ def _consume_zero_credit_events_response(
             raise ValueError("provider did not attest a zero-credit request; refusing to continue")
         raw = _read_bounded_response_body(response)
         try:
-            payload = json.loads(raw)
+            payload = json.loads(raw, object_pairs_hook=_reject_duplicate_json_object_keys)
         except Exception:
-            raise ValueError("provider events response is not valid JSON") from None
+            raise ValueError(
+                "provider events response is not valid JSON or contains duplicate object keys"
+            ) from None
         # Timestamp the capture only after the bounded stream has been fully
         # consumed and parsed. Events that kick off during a slow body read are
         # therefore not misreported as future fixtures at capture completion.
