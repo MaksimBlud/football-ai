@@ -6752,3 +6752,37 @@ The metadata-only query on `public.league_finished_results` selected only `match
 ### Binding disposition
 
 The source artifact has crossed the 24-hour freshness boundary, and no fresh strictly pre-kickoff quote or new eligible V2 forecast exists. Keep the source/quote and 30-completed-prospective-forecast outcome gates closed. Frozen candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; original 19 features/weights unchanged; `active_lambda=0` market, `shadow_lambda=1` research only. No target outcomes read/scored, no paid provider request, no Supabase writes/DDL, no production `.pkl` change, no schedule change and no merge. HUMAN-MERGE only.
+
+## 2026-10-29 — current-form archive identity parity and gate-time mismatch
+
+Read-only audit performed at 2026-10-29T20:51:48Z against fresh main
+40887ebb215730190d7a6c7a1693373ec4afcdfc, the real current-form source artifact,
+and Supabase metadata. No score/result columns were selected or parsed.
+
+- Source run: [40868280531](https://github.com/MaksimBlud/football-ai/actions/runs/40868280531), scheduled, SUCCESS.
+- Source artifact: 12894054589; independently downloaded ZIP SHA-256:
+  b4b1144ca28414ccf7a5a7a5c02fde4611e8e0f1a37997012de031a38baa14b0.
+- Current-season CSV SHA-256 from the archive manifest:
+  d2fa45e92d662ab8a79421475361ac694cace2deb75fbe799b6c04baaabe9691.
+- Parsing only Date, HomeTeam, AwayTeam from the archived current-season CSV yields 88 canonical identities:
+  80 dated through 2026-10-25 and 8 dated 2026-10-26 through 2026-10-28.
+- Independent read-only Supabase metadata query selected only match_date, home_team, away_team.
+  Its canonical identity set is also 88, with SHA-256
+  7ba862a3a52a982ef6482feae6d20eb200f6888dc2132fd966c2da6ca0d2e8fa.
+  The exact same SHA was independently computed from the archived CSV identity columns.
+- Saved odds remain unchanged: 3,966 snapshots; latest
+  2026-10-13T14:48:53.042620Z; zero in the previous 24h/7d and zero future strict-pre-kickoff rows.
+
+**Important gate-time caveat:** the artifact manifest records feature_source_gate.checked_at_utc =
+2026-10-29T11:49:31.742325Z and observed_completed_primary_events = 80, while the source CSV
+captured in the same run contains 88 identities and the ZIP was created at
+2026-10-29T11:49:49.284743Z. Current parity is now demonstrated, so the older statement
+that the newest archive itself has only 80 identities is stale. However, the manifest does not
+store the exact gate identity-set SHA; therefore current parity does not retroactively prove
+which exact 80 identities the gate returned at capture time.
+
+Keep PRs #694/#699 fail-closed: persist the gate identity-set hash and source identity-set hash
+from the same run, and require every gate identity to be present before attesting the archive.
+Do not infer source correctness from row counts alone. This is source-integrity evidence only,
+not a V2 forecast or model-quality result. No outcomes read, no paid calls, no Supabase writes,
+no production artifact/model changes, no main mutation, and no merge.
