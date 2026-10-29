@@ -1,3 +1,16 @@
+## 2026-10-29 23:58 UTC — bounded current-form source body and fresh pre-match data audit
+
+Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no merge or main mutation.
+
+- On the integrated V2 guard branch in [PR #699](https://github.com/MaksimBlud/football-ai/pull/699), current-season Football-Data capture now requests `stream=True`, checks direct HTTP 200 and the exact approved final URL before body consumption, validates any declared Content-Length, enforces the **2,000,000-byte limit on the actual streamed/decompressed body before buffering**, and closes the response on every path. The source-observation clock remains sampled only after the complete body is consumed.
+- Added regressions for an over-limit Content-Length (zero body consumption), an over-limit streamed body (stop at the first over-limit chunk), and response cleanup. Existing source-capture clock/identity tests now use the streamed response contract.
+- Exact PR #699 HEAD: `3ae327a2fb80be7d168c7a5bafbbc5daf3029ed5`; **7/7 required CI checks SUCCESS**. Original V2 shadow workflow [#40976486733](https://github.com/MaksimBlud/football-ai/actions/runs/40976486733) ran **211 tests PASS**, including `tests/test_serie_a_v2_current_form_source_capture.py`; its `git diff --exit-code -- '*.pkl'` guard passed. This is branch CI proof, not post-merge runtime proof.
+- Fresh read-only Supabase odds aggregate at approximately `2026-10-29T23:58Z`: **3,966** snapshots; latest `2026-10-13T14:48:53.042620Z`; **0** snapshots in the last 24 hours, **0** in the last 7 days, and **0** future strictly pre-kickoff snapshots.
+- Fresh metadata-only Serie A 2026/27 query selected only `match_date, home_team, away_team`: **91** raw rows, **88** canonical identities after the V2 Atalanta alias, latest date **2026-10-28**. No score/result/settlement columns were selected.
+- No fresh quote or new forecast exists. The latest on-main source/forward runs remain the October 29 runs recorded below; a fresh live proof of PR #699's new guard still requires HUMAN-MERGE followed by new source capture and forward verification on the resulting exact main SHA.
+
+**Explicit remaining scope:** the ten frozen historical CSV downloads inside `fetch_public_history` still use eager `response.content` and do not yet have the same per-file streaming byte bound. Do not describe all eleven source downloads as bounded; audit that separate historical-source path next. No paid request, Supabase write/DDL, protected target-outcome read, production artifact change, or schedule change occurred.
+
 ## 2026-10-29 22:57 UTC — source/forward runtime rechecked; source-clock regression fixed on #699
 
 Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No main mutation or merge.
