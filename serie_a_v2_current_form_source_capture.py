@@ -365,6 +365,10 @@ def capture_source_archive(
     if getattr(response, "url", None) != CURRENT_URL:
         raise ValueError("current-season source response URL differs from approved HTTPS URL")
     response.raise_for_status()
+    # Accessing requests.Response.content downloads/consumes the response body.
+    # Timestamp observation only after all source bytes are available so a slow
+    # response cannot understate source age or cross the UTC-day feature cutoff.
+    raw = response.content
     observed_clock = clock()
     if (
         not isinstance(observed_clock, datetime)
@@ -373,7 +377,6 @@ def capture_source_archive(
     ):
         raise ValueError("source observation clock must have a real UTC offset")
     observed_at = observed_clock.astimezone(timezone.utc)
-    raw = response.content
     current_rows, excluded_rows = validate_current_season_csv(raw, captured_at=observed_at)
     if len(current_rows) < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
         raise RuntimeError(
