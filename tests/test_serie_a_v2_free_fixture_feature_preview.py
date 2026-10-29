@@ -374,3 +374,40 @@ def test_source_freshness_is_rechecked_after_slow_response_body():
         )
     assert response.closed is True
 
+def test_offline_ci_reaudits_frozen_dependencies_on_pull_request_and_push():
+    workflow_path = Path(".github/workflows/serie-a-v2-free-fixture-feature-preview-tests.yml")
+    workflow = workflow_path.read_text(encoding="utf-8")
+    required_dependencies = [
+        "historical_football_signal_lab.py",
+        "serie_a_v2_asof_feature_manifest.py",
+        "serie_a_v2_current_form_forward_capture.py",
+        "serie_a_v2_current_form_source_capture.py",
+        "serie_a_v2_frozen_shadow_preview.py",
+        "serie_a_v2_attest_real_source.py",
+        "serie_a_v2_prequote_source_archive_gate.py",
+        "serie_a_v2_live_diagnostic_report.py",
+        "serie_a_runtime_config.py",
+        "market_anchor_1x2_v2_shadow.py",
+        "market_anchor_1x2_v1.py",
+        "experiments/market_anchor_1x2_v2_current_form_policy.json",
+        "experiments/market_anchor_1x2_v2_protocol.json",
+        "research/models/market_anchor_v2_serie_a_frozen_candidate.json",
+        "research/SERIE_A_V2_CURRENT_FORM_FORWARD_ONLY_CONTRACT_20261018.md",
+        "tests/test_serie_a_v2_current_form_source_capture.py",
+        "tests/test_serie_a_v2_current_form_forward_capture.py",
+        "tests/test_serie_a_v2_asof_feature_manifest.py",
+        "tests/test_serie_a_v2_atalanta_alias.py",
+        "tests/test_serie_a_v2_frozen_shadow_preview.py",
+        "tests/test_serie_a_v2_prequote_source_archive_gate.py",
+        "tests/test_serie_a_v2_attest_real_source.py",
+        "tests/test_serie_a_v2_live_diagnostic_report.py",
+        "tests/test_historical_football_signal_lab.py",
+        "tests/test_serie_a_v2_current_form_dependency_triggers.py"
+    ]
+    for path in required_dependencies:
+        assert workflow.count(f'"{path}"') == 2, (
+            f"frozen dependency must trigger offline contract tests for both pull_request and push: {path}"
+        )
+    assert "schedule:" not in workflow
+    assert "workflow_dispatch:" not in workflow
+
