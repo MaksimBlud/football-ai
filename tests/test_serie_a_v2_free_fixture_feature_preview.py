@@ -411,3 +411,39 @@ def test_offline_ci_reaudits_frozen_dependencies_on_pull_request_and_push():
     assert "schedule:" not in workflow
     assert "workflow_dispatch:" not in workflow
 
+
+def test_duplicate_json_object_keys_fail_closed_after_zero_credit_attestation():
+    class DuplicateKeyResponse:
+        status_code = 200
+        headers = {"x-requests-last": "0"}
+        url = EVENTS_URL + "?apiKey=REDACTED&dateFormat=iso"
+        history = ()
+
+        def __init__(self):
+            self.closed = False
+            self.iter_content_called = False
+
+        def iter_content(self, chunk_size):
+            self.iter_content_called = True
+            yield (
+                b'[{"id":"first","id":"second","sport_key":"soccer_italy_serie_a",'
+                b'"sport_title":"Serie A","commence_time":"2026-10-30T18:45:00Z",'
+                b'"home_team":"Home FC","away_team":"Away FC"}]'
+            )
+
+        def close(self):
+            self.closed = True
+
+    response = DuplicateKeyResponse()
+    with pytest.raises(ValueError, match="duplicate object keys"):
+        capture_free_fixture_preview(
+            api_key=API_KEY,
+            source_attestation=source_attestation(),
+            history=history_frame(),
+            request_started_at=STARTED,
+            get=lambda *a, **k: response,
+            clock=lambda: RECEIVED,
+        )
+    assert response.iter_content_called is True
+    assert response.closed is True
+
