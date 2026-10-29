@@ -1,3 +1,15 @@
+## 2026-10-29 15:55 UTC — latest original and current-form forward runtime — source attested, zero quotes, no outcomes
+
+Fresh read-only check of `main`: `40887ebb215730190d7a6c7a1693373ec4afcdfc`; PR #697 remains documentation-only and unmerged.
+
+- **Original old-season-only forward:** [run #40898762675](https://github.com/MaksimBlud/football-ai/actions/runs/40898762675) completed SUCCESS on that exact main SHA at 2026-10-29 15:10:42 UTC. The job ran **71 tests**, independently attested source artifact `12899100578` from free diagnostic run `40877079065` (10 pre-prospective CSVs / 3,800 historical results; source ZIP SHA-256 `fda6c48dc59c2ca5b82310756a37742d69023a8e6c1a38d795a240d9390c3d4b)), then reported `quotes_seen=0`, `future_quotes_checked=0`, `v2_diagnostic_previews_captured=0`, `forecasts_created=0`, `paid_provider_calls=0`, and `supabase_writes=0`. Its uploaded output artifact is `12908850341`, GitHub SHA-256 `579272f55c137a1c085d99ac3177fea8b468addfbe93e9581bb158e35240f704`.
+- **Current-form forward-only:** [run #40899523036](https://github.com/MaksimBlud/football-ai/actions/runs/40899523036) completed SUCCESS at 2026-10-29 15:15:14 UTC on the same main SHA. **53 tests passed**. It verified source artifact `12894054589` (SHA-256 `b4b1144ca28414ccf7a5a7a5c02fde4611e8e0f1a37997012de031a38baa14b0`), successful source parent run `40868280531`, current-season input rows 88, feature-input gate count 80, 10 historical CSVs / 3,888 combined historical rows as reported by runtime, and source observation `2026-10-29T11:49:49.220206Z`. At verification it was 12,315 seconds old and remained inside the fixed 24-hour limit. Output artifact `12909131392` has GitHub SHA-256 `39c9216878a629701272a4a6fa92007b62b1eb64d9c4a9299e047ba1c8ec5817`. It reported `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `target_outcomes_read=false`, `target_outcomes_scored=false`, zero paid calls and zero production/Supabase writes.
+- **Fresh read-only odds audit (2026-10-29, approximately 15:55 UTC):** `public.odds_snapshots` has 3,966 rows; latest `snapshot_time_utc=2026-10-13T14:48:53.042620Z`; 0 rows in the previous 24 hours, 0 in the previous 7 days, and 0 future events with a saved snapshot strictly before kickoff. The query selected only counts/timestamps and did not inspect scores or results.
+
+These are successful source/runtime and regression proofs, **not** prospective model-performance evidence. No new eligible quote or forecast exists; the source-before-quote and 30-completed-prospective-forecast outcome gates remain closed. The incumbent remains unpinned, so no Brier/LogLoss comparison is available. No model/weight/feature/lambda changes, paid calls, Supabase writes/DDL, production `.pkl` changes, schedule changes, outcome reads or merges occurred.
+
+---
+
 ## 2026-10-29 — Fresh verified current-form source archive; no admissible quotes
 
 Fresh main re-check: `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No main mutation or merge.
