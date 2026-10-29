@@ -14,6 +14,7 @@ from serie_a_v2_current_form_source_capture import (
     CURRENT_URL,
     MANIFEST_FILENAME,
     MIN_COMPLETED_FEATURE_SOURCE_EVENTS,
+    MAX_CURRENT_CSV_BYTES,
     REQUIRED_COLUMNS,
     capture_source_archive,
     count_unique_completed_primary_events,
@@ -289,16 +290,27 @@ def test_gate_open_rejects_csv_missing_a_gate_fixture_before_current_source_writ
     class Response:
         status_code = 200
         url = CURRENT_URL
-        content = raw
+        headers = {"Content-Length": str(len(raw))}
+
+        def __init__(self):
+            self.closed = False
+
+        def iter_content(self, chunk_size):
+            assert chunk_size == 64 * 1024
+            yield raw
+
         def raise_for_status(self):
             return None
+
+        def close(self):
+            self.closed = True
 
     with pytest.raises(RuntimeError, match="omits 1 completed fixture identities"):
         capture_source_archive(
             output_dir=tmp_path,
             client=FakeQuery(event_rows(30)),
             now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
-            get=lambda url, timeout, allow_redirects=False: Response(),
+            get=lambda url, timeout, allow_redirects=False, stream=False: Response(),
             history_fetch=fake_history,
             clock=lambda: next(source_times),
         )
@@ -334,15 +346,26 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     class Response:
         status_code = 200
         url = CURRENT_URL
-        content = raw
+        headers = {"Content-Length": str(len(raw))}
+
+        def __init__(self):
+            self.closed = False
+
+        def iter_content(self, chunk_size):
+            assert chunk_size == 64 * 1024
+            yield raw
+
         def raise_for_status(self):
             return None
+
+        def close(self):
+            self.closed = True
 
     report = capture_source_archive(
         output_dir=tmp_path,
         client=FakeQuery(event_rows(30)),
         now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
-        get=lambda url, timeout, allow_redirects=False: Response(),
+        get=lambda url, timeout, allow_redirects=False, stream=False: Response(),
         history_fetch=fake_history,
         clock=lambda: next(source_times),
     )
@@ -467,11 +490,14 @@ def test_source_observation_clock_without_offset_fails_after_body_read_before_wr
         def raise_for_status(self):
             return None
 
-        @property
-        def content(self):
+        def iter_content(self, chunk_size):
             nonlocal body_read
+            assert chunk_size == 64 * 1024
             body_read = True
-            return current_csv(n=MIN_COMPLETED_FEATURE_SOURCE_EVENTS)
+            yield current_csv(n=MIN_COMPLETED_FEATURE_SOURCE_EVENTS)
+
+        def close(self):
+            self.closed = True
 
     def invalid_clock():
         assert body_read, "observation clock must follow complete response-body consumption"
@@ -507,11 +533,14 @@ def test_source_observation_timestamp_and_date_cutoff_follow_body_completion(tmp
         def raise_for_status(self):
             return None
 
-        @property
-        def content(self):
+        def iter_content(self, chunk_size):
             nonlocal body_read
+            assert chunk_size == 64 * 1024
             body_read = True
-            return raw
+            yield raw
+
+        def close(self):
+            self.closed = True
 
     def clock_after_body():
         assert body_read, "source clock must be sampled after the response body is complete"
@@ -544,10 +573,21 @@ def test_archive_creation_clock_without_offset_fails_before_current_source_write
     class Response:
         status_code = 200
         url = CURRENT_URL
-        content = current_csv(n=MIN_COMPLETED_FEATURE_SOURCE_EVENTS)
+        body = current_csv(n=MIN_COMPLETED_FEATURE_SOURCE_EVENTS)
+        headers = {"Content-Length": str(len(body))}
+
+        def __init__(self):
+            self.closed = False
+
+        def iter_content(self, chunk_size):
+            assert chunk_size == 64 * 1024
+            yield self.body
 
         def raise_for_status(self):
             return None
+
+        def close(self):
+            self.closed = True
 
     with pytest.raises(ValueError, match="source archive creation clock must have a real UTC offset"):
         capture_source_archive(
@@ -649,21 +689,27 @@ def test_current_source_redirect_or_final_url_mismatch_fails_before_body_access(
 ):
     class Response:
         url = final_url
+        headers = {}
 
         def __init__(self):
             self.status_code = status_code
+            self.closed = False
+            self.iter_content_called = False
 
-        @property
-        def content(self):
+        def iter_content(self, chunk_size):
+            self.iter_content_called = True
             raise AssertionError("unapproved response body must never be read")
 
         def raise_for_status(self):
             raise AssertionError("response must be rejected before raise_for_status")
 
+        def close(self):
+            self.closed = True
+
     requests_seen = []
 
-    def fake_get(url, *, timeout, allow_redirects):
-        requests_seen.append((url, timeout, allow_redirects))
+    def fake_get(url, *, timeout, allow_redirects, stream):
+        requests_seen.append((url, timeout, allow_redirects, stream))
         return Response()
 
     with pytest.raises(ValueError, match=message):
@@ -675,9 +721,94 @@ def test_current_source_redirect_or_final_url_mismatch_fails_before_body_access(
             history_fetch=lambda **_kwargs: _fake_history_for_redirect_test(tmp_path),
         )
 
-    assert requests_seen == [(CURRENT_URL, 30, False)]
+    assert requests_seen == [(CURRENT_URL, 30, False, True)]
     assert not (tmp_path / CURRENT_FILENAME).exists()
     assert not (tmp_path / MANIFEST_FILENAME).exists()
+
+
+
+def test_current_source_rejects_oversized_content_length_before_reading_body(tmp_path):
+    class Response:
+        status_code = 200
+        url = CURRENT_URL
+        headers = {"Content-Length": str(MAX_CURRENT_CSV_BYTES + 1)}
+
+        def __init__(self):
+            self.closed = False
+            self.iter_content_called = False
+
+        def iter_content(self, chunk_size):
+            self.iter_content_called = True
+            yield b"must-not-be-read"
+
+        def raise_for_status(self):
+            return None
+
+        def close(self):
+            self.closed = True
+
+    response = Response()
+    requests_seen = []
+
+    def fake_get(url, *, timeout, allow_redirects, stream):
+        requests_seen.append((url, timeout, allow_redirects, stream))
+        return response
+
+    with pytest.raises(ValueError, match="exceeds size limit"):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=FakeQuery(event_rows(MIN_COMPLETED_FEATURE_SOURCE_EVENTS)),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=fake_get,
+            history_fetch=lambda **_kwargs: _fake_history_for_redirect_test(tmp_path),
+            clock=lambda: pytest.fail("clock must not be sampled before body completion"),
+        )
+
+    assert requests_seen == [(CURRENT_URL, 30, False, True)]
+    assert response.iter_content_called is False
+    assert response.closed is True
+    assert not (tmp_path / CURRENT_FILENAME).exists()
+    assert not (tmp_path / MANIFEST_FILENAME).exists()
+
+
+def test_current_source_stream_enforces_actual_byte_limit_and_closes_early(tmp_path):
+    class Response:
+        status_code = 200
+        url = CURRENT_URL
+        headers = {}
+
+        def __init__(self):
+            self.closed = False
+            self.chunks_yielded = 0
+
+        def iter_content(self, chunk_size):
+            assert chunk_size == 64 * 1024
+            self.chunks_yielded += 1
+            yield b"x" * (MAX_CURRENT_CSV_BYTES + 1)
+            self.chunks_yielded += 1
+            yield b"must-not-be-consumed"
+
+        def raise_for_status(self):
+            return None
+
+        def close(self):
+            self.closed = True
+
+    response = Response()
+    with pytest.raises(ValueError, match="exceeds size limit"):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=FakeQuery(event_rows(MIN_COMPLETED_FEATURE_SOURCE_EVENTS)),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=lambda url, timeout, allow_redirects=False, stream=False: response,
+            history_fetch=lambda **_kwargs: _fake_history_for_redirect_test(tmp_path),
+        )
+
+    assert response.chunks_yielded == 1
+    assert response.closed is True
+    assert not (tmp_path / CURRENT_FILENAME).exists()
+    assert not (tmp_path / MANIFEST_FILENAME).exists()
+
 
 
 def test_current_csv_rejects_completed_row_before_current_season_start():
