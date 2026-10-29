@@ -263,8 +263,8 @@ def _consume_zero_credit_events_response(
 ) -> tuple[datetime, bytes, Any]:
     """Validate metadata and quota before reading a bounded response body."""
     try:
-        received = _utc(clock())
-        if received < started:
+        headers_received = _utc(clock())
+        if headers_received < started:
             raise ValueError("response clock precedes request start")
         if getattr(response, "history", None):
             raise ValueError("provider redirect rejected")
@@ -293,7 +293,13 @@ def _consume_zero_credit_events_response(
             payload = json.loads(raw)
         except Exception:
             raise ValueError("provider events response is not valid JSON") from None
-        return received, raw, payload
+        # Timestamp the capture only after the bounded stream has been fully
+        # consumed and parsed. Events that kick off during a slow body read are
+        # therefore not misreported as future fixtures at capture completion.
+        completed = _utc(clock())
+        if completed < headers_received:
+            raise ValueError("response body completion clock precedes response headers")
+        return completed, raw, payload
     finally:
         close = getattr(response, "close", None)
         if callable(close):
