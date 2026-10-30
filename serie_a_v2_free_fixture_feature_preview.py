@@ -11,15 +11,20 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, time, timezone
 import hashlib
+import inspect
 import json
 import math
 import os
+import re
 from pathlib import Path
 from typing import Any, Callable, Mapping
 from urllib.parse import urlsplit
 
 import pandas as pd
 import requests
+from supabase import create_client
+
+import serie_a_v2_current_form_source_capture as current_form_source_capture
 
 from historical_football_signal_lab import FEATURE_SETS, _snapshot
 from serie_a_v2_asof_feature_manifest import (
@@ -78,6 +83,37 @@ def _assert_source_precedes_request(
         raise ValueError("current-form source archive is stale; provider request was not made")
     if source_attestation.get("candidate_sha256") != FROZEN_SHA:
         raise ValueError("source archive candidate SHA does not match frozen original V2")
+
+    gate_attestation = source_attestation.get("feature_source_gate_attestation")
+    gate_freshness = source_attestation.get("feature_source_gate_freshness")
+    if not isinstance(gate_attestation, Mapping) or gate_attestation.get("verified") is not True:
+        raise ValueError("authenticated current feature-source identity attestation is required")
+    gate_count = gate_attestation.get("gate_fixture_identity_count")
+    covered_count = gate_attestation.get("gate_fixture_identities_covered_by_current_source")
+    missing_count = gate_attestation.get("gate_fixture_identities_missing_from_current_source")
+    if (
+        type(gate_count) is not int or gate_count < 30
+        or covered_count != gate_count or missing_count != 0
+        or not isinstance(gate_attestation.get("gate_fixture_identity_sha256"), str)
+        or not re.fullmatch(r"[0-9a-f]{64}", gate_attestation["gate_fixture_identity_sha256"])
+        or not isinstance(gate_attestation.get("current_source_fixture_identity_sha256"), str)
+        or not re.fullmatch(r"[0-9a-f]{64}", gate_attestation["current_source_fixture_identity_sha256"])
+    ):
+        raise ValueError("current feature-source identity coverage/SHA attestation is invalid")
+    if not isinstance(gate_freshness, Mapping) or (
+        gate_freshness.get("checked") is not True
+        or gate_freshness.get("fresh") is not True
+        or gate_freshness.get("target_outcomes_read") is not False
+        or gate_freshness.get("metadata_fields_read") != ["match_date", "home_team", "away_team"]
+        or type(gate_freshness.get("current_gate_identity_count")) is not int
+        or gate_freshness["current_gate_identity_count"] < 30
+        or gate_freshness.get("missing_identity_count") != 0
+        or gate_freshness.get("source_gate_identity_count_at_capture") != gate_count
+        or gate_freshness.get("source_gate_identity_sha256_at_capture")
+            != gate_attestation.get("gate_fixture_identity_sha256")
+    ):
+        raise ValueError("current metadata-only feature-source gate is stale or unverified")
+
     source_observed = _parse_utc(source_attestation.get("latest_source_observed_at_utc"))
     archive_created = _parse_utc(source_attestation.get("source_archive_created_at_utc"))
     parent = source_attestation.get("parent_run")
@@ -385,18 +421,54 @@ def capture_free_fixture_preview(
             "parent_run_id": source_attestation["parent_run"].get("run_id"),
             "parent_run_head_sha": source_attestation["parent_run"].get("run_head_sha"),
             "parent_run_completed_at_utc": source_attestation["parent_run"].get("run_completed_at_utc"),
+            "feature_source_gate_attestation": source_attestation.get("feature_source_gate_attestation"),
+            "feature_source_gate_freshness": source_attestation.get("feature_source_gate_freshness"),
         },
         **feature_preview,
         "no_odds_requested": True,
         "no_retry": True,
         "no_redirects": True,
-        "no_supabase_access": True,
+        "supabase_access": "READ_ONLY_METADATA_GATE",
+        "supabase_metadata_fields_read": ["match_date", "home_team", "away_team"],
+        "supabase_writes": 0,
+        "supabase_ddl": 0,
         "no_schedule": True,
     }
 
 
-def load_verified_current_source(*, token: str, now: datetime) -> tuple[pd.DataFrame, dict]:
-    """Verify the latest successful main source artifact before any provider request."""
+def load_verified_current_source(
+    *, token: str, now: datetime, supabase_client: Any
+) -> tuple[pd.DataFrame, dict]:
+    """Verify current gate identities and the source archive before any provider request.
+
+    The current-gate query is read-only and selects only match date/team identity
+    metadata. This requires the source-identity guard from PR #699; older main
+    code is deliberately rejected before an archive/provider request.
+    """
+    if supabase_client is None:
+        raise RuntimeError("read-only Supabase metadata client is required; provider request was not made")
+    gate_reader = getattr(
+        current_form_source_capture, "read_completed_primary_event_identities", None
+    )
+    if not callable(gate_reader):
+        raise RuntimeError(
+            "metadata-only current-gate identity reader is unavailable; merge original V2 source guard PR #699 first"
+        )
+    try:
+        verifier_parameters = inspect.signature(verify_latest_source_archive).parameters
+    except (TypeError, ValueError):
+        verifier_parameters = {}
+    if "current_gate_identities" not in verifier_parameters:
+        raise RuntimeError(
+            "source verifier lacks current-gate freshness support; merge original V2 source guard PR #699 first"
+        )
+
+    current_gate_identities = gate_reader(supabase_client, now=_utc(now))
+    if not isinstance(current_gate_identities, set) or len(current_gate_identities) < 30:
+        raise RuntimeError(
+            "current metadata-only feature-source gate is below 30 unique events; provider request was not made"
+        )
+
     archives = discover_archives(token=token)
     raw_cache: dict[int, bytes] = {}
 
@@ -413,9 +485,23 @@ def load_verified_current_source(*, token: str, now: datetime) -> tuple[pd.DataF
         as_of_utc=_utc(now),
         load_archive=load_cached,
         verify_parent_run=verify_parent,
+        current_gate_identities=current_gate_identities,
     )
-    if attestation.get("verified") is not True or attestation.get("fresh_for_new_quote") is not True:
-        raise RuntimeError("no verified fresh current-form source archive; provider request was not made")
+    gate_freshness = attestation.get("feature_source_gate_freshness")
+    gate_attestation = attestation.get("feature_source_gate_attestation")
+    if (
+        attestation.get("verified") is not True
+        or attestation.get("fresh_for_new_quote") is not True
+        or not isinstance(gate_freshness, Mapping)
+        or gate_freshness.get("checked") is not True
+        or gate_freshness.get("fresh") is not True
+        or gate_freshness.get("current_gate_identity_count") != len(current_gate_identities)
+        or not isinstance(gate_attestation, Mapping)
+        or gate_attestation.get("verified") is not True
+    ):
+        raise RuntimeError(
+            "no verified source archive covering the current metadata-only gate; provider request was not made"
+        )
     artifact_id = attestation.get("artifact_id")
     archive = next((item for item in archives if item.get("artifact_id") == artifact_id), None)
     if archive is None or artifact_id not in raw_cache:
@@ -427,8 +513,9 @@ def load_verified_current_source(*, token: str, now: datetime) -> tuple[pd.DataF
         source_meta.get("artifact_sha256") != attestation.get("artifact_sha256")
         or source_meta.get("latest_source_observed_at_utc") != attestation.get("latest_source_observed_at_utc")
         or source_meta.get("manifest", {}).get("frozen_candidate_sha256") != FROZEN_SHA
+        or source_meta.get("feature_source_gate_attestation") != gate_attestation
     ):
-        raise ValueError("source archive re-verification disagrees with its attestation")
+        raise ValueError("source archive re-verification disagrees with its current-gate attestation")
     return history, attestation
 
 
@@ -436,14 +523,23 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
+    if os.environ.get("GITHUB_REPOSITORY") != REPOSITORY or os.environ.get("GITHUB_REF") != "refs/heads/main":
+        raise RuntimeError("free fixture feature preview must run from the original repository main ref")
     token = os.environ.get("GITHUB_TOKEN", "")
     api_key = os.environ.get("THE_ODDS_API_KEY", "")
+    supabase_url = os.environ.get("SUPABASE_URL", "")
+    supabase_key = os.environ.get("SUPABASE_KEY", "")
     if not token:
         raise RuntimeError("GITHUB_TOKEN is missing; no provider request was made")
     if not api_key:
         raise RuntimeError("THE_ODDS_API_KEY is missing; no provider request was made")
+    if not supabase_url or not supabase_key:
+        raise RuntimeError("read-only Supabase metadata credentials are missing; no provider request was made")
+    supabase_client = create_client(supabase_url, supabase_key)
     now = datetime.now(timezone.utc)
-    history, source_attestation = load_verified_current_source(token=token, now=now)
+    history, source_attestation = load_verified_current_source(
+        token=token, now=now, supabase_client=supabase_client
+    )
     request_started = datetime.now(timezone.utc)
     report = capture_free_fixture_preview(
         api_key=api_key,
@@ -465,6 +561,7 @@ def main() -> None:
         "model_probabilities_emitted": report["model_probabilities_emitted"],
         "target_outcomes_read": report["target_outcomes_read"],
         "paid_provider_calls": report["paid_provider_calls"],
+        "supabase_metadata_fields_read": report["supabase_metadata_fields_read"],
         "supabase_writes": report["supabase_writes"],
     }, indent=2))
 
