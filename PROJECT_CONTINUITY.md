@@ -1,5 +1,56 @@
 # Football AI — Project Continuity
 
+## 2026-10-30 04:52 UTC — fresh runtime, all-league quote audit, and free-source odds check
+
+Fresh GitHub read confirms main is still exactly 40887ebb215730190d7a6c7a1693373ec4afcdfc (2026-10-18 commit); no V2 PR has been merged. Main branch protection remains disabled (protected=false). HUMAN-MERGE is still required.
+
+### Exact open V2 review heads
+
+- #699: ab888b32e6ea5a231d271b00e4db42fab186986b, 7/7 exact-head CI SUCCESS, Original V2 Shadow Tests 228 passed; production *.pkl diff guard passed. Consolidated source/clock/identity/URL/outcome/workflow-secret guard PR.
+- #697: d6866f4b10c0062a0064f52e16a8446545e01a2f, 7/7 exact-head CI SUCCESS (documentation only).
+- #702: b91773b6677bd2be7df67d5b2c69c27b9a202397, 8/8 exact-head CI SUCCESS, including mocked zero-credit /events contract suite (18 passed); no live provider request.
+- #701: 7ee3eda3f396735e00737d8e8e42e0c8c146c57f, 6/6 CI SUCCESS; still fail-closed because no registered eligible incumbent exists.
+- #694/#700/#686/#680 overlap the consolidated #699 guards; do not merge them separately. #657/#659/#660 remain confirmed merged.
+
+### Actual main-branch V2 runtime (old main code, not #699 guards)
+
+- Current-form Source Capture run 40868280531: SUCCESS, 19 tests passed, 80 completed-primary feature-gate identities, 88 completed prior-day current-season CSV rows, 10 historical CSVs + 1 current CSV, no paid calls, no Supabase writes, no target outcomes read/scored. Artifact 12894054589, 436,766 bytes, ZIP SHA-256 b4b1144ca28414ccf7a5a7a5c02fde4611e8e0f1a37997012de031a38baa14b0.
+- Original Forward-Only run 40898762675: SUCCESS, 71 tests passed; source attestation verified 10 historical CSVs / 3,800 historical rows; quotes_seen=0, future_quotes_checked=0, v2_diagnostic_previews_captured=0.
+- Current-Form Forward-Only run 40899523036: SUCCESS, 53 tests passed; verified artifact 12894054589 and parent run 40868280531, source age 12,315 seconds, 88 current-season history rows, captured gate count 80; quotes_seen=0, v2_current_form_shadow_captured=0, target outcomes unread/unscored.
+- These are genuine runtime checks on old main; they do not exercise the new gate-identity SHA, bounded source capture, clock rollback, or main-ref secret guards in #699.
+
+### Fresh read-only Supabase quote audit
+
+Only quote timestamps, kickoff timestamps, league and aggregate counts were selected. All nine stored league groups have 0 snapshots in the last 24 hours, 0 in the last 7 days, and 0 future strictly pre-kickoff snapshots:
+
+| League | Stored snapshots | Latest snapshot UTC |
+|---|---:|---|
+| Bundesliga | 404 | 2026-09-11 15:49:52 |
+| EPL | 1,151 | 2026-10-09 15:25:57 |
+| Eredivisie | 412 | 2026-09-11 15:50:20 |
+| La Liga | 806 | 2026-09-11 15:45:28 |
+| Ligue 1 | 394 | 2026-09-11 15:49:24 |
+| Primeira Liga | 9 | 2026-09-11 16:06:24 |
+| RPL | 156 | 2026-09-05 15:07:55 |
+| Serie A | 625 | 2026-10-13 14:48:53 |
+| Turkey Super Lig | 9 | 2026-09-11 16:06:26 |
+
+Total: 3,966 snapshots. The Serie A 2026/27 identity-only query returned 91 raw rows / 88 V2-alias-normalized fixture identities through 2026-10-28; it selected only match_date, home_team, away_team. This does not replace the runtime SHA/coverage attestation required from a fresh #699 source archive.
+
+### Free-source check: Football-Data CSV does not provide upcoming odds in this archive
+
+Downloaded the existing source artifact 12894054589 and inspected only Date, Time, HomeTeam, AwayTeam plus bookmaker 1X2 odds columns in serie_a_2627.csv; no score, goals, result, settlement or target-outcome columns were read. The file has 88 rows, latest date 2026-10-28, and zero rows dated after 2026-10-30; therefore this archived CSV contains no future fixture rows or future market odds to seed new prospective quotes. This is a bounded observation about this artifact, not a claim that no other free source exists. PR #702's free /events probe returns fixture metadata only, not odds.
+
+### Scientific and security blockers
+
+- public.model_artifact_bundles remains 0. public.league_prediction_ledger has 630 Serie A MARKET_ONLY rows, latest 2026-10-13 14:48:53 UTC, and 0 future strict pre-match rows; the ledger has no model-artifact SHA identifying a distinct frozen V2 incumbent. Do not substitute market or the prohibited legacy XGBoost model for the required incumbent.
+- The preregistered outcome gate remains CLOSED until 30 eligible prospective V2 forecasts have completed. No target outcomes were read; no Brier/LogLoss can be reported.
+- Supabase Security Advisor still reports RLS disabled on five public tables: teams, predictions, match_statistics, league_prediction_ledger, and epl_ai_market_pair_ledger. Critical access-control issue; no DDL was run. Enabling RLS without reviewed policies may block application access.
+- The trusted-main auto-merge workflow's code restricts candidates to draft PRs authored by github-actions[bot] with the draft(agents): staged title and allowlisted change sets; owner-authored V2 PRs #699/#697/#702/#701 are not eligible. No merge was attempted.
+
+Next permitted proof remains: HUMAN-MERGE #699 at its exact tested HEAD; verify the resulting main SHA; run a fresh source capture on main; verify the new gate-identity SHA and complete CSV coverage; then run both forward-only readers. Existing stale October 13 quotes must remain blocked. No paid API call, Supabase write/DDL, protected outcome read, production .pkl change, model/weight change, schedule change, or other-agent setting change occurred in this audit.
+
+
 ## 2026-10-30 01:59 UTC — V2 source/archive hardening, exact-head CI, and live-data checkpoint
 
 Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No merge or main mutation.
