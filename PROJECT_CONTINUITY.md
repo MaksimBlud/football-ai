@@ -1,3 +1,42 @@
+## 2026-10-30 13:48 UTC — fresh source/forward runtime, all-league pre-match quote audit, and exact guard review
+
+Fresh GitHub reads confirm `main=40887ebb215730190d7a6c7a1693373ec4afcdfc`; no PR was merged. All evidence below is read-only or GitHub Actions artifact metadata. No target outcomes were selected.
+
+### New current-form source and forward runs on the unchanged main
+
+- Current-Form Source Capture [run 41049950849](https://github.com/MaksimBlud/football-ai/actions/runs/41049950849): SUCCESS; 19 tests passed. Runtime JSON reports candidate `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, feature-input gate count **90**, completed current-season CSV rows **90**, ten old-season CSVs / eleven total source files, 3,890 historical-plus-current rows, zero paid calls, zero Supabase writes, and no target outcomes read/scored. GitHub artifact **12973598320**, upload digest `sha256:02013d5984117f48f5efab2b8662fed7e291bdfd49689d27152325e129c877b4`. This digest is taken from the GitHub Actions upload log/metadata; this cycle did not independently re-download and recompute this new ZIP.
+- Current-Form Forward-Only [run 41050080529](https://github.com/MaksimBlud/football-ai/actions/runs/41050080529): SUCCESS; **53 tests passed**. It independently verified the source artifact metadata and parent run: source artifact ID 12973598320, source ZIP digest above, source observation `11:42:59.273193Z`, archive upload `11:43:01Z`, successful parent completion `11:43:04Z`, forward verification `11:43:43.900741Z`, source age 44 seconds. Runtime report: `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `target_outcomes_read=false`, `target_outcomes_scored=false`, paid calls 0, writes 0. All per-quote block counters are zero because no quotes were returned; this is **not** a quote-level source-before-quote pass and **not** a forecast.
+- Free Real-Quote Diagnostic [run 41057970063](https://github.com/MaksimBlud/football-ai/actions/runs/41057970063): SUCCESS; **53 tests passed**, ten public CSV requests, 3,800 historical rows, zero quoted fixtures, zero diagnostics scored, zero paid provider requests. Mode remains `RESEARCH_ONLY_UNVERIFIED_PROVENANCE_NO_BET`. Artifact 12978111278, upload digest `dd9c9fd43b61f78075bee68b016507d5d766733099e532b79131d566125716da`.
+
+### Read-only saved-odds audit (timestamps and 1X2 snapshot metadata only)
+
+Query predicate is strictly `snapshot_time_utc < commence_time_utc`; no scores, results, settlements or outcome fields were selected. Across nine stored league groups: **3,966** rows total, **3,915** strictly pre-match, **51** not strictly pre-match, **0** rows in the last seven days, and **0** future events with a saved strictly pre-match quote.
+
+| League | Rows | Strictly pre-match | Last 7 days | Future pre-match |
+|---|---:|---:|---:|---:|
+| Bundesliga | 404 | 394 | 0 | 0 |
+| EPL | 1,151 | 1,135 | 0 | 0 |
+| Eredivisie | 412 | 410 | 0 | 0 |
+| La Liga | 806 | 798 | 0 | 0 |
+| Ligue 1 | 394 | 387 | 0 | 0 |
+| Primeira Liga | 9 | 9 | 0 | 0 |
+| RPL | 156 | 153 | 0 | 0 |
+| Serie A | 625 | 620 | 0 | 0 |
+| Turkey Super Lig | 9 | 9 | 0 | 0 |
+
+Serie A's latest strictly pre-match snapshot remains **2026-10-13 14:48:53 UTC**. The V2 current-form source is now at 90 completed identities/rows, but there is still no later saved quote to consume. No provider call was made.
+
+A separate read-only check of `public.product_prediction_snapshots` found **zero Serie A rows satisfying generated_at_utc < commence_time_utc**. `public.model_artifact_bundles` also remains empty. This does not prove no prediction exists in every possible legacy table; it means no eligible frozen incumbent was identified from these pre-match product snapshots or the artifact registry.
+
+### Exact guard review and remaining comparator blocker
+
+- PR #699 remains open, mergeable, HUMAN-MERGE only, at exact HEAD `3e772c859bf3538a492aaffc314be533285d7db0`, base `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Exact-head API returns **7/7 SUCCESS**: Research PR Validation 41011507144; Bundesliga 41011507165; Serie A Frozen V2 Shadow Tests 41011507232 (**229 tests**); Eredivisie 41011507201; Ligue 1 41011507225; Serie A 41011507249; Product 41011507270. The PR body still mentions an older exact SHA in one section; use the API HEAD above, not stale prose.
+- Re-read the four secret-bearing V2 main-branch workflows on current main: original forward preview, current-form source capture, current-form forward preview, and free real-quote diagnostic. Their current-main job guards do not all require `github.ref == refs/heads/main` before Supabase secrets are exposed. PR #699 adds the main-ref guard to all four and includes exact-head regressions. Do not run manual dispatch from a non-main ref. This is a security reason to prioritize manual review/merge of #699.
+- The frozen parent protocol explicitly requires three comparators: de-vigged market, frozen production incumbent, and lambda-one V2 shadow. PR #701 correctly sets `FROZEN_INCUMBENT_REFERENCE=None` because the policy does not pin an incumbent model version/artifact SHA. Do not substitute the market or revive/execute the legacy XGBoost model. Until a valid pre-existing incumbent reference is identified or the owner separately resolves the preregistered comparator requirement, the evaluator must remain closed; no Brier/LogLoss claim is possible.
+- PR #697 documentation itself remains the only change in that PR; this section records this later checkpoint. PR #699/#701/#702 remain unmerged. The original candidate SHA, 19-feature order/weights, `active_lambda=0`, `shadow_lambda=1`, NO_BET and all evaluation gates remain unchanged.
+
+No PR merge, main write, Supabase write/DDL, paid request, production `.pkl` change, model refit, threshold tuning, target-outcome read, betting or publication occurred.
+
 # Football AI — Project Continuity
 
 ## 2026-10-30 — Original V2 guard integration review and current-source coverage gap
