@@ -426,6 +426,8 @@ def capture_source_archive(
     ):
         raise ValueError("source observation clock must have a real UTC offset")
     observed_at = observed_clock.astimezone(timezone.utc)
+    if observed_at < at:
+        raise ValueError("source observation timestamp precedes feature-source gate check")
     current_rows, excluded_rows = validate_current_season_csv(raw, captured_at=observed_at)
     if len(current_rows) < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
         raise RuntimeError(
@@ -446,6 +448,8 @@ def capture_source_archive(
     ):
         raise ValueError("source archive creation clock must have a real UTC offset")
     archive_created_at = archive_clock.astimezone(timezone.utc)
+    if archive_created_at < observed_at:
+        raise ValueError("source archive creation timestamp precedes source observation")
     current_path = output_dir / CURRENT_FILENAME
     current_path.write_bytes(raw)
     audits = list(old_audit) + [{
