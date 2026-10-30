@@ -107,10 +107,14 @@ def _assert_source_precedes_request(
         or gate_freshness.get("metadata_fields_read") != ["match_date", "home_team", "away_team"]
         or type(gate_freshness.get("current_gate_identity_count")) is not int
         or gate_freshness["current_gate_identity_count"] < 30
+        or not isinstance(gate_freshness.get("current_gate_identity_sha256"), str)
+        or not re.fullmatch(r"[0-9a-f]{64}", gate_freshness["current_gate_identity_sha256"])
         or gate_freshness.get("missing_identity_count") != 0
         or gate_freshness.get("source_gate_identity_count_at_capture") != gate_count
         or gate_freshness.get("source_gate_identity_sha256_at_capture")
             != gate_attestation.get("gate_fixture_identity_sha256")
+        or gate_freshness.get("source_current_identity_count")
+            != gate_attestation.get("current_source_fixture_identity_count")
     ):
         raise ValueError("current metadata-only feature-source gate is stale or unverified")
 
