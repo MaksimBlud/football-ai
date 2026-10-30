@@ -64,8 +64,16 @@ def _assert_approved_history_url(url: str, *, season_code: str) -> None:
 
 
 
-def _read_bounded_historical_csv_response(response, *, season_code: str) -> bytes:
-    """Consume one frozen historical CSV with a per-file memory bound."""
+def _read_bounded_historical_csv_response(
+    response, *, season_code: str, remaining_collection_bytes: int | None = None
+) -> bytes:
+    """Consume one frozen historical CSV within both file and remaining collection budgets."""
+    if remaining_collection_bytes is None:
+        remaining_collection_bytes = MAX_HISTORICAL_TOTAL_BYTES
+    if type(remaining_collection_bytes) is not int or remaining_collection_bytes < 0:
+        raise RuntimeError("Public Serie A historical source collection has an invalid remaining byte budget")
+    if remaining_collection_bytes == 0:
+        raise RuntimeError("Public Serie A historical source collection exceeds total size limit")
     try:
         if response.status_code != 200:
             raise RuntimeError(
@@ -84,10 +92,16 @@ def _read_bounded_historical_csv_response(response, *, season_code: str) -> byte
                 raise RuntimeError(
                     f"Public Serie A CSV has invalid Content-Length: season={season_code}"
                 ) from None
-            if declared_bytes < 0 or declared_bytes > MAX_HISTORICAL_CSV_BYTES:
+            if declared_bytes < 0:
+                raise RuntimeError(
+                    f"Public Serie A CSV has invalid Content-Length: season={season_code}"
+                )
+            if declared_bytes > MAX_HISTORICAL_CSV_BYTES:
                 raise RuntimeError(
                     f"Public Serie A CSV exceeds size limit: season={season_code}"
                 )
+            if declared_bytes > remaining_collection_bytes:
+                raise RuntimeError("Public Serie A historical source collection exceeds total size limit")
 
         iterator = getattr(response, "iter_content", None)
         if not callable(iterator):
@@ -108,6 +122,8 @@ def _read_bounded_historical_csv_response(response, *, season_code: str) -> byte
                 raise RuntimeError(
                     f"Public Serie A CSV exceeds size limit: season={season_code}"
                 )
+            if total > remaining_collection_bytes:
+                raise RuntimeError("Public Serie A historical source collection exceeds total size limit")
             chunks.append(chunk)
         body = b"".join(chunks)
         if not body:
@@ -145,7 +161,11 @@ def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -
                 raise RuntimeError(f"Public Serie A CSV unavailable: season={code}, http={response.status_code}")
             if getattr(response, "url", None) != url:
                 raise RuntimeError(f"Public Serie A CSV returned an unexpected final URL: season={code}")
-            body = _read_bounded_historical_csv_response(response, season_code=code)
+            body = _read_bounded_historical_csv_response(
+                response,
+                season_code=code,
+                remaining_collection_bytes=MAX_HISTORICAL_TOTAL_BYTES - total_source_bytes,
+            )
         finally:
             # The helper closes after body consumption; this also closes on URL/status preflight failure.
             close = getattr(response, "close", None)
