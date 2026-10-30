@@ -7364,3 +7364,34 @@ A fresh read-only audit was performed against the exact main source archive and 
 - The current source artifact and forward previews remain technically successful but have `quotes_seen=0`, `v2_current_form_shadow_captured=0`, and `forecasts_created=0`. No prospective V2 observation or metric exists.
 
 This is a source-availability finding, not a model-quality result. Keep `active_lambda=0`, `shadow_lambda=1` research-only, the 30-eligible-prospective-forecast outcome gate CLOSED, and the frozen 19-feature/weight contract unchanged.
+
+
+## 2026-10-30 23:58 UTC — free fixture preview now requires live current-gate identity parity
+
+A further integration audit found that the open free fixture preview (#702) called `verify_latest_source_archive()` without supplying the current completed-fixture identity set. The consolidated source guard in #699 deliberately marks source freshness false when that live metadata-only gate is not supplied. Thus the preview would safely fail closed after #699 merged, but could never reach the intended fixture metadata request.
+
+Updated PR [#702](https://github.com/MaksimBlud/football-ai/pull/702) on exact HEAD `8cf6ee1cb66838e8263dd2c7c5ebf42e86964d7e`:
+
+- Before archive discovery or any provider request, the workflow now requires a read-only Supabase identity query selecting exactly `match_date, home_team, away_team` for the Serie A 2026/27 completed-fixture gate.
+- It passes the canonical identity set into #699's `verify_latest_source_archive(current_gate_identities=...)` contract and requires the current gate to be fresh, the archived gate identity list/count/SHA to be verified, all gate identities to be covered by the archived current-season CSV, and zero missing identities.
+- If #699's identity reader or verifier API is not yet present on main, #702 fails closed before archive discovery and before the provider request. No compatibility fallback weakens the source gate.
+- The output records the gate/source identity attestations and explicitly states that Supabase access is limited to the three metadata fields, with zero writes and zero DDL.
+- The live workflow remains `workflow_dispatch` only, main-ref only, no cron, no workflow-run trigger, and exactly one `/events` metadata request only after source verification. It requests no odds and requires `x-requests-last: 0`. No live request was made during this change.
+
+Exact-head validation on `8cf6ee1cb66838e8263dd2c7c5ebf42e86964d7e`: **8/8 SUCCESS**:
+- Ligue 1 validation #41147422463
+- Research PR validation #41147422438
+- Product contract tests #41147422447
+- Serie A validation #41147422430
+- Dedicated offline fixture tests #41147422466 — **22 passed**
+- Targeted research tests #41147422416 — final no-production-artifact check passed
+- Bundesliga validation #41147422421
+- Push offline fixture tests #41147417948 — **22 passed**
+
+The research validation log also confirms `git diff --exit-code -- '*.pkl'` passed. These are offline/mocked and CI checks only; they are not a live fixture capture, forecast, or model-quality result.
+
+Merge order remains HUMAN-MERGE: **#699 first**, then a fresh successful Current-Form Source Capture on the resulting main SHA (the old pre-#699 archive lacks the new persisted gate identity SHA), then **#702**. Do not manually dispatch #702 until that new archive is verified. PR #701 remains separately gated by the absence of a valid frozen incumbent and 30 eligible completed prospective forecasts.
+
+Fresh read-only Supabase audit at this run found no future fixture metadata in `public.matches`, no future strictly pre-kickoff odds rows, and no new strict pre-match quote in the last 24 hours or 7 days. The market snapshot inventory remains 3,966 total / 3,915 strictly pre-match; latest Serie A quote remains 2026-10-13 14:48:53.042620 UTC. `model_artifact_bundles` remains empty. No protected target outcomes were selected or read.
+
+The original frozen candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, its 19 feature names/order, weights, `active_lambda=0`, research-only `shadow_lambda=1`, and NO_BET behavior remain unchanged. No main merge, paid request, Supabase write/DDL, production `.pkl` change, outcome read, refit, threshold tuning, promotion, schedule change, or other-agent setting change occurred.
