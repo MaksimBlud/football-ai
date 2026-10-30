@@ -856,3 +856,56 @@ def test_current_csv_rejects_populated_row_without_fixture_date():
             current_csv(n=30, missing_date_with_stats=True),
             captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
         )
+
+@pytest.mark.parametrize(
+    ("clock_values", "expected_error"),
+    [
+        (
+            [
+                datetime(2026, 10, 18, 7, 59, tzinfo=timezone.utc),
+                datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc),
+            ],
+            "source observation timestamp precedes feature-source gate check",
+        ),
+        (
+            [
+                datetime(2026, 10, 18, 8, 2, tzinfo=timezone.utc),
+                datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc),
+            ],
+            "source archive creation timestamp precedes source observation",
+        ),
+    ],
+)
+def test_capture_rejects_reversed_gate_source_archive_clock_order(tmp_path, clock_values, expected_error):
+    """Clock rollback must not produce a manifest with false source chronology."""
+    raw = current_csv(n=MIN_COMPLETED_FEATURE_SOURCE_EVENTS)
+    class Response:
+        status_code = 200
+        url = CURRENT_URL
+        headers = {}
+        def __init__(self):
+            self.closed = False
+            self.body_complete = False
+        def raise_for_status(self):
+            return None
+        def iter_content(self, chunk_size):
+            assert chunk_size == 64 * 1024
+            self.body_complete = True
+            yield raw
+        def close(self):
+            self.closed = True
+    response = Response()
+    clocks = iter(clock_values)
+    with pytest.raises(ValueError, match=expected_error):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=FakeQuery(event_rows(MIN_COMPLETED_FEATURE_SOURCE_EVENTS)),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=lambda *_args, **_kwargs: response,
+            history_fetch=lambda **_kwargs: _valid_fake_history_for_clock_tests(),
+            clock=lambda: next(clocks),
+        )
+    assert response.body_complete is True
+    assert response.closed is True
+    assert not (tmp_path / CURRENT_FILENAME).exists()
+    assert not (tmp_path / MANIFEST_FILENAME).exists()
