@@ -69,8 +69,13 @@ def _canonical_team(value: Any) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError("completed primary event has an empty team identity")
     value = value.strip()
+    if any(ord(char) < 32 or 127 <= ord(char) <= 159 for char in value):
+        raise ValueError("completed primary event team identity contains control characters")
     known = SERIE_A_RUNTIME_CONFIG.aliases.get(value, value)
-    return V2_ONLY_ALIASES.get(known, known)
+    canonical = V2_ONLY_ALIASES.get(known, known)
+    if any(ord(char) < 32 or 127 <= ord(char) <= 159 for char in canonical):
+        raise ValueError("completed primary event team identity contains control characters")
+    return canonical
 
 
 def count_unique_completed_primary_events(
@@ -377,6 +382,19 @@ def _current_source_fixture_identities(
 def _fixture_identity_sha256(
     identities: set[tuple[str, str, str]],
 ) -> str:
+    for identity in identities:
+        if (
+            not isinstance(identity, tuple)
+            or len(identity) != 3
+            or not all(isinstance(value, str) and value for value in identity)
+        ):
+            raise ValueError("fixture identity must contain exactly three non-empty strings")
+        if any(
+            ord(char) < 32 or 127 <= ord(char) <= 159
+            for value in identity
+            for char in value
+        ):
+            raise ValueError("fixture identity contains control characters")
     payload = "\n".join("\t".join(identity) for identity in sorted(identities))
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 

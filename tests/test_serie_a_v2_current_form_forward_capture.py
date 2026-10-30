@@ -715,6 +715,22 @@ def _rewrite_source_manifest(raw, mutate):
     return output.getvalue()
 
 
+def test_archive_loader_rejects_control_character_in_gate_identity_even_with_rehashed_archive():
+    raw, archives = make_archive()
+
+    def mutate(manifest):
+        manifest["feature_source_gate"]["gate_fixture_identities"][0][1] = "Atalanta\tBC"
+
+    tampered = _rewrite_source_manifest(raw, mutate)
+    archive = {**archives[0], "sha256": hashlib.sha256(tampered).hexdigest()}
+    parent = valid_parent(
+        archive,
+        quote_time=datetime(2026, 10, 19, 5, 30, tzinfo=timezone.utc),
+    )
+    with pytest.raises(ValueError, match="control characters"):
+        verify_and_load_archive(tampered, archive, parent)
+
+
 @pytest.mark.parametrize(
     "target, field, value, expected_error",
     [

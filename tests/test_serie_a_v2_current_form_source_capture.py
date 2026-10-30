@@ -140,6 +140,28 @@ def test_gate_count_rejects_reversed_duplicate_after_alias_normalization():
     with pytest.raises(ValueError, match="reversed duplicate fixture identity"):
         count_unique_completed_primary_events(rows, before_date=date(2026, 10, 18))
 
+@pytest.mark.parametrize("bad_team", ["Atalanta\tBC", "Atalanta\nBC", "Atalanta\rBC"])
+def test_gate_rejects_control_characters_in_team_identity(bad_team):
+    rows = [{
+        "match_date": "2026-10-01",
+        "home_team": bad_team,
+        "away_team": "Juventus",
+    }]
+    with pytest.raises(ValueError, match="control characters"):
+        count_unique_completed_primary_events(
+            rows, before_date=date(2026, 10, 18)
+        )
+
+
+@pytest.mark.parametrize("bad_team", ["Atalanta\tBC", "Atalanta\nBC", "Atalanta\rBC"])
+def test_fixture_identity_sha256_rejects_control_characters_and_preserves_valid_digest(bad_team):
+    valid = {("2026-10-01", "Atalanta", "Juventus")}
+    expected = hashlib.sha256(b"2026-10-01\tAtalanta\tJuventus").hexdigest()
+    assert _fixture_identity_sha256(valid) == expected
+    with pytest.raises(ValueError, match="control characters"):
+        _fixture_identity_sha256({("2026-10-01", bad_team, "Juventus")})
+
+
 def test_live_feature_gate_query_selects_only_fixture_metadata_not_scores():
     client = FakeQuery(event_rows(30))
     count = read_completed_primary_event_count(
