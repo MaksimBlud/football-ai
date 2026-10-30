@@ -531,7 +531,10 @@ def test_events_request_uses_only_zero_credit_metadata_parameters():
 
 
 def test_source_loader_passes_fresh_metadata_only_gate_identities_to_verifier(monkeypatch):
-    expected_gate = {("2026-10-01", "Home FC", "Away FC")}
+    expected_gate = {
+        (f"2026-10-{(index % 28) + 1:02d}", f"Home FC {index}", f"Away FC {index}")
+        for index in range(30)
+    }
     client = object()
     monkeypatch.setattr(
         preview_module.current_form_source_capture,
