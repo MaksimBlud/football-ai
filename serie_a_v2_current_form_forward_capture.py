@@ -141,12 +141,35 @@ def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
             "X-GitHub-Api-Version": "2022-11-28",
         },
         timeout=90,
+        stream=True,
     )
-    response.raise_for_status()
-    raw = response.content
-    if not raw or len(raw) > MAX_ARCHIVE_BYTES:
-        raise ValueError("current-form source archive is empty or too large")
-    return raw
+    try:
+        response.raise_for_status()
+        declared_length = response.headers.get("Content-Length")
+        if declared_length is not None:
+            declared_text = str(declared_length).strip()
+            if not declared_text.isdecimal():
+                raise ValueError("invalid current-form source archive Content-Length")
+            if int(declared_text) > MAX_ARCHIVE_BYTES:
+                raise ValueError("current-form source archive is empty or too large")
+
+        chunks = []
+        total_bytes = 0
+        for chunk in response.iter_content(chunk_size=64 * 1024):
+            if not chunk:
+                continue
+            total_bytes += len(chunk)
+            if total_bytes > MAX_ARCHIVE_BYTES:
+                raise ValueError("current-form source archive is empty or too large")
+            chunks.append(chunk)
+        raw = b"".join(chunks)
+        if not raw:
+            raise ValueError("current-form source archive is empty or too large")
+        return raw
+    finally:
+        close = getattr(response, "close", None)
+        if callable(close):
+            close()
 
 
 def verify_and_load_archive(
