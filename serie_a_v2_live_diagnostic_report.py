@@ -27,6 +27,7 @@ from serie_a_v2_frozen_shadow_preview import (
 PUBLIC_BASE = "https://www.football-data.co.uk/mmz4281"
 PAID_PROVIDER_REQUESTS = 0
 MAX_PUBLIC_SOURCE_FILES = len(SERIE_A_RUNTIME_CONFIG.historical_source.season_codes)
+MAX_HISTORICAL_CSV_BYTES = 10_000_000
 
 
 def _source_codes() -> list[str]:
@@ -61,6 +62,67 @@ def _assert_approved_history_url(url: str, *, season_code: str) -> None:
         raise ValueError("historical source URL is not the approved HTTPS Football-Data endpoint")
 
 
+
+def _read_bounded_historical_csv_response(response, *, season_code: str) -> bytes:
+    """Consume one frozen historical CSV with a per-file memory bound."""
+    try:
+        if response.status_code != 200:
+            raise RuntimeError(
+                f"Public Serie A CSV unavailable: season={season_code}, http={response.status_code}"
+            )
+        if getattr(response, "url", None) is None:
+            raise RuntimeError(
+                f"Public Serie A CSV missing final URL: season={season_code}"
+            )
+        headers = getattr(response, "headers", {}) or {}
+        declared_length = headers.get("Content-Length")
+        if declared_length is not None:
+            try:
+                declared_bytes = int(declared_length)
+            except (TypeError, ValueError):
+                raise RuntimeError(
+                    f"Public Serie A CSV has invalid Content-Length: season={season_code}"
+                ) from None
+            if declared_bytes < 0 or declared_bytes > MAX_HISTORICAL_CSV_BYTES:
+                raise RuntimeError(
+                    f"Public Serie A CSV exceeds size limit: season={season_code}"
+                )
+
+        iterator = getattr(response, "iter_content", None)
+        if not callable(iterator):
+            raise RuntimeError(
+                f"Public Serie A CSV does not support bounded streaming: season={season_code}"
+            )
+        chunks: list[bytes] = []
+        total = 0
+        for chunk in iterator(chunk_size=64 * 1024):
+            if not chunk:
+                continue
+            if not isinstance(chunk, bytes):
+                raise RuntimeError(
+                    f"Public Serie A CSV yielded non-byte content: season={season_code}"
+                )
+            total += len(chunk)
+            if total > MAX_HISTORICAL_CSV_BYTES:
+                raise RuntimeError(
+                    f"Public Serie A CSV exceeds size limit: season={season_code}"
+                )
+            chunks.append(chunk)
+        body = b"".join(chunks)
+        if not body:
+            raise RuntimeError(
+                f"Public Serie A CSV response body is empty: season={season_code}"
+            )
+        return body
+    finally:
+        close = getattr(response, "close", None)
+        if callable(close):
+            try:
+                close()
+            except Exception:
+                pass
+
+
 def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -> tuple[pd.DataFrame, list[dict]]:
     """Explicit, bounded configured public URLs; never odds API, never cache guess."""
     all_frames = []
@@ -75,12 +137,21 @@ def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -
         # Do not let requests follow a redirect to a different host/path. A
         # successful status alone is not source provenance; require the exact
         # approved final URL before touching response bytes.
-        response = get(url, timeout=30, allow_redirects=False)
-        if response.status_code != 200:
-            raise RuntimeError(f"Public Serie A CSV unavailable: season={code}, http={response.status_code}")
-        if getattr(response, "url", None) != url:
-            raise RuntimeError(f"Public Serie A CSV returned an unexpected final URL: season={code}")
-        body = response.content
+        response = get(url, timeout=30, allow_redirects=False, stream=True)
+        try:
+            if response.status_code != 200:
+                raise RuntimeError(f"Public Serie A CSV unavailable: season={code}, http={response.status_code}")
+            if getattr(response, "url", None) != url:
+                raise RuntimeError(f"Public Serie A CSV returned an unexpected final URL: season={code}")
+            body = _read_bounded_historical_csv_response(response, season_code=code)
+        finally:
+            # The helper closes after body consumption; this also closes on URL/status preflight failure.
+            close = getattr(response, "close", None)
+            if callable(close):
+                try:
+                    close()
+                except Exception:
+                    pass
         capture = datetime.now(timezone.utc)
         if capture_dir is not None:
             (capture_dir / f"serie_a_{code}.csv").write_bytes(body)
