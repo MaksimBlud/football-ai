@@ -7317,3 +7317,37 @@ Therefore there is still no fresh saved quote and no valid Serie A frozen incumb
 Frozen candidate, original 19-feature order/weights, `active_lambda=0` market baseline, research-only `shadow_lambda=1`, NO_BET and both embargoes remain unchanged. No target outcomes read/scored, no paid calls, no Supabase writes/DDL, no production `.pkl` change, no refit, no threshold tuning, no merge, no promotion, and no schedule/other-agent changes.
 
 **Next proof:** HUMAN-MERGE #699 at exact HEAD `3e02ad265306a5dd9347b7ac4b310adb746ca68d`; verify the resulting main SHA; rerun source capture and require the manifest to attest the exact canonical gate identity set/count/SHA and zero missing fixtures; then rerun both forward-only readers. Keep the old quotes blocked and the evaluation gate closed.
+
+
+## 2026-10-30 21:57 UTC — independently rechecked latest main runtime artifacts and source identity parity
+
+Fresh GitHub metadata still shows `main=40887ebb215730190d7a6c7a1693373ec4afcdfc`; no merge occurred. This is a read-only runtime audit plus a continuity update on this documentation PR branch only.
+
+### Latest actual main workflow runs
+
+- **Current-Form Source Capture** [run #41049950849](https://github.com/MaksimBlud/football-ai/actions/runs/41049950849): job SUCCESS, 19 tests passed. Artifact **12973598320** was downloaded again; its ZIP SHA-256 recomputed locally is `02013d5984117f48f5efab2b8662fed7e291bdfd49689d27152325e129c877b4`. It contains ten historical CSVs (3,800 rows), current `serie_a_2627.csv` (90 completed prior-day rows), and the source manifest. All **11/11** individual CSV SHA-256 values match the manifest; current CSV raw SHA is `32ca618587c90db25f16ea647cb55060f519c03830a1e8ec4a6c4204e27d5135`. The frozen candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`. The old-main manifest still records only gate count 90, not the canonical gate identity list/SHA.
+- **Current-Form Forward-Only Preview** [run #41077147924](https://github.com/MaksimBlud/football-ai/actions/runs/41077147924): job SUCCESS, **53 tests passed**. Artifact **12987716790**, ZIP SHA-256 `90ad2e9e026762db807b42f5165697e03a7257bdc6a331101a6b27df0a07376a`. It verified source artifact 12973598320, its successful main parent run, and candidate SHA; source age at verification was 12,058 seconds (within the fixed 24-hour limit). Runtime report: `quotes_seen=0`, `v2_current_form_shadow_captured=0`, no target outcomes read/scored, zero paid calls and zero writes. This is a real source-artifact verification, not a quote-level source-before-quote forecast.
+- **Original old-season Forward-Only** [run #41076521488](https://github.com/MaksimBlud/football-ai/actions/runs/41076521488): job SUCCESS, **71 tests passed**. Artifact **12988120716**, ZIP SHA-256 `0283dd379d41843a12f4b287ace9f9f2e8f1a8a695fc1bad7633904a46443c59`. It authenticated the separate old-season source artifact from Free Diagnostic run #41057970063; `quotes_seen=0`, `future_quotes_checked=0`, `v2_diagnostic_previews_captured=0`, and `forecasts_created=0`.
+- **Free Real-Quote Diagnostic** [run #41057970063](https://github.com/MaksimBlud/football-ai/actions/runs/41057970063): job SUCCESS, **53 tests passed**. Artifact **12978111278**, ZIP SHA-256 `dd9c9fd43b61f78075bee68b016507d5d766733099e532b79131d566125716da`; ten historical CSVs / 3,800 rows, zero quoted fixtures, zero diagnostic scores, no 2026/27 current-season CSV, zero paid requests and zero writes. It is not current-form prospective forecast evidence.
+
+### Independent current-source identity parity
+
+A fresh read-only Supabase query selected only `match_date, home_team, away_team` for Serie A 2026/27 through the exclusive UTC cutoff 2026-10-30. It returned **93 raw rows / 90 canonical unique fixture identities** after the existing aliases (`Inter → Inter Milan`, `Milan → AC Milan`, `Roma → AS Roma`, `Verona → Hellas Verona`) and V2-local `Atalanta BC → Atalanta`.
+
+Using the exact sorted tab-delimited identity tuples joined by LF, SQL/pgcrypto computed SHA-256 `95e3d71ab97076b5edee503301843f55d22eb14a832f7e1aab7f2012e6013811`. The same serialization independently recomputed from the downloaded current-season CSV produced **90 identities and the exact same SHA-256**. This confirms 90/90 parity for this source snapshot. It remains an external cross-check: the old-main artifact manifest does not persist that digest. PR #699 adds the in-manifest identity list/count/SHA and fail-closed gate-to-source coverage check; a fresh post-merge main capture is still required.
+
+### Current quote availability and PR coordination
+
+A read-only strict pre-match query (`snapshot_time_utc < commence_time_utc`) across the nine stored league groups returned **3,966** total snapshots, **3,915** strict pre-match rows, **0** future events with a saved strict pre-match quote, and no strict pre-match snapshots in the last 24 hours or seven days. Latest Serie A strict pre-match snapshot remains **2026-10-13 14:48:53.042620 UTC**. No outcomes/results/settlements were selected.
+
+Current exact PR heads and CI:
+- **#699** `3e02ad265306a5dd9347b7ac4b310adb746ca68d`: **7/7 SUCCESS**, including 236 Original V2 shadow regression tests and the production `*.pkl` diff guard. Its branch contains the historical exact-HTTPS/no-redirect and bounded-streaming fix plus regressions also present in older #700; #699 is the consolidated review target, so do not merge #700 separately. It also supplies the missing source identity SHA/coverage guard and main-ref job guards for all four secret-bearing V2 workflows.
+- **#701** `7ee3eda3f396735e00737d8e8e42e0c8c146c57f`: **6/6 SUCCESS**. The prospective evaluator remains fail-closed because no approved non-legacy frozen incumbent reference/vector is pinned.
+- **#702** `b91773b6677bd2be7df67d5b2c69c27b9a202397`: **7/7 SUCCESS**. Its live probe is manual-only/main-only and requests only one documented zero-credit `/events` metadata response after source verification; it does not request odds or emit probabilities. No live request was made in this audit.
+- **#697** is documentation-only; this commit adds the above verified run/artifact details to this PR branch.
+
+### Security warning
+
+Fresh Supabase schema inventory still reports RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. This is a critical access-control warning for anon/authenticated roles. No DDL was run; enabling RLS without reviewed policies can block legitimate application access.
+
+The original 19-feature order/weights, frozen candidate, `active_lambda=0` market fallback, research-only `shadow_lambda=1`, NO_BET and both evaluation/source embargoes remain unchanged. No paid request, Supabase write/DDL, protected target-outcome read, production `.pkl` change, merge, refit, threshold tuning, promotion, schedule change, or other-agent setting change occurred.
