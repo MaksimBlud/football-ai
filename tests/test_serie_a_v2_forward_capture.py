@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone, tzinfo
 import zipfile
 
 import pytest
+import serie_a_v2_forward_capture as forward_capture_module
 
 from serie_a_v2_frozen_shadow_preview import MAX_QUOTE_AGE, parse_utc
 
@@ -13,7 +14,7 @@ from serie_a_v2_live_diagnostic_report import _source_codes, PUBLIC_BASE
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
 from serie_a_v2_forward_capture import (
     ARTIFACT_NAME, ARCHIVE_REPORT, SOURCE_DIR,
-    discover_archives, prepare_forward_capture, verify_source_run,
+    discover_archives, get_archive, prepare_forward_capture, verify_source_run,
     SOURCE_WORKFLOW_PATH,
 )
 
@@ -337,3 +338,77 @@ def test_original_forward_clock_rejects_tzinfo_without_offset_before_archive_acc
             load_archive=lambda _artifact_id: pytest.fail("archive must not be loaded"),
             verify_parent_run=lambda *_args, **_kwargs: pytest.fail("parent must not be checked"),
         )
+
+class _StreamingArtifactResponse:
+    def __init__(self, chunks, headers=None):
+        self.chunks = list(chunks)
+        self.headers = headers or {}
+        self.iterated = 0
+        self.chunk_size = None
+        self.closed = False
+
+    def raise_for_status(self):
+        return None
+
+    def iter_content(self, chunk_size):
+        self.chunk_size = chunk_size
+        for chunk in self.chunks:
+            self.iterated += 1
+            yield chunk
+
+    def close(self):
+        self.closed = True
+
+
+def test_original_artifact_zip_download_streams_and_closes_response():
+    raw = b"PK\\x03\\x04bounded-original-v2"
+    response = _StreamingArtifactResponse(
+        [raw[:4], b"", raw[4:]],
+        headers={"Content-Length": str(len(raw))},
+    )
+    request = {}
+
+    def fake_get(url, **kwargs):
+        request["url"] = url
+        request.update(kwargs)
+        return response
+
+    assert get_archive(123, token="test-token", get=fake_get) == raw
+    assert request["url"].endswith("/actions/artifacts/123/zip")
+    assert request["stream"] is True
+    assert response.chunk_size == 64 * 1024
+    assert response.closed is True
+
+
+def test_original_artifact_zip_declared_oversize_fails_before_body_read(monkeypatch):
+    monkeypatch.setattr(forward_capture_module, "MAX_ZIP_BYTES", 5)
+    response = _StreamingArtifactResponse(
+        [b"must-not-read"],
+        headers={"Content-Length": "6"},
+    )
+
+    with pytest.raises(ValueError, match="missing or oversized source archive"):
+        get_archive(
+            123,
+            token="test-token",
+            get=lambda _url, **_kwargs: response,
+        )
+
+    assert response.iterated == 0
+    assert response.closed is True
+
+
+def test_original_artifact_zip_stream_oversize_stops_at_first_excess_chunk(monkeypatch):
+    monkeypatch.setattr(forward_capture_module, "MAX_ZIP_BYTES", 5)
+    response = _StreamingArtifactResponse([b"12345", b"6", b"never-read"])
+
+    with pytest.raises(ValueError, match="missing or oversized source archive"):
+        get_archive(
+            123,
+            token="test-token",
+            get=lambda _url, **_kwargs: response,
+        )
+
+    assert response.iterated == 2
+    assert response.closed is True
+\n
