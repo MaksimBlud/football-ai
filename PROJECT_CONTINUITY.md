@@ -7282,3 +7282,38 @@ Fresh GitHub API read still shows `main=40887ebb215730190d7a6c7a1693373ec4afcdfc
 - No prospective quote or V2 shadow forecast was created. The separate 30-completed-prospective-forecast outcome gate remains CLOSED; no target outcomes were read/scored and no Brier/LogLoss claim is available. No paid request, Supabase write/DDL, production `.pkl` change, refit, threshold tuning, bet, publication, promotion, schedule change, or main merge occurred.
 
 Next permitted proof: HUMAN-MERGE #699 at the exact tested head, verify the resulting main SHA, then rerun source capture and confirm the manifest includes the canonical gate identity set/SHA and zero missing gate fixtures before running either forward reader.
+
+
+## 2026-10-30 19:55 UTC — fresh exact-head, source runtime, and pre-match registry checkpoint
+
+Fresh GitHub API reads confirm default branch `main=40887ebb215730190d7a6c7a1693373ec4afcdfc`; no merge or main mutation occurred.
+
+### Current-form source and forward runtime on unchanged main
+
+- **Current-Form Source Capture** [run #41049950849](https://github.com/MaksimBlud/football-ai/actions/runs/41049950849): SUCCESS on the exact main SHA above; **19 tests passed**. The runtime log reports frozen candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, metadata-only feature-input gate count **90**, completed prior-day current-season CSV rows **90**, 10 old-season CSVs / 11 total source files, zero paid calls, zero Supabase writes, and no target-outcome scoring. Artifact **12973598320**, GitHub SHA-256 `02013d5984117f48f5efab2b8662fed7e291bdfd49689d27152325e129c877b4`.
+- **Current-Form Forward-Only Preview** [run #41050080529](https://github.com/MaksimBlud/football-ai/actions/runs/41050080529): SUCCESS on the same main SHA; **53 tests passed**. It authenticated source artifact 12973598320 and parent run 41049950849; source age at verification was **44 seconds**. Artifact **12974157310**, GitHub SHA-256 `80df126dc31e3de9280a396fe48e2e4f04a6f600db8bafc75a2f547f98f9b394`. Runtime report: `quotes_seen=0`, `v2_current_form_shadow_captured=0`, target outcomes not read/scored, paid calls 0, writes 0. Source provenance passed, but no forecast or probability vector was created.
+- **Free Real-Quote Diagnostic** [run #41057970063](https://github.com/MaksimBlud/football-ai/actions/runs/41057970063): SUCCESS; **53 tests passed**; 0 quoted fixtures, 0 diagnostic scores, 0 paid provider requests, 0 Supabase writes. Artifact **12978111278**, GitHub SHA-256 `dd9c9fd43b61f78075bee68b016507d5d766733099e532b79131d566125716da`. This is old-season diagnostic evidence, not a prospective V2 forecast.
+
+The 11:43 UTC source artifact was created on old main, whose manifest records the 90-event gate count but does not yet persist the canonical gate identity list/SHA or exact gate-to-CSV coverage. The prior independent metadata-only parity audit in this continuity file found 90/90 canonical identities and matching tab/LF SHA-256 `95e3d71ab97076b5edee503301843f55d22eb14a832f7e1aab7f2012e6013811`; that external cross-check is not a substitute for the in-manifest guard. PR #699 supplies that missing fail-closed attestation, which still requires HUMAN-MERGE and a fresh main capture.
+
+### Exact open V2 PR heads and CI
+
+- **#699** remains open, base main above, current API HEAD `3e02ad265306a5dd9347b7ac4b310adb746ca68d`; **7/7 exact-head checks SUCCESS**, including [Original V2 Shadow Tests #41111939589](https://github.com/MaksimBlud/football-ai/actions/runs/41111939589) with **236 passed** and the production `*.pkl` diff guard. It includes the source identity-set SHA/control-character hardening and `github.ref == refs/heads/main` job guards for all four existing secret-bearing V2 workflows.
+- The current-main versions of Original Forward-Only, Current-Form Source Capture, Current-Form Forward-Only, and Free Real-Quote Diagnostic still lack the complete main-ref job guard. Do not manually dispatch these secret-bearing workflows from a feature branch. #699 is the consolidated fix; use its current API HEAD above, not older SHA strings in the PR description/comments.
+- **#697** is documentation-only and remains HUMAN-MERGE; this update records the latest verified state.
+- **#701** remains open at `7ee3eda3f396735e00737d8e8e42e0c8c146c57f`, **6/6** exact-head checks SUCCESS. Its prospective evaluator correctly remains fail-closed because no approved non-legacy frozen incumbent reference/vector exists.
+- **#702** remains open at `b91773b6677bd2be7df67d5b2c69c27b9a202397`, **7/7** exact-head checks SUCCESS. Its manual-only, main-only, one-request zero-credit `/events` probe is fixture metadata/19-feature readiness only; it does not request odds or emit probabilities. No live request has been made.
+
+### Fresh read-only Supabase pre-match audit
+
+Only saved market snapshot timestamps/kickoffs and pre-match prediction metadata were queried; no scores, results, settlements, or target-outcome fields were selected.
+
+- `public.odds_snapshots`: **3,966** total rows; **3,915** satisfy strict `snapshot_time_utc < commence_time_utc`; **0** strict pre-match snapshots in the last 24 hours or 7 days; **0** future fixtures with a saved strict pre-match quote. Latest Serie A snapshot remains **2026-10-13 14:48:53.042620 UTC**.
+- `public.product_prediction_snapshots`: **40** strict pre-match rows, all EPL / `EPL_AI_MARKET_PAIR_V1`; **0** Serie A incumbent rows.
+- `public.model_artifact_bundles`: **0** registered bundles.
+
+Therefore there is still no fresh saved quote and no valid Serie A frozen incumbent. The 30-eligible-completed-prospective-forecast outcome gate remains CLOSED. No Brier/LogLoss evaluation or V2-over-market claim is available.
+
+Frozen candidate, original 19-feature order/weights, `active_lambda=0` market baseline, research-only `shadow_lambda=1`, NO_BET and both embargoes remain unchanged. No target outcomes read/scored, no paid calls, no Supabase writes/DDL, no production `.pkl` change, no refit, no threshold tuning, no merge, no promotion, and no schedule/other-agent changes.
+
+**Next proof:** HUMAN-MERGE #699 at exact HEAD `3e02ad265306a5dd9347b7ac4b310adb746ca68d`; verify the resulting main SHA; rerun source capture and require the manifest to attest the exact canonical gate identity set/count/SHA and zero missing fixtures; then rerun both forward-only readers. Keep the old quotes blocked and the evaluation gate closed.
