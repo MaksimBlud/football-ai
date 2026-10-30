@@ -1,3 +1,18 @@
+## 2026-10-30 00:06 UTC — all source CSVs bounded; exact-head proof
+
+Fresh `main` is still `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no merge or main mutation.
+
+- PR #699 now bounds **all eleven source CSV downloads**. The current-season CSV is streamed with a **2,000,000-byte** actual-body cap. The ten frozen historical CSVs are streamed with a **5,000,000-byte per-file** cap and **10,000,000-byte aggregate** cap. Both paths precheck declared Content-Length, enforce the actual streamed/decompressed byte count before joining the body, verify direct HTTP 200/exact approved HTTPS final URL, and close responses on success/failure. Source observation timestamps are recorded only after body completion.
+- Maximum raw source bytes are 12,000,000 (10 MB historical + 2 MB current), below the current-form forward reader's **16,000,000-byte** archive limit, leaving manifest/ZIP overhead headroom.
+- New regression coverage includes historical declared-size rejection before body read, actual streamed overrun/early stop, aggregate over-budget rejection before persisting the offending CSV, and cleanup.
+- Exact PR #699 HEAD: `32251b847b01c0891ea6f94ec3a16471ee6cc95a`; **7/7 required CI checks SUCCESS**. Original V2 shadow run [#40977305620](https://github.com/MaksimBlud/football-ai/actions/runs/40977305620) reports **214 passed**, including both source-capture suites; the production `*.pkl` diff guard passed. This is branch CI proof only, not live post-merge proof.
+- Main-ref security guard remains important: current `main` still lacks job-level main-ref guards on the original-forward and current-form source-capture manual-dispatch jobs. PR #699 adds the guard before secret-bearing `env` for all three V2 workflows. Do not manually dispatch those two main workflows from a feature branch before merge.
+- Fresh read-only odds audit at approximately `2026-10-29T23:58Z`: 3,966 snapshots; latest `2026-10-13T14:48:53.042620Z`; zero in last 24h/7d and zero future strict pre-kickoff observations. Metadata-only Serie A query: 91 raw rows, 88 canonical identities through 2026-10-28. No scores/results/settlement fields were selected.
+- `public.model_artifact_bundles` still has 0 registered bundles; PR #701 remains correctly blocked by the missing pinned non-legacy incumbent. PR #702 remains manual-only; no free-fixture provider request was made.
+- The latest real main source/forward runs remain #40868280531, #40898762675 and #40899523036; no new quote, forecast, Brier or LogLoss result exists. After HUMAN-MERGE, rerun source capture and forward verification on the exact resulting main SHA.
+
+**Remaining separate hardening scope:** GitHub artifact ZIP readers still read the ZIP response body before applying their existing archive-size checks; this is distinct from the now-bounded Football-Data CSV paths and should be reviewed separately. No paid request, Supabase write/DDL, protected target-outcome read, production artifact change, or schedule change occurred.
+
 ## 2026-10-29 23:58 UTC — bounded current-form source body and fresh pre-match data audit
 
 Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no merge or main mutation.
@@ -10,7 +25,7 @@ Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no merge or mai
 - No fresh quote or new forecast exists. The latest on-main source/forward runs remain the October 29 runs recorded below; a fresh live proof of PR #699's new guard still requires HUMAN-MERGE followed by new source capture and forward verification on the resulting exact main SHA.
 - **Secret-boundary finding on current main:** the original forward workflow and current-form source-capture workflow both expose `workflow_dispatch` but lack a job-level main-ref guard before their Supabase secret-bearing `env`; do not manually dispatch either from a feature branch. PR #699 adds guards before `env` for all three V2 workflows and its contract test checks the ordering. Main remains exposed until that PR is manually merged.
 
-**Explicit remaining scope:** the ten frozen historical CSV downloads inside `fetch_public_history` still use eager `response.content` and do not yet have the same per-file streaming byte bound. Do not describe all eleven source downloads as bounded; audit that separate historical-source path next. No paid request, Supabase write/DDL, protected target-outcome read, production artifact change, or schedule change occurred.
+**Superseded scope note (2026-10-30 00:05 UTC):** the historical CSV download path was subsequently bounded in PR #699; see the newer entry at the top of this file. GitHub artifact ZIP downloads are a separate path and are not covered by the CSV streaming fix. No paid request, Supabase write/DDL, protected target-outcome read, production artifact change, or schedule change occurred.
 
 ## 2026-10-29 22:57 UTC — source/forward runtime rechecked; source-clock regression fixed on #699
 
