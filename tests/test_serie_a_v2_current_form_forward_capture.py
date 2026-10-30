@@ -863,3 +863,96 @@ def test_current_form_artifact_zip_stream_oversize_stops_at_first_excess_chunk(m
     assert response.iterated == 2
     assert response.closed is True
 
+
+
+class _FakeArchiveMember:
+    def __init__(self, filename, file_size, compress_size=1):
+        self.filename = filename
+        self.file_size = file_size
+        self.compress_size = compress_size
+
+    def is_dir(self):
+        return False
+
+
+class _FakeArchiveReader:
+    def __init__(self, members):
+        self.members = members
+        self.read_calls = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+    def infolist(self):
+        return self.members
+
+    def read(self, name):
+        self.read_calls.append(name)
+        raise AssertionError("ZIP members must not be decompressed before size validation")
+
+
+def _fake_expected_archive_members():
+    historical = {f"serie_a_{code}.csv" for code in _source_codes()}
+    expected = historical | {CURRENT_FILENAME, MANIFEST_FILENAME}
+    return historical, expected
+
+
+def _assert_archive_rejected_before_member_read(monkeypatch, members, expected_error):
+    fake_zip = _FakeArchiveReader(members)
+    monkeypatch.setattr(
+        forward_capture_module.zipfile,
+        "ZipFile",
+        lambda *_args, **_kwargs: fake_zip,
+    )
+    raw = b"synthetic-zip-envelope"
+    archive = {"sha256": hashlib.sha256(raw).hexdigest()}
+    with pytest.raises(ValueError, match=expected_error):
+        verify_and_load_archive(raw, archive, {})
+    assert fake_zip.read_calls == []
+
+
+def test_current_form_archive_rejects_oversized_manifest_before_decompression(monkeypatch):
+    historical, expected = _fake_expected_archive_members()
+    members = [
+        _FakeArchiveMember(name, forward_capture_module.MAX_MANIFEST_BYTES + 1 if name == MANIFEST_FILENAME else 1)
+        for name in sorted(expected)
+    ]
+    _assert_archive_rejected_before_member_read(
+        monkeypatch, members, "manifest member exceeds uncompressed size limit"
+    )
+
+
+def test_current_form_archive_rejects_oversized_historical_csv_before_decompression(monkeypatch):
+    historical, expected = _fake_expected_archive_members()
+    oversized = sorted(historical)[0]
+    members = [
+        _FakeArchiveMember(name, forward_capture_module.MAX_HISTORICAL_CSV_BYTES + 1 if name == oversized else 1)
+        for name in sorted(expected)
+    ]
+    _assert_archive_rejected_before_member_read(
+        monkeypatch, members, "historical CSV member exceeds uncompressed size limit"
+    )
+
+
+def test_current_form_archive_rejects_historical_aggregate_overflow_before_decompression(monkeypatch):
+    historical, expected = _fake_expected_archive_members()
+    members = []
+    for index, name in enumerate(sorted(expected)):
+        size = 4_000_000 if name in set(sorted(historical)[:3]) else 1
+        members.append(_FakeArchiveMember(name, size))
+    _assert_archive_rejected_before_member_read(
+        monkeypatch, members, "historical CSV members exceed aggregate uncompressed size limit"
+    )
+
+
+def test_current_form_archive_rejects_total_uncompressed_overflow_before_decompression(monkeypatch):
+    historical, expected = _fake_expected_archive_members()
+    monkeypatch.setattr(forward_capture_module, "MAX_ARCHIVE_UNCOMPRESSED_BYTES", 5)
+    members = [_FakeArchiveMember(name, 1) for name in sorted(expected)]
+    _assert_archive_rejected_before_member_read(
+        monkeypatch, members, "archive exceeds total uncompressed size limit"
+    )
+
