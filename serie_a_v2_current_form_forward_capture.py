@@ -25,7 +25,7 @@ from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 from serie_a_v2_asof_feature_manifest import build_manifest
 from serie_a_v2_current_form_source_capture import (
     CURRENT_CODE, CURRENT_FILENAME, CURRENT_SEASON, CURRENT_URL,
-    MANIFEST_FILENAME, MIN_COMPLETED_FEATURE_SOURCE_EVENTS,
+    MANIFEST_FILENAME, MAX_CURRENT_CSV_BYTES, MIN_COMPLETED_FEATURE_SOURCE_EVENTS,
     REQUIRED_COLUMNS, validate_current_season_csv,
 )
 from serie_a_v2_current_form_source_capture import (
@@ -35,7 +35,9 @@ from serie_a_v2_current_form_source_capture import (
 from serie_a_v2_frozen_shadow_preview import (
     FROZEN_SHA, fetch_saved_upcoming_serie_a_quotes, parse_utc, shadow_preview, _guard_outcome_free,
 )
-from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes
+from serie_a_v2_live_diagnostic_report import (
+    MAX_HISTORICAL_CSV_BYTES, MAX_HISTORICAL_TOTAL_BYTES, PUBLIC_BASE, _source_codes,
+)
 from serie_a_v2_prequote_source_archive_gate import MAX_ZIP_BYTES
 
 REPOSITORY = "MaksimBlud/football-ai"
@@ -46,6 +48,8 @@ SCHEMA_VERSION = "SERIE_A_V2_CURRENT_FORM_FORWARD_CAPTURE_V1"
 MAX_QUOTE_AGE = timedelta(hours=24)
 MAX_SOURCE_AGE = timedelta(hours=24)
 MAX_ARCHIVE_BYTES = 16_000_000
+MAX_ARCHIVE_UNCOMPRESSED_BYTES = 16_000_000
+MAX_MANIFEST_BYTES = 3_000_000
 OLD_CUTOFF = pd.Timestamp("2026-07-01")
 
 
@@ -172,6 +176,46 @@ def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
             close()
 
 
+def _validate_archive_member_sizes(infos: list[Any], *, expected_names: set[str]) -> None:
+    """Bound ZIP expansion before any member is decompressed or parsed."""
+    names = [getattr(info, "filename", None) for info in infos]
+    if len(infos) != len(expected_names) or set(names) != expected_names:
+        raise ValueError("current-form archive has unexpected/missing files")
+
+    historical_names = expected_names - {CURRENT_FILENAME, MANIFEST_FILENAME}
+    historical_total = 0
+    uncompressed_total = 0
+    for info in infos:
+        name = info.filename
+        if info.is_dir():
+            raise ValueError("current-form archive must not contain directory members")
+        size = info.file_size
+        compressed_size = info.compress_size
+        if type(size) is not int or size < 0:
+            raise ValueError("current-form archive member has an invalid uncompressed size")
+        if type(compressed_size) is not int or compressed_size < 0:
+            raise ValueError("current-form archive member has an invalid compressed size")
+
+        if name in historical_names:
+            if size > MAX_HISTORICAL_CSV_BYTES:
+                raise ValueError("current-form historical CSV member exceeds uncompressed size limit")
+            historical_total += size
+        elif name == CURRENT_FILENAME:
+            if size > MAX_CURRENT_CSV_BYTES:
+                raise ValueError("current-form current-season CSV member exceeds uncompressed size limit")
+        elif name == MANIFEST_FILENAME:
+            if size > MAX_MANIFEST_BYTES:
+                raise ValueError("current-form source manifest member exceeds uncompressed size limit")
+        else:
+            raise ValueError("current-form archive contains an unapproved member")
+
+        if historical_total > MAX_HISTORICAL_TOTAL_BYTES:
+            raise ValueError("current-form historical CSV members exceed aggregate uncompressed size limit")
+        uncompressed_total += size
+        if uncompressed_total > MAX_ARCHIVE_UNCOMPRESSED_BYTES:
+            raise ValueError("current-form archive exceeds total uncompressed size limit")
+
+
 def verify_and_load_archive(
     raw: bytes, archive: Mapping[str, Any], parent: Mapping[str, Any]
 ) -> tuple[pd.DataFrame, dict]:
@@ -183,9 +227,7 @@ def verify_and_load_archive(
     with zipfile.ZipFile(BytesIO(raw), "r") as z:
         old_names = {f"serie_a_{code}.csv" for code in _source_codes()}
         expected = old_names | {CURRENT_FILENAME, MANIFEST_FILENAME}
-        names = z.namelist()
-        if len(names) != len(expected) or set(names) != expected:
-            raise ValueError("current-form archive has unexpected/missing files")
+        _validate_archive_member_sizes(z.infolist(), expected_names=expected)
         manifest = json.loads(z.read(MANIFEST_FILENAME))
         if (manifest.get("schema_version") != "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V1"
                 or manifest.get("experiment_id") != "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY"
