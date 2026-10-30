@@ -10,6 +10,7 @@ import pandas as pd
 import pytest
 
 from historical_football_signal_lab import FEATURE_SETS
+import serie_a_v2_free_fixture_feature_preview as preview_module
 from serie_a_v2_free_fixture_feature_preview import (
     EVENTS_URL,
     FROZEN_SHA,
@@ -39,6 +40,30 @@ def source_attestation(**overrides):
             "run_id": 54321,
             "run_head_sha": "b" * 40,
             "run_completed_at_utc": "2026-10-28T10:01:00Z",
+        },
+        "feature_source_gate_attestation": {
+            "verified": True,
+            "gate_fixture_identity_sha256": "c" * 64,
+            "gate_fixture_identity_count": 30,
+            "gate_fixture_identities_covered_by_current_source": 30,
+            "gate_fixture_identities_missing_from_current_source": 0,
+            "current_source_fixture_identity_sha256": "d" * 64,
+            "current_source_fixture_identity_count": 30,
+        },
+        "feature_source_gate_freshness": {
+            "checked": True,
+            "fresh": True,
+            "reason": "MATCH",
+            "minimum_completed_primary_events": 30,
+            "current_gate_identity_count": 30,
+            "current_gate_identity_sha256": "c" * 64,
+            "source_current_identity_count": 30,
+            "source_gate_identity_count_at_capture": 30,
+            "source_gate_identity_sha256_at_capture": "c" * 64,
+            "missing_identity_count": 0,
+            "missing_identity_sha256": "e" * 64,
+            "metadata_fields_read": ["match_date", "home_team", "away_team"],
+            "target_outcomes_read": False,
         },
     }
     result.update(overrides)
@@ -151,6 +176,29 @@ def test_source_gate_and_order_fail_before_provider_request():
     assert calls == []
 
 
+def test_stale_current_gate_freshness_blocks_before_provider_request():
+    calls = []
+    stale = source_attestation(
+        feature_source_gate_freshness={
+            "checked": True,
+            "fresh": False,
+            "reason": "SOURCE_ARCHIVE_MISSING_CURRENT_GATE_FIXTURES",
+            "metadata_fields_read": ["match_date", "home_team", "away_team"],
+            "target_outcomes_read": False,
+        }
+    )
+    with pytest.raises(ValueError, match="metadata-only feature-source gate"):
+        capture_free_fixture_preview(
+            api_key=API_KEY,
+            source_attestation=stale,
+            history=history_frame(),
+            request_started_at=STARTED,
+            get=lambda *a, **k: calls.append((a, k)),
+            clock=lambda: RECEIVED,
+        )
+    assert calls == []
+
+
 def test_exactly_one_zero_credit_events_request_and_original_19_features_only():
     payload = [event()]
     response = response_for(payload)
@@ -190,7 +238,10 @@ def test_exactly_one_zero_credit_events_request_and_original_19_features_only():
     assert report["target_outcomes_read"] is False
     assert report["target_outcomes_scored"] is False
     assert report["production_pkl_touched"] is False
+    assert report["supabase_access"] == "READ_ONLY_METADATA_GATE"
+    assert report["supabase_metadata_fields_read"] == ["match_date", "home_team", "away_team"]
     assert report["supabase_writes"] == 0
+    assert report["supabase_ddl"] == 0
     manifest = report["feature_manifests"][0]
     assert set(manifest["features"]) == set(FEATURE_SETS["ALL_FOOTBALL"])
     assert len(manifest["features"]) == 19
@@ -477,3 +528,108 @@ def test_events_request_uses_only_zero_credit_metadata_parameters():
     assert not ({"markets", "regions", "oddsFormat", "bookmakers", "eventIds", "scores"} & set(params))
     assert report["provider_last_request_cost_credits"] == 0
     assert API_KEY not in json.dumps(report)
+
+
+def test_source_loader_passes_fresh_metadata_only_gate_identities_to_verifier(monkeypatch):
+    expected_gate = {("2026-10-01", "Home FC", "Away FC")}
+    client = object()
+    monkeypatch.setattr(
+        preview_module.current_form_source_capture,
+        "read_completed_primary_event_identities",
+        lambda received_client, *, now: expected_gate if received_client is client else set(),
+        raising=False,
+    )
+    archive = {
+        "artifact_id": 12345,
+        "created_at": STARTED - timedelta(minutes=2),
+        "sha256": "a" * 64,
+    }
+    parent = {
+        "run_id": 54321,
+        "run_head_sha": "b" * 40,
+        "run_completed_at_utc": "2026-10-28T10:01:00Z",
+    }
+    raw = b"verified-source-archive"
+    captured = {}
+
+    monkeypatch.setattr(preview_module, "discover_archives", lambda *, token: [archive])
+    monkeypatch.setattr(
+        preview_module, "get_archive", lambda artifact_id, *, token: raw
+    )
+    monkeypatch.setattr(
+        preview_module, "verify_source_run",
+        lambda item, *, quote_time, token: parent if item is archive else {},
+    )
+
+    def fake_verify_latest(
+        archive_metadata, *, as_of_utc, load_archive, verify_parent_run,
+        current_gate_identities, write_sources_to=None,
+    ):
+        captured["gate"] = current_gate_identities
+        assert current_gate_identities == expected_gate
+        assert verify_parent_run(archive, quote_time=as_of_utc) == parent
+        assert load_archive(archive["artifact_id"]) == raw
+        return source_attestation()
+
+    gate_attestation = source_attestation()["feature_source_gate_attestation"]
+    monkeypatch.setattr(preview_module, "verify_latest_source_archive", fake_verify_latest)
+    monkeypatch.setattr(
+        preview_module,
+        "verify_and_load_archive",
+        lambda archive_bytes, item, verified_parent: (
+            history_frame(),
+            {
+                "artifact_sha256": "a" * 64,
+                "latest_source_observed_at_utc": "2026-10-28T09:59:00Z",
+                "manifest": {"frozen_candidate_sha256": FROZEN_SHA},
+                "feature_source_gate_attestation": gate_attestation,
+            },
+        ),
+    )
+
+    history, attestation = preview_module.load_verified_current_source(
+        token="read-only-github-token", now=STARTED, supabase_client=client
+    )
+    assert not history.empty
+    assert captured["gate"] == expected_gate
+    assert attestation["feature_source_gate_freshness"]["fresh"] is True
+
+
+def test_source_loader_fails_closed_if_metadata_only_gate_reader_is_missing(monkeypatch):
+    monkeypatch.delattr(
+        preview_module.current_form_source_capture,
+        "read_completed_primary_event_identities",
+        raising=False,
+    )
+    monkeypatch.setattr(
+        preview_module, "discover_archives",
+        lambda **kwargs: pytest.fail("archive discovery must not run without current gate reader"),
+    )
+    with pytest.raises(RuntimeError, match="metadata-only current-gate identity reader"):
+        preview_module.load_verified_current_source(
+            token="read-only-github-token", now=STARTED, supabase_client=object()
+        )
+
+
+def test_source_loader_fails_closed_if_verifier_lacks_current_gate_freshness_support(monkeypatch):
+    monkeypatch.setattr(
+        preview_module.current_form_source_capture,
+        "read_completed_primary_event_identities",
+        lambda client, *, now: {("2026-10-01", "Home FC", "Away FC")},
+        raising=False,
+    )
+
+    def old_verifier(
+        archive_metadata, *, as_of_utc, load_archive, verify_parent_run, write_sources_to=None
+    ):
+        pytest.fail("old verifier must never be called without current gate freshness support")
+
+    monkeypatch.setattr(preview_module, "verify_latest_source_archive", old_verifier)
+    monkeypatch.setattr(
+        preview_module, "discover_archives",
+        lambda **kwargs: pytest.fail("archive discovery must not run without current gate verifier API"),
+    )
+    with pytest.raises(RuntimeError, match="current-gate freshness support"):
+        preview_module.load_verified_current_source(
+            token="read-only-github-token", now=STARTED, supabase_client=object()
+        )
