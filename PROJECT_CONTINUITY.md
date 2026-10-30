@@ -6844,3 +6844,16 @@ Fresh read-only Supabase queries selected only the saved-odds timestamps/kickoff
 - PR #699 HEAD `e50ad26c3d6b4c9bac8d584dead0ab043b4f3792` was rechecked directly through GitHub's commit check-runs API: all seven named checks completed SUCCESS on that exact SHA (last completion 2026-10-29 03:54:20 UTC). It remains open and unmerged under HUMAN-MERGE.
 
 This note corrects source-age wording only; no code, frozen weights/features, gates, workflow schedules, Supabase data, or production artifacts were changed. No outcomes were read or scored, no paid requests were made, and no merge occurred.
+
+## 2026-10-30 — Original V2: bounded GitHub source-artifact ZIP downloads (PR #699)
+
+- Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no merge or main mutation occurred.
+- The consolidated original V2 source/forward PR #699 now also bounds the two GitHub Actions ZIP download paths: old-season `get_archive` uses the existing 12,000,000-byte limit; current-form `get_archive` uses the existing 16,000,000-byte limit.
+- Both paths request `stream=True`, reject malformed or over-limit `Content-Length` before body reads, count actual yielded bytes in 64 KiB chunks, stop immediately when the configured limit is crossed, reject empty bodies, and close the response in a `finally` block.
+- Six synthetic regressions cover successful streaming/cleanup, declared oversize rejected before any body read, and actual streamed oversize stopped at the first excess chunk (three tests per path).
+- Exact PR #699 head: `3d6c52c86c8298167b39e66fee388d0dd9399fe9`. All **7/7** required PR workflows passed on this exact SHA. Original V2 Shadow Tests: **220 passed**; the `git diff --exit-code -- '*.pkl'` production-model guard passed.
+- CI run IDs: Original V2 Shadow Tests `40983644455`; Research `40983644638`; Serie A `40983644536`; Bundesliga `40983644513`; Ligue 1 `40983644417`; Eredivisie `40983644484`; Product `40983644459`.
+- This is code/CI resource-integrity proof only. The new ZIP downloader has **not** yet been exercised by a post-merge live source/forward run; PR #699 remains open under HUMAN-MERGE. The existing main workflows still lack the new main-ref job guard until that PR is manually merged.
+- Read-only Supabase audit (identity-only metadata columns; no scores/results selected): Serie A 2026/27 had **91** raw rows / **88** canonical identities through **2026-10-28**. Odds audit: **3,966** rows total, **3,915** strictly pre-kickoff snapshots; latest strictly pre-kickoff snapshot `2026-10-13T14:48:53.042620Z`; **0** snapshots in the last 24 hours, **0** in the last 7 days, and **0** future events with a strictly pre-kickoff quote. Therefore no new forecast or quality metric was available.
+- PR #657, #659, and #660 are confirmed merged. PR #694/#700 overlap the consolidated #699 source-identity / URL protections and should not be merged independently without a fresh diff review. PR #697 remains documentation-only; #701 remains blocked by the missing frozen incumbent; #702 remains an unrun manual-only zero-credit fixture/feature-readiness probe.
+- Frozen candidate SHA, original 19 features/weights, `active_lambda=0`, `shadow_lambda=1`, and the 30-primary-completed-event target-outcome gate remain unchanged. No target outcomes were read, no odds-provider request was made, and no Supabase write/DDL occurred.
