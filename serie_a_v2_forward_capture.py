@@ -133,16 +133,38 @@ def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
     url = f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip"
     if not token:
         raise ValueError("GitHub token required")
-    r = get(url, headers={
+    response = get(url, headers={
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
-    }, timeout=90)
-    r.raise_for_status()
-    raw = r.content
-    if not raw or len(raw) > MAX_ZIP_BYTES:
-        raise ValueError("missing or oversized source archive")
-    return raw
+    }, timeout=90, stream=True)
+    try:
+        response.raise_for_status()
+        declared_length = response.headers.get("Content-Length")
+        if declared_length is not None:
+            declared_text = str(declared_length).strip()
+            if not declared_text.isdecimal():
+                raise ValueError("invalid GitHub source archive Content-Length")
+            if int(declared_text) > MAX_ZIP_BYTES:
+                raise ValueError("missing or oversized source archive")
+
+        chunks = []
+        total_bytes = 0
+        for chunk in response.iter_content(chunk_size=64 * 1024):
+            if not chunk:
+                continue
+            total_bytes += len(chunk)
+            if total_bytes > MAX_ZIP_BYTES:
+                raise ValueError("missing or oversized source archive")
+            chunks.append(chunk)
+        raw = b"".join(chunks)
+        if not raw:
+            raise ValueError("missing or oversized source archive")
+        return raw
+    finally:
+        close = getattr(response, "close", None)
+        if callable(close):
+            close()
 
 
 def prepare_forward_capture(
