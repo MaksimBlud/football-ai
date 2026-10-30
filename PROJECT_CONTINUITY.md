@@ -6945,3 +6945,19 @@ The fresh metadata-only / odds audit recorded above remains the latest:
 - GitHub API reports `main` as unprotected (`protected=false`); no repository settings were changed.
 
 **Next proof:** wait for HUMAN-MERGE of #699, verify the resulting exact main SHA, then run the existing free source capture and original/current-form forward-only workflows on main. Do not dispatch secret-bearing V2 workflows from a feature branch before that merge. No live source/forward run has yet exercised the new clock rollback and main-ref guards; current October 13 quotes remain stale and cannot be backfilled.
+
+
+## 2026-10-30 03:58 UTC — Free fixture request parameter allowlist
+
+PR [#702](https://github.com/MaksimBlud/football-ai/pull/702) received a test-only hardening commit:
+- Exact HEAD: `b91773b6677bd2be7df67d5b2c69c27b9a202397`.
+- New regression `test_events_request_uses_only_zero_credit_metadata_parameters` pins the sole query parameter allowlist to `apiKey`, `dateFormat`, and `commenceTimeFrom`; it explicitly rejects markets, regions, odds-format, bookmaker, event-ID and score parameters.
+- The existing request remains one manual-only HTTPS `/events` call, with redirects disabled and `x-requests-last=0` required. The test asserts the API key is not serialized in the output.
+- Exact-head CI: **8/8 checks SUCCESS**. Offline contract test run [#41000192490](https://github.com/MaksimBlud/football-ai/actions/runs/41000192490) reports **18 passed**. This is mocked/offline validation only; no live provider request was made.
+
+Fresh read-only data checkpoint:
+- Strictly pre-kickoff `odds_snapshots`: **3,915** of 3,966 total; zero strictly pre-kickoff rows in the last 24 hours or 7 days; zero future fixtures with a saved pre-kickoff quote. Serie A latest remains `2026-10-13T14:48:53.042620Z`.
+- Metadata-only Serie A 2026/27 identity query selected only `match_date, home_team, away_team`: **91 raw rows / 88 canonical fixture identities**, from 2026-08-22 through 2026-10-28.
+- The last old-main source archive still records a gate count of **80** and 88 completed current-season CSV rows (artifact `12894054589`, ZIP SHA-256 `b4b1144ca28414ccf7a5a7a5c02fde4611e8e0f1a37997012de031a38baa14b0`). It does not attest the later 88-identity metadata set. PR #699's current-gate/source-coverage guard must be exercised by a fresh post-merge capture before any current-form shadow is admitted.
+
+Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; PR #699 remains open at `ab888b32e6ea5a231d271b00e4db42fab186986b`, 7/7 CI / 228 original V2 tests. No new quotes or prospective forecasts exist; no target outcomes were read. Frozen candidate/19-feature/weight contract, `active_lambda=0`, `shadow_lambda=1`, and the 30-completed-prospective-forecast evaluation gate are unchanged. No live provider request, paid call, Supabase write/DDL, production `.pkl` change, merge, or schedule change.
