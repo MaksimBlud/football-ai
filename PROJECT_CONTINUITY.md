@@ -6926,3 +6926,22 @@ Fresh read-only Supabase audit (2026-10-30 approximately 02:50 UTC):
 - Supabase Security Advisor reports RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. This is a separate critical access-control issue; no DDL was run because enabling RLS without reviewed policies can block application access.
 
 **Disposition:** #699 is still open and requires HUMAN-MERGE. After manual merge, verify the exact resulting main SHA, run the existing free source capture on main, compare gate identity-set SHA and full CSV coverage, then run original/current-form forward-only readers. Existing October 13 quotes remain stale/source-after-quote and cannot be backfilled. No prospective forecasts, Brier/LogLoss, incumbent comparison or model-superiority claim is available yet.
+
+## 2026-10-30 02:58 UTC — Original V2: fail-closed source clock rollback proof
+
+The final audit of the consolidated source capture found that offset-aware timestamps were validated, but the source writer did not itself reject a backwards wall-clock transition. The current-form forward reader already requires `gate_checked <= latest_source <= declared_archive`; the source writer now enforces the corresponding order before writing:
+- `source_observed_at_utc >= feature_source_gate.checked_at_utc`;
+- `source_archive_created_at_utc >= source_observed_at_utc`.
+
+The two new regressions simulate (1) observation time earlier than the gate timestamp and (2) archive time earlier than observation. Both prove that the complete bounded response body was read, the response was closed, and neither the current-season CSV nor manifest was written. This consolidates the missing source-capture behavior from overlapping #686 into #699; #680's forward-reader gate/source/archive check is also present in #699. Do not merge #686/#680 independently.
+
+Latest #699 exact HEAD: `ab888b32e6ea5a231d271b00e4db42fab186986b`; base main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. All **7/7** required checks passed on that exact SHA. Original V2 Shadow Tests: **228 passed**; production `*.pkl` diff guard passed. Research PR Validation's no-production-artifact guard passed. The earlier main-ref secret guard also remains in #699 for all four V2 workflows that expose Supabase credentials. Existing schedules are unchanged.
+
+The fresh metadata-only / odds audit recorded above remains the latest:
+- 3,966 stored odds snapshots; zero in the last 24h/7d and zero future strict pre-kickoff rows; Serie A latest snapshot 2026-10-13 14:48:53 UTC.
+- Serie A 2026/27 identity-only metadata: 91 raw rows / 88 canonical fixture identities through 2026-10-28. The exact gate SHA and CSV-coverage proof must come from the new on-main source-capture manifest after HUMAN-MERGE; this count is not a substitute for it.
+- `public.model_artifact_bundles`: 0; no eligible frozen incumbent is registered. The separate 30-eligible-prospective-forecast outcome gate remains closed.
+- Security Advisor still reports RLS disabled on five public tables. No DDL was run.
+- GitHub API reports `main` as unprotected (`protected=false`); no repository settings were changed.
+
+**Next proof:** wait for HUMAN-MERGE of #699, verify the resulting exact main SHA, then run the existing free source capture and original/current-form forward-only workflows on main. Do not dispatch secret-bearing V2 workflows from a feature branch before that merge. No live source/forward run has yet exercised the new clock rollback and main-ref guards; current October 13 quotes remain stale and cannot be backfilled.
