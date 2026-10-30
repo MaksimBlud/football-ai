@@ -114,6 +114,48 @@ def test_historical_source_stops_on_actual_streamed_byte_limit_and_closes(tmp_pa
 
 
 
+
+
+
+def test_historical_source_collection_stops_stream_at_remaining_aggregate_budget(tmp_path, monkeypatch):
+    csv_completed = history_fixture().to_csv(index=False).encode()
+    monkeypatch.setattr(
+        report_module, "MAX_HISTORICAL_TOTAL_BYTES", len(csv_completed) + 1
+    )
+
+    class Response:
+        status_code = 200
+        headers = {}
+        def __init__(self, url, chunks):
+            self.url = url
+            self.chunks = list(chunks)
+            self.chunks_yielded = 0
+            self.closed = False
+        def iter_content(self, chunk_size):
+            assert chunk_size == 64 * 1024
+            for chunk in self.chunks:
+                self.chunks_yielded += 1
+                yield chunk
+        def close(self):
+            self.closed = True
+
+    responses = []
+    def fake_get(url, timeout, allow_redirects, stream):
+        assert allow_redirects is False and stream is True
+        chunks = [csv_completed] if not responses else [b"xx", b"must-not-be-consumed"]
+        response = Response(url, chunks)
+        responses.append(response)
+        return response
+
+    with pytest.raises(RuntimeError, match="total size limit"):
+        fetch_public_history(get=fake_get, capture_dir=tmp_path)
+
+    assert len(responses) == 2
+    assert responses[0].chunks_yielded == 1
+    assert responses[1].chunks_yielded == 1
+    assert all(response.closed for response in responses)
+    assert len(list(tmp_path.glob("*.csv"))) == 1
+
 def test_historical_source_collection_enforces_total_archive_byte_limit(tmp_path, monkeypatch):
     csv_completed = history_fixture().to_csv(index=False).encode()
     monkeypatch.setattr(
