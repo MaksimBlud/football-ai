@@ -1,0 +1,638 @@
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+import hashlib
+import json
+from types import SimpleNamespace
+from pathlib import Path
+
+import pandas as pd
+import pytest
+
+from historical_football_signal_lab import FEATURE_SETS
+import serie_a_v2_free_fixture_feature_preview as preview_module
+from serie_a_v2_free_fixture_feature_preview import (
+    EVENTS_URL,
+    FROZEN_SHA,
+    SPORT_KEY,
+    MAX_RESPONSE_BYTES,
+    _validated_future_events,
+    build_feature_readiness_preview,
+    capture_free_fixture_preview,
+)
+
+UTC = timezone.utc
+STARTED = datetime(2026, 10, 28, 10, 2, tzinfo=UTC)
+RECEIVED = datetime(2026, 10, 28, 10, 3, tzinfo=UTC)
+API_KEY = "test-secret-must-never-be-serialized"
+
+
+def source_attestation(**overrides):
+    result = {
+        "verified": True,
+        "fresh_for_new_quote": True,
+        "candidate_sha256": FROZEN_SHA,
+        "artifact_id": 12345,
+        "artifact_sha256": "a" * 64,
+        "source_archive_created_at_utc": "2026-10-28T10:00:00Z",
+        "latest_source_observed_at_utc": "2026-10-28T09:59:00Z",
+        "parent_run": {
+            "run_id": 54321,
+            "run_head_sha": "b" * 40,
+            "run_completed_at_utc": "2026-10-28T10:01:00Z",
+        },
+        "feature_source_gate_attestation": {
+            "verified": True,
+            "gate_fixture_identity_sha256": "c" * 64,
+            "gate_fixture_identity_count": 30,
+            "gate_fixture_identities_covered_by_current_source": 30,
+            "gate_fixture_identities_missing_from_current_source": 0,
+            "current_source_fixture_identity_sha256": "d" * 64,
+            "current_source_fixture_identity_count": 30,
+        },
+        "feature_source_gate_freshness": {
+            "checked": True,
+            "fresh": True,
+            "reason": "MATCH",
+            "minimum_completed_primary_events": 30,
+            "current_gate_identity_count": 30,
+            "current_gate_identity_sha256": "c" * 64,
+            "source_current_identity_count": 30,
+            "source_gate_identity_count_at_capture": 30,
+            "source_gate_identity_sha256_at_capture": "c" * 64,
+            "missing_identity_count": 0,
+            "missing_identity_sha256": "e" * 64,
+            "metadata_fields_read": ["match_date", "home_team", "away_team"],
+            "target_outcomes_read": False,
+        },
+    }
+    result.update(overrides)
+    return result
+
+
+def history_frame():
+    rows = []
+    first = datetime(2026, 8, 1)
+    for index in range(40):
+        day = first + timedelta(days=index)
+        if index % 2 == 0:
+            home, away, hg, ag, result = "Home FC", f"Opponent {index}", 2, 1, "H"
+        else:
+            home, away, hg, ag, result = f"Opponent {index}", "Away FC", 0, 1, "A"
+        rows.append({
+            "Date": day.strftime("%d/%m/%Y"),
+            "HomeTeam": home,
+            "AwayTeam": away,
+            "FTHG": hg,
+            "FTAG": ag,
+            "FTR": result,
+            "HC": 4 + index % 3,
+            "AC": 2 + index % 2,
+            "HY": index % 2,
+            "AY": (index + 1) % 2,
+            "HR": 0,
+            "AR": 0,
+        })
+    # Same-day history must be excluded because the historical source is date-only.
+    rows.append({
+        "Date": "28/10/2026",
+        "HomeTeam": "Home FC",
+        "AwayTeam": "Same Day Opponent",
+        "FTHG": 1,
+        "FTAG": 0,
+        "FTR": "H",
+        "HC": 8,
+        "AC": 0,
+        "HY": 0,
+        "AY": 0,
+        "HR": 0,
+        "AR": 0,
+    })
+    return pd.DataFrame(rows)
+
+
+def event(event_id="serie-a-event-1", **overrides):
+    item = {
+        "id": event_id,
+        "sport_key": SPORT_KEY,
+        "sport_title": "Serie A",
+        "commence_time": "2026-10-30T18:45:00Z",
+        "home_team": "Home FC",
+        "away_team": "Away FC",
+    }
+    item.update(overrides)
+    return item
+
+
+def response_for(payload, *, cost="0", status=200, history=()):
+    raw = json.dumps(payload, separators=(",", ":")).encode()
+    url = EVENTS_URL + "?apiKey=REDACTED&dateFormat=iso"
+
+    class FakeResponse:
+        def __init__(self):
+            self.status_code = status
+            self.headers = {"x-requests-last": cost} if cost is not None else {}
+            self.content = raw
+            self.url = url
+            self.history = history
+            self.iter_content_called = False
+            self.closed = False
+
+        def iter_content(self, chunk_size):
+            self.iter_content_called = True
+            yield self.content
+
+        def close(self):
+            self.closed = True
+
+    return FakeResponse()
+
+
+def test_source_gate_and_order_fail_before_provider_request():
+    calls = []
+    with pytest.raises(ValueError, match="stale"):
+        capture_free_fixture_preview(
+            api_key=API_KEY,
+            source_attestation=source_attestation(fresh_for_new_quote=False),
+            history=history_frame(),
+            request_started_at=STARTED,
+            get=lambda *a, **k: calls.append((a, k)),
+            clock=lambda: RECEIVED,
+        )
+    assert calls == []
+
+    bad = source_attestation(
+        source_archive_created_at_utc="2026-10-28T10:04:00Z"
+    )
+    with pytest.raises(ValueError, match="finish before"):
+        capture_free_fixture_preview(
+            api_key=API_KEY,
+            source_attestation=bad,
+            history=history_frame(),
+            request_started_at=STARTED,
+            get=lambda *a, **k: calls.append((a, k)),
+            clock=lambda: RECEIVED,
+        )
+    assert calls == []
+
+
+def test_stale_current_gate_freshness_blocks_before_provider_request():
+    calls = []
+    stale = source_attestation(
+        feature_source_gate_freshness={
+            "checked": True,
+            "fresh": False,
+            "reason": "SOURCE_ARCHIVE_MISSING_CURRENT_GATE_FIXTURES",
+            "metadata_fields_read": ["match_date", "home_team", "away_team"],
+            "target_outcomes_read": False,
+        }
+    )
+    with pytest.raises(ValueError, match="metadata-only feature-source gate"):
+        capture_free_fixture_preview(
+            api_key=API_KEY,
+            source_attestation=stale,
+            history=history_frame(),
+            request_started_at=STARTED,
+            get=lambda *a, **k: calls.append((a, k)),
+            clock=lambda: RECEIVED,
+        )
+    assert calls == []
+
+
+def test_exactly_one_zero_credit_events_request_and_original_19_features_only():
+    payload = [event()]
+    response = response_for(payload)
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append((url, kwargs))
+        return response
+
+    report = capture_free_fixture_preview(
+        api_key=API_KEY,
+        source_attestation=source_attestation(),
+        history=history_frame(),
+        request_started_at=STARTED,
+        get=fake_get,
+        clock=lambda: RECEIVED,
+    )
+
+    assert len(calls) == 1
+    assert calls[0][0] == EVENTS_URL
+    assert calls[0][1]["allow_redirects"] is False
+    assert calls[0][1]["stream"] is True
+    assert calls[0][1]["timeout"] == 20
+    assert response.closed is True
+    assert response.iter_content_called is True
+    assert calls[0][1]["params"]["apiKey"] == API_KEY
+    assert calls[0][1]["params"]["dateFormat"] == "iso"
+    assert report["status"] == "CAPTURED"
+    assert report["provider_last_request_cost_credits"] == 0
+    assert report["provider_response_sha256"] == hashlib.sha256(response.content).hexdigest()
+    assert report["future_fixture_count"] == 1
+    assert report["feature_count"] == 19
+    assert report["candidate_sha256"] == FROZEN_SHA
+    assert report["feature_builder_git_blob_sha1"] == "401b3a0893371bfa4a488ec92a4a54af2678c8f7"
+    assert report["model_probabilities_emitted"] is False
+    assert report["market_quotes_read"] is False
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
+    assert report["production_pkl_touched"] is False
+    assert report["supabase_access"] == "READ_ONLY_METADATA_GATE"
+    assert report["supabase_metadata_fields_read"] == ["match_date", "home_team", "away_team"]
+    assert report["supabase_writes"] == 0
+    assert report["supabase_ddl"] == 0
+    manifest = report["feature_manifests"][0]
+    assert set(manifest["features"]) == set(FEATURE_SETS["ALL_FOOTBALL"])
+    assert len(manifest["features"]) == 19
+    assert manifest["history_coverage"]["home"]["prior_matches_in_frozen_30_match_window"] == 20
+    assert manifest["median_imputed_frozen_feature_count"] + manifest["observed_frozen_feature_count"] == 19
+    assert API_KEY not in json.dumps(report)
+
+
+@pytest.mark.parametrize("cost", ["1", "2", None, "not-a-number"])
+def test_nonzero_or_unattested_provider_cost_fails_closed(cost):
+    calls = []
+    response = response_for([event()], cost=cost)
+    with pytest.raises(ValueError, match="quota cost|zero-credit"):
+        capture_free_fixture_preview(
+            api_key=API_KEY,
+            source_attestation=source_attestation(),
+            history=history_frame(),
+            request_started_at=STARTED,
+            get=lambda *a, **k: (calls.append((a, k)) or response),
+            clock=lambda: RECEIVED,
+        )
+    assert len(calls) == 1
+    assert response.iter_content_called is False
+    assert response.closed is True
+
+
+def test_redirect_or_non_200_response_fails_closed():
+    redirected = response_for([event()], history=(object(),))
+    with pytest.raises(ValueError, match="redirect"):
+        capture_free_fixture_preview(
+            api_key=API_KEY,
+            source_attestation=source_attestation(),
+            history=history_frame(),
+            request_started_at=STARTED,
+            get=lambda *a, **k: redirected,
+            clock=lambda: RECEIVED,
+        )
+    assert redirected.closed is True
+    assert redirected.iter_content_called is False
+    not_ok = response_for([], status=302)
+    with pytest.raises(RuntimeError, match="HTTP 302"):
+        capture_free_fixture_preview(
+            api_key=API_KEY,
+            source_attestation=source_attestation(),
+            history=history_frame(),
+            request_started_at=STARTED,
+            get=lambda *a, **k: not_ok,
+            clock=lambda: RECEIVED,
+        )
+    assert not_ok.closed is True
+    assert not_ok.iter_content_called is False
+
+
+def test_oversized_response_is_bounded_and_closed():
+    class OversizedResponse:
+        status_code = 200
+        headers = {"x-requests-last": "0"}
+        url = EVENTS_URL
+        history = ()
+
+        def __init__(self):
+            self.closed = False
+            self.chunks_requested = 0
+
+        def iter_content(self, chunk_size):
+            assert chunk_size == 64 * 1024
+            self.chunks_requested += 1
+            yield b"x" * (MAX_RESPONSE_BYTES + 1)
+            self.chunks_requested += 1
+            yield b"must-not-be-consumed"
+
+        def close(self):
+            self.closed = True
+
+    response = OversizedResponse()
+    with pytest.raises(ValueError, match="exceeds the size limit"):
+        capture_free_fixture_preview(
+            api_key=API_KEY,
+            source_attestation=source_attestation(),
+            history=history_frame(),
+            request_started_at=STARTED,
+            get=lambda *a, **k: response,
+            clock=lambda: RECEIVED,
+        )
+    assert response.chunks_requested == 1
+    assert response.closed is True
+
+
+def test_provider_odds_or_outcome_fields_are_rejected():
+    with pytest.raises(ValueError, match="non-metadata"):
+        _validated_future_events([event(home_score=2)], observed_at=RECEIVED)
+    with pytest.raises(ValueError, match="non-metadata"):
+        _validated_future_events([event(bookmakers=[])], observed_at=RECEIVED)
+
+
+def test_duplicate_canonical_fixture_identity_is_rejected_even_with_different_ids():
+    second = event(event_id="different-provider-id")
+    with pytest.raises(ValueError, match="duplicate future event identity"):
+        _validated_future_events([event(), second], observed_at=RECEIVED)
+
+
+def test_in_play_events_are_excluded_and_empty_future_list_is_valid():
+    live = event(event_id="live", commence_time="2026-10-28T10:02:30Z")
+    future = event()
+    selected = _validated_future_events([live, future], observed_at=RECEIVED)
+    assert [row["event_id"] for row in selected] == ["serie-a-event-1"]
+    assert _validated_future_events([live], observed_at=RECEIVED) == []
+
+
+def test_feature_readiness_uses_date_only_cutoff_and_never_emits_probabilities():
+    report = build_feature_readiness_preview(
+        history_frame(),
+        [{
+            "event_id": "serie-a-event-1",
+            "home_team": "Home FC",
+            "away_team": "Away FC",
+            "commence_time_utc": "2026-10-30T18:45:00Z",
+        }],
+        as_of_utc=STARTED,
+    )
+    row = report["feature_manifests"][0]
+    assert row["feature_history_cutoff_utc"] == "2026-10-28T00:00:00+00:00"
+    assert row["history_coverage"]["home"]["prior_matches_in_frozen_30_match_window"] == 20
+    assert report["feature_count"] == 19
+    assert report["model_probabilities_emitted"] is False
+    assert "brier_score" not in json.dumps(report).lower()
+    assert "log_loss" not in json.dumps(report).lower()
+
+
+def test_live_workflow_is_manual_main_only_before_secret_exposure():
+    workflow_path = Path(".github/workflows/serie-a-v2-free-fixture-feature-preview.yml")
+    workflow = workflow_path.read_text(encoding="utf-8")
+    main_only_guard = "if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}"
+    assert "workflow_dispatch:" in workflow
+    assert "schedule:" not in workflow
+    assert "workflow_run:" not in workflow
+    assert main_only_guard in workflow
+    assert workflow.index(main_only_guard) < workflow.index("THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}")
+
+def test_capture_timestamp_is_after_body_and_events_starting_during_body_are_excluded():
+    response = response_for([event(commence_time="2026-10-28T10:03:30Z")])
+    clock_values = iter([RECEIVED, datetime(2026, 10, 28, 10, 4, tzinfo=UTC)])
+    report = capture_free_fixture_preview(
+        api_key=API_KEY,
+        source_attestation=source_attestation(),
+        history=history_frame(),
+        request_started_at=STARTED,
+        get=lambda *a, **k: response,
+        clock=lambda: next(clock_values),
+    )
+    assert report["captured_at_utc"] == "2026-10-28T10:04:00+00:00"
+    assert report["future_fixture_count"] == 0
+    assert report["status"] == "NO_UPCOMING_FIXTURES"
+    assert response.closed is True
+
+
+def test_source_freshness_is_rechecked_after_slow_response_body():
+    source = source_attestation(
+        source_archive_created_at_utc="2026-10-27T10:05:00Z",
+        latest_source_observed_at_utc="2026-10-27T10:04:00Z",
+        parent_run={
+            "run_id": 54321,
+            "run_head_sha": "b" * 40,
+            "run_completed_at_utc": "2026-10-27T10:06:00Z",
+        },
+    )
+    started = datetime(2026, 10, 28, 10, 3, tzinfo=UTC)
+    response = response_for([event()])
+    clock_values = iter([
+        datetime(2026, 10, 28, 10, 3, 30, tzinfo=UTC),
+        datetime(2026, 10, 28, 10, 5, tzinfo=UTC),
+    ])
+    with pytest.raises(ValueError, match="fresh throughout"):
+        capture_free_fixture_preview(
+            api_key=API_KEY,
+            source_attestation=source,
+            history=history_frame(),
+            request_started_at=started,
+            get=lambda *a, **k: response,
+            clock=lambda: next(clock_values),
+        )
+    assert response.closed is True
+
+def test_offline_ci_reaudits_frozen_dependencies_on_pull_request_and_push():
+    workflow_path = Path(".github/workflows/serie-a-v2-free-fixture-feature-preview-tests.yml")
+    workflow = workflow_path.read_text(encoding="utf-8")
+    required_dependencies = [
+        "historical_football_signal_lab.py",
+        "serie_a_v2_asof_feature_manifest.py",
+        "serie_a_v2_current_form_forward_capture.py",
+        "serie_a_v2_current_form_source_capture.py",
+        "serie_a_v2_frozen_shadow_preview.py",
+        "serie_a_v2_attest_real_source.py",
+        "serie_a_v2_prequote_source_archive_gate.py",
+        "serie_a_v2_live_diagnostic_report.py",
+        "serie_a_runtime_config.py",
+        "market_anchor_1x2_v2_shadow.py",
+        "market_anchor_1x2_v1.py",
+        "experiments/market_anchor_1x2_v2_current_form_policy.json",
+        "experiments/market_anchor_1x2_v2_protocol.json",
+        "research/models/market_anchor_v2_serie_a_frozen_candidate.json",
+        "research/SERIE_A_V2_CURRENT_FORM_FORWARD_ONLY_CONTRACT_20261018.md",
+        "tests/test_serie_a_v2_current_form_source_capture.py",
+        "tests/test_serie_a_v2_current_form_forward_capture.py",
+        "tests/test_serie_a_v2_asof_feature_manifest.py",
+        "tests/test_serie_a_v2_atalanta_alias.py",
+        "tests/test_serie_a_v2_frozen_shadow_preview.py",
+        "tests/test_serie_a_v2_prequote_source_archive_gate.py",
+        "tests/test_serie_a_v2_attest_real_source.py",
+        "tests/test_serie_a_v2_live_diagnostic_report.py",
+        "tests/test_historical_football_signal_lab.py",
+        "tests/test_serie_a_v2_current_form_dependency_triggers.py"
+    ]
+    for path in required_dependencies:
+        assert workflow.count(f'"{path}"') == 2, (
+            f"frozen dependency must trigger offline contract tests for both pull_request and push: {path}"
+        )
+    assert "schedule:" not in workflow
+    assert "workflow_dispatch:" not in workflow
+
+
+def test_duplicate_json_object_keys_fail_closed_after_zero_credit_attestation():
+    class DuplicateKeyResponse:
+        status_code = 200
+        headers = {"x-requests-last": "0"}
+        url = EVENTS_URL + "?apiKey=REDACTED&dateFormat=iso"
+        history = ()
+
+        def __init__(self):
+            self.closed = False
+            self.iter_content_called = False
+
+        def iter_content(self, chunk_size):
+            self.iter_content_called = True
+            yield (
+                b'[{"id":"first","id":"second","sport_key":"soccer_italy_serie_a",'
+                b'"sport_title":"Serie A","commence_time":"2026-10-30T18:45:00Z",'
+                b'"home_team":"Home FC","away_team":"Away FC"}]'
+            )
+
+        def close(self):
+            self.closed = True
+
+    response = DuplicateKeyResponse()
+    with pytest.raises(ValueError, match="duplicate object keys"):
+        capture_free_fixture_preview(
+            api_key=API_KEY,
+            source_attestation=source_attestation(),
+            history=history_frame(),
+            request_started_at=STARTED,
+            get=lambda *a, **k: response,
+            clock=lambda: RECEIVED,
+        )
+    assert response.iter_content_called is True
+    assert response.closed is True
+
+
+
+def test_events_request_uses_only_zero_credit_metadata_parameters():
+    """Prevent accidental addition of paid odds/market parameters to the free /events probe."""
+    response = response_for([event()])
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append((url, kwargs))
+        return response
+
+    report = capture_free_fixture_preview(
+        api_key=API_KEY,
+        source_attestation=source_attestation(),
+        history=history_frame(),
+        request_started_at=STARTED,
+        get=fake_get,
+        clock=lambda: RECEIVED,
+    )
+
+    assert len(calls) == 1
+    assert calls[0][0] == EVENTS_URL
+    params = calls[0][1]["params"]
+    assert set(params) == {"apiKey", "dateFormat", "commenceTimeFrom"}
+    assert params["apiKey"] == API_KEY
+    assert params["dateFormat"] == "iso"
+    assert params["commenceTimeFrom"] == STARTED.isoformat().replace("+00:00", "Z")
+    assert not ({"markets", "regions", "oddsFormat", "bookmakers", "eventIds", "scores"} & set(params))
+    assert report["provider_last_request_cost_credits"] == 0
+    assert API_KEY not in json.dumps(report)
+
+
+def test_source_loader_passes_fresh_metadata_only_gate_identities_to_verifier(monkeypatch):
+    expected_gate = {
+        (f"2026-10-{(index % 28) + 1:02d}", f"Home FC {index}", f"Away FC {index}")
+        for index in range(30)
+    }
+    client = object()
+    monkeypatch.setattr(
+        preview_module.current_form_source_capture,
+        "read_completed_primary_event_identities",
+        lambda received_client, *, now: expected_gate if received_client is client else set(),
+        raising=False,
+    )
+    archive = {
+        "artifact_id": 12345,
+        "created_at": STARTED - timedelta(minutes=2),
+        "sha256": "a" * 64,
+    }
+    parent = {
+        "run_id": 54321,
+        "run_head_sha": "b" * 40,
+        "run_completed_at_utc": "2026-10-28T10:01:00Z",
+    }
+    raw = b"verified-source-archive"
+    captured = {}
+
+    monkeypatch.setattr(preview_module, "discover_archives", lambda *, token: [archive])
+    monkeypatch.setattr(
+        preview_module, "get_archive", lambda artifact_id, *, token: raw
+    )
+    monkeypatch.setattr(
+        preview_module, "verify_source_run",
+        lambda item, *, quote_time, token: parent if item is archive else {},
+    )
+
+    def fake_verify_latest(
+        archive_metadata, *, as_of_utc, load_archive, verify_parent_run,
+        current_gate_identities, write_sources_to=None,
+    ):
+        captured["gate"] = current_gate_identities
+        assert current_gate_identities == expected_gate
+        assert verify_parent_run(archive, quote_time=as_of_utc) == parent
+        assert load_archive(archive["artifact_id"]) == raw
+        return source_attestation()
+
+    gate_attestation = source_attestation()["feature_source_gate_attestation"]
+    monkeypatch.setattr(preview_module, "verify_latest_source_archive", fake_verify_latest)
+    monkeypatch.setattr(
+        preview_module,
+        "verify_and_load_archive",
+        lambda archive_bytes, item, verified_parent: (
+            history_frame(),
+            {
+                "artifact_sha256": "a" * 64,
+                "latest_source_observed_at_utc": "2026-10-28T09:59:00Z",
+                "manifest": {"frozen_candidate_sha256": FROZEN_SHA},
+                "feature_source_gate_attestation": gate_attestation,
+            },
+        ),
+    )
+
+    history, attestation = preview_module.load_verified_current_source(
+        token="read-only-github-token", now=STARTED, supabase_client=client
+    )
+    assert not history.empty
+    assert captured["gate"] == expected_gate
+    assert attestation["feature_source_gate_freshness"]["fresh"] is True
+
+
+def test_source_loader_fails_closed_if_metadata_only_gate_reader_is_missing(monkeypatch):
+    monkeypatch.delattr(
+        preview_module.current_form_source_capture,
+        "read_completed_primary_event_identities",
+        raising=False,
+    )
+    monkeypatch.setattr(
+        preview_module, "discover_archives",
+        lambda **kwargs: pytest.fail("archive discovery must not run without current gate reader"),
+    )
+    with pytest.raises(RuntimeError, match="metadata-only current-gate identity reader"):
+        preview_module.load_verified_current_source(
+            token="read-only-github-token", now=STARTED, supabase_client=object()
+        )
+
+
+def test_source_loader_fails_closed_if_verifier_lacks_current_gate_freshness_support(monkeypatch):
+    monkeypatch.setattr(
+        preview_module.current_form_source_capture,
+        "read_completed_primary_event_identities",
+        lambda client, *, now: {("2026-10-01", "Home FC", "Away FC")},
+        raising=False,
+    )
+
+    def old_verifier(
+        archive_metadata, *, as_of_utc, load_archive, verify_parent_run, write_sources_to=None
+    ):
+        pytest.fail("old verifier must never be called without current gate freshness support")
+
+    monkeypatch.setattr(preview_module, "verify_latest_source_archive", old_verifier)
+    monkeypatch.setattr(
+        preview_module, "discover_archives",
+        lambda **kwargs: pytest.fail("archive discovery must not run without current gate verifier API"),
+    )
+    with pytest.raises(RuntimeError, match="current-gate freshness support"):
+        preview_module.load_verified_current_source(
+            token="read-only-github-token", now=STARTED, supabase_client=object()
+        )
