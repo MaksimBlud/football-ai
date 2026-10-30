@@ -7128,3 +7128,25 @@ public.model_artifact_bundles currently contains 0 registered bundles, so the fr
 6. Keep the separate 30-eligible-prospective-forecast outcome gate closed until its frozen conditions are met, and resolve the non-legacy incumbent reference without changing the parent protocol.
 
 Frozen candidate remains a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6; the 19-feature/weight contract, active_lambda=0, and research-only shadow_lambda=1 are unchanged. No target outcomes were read/scored, no paid provider call, no Supabase write/DDL, no production .pkl change, no merge, no promotion, and no schedule change.
+
+
+## 2026-10-30 10:56 UTC — canonical identity digest serialization cross-check
+
+A fresh read-only Supabase query selected only `match_date, home_team, away_team` from `public.league_finished_results` for Serie A 2026/27 with dates before 2026-10-30. It selected no score, goal, result, settlement, or target-outcome fields.
+
+- Raw rows: **93**.
+- Canonical identities after the frozen runtime aliases (`Inter → Inter Milan`, `Milan → AC Milan`, `Roma → AS Roma`, plus V2-local `Atalanta BC → Atalanta`): **90**.
+- Latest date: **2026-10-29**.
+- Reversed canonical fixture pairs: **0**.
+- The three-row raw-to-canonical reduction is the duplicate Atalanta/Atalanta BC spelling, not three additional fixtures.
+
+The audit explicitly checked the two different digest serializers currently present in the open research branches. They must not be compared as if they were the same hash:
+
+1. The prospective evaluator's `_sha_fixture_set` uses compact JSON arrays (`json.dumps(sorted_identities, ensure_ascii=False, separators=(",", ":"))`). SQL/pgcrypto recomputation over the exact current 90-identity set produced **`09442a8a74c0471e3b6ae161d39cd73e1015fc5d541c994a09134555cc720c93`**.
+2. The source-capture helper `_fixture_identity_sha256` uses sorted tab-delimited identity rows joined by LF. SQL/pgcrypto recomputation over the same set produced **`95e3d71ab97076b5edee503301843f55d22eb14a832f7e1aab7f2012e6013811`**.
+
+Both counts are 90 and the different hashes are expected because the byte serializations differ. The previously recorded manual digest `7c91dad874222ff98e6cce033ce36c71c51306b5979a7854ff8c3c60eab36bce` was not reproduced by either exact in-repository serializer against this fresh result; retain it only as a historical note, not as a current attestation. The post-#699 on-main source artifact must publish its own algorithm-labelled gate/source digests and prove exact set equality before any current-form feature calculation is admitted.
+
+This is a metadata/hash audit only. The last source archive still records 80 gate identities and ends at 2026-10-28; the current gate has 90 identities through 2026-10-29, so that archive remains stale for this set. Saved odds remain unchanged (3,966 total / 3,915 strictly pre-kickoff / zero future strictly pre-kickoff rows), so no new prospective forecast or quality metric exists. No target outcomes were read, no paid call, Supabase write/DDL, production `.pkl` change, merge, or schedule change occurred.
+
+**Next:** HUMAN-MERGE #699 at its exact live API head, then run the existing source capture on the resulting `main` and verify both serializer-labelled digests against the actual archive and current metadata identities. Do not backfill old quotes or open the separate 30-eligible-prospective-forecast outcome gate.
