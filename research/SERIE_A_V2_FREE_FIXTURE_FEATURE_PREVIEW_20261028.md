@@ -25,4 +25,4 @@ The fixture endpoint is a metadata source, not an odds source. Its output can he
 
 ## Verification status
 
-The unit tests use mocked provider responses and synthetic historical rows; they do not call the provider. The manual live workflow is not run from PRs. A real live artifact is required after human merge and manual dispatch before claiming fixture-source availability. If the provider reports no future events, the artifact records `NO_UPCOMING_FIXTURES`; this does not imply a model failure or permit a forecast.
+The unit tests use mocked provider responses and synthetic historical rows; they do not call the provider. The manual live workflow is not run from PRs. A real live artifact is required after human merge of PR #699 and this PR, followed by manual dispatch, before claiming fixture-source availability. If the provider reports no future events, the artifact records `NO_UPCOMING_FIXTURES`; this does not imply a model failure or permit a forecast.
