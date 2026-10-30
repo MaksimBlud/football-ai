@@ -236,3 +236,21 @@ def test_free_diagnostic_secrets_are_available_only_on_main():
     header = diagnostic.split("concurrency:", 1)[0]
     assert "workflow_dispatch:" in header
     assert '- cron: "13 6 * * *"' in header
+
+
+def test_all_original_v2_supabase_secret_jobs_are_main_ref_only():
+    """Every original V2 workflow that receives Supabase secrets must reject non-main refs."""
+    protected_jobs = {
+        ".github/workflows/serie-a-v2-forward-preview.yml": "original-v2-forward-preview",
+        ".github/workflows/serie-a-v2-current-form-source-capture.yml": "capture-current-form",
+        ".github/workflows/serie-a-v2-current-form-forward-preview.yml": "current-form-forward-preview",
+        ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml": "free-diagnostic",
+    }
+    guard = "github.ref == 'refs/heads/main'"
+    for workflow_path, job_name in protected_jobs.items():
+        workflow = Path(workflow_path).read_text(encoding="utf-8")
+        job = workflow.split(f"  {job_name}:\\n", 1)[1].split("\\n    steps:", 1)[0]
+        assert "SUPABASE_URL: \${{ secrets.SUPABASE_URL }}" in job
+        assert "SUPABASE_KEY: \${{ secrets.SUPABASE_KEY }}" in job
+        job_condition = job.split("\\n    runs-on:", 1)[0]
+        assert guard in job_condition, f"{workflow_path} exposes Supabase secrets without a main-ref guard"
