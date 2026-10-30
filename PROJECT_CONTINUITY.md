@@ -1,18 +1,59 @@
-## 2026-10-30 01:51 UTC — exact-head V2 ZIP/source guard proof and fresh read-only gate audit
+# Football AI — Project Continuity
 
-Fresh `main` is still `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no merge or main mutation.
+## 2026-10-30 01:59 UTC — V2 source/archive hardening, exact-head CI, and live-data checkpoint
 
-- PR [#699](https://github.com/MaksimBlud/football-ai/pull/699) is open/mergeable at exact HEAD `3d6c52c86c8298167b39e66fee388d0dd9399fe9` (23 files, 74 commits). The integrated guard now streams both GitHub Actions source ZIP readers in 64-KiB chunks, validates declared Content-Length when present, enforces actual bytes before buffering, stops at the first over-limit chunk, and closes the response on every path. The old-season reader uses the frozen ZIP limit; the current-form reader uses its 16,000,000-byte limit. Dedicated declared-size and streamed-overrun regressions exist for both readers.
-- The same PR bounds all eleven Football-Data CSV bodies, validates exact HTTPS source URLs/direct HTTP 200, records source-observation time after full body consumption, pins the frozen candidate SHA, records the feature-gate identity count/list/SHA, verifies full source coverage, and enforces gate → source observation → archive → parent-run ordering. Job-level `github.ref == refs/heads/main` guards precede secret-bearing environment variables on all three forward/source workflows.
-- Exact-head PR #699 CI: **7/7 SUCCESS**. Original V2 Shadow Tests run [40983644455](https://github.com/MaksimBlud/football-ai/actions/runs/40983644455) logged **220 passed**; the same job's production-model hash guard completed successfully. Remaining exact-head runs: Research [40983644638](https://github.com/MaksimBlud/football-ai/actions/runs/40983644638), Serie A [40983644536](https://github.com/MaksimBlud/football-ai/actions/runs/40983644536), Bundesliga [40983644513](https://github.com/MaksimBlud/football-ai/actions/runs/40983644513), Ligue 1 [40983644417](https://github.com/MaksimBlud/football-ai/actions/runs/40983644417), Eredivisie [40983644484](https://github.com/MaksimBlud/football-ai/actions/runs/40983644484), Product [40983644459](https://github.com/MaksimBlud/football-ai/actions/runs/40983644459). This is branch CI, not post-merge runtime proof.
-- Re-read actual main Actions job logs: source capture [40868280531](https://github.com/MaksimBlud/football-ai/actions/runs/40868280531) SUCCESS, 19 tests, 80 metadata-only gate identities, 88 completed current-season CSV rows, 10 historical CSVs / 11 total source files, archive artifact `12894054589`, ZIP SHA-256 `b4b1144ca28414ccf7a5a7a5c02fde4611e8e0f1a37997012de031a38baa14b0`; no paid calls, Supabase writes or target-outcome scoring.
-- Original old-season forward [40898762675](https://github.com/MaksimBlud/football-ai/actions/runs/40898762675) SUCCESS, 71 tests, verified 10 pre-prospective CSVs / 3,800 historical rows, but `quotes_seen=0`, `future_quotes_checked=0`, `forecasts_created=0`. Current-form forward [40899523036](https://github.com/MaksimBlud/football-ai/actions/runs/40899523036) SUCCESS, 53 tests, verified source artifact `12894054589` and parent `40868280531`, source age 12,315 seconds, but `quotes_seen=0`, `v2_current_form_shadow_captured=0`; target outcomes not read/scored.
-- Fresh read-only Supabase pre-kickoff aggregate: **3,915 strictly pre-kickoff snapshots**, latest `2026-10-13T14:48:53.042620Z`, zero in the last 24 hours, zero in the last 7 days, and zero future fixtures with a saved snapshot strictly before kickoff. No score/result columns were queried.
-- Metadata-only feature-input audit selected exactly `match_date,home_team,away_team`: **91** raw Serie A 2026/27 rows, **88** unique canonical identities after the V2-local `Atalanta BC → Atalanta` alias, latest date **2026-10-28**. No score/result/settlement columns were selected. The captured archive's gate set remains 80 identities; later metadata contains 88, so the old archive must not be treated as covering the later set. A new post-merge capture must bind its own gate SHA and complete coverage.
-- PR #702 remains open with 7/7 CI but no live free-fixture request has been made. PR #701 remains fail-closed: its evaluator pins `FROZEN_INCUMBENT_REFERENCE = None`, while the frozen current-form policy requires market, frozen production incumbent, and lambda-1 shadow. Do not substitute the prohibited legacy XGBoost model or weaken the protocol; no target outcomes have been read. The 30-eligible-prospective-forecast outcome gate remains CLOSED.
-- Supabase Security Advisor still reports RLS disabled on five public tables (`teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, `epl_ai_market_pair_ledger`). No DDL was run; enabling RLS without designed policies would block client access. This remains a separate critical security issue.
+Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No merge or main mutation.
 
-HUMAN-MERGE only. No main change, paid request, Supabase write/DDL, protected target-outcome read, production `.pkl` change, model refit, threshold tuning, promotion, or schedule change occurred.
+### Exact-head original V2 guard PR
+
+PR [#699](https://github.com/MaksimBlud/football-ai/pull/699) is open and mergeable at HEAD `38d6100ab893981e2f59f5a0306563de680f0da0` (76 commits, 23 files). This remains branch-only code; no post-merge runtime proof yet.
+
+New protections now include:
+- Both GitHub Actions artifact ZIP readers stream 64-KiB chunks, enforce declared and actual compressed-download limits, stop at the first excess chunk, and close responses.
+- The current-form ZIP reader now validates every ZIP member's uncompressed size **before reading/decompressing the manifest or any CSV**: 5 MB per historical CSV, 10 MB aggregate historical CSVs, 2 MB current CSV, 3 MB manifest, and 16 MB total uncompressed archive. Duplicate/unexpected members and invalid sizes fail closed.
+- The ten historical Football-Data CSV downloads now receive the remaining aggregate byte budget. Content-Length is rejected before body read if it exceeds that remaining budget; otherwise actual streamed bytes are stopped at the first aggregate overrun. The old post-download aggregate check remains as defense-in-depth.
+- All eleven source CSVs remain bounded and source URLs/status/final URL are checked. Observation time is sampled only after the complete response body. The feature-input gate stores the canonical identity list, count and SHA-256, and the verifier recomputes both gate digest and source coverage.
+- Job-level `github.ref == refs/heads/main` guards precede secret-bearing environment variables on all three source/forward workflows.
+
+**Exact-head CI: 7/7 SUCCESS** on `38d6100ab893981e2f59f5a0306563de680f0da0`:
+- Original V2 Shadow Tests [#40988923958](https://github.com/MaksimBlud/football-ai/actions/runs/40988923958): **225 passed**; production `*.pkl` hash/diff guard passed.
+- Research [#40988924014](https://github.com/MaksimBlud/football-ai/actions/runs/40988924014).
+- Serie A [#40988923786](https://github.com/MaksimBlud/football-ai/actions/runs/40988923786).
+- Bundesliga [#40988923841](https://github.com/MaksimBlud/football-ai/actions/runs/40988923841).
+- Ligue 1 [#40988923967](https://github.com/MaksimBlud/football-ai/actions/runs/40988923967).
+- Eredivisie [#40988923971](https://github.com/MaksimBlud/football-ai/actions/runs/40988923971).
+- Product [#40988923807](https://github.com/MaksimBlud/football-ai/actions/runs/40988923807).
+
+The 225 tests establish code/contract regression behavior only. They do **not** prove a live prospective prediction or model superiority.
+
+### Actual main-branch runtime evidence (old code path, not the unmerged guards)
+
+- Source Capture [#40868280531](https://github.com/MaksimBlud/football-ai/actions/runs/40868280531): SUCCESS, 19 tests, feature-input gate count 80, current-season CSV 88 completed rows, ten historical CSVs / eleven source files, artifact `12894054589`, ZIP SHA-256 `b4b1144ca28414ccf7a5a7a5c02fde4611e8e0f1a37997012de031a38baa14b0`. No paid calls, Supabase writes or target-outcome scoring.
+- Original Forward-Only [#40898762675](https://github.com/MaksimBlud/football-ai/actions/runs/40898762675): SUCCESS, 71 tests, 3,800 historical rows / ten pre-prospective CSVs, but `quotes_seen=0`, `future_quotes_checked=0`, `forecasts_created=0`.
+- Current-Form Forward-Only [#40899523036](https://github.com/MaksimBlud/football-ai/actions/runs/40899523036): SUCCESS, 53 tests, verified artifact `12894054589` and parent run `40868280531`, source age 12,315 seconds, but `quotes_seen=0` and `v2_current_form_shadow_captured=0`. No target outcomes were read/scored.
+- The captured archive's gate set was 80 identities. A fresh metadata-only query selecting only `match_date,home_team,away_team` now returns 91 raw Serie A 2026/27 rows / **88 canonical identities** after V2-local `Atalanta BC → Atalanta`, latest date 2026-10-28. The old archive does not prove coverage of the later 88-identity set; only a new post-merge capture can do so.
+
+### Fresh pre-kickoff data audit
+
+Read-only Supabase query restricted to strictly pre-kickoff rows:
+- 3,915 strictly pre-kickoff snapshots.
+- Latest strictly pre-kickoff snapshot: `2026-10-13T14:48:53.042620Z`.
+- Zero strictly pre-kickoff snapshots in the last 24 hours or 7 days.
+- Zero future events with a saved snapshot strictly before kickoff.
+
+No score/result/settlement columns were selected. No Supabase writes or DDL.
+
+### Remaining scientific blockers
+
+- PR [#702](https://github.com/MaksimBlud/football-ai/pull/702) is open, mergeable, 7/7 CI SUCCESS. It is a free fixture/feature-readiness preview only; no live request has been made.
+- PR [#701](https://github.com/MaksimBlud/football-ai/pull/701) is open with 6/6 CI SUCCESS. Its evaluator keeps `FROZEN_INCUMBENT_REFERENCE = None`; the frozen current-form policy requires de-vigged market, frozen production incumbent, and lambda-1 shadow. Do not substitute the prohibited legacy XGBoost model or weaken the preregistered comparator contract. The 30-eligible-completed-prospective-forecast outcome gate remains CLOSED; no target outcomes have been read.
+- PRs [#694](https://github.com/MaksimBlud/football-ai/pull/694) and [#700](https://github.com/MaksimBlud/football-ai/pull/700) remain open with 7/7 CI but their guard changes are consolidated in #699; do not merge them separately without a fresh overlap review.
+- PRs #657, #659 and #660 are verified merged.
+- Supabase Security Advisor reports RLS disabled on `teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, and `epl_ai_market_pair_ledger`. No DDL was run; policies must be designed before RLS can safely be enabled.
+
+Original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 features/weights, `active_lambda=0` market and `shadow_lambda=1` research-only remain unchanged. No old XGBoost restoration, paid odds call, production `.pkl` change, outcome read, threshold tuning, bet, publication, promotion, schedule change or other-agent setting change.
+
+HUMAN-MERGE only. The next runtime proof requires manual merge of #699, then a fresh main-branch source capture and forward run; the stale October 13 quotes must remain blocked.
 
 ## 2026-10-30 00:06 UTC — all source CSVs bounded; exact-head proof
 
@@ -215,8 +256,6 @@ Fresh read-only Supabase audit at approximately `2026-10-28T03:50Z` selected onl
 **Blockers unchanged:** no admissible new quote since Oct 13, zero new prospective V2 forecasts, no pinned non-legacy frozen incumbent vector/reference, evaluation gate CLOSED. No Brier/LogLoss comparison or superiority claim. Frozen candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, original 19 features/weights, `active_lambda=0`, `shadow_residual_lambda=1`, parent protocol and production artifacts unchanged. No paid API, Supabase writes/DDL, production changes, promotion, betting, or protected target-outcome reads. HUMAN-MERGE only.
 
 ---
-
-# Football AI — Project Continuity
 
 ## 2026-10-28 — Original V2 evaluator strict-schema guard and fresh runtime/data checkpoint
 
