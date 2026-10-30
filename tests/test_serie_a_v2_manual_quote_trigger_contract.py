@@ -226,3 +226,13 @@ def test_current_form_forward_preview_reaudits_frozen_runtime_dependencies():
         "tests/test_historical_football_signal_lab.py",
     ):
         assert required_test in test_step
+
+def test_free_diagnostic_secrets_are_available_only_on_main():
+    """The free diagnostic has Supabase secrets; dispatches from branches must be blocked."""
+    diagnostic = Path(".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml").read_text(encoding="utf-8")
+    job = diagnostic.split("  free-diagnostic:\n", 1)[1].split("\n      - uses:", 1)[0]
+    guard = "if: ${{ github.ref == 'refs/heads/main' }}"
+    assert guard in job.split("    runs-on:", 1)[0]
+    header = diagnostic.split("concurrency:", 1)[0]
+    assert "workflow_dispatch:" in header
+    assert '- cron: "13 6 * * *"' in header
