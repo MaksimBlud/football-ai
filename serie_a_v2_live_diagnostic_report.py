@@ -27,7 +27,8 @@ from serie_a_v2_frozen_shadow_preview import (
 PUBLIC_BASE = "https://www.football-data.co.uk/mmz4281"
 PAID_PROVIDER_REQUESTS = 0
 MAX_PUBLIC_SOURCE_FILES = len(SERIE_A_RUNTIME_CONFIG.historical_source.season_codes)
-MAX_HISTORICAL_CSV_BYTES = 10_000_000
+MAX_HISTORICAL_CSV_BYTES = 5_000_000
+MAX_HISTORICAL_TOTAL_BYTES = 10_000_000
 
 
 def _source_codes() -> list[str]:
@@ -127,6 +128,7 @@ def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -
     """Explicit, bounded configured public URLs; never odds API, never cache guess."""
     all_frames = []
     audit = []
+    total_source_bytes = 0
     if capture_dir is not None:
         capture_dir.mkdir(parents=True, exist_ok=True)
     for code in _source_codes():
@@ -152,6 +154,9 @@ def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -
                     close()
                 except Exception:
                     pass
+        if total_source_bytes + len(body) > MAX_HISTORICAL_TOTAL_BYTES:
+            raise RuntimeError("Public Serie A historical source collection exceeds total size limit")
+        total_source_bytes += len(body)
         capture = datetime.now(timezone.utc)
         if capture_dir is not None:
             (capture_dir / f"serie_a_{code}.csv").write_bytes(body)
