@@ -7150,3 +7150,46 @@ Both counts are 90 and the different hashes are expected because the byte serial
 This is a metadata/hash audit only. The last source archive still records 80 gate identities and ends at 2026-10-28; the current gate has 90 identities through 2026-10-29, so that archive remains stale for this set. Saved odds remain unchanged (3,966 total / 3,915 strictly pre-kickoff / zero future strictly pre-kickoff rows), so no new prospective forecast or quality metric exists. No target outcomes were read, no paid call, Supabase write/DDL, production `.pkl` change, merge, or schedule change occurred.
 
 **Next:** HUMAN-MERGE #699 at its exact live API head, then run the existing source capture on the resulting `main` and verify both serializer-labelled digests against the actual archive and current metadata identities. Do not backfill old quotes or open the separate 30-eligible-prospective-forecast outcome gate.
+
+
+## 2026-10-30 11:43 UTC — live source archive and canonical identity parity
+
+A fresh scheduled **Current-Form Source Capture** ran on unchanged main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`:
+
+- Source run [#41049950849](https://github.com/MaksimBlud/football-ai/actions/runs/41049950849), created 2026-10-30 11:42:02 UTC, completed 11:43:04 UTC; exact main SHA above.
+- Offline regression step: **19 passed**.
+- Source manifest: 10 frozen old-season CSVs plus current `2627/I1.csv`; current completed prior-day rows **90**; historical old-season rows **3,800**; combined history rows reported by the forward verifier **3,890**.
+- Feature-input gate read only `match_date, home_team, away_team`, observed **90** unique primary identities against the fixed minimum 30. It selected no score/result fields.
+- Current CSV SHA-256 from manifest and independently recomputed bytes: `32ca618587c90db25f16ea647cb55060f519c03830a1e8ec4a6c4204e27d5135`.
+- Source artifact ID **12973598320**; GitHub Actions artifact digest and independently downloaded ZIP SHA-256 both equal `02013d5984117f48f5efab2b8662fed7e291bdfd49689d27152325e129c877b4`. The ZIP contains the 11 CSVs and the source manifest; all 11 CSV byte hashes independently match their manifest entries.
+- Source observation: **11:42:59.273193 UTC**; archive creation: **11:42:59.333069 UTC**; parent workflow completed: **11:43:04 UTC**.
+
+The automatic **Current-Form Forward-Only Preview** then ran from that successful main-branch parent:
+
+- Run [#41050080529](https://github.com/MaksimBlud/football-ai/actions/runs/41050080529), created 11:43:07 UTC and completed 11:43:50 UTC.
+- Offline regression step: **53 passed**.
+- It downloaded and verified the exact source artifact and parent run; source age at verification was **44 seconds**.
+- Forward artifact ID **12974157310**; GitHub digest and independently downloaded ZIP SHA-256 both equal `80df126dc31e3de9280a396fe48e2e4f04a6f600db8bafc75a2f547f98f9b394`.
+- Report: `status=VERIFIED`, `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `target_outcomes_read=false`, `target_outcomes_scored=false`, `production_or_supabase_writes=0`, `paid_provider_calls=0`, `no_bet=true`. There were no eligible quotes, so no probability vector or forecast was emitted. This is source/forward provenance proof, **not** model-quality evidence.
+
+### Independent source/gate identity-set parity
+
+A fresh read-only Supabase query again selected only the three approved identity columns for Serie A 2026/27 before 2026-10-30:
+
+- Raw metadata rows: **93**.
+- Canonical unique identities: **90**.
+- Canonicalization exactly follows the existing runtime aliases `Inter → Inter Milan`, `Milan → AC Milan`, `Roma → AS Roma`, `Verona → Hellas Verona`, plus the V2-local `Atalanta BC → Atalanta`.
+- SQL/pgcrypto SHA-256 of sorted tab-delimited canonical identities joined by LF: `95e3d71ab97076b5edee503301843f55d22eb14a832f7e1aab7f2012e6013811`.
+- Independently recomputed from the actual archived `serie_a_2627.csv` identity columns using the same aliases and serializer: **90** identities and the exact same SHA-256 `95e3d71ab97076b5edee503301843f55d22eb14a832f7e1aab7f2012e6013811`.
+
+This resolves the apparent source-vs-gate digest mismatch in the earlier ad-hoc comparison: that CSV-side calculation applied only the Atalanta alias and omitted the four existing `SERIE_A_ALIASES` mappings. The in-repository canonicalizer applies all five mappings. The old manual digest `7c91dad874222ff98e6cce033ce36c71c51306b5979a7854ff8c3c60eab36bce` remains unreproduced and must not be used as an attestation. The canonical 90-event identity set is now independently matched between current Supabase metadata and the actual downloaded source CSV.
+
+**Scope limitation:** both live workflow runs used old main SHA `40887ebb...`; main's source manifest does not yet persist the identity digests. This independent parity check mirrors the canonicalizer/serializer now present in open PR #699, but it is **not** a post-merge live execution of #699. PR #699 remains open at exact HEAD `3e772c859bf3538a492aaffc314be533285d7db0`, with all seven exact-head checks SUCCESS. After HUMAN-MERGE, rerun the source workflow and require the new manifest to publish and the forward verifier to recalculate both identity digests before treating the guard as live-proven.
+
+### Quotes and scheduled workflow timing
+
+A fresh read-only aggregation of `public.odds_snapshots` with strict `snapshot_time_utc < commence_time_utc` returned **zero rows in the last seven days**. Consequently, the successful forward run had no new pre-kickoff quote and correctly emitted no shadow.
+
+The source-capture schedule nominally targets 05:50 UTC but its run was created at 11:42:02 UTC; the forward preview followed at 11:43:07 UTC via `workflow_run`. In the latest main-run page checked at 11:55 UTC, no 2026-10-30 run was present for the separate Free Real-Quote Diagnostic or Original Forward-Only workflow. This is a bounded observation only, not proof that either workflow is disabled. No schedules or settings were changed.
+
+The separate 30-eligible-prospective-forecast target-outcome gate remains CLOSED; the frozen non-legacy incumbent is still absent. Candidate SHA, 19 features/weights, active lambda 0 and research-only shadow lambda 1 remain unchanged. No target outcomes were read for evaluation, no paid calls, no Supabase writes/DDL, no production `.pkl` change, no merge or promotion.
