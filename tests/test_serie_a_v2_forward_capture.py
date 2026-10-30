@@ -411,4 +411,4 @@ def test_original_artifact_zip_stream_oversize_stops_at_first_excess_chunk(monke
 
     assert response.iterated == 2
     assert response.closed is True
-\n
+
