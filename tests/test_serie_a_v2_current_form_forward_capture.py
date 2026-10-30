@@ -13,6 +13,7 @@ from serie_a_v2_current_form_forward_capture import (
     MANIFEST_FILENAME,
     SOURCE_WORKFLOW_PATH,
     _latest_quotes,
+    get_archive,
     prepare_forward_capture as _prepare_forward_capture,
     verify_and_load_archive,
     verify_latest_source_archive,
@@ -788,3 +789,77 @@ def test_archive_loader_rejects_missing_gate_identity_list():
     )
     with pytest.raises(ValueError, match="gate identity list is missing or inconsistent"):
         verify_and_load_archive(tampered, archive, parent)
+
+class _StreamingCurrentFormArtifactResponse:
+    def __init__(self, chunks, headers=None):
+        self.chunks = list(chunks)
+        self.headers = headers or {}
+        self.iterated = 0
+        self.chunk_size = None
+        self.closed = False
+
+    def raise_for_status(self):
+        return None
+
+    def iter_content(self, chunk_size):
+        self.chunk_size = chunk_size
+        for chunk in self.chunks:
+            self.iterated += 1
+            yield chunk
+
+    def close(self):
+        self.closed = True
+
+
+def test_current_form_artifact_zip_download_streams_and_closes_response():
+    raw = b"PK\\x03\\x04bounded-current-form-v2"
+    response = _StreamingCurrentFormArtifactResponse(
+        [raw[:3], b"", raw[3:]],
+        headers={"Content-Length": str(len(raw))},
+    )
+    request = {}
+
+    def fake_get(url, **kwargs):
+        request["url"] = url
+        request.update(kwargs)
+        return response
+
+    assert get_archive(9876, token="test-token", get=fake_get) == raw
+    assert request["url"].endswith("/actions/artifacts/9876/zip")
+    assert request["stream"] is True
+    assert response.chunk_size == 64 * 1024
+    assert response.closed is True
+
+
+def test_current_form_artifact_zip_declared_oversize_fails_before_body_read(monkeypatch):
+    monkeypatch.setattr(forward_capture_module, "MAX_ARCHIVE_BYTES", 5)
+    response = _StreamingCurrentFormArtifactResponse(
+        [b"must-not-read"],
+        headers={"Content-Length": "6"},
+    )
+
+    with pytest.raises(ValueError, match="current-form source archive is empty or too large"):
+        get_archive(
+            9876,
+            token="test-token",
+            get=lambda _url, **_kwargs: response,
+        )
+
+    assert response.iterated == 0
+    assert response.closed is True
+
+
+def test_current_form_artifact_zip_stream_oversize_stops_at_first_excess_chunk(monkeypatch):
+    monkeypatch.setattr(forward_capture_module, "MAX_ARCHIVE_BYTES", 5)
+    response = _StreamingCurrentFormArtifactResponse([b"12345", b"6", b"never-read"])
+
+    with pytest.raises(ValueError, match="current-form source archive is empty or too large"):
+        get_archive(
+            9876,
+            token="test-token",
+            get=lambda _url, **_kwargs: response,
+        )
+
+    assert response.iterated == 2
+    assert response.closed is True
+\n
