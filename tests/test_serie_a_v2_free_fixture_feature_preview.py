@@ -447,3 +447,33 @@ def test_duplicate_json_object_keys_fail_closed_after_zero_credit_attestation():
     assert response.iter_content_called is True
     assert response.closed is True
 
+
+
+def test_events_request_uses_only_zero_credit_metadata_parameters():
+    """Prevent accidental addition of paid odds/market parameters to the free /events probe."""
+    response = response_for([event()])
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append((url, kwargs))
+        return response
+
+    report = capture_free_fixture_preview(
+        api_key=API_KEY,
+        source_attestation=source_attestation(),
+        history=history_frame(),
+        request_started_at=STARTED,
+        get=fake_get,
+        clock=lambda: RECEIVED,
+    )
+
+    assert len(calls) == 1
+    assert calls[0][0] == EVENTS_URL
+    params = calls[0][1]["params"]
+    assert set(params) == {"apiKey", "dateFormat", "commenceTimeFrom"}
+    assert params["apiKey"] == API_KEY
+    assert params["dateFormat"] == "iso"
+    assert params["commenceTimeFrom"] == STARTED.isoformat().replace("+00:00", "Z")
+    assert not ({"markets", "regions", "oddsFormat", "bookmakers", "eventIds", "scores"} & set(params))
+    assert report["provider_last_request_cost_credits"] == 0
+    assert API_KEY not in json.dumps(report)
