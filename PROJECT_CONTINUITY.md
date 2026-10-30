@@ -1,3 +1,14 @@
+## 2026-10-30 13:54 UTC — independent byte-level source and identity parity proof
+
+A second, independent verification was completed after the runtime logs above. Both GitHub artifacts were downloaded read-only and inspected locally; no Supabase data was written.
+
+- Source artifact **12973598320**: ZIP size 437,016 bytes; recomputed SHA-256 `02013d5984117f48f5efab2b8662fed7e291bdfd49689d27152325e129c877b4`, exactly matching GitHub's artifact digest. The ZIP contains 11 CSV files plus the manifest. Recomputed SHA-256 for **all 11/11 CSV byte streams** matches each manifest entry. Current-season CSV SHA-256: `32ca618587c90db25f16ea647cb55060f519c03830a1e8ec4a6c4204e27d5135`.
+- The current-season CSV was read for identity fields only (`Date, HomeTeam, AwayTeam`); no score, goal, result or settlement columns were loaded for this check. It contains 90 rows, 90 unique canonical fixture identities, no exact duplicates and no reversed duplicates. Using the existing four Serie A aliases plus the V2-local `Atalanta BC -> Atalanta` alias, its canonical sorted `date<TAB>home<TAB>away` identity SHA-256 is `95e3d71ab97076b5edee503301843f55d22eb14a832f7e1aab7f2012e6013811`.
+- An independent read-only Supabase query selected exactly `match_date, home_team, away_team` from the Serie A 2026/27 completed-fixture metadata before the 2026-10-30 UTC cutoff. It returned 93 raw rows, 90 unique identities after the same aliases, and 3 duplicate rows after canonicalization. Its independently computed sorted identity SHA-256 is **the same** `95e3d71ab97076b5edee503301843f55d22eb14a832f7e1aab7f2012e6013811`. Therefore current CSV coverage matches the metadata-only 90/90 gate identity set exactly.
+- Current-Form Forward artifact **12974157310**: recomputed ZIP SHA-256 `80df126dc31e3de9280a396fe48e2e4f04a6f600db8bafc75a2f547f98f9b394`, exactly matching GitHub's artifact digest. Its nested source ZIP was independently hashed as `02013d5984117f48f5efab2b8662fed7e291bdfd49689d27152325e129c877b4`, matching the original source artifact byte-for-byte. The JSON report contains `quotes_seen=0`, an empty `rows` array, `v2_current_form_shadow_captured=0`, and both target-outcome flags false.
+
+This establishes byte integrity and exact source identity parity for the current 90-event feature-input gate. It does **not** establish a source-before-quote prediction because there were no saved quotes to test; it does not open the separate 30-eligible-completed-prospective-forecast outcome gate; it is not a model-quality result. Frozen candidate, original 19 features/weights, active lambda 0, shadow lambda 1, NO_BET and all embargoes remain unchanged.
+
 ## 2026-10-30 13:48 UTC — fresh source/forward runtime, all-league pre-match quote audit, and exact guard review
 
 Fresh GitHub reads confirm `main=40887ebb215730190d7a6c7a1693373ec4afcdfc`; no PR was merged. All evidence below is read-only or GitHub Actions artifact metadata. No target outcomes were selected.
