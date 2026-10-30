@@ -249,8 +249,8 @@ def test_all_original_v2_supabase_secret_jobs_are_main_ref_only():
     guard = "github.ref == 'refs/heads/main'"
     for workflow_path, job_name in protected_jobs.items():
         workflow = Path(workflow_path).read_text(encoding="utf-8")
-        job = workflow.split(f"  {job_name}:\\n", 1)[1].split("\\n    steps:", 1)[0]
-        assert "SUPABASE_URL: \${{ secrets.SUPABASE_URL }}" in job
-        assert "SUPABASE_KEY: \${{ secrets.SUPABASE_KEY }}" in job
-        job_condition = job.split("\\n    runs-on:", 1)[0]
+        job = workflow.split(f"  {job_name}:\n", 1)[1].split("\n    steps:", 1)[0]
+        assert "SUPABASE_URL: ${{ secrets.SUPABASE_URL }}" in job
+        assert "SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}" in job
+        job_condition = job.split("\n    runs-on:", 1)[0]
         assert guard in job_condition, f"{workflow_path} exposes Supabase secrets without a main-ref guard"
