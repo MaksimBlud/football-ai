@@ -6,7 +6,8 @@ import pytest
 import serie_a_v2_live_diagnostic_report as report_module
 
 from serie_a_v2_live_diagnostic_report import (
-    PUBLIC_BASE, _source_codes, fetch_public_history, make_report, MAX_HISTORICAL_CSV_BYTES,
+    PUBLIC_BASE, _source_codes, fetch_public_history, make_report,
+    MAX_HISTORICAL_CSV_BYTES, MAX_HISTORICAL_TOTAL_BYTES,
 )
 
 NOW = datetime(2026,10,13,15,1,tzinfo=timezone.utc)
@@ -109,6 +110,42 @@ def test_historical_source_stops_on_actual_streamed_byte_limit_and_closes(tmp_pa
     assert response.chunks_yielded == 1
     assert response.closed is True
     assert list(tmp_path.glob("*.csv")) == []
+
+
+
+
+def test_historical_source_collection_enforces_total_archive_byte_limit(tmp_path, monkeypatch):
+    csv_completed = history_fixture().to_csv(index=False).encode()
+    monkeypatch.setattr(
+        report_module, "MAX_HISTORICAL_TOTAL_BYTES", len(csv_completed) + 1
+    )
+
+    class Response:
+        status_code = 200
+        headers = {"Content-Length": str(len(csv_completed))}
+        def __init__(self, url):
+            self.url = url
+            self.closed = False
+        def iter_content(self, chunk_size):
+            yield csv_completed
+        def close(self):
+            self.closed = True
+
+    responses = []
+    def fake_get(url, timeout, allow_redirects, stream):
+        assert stream is True and allow_redirects is False
+        response = Response(url)
+        responses.append(response)
+        return response
+
+    with pytest.raises(RuntimeError, match="total size limit"):
+        fetch_public_history(get=fake_get, capture_dir=tmp_path)
+
+    assert len(responses) == 2
+    assert all(response.closed for response in responses)
+    # First CSV is within the total budget; the second would exceed it and is
+    # rejected before it can be persisted.
+    assert len(list(tmp_path.glob("*.csv"))) == 1
 
 
 
