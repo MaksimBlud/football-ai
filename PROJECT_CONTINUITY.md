@@ -7067,3 +7067,64 @@ No new prospective V2 forecasts can be captured from the current saved-odds tabl
 5. Wait for genuinely new saved pre-kickoff quotes before any shadow capture. PR #702's free `/events` probe may provide fixture metadata only, not market odds.
 
 Frozen candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features/weights and protocol remain unchanged; `active_lambda=0` remains the market and `shadow_lambda=1` research-only. The separate evaluation gate remains closed until 30 eligible prospective forecasts have completed, and the incumbent blocker remains unresolved. No target outcomes were read/scored, no Supabase writes/DDL, no production `.pkl` changes, no model refit/promotion/bets, no paid calls, no merge, and no schedule changes occurred.
+
+## 2026-10-30 09:49 UTC — source schedule liveness, canonical gate digest, and PR overlap
+
+This checkpoint is a fresh read-only audit. Main remains 40887ebb215730190d7a6c7a1693373ec4afcdfc. The current main continuity file blob is 2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b. No merge or main update occurred.
+
+### Exact open V2 PR state
+
+- #699 remains open/mergeable at exact head 3e772c859bf3538a492aaffc314be533285d7db0, base 40887ebb215730190d7a6c7a1693373ec4afcdfc. Its seven exact-head checks are SUCCESS; Original V2 Shadow Tests [#41011507232](https://github.com/MaksimBlud/football-ai/actions/runs/41011507232) reports 229 passed. The production .pkl diff guard passed.
+- #697 was at exact head 3bd0d030a5c532ac89ad3767828f19f313c2ab7c before this documentation-only append; its seven exact-head checks were SUCCESS.
+- #701 remains at 7ee3eda3f396735e00737d8e8e42e0c8c146c57f with 6/6 SUCCESS. The prospective evaluator remains blocked by the absent approved non-legacy frozen incumbent; do not substitute market probabilities or revive the legacy XGBoost model.
+- #702 remains at b91773b6677bd2be7df67d5b2c69c27b9a202397 with 7/7 SUCCESS. It is a manual-only, one-request, zero-credit event-metadata probe; no live request has been made.
+- #700 remains open at d2a6608ef8c11d2e517f8aec5637d12206760346. Its changed paths overlap #699. The current #699 patch already includes the historical CSV no-redirect control (allow_redirects=False), bounded streaming, and corresponding redirect regression coverage in serie_a_v2_live_diagnostic_report.py. Treat #700 as overlapping/superseded for that core change; do not merge it independently without a post-#699 content comparison.
+
+HUMAN-MERGE remains mandatory.
+
+### Oct 30 scheduled V2 workflow liveness
+
+The main workflow files still declare these UTC schedules:
+
+- Current-Form Source Capture: 05:50 UTC.
+- Free Real-Quote Diagnostic: 06:13 UTC.
+- Original Forward-Only Preview: 08:08 UTC.
+- Current-Form Forward-Only Preview: 08:18 UTC.
+
+A fresh Actions query covered 216 main-branch runs created from 00:00 through 08:58 UTC on Oct 30 (three pages, 100 + 100 + 16). No run with any of the four V2 workflow names above appeared. This is an observed missing scheduled-run set, not proof that GitHub has disabled the workflows. Do not alter schedules or settings. No manual dispatch was possible through the available read-only Actions interface.
+
+### Current metadata-only feature-input gate
+
+Read-only Supabase query selected only match_date, home_team, away_team from public.league_finished_results for Serie A 2026/27 before the current UTC date. It returned:
+
+- raw rows: 93;
+- unique canonical identities after the existing V2-local Atalanta BC → Atalanta alias: 90;
+- latest metadata date: 2026-10-29;
+- sorted canonical identity-set SHA-256: 7c91dad874222ff98e6cce033ce36c71c51306b5979a7854ff8c3c60eab36bce.
+
+This satisfies the separate lagged-feature input count (>=30) but does not open target-outcome evaluation. The latest available source archive is still run [#40868280531](https://github.com/MaksimBlud/football-ai/actions/runs/40868280531), artifact 12894054589, ZIP SHA-256 b4b1144ca28414ccf7a5a7a5c02fde4611e8e0f1a37997012de031a38baa14b0. Its manifest records only 80 gate identities and its current-season CSV ends 2026-10-28. It therefore does not cover the current 90-identity gate and must not be used for a new current-form calculation. A fresh post-#699 source capture and full identity/SHA coverage proof are required.
+
+### Fresh strictly pre-match odds audit
+
+Read-only public.odds_snapshots aggregation enforced snapshot_time_utc < commence_time_utc:
+
+- total rows: 3,966;
+- strictly pre-match rows: 3,915;
+- future fixtures with a saved strictly pre-match quote: 0;
+- latest Serie A pre-match quote: 2026-10-13 14:48:53.042620 UTC;
+- no league has a saved strictly pre-match quote in the last seven days.
+
+Per-league latest saved strictly pre-match quote: EPL 2026-10-09; Serie A 2026-10-13; Bundesliga, Eredivisie, La Liga and Ligue 1 2026-09-11; RPL 2026-09-05; Primeira Liga and Turkey Super Lig 2026-09-11. No odds values or outcomes were read by this audit.
+
+public.model_artifact_bundles currently contains 0 registered bundles, so the frozen incumbent blocker remains unresolved.
+
+### Required next proof
+
+1. HUMAN-MERGE #699 at exact head 3e772c859bf3538a492aaffc314be533285d7db0.
+2. Verify the new main SHA; then obtain a fresh source artifact on main.
+3. Verify all 11 source CSV hashes, the exact 90-identity set/count/SHA, and gate → source observation → archive ordering.
+4. Run both existing forward-only V2 workflows on the resulting main SHA. Existing stale quotes must remain blocked; do not backfill.
+5. Wait for genuinely new strictly pre-kickoff quotes. Only then may a new original-V2 research shadow be captured.
+6. Keep the separate 30-eligible-prospective-forecast outcome gate closed until its frozen conditions are met, and resolve the non-legacy incumbent reference without changing the parent protocol.
+
+Frozen candidate remains a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6; the 19-feature/weight contract, active_lambda=0, and research-only shadow_lambda=1 are unchanged. No target outcomes were read/scored, no paid provider call, no Supabase write/DDL, no production .pkl change, no merge, no promotion, and no schedule change.
