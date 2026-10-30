@@ -1,3 +1,27 @@
+## 2026-10-30 15:48 UTC — fresh original/current-form forward runs and pre-match-only registry audit
+
+Fresh GitHub API reads confirm `main=40887ebb215730190d7a6c7a1693373ec4afcdfc`; PR #699/#697/#701/#702 remain open and no merge was performed.
+
+### New actual main-branch runtime
+
+- Original V2 Forward-Only [run 41076521488](https://github.com/MaksimBlud/football-ai/actions/runs/41076521488): SUCCESS; **71 tests passed**. The actual original old-season source attestation verified 10 pre-prospective CSVs / 3,800 historical rows, artifact **12978111278**, ZIP SHA-256 `dd9c9fd43b61f78075bee68b016507d5d766733099e532b79131d566125716da`, and frozen candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`. The original forward report says `quotes_seen=0`, `future_quotes_checked=0`, `v2_diagnostic_previews_captured=0`, `supabase_writes=0`; no original-cohort forecast was produced. Uploaded output artifact **12988120716**, 1,457 bytes, independently recomputed SHA-256 `0283dd379d41843a12f4b287ace9f9f2e8f1a8a695fc1bad7633904a46443c59`.
+- Current-Form Forward-Only [run 41077147924](https://github.com/MaksimBlud/football-ai/actions/runs/41077147924): SUCCESS; **53 tests passed**. Runtime verified current source artifact **12973598320**, source ZIP SHA-256 `02013d5984117f48f5efab2b8662fed7e291bdfd49689d27152325e129c877b4`, frozen candidate SHA unchanged, feature-input metadata gate count **90**, 90 completed current-season CSV rows, 10 old-season CSVs / 11 total, and 3,890 historical-plus-current rows. Gate check time `11:42:40.932700Z` precedes current CSV observation `11:42:59.273193Z`, which precedes archive creation `11:42:59.333069Z`; authenticated parent run 41049950849 completed at `11:43:04Z`. At forward verification `15:03:57.744812Z`, source age was 12,058 seconds (within the unchanged 24-hour limit). The report says `quotes_seen=0`, empty `rows`, `v2_current_form_shadow_captured=0`, and both target-outcome flags false. This verifies the source/archive path, **not** a per-quote source-before-quote prediction.
+- Downloaded the current-form forward artifact **12987716790** (438,195 bytes); recomputed outer ZIP SHA-256 `90ad2e9e026762db807b42f5165697e03a7257bdc6a331101a6b27df0a07376a`, matching GitHub's digest. Its nested source ZIP recomputed to `02013d5984117f48f5efab2b8662fed7e291bdfd49689d27152325e129c877b4`; all 11 CSV byte hashes match the manifest. Current CSV `serie_a_2627.csv`: 90 completed rows, SHA-256 `32ca618587c90db25f16ea647cb55060f519c03830a1e8ec4a6c4204e27d5135`. The manifest contains the 90-count metadata gate but **does not itself contain the canonical gate-identity-set SHA**; the prior independent read-only 90/90 parity hash remains external evidence. PR #699's gate-identity attestation is still required to move that identity proof into the trusted manifest/runtime.
+
+### Fresh pre-match-only Supabase checks
+
+- Read-only `public.odds_snapshots` query selected only league, snapshot timestamp and kickoff timestamp, with strict predicate `snapshot_time_utc < commence_time_utc`. It again returns **3,966** rows, **3,915** strictly pre-match, **0** strictly pre-match rows in the last 7 days, and **0** future fixtures with a saved strictly pre-match quote. Latest Serie A pre-match snapshot remains **2026-10-13 14:48:53 UTC**. No new quote is available; no provider call was made.
+- `public.model_artifact_bundles` remains empty. A separate query against `public.product_prediction_snapshots` was restricted to rows where `generated_at_utc < commence_time_utc` and non-null 1X2 artifact SHA. It found only **40 EPL** rows for `EPL_AI_MARKET_PAIR_V1`, SHA `1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5`, latest generated `2026-10-09 15:29:33Z`; **no Serie A frozen incumbent** was found. Do not use the EPL artifact or revive/execute the legacy XGBoost model as the required Serie A incumbent.
+
+### Review and scientific state
+
+- PR #699 remains open, mergeable, HUMAN-MERGE only, exact HEAD `3e772c859bf3538a492aaffc314be533285d7db0`, base main above, **7/7 exact-head checks SUCCESS**, including **229 Original V2 shadow tests** and production `*.pkl` diff guard. Its latest change enumerates all four secret-bearing original V2 workflows and enforces a `refs/heads/main` job guard. Main's current original forward workflow does not yet have that guard; the #699 branch does. Do not dispatch secret-bearing V2 jobs from non-main refs.
+- PR #697 remains documentation-only; this entry records the later 15:00/15:04 UTC live runs. PR #701 remains **6/6** CI and fail-closed without an eligible frozen incumbent. PR #702 remains **7/7** mocked contract CI; its live zero-credit `/events` probe has not been run and is sequenced after #699 plus a fresh SHA-attested source capture.
+- Original frozen candidate, 19-feature order/weights, `active_lambda=0`, `shadow_lambda=1`, NO_BET and the 30-eligible-completed-prospective-forecast target-outcome gate are unchanged. Both forward runs captured zero forecasts; no Brier/LogLoss or superiority claim is available.
+
+No merge/main mutation, Supabase write/DDL, paid provider call, production `.pkl` change, target-outcome read, model refit, threshold tuning, bet or publication occurred. No schedule or other-agent setting was changed.
+
+
 ## 2026-10-30 13:54 UTC — independent byte-level source and identity parity proof
 
 A second, independent verification was completed after the runtime logs above. Both GitHub artifacts were downloaded read-only and inspected locally; no Supabase data was written.
