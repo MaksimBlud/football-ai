@@ -20,6 +20,8 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ github.token }}
       THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
       PYTHONPATH: .
       OPENBLAS_NUM_THREADS: "1"
       OMP_NUM_THREADS: "1"
@@ -32,11 +34,13 @@ jobs:
           cache: pip
       - name: Install read-only original V2 dependencies
         run: python -m pip install pandas numpy scipy scikit-learn requests supabase pytest
-      - name: Verify credentials are present without printing them
+      - name: Verify read-only credentials are present without printing them
         run: |
           test -n "$GITHUB_TOKEN"
           test -n "$THE_ODDS_API_KEY"
-      - name: Verify source archive, then make one zero-credit events request
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_KEY"
+      - name: Verify current metadata gate and source archive, then make one zero-credit events request
         run: |
           python -m py_compile serie_a_v2_free_fixture_feature_preview.py
           python serie_a_v2_free_fixture_feature_preview.py \
