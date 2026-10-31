@@ -340,15 +340,17 @@ def test_original_forward_clock_rejects_tzinfo_without_offset_before_archive_acc
         )
 
 class _StreamingArtifactResponse:
-    def __init__(self, chunks, headers=None):
+    def __init__(self, chunks, headers=None, error=None):
         self.chunks = list(chunks)
         self.headers = headers or {}
+        self.error = error
         self.iterated = 0
         self.chunk_size = None
         self.closed = False
 
     def raise_for_status(self):
-        return None
+        if self.error is not None:
+            raise self.error
 
     def iter_content(self, chunk_size):
         self.chunk_size = chunk_size
@@ -410,5 +412,40 @@ def test_original_artifact_zip_stream_oversize_stops_at_first_excess_chunk(monke
         )
 
     assert response.iterated == 2
+    assert response.closed is True
+
+
+def test_original_artifact_zip_requires_read_token_before_request():
+    calls = []
+    with pytest.raises(ValueError, match="GitHub token required"):
+        get_archive(
+            123,
+            token="",
+            get=lambda *args, **kwargs: calls.append((args, kwargs)),
+        )
+    assert calls == []
+
+
+def test_original_artifact_zip_rejects_malformed_content_length_before_read():
+    response = _StreamingArtifactResponse(
+        [b"must-not-read"], headers={"Content-Length": "unknown"}
+    )
+    with pytest.raises(ValueError, match="Content-Length"):
+        get_archive(123, token="test-token", get=lambda _url, **_kwargs: response)
+    assert response.iterated == 0
+    assert response.closed is True
+
+
+def test_original_artifact_zip_rejects_empty_stream_and_closes():
+    response = _StreamingArtifactResponse([])
+    with pytest.raises(ValueError, match="missing or oversized source archive"):
+        get_archive(123, token="test-token", get=lambda _url, **_kwargs: response)
+    assert response.closed is True
+
+
+def test_original_artifact_zip_closes_response_after_http_error():
+    response = _StreamingArtifactResponse([], error=RuntimeError("http failure"))
+    with pytest.raises(RuntimeError, match="http failure"):
+        get_archive(123, token="test-token", get=lambda _url, **_kwargs: response)
     assert response.closed is True
 
