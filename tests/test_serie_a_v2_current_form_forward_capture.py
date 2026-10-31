@@ -45,6 +45,124 @@ def quote(
     }
 
 
+class FakeCurrentFormStreamingArtifactResponse:
+    def __init__(self, chunks=(), *, headers=None, error=None):
+        self._chunks = chunks
+        self.headers = headers or {}
+        self.error = error
+        self.closed = False
+        self.iter_content_called = False
+
+    def raise_for_status(self):
+        if self.error:
+            raise self.error
+
+    def iter_content(self, chunk_size):
+        self.iter_content_called = True
+        yield from self._chunks
+
+    def close(self):
+        self.closed = True
+
+
+def test_current_form_artifact_download_streams_with_content_length_and_closes(monkeypatch):
+    import serie_a_v2_current_form_forward_capture as forward
+
+    monkeypatch.setattr(forward, "MAX_ARCHIVE_BYTES", 10)
+    response = FakeCurrentFormStreamingArtifactResponse(
+        [b"abc", b"def"], headers={"Content-Length": "6"}
+    )
+    calls = []
+
+    def get(url, **kwargs):
+        calls.append((url, kwargs))
+        return response
+
+    assert forward.get_archive(123, token="test-token", get=get) == b"abcdef"
+    assert calls[0][0].endswith("/actions/artifacts/123/zip")
+    assert calls[0][1]["stream"] is True
+    assert calls[0][1]["timeout"] == 90
+    assert response.iter_content_called is True
+    assert response.closed is True
+
+
+def test_current_form_artifact_download_rejects_declared_oversize_before_read(monkeypatch):
+    import serie_a_v2_current_form_forward_capture as forward
+
+    monkeypatch.setattr(forward, "MAX_ARCHIVE_BYTES", 10)
+    response = FakeCurrentFormStreamingArtifactResponse(
+        [b"never-read"], headers={"Content-Length": "11"}
+    )
+
+    with pytest.raises(ValueError, match="too large"):
+        forward.get_archive(123, token="test-token", get=lambda url, **kwargs: response)
+
+    assert response.iter_content_called is False
+    assert response.closed is True
+
+
+def test_current_form_artifact_download_rejects_inaccurate_length_by_stream_cap(monkeypatch):
+    import serie_a_v2_current_form_forward_capture as forward
+
+    monkeypatch.setattr(forward, "MAX_ARCHIVE_BYTES", 10)
+    third_chunk_requested = []
+
+    def chunks():
+        yield b"12345678"
+        yield b"9012"
+        third_chunk_requested.append(True)
+        yield b"never-read"
+
+    response = FakeCurrentFormStreamingArtifactResponse(
+        chunks(), headers={"Content-Length": "8"}
+    )
+
+    with pytest.raises(ValueError, match="too large"):
+        forward.get_archive(123, token="test-token", get=lambda url, **kwargs: response)
+
+    assert third_chunk_requested == []
+    assert response.closed is True
+
+
+def test_current_form_artifact_download_rejects_malformed_length(monkeypatch):
+    import serie_a_v2_current_form_forward_capture as forward
+
+    monkeypatch.setattr(forward, "MAX_ARCHIVE_BYTES", 10)
+    response = FakeCurrentFormStreamingArtifactResponse(
+        [b"never-read"], headers={"Content-Length": "unknown"}
+    )
+
+    with pytest.raises(ValueError, match="Content-Length"):
+        forward.get_archive(123, token="test-token", get=lambda url, **kwargs: response)
+
+    assert response.iter_content_called is False
+    assert response.closed is True
+
+
+def test_current_form_artifact_download_rejects_empty_stream_and_closes(monkeypatch):
+    import serie_a_v2_current_form_forward_capture as forward
+
+    monkeypatch.setattr(forward, "MAX_ARCHIVE_BYTES", 10)
+    response = FakeCurrentFormStreamingArtifactResponse([])
+
+    with pytest.raises(ValueError, match="too large"):
+        forward.get_archive(123, token="test-token", get=lambda url, **kwargs: response)
+
+    assert response.closed is True
+
+
+def test_current_form_artifact_download_closes_after_http_error(monkeypatch):
+    import serie_a_v2_current_form_forward_capture as forward
+
+    monkeypatch.setattr(forward, "MAX_ARCHIVE_BYTES", 10)
+    response = FakeCurrentFormStreamingArtifactResponse(error=RuntimeError("http failure"))
+
+    with pytest.raises(RuntimeError, match="http failure"):
+        forward.get_archive(123, token="test-token", get=lambda url, **kwargs: response)
+
+    assert response.closed is True
+
+
 def make_current_csv():
     header = ",".join(REQUIRED_COLUMNS)
     rows = []
