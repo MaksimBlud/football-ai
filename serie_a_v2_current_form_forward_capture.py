@@ -127,8 +127,16 @@ def verify_source_run(
 
 
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
+    """Download the current-form source ZIP without eagerly buffering an unbounded body.
+
+    GitHub's artifact endpoint redirects to signed storage, so its normal HTTPS
+    redirect behavior is preserved. Both the declared length (when present)
+    and the actual decoded stream are constrained by the frozen archive cap.
+    """
     if type(artifact_id) is not int or artifact_id <= 0:
         raise ValueError("invalid source artifact id")
+    if not token:
+        raise ValueError("GitHub actions:read token missing")
     response = get(
         f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip",
         headers={
@@ -137,12 +145,40 @@ def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
             "X-GitHub-Api-Version": "2022-11-28",
         },
         timeout=90,
+        stream=True,
     )
-    response.raise_for_status()
-    raw = response.content
-    if not raw or len(raw) > MAX_ARCHIVE_BYTES:
-        raise ValueError("current-form source archive is empty or too large")
-    return raw
+    try:
+        response.raise_for_status()
+        headers = getattr(response, "headers", {}) or {}
+        declared_length = headers.get("Content-Length")
+        if declared_length is not None:
+            try:
+                declared_bytes = int(declared_length)
+            except (TypeError, ValueError) as exc:
+                raise ValueError("invalid current-form source archive Content-Length") from exc
+            if declared_bytes < 0:
+                raise ValueError("invalid current-form source archive Content-Length")
+            if declared_bytes > MAX_ARCHIVE_BYTES:
+                raise ValueError("current-form source archive is empty or too large")
+        chunks = []
+        total_bytes = 0
+        for chunk in response.iter_content(chunk_size=64 * 1024):
+            if not chunk:
+                continue
+            if not isinstance(chunk, bytes):
+                raise ValueError("current-form source archive stream yielded a non-bytes chunk")
+            total_bytes += len(chunk)
+            if total_bytes > MAX_ARCHIVE_BYTES:
+                raise ValueError("current-form source archive is empty or too large")
+            chunks.append(chunk)
+        raw = b"".join(chunks)
+        if not raw:
+            raise ValueError("current-form source archive is empty or too large")
+        return raw
+    finally:
+        close = getattr(response, "close", None)
+        if callable(close):
+            close()
 
 
 def verify_and_load_archive(
