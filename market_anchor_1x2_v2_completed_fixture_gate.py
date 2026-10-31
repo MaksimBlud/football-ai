@@ -29,8 +29,13 @@ def _canonical_team(value: Any) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError("completed-fixture metadata has an empty team identity")
     value = value.strip()
+    if any(ord(char) < 32 or 127 <= ord(char) <= 159 for char in value):
+        raise ValueError("completed-fixture metadata team identity contains control characters")
     known = SERIE_A_RUNTIME_CONFIG.aliases.get(value, value)
-    return V2_ONLY_ALIASES.get(known, known)
+    canonical = V2_ONLY_ALIASES.get(known, known)
+    if any(ord(char) < 32 or 127 <= ord(char) <= 159 for char in canonical):
+        raise ValueError("completed-fixture metadata team identity contains control characters")
+    return canonical
 
 PAGE_SIZE = 1000
 MAX_ROWS = 10000
