@@ -67,3 +67,10 @@ def test_original_v2_workflows_use_python_specific_exact_locks() -> None:
     assert "requirements-v2-research-py311.lock" in shadow
     assert "requirements-v2-research-py312.lock" in shadow
     assert "cron:" not in shadow
+
+    py312_job = shadow.split("  py312-lock-tests:\\n", 1)[1]
+    assert 'python-version: "3.12"' in py312_job
+    assert "python -m pip install -r requirements-v2-research-py312.lock" in py312_job
+    assert "python -m pip check" in py312_job
+    assert "tests/test_serie_a_v2_current_form_source_capture.py" in py312_job
+    assert "tests/test_serie_a_v2_current_form_forward_capture.py" in py312_job
