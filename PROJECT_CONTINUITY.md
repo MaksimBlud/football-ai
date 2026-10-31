@@ -7527,3 +7527,88 @@ The fresh Serie A odds query selected only strict pre-match rows (`snapshot_time
 PR #703's bounded-download patch overlaps materially with the two artifact `get_archive` functions already modified in #699. #699 now has the stricter current-form ZIP uncompressed-member/aggregate caps as well. A coordination comment was added to #703: do not merge it independently; after HUMAN-MERGE of #699, rebase/compare and retain only a genuinely distinct guard (currently explicit non-bytes chunk rejection) if still needed.
 
 Scientific status is unchanged: the 90-event feature-input gate is open, but there are **0** eligible new prospective V2 forecasts, no pinned non-legacy incumbent, and the outcome/evaluation gate remains CLOSED. The original candidate SHA, frozen 19 features/order/weights, `active_lambda=0`, research-only `shadow_lambda=1`, and all embargoes remain unchanged. No target outcomes were selected/read/scored; no paid request, Supabase write/DDL, production `.pkl` change, refit, threshold tuning, promotion, betting, merge, schedule change, or other-agent setting change occurred.
+
+
+---
+
+# Continuity update — 2026-10-31 06:00 UTC — exact V2 CI, source identity and dependency reproducibility
+
+## Repository state
+
+- Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; the current main branch has not moved.
+- Main `PROJECT_CONTINUITY.md` blob SHA at this audit: `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`.
+- This update is documentation on the existing #697 branch only. No main merge or mutation.
+
+## Exact open V2 PR heads and CI
+
+| PR | Exact current HEAD | Required CI | Dedicated evidence |
+|---|---|---:|---|
+| #699 source/clock/identity/outcome guards | `e760994249b488a3693116974963509b85788bb6` | 7/7 SUCCESS | Frozen V2 shadow: 256 passed; production `*.pkl` diff guard passed |
+| #697 continuity | `dc490b83dd8c1d3bc647c0745564a19756dc356e` | 7/7 SUCCESS | Documentation-only |
+| #701 prospective evaluator | `4ea2f9e60fc073d1850ae2b999f518db5d501a3f` | 6/6 SUCCESS | Evaluator-specific suite: 73 passed |
+| #702 free fixture/feature preview | `8cf6ee1cb66838e8263dd2c7c5ebf42e86964d7e` | 7/7 SUCCESS | Offline preview suite: 22 passed |
+| #703 bounded artifact downloads | `078a04c6b5bfdf6c61a8b368f9ca6c28fb4f487c` | 7/7 SUCCESS | Frozen V2 shadow suite: 97 passed |
+| #704 version-pinned V2 CI dependencies | `cc4918caf1ae0bb906b6a1949b2b352b3cce64f3` | 7/7 SUCCESS | Python 3.11: 87 passed; Python 3.12: 87 passed; `pip check` passed in Python 3.12 |
+
+All remain open and target the unchanged main SHA above. HUMAN-MERGE only.
+
+## New PR #704 — reproducible original-V2 CI dependencies
+
+The five original-V2 workflows previously installed unpinned packages. Successful runtime logs showed different numerical versions by Python minor:
+- Python 3.11: NumPy 2.4.6, SciPy 1.17.1.
+- Python 3.12: NumPy 2.5.4, SciPy 1.18.1.
+- Both: pandas 3.1.0, scikit-learn 1.9.1, requests 2.34.2, Supabase 2.33.0, pytest 9.2.0.
+
+#704 adds exact-version lock files for both Python versions, switches the original V2 source/forward/diagnostic/shadow workflows to the corresponding lock, and tests that the existing cron expressions are unchanged. These are version pins, not hash-enforced supply-chain locks.
+
+An initial Python-3.12 test-job addition exposed a test-only string-splitting bug (1 failed, 86 passed in each runtime). The assertion was corrected. On the final exact HEAD `cc4918caf1ae0bb906b6a1949b2b352b3cce64f3`, both Python-version jobs now pass 87/87; the Python-3.12 `pip check` passes; both production `*.pkl` diff guards pass; all 7/7 required workflows are SUCCESS.
+
+#704 changes workflow files also changed by #699. Merge #699 first, then rebase #704 and rerun exact-head CI. Do not merge the old base-main heads independently.
+
+## Coordination correction for #703
+
+The current #699 diff already modifies `get_archive()` in both `serie_a_v2_forward_capture.py` and `serie_a_v2_current_form_forward_capture.py`, adding streaming, Content-Length checks, bounded chunks and response cleanup. #703 modifies those same functions and adds an explicit non-bytes chunk guard; its Content-Length conversion is less strict than #699's decimal-only validation. A correction comment is recorded on #703. After #699 is manually merged, rebase/review #703 and retain only a genuinely useful distinct guard if still needed.
+
+## Read-only source and runtime evidence
+
+Current-form source capture on unchanged main:
+- Run #41049950849: SUCCESS; 19 source/manifest tests passed.
+- 90 completed prior-day feature-source events; 10 historical CSVs plus one current-season CSV (11 files total).
+- Candidate SHA: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Artifact ID `12973598320`; ZIP SHA-256 `02013d5984117f48f5efab2b8662fed7e291bdfd49689d27152325e129c877b4`.
+- Paid provider calls 0; Supabase writes 0; target outcomes scored false.
+
+Current-form forward-only run #41077147924: SUCCESS; 53 tests passed; verified the above source archive and parent run; `quotes_seen=0`, `v2_current_form_shadow_captured=0`, target outcomes not read/scored, no paid calls or writes.
+
+Original forward-only run #41076521488: SUCCESS; 71 tests passed; 3,800 historical rows verified; `quotes_seen=0`, `forecasts_created=0`, no paid calls or Supabase writes.
+
+These runs are on old main and predate #699's persisted identity-list/SHA contract. They prove source ZIP/parent provenance and safe no-quote behavior, but **do not** prove the new identity-set guard live. After #699 HUMAN-MERGE, require a new source capture on the resulting exact main SHA before #702 or any forward quote processing.
+
+## Fresh read-only Supabase audit — 2026-10-31
+
+Metadata query against `public.league_finished_results` selected only `match_date, home_team, away_team`, for Serie A 2026/27 and dates before 2026-10-31:
+- Raw rows: 93.
+- Canonical unique identities: 90.
+- Duplicate rows after the original V2 aliases: 3.
+- Independently recomputed SHA using the #699 newline/tab canonical serialization: `95e3d71ab97076b5edee503301843f55d22eb14a832f7e1aab7f2012e6013811`.
+
+Odds metadata:
+- All leagues: 3,966 snapshots; 3,915 strictly pre-match (`snapshot_time_utc < commence_time_utc`); 51 at/after kickoff.
+- New snapshots in the last 24 hours: 0; last 7 days: 0; future fixtures with a strict pre-kickoff quote: 0.
+- Latest saved snapshot: 2026-10-13 14:48:53.042620 UTC.
+- Serie A: 625 snapshots, 620 strict pre-match.
+- Serie A prediction ledger: 630 rows, all prediction timestamps before kickoff and all `MARKET_ONLY / CALIBRATION_REQUIRED`; future rows 0.
+- `model_artifact_bundles`: 0 registered bundles.
+
+No scores, results, settlement columns or protected target outcomes were selected.
+
+## Scientific status and next sequence
+
+- Frozen original candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Original 19 features and weights unchanged; `active_lambda=0` remains market; `shadow_lambda=1` remains research-only.
+- The 90-event feature-input gate is open, but the new persisted identity attestation still requires #699 merge plus a fresh post-merge source capture.
+- Eligible new prospective V2 forecasts: 0. Frozen non-legacy incumbent reference: unavailable (zero registered bundles). Evaluation gate CLOSED; no independent Brier/LogLoss comparison is currently possible.
+- #702 remains blocked until #699 is merged, a fresh source archive with identity list/count/SHA is captured on the new main, and #702 is then manually dispatched.
+- #701 must remain fail-closed; do not substitute the market or the old XGBoost model for the missing incumbent.
+
+No merge, main change, Supabase write/DDL, paid request, target-outcome read, production `.pkl` change, weight/feature change, schedule change, or other-agent setting change occurred.
