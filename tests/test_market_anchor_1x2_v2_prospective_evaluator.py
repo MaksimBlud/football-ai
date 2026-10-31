@@ -670,7 +670,7 @@ def test_supabase_gate_reader_builds_attestation_from_actual_identity_only_rows(
     ] == "2026-10-28"
 
 
-@pytest.mark.parametrize("team", ["Gate Home 0\\x00Injected", "Gate Home 0\\u0085Injected"])
+@pytest.mark.parametrize("team", ["Gate Home 0\x00Injected", "Gate Home 0\u0085Injected"])
 def test_supabase_gate_reader_rejects_control_characters_in_team_identity(team):
     rows = _metadata_rows(1)
     rows[0]["home_team"] = team
@@ -748,7 +748,7 @@ def test_supabase_gate_reader_collapses_live_atalanta_alias_duplicates_to_80_ide
     assert attestation["target_outcomes_read"] is False
 
 
-@pytest.mark.parametrize("team", ["Home 0\\x00Injected", "Home 0\\u0085Injected"])
+@pytest.mark.parametrize("team", ["Home 0\x00Injected", "Home 0\u0085Injected"])
 def test_forecast_identity_rejects_control_characters_before_outcome_read(team):
     rows = make_forecasts(30)
     completed = identities(rows)
