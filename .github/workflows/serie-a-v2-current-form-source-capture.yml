@@ -10,6 +10,7 @@ on:
       - "serie_a_v2_current_form_source_capture.py"
       - "experiments/market_anchor_1x2_v2_current_form_policy.json"
       - "tests/test_serie_a_v2_current_form_source_capture.py"
+      - "requirements-v2-research-py312.lock"
       - ".github/workflows/serie-a-v2-current-form-source-capture.yml"
 
 concurrency:
@@ -39,7 +40,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install read-only V2 source dependencies
-        run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
+        run: python -m pip install -r requirements-v2-research-py312.lock
       - name: Validate feature-input gate and source integrity rules
         run: |
           python -m py_compile serie_a_v2_current_form_source_capture.py
