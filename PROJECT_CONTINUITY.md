@@ -1,3 +1,17 @@
+## 2026-10-31 11:00 UTC — original V2 legacy-model isolation regression
+
+This entry supersedes only the #699 HEAD/test-count details in the 09:10 UTC audit above; main and the frozen model contract remain unchanged.
+
+- **PR #699** now has exact HEAD `53b7b184005e8516bfff8c1483e5ab9a4c41e73e`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, remains open/mergeable, and has **7/7 exact-head CI SUCCESS**. HUMAN-MERGE remains mandatory.
+- Added `tests/test_serie_a_v2_no_legacy_xgboost_dependency.py`. Its AST import-closure check follows the original V2 local runtime dependencies and rejects XGBoost, joblib/pickle imports, pickle model IO, and production `.pkl` paths. The documented `market_anchor_1x2_v1.py` dependency is the research-only residual helper used by V2; it is not the retired XGBoost production model.
+- Exact Original V2 Shadow Tests run [41194794442](https://github.com/MaksimBlud/football-ai/actions/runs/41194794442): **257 passed**; the production `*.pkl` diff guard passed. Exact-head Research PR Validation [41194794598](https://github.com/MaksimBlud/football-ai/actions/runs/41194794598) also completed SUCCESS.
+- Read-only Supabase identity recheck still yields 93 raw rows, 90 canonical identities, 3 alias duplicates, 0 reversed duplicates, and SHA-256 `95e3d71ab97076b5edee503301843f55d22eb14a832f7e1aab7f2012e6013811`.
+- Latest odds recheck at 2026-10-31 11:00 UTC: Serie A 625 snapshots, 620 strictly pre-kickoff, 5 at/after kickoff, 0 future pre-kickoff rows, 0 new snapshots in 24h/7d; latest snapshot remains 2026-10-13 14:48:53.042620 UTC. Model artifact bundles: 0.
+- No new 2026-10-31 original/current-form V2 source/forward scheduled run was visible by 11:00 UTC. The 2026-10-30 source run was delayed about 5h52; this is a delay observation, not proof of a disabled workflow. No schedule changes were made.
+- No new prospective forecast, target-outcome read, or Brier/LogLoss evaluation. The 30-primary-completed-prospective-event outcome gate remains CLOSED; no permitted frozen incumbent is registered.
+
+No merge, main mutation, Supabase write/DDL, paid provider request, production artifact change, refit, threshold change, promotion, or other-agent/schedule change occurred.
+
 ## 2026-10-31 09:10 UTC — exact V2 source/forward audit, identity SHA, and bounded-download regression follow-up
 
 This entry supersedes the older 02:48/03:00 UTC audit below. Default branch is still `main` at `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no merge or main mutation occurred.
