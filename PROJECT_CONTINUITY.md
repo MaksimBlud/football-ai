@@ -1,3 +1,18 @@
+## 2026-10-31 03:00 UTC — evaluator identity sanitization hardening
+
+A real identity-validation gap was found in the prospective evaluator branch: its metadata-gate adapter and forecast identity canonicalizer did not reject C0/C1 control characters, unlike the stricter source-capture canonicalizer in #699. This could allow malformed team labels into the canonical identity/digest path.
+
+The gap is fixed on **PR #701**:
+- Gate metadata adapter rejects control characters before canonical alias mapping and checks the canonical result again.
+- Forecast identity canonicalizer applies the same non-empty, C0/C1 control-character checks before and after the existing Serie A/V2-local alias mapping.
+- Four parameterized regression cases cover NUL and U+0085 in both the read-only metadata gate and forecast identity.
+- The forecast tests assert the lazy outcome callback is not invoked on malformed identity input.
+
+Exact PR #701 HEAD: `4ea2f9e60fc073d1850ae2b999f518db5d501a3f`; base main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. All **6/6** exact-head workflow runs completed SUCCESS. Research run [41162279737](https://github.com/MaksimBlud/football-ai/actions/runs/41162279737) reports **73 passed** in `tests/test_market_anchor_1x2_v2_prospective_evaluator.py`. PR remains open, mergeable and HUMAN-MERGE only.
+
+This hardening changes no feature, weight, candidate SHA, lambda, cohort boundary, comparator, threshold or outcome gate. No target outcomes were read. The evaluator still blocks on the unpinned non-legacy frozen incumbent; do not use the legacy XGBoost model or silently substitute market probabilities.
+
+
 ## 2026-10-31 02:48 UTC — exact-head PR audit and fresh pre-match-only database recheck
 
 This is a read-only continuity refresh. Default branch remains `main` at `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no PR was merged and no main ref was changed.
