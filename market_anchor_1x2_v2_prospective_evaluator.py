@@ -79,8 +79,16 @@ def _canonical_team(value: str) -> str:
     # Keep the evaluator's fixture keys identical to the read-only metadata
     # adapter. Provider-facing row labels and incumbent evidence remain intact;
     # only the comparison key is canonicalized.
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("fixture team identity must be a non-empty string")
+    value = value.strip()
+    if any(ord(char) < 32 or 127 <= ord(char) <= 159 for char in value):
+        raise ValueError("fixture team identity contains control characters")
     configured = SERIE_A_RUNTIME_CONFIG.aliases.get(value, value)
-    return V2_ONLY_TEAM_ALIASES.get(configured, configured)
+    canonical = V2_ONLY_TEAM_ALIASES.get(configured, configured)
+    if any(ord(char) < 32 or 127 <= ord(char) <= 159 for char in canonical):
+        raise ValueError("fixture team identity contains control characters")
+    return canonical
 
 
 def _identity(value: Any, *, label: str) -> tuple[str, str, str]:
