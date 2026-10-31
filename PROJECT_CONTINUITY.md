@@ -1,3 +1,30 @@
+## 2026-10-31 19:48 UTC — corrected PR overlap audit and fresh pre-match database check
+
+A fresh GitHub/Supabase pass confirms main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no V2 PR was merged. The exact main Original Forward workflow still has no `github.ref == 'refs/heads/main'` condition on its job-level `if` for `workflow_dispatch`. Do not dispatch that workflow from a feature branch. PR #699 contains the missing main-ref guard in Original Forward and the current-form source/forward workflows; it remains the first HUMAN-MERGE dependency.
+
+**Correction to the 18:53 overlap note above:** exact source comparison shows PR #703 is **not a duplicate** of #699. Main's original `serie_a_v2_forward_capture.get_archive()` eagerly reads `response.content`. PR #699 changes both original/current-form readers to streaming, applies a declared-length check, caps decoded chunks, and closes the response. PR #703 then adds independent stricter validation to both readers: robust header access, integer Content-Length parsing with negative-value rejection, explicit bytes-only chunk validation, and 12 additional offline regressions (including early stop and response cleanup). PR #703 exact HEAD `e7362b83d1112ce52172d722c7f9decc3e69586e` has **7/7** exact-head checks SUCCESS; its dedicated Original V2 Shadow Tests run #41187160599 reports **99 passed**, and `git diff --exit-code -- '*.pkl'` passed. Keep #703 open as a genuine follow-up; after #699 is manually merged, rebase #703 onto resulting main and rerun exact-head CI. Do not drop or independently merge it against the stale base.
+
+The overlapping source-URL changes in #683/#700 are present in #699: the integration branch pins the exact approved historical/current-season HTTPS endpoints, disables redirects before reading, and verifies the final response URL. #698's current-form trigger/path-filter changes overlap the #699 workflow/test contract; re-check its residual diff after #699 rather than stacking it blindly. PR #704 remains an independent dependency-lock change (two Python lock files plus a contract test), but its five workflow edits overlap #699 and require rebase plus fresh exact-head CI after #699. PR #701 evaluator and #702 manual fixture preview remain independent scopes.
+
+Exact-head status re-read:
+- #699 `53b7b184005e8516bfff8c1483e5ab9a4c41e73e`: **7/7 SUCCESS**, dedicated frozen V2 suite **257 passed**.
+- #697 before this documentation correction: `33172119d00e1a1de47e509ca20b3c5fdb2468b6`, **7/7 SUCCESS**.
+- #701 `fcbdae8a603ecad799065469d78e9deb390adb4a`: **6/6 SUCCESS**, evaluator suite **74 passed**, incumbent remains unpinned/fail-closed.
+- #702 `8cf6ee1cb66838e8263dd2c7c5ebf42e86964d7e`: **7/7 SUCCESS**, 22 offline fixture/feature tests.
+- #703 `e7362b83d1112ce52172d722c7f9decc3e69586e`: **7/7 SUCCESS**, 99 frozen-V2 tests.
+- #704 `cc4918caf1ae0bb906b6a1949b2b352b3cce64f3`: all **8 distinct required check names** succeeded (two complete check sets are present in the API response); rebase/CI still required after #699.
+
+Fresh read-only Supabase check at approximately 2026-10-31 19:48 UTC selected only pre-match timestamps, kickoff metadata, model provenance metadata, and completed-fixture identities:
+- `odds_snapshots` for `SERIE_A`: 625 total, 620 strictly pre-kickoff, 0 future strictly pre-kickoff, 0 strictly pre-kickoff in the last 7 days; latest snapshot remains `2026-10-13T14:48:53.042620Z`.
+- `league_prediction_ledger` for `SERIE_A`: 630 rows, all 630 `MARKET_ONLY` and strictly pre-kickoff, 0 future pre-kickoff; latest timestamp unchanged at `2026-10-13T14:48:53.042620Z`.
+- `public.matches` contains 0 future Serie A fixture identities.
+- `product_prediction_snapshots` contains only 40 strictly pre-kickoff EPL `EPL_AI_MARKET_PAIR_V1` rows; no Serie A incumbent.
+- The identity-only 2026/27 completed metadata query returns 93 raw rows and 93 raw distinct tuples; after the exact V2-local `Atalanta BC → Atalanta` canonicalization this is 90 unique primary identities, from 2026-08-22 through 2026-10-29. No score/result columns were selected.
+
+No new pre-match quote, future Serie A fixture identity, or eligible prospective forecast appeared. The actual 31-Oct source/original-forward/current-form-forward runs and their verified artifact digests are already recorded in the 16:53 UTC section below; this check does not create new runtime proof. Frozen candidate SHA, original 19 features/weights, `active_lambda=0`, `shadow_lambda=1`, NO_BET and both gates remain unchanged. No target outcomes, paid provider calls, Supabase writes/DDL, production `.pkl` changes, main mutation, merge, or schedule change occurred. HUMAN-MERGE only.
+
+---
+
 ## 2026-10-31 18:53 UTC — exact integration-branch audit and duplicate-PR map
 
 Fresh GitHub read confirms `main` is still `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main change or PR merge occurred. The Original Forward workflow on main still lacks a job-level `github.ref == 'refs/heads/main'` guard for `workflow_dispatch`. Do not dispatch it from a feature branch. The integration branch in PR #699 adds that guard; the same main-ref guard is present in its current-form source-capture and current-form forward workflows.
