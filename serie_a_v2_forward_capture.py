@@ -128,21 +128,55 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
 
 
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
+    """Download a verified GitHub artifact with a hard streaming memory bound.
+
+    GitHub's artifact endpoint redirects to its signed storage URL, so redirects
+    remain enabled. The response body itself is never eagerly materialized:
+    Content-Length is checked when present and decoded chunks are capped even
+    when the header is absent or inaccurate.
+    """
     if not isinstance(artifact_id, int) or artifact_id <= 0:
         raise ValueError("invalid artifact id")
     url = f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip"
     if not token:
         raise ValueError("GitHub token required")
-    r = get(url, headers={
+    response = get(url, headers={
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
-    }, timeout=90)
-    r.raise_for_status()
-    raw = r.content
-    if not raw or len(raw) > MAX_ZIP_BYTES:
-        raise ValueError("missing or oversized source archive")
-    return raw
+    }, timeout=90, stream=True)
+    try:
+        response.raise_for_status()
+        headers = getattr(response, "headers", {}) or {}
+        declared_length = headers.get("Content-Length")
+        if declared_length is not None:
+            try:
+                declared_bytes = int(declared_length)
+            except (TypeError, ValueError) as exc:
+                raise ValueError("invalid source archive Content-Length") from exc
+            if declared_bytes < 0:
+                raise ValueError("invalid source archive Content-Length")
+            if declared_bytes > MAX_ZIP_BYTES:
+                raise ValueError("missing or oversized source archive")
+        chunks = []
+        total_bytes = 0
+        for chunk in response.iter_content(chunk_size=64 * 1024):
+            if not chunk:
+                continue
+            if not isinstance(chunk, bytes):
+                raise ValueError("source archive stream yielded a non-bytes chunk")
+            total_bytes += len(chunk)
+            if total_bytes > MAX_ZIP_BYTES:
+                raise ValueError("missing or oversized source archive")
+            chunks.append(chunk)
+        raw = b"".join(chunks)
+        if not raw:
+            raise ValueError("missing or oversized source archive")
+        return raw
+    finally:
+        close = getattr(response, "close", None)
+        if callable(close):
+            close()
 
 
 def prepare_forward_capture(
