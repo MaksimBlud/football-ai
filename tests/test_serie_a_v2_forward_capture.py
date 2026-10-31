@@ -368,3 +368,20 @@ def test_catalog_rejects_missing_parent_run_identity_even_with_valid_digest():
     with pytest.raises(ValueError,match="missing GitHub parent run identity"):
         discover_archives(token="test-token",
                           get=lambda url,headers,timeout:Response())
+
+
+def test_original_artifact_download_rejects_non_bytes_chunk_and_closes(monkeypatch):
+    import serie_a_v2_forward_capture as forward
+
+    monkeypatch.setattr(forward, "MAX_ZIP_BYTES", 10)
+    response = FakeStreamingArtifactResponse([bytearray(b"abc")])
+
+    with pytest.raises(ValueError, match="non-bytes chunk"):
+        forward.get_archive(
+            123,
+            token="test-token",
+            get=lambda _url, **_kwargs: response,
+        )
+
+    assert response.iter_content_called is True
+    assert response.closed is True
