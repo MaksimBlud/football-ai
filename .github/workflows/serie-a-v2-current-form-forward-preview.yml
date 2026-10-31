@@ -10,6 +10,7 @@ on:
       - "serie_a_v2_current_form_forward_capture.py"
       - "tests/test_serie_a_v2_current_form_forward_capture.py"
       - "tests/test_serie_a_v2_manual_quote_trigger_contract.py"
+      - "requirements-v2-research-py312.lock"
       - ".github/workflows/serie-a-v2-current-form-forward-preview.yml"
   workflow_run:
     workflows:
@@ -48,7 +49,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install read-only original V2 dependencies
-        run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
+        run: python -m pip install -r requirements-v2-research-py312.lock
       - name: Test frozen model, current-form source integrity, and no-outcome capture
         run: |
           python -m py_compile serie_a_v2_current_form_source_capture.py serie_a_v2_current_form_forward_capture.py

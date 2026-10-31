@@ -15,6 +15,7 @@ on:
       - "tests/test_serie_a_v2_atalanta_alias.py"
       - "serie_a_v2_prequote_source_archive_gate.py"
       - "tests/test_serie_a_v2_prequote_source_archive_gate.py"
+      - "requirements-v2-research-py312.lock"
       - ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
 
 concurrency:
@@ -42,7 +43,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install read-only diagnostic dependencies
-        run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
+        run: python -m pip install -r requirements-v2-research-py312.lock
       - name: Offline regression tests
         run: |
           python -m py_compile serie_a_v2_live_diagnostic_report.py serie_a_v2_prequote_source_archive_gate.py
