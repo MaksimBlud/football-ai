@@ -44,6 +44,36 @@ REQUIRED_COLUMNS = (
 )
 NUMERIC_COLUMNS = ("FTHG", "FTAG", "HC", "AC", "HY", "AY", "HR", "AR")
 V2_ONLY_ALIASES = {"Atalanta BC": "Atalanta"}
+IDENTITY_METADATA_COLUMNS = frozenset({"match_date", "home_team", "away_team"})
+
+
+def _primary_event_metadata_identity(row: Any) -> tuple[date, str, str]:
+    """Validate an exact identity-only metadata row before canonicalization."""
+    if not isinstance(row, Mapping) or set(row) != IDENTITY_METADATA_COLUMNS:
+        raise ValueError(
+            "primary event metadata contains fields outside the identity-only allowlist"
+        )
+    value = row["match_date"]
+    if isinstance(value, datetime):
+        parsed_date = value.date()
+    elif isinstance(value, date):
+        parsed_date = value
+    elif isinstance(value, str):
+        try:
+            parsed_date = date.fromisoformat(value)
+        except ValueError as exc:
+            raise ValueError("invalid primary event date in gate metadata") from exc
+        if parsed_date.isoformat() != value:
+            raise ValueError(
+                "invalid primary event date in gate metadata: expected canonical YYYY-MM-DD"
+            )
+    else:
+        raise ValueError("missing primary event date in gate metadata")
+    home = _canonical_team(row["home_team"])
+    away = _canonical_team(row["away_team"])
+    if home == away:
+        raise ValueError("invalid primary event identity in gate metadata")
+    return parsed_date, home, away
 
 def _assert_approved_current_url(url: str) -> None:
     """Fail closed unless the current-season source is the exact public CSV endpoint."""
@@ -84,28 +114,13 @@ def count_unique_completed_primary_events(
     """Count fixture identities only; never request or inspect goal/result fields."""
     unique: set[tuple[str, str, str]] = set()
     for row in rows:
-        match_date = row.get("match_date")
-        if isinstance(match_date, datetime):
-            parsed_date = match_date.date()
-        elif isinstance(match_date, date):
-            parsed_date = match_date
-        elif isinstance(match_date, str):
-            try:
-                parsed_date = date.fromisoformat(match_date[:10])
-            except ValueError as exc:
-                raise ValueError("invalid primary event date in gate metadata") from exc
-        else:
-            raise ValueError("missing primary event date in gate metadata")
+        parsed_date, home, away = _primary_event_metadata_identity(row)
         if parsed_date < CURRENT_SEASON_START:
             raise ValueError("primary event metadata contains a pre-season fixture identity")
         if parsed_date > CURRENT_SEASON_END:
             raise ValueError("primary event metadata contains a post-season fixture identity")
         if parsed_date >= before_date:
             continue
-        home = _canonical_team(row.get("home_team"))
-        away = _canonical_team(row.get("away_team"))
-        if home == away:
-            raise ValueError("invalid primary event identity in gate metadata")
         identity = (parsed_date.isoformat(), home, away)
         if (identity[0], away, home) in unique:
             raise ValueError("primary event metadata contains a reversed duplicate fixture identity")
@@ -150,28 +165,13 @@ def _primary_event_identities(
     """Canonical event identities used to prove that the source CSV covers the gate."""
     unique: set[tuple[str, str, str]] = set()
     for row in rows:
-        match_date = row.get("match_date")
-        if isinstance(match_date, datetime):
-            parsed_date = match_date.date()
-        elif isinstance(match_date, date):
-            parsed_date = match_date
-        elif isinstance(match_date, str):
-            try:
-                parsed_date = date.fromisoformat(match_date[:10])
-            except ValueError as exc:
-                raise ValueError("invalid primary event date in gate metadata") from exc
-        else:
-            raise ValueError("missing primary event date in gate metadata")
+        parsed_date, home, away = _primary_event_metadata_identity(row)
         if parsed_date < CURRENT_SEASON_START:
             raise ValueError("primary event metadata contains a pre-season fixture identity")
         if parsed_date > CURRENT_SEASON_END:
             raise ValueError("primary event metadata contains a post-season fixture identity")
         if parsed_date >= before_date:
             continue
-        home = _canonical_team(row.get("home_team"))
-        away = _canonical_team(row.get("away_team"))
-        if home == away:
-            raise ValueError("invalid primary event identity in gate metadata")
         identity = (parsed_date.isoformat(), home, away)
         if (identity[0], away, home) in unique:
             raise ValueError("primary event metadata contains a reversed duplicate fixture identity")
