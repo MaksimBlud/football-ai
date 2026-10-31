@@ -21,7 +21,11 @@ from serie_a_v2_prequote_source_archive_gate import verify_archive
 
 def attest_latest_source(*, token: str, now: datetime, discover=discover_archives,
                          load=get_archive, verify_run=verify_source_run) -> dict:
-    if now.tzinfo is None:
+    if (
+        not isinstance(now, datetime)
+        or now.tzinfo is None
+        or now.utcoffset() is None
+    ):
         raise ValueError("source attestation needs an aware UTC clock")
     at = now.astimezone(timezone.utc)
     archives = discover(token=token)

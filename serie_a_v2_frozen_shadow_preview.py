@@ -11,6 +11,7 @@ import argparse
 from datetime import datetime, timezone, timedelta
 import json
 import math
+import re
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
@@ -27,7 +28,22 @@ SCHEMA = "serie-a-market-anchor-v2-shadow-inference.v1"
 MAX_QUOTE_AGE = timedelta(hours=24)
 FORBIDDEN = frozenset((
     "result", "outcome", "score", "home_goals", "away_goals",
-    "final_score", "settlement", "prediction_correct", "match_winner"
+    "final_score", "settlement", "prediction_correct", "match_winner",
+    # Common score/result aliases seen in football CSVs and API payloads.
+    "ftr", "fthg", "ftag", "home_score", "away_score", "score_home",
+    "score_away", "home_team_score", "away_team_score",
+    "full_time_home_goals", "full_time_away_goals", "ft_home_goals",
+    "ft_away_goals", "home_goals_scored", "away_goals_scored",
+    "actual_result", "actual_outcome", "settled_result", "settled_outcome",
+    "match_result", "result_code", "home_result", "away_result",
+    "target_result", "target_outcome", "winner", "winning_team",
+    # Additional common JSON/API spellings of final scores and full-time outcomes.
+    "final_home_score", "final_away_score", "home_final_score", "away_final_score",
+    "final_home_goals", "final_away_goals", "home_final_goals", "away_final_goals",
+    "full_time_result", "full_time_score", "final_result", "final_outcome",
+    "ft_result", "ft_score", "home_score_ft", "away_score_ft", "scoreline", "score_line",
+    "home_team_goals", "away_team_goals", "goals_home", "goals_away",
+    "home_goal_count", "away_goal_count", "winning_side"
 ))
 MARKET_KEYS = (
     "event_id", "league", "home_team", "away_team", "commence_time_utc",
@@ -86,11 +102,36 @@ def _key(row: Mapping[str, Any]) -> tuple[str, str, str, datetime]:
             _name(row["away_team"]), parse_utc(row["commence_time_utc"]))
 
 
+def _normalise_outcome_field_name(value: Any) -> str:
+    """Normalise snake/camel/spaced field names before outcome-key checks."""
+    with_camel_boundaries = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", str(value).strip())
+    return re.sub(r"[^a-z0-9]+", "_", with_camel_boundaries.casefold()).strip("_")
+
+
+def _contains_forbidden_outcome_key(value: Any) -> bool:
+    """Recursively reject score/result aliases in nested mappings or sequences."""
+    if isinstance(value, Mapping):
+        for key, nested in value.items():
+            if _normalise_outcome_field_name(key) in FORBIDDEN:
+                return True
+            if _contains_forbidden_outcome_key(nested):
+                return True
+    elif isinstance(value, (list, tuple)):
+        return any(_contains_forbidden_outcome_key(item) for item in value)
+    return False
+
+
 def _guard_outcome_free(row: Mapping[str, Any]):
-    if set(row).intersection(FORBIDDEN):
+    feature_payloads = []
+    non_feature_fields = {}
+    for key, value in row.items():
+        if _normalise_outcome_field_name(key) == "features":
+            feature_payloads.append(value)
+        else:
+            non_feature_fields[key] = value
+    if _contains_forbidden_outcome_key(non_feature_fields):
         raise ValueError("outcomes or settlement fields forbidden at capture time")
-    features = row.get("features")
-    if isinstance(features, Mapping) and set(features).intersection(FORBIDDEN):
+    if any(_contains_forbidden_outcome_key(payload) for payload in feature_payloads):
         raise ValueError("result fields cannot be provided as model features")
 
 
@@ -106,7 +147,11 @@ def shadow_preview(
     This module cannot verify that source; it marks every preview NOT eligible
     for the strict preregistered prospective V2 cohort. Do not persist it.
     """
-    if as_of_utc.tzinfo is None:
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
         raise ValueError("as_of_utc must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
     original = load_verified_original()
@@ -248,6 +293,8 @@ def shadow_preview(
 
 def fetch_saved_upcoming_serie_a_quotes(client: Any, *, now: datetime) -> list[dict]:
     """Read *existing* observations only. No odds provider call or DB write."""
+    if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError("now must be timezone-aware")
     items = (
         client.table("odds_snapshots")
         .select(",".join(MARKET_KEYS))

@@ -2,18 +2,19 @@
 import hashlib
 from io import BytesIO
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone, tzinfo
 import zipfile
 
 import pytest
+import serie_a_v2_forward_capture as forward_capture_module
 
-from serie_a_v2_frozen_shadow_preview import parse_utc
+from serie_a_v2_frozen_shadow_preview import MAX_QUOTE_AGE, parse_utc
 
 from serie_a_v2_live_diagnostic_report import _source_codes, PUBLIC_BASE
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
 from serie_a_v2_forward_capture import (
     ARTIFACT_NAME, ARCHIVE_REPORT, SOURCE_DIR,
-    discover_archives, prepare_forward_capture, verify_source_run,
+    discover_archives, get_archive, prepare_forward_capture, verify_source_run,
     SOURCE_WORKFLOW_PATH,
 )
 
@@ -81,6 +82,38 @@ def fake_verified_parent_run(archive, quote_time):
 
 
 
+@pytest.mark.parametrize("conflict", ["home_team", "kickoff"])
+def test_same_original_event_id_cannot_change_fixture_identity(conflict):
+    raw, metadata = make_source_archive()
+    first = quote(ts="2026-10-14T06:00:00Z")
+    second = quote(ts="2026-10-14T06:01:00Z")
+    if conflict == "home_team":
+        second["home_team"] = "Inter"
+    else:
+        second["commence_time_utc"] = "2026-10-21T18:00:00Z"
+
+    calls = []
+
+    def load_archive(artifact_id):
+        calls.append(("load_archive", artifact_id))
+        return raw
+
+    def verify_parent_run(archive, quote_time):
+        calls.append(("verify_parent_run", archive["artifact_id"]))
+        return fake_verified_parent_run(archive, quote_time)
+
+    with pytest.raises(ValueError, match="conflicting fixture identity for same original V2 event_id"):
+        prepare_forward_capture(
+            [first, second],
+            metadata,
+            as_of_utc=NOW,
+            load_archive=load_archive,
+            verify_parent_run=verify_parent_run,
+        )
+
+    assert calls == []
+
+
 def test_forward_v2_scores_only_after_real_prior_archive_and_never_promotes():
     raw, metadata = make_source_archive()
     calls = []
@@ -120,6 +153,32 @@ def test_original_october_13_quote_is_not_backfilled_from_later_archive():
     assert report["blocked_no_prior_source"] == 1
     assert report["rows"][0]["v2_preview"] is None
 
+
+
+def test_stale_original_quote_is_blocked_before_source_parent_or_archive_access():
+    raw, metadata = make_source_archive()
+    stale_time = (NOW - MAX_QUOTE_AGE - timedelta(minutes=1)).isoformat().replace("+00:00", "Z")
+    metadata[0]["created_at"] = parse_utc(stale_time) - timedelta(hours=1)
+    calls = []
+
+    report = prepare_forward_capture(
+        [quote(stale_time)],
+        metadata,
+        as_of_utc=NOW,
+        load_archive=lambda artifact_id: calls.append(("archive", artifact_id)) or raw,
+        verify_parent_run=lambda archive, quote_time: (
+            calls.append(("parent", archive["artifact_id"]))
+            or fake_verified_parent_run(archive, quote_time)
+        ),
+    )
+
+    assert calls == []
+    assert report["quotes_seen"] == report["future_quotes_checked"] == 1
+    assert report["v2_diagnostic_previews_captured"] == 0
+    assert report["blocked_stale_market_quote"] == 1
+    assert report["blocked_no_prior_source"] == 0
+    assert report["rows"][0]["status"] == "STALE_MARKET_QUOTE"
+    assert report["rows"][0]["v2_preview"] is None
 
 def test_wrong_archive_bytes_fail_sha_gate():
     raw, metadata = make_source_archive()
@@ -256,3 +315,137 @@ def test_catalog_rejects_missing_parent_run_identity_even_with_valid_digest():
     with pytest.raises(ValueError,match="missing GitHub parent run identity"):
         discover_archives(token="test-token",
                           get=lambda url,headers,timeout:Response())
+
+
+
+class _NoOffsetTimezone(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+    def tzname(self, dt):
+        return "NO_OFFSET"
+
+
+def test_original_forward_clock_rejects_tzinfo_without_offset_before_archive_access():
+    invalid_clock = datetime(2026, 10, 14, 7, 0, tzinfo=_NoOffsetTimezone())
+    with pytest.raises(ValueError, match="as_of_utc must be timezone-aware"):
+        prepare_forward_capture(
+            [], [],
+            as_of_utc=invalid_clock,
+            load_archive=lambda _artifact_id: pytest.fail("archive must not be loaded"),
+            verify_parent_run=lambda *_args, **_kwargs: pytest.fail("parent must not be checked"),
+        )
+
+class _StreamingArtifactResponse:
+    def __init__(self, chunks, headers=None, error=None):
+        self.chunks = list(chunks)
+        self.headers = headers or {}
+        self.error = error
+        self.iterated = 0
+        self.chunk_size = None
+        self.closed = False
+
+    def raise_for_status(self):
+        if self.error is not None:
+            raise self.error
+
+    def iter_content(self, chunk_size):
+        self.chunk_size = chunk_size
+        for chunk in self.chunks:
+            self.iterated += 1
+            yield chunk
+
+    def close(self):
+        self.closed = True
+
+
+def test_original_artifact_zip_download_streams_and_closes_response():
+    raw = b"PK\\x03\\x04bounded-original-v2"
+    response = _StreamingArtifactResponse(
+        [raw[:4], b"", raw[4:]],
+        headers={"Content-Length": str(len(raw))},
+    )
+    request = {}
+
+    def fake_get(url, **kwargs):
+        request["url"] = url
+        request.update(kwargs)
+        return response
+
+    assert get_archive(123, token="test-token", get=fake_get) == raw
+    assert request["url"].endswith("/actions/artifacts/123/zip")
+    assert request["stream"] is True
+    assert response.chunk_size == 64 * 1024
+    assert response.closed is True
+
+
+def test_original_artifact_zip_declared_oversize_fails_before_body_read(monkeypatch):
+    monkeypatch.setattr(forward_capture_module, "MAX_ZIP_BYTES", 5)
+    response = _StreamingArtifactResponse(
+        [b"must-not-read"],
+        headers={"Content-Length": "6"},
+    )
+
+    with pytest.raises(ValueError, match="missing or oversized source archive"):
+        get_archive(
+            123,
+            token="test-token",
+            get=lambda _url, **_kwargs: response,
+        )
+
+    assert response.iterated == 0
+    assert response.closed is True
+
+
+def test_original_artifact_zip_stream_oversize_stops_at_first_excess_chunk(monkeypatch):
+    monkeypatch.setattr(forward_capture_module, "MAX_ZIP_BYTES", 5)
+    response = _StreamingArtifactResponse([b"12345", b"6", b"never-read"])
+
+    with pytest.raises(ValueError, match="missing or oversized source archive"):
+        get_archive(
+            123,
+            token="test-token",
+            get=lambda _url, **_kwargs: response,
+        )
+
+    assert response.iterated == 2
+    assert response.closed is True
+
+
+def test_original_artifact_zip_requires_read_token_before_request():
+    calls = []
+    with pytest.raises(ValueError, match="GitHub token required"):
+        get_archive(
+            123,
+            token="",
+            get=lambda *args, **kwargs: calls.append((args, kwargs)),
+        )
+    assert calls == []
+
+
+def test_original_artifact_zip_rejects_malformed_content_length_before_read():
+    response = _StreamingArtifactResponse(
+        [b"must-not-read"], headers={"Content-Length": "unknown"}
+    )
+    with pytest.raises(ValueError, match="Content-Length"):
+        get_archive(123, token="test-token", get=lambda _url, **_kwargs: response)
+    assert response.iterated == 0
+    assert response.closed is True
+
+
+def test_original_artifact_zip_rejects_empty_stream_and_closes():
+    response = _StreamingArtifactResponse([])
+    with pytest.raises(ValueError, match="missing or oversized source archive"):
+        get_archive(123, token="test-token", get=lambda _url, **_kwargs: response)
+    assert response.closed is True
+
+
+def test_original_artifact_zip_closes_response_after_http_error():
+    response = _StreamingArtifactResponse([], error=RuntimeError("http failure"))
+    with pytest.raises(RuntimeError, match="http failure"):
+        get_archive(123, token="test-token", get=lambda _url, **_kwargs: response)
+    assert response.closed is True
+

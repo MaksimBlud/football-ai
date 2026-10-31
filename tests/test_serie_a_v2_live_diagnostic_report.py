@@ -1,11 +1,13 @@
 """Tests for actual historical-source + stored-market, always research-only."""
-from datetime import datetime, timezone
+from datetime import datetime, timezone, tzinfo
 
 import pandas as pd
 import pytest
+import serie_a_v2_live_diagnostic_report as report_module
 
 from serie_a_v2_live_diagnostic_report import (
     PUBLIC_BASE, _source_codes, fetch_public_history, make_report,
+    MAX_HISTORICAL_CSV_BYTES, MAX_HISTORICAL_TOTAL_BYTES,
 )
 
 NOW = datetime(2026,10,13,15,1,tzinfo=timezone.utc)
@@ -45,6 +47,148 @@ def source_audit(observed_at="2026-10-13T15:00:00Z"):
         "csv_sha256": "f" * 64,
         "completed_source_rows": 3,
     } for code in _source_codes()]
+
+
+def test_historical_source_rejects_oversized_content_length_before_body_read(tmp_path):
+    class Response:
+        status_code = 200
+        headers = {"Content-Length": str(MAX_HISTORICAL_CSV_BYTES + 1)}
+        def __init__(self, url):
+            self.url = url
+            self.closed = False
+            self.body_read = False
+        def iter_content(self, chunk_size):
+            self.body_read = True
+            yield b"must-not-be-read"
+        def close(self):
+            self.closed = True
+
+    response = None
+    def fake_get(url, timeout, allow_redirects, stream):
+        nonlocal response
+        assert stream is True and allow_redirects is False
+        response = Response(url)
+        return response
+
+    with pytest.raises(RuntimeError, match="exceeds size limit"):
+        fetch_public_history(get=fake_get, capture_dir=tmp_path)
+
+    assert response is not None
+    assert response.body_read is False
+    assert response.closed is True
+    assert list(tmp_path.glob("*.csv")) == []
+
+
+def test_historical_source_stops_on_actual_streamed_byte_limit_and_closes(tmp_path):
+    class Response:
+        status_code = 200
+        headers = {}
+        def __init__(self, url):
+            self.url = url
+            self.closed = False
+            self.chunks_yielded = 0
+        def iter_content(self, chunk_size):
+            assert chunk_size == 64 * 1024
+            self.chunks_yielded += 1
+            yield b"x" * (MAX_HISTORICAL_CSV_BYTES + 1)
+            self.chunks_yielded += 1
+            yield b"must-not-be-consumed"
+        def close(self):
+            self.closed = True
+
+    response = None
+    def fake_get(url, timeout, allow_redirects, stream):
+        nonlocal response
+        assert stream is True and allow_redirects is False
+        response = Response(url)
+        return response
+
+    with pytest.raises(RuntimeError, match="exceeds size limit"):
+        fetch_public_history(get=fake_get, capture_dir=tmp_path)
+
+    assert response is not None
+    assert response.chunks_yielded == 1
+    assert response.closed is True
+    assert list(tmp_path.glob("*.csv")) == []
+
+
+
+
+
+
+
+def test_historical_source_collection_stops_stream_at_remaining_aggregate_budget(tmp_path, monkeypatch):
+    csv_completed = history_fixture().to_csv(index=False).encode()
+    monkeypatch.setattr(
+        report_module, "MAX_HISTORICAL_TOTAL_BYTES", len(csv_completed) + 1
+    )
+
+    class Response:
+        status_code = 200
+        headers = {}
+        def __init__(self, url, chunks):
+            self.url = url
+            self.chunks = list(chunks)
+            self.chunks_yielded = 0
+            self.closed = False
+        def iter_content(self, chunk_size):
+            assert chunk_size == 64 * 1024
+            for chunk in self.chunks:
+                self.chunks_yielded += 1
+                yield chunk
+        def close(self):
+            self.closed = True
+
+    responses = []
+    def fake_get(url, timeout, allow_redirects, stream):
+        assert allow_redirects is False and stream is True
+        chunks = [csv_completed] if not responses else [b"xx", b"must-not-be-consumed"]
+        response = Response(url, chunks)
+        responses.append(response)
+        return response
+
+    with pytest.raises(RuntimeError, match="total size limit"):
+        fetch_public_history(get=fake_get, capture_dir=tmp_path)
+
+    assert len(responses) == 2
+    assert responses[0].chunks_yielded == 1
+    assert responses[1].chunks_yielded == 1
+    assert all(response.closed for response in responses)
+    assert len(list(tmp_path.glob("*.csv"))) == 1
+
+def test_historical_source_collection_enforces_total_archive_byte_limit(tmp_path, monkeypatch):
+    csv_completed = history_fixture().to_csv(index=False).encode()
+    monkeypatch.setattr(
+        report_module, "MAX_HISTORICAL_TOTAL_BYTES", len(csv_completed) + 1
+    )
+
+    class Response:
+        status_code = 200
+        headers = {"Content-Length": str(len(csv_completed))}
+        def __init__(self, url):
+            self.url = url
+            self.closed = False
+        def iter_content(self, chunk_size):
+            yield csv_completed
+        def close(self):
+            self.closed = True
+
+    responses = []
+    def fake_get(url, timeout, allow_redirects, stream):
+        assert stream is True and allow_redirects is False
+        response = Response(url)
+        responses.append(response)
+        return response
+
+    with pytest.raises(RuntimeError, match="total size limit"):
+        fetch_public_history(get=fake_get, capture_dir=tmp_path)
+
+    assert len(responses) == 2
+    assert all(response.closed for response in responses)
+    # First CSV is within the total budget; the second would exceed it and is
+    # rejected before it can be persisted.
+    assert len(list(tmp_path.glob("*.csv"))) == 1
+
 
 
 def test_real_frozen_model_diagnostic_never_relabels_later_source_as_prospective():
@@ -122,14 +266,29 @@ def test_public_free_history_never_downloads_protected_2026_27_outcomes():
     calls = []
     class Response:
         status_code = 200
-        content = csv_completed
-    def fake_get(url, timeout):
-        calls.append((url, timeout))
+        headers = {"Content-Length": str(len(csv_completed))}
+        def __init__(self, url):
+            self.url = url
+            self.closed = False
+        def iter_content(self, chunk_size):
+            assert chunk_size == 64 * 1024
+            yield csv_completed
+        def close(self):
+            self.closed = True
+    responses = []
+    def fake_get(url, timeout, allow_redirects, stream):
+        calls.append((url, timeout, allow_redirects, stream))
         assert url.startswith(PUBLIC_BASE + "/") and url.endswith("/I1.csv")
         assert f"/{current}/" not in url
-        return Response()
+        assert allow_redirects is False
+        assert stream is True
+        response = Response(url)
+        responses.append(response)
+        return response
     history, audit = fetch_public_history(get=fake_get)
     assert len(calls) == 10
+    assert all(call[2] is False and call[3] is True for call in calls)
+    assert all(response.closed for response in responses)
     assert len(audit) == len(calls)
     assert len(history) == 3*len(calls)
     assert all(x["csv_sha256"] and x["source_observed_at_utc"] for x in audit)
@@ -137,10 +296,51 @@ def test_public_free_history_never_downloads_protected_2026_27_outcomes():
 
 def test_upstream_status_failure_is_not_filled_with_guessed_data():
     class BadResponse:
-        status_code=503
-        content=b""
-    with pytest.raises(RuntimeError,match="unavailable"):
-        fetch_public_history(get=lambda url,timeout: BadResponse())
+        status_code = 503
+        url = "https://www.football-data.co.uk/mmz4281/1617/I1.csv"
+        content = b""
+    with pytest.raises(RuntimeError, match="unavailable"):
+        fetch_public_history(get=lambda url, timeout, allow_redirects, stream: BadResponse())
+
+
+def test_public_history_rejects_redirect_before_reading_response_bytes():
+    calls = []
+    class RedirectResponse:
+        status_code = 302
+        url = "https://www.football-data.co.uk/mmz4281/1617/I1.csv"
+        def iter_content(self, chunk_size):
+            raise AssertionError("redirect body must not be read")
+        def close(self):
+            pass
+    def fake_get(url, timeout, allow_redirects, stream):
+        calls.append((url, allow_redirects, stream))
+        return RedirectResponse()
+    with pytest.raises(RuntimeError, match="unavailable"):
+        fetch_public_history(get=fake_get)
+    assert calls and all(allow_redirects is False and stream is True for _, allow_redirects, stream in calls)
+
+
+def test_public_history_rejects_unexpected_final_url_before_reading_response_bytes():
+    class WrongFinalURL:
+        status_code = 200
+        url = "https://example.invalid/attacker.csv"
+        @property
+        def content(self):
+            raise AssertionError("unexpected final URL bytes must not be read")
+    with pytest.raises(RuntimeError, match="unexpected final URL"):
+        fetch_public_history(
+            get=lambda url, timeout, allow_redirects, stream: WrongFinalURL()
+        )
+
+
+def test_public_history_rejects_unapproved_source_endpoint_before_network(monkeypatch):
+    calls = []
+    monkeypatch.setattr(report_module, "PUBLIC_BASE", "http://example.invalid/mmz4281")
+    with pytest.raises(ValueError, match="approved HTTPS Football-Data endpoint"):
+        fetch_public_history(
+            get=lambda url, timeout, allow_redirects, stream: calls.append(url)
+        )
+    assert calls == []
 
 
 
@@ -169,3 +369,64 @@ def test_real_quote_diagnostic_refuses_both_teams_without_prior_match_history():
     assert report["per_fixture_feature_coverage"][0]["observed_frozen_feature_count"] == 0
     assert report["no_bet"] is True
     assert report["supabase_writes"] == report["paid_provider_requests"] == 0
+
+class _NoOffsetTimezone(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+    def tzname(self, dt):
+        return "NO_OFFSET"
+
+
+def test_live_diagnostic_rejects_offsetless_clock_before_feature_build():
+    invalid_clock = datetime(2026, 10, 13, 15, 1, tzinfo=_NoOffsetTimezone())
+    with pytest.raises(ValueError, match="as-of timestamp needs UTC timezone"):
+        make_report([], history_fixture(), [{}], as_of_utc=invalid_clock)
+
+@pytest.mark.parametrize(
+    "redirect_kind",
+    ["cross_origin", "https_downgrade", "path_change", "query_added", "credentials", "nonstandard_port"],
+)
+def test_historical_source_final_url_mutations_fail_before_body_read_or_csv_write(tmp_path, redirect_kind):
+    """Each source URL mutation must fail before reading bytes or persisting a CSV."""
+    body_reads = []
+
+    class MutatedResponse:
+        status_code = 200
+        headers = {}
+
+        def __init__(self, url):
+            self.url = url
+
+        def iter_content(self, chunk_size):
+            body_reads.append(self.url)
+            raise AssertionError("unapproved final response body must not be read")
+
+        def close(self):
+            pass
+
+    def fake_get(url, timeout, allow_redirects, stream):
+        assert allow_redirects is False
+        assert stream is True
+        if redirect_kind == "cross_origin":
+            final_url = url.replace("www.football-data.co.uk", "attacker.invalid")
+        elif redirect_kind == "https_downgrade":
+            final_url = url.replace("https://", "http://", 1)
+        elif redirect_kind == "path_change":
+            final_url = url.replace("/I1.csv", "/other.csv")
+        elif redirect_kind == "query_added":
+            final_url = url + "?redirected=1"
+        elif redirect_kind == "credentials":
+            final_url = url.replace("https://", "https://user@")
+        else:
+            final_url = url.replace("www.football-data.co.uk", "www.football-data.co.uk:444")
+        return MutatedResponse(final_url)
+
+    with pytest.raises(RuntimeError, match="unexpected final URL"):
+        fetch_public_history(get=fake_get, capture_dir=tmp_path)
+    assert body_reads == []
+    assert list(tmp_path.glob("*.csv")) == []
+

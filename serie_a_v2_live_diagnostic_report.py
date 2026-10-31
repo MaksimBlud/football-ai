@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
+from urllib.parse import urlsplit
 import hashlib
 from io import BytesIO
 import json
@@ -26,6 +27,8 @@ from serie_a_v2_frozen_shadow_preview import (
 PUBLIC_BASE = "https://www.football-data.co.uk/mmz4281"
 PAID_PROVIDER_REQUESTS = 0
 MAX_PUBLIC_SOURCE_FILES = len(SERIE_A_RUNTIME_CONFIG.historical_source.season_codes)
+MAX_HISTORICAL_CSV_BYTES = 5_000_000
+MAX_HISTORICAL_TOTAL_BYTES = 10_000_000
 
 
 def _source_codes() -> list[str]:
@@ -38,20 +41,142 @@ def _source_codes() -> list[str]:
     return historical
 
 
+def _assert_approved_history_url(url: str, *, season_code: str) -> None:
+    """Require the exact HTTPS Football-Data CSV endpoint before making a request."""
+    parts = urlsplit(url)
+    expected_path = (
+        f"/mmz4281/{season_code}/"
+        f"{SERIE_A_RUNTIME_CONFIG.historical_source.competition_code}.csv"
+    )
+    expected_url = f"{PUBLIC_BASE}/{season_code}/{SERIE_A_RUNTIME_CONFIG.historical_source.competition_code}.csv"
+    if (
+        parts.scheme != "https"
+        or parts.hostname != "www.football-data.co.uk"
+        or parts.port not in (None, 443)
+        or parts.username is not None
+        or parts.password is not None
+        or parts.path != expected_path
+        or parts.query
+        or parts.fragment
+        or url != expected_url
+    ):
+        raise ValueError("historical source URL is not the approved HTTPS Football-Data endpoint")
+
+
+
+def _read_bounded_historical_csv_response(
+    response, *, season_code: str, remaining_collection_bytes: int | None = None
+) -> bytes:
+    """Consume one frozen historical CSV within both file and remaining collection budgets."""
+    if remaining_collection_bytes is None:
+        remaining_collection_bytes = MAX_HISTORICAL_TOTAL_BYTES
+    if type(remaining_collection_bytes) is not int or remaining_collection_bytes < 0:
+        raise RuntimeError("Public Serie A historical source collection has an invalid remaining byte budget")
+    if remaining_collection_bytes == 0:
+        raise RuntimeError("Public Serie A historical source collection exceeds total size limit")
+    try:
+        if response.status_code != 200:
+            raise RuntimeError(
+                f"Public Serie A CSV unavailable: season={season_code}, http={response.status_code}"
+            )
+        if getattr(response, "url", None) is None:
+            raise RuntimeError(
+                f"Public Serie A CSV missing final URL: season={season_code}"
+            )
+        headers = getattr(response, "headers", {}) or {}
+        declared_length = headers.get("Content-Length")
+        if declared_length is not None:
+            try:
+                declared_bytes = int(declared_length)
+            except (TypeError, ValueError):
+                raise RuntimeError(
+                    f"Public Serie A CSV has invalid Content-Length: season={season_code}"
+                ) from None
+            if declared_bytes < 0:
+                raise RuntimeError(
+                    f"Public Serie A CSV has invalid Content-Length: season={season_code}"
+                )
+            if declared_bytes > MAX_HISTORICAL_CSV_BYTES:
+                raise RuntimeError(
+                    f"Public Serie A CSV exceeds size limit: season={season_code}"
+                )
+            if declared_bytes > remaining_collection_bytes:
+                raise RuntimeError("Public Serie A historical source collection exceeds total size limit")
+
+        iterator = getattr(response, "iter_content", None)
+        if not callable(iterator):
+            raise RuntimeError(
+                f"Public Serie A CSV does not support bounded streaming: season={season_code}"
+            )
+        chunks: list[bytes] = []
+        total = 0
+        for chunk in iterator(chunk_size=64 * 1024):
+            if not chunk:
+                continue
+            if not isinstance(chunk, bytes):
+                raise RuntimeError(
+                    f"Public Serie A CSV yielded non-byte content: season={season_code}"
+                )
+            total += len(chunk)
+            if total > MAX_HISTORICAL_CSV_BYTES:
+                raise RuntimeError(
+                    f"Public Serie A CSV exceeds size limit: season={season_code}"
+                )
+            if total > remaining_collection_bytes:
+                raise RuntimeError("Public Serie A historical source collection exceeds total size limit")
+            chunks.append(chunk)
+        body = b"".join(chunks)
+        if not body:
+            raise RuntimeError(
+                f"Public Serie A CSV response body is empty: season={season_code}"
+            )
+        return body
+    finally:
+        close = getattr(response, "close", None)
+        if callable(close):
+            try:
+                close()
+            except Exception:
+                pass
+
+
 def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -> tuple[pd.DataFrame, list[dict]]:
     """Explicit, bounded configured public URLs; never odds API, never cache guess."""
     all_frames = []
     audit = []
+    total_source_bytes = 0
     if capture_dir is not None:
         capture_dir.mkdir(parents=True, exist_ok=True)
     for code in _source_codes():
         if len(code) != 4 or not code.isdigit():
             raise ValueError("unexpected historical season code")
         url = f"{PUBLIC_BASE}/{code}/{SERIE_A_RUNTIME_CONFIG.historical_source.competition_code}.csv"
-        response = get(url, timeout=30)
-        if response.status_code != 200:
-            raise RuntimeError(f"Public Serie A CSV unavailable: season={code}, http={response.status_code}")
-        body = response.content
+        _assert_approved_history_url(url, season_code=code)
+        # Do not let requests follow a redirect to a different host/path. A
+        # successful status alone is not source provenance; require the exact
+        # approved final URL before touching response bytes.
+        response = get(url, timeout=30, allow_redirects=False, stream=True)
+        try:
+            if response.status_code != 200:
+                raise RuntimeError(f"Public Serie A CSV unavailable: season={code}, http={response.status_code}")
+            if getattr(response, "url", None) != url:
+                raise RuntimeError(f"Public Serie A CSV returned an unexpected final URL: season={code}")
+            body = _read_bounded_historical_csv_response(
+                response,
+                season_code=code,
+                remaining_collection_bytes=MAX_HISTORICAL_TOTAL_BYTES - total_source_bytes,
+            )
+        finally:
+            # The helper closes after body consumption; this also closes on URL/status preflight failure.
+            close = getattr(response, "close", None)
+            if callable(close):
+                try:
+                    close()
+                except Exception:
+                    pass
+        if total_source_bytes + len(body) > MAX_HISTORICAL_TOTAL_BYTES:
+            raise RuntimeError("Public Serie A historical source collection exceeds total size limit")
+        total_source_bytes += len(body)
         capture = datetime.now(timezone.utc)
         if capture_dir is not None:
             (capture_dir / f"serie_a_{code}.csv").write_bytes(body)
@@ -123,7 +248,11 @@ def make_report(quotes: list[dict], history: pd.DataFrame, source_audit: list[di
                 as_of_utc: datetime) -> dict:
     if not source_audit:
         raise ValueError("history provenance required")
-    if as_of_utc.tzinfo is None:
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
         raise ValueError("as-of timestamp needs UTC timezone")
     _assert_original_v2_source_embargo(
         history, source_audit, as_of_utc=as_of_utc.astimezone(timezone.utc)

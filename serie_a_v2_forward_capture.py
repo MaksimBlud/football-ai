@@ -20,7 +20,7 @@ import pandas as pd
 import requests
 
 from serie_a_v2_frozen_shadow_preview import (
-    fetch_saved_upcoming_serie_a_quotes, parse_utc,
+    MAX_QUOTE_AGE, fetch_saved_upcoming_serie_a_quotes, parse_utc,
 )
 from serie_a_v2_live_diagnostic_report import make_report
 from serie_a_v2_prequote_source_archive_gate import (
@@ -133,16 +133,38 @@ def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
     url = f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip"
     if not token:
         raise ValueError("GitHub token required")
-    r = get(url, headers={
+    response = get(url, headers={
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
-    }, timeout=90)
-    r.raise_for_status()
-    raw = r.content
-    if not raw or len(raw) > MAX_ZIP_BYTES:
-        raise ValueError("missing or oversized source archive")
-    return raw
+    }, timeout=90, stream=True)
+    try:
+        response.raise_for_status()
+        declared_length = response.headers.get("Content-Length")
+        if declared_length is not None:
+            declared_text = str(declared_length).strip()
+            if not declared_text.isdecimal():
+                raise ValueError("invalid GitHub source archive Content-Length")
+            if int(declared_text) > MAX_ZIP_BYTES:
+                raise ValueError("missing or oversized source archive")
+
+        chunks = []
+        total_bytes = 0
+        for chunk in response.iter_content(chunk_size=64 * 1024):
+            if not chunk:
+                continue
+            total_bytes += len(chunk)
+            if total_bytes > MAX_ZIP_BYTES:
+                raise ValueError("missing or oversized source archive")
+            chunks.append(chunk)
+        raw = b"".join(chunks)
+        if not raw:
+            raise ValueError("missing or oversized source archive")
+        return raw
+    finally:
+        close = getattr(response, "close", None)
+        if callable(close):
+            close()
 
 
 def prepare_forward_capture(
@@ -150,29 +172,47 @@ def prepare_forward_capture(
     as_of_utc: datetime, load_archive, verify_parent_run,
     write_archives_to: Path | None = None,
 ) -> dict:
-    """Only score quotes with a GitHub source ZIP strictly older than the quote.
+    """Only score fresh quotes with a GitHub source ZIP strictly older than the quote.
 
     A source-before-quote check is necessary but not sufficient for prospective
     admission: frozen incumbent, current-season form and outcome gate still
     missing. All resulting original-V2 probabilities are diagnostic only.
     """
-    if as_of_utc.tzinfo is None:
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
         raise ValueError("as_of_utc must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
     from serie_a_v2_frozen_shadow_preview import _guard_outcome_free
     if write_archives_to is not None:
         write_archives_to.mkdir(parents=True, exist_ok=True)
-    rows, cache = [], {}
-    verified_runs = {}
-    used_archives = {}
+    identity_by_event_id = {}
     for q in quotes:
         _guard_outcome_free(q)
         if q.get("league") != "SERIE_A":
             raise ValueError("forward capture accepts Serie A quotes only")
+        event = q.get("event_id")
+        home, away = q.get("home_team"), q.get("away_team")
+        if not all(isinstance(value, str) and value.strip() for value in (event, home, away)):
+            raise ValueError("quote identity is incomplete")
         quote_time = parse_utc(q["snapshot_time_utc"])
         kickoff = parse_utc(q["commence_time_utc"])
         if quote_time > now or not quote_time < kickoff:
             raise ValueError("invalid stored quote timing")
+        event_identity = (home, away, kickoff)
+        prior_identity = identity_by_event_id.get(event)
+        if prior_identity is not None and prior_identity != event_identity:
+            raise ValueError("conflicting fixture identity for same original V2 event_id")
+        identity_by_event_id[event] = event_identity
+
+    rows, cache = [], {}
+    verified_runs = {}
+    used_archives = {}
+    for q in quotes:
+        quote_time = parse_utc(q["snapshot_time_utc"])
+        kickoff = parse_utc(q["commence_time_utc"])
         if not now < kickoff:
             continue
         key = (q["event_id"], quote_time)
@@ -187,6 +227,10 @@ def prepare_forward_capture(
             "eligible_for_frozen_prospective_cohort": False,
             "no_bet": True,
         }
+        if now - quote_time > MAX_QUOTE_AGE:
+            record["status"] = "STALE_MARKET_QUOTE"
+            rows.append(record)
+            continue
         candidates = [a for a in archive_metadata if a["created_at"] < quote_time]
         if not candidates:
             rows.append(record)
@@ -250,6 +294,8 @@ def prepare_forward_capture(
             r["v2_preview"] is not None for r in rows),
         "blocked_no_prior_source": sum(
             r["status"] == "NO_EARLIER_SOURCE_ARCHIVE" for r in rows),
+        "blocked_stale_market_quote": sum(
+            r["status"] == "STALE_MARKET_QUOTE" for r in rows),
         "archived_sources_used": used_archives,
         "source_workflow_run_attestation_required": True,
         "rows": rows,
@@ -288,6 +334,7 @@ def main() -> None:
     print(json.dumps({k: report[k] for k in (
         "mode", "quotes_seen", "future_quotes_checked",
         "v2_diagnostic_previews_captured", "blocked_no_prior_source",
+        "blocked_stale_market_quote",
         "eligible_for_frozen_prospective_cohort", "paid_provider_calls",
         "supabase_writes", "no_bet",
     )}, sort_keys=True))

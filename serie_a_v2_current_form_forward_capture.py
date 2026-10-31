@@ -25,13 +25,19 @@ from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 from serie_a_v2_asof_feature_manifest import build_manifest
 from serie_a_v2_current_form_source_capture import (
     CURRENT_CODE, CURRENT_FILENAME, CURRENT_SEASON, CURRENT_URL,
-    MANIFEST_FILENAME, MIN_COMPLETED_FEATURE_SOURCE_EVENTS,
+    MANIFEST_FILENAME, MAX_CURRENT_CSV_BYTES, MIN_COMPLETED_FEATURE_SOURCE_EVENTS,
     REQUIRED_COLUMNS, validate_current_season_csv,
+)
+from serie_a_v2_current_form_source_capture import (
+    _canonical_team, _current_source_fixture_identities, _fixture_identity_sha256,
+    _primary_event_identities, read_completed_primary_event_identities,
 )
 from serie_a_v2_frozen_shadow_preview import (
     FROZEN_SHA, fetch_saved_upcoming_serie_a_quotes, parse_utc, shadow_preview, _guard_outcome_free,
 )
-from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes
+from serie_a_v2_live_diagnostic_report import (
+    MAX_HISTORICAL_CSV_BYTES, MAX_HISTORICAL_TOTAL_BYTES, PUBLIC_BASE, _source_codes,
+)
 from serie_a_v2_prequote_source_archive_gate import MAX_ZIP_BYTES
 
 REPOSITORY = "MaksimBlud/football-ai"
@@ -42,6 +48,8 @@ SCHEMA_VERSION = "SERIE_A_V2_CURRENT_FORM_FORWARD_CAPTURE_V1"
 MAX_QUOTE_AGE = timedelta(hours=24)
 MAX_SOURCE_AGE = timedelta(hours=24)
 MAX_ARCHIVE_BYTES = 16_000_000
+MAX_ARCHIVE_UNCOMPRESSED_BYTES = 16_000_000
+MAX_MANIFEST_BYTES = 3_000_000
 OLD_CUTOFF = pd.Timestamp("2026-07-01")
 
 
@@ -129,6 +137,8 @@ def verify_source_run(
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
     if type(artifact_id) is not int or artifact_id <= 0:
         raise ValueError("invalid source artifact id")
+    if not token:
+        raise ValueError("GitHub actions:read token missing")
     response = get(
         f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip",
         headers={
@@ -137,12 +147,75 @@ def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
             "X-GitHub-Api-Version": "2022-11-28",
         },
         timeout=90,
+        stream=True,
     )
-    response.raise_for_status()
-    raw = response.content
-    if not raw or len(raw) > MAX_ARCHIVE_BYTES:
-        raise ValueError("current-form source archive is empty or too large")
-    return raw
+    try:
+        response.raise_for_status()
+        declared_length = response.headers.get("Content-Length")
+        if declared_length is not None:
+            declared_text = str(declared_length).strip()
+            if not declared_text.isdecimal():
+                raise ValueError("invalid current-form source archive Content-Length")
+            if int(declared_text) > MAX_ARCHIVE_BYTES:
+                raise ValueError("current-form source archive is empty or too large")
+
+        chunks = []
+        total_bytes = 0
+        for chunk in response.iter_content(chunk_size=64 * 1024):
+            if not chunk:
+                continue
+            total_bytes += len(chunk)
+            if total_bytes > MAX_ARCHIVE_BYTES:
+                raise ValueError("current-form source archive is empty or too large")
+            chunks.append(chunk)
+        raw = b"".join(chunks)
+        if not raw:
+            raise ValueError("current-form source archive is empty or too large")
+        return raw
+    finally:
+        close = getattr(response, "close", None)
+        if callable(close):
+            close()
+
+
+def _validate_archive_member_sizes(infos: list[Any], *, expected_names: set[str]) -> None:
+    """Bound ZIP expansion before any member is decompressed or parsed."""
+    names = [getattr(info, "filename", None) for info in infos]
+    if len(infos) != len(expected_names) or set(names) != expected_names:
+        raise ValueError("current-form archive has unexpected/missing files")
+
+    historical_names = expected_names - {CURRENT_FILENAME, MANIFEST_FILENAME}
+    historical_total = 0
+    uncompressed_total = 0
+    for info in infos:
+        name = info.filename
+        if info.is_dir():
+            raise ValueError("current-form archive must not contain directory members")
+        size = info.file_size
+        compressed_size = info.compress_size
+        if type(size) is not int or size < 0:
+            raise ValueError("current-form archive member has an invalid uncompressed size")
+        if type(compressed_size) is not int or compressed_size < 0:
+            raise ValueError("current-form archive member has an invalid compressed size")
+
+        if name in historical_names:
+            if size > MAX_HISTORICAL_CSV_BYTES:
+                raise ValueError("current-form historical CSV member exceeds uncompressed size limit")
+            historical_total += size
+        elif name == CURRENT_FILENAME:
+            if size > MAX_CURRENT_CSV_BYTES:
+                raise ValueError("current-form current-season CSV member exceeds uncompressed size limit")
+        elif name == MANIFEST_FILENAME:
+            if size > MAX_MANIFEST_BYTES:
+                raise ValueError("current-form source manifest member exceeds uncompressed size limit")
+        else:
+            raise ValueError("current-form archive contains an unapproved member")
+
+        if historical_total > MAX_HISTORICAL_TOTAL_BYTES:
+            raise ValueError("current-form historical CSV members exceed aggregate uncompressed size limit")
+        uncompressed_total += size
+        if uncompressed_total > MAX_ARCHIVE_UNCOMPRESSED_BYTES:
+            raise ValueError("current-form archive exceeds total uncompressed size limit")
 
 
 def verify_and_load_archive(
@@ -156,9 +229,7 @@ def verify_and_load_archive(
     with zipfile.ZipFile(BytesIO(raw), "r") as z:
         old_names = {f"serie_a_{code}.csv" for code in _source_codes()}
         expected = old_names | {CURRENT_FILENAME, MANIFEST_FILENAME}
-        names = z.namelist()
-        if len(names) != len(expected) or set(names) != expected:
-            raise ValueError("current-form archive has unexpected/missing files")
+        _validate_archive_member_sizes(z.infolist(), expected_names=expected)
         manifest = json.loads(z.read(MANIFEST_FILENAME))
         if (manifest.get("schema_version") != "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V1"
                 or manifest.get("experiment_id") != "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY"
@@ -185,12 +256,77 @@ def verify_and_load_archive(
                 or gate.get("score_or_result_fields_selected_for_gate") is not False
                 or gate.get("passed") is not True):
             raise ValueError("current-form feature input gate is not authenticated/open")
+        gate_identity_count = gate.get("gate_fixture_identity_count")
+        gate_covered_count = gate.get("gate_fixture_identities_covered_by_current_source")
+        gate_missing_count = gate.get("gate_fixture_identities_missing_from_current_source")
+        current_identity_count = gate.get("current_source_fixture_identity_count")
+        gate_identity_sha256 = gate.get("gate_fixture_identity_sha256")
+        current_identity_sha256 = gate.get("current_source_fixture_identity_sha256")
+        if (
+            type(gate_identity_count) is not int
+            or gate_identity_count != gate.get("observed_completed_primary_events")
+            or gate_identity_count < MIN_COMPLETED_FEATURE_SOURCE_EVENTS
+            or type(gate_covered_count) is not int
+            or gate_covered_count != gate_identity_count
+            or type(gate_missing_count) is not int
+            or gate_missing_count != 0
+            or type(current_identity_count) is not int
+            or current_identity_count < gate_identity_count
+            or not isinstance(gate_identity_sha256, str)
+            or not re.fullmatch(r"[0-9a-f]{64}", gate_identity_sha256)
+            or not isinstance(current_identity_sha256, str)
+            or not re.fullmatch(r"[0-9a-f]{64}", current_identity_sha256)
+        ):
+            raise ValueError(
+                "current-form feature source gate identity attestation is missing or inconsistent"
+            )
+        gate_checked_at = parse_utc(gate.get("checked_at_utc"))
+        raw_gate_identities = gate.get("gate_fixture_identities")
+        if not isinstance(raw_gate_identities, list) or len(raw_gate_identities) != gate_identity_count:
+            raise ValueError("current-form feature-source gate identity list is missing or inconsistent")
+        gate_identity_rows = []
+        for identity in raw_gate_identities:
+            if (
+                not isinstance(identity, list)
+                or len(identity) != 3
+                or not all(isinstance(value, str) and value.strip() for value in identity)
+            ):
+                raise ValueError("current-form feature-source gate identity list is malformed")
+            gate_identity_rows.append({
+                "match_date": identity[0],
+                "home_team": identity[1],
+                "away_team": identity[2],
+            })
+        gate_identities = _primary_event_identities(
+            gate_identity_rows, before_date=gate_checked_at.date()
+        )
+        if (
+            len(gate_identities) != gate_identity_count
+            or _fixture_identity_sha256(gate_identities) != gate_identity_sha256
+        ):
+            raise ValueError("current-form feature-source gate identity digest/count mismatch")
         evaluation_gate = manifest.get("target_outcome_evaluation_gate")
         if (not isinstance(evaluation_gate, dict)
                 or evaluation_gate.get("minimum_completed_eligible_prospective_forecasts") != 30
                 or evaluation_gate.get("outcomes_read_for_evaluation") is not False
                 or evaluation_gate.get("outcome_gate_open") is not False):
             raise ValueError("target outcome evaluation gate unexpectedly opened or changed")
+        feature_policy = manifest.get("feature_policy")
+        if (not isinstance(feature_policy, dict)
+                or feature_policy.get("use_current_season_matches_only_as_lagged_features") is not True
+                or feature_policy.get("same_calendar_day_matches_excluded") is not True
+                or feature_policy.get("future_or_unplayed_fixtures_used") is not False
+                or feature_policy.get("model_weights_or_feature_definitions_changed") is not False
+                or feature_policy.get("model_refit") is not False
+                or feature_policy.get("model_selection") is not False):
+            raise ValueError("current-form feature policy violates lagged-only frozen contract")
+        if gate.get("metadata_fields_read") != ["match_date", "home_team", "away_team"]:
+            raise ValueError("current-form feature-source gate must read only fixture metadata")
+        if (manifest.get("eligible_for_frozen_old_season_cohort") is not False
+                or manifest.get("eligible_for_current_form_forward_shadow") is not False
+                or manifest.get("eligible_for_product_publication") is not False
+                or manifest.get("no_bet") is not True):
+            raise ValueError("current-form source archive cannot assert forecast/publication eligibility")
         if (manifest.get("target_outcomes_read") is not False
                 or manifest.get("target_outcomes_scored") is not False
                 or manifest.get("model_refit_or_promotion") is not False
@@ -250,6 +386,24 @@ def verify_and_load_archive(
         current_dates = pd.to_datetime(current_frame["Date"], dayfirst=True, format="mixed", errors="raise")
         if current_dates.empty or (current_dates < OLD_CUTOFF).any():
             raise ValueError("current-season archive contains pre-2026/27 rows or no usable rows")
+        actual_current_identities = _current_source_fixture_identities(current_frame)
+        actual_current_identity_sha256 = _fixture_identity_sha256(actual_current_identities)
+        if (
+            current_identity_count != len(actual_current_identities)
+            or current_identity_sha256 != actual_current_identity_sha256
+        ):
+            raise ValueError("current-form source fixture identity digest/count mismatch")
+        covered_gate_identities = gate_identities & actual_current_identities
+        missing_gate_identities = gate_identities - actual_current_identities
+        if (
+            len(covered_gate_identities) != gate_identity_count
+            or missing_gate_identities
+            or gate_covered_count != len(covered_gate_identities)
+            or gate_missing_count != len(missing_gate_identities)
+        ):
+            raise ValueError(
+                "current-form source fixture identities do not cover the feature-source gate"
+            )
         source_times.append(current_observed)
         history = pd.concat(old_frames + [current_frame], ignore_index=True)
         latest_source = max(source_times)
@@ -257,6 +411,14 @@ def verify_and_load_archive(
         declared_archive = parse_utc(manifest["source_archive_created_at_utc"])
         if latest_source != declared_latest or declared_archive < latest_source:
             raise ValueError("source observation and archive timestamps conflict")
+        # The metadata-only feature-input gate must itself precede the source
+        # observation; otherwise a later gate timestamp could be retrofitted
+        # into an earlier source archive manifest.
+        gate_checked = parse_utc(gate["checked_at_utc"])
+        if not gate_checked <= latest_source <= declared_archive:
+            raise ValueError(
+                "feature-source gate timestamp must precede current source observation and archive creation"
+            )
         if declared_archive > archive["created_at"] or archive["created_at"] > parse_utc(parent["run_completed_at_utc"]):
             raise ValueError("source archive artifact timing conflicts with parent run")
         return history, {
@@ -267,7 +429,99 @@ def verify_and_load_archive(
             "parent_run": dict(parent),
             "historical_match_rows": len(history),
             "current_season_history_rows": len(current_frame),
+            "current_source_fixture_identities": actual_current_identities,
+            "feature_source_gate_attestation": {
+                "verified": True,
+                "gate_fixture_identity_sha256": gate_identity_sha256,
+                "gate_fixture_identity_count": gate_identity_count,
+                "gate_fixture_identities_covered_by_current_source": gate_covered_count,
+                "gate_fixture_identities_missing_from_current_source": gate_missing_count,
+                "current_source_fixture_identity_sha256": actual_current_identity_sha256,
+                "current_source_fixture_identity_count": len(actual_current_identities),
+            },
         }
+
+
+def _current_gate_freshness(
+    current_gate_identities: set[tuple[str, str, str]] | None,
+    source_meta: Mapping[str, Any] | None,
+    *,
+    before_date_exclusive: str | None = None,
+) -> dict:
+    """Check that the archived current-season source covers all gate fixtures known by the cutoff."""
+    if current_gate_identities is None or not isinstance(current_gate_identities, set):
+        return {
+            "checked": False,
+            "fresh": False,
+            "reason": "CURRENT_GATE_NOT_SUPPLIED",
+            "metadata_fields_read": ["match_date", "home_team", "away_team"],
+            "target_outcomes_read": False,
+        }
+    if any(
+        not isinstance(identity, tuple)
+        or len(identity) != 3
+        or not isinstance(identity[0], str)
+        or not isinstance(identity[1], str)
+        or not isinstance(identity[2], str)
+        for identity in current_gate_identities
+    ):
+        return {
+            "checked": True,
+            "fresh": False,
+            "reason": "CURRENT_GATE_IDENTITIES_MALFORMED",
+            "current_gate_identity_count": len(current_gate_identities),
+            "metadata_fields_read": ["match_date", "home_team", "away_team"],
+            "target_outcomes_read": False,
+        }
+    gate = {
+        identity for identity in current_gate_identities
+        if before_date_exclusive is None or identity[0] < before_date_exclusive
+    }
+    source_ids = (
+        source_meta.get("current_source_fixture_identities")
+        if isinstance(source_meta, Mapping) else None
+    )
+    if not isinstance(source_ids, set):
+        source_ids = set()
+    missing = gate - source_ids
+    attestation = (
+        source_meta.get("feature_source_gate_attestation", {})
+        if isinstance(source_meta, Mapping) else {}
+    )
+    captured_gate_count = attestation.get("gate_fixture_identity_count")
+    gate_meets_minimum = len(gate) >= MIN_COMPLETED_FEATURE_SOURCE_EVENTS
+    captured_gate_count_valid = (
+        type(captured_gate_count) is int
+        and captured_gate_count >= MIN_COMPLETED_FEATURE_SOURCE_EVENTS
+        and len(gate) >= captured_gate_count
+    )
+    if not isinstance(source_meta, Mapping):
+        reason = "SOURCE_ARCHIVE_NOT_AVAILABLE"
+    elif not gate_meets_minimum:
+        reason = "CURRENT_GATE_BELOW_MINIMUM"
+    elif not captured_gate_count_valid:
+        reason = "CURRENT_GATE_COUNT_BELOW_CAPTURED_GATE"
+    elif missing:
+        reason = "SOURCE_ARCHIVE_MISSING_CURRENT_GATE_FIXTURES"
+    else:
+        reason = "MATCH"
+    fresh = reason == "MATCH"
+    return {
+        "checked": True,
+        "fresh": fresh,
+        "reason": reason,
+        "minimum_completed_primary_events": MIN_COMPLETED_FEATURE_SOURCE_EVENTS,
+        "cutoff_date_exclusive_utc": before_date_exclusive,
+        "current_gate_identity_count": len(gate),
+        "current_gate_identity_sha256": _fixture_identity_sha256(gate),
+        "source_current_identity_count": len(source_ids),
+        "source_gate_identity_count_at_capture": captured_gate_count,
+        "source_gate_identity_sha256_at_capture": attestation.get("gate_fixture_identity_sha256"),
+        "missing_identity_count": len(missing),
+        "missing_identity_sha256": _fixture_identity_sha256(missing),
+        "metadata_fields_read": ["match_date", "home_team", "away_team"],
+        "target_outcomes_read": False,
+    }
 
 
 def verify_latest_source_archive(
@@ -276,11 +530,16 @@ def verify_latest_source_archive(
     as_of_utc: datetime,
     load_archive,
     verify_parent_run,
+    current_gate_identities: set[tuple[str, str, str]] | None = None,
     write_sources_to: Path | None = None,
 ) -> dict:
     """Verify the latest successful main source artifact even when all quotes are stale."""
-    if as_of_utc.tzinfo is None:
-        raise ValueError("source verification clock must be timezone-aware")
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
+        raise ValueError("source verification clock must have an explicit UTC offset")
     now = as_of_utc.astimezone(timezone.utc)
     candidates = sorted(
         (item for item in archive_metadata if item["created_at"] < now),
@@ -292,13 +551,55 @@ def verify_latest_source_archive(
             "status": "NO_SOURCE_ARCHIVE",
             "verified": False,
             "verified_at_utc": now.isoformat(),
+            "fresh_for_new_quote": False,
+            "fresh_for_current_feature_gate": False,
+            "feature_source_gate_freshness": _current_gate_freshness(
+                current_gate_identities, None
+            ),
             "target_outcomes_read": False,
             "target_outcomes_scored": False,
             "paid_provider_calls": 0,
             "supabase_writes": 0,
         }
-    archive = candidates[0]
-    parent = verify_parent_run(archive, quote_time=now)
+    rejected_parent_artifact_ids: list[int] = []
+    archive = None
+    parent = None
+    # A failed source workflow can still upload a partial diagnostic artifact
+    # because the workflow's artifact step uses if: always(). Skip only the
+    # explicit parent-run rejection; integrity/timestamp failures remain fatal.
+    for candidate in candidates:
+        try:
+            candidate_parent = verify_parent_run(candidate, quote_time=now)
+        except ValueError as exc:
+            if str(exc) != "artifact parent is not a successful main current-form source run":
+                raise
+            rejected_id = candidate.get("artifact_id")
+            if type(rejected_id) is int and rejected_id > 0:
+                rejected_parent_artifact_ids.append(rejected_id)
+            continue
+        archive = candidate
+        parent = candidate_parent
+        break
+    if archive is None:
+        return {
+            "status": "NO_SOURCE_ARCHIVE",
+            "verified": False,
+            "verified_at_utc": now.isoformat(),
+            "fresh_for_new_quote": False,
+            "fresh_for_current_feature_gate": False,
+            "feature_source_gate_freshness": _current_gate_freshness(
+                current_gate_identities, None
+            ),
+            "source_archive_rejection_reason": (
+                "NO_VERIFIED_SUCCESSFUL_SOURCE_PARENT" if rejected_parent_artifact_ids else None
+            ),
+            "unverified_parent_artifact_count": len(rejected_parent_artifact_ids),
+            "unverified_parent_artifact_ids": sorted(rejected_parent_artifact_ids),
+            "target_outcomes_read": False,
+            "target_outcomes_scored": False,
+            "paid_provider_calls": 0,
+            "supabase_writes": 0,
+        }
     raw = load_archive(archive["artifact_id"])
     history, source_meta = verify_and_load_archive(raw, archive, parent)
     if write_sources_to is not None:
@@ -309,6 +610,7 @@ def verify_latest_source_archive(
     if age_seconds < 0:
         raise ValueError("source archive contains a source timestamp after verification time")
     manifest = source_meta["manifest"]
+    gate_freshness = _current_gate_freshness(current_gate_identities, source_meta)
     return {
         "status": "VERIFIED",
         "verified": True,
@@ -318,9 +620,14 @@ def verify_latest_source_archive(
         "source_archive_created_at_utc": source_meta["archive_created_at_utc"],
         "latest_source_observed_at_utc": source_meta["latest_source_observed_at_utc"],
         "source_age_seconds_at_verification": int(age_seconds),
-        "fresh_for_new_quote": age_seconds <= MAX_SOURCE_AGE.total_seconds(),
+        "fresh_for_new_quote": (
+            age_seconds <= MAX_SOURCE_AGE.total_seconds() and gate_freshness["fresh"]
+        ),
+        "fresh_for_current_feature_gate": gate_freshness["fresh"],
+        "feature_source_gate_freshness": gate_freshness,
         "parent_run": source_meta["parent_run"],
         "feature_input_gate_count": manifest["feature_source_gate"]["observed_completed_primary_events"],
+        "feature_source_gate_attestation": source_meta["feature_source_gate_attestation"],
         "historical_old_season_file_count": manifest["historical_old_season_file_count"],
         "source_file_count": manifest["source_file_count"],
         "historical_match_rows": source_meta["historical_match_rows"],
@@ -332,12 +639,16 @@ def verify_latest_source_archive(
         "paid_provider_calls": 0,
         "supabase_writes": 0,
         "no_bet": True,
+        "unverified_parent_artifact_count": len(rejected_parent_artifact_ids),
+        "unverified_parent_artifact_ids": sorted(rejected_parent_artifact_ids),
     }
 
 
 def _latest_quotes(quotes: list[dict], *, now: datetime) -> list[dict]:
     latest = {}
     seen = set()
+    event_to_fixture = {}
+    fixture_to_event = {}
     for q in quotes:
         _guard_outcome_free(q)
         if q.get("league") != "SERIE_A":
@@ -346,11 +657,27 @@ def _latest_quotes(quotes: list[dict], *, now: datetime) -> list[dict]:
         home, away = q.get("home_team"), q.get("away_team")
         if not all(isinstance(x, str) and x.strip() for x in (event, home, away)):
             raise ValueError("quote identity is incomplete")
+        event_key = event.strip()
+        home_key, away_key = _canonical_team(home).casefold(), _canonical_team(away).casefold()
         kickoff = parse_utc(q["commence_time_utc"])
         snapshot = parse_utc(q["snapshot_time_utc"])
         if snapshot > now or not snapshot < kickoff:
             raise ValueError("invalid current-form quote timing")
-        identity = (event, home, away, kickoff)
+
+        # A provider event ID must identify exactly one fixture, and a fixture
+        # (ordered teams + UTC kickoff) must not be split across provider IDs.
+        # Validate this before selecting a latest quote or building any features.
+        fixture_identity = (home_key, away_key, kickoff)
+        previous_fixture = event_to_fixture.get(event_key)
+        if previous_fixture is not None and previous_fixture != fixture_identity:
+            raise ValueError("event_id maps to conflicting fixture identity")
+        previous_event = fixture_to_event.get(fixture_identity)
+        if previous_event is not None and previous_event != event_key:
+            raise ValueError("fixture identity maps to conflicting event_id")
+        event_to_fixture[event_key] = fixture_identity
+        fixture_to_event[fixture_identity] = event_key
+
+        identity = (event_key, home_key, away_key, kickoff)
         key = (*identity, snapshot)
         if key in seen:
             raise ValueError("duplicate exact current-form quote observation")
@@ -368,10 +695,15 @@ def prepare_forward_capture(
     as_of_utc: datetime,
     load_archive,
     verify_parent_run,
+    current_gate_identities: set[tuple[str, str, str]] | None = None,
     write_sources_to: Path | None = None,
 ) -> dict:
-    if as_of_utc.tzinfo is None:
-        raise ValueError("current-form forward clock must be timezone-aware")
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
+        raise ValueError("current-form forward clock must have an explicit UTC offset")
     now = as_of_utc.astimezone(timezone.utc)
     if write_sources_to is not None:
         write_sources_to.mkdir(parents=True, exist_ok=True)
@@ -381,6 +713,7 @@ def prepare_forward_capture(
         "NO_EARLIER_SOURCE_ARCHIVE": 0,
         "SOURCE_PARENT_UNVERIFIED": 0,
         "SOURCE_ARCHIVE_TOO_OLD": 0,
+        "SOURCE_GATE_STALE": 0,
         "STALE_MARKET_QUOTE": 0,
         "EXPIRED_FIXTURE": 0,
         "NO_FEATURES": 0,
@@ -458,6 +791,21 @@ def prepare_forward_capture(
                 **base, "status": "SOURCE_ARCHIVE_TOO_OLD",
                 "source_artifact_id": artifact_id,
                 "source_observed_at_utc": source_time.isoformat(),
+                "v2_preview": None,
+            })
+            continue
+        gate_freshness = _current_gate_freshness(
+            current_gate_identities,
+            source_meta,
+            before_date_exclusive=quote_time.date().isoformat(),
+        )
+        if not gate_freshness["fresh"]:
+            blocked["SOURCE_GATE_STALE"] += 1
+            report_rows.append({
+                **base,
+                "status": "SOURCE_GATE_STALE",
+                "source_artifact_id": artifact_id,
+                "source_gate_freshness": gate_freshness,
                 "v2_preview": None,
             })
             continue
@@ -558,6 +906,8 @@ def main() -> None:
     if not token or not url or not key:
         raise RuntimeError("GitHub actions:read and Supabase read-only credentials are required")
     now = datetime.now(timezone.utc)
+    client = create_client(url, key)
+    current_gate_identities = read_completed_primary_event_identities(client, now=now)
     archives = discover_archives(token=token)
     raw_cache = {}
 
@@ -574,9 +924,9 @@ def main() -> None:
         as_of_utc=now,
         load_archive=load_cached_archive,
         verify_parent_run=verify_parent,
+        current_gate_identities=current_gate_identities,
         write_sources_to=args.sources_output_dir,
     )
-    client = create_client(url, key)
     quotes = fetch_saved_upcoming_serie_a_quotes(client, now=now)
     report = prepare_forward_capture(
         quotes,
@@ -584,6 +934,7 @@ def main() -> None:
         as_of_utc=now,
         load_archive=load_cached_archive,
         verify_parent_run=verify_parent,
+        current_gate_identities=current_gate_identities,
         write_sources_to=args.sources_output_dir,
     )
     report["latest_source_archive_verification"] = source_verification
