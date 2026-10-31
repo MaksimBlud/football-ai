@@ -7816,3 +7816,39 @@ Fresh read-only audit after the 11:00 UTC entry:
 - The Original Forward workflow declares `08:08 UTC` in main. The 31 October GitHub Actions run inventory for 08:00–14:00 UTC contains no run named `Serie A V2 Original Forward-Only Preview`; its latest confirmed run remains #41076521488 from 30 October. Treat this as a missed/unobserved scheduled execution, not proof that the workflow is disabled. No dispatch or schedule change was made.
 
 The original candidate, 19-feature order/weights, `active_lambda=0`, `shadow_lambda=1`, no-bet behavior and both frozen gates remain unchanged. The 30-primary-completed-prospective-forecast outcome gate is CLOSED; no eligible prospective forecasts or frozen incumbent are registered, so no independent Brier/LogLoss comparison can be claimed. No target outcomes were read or scored, no paid provider calls, no Supabase writes/DDL, no production `.pkl` changes, no main mutation, and no merge occurred. HUMAN-MERGE remains mandatory.
+
+
+## 2026-10-31 16:53 UTC — scheduled original and current-form V2 forward runtime proof; quote and incumbent gates remain closed
+
+Read-only audit on unchanged `main` SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This entry corrects the prior cycle's incomplete run inventory: the scheduled Original Forward workflow did run successfully on 2026-10-31.
+
+### Scheduled Original Forward — real runtime proof
+
+- GitHub Actions [run 41210303100](https://github.com/MaksimBlud/football-ai/actions/runs/41210303100), workflow `serie-a-v2-forward-preview.yml`, event `schedule`, created 2026-10-31 14:28:46 UTC, SUCCESS.
+- Exact job `original-v2-forward-preview`: 71 tests passed. The real-source attestation step verified the old-season-only diagnostic archive from run `41200476529`, artifact `13042322093`, ZIP SHA-256 `8c39e6db1f95727a2d6c62513b68c929bcb8560df2ca329eb735dd8229fa470b`; 10 historical CSV files / 3,800 historical matches; original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Forward output: `quotes_seen=0`, `future_quotes_checked=0`, `rows=[]`, `v2_diagnostic_previews_captured=0`, `forecasts_created=0`, `eligible_for_frozen_prospective_cohort=false`, `independent_incumbent_asof_verified=false`, `uses_2026_27_results=false`, `protected_2026_27_results_read=false`, paid calls 0, Supabase writes 0.
+- Output artifact `13045239180`, size 1,461 bytes. GitHub ZIP digest and independently recomputed local SHA-256 both equal `764060555f19a6d8ea4efc8bd06768bccbeaf77e5846230a8ceb7156b1ed1b02`. Its two JSON members independently hash to `b3428d19ba871a7ea49efe4b94739de2a23b9433e01b3e3d35459ca50469d92f` (forward report) and `44172ae76281f7eae9fb1bf5842a35dd1cae76bf0fda1102fcd368ab2be86cf3` (source attestation).
+
+### Scheduled Current-Form Forward — current-season source verification
+
+- GitHub Actions [run 41210600837](https://github.com/MaksimBlud/football-ai/actions/runs/41210600837), workflow `serie-a-v2-current-form-forward-preview.yml`, event `schedule`, created 2026-10-31 14:32:28 UTC, SUCCESS.
+- Exact job `current-form-forward-preview`: 53 tests passed. It verified source run `41196139664`, artifact `13040356986`, archive SHA-256 `feb008fa6ebc15d9125573c8e69061c4bc63bcd81e506265b4d6f948d0a4621a`; 11 source CSVs, 3,890 combined historical/current rows, 90 current-season history rows and 90 metadata-only feature-input gate identities. Source observation `2026-10-31T11:16:50.931690Z`, archive creation `11:16:52Z`, verification `14:33:01.480718Z`; source age 11,770 seconds, inside the frozen 24-hour limit.
+- No saved quotes existed: `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `rows=[]`, `eligible_for_current_form_forward_shadow=false`, `target_outcomes_read=false`, `target_outcomes_scored=false`, paid calls 0, production/Supabase writes 0. This is source verification, not a prospective forecast and not evidence of 19-feature values for future fixtures.
+- Output artifact `13045987954`, size 438,190 bytes. GitHub digest and independent local SHA-256 both equal `32623b30e1ef5a6706db7bc09cc6fd801b408ccfa2b64b911fcde2914d4b64c0`. The JSON member SHA-256 is `1eecbb93483d5fb38ec99881849d14201d33f348e4a66b785649917dc27569e5`; the nested original source ZIP independently hashes to `feb008fa6ebc15d9125573c8e69061c4bc63bcd81e506265b4d6f948d0a4621a`, matching the parent source artifact.
+
+### Fresh read-only pre-match database audit
+
+The audit selected only market snapshot timestamps, kickoff timestamps, league labels, and fixture identities; no target score/result fields were selected. At approximately 2026-10-31 16:53 UTC:
+
+- Across all nine stored leagues, future strictly pre-kickoff snapshots = **0**; strictly pre-kickoff snapshots saved in the preceding 24 hours = **0** and preceding 7 days = **0**.
+- Serie A: 625 total snapshots, 620 strictly before kickoff, 0 future pre-kickoff; latest strictly pre-kickoff snapshot remains `2026-10-13T14:48:53.042620Z`.
+- The identity-only query for future Serie A rows in `public.matches` returned 0 rows. The current completed-fixture identity source remains separate and its read-only 2026/27 metadata query selects only `match_date, home_team, away_team`.
+- `public.model_artifact_bundles` currently returns no registered bundles. The evaluator in PR #701 explicitly keeps `FROZEN_INCUMBENT_REFERENCE=None` because the preregistered policy requires three comparators (de-vigged market, frozen production incumbent, and V2 lambda-one shadow) but does not pin an exact incumbent artifact/version. The existing production/XGBoost model must not be revived or substituted. No protocol amendment or outcome read was made; this remains a hard scientific blocker even after the 30-forecast count gate.
+
+### Binding interpretation
+
+The two scheduled forward workflows now have confirmed real SUCCESS runs, correcting the earlier incomplete inventory. Both verify their respective source archives correctly, but neither produced a prospective forecast because no admissible saved quote exists. The free fixture feature preview in PR #702 remains dependent on HUMAN-MERGE of #699, then a new post-merge source capture with persisted gate identity SHA, then HUMAN-MERGE of #702 and a separate manual dispatch. No provider request was made in this cycle.
+
+The preregistered evaluation gate remains CLOSED: zero eligible prospective forecasts; the required frozen incumbent reference is also absent. Keep `active_lambda=0` as exact de-vigged market, `shadow_lambda=1` research-only, and NO_BET. Do not read 2026/27 target outcomes, relax the 30-event gate, substitute the old production model, or claim V2 superiority.
+
+No main change, PR merge, Supabase write/DDL, paid provider call, model/weight/feature change, schedule change, or production artifact access occurred.
