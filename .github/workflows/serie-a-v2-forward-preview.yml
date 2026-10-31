@@ -25,6 +25,7 @@ on:
       - "serie_a_v2_attest_real_source.py"
       - "tests/test_serie_a_v2_attest_real_source.py"
       - "tests/test_serie_a_v2_manual_quote_trigger_contract.py"
+      - "requirements-v2-research-py312.lock"
       - ".github/workflows/serie-a-v2-forward-preview.yml"
 
 concurrency:
@@ -57,7 +58,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install V2-only read-only dependencies
-        run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
+        run: python -m pip install -r requirements-v2-research-py312.lock
       - name: Test original V2, old-season embargo, and source-before-quote rules
         run: |
           python -m py_compile serie_a_v2_forward_capture.py serie_a_v2_attest_real_source.py
