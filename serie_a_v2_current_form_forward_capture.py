@@ -137,6 +137,8 @@ def verify_source_run(
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
     if type(artifact_id) is not int or artifact_id <= 0:
         raise ValueError("invalid source artifact id")
+    if not token:
+        raise ValueError("GitHub actions:read token missing")
     response = get(
         f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip",
         headers={
