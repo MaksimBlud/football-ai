@@ -1,3 +1,30 @@
+## 2026-10-31 18:53 UTC — exact integration-branch audit and duplicate-PR map
+
+Fresh GitHub read confirms `main` is still `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main change or PR merge occurred. The Original Forward workflow on main still lacks a job-level `github.ref == 'refs/heads/main'` guard for `workflow_dispatch`. Do not dispatch it from a feature branch. The integration branch in PR #699 adds that guard; the same main-ref guard is present in its current-form source-capture and current-form forward workflows.
+
+A code-level review of PR #699 branch HEAD `53b7b184005e8516bfff8c1483e5ab9a4c41e73e` confirms that it is an integration superset for several previously separate source-integrity changes:
+
+- Current-form source capture verifies the exact frozen candidate before querying/downloading, uses the approved current-season HTTPS URL with redirects disabled, streams under the existing byte cap, checks real UTC offsets and gate → source-observation → archive time order, and persists the sorted gate identity list/count/SHA plus current-CSV identity count/SHA and full gate coverage.
+- Historical Football-Data source capture disables redirects, requires the exact approved final URL before reading bytes, streams with bounded per-file/total byte limits, and closes responses on failure.
+- Both original and current-form forward readers stream GitHub artifact ZIPs, validate declared Content-Length and actual decoded chunk totals against their existing caps, stop on overflow, and close responses.
+- The exact #699 branch contains negative regressions for redirected historical URLs and for declared/streamed artifact overflow, including early-stop and response-close behavior.
+
+This means the code/test scope of open PR #683 (historical source URL redirect attestation) and PR #703 (bounded GitHub artifact downloads) is already present in #699's current integration branch. Do not merge #683 or #703 independently on top of the same main base; after #699 is manually merged, re-check their diffs and close/retire any remaining duplicate scope rather than applying it twice. PR #704's two dependency lock files and dependency-lock contract test are not in #699's changed-file set and remain a separate follow-up requiring rebase and exact-head CI after #699. PR #701 evaluator and #702 manual fixture preview are separate scopes.
+
+Exact #699 head CI was re-read from GitHub check-runs: **7/7 completed SUCCESS** on `53b7b184005e8516bfff8c1483e5ab9a4c41e73e`; its dedicated Original V2 Shadow Tests run #41194794442 reports **257 passed**, including the production `*.pkl` diff guard. PR remains open/mergeable and HUMAN-MERGE only. This is branch evidence, not main/runtime proof.
+
+Fresh read-only pre-match Supabase audit at 2026-10-31 18:53 UTC:
+- `odds_snapshots`: all nine stored leagues have zero future strictly pre-kickoff snapshots and zero strictly pre-kickoff snapshots in the preceding seven days. Serie A remains 625 total / 620 strictly pre-kickoff; latest is `2026-10-13T14:48:53.042620Z`.
+- `league_prediction_ledger`: 630 Serie A rows, all `MARKET_ONLY` and strictly pre-kickoff; latest timestamp is unchanged at `2026-10-13T14:48:53.042620Z`.
+- `product_prediction_snapshots`: only 40 EPL `EPL_AI_MARKET_PAIR_V1` rows; no Serie A incumbent.
+- `model_artifact_bundles`: zero registered bundles.
+
+The actual 31-Oct Current-Form Forward artifact #13045987954 was downloaded again and independently rehashed: outer ZIP SHA-256 `32623b30e1ef5a6706db7bc09cc6fd801b408ccfa2b64b911fcde2914d4b64c0`; nested source ZIP #13040356986 SHA-256 `feb008fa6ebc15d9125573c8e69061c4bc63bcd81e506265b4d6f948d0a4621a`. Its report confirms zero quotes/zero shadows and no target-outcome reads. The nested old-main manifest remains schema `SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V1` without persisted gate identity SHA; it is not the post-#699 runtime proof. Current-season CSV metadata-only rows remain 90 completed identities through 2026-10-29 and contain no future fixture identities.
+
+No model feature, weight, candidate SHA, lambda, gate, production artifact, schedule, Supabase data/schema, or other agent was changed. No paid provider calls or protected target outcomes were accessed.
+
+---
+
 ## 2026-10-31 — current free Serie A source contains completed history but no future fixture identities
 
 Independently downloaded the actual GitHub Actions artifact from Current-Form Source Capture run [#41196139664](https://github.com/MaksimBlud/football-ai/actions/runs/41196139664), artifact `13040356986`. The 437,016-byte ZIP SHA-256 recomputed from the downloaded bytes is `feb008fa6ebc15d9125573c8e69061c4bc63bcd81e506265b4d6f948d0a4621a`, matching the GitHub artifact digest. The current member `serie_a_2627.csv` is 42,883 bytes with SHA-256 `32ca618587c90db25f16ea647cb55060f519c03830a1e8ec4a6c4204e27d5135`.
