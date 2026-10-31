@@ -1,3 +1,5 @@
+# Football AI — Project Continuity
+
 ## 2026-10-31 19:48 UTC — corrected PR overlap audit and fresh pre-match database check
 
 A fresh GitHub/Supabase pass confirms main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no V2 PR was merged. The exact main Original Forward workflow still has no `github.ref == 'refs/heads/main'` condition on its job-level `if` for `workflow_dispatch`. Do not dispatch that workflow from a feature branch. PR #699 contains the missing main-ref guard in Original Forward and the current-form source/forward workflows; it remains the first HUMAN-MERGE dependency.
