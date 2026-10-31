@@ -7680,3 +7680,100 @@ No scores, results, settlement columns or protected target outcomes were selecte
 - #701 must remain fail-closed; do not substitute the market or the old XGBoost model for the missing incumbent.
 
 No merge, main change, Supabase write/DDL, paid request, target-outcome read, production `.pkl` change, weight/feature change, schedule change, or other-agent setting change occurred.
+
+
+---
+
+# Continuity update — 2026-10-31 13:05 UTC — live 31 Oct source archive, forward attestation and schedule audit
+
+## Repository and exact PR state
+
+- Fresh default branch remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main commit was created or merged in this cycle.
+- Main `PROJECT_CONTINUITY.md` remains blob `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`; this entry is added only on documentation branch `research/v2-continuity-live-proof-20261025`.
+- PR #699 current HEAD: `53b7b184005e8516bfff8c1483e5ab9a4c41e73e`, base main above, open/mergeable, **7/7 exact-head CI SUCCESS**. Dedicated frozen V2 run #41194794442: **257 passed**, production `*.pkl` diff guard passed. The added AST dependency-closure test rejects XGBoost/joblib/pickle runtime use and production pickle paths; original candidate, 19 features, weights and lambdas are unchanged.
+- PR #697 before this documentation update: `799ac6c5c0819e79287c6ef2d4f2164090c23bf6`, base main above, 7/7 exact-head CI SUCCESS. A new exact-head CI run is required after this append.
+- PRs #701, #702, #703 and #704 remain open/HUMAN-MERGE only at their previously recorded heads. #702 must not be live-dispatched before #699 is merged and a fresh post-merge source artifact is verified.
+
+## New real Current-Form Source Capture — 31 October
+
+Main-only scheduled run [#41196139664](https://github.com/MaksimBlud/football-ai/actions/runs/41196139664) completed SUCCESS at 2026-10-31 11:16 UTC.
+
+- Dedicated source/manifest tests: **19 passed**.
+- Feature-input metadata gate: 90 canonical completed Serie A 2026/27 identities.
+- Source files: 10 frozen historical CSVs plus one current-season CSV (11 CSVs; 3,800 historical rows plus 90 current-season rows).
+- Frozen candidate SHA: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Feature builder blob SHA: `401b3a0893371bfa4a488ec92a4a54af2678c8f7`.
+- Source artifact ID: `13040356986`; size 437,016 bytes; GitHub digest and independently downloaded ZIP SHA-256 both equal `feb008fa6ebc15d9125573c8e69061c4bc63bcd81e506265b4d6f948d0a4621a`.
+- All **11/11 CSV hashes** independently recomputed from the downloaded ZIP match the source manifest.
+- Current-season source CSV: 90 rows, all prior to capture day; after the exact V2 aliases (Inter→Inter Milan, Milan→AC Milan, Roma→AS Roma, Verona→Hellas Verona, Atalanta BC→Atalanta), 90 unique fixture identities.
+- Independently computed current-source identity SHA-256: `95e3d71ab97076b5edee503301843f55d22eb14a832f7e1aab7f2012e6013811`; it matches the independently computed Supabase metadata-only identity SHA below.
+
+**Important contract limitation:** this run executed on unchanged main `40887ebb...`, so its manifest still lacks persisted `gate_fixture_identity_sha256`, `current_source_fixture_identity_sha256`, the full canonical identity list and explicit coverage counts. The external CSV↔Supabase SHA parity is independently proven, but it is **not** the new #699 persisted-manifest proof. #699 branch code adds both SHA values, the identity list/counts and missing-identity coverage fail-closed checks. A new source capture on the post-#699 main is still mandatory after HUMAN-MERGE.
+
+## New real Current-Form Forward-Only run
+
+Main-only workflow-run [#41196202296](https://github.com/MaksimBlud/football-ai/actions/runs/41196202296) completed SUCCESS at 2026-10-31 11:17 UTC.
+
+- Forward regression suite: **53 passed**.
+- Verified source artifact `13040356986`, ZIP SHA above, and authenticated parent run `41196139664`.
+- Source observation: 11:16:50.931690 UTC; artifact creation: 11:16:52 UTC; source parent completion: 11:16:55 UTC; forward verification: 11:17:32.720184 UTC.
+- Source age at verification: 41 seconds; `fresh_for_new_quote=true`.
+- Historical/current-form rows verified: 3,890 total.
+- `quotes_seen=0`; `v2_current_form_shadow_captured=0`.
+- `target_outcomes_read=false`; `target_outcomes_scored=false`; `paid_provider_calls=0`; `production_or_supabase_writes=0`.
+- Forward artifact ID `13040403015`; independently downloaded ZIP SHA-256 `6be708a2a6ac92d78f66e65e2c3ed1f5c56c56ad8f3c3083688cfd573568d0e2`.
+
+This is live source/parent attestation and no-quote safety proof, **not** a prospective prediction or model-quality result.
+
+## New real free Original V2 diagnostic
+
+Main-only scheduled run [#41200476529](https://github.com/MaksimBlud/football-ai/actions/runs/41200476529) completed SUCCESS at 2026-10-31 12:18 UTC.
+
+- Diagnostic regression suite: **53 passed**.
+- Public source HTTP requests: 10; exactly 10 frozen historical CSVs / 3,800 historical matches.
+- `quoted_fixtures=0`; `diagnostic_scored=0`; per-fixture feature coverage rows: 0.
+- `paid_provider_requests=0`; `supabase_writes=0`; 2026/27 public results were not downloaded.
+- Diagnostic artifact ID `13042322093`; independently downloaded ZIP SHA-256 `8c39e6db1f95727a2d6c62513b68c929bcb8560df2ca329eb735dd8229fa470b`.
+
+The diagnostic source archive contains the 10 old-season CSVs only. It is distinct from the 11-file current-form source artifact above.
+
+## Fresh read-only Supabase metadata and odds
+
+Only `match_date, home_team, away_team` were selected from `public.league_finished_results` for Serie A season `2026-2027`; no score/result/settlement fields were selected.
+
+- Raw rows: 93.
+- Canonical unique identities after original V2 aliases: 90.
+- First date: 2026-08-22; latest date: 2026-10-29.
+- Canonical sorted tab/LF SHA-256: `95e3d71ab97076b5edee503301843f55d22eb14a832f7e1aab7f2012e6013811`.
+
+Read-only `public.odds_snapshots` audit for `league='SERIE_A'`:
+
+- Total snapshots: 625.
+- Strictly pre-kickoff: 620.
+- At/after kickoff: 5.
+- New snapshots in last 24 hours: 0; last 7 days: 0.
+- Future events with strictly pre-kickoff snapshots: 0.
+- Latest saved snapshot: 2026-10-13 14:48:53.042620 UTC.
+
+`public.model_artifact_bundles` count remains 0. No non-legacy frozen incumbent is registered.
+
+## Original Forward-Only scheduled-run liveness
+
+The unchanged main workflow `.github/workflows/serie-a-v2-forward-preview.yml` still declares `8 8 * * *` (08:08 UTC) and its last confirmed run is [#41076521488](https://github.com/MaksimBlud/football-ai/actions/runs/41076521488), 2026-10-30 14:59 UTC.
+
+A fresh GitHub Actions run-list audit for 31 October covered the returned run pages from 12:57 UTC back through 02:58 UTC. It found the Current-Form Source Capture #41196139664 and Current-Form Forward #41196202296, but **no 31 October run** for the Original Forward-Only workflow at its 08:08 UTC scheduled slot. This is an observed missing run, not proof the workflow is disabled. No schedule was changed and no manual dispatch was made.
+
+The main Original Forward workflow also still lacks the explicit `github.ref == 'refs/heads/main'` job guard. PR #699 adds this guard; until #699 is manually merged, do not dispatch the original forward/source workflows from a feature branch because they expose Supabase secrets in their job environment.
+
+## Scientific status
+
+- Original `MARKET_ANCHOR_1X2_V2` candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Frozen 19 features/order/weights unchanged.
+- `active_lambda=0` remains exact de-vigged market; `shadow_lambda=1` remains research-only.
+- Current-form feature-input gate: 90, passed.
+- Eligible new prospective V2 forecasts: 0.
+- Frozen non-legacy incumbent: absent.
+- 30-primary-completed-event evaluation gate: CLOSED.
+- Independent Brier/LogLoss comparison: unavailable; no superiority claim is justified.
+
+No protected target outcomes were read or scored. No paid provider request, Supabase write/DDL, main change, PR merge, production `.pkl` mutation, model refit, threshold tuning, promotion, betting, schedule change, or other-agent setting change occurred.
