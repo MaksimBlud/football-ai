@@ -1,3 +1,57 @@
+## 2026-10-31 09:10 UTC — exact V2 source/forward audit, identity SHA, and bounded-download regression follow-up
+
+This entry supersedes the older 02:48/03:00 UTC audit below. Default branch is still `main` at `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no merge or main mutation occurred.
+
+### Exact V2 PR state
+
+- **#699** HEAD `e760994249b488a3693116974963509b85788bb6`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, 7/7 required CI SUCCESS. Exact Original V2 Shadow Tests run [41166528822](https://github.com/MaksimBlud/football-ai/actions/runs/41166528822): **256 passed**, production `*.pkl` diff guard passed. This consolidated branch contains the current-form metadata-only identity allowlist, strict canonical date/team validation, C0/C1 control-character rejection, gate identity SHA/count/list, current-source coverage comparison, verified frozen-candidate preflight, gate/source/archive clock ordering, exact HTTPS URL and no-redirect checks, bounded historical CSV streaming, main-only workflow guards, and expanded dependency-trigger tests. It also contains the redirect-hardening code proposed separately in #700 and the overlapping current-form source/forward guard work from #698/#694/#695/#680/#688. Do not merge those overlapping changes independently.
+- **#703** was extended with two missing negative regressions: both original and current-form GitHub ZIP readers now prove that a non-`bytes` stream chunk is rejected and the response is closed. New exact HEAD `e7362b83d1112ce52172d722c7f9decc3e69586e`; 7/7 CI SUCCESS. Original V2 Shadow Tests [41187160599](https://github.com/MaksimBlud/football-ai/actions/runs/41187160599): **99 passed**; production `*.pkl` diff guard passed. It remains open and unmerged. After #699 is manually merged, rebase/review #703 and retain its non-bytes guard/tests without weakening #699's stricter Content-Length validation or bounded ZIP-member checks.
+- **#704** HEAD `cc4918caf1ae0bb906b6a1949b2b352b3cce64f3`, 7/7 CI SUCCESS. It pins exact package versions separately for Python 3.11 and 3.12 across the five original V2 research workflows. The lock files explicitly do **not** enforce package hashes. Rebase/re-run exact CI after #699 because both PRs touch the same workflows.
+- **#702** HEAD `8cf6ee1cb66838e8263dd2c7c5ebf42e86964d7e`, 7/7 CI SUCCESS; its offline feature-preview suite has 22 tests. It is manual-only, no-odds/no-probability. It depends on #699 and a new successful post-#699 main source archive with persisted gate identities/count/SHA before any manual dispatch.
+- **#701** HEAD `4ea2f9e60fc073d1850ae2b999f518db5d501a3f`, 6/6 CI SUCCESS; evaluator suite 73 tests. It remains fail-closed because `FROZEN_INCUMBENT_REFERENCE=None`; no market substitution or legacy XGBoost incumbent is permitted.
+- **#697** is this documentation branch. Main's own `PROJECT_CONTINUITY.md` remains the older 2026-10-18 version until a human merges the documentation PR.
+
+HUMAN-MERGE remains mandatory. No PR was merged.
+
+### Live metadata and pre-match market state
+
+The read-only Serie A 2026/27 metadata query selected exactly `match_date, home_team, away_team` from `public.league_finished_results`, with date cutoff exclusive 2026-10-31. No score, result, settlement, or target-outcome fields were selected.
+
+- Raw metadata rows: **93**.
+- Canonical unique fixture identities: **90**.
+- Independently recomputed SHA-256 using the V2 alias `Atalanta BC -> Atalanta`, sorted identity tuples, tab separators and newline separators: `95e3d71ab97076b5edee503301843f55d22eb14a832f7e1aab7f2012e6013811`.
+- The digest matches the source-capture branch's `_fixture_identity_sha256` serialization. This is a live metadata digest, not yet a persisted SHA in a new main source archive.
+
+Read-only `odds_snapshots` audit:
+
+- All leagues: **3,966** snapshots; **3,915** strictly before kickoff.
+- Serie A: **625** snapshots; **620** strictly before kickoff.
+- Future fixtures with saved strictly pre-kickoff quotes: **0**.
+- Latest Serie A strictly pre-kickoff quote: **2026-10-13 14:48:53.042620 UTC**.
+
+`public.model_artifact_bundles` currently contains **0** registered bundles.
+
+### Actual main runtime and schedule lag
+
+The latest confirmed main source/forward runs are still from 2026-10-30:
+
+- Source Capture [41049950849](https://github.com/MaksimBlud/football-ai/actions/runs/41049950849), scheduled event, created 11:42:02 UTC, completed 11:43:04 UTC. It ran 19 tests and captured 90 current-season completed rows, 10 old-season CSVs, 11 files total. Artifact 12973598320, ZIP SHA-256 `02013d5984117f48f5efab2b8662fed7e291bdfd49689d27152325e129c877b4`. Paid calls 0; Supabase writes 0; target outcomes scored false.
+- Current-Form Forward [41077147924](https://github.com/MaksimBlud/football-ai/actions/runs/41077147924), scheduled event, created 15:03:21 UTC. It ran 53 tests, authenticated the source artifact and successful parent run, but `quotes_seen=0` and `v2_current_form_shadow_captured=0`. It read no target outcomes and made no writes.
+- Original Forward [41076521488](https://github.com/MaksimBlud/football-ai/actions/runs/41076521488), scheduled event, created 14:59:20 UTC. It ran 71 tests, verified 10 historical source CSVs / 3,800 historical rows, but `quotes_seen=0` and `forecasts_created=0`.
+
+All three 2026-10-30 scheduled runs started roughly 5h52–6h51 after their declared cron times. No 2026-10-31 source/forward run was present in the latest Actions run inventory at this audit. This is an observed scheduling delay, not proof that the workflows are disabled. Schedules were not changed.
+
+Crucially, main's current source-capture script blob `9f48a4a6e78d5d7ffa193ec6f24b394162f36ab4` still lacks persisted gate identity SHA/list, current-CSV gate coverage, candidate preflight and strict offset checks. The Oct30 archive therefore cannot substitute for the required post-#699 source archive. After manual #699 merge: verify the new main SHA, run a fresh successful source capture, and verify its manifest's gate identity count/list/SHA and CSV coverage before using it in any forward preview.
+
+### Frozen model and scientific blockers
+
+Original candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, with **19 unchanged features**, original frozen weights, `active_lambda=0`, and `shadow_lambda=1` research-only.
+
+The 90-event feature-input gate is separate from the outcome-read gate, which requires **30 unique eligible completed prospective forecasts**. Current eligible prospective forecasts remain **0**. The preregistered historical stability gate remains FAILED: only 2/6 prior seasons dual-metric wins; bootstrap probability better than market is 0.6831 for Brier and 0.6317 for LogLoss, below the required 0.95, with both 95% CI upper bounds still positive. No independent prospective Brier/LogLoss result exists. The evaluator requires market, frozen incumbent and V2 shadow; incumbent is unpinned and no model artifact bundle is registered. No target outcomes were read or scored.
+
+No Supabase write/DDL, paid provider call, protected target-outcome read, production `.pkl` change, model refit, threshold tuning, promotion, publication, bet, merge, main mutation, schedule change, or other-agent setting change occurred.
+
+
 ## 2026-10-31 03:00 UTC — evaluator identity sanitization hardening
 
 A real identity-validation gap was found in the prospective evaluator branch: its metadata-gate adapter and forecast identity canonicalizer did not reject C0/C1 control characters, unlike the stricter source-capture canonicalizer in #699. This could allow malformed team labels into the canonical identity/digest path.
