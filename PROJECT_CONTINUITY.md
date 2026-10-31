@@ -7395,3 +7395,39 @@ Merge order remains HUMAN-MERGE: **#699 first**, then a fresh successful Current
 Fresh read-only Supabase audit at this run found no future fixture metadata in `public.matches`, no future strictly pre-kickoff odds rows, and no new strict pre-match quote in the last 24 hours or 7 days. The market snapshot inventory remains 3,966 total / 3,915 strictly pre-match; latest Serie A quote remains 2026-10-13 14:48:53.042620 UTC. `model_artifact_bundles` remains empty. No protected target outcomes were selected or read.
 
 The original frozen candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, its 19 feature names/order, weights, `active_lambda=0`, research-only `shadow_lambda=1`, and NO_BET behavior remain unchanged. No main merge, paid request, Supabase write/DDL, production `.pkl` change, outcome read, refit, threshold tuning, promotion, schedule change, or other-agent setting change occurred.
+
+
+## 2026-10-31 — Correct Serie A metadata source, 90-identity gate SHA, and fresh runtime audit
+
+This update corrects the scope of the prior note that found no Serie A fixtures in `public.matches`: that table currently contains EPL rows only and is **not** the V2 current-form feature-input gate source. The original V2 source-capture code queries `public.league_finished_results` read-only, selecting exactly `match_date,home_team,away_team` for `league='SERIE_A'`, `season='2026-2027'`, and the configured season/date cutoff. Do not interpret an empty Serie A query against `public.matches` as absence of Serie A metadata.
+
+### Live metadata-only gate audit (Supabase read-only, observed 2026-10-31 00:58 UTC)
+
+- Raw `league_finished_results` rows for 2026/27 from 2026-07-01 through (exclusive) 2026-10-31: **93**.
+- Raw ordered identities: **93**; raw unordered fixture pairs: **93**.
+- After the frozen V2-local identity aliases (`Atalanta BC -> Atalanta`, plus the four existing runtime aliases), canonical unique identities: **90**.
+- Exactly three duplicate alias pairs collapse: 2026-08-23 Atalanta–Sassuolo; 2026-08-31 Atalanta–Bologna; 2026-09-05 AS Roma–Atalanta.
+- Canonical identity SHA-256, using sorted `date<TAB>home<TAB>away` rows joined by LF: **`95e3d71ab97076b5edee503301843f55d22eb14a832f7e1aab7f2012e6013811`**.
+- First/last metadata dates: 2026-08-22 / 2026-10-29. All 90 canonical identities precede the 2026-10-31 UTC cutoff and exceed the unchanged 30-event **feature-input** minimum.
+
+The canonical SHA exactly matches the previously independently recorded 90-row CSV identity SHA. This is a reconciliation of the live metadata set with prior evidence, **not** a substitute for the new persisted identity attestation required by #699: the existing main archive predates that manifest contract, so a fresh source capture on the post-#699 main SHA remains mandatory before #702 may run.
+
+### Actual GitHub Actions runtime (main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`)
+
+- [Current-Form Source Capture #41049950849](https://github.com/MaksimBlud/football-ai/actions/runs/41049950849) completed SUCCESS on 2026-10-30 11:43 UTC. Its job log reports feature gate **90**, current-season completed prior-day CSV rows **90**, 10 frozen historical CSVs, 11 total source CSVs, candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, zero paid calls, zero Supabase writes, and no target outcomes scored. Artifact **12973598320**, GitHub ZIP SHA-256 `02013d5984117f48f5efab2b8662fed7e291bdfd49689d27152325e129c877b4`.
+- [Current-Form Forward-Only #41077147924](https://github.com/MaksimBlud/football-ai/actions/runs/41077147924) completed SUCCESS on 2026-10-30 15:04 UTC. It independently verified artifact 12973598320, parent run 41049950849, ZIP digest, 90 current-season rows and 3,890 total historical rows. But `quotes_seen=0`, `v2_current_form_shadow_captured=0`; no inference occurred.
+- [Original Forward-Only #41076521488](https://github.com/MaksimBlud/football-ai/actions/runs/41076521488) completed SUCCESS; `quotes_seen=0`, `future_quotes_checked=0`, `v2_diagnostic_previews_captured=0`, `forecasts_created=0`. This is source/contract runtime proof, not prediction-quality evidence.
+
+### Current market/incumbent availability (read-only, pre-match fields only)
+
+- `public.odds_snapshots`, `SERIE_A`: **625** snapshots / **63** event IDs; **620** strictly pre-kickoff; **0** future strictly pre-kickoff snapshots. Latest saved quote: **2026-10-13 14:48:53.042620 UTC**.
+- `public.league_prediction_ledger`, `SERIE_A`: **630** rows, all `MARKET_ONLY / CALIBRATION_REQUIRED`; latest prediction/market snapshot 2026-10-13 14:48:53.042620 UTC; latest kickoff 2026-10-25 19:45 UTC.
+- `public.model_artifact_bundles`: **0** registered bundles. No independent frozen incumbent is currently available from this registry.
+
+The feature-input gate is therefore satisfied at 90 canonical completed identities, but the separate prospective evaluation gate remains CLOSED: there are no new eligible prospective V2 forecasts, and the required **30 completed primary forecasts** have not been accumulated. No target outcomes were selected or read in this audit. Existing October 13 quotes remain stale and cannot be backfilled.
+
+### PR coordination / next proof
+
+At this audit: #699 exact HEAD `3e02ad265306a5dd9347b7ac4b310adb746ca68d` had 7/7 PR workflow runs SUCCESS; #702 exact HEAD `8cf6ee1cb66838e8263dd2c7c5ebf42e86964d7e` had 8/8 validation/test runs SUCCESS (including both 22-test offline fixture runs); #701 exact HEAD `7ee3eda3f396735e00737d8e8e42e0c8c146c57f` had 6/6 validation runs SUCCESS; #697's prior HEAD `3fbc29f52d91aa35c5f0e0383a5dd78128cc5570` had 7/7 SUCCESS. All remain HUMAN-MERGE. Required order: human merge #699; verify fresh main; obtain a new source capture whose manifest persists gate identity list/count/SHA and whose CSV covers all 90 current canonical identities; only then manually dispatch #702's zero-credit `/events` metadata-only preview. #702 emits no probabilities and does not count toward the 30-event evaluation gate. #701 remains closed until eligible prospective forecasts and a valid frozen incumbent exist.
+
+No merge, main mutation, paid request, Supabase write/DDL, production `.pkl` change, protected outcome read, model refit, weight/feature/lambda change, betting, promotion, schedule change, or other-agent setting change occurred.
