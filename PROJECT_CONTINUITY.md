@@ -7498,3 +7498,32 @@ The feature-input gate is therefore satisfied at 90 canonical completed identiti
 At this audit: #699 exact HEAD `3e02ad265306a5dd9347b7ac4b310adb746ca68d` had 7/7 PR workflow runs SUCCESS; #702 exact HEAD `8cf6ee1cb66838e8263dd2c7c5ebf42e86964d7e` had 8/8 validation/test runs SUCCESS (including both 22-test offline fixture runs); #701 exact HEAD `7ee3eda3f396735e00737d8e8e42e0c8c146c57f` had 6/6 validation runs SUCCESS; #697's prior HEAD `3fbc29f52d91aa35c5f0e0383a5dd78128cc5570` had 7/7 SUCCESS. All remain HUMAN-MERGE. Required order: human merge #699; verify fresh main; obtain a new source capture whose manifest persists gate identity list/count/SHA and whose CSV covers all 90 current canonical identities; only then manually dispatch #702's zero-credit `/events` metadata-only preview. #702 emits no probabilities and does not count toward the 30-event evaluation gate. #701 remains closed until eligible prospective forecasts and a valid frozen incumbent exist.
 
 No merge, main mutation, paid request, Supabase write/DDL, production `.pkl` change, protected outcome read, model refit, weight/feature/lambda change, betting, promotion, schedule change, or other-agent setting change occurred.
+
+
+## 2026-10-31 03:58 UTC — identity-only metadata response hardening and artifact-download failure-path proof
+
+A fresh review of the consolidated original-V2 source/forward branch found two fail-closed gaps in the current-form metadata reader: date parsing sliced the first ten characters of a string (so a noncanonical suffix could be silently ignored), and rows returned by the identity-only Supabase select were not checked for unexpected extra fields. This mattered to the protected-outcome embargo: if a proxy/client ever returned a result/score field despite the explicit select list, the reader would ignore the field instead of rejecting the response.
+
+Updated consolidated PR [#699](https://github.com/MaksimBlud/football-ai/pull/699) to exact HEAD `e760994249b488a3693116974963509b85788bb6`:
+
+- Both the count gate and identity-set/SHA gate now require the exact row-key allowlist `match_date, home_team, away_team`; any additional field (including `result`, `home_goals`, or `score`) fails closed.
+- Metadata date strings must be canonical `YYYY-MM-DD`; timestamp suffixes, arbitrary trailing text, and compact alternate forms are rejected rather than truncated.
+- The current-form GitHub artifact downloader now rejects a missing Actions read token before making a request.
+- Original and current-form artifact download regression tests now cover malformed Content-Length, empty streams, HTTP-error cleanup, and missing-token behavior. The existing declared-size and streamed-overrun tests remain in place.
+
+Exact-head CI on `e760994249b488a3693116974963509b85788bb6`: **7/7 SUCCESS**:
+- Original V2 Shadow [#41166528822](https://github.com/MaksimBlud/football-ai/actions/runs/41166528822) — **256 passed**; `git diff --exit-code -- '*.pkl'` passed.
+- Research [#41166528793](https://github.com/MaksimBlud/football-ai/actions/runs/41166528793)
+- Serie A [#41166528855](https://github.com/MaksimBlud/football-ai/actions/runs/41166528855)
+- Bundesliga [#41166528806](https://github.com/MaksimBlud/football-ai/actions/runs/41166528806)
+- Ligue 1 [#41166528814](https://github.com/MaksimBlud/football-ai/actions/runs/41166528814)
+- Eredivisie [#41166528812](https://github.com/MaksimBlud/football-ai/actions/runs/41166528812)
+- Product [#41166528789](https://github.com/MaksimBlud/football-ai/actions/runs/41166528789)
+
+The fresh metadata-only Supabase query again returned **93 raw rows / 90 canonical unique identities** through 2026-10-29 (exclusive cutoff 2026-11-01), selecting only `match_date, home_team, away_team`. The previously independently verified canonical identity SHA remains `95e3d71ab97076b5edee503301843f55d22eb14a832f7e1aab7f2012e6013811`; this run rechecked count/date parity, not a new SHA recomputation.
+
+The fresh Serie A odds query selected only strict pre-match rows (`snapshot_time_utc < commence_time_utc`): **620** total, **0** in the last 24 hours, **0** in the last 7 days, and **0** future events with a saved pre-kickoff quote. Latest strict pre-match quote remains **2026-10-13 14:48:53.042620 UTC**. The model artifact registry still contains **0** bundles, so no approved non-legacy frozen incumbent is available to pin.
+
+PR #703's bounded-download patch overlaps materially with the two artifact `get_archive` functions already modified in #699. #699 now has the stricter current-form ZIP uncompressed-member/aggregate caps as well. A coordination comment was added to #703: do not merge it independently; after HUMAN-MERGE of #699, rebase/compare and retain only a genuinely distinct guard (currently explicit non-bytes chunk rejection) if still needed.
+
+Scientific status is unchanged: the 90-event feature-input gate is open, but there are **0** eligible new prospective V2 forecasts, no pinned non-legacy incumbent, and the outcome/evaluation gate remains CLOSED. The original candidate SHA, frozen 19 features/order/weights, `active_lambda=0`, research-only `shadow_lambda=1`, and all embargoes remain unchanged. No target outcomes were selected/read/scored; no paid request, Supabase write/DDL, production `.pkl` change, refit, threshold tuning, promotion, betting, merge, schedule change, or other-agent setting change occurred.
