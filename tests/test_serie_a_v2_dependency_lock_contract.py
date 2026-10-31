@@ -68,7 +68,7 @@ def test_original_v2_workflows_use_python_specific_exact_locks() -> None:
     assert "requirements-v2-research-py312.lock" in shadow
     assert "cron:" not in shadow
 
-    py312_job = shadow.split("  py312-lock-tests:\\n", 1)[1]
+    py312_job = shadow.split("  py312-lock-tests:", 1)[1]
     assert 'python-version: "3.12"' in py312_job
     assert "python -m pip install -r requirements-v2-research-py312.lock" in py312_job
     assert "python -m pip check" in py312_job
