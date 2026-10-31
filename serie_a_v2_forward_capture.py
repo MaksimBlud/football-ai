@@ -150,12 +150,10 @@ def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
         headers = getattr(response, "headers", {}) or {}
         declared_length = headers.get("Content-Length")
         if declared_length is not None:
-            try:
-                declared_bytes = int(declared_length)
-            except (TypeError, ValueError) as exc:
-                raise ValueError("invalid source archive Content-Length") from exc
-            if declared_bytes < 0:
+            declared_text = str(declared_length).strip()
+            if not declared_text.isascii() or not declared_text.isdecimal():
                 raise ValueError("invalid source archive Content-Length")
+            declared_bytes = int(declared_text)
             if declared_bytes > MAX_ZIP_BYTES:
                 raise ValueError("missing or oversized source archive")
         chunks = []

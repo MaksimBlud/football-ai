@@ -139,6 +139,22 @@ def test_current_form_artifact_download_rejects_malformed_length(monkeypatch):
     assert response.closed is True
 
 
+
+@pytest.mark.parametrize("declared_length", ["+1", "١", "1.0"])
+def test_current_form_artifact_download_rejects_non_decimal_length(monkeypatch, declared_length):
+    import serie_a_v2_current_form_forward_capture as forward
+
+    monkeypatch.setattr(forward, "MAX_ARCHIVE_BYTES", 10)
+    response = FakeCurrentFormStreamingArtifactResponse(
+        [b"never-read"], headers={"Content-Length": declared_length}
+    )
+
+    with pytest.raises(ValueError, match="Content-Length"):
+        forward.get_archive(123, token="test-token", get=lambda url, **kwargs: response)
+
+    assert response.iter_content_called is False
+    assert response.closed is True
+
 def test_current_form_artifact_download_rejects_empty_stream_and_closes(monkeypatch):
     import serie_a_v2_current_form_forward_capture as forward
 
