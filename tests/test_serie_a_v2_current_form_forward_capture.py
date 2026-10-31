@@ -807,15 +807,17 @@ def test_archive_loader_rejects_missing_gate_identity_list():
         verify_and_load_archive(tampered, archive, parent)
 
 class _StreamingCurrentFormArtifactResponse:
-    def __init__(self, chunks, headers=None):
+    def __init__(self, chunks, headers=None, error=None):
         self.chunks = list(chunks)
         self.headers = headers or {}
+        self.error = error
         self.iterated = 0
         self.chunk_size = None
         self.closed = False
 
     def raise_for_status(self):
-        return None
+        if self.error is not None:
+            raise self.error
 
     def iter_content(self, chunk_size):
         self.chunk_size = chunk_size
@@ -877,6 +879,41 @@ def test_current_form_artifact_zip_stream_oversize_stops_at_first_excess_chunk(m
         )
 
     assert response.iterated == 2
+    assert response.closed is True
+
+
+def test_current_form_artifact_zip_requires_read_token_before_request():
+    calls = []
+    with pytest.raises(ValueError, match="read token missing"):
+        get_archive(
+            9876,
+            token="",
+            get=lambda *args, **kwargs: calls.append((args, kwargs)),
+        )
+    assert calls == []
+
+
+def test_current_form_artifact_zip_rejects_malformed_content_length_before_read():
+    response = _StreamingCurrentFormArtifactResponse(
+        [b"must-not-read"], headers={"Content-Length": "unknown"}
+    )
+    with pytest.raises(ValueError, match="Content-Length"):
+        get_archive(9876, token="test-token", get=lambda _url, **_kwargs: response)
+    assert response.iterated == 0
+    assert response.closed is True
+
+
+def test_current_form_artifact_zip_rejects_empty_stream_and_closes():
+    response = _StreamingCurrentFormArtifactResponse([])
+    with pytest.raises(ValueError, match="empty or too large"):
+        get_archive(9876, token="test-token", get=lambda _url, **_kwargs: response)
+    assert response.closed is True
+
+
+def test_current_form_artifact_zip_closes_response_after_http_error():
+    response = _StreamingCurrentFormArtifactResponse([], error=RuntimeError("http failure"))
+    with pytest.raises(RuntimeError, match="http failure"):
+        get_archive(9876, token="test-token", get=lambda _url, **_kwargs: response)
     assert response.closed is True
 
 
