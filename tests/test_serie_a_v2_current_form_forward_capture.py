@@ -435,3 +435,20 @@ def test_unverified_parent_cannot_admit_quote():
     assert report["v2_current_form_shadow_captured"] == 0
     assert report["blocked"]["SOURCE_PARENT_UNVERIFIED"] == 1
     assert report["rows"][0]["status"] == "SOURCE_PARENT_UNVERIFIED"
+
+
+def test_current_form_artifact_download_rejects_non_bytes_chunk_and_closes(monkeypatch):
+    import serie_a_v2_current_form_forward_capture as forward
+
+    monkeypatch.setattr(forward, "MAX_ARCHIVE_BYTES", 10)
+    response = FakeCurrentFormStreamingArtifactResponse([bytearray(b"abc")])
+
+    with pytest.raises(ValueError, match="non-bytes chunk"):
+        forward.get_archive(
+            123,
+            token="test-token",
+            get=lambda _url, **_kwargs: response,
+        )
+
+    assert response.iter_content_called is True
+    assert response.closed is True
