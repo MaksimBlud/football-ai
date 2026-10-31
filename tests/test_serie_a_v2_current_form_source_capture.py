@@ -140,6 +140,57 @@ def test_gate_count_rejects_reversed_duplicate_after_alias_normalization():
     with pytest.raises(ValueError, match="reversed duplicate fixture identity"):
         count_unique_completed_primary_events(rows, before_date=date(2026, 10, 18))
 
+
+@pytest.mark.parametrize("bad_date", ["2026-10-01T00:00:00Z", "2026-10-01suffix", "20261001"])
+def test_gate_count_rejects_noncanonical_metadata_date_strings(bad_date):
+    rows = [{
+        "match_date": bad_date,
+        "home_team": "Home",
+        "away_team": "Away",
+    }]
+    with pytest.raises(ValueError, match="invalid primary event date"):
+        count_unique_completed_primary_events(rows, before_date=date(2026, 10, 18))
+
+
+@pytest.mark.parametrize("bad_date", ["2026-10-01T00:00:00Z", "2026-10-01suffix", "20261001"])
+def test_gate_identity_reader_rejects_noncanonical_metadata_date_strings(bad_date):
+    client = FakeQuery([{
+        "match_date": bad_date,
+        "home_team": "Home",
+        "away_team": "Away",
+    }])
+    with pytest.raises(ValueError, match="invalid primary event date"):
+        read_completed_primary_event_identities(
+            client, now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
+@pytest.mark.parametrize("extra_field", ["result", "home_goals", "score"])
+def test_gate_count_rejects_outcome_fields_in_identity_metadata(extra_field):
+    row = {
+        "match_date": "2026-10-01",
+        "home_team": "Home",
+        "away_team": "Away",
+    }
+    row[extra_field] = "H"
+    with pytest.raises(ValueError, match="identity-only allowlist"):
+        count_unique_completed_primary_events([row], before_date=date(2026, 10, 18))
+
+
+@pytest.mark.parametrize("extra_field", ["result", "home_goals", "score"])
+def test_gate_identity_reader_rejects_outcome_fields_in_supabase_response(extra_field):
+    row = {
+        "match_date": "2026-10-01",
+        "home_team": "Home",
+        "away_team": "Away",
+    }
+    row[extra_field] = "H"
+    client = FakeQuery([row])
+    with pytest.raises(ValueError, match="identity-only allowlist"):
+        read_completed_primary_event_identities(
+            client, now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
 @pytest.mark.parametrize("bad_team", ["Atalanta\tBC", "Atalanta\nBC", "Atalanta\rBC"])
 def test_gate_rejects_control_characters_in_team_identity(bad_team):
     rows = [{
