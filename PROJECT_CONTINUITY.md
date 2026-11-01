@@ -116,7 +116,7 @@ For Serie A 2026/27 before 2026-11-01:
 - Three duplicate groups are solely the known `Atalanta BC -> Atalanta` alias on 2026-08-23, 2026-08-31, and 2026-09-05.
 - Source-capture identity-set SHA-256 (the exact `newline + tab` serialization used by PR #699): `95e3d71ab97076b5edee503301843f55d22eb14a832f7e1aab7f2012e6013811`.
 - Prospective evaluator identity-set SHA-256 (its separate compact-JSON serialization): `09442a8a74c0471e3b6ae161d39cd73e1015fc5d541c994a09134555cc720c93`.
-- The canonical count matches the 90 current-season rows in the verified 2026-10-31 source artifact. The new source/identity attestation from PR #699 is still required for future admissibility.
+- The exact 90 canonical fixture identities from the CSV match the 90 canonical Supabase metadata identities after applying the runtime/V2 alias map. Both sets independently produce the source-capture tab/newline SHA `95e3d71ab97076b5edee503301843f55d22eb14a832f7e1aab7f2012e6013811` and the prospective-evaluator compact-JSON SHA `09442a8a74c0471e3b6ae161d39cd73e1015fc5d541c994a09134555cc720c93`. This is exact set parity, not count-only parity; the new source/identity attestation from PR #699 is still required for future admissibility.
 
 Across nine leagues, `odds_snapshots` has 3,966 rows, 3,915 strictly pre-kickoff rows and zero new strictly pre-kickoff rows since 2026-10-25. Serie A has 625 total / 620 strictly pre-kickoff rows; its latest verified pre-kickoff snapshot is `2026-10-13T14:48:53.042620Z`. No future fixture has a new saved pre-kickoff quote in the queried window.
 
