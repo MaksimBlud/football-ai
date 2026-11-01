@@ -1,3 +1,57 @@
+## 2026-11-01 12:06 UTC — fresh current-form source and paired forward runtime proof
+
+A new successful run on unchanged main `40887ebb215730190d7a6c7a1693373ec4afcdfc`
+provides the first fresh November 1 current-form archive and its paired
+source-verified forward run:
+
+- Current-Form Source Capture run **#41304706414** completed SUCCESS at
+  12:05:19 UTC; artifact **13082408243**, 437,021 bytes, GitHub digest and
+  independently recomputed ZIP SHA-256
+  `09fd39e2e7371f6db887963b5da85e4bb3bb6008314cc97b2a31eabf41d115fe`.
+- Downloaded the artifact and independently verified all **11/11 CSV
+  byte hashes** against the manifest. It contains ten frozen historical
+  seasons / **3,800** historical rows and current `2627/I1.csv` /
+  **90** completed prior-day rows. The current CSV SHA-256 is
+  `32ca618587c90db25f16ea647cb55060f519c03830a1e8ec4a6c4204e27d5135`.
+- The manifest records the unchanged candidate SHA
+  `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`,
+  original feature-builder blob `401b3a0893371bfa4a488ec92a4a54af2678c8f7`,
+  19 features, metadata-only input gate (only
+  `match_date, home_team, away_team`), 90 completed identities, no same-day
+  rows, no paid calls, no Supabase writes, and no target-outcome reads.
+- Independent source↔Supabase identity parity was recomputed from the
+  downloaded CSV and a separate read-only metadata query. Both produce
+  **90 canonical identities** and exact sorted tab/newline SHA-256
+  `95e3d71ab97076b5edee503301843f55d22eb14a832f7e1aab7f2012e6013811`.
+  The Supabase query returned 93 raw rows; three Atalanta/Atalanta BC alias
+  duplicates collapse under the frozen V2-local alias.
+- Paired Current-Form Forward-Only run **#41304789997** completed SUCCESS
+  at 12:06:04 UTC; artifact **13082817502**, 438,196 bytes, SHA-256
+  `44e054d41f553f84fff8f1ba509f9da2d0cad13c218878ad6b400f558ec458ae`.
+  It independently verified source artifact 13082408243 and parent run
+  41304706414. Source observation was 12:05:13.677 UTC, archive creation
+  12:05:15 UTC, parent completion 12:05:19 UTC, and forward verification
+  12:05:59.096 UTC (source age 45 seconds): all source/parent clocks
+  precede the forward verification time.
+- Forward regression suite: **53 passed**. Real output:
+  `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `rows=[]`,
+  `eligible_for_current_form_forward_shadow=false`,
+  `active_lambda=0`, `shadow_residual_lambda=1`,
+  `target_outcomes_read=false`, `paid_provider_calls=0`,
+  `production_or_supabase_writes=0`. Thus this is source/runtime proof,
+  **not** a forecast or feature-vector calculation: no future fixture
+  with a saved eligible pre-kickoff quote was available.
+
+The feature-input gate is satisfied, but the independent 30 eligible
+completed prospective-forecast outcome gate remains CLOSED. No 2026/27
+target outcomes were read. The 13:14 UTC free diagnostic later produced a
+separate historical-only archive; it does not replace this current-form
+archive or create quotes.
+
+No model, 19-feature definition, weights, candidate SHA, lambda semantics,
+schedule, production artifact, or Supabase data/schema changed. HUMAN-MERGE
+only; this documentation update remains on PR #697.
+
 ## 2026-11-01 — cross-table pre-kickoff source audit
 
 A final read-only schema/metadata audit checked the other existing Supabase
