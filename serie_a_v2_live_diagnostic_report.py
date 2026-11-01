@@ -86,16 +86,16 @@ def _read_bounded_historical_csv_response(
         headers = getattr(response, "headers", {}) or {}
         declared_length = headers.get("Content-Length")
         if declared_length is not None:
-            try:
-                declared_bytes = int(declared_length)
-            except (TypeError, ValueError):
-                raise RuntimeError(
-                    f"Public Serie A CSV has invalid Content-Length: season={season_code}"
-                ) from None
-            if declared_bytes < 0:
+            if not isinstance(declared_length, str):
                 raise RuntimeError(
                     f"Public Serie A CSV has invalid Content-Length: season={season_code}"
                 )
+            declared_text = declared_length.strip(" \\t")
+            if not declared_text or not declared_text.isascii() or not declared_text.isdecimal():
+                raise RuntimeError(
+                    f"Public Serie A CSV has invalid Content-Length: season={season_code}"
+                )
+            declared_bytes = int(declared_text)
             if declared_bytes > MAX_HISTORICAL_CSV_BYTES:
                 raise RuntimeError(
                     f"Public Serie A CSV exceeds size limit: season={season_code}"
