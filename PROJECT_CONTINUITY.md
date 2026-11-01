@@ -17,18 +17,49 @@ Read-only Supabase audit (identity metadata only for the feature gate; odds rows
 - `odds_snapshots`: 3,966 total / 3,915 strictly pre-kickoff across nine leagues; **zero** strict pre-match snapshots in the last seven days and **zero** future events with saved pre-match quotes. Latest Serie A pre-match snapshot remains 2026-10-13 14:48:53 UTC.
 - `league_structural_v2_observations`: Serie A 630 strictly pre-match observations; zero in the last seven days and zero future events.
 
-### Source-integrity PR ordering correction
+### Corrected source-integrity overlap audit — 2026-11-01 16:49 UTC
 
-A fresh overlap audit found that PR **#699**'s current-season CSV downloader already uses `allow_redirects=False` and verifies the exact final URL, but its historical CSV downloader in `serie_a_v2_live_diagnostic_report.py` still follows redirects by default. This leaves a source-identity gap in the ten frozen historical CSV fetches if #699 is merged alone.
+This correction supersedes the merge-order recommendation immediately above. The previous note incorrectly said that PR #699 still followed redirects for the ten historical CSV downloads. A direct read of the #699 branch files at the verified commit below disproves that statement.
 
-PR **#700** closes that exact gap: it pins the full HTTPS host/path, disables redirects before reading the body, checks the final URL, bounds declared and streamed bytes, closes responses, and has dedicated redirect/URL/size regressions. Exact head `8ffbf2119754e8c7d7a8e4f14f75fd94d103c3f0`, **7/7 exact-head CI SUCCESS**, no review threads, mergeable at audit time.
+Verified PR #699 commit: `58bdb5bfc88f1b33f3e9843b164b8c036306e882`. Its exact-head CI set completed **7/7 SUCCESS**:
+- Frozen V2 Shadow #41313954700 — **271 passed**; production `*.pkl` diff guard passed.
+- Research #41313954608
+- Serie A #41313954674
+- Bundesliga #41313954809
+- Product #41313954562
+- Ligue 1 #41313955074
+- Eredivisie #41313954847
 
-PR **#703** separately strengthens streamed GitHub artifact downloads (including rejecting non-bytes chunks) in the same two forward-capture modules also changed by #699. Exact head `f12abfd3a8fc37fb3aff6d394ec3966bc1311b51`, **7/7 exact-head CI SUCCESS**. These overlapping source-integrity changes must be reconciled before integrating #699.
+The #699 diff already includes these substantive protections:
+- Historical Football-Data CSVs: exact approved HTTPS host/path, `allow_redirects=False`, HTTP 200 and exact final URL checks before body consumption, bounded streaming at 5 MB per file / 10 MB aggregate, actual byte checks, and response closure.
+- Original and current-form GitHub artifact downloads: streaming, actual archive-size caps, and response cleanup. The current-form reader also validates ZIP member names and aggregate/member uncompressed sizes.
+- Current-form source workflow: guarded `workflow_run` after the free diagnostic, restricted to successful main-branch scheduled/manual diagnostic runs; it checks the existing source archive against the current metadata-only fixture identity set and captures a new archive only when freshness or gate coverage fails.
 
-**Safe HUMAN-MERGE sequence:** review/merge #700 and #703 first; then rebase/reconcile #699 against the resulting main and rerun all seven checks on its new exact HEAD. Do not merge the previously tested #699 SHA as if it already contained #700's historical redirect guard or #703's latest archive-stream checks. PR #704's Python-specific version locks also touch the same live workflows and must be rebased/rechecked after integration; its lock files pin versions but do not enforce hashes. PR #701 remains the separate 30-eligible-completed-forecast evaluator (6/6 CI); #702 remains the free fixture/feature-readiness preview (7/7 CI).
+There are, however, smaller unique hardening deltas in the overlapping PRs:
+- **#700** adds strict ASCII-decimal `Content-Length` parsing for historical CSVs. #699's historical parser currently uses `int(declared_length)`; it already has the redirect and streaming/aggregate-size guards. The #700 branch also uses a 2 MB per-file cap and lacks #699's 10 MB aggregate cap, so do not merge its older whole-file diff ahead of #699. After #699 is integrated, rebase #700 and retain only the unique strict-header validation/tests if still useful.
+- **#703** adds ASCII-only `Content-Length` validation and rejects non-bytes chunks in the GitHub artifact stream readers. #699 already bounds those streams and adds current-form ZIP expansion checks, but the stricter header/chunk-type checks are unique. Rebase #703 after #699 and rerun exact-head CI; do not merge its stale overlapping diff as-is.
+- **#704** changes the same workflows for Python dependency locks; rebase it after #699 and rerun exact-head CI. Its pins are version locks, not hash-enforced supply-chain locks.
+- **#701** is the separate lazy outcome evaluator; **#702** is the free fixture/19-feature-readiness preview. Review both against the resulting main and their exact tested heads before manual integration.
 
-No PR was merged, no main or production artifact was changed, no Supabase write/DDL occurred, no paid provider was called, and no protected 2026/27 target outcome was read. The prospective 30-primary-completed-event outcome gate remains CLOSED.
- 
+**Correct HUMAN-MERGE sequence:** #699 first; then rebase/reconcile #700 and #703 to preserve only their unique strict-header/chunk-type regressions; then rebase #704. Re-run all required CI on every resulting exact HEAD. Do not merge any PR automatically. The earlier recommendation to merge #700/#703 before #699 is superseded.
+
+### Independent artifact byte verification and current pre-match audit — 2026-11-01 16:49 UTC
+
+I independently downloaded and rehashed the actual GitHub artifacts:
+- Current-form source artifact #13082408243: ZIP SHA-256 `09fd39e2e7371f6db887963b5da85e4bb3bb6008314cc97b2a31eabf41d115fe`, matching the GitHub artifact digest. Its manifest lists 11 CSVs; all 11 raw-file SHA-256 values match. The ten frozen seasons contain 380 rows each; the 2026/27 CSV contains 90 completed prior-day rows. Total: 3,890 CSV rows.
+- Current-form forward artifact #13089345402: ZIP SHA-256 `0511879f1a3e425ee97326158bb366912e771d2084653d010f7926ac15251a02`, matching GitHub. Its JSON reports the source artifact as verified and fresh at forward time (11,153 seconds old), but `quotes_seen=0`, `v2_current_form_shadow_captured=0`, no rows, and no target-outcome reads/scoring.
+- Original forward artifact #13088352792: ZIP SHA-256 `fb2331e0fbb7a19c3979277814762935a7be0098caf34c149c13c154279c0c11`, matching GitHub. Its JSON reports 71 tests passed in the job log, 3,800 frozen historical rows attested, zero quotes checked and zero forecasts created.
+
+At the current audit time, the 2026/27 source observation `2026-11-01T12:05:13.677283Z` is still within the frozen 24-hour maximum. This does not create a quote-backed vector: no eligible saved future quote exists.
+
+Fresh read-only Supabase queries selected only pre-match odds timing and fixture identity metadata:
+- `odds_snapshots`: 3,966 rows; 3,915 satisfy `snapshot_time_utc < commence_time_utc`; zero strict pre-kickoff rows in the last seven days; zero future events with a saved strict pre-kickoff quote. Latest strict pre-kickoff snapshot remains `2026-10-13T14:48:53.042620Z`.
+- `league_structural_v2_observations`: Serie A 630 rows / 63 events, all strictly pre-kickoff; zero in the last seven days and zero future events.
+- `league_finished_results` feature-input identity query selected only `match_date, home_team, away_team`: 93 raw Serie A 2026/27 rows, 90 canonical identities after the V2-local Atalanta alias. This is the lagged feature-input gate only, not the prospective outcome gate.
+- `product_prediction_snapshots`: 40 EPL rows; zero rows with the frozen V2 candidate SHA, zero future original-V2 pre-kickoff rows.
+
+No quote payloads/prices/probabilities or protected target outcomes were selected. No Supabase writes/DDL, paid provider calls, production artifact changes, schedule changes, or main changes occurred. The 30-eligible-completed-prospective-forecast outcome gate remains CLOSED. HUMAN-MERGE only.
+
 ## 2026-11-01 12:06 UTC — fresh current-form source and paired forward runtime proof
 
 A new successful run on unchanged main `40887ebb215730190d7a6c7a1693373ec4afcdfc`
