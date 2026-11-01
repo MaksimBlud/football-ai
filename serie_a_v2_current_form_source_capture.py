@@ -327,12 +327,10 @@ def _read_bounded_current_source_body(response: Any) -> bytes:
         headers = getattr(response, "headers", {}) or {}
         declared_length = headers.get("Content-Length")
         if declared_length is not None:
-            try:
-                declared_bytes = int(declared_length)
-            except (TypeError, ValueError):
-                raise ValueError("current-season source has an invalid Content-Length") from None
-            if declared_bytes < 0:
-                raise ValueError("current-season source has a negative Content-Length")
+            declared_text = str(declared_length).strip()
+            if not declared_text.isascii() or not declared_text.isdecimal():
+                raise ValueError("current-season source has an invalid Content-Length")
+            declared_bytes = int(declared_text)
             if declared_bytes > MAX_CURRENT_CSV_BYTES:
                 raise ValueError("current-season source exceeds size limit")
 
