@@ -1,5 +1,27 @@
 # Football AI — Project Continuity
 
+
+## 2026-11-01 03:50 UTC — independently reverified current-form archive and metadata identity parity
+
+Fresh GitHub and Supabase reads still show main `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No V2 PR was merged.
+
+**Actual main source artifact re-download and byte verification:**
+- Current-Form Source Capture run `41196139664` completed SUCCESS on the exact main SHA; job ran 19 source-gate tests successfully.
+- Downloaded artifact `13040356986`: **437,016 bytes**, SHA-256 `feb008fa6ebc15d9125573c8e69061c4bc63bcd81e506265b4d6f948d0a4621a`, matching GitHub's artifact digest.
+- ZIP contains ten frozen historical-season CSVs, current `serie_a_2627.csv`, and manifest. Recomputed every CSV byte digest: **11/11 match the manifest**.
+- Current CSV SHA-256: `32ca618587c90db25f16ea647cb55060f519c03830a1e8ec4a6c4204e27d5135`; 90 completed prior-day rows dated 2026-08-22 through 2026-10-29.
+- Independently recomputed canonical identities from the downloaded CSV and a fresh Supabase query that selected only `match_date,home_team,away_team`. Applied the exact Serie A runtime aliases plus V2-local `Atalanta BC → Atalanta`; sorted tab-delimited identity SHA-256 is **`95e3d71ab97076b5edee503301843f55d22eb14a832f7e1aab7f2012e6013811` on both sides**, with **90/90 identities** and matching date range. No score/result/settlement column was selected or inspected.
+- The source run recorded observation at 11:16:50.931690 UTC, uploaded the archive at 11:16:52 UTC, and completed at 11:16:55 UTC. The later current-form forward run `41210600837` verified this exact source artifact and successful parent on main at 14:33 UTC. Its artifact `13045987954` digest is `32623b30e1ef5a6706db7bc09cc6fd801b408ccfa2b64b911fcde2914d4b64c0`; report: 53 tests passed, source VERIFIED, age 11,770 seconds, 90 feature-input identities, **0 quotes seen and 0 shadow previews**. This proves source-before-forward and artifact integrity, not a source-before-quote forecast because no quote was available.
+- The old-main manifest records the 90-event count but does not persist the full identity list/SHA. PR #699 adds that durable attestation and exact source coverage check; its new contract has not yet run on main. Independently observed parity does not substitute for post-merge runtime proof.
+
+**Fresh pre-match-only database check:** Serie A `odds_snapshots` = 625 total, 620 strictly pre-kickoff, 5 at/after kickoff, 0 in the last seven days, and 0 future events with a saved strictly pre-kickoff quote. Latest pre-kickoff snapshot remains 2026-10-13 14:48:53.042620 UTC. `league_prediction_ledger` has 630 rows, all 630 strictly before kickoff, across 63 event identities; latest timestamp is the same. No target outcomes were read.
+
+**Binding gates remain separate:** feature-input metadata gate = 90/30, passed; prospective target-outcome evaluation gate = CLOSED, eligible completed prospective forecasts = 0; non-legacy frozen incumbent = unpinned; Brier/LogLoss and superiority claims unavailable. Original candidate SHA, 19 features/weights, `active_lambda=0`, and research-only `shadow_lambda=1` remain unchanged.
+
+**Next safe order:** HUMAN-MERGE #699 at its exact tested HEAD; verify fresh main and a new source artifact with persisted identity list/count/SHA. Then rebase/retest #694's per-quote current-gate freshness guard and #703/#704. Keep #702 main-only/manual-only until the new post-#699 archive is verified. No manual workflow dispatch was made from the old main.
+
+No main mutation or merge, paid request, Supabase write/DDL, production `.pkl` change, model/feature/weight/lambda change, target-outcome read, or schedule/other-agent-setting change occurred.
+
 ## 2026-11-01 02:56 UTC — exact-head V2 refresh; no new admissible quote
 
 Fresh GitHub reads confirm `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no V2 PR has been merged. This entry refreshes exact open-PR heads and real main-run evidence without changing the frozen model or either gate.
