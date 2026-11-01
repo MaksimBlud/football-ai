@@ -43,6 +43,18 @@ There are, however, smaller unique hardening deltas in the overlapping PRs:
 
 **Correct HUMAN-MERGE sequence:** #699 first; then rebase/reconcile #700 and #703 to preserve only their unique strict-header/chunk-type regressions; then rebase #704. Re-run all required CI on every resulting exact HEAD. Do not merge any PR automatically. The earlier recommendation to merge #700/#703 before #699 is superseded.
 
+### Main-ref guard audit for secret-bearing forward workflows — 2026-11-01 17:01 UTC
+
+A fresh comparison of the live `main` workflows with the #699 branch found a separate reason not to dispatch these workflows from a feature ref while #699 remains unmerged:
+
+- On current `main`, `.github/workflows/serie-a-v2-forward-preview.yml` has `workflow_dispatch`, a read-only schedule, and a `workflow_run` after the paid `Serie A Odds Snapshots` workflow's manual dispatch. Its job condition restricts the `workflow_run` case to a successful main/manual collector run, but does not independently require `github.ref == 'refs/heads/main'`. The job receives `SUPABASE_URL` and `SUPABASE_KEY`.
+- On current `main`, `.github/workflows/serie-a-v2-current-form-forward-preview.yml` likewise has a manual dispatch and read-only schedule plus successful source-capture/manual-collector workflow-run triggers. Its job condition checks the workflow-run provenance but does not independently require the main ref; the job also receives Supabase credentials.
+- The #699 branch adds an explicit `github.ref == 'refs/heads/main'` guard to both forward-preview jobs and regression-tests that secret-bearing V2 workflows cannot run from a feature ref. It also constrains the free diagnostic and source-capture job entry points to the intended main-ref/event combinations.
+
+Until #699 is manually merged, **do not dispatch either secret-bearing forward workflow from a feature branch**. Scheduled main runs and the guarded workflow-run paths are distinct from a feature-ref manual dispatch. The paid `Serie A Odds Snapshots` collector remains manual-only; no paid call or cron was introduced by this audit.
+
+This is a current-main security gap, not evidence of a model defect. No workflow was dispatched from a feature ref, no secret was read or exposed, no main change/merge occurred, and no Supabase write/DDL or target-outcome read occurred. HUMAN-MERGE only.
+
 ### Independent artifact byte verification and current pre-match audit — 2026-11-01 16:49 UTC
 
 I independently downloaded and rehashed the actual GitHub artifacts:
