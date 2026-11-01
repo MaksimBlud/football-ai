@@ -1,3 +1,72 @@
+## 2026-11-01 — lazy exact outcome reader and zero future quotes
+
+### Exact pre-kickoff market availability
+
+A second read-only query used the database's current clock and the strict condition
+`snapshot_time_utc < commence_time_utc`. Across all nine tracked leagues,
+there are **zero future events with a saved strict pre-kickoff snapshot** and
+zero associated rows. This confirms that there is no usable future market
+observation waiting in the database for the V2 forward runner.
+
+The prior aggregate remains 3,966 `odds_snapshots` rows / 3,915 strict
+pre-kickoff rows. Serie A's last strict pre-kickoff snapshot remains
+`2026-10-13T14:48:53.042620Z`. Do not treat a historical pre-kickoff snapshot
+for an already-started fixture as a current quote.
+
+### Exact lazy outcome reader added before any prospective outcome access
+
+PR [#701](https://github.com/MaksimBlud/football-ai/pull/701) final HEAD is
+`74322b4f4df331657dcc3fddd66a9867b5033570`; exact-head CI is **6/6 SUCCESS**
+(Research #41309415355, Serie A #41309415356, Bundesliga #41309415147,
+Eredivisie #41309415138, Ligue 1 #41309415184, Product #41309415166).
+Research log: 79 evaluator tests, 5 live-runner tests, and
+`PASS: no .pkl changes in PR`.
+
+The new `evaluate_live_market_only_from_supabase()` wrapper keeps the outcome
+reader lazy behind the unchanged 30-unique-eligible-completed-prospective-
+forecast gate. Below 30 it makes zero result-column queries. At/above 30 it
+queries only exact fixture identities and selects exactly
+`match_date,home_team,away_team,result`; it does not select goal/score fields
+or unrelated fixtures. It canonicalizes known aliases and rejects conflicting
+duplicate H/D/A labels. The supplementary path compares only the exact
+de-vigged market with the frozen lambda-one V2 shadow and always keeps
+`review_signal=false`; the original full three-way evaluator remains
+unchanged and requires a separately pinned non-legacy incumbent.
+
+All new tests are synthetic regression tests. No target outcome has been read
+and the actual prospective cohort still contains **0 eligible completed V2
+forecasts**. The 90 completed metadata identities are feature-input history,
+not 90 prospective forecasts. The full evaluation gate remains closed.
+
+### No admissible Serie A incumbent
+
+The read-only ledger audit remains unchanged:
+- 630 `league_prediction_ledger` rows / 63 Serie A events are `MARKET_ONLY`;
+  the source-before-prediction row count is 0.
+- `product_prediction_snapshots` contains 40 EPL-only records for
+  `EPL_AI_MARKET_PAIR_V1`; no Serie A rows exist.
+- `FROZEN_INCUMBENT_REFERENCE=None` remains correct. Do not infer an incumbent
+  from market-only ledger rows or import the legacy XGBoost model.
+
+### Superseding current integration order
+
+1. HUMAN-MERGE PR #699 first (exact HEAD `fa10c4c8...`, 7/7 CI); it consolidates
+   the source clock, feature-gate clock, exact historical URL/redirect,
+   dependency-trigger and bounded artifact-download guards also represented
+   by open PRs #680, #683, #686, #698, #700 and #703. Do not merge those
+   overlapping branches independently without a new diff review.
+2. HUMAN-MERGE PR #701 after #699 (or independently only if its base remains
+   clean); it contains the pure 30-event evaluator, supplementary market-only
+   diagnostic, and lazy exact Supabase outcome reader.
+3. PR #702 remains manual-only and must not be run until a new source archive
+   is verified and the source/identity guard integration is present.
+4. PR #697 is documentation-only. PR #704's version pins are not hash-enforced
+   and its workflow edits overlap #699; reconcile after #699 before merge.
+
+No merge, main change, schedule change, paid provider request, Supabase
+write/DDL, production artifact change, or protected target-outcome read.
+HUMAN-MERGE remains mandatory.
+
 ## 2026-11-01 — exact artifact digest, live identity audit, and market-only evaluator
 
 ### Repository and frozen candidate
