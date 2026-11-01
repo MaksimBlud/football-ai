@@ -1,3 +1,49 @@
+## 2026-11-01 18:54 UTC — fresh pre-match data and security audit; no prospective quote
+
+This is a read-only refresh against unchanged `main` **40887ebb215730190d7a6c7a1693373ec4afcdfc**. It adds no new model/runtime claim.
+
+### Verified Actions artifacts
+
+- Current-form Source Capture run **41304706414**: SUCCESS on main; artifact **13082408243**, 437,021 bytes, GitHub digest `sha256:09fd39e2e7371f6db887963b5da85e4bb3bb6008314cc97b2a31eabf41d115fe`.
+- Current-form Forward run **41319862002**: SUCCESS on main; artifact **13089345402**, 438,202 bytes, digest `sha256:0511879f1a3e425ee97326158bb366912e771d2084653d010f7926ac15251a02`. Its actual output was `quotes_seen=0`, `v2_current_form_shadow_captured=0`, no rows, no target-outcome reads/scoring, no paid calls, no Supabase writes, `no_bet=true`; 53 tests passed.
+- Original old-season Forward run **41318729126**: SUCCESS on main; artifact **13088352792**, 1,459 bytes, digest `sha256:fb2331e0fbb7a19c3979277814762935a7be0098caf34c149c13c154279c0c11`; 71 tests passed. This is source-checked diagnostic evidence, not a prospective forecast.
+- These are the last specific run artifacts independently inspected in this audit. Do not infer that a new quote or a new prediction exists from a successful workflow alone.
+
+### Read-only Supabase pre-match audit
+
+All odds queries apply the strict predicate `snapshot_time_utc < commence_time_utc`; no outcome columns were selected.
+
+- Across nine leagues: **3,966** odds snapshots, **3,915** strictly pre-match; **0** strictly pre-match snapshots in the last seven days; **0** future events with a saved strictly pre-match quote.
+- `SERIE_A`: **625** total snapshots, **620** strictly pre-match; latest strict pre-match snapshot remains **2026-10-13 14:48:53 UTC**.
+- `league_structural_v2_observations`: **630** Serie A observations across **63** events; all 630 satisfy the strict pre-match timestamp condition; latest snapshot is also **2026-10-13 14:48:53 UTC**.
+- Serie A 2026-2027 feature-input metadata query selected only `match_date, home_team, away_team`: **93** raw rows, **90** unique identities after the frozen V2-local `Atalanta BC → Atalanta` alias (3 alias rows), latest date **2026-10-29**. This is only the feature-input gate, never the 30-forecast outcome gate.
+- `product_prediction_snapshots` contains **40** pre-kickoff EPL rows for `EPL_AI_MARKET_PAIR_V1`; no original Serie A V2 incumbent is present.
+
+No protected 2026/27 target outcomes were selected or read.
+
+### Workflow and PR safety state
+
+- Main's `serie-a-v2-forward-preview.yml` and `serie-a-v2-current-form-forward-preview.yml` currently lack a job-level `github.ref == 'refs/heads/main'` guard for manual dispatch. The main current-form source-capture and free-diagnostic workflows also lack that guard.
+- PR **#699**, exact HEAD `5a1d1bda1c62d36fd092d9e9018a7d2d923e4513`, adds main-ref guards to all four secret-bearing V2 workflows and broadens frozen-dependency triggers. Its exact-head CI is **7/7 SUCCESS**, including **286 Frozen V2 Shadow tests** and the production `*.pkl` diff guard. It remains open; HUMAN-MERGE only.
+- PR **#697**, exact HEAD `22764eaaca2a942cb1e555ecb3ab0690a242eba8`, has **7/7 SUCCESS** and remains documentation-only.
+- PRs **#700**, **#703**, and **#698** remain open with successful CI on their current heads, but overlap files changed by #699. Rebase and compare after #699 is manually merged; do not merge stale bases or duplicate overlapping changes.
+- PR **#701** has 6/6 successful runs on its current HEAD; #702 has 7/7. #702's live fixture preview remains blocked until #699 is manually merged, a fresh post-merge source artifact is captured, and #702 itself is manually merged and dispatched.
+- No PR was merged and main was not changed.
+
+### Separate Supabase security finding
+
+Security Advisor observed at **2026-11-01 18:54 UTC**:
+- ERROR: RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`.
+- INFO: RLS enabled but no policies on `public.competitions`, `public.match_stats`, `public.matches`, and `public.standings`.
+
+No DDL or policy change was attempted. Enabling RLS without correctly scoped policies could break the application; this remains a separate owner-controlled security task.
+
+### Scientific status
+
+The original candidate remains SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 frozen features and weights unchanged, `active_lambda=0`, `shadow_lambda=1` research-only. There are still **0** admissible prospective V2 forecasts and therefore **0/30** eligible completed forecasts. No Brier/LogLoss comparison or superiority claim is permitted.
+
+---
+
 ## 2026-11-01 15:11 UTC — second source-verified current-form forward runtime; still no quote
 
 On unchanged main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, the scheduled Current-Form Forward-Only Preview run **#41319862002** completed SUCCESS at 15:11:15 UTC. Its uploaded artifact is **13089345402**, 438,202 bytes, digest `sha256:0511879f1a3e425ee97326158bb366912e771d2084653d010f7926ac15251a02`.
