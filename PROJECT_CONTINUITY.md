@@ -1,3 +1,35 @@
+## 2026-11-01 — cross-table pre-kickoff source audit
+
+A final read-only schema/metadata audit checked the other existing Supabase
+market/fixture tables so that the absence of quotes is not inferred from
+`odds_snapshots` alone. No payloads, prices, probabilities, scores, goals,
+results, or settlements were selected.
+
+- `matches`: zero future fixture rows from 2026-11-01 onward across all
+  leagues. This table cannot currently supply an upcoming-fixture list.
+- `league_h2h_bookmaker_snapshots`: Serie A has 630 rows / 63 events, all
+  strictly pre-kickoff, but zero rows in the last 7 days and zero future events
+  with a saved strict pre-kickoff snapshot. Latest source snapshot remains
+  `2026-10-13T14:48:53.042620Z`; latest persistence time is
+  `2026-10-22T12:28:06.802262Z`.
+- `league_structural_v2_observations`: Serie A has 630 strictly pre-kickoff
+  rows / 63 events, zero in the last 7 days and zero future events. Its latest
+  observation is also `2026-10-13T14:48:53.042620Z`. These are structural
+  observation rows, not a pinned incumbent artifact or a valid replacement
+  comparator for the original MARKET_ANCHOR_1X2_V2.
+- `league_multi_market_snapshots`: only two rows, both Eredivisie; no Serie A
+  rows.
+- The separate `odds_snapshots` audit also reports zero future events with a
+  strict pre-kickoff snapshot across all nine leagues.
+
+Therefore there is no hidden alternate Supabase table containing newer
+Serie A pre-match quotes or future fixtures. The manual-only free fixture
+discovery preview in PR #702 is still the only prepared path to discover
+upcoming events; it must wait for a fresh source archive and manual integration
+of the source/identity guards. No paid endpoint, cron, or schedule change is
+authorized or required.
+
+
 ## 2026-11-01 — lazy exact outcome reader and zero future quotes
 
 ### Exact pre-kickoff market availability
