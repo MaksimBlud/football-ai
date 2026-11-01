@@ -79,6 +79,64 @@ def test_historical_source_rejects_oversized_content_length_before_body_read(tmp
     assert list(tmp_path.glob("*.csv")) == []
 
 
+@pytest.mark.parametrize("content_length", ["+1", "1.0", "-1", "", "١", "  +1\\t"])
+def test_historical_source_rejects_non_ascii_or_non_decimal_content_length_before_body_read(
+    content_length, tmp_path
+):
+    class Response:
+        status_code = 200
+        headers = {"Content-Length": content_length}
+        def __init__(self, url):
+            self.url = url
+            self.closed = False
+            self.body_read = False
+        def iter_content(self, chunk_size):
+            self.body_read = True
+            yield b"must-not-be-read"
+        def close(self):
+            self.closed = True
+
+    response = None
+    def fake_get(url, timeout, allow_redirects, stream):
+        nonlocal response
+        assert allow_redirects is False and stream is True
+        response = Response(url)
+        return response
+
+    with pytest.raises(RuntimeError, match="invalid Content-Length"):
+        fetch_public_history(get=fake_get, capture_dir=tmp_path)
+
+    assert response is not None
+    assert response.body_read is False
+    assert response.closed is True
+    assert list(tmp_path.glob("*.csv")) == []
+
+
+def test_historical_source_rejects_non_bytes_stream_chunk_and_closes(tmp_path):
+    class Response:
+        status_code = 200
+        headers = {}
+        def __init__(self, url):
+            self.url = url
+            self.closed = False
+        def iter_content(self, chunk_size):
+            yield bytearray(b"not-an-immutable-bytes-chunk")
+        def close(self):
+            self.closed = True
+
+    response = None
+    def fake_get(url, timeout, allow_redirects, stream):
+        nonlocal response
+        response = Response(url)
+        return response
+
+    with pytest.raises(RuntimeError, match="non-byte content"):
+        fetch_public_history(get=fake_get, capture_dir=tmp_path)
+
+    assert response is not None and response.closed is True
+    assert list(tmp_path.glob("*.csv")) == []
+
+
 def test_historical_source_stops_on_actual_streamed_byte_limit_and_closes(tmp_path):
     class Response:
         status_code = 200
