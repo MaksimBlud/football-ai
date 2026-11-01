@@ -305,6 +305,20 @@ HUMAN-MERGE remains mandatory.
 
 # Football AI — Project Continuity
 
+## 2026-11-01 — Exact-head source/transport guard consolidation and live-data audit
+
+- Main remains exactly `40887ebb215730190d7a6c7a1693373ec4afcdfc`; the latest main commit is still the Oct 18 current-form preregistration. No main mutation or merge occurred.
+- PR #699 was extended to exact HEAD `5a1d1bda1c62d36fd092d9e9018a7d2d923e4513`. It now includes strict ASCII-decimal Content-Length validation for historical Football-Data CSV and both original/current-form GitHub artifact ZIP readers, plus explicit rejection of non-`bytes` stream chunks. New malformed-header and non-byte regression cases are included.
+- Exact HEAD CI is **7/7 SUCCESS**: Frozen V2 Shadow #41333735544 (**286 passed**, production `.pkl` diff guard PASS), Research #41333735522, Serie A #41333735604, Bundesliga #41333735595, Ligue 1 #41333735538, Eredivisie #41333735548, Product #41333735584. No `.pkl` files changed.
+- PR #699 still requires HUMAN-MERGE. Its branch keeps the candidate JSON, original feature-builder Git blob `401b3a0893371bfa4a488ec92a4a54af2678c8f7`, `market_anchor_1x2_v2_shadow.py`, current-form policy and parent protocol byte-identical to main. PR #700/#703 are overlapping guard work; do not merge them separately without a fresh diff.
+- Real main runtime on 2026-11-01: Current-Form Source Capture #41304706414 SUCCESS; artifact 13082408243, GitHub digest `09fd39e2e7371f6db887963b5da85e4bb3bb6008314cc97b2a31eabf41d115fe`, 11 CSV (10 frozen historical + 2026/27 current form), 3,800 historical rows + 90 current-season rows, candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`. The successful parent run is main SHA `40887ebb...`.
+- Current-Form Forward #41319862002 SUCCESS; it independently verified the source artifact and parent, source age 11,153 seconds at verification, but `quotes_seen=0` and `v2_current_form_shadow_captured=0`. It read/scored no target outcomes and made no writes. Original Forward #41318729126 also returned zero quotes/zero previews.
+- Free diagnostic #41310276961 SUCCESS but had zero quoted fixtures, zero scored rows and zero feature rows; it therefore does **not** prove a new 19-feature vector was computed for a future event. No paid provider request occurred.
+- Read-only Supabase audit at 2026-11-01 17:49:39Z: 3,966 odds snapshots, 3,915 strictly pre-kickoff; zero new in seven days and zero future events with strict pre-kickoff quotes. Latest strict pre-kickoff Serie A snapshot remains 2026-10-13 14:48:53Z. Current-form identity metadata: 93 raw rows, 90 canonical identities after the V2 Atalanta BC alias, through 2026-10-29. The metadata query selected only `match_date,home_team,away_team`.
+- No original V2 candidate-SHA rows were found in `product_prediction_snapshots`; `model_artifact_bundles` is empty. The market-only prospective evaluator in #701 remains the allowed pairwise path after 30 eligible completed prospective forecasts; below 30 it must not invoke the outcome loader. The full three-way review remains blocked because no non-legacy incumbent is pinned. No target outcomes were read in this audit.
+- Scientific state remains unchanged: original 19 features/weights frozen; active lambda 0 is market, shadow lambda 1 research-only; stability gate failed; no claim of V2 superiority. Outcome-read gate CLOSED at zero eligible prospective forecasts.
+
+
 
 ## 2026-11-01 03:50 UTC — independently reverified current-form archive and metadata identity parity
 
