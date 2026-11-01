@@ -1009,3 +1009,73 @@ def test_current_form_archive_rejects_total_uncompressed_overflow_before_decompr
         monkeypatch, members, "archive exceeds total uncompressed size limit"
     )
 
+
+
+
+@pytest.mark.parametrize("event", ["push", "schedule", "workflow_dispatch", "workflow_run"])
+def test_verified_current_form_parent_accepts_only_pinned_main_capture_events(monkeypatch, event):
+    archive = {
+        "run_id": 123,
+        "head_sha": HEAD,
+        "created_at": ARTIFACT_CREATED,
+    }
+    run = {
+        "id": 123,
+        "path": SOURCE_WORKFLOW_PATH,
+        "head_branch": "main",
+        "head_sha": HEAD,
+        "status": "completed",
+        "conclusion": "success",
+        "event": event,
+        "created_at": PARENT_CREATED,
+        "updated_at": PARENT_COMPLETED,
+    }
+    monkeypatch.setattr(
+        forward_capture_module,
+        "_github_json",
+        lambda *_args, **_kwargs: run,
+    )
+
+    verified = forward_capture_module.verify_source_run(
+        archive,
+        quote_time=datetime(2026, 10, 19, 5, 30, tzinfo=timezone.utc),
+        token="test-read-only-token",
+    )
+
+    assert verified["run_id"] == 123
+    assert verified["workflow_path"] == SOURCE_WORKFLOW_PATH
+
+
+@pytest.mark.parametrize("event", ["pull_request", "repository_dispatch", "workflow_call"])
+def test_verified_current_form_parent_rejects_unapproved_capture_events(monkeypatch, event):
+    archive = {
+        "run_id": 123,
+        "head_sha": HEAD,
+        "created_at": ARTIFACT_CREATED,
+    }
+    run = {
+        "id": 123,
+        "path": SOURCE_WORKFLOW_PATH,
+        "head_branch": "main",
+        "head_sha": HEAD,
+        "status": "completed",
+        "conclusion": "success",
+        "event": event,
+        "created_at": PARENT_CREATED,
+        "updated_at": PARENT_COMPLETED,
+    }
+    monkeypatch.setattr(
+        forward_capture_module,
+        "_github_json",
+        lambda *_args, **_kwargs: run,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="artifact parent is not a successful main current-form source run",
+    ):
+        forward_capture_module.verify_source_run(
+            archive,
+            quote_time=datetime(2026, 10, 19, 5, 30, tzinfo=timezone.utc),
+            token="test-read-only-token",
+        )
