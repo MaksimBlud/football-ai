@@ -136,7 +136,7 @@ def test_frozen_shadow_ci_runs_this_contract_and_tracks_original_forward_workflo
 def test_secret_bearing_v2_workflows_only_run_on_main_ref():
     """Manual dispatch from a feature ref must not receive Supabase secrets."""
     expected_guards = {
-        CURRENT_SOURCE_WORKFLOW: "if: ${{ github.ref == 'refs/heads/main' }}",
+        CURRENT_SOURCE_WORKFLOW: "if: ${{ github.ref == 'refs/heads/main' &&",
         ORIGINAL_FORWARD_WORKFLOW: "if: ${{ github.ref == 'refs/heads/main' && (",
         CURRENT_FORWARD_WORKFLOW: "if: ${{ github.ref == 'refs/heads/main' && (",
     }
