@@ -1,3 +1,33 @@
+## 2026-11-01 22:58 UTC — exact evaluator-head refresh and alternate pre-match source audit
+
+Read-only refresh against unchanged main `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no source capture or quote workflow was dispatched in this audit.
+
+### Additional existing-source feasibility
+
+Only pre-match timestamp and fixture metadata fields were queried:
+- `public.odds_snapshots`: 3,966 total / 3,915 strictly pre-match (`snapshot_time_utc < commence_time_utc`); zero future strict pre-match rows. Latest Serie A quote remains 2026-10-13 14:48:53 UTC.
+- `public.league_multi_market_snapshots`: 2 rows, both strictly pre-match; latest 2026-09-06 03:09:57 UTC; zero future strict pre-match rows.
+- `public.league_h2h_bookmaker_snapshots`: 0 rows.
+- `public.matches`: 0 fixture-metadata rows dated on/after 2026-11-01.
+
+These alternative existing tables do not provide a fresh fixture/quote source for original V2. No score, result, settlement, or protected target-outcome column was selected.
+
+### Exact current evaluator PR state
+
+PR #701 advanced beyond the earlier documented HEAD `74322b4f4df331657dcc3fddd66a9867b5033570`. Current exact HEAD is `86f4710eb11b2ea881ba6a2d6364ad8b889d2eb8`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The two-commit delta adds a regression test rejecting conflicting H/D/A labels across raw Atalanta / Atalanta BC aliases for the same gated fixture; evaluator logic and frozen model contract are unchanged.
+
+All six workflows associated with exact HEAD `86f4710...` completed SUCCESS: Research #41309990641, Serie A #41309990727, Bundesliga #41309990581, Ligue 1 #41309990518, Eredivisie #41309990722, Product #41309990544. The Research log confirms 79 evaluator tests, 6 live-runner tests, and `PASS: no .pkl changes in PR`. PR #701's description was updated to record this exact SHA/CI. These are synthetic/regression checks only; no live target outcomes or Brier/LogLoss were read/computed.
+
+### Binding execution state
+
+- PR #699 remains open at exact HEAD `5a1d1bda1c62d36fd092d9e9018a7d2d923e4513`; all 7 exact-head required checks are SUCCESS. It carries the source/clock/identity/outcome guards and main-ref guards for secret-bearing V2 workflows. HUMAN-MERGE only.
+- PR #702 remains manual-only and blocked until #699 is manually merged, a fresh source capture is produced on resulting main, and #702 itself is reviewed/merged before dispatch.
+- PRs #700, #703, and #704 retain overlapping workflow/source files and must be rebased/reconciled after #699; preserve only unique strict Content-Length / streamed-chunk regressions from #700/#703 and rerun exact-head CI. Do not merge stale bases.
+- No future saved Serie A odds, no eligible prospective V2 forecast, and the 30-completed-prospective-forecast outcome gate remains CLOSED.
+
+No PR was merged; main, production `.pkl`, original 19 features/weights/lambdas, Supabase, schedules, and other agents were not changed. No paid API call, Supabase write/DDL, target-outcome read, bet, or promotion occurred.
+
+---
 ## 2026-11-01 18:54 UTC — fresh pre-match data and security audit; no prospective quote
 
 This is a read-only refresh against unchanged `main` **40887ebb215730190d7a6c7a1693373ec4afcdfc**. It adds no new model/runtime claim.
