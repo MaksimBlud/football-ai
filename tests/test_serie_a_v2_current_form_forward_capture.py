@@ -903,6 +903,27 @@ def test_current_form_artifact_zip_rejects_malformed_content_length_before_read(
     assert response.closed is True
 
 
+@pytest.mark.parametrize("declared_length", ["+1", "١", "1.0"])
+def test_current_form_artifact_zip_rejects_non_ascii_or_non_decimal_content_length(
+    declared_length
+):
+    response = _StreamingCurrentFormArtifactResponse(
+        [b"must-not-read"], headers={"Content-Length": declared_length}
+    )
+    with pytest.raises(ValueError, match="Content-Length"):
+        get_archive(9876, token="test-token", get=lambda _url, **_kwargs: response)
+    assert response.iterated == 0
+    assert response.closed is True
+
+
+def test_current_form_artifact_zip_rejects_non_bytes_chunk_and_closes():
+    response = _StreamingCurrentFormArtifactResponse([bytearray(b"not-immutable-bytes")])
+    with pytest.raises(ValueError, match="non-bytes chunk"):
+        get_archive(9876, token="test-token", get=lambda _url, **_kwargs: response)
+    assert response.iterated == 1
+    assert response.closed is True
+
+
 def test_current_form_artifact_zip_rejects_empty_stream_and_closes():
     response = _StreamingCurrentFormArtifactResponse([])
     with pytest.raises(ValueError, match="empty or too large"):
