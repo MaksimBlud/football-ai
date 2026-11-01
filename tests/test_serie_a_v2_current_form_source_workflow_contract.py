@@ -156,12 +156,12 @@ def test_current_form_source_refreshes_after_free_diagnostic_without_changing_cr
     text = CURRENT_SOURCE_WORKFLOW.read_text(encoding="utf-8")
     assert '- cron: "50 5 * * *"' in text
 
-    trigger = text.split("  workflow_run:\\n", 1)[1].split("\\n\\npush:", 1)[0]
+    trigger = text.split("  workflow_run:\n", 1)[1].split("\n\npush:", 1)[0]
     assert '      - "Serie A V2 Free Real-Quote Diagnostic"' in trigger
-    assert "    types:\\n      - completed" in trigger
+    assert "    types:\n      - completed" in trigger
     assert "Serie A Odds Snapshots" not in trigger
 
-    job = text.split("  capture-current-form:\\n", 1)[1].split("\\n    runs-on:", 1)[0]
+    job = text.split("  capture-current-form:\n", 1)[1].split("\n    runs-on:", 1)[0]
     assert "github.event.workflow_run.conclusion == 'success'" in job
     assert "github.event.workflow_run.head_branch == 'main'" in job
     assert "github.event.workflow_run.name == 'Serie A V2 Free Real-Quote Diagnostic'" in job
