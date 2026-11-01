@@ -143,7 +143,7 @@ def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
         declared_length = response.headers.get("Content-Length")
         if declared_length is not None:
             declared_text = str(declared_length).strip()
-            if not declared_text.isdecimal():
+            if not declared_text.isascii() or not declared_text.isdecimal():
                 raise ValueError("invalid GitHub source archive Content-Length")
             if int(declared_text) > MAX_ZIP_BYTES:
                 raise ValueError("missing or oversized source archive")
@@ -151,6 +151,8 @@ def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
         chunks = []
         total_bytes = 0
         for chunk in response.iter_content(chunk_size=64 * 1024):
+            if not isinstance(chunk, bytes):
+                raise ValueError("source archive stream yielded a non-bytes chunk")
             if not chunk:
                 continue
             total_bytes += len(chunk)
