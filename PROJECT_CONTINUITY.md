@@ -1,3 +1,34 @@
+## 2026-11-01 15:11 UTC — second source-verified current-form forward runtime; still no quote
+
+On unchanged main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, the scheduled Current-Form Forward-Only Preview run **#41319862002** completed SUCCESS at 15:11:15 UTC. Its uploaded artifact is **13089345402**, 438,202 bytes, digest `sha256:0511879f1a3e425ee97326158bb366912e771d2084653d010f7926ac15251a02`.
+
+The real job log reports:
+- Latest verified current-form source artifact **13082408243**, ZIP SHA-256 `09fd39e2e7371f6db887963b5da85e4bb3bb6008314cc97b2a31eabf41d115fe`, 11 source CSVs, 3,890 total historical/current rows, and **90** canonical feature-input gate identities.
+- Original frozen candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; original 19-feature contract unchanged.
+- Source observation at 12:05:13.677 UTC, source archive at 12:05:15 UTC, authenticated parent run **#41304706414** completed at 12:05:19 UTC. Forward verification at 15:11:06.952 UTC measured source age **11,153 seconds (3h 05m 53s)**, below the fixed 24-hour maximum.
+- Forward regression suite: **53 passed**. Actual output: `quotes_seen=0`, `v2_current_form_shadow_captured=0`, no rows, `target_outcomes_read=false`, `target_outcomes_scored=false`, `paid_provider_calls=0`, `supabase_writes=0`, `no_bet=true`.
+
+This is a second real source-artifact/parent verification on main, not a forecast, not a 19-feature vector calculation, and not a source-before-quote observation: no future saved quote existed to test.
+
+The separate Original Forward run **#41318729126** completed SUCCESS at 14:58:02 UTC with **71 tests passed**. It independently attested the free historical artifact **13084892998** from diagnostic parent run **#41310276961**: ten frozen pre-prospective CSVs / 3,800 historical rows, zero quotes checked, zero V2 diagnostic previews, zero paid calls, zero Supabase writes.
+
+Read-only Supabase audit (identity metadata only for the feature gate; odds rows strictly filtered by `snapshot_time_utc < commence_time_utc`):
+- Serie A 2026-2027: **93 raw identity rows**, **90** identities after the frozen V2-local `Atalanta BC → Atalanta` alias; latest metadata date 2026-10-29. This is only the feature-input gate, not the prospective outcome gate.
+- `odds_snapshots`: 3,966 total / 3,915 strictly pre-kickoff across nine leagues; **zero** strict pre-match snapshots in the last seven days and **zero** future events with saved pre-match quotes. Latest Serie A pre-match snapshot remains 2026-10-13 14:48:53 UTC.
+- `league_structural_v2_observations`: Serie A 630 strictly pre-match observations; zero in the last seven days and zero future events.
+
+### Source-integrity PR ordering correction
+
+A fresh overlap audit found that PR **#699**'s current-season CSV downloader already uses `allow_redirects=False` and verifies the exact final URL, but its historical CSV downloader in `serie_a_v2_live_diagnostic_report.py` still follows redirects by default. This leaves a source-identity gap in the ten frozen historical CSV fetches if #699 is merged alone.
+
+PR **#700** closes that exact gap: it pins the full HTTPS host/path, disables redirects before reading the body, checks the final URL, bounds declared and streamed bytes, closes responses, and has dedicated redirect/URL/size regressions. Exact head `8ffbf2119754e8c7d7a8e4f14f75fd94d103c3f0`, **7/7 exact-head CI SUCCESS**, no review threads, mergeable at audit time.
+
+PR **#703** separately strengthens streamed GitHub artifact downloads (including rejecting non-bytes chunks) in the same two forward-capture modules also changed by #699. Exact head `f12abfd3a8fc37fb3aff6d394ec3966bc1311b51`, **7/7 exact-head CI SUCCESS**. These overlapping source-integrity changes must be reconciled before integrating #699.
+
+**Safe HUMAN-MERGE sequence:** review/merge #700 and #703 first; then rebase/reconcile #699 against the resulting main and rerun all seven checks on its new exact HEAD. Do not merge the previously tested #699 SHA as if it already contained #700's historical redirect guard or #703's latest archive-stream checks. PR #704's Python-specific version locks also touch the same live workflows and must be rebased/rechecked after integration; its lock files pin versions but do not enforce hashes. PR #701 remains the separate 30-eligible-completed-forecast evaluator (6/6 CI); #702 remains the free fixture/feature-readiness preview (7/7 CI).
+
+No PR was merged, no main or production artifact was changed, no Supabase write/DDL occurred, no paid provider was called, and no protected 2026/27 target outcome was read. The prospective 30-primary-completed-event outcome gate remains CLOSED.
+ 
 ## 2026-11-01 12:06 UTC — fresh current-form source and paired forward runtime proof
 
 A new successful run on unchanged main `40887ebb215730190d7a6c7a1693373ec4afcdfc`
