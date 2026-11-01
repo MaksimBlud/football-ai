@@ -27,6 +27,7 @@ from serie_a_v2_frozen_shadow_preview import (
 PUBLIC_BASE = "https://www.football-data.co.uk/mmz4281"
 PAID_PROVIDER_REQUESTS = 0
 MAX_PUBLIC_SOURCE_FILES = len(SERIE_A_RUNTIME_CONFIG.historical_source.season_codes)
+MAX_HISTORICAL_CSV_BYTES = 2_000_000
 
 
 def _source_codes() -> list[str]:
@@ -61,8 +62,41 @@ def _assert_approved_history_url(url: str, *, season_code: str) -> None:
         raise ValueError("historical source URL is not the approved HTTPS Football-Data endpoint")
 
 
+def _read_bounded_public_csv_body(response: Any) -> bytes:
+    """Read one decoded public CSV under a fixed per-file memory bound."""
+    headers = getattr(response, "headers", {}) or {}
+    declared_length = headers.get("Content-Length")
+    if declared_length is not None:
+        if not isinstance(declared_length, str):
+            raise ValueError("invalid historical CSV Content-Length")
+        declared_text = declared_length.strip(" \\t")
+        if not declared_text or not declared_text.isascii() or not declared_text.isdecimal():
+            raise ValueError("invalid historical CSV Content-Length")
+        if int(declared_text) > MAX_HISTORICAL_CSV_BYTES:
+            raise ValueError("historical CSV exceeds the configured source size limit")
+
+    iter_content = getattr(response, "iter_content", None)
+    if not callable(iter_content):
+        raise ValueError("historical CSV response does not expose a streaming body")
+    chunks = []
+    total_bytes = 0
+    for chunk in iter_content(chunk_size=64 * 1024):
+        if not chunk:
+            continue
+        if not isinstance(chunk, bytes):
+            raise ValueError("historical CSV stream yielded a non-bytes chunk")
+        total_bytes += len(chunk)
+        if total_bytes > MAX_HISTORICAL_CSV_BYTES:
+            raise ValueError("historical CSV exceeds the configured source size limit")
+        chunks.append(chunk)
+    body = b"".join(chunks)
+    if not body:
+        raise RuntimeError("Public Serie A CSV is empty")
+    return body
+
+
 def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -> tuple[pd.DataFrame, list[dict]]:
-    """Explicit, bounded configured public URLs; never odds API, never cache guess."""
+    """Fetch exact pre-freeze HTTPS sources with redirect and byte-limit guards."""
     all_frames = []
     audit = []
     if capture_dir is not None:
@@ -72,18 +106,25 @@ def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -
             raise ValueError("unexpected historical season code")
         url = f"{PUBLIC_BASE}/{code}/{SERIE_A_RUNTIME_CONFIG.historical_source.competition_code}.csv"
         _assert_approved_history_url(url, season_code=code)
-        # Do not let requests follow a redirect to a different host/path. A
-        # successful status alone is not source provenance; require the exact
-        # approved final URL before touching response bytes.
-        response = get(url, timeout=30, allow_redirects=False)
-        if response.status_code != 200:
-            raise RuntimeError(f"Public Serie A CSV unavailable: season={code}, http={response.status_code}")
-        if getattr(response, "url", None) != url:
-            raise RuntimeError(f"Public Serie A CSV returned an unexpected final URL: season={code}")
-        body = response.content
+        # Do not follow redirects. Check exact source identity before consuming
+        # any bytes, then enforce both declared and actual decoded-body limits.
+        response = get(url, timeout=30, allow_redirects=False, stream=True)
+        try:
+            if response.status_code != 200:
+                raise RuntimeError(
+                    f"Public Serie A CSV unavailable: season={code}, http={response.status_code}"
+                )
+            if getattr(response, "url", None) != url:
+                raise RuntimeError(
+                    f"Public Serie A CSV returned an unexpected final URL: season={code}"
+                )
+            body = _read_bounded_public_csv_body(response)
+        finally:
+            close = getattr(response, "close", None)
+            if callable(close):
+                close()
+
         capture = datetime.now(timezone.utc)
-        if capture_dir is not None:
-            (capture_dir / f"serie_a_{code}.csv").write_bytes(body)
         frame = pd.read_csv(BytesIO(body), low_memory=False)
         required = {"Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR",
                     "HC", "AC", "HY", "AY", "HR", "AR"}
@@ -94,6 +135,8 @@ def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -
         if not outcome.isin(("H", "D", "A")).all():
             raise RuntimeError(f"Historical pre-freeze Serie A season {code} has missing/invalid results")
         frame = frame.loc[:, list(sorted(required))].copy()
+        if capture_dir is not None:
+            (capture_dir / f"serie_a_{code}.csv").write_bytes(body)
         all_frames.append(frame)
         audit.append({
             "season_code": code,
