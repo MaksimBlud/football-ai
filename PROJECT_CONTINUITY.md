@@ -8197,3 +8197,17 @@ No paid provider request, Supabase write/DDL, protected 2026/27 outcome read, pr
 - Fresh read-only Supabase odds audit still shows 0 strict pre-kickoff snapshots in the preceding 7 days and 0 future events with saved pre-match quotes across all nine represented leagues. Latest Serie A pre-match quote remains 2026-10-13T14:48:53.042620Z.
 - Source artifact #13040356986 from scheduled run #41196139664 was created 2026-10-31T11:16:52Z; at 11:04Z on November 1 it is about 23h47m old and reaches the frozen 24-hour source-age boundary at approximately 2026-11-01T11:16:50Z. The next 05:50Z scheduled source-capture run was not yet visible in the checked run window. The previous day's scheduled run itself started at 11:16Z, so treat this as a possible GitHub schedule delay, not proof the workflow is disabled. No manual dispatch or schedule change was made.
 - The original frozen candidate, feature builder, 19-feature order, weights, parent protocol, active_lambda=0, and shadow_lambda=1 are unchanged. No target outcomes were read, no Supabase writes/DDL or paid calls occurred, and no main/production change or merge occurred. The outcome gate remains closed until the frozen 30-primary-completed-forecast gate and a separately approved, same-league non-legacy incumbent reference are both satisfied.
+
+
+## Corrected independent read-only pre-match audit — 2026-11-01 13:15 UTC
+
+This audit supersedes any earlier cross-table attribution in PR metadata and independently re-verifies the original source artifact.
+
+- Re-downloaded GitHub Artifact #13040356986. ZIP SHA-256 from the actual bytes is `feb008fa6ebc15d9125573c8e69061c4bc63bcd81e506265b4d6f948d0a4621a`, exactly matching GitHub's artifact digest. All 11 CSV hashes match the embedded manifest; 3,890 rows total (10 historical seasons × 380 plus 90 current-season rows).
+- The 630 Serie A strict pre-kickoff rows / 63 events belong to `public.league_structural_v2_observations`. `public.league_h2h_bookmaker_snapshots` is empty (direct grouped query returned no rows; table metadata also reports zero rows). Structural observations' latest Serie A timestamp is `2026-10-13T14:48:53.042620Z`; zero in the last 7 days and zero future events.
+- `public.league_multi_market_snapshots`: two strict pre-kickoff EREDIVISIE rows, no Serie A rows. `public.matches`: zero future fixture rows.
+- `public.odds_snapshots`: 3,966 rows total, 3,915 strictly pre-kickoff; zero strictly pre-kickoff rows in the last 7 days and zero future events with saved pre-match quotes across all nine represented leagues. Latest Serie A quote remains `2026-10-13T14:48:53.042620Z`.
+- `public.product_prediction_snapshots`: zero future strictly pre-match rows carrying frozen V2 candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- At `2026-11-01T13:15:26Z`, artifact #13040356986 is about 25h58m35s old, beyond the frozen 24-hour source-age limit. The manifest's 90-event feature-input gate passed, but `eligible_for_current_form_forward_shadow=false` is expected at source-capture stage; no quote-backed feature vector or forecast was produced. The 90 metadata identities are not 30 eligible completed prospective forecasts and do not open the outcome gate.
+
+Only pre-match snapshot/fixture metadata was selected. No quote payloads, prices, probabilities, score/result fields, or protected target outcomes were read. No Supabase writes/DDL, paid calls, schedule changes, production artifact changes, or main changes. HUMAN-MERGE only.
