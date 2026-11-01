@@ -844,6 +844,50 @@ def test_current_source_rejects_oversized_content_length_before_reading_body(tmp
     assert not (tmp_path / MANIFEST_FILENAME).exists()
 
 
+@pytest.mark.parametrize(
+    "declared_length",
+    ["+1", "1.0", "١", "-1", "", "1e0"],
+)
+def test_current_source_rejects_non_ascii_or_non_decimal_content_length_before_body_read(
+    tmp_path, declared_length
+):
+    class Response:
+        status_code = 200
+        url = CURRENT_URL
+        headers = {"Content-Length": declared_length}
+
+        def __init__(self):
+            self.closed = False
+            self.iter_content_called = False
+
+        def iter_content(self, chunk_size):
+            self.iter_content_called = True
+            yield b"must-not-be-read"
+
+        def raise_for_status(self):
+            return None
+
+        def close(self):
+            self.closed = True
+
+    response = Response()
+
+    with pytest.raises(ValueError, match="invalid Content-Length"):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=FakeQuery(event_rows(MIN_COMPLETED_FEATURE_SOURCE_EVENTS)),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=lambda url, timeout, allow_redirects=False, stream=False: response,
+            history_fetch=lambda **_kwargs: _fake_history_for_redirect_test(tmp_path),
+            clock=lambda: pytest.fail("clock must not be sampled before body completion"),
+        )
+
+    assert response.iter_content_called is False
+    assert response.closed is True
+    assert not (tmp_path / CURRENT_FILENAME).exists()
+    assert not (tmp_path / MANIFEST_FILENAME).exists()
+
+
 def test_current_source_stream_enforces_actual_byte_limit_and_closes_early(tmp_path):
     class Response:
         status_code = 200
