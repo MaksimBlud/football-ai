@@ -8211,3 +8211,103 @@ This audit supersedes any earlier cross-table attribution in PR metadata and ind
 - At `2026-11-01T13:15:26Z`, artifact #13040356986 is about 25h58m35s old, beyond the frozen 24-hour source-age limit. The manifest's 90-event feature-input gate passed, but `eligible_for_current_form_forward_shadow=false` is expected at source-capture stage; no quote-backed feature vector or forecast was produced. The 90 metadata identities are not 30 eligible completed prospective forecasts and do not open the outcome gate.
 
 Only pre-match snapshot/fixture metadata was selected. No quote payloads, prices, probabilities, score/result fields, or protected target outcomes were read. No Supabase writes/DDL, paid calls, schedule changes, production artifact changes, or main changes. HUMAN-MERGE only.
+
+
+## 2026-11-01 — current-form source freshness, free diagnostic, and refresh reliability
+
+### Verified source artifacts
+
+- Current-form source capture run **#41196139664** (main SHA
+  `40887ebb215730190d7a6c7a1693373ec4afcdfc`) produced artifact
+  **13040356986**, GitHub digest / independently recomputed ZIP SHA-256:
+  `feb008fa6ebc15d9125573c8e69061c4bc63bcd81e506265b4d6f948d0a4621a`.
+- ZIP contains 10 frozen old-season CSVs plus the 2026/27 CSV and manifest:
+  3,800 historical rows + 90 current-season rows = 3,890 rows. All 11 CSV
+  SHA-256 values were independently recomputed and matched the manifest.
+- The 2026/27 source CSV SHA-256 is
+  `32ca618587c90db25f16ea647cb55060f519c03830a1e8ec4a6c4204e27d5135`.
+- The source observation was `2026-10-31T11:16:50.931690Z`. It crossed the
+  frozen 24-hour limit at approximately `2026-11-01T11:16:50.931690Z`;
+  therefore it is stale for new prospective quotes at the 14:00 UTC audit.
+- Current-form forward run **#41210600837** verified that source at
+  `2026-10-31T14:33:01Z`, when it was still fresh, but saw
+  `quotes_seen=0`, `v2_current_form_shadow_captured=0`, and an empty
+  `rows=[]`. No prospective forecast was created.
+
+### New free historical diagnostic on 2026-11-01
+
+- Free diagnostic run **#41310276961** completed on main at
+  `2026-11-01T13:14:16Z`; artifact **13084892998**, 425,067 bytes,
+  GitHub digest / independently recomputed ZIP SHA-256:
+  `bcd6fcfb6e2c05c88914812a54067539319fd8894a9d9e2387eea1fba93b38c5`.
+- It contains only the 10 pre-freeze historical CSVs (3,800 rows); all 10
+  CSV hashes independently matched the manifest. It does **not** contain a
+  current-season 2026/27 CSV and is not a replacement for the current-form
+  source archive.
+- Manifest confirms `history_stale_without_2026_27_form=true`,
+  `quoted_fixtures=0`, `paid_provider_requests=0`,
+  `supabase_writes=0`, and no 2026/27 public results download.
+  Its 19-feature diagnostic is not a prospective V2 observation.
+
+### Read-only Supabase state
+
+- Identity-only Serie A 2026/27 query through 2026-10-31 returned 93 raw
+  metadata rows and **90 canonical unique fixture identities** after the
+  frozen Serie A aliases (including Atalanta BC -> Atalanta). This matches
+  the 90-identity feature-input gate in the 2026-10-31 source manifest.
+  Only `match_date, home_team, away_team` were selected.
+- Across the nine `odds_snapshots` leagues: 3,966 total snapshots, 3,915
+  strictly pre-match (`snapshot_time_utc < commence_time_utc`), zero new
+  strict pre-match snapshots in the last seven days, and zero future events
+  with a stored strict pre-match quote. Latest Serie A strict pre-match quote:
+  `2026-10-13T14:48:53.042620Z`.
+- `product_prediction_snapshots` has 40 total rows but **zero** rows with
+  the original V2 candidate SHA. Those records are not an admissible V2
+  incumbent and must not be represented as one.
+
+### PR #699 — source refresh reliability, without changing cron
+
+- Updated exact PR head:
+  `58bdb5bfc88f1b33f3e9843b164b8c036306e882`.
+- Added a `workflow_run` trigger after successful main
+  `Serie A V2 Free Real-Quote Diagnostic` schedule/manual runs. The
+  existing `50 5 * * *` source-capture schedule is unchanged.
+- Before a diagnostic-triggered capture, the workflow verifies the latest
+  successful current-form source artifact, its SHA/parent run, the 24-hour
+  freshness rule, and current metadata-only feature-gate coverage. It skips
+  a duplicate capture only when both quote freshness and current-gate
+  freshness are proven; otherwise it performs the existing public-CSV /
+  Supabase-read-only source capture.
+- The new check reads only completed fixture identities
+  (`match_date, home_team, away_team`) and GitHub artifact/run metadata.
+  It performs no odds-provider call, no target-outcome read, no Supabase
+  write, and no production artifact change. The forward verifier now accepts
+  `workflow_run` as a parent event; the workflow contract restricts that
+  event to the named free diagnostic on main, with upstream event
+  `schedule` or `workflow_dispatch`.
+- Exact-head CI: **7/7 SUCCESS**. Research PR Validation run
+  **#41313954608** passed its 43 pytest invocations (233 passing test
+  instances); Frozen V2 Shadow run **#41313954700** passed **271 tests**.
+  Research log confirms `PASS: no .pkl changes in PR`.
+- PR remains open and mergeable. HUMAN-MERGE applies; do not merge from
+  automation.
+
+### Evaluator and scientific gate
+
+- PR #701 head `86f4710eb11b2ea881ba6a2d6364ad8b889d2eb8` has 6/6
+  successful required workflows. Its supplementary market-vs-shadow
+  diagnostic uses the same 30 unique eligible completed prospective-forecast
+  gate and remains `review_signal=false` while no permitted incumbent is
+  pinned. The full three-way evaluation remains blocked.
+- No new prospective V2 forecasts exist; no 2026/27 target outcomes were
+  read; the outcome gate remains closed. No Brier/LogLoss claim is possible.
+
+### Next action
+
+After the user manually merges #699, wait for the next successful free
+historical diagnostic run (or unchanged source schedule) to trigger the
+current-form source workflow. Verify the new artifact SHA, 90-identity gate
+coverage, source-before-quote ordering, and fresh current-form forward run.
+Then continue the 19-feature preview and prospective evaluator integration.
+Do not change the frozen candidate, weights, feature order, lambda semantics,
+24-hour limits, schedule, or 30-event outcome gate.
