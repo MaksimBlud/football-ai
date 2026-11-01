@@ -1,5 +1,31 @@
 # Football AI — Project Continuity
 
+## 2026-11-01 02:56 UTC — exact-head V2 refresh; no new admissible quote
+
+Fresh GitHub reads confirm `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no V2 PR has been merged. This entry refreshes exact open-PR heads and real main-run evidence without changing the frozen model or either gate.
+
+**Open V2 PRs and exact-head CI:**
+- #699 `fa10c4c8ce3971c3da965e07c28af867f3a3abb3`: 7/7 required checks SUCCESS; Original V2 Shadow run #41258862831 = **263 passed**; production `git diff --exit-code -- '*.pkl'` passed. This remains the first HUMAN-MERGE dependency.
+- #703 `f12abfd3a8fc37fb3aff6d394ec3966bc1311b51`: 7/7 SUCCESS; Shadow run #41254780590 = **105 passed**; production `.pkl` diff guard passed. It is a stricter follow-up to the streamed readers (ASCII/decimal Content-Length validation, bytes-only chunks, early stop and cleanup); rebase and rerun after #699, do not merge against the stale base.
+- #701 `fcbdae8a603ecad799065469d78e9deb390adb4a`: 6/6 SUCCESS; evaluator-specific suite **74 passed**. `FROZEN_INCUMBENT_REFERENCE` remains unpinned, so the evaluator must remain fail-closed.
+- #702 `8cf6ee1cb66838e8263dd2c7c5ebf42e86964d7e`: 7/7 returned required checks SUCCESS; manual fixture/feature preview suite **22 passed**. It remains main-only/manual-only and must not be dispatched until #699 is merged and a fresh post-merge Source Capture proves the persisted identity contract.
+- #704 `cc4918caf1ae0bb906b6a1949b2b352b3cce64f3`: 7 distinct required check names succeeded in both recorded check sets; pinned Python 3.11 and 3.12 Original V2 suites each report **87 passed**. Rebase and rerun after #699.
+- #697 documentation branch before this refresh: `19cfb3f5c955e3f68952ad1c7b85d3030c9ce155`, 7/7 SUCCESS.
+
+**Latest real Original V2 main workflows (all on old main SHA above):**
+- Current-Form Source Capture #41196139664: SUCCESS, 19 tests passed; artifact #13040356986, ZIP SHA-256 `feb008fa6ebc15d9125573c8e69061c4bc63bcd81e506265b4d6f948d0a4621a`. Its old-main manifest still has count-only gate evidence, not the persisted identity-list/SHA contract from #699.
+- Original Forward-Only #41210303100: SUCCESS, 71 tests passed; `quotes_seen=0`, `future_quotes_checked=0`, `forecasts_created=0`.
+- Current-Form Forward-Only #41210600837: SUCCESS, 53 tests passed; source archive and parent verified, feature-input count 90, `quotes_seen=0`, `v2_current_form_shadow_captured=0`.
+- Free Real-Quote Diagnostic #41200476529: SUCCESS, 53 tests passed; no admissible quote or scored forecast. No paid provider request or Supabase write occurred.
+
+**Fresh read-only pre-kickoff odds check:** Serie A `odds_snapshots` = 625 total, 620 strictly before kickoff, 5 at/after kickoff, zero strict pre-kickoff snapshots in the last 24 hours or 7 days, zero future events with a strict pre-kickoff quote; latest strict pre-kickoff snapshot remains `2026-10-13T14:48:53.042620Z`. This run did not query score/result/settlement columns. The last independent source-to-gate identity parity proof remains 90/90 with SHA-256 `95e3d71ab97076b5edee503301843f55d22eb14a832f7e1aab7f2012e6013811` (31-Oct audit); it is not post-#699 runtime proof.
+
+**Scientific state:** original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 features and weights unchanged; `active_lambda=0` remains market, `shadow_lambda=1` research-only. Feature-input gate last verified at 90 and passed; eligible prospective forecasts remain 0; the separate 30-eligible-completed-forecast outcome gate remains CLOSED; no frozen non-legacy incumbent is registered; Brier/LogLoss and any superiority claim remain unavailable. No target outcomes were read.
+
+**Next:** HUMAN-MERGE #699 at its exact SHA; then verify the new main, run a fresh Source Capture and independently check persisted gate identities/count/SHA. Only after that, rebase #703/#704 and separately HUMAN-MERGE #702 before any manual zero-credit `/events` probe. Do not use paid odds, old XGBoost, synthetic quotes, outcome peeks, or a gate/protocol change.
+
+No main mutation, merge, Supabase write/DDL, paid request, production `.pkl` change, model/feature/weight/lambda change, schedule change, or other-agent setting change occurred in this audit.
+
 ## 2026-10-31 19:48 UTC — corrected PR overlap audit and fresh pre-match database check
 
 A fresh GitHub/Supabase pass confirms main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no V2 PR was merged. The exact main Original Forward workflow still has no `github.ref == 'refs/heads/main'` condition on its job-level `if` for `workflow_dispatch`. Do not dispatch that workflow from a feature branch. PR #699 contains the missing main-ref guard in Original Forward and the current-form source/forward workflows; it remains the first HUMAN-MERGE dependency.
