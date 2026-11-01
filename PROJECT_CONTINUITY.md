@@ -7968,3 +7968,17 @@ The two scheduled forward workflows now have confirmed real SUCCESS runs, correc
 The preregistered evaluation gate remains CLOSED: zero eligible prospective forecasts; the required frozen incumbent reference is also absent. Keep `active_lambda=0` as exact de-vigged market, `shadow_lambda=1` research-only, and NO_BET. Do not read 2026/27 target outcomes, relax the 30-event gate, substitute the old production model, or claim V2 superiority.
 
 No main change, PR merge, Supabase write/DDL, paid provider call, model/weight/feature change, schedule change, or production artifact access occurred.
+
+
+## 2026-11-01 04:57 UTC — prospective evaluator uncertainty addition; exact-head CI proof
+
+PR #701 was extended on its existing research branch (no main mutation) to add a supplementary paired fixture-level bootstrap summary to the frozen-gate evaluator.
+
+- PR #701 exact HEAD: `3e859a3a25f56aa62b8f806d23f2b09c6a6be005`; base main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- Exact-head PR checks: **6/6 SUCCESS** (validate, Bundesliga, product contract, Serie A, targeted research, Ligue 1).
+- The targeted research job compiled the evaluator and ran `tests/test_market_anchor_1x2_v2_prospective_evaluator.py`: **76 passed in 0.84s**. The same job's no-production-artifact guard passed: no `.pkl` changes.
+- Once the existing outcome gate and frozen-incumbent pin both permit scoring, the evaluator will report paired fixture-level bootstrap percentile 95% intervals for shadow-minus-market and shadow-minus-incumbent Brier/LogLoss differences. It uses 10,000 resamples and fixed seeds 20261101–20261104. The resample fraction below zero is explicitly descriptive only, not a p-value or posterior probability.
+- The bootstrap is supplementary and is not used by the gate or review signal. The 30-eligible-completed-forecast gate, required comparator set, frozen V2 weights/features, `active_lambda=0`, `shadow_lambda=1`, and NO_BET policy are unchanged. The outcome callback remains lazy; no protected 2026/27 target outcomes were read or scored. All tests use synthetic outcomes.
+- PR #701 remains open/HUMAN-MERGE only. No merge or main update occurred.
+
+Current blocker is unchanged: Supabase has 0 future strictly pre-kickoff Serie A quotes; latest saved Serie A snapshot remains 2026-10-13 14:48:53 UTC. The current-form feature-input metadata gate has 90 canonical completed identities, but eligible completed prospective forecasts remain 0 and no permitted non-legacy frozen incumbent is pinned. Therefore the independent Brier/LogLoss comparison remains unavailable and no V2 superiority claim is justified.
