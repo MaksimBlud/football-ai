@@ -35,6 +35,7 @@ def test_current_form_push_filter_covers_frozen_source_dependencies():
         "tests/test_serie_a_v2_atalanta_alias.py",
         "tests/test_serie_a_v2_current_form_source_capture.py",
         "tests/test_serie_a_v2_current_form_source_workflow_contract.py",
+        ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml",
         ".github/workflows/serie-a-v2-current-form-source-capture.yml",
     }
     assert required <= paths, (
@@ -148,3 +149,28 @@ def test_secret_bearing_v2_workflows_only_run_on_main_ref():
         )
         assert "SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}" in job_block
         assert job_block.index(guard) < job_block.index("env:")
+
+
+
+def test_current_form_source_refreshes_after_free_diagnostic_without_changing_cron():
+    text = CURRENT_SOURCE_WORKFLOW.read_text(encoding="utf-8")
+    assert '- cron: "50 5 * * *"' in text
+
+    trigger = text.split("  workflow_run:\\n", 1)[1].split("\\n\\npush:", 1)[0]
+    assert '      - "Serie A V2 Free Real-Quote Diagnostic"' in trigger
+    assert "    types:\\n      - completed" in trigger
+    assert "Serie A Odds Snapshots" not in trigger
+
+    job = text.split("  capture-current-form:\\n", 1)[1].split("\\n    runs-on:", 1)[0]
+    assert "github.event.workflow_run.conclusion == 'success'" in job
+    assert "github.event.workflow_run.head_branch == 'main'" in job
+    assert "github.event.workflow_run.name == 'Serie A V2 Free Real-Quote Diagnostic'" in job
+    assert "github.event.workflow_run.event == 'schedule'" in job
+    assert "github.event.workflow_run.event == 'workflow_dispatch'" in job
+
+    assert "  actions: read" in text
+    assert "GITHUB_TOKEN: ${{ github.token }}" in text
+    assert "verify_latest_source_archive" in text
+    assert "fresh_for_new_quote" in text
+    assert "fresh_for_current_feature_gate" in text
+    assert "steps.source_refresh.outputs.capture != 'false'" in text
