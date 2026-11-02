@@ -1,3 +1,40 @@
+## 2026-11-02 02:56 UTC — current-form source freshness cross-check; Supabase identity set may lag
+
+Read-only audit against unchanged main `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No workflow was dispatched or rerun in this audit.
+
+### Exact original-V2 runtime state on main
+
+- Current-Form Source Capture [run #41304706414](https://github.com/MaksimBlud/football-ai/actions/runs/41304706414) completed 2026-11-01 12:05:19Z. Artifact **13082408243**, ZIP SHA-256 `09fd39e2e7371f6db887963b5da85e4bb3bb6008314cc97b2a31eabf41d115fe`, 11 CSVs, 3,800 frozen old-season rows and **90** current-season completed rows. The source observation was 12:05:13Z. This is the main-era V1 manifest, not the new #699 identity-attested manifest.
+- Its workflow_run child, Current-Form Forward [run #41304789997](https://github.com/MaksimBlud/football-ai/actions/runs/41304789997), completed 12:06:04Z: 53 tests passed; source artifact and parent were verified; `quotes_seen=0`, `v2_current_form_shadow_captured=0`, no target outcomes read, no paid calls, no Supabase writes.
+- Later scheduled Current-Form Forward [run #41319862002](https://github.com/MaksimBlud/football-ai/actions/runs/41319862002) also completed SUCCESS, but again saw zero quotes and zero shadow captures. Original Forward [run #41318729126](https://github.com/MaksimBlud/football-ai/actions/runs/41318729126) completed SUCCESS with 71 tests, zero saved quotes and zero forecasts. Free Real-Quote Diagnostic [run #41310276961](https://github.com/MaksimBlud/football-ai/actions/runs/41310276961) completed SUCCESS with 53 tests and public-source-only requests; it made zero paid-provider requests and recorded no Supabase writes.
+
+### Read-only Supabase pre-match/identity metadata
+
+The Serie A 2026/27 query selected only `match_date,home_team,away_team` plus source/persistence timestamps; no score, goal, result, or settlement columns were selected:
+
+- 93 raw rows; 90 canonical fixture identities after the V2-local `Atalanta BC → Atalanta` alias.
+- Latest identity date: **2026-10-29**.
+- `source_updated_at_utc` is NULL for all 93 rows.
+- Latest `persisted_at_utc`: **2026-10-30 05:33:49 UTC**; zero rows persisted in the last 24 hours.
+- `odds_snapshots`: 3,966 rows / 3,915 strictly pre-match (`snapshot_time_utc < commence_time_utc)); latest snapshot **2026-10-13 14:48:53 UTC**; zero future events with a strictly pre-match quote and zero fresh future pre-match rows in the last 24 hours.
+- `product_prediction_snapshots`: 40 rows total; zero rows carry the frozen original V2 candidate SHA.
+
+### Independent public completeness discrepancy (not admitted as model input)
+
+A secondary public Serie A index reports **93 completed matches through 2026-10-31**, with its page updated 2026-11-01 07:15 ET ([StatsNext](https://statsnext.com/serie-a)); another public match index lists three completed Matchday-10 fixtures dated 2026-10-31 ([GioScore](https://gioscore.com/football/tournament/italy/serie-a/384)). These are only a cross-check, not approved V2 feature sources or an authoritative canonical identity feed. No scorelines from these pages are used here.
+
+This differs from the 90 canonical identities through 2026-10-29 in the current Football-Data archive/Supabase metadata. It is a **source-completeness discrepancy requiring a fresh capture and independent fixture-identity audit**, not proof of the exact missing rows. The Nov 1 12:05Z source capture occurred before the StatsNext page's reported 12:15Z ET? correction: 07:15 ET = 12:15Z update, so the external page update followed that capture by about ten minutes; the existing archive should not be treated as current at the 2026-11-02 audit.
+
+### Implication for PR #699 and next proof
+
+PR #699's new identity SHA proves that the current CSV covers the identities read from Supabase; its code deliberately rejects missing gate identities but permits a CSV superset. It does **not**, by itself, prove that Supabase's gate identity set is complete against an independent fixture schedule. The PR remains useful for source-before-quote, identity, SHA, UTC-clock, URL and outcome guards, but no model-quality or source-completeness claim should rely on the 90-row parity alone.
+
+After HUMAN-MERGE of #699, the next scheduled/free source capture must be checked for its current CSV row count, full source identity set, gate identity count/SHA, and raw/member SHA values. If the source now contains additional completed fixtures, preserve the full source set and document the independent identity reconciliation; do not change the frozen 19 features/weights or evaluation gate. A real forecast still requires a new strictly pre-kickoff saved quote. The 30-completed-prospective-forecast evaluation gate remains CLOSED.
+
+No main change/merge, production `.pkl` change, Supabase write/DDL, paid request, protected target-outcome scoring, bet, promotion, or schedule/agent-setting change occurred.
+
+---
+
 ## 2026-11-01 22:58 UTC — exact evaluator-head refresh and alternate pre-match source audit
 
 Read-only refresh against unchanged main `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no source capture or quote workflow was dispatched in this audit.
