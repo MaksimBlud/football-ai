@@ -375,6 +375,10 @@ def verify_and_load_archive(
                 or current_item.get("csv_sha256") != manifest.get("current_season_source_sha256")
                 or current_item.get("source_observed_at_utc") != manifest.get("current_season_source_observed_at_utc")):
             raise ValueError("current-season source audit mismatch")
+        if current_item.get("latest_completed_fixture_date") != manifest.get(
+            "current_season_latest_completed_fixture_date"
+        ):
+            raise ValueError("current-season source audit latest completed fixture date mismatch")
         current_raw = z.read(CURRENT_FILENAME)
         if hashlib.sha256(current_raw).hexdigest() != current_item.get("csv_sha256"):
             raise ValueError("current-season source CSV hash mismatch")
@@ -390,6 +394,9 @@ def verify_and_load_archive(
         current_dates = pd.to_datetime(current_frame["Date"], dayfirst=True, format="mixed", errors="raise")
         if current_dates.empty or (current_dates < OLD_CUTOFF).any():
             raise ValueError("current-season archive contains pre-2026/27 rows or no usable rows")
+        latest_completed_fixture_date = current_dates.max().date().isoformat()
+        if manifest.get("current_season_latest_completed_fixture_date") != latest_completed_fixture_date:
+            raise ValueError("current-season latest completed fixture date does not match source CSV")
         actual_current_identities = _current_source_fixture_identities(current_frame)
         actual_current_identity_sha256 = _fixture_identity_sha256(actual_current_identities)
         if (
@@ -433,6 +440,7 @@ def verify_and_load_archive(
             "parent_run": dict(parent),
             "historical_match_rows": len(history),
             "current_season_history_rows": len(current_frame),
+            "current_season_latest_completed_fixture_date": latest_completed_fixture_date,
             "current_source_fixture_identities": actual_current_identities,
             "feature_source_gate_attestation": {
                 "verified": True,
