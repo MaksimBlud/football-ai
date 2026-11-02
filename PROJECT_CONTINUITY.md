@@ -8619,3 +8619,24 @@ coverage, source-before-quote ordering, and fresh current-form forward run.
 Then continue the 19-feature preview and prospective evaluator integration.
 Do not change the frozen candidate, weights, feature order, lambda semantics,
 24-hour limits, schedule, or 30-event outcome gate.
+
+
+## 2026-11-02 06:20 UTC — Public-source download budget and current V2 data state
+
+- Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This continuity change is on the open documentation PR only; main is not changed.
+- Official Football-Data.co.uk policy page updated 2026-10-30 states free CSV/Excel data is intended for private personal betting or academic research and allows at most light automated downloads (twice per week maximum); it also excludes commercial or data-training projects involving heavy repeated automated downloads. The Serie A page showed a 2026-10-29 update. Frequency control does not grant commercial, redistribution, or model-training rights.
+- Main still has daily source schedules at 05:50 UTC (Current-Form Source Capture) and 06:13 UTC (Free Real-Quote Diagnostic). The last inspected run evidence showed 11 public CSV downloads in Source Capture and 10 public CSV requests in the diagnostic. This is a new provider-use blocker.
+- New PR #705 adds a shared GitHub Actions marker ledger and 85-hour cooldown across both workflows, a shared concurrency group, marker upload before any public CSV fetch, and fail-closed behavior when GitHub metadata cannot be verified. Existing cron expressions are unchanged. Exact PR head: `5a516d5d2f65ea797cc251130b415bc05a24a1c6`; 8/8 CI checks succeeded, including 17 dedicated budget tests and the existing Frozen V2 Shadow check. PR #705 is open, not merged.
+- Important limitation: the 85-hour guard caps workflow download sessions, not CSV files per session. Source Capture still fetches ten frozen historical CSVs plus the changing current-season CSV. The provider page does not define whether its frequency wording is per session or per file. Reusing already verified frozen historical bytes and fetching only the current-season CSV remains a separate optimization. Do not claim full provider compliance from the session cap alone.
+- The current-form forward source-age contract remains 24 hours. A skipped refresh never refreshes source observation time; stale source must produce no forecast.
+- Read-only Supabase metadata audit (no score/result columns selected): Serie A 2026-2027 has 93 raw rows and 90 identities after the existing Atalanta BC alias normalization; latest match date 2026-10-29; last persisted 2026-10-30 05:33:49 UTC; `source_updated_at_utc` is missing on all 93 rows. Future strictly pre-match odds snapshots: 0. Original V2 candidate rows in `product_prediction_snapshots`: 0.
+- No protected 2026/27 outcomes were read. No Supabase writes/DDL, paid calls, model/weight/feature changes, production .pkl changes, bets, or promotions occurred.
+- Merge order: #699 first. PR #705 must then be rebased onto resulting main and rerun exact-head CI before HUMAN-MERGE. PR #703 is not wholly redundant: it has overlapping bounded-streaming changes plus distinct defensive header handling and tests; preserve/rebase that delta after #699 rather than merging its current main-based diff blindly.
+
+### Next safe work
+
+1. HUMAN-MERGE #699 only after its exact HEAD and CI are rechecked.
+2. Rebase #705 on resulting main and retain its shared 85-hour guard; do not change cron.
+3. Reduce per-session provider requests by reusing SHA-verified frozen historical CSV bytes; fetch only the changing current-season CSV, subject to the same shared budget and explicit provider-use rights.
+4. Recheck source freshness and strictly pre-match quotes. Keep the 24-hour source gate and 30-event outcome gate unchanged.
+5. Continue the frozen 19-feature V2 shadow path; do not claim market outperformance without an eligible independent Brier/LogLoss evaluation.
