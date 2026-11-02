@@ -20,7 +20,32 @@ permissions:
   contents: read
 
 jobs:
+  # Main-branch code pushes run offline validation only; they must not consume
+  # the public-source download budget or request any CSV bytes.
+  validate-source-capture:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: .
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install offline V2 validation dependencies
+        run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
+      - name: Validate current-form source capture without network or Supabase
+        run: |
+          python -m py_compile serie_a_v2_current_form_source_capture.py
+          python -m pytest -q tests/test_serie_a_v2_current_form_source_capture.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_atalanta_alias.py
+
   capture-current-form:
+    if: github.event_name != 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
