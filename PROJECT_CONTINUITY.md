@@ -23,7 +23,7 @@ The Serie A 2026/27 query selected only `match_date,home_team,away_team` plus so
 
 A secondary public Serie A index reports **93 completed matches through 2026-10-31**, with its page updated 2026-11-01 07:15 ET ([StatsNext](https://statsnext.com/serie-a)); another public match index lists three completed Matchday-10 fixtures dated 2026-10-31 ([GioScore](https://gioscore.com/football/tournament/italy/serie-a/384)). These are only a cross-check, not approved V2 feature sources or an authoritative canonical identity feed. No scorelines from these pages are used here.
 
-This differs from the 90 canonical identities through 2026-10-29 in the current Football-Data archive/Supabase metadata. It is a **source-completeness discrepancy requiring a fresh capture and independent fixture-identity audit**, not proof of the exact missing rows. The Nov 1 12:05Z source capture occurred before the StatsNext page's reported 12:15Z ET? correction: 07:15 ET = 12:15Z update, so the external page update followed that capture by about ten minutes; the existing archive should not be treated as current at the 2026-11-02 audit.
+This differs from the 90 canonical identities through 2026-10-29 in the current Football-Data archive/Supabase metadata. It is a **source-completeness discrepancy requiring a fresh capture and independent fixture-identity audit**, not proof of the exact missing rows. The Nov 1 12:05Z source capture preceded the StatsNext page's reported 07:15 ET (12:15Z UTC) update by about ten minutes; the existing archive should not be treated as current at the 2026-11-02 audit.
 
 ### Implication for PR #699 and next proof
 
