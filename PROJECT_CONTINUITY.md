@@ -8682,7 +8682,7 @@ Football-Data's official [fair-use policy](https://football-data.co.uk/contact.p
 - PR #705 exact HEAD `102c575b2e88612de1dacd636696ddd01088db75`, base main above, completed 8/8 exact-head checks successfully. Dedicated download-budget suite: 17 passed; frozen V2 shadow suite: 85 passed on current main base.
 - PR #705 adds one shared artifact marker/concurrency group and an 85-hour minimum interval, which prevents three attempts fitting inside any rolling 168-hour week. It does not change cron expressions.
 - Limitation remains explicit: Source Capture still requests ten historical CSVs plus the current-season CSV; Diagnostic still requests ten CSVs. The provider does not clarify whether the limit is counted per session or per file. The cap is a best-effort frequency guard, not a grant of commercial, redistribution, or model-training rights. Reusing verified historical bytes and fetching only the changing current-season file remains unimplemented.
-- #705 touches the same source/diagnostic workflows as #699; HUMAN-MERGE order remains #699 first, then rebase #705 onto resulting main and rerun exact-head CI.
+- **Superseding merge order for #699/#705:** HUMAN-MERGE #705 first, then rebase #699 onto the resulting main and rerun exact-head CI. #699 changes paths watched by Source Capture and Free Diagnostic push triggers; #705 must install the shared 85-hour budget guard first so merging #699 cannot trigger unbudgeted public CSV downloads.
 
 ### Fail-open production-pickle CI guard discovered and corrected in PR #706
 
