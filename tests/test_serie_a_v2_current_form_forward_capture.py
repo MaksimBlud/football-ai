@@ -98,6 +98,7 @@ def make_archive():
     )
     current_identities = _current_source_fixture_identities(current_frame)
     current_identity_sha256 = _fixture_identity_sha256(current_identities)
+    latest_completed_fixture_date = max(identity[0] for identity in current_identities)
     source_files.append({
         "season_code": CURRENT_CODE,
         "season": CURRENT_SEASON,
@@ -106,6 +107,7 @@ def make_archive():
         "csv_sha256": hashlib.sha256(current).hexdigest(),
         "source_observed_at_utc": SOURCE_OBSERVED,
         "completed_source_rows": 30,
+        "latest_completed_fixture_date": latest_completed_fixture_date,
         "total_source_rows": 30,
         "excluded_incomplete_or_same_day_rows": 0,
     })
@@ -128,6 +130,7 @@ def make_archive():
         "current_season_source_sha256": hashlib.sha256(current).hexdigest(),
         "current_season_source_observed_at_utc": SOURCE_OBSERVED,
         "current_season_completed_prior_day_rows": 30,
+        "current_season_latest_completed_fixture_date": latest_completed_fixture_date,
         "current_season_total_csv_rows": 30,
         "current_season_excluded_incomplete_or_same_day_rows": 0,
         "feature_source_gate": {
@@ -267,6 +270,7 @@ def test_real_archive_verification_is_reported_even_without_any_fresh_quote(tmp_
     assert report["historical_old_season_file_count"] == 10
     assert report["source_file_count"] == 11
     assert report["current_season_history_rows"] == 30
+    assert report["current_season_latest_completed_fixture_date"] == "2026-08-30"
     attestation = report["feature_source_gate_attestation"]
     assert attestation["verified"] is True
     assert attestation["gate_fixture_identity_count"] == 30
