@@ -21,7 +21,12 @@ Current main schedules are daily:
 - Current-Form Source Capture: `50 5 * * *` UTC; downloads ten frozen historical CSVs plus current-season `2627/I1.csv`.
 - Free Real-Quote Diagnostic: `13 6 * * *` UTC; downloads the ten historical CSVs again.
 
-If both scheduled workflows execute, the current design requests 21 CSV downloads per day from this provider, far above its published twice-weekly automated-download guidance. This is a material source-use/compliance blocker, not a model-performance issue. No manual dispatch or extra source download was made in this audit. Do not add further manual fetches. Before relying on this pipeline for continued research, add a tested provider-compliant reuse/conditional-fetch guard (or obtain explicit permission); keep the existing cron expressions unchanged unless the owner separately authorizes a schedule change. Any guard must fail closed and must not relabel cached old bytes as newly observed content.
+This is not only a schedule-level concern; the configured runs actually executed on 2026-11-01:
+- Source Capture #41304706414 completed SUCCESS and logged `source_file_count=11` (ten frozen historical CSVs plus current-season CSV); its source job reported 19 tests passed.
+- Free Real-Quote Diagnostic #41310276961 completed SUCCESS and logged `public_http_requests=10`, `paid_provider_requests=0`, and 53 tests passed.
+- Current-Form Forward #41319862002 then logged `quotes_seen=0` and `v2_current_form_shadow_captured=0`; it read no target outcomes and made no Supabase writes.
+
+If both scheduled workflows execute, the current design therefore requests 21 CSV downloads per day from this provider, far above its published twice-weekly automated-download guidance. This is a material source-use/compliance blocker, not a model-performance issue. No manual dispatch or extra source download was made in this audit. Do not add further manual fetches. Before relying on this pipeline for continued research, add a tested provider-compliant reuse/conditional-fetch guard (or obtain explicit permission); keep the existing cron expressions unchanged unless the owner separately authorizes a schedule change. Any guard must fail closed and must not relabel cached old bytes as newly observed content.
 
 ### Fresh Supabase pre-match/identity audit
 
