@@ -146,7 +146,11 @@ def test_discovery_ignores_non_main_artifact_without_run_lookup():
         return FakeResponse(url, {"total_count": 1, "artifacts": [artifact]})
 
     assert budget.discover_latest_download_attempt(token="test-token", get=get) is None
-    assert calls == [artifact_url]
+    assert calls == [
+        artifact_url,
+        f"{budget.GITHUB_API}/actions/artifacts?name=serie-a-v2-current-form-source-capture&per_page=100&page=1",
+        f"{budget.GITHUB_API}/actions/artifacts?name=serie-a-v2-free-real-quote-diagnostic&per_page=100&page=1",
+    ]
 
 
 @pytest.mark.parametrize("mutation", ["wrong_path", "wrong_sha", "wrong_event", "missing_parent"])
@@ -234,3 +238,115 @@ def test_workflow_contracts_keep_crons_and_share_one_budget():
     assert "if: steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success'" in source
     assert "if: github.event_name != 'push'" in diagnostic
     assert "if: github.event_name != 'push' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success'" in diagnostic
+
+
+
+def test_discovery_bootstraps_cooldown_from_latest_existing_main_source_artifact():
+    marker_url = (
+        f"{budget.GITHUB_API}/actions/artifacts?name={budget.MARKER_ARTIFACT_NAME}"
+        "&per_page=100&page=1"
+    )
+    source_url = (
+        f"{budget.GITHUB_API}/actions/artifacts?name=serie-a-v2-current-form-source-capture"
+        "&per_page=100&page=1"
+    )
+    diagnostic_url = (
+        f"{budget.GITHUB_API}/actions/artifacts?name=serie-a-v2-free-real-quote-diagnostic"
+        "&per_page=100&page=1"
+    )
+    source_artifact = {
+        "id": 13147815874,
+        "name": "serie-a-v2-current-form-source-capture",
+        "expired": False,
+        "created_at": "2026-11-02T13:53:57Z",
+        "workflow_run": {"id": 41456825300, "head_branch": "main", "head_sha": SHA},
+    }
+    diagnostic_artifact = {
+        "id": 13155539394,
+        "name": "serie-a-v2-free-real-quote-diagnostic",
+        "expired": False,
+        "created_at": "2026-11-02T15:41:21Z",
+        "workflow_run": {"id": 41473879081, "head_branch": "main", "head_sha": SHA},
+    }
+    run = {
+        "id": 41473879081,
+        "path": DIAGNOSTIC_PATH,
+        "head_branch": "main",
+        "head_sha": SHA,
+        "event": "schedule",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2026-11-02T15:40:19Z",
+        "updated_at": "2026-11-02T15:41:25Z",
+    }
+    calls = []
+
+    def get(url, **kwargs):
+        calls.append(url)
+        if url == marker_url:
+            return FakeResponse(url, {"artifacts": []})
+        if url == source_url:
+            return FakeResponse(url, {"artifacts": [source_artifact]})
+        if url == diagnostic_url:
+            return FakeResponse(url, {"artifacts": [diagnostic_artifact]})
+        if url.endswith("/actions/runs/41473879081"):
+            return FakeResponse(url, run)
+        raise AssertionError(f"unexpected GitHub API URL: {url}")
+
+    latest = budget.discover_latest_download_attempt(token="test-token", get=get)
+    assert latest == datetime(2026, 11, 2, 15, 41, 21, tzinfo=UTC)
+    assert "football-data.co.uk" not in " ".join(calls)
+    assert calls == [marker_url, source_url, diagnostic_url,
+                     f"{budget.GITHUB_API}/actions/runs/41473879081"]
+    allowed, next_allowed = budget.decide_download_permission(
+        now=datetime(2026, 11, 2, 16, 4, tzinfo=UTC), latest_attempt_at=latest
+    )
+    assert allowed is False
+    assert next_allowed == datetime(2026, 11, 6, 4, 41, 21, tzinfo=UTC)
+
+
+def test_discovery_bootstrap_rejects_legacy_artifact_from_wrong_workflow():
+    marker_url = (
+        f"{budget.GITHUB_API}/actions/artifacts?name={budget.MARKER_ARTIFACT_NAME}"
+        "&per_page=100&page=1"
+    )
+    source_url = (
+        f"{budget.GITHUB_API}/actions/artifacts?name=serie-a-v2-current-form-source-capture"
+        "&per_page=100&page=1"
+    )
+    diagnostic_url = (
+        f"{budget.GITHUB_API}/actions/artifacts?name=serie-a-v2-free-real-quote-diagnostic"
+        "&per_page=100&page=1"
+    )
+    artifact = {
+        "id": 13155539394,
+        "name": "serie-a-v2-free-real-quote-diagnostic",
+        "expired": False,
+        "created_at": "2026-11-02T15:41:21Z",
+        "workflow_run": {"id": 41473879081, "head_branch": "main", "head_sha": SHA},
+    }
+    bad_run = {
+        "id": 41473879081,
+        "path": SOURCE_PATH,
+        "head_branch": "main",
+        "head_sha": SHA,
+        "event": "schedule",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2026-11-02T15:40:19Z",
+        "updated_at": "2026-11-02T15:41:25Z",
+    }
+
+    def get(url, **kwargs):
+        if url == marker_url:
+            return FakeResponse(url, {"artifacts": []})
+        if url == source_url:
+            return FakeResponse(url, {"artifacts": []})
+        if url == diagnostic_url:
+            return FakeResponse(url, {"artifacts": [artifact]})
+        if url.endswith("/actions/runs/41473879081"):
+            return FakeResponse(url, bad_run)
+        raise AssertionError(f"unexpected GitHub API URL: {url}")
+
+    with pytest.raises(ValueError, match="approved main source workflow"):
+        budget.discover_latest_download_attempt(token="test-token", get=get)
