@@ -252,3 +252,98 @@ def test_training_archive_loader_requires_token_before_network(tmp_path):
             get=lambda *args, **kwargs: calls.append(args[0]),
         )
     assert calls == []
+
+
+def _report_only_bundle():
+    output = BytesIO()
+    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as z:
+        z.writestr(archive.REPORT_NAME, b"{}")
+    raw = output.getvalue()
+    artifact = {
+        "id": 100,
+        "name": archive.SOURCE_ARTIFACT_NAME,
+        "expired": False,
+        "size_in_bytes": len(raw),
+        "digest": "sha256:" + hashlib.sha256(raw).hexdigest(),
+        "created_at": "2026-11-02T11:31:00Z",
+    }
+    return raw, artifact
+
+
+def test_training_archive_loader_skips_newer_report_only_run_and_reuses_original_source_bundle(tmp_path):
+    raw, source_artifact = _bundle()
+    report_only_raw, report_only_artifact = _report_only_bundle()
+    newer_run = {
+        **RUN,
+        "id": 43,
+        "head_sha": "b" * 40,
+        "created_at": "2026-11-02T11:00:00Z",
+        "updated_at": "2026-11-02T11:32:00Z",
+    }
+    calls = []
+
+    class JsonResponse:
+        status_code = 200
+        def __init__(self, payload):
+            self.payload = payload
+        def raise_for_status(self):
+            return None
+        def json(self):
+            return self.payload
+
+    class ZipResponse:
+        status_code = 200
+        url = "https://pipelines.actions.githubusercontent.com/signed/archive"
+        headers = {}
+        def __init__(self, body):
+            self.content = body
+        def raise_for_status(self):
+            return None
+        def close(self):
+            return None
+
+    def fake_get(url, **kwargs):
+        calls.append(url)
+        if url.endswith("/actions/workflows?per_page=100"):
+            return JsonResponse({"workflows": [{
+                "id": 123,
+                "path": archive.SOURCE_WORKFLOW_PATH,
+                "state": "active",
+            }]})
+        if url.endswith("/actions/workflows/123/runs?branch=main&per_page=100"):
+            return JsonResponse({"workflow_runs": [newer_run, RUN]})
+        if url.endswith("/actions/runs/43/artifacts"):
+            return JsonResponse({"artifacts": [report_only_artifact]})
+        if url.endswith("/actions/runs/42/artifacts"):
+            return JsonResponse({"artifacts": [source_artifact]})
+        if url.endswith("/actions/artifacts/100/zip"):
+            return ZipResponse(report_only_raw)
+        if url.endswith("/actions/artifacts/99/zip"):
+            return ZipResponse(raw)
+        raise AssertionError("unexpected URL: " + url)
+
+    manifest = archive.load_latest_training_archive(
+        tmp_path / "training",
+        token="read-only-test-token",
+        repository=archive.REPOSITORY,
+        now=datetime(2026, 11, 2, 12, 0, tzinfo=timezone.utc),
+        get=fake_get,
+    )
+    assert manifest["artifact_id"] == 99
+    assert manifest["parent_run_id"] == 42
+    assert len(list((tmp_path / "training").glob("serie_a_*.csv"))) == 10
+    assert all("football-data.co.uk" not in url for url in calls)
+
+
+def test_report_only_artifact_with_unexpected_members_is_not_silently_skipped():
+    output = BytesIO()
+    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as z:
+        z.writestr(archive.REPORT_NAME, b"{}")
+        z.writestr("unexpected.txt", b"not a source archive")
+    raw = output.getvalue()
+    artifact = {
+        "size_in_bytes": len(raw),
+        "digest": "sha256:" + hashlib.sha256(raw).hexdigest(),
+    }
+    with pytest.raises(ValueError, match="report-only diagnostic artifact contains unexpected files"):
+        archive._artifact_contains_historical_source_set(raw, artifact)
