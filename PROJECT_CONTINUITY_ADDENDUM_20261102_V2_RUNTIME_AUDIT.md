@@ -344,3 +344,22 @@ The read-only query selected only quote/event/commence timestamps and league, wi
 - Metadata-only feature-input gate: 90 primary identities, passed. Separate prospective evaluation gate: 30 eligible completed forward forecasts, still CLOSED; current forecasts = 0. No 2026/27 target outcomes were read or scored; no Brier/LogLoss superiority claim is supported.
 
 HUMAN-MERGE only. Main remains unchanged. No production .pkl changes, Supabase writes/DDL, paid Odds API calls, target-outcome reads, schedule changes, refit, threshold tuning, promotion, or betting action occurred in this audit.
+
+
+## Superseding source-budget design — 2026-11-02 18:08 UTC
+
+This section supersedes the earlier 85-hour **global** cooldown described in historical notes above. Review of the unchanged schedule order found that a global cooldown would let the 05:50 Current-Form Source Capture reserve the slot every week and starve the 06:13 Free Real-Quote Diagnostic. That would leave the original forward/recovery source artifact stale.
+
+PR #705 was therefore revised to use a 170-hour cooldown **per approved workflow path**, while retaining one shared GitHub concurrency group:
+- Current-Form Source Capture: at most one attempt in any 170-hour interval.
+- Free Real-Quote Diagnostic: at most one attempt in any 170-hour interval.
+- Exactly two approved paths; therefore at most two download sessions in any rolling 7-day interval.
+- Both workflows pass their own exact --workflow-path; a marker from one workflow does not block the other.
+- The shared concurrency group serializes reservations; the marker is uploaded before any public CSV request.
+- Existing cron expressions remain 05:50 and 06:13 UTC; push events remain offline-only.
+
+Current PR #705 HEAD: e368326ad52f728f1c3975989aa7a60de2be50c3. Exact-head CI: 8/8 SUCCESS (Research 41497453471, Product 41497453467, Bundesliga 41497453493, Ligue 1 41497453700, Eredivisie 41497453567, Serie A 41497453486, Frozen V2 Shadow 41497453444, Budget Tests 41497453479). The budget suite passed 20 tests; Frozen V2 Shadow passed 86 tests; Research and Serie A production-artifact guards passed with no .pkl changes.
+
+Bootstrap cooldowns from the last existing main artifacts (assuming no later attempt): Current-Form Source Capture artifact 13147815874 was created 2026-11-02 13:53:57 UTC, so its next eligible time is 2026-11-09 15:53:57 UTC; Free Real-Quote Diagnostic artifact 13155539394 was created 2026-11-02 15:41:21 UTC, so its next eligible time is 2026-11-09 17:41:21 UTC. Their unchanged schedules therefore next align after both cooldowns on 2026-11-10 at 05:50 and 06:13 UTC. The actual main workflows do not have this guard until the user manually merges #705.
+
+No public CSV request was initiated by this automation. Source-use permission remains a separate unresolved question; a rate budget is not a licence. HUMAN-MERGE only; main is unchanged.
