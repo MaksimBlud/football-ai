@@ -8869,3 +8869,45 @@ automatically or move main from this research task.
 No source download or provider request was made during this audit. No paid API
 calls, Supabase writes/DDL, production `.pkl` changes, model/weight/feature
 changes, target-outcome reads, betting, or promotion occurred.
+
+
+## 2026-11-02 — fresh main runtime and pre-match-only Supabase audit (Research Brain)
+
+Source of truth re-read: main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No PR was merged and no main ref was changed.
+
+### Actual main Current-Form Source Capture and Forward runs
+
+- [Source Capture run 41456825300](https://github.com/MaksimBlud/football-ai/actions/runs/41456825300) completed SUCCESS on main at 2026-11-02 13:53:01–13:54:01 UTC. Its single job passed **19 tests** and produced artifact **13147815874**, 437,965 bytes, GitHub ZIP SHA-256 `67cd15e2e6319196eb13e83b4b65059302c0256b718e876756567efec81614f3`.
+- The archive contains ten frozen old-season CSVs plus current `2627/I1.csv`; 3,800 old-season rows and **98** current-season completed prior-day rows. The metadata-only feature-input gate reported **90 canonical identities**. The run reported zero paid calls, zero Supabase writes, and no target-outcome scoring.
+- [Current-Form Forward run 41456979071](https://github.com/MaksimBlud/football-ai/actions/runs/41456979071) completed SUCCESS at 13:54:05–13:54:55 UTC; **53 tests passed**. It independently verified artifact 13147815874 and its successful main parent; source age at verification was 49 seconds. It correctly reported `quotes_seen=0`, `v2_current_form_shadow_captured=0`, evaluation gate closed, no target-outcome reads, no paid calls, and no Supabase writes. This proves source archive verification, not a model forecast.
+
+### Latest main old-season diagnostic — important provenance and request finding
+
+[Free Real-Quote Diagnostic run 41473879081](https://github.com/MaksimBlud/football-ai/actions/runs/41473879081) completed SUCCESS at 15:40:19–15:41:25 UTC; **53 tests passed**. Artifact **13155539394** is 425,067 bytes with ZIP SHA-256 `a2c5e7a6e35faeea4829342c732625292bea2ef897c7ec24f18b41eb40a335b5`.
+
+The actual log summary is `RESEARCH_ONLY_UNVERIFIED_PROVENANCE_NO_BET`, `history_rows=3800`, `public_http_requests=10`, `quoted_fixtures=0`, `paid_provider_requests=0`, `quotes_with_source_observed_after_quote=0`, and `supabase_writes=0`. This run is not prospective source-before-quote evidence and produced no scored quote or feature row. It made ten public CSV requests even though a separately verified fresh 11-file current-form archive already existed earlier that day. Next safe engineering task: reuse an already SHA/parent-attested historical archive for old-season diagnostic reads instead of repeating ten public downloads; never relax provenance or freshness rules. The #705 workflow-session budget is not by itself a provider licence and does not prove that eleven individual CSV GETs per session are permitted.
+
+### Read-only Supabase pre-match metadata (no scores, results, probabilities, or payloads selected)
+
+- `league_finished_results`, Serie A 2026–27: **93 raw identity rows / 90 canonical identities** after the existing `Atalanta BC → Atalanta` V2 alias; dates 2026-08-22 through 2026-10-29; latest persistence 2026-10-30 05:33:49 UTC. The query selected identity/date columns only.
+- `odds_snapshots`, Serie A: 625 rows, **620** with `snapshot_time_utc < commence_time_utc`, 5 not strictly pre-kickoff, 63 events, zero future strict-pre-kickoff rows. Latest snapshot 2026-10-13 14:48:53 UTC.
+- `league_structural_v2_observations`, Serie A: 630/630 strictly pre-kickoff rows across 63 events; latest snapshot also 2026-10-13 14:48:53 UTC; zero future events.
+- `league_h2h_bookmaker_snapshots`: zero Serie A rows.
+- `product_prediction_snapshots` with the frozen original V2 SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`: zero rows / zero events.
+- Strict Serie A quotes after the frozen prospective-cohort timestamp `2026-10-18T08:15:32Z`: **0**; future strict quotes: **0**. Therefore the prospective V2 evaluation gate remains **0/30 and CLOSED**. These were metadata/count queries only; no target outcomes were read.
+
+### Open PR coordination — current exact heads and HUMAN-MERGE dependencies
+
+- #707 `33371988097f02b9e34d37b57c5f0b8731df303a`: 7/7 exact-head checks SUCCESS, including recovery validation. It includes the verified historical-only GitHub artifact loader and recursive fail-closed production `.pkl` inventory guard. Actual recovery is still main-only and has not run on main. #710 is closed unmerged as superseded by #707; do not merge #710 separately.
+- #705 `a9144033f5bc3e3138595efc64e9436feaf3ad32`: 8/8 exact-head checks SUCCESS, including 17 shared-budget tests. It is the shared public-source budget PR.
+- #709 `268f3fdc82036fca0e44dc0aef20d39423cfda2d`: 7/7 SUCCESS; push validation for current-form source capture is offline.
+- #699 `5a1d1bda1c62d36fd092d9e9018a7d2d923e4513`: 7/7 SUCCESS; source/clock/identity/outcome guards, main-ref secret guards, and expanded original-forward dependencies. Rebase and exact-head CI are required after #705 and #709 because the workflow files overlap.
+- #701 `04233460becc99dcbac0beb83a4e105bb8d64e3c`: 6/6 SUCCESS; prospective scoring remains fail-closed behind 30 eligible completed forecasts.
+- #702 `8cf6ee1cb66838e8263dd2c7c5ebf42e86964d7e`: 7 associated exact-head checks SUCCESS, including its offline feature-preview tests. It is manual-only and makes one zero-credit metadata-only `/events` request (not `/odds`); it emits the original 19 features/readiness only, no probabilities. It requires #699 and a fresh post-#699 source archive before any manual dispatch.
+- #704 `cc4918caf1ae0bb906b6a1949b2b352b3cce64f3`: 7/7 exact-head checks SUCCESS; pins the Python 3.11/3.12 original-V2 research environments, including the free diagnostic workflow. Rebase after #705/#699.
+- #706 `28104a5b943b697d581d578e133585701a395c43`: 6/6 SUCCESS; fail-closed `.pkl` diff-guard correction. Rebase after #701.
+- #697 remains documentation-only; this entry updates its evidence. HUMAN-MERGE only.
+
+Safe integration order: #707 may be manually merged independently after review; merge #705 before source/diagnostic workflow-trigger changes; rebase and revalidate #709 on resulting main; then rebase and revalidate #699 on that resulting main. Follow with #701, then #702 only after a fresh #699-era source capture and an explicit manual dispatch; rebase #704 after #705/#699 and #706 after #701. Do not auto-merge any PR.
+
+No merge, main mutation, Supabase write/DDL, production `.pkl` change, paid API request, cron/schedule change, target-outcome read, betting, or promotion occurred in this audit.
