@@ -108,6 +108,41 @@ def test_candidate_export_cannot_target_production_paths():
         assert dangerous not in code
 
 
+def test_build_training_frame_uses_local_archived_csvs_without_provider_requests(tmp_path, monkeypatch):
+    import pandas as pd
+
+    class FakeLab:
+        @staticmethod
+        def build_point_in_time_features(raw, _league, _mode):
+            return pd.DataFrame({
+                "match_date": pd.to_datetime(raw["Date"], dayfirst=True),
+                "home_team": raw["HomeTeam"],
+                "away_team": raw["AwayTeam"],
+                "season": raw["_season"],
+                "fixture_marker": range(len(raw)),
+            })
+
+    for index, code in enumerate(replay.TRAIN_SEASONS):
+        year = 2016 + index
+        (tmp_path / f"serie_a_{code}.csv").write_text(
+            "Date,HomeTeam,AwayTeam,FTR\n"
+            f"01/10/{year},Home {index},Away {index},H\n",
+            encoding="utf-8",
+        )
+
+    def forbidden_download(_code):
+        raise AssertionError("local archive recovery must not download public CSVs")
+
+    monkeypatch.setattr(replay, "download_csv", forbidden_download)
+    frame, hashes, by_code = replay.build_training_frame(
+        FakeLab(), training_csv_dir=tmp_path
+    )
+    assert len(frame) == 10
+    assert set(hashes) == set(replay.TRAIN_SEASONS)
+    assert set(by_code) == set(replay.TRAIN_SEASONS)
+    assert frame["season"].notna().all()
+
+
 def test_original_frozen_weights_restoration_does_not_read_mutable_2026_27():
     from pathlib import Path
     src = Path("market_anchor_v2_saved_cohort_replay.py").read_text()

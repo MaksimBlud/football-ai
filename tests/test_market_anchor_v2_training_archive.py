@@ -36,6 +36,7 @@ def _bundle(*, extra_current=False, bad_report=None, mutate_csv=False, late_sour
             "Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HC,AC,HY,AY,HR,AR\n"
             f"01/10/{year},Home {index},Away {index},1,0,H,5,3,2,1,0,0\n"
         ).encode()
+        audited_csv_body = csv_body
         if mutate_csv and index == 0:
             csv_body += b"02/10/2016,Other,Other Away,0,0,D,2,2,1,1,0,0\n"
         members[archive.SOURCE_DIR + f"serie_a_{code}.csv"] = csv_body
@@ -46,7 +47,7 @@ def _bundle(*, extra_current=False, bad_report=None, mutate_csv=False, late_sour
             "season_code": code,
             "archived_source_name": f"serie_a_{code}.csv",
             "source_url": f"{archive.PUBLIC_BASE}/{code}/{archive.COMPETITION_CODE}.csv",
-            "csv_sha256": hashlib.sha256(csv_body).hexdigest(),
+            "csv_sha256": hashlib.sha256(audited_csv_body).hexdigest(),
             "source_observed_at_utc": observed.isoformat(),
             "completed_source_rows": 2 if mutate_csv and index == 0 else 1,
         })
@@ -215,6 +216,16 @@ def test_training_archive_loader_uses_only_github_api_and_existing_artifact(tmp_
     assert len(list(out.glob("serie_a_*.csv"))) == 10
     assert all("football-data.co.uk" not in url for url in calls)
     assert all(url.startswith("https://api.github.com/repos/MaksimBlud/football-ai/") for url in calls)
+
+
+def test_recovery_workflow_runs_external_archive_loader_only_on_main_manual_dispatch():
+    workflow = Path(".github/workflows/recover-market-anchor-v2-candidate.yml").read_text()
+    assert "permissions:\\n  actions: read\\n  contents: read" in workflow
+    assert "if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'" in workflow
+    assert "Verify and extract existing historical-only GitHub artifact" in workflow
+    assert "if: github.event_name == 'workflow_dispatch'" in workflow
+    assert "market_anchor_v2_training_archive.py" in workflow
+    assert "schedule:" not in workflow
 
 
 def test_training_archive_loader_requires_token_before_network(tmp_path):

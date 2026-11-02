@@ -458,6 +458,12 @@ def restore_frozen_candidate_from_training_history(
         raise ValueError("verified training source archive candidate mismatch")
     if training_source_manifest.get("protected_2026_27_csv_opened") is not False:
         raise ValueError("protected 2026/27 CSV must remain unopened during candidate recovery")
+    if training_source_manifest.get("paid_provider_calls") != 0:
+        raise ValueError("candidate recovery training archive must use zero paid provider calls")
+    if training_source_manifest.get("supabase_writes") != 0:
+        raise ValueError("candidate recovery training archive must use zero Supabase writes")
+    if training_source_manifest.get("product_publishable") is not False:
+        raise ValueError("training archive is diagnostic-only and cannot be product-published")
     if training_source_manifest.get("season_codes") != list(TRAIN_SEASONS):
         raise ValueError("verified training source archive season list mismatch")
     expected_csvs = {f"serie_a_{code}.csv" for code in TRAIN_SEASONS}
