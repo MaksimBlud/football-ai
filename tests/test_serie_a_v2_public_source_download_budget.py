@@ -30,8 +30,8 @@ def test_first_download_is_allowed_without_any_marker():
     assert next_allowed is None
 
 
-@pytest.mark.parametrize("hours,allowed", [(84, False), (84.99, False), (85, True), (120, True)])
-def test_shared_cooldown_is_at_least_85_hours(hours, allowed):
+@pytest.mark.parametrize("hours,allowed", [(169, False), (169.99, False), (170, True), (240, True)])
+def test_each_workflow_has_a_170_hour_cooldown(hours, allowed):
     latest = datetime(2026, 11, 1, tzinfo=UTC)
     now = latest + timedelta(hours=hours)
     actual, next_allowed = budget.decide_download_permission(
@@ -41,8 +41,26 @@ def test_shared_cooldown_is_at_least_85_hours(hours, allowed):
     assert next_allowed == latest + timedelta(hours=85)
 
 
-def test_three_downloads_cannot_fit_in_any_seven_day_span():
-    assert budget.MIN_DOWNLOAD_INTERVAL * 2 > timedelta(days=7)
+def test_two_workflows_each_get_one_slot_per_seven_day_span_without_starvation():
+    assert budget.MIN_DOWNLOAD_INTERVAL > timedelta(days=7)
+    start = datetime(2026, 11, 2, 5, 50, tzinfo=UTC)
+    diagnostic = start + timedelta(minutes=23)
+    attempts = [
+        (SOURCE_PATH, start),
+        (DIAGNOSTIC_PATH, diagnostic),
+        (SOURCE_PATH, start + budget.MIN_DOWNLOAD_INTERVAL),
+        (DIAGNOSTIC_PATH, diagnostic + budget.MIN_DOWNLOAD_INTERVAL),
+    ]
+    for workflow_path in budget.ALLOWED_WORKFLOW_PATHS:
+        times = [at for path, at in attempts if path == workflow_path]
+        assert all((right - left) >= budget.MIN_DOWNLOAD_INTERVAL for left, right in zip(times, times[1:]))
+    for window_start in (start, diagnostic, start + timedelta(days=1)):
+        in_window = [at for _, at in attempts if window_start <= at < window_start + timedelta(days=7)]
+        assert len(in_window) <= 2
+    source_allowed, _ = budget.decide_download_permission(now=diagnostic, latest_attempt_at=start)
+    diagnostic_allowed, _ = budget.decide_download_permission(now=diagnostic, latest_attempt_at=diagnostic - budget.MIN_DOWNLOAD_INTERVAL)
+    assert source_allowed is False
+    assert diagnostic_allowed is True
 
 
 def test_offsetless_and_future_clocks_fail_closed():
@@ -66,7 +84,7 @@ def test_marker_is_metadata_only_and_pins_approved_workflow():
         latest_attempt_at=None,
     )
     assert marker["schema_version"] == "SERIE_A_V2_PUBLIC_SOURCE_DOWNLOAD_ATTEMPT_V1"
-    assert marker["minimum_interval_hours"] == 85
+    assert marker["minimum_interval_hours"] == 170
     assert marker["no_paid_provider_calls"] is True
     assert marker["budget_guard_uses_supabase"] is False
     assert marker["budget_guard_reads_target_outcomes"] is False
@@ -121,7 +139,7 @@ def test_discovery_uses_only_exact_main_marker_and_verifies_parent_run():
         calls.append((url, kwargs))
         return FakeResponse(url, {"total_count": 1, "artifacts": [artifact]} if url == artifact_url else run)
 
-    latest = budget.discover_latest_download_attempt(token="test-token", get=get)
+    latest = budget.discover_latest_download_attempt(token="test-token", workflow_path=SOURCE_PATH, get=get)
     assert latest == datetime(2026, 11, 1, tzinfo=UTC)
     assert [x[0] for x in calls] == [artifact_url, run_url]
     assert all(x[1]["allow_redirects"] is False for x in calls)
@@ -145,12 +163,8 @@ def test_discovery_ignores_non_main_artifact_without_run_lookup():
         calls.append(url)
         return FakeResponse(url, {"total_count": 1, "artifacts": [artifact]})
 
-    assert budget.discover_latest_download_attempt(token="test-token", get=get) is None
-    assert calls == [
-        artifact_url,
-        f"{budget.GITHUB_API}/actions/artifacts?name=serie-a-v2-current-form-source-capture&per_page=100&page=1",
-        f"{budget.GITHUB_API}/actions/artifacts?name=serie-a-v2-free-real-quote-diagnostic&per_page=100&page=1",
-    ]
+    assert budget.discover_latest_download_attempt(token="test-token", workflow_path=SOURCE_PATH, get=get) is None
+    assert calls == [artifact_url, f"{budget.GITHUB_API}/actions/artifacts?name=serie-a-v2-current-form-source-capture&per_page=100&page=1"]
 
 
 @pytest.mark.parametrize("mutation", ["wrong_path", "wrong_sha", "wrong_event", "missing_parent"])
@@ -191,7 +205,7 @@ def test_bad_main_marker_parent_fails_closed(mutation):
         return FakeResponse(url, run)
 
     with pytest.raises(ValueError):
-        budget.discover_latest_download_attempt(token="test-token", get=get)
+        budget.discover_latest_download_attempt(token="test-token", workflow_path=SOURCE_PATH, get=get)
 
 
 def test_api_redirect_or_error_fails_closed():
@@ -199,13 +213,13 @@ def test_api_redirect_or_error_fails_closed():
         return FakeResponse(url + "/redirect", {}, status=302)
 
     with pytest.raises(ValueError, match="unexpected URL"):
-        budget.discover_latest_download_attempt(token="test-token", get=redirect)
+        budget.discover_latest_download_attempt(token="test-token", workflow_path=SOURCE_PATH, get=redirect)
 
     def error(url, **kwargs):
         return FakeResponse(url, {}, status=503)
 
     with pytest.raises(RuntimeError, match="HTTP 503"):
-        budget.discover_latest_download_attempt(token="test-token", get=error)
+        budget.discover_latest_download_attempt(token="test-token", workflow_path=SOURCE_PATH, get=error)
 
 
 def test_workflow_contracts_keep_crons_and_share_one_budget():
@@ -293,16 +307,15 @@ def test_discovery_bootstraps_cooldown_from_latest_existing_main_source_artifact
             return FakeResponse(url, run)
         raise AssertionError(f"unexpected GitHub API URL: {url}")
 
-    latest = budget.discover_latest_download_attempt(token="test-token", get=get)
+    latest = budget.discover_latest_download_attempt(token="test-token", workflow_path=DIAGNOSTIC_PATH, get=get)
     assert latest == datetime(2026, 11, 2, 15, 41, 21, tzinfo=UTC)
     assert "football-data.co.uk" not in " ".join(calls)
-    assert calls == [marker_url, source_url, diagnostic_url,
-                     f"{budget.GITHUB_API}/actions/runs/41473879081"]
+    assert calls == [marker_url, diagnostic_url, f"{budget.GITHUB_API}/actions/runs/41473879081"]
     allowed, next_allowed = budget.decide_download_permission(
         now=datetime(2026, 11, 2, 16, 4, tzinfo=UTC), latest_attempt_at=latest
     )
     assert allowed is False
-    assert next_allowed == datetime(2026, 11, 6, 4, 41, 21, tzinfo=UTC)
+    assert next_allowed == datetime(2026, 11, 9, 17, 41, 21, tzinfo=UTC)
 
 
 def test_discovery_bootstrap_rejects_legacy_artifact_from_wrong_workflow():
@@ -340,8 +353,6 @@ def test_discovery_bootstrap_rejects_legacy_artifact_from_wrong_workflow():
     def get(url, **kwargs):
         if url == marker_url:
             return FakeResponse(url, {"artifacts": []})
-        if url == source_url:
-            return FakeResponse(url, {"artifacts": []})
         if url == diagnostic_url:
             return FakeResponse(url, {"artifacts": [artifact]})
         if url.endswith("/actions/runs/41473879081"):
@@ -349,4 +360,4 @@ def test_discovery_bootstrap_rejects_legacy_artifact_from_wrong_workflow():
         raise AssertionError(f"unexpected GitHub API URL: {url}")
 
     with pytest.raises(ValueError, match="approved main source workflow"):
-        budget.discover_latest_download_attempt(token="test-token", get=get)
+        budget.discover_latest_download_attempt(token="test-token", workflow_path=DIAGNOSTIC_PATH, get=get)
