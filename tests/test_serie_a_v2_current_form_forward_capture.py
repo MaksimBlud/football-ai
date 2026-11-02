@@ -770,6 +770,45 @@ def test_archive_loader_rejects_manifest_safety_contract_drift(
         verify_and_load_archive(tampered, archive, parent)
 
 
+def test_archive_loader_rejects_latest_fixture_date_if_manifest_and_audit_are_tampered():
+    raw, archives = make_archive()
+
+    def mutate(manifest):
+        manifest["current_season_latest_completed_fixture_date"] = "2026-08-29"
+        current_item = next(
+            item for item in manifest["source_files"] if item["season_code"] == CURRENT_CODE
+        )
+        current_item["latest_completed_fixture_date"] = "2026-08-29"
+
+    tampered = _rewrite_source_manifest(raw, mutate)
+    archive = {**archives[0], "sha256": hashlib.sha256(tampered).hexdigest()}
+    parent = valid_parent(
+        archive,
+        quote_time=datetime(2026, 10, 19, 5, 30, tzinfo=timezone.utc),
+    )
+    with pytest.raises(ValueError, match="latest completed fixture date does not match source CSV"):
+        verify_and_load_archive(tampered, archive, parent)
+
+
+def test_archive_loader_rejects_current_source_audit_latest_fixture_date_drift():
+    raw, archives = make_archive()
+
+    def mutate(manifest):
+        current_item = next(
+            item for item in manifest["source_files"] if item["season_code"] == CURRENT_CODE
+        )
+        current_item["latest_completed_fixture_date"] = "2026-08-29"
+
+    tampered = _rewrite_source_manifest(raw, mutate)
+    archive = {**archives[0], "sha256": hashlib.sha256(tampered).hexdigest()}
+    parent = valid_parent(
+        archive,
+        quote_time=datetime(2026, 10, 19, 5, 30, tzinfo=timezone.utc),
+    )
+    with pytest.raises(ValueError, match="source audit latest completed fixture date mismatch"):
+        verify_and_load_archive(tampered, archive, parent)
+
+
 def test_archive_loader_recomputes_gate_identity_coverage_against_current_source():
     raw, archives = make_archive()
 
