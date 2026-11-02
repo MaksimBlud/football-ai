@@ -189,7 +189,7 @@ jobs:
         run: python -m pytest -q tests/test_rpl_workflow_contract.py
 
       - name: Verify fail-closed production artifact diff guard contracts
-        run: python -m pytest -q tests/test_pr_workflow_pickle_guard_contract.py
+        run: python -m pytest -q tests/test_eredivisie_workflow_contract.py -k pickle_guard
 
       - name: Enforce no production artifact changes
         shell: bash
