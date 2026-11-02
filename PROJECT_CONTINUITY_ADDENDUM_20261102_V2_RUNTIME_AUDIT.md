@@ -303,3 +303,44 @@ PR #707 contains the verified existing-artifact loader and makes artifact verifi
 - No Brier/LogLoss comparison or superiority claim is supported.
 
 HUMAN-MERGE only. Main remains unchanged. No production `.pkl` change, Supabase write/DDL, paid API call, target-outcome read, model refit, threshold tuning, promotion, or bet occurred.
+
+## Latest source/recovery audit — 2026-11-02 17:56 UTC
+
+### Fresh main and real runtime
+
+- Main is still 40887ebb215730190d7a6c7a1693373ec4afcdfc. PROJECT_CONTINUITY.md on main therefore still predates the open November 2 integration PRs; this addendum remains a review-branch update only.
+- Main Current-Form Source Capture run [41456825300](https://github.com/MaksimBlud/football-ai/actions/runs/41456825300) succeeded on that SHA. Artifact 13147815874 is 437,965 bytes, ZIP SHA-256 67cd15e2e6319196eb13e83b4b65059302c0256b718e876756567efec81614f3. Its ten old-season CSVs have 3,800 rows total; current serie_a_2627.csv has 98 completed prior-day rows through 2026-11-01, SHA-256 aa5b3500dea71e654e543c1b083637f17b0268134baf3e93904d31f7cda9c297. The metadata-only feature-input gate is 90 canonical primary identities and passed.
+- Current-Form Forward run [41456979071](https://github.com/MaksimBlud/football-ai/actions/runs/41456979071) succeeded but verified zero saved quotes and captured zero shadow forecasts. It reports active_lambda=0, shadow_residual_lambda=1, no_bet=true, and no outcome reads/scoring.
+- Main Free Real-Quote Diagnostic run [41473879081](https://github.com/MaksimBlud/football-ai/actions/runs/41473879081) succeeded. Artifact 13155539394 is 425,067 bytes with ZIP SHA-256 a2c5e7a6e35faeea4829342c732625292bea2ef897c7ec24f18b41eb40a335b; independently downloaded bytes match. The ZIP contains exactly one diagnostic report plus ten allowlisted historical CSVs, each 380 rows; all ten file hashes match the report, all dates precede 2026-07-01, and no 2026/27 CSV or outcome/score key is present. The report has 19 features, 3,800 history rows, zero scored diagnostics, zero paid-provider requests, zero Supabase writes, and preserves the 2026/27 outcome embargo.
+
+### Recovery source-code admissibility — do not conflate ZIP integrity with provenance
+
+- The parent run for artifact 13155539394 used main SHA 40887ebb215730190d7a6c7a1693373ec4afcdfc; at that commit, serie_a_v2_live_diagnostic_report.py has Git blob SHA fae3698769f857fbcb6c8d3ea7826eb81135fec4.
+- PR #707 intentionally pins SOURCE_SCRIPT_BLOB_SHA to 932e58a4f93b0d471ac4b4e0c81fa01f923e46d5, which is the integrated strict no-redirect source-reader blob currently in #699, not current main. Thus artifact 13155539394 is structurally/hash compatible but not admissible to #707 recovery; the loader must reject it before artifact listing/download.
+- Do not dispatch recovery yet. Required sequence: manual merge #705; rebase/review and manually merge #699 preserving the exact no-redirect source reader; obtain a fresh successful main Free Diagnostic run; verify its source-reader blob is exactly 932e58...; only then run main-only recovery against that new historical-only artifact.
+
+### Current pre-match Supabase state
+
+The read-only query selected only quote/event/commence timestamps and league, with no score/result/settlement fields:
+
+- Serie A: 625 total quote rows, 620 strict snapshot_time_utc < commence_time_utc, 63 events, latest strict pre-match snapshot 2026-10-13 14:48:53.042620 UTC, zero future-kickoff pre-match rows.
+- Every other league in public.odds_snapshots also has zero future-kickoff pre-match rows.
+- The metadata-only query against public.matches found zero future fixture identities.
+- No current saved quote can enter either original or current-form V2 forward capture; no forecast should be fabricated or backfilled.
+
+### Exact PR state and integration order
+
+- PR #705 current HEAD 2b9cafedb6deb414e2a5340ebd8f8da566793ecf, base main 40887ebb215730190d7a6c7a1693373ec4afcdfc: exact-head CI 8/8 SUCCESS. It consolidates the shared 85-hour source-download marker/concurrency guard with #709's offline-only push validation. Pushes run local tests only; scheduled/manual-main capture alone can reserve a public-source attempt. Existing cron expressions are unchanged. #709 must not be merged separately.
+- PR #699 current HEAD 5a1d1bda1c62d36fd092d9e9018a7d2d923e4513: prior exact-head CI 7/7 SUCCESS, but it is still based directly on old main and overlaps #705 workflow paths. It must be rebased/integrated after the user's manual #705 merge, preserving the budget and push-isolation jobs, then exact-head CI rerun.
+- PR #707 current HEAD cdc93ca0aab9dc75434238bec75ea8759d77ffbd: exact-head CI 7/7 SUCCESS; recovery PR job ran 23 tests. Artifact retrieval/rebuild/publication were skipped on the PR event, and recursive production .pkl inventory matched before/after. Its latest code verifies the parent source-code blob before artifact listing/download. No main-only recovery has been run.
+- PR #702 remains 7/7 CI-successful but cannot be dispatched until #699 is merged and a fresh post-#699 source archive contains the required authenticated identity-set attestation. Its manual-only endpoint is fixture metadata only, expects zero credits, and emits no probabilities.
+- #700's redirect guard is represented in the more complete #699 source-reader version (blob 932e58...); #677/#681 overlap #699's original/current-form forward code and expanded tests; #710's recursive pickle guard is already integrated into #707. Do not merge these overlapping PRs as standalone patches without a unique-diff review. #703 remains a distinct bounded GitHub artifact-download hardening PR and needs rebase/review after #699.
+- #697 is still a documentation-only review PR; this addendum update does not change main.
+
+### Frozen V2 contract remains unchanged
+
+- Candidate SHA: a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6; training rows 3,799; training fingerprint f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098.
+- Exact original 19-feature order and weights unchanged; active_lambda=0, shadow_lambda=1; stability gate remains FAILED.
+- Metadata-only feature-input gate: 90 primary identities, passed. Separate prospective evaluation gate: 30 eligible completed forward forecasts, still CLOSED; current forecasts = 0. No 2026/27 target outcomes were read or scored; no Brier/LogLoss superiority claim is supported.
+
+HUMAN-MERGE only. Main remains unchanged. No production .pkl changes, Supabase writes/DDL, paid Odds API calls, target-outcome reads, schedule changes, refit, threshold tuning, promotion, or betting action occurred in this audit.
