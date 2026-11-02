@@ -1,3 +1,43 @@
+## 2026-11-02 18:56 UTC — latest main-only V2 forward runs; zero quotes; recovery source-code mismatch
+
+Audit against unchanged main `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No workflow was dispatched. Only read-only GitHub Actions metadata/logs and pre-match Supabase data were inspected; no target outcomes, scores, goals, settlements, or result columns were queried.
+
+### New main-only runtime evidence
+
+- Current-Form Source Capture [run #41456825300](https://github.com/MaksimBlud/football-ai/actions/runs/41456825300) SUCCESS; artifact `13147815874`, size 437,965 bytes, ZIP SHA-256 `67cd15e2e6319196eb13e83b4b65059302c0256b718e876756567efec81614f3`. The run reported 10 frozen historical CSVs / 3,800 rows, one 2026/27 CSV with 98 completed prior-day rows through 2026-11-01, and feature-input gate count 90. The archive was created at 13:53:57Z; source observation was 13:53:55.657Z.
+- Current-Form Forward [run #41500098611](https://github.com/MaksimBlud/football-ai/actions/runs/41500098611) SUCCESS on the same main SHA; 53 tests passed. It verified source artifact #13147815874 and parent run #41456825300, with source age 16,205 seconds at verification. `quotes_seen=0`, `v2_current_form_shadow_captured=0`, target outcomes read/scored false, paid calls 0, Supabase writes 0. Its report artifact is #13168611787, ZIP SHA-256 `d553efb56a9f937ce2d8b922f2055bcad8f77367bf22790467fa62e58f5ad507`.
+- Original Forward [run #41498178161](https://github.com/MaksimBlud/football-ai/actions/runs/41498178161) SUCCESS; 71 tests passed. It attested historical-only diagnostic artifact #13155539394 and reported `quotes_seen=0`, `future_quotes_checked=0`, `v2_diagnostic_previews_captured=0`, paid calls 0 and Supabase writes 0. Its output artifact #13166733478 has digest `a095fd8d3352e441592f47d4382bafa7e828210232a00a948c6e4142810e295e`.
+- Free Real-Quote Diagnostic [run #41473879081](https://github.com/MaksimBlud/football-ai/actions/runs/41473879081) SUCCESS; 53 tests passed, but report mode was `RESEARCH_ONLY_UNVERIFIED_PROVENANCE_NO_BET`. Artifact #13155539394 has GitHub digest `a2c5e7a6e35faeea4829342c732625292bea2ef897c7ec24f18b41eb40a335b5`.
+
+### Fresh read-only Supabase pre-match/identity audit
+
+- `public.odds_snapshots`: 3,966 rows; 3,915 satisfy strict `snapshot_time_utc < commence_time_utc`; zero strictly pre-match rows in the last seven days; zero future events with a strictly pre-match quote. Latest Serie A strict pre-match snapshot remains 2026-10-13 14:48:53 UTC.
+- The metadata-only Serie A 2026/27 query selected only `match_date, home_team, away_team`: 93 raw/exact fixture identity rows through 2026-10-29. The Source Capture's frozen feature-input gate reported 90 after its V2-local canonicalization; this is not a quality/evaluation gate.
+- `product_prediction_snapshots` has zero rows with frozen candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- No target outcomes were selected.
+
+### Recovery compatibility blocker
+
+The latest Free Diagnostic artifact #13155539394 is ZIP-integrity verified, but its parent run #41473879081 used main's pre-#699 `serie_a_v2_live_diagnostic_report.py` blob `fae3698769f857fbcb6c8d3ea7826eb81135fec4`. PR #707's recovery contract requires the integrated #699 loader blob `932e58a4f93b0d471ac4b4e0c81fa01f923e46d5`. Therefore the existing artifact must remain rejected for candidate recovery despite its correct ZIP/member hashes. Do not bypass this source-code provenance check. Recovery remains pending #705 manual merge, #699 rebase/manual merge, a fresh post-#699 main diagnostic artifact, then the main-only recovery path.
+
+### Open-PR reconciliation
+
+- #705 current HEAD `e368326ad52f728f1c3975989aa7a60de2be50c3`: exact-head CI 8/8 SUCCESS. Its current code uses a **170-hour cooldown per approved workflow path**, not an 85-hour global cooldown; only two workflow paths are allowlisted, so the guard permits at most two sessions per rolling 168 hours. The Source Capture push path already runs offline validation only, making #709 functionally superseded; a clarification was added to #709. #705 remains HUMAN-MERGE only.
+- #699 `5a1d1bda1c62d36fd092d9e9018a7d2d923e4513`: 7/7 CI SUCCESS, but must be rebased after #705 and rerun exact-head CI.
+- #701 `04233460becc99dcbac0beb83a4e105bb8d64e3c`: 6/6 CI SUCCESS. Its separate market-vs-shadow evaluator uses the frozen 30-eligible-completed-forecast gate and lazy outcome loading; it remains unusable for live quality metrics until eligible prospective forecasts exist.
+- #702 `8cf6ee1cb66838e8263dd2c7c5ebf42e86964d7e`: 7/7 CI SUCCESS, manual-only; requires #699 and a fresh identity-attested source archive. Its current-source completeness caveat remains.
+- #707 `cdc93ca0aab9dc75434238bec75ea8759d77ffbd`: 7/7 CI SUCCESS; actual recovery has not been run.
+- #704 `cc4918caf1ae0bb906b6a1949b2b352b3cce64f3`: exact-head checks successful on its current base, but workflow overlap requires rebase after #699/#705.
+- #706 `28104a5b943b697d581d578e133585701a395c43`: 6/6 CI SUCCESS; preserve its fail-closed production-`.pkl` diff guard when integrating evaluator CI.
+
+### Scientific and safety state
+
+Original candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features and weights unchanged; `active_lambda=0`, `shadow_lambda=1`, NO_BET. Feature-input gate is 90, but prospective forecasts remain zero and the separate 30-primary-completed-forecast outcome gate is CLOSED. No new Brier/LogLoss exists; no V2-over-market claim is justified. No PR was merged, main was not changed, Supabase remained read-only, production `.pkl` was not touched, and no paid provider call or protected outcome read occurred.
+
+The Football-Data twice-weekly automated-download guidance remains a source-use blocker, not a license grant. The cap limits workflow sessions, not CSV files per session; whether the provider counts individual CSV files separately and whether its terms authorize this model-training use remain unresolved. Do not initiate additional manual source downloads.
+
+---
+
 ## 2026-11-02 04:54 UTC — Football-Data publication freshness and fair-use audit; V2 evaluator bridge rechecked
 
 Read-only review against unchanged main `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No GitHub workflow was dispatched, no public CSV was downloaded, and no Supabase write/DDL or target-outcome query was performed.
