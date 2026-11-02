@@ -204,3 +204,16 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert report["target_outcome_evaluation_gate"]["outcome_gate_open"] is False
     assert report["paid_provider_calls"] == report["supabase_writes"] == 0
     assert report["model_refit_or_promotion"] is False
+
+
+def test_source_capture_push_runs_offline_validation_without_download_job():
+    workflow_path = (
+        Path(__file__).resolve().parents[1]
+        / ".github/workflows/serie-a-v2-current-form-source-capture.yml"
+    )
+    workflow = workflow_path.read_text(encoding="utf-8")
+    assert "validate-source-capture:" in workflow
+    assert "if: github.event_name == 'push'" in workflow
+    assert "capture-current-form:" in workflow
+    assert "if: github.event_name != 'push' && github.ref == 'refs/heads/main'" in workflow
+    assert "Capture frozen historical seasons plus gated current-form source" in workflow
