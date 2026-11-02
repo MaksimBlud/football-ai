@@ -83,10 +83,10 @@ def test_v2_research_and_serie_a_pickle_guards_fail_closed():
 def test_v2_pickle_guard_shell_blocks_are_valid_bash():
     for name in ("research-pr-validation.yml", "serie-a-pr-validation.yml"):
         source = _read(name)
-        marker = "      - name: Enforce no production artifact changes\\n"
+        marker = "      - name: Enforce no production artifact changes" + chr(10)
         assert marker in source
         step = source.split(marker, 1)[1]
-        run_marker = "        run: |\\n"
+        run_marker = "        run: |" + chr(10)
         assert run_marker in step
         script = textwrap.dedent(step.split(run_marker, 1)[1])
         parsed = subprocess.run(
