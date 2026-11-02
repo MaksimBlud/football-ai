@@ -24,6 +24,10 @@ ALLOWED_WORKFLOW_PATHS = {
     ".github/workflows/serie-a-v2-current-form-source-capture.yml",
     ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml",
 }
+LEGACY_SOURCE_ARTIFACTS = {
+    "serie-a-v2-current-form-source-capture": ".github/workflows/serie-a-v2-current-form-source-capture.yml",
+    "serie-a-v2-free-real-quote-diagnostic": ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml",
+}
 ALLOWED_EVENTS = {"schedule", "workflow_dispatch", "push"}
 SHA1_RE = re.compile(r"[0-9a-f]{40}\Z")
 
@@ -107,25 +111,83 @@ def discover_latest_download_attempt(
         if page == max_pages:
             raise ValueError("download-attempt marker pagination exceeded its safety bound")
 
-    if not candidates:
+    if candidates:
+        created, parent = max(candidates, key=lambda item: item[0])
+        run_id = parent["run_id"]
+        run_url = f"{GITHUB_API}/actions/runs/{run_id}"
+        run = _api_json(run_url, token=token, get=get)
+        if (
+            run.get("id") != run_id
+            or run.get("path") not in ALLOWED_WORKFLOW_PATHS
+            or run.get("head_branch") != "main"
+            or run.get("head_sha") != parent["head_sha"]
+            or run.get("event") not in ALLOWED_EVENTS
+            or run.get("status") not in {"in_progress", "completed"}
+        ):
+            raise ValueError("download-attempt marker parent is not an approved main source workflow")
+        run_created = parse_utc(run.get("created_at"), field="marker parent run created_at")
+        if created < run_created:
+            raise ValueError("download-attempt marker predates its parent workflow run")
+        return created
+
+    # Bootstrap the first marker from existing main source artifacts. Without
+    # this fallback, rollout would ignore earlier scheduled downloads.
+    legacy_candidates: list[tuple[datetime, int, str, str]] = []
+    for artifact_name, expected_path in LEGACY_SOURCE_ARTIFACTS.items():
+        for page in range(1, max_pages + 1):
+            url = (
+                f"{GITHUB_API}/actions/artifacts?name={artifact_name}"
+                f"&per_page={page_size}&page={page}"
+            )
+            payload = _api_json(url, token=token, get=get)
+            artifacts = payload.get("artifacts")
+            if not isinstance(artifacts, list):
+                raise ValueError("legacy source artifact listing lacks an artifacts array")
+            for artifact in artifacts:
+                if not isinstance(artifact, Mapping):
+                    raise ValueError("legacy source artifact listing contains a malformed item")
+                if artifact.get("name") != artifact_name or artifact.get("expired") is True:
+                    continue
+                flow = artifact.get("workflow_run")
+                if not isinstance(flow, Mapping):
+                    raise ValueError("legacy source artifact lacks its GitHub workflow parent")
+                if flow.get("head_branch") != "main":
+                    continue
+                run_id = flow.get("id")
+                head_sha = flow.get("head_sha")
+                if type(run_id) is not int or run_id <= 0:
+                    raise ValueError("legacy source artifact has an invalid parent run id")
+                if not isinstance(head_sha, str) or SHA1_RE.fullmatch(head_sha) is None:
+                    raise ValueError("legacy source artifact has an invalid parent SHA")
+                created = parse_utc(artifact.get("created_at"), field="legacy source artifact created_at")
+                legacy_candidates.append((created, run_id, head_sha, expected_path))
+            if len(artifacts) < page_size:
+                break
+            if page == max_pages:
+                raise ValueError("legacy source artifact pagination exceeded its safety bound")
+
+    if not legacy_candidates:
         return None
 
-    created, parent = max(candidates, key=lambda item: item[0])
-    run_id = parent["run_id"]
+    created, run_id, head_sha, expected_path = max(legacy_candidates, key=lambda item: item[0])
     run_url = f"{GITHUB_API}/actions/runs/{run_id}"
     run = _api_json(run_url, token=token, get=get)
     if (
         run.get("id") != run_id
-        or run.get("path") not in ALLOWED_WORKFLOW_PATHS
+        or run.get("path") != expected_path
         or run.get("head_branch") != "main"
-        or run.get("head_sha") != parent["head_sha"]
+        or run.get("head_sha") != head_sha
         or run.get("event") not in ALLOWED_EVENTS
         or run.get("status") not in {"in_progress", "completed"}
     ):
-        raise ValueError("download-attempt marker parent is not an approved main source workflow")
-    run_created = parse_utc(run.get("created_at"), field="marker parent run created_at")
+        raise ValueError("legacy source artifact parent is not its approved main source workflow")
+    run_created = parse_utc(run.get("created_at"), field="legacy source parent run created_at")
     if created < run_created:
-        raise ValueError("download-attempt marker predates its parent workflow run")
+        raise ValueError("legacy source artifact predates its parent workflow run")
+    if run.get("status") == "completed":
+        run_completed = parse_utc(run.get("updated_at"), field="legacy source parent run updated_at")
+        if created > run_completed:
+            raise ValueError("legacy source artifact postdates its parent workflow completion")
     return created
 
 
