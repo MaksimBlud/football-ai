@@ -145,6 +145,52 @@ def test_discovery_uses_only_exact_main_marker_and_verifies_parent_run():
     assert all(x[1]["allow_redirects"] is False for x in calls)
 
 
+def test_other_workflow_marker_does_not_block_requested_workflow():
+    marker_url = (
+        f"{budget.GITHUB_API}/actions/artifacts?name={budget.MARKER_ARTIFACT_NAME}"
+        "&per_page=100&page=1"
+    )
+    source_run_url = f"{budget.GITHUB_API}/actions/runs/123"
+    diagnostic_url = (
+        f"{budget.GITHUB_API}/actions/artifacts?name=serie-a-v2-free-real-quote-diagnostic"
+        "&per_page=100&page=1"
+    )
+    marker = {
+        "id": 99,
+        "name": budget.MARKER_ARTIFACT_NAME,
+        "expired": False,
+        "created_at": "2026-11-02T05:50:00Z",
+        "workflow_run": {"id": 123, "head_branch": "main", "head_sha": SHA},
+    }
+    source_run = {
+        "id": 123,
+        "path": SOURCE_PATH,
+        "head_branch": "main",
+        "head_sha": SHA,
+        "event": "schedule",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2026-11-02T05:50:00Z",
+        "updated_at": "2026-11-02T05:51:00Z",
+    }
+    calls = []
+
+    def get(url, **kwargs):
+        calls.append(url)
+        if url == marker_url:
+            return FakeResponse(url, {"artifacts": [marker]})
+        if url == source_run_url:
+            return FakeResponse(url, source_run)
+        if url == diagnostic_url:
+            return FakeResponse(url, {"artifacts": []})
+        raise AssertionError(f"unexpected GitHub API URL: {url}")
+
+    assert budget.discover_latest_download_attempt(
+        token="test-token", workflow_path=DIAGNOSTIC_PATH, get=get
+    ) is None
+    assert calls == [marker_url, source_run_url, diagnostic_url]
+
+
 def test_discovery_ignores_non_main_artifact_without_run_lookup():
     artifact_url = (
         f"{budget.GITHUB_API}/actions/artifacts?name={budget.MARKER_ARTIFACT_NAME}"
