@@ -103,6 +103,7 @@ def _verify(raw, artifact, *, run=RUN, output_dir=None):
         run=run,
         output_dir=output_dir,
         now=datetime(2026, 11, 2, 12, 0, tzinfo=timezone.utc),
+        source_script_blob_sha=archive.SOURCE_SCRIPT_BLOB_SHA,
     )
 
 
@@ -209,6 +210,12 @@ def test_training_archive_loader_uses_only_github_api_and_existing_artifact(tmp_
             }]})
         if url.endswith("/actions/workflows/123/runs?branch=main&per_page=100"):
             return JsonResponse({"workflow_runs": [RUN]})
+        if url.endswith(f"/contents/{archive.SOURCE_SCRIPT_PATH}?ref={RUN['head_sha']}"):
+            return JsonResponse({
+                "path": archive.SOURCE_SCRIPT_PATH,
+                "type": "file",
+                "sha": archive.SOURCE_SCRIPT_BLOB_SHA,
+            })
         if url.endswith("/actions/runs/42/artifacts"):
             return JsonResponse({"artifacts": [artifact_meta]})
         if url.endswith("/actions/artifacts/99/zip"):
@@ -252,3 +259,48 @@ def test_training_archive_loader_requires_token_before_network(tmp_path):
             get=lambda *args, **kwargs: calls.append(args[0]),
         )
     assert calls == []
+
+def test_training_archive_loader_rejects_parent_without_strict_source_fetch_code_before_artifact_download(tmp_path):
+    calls = []
+
+    class JsonResponse:
+        status_code = 200
+        def __init__(self, payload):
+            self.payload = payload
+        def raise_for_status(self):
+            return None
+        def json(self):
+            return self.payload
+
+    def fake_get(url, **kwargs):
+        calls.append(url)
+        if url.endswith("/actions/workflows?per_page=100"):
+            return JsonResponse({"workflows": [{
+                "id": 123,
+                "path": archive.SOURCE_WORKFLOW_PATH,
+                "state": "active",
+            }]})
+        if url.endswith("/actions/workflows/123/runs?branch=main&per_page=100"):
+            return JsonResponse({"workflow_runs": [RUN]})
+        if url.endswith(f"/contents/{archive.SOURCE_SCRIPT_PATH}?ref={RUN['head_sha']}"):
+            return JsonResponse({
+                "path": archive.SOURCE_SCRIPT_PATH,
+                "type": "file",
+                "sha": "0" * 40,
+            })
+        raise AssertionError("artifact access must not occur before source-code verification")
+
+    with pytest.raises(ValueError, match="frozen direct-URL no-redirect"):
+        archive.load_latest_training_archive(
+            tmp_path / "training",
+            token="read-only-test-token",
+            repository=archive.REPOSITORY,
+            now=datetime(2026, 11, 2, 12, 0, tzinfo=timezone.utc),
+            get=fake_get,
+        )
+    assert calls[-1].endswith(
+        f"/contents/{archive.SOURCE_SCRIPT_PATH}?ref={RUN['head_sha']}"
+    )
+    assert not any("/actions/runs/42/artifacts" in url for url in calls)
+    assert not any("/actions/artifacts/99/zip" in url for url in calls)
+
