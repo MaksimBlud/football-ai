@@ -8965,3 +8965,69 @@ PR #705 is now at 2b9cafedb6deb414e2a5340ebd8f8da566793ecf with exact-head CI 8/
 ## Superseding source-budget checkpoint — 2026-11-02 18:08 UTC
 
 The earlier global 85-hour source-download cooldown is superseded. PR #705 now uses 170 hours per approved workflow path, one attempt per path per rolling seven days, a shared concurrency group, and offline-only push validation. This allows both unchanged 05:50 and 06:13 UTC workflows to run once per week without one starving the other. Exact PR #705 HEAD e368326ad52f728f1c3975989aa7a60de2be50c3 has 8/8 CI SUCCESS (20 budget tests, 86 frozen V2 shadow tests; no .pkl changes). The complete integration and legacy-artifact cooldown calculation are in the addendum. HUMAN-MERGE only; main remains unchanged.
+
+
+## Latest MARKET_ANCHOR_1X2_V2 audit — 2026-11-02 20:57 UTC
+
+Source of truth re-read: main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The main `PROJECT_CONTINUITY.md` still contains the older 2026-10-18 checkpoint; this branch is the pending documentation update. No PR was merged and main was not changed.
+
+### Exact main runtime since the previous checkpoint
+
+The latest relevant scheduled V2 runs are still:
+
+- Source Capture [#41456825300](https://github.com/MaksimBlud/football-ai/actions/runs/41456825300), successful on main 2026-11-02 13:53:01–13:54:01 UTC. Artifact `13147815874`, 437,965 bytes, GitHub digest `sha256:67cd15e2e6319196eb13e83b4b65059302c0256b718e876756567efec81614f3`. The actual job log reports 10 old-season CSVs / 3,800 historical rows, 98 current-season completed prior-day rows, metadata-only feature-input gate count 90, zero paid calls, zero Supabase writes, and no target-outcome scoring.
+- Free Real-Quote Diagnostic [#41473879081](https://github.com/MaksimBlud/football-ai/actions/runs/41473879081), successful 2026-11-02 15:40:19–15:41:25 UTC. Artifact `13155539394`, 425,067 bytes, digest `sha256:a2c5e7a6e35faeea4829342c732625292bea2ef897c7ec24f18b41eb40a335b5`. It contains the ten frozen historical CSVs and no prospective quote/forecast. Its parent used the pre-#699 source-reader blob `fae3698769f857fbcb6c8d3ea7826eb81135fec4`; therefore this artifact is **not admissible** for #707 recovery, despite its valid ZIP/member hashes.
+- Original Forward [#41498178161](https://github.com/MaksimBlud/football-ai/actions/runs/41498178161), successful 2026-11-02 18:11:22–18:12:16 UTC. Artifact `13166733478`, digest `sha256:a095fd8d3352e441592f47d4382bafa7e828210232a00a948c6e4142810e295e`. Log: `quotes_seen=0`, `future_quotes_checked=0`, `forecasts_created=0`, `v2_diagnostic_previews_captured=0`; source archive SHA verified; no paid calls or Supabase writes.
+- Current-Form Forward [#41500098611](https://github.com/MaksimBlud/football-ai/actions/runs/41500098611), successful 2026-11-02 18:23:23–18:24:10 UTC. Artifact `13168611787`, digest `sha256:d553efb56a9f937ce2d8b922f2055bcad8f77367bf22790467fa62e58f5ad507`. It verified the source artifact `13147815874` and parent run, but logged `quotes_seen=0` and `v2_current_form_shadow_captured=0`; target outcomes were neither read nor scored.
+
+No newer Original Forward, Current-Form Forward, Current-Form Source Capture, or Free Real-Quote Diagnostic scheduled run appeared in the fresh schedule-filtered Actions inventory through 20:57 UTC.
+
+### Direct source-before-quote code audit on PR #699
+
+The exact #699 branch HEAD is `89d2fc7533e26f24eb51c67323f9d7ac756a8539`; its `serie_a_v2_live_diagnostic_report.py` blob is exactly `932e58a4f93b0d471ac4b4e0c81fa01f923e46d5`, which is the source-reader blob pinned by #707.
+
+Direct code inspection confirms:
+
+- Current-season source observation time is recorded after the HTTP response body is read and validated, not before the request.
+- Archive creation time is recorded after source validation and must not precede source observation.
+- Forward parent verification requires `run_created_at <= artifact_created_at <= run_completed_at < quote_time`; the parent must be a successful main run of the exact approved source workflow and its SHA must match the artifact.
+- The forward verifier checks the persisted gate-identity SHA against the current metadata-only identity set, recomputes the current CSV identity SHA, checks the source CSV SHA, and rejects missing gate identities.
+- The current-season latest completed fixture date is separately recorded and recomputed from the CSV; a recent download timestamp is not treated as proof of recent source contents.
+
+This is a code-path verification, not a live quote forecast. The new #699 guards are not yet on main.
+
+### Fresh read-only Supabase strictly pre-match odds inventory
+
+The query selected only `league,event_id,snapshot_time_utc,commence_time_utc` from `public.odds_snapshots`, with strict predicate `snapshot_time_utc < commence_time_utc`. No scores, results, probabilities, or payloads were selected.
+
+| League | Strict pre-match rows | Events | Latest strict pre-match snapshot (UTC) | Rows last 7 days | Future events with strict pre-match quotes |
+|---|---:|---:|---|---:|---:|
+| Serie A | 620 | 63 | 2026-10-13 14:48:53 | 0 | 0 |
+| EPL | 1,135 | 70 | 2026-10-09 15:25:57 | 0 | 0 |
+| La Liga | 798 | 52 | 2026-09-11 15:45:28 | 0 | 0 |
+| Bundesliga | 394 | 35 | 2026-09-11 15:49:52 | 0 | 0 |
+| Ligue 1 | 387 | 35 | 2026-09-11 15:49:24 | 0 | 0 |
+| RPL | 153 | 15 | 2026-09-05 15:07:55 | 0 | 0 |
+| Eredivisie | 410 | 39 | 2026-09-11 15:50:20 | 0 | 0 |
+
+Primeira Liga and Turkey Super Lig each have nine strict pre-match rows, both last updated 2026-09-11; neither has a future event with a saved strict pre-match quote. Across the listed leagues, there are zero strict pre-match snapshots in the last seven days and zero future events with such quotes. Supabase remained read-only.
+
+### Current V2 PR heads and exact-head CI
+
+- #705 `e368326ad52f728f1c3975989aa7a60de2be50c3`: open; 8/8 exact-head checks SUCCESS, including 20 budget tests and 86 frozen V2 shadow tests. It already includes offline-only Source Capture push validation; #709 is superseded and must not be merged separately.
+- #699 `89d2fc7533e26f24eb51c67323f9d7ac756a8539`: open; 7/7 exact-head checks SUCCESS, including 288 frozen V2 shadow tests. Rebase after #705 and rerun exact-head CI before HUMAN-MERGE.
+- #703 `f12abfd3a8fc37fb3aff6d394ec3966bc1311b51`: open; 7/7 prior exact-head checks SUCCESS; rebase after #699 before considering merge.
+- #704 `cc4918caf1ae0bb906b6a1949b2b352b3cce64f3`: open; associated exact-head CI runs succeeded in both pinned Python environments; rebase after #705/#699 and rerun.
+- #701 `04233460becc99dcbac0beb83a4e105bb8d64e3c`: open; 6/6 exact-head checks SUCCESS. Its prospective market-only scoring remains lazy and closed until 30 eligible prospective completed forecasts; no Brier/LogLoss result exists.
+- #706 `28104a5b943b697d581d578e133585701a395c43`: open; 6/6 exact-head checks SUCCESS. Rebase after #701 so the evaluator test and fail-closed production-`.pkl` guard both remain present.
+- #707 `cdc93ca0aab9dc75434238bec75ea8759d77ffbd`: open; 7/7 exact-head checks SUCCESS. The recovery code is artifact-only and its PR tests are offline. Do not dispatch main-only recovery until a new successful main diagnostic artifact is produced by exact source-reader blob `932e58...` after #699 is integrated and the new artifact is independently reverified.
+- #702 `8cf6ee1cb66838e8263dd2c7c5ebf42e86964d7e`: open; offline preview only; requires #699 and a fresh identity-attested source archive before any manual dispatch.
+- #709 is functionally superseded by #705; #694 and #700 overlap the integrated #699 scope. #710 is superseded by the recursive guard already included in #707.
+
+Recommended HUMAN-MERGE sequence: #705; rebase and revalidate #699; then integrate/rebase #703, #704, #701, #706, #702 and #707 according to their workflow overlaps. No automatic merge or main update is permitted.
+
+### Scientific status
+
+The frozen original candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, with 19 unchanged features and original weights; `active_lambda=0`, `shadow_lambda=1`. The source feature-input gate count of 90 is not the prospective evaluation cohort. Eligible prospective forecasts remain **0/30**; evaluation gate CLOSED. No protected 2026/27 target outcomes were opened. No V2-over-market claim is supported; Brier/LogLoss comparison has not been run.
+
+No merge, main mutation, Supabase write/DDL, production `.pkl` change, paid provider call, schedule/cron change, target-outcome read, betting, or promotion occurred in this audit.
