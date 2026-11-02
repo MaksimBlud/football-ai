@@ -211,10 +211,3 @@ jobs:
             exit 1
           fi
           echo "PASS: no .pkl changes in PR"
-
-; then
-            echo "Production model artifact change detected"
-            exit 1
-          fi
-          echo "PASS: no .pkl changes in PR"
-
