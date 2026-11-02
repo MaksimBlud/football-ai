@@ -450,6 +450,9 @@ def capture_source_archive(
             "public current-season source has fewer completed prior-day matches than the feature-source gate"
         )
     source_identities = _current_source_fixture_identities(current_rows)
+    # Record the latest date represented by the completed source rows separately
+    # from the fetch timestamp; a recent fetch does not prove recent source content.
+    latest_completed_fixture_date = max(identity[0] for identity in source_identities)
     missing_gate_identities = gate_identities - source_identities
     if missing_gate_identities:
         raise RuntimeError(
@@ -476,6 +479,7 @@ def capture_source_archive(
         "csv_sha256": hashlib.sha256(raw).hexdigest(),
         "source_observed_at_utc": observed_at.isoformat(),
         "completed_source_rows": len(current_rows),
+        "latest_completed_fixture_date": latest_completed_fixture_date,
         "total_source_rows": int(pd.read_csv(BytesIO(raw), low_memory=False).shape[0]),
         "excluded_incomplete_or_same_day_rows": excluded_rows,
     }]
@@ -500,6 +504,7 @@ def capture_source_archive(
         "current_season_source_sha256": hashlib.sha256(raw).hexdigest(),
         "current_season_source_observed_at_utc": observed_at.isoformat(),
         "current_season_completed_prior_day_rows": len(current_rows),
+        "current_season_latest_completed_fixture_date": latest_completed_fixture_date,
         "current_season_total_csv_rows": audits[-1]["total_source_rows"],
         "current_season_excluded_incomplete_or_same_day_rows": excluded_rows,
         "feature_source_gate": {
