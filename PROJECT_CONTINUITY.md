@@ -1,3 +1,51 @@
+## 2026-11-02 04:54 UTC — Football-Data publication freshness and fair-use audit; V2 evaluator bridge rechecked
+
+Read-only review against unchanged main `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No GitHub workflow was dispatched, no public CSV was downloaded, and no Supabase write/DDL or target-outcome query was performed.
+
+### Correction to the 90-vs-93 current-form source discrepancy
+
+The official Football-Data all-data page and Italy-specific page both report **Last updated: 29/10/26**:
+- https://football-data.co.uk/downloadm.php
+- https://football-data.co.uk/italym.php
+
+This explains the prior comparison: Supabase and the current Football-Data CSV contain 90 canonical Serie A 2026/27 identities through 2026-10-29, while the secondary fixture index reports three further completed fixtures dated 2026-10-31. The discrepancy is therefore consistent with the provider's publication lag; it is **not evidence that the CSV is corrupted or incomplete relative to the provider's 2026-10-29 release**. It does mean the current-form input is not current through 2026-10-31 and must not be described as such.
+
+The source manifest's `source_observed_at_utc` records when the CSV was fetched, not the provider page's last-publication date. A fresh archive timestamp can therefore coexist with several-day-old source content. Preserve the frozen 24-hour source/quote rule; do not silently redefine it. A separate descriptive provider-publication date and latest fixture date should be recorded in a future source-manifest change, without changing the 19 features, weights, or eligibility thresholds.
+
+### Provider fair-use constraint — new acquisition blocker
+
+Football-Data's own contact/fair-use page states that its free files are intended for private/academic research and that automated downloads should be light, with a maximum frequency of **twice per week**; it also disclaims use for commercial or automated AI/data-training products without permission:
+- https://football-data.co.uk/contact.php
+
+Current main schedules are daily:
+- Current-Form Source Capture: `50 5 * * *` UTC; downloads ten frozen historical CSVs plus current-season `2627/I1.csv`.
+- Free Real-Quote Diagnostic: `13 6 * * *` UTC; downloads the ten historical CSVs again.
+
+If both scheduled workflows execute, the current design requests 21 CSV downloads per day from this provider, far above its published twice-weekly automated-download guidance. This is a material source-use/compliance blocker, not a model-performance issue. No manual dispatch or extra source download was made in this audit. Do not add further manual fetches. Before relying on this pipeline for continued research, add a tested provider-compliant reuse/conditional-fetch guard (or obtain explicit permission); keep the existing cron expressions unchanged unless the owner separately authorizes a schedule change. Any guard must fail closed and must not relabel cached old bytes as newly observed content.
+
+### Fresh Supabase pre-match/identity audit
+
+Read-only queries selected only fixture identity and timestamp metadata from the current-season result table, and aggregate pre-match quote timestamps from odds:
+- Serie A 2026/27: **93 raw rows**, **90 canonical identities** after the frozen V2-local `Atalanta BC → Atalanta` alias; three raw alias rows; latest fixture date **2026-10-29**; latest persistence **2026-10-30 05:33:49 UTC**; all 93 rows have NULL `source_updated_at_utc`.
+- `odds_snapshots`: **3,966** total; **3,915** satisfy strict `snapshot_time_utc < commence_time_utc`; zero strict pre-match rows in the last seven days; zero future events with a saved strict pre-match quote. Latest Serie A strict pre-match quote remains **2026-10-13 14:48:53 UTC**.
+- `public.matches`: zero future fixture metadata rows.
+- Original V2 candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`: zero matching rows in `product_prediction_snapshots`.
+
+No scores, goals, H/D/A outcomes, settlements, or protected target-outcome columns were selected.
+
+### Exact PR/code reconciliation
+
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- #699 remains open at `5a1d1bda1c62d36fd092d9e9018a7d2d923e4513`, **7/7 exact-head CI SUCCESS**. Direct branch inspection confirms its current code already has the core #700 public-source protections: exact HTTPS host/path allowlist, redirects disabled, exact final-URL check, bounded streamed CSV reads and response close. #700's redirect-only change is therefore superseded by the more complete #699 branch; do not merge #700 as a duplicate.
+- #699 also already streams and caps both current-form and original GitHub artifact ZIP reads. #703 adds defensive handling for missing/malformed headers and further negative tests; retain only those unique cases after #699 is merged/rebased, not its stale overlapping file versions.
+- #701 is open at `c3c3f4150c9c5475636441bbf50209d1f5c05d7a`, **6/6 exact-head CI SUCCESS**. Its market-only evaluator reads completed fixture identities first, then invokes the exact-result loader only when at least **30 unique eligible completed prospective forecasts** exist. The supplementary market-only path always returns `review_signal=false`; the full three-way evaluator remains blocked because no permitted frozen incumbent SHA is pinned. This is not a live quality result.
+- #702 is open at `8cf6ee1cb66838e8263dd2c7c5ebf42e86964d7e`, **7/7 exact-head CI SUCCESS**, manual-only, and depends on #699 plus a new identity-attested source archive. Its one documented `/events` request is intended to be zero-credit and checks `x-requests-last: 0`; no such request was made here.
+- #697 documentation update is being extended with this audit only; HUMAN-MERGE remains required.
+
+### Scientific state
+
+No new pre-kickoff odds, no eligible original V2 prospective forecasts, and no outcomes were read. The 30-primary-completed-forecast outcome gate remains CLOSED; no new Brier/LogLoss exists. Frozen candidate, 19-feature contract, weights, `active_lambda=0`, `shadow_lambda=1`, NO_BET, and all production artifacts remain unchanged.
+
 ## 2026-11-02 02:56 UTC — current-form source freshness cross-check; Supabase identity set may lag
 
 Read-only audit against unchanged main `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No workflow was dispatched or rerun in this audit.
