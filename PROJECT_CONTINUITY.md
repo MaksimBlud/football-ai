@@ -8710,3 +8710,22 @@ Supabase's security advisor reports RLS disabled on five public tables: `public.
 An independent public index (StatsNext, updated 2026-11-01) reports **93 completed Serie A 2026/27 matches through 2026-10-31**. The downloaded Football-Data current-season CSV in artifact #13082408243 contains **90 rows through 2026-10-29**. The three later fixture identities listed by the independent index are Bologna–Monza, Udinese–Roma, and AC Milan–Internazionale (all dated 2026-10-31).
 
 This is a content-completeness warning, not evidence of CSV corruption. Supabase's 90 canonical identities match the same 90-row CSV, so source/Supabase parity proves consistency between those two views but does not prove that either contains every completed fixture. Do not treat the current-form source as complete through 2026-10-31 until a new permitted source publication or an independent metadata-only fixture identity check closes this gap. The external index is not admitted as a V2 feature source or evaluation set; no score/outcome from it was used for model scoring, target evaluation, or Brier/LogLoss. The separate prospective evaluation gate remains CLOSED.
+
+
+## 2026-11-02 — PR #706 fail-closed production-pickle guard: final shell/YAML correction
+
+PR #706's initial HEAD `7125faf88a9d969c6d6a074193dd78c7052644e2` added the intended explicit base fetch, merge-base check, and fail-closed diff handling, but its two edited workflow files also contained an unintended trailing duplicate `; then` fragment after the final shell block. The earlier 4/4 triggered checks did not execute the modified Research and Serie A workflows, so they did not prove those final workflow files were executable.
+
+The fragment was removed from both workflows and a regression was added to extract each final `run: |` block and execute `bash -n`.
+
+Final exact HEAD: `28104a5b943b697d581d578e133585701a395c43`; base main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+
+Exact-head CI: **6/6 SUCCESS**:
+- Research PR Validation #41404442560 — SUCCESS; `pytest -k pickle_guard`: **2 passed**; actual guard printed `PASS: no .pkl changes in PR`.
+- Serie A PR Validation #41404442533 — SUCCESS; actual guard printed `PASS: no .pkl changes in PR`.
+- Bundesliga #41404442712 — SUCCESS.
+- Ligue 1 #41404442556 — SUCCESS.
+- Product #41404442561 — SUCCESS.
+- Eredivisie #41404442553 — SUCCESS; full `test_eredivisie_workflow_contract.py`: **7 passed**.
+
+GitHub compare confirms only `.github/workflows/research-pr-validation.yml`, `.github/workflows/serie-a-pr-validation.yml`, and `tests/test_eredivisie_workflow_contract.py` changed. No model source, original 19-feature contract, weights, candidate SHA, production `.pkl`, Supabase, schedule, target outcome, or promotion behavior changed. PR #706 remains open; HUMAN-MERGE only. Because #701 also modifies the Research workflow, #706 must be rebased after #701 and its exact-head CI rerun before manual merge.
