@@ -8729,3 +8729,143 @@ Exact-head CI: **6/6 SUCCESS**:
 - Eredivisie #41404442553 — SUCCESS; full `test_eredivisie_workflow_contract.py`: **7 passed**.
 
 GitHub compare confirms only `.github/workflows/research-pr-validation.yml`, `.github/workflows/serie-a-pr-validation.yml`, and `tests/test_eredivisie_workflow_contract.py` changed. No model source, original 19-feature contract, weights, candidate SHA, production `.pkl`, Supabase, schedule, target outcome, or promotion behavior changed. PR #706 remains open; HUMAN-MERGE only. Because #701 also modifies the Research workflow, #706 must be rebased after #701 and its exact-head CI rerun before manual merge.
+
+
+## 2026-11-02 — latest original V2 runtime and pre-match data audit
+
+Audit time: 2026-11-02 09:51 UTC. Source of truth remains main
+`40887ebb215730190d7a6c7a1693373ec4afcdfc`. This is a read-only runtime/data
+snapshot; no workflow was manually dispatched and no public source was downloaded
+during this audit.
+
+### Exact main-only runtime evidence from 2026-11-01
+
+| Workflow | Run | Actual UTC start/end | Main result |
+|---|---:|---|---|
+| Current-Form Source Capture | `41304706414` | 12:04:17–12:05:19 | SUCCESS |
+| Original Forward | `41318729126` | 14:57:22–14:58:02 | SUCCESS |
+| Current-Form Forward | `41319862002` | 15:10:27–15:11:15 | SUCCESS |
+
+All three were `schedule` events on exact main SHA
+`40887ebb215730190d7a6c7a1693373ec4afcdfc`. Compared with their configured
+UTC cron times (05:50, 08:08, 08:18 respectively), the actual starts were
+approximately 6h14m, 6h49m, and 6h52m later. This is evidence of substantial
+GitHub scheduled-run delay on that date, not proof that a later scheduled run
+failed. Do not change cron or infer that a run is missing solely from the nominal
+cron time.
+
+Source Capture:
+- 19 source-capture regressions passed.
+- 3,800 historical rows across ten frozen-season CSVs; 90 current-season rows
+  through 2026-10-29; eleven CSV files total.
+- Output: `completed_primary_events=90`,
+  `current_season_completed_prior_day_rows=90`,
+  `feature_source_gate_passed=true`, `paid_provider_calls=0`,
+  `supabase_writes=0`, `target_outcomes_scored=false`.
+- Artifact ID `13082408243`, 437,021 bytes, ZIP SHA-256
+  `09fd39e2e7371f6db887963b5da85e4bb3bb6008314cc97b2a31eabf41d115fe`.
+- This is the pre-#699 main-era source manifest. It does not carry the new
+  #699 digest-bound current-gate identity list; a fresh capture on resulting
+  main after #699 is required before using the integrated identity-SHA path.
+
+Original Forward:
+- 71 tests passed.
+- Ten historical source files / 3,800 verified historical results.
+- `quotes_seen=0`, `v2_diagnostic_previews_captured=0`,
+  `paid_provider_calls=0`, `supabase_writes=0`,
+  `target_outcomes_read=false`.
+- Artifact ID `13088352792`, ZIP SHA-256
+  `fb2331e0fbb7a19c3979277814762935a7be0098caf34c149c13c154279c0c11`.
+
+Current-Form Forward:
+- 53 tests passed.
+- The parent Source Capture artifact was independently verified; reported
+  source age at verification was 11,153 seconds.
+- `feature_input_gate_count=90`, `current_season_history_rows=90`,
+  `quotes_seen=0`, `v2_current_form_shadow_captured=0`,
+  `target_outcomes_read=false`, `paid_provider_calls=0`,
+  `production_or_supabase_writes=0`.
+- Artifact ID `13089345402`, ZIP SHA-256
+  `0511879f1a3e425ee97326158bb366912e771d2084653d010f7926ac15251a02`.
+
+### Fresh read-only Supabase pre-match metadata
+
+The Serie A 2026/27 identity-only query selected exactly
+`match_date, home_team, away_team` plus separate timestamp aggregates; it did
+not select score, goals, or result fields.
+
+- `public.league_finished_results`: 93 raw rows / 93 raw identity strings.
+- After the existing V2 Atalanta alias normalization: 90 canonical fixture
+  identities. Three duplicate pairs are Atalanta–Sassuolo (2026-08-23),
+  Atalanta–Bologna (2026-08-31), and Roma–Atalanta (2026-09-05).
+- Date range: 2026-08-22 through 2026-10-29.
+- `source_updated_at_utc` is null on all 93 rows; latest
+  `persisted_at_utc` is 2026-10-30 05:33:49 UTC.
+- The 90 canonical identities match the current CSV's 90 identities, but this
+  parity is internal consistency, not independent proof of full fixture
+  coverage. Preserve the existing 93-vs-90 external completeness caveat.
+
+Strict pre-match quote predicate remains
+`snapshot_time_utc < commence_time_utc`. For Serie A there are 620 such saved
+rows; the latest is 2026-10-13 14:48:53 UTC. Across every league in
+`public.odds_snapshots`, the count of strictly pre-match snapshots later than
+the frozen cohort timestamp `2026-10-18T08:15:32Z` is zero. There are zero
+future fixtures in `public.matches` and zero future events with a strictly
+pre-match quote.
+
+`public.product_prediction_snapshots` contains 40 rows, all with model
+1X2 SHA `1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5`;
+none carries the frozen original V2 candidate SHA
+`a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+These are metadata-only checks; no prediction probabilities or target outcomes
+were selected.
+
+### Current prospective gate interpretation
+
+The prospective cohort remains frozen at main commit
+`9df6f63db10e0128aff89c38fb8c6d88703ef8b8`, with cohort freeze time
+`2026-10-18T08:15:32Z`. Since there are zero strictly pre-match quotes after
+that freeze time, there are currently zero eligible prospective V2 forecasts.
+The 30-primary-completed-forecast gate is therefore CLOSED. No target outcomes
+were read.
+
+PR #701 exact HEAD `04233460becc99dcbac0beb83a4e105bb8d64e3c` has 6/6 exact-head
+PR workflows SUCCESS. Its Research job log confirms 79 prospective evaluator
+tests and 12 forward-adapter/workflow-contract tests passed. This is code/test
+readiness, not live market-evaluation evidence. The separate market-only path
+remains diagnostic-only; the full three-way review remains blocked until a
+permitted non-legacy incumbent is separately pinned.
+
+### Open V2 PR exact-head review snapshot
+
+- #699 `5a1d1bda1c62d36fd092d9e9018a7d2d923e4513`: 7/7 SUCCESS; dedicated
+  Frozen V2 Shadow job reports 286 passed. It still needs rebase and exact-head
+  CI after #705 is manually merged.
+- #705 `102c575b2e88612de1dacd636696ddd01088db75`: 8/8 SUCCESS; dedicated
+  shared download-budget tests report 17 passed. Its 85-hour reservation limits
+  workflow sessions but not the eleven individual CSV requests in one capture;
+  it does not itself establish source permission for repeated model-training
+  use.
+- #701 `04233460becc99dcbac0beb83a4e105bb8d64e3c`: 6/6 SUCCESS; see the
+  prospective-gate note above.
+- #702 `8cf6ee1cb66838e8263dd2c7c5ebf42e86964d7e`: 7/7 SUCCESS; 22 offline
+  fixture-preview tests passed. It remains manual-only and requires #699,
+  a fresh post-#699 source capture, and a separate manual dispatch.
+- #706 `28104a5b943b697d581d578e133585701a395c43`: 6/6 SUCCESS; Research
+  and Serie A exact-head jobs executed the fail-closed pickle guard, with
+  `2 passed` for the targeted guard test and explicit
+  `PASS: no .pkl changes in PR`. Rebase after #701 because both touch the
+  Research validation workflow.
+- #704 `cc4918caf1ae0bb906b6a1949b2b352b3cce64f3`: exact-head PR validation
+  runs succeeded; rebase after #705 and #699 because workflow files overlap.
+- #697 remains the documentation PR; its current branch HEAD
+  `c69054f738ae1668bf58fe4b9159683fba67b09c` has 7/7 SUCCESS.
+
+HUMAN-MERGE order remains: #705 first; then rebase #699 and rerun exact-head CI;
+then #701; then #702 after a fresh #699-era source capture and manual dispatch;
+then #704 after #705+#699; then #706 after #701. Do not merge any PR
+automatically or move main from this research task.
+
+No source download or provider request was made during this audit. No paid API
+calls, Supabase writes/DDL, production `.pkl` changes, model/weight/feature
+changes, target-outcome reads, betting, or promotion occurred.
