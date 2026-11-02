@@ -26,7 +26,7 @@ RUN = {
 }
 
 
-def _bundle(*, extra_current=False, bad_report=None, mutate_csv=False, late_source=False):
+def _bundle(*, extra_current=False, bad_report=None, mutate_csv=False, late_source=False, early_source=False):
     output = BytesIO()
     audits = []
     members = {}
@@ -43,6 +43,8 @@ def _bundle(*, extra_current=False, bad_report=None, mutate_csv=False, late_sour
         observed = ARTIFACT_CREATED - timedelta(seconds=20-index)
         if late_source and index == 0:
             observed = ARTIFACT_CREATED + timedelta(seconds=1)
+        if early_source and index == 0:
+            observed = datetime.fromisoformat(RUN["created_at"].replace("Z", "+00:00")) - timedelta(seconds=1)
         audits.append({
             "season_code": code,
             "archived_source_name": f"serie_a_{code}.csv",
@@ -153,6 +155,15 @@ def test_training_archive_rejects_source_observation_after_archive(tmp_path):
     artifact_meta["size_in_bytes"] = len(raw)
     artifact_meta["digest"] = "sha256:" + hashlib.sha256(raw).hexdigest()
     with pytest.raises(ValueError, match="source observation is after"):
+        _verify(raw, artifact_meta, output_dir=tmp_path / "training")
+
+
+
+def test_training_archive_rejects_source_observation_before_parent_run(tmp_path):
+    raw, artifact_meta = _bundle(early_source=True)
+    artifact_meta["size_in_bytes"] = len(raw)
+    artifact_meta["digest"] = "sha256:" + hashlib.sha256(raw).hexdigest()
+    with pytest.raises(ValueError, match="predates its successful parent run"):
         _verify(raw, artifact_meta, output_dir=tmp_path / "training")
 
 
