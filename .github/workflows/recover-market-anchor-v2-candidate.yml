@@ -35,8 +35,16 @@ jobs:
           python-version: "3.11"
       - name: Install pinned, free offline replay dependencies
         run: pip install numpy pandas requests scipy 'scikit-learn==1.7.2' pytest
-      - name: Snapshot production model file hashes (read only)
-        run: sha256sum ./*.pkl 2>/dev/null | sort > /tmp/recovery-pkl-before || true
+      - name: Snapshot all tracked and generated production pickle hashes (read only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -d '' pkl_files < <(find . -path './.git' -prune -o -type f -name '*.pkl' -print0)
+          if (( ${#pkl_files[@]} == 0 )); then
+            echo "FAIL_CLOSED: no production .pkl files found"
+            exit 1
+          fi
+          sha256sum "${pkl_files[@]}" | sort > /tmp/recovery-pkl-before
       - name: Assert synthetic frozen replay guards
         run: |
           python -m py_compile market_anchor_v2_saved_cohort_replay.py
@@ -89,9 +97,16 @@ jobs:
                      for k in manifest["training_csv_sha256"])
           print("PASS: recovered Serie A research candidate weights match frozen digest")
           PY
-      - name: Assert production pickle files still match
+      - name: Assert all production pickle files still match
+        shell: bash
         run: |
-          sha256sum ./*.pkl 2>/dev/null | sort > /tmp/recovery-pkl-after || true
+          set -euo pipefail
+          mapfile -d '' pkl_files < <(find . -path './.git' -prune -o -type f -name '*.pkl' -print0)
+          if (( ${#pkl_files[@]} == 0 )); then
+            echo "FAIL_CLOSED: production .pkl files disappeared"
+            exit 1
+          fi
+          sha256sum "${pkl_files[@]}" | sort > /tmp/recovery-pkl-after
           diff -u /tmp/recovery-pkl-before /tmp/recovery-pkl-after
       - uses: actions/upload-artifact@v4
         with:
