@@ -1,0 +1,229 @@
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+import pytest
+
+import serie_a_v2_public_source_download_budget as budget
+
+
+UTC = timezone.utc
+SOURCE_PATH = ".github/workflows/serie-a-v2-current-form-source-capture.yml"
+DIAGNOSTIC_PATH = ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
+SHA = "a" * 40
+
+
+class FakeResponse:
+    def __init__(self, url, payload, status=200):
+        self.url = url
+        self.payload = payload
+        self.status_code = status
+
+    def json(self):
+        return self.payload
+
+
+def test_first_download_is_allowed_without_any_marker():
+    allowed, next_allowed = budget.decide_download_permission(
+        now=datetime(2026, 11, 2, tzinfo=UTC), latest_attempt_at=None
+    )
+    assert allowed is True
+    assert next_allowed is None
+
+
+@pytest.mark.parametrize("hours,allowed", [(84, False), (84.99, False), (85, True), (120, True)])
+def test_shared_cooldown_is_at_least_85_hours(hours, allowed):
+    latest = datetime(2026, 11, 1, tzinfo=UTC)
+    now = latest + timedelta(hours=hours)
+    actual, next_allowed = budget.decide_download_permission(
+        now=now, latest_attempt_at=latest
+    )
+    assert actual is allowed
+    assert next_allowed == latest + timedelta(hours=85)
+
+
+def test_three_downloads_cannot_fit_in_any_seven_day_span():
+    assert budget.MIN_DOWNLOAD_INTERVAL * 2 > timedelta(days=7)
+
+
+def test_offsetless_and_future_clocks_fail_closed():
+    with pytest.raises(ValueError, match="real UTC offset"):
+        budget.decide_download_permission(
+            now=datetime(2026, 11, 2), latest_attempt_at=None
+        )
+    with pytest.raises(ValueError, match="future"):
+        budget.decide_download_permission(
+            now=datetime(2026, 11, 2, tzinfo=UTC),
+            latest_attempt_at=datetime(2026, 11, 3, tzinfo=UTC),
+        )
+
+
+def test_marker_is_metadata_only_and_pins_approved_workflow():
+    marker = budget.build_attempt_marker(
+        now=datetime(2026, 11, 2, tzinfo=UTC),
+        workflow_path=SOURCE_PATH,
+        run_id=123,
+        head_sha=SHA,
+        latest_attempt_at=None,
+    )
+    assert marker["schema_version"] == "SERIE_A_V2_PUBLIC_SOURCE_DOWNLOAD_ATTEMPT_V1"
+    assert marker["minimum_interval_hours"] == 85
+    assert marker["no_paid_provider_calls"] is True
+    assert marker["budget_guard_uses_supabase"] is False
+    assert marker["budget_guard_reads_target_outcomes"] is False
+    assert not any(key.lower() in {"score", "result", "home_goals", "away_goals", "ftr"} for key in marker)
+
+
+def test_marker_rejects_unapproved_workflow_or_bad_identity():
+    with pytest.raises(ValueError, match="not allowed"):
+        budget.build_attempt_marker(
+            now=datetime(2026, 11, 2, tzinfo=UTC),
+            workflow_path=".github/workflows/other.yml",
+            run_id=123,
+            head_sha=SHA,
+            latest_attempt_at=None,
+        )
+    with pytest.raises(ValueError, match="positive"):
+        budget.build_attempt_marker(
+            now=datetime(2026, 11, 2, tzinfo=UTC),
+            workflow_path=SOURCE_PATH,
+            run_id=0,
+            head_sha=SHA,
+            latest_attempt_at=None,
+        )
+
+
+def test_discovery_uses_only_exact_main_marker_and_verifies_parent_run():
+    artifact_url = (
+        f"{budget.GITHUB_API}/actions/artifacts?name={budget.MARKER_ARTIFACT_NAME}"
+        "&per_page=100&page=1"
+    )
+    run_url = f"{budget.GITHUB_API}/actions/runs/123"
+    artifact = {
+        "id": 99,
+        "name": budget.MARKER_ARTIFACT_NAME,
+        "expired": False,
+        "created_at": "2026-11-01T00:00:00Z",
+        "workflow_run": {"id": 123, "head_branch": "main", "head_sha": SHA},
+    }
+    run = {
+        "id": 123,
+        "path": SOURCE_PATH,
+        "head_branch": "main",
+        "head_sha": SHA,
+        "event": "schedule",
+        "status": "completed",
+        "created_at": "2026-11-01T00:00:00Z",
+        "updated_at": "2026-11-01T00:01:00Z",
+    }
+    calls = []
+
+    def get(url, **kwargs):
+        calls.append((url, kwargs))
+        return FakeResponse(url, {"total_count": 1, "artifacts": [artifact]} if url == artifact_url else run)
+
+    latest = budget.discover_latest_download_attempt(token="test-token", get=get)
+    assert latest == datetime(2026, 11, 1, tzinfo=UTC)
+    assert [x[0] for x in calls] == [artifact_url, run_url]
+    assert all(x[1]["allow_redirects"] is False for x in calls)
+
+
+def test_discovery_ignores_non_main_artifact_without_run_lookup():
+    artifact_url = (
+        f"{budget.GITHUB_API}/actions/artifacts?name={budget.MARKER_ARTIFACT_NAME}"
+        "&per_page=100&page=1"
+    )
+    artifact = {
+        "id": 99,
+        "name": budget.MARKER_ARTIFACT_NAME,
+        "expired": False,
+        "created_at": "2026-11-01T00:00:00Z",
+        "workflow_run": {"id": 123, "head_branch": "feature", "head_sha": SHA},
+    }
+    calls = []
+
+    def get(url, **kwargs):
+        calls.append(url)
+        return FakeResponse(url, {"total_count": 1, "artifacts": [artifact]})
+
+    assert budget.discover_latest_download_attempt(token="test-token", get=get) is None
+    assert calls == [artifact_url]
+
+
+@pytest.mark.parametrize("mutation", ["wrong_path", "wrong_sha", "wrong_event", "missing_parent"])
+def test_bad_main_marker_parent_fails_closed(mutation):
+    artifact_url = (
+        f"{budget.GITHUB_API}/actions/artifacts?name={budget.MARKER_ARTIFACT_NAME}"
+        "&per_page=100&page=1"
+    )
+    artifact = {
+        "id": 99,
+        "name": budget.MARKER_ARTIFACT_NAME,
+        "expired": False,
+        "created_at": "2026-11-01T00:00:00Z",
+        "workflow_run": {"id": 123, "head_branch": "main", "head_sha": SHA},
+    }
+    run = {
+        "id": 123,
+        "path": SOURCE_PATH,
+        "head_branch": "main",
+        "head_sha": SHA,
+        "event": "schedule",
+        "status": "completed",
+        "created_at": "2026-11-01T00:00:00Z",
+        "updated_at": "2026-11-01T00:01:00Z",
+    }
+    if mutation == "wrong_path":
+        run["path"] = ".github/workflows/unrelated.yml"
+    elif mutation == "wrong_sha":
+        run["head_sha"] = "b" * 40
+    elif mutation == "wrong_event":
+        run["event"] = "pull_request"
+    elif mutation == "missing_parent":
+        artifact["workflow_run"] = None
+
+    def get(url, **kwargs):
+        if url == artifact_url:
+            return FakeResponse(url, {"total_count": 1, "artifacts": [artifact]})
+        return FakeResponse(url, run)
+
+    with pytest.raises(ValueError):
+        budget.discover_latest_download_attempt(token="test-token", get=get)
+
+
+def test_api_redirect_or_error_fails_closed():
+    def redirect(url, **kwargs):
+        return FakeResponse(url + "/redirect", {}, status=302)
+
+    with pytest.raises(ValueError, match="unexpected URL"):
+        budget.discover_latest_download_attempt(token="test-token", get=redirect)
+
+    def error(url, **kwargs):
+        return FakeResponse(url, {}, status=503)
+
+    with pytest.raises(RuntimeError, match="HTTP 503"):
+        budget.discover_latest_download_attempt(token="test-token", get=error)
+
+
+def test_workflow_contracts_keep_crons_and_share_one_budget():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / SOURCE_PATH).read_text(encoding="utf-8")
+    diagnostic = (root / DIAGNOSTIC_PATH).read_text(encoding="utf-8")
+
+    assert 'cron: "50 5 * * *"' in source
+    assert 'cron: "13 6 * * *"' in diagnostic
+    assert "group: serie-a-v2-public-source-download-budget" in source
+    assert "group: serie-a-v2-public-source-download-budget" in diagnostic
+    for workflow, download_step in (
+        (source, "Capture frozen historical seasons plus gated current-form source"),
+        (diagnostic, "Fetch and SHA-archive public source, preview original frozen V2 diagnostics"),
+    ):
+        assert "actions: read" in workflow
+        assert "GITHUB_TOKEN: ${{ github.token }}" in workflow
+        assert "serie_a_v2_public_source_download_budget.py" in workflow
+        assert "serie-a-v2-public-source-download-attempt" in workflow
+        assert workflow.index("Upload shared public-source download attempt marker") < workflow.index(download_step)
+        assert "steps.public_source_budget.outputs.allowed == 'true'" in workflow
+        assert "steps.upload_public_source_budget.outcome == 'success'" in workflow
+        assert "The Odds API" not in workflow
+        assert "ODDS_API_KEY" not in workflow
+    assert "contents: read" in source and "contents: read" in diagnostic
