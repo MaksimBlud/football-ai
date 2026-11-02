@@ -9031,3 +9031,18 @@ Recommended HUMAN-MERGE sequence: #705; rebase and revalidate #699; then integra
 The frozen original candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, with 19 unchanged features and original weights; `active_lambda=0`, `shadow_lambda=1`. The source feature-input gate count of 90 is not the prospective evaluation cohort. Eligible prospective forecasts remain **0/30**; evaluation gate CLOSED. No protected 2026/27 target outcomes were opened. No V2-over-market claim is supported; Brier/LogLoss comparison has not been run.
 
 No merge, main mutation, Supabase write/DDL, production `.pkl` change, paid provider call, schedule/cron change, target-outcome read, betting, or promotion occurred in this audit.
+
+
+## Official Football-Data usage-policy blocker — 2026-11-02
+
+The official [Football-Data.co.uk Fair Data Usage Policy](https://football-data.co.uk/contact.php), page updated 2026-11-02, was checked directly. It states that the free CSV/Excel data is intended for private individuals' personal betting or academic research, through manual download or at most light automated downloading (twice per week maximum). It explicitly says the free data is **not intended for commercial or AI data-training projects** and says users seeking such use should assume no permission is granted.
+
+Implications for this V2 recovery:
+
+- The project is an AI model project and its frozen historical candidate/source workflow uses Football-Data CSVs. The current public policy does not establish permission for that AI data-training use.
+- PR #705's two-per-week workflow-session cap addresses frequency only. It is not a licence, does not authorize AI training, and does not resolve whether 10 or 11 separate CSV requests inside one session count as heavy automated data demand.
+- A verified GitHub artifact digest, per-CSV SHA, source timestamp, or source-before-quote chain proves provenance/integrity, not permission to use the data.
+- Do not initiate further Football-Data automated downloads or represent its free CSVs as cleared training data until a source with appropriate rights is established. No paid provider has been authorized or used in this audit.
+- This policy finding does not change the frozen V2 weights, candidate SHA, 19-feature contract, active_lambda=0, shadow_lambda=1, or evaluation gate. It is a source-rights blocker, not a model-quality result.
+
+The policy page also states that requests for permission for commercial or AI data-training use should be assumed not to receive approval. This must remain visible in any review of #699, #705, and #707; their technical source guards and frequency cap do not resolve the usage-rights issue.
