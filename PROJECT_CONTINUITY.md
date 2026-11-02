@@ -8920,3 +8920,8 @@ The current main SHA remains 40887ebb215730190d7a6c7a1693373ec4afcdfc. The Novem
 Critical recovery constraint: artifact 13155539394 has a valid ZIP SHA and ten historical CSVs, but its parent main source-reader blob is fae3698769f857fbcb6c8d3ea7826eb81135fec4. PR #707 intentionally requires the integrated strict no-redirect blob 932e58a4f93b0d471ac4b4e0c81fa01f923e46d5 from PR #699, so the current artifact is not admissible. Do not dispatch recovery until #705 is manually merged, #699 is rebased and manually merged, and a fresh successful main diagnostic run uses the exact pinned source-reader blob.
 
 PR #705 is now at 2b9cafedb6deb414e2a5340ebd8f8da566793ecf with exact-head CI 8/8 SUCCESS; it includes the shared 85-hour download budget and offline-only push validation formerly in #709. HUMAN-MERGE only. Main has not been changed.
+
+
+## Superseding source-budget checkpoint — 2026-11-02 18:08 UTC
+
+The earlier global 85-hour source-download cooldown is superseded. PR #705 now uses 170 hours per approved workflow path, one attempt per path per rolling seven days, a shared concurrency group, and offline-only push validation. This allows both unchanged 05:50 and 06:13 UTC workflows to run once per week without one starving the other. Exact PR #705 HEAD e368326ad52f728f1c3975989aa7a60de2be50c3 has 8/8 CI SUCCESS (20 budget tests, 86 frozen V2 shadow tests; no .pkl changes). The complete integration and legacy-artifact cooldown calculation are in the addendum. HUMAN-MERGE only; main remains unchanged.
