@@ -25,7 +25,7 @@ ALLOWED_WORKFLOW_PATHS = {
     ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml",
 }
 ALLOWED_EVENTS = {"schedule", "workflow_dispatch", "push"}
-SHA1_RE = re.compile(r"[0-9a-f]{40}\\Z")
+SHA1_RE = re.compile(r"[0-9a-f]{40}\Z")
 
 
 def parse_utc(value: Any, *, field: str) -> datetime:
@@ -212,7 +212,7 @@ def main() -> None:
     if output_path:
         with open(output_path, "a", encoding="utf-8") as handle:
             for key, value in output_values.items():
-                handle.write(f"{key}={value}\\n")
+                handle.write(f"{key}={value}\n")
 
     if allowed:
         marker = build_attempt_marker(
@@ -224,7 +224,7 @@ def main() -> None:
         )
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(
-            json.dumps(marker, indent=2, sort_keys=True) + "\\n",
+            json.dumps(marker, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
         print(json.dumps({"status": "PUBLIC_SOURCE_DOWNLOAD_ALLOWED", **output_values}, sort_keys=True))
