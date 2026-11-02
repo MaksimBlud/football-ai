@@ -173,12 +173,31 @@ def download_csv(code: str) -> tuple[pd.DataFrame, str]:
     return pd.read_csv(pd.io.common.BytesIO(response.content)), sha256_bytes(response.content)
 
 
-def build_training_frame(lab) -> tuple[pd.DataFrame, dict[str, str], dict[str, pd.DataFrame]]:
+def build_training_frame(
+    lab, *, training_csv_dir: Path | None = None
+) -> tuple[pd.DataFrame, dict[str, str], dict[str, pd.DataFrame]]:
+    """Build the frozen training frame from a verified local archive when supplied.
+
+    The recovery path must use an already archived, SHA-attested training source.
+    Only the separate historical replay path may call download_csv().
+    """
     raw_frames: list[pd.DataFrame] = []
     hashes: dict[str, str] = {}
     by_code: dict[str, pd.DataFrame] = {}
     for code, season in TRAIN_SEASONS.items():
-        frame, digest = download_csv(code)
+        if training_csv_dir is None:
+            frame, digest = download_csv(code)
+        else:
+            source_path = training_csv_dir / f"serie_a_{code}.csv"
+            if not source_path.is_file():
+                raise FileNotFoundError(f"verified frozen training CSV is missing: {source_path.name}")
+            raw_bytes = source_path.read_bytes()
+            if not raw_bytes:
+                raise ValueError(f"verified frozen training CSV is empty: {source_path.name}")
+            frame = pd.read_csv(pd.io.common.BytesIO(raw_bytes))
+            if frame.empty:
+                raise ValueError(f"verified frozen training CSV has no rows: {source_path.name}")
+            digest = sha256_bytes(raw_bytes)
         by_code[code] = frame.copy()
         hashes[code] = digest
         frame = frame.copy()
@@ -416,20 +435,46 @@ def assert_same_frozen_replay(report: dict[str, Any]) -> None:
 
 
 
-def restore_frozen_candidate_from_training_history(source_dir: Path) -> Path:
-    """Recover the old Serie A JSON weights WITHOUT reading current-season results.
+def restore_frozen_candidate_from_training_history(
+    source_dir: Path, training_csv_dir: Path
+) -> Path:
+    """Recover the old Serie A JSON weights from an existing verified archive.
 
-    The 2026/27 Football-Data CSV is intentionally NOT fetched: it grows over
-    time and its full-file SHA naturally differs from September. All ten
-    TRAIN_SEASONS source file hashes, the model artifact SHA, and the fixed
-    training fingerprint MUST still match their immutable September reference.
+    This recovery path makes no Football-Data request. It consumes only the ten
+    pre-2026/27 training CSVs extracted by market_anchor_v2_training_archive.py
+    after independent GitHub artifact digest, parent-run, member-SHA and
+    season-cutoff verification. The mutable 2026/27 CSV is never downloaded,
+    extracted, opened or used here.
     """
+    if not training_csv_dir.is_dir():
+        raise FileNotFoundError("verified frozen training archive directory is missing")
+    source_manifest_path = training_csv_dir / "training_source_archive_manifest.json"
+    if not source_manifest_path.is_file():
+        raise ValueError("verified training source archive manifest is missing")
+    training_source_manifest = json.loads(source_manifest_path.read_text(encoding="utf-8"))
+    if training_source_manifest.get("schema_version") != "MARKET_ANCHOR_V2_VERIFIED_TRAINING_ARCHIVE_V1":
+        raise ValueError("verified training source archive schema mismatch")
+    if training_source_manifest.get("candidate_sha256") != "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6":
+        raise ValueError("verified training source archive candidate mismatch")
+    if training_source_manifest.get("protected_2026_27_csv_opened") is not False:
+        raise ValueError("protected 2026/27 CSV must remain unopened during candidate recovery")
+    if training_source_manifest.get("season_codes") != list(TRAIN_SEASONS):
+        raise ValueError("verified training source archive season list mismatch")
+    expected_csvs = {f"serie_a_{code}.csv" for code in TRAIN_SEASONS}
+    actual_csvs = {p.name for p in training_csv_dir.glob("*.csv")}
+    if actual_csvs != expected_csvs:
+        raise ValueError("verified training source directory contains missing or unexpected CSVs")
+
     _lab, _v1, v2 = load_frozen_modules(source_dir)
     from_file = Path(__file__).resolve().parent / (
         "experiments/market_anchor_v2_saved_cohort_replay_report.json"
     )
     reference = json.loads(from_file.read_text(encoding="utf-8"))
-    training, historical_hashes, _ = build_training_frame(_lab)
+    training, historical_hashes, _ = build_training_frame(
+        _lab, training_csv_dir=training_csv_dir
+    )
+    if historical_hashes != training_source_manifest.get("season_csv_sha256"):
+        raise ValueError("verified training source archive CSV hashes changed")
     frozen_hashes = reference["football_data_sha256"]
     for season in TRAIN_SEASONS:
         if historical_hashes.get(season) != frozen_hashes.get(season):
@@ -487,6 +532,12 @@ def restore_frozen_candidate_from_training_history(source_dir: Path) -> Path:
         "training_rows": model["training_rows"],
         "training_csv_sha256": historical_hashes,
         "training_files_match_september": True,
+        "training_source_archive_artifact_id": training_source_manifest["artifact_id"],
+        "training_source_archive_sha256": training_source_manifest["artifact_sha256"],
+        "training_source_parent_run_id": training_source_manifest["parent_run_id"],
+        "training_source_archive_created_at_utc": training_source_manifest["artifact_created_at_utc"],
+        "training_source_csv_count": len(training_source_manifest["season_codes"]),
+        "protected_2026_27_csv_opened": False,
         "source_of_output_weights": "git_archived_exact_sha_original_not_refit",
         "refit_exact_sha_match": refit_exact_sha_match,
         "refit_numeric_max_absolute_difference": numerical_diffs,
@@ -519,12 +570,18 @@ def main() -> None:
                         help="Reconstruct September weights from 2016-2026 training sources only")
     parser.add_argument("--save-research-candidate", action="store_true",
                         help="Write the exact verified weights to ignored research artifacts only")
+    parser.add_argument("--training-csv-dir", type=Path, default=None,
+                        help="Directory produced by the SHA-verified existing training archive loader")
     parser.add_argument("--output", type=Path, default=Path("artifacts/market_anchor_v2_saved_cohort_replay/report.json"))
     args = parser.parse_args()
     if args.restore_candidate_only:
         if not args.save_research_candidate:
             parser.error("--restore-candidate-only requires --save-research-candidate")
-        restore_frozen_candidate_from_training_history(args.frozen_source_dir)
+        if args.training_csv_dir is None:
+            parser.error("--restore-candidate-only requires --training-csv-dir; recovery never downloads public CSVs")
+        restore_frozen_candidate_from_training_history(
+            args.frozen_source_dir, args.training_csv_dir
+        )
         return
     report = replay(args.frozen_source_dir, save_research_candidate=args.save_research_candidate)
     args.output.parent.mkdir(parents=True, exist_ok=True)

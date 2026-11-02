@@ -114,7 +114,11 @@ def test_original_frozen_weights_restoration_does_not_read_mutable_2026_27():
     frozen_function = src.split(
         "def restore_frozen_candidate_from_training_history(", 1
     )[1].split("\ndef main()", 1)[0]
-    assert "build_training_frame(_lab)" in frozen_function
+    assert "build_training_frame(" in frozen_function
+    assert "training_csv_dir=training_csv_dir" in frozen_function
+    assert "download_csv(" not in frozen_function
+    assert "--training-csv-dir" in src
+    assert "recovery never downloads public CSVs" in src
     assert "build_target_features(" not in frozen_function
     assert "CURRENT_SEASON_CODE" not in frozen_function
     assert 'historical_hashes.get(season) != frozen_hashes.get(season)' in frozen_function
