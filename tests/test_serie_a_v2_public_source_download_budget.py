@@ -227,3 +227,10 @@ def test_workflow_contracts_keep_crons_and_share_one_budget():
         assert "The Odds API" not in workflow
         assert "ODDS_API_KEY" not in workflow
     assert "contents: read" in source and "contents: read" in diagnostic
+    assert "serie_a_v2_public_source_download_budget.py" in source
+    assert "tests/test_serie_a_v2_public_source_download_budget.py" in source
+    assert "serie_a_v2_public_source_download_budget.py" in diagnostic
+    assert "tests/test_serie_a_v2_public_source_download_budget.py" in diagnostic
+    assert "if: steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success'" in source
+    assert "if: github.event_name != 'push'" in diagnostic
+    assert "if: github.event_name != 'push' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success'" in diagnostic
