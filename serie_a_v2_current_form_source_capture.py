@@ -14,6 +14,7 @@ from io import BytesIO
 import json
 import os
 from pathlib import Path
+import tempfile
 from typing import Any, Mapping
 
 import pandas as pd
@@ -23,7 +24,8 @@ from supabase import create_client
 from historical_football_signal_lab import FEATURE_SETS
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
-from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes, fetch_public_history
+from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes
+from market_anchor_v2_training_archive import load_latest_training_archive, read_training_history
 
 REPOSITORY = "MaksimBlud/football-ai"
 WORKFLOW_PATH = ".github/workflows/serie-a-v2-current-form-source-capture.yml"
@@ -171,7 +173,10 @@ def capture_source_archive(
     client: Any,
     now: datetime,
     get=requests.get,
-    history_fetch=fetch_public_history,
+    archive_get=requests.get,
+    github_token: str = "",
+    historical_archive_loader=load_latest_training_archive,
+    historical_history_reader=read_training_history,
     clock=lambda: datetime.now(timezone.utc),
 ) -> dict:
     """Capture the ten frozen historical seasons plus the gated current-season source."""
@@ -186,9 +191,22 @@ def capture_source_archive(
             "no current-season source request was made"
         )
     output_dir.mkdir(parents=True, exist_ok=True)
-    old_history, old_audit = history_fetch(get=get, capture_dir=output_dir)
+    if not github_token:
+        raise ValueError("read-only GitHub actions token is required to reuse the verified historical archive")
+    with tempfile.TemporaryDirectory(prefix="market-anchor-v2-history-") as temporary:
+        historical_dir = Path(temporary)
+        historical_archive = historical_archive_loader(
+            historical_dir,
+            token=github_token,
+            repository=REPOSITORY,
+            now=at,
+            get=archive_get,
+        )
+        old_history, old_audit = historical_history_reader(
+            historical_dir, historical_archive, copy_to=output_dir
+        )
     if old_history.empty or len(old_audit) != len(_source_codes()):
-        raise ValueError("original frozen historical source archive incomplete")
+        raise ValueError("verified original frozen historical source archive incomplete")
     response = get(CURRENT_URL, timeout=30)
     response.raise_for_status()
     raw = response.content
@@ -226,6 +244,20 @@ def capture_source_archive(
         "original_feature_builder_git_blob_sha1": "401b3a0893371bfa4a488ec92a4a54af2678c8f7",
         "feature_count": len(FEATURE_SETS["ALL_FOOTBALL"]),
         "historical_season_codes": list(_source_codes()),
+        "historical_source_archive": {
+            "workflow_path": historical_archive["workflow_path"],
+            "artifact_id": historical_archive["artifact_id"],
+            "artifact_sha256": historical_archive["artifact_sha256"],
+            "artifact_created_at_utc": historical_archive["artifact_created_at_utc"],
+            "parent_run_id": historical_archive["parent_run_id"],
+            "parent_run_head_sha": historical_archive["parent_run_head_sha"],
+            "season_csv_sha256": historical_archive["season_csv_sha256"],
+            "source_observed_at_utc": historical_archive["source_observed_at_utc"],
+            "historical_match_rows": historical_archive["historical_match_rows"],
+            "protected_2026_27_csv_opened": historical_archive["protected_2026_27_csv_opened"],
+        },
+        "public_csv_requests_this_run": 1,
+        "historical_csv_downloads_this_run": 0,
         "current_season_code": CURRENT_CODE,
         "current_season": CURRENT_SEASON,
         "current_season_source_url": CURRENT_URL,
@@ -294,7 +326,8 @@ def main() -> None:
         raise RuntimeError("Supabase read-only source gate credentials are missing")
     client = create_client(url, key)
     report = capture_source_archive(
-        output_dir=args.output_dir, client=client, now=datetime.now(timezone.utc)
+        output_dir=args.output_dir, client=client, now=datetime.now(timezone.utc),
+        github_token=os.environ.get("GITHUB_TOKEN", ""),
     )
     print(json.dumps({
         "mode": report["mode"],
@@ -304,6 +337,9 @@ def main() -> None:
         "current_season_completed_prior_day_rows": report["current_season_completed_prior_day_rows"],
         "historical_old_season_file_count": report["historical_old_season_file_count"],
         "source_file_count": report["source_file_count"],
+        "public_csv_requests_this_run": report["public_csv_requests_this_run"],
+        "historical_csv_downloads_this_run": report["historical_csv_downloads_this_run"],
+        "historical_source_artifact_id": report["historical_source_archive"]["artifact_id"],
         "candidate_sha256": report["frozen_candidate_sha256"],
         "paid_provider_calls": report["paid_provider_calls"],
         "supabase_writes": report["supabase_writes"],
