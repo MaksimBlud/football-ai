@@ -10,13 +10,16 @@ on:
       - "serie_a_v2_current_form_source_capture.py"
       - "experiments/market_anchor_1x2_v2_current_form_policy.json"
       - "tests/test_serie_a_v2_current_form_source_capture.py"
+      - "serie_a_v2_public_source_download_budget.py"
+      - "tests/test_serie_a_v2_public_source_download_budget.py"
       - ".github/workflows/serie-a-v2-current-form-source-capture.yml"
 
 concurrency:
-  group: serie-a-v2-current-form-source-capture
+  group: serie-a-v2-public-source-download-budget
   cancel-in-progress: false
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
@@ -29,6 +32,7 @@ jobs:
       GITHUB_REPOSITORY: ${{ github.repository }}
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_RUN_ID: ${{ github.run_id }}
+      GITHUB_TOKEN: ${{ github.token }}
       PYTHONPATH: .
       OPENBLAS_NUM_THREADS: "1"
       OMP_NUM_THREADS: "1"
@@ -43,8 +47,20 @@ jobs:
       - name: Validate feature-input gate and source integrity rules
         run: |
           python -m py_compile serie_a_v2_current_form_source_capture.py
-          python -m pytest -q tests/test_serie_a_v2_current_form_source_capture.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_atalanta_alias.py
+          python -m pytest -q tests/test_serie_a_v2_current_form_source_capture.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_atalanta_alias.py tests/test_serie_a_v2_public_source_download_budget.py
+      - name: Check shared public-source download budget
+        id: public_source_budget
+        run: python serie_a_v2_public_source_download_budget.py --workflow-path ".github/workflows/serie-a-v2-current-form-source-capture.yml" --output artifacts/public_source_download_budget/attempt.json
+      - name: Upload shared public-source download attempt marker
+        id: upload_public_source_budget
+        if: steps.public_source_budget.outputs.allowed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: serie-a-v2-public-source-download-attempt
+          path: artifacts/public_source_download_budget/attempt.json
+          retention-days: 90
       - name: Capture frozen historical seasons plus gated current-form source
+        if: steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success'
         run: |
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_KEY"
