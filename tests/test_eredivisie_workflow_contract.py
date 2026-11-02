@@ -1,4 +1,6 @@
 from pathlib import Path
+import subprocess
+import textwrap
 
 
 WORKFLOWS = (
@@ -76,3 +78,22 @@ def test_v2_research_and_serie_a_pickle_guards_fail_closed():
         assert "origin/main...HEAD" not in source
         assert 'git diff --name-only "origin/' not in source
         assert "grep -F '.pkl'" in source
+
+
+def test_v2_pickle_guard_shell_blocks_are_valid_bash():
+    for name in ("research-pr-validation.yml", "serie-a-pr-validation.yml"):
+        source = _read(name)
+        marker = "      - name: Enforce no production artifact changes\\n"
+        assert marker in source
+        step = source.split(marker, 1)[1]
+        run_marker = "        run: |\\n"
+        assert run_marker in step
+        script = textwrap.dedent(step.split(run_marker, 1)[1])
+        parsed = subprocess.run(
+            ["bash", "-n"],
+            input=script,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        assert parsed.returncode == 0, parsed.stderr
