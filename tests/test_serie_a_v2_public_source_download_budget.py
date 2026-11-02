@@ -38,7 +38,7 @@ def test_each_workflow_has_a_170_hour_cooldown(hours, allowed):
         now=now, latest_attempt_at=latest
     )
     assert actual is allowed
-    assert next_allowed == latest + timedelta(hours=85)
+    assert next_allowed == latest + timedelta(hours=170)
 
 
 def test_two_workflows_each_get_one_slot_per_seven_day_span_without_starvation():
