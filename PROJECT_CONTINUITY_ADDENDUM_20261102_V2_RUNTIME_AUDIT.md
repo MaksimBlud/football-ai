@@ -226,3 +226,23 @@ The source capture occurred via its existing daily schedule. PR #705's 85-hour t
 - No target-outcome read, Brier/LogLoss comparison, model refit, threshold tuning, production .pkl mutation, Supabase write/DDL, paid provider call, promotion, or bet.
 
 HUMAN-MERGE only. No main update, no schedule change, and no other-agent setting change.
+
+## 2026-11-02 15:18 UTC — exact live identity-set parity independently recomputed
+
+This section corrects the earlier conservative statement that the 98-row current CSV count alone did not prove coverage. I independently recomputed the exact identity set using only date/home/away columns from the downloaded current-season CSV and the same V2 alias rules used by the source-identity guard:
+
+- Runtime aliases: `Inter → Inter Milan`, `Milan → AC Milan`, `Roma → AS Roma`, `Verona → Hellas Verona`.
+- V2-only alias: `Atalanta BC → Atalanta`.
+- CSV identity cutoff: strictly before 2026-10-30, matching the latest date present in the read-only Supabase gate metadata.
+- Supabase query selected exactly `match_date,home_team,away_team` from `public.league_finished_results` for `SERIE_A` / `2026-2027`; no score/result/settlement columns were selected.
+
+The exact canonical sets are equal, not merely equal in count:
+
+| Evidence | Canonical identities | SHA-256 of sorted tab/newline identity serialization |
+|---|---:|---|
+| Supabase identity-only gate metadata through 2026-10-29 | 90 | `95e3d71ab97076b5edee503301843f55d22eb14a832f7e1aab7f2012e6013811` |
+| Artifact 13147815874 current CSV through 2026-10-29 | 90 | `95e3d71ab97076b5edee503301843f55d22eb14a832f7e1aab7f2012e6013811` |
+
+The whole ZIP SHA-256 independently recomputed from the downloaded artifact remains `67cd15e2e6319196eb13e83b4b65059302c0256b718e876756567efec81614f3`; the current-season CSV SHA-256 remains `aa5b3500dea71e654e543c1b083637f17b0268134baf3e93904d31f7cda9c297`. The CSV has 98 completed rows in total through 2026-11-01; eight additional identities dated 2026-10-30 through 2026-11-01 are beyond the Supabase metadata cutoff and were not included in the equality comparison.
+
+This is an independent offline audit of the exact identity set, not yet the automated source-manifest attestation that PR #699 adds. It does not establish external calendar completeness beyond the approved source, does not establish a source-before-quote pair, and does not create any forecast. Supabase still has zero saved strictly pre-kickoff Serie A quotes after the source archive time; the 30-prospective-forecast outcome gate remains closed. The earlier warning about relying on counts alone is superseded only for the exact Supabase-to-CSV identity-set parity described above.
