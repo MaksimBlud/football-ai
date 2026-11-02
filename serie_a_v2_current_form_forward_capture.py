@@ -644,6 +644,9 @@ def verify_latest_source_archive(
         "source_file_count": manifest["source_file_count"],
         "historical_match_rows": source_meta["historical_match_rows"],
         "current_season_history_rows": source_meta["current_season_history_rows"],
+        "current_season_latest_completed_fixture_date": source_meta[
+            "current_season_latest_completed_fixture_date"
+        ],
         "candidate_sha256": FROZEN_SHA,
         "target_outcomes_read": False,
         "target_outcomes_scored": False,
