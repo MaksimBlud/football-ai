@@ -397,6 +397,9 @@ def load_latest_training_archive(
         run_id = run.get("id")
         if type(run_id) is not int or run_id <= 0:
             continue
+        # Verify the parent commit used the strict no-redirect Football-Data
+        # fetch code before looking up, downloading, or extracting any artifact.
+        source_script_blob_sha = verify_parent_source_code(run=run, token=token, get=get)
         artifacts_payload = _github_json(
             f"{API_BASE}/actions/runs/{run_id}/artifacts",
             token=token,
@@ -409,9 +412,6 @@ def load_latest_training_archive(
         if not artifacts:
             continue
         artifact = max(artifacts, key=lambda item: item.get("created_at", ""))
-        # Verify the parent commit used the strict no-redirect Football-Data
-        # fetch code before downloading or extracting any historical CSV bytes.
-        source_script_blob_sha = verify_parent_source_code(run=run, token=token, get=get)
         raw = _download_artifact_zip(artifact.get("id"), token=token, get=get)
         return verify_and_extract_archive(
             raw,
