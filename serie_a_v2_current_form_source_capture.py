@@ -582,6 +582,9 @@ def main() -> None:
         "feature_source_gate_passed": report["feature_source_gate"]["passed"],
         "completed_primary_events": report["feature_source_gate"]["observed_completed_primary_events"],
         "current_season_completed_prior_day_rows": report["current_season_completed_prior_day_rows"],
+        "current_season_latest_completed_fixture_date": report[
+            "current_season_latest_completed_fixture_date"
+        ],
         "historical_old_season_file_count": report["historical_old_season_file_count"],
         "source_file_count": report["source_file_count"],
         "candidate_sha256": report["frozen_candidate_sha256"],
