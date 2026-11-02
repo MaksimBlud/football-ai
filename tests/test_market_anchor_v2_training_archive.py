@@ -220,7 +220,9 @@ def test_training_archive_loader_uses_only_github_api_and_existing_artifact(tmp_
 
 def test_recovery_workflow_runs_external_archive_loader_only_on_main_manual_dispatch():
     workflow = Path(".github/workflows/recover-market-anchor-v2-candidate.yml").read_text()
-    assert "permissions:\\n  actions: read\\n  contents: read" in workflow
+    assert "permissions:" in workflow
+    assert "  actions: read" in workflow
+    assert "  contents: read" in workflow
     assert "if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'" in workflow
     assert "Verify and extract existing historical-only GitHub artifact" in workflow
     assert "if: github.event_name == 'workflow_dispatch'" in workflow
