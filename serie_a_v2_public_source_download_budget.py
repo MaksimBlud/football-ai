@@ -72,7 +72,7 @@ def _api_json(url: str, *, token: str, get: Callable[..., Any]) -> Mapping[str, 
 def discover_latest_download_attempt(
     *, token: str, get: Callable[..., Any] = requests.get
 ) -> datetime | None:
-    """Return the latest main-branch marker time; malformed evidence fails closed."""
+    """Return latest main download-attempt time, bootstrapping from legacy source artifacts before the first marker."""
     if not isinstance(token, str) or not token.strip():
         raise ValueError("GitHub actions:read token is required for the shared download budget")
 
