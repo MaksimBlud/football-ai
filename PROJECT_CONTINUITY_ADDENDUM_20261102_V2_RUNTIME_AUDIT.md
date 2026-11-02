@@ -246,3 +246,60 @@ The exact canonical sets are equal, not merely equal in count:
 The whole ZIP SHA-256 independently recomputed from the downloaded artifact remains `67cd15e2e6319196eb13e83b4b65059302c0256b718e876756567efec81614f3`; the current-season CSV SHA-256 remains `aa5b3500dea71e654e543c1b083637f17b0268134baf3e93904d31f7cda9c297`. The CSV has 98 completed rows in total through 2026-11-01; eight additional identities dated 2026-10-30 through 2026-11-01 are beyond the Supabase metadata cutoff and were not included in the equality comparison.
 
 This is an independent offline audit of the exact identity set, not yet the automated source-manifest attestation that PR #699 adds. It does not establish external calendar completeness beyond the approved source, does not establish a source-before-quote pair, and does not create any forecast. Supabase still has zero saved strictly pre-kickoff Serie A quotes after the source archive time; the 30-prospective-forecast outcome gate remains closed. The earlier warning about relying on counts alone is superseded only for the exact Supabase-to-CSV identity-set parity described above.
+
+
+## 2026-11-02 16:04 UTC — latest scheduled diagnostic, byte verification, and quote-gate status
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This update records existing scheduled artifacts and read-only database aggregates only; no workflow dispatch, PR merge, schedule edit, Supabase write/DDL, or target-outcome read occurred.
+
+### Latest main Free Real-Quote Diagnostic
+
+Scheduled main run [41473879081](https://github.com/MaksimBlud/football-ai/actions/runs/41473879081) completed SUCCESS on the exact main SHA.
+
+- Parent run: 2026-11-02 15:40:19–15:41:25 UTC.
+- Offline regression suite: 53 passed.
+- Public source mode: Football-Data historical Serie A only; 10 public HTTP requests; 0 paid-provider requests.
+- Diagnostic report: 3,800 historical rows; 0 quoted fixtures; 0 diagnostic previews/scored rows; `eligible_for_frozen_prospective_cohort=false`; `history_stale_without_2026_27_form=true`; `2026_27_public_results_downloaded=false`; `supabase_writes=0`.
+- Artifact ID: `13155539394`; size 425,067 bytes; GitHub digest `sha256:a2c5e7a6e35faeea4829342c732625292bea2ef897c7ec24f18b41eb40a335b5`.
+- Independently downloaded ZIP SHA-256 exactly matches the GitHub digest. ZIP has exactly 11 members: one diagnostic JSON and the ten frozen historical CSVs. All ten CSV hashes in the report match their archived bytes; each contains 380 rows. No 2026/27 CSV is present.
+
+### Current-form archive and forward result
+
+The same-day scheduled Source Capture run [41456825300](https://github.com/MaksimBlud/football-ai/actions/runs/41456825300) completed SUCCESS at 13:54 UTC. Its artifact `13147815874` has size 437,965 bytes and independently verified ZIP SHA-256 `67cd15e2e6319196eb13e83b4b65059302c0256b718e876756567efec81614f3`. It contains ten historical CSVs, the 2026/27 CSV, and the manifest. The ten historical files contain 3,800 rows; the current-season file contains 98 completed prior-day rows through 2026-11-01. All 11 CSV hashes match the manifest. The metadata-only feature-input gate reported 90 canonical completed primary identities and passed.
+
+The immediately following Current-Form Forward run [41456979071](https://github.com/MaksimBlud/football-ai/actions/runs/41456979071) completed SUCCESS. It verified artifact `13147815874` and its successful main parent, but `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `source_artifacts_used=[]`; no source-before-quote pair or real forecast was admitted. `active_lambda=0`, `shadow_residual_lambda=1`, `no_bet=true`; no target outcomes were read/scored; paid calls and writes were zero.
+
+These are two separate scheduled public-source sessions on 2026-11-02 (13:53 and 15:40 UTC), separated by about 1 hour 47 minutes. The shared 85-hour budget in PR #705 is not on main, so it did not guard these runs. The source-use policy issue recorded above remains binding: no further manual or automated CSV request should be initiated until the permitted use basis and the shared download guard are resolved. The existing schedules were not changed in this audit.
+
+### Fresh read-only pre-match database aggregates
+
+Database time at query: 2026-11-02 16:04:10 UTC. SQL selected only snapshot/event/commence timestamps, league, and metadata-only fixture identities; no score, goal, result, settlement, or target-outcome columns were selected.
+
+For `public.odds_snapshots`:
+- 3,966 total rows across nine leagues; 3,915 satisfy strict `snapshot_time_utc < commence_time_utc`.
+- Zero strict pre-match rows in the last seven days; zero strict pre-match rows on/after the 2026-10-18 08:15:32 UTC V2 freeze; zero future-kickoff events with saved quotes.
+- Serie A: 625 total, 620 strict pre-match, latest strict quote 2026-10-13 14:48:53.042620 UTC.
+
+For `public.league_structural_v2_observations`, Serie A has 630 rows, all strict pre-match, latest observation 2026-10-13 14:48:53.042620 UTC; no future-kickoff quote. This table does not supply a newer quote cohort.
+
+The exact frozen candidate SHA query against `public.product_prediction_snapshots` returned zero rows. Metadata-only Serie A 2026/27 identity query returned 93 raw identities (90 after the frozen V2 alias canonicalization), last metadata date 2026-10-29, and 93 null `source_updated_at_utc` values. `public.matches` has zero future Serie A rows. No new eligible prospective forecast exists.
+
+### Original Forward schedule remains unproven for 2026-11-02
+
+The main-branch recent-run listing contains no 2026-11-02 Original Forward-Only Preview run. The last confirmed Original Forward remains run `41318729126` on 2026-11-01, with `quotes_seen=0`, `future_quotes_checked=0`, `forecasts_created=0`, and `v2_diagnostic_previews_captured=0`. The workflow file on main still declares the existing 08:08 UTC schedule and the restricted manual-odds workflow_run trigger. The missing Nov 2 run's root cause is not established; no manual dispatch or schedule change was made.
+
+### Recovery PR integration finding
+
+PR #710's exact-head CI run `41445450598` passed, but its pull_request job executed the old main recovery path: `market_anchor_v2_saved_cohort_replay.py` called `download_csv` once for each of its ten frozen seasons because the #710 branch does not contain PR #707's local `--training-csv-dir`/verified-artifact path. Thus #710 is not safe to merge as a standalone patch and its CI is not evidence of an offline recovery path.
+
+PR #707 contains the verified existing-artifact loader and makes artifact verification/rebuild conditional on main-only `workflow_dispatch`, but its original `.pkl` inventory guard suppressed errors. I integrated #710's recursive fail-closed `.pkl` inventory and regression test directly into the #707 branch, preserving #707's offline pull_request path and manual-main-only artifact recovery. Updated #707 branch HEAD is `33371988097f02b9e34d37b57c5f0b8731df303a`; exact-head CI has started (7 checks pending at 16:10 UTC). No public CSV request is made by the new PR path. Do not merge #710 standalone; after #707's combined head passes, #710 is redundant/superseded.
+
+### Frozen scientific state
+
+- Candidate SHA: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Original 19 features and weights unchanged; `active_lambda=0`, `shadow_lambda=1`.
+- Feature-input gate: 90 canonical completed primary identities; passed.
+- Prospective target-outcome gate: CLOSED; 30 eligible unique primary completed forecasts required; zero candidate prediction snapshots and zero new eligible forecasts.
+- No Brier/LogLoss comparison or superiority claim is supported.
+
+HUMAN-MERGE only. Main remains unchanged. No production `.pkl` change, Supabase write/DDL, paid API call, target-outcome read, model refit, threshold tuning, promotion, or bet occurred.
