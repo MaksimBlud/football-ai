@@ -320,6 +320,86 @@ def verify_and_extract_archive(
     return manifest
 
 
+
+def read_training_history(
+    output_dir: Path,
+    manifest: dict,
+    *,
+    copy_to: Path | None = None,
+) -> tuple[pd.DataFrame, list[dict]]:
+    """Read only the ten SHA-verified frozen seasons extracted by the archive loader."""
+    if not isinstance(manifest, dict):
+        raise ValueError("verified historical archive manifest must be an object")
+    if (
+        manifest.get("schema_version") != "MARKET_ANCHOR_V2_VERIFIED_TRAINING_ARCHIVE_V1"
+        or manifest.get("candidate_sha256") != CANDIDATE_SHA
+        or manifest.get("season_codes") != list(SEASON_CODES)
+        or manifest.get("protected_2026_27_csv_opened") is not False
+        or manifest.get("target_outcomes_read") is not False
+        or manifest.get("paid_provider_calls") != 0
+        or manifest.get("supabase_writes") != 0
+    ):
+        raise ValueError("historical archive manifest does not match the frozen V2 source contract")
+    if (output_dir / "serie_a_2627.csv").exists():
+        raise ValueError("protected 2026/27 CSV must not be opened by the historical-only reader")
+    expected_files = {f"serie_a_{code}.csv" for code in SEASON_CODES}
+    actual_files = {path.name for path in output_dir.glob("serie_a_*.csv")}
+    if actual_files != expected_files:
+        raise ValueError("historical archive directory does not contain exactly ten frozen CSVs")
+    hashes = manifest.get("season_csv_sha256")
+    observed_map = manifest.get("source_observed_at_utc")
+    artifact_created = parse_utc(manifest.get("artifact_created_at_utc"), "artifact_created_at_utc")
+    if not isinstance(hashes, dict) or set(hashes) != set(SEASON_CODES):
+        raise ValueError("historical archive manifest has incomplete per-season SHA values")
+    if not isinstance(observed_map, dict) or set(observed_map) != set(SEASON_CODES):
+        raise ValueError("historical archive manifest has incomplete source observation times")
+
+    column_order = [
+        "Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR",
+        "HC", "AC", "HY", "AY", "HR", "AR",
+    ]
+    frames = []
+    audits = []
+    total_rows = 0
+    for code in SEASON_CODES:
+        filename = f"serie_a_{code}.csv"
+        raw = (output_dir / filename).read_bytes()
+        digest = hashlib.sha256(raw).hexdigest()
+        if digest != hashes.get(code):
+            raise ValueError(f"historical CSV SHA-256 changed after archive extraction: {code}")
+        observed = parse_utc(observed_map.get(code), f"{code} source_observed_at_utc")
+        if observed > artifact_created:
+            raise ValueError(f"historical source observation is after its source artifact: {code}")
+        frame = pd.read_csv(BytesIO(raw), low_memory=False)
+        if frame.empty or not REQUIRED_COLUMNS.issubset(frame.columns):
+            raise ValueError(f"historical CSV lacks required original V2 statistics: {code}")
+        dates = pd.to_datetime(frame["Date"], dayfirst=True, format="mixed", errors="coerce")
+        if dates.isna().any() or (dates >= pd.Timestamp(TRAINING_CUTOFF)).any():
+            raise ValueError(f"historical CSV crosses the frozen 2026-06-30 cutoff: {code}")
+        results = frame["FTR"].fillna("").astype(str).str.strip().str.upper()
+        if not results.isin(("H", "D", "A")).all():
+            raise ValueError(f"historical CSV contains incomplete results: {code}")
+        if copy_to is not None:
+            copy_to.mkdir(parents=True, exist_ok=True)
+            target = copy_to / filename
+            if target.exists():
+                raise ValueError("historical source destination already contains a CSV")
+            target.write_bytes(raw)
+        frames.append(frame.loc[:, column_order].copy())
+        total_rows += len(frame)
+        audits.append({
+            "season_code": code,
+            "source_url": f"{PUBLIC_BASE}/{code}/{COMPETITION_CODE}.csv",
+            "archived_source_name": filename,
+            "source_observed_at_utc": observed.isoformat(),
+            "csv_sha256": digest,
+            "completed_source_rows": int(len(frame)),
+        })
+    if total_rows != manifest.get("historical_match_rows"):
+        raise ValueError("historical CSV row total differs from verified archive manifest")
+    return pd.concat(frames, ignore_index=True), audits
+
+
 def _artifact_contains_historical_source_set(raw: bytes, artifact: dict) -> bool:
     """Verify transport bytes, then distinguish a report-only run from a source archive."""
     if not raw or len(raw) > MAX_ARCHIVE_BYTES:
