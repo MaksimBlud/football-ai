@@ -48,7 +48,7 @@ jobs:
       - name: Prove no production pickle changed
         run: |
           git fetch origin "${{ github.base_ref || 'main' }}"
-          if git diff --name-only "origin/${{ github.base_ref || 'main' }}...HEAD" | grep -E '\.pkl; then
+          if git diff --name-only "origin/${{ github.base_ref || 'main' }}...HEAD" | grep -E '\.pkl$'; then
             echo "Production model artifact change detected"
             exit 1
           fi
