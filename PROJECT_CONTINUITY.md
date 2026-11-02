@@ -8703,3 +8703,10 @@ On PR #705's earlier Research PR Validation run, the log contained `fatal: origi
 ### Supabase security finding (not remediated)
 
 Supabase's security advisor reports RLS disabled on five public tables: `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. No DDL was executed. Enabling RLS without first designing policies would block existing access; this requires a separate manual security decision.
+
+
+### Independent current-season completeness warning — 2026-11-02
+
+An independent public index (StatsNext, updated 2026-11-01) reports **93 completed Serie A 2026/27 matches through 2026-10-31**. The downloaded Football-Data current-season CSV in artifact #13082408243 contains **90 rows through 2026-10-29**. The three later fixture identities listed by the independent index are Bologna–Monza, Udinese–Roma, and AC Milan–Internazionale (all dated 2026-10-31).
+
+This is a content-completeness warning, not evidence of CSV corruption. Supabase's 90 canonical identities match the same 90-row CSV, so source/Supabase parity proves consistency between those two views but does not prove that either contains every completed fixture. Do not treat the current-form source as complete through 2026-10-31 until a new permitted source publication or an independent metadata-only fixture identity check closes this gap. The external index is not admitted as a V2 feature source or evaluation set; no score/outcome from it was used for model scoring, target evaluation, or Brier/LogLoss. The separate prospective evaluation gate remains CLOSED.
