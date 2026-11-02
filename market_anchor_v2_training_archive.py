@@ -320,6 +320,35 @@ def verify_and_extract_archive(
     return manifest
 
 
+def _artifact_contains_historical_source_set(raw: bytes, artifact: dict) -> bool:
+    """Verify transport bytes, then distinguish a report-only run from a source archive."""
+    if not raw or len(raw) > MAX_ARCHIVE_BYTES:
+        raise ValueError("training archive artifact is empty or too large")
+    if artifact.get("size_in_bytes") != len(raw):
+        raise ValueError("training archive artifact size mismatch")
+    digest = hashlib.sha256(raw).hexdigest()
+    if artifact.get("digest") != f"sha256:{digest}":
+        raise ValueError("training archive artifact SHA-256 mismatch")
+    try:
+        with zipfile.ZipFile(BytesIO(raw), "r") as bundle:
+            names = set(bundle.namelist())
+    except zipfile.BadZipFile as exc:
+        raise ValueError("training archive artifact is not a valid ZIP") from exc
+    if REPORT_NAME not in names:
+        raise ValueError("diagnostic artifact is missing its report")
+    source_members = {name for name in names if name.startswith(SOURCE_DIR) and name.endswith(".csv")}
+    # New diagnostic runs intentionally publish report-only artifacts. Skip
+    # those and keep searching for the original immutable source bundle.
+    if not source_members:
+        if names != {REPORT_NAME}:
+            raise ValueError("report-only diagnostic artifact contains unexpected files")
+        return False
+    expected = {SOURCE_DIR + f"serie_a_{code}.csv" for code in SEASON_CODES}
+    if names != expected | {REPORT_NAME} or source_members != expected:
+        raise ValueError("diagnostic source artifact does not contain the exact ten frozen old-season CSVs")
+    return True
+
+
 def load_latest_training_archive(
     output_dir: Path,
     *,
@@ -371,17 +400,21 @@ def load_latest_training_archive(
             token=token,
             get=get,
         )
-        artifacts = [
-            item for item in artifacts_payload.get("artifacts", [])
-            if item.get("name") == SOURCE_ARTIFACT_NAME and item.get("expired") is False
-        ]
-        if not artifacts:
-            continue
-        artifact = max(artifacts, key=lambda item: item.get("created_at", ""))
-        raw = _download_artifact_zip(artifact.get("id"), token=token, get=get)
-        return verify_and_extract_archive(
-            raw, artifact=artifact, run=run, output_dir=output_dir, now=now
+        artifacts = sorted(
+            (
+                item for item in artifacts_payload.get("artifacts", [])
+                if item.get("name") == SOURCE_ARTIFACT_NAME and item.get("expired") is False
+            ),
+            key=lambda item: item.get("created_at", ""),
+            reverse=True,
         )
+        for artifact in artifacts:
+            raw = _download_artifact_zip(artifact.get("id"), token=token, get=get)
+            if not _artifact_contains_historical_source_set(raw, artifact):
+                continue
+            return verify_and_extract_archive(
+                raw, artifact=artifact, run=run, output_dir=output_dir, now=now
+            )
     raise RuntimeError("no successful main Free Diagnostic artifact with the exact historical-only source set was found")
 
 
