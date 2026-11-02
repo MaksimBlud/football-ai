@@ -43,6 +43,7 @@ def test_each_workflow_has_a_170_hour_cooldown(hours, allowed):
 
 def test_two_workflows_each_get_one_slot_per_seven_day_span_without_starvation():
     assert budget.MIN_DOWNLOAD_INTERVAL > timedelta(days=7)
+    assert set(budget.ALLOWED_WORKFLOW_PATHS) == {SOURCE_PATH, DIAGNOSTIC_PATH}
     start = datetime(2026, 11, 2, 5, 50, tzinfo=UTC)
     diagnostic = start + timedelta(minutes=23)
     attempts = [
