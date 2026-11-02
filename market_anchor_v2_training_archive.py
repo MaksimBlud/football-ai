@@ -24,6 +24,8 @@ REPOSITORY = "MaksimBlud/football-ai"
 API_BASE = f"https://api.github.com/repos/{REPOSITORY}"
 SOURCE_WORKFLOW_PATH = ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
 SOURCE_ARTIFACT_NAME = "serie-a-v2-free-real-quote-diagnostic"
+SOURCE_SCRIPT_PATH = "serie_a_v2_live_diagnostic_report.py"
+SOURCE_SCRIPT_BLOB_SHA = "932e58a4f93b0d471ac4b4e0c81fa01f923e46d5"
 REPORT_NAME = "serie_a_v2_real_quote_diagnostic.json"
 SOURCE_DIR = "serie_a_v2_source_capture/"
 PUBLIC_BASE = "https://www.football-data.co.uk/mmz4281"
@@ -83,6 +85,30 @@ def _github_json(url: str, *, token: str, get=requests.get) -> dict:
     if not isinstance(payload, dict):
         raise ValueError("GitHub API returned a non-object response")
     return payload
+
+
+def verify_parent_source_code(*, run: dict, token: str, get=requests.get) -> str:
+    """Pin the source-download implementation used by the artifact parent run.
+
+    The historical-only report records the requested URL, but older code could
+    follow redirects without recording the final response URL. Require the exact
+    no-redirect implementation introduced by the V2 source-provenance PR before
+    any historical artifact bytes can be used for recovery.
+    """
+    head_sha = run.get("head_sha")
+    if not isinstance(head_sha, str) or re.fullmatch(r"[0-9a-f]{40}", head_sha) is None:
+        raise ValueError("training source parent run has an invalid head SHA")
+    url = f"{API_BASE}/contents/{SOURCE_SCRIPT_PATH}?ref={head_sha}"
+    payload = _github_json(url, token=token, get=get)
+    if (
+        payload.get("path") != SOURCE_SCRIPT_PATH
+        or payload.get("type") != "file"
+        or payload.get("sha") != SOURCE_SCRIPT_BLOB_SHA
+    ):
+        raise ValueError(
+            "training source parent does not contain the frozen direct-URL no-redirect fetch implementation"
+        )
+    return SOURCE_SCRIPT_BLOB_SHA
 
 
 def _download_artifact_zip(artifact_id: int, *, token: str, get=requests.get) -> bytes:
@@ -152,10 +178,13 @@ def verify_and_extract_archive(
     run: dict,
     output_dir: Path,
     now: datetime,
+    source_script_blob_sha: str,
 ) -> dict:
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("training archive verification clock must have a real UTC offset")
     now_utc = now.astimezone(timezone.utc)
+    if source_script_blob_sha != SOURCE_SCRIPT_BLOB_SHA:
+        raise ValueError("training source code blob is not the frozen direct-URL no-redirect implementation")
     if artifact.get("name") != SOURCE_ARTIFACT_NAME or artifact.get("expired") is not False:
         raise ValueError("training artifact is not the exact unexpired Free Diagnostic artifact")
     artifact_id = artifact.get("id")
@@ -302,6 +331,8 @@ def verify_and_extract_archive(
         "parent_run_id": run_id,
         "parent_run_head_sha": run.get("head_sha"),
         "workflow_path": SOURCE_WORKFLOW_PATH,
+        "source_script_path": SOURCE_SCRIPT_PATH,
+        "source_script_blob_sha": source_script_blob_sha,
         "season_codes": list(SEASON_CODES),
         "season_csv_sha256": {code: audits[code]["sha256"] for code in SEASON_CODES},
         "source_observed_at_utc": {code: audits[code]["source_observed_at_utc"] for code in SEASON_CODES},
@@ -378,9 +409,17 @@ def load_latest_training_archive(
         if not artifacts:
             continue
         artifact = max(artifacts, key=lambda item: item.get("created_at", ""))
+        # Verify the parent commit used the strict no-redirect Football-Data
+        # fetch code before downloading or extracting any historical CSV bytes.
+        source_script_blob_sha = verify_parent_source_code(run=run, token=token, get=get)
         raw = _download_artifact_zip(artifact.get("id"), token=token, get=get)
         return verify_and_extract_archive(
-            raw, artifact=artifact, run=run, output_dir=output_dir, now=now
+            raw,
+            artifact=artifact,
+            run=run,
+            output_dir=output_dir,
+            now=now,
+            source_script_blob_sha=source_script_blob_sha,
         )
     raise RuntimeError("no successful main Free Diagnostic artifact with the exact historical-only source set was found")
 
