@@ -206,7 +206,13 @@ jobs:
             echo "FAIL_CLOSED: unable to inspect changed files for production artifact diff"
             exit 1
           fi
-          if printf '%s\n' "$CHANGED_FILES" | grep -E '\\.pkl$'; then
+          if printf '%s\n' "$CHANGED_FILES" | grep -E '\.pkl; then
+            echo "Production model artifact change detected"
+            exit 1
+          fi
+          echo "PASS: no .pkl changes in PR"
+
+; then
             echo "Production model artifact change detected"
             exit 1
           fi
