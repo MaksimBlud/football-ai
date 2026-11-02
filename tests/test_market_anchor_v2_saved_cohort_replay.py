@@ -200,3 +200,22 @@ def test_durable_recovered_serie_a_candidate_is_frozen_and_not_production():
     assert len(recovered["scaler_scale"]) == len(recovered["features"])
     assert all(isinstance(x, (float, int)) for row in recovered["weights"] for x in row)
 
+
+
+
+def test_recovery_workflow_pickle_integrity_guard_is_recursive_and_fail_closed():
+    from pathlib import Path
+    workflow = Path(".github/workflows/recover-market-anchor-v2-candidate.yml").read_text(
+        encoding="utf-8"
+    )
+    before = workflow.index("Snapshot all tracked and generated production pickle hashes")
+    restore = workflow.index("Restore exact Sep-2026 model code")
+    after = workflow.index("Assert all production pickle files still match")
+    assert before < restore < after
+    assert workflow.count("set -euo pipefail") >= 3
+    assert workflow.count("find . -path './.git' -prune -o -type f -name '*.pkl' -print0") == 2
+    assert 'sha256sum "${pkl_files[@]}" | sort > /tmp/recovery-pkl-before' in workflow
+    assert 'sha256sum "${pkl_files[@]}" | sort > /tmp/recovery-pkl-after' in workflow
+    assert "FAIL_CLOSED: no production .pkl files found" in workflow
+    assert "FAIL_CLOSED: production .pkl files disappeared" in workflow
+    assert "|| true" not in workflow
