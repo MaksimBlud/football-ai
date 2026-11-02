@@ -254,6 +254,8 @@ def verify_and_extract_archive(
             if not isinstance(file_sha, str) or not re.fullmatch(r"[0-9a-f]{64}", file_sha):
                 raise ValueError("training source audit contains an invalid CSV SHA-256")
             observed = parse_utc(item.get("source_observed_at_utc"), "source_observed_at_utc")
+            if observed < run_created:
+                raise ValueError("historical source observation predates its successful parent run")
             if not (observed <= report_time <= artifact_created):
                 raise ValueError("historical source observation is after the report or archive")
             row_count = item.get("completed_source_rows")
