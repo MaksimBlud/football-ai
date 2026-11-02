@@ -8911,3 +8911,12 @@ The actual log summary is `RESEARCH_ONLY_UNVERIFIED_PROVENANCE_NO_BET`, `history
 Safe integration order: #707 may be manually merged independently after review; merge #705 before source/diagnostic workflow-trigger changes; rebase and revalidate #709 on resulting main; then rebase and revalidate #699 on that resulting main. Follow with #701, then #702 only after a fresh #699-era source capture and an explicit manual dispatch; rebase #704 after #705/#699 and #706 after #701. Do not auto-merge any PR.
 
 No merge, main mutation, Supabase write/DDL, production `.pkl` change, paid API request, cron/schedule change, target-outcome read, betting, or promotion occurred in this audit.
+
+
+## Latest MARKET_ANCHOR_1X2_V2 runtime checkpoint — 2026-11-02 17:56 UTC
+
+The current main SHA remains 40887ebb215730190d7a6c7a1693373ec4afcdfc. The November 2 source/recovery audit, including exact artifact digests, source-reader Git blob checks, pre-match-only Supabase aggregates, and the full PR integration order, is recorded in PROJECT_CONTINUITY_ADDENDUM_20261102_V2_RUNTIME_AUDIT.md.
+
+Critical recovery constraint: artifact 13155539394 has a valid ZIP SHA and ten historical CSVs, but its parent main source-reader blob is fae3698769f857fbcb6c8d3ea7826eb81135fec4. PR #707 intentionally requires the integrated strict no-redirect blob 932e58a4f93b0d471ac4b4e0c81fa01f923e46d5 from PR #699, so the current artifact is not admissible. Do not dispatch recovery until #705 is manually merged, #699 is rebased and manually merged, and a fresh successful main diagnostic run uses the exact pinned source-reader blob.
+
+PR #705 is now at 2b9cafedb6deb414e2a5340ebd8f8da566793ecf with exact-head CI 8/8 SUCCESS; it includes the shared 85-hour download budget and offline-only push validation formerly in #709. HUMAN-MERGE only. Main has not been changed.
