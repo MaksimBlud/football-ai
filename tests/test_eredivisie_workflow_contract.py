@@ -60,3 +60,19 @@ def test_eredivisie_odds_does_not_collide_with_ligue1_live_cycle():
     ligue1_live = _read("ligue1-live-cycle.yml")
     assert 'cron: "33 */2 * * *"' in ligue1_live
     assert 'cron: "33 */2 * * *"' not in _read("eredivisie-odds-snapshots.yml")
+
+
+
+def test_v2_research_and_serie_a_pickle_guards_fail_closed():
+    for name in ("research-pr-validation.yml", "serie-a-pr-validation.yml"):
+        source = _read(name)
+        assert "fetch-depth: 0" in source
+        assert "BASE_REF: ${{ github.base_ref || 'main' }}" in source
+        assert 'git fetch --no-tags origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"' in source
+        assert 'git merge-base "refs/remotes/origin/${BASE_REF}" HEAD' in source
+        assert "FAIL_CLOSED: unable to determine merge base for production artifact diff" in source
+        assert 'git diff --name-only "$BASE_COMMIT" HEAD' in source
+        assert "FAIL_CLOSED: unable to inspect changed files for production artifact diff" in source
+        assert "origin/main...HEAD" not in source
+        assert 'git diff --name-only "origin/' not in source
+        assert "grep -F '.pkl'" in source
