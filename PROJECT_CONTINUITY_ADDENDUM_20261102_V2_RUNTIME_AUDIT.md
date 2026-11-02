@@ -121,3 +121,46 @@ Exact current heads and PR-triggered workflow results checked during this audit:
 The safe engineering dependency order remains #705 before #699 because #699 changes source workflow push paths. However, because #705's merge can itself trigger those push paths, do not treat the order as permission to download: pause source-triggering integration until the source-use limitation above is resolved. Then rebase overlapping workflow PRs and rerun exact-head CI. #703 must be rechecked after #699 because both change forward-reader files; #700's historical redirect guard must be compared against the resulting #699 source reader before deciding whether it is still needed. #701/#702/#704/#706 remain subject to their documented workflow dependencies.
 
 HUMAN-MERGE only. No PR was merged, no branch was pushed to main, no schedule was changed, and no agent settings were changed in this audit.
+
+
+## 6. 2026-11-02 13:03 UTC follow-up — verified archive timing, current gate, and PR integration risks
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main mutation occurred.
+
+### Actual historical archive timing and byte proof
+
+Independently downloaded only the existing GitHub Actions artifact `13084892998` from Free Real-Quote Diagnostic run `41310276961` (no Football-Data request). Its ZIP SHA-256 is:
+
+`bcd6fcfb6e2c05c88914812a54067539319fd8894a9d9e2387eea1fba93b38c5`
+
+Observed chain of custody:
+
+- Parent main run started: 2026-11-01 13:14:16 UTC.
+- Ten historical CSV source observations: 13:14:48.033 through 13:14:58.951 UTC.
+- Diagnostic report timestamp: 13:14:58.998 UTC.
+- GitHub artifact creation: 13:15:00 UTC.
+- Parent run completion: 13:15:03 UTC.
+
+Independent ZIP inspection confirmed exactly ten historical CSVs plus one diagnostic JSON, 3,800 rows total, no 2026/27 CSV, all dates before 2026-07-01, and all ten per-file SHA-256 values and row counts match the embedded report. Every source observation occurred after the parent run started and before the report; report preceded artifact creation; artifact preceded run completion.
+
+PR #707 was strengthened with an explicit fail-closed check that every source observation timestamp must be at or after the successful parent run's `created_at`. A regression test covers a timestamp one second before parent-run creation. Updated PR head is `d21e2854eb752ef234971d62bddc18bd5daabe2b`; exact-head CI is **7/7 SUCCESS** (including the recovery workflow). This is still PR-only: the main-only recovery dispatch and rebuilt-candidate artifact have not run on main.
+
+### Fresh pre-match-only Supabase status
+
+The current read-only odds aggregate returned 3,966 rows across stored leagues, of which 3,915 satisfy `snapshot_time_utc < commence_time_utc`; zero are within the last 24 hours and zero have future kickoff times. Serie A has 625 rows, 620 strictly pre-match, and its latest strict pre-match quote remains 2026-10-13 14:48:53 UTC.
+
+A metadata-only count query selected distinct `match_date, home_team, away_team` for Serie A 2026/27 and returned 93 raw fixture identities. The V2-local three-name alias canonicalization yields the previously observed 90 identities. The 30-event feature-input gate is therefore open, but this does not open the separate 30-prospective-forecast target-outcome evaluation gate. Querying `product_prediction_snapshots` by the frozen candidate SHA returned zero rows. No target score/result columns were selected.
+
+### V2 scheduled runtime
+
+A fresh main-branch scheduled-run query covering 2026-11-01 onward returned no 2026-11-02 runs for the four original V2 workflows. The last successful Original Forward and Current-Form Forward runs remain `41318729126` and `41319862002` on 2026-11-01. Their zero-quote/zero-forecast results remain the last live forward evidence. Root cause of missing 2026-11-02 V2 runs is not established; no manual dispatch or schedule change was made.
+
+### Open-PR overlap audit — do not merge these branches as independent patches
+
+Exact-head CI currently passes for #699 (7/7), #700 (7/7), #705 (8/8), #707 (7/7), #709 (7/7), and #710 (7/7). However, these results are not an integration test:
+
+- #699's source reader already uses `allow_redirects=False`, exact final-URL checks, bounded streaming, and a total collection byte cap. That subsumes the central historical redirect guard in #700; #700 should not be merged independently without comparing its full diff against the resulting #699 reader.
+- #699, #705, and #709 all change `.github/workflows/serie-a-v2-current-form-source-capture.yml`. #699 adds the verified-source `workflow_run` refresh path and gate-identity parity; #705 adds the shared 85-hour budget; #709 separates push-only offline validation from main-only capture. Their current independent CI runs do not prove that all three behaviours coexist. A single resulting workflow must preserve all three, retain the existing cron unchanged, and never allow a push to reserve/download source data.
+- #707 and #710 both change `.github/workflows/recover-market-anchor-v2-candidate.yml`. #710's recursive, fail-closed production `.pkl` inventory is stronger than the current #707 workflow's older suppressed-error snapshot. Recheck/rebase or integrate these changes before treating recovery as fully protected.
+
+HUMAN-MERGE remains mandatory. No PR was merged, no main ref moved, no source download was initiated, no Supabase write/DDL occurred, and no schedules or other agents were changed.
