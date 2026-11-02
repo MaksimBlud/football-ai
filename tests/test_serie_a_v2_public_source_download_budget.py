@@ -269,7 +269,7 @@ def test_api_redirect_or_error_fails_closed():
         budget.discover_latest_download_attempt(token="test-token", workflow_path=SOURCE_PATH, get=error)
 
 
-def test_workflow_contracts_keep_crons_and_share_one_budget():
+def test_workflow_contracts_keep_crons_and_shared_concurrency():
     root = Path(__file__).resolve().parents[1]
     source = (root / SOURCE_PATH).read_text(encoding="utf-8")
     diagnostic = (root / DIAGNOSTIC_PATH).read_text(encoding="utf-8")
@@ -278,6 +278,8 @@ def test_workflow_contracts_keep_crons_and_share_one_budget():
     assert 'cron: "13 6 * * *"' in diagnostic
     assert "group: serie-a-v2-public-source-download-budget" in source
     assert "group: serie-a-v2-public-source-download-budget" in diagnostic
+    assert '--workflow-path ".github/workflows/serie-a-v2-current-form-source-capture.yml"' in source
+    assert '--workflow-path ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"' in diagnostic
     for workflow, download_step in (
         (source, "Capture frozen historical seasons plus gated current-form source"),
         (diagnostic, "Fetch and SHA-archive public source, preview original frozen V2 diagnostics"),
