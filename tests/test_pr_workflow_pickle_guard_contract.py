@@ -19,4 +19,5 @@ def test_research_and_serie_a_pickle_guards_require_a_real_merge_base():
         assert 'git diff --name-only "$BASE_COMMIT" HEAD' in source
         assert "FAIL_CLOSED: unable to inspect changed files for production artifact diff" in source
         assert "origin/main...HEAD" not in source
-        assert "git diff --name-only "origin/" not in source
+        assert 'git diff --name-only "origin/' not in source
+        assert "grep -E '\\.pkl$'" in source
