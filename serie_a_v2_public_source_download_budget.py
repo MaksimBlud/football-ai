@@ -28,7 +28,9 @@ LEGACY_SOURCE_ARTIFACTS = {
     "serie-a-v2-current-form-source-capture": ".github/workflows/serie-a-v2-current-form-source-capture.yml",
     "serie-a-v2-free-real-quote-diagnostic": ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml",
 }
-ALLOWED_EVENTS = {"schedule", "workflow_dispatch", "push"}
+# Current-form capture may also follow a successful main Free Diagnostic workflow_run;
+# its workflow-level guard restricts that parent to schedule/workflow_dispatch. Push is offline-only.
+ALLOWED_EVENTS = {"schedule", "workflow_dispatch", "workflow_run"}
 SHA1_RE = re.compile(r"[0-9a-f]{40}\Z")
 
 
