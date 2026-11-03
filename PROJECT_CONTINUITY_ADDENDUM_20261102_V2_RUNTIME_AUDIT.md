@@ -363,3 +363,54 @@ Current PR #705 HEAD: e368326ad52f728f1c3975989aa7a60de2be50c3. Exact-head CI: 8
 Bootstrap cooldowns from the last existing main artifacts (assuming no later attempt): Current-Form Source Capture artifact 13147815874 was created 2026-11-02 13:53:57 UTC, so its next eligible time is 2026-11-09 15:53:57 UTC; Free Real-Quote Diagnostic artifact 13155539394 was created 2026-11-02 15:41:21 UTC, so its next eligible time is 2026-11-09 17:41:21 UTC. Their unchanged schedules therefore next align after both cooldowns on 2026-11-10 at 05:50 and 06:13 UTC. The actual main workflows do not have this guard until the user manually merges #705.
 
 No public CSV request was initiated by this automation. Source-use permission remains a separate unresolved question; a rate budget is not a licence. HUMAN-MERGE only; main is unchanged.
+
+
+## Fresh live audit — 2026-11-03 19:52 UTC
+
+### Main, original forward workflow, and actual execution
+
+- Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; main `PROJECT_CONTINUITY.md` blob is `2ce2f8f5b2d1a26ec85a6f8dbdd70f5f18a87c3e`. No main ref was changed.
+- Re-read `.github/workflows/serie-a-v2-forward-preview.yml` (the actual **Serie A V2 Original Forward-Only Preview** workflow), both current-form workflows, the free diagnostic workflow, and the candidate/evaluator contracts.
+- Main run [41640753996](https://github.com/MaksimBlud/football-ai/actions/runs/41640753996), Current-Form Source Capture, succeeded at 13:02:10–13:03:01 UTC. It archived 10 historical season files plus the current-season file; the current-season file had 100 rows and the metadata-only feature-input identity gate had 98 canonical identities. Source artifact ID: `13231843819`; ZIP SHA-256: `4e6fb5531a2206a353fe00fa1ebb0b4d20b3c6ae41ab49a7c672f8dab6d29cd8`. Latest source observation: 13:02:58.382703 UTC; archive creation: 13:02:59 UTC; parent completion: 13:03:01 UTC.
+- Main run [41650074683](https://github.com/MaksimBlud/football-ai/actions/runs/41650074683), Free Real-Quote Diagnostic, succeeded at 14:04:13–14:05:09 UTC. It made 10 public historical CSV requests, verified 3,800 historical rows, but reported `quoted_fixtures=0`, `diagnostic_scored=0`, `feature_rows_all_median_imputed=0`, `paid_provider_requests=0`, and `supabase_writes=0`.
+- Main run [41670482076](https://github.com/MaksimBlud/football-ai/actions/runs/41670482076), Original Forward-Only Preview, succeeded at 16:04:57–16:05:40 UTC. Its log reports `forecasts_created=0`, `quotes_seen=0`, `future_quotes_checked=0`, `v2_diagnostic_previews_captured=0`; it verified 3,800 historical rows and 10 pre-prospective source files. This is a successful source/provenance check, not a real forecast run.
+- Main run [41672409582](https://github.com/MaksimBlud/football-ai/actions/runs/41672409582), Current-Form Forward-Only Preview, succeeded at 16:16:00–16:16:42 UTC. Its log reports `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `target_outcomes_read=false`, `target_outcomes_scored=false`. It did verify source artifact `13231843819`, source SHA above, candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 100 current-season rows and 98 feature-input identities. At verification (16:16:34.610679 UTC), source age was 11,616 seconds and the archive was fresh for a new quote.
+- The only later V2-named run found in the latest Actions window is PR run [41701270604](https://github.com/MaksimBlud/football-ai/actions/runs/41701270604), not a main production run. It ran on PR #707 HEAD `3a79d333eb246d92aea88b569c8cb5b4474b9fbd`. Its report explicitly says `mode=SYNTHETIC_ONLY_RUNTIME_SMOKE`, `real_events_scored=0`, `target_outcomes_read=false`, `training_performed=false`, and `production_pkl_touched=false`. The recovery job passed 43 tests; the synthetic runtime report confirms the frozen candidate SHA, 19 features, weights shape 20x2, exact active-market equality at lambda 0, finite/summing shadow output at lambda 1, and unchanged FAILED stability gate. This proves synthetic runtime integrity only; it does **not** prove archive recovery or real-match inference.
+
+### Current read-only Supabase state
+
+Queries selected only pre-kickoff quote metadata, prediction metadata, or future fixture identities; no result, score, goals, or settlement columns were selected.
+
+- `public.odds_snapshots`: 3,966 rows / 327 distinct events overall; 3,915 rows pass strict `snapshot_time_utc < commence_time_utc`. Latest strict pre-match snapshot is 2026-10-13 14:48:53.042620 UTC. Future-kickoff rows with a strictly pre-kickoff snapshot: **0 rows / 0 events**.
+- `public.product_prediction_snapshots`: 40 strictly pre-kickoff rows / 40 events; latest generation 2026-10-09 15:29:33.136613 UTC. Original V2 candidate SHA/version rows: **0**.
+- `public.matches` future fixture identity-only aggregate (`match_date, home_team, away_team`): **0 rows / 0 events**.
+- No Supabase write or DDL was performed. No protected target outcome was read.
+
+### Free fixtures page timing — no admissible pair yet
+
+The official Football-Data fixtures page reports its latest fixture-file upload as **03/11/2026 10:17 UK time** and says midweek odds are collected on Tuesdays no later than 13:00 UK time (weekend odds Fridays no later than 17:00 UK time): https://football-data.co.uk/matches/fixtures.csv.
+
+The current-season source archive above was not observed until **13:02:58 UTC on 03/11/2026**, after the provider's stated Tuesday 13:00 collection bound and after the 10:17 page update. Therefore that archive cannot prove source-before-quote for the 03/11 fixture/odds file. The existing evaluator's frozen 24-hour source-age limit also prevents carrying this 03/11 source archive forward to a later weekly quote collection. The fixtures page is a possible free quote source for future work, but it is not integrated, and no row from it is admitted to the V2 cohort. Do not relax the frozen 24-hour source-age contract or infer an exact bookmaker quote timestamp from a page-upload timestamp.
+
+### Exact open PR heads and CI
+
+All remain open against main; no PR was merged in this audit.
+
+- #705 `8b139335e6722b7c4f5286962486bca84bced20d`: **8/8 SUCCESS**. It adds the per-workflow 170-hour shared public-source budget. The guard is not active on main until HUMAN-MERGE; current main source workflows still retain their existing daily schedules.
+- #699 `42c967f28fd274d8a8f9924e698dc5492f7f13e3`: **7/7 SUCCESS**; rebase after #705 and preserve the shared budget/offline-push guards.
+- #712 `331e7934f92763d8df2c6c35e01b6b26a80bcf5d`: **9/9 SUCCESS** on its old main base; rebase after #705/#699 and preserve the identity-attested producer/consumer round-trip. #711 remains the overlapping draft alternative; do not merge both.
+- #707 `3a79d333eb246d92aea88b569c8cb5b4474b9fbd`: **8/8 SUCCESS**; rebase after #712 because of overlapping source-capture/diagnostic files.
+- #701 `268885f437379a1610c0c56abb883cf7963f9d9c`: **6/6 SUCCESS**; rebase after #707. Its market-only evaluator remains the only admissible path while no non-legacy incumbent is pinned.
+- #704 `cc4918caf1ae0bb906b6a1949b2b352b3cce64f3`: **16/16 SUCCESS**; pinned research dependencies, separate from the source/identity integration chain.
+- #706 `28104a5b943b697d581d578e133585701a395c43`: **6/6 SUCCESS**; fail-closed production-`.pkl` diff guard.
+- #697 documentation branch before this append: `35c3abc483d3e2822522b578aedc87ac1a80dcdf`, **7/7 SUCCESS**; this addendum update is documentation-only and remains in the same review branch.
+
+### Frozen scientific status
+
+- Original candidate SHA: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; original 19-feature order/weights unchanged; training rows 3,799; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`.
+- `active_lambda=0` remains exactly the de-vigged market; `shadow_lambda=1` remains research-only. Stability gate remains FAILED.
+- Feature-input identity gate: 98 identities in the current source archive. This is not the prospective outcome gate.
+- Prospective eligible completed forecasts: **0/30**. The market-only evaluator may read exact H/D/A labels only after 30 unique eligible completed primary forecasts; before that, the lazy outcome loader remains uncalled. No Brier/LogLoss has been computed and no V2 advantage over market is established.
+- Full three-way evaluation remains blocked because no distinct, pinned, non-legacy incumbent is registered. Do not substitute the old XGBoost model or duplicate the market vector as an incumbent.
+
+HUMAN-MERGE remains mandatory. Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No source download was initiated in this audit; no paid provider request, Supabase write/DDL, target-outcome read, production `.pkl` change, weight/contract change, schedule change, automatic promotion, or bet occurred.
