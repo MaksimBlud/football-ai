@@ -7,7 +7,7 @@ no Football-Data requests, Supabase access, odds, outcome reads, writes, or trai
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from io import BytesIO
 import hashlib
 import json
@@ -64,6 +64,40 @@ def _utc(value: Any, *, field: str) -> datetime:
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         raise ValueError(f"{field} must include a real UTC offset")
     return parsed.astimezone(timezone.utc)
+
+
+def _fixture_identity_sha256(identities: Any) -> str:
+    """Recompute the exact frozen V2 digest for canonical date/home/away identities."""
+    if not isinstance(identities, (list, tuple)) or not identities:
+        raise ValueError("feature-source gate identity set must be a non-empty list")
+    canonical: list[tuple[str, str, str]] = []
+    for identity in identities:
+        if not isinstance(identity, (list, tuple)) or len(identity) != 3:
+            raise ValueError("feature-source gate identity must contain date, home and away")
+        raw_date, home, away = identity
+        if not isinstance(raw_date, str):
+            raise ValueError("feature-source gate identity date must be a canonical ISO date")
+        try:
+            parsed_date = date.fromisoformat(raw_date)
+        except ValueError as exc:
+            raise ValueError("feature-source gate identity date must be a canonical ISO date") from exc
+        if parsed_date.isoformat() != raw_date or not (date(2026, 7, 1) <= parsed_date <= date(2027, 6, 30)):
+            raise ValueError("feature-source gate identity date is outside the frozen 2026/27 season")
+        for team in (home, away):
+            if (
+                not isinstance(team, str)
+                or not team
+                or team != team.strip()
+                or any(ord(char) < 32 or 127 <= ord(char) <= 159 for char in team)
+            ):
+                raise ValueError("feature-source gate identity has a malformed canonical team")
+        if home.casefold() == away.casefold():
+            raise ValueError("feature-source gate identity cannot contain identical teams")
+        canonical.append((raw_date, home, away))
+    if len(set(canonical)) != len(canonical):
+        raise ValueError("feature-source gate identity set contains duplicates")
+    payload = "\n".join("\t".join(identity) for identity in sorted(canonical))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def _github_json(url: str, *, token: str, get: Callable[..., Any]) -> dict:
@@ -464,10 +498,37 @@ def _verify_and_extract_historical_files(
             or feature_gate.get("minimum_completed_primary_events") != 30
             or type(feature_gate.get("observed_completed_primary_events")) is not int
             or feature_gate.get("observed_completed_primary_events") < 30
+            or feature_gate.get("metadata_fields_read") != ["match_date", "home_team", "away_team"]
             or feature_gate.get("score_or_result_fields_selected_for_gate") is not False
             or feature_gate.get("passed") is not True
         ):
             raise ValueError("source artifact lacks a closed-contract identity-only feature-input gate")
+
+        observed_gate_count = feature_gate["observed_completed_primary_events"]
+        gate_identity_count = feature_gate.get("gate_fixture_identity_count")
+        gate_identities = feature_gate.get("gate_fixture_identities")
+        gate_identity_sha = feature_gate.get("gate_fixture_identity_sha256")
+        current_identity_count = feature_gate.get("current_source_fixture_identity_count")
+        current_identity_sha = feature_gate.get("current_source_fixture_identity_sha256")
+        covered_identity_count = feature_gate.get("gate_fixture_identities_covered_by_current_source")
+        missing_identity_count = feature_gate.get("gate_fixture_identities_missing_from_current_source")
+        if (
+            type(gate_identity_count) is not int
+            or gate_identity_count != observed_gate_count
+            or not isinstance(gate_identity_sha, str)
+            or SHA256_RE.fullmatch(gate_identity_sha) is None
+            or type(current_identity_count) is not int
+            or current_identity_count < gate_identity_count
+            or not isinstance(current_identity_sha, str)
+            or SHA256_RE.fullmatch(current_identity_sha) is None
+            or covered_identity_count != gate_identity_count
+            or missing_identity_count != 0
+        ):
+            raise ValueError("feature-source gate lacks a complete digest-bound identity coverage attestation")
+        if _fixture_identity_sha256(gate_identities) != gate_identity_sha:
+            raise ValueError("feature-source gate identity-set SHA-256 does not match its canonical identities")
+        if len(gate_identities) != gate_identity_count:
+            raise ValueError("feature-source gate identity count does not match its canonical identity list")
 
         feature_policy = manifest.get("feature_policy")
         if (
@@ -533,6 +594,12 @@ def _verify_and_extract_historical_files(
             current_item.get("source_observed_at_utc"),
             field="current-season source_observed_at_utc",
         )
+        gate_checked_at = _utc(
+            feature_gate.get("checked_at_utc"),
+            field="feature-source gate checked_at_utc",
+        )
+        if not parent_created <= gate_checked_at <= current_observed:
+            raise ValueError("current-season source observation does not follow the authenticated feature-source gate")
         if current_observed < parent_created or current_observed > archive_created:
             raise ValueError("current-season source observation is outside the current source run")
         # Deliberately do not read or decompress CURRENT_FILENAME: this helper
