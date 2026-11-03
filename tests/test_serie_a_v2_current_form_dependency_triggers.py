@@ -75,7 +75,11 @@ def test_successful_source_audit_is_still_the_only_dependency_trigger_for_forwar
     assert '"Serie A V2 Current-Form Source Capture"' in workflow
     assert "github.event.workflow_run.conclusion == 'success'" in workflow
     assert "github.event.workflow_run.head_branch == 'main'" in workflow
-    assert "github.event.workflow_run.event != 'pull_request'" in workflow
+    # Only real scheduled/manual source captures may wake the reader.
+    # The #705 push path is offline-only validation and must not fan out.
+    assert "github.event.workflow_run.event == 'schedule'" in workflow
+    assert "github.event.workflow_run.event == 'workflow_dispatch'" in workflow
+    assert "github.event.workflow_run.event != 'pull_request'" not in workflow
     assert "THE_ODDS_API_KEY" not in workflow
     assert "scheduled_serie_a_odds_snapshot.py" not in workflow
     assert "odds_api_budget_guard.py" not in workflow
