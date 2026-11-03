@@ -25,7 +25,7 @@ The two scheduled public-source workflows also ran again on main on 2026-11-03. 
 ### Integration state
 
 - Main remains unchanged at `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
-- #705 remains HUMAN-MERGE only at exact HEAD `aebf71a6c5ee2cec9ff68a07647b0066fb512e44`; refreshed latest-artifact bootstrap test passed (22 tests) and all 8 exact-head CI checks are SUCCESS. The current slots are Nov 10 15:02:59Z (Source Capture) and 16:05:06Z (Free Diagnostic).
+- #705 remains HUMAN-MERGE only at exact HEAD `8b139335e6722b7c4f5286962486bca84bced20d`; the refreshed bootstrap test now separately proves both Nov 3 main-artifact slots (22 tests), and all 8 exact-head CI checks are SUCCESS. The current slots are Nov 10 15:02:59Z (Source Capture) and 16:05:06Z (Free Diagnostic).
 - #699 must still be rebased after #705; #712 remains dependent on the identity-attested producer/consumer integration and must not reuse this pre-identity-attestation main artifact.
 - #701's market-only evaluator still requires 30 unique eligible completed prospective forecasts before its lazy outcome loader can run. Current cohort is 0/30.
 - Original frozen V2 candidate, 19 features, original weights, `active_lambda=0`, and `shadow_residual_lambda=1` remain unchanged.
