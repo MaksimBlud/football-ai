@@ -169,3 +169,62 @@ def test_real_quote_diagnostic_refuses_both_teams_without_prior_match_history():
     assert report["per_fixture_feature_coverage"][0]["observed_frozen_feature_count"] == 0
     assert report["no_bet"] is True
     assert report["supabase_writes"] == report["paid_provider_requests"] == 0
+
+
+
+def test_source_before_quote_is_strict_at_equal_source_observation_time():
+    q = quote()
+    report = make_report(
+        [q],
+        history_fixture(),
+        source_audit(q["snapshot_time_utc"]),
+        as_of_utc=NOW,
+        source_archive_metadata={"created_at_utc": "2026-10-13T13:59:59Z"},
+    )
+    assert report["quotes_with_source_observed_after_quote"] == 1
+    assert report["quotes_with_source_archive_created_at_or_after_quote"] == 0
+    assert report["quotes_with_all_old_season_sources_and_archive_strictly_before_quote"] == 0
+    assert report["historical_source_before_quote_status"] == "SOURCE_BEFORE_QUOTE_NOT_PROVEN"
+    assert report["independently_attested_feature_availability_at_quote"] is False
+
+
+def test_source_archive_created_at_quote_is_not_source_before_quote():
+    q = quote()
+    report = make_report(
+        [q],
+        history_fixture(),
+        source_audit("2026-10-13T13:00:00Z"),
+        as_of_utc=NOW,
+        source_archive_metadata={"created_at_utc": q["snapshot_time_utc"]},
+    )
+    assert report["quotes_with_source_observed_after_quote"] == 0
+    assert report["quotes_with_source_archive_created_at_or_after_quote"] == 1
+    assert report["quotes_with_all_old_season_sources_and_archive_strictly_before_quote"] == 0
+    assert report["historical_source_before_quote_status"] == "SOURCE_BEFORE_QUOTE_NOT_PROVEN"
+
+
+def test_zero_quotes_are_not_reported_as_a_source_before_quote_pass():
+    report = make_report(
+        [],
+        history_fixture(),
+        source_audit(),
+        as_of_utc=NOW,
+        source_archive_metadata={"created_at_utc": "2026-10-13T13:00:00Z"},
+    )
+    assert report["quoted_fixtures"] == 0
+    assert report["historical_source_before_quote_status"] == "NOT_EVALUABLE_NO_QUOTES"
+    assert report["quotes_with_all_old_season_sources_and_archive_strictly_before_quote"] == 0
+    assert report["public_http_requests"] == 0
+    assert report["source_files_reused"] == 10
+    assert report["source_archive_current_season_member_opened"] is False
+    assert report["eligible_for_frozen_prospective_cohort"] is False
+    assert report["eligible_for_product_publication"] is False
+
+
+
+def test_diagnostic_workflow_main_uses_verified_archive_not_public_csv_fetch():
+    import inspect
+    from serie_a_v2_live_diagnostic_report import main
+    body = inspect.getsource(main)
+    assert "load_latest_historical_source_archive" in body
+    assert "fetch_public_history(" not in body
