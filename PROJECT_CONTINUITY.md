@@ -1,3 +1,47 @@
+## 2026-11-03 17:55 UTC — latest main V2 runs and corrected identity reconciliation
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This is a read-only audit plus a documentation update on this PR branch; no main mutation occurred.
+
+### New main-only runtime evidence
+
+- Current-Form Source Capture [run #41640753996](https://github.com/MaksimBlud/football-ai/actions/runs/41640753996) SUCCESS. Artifact #13231843819, 438,212 bytes, GitHub ZIP SHA-256 `4e6fb5531a2206a353fe00fa1ebb0b4d20b3c6ae41ab49a7c672f8dab6d29cd8`. The report records the frozen candidate SHA, 10 historical CSVs / 3,800 historical rows, 100 completed prior-day current-season rows, 98 canonical feature-input identities, 11 source files, zero paid-provider calls, zero Supabase writes, and no target-outcome scoring.
+- Current-Form Forward [run #41640881317](https://github.com/MaksimBlud/football-ai/actions/runs/41640881317) SUCCESS. It verified the exact source artifact and successful main parent: source observed 13:02:58.382703Z, archive created 13:02:59Z, parent completed 13:03:01Z, verification 13:03:31Z (33 seconds after observation). Source provenance passed, but `quotes_seen=0` and `v2_current_form_shadow_captured=0`. Artifact #13232322438 SHA-256 `c93efaaa1b505bf6a5fe372e1cc9c4f4d44f060d9c144b824ac31c9a99452ce9`.
+- Free Real-Quote Diagnostic [run #41650074683](https://github.com/MaksimBlud/football-ai/actions/runs/41650074683) SUCCESS: 53 tests, 3,800 historical rows, 19 frozen features, 10 public CSV requests, but `quoted_fixtures=0` and `diagnostic_scored=0`. Artifact #13236383688 SHA-256 `8386044e795e208e112e9af8d9ebcb0d5a77cf8f00f51147c70df8d01785c143`.
+- Original Forward [run #41670482076](https://github.com/MaksimBlud/football-ai/actions/runs/41670482076) SUCCESS: 71 tests, real historical source attestation passed, but `quotes_seen=0`, `future_quotes_checked=0`, `v2_diagnostic_previews_captured=0`. Artifact #13248390793 SHA-256 `712895e8167ea0ca5db4b1039bb42f36ed1182ca55cc19f75138286366755fba`.
+- Current-Form Forward [run #41672409582](https://github.com/MaksimBlud/football-ai/actions/runs/41672409582) SUCCESS: 53 tests; verified source artifact #13231843819 and candidate SHA, source age 11,616 seconds at verification, but again `quotes_seen=0` and `v2_current_form_shadow_captured=0`. Its artifact #13249097138 SHA-256 `45c0b1e8729bc733807ee46ad9bb5f68036a0ac7bfaf90c904b6e8a14f9bbb97`.
+
+The successful source/parent chain is real, but there is no actual quote to pair with it. Therefore there is still no genuine source-before-quote forecast observation and no model-quality evidence.
+
+### Correction: 101 raw identities versus 98 canonical identities
+
+The earlier 17:01 note described the raw/canonical count difference as unresolved. That was incorrect. A fresh identity-only query selected only `match_date, home_team, away_team` and returned 101 raw rows. The V2 source-capture code canonicalizes `Atalanta BC → Atalanta`; three duplicate fixture identities collapse:
+
+- 2026-08-23: Atalanta / Sassuolo and Atalanta BC / Sassuolo.
+- 2026-08-31: Atalanta / Bologna and Atalanta BC / Bologna.
+- 2026-09-05: AS Roma / Atalanta and AS Roma / Atalanta BC.
+
+After that frozen alias normalization, the 101 raw rows produce 98 unique canonical identities, matching the Source Capture's 98-event feature-input gate. This is not a three-event shortfall. However, main's current manifest still does not carry a digest-bound exact identity set; PR #699 adds that stronger parity proof. No score, goals, result, or settlement columns were selected.
+
+### Fresh read-only pre-match Supabase audit
+
+- `odds_snapshots`: 3,966 rows; 3,915 satisfy strict `snapshot_time_utc < commence_time_utc`; 327 distinct events; zero strict pre-match rows in the last seven days; zero future events with a strict pre-match quote. Latest strict Serie A quote: 2026-10-13 14:48:53.042620Z.
+- `product_prediction_snapshots`: 40 rows; zero rows with frozen V2 candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; latest generated record 2026-10-09 15:29:33Z.
+- `league_finished_results` identity-only Serie A 2026/27 metadata: 101 raw rows, 98 canonical identities, 2026-08-22 through 2026-11-01. No outcomes were selected.
+
+The 30-eligible-completed-forecast evaluation gate remains 0/30 and CLOSED. PR #701's market-only path keeps the outcome loader lazy and does not require an incumbent; the full three-way path remains blocked until a separately frozen incumbent is pinned. No Brier/LogLoss values exist.
+
+### Current PR and source-use state
+
+- #705 HEAD `8b139335e6722b7c4f5286962486bca84bced20d`: exact-head CI 8/8 SUCCESS. It applies 170 hours per approved source-workflow path (at most two sessions per rolling week), keeps existing cron expressions, and makes push validation offline. It is not merged, so the guard is not active on main. If it remains unmerged, the next unchanged main schedules are 2026-11-04 05:50 UTC (Current-Form Source Capture) and 06:13 UTC (Free Real-Quote Diagnostic). Manual merge is required to activate the budget.
+- #699 HEAD `fecf8dd01ad6ea3b9eabd0dfb31167f397ae4e3a`: exact-head CI 7/7 SUCCESS; rebase after #705 before manual merge.
+- #712 HEAD `331e7934f92763d8df2c6c35e01b6b26a80bcf5d`: exact-head CI 9/9 SUCCESS; overlaps source-capture files and depends on the #699 identity-attested producer, so rebase/review after #699. #711 is an overlapping draft alternative; do not merge both.
+- #701 HEAD `04233460becc99dcbac0beb83a4e105bb8d64e3c`: exact-head CI 6/6 SUCCESS; no live forecasts exist to evaluate.
+- #707 HEAD `dfbeed39507fea3cff3c46ef6c64bc25461385a6`: exact-head CI 7/7 SUCCESS; its explicit rights gate blocks AI model-training recovery without written/open-license evidence. It does not itself grant AI inference rights.
+
+The official Football-Data fair-use policy states that free CSV/Excel data are intended for private personal betting or academic research, limits light automated downloading to twice weekly, and excludes commercial/AI data-training use absent permission: https://football-data.co.uk/contact.php. The 170-hour budget is a frequency guard, not a licence. No new public-source request was initiated by this audit; the already scheduled Nov 3 main runs above are recorded as historical evidence. Do not initiate further live downloads until the intended AI use is confirmed as permitted or appropriate rights are obtained.
+
+HUMAN-MERGE only. No PR was merged; main, original weights, 19-feature contract, schedules, production `.pkl`, and Supabase schema/data were not changed. No paid provider calls, Supabase writes/DDL, protected outcome reads, refit, threshold tuning, promotion, or betting action occurred.
+
 ## 2026-11-03 17:01 UTC — Original V2 live audit, current gate drift, and push-trigger isolation
 
 Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The main copy of this file is still stale at its 2026-10-18 top entry; this PR carries the current continuity update.
