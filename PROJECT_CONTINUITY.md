@@ -9128,3 +9128,46 @@ The next documented engineering task remains reuse of an already verified curren
 Supabase Security Advisor/list-table metadata also reports RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. This is a separate security issue; no RLS DDL or policy change was attempted.
 
 No merge, main mutation, Supabase write/DDL, production `.pkl` change, paid request, schedule/cron change, protected-outcome read, bet, or promotion occurred.
+
+
+## Fresh MARKET_ANCHOR_1X2_V2 operational audit — 2026-11-03 07:23 UTC
+
+This update is documentation-only on the pending continuity branch. Canonical main is still `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main mutation or merge occurred.
+
+### Latest actual Original Forward / Current-Form Forward evidence
+
+The most recent successful main-only forward runs remain on the exact main SHA above:
+
+- Original Forward-Only Preview [run 41498178161](https://github.com/MaksimBlud/football-ai/actions/runs/41498178161), created 2026-11-02 18:11:22 UTC. The real job log reports **71 tests passed**, source archive attestation verified 3,800 historical rows from 10 pre-freeze CSVs, parent Free Diagnostic run 41473879081 and artifact 13155539394 (GitHub ZIP digest `sha256:a2c5e7a6e35faeea4829342c732625292bea2ef897c7ec24f18b41eb40a335b5`). The forward result is `quotes_seen=0`, `future_quotes_checked=0`, `forecasts_created=0`, `v2_diagnostic_previews_captured=0`, `paid_provider_calls=0`, `supabase_writes=0`; target outcomes were not read.
+- Current-Form Forward-Only Preview [run 41500098611](https://github.com/MaksimBlud/football-ai/actions/runs/41500098611), created 2026-11-02 18:23:23 UTC. The real job log reports **53 tests passed** and independently verifies Source Capture run 41456825300 / artifact 13147815874, digest `sha256:67cd15e2e6319196eb51e83b4b65059302c0256b718e876756567efec81614f3`. Its manifest reports 98 current-season history rows but feature-input gate count 90; source age at verification was 16,205 seconds. It reports `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `target_outcomes_read=false`, `paid_provider_calls=0`, and `production_or_supabase_writes=0`.
+- Source Capture [run 41456825300](https://github.com/MaksimBlud/football-ai/actions/runs/41456825300) reports 19 tests passed, 10 historical CSVs plus one current-season CSV, `completed_primary_events=90`, `current_season_completed_prior_day_rows=98`, and no paid calls or Supabase writes. The 98-row CSV count and 90-event feature gate remain distinct; this archive does not attest the later 98 canonical metadata identities.
+- Free Real-Quote Diagnostic [run 41473879081](https://github.com/MaksimBlud/football-ai/actions/runs/41473879081) reports 53 tests passed, 3,800 historical rows, 19 original features, `FUTURE_QUOTE=0`, zero feature rows, zero eligible fixtures, zero paid requests and zero writes. The reported zero late-source quotes is vacuous because no quotes were available; it is not a live source-before-quote pass on a non-empty cohort.
+
+No new forward run or real V2 prediction is established by these artifacts.
+
+### 2026-11-03 scheduled-run inventory
+
+A direct GitHub Actions API query for main-branch `schedule` events created between 2026-11-03 05:40 and 07:25 UTC returned 14 scheduled runs. Other repository schedules ran, but **no** run named `Serie A V2 Current-Form Source Capture` or `Serie A V2 Free Real-Quote Diagnostic` appeared in that interval.
+
+Their unchanged main workflow crons are 05:50 UTC and 06:13 UTC respectively. At the 07:23 UTC audit time both were due but absent from the returned schedule-run set. Original Forward (08:08 UTC) and Current-Form Forward (08:18 UTC) were not yet due. This records an observed missing run only; it does not infer why GitHub did not create it. No manual dispatch, retry, schedule edit, or source request was made.
+
+### Fresh read-only pre-match database check
+
+- `odds_snapshots`: 3,966 rows, 3,915 satisfy `snapshot_time_utc < commence_time_utc`, 51 do not; zero strictly pre-match snapshots in the preceding seven days and zero future events with a saved strictly pre-match quote. Serie A: 625 rows / 620 strictly pre-match; latest valid quote remains 2026-10-13 14:48:53 UTC.
+- Serie A 2026/27 `league_finished_results` metadata only: 101 raw rows, 101 simple lower/trim identities before approved alias canonicalization, 98 canonical identities after Atalanta BC → Atalanta, 90 `source IS NULL`, 101 `source_updated_at_utc IS NULL`, last match date 2026-11-01, latest persistence 2026-11-02 21:40:05 UTC. No score/result/settlement columns were selected.
+- Exact frozen candidate SHA query against `product_prediction_snapshots`: zero rows.
+- Future-fixture metadata query against `public.matches` (only league, season, date and team names; no score/result columns): zero rows with `match_date >= CURRENT_DATE`.
+
+The market and source freshness blockers therefore remain unchanged; no V2 prospective forecast exists and the 30-completed-forecast outcome gate remains CLOSED.
+
+### Frozen model and PR state
+
+Main candidate JSON blob remains `ac1303f6b096664983fbf52443bd0a381b23ba21`, candidate artifact SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 ordered features and a 20×2 weight matrix. `active_lambda=0` remains the exact de-vigged market; `shadow_lambda=1` remains research-only.
+
+Exact open PR heads and latest PR-triggered checks re-read for this audit: #705 `927174fe85c4ff6e7cf91e994a3dc9b7418494e7` 8/8 SUCCESS; #699 `89d2fc7533e26f24eb51c67323f9d7ac756a8539` 7/7; #701 `04233460becc99dcbac0beb83a4e105bb8d64e3c` 6/6; #702 `8cf6ee1cb66838e8263dd2c7c5ebf42e86964d7e` 7/7; #703 `f12abfd3a8fc37fb3aff6d394ec3966bc1311b51` 7/7; #704 `cc4918caf1ae0bb906b6a1949b2b352b3cce64f3` 8/8; #706 `28104a5b943b697d581d578e133585701a395c43` 6/6; #707 `dfbeed39507fea3cff3c46ef6c64bc25461385a6` 7/7; #709 `268f3fdc82036fca0e44dc0aef20d39423cfda2d` 7/7. #709's push-only validation change is already present in #705 and should not be integrated as a duplicate.
+
+#702 remains manual-only and has no live provider execution. Its free `/events` metadata probe is distinct from odds collection; it does not fetch odds or spend odds credits, but remains blocked until the source identity attestation and fresh post-guard source archive exist. No request was made.
+
+Source rights remain research-use-only / AI-training-not-granted; no new Football-Data request was made. The documented next independent engineering task remains reuse of an already verified current-form source artifact for the ten old-season CSVs in Free Diagnostic, reading only old-season ZIP members and never opening the 2026/27 member. This requires the bounded artifact downloader from #703 and the source/identity contract from #699; it is not yet implemented.
+
+No target outcomes, paid calls, Supabase writes/DDL, production `.pkl` changes, model refit, promotion, main changes, or schedule changes occurred. HUMAN-MERGE remains mandatory.
