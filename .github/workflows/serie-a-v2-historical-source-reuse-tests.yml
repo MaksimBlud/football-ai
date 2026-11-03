@@ -1,0 +1,57 @@
+name: Serie A V2 Historical Source Reuse Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "serie_a_v2_historical_source_reuse.py"
+      - "tests/test_serie_a_v2_historical_source_reuse.py"
+      - "serie_a_v2_current_form_source_capture.py"
+      - "tests/test_serie_a_v2_current_form_source_capture.py"
+      - "serie_a_v2_live_diagnostic_report.py"
+      - "tests/test_serie_a_v2_live_diagnostic_report.py"
+      - "serie_a_v2_current_form_forward_capture.py"
+      - "serie_a_v2_asof_feature_manifest.py"
+      - "serie_a_v2_frozen_shadow_preview.py"
+      - "serie_a_runtime_config.py"
+      - "historical_football_signal_lab.py"
+      - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
+  push:
+    branches: [main, "research/**"]
+    paths:
+      - "serie_a_v2_historical_source_reuse.py"
+      - "tests/test_serie_a_v2_historical_source_reuse.py"
+      - "serie_a_v2_current_form_source_capture.py"
+      - "tests/test_serie_a_v2_current_form_source_capture.py"
+      - "serie_a_v2_live_diagnostic_report.py"
+      - "tests/test_serie_a_v2_live_diagnostic_report.py"
+      - "serie_a_v2_current_form_forward_capture.py"
+      - "serie_a_v2_asof_feature_manifest.py"
+      - "serie_a_v2_frozen_shadow_preview.py"
+      - "serie_a_runtime_config.py"
+      - "historical_football_signal_lab.py"
+      - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
+
+permissions:
+  contents: read
+
+jobs:
+  offline-source-reuse-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      PYTHONPATH: .
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install offline test dependencies
+        run: python -m pip install pytest numpy pandas scipy scikit-learn requests supabase
+      - name: Compile source-reuse path and run mocked contract regressions
+        run: |
+          python -m py_compile serie_a_v2_historical_source_reuse.py serie_a_v2_live_diagnostic_report.py serie_a_v2_current_form_source_capture.py
+          python -m pytest -q tests/test_serie_a_v2_historical_source_reuse.py tests/test_serie_a_v2_live_diagnostic_report.py tests/test_serie_a_v2_current_form_source_capture.py
