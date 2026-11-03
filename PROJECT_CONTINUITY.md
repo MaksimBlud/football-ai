@@ -1,3 +1,37 @@
+## 2026-11-03 15:23 UTC — fresh main source archive verified; no saved quotes; V2 cohort still empty
+
+Audit against unchanged main `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The scheduled main workflows were read from GitHub Actions; no manual workflow dispatch, paid odds request, Supabase write/DDL, production artifact change, or target-outcome query was initiated by this audit.
+
+### New main-only source and forward evidence
+
+- Current-Form Source Capture [run #41640753996](https://github.com/MaksimBlud/football-ai/actions/runs/41640753996) completed SUCCESS at 2026-11-03 13:03:01Z on main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`. It passed 19 source-capture/feature-manifest tests and reported candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 98 identity-gate events, 100 completed prior-day current-season CSV rows, 10 historical-season files, 11 source files total, `feature_source_gate_passed=true`, `paid_provider_calls=0`, `supabase_writes=0`, and `target_outcomes_scored=false`. Artifact #13231843819 is 438,212 bytes; GitHub ZIP SHA-256 `4e6fb5531a2206a353fe00fa1ebb0b4d20b3c6ae41ab49a7c672f8dab6d29cd8`.
+- Current-Form Forward [run #41640881317](https://github.com/MaksimBlud/football-ai/actions/runs/41640881317) completed SUCCESS at 13:03:39Z. It independently verified source artifact #13231843819 against the successful main parent run #41640753996: exact ZIP SHA above, 98 identity-gate fixtures, 100 current-season history rows, 3,900 historical rows, source observed at 13:02:58.382703Z, archive created at 13:02:59Z, parent completed at 13:03:01Z, source age 33 seconds at verification, `fresh_for_new_quote=true`, and `status=VERIFIED`. However, `quotes_seen=0` and `v2_current_form_shadow_captured=0`; all blocked counters were zero. Target outcomes remained unread/unscored, paid calls 0, production/Supabase writes 0. Forward artifact #13232322438 is 439,372 bytes; ZIP SHA-256 `c93efaaa1b505bf6a5fe372e1cc9c4f4d44f060d9c144b824ac31c9a99452ce9`.
+- Free Real-Quote Diagnostic [run #41650074683](https://github.com/MaksimBlud/football-ai/actions/runs/41650074683) completed SUCCESS at 14:05:09Z. It passed 53 tests, processed 3,800 historical rows and 19 frozen features, but had `quoted_fixtures=0`, `diagnostic_scored=0`, `feature_rows_with_all_19_observed=0`, `public_http_requests=10`, `paid_provider_requests=0`, `supabase_writes=0`, and zero source-observed-after-quote violations. Artifact #13236383688 is 425,071 bytes; ZIP SHA-256 `8386044e795e208e112e9af8d9ebcb0d5a77cf8f00f51147c70df8d01785c143`.
+
+The new source archive is a real successful main artifact and its parent-before-quote chain is independently verified by the forward workflow. This is a source-pipeline proof, not a prediction-quality result: there were no saved quotes, no forward shadow forecasts, and no outcome reads.
+
+### Fresh read-only Supabase pre-match audit
+
+Only pre-match quote timestamps, fixture IDs, kickoff timestamps, model SHA, and prediction capture timestamps were selected. No result/score columns or target outcomes were queried.
+
+- `odds_snapshots`: 3,966 total; 3,915 satisfy strict `snapshot_time_utc < commence_time_utc`; zero strict pre-match rows in the last seven days; latest strict pre-match quote remains 2026-10-13 14:48:53Z; zero future events have a strict pre-match quote.
+- `product_prediction_snapshots`: 40 rows total; zero use the frozen original V2 candidate SHA; zero original-candidate pre-match rows. All 40 rows are pre-match records for other model SHA values.
+- Prospective original V2 eligible forecasts remain 0/30. The protected outcome gate remains CLOSED; no target outcomes were read or scored.
+
+### Download-budget bootstrap update
+
+The two scheduled public-source workflows also ran again on main on 2026-11-03. Their newest legacy artifacts are now Source Capture #13231843819 (created 13:02:59Z) and Free Diagnostic #13236383688 (created 14:05:06Z). PR #705's dynamic legacy-artifact bootstrap should therefore use these timestamps—not the Nov 2 artifacts previously listed—and, at 170 hours per workflow path, the next allowed times are 2026-11-10 15:02:59Z and 16:05:06Z respectively. The current main workflows ran before that guard is integrated; HUMAN-MERGE is still required. The provider policy allows at most light automated downloading twice per week, while the current wording does not specify whether a session or each file is counted. Do not treat the rate guard as a data-use licence.
+
+### Integration state
+
+- Main remains unchanged at `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- #705 remains HUMAN-MERGE only; its bootstrap test is being refreshed to these Nov 3 main artifacts.
+- #699 must still be rebased after #705; #712 remains dependent on the identity-attested producer/consumer integration and must not reuse this pre-identity-attestation main artifact.
+- #701's market-only evaluator still requires 30 unique eligible completed prospective forecasts before its lazy outcome loader can run. Current cohort is 0/30.
+- Original frozen V2 candidate, 19 features, original weights, `active_lambda=0`, and `shadow_residual_lambda=1` remain unchanged.
+
+---
+
 ## 2026-11-02 18:56 UTC — latest main-only V2 forward runs; zero quotes; recovery source-code mismatch
 
 Audit against unchanged main `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No workflow was dispatched. Only read-only GitHub Actions metadata/logs and pre-match Supabase data were inspected; no target outcomes, scores, goals, settlements, or result columns were queried.
