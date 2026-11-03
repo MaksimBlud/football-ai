@@ -284,6 +284,9 @@ def test_recovery_workflow_runs_external_archive_loader_only_on_main_manual_disp
     assert "market_anchor_v2_training_archive.py" in workflow
     assert "market_anchor_v2_source_rights.py" in workflow
     assert "tests/test_market_anchor_v2_source_rights.py" in workflow
+    assert "market_anchor_v2_frozen_runtime_attestation.py" in workflow
+    assert "tests/test_market_anchor_v2_frozen_runtime_attestation.py" in workflow
+    assert workflow.index("Run original V2 frozen candidate synthetic runtime attestation") < workflow.index("Verify and extract existing historical-only GitHub artifact")
     assert "schedule:" not in workflow
 
 
