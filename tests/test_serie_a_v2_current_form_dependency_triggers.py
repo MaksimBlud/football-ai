@@ -97,3 +97,20 @@ def test_current_form_source_capture_live_job_excludes_push_validation():
     assert "github.event.workflow_run.event == 'schedule'" in job
     assert "github.event.workflow_run.event == 'workflow_dispatch'" in job
     assert "github.event_name != 'workflow_run'" not in job
+
+
+
+def test_diagnostic_refresh_revalidates_live_feature_gate_before_reuse():
+    workflow = SOURCE_WORKFLOW.read_text(encoding="utf-8")
+    refresh = workflow.split(
+        "      - name: Check existing verified source before diagnostic-triggered refresh", 1
+    )[1].split(
+        "      - name: Capture frozen historical seasons plus gated current-form source", 1
+    )[0]
+    assert "read_completed_primary_event_identities(client, now=now)" in refresh
+    assert "current_gate_identities=gate_identities" in refresh
+    assert 'verification.get("fresh_for_new_quote") is True' in refresh
+    assert 'verification.get("fresh_for_current_feature_gate") is True' in refresh
+    assert '"metadata_fields_read": ["match_date", "home_team", "away_team"]' in refresh
+    assert '"target_outcomes_read": False' in refresh
+    assert "steps.source_refresh.outputs.capture != 'false'" in workflow
