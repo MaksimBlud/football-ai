@@ -521,7 +521,9 @@ def _verify_and_extract_historical_files(
             or current_identity_count < gate_identity_count
             or not isinstance(current_identity_sha, str)
             or SHA256_RE.fullmatch(current_identity_sha) is None
+            or type(covered_identity_count) is not int
             or covered_identity_count != gate_identity_count
+            or type(missing_identity_count) is not int
             or missing_identity_count != 0
         ):
             raise ValueError("feature-source gate lacks a complete digest-bound identity coverage attestation")
