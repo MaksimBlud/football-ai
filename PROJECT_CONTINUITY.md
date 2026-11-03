@@ -9434,3 +9434,60 @@ A specific review comment was added to #712: [comment 6604625779](https://github
 - PR #707 source-rights manifest remains `NOT_GRANTED` for AI model training/recovery. Do not rebuild weights from that archive; integrity hashes are not data-use permission.
 
 No PR was merged, main was not modified, no source/odds request was made, no paid provider call or Supabase write/DDL occurred, no protected 2026/27 target outcome was read, no production `.pkl` changed, and no workflow schedule or other agent was changed. HUMAN-MERGE remains mandatory.
+
+
+## 2026-11-03 19:05 UTC — fail-closed AI-usage rights across V2 live entrypoints
+
+### Fresh main and immutable model
+
+- Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No main update or merge was made.
+- The original `MARKET_ANCHOR_1X2_V2` candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, with the frozen 19-feature contract, `active_lambda=0`, and `shadow_residual_lambda=1`. No weights, features, or production pickle files were changed.
+- The current main `PROJECT_CONTINUITY.md` was read before work; this entry is being added only to this documentation PR branch.
+
+### Main-only runtime and pre-match data audit
+
+Verified existing main runs and their artifacts; no workflow was dispatched and no new provider request was made:
+
+- Source Capture run `41640753996`, artifact `13231843819`, ZIP SHA-256 `4e6fb5531a2206a353fe00fa1ebb0b4d20b3c6ae41ab49a7c672f8dab6d29cd8`. Its parent report recorded 10 old-season CSVs, 3,800 old-season rows, 100 current-season completed prior-day rows, and 98 canonical primary fixture identities.
+- Free Real-Quote Diagnostic run `41650074683`: 10 historical source files, 3,800 historical rows, `quoted_fixtures=0`, `diagnostic_scored=0`, no paid calls.
+- Original Forward run `41670482076`, artifact `13248390793`: `quotes_seen=0`, `future_quotes_checked=0`, `v2_diagnostic_previews_captured=0`; no outcomes read.
+- Current-Form Forward run `41672409582`, artifact `13249097138`: verified source artifact `13231843819` and its parent run, but `quotes_seen=0` and `v2_current_form_shadow_captured=0`; no outcomes read.
+
+Read-only Supabase pre-match audit:
+
+- `odds_snapshots`: 3,915 strictly pre-kickoff rows across 327 events; zero strict pre-match rows in the last seven days; zero future events with a saved pre-match quote.
+- Latest strict pre-match snapshots by league remain: Serie A 2026-10-13 14:48:53 UTC; EPL 2026-10-09 15:25:57 UTC; the other queried leagues are older (September 2026).
+- `product_prediction_snapshots`: 40 total, zero with the frozen V2 candidate SHA, latest generated 2026-10-09 15:29:33 UTC.
+- Identity-only `league_finished_results` query: 101 raw Serie A 2026/27 rows, 98 canonical fixture identities after the frozen Atalanta alias. The query selected only `match_date,home_team,away_team`; no score/result fields were read. Provenance metadata is incomplete: 90 rows lack `source`, 90 lack `source_competition`, and all 101 lack `source_updated_at_utc`.
+
+### Source rights — newly enforced, not merely documented
+
+The official Football-Data policy page was rechecked on 2026-11-03. It expressly addresses AI-usage requests and says users seeking such use should assume no data-use permission is granted; the free CSVs are intended for personal betting or academic interest/research via manual or at most light (twice-weekly maximum) automated download. Source: https://football-data.co.uk/contact.php.
+
+The fail-closed manifest records `rights_status=NOT_GRANTED`, `ai_usage_permitted=false`, and `ai_model_training_permitted=false`. The new exact-head #707 commit `240f32e4f5094c57de7a7b9355b61cc352daab51` adds a separate SHA-bound `AI_USAGE` permission check and a no-network/no-inference blocked report. It is called before Supabase reads, GitHub artifact listing, public HTTP requests, feature extraction, or inference in the four live V2 entrypoints:
+
+- `serie_a_v2_live_diagnostic_report.py`;
+- `serie_a_v2_current_form_source_capture.py`;
+- `serie_a_v2_current_form_forward_capture.py`;
+- `serie_a_v2_forward_capture.py`.
+
+The #707 exact-head CI is **8/8 SUCCESS**. Its recovery job compiled all four entrypoints, ran **42 tests** in the recovery/rights/runtime suite, completed the synthetic original-V2 runtime attestation, and proved production `.pkl` hashes unchanged. This is a branch result only; the gate is not active on main until HUMAN-MERGE and the required rebase sequence.
+
+The prospective evaluator is a separate live entrypoint. PR #701 was therefore also updated at HEAD `3dd5ec66e196c57a1a0f3de8629b39554ffd07b4` to carry the identical helper/manifest and block before artifact, Supabase, or outcome access. Its new CI has not yet appeared at the time of this entry. Do not treat the evaluator as rights-gated on main until that PR is integrated.
+
+### Exact evaluation distinction
+
+- The market-only path `evaluate_market_only_after_gate` is a supplementary **de-vigged market vs frozen V2 shadow** diagnostic. It does not require or fabricate a third incumbent vector, but it still requires 30 unique eligible completed primary forecasts and invokes the lazy outcome loader only after that gate. It cannot emit the full three-way review signal.
+- The full three-way `evaluate_after_gate` remains blocked because `FROZEN_INCUMBENT_REFERENCE=None`; a distinct, pinned, same-league non-legacy incumbent is not registered. Do not substitute the old XGBoost production model or duplicate the market vector as a fake incumbent.
+- Current eligible prospective forecasts remain **0/30**. No protected 2026/27 target outcomes were read; no Brier/LogLoss result exists; no V2 advantage over market is established.
+
+### Current PR queue — exact heads, not stale continuity hashes
+
+- #705 `8b139335e6722b7c4f5286962486bca84bced20d`: 8/8 exact-head CI SUCCESS. First HUMAN-MERGE step; shared 170-hour download budget. Do not merge automatically.
+- #699 `fecf8dd01ad6ea3b9eabd0dfb31167f397ae4e3a`: 7/7 exact-head CI SUCCESS. Rebase after #705; preserve the budget and identity-attested producer.
+- #712 `331e7934f92763d8df2c6c35e01b6b26a80bcf5d`: 9/9 exact-head CI SUCCESS. Keep open until rebased on the integrated #699/#705 line; require the end-to-end producer-to-consumer archive test and do not use the pre-#699 main archive as identity-attested cache input. #711 remains a draft overlapping alternative; do not merge both.
+- #701 `3dd5ec66e196c57a1a0f3de8629b39554ffd07b4`: new rights-gated evaluator HEAD; CI pending at the time of this entry.
+- #707 `240f32e4f5094c57de7a7b9355b61cc352daab51`: 8/8 exact-head CI SUCCESS; must be rebased after #699 before integration.
+- #697 documentation branch: this update is pending exact-head CI. #709 remains redundant with the push/offline protection already included in #705.
+
+No PR was merged, no main ref changed, no workflow schedule or other agent was changed, no paid provider request or Football-Data download was initiated, no Supabase write/DDL occurred, no protected outcome was read, and no production `.pkl` was changed. HUMAN-MERGE remains mandatory.
