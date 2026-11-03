@@ -254,7 +254,7 @@ def test_successful_exact_source_workflow_and_prequote_completion_required():
         "id": 456, "path": SOURCE_WORKFLOW_PATH,
         "head_branch": "main", "head_sha": "a"*40,
         "status": "completed", "conclusion": "success",
-        "event": "push",
+        "event": "schedule",
         "created_at": "2026-10-13T14:40:00Z",
         "updated_at": "2026-10-13T15:01:00Z",
     }
@@ -273,6 +273,7 @@ def test_successful_exact_source_workflow_and_prequote_completion_required():
         ({"conclusion":"failure"}, "verified original V2 collector"),
         ({"status":"in_progress"}, "verified original V2 collector"),
         ({"event":"workflow_run"}, "verified original V2 collector"),
+        ({"event":"push"}, "verified original V2 collector"),
         ({"updated_at":"2026-10-14T06:01:00Z"}, "not successfully finished before quote"),
     ]:
         def bad_get(url,headers,timeout):
