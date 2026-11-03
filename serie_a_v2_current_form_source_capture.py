@@ -25,7 +25,7 @@ from historical_football_signal_lab import FEATURE_SETS
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA, load_verified_original
 from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes, fetch_public_history
-from market_anchor_v2_source_rights import require_ai_usage_permission, write_ai_usage_blocked_report
+from market_anchor_v2_source_rights import require_personal_research_inference_scope, write_research_scope_blocked_report
 
 REPOSITORY = "MaksimBlud/football-ai"
 WORKFLOW_PATH = ".github/workflows/serie-a-v2-current-form-source-capture.yml"
@@ -571,9 +571,9 @@ def main() -> None:
     if os.environ.get("GITHUB_REF") != "refs/heads/main":
         raise RuntimeError("current-form V2 source/forecast workflow must run from main")
     try:
-        require_ai_usage_permission()
+        require_personal_research_inference_scope()
     except PermissionError as exc:
-        report = write_ai_usage_blocked_report(
+        report = write_research_scope_blocked_report(
             args.output_dir / MANIFEST_FILENAME,
             "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE",
             str(exc),

@@ -10,8 +10,8 @@ import pytest
 from market_anchor_v2_source_rights import (
     DEFAULT_RIGHTS_MANIFEST_PATH,
     require_ai_model_training_permission,
-    require_ai_usage_permission,
-    write_ai_usage_blocked_report,
+    require_personal_research_inference_scope,
+    write_research_scope_blocked_report,
 )
 
 
@@ -131,53 +131,71 @@ def test_permission_evidence_requires_direct_https_reference(tmp_path):
 
 
 
-def test_default_football_data_policy_manifest_blocks_ai_usage():
-    with pytest.raises(PermissionError, match="AI-usage permission is not granted"):
-        require_ai_usage_permission(DEFAULT_RIGHTS_MANIFEST_PATH)
 
 
-def test_ai_usage_grant_is_separate_from_model_training_permission(tmp_path):
-    path = _write_grant(tmp_path, overrides={
+def _write_research_scope_manifest(tmp_path, **overrides):
+    manifest = {
+        "schema_version": "FOOTBALL_AI_SOURCE_RIGHTS_V1",
+        "provider": "Football-Data.co.uk",
+        "policy_url": "https://football-data.co.uk/contact.php",
+        "policy_checked_at_utc": "2026-11-03T18:00:00Z",
+        "rights_status": "CONDITIONAL_RESEARCH_ONLY",
+        "research_use_permitted": True,
+        "research_inference_permitted": True,
+        "research_inference_scope": "PERSONAL_BETTING_OR_ACADEMIC_RESEARCH_ONLY",
         "ai_model_training_permitted": False,
-        "ai_usage_permitted": True,
-        "authorization": {"scope": ["AI_USAGE", "NONCOMMERCIAL_RESEARCH"]},
-    })
-    result = require_ai_usage_permission(
-        path,
-        repo_root=tmp_path,
-        now=datetime(2026, 11, 3, 12, 0, tzinfo=timezone.utc),
+        "commercial_use_permitted": False,
+        "public_product_use_permitted": False,
+        "max_automated_download_sessions_per_week": 2,
+        "download_budget_policy": "TWO_AUTOMATED_SESSIONS_PER_ROLLING_7_DAYS",
+    }
+    manifest.update(overrides)
+    path = tmp_path / "research-rights.json"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    return path
+
+
+def test_official_policy_manifest_allows_only_conditional_personal_research_inference():
+    result = require_personal_research_inference_scope(
+        DEFAULT_RIGHTS_MANIFEST_PATH,
+        now=datetime(2026, 11, 3, 20, 0, tzinfo=timezone.utc),
     )
-    assert result["provider"] == "Football-Data.co.uk"
-    assert result["scope"] == ["AI_USAGE", "NONCOMMERCIAL_RESEARCH"]
+    assert result["scope_status"] == "CONDITIONAL_RESEARCH_ONLY"
+    assert result["research_inference_scope"] == "PERSONAL_BETTING_OR_ACADEMIC_RESEARCH_ONLY"
+    assert result["provider_issued_ai_inference_license"] is False
     assert result["ai_model_training_permitted"] is False
+    assert result["commercial_use_permitted"] is False
+    assert result["public_product_use_permitted"] is False
+    assert result["max_automated_download_sessions_per_week"] == 2
 
 
-def test_ai_usage_permission_requires_explicit_ai_usage_scope(tmp_path):
-    path = _write_grant(tmp_path, overrides={
-        "ai_model_training_permitted": False,
-        "ai_usage_permitted": True,
-        "authorization": {"scope": ["NONCOMMERCIAL_RESEARCH"]},
-    })
-    with pytest.raises(PermissionError, match="does not cover AI usage"):
-        require_ai_usage_permission(path, repo_root=tmp_path)
+def test_research_inference_rejects_public_product_scope(tmp_path):
+    path = _write_research_scope_manifest(tmp_path, public_product_use_permitted=True)
+    with pytest.raises(PermissionError, match="public product publication"):
+        require_personal_research_inference_scope(path, now=datetime(2026, 11, 3, 20, 0, tzinfo=timezone.utc))
 
 
-def test_ai_usage_permission_rejects_tampered_evidence(tmp_path):
-    path = _write_grant(tmp_path, overrides={
-        "ai_model_training_permitted": False,
-        "ai_usage_permitted": True,
-        "authorization": {"scope": ["AI_USAGE", "NONCOMMERCIAL_RESEARCH"]},
-    })
-    (tmp_path / "permission-evidence.txt").write_text("tampered", encoding="utf-8")
-    with pytest.raises(PermissionError, match="SHA-256 mismatch"):
-        require_ai_usage_permission(path, repo_root=tmp_path)
+def test_research_inference_rejects_commercial_scope(tmp_path):
+    path = _write_research_scope_manifest(tmp_path, commercial_use_permitted=True)
+    with pytest.raises(PermissionError, match="commercial use"):
+        require_personal_research_inference_scope(path, now=datetime(2026, 11, 3, 20, 0, tzinfo=timezone.utc))
 
 
-def test_ai_usage_block_report_is_explicitly_no_io_and_no_inference(tmp_path):
+def test_research_inference_requires_two_session_download_budget(tmp_path):
+    path = _write_research_scope_manifest(tmp_path, max_automated_download_sessions_per_week=3)
+    with pytest.raises(PermissionError, match="at most two sessions"):
+        require_personal_research_inference_scope(path, now=datetime(2026, 11, 3, 20, 0, tzinfo=timezone.utc))
+
+
+def test_research_inference_rejects_disabled_research_scope(tmp_path):
+    path = _write_research_scope_manifest(tmp_path, research_inference_permitted=False)
+    with pytest.raises(PermissionError, match="outside the configured source scope"):
+        require_personal_research_inference_scope(path, now=datetime(2026, 11, 3, 20, 0, tzinfo=timezone.utc))
+
+
+def test_research_scope_block_report_is_explicitly_no_io_and_no_inference(tmp_path):
     output = tmp_path / "reports" / "blocked.json"
-    report = write_ai_usage_blocked_report(
-        output, "SYNTHETIC_TEST", "permission not granted"
-    )
+    report = write_research_scope_blocked_report(output, "SYNTHETIC_TEST", "public product use")
     saved = json.loads(output.read_text(encoding="utf-8"))
     assert saved == report
     assert report["mode"] == "SOURCE_RIGHTS_BLOCKED_NO_NETWORK_NO_INFERENCE"
@@ -189,34 +207,27 @@ def test_ai_usage_block_report_is_explicitly_no_io_and_no_inference(tmp_path):
     assert report["no_bet"] is True
 
 
-def test_live_v2_entrypoints_check_ai_usage_before_external_reads():
+def test_live_v2_entrypoints_check_research_scope_before_external_reads():
     cases = {
         "serie_a_v2_live_diagnostic_report.py": (
             "from database import supabase",
             "fetch_saved_upcoming_serie_a_quotes(",
             "fetch_public_history(",
         ),
-        "serie_a_v2_current_form_source_capture.py": (
-            "create_client(",
-            "capture_source_archive(",
-        ),
+        "serie_a_v2_current_form_source_capture.py": ("create_client(", "capture_source_archive("),
         "serie_a_v2_current_form_forward_capture.py": (
-            "discover_archives(",
-            "create_client(",
-            "fetch_saved_upcoming_serie_a_quotes(",
+            "discover_archives(", "create_client(", "fetch_saved_upcoming_serie_a_quotes(",
         ),
         "serie_a_v2_forward_capture.py": (
-            "from database import supabase",
-            "discover_archives(",
-            "fetch_saved_upcoming_serie_a_quotes(",
+            "from database import supabase", "discover_archives(", "fetch_saved_upcoming_serie_a_quotes(",
         ),
     }
     for path, side_effects in cases.items():
         source = (Path(__file__).resolve().parents[1] / path).read_text(encoding="utf-8")
         main = source[source.index("def main()"):]
-        guard = main.find("require_ai_usage_permission()")
-        assert guard >= 0, f"{path} lacks the AI-usage rights guard"
+        guard = main.find("require_personal_research_inference_scope()")
+        assert guard >= 0, f"{path} lacks the personal-research scope guard"
         for side_effect in side_effects:
             position = main.find(side_effect)
             assert position >= 0, f"{path} lost expected runtime step {side_effect!r}"
-            assert guard < position, f"{path} reaches {side_effect!r} before the rights guard"
+            assert guard < position, f"{path} reaches {side_effect!r} before the research-scope guard"

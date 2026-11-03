@@ -39,7 +39,7 @@ from serie_a_v2_live_diagnostic_report import (
     MAX_HISTORICAL_CSV_BYTES, MAX_HISTORICAL_TOTAL_BYTES, PUBLIC_BASE, _source_codes,
 )
 from serie_a_v2_prequote_source_archive_gate import MAX_ZIP_BYTES
-from market_anchor_v2_source_rights import require_ai_usage_permission, write_ai_usage_blocked_report
+from market_anchor_v2_source_rights import require_personal_research_inference_scope, write_research_scope_blocked_report
 
 REPOSITORY = "MaksimBlud/football-ai"
 GITHUB_API = f"https://api.github.com/repos/{REPOSITORY}"
@@ -918,9 +918,9 @@ def main() -> None:
     if os.environ.get("GITHUB_REF") != "refs/heads/main":
         raise RuntimeError("current-form V2 source/forecast workflow must run from main")
     try:
-        require_ai_usage_permission()
+        require_personal_research_inference_scope()
     except PermissionError as exc:
-        report = write_ai_usage_blocked_report(
+        report = write_research_scope_blocked_report(
             args.output, "SERIE_A_V2_CURRENT_FORM_FORWARD_CAPTURE", str(exc)
         )
         print(json.dumps(report, sort_keys=True))
