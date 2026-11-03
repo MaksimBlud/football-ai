@@ -9055,7 +9055,7 @@ This checkpoint was added to the pending continuity branch only. Canonical main 
 ### Frozen original candidate on main
 
 - Candidate JSON path: `research/models/market_anchor_v2_serie_a_frozen_candidate.json`.
-- Candidate JSON Git blob SHA on main: `ac1303f6` (record the full blob from the GitHub file response when auditing).
+- Candidate JSON Git blob SHA on main: `ac1303f6b096664983fbf52443bd0a381b23ba21`.
 - Frozen candidate artifact SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
 - The candidate declares 19 ordered features and a 20 x 2 weight matrix.
 - `active_lambda=0` remains the exact de-vigged market; `shadow_lambda=1` remains research-only.
