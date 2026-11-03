@@ -321,29 +321,29 @@ def test_discovery_bootstraps_cooldown_from_latest_existing_main_source_artifact
         "&per_page=100&page=1"
     )
     source_artifact = {
-        "id": 13147815874,
+        "id": 13231843819,
         "name": "serie-a-v2-current-form-source-capture",
         "expired": False,
-        "created_at": "2026-11-02T13:53:57Z",
-        "workflow_run": {"id": 41456825300, "head_branch": "main", "head_sha": SHA},
+        "created_at": "2026-11-03T13:02:59Z",
+        "workflow_run": {"id": 41640753996, "head_branch": "main", "head_sha": SHA},
     }
     diagnostic_artifact = {
-        "id": 13155539394,
+        "id": 13236383688,
         "name": "serie-a-v2-free-real-quote-diagnostic",
         "expired": False,
-        "created_at": "2026-11-02T15:41:21Z",
-        "workflow_run": {"id": 41473879081, "head_branch": "main", "head_sha": SHA},
+        "created_at": "2026-11-03T14:05:06Z",
+        "workflow_run": {"id": 41650074683, "head_branch": "main", "head_sha": SHA},
     }
     run = {
-        "id": 41473879081,
+        "id": 41650074683,
         "path": DIAGNOSTIC_PATH,
         "head_branch": "main",
         "head_sha": SHA,
         "event": "schedule",
         "status": "completed",
         "conclusion": "success",
-        "created_at": "2026-11-02T15:40:19Z",
-        "updated_at": "2026-11-02T15:41:25Z",
+        "created_at": "2026-11-03T14:04:13Z",
+        "updated_at": "2026-11-03T14:05:09Z",
     }
     calls = []
 
@@ -355,19 +355,19 @@ def test_discovery_bootstraps_cooldown_from_latest_existing_main_source_artifact
             return FakeResponse(url, {"artifacts": [source_artifact]})
         if url == diagnostic_url:
             return FakeResponse(url, {"artifacts": [diagnostic_artifact]})
-        if url.endswith("/actions/runs/41473879081"):
+        if url.endswith("/actions/runs/41650074683"):
             return FakeResponse(url, run)
         raise AssertionError(f"unexpected GitHub API URL: {url}")
 
     latest = budget.discover_latest_download_attempt(token="test-token", workflow_path=DIAGNOSTIC_PATH, get=get)
     assert latest == datetime(2026, 11, 2, 15, 41, 21, tzinfo=UTC)
     assert "football-data.co.uk" not in " ".join(calls)
-    assert calls == [marker_url, diagnostic_url, f"{budget.GITHUB_API}/actions/runs/41473879081"]
+    assert calls == [marker_url, diagnostic_url, f"{budget.GITHUB_API}/actions/runs/41650074683"]
     allowed, next_allowed = budget.decide_download_permission(
-        now=datetime(2026, 11, 2, 16, 4, tzinfo=UTC), latest_attempt_at=latest
+        now=datetime(2026, 11, 3, 15, 0, tzinfo=UTC), latest_attempt_at=latest
     )
     assert allowed is False
-    assert next_allowed == datetime(2026, 11, 9, 17, 41, 21, tzinfo=UTC)
+    assert next_allowed == datetime(2026, 11, 10, 16, 5, 6, tzinfo=UTC)
 
 
 def test_discovery_bootstrap_rejects_legacy_artifact_from_wrong_workflow():
@@ -384,22 +384,22 @@ def test_discovery_bootstrap_rejects_legacy_artifact_from_wrong_workflow():
         "&per_page=100&page=1"
     )
     artifact = {
-        "id": 13155539394,
+        "id": 13236383688,
         "name": "serie-a-v2-free-real-quote-diagnostic",
         "expired": False,
-        "created_at": "2026-11-02T15:41:21Z",
-        "workflow_run": {"id": 41473879081, "head_branch": "main", "head_sha": SHA},
+        "created_at": "2026-11-03T14:05:06Z",
+        "workflow_run": {"id": 41650074683, "head_branch": "main", "head_sha": SHA},
     }
     bad_run = {
-        "id": 41473879081,
+        "id": 41650074683,
         "path": SOURCE_PATH,
         "head_branch": "main",
         "head_sha": SHA,
         "event": "schedule",
         "status": "completed",
         "conclusion": "success",
-        "created_at": "2026-11-02T15:40:19Z",
-        "updated_at": "2026-11-02T15:41:25Z",
+        "created_at": "2026-11-03T14:04:13Z",
+        "updated_at": "2026-11-03T14:05:09Z",
     }
 
     def get(url, **kwargs):
@@ -407,7 +407,7 @@ def test_discovery_bootstrap_rejects_legacy_artifact_from_wrong_workflow():
             return FakeResponse(url, {"artifacts": []})
         if url == diagnostic_url:
             return FakeResponse(url, {"artifacts": [artifact]})
-        if url.endswith("/actions/runs/41473879081"):
+        if url.endswith("/actions/runs/41650074683"):
             return FakeResponse(url, bad_run)
         raise AssertionError(f"unexpected GitHub API URL: {url}")
 
