@@ -24,6 +24,7 @@ from historical_football_signal_lab import FEATURE_SETS
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
 from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes, fetch_public_history
+from market_anchor_v2_source_rights import require_ai_usage_permission, write_ai_usage_blocked_report
 
 REPOSITORY = "MaksimBlud/football-ai"
 WORKFLOW_PATH = ".github/workflows/serie-a-v2-current-form-source-capture.yml"
@@ -289,6 +290,16 @@ def main() -> None:
         raise RuntimeError("current-form source capture must run in the original GitHub repository")
     if os.environ.get("GITHUB_REF") != "refs/heads/main":
         raise RuntimeError("current-form V2 source/forecast workflow must run from main")
+    try:
+        require_ai_usage_permission()
+    except PermissionError as exc:
+        report = write_ai_usage_blocked_report(
+            args.output_dir / MANIFEST_FILENAME,
+            "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE",
+            str(exc),
+        )
+        print(json.dumps(report, sort_keys=True))
+        return
     url, key = os.environ.get("SUPABASE_URL", ""), os.environ.get("SUPABASE_KEY", "")
     if not url or not key:
         raise RuntimeError("Supabase read-only source gate credentials are missing")
