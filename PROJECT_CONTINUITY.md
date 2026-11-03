@@ -9046,3 +9046,85 @@ Implications for this V2 recovery:
 - This policy finding does not change the frozen V2 weights, candidate SHA, 19-feature contract, active_lambda=0, shadow_lambda=1, or evaluation gate. It is a source-rights blocker, not a model-quality result.
 
 The policy page also states that requests for permission for commercial or AI data-training use should be assumed not to receive approval. This must remain visible in any review of #699, #705, and #707; their technical source guards and frequency cap do not resolve the usage-rights issue.
+
+
+## Fresh MARKET_ANCHOR_1X2_V2 audit — 2026-11-03 06:55 UTC
+
+This checkpoint was added to the pending continuity branch only. Canonical main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main mutation or merge occurred. Main `PROJECT_CONTINUITY.md` remains the older 2026-10-18 version.
+
+### Frozen original candidate on main
+
+- Candidate JSON path: `research/models/market_anchor_v2_serie_a_frozen_candidate.json`.
+- Candidate JSON Git blob SHA on main: `ac1303f6` (record the full blob from the GitHub file response when auditing).
+- Frozen candidate artifact SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- The candidate declares 19 ordered features and a 20 x 2 weight matrix.
+- `active_lambda=0` remains the exact de-vigged market; `shadow_lambda=1` remains research-only.
+- No original feature, weight, lambda, or candidate file was edited.
+
+### Corrected metadata-only Serie A identity query
+
+The Supabase season key is exactly `2026-2027` (not `2026/27`). The earlier slash-form filter returns zero rows and must not be reused.
+
+A fresh read-only query selected only `match_date, home_team, away_team, source, source_updated_at_utc, persisted_at_utc`; no score/result/settlement column was selected.
+
+- Raw `league_finished_results` rows: 101.
+- Canonical fixture identities after the approved Atalanta BC → Atalanta alias: 98.
+- Rows with `source IS NULL`: 90.
+- Rows without `source_updated_at_utc`: 101.
+- Source breakdown: 90 NULL-source rows and 11 `the-odds-api` rows.
+- Latest match date: 2026-11-01.
+- Latest persistence timestamp: 2026-11-02 21:40 UTC.
+
+The 98 metadata identities are not 98 V2 forecasts and do not open outcomes. The frozen prospective evaluator still requires 30 distinct eligible completed forecasts.
+
+### Strictly pre-kickoff odds inventory
+
+The read-only aggregate used only `league,event_id,snapshot_time_utc,commence_time_utc` and the strict predicate `snapshot_time_utc < commence_time_utc`.
+
+- `odds_snapshots`: 3,966 rows total; 3,915 strictly pre-kickoff rows.
+- Strict pre-kickoff snapshots in the preceding seven days: 0.
+- Future events with a saved strictly pre-kickoff quote: 0.
+- Serie A: 625 raw rows, 620 strictly pre-kickoff rows; latest valid snapshot 2026-10-13 14:48:53 UTC.
+- `product_prediction_snapshots`: 40 rows, all under the unrelated EPL market-pair version; 0 rows match the frozen V2 candidate SHA.
+- `model_artifact_bundles`: 0 rows.
+
+No quote price was used to select a forecast and no target outcome was queried.
+
+### Important correction: the market-only evaluator already exists in PR #701
+
+The open #701 implementation has two separate paths:
+
+1. The full three-way evaluator still requires a separately pinned non-legacy incumbent and can emit its full review signal only under that contract.
+2. The supplementary market-only diagnostic is already implemented separately as `evaluate_market_only_after_gate`, `evaluate_live_market_only_prospective_cohort`, and `evaluate_live_market_only_from_supabase`.
+
+The actual `market_anchor_1x2_v2_prospective_evaluation.py` workflow calls the market-only path. It compares only the de-vigged market with original V2 `shadow_lambda=1`, computes Brier and LogLoss plus paired-bootstrap uncertainty, and does not require the old XGBoost model or a different incumbent. It accepts no incumbent vectors/evidence, opens the exact result-label loader only after 30 eligible completed forecasts, and always suppresses the review signal (`review_signal=false`), betting, and promotion. Therefore the unpinned incumbent blocks the separate full three-way review, but it does **not** block the user's requested market-vs-V2 diagnostic.
+
+This is an additive diagnostic path; it does not modify the original V2 model contract or the existing full three-way review. The 30-primary-completed-forecast gate remains unchanged and closed.
+
+Current eligible prospective V2 forecasts remain 0/30. No Brier or LogLoss result exists. No protected 2026/27 target outcomes were opened.
+
+### Exact current open-PR heads and PR-triggered CI
+
+- #705: HEAD `927174fe85c4ff6e7cf91e994a3dc9b7418494e7`, 8/8 PR-triggered workflow runs SUCCESS; dedicated budget test run `41563655079` and Frozen V2 Shadow run `41563655067`. Budget test log reports 20 passed; shadow log reports 86 passed.
+- #699: HEAD `89d2fc7533e26f24eb51c67323f9d7ac756a8539`, 7/7 SUCCESS; Frozen V2 Shadow run `41508145356`, 288 passed.
+- #701: HEAD `04233460becc99dcbac0beb83a4e105bb8d64e3c`, 6/6 SUCCESS; market-only evaluator and lazy 30-event outcome gate are covered by its tests.
+- #707: HEAD `dfbeed39507fea3cff3c46ef6c64bc25461385a6`, 7/7 SUCCESS; recovery test run `41556671103`, 36 passed. Its PR runtime attestation is synthetic/offline; no main-only historical recovery was executed.
+- #702: HEAD `8cf6ee1cb66838e8263dd2c7c5ebf42e86964d7e`, 7/7 SUCCESS.
+- #704: HEAD `cc4918caf1ae0bb906b6a1949b2b352b3cce64f3`, 8/8 SUCCESS.
+- #706: HEAD `28104a5b943b697d581d578e133585701a395c43`, 6/6 SUCCESS.
+
+These are PR-triggered runs attached to the exact listed heads. The available GitHub Actions connector does not expose a repository-wide scheduled-run listing, and `fetch_commit_workflow_runs` explicitly filters to pull-request events. Therefore the 2026-11-03 scheduled Source Capture (05:50 UTC) and Free Real-Quote Diagnostic (06:13 UTC) run IDs/conclusions were not independently retrievable in this audit; do not claim either succeeded or failed.
+
+PR #657, #659 and #660 are merged. #709 is superseded by #705; #700/#694 and the other integrated source/identity protections are represented in #699. #710 is closed unmerged and superseded by #707. HUMAN-MERGE remains mandatory.
+
+### Source rights and remaining operational blockers
+
+The #707 rights manifest still records `rights_status=NOT_GRANTED`, `ai_model_training_permitted=false`, and `commercial_use_permitted=false`. The original frozen candidate can be executed for research without retraining; historical AI-training recovery must remain blocked. A valid SHA or artifact chain is provenance/integrity evidence, not a licence.
+
+PR #705's 170-hour per-workflow-path guard is a frequency guard only, not a licence. Each existing source session still contains multiple CSV GETs; do not infer that the provider's per-week policy permits every individual request merely because the workflow session is rate-limited. No paid The Odds API call or manual public-source download was initiated in this audit.
+
+The next documented engineering task remains reuse of an already verified current-form source artifact for the Free Real-Quote Diagnostic's ten old-season CSVs, without opening the 2026/27 ZIP member. Any such implementation must independently verify artifact SHA, successful main parent run, exact source-code blobs, source timestamps, and strict source-before-quote ordering; it must fail closed if no eligible archive exists. Do not relax the source-rights gate or use the current-season member as a shortcut.
+
+Supabase Security Advisor/list-table metadata also reports RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. This is a separate security issue; no RLS DDL or policy change was attempted.
+
+No merge, main mutation, Supabase write/DDL, production `.pkl` change, paid request, schedule/cron change, protected-outcome read, bet, or promotion occurred.
