@@ -50,7 +50,7 @@ MAX_CURRENT_CSV_BYTES = 2_000_000
 MAX_MANIFEST_BYTES = 2_000_000
 SHA1_RE = re.compile(r"[0-9a-f]{40}\Z")
 SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
-ALLOWED_EVENTS = {"schedule", "workflow_dispatch"}
+ALLOWED_EVENTS = {"schedule", "workflow_dispatch", "workflow_run"}
 REQUIRED_COLUMNS = tuple(sorted(REQUIRED))
 
 
