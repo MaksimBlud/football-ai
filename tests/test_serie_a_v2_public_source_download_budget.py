@@ -334,6 +334,17 @@ def test_discovery_bootstraps_cooldown_from_latest_existing_main_source_artifact
         "created_at": "2026-11-03T14:05:06Z",
         "workflow_run": {"id": 41650074683, "head_branch": "main", "head_sha": SHA},
     }
+    source_run = {
+        "id": 41640753996,
+        "path": SOURCE_PATH,
+        "head_branch": "main",
+        "head_sha": SHA,
+        "event": "schedule",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2026-11-03T13:02:10Z",
+        "updated_at": "2026-11-03T13:03:01Z",
+    }
     run = {
         "id": 41650074683,
         "path": DIAGNOSTIC_PATH,
@@ -355,6 +366,8 @@ def test_discovery_bootstraps_cooldown_from_latest_existing_main_source_artifact
             return FakeResponse(url, {"artifacts": [source_artifact]})
         if url == diagnostic_url:
             return FakeResponse(url, {"artifacts": [diagnostic_artifact]})
+        if url.endswith("/actions/runs/41640753996"):
+            return FakeResponse(url, source_run)
         if url.endswith("/actions/runs/41650074683"):
             return FakeResponse(url, run)
         raise AssertionError(f"unexpected GitHub API URL: {url}")
@@ -368,6 +381,19 @@ def test_discovery_bootstraps_cooldown_from_latest_existing_main_source_artifact
     )
     assert allowed is False
     assert next_allowed == datetime(2026, 11, 10, 16, 5, 6, tzinfo=UTC)
+
+    # The source-capture slot must bootstrap from its own latest Nov 3 artifact too.
+    calls.clear()
+    source_latest = budget.discover_latest_download_attempt(
+        token="test-token", workflow_path=SOURCE_PATH, get=get
+    )
+    assert source_latest == datetime(2026, 11, 3, 13, 2, 59, tzinfo=UTC)
+    assert calls == [marker_url, source_url, f"{budget.GITHUB_API}/actions/runs/41640753996"]
+    source_allowed, source_next_allowed = budget.decide_download_permission(
+        now=datetime(2026, 11, 3, 15, 0, tzinfo=UTC), latest_attempt_at=source_latest
+    )
+    assert source_allowed is False
+    assert source_next_allowed == datetime(2026, 11, 10, 15, 2, 59, tzinfo=UTC)
 
 
 def test_discovery_bootstrap_rejects_legacy_artifact_from_wrong_workflow():
