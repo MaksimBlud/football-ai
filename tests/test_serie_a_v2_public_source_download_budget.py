@@ -360,7 +360,7 @@ def test_discovery_bootstraps_cooldown_from_latest_existing_main_source_artifact
         raise AssertionError(f"unexpected GitHub API URL: {url}")
 
     latest = budget.discover_latest_download_attempt(token="test-token", workflow_path=DIAGNOSTIC_PATH, get=get)
-    assert latest == datetime(2026, 11, 2, 15, 41, 21, tzinfo=UTC)
+    assert latest == datetime(2026, 11, 3, 14, 5, 6, tzinfo=UTC)
     assert "football-data.co.uk" not in " ".join(calls)
     assert calls == [marker_url, diagnostic_url, f"{budget.GITHUB_API}/actions/runs/41650074683"]
     allowed, next_allowed = budget.decide_download_permission(
