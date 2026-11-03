@@ -1076,7 +1076,7 @@ def test_current_form_archive_rejects_total_uncompressed_overflow_before_decompr
 
 
 
-@pytest.mark.parametrize("event", ["push", "schedule", "workflow_dispatch", "workflow_run"])
+@pytest.mark.parametrize("event", ["schedule", "workflow_dispatch", "workflow_run"])
 def test_verified_current_form_parent_accepts_only_pinned_main_capture_events(monkeypatch, event):
     archive = {
         "run_id": 123,
@@ -1110,7 +1110,7 @@ def test_verified_current_form_parent_accepts_only_pinned_main_capture_events(mo
     assert verified["workflow_path"] == SOURCE_WORKFLOW_PATH
 
 
-@pytest.mark.parametrize("event", ["pull_request", "repository_dispatch", "workflow_call"])
+@pytest.mark.parametrize("event", ["push", "pull_request", "repository_dispatch", "workflow_call"])
 def test_verified_current_form_parent_rejects_unapproved_capture_events(monkeypatch, event):
     archive = {
         "run_id": 123,
