@@ -1,8 +1,10 @@
 """Free, outcome-blind, non-admissible LIVE Serie A V2 research diagnostic.
 
-This reads already-persisted 1X2 quotes and publicly accessible Football-Data
-history completed before the 2026/27 protected prospective cohort; it NEVER\ncalls the paid Odds API or inserts into Supabase. Crucially,
-newly downloaded history CANNOT be represented as verified at older quote time.
+The scheduled workflow reads only pre-freeze historical CSV members from an
+authenticated successful main Source Capture artifact and already-persisted
+1X2 quotes. It never opens the protected 2026/27 ZIP member, fetches public
+CSVs, calls the paid Odds API, or writes to Supabase. Source observation and
+artifact creation must both strictly predate a quote to count as source-before-quote.
 The 19-feature V2 outputs are DIAGNOSTIC ONLY, not prospective observations.
 """
 from __future__ import annotations
@@ -40,7 +42,7 @@ def _source_codes() -> list[str]:
 
 
 def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -> tuple[pd.DataFrame, list[dict]]:
-    """Explicit, bounded configured public URLs; never odds API, never cache guess."""
+    """Legacy explicit downloader for offline tests; the scheduled workflow does not call it."""
     all_frames = []
     audit = []
     if capture_dir is not None:
@@ -205,6 +207,7 @@ def make_report(quotes: list[dict], history: pd.DataFrame, source_audit: list[di
         "model_promotion": False,
         "independently_attested_feature_availability_at_quote": False,
         "quotes_with_source_observed_after_quote": late_source_quotes,
+        "quotes_with_source_observed_at_or_after_quote": late_source_quotes,
         "quotes_with_source_archive_created_at_or_after_quote": archive_created_after_quote,
         "quotes_with_all_old_season_sources_and_archive_strictly_before_quote": source_before_quote_ready,
         "historical_source_before_quote_status": source_before_quote_status,
@@ -257,7 +260,8 @@ def main() -> None:
     summary = {key: report[key] for key in (
         "mode", "historical_source", "public_http_requests", "paid_provider_requests",
         "supabase_writes", "quoted_fixtures", "history_rows", "feature_count",
-        "quotes_with_source_observed_after_quote", "quotes_with_source_archive_created_at_or_after_quote",
+        "quotes_with_source_observed_after_quote", "quotes_with_source_observed_at_or_after_quote",
+        "quotes_with_source_archive_created_at_or_after_quote",
         "quotes_with_all_old_season_sources_and_archive_strictly_before_quote",
         "historical_source_before_quote_status", "source_files_reused", "diagnostic_scored",
         "diagnostic_blocked", "feature_rows_with_missing_values",
