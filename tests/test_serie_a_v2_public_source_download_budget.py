@@ -111,7 +111,8 @@ def test_marker_rejects_unapproved_workflow_or_bad_identity():
         )
 
 
-def test_discovery_uses_only_exact_main_marker_and_verifies_parent_run():
+@pytest.mark.parametrize("event", ["schedule", "workflow_run"])
+def test_discovery_uses_only_exact_main_marker_and_verifies_parent_run(event):
     artifact_url = (
         f"{budget.GITHUB_API}/actions/artifacts?name={budget.MARKER_ARTIFACT_NAME}"
         "&per_page=100&page=1"
@@ -129,7 +130,7 @@ def test_discovery_uses_only_exact_main_marker_and_verifies_parent_run():
         "path": SOURCE_PATH,
         "head_branch": "main",
         "head_sha": SHA,
-        "event": "schedule",
+        "event": event,
         "status": "completed",
         "created_at": "2026-11-01T00:00:00Z",
         "updated_at": "2026-11-01T00:01:00Z",
@@ -214,7 +215,7 @@ def test_discovery_ignores_non_main_artifact_without_run_lookup():
     assert calls == [artifact_url, f"{budget.GITHUB_API}/actions/artifacts?name=serie-a-v2-current-form-source-capture&per_page=100&page=1"]
 
 
-@pytest.mark.parametrize("mutation", ["wrong_path", "wrong_sha", "wrong_event", "missing_parent"])
+@pytest.mark.parametrize("mutation", ["wrong_path", "wrong_sha", "wrong_event", "push_event", "missing_parent"])
 def test_bad_main_marker_parent_fails_closed(mutation):
     artifact_url = (
         f"{budget.GITHUB_API}/actions/artifacts?name={budget.MARKER_ARTIFACT_NAME}"
@@ -243,6 +244,8 @@ def test_bad_main_marker_parent_fails_closed(mutation):
         run["head_sha"] = "b" * 40
     elif mutation == "wrong_event":
         run["event"] = "pull_request"
+    elif mutation == "push_event":
+        run["event"] = "push"
     elif mutation == "missing_parent":
         artifact["workflow_run"] = None
 
