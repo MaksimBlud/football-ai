@@ -9473,7 +9473,7 @@ The fail-closed manifest records `rights_status=NOT_GRANTED`, `ai_usage_permitte
 
 The #707 exact-head CI is **8/8 SUCCESS**. Its recovery job compiled all four entrypoints, ran **42 tests** in the recovery/rights/runtime suite, completed the synthetic original-V2 runtime attestation, and proved production `.pkl` hashes unchanged. This is a branch result only; the gate is not active on main until HUMAN-MERGE and the required rebase sequence.
 
-The prospective evaluator is a separate live entrypoint. PR #701 was therefore also updated at HEAD `3dd5ec66e196c57a1a0f3de8629b39554ffd07b4` to carry the identical helper/manifest and block before artifact, Supabase, or outcome access. Its new CI has not yet appeared at the time of this entry. Do not treat the evaluator as rights-gated on main until that PR is integrated.
+The prospective evaluator is a separate live entrypoint. PR #701 was therefore also updated at HEAD `3dd5ec66e196c57a1a0f3de8629b39554ffd07b4` to carry the identical helper/manifest and block before artifact, Supabase, or outcome access. Its exact-head CI subsequently completed **6/6 SUCCESS**: evaluator tests **79 passed**, runner tests **8 passed**, and forward-artifact/selection/workflow tests **14 passed**. Do not treat the evaluator as rights-gated on main until that PR is integrated.
 
 ### Exact evaluation distinction
 
