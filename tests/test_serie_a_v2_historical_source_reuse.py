@@ -604,9 +604,10 @@ def test_capture_producer_manifest_passes_real_historical_reuse_consumer(tmp_pat
             })
         return pd.DataFrame([{"historical": 1}]), audits, reuse_provenance
 
+    capture_client = _CaptureQuery(gate_rows)
     report = source_capture.capture_source_archive(
         output_dir=tmp_path,
-        client=_CaptureQuery(gate_rows),
+        client=capture_client,
         now=now,
         get=lambda url, **kwargs: (
             response
@@ -618,7 +619,7 @@ def test_capture_producer_manifest_passes_real_historical_reuse_consumer(tmp_pat
         clock=lambda: next(source_clock),
     )
     assert response.closed is True
-    assert _CaptureQuery(gate_rows).selected is None
+    assert capture_client.selected == "match_date,home_team,away_team"
     gate = report["feature_source_gate"]
     assert gate["gate_fixture_identity_count"] == 30
     assert gate["gate_fixture_identities_covered_by_current_source"] == 30
