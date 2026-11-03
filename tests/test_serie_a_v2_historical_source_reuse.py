@@ -97,7 +97,7 @@ def _artifact_fixture(*, bad_url: bool = False, protected_old_date: bool = False
             "season": reuse.CURRENT_SEASON,
             "minimum_completed_primary_events": 30,
             "observed_completed_primary_events": 90,
-            "checked_at_utc": "2026-11-02T13:52:00Z",
+            "checked_at_utc": "2026-11-02T13:53:05Z",
             "metadata_fields_read": ["match_date", "home_team", "away_team"],
             "gate_fixture_identity_count": len(gate_identities),
             "gate_fixture_identity_sha256": gate_identity_sha,
