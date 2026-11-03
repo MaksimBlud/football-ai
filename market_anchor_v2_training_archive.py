@@ -20,6 +20,11 @@ from urllib.parse import urlsplit
 import pandas as pd
 import requests
 
+from market_anchor_v2_source_rights import (
+    DEFAULT_RIGHTS_MANIFEST_PATH,
+    require_ai_model_training_permission,
+)
+
 REPOSITORY = "MaksimBlud/football-ai"
 API_BASE = f"https://api.github.com/repos/{REPOSITORY}"
 SOURCE_WORKFLOW_PATH = ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
@@ -179,10 +184,15 @@ def verify_and_extract_archive(
     output_dir: Path,
     now: datetime,
     source_script_blob_sha: str,
+    rights_manifest_path: Path = DEFAULT_RIGHTS_MANIFEST_PATH,
+    rights_repo_root: Path | None = None,
 ) -> dict:
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("training archive verification clock must have a real UTC offset")
     now_utc = now.astimezone(timezone.utc)
+    source_rights = require_ai_model_training_permission(
+        rights_manifest_path, repo_root=rights_repo_root, now=now_utc
+    )
     if source_script_blob_sha != SOURCE_SCRIPT_BLOB_SHA:
         raise ValueError("training source code blob is not the frozen direct-URL no-redirect implementation")
     if artifact.get("name") != SOURCE_ARTIFACT_NAME or artifact.get("expired") is not False:
@@ -343,6 +353,7 @@ def verify_and_extract_archive(
         "supabase_writes": 0,
         "eligible_for_frozen_prospective_cohort": False,
         "product_publishable": False,
+        "source_rights": source_rights,
     }
     (output_dir / "training_source_archive_manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n",
@@ -358,6 +369,8 @@ def load_latest_training_archive(
     repository: str = REPOSITORY,
     now: datetime | None = None,
     get=requests.get,
+    rights_manifest_path: Path = DEFAULT_RIGHTS_MANIFEST_PATH,
+    rights_repo_root: Path | None = None,
 ) -> dict:
     if repository != REPOSITORY:
         raise ValueError("training archive recovery is pinned to the original GitHub repository")
@@ -367,6 +380,10 @@ def load_latest_training_archive(
         now = datetime.now(timezone.utc)
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("training archive recovery clock must have a real UTC offset")
+    # Rights are checked before any GitHub API request, artifact listing, download, or extraction.
+    require_ai_model_training_permission(
+        rights_manifest_path, repo_root=rights_repo_root, now=now
+    )
 
     workflows = _github_json(f"{API_BASE}/actions/workflows?per_page=100", token=token, get=get)
     matches = [
@@ -420,6 +437,8 @@ def load_latest_training_archive(
             output_dir=output_dir,
             now=now,
             source_script_blob_sha=source_script_blob_sha,
+            rights_manifest_path=rights_manifest_path,
+            rights_repo_root=rights_repo_root,
         )
     raise RuntimeError("no successful main Free Diagnostic artifact with the exact historical-only source set was found")
 
@@ -443,6 +462,8 @@ def main() -> None:
         "protected_2026_27_csv_opened": manifest["protected_2026_27_csv_opened"],
         "paid_provider_calls": manifest["paid_provider_calls"],
         "supabase_writes": manifest["supabase_writes"],
+        "source_rights_manifest_sha256": manifest["source_rights"]["rights_manifest_sha256"],
+        "source_rights_evidence_sha256": manifest["source_rights"]["evidence_sha256"],
         "no_bet": True,
     }, sort_keys=True))
 
