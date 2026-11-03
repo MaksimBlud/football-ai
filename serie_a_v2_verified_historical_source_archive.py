@@ -97,8 +97,10 @@ def verify_historical_only_archive(
         raise ValueError("source artifact is not inside a completed successful parent run")
 
     historical_codes = list(SERIE_A_RUNTIME_CONFIG.historical_source.season_codes)
-    if not historical_codes or historical_codes != list(sorted(historical_codes)):
-        raise ValueError("frozen historical season order is invalid")
+    if (not historical_codes or historical_codes != list(sorted(historical_codes))
+            or CURRENT_CODE in historical_codes
+            or any(code >= CURRENT_CODE for code in historical_codes)):
+        raise ValueError("frozen historical season order overlaps protected current season")
     historical_names = {f"serie_a_{code}.csv" for code in historical_codes}
     expected_names = historical_names | {CURRENT_FILENAME, MANIFEST_FILENAME}
 
@@ -134,6 +136,10 @@ def verify_historical_only_archive(
                     or manifest.get("current_season_code") != CURRENT_CODE
                     or manifest.get("current_season") != CURRENT_SEASON
                     or manifest.get("current_season_source_url") != CURRENT_URL
+                    or type(manifest.get("current_season_completed_prior_day_rows")) is not int
+                    or manifest.get("current_season_completed_prior_day_rows") < MIN_COMPLETED_FEATURE_SOURCE_EVENTS
+                    or type(manifest.get("current_season_total_csv_rows")) is not int
+                    or manifest.get("current_season_total_csv_rows") < manifest.get("current_season_completed_prior_day_rows")
                     or manifest.get("source_file_count") != len(expected_names) - 1
                     or manifest.get("historical_old_season_file_count") != len(historical_codes)):
                 raise ValueError("current-form source manifest violates frozen original V2 contract")
@@ -156,6 +162,16 @@ def verify_historical_only_archive(
                     or gate.get("score_or_result_fields_selected_for_gate") is not False
                     or gate.get("passed") is not True):
                 raise ValueError("source artifact feature-input metadata gate is invalid")
+
+            feature_policy = manifest.get("feature_policy")
+            if (not isinstance(feature_policy, dict)
+                    or feature_policy.get("use_current_season_matches_only_as_lagged_features") is not True
+                    or feature_policy.get("same_calendar_day_matches_excluded") is not True
+                    or feature_policy.get("future_or_unplayed_fixtures_used") is not False
+                    or feature_policy.get("model_weights_or_feature_definitions_changed") is not False
+                    or feature_policy.get("model_refit") is not False
+                    or feature_policy.get("model_selection") is not False):
+                raise ValueError("source artifact feature policy violates frozen V2 contract")
 
             target_gate = manifest.get("target_outcome_evaluation_gate")
             if (not isinstance(target_gate, dict)
