@@ -197,7 +197,7 @@ class StreamResponse:
         self.closed = True
 
 
-def _fake_get(raw, artifact_list, parent_run):
+def _fake_get(raw, artifact_list, parent_run, origin_artifact=None, origin_parent_run=None):
     calls = []
     stream = StreamResponse([raw[:1000], raw[1000:]])
     def get(url, **kwargs):
@@ -206,6 +206,10 @@ def _fake_get(raw, artifact_list, parent_run):
             return JsonResponse(url, artifact_list)
         if url.endswith(f"/actions/runs/{RUN_ID}"):
             return JsonResponse(url, parent_run)
+        if origin_artifact is not None and url.endswith("/actions/artifacts/122"):
+            return JsonResponse(url, origin_artifact)
+        if origin_parent_run is not None and url.endswith("/actions/runs/455"):
+            return JsonResponse(url, origin_parent_run)
         if url.endswith(f"/actions/artifacts/{ARTIFACT_ID}/zip"):
             return stream
         raise AssertionError(f"unexpected URL: {url}")
@@ -300,3 +304,81 @@ def test_oversized_artifact_declared_length_stops_before_body_read_and_closes(mo
         reuse.load_verified_historical_source_archive(token="test-token", now=NOW, get=get)
     assert stream.iterated is False
     assert stream.closed is True
+
+ 
+
+def _make_reused_artifact(raw):
+    origin_created = "2026-11-01T13:53:57Z"
+    origin_completed = "2026-11-01T13:54:01Z"
+    origin_head = "b" * 40
+    origin_sha = "c" * 64
+    stream = BytesIO()
+    with zipfile.ZipFile(BytesIO(raw), "r") as source:
+        members = {name: source.read(name) for name in source.namelist() if name != reuse.MANIFEST_FILENAME}
+        manifest = json.loads(source.read(reuse.MANIFEST_FILENAME).decode("utf-8"))
+    for item in manifest["source_files"]:
+        if item["season_code"] != reuse.CURRENT_CODE:
+            item["source_observed_at_utc"] = "2026-11-01T13:52:00Z"
+    manifest["historical_source_reuse"] = {
+        "schema_version": reuse.SCHEMA_VERSION,
+        "mode": "REUSED_VERIFIED_MAIN_ARTIFACT_HISTORICAL_ONLY",
+        "source_artifact_id": 122,
+        "source_artifact_sha256": origin_sha,
+        "source_artifact_created_at_utc": origin_created,
+        "source_parent_run_id": 455,
+        "source_parent_run_head_sha": origin_head,
+        "source_parent_run_completed_at_utc": origin_completed,
+        "historical_files_reused": len(reuse.HISTORICAL_CODES),
+        "public_historical_csv_requests": 0,
+        "current_season_file_reused": False,
+        "prior_feature_gate_reused": False,
+        "protected_2026_27_source_file_read": False,
+        "target_outcomes_read": False,
+        "supabase_writes": 0,
+        "paid_provider_calls": 0,
+    }
+    members[reuse.MANIFEST_FILENAME] = (json.dumps(manifest, sort_keys=True) + "\n").encode()
+    with zipfile.ZipFile(stream, "w", compression=zipfile.ZIP_DEFLATED) as target:
+        for name, body in members.items():
+            target.writestr(name, body)
+    new_raw = stream.getvalue()
+    origin_artifact = {
+        "id": 122,
+        "name": reuse.ARTIFACT_NAME,
+        "expired": False,
+        "digest": "sha256:" + origin_sha,
+        "created_at": origin_created,
+        "workflow_run": {"id": 455, "head_branch": "main", "head_sha": origin_head},
+    }
+    origin_parent = {
+        "id": 455,
+        "path": reuse.SOURCE_WORKFLOW_PATH,
+        "name": reuse.SOURCE_WORKFLOW_NAME,
+        "head_branch": "main",
+        "head_sha": origin_head,
+        "status": "completed",
+        "conclusion": "success",
+        "event": "schedule",
+        "created_at": "2026-11-01T13:53:01Z",
+        "updated_at": origin_completed,
+    }
+    return new_raw, origin_artifact, origin_parent
+
+
+def test_reused_artifact_must_point_back_to_a_verified_original_main_artifact():
+    raw, _artifact, artifact_list, parent_run = _artifact_fixture()
+    raw, origin_artifact, origin_parent = _make_reused_artifact(raw)
+    artifact_list["artifacts"][0]["digest"] = "sha256:" + hashlib.sha256(raw).hexdigest()
+    get, calls, _stream = _fake_get(raw, artifact_list, parent_run, origin_artifact, origin_parent)
+    history, audits, provenance = reuse.load_verified_historical_source_archive(
+        token="test-token", now=NOW, get=get
+    )
+    assert len(history) == 10
+    assert len(audits) == 10
+    assert provenance["source_artifact_id"] == 122
+    assert provenance["source_artifact_sha256"] == "c" * 64
+    assert provenance["source_parent_run_id"] == 455
+    assert provenance["source_parent_run_head_sha"] == "b" * 40
+    assert provenance["source_artifact_created_at_utc"] == "2026-11-01T13:53:57+00:00"
+    assert any(url.endswith("/actions/artifacts/122") for url, _ in calls)
+    assert any(url.endswith("/actions/runs/455") for url, _ in calls)
