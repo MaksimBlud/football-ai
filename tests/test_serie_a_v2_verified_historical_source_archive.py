@@ -104,6 +104,14 @@ def build_archive(*, mutate_manifest=None, mutate_old_member=False):
         "current_season_completed_prior_day_rows": 30,
         "current_season_total_csv_rows": 30,
         "current_season_excluded_incomplete_or_same_day_rows": 0,
+        "feature_policy": {
+            "use_current_season_matches_only_as_lagged_features": True,
+            "same_calendar_day_matches_excluded": True,
+            "future_or_unplayed_fixtures_used": False,
+            "model_weights_or_feature_definitions_changed": False,
+            "model_refit": False,
+            "model_selection": False,
+        },
         "feature_source_gate": {
             "type": "CURRENT_FORM_FEATURE_INPUT_ONLY",
             "primary_league": "SERIE_A",
