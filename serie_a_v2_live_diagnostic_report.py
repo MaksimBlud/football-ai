@@ -12,12 +12,14 @@ from datetime import datetime, timezone
 import hashlib
 from io import BytesIO
 import json
+import os
 from pathlib import Path
 
 import pandas as pd
 import requests
 
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
+from serie_a_v2_historical_source_reuse import load_verified_historical_source_archive
 from serie_a_v2_asof_feature_manifest import build_manifest
 from serie_a_v2_frozen_shadow_preview import (
     fetch_saved_upcoming_serie_a_quotes, parse_utc, shadow_preview,
@@ -77,6 +79,37 @@ def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -
     return pd.concat(all_frames, ignore_index=True), audit
 
 
+def fetch_public_history_with_provenance(
+    *, get=requests.get, capture_dir: Path | None = None,
+    token: str = "", now: datetime | None = None,
+) -> tuple[pd.DataFrame, list[dict], dict]:
+    """Reuse authenticated historical CSV bytes when actions:read is available.
+
+    A present token makes cache verification mandatory: an absent or invalid
+    artifact fails closed instead of silently issuing ten public CSV requests.
+    Without a token, the pre-existing explicit public-download bootstrap path
+    remains available for older workflow revisions.
+    """
+    if token:
+        at = now or datetime.now(timezone.utc)
+        return load_verified_historical_source_archive(
+            token=token, now=at, get=get, capture_dir=capture_dir
+        )
+    history, audit = fetch_public_history(get=get, capture_dir=capture_dir)
+    return history, audit, {
+        "mode": "DIRECT_PUBLIC_HISTORICAL_DOWNLOADS",
+        "source_artifact_id": None,
+        "historical_files_reused": 0,
+        "public_historical_csv_requests": len(audit),
+        "current_season_file_reused": False,
+        "prior_feature_gate_reused": False,
+        "protected_2026_27_source_file_read": False,
+        "target_outcomes_read": False,
+        "supabase_writes": 0,
+        "paid_provider_calls": 0,
+    }
+
+
 # Freeze rule is stronger than merely omitting this season from the remote
 # downloader. A caller may pass a concatenated frame or forged source audit.
 # Disallow 2026/27 rows, even if later excluded by the as-of feature cutoff.
@@ -120,7 +153,7 @@ def _assert_original_v2_source_embargo(history: pd.DataFrame, audit: list[dict],
 
 
 def make_report(quotes: list[dict], history: pd.DataFrame, source_audit: list[dict], *,
-                as_of_utc: datetime) -> dict:
+                as_of_utc: datetime, historical_source_reuse: dict | None = None) -> dict:
     if not source_audit:
         raise ValueError("history provenance required")
     if as_of_utc.tzinfo is None:
@@ -130,6 +163,18 @@ def make_report(quotes: list[dict], history: pd.DataFrame, source_audit: list[di
     )
     quote_times = [parse_utc(q["snapshot_time_utc"]) for q in quotes]
     source_times = [parse_utc(entry["source_observed_at_utc"]) for entry in source_audit]
+    reuse = dict(historical_source_reuse or {
+        "mode": "DIRECT_PUBLIC_HISTORICAL_DOWNLOADS",
+        "source_artifact_id": None,
+        "historical_files_reused": 0,
+        "public_historical_csv_requests": len(source_audit),
+        "current_season_file_reused": False,
+        "prior_feature_gate_reused": False,
+        "protected_2026_27_source_file_read": False,
+        "target_outcomes_read": False,
+        "supabase_writes": 0,
+        "paid_provider_calls": 0,
+    })
     manifest = build_manifest(history, quotes)
     original_inputs = manifest["feature_manifests"]
     # Completeness is reported on exact original 19-feature vectors, not a
@@ -158,7 +203,8 @@ def make_report(quotes: list[dict], history: pd.DataFrame, source_audit: list[di
         "2026_27_public_results_downloaded": False,
         "history_stale_without_2026_27_form": True,
         "public_source_files": source_audit,
-        "public_http_requests": len(source_audit),
+        "historical_source_reuse": reuse,
+        "public_http_requests": reuse.get("public_historical_csv_requests", len(source_audit)),
         "paid_provider_requests": 0,
         "supabase_writes": 0,
         "model_training": False,
@@ -196,8 +242,15 @@ def main() -> None:
     from database import supabase
     now = datetime.now(timezone.utc)
     quotes = fetch_saved_upcoming_serie_a_quotes(supabase, now=now)
-    history, sources = fetch_public_history(capture_dir=args.raw_source_dir)
-    report = make_report(quotes, history, sources, as_of_utc=datetime.now(timezone.utc))
+    history, sources, reuse = fetch_public_history_with_provenance(
+        capture_dir=args.raw_source_dir,
+        token=os.environ.get("GITHUB_TOKEN", ""),
+        now=now,
+    )
+    report = make_report(
+        quotes, history, sources, as_of_utc=datetime.now(timezone.utc),
+        historical_source_reuse=reuse,
+    )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True)+"\n", encoding="utf-8")
     summary = {key: report[key] for key in (
