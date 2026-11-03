@@ -1,3 +1,40 @@
+## 2026-11-03 17:01 UTC — Original V2 live audit, current gate drift, and push-trigger isolation
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The main copy of this file is still stale at its 2026-10-18 top entry; this PR carries the current continuity update.
+
+### Frozen candidate and real main workflows
+
+- The original `MARKET_ANCHOR_1X2_V2` candidate remains present on main: artifact SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; exact frozen feature list has 19 entries; `active_lambda=0`, `shadow_residual_lambda=1`, `stability_gate_passed=false`, `research_only=true`, `automatic_promotion=false`. No weights or feature definitions changed.
+- Main Source Capture #41640753996 SUCCESS created artifact #13231843819 at 2026-11-03 13:02:59 UTC. ZIP SHA-256: `4e6fb5531a2206a353fe00fa1ebb0b4d20b3c6ae41ab49a7c672f8dab6d29cd8`. The run manifest reports 10 historical CSVs / 3,800 historical rows, 100 completed current-season CSV rows, and a 98-identity feature-input gate. Paid calls and Supabase writes: 0.
+- Main Original Forward #41670482076 SUCCESS (2026-11-03 16:04 UTC): source attestation verified ten historical files / 3,800 rows; `quotes_seen=0`, forecasts 0, no target-outcome reads/scoring, paid calls 0, Supabase writes 0.
+- Main Current-Form Forward #41672409582 SUCCESS (2026-11-03 16:16 UTC): 53 tests passed; verified the exact Source Capture artifact and candidate SHA; `quotes_seen=0`, `v2_current_form_shadow_captured=0`, no target-outcome reads/scoring, paid calls 0, Supabase writes 0. This verifies the source archive path, not model quality.
+
+### Fresh read-only Supabase metadata
+
+- Strict pre-match `odds_snapshots` (`snapshot_time_utc < commence_time_utc`): 3,915 rows / 327 distinct events; latest pre-match snapshot 2026-10-13 14:48:53 UTC; zero future events with a strict pre-match quote.
+- `product_prediction_snapshots`: 40 pre-match rows, all `EPL_AI_MARKET_PAIR_V1`; zero rows with the original V2 candidate SHA.
+- Identity-only `league_finished_results` query for `league='SERIE_A'`, `season='2026-2027'`, `match_date < current_date`, selecting/counting only fixture identities: 101 unique identities, 2026-08-22 through 2026-11-01. No score/result fields were selected.
+- The Nov 3 source archive records a 98-identity gate, while the live metadata-only gate is now 101. The old main forward reader verified archive provenance/age but did not prove current identity-set parity. No protected 2026/27 source CSV member was opened to investigate the three-identity difference.
+
+### New #699 exact-head safeguards
+
+PR #699 current HEAD: `fecf8dd01ad6ea3b9eabd0dfb31167f397ae4e3a`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, exact CI **7/7 SUCCESS**. Original V2 shadow job: **289 tests passed**, production `.pkl` no-change guard passed.
+
+- Current-Form Forward Preview now accepts a Source Capture `workflow_run` parent only for `schedule` or `workflow_dispatch`; offline push validation cannot fan out into the secret-bearing forward reader.
+- Current-Form Source Capture live job now accepts only direct `schedule` / `workflow_dispatch` or a successful main Free Real-Quote Diagnostic whose parent event was `schedule` / `workflow_dispatch`; push is excluded.
+- Diagnostic-triggered source reuse rereads current identity-only gate rows, passes `current_gate_identities` to archive verification, and requires both `fresh_for_new_quote` and `fresh_for_current_feature_gate`. Target outcomes remain unread.
+- The new checks are static workflow-contract tests; the model, 19 features, weights, lambdas, gate threshold, and cron expressions are unchanged.
+
+### Integration order and blockers
+
+- PR #705 exact HEAD `8b139335e6722b7c4f5286962486bca84bced20d`: **8/8 SUCCESS**, mergeable, HUMAN-MERGE only. It adds the shared two-per-rolling-week public-source budget (170 hours per approved workflow path), bootstrap from the actual Nov 3 artifacts, and offline-only push validation. Merge #705 first; then rebase #699 and rerun exact-head CI. The Nov 3 source/diagnostic sessions happened before the guard is active on main.
+- PR #712 exact HEAD `331e7934f92763d8df2c6c35e01b6b26a80bcf5d`: **9/9 SUCCESS**, offline/mock-only historical source reuse. Rebase only after #705/#699 integration and a normal post-#699 source capture with the identity-set SHA. #711 is a draft overlapping alternative; do not merge both. #709's push isolation is already present in #705; do not merge #709 separately.
+- The official Football-Data fair-use page says free files are intended for private personal betting/academic research, allows at most light automated downloads twice weekly, and excludes commercial/data-training AI use. Intended AI-inference rights are not established by the rate limit. No new live Football-Data download was manually initiated; do not treat #705's 170-hour budget as a licence. Confirm permitted use or obtain rights before further live capture.
+- Prospective evaluator #701 remains separate from the 98/101 feature-input gate: the 30-primary-completed-forecast outcome gate is still CLOSED at 0/30. No Brier/LogLoss comparison or superiority claim is available.
+
+No main merge, Supabase writes/DDL, paid API calls, production `.pkl` changes, outcome reads, schedule changes, or other-agent changes occurred. HUMAN-MERGE remains mandatory.
+
+
 ## 2026-11-03 15:23 UTC — fresh main source archive verified; no saved quotes; V2 cohort still empty
 
 Audit against unchanged main `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The scheduled main workflows were read from GitHub Actions; no manual workflow dispatch, paid odds request, Supabase write/DDL, production artifact change, or target-outcome query was initiated by this audit.
