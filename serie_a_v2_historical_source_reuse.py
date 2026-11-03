@@ -244,12 +244,136 @@ def _download_archive(
             close()
 
 
+def _verify_origin_provenance(
+    reuse_meta: Any,
+    *,
+    artifact: Mapping[str, Any],
+    parent: Mapping[str, Any],
+    token: str,
+    get: Callable[..., Any],
+) -> tuple[dict, datetime, bool]:
+    current_parent_created = _utc(parent["run_created_at_utc"], field="current parent run created_at")
+    if reuse_meta is None:
+        return {
+            "source_artifact_id": artifact["artifact_id"],
+            "source_artifact_sha256": artifact["sha256"],
+            "source_artifact_created_at_utc": artifact["created_at"].isoformat(),
+            "source_parent_run_id": artifact["run_id"],
+            "source_parent_run_head_sha": artifact["head_sha"],
+            "source_parent_run_completed_at_utc": parent["run_completed_at_utc"],
+        }, artifact["created_at"], False
+
+    if not isinstance(reuse_meta, Mapping):
+        raise ValueError("historical-source reuse provenance must be an object")
+    mode = reuse_meta.get("mode")
+    if mode == "DIRECT_PUBLIC_HISTORICAL_DOWNLOADS":
+        if (
+            reuse_meta.get("historical_files_reused") != 0
+            or reuse_meta.get("public_historical_csv_requests") != len(HISTORICAL_CODES)
+            or reuse_meta.get("current_season_file_reused") is not False
+            or reuse_meta.get("prior_feature_gate_reused") is not False
+            or reuse_meta.get("protected_2026_27_source_file_read") is not False
+            or reuse_meta.get("target_outcomes_read") is not False
+            or reuse_meta.get("supabase_writes") != 0
+            or reuse_meta.get("paid_provider_calls") != 0
+        ):
+            raise ValueError("direct-download provenance does not match the bootstrap contract")
+        return {
+            "source_artifact_id": artifact["artifact_id"],
+            "source_artifact_sha256": artifact["sha256"],
+            "source_artifact_created_at_utc": artifact["created_at"].isoformat(),
+            "source_parent_run_id": artifact["run_id"],
+            "source_parent_run_head_sha": artifact["head_sha"],
+            "source_parent_run_completed_at_utc": parent["run_completed_at_utc"],
+        }, artifact["created_at"], False
+
+    if mode != "REUSED_VERIFIED_MAIN_ARTIFACT_HISTORICAL_ONLY":
+        raise ValueError("source artifact uses an unknown or injected historical reuse mode")
+    origin_id = reuse_meta.get("source_artifact_id")
+    origin_run_id = reuse_meta.get("source_parent_run_id")
+    origin_sha = reuse_meta.get("source_artifact_sha256")
+    origin_head = reuse_meta.get("source_parent_run_head_sha")
+    if (
+        type(origin_id) is not int or origin_id <= 0
+        or type(origin_run_id) is not int or origin_run_id <= 0
+        or not isinstance(origin_sha, str) or SHA256_RE.fullmatch(origin_sha) is None
+        or not isinstance(origin_head, str) or SHA1_RE.fullmatch(origin_head) is None
+        or reuse_meta.get("historical_files_reused") != len(HISTORICAL_CODES)
+        or reuse_meta.get("public_historical_csv_requests") != 0
+        or reuse_meta.get("current_season_file_reused") is not False
+        or reuse_meta.get("prior_feature_gate_reused") is not False
+        or reuse_meta.get("protected_2026_27_source_file_read") is not False
+        or reuse_meta.get("target_outcomes_read") is not False
+        or reuse_meta.get("supabase_writes") != 0
+        or reuse_meta.get("paid_provider_calls") != 0
+    ):
+        raise ValueError("historical reuse provenance lacks its immutable original-artifact anchor")
+    origin_created = _utc(
+        reuse_meta.get("source_artifact_created_at_utc"),
+        field="origin source artifact created_at",
+    )
+    origin_completed_declared = _utc(
+        reuse_meta.get("source_parent_run_completed_at_utc"),
+        field="origin source parent completed_at",
+    )
+    origin_payload = _github_json(
+        f"{GITHUB_API}/actions/artifacts/{origin_id}",
+        token=token,
+        get=get,
+    )
+    workflow_run = origin_payload.get("workflow_run")
+    digest = origin_payload.get("digest")
+    if (
+        origin_payload.get("id") != origin_id
+        or origin_payload.get("name") != ARTIFACT_NAME
+        or origin_payload.get("expired") is True
+        or not isinstance(digest, str)
+        or digest != "sha256:" + origin_sha
+        or _utc(origin_payload.get("created_at"), field="origin artifact created_at") != origin_created
+        or not isinstance(workflow_run, Mapping)
+        or workflow_run.get("id") != origin_run_id
+        or workflow_run.get("head_branch") != "main"
+        or workflow_run.get("head_sha") != origin_head
+    ):
+        raise ValueError("historical reuse origin does not match GitHub artifact metadata")
+    origin_artifact = {
+        "artifact_id": origin_id,
+        "run_id": origin_run_id,
+        "head_sha": origin_head,
+        "created_at": origin_created,
+        "sha256": origin_sha,
+    }
+    origin_parent = _verify_parent_run(
+        origin_artifact,
+        token=token,
+        now=current_parent_created,
+        get=get,
+    )
+    if (
+        _utc(origin_parent["run_completed_at_utc"], field="origin parent completed_at")
+        != origin_completed_declared
+        or origin_created > origin_completed_declared
+        or origin_completed_declared > current_parent_created
+    ):
+        raise ValueError("historical reuse origin is not completed before the current source run")
+    return {
+        "source_artifact_id": origin_id,
+        "source_artifact_sha256": origin_sha,
+        "source_artifact_created_at_utc": origin_created.isoformat(),
+        "source_parent_run_id": origin_run_id,
+        "source_parent_run_head_sha": origin_head,
+        "source_parent_run_completed_at_utc": origin_completed_declared.isoformat(),
+    }, origin_created, True
+
+
 def _verify_and_extract_historical_files(
     raw: bytes,
     artifact: Mapping[str, Any],
     parent: Mapping[str, Any],
     *,
     capture_dir: Path | None,
+    token: str,
+    get: Callable[..., Any],
 ) -> tuple[pd.DataFrame, list[dict], dict]:
     if not raw or len(raw) > MAX_ARCHIVE_BYTES:
         raise ValueError("source artifact ZIP is empty or oversized")
@@ -375,6 +499,13 @@ def _verify_and_extract_historical_files(
         parent_created = _utc(parent["run_created_at_utc"], field="parent run created_at")
         if not parent_created <= archive_created <= artifact_created <= parent_completed:
             raise ValueError("source manifest/archive/parent run timestamps are inconsistent")
+        origin_provenance, source_anchor_created, is_reused = _verify_origin_provenance(
+            manifest.get("historical_source_reuse"),
+            artifact=artifact,
+            parent=parent,
+            token=token,
+            get=get,
+        )
 
         source_files = manifest.get("source_files")
         if not isinstance(source_files, list) or len(source_files) != len(expected_names) - 1:
@@ -402,8 +533,8 @@ def _verify_and_extract_historical_files(
             current_item.get("source_observed_at_utc"),
             field="current-season source_observed_at_utc",
         )
-        if current_observed > archive_created:
-            raise ValueError("current-season source observation postdates source archive creation")
+        if current_observed < parent_created or current_observed > archive_created:
+            raise ValueError("current-season source observation is outside the current source run")
         # Deliberately do not read or decompress CURRENT_FILENAME: this helper
         # reuses old-season inputs only, never protected 2026/27 outcomes.
 
@@ -425,8 +556,10 @@ def _verify_and_extract_historical_files(
                 item.get("source_observed_at_utc"),
                 field=f"historical source {code} source_observed_at_utc",
             )
-            if observed > archive_created or observed > artifact_created:
-                raise ValueError("historical source observation postdates its authenticated archive")
+            if observed > source_anchor_created or observed > archive_created or observed > artifact_created:
+                raise ValueError("historical source observation postdates its authenticated origin archive")
+            if not is_reused and observed < parent_created:
+                raise ValueError("direct historical source observation predates its source workflow run")
             body = archive.read(info_by_name[filename])
             if hashlib.sha256(body).hexdigest() != item["csv_sha256"]:
                 raise ValueError(f"historical source CSV SHA-256 mismatch for season {code}")
@@ -461,12 +594,7 @@ def _verify_and_extract_historical_files(
     provenance = {
         "schema_version": SCHEMA_VERSION,
         "mode": "REUSED_VERIFIED_MAIN_ARTIFACT_HISTORICAL_ONLY",
-        "source_artifact_id": artifact["artifact_id"],
-        "source_artifact_sha256": artifact["sha256"],
-        "source_artifact_created_at_utc": artifact["created_at"].isoformat(),
-        "source_parent_run_id": artifact["run_id"],
-        "source_parent_run_head_sha": artifact["head_sha"],
-        "source_parent_run_completed_at_utc": parent["run_completed_at_utc"],
+        **origin_provenance,
         "historical_files_reused": len(HISTORICAL_CODES),
         "public_historical_csv_requests": 0,
         "current_season_file_reused": False,
@@ -493,5 +621,5 @@ def load_verified_historical_source_archive(
     parent = _verify_parent_run(artifact, token=token, now=at, get=get)
     raw = _download_archive(artifact["artifact_id"], token=token, get=get)
     return _verify_and_extract_historical_files(
-        raw, artifact, parent, capture_dir=capture_dir
+        raw, artifact, parent, capture_dir=capture_dir, token=token, get=get
     )
