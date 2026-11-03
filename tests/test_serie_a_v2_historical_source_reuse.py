@@ -345,6 +345,21 @@ def test_push_created_source_artifact_is_rejected_before_zip_download():
     assert not any(url.endswith("/zip") for url, _ in calls)
 
 
+def test_guarded_workflow_run_source_artifact_is_accepted():
+    raw, _artifact, artifact_list, parent_run = _artifact_fixture()
+    parent_run["event"] = "workflow_run"
+    get, calls, _stream = _fake_get(raw, artifact_list, parent_run)
+
+    history, audits, provenance = reuse.load_verified_historical_source_archive(
+        token="test-token", now=NOW, get=get
+    )
+
+    assert len(history) == len(reuse.HISTORICAL_CODES)
+    assert len(audits) == len(reuse.HISTORICAL_CODES)
+    assert provenance["mode"] == "DIRECT_PUBLIC_HISTORICAL_DOWNLOADS"
+    assert any(url.endswith("/zip") for url, _ in calls)
+
+
 def test_artifact_zip_digest_mismatch_fails_closed():
     raw, _artifact, artifact_list, parent_run = _artifact_fixture()
     artifact_list["artifacts"][0]["digest"] = "sha256:" + ("0" * 64)
