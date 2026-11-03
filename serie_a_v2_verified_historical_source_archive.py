@@ -44,7 +44,7 @@ REPOSITORY = "MaksimBlud/football-ai"
 PUBLIC_BASE = "https://www.football-data.co.uk/mmz4281"
 OLD_CUTOFF = pd.Timestamp("2026-07-01")
 MAX_HISTORICAL_CSV_BYTES = 2_000_000
-SHA256_RE = re.compile(r"[0-9a-f]{64}\\Z")
+SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
 
 
 def _utc(value: Any, *, field: str) -> datetime:
@@ -251,7 +251,7 @@ def verify_historical_only_archive(
                 for filename, body in verified_bytes.items():
                     (capture_dir / filename).write_bytes(body)
                 (capture_dir / MANIFEST_FILENAME).write_text(
-                    json.dumps(manifest, indent=2, ensure_ascii=False, sort_keys=True) + "\\n",
+                    json.dumps(manifest, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
                     encoding="utf-8",
                 )
     except zipfile.BadZipFile as exc:
