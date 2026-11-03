@@ -19,6 +19,7 @@ from serie_a_v2_current_form_source_capture import (
     capture_source_archive,
     count_unique_completed_primary_events,
     read_completed_primary_event_count,
+    read_completed_primary_event_identities,
     validate_current_season_csv,
 )
 from serie_a_v2_live_diagnostic_report import _source_codes
@@ -411,3 +412,26 @@ def test_capture_rejects_current_csv_missing_a_gate_identity_before_archiving_cu
     assert response.closed is True
     assert not (tmp_path / CURRENT_FILENAME).exists()
     assert not (tmp_path / MANIFEST_FILENAME).exists()
+
+def test_identity_gate_rejects_unrequested_outcome_fields_and_noncanonical_dates():
+    outcome_client = FakeQuery([{
+        "match_date": "2026-10-01",
+        "home_team": "Atalanta",
+        "away_team": "Juventus",
+        "result": "H",
+    }])
+    with pytest.raises(ValueError, match="identity-only allowlist"):
+        read_completed_primary_event_identities(
+            outcome_client, now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+    malformed_date_client = FakeQuery([{
+        "match_date": "2026-10-01T00:00:00Z",
+        "home_team": "Atalanta",
+        "away_team": "Juventus",
+    }])
+    with pytest.raises(ValueError, match="invalid primary event date"):
+        read_completed_primary_event_identities(
+            malformed_date_client, now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
