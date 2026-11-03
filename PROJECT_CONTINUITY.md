@@ -9510,3 +9510,21 @@ Therefore the safe HUMAN-MERGE/rebase order is stricter than a simple #699 → #
 6. Merge the documentation PR #697 only after its current exact-head CI passes; it can then record the integrated heads.
 
 Do not merge #707 before #712: that could overwrite the verified historical-cache producer/consumer work. Do not merge #712 before #699: its source reader must inherit #699's exact URL/clock/identity protections and #705's shared budget. #709 is redundant with #705; #711 is the overlapping draft alternative to #712.
+
+
+## 2026-11-03 19:20 UTC — correction: research inference is distinct from AI training
+
+A fresh line-by-line re-read of the provider's current official policy (page updated 03/11/26) corrected the broader interpretation in the preceding entry. The page says the free CSV/Excel data are intended for private individuals' **personal betting and/or academic interest/research only**, by manual download or at most light automated download (maximum twice per week). It says the data are **not intended for commercial or AI data-training projects** and that users seeking those uses should assume no permission is granted. It does **not expressly prohibit frozen-weight inference** for personal/academic research. Source: https://football-data.co.uk/contact.php.
+
+Therefore the earlier `AI_USAGE` permission gate was too broad for the stated V2 research task and has been corrected on the open branches. This project uses the already-frozen 19-feature/weight candidate only for noncommercial personal/academic research inference, with current-season results used solely as lagged features. No fit, refit, feature selection, threshold tuning, commercial use, public product publication, betting, or production promotion is permitted. This is an operational interpretation of the provider's stated personal/academic research category, **not** a provider-issued AI-inference licence; if the intended use changes to a public product or commercial service, this free-data scope is not sufficient.
+
+The revised manifest is `rights_status=CONDITIONAL_RESEARCH_ONLY`, `research_inference_permitted=true`, `research_inference_scope=PERSONAL_BETTING_OR_ACADEMIC_RESEARCH_ONLY`, `ai_model_training_permitted=false`, `commercial_use_permitted=false`, and `public_product_use_permitted=false`. The new `require_personal_research_inference_scope()` gate checks these restrictions, the official policy URL/date, and a maximum of two automated download sessions per rolling seven days. The separate training-recovery function still requires explicit SHA-bound evidence and remains blocked. #705's shared 170-hour budget and #712's verified historical cache remain required before any further automated source refresh; do not dispatch a manual download.
+
+Revised exact heads (CI was starting after these updates):
+- #699: `61c77cef65714d4ca9035fc6763f8b2d65c773cd` — scope gate applied to all four live V2 entrypoints on top of the strict #699 source reader.
+- #707: `4ef792b2bb5b425b6909bbddab1ed3395fe7c76e` — same helper/manifest and recovery rights gate.
+- #701: `af31c747e6deb636157bf3f60ca84b6361ac1d36` — prospective evaluator checks the same restricted research scope before any external read.
+
+The revised helper and manifest have identical blob SHAs across all three branches, so they converge without duplicate implementations. The safe integration order remains #705 → #699 → #712 → #707 → #701, with #707 rebased after #712 because both modify the current-form source-capture and diagnostic scripts. #712 must preserve #699's URL/clock/identity hardening and the restricted research-scope gate.
+
+The main-only data audit remains unchanged: zero strict pre-match quotes in the last seven days, zero future fixtures with saved pre-match quotes, zero original-V2 product snapshots, and zero eligible prospective forecasts. No target outcomes were read and no Brier/LogLoss was computed. No source request, paid request, Supabase write/DDL, production `.pkl` change, main update, schedule change, or other-agent change occurred in this correction.
