@@ -705,7 +705,7 @@ def test_live_workflows_grant_read_only_github_artifact_access_for_historical_re
     }
     for path, job_name in workflows.items():
         text = path.read_text(encoding="utf-8")
-        assert "permissions:\\n  actions: read\\n  contents: read" in text
-        job = text.split("jobs:\\n", 1)[1].split("  " + job_name + ":\\n", 1)[1]
-        env = job.split("    steps:\\n", 1)[0]
+        assert "permissions:\n  actions: read\n  contents: read" in text
+        job = text.split("jobs:\n", 1)[1].split("  " + job_name + ":\n", 1)[1]
+        env = job.split("    steps:\n", 1)[0]
         assert "GITHUB_TOKEN: ${{ github.token }}" in env
