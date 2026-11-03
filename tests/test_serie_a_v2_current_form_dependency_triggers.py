@@ -88,7 +88,7 @@ def test_successful_source_audit_is_still_the_only_dependency_trigger_for_forwar
 
 def test_current_form_source_capture_live_job_excludes_push_validation():
     workflow = SOURCE_WORKFLOW.read_text(encoding="utf-8")
-    job = workflow.split("  capture-current-form:\\n", 1)[1].split("\\n    runs-on:", 1)[0]
+    job = workflow.split("  capture-current-form:\n", 1)[1].split("\n    runs-on:", 1)[0]
     # After #705, push is an offline-only validation event. Only scheduled,
     # manual-main, or successful scheduled/manual diagnostic parents may fetch.
     assert "github.event_name == 'schedule'" in job
