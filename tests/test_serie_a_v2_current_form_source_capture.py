@@ -204,3 +204,85 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert report["target_outcome_evaluation_gate"]["outcome_gate_open"] is False
     assert report["paid_provider_calls"] == report["supabase_writes"] == 0
     assert report["model_refit_or_promotion"] is False
+
+
+def test_current_form_capture_reuses_verified_historical_archive_when_actions_token_exists(monkeypatch, tmp_path):
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    raw = current_csv(n=30)
+    now = datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+    reuse_calls = []
+    public_calls = []
+    source_times = iter([
+        datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc),
+        datetime(2026, 10, 18, 8, 2, tzinfo=timezone.utc),
+    ])
+
+    def fake_reuse(**kwargs):
+        reuse_calls.append(kwargs)
+        audits = []
+        frames = []
+        capture_dir = kwargs["capture_dir"]
+        for code in _source_codes():
+            year = 2000 + int(code[:2])
+            body = (
+                "Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HC,AC,HY,AY,HR,AR\n"
+                f"01/10/{year},Juventus,Napoli,1,0,H,5,3,2,1,0,0\n"
+            ).encode()
+            filename = f"serie_a_{code}.csv"
+            (capture_dir / filename).write_bytes(body)
+            frames.append(pd.read_csv(BytesIO(body)))
+            audits.append({
+                "season_code": code,
+                "source_url": f"https://www.football-data.co.uk/mmz4281/{code}/I1.csv",
+                "archived_source_name": filename,
+                "csv_sha256": hashlib.sha256(body).hexdigest(),
+                "source_observed_at_utc": "2026-10-18T08:00:00+00:00",
+                "completed_source_rows": 1,
+            })
+        provenance = {
+            "mode": "REUSED_VERIFIED_MAIN_ARTIFACT_HISTORICAL_ONLY",
+            "source_artifact_id": 123,
+            "historical_files_reused": 10,
+            "public_historical_csv_requests": 0,
+            "current_season_file_reused": False,
+            "prior_feature_gate_reused": False,
+            "protected_2026_27_source_file_read": False,
+            "target_outcomes_read": False,
+            "supabase_writes": 0,
+            "paid_provider_calls": 0,
+        }
+        return pd.concat(frames, ignore_index=True), audits, provenance
+
+    class Response:
+        status_code = 200
+        url = CURRENT_URL
+        content = raw
+        def raise_for_status(self):
+            return None
+
+    def fake_current_get(url, timeout):
+        public_calls.append((url, timeout))
+        assert url == CURRENT_URL
+        return Response()
+
+    report = capture_source_archive(
+        output_dir=tmp_path,
+        client=FakeQuery(event_rows(30)),
+        now=now,
+        get=fake_current_get,
+        history_fetch_with_provenance=fake_reuse,
+        clock=lambda: next(source_times),
+    )
+
+    assert len(reuse_calls) == 1
+    assert reuse_calls[0]["token"] == "test-token"
+    assert reuse_calls[0]["now"] == now
+    assert public_calls == [(CURRENT_URL, 30)]
+    assert report["historical_source_reuse"]["mode"] == "REUSED_VERIFIED_MAIN_ARTIFACT_HISTORICAL_ONLY"
+    assert report["historical_source_reuse"]["historical_files_reused"] == 10
+    assert report["historical_source_reuse"]["public_historical_csv_requests"] == 0
+    assert report["historical_source_reuse"]["current_season_file_reused"] is False
+    assert report["source_file_count"] == 11
+    assert report["historical_old_season_file_count"] == 10
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
