@@ -83,31 +83,15 @@ def fetch_public_history_with_provenance(
     *, get=requests.get, capture_dir: Path | None = None,
     token: str = "", now: datetime | None = None,
 ) -> tuple[pd.DataFrame, list[dict], dict]:
-    """Reuse authenticated historical CSV bytes when actions:read is available.
-
-    A present token makes cache verification mandatory: an absent or invalid
-    artifact fails closed instead of silently issuing ten public CSV requests.
-    Without a token, the pre-existing explicit public-download bootstrap path
-    remains available for older workflow revisions.
-    """
-    if token:
-        at = now or datetime.now(timezone.utc)
-        return load_verified_historical_source_archive(
-            token=token, now=at, get=get, capture_dir=capture_dir
+    """Reuse authenticated historical CSV bytes; never fall back to direct downloads."""
+    if not isinstance(token, str) or not token.strip():
+        raise ValueError(
+            "GitHub actions:read token is required; direct historical CSV fallback is disabled"
         )
-    history, audit = fetch_public_history(get=get, capture_dir=capture_dir)
-    return history, audit, {
-        "mode": "DIRECT_PUBLIC_HISTORICAL_DOWNLOADS",
-        "source_artifact_id": None,
-        "historical_files_reused": 0,
-        "public_historical_csv_requests": len(audit),
-        "current_season_file_reused": False,
-        "prior_feature_gate_reused": False,
-        "protected_2026_27_source_file_read": False,
-        "target_outcomes_read": False,
-        "supabase_writes": 0,
-        "paid_provider_calls": 0,
-    }
+    at = now or datetime.now(timezone.utc)
+    return load_verified_historical_source_archive(
+        token=token, now=at, get=get, capture_dir=capture_dir
+    )
 
 
 # Freeze rule is stronger than merely omitting this season from the remote

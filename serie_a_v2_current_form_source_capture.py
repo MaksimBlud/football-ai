@@ -168,6 +168,47 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     return result, len(frame) - len(completed)
 
 
+def _read_bounded_current_source_response(response: Any) -> bytes:
+    """Read only the pinned current-season CSV with redirect and byte limits."""
+    try:
+        if getattr(response, "url", None) != CURRENT_URL:
+            raise ValueError("current-season source returned an unexpected URL")
+        status = getattr(response, "status_code", None)
+        if status in (301, 302, 303, 307, 308):
+            raise ValueError("current-season source redirect rejected")
+        if status != 200:
+            raise RuntimeError(f"current-season source unavailable: HTTP {status}")
+        headers = getattr(response, "headers", {})
+        if not isinstance(headers, Mapping):
+            raise ValueError("current-season source headers are malformed")
+        declared_length = headers.get("Content-Length")
+        if declared_length is not None:
+            declared_text = str(declared_length).strip()
+            if not declared_text.isdigit():
+                raise ValueError("current-season source Content-Length is malformed")
+            if int(declared_text) > MAX_CURRENT_CSV_BYTES:
+                raise ValueError("current-season source declared size exceeds the byte limit")
+        iterator = getattr(response, "iter_content", None)
+        if not callable(iterator):
+            raise ValueError("current-season source response does not support bounded streaming")
+        body = bytearray()
+        for chunk in iterator(chunk_size=65536):
+            if not isinstance(chunk, (bytes, bytearray)):
+                raise ValueError("current-season source returned a non-byte stream chunk")
+            if not chunk:
+                continue
+            if len(body) + len(chunk) > MAX_CURRENT_CSV_BYTES:
+                raise ValueError("streamed current-season source exceeds the byte limit")
+            body.extend(chunk)
+        if not body:
+            raise ValueError("current-season source response is empty")
+        return bytes(body)
+    finally:
+        close = getattr(response, "close", None)
+        if callable(close):
+            close()
+
+
 def capture_source_archive(
     *,
     output_dir: Path,
@@ -191,22 +232,23 @@ def capture_source_archive(
         )
     output_dir.mkdir(parents=True, exist_ok=True)
     token = os.environ.get("GITHUB_TOKEN", "")
-    if token and history_fetch is fetch_public_history:
+    if history_fetch is fetch_public_history:
+        if not token:
+            raise RuntimeError(
+                "GITHUB_TOKEN with actions:read is required; public historical download fallback is disabled"
+            )
         old_history, old_audit, history_reuse = history_fetch_with_provenance(
             get=get, capture_dir=output_dir, token=token, now=at
         )
     else:
+        # Dependency injection is retained for offline tests only. The production
+        # default path above never falls back to direct public CSV downloads.
         old_history, old_audit = history_fetch(get=get, capture_dir=output_dir)
         history_reuse = {
-            "mode": (
-                "DIRECT_PUBLIC_HISTORICAL_DOWNLOADS"
-                if history_fetch is fetch_public_history else "INJECTED_HISTORY_FETCH"
-            ),
+            "mode": "INJECTED_HISTORY_FETCH",
             "source_artifact_id": None,
             "historical_files_reused": 0,
-            "public_historical_csv_requests": (
-                len(old_audit) if history_fetch is fetch_public_history else None
-            ),
+            "public_historical_csv_requests": None,
             "current_season_file_reused": False,
             "prior_feature_gate_reused": False,
             "protected_2026_27_source_file_read": False,
@@ -216,9 +258,10 @@ def capture_source_archive(
         }
     if old_history.empty or len(old_audit) != len(_source_codes()):
         raise ValueError("original frozen historical source archive incomplete")
-    response = get(CURRENT_URL, timeout=30)
-    response.raise_for_status()
-    raw = response.content
+    response = get(
+        CURRENT_URL, timeout=30, stream=True, allow_redirects=False
+    )
+    raw = _read_bounded_current_source_response(response)
     observed_at = clock().astimezone(timezone.utc)
     current_rows, excluded_rows = validate_current_season_csv(raw, captured_at=observed_at)
     if len(current_rows) < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:

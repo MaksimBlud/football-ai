@@ -5,7 +5,8 @@ import pandas as pd
 import pytest
 
 from serie_a_v2_live_diagnostic_report import (
-    PUBLIC_BASE, _source_codes, fetch_public_history, make_report,
+    PUBLIC_BASE, _source_codes, fetch_public_history,
+    fetch_public_history_with_provenance, make_report,
 )
 
 NOW = datetime(2026,10,13,15,1,tzinfo=timezone.utc)
@@ -196,3 +197,16 @@ def test_report_records_zero_public_downloads_when_historical_archive_is_reused(
     assert report["historical_source_reuse"]["current_season_file_reused"] is False
     assert report["historical_source_reuse"]["target_outcomes_read"] is False
     assert report["paid_provider_requests"] == report["supabase_writes"] == 0
+
+
+
+def test_historical_source_provenance_requires_actions_read_without_public_fallback():
+    calls = []
+
+    def forbidden_get(*_args, **_kwargs):
+        calls.append("public-csv")
+        raise AssertionError("missing token must not trigger public CSV downloads")
+
+    with pytest.raises(ValueError, match="direct historical CSV fallback is disabled"):
+        fetch_public_history_with_provenance(token="", get=forbidden_get)
+    assert calls == []
