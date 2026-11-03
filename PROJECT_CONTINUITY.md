@@ -9491,3 +9491,22 @@ The prospective evaluator is a separate live entrypoint. PR #701 was therefore a
 - #697 documentation branch: this update is pending exact-head CI. #709 remains redundant with the push/offline protection already included in #705.
 
 No PR was merged, no main ref changed, no workflow schedule or other agent was changed, no paid provider request or Football-Data download was initiated, no Supabase write/DDL occurred, no protected outcome was read, and no production `.pkl` was changed. HUMAN-MERGE remains mandatory.
+
+
+### Integration-order correction — overlapping V2 source files
+
+A fresh changed-file intersection check confirms that #707 and #712 both modify exactly:
+
+- `serie_a_v2_current_form_source_capture.py`;
+- `serie_a_v2_live_diagnostic_report.py`.
+
+Therefore the safe HUMAN-MERGE/rebase order is stricter than a simple #699 → #707 sequence:
+
+1. #705 first (shared 170-hour budget and push-only offline validation).
+2. Rebase #699 on the resulting main, rerun exact-head CI, then human-merge #699 (identity-attested source producer and strict URL/clock checks).
+3. Rebase #712 on that integrated #705/#699 main, preserve its producer-to-consumer identity-manifest round-trip and negative regressions, rerun exact-head CI, then human-merge #712. Its current 9/9 is on the old main base and is not sufficient by itself.
+4. Rebase #707 **after #712**, not before it, so the AI-usage rights guard is applied to the final historical-reuse versions of the two overlapping scripts. Rerun exact-head CI and human-merge only after that rebase.
+5. Rebase #701 after #707 and rerun exact-head CI. Its new branch carries byte-identical rights helper and manifest blobs (`d1a3bcfe...` and `0f2cde54...`) to #707, so the shared files should converge to one identical main version.
+6. Merge the documentation PR #697 only after its current exact-head CI passes; it can then record the integrated heads.
+
+Do not merge #707 before #712: that could overwrite the verified historical-cache producer/consumer work. Do not merge #712 before #699: its source reader must inherit #699's exact URL/clock/identity protections and #705's shared budget. #709 is redundant with #705; #711 is the overlapping draft alternative to #712.
