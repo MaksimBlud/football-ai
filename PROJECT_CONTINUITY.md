@@ -9254,3 +9254,68 @@ HUMAN-MERGE only. No branch was merged and main was not changed.
 - Supabase Security Advisor at 2026-11-03 10:51 UTC still reports RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`; four other tables have RLS enabled but no policies. This is a separate security issue; no DDL or policy change was attempted.
 
 The next technical milestone remains a compatible, exact-head integration of #705 + #699 + one historical-source reuse implementation, followed by a fresh source identity attestation and a real pre-kickoff quote. No model-quality claim is permitted before the frozen 30-event gate and independent Brier/LogLoss comparison.
+
+
+## Fresh MARKET_ANCHOR_1X2_V2 audit — 2026-11-03 13:10 UTC
+
+This addendum records a new read-only Supabase/GitHub audit and a producer/consumer integration defect found in the open historical-source reuse PR. Main is unchanged at `40887ebb215730190d7a6c7a1693373ec4afcdfc`; main `PROJECT_CONTINUITY.md` blob remains `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`. This documentation update is on the existing continuity PR branch only.
+
+### Live identity-only feature gate and saved pre-match quotes
+
+At 2026-11-03 13:10:27 UTC, a read-only query of `public.league_finished_results` selected/aggregated only identity and source-provenance metadata for Serie A season `2026-2027`; no goals, scores, results, settlement or prediction-correctness fields were selected.
+
+- Raw identity rows: **101**.
+- V2-canonical unique identities: **98** (runtime aliases Inter→Inter Milan, Milan→AC Milan, Roma→AS Roma, Verona→Hellas Verona, plus V2-local Atalanta BC→Atalanta).
+- Date range: 2026-08-22 through 2026-11-01.
+- Source metadata: 90 rows have NULL `source` and `source_competition`; 11 rows are tagged `the-odds-api / soccer_italy_serie_a`; all 101 lack `source_updated_at_utc`.
+- Latest persistence metadata: 2026-11-02 21:40:05.112350 UTC.
+
+The feature-input gate is open by count, but this metadata is not itself a source archive or source-rights attestation. The model feature source still requires its own archived CSV SHA and source-before-quote proof.
+
+The same read-only query found, across all nine stored leagues, **zero strict pre-match quote snapshots in the preceding 7 days and zero future fixtures with a saved strict pre-match quote**. Serie A has 625 stored rows, 620 strictly pre-kickoff; its latest strict pre-match quote remains 2026-10-13 14:48:53.042620 UTC. There are zero `product_prediction_snapshots` for the exact frozen candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+
+### Re-read of actual main runtime artifacts
+
+The latest verified main runs remain on main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`:
+
+- Source Capture run [41456825300](https://github.com/MaksimBlud/football-ai/actions/runs/41456825300), artifact `13147815874`, ZIP SHA-256 `67cd15e2e6319196eb13e83b4b65059302c0256b718e876756567efec81614f3`. Its actual log reports the feature-input gate count **90**, 98 completed prior-day CSV rows, 10 old-season files, 11 total files, no paid calls, no Supabase writes and no target scoring.
+- Free Diagnostic run [41473879081](https://github.com/MaksimBlud/football-ai/actions/runs/41473879081) reports zero scored diagnostics, zero source-after-quote cases, zero paid calls and zero Supabase writes.
+- Original Forward run [41498178161](https://github.com/MaksimBlud/football-ai/actions/runs/41498178161) verified the old-season source archive (10 CSVs / 3,800 rows) but reports `quotes_seen=0`, `forecasts_created=0`.
+- Current-Form Forward run [41500098611](https://github.com/MaksimBlud/football-ai/actions/runs/41500098611) verified artifact `13147815874` and correctly read no target outcomes, but captured `quotes_seen=0` and `v2_current_form_shadow_captured=0`.
+
+The source archive's feature-input gate count (90) is now behind the 98 canonical identities in Supabase. The old archive cannot be used as proof of complete coverage for the current identity set. The older main forward implementation reported freshness by age only; the identity-set SHA/coverage guard in #699 is needed before a later quote can be admitted. No current-season CSV member was opened in this audit.
+
+### Original V2 runtime execution — synthetic only
+
+PR #707's main-only recovery/runtime-attestation workflow [41556671103](https://github.com/MaksimBlud/football-ai/actions/runs/41556671103) was re-read. It completed SUCCESS; its dedicated test command reported **36 passed**. The log attests:
+
+- frozen source commit `df19777087fb89af049eedce44ff93f0aa6e6360`;
+- original candidate artifact SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, candidate Git blob `ac1303f6b096664983fbf52443bd0a381b23ba21`;
+- 19 ordered features and 20×2 weights;
+- `active_lambda=0` equals the synthetic market vector exactly;
+- `shadow_lambda=1` output is finite and sums to one;
+- `stability_gate_passed=false`, `real_events_scored=0`, `training_performed=false`, `target_outcomes_read=false`, `production_pkl_touched=false`, `no_bet=true`.
+
+This is a real execution of the original frozen inference code on deterministic synthetic input, **not** a real-match forecast, prospective evaluation, or evidence of superiority.
+
+### New PR #712 producer/consumer contract defect
+
+PR #712 current HEAD is `b1c38a8f579c1a2de7d6d63a592bb97ddc82d904`; its eight CI workflows are SUCCESS. Static review found that its producer and consumer do not share a manifest contract:
+
+- The #712 `serie_a_v2_current_form_source_capture.py` reads an integer gate count and writes only count/field-name metadata; it contains no `gate_fixture_identity_*` or `current_source_fixture_identity_*` fields.
+- Its `serie_a_v2_historical_source_reuse.py` requires the full gate identity list, count/SHA, current-source identity count/SHA and zero-missing coverage. An archive produced by the current #712 capture function would therefore be rejected by its own later reuse verifier.
+- The 42 reuse tests construct synthetic archives that already contain the required fields; the current source-capture tests do not assert those producer fields or exercise a producer-to-consumer round trip.
+- Integrated PR #699 HEAD `49383700ce50ac6df5d648d2b0c932748414f1f2` does emit the identity list/count/SHA and current-source identity digest. Those fields must be preserved when #712 is rebased/integrated.
+
+A specific review comment was added to #712: [comment 6604625779](https://github.com/MaksimBlud/football-ai/pull/712#issuecomment-6604625779). Required fix: integrate the #699 identity-attested producer while retaining #705's budget and push-only offline split, then add an end-to-end test that feeds a manifest produced by `capture_source_archive()` into the reuse verifier. Do not merge #712's current HEAD independently.
+
+### Current integration and scientific gates
+
+- #705 HEAD `df28494e095ae131e553e3f4e303b2eecca4a0db`: 8/8 exact-head CI SUCCESS; contains the 170-hour per-workflow public-source budget and push-only offline validation.
+- #699 HEAD `49383700ce50ac6df5d648d2b0c932748414f1f2`: 7/7 exact-head CI SUCCESS; contains the strict source URL/clock and identity-set SHA/coverage producer. It must be integrated after #705 without losing #705's workflow split/budget.
+- #712 HEAD `b1c38a8f579c1a2de7d6d63a592bb97ddc82d904`: 8/8 CI SUCCESS, but blocked by the producer/consumer mismatch above and its old base.
+- #701 remains exact-head 6/6 SUCCESS. Its evaluator has `FROZEN_INCUMBENT_REFERENCE=None` and correctly returns before calling the lazy outcome loader. The frozen policy still requires a distinct pinned non-legacy incumbent; no eligible same-league non-XGBoost incumbent is registered. Do not substitute the old XGBoost model or duplicate the market vector as a separate incumbent.
+- Eligible prospective forecasts remain **0/30**; no target outcomes were read. Even after 30 eligible forecasts, evaluation remains blocked until the preregistered incumbent requirement is legitimately resolved without changing the frozen contract.
+- PR #707 source-rights manifest remains `NOT_GRANTED` for AI model training/recovery. Do not rebuild weights from that archive; integrity hashes are not data-use permission.
+
+No PR was merged, main was not modified, no source/odds request was made, no paid provider call or Supabase write/DDL occurred, no protected 2026/27 target outcome was read, no production `.pkl` changed, and no workflow schedule or other agent was changed. HUMAN-MERGE remains mandatory.
