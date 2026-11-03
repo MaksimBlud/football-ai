@@ -26,7 +26,7 @@ from serie_a_v2_live_diagnostic_report import make_report
 from serie_a_v2_prequote_source_archive_gate import (
     ARCHIVE_REPORT, SOURCE_DIR, MAX_ZIP_BYTES, verify_archive,
 )
-from market_anchor_v2_source_rights import require_ai_usage_permission, write_ai_usage_blocked_report
+from market_anchor_v2_source_rights import require_personal_research_inference_scope, write_research_scope_blocked_report
 
 REPOSITORY = "MaksimBlud/football-ai"
 ARTIFACT_NAME = "serie-a-v2-free-real-quote-diagnostic"
@@ -274,9 +274,9 @@ def main() -> None:
     if os.environ.get("GITHUB_REPOSITORY") != REPOSITORY:
         raise RuntimeError("wrong GitHub repository scope")
     try:
-        require_ai_usage_permission()
+        require_personal_research_inference_scope()
     except PermissionError as exc:
-        report = write_ai_usage_blocked_report(
+        report = write_research_scope_blocked_report(
             args.output, "SERIE_A_ORIGINAL_V2_FORWARD_CAPTURE", str(exc)
         )
         print(json.dumps(report, sort_keys=True))
