@@ -23,7 +23,10 @@ from supabase import create_client
 from historical_football_signal_lab import FEATURE_SETS
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
-from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes, fetch_public_history
+from serie_a_v2_live_diagnostic_report import (
+    PUBLIC_BASE, _source_codes, fetch_public_history,
+    fetch_public_history_with_provenance,
+)
 
 REPOSITORY = "MaksimBlud/football-ai"
 WORKFLOW_PATH = ".github/workflows/serie-a-v2-current-form-source-capture.yml"
@@ -172,6 +175,7 @@ def capture_source_archive(
     now: datetime,
     get=requests.get,
     history_fetch=fetch_public_history,
+    history_fetch_with_provenance=fetch_public_history_with_provenance,
     clock=lambda: datetime.now(timezone.utc),
 ) -> dict:
     """Capture the ten frozen historical seasons plus the gated current-season source."""
@@ -186,7 +190,30 @@ def capture_source_archive(
             "no current-season source request was made"
         )
     output_dir.mkdir(parents=True, exist_ok=True)
-    old_history, old_audit = history_fetch(get=get, capture_dir=output_dir)
+    token = os.environ.get("GITHUB_TOKEN", "")
+    if token and history_fetch is fetch_public_history:
+        old_history, old_audit, history_reuse = history_fetch_with_provenance(
+            get=get, capture_dir=output_dir, token=token, now=at
+        )
+    else:
+        old_history, old_audit = history_fetch(get=get, capture_dir=output_dir)
+        history_reuse = {
+            "mode": (
+                "DIRECT_PUBLIC_HISTORICAL_DOWNLOADS"
+                if history_fetch is fetch_public_history else "INJECTED_HISTORY_FETCH"
+            ),
+            "source_artifact_id": None,
+            "historical_files_reused": 0,
+            "public_historical_csv_requests": (
+                len(old_audit) if history_fetch is fetch_public_history else None
+            ),
+            "current_season_file_reused": False,
+            "prior_feature_gate_reused": False,
+            "protected_2026_27_source_file_read": False,
+            "target_outcomes_read": False,
+            "supabase_writes": 0,
+            "paid_provider_calls": 0,
+        }
     if old_history.empty or len(old_audit) != len(_source_codes()):
         raise ValueError("original frozen historical source archive incomplete")
     response = get(CURRENT_URL, timeout=30)
@@ -226,6 +253,7 @@ def capture_source_archive(
         "original_feature_builder_git_blob_sha1": "401b3a0893371bfa4a488ec92a4a54af2678c8f7",
         "feature_count": len(FEATURE_SETS["ALL_FOOTBALL"]),
         "historical_season_codes": list(_source_codes()),
+        "historical_source_reuse": history_reuse,
         "current_season_code": CURRENT_CODE,
         "current_season": CURRENT_SEASON,
         "current_season_source_url": CURRENT_URL,
@@ -304,6 +332,9 @@ def main() -> None:
         "current_season_completed_prior_day_rows": report["current_season_completed_prior_day_rows"],
         "historical_old_season_file_count": report["historical_old_season_file_count"],
         "source_file_count": report["source_file_count"],
+        "historical_source_reuse_mode": report["historical_source_reuse"]["mode"],
+        "historical_files_reused": report["historical_source_reuse"]["historical_files_reused"],
+        "public_historical_csv_requests": report["historical_source_reuse"]["public_historical_csv_requests"],
         "candidate_sha256": report["frozen_candidate_sha256"],
         "paid_provider_calls": report["paid_provider_calls"],
         "supabase_writes": report["supabase_writes"],
