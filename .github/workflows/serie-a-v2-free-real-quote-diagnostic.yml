@@ -15,6 +15,8 @@ on:
       - "tests/test_serie_a_v2_atalanta_alias.py"
       - "serie_a_v2_prequote_source_archive_gate.py"
       - "tests/test_serie_a_v2_prequote_source_archive_gate.py"
+      - "serie_a_v2_verified_historical_source_archive.py"
+      - "tests/test_serie_a_v2_verified_historical_source_archive.py"
       - ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
 
 concurrency:
@@ -22,6 +24,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
@@ -31,6 +34,7 @@ jobs:
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      GITHUB_TOKEN: ${{ github.token }}
       OPENBLAS_NUM_THREADS: "1"
       OMP_NUM_THREADS: "1"
       MKL_NUM_THREADS: "1"
@@ -45,25 +49,28 @@ jobs:
         run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
       - name: Offline regression tests
         run: |
-          python -m py_compile serie_a_v2_live_diagnostic_report.py serie_a_v2_prequote_source_archive_gate.py
-          python -m pytest -q tests/test_serie_a_v2_live_diagnostic_report.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_atalanta_alias.py tests/test_serie_a_v2_frozen_shadow_preview.py tests/test_serie_a_v2_prequote_source_archive_gate.py
+          python -m py_compile serie_a_v2_live_diagnostic_report.py serie_a_v2_prequote_source_archive_gate.py serie_a_v2_verified_historical_source_archive.py
+          python -m pytest -q tests/test_serie_a_v2_live_diagnostic_report.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_atalanta_alias.py tests/test_serie_a_v2_frozen_shadow_preview.py tests/test_serie_a_v2_prequote_source_archive_gate.py tests/test_serie_a_v2_verified_historical_source_archive.py
       - name: Verify source access, no paid credentials
         run: |
           python - <<'PY'
           from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, PAID_PROVIDER_REQUESTS
           assert PUBLIC_BASE == "https://www.football-data.co.uk/mmz4281"
           assert PAID_PROVIDER_REQUESTS == 0
-          print("PASS: public-only source; no paid provider key in workflow")
+          from serie_a_v2_verified_historical_source_archive import ARTIFACT_NAME
+          assert ARTIFACT_NAME == "serie-a-v2-current-form-source-capture"
+          print("PASS: verified GitHub historical-artifact reuse; no paid provider key or public CSV request in this diagnostic")
           PY
-      - name: Fetch and SHA-archive public source, preview original frozen V2 diagnostics
+      - name: Load verified old-season members from prior source artifact and preview original V2
+        if: github.event_name != 'push' && github.ref == 'refs/heads/main'
         run: |
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_KEY"
           python serie_a_v2_live_diagnostic_report.py \
             --output artifacts/serie_a_v2_real_quote_diagnostic.json \
             --raw-source-dir artifacts/serie_a_v2_source_capture
-      - name: Archive diagnostic and exact public CSV bytes for provenance
-        if: always()
+      - name: Archive diagnostic and verified historical-only source bytes for provenance
+        if: always() && github.event_name != 'push'
         uses: actions/upload-artifact@v4
         with:
           name: serie-a-v2-free-real-quote-diagnostic
