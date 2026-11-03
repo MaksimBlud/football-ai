@@ -121,7 +121,7 @@ def verify_source_run(
             or run.get("conclusion") != "success"
             # workflow_run is admitted only because the pinned source workflow
             # restricts this trigger to successful main free-diagnostic runs.
-            or run.get("event") not in ("push", "schedule", "workflow_dispatch", "workflow_run")):
+            or run.get("event") not in ("schedule", "workflow_dispatch", "workflow_run")):
         raise ValueError("artifact parent is not a successful main current-form source run")
     created = parse_utc(run["created_at"])
     completed = parse_utc(run["updated_at"])
