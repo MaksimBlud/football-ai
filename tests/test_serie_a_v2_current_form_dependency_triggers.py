@@ -83,3 +83,17 @@ def test_successful_source_audit_is_still_the_only_dependency_trigger_for_forwar
     assert "THE_ODDS_API_KEY" not in workflow
     assert "scheduled_serie_a_odds_snapshot.py" not in workflow
     assert "odds_api_budget_guard.py" not in workflow
+
+
+
+def test_current_form_source_capture_live_job_excludes_push_validation():
+    workflow = SOURCE_WORKFLOW.read_text(encoding="utf-8")
+    job = workflow.split("  capture-current-form:\\n", 1)[1].split("\\n    runs-on:", 1)[0]
+    # After #705, push is an offline-only validation event. Only scheduled,
+    # manual-main, or successful scheduled/manual diagnostic parents may fetch.
+    assert "github.event_name == 'schedule'" in job
+    assert "github.event_name == 'workflow_dispatch'" in job
+    assert "github.event_name == 'workflow_run'" in job
+    assert "github.event.workflow_run.event == 'schedule'" in job
+    assert "github.event.workflow_run.event == 'workflow_dispatch'" in job
+    assert "github.event_name != 'workflow_run'" not in job
