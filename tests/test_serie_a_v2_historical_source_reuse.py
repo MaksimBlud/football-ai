@@ -334,6 +334,17 @@ def test_source_parent_must_be_exact_successful_main_run_before_download():
     assert not any(url.endswith("/zip") for url, _ in calls)
 
 
+def test_push_created_source_artifact_is_rejected_before_zip_download():
+    raw, _artifact, artifact_list, parent_run = _artifact_fixture()
+    parent_run["event"] = "push"
+    get, calls, _stream = _fake_get(raw, artifact_list, parent_run)
+
+    with pytest.raises(ValueError, match="successful main source workflow"):
+        reuse.load_verified_historical_source_archive(token="test-token", now=NOW, get=get)
+
+    assert not any(url.endswith("/zip") for url, _ in calls)
+
+
 def test_artifact_zip_digest_mismatch_fails_closed():
     raw, _artifact, artifact_list, parent_run = _artifact_fixture()
     artifact_list["artifacts"][0]["digest"] = "sha256:" + ("0" * 64)
