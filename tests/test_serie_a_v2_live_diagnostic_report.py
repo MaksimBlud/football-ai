@@ -214,5 +214,17 @@ def test_zero_quotes_are_not_reported_as_a_source_before_quote_pass():
     assert report["quoted_fixtures"] == 0
     assert report["historical_source_before_quote_status"] == "NOT_EVALUABLE_NO_QUOTES"
     assert report["quotes_with_all_old_season_sources_and_archive_strictly_before_quote"] == 0
+    assert report["public_http_requests"] == 0
+    assert report["source_files_reused"] == 10
+    assert report["source_archive_current_season_member_opened"] is False
     assert report["eligible_for_frozen_prospective_cohort"] is False
     assert report["eligible_for_product_publication"] is False
+
+
+
+def test_diagnostic_workflow_main_uses_verified_archive_not_public_csv_fetch():
+    import inspect
+    from serie_a_v2_live_diagnostic_report import main
+    body = inspect.getsource(main)
+    assert "load_latest_historical_source_archive" in body
+    assert "fetch_public_history(" not in body
