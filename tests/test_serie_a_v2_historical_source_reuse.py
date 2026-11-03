@@ -8,7 +8,9 @@ from pathlib import Path
 import zipfile
 
 import pytest
+import pandas as pd
 
+import serie_a_v2_current_form_source_capture as source_capture
 import serie_a_v2_historical_source_reuse as reuse
 
 
@@ -479,3 +481,216 @@ def test_reused_artifact_must_point_back_to_a_verified_original_main_artifact():
     assert provenance["source_artifact_created_at_utc"] == "2026-11-01T13:53:57+00:00"
     assert any(url.endswith("/actions/artifacts/122") for url, _ in calls)
     assert any(url.endswith("/actions/runs/455") for url, _ in calls)
+
+class _CaptureQuery:
+    def __init__(self, rows):
+        self.rows = rows
+        self.selected = None
+
+    def table(self, _name):
+        return self
+
+    def select(self, columns):
+        self.selected = columns
+        return self
+
+    def eq(self, *_args):
+        return self
+
+    def gte(self, *_args):
+        return self
+
+    def lt(self, *_args):
+        return self
+
+    def range(self, *_args):
+        return self
+
+    def execute(self):
+        return type("Response", (), {"data": self.rows})()
+
+
+class _CurrentCsvResponse:
+    def __init__(self, body):
+        self.url = source_capture.CURRENT_URL
+        self.status_code = 200
+        self.headers = {"Content-Length": str(len(body))}
+        self.body = body
+        self.closed = False
+
+    def iter_content(self, chunk_size):
+        assert chunk_size == 65536
+        yield self.body
+
+    def close(self):
+        self.closed = True
+
+
+def _current_capture_csv():
+    header = ",".join(source_capture.REQUIRED_COLUMNS)
+    rows = []
+    start = date(2026, 8, 1)
+    for index in range(30):
+        day = start + timedelta(days=index)
+        rows.append(
+            f"{day.strftime('%d/%m/%Y')},Home {index},Away {index},1,0,H,5,3,2,1,0,0"
+        )
+    return (header + "\n" + "\n".join(rows) + "\n").encode()
+
+
+def test_capture_producer_manifest_passes_real_historical_reuse_consumer(tmp_path, monkeypatch):
+    now = datetime(2026, 11, 3, 7, 0, tzinfo=timezone.utc)
+    gate_rows = [
+        {
+            "match_date": (date(2026, 8, 1) + timedelta(days=index)).isoformat(),
+            "home_team": f"Home {index}",
+            "away_team": f"Away {index}",
+        }
+        for index in range(30)
+    ]
+    current_body = _current_capture_csv()
+    response = _CurrentCsvResponse(current_body)
+    source_clock = iter([
+        datetime(2026, 11, 3, 7, 0, 40, tzinfo=timezone.utc),
+        datetime(2026, 11, 3, 7, 0, 50, tzinfo=timezone.utc),
+    ])
+    monkeypatch.setenv("GITHUB_TOKEN", "test-actions-read-token")
+    monkeypatch.setenv("GITHUB_SHA", HEAD_SHA)
+    monkeypatch.setenv("GITHUB_RUN_ID", str(RUN_ID))
+
+    origin_sha = "b" * 64
+    origin_head = "c" * 40
+    origin_created = "2026-11-03T06:59:50Z"
+    origin_completed = "2026-11-03T06:59:55Z"
+    reuse_provenance = {
+        "mode": "REUSED_VERIFIED_MAIN_ARTIFACT_HISTORICAL_ONLY",
+        "source_artifact_id": 122,
+        "source_artifact_sha256": origin_sha,
+        "source_artifact_created_at_utc": origin_created,
+        "source_parent_run_id": 455,
+        "source_parent_run_head_sha": origin_head,
+        "source_parent_run_completed_at_utc": origin_completed,
+        "historical_files_reused": len(reuse.HISTORICAL_CODES),
+        "public_historical_csv_requests": 0,
+        "current_season_file_reused": False,
+        "prior_feature_gate_reused": False,
+        "protected_2026_27_source_file_read": False,
+        "target_outcomes_read": False,
+        "supabase_writes": 0,
+        "paid_provider_calls": 0,
+    }
+
+    def fake_history_reuse(*, get, capture_dir, token, now):
+        assert token == "test-actions-read-token"
+        assert now == datetime(2026, 11, 3, 7, 0, tzinfo=timezone.utc)
+        audits = []
+        for code in source_capture._source_codes():
+            filename = f"serie_a_{code}.csv"
+            body = _historical_csv(code)
+            (capture_dir / filename).write_bytes(body)
+            audits.append({
+                "season_code": code,
+                "season": f"{2000 + int(code[:2])}-{2001 + int(code[:2])}",
+                "source_url": (
+                    f"{reuse.PUBLIC_BASE}/{code}/"
+                    f"{source_capture.SERIE_A_RUNTIME_CONFIG.historical_source.competition_code}.csv"
+                ),
+                "archived_source_name": filename,
+                "csv_sha256": hashlib.sha256(body).hexdigest(),
+                "source_observed_at_utc": "2026-11-03T06:59:45Z",
+                "completed_source_rows": 1,
+                "total_source_rows": 1,
+                "excluded_incomplete_or_same_day_rows": 0,
+            })
+        return pd.DataFrame([{"historical": 1}]), audits, reuse_provenance
+
+    report = source_capture.capture_source_archive(
+        output_dir=tmp_path,
+        client=_CaptureQuery(gate_rows),
+        now=now,
+        get=lambda url, **kwargs: (
+            response
+            if url == source_capture.CURRENT_URL
+            and kwargs == {"timeout": 30, "stream": True, "allow_redirects": False}
+            else (_ for _ in ()).throw(AssertionError(f"unexpected source request: {url} {kwargs}"))
+        ),
+        history_fetch_with_provenance=fake_history_reuse,
+        clock=lambda: next(source_clock),
+    )
+    assert response.closed is True
+    assert _CaptureQuery(gate_rows).selected is None
+    gate = report["feature_source_gate"]
+    assert gate["gate_fixture_identity_count"] == 30
+    assert gate["gate_fixture_identities_covered_by_current_source"] == 30
+    assert gate["gate_fixture_identities_missing_from_current_source"] == 0
+
+    archive_stream = BytesIO()
+    with zipfile.ZipFile(archive_stream, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for path in sorted(tmp_path.iterdir()):
+            archive.write(path, arcname=path.name)
+    raw = archive_stream.getvalue()
+    artifact = {
+        "artifact_id": ARTIFACT_ID,
+        "run_id": RUN_ID,
+        "head_sha": HEAD_SHA,
+        "created_at": datetime(2026, 11, 3, 7, 0, 57, tzinfo=timezone.utc),
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    }
+    parent = {
+        "run_id": RUN_ID,
+        "head_sha": HEAD_SHA,
+        "head_branch": "main",
+        "workflow_path": reuse.SOURCE_WORKFLOW_PATH,
+        "workflow_name": reuse.SOURCE_WORKFLOW_NAME,
+        "event": "schedule",
+        "run_created_at_utc": "2026-11-03T06:59:59Z",
+        "run_completed_at_utc": "2026-11-03T07:01:01Z",
+    }
+
+    def github_get(url, **kwargs):
+        if url.endswith("/actions/artifacts/122"):
+            return JsonResponse(url, {
+                "id": 122,
+                "name": reuse.ARTIFACT_NAME,
+                "expired": False,
+                "digest": "sha256:" + origin_sha,
+                "created_at": origin_created,
+                "workflow_run": {
+                    "id": 455,
+                    "head_branch": "main",
+                    "head_sha": origin_head,
+                },
+            })
+        if url.endswith("/actions/runs/455"):
+            return JsonResponse(url, {
+                "id": 455,
+                "path": reuse.SOURCE_WORKFLOW_PATH,
+                "name": reuse.SOURCE_WORKFLOW_NAME,
+                "head_branch": "main",
+                "head_sha": origin_head,
+                "status": "completed",
+                "conclusion": "success",
+                "event": "schedule",
+                "created_at": "2026-11-03T06:59:40Z",
+                "updated_at": origin_completed,
+            })
+        raise AssertionError(f"unexpected GitHub provenance request: {url}")
+
+    history, audits, verified = reuse._verify_and_extract_historical_files(
+        raw,
+        artifact,
+        parent,
+        capture_dir=None,
+        token="test-actions-read-token",
+        get=github_get,
+    )
+    assert len(history) == len(reuse.HISTORICAL_CODES)
+    assert len(audits) == len(reuse.HISTORICAL_CODES)
+    assert verified["source_artifact_id"] == 122
+    assert verified["historical_files_reused"] == len(reuse.HISTORICAL_CODES)
+    assert gate["gate_fixture_identity_sha256"] == (
+        reuse._fixture_identity_sha256(gate["gate_fixture_identities"])
+    )
+    assert gate["current_source_fixture_identity_sha256"] == (
+        reuse._fixture_identity_sha256(gate["gate_fixture_identities"])
+    )
