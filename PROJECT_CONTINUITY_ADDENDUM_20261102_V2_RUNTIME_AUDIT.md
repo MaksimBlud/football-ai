@@ -414,3 +414,27 @@ All remain open against main; no PR was merged in this audit.
 - Full three-way evaluation remains blocked because no distinct, pinned, non-legacy incumbent is registered. Do not substitute the old XGBoost model or duplicate the market vector as an incumbent.
 
 HUMAN-MERGE remains mandatory. Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No source download was initiated in this audit; no paid provider request, Supabase write/DDL, target-outcome read, production `.pkl` change, weight/contract change, schedule change, automatic promotion, or bet occurred.
+
+## 2026-11-03 20:56 UTC — exact current-source identity parity
+
+### Exact source archive and current gate identity comparison
+
+- Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- Existing main Source Capture run [41640753996](https://github.com/MaksimBlud/football-ai/actions/runs/41640753996) produced artifact `13231843819`. The artifact was downloaded from GitHub Actions only; no Football-Data request was made. Its ZIP SHA-256 independently matches the GitHub artifact digest: `4e6fb5531a2206a353fe00fa1ebb0b4d20b3c6ae41ab49a7c672f8dab6d29cd8`.
+- The embedded manifest records the metadata-only feature-input gate at 2026-11-03 13:02:46.498639 UTC with 98 canonical identities. The current-season CSV was observed at 13:02:58.382703 UTC, archived at 13:02:59 UTC, and the parent workflow completed at 13:03:01 UTC. It contains 100 completed prior-day rows.
+- Independently inspected only `Date`, `HomeTeam`, and `AwayTeam` in the archived `serie_a_2627.csv`. Applied the exact runtime aliases (`Inter → Inter Milan`, `Milan → AC Milan`, `Roma → AS Roma`, `Verona → Hellas Verona`) plus the V2-local `Atalanta BC → Atalanta` alias. This yields 100 unique source identities with SHA-256 `f85872547e745eae8854ee245902c1e522657fb3a687032be83b000199f2a99e`, using the same sorted tab/newline serialization as PR #699's `_fixture_identity_sha256`.
+- A fresh read-only Supabase query selected only `match_date, home_team, away_team` for `SERIE_A / 2026-2027`, dates before the current UTC date. It returned 103 raw rows, 100 canonical unique identities, and three alias duplicates. Applying the same canonicalization and serialization produced the exact same SHA-256: `f85872547e745eae8854ee245902c1e522657fb3a687032be83b000199f2a99e`. Latest identity date: 2026-11-02.
+- **Exact identity-set parity is independently confirmed as of 2026-11-03 20:56 UTC.** The earlier apparent hash mismatch was caused by omitting the runtime aliases for Inter, Milan, and Roma; after applying the complete frozen alias map, the source and Supabase hashes match. No score, goals, result, or settlement columns were selected or opened.
+- This confirms current source coverage of the presently known 100 fixture identities. It does not create a quote, a forecast, or an evaluation observation. The existing forward run still had `quotes_seen=0` and `v2_current_form_shadow_captured=0`; there are no future-kickoff pre-match quotes in Supabase. No source-before-quote pair or Brier/LogLoss result exists.
+
+### PR integration consequence
+
+- Main's current source archive predates the identity-attestation fields now required by the strict consumer in PR #699. The independent audit above is evidence for this review record only; it is not a retroactive in-workflow attestation and must not be used to bypass the frozen archive contract.
+- PR #699 HEAD `42c967f28fd274d8a8f9924e698dc5492f7f13e3` contains the identity-only gate set, canonical SHA, source-coverage check, and forward freshness guard. GitHub compare confirms PR #694 HEAD `2fd95bb07befb00b6efb4a14815ad925d50cac71` is an ancestor of #699 (102 commits behind); do not merge #694 separately.
+- PR #699 exact-head CI is 7/7 SUCCESS; its check-runs completed 2026-10-26. Rebase it after the user's manual #705 integration, preserve the shared source budget and push-offline guard, then rerun exact-head CI. The old main archive lacks the new embedded identity list/attestation; a new capture would be required by the strict PR #699 contract.
+- PR #705 remains open at `8b139335e6722b7c4f5286962486bca84bced20d`, exact-head CI 8/8 SUCCESS. Main's existing daily source schedules are still unguarded until HUMAN-MERGE. The next scheduled attempts are 2026-11-04 05:50 UTC (Source Capture) and 06:13 UTC (Free Diagnostic). Do not initiate another source request: the provider's twice-weekly fair-use limit and unresolved AI-use scope remain binding; the budget PR is a technical guard, not a licence.
+
+### Frozen V2 and safety state
+
+Original candidate SHA, 19-feature order, weights, protocol, `active_lambda=0`, and `shadow_lambda=1` are unchanged. Feature-input identity gate is open; prospective completed-forecast outcome gate remains CLOSED at 0/30. No target outcomes were read/scored, no model refit or threshold tuning occurred, no paid provider calls, Supabase writes/DDL, production `.pkl` changes, schedule changes, merges, promotion, or bets occurred. HUMAN-MERGE only.
+
