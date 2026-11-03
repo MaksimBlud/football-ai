@@ -23,6 +23,7 @@ from serie_a_v2_asof_feature_manifest import build_manifest
 from serie_a_v2_frozen_shadow_preview import (
     fetch_saved_upcoming_serie_a_quotes, parse_utc, shadow_preview,
 )
+from market_anchor_v2_source_rights import require_ai_usage_permission, write_ai_usage_blocked_report
 
 PUBLIC_BASE = "https://www.football-data.co.uk/mmz4281"
 PAID_PROVIDER_REQUESTS = 0
@@ -322,6 +323,14 @@ def main() -> None:
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--raw-source-dir", type=Path, required=True)
     args = p.parse_args()
+    try:
+        require_ai_usage_permission()
+    except PermissionError as exc:
+        report = write_ai_usage_blocked_report(
+            args.output, "SERIE_A_V2_FREE_REAL_QUOTE_DIAGNOSTIC", str(exc)
+        )
+        print(json.dumps(report, sort_keys=True))
+        return
     from database import supabase
     now = datetime.now(timezone.utc)
     quotes = fetch_saved_upcoming_serie_a_quotes(supabase, now=now)
