@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from io import BytesIO
 import hashlib
 import json
@@ -66,6 +66,11 @@ def _artifact_fixture(*, bad_url: bool = False, protected_old_date: bool = False
         "completed_source_rows": 90,
         "total_source_rows": 90,
     })
+    gate_identities = [
+        [(date(2026, 8, 1) + timedelta(days=index)).isoformat(), f"Home {index:02d}", f"Away {index:02d}"]
+        for index in range(90)
+    ]
+    gate_identity_sha = reuse._fixture_identity_sha256(gate_identities)
     manifest = {
         "schema_version": "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V1",
         "experiment_id": "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY",
@@ -94,6 +99,13 @@ def _artifact_fixture(*, bad_url: bool = False, protected_old_date: bool = False
             "observed_completed_primary_events": 90,
             "checked_at_utc": "2026-11-02T13:52:00Z",
             "metadata_fields_read": ["match_date", "home_team", "away_team"],
+            "gate_fixture_identity_count": len(gate_identities),
+            "gate_fixture_identity_sha256": gate_identity_sha,
+            "gate_fixture_identities": gate_identities,
+            "current_source_fixture_identity_count": len(gate_identities),
+            "current_source_fixture_identity_sha256": gate_identity_sha,
+            "gate_fixture_identities_covered_by_current_source": len(gate_identities),
+            "gate_fixture_identities_missing_from_current_source": 0,
             "score_or_result_fields_selected_for_gate": False,
             "passed": True,
         },
@@ -167,6 +179,25 @@ def _artifact_fixture(*, bad_url: bool = False, protected_old_date: bool = False
         "updated_at": RUN_COMPLETED,
     }
     return raw, artifact, artifact_list, parent_run
+
+
+def _rewrite_manifest(raw: bytes, mutate) -> bytes:
+    with zipfile.ZipFile(BytesIO(raw), "r") as source:
+        members = {
+            info.filename: source.read(info.filename)
+            for info in source.infolist()
+            if info.filename != reuse.MANIFEST_FILENAME
+        }
+        manifest = json.loads(source.read(reuse.MANIFEST_FILENAME).decode("utf-8"))
+    mutate(manifest)
+    members[reuse.MANIFEST_FILENAME] = (
+        json.dumps(manifest, sort_keys=True, ensure_ascii=False) + "\n"
+    ).encode()
+    stream = BytesIO()
+    with zipfile.ZipFile(stream, "w", compression=zipfile.ZIP_DEFLATED) as target:
+        for name, body in members.items():
+            target.writestr(name, body)
+    return stream.getvalue()
 
 
 class JsonResponse:
@@ -253,6 +284,45 @@ def test_current_season_member_is_not_parsed_or_extracted_for_historical_reuse(t
     assert not (tmp_path / reuse.CURRENT_FILENAME).exists()
     assert provenance["current_season_file_reused"] is False
     assert provenance["prior_feature_gate_reused"] is False
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "missing_identity_digest",
+        "wrong_identity_digest",
+        "identity_count_mismatch",
+        "identity_list_missing",
+        "coverage_missing",
+        "metadata_columns_widened",
+        "gate_checked_after_source",
+    ],
+)
+def test_historical_cache_requires_digest_bound_fresh_identity_gate(mutation):
+    raw, _artifact, artifact_list, parent_run = _artifact_fixture()
+
+    def mutate(manifest):
+        gate = manifest["feature_source_gate"]
+        if mutation == "missing_identity_digest":
+            gate.pop("gate_fixture_identity_sha256")
+        elif mutation == "wrong_identity_digest":
+            gate["gate_fixture_identity_sha256"] = "0" * 64
+        elif mutation == "identity_count_mismatch":
+            gate["gate_fixture_identity_count"] = gate["observed_completed_primary_events"] - 1
+        elif mutation == "identity_list_missing":
+            gate.pop("gate_fixture_identities")
+        elif mutation == "coverage_missing":
+            gate["gate_fixture_identities_missing_from_current_source"] = 1
+        elif mutation == "metadata_columns_widened":
+            gate["metadata_fields_read"] = ["match_date", "home_team", "away_team", "result"]
+        elif mutation == "gate_checked_after_source":
+            gate["checked_at_utc"] = "2026-11-02T13:54:00Z"
+
+    raw = _rewrite_manifest(raw, mutate)
+    artifact_list["artifacts"][0]["digest"] = "sha256:" + hashlib.sha256(raw).hexdigest()
+    get, _calls, _stream = _fake_get(raw, artifact_list, parent_run)
+    with pytest.raises(ValueError, match="feature-source gate|identity"):
+        reuse.load_verified_historical_source_archive(token="test-token", now=NOW, get=get)
 
 
 def test_source_parent_must_be_exact_successful_main_run_before_download():
