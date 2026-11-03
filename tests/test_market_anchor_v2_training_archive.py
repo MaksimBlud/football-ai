@@ -26,6 +26,36 @@ RUN = {
 }
 
 
+def _write_granted_rights(tmp_path):
+    evidence = tmp_path / "permission-evidence.txt"
+    evidence.write_bytes(b"synthetic permission evidence for unit tests only")
+    import hashlib
+    manifest = {
+        "schema_version": "FOOTBALL_AI_SOURCE_RIGHTS_V1",
+        "provider": "Football-Data.co.uk",
+        "rights_status": "GRANTED",
+        "research_use_permitted": True,
+        "ai_model_training_permitted": True,
+        "commercial_use_permitted": False,
+        "authorization": {
+            "kind": "written_permission",
+            "license_name": "Synthetic test permission",
+            "rights_holder": "Football-Data.co.uk",
+            "scope": ["AI_MODEL_TRAINING", "NONCOMMERCIAL_RESEARCH"],
+            "evidence_url": "https://example.org/test-permission",
+            "evidence_file": "permission-evidence.txt",
+            "evidence_sha256": hashlib.sha256(evidence.read_bytes()).hexdigest(),
+            "reviewed_by": "synthetic-test-reviewer",
+            "reviewed_at_utc": "2026-11-02T12:00:00Z",
+            "valid_from_utc": "2026-11-02T00:00:00Z",
+            "valid_until_utc": "2026-11-04T00:00:00Z"
+        }
+    }
+    path = tmp_path / "rights.json"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    return path
+
+
 def _bundle(*, extra_current=False, bad_report=None, mutate_csv=False, late_source=False, early_source=False):
     output = BytesIO()
     audits = []
@@ -97,6 +127,8 @@ def _bundle(*, extra_current=False, bad_report=None, mutate_csv=False, late_sour
 def _verify(raw, artifact, *, run=RUN, output_dir=None):
     if output_dir is None:
         output_dir = Path("/tmp/unused-v2-training-archive")
+    rights_root = output_dir.parent
+    rights_path = _write_granted_rights(rights_root)
     return archive.verify_and_extract_archive(
         raw,
         artifact=artifact,
@@ -104,6 +136,8 @@ def _verify(raw, artifact, *, run=RUN, output_dir=None):
         output_dir=output_dir,
         now=datetime(2026, 11, 2, 12, 0, tzinfo=timezone.utc),
         source_script_blob_sha=archive.SOURCE_SCRIPT_BLOB_SHA,
+        rights_manifest_path=rights_path,
+        rights_repo_root=rights_root,
     )
 
 
@@ -223,12 +257,15 @@ def test_training_archive_loader_uses_only_github_api_and_existing_artifact(tmp_
         raise AssertionError("unexpected URL: " + url)
 
     out = tmp_path / "training"
+    rights_path = _write_granted_rights(tmp_path)
     manifest = archive.load_latest_training_archive(
         out,
         token="read-only-test-token",
         repository=archive.REPOSITORY,
         now=datetime(2026, 11, 2, 12, 0, tzinfo=timezone.utc),
         get=fake_get,
+        rights_manifest_path=rights_path,
+        rights_repo_root=tmp_path,
     )
     assert manifest["artifact_id"] == 99
     assert len(list(out.glob("serie_a_*.csv"))) == 10
@@ -245,7 +282,23 @@ def test_recovery_workflow_runs_external_archive_loader_only_on_main_manual_disp
     assert "Verify and extract existing historical-only GitHub artifact" in workflow
     assert "if: github.event_name == 'workflow_dispatch'" in workflow
     assert "market_anchor_v2_training_archive.py" in workflow
+    assert "market_anchor_v2_source_rights.py" in workflow
+    assert "tests/test_market_anchor_v2_source_rights.py" in workflow
     assert "schedule:" not in workflow
+
+
+def test_training_archive_loader_fails_closed_on_unapproved_source_rights_before_network(tmp_path):
+    calls = []
+    with pytest.raises(PermissionError, match="not granted"):
+        archive.load_latest_training_archive(
+            tmp_path / "training",
+            token="read-only-test-token",
+            repository=archive.REPOSITORY,
+            now=datetime(2026, 11, 2, 12, 0, tzinfo=timezone.utc),
+            get=lambda *args, **kwargs: calls.append(args[0]),
+        )
+    assert calls == []
+    assert not (tmp_path / "training").exists()
 
 
 def test_training_archive_loader_requires_token_before_network(tmp_path):
@@ -290,6 +343,7 @@ def test_training_archive_loader_rejects_parent_without_strict_source_fetch_code
             })
         raise AssertionError("artifact access must not occur before source-code verification")
 
+    rights_path = _write_granted_rights(tmp_path)
     with pytest.raises(ValueError, match="frozen direct-URL no-redirect"):
         archive.load_latest_training_archive(
             tmp_path / "training",
@@ -297,6 +351,8 @@ def test_training_archive_loader_rejects_parent_without_strict_source_fetch_code
             repository=archive.REPOSITORY,
             now=datetime(2026, 11, 2, 12, 0, tzinfo=timezone.utc),
             get=fake_get,
+            rights_manifest_path=rights_path,
+            rights_repo_root=tmp_path,
         )
     assert calls[-1].endswith(
         f"/contents/{archive.SOURCE_SCRIPT_PATH}?ref={RUN['head_sha']}"
