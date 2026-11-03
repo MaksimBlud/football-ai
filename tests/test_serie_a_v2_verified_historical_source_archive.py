@@ -199,7 +199,10 @@ def test_artifact_digest_mismatch_fails_before_zip_parsing():
 
 
 def test_old_season_csv_sha_mismatch_fails_closed():
-    raw, archive, parent = build_archive(mutate_old_member=True)
+    raw, archive, parent = build_archive(
+        mutate_manifest=lambda m: m["source_files"][0].update({"csv_sha256": "0" * 64})
+    )
+    archive["sha256"] = sha256(raw).hexdigest()
     with pytest.raises(ValueError, match="historical source CSV SHA256 mismatch"):
         source.verify_historical_only_archive(raw, archive, parent, now=NOW)
 
