@@ -17,7 +17,7 @@ RUN_ID = 456
 ARTIFACT_ID = 123
 HEAD_SHA = "a" * 40
 RUN_CREATED = "2026-11-02T13:53:01Z"
-SOURCE_OBSERVED = "2026-11-02T13:52:00Z"
+SOURCE_OBSERVED = "2026-11-02T13:53:10Z"
 CURRENT_OBSERVED = "2026-11-02T13:53:40Z"
 ARCHIVE_CREATED = "2026-11-02T13:53:50Z"
 ARTIFACT_CREATED = "2026-11-02T13:53:57Z"
@@ -223,7 +223,7 @@ def test_reuses_only_historical_csv_bytes_from_authenticated_successful_main_art
     assert len(history) == len(reuse.HISTORICAL_CODES)
     assert len(audits) == len(reuse.HISTORICAL_CODES)
     assert history["Date"].str.endswith(tuple(str(2000 + int(code[:2])) for code in reuse.HISTORICAL_CODES)).all()
-    assert all(item["source_observed_at_utc"] == "2026-11-02T13:52:00+00:00" for item in audits)
+    assert all(item["source_observed_at_utc"] == "2026-11-02T13:53:10+00:00" for item in audits)
     assert provenance["mode"] == "REUSED_VERIFIED_MAIN_ARTIFACT_HISTORICAL_ONLY"
     assert provenance["historical_files_reused"] == 10
     assert provenance["public_historical_csv_requests"] == 0
