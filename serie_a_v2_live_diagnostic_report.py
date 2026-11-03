@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 import hashlib
 from io import BytesIO
 import json
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -120,7 +121,8 @@ def _assert_original_v2_source_embargo(history: pd.DataFrame, audit: list[dict],
 
 
 def make_report(quotes: list[dict], history: pd.DataFrame, source_audit: list[dict], *,
-                as_of_utc: datetime) -> dict:
+                as_of_utc: datetime,
+                source_archive_metadata: dict | None = None) -> dict:
     if not source_audit:
         raise ValueError("history provenance required")
     if as_of_utc.tzinfo is None:
@@ -143,28 +145,69 @@ def make_report(quotes: list[dict], history: pd.DataFrame, source_audit: list[di
         "history_coverage": item["history_coverage"],
     } for item in original_inputs]
     preview = shadow_preview(quotes, original_inputs, as_of_utc=as_of_utc)
-    late_source_quotes = sum(any(t > quote for t in source_times) for quote in quote_times)
+    # Strict source-before-quote means equality is not admissible.
+    late_source_quotes = sum(any(t >= quote for t in source_times) for quote in quote_times)
+    archive_created = (
+        parse_utc(source_archive_metadata["created_at_utc"])
+        if source_archive_metadata is not None else None
+    )
+    archive_created_after_quote = (
+        sum(archive_created >= quote for quote in quote_times)
+        if archive_created is not None else None
+    )
+    source_before_quote_ready = (
+        sum(archive_created < quote and all(t < quote for t in source_times) for quote in quote_times)
+        if archive_created is not None else None
+    )
+    if not quote_times:
+        source_before_quote_status = "NOT_EVALUABLE_NO_QUOTES"
+    elif archive_created is None:
+        source_before_quote_status = "NOT_EVALUABLE_NO_GITHUB_ARTIFACT_METADATA"
+    elif source_before_quote_ready == len(quote_times):
+        source_before_quote_status = "SOURCE_AND_ARCHIVE_STRICTLY_BEFORE_ALL_QUOTES"
+    elif source_before_quote_ready == 0:
+        source_before_quote_status = "SOURCE_BEFORE_QUOTE_NOT_PROVEN"
+    else:
+        source_before_quote_status = "PARTIAL_SOURCE_BEFORE_QUOTE"
     # Date-only cutoff from original historical builder is NOT proof that this
-    # downloaded file existed when the quotation was captured.
+    # source archive existed when the quotation was captured.
     assert not preview["eligible_for_product_publication"]
     assert all(not p["eligible_for_frozen_prospective_cohort"] for p in preview["previews"])
     return {
         "schema_version": "SERIE_A_V2_LIVE_DIAGNOSTIC_SOURCE_ATTESTATION_V1",
-        "mode": "RESEARCH_ONLY_UNVERIFIED_PROVENANCE_NO_BET",
+        "mode": (
+            "RESEARCH_ONLY_REUSED_SOURCE_ARCHIVE_NO_BET"
+            if source_archive_metadata is not None
+            else "RESEARCH_ONLY_UNVERIFIED_PROVENANCE_NO_BET"
+        ),
         "as_of_utc": as_of_utc.astimezone(timezone.utc).isoformat(),
         "frozen_candidate_sha256": manifest["candidate_sha256"],
-        "historical_source": "FOOTBALL_DATA_CSV",
+        "historical_source": (
+            "GITHUB_ARTIFACT_VERIFIED_FOOTBALL_DATA_CSV"
+            if source_archive_metadata is not None else "FOOTBALL_DATA_CSV"
+        ),
         "protect_2026_27_prospective_outcomes": True,
         "2026_27_public_results_downloaded": False,
         "history_stale_without_2026_27_form": True,
         "public_source_files": source_audit,
-        "public_http_requests": len(source_audit),
+        "public_http_requests": 0 if source_archive_metadata is not None else len(source_audit),
+        "source_files_reused": len(source_audit) if source_archive_metadata is not None else 0,
+        "source_archive_metadata": source_archive_metadata,
+        "source_archive_current_season_member_opened": (
+            False if source_archive_metadata is not None else None
+        ),
+        "source_archive_current_season_member_sha_checked": (
+            False if source_archive_metadata is not None else None
+        ),
         "paid_provider_requests": 0,
         "supabase_writes": 0,
         "model_training": False,
         "model_promotion": False,
         "independently_attested_feature_availability_at_quote": False,
         "quotes_with_source_observed_after_quote": late_source_quotes,
+        "quotes_with_source_archive_created_at_or_after_quote": archive_created_after_quote,
+        "quotes_with_all_old_season_sources_and_archive_strictly_before_quote": source_before_quote_ready,
+        "historical_source_before_quote_status": source_before_quote_status,
         "original_incumbent_asof_prediction_captured": False,
         "eligible_for_frozen_prospective_cohort": False,
         "eligible_for_product_publication": False,
@@ -194,16 +237,29 @@ def main() -> None:
     p.add_argument("--raw-source-dir", type=Path, required=True)
     args = p.parse_args()
     from database import supabase
+    from serie_a_v2_verified_historical_source_archive import load_latest_historical_source_archive
     now = datetime.now(timezone.utc)
     quotes = fetch_saved_upcoming_serie_a_quotes(supabase, now=now)
-    history, sources = fetch_public_history(capture_dir=args.raw_source_dir)
-    report = make_report(quotes, history, sources, as_of_utc=datetime.now(timezone.utc))
+    archive_result = load_latest_historical_source_archive(
+        token=os.environ.get("GITHUB_TOKEN", ""),
+        now=now,
+        capture_dir=args.raw_source_dir,
+    )
+    report = make_report(
+        quotes,
+        archive_result["history"],
+        archive_result["source_audit"],
+        as_of_utc=now,
+        source_archive_metadata=archive_result["source_archive"],
+    )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True)+"\n", encoding="utf-8")
     summary = {key: report[key] for key in (
         "mode", "historical_source", "public_http_requests", "paid_provider_requests",
         "supabase_writes", "quoted_fixtures", "history_rows", "feature_count",
-        "quotes_with_source_observed_after_quote", "diagnostic_scored",
+        "quotes_with_source_observed_after_quote", "quotes_with_source_archive_created_at_or_after_quote",
+        "quotes_with_all_old_season_sources_and_archive_strictly_before_quote",
+        "historical_source_before_quote_status", "source_files_reused", "diagnostic_scored",
         "diagnostic_blocked", "feature_rows_with_missing_values",
         "feature_rows_all_median_imputed", "feature_rows_with_all_19_observed",
         "eligible_for_frozen_prospective_cohort",
