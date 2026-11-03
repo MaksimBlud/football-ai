@@ -28,7 +28,8 @@ EXPECTED_FROZEN_GIT_BLOBS = {
 
 def git_blob_sha(path: Path) -> str:
     raw = path.read_bytes()
-    return hashlib.sha1(f"blob {len(raw)}\\0".encode("ascii") + raw).hexdigest()
+    header = f"blob {len(raw)}".encode("ascii") + bytes((0,))
+    return hashlib.sha1(header + raw).hexdigest()
 
 
 def _load_frozen_modules(source_dir: Path):
