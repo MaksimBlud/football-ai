@@ -392,3 +392,22 @@ def test_current_form_capture_reuses_verified_historical_archive_when_actions_to
     assert report["historical_old_season_file_count"] == 10
     assert report["target_outcomes_read"] is False
     assert report["target_outcomes_scored"] is False
+
+def test_capture_rejects_current_csv_missing_a_gate_identity_before_archiving_current_member(tmp_path):
+    raw = current_csv(n=30).replace(
+        b"01/08/2026,Home 0,Away 0,1,0,H,5,3,2,1,0,0",
+        b"01/08/2026,Other Home,Away 0,1,0,H,5,3,2,1,0,0",
+    )
+    response = StreamResponse(raw)
+    with pytest.raises(RuntimeError, match="omits 1 completed fixture identities"):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=FakeQuery(event_rows(30)),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=lambda _url, **_kwargs: response,
+            history_fetch=_injected_history_for_source_capture,
+            clock=lambda: datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc),
+        )
+    assert response.closed is True
+    assert not (tmp_path / CURRENT_FILENAME).exists()
+    assert not (tmp_path / MANIFEST_FILENAME).exists()
