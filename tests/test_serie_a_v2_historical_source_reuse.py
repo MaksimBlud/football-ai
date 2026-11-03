@@ -695,3 +695,17 @@ def test_capture_producer_manifest_passes_real_historical_reuse_consumer(tmp_pat
     assert gate["current_source_fixture_identity_sha256"] == (
         reuse._fixture_identity_sha256(gate["gate_fixture_identities"])
     )
+
+
+def test_live_workflows_grant_read_only_github_artifact_access_for_historical_reuse():
+    root = Path(__file__).resolve().parents[1]
+    workflows = {
+        root / ".github/workflows/serie-a-v2-current-form-source-capture.yml": "capture-current-form",
+        root / ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml": "free-diagnostic",
+    }
+    for path, job_name in workflows.items():
+        text = path.read_text(encoding="utf-8")
+        assert "permissions:\\n  actions: read\\n  contents: read" in text
+        job = text.split("jobs:\\n", 1)[1].split("  " + job_name + ":\\n", 1)[1]
+        env = job.split("    steps:\\n", 1)[0]
+        assert "GITHUB_TOKEN: ${{ github.token }}" in env
