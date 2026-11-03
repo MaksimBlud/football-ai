@@ -20,7 +20,6 @@ import zipfile
 import pandas as pd
 import requests
 
-from historical_football_signal_lab import FEATURE_SETS
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 from serie_a_v2_asof_feature_manifest import REQUIRED, _validate_history
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
@@ -42,6 +41,7 @@ CURRENT_URL = (
 )
 MANIFEST_FILENAME = "serie_a_v2_current_form_source_manifest.json"
 EXPECTED_BUILDER_BLOB_SHA1 = "401b3a0893371bfa4a488ec92a4a54af2678c8f7"
+EXPECTED_FEATURE_COUNT = 19
 OLD_CUTOFF = pd.Timestamp("2026-07-01")
 MAX_ARCHIVE_BYTES = 16_000_000
 MAX_UNCOMPRESSED_BYTES = 12_000_000
@@ -312,8 +312,7 @@ def _verify_and_extract_historical_files(
             or str(manifest.get("workflow_run_id")) != str(artifact.get("run_id"))
             or manifest.get("frozen_candidate_sha256") != FROZEN_SHA
             or manifest.get("original_feature_builder_git_blob_sha1") != EXPECTED_BUILDER_BLOB_SHA1
-            or manifest.get("feature_count") != len(FEATURE_SETS["ALL_FOOTBALL"])
-            or manifest.get("feature_count") != 19
+            or manifest.get("feature_count") != EXPECTED_FEATURE_COUNT
             or manifest.get("historical_season_codes") != list(HISTORICAL_CODES)
             or manifest.get("current_season_code") != CURRENT_CODE
             or manifest.get("current_season") != CURRENT_SEASON
@@ -321,6 +320,9 @@ def _verify_and_extract_historical_files(
             or manifest.get("source_file_count") != len(expected_names) - 1
             or manifest.get("historical_old_season_file_count") != len(HISTORICAL_CODES)
             or manifest.get("eligible_for_product_publication") is not False
+            or manifest.get("eligible_for_frozen_old_season_cohort") is not False
+            or manifest.get("eligible_for_current_form_forward_shadow") is not False
+            or manifest.get("no_bet") is not True
             or manifest.get("target_outcomes_read") is not False
             or manifest.get("target_outcomes_scored") is not False
             or manifest.get("model_refit_or_promotion") is not False
@@ -346,6 +348,7 @@ def _verify_and_extract_historical_files(
         feature_policy = manifest.get("feature_policy")
         if (
             not isinstance(feature_policy, Mapping)
+            or feature_policy.get("use_current_season_matches_only_as_lagged_features") is not True
             or feature_policy.get("model_refit") is not False
             or feature_policy.get("model_selection") is not False
             or feature_policy.get("model_weights_or_feature_definitions_changed") is not False
@@ -369,8 +372,9 @@ def _verify_and_extract_historical_files(
         )
         artifact_created = artifact["created_at"]
         parent_completed = _utc(parent["run_completed_at_utc"], field="parent run completed_at")
-        if not archive_created <= artifact_created <= parent_completed:
-            raise ValueError("source manifest/archive/parent completion timestamps are inconsistent")
+        parent_created = _utc(parent["run_created_at_utc"], field="parent run created_at")
+        if not parent_created <= archive_created <= artifact_created <= parent_completed:
+            raise ValueError("source manifest/archive/parent run timestamps are inconsistent")
 
         source_files = manifest.get("source_files")
         if not isinstance(source_files, list) or len(source_files) != len(expected_names) - 1:
