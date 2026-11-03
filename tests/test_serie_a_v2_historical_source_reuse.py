@@ -356,8 +356,9 @@ def test_guarded_workflow_run_source_artifact_is_accepted():
 
     assert len(history) == len(reuse.HISTORICAL_CODES)
     assert len(audits) == len(reuse.HISTORICAL_CODES)
-    assert provenance["mode"] == "DIRECT_PUBLIC_HISTORICAL_DOWNLOADS"
+    assert provenance["mode"] == "REUSED_VERIFIED_MAIN_ARTIFACT_HISTORICAL_ONLY"
     assert any(url.endswith("/zip") for url, _ in calls)
+    assert not any("football-data.co.uk" in url for url, _ in calls)
 
 
 def test_artifact_zip_digest_mismatch_fails_closed():
