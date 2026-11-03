@@ -111,7 +111,7 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
             or j.get("head_branch") != "main"
             or j.get("head_sha") != archive["head_sha"]
             or j.get("status") != "completed" or j.get("conclusion") != "success"
-            or j.get("event") not in ("push", "schedule", "workflow_dispatch")):
+            or j.get("event") not in ("schedule", "workflow_dispatch")):
         raise ValueError("source artifact parent run is not the verified original V2 collector")
     completed = parse_utc(j["updated_at"])
     if not completed < quote_time:
