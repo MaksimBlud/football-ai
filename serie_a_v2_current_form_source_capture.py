@@ -7,6 +7,8 @@ until 30 eligible forecasts from this new forward-only cohort have completed.
 """
 from __future__ import annotations
 
+from serie_a_v2_source_rights import require_original_v2_source_rights
+
 import argparse
 from datetime import date, datetime, timezone
 import hashlib
@@ -282,6 +284,7 @@ def capture_source_archive(
 
 
 def main() -> None:
+    require_original_v2_source_rights()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
