@@ -9941,3 +9941,57 @@ The main-only data audit remains unchanged: zero strict pre-match quotes in the 
 - Eligible prospective completed forecasts remain **0/30**.
 - Brier Score and LogLoss remain uncomputed; no superiority claim against the de-vigged market or incumbent is justified.
 - No protected 2026/27 outcomes were read. No fitting/refitting, threshold tuning, candidate/weight/protocol changes, production `.pkl` changes, paid API calls, Supabase writes/DDL, promotion, betting, merge, or schedule changes occurred in this update.
+
+
+## 2026-11-04 15:22 UTC — V2 exact-head recheck, cumulative source-use breach, and current data gate
+
+### Frozen original identity rechecked
+
+Main is still `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+
+The original frozen inputs remain byte-identical between main and the current #699 branch:
+- Candidate JSON Git blob: `ac1303f6b096664983fbf52443bd0a381b23ba21`; embedded candidate SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Protocol JSON Git blob: `65729e9639720e67624c1481190aa22ae606f151`.
+- Original feature builder: `historical_football_signal_lab.py`, blob `401b3a0893371bfa4a488ec92a4a54af2678c8f7`.
+- Frozen V2 shadow engine: `market_anchor_1x2_v2_shadow.py`, blob `b2770d726ffafe7a3cef706b57d3391063cbfe1b`.
+
+The #699 wrapper file `serie_a_v2_frozen_shadow_preview.py` is not byte-identical to main: its `shadow_preview` clock check now requires a real UTC offset, and the outcome guard adds recursive forbidden-key detection. The core frozen shadow engine, candidate JSON, protocol JSON, feature builder, and the `load_verified_original` / market-normalization functions are unchanged. The wrapper diff does not alter the frozen probability formulas. The V2-only active identity remains market (`active_lambda=0)); `shadow_lambda=1` remains research-only.
+
+### Current main source and forward runtime — actual run logs
+
+- Source Capture [run 41836971469](https://github.com/MaksimBlud/football-ai/actions/runs/41836971469), scheduled on main: SUCCESS; 19 focused tests passed; 10 historical CSVs plus one current-season CSV; 100 current-season completed rows; 3,900 historical/current history rows; candidate SHA matched; 0 paid calls, 0 Supabase writes, no target scoring. Artifact #13327281383, ZIP SHA-256 `9dced08f96d81c39dcc199afba481fab07961ce6b61d14776fdc78563bc8cccd`.
+- Current-Form Forward [run 41837103174](https://github.com/MaksimBlud/football-ai/actions/runs/41837103174), SUCCESS: independently verified the source artifact and its successful main parent at a source age of 42 seconds; candidate SHA matched; 0 saved quotes, 0 V2 shadow forecasts, no outcome read/scoring, 0 paid calls, 0 writes. Artifact #13327081347.
+- Free Real-Quote Diagnostic [run 41847314320](https://github.com/MaksimBlud/football-ai/actions/runs/41847314320), SUCCESS; 53 tests passed, but the live diagnostic made 10 public HTTP requests, saw 0 quoted fixtures, scored 0, and reported `RESEARCH_ONLY_UNVERIFIED_PROVENANCE_NO_BET`. Artifact #13332260799, ZIP SHA-256 `72a32dc61d6e230be46bc5fe69a52e97142a79816af33c66f58066e0ceb6e8d8`. No paid provider calls or Supabase writes.
+
+The Nov 4 source artifact is still from the pre-#699 producer: it has a numeric feature-input gate count but not the canonical identity-list/count/SHA attestation and rights-helper provenance required by the new #699 consumer. It is therefore not eligible for #699's identity-attested evaluator/cache chain despite the successful legacy forward verification.
+
+### Cumulative public-source use — policy blocker
+
+Four actual automated public-source sessions are verified within roughly 25 hours:
+- Nov 3 Source Capture #41640753996, artifact #13231843819, 11 source files.
+- Nov 3 Free Diagnostic #41650074683, artifact #13236383688, 10 public HTTP requests, 0 quotes and 0 scores.
+- Nov 4 Source Capture #41836971469, artifact #13327281383, 11 source files.
+- Nov 4 Free Diagnostic #41847314320, artifact #13332260799, 10 public HTTP requests, 0 quotes and 0 scores.
+
+The checked-in rights manifest limits automated source access to **two sessions per rolling seven days**. The four observed sessions exceed that limit. No further Football-Data source session should be initiated while the shared guard is absent or before its cooldown permits access. This is a source-use compliance blocker, not a model-quality finding.
+
+Main still has the unguarded daily source-capture cron at 05:50 UTC and free-diagnostic cron at 06:13 UTC; both current main workflows also have download-capable push paths. The next source-capture slot on current unguarded main is Nov 5 05:50 UTC. Do not manually dispatch either workflow.
+
+PR #705 is now at exact HEAD `97a94f5ba3aa921175071e490a9c698aaf0a414b`, **8/8 exact-head checks SUCCESS** (23 shared-budget tests, 86 frozen V2 shadow tests, production-`.pkl` diff guard passed). It adds the shared 170-hour per-workflow guard, common concurrency, attempt marker before source requests, and offline-only push validation. HUMAN-MERGE is still required; main has not changed. Its bootstrap tests include both latest Nov 4 artifacts. After manual merge, expected next unchanged schedule slots after each 170-hour cooldown are source capture **Nov 12 05:50 UTC** and free diagnostic **Nov 12 06:13 UTC**. The guard controls frequency; it does not grant rights.
+
+PR #699 current exact HEAD `09c95fde22091311cbe56da236e76360aad33f72`: **7/7 SUCCESS**, 321 frozen shadow tests and 13 current-form dependency-trigger tests; no production-`.pkl` changes. It must be rebased after #705 and its workflow YAMLs reconciled to retain #705's shared concurrency, marker reservation, actions:read/GITHUB_TOKEN, and offline push validation while preserving #699's rights, source identity SHA, and workflow-run freshness checks. Do not merge its present workflow files over #705 unmodified.
+
+PR #701 current exact HEAD `99e67b61f474aa5de51d7b829405a23a44cbc4fe`: **6/6 SUCCESS**, including 79 evaluator/runner tests and 17 forward-artifact bridge tests. Its market-only outcome loader remains behind the unchanged 30-primary-completed-forecast gate; the full incumbent comparison remains separately blocked until a same-league non-legacy incumbent is pinned.
+
+PR #712 current exact HEAD `4b9b1281a8ab81988ea713eb5974d1e55dbba81d`: only its targeted offline source-reuse workflow is verified on this HEAD (53 tests); the broader 9/9 claim is for an older predecessor. Rebase after #705/#699 and rerun full exact-head CI. Do not consume the pre-#699 Nov 4 artifact as identity-attested cache input.
+
+### Read-only Supabase pre-match audit
+
+Only pre-match snapshot fields and metadata-only fixture identities were queried:
+- Across `public.odds_snapshots`, 3,966 total rows and 3,915 strictly pre-match rows; **zero** strictly pre-match rows in the last seven days and **zero** future events with a strictly pre-match quote.
+- Serie A: 625 rows, 620 strictly pre-match, 63 events; latest strictly pre-match quote remains **2026-10-13 14:48:53 UTC**; zero future and zero last-seven-day pre-match rows.
+- The feature-input metadata query selected only `match_date, home_team, away_team` for Serie A 2026/27: 103 unique raw identity tuples through 2026-11-02. No scores/results were selected.
+- `public.product_prediction_snapshots`: 40 rows total, zero rows carrying the original V2 version or candidate SHA.
+
+The prospective evaluation gate remains **0/30**. No target outcomes were read; Brier Score and LogLoss remain uncomputed. No source/paid provider call, Supabase write/DDL, model refit, weight/contract change, production-`.pkl` change, promotion, betting, merge, schedule change, or other-agent change was performed in this audit.
+
