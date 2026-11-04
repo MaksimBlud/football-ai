@@ -1,3 +1,56 @@
+## 2026-11-04 04:01 UTC — independently reconstructed gate-time identity SHA
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This is a read-only evidence reconstruction plus a documentation-only update on this PR branch; no main mutation occurred.
+
+### Source artifact and identity-only reconstruction
+
+Downloaded the actual GitHub artifact #13231843819 from Source Capture run #41640753996 and independently recomputed the ZIP SHA-256:
+
+- ZIP SHA-256: `4e6fb5531a2206a353fe00fa1ebb0b4d20b3c6ae41ab49a7c672f8dab6d29cd8` (matches GitHub artifact digest).
+- Current-season CSV SHA-256: `4138a4f01e96312a7a5dc07450c7a520c3861a479620fe3d102f12d42a6678ba` (matches the manifest and recomputed bytes).
+- The manifest's identity-only feature gate ran at `2026-11-03T13:02:46.498639Z` and recorded 98 canonical completed primary identities. It separately recorded 100 completed prior-day CSV rows; these are different counts and must not be conflated.
+
+I parsed only the CSV identity columns `Date, HomeTeam, AwayTeam` (no FTR, goals, score, or result fields). There are 100 pre-gate-day identity rows and 100 unique canonical identities. Their sorted identity-set SHA-256 is `f85872547e745eae8854ee245902c1e522657fb3a687032be83b000199f2a99e`.
+
+A retrospective, identity-only Supabase reconstruction using only `match_date, home_team, away_team, persisted_at_utc`, with `persisted_at_utc <= 2026-11-03T13:02:46.498639Z`, returns 101 raw rows, 98 canonical identities, and SHA-256 `08ba05a619ed01139cd89970a0780f212f66342cb8a2f8d9606dab1a15127745`. Removing the two CSV identities that were persisted after that gate time yields exactly the same 98-identity count and SHA-256.
+
+Those two rows were persisted later on 2026-11-03:
+- `2026-11-02 Atalanta — Parma`: `19:25:30.287934Z`.
+- `2026-11-02 Sassuolo — Fiorentina`: `19:25:30.690599Z`.
+
+The current Supabase identity set now contains 103 raw rows / 100 canonical identities and has SHA-256 `f85872547e745eae8854ee245902c1e522657fb3a687032be83b000199f2a99e`, matching the 100-identity CSV set. This resolves the 98-versus-100 count difference: the two additional fixtures were in the CSV but were not yet persisted in Supabase when the source gate ran.
+
+Important limitation: main's original manifest did not preserve the gate identity list or its SHA at capture time. The above is a retrospective reconstruction from persistence timestamps, not a contemporaneous identity attestation. PR #699 remains necessary: its source-capture path records the gate identity list/SHA, the source identity list/SHA, covered/missing counts, and fails if any gate identity is missing. It deliberately permits extra source identities while proving complete coverage of the gate set.
+
+No protected outcome columns were selected from Supabase. No CSV result/statistics columns were read in this identity comparison.
+
+### Fresh strict pre-match quote audit
+
+The read-only `odds_snapshots` query used only rows satisfying `snapshot_time_utc < commence_time_utc`:
+
+- 3,915 strict pre-match rows / 327 distinct events across the stored leagues.
+- Zero strict pre-match rows in the last seven days.
+- Zero future events with a strict pre-match quote.
+- Latest strict Serie A quote: `2026-10-13 14:48:53.042620Z`.
+- `product_prediction_snapshots`: 40 rows, all `EPL_AI_MARKET_PAIR_V1`; zero original V2 candidate-SHA snapshots.
+
+The real main Original Forward run #41670482076 and Current-Form Forward run #41672409582 still report zero quotes and zero V2 shadow captures. The prospective outcome gate remains 0/30; no target outcomes were read.
+
+### Exact-head PR state and integration constraints
+
+Exact current PR heads were re-read with their associated GitHub Actions runs:
+
+- #705 `8b139335e6722b7c4f5286962486bca84bced20d`: 8/8 SUCCESS. It is the first HUMAN-MERGE priority because the 170-hour source-download budget and offline push validation are not yet on main.
+- #706 `caab7c07ad720866616ce9fa62664b0d398e5fe0`: 6/6 SUCCESS.
+- #699 `42c967f28fd274d8a8f9924e698dc5492f7f13e3`: 7/7 SUCCESS; contains the contemporaneous source identity/SHA coverage proof described above.
+- #701 `268885f437379a1610c0c56abb883cf7963f9d9c`: 6/6 SUCCESS; its market-only evaluator preserves the same 30-event lazy outcome gate and does not require an unpinned incumbent.
+- #702 `3935fc601eff30d2ca0a7670dae797d0cb365228`: 7/7 SUCCESS.
+- #712 `1c0f5a424dd51abc0f1a7dedfb7f8ff1047b3339`: 8/8 SUCCESS; retain after #699/#704 dependency review and rebase.
+
+PR #709 duplicates the offline push-validation change already present in #705 and should not be merged separately. PR #711 remains a draft alternative that overlaps #712; do not merge both.
+
+No new source download was initiated. No paid-provider request, Supabase write/DDL, target-outcome read, production `.pkl` change, model/weight/feature-contract change, schedule change, or merge occurred. The only write in this iteration is this continuity-document commit on PR #697's existing branch.
+
 ## 2026-11-03 17:55 UTC — latest main V2 runs and corrected identity reconciliation
 
 Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This is a read-only audit plus a documentation update on this PR branch; no main mutation occurred.
