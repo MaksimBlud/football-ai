@@ -460,3 +460,16 @@ def test_discovery_bootstrap_rejects_legacy_artifact_from_wrong_workflow():
 
     with pytest.raises(ValueError, match="approved main source workflow"):
         budget.discover_latest_download_attempt(token="test-token", workflow_path=DIAGNOSTIC_PATH, get=get)
+
+def test_current_form_forward_reader_does_not_run_on_push_validation():
+    root = Path(__file__).resolve().parents[1]
+    forward = (root / ".github" / "workflows" / "serie-a-v2-current-form-forward-preview.yml").read_text(encoding="utf-8")
+    job = forward.split("  current-form-forward-preview:\n", 1)[1].split("\n    runs-on:", 1)[0]
+    assert "github.ref == 'refs/heads/main'" in job
+    assert "github.event_name == 'schedule'" in job
+    assert "github.event_name == 'workflow_dispatch'" in job
+    assert "github.event_name == 'workflow_run'" in job
+    assert "github.event.workflow_run.event == 'schedule'" in job
+    assert "github.event.workflow_run.event == 'workflow_dispatch'" in job
+    assert "github.event_name != 'workflow_run'" not in job
+    assert "github.event.workflow_run.event != 'pull_request'" not in job
