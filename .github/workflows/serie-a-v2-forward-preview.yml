@@ -51,10 +51,34 @@ permissions:
   contents: read
 
 jobs:
+  # Code pushes must never read Supabase, source archives, or saved quotes.
+  # Keep the push trigger only to run this secret-free offline regression job.
+  validate-original-forward:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: .
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install offline contract-test dependency
+        run: python -m pip install pytest
+      - name: Compile original V2 entry points without source access
+        run: python -m py_compile serie_a_v2_forward_capture.py serie_a_v2_attest_real_source.py serie_a_v2_frozen_shadow_preview.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py historical_football_signal_lab.py serie_a_runtime_config.py
+      - name: Run offline original V2 trigger and source-contract regressions
+        run: python -m pytest -q tests/test_serie_a_v2_manual_quote_trigger_contract.py
+
   original-v2-forward-preview:
     # Ignore failed or non-main upstream runs and forbid triggering through
     # unrelated paid-provider schedules or untrusted branches.
-    if: ${{ github.ref == 'refs/heads/main' && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.event == 'workflow_dispatch')) }}
+    if: ${{ github.ref == 'refs/heads/main' && github.event_name != 'push' && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.event == 'workflow_dispatch')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
