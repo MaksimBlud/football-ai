@@ -26,6 +26,7 @@ permissions:
 
 jobs:
   free-diagnostic:
+    if: ${{ github.event_name != 'push' && vars.MARKET_ANCHOR_V2_SOURCE_RIGHTS_STATUS == 'GRANTED' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
