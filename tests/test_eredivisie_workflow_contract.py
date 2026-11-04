@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 import subprocess
 import textwrap
 
@@ -97,3 +98,90 @@ def test_v2_pickle_guard_shell_blocks_are_valid_bash():
             check=False,
         )
         assert parsed.returncode == 0, parsed.stderr
+
+
+def _extract_v2_pickle_guard_script(name: str) -> str:
+    source = _read(name)
+    marker = "      - name: Enforce no production artifact changes" + chr(10)
+    assert marker in source
+    step = source.split(marker, 1)[1]
+    run_marker = "        run: |" + chr(10)
+    assert run_marker in step
+    script = textwrap.dedent(step.split(run_marker, 1)[1])
+    return script.split("\\n      - name:", 1)[0]
+
+
+def _run_v2_pickle_guard(script: str, tmp_path: Path, *, mode: str, changed_files: str = "safe.py"):
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir(parents=True, exist_ok=True)
+    fake_git = fake_bin / "git"
+    fake_git.write_text(textwrap.dedent("""\\
+        #!/bin/sh
+        case "$1" in
+          fetch)
+            [ "$FAKE_GIT_MODE" != "fetch-error" ] || exit 9
+            exit 0
+            ;;
+          merge-base)
+            if [ "$FAKE_GIT_MODE" = "merge-base-error" ]; then
+              printf '%s\\n' "simulated missing merge base" >&2
+              exit 1
+            fi
+            if [ "$FAKE_GIT_MODE" = "merge-base-empty" ]; then
+              exit 0
+            fi
+            printf '%s\\n' "deadbeef"
+            exit 0
+            ;;
+          diff)
+            [ "$FAKE_GIT_MODE" != "diff-error" ] || exit 8
+            printf '%s\\n' "$FAKE_CHANGED_FILES"
+            exit 0
+            ;;
+          *)
+            exit 90
+            ;;
+        esac
+    """))
+    fake_git.chmod(0o755)
+    env = os.environ.copy()
+    env["PATH"] = str(fake_bin) + os.pathsep + env.get("PATH", "")
+    env["BASE_REF"] = "main"
+    env["FAKE_GIT_MODE"] = mode
+    env["FAKE_CHANGED_FILES"] = changed_files
+    return subprocess.run(
+        ["bash", "-e", "-o", "pipefail", "-c", script],
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
+def test_v2_pickle_guard_executes_fail_closed_cases(tmp_path):
+    cases = (
+        ("fetch-error", "safe.py", None),
+        ("merge-base-error", "safe.py", "FAIL_CLOSED: unable to determine merge base for production artifact diff"),
+        ("merge-base-empty", "safe.py", "FAIL_CLOSED: unable to determine merge base for production artifact diff"),
+        ("diff-error", "safe.py", "FAIL_CLOSED: unable to inspect changed files for production artifact diff"),
+        ("pkl", "models/production.pkl", "Production model artifact change detected"),
+    )
+    for workflow in ("research-pr-validation.yml", "serie-a-pr-validation.yml"):
+        script = _extract_v2_pickle_guard_script(workflow)
+        for index, (mode, changed_files, expected) in enumerate(cases):
+            result = _run_v2_pickle_guard(
+                script, tmp_path / workflow.replace("/", "_") / str(index),
+                mode=mode, changed_files=changed_files,
+            )
+            assert result.returncode != 0, (workflow, mode, result.stdout, result.stderr)
+            if expected:
+                assert expected in result.stdout + result.stderr, (
+                    workflow, mode, result.stdout, result.stderr
+                )
+            assert "PASS: no .pkl changes in PR" not in result.stdout
+        success = _run_v2_pickle_guard(
+            script, tmp_path / workflow.replace("/", "_") / "success",
+            mode="success", changed_files="safe.py",
+        )
+        assert success.returncode == 0, (workflow, success.stdout, success.stderr)
+        assert "PASS: no .pkl changes in PR" in success.stdout
