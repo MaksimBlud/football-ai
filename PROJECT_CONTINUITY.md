@@ -9747,3 +9747,59 @@ Revised exact heads (CI was starting after these updates):
 The revised helper and manifest have identical blob SHAs across all three branches, so they converge without duplicate implementations. The safe integration order remains #705 → #699 → #712 → #707 → #701, with #707 rebased after #712 because both modify the current-form source-capture and diagnostic scripts. #712 must preserve #699's URL/clock/identity hardening and the restricted research-scope gate.
 
 The main-only data audit remains unchanged: zero strict pre-match quotes in the last seven days, zero future fixtures with saved pre-match quotes, zero original-V2 product snapshots, and zero eligible prospective forecasts. No target outcomes were read and no Brier/LogLoss was computed. No source request, paid request, Supabase write/DDL, production `.pkl` change, main update, schedule change, or other-agent change occurred in this correction.
+
+
+## 2026-11-04 08:34 UTC — rights-trigger regression and fresh main-only runtime audit
+
+### Exact main baseline
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main ref was changed.
+- Frozen candidate JSON Git blob remains `ac1303f6b096664983fbf52443bd0a381b23ba21`; candidate artifact SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Protocol JSON Git blob remains `65729e9639720e67624c1481190aa22ae606f151`; the V2 implementation and feature-builder blobs remain unchanged. The original 19-feature order, weights, scaler, imputer, `active_lambda=0`, `shadow_lambda=1`, and failed stability gate are unchanged.
+
+### New #699 exact-head regression fix
+- Updated the existing #699 research branch only; exact new HEAD: `bda4c810cb1248a67c69f8746191fc9c76c959ab`.
+- Found that the four live V2 workflow push-path filters omitted their newly imported source-rights helper and checked-in rights manifest. A policy/helper edit could therefore change the runtime gate without triggering the corresponding offline workflow re-audit.
+- Added `market_anchor_v2_source_rights.py` and `research/source_rights/football_data_co_uk.json` to the push-path filters of:
+  - `serie-a-v2-current-form-source-capture.yml`;
+  - `serie-a-v2-current-form-forward-preview.yml`;
+  - `serie-a-v2-forward-preview.yml`;
+  - `serie-a-v2-free-real-quote-diagnostic.yml`.
+- Extended `tests/test_serie_a_v2_current_form_dependency_triggers.py` and added `test_source_rights_changes_reaudit_every_live_v2_workflow` to `tests/test_serie_a_v2_current_form_source_workflow_contract.py`.
+- The new regression requires both rights inputs to trigger all four live workflow audits. No cron, job condition, permission, source URL, data, model, or outcome-gate behavior was changed.
+- Exact-head CI: **7/7 SUCCESS** on `bda4c810cb1248a67c69f8746191fc9c76c959ab`:
+  - Product #41800141105;
+  - Serie A Frozen V2 Shadow Tests #41800141067;
+  - Eredivisie #41800141053;
+  - Bundesliga #41800141073;
+  - Serie A #41800141055;
+  - Ligue 1 #41800141052;
+  - Research #41800141149.
+- The frozen shadow job ran **315 passed**. Its final production-pickle check ran `git diff --exit-code -- '*.pkl'` and passed. Research validation also completed successfully. The PR remains open and HUMAN-MERGE only.
+
+### Fresh main-only workflow evidence
+- The latest main V2 workflow runs still belong to 2026-11-03; no main-branch Serie A V2 source-capture, free diagnostic, original forward, or current-form forward run was present in the latest Actions run listing at 2026-11-04 08:32 UTC.
+- Last verified main runs:
+  - Source Capture #41640753996 — schedule, SUCCESS; 98 primary feature-gate identities, 100 current-season completed rows, 10 historical CSVs, 11 total source files; paid calls 0, Supabase writes 0, target outcomes not scored.
+  - Free Real-Quote Diagnostic #41650074683 — schedule, SUCCESS; 3,800 historical rows, 19 features, 10 public historical HTTP requests, zero quotes, zero diagnostic scores, Supabase writes 0.
+  - Original Forward #41670482076 — schedule, SUCCESS; 3,800 historical results verified, zero quotes, zero forecasts, zero future quotes checked, zero V2 diagnostic previews, no protected outcomes read.
+  - Current-Form Forward #41672409582 — schedule, SUCCESS; source artifact SHA verified, source age 11,616 seconds, 98 gate identities, zero quotes, zero V2 current-form shadows, target outcomes not read/scored.
+- These are successful technical/source runs, not model-quality evidence. No fresh quote-backed 19-feature V2 forecast exists.
+
+### Read-only pre-match Supabase audit
+- `public.odds_snapshots`: 3,966 total rows; 3,915 strictly pre-match; zero strictly pre-match rows in the last seven days; zero future events with a strictly pre-match quote; latest strict pre-match quote remains 2026-10-13 14:48:53 UTC.
+- `public.product_prediction_snapshots`: 40 rows total and 40 strictly pre-match rows, but **zero** rows for the original V2 candidate SHA and zero original-V2 events.
+- Queries used only snapshot/generated timestamps, kickoff timestamps, event IDs, and the frozen candidate SHA. No target score/result/settlement columns were selected.
+
+### Integration and execution boundaries
+- #705 remains open at `8b139335e6722b7c4f5286962486bca84bced20d`, with 8/8 exact-head checks successful. It must be manually merged first to install the shared two-session-per-rolling-week source-download guard and offline-only push validation.
+- #699 must then be rebased onto the #705-integrated main and rerun at its exact new head, preserving #705's budget and push/offline behavior. #699 is not authorized for automatic merge.
+- #712 remains open at `1c0f5a424dd51abc0f1a7dedfb7f8ff1047b3339` with 8/8 checks successful, but must be rebased after #699 because it modifies the same source producer/diagnostic files.
+- #701 remains open at `0dbb1106e98f4c83f2bce79d9fb7dd634087e367` with 6/6 checks successful; rebase after the verified source producer/consumer chain before any prospective evaluation.
+- #704 dependency locks (14/14 checks), #706 production-pickle guard (6/6), and #702 manual-only zero-credit fixture/feature-readiness probe (7/7) remain open on the old main base; revalidate exact heads after their dependencies are integrated.
+- #707's manual recovery workflow performs a historical `fit_candidate_artifact` reproduction check and requires `ai_model_training_permitted=true`; the checked-in rights manifest currently says false. Do not dispatch it under the present rights scope. The frozen candidate already exists with its expected SHA; this recovery is not required for the current frozen-weight inference path.
+- #713 is closed as superseded and was never merged.
+
+### Scientific gate
+- Eligible prospective completed forecasts remain **0/30**.
+- Brier Score and LogLoss remain uncomputed; no superiority claim against the de-vigged market or incumbent is justified.
+- No protected 2026/27 outcomes were read. No fitting/refitting, threshold tuning, candidate/weight/protocol changes, production `.pkl` changes, paid API calls, Supabase writes/DDL, promotion, betting, merge, or schedule changes occurred in this update.
