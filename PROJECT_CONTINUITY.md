@@ -1,3 +1,22 @@
+## 2026-11-04 14:24 UTC — latest #705 budget-bootstrap regression and freshness limitation
+
+PR #705 was updated with an offline regression using both the actual Nov 3 and Nov 4 legacy source artifacts. The test now proves that the bootstrap chooses the newest authenticated source artifact/parent rather than the older Nov 3 example:
+
+- New exact HEAD: f518e7ec44b180595c9365cc354d34844f07e174.
+- Source artifact #13327281383, created 2026-11-04T13:19:46Z, parent run #41836971469, is selected over source artifact #13231843819 from Nov 3.
+- The calculated 170-hour next source slot is 2026-11-11T15:19:46Z; unchanged 05:50 UTC cron first falls after it on Nov 12.
+- Focused budget tests: 22 passed in run #41845396377.
+- Exact-head CI: 8/8 SUCCESS — Budget #41845396377, Research #41845396419, Serie A #41845396358, Frozen V2 Shadow #41845396424 (86 passed), Bundesliga #41845396884, Ligue 1 #41845396817, Eredivisie #41845396449, Product #41845396469. Research log explicitly prints PASS: no .pkl changes in PR.
+- No source network request was made by this test change; main remains unchanged.
+
+PR #705 is still open and HUMAN-MERGE only. Main still has the unchanged daily source-capture cron at 05:50 UTC; because #705 is not merged, the next scheduled slot on 2026-11-05 05:50 UTC is not yet budget-guarded. Do not dispatch anything manually. The Nov 4 source archive was created before #705 existed on main.
+
+**Operational freshness conflict:** the source-before-quote contract requires the source observation to be no older than 24 hours at quote time, so the Nov 4 observation reaches its 24-hour age limit around 2026-11-05 13:19:45 UTC. After #705 is merged, the next source-capture slot under the 170-hour budget is not until Nov 12 05:50 UTC. Thus, even if future quotes appear, the existing Nov 4 archive cannot support new current-form V2 forecasts after its 24-hour limit, and the budget will block another source capture for roughly a week. Do not weaken the frozen 24-hour contract or exceed the provider's conditional download policy to bridge this gap; record it as an operational constraint requiring an authorized source-use resolution. Current future strict pre-match quotes remain zero, so no forecast is presently possible anyway.
+
+The #699 current exact HEAD remains 8f767e0877a87d002209b80c19ce6dbdb2a3050b with 7/7 SUCCESS and its rights/identity guards. Its workflow files still omit #705's shared 170-hour marker/concurrency/push protections; the integrated rebase must preserve #705's offline push jobs, shared concurrency group and marker-before-download in both workflows while retaining #699's rights checks, identity-set SHA and diagnostic-triggered freshness preflight. #709 remains redundant. No main merge, schedule change, new public-source request, paid call, Supabase write/DDL, protected target-outcome read, production .pkl change, refit, promotion or bet occurred.
+
+---
+
 ## 2026-11-04 14:12 UTC — exact #699 head correction
 
 A final GitHub PR metadata re-read found that #699's current branch ref resolves to `8f767e0877a87d002209b80c19ce6dbdb2a3050b`, not the earlier `f11b3e1a5fc62f7415ae72944b058b05e3fddd94` cited in the stale PR body/earlier audit note. The branch was re-read at its actual head ref `research/v2-source-capture-guards-integrated-20261026`; the rights and identity protections remain present:
