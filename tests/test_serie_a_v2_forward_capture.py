@@ -471,3 +471,63 @@ def test_original_artifact_zip_closes_response_after_http_error():
         get_archive(123, token="test-token", get=lambda _url, **_kwargs: response)
     assert response.closed is True
 
+
+
+class _GithubJsonGuardResponse:
+    def __init__(self, url, status_code, payload=None):
+        self.url = url
+        self.status_code = status_code
+        self.payload = payload
+        self.json_called = False
+
+    def json(self):
+        self.json_called = True
+        return self.payload
+
+
+def test_original_forward_github_api_json_disables_redirects_and_rejects_302_before_body_read():
+    url = forward_capture_module.GITHUB_API + "/actions/artifacts?per_page=1"
+    response = _GithubJsonGuardResponse(url, 302, {"artifacts": []})
+    request = {}
+
+    def fake_get(request_url, **kwargs):
+        request["url"] = request_url
+        request.update(kwargs)
+        return response
+
+    with pytest.raises(RuntimeError, match="HTTP 302"):
+        forward_capture_module._github_json(url, token="read-only-test-token", get=fake_get)
+
+    assert request["url"] == url
+    assert request["allow_redirects"] is False
+    assert response.json_called is False
+
+
+def test_original_forward_github_api_json_rejects_unexpected_response_url():
+    url = forward_capture_module.GITHUB_API + "/actions/runs/123"
+    response = _GithubJsonGuardResponse("https://attacker.example/forged", 200, {"id": 123})
+    request = {}
+
+    def fake_get(request_url, **kwargs):
+        request["allow_redirects"] = kwargs.get("allow_redirects")
+        return response
+
+    with pytest.raises(ValueError, match="response URL mismatch"):
+        forward_capture_module._github_json(url, token="read-only-test-token", get=fake_get)
+
+    assert request["allow_redirects"] is False
+    assert response.json_called is False
+
+
+def test_original_forward_github_api_json_accepts_exact_http_200_without_redirects():
+    url = forward_capture_module.GITHUB_API + "/actions/artifacts?per_page=1"
+    response = _GithubJsonGuardResponse(url, 200, {"artifacts": []})
+    request = {}
+
+    def fake_get(request_url, **kwargs):
+        request["allow_redirects"] = kwargs.get("allow_redirects")
+        return response
+
+    assert forward_capture_module._github_json(url, token="read-only-test-token", get=fake_get) == {"artifacts": []}
+    assert request["allow_redirects"] is False
+    assert response.json_called is True
