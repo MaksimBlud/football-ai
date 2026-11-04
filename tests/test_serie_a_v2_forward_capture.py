@@ -212,12 +212,15 @@ def test_future_quote_clock_rejected_without_external_requests():
 
 def test_github_source_catalog_requires_main_sha_and_does_not_trust_missing_digest():
     class Response:
-        def __init__(self, data):
-            self.data=data
+        def __init__(self, data, url):
+            self.data = data
+            self.url = url
+            self.status_code = 200
         def raise_for_status(self): pass
         def json(self): return self.data
     calls=[]
-    def get(url,headers,timeout):
+    def get(url,headers,timeout,allow_redirects):
+        assert allow_redirects is False
         calls.append(url)
         return Response({"artifacts": [
             {"id": 123, "name": ARTIFACT_NAME,"expired":False,
@@ -228,17 +231,18 @@ def test_github_source_catalog_requires_main_sha_and_does_not_trust_missing_dige
              "workflow_run":{"head_branch":"research-tampered", "id":457,"head_sha":"b"*40},
              "digest":"sha256:"+"b"*64,
              "created_at":"2026-10-13T14:00:00Z"},
-        ]})
+        ]}, url)
     rows=discover_archives(token="test-token",get=get)
     assert [x["artifact_id"] for x in rows] == [123]
     assert len(calls) == 1
 
-    def invalid(url,headers,timeout):
+    def invalid(url,headers,timeout,allow_redirects):
+        assert allow_redirects is False
         return Response({"artifacts": [
             {"id": 125, "name": ARTIFACT_NAME,"expired":False,
              "workflow_run":{"head_branch":"main", "id":456,"head_sha":"a"*40},
              "digest":None, "created_at":"2026-10-13T15:00:00Z"},
-        ]})
+        ]}, url)
     with pytest.raises(ValueError,match="missing GitHub source archive SHA256 digest"):
         discover_archives(token="test-token",get=invalid)
 
@@ -247,7 +251,10 @@ def test_successful_exact_source_workflow_and_prequote_completion_required():
     _, artifacts = make_source_archive()
     meta = artifacts[0]
     class Response:
-        def __init__(self, data): self.data = data
+        def __init__(self, data, url):
+            self.data = data
+            self.url = url
+            self.status_code = 200
         def raise_for_status(self): pass
         def json(self): return self.data
     valid = {
@@ -259,9 +266,10 @@ def test_successful_exact_source_workflow_and_prequote_completion_required():
         "updated_at": "2026-10-13T15:01:00Z",
     }
     hits = []
-    def get(url, headers, timeout):
+    def get(url, headers, timeout, allow_redirects):
+        assert allow_redirects is False
         hits.append(url)
-        return Response(valid)
+        return Response(valid, url)
     result = verify_source_run(meta, quote_time=parse_utc("2026-10-14T06:00:00Z"),
                                token="test-token", get=get)
     assert hits == ["https://api.github.com/repos/MaksimBlud/football-ai/actions/runs/456"]
@@ -276,8 +284,9 @@ def test_successful_exact_source_workflow_and_prequote_completion_required():
         ({"event":"push"}, "verified original V2 collector"),
         ({"updated_at":"2026-10-14T06:01:00Z"}, "not successfully finished before quote"),
     ]:
-        def bad_get(url,headers,timeout):
-            return Response({**valid,**altered})
+        def bad_get(url,headers,timeout,allow_redirects):
+            assert allow_redirects is False
+            return Response({**valid,**altered}, url)
         with pytest.raises(ValueError, match=expected):
             verify_source_run(meta, quote_time=parse_utc("2026-10-14T06:00:00Z"),
                               token="test-token", get=bad_get)
@@ -305,6 +314,9 @@ def test_forward_v2_refuses_unknown_or_late_parent_workflow_before_zip_download(
 
 def test_catalog_rejects_missing_parent_run_identity_even_with_valid_digest():
     class Response:
+        def __init__(self, url):
+            self.url = url
+            self.status_code = 200
         def raise_for_status(self): pass
         def json(self):
             return {"artifacts":[
@@ -315,7 +327,7 @@ def test_catalog_rejects_missing_parent_run_identity_even_with_valid_digest():
             ]}
     with pytest.raises(ValueError,match="missing GitHub parent run identity"):
         discover_archives(token="test-token",
-                          get=lambda url,headers,timeout:Response())
+                          get=lambda url,headers,timeout,allow_redirects:Response(url))
 
 
 
