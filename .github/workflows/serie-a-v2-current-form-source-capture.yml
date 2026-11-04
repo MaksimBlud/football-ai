@@ -83,7 +83,12 @@ jobs:
           from datetime import datetime, timezone
 
           import requests
+          from market_anchor_v2_source_rights import require_personal_research_inference_scope
           from supabase import create_client
+
+          # Rights must be established before even reading the Supabase gate or
+          # discovering/downloading a previously archived provider source.
+          rights_scope = require_personal_research_inference_scope()
 
           from serie_a_v2_current_form_source_capture import read_completed_primary_event_identities
           from serie_a_v2_current_form_forward_capture import (
@@ -129,6 +134,8 @@ jobs:
               "fresh_for_new_quote": verification.get("fresh_for_new_quote"),
               "fresh_for_current_feature_gate": verification.get("fresh_for_current_feature_gate"),
               "current_gate_identity_count": len(gate_identities),
+              "source_rights_scope": rights_scope.get("research_inference_scope"),
+              "provider_issued_ai_inference_license": rights_scope.get("provider_issued_ai_inference_license"),
               "metadata_fields_read": ["match_date", "home_team", "away_team"],
               "target_outcomes_read": False,
               "paid_provider_calls": 0,
