@@ -438,3 +438,47 @@ HUMAN-MERGE remains mandatory. Main remains `40887ebb215730190d7a6c7a1693373ec4a
 
 Original candidate SHA, 19-feature order, weights, protocol, `active_lambda=0`, and `shadow_lambda=1` are unchanged. Feature-input identity gate is open; prospective completed-forecast outcome gate remains CLOSED at 0/30. No target outcomes were read/scored, no model refit or threshold tuning occurred, no paid provider calls, Supabase writes/DDL, production `.pkl` changes, schedule changes, merges, promotion, or bets occurred. HUMAN-MERGE only.
 
+
+
+## Research Brain exact-head audit — 2026-11-04 11:54 UTC
+
+This update records a fresh read-only audit. Main, production, schedules, other agents, and Supabase were not changed.
+
+### Fresh main and frozen original V2 identity
+
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- Main `PROJECT_CONTINUITY.md` blob: `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`. The main document still predates the November 4 runtime audit; this addendum is on the existing documentation PR branch.
+- Main original forward workflow `.github/workflows/serie-a-v2-forward-preview.yml` blob: `48ce3b0d8e31c4cf293b94500e9c320047311467`. It remains read-only and only awakens after the existing manually dispatched, successful main `Serie A Odds Snapshots` workflow; this does not schedule or call the paid collector.
+- Frozen candidate JSON blob is unchanged on main and #699: `ac1303f6b096664983fbf52443bd0a381b23ba21`; frozen candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- V2 protocol blob is unchanged: `65729e9639720e67624c1481190aa22ae606f151`.
+- Historical feature-builder blob is unchanged: `401b3a0893371bfa4a488ec92a4a54af2678c8f7`.
+- `market_anchor_1x2_v2_shadow.py` is byte-identical on main and #699 (blob `b2770d726ffafe7a3cef706b57d3391063cbfe1b`).
+- `serie_a_v2_frozen_shadow_preview.py` has a guard-only change (main blob `799d2e2f8e6f5733e2d2310c7d02546b00714268`, #699 blob `01dcc546b5d05f273d8a8d6a6c710cf2759fe06f`): real UTC-offset validation and recursive normalized outcome-key rejection. The entire function body from `previews = []` through the end of `shadow_preview` is byte-identical (4,843 characters), including the calls to `predict_candidate` / `predict_shadow_residual`, the exact active-market identity assertion, and the research-only shadow output. No candidate, feature, coefficient, weight, lambda, or inference-math change was found.
+- Contract remains 19 features, 20×2 original weights, `active_lambda=0` (market identity), `shadow_lambda=1` (research only), stability gate FAILED, NO_BET.
+
+### Exact open V2 PR heads and actual CI evidence
+
+- **#705** HEAD `8b139335e6722b7c4f5286962486bca84bced20d`: 8/8 associated PR workflows SUCCESS. Dedicated public-source-budget workflow #41666171494 ran **22 tests**. Its workflow blob `7fae79252472cc849668e73da04bc436104b6f82` already includes both (a) offline-only `validate-source-capture` on push and (b) `capture-current-form` only for non-push main events, plus the 170-hour per-workflow budget reservation, shared concurrency group, and pre-download marker. Cron expressions remain unchanged. The guard is not active on main until HUMAN-MERGE.
+- **#699** current branch HEAD `8f767e0877a87d002209b80c19ce6dbdb2a3050b`: 7/7 associated PR workflows SUCCESS; exact frozen V2 shadow job #41804425498 ran **320 tests**. The branch contains the source-rights helper/manifest and the source/clock/identity/outcome guards. However, its current source-capture workflow blob `df5a6eba91fcec857f5e14c277aed802f45cb6a2` still has a single capture job eligible on push and lacks #705's budget reservation/offline push split. Do not merge #699 as-is. Rebase after #705 and preserve all three: the #705 budget marker, offline-only push validation, and #699 rights/provenance guards. A comment with this exact integration finding was added to #699.
+- **#709** HEAD `268f3fdc82036fca0e44dc0aef20d39423cfda2d`: 7/7 associated PR workflows SUCCESS. Its source workflow blob `ad5e7a93edbf3d398a1155abc7dc852528dac38f` has the offline push split but lacks the budget guard. #705 already contains the same offline split plus the budget; #709 must not be merged independently after #705 because it risks reverting budget protection. A comment documenting the supersession was added to #709.
+- **#712** current HEAD `4b9b1281a8ab81988ea713eb5974d1e55dbba81d`, commit at 10:59:23 UTC: GitHub currently reports `mergeable=false`. The current HEAD has one dedicated `offline-source-reuse-tests` run, #41817875512, SUCCESS with **53 tests passed**. It has no full PR-validation run set on this exact HEAD. The PR body's 9/9 statement refers to the older `1c0f5a424dd51abc0f1a7dedfb7f8ff1047b3339`; it must not be represented as current exact-head CI. Rebase after #705/#699 and the chosen #704 dependency-lock integration, preserve the #699 rights helper before source artifact consumption/extraction or inference, then rerun all required CI. A comment with the exact-head CI distinction was added to #712.
+- **#704** HEAD `cc4918caf1ae0bb906b6a1949b2b352b3cce64f3`: 14 associated PR check runs observed, all SUCCESS; it pins Python 3.11/3.12 research dependencies but is not a hash-enforced supply-chain lock.
+- **#701** HEAD `0dbb1106e98f4c83f2bce79d9fb7dd634087e367`: 6/6 SUCCESS; the 30-eligible-completed-forecast gate remains mandatory before the lazy target-outcome loader.
+- **#702** HEAD `3935fc601eff30d2ca0a7670dae797d0cb365228`: 7/7 SUCCESS; manual-only feature-readiness probe, no probabilities.
+- **#706** HEAD `caab7c07ad720866616ce9fa62664b0d398e5fe0`: 6/6 SUCCESS; fail-closed production-`.pkl` diff guard.
+- #711 remains the overlapping draft alternative to #712; do not merge both. #707 remains excluded from this recovery path because it rebuilds/refits a candidate rather than merely verifying the frozen original.
+- Recommended integration remains HUMAN-MERGE: **#705 → rebase/revalidate #699 while preserving #705 guards → #704/#706 as reviewed → rebase/revalidate #712 → #701/#702**. #709 is superseded by #705 and should not be merged independently.
+
+### Current pre-match Supabase state (read-only)
+
+- `public.odds_snapshots`: 3,966 rows overall; 3,915 satisfy strict `snapshot_time_utc < commence_time_utc`. Across all leagues there are **0 future-kickoff rows with a strictly pre-kickoff snapshot**. Serie A specifically has 625 rows, 620 strictly pre-match rows, 63 distinct pre-match event identities, and latest strict pre-match snapshot `2026-10-13 14:48:53.042620 UTC`.
+- `public.product_prediction_snapshots`: 40 rows, all `EPL_AI_MARKET_PAIR_V1` with model SHA `1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5`; all 40 are pre-kickoff. There are **zero** original V2 candidate SHA/version rows.
+- The current-season feature-input query selected exactly `match_date, home_team, away_team` from `public.league_finished_results` for `SERIE_A / 2026-2027`, dates 2026-07-01 through 2026-11-03. It returned **103 raw identities**, 103 exact unique rows, and **100 canonical identities** after the existing V2-local `Atalanta BC → Atalanta` alias; three rows are alias duplicates. Date range: 2026-08-22 through 2026-11-02. No score, goals, result, or settlement fields were selected. This is only the feature-input gate; it does not open the separate evaluation gate.
+- The prospective evaluation gate remains **0/30**. No Brier or LogLoss has been calculated; no V2-over-market claim is supported.
+
+### Runtime discovery boundary and source rights
+
+- The last verifiable main Source Capture / Free Diagnostic / Original Forward / Current-Form Forward runs remain the 2026-11-03 runs #41640753996, #41650074683, #41670482076, and #41672409582. Their jobs were SUCCESS, but the forward logs recorded zero quotes and zero V2 previews. The available GitHub connector does not expose repository-wide discovery of scheduled workflow runs for 2026-11-04; today's scheduled run status is therefore **unknown**, not inferred as absent or failed.
+- No new public CSV download, paid provider call, Supabase write/DDL, production artifact change, target-outcome read, or manual workflow dispatch occurred in this audit. No current-season archive member was downloaded or opened.
+- The Football-Data manifest is `CONDITIONAL_RESEARCH_ONLY`: it operationally interprets frozen-weight, noncommercial personal/academic research inference as within the stated personal/academic scope, but explicitly records `provider_issued_ai_inference_license=false`. AI training, commercial use, and public product publication remain prohibited by the current manifest. This is not a provider-issued AI-inference licence; do not describe it as one or use these data for a public/commercial product.
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No merge, production `.pkl` change, weight/contract change, schedule/cron change, Supabase write/DDL, protected target-outcome read, promotion, or bet occurred. HUMAN-MERGE only.
