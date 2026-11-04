@@ -1,3 +1,15 @@
+## 2026-11-04 18:02 UTC — original frozen forward run rehashed; historical source attested, zero quotes
+
+The main `Serie A V2 Original Forward-Only Preview` workflow was re-read at blob `48ce3b0d8e31c4cf293b94500e9c320047311467`. Its schedule is 08:08 UTC; manual dispatch is supported; the only `workflow_run` wake-up is a successful main `workflow_dispatch` of `Serie A Odds Snapshots`. It does not schedule or invoke the paid odds collector. It reads saved odds/source artifacts only.
+
+Main run [#41864632742](https://github.com/MaksimBlud/football-ai/actions/runs/41864632742) completed SUCCESS on main `40887ebb215730190d7a6c7a1693373ec4afcdfc`. All eleven job steps succeeded, including original V2/source-before-quote regression tests, real historical source attestation, and the read-only original forward preview. Artifact #13341622767 (`serie-a-v2-original-forward-source-checked`) was independently downloaded and rehashed: SHA-256 `738553a86e392361ce1b27ab0226a2b0fa2f540a6ac9579b5da2d8d81858a215`, matching GitHub's artifact digest.
+
+The artifact's `serie_a_v2_real_source_attestation.json` verifies historical-only source artifact #13332260799, SHA-256 `72a32dc61d6e230be46bc5fe69a52e97142a79816af33c66f58066e0ceb6e8d8`, parent run #41847314320 on the exact main SHA, 10 pre-prospective CSVs / 3,800 historical rows, original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, and `source_archive_sha256_verified=true`. The referenced source artifact #13332260799 was independently downloaded and rehashed; its ZIP SHA-256 matches exactly. Its report records 10 public CSV requests, zero quotes, zero diagnostic previews, zero scored rows, no 2026/27 public-results download, no Supabase writes, and no outcome reads.
+
+The original forward report itself is explicit: `quotes_seen=0`, `future_quotes_checked=0`, `rows=[]`, `v2_diagnostic_previews_captured=0`, `eligible_for_frozen_prospective_cohort=false`, `independent_incumbent_asof_verified=false`, `uses_original_frozen_v2=true`, paid calls 0, Supabase writes 0, and `uses_2026_27_results=false`. Thus the run proves original-candidate and historical-source archive attestation in the live workflow, but **does not prove quote-level source-before-quote inference** and creates no forecast. Do not count it toward the 30-event gate.
+
+The separate Current-Form Forward run #41866116572 is documented immediately below: it also verified its newer source artifact but saw zero quotes and captured zero V2 forecasts. No source refresh, paid request, outcome read, write, or schedule change was made in this audit.
+
 ## 2026-11-04 17:55 UTC — latest forward artifact rehashed; source verified but no quote or V2 forecast
 
 Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Original candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; original 19-feature contract, weights, `active_lambda=0`, and `shadow_lambda=1` are unchanged.
