@@ -192,3 +192,27 @@ def test_source_rights_changes_reaudit_every_live_v2_workflow():
         assert not missing, (
             f"{workflow.name} would skip V2 rights re-audit for: {sorted(missing)}"
         )
+
+def test_diagnostic_trigger_source_preflight_checks_rights_before_any_data_access():
+    """The workflow_run freshness preflight must not bypass the source-rights gate."""
+    text = CURRENT_SOURCE_WORKFLOW.read_text(encoding="utf-8")
+    preflight = text.split(
+        "      - name: Check existing verified source before diagnostic-triggered refresh",
+        1,
+    )[1].split(
+        "      - name: Capture frozen historical seasons plus gated current-form source",
+        1,
+    )[0]
+
+    assert "from market_anchor_v2_source_rights import require_personal_research_inference_scope" in preflight
+    rights_check = preflight.index("rights_scope = require_personal_research_inference_scope()")
+    for access in (
+        "create_client(",
+        "read_completed_primary_event_identities(",
+        "discover_archives(",
+        "get_archive(",
+    ):
+        assert rights_check < preflight.index(access), (
+            f"source-rights check must precede {access}"
+        )
+    assert '"provider_issued_ai_inference_license": rights_scope.get("provider_issued_ai_inference_license")' in preflight
