@@ -1,3 +1,55 @@
+## 2026-11-04 05:02 UTC — rights gate added before original source-archive attestation
+
+Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc` (last main commit 2026-10-18 08:20:05 UTC). This iteration changed only the existing research branch for PR #699 and this continuity-document branch; no main update or merge occurred.
+
+### New PR #699 hardening — exact-head CI PASS
+
+PR #699 now points to exact HEAD `e2d8da77039a19a26a2bec31832ed49e75aa24f7`, three commits ahead of prior HEAD `f15ff20d7626e2b54ad921bf48bb29493239589c`, zero commits behind main.
+
+The original source-attestation entry point `serie_a_v2_attest_real_source.py` previously discovered and downloaded the GitHub historical-source artifact before the separate forward-capture script applied the personal/academic research-scope guard. It now calls `require_personal_research_inference_scope()` immediately after repository-scope validation and before reading `GITHUB_TOKEN`, discovering artifacts, verifying parent runs, or downloading/extracting the archive. If the scope check fails, it writes the explicit `SOURCE_RIGHTS_BLOCKED_NO_NETWORK_NO_INFERENCE` report and returns without archive access.
+
+New regressions:
+- `test_main_blocks_before_github_archive_discovery_when_research_scope_is_denied` proves the entry point writes a blocked report and never calls archive discovery/download when the scope check denies use.
+- `test_live_v2_entrypoints_check_research_scope_before_external_reads` now includes the original source-attestation entry point and verifies the rights guard precedes token/archive access.
+
+Exact-head GitHub Actions on `e2d8da77039a19a26a2bec31832ed49e75aa24f7`: **7/7 SUCCESS**:
+- Original V2 Frozen Shadow Tests [#41776554362](https://github.com/MaksimBlud/football-ai/actions/runs/41776554362) — SUCCESS, **308 passed**.
+- Research PR Validation [#41776554283](https://github.com/MaksimBlud/football-ai/actions/runs/41776554283) — SUCCESS; final production `.pkl` diff guard printed `PASS: no .pkl changes in PR`.
+- Serie A [#41776554202](https://github.com/MaksimBlud/football-ai/actions/runs/41776554202) — SUCCESS.
+- Bundesliga [#41776554189](https://github.com/MaksimBlud/football-ai/actions/runs/41776554189) — SUCCESS.
+- Ligue 1 [#41776554188](https://github.com/MaksimBlud/football-ai/actions/runs/41776554188) — SUCCESS.
+- Product [#41776554186](https://github.com/MaksimBlud/football-ai/actions/runs/41776554186) — SUCCESS.
+- Eredivisie [#41776554171](https://github.com/MaksimBlud/football-ai/actions/runs/41776554171) — SUCCESS.
+
+The three-file diff from the previous #699 HEAD is limited to the original source-attestation entry point and its two regression files. No candidate, 19-feature contract, weights, lambdas, workflow schedule, or production artifact changed. PR #699 remains open for HUMAN-MERGE.
+
+### Fresh main-only runtime and read-only pre-match state
+
+Actual main runs were re-read from GitHub Actions logs:
+- Source Capture [#41640753996](https://github.com/MaksimBlud/football-ai/actions/runs/41640753996): SUCCESS, 19 tests; candidate SHA verified; 98 identity-gate fixtures, 100 completed current-season CSV rows, ten historical CSVs, 11 source files, zero paid calls and zero Supabase writes. Artifact #13231843819; ZIP SHA-256 `4e6fb5531a2206a353fe00fa1ebb0b4d20b3c6ae41ab49a7c672f8dab6d29cd8`.
+- Current-Form Forward [#41640881317](https://github.com/MaksimBlud/football-ai/actions/runs/41640881317): SUCCESS, 53 tests; exact source artifact and parent verified at 33 seconds of source age, but `quotes_seen=0`, `v2_current_form_shadow_captured=0`; no target outcomes read/scored.
+- Free Real-Quote Diagnostic [#41650074683](https://github.com/MaksimBlud/football-ai/actions/runs/41650074683): SUCCESS, 53 tests; `quoted_fixtures=0`, `diagnostic_scored=0`; no paid calls or Supabase writes.
+- Original Forward [#41670482076](https://github.com/MaksimBlud/football-ai/actions/runs/41670482076): SUCCESS, 71 tests; `quotes_seen=0`, `future_quotes_checked=0`, `v2_diagnostic_previews_captured=0`; no target outcomes read/scored.
+- Current-Form Forward [#41672409582](https://github.com/MaksimBlud/football-ai/actions/runs/41672409582): SUCCESS, 53 tests; source artifact verified but age was 11,616 seconds, `quotes_seen=0`, `v2_current_form_shadow_captured=0`; no target outcomes read/scored.
+
+Read-only Supabase:
+- `odds_snapshots`: 3,966 total; 3,915 with `snapshot_time_utc < commence_time_utc`; zero strict pre-match rows in the last seven days; zero future events with a strict pre-match quote; latest strict pre-match snapshot `2026-10-13T14:48:53.042620Z`.
+- Serie A 2026/27 identity-only query selected only `match_date, home_team, away_team`: 103 raw rows, 100 canonical fixture identities after the frozen Atalanta alias normalization, latest identity date 2026-11-02. No score/result/settlement fields were selected.
+- These 100 current identities do not make the old main archive eligible: artifact #13231843819 has the pre-#699 numeric gate only (98) and lacks the new digest-bound identity-set attestation. A fresh post-#699 source archive is required; do not backfill or infer a forecast from the old artifact.
+
+### Remaining integration and source-download guard
+
+- PR #705 remains open at `8b139335e6722b7c4f5286962486bca84bced20d`, exact CI **8/8 SUCCESS**. Its 170-hour-per-workflow shared budget and offline-only push behavior are not active on main.
+- Main's unchanged schedules are next due 2026-11-04 05:50 UTC (Current-Form Source Capture) and 06:13 UTC (Free Real-Quote Diagnostic). If #705 is not manually merged first, those workflows are not protected by its new marker budget.
+- #705 bootstraps from Nov 3 artifacts: Source Capture #13231843819 created 13:02:59 UTC → next budget slot 2026-11-10 15:02:59 UTC; Diagnostic #13236383688 created 14:05:06 UTC → next slot 2026-11-10 16:05:06 UTC. The unchanged daily cron times next fall after both slots on Nov 11.
+- The rate budget is not a data-use licence. The source-rights manifest remains conditional personal/academic research inference, explicitly not a provider-issued AI-inference licence; AI training, commercial use and public product use remain disallowed. No new public Football-Data download was initiated in this iteration.
+
+Integration order remains HUMAN-MERGE: #705 first; rebase and merge #699 after it with exact-head CI; then #704 if desired; then rebase/retest #712. #702 requires a fresh post-#699 identity-attested source archive and remains manual-only. #701 remains the separate 30-eligible-completed-forecast evaluator. Do not merge overlapping #700/#703/#709/#711 independently where their changes are already consolidated or superseded.
+
+No merge, main mutation, Supabase write/DDL, paid provider request, source download, production `.pkl` change, target-outcome read, model refit, threshold tuning, promotion, or schedule change occurred. The original candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features and frozen weights remain unchanged; active lambda remains 0 and shadow lambda 1 research-only. The prospective evaluation cohort remains 0/30; no Brier/LogLoss result exists.
+
+---
+
 ## 2026-11-04 04:01 UTC — independently reconstructed gate-time identity SHA
 
 Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This is a read-only evidence reconstruction plus a documentation-only update on this PR branch; no main mutation occurred.
