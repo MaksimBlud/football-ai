@@ -108,41 +108,43 @@ def _extract_v2_pickle_guard_script(name: str) -> str:
     run_marker = "        run: |" + chr(10)
     assert run_marker in step
     script = textwrap.dedent(step.split(run_marker, 1)[1])
-    return script.split("\\n      - name:", 1)[0]
+    return script
 
 
 def _run_v2_pickle_guard(script: str, tmp_path: Path, *, mode: str, changed_files: str = "safe.py"):
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir(parents=True, exist_ok=True)
     fake_git = fake_bin / "git"
-    fake_git.write_text(textwrap.dedent("""\\
-        #!/bin/sh
-        case "$1" in
-          fetch)
-            [ "$FAKE_GIT_MODE" != "fetch-error" ] || exit 9
-            exit 0
-            ;;
-          merge-base)
-            if [ "$FAKE_GIT_MODE" = "merge-base-error" ]; then
-              printf '%s\\n' "simulated missing merge base" >&2
-              exit 1
-            fi
-            if [ "$FAKE_GIT_MODE" = "merge-base-empty" ]; then
-              exit 0
-            fi
-            printf '%s\\n' "deadbeef"
-            exit 0
-            ;;
-          diff)
-            [ "$FAKE_GIT_MODE" != "diff-error" ] || exit 8
-            printf '%s\\n' "$FAKE_CHANGED_FILES"
-            exit 0
-            ;;
-          *)
-            exit 90
-            ;;
-        esac
-    """))
+    fake_git.write_text(
+        "#!/bin/sh\n"
+        + textwrap.dedent("""
+            case "$1" in
+              fetch)
+                [ "$FAKE_GIT_MODE" != "fetch-error" ] || exit 9
+                exit 0
+                ;;
+              merge-base)
+                if [ "$FAKE_GIT_MODE" = "merge-base-error" ]; then
+                  printf '%s\n' "simulated missing merge base" >&2
+                  exit 1
+                fi
+                if [ "$FAKE_GIT_MODE" = "merge-base-empty" ]; then
+                  exit 0
+                fi
+                printf '%s\n' "deadbeef"
+                exit 0
+                ;;
+              diff)
+                [ "$FAKE_GIT_MODE" != "diff-error" ] || exit 8
+                printf '%s\n' "$FAKE_CHANGED_FILES"
+                exit 0
+                ;;
+              *)
+                exit 90
+                ;;
+            esac
+        """).lstrip("\n")
+    )
     fake_git.chmod(0o755)
     env = os.environ.copy()
     env["PATH"] = str(fake_bin) + os.pathsep + env.get("PATH", "")
