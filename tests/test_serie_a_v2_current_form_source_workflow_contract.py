@@ -136,21 +136,20 @@ def test_frozen_shadow_ci_runs_this_contract_and_tracks_original_forward_workflo
 
 def test_secret_bearing_v2_workflows_only_run_on_main_ref():
     """Manual dispatch from a feature ref must not receive Supabase secrets."""
-    expected_guards = {
-        CURRENT_SOURCE_WORKFLOW: "if: ${{ github.ref == 'refs/heads/main' &&",
-        ORIGINAL_FORWARD_WORKFLOW: "if: ${{ github.ref == 'refs/heads/main' && (",
-        CURRENT_FORWARD_WORKFLOW: "if: ${{ github.ref == 'refs/heads/main' && (",
+    expected_jobs = {
+        CURRENT_SOURCE_WORKFLOW: ("capture-current-form", "if: ${{ github.ref == 'refs/heads/main' &&"),
+        ORIGINAL_FORWARD_WORKFLOW: ("original-v2-forward-preview", "if: ${{ github.ref == 'refs/heads/main' && github.event_name != 'push' && ("),
+        CURRENT_FORWARD_WORKFLOW: ("current-form-forward-preview", "if: ${{ github.ref == 'refs/heads/main' && ("),
     }
-    for workflow_path, guard in expected_guards.items():
+    for workflow_path, (job_name, guard) in expected_jobs.items():
         text = workflow_path.read_text(encoding="utf-8")
-        job_block = text.split("\njobs:\n", 1)[1].split("\n      steps:", 1)[0]
+        job_block = text.split(f"  {job_name}:\n", 1)[1].split("\n    steps:", 1)[0]
         assert guard in job_block, (
             f"{workflow_path.name} must fail closed outside refs/heads/main before "
             "its secret-bearing job can run"
         )
         assert "SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}" in job_block
         assert job_block.index(guard) < job_block.index("env:")
-
 
 
 def test_current_form_source_refreshes_after_free_diagnostic_without_changing_cron():
