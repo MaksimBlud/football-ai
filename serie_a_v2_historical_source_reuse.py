@@ -435,6 +435,12 @@ def _verify_origin_provenance(
     creator_blob_shas = _verify_source_creator_blob_shas(
         origin_head, token=token, get=get
     )
+    declared_creator_blob_shas = reuse_meta.get("source_creator_blob_shas")
+    if (
+        not isinstance(declared_creator_blob_shas, Mapping)
+        or dict(declared_creator_blob_shas) != creator_blob_shas
+    ):
+        raise ValueError("historical reuse provenance lacks the exact source creator blob SHA attestation")
     return {
         "source_artifact_id": origin_id,
         "source_artifact_sha256": origin_sha,
