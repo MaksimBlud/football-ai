@@ -37,6 +37,9 @@ def _authorized_policy() -> dict:
         "rights_status": "GRANTED",
         "ai_feature_inference_permitted": True,
         "automated_source_archiving_permitted": True,
+        "ai_model_training_permitted": False,
+        "commercial_use_permitted": False,
+        "product_publication_permitted": False,
         "authorized_purposes": [
             "AI_FEATURE_INFERENCE",
             "AUTOMATED_SOURCE_ARCHIVE",
@@ -69,8 +72,13 @@ def test_explicit_scoped_authorization_is_required(tmp_path):
         {"rights_status": "NOT_GRANTED"},
         {"ai_feature_inference_permitted": False},
         {"automated_source_archiving_permitted": False},
+        {"ai_model_training_permitted": True},
+        {"commercial_use_permitted": True},
+        {"product_publication_permitted": True},
         {"authorized_purposes": ["AI_FEATURE_INFERENCE"]},
+        {"authorized_purposes": [{}]},
         {"authorized_source_scopes": ["HISTORICAL_SEASON_CSVS"]},
+        {"authorized_source_scopes": [None]},
         {"authorization_reference": None},
     ):
         denied = {**policy, **mutation}
