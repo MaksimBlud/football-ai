@@ -21,6 +21,8 @@ REQUIRED_SOURCE_AUDIT_PATHS = {
     "historical_football_signal_lab.py",
     "serie_a_runtime_config.py",
     "research/models/market_anchor_v2_serie_a_frozen_candidate.json",
+    "market_anchor_v2_source_rights.py",
+    "research/source_rights/football_data_co_uk.json",
     "experiments/market_anchor_1x2_v2_current_form_policy.json",
     "experiments/market_anchor_1x2_v2_protocol.json",
     "tests/test_serie_a_v2_current_form_source_capture.py",

@@ -6,6 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CURRENT_SOURCE_WORKFLOW = ROOT / ".github" / "workflows" / "serie-a-v2-current-form-source-capture.yml"
 ORIGINAL_FORWARD_WORKFLOW = ROOT / ".github" / "workflows" / "serie-a-v2-forward-preview.yml"
 CURRENT_FORWARD_WORKFLOW = ROOT / ".github" / "workflows" / "serie-a-v2-current-form-forward-preview.yml"
+FREE_DIAGNOSTIC_WORKFLOW = ROOT / ".github" / "workflows" / "serie-a-v2-free-real-quote-diagnostic.yml"
 FROZEN_SHADOW_WORKFLOW = ROOT / ".github" / "workflows" / "serie-a-frozen-v2-shadow-tests.yml"
 
 
@@ -174,3 +175,21 @@ def test_current_form_source_refreshes_after_free_diagnostic_without_changing_cr
     assert "fresh_for_new_quote" in text
     assert "fresh_for_current_feature_gate" in text
     assert "steps.source_refresh.outputs.capture != 'false'" in text
+
+
+def test_source_rights_changes_reaudit_every_live_v2_workflow():
+    required = {
+        "market_anchor_v2_source_rights.py",
+        "research/source_rights/football_data_co_uk.json",
+    }
+    workflows = (
+        CURRENT_SOURCE_WORKFLOW,
+        CURRENT_FORWARD_WORKFLOW,
+        ORIGINAL_FORWARD_WORKFLOW,
+        FREE_DIAGNOSTIC_WORKFLOW,
+    )
+    for workflow in workflows:
+        missing = required - _push_paths(workflow)
+        assert not missing, (
+            f"{workflow.name} would skip V2 rights re-audit for: {sorted(missing)}"
+        )
