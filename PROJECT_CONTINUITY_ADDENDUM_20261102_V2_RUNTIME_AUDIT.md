@@ -1,4 +1,28 @@
 # Original MARKET_ANCHOR_1X2_V2 — runtime and pre-match source audit
+
+## 2026-11-04 15:12 UTC — source identity parity, actual forward runs, and push-trigger guards
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The frozen original candidate and protocol remain unchanged: candidate blob `ac1303f6b096664983fbf52443bd0a381b23ba21`, candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, protocol blob `65729e9639720e67624c1481190aa22ae606f151`; 19 features, 20×2 weights, active lambda 0, shadow lambda 1, stability gate FAILED.
+
+New exact main evidence:
+- Source Capture #41836971469 succeeded. Artifact #13327281383 was created 2026-11-04 13:19:46 UTC; ZIP SHA-256 `9dced08f96d81c39dcc199afba481fab07961ce6b61d14776fdc78563bc8cccd`. The current-season CSV member SHA-256 is `4138a4f01e96312a7a5dc07450c7a520c3861a479620fe3d102f12d42a6678ba`. Source observed at 13:19:45.080 UTC; 100 completed prior-day rows plus 10 historical season files / 3,800 historical rows.
+- Current-Form Forward #41837103174 succeeded and verified the exact source artifact/parent run, but the artifact report contains zero saved quotes and zero V2 current-form shadow forecasts.
+- Free Real-Quote Diagnostic #41847314320 succeeded. Artifact #13332260799 ZIP SHA-256 `72a32dc61d6e230be46bc5fe69a52e97142a79816af33c66f58066e0ceb6e8d8`; it contains 10 historical season files / 3,800 rows, zero quoted fixtures, zero diagnostic previews and zero scored forecasts. It is not a current-season source or a V2 forecast.
+
+Independent source identity parity was recomputed without selecting any Supabase score/result/settlement fields. Supabase query selected only `match_date, home_team, away_team`: 103 raw rows canonicalize to 100 unique identities. The archived current-season CSV contains the same 100 canonical fixture identities. Both independently produce SHA-256 `f85872547e745eae8854ee245902c1e522657fb3a687032be83b000199f2a99e`. Canonicalization used the existing Serie A runtime aliases (Inter→Inter Milan, Milan→AC Milan, Roma→AS Roma, Verona→Hellas Verona) plus the V2-local Atalanta BC→Atalanta alias. This is an independent audit result only: the Nov 4 V1 archive manifest does not persist the identity-set SHA/rights attestation required by the newer #699 reader, so do not pass that old artifact to the prospective evaluator as a fully attested V2 source.
+
+Read-only Supabase state: Serie A odds snapshots 625 total / 620 strictly pre-match / 63 event identities; zero future events have a saved strictly pre-kickoff quote; latest strict pre-match snapshot 2026-10-13 14:48:53 UTC. Product prediction snapshots: 40 total, zero rows with the original V2 candidate SHA. The prospective evaluation gate remains 0/30; no Brier/LogLoss and no V2-over-market claim.
+
+New branch safety fixes:
+- #705 HEAD `97a94f5ba3aa921175071e490a9c698aaf0a414b`: 8/8 exact-head CI SUCCESS. Budget tests 23 passed; original V2 shadow tests 86 passed; CI confirms no production .pkl changes. The branch now requires main for the free diagnostic secret-bearing job, restricts the current-form forward reader to schedule/manual/approved workflow_run events (not direct push), and bootstraps its 170-hour diagnostic cooldown from the real Nov 4 diagnostic artifact.
+- #699 HEAD `09c95fde22091311cbe56da236e76360aad33f72`: 7/7 exact-head CI SUCCESS. Original V2 shadow tests 321 passed; current-form dependency-trigger tests 13 passed; CI confirms no production .pkl changes. Its forward job now also excludes direct push and unapproved parent events.
+- #705 and #699 remain separate, open, HUMAN-MERGE PRs. Do not merge #699 without rebasing its download-capable workflows onto #705's budget marker/shared concurrency and offline-only push validation. Preserve #699's rights gate, identity SHA, diagnostic-triggered freshness preflight and explicit forward event allowlist. The source workflow integration must apply the 170-hour reservation to every download-capable event, including its diagnostic-triggered workflow_run path.
+- #701 remains 6/6 CI SUCCESS. Its market-only prospective evaluator is separate from the full three-way evaluator and is designed to call the lazy outcome loader only after 30 eligible completed primary forecasts. The full three-way path remains blocked until a frozen incumbent reference is pinned. #702 remains 7/7 CI SUCCESS and manual-only; it is a zero-credit event-metadata/19-feature readiness probe, not a probability generator. It was not dispatched.
+
+Operational constraint remains: source freshness limit is 24 hours, but #705's per-workflow download cooldown is 170 hours. The Nov 4 source observation reaches 24 hours on Nov 5 around 13:19:45 UTC; the next allowed source attempt is Nov 11 15:19:46 UTC, with the unchanged 05:50 UTC cron first occurring after that on Nov 12. The Nov 4 diagnostic attempt similarly moves its next allowed slot to Nov 11 16:25:54 UTC. Do not weaken the 24-hour source-before-quote rule, exceed the provider's conditional download policy, change schedules, or create a paid request to bridge this gap.
+
+No prospective target outcomes were read or scored; the Supabase feature-gate query selected identity metadata only. No paid provider request, workflow dispatch, Supabase write/DDL, production .pkl change, weight/contract change, promotion, merge or bet occurred. Main remains unchanged. See the detailed addendum below for artifact and SQL evidence.
+
 ## 2026-11-02 10:55 UTC
 
 This addendum records a read-only audit of the original V2 pipeline. It does not change the frozen model, the 19-feature contract, weights, lambdas, evaluation gate, schedules, production artifacts, or database.
