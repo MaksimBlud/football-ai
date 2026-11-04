@@ -42,7 +42,7 @@ Exact current PR heads were re-read with their associated GitHub Actions runs:
 
 - #705 `8b139335e6722b7c4f5286962486bca84bced20d`: 8/8 SUCCESS. It is the first HUMAN-MERGE priority because the 170-hour source-download budget and offline push validation are not yet on main.
 - #706 `caab7c07ad720866616ce9fa62664b0d398e5fe0`: 6/6 SUCCESS.
-- #699 `42c967f28fd274d8a8f9924e698dc5492f7f13e3`: 7/7 SUCCESS; contains the contemporaneous source identity/SHA coverage proof described above.
+- #699 `f15ff20d7626e2b54ad921bf48bb29493239589c`: 7/7 SUCCESS; adds a regression test for 31 source identities against 30 gate identities, proving all gate identities are covered while extra source identities remain allowed.
 - #701 `268885f437379a1610c0c56abb883cf7963f9d9c`: 6/6 SUCCESS; its market-only evaluator preserves the same 30-event lazy outcome gate and does not require an unpinned incumbent.
 - #702 `3935fc601eff30d2ca0a7670dae797d0cb365228`: 7/7 SUCCESS.
 - #712 `1c0f5a424dd51abc0f1a7dedfb7f8ff1047b3339`: 8/8 SUCCESS; retain after #699/#704 dependency review and rebase.
