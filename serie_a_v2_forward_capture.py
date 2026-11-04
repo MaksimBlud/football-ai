@@ -44,8 +44,12 @@ def _github_json(url: str, *, token: str, get=requests.get) -> dict:
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
-    }, timeout=30)
-    r.raise_for_status()
+    }, timeout=30, allow_redirects=False)
+    if getattr(r, "url", None) != url:
+        raise ValueError("GitHub API response URL mismatch")
+    status = getattr(r, "status_code", None)
+    if status != 200:
+        raise RuntimeError(f"GitHub API request failed with HTTP {status}")
     data = r.json()
     if not isinstance(data, dict):
         raise ValueError("unexpected GitHub artifact response")
