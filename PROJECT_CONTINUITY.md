@@ -1,3 +1,60 @@
+## 2026-11-04 08:15 UTC — rights, evaluator, and pre-match data audit
+
+Fresh main is still `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This is an update to the existing documentation branch only. Main, model artifacts, schedules, and Supabase were not changed.
+
+### Original source rights and #699
+
+The current official Football-Data fair-use page (updated 03/11/26) says the free CSV/Excel data is intended for private personal betting and/or academic research only, permits at most light automated downloads twice per week, and excludes commercial use and AI data-training projects. It does not expressly define frozen-weight inference. The project manifest therefore records an operational, conditional personal/academic research interpretation, explicitly not a provider-issued AI-inference licence.
+
+Latest #699 exact HEAD: `f11b3e1a5fc62f7415ae72944b058b05e3fddd94`; exact CI **7/7 SUCCESS**. The branch contains:
+- `market_anchor_v2_source_rights.py`;
+- `research/source_rights/football_data_co_uk.json`;
+- guard-before-external-I/O calls in current-form source capture, current-form forward, original forward, free diagnostic, and real-source attestation;
+- `SOURCE_RIGHTS_BLOCKED_NO_NETWORK_NO_INFERENCE` reports when the requested use falls outside the configured scope;
+- a separate explicit-written-permission + evidence SHA path for any AI training/recovery, which remains denied by the current manifest;
+- regression tests for research scope, policy freshness, two-session download cap, evidence SHA, no legacy XGBoost dependency, and guard-before-I/O order.
+
+The manifest permits only frozen-weight, noncommercial personal/academic research inference; AI model training, commercial use, and public product publication remain false. It records a maximum of two automated source sessions per rolling seven days. The core frozen candidate and protocol are not changed by #699.
+
+### Exact open V2 PR heads and CI
+
+- #705 `8b139335e6722b7c4f5286962486bca84bced20d`: **8/8 SUCCESS** — shared two-session rolling-week download budget; push validation offline; original cron expressions preserved.
+- #699 `f11b3e1a5fc62f7415ae72944b058b05e3fddd94`: **7/7 SUCCESS** — source, clock, identity, outcome, and rights guards; V2 shadow suite **314 passed**; no `.pkl` changes.
+- #704 `cc4918caf1ae0bb906b6a1949b2b352b3cce64f3`: **14/14 SUCCESS** — pinned CI dependencies.
+- #706 `caab7c07ad720866616ce9fa62664b0d398e5fe0`: **6/6 SUCCESS** — fail-closed production `.pkl` diff guard.
+- #712 `1c0f5a424dd51abc0f1a7dedfb7f8ff1047b3339`: **8/8 SUCCESS** — reuse verified historical CSVs; rebase after #705/#699 and preserve rights/source-before-quote guards.
+- #701 `0dbb1106e98f4c83f2bce79d9fb7dd634087e367`: **6/6 SUCCESS** — prospective evaluator; 30 eligible completed primary forecasts required before outcome loading; legacy XGBoost evidence rejected. Rebase after #699 and preserve the rights helper before enabling the evaluator.
+- #702 `3935fc601eff30d2ca0a7670dae797d0cb365228`: **7/7 SUCCESS** — manual-only zero-credit fixture/feature-readiness preview; keep undispatched until the integrated source/rights gates are verified.
+- #697 remains documentation-only and HUMAN-MERGE only.
+- #707 remains excluded because it refits/reconstructs a candidate; #711 is a draft alternative to #712 and must not be merged alongside it.
+- A temporary duplicate rights PR #713 was closed as superseded after inspection of #699's latest exact HEAD; it changed no main or production state.
+
+Recommended manual integration order: **#705 → rebase/revalidate #699 → #704/#706 → #712 → #701/#702**. Re-run CI on every exact resulting HEAD. HUMAN-MERGE only.
+
+### Current original V2 contract
+
+Frozen candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; candidate Git blob `ac1303f6b096664983fbf52443bd0a381b23ba21); protocol blob `65729e9639720e67624c1481190aa22ae606f151). The original model implementation and feature-builder blobs remain unchanged. Contract: 19 features, 20×2 weights, 3,799 training rows, `active_lambda=0` (market), `shadow_lambda=1` (research). Stability gate remains failed. No refit, weight changes, promotion, production `.pkl` changes, or bets.
+
+### Verified runtime and pre-match database state
+
+Last verifiable main workflow runs remain on 2026-11-03:
+- Source Capture #41640753996: 19 tests; 98 metadata-only gate identities; 100 current-season CSV rows; 10 historical CSVs; 11 files total; artifact #13231843819; ZIP digest `4e6fb5531a2206a353fe00fa1ebb0b4d20b3c6ae41ab49a7c672f8dab6d29cd8`.
+- Free Real-Quote Diagnostic #41650074683: 53 tests; zero quotes and zero scored diagnostics.
+- Original Forward #41670482076: 71 tests; 3,800 historical rows; zero quotes, zero previews, zero forecasts; no target outcomes read/scored.
+- Current-Form Forward #41672409582: 53 tests; source artifact verified; zero quotes and zero shadow captures; target outcomes not read.
+
+The available GitHub connector did not expose a list of scheduled workflow runs for 2026-11-04; no status is inferred for today's scheduled slots.
+
+Read-only Supabase pre-match checks:
+- `public.odds_snapshots`: 3,966 rows total; 3,915 strictly pre-match; zero new strictly pre-match rows in the last seven days; latest strict pre-match snapshot 2026-10-13 14:48:53 UTC; zero future events with a strict pre-match quote.
+- `public.product_prediction_snapshots`: 40 rows total; zero strictly pre-match predictions for the frozen V2 candidate SHA; zero matching events.
+
+No target scores/results/settlement were selected. No Supabase writes or DDL were executed.
+
+### Supabase security advisory
+
+The connected project reports RLS disabled on five public tables: `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. The latter two have 184 and 40 rows respectively. This is a critical exposure to anon/authenticated roles. No automatic remediation was applied; enabling RLS without deliberate policies may block application access. User approval and policy design are required.
+
 ## 2026-11-04 06:12 UTC — exact GitHub API metadata redirects blocked in all three V2 readers
 
 Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; main `PROJECT_CONTINUITY.md` still has its last mainline entry dated 2026-10-18. This update is documentation-only on the existing continuity PR branch. No main ref or production state was changed.
