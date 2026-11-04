@@ -49,9 +49,14 @@ def require_original_v2_source_rights(
         or policy.get("ai_feature_inference_permitted") is not True
         or policy.get("automated_source_archiving_permitted") is not True
         or not isinstance(purposes, list)
+        or not all(isinstance(item, str) for item in purposes)
         or not REQUIRED_PURPOSES.issubset(set(purposes))
         or not isinstance(source_scopes, list)
+        or not all(isinstance(item, str) for item in source_scopes)
         or not REQUIRED_SOURCE_SCOPES.issubset(set(source_scopes))
+        or policy.get("ai_model_training_permitted") is not False
+        or policy.get("commercial_use_permitted") is not False
+        or policy.get("product_publication_permitted") is not False
         or not isinstance(reference, str)
         or not reference.strip()
         or policy.get("provider_policy_url") != "https://football-data.co.uk/contact.php"
