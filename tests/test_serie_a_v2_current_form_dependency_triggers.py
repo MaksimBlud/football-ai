@@ -116,3 +116,15 @@ def test_diagnostic_refresh_revalidates_live_feature_gate_before_reuse():
     assert '"metadata_fields_read": ["match_date", "home_team", "away_team"]' in refresh
     assert '"target_outcomes_read": False' in refresh
     assert "steps.source_refresh.outputs.capture != 'false'" in workflow
+
+def test_current_form_forward_job_is_schedule_dispatch_or_approved_workflow_run_only():
+    workflow = FORWARD_WORKFLOW.read_text(encoding="utf-8")
+    job = workflow.split("  current-form-forward-preview:\n", 1)[1].split("\n    runs-on:", 1)[0]
+    assert "github.ref == 'refs/heads/main'" in job
+    assert "github.event_name == 'schedule'" in job
+    assert "github.event_name == 'workflow_dispatch'" in job
+    assert "github.event_name == 'workflow_run'" in job
+    assert "github.event.workflow_run.event == 'schedule'" in job
+    assert "github.event.workflow_run.event == 'workflow_dispatch'" in job
+    assert "github.event_name != 'workflow_run'" not in job
+    assert "github.event.workflow_run.event != 'pull_request'" not in job
