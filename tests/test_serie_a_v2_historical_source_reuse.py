@@ -230,13 +230,28 @@ class StreamResponse:
         self.closed = True
 
 
-def _fake_get(raw, artifact_list, parent_run, origin_artifact=None, origin_parent_run=None):
+def _fake_get(
+    raw, artifact_list, parent_run, origin_artifact=None, origin_parent_run=None,
+    *, blob_overrides=None,
+):
     calls = []
     stream = StreamResponse([raw[:1000], raw[1000:]])
+    blob_overrides = blob_overrides or {}
+
     def get(url, **kwargs):
         calls.append((url, kwargs))
         if "/actions/artifacts?name=" in url:
             return JsonResponse(url, artifact_list)
+        if "/contents/" in url and "?ref=" in url:
+            suffix = url.split("/contents/", 1)[1]
+            source_path, query = suffix.split("?", 1)
+            ref = query.split("ref=", 1)[1]
+            expected = reuse.ORIGINAL_SOURCE_CREATOR_BLOB_SHAS.get(source_path)
+            if expected is not None:
+                sha = blob_overrides.get((ref, source_path), expected)
+                return JsonResponse(url, {
+                    "path": source_path, "type": "file", "sha": sha,
+                })
         if url.endswith(f"/actions/runs/{RUN_ID}"):
             return JsonResponse(url, parent_run)
         if origin_artifact is not None and url.endswith("/actions/artifacts/122"):
@@ -246,6 +261,7 @@ def _fake_get(raw, artifact_list, parent_run, origin_artifact=None, origin_paren
         if url.endswith(f"/actions/artifacts/{ARTIFACT_ID}/zip"):
             return stream
         raise AssertionError(f"unexpected URL: {url}")
+
     return get, calls, stream
 
 
@@ -269,6 +285,7 @@ def test_reuses_only_historical_csv_bytes_from_authenticated_successful_main_art
     assert provenance["protected_2026_27_source_file_read"] is False
     assert provenance["target_outcomes_read"] is False
     assert provenance["supabase_writes"] == provenance["paid_provider_calls"] == 0
+    assert provenance["source_creator_blob_shas"] == reuse.ORIGINAL_SOURCE_CREATOR_BLOB_SHAS
     assert len(list(tmp_path.glob("serie_a_*.csv"))) == 10
     assert not (tmp_path / reuse.CURRENT_FILENAME).exists()
     assert stream.closed is True and stream.iterated is True
@@ -479,8 +496,50 @@ def test_reused_artifact_must_point_back_to_a_verified_original_main_artifact():
     assert provenance["source_parent_run_id"] == 455
     assert provenance["source_parent_run_head_sha"] == "b" * 40
     assert provenance["source_artifact_created_at_utc"] == "2026-11-01T13:53:57+00:00"
+    assert provenance["source_creator_blob_shas"] == reuse.ORIGINAL_SOURCE_CREATOR_BLOB_SHAS
+    assert any("/contents/" in url and "ref=" + ("b" * 40) in url for url, _ in calls)
     assert any(url.endswith("/actions/artifacts/122") for url, _ in calls)
     assert any(url.endswith("/actions/runs/455") for url, _ in calls)
+
+@pytest.mark.parametrize("bad_path", list(reuse.ORIGINAL_SOURCE_CREATOR_BLOB_SHAS))
+def test_original_source_archive_rejects_creator_code_or_rights_sha_drift_before_extract(
+    bad_path, tmp_path
+):
+    raw, _artifact, artifact_list, parent_run = _artifact_fixture()
+    get, _calls, _stream = _fake_get(
+        raw,
+        artifact_list,
+        parent_run,
+        blob_overrides={(HEAD_SHA, bad_path): "0" * 40},
+    )
+
+    with pytest.raises(ValueError, match="source creator code SHA mismatch"):
+        reuse.load_verified_historical_source_archive(
+            token="test-token", now=NOW, get=get, capture_dir=tmp_path
+        )
+
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_reused_artifact_rejects_origin_creator_rights_manifest_sha_drift():
+    raw, _artifact, artifact_list, parent_run = _artifact_fixture()
+    raw, origin_artifact, origin_parent = _make_reused_artifact(raw)
+    artifact_list["artifacts"][0]["digest"] = "sha256:" + hashlib.sha256(raw).hexdigest()
+    rights_manifest = "research/source_rights/football_data_co_uk.json"
+    get, _calls, _stream = _fake_get(
+        raw,
+        artifact_list,
+        parent_run,
+        origin_artifact,
+        origin_parent,
+        blob_overrides={("b" * 40, rights_manifest): "0" * 40},
+    )
+
+    with pytest.raises(ValueError, match="source creator code SHA mismatch"):
+        reuse.load_verified_historical_source_archive(
+            token="test-token", now=NOW, get=get
+        )
+
 
 class _CaptureQuery:
     def __init__(self, rows):
@@ -674,6 +733,12 @@ def test_capture_producer_manifest_passes_real_historical_reuse_consumer(tmp_pat
                 "event": "schedule",
                 "created_at": "2026-11-03T06:59:40Z",
                 "updated_at": origin_completed,
+            })
+        if "/contents/" in url and "?ref=" in url:
+            source_path = url.split("/contents/", 1)[1].split("?", 1)[0]
+            expected = reuse.ORIGINAL_SOURCE_CREATOR_BLOB_SHAS[source_path]
+            return JsonResponse(url, {
+                "path": source_path, "type": "file", "sha": expected,
             })
         raise AssertionError(f"unexpected GitHub provenance request: {url}")
 
