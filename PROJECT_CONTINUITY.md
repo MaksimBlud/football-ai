@@ -1,3 +1,22 @@
+## 2026-11-04 14:12 UTC — exact #699 head correction
+
+A final GitHub PR metadata re-read found that #699's current branch ref resolves to `8f767e0877a87d002209b80c19ce6dbdb2a3050b`, not the earlier `f11b3e1a5fc62f7415ae72944b058b05e3fddd94` cited in the stale PR body/earlier audit note. The branch was re-read at its actual head ref `research/v2-source-capture-guards-integrated-20261026`; the rights and identity protections remain present:
+
+- `market_anchor_v2_source_rights.py`: blob `9fd3a12013af3e0fbe080ffc5a608f50fe21e1bb`.
+- `research/source_rights/football_data_co_uk.json`: blob `ca57046b1408bca39381850e3e3a4b3d70830c6c`.
+- Current-form source capture: blob `59ac00c5c1975b850e475102867b7734068c2c5f`, including `require_personal_research_inference_scope()`, frozen candidate preflight, identity-set SHA/coverage attestation, exact URL and bounded no-redirect stream checks.
+- Current-form forward reader: blob `3c397abc02d4f8b7532a526d0af2f6d751b3cf4a`, including the rights guard and identity-set verification.
+- Frozen candidate JSON remains byte-identical to main: `ac1303f6b096664983fbf52443bd0a381b23ba21`; original feature builder `401b3a0893371bfa4a488ec92a4a54af2678c8f7` and core shadow module `b2770d726ffafe7a3cef706b57d3391063cbfe1b` are also identical.
+- Wrapper `serie_a_v2_frozen_shadow_preview.py` differs by guard hardening, but its inference body from `previews = []` to the next function is byte-identical to main.
+
+Exact current #699 HEAD `8f767e0877a87d002209b80c19ce6dbdb2a3050b` has **7/7 SUCCESS**: Shadow #41804425498, Research #41804425514, Serie A #41804425523, Bundesliga #41804425224, Ligue 1 #41804425479, Eredivisie #41804425488, Product #41804425268. The PR diff is 27 files and 141 commits ahead of main (not 136); inspect the complete diff before any HUMAN-MERGE. The earlier `f11b3e1...` note was a stale intermediate snapshot, not the current PR head.
+
+PR #713 remains closed unmerged as superseded; #699 itself contains the rights helper and manifest, so no rebase after #713 is required. The correct integration order remains #705 first, then rebase/review the current #699 branch against resulting main and rerun exact-head CI. #705's current-form source workflow already has offline-only push validation; #709 remains a duplicate.
+
+This correction does not change the 4 Nov runtime conclusion: source artifact #13327281383 was produced by pre-#699 main and lacks the identity-set SHA/rights guard, so it is not eligible for #701/#702/#712. No new source call, manual dispatch, outcome read, paid call, Supabase write/DDL, model change, main update, or merge occurred.
+
+---
+
 ## 2026-11-04 13:54 UTC — fresh main source-capture and forward-only runtime proof
 
 This entry supersedes the earlier 11:54 UTC statement that no 2026-11-04 V2 scheduled runs were yet visible. Fresh GitHub Actions API evidence now confirms two successful main-only runs on unchanged main `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
