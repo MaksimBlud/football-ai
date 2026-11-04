@@ -1,3 +1,61 @@
+## 2026-11-04 13:54 UTC — fresh main source-capture and forward-only runtime proof
+
+This entry supersedes the earlier 11:54 UTC statement that no 2026-11-04 V2 scheduled runs were yet visible. Fresh GitHub Actions API evidence now confirms two successful main-only runs on unchanged main `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+
+### Actual current-form source archive
+
+[Current-Form Source Capture run 41836971469](https://github.com/MaksimBlud/football-ai/actions/runs/41836971469) completed SUCCESS on 2026-11-04:
+
+- Created 13:18:57 UTC; completed 13:19:49 UTC.
+- Exact main SHA: `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- Source archive artifact ID `13327281383`, 438,212 bytes, GitHub artifact ZIP SHA-256 `9dced08f96d81c39dcc199afba481fab07961ce6b61d14776fdc78563bc8cccd`.
+- The live step passed its 19 focused tests and reported 100 completed primary-event identities, 100 current-season completed prior-day rows, 10 frozen historical files plus one current-season CSV (11 source files total), exact frozen candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, zero paid calls, zero Supabase writes, and no target-outcome scoring.
+- The 30-event feature-input gate is passed (100 canonical identities). The separate prospective evaluation gate remains closed.
+
+The 2026/27 CSV is admitted only after the metadata-only feature-input gate and is used as lagged historical features for later fixtures. This is not a prospective target-outcome evaluation. The run did not call the evaluator or read target outcomes for scoring.
+
+### Independent forward consumer proof
+
+[Current-Form Forward-Only Preview run 41837103174](https://github.com/MaksimBlud/football-ai/actions/runs/41837103174) completed SUCCESS:
+
+- Created 13:19:52 UTC; completed 13:20:32 UTC.
+- Exact main SHA remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- 53 focused regression tests passed.
+- The consumer independently verified source artifact `13327281383` and its exact ZIP digest `9dced08f96d81c39dcc199afba481fab07961ce6b61d14776fdc78563bc8cccd`, candidate SHA, parent workflow path/run/head, source observation at `2026-11-04T13:19:45.080488Z`, artifact creation at `13:19:46Z`, parent completion at `13:19:49Z`, and source age 42 seconds at verification.
+- Verified source metadata: 100 feature-gate identities, 100 current-season rows, 3,900 historical-plus-current match rows, 10 frozen historical CSVs, 11 total source files.
+- `quotes_seen=0`; `v2_current_form_shadow_captured=0`; every reported quote-block counter is zero. Target outcomes were neither read nor scored. Paid calls and Supabase/production writes were zero.
+- Forward artifact ID `13327081347`, 439,365 bytes, ZIP SHA-256 `784a94b80a3827a2aa21c9500899f810586d4e70019951b9f767a7bf7fe5b14f`.
+
+This is a genuine source-archive creation and independent source-verification runtime proof, but **not** a source-before-quote forecast pair: there were no saved quotes, therefore no V2 preview and no prospective evaluation progress.
+
+### Important integration limitation of the new archive
+
+Both runs executed the pre-#699 main code. Main's current-form source-capture blob was `9f48a4a6e78d5d7ffa193ec6f24b394162f36ab4`; it uses the metadata count gate but does not yet carry #699's canonical gate-identity list/count/SHA attestation or call `require_personal_research_inference_scope()`. The 4 November archive must therefore **not** be treated as the post-#699 identity-attested source artifact required by #701/#702 or the strict reuse chain in #712. Do not reuse it for those gates. Wait for the approved #705/#699 integration and a fresh source capture produced by the integrated exact code.
+
+The separate 30-eligible-prospective-forecast outcome gate remains **0/30**. No Brier/LogLoss or V2-over-market claim is possible.
+
+### Read-only Supabase audit, 2026-11-04
+
+Only strict pre-match odds and fixture identity metadata were queried:
+
+- `public.odds_snapshots`, SERIE_A, filtered by `snapshot_time_utc < commence_time_utc`: 620 rows / 63 events; latest admissible snapshot `2026-10-13 14:48:53.04262+00`; zero future-kickoff rows and zero strictly pre-match rows in the preceding seven days.
+- `public.product_prediction_snapshots`, SERIE_A, filtered by the frozen V2 candidate SHA and `generated_at_utc < commence_time_utc`: **0** rows.
+- `public.league_finished_results`: selected only `match_date, home_team, away_team` for SERIE_A 2026/27 before 2026-11-04. Result: 103 raw metadata rows, 100 canonical identities after the existing `Atalanta BC → Atalanta` alias, latest fixture date 2026-11-02. No score, result, or settlement column was selected.
+- No Supabase write or DDL was performed.
+
+### Exact PR integration status and corrections
+
+- #699 current exact HEAD `f11b3e1a5fc62f7415ae72944b058b05e3fddd94`: 7/7 exact-head CI SUCCESS, including 314 frozen-V2 shadow tests. Compare against main shows 136 commits ahead and 27 changed files; review the complete 27-file diff and do not merge blindly. It contains the conditional personal/academic research rights helper/manifest and source/clock/identity/redirect guards; it does not grant a provider-issued AI-inference licence, AI training, commercial use, or public-product use.
+- #713 is closed unmerged as superseded; its own closure record confirms #699 already contains the rights helper. Ignore any stale #699 body sentence that says to rebase after #713.
+- #705 current HEAD `8b139335e6722b7c4f5286962486bca84bced20d`: 8/8 exact-head CI SUCCESS, 22 budget tests. Direct inspection of its current-form source workflow confirms an offline-only `validate-source-capture` push job and a non-push/main-only capture job; #709 duplicates this isolation and must not be merged independently.
+- #705's bootstrap selects the latest authenticated legacy source artifact for each exact workflow path. The new source artifact `13327281383` at `2026-11-04T13:19:46Z` supersedes the Nov 3 source artifact as the bootstrap anchor. Under the 170-hour per-workflow guard, the next source-capture slot is no earlier than `2026-11-11T15:19:46Z`; with the unchanged 05:50 UTC cron, the next scheduled eligible slot is 2026-11-12 05:50 UTC, assuming no newer attempt. The diagnostic bootstrap remains based on artifact `13236383688` at `2026-11-03T14:05:06Z`; its 170-hour slot opens 2026-11-10 16:05:06Z, so the unchanged 06:13 UTC schedule first falls after it on 2026-11-11. These limits apply only after #705 is manually merged and do not retroactively undo earlier source requests. Provider wording does not specify whether "twice per week" is counted per session or per CSV file; the budget is a guard, not a licence.
+- #712 remains unintegrated at `4b9b1281a8ab81988ea713eb5974d1e55dbba81d`; its latest dedicated source-reuse run passed 53 tests, but the current pre-#699 archive is not an eligible producer for its identity-attested consumer.
+- Original Forward Preview schedule remains `08:08 UTC`. No Nov 4 run was visible in the queried main scheduled-run results by 13:54 UTC; treat that as not yet observed, not as proof that the workflow is disabled or failed (GitHub schedule dispatch can be delayed).
+
+HUMAN-MERGE only. No main update, PR merge, schedule change, manual source dispatch, paid call, Supabase write/DDL, production `.pkl` change, protected target-outcome evaluation, model refit, promotion, or bet occurred.
+
+---
+
 ## 2026-11-04 11:54 UTC — Research Brain exact-head and pre-match audit
 
 Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main ref was changed. Original candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 features and original weights/protocol unchanged; `active_lambda=0), `shadow_lambda=1) research-only. Candidate JSON, protocol, historical feature builder, and core `market_anchor_1x2_v2_shadow.py` blobs match between main and #699. The #699 shadow-preview diff is guard-only; the complete inference body from `previews = []` onward is byte-identical.
