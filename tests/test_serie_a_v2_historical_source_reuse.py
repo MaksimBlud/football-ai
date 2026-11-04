@@ -674,6 +674,7 @@ def test_capture_producer_manifest_passes_real_historical_reuse_consumer(tmp_pat
         "source_parent_run_id": 455,
         "source_parent_run_head_sha": origin_head,
         "source_parent_run_completed_at_utc": origin_completed,
+        "source_creator_blob_shas": dict(reuse.ORIGINAL_SOURCE_CREATOR_BLOB_SHAS),
         "historical_files_reused": len(reuse.HISTORICAL_CODES),
         "public_historical_csv_requests": 0,
         "current_season_file_reused": False,
