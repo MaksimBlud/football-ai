@@ -1031,3 +1031,65 @@ def test_capture_rejects_reversed_gate_source_archive_clock_order(tmp_path, cloc
     assert response.closed is True
     assert not (tmp_path / CURRENT_FILENAME).exists()
     assert not (tmp_path / MANIFEST_FILENAME).exists()
+
+
+def test_source_gate_allows_extra_current_csv_identities_when_every_gate_identity_is_covered(tmp_path):
+    """The CSV may contain fixtures persisted after the identity-only gate snapshot."""
+    raw = current_csv(n=31)
+
+    def fake_history(*, get, capture_dir):
+        audits = []
+        for code in _source_codes():
+            filename = f"serie_a_{code}.csv"
+            body = (
+                "Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HC,AC,HY,AY,HR,AR\\n"
+                f"01/10/{2000 + int(code[:2])},Juventus,Napoli,1,0,H,5,3,2,1,0,0\\n"
+            ).encode()
+            (capture_dir / filename).write_bytes(body)
+            audits.append({
+                "season_code": code,
+                "source_url": f"https://www.football-data.co.uk/mmz4281/{code}/I1.csv",
+                "archived_source_name": filename,
+                "csv_sha256": hashlib.sha256(body).hexdigest(),
+                "source_observed_at_utc": "2026-10-18T08:00:00+00:00",
+                "completed_source_rows": 1,
+            })
+        return pd.DataFrame([{"historical": 1}]), audits
+
+    class Response:
+        status_code = 200
+        url = CURRENT_URL
+        headers = {"Content-Length": str(len(raw))}
+
+        def iter_content(self, chunk_size):
+            assert chunk_size == 64 * 1024
+            yield raw
+
+        def raise_for_status(self):
+            return None
+
+        def close(self):
+            return None
+
+    source_times = iter([
+        datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc),
+        datetime(2026, 10, 18, 8, 2, tzinfo=timezone.utc),
+    ])
+    report = capture_source_archive(
+        output_dir=tmp_path,
+        client=FakeQuery(event_rows(30)),
+        now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+        get=lambda *_args, **_kwargs: Response(),
+        history_fetch=fake_history,
+        clock=lambda: next(source_times),
+    )
+
+    gate = report["feature_source_gate"]
+    assert gate["gate_fixture_identity_count"] == 30
+    assert gate["gate_fixture_identities_covered_by_current_source"] == 30
+    assert gate["gate_fixture_identities_missing_from_current_source"] == 0
+    assert gate["current_source_fixture_identity_count"] == 31
+    assert gate["passed"] is True
+    assert report["current_season_completed_prior_day_rows"] == 31
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
