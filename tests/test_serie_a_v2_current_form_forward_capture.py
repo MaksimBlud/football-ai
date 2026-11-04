@@ -1151,7 +1151,7 @@ def test_verified_current_form_parent_accepts_only_pinned_main_capture_events(mo
         ("research/source_rights/football_data_co_uk.json", "0" * 40),
     ],
 )
-def test_current_form_parent_rejects_pre_guard_source_code_blobs(monkeypatch, bad_path, bad_sha):
+def test_current_form_parent_rejects_pre_guard_source_and_rights_blobs(monkeypatch, bad_path, bad_sha):
     archive = {"run_id": 123, "head_sha": HEAD, "created_at": ARTIFACT_CREATED}
     run = {
         "id": 123, "path": SOURCE_WORKFLOW_PATH, "head_branch": "main",
@@ -1178,7 +1178,7 @@ def test_current_form_parent_rejects_pre_guard_source_code_blobs(monkeypatch, ba
         raise AssertionError(f"unexpected GitHub API URL: {url}")
 
     monkeypatch.setattr(forward_capture_module, "_github_json", fake_github_json)
-    with pytest.raises(ValueError, match="approved redirect-guarded source code"):
+    with pytest.raises(ValueError, match="approved redirect-guarded source/rights file"):
         forward_capture_module.verify_source_run(
             archive,
             quote_time=datetime(2026, 10, 19, 5, 30, tzinfo=timezone.utc),

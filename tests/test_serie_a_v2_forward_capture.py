@@ -348,7 +348,7 @@ def test_legacy_source_loader_blob_is_rejected_before_forward_archive_download()
                 }
             })()
         raise AssertionError(f"unexpected GitHub API URL: {url}")
-    with pytest.raises(ValueError, match="redirect-guarded V2 source loader"):
+    with pytest.raises(ValueError, match="approved redirect-guarded V2 source/rights file"):
         prepare_forward_capture(
             [quote()], [meta], as_of_utc=NOW,
             load_archive=lambda artifact_id: downloads.append(artifact_id) or raw,
