@@ -297,6 +297,9 @@ def test_workflow_contracts_keep_crons_and_shared_concurrency():
         assert "The Odds API" not in workflow
         assert "ODDS_API_KEY" not in workflow
     assert "contents: read" in source and "contents: read" in diagnostic
+    diagnostic_job = diagnostic.split("  free-diagnostic:\n", 1)[1].split("\n    steps:", 1)[0]
+    assert "if: ${{ github.ref == 'refs/heads/main' }}" in diagnostic_job
+    assert diagnostic_job.index("if:") < diagnostic_job.index("env:")
     assert "serie_a_v2_public_source_download_budget.py" in source
     assert "tests/test_serie_a_v2_public_source_download_budget.py" in source
     assert "serie_a_v2_public_source_download_budget.py" in diagnostic
