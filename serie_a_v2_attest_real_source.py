@@ -17,6 +17,10 @@ from serie_a_v2_forward_capture import (
     REPOSITORY, discover_archives, get_archive, verify_source_run,
 )
 from serie_a_v2_prequote_source_archive_gate import verify_archive
+from market_anchor_v2_source_rights import (
+    require_personal_research_inference_scope,
+    write_research_scope_blocked_report,
+)
 
 
 def attest_latest_source(*, token: str, now: datetime, discover=discover_archives,
@@ -86,6 +90,16 @@ def main() -> None:
     args = parser.parse_args()
     if os.environ.get("GITHUB_REPOSITORY") != REPOSITORY:
         raise RuntimeError("source proof must run in original GitHub repository")
+    try:
+        require_personal_research_inference_scope()
+    except PermissionError as exc:
+        report = write_research_scope_blocked_report(
+            args.output,
+            "SERIE_A_ORIGINAL_V2_SOURCE_ATTESTATION",
+            str(exc),
+        )
+        print(json.dumps(report, sort_keys=True))
+        return
     token = os.environ.get("GITHUB_TOKEN", "")
     if not token:
         raise RuntimeError("GITHUB_TOKEN actions:read missing")
