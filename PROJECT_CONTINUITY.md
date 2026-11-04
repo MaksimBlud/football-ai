@@ -19,7 +19,7 @@ New branch safety fixes:
 
 Operational constraint remains: source freshness limit is 24 hours, but #705's per-workflow download cooldown is 170 hours. The Nov 4 source observation reaches 24 hours on Nov 5 around 13:19:45 UTC; the next allowed source attempt is Nov 11 15:19:46 UTC, with the unchanged 05:50 UTC cron first occurring after that on Nov 12. The Nov 4 diagnostic attempt similarly moves its next allowed slot to Nov 11 16:25:54 UTC. Do not weaken the 24-hour source-before-quote rule, exceed the provider's conditional download policy, change schedules, or create a paid request to bridge this gap.
 
-No prospective target outcomes were read or scored; the Supabase feature-gate query selected identity metadata only. No paid provider request, workflow dispatch, Supabase write/DDL, production .pkl change, weight/contract change, promotion, merge or bet occurred. Main remains unchanged. See the detailed addendum below for artifact and SQL evidence.
+No prospective target outcomes were read or scored; the Supabase feature-gate query selected identity metadata only. No paid provider request, workflow dispatch, Supabase write/DDL, production .pkl change, weight/contract change, promotion, merge or bet occurred. Main remains unchanged. Detailed artifact and SQL evidence is recorded in [PROJECT_CONTINUITY_ADDENDUM_20261102_V2_RUNTIME_AUDIT.md](PROJECT_CONTINUITY_ADDENDUM_20261102_V2_RUNTIME_AUDIT.md).
 
 ## 2026-11-04 14:24 UTC — latest #705 budget-bootstrap regression and freshness limitation
 
