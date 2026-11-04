@@ -259,9 +259,9 @@ def test_all_original_v2_supabase_secret_jobs_are_main_ref_only():
 def test_original_forward_push_is_offline_validation_only():
     """A main code push may validate V2, but must not read source, quotes, or Supabase."""
     free = FREE.read_text(encoding="utf-8")
-    jobs = free.split("jobs:\\n", 1)[1]
-    validator = jobs.split("  validate-original-forward:\\n", 1)[1].split("\\n  original-v2-forward-preview:\\n", 1)[0]
-    forward_job = jobs.split("  original-v2-forward-preview:\\n", 1)[1].split("\\n    runs-on:", 1)[0]
+    jobs = free[free.index("jobs:"):]
+    validator = jobs.split("  validate-original-forward:", 1)[1].split("  original-v2-forward-preview:", 1)[0]
+    forward_job = jobs.split("  original-v2-forward-preview:", 1)[1].split("    runs-on:", 1)[0]
 
     assert "if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}" in validator
     assert "SUPABASE_URL" not in validator
