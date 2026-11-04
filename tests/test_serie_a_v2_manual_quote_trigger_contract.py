@@ -254,3 +254,23 @@ def test_all_original_v2_supabase_secret_jobs_are_main_ref_only():
         assert "SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}" in job
         job_condition = job.split("\n    runs-on:", 1)[0]
         assert guard in job_condition, f"{workflow_path} exposes Supabase secrets without a main-ref guard"
+
+
+def test_original_forward_push_is_offline_validation_only():
+    """A main code push may validate V2, but must not read source, quotes, or Supabase."""
+    free = FREE.read_text(encoding="utf-8")
+    jobs = free.split("jobs:\\n", 1)[1]
+    validator = jobs.split("  validate-original-forward:\\n", 1)[1].split("\\n  original-v2-forward-preview:\\n", 1)[0]
+    forward_job = jobs.split("  original-v2-forward-preview:\\n", 1)[1].split("\\n    runs-on:", 1)[0]
+
+    assert "if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}" in validator
+    assert "SUPABASE_URL" not in validator
+    assert "SUPABASE_KEY" not in validator
+    assert "GITHUB_TOKEN" not in validator
+    assert "THE_ODDS_API_KEY" not in validator
+    assert "serie_a_v2_attest_real_source.py" not in validator
+    assert "serie_a_v2_forward_capture.py" not in validator
+    assert "actions/upload-artifact@v4" not in validator
+    assert "python -m pytest -q tests/test_serie_a_v2_manual_quote_trigger_contract.py" in validator
+    assert "github.ref == 'refs/heads/main'" in forward_job
+    assert "github.event_name != 'push'" in forward_job
