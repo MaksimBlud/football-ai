@@ -1,3 +1,60 @@
+## 2026-11-04 06:12 UTC — exact GitHub API metadata redirects blocked in all three V2 readers
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; main `PROJECT_CONTINUITY.md` still has its last mainline entry dated 2026-10-18. This update is documentation-only on the existing continuity PR branch. No main ref or production state was changed.
+
+### New source-provenance fixes and exact-head CI
+
+A code review found that three V2 metadata readers allowlisted the GitHub API request URL but relied on Requests' default redirect-following behavior. Their metadata responses could therefore be accepted without proving that the final response remained on the exact GitHub API URL. All three helpers now:
+- pass `allow_redirects=False`;
+- require `response.url == requested_url`;
+- require HTTP 200 before parsing JSON;
+- reject redirects/errors without parsing their response bodies.
+
+**PR #699 — original and current-form forward readers**
+- Exact HEAD: `f11b3e1a5fc62f7415ae72944b058b05e3fddd94`.
+- Files changed by this incremental fix: `serie_a_v2_forward_capture.py`, `serie_a_v2_current_form_forward_capture.py`, and their two test files.
+- Six focused regressions cover 302 rejection, unexpected response URL rejection, and valid exact-200 behavior for both readers.
+- Exact-head CI: **7/7 SUCCESS**. Original V2 Frozen Shadow Tests [#41783044006](https://github.com/MaksimBlud/football-ai/actions/runs/41783044006) — **314 passed**. Research [#41783043965](https://github.com/MaksimBlud/football-ai/actions/runs/41783043965) — SUCCESS; production artifact guard printed `PASS: no .pkl changes in PR`. Serie A [#41783044027](https://github.com/MaksimBlud/football-ai/actions/runs/41783044027), Bundesliga [#41783044028](https://github.com/MaksimBlud/football-ai/actions/runs/41783044028), Product [#41783044011](https://github.com/MaksimBlud/football-ai/actions/runs/41783044011), Eredivisie [#41783044021](https://github.com/MaksimBlud/football-ai/actions/runs/41783044021), Ligue 1 [#41783044123](https://github.com/MaksimBlud/football-ai/actions/runs/41783044123) — all SUCCESS.
+
+**PR #701 — prospective evaluator metadata reader**
+- Exact HEAD: `0dbb1106e98f4c83f2bce79d9fb7dd634087e367`.
+- `market_anchor_1x2_v2_prospective_evaluation.py` now applies the same exact-URL/no-redirect/HTTP-200 rule.
+- Three focused regressions cover 302 rejection, unexpected response URL rejection, and valid exact-200 behavior. The tests extract only the helper AST so the lightweight artifact-contract job does not import the model/scikit-learn dependency stack.
+- Exact-head CI: **6/6 SUCCESS**. Research [#41783608344](https://github.com/MaksimBlud/football-ai/actions/runs/41783608344) — the forward-artifact bridge/contract step **17 passed**, and the production artifact guard printed `PASS: no .pkl changes in PR`. Serie A [#41783608357](https://github.com/MaksimBlud/football-ai/actions/runs/41783608357), Bundesliga [#41783608458](https://github.com/MaksimBlud/football-ai/actions/runs/41783608458), Ligue 1 [#41783608368](https://github.com/MaksimBlud/football-ai/actions/runs/41783608368), Product [#41783608342](https://github.com/MaksimBlud/football-ai/actions/runs/41783608342), Eredivisie [#41783608449](https://github.com/MaksimBlud/football-ai/actions/runs/41783608449) — all SUCCESS.
+
+Both are transport/provenance-only changes. The frozen candidate, original 19-feature order, weights, protocol, `active_lambda=0`, `shadow_lambda=1`, evaluation gate and protected-outcome behavior are unchanged. No live evaluation, outcome read, source download, Supabase write/DDL, or production artifact change was performed.
+
+### Re-read open V2 PRs and merge dependencies
+
+- #705 HEAD `8b139335e6722b7c4f5286962486bca84bced20d`: **8/8 SUCCESS**. Its 170-hour-per-approved-workflow shared source budget and push-only offline validation are still not active on main. It remains first in the HUMAN-MERGE order.
+- #699 HEAD `f11b3e1a5fc62f7415ae72944b058b05e3fddd94`: **7/7 SUCCESS**. It shares source/workflow paths with #705; rebase and rerun exact-head CI after #705 lands.
+- #712 HEAD `1c0f5a424dd51abc0f1a7dedfb7f8ff1047b3339`: **8/8 SUCCESS**. It reuses verified historical CSVs; rebase after #705/#699 and retain the producer-to-consumer manifest round-trip test.
+- #701 HEAD `0dbb1106e98f4c83f2bce79d9fb7dd634087e367`: **6/6 SUCCESS**. It shares the source-rights helper with #699 and must be rebased/revalidated after #699. It retains the 30-primary-completed-forecast gate and rejects legacy XGBoost incumbent evidence.
+- #706 HEAD `ab3e7c3c42a7495be3bac0ba493a20cc684bfb1b`: all 7 reported checks SUCCESS; production-pickle diff guard remains separate.
+- #704 HEAD `cc4918caf1ae0bb906b6a1949b2b352b3cce64f3`: all 14 reported dependency/league checks SUCCESS; rebase after the source workflow integration.
+- #707 HEAD `3a79d333eb246d92aea88b569c8cb5b4474b9fbd`: CI 8/8 SUCCESS, but **excluded from this V2 recovery path**. Its saved-cohort replay hardcodes a 10-event post-outcome diagnostic from the 2026-09-11 market-only ledger and refits a research candidate from historical inputs. That is not the frozen prospective V2 protocol and conflicts with the current instruction not to open protected 2026/27 outcomes or refit/change the original weights. Do not execute or merge #707 under this scope.
+- #711 remains the overlapping draft alternative to #712; do not merge both. HUMAN-MERGE only.
+
+### Fresh strict pre-match state and scientific status
+
+A new read-only aggregate against `public.odds_snapshots` selected only quote/kickoff timestamps and event IDs:
+- 3,966 total rows;
+- 3,915 satisfy strict `snapshot_time_utc < commence_time_utc`;
+- 0 strict pre-match rows in the last seven days;
+- 0 future events with a saved strict pre-match quote;
+- latest strict pre-match quote: `2026-10-13 14:48:53.042620 UTC`.
+
+No result, score, goal, or settlement columns were selected. Main Original Forward run [#41670482076](https://github.com/MaksimBlud/football-ai/actions/runs/41670482076) still reports zero quotes and zero forecasts; Current-Form Forward [#41672409582](https://github.com/MaksimBlud/football-ai/actions/runs/41672409582) reports zero quotes and zero shadow captures. No new source/quote pair exists.
+
+The original candidate remains SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 features, 20x2 weights, 3,799 training rows, `active_lambda=0`, `shadow_lambda=1`, stability gate FAILED. Candidate JSON and protocol blobs are identical between main and the #699 branch. Eligible completed prospective forecasts remain **0/30**; Brier and LogLoss are not available, and no V2-over-market claim is justified.
+
+The rights manifest remains conditional personal/academic research inference only, not a provider-issued AI-inference licence; AI training, commercial use and public product publication remain disallowed. The provider's current fair-use page is updated 03/11/26 and limits automated free-data sessions to twice per week: [Football-Data fair data usage policy](https://football-data.co.uk/contact.php). No new public CSV download was initiated.
+
+HUMAN-MERGE only. No merge, main mutation, production `.pkl` change, Supabase write/DDL, paid API call, source download, target-outcome read, refit, threshold tuning, promotion, bet, schedule change, or other-agent setting change occurred.
+
+
+---
+
 ## 2026-11-04 05:02 UTC — rights gate added before original source-archive attestation
 
 Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc` (last main commit 2026-10-18 08:20:05 UTC). This iteration changed only the existing research branch for PR #699 and this continuity-document branch; no main update or merge occurred.
