@@ -268,8 +268,9 @@ def test_original_forward_push_is_offline_validation_only():
     assert "SUPABASE_KEY" not in validator
     assert "GITHUB_TOKEN" not in validator
     assert "THE_ODDS_API_KEY" not in validator
-    assert "serie_a_v2_attest_real_source.py" not in validator
-    assert "serie_a_v2_forward_capture.py" not in validator
+    # py_compile may name these modules, but the push job must never execute them.
+    assert "python serie_a_v2_attest_real_source.py" not in validator
+    assert "python serie_a_v2_forward_capture.py" not in validator
     assert "actions/upload-artifact@v4" not in validator
     assert "python -m pytest -q tests/test_serie_a_v2_manual_quote_trigger_contract.py" in validator
     assert "github.ref == 'refs/heads/main'" in forward_job
