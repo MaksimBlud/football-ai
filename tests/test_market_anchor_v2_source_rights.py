@@ -221,6 +221,10 @@ def test_live_v2_entrypoints_check_research_scope_before_external_reads():
         "serie_a_v2_forward_capture.py": (
             "from database import supabase", "discover_archives(", "fetch_saved_upcoming_serie_a_quotes(",
         ),
+        "serie_a_v2_attest_real_source.py": (
+            'token = os.environ.get("GITHUB_TOKEN", "")',
+            "proof = attest_latest_source(",
+        ),
     }
     for path, side_effects in cases.items():
         source = (Path(__file__).resolve().parents[1] / path).read_text(encoding="utf-8")
