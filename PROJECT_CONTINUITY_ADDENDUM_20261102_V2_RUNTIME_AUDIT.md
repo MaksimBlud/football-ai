@@ -506,3 +506,44 @@ This update records a fresh read-only audit. Main, production, schedules, other 
 - No new public CSV download, paid provider call, Supabase write/DDL, production artifact change, target-outcome read, or manual workflow dispatch occurred in this audit. No current-season archive member was downloaded or opened.
 - The Football-Data manifest is `CONDITIONAL_RESEARCH_ONLY`: it operationally interprets frozen-weight, noncommercial personal/academic research inference as within the stated personal/academic scope, but explicitly records `provider_issued_ai_inference_license=false`. AI training, commercial use, and public product publication remain prohibited by the current manifest. This is not a provider-issued AI-inference licence; do not describe it as one or use these data for a public/commercial product.
 - Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No merge, production `.pkl` change, weight/contract change, schedule/cron change, Supabase write/DDL, protected target-outcome read, promotion, or bet occurred. HUMAN-MERGE only.
+
+
+## Research Brain exact-head audit — 2026-11-04 16:56 UTC
+
+### Fresh main, original forward workflow, and frozen candidate
+
+- GitHub's latest commit search still returns main `40887ebb215730190d7a6c7a1693373ec4afcdfc`; open PRs #697/#699/#701/#705 all retain that exact base SHA.
+- Main `PROJECT_CONTINUITY.md` blob: `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`.
+- Main original-forward workflow `.github/workflows/serie-a-v2-forward-preview.yml` blob: `48ce3b0d8e31c4cf293b94500e9c320047311467`. It remains read-only: daily 08:08 UTC, plus a successful main manual `Serie A Odds Snapshots` workflow_run; this does not schedule or dispatch the paid collector.
+- Main current-form forward workflow blob: `6ebbcaff290a78e9ccffa4ac9a09bc0982eaff35`; current-form source-capture workflow blob: `9722416862b42d55ff7181003353c39620f23cf2`.
+- Candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features and original weights remain frozen; `active_lambda=0), `shadow_lambda=1` research-only. No candidate/protocol/feature-builder changes were made.
+
+### PR #701 — real CI failure isolated to the documented #699 dependency
+
+- At HEAD `8d8d86a4dc242b88d90973091c7edcda9d10eda4`, Research PR Validation #41862587677 failed because the new bridge test imported the original feature chain without installing scikit-learn (`ModuleNotFoundError: sklearn`).
+- Added `scikit-learn==1.9.1` to the existing research-validation test dependency line, using the version recorded in the reviewed #704 Python 3.12 lock proposal. New exact HEAD: `499c95cea970d42ee6512b77986af6143295e653`; workflow blob: `43fc6faa338ab76bacbf328e298ea4500da06059`. Main's corresponding workflow blob remains `e80f59f6b6b9bc2525d0df2064e02e3984b0cc2a`; no main write occurred.
+- On new HEAD, five of six required PR validations completed SUCCESS. Research PR Validation #41872721087 then failed later in the import chain: `market_anchor_1x2_v2_prospective_evaluation.py` imports `_current_gate_freshness`, which is absent from main's `serie_a_v2_current_form_forward_capture.py` blob `326ac1921ce901a31aa6d73e6cbddb0782071964`, but present in #699's blob `3c397abc02d4f8b7532a526d0af2f6d751b3cf4a`. The dependency package issue is therefore fixed; the remaining failure is the known stacked source-guard dependency, not a reason to duplicate the helper in #701.
+- Added an exact-head explanation to #701. Keep it unmerged; after manual #705 → #699 integration, rebase #701 onto the resulting main and rerun all six checks on the exact new SHA. The frozen 30-primary-completed-forecast gate and lazy outcome loader remain unchanged.
+
+### PR #712 — source-reuse integration must include #699 rights guard
+
+- Re-read exact #712 HEAD `4b9b1281a8ab81988ea713eb5974d1e55dbba81d`. Its current-form source capture reads the identity-only Supabase feature gate and then calls `fetch_public_history_with_provenance()`, which discovers/downloads the GitHub source artifact and extracts historical CSVs through `load_verified_historical_source_archive()`.
+- This branch does not yet import/call #699's `require_personal_research_inference_scope()` before those source/metadata/artifact operations. The rights helper/manifest are also absent from #712's changed-file list.
+- Added an exact-head PR comment. This is an integration blocker, not evidence of a live unauthorized request. Rebase #712 after #699 and call the approved rights guard before Supabase/source-artifact access, artifact download/extraction, or inference. Do not copy a duplicate rights helper. The #711 draft remains an overlapping alternative; do not merge both.
+
+### PR integration and source-use safety
+
+- #705 HEAD `97a94f5ba3aa921175071e490a9c698aaf0a414b`: 8/8 associated checks SUCCESS; dedicated budget tests and frozen V2 shadow tests passed. Its workflow diffs include a shared 170-hour per-workflow marker, shared concurrency, offline-only source-capture push validation, and main-only source capture. It also excludes push from the current-form forward job. Cron expressions are unchanged. It is not active on main until HUMAN-MERGE.
+- #699 HEAD `09c95fde22091311cbe56da236e76360aad33f72`: 7/7 SUCCESS; must be rebased after #705 while preserving the shared marker/concurrency/offline-push behavior and adding its rights, identity, clock and outcome guards.
+- #709 remains superseded by #705: #705 already contains the same offline push split plus the budget marker. Do not merge #709 independently.
+- Main's source-capture cron remains unguarded until #705 is manually merged; next slot is 2026-11-05 05:50 UTC. No source workflow was dispatched and no Football-Data request was made in this audit. The 170-hour guard is a technical control, not a provider licence; the rights manifest remains conditional personal/academic frozen-weight inference only, not AI training, commercial use, or public product publication.
+
+### Fresh read-only Supabase pre-match/identity audit
+
+- Project: `besxwboamipygwvrsblz`; all queries were read-only.
+- `public.odds_snapshots`, Serie A only: 625 rows; 620 strictly pre-kickoff (`snapshot_time_utc < commence_time_utc)); 63 distinct pre-kickoff event IDs; latest strict pre-kickoff snapshot `2026-10-13 14:48:53.042620 UTC`; zero strict pre-kickoff rows in the last 24 hours or seven days.
+- `public.league_finished_results` query selected only `match_date, home_team, away_team` metadata via aggregate identity count for Serie A 2026/27; 103 raw unique tuples through 2026-11-02. No goals, scores, results or settlement fields were selected. This is feature-input metadata only, not the prospective evaluation cohort.
+- `public.product_prediction_snapshots`: 40 EPL rows, all strictly pre-kickoff; zero rows and zero events with the frozen original V2 candidate SHA.
+- No fresh pre-kickoff quote or original-V2 product prediction was found. No target outcomes were selected/read; Brier and LogLoss remain uncomputed. The prospective gate remains blocked pending 30 eligible prospective completed forecasts; no V2-over-market claim is supported.
+
+No source download, paid provider call, Supabase write/DDL, production `.pkl` change, model refit, threshold/weight/contract change, promotion, bet, merge, main update, schedule change, or other-agent change occurred. HUMAN-MERGE only.
