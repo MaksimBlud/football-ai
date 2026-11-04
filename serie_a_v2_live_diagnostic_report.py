@@ -7,6 +7,8 @@ The 19-feature V2 outputs are DIAGNOSTIC ONLY, not prospective observations.
 """
 from __future__ import annotations
 
+from serie_a_v2_source_rights import require_original_v2_source_rights
+
 import argparse
 from datetime import datetime, timezone
 import hashlib
@@ -189,6 +191,7 @@ def make_report(quotes: list[dict], history: pd.DataFrame, source_audit: list[di
 
 
 def main() -> None:
+    require_original_v2_source_rights()
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--raw-source-dir", type=Path, required=True)
