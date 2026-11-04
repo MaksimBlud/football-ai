@@ -49,6 +49,10 @@ SOURCE_CAPTURE_SCRIPT_PATH = "serie_a_v2_current_form_source_capture.py"
 EXPECTED_SOURCE_CAPTURE_SCRIPT_BLOB_SHA1 = "59ac00c5c1975b850e475102867b7734068c2c5f"
 HISTORICAL_SOURCE_LOADER_PATH = "serie_a_v2_live_diagnostic_report.py"
 EXPECTED_HISTORICAL_SOURCE_LOADER_BLOB_SHA1 = "d3b717ea03570413f1d0b6b6f9821b2be0db16a3"
+SOURCE_RIGHTS_HELPER_PATH = "market_anchor_v2_source_rights.py"
+EXPECTED_SOURCE_RIGHTS_HELPER_BLOB_SHA1 = "9fd3a12013af3e0fbe080ffc5a608f50fe21e1bb"
+SOURCE_RIGHTS_MANIFEST_PATH = "research/source_rights/football_data_co_uk.json"
+EXPECTED_SOURCE_RIGHTS_MANIFEST_BLOB_SHA1 = "ca57046b1408bca39381850e3e3a4b3d70830c6c"
 SCHEMA_VERSION = "SERIE_A_V2_CURRENT_FORM_FORWARD_CAPTURE_V1"
 MAX_QUOTE_AGE = timedelta(hours=24)
 MAX_SOURCE_AGE = timedelta(hours=24)
@@ -142,6 +146,8 @@ def verify_source_run(
     source_blobs = (
         (SOURCE_CAPTURE_SCRIPT_PATH, EXPECTED_SOURCE_CAPTURE_SCRIPT_BLOB_SHA1),
         (HISTORICAL_SOURCE_LOADER_PATH, EXPECTED_HISTORICAL_SOURCE_LOADER_BLOB_SHA1),
+        (SOURCE_RIGHTS_HELPER_PATH, EXPECTED_SOURCE_RIGHTS_HELPER_BLOB_SHA1),
+        (SOURCE_RIGHTS_MANIFEST_PATH, EXPECTED_SOURCE_RIGHTS_MANIFEST_BLOB_SHA1),
     )
     verified_blobs = {}
     for path, expected_sha in source_blobs:
@@ -151,7 +157,7 @@ def verify_source_run(
                 or source_file.get("type") != "file"
                 or source_file.get("sha") != expected_sha):
             raise ValueError(
-                f"current-form source artifact parent does not pin approved redirect-guarded source code: {path}"
+                f"current-form source artifact parent does not pin approved redirect-guarded source/rights file: {path}"
             )
         verified_blobs[path] = source_file["sha"]
     return {
@@ -162,6 +168,8 @@ def verify_source_run(
         "run_completed_at_utc": completed.isoformat(),
         "source_capture_blob_sha1": verified_blobs[SOURCE_CAPTURE_SCRIPT_PATH],
         "historical_source_loader_blob_sha1": verified_blobs[HISTORICAL_SOURCE_LOADER_PATH],
+        "source_rights_helper_blob_sha1": verified_blobs[SOURCE_RIGHTS_HELPER_PATH],
+        "source_rights_manifest_blob_sha1": verified_blobs[SOURCE_RIGHTS_MANIFEST_PATH],
     }
 
 

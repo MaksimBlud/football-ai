@@ -16,6 +16,8 @@ from serie_a_v2_forward_capture import (
     ARTIFACT_NAME, ARCHIVE_REPORT, SOURCE_DIR,
     discover_archives, get_archive, prepare_forward_capture, verify_source_run,
     SOURCE_WORKFLOW_PATH, SOURCE_LOADER_PATH, EXPECTED_SOURCE_LOADER_BLOB_SHA1,
+    SOURCE_RIGHTS_HELPER_PATH, EXPECTED_SOURCE_RIGHTS_HELPER_BLOB_SHA1,
+    SOURCE_RIGHTS_MANIFEST_PATH, EXPECTED_SOURCE_RIGHTS_MANIFEST_BLOB_SHA1,
 )
 
 NOW = datetime(2026, 10, 14, 7, 0, tzinfo=timezone.utc)
@@ -266,30 +268,35 @@ def test_successful_exact_source_workflow_and_prequote_completion_required():
         "updated_at": "2026-10-13T15:01:00Z",
     }
     run_url = f"{forward_capture_module.GITHUB_API}/actions/runs/456"
-    loader_url = (
-        f"{forward_capture_module.GITHUB_API}/contents/{SOURCE_LOADER_PATH}?ref={'a'*40}"
-    )
+    approved = {
+        SOURCE_LOADER_PATH: EXPECTED_SOURCE_LOADER_BLOB_SHA1,
+        SOURCE_RIGHTS_HELPER_PATH: EXPECTED_SOURCE_RIGHTS_HELPER_BLOB_SHA1,
+        SOURCE_RIGHTS_MANIFEST_PATH: EXPECTED_SOURCE_RIGHTS_MANIFEST_BLOB_SHA1,
+    }
+    approved_urls = {
+        path: f"{forward_capture_module.GITHUB_API}/contents/{path}?ref={'a'*40}"
+        for path in approved
+    }
     hits = []
     def get(url, headers, timeout, allow_redirects):
         assert allow_redirects is False
         hits.append(url)
         if url == run_url:
             return Response(valid, url)
-        if url == loader_url:
-            return Response({
-                "path": SOURCE_LOADER_PATH,
-                "type": "file",
-                "sha": EXPECTED_SOURCE_LOADER_BLOB_SHA1,
-            }, url)
+        for path, expected_sha in approved.items():
+            if url == approved_urls[path]:
+                return Response({"path": path, "type": "file", "sha": expected_sha}, url)
         raise AssertionError(f"unexpected GitHub API URL: {url}")
     result = verify_source_run(
         meta, quote_time=parse_utc("2026-10-14T06:00:00Z"),
         token="test-token", get=get,
     )
-    assert hits == [run_url, loader_url]
+    assert hits == [run_url, *approved_urls.values()]
     assert result["workflow_path"] == SOURCE_WORKFLOW_PATH
     assert result["run_completed_at_utc"] == "2026-10-13T15:01:00+00:00"
     assert result["source_loader_blob_sha1"] == EXPECTED_SOURCE_LOADER_BLOB_SHA1
+    assert result["source_rights_helper_blob_sha1"] == EXPECTED_SOURCE_RIGHTS_HELPER_BLOB_SHA1
+    assert result["source_rights_manifest_blob_sha1"] == EXPECTED_SOURCE_RIGHTS_MANIFEST_BLOB_SHA1
     for altered, expected in [
         ({"path":".github/workflows/other.yml"}, "verified original V2 collector"),
         ({"head_sha":"b"*40}, "verified original V2 collector"),
@@ -303,12 +310,9 @@ def test_successful_exact_source_workflow_and_prequote_completion_required():
             assert allow_redirects is False
             if url == run_url:
                 return Response({**valid, **altered}, url)
-            if url == loader_url:
-                return Response({
-                    "path": SOURCE_LOADER_PATH,
-                    "type": "file",
-                    "sha": EXPECTED_SOURCE_LOADER_BLOB_SHA1,
-                }, url)
+            for path, expected_sha in approved.items():
+                if url == approved_urls[path]:
+                    return Response({"path": path, "type": "file", "sha": expected_sha}, url)
             raise AssertionError(f"unexpected GitHub API URL: {url}")
         with pytest.raises(ValueError, match=expected):
             verify_source_run(

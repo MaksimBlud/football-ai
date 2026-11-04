@@ -1110,6 +1110,18 @@ def test_verified_current_form_parent_accepts_only_pinned_main_capture_events(mo
                 "type": "file",
                 "sha": forward_capture_module.EXPECTED_HISTORICAL_SOURCE_LOADER_BLOB_SHA1,
             }
+        if f"/contents/{forward_capture_module.SOURCE_RIGHTS_HELPER_PATH}?ref={HEAD}" in url:
+            return {
+                "path": forward_capture_module.SOURCE_RIGHTS_HELPER_PATH,
+                "type": "file",
+                "sha": forward_capture_module.EXPECTED_SOURCE_RIGHTS_HELPER_BLOB_SHA1,
+            }
+        if f"/contents/{forward_capture_module.SOURCE_RIGHTS_MANIFEST_PATH}?ref={HEAD}" in url:
+            return {
+                "path": forward_capture_module.SOURCE_RIGHTS_MANIFEST_PATH,
+                "type": "file",
+                "sha": forward_capture_module.EXPECTED_SOURCE_RIGHTS_MANIFEST_BLOB_SHA1,
+            }
         raise AssertionError(f"unexpected GitHub API URL: {url}")
 
     monkeypatch.setattr(forward_capture_module, "_github_json", fake_github_json)
@@ -1135,6 +1147,8 @@ def test_verified_current_form_parent_accepts_only_pinned_main_capture_events(mo
             "serie_a_v2_live_diagnostic_report.py",
             "fae3698769f857fbcb6c8d3ea7826eb81135fec4",
         ),
+        ("market_anchor_v2_source_rights.py", "0" * 40),
+        ("research/source_rights/football_data_co_uk.json", "0" * 40),
     ],
 )
 def test_current_form_parent_rejects_pre_guard_source_code_blobs(monkeypatch, bad_path, bad_sha):
@@ -1151,6 +1165,8 @@ def test_current_form_parent_rejects_pre_guard_source_code_blobs(monkeypatch, ba
         for path in (
             forward_capture_module.SOURCE_CAPTURE_SCRIPT_PATH,
             forward_capture_module.HISTORICAL_SOURCE_LOADER_PATH,
+            forward_capture_module.SOURCE_RIGHTS_HELPER_PATH,
+            forward_capture_module.SOURCE_RIGHTS_MANIFEST_PATH,
         ):
             if f"/contents/{path}?ref={HEAD}" in url:
                 sha = bad_sha if path == bad_path else (

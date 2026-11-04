@@ -33,6 +33,10 @@ ARTIFACT_NAME = "serie-a-v2-free-real-quote-diagnostic"
 SOURCE_WORKFLOW_PATH = ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
 SOURCE_LOADER_PATH = "serie_a_v2_live_diagnostic_report.py"
 EXPECTED_SOURCE_LOADER_BLOB_SHA1 = "d3b717ea03570413f1d0b6b6f9821b2be0db16a3"
+SOURCE_RIGHTS_HELPER_PATH = "market_anchor_v2_source_rights.py"
+EXPECTED_SOURCE_RIGHTS_HELPER_BLOB_SHA1 = "9fd3a12013af3e0fbe080ffc5a608f50fe21e1bb"
+SOURCE_RIGHTS_MANIFEST_PATH = "research/source_rights/football_data_co_uk.json"
+EXPECTED_SOURCE_RIGHTS_MANIFEST_BLOB_SHA1 = "ca57046b1408bca39381850e3e3a4b3d70830c6c"
 GITHUB_API = f"https://api.github.com/repos/{REPOSITORY}"
 SCHEMA_VERSION = "SERIE_A_ORIGINAL_V2_FORWARD_SOURCE_BEFORE_QUOTE_V1"
 
@@ -129,20 +133,30 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
     created = parse_utc(j["created_at"])
     if not created <= archive["created_at"] or not archive["created_at"] <= completed:
         raise ValueError("source workflow and archived artifact times conflict")
-    loader_url = f"{GITHUB_API}/contents/{SOURCE_LOADER_PATH}?ref={head_sha}"
-    loader = _github_json(loader_url, token=token, get=get)
-    if (loader.get("path") != SOURCE_LOADER_PATH
-            or loader.get("type") != "file"
-            or loader.get("sha") != EXPECTED_SOURCE_LOADER_BLOB_SHA1):
-        raise ValueError(
-            "source artifact parent does not pin the redirect-guarded V2 source loader"
-        )
+    approved_source_files = (
+        (SOURCE_LOADER_PATH, EXPECTED_SOURCE_LOADER_BLOB_SHA1),
+        (SOURCE_RIGHTS_HELPER_PATH, EXPECTED_SOURCE_RIGHTS_HELPER_BLOB_SHA1),
+        (SOURCE_RIGHTS_MANIFEST_PATH, EXPECTED_SOURCE_RIGHTS_MANIFEST_BLOB_SHA1),
+    )
+    verified_blobs = {}
+    for path, expected_sha in approved_source_files:
+        source_url = f"{GITHUB_API}/contents/{path}?ref={head_sha}"
+        source_file = _github_json(source_url, token=token, get=get)
+        if (source_file.get("path") != path
+                or source_file.get("type") != "file"
+                or source_file.get("sha") != expected_sha):
+            raise ValueError(
+                f"source artifact parent does not pin approved redirect-guarded V2 source/rights file: {path}"
+            )
+        verified_blobs[path] = source_file["sha"]
     return {
         "run_id": run_id,
         "run_head_sha": head_sha,
         "workflow_path": SOURCE_WORKFLOW_PATH,
         "run_completed_at_utc": completed.isoformat(),
-        "source_loader_blob_sha1": loader["sha"],
+        "source_loader_blob_sha1": verified_blobs[SOURCE_LOADER_PATH],
+        "source_rights_helper_blob_sha1": verified_blobs[SOURCE_RIGHTS_HELPER_PATH],
+        "source_rights_manifest_blob_sha1": verified_blobs[SOURCE_RIGHTS_MANIFEST_PATH],
     }
 
 
