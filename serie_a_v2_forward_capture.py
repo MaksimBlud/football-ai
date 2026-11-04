@@ -6,6 +6,8 @@ All V2 shadow forecasts remain NO_BET / NOT frozen-prospective-admissible.
 """
 from __future__ import annotations
 
+from serie_a_v2_source_rights import require_original_v2_source_rights
+
 import argparse
 from datetime import datetime, timezone
 from io import BytesIO
@@ -266,6 +268,7 @@ def prepare_forward_capture(
 
 
 def main() -> None:
+    require_original_v2_source_rights()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--sources-output-dir", type=Path, required=True)
