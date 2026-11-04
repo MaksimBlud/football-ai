@@ -41,6 +41,12 @@ CURRENT_URL = (
 )
 MANIFEST_FILENAME = "serie_a_v2_current_form_source_manifest.json"
 EXPECTED_BUILDER_BLOB_SHA1 = "401b3a0893371bfa4a488ec92a4a54af2678c8f7"
+ORIGINAL_SOURCE_CREATOR_BLOB_SHAS = {
+    "serie_a_v2_live_diagnostic_report.py": "d3b717ea03570413f1d0b6b6f9821b2be0db16a3",
+    "serie_a_v2_current_form_source_capture.py": "59ac00c5c1975b850e475102867b7734068c2c5f",
+    "market_anchor_v2_source_rights.py": "9fd3a12013af3e0fbe080ffc5a608f50fe21e1bb",
+    "research/source_rights/football_data_co_uk.json": "ca57046b1408bca39381850e3e3a4b3d70830c6c",
+}
 EXPECTED_FEATURE_COUNT = 19
 OLD_CUTOFF = pd.Timestamp("2026-07-01")
 MAX_ARCHIVE_BYTES = 16_000_000
@@ -278,6 +284,34 @@ def _download_archive(
             close()
 
 
+
+def _verify_source_creator_blob_shas(
+    head_sha: str, *, token: str, get: Callable[..., Any]
+) -> dict[str, str]:
+    """Pin the exact code and rights policy that created the historical source ZIP.
+
+    The ZIP and CSV digests prove byte integrity, not which downloader or rights
+    policy produced those bytes. Query each blob at the authenticated parent
+    commit and fail closed before any historical CSV is extracted.
+    """
+    if not isinstance(head_sha, str) or SHA1_RE.fullmatch(head_sha) is None:
+        raise ValueError("source creator HEAD SHA is malformed")
+    verified: dict[str, str] = {}
+    for path, expected_sha in ORIGINAL_SOURCE_CREATOR_BLOB_SHAS.items():
+        payload = _github_json(
+            f"{GITHUB_API}/contents/{path}?ref={head_sha}",
+            token=token,
+            get=get,
+        )
+        if (
+            payload.get("path") != path
+            or payload.get("type") != "file"
+            or payload.get("sha") != expected_sha
+        ):
+            raise ValueError(f"source creator code SHA mismatch for {path}")
+        verified[path] = expected_sha
+    return verified
+
 def _verify_origin_provenance(
     reuse_meta: Any,
     *,
@@ -288,6 +322,9 @@ def _verify_origin_provenance(
 ) -> tuple[dict, datetime, bool]:
     current_parent_created = _utc(parent["run_created_at_utc"], field="current parent run created_at")
     if reuse_meta is None:
+        creator_blob_shas = _verify_source_creator_blob_shas(
+            artifact["head_sha"], token=token, get=get
+        )
         return {
             "source_artifact_id": artifact["artifact_id"],
             "source_artifact_sha256": artifact["sha256"],
@@ -295,6 +332,7 @@ def _verify_origin_provenance(
             "source_parent_run_id": artifact["run_id"],
             "source_parent_run_head_sha": artifact["head_sha"],
             "source_parent_run_completed_at_utc": parent["run_completed_at_utc"],
+            "source_creator_blob_shas": creator_blob_shas,
         }, artifact["created_at"], False
 
     if not isinstance(reuse_meta, Mapping):
@@ -312,6 +350,9 @@ def _verify_origin_provenance(
             or reuse_meta.get("paid_provider_calls") != 0
         ):
             raise ValueError("direct-download provenance does not match the bootstrap contract")
+        creator_blob_shas = _verify_source_creator_blob_shas(
+            artifact["head_sha"], token=token, get=get
+        )
         return {
             "source_artifact_id": artifact["artifact_id"],
             "source_artifact_sha256": artifact["sha256"],
@@ -319,6 +360,7 @@ def _verify_origin_provenance(
             "source_parent_run_id": artifact["run_id"],
             "source_parent_run_head_sha": artifact["head_sha"],
             "source_parent_run_completed_at_utc": parent["run_completed_at_utc"],
+            "source_creator_blob_shas": creator_blob_shas,
         }, artifact["created_at"], False
 
     if mode != "REUSED_VERIFIED_MAIN_ARTIFACT_HISTORICAL_ONLY":
@@ -390,6 +432,9 @@ def _verify_origin_provenance(
         or origin_completed_declared > current_parent_created
     ):
         raise ValueError("historical reuse origin is not completed before the current source run")
+    creator_blob_shas = _verify_source_creator_blob_shas(
+        origin_head, token=token, get=get
+    )
     return {
         "source_artifact_id": origin_id,
         "source_artifact_sha256": origin_sha,
@@ -397,6 +442,7 @@ def _verify_origin_provenance(
         "source_parent_run_id": origin_run_id,
         "source_parent_run_head_sha": origin_head,
         "source_parent_run_completed_at_utc": origin_completed_declared.isoformat(),
+        "source_creator_blob_shas": creator_blob_shas,
     }, origin_created, True
 
 
