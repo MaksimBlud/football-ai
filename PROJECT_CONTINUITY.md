@@ -1,3 +1,22 @@
+## 2026-11-04 11:54 UTC — Research Brain exact-head and pre-match audit
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main ref was changed. Original candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 features and original weights/protocol unchanged; `active_lambda=0), `shadow_lambda=1) research-only. Candidate JSON, protocol, historical feature builder, and core `market_anchor_1x2_v2_shadow.py` blobs match between main and #699. The #699 shadow-preview diff is guard-only; the complete inference body from `previews = []` onward is byte-identical.
+
+Current exact PR heads:
+- #705 `8b139335e6722b7c4f5286962486bca84bced20d`: 8/8 SUCCESS; 22 budget tests. Its branch already combines the shared 170-hour download budget and offline-only push validation for Current-Form Source Capture.
+- #699 `8f767e0877a87d002209b80c19ce6dbdb2a3050b`: 7/7 SUCCESS; 320 frozen V2 shadow tests. It must be rebased after #705 and preserve the budget/offline-push guards; its current workflow branch would otherwise permit capture on push.
+- #709 `268f3fdc82036fca0e44dc0aef20d39423cfda2d`: 7/7 SUCCESS but superseded by #705 for the same workflow; do not merge independently because it lacks the budget guard.
+- #712 `4b9b1281a8ab81988ea713eb5974d1e55dbba81d`: one dedicated offline run #41817875512 SUCCESS, 53 tests; no full PR-validation set on this current HEAD, and GitHub reports mergeable=false. Its older 9/9 claim is for a prior SHA. Rebase after #705/#699 and preserve the source-rights gate before archive use.
+- #704 14 observed check runs all SUCCESS; #701 6/6; #702 7/7; #706 6/6. #711 remains the overlapping draft alternative to #712; #707 candidate rebuild/refit remains excluded.
+
+Read-only Supabase: Serie A 2026/27 metadata query selected only `match_date,home_team,away_team`: 103 raw rows, 100 canonical identities after the existing Atalanta alias, 3 alias duplicates, through 2026-11-02. This is the feature-input gate only. Across all leagues, 3,966 odds snapshots include 3,915 strictly pre-match rows but **zero future-kickoff pre-match rows**; Serie A's latest strict pre-match snapshot remains 2026-10-13 14:48:53 UTC. The 40 product prediction snapshots are all `EPL_AI_MARKET_PAIR_V1`; none uses the frozen V2 candidate SHA. Prospective evaluation remains 0/30; no Brier/LogLoss or superiority claim.
+
+Last verifiable main V2 workflow runs remain 2026-11-03 and recorded zero quotes/zero previews. The GitHub connector does not expose repository-wide scheduled-run discovery for 2026-11-04, so today's schedule status is unknown. No target outcomes, protected current-season CSV member, new public CSV download, paid provider call, Supabase write/DDL, production artifact, or schedule was touched. Source rights remain conditional personal/academic research interpretation, not a provider-issued AI-inference licence; training/commercial/public-product use remains blocked.
+
+Detailed evidence, exact SHAs, workflow blobs, SQL scope, CI run IDs, and merge order are in [`PROJECT_CONTINUITY_ADDENDUM_20261102_V2_RUNTIME_AUDIT.md`](PROJECT_CONTINUITY_ADDENDUM_20261102_V2_RUNTIME_AUDIT.md). HUMAN-MERGE only; no main merge or production change.
+
+---
+
 ## 2026-11-04 08:15 UTC — rights, evaluator, and pre-match data audit
 
 Fresh main is still `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This is an update to the existing documentation branch only. Main, model artifacts, schedules, and Supabase were not changed.
