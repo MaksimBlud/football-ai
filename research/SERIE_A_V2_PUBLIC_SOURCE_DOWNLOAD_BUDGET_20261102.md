@@ -3,6 +3,23 @@
 Audit timestamp: 2026-11-03 01:56 UTC  
 Base main: `40887ebb215730190d7a6c7a1693373ec4afcdfc`
 
+## Fresh main-only bootstrap recheck — 2026-11-04 14:26 UTC
+
+This section supersedes the initial Nov 3 bootstrap examples below. The guard must bootstrap from the newest authenticated legacy artifact for each workflow, not from the older audit snapshot.
+
+| Workflow | Latest successful main run | Artifact | Artifact created (UTC) | SHA-256 | Next 170-hour slot |
+|---|---:|---:|---|---|---|
+| Current-Form Source Capture | [#41836971469](https://github.com/MaksimBlud/football-ai/actions/runs/41836971469) | 13327281383 | 2026-11-04 13:19:46 | `9dced08f96d81c39dcc199afba481fab07961ce6b61d14776fdc78563bc8cccd` | 2026-11-11 15:19:46 |
+| Free Real-Quote Diagnostic | [#41847314320](https://github.com/MaksimBlud/football-ai/actions/runs/41847314320) | 13332260799 | 2026-11-04 14:25:54 | `72a32dc61d6e230be46bc5fe69a52e97142a79816af33c66f58066e0ceb6e8d8` | 2026-11-11 16:25:54 |
+
+The Nov 4 Source Capture log reports 10 historical CSVs plus the current-season CSV (11 source files), 3,800 historical rows, 100 completed current-season prior-day rows, and a 100-event feature-input gate. It reports zero paid-provider calls and zero Supabase writes. Its source archive was created on unguarded main before this PR's marker guard was integrated.
+
+The Nov 4 Free Diagnostic log reports 10 public HTTP requests, zero scored diagnostics, zero paid-provider requests, and zero Supabase writes. It also ran on unguarded main before this PR's marker guard was integrated.
+
+Adding 170 hours to the two exact artifact creation times yields the next eligible instants above. With the unchanged daily schedules (05:50 and 06:13 UTC), and assuming no newer attempts, the first scheduled slots after both cooldowns are **2026-11-12 05:50 UTC** for Current-Form Source Capture and **2026-11-12 06:13 UTC** for Free Real-Quote Diagnostic.
+
+Main remains unguarded until HUMAN-MERGE of this PR. Therefore the next existing main schedules on Nov 5 (05:50 and 06:13 UTC) are still download-capable under the old workflow definitions if this PR has not been merged. This note does not dispatch, cancel, or alter either workflow.
+
 ## Provider policy and unresolved rights
 
 The official Football-Data.co.uk fair-use page says its free CSV/Excel data is intended for private individuals' personal betting and/or academic research, with manual downloads or at most light automated downloading (twice per week maximum). It also says users seeking commercial, AI-usage, or model-training use should assume no permission is granted.
