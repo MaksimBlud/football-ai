@@ -15,7 +15,7 @@ from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
 from serie_a_v2_forward_capture import (
     ARTIFACT_NAME, ARCHIVE_REPORT, SOURCE_DIR,
     discover_archives, get_archive, prepare_forward_capture, verify_source_run,
-    SOURCE_WORKFLOW_PATH,
+    SOURCE_WORKFLOW_PATH, SOURCE_LOADER_PATH, EXPECTED_SOURCE_LOADER_BLOB_SHA1,
 )
 
 NOW = datetime(2026, 10, 14, 7, 0, tzinfo=timezone.utc)
@@ -265,16 +265,31 @@ def test_successful_exact_source_workflow_and_prequote_completion_required():
         "created_at": "2026-10-13T14:40:00Z",
         "updated_at": "2026-10-13T15:01:00Z",
     }
+    run_url = f"{forward_capture_module.GITHUB_API}/actions/runs/456"
+    loader_url = (
+        f"{forward_capture_module.GITHUB_API}/contents/{SOURCE_LOADER_PATH}?ref={'a'*40}"
+    )
     hits = []
     def get(url, headers, timeout, allow_redirects):
         assert allow_redirects is False
         hits.append(url)
-        return Response(valid, url)
-    result = verify_source_run(meta, quote_time=parse_utc("2026-10-14T06:00:00Z"),
-                               token="test-token", get=get)
-    assert hits == ["https://api.github.com/repos/MaksimBlud/football-ai/actions/runs/456"]
+        if url == run_url:
+            return Response(valid, url)
+        if url == loader_url:
+            return Response({
+                "path": SOURCE_LOADER_PATH,
+                "type": "file",
+                "sha": EXPECTED_SOURCE_LOADER_BLOB_SHA1,
+            }, url)
+        raise AssertionError(f"unexpected GitHub API URL: {url}")
+    result = verify_source_run(
+        meta, quote_time=parse_utc("2026-10-14T06:00:00Z"),
+        token="test-token", get=get,
+    )
+    assert hits == [run_url, loader_url]
     assert result["workflow_path"] == SOURCE_WORKFLOW_PATH
     assert result["run_completed_at_utc"] == "2026-10-13T15:01:00+00:00"
+    assert result["source_loader_blob_sha1"] == EXPECTED_SOURCE_LOADER_BLOB_SHA1
     for altered, expected in [
         ({"path":".github/workflows/other.yml"}, "verified original V2 collector"),
         ({"head_sha":"b"*40}, "verified original V2 collector"),
@@ -284,12 +299,60 @@ def test_successful_exact_source_workflow_and_prequote_completion_required():
         ({"event":"push"}, "verified original V2 collector"),
         ({"updated_at":"2026-10-14T06:01:00Z"}, "not successfully finished before quote"),
     ]:
-        def bad_get(url,headers,timeout,allow_redirects):
+        def bad_get(url, headers, timeout, allow_redirects):
             assert allow_redirects is False
-            return Response({**valid,**altered}, url)
+            if url == run_url:
+                return Response({**valid, **altered}, url)
+            if url == loader_url:
+                return Response({
+                    "path": SOURCE_LOADER_PATH,
+                    "type": "file",
+                    "sha": EXPECTED_SOURCE_LOADER_BLOB_SHA1,
+                }, url)
+            raise AssertionError(f"unexpected GitHub API URL: {url}")
         with pytest.raises(ValueError, match=expected):
-            verify_source_run(meta, quote_time=parse_utc("2026-10-14T06:00:00Z"),
-                              token="test-token", get=bad_get)
+            verify_source_run(
+                meta, quote_time=parse_utc("2026-10-14T06:00:00Z"),
+                token="test-token", get=bad_get,
+            )
+
+
+def test_legacy_source_loader_blob_is_rejected_before_forward_archive_download():
+    raw, metadata = make_source_archive()
+    meta = metadata[0]
+    valid = {
+        "id": 456, "path": SOURCE_WORKFLOW_PATH,
+        "head_branch": "main", "head_sha": "a"*40,
+        "status": "completed", "conclusion": "success",
+        "event": "schedule",
+        "created_at": "2026-10-13T14:40:00Z",
+        "updated_at": "2026-10-13T15:01:00Z",
+    }
+    downloads = []
+    def get(url, headers, timeout, allow_redirects):
+        assert allow_redirects is False
+        if url.endswith("/actions/runs/456"):
+            return type("Response", (), {
+                "url": url, "status_code": 200, "json": lambda self: valid
+            })()
+        if "/contents/" + SOURCE_LOADER_PATH + "?ref=" in url:
+            return type("Response", (), {
+                "url": url, "status_code": 200,
+                "json": lambda self: {
+                    "path": SOURCE_LOADER_PATH, "type": "file",
+                    "sha": "fae3698769f857fbcb6c8d3ea7826eb81135fec4",
+                }
+            })()
+        raise AssertionError(f"unexpected GitHub API URL: {url}")
+    with pytest.raises(ValueError, match="redirect-guarded V2 source loader"):
+        prepare_forward_capture(
+            [quote()], [meta], as_of_utc=NOW,
+            load_archive=lambda artifact_id: downloads.append(artifact_id) or raw,
+            verify_parent_run=lambda archive, quote_time: verify_source_run(
+                archive, quote_time=quote_time, token="test-token", get=get
+            ),
+        )
+    assert downloads == []
 
 
 def test_forward_v2_refuses_unknown_or_late_parent_workflow_before_zip_download():

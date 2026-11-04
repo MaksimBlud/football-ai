@@ -31,6 +31,8 @@ from market_anchor_v2_source_rights import require_personal_research_inference_s
 REPOSITORY = "MaksimBlud/football-ai"
 ARTIFACT_NAME = "serie-a-v2-free-real-quote-diagnostic"
 SOURCE_WORKFLOW_PATH = ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
+SOURCE_LOADER_PATH = "serie_a_v2_live_diagnostic_report.py"
+EXPECTED_SOURCE_LOADER_BLOB_SHA1 = "d3b717ea03570413f1d0b6b6f9821b2be0db16a3"
 GITHUB_API = f"https://api.github.com/repos/{REPOSITORY}"
 SCHEMA_VERSION = "SERIE_A_ORIGINAL_V2_FORWARD_SOURCE_BEFORE_QUOTE_V1"
 
@@ -102,19 +104,22 @@ def discover_archives(*, token: str, get=requests.get) -> list[dict]:
 
 def verify_source_run(archive: dict, *, quote_time: datetime,
                       token: str, get=requests.get) -> dict:
-    """Authenticate artifact parent as our exact successful public CSV collector.
+    """Authenticate the exact successful source run and its redirect-guarded loader.
 
-    The artifact name+main branch alone are NOT evidence that its bytes came
-    from the verified source workflow. A successful parent run must also have
-    finished BEFORE the saved bookmaker quote, not only before inspection.
+    A main-branch run and a matching ZIP digest do not prove which code fetched
+    the CSVs. Pin the historical loader blob at the parent commit before the
+    archive can be consumed for any original V2 quote.
     """
-    run_id = archive["run_id"]
+    run_id = archive.get("run_id")
+    head_sha = archive.get("head_sha")
     if type(run_id) is not int or run_id <= 0:
         raise ValueError("source archive is missing a parent GitHub run")
+    if not isinstance(head_sha, str) or re.fullmatch(r"[0-9a-f]{40}", head_sha) is None:
+        raise ValueError("source archive is missing a valid parent HEAD SHA")
     j = _github_json(f"{GITHUB_API}/actions/runs/{run_id}", token=token, get=get)
     if (j.get("id") != run_id or j.get("path") != SOURCE_WORKFLOW_PATH
             or j.get("head_branch") != "main"
-            or j.get("head_sha") != archive["head_sha"]
+            or j.get("head_sha") != head_sha
             or j.get("status") != "completed" or j.get("conclusion") != "success"
             or j.get("event") not in ("schedule", "workflow_dispatch")):
         raise ValueError("source artifact parent run is not the verified original V2 collector")
@@ -124,11 +129,20 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
     created = parse_utc(j["created_at"])
     if not created <= archive["created_at"] or not archive["created_at"] <= completed:
         raise ValueError("source workflow and archived artifact times conflict")
+    loader_url = f"{GITHUB_API}/contents/{SOURCE_LOADER_PATH}?ref={head_sha}"
+    loader = _github_json(loader_url, token=token, get=get)
+    if (loader.get("path") != SOURCE_LOADER_PATH
+            or loader.get("type") != "file"
+            or loader.get("sha") != EXPECTED_SOURCE_LOADER_BLOB_SHA1):
+        raise ValueError(
+            "source artifact parent does not pin the redirect-guarded V2 source loader"
+        )
     return {
         "run_id": run_id,
-        "run_head_sha": archive["head_sha"],
+        "run_head_sha": head_sha,
         "workflow_path": SOURCE_WORKFLOW_PATH,
         "run_completed_at_utc": completed.isoformat(),
+        "source_loader_blob_sha1": loader["sha"],
     }
 
 
