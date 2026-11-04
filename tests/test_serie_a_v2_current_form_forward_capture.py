@@ -1094,20 +1094,80 @@ def test_verified_current_form_parent_accepts_only_pinned_main_capture_events(mo
         "created_at": PARENT_CREATED,
         "updated_at": PARENT_COMPLETED,
     }
-    monkeypatch.setattr(
-        forward_capture_module,
-        "_github_json",
-        lambda *_args, **_kwargs: run,
-    )
 
+    def fake_github_json(url, *_args, **_kwargs):
+        if url.endswith("/actions/runs/123"):
+            return run
+        if f"/contents/{forward_capture_module.SOURCE_CAPTURE_SCRIPT_PATH}?ref={HEAD}" in url:
+            return {
+                "path": forward_capture_module.SOURCE_CAPTURE_SCRIPT_PATH,
+                "type": "file",
+                "sha": forward_capture_module.EXPECTED_SOURCE_CAPTURE_SCRIPT_BLOB_SHA1,
+            }
+        if f"/contents/{forward_capture_module.HISTORICAL_SOURCE_LOADER_PATH}?ref={HEAD}" in url:
+            return {
+                "path": forward_capture_module.HISTORICAL_SOURCE_LOADER_PATH,
+                "type": "file",
+                "sha": forward_capture_module.EXPECTED_HISTORICAL_SOURCE_LOADER_BLOB_SHA1,
+            }
+        raise AssertionError(f"unexpected GitHub API URL: {url}")
+
+    monkeypatch.setattr(forward_capture_module, "_github_json", fake_github_json)
     verified = forward_capture_module.verify_source_run(
         archive,
         quote_time=datetime(2026, 10, 19, 5, 30, tzinfo=timezone.utc),
         token="test-read-only-token",
     )
-
     assert verified["run_id"] == 123
     assert verified["workflow_path"] == SOURCE_WORKFLOW_PATH
+    assert verified["source_capture_blob_sha1"] == forward_capture_module.EXPECTED_SOURCE_CAPTURE_SCRIPT_BLOB_SHA1
+    assert verified["historical_source_loader_blob_sha1"] == forward_capture_module.EXPECTED_HISTORICAL_SOURCE_LOADER_BLOB_SHA1
+
+
+@pytest.mark.parametrize(
+    ("bad_path", "bad_sha"),
+    [
+        (
+            "serie_a_v2_current_form_source_capture.py",
+            "9f48a4a6e78d5d7ffa193ec6f24b394162f36ab4",
+        ),
+        (
+            "serie_a_v2_live_diagnostic_report.py",
+            "fae3698769f857fbcb6c8d3ea7826eb81135fec4",
+        ),
+    ],
+)
+def test_current_form_parent_rejects_pre_guard_source_code_blobs(monkeypatch, bad_path, bad_sha):
+    archive = {"run_id": 123, "head_sha": HEAD, "created_at": ARTIFACT_CREATED}
+    run = {
+        "id": 123, "path": SOURCE_WORKFLOW_PATH, "head_branch": "main",
+        "head_sha": HEAD, "status": "completed", "conclusion": "success",
+        "event": "schedule", "created_at": PARENT_CREATED, "updated_at": PARENT_COMPLETED,
+    }
+
+    def fake_github_json(url, *_args, **_kwargs):
+        if url.endswith("/actions/runs/123"):
+            return run
+        for path in (
+            forward_capture_module.SOURCE_CAPTURE_SCRIPT_PATH,
+            forward_capture_module.HISTORICAL_SOURCE_LOADER_PATH,
+        ):
+            if f"/contents/{path}?ref={HEAD}" in url:
+                sha = bad_sha if path == bad_path else (
+                    forward_capture_module.EXPECTED_SOURCE_CAPTURE_SCRIPT_BLOB_SHA1
+                    if path == forward_capture_module.SOURCE_CAPTURE_SCRIPT_PATH
+                    else forward_capture_module.EXPECTED_HISTORICAL_SOURCE_LOADER_BLOB_SHA1
+                )
+                return {"path": path, "type": "file", "sha": sha}
+        raise AssertionError(f"unexpected GitHub API URL: {url}")
+
+    monkeypatch.setattr(forward_capture_module, "_github_json", fake_github_json)
+    with pytest.raises(ValueError, match="approved redirect-guarded source code"):
+        forward_capture_module.verify_source_run(
+            archive,
+            quote_time=datetime(2026, 10, 19, 5, 30, tzinfo=timezone.utc),
+            token="test-read-only-token",
+        )
 
 
 @pytest.mark.parametrize("event", ["push", "pull_request", "repository_dispatch", "workflow_call"])

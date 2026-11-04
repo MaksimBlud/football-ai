@@ -45,6 +45,10 @@ REPOSITORY = "MaksimBlud/football-ai"
 GITHUB_API = f"https://api.github.com/repos/{REPOSITORY}"
 ARTIFACT_NAME = "serie-a-v2-current-form-source-capture"
 SOURCE_WORKFLOW_PATH = ".github/workflows/serie-a-v2-current-form-source-capture.yml"
+SOURCE_CAPTURE_SCRIPT_PATH = "serie_a_v2_current_form_source_capture.py"
+EXPECTED_SOURCE_CAPTURE_SCRIPT_BLOB_SHA1 = "59ac00c5c1975b850e475102867b7734068c2c5f"
+HISTORICAL_SOURCE_LOADER_PATH = "serie_a_v2_live_diagnostic_report.py"
+EXPECTED_HISTORICAL_SOURCE_LOADER_BLOB_SHA1 = "d3b717ea03570413f1d0b6b6f9821b2be0db16a3"
 SCHEMA_VERSION = "SERIE_A_V2_CURRENT_FORM_FORWARD_CAPTURE_V1"
 MAX_QUOTE_AGE = timedelta(hours=24)
 MAX_SOURCE_AGE = timedelta(hours=24)
@@ -115,13 +119,16 @@ def verify_source_run(
     archive: Mapping[str, Any], *, quote_time: datetime, token: str, get=requests.get
 ) -> dict:
     run_id = archive.get("run_id")
+    head_sha = archive.get("head_sha")
     if type(run_id) is not int or run_id <= 0:
         raise ValueError("source artifact lacks parent workflow run")
+    if not isinstance(head_sha, str) or re.fullmatch(r"[0-9a-f]{40}", head_sha) is None:
+        raise ValueError("source artifact lacks a valid parent HEAD SHA")
     run = _github_json(f"{GITHUB_API}/actions/runs/{run_id}", token=token, get=get)
     if (run.get("id") != run_id
             or run.get("path") != SOURCE_WORKFLOW_PATH
             or run.get("head_branch") != "main"
-            or run.get("head_sha") != archive.get("head_sha")
+            or run.get("head_sha") != head_sha
             or run.get("status") != "completed"
             or run.get("conclusion") != "success"
             # workflow_run is admitted only because the pinned source workflow
@@ -132,12 +139,29 @@ def verify_source_run(
     completed = parse_utc(run["updated_at"])
     if not (created <= archive["created_at"] <= completed < quote_time):
         raise ValueError("source workflow/artifact did not finish strictly before quote")
+    source_blobs = (
+        (SOURCE_CAPTURE_SCRIPT_PATH, EXPECTED_SOURCE_CAPTURE_SCRIPT_BLOB_SHA1),
+        (HISTORICAL_SOURCE_LOADER_PATH, EXPECTED_HISTORICAL_SOURCE_LOADER_BLOB_SHA1),
+    )
+    verified_blobs = {}
+    for path, expected_sha in source_blobs:
+        source_url = f"{GITHUB_API}/contents/{path}?ref={head_sha}"
+        source_file = _github_json(source_url, token=token, get=get)
+        if (source_file.get("path") != path
+                or source_file.get("type") != "file"
+                or source_file.get("sha") != expected_sha):
+            raise ValueError(
+                f"current-form source artifact parent does not pin approved redirect-guarded source code: {path}"
+            )
+        verified_blobs[path] = source_file["sha"]
     return {
         "run_id": run_id,
-        "run_head_sha": archive["head_sha"],
+        "run_head_sha": head_sha,
         "workflow_path": SOURCE_WORKFLOW_PATH,
         "run_created_at_utc": created.isoformat(),
         "run_completed_at_utc": completed.isoformat(),
+        "source_capture_blob_sha1": verified_blobs[SOURCE_CAPTURE_SCRIPT_PATH],
+        "historical_source_loader_blob_sha1": verified_blobs[HISTORICAL_SOURCE_LOADER_PATH],
     }
 
 
