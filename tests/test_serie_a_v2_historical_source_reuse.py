@@ -203,9 +203,9 @@ def _rewrite_manifest(raw: bytes, mutate) -> bytes:
 
 
 class JsonResponse:
-    def __init__(self, url, payload):
+    def __init__(self, url, payload, *, status=200):
         self.url = url
-        self.status_code = 200
+        self.status_code = status
         self._payload = payload
 
     def json(self):
@@ -232,11 +232,12 @@ class StreamResponse:
 
 def _fake_get(
     raw, artifact_list, parent_run, origin_artifact=None, origin_parent_run=None,
-    *, blob_overrides=None,
+    *, blob_overrides=None, missing_source_paths=None,
 ):
     calls = []
     stream = StreamResponse([raw[:1000], raw[1000:]])
     blob_overrides = blob_overrides or {}
+    missing_source_paths = set(missing_source_paths or ())
 
     def get(url, **kwargs):
         calls.append((url, kwargs))
@@ -248,6 +249,8 @@ def _fake_get(
             ref = query.split("ref=", 1)[1]
             expected = reuse.ORIGINAL_SOURCE_CREATOR_BLOB_SHAS.get(source_path)
             if expected is not None:
+                if source_path in missing_source_paths:
+                    return JsonResponse(url, {"message": "Not Found"}, status=404)
                 sha = blob_overrides.get((ref, source_path), expected)
                 return JsonResponse(url, {
                     "path": source_path, "type": "file", "sha": sha,
@@ -444,6 +447,7 @@ def _make_reused_artifact(raw):
         "source_parent_run_id": 455,
         "source_parent_run_head_sha": origin_head,
         "source_parent_run_completed_at_utc": origin_completed,
+        "source_creator_blob_shas": dict(reuse.ORIGINAL_SOURCE_CREATOR_BLOB_SHAS),
         "historical_files_reused": len(reuse.HISTORICAL_CODES),
         "public_historical_csv_requests": 0,
         "current_season_file_reused": False,
@@ -536,6 +540,47 @@ def test_reused_artifact_rejects_origin_creator_rights_manifest_sha_drift():
     )
 
     with pytest.raises(ValueError, match="source creator code SHA mismatch"):
+        reuse.load_verified_historical_source_archive(
+            token="test-token", now=NOW, get=get
+        )
+
+
+def test_original_source_archive_without_rights_manifest_is_rejected_before_extract(
+    tmp_path,
+):
+    raw, _artifact, artifact_list, parent_run = _artifact_fixture()
+    rights_manifest = "research/source_rights/football_data_co_uk.json"
+    get, _calls, _stream = _fake_get(
+        raw,
+        artifact_list,
+        parent_run,
+        missing_source_paths={rights_manifest},
+    )
+
+    with pytest.raises(RuntimeError, match="HTTP 404"):
+        reuse.load_verified_historical_source_archive(
+            token="test-token", now=NOW, get=get, capture_dir=tmp_path
+        )
+
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_reused_artifact_requires_declared_creator_blob_map_to_match_live_github():
+    raw, _artifact, artifact_list, parent_run = _artifact_fixture()
+    raw, origin_artifact, origin_parent = _make_reused_artifact(raw)
+
+    def mutate(manifest):
+        manifest["historical_source_reuse"]["source_creator_blob_shas"][
+            "market_anchor_v2_source_rights.py"
+        ] = "0" * 40
+
+    raw = _rewrite_manifest(raw, mutate)
+    artifact_list["artifacts"][0]["digest"] = "sha256:" + hashlib.sha256(raw).hexdigest()
+    get, _calls, _stream = _fake_get(
+        raw, artifact_list, parent_run, origin_artifact, origin_parent
+    )
+
+    with pytest.raises(ValueError, match="exact source creator blob SHA attestation"):
         reuse.load_verified_historical_source_archive(
             token="test-token", now=NOW, get=get
         )
