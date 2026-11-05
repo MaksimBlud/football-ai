@@ -53,9 +53,10 @@ The source-before-quote total is a historical metadata join, not proof of provid
 - #701 `1a01f9f82dcd2c6be2061aea1eb5164d0af47f73`: 6/6 SUCCESS, but base is older than #699 and must be rebased/revalidated.
 - #712 `c7a5b5f7db1bc0de13ba8f878e75d6b651fea119`: 9/9 check-runs SUCCESS (offline/mock-only); must wait for a post-#699 rights-attested source artifact and then rebase.
 - #715 `0039b51e1d6de2a70ef17065d831052fec837c05`: Draft, no CI; stacked on #699.
+- #706 `caab7c07ad720866616ce9fa62664b0d398e5fe0`: 6/6 SUCCESS; fail-closed production `.pkl` diff guard. It overlaps with #701 in `research-pr-validation.yml` and `serie-a-pr-validation.yml`, so rebase/revalidate #706 **after #701** to preserve both evaluator and pickle-guard steps.
 - #697 prior HEAD `fcd9f34676f85d66bac4d3214cc7b72f0a42ffac`: 7/7 SUCCESS; this addendum is a new documentation follow-up.
 
-HUMAN-MERGE order remains #705 → rebase/revalidate #714 → #714 → rebase/revalidate #699 → #699; then rebase/revalidate #701, #712, and #715 as their dependencies require. No PR was merged.
+HUMAN-MERGE order remains #705 → rebase/revalidate #714 → #714 → rebase/revalidate #699 → #699. Then rebase/revalidate #701; after #701, rebase/revalidate #706 because both touch the Research/Serie A PR-validation workflows. Rebase #712 and #715 after #699 and admit neither source artifact until a post-#699 rights-attested capture exists. No PR was merged.
 
 ## Frozen original V2 and critical security notice
 
