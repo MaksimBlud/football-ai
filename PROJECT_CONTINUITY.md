@@ -1,3 +1,58 @@
+## 2026-11-05 08:40 UTC — Run 11: fresh schedule, pre-match data, evaluator provenance, and stacked-PR audit
+
+**Main remains** `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This entry updates documentation PR #697 only; no main update or merge.
+
+### Main V2 workflows and actual Nov 4 runs
+
+Re-read the four main workflow files and their cron declarations:
+- Current-Form Source Capture: `.github/workflows/serie-a-v2-current-form-source-capture.yml`, 05:50 UTC.
+- Free Real-Quote Diagnostic: `.github/workflows/serie-a-v2-free-real-quote-diagnostic.yml`, 06:13 UTC.
+- Original Forward-Only Preview: `.github/workflows/serie-a-v2-forward-preview.yml`, 08:08 UTC.
+- Current-Form Forward-Only Preview: `.github/workflows/serie-a-v2-current-form-forward-preview.yml`, 08:18 UTC.
+
+The GitHub Actions API schedule-event listing was queried directly. As of 08:18 UTC on Nov 5, no Nov 5 scheduled run for these four workflows was present; their latest verifiable runs remain Nov 4. This is an observed absence at that timestamp, not evidence that a workflow is disabled.
+
+Actual Nov 4 run logs:
+- Source Capture [#41836971469](https://github.com/MaksimBlud/football-ai/actions/runs/41836971469), artifact **13327281383**, ZIP SHA-256 `9dced08f96d81c39dcc199afba481fab07961ce6b61d14776fdc78563bc8cccd`. Log: 19 tests passed; ten historical CSVs (3,800 rows) plus 100 2026/27 prior-day rows; 3,900 combined history rows; metadata-only feature-input gate passed; no paid calls, Supabase writes, or target-outcome scoring.
+- Free Diagnostic [#41847314320](https://github.com/MaksimBlud/football-ai/actions/runs/41847314320), artifact **13332260799**, ZIP SHA-256 `72a32dc61d6e230be46bc5fe69a52e97142a79816af33c66f58066e0ceb6e8d8`. Log: 53 tests passed, 10 public CSV requests, 3,800 historical rows, zero quoted fixtures and zero scored diagnostics; mode `RESEARCH_ONLY_UNVERIFIED_PROVENANCE_NO_BET`; no paid calls or Supabase writes.
+- Original Forward [#41864632742](https://github.com/MaksimBlud/football-ai/actions/runs/41864632742), artifact **13341622767**, ZIP SHA-256 `738553a86e392361ce1b27ab0226a2b0fa2f540a6ac9579b5da2d8d81858a215`. Log: 71 tests passed, historical source verified, `quotes_seen=0`, `future_quotes_checked=0`, `forecasts_created=0`, `v2_diagnostic_previews_captured=0`.
+- Current-Form Forward [#41866116572](https://github.com/MaksimBlud/football-ai/actions/runs/41866116572), artifact **13342406844**, ZIP SHA-256 `f0893c5fdcbd2515c10915830802f77782441e5638bda62fa7d2dff882d6fc20`. Log: 53 tests passed; verified source artifact #13327281383 and successful main parent; `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `target_outcomes_read=false`, `target_outcomes_scored=false`.
+
+### Read-only Supabase pre-match audit
+
+Only `public.odds_snapshots` pre-match quote timestamps and kickoff timestamps were queried. No finished-results, score, settlement, or target-outcome table was queried.
+
+- 3,966 rows total; 3,915 satisfy `snapshot_time_utc < commence_time_utc`.
+- Zero strictly pre-match rows in the last seven days.
+- Zero future events with a strictly pre-match saved quote.
+- Latest strict pre-match quote by league: BUNDESLIGA 2026-09-11 15:49:52Z; EPL 2026-10-09 15:25:57Z; EREDIVISIE 2026-09-11 15:50:20Z; LA_LIGA 2026-09-11 15:45:28Z; LIGUE_1 2026-09-11 15:49:24Z; PRIMEIRA_LIGA 2026-09-11 16:06:24Z; RPL 2026-09-05 15:07:55Z; SERIE_A 2026-10-13 14:48:53Z; TURKEY_SUPER_LIG 2026-09-11 16:06:26Z.
+
+The source archive is intact, but no fresh market quote exists to create a new quote-backed original-V2 shadow forecast.
+
+### New exact-head PR results and integration order
+
+- #705 `8cf5ded4...`: **8/8 SUCCESS**. Shared two-session-per-rolling-week public-source budget, 170-hour per-workflow slot, common concurrency and marker-before-download. It preserves existing schedules; no source download is run by push validation.
+- #714 `ea4880dc...`: stacked on #705; offline push validation now has exact branch-scoped CI **2/2 SUCCESS**: 76 Free Diagnostic offline tests and 23 budget tests; live download job intentionally skipped on push. No secrets are placed in the push-only validation job.
+- #699 `b1ca5049...`: **7/7 SUCCESS**. Source rights, source-before-quote, identity SHA and clock guards. It modifies the same current-form/source/forward workflows as #705, so it must be rebased onto the budget/offline-push result before integration.
+- #701 `227b8b1b...`: now a one-commit stack on #699 `b1ca5049...` (ahead 1, behind 0); **6/6 SUCCESS** on exact head. The previous stale-main dependency that caused `_current_gate_freshness` ImportError is removed.
+- #701's new outcome provenance rule preserves the metadata-only pre-gate query (`match_date,home_team,away_team`). Only after the frozen 30-eligible-completed-primary-forecast gate does the lazy outcome reader select exact identity, H/D/A and `persisted_at_utc`; each row must be persisted strictly after the forecast-bound `kickoff_utc`. Synthetic regression rejects a row persisted at/before kickoff. No protected production outcomes were read during this work.
+- #701 Research CI: 79 prospective runner tests and 22 bridge/workflow tests passed; production-`.pkl` no-change guard passed.
+- #704 `cc4918ca...`: **16/16 SUCCESS** (pinned V2 research dependencies); overlaps the same V2 workflow YAMLs and must be rebased after #705/#714/#699.
+- #706 `caab7c07...`: **6/6 SUCCESS** (fail-closed production-`.pkl` guard); it shares `research-pr-validation.yml` with #701 and must be rebased after #701 to preserve the evaluator tests.
+- #709 `268f3fdc...`: 7/7 on its branch, but its offline source-capture push validation/test is already present in #705; do not merge separately without a new unique-delta review.
+- #712 `4b9b1281...`: only one offline-source-reuse check is verified on this exact head; rebase after #705/#699 and require full exact-head CI plus a fresh post-#699 source artifact.
+- #707 `a2872bb5...`: 8/8 synthetic runtime/PR validation only; it is not a historical candidate replay or real prospective forecast.
+- #697 documentation branch before this update: `daf04a39...`, 7/7 SUCCESS.
+
+Recommended HUMAN-MERGE sequence: #705, then #714; rebase/revalidate #699 preserving the shared budget and offline push jobs; then #704 and #712 after source-chain integration; rebase/revalidate #701 on the final #699 main SHA; then #706 so its fail-closed pickle guard preserves the evaluator CI. #709 is not a separate merge candidate while its unique delta remains covered by #705. No PR was merged.
+
+### Scientific status and prohibited operations
+
+- Original candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 frozen features; original weights unchanged.
+- `active_lambda=0` remains the market; `shadow_lambda=1` remains research-only.
+- Prospective eligible completed forecasts: **0/30**. Brier Score and LogLoss remain uncomputed; no superiority claim is justified.
+- No target outcomes were read, no source/paid-provider request was made in this run, no Supabase write/DDL, no production `.pkl` change, no training/refit, no weight/contract/threshold change, no promotion, bet, merge, schedule change, or other-agent setting change.
+
 ## 2026-11-05 07:51 UTC — Run 11: fresh original-V2 source, forward and pre-match audit
 
 **Main remains** `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This entry is being added only to documentation PR #697; no main update or merge was made.
