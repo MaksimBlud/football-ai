@@ -280,3 +280,91 @@ def test_saved_quote_reader_rejects_offsetless_clock_before_database_read():
     invalid_clock = datetime(2026, 10, 13, 15, 0, tzinfo=_NoOffsetTimezone())
     with pytest.raises(ValueError, match="now must be timezone-aware"):
         v2_preview.fetch_saved_upcoming_serie_a_quotes(NoReadClient(), now=invalid_clock)
+
+
+def test_cli_blocks_before_database_or_feature_reads_when_research_scope_is_denied(
+    monkeypatch, capsys, tmp_path
+):
+    import sys
+
+    import market_anchor_v2_source_rights as rights
+
+    feature_path = tmp_path / "must-not-be-read.json"
+
+    def deny_scope():
+        raise PermissionError("research inference scope denied")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", deny_scope)
+    # Any attempt to import the database client proves the guard ran too late.
+    monkeypatch.setitem(sys.modules, "database", None)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "serie_a_v2_frozen_shadow_preview.py",
+            "--features-json",
+            str(feature_path),
+            "--saved-supabase-quotes",
+        ],
+    )
+
+    v2_preview.main()
+
+    report = json.loads(capsys.readouterr().out)
+    assert report["mode"] == "RESEARCH_SCOPE_BLOCKED"
+    assert report["reason"] == "research inference scope denied"
+    assert report["supabase_reads"] == 0
+    assert report["supabase_writes"] == 0
+    assert report["paid_provider_calls"] == 0
+    assert report["model_inference_performed"] is False
+    assert report["target_outcomes_read"] is False
+    assert report["no_bet"] is True
+    assert not feature_path.exists()
+
+
+def test_cli_checks_research_scope_before_saved_quotes_and_inference(
+    monkeypatch, capsys, tmp_path
+):
+    import sys
+    import types
+
+    import market_anchor_v2_source_rights as rights
+
+    calls = []
+
+    def allow_scope():
+        calls.append("rights")
+        return {"rights_manifest_sha256": "a" * 64}
+
+    database_module = types.ModuleType("database")
+    database_module.supabase = object()
+    monkeypatch.setitem(sys.modules, "database", database_module)
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", allow_scope)
+    monkeypatch.setattr(
+        v2_preview,
+        "fetch_saved_upcoming_serie_a_quotes",
+        lambda client, now: calls.append("saved_quotes") or [],
+    )
+    monkeypatch.setattr(
+        v2_preview,
+        "shadow_preview",
+        lambda quotes, feature_rows, as_of_utc: calls.append("inference") or {"no_bet": True},
+    )
+
+    feature_path = tmp_path / "features.json"
+    feature_path.write_text("[]", encoding="utf-8")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "serie_a_v2_frozen_shadow_preview.py",
+            "--features-json",
+            str(feature_path),
+            "--saved-supabase-quotes",
+        ],
+    )
+
+    v2_preview.main()
+
+    assert calls == ["rights", "saved_quotes", "inference"]
+    assert json.loads(capsys.readouterr().out) == {"no_bet": True}
