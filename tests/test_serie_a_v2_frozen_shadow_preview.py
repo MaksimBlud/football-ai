@@ -1,5 +1,5 @@
 """Real original V2 JSON weights; strict read-only preview and refusal tests."""
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, tzinfo
 from copy import deepcopy
 import json
 from pathlib import Path
@@ -156,6 +156,38 @@ def test_feature_identity_and_frozen_feature_list_cannot_be_guessed():
         v2_preview.shadow_preview([market()], [features(), features()], as_of_utc=NOW)
 
 
+
+@pytest.mark.parametrize("field", [
+    "FTR", "FTHG", "FTAG", "homeScore", "awayScore",
+    "Full Time Home Goals", "ActualResult", "Settled Outcome",
+    "FinalHomeScore", "FinalAwayScore", "FullTimeResult", "scoreLine",
+    "homeScoreFT", "awayFinalGoals", "goalsHome",
+])
+def test_common_score_result_aliases_are_rejected_in_market_payload(field):
+    row = market()
+    row[field] = "H"
+    with pytest.raises(ValueError, match="outcomes or settlement fields"):
+        v2_preview.shadow_preview([row], [features()], as_of_utc=NOW)
+
+
+@pytest.mark.parametrize("field", [
+    "FTR", "FTHG", "FTAG", "homeScore", "ActualResult", "Final Score",
+    "Final Home Score", "fullTimeResult", "score_line", "homeTeamGoals",
+])
+def test_common_score_result_aliases_are_rejected_in_feature_payload(field):
+    item = features()
+    item["features"][field] = "H"
+    with pytest.raises(ValueError, match="result fields cannot be provided as model features"):
+        v2_preview.shadow_preview([market()], [item], as_of_utc=NOW)
+
+
+def test_nested_outcome_alias_is_rejected_before_inference():
+    row = market()
+    row["diagnostic"] = {"details": [{"Full Time Home Goals": 1}]}
+    with pytest.raises(ValueError, match="outcomes or settlement fields"):
+        v2_preview.shadow_preview([row], [features()], as_of_utc=NOW)
+
+
 def test_fallback_uses_latest_qualified_observation_only():
     earlier = market(snapshot_time_utc="2026-10-13T12:00:00Z",home_odds=3.0)
     report = v2_preview.shadow_preview([market(),earlier], [features()], as_of_utc=NOW)
@@ -220,3 +252,31 @@ def test_preserve_exact_frozen_predictions_with_explicit_imputation_diagnostics(
     assert row["historical_team_coverage"] is None
     assert row["market_1x2"] == pytest.approx(row["active_market_fallback_1x2"])
     assert row["no_bet"] is True
+
+
+
+class _NoOffsetTimezone(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+    def tzname(self, dt):
+        return "NO_OFFSET"
+
+
+def test_shadow_preview_rejects_offsetless_clock_before_model_load():
+    invalid_clock = datetime(2026, 10, 13, 15, 0, tzinfo=_NoOffsetTimezone())
+    with pytest.raises(ValueError, match="as_of_utc must be timezone-aware"):
+        v2_preview.shadow_preview([], [], as_of_utc=invalid_clock)
+
+
+def test_saved_quote_reader_rejects_offsetless_clock_before_database_read():
+    class NoReadClient:
+        def table(self, *_args, **_kwargs):
+            pytest.fail("Supabase must not be queried for an invalid clock")
+
+    invalid_clock = datetime(2026, 10, 13, 15, 0, tzinfo=_NoOffsetTimezone())
+    with pytest.raises(ValueError, match="now must be timezone-aware"):
+        v2_preview.fetch_saved_upcoming_serie_a_quotes(NoReadClient(), now=invalid_clock)
