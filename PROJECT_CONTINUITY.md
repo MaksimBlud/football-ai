@@ -1,3 +1,60 @@
+## 2026-11-05 07:51 UTC — Run 11: fresh original-V2 source, forward and pre-match audit
+
+**Main remains** `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This entry is being added only to documentation PR #697; no main update or merge was made.
+
+### Main workflows and verified live runs
+
+Re-read current main workflow files and cron expressions:
+- Current-Form Source Capture: `.github/workflows/serie-a-v2-current-form-source-capture.yml`, daily 05:50 UTC.
+- Free Real-Quote Diagnostic: `.github/workflows/serie-a-v2-free-real-quote-diagnostic.yml`, daily 06:13 UTC.
+- Original Forward-Only Preview: `.github/workflows/serie-a-v2-forward-preview.yml`, daily 08:08 UTC.
+- Current-Form Forward-Only Preview: `.github/workflows/serie-a-v2-current-form-forward-preview.yml`, daily 08:18 UTC.
+
+At 07:51 UTC the first two scheduled times had elapsed. The available GitHub connector did not expose a scheduled-workflow run listing for 2026-11-05, so no status or request count is inferred for those two slots. Last fully verifiable main runs are 2026-11-04:
+
+- Source Capture run [#41836971469](https://github.com/MaksimBlud/football-ai/actions/runs/41836971469), artifact **13327281383**, 438,212 bytes, ZIP SHA-256 `9dced08f96d81c39dcc199afba481fab07961ce6b61d14776fdc78563bc8cccd`. Log: 19 tests passed; ten old-season files plus one 2026/27 CSV; 100 completed prior-day current-season rows; metadata-only feature-input gate passed; no paid provider calls, Supabase writes or target-outcome evaluation.
+- Current-Form Forward run [#41866116572](https://github.com/MaksimBlud/football-ai/actions/runs/41866116572), artifact **13342406844**, SHA-256 `f0893c5fdcbd2515c10915830802f77782441e5638bda62fa7d2dff882d6fc20`. 53 tests passed. It authenticated source artifact #13327281383 and its successful main parent, verified source/archive/parent timestamps, then reported `quotes_seen=0`, `rows=[]`, `v2_current_form_shadow_captured=0`, and no target outcomes read/scored.
+- Free Diagnostic run [#41847314320](https://github.com/MaksimBlud/football-ai/actions/runs/41847314320), artifact **13332260799**, SHA-256 `72a32dc61d6e230be46bc5fe69a52e97142a79816af33c66f58066e0ceb6e8d8`. 53 tests passed; ten public CSV requests; 3,800 old-season rows; zero quoted fixtures and zero scored diagnostics; no paid provider request or Supabase write. Report mode was `RESEARCH_ONLY_UNVERIFIED_PROVENANCE_NO_BET`.
+- Original Forward run [#41864632742](https://github.com/MaksimBlud/football-ai/actions/runs/41864632742), artifact **13341622767**, SHA-256 `738553a86e392361ce1b27ab0226a2b0fa2f540a6ac9579b5da2d8d81858a215`. 71 tests passed; it verified the 3,800-row historical source artifact, but `quotes_seen=0`, `future_quotes_checked=0`, `forecasts_created=0`, and `v2_diagnostic_previews_captured=0`. No Supabase writes or paid calls.
+
+Artifact #13327281383 was downloaded and independently inspected in this run. Its ZIP digest matches GitHub. All 11 CSV member SHA-256 values match the manifest; all ten old-season files contain 380 rows each (**3,800 old-season rows total**) and the 2026/27 file contains **100** prior-day rows. Every source-observation timestamp precedes archive creation. The forward log's `historical_match_rows=3900` is the combined 3,800 old-season + 100 current-season total; the manifest correctly distinguishes them. The feature-source gate read only `match_date,home_team,away_team` and passed at 100 identities. This is a **feature-input gate**, not the separate prospective evaluation gate.
+
+### Read-only Supabase pre-match audit
+
+Only pre-match snapshot/observation metadata and model-SHA/time metadata were queried. No finished-results or target-outcome table was queried.
+
+- `odds_snapshots`: **3,966** rows total; **3,915** satisfy `snapshot_time_utc < commence_time_utc`; **0** strict pre-match rows in the last seven days; **0** future events with a strict pre-match quote.
+- Latest strict pre-match snapshot by league: BUNDES 2026-09-11 15:49:52Z; EPL 2026-10-09 15:25:57Z; EREDIVISIE 2026-09-11 15:50:20Z; LA_LIGA 2026-09-11 15:45:28Z; LIGUE1 2026-09-11 15:49:24Z; PRIMEIRA 2026-09-11 16:06:24Z; RPL 2026-09-05 15:07:55Z; SERIE_A 2026-10-13 14:48:53Z; TURKEY 2026-09-11 16:06:26Z.
+- `league_structural_v2_observations`: **2,387** rows, all strictly pre-match; **0** in the last seven days and **0** future-event observations.
+- `product_prediction_snapshots`: no rows match frozen candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+
+Thus the source archive is intact and timestamped, but there is no current market quote with which to produce a new prospective V2 shadow. Evaluation remains **0/30 eligible completed forecasts**; no Brier Score or LogLoss can be calculated.
+
+### Open-PR state and integration findings
+
+Exact current PR metadata/heads were re-read; no PR was merged:
+- #706 `caab7c07...`: 6/6 workflow runs SUCCESS (fail-closed production-`.pkl` diff guard).
+- #704 `cc4918ca...`: 14 workflow-run records returned for the exact head; all SUCCESS. It overlaps source/forward workflow files and must be rebased after those workflow changes.
+- #705 `8cf5ded4...`: 8/8 SUCCESS; shared two-session rolling-week budget, 170-hour per-workflow slots. Its current source-capture workflow already has a secret-free offline push-validation job.
+- #714 `00daa9dd...`: stacked on #705; no checks yet. It is still needed because #705's Free Diagnostic job retains Supabase secrets in the job environment on push, even though its budget/download steps are skipped.
+- #699 `b1ca5049...`: 7/7 SUCCESS; contains source-rights, identity-SHA and clock guards. Its workflow files still need careful reconciliation with #705/#714's shared budget/concurrency and offline-push behavior.
+- #701 `499c95ce...`: 5/6; Research PR Validation failed with `ImportError: cannot import name '_current_gate_freshness'` from `serie_a_v2_current_form_forward_capture.py`. The function exists in #699's branch, not current main. Rebase/stack only after #699 is integrated.
+- #712 `4b9b1281...`: no exact-head checks returned; waits for #705/#699 and a fresh post-#699 source artifact.
+- #707 `a2872bb5...`: 8/8 SUCCESS, but this is synthetic runtime/PR validation; the main-only manual recovery/replay path was not dispatched. No training/replay success is claimed.
+- #697 documentation branch `74de56a9...`: 7/7 SUCCESS before this entry; this commit triggers fresh exact-head documentation CI.
+- #709 `268f3fdc...`: 7/7 on its own branch, but its source-capture offline-push split and test are already present in #705's current branch. Do not merge #709 separately without a fresh unique-delta comparison.
+
+A separate evaluator review found one additional post-gate provenance requirement not yet implemented in #701: `_read_exact_completed_outcomes` currently selects `match_date,home_team,away_team,result` but not `persisted_at_utc`. After the existing 30-forecast gate only, the live outcome loader should also select `persisted_at_utc` and require it to be strictly later than that forecast's `kickoff_utc`; add synthetic regressions for before/equal/offsetless timestamps. This must remain lazy: no result or persistence timestamp may be queried before the 30 eligible completed forecasts exist. This is evaluator hardening, not a model/feature/weight change.
+
+### Rights and security boundaries
+
+The current official Football-Data policy says free CSV data is for personal/academic research, permits at most two automated downloads per week, and is not intended for commercial or AI data-training projects: https://football-data.co.uk/contact.php. The repository's frozen-weight inference interpretation remains conditional and is **not** a provider-issued AI-inference licence. No training, refit, commercial use or public-product use is authorized by that manifest. #705's frequency guard is not a licence and is not active on main until HUMAN-MERGE.
+
+Supabase Advisor still reports RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. No DDL or policy changes were made; enabling RLS without reviewed policies could break application access.
+
+No main update, PR merge, schedule change, paid request, Supabase write/DDL, production `.pkl` change, target-outcome read, model refit, candidate/weight/feature/lambda change, promotion or bet occurred in this run.
+
+
 ## 2026-11-05 06:48 UTC — fresh pre-match database audit and prospective-gate code review
 
 Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This is a read-only V2 audit plus a documentation update on this existing PR branch; no main update or merge occurred.
