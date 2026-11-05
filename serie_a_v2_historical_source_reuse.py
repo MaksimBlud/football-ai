@@ -44,8 +44,8 @@ EXPECTED_BUILDER_BLOB_SHA1 = "401b3a0893371bfa4a488ec92a4a54af2678c8f7"
 ORIGINAL_SOURCE_CREATOR_BLOB_SHAS = {
     "serie_a_v2_live_diagnostic_report.py": "d3b717ea03570413f1d0b6b6f9821b2be0db16a3",
     "serie_a_v2_current_form_source_capture.py": "59ac00c5c1975b850e475102867b7734068c2c5f",
-    "market_anchor_v2_source_rights.py": "9fd3a12013af3e0fbe080ffc5a608f50fe21e1bb",
-    "research/source_rights/football_data_co_uk.json": "ca57046b1408bca39381850e3e3a4b3d70830c6c",
+    "market_anchor_v2_source_rights.py": "538ae477995c3b70ba5d4adafa8e4e7516072b98",
+    "research/source_rights/football_data_co_uk.json": "a8795adce411fad4679491be36867dad2565a89c",
 }
 EXPECTED_FEATURE_COUNT = 19
 OLD_CUTOFF = pd.Timestamp("2026-07-01")
