@@ -820,3 +820,13 @@ def test_live_workflows_grant_read_only_github_artifact_access_for_historical_re
         job = text.split("jobs:\n", 1)[1].split("  " + job_name + ":\n", 1)[1]
         env = job.split("    steps:\n", 1)[0]
         assert "GITHUB_TOKEN: ${{ github.token }}" in env
+
+
+def test_source_creator_blob_pins_match_reviewed_rights_and_builder_provenance():
+    """Keep historical-cache provenance tied to the reviewed #699 creator code."""
+    assert reuse.ORIGINAL_SOURCE_CREATOR_BLOB_SHAS == {
+        "serie_a_v2_live_diagnostic_report.py": "d3b717ea03570413f1d0b6b6f9821b2be0db16a3",
+        "serie_a_v2_current_form_source_capture.py": "59ac00c5c1975b850e475102867b7734068c2c5f",
+        "market_anchor_v2_source_rights.py": "538ae477995c3b70ba5d4adafa8e4e7516072b98",
+        "research/source_rights/football_data_co_uk.json": "a8795adce411fad4679491be36867dad2565a89c",
+    }
