@@ -1,6 +1,9 @@
 name: Serie A V2 Public Source Download Budget Tests
 
 on:
+  push:
+    branches:
+      - research/v2-public-source-download-budget-20261102
   pull_request:
     branches:
       - main
