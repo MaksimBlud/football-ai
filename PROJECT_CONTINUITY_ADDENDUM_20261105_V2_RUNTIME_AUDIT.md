@@ -27,7 +27,7 @@ The #699 branch's manifest records only a conditional personal-betting/academic-
 The SQL read only pre-match quote fields/timestamps/event identity and structural-observation timestamps/persistence metadata. No score, result, goal, settlement or target-outcome fields were selected.
 
 - Strict pre-match quote rows: **3,915**.
-- Exact event/league/kickoff rows with a structural observation strictly before quote time and persisted no later than quote creation: **2,266**, not 2,768. The earlier 2,768 aggregate was an arithmetic error; 2,266 is the correct sum of the per-league rows.
+- Exact event/league/kickoff and exact home/away team identity rows with a structural observation strictly before quote time, persisted no later than quote creation, and `payload.pre_kickoff_valid=true`: **2,266**, not 2,768. The stricter team/payload-validity join returned the same per-league counts. The earlier 2,768 aggregate was an arithmetic error; 2,266 is the correct sum of the per-league rows.
 - Strict pre-match quote rows in the last seven days: **0**.
 - Future events with a saved strict pre-match quote: **0**.
 - Latest Serie A strict pre-match quote: **2026-10-13 14:48:53 UTC**.
