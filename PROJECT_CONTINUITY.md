@@ -1,3 +1,30 @@
+## 2026-11-05 12:20 UTC — gate-open market-only outcome binding fix
+
+**Main remains** `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This is a documentation-only follow-up in PR #697; no merge or main write.
+
+### Gate-open evaluator defect found and fixed
+
+Reviewing the actual PR #701 live bridge exposed a dormant defect that closed-gate tests could not reach: `run_live_evaluation()` invoked `_read_exact_completed_outcomes(client, identities)`, while the exact reader requires the frozen forecast-to-kickoff map as a third argument. Once the 30-event gate opened, this would have raised a `TypeError` instead of checking post-kickoff result persistence.
+
+Fixed in PR #701:
+- Exact new HEAD: `1a01f9f82dcd2c6be2061aea1eb5164d0af47f73`.
+- The bridge now builds `selected_rows, kickoff_by_identity` using the existing `_forecast_kickoff_lookup` helper and passes that same mapping into `_read_exact_completed_outcomes`.
+- Added a dynamic synthetic 30-row bridge regression that invokes the lazy callback and verifies exact identity-to-kickoff binding.
+- Exact-head CI: **6/6 SUCCESS**. Targeted Research PR Validation [run 42026189766](https://github.com/MaksimBlud/football-ai/actions/runs/42026189766) includes **20 passed** in the prospective-evaluation workflow tests. The production `.pkl` diff guard passed.
+- Two intermediate CI failures were test-fixture-only (missing `source_artifact_id`, then an invalid synthetic hour 24); both fixtures were corrected. No production guard was weakened.
+
+### Correct evaluation path without reviving the legacy model
+
+The live orchestration in #701 uses `evaluate_live_market_only_prospective_cohort`, not the full three-way incumbent evaluator. It first reads the identity-only completed-fixture gate (`match_date,home_team,away_team`), then runs source/archive SHA preflight on the same immutable identity snapshot. The lazy result callback is invoked only if at least **30 unique eligible completed prospective Serie A forecasts** match that gate. The post-gate reader selects exactly `match_date,home_team,away_team,result,persisted_at_utc` for those identities and requires `persisted_at_utc > kickoff_utc`.
+
+The market-only path compares only the exact lambda-zero de-vigged market against the original V2 lambda-one shadow and reports Brier/LogLoss plus descriptive paired bootstrap uncertainty. It always keeps `review_signal=false`; it cannot promote, bet, tune, or alter the frozen model. The full three-way review remains blocked because no non-legacy frozen incumbent is pinned. Do not revive or load the old XGBoost model to fill that gap.
+
+No eligible quote-backed forecasts exist in the latest Nov 4 main forward artifacts (`quotes_seen=0`, `v2_current_form_shadow_captured=0`), so the target-outcome gate remains closed. The 100-fixture feature-input metadata gate in the Nov 4 source archive is a separate lagged-input gate and does not count toward the 30 prospective forecast outcome gate.
+
+#701 remains stacked on the older #699 base SHA `b1ca50494d529f3fd84dcb2e1435f078c4876099`; after #699 is manually integrated, rebase #701 onto the resulting main and rerun exact-head CI. No PR was merged here.
+
+---
+
 ## 2026-11-05 11:57 UTC — Run 11: exact source-before-quote recheck and rights-gated CLI
 
 **Main remains** `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Documentation-only update to PR #697; no merge or main change.
