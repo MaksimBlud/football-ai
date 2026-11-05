@@ -371,7 +371,7 @@ def test_live_supabase_market_only_runner_rejects_offsetless_outcome_persistence
     ]
     client = _ExactOutcomeClient(outcome_rows)
 
-    with pytest.raises(ValueError, match="persisted_at_utc must be an ISO-8601 timestamp with an explicit UTC offset"):
+    with pytest.raises(ValueError, match="persisted_at_utc must have a real UTC offset"):
         runner.evaluate_live_market_only_from_supabase(client, rows)
 
     assert client.result_query_count == 1
