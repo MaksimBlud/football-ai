@@ -1,5 +1,25 @@
 # Original V2 public-source download budget
 
+
+## Fresh main-only bootstrap recheck — 2026-11-05 15:55 UTC
+
+This section supersedes the Nov 4 bootstrap timestamps below. Main is still `40887ebb215730190d7a6c7a1693373ec4afcdfc` and does not yet contain this PR's shared download guard.
+
+| Workflow | Latest successful main run | Artifact | Artifact created (UTC) | Artifact SHA-256 | Next 170-hour slot |
+|---|---:|---:|---|---|---|
+| Current-Form Source Capture | [#42036450692](https://github.com/MaksimBlud/football-ai/actions/runs/42036450692) | 13418048952 | 2026-11-05 13:31:55 | `941cb910b4b412027de196156147b164ba6705159ef90e34a99af02e0de04f10` | 2026-11-12 15:31:55 |
+| Free Real-Quote Diagnostic | [#42046051819](https://github.com/MaksimBlud/football-ai/actions/runs/42046051819) | 13424482168 | 2026-11-05 14:33:47 | `4f735f1e4636250b0b711963e9f6a660838afc521396968fcb19acb2b39d3559` | 2026-11-12 16:33:47 |
+
+The Nov 5 Source Capture run was a successful scheduled main run. Its log reports 11 source files (ten frozen historical CSVs plus the current-season file), 3,900 historical rows, 100 prior-day current-season rows, and the metadata-only feature-input gate count of 100. It reports zero paid-provider calls, zero Supabase writes, and no target outcomes scored. Its artifact is authenticated by run `42036450692` and the SHA-256 above.
+
+The paired Current-Form Forward-Only run [#42036593390](https://github.com/MaksimBlud/football-ai/actions/runs/42036593390) verified that exact artifact and parent run, but saw `quotes_seen=0` and `v2_current_form_shadow_captured=0`. It read no target outcomes and wrote nothing. The Nov 5 Free Diagnostic run reports `quoted_fixtures=0`, `diagnostic_scored=0`, zero paid-provider requests, and zero Supabase writes.
+
+The Nov 4 legacy artifacts were followed by new runs of the same two source workflows on Nov 5, only about 24 hours later. Those Nov 5 runs occurred on unguarded main because this PR has not been merged. They are newer than the Nov 4 artifacts, so the guard's first-rollout bootstrap must select the Nov 5 artifact IDs above. The 170-hour cooldown is per approved workflow path; the next existing daily cron times after both cooldowns are **2026-11-13 05:50 UTC** (Source Capture) and **2026-11-13 06:13 UTC** (Free Diagnostic), assuming no newer attempt. The schedule itself is unchanged.
+
+The Nov 5 Current-Form Source Capture and Free Diagnostic artifacts were created before #699's source-rights helper was integrated into main. They are not a post-#699 rights-attested source artifact and must not be used by #712's verified historical-cache consumer or admitted as a new prospective source chain. After #705/#714/#699 are manually integrated in order, wait for the next budget-allowed normal scheduled source run and verify the rights helper, identity-set SHA, parent run, artifact digest, and source-before-quote chain before any V2 capture.
+
+The provider policy's phrase “twice per week” does not define whether a session is a workflow invocation or an individual CSV request. This project guard uses the conservative operational interpretation of at most one invocation per approved workflow path per 170 hours. It does not grant rights for AI training, commercial use, public product publication, or redistribution. No new public source request was initiated by this audit.
+
 Audit timestamp: 2026-11-03 01:56 UTC  
 Base main: `40887ebb215730190d7a6c7a1693373ec4afcdfc`
 
