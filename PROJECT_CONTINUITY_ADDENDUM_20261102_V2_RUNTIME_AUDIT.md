@@ -654,3 +654,49 @@ PR #707's prior exact HEAD `3a79d333eb246d92aea88b569c8cb5b4474b9fbd`, workflow 
 The unguarded main source-capture and free-diagnostic crons remain at 05:50 and 06:13 UTC. The previously paginated 14 automated sessions (Oct 29–Nov 4) still exceed the manifest's two-session weekly ceiling; no new source download was initiated. The next scheduled attempts are not made safe until the budget/rights changes are integrated. Do not alter schedules or weaken the budget/freshness gates.
 
 Prospective evaluation remains **0/30**. Brier/LogLoss are not available. No paid API calls, Supabase writes/DDL, production `.pkl` changes, model/weight/lambda changes, protected target-outcome reads, merges, or promotions occurred.
+
+
+## 2026-11-05 14:49 UTC — exact-main workflow review, source-pair audit, and duplicate-PR reconciliation
+
+### Frozen original candidate and rights boundary
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The canonical candidate on main is still SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, with 19 ordered features, a 20x2 weight matrix, `active_lambda=0`, `shadow_residual_lambda=1`, `stability_gate_passed=false`, and no automatic promotion. Candidate JSON blob on main: `ac1303f6b096664983fbf52443bd0a381b23ba21`. No candidate, feature, weight, scaler, imputer, or protocol file was changed.
+
+The #699 source-rights manifest is `CONDITIONAL_RESEARCH_ONLY`: personal-betting/academic-research frozen-weight inference is the project's narrow operational interpretation; it is not a provider-issued AI-inference licence. AI training, commercial use, and public-product use are false; authorization is null. The official Football-Data policy states that free CSV/Excel data are intended for private personal betting and/or academic research, with manual or at most light automated downloads (maximum twice per week), and says AI-usage/model-training requests should assume no permission is granted: https://www.football-data.co.uk/contact.php. A download-frequency guard is not a data-use licence. No source download was initiated in this audit.
+
+### Fresh read-only pre-match Supabase cross-check
+
+The SQL selected only pre-match quote and structural-observation fields from `public.odds_snapshots` and `public.league_structural_v2_observations`; it did not select any target outcome, score, goal, result, or settlement fields.
+
+| League | Strictly pre-match quotes | Rows with earlier persisted structural observation |
+|---|---:|---:|
+| Bundesliga | 394 | 359 |
+| EPL | 1,135 | 478 |
+| Eredivisie | 410 | 371 |
+| La Liga | 798 | 13 |
+| Ligue 1 | 387 | 352 |
+| Primeira Liga | 9 | 0 |
+| RPL | 153 | 138 |
+| Serie A | 620 | 557 |
+| Turkey Super Lig | 9 | 0 |
+| **Total** | **3,915** | **2,768** |
+
+Across the nine leagues, 3,966 quote rows exist; 3,915 are strictly pre-kickoff by both snapshot and persistence timestamps. Zero quote rows were touched in the last seven days, and zero refer to future kickoffs. The structural match count is only a database-level temporal cross-check using same league/event identity, `source.snapshot_time_utc < quote.snapshot_time_utc`, and `source.persisted_at_utc <= quote.created_at`. It is **not** proof that the exact GitHub source archive and parent workflow completed before a quote. The last independently recorded current-form archive is artifact #13327281383, created 2026-11-04 13:19:46 UTC; the saved quote cohort predates that archive, so none of the existing quotes can be admitted by that current-form archive. No prospective forecast can be manufactured or backfilled from these rows.
+
+### Exact workflow review and PR overlap
+
+- Main `.github/workflows/serie-a-v2-forward-preview.yml` (blob `48ce3b0d8e31c4cf293b94500e9c320047311467`) still allows the full read-only forward job on a relevant main push. The #699 version already adds a secret-free `validate-original-forward` job and restricts the live forward job to non-push events. This is already covered by #699; no duplicate PR was created.
+- Main `.github/workflows/serie-a-v2-current-form-source-capture.yml` (blob `9722416862b42d55ff7181003353c39620f23cf2`) still has one secret-bearing capture job on push. #705 already contains the same offline `validate-source-capture` split and non-push capture guard proposed separately by #709, plus the shared 170-hour source budget and pre-download marker. Therefore #709 is functionally superseded for this path by #705; do not merge #709 separately. If #705 is integrated, close #709 as superseded only after confirming the merged main contains the exact offline split and budget behavior.
+- #705 exact HEAD `8cf5ded4dfc18820e10f59f8ccd2a462479ccfe5`: 8/8 associated PR workflows SUCCESS; the dedicated shared-budget job succeeded. Its two workflow paths share concurrency and reserve a marker before public CSV requests. The bootstrap artifacts in its audit imply next scheduled slots of 2026-11-12 05:50 and 06:13 UTC only if no newer attempts occur. The current GitHub connector does not expose a repository-wide scheduled-run listing, so newer main attempts cannot be ruled out here; revalidate run/artifact metadata before any future source session.
+- #709 exact HEAD `268f3fdc82036fca0e44dc0aef20d39423cfda2d`: 7/7 PR checks SUCCESS, but its source-capture push split duplicates #705. It remains open; no merge or close action was taken.
+- #714 exact HEAD `ea4880dca6b7d41434160a298798b0312744ae56`: the push-only Free Diagnostic validation run succeeded and the live diagnostic job was intentionally skipped; the shared-budget test run succeeded. It is stacked on #705 and must be rebased and fully revalidated after #705 integration.
+- #699 exact HEAD `a6725ca49e90d551baa7e9f647151f7e524e42c7`: 7/7 associated PR workflows SUCCESS, including the frozen V2 shadow workflow. It supplies source rights, identity/SHA, clock and outcome guards, and the original-forward push isolation. Rebase after #705 and preserve #705's budget/marker/offline source-capture behavior; do not replace the #705 workflow YAML with the older #699 version.
+- #701 exact HEAD `1a01f9f82dcd2c6be2061aea1eb5164d0af47f73`: the PR body records 6/6 exact-head success; targeted Research run #42026189766 is independently confirmed SUCCESS and includes the prospective evaluator tests. Its base is the older #699 SHA `b1ca50494d529f3fd84dcb2e1435f078c4876099`, behind current #699 `a6725ca49e90d551baa7e9f647151f7e524e42c7`; rebase and rerun all checks after #699 integration.
+- #715 exact HEAD `0039b51e1d6de2a70ef17065d831052fec837c05` remains Draft with zero CI. It uniquely gates the standalone frozen-shadow CLI before DB import, saved-quote access, feature-file reads, or inference. Keep stacked on #699; after #699 manual integration, rebase and run full exact-head CI.
+- #697 documentation PR exact HEAD before this update was `895931414c22664d7238cbbfbaa2a1c67953bd39`, with 7/7 checks SUCCESS. This audit is appended to that documentation branch only.
+
+Main remains unchanged. No PR was merged or closed. No workflow was dispatched, no schedule or other agent was changed, no public CSV or paid API request was made, no Supabase write/DDL occurred, no production `.pkl` or model weight changed, and no protected target outcome was read.
+
+### Scientific state
+
+The independent prospective completed-primary-forecast gate remains **0/30**. The feature-input metadata threshold is a separate gate and does not authorize outcome access. Brier Score and LogLoss remain uncomputed; no claim that V2 beats the market is supported. `active_lambda=0` remains the market; `shadow_lambda=1` remains research-only.
