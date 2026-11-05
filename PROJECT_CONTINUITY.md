@@ -1,3 +1,55 @@
+## 2026-11-05 06:48 UTC — fresh pre-match database audit and prospective-gate code review
+
+Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This is a read-only V2 audit plus a documentation update on this existing PR branch; no main update or merge occurred.
+
+### Fresh Supabase pre-match-only audit
+
+Read-only SQL selected only timestamp, event identity, league and probability/odds fields from pre-match observation tables. No result, score, settlement or post-match table rows were queried.
+
+- `public.odds_snapshots`, Serie A: **625** rows; **620** strictly pre-kickoff; **0** captured in the last seven days; **0** future fixtures with a saved quote; latest snapshot **2026-10-13 14:48:53.042620 UTC**.
+- `public.league_structural_v2_observations`, Serie A: **630** rows; **630** strictly pre-kickoff; **0** captured in the last seven days; latest observation **2026-10-13 14:48:53.042620 UTC**.
+- Across every league in both queried pre-match tables, there are **0** observations from the preceding seven days and **0** future fixtures with a saved snapshot.
+- No new quote or source row was written.
+
+### Latest V2 workflow evidence
+
+The latest scheduled V2 source/diagnostic runs visible on main remain the Nov 4 runs:
+- Current-Form Source Capture **#41836971469**, created 2026-11-04 13:18:57 UTC.
+- Free Real-Quote Diagnostic **#41847314320**, created 2026-11-04 14:24:55 UTC.
+- Current-Form Forward **#41866116572** and Original Forward **#41864632742** both completed Nov 4 and produced **zero** eligible shadow forecasts. No newer Nov 5 V2 source/diagnostic scheduled run was present in the retrieved schedule-run history at 06:48 UTC.
+- The separate Nov 5 Serie A Results Sync run was not inspected for logs, artifacts or result rows; protected outcome data were not opened.
+
+### Exact current PR checks and dependencies
+
+| PR | Exact HEAD prefix | Checks | Current disposition |
+|---|---|---:|---|
+| #706 | `caab7c07` | 6/6 SUCCESS | Fail-closed pickle diff guard; ready for HUMAN-MERGE |
+| #704 | `cc4918ca` | 16/16 SUCCESS | Pinned original-V2 CI dependencies; ready for HUMAN-MERGE |
+| #705 | `8cf5ded4` | 8/8 SUCCESS | Re-run exact-head CI after #706/#704 integration |
+| #699 | `b1ca5049` | 7/7 SUCCESS | Consolidated rights/clock/identity/source guards; must preserve #705 offline-push changes |
+| #707 | `a2872bb5` | 8/8 SUCCESS | Synthetic frozen-runtime proof only; recovery/training dispatch remains rights-blocked |
+| #702 | `3935fc60` | 8/8 SUCCESS | Manual-only offline feature preview; no new real archive attested |
+| #714 | `00daa9dd` | 0 checks | Stacked on #705; must run full CI after its base is integrated |
+| #709 | `268f3fdc` | 7/7 SUCCESS | Source-capture push isolation; overlaps #699 workflow changes and needs rebase |
+| #712 | `4b9b1281` | 1/1 SUCCESS | Dedicated offline test only; full CI still absent |
+| #701 | `499c95ce` | 5/6 SUCCESS | Targeted research test fails because main lacks `_current_gate_freshness`; #699 supplies it |
+| #697 | `da6e923e` | 7/7 SUCCESS before this documentation commit | Continuity record |
+
+The exact #701 failing log is run **#41872721087**, job **126723879288**: `ImportError: cannot import name '_current_gate_freshness'` from `serie_a_v2_current_form_forward_capture`. This is a dependency on #699, not evidence that the evaluator's tests themselves are scientifically invalid.
+
+### Additional post-gate outcome provenance review
+
+Code-only review of #701 found that the live pre-gate query is correctly identity-only (`match_date,home_team,away_team`), and the outcome loader is lazy: the market-only path does not invoke it until at least **30 unique eligible completed primary-cohort forecasts** pass the frozen checks. It keeps `active_lambda=0` as the market and `shadow_lambda=1` as research-only.
+
+A separate hardening gap remains for after the gate opens: `_read_exact_completed_outcomes()` currently selects fixture identity plus `result`, but does not select/validate the existing `persisted_at_utc` field from `league_finished_results` against each forecast's kickoff. The table schema exposes `persisted_at_utc` and `source_updated_at_utc`. Before any future Brier/LogLoss run, a follow-up should prove each exact result row was persisted after its kickoff (and retain exact identity/alias checks). This is a post-gate provenance check only; no outcomes were read in this audit, and the 30-event gate must not be weakened or moved.
+
+### Scientific status
+
+- Original frozen candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 inputs and original weights unchanged.
+- `active_lambda=0`; `shadow_lambda=1`; no production promotion or betting.
+- Real eligible prospective forecasts remain **0/30**; Brier and LogLoss remain unavailable.
+- No paid requests, CSV downloads, Supabase writes/DDL, production `.pkl` changes, model refits, threshold tuning, protected outcome reads or merges occurred.
+
 ## 2026-11-05 04:54 UTC — byte-level source proof, live Supabase identity SHA, and frozen runtime smoke
 
 Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This entry records read-only evidence and a synthetic runtime attestation; no main change or merge occurred.
