@@ -378,6 +378,57 @@ def test_live_supabase_market_only_runner_rejects_offsetless_outcome_persistence
     assert client.select_calls == ["match_date,home_team,away_team,result,persisted_at_utc"]
 
 
+
+def test_live_supabase_market_only_runner_rejects_missing_persistence_timestamp_field(monkeypatch):
+    rows = _forecast_rows(30)
+    for row in rows:
+        row.pop("incumbent_1x2")
+        row.pop("incumbent_evidence")
+    identities = {
+        (row["match_date"], row["home_team"], row["away_team"])
+        for row in rows
+    }
+    monkeypatch.setattr(
+        runner, "read_completed_fixture_gate",
+        lambda _client: (identities, _gate_attestation(identities)),
+    )
+    outcome_rows = [
+        {
+            "league": "SERIE_A",
+            "season": "2026-2027",
+            "match_date": row["match_date"],
+            "home_team": row["home_team"],
+            "away_team": row["away_team"],
+            "result": "H",
+            "persisted_at_utc": _persisted_after_kickoff(row),
+        }
+        for row in rows
+    ]
+
+    class _MissingPersistenceTimestampClient(_ExactOutcomeClient):
+        def table(self, name):
+            query = super().table(name)
+            execute = query.execute
+
+            def execute_without_persistence_timestamp():
+                response = execute()
+                response.data = [
+                    {key: value for key, value in item.items() if key != "persisted_at_utc"}
+                    for item in response.data
+                ]
+                return response
+
+            query.execute = execute_without_persistence_timestamp
+            return query
+
+    client = _MissingPersistenceTimestampClient(outcome_rows)
+
+    with pytest.raises(ValueError, match="outcome query returned fields outside the exact identity\\+result allowlist"):
+        runner.evaluate_live_market_only_from_supabase(client, rows)
+
+    assert client.result_query_count == 1
+    assert client.select_calls == ["match_date,home_team,away_team,result,persisted_at_utc"]
+
 def test_live_supabase_market_only_runner_rejects_conflicting_duplicate_alias_results(monkeypatch):
     rows = _forecast_rows(30)
     for row in rows:
