@@ -309,7 +309,8 @@ def test_live_supabase_market_only_runner_reads_only_exact_identity_and_result_a
 
 
 
-def test_live_supabase_market_only_runner_rejects_outcome_persisted_before_kickoff(monkeypatch):
+@pytest.mark.parametrize("hours", [-1, 0])
+def test_live_supabase_market_only_runner_rejects_outcome_persisted_at_or_before_kickoff(monkeypatch, hours):
     rows = _forecast_rows(30)
     for row in rows:
         row.pop("incumbent_1x2")
@@ -330,13 +331,47 @@ def test_live_supabase_market_only_runner_rejects_outcome_persisted_before_kicko
             "home_team": row["home_team"],
             "away_team": row["away_team"],
             "result": "H",
-            "persisted_at_utc": _persisted_after_kickoff(row, hours=0),
+            "persisted_at_utc": _persisted_after_kickoff(row, hours=hours),
         }
         for row in rows
     ]
     client = _ExactOutcomeClient(outcome_rows)
 
     with pytest.raises(ValueError, match="persisted_at_utc must be strictly after kickoff_utc"):
+        runner.evaluate_live_market_only_from_supabase(client, rows)
+
+    assert client.result_query_count == 1
+    assert client.select_calls == ["match_date,home_team,away_team,result,persisted_at_utc"]
+
+
+def test_live_supabase_market_only_runner_rejects_offsetless_outcome_persistence_timestamp(monkeypatch):
+    rows = _forecast_rows(30)
+    for row in rows:
+        row.pop("incumbent_1x2")
+        row.pop("incumbent_evidence")
+    identities = {
+        (row["match_date"], row["home_team"], row["away_team"])
+        for row in rows
+    }
+    monkeypatch.setattr(
+        runner, "read_completed_fixture_gate",
+        lambda _client: (identities, _gate_attestation(identities)),
+    )
+    outcome_rows = [
+        {
+            "league": "SERIE_A",
+            "season": "2026-2027",
+            "match_date": row["match_date"],
+            "home_team": row["home_team"],
+            "away_team": row["away_team"],
+            "result": "H",
+            "persisted_at_utc": row["kickoff_utc"].replace("Z", ""),
+        }
+        for row in rows
+    ]
+    client = _ExactOutcomeClient(outcome_rows)
+
+    with pytest.raises(ValueError, match="persisted_at_utc must be an ISO-8601 timestamp with an explicit UTC offset"):
         runner.evaluate_live_market_only_from_supabase(client, rows)
 
     assert client.result_query_count == 1

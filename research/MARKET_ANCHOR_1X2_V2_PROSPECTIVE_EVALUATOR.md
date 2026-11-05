@@ -113,9 +113,14 @@ is never called and no result column is selected.
 
 Only after the gate opens does the closure query the exact requested fixture
 identities one at a time, selecting exactly
-`match_date,home_team,away_team,result` from the Serie A 2026/27 table. It
-does not select goal totals, scores, or unrelated fixtures. The reader
-canonicalizes the existing Serie A aliases (including Atalanta BC), accepts
+`match_date,home_team,away_team,result,persisted_at_utc` from the Serie A
+2026/27 table. For each row, `persisted_at_utc` must be a valid ISO-8601
+timestamp with an explicit UTC offset and must be strictly later than that
+forecast's frozen `kickoff_utc`; a timestamp at or before kickoff, or one
+without an explicit offset, fails closed. The persistence timestamp is used
+only as post-kickoff outcome provenance, not as a model feature or selection
+input. The reader does not select goal totals, scores, or unrelated fixtures.
+It canonicalizes the existing Serie A aliases (including Atalanta BC), accepts
 duplicate raw aliases only when their H/D/A labels agree, and rejects missing,
 conflicting, malformed, or identity-mismatched rows. It is read-only and
 returns exactly the identity-to-H/D/A mapping expected by the evaluator.
