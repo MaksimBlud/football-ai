@@ -700,3 +700,25 @@ Main remains unchanged. No PR was merged or closed. No workflow was dispatched, 
 ### Scientific state
 
 The independent prospective completed-primary-forecast gate remains **0/30**. The feature-input metadata threshold is a separate gate and does not authorize outcome access. Brier Score and LogLoss remain uncomputed; no claim that V2 beats the market is supported. `active_lambda=0` remains the market; `shadow_lambda=1` remains research-only.
+
+## 2026-11-05 15:03 UTC — historical-source reuse provenance pins and exact-head CI
+
+PR #712 was advanced on its existing branch, without changing main. Exact new HEAD: `c7a5b5f7db1bc0de13ba8f878e75d6b651fea119`.
+
+A direct blob comparison against current #699 HEAD `a6725ca49e90d551baa7e9f647151f7e524e42c7` found two stale creator pins in `serie_a_v2_historical_source_reuse.py`. They now match the current #699 source-rights helper blob `538ae477995c3b70ba5d4adafa8e4e7516072b98` and rights-manifest blob `a8795adce411fad4679491be36867dad2565a89c`. The other two creator pins already matched. Added `test_source_creator_blob_pins_match_reviewed_rights_and_builder_provenance` to freeze the complete four-file map.
+
+Exact-head CI: **8/8 SUCCESS**:
+- Research PR Validation #42050748319.
+- Historical Source Reuse Tests #42050748514 — **54 passed**; offline/mock-only, including authenticated parent/source creator checks, historical member SHA/date validation, no current-season-member extraction, and the new exact pin regression.
+- Frozen V2 Shadow #42050748154.
+- Serie A #42050748285.
+- Bundesliga #42050748213.
+- Ligue 1 #42050748153.
+- Eredivisie #42050748344.
+- Product #42050748038.
+
+The reuse path is deliberately historical-only: authenticate the exact successful main source artifact and creator code, reuse only the ten pre-2026/27 CSVs, and do not extract, parse, or copy the prior archive's 2026/27 member. The next source capture still performs its own metadata-only identity gate and obtains one fresh current-season CSV; direct historical CSV fallback is disabled. The free diagnostic reuses the ten verified historical files and makes zero Football-Data CSV requests. These are code/test guarantees, not a live capture result.
+
+The current Nov 4 artifact #13327281383 predates #699 and remains ineligible for the identity-attested cache/evaluator. Wait for #699 to be manually integrated with #705's budget/offline behavior preserved, then rebase #712 and verify the creator blob pins against the resulting exact main before any normal scheduled capture. #711 remains a draft diagnostic-only alternative overlapping #712's diagnostic path; do not merge both implementations.
+
+No source archive was downloaded/opened in this code/CI update; no Football-Data request, paid provider request, Supabase access/write, target-outcome read, model change, production `.pkl` change, merge, or schedule change occurred.
