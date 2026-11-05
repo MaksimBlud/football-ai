@@ -6,7 +6,7 @@ training archive. This gate is intentionally independent of the frozen V2 model.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 import hashlib
 import json
 from pathlib import Path
@@ -193,6 +193,15 @@ def require_personal_research_inference_scope(
     if parts.scheme != "https" or parts.hostname != "football-data.co.uk" or parts.path != "/contact.php":
         raise PermissionError("source policy reference is not the official Football-Data fair-use page")
     checked = _parse_utc(manifest.get("policy_checked_at_utc"), "policy_checked_at_utc")
+    page_updated_raw = manifest.get("policy_page_updated_date")
+    if not isinstance(page_updated_raw, str) or not page_updated_raw.strip():
+        raise PermissionError("source policy page update date is missing")
+    try:
+        page_updated = date.fromisoformat(page_updated_raw)
+    except ValueError as exc:
+        raise PermissionError("source policy page update date is invalid") from exc
+    if page_updated.isoformat() != page_updated_raw:
+        raise PermissionError("source policy page update date must use canonical YYYY-MM-DD")
     if now is None:
         now = datetime.now(timezone.utc)
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
@@ -200,6 +209,8 @@ def require_personal_research_inference_scope(
     now_utc = now.astimezone(timezone.utc)
     if checked > now_utc:
         raise PermissionError("source policy check time is in the future")
+    if page_updated > checked.date():
+        raise PermissionError("source policy page update date is later than policy review")
     if (now_utc - checked).total_seconds() > 90 * 86400:
         raise PermissionError("source policy review is stale; refresh the policy review before inference")
     return {
@@ -209,6 +220,7 @@ def require_personal_research_inference_scope(
         "research_inference_scope": manifest["research_inference_scope"],
         "policy_url": policy_url,
         "policy_checked_at_utc": checked.isoformat(),
+        "policy_page_updated_date": page_updated.isoformat(),
         "max_automated_download_sessions_per_week": 2,
         "ai_model_training_permitted": False,
         "commercial_use_permitted": False,
