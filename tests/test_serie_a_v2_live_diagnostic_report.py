@@ -5,7 +5,8 @@ import pandas as pd
 import pytest
 
 from serie_a_v2_live_diagnostic_report import (
-    PUBLIC_BASE, _source_codes, fetch_public_history, make_report,
+    PUBLIC_BASE, _source_codes, fetch_public_history,
+    fetch_public_history_with_provenance, make_report,
 )
 
 NOW = datetime(2026,10,13,15,1,tzinfo=timezone.utc)
@@ -169,3 +170,43 @@ def test_real_quote_diagnostic_refuses_both_teams_without_prior_match_history():
     assert report["per_fixture_feature_coverage"][0]["observed_frozen_feature_count"] == 0
     assert report["no_bet"] is True
     assert report["supabase_writes"] == report["paid_provider_requests"] == 0
+
+
+def test_report_records_zero_public_downloads_when_historical_archive_is_reused():
+    provenance = {
+        "mode": "REUSED_VERIFIED_MAIN_ARTIFACT_HISTORICAL_ONLY",
+        "source_artifact_id": 123,
+        "historical_files_reused": 10,
+        "public_historical_csv_requests": 0,
+        "current_season_file_reused": False,
+        "prior_feature_gate_reused": False,
+        "protected_2026_27_source_file_read": False,
+        "target_outcomes_read": False,
+        "supabase_writes": 0,
+        "paid_provider_calls": 0,
+    }
+    report = make_report(
+        [quote()],
+        history_fixture(),
+        source_audit(),
+        as_of_utc=NOW,
+        historical_source_reuse=provenance,
+    )
+    assert report["public_http_requests"] == 0
+    assert report["historical_source_reuse"] == provenance
+    assert report["historical_source_reuse"]["current_season_file_reused"] is False
+    assert report["historical_source_reuse"]["target_outcomes_read"] is False
+    assert report["paid_provider_requests"] == report["supabase_writes"] == 0
+
+
+
+def test_historical_source_provenance_requires_actions_read_without_public_fallback():
+    calls = []
+
+    def forbidden_get(*_args, **_kwargs):
+        calls.append("public-csv")
+        raise AssertionError("missing token must not trigger public CSV downloads")
+
+    with pytest.raises(ValueError, match="direct historical CSV fallback is disabled"):
+        fetch_public_history_with_provenance(token="", get=forbidden_get)
+    assert calls == []

@@ -17,6 +17,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
@@ -29,6 +30,7 @@ jobs:
       GITHUB_REPOSITORY: ${{ github.repository }}
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_RUN_ID: ${{ github.run_id }}
+      GITHUB_TOKEN: ${{ github.token }}
       PYTHONPATH: .
       OPENBLAS_NUM_THREADS: "1"
       OMP_NUM_THREADS: "1"
