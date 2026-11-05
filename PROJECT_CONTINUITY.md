@@ -1,3 +1,70 @@
+## 2026-11-05 11:14 UTC — Run 11 follow-up: policy-date attestation, exact CI, and corrected provenance count
+
+**Main remains** `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This is a documentation-only update to PR #697; no main update or merge.
+
+### Correction to the preceding source-before-quote summary
+
+The per-league counts already recorded in the 09:56 UTC entry sum to **2,268**, not 2,768. The latter figure in the prior chat summary was an arithmetic error. Recomputed from the same read-only SQL result:
+
+- 3,915 strict pre-kickoff quote rows.
+- 2,268 have a same-league/event structural observation with both `source.snapshot_time_utc < quote.snapshot_time_utc` and `source.persisted_at_utc <= quote.created_at`.
+- 0 have an observation timestamp before quote but persistence after quote under that same join.
+- 1,647 have no qualifying match under those conditions.
+
+This join is a database diagnostic only; it does not replace authenticated raw-source CSV SHA, GitHub parent-run identity, or source-artifact-before-quote proof.
+
+### Official Football-Data policy refresh and #699 change
+
+The official fair-use page currently displays **Updated: 04/11/26** and limits free CSV/Excel use to private personal betting and/or academic research, with no more than two light automated download sessions per week. It excludes commercial and AI data-training projects. The page does not expressly grant frozen-weight AI inference; the project's narrow personal/academic inference treatment remains an operational interpretation, not a provider-issued AI-inference licence. AI training, commercial use, and public-product publication remain false/blocked.
+
+- Official page: https://football-data.co.uk/contact.php
+- Policy page update date: `2026-11-04`.
+- Manifest review timestamp: `2026-11-05T10:54:00Z`.
+- No source download was initiated.
+
+Updated the existing #699 branch (no new PR, no main change):
+- Exact HEAD: `a6725ca49e90d551baa7e9f647151f7e524e42c7`.
+- Manifest now records the official page-update date and current review timestamp.
+- Rights helper rejects a missing, malformed, noncanonical, or later-than-review page-update date.
+- Both original and current-form forward readers pin the new rights-helper and rights-manifest blob SHAs.
+- Regression test suite includes future and noncanonical policy-date failures.
+- Exact-head CI: **7/7 SUCCESS**; Original V2 Shadow Tests **325 passed**; `git diff --exit-code -- '*.pkl'` succeeded. Targeted Research PR Validation also completed successfully.
+- Intermediate HEAD `d8bd85dd...` had one test-only assertion mismatch; CI exposed it (324 passed, 1 failed). The test was corrected to use a valid ISO week-date spelling that exercises the canonical-format guard; final HEAD `a6725ca...` passed all seven checks.
+
+#699 is still 151 commits ahead of main with 27 changed files. It must be reviewed as a complete diff and rebased after #705/#714; do not merge its current old-main base directly.
+
+### Fresh main / live runtime and pre-match database state
+
+A paginated Actions query for main SHA `40887...` and runs created on 2026-11-05 returned 133 runs across two pages. None was one of the four V2 workflows (Current-Form Source Capture, Free Real-Quote Diagnostic, Original Forward-Only, Current-Form Forward-Only). This is absence of run records for that date, not proof that workflows are disabled; cron declarations were not changed and no manual dispatch was attempted.
+
+Latest actual Nov 4 main runs remain:
+- Current-Form Source Capture #41836971469, artifact #13327281383, ZIP SHA-256 `9dced08f96d81c39dcc199afba481fab07961ce6b61d14776fdc78563bc8cccd`: 3,900 historical rows plus 100 current-season rows, 11 CSV members. This V1-era main artifact predates #699's identity-SHA attestation and is not admissible to the new evaluator.
+- Current-Form Forward #41837103174 verified that artifact/parent, but `quotes_seen=0` and `v2_current_form_shadow_captured=0`; no outcomes read.
+- Free Diagnostic #41847314320 reported 3,800 historical rows and `diagnostic_scored=0`.
+- Original Forward #41864632742 verified historical artifact #13332260799 (3,800 historical results), but `quotes_seen=0` and `v2_diagnostic_previews_captured=0`.
+
+Fresh read-only Supabase pre-match aggregates: 3,966 odds rows, 3,915 strictly before kickoff, zero strict pre-kickoff quotes in the preceding seven days, and zero future events with saved strict pre-kickoff quotes. Latest strict Serie A quote remains 2026-10-13 14:48:53 UTC; latest EPL quote 2026-10-09 15:25:57 UTC. No result/score/settlement fields were selected.
+
+### Current exact-head PR and HUMAN-MERGE state
+
+- #706 `caab7c07ad720866616ce9fa62664b0d398e5fe0`: 6/6 SUCCESS; fail-closed production-`.pkl` diff guard.
+- #704 `cc4918caf1ae0bb906b6a1949b2b352b3cce64f3`: 16/16 SUCCESS; pinned V2 research CI dependencies.
+- #705 `8cf5ded4dfc18820e10f59f8ccd2a462479ccfe5`: 8/8 SUCCESS; shared two-session-per-rolling-seven-day source budget. Its inherited `.pkl` diff guard is not sufficient alone, so #706 must precede it.
+- #714 `ea4880dca6b7d41434160a298798b0312744ae56`: offline push validation and budget tests SUCCESS (76 + 23 tests); live download job intentionally SKIPPED. It remains stacked on #705 and needs rebase/full CI after #705.
+- #699 `a6725ca49e90d551baa7e9f647151f7e524e42c7`: 7/7 SUCCESS, but requires rebase after #705/#714.
+- #701 remains dependent on #699; its existing 6/6 result is on the previous base and must be repeated after rebase.
+- #712's existing offline cache tests do not replace the required fresh post-#699 identity-attested source artifact; #711 is an overlapping draft alternative. Choose only one cache consumer after dependencies are integrated.
+
+Authoritative order remains HUMAN-MERGE #706 → #704 → rebase/revalidate #705 → HUMAN-MERGE #705 → rebase/revalidate #714 → HUMAN-MERGE #714 → rebase/revalidate #699 → then #701 and one selected cache consumer. No merge is authorized by this note.
+
+### Frozen scientific state
+
+Original candidate SHA `a9d5abc2...`, 19 features, 20 x 2 weight matrix, `active_lambda=0`, `shadow_residual_lambda=1`; original weights and contract unchanged. The stability gate remains FAILED. Eligible prospective completed primary forecasts remain **0/30**; Brier and LogLoss are unavailable; V2 superiority over market is not established.
+
+No paid odds request, Football-Data download, Supabase write/DDL, target-outcome read, production `.pkl` change, refit, weight/feature/lambda/threshold change, promotion, bet, main update, merge, schedule change, or other-agent setting change occurred.
+
+---
+
 ## 2026-11-05 09:56 UTC — Run 11: exact scheduled-run and database source-before-quote audit
 
 **Main remains** `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This is a documentation-only update to PR #697; no main update or merge.
