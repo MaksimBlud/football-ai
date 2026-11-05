@@ -249,7 +249,7 @@ def test_research_inference_rejects_policy_page_updated_after_review(tmp_path):
 
 
 def test_research_inference_rejects_noncanonical_policy_page_date(tmp_path):
-    path = _write_research_scope_manifest(tmp_path, policy_page_updated_date="04/11/26")
+    path = _write_research_scope_manifest(tmp_path, policy_page_updated_date="2026-W45-3")
     with pytest.raises(PermissionError, match="canonical YYYY-MM-DD"):
         require_personal_research_inference_scope(
             path, now=datetime(2026, 11, 5, 20, 0, tzinfo=timezone.utc)
