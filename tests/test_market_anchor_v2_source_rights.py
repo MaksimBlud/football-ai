@@ -231,3 +231,29 @@ def test_live_v2_entrypoints_check_research_scope_before_external_reads():
             position = main.find(side_effect)
             assert position >= 0, f"{path} lost expected runtime step {side_effect!r}"
             assert guard < position, f"{path} reaches {side_effect!r} before the research-scope guard"
+
+
+def test_source_rights_gate_document_matches_actual_manifest():
+    manifest = json.loads(DEFAULT_RIGHTS_MANIFEST_PATH.read_text(encoding="utf-8"))
+    doc_path = (
+        Path(__file__).resolve().parents[1]
+        / "research"
+        / "MARKET_ANCHOR_V2_SOURCE_RIGHTS_GATE_20261102.md"
+    )
+    doc = doc_path.read_text(encoding="utf-8")
+    for key in (
+        "rights_status",
+        "research_use_permitted",
+        "research_inference_permitted",
+        "research_inference_scope",
+        "ai_model_training_permitted",
+        "commercial_use_permitted",
+        "public_product_use_permitted",
+        "max_automated_download_sessions_per_week",
+    ):
+        value = manifest[key]
+        rendered = str(value).lower() if isinstance(value, bool) else str(value)
+        assert f"`{key} = {rendered}`" in doc
+    assert "`authorization = null`" in doc
+    assert "not a provider-issued AI-inference licence" in doc
+    assert "must fail closed before artifact I/O" in doc
