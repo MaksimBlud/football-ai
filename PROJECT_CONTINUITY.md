@@ -1,3 +1,42 @@
+## 2026-11-05 09:56 UTC — Run 11: exact scheduled-run and database source-before-quote audit
+
+**Main remains** `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This is a documentation-only update to PR #697; no main update or merge.
+
+### Scheduled original-V2 workflows: no Nov 5 schedule records
+
+Re-read the four main workflow files and their cron declarations:
+- Current-Form Source Capture: `.github/workflows/serie-a-v2-current-form-source-capture.yml`, 05:50 UTC.
+- Free Real-Quote Diagnostic: `.github/workflows/serie-a-v2-free-real-quote-diagnostic.yml`, 06:13 UTC.
+- Original Forward-Only Preview: `.github/workflows/serie-a-v2-forward-preview.yml`, 08:08 UTC.
+- Current-Form Forward-Only Preview: `.github/workflows/serie-a-v2-current-form-forward-preview.yml`, 08:18 UTC.
+
+Queried the GitHub Actions API for `event=schedule` and the full UTC date 2026-11-05 at 09:56 UTC: 36 scheduled runs were returned. The only run matching the V2/source-capture/forward-preview name filter was the unrelated `Multi-Market V2 Cycle` (#41986565483). No schedule-event record was present for any of the four workflows above. This is an observed absence of run records, **not** proof that workflows are disabled. No manual dispatch was attempted; the current continuity policy explicitly says not to dispatch source workflows while the shared public-source budget guard is not on main.
+
+### Read-only Supabase pre-match source-before-quote screen
+
+Queried only `public.odds_snapshots` and `public.league_structural_v2_observations`; no results, scores, settlement or target-outcome columns/tables were read. The query admitted only quotes with `snapshot_time_utc < commence_time_utc`, then looked for a same-league/same-event structural observation satisfying both `source.snapshot_time_utc < quote.snapshot_time_utc` and `source.persisted_at_utc <= quote.created_at`.
+
+- 3,915 strictly pre-kickoff quote rows across nine leagues.
+- Zero quote rows in the preceding seven days; zero rows for future kickoffs.
+- Latest strict pre-kickoff quote: Serie A, 2026-10-13 14:48:53 UTC.
+- Structural-observation relation before quote (row counts): Bundesliga 359/394; EPL 478/1,135; Eredivisie 371/410; La Liga 13/798; Ligue 1 352/387; Primeira Liga 0/9; RPL 138/153; Serie A 557/620; Turkey Super Lig 0/9.
+
+**Interpretation limit:** this is a database-level timestamp/identity join against `league_structural_v2_observations`; it is not proof that the original Football-Data CSV archive preceded each quote, and it does not attest raw-source SHA. The authoritative original-V2 source proof remains the GitHub source-artifact/parent-run/SHA verifier. These counts must not be promoted into model eligibility or used to tune the frozen contract.
+
+### Exact PR/CI state at this audit
+
+- #705 HEAD `8cf5ded4dfc18820e10f59f8ccd2a462479ccfe5`: 8/8 SUCCESS.
+- #714 HEAD `ea4880dca6b7d41434160a298798b0312744ae56`: 3 checks total; `budget-tests` and `validate-free-diagnostic` SUCCESS, live `free-diagnostic` intentionally SKIPPED. This is not a full six-workflow CI result; it remains stacked on #705.
+- #699 HEAD `b1ca50494d529f3fd84dcb2e1435f078c4876099`: 7/7 SUCCESS.
+- #701 HEAD `8c059bababce9c1b735f14ec555d44d19b3392c4`: 6/6 SUCCESS.
+- #697 prior HEAD `cf85105b2316aa9098e7f05a243b24029af9be25`: 7/7 SUCCESS before this documentation commit.
+- #703 HEAD `f12abfd3a8fc37fb3aff6d394ec3966bc1311b51`: 7/7 SUCCESS on Nov 1; not a new run in this audit.
+- #711 remains draft with no check-runs on its current head; #712 has only its targeted offline source-reuse check, not full required CI.
+
+No source download, manual workflow dispatch, paid request, Supabase write/DDL, production `.pkl` change, candidate/feature/weight/lambda/threshold change, model training/refit, protected outcome read, promotion, bet, merge, schedule change, or other-agent setting change was performed.
+
+---
+
 ## 2026-11-05 09:07 UTC — Run 11: evaluator persistence-clock regression and exact-head CI
 
 **Main remains** `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This update is documentation-only on PR #697; no main update or merge.
