@@ -1,5 +1,21 @@
 
 
+## 2026-11-05 17:10 UTC — exact V2 integration and review snapshot
+
+- Main is unchanged at `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- **#705** exact HEAD `f3e7451ee9cebc9280a8f86421a509d9bc177da0`, base main, mergeable, **8/8 exact-head PR workflows SUCCESS**. It now consolidates the 170-hour shared source budget, fail-closed production-`.pkl` guard, and offline-only Free Diagnostic push validation. Budget tests: 23 passed; frozen V2 shadow suite: 86 passed; Research and Serie A each passed three fail-closed guard tests. #706 and #714 are closed as superseded and must not be merged separately. HUMAN-MERGE only.
+- **#699** exact head `f11b3e1a5fc62f7415ae72944b058b05e3fddd94`, **7/7 SUCCESS** on its old-main base. Rebase after #705 is manually merged; preserve the shared budget/offline push changes and this PR's rights, source/clock, identity-SHA and outcome guards.
+- **#701** exact head `1a01f9f82dcd2c6be2061aea1eb5164d0af47f73`, reported **6/6 push validations SUCCESS**, still stacked on an older #699 base. Its targeted Research run #42026189766 includes 20 passed prospective-evaluator workflow tests and the gate-open kickoff-binding regression. Rebase after #699 and rerun exact-head CI.
+- **#712** exact head `c7a5b5f7db1bc0de13ba8f878e75d6b651fea119`, **8/8 SUCCESS**, not 9/9. Historical source reuse run #42050748514 reports 54 passed; this is offline/mock-only and does not authorize consuming the pre-#699 artifacts. Wait for a new post-#699 rights-attested original historical source archive before any prospective use.
+- **#715** exact head `0039b51e1d6de2a70ef17065d831052fec837c05`, Draft, no CI; it gates the standalone frozen-shadow CLI with the #699 source-rights helper. Rebase and run full CI after #699.
+- **#704** exact head `cc4918caf1ae0bb906b6a1949b2b352b3cce64f3`, existing dependency-pin checks are successful but the branch is based on old main and overlaps source workflow files. Rebase after #705/#699 if retaining it; it is not a prerequisite for the shared budget guard.
+- **#697** documentation HEAD `88ef1e612b016cadff3b3661a0e872832166a3d5`, **7/7 SUCCESS**. This exact documentation head contains the correction that Structural Edge V2 observation tables are not the original MARKET_ANCHOR_1X2_V2 Football-Data source archive and cannot attest its SHA.
+
+No new source download, paid odds request, Supabase write/DDL, protected target-outcome read, production artifact change, model refit, weight/feature/lambda change, schedule change, or main merge occurred in this audit. The original candidate remains SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 features, 20x2 weights, `active_lambda=0`, `shadow_residual_lambda=1`, stability gate FAILED. Prospective outcome gate remains 0/30; Brier/LogLoss remain unavailable.
+
+
+
+
 ## 2026-11-05 17:12 UTC — original MARKET_ANCHOR_1X2_V2 provenance-scope correction
 
 The 2,935/3,915 source-before-quote join above is a read-only diagnostic over `public.league_structural_v2_observations` and `public.la_liga_structural_v2_observations`. These are Structural Edge V2 observation stores, not the Football-Data historical CSV source consumed by original MARKET_ANCHOR_1X2_V2. Their JSON payloads contain no `sha256`, `source_sha`, or `hash` provenance key. The 2,266 generic-table count and 2,935 union count are therefore **not** original MARKET_ANCHOR_1X2_V2 source-before-quote evidence and must not be used as such. This correction does not alter the DB-only diagnostic; it narrows what it proves.
