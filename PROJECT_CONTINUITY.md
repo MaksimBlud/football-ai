@@ -1,3 +1,46 @@
+## 2026-11-05 11:57 UTC — Run 11: exact source-before-quote recheck and rights-gated CLI
+
+**Main remains** `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Documentation-only update to PR #697; no merge or main change.
+
+### Read-only pre-match quote/source pairing
+
+A fresh SQL recheck selected only pre-match quote metadata and source-observation metadata; no score, result, settlement, or protected target-outcome columns were read.
+
+- `public.odds_snapshots`: **3,966** rows total; **3,915** satisfy `snapshot_time_utc < commence_time_utc`; **0** strict pre-match quotes in the last seven days; **0** future fixtures with a saved strict pre-match quote.
+- Latest saved strict pre-match quote remains Serie A **2026-10-13 14:48:53 UTC**; latest EPL quote **2026-10-09 15:25:57 UTC**.
+- Structural source tables contain **2,387** rows in `league_structural_v2_observations` and **749** in `la_liga_structural_v2_observations`. Latest source snapshot is **2026-10-13 14:48:53 UTC**; latest persisted source observation is **2026-10-22 12:28:06 UTC**; none persisted in the last seven days.
+- Strict source-before-quote join unions both structural tables and requires exact `league + event_id + commence_time_utc`, `source.snapshot_time_utc < quote.snapshot_time_utc`, and `source.persisted_at_utc <= quote.snapshot_time_utc`. Result: **2,935 / 3,915** quote rows have a qualifying earlier persisted observation; **980** do not. No rows had an earlier source-observation timestamp but source persistence after the quote snapshot.
+- Per league qualifying rows / strict pre-match quotes: Bundesliga **359/394**; EPL **478/1,135**; Eredivisie **370/410**; La Liga **682/798**; Ligue 1 **352/387**; Primeira Liga **0/9**; RPL **138/153**; Serie A **556/620**; Turkey Super Lig **0/9**.
+
+**Correction to the previous 11:14 entry:** its **2,268** generic-table-only count is not reproducible under the explicit quote-snapshot persistence anchor. Re-running that generic table alone yields **2,266**; the complete union including the dedicated La Liga observation table yields **2,935**. These are DB pairing diagnostics only, not proof of raw CSV provenance, GitHub parent-run identity, or archive SHA. Those independent attestations remain mandatory.
+
+### Latest real main workflow evidence
+
+No scheduled run for any of the four V2 source/forward workflows was found for **2026-11-05**. The latest verified main runs remain on November 4:
+
+- Current-Form Source Capture [run 41836971469](https://github.com/MaksimBlud/football-ai/actions/runs/41836971469), artifact **13327281383**, ZIP SHA-256 `9dced08f96d81c39dcc199afba481fab07961ce6b61d14776fdc78563bc8cccd`. It captured 10 old-season CSVs plus the 2026/27 current-season CSV; the feature-input metadata gate counted 100 completed prior-day fixtures. This is the feature-input gate, **not** the separate 30-prospective-forecast outcome gate.
+- Current-Form Forward [run 41866116572](https://github.com/MaksimBlud/football-ai/actions/runs/41866116572), artifact **13342406844**, ZIP SHA-256 `f0893c5fdcbd2515c10915830802f77782441e5638bda62fa7d2dff882d6fc20`. It verified the source artifact and parent run, but `quotes_seen=0` and `v2_current_form_shadow_captured=0`; target outcomes were not read.
+- Original Forward [run 41864632742](https://github.com/MaksimBlud/football-ai/actions/runs/41864632742), artifact **13341622767**, ZIP SHA-256 `738553a86e392361ce1b27ab0226a2b0fa2f540a6ac9579b5da2d8d81858a215`. Real historical source attestation verified 10 pre-prospective CSVs / 3,800 historical results, but `quotes_seen=0` and `v2_diagnostic_previews_captured=0`.
+- Free Diagnostic [run 41847314320](https://github.com/MaksimBlud/football-ai/actions/runs/41847314320), artifact **13332260799**, ZIP SHA-256 `72a32dc61d6e230be46bc5fe69a52e97142a79816af33c66f58066e0ceb6e8d8`; 3,800 history rows, `diagnostic_scored=0`.
+
+The Nov 4 current-form source artifact predates #699's new exact fixture-identity/SHA gate attestation; it is not admissible to the new #701 evaluator. No new quote-backed V2 forecast exists.
+
+### New stacked PR #715 — source-rights gate on the standalone frozen-shadow CLI
+
+[PR #715](https://github.com/MaksimBlud/football-ai/pull/715) is a draft stacked on #699 at base `a6725ca49e90d551baa7e9f647151f7e524e42c7`, current head `0039b51e1d6de2a70ef17065d831052fec837c05`.
+
+- The CLI now calls `require_personal_research_inference_scope()` before importing the database client, reading saved quotes, reading external feature JSON, or running inference. A denied scope returns `RESEARCH_SCOPE_BLOCKED` with zero DB reads/writes and no inference.
+- The source-rights manifest records the official Football-Data page update date **2026-11-04** and review time **2026-11-05T10:54:00Z**. It permits only the project's narrow personal/academic frozen-weight research interpretation; it is **not** a provider-issued AI-inference licence. AI training, commercial use, and public-product use remain false/blocked.
+- The preceding commit `acb0d600784f562d0924f29e3cd7cd3403dc61d1` ran [shadow tests 42020206874](https://github.com/MaksimBlud/football-ai/actions/runs/42020206874): **327 passed**, production `.pkl` diff guard passed. The current head's CLI source blob is identical to that tested commit (`3bcbc69fe87a21eba1eccc6cef824ba284e2b6c9)); current head only reverts the temporary workflow base-filter edit. Nevertheless, the exact current head has **no check-runs**. Do not describe #715 as exact-head CI complete; rebase onto main after #699 and rerun full CI.
+
+### PR overlap and integration order
+
+The exact changed-file lists confirm workflow overlap: #699 overlaps #705 in three source/forward workflow files and one source test; #699 overlaps #714 in the free-diagnostic workflow; #705 and #714 overlap in the diagnostic workflow and budget tests; #704 overlaps #699 in five V2 workflows. #714 is stacked on #705. Preserve the manual integration sequence: #706 first for the stronger `.pkl` diff guard; integrate/retest #704 and #705 without losing either dependency-lock or shared-budget changes; then #714; rebase #699 onto the resulting main and rerun all exact-head checks; finally rebase #701 and #715. #703 and #712 also overlap source scripts/workflows and require rebasing against the integrated source pipeline.
+
+No merge, main write, Supabase write/DDL, paid provider request, production `.pkl` change, target-outcome read, model refit, or schedule change occurred in this audit.
+
+---
+
 ## 2026-11-05 11:14 UTC — Run 11 follow-up: policy-date attestation, exact CI, and corrected provenance count
 
 **Main remains** `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This is a documentation-only update to PR #697; no main update or merge.
