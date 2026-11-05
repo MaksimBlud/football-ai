@@ -22,6 +22,7 @@ from market_anchor_1x2_v2_forward_artifact_adapter import (
     select_first_eligible_forecasts,
 )
 from market_anchor_1x2_v2_prospective_runner import (
+    _forecast_kickoff_lookup,
     _read_exact_completed_outcomes,
     evaluate_live_market_only_prospective_cohort,
 )
@@ -346,6 +347,9 @@ def run_live_evaluation(client: Any, token: str, *, now: datetime | None = None,
                 "target_outcomes_read": False, "target_outcomes_scored": False}
 
     selected, selection = select_first_eligible_forecasts(candidates)
+    selected_rows, kickoff_by_identity = _forecast_kickoff_lookup(
+        [item["row"] for item in selected]
+    )
     outcome_state = {"called": False}
     verified_shas: dict[int, str] = {}
 
@@ -363,12 +367,12 @@ def run_live_evaluation(client: Any, token: str, *, now: datetime | None = None,
 
     def lazy_outcome_loader(identities):
         outcome_state["called"] = True
-        return _read_exact_completed_outcomes(client, identities)
+        return _read_exact_completed_outcomes(client, identities, kickoff_by_identity)
 
     try:
         evaluation = evaluate_live_market_only_prospective_cohort(
             client,
-            [item["row"] for item in selected],
+            selected_rows,
             lazy_outcome_loader,
             preflight=verify_source_preflight,
         )

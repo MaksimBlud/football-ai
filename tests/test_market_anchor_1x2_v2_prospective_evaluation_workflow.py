@@ -181,3 +181,99 @@ def test_prospective_github_api_json_accepts_exact_http_200_without_redirects():
     assert github_json(url, "read-only-test-token", get=fake_get) == {"artifacts": []}
     assert request["allow_redirects"] is False
     assert response.json_called is True
+
+
+def test_live_market_only_bridge_binds_forecast_kickoff_to_lazy_outcome_reader(monkeypatch):
+    import hashlib
+
+    import market_anchor_1x2_v2_prospective_evaluation as live
+
+    rows = []
+    candidates = []
+    for index in range(30):
+        row = {
+            "match_date": "2026-11-01",
+            "home_team": f"Home {index:02d}",
+            "away_team": f"Away {index:02d}",
+            "kickoff_utc": f"2026-11-01T{index:02d}:00:00Z",
+        }
+        rows.append(row)
+        candidates.append({
+            "row": row,
+            "provenance": {"source_artifact_id": 999},
+        })
+
+    raw_archive = b"synthetic-forward-artifact"
+    artifact = {
+        "artifact_id": 123,
+        "sha256": hashlib.sha256(raw_archive).hexdigest(),
+        "created_at_utc": "2026-11-01T12:00:00Z",
+    }
+    forward_run = {"run_id": 456, "head_sha": "a" * 40}
+    embedded_source = {999: b"synthetic-source-archive"}
+    verified_source_sha = "b" * 64
+    captured = {}
+
+    monkeypatch.setattr(live, "discover_forward_artifacts", lambda token, get: [artifact])
+    monkeypatch.setattr(live, "verify_forward_run", lambda item, token, get: forward_run)
+    monkeypatch.setattr(live, "get_archive", lambda artifact_id, token, get: raw_archive)
+    monkeypatch.setattr(live, "extract_forward_artifact", lambda raw: ({}, embedded_source))
+    monkeypatch.setattr(
+        live, "normalize_forward_report",
+        lambda report, forward_artifact_id, forward_run: candidates,
+    )
+    monkeypatch.setattr(
+        live, "select_first_eligible_forecasts",
+        lambda items: (items, {"selected": len(items)}),
+    )
+    monkeypatch.setattr(
+        live, "verify_source_artifacts_for_candidates",
+        lambda items, token, current_gate_identities, get: {999: verified_source_sha},
+    )
+
+    def read_exact(client, identities, kickoff_by_identity):
+        captured["client"] = client
+        captured["identities"] = identities
+        captured["kickoff_by_identity"] = dict(kickoff_by_identity)
+        return {identity: "H" for identity in identities}
+
+    monkeypatch.setattr(live, "_read_exact_completed_outcomes", read_exact)
+
+    def evaluate_market_only(client, selected_rows, outcome_loader, *, preflight):
+        identities = {
+            (row["match_date"], row["home_team"], row["away_team"])
+            for row in selected_rows
+        }
+        preflight(identities, {"selected_columns": ["match_date", "home_team", "away_team"]})
+        outcomes = outcome_loader(frozenset(identities))
+        assert set(outcomes) == identities
+        return {
+            "status": "EVALUATED_MARKET_ONLY_DIAGNOSTIC",
+            "target_outcomes_read": True,
+            "target_outcomes_scored": True,
+            "scored_forecasts": len(identities),
+        }
+
+    monkeypatch.setattr(live, "evaluate_live_market_only_prospective_cohort", evaluate_market_only)
+
+    client = object()
+    report = live.run_live_evaluation(
+        client,
+        "read-only-test-token",
+        now=datetime.fromisoformat("2026-11-05T12:00:00+00:00"),
+        get=lambda *_args, **_kwargs: None,
+    )
+
+    expected_identities = frozenset(
+        (row["match_date"], row["home_team"], row["away_team"])
+        for row in rows
+    )
+    expected_kickoffs = {
+        (row["match_date"], row["home_team"], row["away_team"]): row["kickoff_utc"]
+        for row in rows
+    }
+    assert report["status"] == "EVALUATED_MARKET_ONLY_DIAGNOSTIC"
+    assert report["target_outcomes_read"] is True
+    assert captured["client"] is client
+    assert captured["identities"] == expected_identities
+    assert captured["kickoff_by_identity"] == expected_kickoffs
