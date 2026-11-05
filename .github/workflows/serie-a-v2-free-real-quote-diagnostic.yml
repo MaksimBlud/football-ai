@@ -6,7 +6,7 @@ on:
   schedule:
     - cron: "13 6 * * *"
   push:
-    branches: [main]
+    branches: [main, research/v2-free-diagnostic-push-offline-20261104]
     paths:
       - "serie_a_v2_live_diagnostic_report.py"
       - "serie_a_v2_asof_feature_manifest.py"

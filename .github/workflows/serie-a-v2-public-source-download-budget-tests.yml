@@ -1,6 +1,9 @@
 name: Serie A V2 Public Source Download Budget Tests
 
 on:
+  push:
+    branches:
+      - research/v2-free-diagnostic-push-offline-20261104
   pull_request:
     branches:
       - main
