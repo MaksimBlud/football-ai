@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - research/v2-source-capture-guards-integrated-20261026
     paths:
       - "serie_a_v2_frozen_shadow_preview.py"
       - "market_anchor_1x2_v2_shadow.py"
