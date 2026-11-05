@@ -1,3 +1,11 @@
+## 2026-11-05 03:55 UTC — source-budget and fail-closed integration re-audit
+
+Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Full seven-day pagination found 14 scheduled Football-Data download sessions (one Current-Form Source Capture and one Free Real-Quote Diagnostic daily, Oct 29–Nov 4); the unchanged Nov 5 05:50/06:13 UTC cron attempts remain unguarded on main because #705 is open. No download was initiated in this audit. The provider's two-automated-sessions/week limit is already exceeded; the technical #705 budget is not a licence, and the separate source-rights basis must be resolved before any further CSV request.
+
+Integration order is now explicitly **#706 → update/revalidate #705 → HUMAN-MERGE #705 → rebase/revalidate #714 → #714 → rebase/revalidate #699**. #706 exact HEAD `caab7c07` is 6/6 SUCCESS and fixes the fail-open `.pkl` diff guard still visible in #705's current validation log. #705 exact HEAD `8cf5ded4` is 8/8 SUCCESS but must be rerun after #706. #714 exact HEAD `00daa9dd` has no CI yet. #699 exact HEAD `b1ca5049` is 7/7 SUCCESS but must preserve the budget/offline-push changes when rebased. #701 is 5/6 because its only failure is the missing main helper supplied by #699; #702 is 8/8 and manual-only; #712 has only one dedicated check on its current HEAD. #694 is already an ancestor of #699; #709 is superseded by #705.
+
+Fresh main runtime remains source-verified but forecast-empty: Current-Form Source Capture #41836971469 and Current-Form Forward #41866116572 succeeded; Original Forward #41864632742 succeeded. Both forward reports have zero quotes and zero V2 shadows. Read-only Supabase confirms 625 Serie A odds snapshots / 620 strictly pre-kickoff / zero recent or future quotes. The 30-primary-completed-forecast gate remains CLOSED; no Brier/LogLoss result exists. Full evidence and artifact digests are in `PROJECT_CONTINUITY_ADDENDUM_20261102_V2_RUNTIME_AUDIT.md`.
+
 ## 2026-11-04 20:56 UTC — independent byte-level and canonical identity recheck of current-form source
 
 This follow-up independently downloaded the existing main Current-Form Source Capture artifact and recomputed its archive and member hashes. Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no workflow was dispatched and no source request was made.
