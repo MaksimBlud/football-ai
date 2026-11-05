@@ -1,5 +1,49 @@
 # Original MARKET_ANCHOR_1X2_V2 — runtime and pre-match source audit
 
+## 2026-11-05 03:55 UTC — fully paginated source-download audit and fail-closed CI integration order
+
+Fresh main is still `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This audit made no main change, workflow dispatch, provider request, Supabase write/DDL, production-artifact change, model change, or schedule change.
+
+### Real original-V2 runtime, exact main runs and artifacts
+
+- **Current-Form Source Capture** run [41836971469](https://github.com/MaksimBlud/football-ai/actions/runs/41836971469) completed SUCCESS on the exact main SHA. Artifact **13327281383**, ZIP SHA-256 `9dced08f96d81c39dcc199afba481fab07961ce6b61d14776fdc78563bc8cccd`. The actual report records 11 source CSVs (10 frozen historical seasons / 3,800 historical rows plus 2026/27 current-season CSV with 100 completed prior-day rows), feature-input gate count 100, frozen candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, zero paid calls, zero Supabase writes, and no target outcomes scored.
+- **Current-Form Forward-Only Preview** run [41866116572](https://github.com/MaksimBlud/football-ai/actions/runs/41866116572) completed SUCCESS and verified source artifact #13327281383 plus its successful main parent. Output artifact **13342406844**, ZIP SHA-256 `f0893c5fdcbd2515c10915830802f77782441e5638bda62fa7d2dff882d6fc20`. Actual report: `quotes_seen=0`, `v2_current_form_shadow_captured=0`, target outcomes not read/scored, no paid calls, no production/Supabase writes.
+- **Original Forward-Only Preview** run [41864632742](https://github.com/MaksimBlud/football-ai/actions/runs/41864632742) completed SUCCESS. Its source-only attestation verified 10 frozen pre-prospective historical files / 3,800 historical results from source artifact #13332260799. Output artifact **13341622767**, ZIP SHA-256 `738553a86e392361ce1b27ab0226a2b0fa2f540a6ac9579b5da2d8d81858a215`. Actual report: `quotes_seen=0`, `future_quotes_checked=0`, `v2_diagnostic_previews_captured=0`, no target outcomes, no paid calls, no Supabase writes.
+- **Free Real-Quote Diagnostic** run [41847314320](https://github.com/MaksimBlud/football-ai/actions/runs/41847314320) completed SUCCESS. It remains source/diagnostic-only; it did not create an eligible prospective forecast.
+
+These are genuine source/forward runtime proofs, not forecast-quality evidence. The source-before-quote condition is not satisfied for any quote because no quote was seen.
+
+### Read-only Supabase pre-match state
+
+- Identity-only Serie A 2026/27 metadata query selected only `match_date, home_team, away_team`: 103 raw rows / 103 raw tuple identities, dates 2026-08-22 through 2026-11-02. The existing independent canonicalization audit maps these to 100 unique fixture identities; the Nov 4 source CSV has the same 100 canonical identities and SHA-256 `f85872547e745eae8854ee245902c1e522657fb3a687032be83b000199f2a99e`. This does not retroactively add the new #699 rights/identity attestation to the old main archive.
+- `odds_snapshots` for Serie A: 625 rows, 620 strictly pre-kickoff, zero strict pre-kickoff snapshots in the last seven days, zero future events with a saved strict pre-kickoff quote; latest strict pre-match snapshot `2026-10-13T14:48:53.042620Z`.
+- Therefore there are still zero new eligible V2 forecasts and the 30-primary-completed-forecast outcome gate remains CLOSED. Brier and LogLoss remain uncomputed.
+
+### Fully paginated scheduled-download count and immediate operational risk
+
+GitHub scheduled workflow runs were paginated through the seven-day cutoff (2026-10-29 03:55:58 UTC). The complete matching set contains **14 public-source sessions**: one Current-Form Source Capture and one Free Real-Quote Diagnostic on each day from Oct 29 through Nov 4. The latest were #41836971469 at 13:18:57 UTC and #41847314320 at 14:24:55 UTC on Nov 4.
+
+The unchanged main cron still has the next attempts at **Nov 5 05:50 UTC** (Source Capture) and **Nov 5 06:13 UTC** (Free Diagnostic). Because #705 is not merged, those attempts are not protected by its shared 170-hour per-workflow marker on main. If they execute, the rolling-week session count rises beyond the already exceeded provider fair-use limit of two automated sessions per week. No additional download was initiated by this audit.
+
+The 170-hour guard is a technical rate control, not a licence. The Football-Data usage-rights question remains separate: do not initiate new automated/manual CSV downloads until the applicable personal/academic frozen-inference permission basis is established. Do not weaken the 24-hour source/quote freshness rule or substitute a paid provider request.
+
+### Exact PR heads, CI, and safe HUMAN-MERGE dependency order
+
+- **#706** is open at `caab7c07ad720866616ce9fa62664b0d398e5fe0`, exact-head CI **6/6 SUCCESS**. It makes the production-`.pkl` diff guard fail closed by fetching the base, requiring a real merge-base, capturing `git diff` separately, and testing the guard. This is needed first: #705's current validation log still shows the legacy `git diff ... | grep '.pkl'` pipeline, which can mask a git-diff failure as “no changes”.
+- **#705** is open at `8cf5ded4dfc18820e10f59f8ccd2a462479ccfe5`, exact-head CI **8/8 SUCCESS**, including 23 budget tests and 86 frozen V2 shadow tests. It is not active on main. After #706 is manually merged, rebase/update #705 onto the new main and rerun all exact-head CI, including the fail-closed artifact guard, before HUMAN-MERGE.
+- **#714** is open at `00daa9dd5442bcb21d64b4bb319e593c18a7ee22`, stacked on #705, with **no exact-head CI**. It isolates Free Diagnostic push validation from Supabase/GitHub secrets. Rebase after #705 and run full CI; do not merge it directly to main before #705.
+- **#699** is open at `b1ca50494d529f3fd84dcb2e1435f078c4876099`, exact-head CI **7/7 SUCCESS**. It carries the conditional source-rights gate, source/clock/identity/outcome guards and identity-set SHA. Rebase after #705/#714 and preserve the budget marker, offline push isolation, rights manifest, source-before-quote and exact identity attestation; rerun full CI on the resulting exact head.
+- **#701** is open at `499c95cea970d42ee6512b77986af6143295e653`: **5/6 checks pass**. Research validation fails because main lacks `_current_gate_freshness`; #699 supplies it. Do not duplicate the helper; rebase only after #699 and rerun all checks.
+- **#702** is open at `3935fc601eff30d2ca0a7670dae797d0cb365228`, exact-head checks **8/8 SUCCESS**. It is manual-only, metadata/feature-readiness only, not a probability generator; do not dispatch until #699 is integrated and a fresh identity/right-attested source archive exists.
+- **#712** is open at `4b9b1281a8ab81988ea713eb5974d1e55dbba81d`; only one dedicated offline source-reuse check is present on this exact HEAD, not full PR CI. Rebase after #699 and rerun full exact-head CI.
+- **#694** is an ancestor of #699 and its identity-parity work is already represented in #699; do not merge it separately. **#709** is superseded by #705; do not merge it separately.
+
+Recommended HUMAN-MERGE sequence: **#706 → update/revalidate #705 → #705 → rebase/revalidate #714 → #714 → rebase/revalidate #699 → #699 → #701/#702/#712 after their documented dependencies**. No merge was performed in this audit.
+
+### Frozen model invariant
+
+The main candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 original features and original weights; `active_lambda=0`, `shadow_lambda=1`, stability gate FAILED, automatic promotion false. No XGBoost production model, `.pkl`, candidate weights, thresholds, protected target outcomes, or production state was changed.
+
 ## 2026-11-04 15:12 UTC — source identity parity, actual forward runs, and push-trigger guards
 
 Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The frozen original candidate and protocol remain unchanged: candidate blob `ac1303f6b096664983fbf52443bd0a381b23ba21`, candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, protocol blob `65729e9639720e67624c1481190aa22ae606f151`; 19 features, 20×2 weights, active lambda 0, shadow lambda 1, stability gate FAILED.
