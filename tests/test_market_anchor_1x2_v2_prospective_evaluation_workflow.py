@@ -196,6 +196,7 @@ def test_live_market_only_bridge_binds_forecast_kickoff_to_lazy_outcome_reader(m
             "home_team": f"Home {index:02d}",
             "away_team": f"Away {index:02d}",
             "kickoff_utc": f"2026-11-01T{index:02d}:00:00Z",
+            "source_artifact_id": 999,
         }
         rows.append(row)
         candidates.append({
