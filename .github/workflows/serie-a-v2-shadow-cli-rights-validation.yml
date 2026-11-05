@@ -1,0 +1,33 @@
+name: Serie A V2 Shadow CLI Rights Validation
+
+on:
+  push:
+    branches:
+      - research/v2-shadow-cli-rights-gate-20261105-run11
+
+permissions:
+  contents: read
+
+jobs:
+  offline-rights-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: .
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install offline frozen V2 test dependencies
+        run: python -m pip install numpy pandas scipy scikit-learn pytest
+      - name: Compile and test source-rights-gated frozen shadow CLI
+        run: |
+          python -m py_compile market_anchor_v2_source_rights.py serie_a_v2_frozen_shadow_preview.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py historical_football_signal_lab.py
+          python -m pytest -q \
+            tests/test_market_anchor_v2_source_rights.py \
+            tests/test_serie_a_v2_frozen_shadow_preview.py \
+            tests/test_serie_a_v2_shadow_cli_rights_workflow_contract.py
