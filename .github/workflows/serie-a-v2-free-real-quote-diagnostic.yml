@@ -6,7 +6,7 @@ on:
   schedule:
     - cron: "13 6 * * *"
   push:
-    branches: [main]
+    branches: [main, research/v2-public-source-download-budget-20261102]
     paths:
       - "serie_a_v2_live_diagnostic_report.py"
       - "serie_a_v2_asof_feature_manifest.py"
@@ -28,8 +28,32 @@ permissions:
   contents: read
 
 jobs:
+  # Pushes validate the V2 diagnostic contract offline only. They must not
+  # inherit Supabase credentials, reserve a download slot, or fetch public CSVs.
+  validate-free-diagnostic:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: .
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install offline V2 diagnostic validation dependencies
+        run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
+      - name: Validate original V2 diagnostic without network or Supabase
+        run: |
+          python -m py_compile serie_a_v2_live_diagnostic_report.py serie_a_v2_prequote_source_archive_gate.py
+          python -m pytest -q tests/test_serie_a_v2_live_diagnostic_report.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_atalanta_alias.py tests/test_serie_a_v2_frozen_shadow_preview.py tests/test_serie_a_v2_prequote_source_archive_gate.py tests/test_serie_a_v2_public_source_download_budget.py
+
   free-diagnostic:
-    if: ${{ github.ref == 'refs/heads/main' }}
+    if: ${{ github.ref == 'refs/heads/main' && github.event_name != 'push' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
