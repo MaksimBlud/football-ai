@@ -1,3 +1,44 @@
+## 2026-11-05 04:54 UTC — byte-level source proof, live Supabase identity SHA, and frozen runtime smoke
+
+Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This entry records read-only evidence and a synthetic runtime attestation; no main change or merge occurred.
+
+### Existing current-form source artifact — independently rehashed
+
+- Downloaded existing GitHub artifact **#13327281383**, parent Source Capture run **#41836971469**. ZIP SHA-256 recomputed from the downloaded bytes: `9dced08f96d81c39dcc199afba481fab07961ce6b61d14776fdc78563bc8cccd`, matching GitHub's artifact digest.
+- ZIP contains 12 members: ten frozen historical CSVs, `serie_a_2627.csv`, and the V1 manifest. All **11/11 CSV member SHA-256** values match the manifest; all **11/11 source-observed timestamps** precede archive creation `2026-11-04T13:19:45.149891Z`.
+- Historical source: 10 × 380 rows = 3,800. Current-season CSV: 100 rows; SHA-256 `4138a4f01e96312a7a5dc07450c7a520c3861a479620fe3d102f12d42a6678ba`. Its 100 canonical fixture identities independently hash to `f85872547e745eae8854ee245902c1e522657fb3a687032be83b000199f2a99e`.
+- The existing V1 archive predates #699 and lacks its rights/identity attestation. It is **not admissible** to the post-#699 evaluator; do not backfill or relabel it.
+
+### Read-only Supabase — pre-match data only
+
+Checked at `2026-11-05T04:54:06Z`:
+
+- Serie A `odds_snapshots`: 625 total; 620 strictly before kickoff; zero strict pre-kickoff snapshots in the preceding seven days; zero future events with a saved strict pre-kickoff quote. Latest strict quote: `2026-10-13T14:48:53.042620Z`.
+- `league_finished_results` query selected only `match_date,home_team,away_team` for Serie A 2026/27. It returned 103 raw rows/tuples, 2026-08-22 through 2026-11-02. Applying the existing V2-local `Atalanta BC -> Atalanta` alias yields 100 canonical identities. A read-only SQL SHA-256 and an independent CSV identity SHA both equal `f85872547e745eae8854ee245902c1e522657fb3a687032be83b000199f2a99e`.
+- No score, result, or settlement columns were selected.
+
+### Actual forward runtime
+
+- Current-Form Forward run **#41866116572** on main SHA `40887ebb...`: SUCCESS; 53 tests passed; source artifact #13327281383 and parent verified; `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `target_outcomes_read=false`, `supabase_writes=0`, `paid_provider_calls=0`.
+- Original Forward run **#41864632742**: SUCCESS; source archive SHA verified; 3,800 frozen historical rows; `quotes_seen=0`, `future_quotes_checked=0`, `v2_diagnostic_previews_captured=0`, `target_outcomes_read=false`, `supabase_writes=0`, `paid_provider_calls=0`.
+- Therefore there is still no real-match V2 forecast and no admissible outcome score.
+
+### Original candidate — synthetic runtime attestation
+
+PR #707's prior exact HEAD `3a79d333eb246d92aea88b569c8cb5b4474b9fbd`, workflow run **#41701270604**, completed SUCCESS. The runtime report proves: candidate SHA `a9d5abc2...`; frozen code commit `df197770...`; 19 features; weights shape 20×2; `active_lambda=0` returns the synthetic market vector exactly; `shadow_lambda=1` output is finite and sums to one; stability gate remains false; zero real events scored; no training, target-outcome reads, production `.pkl` changes, or promotion. This is a **synthetic smoke test only**, not forecast-quality evidence.
+
+### Rights and PR queue corrections
+
+- The source-rights manifest on #699/#707 branches says `CONDITIONAL_RESEARCH_ONLY`: frozen-weight inference is limited to the project's narrow personal-betting/academic research interpretation; it is not a provider-issued AI-inference licence. AI training/replay, commercial use, and public-product use are false; authorization is null; the automated download ceiling is two sessions per rolling seven days.
+- #707's rights-gate note incorrectly said the overall `rights_status` was `NOT_GRANTED`. Updated that note to distinguish conditional inference from ungranted AI-training permission and added a manifest/document consistency regression. New #707 HEAD is `a2872bb546d9b3093aa8baf5178ae440f45e7f2e`; CI has not yet appeared on this new HEAD. Do not dispatch its training/recovery path: `require_ai_model_training_permission()` must fail before artifact listing/download/extraction under the current manifest.
+- Exact open-PR status at this audit: #706 `caab7c07...` 6/6 SUCCESS; #704 `cc4918ca...` 16/16 SUCCESS; #705 `8cf5ded4...` 8/8 SUCCESS but must be revalidated after #706 and #704; #714 `00daa9dd...` has no CI; #699 `b1ca5049...` 7/7 SUCCESS; #702 `3935fc60...` 8/8 SUCCESS; #701 `499c95ce...` 5/6 because main lacks `_current_gate_freshness`, which #699 supplies; #712 `4b9b1281...` has only one check on its current HEAD; #711 remains draft with no CI.
+- #699's consolidated branch already contains the substantive historical/current URL, redirect/byte-bound, clock, identity-SHA, rights, and workflow-dependency-trigger protections. Its historical loader blob is `d3b717ea03570413f1d0b6b6f9821b2be0db16a3`; the narrower #700 redirect PR is overlapping and should not be merged separately without a fresh diff. #696/#698 and narrower #682/#683/#692/#695/#686 fixes are likewise substantially covered by #699.
+- Safe integration order remains: #706 → #704 → rebase/revalidate #705 → HUMAN-MERGE #705 → rebase/revalidate #714 → HUMAN-MERGE #714 → rebase/revalidate consolidated #699 → HUMAN-MERGE #699. Then rebase #701/#702 and run #702 only after a new rights/identity-attested archive exists.
+
+The unguarded main source-capture and free-diagnostic crons remain at 05:50 and 06:13 UTC. The previously paginated 14 automated sessions (Oct 29–Nov 4) still exceed the manifest's two-session weekly ceiling; no new source download was initiated. The next scheduled attempts are not made safe until the budget/rights changes are integrated. Do not alter schedules or weaken the budget/freshness gates.
+
+Prospective evaluation remains **0/30**. Brier/LogLoss are not available. No paid API calls, Supabase writes/DDL, production `.pkl` changes, model/weight/lambda changes, protected target-outcome reads, merges, or promotions occurred.
+
 ## 2026-11-05 03:55 UTC — source-budget and fail-closed integration re-audit
 
 Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Full seven-day pagination found 14 scheduled Football-Data download sessions (one Current-Form Source Capture and one Free Real-Quote Diagnostic daily, Oct 29–Nov 4); the unchanged Nov 5 05:50/06:13 UTC cron attempts remain unguarded on main because #705 is open. No download was initiated in this audit. The provider's two-automated-sessions/week limit is already exceeded; the technical #705 budget is not a licence, and the separate source-rights basis must be resolved before any further CSV request.
