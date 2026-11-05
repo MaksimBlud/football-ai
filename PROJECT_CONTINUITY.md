@@ -1,3 +1,40 @@
+## 2026-11-05 09:07 UTC — Run 11: evaluator persistence-clock regression and exact-head CI
+
+**Main remains** `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This update is documentation-only on PR #697; no main update or merge.
+
+### Original V2 evaluator follow-up
+
+PR #701 remains stacked on #699 and now has exact HEAD `8c059bababce9c1b735f14ec555d44d19b3392c4`, with **6/6 SUCCESS**:
+- Research PR Validation #41999436433 — 79 evaluator tests and 11 live-runner tests passed.
+- Serie A, Bundesliga, Ligue 1, Product, and Eredivisie checks all SUCCESS.
+- The follow-up corrected the evaluator documentation to state that the post-gate outcome query selects exactly `match_date,home_team,away_team,result,persisted_at_utc`.
+- Added synthetic regressions for result persistence one hour before kickoff, exactly at kickoff, and for an offsetless persistence timestamp. All fail closed; no outcome query occurs below the existing 30-eligible-completed-primary-forecast gate.
+- The first draft test asserted the wrong error wording; exact-head CI caught it. The expectation was corrected to the existing fail-closed runtime message, then all 6 checks passed.
+- The change modifies only the prospective evaluator documentation and runner tests. It does not change the evaluator implementation, frozen candidate, 19 features, weights, lambdas, selection policy, or 30-event gate.
+
+The market-only evaluator remains distinct from the three-way review path: it compares only de-vigged market (`active_lambda=0`) with the original V2 research shadow (`shadow_lambda=1`), keeps `review_signal=false`, and cannot promote or publish. The separately pinned incumbent remains unavailable; no legacy XGBoost model is used.
+
+### Current pre-match data and workflow state
+
+The Nov 5 schedule-event audit still shows no run for the four main V2 scheduled workflows (Source Capture 05:50 UTC, Free Diagnostic 06:13 UTC, Original Forward 08:08 UTC, Current-Form Forward 08:18 UTC). Latest verifiable main V2 runs remain Nov 4. This is an observed absence of run records, not proof that the workflows are disabled.
+
+Read-only Supabase aggregate queries on pre-match tables only:
+- `odds_snapshots`: 3,915 strictly pre-kickoff rows across nine leagues; zero in the last seven days; zero future events with a saved strict pre-kickoff quote.
+- `league_structural_v2_observations`: 2,387 strictly pre-kickoff observations across seven leagues; zero in the last seven days; zero future events with a saved pre-kickoff observation.
+- Latest strict Serie A quote remains 2026-10-13 14:48:53 UTC.
+
+No results, scores, settlements, or protected target outcomes were queried. The prospective cohort remains **0/30**; Brier Score and LogLoss are unavailable.
+
+### HUMAN-MERGE integration order
+
+- #705 `8cf5ded4...`: 8/8 SUCCESS; shared two-session rolling-week download budget and source-capture push isolation.
+- #714 `ea4880dc...`: offline Free Diagnostic push validation 2/2 SUCCESS (the live download job was intentionally skipped); still stacked on #705 and needs rebase/full exact-head validation after #705.
+- #699 `b1ca5049...`: 7/7 SUCCESS on its current head, but must be rebased after #705/#714 to preserve shared-budget and offline-push changes.
+- #701 `8c059bababce9c1b735f14ec555d44d19b3392c4`: 6/6 SUCCESS, but remains stacked on #699 and must be retargeted/revalidated after #699 is integrated.
+- #709's source-capture offline-push delta is already present in #705; do not merge it separately without a new unique-delta review.
+- #704/#706/#712 remain dependent on the final source/evaluator integration and require exact-head rebase CI.
+
+No PR was merged, no main change, no schedule or other-agent setting change, no source download, no paid request, no Supabase write/DDL, no production `.pkl` change, no model training/refit, no weight/feature/lambda/threshold change, no promotion, and no bet occurred.
 ## 2026-11-05 08:40 UTC — Run 11: fresh schedule, pre-match data, evaluator provenance, and stacked-PR audit
 
 **Main remains** `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This entry updates documentation PR #697 only; no main update or merge.
