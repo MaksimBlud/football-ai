@@ -53,8 +53,8 @@ COMPLETED_FIXTURE_GATE_QUERY_CONTRACT_ID = "SERIE_A_COMPLETED_FIXTURE_IDENTITIES
 COMPLETED_FIXTURE_GATE_QUERY_CONTRACT_SHA256 = (
     "181d76b75c092d46b57535591abbb4e625c3e54e9b0f876402c9a3e0ed2457fb"
 )
-_SHA1 = re.compile(r"[0-9a-f]{40}\\Z")
-_SHA256 = re.compile(r"[0-9a-f]{64}\\Z")
+_SHA1 = re.compile(r"[0-9a-f]{40}\Z")
+_SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 _ALLOWED_SOURCE_EVENTS = {"schedule", "workflow_dispatch"}
 _ALLOWED_FORWARD_EVENTS = {"schedule", "workflow_dispatch", "workflow_run"}
 _OUTCOME_KEYS = {
