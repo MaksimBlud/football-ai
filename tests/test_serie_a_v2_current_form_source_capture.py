@@ -1104,10 +1104,10 @@ def test_source_capture_push_runs_offline_validation_without_download_job():
     assert "validate-source-capture:" in workflow
     assert "if: github.event_name == 'push'" in workflow
     assert "capture-current-form:" in workflow
-    capture_job = workflow.split("  capture-current-form:\\n", 1)[1].split("\\n    runs-on:", 1)[0]
+    capture_job = workflow.split("  capture-current-form:\n", 1)[1].split("\n    runs-on:", 1)[0]
     assert "github.event_name != 'push'" in capture_job
     assert "github.ref == 'refs/heads/main'" in capture_job
-    validator_job = workflow.split("  validate-source-capture:\\n", 1)[1].split("\\n  capture-current-form:\\n", 1)[0]
+    validator_job = workflow.split("  validate-source-capture:\n", 1)[1].split("\n  capture-current-form:\n", 1)[0]
     assert "SUPABASE_URL" not in validator_job
     assert "SUPABASE_KEY" not in validator_job
     assert "GITHUB_TOKEN" not in validator_job
