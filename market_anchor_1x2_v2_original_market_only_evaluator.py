@@ -322,6 +322,8 @@ def normalize_original_forward_report(
             raise ValueError("market quote is not strictly pre-kickoff")
         if not captured < kickoff or quote_time > captured:
             raise ValueError("V2 preview was not captured between quote and kickoff")
+        if not captured <= _utc(forward_artifact["created_at_utc"], "forward artifact created_at") < kickoff:
+            raise ValueError("forward forecast artifact was not persisted after capture and before kickoff")
         if preview.get("event_id") != event_id:
             raise ValueError("forward event identity differs from its V2 preview")
         if _utc(preview.get("market_snapshot_time_utc"), "preview market snapshot") != quote_time:
@@ -481,6 +483,8 @@ def select_first_eligible_forecast_per_fixture(
             raise ValueError("forward artifact is outside its successful parent workflow interval")
         if not forward_run_created <= capture <= forward_run_completed:
             raise ValueError("forward capture is outside its successful parent workflow interval")
+        if not capture <= forward_created < kickoff:
+            raise ValueError("forward forecast artifact was not persisted after capture and before kickoff")
         if feature_cutoff > quote or feature_cutoff >= kickoff:
             raise ValueError("original feature history cutoff is not pre-quote")
         if not quote <= capture < kickoff:
