@@ -120,12 +120,12 @@ jobs:
           if type(count) is not int or count < 0:
               raise SystemExit("quote preflight lacks a valid count; public-source download blocked")
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
-              output.write(f"eligible_quote_rows={count}\\n")
+              output.write(f"eligible_quote_rows={count}" + chr(10))
           print(json.dumps({
               "mode": report.get("mode"),
               "quote_rows_seen": report.get("quote_rows_seen"),
               "eligible_future_prematch_quote_rows": count,
-              "public_source_download_allowed_to_continue": count > 0,
+              "fresh_quote_preflight_passed": count > 0,
           }, sort_keys=True))
           PY
       - name: Check shared public-source download budget
