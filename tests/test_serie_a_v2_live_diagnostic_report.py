@@ -627,3 +627,13 @@ def test_free_diagnostic_workflow_preflights_quotes_before_budget_and_download()
     )[1].split("      - name: Archive diagnostic and exact public CSV bytes for provenance", 1)[0]
     assert "steps.quote_preflight.outputs.eligible_quote_rows != '0'" in download_block
     assert "steps.public_source_budget.outputs.allowed == 'true'" in download_block
+
+
+def test_quote_preflight_rejects_invalid_decimal_prices_before_source_download():
+    now = datetime(2026, 10, 13, 15, 1, tzinfo=timezone.utc)
+    invalid_values = (None, True, 1.0, float("nan"), float("inf"), "not-a-price")
+    for key in ("home_odds", "draw_odds", "away_odds"):
+        for invalid in invalid_values:
+            row = {**quote(), key: invalid}
+            with pytest.raises(ValueError, match="invalid bookmaker decimal prices|missing bookmaker decimal prices"):
+                count_fresh_future_prematch_quote_rows([row], now=now)
