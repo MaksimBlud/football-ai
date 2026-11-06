@@ -243,3 +243,15 @@ def test_frozen_sha_patterns_and_source_zip_name_are_exact():
     assert runner.SHA256_RE.fullmatch("b" * 64)
     assert runner.SOURCE_ZIP_RE.fullmatch("source_artifact_12345.zip")
     assert not runner.SOURCE_ZIP_RE.fullmatch("source_artifact_x.zip")
+
+
+def test_report_writer_emits_parseable_json_with_real_terminal_newline(tmp_path):
+    path = tmp_path / "nested" / "secondary-report.json"
+    expected = {"status": "NO_SOURCE_BEFORE_QUOTE_FORECASTS", "target_outcomes_read": False}
+
+    runner._write_json_report(path, expected)
+
+    raw = path.read_bytes()
+    assert raw.endswith(b"\n")
+    assert not raw.endswith(b"\\n")
+    assert json.loads(raw.decode("utf-8")) == expected
