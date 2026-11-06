@@ -108,13 +108,52 @@ def test_candidate_export_cannot_target_production_paths():
         assert dangerous not in code
 
 
+def test_build_training_frame_uses_local_archived_csvs_without_provider_requests(tmp_path, monkeypatch):
+    import pandas as pd
+
+    class FakeLab:
+        @staticmethod
+        def build_point_in_time_features(raw, _league, _mode):
+            return pd.DataFrame({
+                "match_date": pd.to_datetime(raw["Date"], dayfirst=True),
+                "home_team": raw["HomeTeam"],
+                "away_team": raw["AwayTeam"],
+                "season": raw["_season"],
+                "fixture_marker": range(len(raw)),
+            })
+
+    for index, code in enumerate(replay.TRAIN_SEASONS):
+        year = 2016 + index
+        (tmp_path / f"serie_a_{code}.csv").write_text(
+            "Date,HomeTeam,AwayTeam,FTR\n"
+            f"01/10/{year},Home {index},Away {index},H\n",
+            encoding="utf-8",
+        )
+
+    def forbidden_download(_code):
+        raise AssertionError("local archive recovery must not download public CSVs")
+
+    monkeypatch.setattr(replay, "download_csv", forbidden_download)
+    frame, hashes, by_code = replay.build_training_frame(
+        FakeLab(), training_csv_dir=tmp_path
+    )
+    assert len(frame) == 10
+    assert set(hashes) == set(replay.TRAIN_SEASONS)
+    assert set(by_code) == set(replay.TRAIN_SEASONS)
+    assert frame["season"].notna().all()
+
+
 def test_original_frozen_weights_restoration_does_not_read_mutable_2026_27():
     from pathlib import Path
     src = Path("market_anchor_v2_saved_cohort_replay.py").read_text()
     frozen_function = src.split(
         "def restore_frozen_candidate_from_training_history(", 1
     )[1].split("\ndef main()", 1)[0]
-    assert "build_training_frame(_lab)" in frozen_function
+    assert "build_training_frame(" in frozen_function
+    assert "training_csv_dir=training_csv_dir" in frozen_function
+    assert "download_csv(" not in frozen_function
+    assert "--training-csv-dir" in src
+    assert "recovery never downloads public CSVs" in src
     assert "build_target_features(" not in frozen_function
     assert "CURRENT_SEASON_CODE" not in frozen_function
     assert 'historical_hashes.get(season) != frozen_hashes.get(season)' in frozen_function
@@ -161,3 +200,22 @@ def test_durable_recovered_serie_a_candidate_is_frozen_and_not_production():
     assert len(recovered["scaler_scale"]) == len(recovered["features"])
     assert all(isinstance(x, (float, int)) for row in recovered["weights"] for x in row)
 
+
+
+
+def test_recovery_workflow_pickle_integrity_guard_is_recursive_and_fail_closed():
+    from pathlib import Path
+    workflow = Path(".github/workflows/recover-market-anchor-v2-candidate.yml").read_text(
+        encoding="utf-8"
+    )
+    before = workflow.index("Snapshot all tracked and generated production pickle hashes")
+    restore = workflow.index("Restore exact Sep-2026 model code")
+    after = workflow.index("Assert all production pickle files still match")
+    assert before < restore < after
+    assert workflow.count("set -euo pipefail") >= 3
+    assert workflow.count("find . -path './.git' -prune -o -type f -name '*.pkl' -print0") == 2
+    assert 'sha256sum "${pkl_files[@]}" | sort > /tmp/recovery-pkl-before' in workflow
+    assert 'sha256sum "${pkl_files[@]}" | sort > /tmp/recovery-pkl-after' in workflow
+    assert "FAIL_CLOSED: no production .pkl files found" in workflow
+    assert "FAIL_CLOSED: production .pkl files disappeared" in workflow
+    assert "|| true" not in workflow
