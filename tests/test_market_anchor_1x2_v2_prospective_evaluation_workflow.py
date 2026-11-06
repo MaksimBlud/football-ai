@@ -232,10 +232,11 @@ def test_live_market_only_bridge_binds_forecast_kickoff_to_lazy_outcome_reader(m
         lambda items, token, current_gate_identities, get: {999: verified_source_sha},
     )
 
-    def read_exact(client, identities, kickoff_by_identity):
+    def read_exact(client, identities, kickoff_by_identity, *, observed_at_utc):
         captured["client"] = client
         captured["identities"] = identities
         captured["kickoff_by_identity"] = dict(kickoff_by_identity)
+        captured["observed_at_utc"] = observed_at_utc
         return {identity: "H" for identity in identities}
 
     monkeypatch.setattr(live, "_read_exact_completed_outcomes", read_exact)
@@ -278,3 +279,4 @@ def test_live_market_only_bridge_binds_forecast_kickoff_to_lazy_outcome_reader(m
     assert captured["client"] is client
     assert captured["identities"] == expected_identities
     assert captured["kickoff_by_identity"] == expected_kickoffs
+    assert captured["observed_at_utc"] == "2026-11-05T12:00:00Z"
