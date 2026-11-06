@@ -74,7 +74,7 @@ FORWARD_CODE_BLOBS = {
     "market_anchor_1x2_v2_shadow.py": "b2770d726ffafe7a3cef706b57d3391063cbfe1b",
     "serie_a_v2_prequote_source_archive_gate.py": "c04e8faae612305f4b618cd10ef59e3ec9729b2d",
     "serie_a_v2_live_diagnostic_report.py": "d3b717ea03570413f1d0b6b6f9821b2be0db16a3",
-    "serie_a_v2_attest_real_source.py": "22693df450ae8b431ef0547f98dc727f499fa9fb",
+    "serie_a_v2_attest_real_source.py": "f80361c7dd5784883a1584d261ec5e026dfcb8ca",
     "market_anchor_v2_source_rights.py": "538ae477995c3b70ba5d4adafa8e4e7516072b98",
     "research/source_rights/football_data_co_uk.json": "a8795adce411fad4679491be36867dad2565a89c",
     "research/models/market_anchor_v2_serie_a_frozen_candidate.json": "ac1303f6b096664983fbf52443bd0a381b23ba21",
