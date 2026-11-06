@@ -1,0 +1,64 @@
+name: Original V2 Market-Only Secondary Evaluator Tests
+
+on:
+  pull_request:
+    branches:
+      - research/v2-source-capture-guards-integrated-20261026
+    paths:
+      - "market_anchor_1x2_v2_original_market_only_evaluator.py"
+      - "tests/test_market_anchor_1x2_v2_original_market_only_evaluator.py"
+      - "experiments/market_anchor_1x2_v2_original_market_only_secondary_policy.json"
+      - "research/MARKET_ANCHOR_1X2_V2_ORIGINAL_MARKET_ONLY_SECONDARY_EVALUATION_20261106.md"
+      - ".github/workflows/market-anchor-1x2-v2-original-market-only-secondary.yml"
+  push:
+    branches:
+      - research/v2-original-market-only-secondary-eval-20261106-run11
+    paths:
+      - "market_anchor_1x2_v2_original_market_only_evaluator.py"
+      - "tests/test_market_anchor_1x2_v2_original_market_only_evaluator.py"
+      - "experiments/market_anchor_1x2_v2_original_market_only_secondary_policy.json"
+      - "research/MARKET_ANCHOR_1X2_V2_ORIGINAL_MARKET_ONLY_SECONDARY_EVALUATION_20261106.md"
+      - ".github/workflows/market-anchor-1x2-v2-original-market-only-secondary.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  offline-secondary-evaluator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: .
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install offline evaluator test dependency
+        run: python -m pip install pytest
+      - name: Compile and test pure market-only evaluator (no outcomes or network)
+        run: |
+          python -m py_compile market_anchor_1x2_v2_original_market_only_evaluator.py
+          python -m pytest -q tests/test_market_anchor_1x2_v2_original_market_only_evaluator.py
+      - name: Verify policy and frozen candidate contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          policy = json.loads(Path("experiments/market_anchor_1x2_v2_original_market_only_secondary_policy.json").read_text())
+          assert policy["model_contract"]["candidate_sha256"] == "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
+          assert policy["model_contract"]["feature_count"] == 19
+          assert policy["model_contract"]["weights_shape"] == [20, 2]
+          assert policy["model_contract"]["active_lambda"] == 0.0
+          assert policy["model_contract"]["shadow_residual_lambda"] == 1.0
+          assert policy["analysis_scope"]["secondary_analysis_only"] is True
+          assert policy["analysis_scope"]["original_frozen_cohort_eligibility_rewritten"] is False
+          assert policy["gates"]["minimum_completed_primary_fixture_identities"] == 30
+          assert policy["gates"]["minimum_eligible_completed_forecasts"] == 30
+          assert policy["gates"]["post_kickoff_persistence_rule"] == "persisted_at_utc strictly greater than kickoff_utc"
+          assert policy["interpretation"]["does_not_change_original_v2_model_or_evaluation_contract"] is True
+          print("PASS: separate secondary protocol; original V2 contract unchanged")
+          PY

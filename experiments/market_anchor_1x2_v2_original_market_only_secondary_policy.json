@@ -1,0 +1,68 @@
+{
+  "policy_id": "MARKET_ANCHOR_1X2_V2_OLD_SEASON_ONLY_MARKET_COMPARISON_SECONDARY_V1",
+  "frozen_at_utc": "2026-11-06T02:46:10Z",
+  "model_contract": {
+    "experiment_id": "MARKET_ANCHOR_1X2_V2",
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "feature_count": 19,
+    "weights_shape": [20, 2],
+    "training_data_through_utc": "2026-06-30T23:59:59Z",
+    "active_lambda": 0.0,
+    "shadow_residual_lambda": 1.0,
+    "stability_gate_passed": false,
+    "original_contract_changed": false
+  },
+  "analysis_scope": {
+    "primary_league": "SERIE_A",
+    "primary_season": "2026-2027",
+    "source_pipeline": "original old-season-only Serie A V2 forward artifact",
+    "comparison": "de-vigged market versus original frozen V2 lambda-1 residual shadow",
+    "incumbent_model_used": false,
+    "current_form_cohort_used": false,
+    "original_frozen_cohort_eligibility_rewritten": false,
+    "secondary_analysis_only": true,
+    "product_publication": false,
+    "betting": false,
+    "automatic_promotion": false
+  },
+  "gates": {
+    "minimum_completed_primary_fixture_identities": 30,
+    "minimum_eligible_completed_forecasts": 30,
+    "post_kickoff_persistence_rule": "persisted_at_utc strictly greater than kickoff_utc",
+    "outcome_read_before_both_gates": false,
+    "completed_fixture_query_columns": ["match_date", "home_team", "away_team"],
+    "completed_fixture_query_source": "public.league_finished_results"
+  },
+  "selection": {
+    "unit": "canonical_fixture_identity",
+    "rule": "earliest source-verified pre-kickoff V2 shadow capture per fixture",
+    "tie_policy": "fail_closed_if_two_captures_for_one_fixture_share_the_same_capture_time",
+    "event_id_policy": "fail_closed_if_one_provider_event_id_maps_to_more_than_one_fixture",
+    "outcome_dependent_selection": false,
+    "market_price_dependent_selection": false,
+    "performance_based_selection": false
+  },
+  "provenance": {
+    "forward_artifact_name": "serie-a-v2-original-forward-source-checked",
+    "forward_workflow_path": ".github/workflows/serie-a-v2-forward-preview.yml",
+    "forward_run_events": ["schedule", "workflow_dispatch"],
+    "source_run_events": ["schedule", "workflow_dispatch"],
+    "source_artifact_name": "serie-a-v2-free-real-quote-diagnostic",
+    "source_workflow_path": ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml",
+    "source_loader_blob_sha1": "d3b717ea03570413f1d0b6b6f9821b2be0db16a3",
+    "source_rights_helper_blob_sha1": "538ae477995c3b70ba5d4adafa8e4e7516072b98",
+    "source_rights_manifest_blob_sha1": "a8795adce411fad4679491be36867dad2565a89c"
+  },
+  "statistics": {
+    "metrics": ["multiclass_brier_score", "multiclass_log_loss"],
+    "paired_bootstrap_replicates": 10000,
+    "paired_bootstrap_seed": 20261106,
+    "confidence_level": 0.95
+  },
+  "interpretation": {
+    "superiority_claim_permitted": false,
+    "must_report_both_metrics_and_uncertainty": true,
+    "does_not_satisfy_original_frozen_prospective_cohort": true,
+    "does_not_change_original_v2_model_or_evaluation_contract": true
+  }
+}
