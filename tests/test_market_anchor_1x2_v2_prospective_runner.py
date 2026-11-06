@@ -344,6 +344,72 @@ def test_live_supabase_market_only_runner_rejects_outcome_persisted_at_or_before
     assert client.select_calls == ["match_date,home_team,away_team,result,persisted_at_utc"]
 
 
+
+def test_live_supabase_market_only_runner_rejects_outcome_persisted_after_evaluation_observation_time(monkeypatch):
+    rows = _forecast_rows(30)
+    for row in rows:
+        row.pop("incumbent_1x2")
+        row.pop("incumbent_evidence")
+    identities = {
+        (row["match_date"], row["home_team"], row["away_team"])
+        for row in rows
+    }
+    monkeypatch.setattr(
+        runner, "read_completed_fixture_gate",
+        lambda _client: (identities, _gate_attestation(identities)),
+    )
+    outcome_rows = [
+        {
+            "league": "SERIE_A",
+            "season": "2026-2027",
+            "match_date": row["match_date"],
+            "home_team": row["home_team"],
+            "away_team": row["away_team"],
+            "result": "H",
+            "persisted_at_utc": _persisted_after_kickoff(row),
+        }
+        for row in rows
+    ]
+    # This timestamp is after kickoff but after the evaluator's frozen
+    # observation clock; it must not be treated as already persisted evidence.
+    outcome_rows[0]["persisted_at_utc"] = "2026-12-01T20:00:00Z"
+    client = _ExactOutcomeClient(outcome_rows)
+
+    with pytest.raises(ValueError, match="cannot be later than evaluation observation time"):
+        runner.evaluate_live_market_only_from_supabase(
+            client, rows, observed_at_utc="2026-12-01T19:00:00Z"
+        )
+
+    assert client.result_query_count == 1
+    assert client.select_calls == ["match_date,home_team,away_team,result,persisted_at_utc"]
+
+
+def test_live_supabase_market_only_runner_rejects_offsetless_evaluation_observation_clock(monkeypatch):
+    rows = _forecast_rows(30)
+    for row in rows:
+        row.pop("incumbent_1x2")
+        row.pop("incumbent_evidence")
+    identities = {
+        (row["match_date"], row["home_team"], row["away_team"])
+        for row in rows
+    }
+    gate_calls = []
+    monkeypatch.setattr(
+        runner, "read_completed_fixture_gate",
+        lambda _client: gate_calls.append(True) or (identities, _gate_attestation(identities)),
+    )
+    client = _ExactOutcomeClient([])
+
+    with pytest.raises(ValueError, match="evaluation observed_at_utc must have a real UTC offset"):
+        runner.evaluate_live_market_only_from_supabase(
+            client, rows, observed_at_utc="2026-11-06T12:00:00"
+        )
+
+    assert gate_calls == []
+    assert client.result_query_count == 0
+    assert client.select_calls == []
+
+
 def test_live_supabase_market_only_runner_rejects_offsetless_outcome_persistence_timestamp(monkeypatch):
     rows = _forecast_rows(30)
     for row in rows:
