@@ -380,6 +380,29 @@ def test_post_gate_outcome_persistence_must_be_strictly_after_kickoff():
         )
 
 
+
+def test_post_gate_outcome_persistence_cannot_be_later_than_evaluation_observation_time():
+    identities = _identities()
+    forecasts = _forecasts(identities)
+
+    def load_outcomes(keys):
+        return {
+            key: {
+                "result": "H",
+                "persisted_at_utc": "2026-12-01T14:00:00Z",
+            }
+            for key in keys
+        }
+
+    with pytest.raises(ValueError, match="cannot be later than evaluation observation time"):
+        evaluator.evaluate_market_only_secondary_cohort(
+            forecasts,
+            completed_fixture_identities=identities,
+            completed_gate_attestation=_gate(identities),
+            load_outcomes=load_outcomes,
+        )
+
+
 def test_forward_workflow_run_from_paid_snapshot_is_not_admitted():
     report, forward, sources = _valid_report()
     forward["parent_run"]["event"] = "workflow_run"
