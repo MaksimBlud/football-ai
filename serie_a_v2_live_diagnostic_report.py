@@ -354,6 +354,12 @@ def count_fresh_future_prematch_quote_rows(quotes: list[dict], *, now: datetime)
 
 def build_quote_preflight_report(quotes: list[dict], *, as_of_utc: datetime) -> dict:
     """Metadata-only quote preflight; it never downloads sources or runs inference."""
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
+        raise ValueError("quote preflight clock must be timezone-aware")
     at = as_of_utc.astimezone(timezone.utc)
     eligible = count_fresh_future_prematch_quote_rows(quotes, now=at)
     return {
