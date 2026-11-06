@@ -298,7 +298,12 @@ def verify_source_artifacts_for_candidates(
 
 
 def run_live_evaluation(client: Any, token: str, *, now: datetime | None = None, get=requests.get):
-    now = now or datetime.now(timezone.utc)
+    if now is None:
+        now = datetime.now(timezone.utc)
+    if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError("evaluation observation clock must have a real UTC offset")
+    now = now.astimezone(timezone.utc)
+    observed_at_utc = now.isoformat().replace("+00:00", "Z")
     base = {
         "schema_version": "MARKET_ANCHOR_1X2_V2_PROSPECTIVE_MARKET_EVALUATION_RUN_V1",
         "run_at_utc": now.astimezone(timezone.utc).isoformat(),
@@ -367,7 +372,9 @@ def run_live_evaluation(client: Any, token: str, *, now: datetime | None = None,
 
     def lazy_outcome_loader(identities):
         outcome_state["called"] = True
-        return _read_exact_completed_outcomes(client, identities, kickoff_by_identity)
+        return _read_exact_completed_outcomes(
+            client, identities, kickoff_by_identity, observed_at_utc=observed_at_utc
+        )
 
     try:
         evaluation = evaluate_live_market_only_prospective_cohort(
