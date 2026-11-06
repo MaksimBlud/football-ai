@@ -21,7 +21,7 @@ import requests
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 from serie_a_v2_asof_feature_manifest import build_manifest
 from serie_a_v2_frozen_shadow_preview import (
-    FROZEN_SHA, MARKET_KEYS, MAX_QUOTE_AGE, _guard_outcome_free,
+    FROZEN_SHA, MARKET_KEYS, MAX_QUOTE_AGE, _guard_outcome_free, _market,
     fetch_saved_upcoming_serie_a_quotes, parse_utc, shadow_preview,
 )
 from market_anchor_v2_source_rights import require_personal_research_inference_scope, write_research_scope_blocked_report
@@ -333,6 +333,9 @@ def count_fresh_future_prematch_quote_rows(quotes: list[dict], *, now: datetime)
         _guard_outcome_free(row)
         if not all(key in row for key in MARKET_KEYS):
             raise ValueError("market observation has missing fields")
+        # Use the same decimal-price validator as frozen inference so malformed
+        # rows cannot trigger an otherwise unnecessary public-source download.
+        _market(row)
         if row["league"] != "SERIE_A":
             raise ValueError("non-Serie-A observations forbidden")
         for key in ("event_id", "home_team", "away_team"):
