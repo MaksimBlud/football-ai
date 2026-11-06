@@ -520,3 +520,18 @@ def test_current_form_forward_reader_does_not_run_on_push_validation():
     assert "github.event.workflow_run.event == 'workflow_dispatch'" in job
     assert "github.event_name != 'workflow_run'" not in job
     assert "github.event.workflow_run.event != 'pull_request'" not in job
+
+
+def test_fresh_source_refresh_skips_budget_reservation_and_public_download():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / SOURCE_PATH).read_text(encoding="utf-8")
+    preflight = source.index("Check existing verified source before diagnostic-triggered refresh")
+    budget_step = source.index("Check shared public-source download budget")
+    marker_step = source.index("Upload shared public-source download attempt marker")
+    capture_step = source.index("Capture frozen historical seasons plus gated current-form source")
+    assert preflight < budget_step < marker_step < capture_step
+    budget_block = source[budget_step:marker_step]
+    assert "if: ${{ steps.source_refresh.outputs.capture != 'false' }}" in budget_block
+    assert "steps.source_refresh.outputs.capture != 'false'" in source
+    assert "steps.public_source_budget.outputs.allowed == 'true'" in source
+    assert "steps.upload_public_source_budget.outcome == 'success'" in source
