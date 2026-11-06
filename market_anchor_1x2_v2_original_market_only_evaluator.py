@@ -399,12 +399,19 @@ def normalize_original_forward_report(
             "candidate_sha256": CANDIDATE_SHA256,
             "source_artifact_id": source_id,
             "source_artifact_sha256": source_sha,
+            "source_artifact_created_at_utc": source_artifact["created_at_utc"],
             "source_parent_run_id": source_run["id"],
             "source_parent_run_head_sha": source_run["head_sha"],
+            "source_parent_run_created_at_utc": source_run["created_at_utc"],
+            "source_parent_run_completed_at_utc": source_run["completed_at_utc"],
             "forward_artifact_id": forward_artifact["artifact_id"],
             "forward_artifact_sha256": forward_artifact["sha256"],
+            "forward_artifact_created_at_utc": forward_artifact["created_at_utc"],
             "forward_parent_run_id": forward_run["id"],
             "forward_parent_run_head_sha": forward_run["head_sha"],
+            "forward_parent_run_created_at_utc": forward_run["created_at_utc"],
+            "forward_parent_run_completed_at_utc": forward_run["completed_at_utc"],
+            "source_before_quote_provenance_verified": True,
             "original_frozen_cohort_eligible": False,
             "secondary_market_only_eligible": True,
             "no_bet": True,
@@ -436,9 +443,46 @@ def select_first_eligible_forecast_per_fixture(
             raise ValueError("row is not eligible for this frozen secondary protocol")
         if row.get("original_frozen_cohort_eligible") is not False or row.get("no_bet") is not True:
             raise ValueError("secondary selection cannot rewrite original eligibility or NO_BET")
+        required_provenance = (
+            "source_artifact_id", "source_artifact_sha256", "source_artifact_created_at_utc",
+            "source_parent_run_id", "source_parent_run_head_sha",
+            "source_parent_run_created_at_utc", "source_parent_run_completed_at_utc",
+            "forward_artifact_id", "forward_artifact_sha256", "forward_artifact_created_at_utc",
+            "forward_parent_run_id", "forward_parent_run_head_sha",
+            "forward_parent_run_created_at_utc", "forward_parent_run_completed_at_utc",
+            "feature_history_cutoff_utc",
+        )
+        missing_provenance = [field for field in required_provenance if field not in row]
+        if missing_provenance or row.get("source_before_quote_provenance_verified") is not True:
+            raise ValueError("secondary forecast lacks normalized source-before-quote provenance")
+        _positive_int(row.get("source_artifact_id"), "source_artifact_id")
+        _digest(row.get("source_artifact_sha256"), "source_artifact_sha256")
+        _positive_int(row.get("source_parent_run_id"), "source_parent_run_id")
+        if _SHA1.fullmatch(str(row.get("source_parent_run_head_sha", ""))) is None:
+            raise ValueError("source parent run HEAD SHA is malformed")
+        _positive_int(row.get("forward_artifact_id"), "forward_artifact_id")
+        _digest(row.get("forward_artifact_sha256"), "forward_artifact_sha256")
+        _positive_int(row.get("forward_parent_run_id"), "forward_parent_run_id")
+        if _SHA1.fullmatch(str(row.get("forward_parent_run_head_sha", ""))) is None:
+            raise ValueError("forward parent run HEAD SHA is malformed")
         capture = _utc(row.get("capture_time_utc"), "capture_time_utc")
         quote = _utc(row.get("quote_time_utc"), "quote_time_utc")
         kickoff = _utc(row.get("kickoff_utc"), "kickoff_utc")
+        source_created = _utc(row.get("source_artifact_created_at_utc"), "source_artifact_created_at_utc")
+        source_run_created = _utc(row.get("source_parent_run_created_at_utc"), "source_parent_run_created_at_utc")
+        source_run_completed = _utc(row.get("source_parent_run_completed_at_utc"), "source_parent_run_completed_at_utc")
+        forward_created = _utc(row.get("forward_artifact_created_at_utc"), "forward_artifact_created_at_utc")
+        forward_run_created = _utc(row.get("forward_parent_run_created_at_utc"), "forward_parent_run_created_at_utc")
+        forward_run_completed = _utc(row.get("forward_parent_run_completed_at_utc"), "forward_parent_run_completed_at_utc")
+        feature_cutoff = _utc(row.get("feature_history_cutoff_utc"), "feature_history_cutoff_utc")
+        if not source_run_created <= source_created <= source_run_completed < quote:
+            raise ValueError("source archive and successful source workflow must both precede the quote")
+        if not forward_run_created <= forward_created <= forward_run_completed:
+            raise ValueError("forward artifact is outside its successful parent workflow interval")
+        if not forward_run_created <= capture <= forward_run_completed:
+            raise ValueError("forward capture is outside its successful parent workflow interval")
+        if feature_cutoff > quote or feature_cutoff >= kickoff:
+            raise ValueError("original feature history cutoff is not pre-quote")
         if not quote <= capture < kickoff:
             raise ValueError("secondary forecast must be captured after quote and before kickoff")
         market = _probabilities(row.get("market_1x2"), "market_1x2")
