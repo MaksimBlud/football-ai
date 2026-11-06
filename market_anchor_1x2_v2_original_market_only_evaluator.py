@@ -56,7 +56,7 @@ COMPLETED_FIXTURE_GATE_QUERY_CONTRACT_SHA256 = (
 _SHA1 = re.compile(r"[0-9a-f]{40}\Z")
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 _ALLOWED_SOURCE_EVENTS = {"schedule", "workflow_dispatch"}
-_ALLOWED_FORWARD_EVENTS = {"schedule", "workflow_dispatch", "workflow_run"}
+_ALLOWED_FORWARD_EVENTS = {"schedule", "workflow_dispatch"}
 _OUTCOME_KEYS = {
     "result", "outcome", "score", "finalscore", "homegoals", "awaygoals",
     "fthg", "ftag", "ftr", "winner", "winningteam", "settlement",
