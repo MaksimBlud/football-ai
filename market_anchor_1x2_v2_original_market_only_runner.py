@@ -676,6 +676,13 @@ def run_live(
     }
 
 
+
+def _write_json_report(path: Path, report: Mapping[str, Any]) -> None:
+    """Write a parseable UTF-8 JSON report with a real terminal newline."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True)
+    path.write_text(payload + "\n", encoding="utf-8")
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
@@ -695,11 +702,7 @@ def main() -> None:
         current_sha=current_sha,
         client_factory=lambda: create_client(supabase_url, supabase_key),
     )
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(
-        json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True) + "\\n",
-        encoding="utf-8",
-    )
+    _write_json_report(args.output, report)
     print(json.dumps({
         key: report.get(key) for key in (
             "status", "forward_artifact_count", "eligible_forecast_count",
