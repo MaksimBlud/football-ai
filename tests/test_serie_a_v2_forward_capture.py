@@ -615,4 +615,4 @@ def test_original_forward_github_api_json_accepts_exact_http_200_without_redirec
 def test_original_forward_pins_exact_preflight_diagnostic_loader_blob():
     # PR #719 changes the diagnostic source loader; forward provenance must
     # authenticate that exact Git blob before consuming any new source archive.
-    assert EXPECTED_SOURCE_LOADER_BLOB_SHA1 == "fd988c8a871890dfa7808d93ac659a6e98f4d57d"
+    assert EXPECTED_SOURCE_LOADER_BLOB_SHA1 == "ea76b04710a4ce4592fb7ca3967db07270ecee1f"
