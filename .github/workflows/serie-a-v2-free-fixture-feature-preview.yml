@@ -1,0 +1,55 @@
+name: Serie A V2 Free Fixture Feature Preview
+
+on:
+  # Manual only: zero-credit event metadata, never odds.
+  workflow_dispatch:
+
+concurrency:
+  group: serie-a-v2-free-fixture-feature-preview
+  cancel-in-progress: false
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  capture-free-fixture-metadata:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      PYTHONPATH: .
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install read-only original V2 dependencies
+        run: python -m pip install pandas numpy scipy scikit-learn requests supabase pytest
+      - name: Verify read-only credentials are present without printing them
+        run: |
+          test -n "$GITHUB_TOKEN"
+          test -n "$THE_ODDS_API_KEY"
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_KEY"
+      - name: Verify current metadata gate and source archive, then make one zero-credit events request
+        run: |
+          python -m py_compile serie_a_v2_free_fixture_feature_preview.py
+          python serie_a_v2_free_fixture_feature_preview.py \
+            --output artifacts/serie_a_v2_free_fixture_feature_preview.json
+      - name: Archive fixture metadata and 19-feature readiness only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: serie-a-v2-free-fixture-feature-preview
+          path: artifacts/serie_a_v2_free_fixture_feature_preview.json
+          if-no-files-found: warn
+          retention-days: 90
