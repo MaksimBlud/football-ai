@@ -46,3 +46,9 @@ Therefore no quote-backed prospective V2 forecast exists yet. Brier/LogLoss rema
 - Safe Engineering Agent Auto-Merge run #42166631172 logged `SAFE_AUTO_MERGE_HEALTHY_NOOP: no eligible bot PR with verified six-check CI`; no PR was merged by that run.
 
 No main update, PR merge, source request, paid provider call, Supabase write/DDL, target-outcome read, live runner dispatch, model/weight/feature/policy change, production `.pkl` change, or schedule change occurred in this audit.
+
+## Runner workflow rebase-trigger hardening — 2026-11-06 05:59 UTC
+
+PR #717 exact HEAD is now `e34db80989f038ba73875d2551b3173918aa5d98`. The custom offline workflow's `pull_request.branches` now includes both `main` and the current stacked #716 base branch. This prevents the runner's own regression workflow from silently ceasing to trigger after #716 is HUMAN-MERGED and #717 is rebased/retargeted to main. A workflow-contract regression asserts both targets.
+
+Exact-head CI on the same SHA: push run [#42171598196](https://github.com/MaksimBlud/football-ai/actions/runs/42171598196) and PR run [#42171600478](https://github.com/MaksimBlud/football-ai/actions/runs/42171600478) both SUCCESS, **47 passed** each; the live runner job was skipped in both runs. No live dispatch or external/database access occurred.
