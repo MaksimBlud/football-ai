@@ -8,6 +8,7 @@ on:
   push:
     branches: [main, research/v2-705-699-integrated-20261106-run11]
     paths:
+      - "requirements-v2-research-py312.lock"
       - "serie_a_v2_live_diagnostic_report.py"
       - "serie_a_v2_asof_feature_manifest.py"
       - "serie_a_v2_frozen_shadow_preview.py"
@@ -54,7 +55,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install offline V2 diagnostic validation dependencies
-        run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
+        run: python -m pip install -r requirements-v2-research-py312.lock
       - name: Validate original V2 diagnostic without network or Supabase
         run: |
           python -m py_compile serie_a_v2_live_diagnostic_report.py serie_a_v2_prequote_source_archive_gate.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py market_anchor_v2_source_rights.py
@@ -80,7 +81,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install read-only diagnostic dependencies
-        run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
+        run: python -m pip install -r requirements-v2-research-py312.lock
       - name: Offline regression tests
         run: |
           python -m py_compile serie_a_v2_live_diagnostic_report.py serie_a_v2_prequote_source_archive_gate.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py
