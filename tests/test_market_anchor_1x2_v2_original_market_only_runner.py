@@ -248,6 +248,11 @@ def test_frozen_sha_patterns_and_source_zip_name_are_exact():
     assert runner.SOURCE_ZIP_RE.fullmatch("source_artifact_12345.zip")
     assert not runner.SOURCE_ZIP_RE.fullmatch("source_artifact_x.zip")
 
+def test_runner_pins_exact_hardened_secondary_evaluator_blob():
+    assert runner.CURRENT_CODE_BLOBS["market_anchor_1x2_v2_original_market_only_evaluator.py"] == (
+        "7a9a6552b78647a350ab2b9177765656c99147f9"
+    )
+
 
 
 def test_outcome_loader_rejects_persistence_after_observation_time():
