@@ -610,3 +610,9 @@ def test_original_forward_github_api_json_accepts_exact_http_200_without_redirec
     assert forward_capture_module._github_json(url, token="read-only-test-token", get=fake_get) == {"artifacts": []}
     assert request["allow_redirects"] is False
     assert response.json_called is True
+
+
+def test_original_forward_pins_exact_preflight_diagnostic_loader_blob():
+    # PR #719 changes the diagnostic source loader; forward provenance must
+    # authenticate that exact Git blob before consuming any new source archive.
+    assert EXPECTED_SOURCE_LOADER_BLOB_SHA1 == "fd988c8a871890dfa7808d93ac659a6e98f4d57d"
