@@ -1,0 +1,119 @@
+name: Original V2 Market-Only Secondary Runner
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+      - research/v2-original-market-only-secondary-eval-20261106-run11
+    paths:
+      - "market_anchor_1x2_v2_original_market_only_runner.py"
+      - "tests/test_market_anchor_1x2_v2_original_market_only_runner.py"
+      - "tests/test_market_anchor_1x2_v2_original_market_only_runner_workflow.py"
+      - "research/MARKET_ANCHOR_1X2_V2_ORIGINAL_MARKET_ONLY_SECONDARY_RUNNER_20261106.md"
+      - ".github/workflows/market-anchor-1x2-v2-original-market-only-secondary-runner.yml"
+      - "market_anchor_1x2_v2_original_market_only_evaluator.py"
+      - "tests/test_market_anchor_1x2_v2_original_market_only_evaluator.py"
+      - "experiments/market_anchor_1x2_v2_original_market_only_secondary_policy.json"
+      - "market_anchor_v2_source_rights.py"
+      - "research/source_rights/football_data_co_uk.json"
+      - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
+      - "serie_a_v2_forward_capture.py"
+      - "serie_a_v2_prequote_source_archive_gate.py"
+      - "serie_a_v2_live_diagnostic_report.py"
+      - "serie_a_v2_frozen_shadow_preview.py"
+      - "serie_a_v2_asof_feature_manifest.py"
+      - "historical_football_signal_lab.py"
+      - "market_anchor_1x2_v2_shadow.py"
+      - "serie_a_v2_attest_real_source.py"
+      - "serie_a_runtime_config.py"
+      - ".github/workflows/serie-a-v2-forward-preview.yml"
+  push:
+    branches:
+      - research/v2-original-market-only-runner-20261106-run11
+    paths:
+      - "market_anchor_1x2_v2_original_market_only_runner.py"
+      - "tests/test_market_anchor_1x2_v2_original_market_only_runner.py"
+      - "tests/test_market_anchor_1x2_v2_original_market_only_runner_workflow.py"
+      - "research/MARKET_ANCHOR_1X2_V2_ORIGINAL_MARKET_ONLY_SECONDARY_RUNNER_20261106.md"
+      - ".github/workflows/market-anchor-1x2-v2-original-market-only-secondary-runner.yml"
+      - "market_anchor_1x2_v2_original_market_only_evaluator.py"
+      - "tests/test_market_anchor_1x2_v2_original_market_only_evaluator.py"
+      - "experiments/market_anchor_1x2_v2_original_market_only_secondary_policy.json"
+      - "market_anchor_v2_source_rights.py"
+      - "research/source_rights/football_data_co_uk.json"
+      - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
+      - "serie_a_v2_forward_capture.py"
+      - "serie_a_v2_prequote_source_archive_gate.py"
+      - "serie_a_v2_live_diagnostic_report.py"
+      - "serie_a_v2_frozen_shadow_preview.py"
+      - "serie_a_v2_asof_feature_manifest.py"
+      - "historical_football_signal_lab.py"
+      - "market_anchor_1x2_v2_shadow.py"
+      - "serie_a_v2_attest_real_source.py"
+      - "serie_a_runtime_config.py"
+      - ".github/workflows/serie-a-v2-forward-preview.yml"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  offline-runner-tests:
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: .
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install read-only V2 test dependencies
+        run: python -m pip install pandas numpy scipy scikit-learn requests supabase pytest
+      - name: Compile and run runner/evaluator regressions
+        run: |
+          python -m py_compile market_anchor_1x2_v2_original_market_only_runner.py
+          python -m pytest -q \
+            tests/test_market_anchor_1x2_v2_original_market_only_runner.py \
+            tests/test_market_anchor_1x2_v2_original_market_only_runner_workflow.py \
+            tests/test_market_anchor_1x2_v2_original_market_only_evaluator.py
+
+  live-read-only-runner:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: .
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      GITHUB_REF: ${{ github.ref }}
+      GITHUB_SHA: ${{ github.sha }}
+      GITHUB_TOKEN: ${{ github.token }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install read-only runner dependencies
+        run: python -m pip install pandas numpy scipy scikit-learn requests supabase
+      - name: Run original V2 secondary evaluator (manual, read-only, fail-closed)
+        run: |
+          python market_anchor_1x2_v2_original_market_only_runner.py \
+            --output artifacts/market_anchor_v2_original_secondary_evaluation.json
+      - name: Archive aggregate research report only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-anchor-v2-original-secondary-evaluation
+          path: artifacts/market_anchor_v2_original_secondary_evaluation.json
+          if-no-files-found: warn
+          retention-days: 90
