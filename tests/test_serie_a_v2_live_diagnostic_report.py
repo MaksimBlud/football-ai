@@ -1,5 +1,8 @@
 """Tests for actual historical-source + stored-market, always research-only."""
-from datetime import datetime, timezone, tzinfo
+from datetime import datetime, timedelta, timezone, tzinfo
+import json
+import sys
+from types import SimpleNamespace
 
 import pandas as pd
 import pytest
@@ -8,6 +11,7 @@ import serie_a_v2_live_diagnostic_report as report_module
 from serie_a_v2_live_diagnostic_report import (
     PUBLIC_BASE, _source_codes, fetch_public_history, make_report,
     MAX_HISTORICAL_CSV_BYTES, MAX_HISTORICAL_TOTAL_BYTES,
+    build_quote_preflight_report, count_fresh_future_prematch_quote_rows,
 )
 
 NOW = datetime(2026,10,13,15,1,tzinfo=timezone.utc)
@@ -488,3 +492,138 @@ def test_historical_source_final_url_mutations_fail_before_body_read_or_csv_writ
     assert body_reads == []
     assert list(tmp_path.glob("*.csv")) == []
 
+
+
+def test_quote_preflight_counts_only_fresh_future_strictly_prematch_rows():
+    now = datetime(2026, 10, 13, 15, 1, tzinfo=timezone.utc)
+    fresh = quote()
+    stale = {
+        **quote(), "event_id": "stale-event",
+        "snapshot_time_utc": "2026-10-12T14:00:00Z",
+    }
+    future_snapshot = {
+        **quote(), "event_id": "future-snapshot",
+        "snapshot_time_utc": "2026-10-13T15:02:00Z",
+    }
+    kicked_off = {
+        **quote(), "event_id": "kicked-off",
+        "commence_time_utc": "2026-10-13T15:00:00Z",
+    }
+    assert count_fresh_future_prematch_quote_rows(
+        [fresh, stale, future_snapshot, kicked_off], now=now
+    ) == 1
+
+
+def test_quote_preflight_fails_closed_on_post_kickoff_or_outcome_fields():
+    now = datetime(2026, 10, 13, 15, 1, tzinfo=timezone.utc)
+    post_kickoff = {
+        **quote(), "snapshot_time_utc": "2026-10-19T19:01:00Z",
+    }
+    with pytest.raises(ValueError, match="at or after kickoff"):
+        count_fresh_future_prematch_quote_rows([post_kickoff], now=now)
+    with pytest.raises(ValueError):
+        count_fresh_future_prematch_quote_rows(
+            [{**quote(), "home_goals": 2}], now=now
+        )
+
+
+def test_quote_preflight_report_is_no_inference_and_no_download():
+    report = build_quote_preflight_report([], as_of_utc=NOW)
+    assert report["mode"] == "NO_ELIGIBLE_FUTURE_PREMATCH_QUOTES_SOURCE_DOWNLOAD_SKIPPED"
+    assert report["eligible_future_prematch_quote_rows"] == 0
+    assert report["public_http_requests"] == 0
+    assert report["model_inference_performed"] is False
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
+    assert report["supabase_writes"] == 0
+    assert report["no_bet"] is True
+
+
+def test_main_skips_public_history_download_when_no_fresh_future_quotes(tmp_path, monkeypatch):
+    output = tmp_path / "report.json"
+    raw_dir = tmp_path / "raw"
+    monkeypatch.setattr(report_module, "require_personal_research_inference_scope", lambda: {})
+    monkeypatch.setitem(sys.modules, "database", SimpleNamespace(supabase=object()))
+    monkeypatch.setattr(
+        report_module, "fetch_saved_upcoming_serie_a_quotes",
+        lambda client, now: [],
+    )
+
+    def forbidden_download(**kwargs):
+        raise AssertionError("public source download must be skipped when no fresh quote exists")
+
+    monkeypatch.setattr(report_module, "fetch_public_history", forbidden_download)
+    monkeypatch.setattr(
+        sys, "argv",
+        ["serie_a_v2_live_diagnostic_report.py", "--output", str(output),
+         "--raw-source-dir", str(raw_dir)],
+    )
+    report_module.main()
+    report = json.loads(output.read_text(encoding="utf-8"))
+    assert report["mode"] == "NO_ELIGIBLE_FUTURE_PREMATCH_QUOTES_SOURCE_DOWNLOAD_SKIPPED"
+    assert report["eligible_future_prematch_quote_rows"] == 0
+    assert report["public_http_requests"] == 0
+    assert report["target_outcomes_read"] is False
+    assert report["supabase_writes"] == 0
+    assert not raw_dir.exists()
+
+
+def test_preflight_only_reports_fresh_quotes_without_downloading_or_inference(tmp_path, monkeypatch):
+    output = tmp_path / "preflight.json"
+    raw_dir = tmp_path / "raw"
+    now = datetime.now(timezone.utc)
+    fresh = {
+        **quote(),
+        "snapshot_time_utc": (now - timedelta(minutes=2)).isoformat(),
+        "commence_time_utc": (now + timedelta(hours=3)).isoformat(),
+    }
+    monkeypatch.setattr(report_module, "require_personal_research_inference_scope", lambda: {})
+    monkeypatch.setitem(sys.modules, "database", SimpleNamespace(supabase=object()))
+    monkeypatch.setattr(
+        report_module, "fetch_saved_upcoming_serie_a_quotes",
+        lambda client, now: [fresh],
+    )
+
+    def forbidden_download(**kwargs):
+        raise AssertionError("preflight-only mode must never download history")
+
+    monkeypatch.setattr(report_module, "fetch_public_history", forbidden_download)
+    monkeypatch.setattr(
+        sys, "argv",
+        ["serie_a_v2_live_diagnostic_report.py", "--preflight-only",
+         "--output", str(output), "--raw-source-dir", str(raw_dir)],
+    )
+    report_module.main()
+    result = json.loads(output.read_text(encoding="utf-8"))
+    assert result["mode"] == "PREMATCH_QUOTE_PREFLIGHT_READY_FOR_BUDGET_CHECK"
+    assert result["eligible_future_prematch_quote_rows"] == 1
+    assert result["public_http_requests"] == 0
+    assert result["model_inference_performed"] is False
+    assert result["target_outcomes_read"] is False
+    assert not raw_dir.exists()
+
+
+def test_free_diagnostic_workflow_preflights_quotes_before_budget_and_download():
+    workflow_path = (
+        __import__("pathlib").Path(__file__).resolve().parents[1]
+        / ".github" / "workflows" / "serie-a-v2-free-real-quote-diagnostic.yml"
+    )
+    workflow = workflow_path.read_text(encoding="utf-8")
+    preflight = workflow.index("Preflight fresh future pre-kickoff quotes before public-source budget")
+    budget = workflow.index("Check shared public-source download budget")
+    download = workflow.index("Fetch and SHA-archive public source, preview original frozen V2 diagnostics")
+    assert preflight < budget < download
+    preflight_block = workflow.split(
+        "      - name: Preflight fresh future pre-kickoff quotes before public-source budget", 1
+    )[1].split("      - name: Check shared public-source download budget", 1)[0]
+    assert "--preflight-only" in preflight_block
+    assert "eligible_future_prematch_quote_rows" in preflight_block
+    budget_block = workflow.split(
+        "      - name: Check shared public-source download budget", 1
+    )[1].split("      - name: Upload shared public-source download attempt marker", 1)[0]
+    assert "if: steps.quote_preflight.outputs.eligible_quote_rows != '0'" in budget_block
+    download_block = workflow.split(
+        "      - name: Fetch and SHA-archive public source, preview original frozen V2 diagnostics", 1
+    )[1].split("      - name: Archive diagnostic and exact public CSV bytes for provenance", 1)[0]
+    assert "steps.quote_preflight.outputs.eligible_quote_rows != '0'" in download_block
+    assert "steps.public_source_budget.outputs.allowed == 'true'" in download_block
