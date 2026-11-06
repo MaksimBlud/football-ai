@@ -59,9 +59,10 @@ The pure evaluator accepts only caller-authenticated GitHub artifact metadata:
 - exact candidate SHA, quote time, feature-history cutoff, and kickoff.
 
 The module itself is pure and has no GitHub, Supabase, filesystem, or network
-client. A future read-only runner must authenticate the GitHub metadata and ZIP
-bytes before calling it, and must call the source-rights guard before any
-external reads.
+client. Only schedule/manual forward runs are admitted; workflow_run fan-out
+from a paid odds snapshot is explicitly rejected. A future read-only runner
+must authenticate the GitHub metadata, exact code contract and ZIP bytes before
+calling it, and must call the source-rights guard before any external reads.
 
 ## Metrics and limits
 

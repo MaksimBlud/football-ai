@@ -1,6 +1,6 @@
 {
   "policy_id": "MARKET_ANCHOR_1X2_V2_OLD_SEASON_ONLY_MARKET_COMPARISON_SECONDARY_V1",
-  "frozen_at_utc": "2026-11-06T02:30:00Z",
+  "frozen_at_utc": "2026-11-06T02:40:58Z",
   "model_contract": {
     "experiment_id": "MARKET_ANCHOR_1X2_V2",
     "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
@@ -45,6 +45,8 @@
   "provenance": {
     "forward_artifact_name": "serie-a-v2-original-forward-source-checked",
     "forward_workflow_path": ".github/workflows/serie-a-v2-forward-preview.yml",
+    "forward_run_events": ["schedule", "workflow_dispatch"],
+    "source_run_events": ["schedule", "workflow_dispatch"],
     "source_artifact_name": "serie-a-v2-free-real-quote-diagnostic",
     "source_workflow_path": ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml",
     "source_loader_blob_sha1": "d3b717ea03570413f1d0b6b6f9821b2be0db16a3",

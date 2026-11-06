@@ -58,6 +58,7 @@ jobs:
           assert policy["analysis_scope"]["original_frozen_cohort_eligibility_rewritten"] is False
           assert policy["gates"]["minimum_completed_primary_fixture_identities"] == 30
           assert policy["gates"]["minimum_eligible_completed_forecasts"] == 30
+          assert policy["gates"]["post_kickoff_persistence_rule"] == "persisted_at_utc strictly greater than kickoff_utc"
           assert policy["interpretation"]["does_not_change_original_v2_model_or_evaluation_contract"] is True
           print("PASS: separate secondary protocol; original V2 contract unchanged")
           PY

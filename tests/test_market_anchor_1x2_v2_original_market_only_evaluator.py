@@ -342,3 +342,12 @@ def test_post_gate_outcome_persistence_must_be_strictly_after_kickoff():
             completed_gate_attestation=_gate(identities),
             load_outcomes=load_outcomes,
         )
+
+
+def test_forward_workflow_run_from_paid_snapshot_is_not_admitted():
+    report, forward, sources = _valid_report()
+    forward["parent_run"]["event"] = "workflow_run"
+    with pytest.raises(ValueError, match="event is not allowed"):
+        evaluator.normalize_original_forward_report(
+            report, forward_artifact_metadata=forward, source_artifacts_by_id=sources
+        )
