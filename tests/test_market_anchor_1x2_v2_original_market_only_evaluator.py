@@ -154,6 +154,17 @@ def _forecasts(identities):
             "source_parent_run_head_sha": f"{2000 + index:040x}",
             "source_parent_run_created_at_utc": f"{match_day}T07:00:00Z",
             "source_parent_run_completed_at_utc": f"{match_day}T08:01:00Z",
+            "source_parent_run_path": evaluator.SOURCE_WORKFLOW_PATH,
+            "source_parent_run_name": evaluator.SOURCE_WORKFLOW_NAME,
+            "source_parent_run_branch": "main",
+            "source_parent_run_event": "schedule",
+            "source_parent_run_status": "completed",
+            "source_parent_run_conclusion": "success",
+            "source_loader_blob_sha1": evaluator.SOURCE_LOADER_BLOB_SHA1,
+            "source_rights_helper_blob_sha1": evaluator.SOURCE_RIGHTS_HELPER_BLOB_SHA1,
+            "source_rights_manifest_blob_sha1": evaluator.SOURCE_RIGHTS_MANIFEST_BLOB_SHA1,
+            "source_artifact_metadata_verified": True,
+            "source_code_contract_verified": True,
             "forward_artifact_id": 3000 + index,
             "forward_artifact_sha256": hashlib.sha256(f"forward-{index}".encode()).hexdigest(),
             "forward_artifact_created_at_utc": f"{match_day}T11:07:00Z",
@@ -161,6 +172,13 @@ def _forecasts(identities):
             "forward_parent_run_head_sha": f"{4000 + index:040x}",
             "forward_parent_run_created_at_utc": f"{match_day}T11:04:00Z",
             "forward_parent_run_completed_at_utc": f"{match_day}T11:08:00Z",
+            "forward_parent_run_path": evaluator.FORWARD_WORKFLOW_PATH,
+            "forward_parent_run_name": evaluator.FORWARD_WORKFLOW_NAME,
+            "forward_parent_run_branch": "main",
+            "forward_parent_run_event": "schedule",
+            "forward_parent_run_status": "completed",
+            "forward_parent_run_conclusion": "success",
+            "forward_artifact_metadata_verified": True,
             "source_before_quote_provenance_verified": True,
             "candidate_sha256": evaluator.CANDIDATE_SHA256,
             "market_1x2": (0.50, 0.25, 0.25),
@@ -433,3 +451,53 @@ def test_secondary_evaluator_rejects_forward_artifact_persisted_after_kickoff():
             load_outcomes=lambda keys: {},
         )
 
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("source_parent_run_path", ".github/workflows/unrelated.yml"),
+        ("source_parent_run_branch", "feature"),
+        ("source_parent_run_event", "workflow_run"),
+        ("source_parent_run_status", "in_progress"),
+        ("source_parent_run_conclusion", "failure"),
+        ("source_rights_manifest_blob_sha1", "0" * 40),
+        ("source_artifact_metadata_verified", False),
+        ("source_code_contract_verified", False),
+    ],
+)
+def test_secondary_evaluator_rejects_invalid_source_parent_attestation(field, value):
+    identities = _identities()
+    forecasts = _forecasts(identities)
+    forecasts[0][field] = value
+    with pytest.raises(ValueError, match="source parent/workflow/code attestation"):
+        evaluator.evaluate_market_only_secondary_cohort(
+            forecasts,
+            completed_fixture_identities=identities,
+            completed_gate_attestation=_gate(identities),
+            load_outcomes=lambda keys: {},
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("forward_parent_run_path", ".github/workflows/unrelated.yml"),
+        ("forward_parent_run_branch", "feature"),
+        ("forward_parent_run_event", "workflow_run"),
+        ("forward_parent_run_status", "in_progress"),
+        ("forward_parent_run_conclusion", "failure"),
+        ("forward_artifact_metadata_verified", False),
+    ],
+)
+def test_secondary_evaluator_rejects_invalid_forward_parent_attestation(field, value):
+    identities = _identities()
+    forecasts = _forecasts(identities)
+    forecasts[0][field] = value
+    with pytest.raises(ValueError, match="forward parent/workflow attestation"):
+        evaluator.evaluate_market_only_secondary_cohort(
+            forecasts,
+            completed_fixture_identities=identities,
+            completed_gate_attestation=_gate(identities),
+            load_outcomes=lambda keys: {},
+        )
