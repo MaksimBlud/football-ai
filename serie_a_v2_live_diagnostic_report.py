@@ -328,8 +328,10 @@ def count_fresh_future_prematch_quote_rows(quotes: list[dict], *, now: datetime)
     at = now.astimezone(timezone.utc)
     eligible = 0
     for row in quotes:
+        if not isinstance(row, dict):
+            raise ValueError("market observation must be an object")
         _guard_outcome_free(row)
-        if not isinstance(row, dict) or not all(key in row for key in MARKET_KEYS):
+        if not all(key in row for key in MARKET_KEYS):
             raise ValueError("market observation has missing fields")
         if row["league"] != "SERIE_A":
             raise ValueError("non-Serie-A observations forbidden")
@@ -406,7 +408,7 @@ def main() -> None:
     if args.preflight_only or preflight["eligible_future_prematch_quote_rows"] == 0:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(
-            json.dumps(preflight, indent=2, ensure_ascii=False, sort_keys=True) + "\\n",
+            json.dumps(preflight, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
             encoding="utf-8",
         )
         print(json.dumps({
@@ -424,7 +426,7 @@ def main() -> None:
     history, sources = fetch_public_history(capture_dir=args.raw_source_dir)
     report = make_report(quotes, history, sources, as_of_utc=datetime.now(timezone.utc))
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True)+"\\n", encoding="utf-8")
+    args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True)+"\n", encoding="utf-8")
     summary = {key: report[key] for key in (
         "mode", "historical_source", "public_http_requests", "paid_provider_requests",
         "supabase_writes", "quoted_fixtures", "history_rows", "feature_count",
