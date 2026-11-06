@@ -1,3 +1,22 @@
+## 2026-11-06 — Reproducible original V2 runtime locks integrated into PR #718
+
+The dependency-lock work previously isolated in Draft PR #704 has been integrated into the HUMAN-MERGE integration branch for PR #718, so #704 must not be merged independently. The code integration commit is `0db102d5b4461813c5bca312199727576bf967ce` (the later commit in this section is documentation-only).
+
+- Added exact-version `requirements-v2-research-py311.lock` and `requirements-v2-research-py312.lock`, based on successful observed V2 CI environments. These are version locks, **not hash-enforced supply-chain locks**.
+- Switched original V2 workflow dependency installs to the matching Python lock in frozen shadow tests, original forward preview, current-form source capture, current-form forward preview and free real-quote diagnostic. Both offline validation jobs in current-form source capture and free diagnostic use the Python 3.12 lock too.
+- Added the dependency-lock contract regression and a Python 3.12 shadow-regression job. The existing Python 3.11 frozen V2 suite remains intact; both Python versions run the same 328-test suite and the Python 3.12 job runs `pip check`.
+- No cron expression changed: source capture `50 5 * * *`, free diagnostic `13 6 * * *`, original forward `8 8 * * *`, current-form forward `18 8 * * *`.
+
+Exact code-head CI on `0db102d5b4461813c5bca312199727576bf967ce`:
+- [Frozen V2 run #42223161601](https://github.com/MaksimBlud/football-ai/actions/runs/42223161601): SUCCESS; Python 3.11 **328 passed**, Python 3.12 **328 passed**, `pip check` clean, both production-`.pkl` guards passed.
+- [Current-form source push run #42223151491](https://github.com/MaksimBlud/football-ai/actions/runs/42223151491): SUCCESS; offline validation **306 passed**; live source-capture job SKIPPED on the research branch.
+- [Free diagnostic push run #42223151474](https://github.com/MaksimBlud/football-ai/actions/runs/42223151474): SUCCESS; offline validation **180 passed**; live diagnostic job SKIPPED on the research branch.
+- All nine PR workflows on this exact SHA succeeded, including [Research PR Validation #42223161531](https://github.com/MaksimBlud/football-ai/actions/runs/42223161531) and [source-budget tests #42223161512](https://github.com/MaksimBlud/football-ai/actions/runs/42223161512).
+
+The push jobs above were offline-only; no source archive download, Odds API call, Supabase access/write, target-outcome read or real fixture scoring occurred. This validates reproducibility and regression safety, **not** V2 predictive quality. Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; PR #718 remains unmerged and HUMAN-MERGE only. Original candidate SHA, 19 features, weights, active/shadow lambdas, failed stability gate and 30-primary-completed-event outcome gate are unchanged.
+
+---
+
 ## 2026-11-06 — Original MARKET_ANCHOR_1X2_V2: source/budget integration and real-artifact audit
 
 **Authoritative main at audit:** 40887ebb215730190d7a6c7a1693373ec4afcdfc. Original frozen candidate SHA-256 remains a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6; feature-builder Git blob remains ac1303f6b096664983fbf52443bd0a381b23ba21 for the candidate and the original 19-feature order/weights/scaler/imputer are unchanged. Original stability gate remains FAILED; active_lambda=0 is the exact de-vigged market, shadow_lambda=1 is research-only, NO_BET and no publication/promotion.
