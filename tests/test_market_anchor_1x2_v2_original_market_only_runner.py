@@ -223,3 +223,12 @@ def test_outcome_loader_rejects_persistence_at_or_before_kickoff():
         runner._read_exact_outcomes(
             Client(), (identity,), {identity: "2026-08-22T18:30:00+00:00"}
         )
+
+
+
+def test_frozen_sha_patterns_and_source_zip_name_are_exact():
+    assert runner.SHA1_RE.fullmatch("a" * 40)
+    assert not runner.SHA1_RE.fullmatch("a" * 39)
+    assert runner.SHA256_RE.fullmatch("b" * 64)
+    assert runner.SOURCE_ZIP_RE.fullmatch("source_artifact_12345.zip")
+    assert not runner.SOURCE_ZIP_RE.fullmatch("source_artifact_x.zip")
