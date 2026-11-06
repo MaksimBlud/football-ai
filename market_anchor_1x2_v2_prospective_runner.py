@@ -8,6 +8,7 @@ lazy and is invoked only by the evaluator after every frozen gate is satisfied.
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import datetime, timezone
 from types import MappingProxyType
 from typing import Any, Callable, Iterable, Mapping
 
@@ -118,6 +119,8 @@ def _read_exact_completed_outcomes(
     client: Any,
     identities: frozenset[tuple[str, str, str]],
     kickoff_by_identity: Mapping[tuple[str, str, str], str],
+    *,
+    observed_at_utc: str,
 ) -> dict[tuple[str, str, str], str]:
     """Read H/D/A labels for exact gated identities, never scores or extra fixtures.
 
@@ -131,6 +134,7 @@ def _read_exact_completed_outcomes(
         raise ValueError("outcome loader requires a non-empty frozen set of exact fixture identities")
     if not isinstance(kickoff_by_identity, Mapping):
         raise ValueError("outcome loader requires forecast-bound kickoff timestamps")
+    observed_at = evaluator._utc(observed_at_utc, "evaluation observed_at_utc")
     outcomes: dict[tuple[str, str, str], str] = {}
     selected_columns = "match_date,home_team,away_team,result,persisted_at_utc"
     for identity in sorted(identities):
@@ -185,6 +189,8 @@ def _read_exact_completed_outcomes(
             persisted_at = evaluator._utc(row["persisted_at_utc"], "persisted_at_utc")
             if persisted_at <= kickoff:
                 raise ValueError("outcome persisted_at_utc must be strictly after kickoff_utc")
+            if persisted_at > observed_at:
+                raise ValueError("outcome persisted_at_utc cannot be later than evaluation observation time")
             label = row["result"]
             if not isinstance(label, str) or label not in {"H", "D", "A"}:
                 raise ValueError("outcome query returned a malformed H/D/A result label")
@@ -222,6 +228,8 @@ def _forecast_kickoff_lookup(
 def evaluate_live_market_only_from_supabase(
     client: Any,
     forecast_rows: Iterable[Mapping[str, Any]],
+    *,
+    observed_at_utc: str | None = None,
 ) -> dict[str, Any]:
     """Run market-vs-shadow evaluation with an internally lazy, exact-row outcome reader.
 
@@ -231,9 +239,14 @@ def evaluate_live_market_only_from_supabase(
     completed prospective forecasts pass the evaluator gate.
     """
     rows, kickoff_by_identity = _forecast_kickoff_lookup(forecast_rows)
+    observed = observed_at_utc or datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    # Validate before the identity gate or any possible outcome query.
+    evaluator._utc(observed, "evaluation observed_at_utc")
     return evaluate_live_market_only_prospective_cohort(
         client,
         rows,
-        lambda identities: _read_exact_completed_outcomes(client, identities, kickoff_by_identity),
+        lambda identities: _read_exact_completed_outcomes(
+            client, identities, kickoff_by_identity, observed_at_utc=observed
+        ),
     )
 
