@@ -3,6 +3,7 @@ import hashlib
 from io import BytesIO
 import json
 from datetime import datetime, timedelta, timezone, tzinfo
+from pathlib import Path
 import zipfile
 
 import pytest
@@ -613,6 +614,9 @@ def test_original_forward_github_api_json_accepts_exact_http_200_without_redirec
 
 
 def test_original_forward_pins_exact_preflight_diagnostic_loader_blob():
-    # PR #719 changes the diagnostic source loader; forward provenance must
-    # authenticate that exact Git blob before consuming any new source archive.
-    assert EXPECTED_SOURCE_LOADER_BLOB_SHA1 == "ea76b04710a4ce4592fb7ca3967db07270ecee1f"
+    # Authenticate the actual checked-out Git blob, not just a hard-coded pin.
+    assert EXPECTED_SOURCE_LOADER_BLOB_SHA1 == "79438e85e7987688e51705f8d54c0aa9a0d736df"
+    loader_path = Path(__file__).resolve().parents[1] / SOURCE_LOADER_PATH
+    loader_bytes = loader_path.read_bytes()
+    git_blob = b"blob " + str(len(loader_bytes)).encode("ascii") + b"\\0" + loader_bytes
+    assert hashlib.sha1(git_blob).hexdigest() == EXPECTED_SOURCE_LOADER_BLOB_SHA1
