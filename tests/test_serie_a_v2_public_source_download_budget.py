@@ -352,6 +352,13 @@ def test_discovery_bootstraps_cooldown_from_latest_existing_main_source_artifact
             "created_at": "2026-11-05T13:31:55Z",
             "workflow_run": {"id": 42036450692, "head_branch": "main", "head_sha": SHA},
         },
+        {
+            "id": 13504817564,
+            "name": "serie-a-v2-current-form-source-capture",
+            "expired": False,
+            "created_at": "2026-11-06T13:17:15Z",
+            "workflow_run": {"id": 42224162373, "head_branch": "main", "head_sha": SHA},
+        },
     ]
     diagnostic_artifacts = [
         {
@@ -374,6 +381,13 @@ def test_discovery_bootstraps_cooldown_from_latest_existing_main_source_artifact
             "expired": False,
             "created_at": "2026-11-05T14:33:47Z",
             "workflow_run": {"id": 42046051819, "head_branch": "main", "head_sha": SHA},
+        },
+        {
+            "id": 13510280643,
+            "name": "serie-a-v2-free-real-quote-diagnostic",
+            "expired": False,
+            "created_at": "2026-11-06T14:11:58Z",
+            "workflow_run": {"id": 42231648250, "head_branch": "main", "head_sha": SHA},
         },
     ]
     source_run = {
@@ -399,26 +413,26 @@ def test_discovery_bootstraps_cooldown_from_latest_existing_main_source_artifact
         "updated_at": "2026-11-04T14:25:58Z",
     }
     source_run_latest = {
-        "id": 42036450692,
+        "id": 42224162373,
         "path": SOURCE_PATH,
         "head_branch": "main",
         "head_sha": SHA,
         "event": "schedule",
         "status": "completed",
         "conclusion": "success",
-        "created_at": "2026-11-05T13:31:05Z",
-        "updated_at": "2026-11-05T13:31:59Z",
+        "created_at": "2026-11-06T13:16:23Z",
+        "updated_at": "2026-11-06T13:17:18Z",
     }
     diagnostic_run_latest = {
-        "id": 42046051819,
+        "id": 42231648250,
         "path": DIAGNOSTIC_PATH,
         "head_branch": "main",
         "head_sha": SHA,
         "event": "schedule",
         "status": "completed",
         "conclusion": "success",
-        "created_at": "2026-11-05T14:32:51Z",
-        "updated_at": "2026-11-05T14:33:50Z",
+        "created_at": "2026-11-06T14:11:04Z",
+        "updated_at": "2026-11-06T14:12:00Z",
     }
     calls = []
 
@@ -430,9 +444,9 @@ def test_discovery_bootstraps_cooldown_from_latest_existing_main_source_artifact
             return FakeResponse(url, {"artifacts": source_artifacts})
         if url == diagnostic_url:
             return FakeResponse(url, {"artifacts": diagnostic_artifacts})
-        if url.endswith("/actions/runs/42036450692"):
+        if url.endswith("/actions/runs/42224162373"):
             return FakeResponse(url, source_run_latest)
-        if url.endswith("/actions/runs/42046051819"):
+        if url.endswith("/actions/runs/42231648250"):
             return FakeResponse(url, diagnostic_run_latest)
         if url.endswith("/actions/runs/41836971469"):
             return FakeResponse(url, source_run)
@@ -441,27 +455,27 @@ def test_discovery_bootstraps_cooldown_from_latest_existing_main_source_artifact
         raise AssertionError(f"unexpected GitHub API URL: {url}")
 
     latest = budget.discover_latest_download_attempt(token="test-token", workflow_path=DIAGNOSTIC_PATH, get=get)
-    assert latest == datetime(2026, 11, 5, 14, 33, 47, tzinfo=UTC)
+    assert latest == datetime(2026, 11, 6, 14, 11, 58, tzinfo=UTC)
     assert "football-data.co.uk" not in " ".join(calls)
-    assert calls == [marker_url, diagnostic_url, f"{budget.GITHUB_API}/actions/runs/42046051819"]
+    assert calls == [marker_url, diagnostic_url, f"{budget.GITHUB_API}/actions/runs/42231648250"]
     allowed, next_allowed = budget.decide_download_permission(
-        now=datetime(2026, 11, 5, 15, 0, tzinfo=UTC), latest_attempt_at=latest
+        now=datetime(2026, 11, 6, 15, 0, tzinfo=UTC), latest_attempt_at=latest
     )
     assert allowed is False
-    assert next_allowed == datetime(2026, 11, 12, 16, 33, 47, tzinfo=UTC)
+    assert next_allowed == datetime(2026, 11, 13, 16, 11, 58, tzinfo=UTC)
 
     # The source-capture slot must select the latest of multiple legacy main artifacts.
     calls.clear()
     source_latest = budget.discover_latest_download_attempt(
         token="test-token", workflow_path=SOURCE_PATH, get=get
     )
-    assert source_latest == datetime(2026, 11, 5, 13, 31, 55, tzinfo=UTC)
-    assert calls == [marker_url, source_url, f"{budget.GITHUB_API}/actions/runs/42036450692"]
+    assert source_latest == datetime(2026, 11, 6, 13, 17, 15, tzinfo=UTC)
+    assert calls == [marker_url, source_url, f"{budget.GITHUB_API}/actions/runs/42224162373"]
     source_allowed, source_next_allowed = budget.decide_download_permission(
-        now=datetime(2026, 11, 5, 14, 0, tzinfo=UTC), latest_attempt_at=source_latest
+        now=datetime(2026, 11, 6, 14, 0, tzinfo=UTC), latest_attempt_at=source_latest
     )
     assert source_allowed is False
-    assert source_next_allowed == datetime(2026, 11, 12, 15, 31, 55, tzinfo=UTC)
+    assert source_next_allowed == datetime(2026, 11, 13, 15, 17, 15, tzinfo=UTC)
 
 
 def test_discovery_bootstrap_rejects_legacy_artifact_from_wrong_workflow():
