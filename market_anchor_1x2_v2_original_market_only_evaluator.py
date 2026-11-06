@@ -560,6 +560,9 @@ def _validate_completed_gate(
     attestation: Mapping[str, Any],
 ) -> set[tuple[str, str, str]]:
     identities = {_fixture_identity(*item) for item in completed_identities}
+    for match_date, home, away in identities:
+        if (match_date, away, home) in identities:
+            raise ValueError("completed-fixture gate contains a reversed duplicate fixture identity")
     required = {
         "schema_version", "source_table", "selected_columns", "league", "season",
         "query_contract_id", "query_contract_sha256", "captured_at_utc",
