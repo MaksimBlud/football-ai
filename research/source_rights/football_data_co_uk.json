@@ -1,0 +1,20 @@
+{
+  "schema_version": "FOOTBALL_AI_SOURCE_RIGHTS_V1",
+  "provider": "Football-Data.co.uk",
+  "source_url": "https://www.football-data.co.uk/",
+  "policy_url": "https://football-data.co.uk/contact.php",
+  "policy_checked_at_utc": "2026-11-05T10:54:00Z",
+  "rights_status": "CONDITIONAL_RESEARCH_ONLY",
+  "research_use_permitted": true,
+  "research_inference_permitted": true,
+  "research_inference_scope": "PERSONAL_BETTING_OR_ACADEMIC_RESEARCH_ONLY",
+  "ai_model_training_permitted": false,
+  "commercial_use_permitted": false,
+  "public_product_use_permitted": false,
+  "max_automated_download_sessions_per_week": 2,
+  "download_budget_policy": "TWO_AUTOMATED_SESSIONS_PER_ROLLING_7_DAYS",
+  "policy_summary": "The official fair-data-usage page currently displays Updated: 04/11/26. It states that free CSV/Excel data are intended for private individuals' personal betting and/or academic research only, via manual download or at most light automated download (maximum twice per week), and that no permission request is needed when the intended use is within that stated category. It excludes commercial and AI data-training projects. The page does not expressly grant frozen-weight AI inference; this project records that as a narrow operational interpretation only, not a provider-issued AI-inference licence.",
+  "policy_interpretation": "Operational interpretation only, not a provider-issued AI-inference licence: frozen-weight inference using current-season statistics solely as lagged features, with no fitting/refitting/selection, no commercial use and no public product publication, is treated as personal/academic research. If intended use becomes a public product, commercial service or training project, this manifest does not permit it and the source must not be used for that purpose.",
+  "authorization": null,
+  "policy_page_updated_date": "2026-11-04"
+}
