@@ -335,7 +335,15 @@ def count_fresh_future_prematch_quote_rows(quotes: list[dict], *, now: datetime)
             raise ValueError("market observation has missing fields")
         # Use the same decimal-price validator as frozen inference so malformed
         # rows cannot trigger an otherwise unnecessary public-source download.
-        _market(row)
+        try:
+            _market(row)
+        except (TypeError, ValueError, OverflowError) as exc:
+            if str(exc) in {
+                "missing bookmaker decimal prices",
+                "invalid bookmaker decimal prices",
+            }:
+                raise
+            raise ValueError("invalid bookmaker decimal prices") from exc
         if row["league"] != "SERIE_A":
             raise ValueError("non-Serie-A observations forbidden")
         for key in ("event_id", "home_team", "away_team"):
