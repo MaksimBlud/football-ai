@@ -1,5 +1,5 @@
 """Immutable source archive / time-order gate regressions, no prospective outcomes."""
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, tzinfo
 import hashlib
 from io import StringIO
 import json
@@ -151,3 +151,22 @@ def test_quote_outcome_field_is_never_read_as_source_timing_evidence(tmp_path):
     malicious = {**quote(), "result": "H"}
     with pytest.raises(ValueError, match="outcomes or settlement fields forbidden"):
         verify_archive(archive, [malicious], as_of_utc=AFTER)
+
+
+
+class _NoOffsetTimezone(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+    def tzname(self, dt):
+        return "NO_OFFSET"
+
+
+def test_archive_gate_rejects_offsetless_clock_before_touching_archive(tmp_path):
+    missing_archive = tmp_path / "must-not-be-opened.zip"
+    invalid_clock = datetime(2026, 10, 15, 12, tzinfo=_NoOffsetTimezone())
+    with pytest.raises(ValueError, match="as_of_utc requires timezone"):
+        verify_archive(missing_archive, [], as_of_utc=invalid_clock)
