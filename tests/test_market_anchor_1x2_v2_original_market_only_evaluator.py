@@ -408,3 +408,28 @@ def test_secondary_evaluator_rejects_forward_capture_outside_parent_run():
             load_outcomes=lambda keys: {},
         )
 
+
+
+def test_forward_forecast_artifact_must_be_persisted_before_kickoff():
+    report, forward, sources = _valid_report()
+    forward["created_at_utc"] = "2026-09-20T13:01:00Z"
+    forward["parent_run"]["completed_at_utc"] = "2026-09-20T13:02:00Z"
+    with pytest.raises(ValueError, match="forward forecast artifact was not persisted after capture and before kickoff"):
+        evaluator.normalize_original_forward_report(
+            report, forward_artifact_metadata=forward, source_artifacts_by_id=sources
+        )
+
+
+def test_secondary_evaluator_rejects_forward_artifact_persisted_after_kickoff():
+    identities = _identities()
+    forecasts = _forecasts(identities)
+    forecasts[0]["forward_artifact_created_at_utc"] = "2026-08-01T13:01:00Z"
+    forecasts[0]["forward_parent_run_completed_at_utc"] = "2026-08-01T13:02:00Z"
+    with pytest.raises(ValueError, match="forward forecast artifact was not persisted after capture and before kickoff"):
+        evaluator.evaluate_market_only_secondary_cohort(
+            forecasts,
+            completed_fixture_identities=identities,
+            completed_gate_attestation=_gate(identities),
+            load_outcomes=lambda keys: {},
+        )
+
