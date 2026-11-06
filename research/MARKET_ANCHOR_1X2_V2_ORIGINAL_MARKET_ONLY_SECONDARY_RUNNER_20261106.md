@@ -23,7 +23,9 @@ versus the exact original lambda-1 shadow. `active_lambda=0` remains the market;
   eligible completed forecasts.
 - After the gate, the outcome query selects only exact fixture identity,
   `result`, and `persisted_at_utc`; every persistence timestamp must be
-  strictly after kickoff. The report contains aggregate metrics, not outcomes.
+  strictly after kickoff and no later than the runner's captured evaluation
+  time. Future-dated persistence is rejected. The report contains aggregate
+  metrics, not outcomes.
 - No Supabase writes/DDL, paid calls, model refit, production artifact changes,
   bets, publication, or promotion.
 
