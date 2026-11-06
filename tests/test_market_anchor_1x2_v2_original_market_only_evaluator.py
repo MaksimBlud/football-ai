@@ -400,7 +400,7 @@ def test_secondary_evaluator_rejects_forward_capture_outside_parent_run():
     identities = _identities()
     forecasts = _forecasts(identities)
     forecasts[0]["forward_parent_run_completed_at_utc"] = "2026-08-01T11:04:00Z"
-    with pytest.raises(ValueError, match="forward capture is outside its successful parent workflow interval"):
+    with pytest.raises(ValueError, match="forward artifact is outside its successful parent workflow interval"):
         evaluator.evaluate_market_only_secondary_cohort(
             forecasts,
             completed_fixture_identities=identities,
