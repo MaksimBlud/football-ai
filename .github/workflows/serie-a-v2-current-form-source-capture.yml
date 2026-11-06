@@ -12,6 +12,7 @@ on:
   push:
     branches: [main, research/v2-705-699-integrated-20261106-run11]
     paths:
+      - "requirements-v2-research-py312.lock"
       - "serie_a_v2_current_form_source_capture.py"
       - "experiments/market_anchor_1x2_v2_current_form_policy.json"
       - "experiments/market_anchor_1x2_v2_protocol.json"
@@ -65,7 +66,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install offline V2 validation dependencies
-        run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
+        run: python -m pip install -r requirements-v2-research-py312.lock
       - name: Validate current-form source capture without network or Supabase
         run: |
           python -m py_compile serie_a_v2_current_form_source_capture.py serie_a_v2_current_form_forward_capture.py market_anchor_v2_source_rights.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py historical_football_signal_lab.py serie_a_runtime_config.py
@@ -93,7 +94,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install read-only V2 source dependencies
-        run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
+        run: python -m pip install -r requirements-v2-research-py312.lock
       - name: Validate feature-input gate and source integrity rules
         run: |
           python -m py_compile serie_a_v2_current_form_source_capture.py serie_a_v2_current_form_forward_capture.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py
