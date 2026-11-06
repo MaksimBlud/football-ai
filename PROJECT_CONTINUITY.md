@@ -1,3 +1,9 @@
+## 2026-11-06 05:57 UTC — Original V2 runner identity-gate audit
+
+Detailed evidence is in [PROJECT_CONTINUITY_ADDENDUM_20261106_V2_RUNNER.md](PROJECT_CONTINUITY_ADDENDUM_20261106_V2_RUNNER.md): exact-head #717 CI (47 passed), frozen Serie A metadata query (103 raw / 100 canonical identities), pre-match odds freshness (0 in last seven days), and the still-unmerged #705 source-budget blocker. No outcomes were read and no model or main state changed.
+
+---
+
 ## 2026-11-06 05:06 UTC — original V2 secondary evaluator and read-only runner; source-budget merge remains urgent
 
 Fresh `main` is still `40887ebb215730190d7a6c7a1693373ec4afcdfc`; the top main continuity entry remains 2026-10-18. This update is documentation-only on the existing continuity PR branch; no main change, workflow dispatch, source request, Supabase write/DDL, model change, production artifact change, or schedule change was made.
