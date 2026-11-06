@@ -1,3 +1,6 @@
+# Football AI — Project Continuity
+
+
 ## 2026-11-06 14:12 UTC — latest main source/forward runtime and duplicate historical fetch
 
 Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This note records the later scheduled runs after the 13:55 UTC audit above; it does not authorize another source request.
