@@ -83,3 +83,10 @@ The original candidate SHA, 19-feature order, 20×2 weights, `active_lambda=0`, 
 ## PR #714 disposition — 2026-11-06 08:00 UTC
 
 GitHub now reports PR #714 `ea4880dca6b7d41434160a298798b0312744ae56` as **closed, not merged**. This is consistent with the file-level audit: its remaining delta from #705 only adds the derivative branch name to push filters so that the same offline validation can self-trigger on that branch. #705 already contains the offline-only validation job, the no-secret push path, and the shared download budget needed on main. No distinct main runtime protection was lost by closing #714. Do not list #714 as an open merge dependency.
+
+
+## Correction: scheduled-run delay window — 2026-11-06 08:05 UTC
+
+The absence of Source Capture and Free Real-Quote Diagnostic runs in the 2026-11-06 05:00–07:00 UTC Actions query does **not** mean the Nov 6 daily cron slots were skipped or that the next slots are Nov 7. Both workflows have daily crons. Their last confirmed Nov 5 run creation times were substantially delayed relative to their configured cron times: Source Capture created at 13:31:05Z versus 05:50Z (+7h41m), and Free Diagnostic at 14:32:51Z versus 06:13Z (+8h20m). Original Forward was created at 16:23:16Z versus its configured 08:08Z (+8h15m). Thus Nov 6 executions may still appear later in the day; no conclusion about disabled schedules or a missed run is justified yet.
+
+At the 08:05Z audit, no Nov 6 source/forward run was present in the 05:00–07:00Z window and no Original Forward run was yet present in the 08:00–09:00Z window. Continue checking actual Actions run IDs later; do not dispatch any workflow. Because #705 is still unmerged, a delayed Nov 6 source run could still bypass the proposed shared budget. The #705-first HUMAN-MERGE remains urgent, but the exact run window must be monitored rather than inferred from cron time alone.
