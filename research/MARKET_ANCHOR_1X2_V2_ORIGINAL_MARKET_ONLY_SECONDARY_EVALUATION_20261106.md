@@ -33,10 +33,17 @@ Before target outcomes can be requested, both conditions must hold:
 2. At least 30 unique source-verified original-V2 secondary forecasts whose
    fixtures are in that completed identity set.
 
-The first gate is the original 30-completed-primary-event protection. The second
-is a stricter minimum sample-size guard for this separate market-only analysis.
-If either gate is closed, the evaluator returns without invoking the lazy
-outcome loader.
+The identity-only query is a metadata preflight and does not open target outcomes.
+The protected outcome gate is at least 30 unique eligible completed forecasts
+from this original old-season-only pipeline. If fewer than 30 exist, the
+evaluator returns without invoking the lazy outcome loader, even if the
+metadata-only completed-fixture count is already above 30.
+
+After the protected gate opens, the outcome reader must select only the exact
+selected fixture identities and the fields match_date, home_team, away_team,
+result, and persisted_at_utc. Every persisted_at_utc must be strictly later
+than that fixture's kickoff_utc; equality, earlier persistence, or a missing/
+offsetless timestamp fails closed.
 
 ## Source-before-quote chain
 

@@ -32,6 +32,7 @@ def _artifact(artifact_id, name, path, workflow_name, created, run_created, run_
         "created_at_utc": created,
         "zip_sha256_verified": True,
         "run_metadata_verified": True,
+        "code_contract_verified": True,
         "parent_run_id": run_id,
         "parent_run": _run(run_id, path, workflow_name, run_created, run_completed, event),
     }
@@ -247,7 +248,7 @@ def test_no_outcomes_are_loaded_when_completed_primary_gate_is_closed():
         completed_gate_attestation=_gate(identities),
         load_outcomes=lambda keys: called.append(keys) or {},
     )
-    assert result["status"] == "COMPLETED_PRIMARY_EVENT_GATE_CLOSED_NO_OUTCOME_READ"
+    assert result["status"] == "COMPLETED_PRIMARY_IDENTITY_PREFLIGHT_CLOSED_NO_OUTCOME_READ"
     assert result["target_outcomes_read"] is False
     assert called == []
 
@@ -262,7 +263,7 @@ def test_no_outcomes_are_loaded_when_fewer_than_30_eligible_completed_forecasts(
         completed_gate_attestation=_gate(identities),
         load_outcomes=lambda keys: called.append(keys) or {},
     )
-    assert result["status"] == "INSUFFICIENT_ELIGIBLE_FORECASTS_NO_OUTCOME_READ"
+    assert result["status"] == "PROTECTED_30_PRIMARY_COMPLETED_FORECAST_GATE_CLOSED_NO_OUTCOME_READ"
     assert result["target_outcomes_read"] is False
     assert called == []
 
@@ -274,7 +275,7 @@ def test_market_only_metrics_and_paired_bootstrap_run_only_after_both_gates():
 
     def load_outcomes(keys):
         called.append(keys)
-        return {key: "H" for key in keys}
+        return {key: {"result": "H", "persisted_at_utc": f"{key[0]}T14:00:00Z"} for key in keys}
 
     result = evaluator.evaluate_market_only_secondary_cohort(
         forecasts,
@@ -286,6 +287,7 @@ def test_market_only_metrics_and_paired_bootstrap_run_only_after_both_gates():
     assert len(called[0]) == 30
     assert result["status"] == "EVALUATED_SECONDARY_MARKET_ONLY"
     assert result["target_outcomes_read"] is True
+    assert result["post_kickoff_persistence_verified"] is True
     assert result["sample_size"] == 30
     assert result["market"]["brier_score"] > result["shadow_lambda_1"]["brier_score"]
     assert result["market"]["log_loss"] > result["shadow_lambda_1"]["log_loss"]
@@ -318,3 +320,25 @@ def test_one_event_id_cannot_map_to_two_fixture_identities():
     second["event_id"] = first["event_id"]
     with pytest.raises(ValueError, match="maps to multiple fixtures"):
         evaluator.select_first_eligible_forecast_per_fixture([first, second])
+
+
+def test_post_gate_outcome_persistence_must_be_strictly_after_kickoff():
+    identities = _identities()
+    forecasts = _forecasts(identities)
+
+    def load_outcomes(keys):
+        return {
+            key: {
+                "result": "H",
+                "persisted_at_utc": f"{key[0]}T13:00:00Z",
+            }
+            for key in keys
+        }
+
+    with pytest.raises(ValueError, match="strictly after kickoff"):
+        evaluator.evaluate_market_only_secondary_cohort(
+            forecasts,
+            completed_fixture_identities=identities,
+            completed_gate_attestation=_gate(identities),
+            load_outcomes=load_outcomes,
+        )

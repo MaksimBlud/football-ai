@@ -28,6 +28,7 @@
   "gates": {
     "minimum_completed_primary_fixture_identities": 30,
     "minimum_eligible_completed_forecasts": 30,
+    "post_kickoff_persistence_rule": "persisted_at_utc strictly greater than kickoff_utc",
     "outcome_read_before_both_gates": false,
     "completed_fixture_query_columns": ["match_date", "home_team", "away_team"],
     "completed_fixture_query_source": "public.league_finished_results"

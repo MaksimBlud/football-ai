@@ -220,8 +220,8 @@ def _validate_artifact_metadata(
     digest = _digest(metadata.get("sha256"), f"{label} artifact SHA-256")
     if metadata.get("zip_sha256_verified") is not True:
         raise ValueError(f"{label} artifact ZIP bytes have not been independently SHA-verified")
-    if metadata.get("run_metadata_verified") is not True:
-        raise ValueError(f"{label} parent run metadata has not been independently verified")
+    if metadata.get("run_metadata_verified") is not True or metadata.get("code_contract_verified") is not True:
+        raise ValueError(f"{label} parent run metadata and exact code contract have not been independently verified")
     created = _utc(metadata.get("created_at_utc"), f"{label} artifact created_at")
     parent = _validate_run_metadata(
         metadata.get("parent_run"),
@@ -577,6 +577,7 @@ def evaluate_market_only_secondary_cohort(
         "shadow_residual_lambda": SHADOW_RESIDUAL_LAMBDA,
         "completed_primary_fixture_identities": len(completed),
         "eligible_completed_forecasts": len(completed_forecasts),
+        "protected_30_completed_forecast_gate_passed": len(completed_forecasts) >= MIN_ELIGIBLE_COMPLETED_FORECASTS,
         "minimum_completed_primary_fixtures": MIN_COMPLETED_PRIMARY_FIXTURES,
         "minimum_eligible_completed_forecasts": MIN_ELIGIBLE_COMPLETED_FORECASTS,
         "original_frozen_cohort_eligible": False,
@@ -591,14 +592,14 @@ def evaluate_market_only_secondary_cohort(
     if len(completed) < MIN_COMPLETED_PRIMARY_FIXTURES:
         return {
             **base,
-            "status": "COMPLETED_PRIMARY_EVENT_GATE_CLOSED_NO_OUTCOME_READ",
+            "status": "COMPLETED_PRIMARY_IDENTITY_PREFLIGHT_CLOSED_NO_OUTCOME_READ",
             "target_outcomes_read": False,
             "outcomes_scored": False,
         }
     if len(completed_forecasts) < MIN_ELIGIBLE_COMPLETED_FORECASTS:
         return {
             **base,
-            "status": "INSUFFICIENT_ELIGIBLE_FORECASTS_NO_OUTCOME_READ",
+            "status": "PROTECTED_30_PRIMARY_COMPLETED_FORECAST_GATE_CLOSED_NO_OUTCOME_READ",
             "target_outcomes_read": False,
             "outcomes_scored": False,
         }
@@ -607,12 +608,20 @@ def evaluate_market_only_secondary_cohort(
     outcomes = load_outcomes(identities)
     if not isinstance(outcomes, Mapping) or set(outcomes) != set(identities):
         raise ValueError("outcome loader must return exactly the selected completed fixture identities")
-    if any(value not in {"H", "D", "A"} for value in outcomes.values()):
-        raise ValueError("outcome loader returned an invalid 1X2 result")
+    for identity, payload in outcomes.items():
+        if not isinstance(payload, Mapping) or set(payload) != {"result", "persisted_at_utc"}:
+            raise ValueError("post-gate outcome payload must contain only result and persisted_at_utc")
+        if payload.get("result") not in {"H", "D", "A"}:
+            raise ValueError("outcome loader returned an invalid 1X2 result")
+        if _utc(payload.get("persisted_at_utc"), "persisted_at_utc") <= _utc(
+            next(row["kickoff_utc"] for row in completed_forecasts if row["fixture_identity"] == identity),
+            "forecast kickoff",
+        ):
+            raise ValueError("persisted_at_utc must be strictly after kickoff")
 
     market_brier, shadow_brier, market_logloss, shadow_logloss = [], [], [], []
     for row in completed_forecasts:
-        outcome = outcomes[row["fixture_identity"]]
+        outcome = outcomes[row["fixture_identity"]]["result"]
         market = tuple(row["market_1x2"])
         shadow = tuple(row["shadow_v2_residual_1x2"])
         market_brier.append(_brier(market, outcome))
@@ -625,6 +634,7 @@ def evaluate_market_only_secondary_cohort(
         "status": "EVALUATED_SECONDARY_MARKET_ONLY",
         "target_outcomes_read": True,
         "outcomes_scored": True,
+        "post_kickoff_persistence_verified": True,
         "sample_size": len(completed_forecasts),
         "market": {
             "brier_score": fmean(market_brier),
