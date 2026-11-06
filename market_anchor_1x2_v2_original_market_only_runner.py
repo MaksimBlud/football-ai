@@ -482,9 +482,18 @@ def _read_exact_outcomes(
     client: Any,
     identities: tuple[tuple[str, str, str], ...],
     kickoff_by_identity: Mapping[tuple[str, str, str], str],
+    *,
+    observed_at_utc: datetime,
 ) -> dict[tuple[str, str, str], dict[str, str]]:
     if not identities or not isinstance(kickoff_by_identity, Mapping):
         raise ValueError("post-gate outcome reader requires exact forecast-bound identities")
+    if (
+        not isinstance(observed_at_utc, datetime)
+        or observed_at_utc.tzinfo is None
+        or observed_at_utc.utcoffset() is None
+    ):
+        raise ValueError("outcome observation clock must have a real UTC offset")
+    observed_at = observed_at_utc.astimezone(timezone.utc)
     result: dict[tuple[str, str, str], dict[str, str]] = {}
     for identity in identities:
         if identity not in kickoff_by_identity:
@@ -516,6 +525,8 @@ def _read_exact_outcomes(
             persisted_at = _utc(row["persisted_at_utc"], "persisted_at_utc")
             if persisted_at <= kickoff:
                 raise ValueError("result persistence must be strictly later than kickoff")
+            if persisted_at > observed_at:
+                raise ValueError("result persistence cannot be later than the evaluation observation time")
             label = row["result"]
             if not isinstance(label, str) or label not in {"H", "D", "A"}:
                 raise ValueError("post-gate result label is malformed")
@@ -656,7 +667,9 @@ def run_live(
     }
 
     def lazy_outcome_loader(identities):
-        return _read_exact_outcomes(client, identities, kickoff_by_identity)
+        return _read_exact_outcomes(
+            client, identities, kickoff_by_identity, observed_at_utc=at
+        )
 
     evaluated = evaluator.evaluate_market_only_secondary_cohort(
         selected,
