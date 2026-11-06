@@ -146,6 +146,22 @@ def _forecasts(identities):
             "quote_time_utc": f"{match_day}T09:00:00Z",
             "capture_time_utc": f"{match_day}T11:05:00Z",
             "kickoff_utc": f"{match_day}T13:00:00Z",
+            "feature_history_cutoff_utc": f"{match_day}T08:30:00Z",
+            "source_artifact_id": 1000 + index,
+            "source_artifact_sha256": hashlib.sha256(f"source-{index}".encode()).hexdigest(),
+            "source_artifact_created_at_utc": f"{match_day}T08:00:00Z",
+            "source_parent_run_id": 2000 + index,
+            "source_parent_run_head_sha": f"{2000 + index:040x}",
+            "source_parent_run_created_at_utc": f"{match_day}T07:00:00Z",
+            "source_parent_run_completed_at_utc": f"{match_day}T08:01:00Z",
+            "forward_artifact_id": 3000 + index,
+            "forward_artifact_sha256": hashlib.sha256(f"forward-{index}".encode()).hexdigest(),
+            "forward_artifact_created_at_utc": f"{match_day}T11:07:00Z",
+            "forward_parent_run_id": 4000 + index,
+            "forward_parent_run_head_sha": f"{4000 + index:040x}",
+            "forward_parent_run_created_at_utc": f"{match_day}T11:04:00Z",
+            "forward_parent_run_completed_at_utc": f"{match_day}T11:08:00Z",
+            "source_before_quote_provenance_verified": True,
             "candidate_sha256": evaluator.CANDIDATE_SHA256,
             "market_1x2": (0.50, 0.25, 0.25),
             "active_market_fallback_1x2": (0.50, 0.25, 0.25),
@@ -170,6 +186,8 @@ def test_original_forward_report_is_admitted_only_to_secondary_market_only_lane(
     assert row["market_1x2"] == row["active_market_fallback_1x2"]
     assert row["shadow_v2_residual_1x2"] != row["market_1x2"]
     assert row["fixture_identity"] == ("2026-09-20", "Juventus", "Atalanta")
+    assert row["source_before_quote_provenance_verified"] is True
+    assert row["source_parent_run_completed_at_utc"] < row["quote_time_utc"]
 
 
 def test_source_created_after_quote_is_rejected():
@@ -351,3 +369,42 @@ def test_forward_workflow_run_from_paid_snapshot_is_not_admitted():
         evaluator.normalize_original_forward_report(
             report, forward_artifact_metadata=forward, source_artifacts_by_id=sources
         )
+
+def test_secondary_evaluator_rejects_rows_without_normalized_source_provenance():
+    identities = _identities()
+    forecasts = _forecasts(identities)
+    del forecasts[0]["source_artifact_sha256"]
+    with pytest.raises(ValueError, match="lacks normalized source-before-quote provenance"):
+        evaluator.evaluate_market_only_secondary_cohort(
+            forecasts,
+            completed_fixture_identities=identities,
+            completed_gate_attestation=_gate(identities),
+            load_outcomes=lambda keys: {},
+        )
+
+
+def test_secondary_evaluator_rechecks_source_parent_completion_before_quote():
+    identities = _identities()
+    forecasts = _forecasts(identities)
+    forecasts[0]["source_parent_run_completed_at_utc"] = forecasts[0]["quote_time_utc"]
+    with pytest.raises(ValueError, match="source archive and successful source workflow must both precede the quote"):
+        evaluator.evaluate_market_only_secondary_cohort(
+            forecasts,
+            completed_fixture_identities=identities,
+            completed_gate_attestation=_gate(identities),
+            load_outcomes=lambda keys: {},
+        )
+
+
+def test_secondary_evaluator_rejects_forward_capture_outside_parent_run():
+    identities = _identities()
+    forecasts = _forecasts(identities)
+    forecasts[0]["forward_parent_run_completed_at_utc"] = "2026-08-01T11:04:00Z"
+    with pytest.raises(ValueError, match="forward capture is outside its successful parent workflow interval"):
+        evaluator.evaluate_market_only_secondary_cohort(
+            forecasts,
+            completed_fixture_identities=identities,
+            completed_gate_attestation=_gate(identities),
+            load_outcomes=lambda keys: {},
+        )
+
