@@ -78,3 +78,8 @@ These are offline checks only. No live artifact scan, Supabase read, source requ
 - Identity-only Serie A 2026/27 gate query: 103 raw rows / 100 canonical identities after the frozen Atalanta alias, through 2026-11-02. No result or score columns were selected. Eligible completed forecasts remain 0/30; no Brier/LogLoss or protected outcomes were read.
 
 The original candidate SHA, 19-feature order, 20×2 weights, `active_lambda=0`, `shadow_residual_lambda=1`, stability gate, production `.pkl`, Supabase data, and workflow schedules remain unchanged.
+
+
+## PR #714 disposition — 2026-11-06 08:00 UTC
+
+GitHub now reports PR #714 `ea4880dca6b7d41434160a298798b0312744ae56` as **closed, not merged**. This is consistent with the file-level audit: its remaining delta from #705 only adds the derivative branch name to push filters so that the same offline validation can self-trigger on that branch. #705 already contains the offline-only validation job, the no-secret push path, and the shared download budget needed on main. No distinct main runtime protection was lost by closing #714. Do not list #714 as an open merge dependency.
