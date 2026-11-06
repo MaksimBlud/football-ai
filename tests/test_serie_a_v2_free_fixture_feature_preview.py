@@ -737,4 +737,8 @@ def test_main_rights_denial_blocks_before_any_external_access(monkeypatch, tmp_p
     assert report["operation"] == "MARKET_ANCHOR_1X2_V2_FREE_FIXTURE_FEATURE_PREVIEW"
     assert report["paid_provider_calls"] == 0
     assert report["supabase_writes"] == 0
-    assert report["model_inference"] is False
+    assert report["model_training"] is False
+    assert report["model_refit_or_selection"] is False
+    assert report["model_promotion"] is False
+    assert report["forecasts_created"] == 0
+    assert report["diagnostic_scored"] == 0
