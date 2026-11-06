@@ -202,7 +202,10 @@ def test_outcome_loader_queries_only_exact_fixture_and_post_kickoff_fields():
             return self.query
 
     client = Client()
-    loaded = runner._read_exact_outcomes(client, (identity,), {identity: kickoff})
+    loaded = runner._read_exact_outcomes(
+        client, (identity,), {identity: kickoff},
+        observed_at_utc=datetime(2026, 11, 6, 4, 0, tzinfo=timezone.utc),
+    )
     assert client.query.selected == "match_date,home_team,away_team,result,persisted_at_utc"
     assert ("eq", "match_date", "2026-08-22") in client.query.filters
     assert loaded[identity]["result"] == "H"
@@ -232,7 +235,8 @@ def test_outcome_loader_rejects_persistence_at_or_before_kickoff():
 
     with pytest.raises(ValueError, match="strictly later than kickoff"):
         runner._read_exact_outcomes(
-            Client(), (identity,), {identity: "2026-08-22T18:30:00+00:00"}
+            Client(), (identity,), {identity: "2026-08-22T18:30:00+00:00"},
+            observed_at_utc=datetime(2026, 11, 6, 4, 0, tzinfo=timezone.utc),
         )
 
 
@@ -244,6 +248,36 @@ def test_frozen_sha_patterns_and_source_zip_name_are_exact():
     assert runner.SOURCE_ZIP_RE.fullmatch("source_artifact_12345.zip")
     assert not runner.SOURCE_ZIP_RE.fullmatch("source_artifact_x.zip")
 
+
+
+def test_outcome_loader_rejects_persistence_after_observation_time():
+    identity = ("2026-08-22", "Atalanta", "Pisa")
+
+    class Response:
+        data = [{
+            "match_date": "2026-08-22",
+            "home_team": "Atalanta",
+            "away_team": "Pisa",
+            "result": "H",
+            "persisted_at_utc": "2026-11-06T04:00:01+00:00",
+        }]
+
+    class Query:
+        def select(self, value): return self
+        def eq(self, *args): return self
+        def in_(self, *args): return self
+        def execute(self): return Response()
+
+    class Client:
+        def table(self, name):
+            assert name == "league_finished_results"
+            return Query()
+
+    with pytest.raises(ValueError, match="later than the evaluation observation time"):
+        runner._read_exact_outcomes(
+            Client(), (identity,), {identity: "2026-08-22T18:30:00+00:00"},
+            observed_at_utc=datetime(2026, 11, 6, 4, 0, tzinfo=timezone.utc),
+        )
 
 def test_report_writer_emits_parseable_json_with_real_terminal_newline(tmp_path):
     path = tmp_path / "nested" / "secondary-report.json"
