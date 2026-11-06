@@ -637,3 +637,11 @@ def test_quote_preflight_rejects_invalid_decimal_prices_before_source_download()
             row = {**quote(), key: invalid}
             with pytest.raises(ValueError, match="invalid bookmaker decimal prices|missing bookmaker decimal prices"):
                 count_fresh_future_prematch_quote_rows([row], now=now)
+
+@pytest.mark.parametrize("field", ["snapshot_time_utc", "commence_time_utc"])
+def test_quote_preflight_rejects_offsetless_market_clocks(field):
+    row = {**quote(), field: "2026-10-13T15:00:00"}
+    with pytest.raises(ValueError, match="naive clock-time not allowed"):
+        count_fresh_future_prematch_quote_rows(
+            [row], now=datetime(2026, 10, 13, 15, 1, tzinfo=timezone.utc)
+        )
