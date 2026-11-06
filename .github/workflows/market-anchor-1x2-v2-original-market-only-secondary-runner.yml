@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   pull_request:
     branches:
+      - main
       - research/v2-original-market-only-secondary-eval-20261106-run11
     paths:
       - "market_anchor_1x2_v2_original_market_only_runner.py"
