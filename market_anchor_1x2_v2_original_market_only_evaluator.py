@@ -406,6 +406,17 @@ def normalize_original_forward_report(
             "source_parent_run_head_sha": source_run["head_sha"],
             "source_parent_run_created_at_utc": source_run["created_at_utc"],
             "source_parent_run_completed_at_utc": source_run["completed_at_utc"],
+            "source_parent_run_path": source_run["path"],
+            "source_parent_run_name": source_run["name"],
+            "source_parent_run_branch": source_run["head_branch"],
+            "source_parent_run_event": source_run["event"],
+            "source_parent_run_status": source_run["status"],
+            "source_parent_run_conclusion": source_run["conclusion"],
+            "source_loader_blob_sha1": SOURCE_LOADER_BLOB_SHA1,
+            "source_rights_helper_blob_sha1": SOURCE_RIGHTS_HELPER_BLOB_SHA1,
+            "source_rights_manifest_blob_sha1": SOURCE_RIGHTS_MANIFEST_BLOB_SHA1,
+            "source_artifact_metadata_verified": True,
+            "source_code_contract_verified": True,
             "forward_artifact_id": forward_artifact["artifact_id"],
             "forward_artifact_sha256": forward_artifact["sha256"],
             "forward_artifact_created_at_utc": forward_artifact["created_at_utc"],
@@ -413,6 +424,13 @@ def normalize_original_forward_report(
             "forward_parent_run_head_sha": forward_run["head_sha"],
             "forward_parent_run_created_at_utc": forward_run["created_at_utc"],
             "forward_parent_run_completed_at_utc": forward_run["completed_at_utc"],
+            "forward_parent_run_path": forward_run["path"],
+            "forward_parent_run_name": forward_run["name"],
+            "forward_parent_run_branch": forward_run["head_branch"],
+            "forward_parent_run_event": forward_run["event"],
+            "forward_parent_run_status": forward_run["status"],
+            "forward_parent_run_conclusion": forward_run["conclusion"],
+            "forward_artifact_metadata_verified": True,
             "source_before_quote_provenance_verified": True,
             "original_frozen_cohort_eligible": False,
             "secondary_market_only_eligible": True,
@@ -452,11 +470,42 @@ def select_first_eligible_forecast_per_fixture(
             "forward_artifact_id", "forward_artifact_sha256", "forward_artifact_created_at_utc",
             "forward_parent_run_id", "forward_parent_run_head_sha",
             "forward_parent_run_created_at_utc", "forward_parent_run_completed_at_utc",
-            "feature_history_cutoff_utc",
+            "source_parent_run_path", "source_parent_run_name", "source_parent_run_branch",
+            "source_parent_run_event", "source_parent_run_status", "source_parent_run_conclusion",
+            "source_loader_blob_sha1", "source_rights_helper_blob_sha1",
+            "source_rights_manifest_blob_sha1", "source_artifact_metadata_verified",
+            "source_code_contract_verified",
+            "forward_parent_run_path", "forward_parent_run_name", "forward_parent_run_branch",
+            "forward_parent_run_event", "forward_parent_run_status", "forward_parent_run_conclusion",
+            "forward_artifact_metadata_verified", "feature_history_cutoff_utc",
         )
         missing_provenance = [field for field in required_provenance if field not in row]
         if missing_provenance or row.get("source_before_quote_provenance_verified") is not True:
             raise ValueError("secondary forecast lacks normalized source-before-quote provenance")
+        if (
+            row.get("source_artifact_metadata_verified") is not True
+            or row.get("source_code_contract_verified") is not True
+            or row.get("source_parent_run_path") != SOURCE_WORKFLOW_PATH
+            or row.get("source_parent_run_name") != SOURCE_WORKFLOW_NAME
+            or row.get("source_parent_run_branch") != "main"
+            or row.get("source_parent_run_event") not in _ALLOWED_SOURCE_EVENTS
+            or row.get("source_parent_run_status") != "completed"
+            or row.get("source_parent_run_conclusion") != "success"
+            or row.get("source_loader_blob_sha1") != SOURCE_LOADER_BLOB_SHA1
+            or row.get("source_rights_helper_blob_sha1") != SOURCE_RIGHTS_HELPER_BLOB_SHA1
+            or row.get("source_rights_manifest_blob_sha1") != SOURCE_RIGHTS_MANIFEST_BLOB_SHA1
+        ):
+            raise ValueError("secondary forecast source parent/workflow/code attestation is invalid")
+        if (
+            row.get("forward_artifact_metadata_verified") is not True
+            or row.get("forward_parent_run_path") != FORWARD_WORKFLOW_PATH
+            or row.get("forward_parent_run_name") != FORWARD_WORKFLOW_NAME
+            or row.get("forward_parent_run_branch") != "main"
+            or row.get("forward_parent_run_event") not in _ALLOWED_FORWARD_EVENTS
+            or row.get("forward_parent_run_status") != "completed"
+            or row.get("forward_parent_run_conclusion") != "success"
+        ):
+            raise ValueError("secondary forecast forward parent/workflow attestation is invalid")
         _positive_int(row.get("source_artifact_id"), "source_artifact_id")
         _digest(row.get("source_artifact_sha256"), "source_artifact_sha256")
         _positive_int(row.get("source_parent_run_id"), "source_parent_run_id")
