@@ -51,9 +51,9 @@ MAX_ARTIFACT_PAGES = 3
 PER_PAGE = 100
 MAX_IDENTITY_PAGES = 10
 IDENTITY_PAGE_SIZE = 1000
-SHA1_RE = re.compile(r"[0-9a-f]{40}\\Z")
-SHA256_RE = re.compile(r"[0-9a-f]{64}\\Z")
-SOURCE_ZIP_RE = re.compile(r"source_artifact_(\\d+)\\.zip\\Z")
+SHA1_RE = re.compile(r"[0-9a-f]{40}\Z")
+SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
+SOURCE_ZIP_RE = re.compile(r"source_artifact_(\d+)\.zip\Z")
 
 # These exact Git blob IDs are inherited from the reviewed #699 source/forward
 # branch and the frozen #716 evaluator/policy. A changed dependency blocks the
@@ -74,6 +74,10 @@ FORWARD_CODE_BLOBS = {
     "market_anchor_1x2_v2_shadow.py": "b2770d726ffafe7a3cef706b57d3391063cbfe1b",
     "serie_a_v2_prequote_source_archive_gate.py": "c04e8faae612305f4b618cd10ef59e3ec9729b2d",
     "serie_a_v2_live_diagnostic_report.py": "d3b717ea03570413f1d0b6b6f9821b2be0db16a3",
+    "serie_a_v2_attest_real_source.py": "22693df450ae8b431ef0547f98dc727f499fa9fb",
+    "market_anchor_v2_source_rights.py": "538ae477995c3b70ba5d4adafa8e4e7516072b98",
+    "research/source_rights/football_data_co_uk.json": "a8795adce411fad4679491be36867dad2565a89c",
+    "research/models/market_anchor_v2_serie_a_frozen_candidate.json": "ac1303f6b096664983fbf52443bd0a381b23ba21",
     "serie_a_runtime_config.py": "305472ca129459bda69a55a1c1c9501b3aea7b51",
 }
 CANDIDATE_PATH = "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
@@ -576,10 +580,8 @@ def run_live(
             "source_rights": rights,
         }
 
-    source_artifacts = discover_archives(token=token, get=get)
-    source_by_id = {item["artifact_id"]: item for item in source_artifacts}
+    source_by_id: dict[int, dict[str, Any]] | None = None
     source_meta_cache: dict[int, dict[str, Any]] = {}
-    source_rows_cache: dict[int, list[Mapping[str, Any]]] = {}
     normalized_rows: list[dict[str, Any]] = []
     forward_artifact_ids: list[int] = []
 
@@ -601,15 +603,17 @@ def run_live(
             row.get("source_artifact_id") for row in eligible_rows
             if type(row.get("source_artifact_id")) is int
         }
+        if needed_ids and source_by_id is None:
+            source_by_id = {item["artifact_id"]: item for item in discover_archives(token=token, get=get)}
         for source_id in needed_ids:
-            if source_id not in source_by_id:
+            if source_by_id is None or source_id not in source_by_id:
                 raise ValueError("forward report references a source artifact absent from GitHub metadata")
-            if source_id not in source_meta_cache:
-                grouped = [row for row in eligible_rows if row.get("source_artifact_id") == source_id]
-                source_meta_cache[source_id] = _verify_source_artifact(
-                    source_by_id[source_id], grouped, token=token, get=get
-                )
-                source_rows_cache[source_id] = grouped
+            grouped = [row for row in eligible_rows if row.get("source_artifact_id") == source_id]
+            # Revalidate the source ZIP against every forward report that uses it.
+            # A later artifact may contain an earlier quote timestamp.
+            source_meta_cache[source_id] = _verify_source_artifact(
+                source_by_id[source_id], grouped, token=token, get=get
+            )
         forward_meta = {
             "artifact_id": artifact["artifact_id"],
             "name": FORWARD_ARTIFACT_NAME,
