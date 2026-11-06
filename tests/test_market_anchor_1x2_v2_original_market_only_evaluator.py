@@ -273,6 +273,15 @@ def test_completed_gate_requires_identity_only_fields_and_matching_sha():
     with pytest.raises(ValueError, match="identity metadata only"):
         evaluator._validate_completed_gate(identities, gate)
 
+def test_completed_gate_rejects_reversed_duplicate_fixture_identity():
+    identities = _identities()
+    match_date, home, away = next(iter(identities))
+    reversed_identities = set(identities)
+    reversed_identities.add((match_date, away, home))
+    gate = _gate(reversed_identities)
+    with pytest.raises(ValueError, match="reversed duplicate fixture identity"):
+        evaluator._validate_completed_gate(reversed_identities, gate)
+
 
 def test_no_outcomes_are_loaded_when_completed_primary_gate_is_closed():
     identities = _identities(29)
