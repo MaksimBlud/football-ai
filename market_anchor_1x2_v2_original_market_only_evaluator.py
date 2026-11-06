@@ -702,6 +702,9 @@ def evaluate_market_only_secondary_cohort(
         }
 
     identities = tuple(row["fixture_identity"] for row in completed_forecasts)
+    # Capture the real UTC evaluation clock before invoking the lazy outcome loader.
+    # A timestamp later than this observation cannot be treated as already-persisted evidence.
+    evaluation_observed_at = datetime.now(timezone.utc)
     outcomes = load_outcomes(identities)
     if not isinstance(outcomes, Mapping) or set(outcomes) != set(identities):
         raise ValueError("outcome loader must return exactly the selected completed fixture identities")
@@ -710,11 +713,15 @@ def evaluate_market_only_secondary_cohort(
             raise ValueError("post-gate outcome payload must contain only result and persisted_at_utc")
         if payload.get("result") not in {"H", "D", "A"}:
             raise ValueError("outcome loader returned an invalid 1X2 result")
-        if _utc(payload.get("persisted_at_utc"), "persisted_at_utc") <= _utc(
+        persisted_at = _utc(payload.get("persisted_at_utc"), "persisted_at_utc")
+        kickoff = _utc(
             next(row["kickoff_utc"] for row in completed_forecasts if row["fixture_identity"] == identity),
             "forecast kickoff",
-        ):
+        )
+        if persisted_at <= kickoff:
             raise ValueError("persisted_at_utc must be strictly after kickoff")
+        if persisted_at > evaluation_observed_at:
+            raise ValueError("persisted_at_utc cannot be later than evaluation observation time")
 
     market_brier, shadow_brier, market_logloss, shadow_logloss = [], [], [], []
     for row in completed_forecasts:
