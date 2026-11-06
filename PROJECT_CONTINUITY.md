@@ -1,3 +1,33 @@
+## 2026-11-06 05:06 UTC — original V2 secondary evaluator and read-only runner; source-budget merge remains urgent
+
+Fresh `main` is still `40887ebb215730190d7a6c7a1693373ec4afcdfc`; the top main continuity entry remains 2026-10-18. This update is documentation-only on the existing continuity PR branch; no main change, workflow dispatch, source request, Supabase write/DDL, model change, production artifact change, or schedule change was made.
+
+### New original old-season-only secondary evaluation path
+
+- PR [#716](https://github.com/MaksimBlud/football-ai/pull/716), exact HEAD `1f89a03a3427cd0d26cafaf5aafc3d45dd421377`, remains Draft and stacked on #699. Its pure offline market-only evaluator preserves the original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 features, 20×2 weights, active lambda 0 and shadow lambda 1. Exact offline CI [#42159939427](https://github.com/MaksimBlud/football-ai/actions/runs/42159939427) and branch-push run [#42159933667](https://github.com/MaksimBlud/football-ai/actions/runs/42159933667) both SUCCESS (35 evaluator tests each).
+- New stacked Draft PR [#717](https://github.com/MaksimBlud/football-ai/pull/717), base #716, exact HEAD `223870e4c2f019f80e4f5fb80d6207d7b47bc3f3`, adds the manual-only read-only runner. Branch push [#42166188602](https://github.com/MaksimBlud/football-ai/actions/runs/42166188602) and PR CI [#42166272625](https://github.com/MaksimBlud/football-ai/actions/runs/42166272625) both SUCCESS with **47 passed**. The live job was skipped on both events as designed; no live artifact scan or Supabase read was performed by this PR.
+- The runner checks local personal/academic research-inference scope before external reads, authenticates exact GitHub artifact ZIP SHA and parent workflow/code blobs, and reads only completed-fixture identity metadata before both gates. Its lazy outcome reader is reachable only after at least 30 completed primary fixture identities AND at least 30 unique eligible completed forecasts. It returns aggregate Brier/LogLoss and paired bootstrap only; superiority claims remain prohibited.
+- The runner is not dispatched. Existing main Original Forward run [#42063896617](https://github.com/MaksimBlud/football-ai/actions/runs/42063896617) SUCCESS but reports `quotes_seen=0`, `future_quotes_checked=0`, `v2_diagnostic_previews_captured=0`, `forecasts_created=0`, paid calls 0 and Supabase writes 0. Artifact #13432756141 SHA-256 `a0ee37f9636663c77be81534211305aff0b7f0cfaeed1a56b91049e8e1d6d59b`.
+- The secondary evaluator and runner do not rewrite the original frozen-cohort eligibility. No target outcomes were read; the prospective outcome gate remains closed at 0/30 eligible forecasts.
+
+### Current main-only source and pre-match quote evidence
+
+- Current-Form Source Capture [#42036450692](https://github.com/MaksimBlud/football-ai/actions/runs/42036450692) SUCCESS; artifact #13418048952, SHA-256 `941cb910b4b412027de196156147b164ba6705159ef90e34a99af02e0de04f10`.
+- Free Real-Quote Diagnostic [#42046051819](https://github.com/MaksimBlud/football-ai/actions/runs/42046051819) SUCCESS; artifact #13424482168, SHA-256 `4f735f1e4636250b0b711963e9f6a660838afc521396968fcb19acb2b39d3559`; zero quotes/scored diagnostics.
+- Read-only Supabase `odds_snapshots` check at 2026-11-06 04:54 UTC: 3,966 total, 3,915 strictly pre-kickoff, zero strictly pre-kickoff snapshots in the prior seven days, zero future events with a saved strictly pre-kickoff quote; latest snapshot 2026-10-13 14:48:53 UTC. No odds data was written.
+- The Nov 5 source archives predate #699's rights/identity guard and are not admitted as a new rights-attested V2 chain.
+
+### Integration blocker and HUMAN-MERGE order
+
+- PR [#705](https://github.com/MaksimBlud/football-ai/pull/705) remains open/unmerged, exact HEAD `f3e7451ee9cebc9280a8f86421a509d9bc177da0`, mergeable, with 8/8 required CI success. It is the consolidated shared two-session/170-hour source budget, offline-only push validation, and fail-closed production `.pkl` diff guard.
+- Main still has source schedules at 05:50 UTC and 06:13 UTC. At 05:06 UTC the next Current-Form Source Capture slot is 2026-11-06 05:50 UTC (44 minutes away). The two Nov 5 source sessions already consume the rolling weekly allowance; #705's guard is not active until human merge.
+- PR [#699](https://github.com/MaksimBlud/football-ai/pull/699) is open at `a6725ca49e90d551baa7e9f647151f7e524e42c7`, exact-head 7/7 CI success, but must be rebased/reconciled with #705 first. Preserve the shared marker/concurrency and offline push guards while retaining #699's rights, identity and clock checks.
+- Required human order: #705 → rebase/reconcile #699 → exact full CI → #699 → #716 → #717. No PR was merged and no main or schedule was changed.
+
+The Football-Data manifest remains a conditional personal/academic research-inference interpretation, not a provider-issued AI-inference licence; no AI training, commercial use, public product publication or redistribution is permitted. Frozen V2 weights/features remain unchanged, `active_lambda=0` remains the market, `shadow_lambda=1` remains research-only, and no superiority claim is made.
+
+---
+
 ## 2026-11-05 18:04 UTC — Original MARKET_ANCHOR_1X2_V2: exact forward runtime, evaluator provenance regression, and fresh read-only source audit
 
 **Fresh repository state.** Default branch remains `main` at `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Main's `PROJECT_CONTINUITY.md` still begins with the 2026-10-18 entry; this update is on this documentation PR only. No main update or merge was performed.
