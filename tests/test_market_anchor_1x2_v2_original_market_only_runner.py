@@ -81,11 +81,20 @@ def test_forward_artifact_extractor_rejects_duplicate_report():
 
 def test_completed_fixture_gate_selects_only_identity_columns_and_attests_sha():
     class Response:
-        data = [{
-            "match_date": "2026-08-22",
-            "home_team": "Atalanta BC",
-            "away_team": "Pisa",
-        }]
+        # The live ledger contains both raw Atalanta labels for some fixtures.
+        # The frozen V2-local alias must collapse them to one primary identity.
+        data = [
+            {
+                "match_date": "2026-08-22",
+                "home_team": "Atalanta BC",
+                "away_team": "Pisa",
+            },
+            {
+                "match_date": "2026-08-22",
+                "home_team": "Atalanta",
+                "away_team": "Pisa",
+            },
+        ]
 
     class Query:
         def __init__(self):
@@ -125,6 +134,8 @@ def test_completed_fixture_gate_selects_only_identity_columns_and_attests_sha():
         client, now=datetime(2026, 11, 6, 4, 0, tzinfo=timezone.utc)
     )
     assert client.query.selected == "match_date,home_team,away_team"
+    assert ("eq", "league", "SERIE_A") in client.query.filters
+    assert ("eq", "season", "2026-2027") in client.query.filters
     assert ("lt", "match_date", "2026-11-06") in client.query.filters
     assert identities == {("2026-08-22", "Atalanta", "Pisa")}
     assert attestation["selected_columns"] == ["match_date", "home_team", "away_team"]
