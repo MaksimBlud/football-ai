@@ -7,6 +7,7 @@ on:
   push:
     branches: [main]
     paths:
+      - "requirements-v2-research-py312.lock"
       - "serie_a_v2_current_form_forward_capture.py"
       - "serie_a_v2_current_form_source_capture.py"
       - "serie_a_v2_asof_feature_manifest.py"
@@ -70,7 +71,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install read-only original V2 dependencies
-        run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
+        run: python -m pip install -r requirements-v2-research-py312.lock
       - name: Test frozen model, current-form source integrity, and no-outcome capture
         run: |
           python -m py_compile serie_a_v2_current_form_source_capture.py serie_a_v2_current_form_forward_capture.py serie_a_v2_asof_feature_manifest.py serie_a_v2_frozen_shadow_preview.py serie_a_v2_live_diagnostic_report.py serie_a_v2_prequote_source_archive_gate.py historical_football_signal_lab.py serie_a_runtime_config.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py
