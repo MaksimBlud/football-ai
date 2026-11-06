@@ -1,3 +1,30 @@
+# Football AI — Project Continuity
+
+## 2026-11-06 — Original V2: free diagnostic quote preflight (Draft PR #719, stacked on #718)
+
+This branch-only follow-up is based on #718's integration branch; it does not change main. The source/forward artifacts were independently downloaded and re-hashed during this audit:
+
+- Current-Form Source Capture run #42224162373, artifact #13504817564: ZIP SHA-256 `d8e96884c6fefd6687b82d72bf4c6cc08433b6d42e3b87879252115137a6e7ea`; all 11/11 internal CSV hashes match the manifest. The archive contains 10 historical CSVs / 3,800 rows plus the separate 2026/27 current-season CSV / 100 prior-day rows. Feature-input gate time `2026-11-06T13:16:58.008533Z` selected only `match_date,home_team,away_team` and recorded 100 canonical Serie A fixture identities. Current-season source observation was `13:17:14.166325Z`; archive creation was `13:17:14.179267Z`.
+- Paired Current-Form Forward-Only artifact #13503839598: ZIP SHA-256 `b4889df9b681b4b06b22c09b63e3501ccdf0a424c36ea0be10d565a75585af43`; parent/source/candidate pins verified, but `quotes_seen=0` and `v2_current_form_shadow_captured=0`; no target outcome was read or scored.
+- Free Real-Quote Diagnostic run #42231648250, artifact #13510280643: ZIP SHA-256 `4cb7780bc52e64d4b9f761107e79451fcf7541fb79a6ea70a520c96df9bc54dd`; 10 public HTTP requests, 10 historical CSVs / 3,800 rows, zero quoted fixtures and zero diagnostic scores. Every one of its 10 historical CSV SHA-256 values exactly matches the corresponding historical member in #13504817564, downloaded 54 minutes earlier. The second session added no historical bytes.
+
+Read-only Supabase `odds_snapshots` audit: 3,966 total, 3,915 strictly pre-kickoff, zero in the last seven days, zero future-event pre-kickoff quotes; latest snapshot `2026-10-13T14:48:53.042620Z`. Metadata-only Serie A 2026/27 identity query returned 103 raw tuples and 100 after the V2-local Atalanta alias normalization; no score/result fields were selected.
+
+Draft PR #719 adds an outcome-blind preflight to the free diagnostic:
+- It reads only saved Serie A market snapshot fields and counts fresh (<=24h), future-kickoff, strictly pre-kickoff quote rows.
+- With zero eligible rows, both the full CLI and workflow preflight emit an explicit no-download/no-inference report. The workflow skips the shared budget reservation/marker and all public CSV HTTP requests.
+- The full CLI repeats the guard, so a quote that expires between workflow preflight and execution still cannot trigger a source download.
+- Regression tests cover fresh/stale/future/post-kickoff quote timing, forbidden outcome fields, full-mode no-quote early return, preflight-only no-download behavior, and workflow ordering/conditions.
+- PR #719 remains Draft and stacked on #718. It has no full main-targeted exact-head PR matrix yet. Do not merge it before #718; after #718 is manually integrated, retarget/rebase #719 onto resulting main and require exact-head CI.
+
+Rights remain conditional: the source manifest has `authorization=null`; its frozen-inference allowance is an operational interpretation, not a provider-issued AI-inference licence. The official policy says requests concerning AI usage/model training should assume no permission absent an applicable permitted-use basis. Do not initiate another Football-Data source session or describe AI inference as rights-cleared until the intended use is demonstrably within the stated personal/academic scope or written permission is obtained. No new Football-Data request was made in this iteration.
+
+Original candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`: 19 features, 20x2 weights, 3,799 training rows through 2026-06-30, `active_lambda=0`, `shadow_lambda=1`, stability gate FAILED, and no 2026/27 outcomes used for fitting. The separate primary outcome-read gate remains closed at 0/30 eligible prospective completed forecasts. No refit, threshold tuning, production `.pkl`, Supabase write/DDL, paid API request, bet, promotion, main change, or schedule change.
+
+---
+
+
+
 ## 2026-11-06 14:12 UTC — latest main source/forward runtime and duplicate historical fetch
 
 Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This note records the later scheduled runs after the 13:55 UTC audit above; it does not authorize another source request.
