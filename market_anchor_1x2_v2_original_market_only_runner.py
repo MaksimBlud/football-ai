@@ -59,7 +59,7 @@ SOURCE_ZIP_RE = re.compile(r"source_artifact_(\d+)\.zip\Z")
 # branch and the frozen #716 evaluator/policy. A changed dependency blocks the
 # runner until the code contract is reviewed and explicitly repinned.
 CURRENT_CODE_BLOBS = {
-    "market_anchor_1x2_v2_original_market_only_evaluator.py": "c460f9cfacc89374c19a709a3591fa52785a9003",
+    "market_anchor_1x2_v2_original_market_only_evaluator.py": "7a9a6552b78647a350ab2b9177765656c99147f9",
     "experiments/market_anchor_1x2_v2_original_market_only_secondary_policy.json": "0d0100a48bd5df68244bc32cb5a4301b621a800f",
     "market_anchor_v2_source_rights.py": "538ae477995c3b70ba5d4adafa8e4e7516072b98",
     "research/source_rights/football_data_co_uk.json": "a8795adce411fad4679491be36867dad2565a89c",
