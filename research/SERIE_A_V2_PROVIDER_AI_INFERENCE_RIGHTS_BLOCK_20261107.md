@@ -20,7 +20,7 @@ The manifest therefore records:
 - AI training, commercial use and public product use as forbidden;
 - no more than two automated source-download sessions per rolling seven days.
 
-The runtime guard blocks before network, Supabase, archive, quote, feature, or model access while this internal inference gate remains closed.
+The runtime guard blocks before network, Supabase, archive, quote, feature, or model access while this internal inference gate remains closed. The standalone frozen-shadow CLI also checks this gate before importing the database client or reading externally supplied feature JSON.
 
 ## Verification and safety
 

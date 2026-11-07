@@ -315,6 +315,26 @@ def main() -> None:
     parser.add_argument("--saved-supabase-quotes", action="store_true", required=True,
                         help="Read existing odds_snapshots only; never calls Odds API")
     args = parser.parse_args()
+    # Saved quotes and externally supplied features still enter frozen-weight
+    # inference. Check the same conservative source-rights scope before either
+    # the database client or feature file is accessed.
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+
+    try:
+        require_personal_research_inference_scope()
+    except PermissionError as exc:
+        print(json.dumps({
+            "mode": "RESEARCH_SCOPE_BLOCKED",
+            "reason": str(exc),
+            "supabase_reads": 0,
+            "supabase_writes": 0,
+            "paid_provider_calls": 0,
+            "model_inference_performed": False,
+            "target_outcomes_read": False,
+            "no_bet": True,
+        }, ensure_ascii=False, sort_keys=True))
+        return
+
     from database import supabase
     now = datetime.now(timezone.utc)
     features = json.loads(args.features_json.read_text(encoding="utf-8"))

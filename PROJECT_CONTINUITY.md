@@ -7,6 +7,7 @@ The earlier draft wording overstated the provider's current statement. The proje
 - Refreshed manifest review timestamp to 2026-11-07T01:56:17Z and page update date to 2026-11-06.
 - Kept `research_inference_permitted=false`, `authorization=null`, `provider_issued_ai_inference_license=false`, AI training=false, commercial=false, public product=false, and the two-session-per-rolling-week download ceiling.
 - Updated the guard's wording and blocked-report status to say the frozen-inference scope remains unresolved pending clarification or a source with an explicit applicable licence.
+- Integrated the standalone frozen-shadow CLI guard from #715: its main checks the same rights helper before importing the database client or reading the external feature JSON. Two regression tests prove the denied path performs zero reads/inference and the allowed path checks rights first. PR #715 is now superseded by this integrated change and must not be merged separately.
 - Added a regression pinning the current policy date/wording and confirming the conservative inference block remains fail-closed.
 - No Football-Data CSV was requested, no V2 inference was run, no odds or target outcomes were read, and no Supabase write/DDL occurred in this correction.
 
