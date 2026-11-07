@@ -311,16 +311,17 @@ def test_live_v2_entrypoints_check_research_scope_before_external_reads():
             # The explicitly named metadata-only mode may read saved odds before
             # the provider gate; it must not read Football-Data or infer.
             preflight = main.split("    if args.preflight_only:", 1)[1].split(
-                "    try:\\n        require_personal_research_inference_scope()", 1
+                "    try:\n        require_personal_research_inference_scope()", 1
             )[0]
             assert "from database import supabase" in preflight
             assert "fetch_saved_upcoming_serie_a_quotes(" in preflight
             assert "require_personal_research_inference_scope()" not in preflight
             assert "fetch_public_history(" not in preflight
             normal = main.split(
-                "    try:\\n        require_personal_research_inference_scope()", 1
+                "    try:\n        require_personal_research_inference_scope()", 1
             )[1]
-            guard = 0
+            guard = normal.find("require_personal_research_inference_scope()")
+            assert guard >= 0
             for side_effect in side_effects:
                 position = normal.find(side_effect)
                 assert position >= 0, f"{path} lost expected post-rights runtime step {side_effect!r}"

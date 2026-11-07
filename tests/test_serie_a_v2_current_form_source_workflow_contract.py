@@ -347,7 +347,7 @@ def test_all_live_v2_entrypoints_block_rights_denied_source_quote_reads_and_arti
             assert quote_preflight < preflight
             quote_block = text.split(
                 f"      - name: {quote_preflight_name}", 1
-            )[1].split("\\n      - name:", 1)[0]
+            )[1].split("\n      - name:", 1)[0]
             assert "--preflight-only" in quote_block
         else:
             preflight_name = "Preflight frozen V2 source rights before source/quote access"
