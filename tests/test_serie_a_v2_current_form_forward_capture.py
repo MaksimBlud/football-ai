@@ -1279,3 +1279,21 @@ def test_current_form_github_api_json_accepts_exact_http_200_without_redirects()
     assert forward_capture_module._github_json(url, token="read-only-test-token", get=fake_get) == {"artifacts": []}
     assert request["allow_redirects"] is False
     assert response.json_called is True
+
+
+def _repository_git_blob_sha1(path):
+    raw = path.read_bytes()
+    header = f"blob {len(raw)}\\0".encode("ascii")
+    return hashlib.sha1(header + raw).hexdigest()
+
+
+def test_current_form_forward_rights_blob_pins_match_exact_repository_bytes():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    assert forward_capture_module.EXPECTED_SOURCE_RIGHTS_HELPER_BLOB_SHA1 == _repository_git_blob_sha1(
+        root / forward_capture_module.SOURCE_RIGHTS_HELPER_PATH
+    )
+    assert forward_capture_module.EXPECTED_SOURCE_RIGHTS_MANIFEST_BLOB_SHA1 == _repository_git_blob_sha1(
+        root / forward_capture_module.SOURCE_RIGHTS_MANIFEST_PATH
+    )
