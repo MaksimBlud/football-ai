@@ -6330,3 +6330,8 @@ A future restart requires genuinely new prospectively frozen information or a ne
 ## 2026-11-07 — V2 source artifacts require private repository storage
 
 The source-rights branch now separately verifies GitHub repository privacy before any of the four live V2 workflows reads source archives, queries saved quotes, reserves download budget, fetches public CSVs, builds features, or runs inference. The check uses the exact `GITHUB_REPOSITORY` identity and read-only `GITHUB_TOKEN`; API failure, redirect, identity mismatch, missing token, or `private != true` fails closed. This is independent of provider permission: both gates must pass. The current repository is public, so after this PR is integrated the workflows will remain blocked until the owner chooses private repository visibility or approves a separately reviewed encrypted-artifact design. Existing artifacts are not retroactively protected or deleted by this code. No repository settings, secrets, schedules, model bytes, feature definitions, weights, lambdas, or production files are changed.
+
+
+### Privacy guard provenance isolation
+
+The storage check is isolated in `market_anchor_v2_artifact_privacy.py`, not added to `market_anchor_v2_source_rights.py`. This keeps the provider-rights helper blob SHA used by current forward provenance pins unchanged and avoids changing the frozen evaluator's older preregistered rights-helper pin. The privacy module is an operational storage gate only; it does not enter the V2 feature/model contract.
