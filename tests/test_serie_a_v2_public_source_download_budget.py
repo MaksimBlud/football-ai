@@ -322,9 +322,9 @@ def test_workflow_contracts_keep_crons_and_shared_concurrency():
     diagnostic_archive_block = diagnostic.split(
         "      - name: Archive diagnostic and exact public CSV bytes for provenance", 1
     )[1]
-    assert "if: ${{ always() && steps.rights_preflight.outputs.allowed == 'true' && steps.quote_preflight.outputs.eligible_quote_rows != '0' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success' }}" in diagnostic_archive_block
+    assert "if: ${{ always() && steps.rights_preflight.outputs.allowed == 'true' && steps.final_quote_preflight.outputs.eligible_quote_rows != '0' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success' }}" in diagnostic_archive_block
     assert "github.event_name != 'push'" in diagnostic
-    assert "if: ${{ github.event_name != 'push' && steps.rights_preflight.outputs.allowed == 'true' && steps.quote_preflight.outputs.eligible_quote_rows != '0' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success' }}" in diagnostic
+    assert "if: ${{ github.event_name != 'push' && steps.rights_preflight.outputs.allowed == 'true' && steps.final_quote_preflight.outputs.eligible_quote_rows != '0' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success' }}" in diagnostic
 
 
 
