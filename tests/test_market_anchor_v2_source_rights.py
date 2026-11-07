@@ -133,75 +133,150 @@ def test_permission_evidence_requires_direct_https_reference(tmp_path):
 
 
 
+def test_official_policy_manifest_blocks_ai_inference_without_provider_license():
+    with pytest.raises(PermissionError, match="provider-issued AI-inference permission is absent"):
+        require_personal_research_inference_scope(
+            DEFAULT_RIGHTS_MANIFEST_PATH,
+            now=datetime(2026, 11, 5, 20, 0, tzinfo=timezone.utc),
+        )
+
+
 def _write_research_scope_manifest(tmp_path, **overrides):
+    evidence_bytes = b"synthetic provider-issued frozen AI inference permission for tests only"
+    evidence_path = tmp_path / "provider-ai-inference-permission.txt"
+    evidence_path.write_bytes(evidence_bytes)
     manifest = {
         "schema_version": "FOOTBALL_AI_SOURCE_RIGHTS_V1",
         "provider": "Football-Data.co.uk",
         "policy_url": "https://football-data.co.uk/contact.php",
         "policy_checked_at_utc": "2026-11-05T10:54:00Z",
         "policy_page_updated_date": "2026-11-04",
-        "rights_status": "CONDITIONAL_RESEARCH_ONLY",
+        "rights_status": "GRANTED",
         "research_use_permitted": True,
         "research_inference_permitted": True,
-        "research_inference_scope": "PERSONAL_BETTING_OR_ACADEMIC_RESEARCH_ONLY",
+        "research_inference_scope": "FROZEN_AI_INFERENCE_AND_NONCOMMERCIAL_RESEARCH",
         "ai_model_training_permitted": False,
+        "provider_issued_ai_inference_license": True,
         "commercial_use_permitted": False,
         "public_product_use_permitted": False,
         "max_automated_download_sessions_per_week": 2,
         "download_budget_policy": "TWO_AUTOMATED_SESSIONS_PER_ROLLING_7_DAYS",
+        "authorization": {
+            "provider_issued": True,
+            "kind": "written_permission",
+            "license_name": "Synthetic provider-issued frozen inference permission",
+            "rights_holder": "Football-Data.co.uk",
+            "scope": ["FROZEN_AI_INFERENCE", "NONCOMMERCIAL_RESEARCH"],
+            "evidence_url": "https://football-data.co.uk/contact.php",
+            "evidence_file": evidence_path.name,
+            "evidence_sha256": hashlib.sha256(evidence_bytes).hexdigest(),
+            "reviewed_by": "synthetic-test-reviewer",
+            "reviewed_at_utc": "2026-11-05T10:00:00Z",
+            "valid_from_utc": "2026-11-05T00:00:00Z",
+            "valid_until_utc": "2026-11-06T00:00:00Z",
+        },
     }
-    manifest.update(overrides)
+    for key, value in overrides.items():
+        if key == "authorization" and isinstance(value, dict):
+            manifest["authorization"].update(value)
+        else:
+            manifest[key] = value
     path = tmp_path / "research-rights.json"
     path.write_text(json.dumps(manifest), encoding="utf-8")
     return path
 
 
-def test_official_policy_manifest_allows_only_conditional_personal_research_inference():
+def test_research_inference_accepts_only_explicit_provider_issued_frozen_ai_license(tmp_path):
+    path = _write_research_scope_manifest(tmp_path)
     result = require_personal_research_inference_scope(
-        DEFAULT_RIGHTS_MANIFEST_PATH,
+        path,
+        repo_root=tmp_path,
         now=datetime(2026, 11, 5, 20, 0, tzinfo=timezone.utc),
     )
-    assert result["scope_status"] == "CONDITIONAL_RESEARCH_ONLY"
-    assert result["research_inference_scope"] == "PERSONAL_BETTING_OR_ACADEMIC_RESEARCH_ONLY"
-    assert result["provider_issued_ai_inference_license"] is False
+    assert result["scope_status"] == "GRANTED"
+    assert result["research_inference_scope"] == "FROZEN_AI_INFERENCE_AND_NONCOMMERCIAL_RESEARCH"
+    assert result["provider_issued_ai_inference_license"] is True
+    assert result["authorization_evidence_sha256"] == hashlib.sha256(
+        (tmp_path / "provider-ai-inference-permission.txt").read_bytes()
+    ).hexdigest()
     assert result["ai_model_training_permitted"] is False
     assert result["commercial_use_permitted"] is False
     assert result["public_product_use_permitted"] is False
     assert result["max_automated_download_sessions_per_week"] == 2
-    assert result["policy_checked_at_utc"] == "2026-11-05T10:54:00+00:00"
-    assert result["policy_page_updated_date"] == "2026-11-04"
+
+
+def test_research_inference_rejects_personal_research_flags_without_provider_license(tmp_path):
+    path = _write_research_scope_manifest(tmp_path, provider_issued_ai_inference_license=False)
+    with pytest.raises(PermissionError, match="provider-issued AI-inference permission is absent"):
+        require_personal_research_inference_scope(
+            path, repo_root=tmp_path, now=datetime(2026, 11, 5, 20, 0, tzinfo=timezone.utc)
+        )
+
+
+def test_research_inference_rejects_unverified_authorization_marker(tmp_path):
+    path = _write_research_scope_manifest(tmp_path, authorization={"provider_issued": False})
+    with pytest.raises(PermissionError, match="authorization evidence is missing"):
+        require_personal_research_inference_scope(
+            path, repo_root=tmp_path, now=datetime(2026, 11, 5, 20, 0, tzinfo=timezone.utc)
+        )
+
+
+def test_research_inference_rejects_authorization_without_frozen_ai_scope(tmp_path):
+    path = _write_research_scope_manifest(tmp_path, authorization={"scope": ["NONCOMMERCIAL_RESEARCH"]})
+    with pytest.raises(PermissionError, match="does not cover frozen AI inference"):
+        require_personal_research_inference_scope(
+            path, repo_root=tmp_path, now=datetime(2026, 11, 5, 20, 0, tzinfo=timezone.utc)
+        )
+
+
+def test_research_inference_rejects_tampered_provider_permission_evidence(tmp_path):
+    path = _write_research_scope_manifest(tmp_path)
+    (tmp_path / "provider-ai-inference-permission.txt").write_text("tampered", encoding="utf-8")
+    with pytest.raises(PermissionError, match="evidence SHA-256 mismatch"):
+        require_personal_research_inference_scope(
+            path, repo_root=tmp_path, now=datetime(2026, 11, 5, 20, 0, tzinfo=timezone.utc)
+        )
 
 
 def test_research_inference_rejects_public_product_scope(tmp_path):
     path = _write_research_scope_manifest(tmp_path, public_product_use_permitted=True)
     with pytest.raises(PermissionError, match="public product publication"):
-        require_personal_research_inference_scope(path, now=datetime(2026, 11, 5, 20, 0, tzinfo=timezone.utc))
+        require_personal_research_inference_scope(
+            path, repo_root=tmp_path, now=datetime(2026, 11, 5, 20, 0, tzinfo=timezone.utc)
+        )
 
 
 def test_research_inference_rejects_commercial_scope(tmp_path):
     path = _write_research_scope_manifest(tmp_path, commercial_use_permitted=True)
     with pytest.raises(PermissionError, match="commercial use"):
-        require_personal_research_inference_scope(path, now=datetime(2026, 11, 5, 20, 0, tzinfo=timezone.utc))
+        require_personal_research_inference_scope(
+            path, repo_root=tmp_path, now=datetime(2026, 11, 5, 20, 0, tzinfo=timezone.utc)
+        )
 
 
 def test_research_inference_requires_two_session_download_budget(tmp_path):
     path = _write_research_scope_manifest(tmp_path, max_automated_download_sessions_per_week=3)
     with pytest.raises(PermissionError, match="at most two sessions"):
-        require_personal_research_inference_scope(path, now=datetime(2026, 11, 5, 20, 0, tzinfo=timezone.utc))
+        require_personal_research_inference_scope(
+            path, repo_root=tmp_path, now=datetime(2026, 11, 5, 20, 0, tzinfo=timezone.utc)
+        )
 
 
 def test_research_inference_rejects_disabled_research_scope(tmp_path):
     path = _write_research_scope_manifest(tmp_path, research_inference_permitted=False)
-    with pytest.raises(PermissionError, match="outside the configured source scope"):
-        require_personal_research_inference_scope(path, now=datetime(2026, 11, 5, 20, 0, tzinfo=timezone.utc))
+    with pytest.raises(PermissionError, match="outside the provider-authorized research scope"):
+        require_personal_research_inference_scope(
+            path, repo_root=tmp_path, now=datetime(2026, 11, 5, 20, 0, tzinfo=timezone.utc)
+        )
 
 
 def test_research_scope_block_report_is_explicitly_no_io_and_no_inference(tmp_path):
     output = tmp_path / "reports" / "blocked.json"
-    report = write_research_scope_blocked_report(output, "SYNTHETIC_TEST", "public product use")
+    report = write_research_scope_blocked_report(output, "SYNTHETIC_TEST", "provider permission absent")
     saved = json.loads(output.read_text(encoding="utf-8"))
     assert saved == report
     assert report["mode"] == "SOURCE_RIGHTS_BLOCKED_NO_NETWORK_NO_INFERENCE"
+    assert report["rights_status"] == "PROVIDER_AI_INFERENCE_PERMISSION_REQUIRED"
     assert report["public_http_requests"] == 0
     assert report["supabase_reads"] == 0
     assert report["supabase_writes"] == 0
@@ -233,18 +308,18 @@ def test_live_v2_entrypoints_check_research_scope_before_external_reads():
         source = (Path(__file__).resolve().parents[1] / path).read_text(encoding="utf-8")
         main = source[source.index("def main()"):]
         guard = main.find("require_personal_research_inference_scope()")
-        assert guard >= 0, f"{path} lacks the personal-research scope guard"
+        assert guard >= 0, f"{path} lacks the provider AI-inference permission guard"
         for side_effect in side_effects:
             position = main.find(side_effect)
             assert position >= 0, f"{path} lost expected runtime step {side_effect!r}"
-            assert guard < position, f"{path} reaches {side_effect!r} before the research-scope guard"
+            assert guard < position, f"{path} reaches {side_effect!r} before the provider AI-inference permission guard"
 
 
 def test_research_inference_rejects_policy_page_updated_after_review(tmp_path):
     path = _write_research_scope_manifest(tmp_path, policy_page_updated_date="2026-11-06")
     with pytest.raises(PermissionError, match="later than policy review"):
         require_personal_research_inference_scope(
-            path, now=datetime(2026, 11, 5, 20, 0, tzinfo=timezone.utc)
+            path, repo_root=tmp_path, now=datetime(2026, 11, 5, 20, 0, tzinfo=timezone.utc)
         )
 
 
@@ -252,5 +327,5 @@ def test_research_inference_rejects_noncanonical_policy_page_date(tmp_path):
     path = _write_research_scope_manifest(tmp_path, policy_page_updated_date="2026-W45-3")
     with pytest.raises(PermissionError, match="canonical YYYY-MM-DD"):
         require_personal_research_inference_scope(
-            path, now=datetime(2026, 11, 5, 20, 0, tzinfo=timezone.utc)
+            path, repo_root=tmp_path, now=datetime(2026, 11, 5, 20, 0, tzinfo=timezone.utc)
         )
