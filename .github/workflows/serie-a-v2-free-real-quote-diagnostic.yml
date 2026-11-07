@@ -70,6 +70,7 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
       GITHUB_TOKEN: ${{ github.token }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
       OPENBLAS_NUM_THREADS: "1"
       OMP_NUM_THREADS: "1"
       MKL_NUM_THREADS: "1"
@@ -100,21 +101,26 @@ jobs:
           assert PAID_PROVIDER_REQUESTS == 0
           print("PASS: public-only source; no paid provider key in workflow")
           PY
-      - name: Preflight frozen V2 source rights before source/quote access
+      - name: Preflight frozen V2 source rights and private artifact storage before source/quote access
         id: rights_preflight
         run: |
           python - <<'PY'
           import json
           import os
 
-          from market_anchor_v2_source_rights import require_personal_research_inference_scope
+          from market_anchor_v2_source_rights import (
+              require_personal_research_inference_scope,
+              require_private_repository_for_source_artifacts,
+          )
 
           try:
               require_personal_research_inference_scope()
+              require_private_repository_for_source_artifacts()
           except PermissionError as exc:
               allowed = "false"
               report = {
                   "rights_preflight": "BLOCKED",
+                  "source_artifact_storage": "BLOCKED",
                   "reason": str(exc),
                   "supabase_reads": 0,
                   "public_http_requests": 0,
@@ -125,6 +131,7 @@ jobs:
               allowed = "true"
               report = {
                   "rights_preflight": "PASS",
+                  "source_artifact_storage": "PRIVATE_REPOSITORY",
                   "supabase_reads_before_preflight": 0,
                   "public_http_requests_before_preflight": 0,
                   "download_budget_markers_before_preflight": 0,
