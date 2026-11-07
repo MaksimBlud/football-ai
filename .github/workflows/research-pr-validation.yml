@@ -188,10 +188,25 @@ jobs:
       - name: Run RPL workflow contract tests
         run: python -m pytest -q tests/test_rpl_workflow_contract.py
 
+      - name: Verify fail-closed production artifact diff guard contracts
+        run: python -m pytest -q tests/test_eredivisie_workflow_contract.py -k pickle_guard
+
       - name: Enforce no production artifact changes
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref || 'main' }}
         run: |
-          git fetch origin "${{ github.base_ref || 'main' }}"
-          if git diff --name-only "origin/${{ github.base_ref || 'main' }}...HEAD" | grep -E '\.pkl$'; then
+          set -euo pipefail
+          git fetch --no-tags origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+          if ! BASE_COMMIT="$(git merge-base "refs/remotes/origin/${BASE_REF}" HEAD)" || [[ -z "$BASE_COMMIT" ]]; then
+            echo "FAIL_CLOSED: unable to determine merge base for production artifact diff"
+            exit 1
+          fi
+          if ! CHANGED_FILES="$(git diff --name-only "$BASE_COMMIT" HEAD)"; then
+            echo "FAIL_CLOSED: unable to inspect changed files for production artifact diff"
+            exit 1
+          fi
+          if printf '%s\n' "$CHANGED_FILES" | grep -F '.pkl'; then
             echo "Production model artifact change detected"
             exit 1
           fi

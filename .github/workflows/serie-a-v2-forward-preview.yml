@@ -15,13 +15,29 @@ on:
   push:
     branches: [main]
     paths:
+      - "requirements-v2-research-py312.lock"
       - "serie_a_v2_forward_capture.py"
       - "serie_a_v2_prequote_source_archive_gate.py"
+      - "tests/test_serie_a_v2_prequote_source_archive_gate.py"
       - "serie_a_v2_live_diagnostic_report.py"
+      - "tests/test_serie_a_v2_live_diagnostic_report.py"
       - "serie_a_v2_asof_feature_manifest.py"
+      - "serie_a_v2_frozen_shadow_preview.py"
+      - "market_anchor_1x2_v2_shadow.py"
+      - "market_anchor_1x2_v1.py"
+      - "historical_football_signal_lab.py"
+      - "serie_a_runtime_config.py"
+      - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
+      - "market_anchor_v2_source_rights.py"
+      - "research/source_rights/football_data_co_uk.json"
+      - "experiments/market_anchor_1x2_v2_protocol.json"
       - "tests/test_serie_a_v2_asof_feature_manifest.py"
       - "tests/test_serie_a_v2_atalanta_alias.py"
       - "tests/test_serie_a_v2_forward_capture.py"
+      - "tests/test_serie_a_v2_frozen_shadow_preview.py"
+      - "tests/test_historical_football_signal_lab.py"
+      - "tests/test_serie_a_v2_current_form_source_workflow_contract.py"
+      - "tests/test_serie_a_v2_current_form_dependency_triggers.py"
       - "serie_a_v2_attest_real_source.py"
       - "tests/test_serie_a_v2_attest_real_source.py"
       - "tests/test_serie_a_v2_manual_quote_trigger_contract.py"
@@ -36,10 +52,34 @@ permissions:
   contents: read
 
 jobs:
+  # Code pushes must never read Supabase, source archives, or saved quotes.
+  # Keep the push trigger only to run this secret-free offline regression job.
+  validate-original-forward:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: .
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install offline contract-test dependency
+        run: python -m pip install pytest
+      - name: Compile original V2 entry points without source access
+        run: python -m py_compile serie_a_v2_forward_capture.py serie_a_v2_attest_real_source.py serie_a_v2_frozen_shadow_preview.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py historical_football_signal_lab.py serie_a_runtime_config.py
+      - name: Run offline original V2 trigger and source-contract regressions
+        run: python -m pytest -q tests/test_serie_a_v2_manual_quote_trigger_contract.py
+
   original-v2-forward-preview:
     # Ignore failed or non-main upstream runs and forbid triggering through
     # unrelated paid-provider schedules or untrusted branches.
-    if: ${{ github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.event == 'workflow_dispatch') }}
+    if: ${{ github.ref == 'refs/heads/main' && github.event_name != 'push' && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.event == 'workflow_dispatch')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -57,10 +97,10 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install V2-only read-only dependencies
-        run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
+        run: python -m pip install -r requirements-v2-research-py312.lock
       - name: Test original V2, old-season embargo, and source-before-quote rules
         run: |
-          python -m py_compile serie_a_v2_forward_capture.py serie_a_v2_attest_real_source.py
+          python -m py_compile serie_a_v2_forward_capture.py serie_a_v2_attest_real_source.py serie_a_v2_frozen_shadow_preview.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py historical_football_signal_lab.py serie_a_runtime_config.py
           python -m pytest -q \
             tests/test_serie_a_v2_forward_capture.py \
             tests/test_serie_a_v2_attest_real_source.py \
@@ -69,12 +109,52 @@ jobs:
             tests/test_serie_a_v2_live_diagnostic_report.py \
             tests/test_serie_a_v2_asof_feature_manifest.py \
             tests/test_serie_a_v2_atalanta_alias.py \
-            tests/test_serie_a_v2_frozen_shadow_preview.py
+            tests/test_serie_a_v2_frozen_shadow_preview.py \
+            tests/test_historical_football_signal_lab.py \
+            tests/test_serie_a_v2_current_form_source_workflow_contract.py \
+            tests/test_serie_a_v2_current_form_dependency_triggers.py
+      - name: Preflight frozen V2 source rights before source/quote access
+        id: rights_preflight
+        run: |
+          python - <<'PY'
+          import json
+          import os
+
+          from market_anchor_v2_source_rights import require_personal_research_inference_scope
+
+          try:
+              require_personal_research_inference_scope()
+          except PermissionError as exc:
+              allowed = "false"
+              report = {
+                  "rights_preflight": "BLOCKED",
+                  "reason": str(exc),
+                  "supabase_reads": 0,
+                  "public_http_requests": 0,
+                  "download_budget_markers": 0,
+                  "source_archive_artifacts": 0,
+              }
+          else:
+              allowed = "true"
+              report = {
+                  "rights_preflight": "PASS",
+                  "supabase_reads_before_preflight": 0,
+                  "public_http_requests_before_preflight": 0,
+                  "download_budget_markers_before_preflight": 0,
+                  "source_archive_artifacts_before_preflight": 0,
+              }
+
+          print(json.dumps(report, sort_keys=True))
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"allowed={allowed}\n")
+          PY
       - name: Attest original historical source ZIP from real GitHub Actions (no quotes read)
+        if: ${{ steps.rights_preflight.outputs.allowed == 'true' }}
         run: |
           python serie_a_v2_attest_real_source.py \
             --output artifacts/serie_a_v2_real_source_attestation.json
       - name: Generate actual original frozen V2 source-verified read-only preview
+        if: ${{ steps.rights_preflight.outputs.allowed == 'true' }}
         run: |
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_KEY"
@@ -83,7 +163,7 @@ jobs:
             --output artifacts/serie_a_v2_forward_source_checked.json \
             --sources-output-dir artifacts/serie_a_v2_forward_original_sources
       - name: Save immutable original V2 predictions and exact older source bytes
-        if: always()
+        if: ${{ always() && steps.rights_preflight.outputs.allowed == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: serie-a-v2-original-forward-source-checked

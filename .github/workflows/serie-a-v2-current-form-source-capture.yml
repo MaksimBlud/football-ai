@@ -4,23 +4,77 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "50 5 * * *"
+  workflow_run:
+    workflows:
+      - "Serie A V2 Free Real-Quote Diagnostic"
+    types:
+      - completed
   push:
-    branches: [main]
+    branches: [main, research/v2-705-699-integrated-20261106-run11, research/v2-block-blocked-source-capture-*]
     paths:
+      - "requirements-v2-research-py312.lock"
       - "serie_a_v2_current_form_source_capture.py"
       - "experiments/market_anchor_1x2_v2_current_form_policy.json"
+      - "experiments/market_anchor_1x2_v2_protocol.json"
+      - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
+      - "market_anchor_v2_source_rights.py"
+      - "research/source_rights/football_data_co_uk.json"
+      - "historical_football_signal_lab.py"
+      - "serie_a_runtime_config.py"
+      - "serie_a_v2_frozen_shadow_preview.py"
+      - "market_anchor_1x2_v2_shadow.py"
+      - "market_anchor_1x2_v1.py"
+      - "serie_a_v2_live_diagnostic_report.py"
+      - "serie_a_v2_asof_feature_manifest.py"
+      - "tests/test_historical_football_signal_lab.py"
+      - "tests/test_serie_a_v2_frozen_shadow_preview.py"
+      - "tests/test_serie_a_v2_live_diagnostic_report.py"
+      - "tests/test_serie_a_v2_asof_feature_manifest.py"
+      - "tests/test_serie_a_v2_atalanta_alias.py"
       - "tests/test_serie_a_v2_current_form_source_capture.py"
+      - "serie_a_v2_public_source_download_budget.py"
+      - "tests/test_serie_a_v2_public_source_download_budget.py"
+      - "tests/test_serie_a_v2_current_form_forward_capture.py"
+      - "tests/test_serie_a_v2_manual_quote_trigger_contract.py"
+      - "tests/test_serie_a_v2_current_form_source_workflow_contract.py"
+      - "tests/test_serie_a_v2_current_form_dependency_triggers.py"
+      - ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
       - ".github/workflows/serie-a-v2-current-form-source-capture.yml"
 
 concurrency:
-  group: serie-a-v2-current-form-source-capture
+  group: serie-a-v2-public-source-download-budget
   cancel-in-progress: false
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
+  validate-source-capture:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: .
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install offline V2 validation dependencies
+        run: python -m pip install -r requirements-v2-research-py312.lock
+      - name: Validate current-form source capture without network or Supabase
+        run: |
+          python -m py_compile serie_a_v2_current_form_source_capture.py serie_a_v2_current_form_forward_capture.py market_anchor_v2_source_rights.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py historical_football_signal_lab.py serie_a_runtime_config.py
+          python -m pytest -q tests/test_serie_a_v2_current_form_source_capture.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_atalanta_alias.py tests/test_serie_a_v2_frozen_shadow_preview.py tests/test_serie_a_v2_live_diagnostic_report.py tests/test_historical_football_signal_lab.py tests/test_serie_a_v2_current_form_source_workflow_contract.py tests/test_serie_a_v2_current_form_dependency_triggers.py tests/test_serie_a_v2_current_form_forward_capture.py tests/test_serie_a_v2_manual_quote_trigger_contract.py tests/test_market_anchor_v2_source_rights.py tests/test_serie_a_v2_public_source_download_budget.py
+
+
   capture-current-form:
+    if: ${{ github.ref == 'refs/heads/main' && github.event_name != 'push' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.name == 'Serie A V2 Free Real-Quote Diagnostic' && (github.event.workflow_run.event == 'schedule' || github.event.workflow_run.event == 'workflow_dispatch'))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -29,6 +83,7 @@ jobs:
       GITHUB_REPOSITORY: ${{ github.repository }}
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_RUN_ID: ${{ github.run_id }}
+      GITHUB_TOKEN: ${{ github.token }}
       PYTHONPATH: .
       OPENBLAS_NUM_THREADS: "1"
       OMP_NUM_THREADS: "1"
@@ -39,19 +94,139 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install read-only V2 source dependencies
-        run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
+        run: python -m pip install -r requirements-v2-research-py312.lock
       - name: Validate feature-input gate and source integrity rules
         run: |
-          python -m py_compile serie_a_v2_current_form_source_capture.py
-          python -m pytest -q tests/test_serie_a_v2_current_form_source_capture.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_atalanta_alias.py
+          python -m py_compile serie_a_v2_current_form_source_capture.py serie_a_v2_current_form_forward_capture.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py
+          python -m pytest -q tests/test_serie_a_v2_current_form_source_capture.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_atalanta_alias.py tests/test_serie_a_v2_frozen_shadow_preview.py tests/test_serie_a_v2_live_diagnostic_report.py tests/test_historical_football_signal_lab.py tests/test_serie_a_v2_current_form_source_workflow_contract.py tests/test_serie_a_v2_current_form_dependency_triggers.py tests/test_serie_a_v2_current_form_forward_capture.py tests/test_serie_a_v2_manual_quote_trigger_contract.py
+      - name: Preflight frozen V2 source rights before metadata or download budget
+        id: rights_preflight
+        run: |
+          python - <<'PY'
+          import json
+          import os
+
+          from market_anchor_v2_source_rights import require_personal_research_inference_scope
+
+          try:
+              require_personal_research_inference_scope()
+          except PermissionError as exc:
+              allowed = "false"
+              report = {
+                  "rights_preflight": "BLOCKED",
+                  "reason": str(exc),
+                  "supabase_reads": 0,
+                  "public_http_requests": 0,
+                  "download_budget_markers": 0,
+                  "source_archive_artifacts": 0,
+              }
+          else:
+              allowed = "true"
+              report = {
+                  "rights_preflight": "PASS",
+                  "supabase_reads_before_preflight": 0,
+                  "public_http_requests_before_preflight": 0,
+                  "download_budget_markers_before_preflight": 0,
+                  "source_archive_artifacts_before_preflight": 0,
+              }
+
+          print(json.dumps(report, sort_keys=True))
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"allowed={allowed}\n")
+          PY
+      - name: Check existing verified source before diagnostic-triggered refresh
+        id: source_refresh
+        if: ${{ github.event_name == 'workflow_run' && steps.rights_preflight.outputs.allowed == 'true' }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+
+          import requests
+          from market_anchor_v2_source_rights import require_personal_research_inference_scope
+          from supabase import create_client
+
+          # Rights must be established before even reading the Supabase gate or
+          # discovering/downloading a previously archived provider source.
+          rights_scope = require_personal_research_inference_scope()
+
+          from serie_a_v2_current_form_source_capture import read_completed_primary_event_identities
+          from serie_a_v2_current_form_forward_capture import (
+              discover_archives,
+              get_archive,
+              verify_latest_source_archive,
+              verify_source_run,
+          )
+
+          now = datetime.now(timezone.utc)
+          client = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
+          gate_identities = read_completed_primary_event_identities(client, now=now)
+          try:
+              archives = discover_archives(token=os.environ["GITHUB_TOKEN"])
+              verification = verify_latest_source_archive(
+                  archives,
+                  as_of_utc=now,
+                  load_archive=lambda artifact_id: get_archive(
+                      artifact_id, token=os.environ["GITHUB_TOKEN"]
+                  ),
+                  verify_parent_run=lambda archive, quote_time: verify_source_run(
+                      archive, quote_time=quote_time, token=os.environ["GITHUB_TOKEN"]
+                  ),
+                  current_gate_identities=gate_identities,
+              )
+          except requests.RequestException as exc:
+              print(
+                  "GitHub source archive lookup unavailable "
+                  f"({type(exc).__name__}); a fresh capture will run"
+              )
+              verification = {
+                  "status": "GITHUB_ARCHIVE_LOOKUP_UNAVAILABLE",
+                  "fresh_for_new_quote": False,
+                  "fresh_for_current_feature_gate": False,
+              }
+
+          fresh = (
+              verification.get("fresh_for_new_quote") is True
+              and verification.get("fresh_for_current_feature_gate") is True
+          )
+          print(json.dumps({
+              "existing_source_status": verification.get("status"),
+              "fresh_for_new_quote": verification.get("fresh_for_new_quote"),
+              "fresh_for_current_feature_gate": verification.get("fresh_for_current_feature_gate"),
+              "current_gate_identity_count": len(gate_identities),
+              "source_rights_scope": rights_scope.get("research_inference_scope"),
+              "provider_issued_ai_inference_license": rights_scope.get("provider_issued_ai_inference_license"),
+              "metadata_fields_read": ["match_date", "home_team", "away_team"],
+              "target_outcomes_read": False,
+              "paid_provider_calls": 0,
+              "supabase_writes": 0,
+              "capture_required": not fresh,
+          }, sort_keys=True))
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"capture={'false' if fresh else 'true'}\n")
+          PY
+      - name: Check shared public-source download budget
+        id: public_source_budget
+        if: ${{ steps.rights_preflight.outputs.allowed == 'true' && steps.source_refresh.outputs.capture != 'false' }}
+        run: python serie_a_v2_public_source_download_budget.py --workflow-path ".github/workflows/serie-a-v2-current-form-source-capture.yml" --output artifacts/public_source_download_budget/attempt.json
+      - name: Upload shared public-source download attempt marker
+        id: upload_public_source_budget
+        if: ${{ steps.rights_preflight.outputs.allowed == 'true' && steps.public_source_budget.outputs.allowed == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: serie-a-v2-public-source-download-attempt
+          path: artifacts/public_source_download_budget/attempt.json
+          retention-days: 90
       - name: Capture frozen historical seasons plus gated current-form source
+        if: ${{ steps.rights_preflight.outputs.allowed == 'true' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success' }}
         run: |
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_KEY"
           python serie_a_v2_current_form_source_capture.py \
             --output-dir artifacts/serie_a_v2_current_form_source_capture
       - name: Archive source bytes and gate manifest for future quotes only
-        if: always()
+        if: ${{ always() && steps.rights_preflight.outputs.allowed == 'true' && steps.source_refresh.outputs.capture != 'false' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: serie-a-v2-current-form-source-capture
