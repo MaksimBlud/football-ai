@@ -40,6 +40,16 @@ A public Cornerflick results page was inadvertently opened during source discove
 
 # Football AI — Project Continuity
 
+## 2026-11-07 06:53 UTC — CI caught two stale source-budget assertions and one test-string escaping defect
+
+- First stacked-PR exact-head run correctly triggered Frozen V2, source-capture push validation, and shared-budget validation after the branch-filter fix.
+- The runs exposed two existing budget-contract assertions that still expected the old unguarded conditions, plus a new test that accidentally searched for literal backslash-n instead of a newline. No runtime defect was indicated; 22 budget tests passed and the new source-workflow contract group reached 340 passes with only the malformed branch-parser test failing.
+- Updated the assertions to require both the new rights-preflight condition and the existing source-refresh/budget conditions; corrected the test parser to split on actual newline delimiters. Exact-head rerun is pending.
+- No schedule, source policy, model, weights, features, data, or production artifact changed. No live source/quote access or Supabase access occurred.
+
+---
+
+
 ## 2026-11-07 06:47 UTC — exact V2 CI coverage for stacked rights-preflight PR #721
 
 - Audit of #721's first head found only the unrelated La Liga PR workflow had run: the Frozen V2 and shared download-budget workflows filtered pull-request base branches to `main`, while #721 targets the still-open #720 branch. The source-capture offline push validator also did not include #721's head-branch pattern.

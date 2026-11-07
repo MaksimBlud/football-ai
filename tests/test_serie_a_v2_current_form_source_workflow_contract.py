@@ -287,15 +287,15 @@ def test_current_form_rights_preflight_is_local_only_and_does_not_consume_downlo
 def test_stacked_rights_preflight_pr_receives_exact_v2_ci_on_its_base_branch():
     """The stacked #721 branch must receive the same offline V2/budget checks as a main PR."""
     source = CURRENT_SOURCE_WORKFLOW.read_text(encoding="utf-8")
-    source_push_branches = source.split("  push:\\n", 1)[1].split("    paths:\\n", 1)[0]
+    source_push_branches = source.split("  push:\n", 1)[1].split("    paths:\n", 1)[0]
     assert "research/v2-block-blocked-source-capture-*" in source_push_branches
 
     frozen = FROZEN_SHADOW_WORKFLOW.read_text(encoding="utf-8")
-    frozen_pr_branches = frozen.split("  pull_request:\\n", 1)[1].split("    paths:\\n", 1)[0]
+    frozen_pr_branches = frozen.split("  pull_request:\n", 1)[1].split("    paths:\n", 1)[0]
     assert "research/v2-provider-ai-inference-rights-block-*" in frozen_pr_branches
 
     budget = BUDGET_TEST_WORKFLOW.read_text(encoding="utf-8")
-    budget_pr_branches = budget.split("  pull_request:\\n", 1)[1].split("    paths:\\n", 1)[0]
+    budget_pr_branches = budget.split("  pull_request:\n", 1)[1].split("    paths:\n", 1)[0]
     assert "research/v2-provider-ai-inference-rights-block-*" in budget_pr_branches
 
     # These are validation triggers only: no schedule, paid collector, or secret-bearing

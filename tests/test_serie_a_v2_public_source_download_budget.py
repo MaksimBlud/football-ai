@@ -311,7 +311,7 @@ def test_workflow_contracts_keep_crons_and_shared_concurrency():
     assert "tests/test_serie_a_v2_public_source_download_budget.py" in source
     assert "serie_a_v2_public_source_download_budget.py" in diagnostic
     assert "tests/test_serie_a_v2_public_source_download_budget.py" in diagnostic
-    assert "if: steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success'" in source
+    assert "if: ${{ steps.rights_preflight.outputs.allowed == 'true' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success' }}" in source
     assert "if: github.event_name != 'push'" in diagnostic
     assert "if: github.event_name != 'push' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success'" in diagnostic
 
@@ -545,7 +545,7 @@ def test_fresh_source_refresh_skips_budget_reservation_and_public_download():
     capture_step = source.index("Capture frozen historical seasons plus gated current-form source")
     assert preflight < budget_step < marker_step < capture_step
     budget_block = source[budget_step:marker_step]
-    assert "if: ${{ steps.source_refresh.outputs.capture != 'false' }}" in budget_block
+    assert "if: ${{ steps.rights_preflight.outputs.allowed == 'true' && steps.source_refresh.outputs.capture != 'false' }}" in budget_block
     assert "steps.source_refresh.outputs.capture != 'false'" in source
     assert "steps.public_source_budget.outputs.allowed == 'true'" in source
     assert "steps.upload_public_source_budget.outcome == 'success'" in source
