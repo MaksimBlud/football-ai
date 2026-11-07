@@ -40,6 +40,19 @@ A public Cornerflick results page was inadvertently opened during source discove
 
 # Football AI — Project Continuity
 
+## 2026-11-07 07:01 UTC — all live V2 rights preflights verified on exact code head
+
+- Final runtime/test code head: \`7a5e582154e55dff6441d3b0e4d405918ebcab06\` (PR #721, stacked on #720 \`0df6c7aed9bdc128a47c6b0b7f93a76b1c4e2a8b\`).
+- Frozen V2 exact-head CI: **342 passed on Python 3.11 and 342 passed on Python 3.12**, with \`pip check\` clean; run [#42349382059](https://github.com/MaksimBlud/football-ai/actions/runs/42349382059).
+- Shared download-budget contract: **24 passed**, production .pkl diff guard PASS; run [#42349381947](https://github.com/MaksimBlud/football-ai/actions/runs/42349381947).
+- Current-form source offline validation: **319 passed**; the secret-bearing live capture job was correctly skipped on the push event; run [#42349375957](https://github.com/MaksimBlud/football-ai/actions/runs/42349375957).
+- First attempts exposed stale budget assertions and a malformed inserted test string; both were corrected before the successful exact-code-head runs. A subsequent continuity-only commit does not change the tested runtime tree.
+- Workflow-level rights preflight now precedes source ZIP attestation, quote/metadata reads, public CSV downloads, shared budget markers, and normal artifact uploads in all four live V2 workflows. The rights manifest remains BLOCKED; no live source or quote access was attempted by these CI jobs.
+- Cron expressions, paid-provider policy, original frozen candidate/19 features/weights/lambdas, 30-event outcome gate, Supabase schema/data, and production artifacts are unchanged. HUMAN-MERGE only; #721 remains Draft and stacked on #720.
+
+---
+
+
 ## 2026-11-07 06:56 UTC — correct diagnostic workflow regression source formatting
 
 - The first CI run after extending preflight coverage to all live entrypoints caught a malformed inserted test block in the shared-budget suite (literal newline escapes were inserted outside Python string literals). This was a test-source formatting defect, not a workflow/runtime failure.
