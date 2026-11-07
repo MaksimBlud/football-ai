@@ -307,6 +307,24 @@ def test_live_v2_entrypoints_check_research_scope_before_external_reads():
     for path, side_effects in cases.items():
         source = (Path(__file__).resolve().parents[1] / path).read_text(encoding="utf-8")
         main = source[source.index("def main()"):]
+        if path == "serie_a_v2_live_diagnostic_report.py":
+            # The explicitly named metadata-only mode may read saved odds before
+            # the provider gate; it must not read Football-Data or infer.
+            preflight = main.split("    if args.preflight_only:", 1)[1].split(
+                "    try:\n        require_personal_research_inference_scope()", 1
+            )[0]
+            assert "from database import supabase" in preflight
+            assert "fetch_saved_upcoming_serie_a_quotes(" in preflight
+            assert "require_personal_research_inference_scope()" not in preflight
+            assert "fetch_public_history(" not in preflight
+            normal = main[main.index("    try:\n"):]
+            guard = normal.find("require_personal_research_inference_scope()")
+            assert guard >= 0
+            for side_effect in side_effects:
+                position = normal.find(side_effect)
+                assert position >= 0, f"{path} lost expected post-rights runtime step {side_effect!r}"
+                assert guard < position, f"{path} reaches {side_effect!r} before the provider AI-inference permission guard"
+            continue
         guard = main.find("require_personal_research_inference_scope()")
         assert guard >= 0, f"{path} lacks the provider AI-inference permission guard"
         for side_effect in side_effects:

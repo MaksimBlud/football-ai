@@ -21,6 +21,7 @@ import requests
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 from serie_a_v2_asof_feature_manifest import build_manifest
 from serie_a_v2_frozen_shadow_preview import (
+    FROZEN_SHA, MARKET_KEYS, MAX_QUOTE_AGE, _guard_outcome_free, _market,
     fetch_saved_upcoming_serie_a_quotes, parse_utc, shadow_preview,
 )
 from market_anchor_v2_source_rights import require_personal_research_inference_scope, write_research_scope_blocked_report
@@ -318,11 +319,121 @@ def make_report(quotes: list[dict], history: pd.DataFrame, source_audit: list[di
     }
 
 
+def count_fresh_future_prematch_quote_rows(quotes: list[dict], *, now: datetime) -> int:
+    """Count fresh, strictly pre-kickoff saved market rows; never read outcomes or infer."""
+    if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError("quote preflight clock must be timezone-aware")
+    if not isinstance(quotes, list):
+        raise ValueError("saved market quotes must be a list")
+    at = now.astimezone(timezone.utc)
+    eligible = 0
+    for row in quotes:
+        if not isinstance(row, dict):
+            raise ValueError("market observation must be an object")
+        _guard_outcome_free(row)
+        if not all(key in row for key in MARKET_KEYS):
+            raise ValueError("market observation has missing fields")
+        try:
+            _market(row)
+        except (TypeError, ValueError, OverflowError) as exc:
+            if str(exc) in {
+                "missing bookmaker decimal prices",
+                "invalid bookmaker decimal prices",
+            }:
+                raise
+            raise ValueError("invalid bookmaker decimal prices") from exc
+        if row["league"] != "SERIE_A":
+            raise ValueError("non-Serie-A observations forbidden")
+        for key in ("event_id", "home_team", "away_team"):
+            if not isinstance(row[key], str) or not row[key].strip():
+                raise ValueError("market observation has an empty event identity")
+        if row["home_team"].strip().casefold() == row["away_team"].strip().casefold():
+            raise ValueError("identical home/away team identities")
+        kickoff = parse_utc(row["commence_time_utc"])
+        snapshot = parse_utc(row["snapshot_time_utc"])
+        if not snapshot < kickoff:
+            raise ValueError("market quote at or after kickoff")
+        if snapshot > at or not at < kickoff:
+            continue
+        if at - snapshot > MAX_QUOTE_AGE:
+            continue
+        eligible += 1
+    return eligible
+
+
+def build_quote_preflight_report(quotes: list[dict], *, as_of_utc: datetime) -> dict:
+    """Read-only market metadata preflight; no source access, features, or inference."""
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
+        raise ValueError("quote preflight clock must be timezone-aware")
+    at = as_of_utc.astimezone(timezone.utc)
+    eligible = count_fresh_future_prematch_quote_rows(quotes, now=at)
+    return {
+        "schema_version": "SERIE_A_V2_FREE_DIAGNOSTIC_QUOTE_PREFLIGHT_V1",
+        "experiment_id": "MARKET_ANCHOR_1X2_V2",
+        "mode": (
+            "PREMATCH_QUOTE_PREFLIGHT_READY_FOR_RIGHTS_AND_BUDGET_CHECK"
+            if eligible
+            else "NO_ELIGIBLE_FUTURE_PREMATCH_QUOTES_SOURCE_DOWNLOAD_SKIPPED"
+        ),
+        "as_of_utc": at.isoformat(),
+        "frozen_candidate_sha256": FROZEN_SHA,
+        "quote_rows_seen": len(quotes),
+        "eligible_future_prematch_quote_rows": eligible,
+        "public_source_files": [],
+        "public_http_requests": 0,
+        "paid_provider_requests": 0,
+        "supabase_reads": 1,
+        "supabase_writes": 0,
+        "target_outcomes_read": False,
+        "target_outcomes_scored": False,
+        "model_inference_performed": False,
+        "source_download_performed": False,
+        "eligible_for_frozen_prospective_cohort": False,
+        "eligible_for_product_publication": False,
+        "no_bet": True,
+    }
+
+
+def _write_quote_preflight_report(output_path: Path, report: dict) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    summary = {
+        key: report[key]
+        for key in (
+            "mode", "quote_rows_seen", "eligible_future_prematch_quote_rows",
+            "public_http_requests", "paid_provider_requests", "supabase_reads",
+            "supabase_writes", "target_outcomes_read", "model_inference_performed",
+            "source_download_performed", "no_bet",
+        )
+    }
+    print(json.dumps(summary, sort_keys=True))
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--raw-source-dir", type=Path, required=True)
+    p.add_argument(
+        "--preflight-only", action="store_true",
+        help="read saved pre-match odds metadata only; no source, features, or inference",
+    )
     args = p.parse_args()
+    if args.preflight_only:
+        # This path reads only existing odds_snapshots metadata.
+        # It is not Football-Data access, feature construction, or model inference.
+        from database import supabase
+        preflight_now = datetime.now(timezone.utc)
+        saved_quotes = fetch_saved_upcoming_serie_a_quotes(supabase, now=preflight_now)
+        preflight = build_quote_preflight_report(saved_quotes, as_of_utc=preflight_now)
+        _write_quote_preflight_report(args.output, preflight)
+        return
     try:
         require_personal_research_inference_scope()
     except PermissionError as exc:
@@ -334,6 +445,10 @@ def main() -> None:
     from database import supabase
     now = datetime.now(timezone.utc)
     quotes = fetch_saved_upcoming_serie_a_quotes(supabase, now=now)
+    preflight = build_quote_preflight_report(quotes, as_of_utc=now)
+    if preflight["eligible_future_prematch_quote_rows"] == 0:
+        _write_quote_preflight_report(args.output, preflight)
+        return
     history, sources = fetch_public_history(capture_dir=args.raw_source_dir)
     report = make_report(quotes, history, sources, as_of_utc=datetime.now(timezone.utc))
     args.output.parent.mkdir(parents=True, exist_ok=True)
