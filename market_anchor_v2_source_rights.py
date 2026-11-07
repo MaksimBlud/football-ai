@@ -153,44 +153,116 @@ def require_personal_research_inference_scope(
     manifest_path: Path = DEFAULT_RIGHTS_MANIFEST_PATH,
     *,
     now: datetime | None = None,
+    repo_root: Path | None = None,
 ) -> dict:
-    """Validate the narrow personal/academic research scope stated by the provider.
+    """Require provider-issued AI-inference permission before any V2 source use.
 
-    This is not a provider-issued AI-inference licence. The provider's current
-    policy permits private personal betting and/or academic research without a
-    permission request, while excluding commercial use and AI data training.
-    The project therefore permits only frozen-weight, noncommercial research
-    inference; training and public product publication remain blocked.
+    The current public fair-use page says AI-usage requests should assume no
+    data-use permission unless the provider grants it. General personal or
+    academic research language is not treated as an AI-inference licence.
+    Missing permission therefore blocks before network, Supabase, archive,
+    quote, feature, or model access. A future exception requires explicit,
+    locally SHA-verified written permission or an open licence scoped to frozen
+    AI inference and noncommercial research.
     """
     path = Path(manifest_path)
+    root = Path(repo_root) if repo_root is not None else REPOSITORY_ROOT
     try:
         raw = path.read_bytes()
         manifest = json.loads(raw)
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise PermissionError("source-rights manifest is missing or invalid; research inference is blocked") from exc
+        raise PermissionError(
+            "source-rights manifest is missing or invalid; V2 AI inference is blocked"
+        ) from exc
     if not isinstance(manifest, dict) or manifest.get("schema_version") != SCHEMA_VERSION:
         raise PermissionError("source-rights manifest schema is not approved")
     if manifest.get("provider") != EXPECTED_PROVIDER:
         raise PermissionError("source-rights manifest provider does not match the inference source")
-    if manifest.get("rights_status") != "CONDITIONAL_RESEARCH_ONLY":
-        raise PermissionError("provider policy does not establish the configured personal/academic research scope")
+    if manifest.get("provider_issued_ai_inference_license") is not True:
+        raise PermissionError(
+            "provider-issued AI-inference permission is absent; no V2 inference or source use is allowed"
+        )
+    if manifest.get("rights_status") != "GRANTED":
+        raise PermissionError("provider-issued AI-inference permission is not recorded as GRANTED")
     if manifest.get("research_use_permitted") is not True or manifest.get("research_inference_permitted") is not True:
-        raise PermissionError("personal/academic research inference is outside the configured source scope")
-    if manifest.get("research_inference_scope") != "PERSONAL_BETTING_OR_ACADEMIC_RESEARCH_ONLY":
-        raise PermissionError("research inference scope is not the provider's stated personal/academic category")
+        raise PermissionError("frozen AI inference is outside the provider-authorized research scope")
+    if manifest.get("research_inference_scope") != "FROZEN_AI_INFERENCE_AND_NONCOMMERCIAL_RESEARCH":
+        raise PermissionError("research inference scope is not the explicitly authorized frozen-AI scope")
     if manifest.get("ai_model_training_permitted") is not False:
-        raise PermissionError("AI model training is not permitted by the configured source scope")
+        raise PermissionError("AI model training remains forbidden by this inference-only permission")
     if manifest.get("commercial_use_permitted") is not False:
-        raise PermissionError("commercial use is outside the configured source scope")
+        raise PermissionError("commercial use is outside the permitted research scope")
     if manifest.get("public_product_use_permitted") is not False:
-        raise PermissionError("public product publication is outside the configured source scope")
+        raise PermissionError("public product publication is outside the permitted research scope")
     if type(manifest.get("max_automated_download_sessions_per_week")) is not int or manifest["max_automated_download_sessions_per_week"] != 2:
         raise PermissionError("automated source access must remain limited to at most two sessions per rolling week")
     if manifest.get("download_budget_policy") != "TWO_AUTOMATED_SESSIONS_PER_ROLLING_7_DAYS":
         raise PermissionError("the required shared automated-download budget policy is not recorded")
+
+    authorization = manifest.get("authorization")
+    if not isinstance(authorization, dict) or authorization.get("provider_issued") is not True:
+        raise PermissionError("provider-issued AI-inference authorization evidence is missing")
+    if authorization.get("kind") not in {"written_permission", "open_license"}:
+        raise PermissionError("AI-inference authorization kind is not approved")
+    scope = authorization.get("scope")
+    if not isinstance(scope, list) or not {"FROZEN_AI_INFERENCE", "NONCOMMERCIAL_RESEARCH"}.issubset(set(scope)):
+        raise PermissionError("authorization does not cover frozen AI inference and noncommercial research")
+    for field in ("license_name", "rights_holder", "reviewed_by"):
+        value = authorization.get(field)
+        if not isinstance(value, str) or not value.strip():
+            raise PermissionError(f"AI-inference authorization is missing {field}")
+
+    evidence_url = authorization.get("evidence_url")
+    parts = urlsplit(evidence_url if isinstance(evidence_url, str) else "")
+    if (
+        parts.scheme != "https"
+        or not parts.hostname
+        or parts.username is not None
+        or parts.password is not None
+        or parts.fragment
+    ):
+        raise PermissionError("AI-inference evidence URL must be a direct HTTPS reference")
+    evidence_file = authorization.get("evidence_file")
+    if not isinstance(evidence_file, str) or not evidence_file.strip():
+        raise PermissionError("AI-inference authorization is missing its local evidence file")
+    relative = Path(evidence_file)
+    if relative.is_absolute() or ".." in relative.parts:
+        raise PermissionError("AI-inference evidence file must stay inside the repository")
+    root_resolved = root.resolve()
+    candidate = root_resolved / relative
+    if candidate.is_symlink():
+        raise PermissionError("AI-inference evidence file cannot be a symbolic link")
+    try:
+        evidence_path = candidate.resolve(strict=True)
+    except OSError as exc:
+        raise PermissionError("AI-inference authorization evidence file is missing") from exc
+    if root_resolved not in evidence_path.parents or not evidence_path.is_file():
+        raise PermissionError("AI-inference evidence file is outside the repository or is not a file")
+    expected_sha = authorization.get("evidence_sha256")
+    if not isinstance(expected_sha, str) or re.fullmatch(r"[0-9a-f]{64}", expected_sha) is None:
+        raise PermissionError("AI-inference authorization evidence SHA-256 is invalid")
+    actual_sha = hashlib.sha256(evidence_path.read_bytes()).hexdigest()
+    if actual_sha != expected_sha:
+        raise PermissionError("AI-inference authorization evidence SHA-256 mismatch")
+
+    if now is None:
+        now = datetime.now(timezone.utc)
+    if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
+        raise PermissionError("source-rights verification clock must have a real UTC offset")
+    now_utc = now.astimezone(timezone.utc)
+    reviewed_at = _parse_utc(authorization.get("reviewed_at_utc"), "reviewed_at_utc")
+    if reviewed_at > now_utc:
+        raise PermissionError("AI-inference authorization review time is in the future")
+    valid_from = authorization.get("valid_from_utc")
+    if valid_from is not None and _parse_utc(valid_from, "valid_from_utc") > now_utc:
+        raise PermissionError("AI-inference authorization is not yet valid")
+    valid_until = authorization.get("valid_until_utc")
+    if valid_until is not None and _parse_utc(valid_until, "valid_until_utc") <= now_utc:
+        raise PermissionError("AI-inference authorization has expired")
+
     policy_url = manifest.get("policy_url")
-    parts = urlsplit(policy_url if isinstance(policy_url, str) else "")
-    if parts.scheme != "https" or parts.hostname != "football-data.co.uk" or parts.path != "/contact.php":
+    policy_parts = urlsplit(policy_url if isinstance(policy_url, str) else "")
+    if policy_parts.scheme != "https" or policy_parts.hostname != "football-data.co.uk" or policy_parts.path != "/contact.php":
         raise PermissionError("source policy reference is not the official Football-Data fair-use page")
     checked = _parse_utc(manifest.get("policy_checked_at_utc"), "policy_checked_at_utc")
     page_updated_raw = manifest.get("policy_page_updated_date")
@@ -202,17 +274,13 @@ def require_personal_research_inference_scope(
         raise PermissionError("source policy page update date is invalid") from exc
     if page_updated.isoformat() != page_updated_raw:
         raise PermissionError("source policy page update date must use canonical YYYY-MM-DD")
-    if now is None:
-        now = datetime.now(timezone.utc)
-    if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
-        raise PermissionError("source-rights verification clock must have a real UTC offset")
-    now_utc = now.astimezone(timezone.utc)
     if checked > now_utc:
         raise PermissionError("source policy check time is in the future")
     if page_updated > checked.date():
         raise PermissionError("source policy page update date is later than policy review")
     if (now_utc - checked).total_seconds() > 90 * 86400:
         raise PermissionError("source policy review is stale; refresh the policy review before inference")
+
     return {
         "provider": EXPECTED_PROVIDER,
         "rights_manifest_sha256": hashlib.sha256(raw).hexdigest(),
@@ -221,11 +289,14 @@ def require_personal_research_inference_scope(
         "policy_url": policy_url,
         "policy_checked_at_utc": checked.isoformat(),
         "policy_page_updated_date": page_updated.isoformat(),
+        "authorization_kind": authorization["kind"],
+        "authorization_evidence_sha256": actual_sha,
+        "authorization_reviewed_at_utc": reviewed_at.isoformat(),
         "max_automated_download_sessions_per_week": 2,
         "ai_model_training_permitted": False,
         "commercial_use_permitted": False,
         "public_product_use_permitted": False,
-        "provider_issued_ai_inference_license": False,
+        "provider_issued_ai_inference_license": True,
     }
 
 
@@ -236,8 +307,8 @@ def write_research_scope_blocked_report(path: Path, operation: str, reason: str)
         "mode": "SOURCE_RIGHTS_BLOCKED_NO_NETWORK_NO_INFERENCE",
         "operation": operation,
         "provider": EXPECTED_PROVIDER,
-        "permitted_scope": "PERSONAL_BETTING_OR_ACADEMIC_RESEARCH_ONLY",
-        "rights_status": "OUTSIDE_CONDITIONAL_RESEARCH_SCOPE",
+        "permitted_scope": "NONE_FOR_V2_AI_INFERENCE_PENDING_PROVIDER_PERMISSION",
+        "rights_status": "PROVIDER_AI_INFERENCE_PERMISSION_REQUIRED",
         "block_reason": str(reason),
         "checked_at_utc": datetime.now(timezone.utc).isoformat(),
         "public_http_requests": 0,
