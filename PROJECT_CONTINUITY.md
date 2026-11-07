@@ -1,5 +1,30 @@
 # Football AI — Project Continuity
 
+## 2026-11-06 — Original V2: free diagnostic quote preflight (Draft PR #719, stacked on #718)
+
+This branch-only follow-up is based on #718's integration branch; it does not change main. The source/forward artifacts were independently downloaded and re-hashed during this audit:
+
+- Current-Form Source Capture run #42224162373, artifact #13504817564: ZIP SHA-256 `d8e96884c6fefd6687b82d72bf4c6cc08433b6d42e3b87879252115137a6e7ea`; all 11/11 internal CSV hashes match the manifest. The archive contains 10 historical CSVs / 3,800 rows plus the separate 2026/27 current-season CSV / 100 prior-day rows. Feature-input gate time `2026-11-06T13:16:58.008533Z` selected only `match_date,home_team,away_team` and recorded 100 canonical Serie A fixture identities. Current-season source observation was `13:17:14.166325Z`; archive creation was `13:17:14.179267Z`.
+- Paired Current-Form Forward-Only artifact #13503839598: ZIP SHA-256 `b4889df9b681b4b06b22c09b63e3501ccdf0a424c36ea0be10d565a75585af43`; parent/source/candidate pins verified, but `quotes_seen=0` and `v2_current_form_shadow_captured=0`; no target outcome was read or scored.
+- Free Real-Quote Diagnostic run #42231648250, artifact #13510280643: ZIP SHA-256 `4cb7780bc52e64d4b9f761107e79451fcf7541fb79a6ea70a520c96df9bc54dd`; 10 public HTTP requests, 10 historical CSVs / 3,800 rows, zero quoted fixtures and zero diagnostic scores. Every one of its 10 historical CSV SHA-256 values exactly matches the corresponding historical member in #13504817564, downloaded 54 minutes earlier. The second session added no historical bytes.
+
+Read-only Supabase `odds_snapshots` audit: 3,966 total, 3,915 strictly pre-kickoff, zero in the last seven days, zero future-event pre-kickoff quotes; latest snapshot `2026-10-13T14:48:53.042620Z`. Metadata-only Serie A 2026/27 identity query returned 103 raw tuples and 100 after the V2-local Atalanta alias normalization; no score/result fields were selected.
+
+Draft PR #719 adds an outcome-blind preflight to the free diagnostic:
+- Integration dependency fixed in this branch: the preflight changes `serie_a_v2_live_diagnostic_report.py` to Git blob `ea76b04710a4ce4592fb7ca3967db07270ecee1f`; `serie_a_v2_forward_capture.py` now pins that exact loader blob instead of the prior `d3b717...` blob. A regression test freezes the new pin, so original forward will not silently reject artifacts produced by the updated diagnostic workflow.
+- It reads only saved Serie A market snapshot fields and counts fresh (<=24h), future-kickoff, strictly pre-kickoff quote rows.
+- With zero eligible rows, both the full CLI and workflow preflight emit an explicit no-download/no-inference report. The workflow skips the shared budget reservation/marker and all public CSV HTTP requests.
+- The full CLI repeats the guard, so a quote that expires between workflow preflight and execution still cannot trigger a source download.
+- Regression tests cover fresh/stale/future/post-kickoff quote timing, forbidden outcome fields, full-mode no-quote early return, preflight-only no-download behavior, and workflow ordering/conditions.
+- PR #719 remains Draft and stacked on #718. It has no full main-targeted exact-head PR matrix yet. Do not merge it before #718; after #718 is manually integrated, retarget/rebase #719 onto resulting main and require exact-head CI.
+
+Rights remain conditional: the source manifest has `authorization=null`; its frozen-inference allowance is an operational interpretation, not a provider-issued AI-inference licence. The official policy, updated 2026-11-06, limits free data to private individuals' personal betting and/or academic research, via manual or at most two automated downloads per week, and excludes commercial or AI data-training projects. It does not explicitly resolve frozen-weight AI inference. Keep any use strictly within the stated private/academic research scope, do not train or use commercially, and obtain written permission if the intended use falls outside that scope. No new Football-Data request or inference was made in this iteration.
+
+Original candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`: 19 features, 20x2 weights, 3,799 training rows through 2026-06-30, `active_lambda=0`, `shadow_lambda=1`, stability gate FAILED, and no 2026/27 outcomes used for fitting. The separate primary outcome-read gate remains closed at 0/30 eligible prospective completed forecasts. No refit, threshold tuning, production `.pkl`, Supabase write/DDL, paid API request, bet, promotion, main change, or schedule change.
+
+---
+
+
 
 ## 2026-11-06 14:12 UTC — latest main source/forward runtime and duplicate historical fetch
 
@@ -6220,3 +6245,15 @@ A future restart requires genuinely new prospectively frozen information or a ne
 - Independent Vercel **preview** `dpl_5YnYbaEEsqJBcvwjHc7tL3yqU7BW` READY: https://football-ai-real-epl-snapshot-pvrf0iym3-max-7d3e.vercel.app/ . HTTP home 200 with new card/freshness code; `/product-market-view` HTTP 200 with 20 matches, 20 model forecasts, 20 priced events. No production deployment done: stable production alias https://football-ai-real-epl-snapshot-max-7d3e.vercel.app/ remained READY at older SHA `202d46796f031caa0c9d7138c402eefb0cc56971`. A production release requires separate explicit authorization.
 - Live Supabase read-only proof 2026-10-10: 20 future EPL odds snapshots across 20 events, 20 public model-prediction snapshots, 20 AI/market pairs; newest paid-provider market snapshot is `2026-10-09T15:25:57Z`. The separately user-authorized single H2H request spent **one** The Odds API credit; **499/500** remained at the last provider preflight. That consent is exhausted; **no additional paid API calls or paid cron** without a new explicit authorization (hard reserve >=100).
 - Next: Frontend Builder owns responsive `static/match.html` and #582; Backend Builder handles #581 / PR #598 with as-of paging/atomic consistency caveats. Research Brain and Signal Scout separately validate independent new signal ideas. No model `.pkl` changes, promotion, research frozen gate relaxation, live DB writes, or production Vercel promotion.
+
+
+## 2026-11-06 — V2 quote-preflight source-loader pin repaired (PR #719, still Draft)
+
+The latest quote-preflight hardening commit changed the exact Git blob of `serie_a_v2_live_diagnostic_report.py` to `79438e85e7987688e51705f8d54c0aa9a0d736df`. The previous forward-capture pin still named the earlier `ea76b04710a4ce4592fb7ca3967db07270ecee1f`, which would make the original Forward reject the updated loader. Updated `serie_a_v2_forward_capture.py` to the actual current blob SHA and strengthened `tests/test_serie_a_v2_forward_capture.py` to compute the Git blob SHA-1 from the checked-out loader bytes, rather than merely asserting a hard-coded constant.
+
+- Fix commits: `05ca3bc89c5011f864127ea776747f0a680c6f7d` and `2e00cdc465bbcf20cb9a41ac970cd30711f9141d`.
+- Verified by GitHub contents API: diagnostic loader blob SHA, forward pin and regression constant all equal `79438e85e7987688e51705f8d54c0aa9a0d736df`.
+- Exact-head CI is not yet available: PR #719 is stacked on #718 and currently diverges by one base-only continuity-title commit. Do not merge #719 before #718; after #718 is HUMAN-MERGED, rebase onto the resulting main and rerun the full exact-head matrix.
+- Compatibility warning: old-season-only secondary runner PR #717 freezes loader blob `d3b717ea03570413f1d0b6b6f9821b2be0db16a3`. This quote-preflight branch changes that loader; do not silently repin #717's frozen policy or merge the two paths together. Keep #717 isolated until a separate versioned-loader solution or explicit retirement is reviewed.
+
+No model weights, 19-feature order, candidate SHA, lambda semantics, production artifacts, schedules, Supabase data/schema, paid provider calls or target outcomes were changed/read by this pin repair.

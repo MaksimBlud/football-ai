@@ -313,7 +313,14 @@ def test_workflow_contracts_keep_crons_and_shared_concurrency():
     assert "tests/test_serie_a_v2_public_source_download_budget.py" in diagnostic
     assert "if: steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success'" in source
     assert "if: github.event_name != 'push'" in diagnostic
-    assert "if: github.event_name != 'push' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success'" in diagnostic
+    preflight_step = diagnostic.index("Preflight fresh future pre-kickoff quotes before public-source budget")
+    budget_step = diagnostic.index("Check shared public-source download budget")
+    marker_step = diagnostic.index("Upload shared public-source download attempt marker")
+    download_index = diagnostic.index("Fetch and SHA-archive public source, preview original frozen V2 diagnostics")
+    assert preflight_step < budget_step < marker_step < download_index
+    assert "if: steps.quote_preflight.outputs.eligible_quote_rows != '0'" in diagnostic[budget_step:marker_step]
+    assert "if: steps.public_source_budget.outputs.allowed == 'true'" in diagnostic[marker_step:download_index]
+    assert "if: github.event_name != 'push' && steps.quote_preflight.outputs.eligible_quote_rows != '0' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success'" in diagnostic
 
 
 
