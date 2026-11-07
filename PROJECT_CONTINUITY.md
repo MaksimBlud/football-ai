@@ -40,6 +40,16 @@ A public Cornerflick results page was inadvertently opened during source discove
 
 # Football AI — Project Continuity
 
+## 2026-11-07 06:47 UTC — exact V2 CI coverage for stacked rights-preflight PR #721
+
+- Audit of #721's first head found only the unrelated La Liga PR workflow had run: the Frozen V2 and shared download-budget workflows filtered pull-request base branches to `main`, while #721 targets the still-open #720 branch. The source-capture offline push validator also did not include #721's head-branch pattern.
+- Added branch-scoped, read-only validation triggers: the source workflow's offline push validator now matches `research/v2-block-blocked-source-capture-*`; Frozen V2 and shared-budget PR validation now also match `research/v2-provider-ai-inference-rights-block-*`.
+- Added a regression asserting all three exact branch filters. Existing source-before-budget rights guards, the 05:50 UTC schedule, paid-collector policy, model contract, candidate SHA, features, weights and lambdas are unchanged.
+- This is CI wiring only. It does not grant source rights or permit inference. Exact-head V2/budget CI is pending on the new commit. HUMAN-MERGE only; #721 remains stacked on #720.
+
+---
+
+
 
 ## 2026-11-06 14:12 UTC — latest main source/forward runtime and duplicate historical fetch
 

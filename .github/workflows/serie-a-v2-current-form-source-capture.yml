@@ -10,7 +10,7 @@ on:
     types:
       - completed
   push:
-    branches: [main, research/v2-705-699-integrated-20261106-run11]
+    branches: [main, research/v2-705-699-integrated-20261106-run11, research/v2-block-blocked-source-capture-*]
     paths:
       - "requirements-v2-research-py312.lock"
       - "serie_a_v2_current_form_source_capture.py"
