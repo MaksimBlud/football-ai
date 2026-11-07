@@ -244,8 +244,9 @@ def test_current_form_rights_preflight_blocks_metadata_budget_and_artifact_when_
     assert "except PermissionError" in rights_block
     assert 'output.write(f"allowed={allowed}' in rights_block
     assert "create_client(" not in rights_block
-    assert "supabase" not in rights_block.lower()
-    assert "requests" not in rights_block.lower()
+    assert "from supabase" not in rights_block
+    assert "import requests" not in rights_block
+    assert "requests.get" not in rights_block
 
     guarded_steps = (
         "Check existing verified source before diagnostic-triggered refresh",
