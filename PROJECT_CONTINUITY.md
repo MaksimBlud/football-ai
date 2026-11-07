@@ -1,10 +1,10 @@
-## 2026-11-07 05:55 UTC — block rights-denied current-form captures before budget and artifact upload
+## 2026-11-07 06:10 UTC — block rights-denied current-form captures before budget and artifact upload
 
-- New stacked research branch `research/v2-block-blocked-source-capture-before-budget-20261107-run11`, based on PR #720 HEAD `0df6c7aed9bdc128a47c6b0b7f93a76b1c4e2a8b`. This is a workflow-safety follow-up; it does not change the original V2 candidate, features, weights, or lambda semantics.
+- Draft PR #721 on stacked branch `research/v2-block-blocked-source-capture-before-budget-20261107-run11`, based on PR #720 HEAD `0df6c7aed9bdc128a47c6b0b7f93a76b1c4e2a8b`. This is a workflow-safety follow-up; it does not change the original V2 candidate, features, weights, or lambda semantics.
 - Audit found that the current-form capture job checked rights inside the Python capture entrypoint, but on the scheduled path it could first create/upload the shared download-attempt marker. The final archive step also used `always()` and could upload a rights-blocked manifest under the normal source-artifact name.
 - Added a local-only `require_personal_research_inference_scope()` preflight before source metadata, budget marker, source capture, or archive upload. A denied scope records `allowed=false`; all external/read/write steps are skipped, so no budget slot is consumed and no blocked manifest is published as a source archive.
 - Existing defense-in-depth rights checks remain in the Python entrypoint and diagnostic-triggered freshness step. The 05:50 UTC schedule, workflow triggers, source budget policy, and all other agent schedules remain unchanged.
-- No source/quote reads, public downloads, Supabase access, GitHub artifacts, or model inference were performed by this code change. Exact-head CI is pending; this branch is Draft/HUMAN-MERGE only.
+- No source/quote reads, public downloads, Supabase access, GitHub artifacts, or model inference were performed by this code change. Static contract inspection confirms all five downstream steps are rights-guarded and the 05:50 UTC cron is unchanged. The existing Frozen V2 workflow only targets PRs based on main, so this stacked PR has no V2-specific exact-head CI yet; it must be retargeted to main and fully revalidated after #720 is manually merged. Draft/HUMAN-MERGE only.
 
 ---
 
