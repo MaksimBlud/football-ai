@@ -19,6 +19,7 @@ on:
       - "serie_a_runtime_config.py"
       - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
       - "market_anchor_v2_source_rights.py"
+      - "market_anchor_v2_artifact_privacy.py"
       - "research/source_rights/football_data_co_uk.json"
       - "experiments/market_anchor_1x2_v2_protocol.json"
       - "tests/test_serie_a_v2_live_diagnostic_report.py"
@@ -101,17 +102,15 @@ jobs:
           assert PAID_PROVIDER_REQUESTS == 0
           print("PASS: public-only source; no paid provider key in workflow")
           PY
-      - name: Preflight frozen V2 source rights and private artifact storage before source/quote access
+      - name: Preflight frozen V2 source rights before source/quote access
         id: rights_preflight
         run: |
           python - <<'PY'
           import json
           import os
 
-          from market_anchor_v2_source_rights import (
-              require_personal_research_inference_scope,
-              require_private_repository_for_source_artifacts,
-          )
+          from market_anchor_v2_source_rights import require_personal_research_inference_scope
+          from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
 
           try:
               require_personal_research_inference_scope()
