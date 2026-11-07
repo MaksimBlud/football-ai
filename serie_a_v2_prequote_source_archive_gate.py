@@ -39,7 +39,11 @@ def verify_archive(archive_path: Path, quotes: list[Mapping[str, Any]], *,
     authenticated GitHub API digest+timestamp is required to trust it as evidence.
     No quote can be called source-before-quote verified without BOTH values.
     """
-    if as_of_utc.tzinfo is None:
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
         raise ValueError("as_of_utc requires timezone")
     now = as_of_utc.astimezone(timezone.utc)
     expected_names = {SOURCE_DIR + f"serie_a_{code}.csv" for code in _source_codes()}

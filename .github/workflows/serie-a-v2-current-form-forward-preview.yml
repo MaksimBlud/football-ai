@@ -7,9 +7,32 @@ on:
   push:
     branches: [main]
     paths:
+      - "requirements-v2-research-py312.lock"
       - "serie_a_v2_current_form_forward_capture.py"
+      - "serie_a_v2_current_form_source_capture.py"
+      - "serie_a_v2_asof_feature_manifest.py"
+      - "serie_a_v2_frozen_shadow_preview.py"
+      - "market_anchor_1x2_v2_shadow.py"
+      - "market_anchor_1x2_v1.py"
+      - "serie_a_v2_live_diagnostic_report.py"
+      - "serie_a_v2_prequote_source_archive_gate.py"
+      - "serie_a_runtime_config.py"
+      - "historical_football_signal_lab.py"
+      - "experiments/market_anchor_1x2_v2_current_form_policy.json"
+      - "experiments/market_anchor_1x2_v2_protocol.json"
+      - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
+      - "market_anchor_v2_source_rights.py"
+      - "research/source_rights/football_data_co_uk.json"
+      - "tests/test_serie_a_v2_current_form_source_capture.py"
       - "tests/test_serie_a_v2_current_form_forward_capture.py"
+      - "tests/test_serie_a_v2_asof_feature_manifest.py"
+      - "tests/test_serie_a_v2_atalanta_alias.py"
+      - "tests/test_serie_a_v2_frozen_shadow_preview.py"
+      - "tests/test_serie_a_v2_prequote_source_archive_gate.py"
+      - "tests/test_serie_a_v2_live_diagnostic_report.py"
+      - "tests/test_historical_football_signal_lab.py"
       - "tests/test_serie_a_v2_manual_quote_trigger_contract.py"
+      - "tests/test_serie_a_v2_current_form_dependency_triggers.py"
       - ".github/workflows/serie-a-v2-current-form-forward-preview.yml"
   workflow_run:
     workflows:
@@ -28,7 +51,7 @@ permissions:
 
 jobs:
   current-form-forward-preview:
-    if: ${{ github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && ((github.event.workflow_run.name == 'Serie A V2 Current-Form Source Capture' && github.event.workflow_run.event != 'pull_request') || (github.event.workflow_run.name == 'Serie A Odds Snapshots' && github.event.workflow_run.event == 'workflow_dispatch'))) }}
+    if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && ((github.event.workflow_run.name == 'Serie A V2 Current-Form Source Capture' && (github.event.workflow_run.event == 'schedule' || github.event.workflow_run.event == 'workflow_dispatch')) || (github.event.workflow_run.name == 'Serie A Odds Snapshots' && github.event.workflow_run.event == 'workflow_dispatch')))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -48,18 +71,58 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install read-only original V2 dependencies
-        run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
+        run: python -m pip install -r requirements-v2-research-py312.lock
       - name: Test frozen model, current-form source integrity, and no-outcome capture
         run: |
-          python -m py_compile serie_a_v2_current_form_source_capture.py serie_a_v2_current_form_forward_capture.py
+          python -m py_compile serie_a_v2_current_form_source_capture.py serie_a_v2_current_form_forward_capture.py serie_a_v2_asof_feature_manifest.py serie_a_v2_frozen_shadow_preview.py serie_a_v2_live_diagnostic_report.py serie_a_v2_prequote_source_archive_gate.py historical_football_signal_lab.py serie_a_runtime_config.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py
           python -m pytest -q \
             tests/test_serie_a_v2_current_form_source_capture.py \
             tests/test_serie_a_v2_current_form_forward_capture.py \
             tests/test_serie_a_v2_asof_feature_manifest.py \
             tests/test_serie_a_v2_atalanta_alias.py \
             tests/test_serie_a_v2_frozen_shadow_preview.py \
-            tests/test_serie_a_v2_manual_quote_trigger_contract.py
+            tests/test_serie_a_v2_prequote_source_archive_gate.py \
+            tests/test_serie_a_v2_live_diagnostic_report.py \
+            tests/test_historical_football_signal_lab.py \
+            tests/test_serie_a_v2_manual_quote_trigger_contract.py \
+            tests/test_serie_a_v2_current_form_dependency_triggers.py
+      - name: Preflight frozen V2 source rights before source/quote access
+        id: rights_preflight
+        run: |
+          python - <<'PY'
+          import json
+          import os
+
+          from market_anchor_v2_source_rights import require_personal_research_inference_scope
+
+          try:
+              require_personal_research_inference_scope()
+          except PermissionError as exc:
+              allowed = "false"
+              report = {
+                  "rights_preflight": "BLOCKED",
+                  "reason": str(exc),
+                  "supabase_reads": 0,
+                  "public_http_requests": 0,
+                  "download_budget_markers": 0,
+                  "source_archive_artifacts": 0,
+              }
+          else:
+              allowed = "true"
+              report = {
+                  "rights_preflight": "PASS",
+                  "supabase_reads_before_preflight": 0,
+                  "public_http_requests_before_preflight": 0,
+                  "download_budget_markers_before_preflight": 0,
+                  "source_archive_artifacts_before_preflight": 0,
+              }
+
+          print(json.dumps(report, sort_keys=True))
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"allowed={allowed}\n")
+          PY
       - name: Generate read-only current-form V2 shadow from already saved quotes
+        if: ${{ steps.rights_preflight.outputs.allowed == 'true' }}
         run: |
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_KEY"
@@ -68,7 +131,7 @@ jobs:
             --output artifacts/serie_a_v2_current_form_forward_preview.json \
             --sources-output-dir artifacts/serie_a_v2_current_form_sources_used
       - name: Archive pre-kickoff V2 shadow and exact source ZIPs
-        if: always()
+        if: ${{ always() && steps.rights_preflight.outputs.allowed == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: serie-a-v2-current-form-forward-preview

@@ -1,8 +1,11 @@
 """Free actual-source attestation behavior with synthetic pre-2026 history only."""
-from datetime import datetime, timezone
+from datetime import datetime, timezone, tzinfo
 import hashlib
 from io import BytesIO
 import json
+import sys
+
+import serie_a_v2_attest_real_source as attestor
 import zipfile
 
 import pytest
@@ -134,3 +137,59 @@ def test_invalid_datetime_is_not_silently_assumed_utc():
             discover=lambda **kwargs:meta,
             load=lambda *a,**kw:raw,verify_run=valid_parent,
         )
+
+
+
+class _NoOffsetTimezone(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+    def tzname(self, dt):
+        return "NO_OFFSET"
+
+
+def test_no_offset_timezone_is_not_silently_assumed_utc():
+    invalid_clock = datetime(2026, 10, 14, 16, tzinfo=_NoOffsetTimezone())
+    with pytest.raises(ValueError, match="aware UTC clock"):
+        attest_latest_source(
+            token="test-token",
+            now=invalid_clock,
+            discover=lambda **kwargs: pytest.fail("archive discovery must not run"),
+            load=lambda *args, **kwargs: pytest.fail("archive must not load"),
+            verify_run=lambda *args, **kwargs: pytest.fail("parent verification must not run"),
+        )
+
+
+def test_main_blocks_before_github_archive_discovery_when_research_scope_is_denied(monkeypatch, tmp_path):
+    output = tmp_path / "blocked.json"
+    monkeypatch.setenv("GITHUB_REPOSITORY", attestor.REPOSITORY)
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.setattr(
+        sys, "argv",
+        ["serie_a_v2_attest_real_source.py", "--output", str(output)],
+    )
+    monkeypatch.setattr(
+        attestor,
+        "require_personal_research_inference_scope",
+        lambda: (_ for _ in ()).throw(PermissionError("research scope not confirmed")),
+    )
+    monkeypatch.setattr(
+        attestor,
+        "attest_latest_source",
+        lambda **kwargs: pytest.fail("archive discovery/download must not run before rights approval"),
+    )
+
+    attestor.main()
+
+    report = json.loads(output.read_text(encoding="utf-8"))
+    assert report["mode"] == "SOURCE_RIGHTS_BLOCKED_NO_NETWORK_NO_INFERENCE"
+    assert report["operation"] == "SERIE_A_ORIGINAL_V2_SOURCE_ATTESTATION"
+    assert report["block_reason"] == "research scope not confirmed"
+    assert report["public_http_requests"] == 0
+    assert report["supabase_reads"] == 0
+    assert report["supabase_writes"] == 0
+    assert report["quotes_read"] == 0
+    assert report["forecasts_created"] == 0

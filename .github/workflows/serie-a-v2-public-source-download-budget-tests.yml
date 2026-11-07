@@ -1,0 +1,73 @@
+name: Serie A V2 Public Source Download Budget Tests
+
+on:
+  push:
+    branches:
+      - research/v2-public-source-download-budget-20261102
+  pull_request:
+    branches:
+      - main
+      - research/v2-provider-ai-inference-rights-block-*
+    paths:
+      - "serie_a_v2_public_source_download_budget.py"
+      - "tests/test_serie_a_v2_public_source_download_budget.py"
+      - ".github/workflows/serie-a-v2-current-form-source-capture.yml"
+      - ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
+      - ".github/workflows/serie-a-v2-public-source-download-budget-tests.yml"
+  workflow_dispatch:
+    inputs:
+      expected_head_sha:
+        description: "Exact 40-character commit SHA to test"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  budget-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BASE_REF: ${{ github.base_ref || 'main' }}
+    steps:
+      - name: Require exact head SHA for manual validation
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          EXPECTED_HEAD: ${{ inputs.expected_head_sha }}
+          ACTION_HEAD: ${{ github.sha }}
+        run: |
+          if [[ ! "$EXPECTED_HEAD" =~ ^[0-9a-f]{40}$ || "$EXPECTED_HEAD" != "$ACTION_HEAD" ]]; then
+            echo "FAIL_CLOSED: expected head SHA does not match"
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install offline test dependency
+        run: python -m pip install pytest requests
+      - name: Compile and test the shared source-download budget
+        run: |
+          python -m py_compile serie_a_v2_public_source_download_budget.py
+          python -m pytest -q tests/test_serie_a_v2_public_source_download_budget.py
+      - name: Prove no production pickle changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+          if ! BASE_COMMIT="$(git merge-base "refs/remotes/origin/${BASE_REF}" HEAD)" || [[ -z "$BASE_COMMIT" ]]; then
+            echo "FAIL_CLOSED: unable to determine merge base for production artifact diff"
+            exit 1
+          fi
+          if ! CHANGED_FILES="$(git diff --name-only "$BASE_COMMIT" HEAD)"; then
+            echo "FAIL_CLOSED: unable to inspect changed files for production artifact diff"
+            exit 1
+          fi
+          if printf '%s\n' "$CHANGED_FILES" | grep -E '\.pkl$'; then
+            echo "Production model artifact change detected"
+            exit 1
+          fi
+          echo "PASS: no .pkl changes in PR"

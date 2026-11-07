@@ -6,31 +6,70 @@ on:
   schedule:
     - cron: "13 6 * * *"
   push:
-    branches: [main]
+    branches: [main, research/v2-705-699-integrated-20261106-run11]
     paths:
+      - "requirements-v2-research-py312.lock"
       - "serie_a_v2_live_diagnostic_report.py"
       - "serie_a_v2_asof_feature_manifest.py"
       - "serie_a_v2_frozen_shadow_preview.py"
-      - "tests/test_serie_a_v2_live_diagnostic_report.py"
-      - "tests/test_serie_a_v2_atalanta_alias.py"
       - "serie_a_v2_prequote_source_archive_gate.py"
+      - "market_anchor_1x2_v2_shadow.py"
+      - "market_anchor_1x2_v1.py"
+      - "historical_football_signal_lab.py"
+      - "serie_a_runtime_config.py"
+      - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
+      - "market_anchor_v2_source_rights.py"
+      - "research/source_rights/football_data_co_uk.json"
+      - "experiments/market_anchor_1x2_v2_protocol.json"
+      - "tests/test_serie_a_v2_live_diagnostic_report.py"
+      - "tests/test_serie_a_v2_asof_feature_manifest.py"
+      - "tests/test_serie_a_v2_atalanta_alias.py"
+      - "tests/test_serie_a_v2_frozen_shadow_preview.py"
       - "tests/test_serie_a_v2_prequote_source_archive_gate.py"
       - ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
+      - "serie_a_v2_public_source_download_budget.py"
+      - "tests/test_serie_a_v2_public_source_download_budget.py"
 
 concurrency:
-  group: serie-a-v2-free-diagnostic
+  group: serie-a-v2-public-source-download-budget
   cancel-in-progress: false
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
+  validate-free-diagnostic:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: .
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install offline V2 diagnostic validation dependencies
+        run: python -m pip install -r requirements-v2-research-py312.lock
+      - name: Validate original V2 diagnostic without network or Supabase
+        run: |
+          python -m py_compile serie_a_v2_live_diagnostic_report.py serie_a_v2_prequote_source_archive_gate.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py market_anchor_v2_source_rights.py
+          python -m pytest -q tests/test_serie_a_v2_live_diagnostic_report.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_atalanta_alias.py tests/test_serie_a_v2_frozen_shadow_preview.py tests/test_serie_a_v2_prequote_source_archive_gate.py tests/test_historical_football_signal_lab.py tests/test_serie_a_v2_manual_quote_trigger_contract.py tests/test_serie_a_v2_current_form_source_workflow_contract.py tests/test_serie_a_v2_current_form_dependency_triggers.py tests/test_market_anchor_v2_source_rights.py tests/test_serie_a_v2_public_source_download_budget.py
+
+
   free-diagnostic:
+    if: ${{ github.ref == 'refs/heads/main' && github.event_name != 'push' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      GITHUB_TOKEN: ${{ github.token }}
       OPENBLAS_NUM_THREADS: "1"
       OMP_NUM_THREADS: "1"
       MKL_NUM_THREADS: "1"
@@ -42,11 +81,17 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install read-only diagnostic dependencies
-        run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
+        run: python -m pip install -r requirements-v2-research-py312.lock
       - name: Offline regression tests
         run: |
-          python -m py_compile serie_a_v2_live_diagnostic_report.py serie_a_v2_prequote_source_archive_gate.py
-          python -m pytest -q tests/test_serie_a_v2_live_diagnostic_report.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_atalanta_alias.py tests/test_serie_a_v2_frozen_shadow_preview.py tests/test_serie_a_v2_prequote_source_archive_gate.py
+          python -m py_compile serie_a_v2_live_diagnostic_report.py serie_a_v2_prequote_source_archive_gate.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py
+          python -m pytest -q \
+            tests/test_serie_a_v2_live_diagnostic_report.py \
+            tests/test_serie_a_v2_asof_feature_manifest.py \
+            tests/test_serie_a_v2_atalanta_alias.py \
+            tests/test_serie_a_v2_frozen_shadow_preview.py \
+            tests/test_serie_a_v2_prequote_source_archive_gate.py \
+            tests/test_serie_a_v2_public_source_download_budget.py
       - name: Verify source access, no paid credentials
         run: |
           python - <<'PY'
@@ -55,7 +100,55 @@ jobs:
           assert PAID_PROVIDER_REQUESTS == 0
           print("PASS: public-only source; no paid provider key in workflow")
           PY
+      - name: Preflight frozen V2 source rights before source/quote access
+        id: rights_preflight
+        run: |
+          python - <<'PY'
+          import json
+          import os
+
+          from market_anchor_v2_source_rights import require_personal_research_inference_scope
+
+          try:
+              require_personal_research_inference_scope()
+          except PermissionError as exc:
+              allowed = "false"
+              report = {
+                  "rights_preflight": "BLOCKED",
+                  "reason": str(exc),
+                  "supabase_reads": 0,
+                  "public_http_requests": 0,
+                  "download_budget_markers": 0,
+                  "source_archive_artifacts": 0,
+              }
+          else:
+              allowed = "true"
+              report = {
+                  "rights_preflight": "PASS",
+                  "supabase_reads_before_preflight": 0,
+                  "public_http_requests_before_preflight": 0,
+                  "download_budget_markers_before_preflight": 0,
+                  "source_archive_artifacts_before_preflight": 0,
+              }
+
+          print(json.dumps(report, sort_keys=True))
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"allowed={allowed}\n")
+          PY
+      - name: Check shared public-source download budget
+        id: public_source_budget
+        if: ${{ steps.rights_preflight.outputs.allowed == 'true' }}
+        run: python serie_a_v2_public_source_download_budget.py --workflow-path ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml" --output artifacts/public_source_download_budget/attempt.json
+      - name: Upload shared public-source download attempt marker
+        id: upload_public_source_budget
+        if: ${{ steps.rights_preflight.outputs.allowed == 'true' && steps.public_source_budget.outputs.allowed == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: serie-a-v2-public-source-download-attempt
+          path: artifacts/public_source_download_budget/attempt.json
+          retention-days: 90
       - name: Fetch and SHA-archive public source, preview original frozen V2 diagnostics
+        if: ${{ github.event_name != 'push' && steps.rights_preflight.outputs.allowed == 'true' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success' }}
         run: |
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_KEY"
@@ -63,7 +156,7 @@ jobs:
             --output artifacts/serie_a_v2_real_quote_diagnostic.json \
             --raw-source-dir artifacts/serie_a_v2_source_capture
       - name: Archive diagnostic and exact public CSV bytes for provenance
-        if: always()
+        if: ${{ always() && steps.rights_preflight.outputs.allowed == 'true' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: serie-a-v2-free-real-quote-diagnostic
