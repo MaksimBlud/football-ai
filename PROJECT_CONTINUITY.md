@@ -1,3 +1,14 @@
+## 2026-11-07 04:58 UTC — exact source-rights blob pins restored on both V2 forward paths
+
+The rights integration added a new `market_anchor_v2_source_rights.py` blob and refreshed `research/source_rights/football_data_co_uk.json`. A fresh exact-HEAD audit found that the original and current-form forward capture modules still pinned the pre-integration helper/manifest blobs. Those stale pins would fail closed after a future manual merge even if the separate inference-scope question were resolved.
+
+- Updated both `serie_a_v2_forward_capture.py` and `serie_a_v2_current_form_forward_capture.py` to the exact branch blobs: helper `459ef1cf75073552d34c4cf4b2a07d24e4ade1f9`, manifest `2b166bce84b33140bdccfbb13e55829139c0a9df`.
+- Added offline regressions that calculate the Git blob SHA-1 from the checked-in bytes using the canonical `blob <length>\0` header, then compare both forward paths' pins to the actual helper and manifest. The first run exposed a test-only escaping error (two literal backslash characters instead of the NUL separator); that helper was corrected, and the final exact-head tests pass.
+- Final PR #720 head: `6f764973254a042d812b6869088b9beec33d2c6e`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`; PR remains open, mergeable, and HUMAN-MERGE only.
+- Exact-head CI: 9/9 workflows SUCCESS. Frozen V2 regressions: 338 passed on Python 3.11 and 338 passed on Python 3.12; dependency check clean. Shared public-source budget regressions: 24 passed. Production model hash guards passed.
+- This fixes provenance-pin consistency only. It does not grant Football-Data inference rights, execute source capture, create forecasts, open target outcomes, or establish V2 quality. The source-rights gate remains fail-closed; no paid provider, Supabase writes/DDL, production pickle, original feature/weight/lambda, or workflow schedule changed.
+
+---
 ## 2026-11-07 01:56 UTC — refresh Football-Data policy interpretation; frozen inference remains conservatively blocked
 
 Fresh review of the official [Football-Data fair-use page](https://football-data.co.uk/contact.php) found that the page is now marked **Updated: 06/11/26**. Its current wording says the free CSV/Excel files are intended for private individuals' personal betting and/or academic interest and research only, with manual download or at most two light automated download sessions per week. It says the data are not intended for commercial or AI data-training projects. The current page does **not** use the earlier phrase “AI-usage” and does not separately define whether frozen-model inference for noncommercial research is included.
