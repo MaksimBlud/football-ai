@@ -1,47 +1,32 @@
-# MARKET_ANCHOR_1X2_V2 — provider AI-inference rights gate
+# MARKET_ANCHOR_1X2_V2 — Football-Data source-scope review
 
 Date: 2026-11-07 UTC  
 Scope: research-only, original frozen MARKET_ANCHOR_1X2_V2; no production or model changes.
 
-## Finding
+## Current official wording
 
-The official [Football-Data fair-use policy](https://football-data.co.uk/contact.php) currently states that requests for commercial, AI-usage, and model-training purposes should assume no data-use permission is granted. It separately describes the free CSV/Excel data as intended for private individuals' personal betting and/or academic interest/research, with at most two light automated download sessions per week.
+The official [Football-Data fair-use page](https://football-data.co.uk/contact.php) is marked **Updated: 06/11/26**. It describes the free CSV/Excel files as intended for private individuals' personal betting and/or academic interest and research only, through manual download or at most two light automated download sessions per week. It says the files are not intended for commercial or AI data-training projects.
 
-The previous project manifest recorded `authorization=null` and `provider_issued_ai_inference_license=false`, but still treated frozen-weight AI inference as a narrow operational interpretation of personal/academic research. Because the original V2 uses these data as input to an AI model, that inference interpretation is not sufficiently supported by the provider's explicit AI-usage language.
+The current page does not separately define whether applying already-frozen model weights to data for noncommercial research is included in the research allowance. It also does not say that every such inference requires a provider-issued licence. The earlier draft's phrase “AI-usage” overstated the current page wording and has been removed.
 
-## Fail-closed correction
+## Conservative project decision
 
-The research branch now:
-- marks `research_inference_permitted=false`;
-- marks `research_inference_scope=NONE_PENDING_PROVIDER_AUTHORIZATION`;
-- records `provider_issued_ai_inference_license=false`;
-- requires a provider-issued written permission or open licence specifically covering `FROZEN_AI_INFERENCE` and `NONCOMMERCIAL_RESEARCH`;
-- requires the permission evidence to be stored inside the repository, reviewed, within its validity window, and SHA-256 verified;
-- blocks source capture, source attestation, quote reads, feature construction, original/current-form forward inference, and secondary evaluation before external access while permission is absent.
+The project continues to block Football-Data-derived V2 inference until the narrow frozen-inference scope is clarified or a different source with an applicable explicit licence is identified. This is an internal fail-closed risk-control decision, not a legal conclusion that the provider expressly prohibits all inference.
 
-This is deliberately stricter than the provider's general personal/academic research wording. It does not claim legal advice or imply that permission has been granted.
+The manifest therefore records:
+- `research_use_permitted=true` for the page's stated personal/academic research scope;
+- `research_inference_permitted=false` pending scope clarification;
+- `provider_issued_ai_inference_license=false` and `authorization=null`;
+- AI training, commercial use and public product use as forbidden;
+- no more than two automated source-download sessions per rolling seven days.
 
-## Exact code provenance
+The runtime guard blocks before network, Supabase, archive, quote, feature, or model access while this internal inference gate remains closed.
 
-- New rights helper blob: `4caa66c672181dd7babd2d1da7dd28ad2831ca16`
-- New rights manifest blob: `513336b0b04634a6bbb16f944c9d374a08e9f8ac`
-- Original forward script blob after pin update: `8db52d151f9734a9c2485aab613ccf08ee5f6519`
-- Current-form forward script blob after pin update: `e966286949a7df24a3728be8365382d0c17188eb`
-- Candidate SHA unchanged: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`
+## Verification and safety
 
-## Required downstream integration
-
-PR #718 must not be merged by itself with the older conditional-inference interpretation. The quote-preflight PR #719 and the market-only evaluator/runner PRs #716/#717 still carry earlier rights/helper/source-loader pins. After the rights branch is reviewed and integrated, rebase in order and update each exact blob pin; never disable provenance checks to make the stack green.
-
-## Validation boundary
-
-- Synthetic rights tests only; no provider request.
-- No new CSV downloads.
-- No paid provider calls.
-- No Supabase reads/writes in this branch's validation; no DDL.
-- No 2026/27 target outcomes read.
-- No model inference, training, refit, or promotion.
-- No production `.pkl`, weights, 19-feature order, scaler, imputer, or lambda semantics changed.
-- Original 30-primary-completed-forecast evaluation gate remains closed.
-
-The next permissible path is either provider-issued written AI-inference permission recorded with evidence and SHA, or a different source whose licence expressly permits this frozen-model research use. Until then, do not run V2 against Football-Data-derived data.
+- Official page checked: 2026-11-07T01:56:17Z; page update date: 2026-11-06.
+- No Football-Data CSV request was made for this review.
+- No paid provider request, Supabase write/DDL, model inference, training, refit, or promotion occurred.
+- No protected 2026/27 outcomes were queried from Supabase or passed to an evaluator.
+- Original candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features, 20x2 weights, active lambda 0 and shadow lambda 1 are unchanged.
+- The 30-primary-completed-forecast outcome gate remains closed.

@@ -155,15 +155,16 @@ def require_personal_research_inference_scope(
     now: datetime | None = None,
     repo_root: Path | None = None,
 ) -> dict:
-    """Require provider-issued AI-inference permission before any V2 source use.
+    """Require the project's conservative clearance for frozen V2 inference.
 
-    The current public fair-use page says AI-usage requests should assume no
-    data-use permission unless the provider grants it. General personal or
-    academic research language is not treated as an AI-inference licence.
-    Missing permission therefore blocks before network, Supabase, archive,
-    quote, feature, or model access. A future exception requires explicit,
-    locally SHA-verified written permission or an open licence scoped to frozen
-    AI inference and noncommercial research.
+    The latest public fair-use page (updated 2026-11-06) describes private
+    personal/academic research as an intended use and excludes commercial or
+    AI data-training projects. It does not separately define frozen-model
+    inference. The project therefore keeps this path fail-closed until that
+    narrow inference scope is clarified or an applicable licence is recorded.
+    This is an internal risk-control decision, not a claim that the provider
+    expressly prohibits every form of research inference. Missing clearance
+    blocks before network, Supabase, archive, quote, feature, or model access.
     """
     path = Path(manifest_path)
     root = Path(repo_root) if repo_root is not None else REPOSITORY_ROOT
@@ -180,7 +181,7 @@ def require_personal_research_inference_scope(
         raise PermissionError("source-rights manifest provider does not match the inference source")
     if manifest.get("provider_issued_ai_inference_license") is not True:
         raise PermissionError(
-            "provider-issued AI-inference permission is absent; no V2 inference or source use is allowed"
+            "the frozen-inference scope remains unresolved under the current public policy; no V2 inference or source use is allowed"
         )
     if manifest.get("rights_status") != "GRANTED":
         raise PermissionError("provider-issued AI-inference permission is not recorded as GRANTED")
@@ -307,8 +308,8 @@ def write_research_scope_blocked_report(path: Path, operation: str, reason: str)
         "mode": "SOURCE_RIGHTS_BLOCKED_NO_NETWORK_NO_INFERENCE",
         "operation": operation,
         "provider": EXPECTED_PROVIDER,
-        "permitted_scope": "NONE_FOR_V2_AI_INFERENCE_PENDING_PROVIDER_PERMISSION",
-        "rights_status": "PROVIDER_AI_INFERENCE_PERMISSION_REQUIRED",
+        "permitted_scope": "NONE_PENDING_FROZEN_INFERENCE_SCOPE_CLARIFICATION",
+        "rights_status": "V2_FROZEN_INFERENCE_SCOPE_UNRESOLVED",
         "block_reason": str(reason),
         "checked_at_utc": datetime.now(timezone.utc).isoformat(),
         "public_http_requests": 0,

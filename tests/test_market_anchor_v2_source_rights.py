@@ -134,7 +134,7 @@ def test_permission_evidence_requires_direct_https_reference(tmp_path):
 
 
 def test_official_policy_manifest_blocks_ai_inference_without_provider_license():
-    with pytest.raises(PermissionError, match="provider-issued AI-inference permission is absent"):
+    with pytest.raises(PermissionError, match="scope remains unresolved"):
         require_personal_research_inference_scope(
             DEFAULT_RIGHTS_MANIFEST_PATH,
             now=datetime(2026, 11, 5, 20, 0, tzinfo=timezone.utc),
@@ -207,7 +207,7 @@ def test_research_inference_accepts_only_explicit_provider_issued_frozen_ai_lice
 
 def test_research_inference_rejects_personal_research_flags_without_provider_license(tmp_path):
     path = _write_research_scope_manifest(tmp_path, provider_issued_ai_inference_license=False)
-    with pytest.raises(PermissionError, match="provider-issued AI-inference permission is absent"):
+    with pytest.raises(PermissionError, match="scope remains unresolved"):
         require_personal_research_inference_scope(
             path, repo_root=tmp_path, now=datetime(2026, 11, 5, 20, 0, tzinfo=timezone.utc)
         )
@@ -276,7 +276,7 @@ def test_research_scope_block_report_is_explicitly_no_io_and_no_inference(tmp_pa
     saved = json.loads(output.read_text(encoding="utf-8"))
     assert saved == report
     assert report["mode"] == "SOURCE_RIGHTS_BLOCKED_NO_NETWORK_NO_INFERENCE"
-    assert report["rights_status"] == "PROVIDER_AI_INFERENCE_PERMISSION_REQUIRED"
+    assert report["rights_status"] == "V2_FROZEN_INFERENCE_SCOPE_UNRESOLVED"
     assert report["public_http_requests"] == 0
     assert report["supabase_reads"] == 0
     assert report["supabase_writes"] == 0
@@ -328,4 +328,22 @@ def test_research_inference_rejects_noncanonical_policy_page_date(tmp_path):
     with pytest.raises(PermissionError, match="canonical YYYY-MM-DD"):
         require_personal_research_inference_scope(
             path, repo_root=tmp_path, now=datetime(2026, 11, 5, 20, 0, tzinfo=timezone.utc)
+        )
+
+
+def test_current_official_policy_wording_is_pinned_without_overstating_ai_usage_ban():
+    manifest = json.loads(DEFAULT_RIGHTS_MANIFEST_PATH.read_text(encoding="utf-8"))
+    assert manifest["policy_page_updated_date"] == "2026-11-06"
+    assert manifest["policy_checked_at_utc"] == "2026-11-07T01:56:17Z"
+    assert "AI data-training projects" in manifest["policy_summary"]
+    assert "AI-usage" not in manifest["policy_summary"]
+    assert "does not separately define" in manifest["policy_summary"]
+    assert manifest["research_use_permitted"] is True
+    assert manifest["research_inference_permitted"] is False
+    assert manifest["provider_issued_ai_inference_license"] is False
+    assert manifest["authorization"] is None
+    with pytest.raises(PermissionError, match="scope remains unresolved"):
+        require_personal_research_inference_scope(
+            DEFAULT_RIGHTS_MANIFEST_PATH,
+            now=datetime(2026, 11, 7, 2, 0, tzinfo=timezone.utc),
         )
