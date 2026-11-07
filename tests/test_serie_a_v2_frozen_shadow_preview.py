@@ -203,7 +203,11 @@ def test_read_only_saved_supabase_query_does_not_call_provider():
     class Q:
         def __init__(self):
             self.calls = []
-        def select(self, v): self.calls.append("select");return self
+            self.selected_columns = None
+        def select(self, value):
+            self.calls.append("select")
+            self.selected_columns = value
+            return self
         def eq(self, k, v): self.calls.append("eq");assert (k,v)==("league","SERIE_A");return self
         def gt(self, k, v): self.calls.append("gt"); assert k=="commence_time_utc";return self
         def order(self, *a, **kw): self.calls.append("order");return self
@@ -216,6 +220,14 @@ def test_read_only_saved_supabase_query_does_not_call_provider():
             return self.query
     db=DB()
     assert v2_preview.fetch_saved_upcoming_serie_a_quotes(db,now=NOW)==[market()]
+    expected_columns = (
+        "event_id", "league", "home_team", "away_team", "commence_time_utc",
+        "snapshot_time_utc", "home_odds", "draw_odds", "away_odds",
+    )
+    # Quote preflight must project only pre-match identity/prices, never use SELECT *.
+    assert v2_preview.MARKET_KEYS == expected_columns
+    assert db.query.selected_columns == ",".join(expected_columns)
+    assert "*" not in db.query.selected_columns
     assert db.query.calls==["select","eq","gt","order","limit","execute"]
 
 
