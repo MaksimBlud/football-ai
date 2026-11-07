@@ -18,6 +18,7 @@ on:
       - "experiments/market_anchor_1x2_v2_protocol.json"
       - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
       - "market_anchor_v2_source_rights.py"
+      - "market_anchor_v2_artifact_privacy.py"
       - "research/source_rights/football_data_co_uk.json"
       - "historical_football_signal_lab.py"
       - "serie_a_runtime_config.py"
@@ -107,13 +108,16 @@ jobs:
           import os
 
           from market_anchor_v2_source_rights import require_personal_research_inference_scope
+          from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
 
           try:
               require_personal_research_inference_scope()
+              require_private_repository_for_source_artifacts()
           except PermissionError as exc:
               allowed = "false"
               report = {
                   "rights_preflight": "BLOCKED",
+                  "source_artifact_storage": "BLOCKED",
                   "reason": str(exc),
                   "supabase_reads": 0,
                   "public_http_requests": 0,
@@ -124,6 +128,7 @@ jobs:
               allowed = "true"
               report = {
                   "rights_preflight": "PASS",
+                  "source_artifact_storage": "PRIVATE_REPOSITORY",
                   "supabase_reads_before_preflight": 0,
                   "public_http_requests_before_preflight": 0,
                   "download_budget_markers_before_preflight": 0,
