@@ -170,3 +170,29 @@ def test_archive_gate_rejects_offsetless_clock_before_touching_archive(tmp_path)
     invalid_clock = datetime(2026, 10, 15, 12, tzinfo=_NoOffsetTimezone())
     with pytest.raises(ValueError, match="as_of_utc requires timezone"):
         verify_archive(missing_archive, [], as_of_utc=invalid_clock)
+
+
+def test_source_observation_at_exact_quote_time_is_not_prequote(tmp_path):
+    quote_time = "2026-10-14T12:00:00Z"
+    exact = datetime.fromisoformat(quote_time.replace("Z", "+00:00"))
+    archive, digest = make_archive(tmp_path, observed=exact)
+    result = verify_archive(
+        archive, [quote(quote_time)], as_of_utc=AFTER,
+        github_artifact_sha256=digest,
+        github_artifact_created_at_utc="2026-10-14T12:00:01Z",
+    )
+    assert result["source_archive_prequote_ready"] == 0
+    assert result["by_quote"][0]["source_archive_before_quote"] is False
+    assert result["blocked"]["ARCHIVE_NOT_BEFORE_QUOTE"] == 1
+
+
+def test_github_artifact_created_at_exact_quote_time_is_not_prequote(tmp_path):
+    archive, digest = make_archive(tmp_path)
+    result = verify_archive(
+        archive, [quote("2026-10-14T12:00:00Z")], as_of_utc=AFTER,
+        github_artifact_sha256=digest,
+        github_artifact_created_at_utc="2026-10-14T12:00:00Z",
+    )
+    assert result["source_archive_prequote_ready"] == 0
+    assert result["by_quote"][0]["source_archive_before_quote"] is False
+    assert result["blocked"]["ARCHIVE_NOT_BEFORE_QUOTE"] == 1
