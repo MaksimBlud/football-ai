@@ -312,8 +312,10 @@ def test_workflow_contracts_keep_crons_and_shared_concurrency():
     assert "serie_a_v2_public_source_download_budget.py" in diagnostic
     assert "tests/test_serie_a_v2_public_source_download_budget.py" in diagnostic
     assert "if: ${{ steps.rights_preflight.outputs.allowed == 'true' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success' }}" in source
+
+    diagnostic_budget_block = diagnostic.split(\n        "      - name: Check shared public-source download budget", 1\n    )[1].split(\n        "      - name: Upload shared public-source download attempt marker", 1\n    )[0]\n    assert "if: ${{ steps.rights_preflight.outputs.allowed == 'true' }}" in diagnostic_budget_block\n    diagnostic_archive_block = diagnostic.split(\n        "      - name: Archive diagnostic and exact public CSV bytes for provenance", 1\n    )[1]\n    assert "if: ${{ always() && steps.rights_preflight.outputs.allowed == 'true' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success' }}" in diagnostic_archive_block\n
     assert "if: github.event_name != 'push'" in diagnostic
-    assert "if: github.event_name != 'push' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success'" in diagnostic
+    assert "if: ${{ github.event_name != 'push' && steps.rights_preflight.outputs.allowed == 'true' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success' }}" in diagnostic
 
 
 

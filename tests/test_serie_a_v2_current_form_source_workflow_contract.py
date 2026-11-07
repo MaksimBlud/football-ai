@@ -303,3 +303,56 @@ def test_stacked_rights_preflight_pr_receives_exact_v2_ci_on_its_base_branch():
     assert '- cron: "50 5 * * *"' in source
     assert "  schedule:" in source
     assert "The Odds API" not in source_push_branches
+
+
+def test_all_live_v2_entrypoints_block_rights_denied_source_quote_reads_and_artifacts():
+    """Every live original/current-form V2 workflow must stop before external reads and archive upload."""
+    expectations = (
+        (
+            ORIGINAL_FORWARD_WORKFLOW,
+            (
+                "Attest original historical source ZIP from real GitHub Actions (no quotes read)",
+                "Generate actual original frozen V2 source-verified read-only preview",
+                "Save immutable original V2 predictions and exact older source bytes",
+            ),
+            '- cron: "8 8 * * *"',
+        ),
+        (
+            FREE_DIAGNOSTIC_WORKFLOW,
+            (
+                "Check shared public-source download budget",
+                "Upload shared public-source download attempt marker",
+                "Fetch and SHA-archive public source, preview original frozen V2 diagnostics",
+                "Archive diagnostic and exact public CSV bytes for provenance",
+            ),
+            '- cron: "13 6 * * *"',
+        ),
+        (
+            CURRENT_FORWARD_WORKFLOW,
+            (
+                "Generate read-only current-form V2 shadow from already saved quotes",
+                "Archive pre-kickoff V2 shadow and exact source ZIPs",
+            ),
+            '- cron: "18 8 * * *"',
+        ),
+    )
+    preflight_name = "Preflight frozen V2 source rights before source/quote access"
+    for workflow_path, downstream_steps, frozen_cron in expectations:
+        text = workflow_path.read_text(encoding="utf-8")
+        assert frozen_cron in text
+        preflight = text.index(f"      - name: {preflight_name}")
+        block = text.split(
+            f"      - name: {preflight_name}", 1
+        )[1].split("\n      - name:", 1)[0]
+        assert "require_personal_research_inference_scope()" in block
+        assert "except PermissionError" in block
+        assert "from supabase" not in block
+        assert "import requests" not in block
+        assert "create_client(" not in block
+        for step_name in downstream_steps:
+            step_index = text.index(f"      - name: {step_name}")
+            assert preflight < step_index, f"{workflow_path.name}: rights preflight must precede {step_name}"
+            step_block = text.split(f"      - name: {step_name}", 1)[1].split("\n      - name:", 1)[0]
+            assert "steps.rights_preflight.outputs.allowed == 'true'" in step_block, (
+                f"{workflow_path.name}: {step_name} must be skipped when rights are denied"
+            )

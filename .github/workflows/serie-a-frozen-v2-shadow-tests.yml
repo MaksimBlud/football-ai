@@ -36,6 +36,7 @@ on:
       - "experiments/market_anchor_1x2_v2_protocol.json"
       - "research/SERIE_A_V2_CURRENT_FORM_FORWARD_ONLY_CONTRACT_20261018.md"
       - ".github/workflows/serie-a-v2-current-form-source-capture.yml"
+      - ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
       - ".github/workflows/serie-a-v2-current-form-forward-preview.yml"
       - ".github/workflows/serie-a-v2-forward-preview.yml"
       - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"

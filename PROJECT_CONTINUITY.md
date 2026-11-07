@@ -40,6 +40,16 @@ A public Cornerflick results page was inadvertently opened during source discove
 
 # Football AI — Project Continuity
 
+## 2026-11-07 06:55 UTC — extend rights preflight to every live original V2 entrypoint
+
+- Re-audit of the exact #720 tree found that the original forward workflow downloaded/attested the historical source ZIP before the Python-level rights check, and its artifact upload used always(). The free diagnostic reserved a shared download-budget marker before the Python rights check and also uploaded its diagnostic/source artifact with always(). The current-form forward workflow likewise uploaded a blocked report under the normal preview artifact name.
+- Extended #721's local-only workflow preflight to the original forward, free diagnostic, and current-form forward jobs. Source attestation, quote/metadata access, public CSV download, budget reservation, and normal artifact upload are now all skipped unless the exact rights helper returns allowed=true. Existing Python-level fail-closed checks remain as defense in depth.
+- Added regression coverage for the preflight order, downstream conditions, no-network/no-Supabase preflight body, and unchanged cron expressions. Added the free-diagnostic workflow to the Frozen V2 PR-validation path filter.
+- This does not grant Football-Data rights. The checked-in manifest still blocks inference/source use pending clarification. No schedule, paid workflow, model, features, weights, lambdas, Supabase schema/data, or production artifact changed. Exact-head CI pending.
+
+---
+
+
 ## 2026-11-07 06:53 UTC — CI caught two stale source-budget assertions and one test-string escaping defect
 
 - First stacked-PR exact-head run correctly triggered Frozen V2, source-capture push validation, and shared-budget validation after the branch-filter fix.
