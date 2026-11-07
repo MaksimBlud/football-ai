@@ -99,9 +99,44 @@ jobs:
         run: |
           python -m py_compile serie_a_v2_current_form_source_capture.py serie_a_v2_current_form_forward_capture.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py
           python -m pytest -q tests/test_serie_a_v2_current_form_source_capture.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_atalanta_alias.py tests/test_serie_a_v2_frozen_shadow_preview.py tests/test_serie_a_v2_live_diagnostic_report.py tests/test_historical_football_signal_lab.py tests/test_serie_a_v2_current_form_source_workflow_contract.py tests/test_serie_a_v2_current_form_dependency_triggers.py tests/test_serie_a_v2_current_form_forward_capture.py tests/test_serie_a_v2_manual_quote_trigger_contract.py
+      - name: Preflight frozen V2 source rights before metadata or download budget
+        id: rights_preflight
+        run: |
+          python - <<'PY'
+          import json
+          import os
+
+          from market_anchor_v2_source_rights import require_personal_research_inference_scope
+
+          try:
+              require_personal_research_inference_scope()
+          except PermissionError as exc:
+              allowed = "false"
+              report = {
+                  "rights_preflight": "BLOCKED",
+                  "reason": str(exc),
+                  "supabase_reads": 0,
+                  "public_http_requests": 0,
+                  "download_budget_markers": 0,
+                  "source_archive_artifacts": 0,
+              }
+          else:
+              allowed = "true"
+              report = {
+                  "rights_preflight": "PASS",
+                  "supabase_reads_before_preflight": 0,
+                  "public_http_requests_before_preflight": 0,
+                  "download_budget_markers_before_preflight": 0,
+                  "source_archive_artifacts_before_preflight": 0,
+              }
+
+          print(json.dumps(report, sort_keys=True))
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"allowed={allowed}\n")
+          PY
       - name: Check existing verified source before diagnostic-triggered refresh
         id: source_refresh
-        if: ${{ github.event_name == 'workflow_run' }}
+        if: ${{ github.event_name == 'workflow_run' && steps.rights_preflight.outputs.allowed == 'true' }}
         run: |
           python - <<'PY'
           import json
@@ -173,25 +208,25 @@ jobs:
           PY
       - name: Check shared public-source download budget
         id: public_source_budget
-        if: ${{ steps.source_refresh.outputs.capture != 'false' }}
+        if: ${{ steps.rights_preflight.outputs.allowed == 'true' && steps.source_refresh.outputs.capture != 'false' }}
         run: python serie_a_v2_public_source_download_budget.py --workflow-path ".github/workflows/serie-a-v2-current-form-source-capture.yml" --output artifacts/public_source_download_budget/attempt.json
       - name: Upload shared public-source download attempt marker
         id: upload_public_source_budget
-        if: steps.public_source_budget.outputs.allowed == 'true'
+        if: ${{ steps.rights_preflight.outputs.allowed == 'true' && steps.public_source_budget.outputs.allowed == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: serie-a-v2-public-source-download-attempt
           path: artifacts/public_source_download_budget/attempt.json
           retention-days: 90
       - name: Capture frozen historical seasons plus gated current-form source
-        if: steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success'
+        if: ${{ steps.rights_preflight.outputs.allowed == 'true' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success' }}
         run: |
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_KEY"
           python serie_a_v2_current_form_source_capture.py \
             --output-dir artifacts/serie_a_v2_current_form_source_capture
       - name: Archive source bytes and gate manifest for future quotes only
-        if: ${{ always() && steps.source_refresh.outputs.capture != 'false' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success' }}
+        if: ${{ always() && steps.rights_preflight.outputs.allowed == 'true' && steps.source_refresh.outputs.capture != 'false' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: serie-a-v2-current-form-source-capture
