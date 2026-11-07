@@ -40,6 +40,15 @@ A public Cornerflick results page was inadvertently opened during source discove
 
 # Football AI — Project Continuity
 
+## 2026-11-07 06:56 UTC — correct diagnostic workflow regression source formatting
+
+- The first CI run after extending preflight coverage to all live entrypoints caught a malformed inserted test block in the shared-budget suite (literal newline escapes were inserted outside Python string literals). This was a test-source formatting defect, not a workflow/runtime failure.
+- Rewrote the inserted block as ordinary Python lines and updated the legacy diagnostic assertion to match the guarded expression. The exact-head rerun is pending.
+- No additional workflow, model, schedule, data, or rights-policy change. No live source, quote, or Supabase access.
+
+---
+
+
 ## 2026-11-07 06:55 UTC — extend rights preflight to every live original V2 entrypoint
 
 - Re-audit of the exact #720 tree found that the original forward workflow downloaded/attested the historical source ZIP before the Python-level rights check, and its artifact upload used always(). The free diagnostic reserved a shared download-budget marker before the Python rights check and also uploaded its diagnostic/source artifact with always(). The current-form forward workflow likewise uploaded a blocked report under the normal preview artifact name.
