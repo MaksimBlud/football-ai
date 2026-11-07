@@ -367,3 +367,38 @@ def test_all_live_v2_entrypoints_block_rights_denied_source_quote_reads_and_arti
             assert "steps.rights_preflight.outputs.allowed == 'true'" in step_block, (
                 f"{workflow_path.name}: {step_name} must be skipped when rights are denied"
             )
+
+
+def test_free_diagnostic_rechecks_quote_freshness_after_budget_before_marker():
+    """A quote that expires during the budget check must not consume a download marker."""
+    text = FREE_DIAGNOSTIC_WORKFLOW.read_text(encoding="utf-8")
+    initial = text.index("Preflight saved future pre-kickoff quotes (metadata only)")
+    rights = text.index("Preflight frozen V2 source rights before source access")
+    budget = text.index("Check shared public-source download budget")
+    final = text.index(
+        "Recheck saved future pre-kickoff quotes immediately before budget reservation"
+    )
+    marker = text.index("Upload shared public-source download attempt marker")
+    fetch = text.index("Fetch and SHA-archive public source, preview original frozen V2 diagnostics")
+    archive = text.index("Archive diagnostic and exact public CSV bytes for provenance")
+
+    assert initial < rights < budget < final < marker < fetch < archive
+
+    final_block = text.split(
+        "      - name: Recheck saved future pre-kickoff quotes immediately before budget reservation",
+        1,
+    )[1].split("\\n      - name:", 1)[0]
+    assert "id: final_quote_preflight" in final_block
+    assert "--preflight-only" in final_block
+    assert "steps.rights_preflight.outputs.allowed == 'true'" in final_block
+    assert "steps.public_source_budget.outputs.allowed == 'true'" in final_block
+
+    for step_name in (
+        "Upload shared public-source download attempt marker",
+        "Fetch and SHA-archive public source, preview original frozen V2 diagnostics",
+        "Archive diagnostic and exact public CSV bytes for provenance",
+    ):
+        block = text.split(f"      - name: {step_name}", 1)[1].split("\\n      - name:", 1)[0]
+        assert "steps.final_quote_preflight.outputs.eligible_quote_rows != '0'" in block
+
+    assert "steps.quote_preflight.outputs.eligible_quote_rows != '0'" in final_block
