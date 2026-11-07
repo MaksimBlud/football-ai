@@ -216,3 +216,67 @@ def test_diagnostic_trigger_source_preflight_checks_rights_before_any_data_acces
             f"source-rights check must precede {access}"
         )
     assert '"provider_issued_ai_inference_license": rights_scope.get("provider_issued_ai_inference_license")' in preflight
+
+
+def test_current_form_rights_preflight_blocks_metadata_budget_and_artifact_when_scope_is_denied():
+    """A denied rights gate must stop before Supabase metadata, budget markers, or source artifacts."""
+    text = CURRENT_SOURCE_WORKFLOW.read_text(encoding="utf-8")
+    rights = text.index(
+        "Preflight frozen V2 source rights before metadata or download budget"
+    )
+    source_refresh = text.index(
+        "Check existing verified source before diagnostic-triggered refresh"
+    )
+    budget = text.index("Check shared public-source download budget")
+    marker = text.index("Upload shared public-source download attempt marker")
+    capture = text.index("Capture frozen historical seasons plus gated current-form source")
+    archive = text.index("Archive source bytes and gate manifest for future quotes only")
+    assert rights < source_refresh < budget < marker < capture < archive
+
+    rights_block = text.split(
+        "      - name: Preflight frozen V2 source rights before metadata or download budget",
+        1,
+    )[1].split(
+        "      - name: Check existing verified source before diagnostic-triggered refresh",
+        1,
+    )[0]
+    assert "require_personal_research_inference_scope()" in rights_block
+    assert "except PermissionError" in rights_block
+    assert 'output.write(f"allowed={allowed}' in rights_block
+    assert "create_client(" not in rights_block
+    assert "supabase" not in rights_block.lower()
+    assert "requests" not in rights_block.lower()
+
+    guarded_steps = (
+        "Check existing verified source before diagnostic-triggered refresh",
+        "Check shared public-source download budget",
+        "Upload shared public-source download attempt marker",
+        "Capture frozen historical seasons plus gated current-form source",
+        "Archive source bytes and gate manifest for future quotes only",
+    )
+    for step_name in guarded_steps:
+        block = text.split(f"      - name: {step_name}", 1)[1].split(
+            "      - name:", 1
+        )[0]
+        assert "steps.rights_preflight.outputs.allowed == 'true'" in block, (
+            f"{step_name} must be skipped when frozen inference rights are denied"
+        )
+
+    assert '- cron: "50 5 * * *"' in text
+
+
+def test_current_form_rights_preflight_is_local_only_and_does_not_consume_download_budget():
+    text = CURRENT_SOURCE_WORKFLOW.read_text(encoding="utf-8")
+    block = text.split(
+        "      - name: Preflight frozen V2 source rights before metadata or download budget",
+        1,
+    )[1].split(
+        "      - name: Check existing verified source before diagnostic-triggered refresh",
+        1,
+    )[0]
+    assert "market_anchor_v2_source_rights" in block
+    assert "GITHUB_OUTPUT" in block
+    assert "download_budget_markers" in block
+    assert "source_archive_artifacts" in block
+    assert "serie_a_v2_public_source_download_budget.py" not in block
+    assert "actions/upload-artifact" not in block
