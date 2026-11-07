@@ -1,3 +1,19 @@
+## 2026-11-07 00:xx UTC — provider AI-usage policy now blocks Football-Data V2 inference
+
+Fresh review of the official [Football-Data fair-use policy](https://football-data.co.uk/contact.php) found a material rights issue. The page says requests for commercial, AI-usage, and model-training purposes should assume no data-use permission is granted. It separately describes free CSV/Excel data as intended for private individuals' personal betting and/or academic interest/research, with at most two light automated download sessions per week. The previous project manifest treated frozen-weight AI inference as a narrow operational interpretation of personal/academic research even though it also recorded `authorization=null` and `provider_issued_ai_inference_license=false`. That interpretation is not sufficiently supported for an AI model.
+
+A new fail-closed research branch, `research/v2-provider-ai-inference-rights-block-20261107-run11`, corrects this before any live use:
+- The provider manifest now records `research_inference_permitted=false`, `research_inference_scope=NONE_PENDING_PROVIDER_AUTHORIZATION`, and `provider_issued_ai_inference_license=false`.
+- `require_personal_research_inference_scope` now requires an explicit provider-issued written permission/open licence for `FROZEN_AI_INFERENCE` plus `NONCOMMERCIAL_RESEARCH`, with a local evidence file and SHA-256, review timestamp, and validity window. The current manifest fails before network, Supabase, archive, quote, feature, or model access.
+- The original/current-form forward scripts pin the new helper and manifest blobs: helper `4caa66c672181dd7babd2d1da7dd28ad2831ca16`, manifest `513336b0b04634a6bbb16f944c9d374a08e9f8ac`.
+- Synthetic tests cover absent provider permission, missing provider-issued evidence, insufficient scope, tampered evidence SHA, expiry/validity, and the no-external-read ordering. No live source request or model inference was performed.
+
+Integration dependency: PR #718's current helper/manifest still contains the earlier conditional inference interpretation. Do not manually merge #718 by itself before this rights correction is reviewed. PR #719, #716, and #717 still pin the earlier helper/manifest/source-loader blobs and must be rebased/re-pinned in dependency order after this rights branch and the source-loader preflight are integrated. Preserve the exact source-before-quote and SHA checks; do not bypass them.
+
+This is a rights gate, not a model change. Candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features, 20x2 weights, `active_lambda=0`, `shadow_lambda=1`, and production artifacts remain unchanged. No target outcomes, Supabase writes/DDL, paid-provider requests, or new public CSV downloads were made. The original V2 evaluation gate remains closed because no eligible prospective forecasts exist.
+
+---
+
 # Football AI — Project Continuity
 
 
