@@ -317,9 +317,7 @@ def test_live_v2_entrypoints_check_research_scope_before_external_reads():
             assert "fetch_saved_upcoming_serie_a_quotes(" in preflight
             assert "require_personal_research_inference_scope()" not in preflight
             assert "fetch_public_history(" not in preflight
-            normal = main.split(
-                "    try:\n        require_personal_research_inference_scope()", 1
-            )[1]
+            normal = main[main.index("    try:\n"):]
             guard = normal.find("require_personal_research_inference_scope()")
             assert guard >= 0
             for side_effect in side_effects:
