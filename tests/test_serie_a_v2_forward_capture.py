@@ -615,7 +615,7 @@ def test_original_forward_github_api_json_accepts_exact_http_200_without_redirec
 def _repository_git_blob_sha1(path):
     from pathlib import Path
     raw = Path(path).read_bytes()
-    header = f"blob {len(raw)}\\0".encode("ascii")
+    header = f"blob {len(raw)}\0".encode("ascii")
     return hashlib.sha1(header + raw).hexdigest()
 
 
