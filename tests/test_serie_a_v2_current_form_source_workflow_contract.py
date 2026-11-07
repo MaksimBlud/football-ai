@@ -336,11 +336,22 @@ def test_all_live_v2_entrypoints_block_rights_denied_source_quote_reads_and_arti
             '- cron: "18 8 * * *"',
         ),
     )
-    preflight_name = "Preflight frozen V2 source rights before source/quote access"
     for workflow_path, downstream_steps, frozen_cron in expectations:
         text = workflow_path.read_text(encoding="utf-8")
         assert frozen_cron in text
-        preflight = text.index(f"      - name: {preflight_name}")
+        if workflow_path == FREE_DIAGNOSTIC_WORKFLOW:
+            quote_preflight_name = "Preflight saved future pre-kickoff quotes (metadata only)"
+            quote_preflight = text.index(f"      - name: {quote_preflight_name}")
+            preflight_name = "Preflight frozen V2 source rights before source access"
+            preflight = text.index(f"      - name: {preflight_name}")
+            assert quote_preflight < preflight
+            quote_block = text.split(
+                f"      - name: {quote_preflight_name}", 1
+            )[1].split("\\n      - name:", 1)[0]
+            assert "--preflight-only" in quote_block
+        else:
+            preflight_name = "Preflight frozen V2 source rights before source/quote access"
+            preflight = text.index(f"      - name: {preflight_name}")
         block = text.split(
             f"      - name: {preflight_name}", 1
         )[1].split("\n      - name:", 1)[0]

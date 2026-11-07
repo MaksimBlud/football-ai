@@ -557,9 +557,16 @@ def test_preflight_only_main_reads_saved_quotes_before_rights_but_never_source_o
         "--raw-source-dir", str(tmp_path / "must-not-be-created"),
     ])
     monkeypatch.setitem(sys.modules, "database", SimpleNamespace(supabase=object()))
+    from datetime import timedelta
+    current = datetime.now(timezone.utc)
+    fresh_quote = {
+        **quote(),
+        "snapshot_time_utc": (current - timedelta(minutes=15)).isoformat(),
+        "commence_time_utc": (current + timedelta(hours=2)).isoformat(),
+    }
     monkeypatch.setattr(
         report_module, "fetch_saved_upcoming_serie_a_quotes",
-        lambda client, now: [quote()],
+        lambda client, now: [fresh_quote],
     )
     monkeypatch.setattr(
         report_module, "require_personal_research_inference_scope",
