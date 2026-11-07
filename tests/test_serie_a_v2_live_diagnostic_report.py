@@ -592,7 +592,7 @@ def test_free_diagnostic_quote_preflight_precedes_rights_budget_and_source_acces
     quote_step = workflow.index("- name: Preflight saved future pre-kickoff quotes (metadata only)")
     rights_step = workflow.index("- name: Preflight frozen V2 source rights before source access")
     budget_step = workflow.index("- name: Check shared public-source download budget")
-    marker_step = workflow.index("- name: Upload shared public-source budget attempt marker")
+    marker_step = workflow.index("- name: Upload shared public-source download attempt marker")
     source_step = workflow.index("- name: Fetch and SHA-archive public source, preview original frozen V2 diagnostics")
     assert quote_step < rights_step < budget_step < marker_step < source_step
     assert "--preflight-only" in workflow[quote_step:rights_step]
