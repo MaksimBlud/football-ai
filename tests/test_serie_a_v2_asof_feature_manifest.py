@@ -35,6 +35,18 @@ def history():
     ])
 
 
+@pytest.fixture(autouse=True)
+def allow_synthetic_v2_inference_scope(monkeypatch):
+    """Keep offline numerical/source tests independent of live rights clearance."""
+    import market_anchor_v2_source_rights as rights
+
+    monkeypatch.setattr(
+        rights,
+        "require_personal_research_inference_scope",
+        lambda: {"rights_manifest_sha256": "a" * 64},
+    )
+
+
 def test_exact_frozen_19_features_and_no_same_day_outcome_leakage():
     report = build_manifest(history(), [QUOTE])
     assert report["feature_count"] == 19
