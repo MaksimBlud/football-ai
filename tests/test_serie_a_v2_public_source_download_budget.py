@@ -318,7 +318,17 @@ def test_workflow_contracts_keep_crons_and_shared_concurrency():
     )[1].split(
         "      - name: Upload shared public-source download attempt marker", 1
     )[0]
-    assert "if: ${{ steps.rights_preflight.outputs.allowed == 'true' && steps.quote_preflight.outputs.eligible_quote_rows != '0' }}" in diagnostic_budget_block
+    diagnostic_final_quote_block = diagnostic.split(
+        "      - name: Recheck saved future pre-kickoff quotes immediately before budget reservation", 1
+    )[1].split(
+        "      - name: Check shared public-source download budget", 1
+    )[0]
+    assert "steps.rights_preflight.outputs.allowed == 'true'" in diagnostic_final_quote_block
+    assert "steps.quote_preflight.outputs.eligible_quote_rows != '0'" in diagnostic_final_quote_block
+    assert diagnostic.index("Recheck saved future pre-kickoff quotes immediately before budget reservation") < diagnostic.index(
+        "Check shared public-source download budget"
+    )
+    assert "if: ${{ steps.rights_preflight.outputs.allowed == 'true' && steps.final_quote_preflight.outputs.eligible_quote_rows != '0' }}" in diagnostic_budget_block
     diagnostic_archive_block = diagnostic.split(
         "      - name: Archive diagnostic and exact public CSV bytes for provenance", 1
     )[1]
