@@ -8,6 +8,7 @@ on:
       - research/v2-prematch-quote-query-cutoff-stacked-on-720-20261108-run11
       - research/v2-shadow-preview-internal-inference-rights-gate-stacked-on-742-20261108-run11
       - research/v2-forward-preparation-inference-rights-gate-stacked-on-743-20261108-run11
+      - research/v2-diagnostic-make-report-inference-rights-gate-stacked-on-744-20261108-run11
     paths:
       - "tests/test_serie_a_v2_dependency_lock_contract.py"
       - "requirements-v2-research-py312.lock"
