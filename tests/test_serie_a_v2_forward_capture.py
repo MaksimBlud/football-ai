@@ -629,3 +629,6 @@ def test_original_forward_rights_blob_pins_match_exact_repository_bytes():
     assert EXPECTED_SOURCE_RIGHTS_MANIFEST_BLOB_SHA1 == _repository_git_blob_sha1(
         root / SOURCE_RIGHTS_MANIFEST_PATH
     )
+    assert EXPECTED_SOURCE_LOADER_BLOB_SHA1 == _repository_git_blob_sha1(
+        root / SOURCE_LOADER_PATH
+    )
