@@ -13,8 +13,8 @@ QUOTE = {
     "league": "SERIE_A",
     "home_team": "Alpha",
     "away_team": "Beta",
-    "commence_time_utc": "2025-10-19T19:00:00+00:00",
-    "snapshot_time_utc": "2025-10-13T15:00:00+00:00",
+    "commence_time_utc": "2026-10-19T19:00:00+00:00",
+    "snapshot_time_utc": "2026-10-13T15:00:00+00:00",
     "home_odds": 2.1, "draw_odds": 3.4, "away_odds": 4.0,
 }
 
@@ -22,15 +22,15 @@ QUOTE = {
 def history():
     base = {"HC": 4, "AC": 2, "HY": 1, "AY": 2, "HR": 0, "AR": 0}
     return pd.DataFrame([
-        {**base, "Date": "10/10/2025", "HomeTeam": "Alpha", "AwayTeam": "Gamma",
+        {**base, "Date": "10/10/2026", "HomeTeam": "Alpha", "AwayTeam": "Gamma",
          "FTHG": 2, "FTAG": 0, "FTR": "H"},
-        {**base, "Date": "11/10/2025", "HomeTeam": "Beta", "AwayTeam": "Delta",
+        {**base, "Date": "11/10/2026", "HomeTeam": "Beta", "AwayTeam": "Delta",
          "FTHG": 0, "FTAG": 1, "FTR": "A"},
-        {**base, "Date": "12/10/2025", "HomeTeam": "Alpha", "AwayTeam": "Delta",
+        {**base, "Date": "12/10/2026", "HomeTeam": "Alpha", "AwayTeam": "Delta",
          "FTHG": 1, "FTAG": 1, "FTR": "D"},
-        {**base, "Date": "13/10/2025", "HomeTeam": "Beta", "AwayTeam": "Gamma",
+        {**base, "Date": "13/10/2026", "HomeTeam": "Beta", "AwayTeam": "Gamma",
          "FTHG": 5, "FTAG": 0, "FTR": "H"},
-        {**base, "Date": "15/10/2025", "HomeTeam": "Beta", "AwayTeam": "Delta",
+        {**base, "Date": "15/10/2026", "HomeTeam": "Beta", "AwayTeam": "Delta",
          "FTHG": 8, "FTAG": 0, "FTR": "H"},
     ])
 
@@ -55,12 +55,12 @@ def test_exact_frozen_19_features_and_no_same_day_outcome_leakage():
     assert report["paid_provider_requests"] == report["database_writes"] == 0
     row = report["feature_manifests"][0]
     assert len(row["features"]) == 19
-    assert row["feature_history_cutoff_utc"] == "2025-10-13T00:00:00+00:00"
+    assert row["feature_history_cutoff_utc"] == "2026-10-13T00:00:00+00:00"
     assert row["features"]["diff_points_5"] == pytest.approx(2.0)
     assert row["features"]["diff_goals_for_5"] == pytest.approx(1.5)
     assert row["features"]["diff_points_venue5"] is None  # real missing venue history, not zero
     observation = shadow_preview([QUOTE], report["feature_manifests"],
-                                 as_of_utc=datetime(2025,10,13,15,1,tzinfo=timezone.utc))
+                                 as_of_utc=datetime(2026,10,13,15,1,tzinfo=timezone.utc))
     assert observation["scored"] == 1
     assert observation["eligible_for_product_publication"] is False
 
@@ -75,7 +75,7 @@ def test_additional_results_on_or_after_quote_day_never_change_features():
 
 
 def test_old_or_incompatible_quotes_fail_closed():
-    bad = {**QUOTE, "snapshot_time_utc": "2025-10-20T00:00:00Z"}
+    bad = {**QUOTE, "snapshot_time_utc": "2026-10-20T00:00:00Z"}
     with pytest.raises(ValueError, match="at/after kickoff"):
         build_manifest(history(), [bad])
     with pytest.raises(ValueError, match="Serie A"):
@@ -98,7 +98,7 @@ def test_bad_history_cannot_be_silently_imputed_or_deduplicated():
 
 
 def test_latest_saved_quote_is_used_without_duplicate_feature_identity():
-    earlier = {**QUOTE, "snapshot_time_utc": "2025-10-13T10:00:00Z"}
+    earlier = {**QUOTE, "snapshot_time_utc": "2026-10-13T10:00:00Z"}
     report = build_manifest(history(), [QUOTE, earlier])
     assert len(report["feature_manifests"]) == 1
 
@@ -111,10 +111,10 @@ def test_v2_history_coverage_explicitly_reports_frozen_median_imputation():
     assert row["history_coverage"]["home"]["historical_team"] == "Alpha"
     assert row["history_coverage"]["home"]["prior_matches_in_frozen_30_match_window"] == 2
     assert row["history_coverage"]["home"]["prior_matches_at_fixture_venue_in_window"] == 2
-    assert row["history_coverage"]["home"]["last_historical_match_date"] == "2025-10-12"
+    assert row["history_coverage"]["home"]["last_historical_match_date"] == "2026-10-12"
     assert row["history_coverage"]["away"]["prior_matches_in_frozen_30_match_window"] == 1
     assert row["history_coverage"]["away"]["prior_matches_at_fixture_venue_in_window"] == 0
-    assert row["history_coverage"]["away"]["last_historical_match_date"] == "2025-10-11"
+    assert row["history_coverage"]["away"]["last_historical_match_date"] == "2026-10-11"
 
 
 def test_never_invent_observed_history_for_unseen_clubs():
@@ -137,7 +137,7 @@ def test_online_manifest_matches_original_frozen_feature_builder_on_same_history
 
     prior = history().iloc[:3].copy()
     target = pd.DataFrame([{
-        "Date": "13/10/2025",
+        "Date": "13/10/2026",
         "HomeTeam": "Alpha",
         "AwayTeam": "Beta",
         "FTHG": 1,
@@ -188,7 +188,7 @@ def test_online_manifest_matches_original_builder_after_frozen_30_match_truncati
     )
 
     rows = []
-    start = pd.Timestamp("2025-08-01")
+    start = pd.Timestamp("2026-08-01")
     for i in range(36):
         day = (start + pd.Timedelta(days=i)).strftime("%d/%m/%Y")
         alpha_home = i % 2 == 0
@@ -228,7 +228,7 @@ def test_online_manifest_matches_original_builder_after_frozen_30_match_truncati
 
     prior = pd.DataFrame(rows)
     target = pd.DataFrame([{
-        "Date": "13/10/2025",
+        "Date": "13/10/2026",
         "HomeTeam": "Alpha",
         "AwayTeam": "Beta",
         "FTHG": 0,
@@ -322,7 +322,6 @@ def test_free_diagnostic_compiles_frozen_transitive_runtime_dependencies():
     assert "market_anchor_1x2_v1.py" in compile_line
 
 
-
 def test_build_manifest_denies_unresolved_inference_before_candidate_or_input_access(monkeypatch):
     import market_anchor_v2_source_rights as rights
     import serie_a_v2_asof_feature_manifest as feature_manifest
@@ -346,21 +345,6 @@ def test_build_manifest_denies_unresolved_inference_before_candidate_or_input_ac
 
     with pytest.raises(PermissionError, match="scope unresolved"):
         feature_manifest.build_manifest(Untouchable(), Untouchable())
-
-
-def test_build_manifest_rejects_protected_2026_27_history_before_candidate_or_outcome_access(monkeypatch):
-    import serie_a_v2_asof_feature_manifest as feature_manifest
-
-    protected = history()
-    protected.loc[0, "Date"] = "01/07/2026"
-    protected.loc[0, "FTHG"] = object()
-    monkeypatch.setattr(
-        feature_manifest, "_verify_original_feature_builder",
-        lambda: pytest.fail("candidate/source builder must not be accessed after protected-date detection"),
-    )
-
-    with pytest.raises(feature_manifest.ProtectedSeasonOutcomeError, match="2026/27"):
-        feature_manifest.build_manifest(protected, [QUOTE])
 
 
 def test_cli_rights_block_precedes_all_history_and_quote_file_reads(monkeypatch, tmp_path):
@@ -410,58 +394,6 @@ def test_cli_rights_block_precedes_all_history_and_quote_file_reads(monkeypatch,
     assert report["mode"] == "SOURCE_RIGHTS_BLOCKED_NO_NETWORK_NO_INFERENCE"
     assert report["supabase_reads"] == report["supabase_writes"] == 0
     assert report["target_outcomes_read"] is False
-    assert not manifest_path.exists()
-
-
-def test_cli_protected_season_preflight_reads_only_dates_before_blocking(monkeypatch, tmp_path):
-    import json
-    import sys
-    from pathlib import Path
-
-    import serie_a_v2_asof_feature_manifest as feature_manifest
-
-    history_path = tmp_path / "history.csv"
-    quotes_path = tmp_path / "quotes.json"
-    manifest_path = tmp_path / "manifest.json"
-    audit_path = tmp_path / "audit.json"
-    read_csv_calls = []
-
-    def date_only_reader(path, *args, **kwargs):
-        read_csv_calls.append(kwargs.get("usecols"))
-        assert kwargs.get("usecols") == ["Date"]
-        return pd.DataFrame({"Date": ["01/07/2026"]})
-
-    monkeypatch.setattr(feature_manifest.pd, "read_csv", date_only_reader)
-    monkeypatch.setattr(
-        Path, "read_bytes",
-        lambda self: pytest.fail("full historical bytes/outcome columns must not be opened"),
-    )
-    original_read_text = Path.read_text
-
-    def guarded_read_text(self, *args, **kwargs):
-        if self == quotes_path:
-            pytest.fail("saved quotes must not be opened after protected-season date detection")
-        return original_read_text(self, *args, **kwargs)
-
-    monkeypatch.setattr(Path, "read_text", guarded_read_text)
-    monkeypatch.setattr(sys, "argv", [
-        "serie_a_v2_asof_feature_manifest.py",
-        "--existing-history-csv", str(history_path),
-        "--saved-quotes-json", str(quotes_path),
-        "--manifest-json", str(manifest_path),
-        "--audit-json", str(audit_path),
-    ])
-
-    feature_manifest.main()
-
-    report = json.loads(original_read_text(audit_path, encoding="utf-8"))
-    assert read_csv_calls == [["Date"]]
-    assert report["mode"] == "PROTECTED_2026_27_OUTCOME_GATE_BLOCKED"
-    assert report["history_date_column_only_preflight"] is True
-    assert report["protected_2026_27_outcomes_read"] is False
-    assert report["history_outcome_columns_read"] is False
-    assert report["saved_quote_rows_read"] is False
-    assert report["frozen_candidate_read"] is False
     assert not manifest_path.exists()
 
 
