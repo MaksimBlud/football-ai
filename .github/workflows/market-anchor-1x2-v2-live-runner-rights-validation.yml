@@ -10,6 +10,7 @@ on:
       - research/v2-forward-entrypoint-private-storage-gate-stacked-on-733-20261108-run11
       - research/v2-direct-artifact-discovery-private-gate-stacked-on-734-20261108-run11
       - research/v2-live-diagnostic-source-private-gate-stacked-on-735-20261108-run11
+      - research/v2-evaluation-artifact-discovery-private-gate-stacked-on-736-20261108-run11
     paths:
       - "requirements-v2-research-py312.lock"
       - "market_anchor_1x2_v2_prospective_runner.py"
@@ -51,6 +52,7 @@ on:
       - research/v2-forward-entrypoint-private-storage-gate-stacked-on-733-20261108-run11
       - research/v2-direct-artifact-discovery-private-gate-stacked-on-734-20261108-run11
       - research/v2-live-diagnostic-source-private-gate-stacked-on-735-20261108-run11
+      - research/v2-evaluation-artifact-discovery-private-gate-stacked-on-736-20261108-run11
     paths:
       - "requirements-v2-research-py312.lock"
       - "market_anchor_1x2_v2_prospective_runner.py"
@@ -104,7 +106,7 @@ jobs:
       - name: Install pinned offline V2 dependencies
         run: python -m pip install -r requirements-v2-research-py312.lock
       - name: Compile the protected live runner and original V2 source attestor
-        run: python -m py_compile market_anchor_1x2_v2_prospective_runner.py market_anchor_v2_source_rights.py serie_a_v2_current_form_source_capture.py serie_a_v2_current_form_forward_capture.py market_anchor_v2_source_capture_rights.py market_anchor_v2_artifact_privacy.py serie_a_v2_attest_real_source.py serie_a_v2_live_diagnostic_report.py serie_a_v2_forward_capture.py serie_a_v2_prequote_source_archive_gate.py
+        run: python -m py_compile market_anchor_1x2_v2_prospective_runner.py market_anchor_1x2_v2_prospective_evaluation.py market_anchor_v2_source_rights.py serie_a_v2_current_form_source_capture.py serie_a_v2_current_form_forward_capture.py market_anchor_v2_source_capture_rights.py market_anchor_v2_artifact_privacy.py serie_a_v2_attest_real_source.py serie_a_v2_live_diagnostic_report.py serie_a_v2_forward_capture.py serie_a_v2_prequote_source_archive_gate.py
       - name: Run synthetic runner, source-capture, source-attestation and workflow-contract regressions
         run: python -m pytest -q tests/test_market_anchor_1x2_v2_prospective_runner.py tests/test_market_anchor_1x2_v2_prospective_evaluation_workflow.py tests/test_market_anchor_1x2_v2_forward_artifact_adapter.py tests/test_serie_a_v2_current_form_source_capture.py tests/test_serie_a_v2_current_form_forward_capture.py tests/test_serie_a_v2_forward_capture.py tests/test_serie_a_v2_prequote_source_archive_gate.py tests/test_serie_a_v2_attest_real_source.py tests/test_serie_a_v2_live_diagnostic_report.py tests/test_market_anchor_v2_source_capture_rights.py tests/test_market_anchor_v2_artifact_privacy.py
       - name: Verify production pickle artifacts are unchanged

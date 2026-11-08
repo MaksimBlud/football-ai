@@ -420,3 +420,27 @@ def test_private_storage_gate_is_before_artifact_listing_in_live_evaluator_sourc
     assert privacy >= 0
     assert artifact_listing >= 0
     assert privacy < artifact_listing
+
+
+
+def test_direct_forward_artifact_discovery_blocks_public_storage_before_metadata_request(monkeypatch):
+    import market_anchor_1x2_v2_prospective_evaluation as live
+
+    calls = []
+
+    def deny_private_storage(repository, token, *, get=None):
+        calls.append(("privacy", repository, token))
+        raise PermissionError("source archives require a private GitHub repository")
+
+    monkeypatch.setattr(
+        live, "require_private_repository_for_source_artifacts", deny_private_storage
+    )
+    with pytest.raises(PermissionError, match="require a private GitHub repository"):
+        live.discover_forward_artifacts(
+            "synthetic-read-only-token",
+            get=lambda *args, **kwargs: calls.append(("github", args, kwargs)),
+        )
+
+    assert calls == [
+        ("privacy", "MaksimBlud/football-ai", "synthetic-read-only-token")
+    ]

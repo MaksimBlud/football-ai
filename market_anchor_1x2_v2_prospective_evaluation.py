@@ -85,7 +85,7 @@ def _digest(value: Any, field: str) -> str:
     return digest
 
 
-def discover_forward_artifacts(token: str, *, get=requests.get) -> list[dict[str, Any]]:
+def _discover_forward_artifacts_after_private_preflight(token: str, *, get=requests.get) -> list[dict[str, Any]]:
     if not token:
         raise ValueError("GITHUB_TOKEN is required")
     cohort_start = evaluator.COHORT_FROZEN_AT_UTC
@@ -134,6 +134,17 @@ def discover_forward_artifacts(token: str, *, get=requests.get) -> list[dict[str
         if page_count == PER_PAGE:
             raise ValueError("forward artifact scan reached its 300-artifact safety bound")
     return sorted(found, key=lambda item: (item["created_at"], item["artifact_id"]))
+
+
+def discover_forward_artifacts(token: str, *, get=requests.get) -> list[dict[str, Any]]:
+    """Require private artifact storage before listing forward prediction artifacts.
+
+    The live evaluator checks privacy before its first external read. This
+    public helper repeats that gate so direct imports cannot enumerate forward
+    artifact IDs, digests, or parent-run metadata from a public repository.
+    """
+    require_private_repository_for_source_artifacts(REPOSITORY, token, get=get)
+    return _discover_forward_artifacts_after_private_preflight(token, get=get)
 
 
 def verify_forward_run(artifact: Mapping[str, Any], token: str, *, get=requests.get) -> dict[str, Any]:
