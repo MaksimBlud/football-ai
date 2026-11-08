@@ -98,7 +98,16 @@ def _stats_asof(frame: pd.DataFrame, *, before_day: datetime) -> dict[str, deque
     return histories
 
 
+def _require_frozen_inference_scope() -> dict:
+    # This public feature builder is part of the frozen V2 inference path.
+    # A caller must not bypass the provider scope by importing build_manifest().
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+
+    return require_personal_research_inference_scope()
+
+
 def build_manifest(history: pd.DataFrame, quotes: list[dict]) -> dict:
+    _require_frozen_inference_scope()
     _verify_original_feature_builder()
     original = load_verified_original()
     names = list(original["features"])
@@ -205,6 +214,18 @@ def main() -> None:
     args = p.parse_args()
     if args.manifest_json == args.audit_json:
         raise ValueError("audit and manifest paths must differ")
+    # The standalone CLI is a feature-building entrypoint. Enforce the same
+    # rights scope before opening history, saved quotes, or the frozen model.
+    try:
+        _require_frozen_inference_scope()
+    except PermissionError as exc:
+        from market_anchor_v2_source_rights import write_research_scope_blocked_report
+
+        report = write_research_scope_blocked_report(
+            args.audit_json, "SERIE_A_V2_ASOF_FEATURE_MANIFEST", str(exc)
+        )
+        print(json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True))
+        return
     historical_bytes = args.existing_history_csv.read_bytes()
     history = pd.read_csv(args.existing_history_csv)
     quotes = json.loads(args.saved_quotes_json.read_text(encoding="utf-8"))
