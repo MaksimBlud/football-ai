@@ -1,3 +1,19 @@
+## Continuity follow-up — PR #755 mandatory source SHA preflight
+
+A fresh audit of PR #731's direct live market-only runner found that its `preflight` callback was optional. The supported GitHub bridge supplied the source-artifact verifier, but a direct import could omit it and still reach the 30-forecast outcome reader. This left a gap in the required source-before-quote/SHA proof.
+
+- New Draft PR **#755**: require preflight in both live market-only entrypoints, pass an immutable snapshot of forecast rows, require the verifier to return an artifact-ID -> SHA-256 map, and reject any selected forecast row whose source artifact ID/SHA is not covered before the lazy outcome reader can be reached.
+- The real bridge now returns the verified map from the existing GitHub artifact, parent-run, and embedded-ZIP verification. The 30-primary-identity and 30-eligible-completed-forecast gates are unchanged.
+- Exact final HEAD: `ae0ffbbe6347729050d4e1d849d6b38d3f861b8e`, based on PR #731 exact HEAD `2f4c9a7849c64db4d11d6e29b99239d9ed0c1a58`.
+- Exact-head push run #42528057658: SUCCESS; 47 passed, Python compilation passed, production-`.pkl` guard passed.
+- Exact-head PR run #42528062571: SUCCESS; 47 passed, Python compilation passed, production-`.pkl` guard passed.
+- The initial head `bf717c3e7de1d1408864516fa8c9bc61457a97c5` had one stale two-argument synthetic callback in a workflow test; it failed, was corrected in the next commit, and is superseded by the passing final HEAD above.
+- PR #755 remains Draft/open and mergeable; HUMAN-MERGE only after #731 and its predecessors. No main merge occurred.
+
+This is offline/synthetic gate hardening, not live inference, not a source download, and not evidence of model quality. No protected outcomes, paid calls, Supabase writes/DDL, production `.pkl` changes, or model-weight/contract changes occurred.
+
+---
+
 # Continuity update — 2026-11-08 — Research Brain run 11 final exact-head audit
 
 This addendum is based on fresh GitHub main/PR reads, exact GitHub Actions job logs, and read-only Supabase metadata/odds aggregates. It updates this existing documentation PR only; it does not change main or any runtime behavior.
