@@ -10,6 +10,7 @@ on:
       - research/v2-forward-preparation-inference-rights-gate-stacked-on-743-20261108-run11
       - research/v2-diagnostic-make-report-inference-rights-gate-stacked-on-744-20261108-run11
       - research/v2-feature-manifest-inference-and-embargo-gate-stacked-on-745-20261108-run11
+      - research/v2-shadow-residual-direct-inference-rights-gate-stacked-on-746-20261108-run11
     paths:
       - "tests/test_serie_a_v2_dependency_lock_contract.py"
       - "tests/test_market_anchor_1x2_v2_shadow.py"
