@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - research/v2-market-only-runner-rights-gate-stacked-on-729-20261108-run11
+      - research/v2-market-only-outcome-reader-gate-stacked-on-730-20261108-run11
     paths:
       - "requirements-v2-research-py312.lock"
       - "market_anchor_1x2_v2_prospective_runner.py"
@@ -24,6 +25,7 @@ on:
   pull_request:
     branches:
       - research/v2-current-form-forward-push-validation-stacked-on-728-20261108-run11
+      - research/v2-market-only-runner-rights-gate-stacked-on-729-20261108-run11
     paths:
       - "requirements-v2-research-py312.lock"
       - "market_anchor_1x2_v2_prospective_runner.py"
