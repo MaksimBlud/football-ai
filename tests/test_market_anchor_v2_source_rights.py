@@ -353,7 +353,7 @@ def test_current_official_policy_wording_is_pinned_without_overstating_ai_usage_
     assert manifest["research_source_capture_permitted"] is True
     assert manifest["research_source_capture_scope"] == "PRIVATE_NONCOMMERCIAL_RESEARCH_ARCHIVE_ONLY"
     assert "source-only archival/validation" in manifest["policy_interpretation"]
-    assert "frozen-model inference remains blocked" in manifest["policy_interpretation"]
+    assert "frozen-model inference remains blocked" in manifest["policy_interpretation"].lower()
     assert manifest["research_inference_permitted"] is False
     assert manifest["provider_issued_ai_inference_license"] is False
     assert manifest["authorization"] is None
