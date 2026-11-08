@@ -122,21 +122,18 @@ def test_diagnostic_refresh_revalidates_live_feature_gate_before_reuse():
 
 def test_current_form_forward_push_trigger_has_secret_free_offline_validation():
     workflow = FORWARD_WORKFLOW.read_text(encoding="utf-8")
+    lines = workflow.splitlines()
+    validation_start = lines.index("  validate-current-form-forward:")
+    live_start = lines.index("  current-form-forward-preview:")
+    validation = "\n".join(lines[validation_start:live_start])
+    live = "\n".join(lines[live_start:])
+
     assert "  push:" in workflow
-    validation = workflow.split(
-        "  validate-current-form-forward:\\n", 1
-    )[1].split("\\n  current-form-forward-preview:", 1)[0]
     assert "github.event_name == 'push'" in validation
     assert "github.ref == 'refs/heads/main'" in validation
     assert "python -m pytest -q" in validation
     for secret in ("SUPABASE_URL", "SUPABASE_KEY", "GITHUB_TOKEN", "THE_ODDS_API_KEY"):
         assert secret not in validation
-
-    live = workflow.split(
-        "  current-form-forward-preview:\\n", 1
-    )[1].split("\\njobs:", 1)[0] if "\\njobs:" in workflow else workflow.split(
-        "  current-form-forward-preview:\\n", 1
-    )[1]
     assert "github.event_name == 'push'" not in live
 
 
