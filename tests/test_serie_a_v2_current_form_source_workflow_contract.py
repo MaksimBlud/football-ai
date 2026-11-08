@@ -344,7 +344,7 @@ def test_all_live_v2_entrypoints_block_rights_denied_source_quote_reads_and_arti
             quote_preflight = text.index(f"      - name: {quote_preflight_name}")
             preflight_name = "Preflight frozen V2 source rights before source access"
             preflight = text.index(f"      - name: {preflight_name}")
-            assert quote_preflight < preflight
+            assert preflight < quote_preflight
             quote_block = text.split(
                 f"      - name: {quote_preflight_name}", 1
             )[1].split("\n      - name:", 1)[0]
@@ -369,8 +369,8 @@ def test_all_live_v2_entrypoints_block_rights_denied_source_quote_reads_and_arti
             )
 
 
-def test_free_diagnostic_rechecks_quote_freshness_after_budget_before_marker():
-    """A quote that expires during the budget check must not consume a download marker."""
+def test_free_diagnostic_rechecks_quote_freshness_before_budget_and_marker():
+    """A quote that expires between preflights must not consume a download marker."""
     text = FREE_DIAGNOSTIC_WORKFLOW.read_text(encoding="utf-8")
     initial = text.index("Preflight saved future pre-kickoff quotes (metadata only)")
     rights = text.index("Preflight frozen V2 source rights before source access")
@@ -382,13 +382,13 @@ def test_free_diagnostic_rechecks_quote_freshness_after_budget_before_marker():
     fetch = text.index("Fetch and SHA-archive public source, preview original frozen V2 diagnostics")
     archive = text.index("Archive diagnostic and exact public CSV bytes for provenance")
 
-    assert initial < rights < budget < final < marker < fetch < archive
+    assert rights < initial < final < budget < marker < fetch < archive
 
     budget_block = text.split(
         "      - name: Check shared public-source download budget",
         1,
     )[1].split("\n      - name:", 1)[0]
-    assert "steps.quote_preflight.outputs.eligible_quote_rows != '0'" in budget_block
+    assert "steps.final_quote_preflight.outputs.eligible_quote_rows != '0'" in budget_block
 
     final_block = text.split(
         "      - name: Recheck saved future pre-kickoff quotes immediately before budget reservation",
@@ -397,7 +397,7 @@ def test_free_diagnostic_rechecks_quote_freshness_after_budget_before_marker():
     assert "id: final_quote_preflight" in final_block
     assert "--preflight-only" in final_block
     assert "steps.rights_preflight.outputs.allowed == 'true'" in final_block
-    assert "steps.public_source_budget.outputs.allowed == 'true'" in final_block
+    assert "steps.quote_preflight.outputs.eligible_quote_rows != '0'" in final_block
 
     for step_name in (
         "Upload shared public-source download attempt marker",
