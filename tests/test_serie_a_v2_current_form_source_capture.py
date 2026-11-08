@@ -27,6 +27,30 @@ from serie_a_v2_current_form_source_capture import (
 from serie_a_v2_live_diagnostic_report import _source_codes
 
 
+@pytest.fixture(autouse=True)
+def _allow_private_source_only_scope_for_synthetic_capture_tests(monkeypatch):
+    """Keep synthetic capture tests offline; dedicated tests below exercise denial."""
+    monkeypatch.setattr(
+        source_capture,
+        "require_personal_research_source_capture_scope",
+        lambda: {
+            "source_capture_scope": source_capture.SOURCE_CAPTURE_SCOPE,
+            "rights_manifest_sha256": "a" * 64,
+            "policy_url": "https://football-data.co.uk/contact.php",
+            "policy_checked_at_utc": "2026-11-07T01:56:17+00:00",
+            "policy_page_updated_date": "2026-11-06",
+        },
+    )
+    monkeypatch.setattr(
+        source_capture,
+        "require_private_repository_for_source_artifacts",
+        lambda: {
+            "private": True,
+            "storage_policy": "PRIVATE_GITHUB_ACTIONS_ARTIFACTS",
+        },
+    )
+
+
 def event_rows(n=30):
     start = date(2026, 8, 1)
     return [
@@ -312,6 +336,119 @@ def test_current_csv_rejects_completed_future_result_and_missing_stats():
         )
 
 
+def test_importable_capture_entrypoint_blocks_rights_denial_before_any_data_or_file_io(monkeypatch, tmp_path):
+    calls = []
+
+    def deny_rights():
+        calls.append("rights")
+        raise PermissionError("synthetic source-only rights denial")
+
+    def forbidden(*_args, **_kwargs):
+        pytest.fail("no later gate, model, Supabase, network, or filesystem work is allowed")
+
+    monkeypatch.setattr(source_capture, "require_personal_research_source_capture_scope", deny_rights)
+    monkeypatch.setattr(source_capture, "require_private_repository_for_source_artifacts", forbidden)
+    monkeypatch.setattr(source_capture, "load_verified_original", forbidden)
+
+    with pytest.raises(PermissionError, match="synthetic source-only rights denial"):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=forbidden,
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=forbidden,
+            history_fetch=forbidden,
+        )
+
+    assert calls == ["rights"]
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_importable_capture_entrypoint_blocks_public_storage_before_supabase_or_source_io(monkeypatch, tmp_path):
+    calls = []
+
+    def allow_rights():
+        calls.append("rights")
+        return {"source_capture_scope": source_capture.SOURCE_CAPTURE_SCOPE}
+
+    def deny_storage():
+        calls.append("privacy")
+        raise PermissionError("synthetic public repository denial")
+
+    def forbidden(*_args, **_kwargs):
+        pytest.fail("Supabase, model, network, and filesystem work must remain blocked")
+
+    monkeypatch.setattr(source_capture, "require_personal_research_source_capture_scope", allow_rights)
+    monkeypatch.setattr(source_capture, "require_private_repository_for_source_artifacts", deny_storage)
+    monkeypatch.setattr(source_capture, "load_verified_original", forbidden)
+
+    with pytest.raises(PermissionError, match="synthetic public repository denial"):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=forbidden,
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=forbidden,
+            history_fetch=forbidden,
+        )
+
+    assert calls == ["rights", "privacy"]
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_importable_capture_entrypoint_checks_rights_and_privacy_before_candidate_or_metadata(monkeypatch, tmp_path):
+    calls = []
+
+    def allow_rights():
+        calls.append("rights")
+        return {"source_capture_scope": source_capture.SOURCE_CAPTURE_SCOPE}
+
+    def allow_storage():
+        calls.append("privacy")
+        return {"private": True, "storage_policy": "PRIVATE_GITHUB_ACTIONS_ARTIFACTS"}
+
+    def candidate():
+        calls.append("candidate")
+        return {"artifact_sha256": source_capture.FROZEN_SHA, "features": list(range(19))}
+
+    class OrderedClient:
+        def table(self, _name):
+            calls.append("supabase_metadata")
+            return self
+
+        def select(self, _columns):
+            return self
+
+        def eq(self, *_args):
+            return self
+
+        def gte(self, *_args):
+            return self
+
+        def lt(self, *_args):
+            return self
+
+        def range(self, *_args):
+            return self
+
+        def execute(self):
+            return SimpleNamespace(data=event_rows(29))
+
+    monkeypatch.setattr(source_capture, "require_personal_research_source_capture_scope", allow_rights)
+    monkeypatch.setattr(source_capture, "require_private_repository_for_source_artifacts", allow_storage)
+    monkeypatch.setattr(source_capture, "load_verified_original", candidate)
+
+    with pytest.raises(RuntimeError, match="feature-source gate closed"):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=OrderedClient(),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=lambda *_args, **_kwargs: pytest.fail("provider download must remain blocked below 30"),
+            history_fetch=lambda **_kwargs: pytest.fail("historical download must remain blocked below 30"),
+        )
+
+    assert calls == ["rights", "privacy", "candidate", "supabase_metadata"]
+    assert list(tmp_path.iterdir()) == []
+
+
 def test_closed_feature_source_gate_stops_before_any_public_download(tmp_path):
     calls = []
     def forbidden_history(**_kwargs):
@@ -473,6 +610,11 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert (tmp_path / MANIFEST_FILENAME).exists()
     assert report["target_outcomes_read"] is False
     assert report["source_capture_only"] is True
+    assert report["source_rights_manifest_sha256"] == "a" * 64
+    assert report["source_policy_url"] == "https://football-data.co.uk/contact.php"
+    assert report["source_policy_checked_at_utc"] == "2026-11-07T01:56:17+00:00"
+    assert report["source_policy_page_updated_date"] == "2026-11-06"
+    assert report["source_artifact_storage_policy"] == "PRIVATE_GITHUB_ACTIONS_ARTIFACTS"
     assert report["research_inference_permitted"] is False
     assert report["model_inference_executed"] is False
     assert report["model_training_executed"] is False

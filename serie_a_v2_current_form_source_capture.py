@@ -415,6 +415,11 @@ def capture_source_archive(
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("source capture clock must have a real UTC offset")
     at = now.astimezone(timezone.utc)
+    # The CLI and workflow both check these gates, but this function is also an
+    # importable entrypoint. Re-check rights and private storage here so direct
+    # callers cannot reach Supabase metadata, provider CSVs, or output writes.
+    source_scope = require_personal_research_source_capture_scope()
+    storage_scope = require_private_repository_for_source_artifacts()
     # Authenticate the frozen candidate and exact source URL before any metadata read,
     # network request, or filesystem output. The manifest must attest the verified artifact.
     candidate = load_verified_original()
@@ -495,6 +500,11 @@ def capture_source_archive(
         "experiment_id": "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY",
         "mode": "RESEARCH_ONLY_CURRENT_FORM_SOURCE_ARCHIVE",
         "source_capture_scope": SOURCE_CAPTURE_SCOPE,
+        "source_rights_manifest_sha256": source_scope["rights_manifest_sha256"],
+        "source_policy_url": source_scope["policy_url"],
+        "source_policy_checked_at_utc": source_scope["policy_checked_at_utc"],
+        "source_policy_page_updated_date": source_scope["policy_page_updated_date"],
+        "source_artifact_storage_policy": storage_scope["storage_policy"],
         "source_capture_only": True,
         "research_inference_permitted": False,
         "provider_issued_ai_inference_license": False,
