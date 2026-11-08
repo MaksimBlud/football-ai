@@ -757,6 +757,9 @@ def prepare_forward_capture(
     ):
         raise ValueError("current-form forward clock must have an explicit UTC offset")
     now = as_of_utc.astimezone(timezone.utc)
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+
+    require_personal_research_inference_scope()
     if write_sources_to is not None:
         write_sources_to.mkdir(parents=True, exist_ok=True)
     latest_quotes = _latest_quotes(quotes, now=now)
