@@ -103,7 +103,7 @@ def test_source_capture_scope_rejects_broader_or_unverified_permissions(
 
 
 def test_source_capture_scope_rejects_stale_policy_review(tmp_path):
-    path = _write_manifest(tmp_path, policy_checked_at_utc="2026-01-01T00:00:00Z")
+    path = _write_manifest(tmp_path, policy_checked_at_utc="2026-01-01T00:00:00Z", policy_page_updated_date="2025-12-31")
     with pytest.raises(PermissionError, match="stale"):
         require_personal_research_source_capture_scope(path, now=NOW)
 
