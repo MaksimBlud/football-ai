@@ -7,6 +7,7 @@ import pytest
 
 import market_anchor_1x2_v2_prospective_evaluator as evaluator
 import market_anchor_1x2_v2_prospective_runner as runner
+from market_anchor_v2_source_rights import require_personal_research_inference_scope as actual_inference_rights_check
 
 
 @pytest.fixture(autouse=True)
@@ -686,3 +687,17 @@ def test_every_live_runner_blocks_before_identity_gate_without_inference_rights(
             runner.evaluate_live_market_only_from_supabase(object(), rows)
 
     assert calls == ["rights"]
+
+
+
+def test_current_manifest_blocks_market_only_runner_before_supabase_gate(monkeypatch):
+    def forbidden_gate(_client):
+        pytest.fail("the identity-only Supabase gate must not run under the current blocked manifest")
+
+    monkeypatch.setattr(runner, "require_personal_research_inference_scope", actual_inference_rights_check)
+    monkeypatch.setattr(runner, "read_completed_fixture_gate", forbidden_gate)
+
+    with pytest.raises(PermissionError, match="frozen-inference scope remains unresolved"):
+        runner.evaluate_live_market_only_prospective_cohort(
+            object(), _forecast_rows(30), lambda _keys: pytest.fail("outcome loader must remain lazy")
+        )
