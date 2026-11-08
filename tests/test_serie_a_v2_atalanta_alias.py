@@ -41,10 +41,6 @@ def fixture(event_id, home, away):
     }
 
 
-@pytest.mark.parametrize("quote,atalanta_side", [
-    (fixture("a", "Atalanta BC", "Frosinone"), "home"),
-    (fixture("b", "AC Milan", "Atalanta BC"), "away"),
-])
 @pytest.fixture(autouse=True)
 def allow_synthetic_v2_inference_scope(monkeypatch):
     """Keep offline numerical/source tests independent of live rights clearance."""
@@ -57,6 +53,11 @@ def allow_synthetic_v2_inference_scope(monkeypatch):
     )
 
 
+
+@pytest.mark.parametrize("quote,atalanta_side", [
+    (fixture("a", "Atalanta BC", "Frosinone"), "home"),
+    (fixture("b", "AC Milan", "Atalanta BC"), "away"),
+])
 def test_v2_bookmaker_atalanta_identity_joins_verified_10_season_team_history(quote, atalanta_side):
     original = load_verified_original()
     row = build_manifest(history(), [quote])["feature_manifests"][0]
