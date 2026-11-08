@@ -313,3 +313,15 @@ def test_original_forward_reaudits_source_capture_rights_transitive_dependencies
         "tests/test_market_anchor_v2_artifact_privacy.py",
     ):
         assert path in test_command
+
+    # Every pytest argument except the final one must be shell-continued.
+    # This catches a missing trailing backslash that would run a test path
+    # as a standalone shell command and silently skip the remaining suite.
+    test_argument_lines = [
+        line.strip()
+        for line in test_command.splitlines()
+        if line.strip()
+    ]
+    assert test_argument_lines
+    assert all(line.endswith("\\") for line in test_argument_lines[:-1])
+    assert not test_argument_lines[-1].endswith("\\")
