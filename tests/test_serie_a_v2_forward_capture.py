@@ -720,3 +720,22 @@ def test_original_forward_main_blocks_public_storage_before_supabase_or_quote_re
         forward_capture_module.main()
     assert calls == [("privacy", "MaksimBlud/football-ai", "synthetic-token")]
     assert not (tmp_path / "report.json").exists()
+
+
+def test_original_forward_discover_archives_blocks_public_storage_before_metadata_request(monkeypatch):
+    calls = []
+
+    def deny_private_storage(repository, token):
+        calls.append(("privacy", repository, token))
+        raise PermissionError("source archives require a private GitHub repository")
+
+    monkeypatch.setattr(
+        forward_capture_module, "require_private_repository_for_source_artifacts",
+        deny_private_storage,
+    )
+    with pytest.raises(PermissionError, match="require a private GitHub repository"):
+        forward_capture_module.discover_archives(
+            token="synthetic-token",
+            get=lambda *args, **kwargs: calls.append(("github", args, kwargs)),
+        )
+    assert calls == [("privacy", "MaksimBlud/football-ai", "synthetic-token")]

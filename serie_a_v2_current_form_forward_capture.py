@@ -84,7 +84,7 @@ def _github_json(url: str, *, token: str, get=requests.get) -> dict:
     return data
 
 
-def discover_archives(*, token: str, get=requests.get) -> list[dict]:
+def _discover_archives_after_private_preflight(*, token: str, get=requests.get) -> list[dict]:
     out, seen_ids = [], set()
     for page in range(1, 4):
         data = _github_json(
@@ -118,6 +118,17 @@ def discover_archives(*, token: str, get=requests.get) -> list[dict]:
         if len(items) < 100:
             break
     return sorted(out, key=lambda item: (item["created_at"], item["artifact_id"]), reverse=True)
+
+
+def discover_archives(*, token: str, get=requests.get) -> list[dict]:
+    """Require private artifact storage before listing source archive metadata.
+
+    The CLI performs this preflight before any other live read. This public
+    helper repeats it so direct imports cannot enumerate artifact IDs/digests
+    from a public repository and then bypass the normal entrypoint.
+    """
+    require_private_repository_for_source_artifacts(REPOSITORY, token)
+    return _discover_archives_after_private_preflight(token=token, get=get)
 
 
 def verify_source_run(
