@@ -1,0 +1,65 @@
+name: MARKET_ANCHOR_1X2_V2 Prospective Evaluator Validation
+
+on:
+  pull_request:
+    branches:
+      - research/v2-integrated-private-quote-preflight-20261108
+    paths:
+      - "requirements-v2-research-py312.lock"
+      - "market_anchor_1x2_v2_*.py"
+      - "market_anchor_v2_source_rights.py"
+      - "market_anchor_v2_artifact_privacy.py"
+      - "serie_a_v2_current_form_forward_capture.py"
+      - "serie_a_runtime_config.py"
+      - "experiments/market_anchor_1x2_v2_prospective_selection_policy.json"
+      - "research/MARKET_ANCHOR_1X2_V2_PROSPECTIVE_EVALUATOR.md"
+      - "tests/test_market_anchor_1x2_v2_*.py"
+      - ".github/workflows/market-anchor-1x2-v2-prospective-evaluation.yml"
+      - ".github/workflows/market-anchor-1x2-v2-prospective-evaluation-validation.yml"
+  push:
+    branches:
+      - research/v2-market-only-evaluator-stacked-on-727-20261108-run11
+    paths:
+      - "requirements-v2-research-py312.lock"
+      - "market_anchor_1x2_v2_*.py"
+      - "market_anchor_v2_source_rights.py"
+      - "market_anchor_v2_artifact_privacy.py"
+      - "serie_a_v2_current_form_forward_capture.py"
+      - "serie_a_runtime_config.py"
+      - "experiments/market_anchor_1x2_v2_prospective_selection_policy.json"
+      - "research/MARKET_ANCHOR_1X2_V2_PROSPECTIVE_EVALUATOR.md"
+      - "tests/test_market_anchor_1x2_v2_*.py"
+      - ".github/workflows/market-anchor-1x2-v2-prospective-evaluation.yml"
+      - ".github/workflows/market-anchor-1x2-v2-prospective-evaluation-validation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-offline-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install pinned V2 research dependencies
+        run: python -m pip install -r requirements-v2-research-py312.lock
+      - name: Compile evaluator and frozen dependencies
+        run: |
+          python -m py_compile market_anchor_1x2_v2_completed_fixture_gate.py market_anchor_1x2_v2_forward_artifact_adapter.py market_anchor_1x2_v2_prospective_evaluation.py market_anchor_1x2_v2_prospective_evaluator.py market_anchor_1x2_v2_prospective_runner.py market_anchor_v2_source_rights.py market_anchor_v2_artifact_privacy.py serie_a_v2_current_form_forward_capture.py serie_a_runtime_config.py
+      - name: Run synthetic-only evaluator and lazy-gate regressions
+        run: |
+          python -m pytest -q \
+            tests/test_market_anchor_1x2_v2_forward_artifact_adapter.py \
+            tests/test_market_anchor_1x2_v2_prospective_evaluation_workflow.py \
+            tests/test_market_anchor_1x2_v2_prospective_evaluator.py \
+            tests/test_market_anchor_1x2_v2_prospective_runner.py
+      - name: Prove no production model pickle changed
+        run: |
+          git fetch origin research/v2-integrated-private-quote-preflight-20261108
+          git diff --exit-code FETCH_HEAD...HEAD -- '*.pkl'
