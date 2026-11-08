@@ -69,7 +69,7 @@ def test_source_preflight_and_outcome_evaluator_share_one_gate_snapshot():
     script = (ROOT / "market_anchor_1x2_v2_prospective_evaluation.py").read_text(encoding="utf-8")
     assert "read_completed_primary_event_identities" not in script
     assert "current_gate = " not in script
-    assert "def verify_source_preflight(completed_identities, _gate_attestation):" in script
+    assert "def verify_source_preflight(completed_identities, _gate_attestation, _forecast_rows):" in script
     assert "preflight=verify_source_preflight" in script
     assert "current_gate_identities=set(completed_identities)" in script
 

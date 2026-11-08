@@ -95,6 +95,26 @@ def _gate_attestation(identities: set[tuple[str, str, str]]) -> dict:
     }
 
 
+def _synthetic_source_preflight(_identities, _attestation, forecast_rows):
+    """Synthetic-only proof stub; live code must use the GitHub source verifier."""
+    return {
+        row["source_artifact_id"]: row["source_archive_sha256"]
+        for row in forecast_rows
+    }
+
+
+def _run_market_only_cohort(client, rows, outcome_loader, **kwargs):
+    kwargs.setdefault("preflight", _synthetic_source_preflight)
+    return runner.evaluate_live_market_only_prospective_cohort(
+        client, rows, outcome_loader, **kwargs
+    )
+
+
+def _run_market_only_supabase(client, rows, **kwargs):
+    kwargs.setdefault("preflight", _synthetic_source_preflight)
+    return runner.evaluate_live_market_only_from_supabase(client, rows, **kwargs)
+
+
 def test_live_runner_reads_identity_gate_and_keeps_outcomes_lazy_when_incumbent_unpinned(monkeypatch):
     rows = _forecast_rows()
     # Mirror the current-form forward artifact: it contains no incumbent
@@ -179,7 +199,7 @@ def test_live_market_only_runner_uses_identity_gate_and_scores_only_after_30(mon
         outcome_calls.append(keys)
         return {key: "H" for key in keys}
 
-    report = runner.evaluate_live_market_only_prospective_cohort(
+    report = _run_market_only_cohort(
         client, rows, load_outcomes
     )
 
@@ -256,7 +276,7 @@ def test_live_supabase_market_only_runner_does_not_read_results_below_30(monkeyp
     client = _ExactOutcomeClient([])
 
     outcome_read_state = {}
-    report = runner.evaluate_live_market_only_from_supabase(
+    report = _run_market_only_supabase(
         client, rows, outcome_read_state=outcome_read_state
     )
 
@@ -313,7 +333,7 @@ def test_live_supabase_market_only_runner_reads_only_exact_identity_and_result_a
     client = _ExactOutcomeClient(outcome_rows)
     outcome_read_state = {}
 
-    report = runner.evaluate_live_market_only_from_supabase(
+    report = _run_market_only_supabase(
         client, rows, outcome_read_state=outcome_read_state
     )
 
@@ -370,14 +390,16 @@ def test_supabase_wrapper_runs_source_preflight_before_any_result_query(monkeypa
 
     client.table = guarded_table
 
-    def source_preflight(received_identities, received_attestation):
+    def source_preflight(received_identities, received_attestation, received_rows):
         assert gate_seen["value"] is True
         assert received_identities == frozenset(identities)
         assert received_attestation == gate_attestation
+        assert len(received_rows) == len(rows)
         preflight_seen["value"] = True
+        return _synthetic_source_preflight(received_identities, received_attestation, received_rows)
 
     outcome_read_state = {}
-    report = runner.evaluate_live_market_only_from_supabase(
+    report = _run_market_only_supabase(
         client,
         rows,
         preflight=source_preflight,
@@ -419,7 +441,7 @@ def test_live_supabase_market_only_runner_rejects_outcome_persisted_at_or_before
     client = _ExactOutcomeClient(outcome_rows)
 
     with pytest.raises(ValueError, match="persisted_at_utc must be strictly after kickoff_utc"):
-        runner.evaluate_live_market_only_from_supabase(client, rows)
+        _run_market_only_supabase(client, rows)
 
     assert client.result_query_count == 1
     assert client.select_calls == ["match_date,home_team,away_team,result,persisted_at_utc"]
@@ -457,7 +479,7 @@ def test_live_supabase_market_only_runner_rejects_outcome_persisted_after_evalua
     client = _ExactOutcomeClient(outcome_rows)
 
     with pytest.raises(ValueError, match="cannot be later than evaluation observation time"):
-        runner.evaluate_live_market_only_from_supabase(
+        _run_market_only_supabase(
             client, rows, observed_at_utc="2026-12-01T19:00:00Z"
         )
 
@@ -482,7 +504,7 @@ def test_live_supabase_market_only_runner_rejects_offsetless_evaluation_observat
     client = _ExactOutcomeClient([])
 
     with pytest.raises(ValueError, match="evaluation observed_at_utc must have a real UTC offset"):
-        runner.evaluate_live_market_only_from_supabase(
+        _run_market_only_supabase(
             client, rows, observed_at_utc="2026-11-06T12:00:00"
         )
 
@@ -519,7 +541,7 @@ def test_live_supabase_market_only_runner_rejects_offsetless_outcome_persistence
     client = _ExactOutcomeClient(outcome_rows)
 
     with pytest.raises(ValueError, match="persisted_at_utc must have a real UTC offset"):
-        runner.evaluate_live_market_only_from_supabase(client, rows)
+        _run_market_only_supabase(client, rows)
 
     assert client.result_query_count == 1
     assert client.select_calls == ["match_date,home_team,away_team,result,persisted_at_utc"]
@@ -571,7 +593,7 @@ def test_live_supabase_market_only_runner_rejects_missing_persistence_timestamp_
     client = _MissingPersistenceTimestampClient(outcome_rows)
 
     with pytest.raises(ValueError, match="outcome query returned fields outside the exact identity\\+result allowlist"):
-        runner.evaluate_live_market_only_from_supabase(client, rows)
+        _run_market_only_supabase(client, rows)
 
     assert client.result_query_count == 1
     assert client.select_calls == ["match_date,home_team,away_team,result,persisted_at_utc"]
@@ -618,7 +640,7 @@ def test_live_supabase_market_only_runner_rejects_conflicting_duplicate_alias_re
     client = _ExactOutcomeClient(outcome_rows)
 
     with pytest.raises(ValueError, match="duplicate raw aliases disagree"):
-        runner.evaluate_live_market_only_from_supabase(client, rows)
+        _run_market_only_supabase(client, rows)
 
     assert client.result_query_count == 1
     assert client.select_calls == ["match_date,home_team,away_team,result,persisted_at_utc"]
@@ -646,14 +668,16 @@ def test_market_only_preflight_and_evaluator_share_one_immutable_gate_snapshot(m
         gate_calls.append(received_client)
         return set(identities), attestation
 
-    def preflight(received_identities, received_attestation):
+    def preflight(received_identities, received_attestation, received_rows):
         call_order.append("preflight")
         preflight_seen.append((received_identities, received_attestation))
         assert isinstance(received_identities, frozenset)
         assert received_identities == frozenset(identities)
+        assert len(received_rows) == len(rows)
         # Mutating this detached nested list must not alter the attestation
         # later supplied to the evaluator.
         received_attestation["selected_columns"].append("result")
+        return _synthetic_source_preflight(received_identities, received_attestation, received_rows)
 
     def fake_evaluate(received_rows, received_identities, outcome_loader, *, completed_fixture_gate_attestation):
         call_order.append("evaluate")
@@ -672,7 +696,7 @@ def test_market_only_preflight_and_evaluator_share_one_immutable_gate_snapshot(m
     monkeypatch.setattr(runner, "read_completed_fixture_gate", read_gate)
     monkeypatch.setattr(runner, "evaluate_market_only_after_gate", fake_evaluate)
 
-    report = runner.evaluate_live_market_only_prospective_cohort(
+    report = _run_market_only_cohort(
         client, rows, outcome_loader, preflight=preflight
     )
 
@@ -703,7 +727,7 @@ def test_market_only_preflight_failure_stops_before_evaluator_or_outcomes(monkey
     evaluator_calls = []
     outcome_calls = []
 
-    def preflight(_identities, _attestation):
+    def preflight(_identities, _attestation, _forecast_rows):
         raise RuntimeError("source identity SHA mismatch")
 
     def fake_evaluate(*args, **kwargs):
@@ -717,10 +741,59 @@ def test_market_only_preflight_failure_stops_before_evaluator_or_outcomes(monkey
     monkeypatch.setattr(runner, "evaluate_market_only_after_gate", fake_evaluate)
 
     with pytest.raises(RuntimeError, match="source identity SHA mismatch"):
-        runner.evaluate_live_market_only_prospective_cohort(
+        _run_market_only_cohort(
             object(), rows, outcome_loader, preflight=preflight
         )
 
+    assert evaluator_calls == []
+    assert outcome_calls == []
+
+
+
+def test_market_only_live_entrypoints_require_source_preflight_before_any_identity_or_outcome_read(monkeypatch):
+    rows = _forecast_rows(30)
+    gate_calls = []
+    monkeypatch.setattr(
+        runner,
+        "read_completed_fixture_gate",
+        lambda _client: gate_calls.append(True) or (
+            {(row["match_date"], row["home_team"], row["away_team"]) for row in rows},
+            _gate_attestation({(row["match_date"], row["home_team"], row["away_team"]) for row in rows}),
+        ),
+    )
+    with pytest.raises(TypeError, match="preflight"):
+        runner.evaluate_live_market_only_prospective_cohort(object(), rows, lambda _keys: {})
+    with pytest.raises(TypeError, match="preflight"):
+        runner.evaluate_live_market_only_from_supabase(object(), rows)
+    assert gate_calls == []
+
+
+def test_market_only_runner_rejects_unmatched_source_sha_proof_before_evaluator_or_outcomes(monkeypatch):
+    rows = _forecast_rows(30)
+    for row in rows:
+        row.pop("incumbent_1x2")
+        row.pop("incumbent_evidence")
+    identities = {(row["match_date"], row["home_team"], row["away_team"]) for row in rows}
+    monkeypatch.setattr(
+        runner, "read_completed_fixture_gate",
+        lambda _client: (identities, _gate_attestation(identities)),
+    )
+    evaluator_calls = []
+    outcome_calls = []
+
+    def wrong_source_preflight(_identities, _attestation, forecast_rows):
+        return {row["source_artifact_id"]: "0" * 64 for row in forecast_rows}
+
+    def forbidden_evaluator(*args, **kwargs):
+        evaluator_calls.append((args, kwargs))
+        pytest.fail("evaluator must not run with an unverified source SHA")
+
+    monkeypatch.setattr(runner, "evaluate_market_only_after_gate", forbidden_evaluator)
+    with pytest.raises(ValueError, match="source preflight SHA proof does not match"):
+        runner.evaluate_live_market_only_prospective_cohort(
+            object(), rows, lambda keys: outcome_calls.append(keys) or {},
+            preflight=wrong_source_preflight,
+        )
     assert evaluator_calls == []
     assert outcome_calls == []
 
@@ -751,11 +824,11 @@ def test_every_live_runner_blocks_before_identity_gate_without_inference_rights(
                 object(), rows, lambda _keys: pytest.fail("outcome loader must remain lazy")
             )
         elif entrypoint == "market_only_cohort":
-            runner.evaluate_live_market_only_prospective_cohort(
+            _run_market_only_cohort(
                 object(), rows, lambda _keys: pytest.fail("outcome loader must remain lazy")
             )
         else:
-            runner.evaluate_live_market_only_from_supabase(object(), rows)
+            _run_market_only_supabase(object(), rows)
 
     assert calls == ["rights"]
 
@@ -769,6 +842,6 @@ def test_current_manifest_blocks_market_only_runner_before_supabase_gate(monkeyp
     monkeypatch.setattr(runner, "read_completed_fixture_gate", forbidden_gate)
 
     with pytest.raises(PermissionError, match="frozen-inference scope remains unresolved"):
-        runner.evaluate_live_market_only_prospective_cohort(
+        _run_market_only_cohort(
             object(), _forecast_rows(30), lambda _keys: pytest.fail("outcome loader must remain lazy")
         )
