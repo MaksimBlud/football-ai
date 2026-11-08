@@ -76,6 +76,75 @@ The required HUMAN-MERGE order for the stacked rights/privacy chain is #720 → 
 No paid The Odds API calls, paid cron, production writes, Supabase writes/DDL, model refit, threshold tuning, promotion, or protected target-outcome reads were performed in this iteration.
 
 
+## 2026-11-08 — additional original V2 quote and direct-inference gates (Research Brain run 11)
+
+This addendum records the next exact-head code audits after the November 8 runtime snapshot above. All PRs below remain open/unmerged and are **not active on main**. Current main/base remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; repository visibility remains public.
+
+### Frozen candidate reconfirmed
+
+- Candidate file: `research/models/market_anchor_v2_serie_a_frozen_candidate.json`; Git blob SHA-1 `ac1303f6b096664983fbf52443bd0a381b23ba21`.
+- Candidate SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Training rows: 3,799; training data through 2026-06-30.
+- Exact original 19-feature order, 20×2 weights, 19 imputer medians and 19-element scaler parameters remain unchanged.
+- `active_lambda=0`; `shadow_residual_lambda=1`; stability gate FAILED; automatic promotion false; no 2026/27 target outcomes used for fit/selection.
+- Protocol still requires 30 completed primary forecasts before any protected target-outcome read. Current eligible prospective forecasts: 0/30. No Brier/LogLoss comparison or superiority claim exists.
+
+### New exact-head PRs and regression evidence
+
+**PR #742 — server-side strictly pre-match quote cutoff**
+
+- Head `727b4456fb103557039c3daac09bcaf93bcd36fa`, based on PR #720 head `1b9464834dd5256b7d69499c1443378518dde256`.
+- The shared saved-quote query now requires both `commence_time_utc > as_of` and `snapshot_time_utc <= as_of` before returning rows. Since kickoff is strictly after the same cutoff, every returned quote is strictly pre-kickoff and already observed. Projection remains explicit; no `SELECT *`.
+- Frozen V2 Shadow Tests [run #42492038152](https://github.com/MaksimBlud/football-ai/actions/runs/42492038152): SUCCESS; Python 3.11 and 3.12 each **342 passed**; production `.pkl` guard PASS.
+- This is query-contract regression evidence, not a live Supabase inference run.
+
+**PR #743 — inference rights enforced inside the public `shadow_preview()` API**
+
+- Head `e468da0e54a935dbf5f3c114f2f0d7cff793c0c5`, stacked on #742.
+- A direct import could previously call the scoring function without going through the CLI's rights preflight. The function now checks frozen-inference scope before loading the candidate or iterating quote/features.
+- [Run #42497538837](https://github.com/MaksimBlud/football-ai/actions/runs/42497538837): SUCCESS; Python 3.11 and 3.12 each **343 passed**; production `.pkl` guard PASS.
+
+**PR #744 — inference rights enforced inside both forward preparation APIs**
+
+- Head `62fa017799cf052511adbce66128a1aa56fb5aa4`, stacked on #743.
+- Both original and current-form `prepare_forward_capture()` functions now check rights before iterating quote/archive metadata, invoking parent/archive callbacks, creating output directories, loading ZIPs or building features.
+- Direct-call regressions prove denied rights block before input iteration/callbacks/output.
+- [Run #42498077784](https://github.com/MaksimBlud/football-ai/actions/runs/42498077784): SUCCESS; Python 3.11 and 3.12 each **345 passed**; production `.pkl` guard PASS.
+
+**PR #745 — inference rights enforced inside the diagnostic `make_report()` API**
+
+- Head `8ec091091a1ba8838166dcfcf5c36f978a997e52`, stacked on #744.
+- Direct callers could previously build the 19-feature manifest before reaching the guarded shadow scorer. `make_report()` now checks rights before source-embargo inspection, quote-time iteration and feature construction.
+- PR #736 already covers the separate direct `fetch_public_history()` source-only/private-storage downloader; #745 does not duplicate that work.
+- [Run #42498338407](https://github.com/MaksimBlud/football-ai/actions/runs/42498338407): SUCCESS; Python 3.11 and 3.12 each **346 passed**; production `.pkl` guard PASS.
+
+PRs #743 → #745 are a dependent stack on #742; #742 is based on #720. They require fresh-main rebase and exact CI after the #720/#727 rights/privacy integration. No PR in this stack is merged.
+
+**Existing original-forward dependency checks**
+
+- PR #739 head `8dc0f4bc7d7057d98bd5dc40386c888bcf124106`, offline rights-validation run #42484153504: SUCCESS, **329 passed**, production `.pkl` guard PASS.
+- PR #741 head `93827b4442a65ef683631dd74fa517f6b4dc0c9e`, offline rights-validation run #42487475354: SUCCESS, **329 passed**, production `.pkl` guard PASS. This is not a live Original Forward source/quote/inference run.
+- #718 is closed/superseded by #720. Open #705/#699 are superseded/reference-only; do not merge them separately because #720 carries the consolidated shared download budget plus the refreshed rights gate.
+- #720 is Ready on main; #727 is Ready on #720. #728–#741 form the downstream privacy/forward/evaluator stack. #742–#745 are a separate quote/inference-gate stack based on #720. HUMAN-MERGE only.
+
+### Latest read-only pre-match data and runtime
+
+- The 2026-11-08 source capture [run #42479299556](https://github.com/MaksimBlud/football-ai/actions/runs/42479299556) succeeded: 10 historical CSVs / 3,900 matches plus one current-season CSV / 100 completed prior-day rows; 11 files total; feature-input gate 100; zero paid calls and zero Supabase writes.
+- Source artifact ID `13617155063`; ZIP SHA-256 `5395ff50d5e312f395b4f76e9cdf63fcb2a71ab831e07fd24cb3418602ad3af6`.
+- Current-form forward [run #42479367957](https://github.com/MaksimBlud/football-ai/actions/runs/42479367957) verified the exact source artifact SHA, parent run and source observation time (43 seconds old), but `quotes_seen=0`, `v2_current_form_shadow_captured=0`; no target outcomes read/scored.
+- Free diagnostic [run #42484124054](https://github.com/MaksimBlud/football-ai/actions/runs/42484124054) passed its 53 offline tests and public-only/no-paid preflight, then failed on a 30-second HTTPS ReadTimeout from `www.football-data.co.uk`; no diagnostic JSON/artifact was produced.
+- Read-only `odds_snapshots` aggregate at 2026-11-08 approximately 15:47 UTC: Serie A 625 total rows, 620 strictly pre-kickoff across 63 events, latest strictly pre-kickoff snapshot 2026-10-13 14:48:53 UTC; zero new strictly pre-kickoff rows in seven days and zero future events with an already-saved pre-kickoff quote. The same seven-day new-pre-match count was zero for every other tracked league. No score/result columns were selected.
+- Therefore there is still no live quote to score and no new prospective V2 forecast.
+
+### Binding rights/privacy and Supabase security blockers
+
+- The repository is public. November 8 Actions artifacts were uploaded by current main before the private-storage PR stack was integrated. Their SHA proves integrity, not confidentiality; ZIPs were not downloaded/opened.
+- The Football-Data rights manifest still has `authorization=null`, `provider_issued_ai_inference_license=false`, and `research_inference_scope=NONE_PENDING_SCOPE_CLARIFICATION`. The new rights tests are synthetic only; they do not grant permission or execute live inference.
+- Supabase read-only schema advisory: RLS is disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. No DDL was run. Enabling RLS without designed policies can block the application; handle separately with owner review.
+- No source/quote writes, Supabase writes/DDL, paid provider calls, protected outcome reads, model refit, threshold tuning, production `.pkl` changes, promotion, schedule changes or main updates occurred in this run.
+
+
+
 
 ## 2026-10-18 — Original V2: preregistered current-form forward-only source and quote pipeline (runtime proof pending)
 
