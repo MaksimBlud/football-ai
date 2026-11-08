@@ -304,6 +304,7 @@ def test_successful_exact_source_workflow_and_prequote_completion_required():
         ({"status":"in_progress"}, "verified original V2 collector"),
         ({"event":"workflow_run"}, "verified original V2 collector"),
         ({"event":"push"}, "verified original V2 collector"),
+        ({"updated_at":"2026-10-14T06:00:00Z"}, "not successfully finished before quote"),
         ({"updated_at":"2026-10-14T06:01:00Z"}, "not successfully finished before quote"),
         ({"updated_at":"2026-10-14T06:00:00Z"}, "not successfully finished before quote"),
     ]:
