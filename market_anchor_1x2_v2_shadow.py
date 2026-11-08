@@ -244,10 +244,6 @@ def write_candidate_artifact(frame: pd.DataFrame, output: Path) -> dict:
     raise PermissionError(
         "original MARKET_ANCHOR_1X2_V2 candidate is frozen; writing a refit artifact is disabled"
     )
-    artifact = fit_candidate_artifact(frame)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(artifact, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    return artifact
 
 
 def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
