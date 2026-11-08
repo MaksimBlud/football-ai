@@ -1,3 +1,56 @@
+# Continuity update — 2026-11-08 — Research Brain run 11 final exact-head audit
+
+This addendum is based on fresh GitHub main/PR reads, exact GitHub Actions job logs, and read-only Supabase metadata/odds aggregates. It updates this existing documentation PR only; it does not change main or any runtime behavior.
+
+## Baseline and frozen V2
+
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; `PROJECT_CONTINUITY.md` on main is still the older 2026-10-18 entry. This PR #740 is still open and is the only continuity update branch being maintained.
+- Frozen candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 3,799 training rows through 2026-06-30; original 19-feature order and original weights/scaler/imputer unchanged.
+- `active_lambda=0`; `shadow_lambda=1` research-only; stability gate FAILED; automatic promotion false.
+
+## New exact-head direct-inference / freeze PRs
+
+All listed PRs remain open and are not active on main. Their checks are offline/synthetic CI, not live inference or model-quality evidence.
+
+- **#746** — guard the public 19-feature manifest builder and standalone CLI before candidate/history/quote access. Exact HEAD `80e226a14bde226afad2711d10b5c589e8c7c388`; run #42500360760 SUCCESS, 349 passed under Python 3.11 and 3.12.
+- **#748** — guard direct `predict_shadow_residual()`. Exact HEAD `34be143c9460c5214791c6c15e092708fe08ef3d`; runs #42500942392 and #42500942428 SUCCESS; 11 targeted tests and 360 frozen-V2 tests under each Python version.
+- **#749** — guard direct `predict_candidate()` before residual weights/features are read. Exact HEAD `66d09810f4239486452d4014e6e7da03c066459b`; runs #42501779681 and #42501779789 SUCCESS; 12 targeted tests and 361 frozen-V2 tests under each Python version.
+- **#750** — guard direct `_artifact_residual_logits()` and disable direct refit/write APIs. Exact HEAD `6487283044c231cf678f770293a452b560f509df`; runs #42501979671 and #42501979740 SUCCESS; 14 targeted tests and 363 frozen-V2 tests under each Python version.
+- **#751** — remove V1 fitting/preparation helper re-exports from the V2 namespace and remove the dormant refit implementation/fingerprint helper. Its exact base for #754 is `afa38aff86fdb60b5a9104f17a82633f954f9e1d`.
+- **#752** — repair the original-forward workflow's missing shell continuation so rights/privacy test paths are actual pytest arguments. Exact HEAD `9b86cff7985f569016081367b8c3657e9d798213`; push and PR runs #42512766311/#42512771879 SUCCESS, 330 passed in each run. Stacked on #739.
+- **#753** — fail closed if the GitHub privacy response has no exact `url`. Exact HEAD `40d4980b76834a17a0c455945a9d16809a48d980`; run #42517796143 SUCCESS, 385 passed under Python 3.11 and 3.12. Stacked on #727.
+- **#754** — remove unreachable writer statements after the frozen-artifact `PermissionError` and add an AST regression proving both refit/write functions contain only the fail-closed stub. Exact HEAD `55b120afdbfe06885e7e4323a4932d337565e074`; runs #42523164631/#42523164731 SUCCESS, 16 targeted tests and 365 frozen-V2 tests under each Python version; `pip check` and production-`.pkl` diff guards passed. Stacked on #751.
+
+The #742–#745 quote/inference stack already recorded above remains separate and based on #720. Preserve HUMAN-MERGE and rebase/revalidate every dependent stack on fresh main after its manual predecessors; no merge or main update occurred.
+
+## Latest verified runtime and source-before-quote state
+
+- Current-form Source Capture run #42479299556 (2026-11-08 12:14 UTC) succeeded. It passed the metadata-only feature-input gate at 100 canonical unique completed fixtures, captured 10 historical CSVs / 3,900 matches plus one current 2026/27 CSV / 100 completed prior-day rows (11 files total), with zero paid calls and zero Supabase writes.
+- Source artifact #13617155063, ZIP SHA-256 `5395ff50d5e312f395b4f76e9cdf63fcb2a71ab831e07fd24cb3418602ad3af6`.
+- Current-form Forward run #42493688915 (2026-11-08 15:13 UTC) re-verified that exact artifact SHA and successful parent run; source age at verification was 10,706 seconds. It found `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `target_outcomes_read=false`, and `target_outcomes_scored=false`; no paid calls or production/Supabase writes.
+- Original old-season Forward run #42492484513 (2026-11-08 14:59 UTC) passed 71 tests, verified 3,800 historical matches / 10 old-season files, but found `future_quotes_checked=0`, `quotes_seen=0`, and zero diagnostic previews. It did not generate a forecast.
+- Source-before-quote provenance is verified for the source archive and parent workflow; no actual quote existed, so no source-before-quote forecast pair was created.
+
+## Fresh read-only Supabase aggregates
+
+- `public.odds_snapshots`: 3,966 total rows; 3,915 strictly pre-kickoff; 51 at/after kickoff.
+- Strictly pre-kickoff rows in the last seven days: 0. Future events with a saved strictly pre-kickoff quote: 0.
+- Latest Serie A strictly pre-kickoff quote remains 2026-10-13 14:48:53 UTC.
+- Metadata-only `public.league_finished_results` query for `SERIE_A` / `2026-2027`, selecting only distinct `match_date,home_team,away_team`, returned 103 identities from 2026-08-22 through 2026-11-02. Source-capture canonicalization/alias handling yielded 100 identities at its 2026-11-08 run. Neither count is the prospective forecast cohort.
+- Prospective eligible forecasts remain 0/30. No target outcome/result/score fields were selected in this audit.
+
+## Rights, privacy, and security blockers
+
+- The current official Football-Data page states that the free data are intended for private individuals and not commercial or AI data-training products using automated bots/scrapers/AI. It does not expressly resolve the narrow frozen-model inference scope. The repository manifest conservatively records `research_inference_permitted=false`, `provider_issued_ai_inference_license=false`, and `authorization=null`; this is an internal fail-closed interpretation, not a claim that the page explicitly bans every form of noncommercial inference.
+- Repository visibility remains public. The November 8 source/forward artifacts were uploaded by current main before the private-storage PRs; SHA proves integrity, not confidentiality. Do not initiate more source capture until the rights/privacy gates are integrated and the owner has resolved repository privacy.
+- Supabase advisory remains: RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. No DDL was run; enabling RLS without designed policies may break application access.
+
+## Binding conclusion
+
+The frozen candidate and code contracts are intact, and the offline CI coverage has expanded. There is still no qualifying fresh pre-kickoff quote, no prospective V2 forecast, no 30/30 completed forecast gate, and no Brier/LogLoss evidence. Do not claim V2 beats the market. No target outcomes, paid provider calls, Supabase writes/DDL, production `.pkl` changes, schedule changes, auto-promotion, or main merges occurred in this update.
+
+---
+
 # Football AI — Project Continuity
 
 ## 2026-11-08 — Current main, real forward runs, and unresolved rights/privacy gates
