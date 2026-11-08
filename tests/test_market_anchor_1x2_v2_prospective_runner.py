@@ -255,13 +255,17 @@ def test_live_supabase_market_only_runner_does_not_read_results_below_30(monkeyp
     )
     client = _ExactOutcomeClient([])
 
-    report = runner.evaluate_live_market_only_from_supabase(client, rows)
+    outcome_read_state = {}
+    report = runner.evaluate_live_market_only_from_supabase(
+        client, rows, outcome_read_state=outcome_read_state
+    )
 
     assert report["status"] == "OUTCOME_READ_GATE_CLOSED"
     assert report["eligible_completed_forecasts"] == 29
     assert report["target_outcomes_read"] is False
     assert client.result_query_count == 0
     assert client.select_calls == []
+    assert outcome_read_state["called"] is False
 
 
 def test_live_supabase_market_only_runner_reads_only_exact_identity_and_result_after_30(monkeypatch):
@@ -307,8 +311,11 @@ def test_live_supabase_market_only_runner_reads_only_exact_identity_and_result_a
                 "persisted_at_utc": _persisted_after_kickoff(row),
             })
     client = _ExactOutcomeClient(outcome_rows)
+    outcome_read_state = {}
 
-    report = runner.evaluate_live_market_only_from_supabase(client, rows)
+    report = runner.evaluate_live_market_only_from_supabase(
+        client, rows, outcome_read_state=outcome_read_state
+    )
 
     assert report["status"] == "EVALUATED_MARKET_ONLY_DIAGNOSTIC"
     assert report["scored_forecasts"] == 30
@@ -316,7 +323,71 @@ def test_live_supabase_market_only_runner_reads_only_exact_identity_and_result_a
     assert report["review_signal"] is False
     assert client.result_query_count == 30
     assert client.select_calls == ["match_date,home_team,away_team,result,persisted_at_utc"] * 30
+    assert outcome_read_state["called"] is True
 
+
+def test_exact_completed_outcome_reader_is_not_a_module_level_entrypoint():
+    assert not hasattr(runner, "_read_exact_completed_outcomes")
+
+
+def test_supabase_wrapper_runs_source_preflight_before_any_result_query(monkeypatch):
+    rows = _forecast_rows(30)
+    for row in rows:
+        row.pop("incumbent_1x2")
+        row.pop("incumbent_evidence")
+    identities = {
+        (row["match_date"], row["home_team"], row["away_team"])
+        for row in rows
+    }
+    gate_attestation = _gate_attestation(identities)
+    gate_seen = {"value": False}
+    preflight_seen = {"value": False}
+
+    def read_gate(_client):
+        gate_seen["value"] = True
+        return identities, gate_attestation
+
+    monkeypatch.setattr(runner, "read_completed_fixture_gate", read_gate)
+    outcome_rows = [
+        {
+            "league": "SERIE_A",
+            "season": "2026-2027",
+            "match_date": row["match_date"],
+            "home_team": row["home_team"],
+            "away_team": row["away_team"],
+            "result": "H",
+            "persisted_at_utc": _persisted_after_kickoff(row),
+        }
+        for row in rows
+    ]
+    client = _ExactOutcomeClient(outcome_rows)
+    original_table = client.table
+
+    def guarded_table(name):
+        assert gate_seen["value"] is True
+        assert preflight_seen["value"] is True
+        return original_table(name)
+
+    client.table = guarded_table
+
+    def source_preflight(received_identities, received_attestation):
+        assert gate_seen["value"] is True
+        assert received_identities == frozenset(identities)
+        assert received_attestation == gate_attestation
+        preflight_seen["value"] = True
+
+    outcome_read_state = {}
+    report = runner.evaluate_live_market_only_from_supabase(
+        client,
+        rows,
+        preflight=source_preflight,
+        outcome_read_state=outcome_read_state,
+    )
+
+    assert report["status"] == "EVALUATED_MARKET_ONLY_DIAGNOSTIC"
+    assert report["target_outcomes_read"] is True
+    assert client.result_query_count == 30
+    assert outcome_read_state["called"] is True
 
 
 @pytest.mark.parametrize("hours", [-1, 0])
