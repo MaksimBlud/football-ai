@@ -426,8 +426,16 @@ def main() -> None:
     )
     args = p.parse_args()
     if args.preflight_only:
-        # This path reads only existing odds_snapshots metadata.
-        # It is not Football-Data access, feature construction, or model inference.
+        # Rights must be checked before even reading saved quote metadata.
+        # This path still performs no Football-Data access, features, or inference.
+        try:
+            require_personal_research_inference_scope()
+        except PermissionError as exc:
+            report = write_research_scope_blocked_report(
+                args.output, "SERIE_A_V2_FREE_REAL_QUOTE_DIAGNOSTIC", str(exc)
+            )
+            print(json.dumps(report, sort_keys=True))
+            return
         from database import supabase
         preflight_now = datetime.now(timezone.utc)
         saved_quotes = fetch_saved_upcoming_serie_a_quotes(supabase, now=preflight_now)
