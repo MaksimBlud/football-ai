@@ -51,6 +51,46 @@ permissions:
   contents: read
 
 jobs:
+  # Code pushes run only offline regressions; the live preview below excludes push.
+  validate-current-form-forward:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: .
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install pinned offline V2 dependencies
+        run: python -m pip install -r requirements-v2-research-py312.lock
+      - name: Compile current-form forward and frozen V2 dependencies
+        run: |
+          python -m py_compile serie_a_v2_current_form_source_capture.py serie_a_v2_current_form_forward_capture.py serie_a_v2_asof_feature_manifest.py serie_a_v2_frozen_shadow_preview.py serie_a_v2_live_diagnostic_report.py serie_a_v2_prequote_source_archive_gate.py historical_football_signal_lab.py serie_a_runtime_config.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py market_anchor_v2_source_rights.py market_anchor_v2_source_capture_rights.py market_anchor_v2_artifact_privacy.py
+      - name: Run offline current-form source and forward regressions
+        run: |
+          python -m pytest -q \
+            tests/test_serie_a_v2_current_form_source_capture.py \
+            tests/test_serie_a_v2_current_form_forward_capture.py \
+            tests/test_serie_a_v2_asof_feature_manifest.py \
+            tests/test_serie_a_v2_atalanta_alias.py \
+            tests/test_serie_a_v2_frozen_shadow_preview.py \
+            tests/test_serie_a_v2_prequote_source_archive_gate.py \
+            tests/test_serie_a_v2_live_diagnostic_report.py \
+            tests/test_historical_football_signal_lab.py \
+            tests/test_serie_a_v2_manual_quote_trigger_contract.py \
+            tests/test_serie_a_v2_current_form_dependency_triggers.py \
+            tests/test_serie_a_v2_current_form_source_workflow_contract.py \
+            tests/test_market_anchor_v2_source_rights.py \
+            tests/test_market_anchor_v2_source_capture_rights.py \
+            tests/test_market_anchor_v2_artifact_privacy.py \
+            tests/test_serie_a_v2_public_source_download_budget.py
+
   current-form-forward-preview:
     if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && ((github.event.workflow_run.name == 'Serie A V2 Current-Form Source Capture' && (github.event.workflow_run.event == 'schedule' || github.event.workflow_run.event == 'workflow_dispatch')) || (github.event.workflow_run.name == 'Serie A Odds Snapshots' && github.event.workflow_run.event == 'workflow_dispatch')))) }}
     runs-on: ubuntu-latest
