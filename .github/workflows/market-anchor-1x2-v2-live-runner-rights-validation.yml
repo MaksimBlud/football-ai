@@ -12,6 +12,7 @@ on:
       - research/v2-live-diagnostic-source-private-gate-stacked-on-735-20261108-run11
       - research/v2-evaluation-artifact-discovery-private-gate-stacked-on-736-20261108-run11
       - research/v2-internal-archive-downloader-private-gate-stacked-on-737-20261108-run11
+      - research/v2-original-forward-source-capture-rights-triggers-stacked-on-738-20261108-run11
     paths:
       - "requirements-v2-research-py312.lock"
       - "market_anchor_1x2_v2_prospective_runner.py"
@@ -41,7 +42,9 @@ on:
       - "research/source_rights/football_data_co_uk.json"
       - "tests/test_market_anchor_1x2_v2_prospective_runner.py"
       - "tests/test_market_anchor_1x2_v2_prospective_evaluation_workflow.py"
-      - "tests/test_market_anchor_1x2_v2_forward_artifact_adapter.py"
+      - "tests/test_market_anchor_1x2_v2_forward_artifact_adapter.py tests/test_serie_a_v2_manual_quote_trigger_contract.py"
+      - ".github/workflows/serie-a-v2-forward-preview.yml"
+      - "tests/test_serie_a_v2_manual_quote_trigger_contract.py"
       - ".github/workflows/market-anchor-1x2-v2-live-runner-rights-validation.yml"
   pull_request:
     branches:
@@ -85,6 +88,8 @@ on:
       - "tests/test_market_anchor_1x2_v2_prospective_runner.py"
       - "tests/test_market_anchor_1x2_v2_prospective_evaluation_workflow.py"
       - "tests/test_market_anchor_1x2_v2_forward_artifact_adapter.py"
+      - ".github/workflows/serie-a-v2-forward-preview.yml"
+      - "tests/test_serie_a_v2_manual_quote_trigger_contract.py"
       - ".github/workflows/market-anchor-1x2-v2-live-runner-rights-validation.yml"
 
 permissions:
