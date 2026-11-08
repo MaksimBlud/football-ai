@@ -621,7 +621,7 @@ def test_free_diagnostic_rights_and_quote_preflight_precede_budget_and_source_ac
 
     workflow = Path(".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml").read_text(encoding="utf-8")
     quote_step = workflow.index("- name: Preflight saved future pre-kickoff quotes (metadata only)")
-    rights_step = workflow.index("- name: Preflight frozen V2 source rights before source access")
+    rights_step = workflow.index("- name: Preflight frozen V2 source rights before source/quote access")
     final_quote_step = workflow.index("- name: Recheck saved future pre-kickoff quotes immediately before budget reservation")
     budget_step = workflow.index("- name: Check shared public-source download budget")
     marker_step = workflow.index("- name: Upload shared public-source download attempt marker")
@@ -632,6 +632,11 @@ def test_free_diagnostic_rights_and_quote_preflight_precede_budget_and_source_ac
     assert "steps.quote_preflight.outputs.eligible_quote_rows != '0'" in workflow[final_quote_step:budget_step]
     assert "steps.final_quote_preflight.outputs.eligible_quote_rows != '0'" in workflow[budget_step:source_step]
     assert "steps.rights_preflight.outputs.allowed == 'true'" in workflow[budget_step:source_step]
+    rights_block = workflow[rights_step:quote_step]
+    assert "require_personal_research_inference_scope()" in rights_block
+    assert "require_private_repository_for_source_artifacts()" in rights_block
+    assert "steps.quote_preflight.outputs.eligible_quote_rows != ''" in workflow[final_quote_step:budget_step]
+    assert "steps.final_quote_preflight.outputs.eligible_quote_rows != ''" in workflow[budget_step:source_step]
 
 
 
