@@ -38,6 +38,10 @@ def evaluate_live_prospective_cohort(
     enforces the 30 eligible completed primary-event gate and the separately
     pinned non-legacy incumbent requirement before it can invoke outcome_loader.
     """
+    # This live runner is importable independently of the CLI. Enforce the
+    # provider-rights boundary before its first Supabase identity read.
+    require_personal_research_inference_scope()
+
     if not callable(outcome_loader):
         raise ValueError("outcome_loader must be a lazy callable, not preloaded outcomes")
 
