@@ -40,10 +40,34 @@ REQUIRED_SOURCE_AUDIT_PATHS = {
 }
 
 
-def _source_push_paths(workflow_text: str) -> set[str]:
+REQUIRED_FORWARD_AUDIT_PATHS = {
+    "requirements-v2-research-py312.lock",
+    "serie_a_v2_current_form_forward_capture.py",
+    "serie_a_v2_current_form_source_capture.py",
+    "market_anchor_v2_source_capture_rights.py",
+    "market_anchor_v2_source_rights.py",
+    "market_anchor_v2_artifact_privacy.py",
+    "research/source_rights/football_data_co_uk.json",
+    "research/SERIE_A_V2_SOURCE_CAPTURE_ONLY_SCOPE_20261107.md",
+    "tests/test_market_anchor_v2_source_capture_rights.py",
+    "tests/test_market_anchor_v2_source_rights.py",
+    "tests/test_market_anchor_v2_artifact_privacy.py",
+    "tests/test_serie_a_v2_current_form_source_workflow_contract.py",
+    "tests/test_serie_a_v2_public_source_download_budget.py",
+    "tests/test_serie_a_v2_current_form_dependency_triggers.py",
+    "tests/test_serie_a_v2_current_form_forward_capture.py",
+    "tests/test_serie_a_v2_current_form_source_capture.py",
+}
+
+
+def _push_paths(workflow_text: str) -> set[str]:
     lines = workflow_text.splitlines()
     push_index = lines.index("  push:")
-    end_index = lines.index("concurrency:")
+    end_candidates = [
+        index for index, line in enumerate(lines)
+        if index > push_index and line in {"  workflow_run:", "concurrency:"}
+    ]
+    end_index = min(end_candidates)
     push_block = lines[push_index + 1:end_index]
     paths_index = push_block.index("    paths:")
     paths = set()
@@ -57,7 +81,7 @@ def _source_push_paths(workflow_text: str) -> set[str]:
 
 def test_current_form_source_capture_reaudits_all_frozen_v2_dependencies():
     workflow = SOURCE_WORKFLOW.read_text(encoding="utf-8")
-    actual = _source_push_paths(workflow)
+    actual = _push_paths(workflow)
     missing = REQUIRED_SOURCE_AUDIT_PATHS - actual
     assert not missing, f"frozen V2 dependency changes would skip source audit: {sorted(missing)}"
 
@@ -119,6 +143,16 @@ def test_diagnostic_refresh_revalidates_live_feature_gate_before_reuse():
     assert '"metadata_fields_read": ["match_date", "home_team", "away_team"]' in refresh
     assert '"target_outcomes_read": False' in refresh
     assert "steps.source_refresh.outputs.capture != 'false'" in workflow
+
+def test_current_form_forward_reaudits_transitive_source_rights_dependencies():
+    workflow = FORWARD_WORKFLOW.read_text(encoding="utf-8")
+    actual = _push_paths(workflow)
+    missing = REQUIRED_FORWARD_AUDIT_PATHS - actual
+    assert not missing, (
+        "current-form forward push validation would miss transitive source/privacy dependencies: "
+        f"{sorted(missing)}"
+    )
+
 
 def test_current_form_forward_push_trigger_has_secret_free_offline_validation():
     workflow = FORWARD_WORKFLOW.read_text(encoding="utf-8")
