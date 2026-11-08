@@ -29,27 +29,40 @@ def evaluate_live_prospective_cohort(
     client: Any,
     forecast_rows: Iterable[Mapping[str, Any]],
     outcome_loader: Callable[[frozenset[tuple[str, str, str]]], Mapping[tuple[str, str, str], str]],
+    *,
+    preflight: Callable[[frozenset[tuple[str, str, str]], Mapping[str, Any], tuple[Mapping[str, Any], ...]], Mapping[int, str]],
 ) -> dict[str, Any]:
-    """Evaluate using a fresh identity-only gate read and a lazy outcome loader.
+    """Evaluate only after identity, source-archive, and frozen outcome preflights.
 
-    This is the supported live orchestration path. It deliberately has no
-    parameters for caller-supplied completed identities, attestation, cutoff,
-    or preloaded outcomes. The gate reader samples its own current UTC clock
-    and selects only match_date/home_team/away_team. The pure evaluator then
-    enforces the 30 eligible completed primary-event gate and the separately
-    pinned non-legacy incumbent requirement before it can invoke outcome_loader.
+    This full-comparator entrypoint remains separately blocked until a frozen
+    non-legacy incumbent is pinned. It nevertheless requires the same verified
+    source artifact ID -> SHA-256 proof as the market-only path, so a future
+    protocol amendment cannot make this older entrypoint an unverified bypass.
+    The source callback receives one detached identity/forecast snapshot and
+    must complete before the pure evaluator can reach its lazy outcome loader.
     """
-    # This live runner is importable independently of the CLI. Enforce the
-    # provider-rights boundary before its first Supabase identity read.
+    # Enforce provider rights before the first Supabase identity-only read.
     require_personal_research_inference_scope()
 
     if not callable(outcome_loader):
         raise ValueError("outcome_loader must be a lazy callable, not preloaded outcomes")
+    if not callable(preflight):
+        raise ValueError("preflight must be a callable source/archive verifier")
 
+    rows = list(forecast_rows)
+    expected_source_shas = _expected_source_artifact_shas(rows)
     completed_identities, attestation = read_completed_fixture_gate(client)
+    frozen_identities = frozenset(completed_identities)
+    _validate_completed_fixture_gate_attestation(attestation, frozen_identities)
+
+    detached_attestation = MappingProxyType(deepcopy(dict(attestation)))
+    immutable_rows = tuple(MappingProxyType(deepcopy(dict(row))) for row in rows)
+    source_sha_proof = preflight(frozen_identities, detached_attestation, immutable_rows)
+    _validate_source_preflight_sha_proof(expected_source_shas, source_sha_proof)
+
     return evaluate_after_gate(
-        forecast_rows,
-        completed_identities,
+        rows,
+        frozen_identities,
         outcome_loader,
         completed_fixture_gate_attestation=attestation,
     )
