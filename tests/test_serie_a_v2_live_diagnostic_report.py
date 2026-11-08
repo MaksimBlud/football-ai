@@ -613,6 +613,15 @@ def test_free_diagnostic_jobs_run_original_forward_loader_pin_regression():
     assert "tests/test_serie_a_v2_forward_capture.py" in validation
     assert "serie_a_v2_forward_capture.py" in live
     assert "tests/test_serie_a_v2_forward_capture.py" in live
+    push_paths = workflow.split("    paths:", 1)[1].split("\n\nconcurrency:", 1)[0]
+    for path in (
+        "serie_a_v2_forward_capture.py",
+        "tests/test_serie_a_v2_forward_capture.py",
+        "tests/test_market_anchor_v2_source_rights.py",
+        "tests/test_serie_a_v2_current_form_source_workflow_contract.py",
+        "tests/test_serie_a_v2_current_form_dependency_triggers.py",
+    ):
+        assert f'"{path}"' in push_paths
 
 def test_quote_preflight_rejects_post_kickoff_snapshot():
     row = {**quote(), "snapshot_time_utc": "2026-10-19T19:01:00Z"}
