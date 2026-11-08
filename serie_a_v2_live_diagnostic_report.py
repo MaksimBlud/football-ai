@@ -25,7 +25,10 @@ from serie_a_v2_frozen_shadow_preview import (
     fetch_saved_upcoming_serie_a_quotes, parse_utc, shadow_preview,
 )
 from market_anchor_v2_source_rights import require_personal_research_inference_scope, write_research_scope_blocked_report
+from market_anchor_v2_source_capture_rights import require_personal_research_source_capture_scope
+from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
 
+REPOSITORY = "MaksimBlud/football-ai"
 PUBLIC_BASE = "https://www.football-data.co.uk/mmz4281"
 PAID_PROVIDER_REQUESTS = 0
 MAX_PUBLIC_SOURCE_FILES = len(SERIE_A_RUNTIME_CONFIG.historical_source.season_codes)
@@ -144,6 +147,10 @@ def _read_bounded_historical_csv_response(
 
 def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -> tuple[pd.DataFrame, list[dict]]:
     """Explicit, bounded configured public URLs; never odds API, never cache guess."""
+    # This public downloader is also imported by the current-form source runner.
+    # Keep source-only rights and private storage enforced for direct callers.
+    require_personal_research_source_capture_scope()
+    require_private_repository_for_source_artifacts(REPOSITORY)
     all_frames = []
     audit = []
     total_source_bytes = 0
@@ -436,6 +443,7 @@ def main() -> None:
             )
             print(json.dumps(report, sort_keys=True))
             return
+        require_private_repository_for_source_artifacts(REPOSITORY)
         from database import supabase
         preflight_now = datetime.now(timezone.utc)
         saved_quotes = fetch_saved_upcoming_serie_a_quotes(supabase, now=preflight_now)
@@ -450,6 +458,7 @@ def main() -> None:
         )
         print(json.dumps(report, sort_keys=True))
         return
+    require_private_repository_for_source_artifacts(REPOSITORY)
     from database import supabase
     now = datetime.now(timezone.utc)
     quotes = fetch_saved_upcoming_serie_a_quotes(supabase, now=now)

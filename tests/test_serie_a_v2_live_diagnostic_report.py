@@ -12,6 +12,24 @@ from serie_a_v2_live_diagnostic_report import (
 
 NOW = datetime(2026,10,13,15,1,tzinfo=timezone.utc)
 
+@pytest.fixture(autouse=True)
+def _allow_synthetic_source_rights_and_private_storage(monkeypatch):
+    monkeypatch.setattr(
+        report_module,
+        "require_personal_research_source_capture_scope",
+        lambda: {"source_capture_scope": "PRIVATE_NONCOMMERCIAL_RESEARCH_ARCHIVE_ONLY"},
+    )
+    monkeypatch.setattr(
+        report_module,
+        "require_private_repository_for_source_artifacts",
+        lambda *_args, **_kwargs: {
+            "repository": "MaksimBlud/football-ai",
+            "private": True,
+            "storage_policy": "PRIVATE_GITHUB_ACTIONS_ARTIFACTS",
+        },
+    )
+
+
 
 def history_fixture():
     rows = []
@@ -715,3 +733,88 @@ def test_main_skips_public_history_download_when_no_fresh_future_quotes(tmp_path
     assert report["target_outcomes_read"] is False
     assert report["supabase_writes"] == 0
     assert not raw_dir.exists()
+
+
+
+def test_public_history_fetch_blocks_source_rights_denial_before_http_or_output(monkeypatch, tmp_path):
+    calls = []
+
+    def deny_source_scope():
+        calls.append("source_rights")
+        raise PermissionError("source-only rights denied")
+
+    monkeypatch.setattr(report_module, "require_personal_research_source_capture_scope", deny_source_scope)
+    with pytest.raises(PermissionError, match="source-only rights denied"):
+        fetch_public_history(
+            get=lambda *args, **kwargs: calls.append(("http", args, kwargs)),
+            capture_dir=tmp_path / "sources",
+        )
+    assert calls == ["source_rights"]
+    assert not (tmp_path / "sources").exists()
+
+
+def test_public_history_fetch_blocks_public_storage_before_http_or_output(monkeypatch, tmp_path):
+    calls = []
+
+    def deny_private_storage(repository, token=None):
+        calls.append(("privacy", repository, token))
+        raise PermissionError("source archives require a private GitHub repository")
+
+    monkeypatch.setattr(
+        report_module, "require_private_repository_for_source_artifacts", deny_private_storage
+    )
+    with pytest.raises(PermissionError, match="require a private GitHub repository"):
+        fetch_public_history(
+            get=lambda *args, **kwargs: calls.append(("http", args, kwargs)),
+            capture_dir=tmp_path / "sources",
+        )
+    assert calls == [
+        ("privacy", "MaksimBlud/football-ai", None)
+    ]
+    assert not (tmp_path / "sources").exists()
+
+
+@pytest.mark.parametrize("preflight_only", [False, True])
+def test_live_diagnostic_main_blocks_public_storage_before_saved_quote_reads(
+    monkeypatch, tmp_path, preflight_only
+):
+    import sys
+    from types import SimpleNamespace
+
+    calls = []
+    monkeypatch.setattr(
+        report_module,
+        "require_personal_research_inference_scope",
+        lambda: calls.append("inference_rights"),
+    )
+
+    def deny_private_storage(repository, token=None):
+        calls.append(("privacy", repository, token))
+        raise PermissionError("source archives require a private GitHub repository")
+
+    monkeypatch.setattr(
+        report_module, "require_private_repository_for_source_artifacts", deny_private_storage
+    )
+    monkeypatch.setitem(sys.modules, "database", SimpleNamespace(supabase=object()))
+    monkeypatch.setattr(
+        report_module,
+        "fetch_saved_upcoming_serie_a_quotes",
+        lambda *args, **kwargs: calls.append("quotes"),
+    )
+    argv = [
+        "serie_a_v2_live_diagnostic_report.py",
+        "--output", str(tmp_path / "diagnostic.json"),
+        "--raw-source-dir", str(tmp_path / "sources"),
+    ]
+    if preflight_only:
+        argv.append("--preflight-only")
+    monkeypatch.setattr(sys, "argv", argv)
+
+    with pytest.raises(PermissionError, match="require a private GitHub repository"):
+        report_module.main()
+
+    assert calls == [
+        "inference_rights",
+        ("privacy", "MaksimBlud/football-ai", None),
+    ]
+    assert not (tmp_path / "diagnostic.json").exists()
