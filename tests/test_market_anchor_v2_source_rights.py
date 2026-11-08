@@ -316,9 +316,8 @@ def test_live_v2_entrypoints_check_research_scope_before_external_reads():
             rights_guard = preflight.find("require_personal_research_inference_scope()")
             assert rights_guard >= 0
             assert "fetch_public_history(" not in preflight
-            pattern = "    try:\\n        require_personal_research_inference_scope()"
-            first_guard = main.index(pattern, preflight_start)
-            normal_start = main.index(pattern, first_guard + len(pattern))
+            normal_pattern = "    try:\\n        require_personal_research_inference_scope()"
+            normal_start = main.index(normal_pattern, preflight_db)
             normal = main[normal_start:]
             guard = normal.find("require_personal_research_inference_scope()")
             assert guard >= 0
