@@ -633,3 +633,23 @@ def test_original_forward_rights_blob_pins_match_exact_repository_bytes():
     assert EXPECTED_SOURCE_LOADER_BLOB_SHA1 == _repository_git_blob_sha1(
         root / SOURCE_LOADER_PATH
     )
+
+def test_source_archive_created_at_equal_to_quote_is_not_prequote_source():
+    _, metadata = make_source_archive()
+    quote_time = "2026-10-14T06:00:00Z"
+    metadata[0]["created_at"] = parse_utc(quote_time)
+    calls = []
+
+    report = prepare_forward_capture(
+        [quote(quote_time)],
+        metadata,
+        as_of_utc=NOW,
+        load_archive=lambda artifact_id: calls.append(("archive", artifact_id),
+        verify_parent_run=lambda archive, at: calls.append(("parent", archive["artifact_id"])),
+    )
+
+    assert calls == []
+    assert report["v2_diagnostic_previews_captured"] == 0
+    assert report["blocked_no_prior_source"] == 1
+    assert report["rows"][0]["status"] == "NO_EARLIER_SOURCE_ARCHIVE"
+    assert report["rows"][0]["v2_preview"] is None
