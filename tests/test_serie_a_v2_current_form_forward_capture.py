@@ -1297,6 +1297,9 @@ def test_current_form_forward_source_and_rights_blob_pins_match_exact_repository
     assert forward_capture_module.EXPECTED_HISTORICAL_SOURCE_LOADER_BLOB_SHA1 == _repository_git_blob_sha1(
         root / forward_capture_module.HISTORICAL_SOURCE_LOADER_PATH
     )
+    assert forward_capture_module.EXPECTED_SOURCE_RIGHTS_MANIFEST_BLOB_SHA1 == _repository_git_blob_sha1(
+        root / forward_capture_module.SOURCE_RIGHTS_MANIFEST_PATH
+    )
     assert forward_capture_module.EXPECTED_SOURCE_RIGHTS_HELPER_BLOB_SHA1 == _repository_git_blob_sha1(
         root / forward_capture_module.SOURCE_RIGHTS_HELPER_PATH
     )
