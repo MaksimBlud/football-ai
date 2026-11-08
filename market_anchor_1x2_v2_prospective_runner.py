@@ -124,92 +124,6 @@ def _raw_team_aliases(canonical: str) -> list[str]:
     return sorted(aliases)
 
 
-def _read_exact_completed_outcomes(
-    client: Any,
-    identities: frozenset[tuple[str, str, str]],
-    kickoff_by_identity: Mapping[tuple[str, str, str], str],
-    *,
-    observed_at_utc: str,
-) -> dict[tuple[str, str, str], str]:
-    """Read H/D/A labels for exact gated identities, never scores or extra fixtures.
-
-    This function is intended only as the lazy callback passed to the market-only
-    evaluator. Its caller must not invoke it before the evaluator opens the
-    30-eligible-completed-prospective-forecast gate.
-    """
-    from datetime import date
-
-    if not isinstance(identities, frozenset) or not identities:
-        raise ValueError("outcome loader requires a non-empty frozen set of exact fixture identities")
-    if not isinstance(kickoff_by_identity, Mapping):
-        raise ValueError("outcome loader requires forecast-bound kickoff timestamps")
-    observed_at = evaluator._utc(observed_at_utc, "evaluation observed_at_utc")
-    outcomes: dict[tuple[str, str, str], str] = {}
-    selected_columns = "match_date,home_team,away_team,result,persisted_at_utc"
-    for identity in sorted(identities):
-        if not isinstance(identity, tuple) or len(identity) != 3:
-            raise ValueError("outcome loader received a malformed fixture identity")
-        match_date, home, away = identity
-        try:
-            parsed_date = date.fromisoformat(match_date)
-        except (TypeError, ValueError) as exc:
-            raise ValueError("outcome loader fixture date must be canonical ISO form") from exc
-        if parsed_date.isoformat() != match_date:
-            raise ValueError("outcome loader fixture date must be canonical ISO form")
-        canonical_home = _canonical_team(home)
-        canonical_away = _canonical_team(away)
-        if canonical_home != home or canonical_away != away or home == away:
-            raise ValueError("outcome loader identities must already be canonical V2 fixture keys")
-        kickoff_value = kickoff_by_identity.get(identity)
-        if kickoff_value is None:
-            raise ValueError("gated fixture has no matching frozen forecast kickoff timestamp")
-        kickoff = evaluator._utc(kickoff_value, "kickoff_utc")
-        if kickoff.date().isoformat() != match_date:
-            raise ValueError("forecast kickoff UTC date does not match gated fixture identity")
-
-        response = (
-            client.table("league_finished_results")
-            .select(selected_columns)
-            .eq("league", SERIE_A_RUNTIME_CONFIG.identity.identifier)
-            .eq("season", SERIE_A_RUNTIME_CONFIG.finished_results_source.season)
-            .eq("match_date", match_date)
-            .in_("home_team", _raw_team_aliases(home))
-            .in_("away_team", _raw_team_aliases(away))
-            .execute()
-        )
-        rows = getattr(response, "data", None)
-        if not isinstance(rows, list) or not rows:
-            raise ValueError(f"no completed outcome row found for gated fixture {identity!r}")
-        labels: set[str] = set()
-        for row in rows:
-            if not isinstance(row, Mapping) or set(row) != {
-                "match_date", "home_team", "away_team", "result", "persisted_at_utc"
-            }:
-                raise ValueError("outcome query returned fields outside the exact identity+result allowlist")
-            raw_date = row["match_date"]
-            if isinstance(raw_date, date):
-                raw_date = raw_date.isoformat()
-            if raw_date != match_date:
-                raise ValueError("outcome query returned a different fixture date")
-            raw_home = _canonical_team(row["home_team"])
-            raw_away = _canonical_team(row["away_team"])
-            if (raw_date, raw_home, raw_away) != identity:
-                raise ValueError("outcome query returned a different canonical fixture identity")
-            persisted_at = evaluator._utc(row["persisted_at_utc"], "persisted_at_utc")
-            if persisted_at <= kickoff:
-                raise ValueError("outcome persisted_at_utc must be strictly after kickoff_utc")
-            if persisted_at > observed_at:
-                raise ValueError("outcome persisted_at_utc cannot be later than evaluation observation time")
-            label = row["result"]
-            if not isinstance(label, str) or label not in {"H", "D", "A"}:
-                raise ValueError("outcome query returned a malformed H/D/A result label")
-            labels.add(label)
-        if len(labels) != 1:
-            raise ValueError("duplicate raw aliases disagree on the completed fixture result")
-        outcomes[identity] = next(iter(labels))
-    return outcomes
-
-
 def _forecast_kickoff_lookup(
     forecast_rows: Iterable[Mapping[str, Any]],
 ) -> tuple[tuple[Mapping[str, Any], ...], dict[tuple[str, str, str], str]]:
@@ -239,23 +153,112 @@ def evaluate_live_market_only_from_supabase(
     forecast_rows: Iterable[Mapping[str, Any]],
     *,
     observed_at_utc: str | None = None,
+    preflight: Callable[[frozenset[tuple[str, str, str]], Mapping[str, Any]], None] | None = None,
+    outcome_read_state: dict[str, bool] | None = None,
 ) -> dict[str, Any]:
-    """Run market-vs-shadow evaluation with an internally lazy, exact-row outcome reader.
+    """Run market-vs-shadow evaluation with a gate-local exact-row outcome reader.
 
-    The only Supabase read before the frozen gate is the identity-only reader
-    used by evaluate_live_market_only_prospective_cohort. The result-column
-    query is encapsulated in a callback and is invoked only after 30 eligible
-    completed prospective forecasts pass the evaluator gate.
+    The result-column query exists only as a nested lazy callback. There is no
+    importable module-level outcome reader that can be called around the frozen
+    30-identity / 30-eligible-forecast gate. The optional state sink is audit
+    metadata only; it cannot initiate a read.
     """
     rows, kickoff_by_identity = _forecast_kickoff_lookup(forecast_rows)
     observed = observed_at_utc or datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    # Validate before the identity gate or any possible outcome query.
     evaluator._utc(observed, "evaluation observed_at_utc")
-    return evaluate_live_market_only_prospective_cohort(
-        client,
-        rows,
-        lambda identities: _read_exact_completed_outcomes(
-            client, identities, kickoff_by_identity, observed_at_utc=observed
-        ),
-    )
+
+    state = {"called": False}
+    if outcome_read_state is not None:
+        if not isinstance(outcome_read_state, dict):
+            raise ValueError("outcome_read_state must be a mutable dictionary when supplied")
+        outcome_read_state["called"] = False
+
+    def load_exact_completed_outcomes_after_gate(
+        identities: frozenset[tuple[str, str, str]],
+    ) -> dict[tuple[str, str, str], str]:
+        # This closure is passed only to the pure evaluator, which invokes it
+        # after the frozen metadata-identity and eligible-forecast gates pass.
+        state["called"] = True
+        if outcome_read_state is not None:
+            outcome_read_state["called"] = True
+
+        from datetime import date
+
+        if not isinstance(identities, frozenset) or not identities:
+            raise ValueError("outcome loader requires a non-empty frozen set of exact fixture identities")
+        outcomes: dict[tuple[str, str, str], str] = {}
+        selected_columns = "match_date,home_team,away_team,result,persisted_at_utc"
+        for identity in sorted(identities):
+            if not isinstance(identity, tuple) or len(identity) != 3:
+                raise ValueError("outcome loader received a malformed fixture identity")
+            match_date, home, away = identity
+            try:
+                parsed_date = date.fromisoformat(match_date)
+            except (TypeError, ValueError) as exc:
+                raise ValueError("outcome loader fixture date must be canonical ISO form") from exc
+            if parsed_date.isoformat() != match_date:
+                raise ValueError("outcome loader fixture date must be canonical ISO form")
+            canonical_home = _canonical_team(home)
+            canonical_away = _canonical_team(away)
+            if canonical_home != home or canonical_away != away or home == away:
+                raise ValueError("outcome loader identities must already be canonical V2 fixture keys")
+            kickoff_value = kickoff_by_identity.get(identity)
+            if kickoff_value is None:
+                raise ValueError("gated fixture has no matching frozen forecast kickoff timestamp")
+            kickoff = evaluator._utc(kickoff_value, "kickoff_utc")
+            if kickoff.date().isoformat() != match_date:
+                raise ValueError("forecast kickoff UTC date does not match gated fixture identity")
+
+            response = (
+                client.table("league_finished_results")
+                .select(selected_columns)
+                .eq("league", SERIE_A_RUNTIME_CONFIG.identity.identifier)
+                .eq("season", SERIE_A_RUNTIME_CONFIG.finished_results_source.season)
+                .eq("match_date", match_date)
+                .in_("home_team", _raw_team_aliases(home))
+                .in_("away_team", _raw_team_aliases(away))
+                .execute()
+            )
+            rows_for_fixture = getattr(response, "data", None)
+            if not isinstance(rows_for_fixture, list) or not rows_for_fixture:
+                raise ValueError(f"no completed outcome row found for gated fixture {identity!r}")
+            labels: set[str] = set()
+            for row in rows_for_fixture:
+                if not isinstance(row, Mapping) or set(row) != {
+                    "match_date", "home_team", "away_team", "result", "persisted_at_utc"
+                }:
+                    raise ValueError("outcome query returned fields outside the exact identity+result allowlist")
+                raw_date = row["match_date"]
+                if isinstance(raw_date, date):
+                    raw_date = raw_date.isoformat()
+                if raw_date != match_date:
+                    raise ValueError("outcome query returned a different fixture date")
+                raw_home = _canonical_team(row["home_team"])
+                raw_away = _canonical_team(row["away_team"])
+                if (raw_date, raw_home, raw_away) != identity:
+                    raise ValueError("outcome query returned a different canonical fixture identity")
+                persisted_at = evaluator._utc(row["persisted_at_utc"], "persisted_at_utc")
+                if persisted_at <= kickoff:
+                    raise ValueError("outcome persisted_at_utc must be strictly after kickoff_utc")
+                if persisted_at > evaluator._utc(observed, "evaluation observed_at_utc"):
+                    raise ValueError("outcome persisted_at_utc cannot be later than evaluation observation time")
+                label = row["result"]
+                if not isinstance(label, str) or label not in {"H", "D", "A"}:
+                    raise ValueError("outcome query returned a malformed H/D/A result label")
+                labels.add(label)
+            if len(labels) != 1:
+                raise ValueError("duplicate raw aliases disagree on the completed fixture result")
+            outcomes[identity] = next(iter(labels))
+        return outcomes
+
+    try:
+        return evaluate_live_market_only_prospective_cohort(
+            client,
+            rows,
+            load_exact_completed_outcomes_after_gate,
+            preflight=preflight,
+        )
+    finally:
+        if outcome_read_state is not None:
+            outcome_read_state["called"] = state["called"]
 
