@@ -177,9 +177,8 @@ def _download_archive_bytes(artifact_id: int, *, token: str, get=requests.get) -
         raise ValueError("invalid artifact id")
     url = f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip"
     if not token:
-
-    require_private_repository_for_source_artifacts(REPOSITORY, token)
         raise ValueError("GitHub token required")
+    require_private_repository_for_source_artifacts(REPOSITORY, token)
     response = get(url, headers={
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
