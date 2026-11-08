@@ -402,3 +402,26 @@ def test_cli_checks_research_scope_before_saved_quotes_and_inference(
 
     assert calls == ["rights", "saved_quotes", "inference"]
     assert json.loads(capsys.readouterr().out) == {"no_bet": True}
+
+
+def test_load_verified_original_denies_direct_model_access_before_candidate_file_read(monkeypatch):
+    import market_anchor_v2_source_rights as rights
+
+    def denied():
+        raise PermissionError("frozen inference scope unresolved")
+
+    class ForbiddenCandidatePath:
+        def read_text(self, *args, **kwargs):
+            pytest.fail("frozen candidate must not be opened before inference rights")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", denied)
+    monkeypatch.setattr(v2_preview, "FROZEN_FILE", ForbiddenCandidatePath())
+
+    with pytest.raises(PermissionError, match="scope unresolved"):
+        v2_preview.load_verified_original()
+
+
+def test_frozen_shadow_workflow_targets_the_candidate_loader_stack_base():
+    workflow = Path(".github/workflows/serie-a-frozen-v2-shadow-tests.yml").read_text(encoding="utf-8")
+    pull_request = workflow.split("  pull_request:\n", 1)[1].split("\npermissions:", 1)[0]
+    assert "research/v2-feature-manifest-inference-and-embargo-gate-stacked-on-745-20261108-run11" in pull_request
