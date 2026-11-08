@@ -613,3 +613,57 @@ def test_free_diagnostic_jobs_run_original_forward_loader_pin_regression():
     assert "tests/test_serie_a_v2_forward_capture.py" in validation
     assert "serie_a_v2_forward_capture.py" in live
     assert "tests/test_serie_a_v2_forward_capture.py" in live
+
+def test_quote_preflight_rejects_post_kickoff_snapshot():
+    row = {**quote(), "snapshot_time_utc": "2026-10-19T19:01:00Z"}
+    with pytest.raises(ValueError, match="market quote at or after kickoff"):
+        report_module.count_fresh_future_prematch_quote_rows([row], now=NOW)
+
+
+def test_quote_preflight_rejects_invalid_decimal_prices_before_source_download():
+    invalid_values = (None, True, 1.0, float("nan"), float("inf"), "not-a-price")
+    for key in ("home_odds", "draw_odds", "away_odds"):
+        for invalid in invalid_values:
+            row = {**quote(), key: invalid}
+            with pytest.raises(ValueError, match="invalid bookmaker decimal prices|missing bookmaker decimal prices"):
+                report_module.count_fresh_future_prematch_quote_rows([row], now=NOW)
+
+
+@pytest.mark.parametrize("field", ["snapshot_time_utc", "commence_time_utc"])
+def test_quote_preflight_rejects_offsetless_market_clocks(field):
+    row = {**quote(), field: "2026-10-13T15:00:00"}
+    with pytest.raises(ValueError, match="naive clock-time not allowed"):
+        report_module.count_fresh_future_prematch_quote_rows([row], now=NOW)
+
+
+def test_main_skips_public_history_download_when_no_fresh_future_quotes(tmp_path, monkeypatch):
+    import json
+    import sys
+    from types import SimpleNamespace
+
+    output = tmp_path / "report.json"
+    raw_dir = tmp_path / "raw"
+    monkeypatch.setattr(report_module, "require_personal_research_inference_scope", lambda: {})
+    monkeypatch.setitem(sys.modules, "database", SimpleNamespace(supabase=object()))
+    monkeypatch.setattr(
+        report_module, "fetch_saved_upcoming_serie_a_quotes",
+        lambda client, now: [],
+    )
+
+    def forbidden_download(**kwargs):
+        raise AssertionError("public source download must be skipped when no fresh quote exists")
+
+    monkeypatch.setattr(report_module, "fetch_public_history", forbidden_download)
+    monkeypatch.setattr(
+        sys, "argv",
+        ["serie_a_v2_live_diagnostic_report.py", "--output", str(output),
+         "--raw-source-dir", str(raw_dir)],
+    )
+    report_module.main()
+    report = json.loads(output.read_text(encoding="utf-8"))
+    assert report["mode"] == "NO_ELIGIBLE_FUTURE_PREMATCH_QUOTES_SOURCE_DOWNLOAD_SKIPPED"
+    assert report["eligible_future_prematch_quote_rows"] == 0
+    assert report["public_http_requests"] == 0
+    assert report["target_outcomes_read"] is False
+    assert report["supabase_writes"] == 0
+    assert not raw_dir.exists()
