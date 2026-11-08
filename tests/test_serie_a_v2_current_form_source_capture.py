@@ -360,7 +360,7 @@ def test_importable_capture_entrypoint_blocks_rights_denial_before_any_data_or_f
         )
 
     assert calls == ["rights"]
-    assert not tmp_path.exists()
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_importable_capture_entrypoint_blocks_public_storage_before_supabase_or_source_io(monkeypatch, tmp_path):
@@ -391,7 +391,7 @@ def test_importable_capture_entrypoint_blocks_public_storage_before_supabase_or_
         )
 
     assert calls == ["rights", "privacy"]
-    assert not tmp_path.exists()
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_importable_capture_entrypoint_checks_rights_and_privacy_before_candidate_or_metadata(monkeypatch, tmp_path):
@@ -446,7 +446,7 @@ def test_importable_capture_entrypoint_checks_rights_and_privacy_before_candidat
         )
 
     assert calls == ["rights", "privacy", "candidate", "supabase_metadata"]
-    assert not tmp_path.exists()
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_closed_feature_source_gate_stops_before_any_public_download(tmp_path):
