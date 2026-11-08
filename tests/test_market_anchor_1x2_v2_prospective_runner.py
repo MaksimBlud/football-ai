@@ -141,7 +141,9 @@ def test_live_runner_reads_identity_gate_and_keeps_outcomes_lazy_when_incumbent_
         outcome_calls.append(keys)
         return {key: "H" for key in keys}
 
-    report = runner.evaluate_live_prospective_cohort(client, rows, load_outcomes)
+    report = runner.evaluate_live_prospective_cohort(
+        client, rows, load_outcomes, preflight=_synthetic_source_preflight
+    )
 
     assert gate_calls == [client]
     assert report["eligible_completed_forecasts"] == 30
@@ -171,6 +173,7 @@ def test_live_runner_stops_if_identity_gate_fails_before_evaluator_or_outcomes(m
             object(),
             [],
             lambda keys: outcome_calls.append(keys) or {},
+            preflight=_synthetic_source_preflight,
         )
 
     assert outcome_calls == []
@@ -711,6 +714,92 @@ def test_market_only_preflight_and_evaluator_share_one_immutable_gate_snapshot(m
     assert report["status"] == "GATE_SNAPSHOT_REUSED"
 
 
+def test_incumbent_runner_verifies_source_sha_before_evaluator_and_reuses_gate_snapshot(monkeypatch):
+    rows = _forecast_rows(30)
+    for row in rows:
+        row.pop("incumbent_1x2")
+        row.pop("incumbent_evidence")
+    identities = {
+        (row["match_date"], row["home_team"], row["away_team"])
+        for row in rows
+    }
+    attestation = _gate_attestation(identities)
+    call_order = []
+    outcome_calls = []
+
+    def read_gate(_client):
+        call_order.append("gate")
+        return set(identities), attestation
+
+    def preflight(received_identities, received_attestation, received_rows):
+        call_order.append("preflight")
+        assert received_identities == frozenset(identities)
+        assert len(received_rows) == 30
+        with pytest.raises(TypeError):
+            received_rows[0]["source_artifact_id"] = 999
+        # The callback may mutate its detached nested list, but the evaluator
+        # must receive the original attestation and the original forecast rows.
+        received_attestation["selected_columns"].append("result")
+        return _synthetic_source_preflight(received_identities, received_attestation, received_rows)
+
+    def fake_evaluate(received_rows, received_identities, outcome_loader, *, completed_fixture_gate_attestation):
+        call_order.append("evaluate")
+        assert received_identities == frozenset(identities)
+        assert len(received_rows) == 30
+        assert completed_fixture_gate_attestation["selected_columns"] == [
+            "match_date", "home_team", "away_team"
+        ]
+        return {"status": "INCUMBENT_PATH_PREFLIGHT_VERIFIED"}
+
+    monkeypatch.setattr(runner, "read_completed_fixture_gate", read_gate)
+    monkeypatch.setattr(runner, "evaluate_after_gate", fake_evaluate)
+
+    report = runner.evaluate_live_prospective_cohort(
+        object(),
+        rows,
+        lambda keys: outcome_calls.append(keys) or {},
+        preflight=preflight,
+    )
+
+    assert call_order == ["gate", "preflight", "evaluate"]
+    assert outcome_calls == []
+    assert attestation["selected_columns"] == ["match_date", "home_team", "away_team"]
+    assert report["status"] == "INCUMBENT_PATH_PREFLIGHT_VERIFIED"
+
+
+def test_incumbent_runner_rejects_unmatched_source_sha_before_evaluator_or_outcomes(monkeypatch):
+    rows = _forecast_rows(30)
+    for row in rows:
+        row.pop("incumbent_1x2")
+        row.pop("incumbent_evidence")
+    identities = {(row["match_date"], row["home_team"], row["away_team"]) for row in rows}
+    monkeypatch.setattr(
+        runner, "read_completed_fixture_gate",
+        lambda _client: (identities, _gate_attestation(identities)),
+    )
+    evaluator_calls = []
+    outcome_calls = []
+
+    def wrong_source_preflight(_identities, _attestation, forecast_rows):
+        return {row["source_artifact_id"]: "0" * 64 for row in forecast_rows}
+
+    def forbidden_evaluator(*args, **kwargs):
+        evaluator_calls.append((args, kwargs))
+        pytest.fail("full evaluator must not run with an unverified source SHA")
+
+    monkeypatch.setattr(runner, "evaluate_after_gate", forbidden_evaluator)
+    with pytest.raises(ValueError, match="source preflight SHA proof does not match"):
+        runner.evaluate_live_prospective_cohort(
+            object(),
+            rows,
+            lambda keys: outcome_calls.append(keys) or {},
+            preflight=wrong_source_preflight,
+        )
+
+    assert evaluator_calls == []
+    assert outcome_calls == []
+
+
 def test_market_only_preflight_failure_stops_before_evaluator_or_outcomes(monkeypatch):
     rows = _forecast_rows(30)
     for row in rows:
@@ -761,6 +850,8 @@ def test_market_only_live_entrypoints_require_source_preflight_before_any_identi
             _gate_attestation({(row["match_date"], row["home_team"], row["away_team"]) for row in rows}),
         ),
     )
+    with pytest.raises(TypeError, match="preflight"):
+        runner.evaluate_live_prospective_cohort(object(), rows, lambda _keys: {})
     with pytest.raises(TypeError, match="preflight"):
         runner.evaluate_live_market_only_prospective_cohort(object(), rows, lambda _keys: {})
     with pytest.raises(TypeError, match="preflight"):
@@ -821,7 +912,8 @@ def test_every_live_runner_blocks_before_identity_gate_without_inference_rights(
     with pytest.raises(PermissionError, match="frozen-inference scope remains unresolved"):
         if entrypoint == "incumbent_cohort":
             runner.evaluate_live_prospective_cohort(
-                object(), rows, lambda _keys: pytest.fail("outcome loader must remain lazy")
+                object(), rows, lambda _keys: pytest.fail("outcome loader must remain lazy"),
+                preflight=_synthetic_source_preflight,
             )
         elif entrypoint == "market_only_cohort":
             _run_market_only_cohort(
