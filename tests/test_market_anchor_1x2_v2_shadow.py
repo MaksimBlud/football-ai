@@ -1,3 +1,4 @@
+import ast
 import json
 from pathlib import Path
 
@@ -287,3 +288,29 @@ def test_frozen_candidate_refit_and_artifact_write_are_disabled_before_input_acc
     with pytest.raises(PermissionError, match="candidate is frozen; writing a refit artifact is disabled"):
         v2.write_candidate_artifact(Untouchable(), output)
     assert not output.exists()
+
+def test_frozen_refit_and_writer_apis_contain_only_fail_closed_stubs():
+    source = (ROOT / "market_anchor_1x2_v2_shadow.py").read_text(encoding="utf-8")
+    module = ast.parse(source)
+    functions = {
+        node.name: node
+        for node in module.body
+        if isinstance(node, ast.FunctionDef)
+    }
+
+    for name in ("fit_candidate_artifact", "write_candidate_artifact"):
+        body = list(functions[name].body)
+        if (
+            body
+            and isinstance(body[0], ast.Expr)
+            and isinstance(body[0].value, ast.Constant)
+            and isinstance(body[0].value.value, str)
+        ):
+            body.pop(0)
+        assert len(body) == 1, f"{name} must not retain dormant executable code"
+        statement = body[0]
+        assert isinstance(statement, ast.Raise), f"{name} must fail closed immediately"
+        assert isinstance(statement.exc, ast.Call)
+        assert isinstance(statement.exc.func, ast.Name)
+        assert statement.exc.func.id == "PermissionError"
+
