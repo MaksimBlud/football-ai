@@ -29,6 +29,11 @@ on:
       - "serie_a_runtime_config.py"
       - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
       - "market_anchor_v2_source_rights.py"
+      - "market_anchor_v2_source_capture_rights.py"
+      - "tests/test_market_anchor_v2_source_capture_rights.py"
+      - "tests/test_market_anchor_v2_source_rights.py"
+      - "tests/test_market_anchor_v2_artifact_privacy.py"
+      - "research/SERIE_A_V2_SOURCE_CAPTURE_ONLY_SCOPE_20261107.md"
       - "market_anchor_v2_artifact_privacy.py"
       - "research/source_rights/football_data_co_uk.json"
       - "experiments/market_anchor_1x2_v2_protocol.json"
@@ -73,7 +78,7 @@ jobs:
       - name: Install offline contract-test dependency
         run: python -m pip install pytest
       - name: Compile original V2 entry points without source access
-        run: python -m py_compile serie_a_v2_forward_capture.py serie_a_v2_attest_real_source.py serie_a_v2_frozen_shadow_preview.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py historical_football_signal_lab.py serie_a_runtime_config.py
+        run: python -m py_compile serie_a_v2_forward_capture.py serie_a_v2_attest_real_source.py serie_a_v2_frozen_shadow_preview.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py historical_football_signal_lab.py serie_a_runtime_config.py market_anchor_v2_source_rights.py market_anchor_v2_source_capture_rights.py market_anchor_v2_artifact_privacy.py
       - name: Run offline original V2 trigger and source-contract regressions
         run: python -m pytest -q tests/test_serie_a_v2_manual_quote_trigger_contract.py
 
@@ -102,7 +107,7 @@ jobs:
         run: python -m pip install -r requirements-v2-research-py312.lock
       - name: Test original V2, old-season embargo, and source-before-quote rules
         run: |
-          python -m py_compile serie_a_v2_forward_capture.py serie_a_v2_attest_real_source.py serie_a_v2_frozen_shadow_preview.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py historical_football_signal_lab.py serie_a_runtime_config.py
+          python -m py_compile serie_a_v2_forward_capture.py serie_a_v2_attest_real_source.py serie_a_v2_frozen_shadow_preview.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py historical_football_signal_lab.py serie_a_runtime_config.py market_anchor_v2_source_rights.py market_anchor_v2_source_capture_rights.py market_anchor_v2_artifact_privacy.py
           python -m pytest -q \
             tests/test_serie_a_v2_forward_capture.py \
             tests/test_serie_a_v2_attest_real_source.py \
@@ -115,6 +120,9 @@ jobs:
             tests/test_historical_football_signal_lab.py \
             tests/test_serie_a_v2_current_form_source_workflow_contract.py \
             tests/test_serie_a_v2_current_form_dependency_triggers.py
+            tests/test_market_anchor_v2_source_rights.py \
+            tests/test_market_anchor_v2_source_capture_rights.py \
+            tests/test_market_anchor_v2_artifact_privacy.py
       - name: Preflight frozen V2 source rights before source/quote access
         id: rights_preflight
         run: |
