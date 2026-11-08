@@ -185,9 +185,14 @@ def test_live_market_only_bridge_binds_forecast_kickoff_to_lazy_outcome_reader(m
     import hashlib
 
     import market_anchor_1x2_v2_prospective_evaluation as live
+    import market_anchor_1x2_v2_prospective_runner as runner
 
     monkeypatch.setattr(
         live, "require_personal_research_inference_scope",
+        lambda: {"scope_status": "TEST_ONLY_EXPLICITLY_AUTHORIZED"},
+    )
+    monkeypatch.setattr(
+        runner, "require_personal_research_inference_scope",
         lambda: {"scope_status": "TEST_ONLY_EXPLICITLY_AUTHORIZED"},
     )
 
