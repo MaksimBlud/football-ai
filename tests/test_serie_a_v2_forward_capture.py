@@ -305,6 +305,7 @@ def test_successful_exact_source_workflow_and_prequote_completion_required():
         ({"event":"workflow_run"}, "verified original V2 collector"),
         ({"event":"push"}, "verified original V2 collector"),
         ({"updated_at":"2026-10-14T06:01:00Z"}, "not successfully finished before quote"),
+        ({"updated_at":"2026-10-14T06:00:00Z"}, "not successfully finished before quote"),
     ]:
         def bad_get(url, headers, timeout, allow_redirects):
             assert allow_redirects is False
