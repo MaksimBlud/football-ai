@@ -27,6 +27,7 @@ from market_anchor_1x2_v2_prospective_runner import (
     evaluate_live_market_only_prospective_cohort,
 )
 from market_anchor_v2_source_rights import require_personal_research_inference_scope, write_research_scope_blocked_report
+from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
 from serie_a_v2_current_form_forward_capture import (
     GITHUB_API,
     REPOSITORY,
@@ -311,7 +312,13 @@ def run_live_evaluation(client: Any, token: str, *, now: datetime | None = None,
         "no_bet": True, "automatic_promotion": False,
         "production_or_supabase_writes": 0, "paid_provider_calls": 0,
         "raw_outcomes_included": False,
+        "private_storage_verified": False,
     }
+    private_storage = require_private_repository_for_source_artifacts(
+        os.environ.get("GITHUB_REPOSITORY", ""), token, get=get
+    )
+    base["private_storage_verified"] = private_storage["private"] is True
+    base["private_storage_policy"] = private_storage["storage_policy"]
     artifacts = discover_forward_artifacts(token, get=get)
     if not artifacts:
         return {**base, "status": "NO_FORWARD_ARTIFACTS", "forward_artifact_count": 0,
@@ -435,6 +442,17 @@ def main() -> int:
             raise ValueError("GitHub read token and Supabase read credentials are required")
         from supabase import create_client
         report = run_live_evaluation(create_client(url, key), token)
+    except PermissionError as exc:
+        report = {
+            "schema_version": "MARKET_ANCHOR_1X2_V2_PROSPECTIVE_MARKET_EVALUATION_RUN_V1",
+            "status": "BLOCKED_PRIVATE_STORAGE", "run_at_utc": datetime.now(timezone.utc).isoformat(),
+            "candidate_sha256": evaluator.FROZEN_CANDIDATE_SHA256,
+            "private_storage_verified": False,
+            "target_outcomes_read": False, "target_outcomes_scored": False,
+            "no_bet": True, "automatic_promotion": False,
+            "production_or_supabase_writes": 0, "paid_provider_calls": 0,
+            "raw_outcomes_included": False, "error_type": type(exc).__name__, "error": str(exc),
+        }
     except Exception as exc:
         report = {
             "schema_version": "MARKET_ANCHOR_1X2_V2_PROSPECTIVE_MARKET_EVALUATION_RUN_V1",
@@ -454,6 +472,7 @@ def main() -> int:
         "selected_unique_fixture_forecasts": report.get("selected_unique_fixture_forecasts", 0),
         "target_outcomes_read": report.get("target_outcomes_read"),
         "target_outcomes_scored": report.get("target_outcomes_scored"),
+        "private_storage_verified": report.get("private_storage_verified", False),
         "no_bet": report.get("no_bet", True),
     }, sort_keys=True))
     return 1 if report.get("status") == "BLOCKED" else 0

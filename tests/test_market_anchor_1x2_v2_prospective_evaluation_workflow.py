@@ -57,6 +57,8 @@ def test_prospective_evaluation_workflow_is_main_only_and_has_no_schedule_or_pai
     assert "github.event.workflow_run.event != 'pull_request'" not in job
     assert "SUPABASE_KEY: " + "$" + "{{ secrets.SUPABASE_KEY }}" in job
     assert "GITHUB_TOKEN: " + "$" + "{{ github.token }}" in job
+    assert "GITHUB_REPOSITORY: " + "$" + "{{ github.repository }}" in job
+    assert "market_anchor_v2_artifact_privacy.py" in job
     assert "market_anchor_1x2_v2_prospective_evaluation.py" in job
     assert "actions/upload-artifact@v4" in job
     assert "retention-days: 90" in job
@@ -188,6 +190,16 @@ def test_live_market_only_bridge_binds_forecast_kickoff_to_lazy_outcome_reader(m
 
     import market_anchor_1x2_v2_prospective_evaluation as live
 
+    monkeypatch.setattr(
+        live,
+        "require_private_repository_for_source_artifacts",
+        lambda repository, token, get: {
+            "repository": repository,
+            "private": True,
+            "storage_policy": "PRIVATE_GITHUB_ACTIONS_ARTIFACTS",
+        },
+    )
+
     rows = []
     candidates = []
     for index in range(30):
@@ -280,3 +292,86 @@ def test_live_market_only_bridge_binds_forecast_kickoff_to_lazy_outcome_reader(m
     assert captured["identities"] == expected_identities
     assert captured["kickoff_by_identity"] == expected_kickoffs
     assert captured["observed_at_utc"] == "2026-11-05T12:00:00Z"
+
+
+
+class _PrivateRepositoryResponse:
+    def __init__(self, private):
+        self.status_code = 200
+        self.url = PROSPECTIVE_GITHUB_API
+        self.private = private
+
+    def json(self):
+        return {"full_name": "MaksimBlud/football-ai", "private": self.private}
+
+
+def test_public_repository_blocks_before_forward_artifact_listing_or_supabase_reads(monkeypatch):
+    import market_anchor_1x2_v2_prospective_evaluation as live
+
+    monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append((url, kwargs))
+        return _PrivateRepositoryResponse(False)
+
+    def forbidden_artifact_listing(*_args, **_kwargs):
+        pytest.fail("public repository must be rejected before artifact listing")
+
+    class Client:
+        def table(self, _name):
+            pytest.fail("public repository must be rejected before any Supabase read")
+
+    monkeypatch.setattr(live, "discover_forward_artifacts", forbidden_artifact_listing)
+
+    with pytest.raises(PermissionError, match="require a private GitHub repository"):
+        live.run_live_evaluation(
+            Client(),
+            "synthetic-read-only-token",
+            now=datetime.fromisoformat("2026-11-08T03:00:00+00:00"),
+            get=fake_get,
+        )
+
+    assert len(calls) == 1
+    assert calls[0][0] == PROSPECTIVE_GITHUB_API
+    assert calls[0][1]["allow_redirects"] is False
+
+
+def test_private_repository_gate_precedes_forward_artifact_listing(monkeypatch):
+    import market_anchor_1x2_v2_prospective_evaluation as live
+
+    monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append("privacy")
+        return _PrivateRepositoryResponse(True)
+
+    def empty_artifact_listing(token, get):
+        calls.append("artifact_listing")
+        return []
+
+    monkeypatch.setattr(live, "discover_forward_artifacts", empty_artifact_listing)
+
+    report = live.run_live_evaluation(
+        object(),
+        "synthetic-read-only-token",
+        now=datetime.fromisoformat("2026-11-08T03:00:00+00:00"),
+        get=fake_get,
+    )
+
+    assert calls == ["privacy", "artifact_listing"]
+    assert report["status"] == "NO_FORWARD_ARTIFACTS"
+    assert report["private_storage_verified"] is True
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
+
+
+def test_private_storage_gate_is_before_artifact_listing_in_live_evaluator_source():
+    source = (ROOT / "market_anchor_1x2_v2_prospective_evaluation.py").read_text(encoding="utf-8")
+    live = source[source.index("def run_live_evaluation"):source.index("def main()")]
+    privacy = live.find("require_private_repository_for_source_artifacts(")
+    artifact_listing = live.find("discover_forward_artifacts(")
+    assert privacy >= 0
+    assert artifact_listing >= 0
+    assert privacy < artifact_listing

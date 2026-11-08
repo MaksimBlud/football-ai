@@ -41,7 +41,7 @@ jobs:
         run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
       - name: Compile and test artifact bridge without live outcomes
         run: |
-          python -m py_compile market_anchor_1x2_v2_forward_artifact_adapter.py market_anchor_1x2_v2_prospective_evaluation.py
+          python -m py_compile market_anchor_1x2_v2_forward_artifact_adapter.py market_anchor_v2_artifact_privacy.py market_anchor_1x2_v2_prospective_evaluation.py
           python -m pytest -q tests/test_market_anchor_1x2_v2_forward_artifact_adapter.py tests/test_market_anchor_1x2_v2_prospective_evaluation_workflow.py
       - name: Verify source-before-quote artifacts and evaluate only after the frozen gate
         run: |
