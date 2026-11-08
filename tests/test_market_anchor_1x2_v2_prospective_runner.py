@@ -9,6 +9,15 @@ import market_anchor_1x2_v2_prospective_evaluator as evaluator
 import market_anchor_1x2_v2_prospective_runner as runner
 
 
+@pytest.fixture(autouse=True)
+def _allow_synthetic_inference_scope(monkeypatch):
+    monkeypatch.setattr(
+        runner,
+        "require_personal_research_inference_scope",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+
+
 def _forecast_rows(count: int = 30) -> list[dict]:
     rows = []
     first_day = date(2026, 10, 19)
@@ -642,3 +651,31 @@ def test_market_only_preflight_failure_stops_before_evaluator_or_outcomes(monkey
 
     assert evaluator_calls == []
     assert outcome_calls == []
+
+
+
+@pytest.mark.parametrize("entrypoint", ["cohort", "supabase_wrapper"])
+def test_live_market_only_runner_blocks_before_identity_gate_without_inference_rights(monkeypatch, entrypoint):
+    rows = _forecast_rows(30)
+    calls = []
+
+    def deny_rights():
+        calls.append("rights")
+        raise PermissionError("frozen-inference scope remains unresolved")
+
+    def forbidden_gate(_client):
+        calls.append("gate")
+        pytest.fail("the Supabase identity gate must not run without inference rights")
+
+    monkeypatch.setattr(runner, "require_personal_research_inference_scope", deny_rights)
+    monkeypatch.setattr(runner, "read_completed_fixture_gate", forbidden_gate)
+
+    with pytest.raises(PermissionError, match="frozen-inference scope remains unresolved"):
+        if entrypoint == "cohort":
+            runner.evaluate_live_market_only_prospective_cohort(
+                object(), rows, lambda _keys: pytest.fail("outcome loader must remain lazy")
+            )
+        else:
+            runner.evaluate_live_market_only_from_supabase(object(), rows)
+
+    assert calls == ["rights"]
