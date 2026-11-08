@@ -84,7 +84,6 @@ def fake_verified_parent_run(archive, quote_time):
 
 
 
-@pytest.mark.parametrize("conflict", ["home_team", "kickoff"])
 @pytest.fixture(autouse=True)
 def allow_synthetic_v2_inference_scope(monkeypatch):
     """Keep offline numerical/source tests independent of live rights clearance."""
@@ -97,6 +96,8 @@ def allow_synthetic_v2_inference_scope(monkeypatch):
     )
 
 
+
+@pytest.mark.parametrize("conflict", ["home_team", "kickoff"])
 def test_same_original_event_id_cannot_change_fixture_identity(conflict):
     raw, metadata = make_source_archive()
     first = quote(ts="2026-10-14T06:00:00Z")
