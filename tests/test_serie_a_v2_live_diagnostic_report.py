@@ -544,10 +544,11 @@ def test_quote_preflight_report_is_metadata_only_and_never_admissible():
     assert report["no_bet"] is True
 
 
-def test_preflight_only_main_reads_saved_quotes_before_rights_but_never_source_or_inference(monkeypatch, tmp_path):
+def test_preflight_only_main_checks_rights_before_reading_saved_quotes(monkeypatch, tmp_path):
     import sys
     from types import SimpleNamespace
     import json
+    from datetime import timedelta
 
     output = tmp_path / "preflight.json"
     monkeypatch.setattr(sys, "argv", [
@@ -557,20 +558,20 @@ def test_preflight_only_main_reads_saved_quotes_before_rights_but_never_source_o
         "--raw-source-dir", str(tmp_path / "must-not-be-created"),
     ])
     monkeypatch.setitem(sys.modules, "database", SimpleNamespace(supabase=object()))
-    from datetime import timedelta
     current = datetime.now(timezone.utc)
     fresh_quote = {
         **quote(),
         "snapshot_time_utc": (current - timedelta(minutes=15)).isoformat(),
         "commence_time_utc": (current + timedelta(hours=2)).isoformat(),
     }
-    monkeypatch.setattr(
-        report_module, "fetch_saved_upcoming_serie_a_quotes",
-        lambda client, now: [fresh_quote],
-    )
+    order = []
     monkeypatch.setattr(
         report_module, "require_personal_research_inference_scope",
-        lambda: pytest.fail("metadata-only quote preflight must not require or invoke inference permission"),
+        lambda: order.append("rights"),
+    )
+    monkeypatch.setattr(
+        report_module, "fetch_saved_upcoming_serie_a_quotes",
+        lambda client, now: order.append("quotes") or [fresh_quote],
     )
     monkeypatch.setattr(
         report_module, "fetch_public_history",
@@ -579,10 +580,40 @@ def test_preflight_only_main_reads_saved_quotes_before_rights_but_never_source_o
 
     report_module.main()
     report = json.loads(output.read_text(encoding="utf-8"))
+    assert order == ["rights", "quotes"]
     assert report["eligible_future_prematch_quote_rows"] == 1
     assert report["source_download_performed"] is False
     assert report["model_inference_performed"] is False
     assert not (tmp_path / "must-not-be-created").exists()
+
+
+def test_preflight_only_denied_rights_stops_before_database_quote_read(monkeypatch, tmp_path):
+    import sys
+    from types import SimpleNamespace
+
+    output = tmp_path / "blocked.json"
+    monkeypatch.setattr(sys, "argv", [
+        "serie_a_v2_live_diagnostic_report.py",
+        "--preflight-only",
+        "--output", str(output),
+        "--raw-source-dir", str(tmp_path / "unused"),
+    ])
+    monkeypatch.setitem(sys.modules, "database", SimpleNamespace(supabase=object()))
+    monkeypatch.setattr(
+        report_module, "require_personal_research_inference_scope",
+        lambda: (_ for _ in ()).throw(PermissionError("scope blocked")),
+    )
+    monkeypatch.setattr(
+        report_module, "write_research_scope_blocked_report",
+        lambda path, workflow, reason: {"mode": "SOURCE_RIGHTS_BLOCKED", "reason": reason},
+    )
+    monkeypatch.setattr(
+        report_module, "fetch_saved_upcoming_serie_a_quotes",
+        lambda *args, **kwargs: pytest.fail("quote metadata must not be read when rights are blocked"),
+    )
+
+    report_module.main()
+    assert not output.exists()
 
 
 def test_free_diagnostic_quote_preflight_precedes_rights_budget_and_source_access():
@@ -591,12 +622,15 @@ def test_free_diagnostic_quote_preflight_precedes_rights_budget_and_source_acces
     workflow = Path(".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml").read_text(encoding="utf-8")
     quote_step = workflow.index("- name: Preflight saved future pre-kickoff quotes (metadata only)")
     rights_step = workflow.index("- name: Preflight frozen V2 source rights before source access")
+    final_quote_step = workflow.index("- name: Recheck saved future pre-kickoff quotes immediately before budget reservation")
     budget_step = workflow.index("- name: Check shared public-source download budget")
     marker_step = workflow.index("- name: Upload shared public-source download attempt marker")
     source_step = workflow.index("- name: Fetch and SHA-archive public source, preview original frozen V2 diagnostics")
-    assert quote_step < rights_step < budget_step < marker_step < source_step
-    assert "--preflight-only" in workflow[quote_step:rights_step]
-    assert "steps.quote_preflight.outputs.eligible_quote_rows != '0'" in workflow[budget_step:source_step]
+    assert rights_step < quote_step < final_quote_step < budget_step < marker_step < source_step
+    assert "--preflight-only" in workflow[quote_step:final_quote_step]
+    assert "steps.rights_preflight.outputs.allowed == 'true'" in workflow[quote_step:final_quote_step]
+    assert "steps.quote_preflight.outputs.eligible_quote_rows != '0'" in workflow[final_quote_step:budget_step]
+    assert "steps.final_quote_preflight.outputs.eligible_quote_rows != '0'" in workflow[budget_step:source_step]
     assert "steps.rights_preflight.outputs.allowed == 'true'" in workflow[budget_step:source_step]
 
 
