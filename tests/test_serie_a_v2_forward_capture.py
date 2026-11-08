@@ -644,7 +644,7 @@ def test_source_archive_created_at_equal_to_quote_is_not_prequote_source():
         [quote(quote_time)],
         metadata,
         as_of_utc=NOW,
-        load_archive=lambda artifact_id: calls.append(("archive", artifact_id),
+        load_archive=lambda artifact_id: calls.append(("archive", artifact_id)),
         verify_parent_run=lambda archive, at: calls.append(("parent", archive["artifact_id"])),
     )
 
