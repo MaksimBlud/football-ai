@@ -16,6 +16,18 @@ QUOTE = "2026-10-13T14:00:00+00:00"
 CUTOFF = "2026-10-13T13:00:00Z"
 
 
+@pytest.fixture(autouse=True)
+def allow_frozen_inference_scope_for_offline_unit_tests(monkeypatch):
+    """Synthetic unit tests do not exercise the live provider-rights gate."""
+    import market_anchor_v2_source_rights as rights
+
+    monkeypatch.setattr(
+        rights,
+        "require_personal_research_inference_scope",
+        lambda: {"rights_manifest_sha256": "a" * 64},
+    )
+
+
 def market(**overrides):
     row = {
         "league": "SERIE_A", "event_id": "event-serie-a-001",
@@ -39,6 +51,27 @@ def features(**overrides):
     }
     row.update(overrides)
     return row
+
+
+def test_shadow_preview_enforces_inference_rights_before_model_or_input_access(monkeypatch):
+    import market_anchor_v2_source_rights as rights
+
+    def deny_scope():
+        raise PermissionError("V2 frozen inference scope remains unresolved")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", deny_scope)
+    monkeypatch.setattr(
+        v2_preview,
+        "load_verified_original",
+        lambda: pytest.fail("candidate must not be loaded before inference rights"),
+    )
+
+    class ForbiddenInput:
+        def __iter__(self):
+            pytest.fail("market/features must not be inspected before inference rights")
+
+    with pytest.raises(PermissionError, match="V2 frozen inference scope remains unresolved"):
+        v2_preview.shadow_preview(ForbiddenInput(), ForbiddenInput(), as_of_utc=NOW)
 
 
 def test_actual_sha_restored_candidate_is_used_and_shadow_is_not_active_market():
