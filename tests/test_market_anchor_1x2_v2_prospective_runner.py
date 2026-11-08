@@ -654,8 +654,11 @@ def test_market_only_preflight_failure_stops_before_evaluator_or_outcomes(monkey
 
 
 
-@pytest.mark.parametrize("entrypoint", ["cohort", "supabase_wrapper"])
-def test_live_market_only_runner_blocks_before_identity_gate_without_inference_rights(monkeypatch, entrypoint):
+@pytest.mark.parametrize(
+    "entrypoint",
+    ["incumbent_cohort", "market_only_cohort", "supabase_wrapper"],
+)
+def test_every_live_runner_blocks_before_identity_gate_without_inference_rights(monkeypatch, entrypoint):
     rows = _forecast_rows(30)
     calls = []
 
@@ -671,7 +674,11 @@ def test_live_market_only_runner_blocks_before_identity_gate_without_inference_r
     monkeypatch.setattr(runner, "read_completed_fixture_gate", forbidden_gate)
 
     with pytest.raises(PermissionError, match="frozen-inference scope remains unresolved"):
-        if entrypoint == "cohort":
+        if entrypoint == "incumbent_cohort":
+            runner.evaluate_live_prospective_cohort(
+                object(), rows, lambda _keys: pytest.fail("outcome loader must remain lazy")
+            )
+        elif entrypoint == "market_only_cohort":
             runner.evaluate_live_market_only_prospective_cohort(
                 object(), rows, lambda _keys: pytest.fail("outcome loader must remain lazy")
             )
