@@ -154,6 +154,12 @@ def shadow_preview(
     ):
         raise ValueError("as_of_utc must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
+    # Enforce the inference-rights boundary inside the public scoring API too.
+    # CLI-only checks are insufficient because forward runners and external
+    # callers can import this function directly.
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+
+    require_personal_research_inference_scope()
     original = load_verified_original()
     feature_keys = tuple(original["features"])
     feature_by_key: dict[tuple[str, str, str, datetime], Mapping[str, Any]] = {}
