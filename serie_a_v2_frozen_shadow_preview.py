@@ -85,6 +85,11 @@ def _market(row: Mapping[str, Any]) -> tuple[float, float, float]:
 
 
 def load_verified_original() -> dict[str, Any]:
+    # This public loader is itself a model-access boundary. Protect direct
+    # imports as well as the already-guarded scoring/feature-building callers.
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+
+    require_personal_research_inference_scope()
     candidate = json.loads(FROZEN_FILE.read_text(encoding="utf-8"))
     v2.validate_candidate_artifact(candidate)
     if (candidate["artifact_sha256"] != FROZEN_SHA
