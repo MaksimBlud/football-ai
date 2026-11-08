@@ -225,3 +225,23 @@ def test_predict_shadow_residual_denies_direct_inference_before_features_or_weig
 
     with pytest.raises(PermissionError, match="scope unresolved"):
         v2.predict_shadow_residual(Untouchable(), Untouchable(), Untouchable())
+
+def test_predict_candidate_denies_direct_inference_before_features_or_weights(monkeypatch):
+    import market_anchor_v2_source_rights as rights
+
+    def denied():
+        raise PermissionError("frozen inference scope unresolved")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", denied)
+    monkeypatch.setattr(
+        v2,
+        "_artifact_residual_logits",
+        lambda *args, **kwargs: pytest.fail("candidate logits must not be computed before rights clearance"),
+    )
+
+    class Untouchable:
+        def __getattribute__(self, name):
+            raise AssertionError(f"model input accessed before rights clearance: {name}")
+
+    with pytest.raises(PermissionError, match="scope unresolved"):
+        v2.predict_candidate(Untouchable(), Untouchable(), Untouchable())
