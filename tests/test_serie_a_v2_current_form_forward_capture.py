@@ -220,6 +220,18 @@ def valid_parent(archive, *, quote_time):
     }
 
 
+@pytest.fixture(autouse=True)
+def allow_synthetic_v2_inference_scope(monkeypatch):
+    """Keep offline numerical/source tests independent of live rights clearance."""
+    import market_anchor_v2_source_rights as rights
+
+    monkeypatch.setattr(
+        rights,
+        "require_personal_research_inference_scope",
+        lambda: {"rights_manifest_sha256": "a" * 64},
+    )
+
+
 def test_current_form_v2_scores_only_future_quote_with_prequote_source_and_stays_no_bet(tmp_path):
     raw, archives = make_archive()
     report = prepare_forward_capture(
