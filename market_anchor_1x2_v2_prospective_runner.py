@@ -10,6 +10,7 @@ from __future__ import annotations
 from copy import deepcopy
 from datetime import datetime, timezone
 from types import MappingProxyType
+import re
 from typing import Any, Callable, Iterable, Mapping
 
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
@@ -54,21 +55,60 @@ def evaluate_live_prospective_cohort(
     )
 
 
+
+_SOURCE_ARCHIVE_SHA256_RE = re.compile(r"[0-9a-f]{64}")
+
+
+def _expected_source_artifact_shas(forecast_rows: Iterable[Mapping[str, Any]]) -> dict[int, str]:
+    expected: dict[int, str] = {}
+    for row in forecast_rows:
+        if not isinstance(row, Mapping):
+            raise ValueError("market-only forecast rows must be mappings before source preflight")
+        source_id = row.get("source_artifact_id")
+        source_sha = row.get("source_archive_sha256")
+        if type(source_id) is not int or source_id <= 0:
+            raise ValueError("forecast source_artifact_id must be a positive integer")
+        if not isinstance(source_sha, str) or _SOURCE_ARCHIVE_SHA256_RE.fullmatch(source_sha) is None:
+            raise ValueError("forecast source_archive_sha256 must be a lowercase SHA-256")
+        previous = expected.setdefault(source_id, source_sha)
+        if previous != source_sha:
+            raise ValueError("one source artifact ID cannot map to multiple forecast SHA-256 values")
+    return expected
+
+
+def _validate_source_preflight_sha_proof(
+    expected: Mapping[int, str],
+    proof: object,
+) -> None:
+    if not isinstance(proof, Mapping):
+        raise ValueError("source preflight must return a verified artifact-ID-to-SHA-256 mapping")
+    verified: dict[int, str] = {}
+    for source_id, source_sha in proof.items():
+        if type(source_id) is not int or source_id <= 0:
+            raise ValueError("source preflight returned an invalid artifact ID")
+        if not isinstance(source_sha, str) or _SOURCE_ARCHIVE_SHA256_RE.fullmatch(source_sha) is None:
+            raise ValueError("source preflight returned an invalid artifact SHA-256")
+        verified[source_id] = source_sha
+    for source_id, source_sha in expected.items():
+        if verified.get(source_id) != source_sha:
+            raise ValueError("source preflight SHA proof does not match every forecast source artifact")
+
+
 def evaluate_live_market_only_prospective_cohort(
     client: Any,
     forecast_rows: Iterable[Mapping[str, Any]],
     outcome_loader: Callable[[frozenset[tuple[str, str, str]]], Mapping[tuple[str, str, str], str]],
     *,
-    preflight: Callable[[frozenset[tuple[str, str, str]], Mapping[str, Any]], None] | None = None,
+    preflight: Callable[[frozenset[tuple[str, str, str]], Mapping[str, Any], tuple[Mapping[str, Any], ...]], Mapping[int, str]],
 ) -> dict[str, Any]:
-    """Run market-vs-shadow evaluation against one immutable identity-gate snapshot.
+    """Run market-vs-shadow evaluation with mandatory source/archive SHA preflight.
 
-    The optional preflight receives only the frozen identity set and a detached
-    attestation copy. It is intended for source/archive verification before
-    evaluation. The exact same identity set and original attestation are then
-    passed to the pure evaluator, avoiding a second Supabase gate read and any
-    race between source-completeness verification and the outcome-read gate.
-    It cannot receive target outcomes or alter the evaluator's attestation.
+    The required preflight receives the frozen identity set, a detached gate
+    attestation, and immutable forecast-row copies. It must return the verified
+    source artifact ID -> SHA-256 map. Every forecast row's source artifact ID
+    and SHA must match that proof before the pure evaluator can reach its lazy
+    outcome loader. The same identity set and original attestation are then
+    passed to the evaluator; no second gate read is performed.
     """
     # This live runner is importable independently of the CLI. Enforce the
     # same provider-rights boundary before its first Supabase identity read.
@@ -76,19 +116,22 @@ def evaluate_live_market_only_prospective_cohort(
 
     if not callable(outcome_loader):
         raise ValueError("outcome_loader must be a lazy callable, not preloaded outcomes")
-    if preflight is not None and not callable(preflight):
-        raise ValueError("preflight must be a callable receiving identity metadata only")
+    if not callable(preflight):
+        raise ValueError("preflight must be a callable source/archive verifier")
 
+    rows = list(forecast_rows)
+    expected_source_shas = _expected_source_artifact_shas(rows)
     completed_identities, attestation = read_completed_fixture_gate(client)
     frozen_identities = frozenset(completed_identities)
     _validate_completed_fixture_gate_attestation(attestation, frozen_identities)
 
-    if preflight is not None:
-        detached_attestation = MappingProxyType(deepcopy(dict(attestation)))
-        preflight(frozen_identities, detached_attestation)
+    detached_attestation = MappingProxyType(deepcopy(dict(attestation)))
+    immutable_rows = tuple(MappingProxyType(deepcopy(dict(row))) for row in rows)
+    source_sha_proof = preflight(frozen_identities, detached_attestation, immutable_rows)
+    _validate_source_preflight_sha_proof(expected_source_shas, source_sha_proof)
 
     return evaluate_market_only_after_gate(
-        forecast_rows,
+        rows,
         frozen_identities,
         outcome_loader,
         completed_fixture_gate_attestation=attestation,
@@ -153,7 +196,7 @@ def evaluate_live_market_only_from_supabase(
     forecast_rows: Iterable[Mapping[str, Any]],
     *,
     observed_at_utc: str | None = None,
-    preflight: Callable[[frozenset[tuple[str, str, str]], Mapping[str, Any]], None] | None = None,
+    preflight: Callable[[frozenset[tuple[str, str, str]], Mapping[str, Any], tuple[Mapping[str, Any], ...]], Mapping[int, str]],
     outcome_read_state: dict[str, bool] | None = None,
 ) -> dict[str, Any]:
     """Run market-vs-shadow evaluation with a gate-local exact-row outcome reader.
@@ -163,6 +206,8 @@ def evaluate_live_market_only_from_supabase(
     30-identity / 30-eligible-forecast gate. The optional state sink is audit
     metadata only; it cannot initiate a read.
     """
+    if not callable(preflight):
+        raise ValueError("preflight must be a callable source/archive verifier")
     rows, kickoff_by_identity = _forecast_kickoff_lookup(forecast_rows)
     observed = observed_at_utc or datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     evaluator._utc(observed, "evaluation observed_at_utc")

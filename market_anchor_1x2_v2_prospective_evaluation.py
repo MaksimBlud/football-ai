@@ -361,17 +361,20 @@ def run_live_evaluation(client: Any, token: str, *, now: datetime | None = None,
     outcome_state = {"called": False}
     verified_shas: dict[int, str] = {}
 
-    def verify_source_preflight(completed_identities, _gate_attestation):
+    def verify_source_preflight(completed_identities, _gate_attestation, _forecast_rows):
         # The runner supplies the one freshly read, immutable identity snapshot
         # that the evaluator will also use for its frozen 30-forecast gate.
         # Source verification remains metadata-only and runs before any outcome
-        # callback can be invoked.
-        verified_shas.update(verify_source_artifacts_for_candidates(
+        # callback can be invoked. Return the verified artifact SHA map so the
+        # runner can bind every selected forecast row to a verified source ZIP.
+        verified = verify_source_artifacts_for_candidates(
             candidates,
             token=token,
             current_gate_identities=set(completed_identities),
             get=get,
-        ))
+        )
+        verified_shas.update(verified)
+        return verified
 
     try:
         evaluation = evaluate_live_market_only_from_supabase(

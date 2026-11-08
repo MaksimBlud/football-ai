@@ -69,7 +69,7 @@ def test_source_preflight_and_outcome_evaluator_share_one_gate_snapshot():
     script = (ROOT / "market_anchor_1x2_v2_prospective_evaluation.py").read_text(encoding="utf-8")
     assert "read_completed_primary_event_identities" not in script
     assert "current_gate = " not in script
-    assert "def verify_source_preflight(completed_identities, _gate_attestation):" in script
+    assert "def verify_source_preflight(completed_identities, _gate_attestation, _forecast_rows):" in script
     assert "preflight=verify_source_preflight" in script
     assert "current_gate_identities=set(completed_identities)" in script
 
@@ -265,7 +265,12 @@ def test_live_market_only_bridge_delegates_to_gate_local_supabase_runner(monkeyp
         captured["client"] = client
         captured["selected_rows"] = list(selected_rows)
         captured["observed_at_utc"] = observed_at_utc
-        preflight(identities, {"selected_columns": ["match_date", "home_team", "away_team"]})
+        source_sha_proof = preflight(
+            identities,
+            {"selected_columns": ["match_date", "home_team", "away_team"]},
+            tuple(selected_rows),
+        )
+        captured["source_sha_proof"] = source_sha_proof
         outcome_read_state["called"] = True
         return {
             "status": "EVALUATED_MARKET_ONLY_DIAGNOSTIC",
@@ -289,6 +294,7 @@ def test_live_market_only_bridge_delegates_to_gate_local_supabase_runner(monkeyp
     assert captured["client"] is client
     assert captured["selected_rows"] == rows
     assert captured["observed_at_utc"] == "2026-11-05T12:00:00Z"
+    assert captured["source_sha_proof"] == {999: verified_source_sha}
 
 
 
