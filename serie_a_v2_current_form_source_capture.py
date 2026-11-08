@@ -21,11 +21,15 @@ import pandas as pd
 import requests
 from supabase import create_client
 
-from historical_football_signal_lab import FEATURE_SETS
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA, load_verified_original
 from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes, fetch_public_history
-from market_anchor_v2_source_rights import require_personal_research_inference_scope, write_research_scope_blocked_report
+from market_anchor_v2_source_capture_rights import (
+    SOURCE_CAPTURE_SCOPE,
+    require_personal_research_source_capture_scope,
+    write_source_capture_scope_blocked_report,
+)
+from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
 
 REPOSITORY = "MaksimBlud/football-ai"
 WORKFLOW_PATH = ".github/workflows/serie-a-v2-current-form-source-capture.yml"
@@ -490,6 +494,12 @@ def capture_source_archive(
         "schema_version": SCHEMA_VERSION,
         "experiment_id": "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY",
         "mode": "RESEARCH_ONLY_CURRENT_FORM_SOURCE_ARCHIVE",
+        "source_capture_scope": SOURCE_CAPTURE_SCOPE,
+        "source_capture_only": True,
+        "research_inference_permitted": False,
+        "provider_issued_ai_inference_license": False,
+        "model_inference_executed": False,
+        "model_training_executed": False,
         "repository": REPOSITORY,
         "workflow_path": WORKFLOW_PATH,
         "git_sha": os.environ.get("GITHUB_SHA", ""),
@@ -571,9 +581,10 @@ def main() -> None:
     if os.environ.get("GITHUB_REF") != "refs/heads/main":
         raise RuntimeError("current-form V2 source/forecast workflow must run from main")
     try:
-        require_personal_research_inference_scope()
+        source_scope = require_personal_research_source_capture_scope()
+        storage_scope = require_private_repository_for_source_artifacts()
     except PermissionError as exc:
-        report = write_research_scope_blocked_report(
+        report = write_source_capture_scope_blocked_report(
             args.output_dir / MANIFEST_FILENAME,
             "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE",
             str(exc),
@@ -589,6 +600,9 @@ def main() -> None:
     )
     print(json.dumps({
         "mode": report["mode"],
+        "source_capture_scope": source_scope["source_capture_scope"],
+        "source_artifact_storage": storage_scope["storage_policy"],
+        "model_inference_executed": report["model_inference_executed"],
         "current_season": report["current_season"],
         "feature_source_gate_passed": report["feature_source_gate"]["passed"],
         "completed_primary_events": report["feature_source_gate"]["observed_completed_primary_events"],
