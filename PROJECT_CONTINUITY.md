@@ -1,5 +1,81 @@
 # Football AI — Project Continuity
 
+## 2026-11-08 — Current main, real forward runs, and unresolved rights/privacy gates
+
+This operational entry supersedes the 2026-10-18 “runtime proof pending” status for the checks below. It does **not** change the frozen model, original protocol, source-rights interpretation, or evaluation embargo.
+
+### Exact baseline and frozen model
+
+- Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc` (commit dated 2026-10-18 08:20:05 UTC).
+- Repository visibility is still **public**.
+- Original candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Original feature contract remains 19 features; `active_lambda=0` (market), `shadow_residual_lambda=1` (research only), stability gate FAILED, automatic promotion false.
+- No original weights, feature definitions, production `.pkl`, or Supabase schema/data were changed.
+
+### Real current-form source and forward runs on 2026-11-08
+
+**Source capture:** [GitHub Actions run 42479299556](https://github.com/MaksimBlud/football-ai/actions/runs/42479299556), scheduled main run, SUCCESS.
+
+- Feature-input gate: 100 canonical unique completed fixture identities.
+- The read-only gate query selects only `match_date,home_team,away_team`; no score/result fields.
+- A separate metadata-only audit returned 103 rows / 103 raw fixture triples for Serie A 2026/27 from 2026-08-22 through 2026-11-02. The source code canonicalizes configured team aliases before counting, producing the 100 unique identities reported by the run.
+- Captured 10 frozen historical CSVs / 3,900 historical matches plus one 2026/27 CSV with 100 completed prior-day rows; 11 files total.
+- Source artifact ID `13617155063`, created `2026-11-08T12:15:16Z`, size 438,211 bytes, GitHub SHA-256 `5395ff50d5e312f395b4f76e9cdf63fcb2a71ab831e07fd24cb3418602ad3af6`.
+
+**Current-form forward preview:** [GitHub Actions run 42479367957](https://github.com/MaksimBlud/football-ai/actions/runs/42479367957), SUCCESS.
+
+- Verified the exact source artifact ID/SHA, parent workflow ID/HEAD, and source observation time before quote admission.
+- Source was 43 seconds old at verification and marked fresh for a future quote.
+- `quotes_seen=0`; `v2_current_form_shadow_captured=0`.
+- `target_outcomes_read=false`; `target_outcomes_scored=false`; no paid calls; no Supabase writes.
+- Forward artifact ID `13616738214`, SHA-256 `ba3cb97f0e3c51fd7f82e243d4a4e67118622e1e7154f1c02d975d89554fa5c8`.
+
+**Original old-season forward:** [GitHub Actions run 42383500443](https://github.com/MaksimBlud/football-ai/actions/runs/42383500443), 2026-11-07 14:50:47 UTC, SUCCESS.
+
+- 71 regression tests passed.
+- Real source attestation verified 10 historical CSVs / 3,800 matches.
+- `quotes_seen=0`; `future_quotes_checked=0`; `v2_diagnostic_previews_captured=0`; no paid calls; no Supabase writes.
+- Forward artifact ID `13578712079`, SHA-256 `143b0699bc1d3c5d00e5cde4107068e03775032919024bf0a30a2e48aa074859`.
+
+### Read-only Supabase pre-match audit (2026-11-08)
+
+Only `public.odds_snapshots` fields needed for timing/market inventory were aggregated. Rows with `snapshot_time_utc >= commence_time_utc` were excluded.
+
+- Serie A strictly pre-kickoff snapshots: **620** across **63** event IDs.
+- Latest saved Serie A pre-kickoff snapshot: **2026-10-13 14:48:53 UTC**.
+- New strictly pre-kickoff Serie A snapshots in the last 7 days: **0**.
+- Future events with a strictly pre-kickoff saved quote: **0**.
+
+This is the immediate data blocker: source history is available, but no new qualifying market quotes exist. No outcomes/score columns were selected in this audit.
+
+### Rights and confidentiality are still blocking live inference
+
+- The official Football-Data data page currently says the free files are intended for private individuals and not commercial or data-training products using automated bots/scrapers/AI: https://football-data.co.uk/data
+- The branch rights manifest records source-only private noncommercial archival/validation as the narrow scope; it explicitly leaves frozen-model inference, AI training, commercial use, and public product use unapproved. Frozen inference must remain blocked pending explicit scope clarification or a separately licensed source.
+- The repository is still public. The 2026-11-08 source and forward artifacts above were uploaded by the current main workflows before the privacy-gate PRs were merged. Their digests prove integrity, **not confidentiality**. The artifacts were not downloaded or opened in this audit.
+- PRs #720/#727 and the stacked privacy/rights fixes remain unmerged. Do not treat their protections as active on main. Do not change repository visibility/settings from this research task; private storage requires owner action.
+- Main forward workflows still install floating package versions. The version-pinned `requirements-v2-research-py312.lock` and its workflow adoption exist in the open #720/#727 branch stack, not current main.
+
+### PR and CI state checked 2026-11-08
+
+- #720 — Ready; source/inference rights and bounded free download gate.
+- #727 — Ready; integrated private-storage gate and fail-closed quote preflight.
+- #728–#738 — open stacked research/rights/privacy PRs; #738 head `9cc3c676f53e298c1378b29770eebde68ec19abc`.
+- **#739 — new Draft**, stacked on exact #738 HEAD. It adds the missing transitive source-capture-rights dependencies/tests to the original forward workflow trigger and regression contract. Exact HEAD `8dc0f4bc7d7057d98bd5dc40386c888bcf124106`; PR CI [run 42484153504](https://github.com/MaksimBlud/football-ai/actions/runs/42484153504) and push CI [run 42484148786](https://github.com/MaksimBlud/football-ai/actions/runs/42484148786) both SUCCESS; **329 tests passed**, production pickle diff guard passed. It is not merged.
+- #696 and #698 remain separate open workflow-dependency audit PRs; inspect their exact heads before any future merge decision to avoid duplicating their coverage.
+
+The required HUMAN-MERGE order for the stacked rights/privacy chain is #720 → #727 → #728 → #729 → #730 → #731 → #732 → #733 → #734 → #735 → #736 → #737 → #738 → #739. No PR was merged and main was not changed.
+
+### Scientific gate status and next safe steps
+
+- The 100-event feature-input gate is **not** the prospective outcome-evaluation gate.
+- The 30-eligible-completed-prospective-forecast outcome gate remains CLOSED. The 2026-11-08 forward run read/scored no target outcomes.
+- No eligible prospective V2-vs-market Brier/LogLoss comparison exists; no superiority claim is justified.
+- Next: owner manually integrates the rights/privacy chain in order and resolves repository privacy; obtain written provider clarification for frozen inference (or an applicable explicit licence); then wait for genuinely new strictly pre-kickoff saved quotes after a verified source archive; capture the unchanged 19-feature V2 shadow prospectively; only after the preregistered 30-forecast completion gate may the independent evaluator read target outcomes.
+
+No paid The Odds API calls, paid cron, production writes, Supabase writes/DDL, model refit, threshold tuning, promotion, or protected target-outcome reads were performed in this iteration.
+
+
 
 ## 2026-10-18 — Original V2: preregistered current-form forward-only source and quote pipeline (runtime proof pending)
 
