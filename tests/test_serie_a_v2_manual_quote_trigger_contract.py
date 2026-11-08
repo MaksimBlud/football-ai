@@ -317,7 +317,7 @@ def test_original_forward_reaudits_source_capture_rights_transitive_dependencies
 
 def test_original_forward_pytest_command_has_valid_shell_continuations():
     free = FREE.read_text(encoding="utf-8")
-    live = free.split("  original-v2-forward-preview:\\n", 1)[1]
+    live = free.split("  original-v2-forward-preview:", 1)[1]
     command = live.split("python -m pytest -q", 1)[1].split(
         "      - name: Preflight frozen V2 source rights", 1
     )[0]
