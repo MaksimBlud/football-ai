@@ -251,6 +251,11 @@ def _artifact_residual_logits(features: pd.DataFrame, artifact: Mapping) -> np.n
 
 
 def predict_shadow_residual(market_probabilities: np.ndarray, features: pd.DataFrame, artifact: Mapping) -> np.ndarray:
+    # This is the public numerical V2 inference function. Do not rely only on
+    # higher-level CLI/scorer guards: direct imports must fail closed too.
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+
+    require_personal_research_inference_scope()
     residual = _artifact_residual_logits(features, artifact)
     return market_anchored_probabilities(
         validate_probabilities(market_probabilities), residual, SHADOW_RESIDUAL_LAMBDA
