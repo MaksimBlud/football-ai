@@ -21,11 +21,7 @@ from market_anchor_1x2_v2_forward_artifact_adapter import (
     normalize_forward_report,
     select_first_eligible_forecasts,
 )
-from market_anchor_1x2_v2_prospective_runner import (
-    _forecast_kickoff_lookup,
-    _read_exact_completed_outcomes,
-    evaluate_live_market_only_prospective_cohort,
-)
+from market_anchor_1x2_v2_prospective_runner import evaluate_live_market_only_from_supabase
 from market_anchor_v2_source_rights import require_personal_research_inference_scope, write_research_scope_blocked_report
 from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
 from serie_a_v2_current_form_forward_capture import (
@@ -361,9 +357,7 @@ def run_live_evaluation(client: Any, token: str, *, now: datetime | None = None,
                 "target_outcomes_read": False, "target_outcomes_scored": False}
 
     selected, selection = select_first_eligible_forecasts(candidates)
-    selected_rows, kickoff_by_identity = _forecast_kickoff_lookup(
-        [item["row"] for item in selected]
-    )
+    selected_rows = [item["row"] for item in selected]
     outcome_state = {"called": False}
     verified_shas: dict[int, str] = {}
 
@@ -379,18 +373,13 @@ def run_live_evaluation(client: Any, token: str, *, now: datetime | None = None,
             get=get,
         ))
 
-    def lazy_outcome_loader(identities):
-        outcome_state["called"] = True
-        return _read_exact_completed_outcomes(
-            client, identities, kickoff_by_identity, observed_at_utc=observed_at_utc
-        )
-
     try:
-        evaluation = evaluate_live_market_only_prospective_cohort(
+        evaluation = evaluate_live_market_only_from_supabase(
             client,
             selected_rows,
-            lazy_outcome_loader,
+            observed_at_utc=observed_at_utc,
             preflight=verify_source_preflight,
+            outcome_read_state=outcome_state,
         )
     except Exception as exc:
         return {
