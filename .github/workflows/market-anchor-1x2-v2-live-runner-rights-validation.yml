@@ -42,7 +42,7 @@ on:
       - "research/source_rights/football_data_co_uk.json"
       - "tests/test_market_anchor_1x2_v2_prospective_runner.py"
       - "tests/test_market_anchor_1x2_v2_prospective_evaluation_workflow.py"
-      - "tests/test_market_anchor_1x2_v2_forward_artifact_adapter.py tests/test_serie_a_v2_manual_quote_trigger_contract.py"
+      - "tests/test_market_anchor_1x2_v2_forward_artifact_adapter.py"
       - ".github/workflows/serie-a-v2-forward-preview.yml"
       - "tests/test_serie_a_v2_manual_quote_trigger_contract.py"
       - ".github/workflows/market-anchor-1x2-v2-live-runner-rights-validation.yml"
