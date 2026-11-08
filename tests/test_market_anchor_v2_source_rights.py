@@ -308,16 +308,18 @@ def test_live_v2_entrypoints_check_research_scope_before_external_reads():
         source = (Path(__file__).resolve().parents[1] / path).read_text(encoding="utf-8")
         main = source[source.index("def main()"):]
         if path == "serie_a_v2_live_diagnostic_report.py":
-            # The explicitly named metadata-only mode may read saved odds before
-            # the provider gate; it must not read Football-Data or infer.
-            preflight = main.split("    if args.preflight_only:", 1)[1].split(
-                "    try:\n        require_personal_research_inference_scope()", 1
-            )[0]
-            assert "from database import supabase" in preflight
-            assert "fetch_saved_upcoming_serie_a_quotes(" in preflight
-            assert "require_personal_research_inference_scope()" not in preflight
+            # Even metadata-only quote preflight must pass the provider-rights
+            # gate before reading saved odds; it must not read Football-Data or infer.
+            preflight_start = main.index("    if args.preflight_only:")
+            preflight_db = main.index("    from database import supabase", preflight_start)
+            preflight = main[preflight_start:preflight_db]
+            rights_guard = preflight.find("require_personal_research_inference_scope()")
+            assert rights_guard >= 0
             assert "fetch_public_history(" not in preflight
-            normal = main[main.index("    try:\n"):]
+            pattern = "    try:\\n        require_personal_research_inference_scope()"
+            first_guard = main.index(pattern, preflight_start)
+            normal_start = main.index(pattern, first_guard + len(pattern))
+            normal = main[normal_start:]
             guard = normal.find("require_personal_research_inference_scope()")
             assert guard >= 0
             for side_effect in side_effects:
