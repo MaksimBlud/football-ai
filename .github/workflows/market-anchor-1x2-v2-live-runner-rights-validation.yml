@@ -13,6 +13,7 @@ on:
       - research/v2-evaluation-artifact-discovery-private-gate-stacked-on-736-20261108-run11
       - research/v2-internal-archive-downloader-private-gate-stacked-on-737-20261108-run11
       - research/v2-original-forward-source-capture-rights-triggers-stacked-on-738-20261108-run11
+      - research/v2-original-forward-pytest-continuation-fix-stacked-on-739-20261108-run11
     paths:
       - "requirements-v2-research-py312.lock"
       - "market_anchor_1x2_v2_prospective_runner.py"
@@ -58,6 +59,7 @@ on:
       - research/v2-live-diagnostic-source-private-gate-stacked-on-735-20261108-run11
       - research/v2-evaluation-artifact-discovery-private-gate-stacked-on-736-20261108-run11
       - research/v2-internal-archive-downloader-private-gate-stacked-on-737-20261108-run11
+      - research/v2-original-forward-source-capture-rights-triggers-stacked-on-738-20261108-run11
     paths:
       - "requirements-v2-research-py312.lock"
       - "market_anchor_1x2_v2_prospective_runner.py"
