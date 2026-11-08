@@ -110,7 +110,7 @@ def require_personal_research_source_capture_scope(
     if (
         not isinstance(interpretation, str)
         or "source-only archival/validation" not in interpretation
-        or "frozen-model inference remains blocked" not in interpretation
+        or "frozen-model inference remains blocked" not in interpretation.lower()
     ):
         raise PermissionError("source-capture policy interpretation is missing the separate inference prohibition")
 
