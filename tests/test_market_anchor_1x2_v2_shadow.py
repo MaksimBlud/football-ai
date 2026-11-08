@@ -199,6 +199,15 @@ def test_outcome_gate_is_count_based_and_cannot_activate_v2_post_hoc():
         v2.outcome_read_permitted(-1)
 
 
+def test_v2_module_does_not_reexport_v1_training_helpers():
+    # The V2 recovery module must not expose the V1 fit/prepare functions as
+    # alternate ways to refit the immutable original candidate.
+    assert not hasattr(v2, "fit_residual_model")
+    assert not hasattr(v2, "_prepare")
+    assert not hasattr(v2, "_market")
+    assert not hasattr(v2, "_training_fingerprint")
+
+
 def test_v2_code_does_not_reference_production_pickle_paths():
     text = (ROOT / "market_anchor_1x2_v2_shadow.py").read_text()
     assert "football_model_xgboost_elo.pkl" not in text
