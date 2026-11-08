@@ -20,6 +20,31 @@ from serie_a_v2_prequote_source_archive_gate import ARCHIVE_REPORT, SOURCE_DIR
 NOW = datetime(2026, 10, 14, 16, tzinfo=timezone.utc)
 
 
+@pytest.fixture(autouse=True)
+def _allow_private_source_only_scope_for_synthetic_attestation(monkeypatch):
+    """Keep synthetic ZIP tests offline; denial/order cases override these gates."""
+    monkeypatch.setattr(
+        attestor,
+        "require_personal_research_source_capture_scope",
+        lambda: {
+            "source_capture_scope": "PRIVATE_NONCOMMERCIAL_RESEARCH_ARCHIVE_ONLY",
+            "rights_manifest_sha256": "a" * 64,
+            "policy_url": "https://football-data.co.uk/contact.php",
+            "policy_checked_at_utc": "2026-11-07T01:56:17+00:00",
+            "policy_page_updated_date": "2026-11-06",
+        },
+    )
+    monkeypatch.setattr(
+        attestor,
+        "require_private_repository_for_source_artifacts",
+        lambda repository, token: {
+            "repository": repository,
+            "private": True,
+            "storage_policy": "PRIVATE_GITHUB_ACTIONS_ARTIFACTS",
+        },
+    )
+
+
 def source_fixture():
     sources = {}
     manifest = []
@@ -85,6 +110,11 @@ def test_complete_attestation_proves_actual_zip_contents_without_any_quotes():
     assert proof["verified_original_v2_sha256"]==FROZEN_SHA
     assert proof["source_run_provenance"]["workflow_path"]==SOURCE_WORKFLOW_PATH
     assert proof["source_archive_sha256_verified"] is True
+    assert proof["source_rights_manifest_sha256"] == "a" * 64
+    assert proof["source_policy_url"] == "https://football-data.co.uk/contact.php"
+    assert proof["source_policy_checked_at_utc"] == "2026-11-07T01:56:17+00:00"
+    assert proof["source_policy_page_updated_date"] == "2026-11-06"
+    assert proof["source_artifact_storage_policy"] == "PRIVATE_GITHUB_ACTIONS_ARTIFACTS"
     assert proof["quotes_read"]==proof["forecasts_created"]==0
     assert proof["paid_provider_calls"]==0
     assert proof["supabase_reads"]==proof["supabase_writes"]==0
@@ -173,23 +203,115 @@ def test_main_blocks_before_github_archive_discovery_when_research_scope_is_deni
     )
     monkeypatch.setattr(
         attestor,
-        "require_personal_research_inference_scope",
-        lambda: (_ for _ in ()).throw(PermissionError("research scope not confirmed")),
+        "require_personal_research_source_capture_scope",
+        lambda: (_ for _ in ()).throw(PermissionError("source-only scope not confirmed")),
     )
     monkeypatch.setattr(
         attestor,
-        "attest_latest_source",
-        lambda **kwargs: pytest.fail("archive discovery/download must not run before rights approval"),
+        "require_private_repository_for_source_artifacts",
+        lambda *args, **kwargs: pytest.fail("privacy lookup must not run after source-rights denial"),
     )
 
     attestor.main()
 
     report = json.loads(output.read_text(encoding="utf-8"))
-    assert report["mode"] == "SOURCE_RIGHTS_BLOCKED_NO_NETWORK_NO_INFERENCE"
+    assert report["mode"] == "SOURCE_CAPTURE_SCOPE_BLOCKED_NO_NETWORK_NO_INFERENCE"
     assert report["operation"] == "SERIE_A_ORIGINAL_V2_SOURCE_ATTESTATION"
-    assert report["block_reason"] == "research scope not confirmed"
+    assert report["block_reason"] == "source-only scope not confirmed"
     assert report["public_http_requests"] == 0
     assert report["supabase_reads"] == 0
     assert report["supabase_writes"] == 0
     assert report["quotes_read"] == 0
     assert report["forecasts_created"] == 0
+
+
+
+def test_direct_attestation_checks_rights_and_private_storage_before_archive_io(monkeypatch):
+    data, meta = source_fixture()
+    calls = []
+
+    def allow_rights():
+        calls.append("rights")
+        return {
+            "rights_manifest_sha256": "b" * 64,
+            "policy_url": "https://football-data.co.uk/contact.php",
+            "policy_checked_at_utc": "2026-11-07T01:56:17+00:00",
+            "policy_page_updated_date": "2026-11-06",
+        }
+
+    def allow_private(repository, token):
+        calls.append("privacy")
+        assert repository == attestor.REPOSITORY
+        assert token == "test-token"
+        return {"private": True, "storage_policy": "PRIVATE_GITHUB_ACTIONS_ARTIFACTS"}
+
+    def discover(**kwargs):
+        calls.append("discover")
+        return meta
+
+    def verify(m, quote_time, token):
+        calls.append("verify")
+        return valid_parent(m, quote_time, token)
+
+    def load(artifact_id, token):
+        calls.append("load")
+        return data
+
+    monkeypatch.setattr(attestor, "require_personal_research_source_capture_scope", allow_rights)
+    monkeypatch.setattr(attestor, "require_private_repository_for_source_artifacts", allow_private)
+    proof = attest_latest_source(
+        token="test-token", now=NOW, discover=discover, load=load, verify_run=verify,
+    )
+
+    assert calls == ["rights", "privacy", "discover", "verify", "load"]
+    assert proof["source_rights_manifest_sha256"] == "b" * 64
+    assert proof["source_artifact_storage_policy"] == "PRIVATE_GITHUB_ACTIONS_ARTIFACTS"
+
+
+def test_direct_attestation_blocks_rights_denial_before_privacy_or_archive_discovery(monkeypatch):
+    calls = []
+
+    def deny_rights():
+        calls.append("rights")
+        raise PermissionError("source-only rights denied")
+
+    monkeypatch.setattr(attestor, "require_personal_research_source_capture_scope", deny_rights)
+    monkeypatch.setattr(
+        attestor, "require_private_repository_for_source_artifacts",
+        lambda *args, **kwargs: pytest.fail("privacy check must not run after rights denial"),
+    )
+
+    with pytest.raises(PermissionError, match="source-only rights denied"):
+        attest_latest_source(
+            token="test-token", now=NOW,
+            discover=lambda **kwargs: pytest.fail("archive discovery must remain blocked"),
+            load=lambda *args, **kwargs: pytest.fail("archive download must remain blocked"),
+            verify_run=lambda *args, **kwargs: pytest.fail("parent verification must remain blocked"),
+        )
+
+    assert calls == ["rights"]
+
+
+def test_direct_attestation_blocks_public_storage_before_archive_discovery(monkeypatch):
+    calls = []
+
+    def allow_rights():
+        calls.append("rights")
+        return {"rights_manifest_sha256": "c" * 64}
+
+    def deny_privacy(repository, token):
+        calls.append("privacy")
+        raise PermissionError("private repository required")
+
+    monkeypatch.setattr(attestor, "require_personal_research_source_capture_scope", allow_rights)
+    monkeypatch.setattr(attestor, "require_private_repository_for_source_artifacts", deny_privacy)
+
+    with pytest.raises(PermissionError, match="private repository required"):
+        attest_latest_source(
+            token="test-token", now=NOW,
+            discover=lambda **kwargs: pytest.fail("public-storage denial must precede archive discovery"),
+            load=lambda *args, **kwargs: pytest.fail("public-storage denial must precede archive download"),
+            verify_run=lambda *args, **kwargs: pytest.fail("public-storage denial must precede parent verification"),
+        )
+
+    assert calls == ["rights", "privacy"]
