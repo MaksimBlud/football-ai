@@ -36,6 +36,9 @@ def test_current_form_push_filter_covers_frozen_source_dependencies():
         "tests/test_serie_a_v2_asof_feature_manifest.py",
         "tests/test_serie_a_v2_atalanta_alias.py",
         "tests/test_serie_a_v2_current_form_source_capture.py",
+        "market_anchor_v2_source_capture_rights.py",
+        "tests/test_market_anchor_v2_source_capture_rights.py",
+        "research/SERIE_A_V2_SOURCE_CAPTURE_ONLY_SCOPE_20261107.md",
         "tests/test_serie_a_v2_current_form_source_workflow_contract.py",
         ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml",
         ".github/workflows/serie-a-v2-current-form-source-capture.yml",
@@ -51,6 +54,7 @@ def test_current_form_source_workflow_runs_frozen_feature_regressions():
     validation = validation.split("      - name: Capture frozen historical seasons plus gated current-form source", 1)[0]
     required_tests = {
         "tests/test_serie_a_v2_current_form_source_capture.py",
+        "tests/test_market_anchor_v2_source_capture_rights.py",
         "tests/test_serie_a_v2_asof_feature_manifest.py",
         "tests/test_serie_a_v2_atalanta_alias.py",
         "tests/test_serie_a_v2_frozen_shadow_preview.py",
@@ -193,6 +197,15 @@ def test_source_rights_changes_reaudit_every_live_v2_workflow():
         assert not missing, (
             f"{workflow.name} would skip V2 rights re-audit for: {sorted(missing)}"
         )
+    source_only_required = {
+        "market_anchor_v2_source_capture_rights.py",
+        "tests/test_market_anchor_v2_source_capture_rights.py",
+        "research/SERIE_A_V2_SOURCE_CAPTURE_ONLY_SCOPE_20261107.md",
+    }
+    source_only_missing = source_only_required - _push_paths(CURRENT_SOURCE_WORKFLOW)
+    assert not source_only_missing, (
+        f"source-only scope changes would skip source capture re-audit: {sorted(source_only_missing)}"
+    )
 
 def test_diagnostic_trigger_source_preflight_checks_rights_before_any_data_access():
     """The workflow_run freshness preflight must not bypass the source-rights gate."""
@@ -205,8 +218,11 @@ def test_diagnostic_trigger_source_preflight_checks_rights_before_any_data_acces
         1,
     )[0]
 
-    assert "from market_anchor_v2_source_rights import require_personal_research_inference_scope" in preflight
-    rights_check = preflight.index("rights_scope = require_personal_research_inference_scope()")
+    assert "from market_anchor_v2_source_capture_rights import require_personal_research_source_capture_scope" in preflight
+    assert "from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts" in preflight
+    rights_check = preflight.index("source_scope = require_personal_research_source_capture_scope()")
+    privacy_check = preflight.index("require_private_repository_for_source_artifacts()")
+    assert rights_check < privacy_check
     for access in (
         "create_client(",
         "read_completed_primary_event_identities(",
@@ -216,14 +232,15 @@ def test_diagnostic_trigger_source_preflight_checks_rights_before_any_data_acces
         assert rights_check < preflight.index(access), (
             f"source-rights check must precede {access}"
         )
-    assert '"provider_issued_ai_inference_license": rights_scope.get("provider_issued_ai_inference_license")' in preflight
+    assert '"provider_issued_ai_inference_license": source_scope.get("provider_issued_ai_inference_license")' in preflight
+    assert '"research_inference_permitted": source_scope.get("research_inference_permitted")' in preflight
 
 
 def test_current_form_rights_preflight_blocks_metadata_budget_and_artifact_when_scope_is_denied():
     """A denied rights gate must stop before Supabase metadata, budget markers, or source artifacts."""
     text = CURRENT_SOURCE_WORKFLOW.read_text(encoding="utf-8")
     rights = text.index(
-        "Preflight frozen V2 source rights before metadata or download budget"
+        "Preflight private source-only research capture rights before metadata or download budget"
     )
     source_refresh = text.index(
         "Check existing verified source before diagnostic-triggered refresh"
@@ -235,13 +252,15 @@ def test_current_form_rights_preflight_blocks_metadata_budget_and_artifact_when_
     assert rights < source_refresh < budget < marker < capture < archive
 
     rights_block = text.split(
-        "      - name: Preflight frozen V2 source rights before metadata or download budget",
+        "      - name: Preflight private source-only research capture rights before metadata or download budget",
         1,
     )[1].split(
         "      - name: Check existing verified source before diagnostic-triggered refresh",
         1,
     )[0]
-    assert "require_personal_research_inference_scope()" in rights_block
+    assert "require_personal_research_source_capture_scope()" in rights_block
+    assert "require_personal_research_inference_scope()" not in rights_block
+    assert "require_private_repository_for_source_artifacts()" in rights_block
     assert "except PermissionError" in rights_block
     assert 'output.write(f"allowed={allowed}' in rights_block
     assert "create_client(" not in rights_block
@@ -261,7 +280,7 @@ def test_current_form_rights_preflight_blocks_metadata_budget_and_artifact_when_
             "      - name:", 1
         )[0]
         assert "steps.rights_preflight.outputs.allowed == 'true'" in block, (
-            f"{step_name} must be skipped when frozen inference rights are denied"
+            f"{step_name} must be skipped when source-only rights or private storage are denied"
         )
 
     assert '- cron: "50 5 * * *"' in text
@@ -270,13 +289,14 @@ def test_current_form_rights_preflight_blocks_metadata_budget_and_artifact_when_
 def test_current_form_rights_preflight_is_local_only_and_does_not_consume_download_budget():
     text = CURRENT_SOURCE_WORKFLOW.read_text(encoding="utf-8")
     block = text.split(
-        "      - name: Preflight frozen V2 source rights before metadata or download budget",
+        "      - name: Preflight private source-only research capture rights before metadata or download budget",
         1,
     )[1].split(
         "      - name: Check existing verified source before diagnostic-triggered refresh",
         1,
     )[0]
-    assert "market_anchor_v2_source_rights" in block
+    assert "market_anchor_v2_source_capture_rights" in block
+    assert "market_anchor_v2_artifact_privacy" in block
     assert "GITHUB_OUTPUT" in block
     assert "download_budget_markers" in block
     assert "source_archive_artifacts" in block
@@ -289,6 +309,7 @@ def test_stacked_rights_preflight_pr_receives_exact_v2_ci_on_its_base_branch():
     source = CURRENT_SOURCE_WORKFLOW.read_text(encoding="utf-8")
     source_push_branches = source.split("  push:\n", 1)[1].split("    paths:\n", 1)[0]
     assert "research/v2-block-blocked-source-capture-*" in source_push_branches
+    assert "research/v2-private-artifact-gate-*" in source_push_branches
 
     frozen = FROZEN_SHADOW_WORKFLOW.read_text(encoding="utf-8")
     frozen_pr_branches = frozen.split("  pull_request:\n", 1)[1].split("    paths:\n", 1)[0]

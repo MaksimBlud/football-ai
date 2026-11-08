@@ -6,6 +6,8 @@
   "policy_checked_at_utc": "2026-11-07T01:56:17Z",
   "rights_status": "V2_FROZEN_INFERENCE_SCOPE_UNRESOLVED",
   "research_use_permitted": true,
+  "research_source_capture_permitted": true,
+  "research_source_capture_scope": "PRIVATE_NONCOMMERCIAL_RESEARCH_ARCHIVE_ONLY",
   "research_inference_permitted": false,
   "research_inference_scope": "NONE_PENDING_SCOPE_CLARIFICATION",
   "ai_model_training_permitted": false,
@@ -15,7 +17,7 @@
   "max_automated_download_sessions_per_week": 2,
   "download_budget_policy": "TWO_AUTOMATED_SESSIONS_PER_ROLLING_7_DAYS",
   "policy_summary": "The official fair-use page displays Updated: 06/11/26. It describes free CSV/Excel data as intended for private individuals' personal betting and/or academic interest and research only, via manual download or at most two light automated download sessions per week. It says the data are not intended for commercial or AI data-training projects. The current page does not separately define frozen-model inference for noncommercial research.",
-  "policy_interpretation": "The current public page does not expressly resolve frozen-model inference. The project therefore applies a conservative internal fail-closed rule: no Football-Data-derived V2 inference or source use until the provider clarifies that this narrow frozen, noncommercial research inference is within the stated research scope, or an alternative source with an applicable explicit licence is used. This is not a claim that the provider explicitly bans all inference or requires a provider-issued inference licence for every academic-research use. AI model training, commercial use, and public product use remain forbidden. Automated source access remains limited to two sessions per rolling seven days.",
+  "policy_interpretation": "The official page expressly describes the free data as intended for private individuals' personal betting and/or academic interest and research, with at most two light automated download sessions per week. The project treats that stated allowance as permitting only private, noncommercial source-only archival/validation for research, subject to the private-repository and shared download-budget gates. This narrow source-capture scope does NOT authorize feature construction, frozen-model inference, AI model training, commercial use, public product publication, or redistribution. Frozen-model inference remains blocked until its separate scope is clarified or an alternative source with an applicable explicit licence is used. This is an internal scope classification, not a provider-issued inference licence or a claim that the provider expressly bans every form of inference.",
   "authorization": null,
   "policy_page_updated_date": "2026-11-06"
 }

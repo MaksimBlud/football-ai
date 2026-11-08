@@ -472,6 +472,10 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert (tmp_path / CURRENT_FILENAME).read_bytes() == raw
     assert (tmp_path / MANIFEST_FILENAME).exists()
     assert report["target_outcomes_read"] is False
+    assert report["source_capture_only"] is True
+    assert report["research_inference_permitted"] is False
+    assert report["model_inference_executed"] is False
+    assert report["model_training_executed"] is False
     assert report["target_outcomes_scored"] is False
     assert report["target_outcome_evaluation_gate"]["outcome_gate_open"] is False
     assert report["paid_provider_calls"] == report["supabase_writes"] == 0

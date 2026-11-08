@@ -285,14 +285,13 @@ def test_research_scope_block_report_is_explicitly_no_io_and_no_inference(tmp_pa
     assert report["no_bet"] is True
 
 
-def test_live_v2_entrypoints_check_research_scope_before_external_reads():
-    cases = {
+def test_live_v2_entrypoints_check_scope_before_external_reads():
+    inference_cases = {
         "serie_a_v2_live_diagnostic_report.py": (
             "from database import supabase",
             "fetch_saved_upcoming_serie_a_quotes(",
             "fetch_public_history(",
         ),
-        "serie_a_v2_current_form_source_capture.py": ("create_client(", "capture_source_archive("),
         "serie_a_v2_current_form_forward_capture.py": (
             "discover_archives(", "create_client(", "fetch_saved_upcoming_serie_a_quotes(",
         ),
@@ -304,7 +303,7 @@ def test_live_v2_entrypoints_check_research_scope_before_external_reads():
             "proof = attest_latest_source(",
         ),
     }
-    for path, side_effects in cases.items():
+    for path, side_effects in inference_cases.items():
         source = (Path(__file__).resolve().parents[1] / path).read_text(encoding="utf-8")
         main = source[source.index("def main()"):]
         guard = main.find("require_personal_research_inference_scope()")
@@ -313,6 +312,18 @@ def test_live_v2_entrypoints_check_research_scope_before_external_reads():
             position = main.find(side_effect)
             assert position >= 0, f"{path} lost expected runtime step {side_effect!r}"
             assert guard < position, f"{path} reaches {side_effect!r} before the provider AI-inference permission guard"
+
+    source_path = Path(__file__).resolve().parents[1] / "serie_a_v2_current_form_source_capture.py"
+    source_main = source_path.read_text(encoding="utf-8").split("def main()", 1)[1]
+    source_guard = source_main.find("require_personal_research_source_capture_scope()")
+    privacy_guard = source_main.find("require_private_repository_for_source_artifacts()")
+    assert source_guard >= 0, "source capture lacks the source-only research rights gate"
+    assert privacy_guard > source_guard, "source capture must verify private storage after source-only rights"
+    assert "require_personal_research_inference_scope()" not in source_main
+    for side_effect in ("create_client(", "capture_source_archive("):
+        position = source_main.find(side_effect)
+        assert position >= 0, f"source capture lost expected runtime step {side_effect!r}"
+        assert privacy_guard < position, f"source capture reaches {side_effect!r} before private-storage verification"
 
 
 def test_research_inference_rejects_policy_page_updated_after_review(tmp_path):
@@ -339,6 +350,10 @@ def test_current_official_policy_wording_is_pinned_without_overstating_ai_usage_
     assert "AI-usage" not in manifest["policy_summary"]
     assert "does not separately define" in manifest["policy_summary"]
     assert manifest["research_use_permitted"] is True
+    assert manifest["research_source_capture_permitted"] is True
+    assert manifest["research_source_capture_scope"] == "PRIVATE_NONCOMMERCIAL_RESEARCH_ARCHIVE_ONLY"
+    assert "source-only archival/validation" in manifest["policy_interpretation"]
+    assert "frozen-model inference remains blocked" in manifest["policy_interpretation"].lower()
     assert manifest["research_inference_permitted"] is False
     assert manifest["provider_issued_ai_inference_license"] is False
     assert manifest["authorization"] is None
