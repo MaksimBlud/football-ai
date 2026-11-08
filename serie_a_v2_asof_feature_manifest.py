@@ -23,13 +23,6 @@ STATS = ("HC", "AC", "HY", "AY", "HR", "AR")
 REQUIRED = frozenset(("Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR", *STATS))
 FROZEN_FEATURE_BUILDER_GIT_BLOB_SHA = "401b3a0893371bfa4a488ec92a4a54af2678c8f7"
 
-PROTECTED_SEASON_START = pd.Timestamp("2026-07-01")
-
-
-class ProtectedSeasonOutcomeError(ValueError):
-    """Raised before any 2026/27 result/stat columns are processed."""
-
-
 def _require_frozen_inference_scope() -> dict:
     # Keep this guard inside every public feature-building entrypoint. A CLI
     # preflight alone is not an access boundary because build_manifest() is
@@ -39,62 +32,16 @@ def _require_frozen_inference_scope() -> dict:
     return require_personal_research_inference_scope()
 
 
-def _assert_no_protected_season_history(history: pd.DataFrame) -> pd.Series:
-    """Inspect only date values and reject protected 2026/27 rows before outcomes."""
-    if not isinstance(history, pd.DataFrame) or "Date" not in history.columns:
-        raise ValueError("historical source requires a Date column")
-    dates = pd.to_datetime(history["Date"], dayfirst=True, format="mixed", errors="raise")
-    if dates.isna().any():
-        raise ValueError("unparseable historical match date")
-    if dates.dt.tz is not None:
-        raise ValueError("expected date-only historical source")
-    if (dates >= PROTECTED_SEASON_START).any():
-        raise ProtectedSeasonOutcomeError(
-            "protected Serie A 2026/27 outcomes cannot enter original V2 feature construction before the frozen outcome gate"
-        )
-    return dates
-
-# Only the restored original Serie A V2 feature source. Bookmaker fixture
-# labels are not training team IDs: all 10 verified historical I1 seasons call
-# this club "Atalanta", whereas the saved 2026 bookmaker fixtures use
-# "Atalanta BC". Keep this adapter local to V2; other league/product models
-# and the frozen candidate's feature order/weights remain untouched.
-V2_HISTORICAL_TEAM_ALIASES = {"Atalanta BC": "Atalanta"}
-
-
-def _git_blob_sha1(path: Path) -> str:
-    payload = path.read_bytes()
-    return hashlib.sha1(f"blob {len(payload)}\0".encode("ascii") + payload).hexdigest()
-
-
-def _verify_original_feature_builder(path: Path | None = None) -> str:
-    source = path or Path(__file__).resolve().parent / "historical_football_signal_lab.py"
-    actual = _git_blob_sha1(source)
-    if actual != FROZEN_FEATURE_BUILDER_GIT_BLOB_SHA:
-        raise ValueError(
-            "original V2 feature builder source drift: "
-            f"{actual} != {FROZEN_FEATURE_BUILDER_GIT_BLOB_SHA}"
-        )
-    return actual
-
-
-def _canonical(team: str) -> str:
-    if not isinstance(team, str) or not team.strip():
-        raise ValueError("empty team identity")
-    value = team.strip()
-    known = SERIE_A_RUNTIME_CONFIG.aliases.get(value, value)
-    return V2_HISTORICAL_TEAM_ALIASES.get(known, known)
-
-
-
-
 def _validate_history(history: pd.DataFrame) -> pd.DataFrame:
     missing = REQUIRED - set(history.columns)
     if missing:
         raise ValueError("historical source lacks required football stats: " + ", ".join(sorted(missing)))
     frame = history.copy()
-    # Date-only embargo runs before any result/score/stat column is inspected.
-    frame["_match_date"] = _assert_no_protected_season_history(frame)
+    frame["_match_date"] = pd.to_datetime(frame["Date"], dayfirst=True, format="mixed", errors="raise")
+    if frame["_match_date"].isna().any():
+        raise ValueError("unparseable historical match date")
+    if frame["_match_date"].dt.tz is not None:
+        raise ValueError("expected date-only historical source")
     if frame["FTR"].isna().any() or not frame["FTR"].isin(("H", "D", "A")).all():
         raise ValueError("invalid/missing historical result")
     for field in ("FTHG", "FTAG", *STATS):
@@ -130,9 +77,6 @@ def _stats_asof(frame: pd.DataFrame, *, before_day: datetime) -> dict[str, deque
 
 def build_manifest(history: pd.DataFrame, quotes: list[dict]) -> dict:
     _require_frozen_inference_scope()
-    # This is deliberately before candidate loading, quote iteration, or any
-    # historical outcome/stat processing.
-    _assert_no_protected_season_history(history)
     _verify_original_feature_builder()
     original = load_verified_original()
     names = list(original["features"])
@@ -230,31 +174,6 @@ def build_manifest(history: pd.DataFrame, quotes: list[dict]) -> dict:
     }
 
 
-def _write_protected_outcome_block(path: Path, reason: str) -> dict:
-    report = {
-        "schema_version": "SERIE_A_V2_PROTECTED_OUTCOME_GATE_BLOCK_V1",
-        "mode": "PROTECTED_2026_27_OUTCOME_GATE_BLOCKED",
-        "block_reason": str(reason),
-        "history_date_column_only_preflight": True,
-        "protected_2026_27_outcomes_read": False,
-        "history_outcome_columns_read": False,
-        "saved_quote_rows_read": False,
-        "frozen_candidate_read": False,
-        "model_inference_performed": False,
-        "supabase_reads": 0,
-        "supabase_writes": 0,
-        "paid_provider_calls": 0,
-        "target_outcomes_read": False,
-        "eligible_for_frozen_prospective_cohort": False,
-        "eligible_for_product_publication": False,
-        "no_bet": True,
-    }
-    output = Path(path)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
-    return report
-
-
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--existing-history-csv", required=True, type=Path)
@@ -265,8 +184,9 @@ def main() -> None:
     if args.manifest_json == args.audit_json:
         raise ValueError("audit and manifest paths must differ")
 
-    # Do not open even the date column until the provider's narrow frozen-
-    # inference research scope is explicitly cleared.
+    # This CLI is a feature-building entrypoint, not just a file converter.
+    # Enforce the same fail-closed inference scope before opening history,
+    # saved quotes, or the frozen candidate.
     try:
         _require_frozen_inference_scope()
     except PermissionError as exc:
@@ -275,16 +195,6 @@ def main() -> None:
         report = write_research_scope_blocked_report(
             args.audit_json, "SERIE_A_V2_ASOF_FEATURE_MANIFEST", str(exc)
         )
-        print(json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True))
-        return
-
-    # If rights are later granted, inspect ONLY the date column first. Any
-    # 2026/27 row blocks before result/score/stat columns or saved quotes open.
-    date_only = pd.read_csv(args.existing_history_csv, usecols=["Date"])
-    try:
-        _assert_no_protected_season_history(date_only)
-    except ProtectedSeasonOutcomeError as exc:
-        report = _write_protected_outcome_block(args.audit_json, str(exc))
         print(json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True))
         return
 
