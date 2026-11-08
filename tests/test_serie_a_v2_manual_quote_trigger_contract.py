@@ -276,3 +276,40 @@ def test_original_forward_push_is_offline_validation_only():
     assert "python -m pytest -q tests/test_serie_a_v2_manual_quote_trigger_contract.py" in validator
     assert "github.ref == 'refs/heads/main'" in forward_job
     assert "github.event_name != 'push'" in forward_job
+
+
+def test_original_forward_reaudits_source_capture_rights_transitive_dependencies():
+    """The original forward attestor must rerun when its source-only rights change."""
+    free = FREE.read_text(encoding="utf-8")
+    header = free.split("concurrency:", 1)[0]
+    required_paths = (
+        "market_anchor_v2_source_rights.py",
+        "market_anchor_v2_source_capture_rights.py",
+        "market_anchor_v2_artifact_privacy.py",
+        "research/source_rights/football_data_co_uk.json",
+        "research/SERIE_A_V2_SOURCE_CAPTURE_ONLY_SCOPE_20261107.md",
+        "tests/test_market_anchor_v2_source_rights.py",
+        "tests/test_market_anchor_v2_source_capture_rights.py",
+        "tests/test_market_anchor_v2_artifact_privacy.py",
+    )
+    for path in required_paths:
+        assert f'"{path}"' in header
+
+    live = free.split("  original-v2-forward-preview:\\n", 1)[1]
+    compile_command = live.split("python -m py_compile ", 1)[1].split("\\n", 1)[0]
+    for module in (
+        "market_anchor_v2_source_rights.py",
+        "market_anchor_v2_source_capture_rights.py",
+        "market_anchor_v2_artifact_privacy.py",
+    ):
+        assert module in compile_command
+
+    test_command = live.split("python -m pytest -q", 1)[1].split(
+        "      - name: Preflight frozen V2 source rights", 1
+    )[0]
+    for path in (
+        "tests/test_market_anchor_v2_source_rights.py",
+        "tests/test_market_anchor_v2_source_capture_rights.py",
+        "tests/test_market_anchor_v2_artifact_privacy.py",
+    ):
+        assert path in test_command
