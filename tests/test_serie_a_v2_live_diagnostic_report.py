@@ -599,3 +599,17 @@ def test_free_diagnostic_quote_preflight_precedes_rights_budget_and_source_acces
     assert "steps.quote_preflight.outputs.eligible_quote_rows != '0'" in workflow[budget_step:source_step]
     assert "steps.rights_preflight.outputs.allowed == 'true'" in workflow[budget_step:source_step]
 
+
+
+def test_free_diagnostic_jobs_run_original_forward_loader_pin_regression():
+    from pathlib import Path
+
+    workflow = Path(".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml").read_text(encoding="utf-8")
+    validation = workflow.split("  validate-free-diagnostic:", 1)[1].split(
+        "\n\n  free-diagnostic:", 1
+    )[0]
+    live = workflow.split("  free-diagnostic:", 1)[1]
+    assert "serie_a_v2_forward_capture.py" in validation
+    assert "tests/test_serie_a_v2_forward_capture.py" in validation
+    assert "serie_a_v2_forward_capture.py" in live
+    assert "tests/test_serie_a_v2_forward_capture.py" in live
