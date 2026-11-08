@@ -295,8 +295,8 @@ def test_original_forward_reaudits_source_capture_rights_transitive_dependencies
     for path in required_paths:
         assert f'"{path}"' in header
 
-    live = free.split("  original-v2-forward-preview:\\n", 1)[1]
-    compile_command = live.split("python -m py_compile ", 1)[1].split("\\n", 1)[0]
+    live = free.split("  original-v2-forward-preview:\n", 1)[1]
+    compile_command = live.split("python -m py_compile ", 1)[1].split("\n", 1)[0]
     for module in (
         "market_anchor_v2_source_rights.py",
         "market_anchor_v2_source_capture_rights.py",
