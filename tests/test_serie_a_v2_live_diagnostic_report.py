@@ -616,7 +616,7 @@ def test_preflight_only_denied_rights_stops_before_database_quote_read(monkeypat
     assert not output.exists()
 
 
-def test_free_diagnostic_quote_preflight_precedes_rights_budget_and_source_access():
+def test_free_diagnostic_rights_and_quote_preflight_precede_budget_and_source_access():
     from pathlib import Path
 
     workflow = Path(".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml").read_text(encoding="utf-8")
