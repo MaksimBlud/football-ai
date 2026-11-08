@@ -23,13 +23,36 @@ STATS = ("HC", "AC", "HY", "AY", "HR", "AR")
 REQUIRED = frozenset(("Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR", *STATS))
 FROZEN_FEATURE_BUILDER_GIT_BLOB_SHA = "401b3a0893371bfa4a488ec92a4a54af2678c8f7"
 
-def _require_frozen_inference_scope() -> dict:
-    # Keep this guard inside every public feature-building entrypoint. A CLI
-    # preflight alone is not an access boundary because build_manifest() is
-    # directly importable by other Python callers.
-    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+# Only the restored original Serie A V2 feature source. Bookmaker fixture
+# labels are not training team IDs: all 10 verified historical I1 seasons call
+# this club "Atalanta", whereas the saved 2026 bookmaker fixtures use
+# "Atalanta BC". Keep this adapter local to V2; other league/product models
+# and the frozen candidate's feature order/weights remain untouched.
+V2_HISTORICAL_TEAM_ALIASES = {"Atalanta BC": "Atalanta"}
 
-    return require_personal_research_inference_scope()
+
+def _git_blob_sha1(path: Path) -> str:
+    payload = path.read_bytes()
+    return hashlib.sha1(f"blob {len(payload)}\0".encode("ascii") + payload).hexdigest()
+
+
+def _verify_original_feature_builder(path: Path | None = None) -> str:
+    source = path or Path(__file__).resolve().parent / "historical_football_signal_lab.py"
+    actual = _git_blob_sha1(source)
+    if actual != FROZEN_FEATURE_BUILDER_GIT_BLOB_SHA:
+        raise ValueError(
+            "original V2 feature builder source drift: "
+            f"{actual} != {FROZEN_FEATURE_BUILDER_GIT_BLOB_SHA}"
+        )
+    return actual
+
+
+def _canonical(team: str) -> str:
+    if not isinstance(team, str) or not team.strip():
+        raise ValueError("empty team identity")
+    value = team.strip()
+    known = SERIE_A_RUNTIME_CONFIG.aliases.get(value, value)
+    return V2_HISTORICAL_TEAM_ALIASES.get(known, known)
 
 
 def _validate_history(history: pd.DataFrame) -> pd.DataFrame:
@@ -73,6 +96,14 @@ def _stats_asof(frame: pd.DataFrame, *, before_day: datetime) -> dict[str, deque
         histories[away].append(TeamMatch(ap, ag, hg, float(row["AC"]), float(row["HC"]),
                                          float(row["AY"]), float(row["AR"]), False))
     return histories
+
+
+def _require_frozen_inference_scope() -> dict:
+    # This public feature builder is part of the frozen V2 inference path.
+    # A caller must not bypass the provider scope by importing build_manifest().
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+
+    return require_personal_research_inference_scope()
 
 
 def build_manifest(history: pd.DataFrame, quotes: list[dict]) -> dict:
@@ -183,10 +214,8 @@ def main() -> None:
     args = p.parse_args()
     if args.manifest_json == args.audit_json:
         raise ValueError("audit and manifest paths must differ")
-
-    # This CLI is a feature-building entrypoint, not just a file converter.
-    # Enforce the same fail-closed inference scope before opening history,
-    # saved quotes, or the frozen candidate.
+    # The standalone CLI is a feature-building entrypoint. Enforce the same
+    # rights scope before opening history, saved quotes, or the frozen model.
     try:
         _require_frozen_inference_scope()
     except PermissionError as exc:
@@ -197,19 +226,16 @@ def main() -> None:
         )
         print(json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True))
         return
-
     historical_bytes = args.existing_history_csv.read_bytes()
     history = pd.read_csv(args.existing_history_csv)
     quotes = json.loads(args.saved_quotes_json.read_text(encoding="utf-8"))
     if not isinstance(quotes, list):
         raise ValueError("saved quotes must be a JSON array")
     result = build_manifest(history, quotes)
-    args.manifest_json.parent.mkdir(parents=True, exist_ok=True)
     args.manifest_json.write_text(json.dumps(result["feature_manifests"], indent=2), encoding="utf-8")
     audit = {k: v for k, v in result.items() if k != "feature_manifests"}
     audit["existing_history_sha256"] = hashlib.sha256(historical_bytes).hexdigest()
     audit["saved_quotes_sha256"] = hashlib.sha256(args.saved_quotes_json.read_bytes()).hexdigest()
-    args.audit_json.parent.mkdir(parents=True, exist_ok=True)
     args.audit_json.write_text(json.dumps(audit, indent=2), encoding="utf-8")
     print(json.dumps(audit, indent=2))
 
