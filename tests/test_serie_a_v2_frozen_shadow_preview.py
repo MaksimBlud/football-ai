@@ -205,7 +205,8 @@ def test_read_only_saved_supabase_query_does_not_call_provider():
             self.calls = []
         def select(self, v): self.calls.append("select");return self
         def eq(self, k, v): self.calls.append("eq");assert (k,v)==("league","SERIE_A");return self
-        def gt(self, k, v): self.calls.append("gt"); assert k=="commence_time_utc";return self
+        def gt(self, k, v): self.calls.append("gt"); assert (k,v)==("commence_time_utc",NOW.isoformat());return self
+        def lte(self, k, v): self.calls.append("lte"); assert (k,v)==("snapshot_time_utc",NOW.isoformat());return self
         def order(self, *a, **kw): self.calls.append("order");return self
         def limit(self, n): self.calls.append("limit");assert n==1000;return self
         def execute(self): self.calls.append("execute");return Result()
@@ -216,7 +217,7 @@ def test_read_only_saved_supabase_query_does_not_call_provider():
             return self.query
     db=DB()
     assert v2_preview.fetch_saved_upcoming_serie_a_quotes(db,now=NOW)==[market()]
-    assert db.query.calls==["select","eq","gt","order","limit","execute"]
+    assert db.query.calls==["select","eq","gt","lte","order","limit","execute"]
 
 
 def test_research_no_promotion_or_outcome_read_source():
