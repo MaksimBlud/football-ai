@@ -106,40 +106,6 @@ jobs:
           assert PAID_PROVIDER_REQUESTS == 0
           print("PASS: public-only source; no paid provider key in workflow")
           PY
-      - name: Preflight saved future pre-kickoff quotes (metadata only)
-        id: quote_preflight
-        run: |
-          test -n "$SUPABASE_URL"
-          test -n "$SUPABASE_KEY"
-          python serie_a_v2_live_diagnostic_report.py \
-            --preflight-only \
-            --output artifacts/serie_a_v2_real_quote_diagnostic.json \
-            --raw-source-dir artifacts/serie_a_v2_source_capture
-          python - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          report = json.loads(Path("artifacts/serie_a_v2_real_quote_diagnostic.json").read_text(encoding="utf-8"))
-          count = report.get("eligible_future_prematch_quote_rows")
-          if type(count) is not int or count < 0:
-              raise SystemExit("quote preflight lacks a valid count; source access remains blocked")
-          if report.get("source_download_performed") is not False or report.get("model_inference_performed") is not False:
-              raise SystemExit("quote preflight must not download source or run inference")
-          if report.get("target_outcomes_read") is not False or report.get("supabase_writes") != 0:
-              raise SystemExit("quote preflight crossed the read-only outcome boundary")
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
-              output.write(f"eligible_quote_rows={count}" + chr(10))
-          print(json.dumps({
-              "mode": report.get("mode"),
-              "quote_rows_seen": report.get("quote_rows_seen"),
-              "eligible_future_prematch_quote_rows": count,
-              "source_download_performed": False,
-              "model_inference_performed": False,
-              "target_outcomes_read": False,
-              "supabase_writes": 0,
-          }, sort_keys=True))
-          PY
       - name: Preflight frozen V2 source rights before source access
         id: rights_preflight
         run: |
@@ -175,13 +141,44 @@ jobs:
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
               output.write(f"allowed={allowed}\n")
           PY
-      - name: Check shared public-source download budget
-        id: public_source_budget
-        if: ${{ steps.rights_preflight.outputs.allowed == 'true' && steps.quote_preflight.outputs.eligible_quote_rows != '0' }}
-        run: python serie_a_v2_public_source_download_budget.py --workflow-path ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml" --output artifacts/public_source_download_budget/attempt.json
+      - name: Preflight saved future pre-kickoff quotes (metadata only)
+        id: quote_preflight
+        if: ${{ steps.rights_preflight.outputs.allowed == 'true' }}
+        run: |
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_KEY"
+          python serie_a_v2_live_diagnostic_report.py \
+            --preflight-only \
+            --output artifacts/serie_a_v2_real_quote_diagnostic.json \
+            --raw-source-dir artifacts/serie_a_v2_source_capture
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          report = json.loads(Path("artifacts/serie_a_v2_real_quote_diagnostic.json").read_text(encoding="utf-8"))
+          count = report.get("eligible_future_prematch_quote_rows")
+          if type(count) is not int or count < 0:
+              raise SystemExit("quote preflight lacks a valid count; source access remains blocked")
+          if report.get("source_download_performed") is not False or report.get("model_inference_performed") is not False:
+              raise SystemExit("quote preflight must not download source or run inference")
+          if report.get("target_outcomes_read") is not False or report.get("supabase_writes") != 0:
+              raise SystemExit("quote preflight crossed the read-only outcome boundary")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"eligible_quote_rows={count}" + chr(10))
+          print(json.dumps({
+              "mode": report.get("mode"),
+              "quote_rows_seen": report.get("quote_rows_seen"),
+              "eligible_future_prematch_quote_rows": count,
+              "source_download_performed": False,
+              "model_inference_performed": False,
+              "target_outcomes_read": False,
+              "supabase_writes": 0,
+          }, sort_keys=True))
+          PY
       - name: Recheck saved future pre-kickoff quotes immediately before budget reservation
         id: final_quote_preflight
-        if: ${{ steps.rights_preflight.outputs.allowed == 'true' && steps.public_source_budget.outputs.allowed == 'true' }}
+        if: ${{ steps.rights_preflight.outputs.allowed == 'true' && steps.quote_preflight.outputs.eligible_quote_rows != '0' }}
         run: |
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_KEY"
@@ -214,6 +211,10 @@ jobs:
               "supabase_writes": 0,
           }, sort_keys=True))
           PY
+      - name: Check shared public-source download budget
+        id: public_source_budget
+        if: ${{ steps.rights_preflight.outputs.allowed == 'true' && steps.final_quote_preflight.outputs.eligible_quote_rows != '0' }}
+        run: python serie_a_v2_public_source_download_budget.py --workflow-path ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml" --output artifacts/public_source_download_budget/attempt.json
       - name: Upload shared public-source download attempt marker
         id: upload_public_source_budget
         if: ${{ steps.rights_preflight.outputs.allowed == 'true' && steps.final_quote_preflight.outputs.eligible_quote_rows != '0' && steps.public_source_budget.outputs.allowed == 'true' }}
