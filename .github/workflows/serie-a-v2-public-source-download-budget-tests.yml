@@ -9,6 +9,7 @@ on:
       - main
       - research/v2-provider-ai-inference-rights-block-*
     paths:
+      - "PROJECT_CONTINUITY.md"
       - "serie_a_v2_public_source_download_budget.py"
       - "tests/test_serie_a_v2_public_source_download_budget.py"
       - ".github/workflows/serie-a-v2-current-form-source-capture.yml"

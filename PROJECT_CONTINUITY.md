@@ -1,3 +1,25 @@
+## 2026-11-08 06:06 UTC — authoritative original V2 recovery status, private/quote integration
+
+This section supersedes older contradictory status notes below. Fresh default-branch main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main update was made by this iteration.
+
+**Only candidate:** original `MARKET_ANCHOR_1X2_V2`, candidate artifact SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 exact `ALL_FOOTBALL` features, 3,799 training rows through 2026-06-30 UTC, original weights/scaler/imputer unchanged. `active_lambda=0` remains the exact de-vigged market baseline; `shadow_residual_lambda=1` is research-only. Original stability gate remains FAILED; automatic promotion remains false; no bets or publication.
+
+**HUMAN-MERGE stack:**
+- PR [#720](https://github.com/MaksimBlud/football-ai/pull/720) is Ready for review, base main, exact head `1b9464834dd5256b7d69499c1443378518dde256`, 9/9 required workflows SUCCESS.
+- PR [#727](https://github.com/MaksimBlud/football-ai/pull/727) is Ready for review, mergeable, based on the #720 branch. Exact head `1e5eeed49993a1ef97da1f93b6796de8ddc3d118`. It integrates the private artifact/source-only gate from #723, metadata-only quote preflight and final freshness recheck from #722, strict source-observation and GitHub artifact-time equality regressions from #725, and explicit nine-column pre-match quote projection from #726.
+- Exact #727 CI: [Frozen V2 #42453379871](https://github.com/MaksimBlud/football-ai/actions/runs/42453379871) — Python 3.11 **384 passed**, Python 3.12 **384 passed**, pip check clean, production-pickle guards passed; [download budget #42453379884](https://github.com/MaksimBlud/football-ai/actions/runs/42453379884) — **24 passed**, production-pickle guard passed; [free diagnostic push validation #42453375666](https://github.com/MaksimBlud/football-ai/actions/runs/42453375666) — **238 passed**, live diagnostic correctly skipped on push.
+- Integration found and fixed a real GitHub Actions condition bug: a skipped final quote-preflight step has an empty output, and `'' != '0'` evaluates true. Budget reservation, marker upload, source fetch and artifact upload now require both initial and final quote counts to be explicitly non-empty and positive.
+- PRs #722/#723/#725/#726 remain open as source branches/reference only; their changes are carried into #727 and must not be merged independently. Manual order is #720 first, then fresh-main retarget/revalidation of #727, then human merge.
+- PR #701 prospective evaluator remains Draft on an older base; its privacy gate must be rebased/revalidated after the source/quote stack. The separate 30-forecast evaluation gate remains closed.
+
+**Rights and operational boundary:** Football-Data is recorded as conditional research-only; there is no provider-issued AI-inference licence. Source-only archival and inference are separate permissions. The GitHub repository is still public, so the private-storage gate must block source/forward artifacts. Main's current-form source workflow SHA `9722416862b42d55ff7181003353c39620f23cf2` still has the 05:50 UTC schedule without the new rights/privacy gate; main's original-forward workflow SHA `48ce3b0d8e31c4cf293b94500e9c320047311467` still has the 08:08 UTC schedule without it. No 2026-11-08 source-capture schedule run appeared in the first 100 schedule-event runs as of 06:06 UTC; latest observed source-capture schedule run remains #42370312212 on 2026-11-07. Do not change schedules; until manual integration, the public-main artifact risk remains.
+
+**Read-only pre-match Supabase audit at this iteration:** `odds_snapshots` has 3,966 rows; 3,915 are strictly before kickoff and 51 are at/after kickoff. Zero strictly pre-kickoff rows were created in the last seven days; zero future events have a saved pre-kickoff quote. Latest strictly pre-kickoff snapshot is 2026-10-13 14:48:53 UTC. Original-candidate SHA queries returned **0** `product_prediction_snapshots` rows and **0** `epl_ai_market_pair_ledger` rows. Metadata-only Serie A 2026/27 fixture identity query (date/home/away only) returned 103 unique identities from 2026-08-22 through 2026-11-02; no score/result columns were selected. This is the feature-input gate, not the evaluation gate. Eligible prospective V2 forecasts remain **0/30**; Brier and LogLoss have not been calculated. No protected outcomes were opened.
+
+PRs #657, #659 and #660 are already merged; older contradictory notes below are historical only. No production `.pkl`, model weights/features/lambdas, Supabase schema/data, main branch, workflow schedules or other agent settings were changed. No paid provider calls, Supabase writes/DDL, source downloads, quote reads, inference, target-outcome reads, betting or promotion occurred in this iteration.
+
+---
+
 ## 2026-11-07 11:58 UTC — live source attestation succeeded; no admissible quote or V2 forecast
 
 - Source of truth remains main `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The live runs below executed on that main SHA, before the #720 integration is merged.

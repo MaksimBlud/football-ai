@@ -6,6 +6,7 @@ on:
       - main
       - research/v2-provider-ai-inference-rights-block-*
     paths:
+      - "PROJECT_CONTINUITY.md"
       - "tests/test_serie_a_v2_dependency_lock_contract.py"
       - "requirements-v2-research-py312.lock"
       - "requirements-v2-research-py311.lock"

@@ -8,6 +8,7 @@ on:
   push:
     branches: [main, research/v2-705-699-integrated-20261106-run11, research/v2-integrated-private-quote-preflight-20261108]
     paths:
+      - "PROJECT_CONTINUITY.md"
       - "requirements-v2-research-py312.lock"
       - "serie_a_v2_live_diagnostic_report.py"
       - "serie_a_v2_asof_feature_manifest.py"
