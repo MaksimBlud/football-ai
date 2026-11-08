@@ -61,6 +61,35 @@ def allow_synthetic_v2_inference_scope(monkeypatch):
     )
 
 
+def test_make_report_enforces_inference_rights_before_source_or_feature_processing(monkeypatch):
+    import market_anchor_v2_source_rights as rights
+
+    def deny_scope():
+        raise PermissionError("V2 frozen inference scope remains unresolved")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", deny_scope)
+    monkeypatch.setattr(
+        report_module,
+        "_assert_original_v2_source_embargo",
+        lambda *_args, **_kwargs: pytest.fail("source data must not be inspected before inference rights"),
+    )
+    monkeypatch.setattr(
+        report_module,
+        "build_manifest",
+        lambda *_args, **_kwargs: pytest.fail("frozen features must not be built before inference rights"),
+    )
+
+    class ForbiddenRows:
+        def __bool__(self):
+            return True
+
+        def __iter__(self):
+            pytest.fail("quotes/source audit must not be iterated before inference rights")
+
+    with pytest.raises(PermissionError, match="V2 frozen inference scope remains unresolved"):
+        make_report(ForbiddenRows(), object(), ForbiddenRows(), as_of_utc=NOW)
+
+
 def test_historical_source_rejects_oversized_content_length_before_body_read(tmp_path):
     class Response:
         status_code = 200
