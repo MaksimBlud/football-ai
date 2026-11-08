@@ -313,3 +313,17 @@ def test_original_forward_reaudits_source_capture_rights_transitive_dependencies
         "tests/test_market_anchor_v2_artifact_privacy.py",
     ):
         assert path in test_command
+
+
+def test_original_forward_pytest_command_has_valid_shell_continuations():
+    free = FREE.read_text(encoding="utf-8")
+    live = free.split("  original-v2-forward-preview:\\n", 1)[1]
+    command = live.split("python -m pytest -q", 1)[1].split(
+        "      - name: Preflight frozen V2 source rights", 1
+    )[0]
+    command_lines = [line.strip() for line in command.splitlines() if line.strip()]
+    assert command_lines[0] == chr(92)
+    argument_lines = command_lines[1:]
+    assert argument_lines
+    assert all(line.endswith(chr(92)) for line in argument_lines[:-1])
+    assert not argument_lines[-1].endswith(chr(92))
