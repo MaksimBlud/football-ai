@@ -245,3 +245,36 @@ def test_predict_candidate_denies_direct_inference_before_features_or_weights(mo
 
     with pytest.raises(PermissionError, match="scope unresolved"):
         v2.predict_candidate(Untouchable(), Untouchable(), Untouchable())
+
+def test_private_residual_logits_helper_enforces_rights_before_model_or_input_access(monkeypatch):
+    import market_anchor_v2_source_rights as rights
+
+    def denied():
+        raise PermissionError("frozen inference scope unresolved")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", denied)
+    monkeypatch.setattr(
+        v2,
+        "validate_candidate_artifact",
+        lambda *_args, **_kwargs: pytest.fail("candidate artifact must not be read before rights clearance"),
+    )
+
+    class Untouchable:
+        def __getattribute__(self, name):
+            raise AssertionError(f"model input accessed before rights clearance: {name}")
+
+    with pytest.raises(PermissionError, match="scope unresolved"):
+        v2._artifact_residual_logits(Untouchable(), Untouchable())
+
+
+def test_frozen_candidate_refit_and_artifact_write_are_disabled_before_input_access(tmp_path):
+    class Untouchable:
+        def __getattribute__(self, name):
+            raise AssertionError(f"training input accessed despite frozen-candidate block: {name}")
+
+    output = tmp_path / "must-not-be-created" / "candidate.json"
+    with pytest.raises(PermissionError, match="candidate is frozen; refitting is disabled"):
+        v2.fit_candidate_artifact(Untouchable())
+    with pytest.raises(PermissionError, match="candidate is frozen; writing a refit artifact is disabled"):
+        v2.write_candidate_artifact(Untouchable(), output)
+    assert not output.exists()
