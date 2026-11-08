@@ -12,6 +12,7 @@ on:
       - research/v2-feature-manifest-inference-and-embargo-gate-stacked-on-745-20261108-run11
       - research/v2-shadow-residual-direct-inference-rights-gate-stacked-on-746-20261108-run11
       - research/v2-active-candidate-inference-rights-gate-stacked-on-748-20261108-run11
+      - research/v2-freeze-refit-and-private-logits-gate-stacked-on-749-20261108-run11
     paths:
       - "tests/test_serie_a_v2_dependency_lock_contract.py"
       - "tests/test_market_anchor_1x2_v2_shadow.py"
