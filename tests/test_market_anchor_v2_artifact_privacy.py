@@ -120,7 +120,12 @@ def test_all_live_v2_workflows_require_rights_then_private_storage_before_source
     }
     for relative, downstream_steps in cases.items():
         source = (root / relative).read_text(encoding="utf-8")
-        rights_call = source.index("require_personal_research_inference_scope()")
+        rights_gate = (
+            "require_personal_research_source_capture_scope()"
+            if relative.endswith("serie-a-v2-current-form-source-capture.yml")
+            else "require_personal_research_inference_scope()"
+        )
+        rights_call = source.index(rights_gate)
         privacy_call = source.index("require_private_repository_for_source_artifacts()")
         assert rights_call < privacy_call, f"{relative} must establish provider rights first"
         for step in downstream_steps:
