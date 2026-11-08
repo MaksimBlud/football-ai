@@ -178,7 +178,10 @@ def _training_fingerprint(frame: pd.DataFrame, features: list[str]) -> str:
 
 
 def fit_candidate_artifact(frame: pd.DataFrame) -> dict:
-    """Refit the frozen residual recipe on pre-2026/27 Serie A history only."""
+    """Refitting the original frozen V2 candidate is disabled by the recovery contract."""
+    raise PermissionError(
+        "original MARKET_ANCHOR_1X2_V2 candidate is frozen; refitting is disabled"
+    )
     prepared = _prepare(frame)
     prepared = prepared[(prepared["league"] == PRIMARY_LEAGUE) & prepared["season"].isin(REFIT_SEASONS)].copy()
     if prepared.empty:
@@ -232,6 +235,11 @@ def validate_candidate_artifact(artifact: Mapping) -> None:
 
 
 def _artifact_residual_logits(features: pd.DataFrame, artifact: Mapping) -> np.ndarray:
+    # Defense in depth: this helper is importable directly and reads frozen
+    # weights/features, so it must enforce the same provider scope itself.
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+
+    require_personal_research_inference_scope()
     validate_candidate_artifact(artifact)
     names = list(artifact["features"])
     if list(features.columns) != names:
@@ -275,6 +283,10 @@ def predict_candidate(market_probabilities: np.ndarray, features: pd.DataFrame, 
 
 
 def write_candidate_artifact(frame: pd.DataFrame, output: Path) -> dict:
+    """Writing a newly fitted candidate is disabled; the original artifact is immutable."""
+    raise PermissionError(
+        "original MARKET_ANCHOR_1X2_V2 candidate is frozen; writing a refit artifact is disabled"
+    )
     artifact = fit_candidate_artifact(frame)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(artifact, indent=2, sort_keys=True) + "\n", encoding="utf-8")
