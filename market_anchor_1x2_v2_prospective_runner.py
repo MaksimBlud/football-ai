@@ -14,6 +14,7 @@ from typing import Any, Callable, Iterable, Mapping
 
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 import market_anchor_1x2_v2_prospective_evaluator as evaluator
+from market_anchor_v2_source_rights import require_personal_research_inference_scope
 
 from market_anchor_1x2_v2_completed_fixture_gate import read_completed_fixture_gate
 from market_anchor_1x2_v2_prospective_evaluator import (
@@ -37,6 +38,10 @@ def evaluate_live_prospective_cohort(
     enforces the 30 eligible completed primary-event gate and the separately
     pinned non-legacy incumbent requirement before it can invoke outcome_loader.
     """
+    # This live runner is importable independently of the CLI. Enforce the
+    # provider-rights boundary before its first Supabase identity read.
+    require_personal_research_inference_scope()
+
     if not callable(outcome_loader):
         raise ValueError("outcome_loader must be a lazy callable, not preloaded outcomes")
 
@@ -65,6 +70,10 @@ def evaluate_live_market_only_prospective_cohort(
     race between source-completeness verification and the outcome-read gate.
     It cannot receive target outcomes or alter the evaluator's attestation.
     """
+    # This live runner is importable independently of the CLI. Enforce the
+    # same provider-rights boundary before its first Supabase identity read.
+    require_personal_research_inference_scope()
+
     if not callable(outcome_loader):
         raise ValueError("outcome_loader must be a lazy callable, not preloaded outcomes")
     if preflight is not None and not callable(preflight):

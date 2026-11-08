@@ -1,0 +1,70 @@
+name: Original V2 Live Runner Rights Gate Validation
+
+on:
+  push:
+    branches:
+      - research/v2-market-only-runner-rights-gate-stacked-on-729-20261108-run11
+    paths:
+      - "requirements-v2-research-py312.lock"
+      - "market_anchor_1x2_v2_prospective_runner.py"
+      - "market_anchor_1x2_v2_prospective_evaluation.py"
+      - "market_anchor_1x2_v2_prospective_evaluator.py"
+      - "market_anchor_1x2_v2_forward_artifact_adapter.py"
+      - "market_anchor_1x2_v2_completed_fixture_gate.py"
+      - "market_anchor_v2_source_rights.py"
+      - "market_anchor_v2_artifact_privacy.py"
+      - "serie_a_runtime_config.py"
+      - "serie_a_v2_current_form_forward_capture.py"
+      - ".github/workflows/market-anchor-1x2-v2-prospective-evaluation.yml"
+      - "research/source_rights/football_data_co_uk.json"
+      - "tests/test_market_anchor_1x2_v2_prospective_runner.py"
+      - "tests/test_market_anchor_1x2_v2_prospective_evaluation_workflow.py"
+      - "tests/test_market_anchor_1x2_v2_forward_artifact_adapter.py"
+      - ".github/workflows/market-anchor-1x2-v2-live-runner-rights-validation.yml"
+  pull_request:
+    branches:
+      - research/v2-current-form-forward-push-validation-stacked-on-728-20261108-run11
+    paths:
+      - "requirements-v2-research-py312.lock"
+      - "market_anchor_1x2_v2_prospective_runner.py"
+      - "market_anchor_1x2_v2_prospective_evaluation.py"
+      - "market_anchor_1x2_v2_prospective_evaluator.py"
+      - "market_anchor_1x2_v2_forward_artifact_adapter.py"
+      - "market_anchor_1x2_v2_completed_fixture_gate.py"
+      - "market_anchor_v2_source_rights.py"
+      - "market_anchor_v2_artifact_privacy.py"
+      - "serie_a_runtime_config.py"
+      - "serie_a_v2_current_form_forward_capture.py"
+      - ".github/workflows/market-anchor-1x2-v2-prospective-evaluation.yml"
+      - "research/source_rights/football_data_co_uk.json"
+      - "tests/test_market_anchor_1x2_v2_prospective_runner.py"
+      - "tests/test_market_anchor_1x2_v2_prospective_evaluation_workflow.py"
+      - "tests/test_market_anchor_1x2_v2_forward_artifact_adapter.py"
+      - ".github/workflows/market-anchor-1x2-v2-live-runner-rights-validation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  offline-live-runner-rights-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: .
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install pinned offline V2 dependencies
+        run: python -m pip install -r requirements-v2-research-py312.lock
+      - name: Compile the protected live runner and rights helper
+        run: python -m py_compile market_anchor_1x2_v2_prospective_runner.py market_anchor_v2_source_rights.py
+      - name: Run synthetic runner and workflow-contract regressions
+        run: python -m pytest -q tests/test_market_anchor_1x2_v2_prospective_runner.py tests/test_market_anchor_1x2_v2_prospective_evaluation_workflow.py tests/test_market_anchor_1x2_v2_forward_artifact_adapter.py
+      - name: Verify production pickle artifacts are unchanged
+        run: git diff --exit-code -- '*.pkl'
