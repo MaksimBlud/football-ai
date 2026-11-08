@@ -44,6 +44,7 @@ on:
       - research/v2-market-only-outcome-reader-gate-stacked-on-730-20261108-run11
       - research/v2-source-capture-entrypoint-rights-gate-stacked-on-731-20261108-run11
       - research/v2-source-attestation-source-only-rights-gate-stacked-on-732-20261108-run11
+      - research/v2-forward-entrypoint-private-storage-gate-stacked-on-733-20261108-run11
     paths:
       - "requirements-v2-research-py312.lock"
       - "market_anchor_1x2_v2_prospective_runner.py"
@@ -61,6 +62,7 @@ on:
       - "serie_a_v2_attest_real_source.py"
       - "market_anchor_v2_source_capture_rights.py"
       - "tests/test_serie_a_v2_current_form_source_capture.py"
+      - "tests/test_serie_a_v2_current_form_forward_capture.py"
       - "tests/test_serie_a_v2_forward_capture.py"
       - "tests/test_serie_a_v2_prequote_source_archive_gate.py"
       - "tests/test_serie_a_v2_attest_real_source.py"
