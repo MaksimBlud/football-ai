@@ -27,6 +27,7 @@ from serie_a_v2_prequote_source_archive_gate import (
     ARCHIVE_REPORT, SOURCE_DIR, MAX_ZIP_BYTES, verify_archive,
 )
 from market_anchor_v2_source_rights import require_personal_research_inference_scope, write_research_scope_blocked_report
+from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
 
 REPOSITORY = "MaksimBlud/football-ai"
 ARTIFACT_NAME = "serie-a-v2-free-real-quote-diagnostic"
@@ -160,7 +161,7 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
     }
 
 
-def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
+def _download_archive_bytes(artifact_id: int, *, token: str, get=requests.get) -> bytes:
     if not isinstance(artifact_id, int) or artifact_id <= 0:
         raise ValueError("invalid artifact id")
     url = f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip"
@@ -200,6 +201,16 @@ def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
         close = getattr(response, "close", None)
         if callable(close):
             close()
+
+
+
+def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
+    if not isinstance(artifact_id, int) or artifact_id <= 0:
+        raise ValueError("invalid artifact id")
+    if not token:
+        raise ValueError("GitHub token required")
+    require_private_repository_for_source_artifacts(REPOSITORY, token)
+    return _download_archive_bytes(artifact_id, token=token, get=get)
 
 
 def prepare_forward_capture(
@@ -362,13 +373,20 @@ def main() -> None:
         print(json.dumps(report, sort_keys=True))
         return
     token = os.environ.get("GITHUB_TOKEN", "")
+    require_private_repository_for_source_artifacts(REPOSITORY, token)
     from database import supabase
     now = datetime.now(timezone.utc)
     quotes = fetch_saved_upcoming_serie_a_quotes(supabase, now=now)
     archives = discover_archives(token=token)
+    raw_cache: dict[int, bytes] = {}
+    def load_cached_archive(artifact_id: int) -> bytes:
+        if artifact_id not in raw_cache:
+            raw_cache[artifact_id] = _download_archive_bytes(artifact_id, token=token)
+        return raw_cache[artifact_id]
+
     report = prepare_forward_capture(
         quotes, archives, as_of_utc=datetime.now(timezone.utc),
-        load_archive=lambda artifact_id: get_archive(artifact_id, token=token),
+        load_archive=load_cached_archive,
         verify_parent_run=lambda a, qt: verify_source_run(a, quote_time=qt, token=token),
         write_archives_to=args.sources_output_dir,
     )

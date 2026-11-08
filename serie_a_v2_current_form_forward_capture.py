@@ -40,6 +40,7 @@ from serie_a_v2_live_diagnostic_report import (
 )
 from serie_a_v2_prequote_source_archive_gate import MAX_ZIP_BYTES
 from market_anchor_v2_source_rights import require_personal_research_inference_scope, write_research_scope_blocked_report
+from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
 
 REPOSITORY = "MaksimBlud/football-ai"
 GITHUB_API = f"https://api.github.com/repos/{REPOSITORY}"
@@ -173,7 +174,7 @@ def verify_source_run(
     }
 
 
-def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
+def _download_archive_bytes(artifact_id: int, *, token: str, get=requests.get) -> bytes:
     if type(artifact_id) is not int or artifact_id <= 0:
         raise ValueError("invalid source artifact id")
     if not token:
@@ -217,6 +218,16 @@ def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
         close = getattr(response, "close", None)
         if callable(close):
             close()
+
+
+
+def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
+    if type(artifact_id) is not int or artifact_id <= 0:
+        raise ValueError("invalid source artifact id")
+    if not token:
+        raise ValueError("GitHub actions:read token missing")
+    require_private_repository_for_source_artifacts(REPOSITORY, token)
+    return _download_archive_bytes(artifact_id, token=token, get=get)
 
 
 def _validate_archive_member_sizes(infos: list[Any], *, expected_names: set[str]) -> None:
@@ -962,6 +973,7 @@ def main() -> None:
         print(json.dumps(report, sort_keys=True))
         return
     token = os.environ.get("GITHUB_TOKEN", "")
+    require_private_repository_for_source_artifacts(REPOSITORY, token)
     url, key = os.environ.get("SUPABASE_URL", ""), os.environ.get("SUPABASE_KEY", "")
     if not token or not url or not key:
         raise RuntimeError("GitHub actions:read and Supabase read-only credentials are required")
@@ -973,7 +985,7 @@ def main() -> None:
 
     def load_cached_archive(artifact_id: int) -> bytes:
         if artifact_id not in raw_cache:
-            raw_cache[artifact_id] = get_archive(artifact_id, token=token)
+            raw_cache[artifact_id] = _download_archive_bytes(artifact_id, token=token)
         return raw_cache[artifact_id]
 
     def verify_parent(archive: Mapping[str, Any], *, quote_time: datetime) -> dict:
