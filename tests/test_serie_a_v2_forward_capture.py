@@ -97,6 +97,31 @@ def allow_synthetic_v2_inference_scope(monkeypatch):
 
 
 
+def test_prepare_forward_capture_enforces_inference_rights_before_quote_archive_or_output_access(monkeypatch, tmp_path):
+    import market_anchor_v2_source_rights as rights
+
+    def deny_scope():
+        raise PermissionError("V2 frozen inference scope remains unresolved")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", deny_scope)
+
+    class ForbiddenRows:
+        def __iter__(self):
+            pytest.fail("quote/archive rows must not be inspected before inference rights")
+
+    output_dir = tmp_path / "must-not-be-created"
+    with pytest.raises(PermissionError, match="V2 frozen inference scope remains unresolved"):
+        prepare_forward_capture(
+            ForbiddenRows(),
+            ForbiddenRows(),
+            as_of_utc=NOW,
+            load_archive=lambda *_args, **_kwargs: pytest.fail("archive must not be loaded"),
+            verify_parent_run=lambda *_args, **_kwargs: pytest.fail("parent run must not be read"),
+            write_archives_to=output_dir,
+        )
+    assert not output_dir.exists()
+
+
 @pytest.mark.parametrize("conflict", ["home_team", "kickoff"])
 def test_same_original_event_id_cannot_change_fixture_identity(conflict):
     raw, metadata = make_source_archive()

@@ -232,6 +232,32 @@ def allow_synthetic_v2_inference_scope(monkeypatch):
     )
 
 
+def test_current_form_prepare_forward_capture_enforces_inference_rights_before_source_or_feature_access(monkeypatch, tmp_path):
+    import market_anchor_v2_source_rights as rights
+
+    def deny_scope():
+        raise PermissionError("V2 frozen inference scope remains unresolved")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", deny_scope)
+
+    class ForbiddenRows:
+        def __iter__(self):
+            pytest.fail("quotes, archives, and gate identities must not be inspected before inference rights")
+
+    output_dir = tmp_path / "must-not-be-created"
+    with pytest.raises(PermissionError, match="V2 frozen inference scope remains unresolved"):
+        _prepare_forward_capture(
+            ForbiddenRows(),
+            ForbiddenRows(),
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            load_archive=lambda *_args, **_kwargs: pytest.fail("archive must not be loaded"),
+            verify_parent_run=lambda *_args, **_kwargs: pytest.fail("parent run must not be read"),
+            current_gate_identities=ForbiddenRows(),
+            write_sources_to=output_dir,
+        )
+    assert not output_dir.exists()
+
+
 def test_current_form_v2_scores_only_future_quote_with_prequote_source_and_stays_no_bet(tmp_path):
     raw, archives = make_archive()
     report = prepare_forward_capture(
