@@ -10,6 +10,9 @@ on:
   pull_request:
     branches:
       - main
+  push:
+    branches:
+      - research/v2-prospective-gated-evaluator-20261027
 
 permissions:
   contents: read
@@ -48,7 +51,7 @@ jobs:
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest numpy pandas requests supabase python-dotenv
+          pip install pytest numpy pandas requests supabase python-dotenv scikit-learn==1.9.1
 
       - name: Compile research modules
         run: |
@@ -93,6 +96,11 @@ jobs:
           python -m py_compile update_rpl_results.py
           python -m py_compile evaluate_rpl_predictions.py
           python -m py_compile all_leagues_market_only_v1_1_status.py
+          python -m py_compile market_anchor_1x2_v2_prospective_evaluator.py
+          python -m py_compile market_anchor_1x2_v2_completed_fixture_gate.py
+          python -m py_compile market_anchor_1x2_v2_prospective_runner.py
+          python -m py_compile market_anchor_v2_source_rights.py
+          python -m py_compile market_anchor_v2_artifact_privacy.py
 
       - name: Run historical strategy lab tests
         run: |
@@ -140,6 +148,12 @@ jobs:
 
       - name: Run all-leagues prospective protocol contract tests
         run: python -m pytest -q tests/test_all_leagues_prospective_protocol.py tests/test_all_leagues_market_only_v1_1_status.py
+
+      - name: Run original V2 prospective outcome-gate evaluator and live-runner tests
+        run: |
+          python -m pytest -q tests/test_market_anchor_1x2_v2_prospective_evaluator.py
+          python -m pytest -q tests/test_market_anchor_1x2_v2_prospective_runner.py
+          python -m pytest -q tests/test_market_anchor_1x2_v2_prospective_evaluation_workflow.py
 
       - name: Run EPL live-cycle safety tests
         run: |
@@ -196,3 +210,8 @@ jobs:
             exit 1
           fi
           echo "PASS: no .pkl changes in PR"
+
+      - name: Test real forward-artifact bridge and frozen selection policy
+        run: |
+          python -m py_compile market_anchor_1x2_v2_forward_artifact_adapter.py market_anchor_1x2_v2_prospective_evaluation.py
+          python -m pytest -q tests/test_market_anchor_1x2_v2_forward_artifact_adapter.py tests/test_market_anchor_1x2_v2_prospective_evaluation_workflow.py

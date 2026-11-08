@@ -1,0 +1,59 @@
+name: MARKET_ANCHOR_1X2_V2 Prospective Market Evaluation
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows:
+      - "Serie A V2 Current-Form Forward-Only Preview"
+    types:
+      - completed
+
+concurrency:
+  group: market-anchor-1x2-v2-prospective-market-evaluation
+  cancel-in-progress: false
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  evaluate-market-only:
+    if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.name == 'Serie A V2 Current-Form Forward-Only Preview' && (github.event.workflow_run.event == 'schedule' || github.event.workflow_run.event == 'workflow_dispatch' || github.event.workflow_run.event == 'workflow_run'))) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      GITHUB_TOKEN: ${{ github.token }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      GITHUB_REF: ${{ github.ref }}
+      PYTHONPATH: .
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install read-only original V2 evaluator dependencies
+        run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
+      - name: Compile and test artifact bridge without live outcomes
+        run: |
+          python -m py_compile market_anchor_1x2_v2_forward_artifact_adapter.py market_anchor_v2_artifact_privacy.py market_anchor_1x2_v2_prospective_evaluation.py
+          python -m pytest -q tests/test_market_anchor_1x2_v2_forward_artifact_adapter.py tests/test_market_anchor_1x2_v2_prospective_evaluation_workflow.py
+      - name: Verify source-before-quote artifacts and evaluate only after the frozen gate
+        run: |
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_KEY"
+          test -n "$GITHUB_TOKEN"
+          python market_anchor_1x2_v2_prospective_evaluation.py --output artifacts/market_anchor_1x2_v2_prospective_evaluation.json
+      - name: Archive metrics-only research report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-anchor-1x2-v2-prospective-evaluation
+          path: artifacts/market_anchor_1x2_v2_prospective_evaluation.json
+          if-no-files-found: warn
+          retention-days: 90
