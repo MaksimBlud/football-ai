@@ -11,6 +11,18 @@ import market_anchor_1x2_v2_shadow as v2
 ROOT = Path(__file__).resolve().parents[1]
 
 
+@pytest.fixture(autouse=True)
+def allow_synthetic_inference_scope_for_offline_model_tests(monkeypatch):
+    """Offline numerical tests use synthetic fixtures, not provider data."""
+    import market_anchor_v2_source_rights as rights
+
+    monkeypatch.setattr(
+        rights,
+        "require_personal_research_inference_scope",
+        lambda: {"rights_manifest_sha256": "a" * 64},
+    )
+
+
 def _artifact():
     features = list(v2.FEATURE_SETS[v2.FEATURE_VARIANT])
     body = {
@@ -192,3 +204,24 @@ def test_v2_code_does_not_reference_production_pickle_paths():
     assert "football_model_xgboost_elo.pkl" not in text
     assert "joblib.dump" not in text
     assert "--production" not in text
+
+
+def test_predict_shadow_residual_denies_direct_inference_before_features_or_weights(monkeypatch):
+    import market_anchor_v2_source_rights as rights
+
+    def denied():
+        raise PermissionError("frozen inference scope unresolved")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", denied)
+    monkeypatch.setattr(
+        v2,
+        "_artifact_residual_logits",
+        lambda *args, **kwargs: pytest.fail("residual logits must not be computed before rights clearance"),
+    )
+
+    class Untouchable:
+        def __getattribute__(self, name):
+            raise AssertionError(f"model input accessed before rights clearance: {name}")
+
+    with pytest.raises(PermissionError, match="scope unresolved"):
+        v2.predict_shadow_residual(Untouchable(), Untouchable(), Untouchable())
