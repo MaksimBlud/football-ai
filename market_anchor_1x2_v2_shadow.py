@@ -264,6 +264,12 @@ def predict_shadow_residual(market_probabilities: np.ndarray, features: pd.DataF
 
 def predict_candidate(market_probabilities: np.ndarray, features: pd.DataFrame, artifact: Mapping) -> np.ndarray:
     """Return active V2 probabilities; currently exact market because the gate failed."""
+    # This public active-candidate API still reads frozen residual weights before
+    # applying ACTIVE_LAMBDA=0. Keep the same provider-rights boundary as the
+    # shadow API; market fallback is not permission to inspect model inputs.
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+
+    require_personal_research_inference_scope()
     residual = _artifact_residual_logits(features, artifact)
     return market_anchored_probabilities(validate_probabilities(market_probabilities), residual, ACTIVE_LAMBDA)
 
