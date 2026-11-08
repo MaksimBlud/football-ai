@@ -1391,3 +1391,22 @@ def test_current_form_discover_archives_blocks_public_storage_before_metadata_re
             get=lambda *args, **kwargs: calls.append(("github", args, kwargs)),
         )
     assert calls == [("privacy", "MaksimBlud/football-ai", "synthetic-token")]
+
+
+def test_current_form_internal_downloader_blocks_public_storage_before_http(monkeypatch):
+    calls = []
+
+    def deny_private_storage(repository, token):
+        calls.append(("privacy", repository, token))
+        raise PermissionError("source archives require a private GitHub repository")
+
+    monkeypatch.setattr(
+        forward_capture_module, "require_private_repository_for_source_artifacts",
+        deny_private_storage,
+    )
+    with pytest.raises(PermissionError, match="require a private GitHub repository"):
+        forward_capture_module._download_archive_bytes(
+            9876, token="synthetic-token",
+            get=lambda *args, **kwargs: calls.append(("download", args, kwargs)),
+        )
+    assert calls == [("privacy", "MaksimBlud/football-ai", "synthetic-token")]
