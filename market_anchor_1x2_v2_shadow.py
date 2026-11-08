@@ -18,12 +18,9 @@ from typing import Iterable, Mapping
 import numpy as np
 import pandas as pd
 
-from historical_football_signal_lab import FEATURE_SETS, RESULT_TO_INT
+from historical_football_signal_lab import FEATURE_SETS
 from market_anchor_1x2_v1 import (
     L2_PENALTY,
-    _market,
-    _prepare,
-    fit_residual_model,
     market_anchored_probabilities,
     validate_probabilities,
 )
@@ -163,51 +160,11 @@ def candidate_recipe() -> dict:
     }
 
 
-def _training_fingerprint(frame: pd.DataFrame, features: list[str]) -> str:
-    cols = [
-        "league", "season", "match_date", "home_team", "away_team", "result",
-        "market_home", "market_draw", "market_away", *features,
-    ]
-    missing = set(cols) - set(frame.columns)
-    if missing:
-        raise ValueError("training frame missing columns: " + ", ".join(sorted(missing)))
-    canonical = frame[cols].copy()
-    canonical["match_date"] = pd.to_datetime(canonical["match_date"]).dt.strftime("%Y-%m-%d")
-    records = canonical.replace({np.nan: None}).to_dict(orient="records")
-    return _sha256_json({"rows": records})
-
-
 def fit_candidate_artifact(frame: pd.DataFrame) -> dict:
     """Refitting the original frozen V2 candidate is disabled by the recovery contract."""
     raise PermissionError(
         "original MARKET_ANCHOR_1X2_V2 candidate is frozen; refitting is disabled"
     )
-    prepared = _prepare(frame)
-    prepared = prepared[(prepared["league"] == PRIMARY_LEAGUE) & prepared["season"].isin(REFIT_SEASONS)].copy()
-    if prepared.empty:
-        raise ValueError("no eligible frozen Serie A training rows")
-    if pd.to_datetime(prepared["match_date"]).max() > TRAINING_DATA_THROUGH.tz_localize(None):
-        raise ValueError("training data exceeds frozen cutoff")
-
-    features = list(FEATURE_SETS[FEATURE_VARIANT])
-    market = _market(prepared)
-    y = prepared["result"].map(RESULT_TO_INT).to_numpy()
-    if np.isnan(y.astype(float)).any():
-        raise ValueError("training outcomes must be known historical labels")
-    model = fit_residual_model(prepared[features], y, market, l2_penalty=L2_PENALTY)
-
-    artifact = {
-        **candidate_recipe(),
-        "training_rows": int(len(prepared)),
-        "training_fingerprint_sha256": _training_fingerprint(prepared, features),
-        "imputer_medians": _finite_list(model.imputer.statistics_, len(features), "imputer_medians"),
-        "scaler_mean": _finite_list(model.scaler.mean_, len(features), "scaler_mean"),
-        "scaler_scale": _finite_list(model.scaler.scale_, len(features), "scaler_scale"),
-        "weights": _finite_matrix(model.weights, len(features) + 1, 2, "weights"),
-    }
-    artifact["artifact_sha256"] = _sha256_json(artifact)
-    validate_candidate_artifact(artifact)
-    return artifact
 
 
 def validate_candidate_artifact(artifact: Mapping) -> None:
