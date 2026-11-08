@@ -17,9 +17,12 @@ from serie_a_v2_forward_capture import (
     REPOSITORY, discover_archives, get_archive, verify_source_run,
 )
 from serie_a_v2_prequote_source_archive_gate import verify_archive
-from market_anchor_v2_source_rights import (
-    require_personal_research_inference_scope,
-    write_research_scope_blocked_report,
+from market_anchor_v2_source_capture_rights import (
+    require_personal_research_source_capture_scope,
+    write_source_capture_scope_blocked_report,
+)
+from market_anchor_v2_artifact_privacy import (
+    require_private_repository_for_source_artifacts,
 )
 
 
@@ -32,6 +35,12 @@ def attest_latest_source(*, token: str, now: datetime, discover=discover_archive
     ):
         raise ValueError("source attestation needs an aware UTC clock")
     at = now.astimezone(timezone.utc)
+    # This module attests an already-created source archive; it does not run
+    # model inference. Re-check the narrow source-only permission and private
+    # artifact-storage gates here so direct imports cannot bypass the CLI or
+    # workflow preflight before GitHub artifact discovery/download.
+    source_scope = require_personal_research_source_capture_scope()
+    storage_scope = require_private_repository_for_source_artifacts(REPOSITORY, token)
     archives = discover(token=token)
     eligible = [x for x in archives if x["created_at"] < at]
     if not eligible:
@@ -66,6 +75,11 @@ def attest_latest_source(*, token: str, now: datetime, discover=discover_archive
         "source_run_id": archive["run_id"],
         "source_run_head_sha": archive["head_sha"],
         "source_run_provenance": parent,
+        "source_rights_manifest_sha256": source_scope["rights_manifest_sha256"],
+        "source_policy_url": source_scope["policy_url"],
+        "source_policy_checked_at_utc": source_scope["policy_checked_at_utc"],
+        "source_policy_page_updated_date": source_scope["policy_page_updated_date"],
+        "source_artifact_storage_policy": storage_scope["storage_policy"],
         "verified_pre_prospective_source_files": proven["archived_csv_count"],
         "verified_historical_results": proven["historical_match_rows"],
         "verified_original_v2_sha256": proven["original_candidate_sha256"],
@@ -90,20 +104,20 @@ def main() -> None:
     args = parser.parse_args()
     if os.environ.get("GITHUB_REPOSITORY") != REPOSITORY:
         raise RuntimeError("source proof must run in original GitHub repository")
+    token = os.environ.get("GITHUB_TOKEN", "")
     try:
-        require_personal_research_inference_scope()
+        # The attestor only verifies an existing source archive. Its own
+        # entrypoint enforces source-only rights and private storage before
+        # discovery/download; frozen-model inference remains separately blocked.
+        proof = attest_latest_source(token=token, now=datetime.now(timezone.utc))
     except PermissionError as exc:
-        report = write_research_scope_blocked_report(
+        report = write_source_capture_scope_blocked_report(
             args.output,
             "SERIE_A_ORIGINAL_V2_SOURCE_ATTESTATION",
             str(exc),
         )
         print(json.dumps(report, sort_keys=True))
         return
-    token = os.environ.get("GITHUB_TOKEN", "")
-    if not token:
-        raise RuntimeError("GITHUB_TOKEN actions:read missing")
-    proof = attest_latest_source(token=token, now=datetime.now(timezone.utc))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(proof, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
                            encoding="utf-8")
