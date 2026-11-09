@@ -6676,3 +6676,6 @@ Exact HEAD: `d4f4eabf0389ffbebf0447dfd6a7330c2e3a9da8`; base main `40887ebb21573
 ### Frozen model and safety state
 
 Candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 original features/weights/scaler/imputer unchanged; active lambda 0; shadow lambda 1; NO_BET; stability gate FAILED; no refit or promotion. The 100-event feature-input gate does not open the 30-forecast evaluation gate. No target outcome was read, no production .pkl changed, no Supabase write/DDL or paid call occurred, and main was not changed.
+
+
+**Additional source-access cadence finding:** the current main source workflows still declare daily schedules: current-form capture at `50 5 * * *` and the old-season free real-quote diagnostic at `13 6 * * *`. The provider policy snapshot in the rights manifest describes at most two light automated sessions per rolling seven days. The shared cross-workflow two-session budget is only in open PR #720, not main. No schedule was changed and no manual source dispatch was made; until the rights/budget stack is integrated, do not initiate extra source sessions.
