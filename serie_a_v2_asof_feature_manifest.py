@@ -66,7 +66,7 @@ def _validate_history(history: pd.DataFrame) -> pd.DataFrame:
     # also normalizes to midnight and would silently pass. Reject clock or
     # timezone syntax in the raw source representation before parsing.
     raw_dates = frame["Date"].astype(str).str.strip()
-    if raw_dates.str.contains(r"(?i)(?:[Tt]\\d{2}:\\d{2}|\\s+\\d{1,2}:\\d{2}|[+-]\\d{2}:\\d{2})", regex=True).any():
+    if raw_dates.str.contains(r"(?i)(?:[Tt]\d{2}:\d{2}|\s+\d{1,2}:\d{2}|[+-]\d{2}:\d{2})", regex=True).any():
         raise ValueError("expected date-only historical source")
     frame["_match_date"] = pd.to_datetime(frame["Date"], dayfirst=True, format="mixed", errors="raise")
     if frame["_match_date"].isna().any():
