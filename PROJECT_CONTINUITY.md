@@ -7184,3 +7184,40 @@ There is currently no fresh saved quote from which to produce a prospective V2 p
 ### Safety ledger for this iteration
 
 No main update or merge; no production `.pkl` changes; no Supabase writes/DDL; no paid provider requests; no new source downloads; no target-outcome reads; no refit, threshold tuning, lambda/feature/weight changes, promotion, betting, schedule changes, or other-agent changes.
+
+## 2026-11-09 23:10 UTC — direct feature-manifest rights gate and ancestry correction
+
+### New clean-stack PR #776
+
+- PR: https://github.com/MaksimBlud/football-ai/pull/776
+- Base is exact PR #727 HEAD `18a3cfda4e83e44aca1252665d01804267d16467`.
+- Head: `9957d504c1e2010a1b582f8f45abcc4267f5ff6b`, 12 commits ahead / 0 behind; final diff is limited to the feature-manifest module, its regression tests, and its validation workflow.
+- Finding: the importable original V2 `build_manifest()` and standalone CLI could construct frozen 19-feature inputs without checking the unresolved provider inference scope. The CLI could open the history CSV and saved-quote JSON before authorization.
+- Fix: enforce `require_personal_research_inference_scope()` inside `build_manifest()` before feature-builder SHA verification/candidate/input access, and at the CLI before any history or quote file read. A denied CLI call writes the standard blocked report without creating a manifest.
+- Existing numerical tests now use explicit test-only synthetic inference-scope fixtures. These fixtures are not live provider authorization and do not change the rights manifest.
+- Exact-head push CI #42718014660: SUCCESS; Python 3.11 **391 passed**, Python 3.12 **391 passed**, Python 3.12 pip check clean, compilation PASS, production `.pkl` diff guard PASS.
+- Initial runs exposed nine existing offline tests that needed those explicit synthetic fixtures after the new gate. The fixtures were added; the final exact HEAD above is green.
+- PR remains Draft, cleanly stacked on #727, HUMAN-MERGE only.
+
+### Superseded duplicate and remaining direct-report gate
+
+- The unique direct `build_manifest()` / CLI gate from divergent PR #746 is ported to #776 on the clean #727 stack. #746 is marked in its conversation as Draft/superseded; do not merge it.
+- PR #745's separate direct `make_report()` gate is not covered by #776 and remains a separate pending delta.
+
+### Re-audited outcome-reader ancestry
+
+- PR #728 base #727 exact HEAD `8894ce8e0248a5502d60571ff073fc6d7847a43a`, head `e075e4160f4e9be750ba0cb8a0f47a1ba419d01d`: **1 ahead / 4 behind (diverged)**.
+- PR #770 head `3888b77f85445e88d6cd20047e56e86202d51897` compared with #727 exact HEAD: **33 ahead / 4 behind (diverged)**, inherited through #728 → #729 → #730 → #731 → #732 → #769 → #770.
+- Therefore PR #775's future-observation-clock guard is exact-head CI-green (144 tests on push and PR runs) but remains Draft and is **not integration-ready** until the #728–#770 outcome-reader chain is ported/rebased onto the clean #727 ancestry. Do not merge #775 or flatten its parents in the current state.
+- The #743 → #746 branch remains separately divergent from #742 (12 ahead / 50 behind). Its direct feature-manifest delta is now safely ported to #776; other unique deltas still require individual clean-base review.
+
+### Safety and evaluation state
+
+- Main is unchanged at `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- The exact main original-forward and current-form-forward runs remain #42676083517 and #42677383722; both had zero quotes, zero previews, zero target-outcome reads, zero paid provider calls, and zero writes.
+- The strict pre-match Supabase aggregate remains 3,915 snapshots / 327 events, zero new snapshots in seven days, zero future events with saved pre-match quotes; latest is 2026-10-13 14:48:53 UTC.
+- Candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; original 19-feature order and 20×2 weights unchanged; feature-builder blob SHA remains `401b3a0893371bfa4a488ec92a4a54af2678c8f7`.
+- Repo remains public; #727 private-artifact gate will block new source capture until owner changes repository visibility. Provider inference scope is independently unresolved, so privacy alone does not authorize frozen inference.
+- The 30-primary-completed-event outcome gate remains closed; no protected 2026/27 target outcomes were read.
+
+No main update/merge, production model change, Supabase write/DDL, paid request, source download, target-outcome read, refit, threshold tuning, lambda/feature/weight change, promotion, betting, schedule change, or other-agent change.
