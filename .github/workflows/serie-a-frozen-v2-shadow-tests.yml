@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - research/v2-provider-ai-inference-rights-block-*
+      - research/v2-integrated-private-quote-preflight-20261108
     paths:
       - "PROJECT_CONTINUITY.md"
       - "tests/test_serie_a_v2_dependency_lock_contract.py"
@@ -49,6 +50,14 @@ on:
       - "tests/test_market_anchor_v2_source_rights.py"
       - "tests/test_market_anchor_v2_source_capture_rights.py"
       - "tests/test_market_anchor_v2_artifact_privacy.py"
+      - ".github/workflows/serie-a-frozen-v2-shadow-tests.yml"
+
+  push:
+    branches:
+      - research/v2-direct-diagnostic-history-download-rights-gate-stacked-on-727-20261109-run11
+    paths:
+      - "serie_a_v2_live_diagnostic_report.py"
+      - "tests/test_serie_a_v2_live_diagnostic_report.py"
       - ".github/workflows/serie-a-frozen-v2-shadow-tests.yml"
 
 permissions:
