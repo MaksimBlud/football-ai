@@ -506,7 +506,7 @@ def test_importable_capture_entrypoint_checks_rights_and_privacy_before_candidat
             history_fetch=lambda **_kwargs: pytest.fail("historical download must remain blocked below 30"),
         )
 
-    assert calls == ["rights", "privacy", "candidate", "supabase_metadata"]
+    assert calls == ["rights", "privacy", "candidate", "rights", "privacy", "supabase_metadata"]
     assert list(tmp_path.iterdir()) == []
 
 
