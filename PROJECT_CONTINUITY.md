@@ -6628,3 +6628,51 @@ Read-only Supabase pre-match aggregate (strict `snapshot_time_utc < commence_tim
 - The separate prospective outcome gate remains **0/30**; no 2026/27 target outcome was read.
 - Original candidate SHA, 19 features, weights/scaler/imputer, `active_lambda=0`, `shadow_lambda=1`, NO_BET and no-promotion rules remain unchanged.
 - HUMAN-MERGE only; no main update, merge, Supabase write/DDL, paid request, schedule change, or production artifact change.
+
+---
+
+## 2026-11-09 15:08 UTC — fresh main source/forward run and quote-identity guard
+
+### Exact main and new live source evidence
+
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no merge or ref update was performed.
+- Existing scheduled current-form source run [#42634501531](https://github.com/MaksimBlud/football-ai/actions/runs/42634501531) completed SUCCESS on that main. Its source-validation step passed **19 tests**.
+- The metadata-only feature-input query reported **100** unique completed Serie A 2026/27 fixtures. An independent read-only identity aggregate selected only `match_date, home_team, away_team`: 103 rows, 100 ordered identities, 100 unordered identities after V2-local Atalanta alias normalization, date range 2026-08-22 through 2026-11-02. No score/result columns were selected.
+- The source archive contains ten historical CSVs (**3,910** historical rows) plus the current-season CSV (**110** completed prior-day rows), for **11** source files.
+- Source artifact ID **13681778268**, size 439,419 bytes, GitHub ZIP SHA-256 `f4fb869be6e065ca611f012fe21b6d1eafe22434c60ced3a2e7b7ea6c5602101`. Latest current-source observation: `2026-11-09T14:26:18.118320Z`; artifact upload: `14:26:19Z`; parent workflow completion: `14:26:23Z`.
+- The chronology is recorded explicitly: artifact upload preceded parent-run completion by about four seconds. The downstream verifier requires the successful parent run to be completed before any quote is admitted. This run itself contained no quote, so it does **not** establish a quote-level source-before-quote forecast.
+
+### Downstream forward-only verification
+
+- Existing current-form forward run [#42634693506](https://github.com/MaksimBlud/football-ai/actions/runs/42634693506) completed SUCCESS; **53 tests passed**.
+- It independently verified source artifact **13681778268**, the exact ZIP SHA-256 above, the source parent run, and the frozen candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- At verification, the source archive was 47 seconds old and marked fresh for a future quote.
+- Actual result: `quotes_seen=0`, `v2_current_form_shadow_captured=0`; target outcomes read/scored false; paid provider calls 0; Supabase writes 0. Forward report artifact **13682418549**, ZIP SHA-256 `51afce059c43a33b9751fd308196cf33f4dd661344eefaa6d809c9f5b529bd5a`.
+- Therefore the live proof is real source-artifact/parent verification, not a V2 forecast and not a source-before-quote prediction. The separate target-outcome gate remains **0/30**.
+
+### Fresh read-only saved-quote inventory
+
+Strict pre-match definition: `snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= NOW()`.
+
+- All leagues: **3,915** snapshots / **327** events; **0** new snapshots in seven days; **0** upcoming events with a saved strict pre-match quote.
+- Serie A: **620** snapshots / **63** events; latest saved strict pre-match quote `2026-10-13 14:48:53.042620+00`.
+- No individual odds, scores, results, or target-outcome columns were selected.
+
+### New PR #766 — event-ID identity integrity
+
+PR [#766](https://github.com/MaksimBlud/football-ai/pull/766) adds a V2 forward-capture guard binding one saved provider event ID to exactly one (home team, away team, kickoff) identity. Reversed home/away rows or a conflicting kickoff for the same event ID now fail before source-archive loading, feature construction, or shadow inference. Multiple timestamped quotes for the same exact fixture remain supported.
+
+Exact HEAD: `d4f4eabf0389ffbebf0447dfd6a7330c2e3a9da8`; base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`; two changed files; two new regressions. All **7/7** exact-head workflows succeeded:
+- Frozen V2 Shadow Tests [#42641305908](https://github.com/MaksimBlud/football-ai/actions/runs/42641305908): **87 passed**, production candidate/hash guard passed.
+- Research [#42641305845](https://github.com/MaksimBlud/football-ai/actions/runs/42641305845), Serie A [#42641305912](https://github.com/MaksimBlud/football-ai/actions/runs/42641305912), Ligue 1 [#42641305691](https://github.com/MaksimBlud/football-ai/actions/runs/42641305691), Product [#42641306021](https://github.com/MaksimBlud/football-ai/actions/runs/42641306021), Bundesliga [#42641306052](https://github.com/MaksimBlud/football-ai/actions/runs/42641306052), Eredivisie [#42641305841](https://github.com/MaksimBlud/football-ai/actions/runs/42641305841) — all SUCCESS.
+- PR #766 is Ready for review, mergeable, and **not merged**. HUMAN-MERGE remains mandatory.
+
+### Rights/privacy blocker remains binding
+
+- Repository visibility remains `public`; main current-form source capture still uploads raw source archives as public Actions artifacts with 90-day retention.
+- PR #720/#727 have not been merged. #720's manifest explicitly keeps provider frozen-inference permission unresolved and blocks V2 inference/source access; #727 adds the private-storage gate. PR #753's missing-response-URL fail-closed correction is a dependent privacy hardening and must be included/revalidated before relying on that helper.
+- Do not dispatch or initiate another source download, quote collection, or V2 inference until the rights and private-storage conditions are resolved. Do not change existing schedules here.
+
+### Frozen model and safety state
+
+Candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 original features/weights/scaler/imputer unchanged; active lambda 0; shadow lambda 1; NO_BET; stability gate FAILED; no refit or promotion. The 100-event feature-input gate does not open the 30-forecast evaluation gate. No target outcome was read, no production .pkl changed, no Supabase write/DDL or paid call occurred, and main was not changed.
