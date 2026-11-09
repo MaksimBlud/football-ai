@@ -43,7 +43,13 @@ def test_direct_completed_fixture_gate_blocks_before_supabase_without_inference_
     assert calls == ["rights"]
 
 
-def test_current_manifest_blocks_direct_completed_fixture_gate_before_supabase():
+def test_current_manifest_blocks_direct_completed_fixture_gate_before_supabase(monkeypatch):
+    monkeypatch.setattr(
+        completed_gate,
+        "require_personal_research_inference_scope",
+        actual_inference_rights_check,
+    )
+
     class ForbiddenClient:
         def table(self, _name):
             pytest.fail("the current unresolved manifest must block before the identity-only Supabase query")
