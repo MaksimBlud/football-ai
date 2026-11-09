@@ -62,7 +62,10 @@ class FakeQuery:
         return SimpleNamespace(data=self.rows)
 
 
-def current_csv(n=30, *, same_day=False, future_unplayed=False, future_completed=False):
+def current_csv(
+    n=30, *, same_day=False, future_unplayed=False, future_completed=False,
+    reversed_duplicate=False,
+):
     header = ",".join(REQUIRED_COLUMNS)
     rows = []
     start = date(2026, 8, 1)
@@ -77,6 +80,9 @@ def current_csv(n=30, *, same_day=False, future_unplayed=False, future_completed
         rows.append("20/10/2026,Future Home,Future Away,,,,,,,,,")
     if future_completed:
         rows.append("20/10/2026,Future Home,Future Away,1,0,H,4,2,1,0,0,0")
+    if reversed_duplicate:
+        rows[0] = rows[0].replace("Home 0,Away 0", "Atalanta,Juventus")
+        rows.append("01/08/2026,Juventus,Atalanta BC,0,1,A,3,5,1,2,0,0")
     return (header + "\n" + "\n".join(rows) + "\n").encode()
 
 
@@ -111,6 +117,33 @@ def test_current_csv_uses_only_completed_rows_strictly_before_capture_day():
     assert excluded == 2
     assert not frame["Date"].str.contains("18/10/2026").any()
     assert not frame["Date"].str.contains("20/10/2026").any()
+
+
+@pytest.mark.parametrize(
+    "timestamp_date",
+    [
+        "01/08/2026 00:00:00",
+        "01/08/2026 12:30:00",
+        "2026-08-01T00:00:00Z",
+        "2026-08-01 12:30:00+00:00",
+    ],
+)
+def test_current_csv_rejects_timestamp_dates_before_pandas_normalization(timestamp_date):
+    raw = current_csv().decode().replace(
+        "01/08/2026,Home 0", f"{timestamp_date},Home 0", 1
+    ).encode()
+    with pytest.raises(ValueError, match="date-only"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
+def test_current_csv_rejects_reversed_duplicate_after_v2_local_alias_normalization():
+    with pytest.raises(ValueError, match="duplicate or reversed fixture identities"):
+        validate_current_season_csv(
+            current_csv(reversed_duplicate=True),
+            captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+        )
 
 
 def test_current_csv_rejects_completed_future_result_and_missing_stats():
