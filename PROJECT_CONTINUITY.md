@@ -26,6 +26,30 @@ A single aggregate read used only `public.odds_snapshots` and only rows satisfyi
 
 There are no future fixtures with a saved pre-kickoff quote in any of these leagues. The latest Serie A quote remains 2026-10-13 14:48:53 UTC. Do not trigger source downloads or paid odds calls to compensate.
 
+## Fresh main workflow and artifact audit (metadata/logs only)
+
+The four relevant main-branch workflows were re-read. Their current schedules and public artifact retention remain:
+
+- Original forward preview: daily `08:08 UTC`; 90-day artifact retention.
+- Current-form source capture: daily `05:50 UTC`; 90-day artifact retention.
+- Free real-quote diagnostic: daily `06:13 UTC`; 90-day artifact retention.
+- Current-form forward preview: daily `08:18 UTC`; 90-day artifact retention.
+
+No schedule was changed. These are free research workflows; no paid odds request was made.
+
+Exact main run logs and artifact metadata were re-read without downloading any artifact:
+
+| Workflow run | Actual logged result | Artifact metadata |
+|---|---|---|
+| #42634501531 — current-form source capture | SUCCESS; candidate SHA matches frozen V2; feature-input gate 100; 110 current-season completed prior-day rows; 10 historical + 1 current-season source file; `target_outcomes_scored=false`; paid calls 0; Supabase writes 0 | #13681778268, 439,419 bytes, expires 2027-02-07 |
+| #42651542041 — free real-quote diagnostic | SUCCESS; paid provider requests 0; Supabase writes 0 | #13689701985, 425,067 bytes, expires 2027-02-07 |
+| #42676083517 — original V2 forward preview | SUCCESS; source archive SHA verified; 3,800 historical rows / 10 pre-prospective files; `quotes_seen=0`; `future_quotes_checked=0`; forecasts 0; shadow previews 0; paid calls 0; Supabase writes 0 | #13700981366, 1,460 bytes, expires 2027-02-07 |
+| #42677383722 — current-form forward preview | SUCCESS; source #13681778268 verified against SHA-256 `f4fb869be6e065ca611f012fe21b6d1eafe22434c60ced3a2e7b7ea6c5602101`; 3,910 historical rows; 110 current-season rows; feature-input gate 100; source age 15,793 seconds; `quotes_seen=0`; shadow captures 0; `target_outcome_evaluation_gate_open=false`; `target_outcomes_read=false`; paid calls 0; writes 0 | #13700368254, 440,605 bytes, expires 2027-02-07 |
+
+All four jobs completed SUCCESS, but none produced a V2 forecast. The current-form source run's 100-event feature-input gate is distinct from the protocol's 30-primary-event target-outcome evaluation gate. The forward preview explicitly confirms the latter remains closed and no target outcomes were read. Do not count these runs as prospective forecasts or model-quality evidence.
+
+**Public-storage blocker remains real:** GitHub confirms the repository visibility is `public`, while the current main workflows still upload source/diagnostic artifacts with 90-day retention and do not yet contain the #720/#727 rights/privacy gates. Artifact contents were not downloaded or opened. The #720/#727 stack must reach main and the repository must be private before any further source-artifact access is allowed.
+
 ## Provider scope and privacy
 
 - The official Football-Data fair-use page says free CSV/Excel data are intended for private individuals' personal betting and/or academic research, with manual access or at most two light automated download sessions per week; it excludes commercial and AI data-training projects. It does not explicitly resolve this project's frozen-model inference scope. Treat inference as unresolved and fail closed; do not infer a licence from public availability.
