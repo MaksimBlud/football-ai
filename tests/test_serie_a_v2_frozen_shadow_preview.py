@@ -197,7 +197,11 @@ def test_fallback_uses_latest_qualified_observation_only():
         v2_preview.shadow_preview([market(),market()], [features()], as_of_utc=NOW)
 
 
-def test_read_only_saved_supabase_query_does_not_call_provider():
+def test_read_only_saved_supabase_query_does_not_call_provider(monkeypatch):
+    import market_anchor_v2_source_rights as rights
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", lambda: None)
+
     class Result:
         data = [market()]
     class Q:
