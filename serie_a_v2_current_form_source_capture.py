@@ -54,8 +54,9 @@ def _canonical_team(value: Any) -> str:
 def count_unique_completed_primary_events(
     rows: list[Mapping[str, Any]], *, before_date: date
 ) -> int:
-    """Count fixture identities only; never request or inspect goal/result fields."""
+    """Count fixture identities only; reject reversed pairs and never inspect results."""
     unique: set[tuple[str, str, str]] = set()
+    orientations: dict[tuple[str, str, str], tuple[str, str]] = {}
     for row in rows:
         match_date = row.get("match_date")
         if isinstance(match_date, date):
@@ -73,7 +74,14 @@ def count_unique_completed_primary_events(
         away = _canonical_team(row.get("away_team"))
         if home == away:
             raise ValueError("invalid primary event identity in gate metadata")
-        unique.add((parsed_date.isoformat(), home, away))
+        date_key = parsed_date.isoformat()
+        unordered_identity = (date_key, min(home, away), max(home, away))
+        orientation = (home, away)
+        previous_orientation = orientations.get(unordered_identity)
+        if previous_orientation is not None and previous_orientation != orientation:
+            raise ValueError("reversed duplicate primary event identity in gate metadata")
+        orientations[unordered_identity] = orientation
+        unique.add((date_key, home, away))
     return len(unique)
 
 
