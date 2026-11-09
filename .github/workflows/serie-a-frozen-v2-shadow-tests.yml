@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - research/v2-provider-ai-inference-rights-block-*
+      - research/v2-integrated-private-quote-preflight-*
     paths:
       - "PROJECT_CONTINUITY.md"
       - "tests/test_serie_a_v2_dependency_lock_contract.py"

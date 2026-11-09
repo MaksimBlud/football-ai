@@ -209,7 +209,8 @@ def test_read_only_saved_supabase_query_does_not_call_provider():
             self.selected_columns = value
             return self
         def eq(self, k, v): self.calls.append("eq");assert (k,v)==("league","SERIE_A");return self
-        def gt(self, k, v): self.calls.append("gt"); assert k=="commence_time_utc";return self
+        def gt(self, k, v): self.calls.append("gt"); assert (k,v)==("commence_time_utc",NOW.isoformat());return self
+        def lte(self, k, v): self.calls.append("lte"); assert (k,v)==("snapshot_time_utc",NOW.isoformat());return self
         def order(self, *a, **kw): self.calls.append("order");return self
         def limit(self, n): self.calls.append("limit");assert n==1000;return self
         def execute(self): self.calls.append("execute");return Result()
@@ -228,7 +229,7 @@ def test_read_only_saved_supabase_query_does_not_call_provider():
     assert v2_preview.MARKET_KEYS == expected_columns
     assert db.query.selected_columns == ",".join(expected_columns)
     assert "*" not in db.query.selected_columns
-    assert db.query.calls==["select","eq","gt","order","limit","execute"]
+    assert db.query.calls==["select","eq","gt","lte","order","limit","execute"]
 
 
 def test_research_no_promotion_or_outcome_read_source():
