@@ -58,6 +58,10 @@ on:
     paths:
       - "serie_a_v2_live_diagnostic_report.py"
       - "tests/test_serie_a_v2_live_diagnostic_report.py"
+      - "serie_a_v2_forward_capture.py"
+      - "serie_a_v2_current_form_forward_capture.py"
+      - "tests/test_serie_a_v2_forward_capture.py"
+      - "tests/test_serie_a_v2_current_form_forward_capture.py"
       - ".github/workflows/serie-a-frozen-v2-shadow-tests.yml"
 
 permissions:
