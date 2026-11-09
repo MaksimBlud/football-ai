@@ -13,6 +13,18 @@ from serie_a_v2_live_diagnostic_report import (
 NOW = datetime(2026,10,13,15,1,tzinfo=timezone.utc)
 
 
+@pytest.fixture(autouse=True)
+def allow_synthetic_v2_inference_scope(monkeypatch):
+    """Offline fixtures use synthetic inputs; this is not provider authorization."""
+    import market_anchor_v2_source_rights as rights
+
+    monkeypatch.setattr(
+        rights,
+        "require_personal_research_inference_scope",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+
+
 def history_fixture():
     rows = []
     for date, home, away, home_goals, away_goals, result in [
