@@ -6546,3 +6546,38 @@ The source archive and parent provenance are genuinely verified, but there is no
 The provider-rights/private-storage chain (#720/#727 and dependent protections) remains open; the public repository/artifact boundary and unresolved frozen-inference permission remain blockers. Do not initiate further source capture or inference until the applicable rights/privacy gates are resolved.
 
 No main merge/update, Supabase write/DDL, paid API request, protected target-outcome read, model refit, candidate/weight/feature/lambda change, production `.pkl` change, schedule change, bet, publication, or promotion occurred in this addendum.
+
+
+---
+
+# Integration overlap audit — 2026-11-09 12:56 UTC
+
+A direct comparison of the exact #720 branch source and its regression tests against open #763–#765 found that the current merge plan should avoid duplicating guards already present in the consolidated rights branch.
+
+## What #720 already contains
+
+PR #720 exact HEAD remains `1b9464834dd5256b7d69499c1443378518dde256`, based on main `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Its nine associated PR workflow runs are all completed SUCCESS, including the dual-Python frozen-V2 suite (342 tests under Python 3.11 and 3.12) and the 24-test shared download-budget suite.
+
+On that exact branch, `serie_a_v2_current_form_source_capture.py` and its tests already:
+- canonicalize the V2-local Atalanta alias and reject reversed same-date fixture pairs in both the metadata feature-input gate and the downloaded current-season CSV;
+- deduplicate exact alias-equivalent metadata identities;
+- require current-season goal/corner/card counts to be nonnegative integers;
+- test both reversed-duplicate cases and exact alias deduplication;
+- require a real UTC offset for source-gate, capture, observation and archive clocks;
+- pin the approved current-season HTTPS URL, disable redirects, stream the response with a hard byte bound, and verify current-source fixture coverage against the metadata gate.
+
+These are already in #720's diff/tests and should not be reimplemented by separately merging overlapping PRs.
+
+## Incremental status of #763–#765 against #720
+
+- **#763 is still materially incremental.** #720's `_primary_event_metadata_identity()` currently converts a `datetime` object to `.date()`. #763 explicitly rejects datetime/timestamp objects and requires canonical full-string `YYYY-MM-DD`. Preserve this stricter date-only metadata rule when rebasing after #720.
+- **#764 is partially overlapping.** #720 already rejects non-integer counts and reversed duplicate rows. #764's distinct addition is checking the raw CSV date cells for time/offset syntax *before* Pandas can normalize them; retain that pre-parse date-only guard (and its explicit finite-number assertion) if it remains absent after rebase.
+- **#765 is functionally superseded by #720.** The same V2-local alias-normalized reversed-pair rejection is already implemented in #720's `count_unique_completed_primary_events()` and `_primary_event_identities()`, with dedicated tests for the counter, identity reader, and current CSV. The #720 tests also already prove exact Atalanta alias duplicates collapse to one identity. Do not merge #765 independently unless a post-rebase diff reveals genuinely new coverage not present in #720.
+
+All #763, #764 and #765 heads remain based on the unchanged main rather than #720. Their standalone CI passes do not establish compatibility with #720. After HUMAN-MERGE of #720, re-read the new main, rebase only the unique #763/#764 protections, inspect exact diffs, and rerun exact-head CI. Keep #765 Draft/superseded rather than adding a duplicate merge.
+
+## Privacy/evaluator dependency reminder
+
+PR #727 is stacked on #720 at head `8894ce8e0248a5502d60571ff073fc6d7847a43a`; its three relevant V2/budget validation runs are SUCCESS. PR #753 is stacked on #727 and corrects the privacy helper's missing-response-URL fallback; it must be included/revalidated before relying on that privacy check. The evaluator chain #728 and #755–#759 remains stacked on #727 / its descendants and must not be rebased or merged ahead of its exact rights, privacy and mandatory source-SHA predecessors.
+
+HUMAN-MERGE remains binding. No branch was merged, no main ref moved, no workflow was dispatched, and no source/quote/outcome data were accessed for this overlap audit. This is an integration-order finding, not model-quality evidence.
