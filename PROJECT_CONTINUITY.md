@@ -6972,7 +6972,7 @@ The Nov 8 diagnostic [#42484124054](https://github.com/MaksimBlud/football-ai/ac
 
 ### Policy consequence / immediate safe response
 
-This is at least **13 successful automated public-source sessions** in the rolling seven-day window (7 capture + 6 diagnostic), versus the stated maximum of **2**: at least 6 sessions over the limit, excluding the failed Nov 8 attempt. The diagnostic and source-capture workflows are separate sessions even though they use the same public source.
+This is at least **13 successful automated public-source sessions** in the rolling seven-day window (7 capture + 6 diagnostic), versus the stated maximum of **2**: at least 11 sessions over the limit, excluding the failed Nov 8 attempt. The diagnostic and source-capture workflows are separate sessions even though they use the same public source.
 
 No new provider request was made during this audit; only existing GitHub run logs/artifact metadata and the live pre-match Supabase aggregate were read. The main workflows have not been edited and their cron expressions were not changed.
 
