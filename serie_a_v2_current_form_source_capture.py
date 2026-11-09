@@ -137,6 +137,10 @@ def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
     """Read only event date/team metadata; no goals, result or settlement columns."""
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("feature-source gate clock must have a real UTC offset")
+    # These public metadata readers can be imported directly. Re-check the
+    # private source-only scope before touching Supabase, not only in the CLI.
+    require_personal_research_source_capture_scope()
+    require_private_repository_for_source_artifacts()
     cutoff = now.astimezone(timezone.utc).date().isoformat()
     rows: list[dict[str, Any]] = []
     start = 0
@@ -190,6 +194,10 @@ def read_completed_primary_event_identities(
     """Read only date/team metadata and return canonical identities for source parity."""
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("feature-source gate clock must have an explicit UTC offset")
+    # These public metadata readers can be imported directly. Re-check the
+    # private source-only scope before touching Supabase, not only in the CLI.
+    require_personal_research_source_capture_scope()
+    require_private_repository_for_source_artifacts()
     cutoff_date = now.astimezone(timezone.utc).date()
     cutoff = cutoff_date.isoformat()
     rows: list[dict[str, Any]] = []
