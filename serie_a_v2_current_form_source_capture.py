@@ -250,6 +250,14 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     if (missing_date & has_payload).any():
         raise ValueError("current-season source contains populated fixture row without date")
     nonblank_dates = ~missing_date
+    # Football-Data's contract is date-only. Inspect the original CSV cells
+    # before pandas can normalize an explicit midnight timestamp into a date.
+    raw_dates = frame.loc[nonblank_dates, "Date"].astype(str).str.strip()
+    if raw_dates.str.contains(
+        r"(?i)(?:[Tt]\\d{2}:\\d{2}|[ \\t]+\\d{1,2}:\\d{2}|[+-]\\d{2}:\\d{2}|[Zz]$)",
+        regex=True,
+    ).any():
+        raise ValueError("current-season source must use date-only fixture dates")
     parsed_dates = pd.to_datetime(frame["Date"], dayfirst=True, format="mixed", errors="coerce")
     if parsed_dates.loc[nonblank_dates].isna().any():
         raise ValueError("current-season source contains an unparseable fixture date")
