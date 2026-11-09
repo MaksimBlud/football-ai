@@ -53,6 +53,14 @@ on:
       - "tests/test_market_anchor_v2_artifact_privacy.py"
       - ".github/workflows/serie-a-frozen-v2-shadow-tests.yml"
 
+  push:
+    branches:
+      - research/v2-direct-quote-reader-rights-gate-stacked-on-742-20261109-run11
+    paths:
+      - "serie_a_v2_frozen_shadow_preview.py"
+      - "tests/test_serie_a_v2_frozen_shadow_preview.py"
+      - ".github/workflows/serie-a-frozen-v2-shadow-tests.yml"
+
 permissions:
   contents: read
 
