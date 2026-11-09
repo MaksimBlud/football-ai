@@ -13,6 +13,7 @@ import hashlib
 import json
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from historical_football_signal_lab import TeamMatch, _snapshot, FEATURE_SETS
@@ -71,8 +72,10 @@ def _validate_history(history: pd.DataFrame) -> pd.DataFrame:
         raise ValueError("invalid/missing historical result")
     for field in ("FTHG", "FTAG", *STATS):
         frame[field] = pd.to_numeric(frame[field], errors="coerce")
-        if frame[field].isna().any() or (frame[field] < 0).any():
-            raise ValueError("unverified or missing history stat: " + field)
+        if frame[field].isna().any() or not np.isfinite(frame[field].to_numpy(dtype=float)).all():
+            raise ValueError("unverified or non-finite history stat: " + field)
+        if (frame[field] < 0).any() or (frame[field] % 1 != 0).any():
+            raise ValueError("historical count stat must be a nonnegative integer: " + field)
     if ((frame["FTHG"] > frame["FTAG"]) != (frame["FTR"] == "H")).any() or (
         (frame["FTHG"] < frame["FTAG"]) != (frame["FTR"] == "A")
     ).any():
