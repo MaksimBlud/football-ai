@@ -72,10 +72,14 @@ def _validate_history(history: pd.DataFrame) -> pd.DataFrame:
         raise ValueError("invalid/missing historical result")
     for field in ("FTHG", "FTAG", *STATS):
         frame[field] = pd.to_numeric(frame[field], errors="coerce")
-        if frame[field].isna().any() or not np.isfinite(frame[field].to_numpy(dtype=float)).all():
-            raise ValueError("unverified or non-finite history stat: " + field)
-        if (frame[field] < 0).any() or (frame[field] % 1 != 0).any():
-            raise ValueError("historical count stat must be a nonnegative integer: " + field)
+        if frame[field].isna().any():
+            raise ValueError("missing history stat: " + field)
+        if not np.isfinite(frame[field].to_numpy(dtype=float)).all():
+            raise ValueError("non-finite history stat: " + field)
+        if (frame[field] < 0).any():
+            raise ValueError("negative history stat: " + field)
+        if (frame[field] % 1 != 0).any():
+            raise ValueError("historical count stat must be an integer: " + field)
     if ((frame["FTHG"] > frame["FTAG"]) != (frame["FTR"] == "H")).any() or (
         (frame["FTHG"] < frame["FTAG"]) != (frame["FTR"] == "A")
     ).any():
