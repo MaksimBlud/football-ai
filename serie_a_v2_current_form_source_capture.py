@@ -58,13 +58,19 @@ def count_unique_completed_primary_events(
     unique: set[tuple[str, str, str]] = set()
     for row in rows:
         match_date = row.get("match_date")
+        # The Supabase column is DATE, so accepting a datetime/timestamp here
+        # would weaken the metadata-only gate's event-identity contract.
+        if isinstance(match_date, datetime):
+            raise ValueError("primary event date must be date-only metadata")
         if isinstance(match_date, date):
             parsed_date = match_date
         elif isinstance(match_date, str):
             try:
-                parsed_date = date.fromisoformat(match_date[:10])
+                parsed_date = date.fromisoformat(match_date)
             except ValueError as exc:
                 raise ValueError("invalid primary event date in gate metadata") from exc
+            if parsed_date.isoformat() != match_date:
+                raise ValueError("primary event date must be canonical YYYY-MM-DD")
         else:
             raise ValueError("missing primary event date in gate metadata")
         if parsed_date >= before_date:
