@@ -138,6 +138,23 @@ def test_current_csv_rejects_timestamp_dates_before_pandas_normalization(timesta
         )
 
 
+@pytest.mark.parametrize(
+    ("bad_stats", "field"),
+    [
+        ("1.5,0,H,5,3,2,1,0,0", "FTHG"),
+        ("1,0,H,inf,3,2,1,0,0", "HC"),
+    ],
+)
+def test_current_csv_rejects_fractional_or_nonfinite_count_statistics(bad_stats, field):
+    raw = current_csv().decode().replace(
+        "1,0,H,5,3,2,1,0,0", bad_stats, 1
+    ).encode()
+    with pytest.raises(ValueError, match=f"missing/invalid integer {field}"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
 def test_current_csv_rejects_reversed_duplicate_after_v2_local_alias_normalization():
     with pytest.raises(ValueError, match="duplicate or reversed fixture identities"):
         validate_current_season_csv(
