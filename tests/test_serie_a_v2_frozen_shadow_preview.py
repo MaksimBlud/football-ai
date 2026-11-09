@@ -28,6 +28,29 @@ def allow_frozen_inference_scope_for_offline_unit_tests(monkeypatch):
     )
 
 
+def test_saved_quote_reader_enforces_inference_rights_before_supabase_access(monkeypatch):
+    import market_anchor_v2_source_rights as rights
+
+    def deny_scope():
+        raise PermissionError("V2 frozen inference scope remains unresolved")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", deny_scope)
+
+    class ForbiddenClient:
+        def table(self, name):
+            pytest.fail(f"Supabase table {name!r} must not be accessed before rights clearance")
+
+    with pytest.raises(PermissionError, match="V2 frozen inference scope remains unresolved"):
+        v2_preview.fetch_saved_upcoming_serie_a_quotes(ForbiddenClient(), now=NOW)
+
+
+def test_frozen_shadow_workflow_targets_direct_quote_read_rights_stack():
+    workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" / "serie-a-frozen-v2-shadow-tests.yml").read_text(encoding="utf-8")
+    pull_request = workflow.split("  pull_request:\\n", 1)[1].split("\\npermissions:", 1)[0]
+    assert "research/v2-shadow-preview-internal-inference-rights-gate-stacked-on-742-20261108-run11" in pull_request
+    assert "research/v2-direct-saved-quote-read-rights-gate-stacked-on-743-20261109-run11" in workflow
+
+
 def market(**overrides):
     row = {
         "league": "SERIE_A", "event_id": "event-serie-a-001",
