@@ -6915,3 +6915,23 @@ Both exact-head offline CI triggers completed SUCCESS:
 They are duplicate push/PR triggers on the same HEAD, not independent cohorts. No Supabase, source, quote, outcome, paid-provider or production artifact access occurred in these tests.
 
 The source-only scope remains private noncommercial archive/validation only; frozen-model inference, AI training, commercial use and public-product use remain unauthorized. This PR does not change those permissions or the two-download-sessions-per-rolling-seven-days budget.
+
+
+## Direct prospective completed-fixture metadata reader hardening — 2026-11-09 19:08 UTC
+
+PR #770 closes a second direct-import bypass in the original V2 prospective gate. The live runner in #730 checked inference rights before calling the identity-only completed-fixture reader, but the public `read_completed_fixture_gate()` function itself did not re-check rights when imported directly.
+
+- The public reader now calls `require_personal_research_inference_scope()` before the identity-only Supabase query.
+- Its frozen query allowlist is unchanged: `match_date,home_team,away_team`; no score, H/D/A result, persistence timestamp, or other target-outcome field is selected.
+- Regressions prove denial occurs before `client.table(...)`, and the actual unresolved rights manifest blocks the direct call before Supabase.
+- The offline validation workflow now compiles the gate module and tests this exact stack.
+
+PR #770 exact HEAD: `3888b77f85445e88d6cd20047e56e86202d51897`, stacked on #769 exact base `df1d6ff024e4ccc3b06d3cdb55ee56125a327e7c`, Draft/HUMAN-MERGE only.
+
+Both exact-head offline validation runs completed SUCCESS:
+- [#42680275346](https://github.com/MaksimBlud/football-ai/actions/runs/42680275346): **143 passed**, Python 3.12, production `.pkl` diff guard PASS.
+- [#42680258247](https://github.com/MaksimBlud/football-ai/actions/runs/42680258247): **143 passed**, Python 3.12, production `.pkl` diff guard PASS.
+
+Earlier failures were on superseded HEAD `e48c28fd82ca30413f64bdb82c294d23f28e2881`; the actual-manifest test was corrected on the final HEAD above. Duplicate triggers on the same HEAD are not independent cohorts.
+
+The direct-reader chain is now: #732 capture entrypoint gate → #769 direct source identity-reader gates → #770 direct prospective completed-fixture identity gate. These are rights/metadata protections only; they do not open the protected outcome reader. The 30-eligible-completed-primary-forecast gate and lazy post-gate outcome reader remain unchanged. No outcome data was read by this PR or its CI.
