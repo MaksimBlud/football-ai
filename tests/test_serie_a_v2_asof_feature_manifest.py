@@ -8,6 +8,20 @@ import pytest
 from serie_a_v2_asof_feature_manifest import build_manifest
 from serie_a_v2_frozen_shadow_preview import shadow_preview
 
+
+@pytest.fixture(autouse=True)
+def _allow_synthetic_inference_scope(monkeypatch):
+    # Numerical feature regressions use synthetic inputs only. This fixture is
+    # not a live provider authorization and is overridden by denial tests.
+    import market_anchor_v2_source_rights as rights
+
+    monkeypatch.setattr(
+        rights,
+        "require_personal_research_inference_scope",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+
+
 QUOTE = {
     "event_id": "test-v2-a",
     "league": "SERIE_A",
@@ -308,3 +322,85 @@ def test_free_diagnostic_compiles_frozen_transitive_runtime_dependencies():
     compile_line = next(line for line in step.splitlines() if "python -m py_compile " in line)
     assert "market_anchor_1x2_v2_shadow.py" in compile_line
     assert "market_anchor_1x2_v1.py" in compile_line
+
+def test_build_manifest_denies_unresolved_inference_before_candidate_or_input_access(monkeypatch):
+    import market_anchor_v2_source_rights as rights
+    import serie_a_v2_asof_feature_manifest as feature_manifest
+
+    def denied():
+        raise PermissionError("frozen inference scope unresolved")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", denied)
+    monkeypatch.setattr(
+        feature_manifest, "_verify_original_feature_builder",
+        lambda: pytest.fail("feature-builder source must not be read before rights clearance"),
+    )
+    monkeypatch.setattr(
+        feature_manifest, "load_verified_original",
+        lambda: pytest.fail("frozen candidate must not be read before rights clearance"),
+    )
+
+    class Untouchable:
+        def __getattribute__(self, name):
+            raise AssertionError(f"input accessed before rights clearance: {name}")
+
+    with pytest.raises(PermissionError, match="scope unresolved"):
+        feature_manifest.build_manifest(Untouchable(), Untouchable())
+
+
+def test_cli_rights_block_precedes_all_history_and_quote_file_reads(monkeypatch, tmp_path):
+    import json
+    import sys
+    from pathlib import Path
+
+    import market_anchor_v2_source_rights as rights
+    import serie_a_v2_asof_feature_manifest as feature_manifest
+
+    history_path = tmp_path / "history.csv"
+    quotes_path = tmp_path / "quotes.json"
+    manifest_path = tmp_path / "manifest.json"
+    audit_path = tmp_path / "audit.json"
+
+    def denied():
+        raise PermissionError("frozen inference scope unresolved")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", denied)
+    monkeypatch.setattr(
+        feature_manifest.pd, "read_csv",
+        lambda *args, **kwargs: pytest.fail("history must not be opened before rights clearance"),
+    )
+    monkeypatch.setattr(
+        Path, "read_bytes",
+        lambda self: pytest.fail("history bytes must not be opened before rights clearance"),
+    )
+    original_read_text = Path.read_text
+
+    def guarded_read_text(self, *args, **kwargs):
+        if self == quotes_path:
+            pytest.fail("saved quotes must not be opened before rights clearance")
+        return original_read_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", guarded_read_text)
+    monkeypatch.setattr(sys, "argv", [
+        "serie_a_v2_asof_feature_manifest.py",
+        "--existing-history-csv", str(history_path),
+        "--saved-quotes-json", str(quotes_path),
+        "--manifest-json", str(manifest_path),
+        "--audit-json", str(audit_path),
+    ])
+
+    feature_manifest.main()
+
+    report = json.loads(original_read_text(audit_path, encoding="utf-8"))
+    assert report["mode"] == "SOURCE_RIGHTS_BLOCKED_NO_NETWORK_NO_INFERENCE"
+    assert report["supabase_reads"] == report["supabase_writes"] == 0
+    assert report["target_outcomes_read"] is False
+    assert not manifest_path.exists()
+
+
+def test_frozen_shadow_workflow_targets_private_preflight_stack_base():
+    from pathlib import Path
+
+    workflow = Path(".github/workflows/serie-a-frozen-v2-shadow-tests.yml").read_text(encoding="utf-8")
+    pull_request = workflow.split("  pull_request:\\n", 1)[1].split("\\npermissions:", 1)[0]
+    assert "research/v2-integrated-private-quote-preflight-20261108" in pull_request
