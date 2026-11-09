@@ -6935,3 +6935,47 @@ Both exact-head offline validation runs completed SUCCESS:
 Earlier failures were on superseded HEAD `e48c28fd82ca30413f64bdb82c294d23f28e2881`; the actual-manifest test was corrected on the final HEAD above. Duplicate triggers on the same HEAD are not independent cohorts.
 
 The direct-reader chain is now: #732 capture entrypoint gate → #769 direct source identity-reader gates → #770 direct prospective completed-fixture identity gate. These are rights/metadata protections only; they do not open the protected outcome reader. The 30-eligible-completed-primary-forecast gate and lazy post-gate outcome reader remain unchanged. No outcome data was read by this PR or its CI.
+
+
+## Critical rolling-seven-day public-source budget audit — 2026-11-09 19:12 UTC
+
+A second, date-scoped read-only audit confirms the daily source workflows on main have exceeded the provider's stated maximum of two automated sessions per rolling seven days. The rolling window checked was **2026-11-02 19:08 UTC through 2026-11-09 19:08 UTC**. Main is still `40887ebb215730190d7a6c7a1693373ec4afcdfc`; its two live workflow files have daily schedules and contain no shared budget reservation/gate.
+
+### Successful scheduled sessions in the rolling window
+
+**Current-Form Source Capture — 7 successful sessions, one per day Nov 3–9:**
+
+| Date UTC | Run | Artifact | Historical CSVs | ZIP SHA-256 |
+|---|---:|---:|---:|---|
+| Nov 3 | [#41640753996](https://github.com/MaksimBlud/football-ai/actions/runs/41640753996) | #13231843819 | 10 | `4e6fb5531a2206a353fe00fa1ebb0b4d20b3c6ae41ab49a7c672f8dab6d29cd8` |
+| Nov 4 | [#41836971469](https://github.com/MaksimBlud/football-ai/actions/runs/41836971469) | #13327281383 | 10 | `9dced08f96d81c39dcc199afba481fab07961ce6b61d14776fdc78563bc8cccd` |
+| Nov 5 | [#42036450692](https://github.com/MaksimBlud/football-ai/actions/runs/42036450692) | #13418048952 | 10 | `941cb910b4b412027de196156147b164ba6705159ef90e34a99af02e0de04f10` |
+| Nov 6 | [#42224162373](https://github.com/MaksimBlud/football-ai/actions/runs/42224162373) | #13504817564 | 10 | `d8e96884c6fefd6687b82d72bf4c6cc08433b6d42e3b87879252115137a6e7ea` |
+| Nov 7 | [#42370312212](https://github.com/MaksimBlud/football-ai/actions/runs/42370312212) | #13573502390 | 10 | `92b3ff34565c96ef17c12fdfb99cfa6f562ff37037235e02a8a9bb3b1d3d1afe` |
+| Nov 8 | [#42479299556](https://github.com/MaksimBlud/football-ai/actions/runs/42479299556) | #13617155063 | 10 | `5395ff50d5e312f395b4f76e9cdf63fcb2a71ab831e07fd24cb3418602ad3af6` |
+| Nov 9 | [#42634501531](https://github.com/MaksimBlud/football-ai/actions/runs/42634501531) | #13681778268 | 10 | `f4fb869be6e065ca611f012fe21b6d1eafe22434c60ced3a2e7b7ea6c5602101` |
+
+Each successful run reports 10 historical old-season CSVs, 11 total archive files, and zero paid-provider calls / Supabase writes.
+
+**Free Real-Quote Diagnostic — 6 successful sessions, Nov 3–7 and Nov 9:**
+
+| Date UTC | Run | Artifact | Historical rows | Public CSV HTTP requests | ZIP SHA-256 |
+|---|---:|---:|---:|---:|---|
+| Nov 3 | [#41650074683](https://github.com/MaksimBlud/football-ai/actions/runs/41650074683) | #13236383688 | 3,800 | 10 | `8386044e795e208e112e9af8d9ebcb0d5a77cf8f00f51147c70df8d01785c143` |
+| Nov 4 | [#41847314320](https://github.com/MaksimBlud/football-ai/actions/runs/41847314320) | #13332260799 | 3,800 | 10 | `72a32dc61d6e230be46bc5fe69a52e97142a79816af33c66f58066e0ceb6e8d8` |
+| Nov 5 | [#42046051819](https://github.com/MaksimBlud/football-ai/actions/runs/42046051819) | #13424482168 | 3,800 | 10 | `4f735f1e4636250b0b711963e9f6a660838afc521396968fcb19acb2b39d3559` |
+| Nov 6 | [#42231648250](https://github.com/MaksimBlud/football-ai/actions/runs/42231648250) | #13510280643 | 3,800 | 10 | `4cb7780bc52e64d4b9f761107e79451fcf7541fb79a6ea70a520c96df9bc54dd` |
+| Nov 7 | [#42374478720](https://github.com/MaksimBlud/football-ai/actions/runs/42374478720) | #13574818932 | 3,800 | 10 | `6909afcba069000449d033e20fee00aafe4b4e0f044087d4e0b48901260b7d88` |
+| Nov 9 | [#42651542041](https://github.com/MaksimBlud/football-ai/actions/runs/42651542041) | #13689701985 | 3,800 | 10 | `c968b357235029c5e96283470d5ac4d40fe1a0647b1d510dbf7270e976db9c4d` |
+
+The Nov 8 diagnostic [#42484124054](https://github.com/MaksimBlud/football-ai/actions/runs/42484124054) failed before producing an artifact and is excluded from the successful-session lower bound. Each successful diagnostic reports `paid_provider_requests=0`, `public_http_requests=10`, and uploads a ~425 KB artifact.
+
+### Policy consequence / immediate safe response
+
+This is at least **13 successful automated public-source sessions** in the rolling seven-day window (7 capture + 6 diagnostic), versus the stated maximum of **2**: at least 6 sessions over the limit, excluding the failed Nov 8 attempt. The diagnostic and source-capture workflows are separate sessions even though they use the same public source.
+
+No new provider request was made during this audit; only existing GitHub run logs/artifact metadata and the live pre-match Supabase aggregate were read. The main workflows have not been edited and their cron expressions were not changed.
+
+PR #720 already adds one shared two-sessions-per-rolling-seven-days budget gate to **both** workflows, with a single concurrency group and reserved-attempt markers; it leaves both cron expressions unchanged. It is Ready for review at exact HEAD `1b9464834dd5256b7d69499c1443378518dde256`, with **10/10** exact-head check-runs SUCCESS. PR #727 then adds private-repository and source-rights preflight, but the repository remains public and the inference scope remains unresolved. These must be manually integrated in dependency order; no automatic merge or schedule change was made.
+
+This budget breach risk is independent of model quality. It does not create any V2 forecast or authorize inference. The candidate, 19 features, weights, lambdas and 30-event outcome gate remain frozen.
