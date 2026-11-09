@@ -65,6 +65,8 @@ def _validate_history(history: pd.DataFrame) -> pd.DataFrame:
         raise ValueError("unparseable historical match date")
     if frame["_match_date"].dt.tz is not None:
         raise ValueError("expected date-only historical source")
+    if (frame["_match_date"] != frame["_match_date"].dt.normalize()).any():
+        raise ValueError("expected date-only historical source")
     if frame["FTR"].isna().any() or not frame["FTR"].isin(("H", "D", "A")).all():
         raise ValueError("invalid/missing historical result")
     for field in ("FTHG", "FTAG", *STATS):
