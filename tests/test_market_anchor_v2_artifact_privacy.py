@@ -171,3 +171,17 @@ def test_every_live_v2_artifact_upload_is_guarded_by_private_storage_preflight()
             assert "steps.rights_preflight.outputs.allowed == 'true'" in step, (
                 f"{relative}: artifact upload is not disabled when private-storage preflight blocks"
             )
+
+
+def test_privacy_lookup_fails_closed_when_response_url_is_missing():
+    def missing_url(url, **kwargs):
+        response = _PrivacyResponse(
+            {"full_name": "MaksimBlud/football-ai", "private": True}
+        )
+        del response.url
+        return response
+
+    with pytest.raises(PermissionError, match="lookup failed"):
+        require_private_repository_for_source_artifacts(
+            "MaksimBlud/football-ai", "synthetic-token", get=missing_url
+        )
