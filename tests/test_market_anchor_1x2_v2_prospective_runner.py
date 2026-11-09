@@ -897,6 +897,61 @@ def test_live_runner_rejects_caller_supplied_preflight_callbacks():
         runner.evaluate_live_market_only_from_supabase(
             object(), candidates, token="synthetic-read-only-token", preflight=fake_preflight
         )
+    with pytest.raises(TypeError, match="preflight"):
+        runner.evaluate_live_prospective_cohort(
+            object(), candidates, lambda _keys: {}, token="synthetic-read-only-token",
+            preflight=fake_preflight,
+        )
+
+
+def test_live_runner_requires_private_repository_before_identity_gate(monkeypatch):
+    candidates = _source_candidates(_forecast_rows(30))
+    calls = []
+
+    def deny_private(**_kwargs):
+        calls.append("private")
+        raise PermissionError("source archives require a private GitHub repository")
+
+    def forbidden_gate(_client):
+        calls.append("identity_gate")
+        pytest.fail("private-repository failure must stop before the Supabase identity gate")
+
+    monkeypatch.setattr(runner, "require_private_repository_for_source_artifacts", deny_private)
+    monkeypatch.setattr(runner, "read_completed_fixture_gate", forbidden_gate)
+    with pytest.raises(PermissionError, match="private GitHub repository"):
+        runner.evaluate_live_market_only_prospective_cohort(
+            object(), candidates, lambda _keys: {}, token="synthetic-read-only-token"
+        )
+    assert calls == ["private"]
+
+
+def test_market_only_runner_rejects_extra_source_sha_artifacts_before_evaluator_or_outcomes(monkeypatch):
+    rows = _forecast_rows(30)
+    identities = {(row["match_date"], row["home_team"], row["away_team"]) for row in rows}
+    monkeypatch.setattr(
+        runner, "read_completed_fixture_gate",
+        lambda _client: (identities, _gate_attestation(identities)),
+    )
+    evaluator_calls = []
+    outcome_calls = []
+
+    def extra_source_preflight(_identities, _attestation, forecast_rows):
+        proof = _synthetic_source_preflight(_identities, _attestation, forecast_rows)
+        proof[99999] = "b" * 64
+        return proof
+
+    def forbidden_evaluator(*args, **kwargs):
+        evaluator_calls.append((args, kwargs))
+        pytest.fail("evaluator must not run with an extra unselected source artifact")
+
+    monkeypatch.setattr(runner, "evaluate_market_only_after_gate", forbidden_evaluator)
+    with pytest.raises(ValueError, match="exactly the selected source artifacts"):
+        _run_market_only_cohort(
+            object(), rows, lambda keys: outcome_calls.append(keys) or {},
+            preflight=extra_source_preflight,
+        )
+    assert evaluator_calls == []
+    assert outcome_calls == []
 
 
 def test_market_only_runner_rejects_unmatched_source_sha_proof_before_evaluator_or_outcomes(monkeypatch):
