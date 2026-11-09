@@ -207,7 +207,7 @@ def extract_forward_artifact(raw: bytes) -> tuple[dict[str, Any], dict[int, byte
 
 def verify_source_artifacts_for_candidates(
     candidates: list[dict[str, Any]], *, token: str,
-    current_gate_identities: set[tuple[str, str, str]], get=requests.get,
+    current_gate_identities: set[tuple[str, str, str]],
 ) -> dict[int, str]:
     if not candidates:
         return {}
@@ -215,8 +215,8 @@ def verify_source_artifacts_for_candidates(
     # the same frozen-inference and private-storage boundaries before it lists
     # or downloads any source artifact.
     require_personal_research_inference_scope()
-    require_private_repository_for_source_artifacts(REPOSITORY, token, get=get)
-    source_by_id = {item["artifact_id"]: item for item in discover_archives(token=token, get=get)}
+    require_private_repository_for_source_artifacts(REPOSITORY, token)
+    source_by_id = {item["artifact_id"]: item for item in discover_archives(token=token)}
     groups, embedded_by_id = {}, {}
     for candidate in candidates:
         row, provenance = candidate["row"], candidate["provenance"]
@@ -250,7 +250,7 @@ def verify_source_artifacts_for_candidates(
         if actual_sha != archive_meta["sha256"]:
             raise ValueError("embedded source ZIP SHA256 differs from GitHub source artifact digest")
         earliest_quote = min(_utc(item["row"]["quote_time_utc"], "quote_time_utc") for item in group)
-        parent = verify_source_run(archive_meta, quote_time=earliest_quote, token=token, get=get)
+        parent = verify_source_run(archive_meta, quote_time=earliest_quote, token=token)
         if (
             parent.get("run_id") != parent_report.get("run_id")
             or parent.get("run_head_sha") != parent_report.get("run_head_sha")
@@ -299,7 +299,7 @@ def verify_source_artifacts_for_candidates(
     return verified_shas
 
 
-def run_live_evaluation(client: Any, token: str, *, now: datetime | None = None, get=requests.get):
+def run_live_evaluation(client: Any, token: str, *, now: datetime | None = None):
     # Defense in depth: imported callers must not bypass the CLI rights gate.
     require_personal_research_inference_scope()
     if now is None:
@@ -318,11 +318,11 @@ def run_live_evaluation(client: Any, token: str, *, now: datetime | None = None,
         "private_storage_verified": False,
     }
     private_storage = require_private_repository_for_source_artifacts(
-        os.environ.get("GITHUB_REPOSITORY", ""), token, get=get
+        os.environ.get("GITHUB_REPOSITORY", ""), token
     )
     base["private_storage_verified"] = private_storage["private"] is True
     base["private_storage_policy"] = private_storage["storage_policy"]
-    artifacts = discover_forward_artifacts(token, get=get)
+    artifacts = discover_forward_artifacts(token)
     if not artifacts:
         return {**base, "status": "NO_FORWARD_ARTIFACTS", "forward_artifact_count": 0,
                 "forecast_candidate_count": 0, "selected_unique_fixture_forecasts": 0,
@@ -330,8 +330,8 @@ def run_live_evaluation(client: Any, token: str, *, now: datetime | None = None,
 
     total_bytes, candidates, artifact_reports = 0, [], []
     for artifact in artifacts:
-        run = verify_forward_run(artifact, token, get=get)
-        raw = get_archive(artifact["artifact_id"], token=token, get=get)
+        run = verify_forward_run(artifact, token)
+        raw = get_archive(artifact["artifact_id"], token=token)
         total_bytes += len(raw)
         if len(raw) > MAX_ARTIFACT_BYTES or total_bytes > MAX_TOTAL_DOWNLOAD_BYTES:
             raise ValueError("forward artifact downloads exceeded the bounded byte budget")
