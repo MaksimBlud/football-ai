@@ -401,4 +401,5 @@ def test_saved_quote_reader_enforces_inference_rights_before_supabase_access(mon
 def test_frozen_shadow_workflow_targets_prematch_quote_reader_rights_stack():
     workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" / "serie-a-frozen-v2-shadow-tests.yml").read_text(encoding="utf-8")
     assert "research/v2-prematch-quote-query-cutoff-stacked-on-720-*" in workflow
+    assert "research/v2-direct-quote-reader-rights-gate-stacked-on-742-20261109-run11" in workflow
 
