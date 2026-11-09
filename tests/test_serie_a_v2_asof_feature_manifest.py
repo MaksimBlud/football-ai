@@ -285,6 +285,7 @@ def test_history_rejects_time_of_day_that_could_bypass_same_date_fixture_identit
 )
 def test_historical_count_stats_must_be_finite_nonnegative_integers(field, value, message):
     malformed = history()
+    malformed[field] = malformed[field].astype(float)
     malformed.loc[0, field] = value
 
     with pytest.raises(ValueError, match=message):
