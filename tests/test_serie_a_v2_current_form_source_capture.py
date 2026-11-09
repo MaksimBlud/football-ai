@@ -204,3 +204,24 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert report["target_outcome_evaluation_gate"]["outcome_gate_open"] is False
     assert report["paid_provider_calls"] == report["supabase_writes"] == 0
     assert report["model_refit_or_promotion"] is False
+
+def test_feature_gate_rejects_reversed_duplicate_after_v2_alias_normalization():
+    rows = [
+        {"match_date": "2026-10-01", "home_team": "Atalanta BC", "away_team": "Juventus"},
+        {"match_date": "2026-10-01", "home_team": "Juventus", "away_team": "Atalanta"},
+    ]
+    with pytest.raises(ValueError, match="reversed duplicate primary event identity"):
+        count_unique_completed_primary_events(
+            rows, before_date=date(2026, 10, 18)
+        )
+
+
+def test_feature_gate_keeps_exact_alias_duplicates_as_one_completed_fixture():
+    rows = [
+        {"match_date": "2026-10-01", "home_team": "Atalanta", "away_team": "Juventus"},
+        {"match_date": "2026-10-01", "home_team": "Atalanta BC", "away_team": "Juventus"},
+    ]
+    assert count_unique_completed_primary_events(
+        rows, before_date=date(2026, 10, 18)
+    ) == 1
+
