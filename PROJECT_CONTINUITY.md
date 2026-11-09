@@ -6815,3 +6815,17 @@ A fresh read-only Supabase aggregate selected only prematch odds fields and used
 Binding state remains unchanged: original candidate SHA a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6, 19 frozen features, 3,799 training rows through 2026-06-30, active_lambda=0, shadow_lambda=1, stability gate FAILED, and prospective outcome gate 0/30. No inference is authorized while provider frozen-inference scope remains unresolved.
 
 No main update, merge, Supabase write/DDL, paid request, schedule change, production artifact change, model refit, threshold tuning, or target-outcome read was performed by this audit. HUMAN-MERGE only.
+
+## Strict prematch quote-reader and privacy stack — 2026-11-09 17:03 UTC
+
+Dependency audit confirmed #727 and #742 were sibling PRs: #727's current branch still used the saved-quote query without the server-side snapshot-time upper bound, while #742 alone added lte(snapshot_time_utc, as_of). Do not treat #727 alone as the final prematch quote-reader contract.
+
+PR #742 was rebased onto current #727 HEAD 18a3cfda4e83e44aca1252665d01804267d16467. Current #742 HEAD is fac462a10509a14c63d7f39abb5614bab756fcae. Its exact one-commit diff against #727 contains the strict server-side snapshot cutoff, the query-builder regression, and the frozen-V2 test workflow allowlist for the #727 base. It preserves the #727 privacy/source-rights tests. Exact run #42660308461 succeeded: Python 3.11 388 passed, Python 3.12 388 passed, pip check clean, production .pkl guards PASS.
+
+PR #753 was then rebased on top of #742, creating a linear dependency stack #720 → #727 → #742 → #753. Current #753 HEAD is a3f8cb4e8d4447f15eaed3fb283c1e7670e944f0, based on #742 HEAD fac462a10509a14c63d7f39abb5614bab756fcae. Exact comparison shows only the privacy helper's missing-response-URL fail-closed change, its single regression test, and the workflow base-branch allowlist. Exact run #42660688361 succeeded: Python 3.11 389 passed, Python 3.12 389 passed, pip check clean, production .pkl guards PASS. #753 remains Draft until the parent stack is manually integrated.
+
+Earlier intermediate #742/#753 rebase commits were superseded before final validation and are not the accepted heads. Only #742 HEAD fac462a10509a14c63d7f39abb5614bab756fcae and #753 HEAD a3f8cb4e8d4447f15eaed3fb283c1e7670e944f0 are the final exact-head results for this stack.
+
+The strict quote reader now has a server-side condition: future kickoff and snapshot_time_utc <= as_of, so the database does not return snapshots observed after the evaluation clock. The query keeps the explicit market-only projection and never uses SELECT *.
+
+No main update or merge occurred. No Supabase writes/DDL, paid calls, source downloads, schedule changes, target-outcome reads, model refit, weight/feature/lambda changes, production .pkl modifications, or promotion occurred during this stack work. HUMAN-MERGE only.
