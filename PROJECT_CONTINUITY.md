@@ -7124,3 +7124,63 @@ PR [#774](https://github.com/MaksimBlud/football-ai/pull/774) transplants the un
 PR #768 remains Draft/superseded on the divergent #743/#728 stack; its direct-reader delta is carried by #774. PR #774 remains Draft until #720 → #727 → #742 are manually integrated and the child is rebased/revalidated on fresh main. HUMAN-MERGE only.
 
 No live Supabase read, source/quote download, target-outcome read, paid provider call, write/DDL, main change, production artifact change, or model-contract change was performed.
+
+## 2026-11-09 23:01 UTC — outcome-clock hardening and fresh runtime audit
+
+### Fresh source-of-truth state
+
+- `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- The repository is still public (`private=false`). Do not expose or create further source archives while the privacy gate is absent from main.
+- The open continuity PR branch is separate from main; this note does not modify main.
+
+### Actual original V2 forward runs on the exact main SHA
+
+- Original forward run #42676083517 completed SUCCESS at 2026-11-09 18:41 UTC. Its source attestation verified artifact 13689701985, parent run 42651542041, source ZIP SHA-256 `c968b357235029c5e96283470d5ac4d40fe1a0647b1d510dbf7270e976db9c4d`, 10 historical source files and 3,800 historical results. The actual forward report states `quotes_seen=0`, `future_quotes_checked=0`, `v2_diagnostic_previews_captured=0`, `paid_provider_calls=0`, and `supabase_writes=0`. Its output artifact is 13700981366 (1,460 bytes; ZIP SHA-256 `e6f625a9dad6e7351ae08c38a45f80412266c08c8d2a55769d18d86f73faef37`).
+- Current-form forward run #42677383722 completed SUCCESS at 2026-11-09 18:49 UTC. It verified source artifact 13681778268, parent run 42634501531, source ZIP SHA-256 `f4fb869be6e065ca611f012fe21b6d1eafe22434c60ced3a2e7b7ea6c5602101`, 3,910 historical rows, 110 current-season history rows, and the 100-event feature-input gate. Source age at verification was 15,793 seconds. The report states `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `target_outcome_evaluation_gate_open=false`, `target_outcomes_read=false`, `target_outcomes_scored=false`, `paid_provider_calls=0`, and `production_or_supabase_writes=0`. Output artifact 13700368254 is 440,605 bytes (ZIP SHA-256 `25b1b327b47f0ebfa0eb75a258604427e785eaa86eafc80a6fdc40907b4847c8`).
+- These are successful source/provenance checks, not live V2 forecasts. No new forecast was produced.
+
+### Strict pre-match Supabase aggregate (read-only)
+
+Query was restricted to `odds_snapshots` metadata and the predicate `snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= NOW()`; no prices, scores, results, or target outcomes were selected.
+
+- Strict pre-match snapshots: 3,915.
+- Unique events: 327.
+- Strict pre-match snapshots in the last seven days: 0.
+- Future events with saved pre-match quotes: 0.
+- Latest strict pre-match snapshot: 2026-10-13 14:48:53.042620 UTC.
+
+There is currently no fresh saved quote from which to produce a prospective V2 preview.
+
+### Original frozen candidate re-verified from main
+
+- Candidate artifact SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Exact feature-builder Git blob SHA: `401b3a0893371bfa4a488ec92a4a54af2678c8f7` (matches the previously pinned source).
+- Frozen features: 19, in the original stored order.
+- Weight matrix: 20 × 2.
+- Training rows: 3,799; training cutoff: 2026-06-30 23:59:59 UTC.
+- `active_lambda=0`; `shadow_residual_lambda=1`; `stability_gate_passed=false`; automatic promotion remains false.
+- No candidate, feature order, weight, lambda, or model file was changed.
+
+### New PR #775 — bind evaluator observation time to the actual clock
+
+- PR: https://github.com/MaksimBlud/football-ai/pull/775
+- Base: PR #770 exact HEAD `3888b77f85445e88d6cd20047e56e86202d51897`.
+- Head: `90055f62475a29d91019969165356ddf588d9fd9`, 3 commits ahead / 0 behind.
+- Finding: the gated outcome reader accepted caller-supplied `observed_at_utc` values later than the real runtime clock. The 30-event gates remained in place, but a future timestamp could incorrectly validate a result row whose `persisted_at_utc` was also in the future.
+- Change: capture the actual UTC clock and reject a later supplied observation time before the completed-fixture gate, source preflight, or outcome query. Historical timestamps remain usable for deterministic replay. Added a regression proving zero gate/result reads on a future timestamp.
+- Exact-head push CI #42716672932: SUCCESS, 144 tests passed, Python 3.12 compilation passed, production `.pkl` diff guard passed.
+- Exact-head pull-request CI #42716742925: SUCCESS, 144 tests passed, compilation passed, production `.pkl` diff guard passed.
+- PR remains Draft and HUMAN-MERGE only. No outcome query was run by this PR or its tests.
+
+### Current integration and rights blockers
+
+- Exact commit check-runs remain successful: #720 10/10; #727 4/4; #742 2/2; #753 2/2; #772 4/4; #773 2/2; #774 4/4; #740 prior HEAD 7/7.
+- #773 remains stacked on #720; #774 remains stacked on #742; #772 remains stacked on #727; #775 remains stacked on #770. Do not flatten or merge these branches out of order.
+- The repository is public, so #727's private-artifact gate will block source archive capture until repository privacy is changed by the owner. No repository setting was changed here.
+- The rights manifest permits only private noncommercial source archival/validation under its internal interpretation; frozen V2 inference remains explicitly blocked pending provider-issued scope clarification or an alternative appropriately licensed source. Making the repository private alone does not grant inference rights.
+- The current main scheduled source workflows have not yet received the #720/#727 gates. Their latest successful run artifacts above remain public metadata. No schedule was changed and no additional download was initiated.
+- The preregistered 30-primary-completed-event outcome gate remains closed. No 2026/27 target outcomes were read.
+
+### Safety ledger for this iteration
+
+No main update or merge; no production `.pkl` changes; no Supabase writes/DDL; no paid provider requests; no new source downloads; no target-outcome reads; no refit, threshold tuning, lambda/feature/weight changes, promotion, betting, schedule changes, or other-agent changes.
