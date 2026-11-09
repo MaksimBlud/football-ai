@@ -7109,3 +7109,18 @@ Exact stack: base #720 HEAD `1b9464834dd5256b7d69499c1443378518dde256`; PR #773 
 PR #760 is now Draft/superseded to prevent duplicate integration; its unique two-file delta is carried by #773. #773 remains Draft until #720 is manually merged and the child is rebased/revalidated on fresh main. HUMAN-MERGE only.
 
 No main update/merge, source download, quote read, protected outcome read, paid request, Supabase write/DDL, schedule change, production artifact change, refit, threshold tuning, promotion, betting, or other-agent change occurred in this cycle.
+
+## Direct saved-quote reader rights hardening — 2026-11-09 22:04 UTC
+
+PR [#774](https://github.com/MaksimBlud/football-ai/pull/774) transplants the unique direct-reader guard from #768 onto the correct strict-prematch stack:
+
+- Exact base: #742 HEAD `fac462a10509a14c63d7f39abb5614bab756fcae`.
+- Exact head: `f4180d8ce4142096f7a2ad1cd86ba95c78b3ae30`; compare **6 ahead / 0 behind**, exactly three files (quote reader, tests, frozen V2 workflow).
+- `fetch_saved_upcoming_serie_a_quotes()` now checks `require_personal_research_inference_scope()` before any `client.table(...)` access. It retains the strict server-side `commence_time_utc > as_of` and `snapshot_time_utc <= as_of` filters and explicit market-only projection.
+- Regression proves a denied rights scope blocks before Supabase; the existing offline query test explicitly mocks the scope as allowed.
+- Exact corrected CI run [#42708210273](https://github.com/MaksimBlud/football-ai/actions/runs/42708210273) SUCCESS: **390 passed** under Python 3.11 and **390 passed** under Python 3.12; compile, `pip check`, and production `.pkl` diff guard PASS. Duplicate run #42708193908 on the same HEAD also passed and is not a second independent cohort.
+- The first pre-fixture-fix attempt failed because an existing offline query test did not explicitly grant the newly required scope; this was corrected before the accepted exact-head run.
+
+PR #768 remains Draft/superseded on the divergent #743/#728 stack; its direct-reader delta is carried by #774. PR #774 remains Draft until #720 → #727 → #742 are manually integrated and the child is rebased/revalidated on fresh main. HUMAN-MERGE only.
+
+No live Supabase read, source/quote download, target-outcome read, paid provider call, write/DDL, main change, production artifact change, or model-contract change was performed.
