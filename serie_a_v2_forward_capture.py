@@ -19,6 +19,7 @@ import zipfile
 import pandas as pd
 import requests
 
+from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 from serie_a_v2_frozen_shadow_preview import (
     MAX_QUOTE_AGE, fetch_saved_upcoming_serie_a_quotes, parse_utc,
 )
@@ -32,6 +33,20 @@ ARTIFACT_NAME = "serie-a-v2-free-real-quote-diagnostic"
 SOURCE_WORKFLOW_PATH = ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
 GITHUB_API = f"https://api.github.com/repos/{REPOSITORY}"
 SCHEMA_VERSION = "SERIE_A_ORIGINAL_V2_FORWARD_SOURCE_BEFORE_QUOTE_V1"
+
+# Identity-only canonicalization for duplicate detection. It never rewrites
+# quote labels, odds, feature inputs, or the frozen V2 model contract.
+_TEAM_IDENTITY_ALIASES = {
+    " ".join(str(alias).split()).casefold(): " ".join(str(canonical).split()).casefold()
+    for alias, canonical in SERIE_A_RUNTIME_CONFIG.aliases.items()
+}
+_TEAM_IDENTITY_ALIASES["atalanta bc"] = "atalanta"
+
+
+def _fixture_team_identity(value: str) -> str:
+    normalized = " ".join(value.split()).casefold()
+    return _TEAM_IDENTITY_ALIASES.get(normalized, normalized)
+
 
 
 def _github_json(url: str, *, token: str, get=requests.get) -> dict:
@@ -167,6 +182,7 @@ def prepare_forward_capture(
     if write_archives_to is not None:
         write_archives_to.mkdir(parents=True, exist_ok=True)
     identity_by_event_id = {}
+    event_id_by_unordered_fixture = {}
     for q in quotes:
         _guard_outcome_free(q)
         if q.get("league") != "SERIE_A":
@@ -179,11 +195,23 @@ def prepare_forward_capture(
         kickoff = parse_utc(q["commence_time_utc"])
         if quote_time > now or not quote_time < kickoff:
             raise ValueError("invalid stored quote timing")
-        event_identity = (home, away, kickoff)
-        prior_identity = identity_by_event_id.get(event)
+        event_key = event.strip()
+        home_key = _fixture_team_identity(home)
+        away_key = _fixture_team_identity(away)
+        event_identity = (home_key, away_key, kickoff)
+        prior_identity = identity_by_event_id.get(event_key)
         if prior_identity is not None and prior_identity != event_identity:
             raise ValueError("conflicting fixture identity for same original V2 event_id")
-        identity_by_event_id[event] = event_identity
+        identity_by_event_id[event_key] = event_identity
+
+        # A provider may accidentally split one real fixture into multiple IDs.
+        # Use the unordered canonical team pair only for duplicate detection,
+        # so a reversed Home/Away row cannot inflate the prospective event count.
+        fixture_pair = (tuple(sorted((home_key, away_key))), kickoff)
+        prior_event_id = event_id_by_unordered_fixture.get(fixture_pair)
+        if prior_event_id is not None and prior_event_id != event_key:
+            raise ValueError("conflicting event IDs or orientation for same original V2 fixture")
+        event_id_by_unordered_fixture[fixture_pair] = event_key
 
     rows, cache = [], {}
     verified_runs = {}
