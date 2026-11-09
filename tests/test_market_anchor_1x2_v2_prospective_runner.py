@@ -1,7 +1,7 @@
 """Integration regressions for the original V2 live prospective runner."""
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -62,6 +62,7 @@ def test_completed_fixture_gate_rights_validation_is_wired_to_exact_stacked_bran
     workflow = (__import__("pathlib").Path(__file__).resolve().parents[1] / ".github" / "workflows" / "market-anchor-1x2-v2-live-runner-rights-validation.yml").read_text(encoding="utf-8")
     assert "research/v2-direct-source-identity-reader-rights-gate-stacked-on-732-20261109-run11" in workflow
     assert "research/v2-direct-completed-fixture-gate-rights-stacked-on-769-20261109-run11" in workflow
+    assert "research/v2-outcome-clock-bound-stacked-on-770-20261109-run11" in workflow
 
 
 
@@ -497,8 +498,10 @@ def test_live_supabase_market_only_runner_rejects_outcome_persisted_after_evalua
         }
         for row in rows
     ]
-    # This timestamp is after kickoff but after the evaluator's frozen
-    # observation clock; it must not be treated as already persisted evidence.
+    # Freeze the synthetic evaluator clock; a result persisted later than
+    # this observation must not be treated as already available evidence.
+    frozen_clock = datetime(2026, 12, 1, 19, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr(runner, "_now_utc", lambda: frozen_clock)
     outcome_rows[0]["persisted_at_utc"] = "2026-12-01T20:00:00Z"
     client = _ExactOutcomeClient(outcome_rows)
 
@@ -509,6 +512,26 @@ def test_live_supabase_market_only_runner_rejects_outcome_persisted_after_evalua
 
     assert client.result_query_count == 1
     assert client.select_calls == ["match_date,home_team,away_team,result,persisted_at_utc"]
+
+
+def test_live_supabase_market_only_runner_rejects_future_observation_clock_before_gate(monkeypatch):
+    rows = _forecast_rows(30)
+    frozen_clock = datetime(2026, 11, 9, 19, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr(runner, "_now_utc", lambda: frozen_clock)
+
+    def forbidden_gate(_client):
+        pytest.fail("future observation time must be rejected before the completed-fixture gate")
+
+    monkeypatch.setattr(runner, "read_completed_fixture_gate", forbidden_gate)
+    client = _ExactOutcomeClient([])
+
+    with pytest.raises(ValueError, match="cannot be later than the actual current UTC clock"):
+        runner.evaluate_live_market_only_from_supabase(
+            client, rows, observed_at_utc="2026-12-01T19:00:00Z"
+        )
+
+    assert client.result_query_count == 0
+    assert client.select_calls == []
 
 
 def test_live_supabase_market_only_runner_rejects_offsetless_evaluation_observation_clock(monkeypatch):
