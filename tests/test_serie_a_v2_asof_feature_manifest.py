@@ -279,7 +279,7 @@ def test_history_rejects_time_of_day_that_could_bypass_same_date_fixture_identit
 @pytest.mark.parametrize(
     ("field", "value", "message"),
     [
-        ("FTHG", 1.5, "nonnegative integer"),
+        ("FTHG", 1.5, "integer"),
         ("HC", float("inf"), "non-finite"),
     ],
 )
