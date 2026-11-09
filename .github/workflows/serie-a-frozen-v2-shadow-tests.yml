@@ -7,6 +7,7 @@ on:
       - research/v2-provider-ai-inference-rights-block-*
       - research/v2-integrated-private-quote-preflight-*
       - research/v2-prematch-quote-query-cutoff-stacked-on-720-*
+      - research/v2-direct-quote-reader-rights-gate-stacked-on-742-*
     paths:
       - "PROJECT_CONTINUITY.md"
       - "tests/test_serie_a_v2_dependency_lock_contract.py"
@@ -56,6 +57,7 @@ on:
   push:
     branches:
       - research/v2-direct-quote-reader-rights-gate-stacked-on-742-20261109-run11
+      - research/v2-direct-shadow-preview-inference-rights-gate-stacked-on-774-20261109-run11
     paths:
       - "serie_a_v2_frozen_shadow_preview.py"
       - "tests/test_serie_a_v2_frozen_shadow_preview.py"
