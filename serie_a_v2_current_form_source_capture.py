@@ -130,7 +130,7 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     # normalize an explicit midnight timestamp into an indistinguishable date.
     raw_dates = frame.loc[nonblank_dates, "Date"].astype(str).str.strip()
     if raw_dates.str.contains(
-        r"(?i)(?:[Tt]\\d{2}:\\d{2}|[ \\t]+\\d{1,2}:\\d{2}|[+-]\\d{2}:\\d{2}|[Zz]$)",
+        r"(?i)(?:[Tt]\d{2}:\d{2}|[ \t]+\d{1,2}:\d{2}|[+-]\d{2}:\d{2}|[Zz]$)",
         regex=True,
     ).any():
         raise ValueError("current-season source must use date-only fixture dates")
