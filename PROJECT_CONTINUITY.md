@@ -1,3 +1,63 @@
+# Continuity update — 2026-11-09 — Research Brain run 11 follow-up
+
+This update follows a fresh read of `main`, the open V2 PR stack, exact-head GitHub Actions runs, the frozen candidate/policies, and a read-only Supabase query restricted to already-observed pre-kickoff Serie A quote rows. It updates this documentation PR only; no main/runtime/data changes are made here.
+
+## Frozen original V2 baseline
+
+- Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; the default-branch commit search confirms no newer main commit.
+- Original candidate file remains `research/models/market_anchor_v2_serie_a_frozen_candidate.json`; its embedded SHA-256 is `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Candidate metadata remains: 3,799 training rows through `2026-06-30T23:59:59Z`, exact 19-feature order, original weights/scaler/imputer, `active_lambda=0`, `shadow_residual_lambda=1`, stability gate FAILED, refit disabled, automatic promotion false.
+- No legacy XGBoost model is loaded or used. The market remains the active lambda-zero baseline; the lambda-one residual remains research-only.
+
+## New historical-source integrity finding — PR #760
+
+A direct audit of `serie_a_v2_asof_feature_manifest.py` found three malformed-history cases that could pass the original source validator:
+
+1. A same-date duplicate fixture with home/away reversed could evade the ordered duplicate key, including after the local `Atalanta BC -> Atalanta` alias.
+2. The code declared a date-only historical source but accepted a time-bearing, timezone-naive `Date`; differing timestamps on one calendar day could bypass date-level fixture identity checks.
+3. Historical goals/corners/cards rejected missing and negative values but accepted fractional counts and positive infinity after numeric conversion.
+
+PR [#760](https://github.com/MaksimBlud/football-ai/pull/760) now:
+- rejects same-date duplicate unordered canonical team pairs;
+- rejects any historical date with a non-midnight time component or timezone;
+- requires goals, corners and cards to be finite, nonnegative integer counts;
+- preserves the exact original feature builder, feature order, candidate SHA, weights, scaler/imputer and lambda semantics.
+
+Final exact HEAD: `8f4837fbd9a4b403252b3c6618a58e7fa0fbabca`.
+
+All 7 PR workflows passed on that exact SHA:
+- Serie A Frozen V2 Shadow Tests run #42576204390: **89 passed**, compile PASS, production `.pkl` diff guard PASS.
+- Serie A #42576204400, Research #42576204455, Product #42576204393, Bundesliga #42576204404, Eredivisie #42576204391, and Ligue 1 #42576204398: all SUCCESS.
+
+Two intermediate heads failed only in regression/test-fixture assertions; those were corrected, and the final exact head above is the one with 7/7 success. This is source-contract/code validation using synthetic fixtures, not validation against a downloaded real archive, not live inference, and not model-quality evidence. PR #760 is open, ready for review, mergeable, and HUMAN-MERGE only.
+
+## Current pre-match data availability
+
+A new read-only SQL aggregate selected only rows satisfying `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= now()`, restricted to `league='SERIE_A'`:
+
+- 620 strictly pre-kickoff snapshots across 63 event IDs.
+- Latest observed pre-kickoff snapshot: `2026-10-13 14:48:53.04262+00`.
+- New observed pre-kickoff snapshots in the last 7 days: 0.
+- Upcoming events with an already-observed pre-kickoff quote: 0.
+
+No result, score, goal, settlement, or outcome columns were selected. No Supabase write or DDL was performed.
+
+The last independently verified current-form source capture remains run #42479299556, artifact #13617155063, ZIP SHA-256 `5395ff50d5e312f395b4f76e9cdf63fcb2a71ab831e07fd24cb3418602ad3af6`: 10 historical CSVs / 3,900 matches plus one current-season CSV / 100 prior-day completed rows; 100 canonical identities passed the feature-input gate. The last verified current-form forward run #42493688915 re-attested the artifact/parent but found zero quotes and zero V2 shadows. The old-season forward run #42492484513 also found zero quotes and zero previews.
+
+The 100-event feature-input gate is not the evaluation gate. Eligible prospective V2 forecasts remain **0/30**. No protected 2026/27 outcomes have been read.
+
+## Rights, privacy and evaluation blockers remain binding
+
+- Repository visibility is still PUBLIC. The existing source artifact SHA proves integrity, not confidentiality. Do not download or open the public artifact as part of this run.
+- Source-only archival rights and frozen-model inference rights remain separate. The current internal rights manifest conservatively blocks inference; no provider-issued AI inference permission has been evidenced.
+- PR #720 (source rights / free-download budget), #727 (private storage / quote preflight), #742 (server-side observed-quote cutoff), and #753 (exact privacy-response URL) remain open in their dependency chain. Their exact heads/checks were re-read; none is merged into main.
+- The market-only evaluator in the open #728 stack preserves the 30-eligible-completed-forecast gate and always leaves `review_signal=false`; the full three-way review remains blocked because the preregistered incumbent is unpinned. The legacy XGBoost comparator is explicitly not to be revived or substituted.
+- The supplementary market-only Brier/LogLoss diagnostic can only run after 30 eligible prospective forecasts complete. No outcome callback has been invoked.
+
+No model weights, protocol, thresholds, production artifacts, Supabase data/schema, workflows, schedules, main branch, or other agents were changed. No paid API calls, bets, target-outcome reads, automatic promotion, or product publication occurred.
+
+---
+
 ## Continuity follow-up — PR #755 mandatory source SHA preflight
 
 A fresh audit of PR #731's direct live market-only runner found that its `preflight` callback was optional. The supported GitHub bridge supplied the source-artifact verifier, but a direct import could omit it and still reach the 30-forecast outcome reader. This left a gap in the required source-before-quote/SHA proof.
