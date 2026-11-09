@@ -1,3 +1,49 @@
+# Continuity update — 2026-11-09 09:16 UTC — Research Brain follow-up
+
+This update follows a fresh default-branch commit search, current V2 policy/candidate reads, open-PR and exact-head CI checks, and read-only Supabase queries restricted to already-observed pre-kickoff quote metadata and completed-fixture identities. It updates this documentation PR branch only; main and runtime are unchanged.
+
+## Fresh main and frozen original V2
+
+- Latest default-branch commit remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; main `PROJECT_CONTINUITY.md` is still the older 2026-10-18 entry.
+- Original candidate file still embeds SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Candidate remains 3,799 training rows through 2026-06-30, exact 19 original features/weights/scaler/imputer, `active_lambda=0`, `shadow_residual_lambda=1`, stability gate FAILED, refit disabled, automatic promotion false.
+- No legacy XGBoost model is used or restored.
+
+## Follow-up source-date finding — PR #762
+
+A direct review of PR #760 found that checking only whether the parsed date equals its midnight normalization does not reject an explicit timestamp exactly at midnight (for example `10/10/2026 00:00:00`). PR [#762](https://github.com/MaksimBlud/football-ai/pull/762) adds a raw-source clock/timezone syntax check before pandas parsing and a regression for this exact midnight case.
+
+- Exact HEAD: `dc18a149315053818eec20d7e36a74596f899270`; base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- All 7 PR workflows completed SUCCESS on that exact HEAD.
+- Frozen V2 shadow suite: **86 passed**; production `.pkl` diff guard PASS.
+- Runs: #42591737924 (V2), #42591737957 (Product), #42591738012 (Bundesliga), #42591737811 (Eredivisie), #42591738033 (Research), #42591737820 (Ligue 1), #42591737945 (Serie A).
+- PR #762 is open, Ready for review, mergeable, HUMAN-MERGE only. It changes only historical date-source validation and its test; no feature values or model parameters.
+- A temporary stacked draft #761 was closed as superseded by #762; it was never merged.
+
+PR #760 remains independently open/ready at exact HEAD `8f4837fbd9a4b403252b3c6618a58e7fa0fbabca`, with 7/7 exact-head CI and 89 V2 tests. PR #740 itself remains open/ready at exact HEAD `4e27d76b2e60f1ad944f5a5a3484ff5ff2e4e845`, 7/7 CI. None of these PRs is merged.
+
+## Fresh read-only Supabase pre-match inventory — 2026-11-09 09:10 UTC
+
+The aggregate selected only `odds_snapshots` timestamps, league, and event identity; it did not select odds prices or any outcome fields. Admission required `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= now()`.
+
+- All leagues: **3,915** strictly pre-kickoff snapshots across the same 327 event identities; **0** new strict pre-match snapshots in the last seven days; **0** upcoming events with an already-saved strict pre-match quote.
+- Serie A: **620** strictly pre-kickoff snapshots / **63** event IDs; latest snapshot `2026-10-13 14:48:53.042620+00`; zero in the last seven days; zero upcoming events with a saved pre-match quote.
+- Identity-only `SERIE_A` 2026-2027 query selected only distinct `season, match_date, home_team, away_team`: **103** unique fixture identities. This supports the separate lagged-feature-input gate only; no score/result fields were selected.
+- The target-outcome evaluation gate remains **0/30**. No protected 2026/27 result, score, goal, settlement, or target outcome was read.
+- The latest independently verified current-form source capture/forward runtime remains the November 8 evidence recorded below; no later successful run ID was independently established in this pass, so no new capture or forecast is claimed.
+
+## Official Football-Data fair-use policy rechecked
+
+The provider's official contact page was updated **2026-11-06**: https://football-data.co.uk/contact.php. It limits free CSV/Excel use to private individuals' personal betting or academic research, via manual download or light automated download (maximum twice per week). It says free data is not intended for commercial or AI data-training projects involving heavy repeated automated downloads, and requests for permission for those uses should be assumed not granted.
+
+This does not expressly settle the project's frozen-inference/public-product rights. The internal rights gate therefore remains fail-closed; no inference permission is inferred from the free-data availability or the download-frequency allowance. The official policy finding was recorded as a comment on PR #720. No CSV was downloaded for this policy check.
+
+## Safety
+
+No main update, Supabase writes/DDL, source download, odds-provider request, production `.pkl` change, model refit, feature/weight/lambda change, schedule change, threshold tuning, protected-outcome read, bet, promotion, or publication occurred. This is provenance/contract/CI work, not evidence that V2 beats the market.
+
+---
+
 # Continuity update — 2026-11-09 — Research Brain run 11 follow-up
 
 This update follows a fresh read of `main`, the open V2 PR stack, exact-head GitHub Actions runs, the frozen candidate/policies, and a read-only Supabase query restricted to already-observed pre-kickoff Serie A quote rows. It updates this documentation PR only; no main/runtime/data changes are made here.
