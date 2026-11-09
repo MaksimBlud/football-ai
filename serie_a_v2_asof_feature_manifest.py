@@ -77,7 +77,18 @@ def _validate_history(history: pd.DataFrame) -> pd.DataFrame:
         raise ValueError("historical full-time result does not match goals")
     frame["_home"] = frame["HomeTeam"].map(_canonical)
     frame["_away"] = frame["AwayTeam"].map(_canonical)
-    if (frame["_home"] == frame["_away"]).any() or frame.duplicated(["_match_date", "_home", "_away"]).any():
+    if (frame["_home"] == frame["_away"]).any():
+        raise ValueError("historical fixture identity collision")
+    # A league fixture cannot be represented twice on the same date with
+    # home/away reversed. Compare canonical unordered pairs so local aliases
+    # (for example Atalanta BC -> Atalanta) cannot bypass this source check.
+    fixture_identity = frame.assign(
+        _unordered_team_pair=[
+            tuple(sorted((home, away)))
+            for home, away in zip(frame["_home"], frame["_away"])
+        ]
+    )
+    if fixture_identity.duplicated(["_match_date", "_unordered_team_pair"]).any():
         raise ValueError("historical fixture identity collision")
     return frame.sort_values(["_match_date", "_home", "_away"], kind="stable")
 
