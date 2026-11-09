@@ -143,6 +143,15 @@ def _read_bounded_historical_csv_response(
 
 def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -> tuple[pd.DataFrame, list[dict]]:
     """Explicit, bounded configured public URLs; never odds API, never cache guess."""
+    # This public helper can be imported without going through main(). Enforce
+    # the frozen-inference and private-storage gates before creating directories
+    # or making any public HTTP request.
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+    from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
+
+    require_personal_research_inference_scope()
+    require_private_repository_for_source_artifacts()
+
     all_frames = []
     audit = []
     total_source_bytes = 0
