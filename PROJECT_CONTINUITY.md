@@ -1,3 +1,70 @@
+# Continuity update — 2026-11-09 20:06 UTC — exact ancestry audit, direct downloader gate, pre-match quote state
+
+## Source of truth and frozen contract
+
+- Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; repository visibility was re-read from GitHub metadata and is **public**.
+- The main candidate remains pinned to artifact SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, with the original 19 features and 20×2 weight matrix unchanged.
+- The main protocol still specifies `active_lambda=0` / `MARKET_FALLBACK`, `shadow_residual_lambda=1`, `stability_gate_passed=false`, and a first target-outcome read gate of **30 completed primary Serie A events**. Before that gate, no target outcomes may be read. The gate is diagnostic only; it is not a promotion gate. Betting and automatic promotion remain disabled.
+- No model inference, fitting, refit, candidate write, or target-outcome read was performed in this audit.
+
+## Read-only pre-match quote audit
+
+A single aggregate read used only `public.odds_snapshots` and only rows satisfying `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= NOW()`. No results, scores, settlements, or finished-results tables were queried.
+
+| League | Strictly pre-match snapshots | Events | Latest saved snapshot (UTC) | Future events with saved quotes |
+|---|---:|---:|---|---:|
+| Bundesliga | 394 | 35 | 2026-09-11 15:49:52 | 0 |
+| EPL | 1,135 | 70 | 2026-10-09 15:25:57 | 0 |
+| Eredivisie | 410 | 39 | 2026-09-11 15:50:20 | 0 |
+| La Liga | 798 | 52 | 2026-09-11 15:45:28 | 0 |
+| Ligue 1 | 387 | 35 | 2026-09-11 15:49:24 | 0 |
+| Primeira Liga | 9 | 9 | 2026-09-11 16:06:24 | 0 |
+| RPL | 153 | 15 | 2026-09-05 15:07:55 | 0 |
+| Serie A | 620 | 63 | 2026-10-13 14:48:53 | 0 |
+| Turkey Super Lig | 9 | 9 | 2026-09-11 16:06:26 | 0 |
+| **Total** | **3,915** | **327** | — | **0** |
+
+There are no future fixtures with a saved pre-kickoff quote in any of these leagues. The latest Serie A quote remains 2026-10-13 14:48:53 UTC. Do not trigger source downloads or paid odds calls to compensate.
+
+## Provider scope and privacy
+
+- The official Football-Data fair-use page says free CSV/Excel data are intended for private individuals' personal betting and/or academic research, with manual access or at most two light automated download sessions per week; it excludes commercial and AI data-training projects. It does not explicitly resolve this project's frozen-model inference scope. Treat inference as unresolved and fail closed; do not infer a licence from public availability.
+- The #720 manifest keeps `research_inference_permitted=false`, `ai_model_training_permitted=false`, `commercial_use_permitted=false`, and `public_product_use_permitted=false`. The separate #727 scope is private, noncommercial source archival/validation only; it does not authorize inference or training.
+- Because the repository is still public, the #727 private-artifact gate must block source artifact access. Do not change repository visibility or provider scope automatically.
+- Official policy reference: https://football-data.co.uk/contact.php.
+
+## Exact ancestry audit — do not integrate stale/diverged stacks
+
+The following commit comparisons were run against the exact PR HEADs, not inferred from PR base labels:
+
+**Clean current rights/quote chain**
+- #720 HEAD `1b9464834dd5256b7d69499c1443378518dde256` → #727 HEAD `18a3cfda4e83e44aca1252665d01804267d16467`: **49 ahead / 0 behind**.
+- #727 → #742 HEAD `fac462a10509a14c63d7f39abb5614bab756fcae`: **1 ahead / 0 behind**.
+- #742 → #753 HEAD `a3f8cb4e8d4447f15eaed3fb283c1e7670e944f0`: **1 ahead / 0 behind**.
+- These are the only currently verified source-rights/private-storage/quote-cutoff stack in this group. #720 and #727 each have their exact V2/budget workflow runs successful; #742 and #753 exact-head Python 3.11/3.12 jobs are successful.
+
+**Diverged/stale chains — CI success does not make these integration-safe**
+- #742 → #743 is **12 ahead / 50 behind** and diverged; #743 is not mergeable. #744 → #745 → #746 are each clean descendants of their immediate parent, but inherit the broken #743 ancestry. #768 is also a clean descendant of #743, so its successful direct-quote-reader CI does not repair the missing #727 private-storage base.
+- #727 → #728 is **1 ahead / 4 behind** and diverged. #729 → #730 → #731 → #732 → #769 → #770 are clean descendants of their immediate parents, but inherit #728's stale base and must not be integrated until rebuilt/rebased on current #727.
+- #769 and #770's direct-reader tests are useful regression evidence, but their current ancestry is not a safe merge path.
+- #767 is a separate main-based original-forward identity guard; its exact-head workflow runs are successful and it does not depend on the diverged #743/#728 stacks.
+
+## Direct historical-source downloader gap and corrected PR
+
+A new static audit found that `serie_a_v2_live_diagnostic_report.fetch_public_history()` was publicly importable and performed Football-Data HTTP requests / optional directory creation without enforcing the CLI's inference-rights and private-storage preflights. The CLI-only guard was insufficient.
+
+- PR #771 was opened on the wrong #746 stack. Its exact CI correctly failed at `py_compile` because that diverged branch did not contain `market_anchor_v2_artifact_privacy.py`. #771 was closed unmerged as superseded; do not revive it.
+- PR #772 rebuilds the same narrow fix on the verified #727 HEAD. It enforces inference rights first, then private repository storage, before directory creation or HTTP. Two tests prove both denials stop before filesystem/network side effects.
+- #772 current HEAD is `64efe827263c96aa176af5145fe7ae261ccdabe2`, base #727 exact HEAD `18a3cfda4e83e44aca1252665d01804267d16467`; comparison is **5 ahead / 0 behind**.
+- Its first exact run #42689292661 exposed two expected source-loader pin regressions (388 passed, 2 failed): the two forward modules still pinned the previous loader blob. Both constants were updated to the new loader blob SHA-1 `6bc51aa2551765c06862cd9bb39a425c85f3b67a`.
+- Exact-head rerun #42689630724 is currently in progress. Keep #772 Draft until both Python lock suites, all tests, and the production `.pkl` guard pass on this exact HEAD. Do not claim success yet.
+
+## Safety for this audit
+
+No source files were downloaded; the only Supabase operation was the pre-match quote aggregate above. No Supabase writes/DDL, paid API calls, target-outcome reads, production `.pkl` changes, main changes, merges, schedule changes, or other-agent changes occurred. HUMAN-MERGE remains mandatory.
+
+---
+
 # Continuity update — 2026-11-09 16:08 UTC — frozen V2 direct-API and refit audit
 
 ## Main-code finding
