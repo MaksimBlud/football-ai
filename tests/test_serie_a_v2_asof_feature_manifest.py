@@ -8,6 +8,18 @@ import pytest
 from serie_a_v2_asof_feature_manifest import build_manifest
 from serie_a_v2_frozen_shadow_preview import shadow_preview
 
+
+@pytest.fixture(autouse=True)
+def allow_synthetic_v2_inference_scope(monkeypatch):
+    """Offline feature tests use synthetic inputs; this is not provider authorization."""
+    import market_anchor_v2_source_rights as rights
+
+    monkeypatch.setattr(
+        rights,
+        "require_personal_research_inference_scope",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+
 QUOTE = {
     "event_id": "test-v2-a",
     "league": "SERIE_A",
