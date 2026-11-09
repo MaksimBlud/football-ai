@@ -6679,3 +6679,15 @@ Candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374
 
 
 **Additional source-access cadence finding:** the current main source workflows still declare daily schedules: current-form capture at `50 5 * * *` and the old-season free real-quote diagnostic at `13 6 * * *`. The provider policy snapshot in the rights manifest describes at most two light automated sessions per rolling seven days. The shared cross-workflow two-session budget is only in open PR #720, not main. No schedule was changed and no manual source dispatch was made; until the rights/budget stack is integrated, do not initiate extra source sessions.
+
+
+## 2026-11-09 15:12 UTC — evaluator stack base-SHA freshness audit
+
+A fresh metadata read shows the privacy/evaluator descendants have not all been refreshed onto the latest #727 code head:
+
+- #727 current HEAD is `18a3cfda4e83e44aca1252665d01804267d16467`, based on #720 HEAD `1b9464834dd5256b7d69499c1443378518dde256`.
+- #728 still uses base SHA `8894ce8e0248a5502d60571ff073fc6d7847a43a` (the earlier #727 snapshot).
+- #753 also still uses base SHA `8894ce8e0248a5502d60571ff073fc6d7847a43a`; it does not yet contain #727's later raw-date guard/source-script pin update.
+- The outcome-reader/source-verifier descendants #755–#759 are stacked through #730/#731 and then sequentially (#755 → #756 → #757 → #758 → #759). Their current mergeability flags do not prove that the full stack contains #727's latest HEAD or the #753 response-URL fix.
+
+Do not merge these descendants in their current ancestry. After HUMAN-MERGE of #720 and #727, refresh #728 and #753 from the new exact main in the intended order, rerun exact-head CI, then rebuild/revalidate #755–#759 on that refreshed base. #753 must remain part of the privacy hardening before relying on the repository-response URL check. No PR was merged or rebased in this audit.
