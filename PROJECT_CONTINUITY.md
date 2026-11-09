@@ -6795,3 +6795,23 @@ A fresh metadata read shows the privacy/evaluator descendants have not all been 
 - The outcome-reader/source-verifier descendants #755–#759 are stacked through #730/#731 and then sequentially (#755 → #756 → #757 → #758 → #759). Their current mergeability flags do not prove that the full stack contains #727's latest HEAD or the #753 response-URL fix.
 
 Do not merge these descendants in their current ancestry. After HUMAN-MERGE of #720 and #727, refresh #728 and #753 from the new exact main in the intended order, rerun exact-head CI, then rebuild/revalidate #755–#759 on that refreshed base. #753 must remain part of the privacy hardening before relying on the repository-response URL check. No PR was merged or rebased in this audit.
+
+## Latest main free-diagnostic privacy audit — 2026-11-09 16:08 UTC
+
+Fresh main is still 40887ebb215730190d7a6c7a1693373ec4afcdfc. The scheduled main workflow [Serie A V2 Free Real-Quote Diagnostic #42651542041](https://github.com/MaksimBlud/football-ai/actions/runs/42651542041) completed SUCCESS at 16:08 UTC. Its log confirms 53 offline tests passed, then the unguarded main workflow fetched the public Football-Data source and uploaded a new GitHub Actions artifact:
+
+- Artifact ID: 13689701985.
+- Name: serie-a-v2-free-real-quote-diagnostic.
+- Size: 425,067 bytes.
+- GitHub ZIP SHA-256: c968b357235029c5e96283470d5ac4d40fe1a0647b1d510dbf7270e976db9c4d.
+- Expires: 2027-02-07 16:07:28 UTC.
+
+The run's printed diagnostic summary had 19 expected features but zero feature rows and zero diagnostic scores, zero paid-provider requests, zero Supabase writes, and zero quote rows reported as having source observed after quote. This is not a forecast or model-quality evidence. The artifact was inspected only through GitHub metadata and job logs; its ZIP/source bytes were not downloaded by this audit.
+
+This confirms the confidentiality blocker is still active on main: repository visibility is public, while the main workflow still runs without the private-repository preflight and uploads source bytes with 90-day retention. The #720/#727 rights/privacy stack is not merged; do not initiate manual source collection or new artifact downloads. #727's private-storage preflight remains the intended fail-closed fix, and #753 has now been rebased onto current #727 HEAD 18a3cfda4e83e44aca1252665d01804267d16467 as HEAD 2d53f9bc6160410bbca81a990b5c1a482864705a; exact-head frozen V2 CI #42659444261 passed 389 tests on both Python 3.11 and 3.12, with pip check and production .pkl guards clean. #753 remains Draft until its #727 parent is manually integrated.
+
+A fresh read-only Supabase aggregate selected only prematch odds fields and used snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= NOW(): 3,915 strict prematch snapshots across 327 events, 0 in the last seven days, and 0 future events with a saved strict prematch quote. Latest Serie A prematch snapshot remains 2026-10-13 14:48:53 UTC. No scores/results/target outcomes were selected.
+
+Binding state remains unchanged: original candidate SHA a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6, 19 frozen features, 3,799 training rows through 2026-06-30, active_lambda=0, shadow_lambda=1, stability gate FAILED, and prospective outcome gate 0/30. No inference is authorized while provider frozen-inference scope remains unresolved.
+
+No main update, merge, Supabase write/DDL, paid request, schedule change, production artifact change, model refit, threshold tuning, or target-outcome read was performed by this audit. HUMAN-MERGE only.
