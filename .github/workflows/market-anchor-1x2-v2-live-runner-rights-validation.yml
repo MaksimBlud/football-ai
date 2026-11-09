@@ -9,6 +9,7 @@ on:
       - research/v2-generic-live-runner-require-source-sha-preflight-stacked-on-755-20261108-run11
       - research/v2-internal-source-verifier-in-runner-stacked-on-756-20261109-run11
       - research/v2-direct-evaluator-source-rights-gate-stacked-on-757-20261109-run11
+      - research/v2-remove-caller-http-transport-stacked-on-758-20261109-run11
     paths:
       - "requirements-v2-research-py312.lock"
       - "market_anchor_1x2_v2_prospective_runner.py"
@@ -34,6 +35,7 @@ on:
       - research/v2-market-only-source-preflight-sha-required-stacked-on-731-20261108-run11
       - research/v2-generic-live-runner-require-source-sha-preflight-stacked-on-755-20261108-run11
       - research/v2-internal-source-verifier-in-runner-stacked-on-756-20261109-run11
+      - research/v2-direct-evaluator-source-rights-gate-stacked-on-757-20261109-run11
     paths:
       - "requirements-v2-research-py312.lock"
       - "market_anchor_1x2_v2_prospective_runner.py"
