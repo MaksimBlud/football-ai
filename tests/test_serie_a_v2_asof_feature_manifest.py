@@ -262,3 +262,17 @@ def test_bad_history_rejects_reversed_duplicate_after_v2_alias_normalization():
 
     with pytest.raises(ValueError, match="collision"):
         build_manifest(duplicated, [QUOTE])
+
+def test_history_rejects_time_of_day_that_could_bypass_same_date_fixture_identity():
+    first = history().iloc[[0]].copy()
+    first["HomeTeam"] = "Atalanta"
+    first["AwayTeam"] = "Alpha"
+    reversed_fixture = first.copy()
+    reversed_fixture["Date"] = "10/10/2026 12:00:00"
+    reversed_fixture["HomeTeam"] = "Alpha"
+    reversed_fixture["AwayTeam"] = "Atalanta BC"
+    malformed = pd.concat([first, reversed_fixture], ignore_index=True)
+
+    with pytest.raises(ValueError, match="date-only"):
+        build_manifest(malformed, [QUOTE])
+
