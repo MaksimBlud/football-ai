@@ -10,6 +10,17 @@ import market_anchor_1x2_v2_prospective_runner as runner
 from market_anchor_v2_source_rights import require_personal_research_inference_scope as actual_inference_rights_check
 
 
+def _source_candidates(rows):
+    return [{"row": row, "provenance": {}} for row in rows]
+
+
+def _synthetic_source_verifier(candidates, *, token, current_gate_identities, gate_attestation):
+    return {
+        candidate["row"]["source_artifact_id"]: candidate["row"]["source_archive_sha256"]
+        for candidate in candidates
+    }
+
+
 @pytest.fixture(autouse=True)
 def _allow_synthetic_inference_scope(monkeypatch):
     monkeypatch.setattr(
@@ -17,6 +28,12 @@ def _allow_synthetic_inference_scope(monkeypatch):
         "require_personal_research_inference_scope",
         lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
     )
+    monkeypatch.setattr(
+        runner,
+        "require_private_repository_for_source_artifacts",
+        lambda **_kwargs: {"private": True, "storage_policy": "PRIVATE_GITHUB_ACTIONS_ARTIFACTS"},
+    )
+    monkeypatch.setattr(runner, "_verify_source_candidates", _synthetic_source_verifier)
 
 
 def _forecast_rows(count: int = 30) -> list[dict]:
@@ -96,23 +113,59 @@ def _gate_attestation(identities: set[tuple[str, str, str]]) -> dict:
 
 
 def _synthetic_source_preflight(_identities, _attestation, forecast_rows):
-    """Synthetic-only proof stub; live code must use the GitHub source verifier."""
-    return {
-        row["source_artifact_id"]: row["source_archive_sha256"]
-        for row in forecast_rows
-    }
+    """Test-only adapter for exercising source-verifier ordering and SHA checks."""
+    return {row["source_artifact_id"]: row["source_archive_sha256"] for row in forecast_rows}
+
+
+def _run_full_cohort(client, rows, outcome_loader, **kwargs):
+    preflight = kwargs.pop("preflight", None)
+    kwargs.setdefault("token", "synthetic-read-only-token")
+    candidates = _source_candidates(rows)
+    original = None
+    if preflight is not None:
+        original = runner._verify_source_candidates
+        def test_verifier(items, *, token, current_gate_identities, gate_attestation):
+            return preflight(current_gate_identities, gate_attestation, tuple(c["row"] for c in items))
+        runner._verify_source_candidates = test_verifier
+    try:
+        return runner.evaluate_live_prospective_cohort(client, candidates, outcome_loader, **kwargs)
+    finally:
+        if original is not None:
+            runner._verify_source_candidates = original
 
 
 def _run_market_only_cohort(client, rows, outcome_loader, **kwargs):
-    kwargs.setdefault("preflight", _synthetic_source_preflight)
-    return runner.evaluate_live_market_only_prospective_cohort(
-        client, rows, outcome_loader, **kwargs
-    )
+    preflight = kwargs.pop("preflight", None)
+    kwargs.setdefault("token", "synthetic-read-only-token")
+    candidates = _source_candidates(rows)
+    original = None
+    if preflight is not None:
+        original = runner._verify_source_candidates
+        def test_verifier(items, *, token, current_gate_identities, gate_attestation):
+            return preflight(current_gate_identities, gate_attestation, tuple(c["row"] for c in items))
+        runner._verify_source_candidates = test_verifier
+    try:
+        return runner.evaluate_live_market_only_prospective_cohort(client, candidates, outcome_loader, **kwargs)
+    finally:
+        if original is not None:
+            runner._verify_source_candidates = original
 
 
 def _run_market_only_supabase(client, rows, **kwargs):
-    kwargs.setdefault("preflight", _synthetic_source_preflight)
-    return runner.evaluate_live_market_only_from_supabase(client, rows, **kwargs)
+    preflight = kwargs.pop("preflight", None)
+    kwargs.setdefault("token", "synthetic-read-only-token")
+    candidates = _source_candidates(rows)
+    original = None
+    if preflight is not None:
+        original = runner._verify_source_candidates
+        def test_verifier(items, *, token, current_gate_identities, gate_attestation):
+            return preflight(current_gate_identities, gate_attestation, tuple(c["row"] for c in items))
+        runner._verify_source_candidates = test_verifier
+    try:
+        return runner.evaluate_live_market_only_from_supabase(client, candidates, **kwargs)
+    finally:
+        if original is not None:
+            runner._verify_source_candidates = original
 
 
 def test_live_runner_reads_identity_gate_and_keeps_outcomes_lazy_when_incumbent_unpinned(monkeypatch):
@@ -141,9 +194,7 @@ def test_live_runner_reads_identity_gate_and_keeps_outcomes_lazy_when_incumbent_
         outcome_calls.append(keys)
         return {key: "H" for key in keys}
 
-    report = runner.evaluate_live_prospective_cohort(
-        client, rows, load_outcomes, preflight=_synthetic_source_preflight
-    )
+    report = _run_full_cohort(client, rows, load_outcomes)
 
     assert gate_calls == [client]
     assert report["eligible_completed_forecasts"] == 30
@@ -169,12 +220,7 @@ def test_live_runner_stops_if_identity_gate_fails_before_evaluator_or_outcomes(m
     monkeypatch.setattr(runner, "evaluate_after_gate", forbidden_evaluator)
 
     with pytest.raises(RuntimeError, match="identity-only gate unavailable"):
-        runner.evaluate_live_prospective_cohort(
-            object(),
-            [],
-            lambda keys: outcome_calls.append(keys) or {},
-            preflight=_synthetic_source_preflight,
-        )
+        _run_full_cohort(object(), [], lambda keys: outcome_calls.append(keys) or {})
 
     assert outcome_calls == []
 
@@ -754,7 +800,7 @@ def test_incumbent_runner_verifies_source_sha_before_evaluator_and_reuses_gate_s
     monkeypatch.setattr(runner, "read_completed_fixture_gate", read_gate)
     monkeypatch.setattr(runner, "evaluate_after_gate", fake_evaluate)
 
-    report = runner.evaluate_live_prospective_cohort(
+    report = _run_full_cohort(
         object(),
         rows,
         lambda keys: outcome_calls.append(keys) or {},
@@ -788,8 +834,8 @@ def test_incumbent_runner_rejects_unmatched_source_sha_before_evaluator_or_outco
         pytest.fail("full evaluator must not run with an unverified source SHA")
 
     monkeypatch.setattr(runner, "evaluate_after_gate", forbidden_evaluator)
-    with pytest.raises(ValueError, match="source preflight SHA proof does not match"):
-        runner.evaluate_live_prospective_cohort(
+    with pytest.raises(ValueError, match="source verifier SHA proof does not match"):
+        _run_full_cohort(
             object(),
             rows,
             lambda keys: outcome_calls.append(keys) or {},
@@ -839,24 +885,73 @@ def test_market_only_preflight_failure_stops_before_evaluator_or_outcomes(monkey
 
 
 
-def test_market_only_live_entrypoints_require_source_preflight_before_any_identity_or_outcome_read(monkeypatch):
+def test_live_runner_rejects_caller_supplied_preflight_callbacks():
+    candidates = _source_candidates(_forecast_rows(30))
+    fake_preflight = lambda *_args, **_kwargs: {20001: "a" * 64}
+    with pytest.raises(TypeError, match="preflight"):
+        runner.evaluate_live_market_only_prospective_cohort(
+            object(), candidates, lambda _keys: {}, token="synthetic-read-only-token",
+            preflight=fake_preflight,
+        )
+    with pytest.raises(TypeError, match="preflight"):
+        runner.evaluate_live_market_only_from_supabase(
+            object(), candidates, token="synthetic-read-only-token", preflight=fake_preflight
+        )
+    with pytest.raises(TypeError, match="preflight"):
+        runner.evaluate_live_prospective_cohort(
+            object(), candidates, lambda _keys: {}, token="synthetic-read-only-token",
+            preflight=fake_preflight,
+        )
+
+
+def test_live_runner_requires_private_repository_before_identity_gate(monkeypatch):
+    candidates = _source_candidates(_forecast_rows(30))
+    calls = []
+
+    def deny_private(**_kwargs):
+        calls.append("private")
+        raise PermissionError("source archives require a private GitHub repository")
+
+    def forbidden_gate(_client):
+        calls.append("identity_gate")
+        pytest.fail("private-repository failure must stop before the Supabase identity gate")
+
+    monkeypatch.setattr(runner, "require_private_repository_for_source_artifacts", deny_private)
+    monkeypatch.setattr(runner, "read_completed_fixture_gate", forbidden_gate)
+    with pytest.raises(PermissionError, match="private GitHub repository"):
+        runner.evaluate_live_market_only_prospective_cohort(
+            object(), candidates, lambda _keys: {}, token="synthetic-read-only-token"
+        )
+    assert calls == ["private"]
+
+
+def test_market_only_runner_rejects_extra_source_sha_artifacts_before_evaluator_or_outcomes(monkeypatch):
     rows = _forecast_rows(30)
-    gate_calls = []
+    identities = {(row["match_date"], row["home_team"], row["away_team"]) for row in rows}
     monkeypatch.setattr(
-        runner,
-        "read_completed_fixture_gate",
-        lambda _client: gate_calls.append(True) or (
-            {(row["match_date"], row["home_team"], row["away_team"]) for row in rows},
-            _gate_attestation({(row["match_date"], row["home_team"], row["away_team"]) for row in rows}),
-        ),
+        runner, "read_completed_fixture_gate",
+        lambda _client: (identities, _gate_attestation(identities)),
     )
-    with pytest.raises(TypeError, match="preflight"):
-        runner.evaluate_live_prospective_cohort(object(), rows, lambda _keys: {})
-    with pytest.raises(TypeError, match="preflight"):
-        runner.evaluate_live_market_only_prospective_cohort(object(), rows, lambda _keys: {})
-    with pytest.raises(TypeError, match="preflight"):
-        runner.evaluate_live_market_only_from_supabase(object(), rows)
-    assert gate_calls == []
+    evaluator_calls = []
+    outcome_calls = []
+
+    def extra_source_preflight(_identities, _attestation, forecast_rows):
+        proof = _synthetic_source_preflight(_identities, _attestation, forecast_rows)
+        proof[99999] = "b" * 64
+        return proof
+
+    def forbidden_evaluator(*args, **kwargs):
+        evaluator_calls.append((args, kwargs))
+        pytest.fail("evaluator must not run with an extra unselected source artifact")
+
+    monkeypatch.setattr(runner, "evaluate_market_only_after_gate", forbidden_evaluator)
+    with pytest.raises(ValueError, match="exactly the selected source artifacts"):
+        _run_market_only_cohort(
+            object(), rows, lambda keys: outcome_calls.append(keys) or {},
+            preflight=extra_source_preflight,
+        )
+    assert evaluator_calls == []
+    assert outcome_calls == []
 
 
 def test_market_only_runner_rejects_unmatched_source_sha_proof_before_evaluator_or_outcomes(monkeypatch):
@@ -880,8 +975,8 @@ def test_market_only_runner_rejects_unmatched_source_sha_proof_before_evaluator_
         pytest.fail("evaluator must not run with an unverified source SHA")
 
     monkeypatch.setattr(runner, "evaluate_market_only_after_gate", forbidden_evaluator)
-    with pytest.raises(ValueError, match="source preflight SHA proof does not match"):
-        runner.evaluate_live_market_only_prospective_cohort(
+    with pytest.raises(ValueError, match="source verifier SHA proof does not match"):
+        _run_market_only_cohort(
             object(), rows, lambda keys: outcome_calls.append(keys) or {},
             preflight=wrong_source_preflight,
         )
@@ -911,10 +1006,7 @@ def test_every_live_runner_blocks_before_identity_gate_without_inference_rights(
 
     with pytest.raises(PermissionError, match="frozen-inference scope remains unresolved"):
         if entrypoint == "incumbent_cohort":
-            runner.evaluate_live_prospective_cohort(
-                object(), rows, lambda _keys: pytest.fail("outcome loader must remain lazy"),
-                preflight=_synthetic_source_preflight,
-            )
+            _run_full_cohort(object(), rows, lambda _keys: pytest.fail("outcome loader must remain lazy"))
         elif entrypoint == "market_only_cohort":
             _run_market_only_cohort(
                 object(), rows, lambda _keys: pytest.fail("outcome loader must remain lazy")

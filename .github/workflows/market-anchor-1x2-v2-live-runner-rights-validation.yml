@@ -7,6 +7,7 @@ on:
       - research/v2-market-only-outcome-reader-gate-stacked-on-730-20261108-run11
       - research/v2-market-only-source-preflight-sha-required-stacked-on-731-20261108-run11
       - research/v2-generic-live-runner-require-source-sha-preflight-stacked-on-755-20261108-run11
+      - research/v2-internal-source-verifier-in-runner-stacked-on-756-20261109-run11
     paths:
       - "requirements-v2-research-py312.lock"
       - "market_anchor_1x2_v2_prospective_runner.py"
@@ -30,6 +31,7 @@ on:
       - research/v2-market-only-runner-rights-gate-stacked-on-729-20261108-run11
       - research/v2-market-only-outcome-reader-gate-stacked-on-730-20261108-run11
       - research/v2-market-only-source-preflight-sha-required-stacked-on-731-20261108-run11
+      - research/v2-generic-live-runner-require-source-sha-preflight-stacked-on-755-20261108-run11
     paths:
       - "requirements-v2-research-py312.lock"
       - "market_anchor_1x2_v2_prospective_runner.py"
@@ -68,8 +70,8 @@ jobs:
           cache: pip
       - name: Install pinned offline V2 dependencies
         run: python -m pip install -r requirements-v2-research-py312.lock
-      - name: Compile the protected live runner and rights helper
-        run: python -m py_compile market_anchor_1x2_v2_prospective_runner.py market_anchor_v2_source_rights.py
+      - name: Compile the protected live runner, bridge, and rights helpers
+        run: python -m py_compile market_anchor_1x2_v2_prospective_runner.py market_anchor_1x2_v2_prospective_evaluation.py market_anchor_v2_source_rights.py market_anchor_v2_artifact_privacy.py
       - name: Run synthetic runner and workflow-contract regressions
         run: python -m pytest -q tests/test_market_anchor_1x2_v2_prospective_runner.py tests/test_market_anchor_1x2_v2_prospective_evaluation_workflow.py tests/test_market_anchor_1x2_v2_forward_artifact_adapter.py
       - name: Verify production pickle artifacts are unchanged

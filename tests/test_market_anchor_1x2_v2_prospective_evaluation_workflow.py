@@ -65,13 +65,13 @@ def test_prospective_evaluation_workflow_is_main_only_and_has_no_schedule_or_pai
 
 
 
-def test_source_preflight_and_outcome_evaluator_share_one_gate_snapshot():
-    script = (ROOT / "market_anchor_1x2_v2_prospective_evaluation.py").read_text(encoding="utf-8")
-    assert "read_completed_primary_event_identities" not in script
-    assert "current_gate = " not in script
-    assert "def verify_source_preflight(completed_identities, _gate_attestation, _forecast_rows):" in script
-    assert "preflight=verify_source_preflight" in script
-    assert "current_gate_identities=set(completed_identities)" in script
+def test_live_runner_owns_source_sha_verification_before_outcome_evaluation():
+    runner_source = (ROOT / "market_anchor_1x2_v2_prospective_runner.py").read_text(encoding="utf-8")
+    bridge_source = (ROOT / "market_anchor_1x2_v2_prospective_evaluation.py").read_text(encoding="utf-8")
+    assert "from market_anchor_1x2_v2_prospective_evaluation import verify_source_artifacts_for_candidates" in runner_source
+    assert "preflight:" not in runner_source
+    assert "preflight=verify_source_preflight" not in bridge_source
+    assert "token=token" in bridge_source
 
 
 
@@ -252,31 +252,30 @@ def test_live_market_only_bridge_delegates_to_gate_local_supabase_runner(monkeyp
 
     def evaluate_from_supabase(
         client,
-        selected_rows,
+        source_candidates,
         *,
+        token,
         observed_at_utc,
-        preflight,
         outcome_read_state,
     ):
+        selected_rows = [candidate["row"] for candidate in source_candidates]
         identities = {
             (row["match_date"], row["home_team"], row["away_team"])
             for row in selected_rows
         }
         captured["client"] = client
-        captured["selected_rows"] = list(selected_rows)
+        captured["source_candidates"] = list(source_candidates)
+        captured["selected_rows"] = selected_rows
+        captured["token"] = token
         captured["observed_at_utc"] = observed_at_utc
-        source_sha_proof = preflight(
-            identities,
-            {"selected_columns": ["match_date", "home_team", "away_team"]},
-            tuple(selected_rows),
-        )
-        captured["source_sha_proof"] = source_sha_proof
         outcome_read_state["called"] = True
         return {
             "status": "EVALUATED_MARKET_ONLY_DIAGNOSTIC",
             "target_outcomes_read": True,
             "target_outcomes_scored": True,
             "scored_forecasts": len(identities),
+            "source_archives_reverified": 1,
+            "source_archive_sha256": {"999": verified_source_sha},
         }
 
     monkeypatch.setattr(live, "evaluate_live_market_only_from_supabase", evaluate_from_supabase)
@@ -293,8 +292,11 @@ def test_live_market_only_bridge_delegates_to_gate_local_supabase_runner(monkeyp
     assert report["target_outcomes_read"] is True
     assert captured["client"] is client
     assert captured["selected_rows"] == rows
+    assert len(captured["source_candidates"]) == 30
+    assert captured["token"] == "read-only-test-token"
     assert captured["observed_at_utc"] == "2026-11-05T12:00:00Z"
-    assert captured["source_sha_proof"] == {999: verified_source_sha}
+    assert report["source_archives_reverified"] == 1
+    assert report["source_archive_sha256"] == {"999": verified_source_sha}
 
 
 
