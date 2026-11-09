@@ -6581,3 +6581,50 @@ All #763, #764 and #765 heads remain based on the unchanged main rather than #72
 PR #727 is stacked on #720 at head `8894ce8e0248a5502d60571ff073fc6d7847a43a`; its three relevant V2/budget validation runs are SUCCESS. PR #753 is stacked on #727 and corrects the privacy helper's missing-response-URL fallback; it must be included/revalidated before relying on that privacy check. The evaluator chain #728 and #755–#759 remains stacked on #727 / its descendants and must not be rebased or merged ahead of its exact rights, privacy and mandatory source-SHA predecessors.
 
 HUMAN-MERGE remains binding. No branch was merged, no main ref moved, no workflow was dispatched, and no source/quote/outcome data were accessed for this overlap audit. This is an integration-order finding, not model-quality evidence.
+
+
+## 2026-11-09 14:30 UTC — corrected current-form overlap and exact runtime audit
+
+### Corrected overlap audit (direct source/test comparison)
+
+A direct re-read of the actual PR #720 branch at `1b9464834dd5256b7d69499c1443378518dde256` supersedes the earlier 13:06 overlap note above. The #720 branch already contains all of the following in `serie_a_v2_current_form_source_capture.py` and its tests:
+
+- strict metadata date-only validation: `datetime` objects and noncanonical/timestamp strings are rejected before counting;
+- same-date reversed fixture rejection after V2 alias normalization in both metadata and current-season CSV;
+- configured season-boundary validation;
+- finite/nonnegative integer-count behavior (the integer check rejects non-finite values);
+- the associated Atalanta alias regressions.
+
+Therefore PRs #763 and #765 are duplicate protections relative to the current #720 branch and should not be merged separately. In #764, the reversed-duplicate and integer protections are also already present in #720. Its unique delta is the raw CSV `Date` cell check **before** `pandas.to_datetime`, preventing a timestamp such as midnight from being normalized into a date. The prior continuity statement that #720 still converted metadata `datetime` objects to dates was incorrect.
+
+That unique raw-date delta was integrated directly into the existing #727 branch rather than creating another overlapping PR. Final #727 HEAD: `18a3cfda4e83e44aca1252665d01804267d16467` (base remains #720 `1b9464834dd5256b7d69499c1443378518dde256`). It rejects midnight/non-midnight times, ISO timestamps with `Z`, and explicit offsets before pandas parsing. The forward-capture verifier's pinned source-script Git blob SHA-1 was updated to the exact source blob `4f5837671727066903e798dd893753f13a925434`.
+
+Exact-head validation for #727:
+- Frozen V2 Shadow Tests [#42634756592](https://github.com/MaksimBlud/football-ai/actions/runs/42634756592): SUCCESS; Python 3.11 **388 passed**, Python 3.12 **388 passed**, `pip check` clean.
+- Public Source Download Budget Tests [#42634756621](https://github.com/MaksimBlud/football-ai/actions/runs/42634756621): SUCCESS, **24 passed**.
+- Production `.pkl` guards: PASS.
+- La Liga workflow [#42634756714](https://github.com/MaksimBlud/football-ai/actions/runs/42634756714) was an existing shared-path side effect, SUCCESS, and is not V2 evidence.
+
+The first run on superseded #727 HEAD `f14142fceb836531b73ae805a95371c479b46993` correctly caught the stale forward source-blob pin (387 passed, one pin test failed). The pin was corrected and the final exact HEAD above passes.
+
+### Fresh main runtime and artifact privacy
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The original forward workflow is `.github/workflows/serie-a-v2-forward-preview.yml`; the current-form forward workflow is `.github/workflows/serie-a-v2-current-form-forward-preview.yml`.
+
+Actual main runs re-read from GitHub Actions:
+- Original old-season-only forward run [#42492484513](https://github.com/MaksimBlud/football-ai/actions/runs/42492484513), 2026-11-08 14:59 UTC: SUCCESS; 71 tests passed; source artifact `13574818932` SHA-256 `d8f73d4845dfbbcc835723183f9c2e07bdbf061af68ff3447c166874d605f7b1`; `quotes_seen=0`, `forecasts_created=0`, no Supabase writes or paid calls.
+- Current-form source capture run [#42479299556](https://github.com/MaksimBlud/football-ai/actions/runs/42479299556), 2026-11-08 12:14 UTC: SUCCESS; 19 tests passed; 10 old-season CSVs plus current-season CSV, 3,900 historical rows plus 100 current-season rows; artifact `13617155063`, ZIP SHA-256 `5395ff50d5e312f395b4f76e9cdf63fcb2a71ab831e07fd24cb3418602ad3af6`.
+- Current-form forward-only run [#42493688915](https://github.com/MaksimBlud/football-ai/actions/runs/42493688915), 2026-11-08 15:13 UTC: SUCCESS; 53 tests passed; independently reverified artifact `13617155063` and parent run/SHA; `quotes_seen=0`, `v2_current_form_shadow_captured=0`, target outcomes read/scored false, paid calls 0, Supabase writes 0.
+
+Artifact metadata for `13617155063` was read without downloading the ZIP: it remains unexpired, size 438,211 bytes, and GitHub reports expiry `2027-02-06T12:14:28Z`. The repository visibility is still `public`. This is a live confidentiality blocker: the main source-capture workflow has not yet received #720/#727's private-storage preflight. Do not initiate another source capture or download the artifact while this remains unresolved; do not change the workflow schedule or delete artifacts in this task.
+
+Read-only Supabase pre-match aggregate (strict `snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= NOW()`): **3,915** snapshots across **327** events; **0** snapshots/events in the last seven days; **0** snapshots for future fixtures. Latest Serie A pre-match snapshot remains `2026-10-13 14:48:53 UTC`. No individual prices or outcome/result fields were selected.
+
+### Binding state
+
+- Source archive SHA and parent-workflow chronology are technically verified for the November 8 artifact, but the artifact's public-repository confidentiality gate is not integrated on main.
+- Provider-issued frozen-inference permission remains unresolved; no inference is authorized by the open PRs.
+- No new pre-match quote has appeared, so no new forecast exists.
+- The separate prospective outcome gate remains **0/30**; no 2026/27 target outcome was read.
+- Original candidate SHA, 19 features, weights/scaler/imputer, `active_lambda=0`, `shadow_lambda=1`, NO_BET and no-promotion rules remain unchanged.
+- HUMAN-MERGE only; no main update, merge, Supabase write/DDL, paid request, schedule change, or production artifact change.
