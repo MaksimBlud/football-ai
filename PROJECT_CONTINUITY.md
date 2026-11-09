@@ -57,7 +57,7 @@ A new static audit found that `serie_a_v2_live_diagnostic_report.fetch_public_hi
 - PR #772 rebuilds the same narrow fix on the verified #727 HEAD. It enforces inference rights first, then private repository storage, before directory creation or HTTP. Two tests prove both denials stop before filesystem/network side effects.
 - #772 current HEAD is `64efe827263c96aa176af5145fe7ae261ccdabe2`, base #727 exact HEAD `18a3cfda4e83e44aca1252665d01804267d16467`; comparison is **5 ahead / 0 behind**.
 - Its first exact run #42689292661 exposed two expected source-loader pin regressions (388 passed, 2 failed): the two forward modules still pinned the previous loader blob. Both constants were updated to the new loader blob SHA-1 `6bc51aa2551765c06862cd9bb39a425c85f3b67a`.
-- Exact-head rerun #42689630724 is currently in progress. Keep #772 Draft until both Python lock suites, all tests, and the production `.pkl` guard pass on this exact HEAD. Do not claim success yet.
+- Exact-head rerun #42689630724 completed **SUCCESS** on `64efe827263c96aa176af5145fe7ae261ccdabe2`: Python 3.11 **390 passed**, Python 3.12 **390 passed**, pip check clean, compile PASS, and production `.pkl` diff guard PASS. Both new fail-before-filesystem/network regressions passed. #772 remains Draft because its verified base #727 is not yet merged; this is offline/synthetic safety evidence, not live inference or model-quality evidence.
 
 ## Safety for this audit
 
