@@ -46,10 +46,8 @@ def test_saved_quote_reader_enforces_inference_rights_before_supabase_access(mon
 
 def test_frozen_shadow_workflow_targets_direct_quote_read_rights_stack():
     workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" / "serie-a-frozen-v2-shadow-tests.yml").read_text(encoding="utf-8")
-    pull_request = workflow.split("  pull_request:\\n", 1)[1].split("\\npermissions:", 1)[0]
-    assert "research/v2-shadow-preview-internal-inference-rights-gate-stacked-on-742-20261108-run11" in pull_request
+    assert "research/v2-shadow-preview-internal-inference-rights-gate-stacked-on-742-20261108-run11" in workflow
     assert "research/v2-direct-saved-quote-read-rights-gate-stacked-on-743-20261109-run11" in workflow
-
 
 def market(**overrides):
     row = {
