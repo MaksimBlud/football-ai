@@ -1,3 +1,32 @@
+# Continuity update — 2026-11-09 16:05 UTC — rights, privacy, quote and original-forward workflow audit
+
+## Provider policy versus current source cadence
+
+The official Football-Data fair-use page now says it was updated **2026-11-09** and limits free CSV/Excel use to personal/academic research via manual download or light automated download **at most twice per week**. It says commercial or AI data-training projects with heavy automated requests are not intended uses and unapproved requests should be treated as not granted: https://football-data.co.uk/contact.php.
+
+Main's current-form source workflow still has its daily `50 5 * * *` schedule. Today's main run #42634501531 downloaded 10 historical CSVs plus the current-season CSV (11 source files). This daily cadence is not compatible with the provider's twice-weekly automated-download limit unless the shared budget gate prevents most scheduled downloads. Do not change the schedule in this research task; prioritize the already-open #720 budget/rights guard and do not manually trigger another source download.
+
+## Source rights / private artifact stack — exact heads
+
+- PR #720 exact HEAD `1b9464834dd5256b7d69499c1443378518dde256`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`: **9/9 workflows SUCCESS**. Frozen V2 suite: **342 PASS** under Python 3.11 and **342 PASS** under Python 3.12; pip check and production `.pkl` diff guard PASS. It includes the source-rights fail-closed path and shared free-download budget cap of two per rolling seven days.
+- PR #727 exact HEAD `18a3cfda4e83e44aca1252665d01804267d16467`, stacked on #720: **3/3 workflows SUCCESS**. Frozen V2 suite: **388 PASS** under Python 3.11 and **388 PASS** under Python 3.12; pip check and production `.pkl` diff guard PASS. It adds private-artifact storage gating and read-only quote preflight. Repository is still public, so the gate must block source artifact access until privacy is actually resolved.
+- A fresh branch comparison confirms #727 still has the fail-open missing-response-URL fallback `getattr(response, "url", url)`. The separate #753 fix uses `getattr(response, "url", None)`, but #753 exact HEAD `40d4980b76834a17a0c455945a9d16809a48d980` is based on stale #727 base `8894ce8e0248a5502d60571ff073fc6d7847a43a`; its V2 workflow passes **385 tests** under both Python versions. Rebase/reapply this delta onto the current #727 HEAD before integration; it is not yet in #727 or #759.
+
+## Quote and original-forward workflow guards
+
+- PR #742 exact HEAD `727b4456fb103557039c3daac09bcaf93bcd36fa`, stacked on #720: its V2 workflow passes **342 tests** under Python 3.11 and Python 3.12, with production `.pkl` diff guard PASS. It adds a server-side `snapshot_time_utc <= as_of` filter to the saved-quote query, so future-dated snapshots are not even read and then discarded in Python. It remains open/Ready, dependent on #720.
+- Fresh main read of `.github/workflows/serie-a-v2-forward-preview.yml` shows a daily 08:08 UTC original-forward reader, a paid-snapshot `workflow_run` wake-up restricted to manually dispatched successful upstream runs, and 90-day public Actions artifact retention. Main does not yet have the source-rights/private-storage preflight.
+- PR #739 adds the original-forward source-rights/private-storage preflight and transitive dependency triggers, but its exact workflow test command omitted a shell continuation after `tests/test_serie_a_v2_current_form_dependency_triggers.py`; later rights/privacy tests would not be passed to pytest. PR #752 fixes that exact continuation. #739 exact head `8dc0f4bc7d7057d98bd5dc40386c888bcf124106` and #752 exact head `9b86cff7985f569016081367b8c3657e9d798213` each have their Original V2 Live Runner Rights Gate Validation workflow SUCCESS; #752 is still Draft and stacked on #739.
+- #681/#691/#696 are separate ready dependency-trigger audits. They must be compared/ordered carefully rather than merged as duplicates; their exact heads each have 7/7 PR CI SUCCESS.
+
+## Current status
+
+- Original old-season forward identity consolidation: #767 exact HEAD `b173b24600a8db9fc46301ee5b75d2db0159a8dd`, 7/7 CI SUCCESS, 94 V2 tests PASS; #677 is Draft/superseded.
+- Current-form identity: #676 exact HEAD `0de1f60bea9e7d879ab6f4c543bde66f32eb3d44`, 7/7 CI SUCCESS, 91 V2 tests PASS; #766 is Draft/superseded.
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No PR was merged; no schedule or agent setting changed.
+
+---
+
 # Continuity update — 2026-11-09 16:00 UTC — Original V2 forward identity and live source refresh
 
 ## Fresh main / frozen candidate
