@@ -404,5 +404,13 @@ def test_frozen_shadow_workflow_targets_private_preflight_stack_base():
     workflow = Path(".github/workflows/serie-a-frozen-v2-shadow-tests.yml").read_text(encoding="utf-8")
     push = workflow.split("  push:\n", 1)[1].split("\n  pull_request:", 1)[0]
     assert "research/v2-direct-feature-manifest-rights-gate-stacked-on-727-20261109-run11" in push
+    for path in (
+        "tests/test_serie_a_v2_asof_feature_manifest.py",
+        "tests/test_serie_a_v2_atalanta_alias.py",
+        "tests/test_serie_a_v2_live_diagnostic_report.py",
+        "tests/test_serie_a_v2_forward_capture.py",
+        "tests/test_serie_a_v2_current_form_forward_capture.py",
+    ):
+        assert f'"{path}"' in push
     pull_request = workflow.split("  pull_request:\n", 1)[1].split("\npermissions:", 1)[0]
     assert "research/v2-integrated-private-quote-preflight-20261108" in pull_request
