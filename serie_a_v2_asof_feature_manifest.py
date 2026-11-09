@@ -13,6 +13,7 @@ import hashlib
 import json
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from historical_football_signal_lab import TeamMatch, _snapshot, FEATURE_SETS
@@ -65,19 +66,38 @@ def _validate_history(history: pd.DataFrame) -> pd.DataFrame:
         raise ValueError("unparseable historical match date")
     if frame["_match_date"].dt.tz is not None:
         raise ValueError("expected date-only historical source")
+    if (frame["_match_date"] != frame["_match_date"].dt.normalize()).any():
+        raise ValueError("expected date-only historical source")
     if frame["FTR"].isna().any() or not frame["FTR"].isin(("H", "D", "A")).all():
         raise ValueError("invalid/missing historical result")
     for field in ("FTHG", "FTAG", *STATS):
         frame[field] = pd.to_numeric(frame[field], errors="coerce")
-        if frame[field].isna().any() or (frame[field] < 0).any():
-            raise ValueError("unverified or missing history stat: " + field)
+        if frame[field].isna().any():
+            raise ValueError("missing history stat: " + field)
+        if not np.isfinite(frame[field].to_numpy(dtype=float)).all():
+            raise ValueError("non-finite history stat: " + field)
+        if (frame[field] < 0).any():
+            raise ValueError("negative history stat: " + field)
+        if (frame[field] % 1 != 0).any():
+            raise ValueError("historical count stat must be an integer: " + field)
     if ((frame["FTHG"] > frame["FTAG"]) != (frame["FTR"] == "H")).any() or (
         (frame["FTHG"] < frame["FTAG"]) != (frame["FTR"] == "A")
     ).any():
         raise ValueError("historical full-time result does not match goals")
     frame["_home"] = frame["HomeTeam"].map(_canonical)
     frame["_away"] = frame["AwayTeam"].map(_canonical)
-    if (frame["_home"] == frame["_away"]).any() or frame.duplicated(["_match_date", "_home", "_away"]).any():
+    if (frame["_home"] == frame["_away"]).any():
+        raise ValueError("historical fixture identity collision")
+    # A league fixture cannot be represented twice on the same date with
+    # home/away reversed. Compare canonical unordered pairs so local aliases
+    # (for example Atalanta BC -> Atalanta) cannot bypass this source check.
+    fixture_identity = frame.assign(
+        _unordered_team_pair=[
+            tuple(sorted((home, away)))
+            for home, away in zip(frame["_home"], frame["_away"])
+        ]
+    )
+    if fixture_identity.duplicated(["_match_date", "_unordered_team_pair"]).any():
         raise ValueError("historical fixture identity collision")
     return frame.sort_values(["_match_date", "_home", "_away"], kind="stable")
 
