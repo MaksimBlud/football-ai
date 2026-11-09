@@ -211,6 +211,11 @@ def verify_source_artifacts_for_candidates(
 ) -> dict[int, str]:
     if not candidates:
         return {}
+    # This helper is importable independently of run_live_evaluation. Enforce
+    # the same frozen-inference and private-storage boundaries before it lists
+    # or downloads any source artifact.
+    require_personal_research_inference_scope()
+    require_private_repository_for_source_artifacts(REPOSITORY, token, get=get)
     source_by_id = {item["artifact_id"]: item for item in discover_archives(token=token, get=get)}
     groups, embedded_by_id = {}, {}
     for candidate in candidates:
