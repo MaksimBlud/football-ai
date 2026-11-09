@@ -24,6 +24,11 @@ from market_anchor_1x2_v2_prospective_evaluator import (
 )
 
 
+def _now_utc() -> datetime:
+    """Return the actual UTC observation clock used by the live evaluator."""
+    return datetime.now(timezone.utc)
+
+
 def evaluate_live_prospective_cohort(
     client: Any,
     forecast_rows: Iterable[Mapping[str, Any]],
@@ -164,8 +169,17 @@ def evaluate_live_market_only_from_supabase(
     metadata only; it cannot initiate a read.
     """
     rows, kickoff_by_identity = _forecast_kickoff_lookup(forecast_rows)
-    observed = observed_at_utc or datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    evaluator._utc(observed, "evaluation observed_at_utc")
+    clock = _now_utc()
+    if not isinstance(clock, datetime) or clock.tzinfo is None or clock.utcoffset() is None:
+        raise ValueError("system evaluation clock must have a real UTC offset")
+    clock = clock.astimezone(timezone.utc)
+    observed_time = (
+        clock if observed_at_utc is None
+        else evaluator._utc(observed_at_utc, "evaluation observed_at_utc")
+    )
+    if observed_time > clock:
+        raise ValueError("evaluation observed_at_utc cannot be later than the actual current UTC clock")
+    observed = observed_time.isoformat().replace("+00:00", "Z")
 
     state = {"called": False}
     if outcome_read_state is not None:
