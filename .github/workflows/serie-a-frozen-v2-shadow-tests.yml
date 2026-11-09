@@ -1,6 +1,13 @@
 name: Serie A Frozen V2 Shadow Tests
 
 on:
+  push:
+    branches:
+      - research/v2-direct-feature-manifest-rights-gate-stacked-on-727-20261109-run11
+    paths:
+      - "serie_a_v2_asof_feature_manifest.py"
+      - "tests/test_serie_a_v2_asof_feature_manifest.py"
+      - ".github/workflows/serie-a-frozen-v2-shadow-tests.yml"
   pull_request:
     branches:
       - main
