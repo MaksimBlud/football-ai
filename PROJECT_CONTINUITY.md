@@ -6895,3 +6895,23 @@ The live Supabase Security Advisor still reports RLS disabled on `public.teams`,
 - No refit, weight/feature/contract change, production `.pkl` change, target-outcome read, scoring, promotion or betting.
 
 HUMAN-MERGE only. Main, Supabase data/schema, source schedules and other agents remain unchanged.
+
+
+## Direct source-metadata reader hardening — 2026-11-09 19:04 UTC
+
+PR #769 closes a remaining direct-call gap beneath the already-guarded `capture_source_archive()` entrypoint in #732. The public `read_completed_primary_event_count()` and `read_completed_primary_event_identities()` helpers each performed a Supabase identity-only read without re-checking source-only rights and private artifact storage when imported directly.
+
+- Both helpers now require `require_personal_research_source_capture_scope()` and `require_private_repository_for_source_artifacts()` before `client.table(...)`.
+- The selected metadata allowlist remains exactly `match_date,home_team,away_team`; no score/result/outcome columns were added.
+- Rights-denial and public-storage-denial regressions cover both helpers and prove the Supabase client is untouched.
+- Existing `capture_source_archive()` checks remain in place. The nested reader re-check is intentional defense in depth; the capture-order regression records both pairs of checks before the metadata query.
+
+PR #769 exact HEAD: `df1d6ff024e4ccc3b06d3cdb55ee56125a327e7c`, stacked on #732 exact base `b0e3085fae0bbdad4405b028a93dcc00cca0019a`, Draft/HUMAN-MERGE only.
+
+Both exact-head offline CI triggers completed SUCCESS:
+- [#42679535830](https://github.com/MaksimBlud/football-ai/actions/runs/42679535830): **140 passed**, Python 3.12, production `.pkl` diff guard PASS.
+- [#42679527984](https://github.com/MaksimBlud/football-ai/actions/runs/42679527984): **140 passed**, Python 3.12, production `.pkl` diff guard PASS.
+
+They are duplicate push/PR triggers on the same HEAD, not independent cohorts. No Supabase, source, quote, outcome, paid-provider or production artifact access occurred in these tests.
+
+The source-only scope remains private noncommercial archive/validation only; frozen-model inference, AI training, commercial use and public-product use remain unauthorized. This PR does not change those permissions or the two-download-sessions-per-rolling-seven-days budget.
