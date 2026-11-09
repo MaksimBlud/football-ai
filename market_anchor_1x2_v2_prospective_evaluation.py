@@ -357,31 +357,13 @@ def run_live_evaluation(client: Any, token: str, *, now: datetime | None = None,
                 "target_outcomes_read": False, "target_outcomes_scored": False}
 
     selected, selection = select_first_eligible_forecasts(candidates)
-    selected_rows = [item["row"] for item in selected]
     outcome_state = {"called": False}
-    verified_shas: dict[int, str] = {}
-
-    def verify_source_preflight(completed_identities, _gate_attestation, _forecast_rows):
-        # The runner supplies the one freshly read, immutable identity snapshot
-        # that the evaluator will also use for its frozen 30-forecast gate.
-        # Source verification remains metadata-only and runs before any outcome
-        # callback can be invoked. Return the verified artifact SHA map so the
-        # runner can bind every selected forecast row to a verified source ZIP.
-        verified = verify_source_artifacts_for_candidates(
-            candidates,
-            token=token,
-            current_gate_identities=set(completed_identities),
-            get=get,
-        )
-        verified_shas.update(verified)
-        return verified
-
     try:
         evaluation = evaluate_live_market_only_from_supabase(
             client,
-            selected_rows,
+            selected,
+            token=token,
             observed_at_utc=observed_at_utc,
-            preflight=verify_source_preflight,
             outcome_read_state=outcome_state,
         )
     except Exception as exc:
@@ -389,18 +371,28 @@ def run_live_evaluation(client: Any, token: str, *, now: datetime | None = None,
             **base, "status": "BLOCKED", "forward_artifact_count": len(artifacts),
             "forward_artifacts": artifact_reports, "forecast_candidate_count": len(candidates),
             "selected_unique_fixture_forecasts": len(selected), "selection": selection,
-            "source_archives_reverified": len(verified_shas),
-            "source_archive_sha256": {str(k): v for k, v in sorted(verified_shas.items())},
+            "source_archives_reverified": 0, "source_archive_sha256": {},
             "target_outcomes_read": outcome_state["called"], "target_outcomes_scored": False,
             "error_type": type(exc).__name__, "error": str(exc),
+        }
+    source_archives_reverified = evaluation.get("source_archives_reverified", 0)
+    source_archive_sha256 = evaluation.get("source_archive_sha256", {})
+    if type(source_archives_reverified) is not int or source_archives_reverified < 0 or not isinstance(source_archive_sha256, Mapping):
+        return {
+            **base, "status": "BLOCKED", "forward_artifact_count": len(artifacts),
+            "forward_artifacts": artifact_reports, "forecast_candidate_count": len(candidates),
+            "selected_unique_fixture_forecasts": len(selected), "selection": selection,
+            "source_archives_reverified": 0, "source_archive_sha256": {},
+            "target_outcomes_read": outcome_state["called"], "target_outcomes_scored": False,
+            "error": "runner omitted the verified source SHA attestation",
         }
     if outcome_state["called"] is not bool(evaluation.get("target_outcomes_read")):
         return {
             **base, "status": "BLOCKED", "forward_artifact_count": len(artifacts),
             "forward_artifacts": artifact_reports, "forecast_candidate_count": len(candidates),
             "selected_unique_fixture_forecasts": len(selected), "selection": selection,
-            "source_archives_reverified": len(verified_shas),
-            "source_archive_sha256": {str(k): v for k, v in sorted(verified_shas.items())},
+            "source_archives_reverified": source_archives_reverified,
+            "source_archive_sha256": dict(source_archive_sha256),
             "target_outcomes_read": outcome_state["called"], "target_outcomes_scored": False,
             "error": "outcome-loader invocation differs from evaluator gate attestation",
         }
@@ -408,8 +400,8 @@ def run_live_evaluation(client: Any, token: str, *, now: datetime | None = None,
         **base, "status": evaluation.get("status", "UNKNOWN"),
         "forward_artifact_count": len(artifacts), "forward_artifacts": artifact_reports,
         "forecast_candidate_count": len(candidates), "selected_unique_fixture_forecasts": len(selected),
-        "selection": selection, "source_archives_reverified": len(verified_shas),
-        "source_archive_sha256": {str(k): v for k, v in sorted(verified_shas.items())},
+        "selection": selection, "source_archives_reverified": source_archives_reverified,
+        "source_archive_sha256": dict(source_archive_sha256),
         "target_outcomes_read": outcome_state["called"],
         "target_outcomes_scored": bool(evaluation.get("target_outcomes_scored")),
         "evaluation": evaluation,
