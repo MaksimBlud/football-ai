@@ -6829,3 +6829,69 @@ Earlier intermediate #742/#753 rebase commits were superseded before final valid
 The strict quote reader now has a server-side condition: future kickoff and snapshot_time_utc <= as_of, so the database does not return snapshots observed after the evaluation clock. The query keeps the explicit market-only projection and never uses SELECT *.
 
 No main update or merge occurred. No Supabase writes/DDL, paid calls, source downloads, schedule changes, target-outcome reads, model refit, weight/feature/lambda changes, production .pkl modifications, or promotion occurred during this stack work. HUMAN-MERGE only.
+
+## Latest original V2 runtime / direct-read rights follow-up — 2026-11-09 18:59 UTC
+
+Current main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc` and the repository is still public.
+
+### Fresh real forward-only runs
+
+- Original forward run [#42676083517](https://github.com/MaksimBlud/football-ai/actions/runs/42676083517), exact main SHA above:
+  - 71 offline regression tests passed.
+  - Real historical source attestation verified 10 pre-prospective source CSVs / 3,800 historical rows, candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+  - `quotes_seen=0`, `v2_diagnostic_previews_captured=0`, `forecasts_created=0`, paid calls 0, Supabase writes 0, no target outcomes read/scored.
+  - Forward artifact ID `13700981366`, ZIP digest `sha256:e6f625a9dad6e7351ae08c38a45f80412266c08c8d2a55769d18d86f73faef37`, 1,460 bytes.
+- Current-form forward run [#42677383722](https://github.com/MaksimBlud/football-ai/actions/runs/42677383722), exact main SHA above:
+  - 0 quotes and 0 current-form shadow captures; no target outcomes read/scored, paid calls 0, production/Supabase writes 0.
+  - It re-verified source artifact `13681778268`, SHA-256 `f4fb869be6e065ca611f012fe21b6d1eafe22434c60ced3a2e7b7ea6c5602101`, from successful parent run `42634501531` at head `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+  - The verified archive contains 10 historical CSVs / 3,910 historical match rows and 110 current-season history rows; the metadata-only feature-input gate is 100 canonical events. At the 18:49 UTC verification, source age was 15,793 seconds and the source was still within the 24-hour freshness bound.
+  - Current-form forward artifact ID `13700368254`, ZIP digest `sha256:25b1b327b47f0ebfa0eb75a258604427e785eaa86eafc80a6fdc40907b4847c8`, 440,605 bytes, 90-day retention. It was uploaded while the repository was public; do not download or treat SHA as confidentiality. The private-storage/right gates in #720/#727 are not yet on main.
+
+These are source-attestation / no-quote runtime proofs, not live V2 predictions or quality evidence.
+
+### Fresh read-only Supabase pre-kickoff inventory
+
+Query used only `league`, `event_id`, `snapshot_time_utc`, and `commence_time_utc`, with `snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= NOW()`. No odds prices or result/outcome columns were selected.
+
+- All leagues: **3,915** strict pre-match snapshots / **327** distinct events.
+- New strict pre-match snapshots in the last 7 days: **0**.
+- Upcoming events with saved strict pre-match quotes: **0**.
+- Serie A: **620** snapshots / **63** events; latest strict pre-match snapshot `2026-10-13T14:48:53.042620Z`.
+- Latest per other league: EPL `2026-10-09T15:25:57.102061Z`; Bundesliga, Eredivisie, La Liga, Ligue 1, Primeira Liga, RPL and Turkey Super Lig have no snapshots in the last 7 days.
+
+The 100-event feature-input gate is separate from the 30-primary-completed-event outcome gate. Evaluation remains **0/30**.
+
+### Rights and confidentiality remain separate blockers
+
+The #727 branch's reviewed Football-Data manifest explicitly distinguishes:
+- private noncommercial source archive/validation only;
+- frozen inference not permitted pending provider-issued scope;
+- AI training, commercial use and public product use not permitted;
+- at most two automated source-download sessions per rolling seven days;
+- no provider-issued authorization evidence (`authorization=null`).
+
+The repository metadata still reports `private=false`. Therefore #727's source-capture path must block before Supabase/source access and #727's forward path must block before quote access until the repository is private and the corresponding scope is satisfied. This is a fail-closed project policy, not a claim that the provider expressly prohibits all academic inference.
+
+### New direct Supabase-read bypass PR
+
+PR [#768](https://github.com/MaksimBlud/football-ai/pull/768), stacked on PR #743 exact base `e468da0e54a935dbf5f3c114f2f0d7cff793c0c5`, adds an inference-rights check inside the public `fetch_saved_upcoming_serie_a_quotes()` helper before `client.table(...)` can be accessed. This closes a direct-import bypass not covered by the CLI, forward-preparation, or scoring guards.
+
+Exact HEAD: `dc53d77c2a503ae6a8bd09bde4fd14ad38cdd1fe`.
+Two duplicate-trigger workflow runs on that same exact HEAD both completed SUCCESS:
+- [#42678674472](https://github.com/MaksimBlud/football-ai/actions/runs/42678674472): Python 3.11 and 3.12 each **345 passed**, production `.pkl` diff guards PASS.
+- [#42678665725](https://github.com/MaksimBlud/football-ai/actions/runs/42678665725): Python 3.11 and 3.12 each **345 passed**, production `.pkl` diff guards PASS.
+
+The two runs are duplicate triggers on one HEAD, not four independent test suites. #768 remains Draft until its #743 base dependency is integrated and revalidated.
+
+### Current security finding
+
+The live Supabase Security Advisor still reports RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger` (CRITICAL). No RLS DDL or policy change was made; enabling RLS without correct policies could break existing access.
+
+### Frozen model status unchanged
+
+- Original candidate SHA: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- 19 features; 3,799 training rows through 2026-06-30.
+- `active_lambda=0`; `shadow_lambda=1`; stability gate FAILED; prospective evaluation gate **0/30**.
+- No refit, weight/feature/contract change, production `.pkl` change, target-outcome read, scoring, promotion or betting.
+
+HUMAN-MERGE only. Main, Supabase data/schema, source schedules and other agents remain unchanged.
