@@ -428,3 +428,64 @@ def test_private_storage_gate_is_before_artifact_listing_in_live_evaluator_sourc
     assert privacy >= 0
     assert artifact_listing >= 0
     assert privacy < artifact_listing
+
+
+
+def test_direct_source_verifier_requires_inference_rights_before_any_archive_access(monkeypatch):
+    import market_anchor_1x2_v2_prospective_evaluation as live
+
+    calls = []
+
+    def deny_inference_rights():
+        calls.append("rights")
+        raise PermissionError("frozen-inference scope remains unresolved")
+
+    monkeypatch.setattr(live, "require_personal_research_inference_scope", deny_inference_rights)
+    monkeypatch.setattr(
+        live, "require_private_repository_for_source_artifacts",
+        lambda *args, **kwargs: calls.append("privacy"),
+    )
+    monkeypatch.setattr(
+        live, "discover_archives",
+        lambda **kwargs: calls.append("archive-listing") or [],
+    )
+
+    candidate = {"row": {"source_artifact_id": 123}, "provenance": {}}
+    with pytest.raises(PermissionError, match="frozen-inference scope remains unresolved"):
+        live.verify_source_artifacts_for_candidates(
+            [candidate], token="synthetic-token", current_gate_identities=set()
+        )
+
+    assert calls == ["rights"]
+
+
+def test_direct_source_verifier_requires_private_storage_before_archive_listing(monkeypatch):
+    import market_anchor_1x2_v2_prospective_evaluation as live
+
+    calls = []
+
+    monkeypatch.setattr(
+        live, "require_personal_research_inference_scope",
+        lambda: calls.append("rights") or {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+
+    def deny_private_storage(repository, token, *, get=None):
+        calls.append(("privacy", repository, token))
+        raise PermissionError("source archives require a private GitHub repository")
+
+    monkeypatch.setattr(live, "require_private_repository_for_source_artifacts", deny_private_storage)
+    monkeypatch.setattr(
+        live, "discover_archives",
+        lambda **kwargs: calls.append("archive-listing") or [],
+    )
+
+    candidate = {"row": {"source_artifact_id": 123}, "provenance": {}}
+    with pytest.raises(PermissionError, match="require a private GitHub repository"):
+        live.verify_source_artifacts_for_candidates(
+            [candidate], token="synthetic-token", current_gate_identities=set()
+        )
+
+    assert calls == [
+        "rights",
+        ("privacy", "MaksimBlud/football-ai", "synthetic-token"),
+    ]
