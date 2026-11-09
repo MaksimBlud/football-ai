@@ -92,6 +92,40 @@ def test_gate_counts_unique_primary_fixture_metadata_only_and_normalizes_aliases
     ) == 2
 
 
+
+
+@pytest.mark.parametrize(
+    "bad_date",
+    [
+        "2026-10-01T00:00:00",
+        "2026-10-01 00:00:00",
+        "2026-10-01Z",
+        "20261001",
+        "2026-W40-4",
+        datetime(2026, 10, 1, 0, 0),
+    ],
+)
+def test_feature_gate_rejects_timestamp_or_noncanonical_date_metadata(bad_date):
+    rows = [{
+        "match_date": bad_date,
+        "home_team": "Juventus",
+        "away_team": "Napoli",
+    }]
+    with pytest.raises(ValueError, match="date-only|canonical|invalid primary event date"):
+        count_unique_completed_primary_events(rows, before_date=date(2026, 10, 18))
+
+
+def test_feature_gate_accepts_canonical_date_only_metadata():
+    rows = [{
+        "match_date": "2026-10-01",
+        "home_team": "Juventus",
+        "away_team": "Napoli",
+    }]
+    assert count_unique_completed_primary_events(
+        rows, before_date=date(2026, 10, 18)
+    ) == 1
+
+
 def test_live_feature_gate_query_selects_only_fixture_metadata_not_scores():
     client = FakeQuery(event_rows(30))
     count = read_completed_primary_event_count(
