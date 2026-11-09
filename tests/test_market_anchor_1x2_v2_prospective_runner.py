@@ -800,7 +800,7 @@ def test_incumbent_runner_verifies_source_sha_before_evaluator_and_reuses_gate_s
     monkeypatch.setattr(runner, "read_completed_fixture_gate", read_gate)
     monkeypatch.setattr(runner, "evaluate_after_gate", fake_evaluate)
 
-    report = runner.evaluate_live_prospective_cohort(
+    report = _run_full_cohort(
         object(),
         rows,
         lambda keys: outcome_calls.append(keys) or {},
@@ -835,7 +835,7 @@ def test_incumbent_runner_rejects_unmatched_source_sha_before_evaluator_or_outco
 
     monkeypatch.setattr(runner, "evaluate_after_gate", forbidden_evaluator)
     with pytest.raises(ValueError, match="source verifier SHA proof does not match"):
-        runner.evaluate_live_prospective_cohort(
+        _run_full_cohort(
             object(),
             rows,
             lambda keys: outcome_calls.append(keys) or {},
