@@ -249,3 +249,16 @@ def test_online_manifest_matches_original_builder_after_frozen_30_match_truncati
         else:
             assert actual == pytest.approx(float(expected), abs=1e-12)
 
+
+
+def test_bad_history_rejects_reversed_duplicate_after_v2_alias_normalization():
+    first = history().iloc[[0]].copy()
+    first["HomeTeam"] = "Atalanta"
+    first["AwayTeam"] = "Alpha"
+    reversed_fixture = first.copy()
+    reversed_fixture["HomeTeam"] = "Alpha"
+    reversed_fixture["AwayTeam"] = "Atalanta BC"
+    duplicated = pd.concat([first, reversed_fixture], ignore_index=True)
+
+    with pytest.raises(ValueError, match="collision"):
+        build_manifest(duplicated, [QUOTE])
