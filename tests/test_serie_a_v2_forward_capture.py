@@ -149,6 +149,27 @@ def test_same_original_fixture_cannot_be_split_across_provider_event_ids(
         )
 
 
+def test_original_event_id_whitespace_is_normalized_before_identity_checks():
+    first = quote(ts="2026-10-14T06:00:00Z")
+    second = {
+        **quote(ts="2026-10-14T06:01:00Z"),
+        "event_id": " " + first["event_id"] + " ",
+        "home_team": "Inter",
+    }
+    with pytest.raises(ValueError, match="conflicting fixture identity for same original V2 event_id"):
+        prepare_forward_capture(
+            [first, second],
+            [],
+            as_of_utc=NOW,
+            load_archive=lambda _artifact_id: pytest.fail(
+                "conflicting normalized event IDs must fail before archive access"
+            ),
+            verify_parent_run=lambda *_args, **_kwargs: pytest.fail(
+                "conflicting normalized event IDs must fail before parent verification"
+            ),
+        )
+
+
 def test_forward_v2_scores_only_after_real_prior_archive_and_never_promotes():
     raw, metadata = make_source_archive()
     calls = []
