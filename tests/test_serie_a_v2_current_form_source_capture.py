@@ -276,6 +276,25 @@ def test_current_csv_uses_only_completed_rows_strictly_before_capture_day():
     assert not frame["Date"].str.contains("20/10/2026").any()
 
 
+@pytest.mark.parametrize(
+    "timestamp_date",
+    [
+        "01/08/2026 00:00:00",
+        "01/08/2026 12:30:00",
+        "2026-08-01T00:00:00Z",
+        "2026-08-01 12:30:00+00:00",
+    ],
+)
+def test_current_csv_rejects_timestamp_dates_before_pandas_normalization(timestamp_date):
+    raw = current_csv().decode().replace(
+        "01/08/2026,Home 0", f"{timestamp_date},Home 0", 1
+    ).encode()
+    with pytest.raises(ValueError, match="date-only"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
 def test_current_csv_rejects_reversed_duplicate_fixture_identity():
     raw = (
         ",".join(REQUIRED_COLUMNS) + "\n"
