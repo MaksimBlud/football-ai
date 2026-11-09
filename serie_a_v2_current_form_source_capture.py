@@ -8,6 +8,7 @@ until 30 eligible forecasts from this new forward-only cohort have completed.
 from __future__ import annotations
 
 import argparse
+import math
 from datetime import date, datetime, timezone
 import hashlib
 from io import BytesIO
@@ -150,9 +151,15 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     if completed.empty:
         raise ValueError("current-season source has no completed prior-day matches")
     for field in NUMERIC_COLUMNS:
-        completed[field] = pd.to_numeric(completed[field], errors="coerce")
-        if completed[field].isna().any() or (completed[field] < 0).any():
-            raise ValueError("completed current-season match has missing/invalid " + field)
+        values = pd.to_numeric(completed[field], errors="coerce")
+        if (
+            values.isna().any()
+            or not values.map(math.isfinite).all()
+            or (values < 0).any()
+            or (values % 1 != 0).any()
+        ):
+            raise ValueError("completed current-season match has missing/invalid integer " + field)
+        completed[field] = values
     if ((completed["FTHG"] > completed["FTAG"]) != (completed["FTR"] == "H")).any() or (
         (completed["FTHG"] < completed["FTAG"]) != (completed["FTR"] == "A")
     ).any():
