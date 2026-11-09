@@ -173,7 +173,7 @@ def test_current_csv_rejects_completed_future_result_and_missing_stats():
         "01/08/2026,Home 0,Away 0,1,0,H,5,3,2,1,0,0",
         "01/08/2026,Home 0,Away 0,1,0,H,,,,,,",
     ).encode()
-    with pytest.raises(ValueError, match="missing/invalid HC"):
+    with pytest.raises(ValueError, match="missing/invalid integer HC"):
         validate_current_season_csv(
             broken, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
         )
