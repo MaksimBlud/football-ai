@@ -317,3 +317,36 @@ def test_unverified_parent_cannot_admit_quote():
     assert report["v2_current_form_shadow_captured"] == 0
     assert report["blocked"]["SOURCE_PARENT_UNVERIFIED"] == 1
     assert report["rows"][0]["status"] == "SOURCE_PARENT_UNVERIFIED"
+
+
+def test_same_current_form_event_id_cannot_reverse_home_and_away():
+    reversed_quote = {
+        **quote(snapshot="2026-10-19T05:31:00Z"),
+        "home_team": "Napoli",
+        "away_team": "Juventus",
+    }
+    with pytest.raises(ValueError, match="conflicting fixture identities"):
+        prepare_forward_capture(
+            [quote(), reversed_quote], [],
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            load_archive=lambda _artifact_id: pytest.fail(
+                "conflicting event identities must fail before source archive access"
+            ),
+            verify_parent_run=valid_parent,
+        )
+
+
+def test_same_current_form_event_id_cannot_have_multiple_kickoff_times():
+    second_kickoff = quote(
+        snapshot="2026-10-19T05:31:00Z",
+        kickoff="2026-10-20T18:00:00Z",
+    )
+    with pytest.raises(ValueError, match="conflicting fixture identities"):
+        prepare_forward_capture(
+            [quote(), second_kickoff], [],
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            load_archive=lambda _artifact_id: pytest.fail(
+                "conflicting event identities must fail before source archive access"
+            ),
+            verify_parent_run=valid_parent,
+        )
