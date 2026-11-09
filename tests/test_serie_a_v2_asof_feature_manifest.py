@@ -249,3 +249,10 @@ def test_online_manifest_matches_original_builder_after_frozen_30_match_truncati
         else:
             assert actual == pytest.approx(float(expected), abs=1e-12)
 
+def test_history_rejects_explicit_midnight_timestamp_before_date_normalization():
+    malformed = history()
+    malformed.loc[0, "Date"] = "10/10/2026 00:00:00"
+
+    with pytest.raises(ValueError, match="date-only"):
+        build_manifest(malformed, [QUOTE])
+
