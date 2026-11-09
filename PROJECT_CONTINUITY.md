@@ -1,3 +1,27 @@
+# Continuity update — 2026-11-09 16:08 UTC — frozen V2 direct-API and refit audit
+
+## Main-code finding
+
+A fresh read of main `market_anchor_1x2_v2_shadow.py` confirms that the current main branch still exposes the original V2 numerical functions and the old `fit_candidate_artifact` / `write_candidate_artifact` implementations. They were not invoked. The candidate JSON itself remains unchanged at SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+
+## Open direct-API/refit hardening stack
+
+The following exact heads were re-read; each has both its dedicated Market Anchor V2 validation workflow and the Serie A Frozen V2 Shadow Tests workflow SUCCESS, with the production `.pkl` diff guard passing:
+
+- #748 `34be143c9460c5214791c6c15e092708fe08ef3d`: direct `predict_shadow_residual` now checks unresolved provider inference rights before residual logits; **360 V2 tests PASS**.
+- #749 `66d09810f4239486452d4014e6e7da03c066459b`: direct `predict_candidate` has the same rights guard; **361 V2 tests PASS**.
+- #750 `ff22e4605637b05c46415a8153d261608bfab54a`: direct residual-logit helper is rights-gated and candidate refit/write APIs fail closed; **363 V2 tests PASS**.
+- #751 `afa38aff86fdb60b5a9104f17a82633f954f9e1d`: removes re-exported V1 fit/prepare helpers and the training fingerprint from the V2 namespace; **364 V2 tests PASS**.
+- #754 `55b120afdbfe06885e7e4323a4932d337565e074`: removes unreachable writer statements after the fail-closed stub; **365 V2 tests PASS**.
+
+All five remain Draft and stacked in order; none is merged. Keep the stack intact and revalidate exact heads after each parent/base change. Until these changes reach main, the original V2 module still contains direct APIs and refit helper bodies, even though no refit or inference was performed in this cycle.
+
+## Safety
+
+No inference, fitting, refit, artifact write, production `.pkl` change, Supabase write/DDL, paid API call, source download, protected target-outcome read, promotion, bet, or main update occurred. This is static/API-contract hardening evidence only, not model-quality evidence.
+
+---
+
 # Continuity update — 2026-11-09 16:05 UTC — rights, privacy, quote and original-forward workflow audit
 
 ## Provider policy versus current source cadence
