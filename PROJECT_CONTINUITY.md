@@ -6469,3 +6469,80 @@ A future restart requires genuinely new prospectively frozen information or a ne
 - Independent Vercel **preview** `dpl_5YnYbaEEsqJBcvwjHc7tL3yqU7BW` READY: https://football-ai-real-epl-snapshot-pvrf0iym3-max-7d3e.vercel.app/ . HTTP home 200 with new card/freshness code; `/product-market-view` HTTP 200 with 20 matches, 20 model forecasts, 20 priced events. No production deployment done: stable production alias https://football-ai-real-epl-snapshot-max-7d3e.vercel.app/ remained READY at older SHA `202d46796f031caa0c9d7138c402eefb0cc56971`. A production release requires separate explicit authorization.
 - Live Supabase read-only proof 2026-10-10: 20 future EPL odds snapshots across 20 events, 20 public model-prediction snapshots, 20 AI/market pairs; newest paid-provider market snapshot is `2026-10-09T15:25:57Z`. The separately user-authorized single H2H request spent **one** The Odds API credit; **499/500** remained at the last provider preflight. That consent is exhausted; **no additional paid API calls or paid cron** without a new explicit authorization (hard reserve >=100).
 - Next: Frontend Builder owns responsive `static/match.html` and #582; Backend Builder handles #581 / PR #598 with as-of paging/atomic consistency caveats. Research Brain and Signal Scout separately validate independent new signal ideas. No model `.pkl` changes, promotion, research frozen gate relaxation, live DB writes, or production Vercel promotion.
+
+
+---
+
+# Continuity follow-up — 2026-11-09 11:59 UTC — feature-gate identity guard and fresh pre-match audit
+
+This addendum records only new, independently re-read evidence. It updates this existing documentation PR branch, not `main`.
+
+## Fresh main and exact V2 state
+
+- Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- The main-branch `PROJECT_CONTINUITY.md` still has only the older 2026-10-18 top-level entry; this PR #740 branch remains the maintained current continuity update.
+- Frozen original candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 3,799 training rows through 2026-06-30; exact original 19 features/weights/scaler/imputer; `active_lambda=0`, `shadow_lambda=1); stability gate FAILED; refit and automatic promotion disabled.
+
+## New PR #765 — reversed duplicate identities in the feature-input gate
+
+PR [#765](https://github.com/MaksimBlud/football-ai/pull/765) adds a fail-closed check to `count_unique_completed_primary_events()`:
+
+- canonicalize V2-local team aliases first;
+- key fixtures by date plus unordered team pair to detect the same match represented once as Home/Away and once reversed;
+- reject a reversed duplicate instead of counting it as another completed primary event;
+- retain exact alias duplicates as one fixture;
+- the gate continues to inspect only `match_date, home_team, away_team`, never scores/results.
+
+Exact HEAD: `9752541e35b850c2f8d69f0fb4894ce98addeec6`; parent `65ed4131f1b5ee00713c5c421cee1dc1d3565919`; base `main` `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+
+All 7 exact-head PR workflows completed SUCCESS:
+- Frozen V2 Shadow Tests #42612781599 — **87 passed**; production candidate/hash guard passed.
+- Research #42612781507, Serie A #42612781460, Ligue 1 #42612781438, Product #42612781168, Bundesliga #42612781314, Eredivisie #42612781299 — all SUCCESS.
+
+PR #765 remains Draft/open. It is a defensive contract guard, not evidence of a currently observed reversed duplicate. Do not merge it ahead of the overlapping strict-date/source-row work: PRs #763, #764 and #765 are all based on the same current main and must be integrated one at a time, with remaining branches refreshed and exact-head CI rerun after each manual merge.
+
+## Fresh read-only identity check
+
+The read-only Serie A 2026-2027 query selected only identity metadata. After the same V2-local `Atalanta BC -> Atalanta` normalization:
+
+- raw identity rows: **103**;
+- canonical ordered identities: **100**;
+- canonical unordered pair identities: **100**;
+- reversed-orientation excess: **0**;
+- date range: **2026-08-22 through 2026-11-02**.
+
+Thus the new reversed-pair guard did not discover an existing reversed duplicate in the current rows; it prevents future metadata corruption from inflating the 30-fixture feature-input gate. The 100 canonical identities satisfy only the lagged-feature input gate. The separate target-outcome evaluation gate remains **0/30**.
+
+## Exact-head status of adjacent source validation PRs
+
+- PR #763 — `0adc9b9441a8b4066d0a08c4a29773b0fe7993a1`: 7/7 exact-head workflows SUCCESS.
+- PR #764 — `52b21e39d65c1de36864220c7e9ab825780dbe3d`: 7/7 exact-head workflows SUCCESS.
+- PR #765 — `9752541e35b850c2f8d69f0fb4894ce98addeec6`: 7/7 exact-head workflows SUCCESS.
+
+All remain open; none is merged. Preserve HUMAN-MERGE. Because the PRs overlap in the source-capture validation area, do not treat the independent CI passes as proof that their unrebased branches are mutually mergeable.
+
+## Fresh source-before-quote runtime and saved-market availability
+
+Re-read the exact main workflow logs:
+
+- Source capture run [#42479299556](https://github.com/MaksimBlud/football-ai/actions/runs/42479299556), 2026-11-08 12:14 UTC, SUCCESS. It created artifact **13617155063**, ZIP SHA-256 `5395ff50d5e312f395b4f76e9cdf63fcb2a71ab831e07fd24cb3418602ad3af6`, with 10 historical CSVs / 3,900 historical matches plus one current-season source CSV / 100 lagged rows. Parent run and artifact timestamps were authenticated.
+- Current-form forward run [#42493688915](https://github.com/MaksimBlud/football-ai/actions/runs/42493688915), 2026-11-08 15:13 UTC, SUCCESS; **53 tests passed**. It re-verified the real artifact and parent run, but `quotes_seen=0`, `v2_current_form_shadow_captured=0`; target outcomes read/scored false; paid calls and Supabase writes zero.
+- Original old-season forward run [#42492484513](https://github.com/MaksimBlud/football-ai/actions/runs/42492484513), 2026-11-08 14:59 UTC, SUCCESS; **71 tests passed**, source ZIP verified, but zero future quotes and zero previews.
+- No newer current-form source-capture or forward-preview run was found in the latest 100 main scheduled runs. No new source download or workflow dispatch was initiated in this pass.
+
+Fresh read-only Supabase aggregate on `public.odds_snapshots` admitted only `snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= now()`:
+
+- **3,915** strict pre-kickoff snapshots across **327** event IDs;
+- **0** snapshots in the last seven days;
+- **0** future events with a saved strict pre-kickoff quote;
+- Serie A: **620** snapshots / **63** events; latest `2026-10-13 14:48:53.042620+00`.
+
+No odds prices or outcome columns were selected. No target outcomes were read.
+
+## Binding conclusion and safety
+
+The source archive and parent provenance are genuinely verified, but there is no new quote to pair with that archive and no new V2 shadow forecast. The feature-input count is not the outcome-evaluation gate. There is still no admissible 30/30 prospective cohort and no independent Brier/LogLoss evidence; no claim that V2 beats the market is justified.
+
+The provider-rights/private-storage chain (#720/#727 and dependent protections) remains open; the public repository/artifact boundary and unresolved frozen-inference permission remain blockers. Do not initiate further source capture or inference until the applicable rights/privacy gates are resolved.
+
+No main merge/update, Supabase write/DDL, paid API request, protected target-outcome read, model refit, candidate/weight/feature/lambda change, production `.pkl` change, schedule change, bet, publication, or promotion occurred in this addendum.
