@@ -276,3 +276,17 @@ def test_history_rejects_time_of_day_that_could_bypass_same_date_fixture_identit
     with pytest.raises(ValueError, match="date-only"):
         build_manifest(malformed, [QUOTE])
 
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("FTHG", 1.5, "nonnegative integer"),
+        ("HC", float("inf"), "non-finite"),
+    ],
+)
+def test_historical_count_stats_must_be_finite_nonnegative_integers(field, value, message):
+    malformed = history()
+    malformed.loc[0, field] = value
+
+    with pytest.raises(ValueError, match=message):
+        build_manifest(malformed, [QUOTE])
+
