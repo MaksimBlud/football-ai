@@ -8,6 +8,7 @@ until 30 eligible forecasts from this new forward-only cohort have completed.
 from __future__ import annotations
 
 import argparse
+import math
 from datetime import date, datetime, timezone
 import hashlib
 from io import BytesIO
@@ -126,6 +127,14 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
         raise ValueError("current-season source lacks required original V2 statistics: "
                          + ", ".join(sorted(missing)))
     nonblank_dates = frame["Date"].notna()
+    # The provider contract is date-only. Check raw cells before pandas can
+    # normalize an explicit midnight timestamp into an indistinguishable date.
+    raw_dates = frame.loc[nonblank_dates, "Date"].astype(str).str.strip()
+    if raw_dates.str.contains(
+        r"(?i)(?:[Tt]\d{2}:\d{2}|[ \t]+\d{1,2}:\d{2}|[+-]\d{2}:\d{2}|[Zz]$)",
+        regex=True,
+    ).any():
+        raise ValueError("current-season source must use date-only fixture dates")
     parsed_dates = pd.to_datetime(frame["Date"], dayfirst=True, format="mixed", errors="coerce")
     if parsed_dates.loc[nonblank_dates].isna().any():
         raise ValueError("current-season source contains an unparseable fixture date")
@@ -142,22 +151,31 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     if completed.empty:
         raise ValueError("current-season source has no completed prior-day matches")
     for field in NUMERIC_COLUMNS:
-        completed[field] = pd.to_numeric(completed[field], errors="coerce")
-        if completed[field].isna().any() or (completed[field] < 0).any():
-            raise ValueError("completed current-season match has missing/invalid " + field)
+        values = pd.to_numeric(completed[field], errors="coerce")
+        if (
+            values.isna().any()
+            or not values.map(math.isfinite).all()
+            or (values < 0).any()
+            or (values % 1 != 0).any()
+        ):
+            raise ValueError("completed current-season match has missing/invalid integer " + field)
+        completed[field] = values
     if ((completed["FTHG"] > completed["FTAG"]) != (completed["FTR"] == "H")).any() or (
         (completed["FTHG"] < completed["FTAG"]) != (completed["FTR"] == "A")
     ).any():
         raise ValueError("current-season result does not match full-time goals")
-    identities = []
+    identities: set[tuple[str, str, str]] = set()
     for _, row in completed.iterrows():
         home = _canonical_team(row["HomeTeam"])
         away = _canonical_team(row["AwayTeam"])
         if home == away:
             raise ValueError("current-season fixture has identical canonical teams")
-        identities.append((row["_parsed_date"].isoformat(), home, away))
-    if len(identities) != len(set(identities)):
-        raise ValueError("current-season source has duplicate fixture identities")
+        event_date = row["_parsed_date"].isoformat()
+        identity = (event_date, home, away)
+        reversed_identity = (event_date, away, home)
+        if identity in identities or reversed_identity in identities:
+            raise ValueError("current-season source has duplicate or reversed fixture identities")
+        identities.add(identity)
     completed["Date"] = completed["_parsed_date"].map(
         lambda value: value.strftime("%d/%m/%Y")
     )
