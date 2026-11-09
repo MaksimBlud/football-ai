@@ -51,6 +51,67 @@ def _allow_private_source_only_scope_for_synthetic_capture_tests(monkeypatch):
     )
 
 
+@pytest.mark.parametrize("reader_name", [
+    "read_completed_primary_event_count",
+    "read_completed_primary_event_identities",
+])
+def test_direct_feature_gate_metadata_readers_enforce_rights_before_supabase(reader_name, monkeypatch):
+    calls = []
+
+    def deny_rights():
+        calls.append("rights")
+        raise PermissionError("source-only scope denied")
+
+    def forbidden_privacy():
+        pytest.fail("privacy lookup must not run after rights denial")
+
+    class ForbiddenClient:
+        def table(self, _name):
+            pytest.fail("Supabase metadata must not be read before source rights")
+
+    monkeypatch.setattr(source_capture, "require_personal_research_source_capture_scope", deny_rights)
+    monkeypatch.setattr(source_capture, "require_private_repository_for_source_artifacts", forbidden_privacy)
+    reader = getattr(source_capture, reader_name)
+
+    with pytest.raises(PermissionError, match="source-only scope denied"):
+        reader(ForbiddenClient(), now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc))
+    assert calls == ["rights"]
+
+
+@pytest.mark.parametrize("reader_name", [
+    "read_completed_primary_event_count",
+    "read_completed_primary_event_identities",
+])
+def test_direct_feature_gate_metadata_readers_enforce_private_storage_before_supabase(reader_name, monkeypatch):
+    calls = []
+
+    def allow_rights():
+        calls.append("rights")
+        return {"source_capture_scope": source_capture.SOURCE_CAPTURE_SCOPE}
+
+    def deny_privacy():
+        calls.append("privacy")
+        raise PermissionError("private repository required")
+
+    class ForbiddenClient:
+        def table(self, _name):
+            pytest.fail("Supabase metadata must not be read from public storage")
+
+    monkeypatch.setattr(source_capture, "require_personal_research_source_capture_scope", allow_rights)
+    monkeypatch.setattr(source_capture, "require_private_repository_for_source_artifacts", deny_privacy)
+    reader = getattr(source_capture, reader_name)
+
+    with pytest.raises(PermissionError, match="private repository required"):
+        reader(ForbiddenClient(), now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc))
+    assert calls == ["rights", "privacy"]
+
+
+def test_direct_metadata_reader_rights_validation_is_wired_to_exact_stacked_branch():
+    workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" / "market-anchor-1x2-v2-live-runner-rights-validation.yml").read_text(encoding="utf-8")
+    assert "research/v2-source-capture-entrypoint-rights-gate-stacked-on-731-20261108-run11" in workflow
+    assert "research/v2-direct-source-identity-reader-rights-gate-stacked-on-732-20261109-run11" in workflow
+
+
 def event_rows(n=30):
     start = date(2026, 8, 1)
     return [
