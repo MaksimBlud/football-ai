@@ -21,6 +21,7 @@ from market_anchor_1x2_v2_prospective_evaluator import (
     _sha_fixture_set,
 )
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
+from market_anchor_v2_source_rights import require_personal_research_inference_scope
 
 V2_ONLY_ALIASES = {"Atalanta BC": "Atalanta"}
 
@@ -75,7 +76,9 @@ def read_completed_fixture_gate(
 
     The public runtime API intentionally does not accept a caller-supplied
     timestamp, so a stale or future cutoff cannot be injected by its caller.
+    Direct imports must enforce provider inference rights before Supabase access.
     """
+    require_personal_research_inference_scope()
     return _read_completed_fixture_gate_at(client, captured_at=_now_utc())
 
 

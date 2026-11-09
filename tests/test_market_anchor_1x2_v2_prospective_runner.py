@@ -7,6 +7,7 @@ import pytest
 
 import market_anchor_1x2_v2_prospective_evaluator as evaluator
 import market_anchor_1x2_v2_prospective_runner as runner
+import market_anchor_1x2_v2_completed_fixture_gate as completed_gate
 from market_anchor_v2_source_rights import require_personal_research_inference_scope as actual_inference_rights_check
 
 
@@ -17,6 +18,51 @@ def _allow_synthetic_inference_scope(monkeypatch):
         "require_personal_research_inference_scope",
         lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
     )
+
+    monkeypatch.setattr(
+        completed_gate,
+        "require_personal_research_inference_scope",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+
+
+def test_direct_completed_fixture_gate_blocks_before_supabase_without_inference_rights(monkeypatch):
+    calls = []
+
+    def deny_scope():
+        calls.append("rights")
+        raise PermissionError("frozen-inference scope remains unresolved")
+
+    class ForbiddenClient:
+        def table(self, _name):
+            pytest.fail("completed-fixture Supabase metadata must not be read before inference rights")
+
+    monkeypatch.setattr(completed_gate, "require_personal_research_inference_scope", deny_scope)
+    with pytest.raises(PermissionError, match="frozen-inference scope remains unresolved"):
+        completed_gate.read_completed_fixture_gate(ForbiddenClient())
+    assert calls == ["rights"]
+
+
+def test_current_manifest_blocks_direct_completed_fixture_gate_before_supabase(monkeypatch):
+    monkeypatch.setattr(
+        completed_gate,
+        "require_personal_research_inference_scope",
+        actual_inference_rights_check,
+    )
+
+    class ForbiddenClient:
+        def table(self, _name):
+            pytest.fail("the current unresolved manifest must block before the identity-only Supabase query")
+
+    with pytest.raises(PermissionError, match="frozen-inference scope remains unresolved"):
+        completed_gate.read_completed_fixture_gate(ForbiddenClient())
+
+
+def test_completed_fixture_gate_rights_validation_is_wired_to_exact_stacked_branch():
+    workflow = (__import__("pathlib").Path(__file__).resolve().parents[1] / ".github" / "workflows" / "market-anchor-1x2-v2-live-runner-rights-validation.yml").read_text(encoding="utf-8")
+    assert "research/v2-direct-source-identity-reader-rights-gate-stacked-on-732-20261109-run11" in workflow
+    assert "research/v2-direct-completed-fixture-gate-rights-stacked-on-769-20261109-run11" in workflow
+
 
 
 def _forecast_rows(count: int = 30) -> list[dict]:
