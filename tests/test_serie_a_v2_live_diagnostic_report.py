@@ -24,6 +24,13 @@ def allow_synthetic_v2_inference_scope(monkeypatch):
         lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
     )
 
+    import market_anchor_v2_artifact_privacy as privacy
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: {"private": True, "storage_policy": "SYNTHETIC_TEST_ONLY"},
+    )
+
 
 def history_fixture():
     rows = []
@@ -59,6 +66,64 @@ def source_audit(observed_at="2026-10-13T15:00:00Z"):
         "csv_sha256": "f" * 64,
         "completed_source_rows": 3,
     } for code in _source_codes()]
+
+
+def test_make_report_denies_unresolved_inference_before_source_or_feature_processing(monkeypatch):
+    import market_anchor_v2_source_rights as rights
+
+    def deny_scope():
+        raise PermissionError("V2 frozen inference scope remains unresolved")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", deny_scope)
+    monkeypatch.setattr(
+        report_module,
+        "_assert_original_v2_source_embargo",
+        lambda *_args, **_kwargs: pytest.fail("source data must not be inspected before inference rights"),
+    )
+    monkeypatch.setattr(
+        report_module,
+        "build_manifest",
+        lambda *_args, **_kwargs: pytest.fail("frozen features must not be built before inference rights"),
+    )
+
+    class ForbiddenRows:
+        def __bool__(self):
+            return True
+
+        def __iter__(self):
+            pytest.fail("quotes/source audit must not be iterated before inference rights")
+
+    with pytest.raises(PermissionError, match="V2 frozen inference scope remains unresolved"):
+        make_report(ForbiddenRows(), object(), ForbiddenRows(), as_of_utc=NOW)
+
+
+def test_make_report_denies_public_artifact_storage_before_source_or_feature_processing(monkeypatch):
+    import market_anchor_v2_artifact_privacy as privacy
+
+    def deny_public_storage():
+        raise PermissionError("source archives require a private GitHub repository")
+
+    monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", deny_public_storage)
+    monkeypatch.setattr(
+        report_module,
+        "_assert_original_v2_source_embargo",
+        lambda *_args, **_kwargs: pytest.fail("source data must not be inspected before private storage"),
+    )
+    monkeypatch.setattr(
+        report_module,
+        "build_manifest",
+        lambda *_args, **_kwargs: pytest.fail("frozen features must not be built before private storage"),
+    )
+
+    class ForbiddenRows:
+        def __bool__(self):
+            return True
+
+        def __iter__(self):
+            pytest.fail("quotes/source audit must not be iterated before private storage")
+
+    with pytest.raises(PermissionError, match="private GitHub repository"):
+        make_report(ForbiddenRows(), object(), ForbiddenRows(), as_of_utc=NOW)
 
 
 def test_historical_source_rejects_oversized_content_length_before_body_read(tmp_path):
