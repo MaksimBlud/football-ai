@@ -7353,3 +7353,48 @@ Read-only aggregate from `public.odds_snapshots`, selecting only `league,event_i
 ### Next execution pointer
 
 Preserve source-only/inference separation. Continue auditing direct original-V2 entrypoints and clean-stack ancestry, but do not duplicate superseded branches. Keep #775 out of integration until its #728–#770 evaluator chain is ported onto the clean #727 ancestry. The current main still has no admissible new quotes; do not spend paid credits, change schedules, or read protected outcomes.
+
+
+## 2026-11-10 01:45 UTC — corrected direct source-download budget test and exact-head CI
+
+### PR #772 correction
+
+A later edit to PR #772 exposed one test-fixture error that was not present in its earlier 66c02b0 snapshot:
+
+- Failed exact-head run #42736988150 on HEAD e8bac5b8b13ca1c5f5e97bf1ca6156f29e697df7: 427 passed, 1 failed on both Python 3.11 and 3.12.
+- The sole failure was in test_direct_public_history_fetch_requires_current_budget_marker_before_http. Production code imports require_current_download_reservation locally from serie_a_v2_public_source_download_budget; the test incorrectly attempted to monkeypatch a nonexistent attribute on serie_a_v2_live_diagnostic_report.
+- Corrected only the test to monkeypatch the budget module actually imported by the helper. No production gate was weakened or changed.
+- Current PR #772 HEAD: 46025507677dcafa5b42421d5b79a52ff76d6c5a, exact base #727 HEAD 18a3cfda4e83e44aca1252665d01804267d16467; compare 28 ahead / 0 behind, nine intended files.
+- Exact-head run #42737911980: SUCCESS. Python 3.11: 428 passed; Python 3.12: 428 passed; pip check, compilation, and production .pkl diff guards PASS.
+- PR #772 remains Draft/HUMAN-MERGE only. The passing tests use synthetic permissions and mocked HTTP/budget responses; they are not a live public-source download or permission to bypass the private-repository prerequisite.
+
+### Direct inference/forward stack recheck
+
+- #778 remains exact HEAD b2a034614d999683a8c334569dc07eb07b7ac589, base #777 12a64174341f8d3716c1206ee63d4f4c01ca817d, 3 ahead / 0 behind. Run #42732823241: 405 passed in each Python 3.11/3.12 suite; core V2 validation #42732823023: 14 passed; compile and production-artifact guards PASS.
+- #779 remains exact HEAD 6002e823e08438c1109aac6374629cf713d97324, base #778 b2a034614d999683a8c334569dc07eb07b7ac589, 10 ahead / 0 behind. Run #42734842832: 411 passed in each Python 3.11/3.12 suite; pip check, compile, and production-artifact guards PASS.
+- These are independent offline/synthetic rights-boundary regressions, not live model inference or model-quality evidence.
+
+### Frozen candidate identity recheck
+
+- Candidate file Git blob remains ac1303f6b096664983fbf52443bd0a381b23ba21 on both main and the #778 branch.
+- Embedded original candidate SHA-256 remains a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6.
+- Original feature-builder blob remains 401b3a0893371bfa4a488ec92a4a54af2678c8f7 on both main and the #778 branch.
+- No change to the 19-feature order, frozen 20×2 weights/scaler/imputer, active_lambda=0, shadow_lambda=1, failed stability gate, or 30-primary-completed-event outcome gate.
+
+### Read-only data/runtime status
+
+Re-inspected successful main runs #42676083517 and #42677383722 and their actual job logs:
+
+- #42676083517: 71 tests passed; real source ZIP attestation verified 10 pre-prospective CSVs / 3,800 historical results; quotes_seen=0, zero previews, zero paid calls, zero Supabase writes.
+- #42677383722: 53 tests passed; verified source artifact 13681778268 with SHA-256 f4fb869be6e065ca611f012fe21b6d1eafe22434c60ced3a2e7b7ea6c5602101, 10 old-season CSVs / 3,910 historical rows plus 110 lagged current-season rows, 100-identity feature-input gate; quotes_seen=0, zero current-form shadows, no target-outcome reads/scoring, zero paid calls and writes.
+- Fresh read-only aggregate of public.odds_snapshots using only strict pre-kickoff timestamps: 3,915 snapshots / 327 unique events; 0 new strict pre-match rows in seven days; 0 future events with saved pre-match quotes; latest strict pre-match snapshot 2026-10-13 14:48:53.042620+00.
+- No prices, scores, completed results, or protected 2026/27 target outcomes were selected.
+
+### Binding blockers and safety
+
+- Main remains 40887ebb215730190d7a6c7a1693373ec4afcdfc; repository remains public. #720/#727 and all descendants remain open; no PR was merged.
+- The rights manifest still permits only narrowly scoped private noncommercial source archival; frozen inference remains unauthorized (research_inference_permitted=false, provider_issued_ai_inference_license=false, authorization=null). Public repository visibility independently blocks private artifact storage.
+- Supabase schema inspection still reports RLS disabled on public.teams, public.predictions, public.match_statistics, public.league_prediction_ledger, and public.epl_ai_market_pair_ledger. No DDL or policy changes were made.
+- Prospective evaluation remains 0/30; no Brier/LogLoss comparison is admissible and no V2 superiority claim is made.
+
+No main update/merge, repository visibility change, source download, quote read, target-outcome read, Supabase write/DDL, paid provider request, schedule/cron change, refit, threshold tuning, weight/feature/lambda change, production artifact change, promotion, betting, or other-agent change occurred.
