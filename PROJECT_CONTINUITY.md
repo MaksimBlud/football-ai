@@ -1,3 +1,54 @@
+# Continuity update — 2026-11-10 04:52 UTC — fresh main, pre-match availability, rights risk, and exact-head corrections
+
+## Source of truth
+
+- Fresh `main` is still `40887ebb215730190d7a6c7a1693373ec4afcdfc` (branch metadata re-read 2026-11-10 04:48 UTC); no main update or merge occurred.
+- The `main` copy of this file is blob `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b` and its newest top-level checkpoint remains 2026-10-18. This continuity PR branch is the current November journal.
+- Repository visibility is still `public`; the `main` branch protection metadata reports protection disabled. HUMAN-MERGE remains an operational instruction; no merge was performed.
+
+## Immediate scheduled-source risk
+
+The four existing main workflows were read again; schedules are unchanged:
+
+- Current-Form Source Capture: `05:50 UTC` daily.
+- Free Real-Quote Diagnostic: `06:13 UTC` daily.
+- Original V2 Forward-Only Preview: `08:08 UTC` daily.
+- Current-Form Forward-Only Preview: `08:18 UTC` daily.
+
+At this audit's 04:52 UTC checkpoint, the next two public-source runs were due at 05:50 and 06:13 UTC. PR #720 remains OPEN, Ready for review, mergeable, at exact HEAD `1b9464834dd5256b7d69499c1443378518dde256` on base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`; exact 10/10 checks passed. Its 2026-11-10 03:54 UTC description update records 13 successful automated Football-Data sessions in 2026-11-02 19:08–2026-11-09 19:08 UTC against the provider's stated maximum of two: seven source-capture and six diagnostic sessions, at least eleven over the cap. The failed Nov 8 attempt is excluded. Until #720 is HUMAN-MERGED, main's scheduled workflows do not yet have its shared fail-closed budget/rights gate. Do not dispatch them, alter schedules, or infer provider permission from public access.
+
+PR #727 remains OPEN, Ready for review, at `18a3cfda4e83e44aca1252665d01804267d16467`, stacked on #720. Its exact V2/budget checks passed. It additionally blocks source-artifact access while the repository is public and keeps frozen inference separately unauthorized. The intended sequence remains #720 first, then rebase/revalidate #727 against fresh main.
+
+## Fresh read-only pre-match quote state
+
+A single Supabase read-only aggregate queried only `public.odds_snapshots` rows satisfying both `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= NOW()`; it selected only counts, event IDs, and timestamps. It did not query results, scores, settlements, or finished-result tables.
+
+- Strictly pre-kickoff snapshots: **3,915**.
+- Unique events: **327**.
+- Strictly pre-kickoff snapshots in the last seven days: **0**.
+- Future events with an already-saved pre-kickoff quote: **0**.
+- Latest strictly pre-kickoff snapshot: **2026-10-13 14:48:53.042620 UTC**.
+
+No new source download, quote request, artifact download, or forecast was performed. This does not create any prospective V2 observation.
+
+## New exact-head / integration corrections
+
+- **#762** is still OPEN, Ready for review, based on main, exact HEAD `dc18a149315053818eec20d7e36a74596f899270`. Its distinct two-file change checks the raw source date token before pandas parsing and rejects explicit time/timezone syntax, including `10/10/2026 00:00:00`; a post-parse midnight normalization check alone cannot detect that representation. All seven exact-head PR workflows passed, including Frozen V2 run [#42591737924](https://github.com/MaksimBlud/football-ai/actions/runs/42591737924) with 86 tests and the production `.pkl` diff guard. Its updated PR description correctly says to integrate it after #720/#727 and before rebasing #773.
+- **#773** carries #760's separate historical-row integrity deltas on top of #720: finite, nonnegative integer count checks and reversed-fixture duplicate rejection after the frozen V2 alias normalization. Exact HEAD `d13b4bc3f510be47baa2fc9c4d31a3bedc05ab15`, 2 ahead / 0 behind its #720 base, exact run [#42707544006](https://github.com/MaksimBlud/football-ai/actions/runs/42707544006) SUCCESS with 346 tests on both Python 3.11 and 3.12. Do not merge #760 separately; its unique changes are represented in #773. Because #762 and #773 touch the same adapter/test files, rebase/revalidate #773 after #762.
+- **#767** remains an independent main-based, non-draft PR at `b173b24600a8db9fc46301ee5b75d2db0159a8dd`, 12 ahead / 0 behind. Exact 7/7 workflows passed; Frozen V2 run [#42650217349](https://github.com/MaksimBlud/football-ai/actions/runs/42650217349) reports 94 tests and the production `.pkl` guard PASS. It rejects both event-ID reuse and duplicate real fixtures split across IDs/reversed Home-Away orientation. It touches `serie_a_v2_forward_capture.py`, also changed by #779; if #767 is integrated first, #779's downstream stack must be rebased and exact-head revalidated.
+- **#779**'s PR description was corrected on its existing branch after re-reading the actual PR metadata, compare, and job logs. Current HEAD is `6002e823e08438c1109aac6374629cf713d97324`, parent #778 HEAD `b2a034614d999683a8c334569dc07eb07b7ac589`, compare 10 ahead / 0 behind, seven intended files. Exact run [#42734842832](https://github.com/MaksimBlud/football-ai/actions/runs/42734842832) is 2/2 SUCCESS: 411 passed on Python 3.11 and 411 on Python 3.12; Python 3.12 pip check and both production-artifact guards passed. It remains Draft and HUMAN-MERGE only.
+- **#772** exact HEAD `46025507677dcafa5b42421d5b79a52ff76d6c5a` has 428 passed on Python 3.11 and 428 on Python 3.12 in exact run [#42737911980](https://github.com/MaksimBlud/football-ai/actions/runs/42737911980). #776/#777/#778/#779 remain a rights-gated direct-call chain; preserve their parent order and revalidate descendants after any parent integration. These are offline contract tests, not live authorization or inference.
+
+## Frozen original V2 boundary
+
+The candidate remains SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, with the original 19-feature order, original weights/scaler/imputer, `active_lambda=0` market fallback and `shadow_lambda=1` research-only. Provider-issued inference permission remains unresolved/false; repository privacy still blocks private source archival. Stability gate remains FAILED. Eligible completed prospective primary events remain **0/30**. No Brier/LogLoss superiority claim is supported.
+
+## Safety for this update
+
+No main change/merge, schedule or other-agent change, source/quote download, artifact download, target-outcome read, paid provider call, Supabase write/DDL, production `.pkl` change, refit, threshold tuning, promotion, or bet occurred. The only Supabase operation was the strictly pre-kickoff aggregate above. HUMAN-MERGE remains mandatory.
+
+---
+
 # Continuity correction — 2026-11-10 02:51 UTC — actual Nov 9 V2 workflow runs and merge-ready identity guard
 
 This section supersedes the earlier 2026-11-09 23:59 UTC sentence claiming that no Original V2 Forward, Current-Form Source Capture, Current-Form Forward, or Free Real-Quote Diagnostic run occurred on Nov 9. That statement was incorrect: exact main-branch workflow runs and their job logs were re-read.
