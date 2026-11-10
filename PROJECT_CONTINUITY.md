@@ -1,3 +1,32 @@
+# Continuity correction — 2026-11-10 13:02 UTC — Serie A-only quote inventory and existing public artifact retention
+
+## Correctly scoped primary-cohort pre-match inventory
+
+The earlier aggregate of 3,915 snapshots / 327 events is the all-league total, not the original V2 primary-cohort count. A separate read-only query filtered `public.odds_snapshots` to `league='SERIE_A'` and applied both `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= NOW()`. It selected only aggregate counts, distinct event IDs and the latest timestamp:
+
+- Original V2 primary Serie A cohort: **620 strictly pre-kickoff snapshots across 63 events**.
+- New Serie A pre-match snapshots in the last seven days: **0**.
+- New Serie A events in the last seven days: **0**.
+- Future Serie A events with a saved strictly pre-kickoff quote: **0**.
+- Latest Serie A pre-match snapshot: **2026-10-13 14:48:53.042620 UTC**.
+
+The all-league count remains 3,915 / 327, but it must not be reported as the V2 Serie A cohort. No odds prices, scores, settlements, or protected target outcomes were selected.
+
+## Existing main-branch Actions artifacts remain unexpired
+
+Read-only GitHub artifact metadata confirms the last successful main source/forward runs left these artifacts unexpired in the still-public repository:
+
+- Source Capture artifact **13681778268**, SHA-256 `f4fb869be6e065ca611f012fe21b6d1eafe22434c60ced3a2e7b7ea6c5602101`, expires **2027-02-07 14:25:18 UTC**.
+- Free Diagnostic artifact **13689701985**, SHA-256 `c968b357235029c5e96283470d5ac4d40fe1a0647b1d510dbf7270e976db9c4d`, expires **2027-02-07 16:07:28 UTC**.
+- Original Forward artifact **13700981366**, expires **2027-02-07 18:40:28 UTC**.
+- Current-Form Forward artifact **13700368254**, expires **2027-02-07 18:48:55 UTC**.
+
+The source and diagnostic artifacts were produced by main workflows that upload with 90-day retention. PR #727's private-repository preflight prevents future source-artifact access/uploads when the repository is public; it does not retroactively remove these existing artifacts. PR #780 additionally sets source capture to false under the 2026-11-10 policy recheck. No artifact was downloaded or deleted in this audit. Existing artifact exposure remains a separate privacy cleanup decision for the repository owner.
+
+No Supabase write/DDL, source download, quote request, protected-outcome read, or workflow dispatch occurred.
+
+---
+
 # Continuity update — 2026-11-10 12:59 UTC — repository-wide V2 run audit and main-branch rights/privacy gap
 
 ## Repository-wide scheduled-run audit
