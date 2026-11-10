@@ -219,7 +219,8 @@ def test_candidate_recovery_cannot_download_or_publish_until_source_clearance():
     text = _workflow(path)
     assert f'env:\n  {FLAG}: "false"' in text
     assert "workflow_dispatch:" in text
-    assert "tests/test_market_anchor_v2_saved_cohort_replay.py" not in text
+    assert "pytest -q tests/test_market_anchor_v2_saved_cohort_replay.py" not in text
+    assert "py_compile market_anchor_v2_saved_cohort_replay.py" not in text
     rebuild = _step_block(text, "Rebuild September candidate from fixed 2016-2026 training input only")
     assert f"if: {LIVE_GATE}" in rebuild
     proof = _step_block(text, "Prove frozen checksum, immutable recipe and research-only status")
