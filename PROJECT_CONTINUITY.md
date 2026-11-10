@@ -7522,3 +7522,67 @@ Re-inspected successful main runs #42676083517 and #42677383722 and their actual
 - Prospective evaluation remains 0/30; no Brier/LogLoss comparison is admissible and no V2 superiority claim is made.
 
 No main update/merge, repository visibility change, source download, quote read, target-outcome read, Supabase write/DDL, paid provider request, schedule/cron change, refit, threshold tuning, weight/feature/lambda change, production artifact change, promotion, betting, or other-agent change occurred.
+
+
+## 2026-11-10 07:54 UTC — fresh main, scheduled-source, prematch-Supabase and branch-ancestry audit
+
+### Exact repository and frozen identity
+
+- Fresh default-branch main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; repository remains public.
+- Re-read `PROJECT_CONTINUITY.md` on main and this PR branch before updating this record.
+- Candidate file blob is identical on main and the #778/#779 inference-rights stack: `ac1303f6b096664983fbf52443bd0a381b23ba21`.
+- Embedded candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Protocol blob is identical on main and that branch: `65729e9639720e67624c1481190aa22ae606f151`.
+- Original feature-builder blob is identical on main and that branch: `06393c494e454149e679b2a0826c194de94ed3f5`.
+- No candidate, protocol, feature order, weight, scaler/imputer, active/shadow lambda or production artifact change is present in this audit.
+
+### Actual scheduled workflow inventory at 07:54 UTC
+
+Read the main workflow files and the repository's scheduled-run listing (main branch, event=schedule). The configured UTC cron slots remain:
+
+- Current-Form Source Capture: 05:50 UTC.
+- Free Real-Quote Diagnostic: 06:13 UTC.
+- Original Forward-Only: 08:08 UTC.
+- Current-Form Forward-Only: 08:18 UTC.
+
+By 07:54 UTC on Nov 10, the scheduled-run listing contained no Nov 10 run for either 05:50 or 06:13 workflow. Latest observed source runs are still:
+- #42634501531, Current-Form Source Capture, 2026-11-09 14:25:18 UTC, SUCCESS, main SHA above.
+- #42651542041, Free Real-Quote Diagnostic, 2026-11-09 16:07:28 UTC, SUCCESS, main SHA above.
+
+Latest forward-only runs remain #42676083517 at 18:40:27 UTC and #42677383722 at 18:48:55 UTC on Nov 9, both SUCCESS. The Nov 10 08:08/08:18 slots had not yet arrived at this audit time. Absence of a Nov 10 source run is recorded as "not observed by 07:54 UTC", not as a proven workflow failure. No workflow was manually dispatched and no schedule was changed.
+
+### Fresh strictly pre-kickoff Supabase metadata aggregate
+
+Read-only query against `public.odds_snapshots` selected only `league,event_id,snapshot_time_utc,commence_time_utc`, requiring `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= now()`. No odds values, scores, result columns or protected outcomes were selected.
+
+| League | Strict pre-match snapshots | Unique events | Snapshots last 7d | Future events with saved quotes | Latest snapshot UTC |
+|---|---:|---:|---:|---:|---|
+| BUNDESLIGA | 394 | 35 | 0 | 0 | 2026-09-11 15:49:52.864729 |
+| EPL | 1,135 | 70 | 0 | 0 | 2026-10-09 15:25:57.102061 |
+| EREDIVISIE | 410 | 39 | 0 | 0 | 2026-09-11 15:50:20.804995 |
+| LA_LIGA | 798 | 52 | 0 | 0 | 2026-09-11 15:45:28.192487 |
+| LIGUE_1 | 387 | 35 | 0 | 0 | 2026-09-11 15:49:24.632280 |
+| PRIMEIRA_LIGA | 9 | 9 | 0 | 0 | 2026-09-11 16:06:24.367764 |
+| RPL | 153 | 15 | 0 | 0 | 2026-09-05 15:07:55.574301 |
+| SERIE_A | 620 | 63 | 0 | 0 | 2026-10-13 14:48:53.042620 |
+| TURKEY_SUPER_LIG | 9 | 9 | 0 | 0 | 2026-09-11 16:06:26.034182 |
+| TOTAL | 3,915 | 327 | 0 | 0 | 2026-10-13 14:48:53.042620 |
+
+This is a metadata-only freshness result. It does not establish any new prospective forecast.
+
+### Open-PR ancestry correction
+
+The direct-entrypoint protections are split across multiple non-equivalent stacks; do not treat them as one linear chain:
+
+- #720 is main-based. #727 is stacked on #720. #742 is stacked on #727. #774 → #777 → #778 → #779 is the direct quote/scoring/refit/forward-builder chain.
+- #772 is independently stacked on #727 and adds source-only rights/budget protection inside the diagnostic history downloader.
+- #733 → #734 → #735 → #736 → #737 → #738 → #739 → #752 is a separate chain rooted in #731/#730/#729, not the #727/#742/#779 chain. It covers direct source attestation, artifact discovery/download, original-forward dependency triggers and the pytest shell-continuation repair.
+- #752 fixes the missing shell continuation in #739; its exact offline validation run #42512771879 passed 330 tests. #739's earlier 329-test run does not validate the corrected shell command.
+- #762 is main-based; #773 is stacked on #720 and contains the unique historical-row integrity transplant. Rebase/revalidate after integrating its prerequisites; do not merge the superseded #760 separately.
+- #767 is main-based and independent; it must be integrated/rebased before #779 if the shared original-forward identity code conflicts.
+
+All these branches remain HUMAN-MERGE only. Exact-head CI is offline/synthetic contract evidence, not live source access, inference or model-quality evidence. No merge is performed by this task.
+
+### Safety
+
+No source download, manual workflow dispatch, paid provider call, Supabase write/DDL, quote-value read, target-outcome read, production `.pkl` change, refit, threshold tuning, promotion, betting, main update, schedule change or other-agent change occurred in this audit. Prospective evaluation remains 0/30 and no Brier/LogLoss superiority claim is permitted.
