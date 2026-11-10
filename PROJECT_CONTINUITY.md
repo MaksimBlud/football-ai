@@ -8152,3 +8152,57 @@ Read-only Supabase aggregate on `public.odds_snapshots` used only `league`, even
 The current Football-Data fair-use wording continues to block assuming that free CSV access grants permission for automated AI/data-training use. No source collection was restarted. A new source requires explicit rights/terms compatible with this research or a different licensed/open source with documented permitted use.
 
 PR #781 remains OPEN / Ready for review / HUMAN-MERGE only. No merge performed.
+
+
+## 2026-11-10 21:00 UTC — free-source alternative feasibility review
+
+Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The GitHub branch metadata reports `protected=false`; no repository setting was changed. HUMAN-MERGE remains a manual owner action.
+
+### Exact V2 branch/runtime status
+
+- PR #781 remains OPEN / Ready for review at `c48e0c2f6a486c9320b04c7670d84b74e8d2322a`; its exact 8/8 PR checks remain successful, including the recovery workflow's expected skipped download/rebuild/upload steps while live access is false.
+- PR #778 is at `60d1025e9556cdce05f93b9a71ce46d4d06096cb`; its exact frozen V2 tests and shadow validation succeeded (416 tests in the frozen suite).
+- PR #779 is a descendant of the current #778 head (compare: 28 ahead / 0 behind) at `3e936d64b1f490b8c8dc31951b35e446096ca94c`. Exact run [#42892646330](https://github.com/MaksimBlud/football-ai/actions/runs/42892646330) passed both Python 3.11 and 3.12 suites: **430 passed** in each; dependency check and production `.pkl` diff guard passed. Earlier failed push runs on superseded intermediate commits are not the final exact-head result.
+- No new main-branch Original V2 source-capture, quote-diagnostic, or forward-only runtime run appeared in the latest Actions run page; the recent V2 runs were PR validation runs. This is an observed run-list absence, not a claim about why scheduled runs did not register.
+
+### Read-only pre-match inventory
+
+A fresh read-only aggregate on `public.odds_snapshots` selected only league, event IDs and timestamps, with `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= NOW()`. It returned the same inventory as the previous audit:
+
+- 3,915 strict pre-match snapshots / 327 events across leagues;
+- Serie A: 620 snapshots / 63 events;
+- 0 new strict pre-match snapshots and 0 new events in the last seven days;
+- 0 future events with a saved strict pre-match quote;
+- latest saved Serie A quote: `2026-10-13 14:48:53.04262+00` UTC.
+
+No odds values, scores, results, or settlement fields were selected.
+
+### Free-source feasibility against the unchanged 19-feature contract
+
+The original 19 football features require lagged points/goals plus corners-for/against and yellow/red-card history (including the unchanged 5/10-match and venue variants). A candidate source must provide all of those fields with lawful, reproducible access; partial coverage is not a substitute for the frozen feature contract.
+
+1. **OpenFootball / football.json** — its repository declares CC0/public-domain data and documents fixtures/results with date, teams and full-time score. It does not provide per-match corners or yellow/red-card statistics, so it can support fixture/result identity only, not the complete 19-feature V2 input.  
+   https://github.com/openfootball/football.json
+
+2. **SportAPI.ai** — its current terms allow use in the user's own websites, apps, analysis and products, prohibit raw-data feed resale/redistribution, and its advertised free tier is 1,000 requests/day and 7,000/month. The reviewed football match-stat documentation lists shots, shots on target, fouls, passes, tackles and saves, but does not document corners; coverage depth also varies by competition. It therefore does not currently establish full original-V2 feature coverage. No account was created and no API call was made.  
+   https://sportapi.ai/terms  
+   https://sportapi.ai/docs
+
+3. **API-Football / API-SPORTS** — the provider advertises a free 100-request/day plan with access to endpoints but limited historical seasons. Its terms say it does not grant a general licence for use/publication of supplied data in user products and leave third-party competition rights to the user to verify. This may merit written clarification for internal frozen-model research and current-season stats, but it is not treated as cleared for automated AI source capture/inference. No account, key, or API request was used.  
+   https://www.api-football.com/terms  
+   https://www.api-football.com/
+
+4. **Cornerflick** — its data page advertises season CSV/JSON and match statistics including corners under CC BY 4.0, but its Terms (updated 2026-11-09) restrict use to personal non-commercial reading and prohibit scraping, harvesting or bulk downloads except as permitted by law. The data page also says the CC BY licence covers Cornerflick's compilation while underlying match facts remain subject to provider terms. These conflicting scopes require written clarification; no automated capture is permitted by this project pending that clarification.  
+   https://cornerflick.com/data  
+   https://cornerflick.com/terms
+
+5. **SportScore** — its terms restrict site information to personal use and prohibit automated requests, scraping, embedding, aggregation and substantial database extraction without express consent. It is not an approved automated source.  
+   https://sportscore.com/terms/
+
+6. **Football-Data.co.uk** — the 2026-11-10 official-page review is already recorded in PR #780. The project continues to keep automated source capture and frozen inference fail-closed pending provider clarification or an applicable written licence.
+
+### Binding source decision
+
+No reviewed alternative currently proves both (a) complete coverage of the original 19 feature inputs and (b) clear permission for automated archival and frozen-model research/inference. Do not wire a partial source, do not impute away systematic missing corners/cards, and do not relax the frozen feature contract. The next valid path is written provider clarification/licensing or a genuinely open dataset whose licence and field coverage explicitly satisfy the complete contract.
+
+This was a documentation-only feasibility review. No external sports API was called, no account/key was created, no source bytes were downloaded, no quote or protected 2026/27 outcome was read, no Supabase write/DDL occurred, and no model/candidate/weight/feature/lambda/production file/schedule/main change was made.
