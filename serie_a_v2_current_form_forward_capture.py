@@ -266,6 +266,9 @@ def _validate_archive_member_sizes(infos: list[Any], *, expected_names: set[str]
 def verify_and_load_archive(
     raw: bytes, archive: Mapping[str, Any], parent: Mapping[str, Any]
 ) -> tuple[pd.DataFrame, dict]:
+    # This public helper parses current-season 2026/27 results from the ZIP.
+    from serie_a_v2_forward_capture import _require_private_source_archive_read_scope
+    _require_private_source_archive_read_scope()
     if not raw or len(raw) > MAX_ARCHIVE_BYTES:
         raise ValueError("current-form source archive is empty or too large")
     digest = hashlib.sha256(raw).hexdigest()
@@ -594,6 +597,9 @@ def verify_latest_source_archive(
     ):
         raise ValueError("source verification clock must have an explicit UTC offset")
     now = as_of_utc.astimezone(timezone.utc)
+    # Guard before inspecting metadata or invoking either external callback.
+    from serie_a_v2_forward_capture import _require_private_source_archive_read_scope
+    _require_private_source_archive_read_scope()
     candidates = sorted(
         (item for item in archive_metadata if item["created_at"] < now),
         key=lambda item: (item["created_at"], item["artifact_id"]),
