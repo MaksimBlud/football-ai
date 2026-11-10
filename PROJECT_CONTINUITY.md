@@ -8108,3 +8108,47 @@ The rights/privacy fixes remain unmerged. PR #720 adds the fail-closed preflight
 The original protocol blob remains `65729e9639720e67624c1481190aa22ae606f151`; original candidate SHA, 19 feature order, weights, scaler, imputer, 3,799-row training fingerprint, `active_lambda=0`, `shadow_lambda=1`, and FAILED stability gate remain unchanged. The original protocol's first outcome-read gate is 30 completed primary-league events; the current-form policy separately requires 30 completed eligible prospective forecasts for its target evaluation gate. No protected 2026/27 target outcomes were read in this audit. No Brier/LogLoss result was generated; no superiority claim is justified.
 
 No main ref, schedule, Supabase row/schema, production `.pkl`, other agent, or automation setting was changed. No merge, paid API request, or Supabase write/DDL occurred.
+
+
+## 2026-11-10 19:02 UTC — extended live-access hold to the frozen-candidate recovery workflow
+
+Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The original frozen candidate remains SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features, original weights/scaler/imputer, `active_lambda=0`, `shadow_lambda=1`, and failed stability gate are unchanged.
+
+### New gap found and closed in PR #781
+
+The separate `Recover Frozen Market Anchor V2 Candidate` workflow was not among the four daily live workflows previously held. It has `workflow_dispatch` and PR triggers and its rebuild step downloads the ten 2016/17–2025/26 Football-Data CSVs and reconstructs the frozen training artifact. Although this path did not write production `.pkl`, it still performed automated provider downloads and a reconstruction/refit while the provider's AI/data-training scope remained unresolved.
+
+PR #781 now also holds this fifth workflow, without changing its triggers or adding/removing any schedule:
+- workflow-level `MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=false`;
+- the source-download/rebuild and subsequent proof steps require the same fail-closed flag;
+- candidate artifact upload is gated;
+- the workflow's offline V2 feature/candidate checks remain active;
+- the legacy saved-cohort post-outcome replay test suite is no longer invoked by this recovery workflow;
+- the production `.pkl` before/after hash check remains active.
+
+### Exact-head proof
+
+PR #781 HEAD: `c48e0c2f6a486c9320b04c7670d84b74e8d2322a`, 27 commits ahead / 0 behind fresh `main`, seven changed files. Exact PR checks: **8/8 SUCCESS**:
+- Frozen V2 Shadow Tests [#42881013776](https://github.com/MaksimBlud/football-ai/actions/runs/42881013776) — **92 passed**; production `.pkl` diff guard PASS.
+- Candidate recovery workflow [#42881013880](https://github.com/MaksimBlud/football-ai/actions/runs/42881013880) — SUCCESS. Offline tests and frozen source checkout ran; the data rebuild, checksum proof dependent on its output, and artifact upload were all **SKIPPED** because the flag is false; production `.pkl` before/after check PASS.
+- Serie A [#42881013628](https://github.com/MaksimBlud/football-ai/actions/runs/42881013628) — SUCCESS.
+- Bundesliga [#42881013669](https://github.com/MaksimBlud/football-ai/actions/runs/42881013669) — SUCCESS.
+- Eredivisie [#42881013674](https://github.com/MaksimBlud/football-ai/actions/runs/42881013674) — SUCCESS.
+- Ligue 1 [#42881013797](https://github.com/MaksimBlud/football-ai/actions/runs/42881013797) — SUCCESS.
+- Research [#42881013676](https://github.com/MaksimBlud/football-ai/actions/runs/42881013676) — SUCCESS.
+- Product [#42881014040](https://github.com/MaksimBlud/football-ai/actions/runs/42881014040) — SUCCESS.
+
+This is workflow/contract safety evidence only, not a new V2 forecast or model-quality result. The four daily live workflows and the recovery workflow remain active on `main` until #781 is manually merged. No PR was merged, no main ref or schedule was changed, no provider CSV was downloaded in this recovery run, no quote or protected target outcome was read, no paid provider call or Supabase write/DDL occurred.
+
+### Fresh strict pre-match quote inventory
+
+Read-only Supabase aggregate on `public.odds_snapshots` used only `league`, event IDs, and timestamps, with `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= NOW()`:
+- all leagues: 3,915 strict pre-match snapshots / 327 events;
+- Serie A: 620 snapshots / 63 events;
+- new strict pre-match snapshots/events in the last seven days: 0 / 0;
+- future events with saved strict pre-match quotes: 0;
+- latest saved Serie A quote timestamp: `2026-10-13 14:48:53.04262+00` UTC.
+
+The current Football-Data fair-use wording continues to block assuming that free CSV access grants permission for automated AI/data-training use. No source collection was restarted. A new source requires explicit rights/terms compatible with this research or a different licensed/open source with documented permitted use.
+
+PR #781 remains OPEN / Ready for review / HUMAN-MERGE only. No merge performed.
