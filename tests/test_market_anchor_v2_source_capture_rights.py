@@ -11,7 +11,7 @@ from market_anchor_v2_source_capture_rights import (
 )
 
 
-NOW = datetime(2026, 11, 7, 2, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 11, 10, 11, 57, 30, tzinfo=timezone.utc)
 
 
 def _manifest(**overrides):
@@ -29,7 +29,7 @@ def _manifest(**overrides):
         "public_product_use_permitted": False,
         "max_automated_download_sessions_per_week": 2,
         "download_budget_policy": "TWO_AUTOMATED_SESSIONS_PER_ROLLING_7_DAYS",
-        "policy_url": "https://football-data.co.uk/contact.php",
+        "policy_url": "https://football-data.co.uk/data",
         "policy_checked_at_utc": "2026-11-07T01:56:17Z",
         "policy_page_updated_date": "2026-11-06",
         "policy_summary": (
@@ -55,19 +55,11 @@ def _write_manifest(tmp_path, **overrides):
     return path
 
 
-def test_current_official_manifest_allows_only_private_source_capture():
-    result = require_personal_research_source_capture_scope(
-        DEFAULT_RIGHTS_MANIFEST_PATH, now=NOW
-    )
-    assert result["source_capture_scope"] == SOURCE_CAPTURE_SCOPE
-    assert result["source_capture_only"] is True
-    assert result["research_use_permitted"] is True
-    assert result["research_inference_permitted"] is False
-    assert result["provider_issued_ai_inference_license"] is False
-    assert result["ai_model_training_permitted"] is False
-    assert result["commercial_use_permitted"] is False
-    assert result["public_product_use_permitted"] is False
-    assert result["max_automated_download_sessions_per_week"] == 2
+def test_current_official_manifest_blocks_automated_source_capture_after_policy_update():
+    with pytest.raises(PermissionError, match="not explicitly enabled"):
+        require_personal_research_source_capture_scope(
+            DEFAULT_RIGHTS_MANIFEST_PATH, now=NOW
+        )
 
 
 def test_source_capture_scope_accepts_synthetic_research_only_manifest(tmp_path):
