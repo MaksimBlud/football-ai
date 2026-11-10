@@ -1,3 +1,37 @@
+# Continuity update — 2026-11-10 17:05 UTC — Original V2 forward rerun and credential-scoped live hold
+
+## Fresh main and frozen identity
+
+Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; this checkpoint records evidence only. Original candidate SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; candidate Git blob `ac1303f6b096664983fbf52443bd0a381b23ba21`; original protocol blob `65729e9639720e67624c1481190aa22ae606f151`; separate current-form policy blob `394a426c7ced81e27e12de61087a349bb972b612`. The original protocol requires 30 completed primary Serie A events before its first target-outcome read. The separate current-form cohort requires 30 completed eligible prospective forecasts before its evaluation read. These are different gates. Original 19 features/weights, `active_lambda=0`, `shadow_lambda=1`, NO_BET and failed stability gate remain unchanged.
+
+## New real Original Forward-Only run
+
+[Run 42853738496](https://github.com/MaksimBlud/football-ai/actions/runs/42853738496), main SHA above, SUCCESS. Offline regression step: **71 tests passed**. Real GitHub source attestation verified artifact `13773563645`, parent source run `42837720155`, GitHub ZIP SHA, **10** pre-prospective historical CSVs and **3,800** historical results. Forward JSON artifact `13782226394` has ZIP SHA-256 `24906d82f8d15b6597ba0227be9253b460d55038116a1b03b85bb21443a42d94`; parsed report: `quotes_seen=0`, `future_quotes_checked=0`, `eligible_for_frozen_prospective_cohort=false`, `supabase_writes=0`, `paid_provider_calls=0`. This proves source attestation only, not a forecast.
+
+## New real Current-Form Forward-Only run
+
+[Run 42854487569](https://github.com/MaksimBlud/football-ai/actions/runs/42854487569), same main SHA, SUCCESS; **53 tests passed**. Artifact `13780824313` ZIP SHA-256 `62196fcf3dfb6b384d5f1f4c11b532073ffe7bff57f06bec712afa34336cdfeb`. Its JSON-only report re-attests source artifact `13770560196` SHA-256 `f29363e28775032937108d102da1dda1ca2d5c1aa0f921cb4518bf3a82e9aec6`, parent run `42827889788` completed at 13:49:20 UTC, 11 source files (10 historical + current-form archive), 3,910 historical rows and 110 metadata-only current-season feature-input identities. Source age at verification: 9,447 seconds (<24h). Report: `quotes_seen=0`, `v2_current_form_shadow_captured=0`, target outcomes not read/scored, no paid calls and no Supabase/production writes. The nested current-season source ZIP was not opened for this audit. No source-before-quote pair exists because there was no quote.
+
+## Read-only pre-match Supabase aggregate
+
+`public.odds_snapshots`, strictly `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= NOW()`, league `SERIE_A`: **620 snapshots / 63 distinct events**; zero snapshots or events in the last seven days; zero future fixtures with saved snapshots; latest snapshot `2026-10-13 14:48:53 UTC`. No prices, scores, results or settlements were selected.
+
+## Live access is still active on main
+
+PR #781 is not merged, so main workflows ran at 16:21 and 16:26 UTC after the hold PR was opened. PR #781 now gates all five live source/quote steps and four artifact uploads across the four workflows; it also scopes Supabase/GitHub credentials only to gated steps so offline tests do not inherit them. Existing four cron expressions are preserved. Updated exact HEAD `d901055e667697f65a3bea6686cdbbd38785a1f5`, **7/7 exact-head CI SUCCESS**; Frozen V2 suite **89 passed**, compilation and production `.pkl` diff guard passed. PR #781 is Ready for review, OPEN, mergeable and HUMAN-MERGE only: [PR #781](https://github.com/MaksimBlud/football-ai/pull/781). It is not yet active on main.
+
+## Rights stack remains open
+
+- #720 HEAD `1b9464834dd5256b7d69499c1443378518dde256` — exact CI green.
+- #727 HEAD `18a3cfda4e83e44aca1252665d01804267d16467` — exact CI green.
+- #780 HEAD `48f55b6ef4dc40879d5232ac78ce55df51d2dce4` — exact CI green, Draft.
+
+Keep the order #781 manual hold first, then rebase/revalidate #720 → #727 → #780 and direct-reader/inference descendants on fresh main. No source/quote access should resume without provider clearance and private artifact storage.
+
+No target outcomes were opened, no new forecasts were created, no model fit/refit or threshold tuning occurred, and no production `.pkl`, Supabase data/schema, schedule, other agent or main change was made.
+
+---
+
 # Continuity update — 2026-11-10 15:59 UTC — interim live-workflow hold PR #781
 
 ## Fresh main and frozen original V2 identity
