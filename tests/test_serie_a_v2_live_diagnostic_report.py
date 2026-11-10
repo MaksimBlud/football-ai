@@ -178,7 +178,7 @@ def test_direct_public_history_fetch_requires_current_budget_marker_before_http(
 
     monkeypatch.setattr(source_rights, "require_personal_research_source_capture_scope", allow_source_only)
     monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", allow_private_storage)
-    monkeypatch.setattr(report_module, "require_current_download_reservation", deny_budget)
+    monkeypatch.setattr(budget, "require_current_download_reservation", deny_budget)
 
     def forbidden_get(*_args, **_kwargs):
         pytest.fail("historical source HTTP must not run without this run's budget marker")
