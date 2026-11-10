@@ -1,3 +1,76 @@
+# Continuity correction — 2026-11-10 14:51 UTC — new real runs, independent historical ZIP SHA, zero quote coverage
+
+## Fresh source of truth
+
+- Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- Repository remains public.
+- The main copy of `PROJECT_CONTINUITY.md` still has its last top-level checkpoint dated 2026-10-18. This November journal is on the existing documentation PR #740 branch only.
+- No main update, merge, workflow dispatch, schedule edit, or other-agent setting change occurred.
+
+## New real GitHub Actions runs on 2026-11-10
+
+The earlier 12:59 UTC audit correctly found no runs in the then-current listing window. Later runs were registered after that checkpoint; the earlier statement must not be carried forward as a full-day result.
+
+1. **Current-Form Source Capture** — run **42827889788**, scheduled, SUCCESS, 13:48:21–13:49:20 UTC, main SHA above. Artifact **13770560196**, 439,422 bytes, digest `sha256:f29363e28775032937108d102da1dda1ca2d5c1aa0f921cb4518bf3a82e9aec6`, created 13:49:17 UTC, expiry 2027-02-08 13:48:21 UTC.
+2. **Current-Form Forward-Only Preview** — run **42828048742**, workflow_run, SUCCESS, 13:49:24–13:50:09 UTC, same main SHA. Artifact **13769184138**, digest `sha256:dc75f076de30584cb74985f4c487612546e5c91f3c521749fa080abf90ce894f`.
+3. **Free Real-Quote Diagnostic** — run **42837720155**, scheduled, SUCCESS, 14:47:47–14:48:39 UTC, same main SHA. Artifact **13773563645**, 425,065 bytes, digest `sha256:c04e21994365159382372f8596956dfaf1766c9170285773346778e291b6e823`, created 14:48:35 UTC, expiry 2027-02-08 14:47:47 UTC.
+
+The original V2 Original Forward-Only workflow did not have a new run in the retrieved latest 100-run window. Do not infer why or dispatch it manually.
+
+## Current-form source → forward attestation (metadata/report only)
+
+The Forward-Only artifact JSON was inspected; the nested source ZIP/current-season CSV was not opened or parsed in this audit.
+
+- Source artifact ID: **13770560196**; ZIP digest matches its GitHub artifact metadata.
+- Source observation: **2026-11-10 13:49:15.294332 UTC**.
+- Source archive creation: **13:49:17 UTC**.
+- Authenticated parent run: **42827889788**, main SHA exact, completed **13:49:20 UTC**.
+- Forward verification: **13:50:00.398213 UTC**, source age **45 seconds**, status `VERIFIED`, `fresh_for_new_quote=true`.
+- The report records 10 historical old-season CSVs plus the current-season file (11 source files), 3,800 historical rows plus 110 current-season prior-day rows, feature-input gate count **110**, and the unchanged candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- `quotes_seen=0`, `rows=[]`, `source_artifacts_used=[]`, `v2_current_form_shadow_captured=0`; no target outcomes read/scored, no Supabase writes, no paid calls, no product publication.
+
+This proves the current-form source artifact and its successful parent run were verified before the forward process. It does **not** prove source-before-quote for an individual quote, because there were zero quotes.
+
+## Independent verification of the 14:47 UTC free diagnostic archive
+
+Downloaded artifact #13773563645 from the existing GitHub run and independently checked the ZIP bytes:
+
+- Computed ZIP SHA-256 exactly matches GitHub artifact digest: `c04e21994365159382372f8596956dfaf1766c9170285773346778e291b6e823`.
+- Diagnostic JSON SHA-256: `9d43fbccd8c1241d3a1d532bb518ad2358e2b7ddadec2a4f3f67dae3797acf35`.
+- The archive contains the diagnostic JSON and **10 old-season historical CSVs** (1617–2526); all **10/10** CSV byte hashes match the per-file manifest. Manifest reports 380 completed source rows per season, 3,800 total historical rows.
+- The diagnostic archive does not contain the current 2026/27 CSV. No 2026/27 score/result rows were opened in this audit.
+- Diagnostic fields: `quoted_fixtures=0`, `diagnostic_scored=0`, `diagnostic_previews=[]`, `independently_attested_feature_availability_at_quote=false`, `original_incumbent_asof_prediction_captured=false`, `eligible_for_frozen_prospective_cohort=false`, `history_stale_without_2026_27_form=true`.
+- It made **10 public HTTP requests** for the ten historical CSVs; paid provider requests **0**; Supabase writes **0**; `2026_27_public_results_downloaded=false`; model training/promotion false; NO_BET true.
+
+`quotes_with_source_observed_after_quote=0` is vacuous with zero quoted fixtures and is not evidence that a quote passed the source-before-quote gate. No new V2 prediction or prospective observation was created.
+
+## Important live rights/privacy gap demonstrated by the new run
+
+The 14:47 diagnostic run executed on old main. The main copy of `serie_a_v2_live_diagnostic_report.py` still lacks `require_personal_research_inference_scope()`; the main workflow `.github/workflows/serie-a-v2-free-real-quote-diagnostic.yml` still schedules at 06:13 UTC and uploads its artifact with 90-day retention. Thus it performed ten public source GETs and published the diagnostic/raw historical archive after the 2026-11-10 provider-policy recheck.
+
+The existing PR chain is intended to close this, but is **not active on main**:
+- #727 adds inference/private-repository preflight before external reads and artifact access.
+- #780 changes the current policy manifest to `research_source_capture_permitted=false`, `research_source_capture_scope=NONE_PENDING_PROVIDER_CLARIFICATION`, and `research_inference_permitted=false`; its tests assert rights guards precede external reads in the diagnostic, original forward, current-form forward, current-form source capture, and source-attestation entrypoints.
+- Exact #780 HEAD `48f55b6ef4dc40879d5232ac78ce55df51d2dce4` has 2/2 checks SUCCESS; #727 exact HEAD `18a3cfda4e83e44aca1252665d01804267d16467` has 4/4 SUCCESS. Both remain open; #780 is Draft and stacked on #727.
+- The current-form source artifact #13770560196 is also an unexpired artifact in the still-public repository. No artifact was deleted. Existing public artifact cleanup remains a separate owner decision.
+
+Do not run or dispatch the old main source workflows again. Do not claim that the PR gates are active until the owner manually integrates them and fresh-main checks prove it. HUMAN-MERGE remains binding.
+
+## Fresh read-only Supabase pre-match inventory
+
+Only `public.odds_snapshots` aggregates were queried, selecting league, counts, distinct event IDs and timestamps, with both `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= NOW()`. No prices, results, scores, settlements or target outcomes were selected.
+
+- All leagues: **3,915** strictly pre-kickoff snapshots / **327** unique events; **0** snapshots and **0** events in the last seven days; **0** future events with saved strictly pre-kickoff quotes.
+- Serie A only: **620** strictly pre-kickoff snapshots / **63** unique events; **0** new in the last seven days.
+- Latest Serie A pre-match snapshot: **2026-10-13 14:48:53.042620 UTC**.
+
+Supabase table metadata also reports RLS disabled on five public tables: `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. This is a separate critical security warning. No DDL was run; enabling RLS without first defining appropriate policies can block existing application access.
+
+## Original frozen V2 remains unchanged
+
+Candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; original 19 features, weights/scaler/imputer, training fingerprint, `active_lambda=0`, `shadow_lambda=1`, and FAILED stability gate remain unchanged. No new eligible prospective forecasts, Brier/LogLoss evaluation, outcome read, refit, threshold tuning, promotion, production `.pkl` change, paid provider call, Supabase write/DDL, or merge occurred.
+
+
 # Continuity correction — 2026-11-10 13:02 UTC — Serie A-only quote inventory and existing public artifact retention
 
 ## Correctly scoped primary-cohort pre-match inventory
