@@ -8211,3 +8211,58 @@ This was a documentation-only feasibility review. No external sports API was cal
 ### Candidate-specific pre-match snapshot check — 2026-11-10
 
 A second read-only Supabase aggregate filtered `public.product_prediction_snapshots` to the exact frozen V2 candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, and required `generated_at_utc < commence_time_utc` and `generated_at_utc <= NOW()`. It selected only league, row count, distinct event count and latest generation timestamp. Result: **zero rows**. No original-candidate strict pre-match prediction snapshots are currently recorded in this product snapshot table. No probability, target outcome, score, result or settlement field was selected.
+
+## 2026-11-10 21:55 UTC — exact main runtime, rights, and additional open-source review
+
+### Fresh main and frozen candidate
+
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- Frozen candidate Git blob remains `ac1303f6b096664983fbf52443bd0a381b23ba21`; embedded artifact SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- The candidate still has the unchanged 19-feature order, 3,799 training rows, `active_lambda=0`, `shadow_residual_lambda=1`, `stability_gate_passed=false`, and `automatic_promotion=false`.
+- Historical feature-builder Git blob remains `401b3a0893371bfa4a488ec92a4a54af2678c8f7`.
+
+### Re-read of actual main-branch runtime logs
+
+The following are main-branch scheduled runs, not PR test runs:
+
+- Original Forward-Only [#42853738496](https://github.com/MaksimBlud/football-ai/actions/runs/42853738496), created 2026-11-10 16:21:37 UTC, exact main SHA above: 71 tests passed; 10 historical source files / 3,800 rows were attested and the parent archive SHA verified. Runtime JSON reports `quotes_seen=0`, `future_quotes_checked=0`, `v2_diagnostic_previews_captured=0`, `forecasts_created=0`, `supabase_writes=0`, and `paid_provider_calls=0`. Artifact #13782226394 SHA-256: `24906d82f8d15b6597ba0227be9253b460d55038116a1b03b85bb21443a42d94`.
+- Current-Form Source Capture [#42827889788](https://github.com/MaksimBlud/football-ai/actions/runs/42827889788), created 2026-11-10 13:48:21 UTC: 19 tests passed; the lagged feature-input gate recorded 110 completed prior-day identities and 11 source files (10 historical files plus current-season source). Runtime reports `target_outcomes_scored=false`, `supabase_writes=0`, and `paid_provider_calls=0`. Artifact #13770560196 SHA-256: `f29363e28775032937108d102da1dda1ca2d5c1aa0f921cb4518bf3a82e9aec6`. This is feature-input/source-attestation evidence only, not the separate prospective outcome gate.
+- Current-Form Forward-Only [#42854487569](https://github.com/MaksimBlud/football-ai/actions/runs/42854487569), created 2026-11-10 16:26:06 UTC: 53 tests passed; the 11-file parent source archive and SHA were verified, but runtime reports `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `target_outcomes_read=false`, `target_outcomes_scored=false`, and `production_or_supabase_writes=0`. Artifact #13780824313 SHA-256: `62196fcf3dfb6b384d5f1f4c11b532073ffe7bff57f06bec712afa34336cdfeb`.
+- Free Real-Quote Diagnostic [#42837720155](https://github.com/MaksimBlud/football-ai/actions/runs/42837720155): 53 tests passed; it made 10 public CSV HTTP requests, but found `quoted_fixtures=0`, `FUTURE_QUOTE=0`, `eligible_for_frozen_prospective_cohort=false`, and `feature_rows_with_all_19_observed=0`. No paid-provider request or Supabase write occurred. Artifact #13773563645 SHA-256: `c04e21994365159382372f8596956dfaf1766c9170285773346778e291b6e823`.
+
+PR #781 was opened at 2026-11-10 15:55:27 UTC. The main Current-Form Forward-Only run #42854487569 therefore executed after the hold PR was opened but before it was merged. This is direct evidence that opening a PR does not stop main-branch workflows. The run itself created no quote-based shadow and read/scored no target outcome.
+
+The existing public Actions artifacts #13770560196, #13773563645, and #13780824313 remain available until their recorded expiry. Their contents were not downloaded or inspected in this audit. In particular, the current-form artifact's `sources_used` directory was not opened. PR #781 gates future live steps/uploads only; it does not retroactively remove existing artifacts.
+
+### Additional free-source feasibility review
+
+No reviewed source is approved for the frozen V2 pipeline:
+
+1. **open-matchday** ([README](https://github.com/oladeeayo/open-matchday/blob/master/README.md)): it provides free 2026/27 fixtures/results for 75 competitions, but its own coverage table says shots/fouls/cards and corner totals are present in only about 19% of result rows. It combines OpenLigaDB, fixturedownload, ESPN, Football-Data, FotMob, and Soccerway; provider rights remain with those providers. Its terms describe informational/non-commercial use and it has no OSI-approved data licence. It cannot provide a complete, consistently licensed 19-feature input set.
+2. **Footiqo** ([free data page](https://footiqo.com/football-data/), [terms](https://footiqo.com/terms-of-use/), [premium dataset terms/coverage](https://footiqo.com/premium/premium-football-database/)): its free pages support CSV/Excel export and describe AI/ML research, but the public Terms restrict copying/reproduction and do not grant automated bulk extraction. The site states there is no public API and automated scraping/crawling/bulk extraction requires prior written authorisation. A free Big-Five sample is offered, while the complete multi-season 150,000+ match database is paid (€49.99). No download, account, or contact was made.
+3. **Gamblistics Lab sport-statistics** ([dataset card](https://huggingface.co/datasets/gamblistics-lab/sport-statistics)): declares CC BY-NC 4.0 and documents 1,190 match rows / 810 match-stat rows with corners and cards, but describes recent EPL coverage only; this is not the Serie A 2016/17–2025/26 history or a complete original-V2 source. Its upstream rights were not independently established.
+4. **WideMan football_matches** ([dataset card](https://huggingface.co/datasets/WideMan/football_matches)): the visible sample is EPL-only and the page does not declare a dataset licence. It is not eligible for automated capture or model use.
+
+No source bytes were downloaded and no external sports API was called for this review. Do not substitute partial rows, infer missing corners/cards as zero, or change the frozen feature contract.
+
+### Fresh read-only Supabase inventory
+
+Queries used only pre-kickoff odds timestamps, league labels, event IDs, and candidate SHA/time metadata:
+
+- `public.odds_snapshots`: 3,915 strict pre-match snapshots / 327 events across leagues; 0 new in the last seven days; 0 future fixtures with saved quotes. Serie A remains 620 snapshots / 63 events, latest `2026-10-13 14:48:53.04262+00` UTC.
+- `public.product_prediction_snapshots`: 0 strict pre-match rows for candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- No odds values, scores, results, settlement fields, or protected target outcomes were selected.
+
+### Exact PR #781 integration state
+
+- PR #781 remains OPEN / Ready for review at exact HEAD `c48e0c2f6a486c9320b04c7670d84b74e8d2322a`, based directly on main.
+- All 8 exact-head checks are SUCCESS; Frozen V2 suite: 92 passed; recovery workflow's source download, rebuild, and artifact upload steps were skipped under the false live-access flag; production `.pkl` before/after guard passed.
+- Main remains unmodified and its live workflows remain active until manual merge.
+- Do not merge PR #720 as currently based on main without first integrating #781 and then rebasing/revalidating #720 on the new main. #720 changes the same workflow files and its older source-only manifest must not undo the hold or re-enable capture. The subsequent #727 private-storage gate and #780 updated rights block must be integrated and revalidated before any source access can be reconsidered.
+- HUMAN-MERGE only. No PR was merged by this audit.
+
+### Supabase security advisory recheck
+
+At 2026-11-10 21:51 UTC, Supabase Security Advisor still reports five public tables with RLS disabled (`teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, `epl_ai_market_pair_ledger`) and four tables with RLS enabled but no policies (`competitions`, `match_stats`, `matches`, `standings`). No remediation SQL was executed; enabling RLS without policies could block the application. This is a separate security issue, not V2 evidence.
+
+No model, weights, feature order, lambda, schedule, production `.pkl`, Supabase row/schema, repository visibility, or other-agent configuration was changed.
