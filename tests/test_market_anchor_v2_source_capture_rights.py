@@ -101,7 +101,7 @@ def test_source_capture_scope_rejects_stale_policy_review(tmp_path):
 
 
 def test_source_capture_scope_rejects_future_policy_review(tmp_path):
-    path = _write_manifest(tmp_path, policy_checked_at_utc="2026-11-08T00:00:00Z")
+    path = _write_manifest(tmp_path, policy_checked_at_utc="2026-11-11T00:00:00Z")
     with pytest.raises(PermissionError, match="future"):
         require_personal_research_source_capture_scope(path, now=NOW)
 
