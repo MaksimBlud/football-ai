@@ -10,6 +10,17 @@ import market_anchor_1x2_v2_shadow as v2
 
 ROOT = Path(__file__).resolve().parents[1]
 
+@pytest.fixture(autouse=True)
+def allow_synthetic_v2_inference_scope(monkeypatch):
+    """Offline fixtures use synthetic inputs; this is not provider authorization."""
+    import market_anchor_v2_source_rights as rights
+
+    monkeypatch.setattr(
+        rights,
+        "require_personal_research_inference_scope",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+
 
 def _artifact():
     features = list(v2.FEATURE_SETS[v2.FEATURE_VARIANT])
@@ -99,7 +110,7 @@ def test_frozen_v1_robustness_fails_the_predeclared_stability_gate():
     assert protocol["provenance"]["source_robustness_report_blob_sha"] == v2.SOURCE_ROBUSTNESS_REPORT_BLOB_SHA
 
 
-def test_candidate_recipe_refits_only_pre_2026_27_history():
+def test_candidate_recipe_is_frozen_and_refit_writer_paths_are_disabled(tmp_path):
     recipe = v2.candidate_recipe()
     assert recipe["primary_league"] == "SERIE_A"
     assert recipe["feature_variant"] == "ALL_FOOTBALL"
@@ -111,6 +122,17 @@ def test_candidate_recipe_refits_only_pre_2026_27_history():
     assert "2026-2027" not in recipe["refit_seasons"]
     assert recipe["opened_2026_27_outcomes_used"] is False
     assert len(recipe["features"]) == 19
+
+    class Untouchable:
+        def __getattribute__(self, name):
+            raise AssertionError(f"training input inspected despite frozen-candidate block: {name}")
+
+    output = tmp_path / "must-not-be-created" / "candidate.json"
+    with pytest.raises(PermissionError, match="candidate is frozen; refitting is disabled"):
+        v2.fit_candidate_artifact(Untouchable())
+    with pytest.raises(PermissionError, match="candidate is frozen; writing a refit artifact is disabled"):
+        v2.write_candidate_artifact(Untouchable(), output)
+    assert not output.exists()
 
 
 def test_active_candidate_is_exact_market_even_when_shadow_residual_moves():
@@ -185,6 +207,72 @@ def test_outcome_gate_is_count_based_and_cannot_activate_v2_post_hoc():
     assert v2.STABILITY_GATE_PASSED is False
     with pytest.raises(ValueError):
         v2.outcome_read_permitted(-1)
+
+
+
+def _deny_inference_scope(monkeypatch):
+    import market_anchor_v2_source_rights as rights
+
+    def denied():
+        raise PermissionError("frozen inference scope unresolved")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", denied)
+
+
+def test_direct_shadow_residual_predictor_checks_rights_before_inputs_or_logits(monkeypatch):
+    _deny_inference_scope(monkeypatch)
+    monkeypatch.setattr(
+        v2,
+        "_artifact_residual_logits",
+        lambda *_args, **_kwargs: pytest.fail("residual logits must not be calculated before rights clearance"),
+    )
+
+    class Untouchable:
+        def __getattribute__(self, name):
+            raise AssertionError(f"input inspected before rights clearance: {name}")
+
+    with pytest.raises(PermissionError, match="frozen inference scope unresolved"):
+        v2.predict_shadow_residual(Untouchable(), Untouchable(), Untouchable())
+
+
+def test_direct_active_candidate_predictor_checks_rights_before_inputs_or_logits(monkeypatch):
+    _deny_inference_scope(monkeypatch)
+    monkeypatch.setattr(
+        v2,
+        "_artifact_residual_logits",
+        lambda *_args, **_kwargs: pytest.fail("candidate logits must not be calculated before rights clearance"),
+    )
+
+    class Untouchable:
+        def __getattribute__(self, name):
+            raise AssertionError(f"input inspected before rights clearance: {name}")
+
+    with pytest.raises(PermissionError, match="frozen inference scope unresolved"):
+        v2.predict_candidate(Untouchable(), Untouchable(), Untouchable())
+
+
+def test_direct_residual_logits_helper_checks_rights_before_artifact_or_features(monkeypatch):
+    _deny_inference_scope(monkeypatch)
+    monkeypatch.setattr(
+        v2,
+        "validate_candidate_artifact",
+        lambda *_args, **_kwargs: pytest.fail("candidate artifact must not be read before rights clearance"),
+    )
+
+    class Untouchable:
+        def __getattribute__(self, name):
+            raise AssertionError(f"input inspected before rights clearance: {name}")
+
+    with pytest.raises(PermissionError, match="frozen inference scope unresolved"):
+        v2._artifact_residual_logits(Untouchable(), Untouchable())
+
+
+def test_v2_module_does_not_reexport_v1_refit_helpers():
+    assert not hasattr(v2, "RESULT_TO_INT")
+    assert not hasattr(v2, "fit_residual_model")
+    assert not hasattr(v2, "_prepare")
+    assert not hasattr(v2, "_market")
+    assert not hasattr(v2, "_training_fingerprint")
 
 
 def test_v2_code_does_not_reference_production_pickle_paths():
