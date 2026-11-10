@@ -7829,3 +7829,72 @@ No source CSV was downloaded; no quote value or protected target outcome was rea
 The frozen original V2 protocol's `first_outcome_read_gate` is defined in terms of **30 completed primary-league events**. The current-form source workflow has a separate **feature-input gate** with the same numeric minimum; the last source-capture log recorded 100 metadata-only completed-primary event identities for that feature-input gate. That 100 is not a count of prospective forecasts and does not itself authorize reading protected target outcomes.
 
 The current-form policy also has a distinct **target-outcome evaluation gate** requiring 30 eligible completed prospective forecasts. Its count remains **0/30** because no prospective V2 forecasts have been captured. These gates must not be substituted for one another. No protected 2026/27 target outcomes were read in this audit; no claim is made that the original V2 outcome-read gate has been exercised or that the current-form evaluation gate is open.
+
+
+## 2026-11-10 13:53 UTC — scheduled source capture completed after the rights recheck; no quote or forecast
+
+This addendum supersedes the earlier 12:06 UTC statement that no November 10 source run had been registered. The scheduled workflow did run later on the unchanged public main; it was not manually dispatched by this audit.
+
+### Exact real runs on main
+
+- Current-Form Source Capture: [run #42827889788](https://github.com/MaksimBlud/football-ai/actions/runs/42827889788), event `schedule`, created 13:48:21Z, completed 13:49:20Z, exact main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Job `capture-current-form` succeeded; its offline source tests were **19 passed**.
+- Current-Form Forward-Only: [run #42828048742](https://github.com/MaksimBlud/football-ai/actions/runs/42828048742), event `workflow_run`, created 13:49:24Z, completed 13:50:09Z, same main SHA. Its frozen/source/no-outcome tests were **53 passed**.
+
+### Independently verified source artifact bytes
+
+The source run uploaded public GitHub Actions artifact **13770560196**, 439,422 bytes, retention through 2027-02-08 13:48:21Z, GitHub digest `sha256:f29363e28775032937108d102da1dda1ca2d5c1aa0f921cb4518bf3a82e9aec6`. The downloaded ZIP's independently calculated SHA-256 matches that digest exactly.
+
+The ZIP contains 10 frozen historical Serie A CSVs, the 2026/27 CSV, and one JSON manifest. The manifest SHA-256 is `0f8edf23c47c4f59cf152b4386299a5f827b2c934c268f6b71ec0ea33f770da4`. All **11/11** CSV byte hashes independently match their manifest entries. Current-season CSV SHA-256 is `91f517fedb41215a32e80faa8f4ec44e26d970e557c6c120a664686dbc4d22f0`. This audit hashed raw bytes only; it did not parse current-season CSV rows or inspect any 2026/27 score/result.
+
+The manifest records:
+- feature-input gate: **110** metadata-only completed primary event identities (minimum 30); only `match_date,home_team,away_team` were selected;
+- current-season prior-day rows: **110**;
+- original frozen candidate SHA-256 unchanged: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`;
+- original feature-builder blob unchanged: `401b3a0893371bfa4a488ec92a4a54af2678c8f7`;
+- source observed at 13:49:15.294332Z and archive created at 13:49:15.307474Z;
+- `eligible_for_current_form_forward_shadow=false`, target-outcome gate closed, no outcomes read/scored, no paid provider calls, and no Supabase writes.
+
+The earlier 100 metadata identities were from the prior source run; the current run's manifest now records 110. The 110 feature-input identities are not 110 prospective forecasts and do not open either outcome-read/evaluation gate.
+
+### Forward result and quote availability
+
+The forward job independently verified the exact source artifact and its successful main parent. It reported source age 45 seconds, `fresh_for_new_quote=true`, but:
+- `quotes_seen=0`;
+- `v2_current_form_shadow_captured=0`;
+- all blocked-reason counters were zero because no quote rows were available to classify;
+- `target_outcomes_read=false` and `target_outcomes_scored=false`;
+- no model refit, promotion, bet, production write, Supabase write, or paid request.
+
+Thus this is new source-integrity/feature-input runtime evidence, **not** a new V2 forecast or model-quality result. Source-before-quote ordering is proven for the source archive itself, but there is still no source-before-quote *quote pair* because no quote was seen.
+
+### Fresh read-only Serie A pre-match quote inventory
+
+The live Supabase aggregate required `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= NOW()`, filtered only `league='SERIE_A'`, and returned:
+
+| Metric | Value |
+|---|---:|
+| Strict pre-match snapshots | 620 |
+| Unique events | 63 |
+| New strict pre-match snapshots in the last 7 days | 0 |
+| New strict pre-match events in the last 7 days | 0 |
+| Future events with saved pre-match quotes | 0 |
+| Latest strict pre-match quote | 2026-10-13 14:48:53.042620Z |
+
+No odds values or outcome columns were selected.
+
+### Rights/privacy discrepancy requiring HUMAN-MERGE
+
+The official Football-Data data page now states that the free CSV/Excel data are intended for private individuals only and excludes commercial or data-training products using automated bots, scrapers, or AI. The updated page was checked at 13:53 UTC; see [official policy page](https://football-data.co.uk/data). The source-capture run above nevertheless executed from old main code after the policy recheck and uploaded its source ZIP to a public repository artifact with 90-day retention. This was an existing scheduled main workflow, not a manual action by this audit; the artifact was not deleted or altered.
+
+The rights/privacy fixes remain unmerged. PR #720 adds the fail-closed preflight and shared download budget; #727 adds private-storage and quote preflight; #780 updates the source-rights decision to block automated capture pending provider clarification. Their current exact heads remain:
+- #720 `1b9464834dd5256b7d69499c1443378518dde256`;
+- #727 `18a3cfda4e83e44aca1252665d01804267d16467`;
+- #780 `48f55b6ef4dc40879d5232ac78ce55df51d2dce4`.
+
+**Do not manually dispatch or otherwise trigger another source download.** Keep automated source capture and all V2 inference blocked pending provider clarification and HUMAN-MERGE of the fail-closed chain. Do not change the existing schedule in this research branch; no schedule or other-agent setting was changed by this audit. The public artifact is a confidentiality/rights issue for owner review; no artifact deletion was attempted.
+
+### Frozen-model and evaluation status
+
+The original protocol blob remains `65729e9639720e67624c1481190aa22ae606f151`; original candidate SHA, 19 feature order, weights, scaler, imputer, 3,799-row training fingerprint, `active_lambda=0`, `shadow_lambda=1`, and FAILED stability gate remain unchanged. The original protocol's first outcome-read gate is 30 completed primary-league events; the current-form policy separately requires 30 completed eligible prospective forecasts for its target evaluation gate. No protected 2026/27 target outcomes were read in this audit. No Brier/LogLoss result was generated; no superiority claim is justified.
+
+No main ref, schedule, Supabase row/schema, production `.pkl`, other agent, or automation setting was changed. No merge, paid API request, or Supabase write/DDL occurred.
