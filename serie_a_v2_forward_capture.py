@@ -62,8 +62,34 @@ def _github_json(url: str, *, token: str, get=requests.get) -> dict:
     return data
 
 
+def _require_private_source_archive_read_scope() -> dict:
+    """Require either authorized source-only archival or frozen inference, plus private storage.
+
+    This helper authorizes reading an already archived source ZIP only. It does
+    not authorize quote access, feature construction, model inference, training,
+    or publication.
+    """
+    try:
+        from market_anchor_v2_source_rights import require_personal_research_inference_scope
+        rights = require_personal_research_inference_scope()
+        access_scope = "FROZEN_V2_INFERENCE"
+    except PermissionError:
+        from market_anchor_v2_source_capture_rights import require_personal_research_source_capture_scope
+        rights = require_personal_research_source_capture_scope()
+        access_scope = "SOURCE_CAPTURE_ONLY"
+
+    from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
+    privacy = require_private_repository_for_source_artifacts()
+    return {
+        "access_scope": access_scope,
+        "rights": rights,
+        "artifact_privacy": privacy,
+    }
+
+
 def discover_archives(*, token: str, get=requests.get) -> list[dict]:
     """Bound pagination and accept only main-branch, correct-name artifacts."""
+    _require_private_source_archive_read_scope()
     out = []
     seen_ids = set()
     for page in range(1, 4):
@@ -161,6 +187,7 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
 
 
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
+    _require_private_source_archive_read_scope()
     if not isinstance(artifact_id, int) or artifact_id <= 0:
         raise ValueError("invalid artifact id")
     url = f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip"
