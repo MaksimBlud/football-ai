@@ -1,3 +1,54 @@
+# Continuity update — 2026-11-10 18:05 UTC — V2 live-hold regression hardening and source-policy audit
+
+## Fresh main and immutable original V2
+
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- Candidate Git blob `ac1303f6b096664983fbf52443bd0a381b23ba21`; embedded candidate SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Original protocol blob `65729e9639720e67624c1481190aa22ae606f151`; feature builder blob `401b3a0893371bfa4a488ec92a4a54af2678c8f7`; separate current-form policy blob `394a426c7ced81e27e12de61087a349bb972b612`.
+- Candidate still has 19 frozen features, 20x2 weights, 3,799 training rows through 2026-06-30, `active_lambda=0`, `shadow_residual_lambda=1`, stability gate false and automatic promotion false. The original 30-completed-primary-event outcome gate and the separate 30-eligible-prospective-forecast evaluation gate remain distinct and closed.
+- No weights, medians, scaler, feature order, training fingerprint, production `.pkl`, or model contract changed.
+
+## Exact PR #781 latest head
+
+PR #781 remains the direct-main interim live-access hold. Latest exact HEAD `ac9cee6748f7e380d97ad9040a32adb080514552`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, OPEN / Ready for review / mergeable / HUMAN-MERGE.
+
+Two additional static regressions now prove:
+1. the fail-closed environment flag has exactly one workflow-level definition set to `false`, with no job/step override;
+2. every `actions/upload-artifact` action in each of the four live V2 workflows is gated, not merely the currently named upload step.
+
+Exact-head CI: **7/7 SUCCESS**. Frozen V2 Shadow Tests [run 42871106817](https://github.com/MaksimBlud/football-ai/actions/runs/42871106817): **91 passed**, Python compilation and production `.pkl` diff guard passed. Other exact-head runs: Serie A 42871106947, Research 42871106924, Product 42871106995, Bundesliga 42871106967, Ligue 1 42871106776, Eredivisie 42871106735 — all SUCCESS. Offline/synthetic only.
+
+The four live workflows audited are free diagnostic, original forward-only, current-form source capture and current-form forward-only. The other V2-related workflows found on main are PR-only regression workflows or the manual fixed-input candidate-recovery workflow; they are not scheduled live source/quote capture paths. All four live workflow cron strings remain unchanged in #781.
+
+## Verified main-branch runtime before the hold is merged
+
+- Original Forward-Only run [42853738496](https://github.com/MaksimBlud/football-ai/actions/runs/42853738496), main SHA above, SUCCESS: source attestation verified source artifact 13773563645 / parent run 42837720155 / 10 historical CSVs / 3,800 rows. Forward JSON artifact 13782226394, SHA-256 `24906d82f8d15b6597ba0227be9253b460d55038116a1b03b85bb21443a42d94`; `quotes_seen=0`, `future_quotes_checked=0`, zero previews and zero prospective eligibility.
+- Current-Form Forward-Only run [42854487569](https://github.com/MaksimBlud/football-ai/actions/runs/42854487569), same main SHA, SUCCESS: 53 tests passed; re-attested source artifact 13770560196, ZIP SHA-256 `f29363e28775032937108d102da1dda1ca2d5c1aa0f921cb4518bf3a82e9aec6`, parent run 42827889788 completed at 13:49:20 UTC; 10 historical CSVs + one current-form source archive, 3,910 historical rows and 110 metadata-only feature-input identities. The JSON-only report says `quotes_seen=0`, `v2_current_form_shadow_captured=0`, target outcomes not read/scored, no paid calls or writes.
+- Current-form forward artifact 13780824313, 440,596 bytes, SHA-256 `62196fcf3dfb6b384d5f1f4c11b532073ffe7bff57f06bec712afa34336cdfeb`, remains in public GitHub Actions artifact storage until 2027-02-08. Its nested current-season source file was deliberately NOT opened in this audit; the artifact is not deleted by #781.
+- No V2 live workflow run appears after the 16:21 and 16:26 UTC main runs in the latest 100-run window. Those runs predate PR #781's 17:01 UTC head and therefore do not demonstrate the hold is active.
+
+## Current read-only pre-match Supabase inventory
+
+Queries touched only `public.odds_snapshots` timestamp/identity/league columns and applied `snapshot_time_utc < commence_time_utc` plus `snapshot_time_utc <= NOW()`. No prices, scores, results, settlements or target outcomes were selected.
+
+- All leagues: 3,915 strict pre-match snapshots / 327 distinct events; zero new snapshots/events in the last 7 days; zero future events with saved pre-match quotes.
+- Serie A: 620 strict pre-match snapshots / 63 distinct events; zero new snapshots/events in the last 7 days; zero future events with saved pre-match quotes.
+- Latest saved strict pre-match snapshot: 2026-10-13 14:48:53 UTC.
+
+## Provider terms and source hold
+
+The current official Football-Data pages state that the free CSV/Excel data is intended for private individuals for personal betting and/or academic interest/research, via manual download or at most light automated download (twice per week maximum), and is not intended for commercial or data-training products using heavy repeated automated bots/scrapers/AI. The project is an AI research model and the prior workflows were daily automated downloads. Treat permission for this use as unresolved; do not resume automated capture or inference without clear authorization. Official pages: https://football-data.co.uk/data.php and https://football-data.co.uk/contact.php.
+
+PR #781 is an interim hold only; because it is not merged, the old main still contains live-access steps. Do not claim the hold is deployed until the owner manually integrates it and a fresh-main audit confirms all live steps and artifact uploads remain skipped.
+
+## Supabase security advisory (separate from V2)
+
+Security Advisor at 2026-11-10 18:04 UTC reports RLS disabled on five public tables: `teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, `epl_ai_market_pair_ledger`. It also reports RLS enabled without policies on `competitions`, `match_stats`, `matches`, `standings`. No DDL or writes were performed; do not enable RLS without designing and validating policies.
+
+No protected 2026/27 target outcomes were opened. No new forecasts or Brier/LogLoss observations were created. No paid API, Supabase writes/DDL, production `.pkl` changes, schedule changes, other-agent changes, or main updates occurred.
+
+---
+
 # Continuity update — 2026-11-10 17:05 UTC — Original V2 forward rerun and credential-scoped live hold
 
 ## Fresh main and frozen identity
