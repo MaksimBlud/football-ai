@@ -8206,3 +8206,8 @@ The original 19 football features require lagged points/goals plus corners-for/a
 No reviewed alternative currently proves both (a) complete coverage of the original 19 feature inputs and (b) clear permission for automated archival and frozen-model research/inference. Do not wire a partial source, do not impute away systematic missing corners/cards, and do not relax the frozen feature contract. The next valid path is written provider clarification/licensing or a genuinely open dataset whose licence and field coverage explicitly satisfy the complete contract.
 
 This was a documentation-only feasibility review. No external sports API was called, no account/key was created, no source bytes were downloaded, no quote or protected 2026/27 outcome was read, no Supabase write/DDL occurred, and no model/candidate/weight/feature/lambda/production file/schedule/main change was made.
+
+
+### Candidate-specific pre-match snapshot check — 2026-11-10
+
+A second read-only Supabase aggregate filtered `public.product_prediction_snapshots` to the exact frozen V2 candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, and required `generated_at_utc < commence_time_utc` and `generated_at_utc <= NOW()`. It selected only league, row count, distinct event count and latest generation timestamp. Result: **zero rows**. No original-candidate strict pre-match prediction snapshots are currently recorded in this product snapshot table. No probability, target outcome, score, result or settlement field was selected.
