@@ -35,6 +35,13 @@ def allow_synthetic_v2_inference_scope(monkeypatch):
         lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
     )
 
+    import market_anchor_v2_artifact_privacy as privacy
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: {"private": True, "storage_policy": "SYNTHETIC_TEST_ONLY"},
+    )
+
 
 def quote(ts="2026-10-14T06:00:00Z"):
     return {
@@ -97,6 +104,56 @@ def fake_verified_parent_run(archive, quote_time):
 
 
 @pytest.mark.parametrize("conflict", ["home_team", "kickoff"])
+def test_prepare_forward_capture_denies_unresolved_inference_before_inputs_or_callbacks(monkeypatch, tmp_path):
+    import market_anchor_v2_source_rights as rights
+
+    def deny_scope():
+        raise PermissionError("V2 frozen inference scope remains unresolved")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", deny_scope)
+
+    class ForbiddenRows:
+        def __iter__(self):
+            pytest.fail("quotes and archive metadata must not be inspected before inference rights")
+
+    output_dir = tmp_path / "must-not-be-created"
+    with pytest.raises(PermissionError, match="V2 frozen inference scope remains unresolved"):
+        prepare_forward_capture(
+            ForbiddenRows(),
+            ForbiddenRows(),
+            as_of_utc=NOW,
+            load_archive=lambda *_args, **_kwargs: pytest.fail("archive must not be loaded"),
+            verify_parent_run=lambda *_args, **_kwargs: pytest.fail("parent run must not be read"),
+            write_archives_to=output_dir,
+        )
+    assert not output_dir.exists()
+
+
+def test_prepare_forward_capture_denies_public_artifact_storage_before_inputs(monkeypatch, tmp_path):
+    import market_anchor_v2_artifact_privacy as privacy
+
+    def deny_public_storage():
+        raise PermissionError("source archives require a private GitHub repository")
+
+    monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", deny_public_storage)
+
+    class ForbiddenRows:
+        def __iter__(self):
+            pytest.fail("quotes and archive metadata must not be inspected before private storage")
+
+    output_dir = tmp_path / "must-not-be-created"
+    with pytest.raises(PermissionError, match="private GitHub repository"):
+        prepare_forward_capture(
+            ForbiddenRows(),
+            ForbiddenRows(),
+            as_of_utc=NOW,
+            load_archive=lambda *_args, **_kwargs: pytest.fail("archive must not be loaded"),
+            verify_parent_run=lambda *_args, **_kwargs: pytest.fail("parent run must not be read"),
+            write_archives_to=output_dir,
+        )
+    assert not output_dir.exists()
+
+
 def test_same_original_event_id_cannot_change_fixture_identity(conflict):
     raw, metadata = make_source_archive()
     first = quote(ts="2026-10-14T06:00:00Z")
