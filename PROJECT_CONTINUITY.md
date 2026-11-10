@@ -8266,3 +8266,41 @@ Queries used only pre-kickoff odds timestamps, league labels, event IDs, and can
 At 2026-11-10 21:51 UTC, Supabase Security Advisor still reports five public tables with RLS disabled (`teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, `epl_ai_market_pair_ledger`) and four tables with RLS enabled but no policies (`competitions`, `match_stats`, `matches`, `standings`). No remediation SQL was executed; enabling RLS without policies could block the application. This is a separate security issue, not V2 evidence.
 
 No model, weights, feature order, lambda, schedule, production `.pkl`, Supabase row/schema, repository visibility, or other-agent configuration was changed.
+
+
+## 2026-11-10 23:47 UTC — fresh-main entrypoint, exact-head CI, and PR ancestry re-audit
+
+### Fresh main and original candidate
+
+- Re-read refs/heads/main directly from GitHub: 40887ebb215730190d7a6c7a1693373ec4afcdfc.
+- Original frozen candidate file research/models/market_anchor_v2_serie_a_frozen_candidate.json still has Git blob ac1303f6b096664983fbf52443bd0a381b23ba21 and embedded SHA-256 a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6.
+- Its exact 19-feature order, 20×2 weight matrix, 3,799 training rows, active_lambda=0, shadow_residual_lambda=1, failed stability gate, and no-promotion flag are unchanged.
+
+### Main workflow still live until HUMAN-MERGE
+
+Fresh main's .github/workflows/serie-a-v2-forward-preview.yml (blob 48ce3b0d8e31c4cf293b94500e9c320047311467) still has workflow_dispatch, daily 8 8 * * * schedule, a workflow_run trigger after Serie A Odds Snapshots only when the paid snapshot workflow was itself manually dispatched, job-level Supabase/GitHub credentials, source attestation, saved-quote forward capture, and if: always() artifact upload with no live-access hold on main.
+
+The free diagnostic workflow still has 13 6 * * *; current-form source capture still has 50 5 * * *. The paid Serie A Odds Snapshots workflow was re-read and has only workflow_dispatch, with no cron. No paid workflow was dispatched and no provider request was made in this audit.
+
+PR #781 remains OPEN / Ready for review / HUMAN-MERGE only at exact HEAD c48e0c2f6a486c9320b04c7a1693373ec4afcdfc. Its description reports 8/8 exact-head CI success. Independently opened recovery workflow run #42881013880, which is on that exact HEAD: offline V2 tests and production .pkl hash guard succeeded; candidate rebuild, proof, and research-artifact upload were all correctly skipped under the false live-access flag. This is a workflow-safety result, not an inference result. Main remains unchanged, so the hold is not active on main until the owner manually merges #781.
+
+### Current V2 hardening PRs — exact current heads and ancestry
+
+- PR #778 current metadata HEAD is 3ecbef08babe4c24cb1a22e492e83a08fad3be5b, based on #777 HEAD 12a64174341f8d3716c1206ee63d4f4c01ca817d (10 ahead / 0 behind). Exact push run #42919157425 is on that exact HEAD: both Python 3.11 and 3.12 jobs succeeded, each reporting 413 passed, and both production .pkl guards passed.
+- PR #779 current metadata HEAD is 3e936d64b1f490b8c8dc31951b35e446096ca94c, with base SHA b2a034614d999683a8c334569dc07eb07b7ac589. Exact PR run #42892646330 is on that exact HEAD: both Python 3.11 and 3.12 jobs succeeded, each reporting 430 passed, and both production .pkl guards passed.
+- New ancestry correction: comparing #778's current HEAD to #779's current HEAD returns diverged: #779 is 28 commits ahead and 2 commits behind #778, with merge base 60d1025e.... Comparing #779's base SHA to #778's current HEAD shows #778 has 7 commits not present in that base. Thus #779 must be rebased onto the current #778 HEAD and exact-head CI rerun before it can be treated as a clean descendant/integration candidate. Older statements that #779 was 28 ahead / 0 behind are stale. PR #779's body also contains an older exact-head reference (6002e823...); use current GitHub metadata and run #42892646330, not that stale body reference.
+- Keep both PRs Draft where specified; no merge, branch rewrite, or main update was performed.
+
+### Read-only pre-match Supabase recheck
+
+A fresh aggregate queried only event IDs, league labels, pre-kickoff timestamps, and exact candidate SHA/time metadata:
+- strict pre-match public.odds_snapshots: 3,915 rows / 327 events;
+- new strict pre-match odds snapshots in the last seven days: 0;
+- future events with a saved strict pre-match quote: 0;
+- strict pre-match product_prediction_snapshots for the exact V2 SHA: 0 rows / 0 events.
+
+No odds values, scores, result/settlement columns, or protected 2026/27 target outcomes were selected. No Supabase writes/DDL, paid provider calls, source downloads, model refit, production artifact change, or schedule change occurred.
+
+### Scientific status
+
+The original V2 artifact and 19-feature contract remain intact, but there are still no new admissible pre-kickoff V2 forecasts in Supabase and no independent prospective evaluation sample. The 30-primary-completed-event outcome gate remains closed. No new Brier/LogLoss comparison exists; superiority to the market is not established. active_lambda=0 remains the market baseline and shadow_lambda=1 remains research-only.
