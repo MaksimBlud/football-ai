@@ -7682,3 +7682,54 @@ A fresh exact file-patch comparison shows #760 and #773 both change the same two
 ### Safety
 
 No source download, manual dispatch, paid request, Supabase write/DDL, quote-value read, target-outcome read, production `.pkl` change, model refit, threshold tuning, promotion, bet, merge, main update, schedule change, or other-agent change occurred in this audit. The source archive's remaining freshness window is an operational deadline, not permission to bypass the provider budget or inference-rights gate.
+
+
+## 2026-11-10 12:06 UTC — Football-Data policy recheck and fail-closed source-capture update
+
+### Official policy page changed
+
+A fresh read of the official Football-Data data page at `https://football-data.co.uk/data` shows `Updated: 10/11/26`. The current page describes the free CSV/Excel data as intended for private individuals and excludes commercial or data-training products using automated bots, scrapers, or AI.
+
+The previous rights manifest review was recorded on 2026-11-07 against a page date of 2026-11-06. That review is now superseded. The current page does not give this automated AI workflow a sufficiently clear source-capture authorization.
+
+### Conservative code/test carrier
+
+New Draft PR #780 is stacked on #727:
+
+- Parent #727 HEAD: `18a3cfda4e83e44aca1252665d01804267d16467`.
+- PR #780 HEAD: `48f55b6ef4dc40879d5232ac78ce55df51d2dce4`.
+- Exact comparison: 10 commits ahead, 0 behind its parent.
+- Exact V2 CI run #42812927009: both `shadow-tests` and `py312-lock-tests` SUCCESS.
+- Each Python suite reports 388 passed; the production `.pkl` guard also passed.
+
+The first run #42812730024 exposed three regression issues (two stale source-rights blob pins and a future-clock fixture made stale by the new test clock). Those were corrected in the later commit; the final exact HEAD above is the one with 2/2 SUCCESS.
+
+PR #780 changes only the source-rights manifest/helpers, their SHA pins, tests, the V2 test-workflow trigger for this stacked base, and this policy-recheck note. It does not change the candidate, features, weights, scaler/imputer, training fingerprint, lambda values, or production artifacts.
+
+### Rights state after recheck
+
+The PR sets:
+
+- `research_source_capture_permitted=false`;
+- `research_source_capture_scope=NONE_PENDING_PROVIDER_CLARIFICATION`;
+- `research_inference_permitted=false`;
+- `provider_issued_ai_inference_license=false`;
+- `ai_model_training_permitted=false`.
+
+This is a conservative internal fail-closed decision pending provider clarification, not a legal conclusion about every form of manual personal research. The two-session weekly limit is a ceiling, not a grant of permission. The repository is still public; the separate private-storage gate remains required if a future clarification permits source archival.
+
+PR #780 remains Draft/HUMAN-MERGE only and must not be merged before its parent #727. The sibling quote-cutoff and direct-entrypoint PRs require fresh exact-head validation after their parent chain is integrated.
+
+### Runtime and data status
+
+The Nov 10 scheduled windows checked for Current-Form Source Capture (05:40–06:30 UTC) and the two forward previews (08:00–08:35 UTC) still had no V2 schedule run IDs. This records absence of registered runs only; it does not infer the cause. No workflow was manually dispatched and no schedule was changed.
+
+The latest read-only Supabase aggregate remains 3,915 strictly pre-kickoff snapshots / 327 events, zero snapshots in the last seven days, zero future events with saved pre-match quotes, and latest saved pre-match snapshot 2026-10-13 14:48:53.042620 UTC. No odds values or target outcomes were selected.
+
+The last source archive's 24-hour source-age boundary remains 2026-11-10 14:26:18.118320 UTC, but no refresh is authorized under the current policy/privacy state. No source download or archive upload was performed.
+
+### Safety and model status
+
+The main SHA remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Original candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; protocol and feature-builder blobs remain unchanged. The original 19-feature / 20x2 candidate, `active_lambda=0`, `shadow_lambda=1`, and FAILED stability gate remain intact.
+
+No source CSV was downloaded; no quote value or protected target outcome was read; no prospective forecast was created; target-outcome gate remains 0/30. No paid request, Supabase write/DDL, merge, main update, production `.pkl` change, refit, threshold change, promotion, bet, schedule change, or other-agent change occurred.
