@@ -9,8 +9,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FLAG = "MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED"
-LIVE_GATE = "\${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}"
-UPLOAD_GATE = "\${{ always() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}"
+LIVE_GATE = "${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}"
+UPLOAD_GATE = "${{ always() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}"
 
 WORKFLOWS = {
     ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml": {
