@@ -7586,3 +7586,33 @@ All these branches remain HUMAN-MERGE only. Exact-head CI is offline/synthetic c
 ### Safety
 
 No source download, manual workflow dispatch, paid provider call, Supabase write/DDL, quote-value read, target-outcome read, production `.pkl` change, refit, threshold tuning, promotion, betting, main update, schedule change or other-agent change occurred in this audit. Prospective evaluation remains 0/30 and no Brier/LogLoss superiority claim is permitted.
+
+
+## Artifact-byte SHA verification — 2026-11-10 09:52 UTC
+
+This addendum records a read-only verification of the actual Nov 9 GitHub Actions ZIP bytes, beyond the run/artifact metadata already recorded above.
+
+### Current-form source archive #13681778268
+
+- Parent run: [#42634501531](https://github.com/MaksimBlud/football-ai/actions/runs/42634501531), main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`, successful.
+- GitHub artifact digest and independently computed ZIP SHA-256 both equal `f4fb869be6e065ca611f012fe21b6d1eafe22434c60ced3a2e7b7ea6c5602101`.
+- Manifest SHA-256: `3c5264a9cedd4fdf4e2875c4843601f009226c2b5a0d72956493617498ea79fd`.
+- All **11/11** archived CSV raw-byte SHA-256 values match the manifest, including the ten frozen historical files and the 2026/27 current-season file. The current-season CSV was hashed as opaque bytes only; no score, result, goal, or outcome field was parsed or inspected during this verification.
+- The current-form forward artifact #13700368254 contains a nested copy of this source ZIP; its independently computed SHA-256 is the same `f4fb869b...` digest.
+
+The source manifest records the separate metadata-only feature-input gate as passed (100 identities at source capture) and 110 completed prior-day current-season CSV rows. This is source-integrity evidence only. It does not open the target-outcome evaluation gate.
+
+### Forward-only runtime remains empty
+
+- Current-form forward run [#42677383722](https://github.com/MaksimBlud/football-ai/actions/runs/42677383722) completed SUCCESS on the same main SHA. Its exact report has `quotes_seen=0`, `rows=[]`, `v2_current_form_shadow_captured=0`, `target_outcomes_read=false`, and `target_outcomes_scored=false`.
+- Original old-season forward run [#42676083517](https://github.com/MaksimBlud/football-ai/actions/runs/42676083517) also completed SUCCESS, with `quotes_seen=0`, `future_quotes_checked=0`, and `v2_diagnostic_previews_captured=0`.
+- The read-only Supabase quote aggregate still reports 3,915 strictly pre-kickoff snapshots / 327 events, zero new in seven days, zero future events with a saved pre-kickoff quote, and latest quote 2026-10-13 14:48:53 UTC.
+- At the 2026-11-10 09:52 UTC audit, the latest repository-wide Actions run listing and latest scheduled-run listing contained no later V2 source/diagnostic/forward run IDs than the four successful Nov 9 runs recorded above. This is a run-list observation, not proof of why the Nov 10 schedules did not register.
+
+### Confidentiality and rights remain binding blockers
+
+The repository remains public. The downloaded source artifact proves that its current-season CSV bytes were present in a public-repository Actions artifact. The #727 private-storage helper explicitly fails closed for public repositories; its branch remains unmerged. SHA verification proves integrity, not confidentiality. Do not treat this archive as a new permission to publish, infer, or evaluate.
+
+The source-only rights scope in #727 is private, noncommercial archival/validation only. Frozen V2 inference remains explicitly false/unresolved. The separate target-outcome gate remains **0/30**; no target outcomes were read or scored. The #720 → #727 manual integration order remains binding.
+
+No source download was initiated by this audit; no quote was read individually; no target outcome was parsed; no Supabase write/DDL, paid request, production `.pkl` change, model refit, threshold change, promotion, merge, or main update occurred. HUMAN-MERGE only.
