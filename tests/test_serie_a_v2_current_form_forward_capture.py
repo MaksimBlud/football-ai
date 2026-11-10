@@ -47,6 +47,13 @@ def allow_synthetic_v2_inference_scope(monkeypatch):
         lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
     )
 
+    import market_anchor_v2_artifact_privacy as privacy
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: {"private": True, "storage_policy": "SYNTHETIC_TEST_ONLY"},
+    )
+
 
 class OffsetlessTZ(tzinfo):
     def utcoffset(self, dt):
@@ -230,6 +237,58 @@ def valid_parent(archive, *, quote_time):
         "run_created_at_utc": PARENT_CREATED,
         "run_completed_at_utc": PARENT_COMPLETED,
     }
+
+
+def test_current_form_prepare_forward_capture_denies_inference_before_source_or_feature_access(monkeypatch, tmp_path):
+    import market_anchor_v2_source_rights as rights
+
+    def deny_scope():
+        raise PermissionError("V2 frozen inference scope remains unresolved")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", deny_scope)
+
+    class ForbiddenRows:
+        def __iter__(self):
+            pytest.fail("quotes, archives and gate identities must not be inspected before rights clearance")
+
+    output_dir = tmp_path / "must-not-be-created"
+    with pytest.raises(PermissionError, match="V2 frozen inference scope remains unresolved"):
+        _prepare_forward_capture(
+            ForbiddenRows(),
+            ForbiddenRows(),
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            load_archive=lambda *_args, **_kwargs: pytest.fail("archive must not be loaded"),
+            verify_parent_run=lambda *_args, **_kwargs: pytest.fail("parent run must not be read"),
+            current_gate_identities=ForbiddenRows(),
+            write_sources_to=output_dir,
+        )
+    assert not output_dir.exists()
+
+
+def test_current_form_prepare_forward_capture_denies_public_storage_before_source_access(monkeypatch, tmp_path):
+    import market_anchor_v2_artifact_privacy as privacy
+
+    def deny_public_storage():
+        raise PermissionError("source archives require a private GitHub repository")
+
+    monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", deny_public_storage)
+
+    class ForbiddenRows:
+        def __iter__(self):
+            pytest.fail("quotes, archives and gate identities must not be inspected before private storage")
+
+    output_dir = tmp_path / "must-not-be-created"
+    with pytest.raises(PermissionError, match="private GitHub repository"):
+        _prepare_forward_capture(
+            ForbiddenRows(),
+            ForbiddenRows(),
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            load_archive=lambda *_args, **_kwargs: pytest.fail("archive must not be loaded"),
+            verify_parent_run=lambda *_args, **_kwargs: pytest.fail("parent run must not be read"),
+            current_gate_identities=ForbiddenRows(),
+            write_sources_to=output_dir,
+        )
+    assert not output_dir.exists()
 
 
 def test_current_form_v2_scores_only_future_quote_with_prequote_source_and_stays_no_bet(tmp_path):
