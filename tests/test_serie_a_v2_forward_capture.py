@@ -723,3 +723,75 @@ def test_source_archive_created_at_equal_to_quote_is_not_prequote_source():
     assert report["blocked_no_prior_source"] == 1
     assert report["rows"][0]["status"] == "NO_EARLIER_SOURCE_ARCHIVE"
     assert report["rows"][0]["v2_preview"] is None
+
+
+def test_direct_original_archive_helpers_fail_before_network_when_both_rights_scopes_are_denied(monkeypatch):
+    import market_anchor_v2_source_rights as inference_rights
+    import market_anchor_v2_source_capture_rights as source_rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    calls = []
+
+    def deny_inference():
+        calls.append("inference")
+        raise PermissionError("synthetic inference scope denied")
+
+    def deny_source_only():
+        calls.append("source_only")
+        raise PermissionError("synthetic source-only scope denied")
+
+    monkeypatch.setattr(inference_rights, "require_personal_research_inference_scope", deny_inference)
+    monkeypatch.setattr(source_rights, "require_personal_research_source_capture_scope", deny_source_only)
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: pytest.fail("privacy lookup must not run when both rights scopes are denied"),
+    )
+    get = lambda *_args, **_kwargs: pytest.fail("GitHub API must not run before rights clearance")
+
+    with pytest.raises(PermissionError, match="synthetic source-only scope denied"):
+        discover_archives(token="test-token", get=get)
+    assert calls == ["inference", "source_only"]
+
+    with pytest.raises(PermissionError, match="synthetic source-only scope denied"):
+        get_archive(123, token="test-token", get=get)
+    assert calls == ["inference", "source_only", "inference", "source_only"]
+
+
+def test_direct_original_archive_discovery_can_use_source_only_scope_without_inference(monkeypatch):
+    import market_anchor_v2_source_rights as inference_rights
+    import market_anchor_v2_source_capture_rights as source_rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    calls = []
+
+    def deny_inference():
+        calls.append("inference")
+        raise PermissionError("synthetic inference scope denied")
+
+    def allow_source_only():
+        calls.append("source_only")
+        return {"source_capture_scope": "SYNTHETIC_TEST_ONLY"}
+
+    monkeypatch.setattr(inference_rights, "require_personal_research_inference_scope", deny_inference)
+    monkeypatch.setattr(source_rights, "require_personal_research_source_capture_scope", allow_source_only)
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: calls.append("private") or {"private": True},
+    )
+
+    class Response:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"artifacts": []}
+
+    def fake_get(url, *, headers, timeout):
+        calls.append("github")
+        assert "/actions/artifacts?name=" in url
+        return Response()
+
+    assert discover_archives(token="test-token", get=fake_get) == []
+    assert calls == ["inference", "source_only", "private", "github"]
