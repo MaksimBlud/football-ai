@@ -63,28 +63,17 @@ def _github_json(url: str, *, token: str, get=requests.get) -> dict:
 
 
 def _require_private_source_archive_read_scope() -> dict:
-    """Require either authorized source-only archival or frozen inference, plus private storage.
-
-    This helper authorizes reading an already archived source ZIP only. It does
-    not authorize quote access, feature construction, model inference, training,
-    or publication.
-    """
-    try:
-        from market_anchor_v2_source_rights import require_personal_research_inference_scope
-        rights = require_personal_research_inference_scope()
-        access_scope = "FROZEN_V2_INFERENCE"
-    except PermissionError:
-        from market_anchor_v2_source_capture_rights import require_personal_research_source_capture_scope
-        rights = require_personal_research_source_capture_scope()
-        access_scope = "SOURCE_CAPTURE_ONLY"
-
+    """Require cleared frozen-inference rights and private storage before archive reads."""
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+    rights = require_personal_research_inference_scope()
     from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
     privacy = require_private_repository_for_source_artifacts()
     return {
-        "access_scope": access_scope,
+        "access_scope": "FROZEN_V2_INFERENCE",
         "rights": rights,
         "artifact_privacy": privacy,
     }
+
 
 
 def discover_archives(*, token: str, get=requests.get) -> list[dict]:
