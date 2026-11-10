@@ -110,7 +110,7 @@ def _job_env_block(text: str) -> str:
         None,
     )
     assert end is not None, "job-level steps block missing"
-    return "\\n".join(lines[start:end])
+    return "\n".join(lines[start:end])
 
 
 CREDENTIAL_BINDINGS = {
