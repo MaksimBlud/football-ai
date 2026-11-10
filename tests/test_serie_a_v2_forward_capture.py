@@ -103,7 +103,6 @@ def fake_verified_parent_run(archive, quote_time):
 
 
 
-@pytest.mark.parametrize("conflict", ["home_team", "kickoff"])
 def test_prepare_forward_capture_denies_unresolved_inference_before_inputs_or_callbacks(monkeypatch, tmp_path):
     import market_anchor_v2_source_rights as rights
 
@@ -154,6 +153,7 @@ def test_prepare_forward_capture_denies_public_artifact_storage_before_inputs(mo
     assert not output_dir.exists()
 
 
+@pytest.mark.parametrize("conflict", ["home_team", "kickoff"])
 def test_same_original_event_id_cannot_change_fixture_identity(conflict):
     raw, metadata = make_source_archive()
     first = quote(ts="2026-10-14T06:00:00Z")
