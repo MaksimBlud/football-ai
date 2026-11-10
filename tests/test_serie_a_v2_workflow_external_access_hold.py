@@ -172,3 +172,17 @@ def test_live_credentials_are_not_exposed_to_offline_steps():
                 assert f"{name}: {value}" in block, (
                     f"{path}: {name} must be scoped only to {step_name}"
                 )
+
+
+def test_live_access_hold_cannot_be_overridden_at_job_or_step_scope():
+    for path in WORKFLOWS:
+        text = _workflow(path)
+        definitions = [
+            line
+            for line in text.splitlines()
+            if line.lstrip().startswith(f"{FLAG}:")
+        ]
+        assert definitions == [f'  {FLAG}: "false"'], (
+            f"{path}: the fail-closed flag must have exactly one workflow-level "
+            "definition and must not be overridden by job/step env"
+        )
