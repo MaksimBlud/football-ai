@@ -1377,3 +1377,36 @@ def test_current_form_forward_source_and_rights_blob_pins_match_exact_repository
     assert forward_capture_module.EXPECTED_SOURCE_RIGHTS_MANIFEST_BLOB_SHA1 == _repository_git_blob_sha1(
         root / forward_capture_module.SOURCE_RIGHTS_MANIFEST_PATH
     )
+
+
+def test_direct_current_form_archive_helpers_fail_before_network_when_rights_are_denied(monkeypatch):
+    import market_anchor_v2_source_rights as inference_rights
+    import market_anchor_v2_source_capture_rights as source_rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    calls = []
+
+    def deny_inference():
+        calls.append("inference")
+        raise PermissionError("synthetic inference scope denied")
+
+    def deny_source_only():
+        calls.append("source_only")
+        raise PermissionError("synthetic source-only scope denied")
+
+    monkeypatch.setattr(inference_rights, "require_personal_research_inference_scope", deny_inference)
+    monkeypatch.setattr(source_rights, "require_personal_research_source_capture_scope", deny_source_only)
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: pytest.fail("privacy lookup must not run when rights are denied"),
+    )
+    get = lambda *_args, **_kwargs: pytest.fail("GitHub API must not run before rights clearance")
+
+    with pytest.raises(PermissionError, match="synthetic source-only scope denied"):
+        forward_capture_module.discover_archives(token="test-token", get=get)
+    assert calls == ["inference", "source_only"]
+
+    with pytest.raises(PermissionError, match="synthetic source-only scope denied"):
+        get_archive(9876, token="test-token", get=get)
+    assert calls == ["inference", "source_only", "inference", "source_only"]
