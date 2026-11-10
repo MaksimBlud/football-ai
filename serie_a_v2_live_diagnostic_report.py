@@ -256,6 +256,12 @@ def make_report(quotes: list[dict], history: pd.DataFrame, source_audit: list[di
         or as_of_utc.utcoffset() is None
     ):
         raise ValueError("as-of timestamp needs UTC timezone")
+    # The importable report builder must enforce both provider scope and private
+    # artifact storage itself; CLI-only guards can be bypassed by direct imports.
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+    require_personal_research_inference_scope()
+    from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
+    require_private_repository_for_source_artifacts()
     _assert_original_v2_source_embargo(
         history, source_audit, as_of_utc=as_of_utc.astimezone(timezone.utc)
     )
