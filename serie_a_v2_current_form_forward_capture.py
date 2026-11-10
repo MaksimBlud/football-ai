@@ -84,6 +84,8 @@ def _github_json(url: str, *, token: str, get=requests.get) -> dict:
 
 
 def discover_archives(*, token: str, get=requests.get) -> list[dict]:
+    from serie_a_v2_forward_capture import _require_private_source_archive_read_scope
+    _require_private_source_archive_read_scope()
     out, seen_ids = [], set()
     for page in range(1, 4):
         data = _github_json(
@@ -174,6 +176,8 @@ def verify_source_run(
 
 
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
+    from serie_a_v2_forward_capture import _require_private_source_archive_read_scope
+    _require_private_source_archive_read_scope()
     if type(artifact_id) is not int or artifact_id <= 0:
         raise ValueError("invalid source artifact id")
     if not token:
