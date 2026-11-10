@@ -164,22 +164,22 @@ def load_frozen_modules(source_dir: Path):
     return lab, v1, v2
 
 
-def _require_frozen_v2_replay_inference_scope() -> dict:
-    """Require provider clearance before any replay source, target, or model access."""
-    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+def _deny_retired_saved_cohort_replay() -> None:
+    """Fail closed: this historical refit/replay path is retired.
 
-    return require_personal_research_inference_scope()
+    The original candidate is SHA-pinned and refitting is disabled. This legacy
+    post-outcome replay also downloads public CSVs before reaching the frozen
+    model guard, so no caller may use it as a source-download or inference path.
+    """
+    raise PermissionError(
+        "saved-cohort replay/refit is retired; use the SHA-pinned frozen candidate "
+        "and the separately gated pre-kickoff V2 forward path"
+    )
 
 
 def download_csv(code: str) -> tuple[pd.DataFrame, str]:
-    # This low-level helper is directly importable; guard before the first HTTP call.
-    _require_frozen_v2_replay_inference_scope()
-    url = BASE_URL.format(code=code)
-    response = requests.get(url, timeout=60, headers={"User-Agent": "football-ai-frozen-replay/1"})
-    response.raise_for_status()
-    if len(response.content) < 500:
-        raise RuntimeError(f"suspiciously small Football-Data response for {code}")
-    return pd.read_csv(pd.io.common.BytesIO(response.content)), sha256_bytes(response.content)
+    # This low-level helper is directly importable; never let it bypass the retired path.
+    _deny_retired_saved_cohort_replay()
 
 
 def build_training_frame(lab) -> tuple[pd.DataFrame, dict[str, str], dict[str, pd.DataFrame]]:
@@ -276,9 +276,8 @@ def validate_targets() -> None:
 
 
 def replay(source_dir: Path, *, save_research_candidate: bool = False) -> dict[str, Any]:
-    # Guard the public replay entrypoint before target labels or source inputs are touched.
-    _require_frozen_v2_replay_inference_scope()
-    validate_targets()
+    # This post-outcome refit/replay path is retired before target labels or sources are touched.
+    _deny_retired_saved_cohort_replay()
     lab, v1, v2 = load_frozen_modules(source_dir)
     training, historical_hashes, historical_by_code = build_training_frame(lab)
     artifact = v2.fit_candidate_artifact(training)
@@ -435,9 +434,8 @@ def restore_frozen_candidate_from_training_history(source_dir: Path) -> Path:
     TRAIN_SEASONS source file hashes, the model artifact SHA, and the fixed
     training fingerprint MUST still match their immutable September reference.
     """
-    # This entrypoint downloads ten historical CSVs before the later fit helper.
-    # Enforce the provider boundary here, before even loading recovery inputs.
-    _require_frozen_v2_replay_inference_scope()
+    # Candidate recovery by historical refit is retired; do not download sources.
+    _deny_retired_saved_cohort_replay()
     _lab, _v1, v2 = load_frozen_modules(source_dir)
     from_file = Path(__file__).resolve().parent / (
         "experiments/market_anchor_v2_saved_cohort_replay_report.json"
