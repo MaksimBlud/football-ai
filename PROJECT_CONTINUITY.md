@@ -7733,3 +7733,10 @@ The last source archive's 24-hour source-age boundary remains 2026-11-10 14:26:1
 The main SHA remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Original candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; protocol and feature-builder blobs remain unchanged. The original 19-feature / 20x2 candidate, `active_lambda=0`, `shadow_lambda=1`, and FAILED stability gate remain intact.
 
 No source CSV was downloaded; no quote value or protected target outcome was read; no prospective forecast was created; target-outcome gate remains 0/30. No paid request, Supabase write/DDL, merge, main update, production `.pkl` change, refit, threshold change, promotion, bet, schedule change, or other-agent change occurred.
+
+
+### Gate-count distinction — do not conflate the 30-event and 30-forecast gates
+
+The frozen original V2 protocol's `first_outcome_read_gate` is defined in terms of **30 completed primary-league events**. The current-form source workflow has a separate **feature-input gate** with the same numeric minimum; the last source-capture log recorded 100 metadata-only completed-primary event identities for that feature-input gate. That 100 is not a count of prospective forecasts and does not itself authorize reading protected target outcomes.
+
+The current-form policy also has a distinct **target-outcome evaluation gate** requiring 30 eligible completed prospective forecasts. Its count remains **0/30** because no prospective V2 forecasts have been captured. These gates must not be substituted for one another. No protected 2026/27 target outcomes were read in this audit; no claim is made that the original V2 outcome-read gate has been exercised or that the current-form evaluation gate is open.
