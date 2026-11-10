@@ -4,6 +4,7 @@ from datetime import datetime, timezone, tzinfo
 import pandas as pd
 import pytest
 import serie_a_v2_live_diagnostic_report as report_module
+import serie_a_v2_public_source_download_budget as budget
 
 from serie_a_v2_live_diagnostic_report import (
     PUBLIC_BASE, _source_codes, fetch_public_history, make_report,
@@ -72,7 +73,7 @@ def allow_synthetic_v2_rights_for_offline_tests(monkeypatch):
         lambda: {"private": True, "storage_policy": "SYNTHETIC_TEST_ONLY"},
     )
     monkeypatch.setattr(
-        report_module,
+        budget,
         "require_current_download_reservation",
         lambda **_kwargs: datetime(2026, 10, 13, 15, 0, tzinfo=timezone.utc),
     )
@@ -101,7 +102,7 @@ def test_direct_public_history_fetch_enforces_source_only_rights_before_storage_
         lambda: pytest.fail("privacy lookup must not run after source-only rights denial"),
     )
     monkeypatch.setattr(
-        report_module,
+        budget,
         "require_current_download_reservation",
         lambda **_kwargs: pytest.fail("budget lookup must not run after source-only rights denial"),
     )
@@ -140,7 +141,7 @@ def test_direct_public_history_fetch_enforces_private_storage_after_source_only_
     )
     monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", deny_private_storage)
     monkeypatch.setattr(
-        report_module,
+        budget,
         "require_current_download_reservation",
         lambda **_kwargs: pytest.fail("budget lookup must not run after private-storage denial"),
     )
