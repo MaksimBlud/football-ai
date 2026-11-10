@@ -35,9 +35,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-      GITHUB_TOKEN: ${{ github.token }}
       GITHUB_REPOSITORY: ${{ github.repository }}
       GITHUB_REF: ${{ github.ref }}
       PYTHONPATH: .
@@ -64,6 +61,10 @@ jobs:
             tests/test_serie_a_v2_manual_quote_trigger_contract.py
       - name: Generate read-only current-form V2 shadow from already saved quotes
         if: ${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_KEY"
