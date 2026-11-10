@@ -68,7 +68,6 @@ jobs:
             --raw-source-dir artifacts/serie_a_v2_source_capture
       - name: Archive diagnostic and exact public CSV bytes for provenance
         if: ${{ always() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: serie-a-v2-free-real-quote-diagnostic
