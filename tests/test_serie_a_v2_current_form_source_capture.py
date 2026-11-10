@@ -26,7 +26,7 @@ from serie_a_v2_current_form_source_capture import (
 )
 from serie_a_v2_live_diagnostic_report import _source_codes
 
-import serie_a_v2_live_diagnostic_report as report_module
+import serie_a_v2_public_source_download_budget as budget
 
 
 @pytest.fixture(autouse=True)
@@ -54,7 +54,7 @@ def _allow_synthetic_source_only_capture_and_budget(monkeypatch):
     monkeypatch.setattr(source_capture, "require_private_repository_for_source_artifacts", allow_private_storage)
     monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", allow_private_storage)
     monkeypatch.setattr(source_capture, "require_current_download_reservation", allow_budget_reservation)
-    monkeypatch.setattr(report_module, "require_current_download_reservation", allow_budget_reservation)
+    monkeypatch.setattr(budget, "require_current_download_reservation", allow_budget_reservation)
 
 
 def test_importable_capture_entrypoint_blocks_source_rights_denial_before_candidate_or_metadata(monkeypatch, tmp_path):
