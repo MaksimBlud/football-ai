@@ -63,58 +63,7 @@ RESULT_TO_INT = {"H": 0, "D": 1, "A": 2}
 # by the parent 47-event replay. Old-model probabilities come from the frozen
 # POINT_IN_TIME_CROSS_LEAGUE_REPLAY_V1 manifest. Outcomes are now known and are
 # used only for this explicitly post-outcome diagnostic.
-TARGETS: tuple[dict[str, Any], ...] = (
-    {
-        "event_id": "a9656d25ca6b06be9e477a098333bd70", "home": "Venezia", "away": "Fiorentina", "result": "A",
-        "market": [0.347195829018205, 0.281422174186932, 0.371381996794863],
-        "old_model": [0.2372110003648549, 0.2243963446558066, 0.5383926549793384],
-    },
-    {
-        "event_id": "3dba40cdf22e962c0f6f6c940ef01850", "home": "Genoa", "away": "Frosinone", "result": "D",
-        "market": [0.445403244400048, 0.282980928929109, 0.271615826670843],
-        "old_model": [0.3334816594874364, 0.2821909105124798, 0.3843274300000837],
-    },
-    {
-        "event_id": "b412817739a87e18bf391bf6ccff6560", "home": "Lazio", "away": "AC Milan", "result": "D",
-        "market": [0.281318981610276, 0.299624870383391, 0.419056148006334],
-        "old_model": [0.2839135910246846, 0.2934240786261582, 0.4226623303491572],
-    },
-    {
-        "event_id": "fd30ca2b96bfa088e51bffddeb3b6e56", "home": "Atalanta BC", "away": "Cagliari", "result": "A",
-        "market": [0.599241512092612, 0.237932289673021, 0.162826198234367],
-        "old_model": [0.5754179358482361, 0.2043052911758422, 0.2202767729759216],
-    },
-    {
-        "event_id": "e66df35062d3cc1c59258406374c2e76", "home": "Lecce", "away": "Monza", "result": "H",
-        "market": [0.358238198691022, 0.307047489045547, 0.334714312263432],
-        "old_model": [0.3413350385825347, 0.3025469274087825, 0.3561180340086828],
-    },
-    {
-        "event_id": "27eaaab4498bb2984321e5f81f0ff9fd", "home": "Napoli", "away": "Bologna", "result": "H",
-        "market": [0.529471343018315, 0.267441816899981, 0.203086840081704],
-        "old_model": [0.5386763375603061, 0.2388650548119859, 0.2224586076277079],
-    },
-    {
-        "event_id": "0a91f850039ce571eb6e90b2eed15548", "home": "Sassuolo", "away": "Juventus", "result": "H",
-        "market": [0.182743963070909, 0.242218002399942, 0.575038034529149],
-        "old_model": [0.2073271932401416, 0.2628998536735729, 0.5297729530862854],
-    },
-    {
-        "event_id": "17a081148b714450797ef8d6a29d16e6", "home": "Torino", "away": "AS Roma", "result": "A",
-        "market": [0.162349921031296, 0.235421660599638, 0.602228418369067],
-        "old_model": [0.1335925499675437, 0.2143672470559849, 0.6520402029764713],
-    },
-    {
-        "event_id": "9da3aa4b46166eb4ccd1e600d67080a6", "home": "Como", "away": "Parma", "result": "H",
-        "market": [0.774299209903783, 0.155769910752818, 0.0699308793433981],
-        "old_model": [0.6703084111213684, 0.2181374281644821, 0.1115541607141494],
-    },
-    {
-        "event_id": "7ea3ea9925ae0f1d149965fb9769c7dc", "home": "Inter Milan", "away": "Udinese", "result": "H",
-        "market": [0.758308448454786, 0.157106223942894, 0.08458532760232],
-        "old_model": [0.7089131474494934, 0.1738733053207397, 0.1172135472297668],
-    },
-)
+TARGETS: tuple[dict[str, Any], ...] = ()  # Protected legacy target labels removed; replay is retired.
 
 
 def git_blob_sha1(path: Path) -> str:
@@ -183,6 +132,7 @@ def download_csv(code: str) -> tuple[pd.DataFrame, str]:
 
 
 def build_training_frame(lab) -> tuple[pd.DataFrame, dict[str, str], dict[str, pd.DataFrame]]:
+    _deny_retired_saved_cohort_replay()
     raw_frames: list[pd.DataFrame] = []
     hashes: dict[str, str] = {}
     by_code: dict[str, pd.DataFrame] = {}
@@ -213,6 +163,7 @@ def build_training_frame(lab) -> tuple[pd.DataFrame, dict[str, str], dict[str, p
 
 
 def build_target_features(lab, historical_by_code: dict[str, pd.DataFrame]) -> tuple[pd.DataFrame, str, dict[str, int]]:
+    _deny_retired_saved_cohort_replay()
     current, current_sha256 = download_csv(CURRENT_SEASON_CODE)
     frames = [historical_by_code[code].copy() for code in TRAIN_SEASONS]
     frames.append(current.copy())
@@ -259,6 +210,7 @@ def build_target_features(lab, historical_by_code: dict[str, pd.DataFrame]) -> t
 
 
 def validate_targets() -> None:
+    _deny_retired_saved_cohort_replay()
     if len(TARGETS) != 10:
         raise RuntimeError("frozen Serie A parent cohort must contain exactly 10 events")
     ids = [row["event_id"] for row in TARGETS]
@@ -362,6 +314,7 @@ def replay(source_dir: Path, *, save_research_candidate: bool = False) -> dict[s
 
 
 def assert_same_frozen_replay(report: dict[str, Any]) -> None:
+    _deny_retired_saved_cohort_replay()
     """Require byte-identified frozen inputs and numerically identical saved findings.
 
     Old observations are already open: this is a *post-outcome diagnostic* replay.
