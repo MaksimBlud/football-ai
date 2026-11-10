@@ -30,6 +30,7 @@ on:
       - ".github/workflows/serie-a-v2-current-form-forward-preview.yml"
       - ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
       - ".github/workflows/serie-a-v2-forward-preview.yml"
+      - ".github/workflows/recover-market-anchor-v2-candidate.yml"
       - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
       - ".github/workflows/serie-a-frozen-v2-shadow-tests.yml"
 
