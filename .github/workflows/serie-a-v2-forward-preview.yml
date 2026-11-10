@@ -46,9 +46,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-      GITHUB_TOKEN: ${{ github.token }}
       OPENBLAS_NUM_THREADS: "1"
       OMP_NUM_THREADS: "1"
       MKL_NUM_THREADS: "1"
@@ -75,11 +72,17 @@ jobs:
             tests/test_serie_a_v2_frozen_shadow_preview.py
       - name: Attest original historical source ZIP from real GitHub Actions (no quotes read)
         if: ${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           python serie_a_v2_attest_real_source.py \
             --output artifacts/serie_a_v2_real_source_attestation.json
       - name: Generate actual original frozen V2 source-verified read-only preview
         if: ${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_KEY"
