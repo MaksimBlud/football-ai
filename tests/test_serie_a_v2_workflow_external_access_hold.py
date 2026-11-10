@@ -186,3 +186,18 @@ def test_live_access_hold_cannot_be_overridden_at_job_or_step_scope():
             f"{path}: the fail-closed flag must have exactly one workflow-level "
             "definition and must not be overridden by job/step env"
         )
+
+
+def test_every_artifact_upload_in_live_workflows_is_gated():
+    for path in WORKFLOWS:
+        lines = _workflow(path).splitlines()
+        upload_indices = [
+            index
+            for index, line in enumerate(lines)
+            if line.strip().startswith("uses: actions/upload-artifact@")
+        ]
+        assert upload_indices, f"{path}: expected at least one artifact upload"
+        for index in upload_indices:
+            assert index > 0 and lines[index - 1].strip() == f"if: {UPLOAD_GATE}", (
+                f"{path}: every artifact upload must be gated, not only a named upload step"
+            )
