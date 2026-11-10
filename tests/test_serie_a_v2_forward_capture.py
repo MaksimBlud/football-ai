@@ -795,3 +795,39 @@ def test_direct_original_archive_discovery_can_use_source_only_scope_without_inf
 
     assert discover_archives(token="test-token", get=fake_get) == []
     assert calls == ["inference", "source_only", "private", "github"]
+
+
+def test_direct_archive_helpers_require_private_repository_even_for_source_only_scope(monkeypatch):
+    import market_anchor_v2_source_rights as inference_rights
+    import market_anchor_v2_source_capture_rights as source_rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    calls = []
+
+    def deny_inference():
+        calls.append("inference")
+        raise PermissionError("synthetic inference scope denied")
+
+    def allow_source_only():
+        calls.append("source_only")
+        return {"source_capture_scope": "SYNTHETIC_TEST_ONLY"}
+
+    def deny_public_repository():
+        calls.append("private_repository")
+        raise PermissionError("source archives require a private GitHub repository")
+
+    monkeypatch.setattr(inference_rights, "require_personal_research_inference_scope", deny_inference)
+    monkeypatch.setattr(source_rights, "require_personal_research_source_capture_scope", allow_source_only)
+    monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", deny_public_repository)
+    get = lambda *_args, **_kwargs: pytest.fail("GitHub API must not run when repository storage is public")
+
+    with pytest.raises(PermissionError, match="private GitHub repository"):
+        discover_archives(token="test-token", get=get)
+    assert calls == ["inference", "source_only", "private_repository"]
+
+    with pytest.raises(PermissionError, match="private GitHub repository"):
+        get_archive(123, token="test-token", get=get)
+    assert calls == [
+        "inference", "source_only", "private_repository",
+        "inference", "source_only", "private_repository",
+    ]
