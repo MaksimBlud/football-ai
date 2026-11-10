@@ -51,14 +51,20 @@ def source_audit(observed_at="2026-10-13T15:00:00Z"):
 
 @pytest.fixture(autouse=True)
 def allow_synthetic_v2_rights_for_offline_tests(monkeypatch):
-    """Keep fake-response tests independent of live provider/storage clearance."""
-    import market_anchor_v2_source_rights as rights
+    """Synthetic fixtures model source-only archival and inference separately."""
+    import market_anchor_v2_source_rights as inference_rights
+    import market_anchor_v2_source_capture_rights as source_rights
     import market_anchor_v2_artifact_privacy as privacy
 
     monkeypatch.setattr(
-        rights,
+        inference_rights,
         "require_personal_research_inference_scope",
         lambda: {"rights_manifest_sha256": "a" * 64},
+    )
+    monkeypatch.setattr(
+        source_rights,
+        "require_personal_research_source_capture_scope",
+        lambda: {"source_capture_scope": "SYNTHETIC_TEST_ONLY"},
     )
     monkeypatch.setattr(
         privacy,
@@ -67,49 +73,61 @@ def allow_synthetic_v2_rights_for_offline_tests(monkeypatch):
     )
 
 
-def test_direct_public_history_fetch_enforces_inference_rights_before_storage_or_network(monkeypatch, tmp_path):
-    import market_anchor_v2_source_rights as rights
+def test_direct_public_history_fetch_enforces_source_only_rights_before_storage_or_network(monkeypatch, tmp_path):
+    import market_anchor_v2_source_rights as inference_rights
+    import market_anchor_v2_source_capture_rights as source_rights
     import market_anchor_v2_artifact_privacy as privacy
 
     calls = []
 
-    def deny_inference():
-        calls.append("inference_rights")
-        raise PermissionError("V2 frozen inference scope remains unresolved")
+    def deny_source_only():
+        calls.append("source_only_rights")
+        raise PermissionError("source-only scope remains unresolved")
 
-    monkeypatch.setattr(rights, "require_personal_research_inference_scope", deny_inference)
+    monkeypatch.setattr(source_rights, "require_personal_research_source_capture_scope", deny_source_only)
+    monkeypatch.setattr(
+        inference_rights,
+        "require_personal_research_inference_scope",
+        lambda: pytest.fail("source-only archival must not require frozen-inference rights"),
+    )
     monkeypatch.setattr(
         privacy,
         "require_private_repository_for_source_artifacts",
-        lambda: pytest.fail("privacy lookup must not run after inference denial"),
+        lambda: pytest.fail("privacy lookup must not run after source-only rights denial"),
     )
 
     def forbidden_get(*_args, **_kwargs):
-        pytest.fail("historical source HTTP must not run before inference rights")
+        pytest.fail("historical source HTTP must not run before source-only rights")
 
     archive_dir = tmp_path / "source-archive"
-    with pytest.raises(PermissionError, match="V2 frozen inference scope remains unresolved"):
+    with pytest.raises(PermissionError, match="source-only scope remains unresolved"):
         fetch_public_history(get=forbidden_get, capture_dir=archive_dir)
 
-    assert calls == ["inference_rights"]
+    assert calls == ["source_only_rights"]
     assert not archive_dir.exists()
 
 
-def test_direct_public_history_fetch_enforces_private_storage_before_network(monkeypatch, tmp_path):
-    import market_anchor_v2_source_rights as rights
+def test_direct_public_history_fetch_enforces_private_storage_after_source_only_rights_before_network(monkeypatch, tmp_path):
+    import market_anchor_v2_source_rights as inference_rights
+    import market_anchor_v2_source_capture_rights as source_rights
     import market_anchor_v2_artifact_privacy as privacy
 
     calls = []
 
-    def allow_inference():
-        calls.append("inference_rights")
-        return {"rights_manifest_sha256": "a" * 64}
+    def allow_source_only():
+        calls.append("source_only_rights")
+        return {"source_capture_scope": "SYNTHETIC_TEST_ONLY"}
 
     def deny_private_storage():
         calls.append("private_storage")
         raise PermissionError("private repository required")
 
-    monkeypatch.setattr(rights, "require_personal_research_inference_scope", allow_inference)
+    monkeypatch.setattr(source_rights, "require_personal_research_source_capture_scope", allow_source_only)
+    monkeypatch.setattr(
+        inference_rights,
+        "require_personal_research_inference_scope",
+        lambda: pytest.fail("source-only archival must not require frozen-inference rights"),
+    )
     monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", deny_private_storage)
 
     def forbidden_get(*_args, **_kwargs):
@@ -119,7 +137,7 @@ def test_direct_public_history_fetch_enforces_private_storage_before_network(mon
     with pytest.raises(PermissionError, match="private repository required"):
         fetch_public_history(get=forbidden_get, capture_dir=archive_dir)
 
-    assert calls == ["inference_rights", "private_storage"]
+    assert calls == ["source_only_rights", "private_storage"]
     assert not archive_dir.exists()
 
 
