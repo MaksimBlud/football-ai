@@ -163,93 +163,39 @@ def test_durable_recovered_serie_a_candidate_is_frozen_and_not_production():
 
 
 
-def _deny_replay_inference_scope(monkeypatch):
-    import market_anchor_v2_source_rights as rights
 
-    calls = []
-
-    def deny():
-        calls.append("rights")
-        raise PermissionError("synthetic frozen V2 inference scope denied")
-
-    monkeypatch.setattr(rights, "require_personal_research_inference_scope", deny)
-    return calls
-
-
-def test_replay_csv_download_requires_inference_rights_before_http(monkeypatch):
+def test_retired_replay_csv_download_fails_before_http(monkeypatch):
     import pytest
 
-    calls = _deny_replay_inference_scope(monkeypatch)
     monkeypatch.setattr(
         replay.requests,
         "get",
-        lambda *_args, **_kwargs: pytest.fail("HTTP must not run before rights clearance"),
+        lambda *_args, **_kwargs: pytest.fail("retired replay must not make an HTTP request"),
     )
-    with pytest.raises(PermissionError, match="synthetic frozen V2 inference scope denied"):
+    with pytest.raises(PermissionError, match="saved-cohort replay/refit is retired"):
         replay.download_csv("1617")
-    assert calls == ["rights"]
 
 
-def test_replay_and_recovery_entrypoints_require_rights_before_source_or_target_access(
-    monkeypatch, tmp_path
-):
+def test_retired_replay_and_recovery_fail_before_target_or_source_access(monkeypatch, tmp_path):
     import pytest
 
-    calls = _deny_replay_inference_scope(monkeypatch)
     monkeypatch.setattr(
         replay,
         "validate_targets",
-        lambda: pytest.fail("target labels must not be inspected before rights clearance"),
+        lambda: pytest.fail("retired replay must not inspect target labels"),
     )
     monkeypatch.setattr(
         replay,
         "load_frozen_modules",
-        lambda *_args: pytest.fail("frozen modules must not be loaded before rights clearance"),
+        lambda *_args: pytest.fail("retired recovery must not load/refit model modules"),
     )
     monkeypatch.setattr(
         replay,
         "build_training_frame",
-        lambda *_args: pytest.fail("training sources must not be downloaded before rights clearance"),
+        lambda *_args: pytest.fail("retired recovery must not download training sources"),
     )
 
-    with pytest.raises(PermissionError, match="synthetic frozen V2 inference scope denied"):
+    with pytest.raises(PermissionError, match="saved-cohort replay/refit is retired"):
         replay.replay(tmp_path)
-    assert calls == ["rights"]
-
-    with pytest.raises(PermissionError, match="synthetic frozen V2 inference scope denied"):
+    with pytest.raises(PermissionError, match="saved-cohort replay/refit is retired"):
         replay.restore_frozen_candidate_from_training_history(tmp_path)
-    assert calls == ["rights", "rights"]
-
-
-def test_replay_csv_download_occurs_only_after_explicit_inference_clearance(monkeypatch):
-    import hashlib
-    import market_anchor_v2_source_rights as rights
-
-    calls = []
-    monkeypatch.setattr(
-        rights,
-        "require_personal_research_inference_scope",
-        lambda: calls.append("rights") or {"scope_status": "GRANTED"},
-    )
-    header = "Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HS,AS,HST,AST,HC,AC,HY,AY,HR,AR\n"
-    row = "01/08/2016,Team A,Team B,1,0,H,10,5,4,2,6,3,1,0,0,0\n"
-    payload = (header + row * 40).encode("utf-8")
-
-    class Response:
-        content = payload
-
-        def raise_for_status(self):
-            return None
-
-    def fake_get(url, *, timeout, headers):
-        calls.append("http")
-        assert url == replay.BASE_URL.format(code="1617")
-        assert timeout == 60
-        assert headers["User-Agent"] == "football-ai-frozen-replay/1"
-        return Response()
-
-    monkeypatch.setattr(replay.requests, "get", fake_get)
-    frame, digest = replay.download_csv("1617")
-    assert calls == ["rights", "http"]
-    assert len(frame) == 40
-    assert digest == hashlib.sha256(payload).hexdigest()
