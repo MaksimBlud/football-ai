@@ -788,9 +788,11 @@ def test_direct_original_archive_discovery_can_use_source_only_scope_without_inf
         def json(self):
             return {"artifacts": []}
 
-    def fake_get(url, *, headers, timeout):
+    def fake_get(url, **kwargs):
         calls.append("github")
         assert "/actions/artifacts?name=" in url
+        assert kwargs["timeout"] == 20
+        assert kwargs["allow_redirects"] is False
         return Response()
 
     assert discover_archives(token="test-token", get=fake_get) == []
