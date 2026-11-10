@@ -9,6 +9,7 @@ on:
       - research/v2-prematch-quote-query-cutoff-stacked-on-720-*
       - research/v2-direct-quote-reader-rights-gate-stacked-on-742-*
       - research/v2-direct-shadow-preview-inference-rights-gate-stacked-on-774-*
+      - research/v2-core-inference-and-refit-freeze-stacked-on-777-*
     paths:
       - "PROJECT_CONTINUITY.md"
       - "tests/test_serie_a_v2_dependency_lock_contract.py"
@@ -61,11 +62,18 @@ on:
       - research/v2-direct-quote-reader-rights-gate-stacked-on-742-20261109-run11
       - research/v2-direct-shadow-preview-inference-rights-gate-stacked-on-774-20261109-run11
       - research/v2-core-inference-and-refit-freeze-stacked-on-777-20261109-run11
+      - research/v2-direct-forward-report-rights-privacy-gate-stacked-on-778-20261110-run11
     paths:
       - "serie_a_v2_frozen_shadow_preview.py"
       - "tests/test_serie_a_v2_frozen_shadow_preview.py"
       - "market_anchor_1x2_v2_shadow.py"
       - "tests/test_market_anchor_1x2_v2_shadow.py"
+      - "serie_a_v2_forward_capture.py"
+      - "serie_a_v2_current_form_forward_capture.py"
+      - "serie_a_v2_live_diagnostic_report.py"
+      - "tests/test_serie_a_v2_forward_capture.py"
+      - "tests/test_serie_a_v2_current_form_forward_capture.py"
+      - "tests/test_serie_a_v2_live_diagnostic_report.py"
       - ".github/workflows/serie-a-frozen-v2-shadow-tests.yml"
 
 permissions:
