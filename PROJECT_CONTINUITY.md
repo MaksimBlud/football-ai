@@ -1,3 +1,55 @@
+# Continuity update — 2026-11-10 15:59 UTC — interim live-workflow hold PR #781
+
+## Fresh main and frozen original V2 identity
+
+- Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no merge or main write occurred.
+- Candidate Git blob: `ac1303f6b096664983fbf52443bd0a381b23ba21`; candidate artifact SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Original protocol Git blob: `65729e9639720e67624c1481190aa22ae606f151`.
+- Original feature builder Git blob: `401b3a0893371bfa4a488ec92a4a54af2678c8f7`.
+- The frozen candidate still has 19 features, 3,799 training rows through 2026-06-30, `active_lambda=0`, `shadow_residual_lambda=1`, `stability_gate_passed=false`, and `automatic_promotion=false`. No model artifact, weights, scaler, imputer, feature order, training fingerprint, or production `.pkl` changed.
+
+## Why an interim hold was necessary
+
+The official Football-Data data page is still marked `Updated: 10/11/26` and says the free CSV/Excel data is intended for private individuals only, not commercial or data-training products using automated bots, scrapers, or AI: https://football-data.co.uk/data.
+
+The main branch remains public and still lacks `market_anchor_v2_source_rights.py`. Its four live V2 workflows still contain source/quote/archive steps and 90-day artifact uploads. The newer source-rights decision in PR #780 is not on main because #780 is stacked on #727 → #720. Therefore the old main could continue live access while the safer rights stack awaited HUMAN-MERGE.
+
+## New direct-main Draft PR #781
+
+PR: https://github.com/MaksimBlud/football-ai/pull/781
+
+- Branch: `research/v2-workflow-live-access-hold-20261110-run11`.
+- Base: `main` at `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- Final exact HEAD: `685c314e5429d4d7ae07db452bfa9bdeafd71a0c`.
+- Six files changed: four live V2 workflows, the existing Frozen V2 Shadow Tests workflow, and one static workflow-contract test.
+- A workflow-level `MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED: "false"` now gates every live source/quote/archive-read step and every associated `upload-artifact` step. Offline regression tests remain enabled.
+- Existing schedules are byte-for-byte retained: diagnostic `13 6 * * *`; original forward `8 8 * * *`; current-form source `50 5 * * *`; current-form forward `18 8 * * *`.
+- Static tests pin the fail-closed default, all six live-step guards, all four upload guards, and those four cron expressions.
+
+Exact-head GitHub Actions: **7/7 SUCCESS** on `685c314e5429d4d7ae07db452bfa9bdeafd71a0c`:
+- Frozen V2 Shadow Tests run 42849762620: **88 passed**, compile PASS, production `.pkl` diff guard PASS.
+- Serie A 42849761802; Research 42849761894; Product 42849762163; Bundesliga 42849762161; Ligue 1 42849761770; Eredivisie 42849762354 — all SUCCESS.
+
+These CI runs are offline/synthetic. They made no provider, Supabase, quote, or outcome reads. PR #781 remains Draft / HUMAN-MERGE; it has not been merged.
+
+## Current live-data state
+
+Latest registered original-V2 diagnostic remains run 42837720155 (2026-11-10 14:47 UTC): SUCCESS, but zero saved quotes, zero scored previews, zero prospective predictions, and no eligible prospective cohort. The current-form source/forward pair #42827889788 / #42828048742 verified a source archive and parent run, but also saw zero quotes and captured zero forecasts. The original old-season forward workflow had no new run in the retrieved latest 100-run window; do not dispatch it manually.
+
+Read-only Serie A `public.odds_snapshots` aggregate, restricted to `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= now()`:
+- 620 strictly pre-match snapshots across 63 events.
+- Latest saved quote timestamp: 2026-10-13 14:48:53 UTC.
+- New snapshots/events in the last seven days: 0 / 0.
+- Future events with saved pre-match quotes: 0.
+No odds values, scores, settlements, or protected target outcomes were selected.
+
+## Integration order and restrictions
+
+- PR #781 is the temporary direct-main hold and should be manually integrated first if the owner chooses to stop current public-main live access immediately.
+- Then rebase/revalidate the rights/privacy stack #720 → #727 → #780 and its descendants on fresh main. PR #720 is OPEN/Ready; #727 OPEN/Ready; #780 OPEN/Draft.
+- No automatic merge, no main write, no schedule/trigger change, no paid API, no Supabase write/DDL, no protected outcome read, no model refit, no threshold tuning, no betting, and no promotion.
+- Original first-outcome-read gate remains 30 completed primary Serie A events; separate current-form evaluation gate remains 30 eligible completed prospective forecasts. Metadata-only feature-input identities do not count as forecasts.
+
 # Continuity correction — 2026-11-10 14:51 UTC — new real runs, independent historical ZIP SHA, zero quote coverage
 
 ## Fresh source of truth
