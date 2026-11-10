@@ -1379,7 +1379,7 @@ def test_current_form_forward_source_and_rights_blob_pins_match_exact_repository
     )
 
 
-def test_direct_current_form_archive_helpers_fail_before_network_when_rights_are_denied(monkeypatch):
+def test_direct_current_form_archive_helpers_fail_before_network_without_inference_clearance(monkeypatch):
     import market_anchor_v2_source_rights as inference_rights
     import market_anchor_v2_source_capture_rights as source_rights
     import market_anchor_v2_artifact_privacy as privacy
@@ -1390,23 +1390,23 @@ def test_direct_current_form_archive_helpers_fail_before_network_when_rights_are
         calls.append("inference")
         raise PermissionError("synthetic inference scope denied")
 
-    def deny_source_only():
-        calls.append("source_only")
-        raise PermissionError("synthetic source-only scope denied")
-
     monkeypatch.setattr(inference_rights, "require_personal_research_inference_scope", deny_inference)
-    monkeypatch.setattr(source_rights, "require_personal_research_source_capture_scope", deny_source_only)
+    monkeypatch.setattr(
+        source_rights,
+        "require_personal_research_source_capture_scope",
+        lambda: pytest.fail("withdrawn source-only scope must not authorize current-form archive reads"),
+    )
     monkeypatch.setattr(
         privacy,
         "require_private_repository_for_source_artifacts",
-        lambda: pytest.fail("privacy lookup must not run when rights are denied"),
+        lambda: pytest.fail("privacy lookup must not run without inference clearance"),
     )
-    get = lambda *_args, **_kwargs: pytest.fail("GitHub API must not run before rights clearance")
+    get = lambda *_args, **_kwargs: pytest.fail("GitHub API must not run before inference clearance")
 
-    with pytest.raises(PermissionError, match="synthetic source-only scope denied"):
+    with pytest.raises(PermissionError, match="synthetic inference scope denied"):
         forward_capture_module.discover_archives(token="test-token", get=get)
-    assert calls == ["inference", "source_only"]
+    assert calls == ["inference"]
 
-    with pytest.raises(PermissionError, match="synthetic source-only scope denied"):
+    with pytest.raises(PermissionError, match="synthetic inference scope denied"):
         get_archive(9876, token="test-token", get=get)
-    assert calls == ["inference", "source_only", "inference", "source_only"]
+    assert calls == ["inference", "inference"]
