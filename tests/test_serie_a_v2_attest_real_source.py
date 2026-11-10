@@ -17,6 +17,16 @@ from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes
 from serie_a_v2_prequote_source_archive_gate import ARCHIVE_REPORT, SOURCE_DIR
 
 
+
+@pytest.fixture(autouse=True)
+def allow_synthetic_private_archive_read_scope(monkeypatch):
+    monkeypatch.setattr(
+        attestor,
+        "_require_private_source_archive_read_scope",
+        lambda: {"access_scope": "SYNTHETIC_TEST_ONLY", "artifact_privacy": {"private": True}},
+    )
+
+
 NOW = datetime(2026, 10, 14, 16, tzinfo=timezone.utc)
 
 
@@ -163,33 +173,83 @@ def test_no_offset_timezone_is_not_silently_assumed_utc():
         )
 
 
-def test_main_blocks_before_github_archive_discovery_when_research_scope_is_denied(monkeypatch, tmp_path):
+def test_main_blocks_before_github_archive_discovery_when_private_source_scope_is_denied(monkeypatch, tmp_path):
     output = tmp_path / "blocked.json"
     monkeypatch.setenv("GITHUB_REPOSITORY", attestor.REPOSITORY)
-    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
     monkeypatch.setattr(
         sys, "argv",
         ["serie_a_v2_attest_real_source.py", "--output", str(output)],
     )
     monkeypatch.setattr(
         attestor,
-        "require_personal_research_inference_scope",
-        lambda: (_ for _ in ()).throw(PermissionError("research scope not confirmed")),
+        "_require_private_source_archive_read_scope",
+        lambda: (_ for _ in ()).throw(PermissionError("private source archive scope not confirmed")),
     )
     monkeypatch.setattr(
         attestor,
-        "attest_latest_source",
-        lambda **kwargs: pytest.fail("archive discovery/download must not run before rights approval"),
+        "discover_archives",
+        lambda **kwargs: pytest.fail("archive discovery must not run before source/privacy approval"),
     )
 
     attestor.main()
 
     report = json.loads(output.read_text(encoding="utf-8"))
-    assert report["mode"] == "SOURCE_RIGHTS_BLOCKED_NO_NETWORK_NO_INFERENCE"
+    assert report["mode"] == "SOURCE_CAPTURE_SCOPE_BLOCKED_NO_NETWORK_NO_INFERENCE"
     assert report["operation"] == "SERIE_A_ORIGINAL_V2_SOURCE_ATTESTATION"
-    assert report["block_reason"] == "research scope not confirmed"
+    assert report["block_reason"] == "private source archive scope not confirmed"
     assert report["public_http_requests"] == 0
     assert report["supabase_reads"] == 0
     assert report["supabase_writes"] == 0
     assert report["quotes_read"] == 0
     assert report["forecasts_created"] == 0
+
+
+def test_attestation_checks_source_archive_scope_before_injected_discovery_or_load(monkeypatch):
+    calls = []
+
+    def deny():
+        calls.append("source_privacy")
+        raise PermissionError("source archive scope denied")
+
+    monkeypatch.setattr(attestor, "_require_private_source_archive_read_scope", deny)
+    with pytest.raises(PermissionError, match="source archive scope denied"):
+        attest_latest_source(
+            token="test-token",
+            now=NOW,
+            discover=lambda **kwargs: pytest.fail("discovery must follow source/privacy gate"),
+            load=lambda *args, **kwargs: pytest.fail("archive download must follow source/privacy gate"),
+            verify_run=lambda *args, **kwargs: pytest.fail("parent verification must follow source/privacy gate"),
+        )
+    assert calls == ["source_privacy"]
+
+
+
+def test_attestation_does_not_fall_back_to_withdrawn_source_only_scope(monkeypatch):
+    from serie_a_v2_forward_capture import _require_private_source_archive_read_scope
+    import market_anchor_v2_source_rights as inference_rights
+    import market_anchor_v2_source_capture_rights as source_rights
+
+    calls = []
+
+    def deny_inference():
+        calls.append("inference")
+        raise PermissionError("inference scope intentionally unresolved")
+
+    monkeypatch.setattr(inference_rights, "require_personal_research_inference_scope", deny_inference)
+    monkeypatch.setattr(
+        source_rights,
+        "require_personal_research_source_capture_scope",
+        lambda: calls.append("source_only") or {"source_capture_scope": "STALE_POLICY_MUST_NOT_BE_USED"},
+    )
+    monkeypatch.setattr(attestor, "_require_private_source_archive_read_scope", _require_private_source_archive_read_scope)
+
+    with pytest.raises(PermissionError, match="inference scope intentionally unresolved"):
+        attest_latest_source(
+            token="test-token",
+            now=NOW,
+            discover=lambda **kwargs: pytest.fail("discovery must not run without inference clearance"),
+            load=lambda *args, **kwargs: pytest.fail("no archive should be loaded"),
+            verify_run=lambda *args, **kwargs: pytest.fail("no parent should be verified"),
+        )
+    assert calls == ["inference"]

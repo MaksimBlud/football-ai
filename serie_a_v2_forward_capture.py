@@ -32,7 +32,7 @@ REPOSITORY = "MaksimBlud/football-ai"
 ARTIFACT_NAME = "serie-a-v2-free-real-quote-diagnostic"
 SOURCE_WORKFLOW_PATH = ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
 SOURCE_LOADER_PATH = "serie_a_v2_live_diagnostic_report.py"
-EXPECTED_SOURCE_LOADER_BLOB_SHA1 = "54805b05a03efac9466f1b77277cccb1e538cf64"
+EXPECTED_SOURCE_LOADER_BLOB_SHA1 = "d86d5a14aaff437a284be36968178aec54e4ca83"
 SOURCE_RIGHTS_HELPER_PATH = "market_anchor_v2_source_rights.py"
 EXPECTED_SOURCE_RIGHTS_HELPER_BLOB_SHA1 = "459ef1cf75073552d34c4cf4b2a07d24e4ade1f9"
 SOURCE_RIGHTS_MANIFEST_PATH = "research/source_rights/football_data_co_uk.json"
@@ -62,8 +62,23 @@ def _github_json(url: str, *, token: str, get=requests.get) -> dict:
     return data
 
 
+def _require_private_source_archive_read_scope() -> dict:
+    """Require cleared frozen-inference rights and private storage before archive reads."""
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+    rights = require_personal_research_inference_scope()
+    from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
+    privacy = require_private_repository_for_source_artifacts()
+    return {
+        "access_scope": "FROZEN_V2_INFERENCE",
+        "rights": rights,
+        "artifact_privacy": privacy,
+    }
+
+
+
 def discover_archives(*, token: str, get=requests.get) -> list[dict]:
     """Bound pagination and accept only main-branch, correct-name artifacts."""
+    _require_private_source_archive_read_scope()
     out = []
     seen_ids = set()
     for page in range(1, 4):
@@ -161,6 +176,7 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
 
 
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
+    _require_private_source_archive_read_scope()
     if not isinstance(artifact_id, int) or artifact_id <= 0:
         raise ValueError("invalid artifact id")
     url = f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip"
@@ -220,6 +236,10 @@ def prepare_forward_capture(
     ):
         raise ValueError("as_of_utc must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+    require_personal_research_inference_scope()
+    from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
+    require_private_repository_for_source_artifacts()
     from serie_a_v2_frozen_shadow_preview import _guard_outcome_free
     if write_archives_to is not None:
         write_archives_to.mkdir(parents=True, exist_ok=True)
