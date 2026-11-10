@@ -220,6 +220,10 @@ def prepare_forward_capture(
     ):
         raise ValueError("as_of_utc must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+    require_personal_research_inference_scope()
+    from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
+    require_private_repository_for_source_artifacts()
     from serie_a_v2_frozen_shadow_preview import _guard_outcome_free
     if write_archives_to is not None:
         write_archives_to.mkdir(parents=True, exist_ok=True)
