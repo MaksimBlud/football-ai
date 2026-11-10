@@ -1,3 +1,63 @@
+# Continuity update — 2026-11-10 12:59 UTC — repository-wide V2 run audit and main-branch rights/privacy gap
+
+## Repository-wide scheduled-run audit
+
+A read-only GitHub Actions repository run listing was checked for `branch=main`, pages 1 and 2, 100 runs per page, newest first. The returned time ranges were:
+
+- Page 1: 2026-11-10 12:58:29 UTC through 2026-11-10 01:25:31 UTC.
+- Page 2: 2026-11-10 01:25:28 UTC through 2026-11-09 19:09:04 UTC.
+
+These pages cover all four 2026-11-10 scheduled windows (05:50, 06:13, 08:08, and 08:18 UTC). No run with any of the four original V2 workflow names was present in either page:
+
+- Serie A V2 Current-Form Source Capture;
+- Serie A V2 Free Real-Quote Diagnostic;
+- Serie A V2 Original Forward-Only Preview;
+- Serie A V2 Current-Form Forward-Only Preview.
+
+The latest matching successful main runs remain on 2026-11-09: Source Capture #42634501531, Free Real-Quote Diagnostic #42651542041, Original Forward-Only #42676083517, and Current-Form Forward-Only #42677383722. This establishes no registered run for the four 2026-11-10 windows; it does not establish why they did not run or that the workflows are disabled. No manual dispatch or schedule change was made.
+
+## Main still lacks the new source-rights/privacy gates
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; repository visibility is still public.
+
+Direct main-branch content reads returned 404 for both `market_anchor_v2_source_rights.py` and `research/source_rights/football_data_co_uk.json`. The main workflow YAMLs still contain the existing daily schedules and artifact uploads (90-day retention in the inspected source/forward workflows). Thus the rights/privacy preflight code is not yet on main. The current main workflow definitions still expose the old scheduled source path; do not dispatch it, do not infer permission from the absence of a run, and do not claim the new fail-closed controls are active on main.
+
+The four schedules remain untouched. No source CSV was downloaded and no Actions artifact was uploaded in this audit.
+
+## Official provider-page recheck
+
+The official page at https://football-data.co.uk/data displays `Updated: 10/11/26` and says the free data are intended for private individuals only, not commercial or data-training products using automated bots, scrapers, or AI. The conservative project decision in PR #780 remains appropriate: automated source capture and frozen inference stay blocked pending provider clarification or an applicable written licence. This is an internal fail-closed control, not a legal conclusion about every form of manual personal research.
+
+## Exact open-PR evidence
+
+- #720 remains OPEN/Ready for review, exact HEAD `1b9464834dd5256b7d69499c1443378518dde256`; 10/10 exact-head checks SUCCESS.
+- #727 remains OPEN/Ready for review, exact HEAD `18a3cfda4e83e44aca1252665d01804267d16467`; current exact check-runs API reports 4/4 SUCCESS. Its workflow tests place rights and private-repository checks before source access and artifact upload.
+- #780 remains OPEN/Draft, stacked on #727, exact HEAD `48f55b6ef4dc40879d5232ac78ce55df51d2dce4`; 2/2 exact-head checks SUCCESS (388 tests on each Python version; production `.pkl` guard passed). It sets automated source capture to false under the 2026-11-10 policy recheck.
+- #742 remains OPEN/Ready, stacked on #727, exact HEAD `fac462a10509a14c63d7f39abb5614bab756fcae`; 2/2 exact-head checks SUCCESS. Its server-side quote query requires `snapshot_time_utc <= as_of`.
+- Direct entrypoint rights-gate chain #774 → #777 → #778 → #779 and parallel #776 remain unmerged; preserve their ancestry and re-run exact CI after parent updates.
+- This documentation PR #740 is updated on its existing branch only; no main change or merge is performed.
+
+The staged chain must be manually reviewed/rebased/retargeted with exact-head CI at each step. Do not treat any branch CI as proof that the corresponding protection is active on main.
+
+## Fresh pre-match-only Supabase aggregate
+
+A read-only aggregate over `public.odds_snapshots` applied both `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= NOW()`, selecting counts, distinct event IDs, and the latest timestamp only:
+
+- Strictly pre-kickoff snapshots: 3,915 across 327 events.
+- Strictly pre-kickoff snapshots in the last seven days: 0 across 0 events.
+- Future events with a saved strictly pre-kickoff quote: 0.
+- Latest strictly pre-kickoff snapshot: 2026-10-13 14:48:53.042620 UTC.
+
+No odds values, match results, scores, settlements, or protected 2026/27 target outcomes were selected. No Supabase writes/DDL occurred.
+
+## Original frozen V2 boundary
+
+The candidate blob remains `ac1303f6b096664983fbf52443bd0a381b23ba21`, candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, protocol blob remains `65729e9639720e67624c1481190aa22ae606f151`, and original feature-builder blob remains `401b3a0893371bfa4a488ec92a4a54af2678c8f7`. The 19-feature order, original weights/scaler/imputer, training cutoff, `active_lambda=0`, `shadow_lambda=1`, and FAILED stability gate remain unchanged. No new prospective forecast or Brier/LogLoss result exists; no target outcome was read. The scientific evaluation gate remains closed.
+
+No paid provider request, source download, forecast, Supabase write/DDL, production `.pkl` change, refit, threshold tuning, promotion, bet, merge, main update, schedule change, or other-agent change occurred.
+
+---
+
 # Continuity update — 2026-11-10 06:49 UTC — refreshed Serie A feature-input metadata, no new pre-match quotes
 
 ## Read-only feature-input metadata gate
