@@ -725,7 +725,7 @@ def test_source_archive_created_at_equal_to_quote_is_not_prequote_source():
     assert report["rows"][0]["v2_preview"] is None
 
 
-def test_direct_original_archive_helpers_fail_before_network_when_both_rights_scopes_are_denied(monkeypatch):
+def test_direct_original_archive_helpers_fail_before_network_when_inference_scope_is_denied(monkeypatch):
     import market_anchor_v2_source_rights as inference_rights
     import market_anchor_v2_source_capture_rights as source_rights
     import market_anchor_v2_artifact_privacy as privacy
@@ -736,29 +736,29 @@ def test_direct_original_archive_helpers_fail_before_network_when_both_rights_sc
         calls.append("inference")
         raise PermissionError("synthetic inference scope denied")
 
-    def deny_source_only():
-        calls.append("source_only")
-        raise PermissionError("synthetic source-only scope denied")
-
     monkeypatch.setattr(inference_rights, "require_personal_research_inference_scope", deny_inference)
-    monkeypatch.setattr(source_rights, "require_personal_research_source_capture_scope", deny_source_only)
+    monkeypatch.setattr(
+        source_rights,
+        "require_personal_research_source_capture_scope",
+        lambda: pytest.fail("withdrawn source-only scope must not authorize archive reads"),
+    )
     monkeypatch.setattr(
         privacy,
         "require_private_repository_for_source_artifacts",
-        lambda: pytest.fail("privacy lookup must not run when both rights scopes are denied"),
+        lambda: pytest.fail("privacy lookup must not run without inference clearance"),
     )
-    get = lambda *_args, **_kwargs: pytest.fail("GitHub API must not run before rights clearance")
+    get = lambda *_args, **_kwargs: pytest.fail("GitHub API must not run before inference clearance")
 
-    with pytest.raises(PermissionError, match="synthetic source-only scope denied"):
+    with pytest.raises(PermissionError, match="synthetic inference scope denied"):
         discover_archives(token="test-token", get=get)
-    assert calls == ["inference", "source_only"]
+    assert calls == ["inference"]
 
-    with pytest.raises(PermissionError, match="synthetic source-only scope denied"):
+    with pytest.raises(PermissionError, match="synthetic inference scope denied"):
         get_archive(123, token="test-token", get=get)
-    assert calls == ["inference", "source_only", "inference", "source_only"]
+    assert calls == ["inference", "inference"]
 
 
-def test_direct_original_archive_discovery_can_use_source_only_scope_without_inference(monkeypatch):
+def test_direct_archive_reads_do_not_fall_back_to_withdrawn_source_only_scope(monkeypatch):
     import market_anchor_v2_source_rights as inference_rights
     import market_anchor_v2_source_capture_rights as source_rights
     import market_anchor_v2_artifact_privacy as privacy
@@ -767,69 +767,57 @@ def test_direct_original_archive_discovery_can_use_source_only_scope_without_inf
 
     def deny_inference():
         calls.append("inference")
-        raise PermissionError("synthetic inference scope denied")
-
-    def allow_source_only():
-        calls.append("source_only")
-        return {"source_capture_scope": "SYNTHETIC_TEST_ONLY"}
+        raise PermissionError("inference scope unresolved")
 
     monkeypatch.setattr(inference_rights, "require_personal_research_inference_scope", deny_inference)
-    monkeypatch.setattr(source_rights, "require_personal_research_source_capture_scope", allow_source_only)
+    monkeypatch.setattr(
+        source_rights,
+        "require_personal_research_source_capture_scope",
+        lambda: calls.append("source_only") or {"source_capture_scope": "STALE_POLICY_MUST_NOT_BE_USED"},
+    )
     monkeypatch.setattr(
         privacy,
         "require_private_repository_for_source_artifacts",
-        lambda: calls.append("private") or {"private": True},
+        lambda: pytest.fail("privacy lookup must not run when inference rights are unresolved"),
     )
+    get = lambda *_args, **_kwargs: pytest.fail("GitHub API must not run without inference rights")
 
-    class Response:
-        def raise_for_status(self):
-            return None
-
-        def json(self):
-            return {"artifacts": []}
-
-    def fake_get(url, **kwargs):
-        calls.append("github")
-        assert "/actions/artifacts?name=" in url
-        assert kwargs["timeout"] == 20
-        assert kwargs["allow_redirects"] is False
-        return Response()
-
-    assert discover_archives(token="test-token", get=fake_get) == []
-    assert calls == ["inference", "source_only", "private", "github"]
+    with pytest.raises(PermissionError, match="inference scope unresolved"):
+        discover_archives(token="test-token", get=get)
+    with pytest.raises(PermissionError, match="inference scope unresolved"):
+        get_archive(123, token="test-token", get=get)
+    assert calls == ["inference", "inference"]
 
 
-def test_direct_archive_helpers_require_private_repository_even_for_source_only_scope(monkeypatch):
+def test_direct_archive_helpers_require_private_repository_after_inference_clearance(monkeypatch):
     import market_anchor_v2_source_rights as inference_rights
     import market_anchor_v2_source_capture_rights as source_rights
     import market_anchor_v2_artifact_privacy as privacy
 
     calls = []
 
-    def deny_inference():
-        calls.append("inference")
-        raise PermissionError("synthetic inference scope denied")
-
-    def allow_source_only():
-        calls.append("source_only")
-        return {"source_capture_scope": "SYNTHETIC_TEST_ONLY"}
+    monkeypatch.setattr(
+        inference_rights,
+        "require_personal_research_inference_scope",
+        lambda: calls.append("inference") or {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(
+        source_rights,
+        "require_personal_research_source_capture_scope",
+        lambda: pytest.fail("source-only scope is not an inference authorization"),
+    )
 
     def deny_public_repository():
         calls.append("private_repository")
         raise PermissionError("source archives require a private GitHub repository")
 
-    monkeypatch.setattr(inference_rights, "require_personal_research_inference_scope", deny_inference)
-    monkeypatch.setattr(source_rights, "require_personal_research_source_capture_scope", allow_source_only)
     monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", deny_public_repository)
     get = lambda *_args, **_kwargs: pytest.fail("GitHub API must not run when repository storage is public")
 
     with pytest.raises(PermissionError, match="private GitHub repository"):
         discover_archives(token="test-token", get=get)
-    assert calls == ["inference", "source_only", "private_repository"]
+    assert calls == ["inference", "private_repository"]
 
     with pytest.raises(PermissionError, match="private GitHub repository"):
         get_archive(123, token="test-token", get=get)
-    assert calls == [
-        "inference", "source_only", "private_repository",
-        "inference", "source_only", "private_repository",
-    ]
+    assert calls == ["inference", "private_repository", "inference", "private_repository"]
