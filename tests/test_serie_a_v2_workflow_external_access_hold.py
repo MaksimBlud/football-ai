@@ -81,12 +81,12 @@ def test_live_steps_and_public_artifact_uploads_are_gated():
         text = _workflow(path)
         for name in spec["live"]:
             block = _step_block(text, name)
-            assert f"if: {LIVE_GATE}" in block, (
-                f"{path}: live step is not held: {name}"
+            assert block.count("if:") == 1 and f"if: {LIVE_GATE}" in block, (
+                f"{path}: live step must have exactly one fail-closed condition: {name}"
             )
         upload = _step_block(text, spec["upload"])
-        assert f"if: {UPLOAD_GATE}" in upload, (
-            f"{path}: artifact publication is not held"
+        assert upload.count("if:") == 1 and f"if: {UPLOAD_GATE}" in upload, (
+            f"{path}: artifact publication must have exactly one fail-closed condition"
         )
 
 
