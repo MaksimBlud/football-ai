@@ -35,6 +35,9 @@ permissions:
   actions: read
   contents: read
 
+env:
+  MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED: "false"
+
 jobs:
   original-v2-forward-preview:
     # Ignore failed or non-main upstream runs and forbid triggering through
@@ -71,10 +74,12 @@ jobs:
             tests/test_serie_a_v2_atalanta_alias.py \
             tests/test_serie_a_v2_frozen_shadow_preview.py
       - name: Attest original historical source ZIP from real GitHub Actions (no quotes read)
+        if: ${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
         run: |
           python serie_a_v2_attest_real_source.py \
             --output artifacts/serie_a_v2_real_source_attestation.json
       - name: Generate actual original frozen V2 source-verified read-only preview
+        if: ${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
         run: |
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_KEY"
@@ -83,6 +88,7 @@ jobs:
             --output artifacts/serie_a_v2_forward_source_checked.json \
             --sources-output-dir artifacts/serie_a_v2_forward_original_sources
       - name: Save immutable original V2 predictions and exact older source bytes
+        if: ${{ always() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
         if: always()
         uses: actions/upload-artifact@v4
         with:
