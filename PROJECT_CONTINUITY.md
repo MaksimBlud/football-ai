@@ -7235,3 +7235,83 @@ No main update or merge; no production `.pkl` changes; no Supabase writes/DDL; n
 - The 30-primary-completed-event outcome gate remains closed; no protected 2026/27 target outcomes were read.
 
 No main update/merge, production model change, Supabase write/DDL, paid request, source download, target-outcome read, refit, threshold tuning, lambda/feature/weight change, promotion, betting, schedule change, or other-agent change.
+
+
+## 2026-11-10 01:05 UTC — core V2 inference/refit surfaces sealed; fresh quote and main-run audit
+
+### Fresh repository/main state
+
+- Default branch remains `main` at exact commit `40887ebb215730190d7a6c7a1693373ec4afcdfc` (latest commit message: #673 current-form source attestation).
+- Repository metadata still reports `visibility=public`, `private=false`.
+- The latest continuity documentation branch is separate from main; no main ref or repository setting was changed.
+
+### New clean-stack PR #778 — core inference and refit bypasses
+
+PR [#778](https://github.com/MaksimBlud/football-ai/pull/778) is Draft/HUMAN-MERGE only.
+
+- Exact base: #777 HEAD `12a64174341f8d3716c1206ee63d4f4c01ca817d`.
+- Exact HEAD: `b2a034614d999683a8c334569dc07eb07b7ac589`.
+- Compare: **3 ahead / 0 behind**, exactly three intended files (core V2 module, core V2 tests, frozen-V2 workflow).
+- Direct `predict_shadow_residual()`, `predict_candidate()`, and `_artifact_residual_logits()` now each enforce the provider-issued frozen-inference scope before touching model/input data.
+- `fit_candidate_artifact()` and `write_candidate_artifact()` now fail closed before inspecting training inputs or creating files. The dormant training fingerprint and V1 fit/prepare/market/result helper re-exports were removed from the V2 module.
+- Offline numerical tests explicitly use `SYNTHETIC_TEST_ONLY`; negative tests prove direct-call denial. The original candidate recipe metadata remains unchanged.
+
+Exact-head CI:
+- Frozen V2 workflow [#42732823241](https://github.com/MaksimBlud/football-ai/actions/runs/42732823241): Python 3.11 **405 passed** and Python 3.12 **405 passed**; `pip check`, compilation and production `.pkl` diff guards PASS.
+- Core Market Anchor V2 validation [#42732823023](https://github.com/MaksimBlud/football-ai/actions/runs/42732823023): **14 passed**, compile and production artifact guard PASS.
+- The dedicated core suite has 14 tests. These are offline/synthetic contract tests, not real inference or model-quality evidence.
+
+PR #778 is stacked on #777 → #774 → #742 → #727 → #720. Do not merge or flatten the chain. The #777 parent remains Draft at exact HEAD `12a64174341f8d3716c1206ee63d4f4c01ca817d`, with 391/391 tests on both Python 3.11 and 3.12. The direct quote reader #774 remains Draft at `f4180d8ce4142096f7a2ad1cd86ba95c78b3ae30`, with 390/390 on both versions.
+
+### Fresh actual Original V2 forward runtime audit
+
+Verified GitHub run metadata and jobs, not just prior narrative summaries:
+
+- Original old-season forward [run #42676083517](https://github.com/MaksimBlud/football-ai/actions/runs/42676083517): `schedule`, `main`, exact main SHA above, SUCCESS on 2026-11-09 18:40:27–18:41:09 UTC. All steps completed, including real source ZIP attestation and forward-only preview. Its report has zero saved quotes, zero candidate previews, zero paid provider calls, zero Supabase writes.
+- Current-form forward [run #42677383722](https://github.com/MaksimBlud/football-ai/actions/runs/42677383722): `schedule`, `main`, same exact main SHA, SUCCESS on 2026-11-09 18:48:55–18:49:39 UTC. All steps completed. It verified the current-form source archive and 100-event feature-input gate, but had zero saved quotes, zero current-form V2 shadows, no target-outcome reads/scoring, no paid calls and no writes.
+- A fresh `main` Actions query from 2026-11-09 18:40 UTC through 2026-11-10 01:05 UTC found no later Original V2 source/forward workflow run. Other main runs in that interval (Multi-Market V2 Cycle, Serie A Results Sync, Serie A Live Cycle) are not evidence of Original V2 inference.
+- The latest verified Original V2 runs are source/provenance checks only; **no real prospective V2 forecast was produced**.
+
+### Fresh read-only Supabase pre-match inventory
+
+The only database query in this audit selected `league`, `event_id`, `snapshot_time_utc`, and `commence_time_utc` from `public.odds_snapshots`, with strict predicates `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= NOW()`. No prices, score/result/settlement columns or target outcomes were selected.
+
+As of 2026-11-10 01:02 UTC:
+
+- Strict pre-match snapshots: **3,915** across all leagues.
+- Unique events: **327**.
+- New strict pre-match snapshots in the preceding seven days: **0**.
+- Future events with a saved strict pre-match quote: **0**.
+- Latest strict pre-match snapshot overall: **2026-10-13 14:48:53.042620 UTC** (Serie A).
+- Serie A specifically remains 620 snapshots / 63 events; latest timestamp above.
+
+There is no saved quote to admit into a new prospective V2 forecast. No paid quote request or source download was made.
+
+### Rights and confidentiality blockers remain independent
+
+The #720 rights manifest branch records:
+
+- `research_use_permitted=true`, but `research_inference_permitted=false`;
+- `provider_issued_ai_inference_license=false`;
+- `research_inference_scope=NONE_PENDING_SCOPE_CLARIFICATION`;
+- `ai_model_training_permitted=false`, `commercial_use_permitted=false`, `public_product_use_permitted=false`;
+- `authorization=null`;
+- maximum automated public-source sessions: **2 per rolling seven days**.
+
+The rights manifest is not on main yet; the repository remains public. #720 is still open/Ready at `1b9464834dd5256b7d69499c1443378518dde256` with 10/10 exact-head checks; #727 is still open/Ready on top of #720. Private storage does not itself grant frozen-inference rights. The source/inference pipeline must remain fail-closed until both the private-storage and provider-scope issues are resolved.
+
+### Frozen candidate / scientific gate
+
+Re-read the candidate from main:
+
+- Candidate file Git blob: `ac1303f6b096664983fbf52443bd0a381b23ba21`.
+- Embedded candidate SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Original feature-builder blob: `401b3a0893371bfa4a488ec92a4a54af2678c8f7`.
+- Exactly 19 frozen features, 20×2 weight matrix, 3,799 training rows.
+- `active_lambda=0`, `shadow_residual_lambda=1`, `stability_gate_passed=false`, automatic promotion false.
+- Feature-input gate and target-outcome evaluation gate remain distinct. The 100 completed fixture identities in the current-form source contract are not 100 forecasts.
+- Eligible prospective forecasts: **0/30**. No target outcomes were read. No Brier/LogLoss superiority claim is supported.
+
+### Safety ledger
+
+No main update/merge, repository visibility change, Supabase write/DDL, paid provider request, source download, target-outcome read, refit, weight/feature/lambda change, production `.pkl` change, schedule/cron change, promotion, betting, or other-agent change occurred. The original candidate and its 19-feature/weight contract remain byte-for-byte unchanged.
