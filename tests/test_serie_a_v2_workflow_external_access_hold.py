@@ -42,6 +42,14 @@ WORKFLOWS = {
         ),
         "upload": "Archive pre-kickoff V2 shadow and exact source ZIPs",
     },
+    ".github/workflows/recover-market-anchor-v2-candidate.yml": {
+        "cron": None,
+        "live": (
+            "Rebuild September candidate from fixed 2016-2026 training input only",
+            "Prove frozen checksum, immutable recipe and research-only status",
+        ),
+        "upload": "Archive recovered frozen V2 research candidate",
+    },
 }
 
 
@@ -93,6 +101,8 @@ def test_live_steps_and_public_artifact_uploads_are_gated():
 def test_existing_daily_schedules_are_preserved():
     for path, spec in WORKFLOWS.items():
         text = _workflow(path)
+        if spec["cron"] is None:
+            continue
         assert f'cron: "{spec["cron"]}"' in text, (
             f"{path}: existing schedule changed"
         )
@@ -143,6 +153,7 @@ CREDENTIAL_BINDINGS = {
             "GITHUB_TOKEN": "${{ github.token }}",
         },
     },
+    ".github/workflows/recover-market-anchor-v2-candidate.yml": {},
 }
 
 
@@ -201,3 +212,19 @@ def test_every_artifact_upload_in_live_workflows_is_gated():
             assert index > 0 and lines[index - 1].strip() == f"if: {UPLOAD_GATE}", (
                 f"{path}: every artifact upload must be gated, not only a named upload step"
             )
+
+
+def test_candidate_recovery_cannot_download_or_publish_until_source_clearance():
+    path = ".github/workflows/recover-market-anchor-v2-candidate.yml"
+    text = _workflow(path)
+    assert f'env:\n  {FLAG}: "false"' in text
+    assert "workflow_dispatch:" in text
+    assert "tests/test_market_anchor_v2_saved_cohort_replay.py" not in text
+    rebuild = _step_block(text, "Rebuild September candidate from fixed 2016-2026 training input only")
+    assert f"if: {LIVE_GATE}" in rebuild
+    proof = _step_block(text, "Prove frozen checksum, immutable recipe and research-only status")
+    assert f"if: {LIVE_GATE}" in proof
+    upload = _step_block(text, "Archive recovered frozen V2 research candidate")
+    assert f"if: {UPLOAD_GATE}" in upload
+    assert "--restore-candidate-only" in rebuild
+    assert "--save-research-candidate" in rebuild
