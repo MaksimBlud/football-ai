@@ -224,12 +224,11 @@ def test_attestation_checks_source_archive_scope_before_injected_discovery_or_lo
     assert calls == ["source_privacy"]
 
 
-def test_attestation_can_use_source_only_archive_scope_without_frozen_inference(monkeypatch):
+
+def test_attestation_does_not_fall_back_to_withdrawn_source_only_scope(monkeypatch):
     from serie_a_v2_forward_capture import _require_private_source_archive_read_scope
     import market_anchor_v2_source_rights as inference_rights
-    monkeypatch.setattr(attestor, "_require_private_source_archive_read_scope", _require_private_source_archive_read_scope)
     import market_anchor_v2_source_capture_rights as source_rights
-    import market_anchor_v2_artifact_privacy as privacy
 
     calls = []
 
@@ -237,24 +236,20 @@ def test_attestation_can_use_source_only_archive_scope_without_frozen_inference(
         calls.append("inference")
         raise PermissionError("inference scope intentionally unresolved")
 
-    def allow_source_only():
-        calls.append("source_only")
-        return {"source_capture_scope": "SYNTHETIC_TEST_ONLY"}
-
     monkeypatch.setattr(inference_rights, "require_personal_research_inference_scope", deny_inference)
-    monkeypatch.setattr(source_rights, "require_personal_research_source_capture_scope", allow_source_only)
     monkeypatch.setattr(
-        privacy,
-        "require_private_repository_for_source_artifacts",
-        lambda: calls.append("private") or {"private": True},
+        source_rights,
+        "require_personal_research_source_capture_scope",
+        lambda: calls.append("source_only") or {"source_capture_scope": "STALE_POLICY_MUST_NOT_BE_USED"},
     )
+    monkeypatch.setattr(attestor, "_require_private_source_archive_read_scope", _require_private_source_archive_read_scope)
 
-    with pytest.raises(RuntimeError, match="no original historical"):
+    with pytest.raises(PermissionError, match="inference scope intentionally unresolved"):
         attest_latest_source(
             token="test-token",
             now=NOW,
-            discover=lambda **kwargs: calls.append("discover") or [],
+            discover=lambda **kwargs: pytest.fail("discovery must not run without inference clearance"),
             load=lambda *args, **kwargs: pytest.fail("no archive should be loaded"),
             verify_run=lambda *args, **kwargs: pytest.fail("no parent should be verified"),
         )
-    assert calls == ["inference", "source_only", "private", "discover"]
+    assert calls == ["inference"]
