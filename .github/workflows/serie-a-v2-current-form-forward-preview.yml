@@ -73,7 +73,6 @@ jobs:
             --sources-output-dir artifacts/serie_a_v2_current_form_sources_used
       - name: Archive pre-kickoff V2 shadow and exact source ZIPs
         if: ${{ always() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: serie-a-v2-current-form-forward-preview
