@@ -1,3 +1,35 @@
+# Continuity update — 2026-11-10 06:49 UTC — refreshed Serie A feature-input metadata, no new pre-match quotes
+
+## Read-only feature-input metadata gate
+
+A fresh Supabase SELECT read only `match_date, home_team, away_team` from `public.league_finished_results` for `league='SERIE_A'`, `season='2026-2027'`, and dates before the current UTC date. No score, goal, result, settlement, or outcome columns were selected.
+
+- Raw metadata rows: **113**.
+- After the original V2-local `Atalanta BC → Atalanta` alias normalization: **110 unique date/team fixture identities**.
+- Three duplicate rows are the same Atalanta fixtures under the two source names; no reversed-orientation duplicate was found in this metadata sample.
+- Date range: **2026-08-22 through 2026-11-08**.
+
+This confirms the separate lagged feature-input gate has more than its 30 required completed fixture identities. It is **not** the frozen target-outcome evaluation gate and does not authorize reading outcomes. Eligible completed prospective primary V2 forecasts remain **0/30**; target outcomes remain unread.
+
+## Fresh strict pre-match quote inventory
+
+A separate read-only aggregate selected only counts, event IDs and timestamps from `public.odds_snapshots`, requiring `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= NOW()`:
+
+- Strictly pre-kickoff snapshots: **3,915** across **327** events.
+- New strict pre-match snapshots in the last seven days: **0**.
+- Upcoming events with a saved strict pre-match quote: **0**.
+- Latest strict pre-match snapshot: **2026-10-13 14:48:53.042620 UTC**.
+
+No new quote or source download was requested. The main daily source schedules are unchanged; this audit does not claim whether the 2026-11-10 05:50/06:13 UTC scheduled runs executed, because the available connected GitHub Actions reads expose known-run jobs but not the repository-wide run listing. Do not infer success or failure without a run ID/log.
+
+## Documentation PR validation
+
+The seven exact-head jobs on documentation commit `8211ba5099780692e47ac2864f59df1e96e40e3a` have all completed SUCCESS: Research #42758625330, Product #42758625381, Serie A #42758625363, Bundesliga #42758625319, Eredivisie #42758625522, Ligue 1 #42758625322, and La Liga #42758625318. The La Liga job is a shared-document path-filter side effect, not V2 runtime/model evidence.
+
+Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; this is documentation-only. No merge, source download, quote read, target-outcome read, Supabase write/DDL, paid provider request, production artifact change, schedule change, or model-contract change occurred. HUMAN-MERGE only.
+
+---
+
 # Continuity update — 2026-11-10 04:52 UTC — fresh main, pre-match availability, rights risk, and exact-head corrections
 
 ## Source of truth
