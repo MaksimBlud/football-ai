@@ -225,7 +225,9 @@ def test_attestation_checks_source_archive_scope_before_injected_discovery_or_lo
 
 
 def test_attestation_can_use_source_only_archive_scope_without_frozen_inference(monkeypatch):
+    from serie_a_v2_forward_capture import _require_private_source_archive_read_scope
     import market_anchor_v2_source_rights as inference_rights
+    monkeypatch.setattr(attestor, "_require_private_source_archive_read_scope", _require_private_source_archive_read_scope)
     import market_anchor_v2_source_capture_rights as source_rights
     import market_anchor_v2_artifact_privacy as privacy
 
