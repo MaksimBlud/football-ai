@@ -7315,3 +7315,41 @@ Re-read the candidate from main:
 ### Safety ledger
 
 No main update/merge, repository visibility change, Supabase write/DDL, paid provider request, source download, target-outcome read, refit, weight/feature/lambda change, production `.pkl` change, schedule/cron change, promotion, betting, or other-agent change occurred. The original candidate and its 19-feature/weight contract remain byte-for-byte unchanged.
+
+## 2026-11-10 — Original V2: source-only rights separation, direct forward guards, and fresh runtime inventory
+
+Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; repository visibility is still **public**. No merge or main update was performed.
+
+### Latest exact-head direct-entrypoint hardening
+
+- **PR #772** now correctly distinguishes *source-only archival* from *frozen-model inference*. `fetch_public_history()` only downloads public historical CSV bytes, so its inner guard now requires `require_personal_research_source_capture_scope()` followed by private-repository storage. It does not require an inference licence. The diagnostic CLI retains its separate inference-rights gate before saved-quote reads, feature construction, or scoring. Exact HEAD `66c02b0e258736dc1be7dc93f0a368b33e78ffb2`, base #727 HEAD `18a3cfda4e83e44aca1252665d01804267d16467`, 10 ahead / 0 behind, five intended files. Exact push #42735375606 and PR #42735378792 both SUCCESS: 390 tests on Python 3.11 and 390 on Python 3.12, pip check/compile/.pkl diff guard PASS. This remains blocked from real source download while the repository is public; no live request was made.
+- **PR #779** adds provider-inference and private-storage gates inside both original/current-form `prepare_forward_capture()` builders and the diagnostic `make_report()`, before input iteration, archive callbacks, directory creation, manifest construction, or scoring. Exact HEAD `6002e823e08438c1109aac6374629cf713d97324`, base #778 HEAD `b2a034614d999683a8c334569dc07eb07b7ac589`, 10 ahead / 0 behind, seven intended files. Exact push #42734839489 and PR #42734842832 both SUCCESS: 411 tests on Python 3.11 and 411 on Python 3.12, pip check/compile/.pkl diff guard PASS. The first failed attempt was corrected by moving the existing fixture-identity parametrization back to its intended test and repinning both forward readers to the exact diagnostic-loader blob.
+- **PR #778** exact HEAD `b2a034614d999683a8c334569dc07eb07b7ac589` remains the parent of #779. Its exact run #42732823241 passed both Frozen V2 and Market Anchor V2 Shadow Validation jobs; it guards direct low-level inference/refit APIs and removes dormant V1 fit-helper re-exports from the V2 namespace without changing the frozen candidate or contract.
+- #772 and #779 are Draft/HUMAN-MERGE only. No PR was merged.
+
+### Fresh main runtime evidence (read-only)
+
+- Original old-season forward run [#42676083517](https://github.com/MaksimBlud/football-ai/actions/runs/42676083517), main SHA above: 71 tests passed; real GitHub source attestation verified 10 pre-prospective CSVs / 3,800 historical results and source artifact `13689701985` (parent run `42651542041`); `quotes_seen=0`, `v2_diagnostic_previews_captured=0`, zero paid calls and zero Supabase writes.
+- Current-form forward run [#42677383722](https://github.com/MaksimBlud/football-ai/actions/runs/42677383722), same main SHA: 53 tests passed; source artifact `13681778268`, SHA-256 `f4fb869be6e065ca611f012fe21b6d1eafe22434c60ced3a2e7b7ea6c5602101`, parent source run `42634501531` completed before verification. Manifest reports 10 old-season CSVs / 3,910 rows plus 110 lagged current-season rows, 100-identity feature-input gate, source status VERIFIED; `quotes_seen=0`, `v2_current_form_shadow_captured=0`, target outcomes read/scored false, zero paid calls and zero writes.
+- These runs prove source/archive integrity and a zero-quote forward path only. They do not prove a prospective forecast or V2 superiority.
+
+### Fresh strictly pre-kickoff Supabase inventory
+
+Read-only aggregate from `public.odds_snapshots`, selecting only `league,event_id,snapshot_time_utc,commence_time_utc`, with `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= now()`:
+
+- **3,915** strict pre-match snapshots across **327** unique events.
+- **0** new strict pre-match snapshots in the last seven days.
+- **0** future events with saved pre-match quotes.
+- Latest saved snapshot by league: Serie A 2026-10-13 14:48:53 UTC; EPL 2026-10-09 15:25:57 UTC; all other listed leagues no later than 2026-09-11 (RPL 2026-09-05).
+- No odds values, scores, result columns, or protected target outcomes were selected.
+
+### Binding rights/security state
+
+- Rights manifest: private noncommercial source-only archival is separately permitted; frozen-model inference remains `false`; provider-issued AI inference licence remains `false`.
+- GitHub repository remains public, so private-artifact gates block source ZIP archival and inference. Do not bypass them or download source artifacts until the repository privacy prerequisite is met.
+- Supabase table inspection raised a critical advisor finding: RLS is disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. No DDL or policy change was made; this is a separate owner-controlled security decision and must not be silently remediated by this research task.
+- Original candidate SHA, 19-feature order, weights, scaler/imputer, `active_lambda=0`, `shadow_lambda=1`, NO_BET, and the 30-primary-completed-event outcome gate remain unchanged. Prospective evaluation remains 0/30; no Brier/LogLoss superiority claim is permitted.
+
+### Next execution pointer
+
+Preserve source-only/inference separation. Continue auditing direct original-V2 entrypoints and clean-stack ancestry, but do not duplicate superseded branches. Keep #775 out of integration until its #728–#770 evaluator chain is ported onto the clean #727 ancestry. The current main still has no admissible new quotes; do not spend paid credits, change schedules, or read protected outcomes.
