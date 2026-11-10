@@ -96,3 +96,79 @@ def test_existing_daily_schedules_are_preserved():
         assert f'cron: "{spec["cron"]}"' in text, (
             f"{path}: existing schedule changed"
         )
+
+
+def _job_env_block(text: str) -> str:
+    lines = text.splitlines()
+    start = next(
+        (i for i, line in enumerate(lines) if line == "    env:"),
+        None,
+    )
+    assert start is not None, "job-level env block missing"
+    end = next(
+        (i for i in range(start + 1, len(lines)) if lines[i] == "    steps:"),
+        None,
+    )
+    assert end is not None, "job-level steps block missing"
+    return "\\n".join(lines[start:end])
+
+
+CREDENTIAL_BINDINGS = {
+    ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml": {
+        "Fetch and SHA-archive public source, preview original frozen V2 diagnostics": {
+            "SUPABASE_URL": "${{ secrets.SUPABASE_URL }}",
+            "SUPABASE_KEY": "${{ secrets.SUPABASE_KEY }}",
+        },
+    },
+    ".github/workflows/serie-a-v2-forward-preview.yml": {
+        "Attest original historical source ZIP from real GitHub Actions (no quotes read)": {
+            "GITHUB_TOKEN": "${{ github.token }}",
+        },
+        "Generate actual original frozen V2 source-verified read-only preview": {
+            "SUPABASE_URL": "${{ secrets.SUPABASE_URL }}",
+            "SUPABASE_KEY": "${{ secrets.SUPABASE_KEY }}",
+            "GITHUB_TOKEN": "${{ github.token }}",
+        },
+    },
+    ".github/workflows/serie-a-v2-current-form-source-capture.yml": {
+        "Capture frozen historical seasons plus gated current-form source": {
+            "SUPABASE_URL": "${{ secrets.SUPABASE_URL }}",
+            "SUPABASE_KEY": "${{ secrets.SUPABASE_KEY }}",
+        },
+    },
+    ".github/workflows/serie-a-v2-current-form-forward-preview.yml": {
+        "Generate read-only current-form V2 shadow from already saved quotes": {
+            "SUPABASE_URL": "${{ secrets.SUPABASE_URL }}",
+            "SUPABASE_KEY": "${{ secrets.SUPABASE_KEY }}",
+            "GITHUB_TOKEN": "${{ github.token }}",
+        },
+    },
+}
+
+
+def test_live_credentials_are_not_exposed_to_offline_steps():
+    forbidden_job_credentials = (
+        "SUPABASE_URL:",
+        "SUPABASE_KEY:",
+        "GITHUB_TOKEN:",
+        "API_FOOTBALL_KEY:",
+    )
+    for path, step_bindings in CREDENTIAL_BINDINGS.items():
+        text = _workflow(path)
+        job_env = _job_env_block(text)
+        for binding in forbidden_job_credentials:
+            assert binding not in job_env, (
+                f"{path}: credential {binding} must not be present in job-level env"
+            )
+        for step_name, bindings in step_bindings.items():
+            block = _step_block(text, step_name)
+            assert f"if: {LIVE_GATE}" in block, (
+                f"{path}: credential-bearing step must remain fail-closed: {step_name}"
+            )
+            assert "        env:" in block, (
+                f"{path}: live credentials must be step-scoped: {step_name}"
+            )
+            for name, value in bindings.items():
+                assert f"{name}: {value}" in block, (
+                    f"{path}: {name} must be scoped only to {step_name}"
+                )
