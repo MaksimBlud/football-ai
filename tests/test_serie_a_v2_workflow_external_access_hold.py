@@ -6,7 +6,6 @@ artifact storage are unresolved. The workflows keep their offline tests and
 existing schedules; only live access and its artifact upload are held.
 """
 from pathlib import Path
-import re
 
 ROOT = Path(__file__).resolve().parents[1]
 FLAG = "MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED"
@@ -51,23 +50,30 @@ def _workflow(path: str) -> str:
 
 
 def _step_block(text: str, name: str) -> str:
-    pattern = (
-        r"(?ms)^      - name: "
-        + re.escape(name)
-        + r"\\n(?P<body>.*?)(?=^      - (?:name|uses):|\\Z)"
+    lines = text.splitlines()
+    start = next(
+        (i for i, line in enumerate(lines) if line == f"      - name: {name}"),
+        None,
     )
-    match = re.search(pattern, text)
-    assert match is not None, f"workflow step missing: {name}"
-    return match.group(0)
+    assert start is not None, f"workflow step missing: {name}"
+    end = next(
+        (
+            i
+            for i in range(start + 1, len(lines))
+            if lines[i].startswith("      - name: ")
+            or lines[i].startswith("      - uses: ")
+        ),
+        len(lines),
+    )
+    return "\\n".join(lines[start:end])
 
 
 def test_all_live_v2_workflows_default_to_external_access_disabled():
     for path in WORKFLOWS:
         text = _workflow(path)
-        assert re.search(
-            rf'(?m)^env:\\n  {FLAG}: "false"$',
-            text,
-        ), f"{path} must default to a workflow-level fail-closed flag"
+        assert f'env:\\n  {FLAG}: "false"' in text, (
+            f"{path} must default to a workflow-level fail-closed flag"
+        )
 
 
 def test_live_steps_and_public_artifact_uploads_are_gated():
