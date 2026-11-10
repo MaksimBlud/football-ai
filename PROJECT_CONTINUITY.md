@@ -7616,3 +7616,69 @@ The repository remains public. The downloaded source artifact proves that its cu
 The source-only rights scope in #727 is private, noncommercial archival/validation only. Frozen V2 inference remains explicitly false/unresolved. The separate target-outcome gate remains **0/30**; no target outcomes were read or scored. The #720 → #727 manual integration order remains binding.
 
 No source download was initiated by this audit; no quote was read individually; no target outcome was parsed; no Supabase write/DDL, paid request, production `.pkl` change, model refit, threshold change, promotion, merge, or main update occurred. HUMAN-MERGE only.
+
+
+## 2026-11-10 10:49 UTC — source-window deadline and fresh run-list audit
+
+### Current main and frozen model identity
+
+- Current `main`: `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- Original candidate Git blob: `ac1303f6b096664983fbf52443bd0a381b23ba21`; candidate SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Original protocol Git blob: `65729e9639720e67624c1481190aa22ae606f151`.
+- Original feature builder Git blob: `401b3a0893371bfa4a488ec92a4a54af2678c8f7`.
+- Candidate remains 19 features, 20x2 weights, 3,799 training rows through 2026-06-30, `active_lambda=0`, `shadow_residual_lambda=1`, stability gate FAILED, refit/promotion disabled. No candidate/protocol/feature-builder change.
+
+### Nov 10 scheduled-run audit
+
+The four main-branch V2 workflows were re-read directly from main:
+
+| Workflow | UTC schedule | Latest successful run observed |
+|---|---:|---|
+| Current-Form Source Capture | 05:50 | #42634501531, Nov 9 14:25:18Z |
+| Free Real-Quote Diagnostic | 06:13 | #42651542041, Nov 9 16:07:28Z |
+| Original Forward-Only Preview | 08:08 | #42676083517, Nov 9 18:40:27Z |
+| Current-Form Forward-Only Preview | 08:18 | #42677383722, Nov 9 18:48:55Z |
+
+At 2026-11-10 10:49:43Z, the repository-wide `event=schedule, branch=main` run listing contained no Nov 10 run ID for any of these four workflows. This is an observed absence of registered runs, not proof of the cause. No workflow was manually dispatched and no schedule was changed.
+
+### Source archive freshness deadline
+
+The latest verified current-form source archive is artifact **13681778268**, created 2026-11-09 14:26:19Z, digest `sha256:f4fb869be6e065ca611f012fe21b6d1eafe22434c60ced3a2e7b7ea6c5602101`. Its successful main parent run **42634501531** completed at 14:26:23Z. The manifest's source observation time is **2026-11-09 14:26:18.118320Z**.
+
+The unchanged current-form contract allows a source observation no more than 24 hours before a quote. Therefore this archive's source-age eligibility boundary is **2026-11-10 14:26:18.118320Z**. At this audit time, approximately **3h36m35s** remained. A quote after that boundary cannot use this archive; no backfill is allowed. Do not manually rerun the downloader to refresh it: the source budget/private-storage prerequisites remain unmerged and no new provider permission was granted.
+
+### Corrected feature-input count interpretation
+
+The real source-capture job log reports:
+- `completed_primary_events=100` — the metadata-only Supabase feature-input gate count;
+- `current_season_completed_prior_day_rows=110` — the validated prior-day rows in the captured current-season CSV.
+
+These are different quantities. **100**, not 110, is the observed metadata gate count in that source run. Both exceed the feature-input minimum of 30, but neither count is a prospective forecast or opens the separate target-outcome gate.
+
+The current-form forward run #42677383722 independently verified the source archive and parent provenance, ran 53 tests, then reported `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `target_outcomes_read=false`, and `target_outcomes_scored=false`. The original forward run #42676083517 ran 71 tests, verified the ten historical source files / 3,800 historical rows, and reported `quotes_seen=0`, `future_quotes_checked=0`, and zero V2 previews. These are real runtime/guard proofs, not model-quality evidence.
+
+### Fresh read-only Supabase pre-match aggregate
+
+A new read-only query selected only `league,event_id,snapshot_time_utc,commence_time_utc` and required `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= NOW()`:
+
+| Metric | Value |
+|---|---:|
+| Strictly pre-match snapshots | 3,915 |
+| Unique events | 327 |
+| Strictly pre-match snapshots in last 7 days | 0 |
+| Future events with an already-saved valid pre-match quote | 0 |
+| Latest valid pre-match snapshot | 2026-10-13 14:48:53.042620Z |
+
+No odds values, score/result fields, or protected target outcomes were selected. The prospective cohort remains at **0 eligible forecasts**; the 30-forecast outcome-read gate remains CLOSED.
+
+### Historical-row guard PR duplication correction
+
+A fresh exact file-patch comparison shows #760 and #773 both change the same two files (`serie_a_v2_asof_feature_manifest.py` and its test file), with identical validator code hunks and the same three regression cases (reversed alias duplicate, non-date timestamp, and finite integer statistics). They are duplicate carriers of the same historical-row guard, not two independent fixes.
+
+- #760 is main-based and its exact HEAD `8f4837fbd9a4b403252b3c6618a58e7fa0fbabca` has 7/7 returned PR workflow runs SUCCESS.
+- #773 is stacked on #720 and its exact V2 frozen-test run #42707544006 is SUCCESS.
+- Do not merge both. Select one carrier during manual integration; if #773 is retained on the #720 stack, #760 remains a duplicate Draft. No PR state or merge was changed in this audit.
+
+### Safety
+
+No source download, manual dispatch, paid request, Supabase write/DDL, quote-value read, target-outcome read, production `.pkl` change, model refit, threshold tuning, promotion, bet, merge, main update, schedule change, or other-agent change occurred in this audit. The source archive's remaining freshness window is an operational deadline, not permission to bypass the provider budget or inference-rights gate.
