@@ -1410,3 +1410,47 @@ def test_direct_current_form_archive_helpers_fail_before_network_without_inferen
     with pytest.raises(PermissionError, match="synthetic inference scope denied"):
         get_archive(9876, token="test-token", get=get)
     assert calls == ["inference", "inference"]
+
+
+def test_direct_current_form_archive_parser_requires_inference_before_reading_2026_27_bytes(monkeypatch):
+    import market_anchor_v2_source_rights as inference_rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    def deny_inference():
+        raise PermissionError("synthetic inference scope denied before current-form parsing")
+
+    monkeypatch.setattr(inference_rights, "require_personal_research_inference_scope", deny_inference)
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: pytest.fail("privacy lookup must not run without inference clearance"),
+    )
+    with pytest.raises(PermissionError, match="synthetic inference scope denied before current-form parsing"):
+        verify_and_load_archive(b"not-a-zip", {}, {})
+
+
+def test_direct_current_form_latest_archive_verifier_requires_inference_before_metadata_or_callbacks(monkeypatch):
+    import market_anchor_v2_source_rights as inference_rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    def deny_inference():
+        raise PermissionError("synthetic inference scope denied before current-form archive verification")
+
+    monkeypatch.setattr(inference_rights, "require_personal_research_inference_scope", deny_inference)
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: pytest.fail("privacy lookup must not run without inference clearance"),
+    )
+
+    class ForbiddenMetadata:
+        def __iter__(self):
+            pytest.fail("archive metadata must not be inspected before inference clearance")
+
+    with pytest.raises(PermissionError, match="synthetic inference scope denied before current-form archive verification"):
+        forward_capture_module.verify_latest_source_archive(
+            ForbiddenMetadata(),
+            as_of_utc=datetime(2026, 10, 19, 7, 0, tzinfo=timezone.utc),
+            load_archive=lambda *_args: pytest.fail("archive must not load before inference clearance"),
+            verify_parent_run=lambda *_args, **_kwargs: pytest.fail("parent must not be read before inference clearance"),
+        )
