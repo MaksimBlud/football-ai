@@ -8503,3 +8503,39 @@ Remediation committed to the existing Draft #779 branch (no new PR and no main c
 - exact-head CI runs `42941355893` and `42941361473` both completed SUCCESS on this exact SHA: Python 3.11 **439 passed**, Python 3.12 **439 passed**, and the production `.pkl` hash guard passed in both jobs.
 
 PR #779 remains Draft and ancestry-stale: base `b2a034614d999683a8c334569dc07eb07b7ac589`; compare current #778 HEAD to new #779 HEAD remains diverged (52 ahead / 3 behind; merge base `60d1025e9556cdce05f93b9a71ce46d4d06096cb`). Keep HUMAN-MERGE. After parent integration, rebase the whole chain and rerun exact-head CI. The retired post-outcome replay must stay disabled; do not use its old report or any target rows for inference, scoring, selection, or promotion.
+
+
+## 2026-11-11 — fresh pre-match inventory, source-rights candidates, and V2 ancestry audit
+
+### Fresh main and frozen model identity
+
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; branch metadata still reports `protected=false`. No main update or merge occurred.
+- Original candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; protocol blob `65729e9639720e67624c1481190aa22ae606f151`; historical feature-builder blob `401b3a0893371bfa4a488ec92a4a54af2678c8f7`.
+- Frozen 19-feature order, 20×2 weights, imputer/scaler, 3,799 training rows, `active_lambda=0`, `shadow_lambda=1`, failed stability gate, NO_BET and no-promotion policy remain unchanged.
+
+### Fresh read-only Supabase pre-match inventory
+
+Only timestamp/identity/league aggregates were queried. For odds snapshots the predicate was `snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= NOW()`; no odds prices, scores, results, settlements or target-outcome fields were selected.
+
+- All leagues: **3,915** strict pre-match snapshots / **327** unique events.
+- New strict pre-match snapshots in the last seven days: **0**; upcoming events with a saved strict pre-match quote: **0**.
+- Latest strict pre-match snapshot: Serie A, **2026-10-13 14:48:53 UTC**.
+- Exact original candidate SHA in `public.product_prediction_snapshots`: **0** strict pre-match V2 rows / **0** events.
+- Correct current-form feature-input metadata source is `public.league_finished_results`, not `public.matches`. A metadata-only query selecting/counting only `match_date, home_team, away_team` for Serie A 2026-27 returned **113** unique fixture identities, latest metadata date **2026-11-08**. This is only the lagged-feature input gate; it does not open the separate 30-eligible-prospective-forecast outcome gate.
+
+### New source-rights candidates — not approved for use
+
+- **OpenScores** publishes terms allowing internal research and caching/transformation, and documents top-five league fixtures/statistics. Its docs were last updated 2026-06-12; its changelog describes Sofascore/Flashscore ingestion. Upstream rights for those feeds and verified 2026-27 Serie A field completeness remain unresolved. No account/key was created and no API call was made. References: `https://openscores.ai/terms`, `https://openscores.ai/docs`, `https://openscores.ai/changelog`.
+- **Cornerflick** publishes a CC BY 4.0 compilation and per-match CSV/JSON with stats/provenance, but its own data page explicitly limits that licence to its compilation and says underlying match facts remain subject to provider terms. A sampled page identifies API-Football as the feed; no upstream permission for this V2 use was established. Do not treat the compilation licence as clearing provider rights. No CSV was downloaded or used. References: `https://cornerflick.com/data`, `https://www.api-football.com/terms`.
+- Neither source replaces the current Football-Data source-rights block. No source was added to the V2 pipeline.
+
+### Current V2 PR state and exact verification
+
+- PR #781 remains OPEN / Ready for review / HUMAN-MERGE at `c48e0c2f6a486c9320b04c7670d84b74e8d2322a`; its eight PR-triggered workflows are SUCCESS. The recovery run `42881013880` completed offline tests and the production hash check, while candidate rebuild, proof and artifact upload were SKIPPED. This hold is not on main; the four scheduled live workflows remain active until manual integration.
+- PR #778 current HEAD `aa0cd076a15033d2d90c7c08cb3ff14c94c2e8ec` pins both candidate validation and captured shadow rows to the exact original candidate SHA. Exact frozen V2 CI: Python 3.11 **414 passed**, Python 3.12 **414 passed**; separate V2 shadow-validation run **15 passed**; production `.pkl` guards passed.
+- PR #779 current HEAD `19d1332bd69d345f1e7507e35dead8a5012bfe09` has exact frozen V2 CI **439 passed** in Python 3.11 and **439 passed** in Python 3.12. However, compare #778 HEAD → #779 HEAD is **diverged, 54 ahead / 3 behind**, merge base `60d1025e9556cdce05f93b9a71ce46d4d06096cb`. Direct blob comparison confirms #779 still has an older `market_anchor_1x2_v2_shadow.py` that lacks #778's exact `FROZEN_CANDIDATE_SHA256` pin. Keep #779 Draft; do not merge it. Rebase/port the complete latest #778 state, then rerun exact-head CI before considering integration.
+- PR #740 itself remains a documentation-only branch; its previous exact HEAD `ee97565092f99ba34eff5950d5fc405fbaf812c3` passed 7/7 PR workflows. This addendum must receive fresh exact-head CI after this commit.
+
+### Boundaries
+
+No source download, API request, odds-provider request, quote-price read, target-outcome query, Supabase write/DDL, production `.pkl` change, model refit, threshold tuning, promotion, betting, schedule change, main update, or other-agent setting change was performed. No 2026/27 result values were used for model features, forecast scoring, candidate selection, or evaluation. The 30-forecast outcome gate remains CLOSED; no Brier/LogLoss superiority claim is supported.
