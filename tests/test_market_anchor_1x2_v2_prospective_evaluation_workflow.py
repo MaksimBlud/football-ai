@@ -55,8 +55,10 @@ def test_prospective_evaluation_workflow_is_main_only_and_has_no_schedule_or_pai
     assert "github.event.workflow_run.event == 'workflow_run'" in job
     assert "github.event_name != 'workflow_run'" not in job
     assert "github.event.workflow_run.event != 'pull_request'" not in job
-    assert "SUPABASE_KEY: " + "$" + "{{ secrets.SUPABASE_KEY }}" in job
-    assert "GITHUB_TOKEN: " + "$" + "{{ github.token }}" in job
+    job_env = job.split("    steps:", 1)[0]
+    assert "SUPABASE_KEY:" not in job_env
+    assert "SUPABASE_URL:" not in job_env
+    assert "GITHUB_TOKEN:" not in job_env
     assert "GITHUB_REPOSITORY: " + "$" + "{{ github.repository }}" in job
     assert "market_anchor_v2_artifact_privacy.py" in job
     assert "market_anchor_1x2_v2_prospective_evaluation.py" in job
@@ -471,3 +473,25 @@ def test_public_live_entrypoints_do_not_accept_caller_supplied_http_transport():
 
     assert "get" not in inspect.signature(live.run_live_evaluation).parameters
     assert "get" not in inspect.signature(live.verify_source_artifacts_for_candidates).parameters
+
+
+def test_live_evaluation_workflow_defaults_closed_and_scopes_credentials_to_live_step():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    assert 'env:\\n  MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED: "false"' in text
+
+    job = text.split("  evaluate-market-only:", 1)[1]
+    job_env = job.split("    steps:", 1)[0]
+    for credential in ("SUPABASE_URL:", "SUPABASE_KEY:", "GITHUB_TOKEN:"):
+        assert credential not in job_env
+
+    live_step = job.split(
+        "- name: Verify source-before-quote artifacts and evaluate only after the frozen gate",
+        1,
+    )[1].split("- name: Archive metrics-only research report", 1)[0]
+    assert "if: " + "$" + "{{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}" in live_step
+    assert "SUPABASE_URL: " + "$" + "{{ secrets.SUPABASE_URL }}" in live_step
+    assert "SUPABASE_KEY: " + "$" + "{{ secrets.SUPABASE_KEY }}" in live_step
+    assert "GITHUB_TOKEN: " + "$" + "{{ github.token }}" in live_step
+
+    upload_step = job.split("- name: Archive metrics-only research report", 1)[1]
+    assert "if: " + "$" + "{{ always() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}" in upload_step
