@@ -326,3 +326,33 @@ def test_free_diagnostic_compiles_frozen_transitive_runtime_dependencies():
     compile_line = next(line for line in step.splitlines() if "python -m py_compile " in line)
     assert "market_anchor_1x2_v2_shadow.py" in compile_line
     assert "market_anchor_1x2_v1.py" in compile_line
+
+
+
+def test_feature_manifest_cli_denies_before_reading_history_or_quotes(monkeypatch, tmp_path):
+    import sys
+    import serie_a_v2_asof_feature_manifest as feature_manifest
+    import market_anchor_v2_direct_access as direct_access
+
+    missing_history = tmp_path / "must-not-be-read.csv"
+    missing_quotes = tmp_path / "must-not-be-read.json"
+    manifest = tmp_path / "manifest.json"
+    audit = tmp_path / "audit.json"
+    monkeypatch.setattr(sys, "argv", [
+        "serie_a_v2_asof_feature_manifest.py",
+        "--existing-history-csv", str(missing_history),
+        "--saved-quotes-json", str(missing_quotes),
+        "--manifest-json", str(manifest),
+        "--audit-json", str(audit),
+    ])
+    monkeypatch.setattr(
+        direct_access,
+        "require_v2_inference_access",
+        lambda: (_ for _ in ()).throw(PermissionError("direct feature inference blocked")),
+    )
+
+    with pytest.raises(PermissionError, match="direct feature inference blocked"):
+        feature_manifest.main()
+
+    assert not manifest.exists()
+    assert not audit.exists()
