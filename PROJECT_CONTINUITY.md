@@ -1,3 +1,39 @@
+# Continuity update — 2026-11-11 09:16 UTC — bidirectional fixture identity and final direct-access audit
+
+## Fresh main and original V2 contract
+
+- `refs/heads/main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main update or merge.
+- Original `MARKET_ANCHOR_1X2_V2` candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, candidate blob `ac1303f6b096664983fbf52443bd0a381b23ba21`. The 19-feature order, 20×2 weights, scaler/imputer, 3,799 training rows, `active_lambda=0`, `shadow_lambda=1`, failed stability gate and no-promotion rule remain unchanged.
+
+## #787 — direct-access and fixture-identity gaps closed on the same branch
+
+- PR #787 remains Draft, stacked on #786 HEAD `6e61c92fd211862ef1ad067faa6789fe535779e5`.
+- Current #787 HEAD: `013dccc0ef195721977c52ac663c8bc0312022b8`, parent `b4cf76bb8e477a9681b657aba5a2949a57e76bc7`.
+- The prior #787 direct-access audit fix now requires provider inference rights plus private artifact storage at the original low-level V2 scorers, candidate loader, direct shadow preview, saved-quote reader and CLI before model bytes, inputs, Supabase or feature files are touched.
+- A further audit of the actual forward code found that the branch rejected one event ID changing identity, but did not reject two different provider IDs representing the same fixture in reversed Home/Away order. Ported the independent #767 bidirectional-identity fix into #787: canonical team aliases/case/spacing are used only for identity checks; unordered team-pair + kickoff collisions across provider IDs are rejected; surrounding event-ID whitespace and identical canonical teams fail before archive or parent-run access. Quote prices and the frozen feature/model contract are untouched.
+- Exact-head CI for `013dccc0ef195721977c52ac663c8bc0312022b8`:
+  - [Serie A Frozen V2 Shadow Tests #42993430189](https://github.com/MaksimBlud/football-ai/actions/runs/42993430189): **433 passed on Python 3.11 and 433 passed on Python 3.12**; dependency lock `pip check` succeeded; candidate file presence and `git diff --exit-code -- '*.pkl'` succeeded.
+  - [Market Anchor 1X2 V2 Shadow Validation #42993430037](https://github.com/MaksimBlud/football-ai/actions/runs/42993430037): **15 passed**.
+- These are offline/synthetic regression results only. They do not authorize source capture or inference and are not model-quality evidence.
+- #767's bidirectional identity logic and no-offset attestation guard are now present in the #787 branch; avoid merging both versions without rebase. #787 remains Draft until its #786 parent stack is integrated and exact-head CI is rerun.
+
+## Current data and evaluation status (read-only)
+
+- Strict pre-match quote predicate: `snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= NOW()`.
+- `public.odds_snapshots`: 3,915 strict pre-match snapshots / 327 events; zero future events with saved strict pre-match quotes; latest observation `2026-10-13T14:48:53.042620Z`.
+- Exact original-candidate SHA query in `public.product_prediction_snapshots`: zero strict pre-match V2 predictions / zero events.
+- Serie A 2026-2027 feature-input metadata query selected only `match_date,home_team,away_team`: 113 unique fixture identities through 2026-11-08. No target scores/results/settlements were selected; the separate 30-completed-forecast target-outcome gate remains closed.
+- Latest actual V2 source/diagnostic/original-forward/current-form-forward runs remain the 2026-11-10 runs #42827889788, #42837720155, #42853738496 and #42854487569. They show respectively a source archive with 110 feature-source events, zero eligible quotes, zero original V2 quote previews, and zero current-form shadow captures. No new V2 scheduled run was present in the latest Actions history for 2026-11-11 at this audit time.
+
+## Manual integration blockers and safety
+
+- #781 remains OPEN / Ready for review / mergeable, exact HEAD `c48e0c2f6a486c9320b04c7670d84b74e8d2322a`, with 8/8 exact-head CI SUCCESS. It is not merged; main live schedules remain present until owner HUMAN-MERGE.
+- #720 remains OPEN / Ready for review / mergeable, exact HEAD `1b9464834dd5256b7d69499c1443378518dde256`, with 9/9 exact-head runs SUCCESS. Its proposed rights manifest still records inference unresolved/false and `authorization=null`; its two-session ceiling is not a rights grant.
+- The repository remains public. Private-artifact guard therefore correctly blocks source/inference artifact access. Do not change repository visibility or schedules.
+- Supabase writes/DDL = 0; paid provider calls = 0; no source download or inference in this audit; production `.pkl` unchanged; no target-outcome reads, bets, threshold tuning or promotion.
+
+---
+
 # Continuity update — 2026-11-11 09:10 UTC — close remaining direct frozen-inference/private-artifact bypasses
 
 ## Fresh main, PR stack and exact candidate
