@@ -8539,3 +8539,8 @@ Only timestamp/identity/league aggregates were queried. For odds snapshots the p
 ### Boundaries
 
 No source download, API request, odds-provider request, quote-price read, target-outcome query, Supabase write/DDL, production `.pkl` change, model refit, threshold tuning, promotion, betting, schedule change, main update, or other-agent setting change was performed. No 2026/27 result values were used for model features, forecast scoring, candidate selection, or evaluation. The 30-forecast outcome gate remains CLOSED; no Brier/LogLoss superiority claim is supported.
+
+
+### Source-review boundary incident — 2026-11-11
+
+During external licence research, a public Cornerflick Serie A results page and search surfaces inadvertently displayed 2026/27 result listings before the V2 evaluation workflow was authorized to use outcomes. This was an accidental browsing exposure. No score/result values were copied into the repository or Supabase, supplied to the model, used for candidate/feature selection, forecast scoring, Brier/LogLoss, or evaluation; no Supabase outcome columns were queried. Treat the surfaced public data as contaminated and do not use it for any V2 work. Cornerflick is not an approved V2 source regardless: its CC BY 4.0 licence covers only its compilation, while its own data page leaves underlying match facts subject to upstream provider terms. No CSV or API data was downloaded. Keep all original outcome gates unchanged.
