@@ -8570,3 +8570,45 @@ On main `40887ebb215730190d7a6c7a1693373ec4afcdfc`:
 - The PR hold is the required fail-closed protection pending provider AI-use clearance. HUMAN-MERGE remains mandatory; do not merge automatically or change the schedules in this research task.
 
 No artifact payload, score/result column, target outcome, or quote price was read in this incremental audit. No source/API request, Supabase write/DDL, paid provider call, model refit, threshold tuning, production `.pkl` change, merge, main update, or other-agent setting change occurred. The original candidate SHA, 19-feature contract, weights, `active_lambda=0`, `shadow_lambda=1`, NO_BET and both outcome gates remain unchanged.
+
+
+## 2026-11-11 05:20 UTC — clean rebase replacement for V2 direct forward/report gate
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main update or merge occurred.
+
+### PR #782 replaces the stale #779 branch
+
+- PR #782 base is the exact current #778 HEAD `aa0cd076a15033d2d90c7c08cb3ff14c94c2e8ec`.
+- Current #782 head is `984f00cf1c4c236dc4124ec1903e3ddd4c51474e`.
+- GitHub compare confirms **17 commits ahead / 0 behind**, with 16 changed files.
+- The PR description was corrected to this current SHA; earlier intermediate SHA `10f84be3937f5c48fcc324010855e2acf68c9070` is stale.
+- Exact-head push run [42964652147](https://github.com/MaksimBlud/football-ai/actions/runs/42964652147) and pull-request run [42964659477](https://github.com/MaksimBlud/football-ai/actions/runs/42964659477) both completed **2/2 jobs SUCCESS** on `984f00cf...`. Python 3.11 and Python 3.12 each report **440 passed**; production `.pkl` hash guards passed.
+- The new direct-call checks enforce inference scope and private artifact storage before quote/archive inspection, callbacks, filesystem creation, feature construction, or shadow scoring. Source capture and source-archive reading have their separate scope checks. CI uses synthetic permission stubs only; this is not live provider clearance or inference evidence.
+- #782 remains **Draft** because #778 and its parent stack are not merged. HUMAN-MERGE only.
+
+PR #779 remains Draft and is superseded for integration purposes. Its HEAD `19d1332bd69d345f1e7507e35dead8a5012bfe09` remains based on stale ancestry and lacks #778's exact candidate SHA pin in the shadow module. Its 439-test CI does not cure that code difference. Do not merge #779.
+
+### Current live-workflow hold and schedule audit
+
+PR #781 remains OPEN / Ready for review at exact HEAD `c48e0c2f6a486c9320b04c7670d84b74e8d2322a`; all eight exact-head workflows are SUCCESS, including the offline V2 shadow suite and recovery job. It is not merged to main.
+
+Direct comparison of the four main workflow files with #781 confirms that #781 preserves the existing cron strings while hard-gating the live data/inference steps and their artifact uploads behind `MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true'` (fixed false in the PR):
+- current-form source capture: `50 5 * * *`;
+- free diagnostic: `13 6 * * *`;
+- original forward: `8 8 * * *`;
+- current-form forward: `18 8 * * *`.
+
+The unchanged main workflows still contain their original live steps and credentials until #781 is manually integrated. No schedule was edited in this task.
+
+### Fresh read-only pre-match Supabase audit
+
+At this check:
+- strict pre-kickoff odds snapshots: **3,915 / 327 events** across nine leagues;
+- future-event snapshots satisfying `snapshot_time_utc < commence_time_utc`: **0**;
+- latest Serie A pre-kickoff snapshot: **2026-10-13 14:48:53 UTC**;
+- exact original-candidate rows in `product_prediction_snapshots` satisfying `generated_at_utc < commence_time_utc`: **0 / 0 events**;
+- Serie A 2026/27 feature-input metadata: **113 unique date/home/away identities**, latest match date **2026-11-08**, selecting no score/result fields.
+
+The 113 metadata identities satisfy only the lagged feature-input gate. The separate prospective target-outcome gate remains CLOSED; no 2026/27 target outcomes were read or scored. No Brier/LogLoss or V2-over-market claim is available.
+
+No source/API download, paid request, live inference, Supabase write/DDL, production `.pkl` change, model refit, threshold tuning, promotion, bet, schedule change, main update, merge, or other-agent setting change occurred. Original candidate SHA, 19-feature order, weights, scaler/imputer, `active_lambda=0`, `shadow_lambda=1`, and all frozen gates remain unchanged.
