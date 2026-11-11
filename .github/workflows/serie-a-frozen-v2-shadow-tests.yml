@@ -6,6 +6,7 @@ on:
       - main
       - research/v2-provider-ai-inference-rights-block-*
       - research/v2-integrated-private-quote-preflight-*
+      - research/v2-source-policy-recheck-stacked-on-727-20261110-run11
     paths:
       - "PROJECT_CONTINUITY.md"
       - "tests/test_serie_a_v2_dependency_lock_contract.py"
