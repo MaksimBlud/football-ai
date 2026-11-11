@@ -9545,3 +9545,41 @@ Query restriction: `snapshot_time_utc < commence_time_utc AND snapshot_time_utc 
 - PR [#781](https://github.com/MaksimBlud/football-ai/pull/781) is the direct-main live-access hold, exact current HEAD `afe943305143b68b62e89f20010d78d6b48efd70`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, Ready for review / mergeable, 8/8 exact-head CI SUCCESS. It sets `MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=false`, gates source/quote/inference/recovery steps and uploads, and preserves existing schedules. It is not merged; the hold is not active on main. HUMAN-MERGE only.
 - #720 remains 118 commits ahead and 30 behind #781; do not merge it as-is. After the owner manually merges #781, re-read fresh main, rebase #720, preserve every default-deny and upload gate, run exact-head CI, then consider #727 and its descendants. #783–#787 remain a stacked chain; no provider rights are granted by their CI.
 - No cron/schedule, other agent, main branch, production pickle, Supabase schema/data, V2 weight, feature contract, quote source or outcome gate was changed by this audit. No paid API, training/refit, bet, promotion or target-outcome read occurred.
+
+
+## Incremental original V2 verification — 2026-11-11 22:53 UTC
+
+This addendum supersedes the earlier 21:58 UTC CI-pending statement for PR #791 and records a fresh exact-head/status and strict pre-match-only database recheck. It does not change main.
+
+### Fresh main and continuity PR
+
+- Main ref remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; `PROJECT_CONTINUITY.md` on main still contains only the 2026-10-18 checkpoint.
+- At the start of this addendum, continuity PR #740 was at HEAD `fee5ce38deed042938bd8131be632926ac169278`, base main unchanged, with all seven exact-head PR workflows SUCCESS (runs #43107560086, #43107559929, #43107559907, #43107559897, #43107559978, #43107560092, #43107560083). This addendum is documentation-only and requires its own new exact-head CI before it can be called validated.
+- Repository visibility remains public. No repository visibility, artifact-retention, workflow schedule, or other-agent setting was changed.
+
+### Corrected exact-head PR status
+
+- PR #781 live-access hold: exact HEAD `afe943305143b68b62e89f20010d78d6b48efd70`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, OPEN / Ready for review / mergeable, **8/8 exact-head workflows SUCCESS** (runs #43083511016, #43083511138, #43083510665, #43083510643, #43083510883, #43083510860, #43083510838, #43083510669). The frozen V2 suite reports 93 passed; recovery tests report 39 passed; candidate rebuild/proof/upload are skipped under default deny and the production pickle hash comparison passes. This hold is not active on main until HUMAN-MERGE and fresh-main verification.
+- PR #787 direct-entrypoint rights/privacy gates: exact HEAD `272a0dc2d6a97fedc7964e8cc2614ba670220fae`, stacked on #786, **2/2 exact-head V2 workflows SUCCESS** (#43085253171 and #43085253302). The latter's actual logs show **440 passed on Python 3.11 and 440 passed on Python 3.12**; both production `.pkl` hash checks pass. PR remains Draft/HUMAN-MERGE. Its direct-call guards require both provider clearance and a private GitHub repository before source/inference helpers inspect inputs or access Supabase/network/files. Since this repository is public, the guard correctly denies live access even if a caller bypasses workflow-level gates.
+- PR #790 Open-Matchday audit: exact HEAD `c12dcc03afa533943bcbbca55aae5334740a3d9c`, **6/6 exact-head PR workflows SUCCESS**. Audit only; no source rights granted.
+- PR #791 Soccer Data audit: exact HEAD `ea1a5c33f5d6a7e91fb4aba4aa42332a58fec54d`, **6/6 exact-head PR workflows SUCCESS**, including Research PR Validation #43107143776. This supersedes the earlier 5/6 / Research queued status. It remains Draft. The audit is documentation-only: no account, key, API call, odds endpoint, source payload, or match data was accessed. Exact Serie A coverage, field-level upstream provenance, and written permission for frozen inference/private retention remain unverified.
+- PR #781 and #787 remain separate controls: #781 stops the current main workflows and public uploads after manual merge; #787 protects direct-call boundaries on its stacked branch. Neither grants provider rights or makes public storage private.
+
+### Strict pre-match Supabase refresh
+
+All SQL was read-only. No score, result, settlement, or target-outcome columns were queried.
+
+- `odds_snapshots`, requiring `snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= NOW()`: **3,915** snapshots across **327** events.
+- Strict pre-match snapshots in the preceding seven days: **0**.
+- Latest strict pre-match quote: **2026-10-13 14:48:53 UTC** (Serie A).
+- `product_prediction_snapshots`, exact frozen candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, requiring both `generated_at_utc < commence_time_utc` and `created_at < commence_time_utc`: **0 rows / 0 events**.
+- No Supabase write or DDL. These counts do not establish a V2 forecast cohort.
+
+### Frozen model and scientific gate
+
+- Original candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; original 19-feature order, 20x2 weights, scaler/imputer, 3,799-row training fingerprint and 2026-06-30 cutoff are unchanged.
+- `active_lambda=0`; `shadow_lambda=1` research-only; stability gate remains FAILED; prospective target-outcome gate remains **0/30**.
+- No exact-SHA prospective predictions exist in the queried Supabase snapshot table. Brier/LogLoss comparison and superiority over market are not established.
+- The Soccer Data source remains unapproved. The public repository/private-artifact incompatibility is an additional hard blocker: SHA integrity does not provide confidentiality, and the current direct guard intentionally fails closed on a public repository.
+
+No source/quote workflow was enabled, no source or quote was downloaded, no target outcome was read, no paid API call, refit, threshold tuning, bet, promotion, production `.pkl` change, Supabase write/DDL, main update, PR merge, schedule change, or other-agent setting change occurred.
