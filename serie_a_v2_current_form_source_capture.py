@@ -137,6 +137,7 @@ def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
     """Read only event date/team metadata; no goals, result or settlement columns."""
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("feature-source gate clock must have a real UTC offset")
+    require_personal_research_source_capture_scope()
     cutoff = now.astimezone(timezone.utc).date().isoformat()
     rows: list[dict[str, Any]] = []
     start = 0
@@ -190,6 +191,7 @@ def read_completed_primary_event_identities(
     """Read only date/team metadata and return canonical identities for source parity."""
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("feature-source gate clock must have an explicit UTC offset")
+    require_personal_research_source_capture_scope()
     cutoff_date = now.astimezone(timezone.utc).date()
     cutoff = cutoff_date.isoformat()
     rows: list[dict[str, Any]] = []
@@ -234,6 +236,7 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
         raise ValueError(
             "current-season source capture clock must be timezone-aware with a real UTC offset"
         )
+    require_personal_research_source_capture_scope()
     if not raw or len(raw) > MAX_CURRENT_CSV_BYTES:
         raise ValueError("current-season CSV is empty or exceeds size limit")
     frame = pd.read_csv(BytesIO(raw), low_memory=False)
@@ -422,6 +425,8 @@ def capture_source_archive(
     """Capture the ten frozen historical seasons plus the gated current-season source."""
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("source capture clock must have a real UTC offset")
+    require_personal_research_source_capture_scope()
+    require_private_repository_for_source_artifacts()
     at = now.astimezone(timezone.utc)
     # Authenticate the frozen candidate and exact source URL before any metadata read,
     # network request, or filesystem output. The manifest must attest the verified artifact.
