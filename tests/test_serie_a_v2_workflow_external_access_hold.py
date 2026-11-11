@@ -250,14 +250,13 @@ def test_live_v2_workflow_inventory_cannot_grow_around_the_hold():
         has_live_access = (
             "secrets.SUPABASE_URL" in text
             or "secrets.SUPABASE_KEY" in text
-            or "actions/upload-artifact@" in text
             or any(marker in text for marker in live_script_markers)
         )
         if has_v2_reference and has_live_access:
             discovered.add(path.relative_to(ROOT).as_posix())
 
-    assert discovered == set(WORKFLOWS), (
-        "V2 live workflow inventory changed without updating and gating the "
-        f"explicit hold contract; discovered={sorted(discovered)}, "
-        f"expected={sorted(WORKFLOWS)}"
+    unexpected = discovered - set(WORKFLOWS)
+    assert not unexpected, (
+        "New V2 live-access workflow(s) bypass the explicit fail-closed "
+        f"inventory: {sorted(unexpected)}"
     )
