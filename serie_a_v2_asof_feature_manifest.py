@@ -66,7 +66,7 @@ def _validate_history(history: pd.DataFrame) -> pd.DataFrame:
     # timestamp into the same date-only value used by the frozen source contract.
     raw_dates = frame["Date"].astype(str).str.strip()
     if raw_dates.str.contains(
-        r"(?i)(?:[Tt]\\d{2}:\\d{2}|\\s+\\d{1,2}:\\d{2}|[+-]\\d{2}:\\d{2}|[Zz]$)",
+        r"(?i)(?:[Tt]\d{2}:\d{2}|\s+\d{1,2}:\d{2}|[+-]\d{2}:\d{2}|[Zz]$)",
         regex=True,
     ).any():
         raise ValueError("expected date-only historical source")
