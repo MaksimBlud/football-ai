@@ -10,6 +10,7 @@ on:
       - research/v2-prematch-quote-query-cutoff-rebased-on-780-20261111-run11
       - research/v2-direct-quote-reader-rights-gate-rebased-on-783-20261111-run11
       - research/v2-direct-shadow-preview-inference-rights-gate-rebased-on-784-20261111-run11
+      - research/v2-core-inference-and-refit-freeze-rebased-on-785-20261111-run11
     paths:
       - "PROJECT_CONTINUITY.md"
       - "tests/test_serie_a_v2_dependency_lock_contract.py"
@@ -65,6 +66,7 @@ on:
       - research/v2-direct-quote-reader-rights-gate-rebased-on-783-20261111-run11
       - research/v2-direct-shadow-preview-inference-rights-gate-rebased-on-784-20261111-run11
       - research/v2-core-inference-and-refit-freeze-rebased-on-785-20261111-run11
+      - research/v2-current-form-source-direct-rights-gate-on-786-20261111-run11
     paths:
       - "serie_a_v2_frozen_shadow_preview.py"
       - "tests/test_serie_a_v2_frozen_shadow_preview.py"
