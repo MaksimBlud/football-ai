@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone, tzinfo
 import hashlib
 from io import StringIO
 import json
+import sys
 from pathlib import Path
 import zipfile
 
@@ -10,9 +11,21 @@ import pytest
 
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
 from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes
+import serie_a_v2_prequote_source_archive_gate as gate_module
+
 from serie_a_v2_prequote_source_archive_gate import (
     ARCHIVE_REPORT, SOURCE_DIR, verify_archive,
 )
+
+
+@pytest.fixture(autouse=True)
+def allow_synthetic_source_archive_scope(monkeypatch):
+    monkeypatch.setattr(
+        gate_module,
+        "_require_source_archive_read_scope",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+
 
 AFTER = datetime(2026, 10, 15, 12, tzinfo=timezone.utc)
 OBSERVED = datetime(2026, 10, 13, 15, 22, tzinfo=timezone.utc)
@@ -196,3 +209,58 @@ def test_github_artifact_created_at_exact_quote_time_is_not_prequote(tmp_path):
     assert result["source_archive_prequote_ready"] == 0
     assert result["by_quote"][0]["source_archive_before_quote"] is False
     assert result["blocked"]["ARCHIVE_NOT_BEFORE_QUOTE"] == 1
+
+
+
+def test_direct_archive_verifier_denies_before_archive_stat_when_rights_are_unresolved(monkeypatch, tmp_path):
+    def deny():
+        raise PermissionError("V2 frozen inference scope remains unresolved")
+
+    monkeypatch.setattr(gate_module, "_require_source_archive_read_scope", deny)
+    missing_archive = tmp_path / "must-not-be-statted.zip"
+    with pytest.raises(PermissionError, match="V2 frozen inference scope remains unresolved"):
+        verify_archive(missing_archive, [], as_of_utc=AFTER)
+
+
+def test_cli_denies_before_reading_quote_file_or_archive_when_rights_are_unresolved(monkeypatch, tmp_path):
+    def deny():
+        raise PermissionError("V2 frozen inference scope remains unresolved")
+
+    monkeypatch.setattr(gate_module, "_require_source_archive_read_scope", deny)
+    missing_archive = tmp_path / "must-not-be-opened.zip"
+    missing_quotes = tmp_path / "must-not-be-read.json"
+    output = tmp_path / "must-not-be-written.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "serie_a_v2_prequote_source_archive_gate.py",
+            "--archive", str(missing_archive),
+            "--quotes-json", str(missing_quotes),
+            "--output", str(output),
+        ],
+    )
+    with pytest.raises(PermissionError, match="V2 frozen inference scope remains unresolved"):
+        gate_module.main()
+    assert not output.exists()
+
+
+def test_source_archive_scope_requires_both_inference_rights_and_private_storage(monkeypatch):
+    import market_anchor_v2_source_rights as rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    calls = []
+    monkeypatch.setattr(
+        rights,
+        "require_personal_research_inference_scope",
+        lambda: calls.append("rights") or {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+
+    def public_repository_denied():
+        calls.append("privacy")
+        raise PermissionError("source archives require a private repository")
+
+    monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", public_repository_denied)
+    with pytest.raises(PermissionError, match="source archives require a private repository"):
+        gate_module._require_source_archive_read_scope()
+    assert calls == ["rights", "privacy"]
