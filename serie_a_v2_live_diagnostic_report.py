@@ -433,7 +433,8 @@ def main() -> None:
         # Rights must be checked before even reading saved quote metadata.
         # This path still performs no Football-Data access, features, or inference.
         try:
-            require_personal_research_inference_scope()
+            from market_anchor_v2_direct_access import require_v2_inference_access
+            require_v2_inference_access()
         except PermissionError as exc:
             report = write_research_scope_blocked_report(
                 args.output, "SERIE_A_V2_FREE_REAL_QUOTE_DIAGNOSTIC", str(exc)
@@ -447,7 +448,8 @@ def main() -> None:
         _write_quote_preflight_report(args.output, preflight)
         return
     try:
-        require_personal_research_inference_scope()
+        from market_anchor_v2_direct_access import require_v2_inference_access
+        require_v2_inference_access()
     except PermissionError as exc:
         report = write_research_scope_blocked_report(
             args.output, "SERIE_A_V2_FREE_REAL_QUOTE_DIAGNOSTIC", str(exc)
