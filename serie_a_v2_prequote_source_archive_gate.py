@@ -194,8 +194,7 @@ def verify_archive(archive_path: Path, quotes: list[Mapping[str, Any]], *,
         or as_of_utc.utcoffset() is None
     ):
         raise ValueError("as_of_utc requires timezone")
-    _require_source_archive_read_scope()
-    return _verify_archive_unchecked(
+    return _verify_archive_with_rights(
         archive_path, quotes, as_of_utc=as_of_utc,
         github_artifact_sha256=github_artifact_sha256,
         github_artifact_created_at_utc=github_artifact_created_at_utc,
@@ -214,7 +213,7 @@ def main() -> None:
     quotes = json.loads(args.quotes_json.read_text(encoding="utf-8"))
     if not isinstance(quotes, list):
         raise ValueError("quotes JSON must be a list")
-    result = _verify_archive_unchecked(
+    result = _verify_archive_with_rights(
         args.archive, quotes, as_of_utc=datetime.now(timezone.utc),
         github_artifact_sha256=args.github_artifact_sha256,
         github_artifact_created_at_utc=args.github_artifact_created_at_utc,
