@@ -56,6 +56,11 @@ class _ForbiddenClient:
 
 def test_original_forward_direct_helpers_deny_before_quote_archive_or_network_access(monkeypatch, tmp_path):
     monkeypatch.setattr(inference_rights, "require_personal_research_inference_scope", _deny)
+    monkeypatch.setattr(
+        capture_rights,
+        "require_personal_research_source_capture_scope",
+        lambda: {"source_capture_only": True, "scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
     blocked_dir = tmp_path / "must-not-be-created"
 
     with pytest.raises(PermissionError, match="direct-access test deny"):
@@ -101,6 +106,11 @@ def test_feature_report_archive_and_attestation_helpers_deny_before_inputs(monke
 
 def test_current_form_forward_direct_helpers_deny_before_inputs_or_callbacks(monkeypatch, tmp_path):
     monkeypatch.setattr(inference_rights, "require_personal_research_inference_scope", _deny)
+    monkeypatch.setattr(
+        capture_rights,
+        "require_personal_research_source_capture_scope",
+        lambda: {"source_capture_only": True, "scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
     blocked_dir = tmp_path / "must-not-be-created"
 
     with pytest.raises(PermissionError, match="direct-access test deny"):
