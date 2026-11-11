@@ -142,8 +142,26 @@ def _read_bounded_historical_csv_response(
                 pass
 
 
-def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -> tuple[pd.DataFrame, list[dict]]:
-    """Explicit, bounded configured public URLs; never odds API, never cache guess."""
+def _require_public_history_scope(access_scope: str) -> dict:
+    """Require an explicit provider scope and private artifact storage before source access."""
+    if access_scope == "INFERENCE":
+        from market_anchor_v2_source_rights import require_personal_research_inference_scope
+        rights = require_personal_research_inference_scope()
+    elif access_scope == "SOURCE_CAPTURE":
+        from market_anchor_v2_source_capture_rights import require_personal_research_source_capture_scope
+        rights = require_personal_research_source_capture_scope()
+    else:
+        raise PermissionError("historical source loader requires an explicit approved access scope")
+    from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
+    privacy = require_private_repository_for_source_artifacts()
+    return {"access_scope": access_scope, "rights": rights, "artifact_privacy": privacy}
+
+
+def _fetch_public_history_with_scope(
+    *, get=requests.get, capture_dir: Path | None = None, access_scope: str
+) -> tuple[pd.DataFrame, list[dict]]:
+    """Bounded historical CSV loader; direct imports must select a valid scope."""
+    _require_public_history_scope(access_scope)
     all_frames = []
     audit = []
     total_source_bytes = 0
@@ -202,6 +220,31 @@ def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -
             "completed_source_rows": len(frame),
         })
     return pd.concat(all_frames, ignore_index=True), audit
+
+
+def fetch_public_history_for_inference(
+    *, get=requests.get, capture_dir: Path | None = None
+) -> tuple[pd.DataFrame, list[dict]]:
+    """Fetch pre-freeze history only under the frozen-inference rights scope."""
+    return _fetch_public_history_with_scope(
+        get=get, capture_dir=capture_dir, access_scope="INFERENCE"
+    )
+
+
+def fetch_public_history_for_source_capture(
+    *, get=requests.get, capture_dir: Path | None = None
+) -> tuple[pd.DataFrame, list[dict]]:
+    """Fetch pre-freeze history only under the narrower private source-only scope."""
+    return _fetch_public_history_with_scope(
+        get=get, capture_dir=capture_dir, access_scope="SOURCE_CAPTURE"
+    )
+
+
+def fetch_public_history(
+    *, get=requests.get, capture_dir: Path | None = None
+) -> tuple[pd.DataFrame, list[dict]]:
+    """Compatibility entrypoint defaults to inference scope, never source-only scope."""
+    return fetch_public_history_for_inference(get=get, capture_dir=capture_dir)
 
 
 # Freeze rule is stronger than merely omitting this season from the remote
