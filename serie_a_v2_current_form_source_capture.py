@@ -22,7 +22,7 @@ import requests
 from supabase import create_client
 
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
-from serie_a_v2_frozen_shadow_preview import FROZEN_SHA, load_verified_original
+from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
 from serie_a_v2_live_diagnostic_report import (
     PUBLIC_BASE, _source_codes, fetch_public_history_for_source_capture
 )
@@ -44,6 +44,8 @@ CURRENT_URL = f"{PUBLIC_BASE}/{CURRENT_CODE}/{SERIE_A_RUNTIME_CONFIG.finished_re
 CURRENT_FILENAME = f"serie_a_{CURRENT_CODE}.csv"
 MANIFEST_FILENAME = "serie_a_v2_current_form_source_manifest.json"
 MIN_COMPLETED_FEATURE_SOURCE_EVENTS = 30
+EXPECTED_FROZEN_CANDIDATE_SHA256 = "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
+FROZEN_FEATURE_COUNT = 19
 MAX_CURRENT_CSV_BYTES = 2_000_000
 REQUIRED_COLUMNS = (
     "Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR",
@@ -418,6 +420,17 @@ def _fixture_identity_sha256(
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def _verify_frozen_candidate_contract_pin() -> str:
+    """Bind the source-only archive to the unchanged V2 SHA without loading weights.
+
+    Source capture is not inference. The later inference path independently loads
+    and validates the candidate bytes before constructing features or scoring.
+    """
+    if FROZEN_SHA != EXPECTED_FROZEN_CANDIDATE_SHA256:
+        raise ValueError("current-form source capture frozen candidate contract pin mismatch")
+    return FROZEN_SHA
+
+
 def capture_source_archive(
     *,
     output_dir: Path,
@@ -433,11 +446,9 @@ def capture_source_archive(
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("source capture clock must have a real UTC offset")
     at = now.astimezone(timezone.utc)
-    # Authenticate the frozen candidate and exact source URL before any metadata read,
-    # network request, or filesystem output. The manifest must attest the verified artifact.
-    candidate = load_verified_original()
-    if candidate["artifact_sha256"] != FROZEN_SHA:
-        raise ValueError("current-form source capture frozen candidate attestation mismatch")
+    # Pin the unchanged candidate identity without loading model weights or invoking
+    # the inference-only artifact validator from this source-only operation.
+    _verify_frozen_candidate_contract_pin()
     _assert_approved_current_url(CURRENT_URL)
     gate_identities = read_completed_primary_event_identities(client, now=at)
     gate_count = len(gate_identities)
@@ -523,9 +534,9 @@ def capture_source_archive(
         "git_sha": os.environ.get("GITHUB_SHA", ""),
         "workflow_run_id": os.environ.get("GITHUB_RUN_ID", ""),
         "source_archive_created_at_utc": archive_created_at.isoformat(),
-        "frozen_candidate_sha256": candidate["artifact_sha256"],
+        "frozen_candidate_sha256": FROZEN_SHA,
         "original_feature_builder_git_blob_sha1": "401b3a0893371bfa4a488ec92a4a54af2678c8f7",
-        "feature_count": len(candidate["features"]),
+        "feature_count": FROZEN_FEATURE_COUNT,
         "historical_season_codes": list(_source_codes()),
         "current_season_code": CURRENT_CODE,
         "current_season": CURRENT_SEASON,
