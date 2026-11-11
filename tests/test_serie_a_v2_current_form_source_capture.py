@@ -1154,3 +1154,14 @@ def test_source_capture_push_runs_offline_validation_without_download_job():
     assert "GITHUB_TOKEN" not in validator_job
     assert "Check shared public-source download budget" in workflow
     assert "Capture frozen historical seasons plus gated current-form source" in workflow
+
+
+def test_source_only_candidate_contract_pin_does_not_load_model_weights(monkeypatch):
+    import serie_a_v2_frozen_shadow_preview as frozen
+
+    monkeypatch.setattr(
+        frozen,
+        "load_verified_original",
+        lambda: pytest.fail("source-only capture must not load model weights or run inference validation"),
+    )
+    assert source_capture._verify_frozen_candidate_contract_pin() == source_capture.FROZEN_SHA
