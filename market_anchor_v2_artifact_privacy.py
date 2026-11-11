@@ -46,7 +46,7 @@ def require_private_repository_for_source_artifacts(
             "GitHub repository privacy could not be verified; source archive access is blocked"
         ) from exc
 
-    if getattr(response, "status_code", None) != 200 or getattr(response, "url", url) != url:
+    if getattr(response, "status_code", None) != 200 or getattr(response, "url", None) != url:
         raise PermissionError(
             "GitHub repository privacy lookup failed; source archive access is blocked"
         )
