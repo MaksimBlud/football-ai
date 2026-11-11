@@ -9196,3 +9196,40 @@ A direct GitHub compare was run between the exact #781 hold HEAD `c48e0c2f6a486c
 - The branches modify the same live V2 workflow files (`serie-a-v2-current-form-source-capture`, `serie-a-v2-current-form-forward-preview`, `serie-a-v2-forward-preview`, `serie-a-v2-free-real-quote-diagnostic`) and the frozen V2 / research / Serie A validation workflows. They are not a clean linear stack.
 
 **Do not merge #720 at its current stale base after #781 without rebasing and revalidating.** The safe integration plan is: user manually merges the direct-main #781 live-access hold first; then #720 must be rebased onto the resulting fresh main while preserving the hold's default-deny conditions and every upload gate, followed by exact-head full CI. Only then can #727 and its descendants be considered. Do not merge #720 first if doing so could restore un-gated scheduled source capture or public artifact uploads. HUMAN-MERGE remains mandatory.
+
+
+## Automation re-audit — 2026-11-11 15:55 UTC
+
+Fresh GitHub reads confirm main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no PR was merged into main during this audit. The latest main-side no-API engineering checkpoint, run [#43045775196](https://github.com/MaksimBlud/football-ai/actions/runs/43045775196), completed SUCCESS at 15:11:10 UTC. This checkpoint is not source capture, inference, or model-quality evidence.
+
+### Exact current PR #740 validation
+
+Documentation branch HEAD before this addendum: `5fc4fe90336efa6dcbedac0b318d9e6f5c335fae`, base main unchanged. All seven exact-head runs have now been re-read from GitHub and completed SUCCESS:
+
+- La Liga Market Anchor Prospective [#43044504586](https://github.com/MaksimBlud/football-ai/actions/runs/43044504586)
+- Ligue 1 [#43044504342](https://github.com/MaksimBlud/football-ai/actions/runs/43044504342)
+- Eredivisie [#43044504654](https://github.com/MaksimBlud/football-ai/actions/runs/43044504654)
+- Product [#43044504340](https://github.com/MaksimBlud/football-ai/actions/runs/43044504340)
+- Research [#43044505420](https://github.com/MaksimBlud/football-ai/actions/runs/43044505420)
+- Serie A [#43044504774](https://github.com/MaksimBlud/football-ai/actions/runs/43044504774)
+- Bundesliga [#43044504494](https://github.com/MaksimBlud/football-ai/actions/runs/43044504494)
+
+Result: **7/7 SUCCESS on the same exact HEAD**. This validates documentation/CI only.
+
+### Original forward workflow re-read
+
+Main's `.github/workflows/serie-a-v2-forward-preview.yml` remains live on the unmodified main. It currently has job-level `SUPABASE_URL`, `SUPABASE_KEY`, and `GITHUB_TOKEN`, runs the original V2 tests and source attestation, then reads saved quotes and uploads source/prediction artifacts with `if: always()`. The hold in PR #781 is therefore not active until HUMAN-MERGE and fresh-main verification.
+
+PR #781 current exact HEAD `c48e0c2f6a486c9320b04c7670d84b74e8d2322a`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, remains OPEN / Ready for review / mergeable / not merged. Its eight exact-head workflow runs #42881013669, #42881013797, #42881013880, #42881013628, #42881014040, #42881013776, #42881013674, and #42881013676 were re-read and all completed SUCCESS. The hold is still only a PR-branch control, not a main-side control.
+
+### Corrected quote-cutoff dependency
+
+PR #742 is CLOSED with `merged=false`; its strict cutoff change did not reach main through that PR. The current strict saved-quote query implementation is carried by open Draft PR #783 (HEAD `a9c77854bc03036f1a15d0fed2dadf29e02c23e9`) on the #780 source-policy stack, followed by #784 and #785 direct-reader/shadow rights guards. Keep that ancestry intact; do not merge #742 or bypass the #780 parent.
+
+PR #720 remains diverged from #781 (common base main; #781...#720 was 118 ahead / 27 behind). It must not be merged as-is because it does not contain #781's live-step and artifact-upload holds. Safe order remains: manual #781 integration first; then rebase/revalidate #720 and its descendants on fresh main, preserving every default-deny gate.
+
+### Research boundary
+
+No new pre-match quote, original-V2 forecast, or eligible prospective target was observed in this audit. The latest verified source/forward pair remains #43025058808 / #43025215214 with 110 lagged feature-input identities, exact archive SHA attestation, zero quotes, zero shadow forecasts, and no target-outcome reads. The separate prospective evaluation gate remains 0/30. No Brier/LogLoss or market-superiority claim is available.
+
+No production `.pkl`, frozen candidate, 19-feature order, weights, scaler/imputer, lambda, Supabase row/schema, schedule, or other-agent setting changed. No paid request, Supabase write/DDL, target-outcome read, or merge occurred. HUMAN-MERGE only.
