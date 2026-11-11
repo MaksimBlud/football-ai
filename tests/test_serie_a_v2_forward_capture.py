@@ -821,3 +821,19 @@ def test_direct_archive_helpers_require_private_repository_after_inference_clear
     with pytest.raises(PermissionError, match="private GitHub repository"):
         get_archive(123, token="test-token", get=get)
     assert calls == ["inference", "private_repository", "inference", "private_repository"]
+
+
+
+def test_direct_source_run_verification_denies_before_github_metadata_request(monkeypatch):
+    import market_anchor_v2_source_rights as rights
+
+    def deny():
+        raise PermissionError("V2 frozen inference scope remains unresolved")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", deny)
+
+    def forbidden_get(*_args, **_kwargs):
+        pytest.fail("GitHub source-run metadata must not be read before inference clearance")
+
+    with pytest.raises(PermissionError, match="V2 frozen inference scope remains unresolved"):
+        verify_source_run({}, quote_time=NOW, token="synthetic-token", get=forbidden_get)
