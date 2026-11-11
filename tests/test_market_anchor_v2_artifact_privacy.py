@@ -184,3 +184,21 @@ def test_every_live_v2_artifact_upload_is_guarded_by_private_storage_preflight()
 
 def test_private_storage_gate_does_not_accept_caller_supplied_http_transport():
     assert "get" not in inspect.signature(require_private_repository_for_source_artifacts).parameters
+
+def test_privacy_lookup_fails_closed_when_success_response_omits_url(monkeypatch):
+    class ResponseWithoutUrl:
+        status_code = 200
+
+        def json(self):
+            return {"full_name": "MaksimBlud/football-ai", "private": True}
+
+    monkeypatch.setattr(
+        privacy.requests,
+        "get",
+        lambda url, **kwargs: ResponseWithoutUrl(),
+    )
+    with pytest.raises(PermissionError, match="lookup failed"):
+        require_private_repository_for_source_artifacts(
+            "MaksimBlud/football-ai", "synthetic-token"
+        )
+
