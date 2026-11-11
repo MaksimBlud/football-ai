@@ -8304,3 +8304,12 @@ No odds values, scores, result/settlement columns, or protected 2026/27 target o
 ### Scientific status
 
 The original V2 artifact and 19-feature contract remain intact, but there are still no new admissible pre-kickoff V2 forecasts in Supabase and no independent prospective evaluation sample. The 30-primary-completed-event outcome gate remains closed. No new Brier/LogLoss comparison exists; superiority to the market is not established. active_lambda=0 remains the market baseline and shadow_lambda=1 remains research-only.
+
+
+## 2026-11-10 23:59 UTC — newly found PDDL Serie A mirror (technical candidate only; rights not cleared)
+
+A fresh search found public repository qhtexas/football-dataset, whose Serie A datapackage declares ODC-PDDL-1.0 and lists 33 season resources from 1993/94 through 2025/26. Its schema includes Date, teams, goals/result, corners (HC/AC), yellow cards (HY/AY), and red cards (HR/AR). For the frozen training window 2016/17–2025/26, this is a potentially complete historical field source on paper. The metadata lists no 2026/27 resource, so it cannot provide current-season lagged form for the separate current-form cohort.
+
+The repository README and datapackage explicitly identify Football-Data.co.uk as the upstream source. The current official Football-Data policy says its free files are intended for private individuals' personal betting/academic research via manual download or at most light automated download twice per week, and are not intended for commercial or AI data-training products using automated bots/scrapers. The PDDL text itself cautions that a party can only license rights it owns and that users may need to clear other rights. Therefore the mirror's PDDL declaration is promising but does not independently establish that its maintainer owns or is authorized to waive the upstream database/data rights. Do not download, archive, infer from, or substitute this mirror until its maintainer's rights in the underlying Football-Data material are clarified or an applicable provider permission is recorded.
+
+Metadata only was inspected: no season CSV bytes (including no 2026/27 result file) were downloaded or opened. No API, account, paid provider, Supabase, target outcome, or model run was used. Treat this as a new historical-source candidate for rights review, not an approved source or a source-before-quote attestation.
