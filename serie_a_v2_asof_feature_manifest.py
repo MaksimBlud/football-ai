@@ -13,6 +13,8 @@ import hashlib
 import json
 from pathlib import Path
 
+import numpy as np
+
 import pandas as pd
 
 from historical_football_signal_lab import TeamMatch, _snapshot, FEATURE_SETS
@@ -60,24 +62,47 @@ def _validate_history(history: pd.DataFrame) -> pd.DataFrame:
     if missing:
         raise ValueError("historical source lacks required football stats: " + ", ".join(sorted(missing)))
     frame = history.copy()
+    # Reject explicit clocks/timezones before pandas can normalize a midnight
+    # timestamp into the same date-only value used by the frozen source contract.
+    raw_dates = frame["Date"].astype(str).str.strip()
+    if raw_dates.str.contains(
+        r"(?i)(?:[Tt]\\d{2}:\\d{2}|\\s+\\d{1,2}:\\d{2}|[+-]\\d{2}:\\d{2}|[Zz]$)",
+        regex=True,
+    ).any():
+        raise ValueError("expected date-only historical source")
     frame["_match_date"] = pd.to_datetime(frame["Date"], dayfirst=True, format="mixed", errors="raise")
     if frame["_match_date"].isna().any():
         raise ValueError("unparseable historical match date")
-    if frame["_match_date"].dt.tz is not None:
+    if frame["_match_date"].dt.tz is not None or (
+        frame["_match_date"] != frame["_match_date"].dt.normalize()
+    ).any():
         raise ValueError("expected date-only historical source")
     if frame["FTR"].isna().any() or not frame["FTR"].isin(("H", "D", "A")).all():
         raise ValueError("invalid/missing historical result")
     for field in ("FTHG", "FTAG", *STATS):
         frame[field] = pd.to_numeric(frame[field], errors="coerce")
-        if frame[field].isna().any() or (frame[field] < 0).any():
-            raise ValueError("unverified or missing history stat: " + field)
+        if frame[field].isna().any():
+            raise ValueError("missing history stat: " + field)
+        if not np.isfinite(frame[field].to_numpy(dtype=float)).all():
+            raise ValueError("non-finite history stat: " + field)
+        if (frame[field] < 0).any():
+            raise ValueError("negative history stat: " + field)
+        if (frame[field] % 1 != 0).any():
+            raise ValueError("historical count stat must be an integer: " + field)
     if ((frame["FTHG"] > frame["FTAG"]) != (frame["FTR"] == "H")).any() or (
         (frame["FTHG"] < frame["FTAG"]) != (frame["FTR"] == "A")
     ).any():
         raise ValueError("historical full-time result does not match goals")
     frame["_home"] = frame["HomeTeam"].map(_canonical)
     frame["_away"] = frame["AwayTeam"].map(_canonical)
-    if (frame["_home"] == frame["_away"]).any() or frame.duplicated(["_match_date", "_home", "_away"]).any():
+    if (frame["_home"] == frame["_away"]).any():
+        raise ValueError("historical fixture identity collision")
+    unordered_pairs = [
+        tuple(sorted((home, away)))
+        for home, away in zip(frame["_home"], frame["_away"])
+    ]
+    identity_frame = frame.assign(_unordered_team_pair=unordered_pairs)
+    if identity_frame.duplicated(["_match_date", "_unordered_team_pair"]).any():
         raise ValueError("historical fixture identity collision")
     return frame.sort_values(["_match_date", "_home", "_away"], kind="stable")
 
