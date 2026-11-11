@@ -1,3 +1,46 @@
+# Continuity update — 2026-11-11 00:56 UTC — exact original V2 artifact identity pin
+
+## Fresh main and frozen candidate
+
+- Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; the branch API reports `protected=false`. No main update or merge was performed.
+- Original candidate blob: `ac1303f6b096664983fbf52443bd0a381b23ba21`; embedded SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Protocol blob: `65729e9639720e67624c1481190aa22ae606f151`; historical feature builder blob: `401b3a0893371bfa4a488ec92a4a54af2678c8f7`.
+- Frozen 19-feature order, 20×2 weights, medians, scaler, 3,799 training rows, `active_lambda=0`, `shadow_residual_lambda=1`, failed stability gate and no-promotion policy remain unchanged.
+
+## New direct-API identity gap closed on PR #778
+
+A fresh audit of the PR branch found that the low-level candidate validator checked only a self-reported SHA-256. A caller could alter the frozen weights, recompute the self-hash, and pass the recipe/shape checks. The prospective capture-row validator also accepted any syntactically valid candidate SHA.
+
+PR #778 now pins both the direct candidate validator and every captured shadow row to the exact original candidate SHA. Its tests use the real frozen JSON and reject re-hashed non-original weights and a wrong candidate hash.
+
+- Exact PR #778 HEAD: `aa0cd076a15033d2d90c7c08cb3ff14c94c2e8ec`.
+- Frozen V2 Shadow Tests [run 42935139447](https://github.com/MaksimBlud/football-ai/actions/runs/42935139447): **2/2 jobs SUCCESS**, Python 3.11 **414 passed**, Python 3.12 **414 passed**; production `.pkl` diff guards passed.
+- Market Anchor 1X2 V2 Shadow Validation [run 42935139489](https://github.com/MaksimBlud/football-ai/actions/runs/42935139489): **1/1 SUCCESS**, **15 passed**, production `.pkl` guard passed.
+- This is a PR-branch guard only; it is not on main until the required parent stack is manually integrated.
+
+## Direct-forward stack and HUMAN-MERGE
+
+- PR #779 remains based on stale #778 parent `b2a034614d999683a8c334569dc07eb07b7ac589`, HEAD `3e936d64b1f490b8c8dc31951b35e446096ca94c`. Compare with the new #778 HEAD: diverged, **28 ahead / 3 behind**, merge base `60d1025e9556cdce05f93b9a71ce46d4d06096cb`. Keep Draft; rebase after parent integration and rerun exact-head CI.
+- PR #781 remains OPEN / Ready for review / HUMAN-MERGE at exact HEAD `c48e0c2f6a486c9320b04c7670d84b74e8d2322a`. Direct commit check-runs: **8/8 SUCCESS**. It is not on main; the live hold is not deployed.
+- PR #720 remains OPEN / Ready for review at `1b9464834dd5256b7d69499c1443378518dde256`; the source-rights/shared-download-budget tests and associated PR validations are green. PR #727 remains stacked on #720 at `18a3cfda4e83e44aca1252665d01804267d16467`. PR #780 remains Draft on #727 at `48f55b6ef4dc40879d5232ac78ce55df51d2dce4` and explicitly withdraws automated source-capture permission pending provider clarification.
+- The safe-agent auto-merge workflow ran on main but logged `SAFE_AUTO_MERGE_HEALTHY_NOOP: no eligible bot PR with verified six-check CI`; no V2 PR was merged. HUMAN-MERGE remains binding.
+
+## Read-only pre-match Supabase check
+
+Only strict pre-kickoff timestamp/identity aggregates were queried; no prices, results, scores, settlements or target outcomes were selected.
+
+- `public.odds_snapshots`: **3,915** strict pre-match rows / **327** events; **0** rows in the last seven days; **0** future events with saved quotes; latest strict snapshot `2026-10-13T14:48:53.04262Z`.
+- `public.product_prediction_snapshots`, exact original candidate SHA: **0** strict pre-match V2 predictions / **0** events; no generation timestamp exists.
+- No new source/quote pair or independent prospective V2 sample is available. No Brier/LogLoss superiority claim is supported.
+
+## Security and operational blockers
+
+- Supabase Security Advisor reports RLS disabled on five public tables: `teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, and `epl_ai_market_pair_ledger`. It also reports RLS enabled without policies on `competitions`, `match_stats`, `matches`, and `standings`. No DDL or writes were performed; do not enable RLS without policy design and validation.
+- Main still contains the four scheduled live V2 workflows because #781 is not merged. Their existing UTC cron slots remain 05:50 (current-form source), 06:13 (free diagnostic), 08:08 (original forward), and 08:18 (current-form forward). The latest run window inspected for this cycle contained no new scheduled V2 run; no workflow was dispatched.
+- No provider source was downloaded, no quote was read, no paid API was called, no protected 2026/27 outcome was opened, no Supabase write/DDL occurred, and no production `.pkl` or schedule was changed.
+
+---
+
 # Continuity update — 2026-11-10 18:05 UTC — V2 live-hold regression hardening and source-policy audit
 
 ## Fresh main and immutable original V2
