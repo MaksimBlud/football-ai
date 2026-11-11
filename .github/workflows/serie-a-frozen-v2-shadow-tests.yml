@@ -68,6 +68,7 @@ on:
       - research/v2-direct-shadow-preview-inference-rights-gate-stacked-on-774-20261109-run11
       - research/v2-core-inference-and-refit-freeze-stacked-on-777-20261109-run11
       - research/v2-direct-forward-report-rights-privacy-gate-stacked-on-778-20261110-run11
+      - research/v2-direct-forward-report-rights-privacy-gate-rebased-on-778-20261111-run11
     paths:
       - "serie_a_v2_frozen_shadow_preview.py"
       - "tests/test_serie_a_v2_frozen_shadow_preview.py"
