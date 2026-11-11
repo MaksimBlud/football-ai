@@ -8872,3 +8872,32 @@ The static audit fetched the legacy `market_anchor_v2_saved_cohort_replay.py` so
 Supabase Security Advisor still reports critical RLS-disabled exposure on `teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, and `epl_ai_market_pair_ledger`. No DDL or writes were performed; enabling RLS without designed policies could break access.
 
 No source download, odds/API request, target-outcome query, live inference, Supabase write/DDL, production `.pkl` change, model refit, threshold tuning, promotion, bet, merge, main update, schedule change, or other-agent setting change occurred. Original 19-feature order/weights, candidate SHA, `active_lambda=0`, `shadow_lambda=1`, failed stability gate and NO_BET remain unchanged.
+
+## 2026-11-11 09:49 UTC — prospective evaluator regression repair and exact live-data recheck
+
+### PR #728 — offline-only evaluator test repair
+
+- PR #728 remains Draft. Current exact HEAD: `245420b83308d5b4e20f51fe7fd7a3c5e1ddd582`; it is based on base SHA `8894ce8e0248a5502d60571ff073fc6d7847a43a`.
+- Repaired a real type-contract defect in `run_live_evaluation`: its public `now` parameter was annotated `datetime | None`, but the implementation passed aware `datetime` objects to a string-only ISO parser. It now accepts an aware `datetime` or explicit-offset ISO string, normalizes to UTC, rejects naive datetimes, and still rejects any observation clock later than the actual system clock.
+- Updated only synthetic tests to model the current direct-access and source-preflight contracts. Unit fixtures explicitly stub provider/private-storage permission as `SYNTHETIC_TEST_ONLY`; a separate negative test proves unresolved inference rights fail before the identity gate or outcome callback. Synthetic source attestations are test fixtures only and are not provider authorization or real source evidence.
+- Updated the mocked bridge to pass the same gate/source attestations and keyword-only provenance expected by the lazy outcome reader. No real Supabase outcome reader or live evaluator was run.
+- Exact-head validation on Python 3.12: **120 passed**, production pickle diff guard SUCCESS on both [push run 42997996998](https://github.com/MaksimBlud/football-ai/actions/runs/42997996998) and [PR run 42998005892](https://github.com/MaksimBlud/football-ai/actions/runs/42998005892).
+- The branch is not ready to merge: comparing its HEAD with the current #727 head `18a3cfda4e83e44aca1252665d01804267d16467` reports **diverged (9 ahead / 4 behind)**, merge base `8894ce8e0248a5502d60571ff073fc6d7847a43a`. Rebase/reconciliation is required after its parent stack is integrated. The live source-rights manifest still records inference permission false, and the repository is public; those runtime gates remain fail-closed. Keep #728 Draft.
+
+### Re-read original forward workflow and actual latest main runs
+
+- Main's `.github/workflows/serie-a-v2-forward-preview.yml` still defines the original V2 forward-only workflow; its daily 08:08 UTC schedule and manual-paid-snapshot-only `workflow_run` trigger are unchanged. The current-form source/forward schedules remain 05:50 and 08:18 UTC. No workflow was dispatched or edited.
+- Actual 2026-11-10 source capture run [42827889788](https://github.com/MaksimBlud/football-ai/actions/runs/42827889788) succeeded on main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`: 110 completed feature-input identities, 10 historical CSVs + 1 current-season CSV, source artifact `13770560196`, SHA-256 `f29363e28775032937108d102da1dda1ca2d5c1aa0f921cb4518bf3a82e9aec6`, zero paid calls and zero Supabase writes.
+- Actual original forward run [42853738496](https://github.com/MaksimBlud/football-ai/actions/runs/42853738496) succeeded but reported `quotes_seen=0`, `v2_diagnostic_previews_captured=0`, `forecasts_created=0`. Current-form forward run [42854487569](https://github.com/MaksimBlud/football-ai/actions/runs/42854487569) verified that source artifact and its parent run, but reported `quotes_seen=0`, `v2_current_form_shadow_captured=0`, and target-outcome gate false. These are source-integrity proofs, not model predictions or quality evidence.
+
+### Fresh read-only Supabase pre-match aggregates
+
+- `public.odds_snapshots` was queried only with `snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= NOW()`. Counts: Bundesliga 394/35 events; EPL 1,135/70; Eredivisie 410/39; La Liga 798/52; Ligue 1 387/35; Primeira Liga 9/9; RPL 153/15; Serie A 620/63; Turkey Super Lig 9/9. Total **3,915 snapshots / 327 events**.
+- `public.product_prediction_snapshots`, filtered by the exact original candidate SHA and strict generated-before-kickoff predicate: **0 predictions / 0 events**.
+- Serie A 2026/27 feature-gate query selected only `match_date, home_team, away_team`: **113 unique identities**, latest date 2026-11-08. No score, result, settlement, or target-outcome fields were selected.
+- Therefore the protected 30-primary-completed-event outcome gate remains closed; no Brier/LogLoss or market-superiority claim is available.
+
+### Safety
+
+- Supabase Security Advisor re-confirmed RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. This is a critical exposure. No DDL was executed; enabling RLS without reviewed policies can block legitimate access.
+- No main update/merge, production pickle change, source download, paid request, Supabase write/DDL, live inference, target-outcome read, bet, threshold change, or promotion occurred. Original candidate SHA, 19-feature contract, weights, `active_lambda=0`, `shadow_lambda=1`, and failed stability gate remain unchanged.
