@@ -99,6 +99,10 @@ def _stats_asof(frame: pd.DataFrame, *, before_day: datetime) -> dict[str, deque
 
 
 def build_manifest(history: pd.DataFrame, quotes: list[dict]) -> dict:
+    # Feature construction itself is a source-use operation; callers may not
+    # bypass the CLI/forward-runner rights check by importing this builder.
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+    require_personal_research_inference_scope()
     _verify_original_feature_builder()
     original = load_verified_original()
     names = list(original["features"])
@@ -203,6 +207,8 @@ def main() -> None:
     p.add_argument("--manifest-json", required=True, type=Path)
     p.add_argument("--audit-json", required=True, type=Path)
     args = p.parse_args()
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+    require_personal_research_inference_scope()
     if args.manifest_json == args.audit_json:
         raise ValueError("audit and manifest paths must differ")
     historical_bytes = args.existing_history_csv.read_bytes()
