@@ -100,6 +100,21 @@ def _assert_approved_current_url(url: str) -> None:
         raise ValueError("current-season source URL is not the approved HTTPS Football-Data URL")
 
 
+def _require_source_capture_and_private_storage() -> dict:
+    """Require the narrow source-only permission and private archive storage.
+
+    Direct imports must not bypass the CLI guard before reading Supabase
+    fixture metadata, downloading CSVs, or creating an archive directory.
+    This scope never authorizes model inference or training.
+    """
+    source_scope = require_personal_research_source_capture_scope()
+    storage_scope = require_private_repository_for_source_artifacts()
+    return {
+        "source_capture_scope": source_scope,
+        "artifact_storage": storage_scope,
+    }
+
+
 def _canonical_team(value: Any) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError("completed primary event has an empty team identity")
@@ -137,6 +152,7 @@ def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
     """Read only event date/team metadata; no goals, result or settlement columns."""
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("feature-source gate clock must have a real UTC offset")
+    _require_source_capture_and_private_storage()
     cutoff = now.astimezone(timezone.utc).date().isoformat()
     rows: list[dict[str, Any]] = []
     start = 0
@@ -190,6 +206,7 @@ def read_completed_primary_event_identities(
     """Read only date/team metadata and return canonical identities for source parity."""
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("feature-source gate clock must have an explicit UTC offset")
+    _require_source_capture_and_private_storage()
     cutoff_date = now.astimezone(timezone.utc).date()
     cutoff = cutoff_date.isoformat()
     rows: list[dict[str, Any]] = []
@@ -422,6 +439,7 @@ def capture_source_archive(
     """Capture the ten frozen historical seasons plus the gated current-season source."""
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("source capture clock must have a real UTC offset")
+    _require_source_capture_and_private_storage()
     at = now.astimezone(timezone.utc)
     # Authenticate the frozen candidate and exact source URL before any metadata read,
     # network request, or filesystem output. The manifest must attest the verified artifact.
