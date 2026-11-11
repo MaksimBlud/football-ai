@@ -287,6 +287,19 @@ def test_research_scope_block_report_is_explicitly_no_io_and_no_inference(tmp_pa
 
 
 def test_live_v2_entrypoints_check_scope_before_external_reads():
+    def first_inference_guard(section):
+        positions = [
+            section.find("require_v2_inference_access()"),
+            section.find("require_personal_research_inference_scope()"),
+        ]
+        valid = [position for position in positions if position >= 0]
+        return min(valid) if valid else -1
+
+    helper = (Path(__file__).resolve().parents[1] / "market_anchor_v2_direct_access.py").read_text(encoding="utf-8")
+    assert "require_personal_research_inference_scope()" in helper
+    assert "require_personal_research_source_capture_scope()" in helper
+    assert helper.count("require_private_repository_for_source_artifacts()") == 2
+
     inference_cases = {
         "serie_a_v2_live_diagnostic_report.py": (
             "from database import supabase",
@@ -312,19 +325,19 @@ def test_live_v2_entrypoints_check_scope_before_external_reads():
             preflight_start = main.index("    if args.preflight_only:")
             preflight_db = main.index("    from database import supabase", preflight_start)
             preflight = main[preflight_start:preflight_db]
-            rights_guard = preflight.find("require_personal_research_inference_scope()")
+            rights_guard = first_inference_guard(preflight)
             assert rights_guard >= 0
             assert "fetch_public_history(" not in preflight
             normal_start = main.index("    try:", preflight_db)
             normal = main[normal_start:]
-            guard = normal.find("require_personal_research_inference_scope()")
+            guard = first_inference_guard(normal)
             assert guard >= 0
             for side_effect in side_effects:
                 position = normal.find(side_effect)
                 assert position >= 0, "missing expected post-rights step: " + path + " / " + side_effect
                 assert guard < position, "rights guard follows external read: " + path + " / " + side_effect
             continue
-        guard = main.find("require_personal_research_inference_scope()")
+        guard = first_inference_guard(main)
         assert guard >= 0, f"{path} lacks the provider AI-inference permission guard"
         for side_effect in side_effects:
             position = main.find(side_effect)
