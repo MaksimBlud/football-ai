@@ -142,8 +142,24 @@ def _read_bounded_historical_csv_response(
                 pass
 
 
-def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -> tuple[pd.DataFrame, list[dict]]:
-    """Explicit, bounded configured public URLs; never odds API, never cache guess."""
+def _require_public_history_scope(access_scope: str) -> dict:
+    """Require a distinct provider scope and private artifact storage before source access."""
+    from market_anchor_v2_direct_access import (
+        require_v2_inference_access,
+        require_v2_source_capture_access,
+    )
+    if access_scope == "INFERENCE":
+        return require_v2_inference_access()
+    if access_scope == "SOURCE_CAPTURE":
+        return require_v2_source_capture_access()
+    raise PermissionError("historical source loader requires an explicit approved access scope")
+
+
+def _fetch_public_history_with_scope(
+    *, get=requests.get, capture_dir: Path | None = None, access_scope: str
+) -> tuple[pd.DataFrame, list[dict]]:
+    """Bounded historical CSV loader; direct imports must select a valid scope."""
+    _require_public_history_scope(access_scope)
     all_frames = []
     audit = []
     total_source_bytes = 0
@@ -204,6 +220,31 @@ def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -
     return pd.concat(all_frames, ignore_index=True), audit
 
 
+def fetch_public_history_for_inference(
+    *, get=requests.get, capture_dir: Path | None = None
+) -> tuple[pd.DataFrame, list[dict]]:
+    """Fetch pre-freeze history only under the frozen-inference rights scope."""
+    return _fetch_public_history_with_scope(
+        get=get, capture_dir=capture_dir, access_scope="INFERENCE"
+    )
+
+
+def fetch_public_history_for_source_capture(
+    *, get=requests.get, capture_dir: Path | None = None
+) -> tuple[pd.DataFrame, list[dict]]:
+    """Fetch pre-freeze history under the narrower source-only rights scope."""
+    return _fetch_public_history_with_scope(
+        get=get, capture_dir=capture_dir, access_scope="SOURCE_CAPTURE"
+    )
+
+
+def fetch_public_history(
+    *, get=requests.get, capture_dir: Path | None = None
+) -> tuple[pd.DataFrame, list[dict]]:
+    """Compatibility entrypoint defaults to inference rights, never source-only rights."""
+    return fetch_public_history_for_inference(get=get, capture_dir=capture_dir)
+
+
 # Freeze rule is stronger than merely omitting this season from the remote
 # downloader. A caller may pass a concatenated frame or forged source audit.
 # Disallow 2026/27 rows, even if later excluded by the as-of feature cutoff.
@@ -248,6 +289,8 @@ def _assert_original_v2_source_embargo(history: pd.DataFrame, audit: list[dict],
 
 def make_report(quotes: list[dict], history: pd.DataFrame, source_audit: list[dict], *,
                 as_of_utc: datetime) -> dict:
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     if not source_audit:
         raise ValueError("history provenance required")
     if (
@@ -429,7 +472,8 @@ def main() -> None:
         # Rights must be checked before even reading saved quote metadata.
         # This path still performs no Football-Data access, features, or inference.
         try:
-            require_personal_research_inference_scope()
+            from market_anchor_v2_direct_access import require_v2_inference_access
+            require_v2_inference_access()
         except PermissionError as exc:
             report = write_research_scope_blocked_report(
                 args.output, "SERIE_A_V2_FREE_REAL_QUOTE_DIAGNOSTIC", str(exc)
@@ -443,7 +487,8 @@ def main() -> None:
         _write_quote_preflight_report(args.output, preflight)
         return
     try:
-        require_personal_research_inference_scope()
+        from market_anchor_v2_direct_access import require_v2_inference_access
+        require_v2_inference_access()
     except PermissionError as exc:
         report = write_research_scope_blocked_report(
             args.output, "SERIE_A_V2_FREE_REAL_QUOTE_DIAGNOSTIC", str(exc)

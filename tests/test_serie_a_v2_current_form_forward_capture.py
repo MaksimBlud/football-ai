@@ -47,6 +47,19 @@ def allow_synthetic_v2_inference_scope(monkeypatch):
         lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
     )
 
+    import market_anchor_v2_source_capture_rights as capture_rights
+    import market_anchor_v2_artifact_privacy as privacy
+    monkeypatch.setattr(
+        capture_rights,
+        "require_personal_research_source_capture_scope",
+        lambda: {"source_capture_only": True, "scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: {"private": True, "storage_policy": "SYNTHETIC_TEST_ONLY"},
+    )
+
 
 class OffsetlessTZ(tzinfo):
     def utcoffset(self, dt):

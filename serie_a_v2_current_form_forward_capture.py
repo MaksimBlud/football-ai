@@ -46,9 +46,9 @@ GITHUB_API = f"https://api.github.com/repos/{REPOSITORY}"
 ARTIFACT_NAME = "serie-a-v2-current-form-source-capture"
 SOURCE_WORKFLOW_PATH = ".github/workflows/serie-a-v2-current-form-source-capture.yml"
 SOURCE_CAPTURE_SCRIPT_PATH = "serie_a_v2_current_form_source_capture.py"
-EXPECTED_SOURCE_CAPTURE_SCRIPT_BLOB_SHA1 = "4f5837671727066903e798dd893753f13a925434"
+EXPECTED_SOURCE_CAPTURE_SCRIPT_BLOB_SHA1 = "029c330e2af05fd8515f2cc69dfcd07688193ac6"
 HISTORICAL_SOURCE_LOADER_PATH = "serie_a_v2_live_diagnostic_report.py"
-EXPECTED_HISTORICAL_SOURCE_LOADER_BLOB_SHA1 = "54805b05a03efac9466f1b77277cccb1e538cf64"
+EXPECTED_HISTORICAL_SOURCE_LOADER_BLOB_SHA1 = "6a1c382e127dc0aa1088ef976fc436a78176b515"
 SOURCE_RIGHTS_HELPER_PATH = "market_anchor_v2_source_rights.py"
 EXPECTED_SOURCE_RIGHTS_HELPER_BLOB_SHA1 = "4495f6948ae8ec7c0ceeff8c08d7b1ca748cd841"
 SOURCE_RIGHTS_MANIFEST_PATH = "research/source_rights/football_data_co_uk.json"
@@ -84,6 +84,8 @@ def _github_json(url: str, *, token: str, get=requests.get) -> dict:
 
 
 def discover_archives(*, token: str, get=requests.get) -> list[dict]:
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     out, seen_ids = [], set()
     for page in range(1, 4):
         data = _github_json(
@@ -122,6 +124,8 @@ def discover_archives(*, token: str, get=requests.get) -> list[dict]:
 def verify_source_run(
     archive: Mapping[str, Any], *, quote_time: datetime, token: str, get=requests.get
 ) -> dict:
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     run_id = archive.get("run_id")
     head_sha = archive.get("head_sha")
     if type(run_id) is not int or run_id <= 0:
@@ -174,6 +178,8 @@ def verify_source_run(
 
 
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     if type(artifact_id) is not int or artifact_id <= 0:
         raise ValueError("invalid source artifact id")
     if not token:
@@ -262,6 +268,8 @@ def _validate_archive_member_sizes(infos: list[Any], *, expected_names: set[str]
 def verify_and_load_archive(
     raw: bytes, archive: Mapping[str, Any], parent: Mapping[str, Any]
 ) -> tuple[pd.DataFrame, dict]:
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     if not raw or len(raw) > MAX_ARCHIVE_BYTES:
         raise ValueError("current-form source archive is empty or too large")
     digest = hashlib.sha256(raw).hexdigest()
@@ -583,6 +591,8 @@ def verify_latest_source_archive(
     write_sources_to: Path | None = None,
 ) -> dict:
     """Verify the latest successful main source artifact even when all quotes are stale."""
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     if (
         not isinstance(as_of_utc, datetime)
         or as_of_utc.tzinfo is None
@@ -750,6 +760,8 @@ def prepare_forward_capture(
     current_gate_identities: set[tuple[str, str, str]] | None = None,
     write_sources_to: Path | None = None,
 ) -> dict:
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     if (
         not isinstance(as_of_utc, datetime)
         or as_of_utc.tzinfo is None
@@ -954,7 +966,8 @@ def main() -> None:
     if os.environ.get("GITHUB_REF") != "refs/heads/main":
         raise RuntimeError("current-form V2 source/forecast workflow must run from main")
     try:
-        require_personal_research_inference_scope()
+        from market_anchor_v2_direct_access import require_v2_inference_access
+        require_v2_inference_access()
     except PermissionError as exc:
         report = write_research_scope_blocked_report(
             args.output, "SERIE_A_V2_CURRENT_FORM_FORWARD_CAPTURE", str(exc)

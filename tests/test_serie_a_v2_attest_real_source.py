@@ -17,6 +17,29 @@ from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes
 from serie_a_v2_prequote_source_archive_gate import ARCHIVE_REPORT, SOURCE_DIR
 
 
+@pytest.fixture(autouse=True)
+def allow_synthetic_v2_access_scopes(monkeypatch):
+    """Offline fixtures use synthetic permissions; this is not provider authorization."""
+    import market_anchor_v2_source_rights as inference_rights
+    import market_anchor_v2_source_capture_rights as capture_rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    monkeypatch.setattr(
+        inference_rights,
+        "require_personal_research_inference_scope",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(
+        capture_rights,
+        "require_personal_research_source_capture_scope",
+        lambda: {"source_capture_only": True, "scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: {"private": True, "storage_policy": "SYNTHETIC_TEST_ONLY"},
+    )
+
 NOW = datetime(2026, 10, 14, 16, tzinfo=timezone.utc)
 
 
@@ -171,9 +194,10 @@ def test_main_blocks_before_github_archive_discovery_when_research_scope_is_deni
         sys, "argv",
         ["serie_a_v2_attest_real_source.py", "--output", str(output)],
     )
+    import market_anchor_v2_direct_access as direct_access
     monkeypatch.setattr(
-        attestor,
-        "require_personal_research_inference_scope",
+        direct_access,
+        "require_v2_source_capture_access",
         lambda: (_ for _ in ()).throw(PermissionError("research scope not confirmed")),
     )
     monkeypatch.setattr(

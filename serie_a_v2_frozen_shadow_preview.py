@@ -85,6 +85,9 @@ def _market(row: Mapping[str, Any]) -> tuple[float, float, float]:
 
 
 def load_verified_original() -> dict[str, Any]:
+    from market_anchor_v2_direct_access import require_v2_inference_access
+
+    require_v2_inference_access()
     candidate = json.loads(FROZEN_FILE.read_text(encoding="utf-8"))
     v2.validate_candidate_artifact(candidate)
     if (candidate["artifact_sha256"] != FROZEN_SHA
@@ -147,6 +150,11 @@ def shadow_preview(
     This module cannot verify that source; it marks every preview NOT eligible
     for the strict preregistered prospective V2 cohort. Do not persist it.
     """
+    # Direct imports must enforce provider rights and private artifact storage
+    # before inspecting timestamps, iterating caller inputs, or loading weights.
+    from market_anchor_v2_direct_access import require_v2_inference_access
+
+    require_v2_inference_access()
     if (
         not isinstance(as_of_utc, datetime)
         or as_of_utc.tzinfo is None
@@ -154,11 +162,6 @@ def shadow_preview(
     ):
         raise ValueError("as_of_utc must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
-    # The public scoring API must enforce rights itself; a CLI-only guard can
-    # be bypassed by direct imports from forward runners or callers.
-    from market_anchor_v2_source_rights import require_personal_research_inference_scope
-
-    require_personal_research_inference_scope()
     original = load_verified_original()
     feature_keys = tuple(original["features"])
     feature_by_key: dict[tuple[str, str, str, datetime], Mapping[str, Any]] = {}
@@ -298,13 +301,13 @@ def shadow_preview(
 
 def fetch_saved_upcoming_serie_a_quotes(client: Any, *, now: datetime) -> list[dict]:
     """Read *existing* observations only. No odds provider call or DB write."""
+    # This public helper can be imported without the CLI/forward-runner.
+    # Enforce rights and private storage before inspecting the client or querying Supabase.
+    from market_anchor_v2_direct_access import require_v2_inference_access
+
+    require_v2_inference_access()
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("now must be timezone-aware")
-    # This public helper can be imported without the CLI/forward-runner.
-    # Enforce inference rights before any Supabase access.
-    from market_anchor_v2_source_rights import require_personal_research_inference_scope
-
-    require_personal_research_inference_scope()
     as_of = now.astimezone(timezone.utc).isoformat()
     items = (
         client.table("odds_snapshots")
@@ -330,12 +333,12 @@ def main() -> None:
                         help="Read existing odds_snapshots only; never calls Odds API")
     args = parser.parse_args()
     # Saved quotes and externally supplied features still enter frozen-weight
-    # inference. Check the same conservative source-rights scope before either
+    # inference. Check provider rights and private storage before either
     # the database client or feature file is accessed.
-    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+    from market_anchor_v2_direct_access import require_v2_inference_access
 
     try:
-        require_personal_research_inference_scope()
+        require_v2_inference_access()
     except PermissionError as exc:
         print(json.dumps({
             "mode": "RESEARCH_SCOPE_BLOCKED",

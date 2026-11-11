@@ -27,6 +27,24 @@ from serie_a_v2_current_form_source_capture import (
 from serie_a_v2_live_diagnostic_report import _source_codes
 
 
+@pytest.fixture(autouse=True)
+def allow_synthetic_source_capture_scope(monkeypatch):
+    """Offline fixtures explicitly stub source rights and private storage only."""
+    import market_anchor_v2_source_capture_rights as capture_rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    monkeypatch.setattr(
+        capture_rights,
+        "require_personal_research_source_capture_scope",
+        lambda: {"source_capture_only": True, "scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: {"private": True, "storage_policy": "SYNTHETIC_TEST_ONLY"},
+    )
+
+
 def event_rows(n=30):
     start = date(2026, 8, 1)
     return [
@@ -720,7 +738,7 @@ def test_frozen_candidate_is_verified_before_gate_reads_or_source_requests(monke
         calls.append("http")
         raise AssertionError("current-season source must not be requested for an invalid candidate")
 
-    monkeypatch.setattr(source_capture, "load_verified_original", reject_candidate)
+    monkeypatch.setattr(source_capture, "_verify_frozen_candidate_contract_pin", reject_candidate)
     with pytest.raises(ValueError, match="frozen V2 candidate integrity failure"):
         capture_source_archive(
             output_dir=tmp_path,
@@ -1136,3 +1154,14 @@ def test_source_capture_push_runs_offline_validation_without_download_job():
     assert "GITHUB_TOKEN" not in validator_job
     assert "Check shared public-source download budget" in workflow
     assert "Capture frozen historical seasons plus gated current-form source" in workflow
+
+
+def test_source_only_candidate_contract_pin_does_not_load_model_weights(monkeypatch):
+    import serie_a_v2_frozen_shadow_preview as frozen
+
+    monkeypatch.setattr(
+        frozen,
+        "load_verified_original",
+        lambda: pytest.fail("source-only capture must not load model weights or run inference validation"),
+    )
+    assert source_capture._verify_frozen_candidate_contract_pin() == source_capture.FROZEN_SHA
