@@ -1454,3 +1454,22 @@ def test_direct_current_form_latest_archive_verifier_requires_inference_before_m
             load_archive=lambda *_args: pytest.fail("archive must not load before inference clearance"),
             verify_parent_run=lambda *_args, **_kwargs: pytest.fail("parent must not be read before inference clearance"),
         )
+
+
+
+def test_direct_current_form_source_run_verification_denies_before_github_api(monkeypatch):
+    import market_anchor_v2_source_rights as rights
+
+    def deny():
+        raise PermissionError("V2 frozen inference scope remains unresolved")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", deny)
+
+    def forbidden_get(*_args, **_kwargs):
+        pytest.fail("GitHub source-run metadata must not be read before inference clearance")
+
+    with pytest.raises(PermissionError, match="V2 frozen inference scope remains unresolved"):
+        forward_capture_module.verify_source_run(
+            {}, quote_time=datetime(2026, 10, 19, 5, tzinfo=timezone.utc),
+            token="synthetic-token", get=forbidden_get,
+        )
