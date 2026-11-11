@@ -135,6 +135,8 @@ def count_unique_completed_primary_events(
 
 def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
     """Read only event date/team metadata; no goals, result or settlement columns."""
+    from market_anchor_v2_direct_access import require_v2_source_capture_access
+    require_v2_source_capture_access()
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("feature-source gate clock must have a real UTC offset")
     cutoff = now.astimezone(timezone.utc).date().isoformat()
@@ -188,6 +190,8 @@ def read_completed_primary_event_identities(
     client: Any, *, now: datetime
 ) -> set[tuple[str, str, str]]:
     """Read only date/team metadata and return canonical identities for source parity."""
+    from market_anchor_v2_direct_access import require_v2_source_capture_access
+    require_v2_source_capture_access()
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("feature-source gate clock must have an explicit UTC offset")
     cutoff_date = now.astimezone(timezone.utc).date()
@@ -226,6 +230,8 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     are never converted to features. The returned frame contains no incomplete
     fixtures and exactly the original V2 builder's required columns.
     """
+    from market_anchor_v2_direct_access import require_v2_source_capture_access
+    require_v2_source_capture_access()
     if (
         not isinstance(captured_at, datetime)
         or captured_at.tzinfo is None
@@ -420,6 +426,8 @@ def capture_source_archive(
     clock=lambda: datetime.now(timezone.utc),
 ) -> dict:
     """Capture the ten frozen historical seasons plus the gated current-season source."""
+    from market_anchor_v2_direct_access import require_v2_source_capture_access
+    require_v2_source_capture_access()
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("source capture clock must have a real UTC offset")
     at = now.astimezone(timezone.utc)
