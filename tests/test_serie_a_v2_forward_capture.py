@@ -134,6 +134,71 @@ def test_same_original_event_id_cannot_change_fixture_identity(conflict):
     assert calls == []
 
 
+@pytest.mark.parametrize(
+    ("first_home", "first_away", "second_home", "second_away"),
+    [
+        ("Juventus", "Napoli", "Juventus", "Napoli"),
+        ("Atalanta", "Fiorentina", "Atalanta BC", " FIORENTINA "),
+        ("Juventus", "Napoli", "Napoli", "Juventus"),
+    ],
+)
+def test_same_original_fixture_cannot_be_split_across_provider_event_ids(
+    first_home, first_away, second_home, second_away
+):
+    first = {
+        **quote(ts="2026-10-14T06:00:00Z"),
+        "home_team": first_home,
+        "away_team": first_away,
+    }
+    second = {
+        **quote(ts="2026-10-14T06:01:00Z"),
+        "event_id": "another-provider-event-id",
+        "home_team": second_home,
+        "away_team": second_away,
+    }
+    with pytest.raises(ValueError, match="conflicting event IDs or orientation"):
+        prepare_forward_capture(
+            [first, second],
+            [],
+            as_of_utc=NOW,
+            load_archive=lambda _artifact_id: pytest.fail(
+                "duplicate fixture identity must fail before archive access"
+            ),
+            verify_parent_run=lambda *_args, **_kwargs: pytest.fail(
+                "duplicate fixture identity must fail before parent verification"
+            ),
+        )
+
+
+def test_original_event_id_with_surrounding_whitespace_is_rejected_before_archive_access():
+    first = quote(ts="2026-10-14T06:00:00Z")
+    second = {
+        **quote(ts="2026-10-14T06:01:00Z"),
+        "event_id": " " + first["event_id"] + " ",
+        "home_team": "Inter",
+    }
+    with pytest.raises(ValueError, match="surrounding whitespace"):
+        prepare_forward_capture(
+            [first, second],
+            [],
+            as_of_utc=NOW,
+            load_archive=lambda _artifact_id: pytest.fail("archive access before identity rejection"),
+            verify_parent_run=lambda *_args, **_kwargs: pytest.fail("parent verification before identity rejection"),
+        )
+
+
+def test_quote_with_identical_canonical_teams_is_rejected_before_archive_access():
+    item = {**quote(), "home_team": "Atalanta", "away_team": "Atalanta BC"}
+    with pytest.raises(ValueError, match="identical canonical teams"):
+        prepare_forward_capture(
+            [item],
+            [],
+            as_of_utc=NOW,
+            load_archive=lambda _artifact_id: pytest.fail("archive access before identity rejection"),
+            verify_parent_run=lambda *_args, **_kwargs: pytest.fail("parent verification before identity rejection"),
+        )
+
+
 def test_forward_v2_scores_only_after_real_prior_archive_and_never_promotes():
     raw, metadata = make_source_archive()
     calls = []
