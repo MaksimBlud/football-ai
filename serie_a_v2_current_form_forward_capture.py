@@ -84,6 +84,8 @@ def _github_json(url: str, *, token: str, get=requests.get) -> dict:
 
 
 def discover_archives(*, token: str, get=requests.get) -> list[dict]:
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     out, seen_ids = [], set()
     for page in range(1, 4):
         data = _github_json(
@@ -122,6 +124,8 @@ def discover_archives(*, token: str, get=requests.get) -> list[dict]:
 def verify_source_run(
     archive: Mapping[str, Any], *, quote_time: datetime, token: str, get=requests.get
 ) -> dict:
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     run_id = archive.get("run_id")
     head_sha = archive.get("head_sha")
     if type(run_id) is not int or run_id <= 0:
@@ -174,6 +178,8 @@ def verify_source_run(
 
 
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     if type(artifact_id) is not int or artifact_id <= 0:
         raise ValueError("invalid source artifact id")
     if not token:
@@ -262,6 +268,8 @@ def _validate_archive_member_sizes(infos: list[Any], *, expected_names: set[str]
 def verify_and_load_archive(
     raw: bytes, archive: Mapping[str, Any], parent: Mapping[str, Any]
 ) -> tuple[pd.DataFrame, dict]:
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     if not raw or len(raw) > MAX_ARCHIVE_BYTES:
         raise ValueError("current-form source archive is empty or too large")
     digest = hashlib.sha256(raw).hexdigest()
@@ -583,6 +591,8 @@ def verify_latest_source_archive(
     write_sources_to: Path | None = None,
 ) -> dict:
     """Verify the latest successful main source artifact even when all quotes are stale."""
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     if (
         not isinstance(as_of_utc, datetime)
         or as_of_utc.tzinfo is None
@@ -750,6 +760,8 @@ def prepare_forward_capture(
     current_gate_identities: set[tuple[str, str, str]] | None = None,
     write_sources_to: Path | None = None,
 ) -> dict:
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     if (
         not isinstance(as_of_utc, datetime)
         or as_of_utc.tzinfo is None
@@ -954,7 +966,8 @@ def main() -> None:
     if os.environ.get("GITHUB_REF") != "refs/heads/main":
         raise RuntimeError("current-form V2 source/forecast workflow must run from main")
     try:
-        require_personal_research_inference_scope()
+        from market_anchor_v2_direct_access import require_v2_inference_access
+        require_v2_inference_access()
     except PermissionError as exc:
         report = write_research_scope_blocked_report(
             args.output, "SERIE_A_V2_CURRENT_FORM_FORWARD_CAPTURE", str(exc)
