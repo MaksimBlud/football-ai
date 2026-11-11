@@ -1,3 +1,16 @@
+# Continuity update — 2026-11-11 09:18 UTC — superseded V2 branches closed
+
+The exact-head audit now confirms the following duplicate branches have been closed, without merge:
+- #742 → superseded by #783 (strict pre-kickoff quote query on the updated source-policy stack).
+- #774 → superseded by #784 (direct saved-quote rights gate).
+- #777 → superseded by #785 (direct shadow-scoring rights gate).
+- #778 → superseded by #786 (frozen candidate SHA/refit lock).
+- #767 → its bidirectional fixture identity and no-offset attestation changes are now included in #787 exact HEAD `013dccc0ef195721977c52ac663c8bc0312022b8`; the duplicate main-based PR was closed after #787's 433+433 regression tests and 15 V2 validation tests passed.
+
+The replacement chain remains Draft where stacked; no PR was merged and main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The only ready main-based integration priorities are the independent live-access hold #781 (8/8 exact-head checks) and source-rights/download-budget #720 (9/9 exact-head runs). HUMAN-MERGE remains mandatory.
+
+---
+
 # Continuity update — 2026-11-11 09:16 UTC — bidirectional fixture identity and final direct-access audit
 
 ## Fresh main and original V2 contract
