@@ -175,3 +175,17 @@ def test_private_storage_is_required_after_provider_inference_scope(monkeypatch)
             load_archive=_network_forbidden,
             verify_parent_run=_network_forbidden,
         )
+
+
+def test_private_storage_is_required_after_source_capture_scope(monkeypatch):
+    import market_anchor_v2_direct_access as direct_access
+
+    monkeypatch.setattr(
+        capture_rights,
+        "require_personal_research_source_capture_scope",
+        lambda: {"source_capture_only": True, "scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", _deny)
+
+    with pytest.raises(PermissionError, match="direct-access test deny"):
+        direct_access.require_v2_source_capture_access()
