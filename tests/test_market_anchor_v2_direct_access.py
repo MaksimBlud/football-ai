@@ -81,6 +81,7 @@ def test_original_forward_direct_helpers_deny_before_quote_archive_or_network_ac
 
 def test_feature_report_archive_and_attestation_helpers_deny_before_inputs(monkeypatch):
     monkeypatch.setattr(inference_rights, "require_personal_research_inference_scope", _deny)
+    monkeypatch.setattr(capture_rights, "require_personal_research_source_capture_scope", _deny)
 
     with pytest.raises(PermissionError, match="direct-access test deny"):
         feature_manifest.build_manifest(_Forbidden(), _Forbidden())
