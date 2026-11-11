@@ -64,6 +64,8 @@ def _github_json(url: str, *, token: str, get=requests.get) -> dict:
 
 def discover_archives(*, token: str, get=requests.get) -> list[dict]:
     """Bound pagination and accept only main-branch, correct-name artifacts."""
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     out = []
     seen_ids = set()
     for page in range(1, 4):
@@ -114,6 +116,8 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
     the CSVs. Pin the historical loader blob at the parent commit before the
     archive can be consumed for any original V2 quote.
     """
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     run_id = archive.get("run_id")
     head_sha = archive.get("head_sha")
     if type(run_id) is not int or run_id <= 0:
@@ -161,6 +165,8 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
 
 
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     if not isinstance(artifact_id, int) or artifact_id <= 0:
         raise ValueError("invalid artifact id")
     url = f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip"
@@ -213,6 +219,8 @@ def prepare_forward_capture(
     admission: frozen incumbent, current-season form and outcome gate still
     missing. All resulting original-V2 probabilities are diagnostic only.
     """
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     if (
         not isinstance(as_of_utc, datetime)
         or as_of_utc.tzinfo is None
