@@ -668,7 +668,7 @@ def test_market_only_preflight_and_evaluator_share_one_immutable_gate_snapshot(m
         outcome_loader(frozenset(identities))
         return {"status": "GATE_SNAPSHOT_REUSED"}
 
-    def outcome_loader(_identities):
+    def outcome_loader(_identities, **_kwargs):
         call_order.append("outcome")
         outcome_calls.append(_identities)
         return {}
