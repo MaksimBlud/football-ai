@@ -25,6 +25,12 @@ def allow_synthetic_private_archive_read_scope(monkeypatch):
         "_require_private_source_archive_read_scope",
         lambda: {"access_scope": "SYNTHETIC_TEST_ONLY", "artifact_privacy": {"private": True}},
     )
+    import serie_a_v2_prequote_source_archive_gate as archive_gate
+    monkeypatch.setattr(
+        archive_gate,
+        "_require_source_archive_read_scope",
+        lambda: {"access_scope": "SYNTHETIC_TEST_ONLY", "artifact_privacy": {"private": True}},
+    )
 
 
 NOW = datetime(2026, 10, 14, 16, tzinfo=timezone.utc)
