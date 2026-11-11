@@ -136,6 +136,7 @@ def test_current_form_forward_direct_helpers_deny_before_inputs_or_callbacks(mon
 
 def test_current_form_source_capture_direct_helpers_deny_before_supabase_csv_or_network(monkeypatch, tmp_path):
     monkeypatch.setattr(capture_rights, "require_personal_research_source_capture_scope", _deny)
+    monkeypatch.setattr(inference_rights, "require_personal_research_inference_scope", _deny)
     blocked_dir = tmp_path / "must-not-be-created"
 
     with pytest.raises(PermissionError, match="direct-access test deny"):
