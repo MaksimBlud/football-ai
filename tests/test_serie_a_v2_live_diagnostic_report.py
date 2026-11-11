@@ -24,6 +24,15 @@ def allow_synthetic_v2_inference_scope(monkeypatch):
         lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
     )
 
+    monkeypatch.setattr(
+        report_module,
+        "_require_public_history_scope",
+        lambda access_scope: {
+            "access_scope": access_scope,
+            "scope_status": "SYNTHETIC_TEST_ONLY",
+        },
+    )
+
 
 def history_fixture():
     rows = []
@@ -727,3 +736,53 @@ def test_main_skips_public_history_download_when_no_fresh_future_quotes(tmp_path
     assert report["target_outcomes_read"] is False
     assert report["supabase_writes"] == 0
     assert not raw_dir.exists()
+
+
+@pytest.mark.parametrize(
+    ("loader", "expected_scope"),
+    [
+        (fetch_public_history, "INFERENCE"),
+        (report_module.fetch_public_history_for_source_capture, "SOURCE_CAPTURE"),
+    ],
+)
+def test_public_history_loaders_require_explicit_scope_before_any_network_or_filesystem(
+    loader, expected_scope, monkeypatch, tmp_path
+):
+    observed_scopes = []
+    network_calls = []
+
+    def deny_scope(scope):
+        observed_scopes.append(scope)
+        raise PermissionError("historical source scope unresolved")
+
+    def forbidden_get(*_args, **_kwargs):
+        network_calls.append(True)
+        pytest.fail("historical CSV request must not occur before rights clearance")
+
+    monkeypatch.setattr(report_module, "_require_public_history_scope", deny_scope)
+    output_dir = tmp_path / "must-not-be-created"
+    with pytest.raises(PermissionError, match="historical source scope unresolved"):
+        loader(get=forbidden_get, capture_dir=output_dir)
+
+    assert observed_scopes == [expected_scope]
+    assert network_calls == []
+    assert not output_dir.exists()
+
+
+def test_source_capture_history_loader_is_distinct_from_inference_loader(monkeypatch):
+    observed = []
+
+    def record_scope(scope):
+        observed.append(scope)
+        return {"access_scope": scope, "scope_status": "SYNTHETIC_TEST_ONLY"}
+
+    def stop_after_scope(*_args, **_kwargs):
+        raise RuntimeError("scope reached before network")
+
+    monkeypatch.setattr(report_module, "_require_public_history_scope", record_scope)
+    with pytest.raises(RuntimeError, match="scope reached before network"):
+        report_module.fetch_public_history_for_source_capture(get=stop_after_scope)
+    with pytest.raises(RuntimeError, match="scope reached before network"):
+        report_module.fetch_public_history_for_inference(get=stop_after_scope)
+
+    assert observed == ["SOURCE_CAPTURE", "INFERENCE"]
