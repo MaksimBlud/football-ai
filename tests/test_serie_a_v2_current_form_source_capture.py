@@ -29,16 +29,15 @@ from serie_a_v2_live_diagnostic_report import _source_codes
 
 @pytest.fixture(autouse=True)
 def allow_synthetic_source_capture_scope(monkeypatch):
-    monkeypatch.setattr(
-        source_capture,
-        "require_personal_research_source_capture_scope",
-        lambda: {"source_capture_only": True, "scope_status": "SYNTHETIC_TEST_ONLY"},
-    )
-    monkeypatch.setattr(
-        source_capture,
-        "require_private_repository_for_source_artifacts",
-        lambda: {"private": True, "storage_policy": "SYNTHETIC_TEST_ONLY"},
-    )
+    import market_anchor_v2_source_capture_rights as capture_rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    synthetic_source_scope = lambda: {"source_capture_only": True, "scope_status": "SYNTHETIC_TEST_ONLY"}
+    synthetic_private_scope = lambda: {"private": True, "storage_policy": "SYNTHETIC_TEST_ONLY"}
+    monkeypatch.setattr(source_capture, "require_personal_research_source_capture_scope", synthetic_source_scope)
+    monkeypatch.setattr(capture_rights, "require_personal_research_source_capture_scope", synthetic_source_scope)
+    monkeypatch.setattr(source_capture, "require_private_repository_for_source_artifacts", synthetic_private_scope)
+    monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", synthetic_private_scope)
 
 
 def event_rows(n=30):
