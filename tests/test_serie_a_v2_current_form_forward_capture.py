@@ -47,6 +47,13 @@ def allow_synthetic_v2_inference_scope(monkeypatch):
         lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
     )
 
+    import market_anchor_v2_artifact_privacy as privacy
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: {"private": True, "storage_policy": "SYNTHETIC_TEST_ONLY"},
+    )
+
 
 class OffsetlessTZ(tzinfo):
     def utcoffset(self, dt):
@@ -230,6 +237,58 @@ def valid_parent(archive, *, quote_time):
         "run_created_at_utc": PARENT_CREATED,
         "run_completed_at_utc": PARENT_COMPLETED,
     }
+
+
+def test_current_form_prepare_forward_capture_denies_inference_before_source_or_feature_access(monkeypatch, tmp_path):
+    import market_anchor_v2_source_rights as rights
+
+    def deny_scope():
+        raise PermissionError("V2 frozen inference scope remains unresolved")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", deny_scope)
+
+    class ForbiddenRows:
+        def __iter__(self):
+            pytest.fail("quotes, archives and gate identities must not be inspected before rights clearance")
+
+    output_dir = tmp_path / "must-not-be-created"
+    with pytest.raises(PermissionError, match="V2 frozen inference scope remains unresolved"):
+        _prepare_forward_capture(
+            ForbiddenRows(),
+            ForbiddenRows(),
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            load_archive=lambda *_args, **_kwargs: pytest.fail("archive must not be loaded"),
+            verify_parent_run=lambda *_args, **_kwargs: pytest.fail("parent run must not be read"),
+            current_gate_identities=ForbiddenRows(),
+            write_sources_to=output_dir,
+        )
+    assert not output_dir.exists()
+
+
+def test_current_form_prepare_forward_capture_denies_public_storage_before_source_access(monkeypatch, tmp_path):
+    import market_anchor_v2_artifact_privacy as privacy
+
+    def deny_public_storage():
+        raise PermissionError("source archives require a private GitHub repository")
+
+    monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", deny_public_storage)
+
+    class ForbiddenRows:
+        def __iter__(self):
+            pytest.fail("quotes, archives and gate identities must not be inspected before private storage")
+
+    output_dir = tmp_path / "must-not-be-created"
+    with pytest.raises(PermissionError, match="private GitHub repository"):
+        _prepare_forward_capture(
+            ForbiddenRows(),
+            ForbiddenRows(),
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            load_archive=lambda *_args, **_kwargs: pytest.fail("archive must not be loaded"),
+            verify_parent_run=lambda *_args, **_kwargs: pytest.fail("parent run must not be read"),
+            current_gate_identities=ForbiddenRows(),
+            write_sources_to=output_dir,
+        )
+    assert not output_dir.exists()
 
 
 def test_current_form_v2_scores_only_future_quote_with_prequote_source_and_stays_no_bet(tmp_path):
@@ -1318,3 +1377,99 @@ def test_current_form_forward_source_and_rights_blob_pins_match_exact_repository
     assert forward_capture_module.EXPECTED_SOURCE_RIGHTS_MANIFEST_BLOB_SHA1 == _repository_git_blob_sha1(
         root / forward_capture_module.SOURCE_RIGHTS_MANIFEST_PATH
     )
+
+
+def test_direct_current_form_archive_helpers_fail_before_network_without_inference_clearance(monkeypatch):
+    import market_anchor_v2_source_rights as inference_rights
+    import market_anchor_v2_source_capture_rights as source_rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    calls = []
+
+    def deny_inference():
+        calls.append("inference")
+        raise PermissionError("synthetic inference scope denied")
+
+    monkeypatch.setattr(inference_rights, "require_personal_research_inference_scope", deny_inference)
+    monkeypatch.setattr(
+        source_rights,
+        "require_personal_research_source_capture_scope",
+        lambda: pytest.fail("withdrawn source-only scope must not authorize current-form archive reads"),
+    )
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: pytest.fail("privacy lookup must not run without inference clearance"),
+    )
+    get = lambda *_args, **_kwargs: pytest.fail("GitHub API must not run before inference clearance")
+
+    with pytest.raises(PermissionError, match="synthetic inference scope denied"):
+        forward_capture_module.discover_archives(token="test-token", get=get)
+    assert calls == ["inference"]
+
+    with pytest.raises(PermissionError, match="synthetic inference scope denied"):
+        get_archive(9876, token="test-token", get=get)
+    assert calls == ["inference", "inference"]
+
+
+def test_direct_current_form_archive_parser_requires_inference_before_reading_2026_27_bytes(monkeypatch):
+    import market_anchor_v2_source_rights as inference_rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    def deny_inference():
+        raise PermissionError("synthetic inference scope denied before current-form parsing")
+
+    monkeypatch.setattr(inference_rights, "require_personal_research_inference_scope", deny_inference)
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: pytest.fail("privacy lookup must not run without inference clearance"),
+    )
+    with pytest.raises(PermissionError, match="synthetic inference scope denied before current-form parsing"):
+        verify_and_load_archive(b"not-a-zip", {}, {})
+
+
+def test_direct_current_form_latest_archive_verifier_requires_inference_before_metadata_or_callbacks(monkeypatch):
+    import market_anchor_v2_source_rights as inference_rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    def deny_inference():
+        raise PermissionError("synthetic inference scope denied before current-form archive verification")
+
+    monkeypatch.setattr(inference_rights, "require_personal_research_inference_scope", deny_inference)
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: pytest.fail("privacy lookup must not run without inference clearance"),
+    )
+
+    class ForbiddenMetadata:
+        def __iter__(self):
+            pytest.fail("archive metadata must not be inspected before inference clearance")
+
+    with pytest.raises(PermissionError, match="synthetic inference scope denied before current-form archive verification"):
+        forward_capture_module.verify_latest_source_archive(
+            ForbiddenMetadata(),
+            as_of_utc=datetime(2026, 10, 19, 7, 0, tzinfo=timezone.utc),
+            load_archive=lambda *_args: pytest.fail("archive must not load before inference clearance"),
+            verify_parent_run=lambda *_args, **_kwargs: pytest.fail("parent must not be read before inference clearance"),
+        )
+
+
+
+def test_direct_current_form_source_run_verification_denies_before_github_api(monkeypatch):
+    import market_anchor_v2_source_rights as rights
+
+    def deny():
+        raise PermissionError("V2 frozen inference scope remains unresolved")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", deny)
+
+    def forbidden_get(*_args, **_kwargs):
+        pytest.fail("GitHub source-run metadata must not be read before inference clearance")
+
+    with pytest.raises(PermissionError, match="V2 frozen inference scope remains unresolved"):
+        forward_capture_module.verify_source_run(
+            {}, quote_time=datetime(2026, 10, 19, 5, tzinfo=timezone.utc),
+            token="synthetic-token", get=forbidden_get,
+        )
