@@ -802,17 +802,17 @@ def test_main_skips_public_history_download_when_no_fresh_future_quotes(tmp_path
 
 
 def test_direct_public_history_fetch_denies_before_http_or_output_directory(monkeypatch, tmp_path):
-    import market_anchor_v2_source_capture_rights as capture_rights
+    import market_anchor_v2_source_rights as rights
 
     def deny():
-        raise PermissionError("private source-capture scope is not cleared")
+        raise PermissionError("V2 frozen inference scope remains unresolved")
 
-    monkeypatch.setattr(capture_rights, "require_personal_research_source_capture_scope", deny)
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", deny)
     output_dir = tmp_path / "must-not-be-created"
 
     def forbidden_get(*_args, **_kwargs):
         pytest.fail("source HTTP must not run before source-capture rights")
 
-    with pytest.raises(PermissionError, match="private source-capture scope is not cleared"):
+    with pytest.raises(PermissionError, match="V2 frozen inference scope remains unresolved"):
         fetch_public_history(get=forbidden_get, capture_dir=output_dir)
     assert not output_dir.exists()
