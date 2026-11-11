@@ -9122,3 +9122,51 @@ RLS is still disabled on `public.teams`, `public.predictions`, `public.match_sta
 ### Binding conclusion
 
 Original candidate SHA, 19-feature contract, weights, scaler/imputer, `active_lambda=0`, `shadow_lambda=1`, NO_BET and the 30-primary-completed-event gate are unchanged. The source/quote pipeline has no new eligible pre-kickoff observations; original V2 prospective forecasts remain 0/30. No Brier/LogLoss result or superiority claim is available. Main was not changed; no PR was merged; no source was downloaded; no target outcomes were read; no production `.pkl`, Supabase row/schema, schedule or other-agent setting was changed.
+
+
+## Exact runtime and ancestry refresh — 2026-11-11 14:56 UTC
+
+### Fresh main and original candidate identity
+
+- GitHub commit search still returns main HEAD `40887ebb215730190d7a6c7a1693373ec4afcdfc` (committed 2026-10-18 08:20:05 UTC); no newer main commit was found.
+- Candidate file blob: `ac1303f6b096664983fbf52443bd0a381b23ba21`; declared frozen artifact SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Candidate contract read from main: exact 19-feature order, 20x2 weights, 3,799 training rows through 2026-06-30 23:59:59 UTC, training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`, `active_lambda=0`, `shadow_residual_lambda=1`, `stability_gate_passed=false`, `automatic_promotion=false`.
+- Frozen builder blob remains `401b3a0893371bfa4a488ec92a4a54af2678c8f7`. No candidate, weight, scaler, imputer, feature-order, or production artifact was changed.
+
+### New actual main runtime — 2026-11-11 13:00–13:01 UTC
+
+- Current-Form Source Capture run [#43025058808](https://github.com/MaksimBlud/football-ai/actions/runs/43025058808) completed SUCCESS on main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+  - Log payload: 110 completed primary identities; 110 current-season completed-prior-day rows; 10 old-season CSVs + 1 current-season CSV (11 source files); 3,910 historical rows; candidate SHA matched; `target_outcomes_scored=false`; paid calls 0; Supabase writes 0.
+  - Artifact #13857286039, 439,429 bytes, created 2026-11-11 13:00:12 UTC; uploaded ZIP SHA-256 `117d72e536f56d41b7b893700b51c8e1fc593cd40034fbedb8fc1f88a8cee6be`.
+- Current-Form Forward run [#43025215214](https://github.com/MaksimBlud/football-ai/actions/runs/43025215214) completed SUCCESS on the same main SHA.
+  - It independently verified source artifact #13857286039 and its SHA, authenticated parent run #43025058808, exact workflow path, parent head SHA, and successful parent completion at 13:00:16 UTC. Source was observed at 13:00:10.622 UTC and verified at 13:01:00.820 UTC (50 seconds old).
+  - Verified archive contained 3,910 historical rows + 110 current-season lagged rows. `quotes_seen=0`; `v2_current_form_shadow_captured=0`; target outcomes read/scored false; target evaluation gate closed; paid calls 0; production/Supabase writes 0.
+  - Forward artifact #13856997023, 440,596 bytes, created 13:01:05 UTC; ZIP SHA-256 `7b400438a46319dc1ed15a411712d2cfb685945bd2d0d99330d362913b6c9a21`.
+- This proves a real source archive and its provenance attestation, **not** a source/quote pair: there were no saved quotes and no new V2 forecast. Both artifacts are public while the repository is public; their existence is a privacy/provider-rights exposure, not permission to continue automated collection. No artifact was downloaded or inspected in this audit.
+
+### PR #781 — exact hold review
+
+- PR #781 remains OPEN / Ready for review / mergeable, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, HEAD `c48e0c2f6a486c9320b04c7670d84b74e8d2322a`; compare is 27 commits ahead / 0 behind across seven workflow/test files.
+- Re-read all four live source/quote workflows on main and on the #781 branch. Main still has active scheduled source/quote steps and `always()` artifact uploads. The #781 branch adds workflow-level `MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED="false"`, gates each live step and every upload, scopes credentials to the gated live steps, and preserves the existing cron strings. Its 232-line regression file checks all five V2 live/recovery workflows, all upload actions, no job/step override, step-scoped credentials, and preserved schedules.
+- All eight exact-HEAD PR checks were independently re-read and completed SUCCESS: Bundesliga #42881013669, Ligue 1 #42881013797, recovery #42881013880 (candidate rebuild/proof/archive steps correctly skipped), Serie A #42881013628, Product #42881014040, frozen V2 shadow #42881013776, Eredivisie #42881013674, Research #42881013676.
+- The 13:00 main source/forward runs occurred while #781 was still unmerged. The hold is therefore **not active on main**. HUMAN-MERGE only; no merge was performed.
+
+### Other open V2 stack — exact-head checks and ancestry
+
+- #720 is OPEN / Ready for review, base main, HEAD `1b9464834dd5256b7d69499c1443378518dde256`; all nine exact-head runs are completed SUCCESS, including the public-source download-budget and frozen V2 shadow suites. It is a separate 118-commit-ahead parent branch and must be reviewed for overlap with #781 before integration.
+- #727 is based on #720 HEAD `1b9464834dd5256b7d69499c1443378518dde256`, current HEAD `18a3cfda4e83e44aca1252665d01804267d16467`; do not merge without its parent and fresh exact-head CI.
+- #783 -> #784 -> #785 -> #786 -> #787 is a clean stacked direct-quote/direct-shadow/frozen-candidate/direct-entrypoint chain. #786 exact-head runs #42967497143 and #42967497201 are completed SUCCESS (three jobs total); #787 exact-head runs #43011586786 and #43011586865 are completed SUCCESS. Both remain Draft/HUMAN-MERGE; no provider permission is granted.
+- #728 remains Draft on stale base `8894ce8e0248a5502d60571ff073fc6d7847a43a`; do not merge until rebased onto the current rights/privacy stack and rerun.
+- #789 remains Draft, exact HEAD `d0f0a51092c8959b7af5701c68a53ce2898fa5df`, metadata-only openplay rights/source audit; its six exact-head checks are completed SUCCESS (#43035386362, #43035386367, #43035386234, #43035386241, #43035386793, #43035386219). It does not approve openplay as a source.
+- #740 remains documentation-only / Ready for review; this addendum is on its existing branch and requires a fresh exact-head CI run.
+
+### Fresh read-only Supabase pre-match check
+
+- Project schema metadata re-confirmed the critical RLS advisory: RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. No DDL was run.
+- Strict query used only `public.odds_snapshots` fields `league, snapshot_time_utc, commence_time_utc, event_id` with `snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= NOW()`: **3,915** snapshots / **327** events across nine leagues; **0** snapshots / **0** events in the last seven days; zero saved snapshots for future kickoffs. Latest Serie A quote remains `2026-10-13T14:48:53.042620Z`.
+- Separate read-only query on `public.product_prediction_snapshots` selected only league, event ID, model SHA and prediction/kickoff timestamps, with exact original candidate SHA and generated-before-kickoff predicate: **0** original-V2 pre-kickoff predictions / **0** events.
+- No score/result/settlement/target-outcome column was queried. Supabase writes/DDL: 0.
+
+### Binding status
+
+Source provenance is now runtime-verified for the 13:00 archive, but quote availability remains zero and no forecast was created. The feature-input metadata count (110 in the archived source; 113 identity-only rows in the latest earlier DB audit) is not the separate prospective evaluation sample. Eligible completed V2 forecasts remain 0/30; Brier/LogLoss remain unavailable; no market-superiority claim is supported. Provider AI-use permission and private artifact storage remain unresolved. Keep live access held, preserve both frozen gates and HUMAN-MERGE, and do not read protected target outcomes.
