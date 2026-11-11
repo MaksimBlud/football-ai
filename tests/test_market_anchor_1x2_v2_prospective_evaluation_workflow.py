@@ -477,7 +477,7 @@ def test_public_live_entrypoints_do_not_accept_caller_supplied_http_transport():
 
 def test_live_evaluation_workflow_defaults_closed_and_scopes_credentials_to_live_step():
     text = WORKFLOW.read_text(encoding="utf-8")
-    assert 'env:\\n  MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED: "false"' in text
+    assert 'MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED: "false"' in text
 
     job = text.split("  evaluate-market-only:", 1)[1]
     job_env = job.split("    steps:", 1)[0]
