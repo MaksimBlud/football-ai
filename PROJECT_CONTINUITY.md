@@ -1145,6 +1145,54 @@ The frozen candidate and code contracts are intact, and the offline CI coverage 
 
 # Football AI — Project Continuity
 
+
+## 2026-11-11 — Fresh pre-match, source-rights, and protection-PR audit
+
+Main remains 40887ebb215730190d7a6c7a1693373ec4afcdfc. The original MARKET_ANCHOR_1X2_V2 candidate remains SHA-256 a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6, with its frozen 19 features/weights, scaler/imputer, training fingerprint, active_lambda=0, and shadow_lambda=1 unchanged.
+
+### Fresh read-only Supabase pre-match inventory
+
+Queries used only odds/prediction metadata and enforced snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= now(). No result/score/outcome fields were selected.
+
+| League | Strict pre-match snapshots | Events | Future events with saved pre-match quote |
+|---|---:|---:|---:|
+| Bundesliga | 394 | 35 | 0 |
+| EPL | 1,135 | 70 | 0 |
+| Eredivisie | 410 | 39 | 0 |
+| La Liga | 798 | 52 | 0 |
+| Ligue 1 | 387 | 35 | 0 |
+| Primeira Liga | 9 | 9 | 0 |
+| RPL | 153 | 15 | 0 |
+| Serie A | 620 | 63 | 0 |
+| Turkey Super Lig | 9 | 9 | 0 |
+| **Total** | **3,915** | **327** | **0** |
+
+product_prediction_snapshots contains 40 rows in total, but 0 pre-kickoff rows with the original candidate SHA above. This is not a live V2 prediction archive. No Supabase writes or DDL were performed.
+
+Security Advisor still reports RLS disabled on five public tables: teams, predictions, match_statistics, league_prediction_ledger, and epl_ai_market_pair_ledger. This is a critical exposure. Do not enable RLS without reviewed policies; the advisory remediation SQL is recorded in the run notes, not executed.
+
+### Source-rights recheck — no replacement approved
+
+- Football-Data's current fair-use page says the free files are intended for private individuals' personal betting/academic research, via manual or at most light (twice-weekly maximum) automated downloads, and excludes commercial/data-training products using heavy repeated automated downloads: https://football-data.co.uk/contact.php and https://football-data.co.uk/data
+- Cornerflick's data page says CC BY 4.0 covers its compilation only and that underlying facts remain subject to provider terms: https://cornerflick.com/data. Its Terms, last updated 2026-11-09, separately grant only personal non-commercial access/read use and prohibit scraping, harvesting or bulk download except as permitted by law: https://cornerflick.com/terms. Treat this conflict as no automated V2 capture/inference permission pending written clarification. No match records were downloaded or inspected.
+- open-matchday declares non-commercial use and expressly preserves upstream provider rights; its source list includes Football-Data, ESPN, FotMob, Soccerway, OpenLigaDB and fixturedownload: https://github.com/oladeeayo/open-matchday/blob/master/README.md. Not approved for this automated AI workflow.
+- qhtexas/football-dataset labels its compilation PDDL but identifies Football-Data.co.uk as its source: https://github.com/qhtexas/football-dataset/blob/main/datasets/serie-a/README.md. A downstream PDDL declaration does not resolve the upstream source restrictions. Not approved.
+
+No new provider was downloaded, no current-season score/result was inspected, and no new feature values were computed. Source-before-quote + SHA remains a required technical contract, but provenance integrity does not itself grant data rights.
+
+### Exact protection PR state
+
+- PR #781 remains open/HUMAN-MERGE. Its previous HEAD c48e0c2f6a486c9320b04c7670d84b74e8d2322a had 8/8 exact-head workflows SUCCESS, including 92 Frozen V2 tests and a recovery run where candidate rebuild/proof/upload were skipped. A new workflow-inventory regression was then added; current HEAD is afe943305143b68b62e89f20010d78d6b48efd70, base main 40887ebb215730190d7a6c7a1693373ec4afcdfc, 30 commits ahead / 0 behind, seven changed files, no production .pkl changes. No exact-head CI runs are yet visible for this new HEAD; do not merge until all required checks are re-read on it.
+- The new regression scans workflow YAML for unreviewed V2 live-access scripts/secrets and fails if an additional V2 live workflow appears outside the explicit fail-closed inventory. Existing offline V2 tests remain available.
+- PR #740's preceding HEAD f22bfa5e4f6180732c2ce49c54dc2dd9565df0564 had 7/7 exact-head checks SUCCESS; this addendum creates a new documentation HEAD, so that prior CI does not validate the new commit.
+
+### Scientific state
+
+The feature-input gate and the separate outcome-read gate must not be conflated. Eligible prospective completed V2 forecasts remain 0/30. No Brier or LogLoss has been calculated on an admissible independent sample; superiority over market/incumbent is not established. No protected 2026/27 target outcomes were read. No candidate refit, threshold tuning, production .pkl modification, Supabase write/DDL, paid API call, betting or promotion occurred.
+
+HUMAN-MERGE remains mandatory. Do not merge #781, #720, or any stacked descendants automatically; preserve the rights/privacy/source-SHA dependency order.
+
+
 ## 2026-11-08 — Current main, real forward runs, and unresolved rights/privacy gates
 
 This operational entry supersedes the 2026-10-18 “runtime proof pending” status for the checks below. It does **not** change the frozen model, original protocol, source-rights interpretation, or evaluation embargo.
