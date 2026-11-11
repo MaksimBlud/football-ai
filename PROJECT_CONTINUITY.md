@@ -9399,3 +9399,19 @@ All queries were read-only and excluded results/scores/settlements.
 - Source capture and inference rights remain false in #780; the GitHub repository is public; #787 additionally requires private artifact storage. No source download, inference, or evaluator dispatch was performed in this re-audit.
 - The Supabase security advisor still reports RLS disabled on five public tables (`teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, `epl_ai_market_pair_ledger`). No DDL/policy change was made; do not enable RLS without first designing policies.
 - No paid The Odds API call, production `.pkl` change, candidate refit, Supabase write/DDL, target-outcome read, bet, promotion, merge, schedule change, or other-agent setting change occurred. HUMAN-MERGE only.
+
+
+## Additional free-source rights screen — OpenScores and OpenFootAPI (2026-11-11)
+
+A metadata/official-terms-only screen was completed to identify a lawful, free source for the unchanged 19-feature V2 input contract. No API key was created, no endpoint was queried, and no match record or dataset was downloaded.
+
+- **OpenScores** advertises a free API, commercial use, and permission to cache/transform API responses. Its terms also state that data is ingested from public sources and passed through without warranty; its public materials do not identify the upstream rights for the match facts or grant an upstream licence. Its FAQ advertises top-five coverage and team statistics, but its changelog/docs are last updated 2026-06-12 and the public landing still references 2025/26. Therefore 2026/27 freshness, historical completeness for all 19 fields, source-level rights, retention and SHA-pinned private archiving remain unverified. **Candidate only; not approved for V2 capture or inference.**
+  - Official terms: https://openscores.ai/terms
+  - FAQ / coverage / daily-ingest statement: https://openscores.ai/faq
+  - Docs and changelog: https://openscores.ai/docs ; https://openscores.ai/changelog
+- **OpenFootAPI** lists all five top leagues for 2026/27 and describes source/licence metadata per competition. Its free Starter tier is limited to fixtures, competitions, standings and search (5,000 requests/month); lineups, live events, xG shot maps and odds are in the paid Developer tier. Its published endpoints do not establish a free team-match-stat feed for the original V2 corners/cards/points feature set. The four historical OpenFootball archives are CC0, but that does not supply current-season 2026/27 match statistics. The separately listed Football-Data source remains subject to the project's unresolved updated provider policy. **Not a free drop-in source for the 19 frozen features.**
+  - Official docs / source map: https://openfootapi.com/docs
+  - Competition coverage: https://openfootapi.com/coverage
+
+**Decision:** neither candidate is approved. Do not connect either source to the frozen feature builder, do not calculate V2 features from their data, and do not create a prospective forecast until upstream source rights, current-season coverage, all required feature definitions, retention/private-storage permission and inference scope are explicitly established. No change to candidate SHA, feature order, weights, scaler/imputer, lambda values, gates, schedules, Supabase or production artifacts.
+
