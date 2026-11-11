@@ -236,11 +236,11 @@ def test_live_v2_workflow_inventory_cannot_grow_around_the_hold():
     workflow_dir = ROOT / ".github" / "workflows"
     discovered = set()
     live_script_markers = (
-        "serie_a_v2_current_form_source_capture.py",
-        "serie_a_v2_current_form_forward_capture.py",
-        "serie_a_v2_forward_capture.py",
-        "serie_a_v2_attest_real_source.py",
-        "market_anchor_v2_saved_cohort_replay.py",
+        "python serie_a_v2_current_form_source_capture.py",
+        "python serie_a_v2_current_form_forward_capture.py",
+        "python serie_a_v2_forward_capture.py",
+        "python serie_a_v2_attest_real_source.py",
+        "python market_anchor_v2_saved_cohort_replay.py",
     )
     for path in sorted(
         [*workflow_dir.glob("*.yml"), *workflow_dir.glob("*.yaml")]
