@@ -132,7 +132,7 @@ No candidate bytes, 19-feature order, weights, scaler/imputer, training fingerpr
 - Prospective completed-event outcome-read gate: still 0/30 in the current evidence record.
 - Brier/LogLoss superiority: not established.
 
-No dataset CSV was downloaded or parsed. No source request, quote read, Supabase query/write, target-outcome read, inference, refit, paid API call, production `.pkl` change, workflow schedule change or main-branch update was performed.
+No dataset CSV was downloaded or parsed. No upstream data-provider request or CSV download, quote read, Supabase access as part of this source audit, target-outcome read, inference, refit, paid API call, production `.pkl` change, workflow schedule change or main-branch update was performed.
 
 ## Final disposition
 
