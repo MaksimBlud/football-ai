@@ -124,6 +124,8 @@ def discover_archives(*, token: str, get=requests.get) -> list[dict]:
 def verify_source_run(
     archive: Mapping[str, Any], *, quote_time: datetime, token: str, get=requests.get
 ) -> dict:
+    from serie_a_v2_forward_capture import _require_private_source_archive_read_scope
+    _require_private_source_archive_read_scope()
     run_id = archive.get("run_id")
     head_sha = archive.get("head_sha")
     if type(run_id) is not int or run_id <= 0:
