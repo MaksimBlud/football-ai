@@ -29,7 +29,16 @@ MAX_ZIP_BYTES = 12_000_000
 MAX_CSV_BYTES = 2_000_000
 
 
-def verify_archive(archive_path: Path, quotes: list[Mapping[str, Any]], *,
+def _require_source_archive_read_scope() -> dict:
+    """Require frozen-inference rights and private storage before archive bytes are read."""
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+    rights = require_personal_research_inference_scope()
+    from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
+    privacy = require_private_repository_for_source_artifacts()
+    return {"rights": rights, "artifact_privacy": privacy}
+
+
+def _verify_archive_unchecked(archive_path: Path, quotes: list[Mapping[str, Any]], *,
                    as_of_utc: datetime,
                    github_artifact_sha256: str | None = None,
                    github_artifact_created_at_utc: str | None = None) -> dict:
@@ -173,6 +182,25 @@ def verify_archive(archive_path: Path, quotes: list[Mapping[str, Any]], *,
     }
 
 
+def verify_archive(archive_path: Path, quotes: list[Mapping[str, Any]], *,
+                   as_of_utc: datetime,
+                   github_artifact_sha256: str | None = None,
+                   github_artifact_created_at_utc: str | None = None) -> dict:
+    """Public archive verifier; rights/privacy checks run before any archive I/O."""
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
+        raise ValueError("as_of_utc requires timezone")
+    _require_source_archive_read_scope()
+    return _verify_archive_unchecked(
+        archive_path, quotes, as_of_utc=as_of_utc,
+        github_artifact_sha256=github_artifact_sha256,
+        github_artifact_created_at_utc=github_artifact_created_at_utc,
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--archive", type=Path, required=True)
@@ -181,10 +209,11 @@ def main() -> None:
     parser.add_argument("--github-artifact-created-at-utc", default=None)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
+    _require_source_archive_read_scope()
     quotes = json.loads(args.quotes_json.read_text(encoding="utf-8"))
     if not isinstance(quotes, list):
         raise ValueError("quotes JSON must be a list")
-    result = verify_archive(
+    result = _verify_archive_unchecked(
         args.archive, quotes, as_of_utc=datetime.now(timezone.utc),
         github_artifact_sha256=args.github_artifact_sha256,
         github_artifact_created_at_utc=args.github_artifact_created_at_utc,
