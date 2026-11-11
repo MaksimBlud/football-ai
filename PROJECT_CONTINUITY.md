@@ -1146,6 +1146,33 @@ The frozen candidate and code contracts are intact, and the offline CI coverage 
 # Football AI — Project Continuity
 
 
+## 2026-11-11 — V2 validation stack consolidation
+
+The direct-entrypoint protection branch #787 has now absorbed source-validation fixes that previously existed only in sibling PRs. Current #787 HEAD is 272a0dc2d6a97fedc7964e8cc2614ba670220fae, based on #786 HEAD 6e61c92fd211862ef1ad067faa6789fe535779e5, still Draft/HUMAN-MERGE.
+
+The consolidated branch includes:
+- #760/#773 historical-source validation: finite, nonnegative integer count statistics and unordered canonical fixture duplicate rejection;
+- #762 historical date validation: reject explicit timestamps before pandas can normalize midnight;
+- #763/#764/#765 current-form validation: canonical date-only metadata, finite integer counts, and reversed-duplicate rejection;
+- #753 privacy validation: missing GitHub response URL fails closed.
+
+Exact-head CI on #787 HEAD 272a0dc2d6a97fedc7964e8cc2614ba670220fae:
+- Market Anchor 1X2 V2 Shadow Validation #43085253171 — SUCCESS.
+- Serie A Frozen V2 Shadow Tests #43085253302 — SUCCESS.
+- Python 3.11: 440 passed.
+- Python 3.12: 440 passed.
+- Both production .pkl diff guards passed.
+
+The fixes reject malformed source rows before feature building; they do not change valid-row feature values, the frozen 19-feature order, weights, scaler/imputer, training fingerprint, candidate SHA, active_lambda=0, shadow_lambda=1, or the 30-forecast outcome-read gate.
+
+PR #728's dependency note was corrected: #742 is closed/not merged and #783 is its clean strict-cutoff replacement; the #753 privacy fix and #760/#762/#773/#763/#764/#765 validations are now present in #787, but #787 is still Draft and not merged. Rebase the evaluator and descendants only after the entire parent rights/privacy chain is integrated on fresh main.
+
+PR #781 current HEAD remains afe943305143b68b62e89f20010d78d6b48efd70 with 8/8 exact-head workflows SUCCESS and 93 frozen V2 tests passed. It is open and HUMAN-MERGE only; its live-access hold is still not active on main. Main remains 40887ebb215730190d7a6c7a1693373ec4afcdfc.
+
+No source files, quotes, target outcomes, paid APIs, or Supabase were accessed by the #787 CI. No production .pkl, original candidate, weights, feature order, or runtime settings were changed. No Supabase writes/DDL or merge occurred.
+
+
+
 ## 2026-11-11 — Fresh pre-match, source-rights, and protection-PR audit
 
 Main remains 40887ebb215730190d7a6c7a1693373ec4afcdfc. The original MARKET_ANCHOR_1X2_V2 candidate remains SHA-256 a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6, with its frozen 19 features/weights, scaler/imputer, training fingerprint, active_lambda=0, and shadow_lambda=1 unchanged.
