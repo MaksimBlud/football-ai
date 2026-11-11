@@ -1,3 +1,52 @@
+# Continuity update — 2026-11-11 12:48 UTC — fresh-main and pre-match-only audit
+
+## Fresh main and frozen original candidate
+
+- Re-read `refs/heads/main`: exact SHA remains `40887ebb215730190d7a6c7a1693373ec4afcdfc` (latest main commit is 2026-10-18; no main mutation in this audit).
+- Re-read main `PROJECT_CONTINUITY.md`; its latest main-branch section remains 2026-10-18. This open documentation PR is the newer continuity stream.
+- Fetched the actual main candidate JSON `research/models/market_anchor_v2_serie_a_frozen_candidate.json`: Git blob `ac1303f6b096664983fbf52443bd0a381b23ba21`; its declared artifact SHA-256 is `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Actual candidate fields confirm exactly 19 frozen features, a 20×2 weight matrix, 3,799 training rows through 2026-06-30, original scaler/imputer, `active_lambda=0`, `shadow_residual_lambda=1`, `stability_gate_passed=false`, and `automatic_promotion=false`. No candidate bytes, feature order, weights, scaler, imputer, or production `.pkl` were changed.
+
+## Live workflow and HUMAN-MERGE state
+
+- Main `.github/workflows/serie-a-v2-forward-preview.yml` was re-read. It still has Supabase/GitHub credentials at job scope, live source/quote steps, and a 90-day artifact upload. The temporary hold is **not deployed** because PR #781 is not merged.
+- PR #781 remains OPEN / Ready for review / mergeable / HUMAN-MERGE, exact current GitHub API HEAD `c48e0c2f6a486c9320b04c7670d84b74e8d2322a`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Exact-head workflow runs: #42881013669, #42881013797, #42881013880, #42881013628, #42881014040, #42881013776, #42881013674, #42881013676 — **8/8 SUCCESS**. The PR description's older `d901055...` SHA is stale; the current PR API HEAD and these eight runs are authoritative. Do not auto-merge.
+- PR #780 remains Draft on the #727 rights stack at exact HEAD `48f55b6ef4dc40879d5232ac78ce55df51d2dce4`. Its 2026-11-10 official Football-Data policy recheck sets automated source capture and frozen inference to false pending provider clarification; it is not a rights grant. Its exact-head validation run #42812927009 is successful.
+- PR #728 remains Draft at `dc263d5282631a38c7479a6d17a85a3622cbb1c8`; its base is the older #727 ancestry `8894ce8e0248a5502d60571ff073fc6d7847a43a`, not #727's current HEAD `18a3cfda4e83e44aca1252665d01804267d16467`. Its validation run #43016064832 is SUCCESS, but this does not make the stale stacked branch merge-ready.
+- PR #787 remains Draft at `9457fb63dfd1f5da7f0b0d215b86fa8a4c659001`, stacked on #786 HEAD `6e61c92fd211862ef1ad067faa6789fe535779e5`. Its two exact-head runs #43011586786 and #43011586865 are SUCCESS. This remains offline/synthetic validation only.
+- The latest recorded actual V2 live runs remain source capture #42827889788, free diagnostic #42837720155, original forward #42853738496, and current-form forward #42854487569. Their jobs and every listed step completed SUCCESS; the forward reports contain **0 eligible quotes / 0 original V2 previews** and **0 current-form shadow captures**. No new original-V2 live run was found in the latest retrieved Actions window for 2026-11-11. A green job with zero quotes is not a forecast or model-quality result.
+
+## Read-only Supabase pre-match inventory (2026-11-11 12:48 UTC)
+
+The only data query was a SELECT on `public.odds_snapshots` with strict `snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= NOW()`; no result, score, settlement, or post-kickoff columns were selected.
+
+| League | Pre-match snapshots | Unique events | Latest pre-match snapshot (UTC) |
+|---|---:|---:|---|
+| BUNDESLIGA | 394 | 35 | 2026-09-11 15:49:52 |
+| EPL | 1,135 | 70 | 2026-10-09 15:25:57 |
+| EREDIVISIE | 410 | 39 | 2026-09-11 15:50:20 |
+| LA_LIGA | 798 | 52 | 2026-09-11 15:45:28 |
+| LIGUE_1 | 387 | 35 | 2026-09-11 15:49:24 |
+| PRIMEIRA_LIGA | 9 | 9 | 2026-09-11 16:06:24 |
+| RPL | 153 | 15 | 2026-09-05 15:07:55 |
+| SERIE_A | 620 | 63 | 2026-10-13 14:48:53 |
+| TURKEY_SUPER_LIG | 9 | 9 | 2026-09-11 16:06:26 |
+| **Total** | **3,915** | **327** | — |
+
+- New pre-match snapshots in the last seven days: **0** for every league.
+- Latest Serie A saved pre-match quote remains 2026-10-13 14:48:53 UTC; no newer admissible quote exists for the archived source cohort.
+- A metadata-only information_schema lookup found no Market Anchor V2 table/ledger; the only table names matching `%market_anchor%`, `%v2%`, or `%shadow%` are the unrelated `la_liga_structural_v2_observations` and `league_structural_v2_observations`.
+- Supabase table metadata / Security Advisor still reports RLS disabled on five public tables: `teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, and `epl_ai_market_pair_ledger`. This is a critical exposure; do not auto-enable RLS without policy design because that can block application access. No DDL was run.
+
+## Binding rights and scientific interpretation
+
+- Football-Data's official data page update dated 2026-11-10 is reflected by #780: automated source capture and frozen inference remain denied pending provider clarification or a suitable written licence. The repository remains public; private artifact storage is also unresolved. Do not download new CSVs, run live inference, or publish another public source artifact while these gates remain closed.
+- Original primary-outcome access gate (30 completed primary events) and the separate current-form prospective-evaluation gate (30 eligible completed prospective forecasts) remain closed. No protected 2026/27 score/result/settlement was read; no Brier/LogLoss was calculated; no claim of V2 superiority is supported.
+- This audit made no source download, no live inference, no paid The Odds API request, no Supabase write/DDL, no target-outcome read, no bet, no threshold tuning, no promotion, no production `.pkl` change, no main change, no schedule change, and no other-agent change.
+- Next safe operational step remains owner-controlled HUMAN-MERGE of #781 if the owner accepts the interim hold, followed by fresh-main proof that all live source/quote steps and artifact uploads are skipped. Do not resume automated source/inference until both provider rights and private storage are independently resolved.
+
+---
+
 # Continuity update — 2026-11-11 09:18 UTC — superseded V2 branches closed
 
 The exact-head audit now confirms the following duplicate branches have been closed, without merge:
