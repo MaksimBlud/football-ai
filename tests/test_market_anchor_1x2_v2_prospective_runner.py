@@ -431,13 +431,13 @@ def test_live_supabase_market_only_runner_rejects_outcome_persisted_after_evalua
     ]
     # This timestamp is after kickoff but after the evaluator's frozen
     # observation clock; it must not be treated as already persisted evidence.
-    outcome_rows[0]["persisted_at_utc"] = "2026-12-01T20:00:00Z"
+    outcome_rows[0]["persisted_at_utc"] = "2026-11-01T20:00:00Z"
     client = _ExactOutcomeClient(outcome_rows)
 
     with pytest.raises(ValueError, match="cannot be later than evaluation observation time"):
         runner.evaluate_live_market_only_from_supabase(
             client, rows, preflight=_synthetic_source_preflight,
-            observed_at_utc="2026-12-01T19:00:00Z"
+            observed_at_utc="2026-11-01T19:00:00Z"
         )
 
     assert client.result_query_count == 1
@@ -640,6 +640,13 @@ def test_market_only_preflight_and_evaluator_share_one_immutable_gate_snapshot(m
         # Mutating this detached nested list must not alter the attestation
         # later supplied to the evaluator.
         received_attestation["selected_columns"].append("result")
+        return {
+            "verified": True,
+            "source_archive_sha256": {"synthetic-source": "a" * 64},
+            "verified_source_archive_count": 1,
+            "gate_fixture_identity_count": received_attestation["completed_fixture_identity_count"],
+            "gate_fixture_identity_sha256": received_attestation["completed_fixture_identity_sha256"],
+        }
 
     def fake_evaluate(received_rows, received_identities, outcome_loader, *, completed_fixture_gate_attestation):
         call_order.append("evaluate")
