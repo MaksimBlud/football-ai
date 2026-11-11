@@ -297,11 +297,17 @@ def test_live_supabase_market_only_runner_does_not_read_results_below_30(monkeyp
         lambda _client: (identities, _gate_attestation(identities)),
     )
     client = _ExactOutcomeClient([])
+    preflight_calls = []
+
+    def preflight(identities, attestation):
+        preflight_calls.append((identities, attestation))
+        return _synthetic_source_preflight(identities, attestation)
 
     report = runner.evaluate_live_market_only_from_supabase(
-        client, rows, preflight=_synthetic_source_preflight
+        client, rows, preflight=preflight
     )
 
+    assert preflight_calls == []
     assert report["status"] == "OUTCOME_READ_GATE_CLOSED"
     assert report["eligible_completed_forecasts"] == 29
     assert report["target_outcomes_read"] is False
@@ -656,11 +662,16 @@ def test_market_only_preflight_and_evaluator_share_one_immutable_gate_snapshot(m
         ]
         assert received_identities == frozenset(identities)
         assert len(list(received_rows)) == 30
+        # Simulate the pure evaluator crossing its 30-eligible-forecast gate.
+        # The wrapper must run source preflight here, immediately before the
+        # underlying outcome loader, never before this call.
+        outcome_loader(frozenset(identities))
         return {"status": "GATE_SNAPSHOT_REUSED"}
 
     def outcome_loader(_identities):
+        call_order.append("outcome")
         outcome_calls.append(_identities)
-        raise AssertionError("stub evaluator must not request outcomes")
+        return {}
 
     monkeypatch.setattr(runner, "read_completed_fixture_gate", read_gate)
     monkeypatch.setattr(runner, "evaluate_market_only_after_gate", fake_evaluate)
@@ -670,17 +681,18 @@ def test_market_only_preflight_and_evaluator_share_one_immutable_gate_snapshot(m
     )
 
     assert gate_calls == [client]
-    assert call_order == ["preflight", "evaluate"]
+    assert call_order == ["evaluate", "preflight", "outcome"]
     assert preflight_seen[0][0] is evaluator_seen[0][0]
     assert preflight_seen[0][0] == evaluator_seen[0][0]
     assert preflight_seen[0][1]["selected_columns"] == [
         "match_date", "home_team", "away_team", "result"
     ]
-    assert outcome_calls == []
+    assert len(outcome_calls) == 1
+    assert outcome_calls[0] == frozenset(identities)
     assert report["status"] == "GATE_SNAPSHOT_REUSED"
 
 
-def test_market_only_preflight_failure_stops_before_evaluator_or_outcomes(monkeypatch):
+def test_market_only_preflight_failure_stops_after_gate_before_outcomes(monkeypatch):
     rows = _forecast_rows(30)
     for row in rows:
         row.pop("incumbent_1x2")
@@ -699,9 +711,11 @@ def test_market_only_preflight_failure_stops_before_evaluator_or_outcomes(monkey
     def preflight(_identities, _attestation):
         raise RuntimeError("source identity SHA mismatch")
 
-    def fake_evaluate(*args, **kwargs):
-        evaluator_calls.append((args, kwargs))
-        return {"status": "SHOULD_NOT_RUN"}
+    def fake_evaluate(_rows, _identities, outcome_loader, **_kwargs):
+        evaluator_calls.append("gate_evaluator_called")
+        # Simulate the evaluator opening the 30-forecast gate. The source
+        # preflight must then fail before the real outcome loader is called.
+        return outcome_loader(frozenset(identities))
 
     def outcome_loader(_identities):
         outcome_calls.append(_identities)
@@ -714,5 +728,5 @@ def test_market_only_preflight_failure_stops_before_evaluator_or_outcomes(monkey
             object(), rows, outcome_loader, preflight=preflight
         )
 
-    assert evaluator_calls == []
+    assert evaluator_calls == ["gate_evaluator_called"]
     assert outcome_calls == []

@@ -124,15 +124,18 @@ def evaluate_live_market_only_prospective_cohort(
     _validate_completed_fixture_gate_attestation(attestation, frozen_identities)
 
     detached_attestation = MappingProxyType(deepcopy(dict(attestation)))
-    source_preflight_attestation = _validate_source_preflight_attestation(
-        preflight(frozen_identities, detached_attestation), attestation
-    )
-
     def gated_outcome_loader(eligible_identities):
         if not isinstance(eligible_identities, frozenset) or len(eligible_identities) < evaluator.MIN_COMPLETED_ELIGIBLE_FORECASTS:
             raise PermissionError("outcome reader requires the frozen minimum of 30 eligible completed primary forecasts")
         if not eligible_identities.issubset(frozen_identities):
             raise PermissionError("eligible forecast identities fall outside the frozen completed-fixture gate")
+        # The evaluator invokes this loader only after it has verified at least
+        # 30 unique eligible completed primary forecasts. Keep source/archive
+        # preflight inside this post-gate boundary and before the first outcome
+        # read; a caller-supplied callback must never run while the gate is closed.
+        source_preflight_attestation = _validate_source_preflight_attestation(
+            preflight(frozen_identities, detached_attestation), attestation
+        )
         return outcome_loader(
             eligible_identities,
             completed_fixture_identities=frozen_identities,
