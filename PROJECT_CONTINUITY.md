@@ -8924,3 +8924,43 @@ The original as-of builder requires the exact historical fields `Date, HomeTeam,
 - **football-data.org** free access provides fixtures/results/standings, not the full corners/cards columns required by the frozen builder. https://www.football-data.org/documentation/api
 
 No CSV was downloaded, no API/account was used, no paid request was made, and no source was approved by inference from a free endpoint. Keep `research_source_capture_permitted=false` until a provider explicitly confirms the required AI/research use and field coverage. Preserve source-before-quote, archive SHA, private storage and the existing frozen gates.
+
+
+# Incremental V2 audit — 2026-11-11 — frozen outcome boundary and private-storage hardening
+
+## PR #728 — source preflight is now inside the 30-forecast outcome gate
+
+- Current HEAD: `d6884fe832a271dea1e8600b0a0f0928e8a53a29`; PR remains Draft.
+- A live-path audit found a real gate-ordering defect: `evaluate_live_market_only_prospective_cohort` called the caller-supplied source/archive `preflight` callback before `evaluate_market_only_after_gate` checked the 30 unique eligible completed-primary-forecast threshold. Although the callback received only identity metadata, it could capture the client in a closure and read protected outcomes before the gate.
+- Moved preflight into the lazy gated outcome-loader wrapper. The evaluator must first establish at least 30 unique eligible completed forecasts; only then does source preflight run, and it still runs immediately before the underlying outcome loader. If the gate is closed, preflight and outcome loader are both untouched. If preflight fails, the outcome loader is not called.
+- Added regression coverage for: 29 forecasts => no preflight/no outcome read; 30 forecasts => evaluator gate, then preflight, then outcome loader; preflight failure => no outcome loader.
+- The preceding commit also removed caller-controlled HTTP transport from `run_live_evaluation` and `verify_source_artifacts_for_candidates`; tests now monkeypatch the module-owned Requests transport internally.
+- Exact-head push and PR validation both SUCCESS on HEAD `d6884fe832a271dea1e8600b0a0f0928e8a53a29`: [43009064741](https://github.com/MaksimBlud/football-ai/actions/runs/43009064741) and [43009071861](https://github.com/MaksimBlud/football-ai/actions/runs/43009071861). Each ran `py_compile` and `121 passed` offline regression tests. No live evaluator, quote reader, outcome reader, source download or Supabase write was run.
+- PR #728 is still based on old ancestor `8894ce8e0248a5502d60571ff073fc6d7847a43a`; #727 HEAD remains `18a3cfda4e83e44aca1252665d01804267d16467`, four commits after that base. Keep Draft until reconciled onto the latest source-rights/private-storage/direct-entrypoint stack. HUMAN-MERGE only.
+
+## PR #787 — private-storage gate no longer accepts caller-controlled HTTP
+
+- Current HEAD: `0d6f5ac0533828206c4625f5bcb394a989894ad2`; PR remains Draft, based on #786 HEAD `6e61c92fd211862ef1ad067faa6789fe535779e5`.
+- Removed the optional caller-supplied `get` transport from `require_private_repository_for_source_artifacts`. The privacy gate now owns its Requests transport; tests patch the module transport internally and assert that the public gate signature exposes no transport injection. This closes a direct way to spoof the GitHub `private=true` metadata check.
+- Exact-head CI: `Serie A Frozen V2 Shadow Tests` passed 434 tests in both Python 3.11 and 3.12; `Market Anchor 1X2 V2 Shadow Validation` passed 15 tests. All three checks SUCCESS: [43008668153](https://github.com/MaksimBlud/football-ai/actions/runs/43008668153) and [43008668179](https://github.com/MaksimBlud/football-ai/actions/runs/43008668179).
+
+## Current live-source and prediction state (read-only)
+
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Repository metadata reports `private=false`. The #787 rights manifest remains fail-closed: `research_source_capture_permitted=false`, `research_inference_permitted=false`, `provider_issued_ai_inference_license=false`, `ai_model_training_permitted=false`; no authorization evidence is recorded.
+- The 2026-11-11 Actions inventory contained 42 scheduled runs, but no V2 source-capture, quote-diagnostic, original-forward or current-form-forward run. The latest actual V2 live runs remain on 2026-11-10:
+  - Source capture [42827889788](https://github.com/MaksimBlud/football-ai/actions/runs/42827889788): 110 completed primary events at capture, 11 source files, candidate SHA `a9d5abc2...`, archive SHA `f29363e28775032937108d102da1dda1ca2d5c1aa0f921cb4518bf3a82e9aec6`, artifact ID `13770560196`; `paid_provider_calls=0`, `supabase_writes=0`, `target_outcomes_scored=false`.
+  - Original forward [42853738496](https://github.com/MaksimBlud/football-ai/actions/runs/42853738496): source SHA verified; `quotes_seen=0`, `forecasts_created=0`, `v2_diagnostic_previews_captured=0`, `paid_provider_calls=0`, `supabase_writes=0`; output artifact ID `13782226394`.
+  - Current-form forward [42854487569](https://github.com/MaksimBlud/football-ai/actions/runs/42854487569): source artifact SHA verified; `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `target_outcomes_read=false`, `target_outcome_evaluation_gate_open=false`, `paid_provider_calls=0`, `production_or_supabase_writes=0`; artifact ID `13780824313`.
+- Because the repository is public, the 2026-11-10 source and forward artifacts must be treated as potentially readable by repository readers. No artifact was downloaded or deleted in this audit. Do not create new source artifacts until both provider rights and private storage are independently verified.
+
+## Supabase pre-match-only snapshot (2026-11-11)
+
+- Strict pre-match odds query used only rows where `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= NOW()`: 3,915 snapshots across 327 events. Latest Serie A snapshot: `2026-10-13T14:48:53Z`.
+- Exact original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`: 0 saved pre-match V2 predictions, 0 events.
+- Identity-only Serie A 2026/27 gate query selected exactly `match_date, home_team, away_team`: 113 rows / 113 unique fixture identities, 2026-08-22 through 2026-11-08. No score/result/settlement/outcome column was selected. This satisfies the 30-completed-primary-event feature-input threshold only; it does not open the separate prospective evaluation gate because there are still 0 eligible saved V2 forecasts. Target outcomes remain unread.
+- RLS is still disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. This is a separate Supabase security issue; no RLS/DDL or data writes were performed.
+
+## Human integration boundary
+
+- #781 remains OPEN, Ready for review, mergeable, and 8/8 CI SUCCESS at `c48e0c2f6a486c9320b04c7670d84b74e8d2322a`. It is the direct fail-closed hold for the four live V2 workflows and their artifact uploads. It has not been merged; main therefore remains without this hold. Only the user may merge it.
+- No main changes, PR merges, schedule edits, other-agent setting changes, production `.pkl` changes, paid provider calls, Supabase writes/DDL, bets or automatic promotions were performed.
