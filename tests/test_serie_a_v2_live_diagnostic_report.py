@@ -30,6 +30,12 @@ def allow_synthetic_v2_inference_scope(monkeypatch):
         "require_private_repository_for_source_artifacts",
         lambda: {"private": True, "storage_policy": "SYNTHETIC_TEST_ONLY"},
     )
+    import market_anchor_v2_source_capture_rights as capture_rights
+    monkeypatch.setattr(
+        capture_rights,
+        "require_personal_research_source_capture_scope",
+        lambda: {"source_capture_only": True, "scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
 
 
 def history_fixture():
@@ -792,3 +798,21 @@ def test_main_skips_public_history_download_when_no_fresh_future_quotes(tmp_path
     assert report["target_outcomes_read"] is False
     assert report["supabase_writes"] == 0
     assert not raw_dir.exists()
+
+
+
+def test_direct_public_history_fetch_denies_before_http_or_output_directory(monkeypatch, tmp_path):
+    import market_anchor_v2_source_capture_rights as capture_rights
+
+    def deny():
+        raise PermissionError("private source-capture scope is not cleared")
+
+    monkeypatch.setattr(capture_rights, "require_personal_research_source_capture_scope", deny)
+    output_dir = tmp_path / "must-not-be-created"
+
+    def forbidden_get(*_args, **_kwargs):
+        pytest.fail("source HTTP must not run before source-capture rights")
+
+    with pytest.raises(PermissionError, match="private source-capture scope is not cleared"):
+        fetch_public_history(get=forbidden_get, capture_dir=output_dir)
+    assert not output_dir.exists()
