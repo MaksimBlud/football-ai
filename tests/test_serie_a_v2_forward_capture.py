@@ -34,6 +34,12 @@ def allow_synthetic_v2_inference_scope(monkeypatch):
         "require_personal_research_inference_scope",
         lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
     )
+    import market_anchor_v2_artifact_privacy as privacy
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: {"private": True, "storage_policy": "SYNTHETIC_TEST_ONLY"},
+    )
 
 
 def quote(ts="2026-10-14T06:00:00Z"):
