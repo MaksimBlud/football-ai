@@ -9,12 +9,12 @@ from __future__ import annotations
 import os
 import re
 
+import requests
+
 
 def require_private_repository_for_source_artifacts(
     repository: str | None = None,
     token: str | None = None,
-    *,
-    get=None,
 ) -> dict:
     """Require the exact source-artifact repository to be private.
 
@@ -29,13 +29,9 @@ def require_private_repository_for_source_artifacts(
     if not isinstance(credential, str) or not credential.strip():
         raise PermissionError("GitHub token is required to verify private source-archive storage")
 
-    if get is None:
-        import requests
-        get = requests.get
-
     url = f"https://api.github.com/repos/{repo}"
     try:
-        response = get(
+        response = requests.get(
             url,
             headers={
                 "Authorization": f"Bearer {credential}",
