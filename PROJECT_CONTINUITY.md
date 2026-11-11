@@ -8612,3 +8612,15 @@ At this check:
 The 113 metadata identities satisfy only the lagged feature-input gate. The separate prospective target-outcome gate remains CLOSED; no 2026/27 target outcomes were read or scored. No Brier/LogLoss or V2-over-market claim is available.
 
 No source/API download, paid request, live inference, Supabase write/DDL, production `.pkl` change, model refit, threshold tuning, promotion, bet, schedule change, main update, merge, or other-agent setting change occurred. Original candidate SHA, 19-feature order, weights, scaler/imputer, `active_lambda=0`, `shadow_lambda=1`, and all frozen gates remain unchanged.
+
+### Direct original-candidate guard: main versus frozen PR stack
+
+A fresh file-level comparison was made against main `40887ebb215730190d7a6c7a1693373ec4afcdfc`:
+
+- Main candidate JSON blob is `ac1303f6b096664983fbf52443bd0a381b23ba21`. Its embedded `artifact_sha256` is the unchanged original `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; it declares 19 ordered features, 20×2 weights, 3,799 training rows, `active_lambda=0`, `shadow_residual_lambda=1`, failed stability gate and no promotion.
+- Main protocol blob is `65729e9639720e67624c1481190aa22ae606f151`; it keeps the first target-outcome read gate at 30 completed primary Serie A events, with no outcome read before the gate and NO_BET.
+- Main historical feature-builder blob is `401b3a0893371bfa4a488ec92a4a54af2678c8f7`.
+- **Important code gap on main:** `market_anchor_1x2_v2_shadow.py` blob `b2770d726ffafe7a3cef706b57d3391063cbfe1b` does not contain `FROZEN_CANDIDATE_SHA256` and still exposes the old refit helper bodies.
+- The corresponding file on #778/#782 is blob `f3a572e3fd5c9fdc9f8ca1950ba7e551b0edd97e`; it pins `FROZEN_CANDIDATE_SHA256` to the exact original candidate and makes refit/write paths fail closed. #782 inherits that exact #778 file byte-for-byte.
+
+Therefore the candidate artifact itself is present and unchanged on main, but the strongest direct-call SHA/refit protections are still only in the unmerged frozen PR stack. Do not treat the candidate file's presence as proof that main has the full protected execution path. Preserve the #778 → #782 order and HUMAN-MERGE; do not merge #779.
