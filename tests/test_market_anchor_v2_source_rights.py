@@ -298,10 +298,6 @@ def test_live_v2_entrypoints_check_scope_before_external_reads():
         "serie_a_v2_forward_capture.py": (
             "from database import supabase", "discover_archives(", "fetch_saved_upcoming_serie_a_quotes(",
         ),
-        "serie_a_v2_attest_real_source.py": (
-            'token = os.environ.get("GITHUB_TOKEN", "")',
-            "proof = attest_latest_source(",
-        ),
     }
     for path, side_effects in inference_cases.items():
         source = (Path(__file__).resolve().parents[1] / path).read_text(encoding="utf-8")
@@ -329,6 +325,19 @@ def test_live_v2_entrypoints_check_scope_before_external_reads():
             position = main.find(side_effect)
             assert position >= 0, f"{path} lost expected runtime step {side_effect!r}"
             assert guard < position, f"{path} reaches {side_effect!r} before the provider AI-inference permission guard"
+
+    # Source attestation is source-only, not model inference. It must use the
+    # combined inference-or-source-only rights gate plus private artifact storage.
+    attestor_path = Path(__file__).resolve().parents[1] / "serie_a_v2_attest_real_source.py"
+    attestor_source = attestor_path.read_text(encoding="utf-8")
+    attestor_start = attestor_source.index("def attest_latest_source(")
+    attestor_end = attestor_source.index("\ndef main()", attestor_start)
+    attestor = attestor_source[attestor_start:attestor_end]
+    archive_gate = attestor.find("_require_private_source_archive_read_scope()")
+    discovery = attestor.find("archives = discover(token=token)")
+    assert archive_gate >= 0, "source attestation lacks the private source-archive read gate"
+    assert discovery >= 0 and archive_gate < discovery, "source attestation reaches GitHub artifacts before source/privacy approval"
+    assert "require_personal_research_inference_scope()" not in attestor
 
     source_path = Path(__file__).resolve().parents[1] / "serie_a_v2_current_form_source_capture.py"
     source_main = source_path.read_text(encoding="utf-8").split("def main()", 1)[1]
