@@ -27,6 +27,24 @@ from serie_a_v2_current_form_source_capture import (
 from serie_a_v2_live_diagnostic_report import _source_codes
 
 
+@pytest.fixture(autouse=True)
+def allow_synthetic_source_capture_scope(monkeypatch):
+    """Offline fixtures explicitly stub source rights and private storage only."""
+    import market_anchor_v2_source_capture_rights as capture_rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    monkeypatch.setattr(
+        capture_rights,
+        "require_personal_research_source_capture_scope",
+        lambda: {"source_capture_only": True, "scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: {"private": True, "storage_policy": "SYNTHETIC_TEST_ONLY"},
+    )
+
+
 def event_rows(n=30):
     start = date(2026, 8, 1)
     return [
