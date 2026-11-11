@@ -24,7 +24,20 @@ from serie_a_v2_current_form_source_capture import (
     _current_source_fixture_identities,
     _fixture_identity_sha256,
 )
-from serie_a_v2_live_diagnostic_report import _source_codes
+from serie_a_v2_live_diagnostic_report import _source_codes, fetch_public_history_for_source_capture
+
+
+@pytest.fixture(autouse=True)
+def allow_synthetic_source_capture_scope(monkeypatch):
+    import market_anchor_v2_source_capture_rights as capture_rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    synthetic_source_scope = lambda: {"source_capture_only": True, "scope_status": "SYNTHETIC_TEST_ONLY"}
+    synthetic_private_scope = lambda: {"private": True, "storage_policy": "SYNTHETIC_TEST_ONLY"}
+    monkeypatch.setattr(source_capture, "require_personal_research_source_capture_scope", synthetic_source_scope)
+    monkeypatch.setattr(capture_rights, "require_personal_research_source_capture_scope", synthetic_source_scope)
+    monkeypatch.setattr(source_capture, "require_private_repository_for_source_artifacts", synthetic_private_scope)
+    monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", synthetic_private_scope)
 
 
 def event_rows(n=30):
@@ -1136,3 +1149,79 @@ def test_source_capture_push_runs_offline_validation_without_download_job():
     assert "GITHUB_TOKEN" not in validator_job
     assert "Check shared public-source download budget" in workflow
     assert "Capture frozen historical seasons plus gated current-form source" in workflow
+
+
+
+def test_direct_primary_event_metadata_read_requires_source_scope_before_supabase(monkeypatch):
+    def deny():
+        raise PermissionError("source-capture rights are not cleared")
+
+    monkeypatch.setattr(source_capture, "require_personal_research_source_capture_scope", deny)
+
+    class ForbiddenClient:
+        def table(self, *_args, **_kwargs):
+            pytest.fail("Supabase metadata must not be read before source-capture rights")
+
+    with pytest.raises(PermissionError, match="source-capture rights are not cleared"):
+        read_completed_primary_event_identities(
+            ForbiddenClient(), now=datetime(2026, 11, 11, 1, tzinfo=timezone.utc)
+        )
+
+
+def test_direct_current_season_csv_validation_requires_source_scope(monkeypatch):
+    def deny():
+        raise PermissionError("source-capture rights are not cleared")
+
+    monkeypatch.setattr(source_capture, "require_personal_research_source_capture_scope", deny)
+    with pytest.raises(PermissionError, match="source-capture rights are not cleared"):
+        validate_current_season_csv(
+            b"Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HC,AC,HY,AY,HR,AR\\n",
+            captured_at=datetime(2026, 11, 11, 1, tzinfo=timezone.utc),
+        )
+
+
+def test_direct_capture_source_archive_requires_scope_before_candidate_or_io(monkeypatch, tmp_path):
+    def deny():
+        raise PermissionError("source-capture rights are not cleared")
+
+    monkeypatch.setattr(source_capture, "require_personal_research_source_capture_scope", deny)
+    monkeypatch.setattr(
+        source_capture,
+        "load_verified_original",
+        lambda: pytest.fail("candidate file must not be read before source-capture rights"),
+    )
+
+    class ForbiddenClient:
+        def table(self, *_args, **_kwargs):
+            pytest.fail("Supabase must not be read before source-capture rights")
+
+    def forbidden_get(*_args, **_kwargs):
+        pytest.fail("public HTTP must not run before source-capture rights")
+
+    output_dir = tmp_path / "must-not-be-created"
+    with pytest.raises(PermissionError, match="source-capture rights are not cleared"):
+        capture_source_archive(
+            output_dir=output_dir,
+            client=ForbiddenClient(),
+            now=datetime(2026, 11, 11, 1, tzinfo=timezone.utc),
+            get=forbidden_get,
+        )
+    assert not output_dir.exists()
+
+
+
+def test_direct_source_only_historical_loader_denies_before_http_or_archive_output(monkeypatch, tmp_path):
+    import market_anchor_v2_source_capture_rights as capture_rights
+
+    def deny():
+        raise PermissionError("private source-only capture scope is not cleared")
+
+    monkeypatch.setattr(capture_rights, "require_personal_research_source_capture_scope", deny)
+    output_dir = tmp_path / "must-not-be-created"
+
+    def forbidden_get(*_args, **_kwargs):
+        pytest.fail("historical CSV HTTP must not run before source-only rights")
+
+    with pytest.raises(PermissionError, match="private source-only capture scope is not cleared"):
+        fetch_public_history_for_source_capture(get=forbidden_get, capture_dir=output_dir)
+    assert not output_dir.exists()
