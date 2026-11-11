@@ -25,8 +25,8 @@ from market_anchor_v2_source_rights import (
 
 def attest_latest_source(*, token: str, now: datetime, discover=discover_archives,
                          load=get_archive, verify_run=verify_source_run) -> dict:
-    from market_anchor_v2_direct_access import require_v2_inference_access
-    require_v2_inference_access()
+    from market_anchor_v2_direct_access import require_v2_source_capture_access
+    require_v2_source_capture_access()
     if (
         not isinstance(now, datetime)
         or now.tzinfo is None
@@ -93,7 +93,8 @@ def main() -> None:
     if os.environ.get("GITHUB_REPOSITORY") != REPOSITORY:
         raise RuntimeError("source proof must run in original GitHub repository")
     try:
-        require_personal_research_inference_scope()
+        from market_anchor_v2_direct_access import require_v2_source_capture_access
+        require_v2_source_capture_access()
     except PermissionError as exc:
         report = write_research_scope_blocked_report(
             args.output,
