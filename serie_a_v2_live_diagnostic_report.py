@@ -144,6 +144,8 @@ def _read_bounded_historical_csv_response(
 
 def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -> tuple[pd.DataFrame, list[dict]]:
     """Explicit, bounded configured public URLs; never odds API, never cache guess."""
+    from market_anchor_v2_direct_access import require_v2_source_capture_access
+    require_v2_source_capture_access()
     all_frames = []
     audit = []
     total_source_bytes = 0
@@ -248,6 +250,8 @@ def _assert_original_v2_source_embargo(history: pd.DataFrame, audit: list[dict],
 
 def make_report(quotes: list[dict], history: pd.DataFrame, source_audit: list[dict], *,
                 as_of_utc: datetime) -> dict:
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     if not source_audit:
         raise ValueError("history provenance required")
     if (
