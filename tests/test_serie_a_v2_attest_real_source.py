@@ -17,6 +17,23 @@ from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes
 from serie_a_v2_prequote_source_archive_gate import ARCHIVE_REPORT, SOURCE_DIR
 
 
+@pytest.fixture(autouse=True)
+def allow_synthetic_v2_access_scopes(monkeypatch):
+    """Offline fixtures use synthetic permissions; this is not provider authorization."""
+    import market_anchor_v2_source_rights as inference_rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    monkeypatch.setattr(
+        inference_rights,
+        "require_personal_research_inference_scope",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: {"private": True, "storage_policy": "SYNTHETIC_TEST_ONLY"},
+    )
+
 NOW = datetime(2026, 10, 14, 16, tzinfo=timezone.utc)
 
 
