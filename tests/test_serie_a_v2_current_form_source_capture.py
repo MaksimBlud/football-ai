@@ -738,7 +738,7 @@ def test_frozen_candidate_is_verified_before_gate_reads_or_source_requests(monke
         calls.append("http")
         raise AssertionError("current-season source must not be requested for an invalid candidate")
 
-    monkeypatch.setattr(source_capture, "load_verified_original", reject_candidate)
+    monkeypatch.setattr(source_capture, "_verify_frozen_candidate_contract_pin", reject_candidate)
     with pytest.raises(ValueError, match="frozen V2 candidate integrity failure"):
         capture_source_archive(
             output_dir=tmp_path,
