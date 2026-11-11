@@ -245,7 +245,7 @@ def test_live_market_only_bridge_binds_forecast_kickoff_to_lazy_outcome_reader(m
         lambda items, token, current_gate_identities, get: {999: verified_source_sha},
     )
 
-    def read_exact(client, identities, kickoff_by_identity, *, observed_at_utc):
+    def read_exact(client, identities, kickoff_by_identity, *, observed_at_utc, **_kwargs):
         captured["client"] = client
         captured["identities"] = identities
         captured["kickoff_by_identity"] = dict(kickoff_by_identity)
@@ -255,13 +255,22 @@ def test_live_market_only_bridge_binds_forecast_kickoff_to_lazy_outcome_reader(m
     monkeypatch.setattr(live, "_read_exact_completed_outcomes", read_exact)
 
     def evaluate_market_only(client, selected_rows, outcome_loader, *, preflight):
-        identities = {
+        identities = frozenset(
             (row["match_date"], row["home_team"], row["away_team"])
             for row in selected_rows
+        )
+        gate_attestation = {
+            "completed_fixture_identity_count": len(identities),
+            "completed_fixture_identity_sha256": live.evaluator._sha_fixture_set(identities),
         }
-        preflight(identities, {"selected_columns": ["match_date", "home_team", "away_team"]})
-        outcomes = outcome_loader(frozenset(identities))
-        assert set(outcomes) == identities
+        source_preflight_attestation = preflight(identities, gate_attestation)
+        outcomes = outcome_loader(
+            identities,
+            completed_fixture_identities=identities,
+            completed_fixture_gate_attestation=gate_attestation,
+            source_preflight_attestation=source_preflight_attestation,
+        )
+        assert set(outcomes) == set(identities)
         return {
             "status": "EVALUATED_MARKET_ONLY_DIAGNOSTIC",
             "target_outcomes_read": True,
@@ -410,6 +419,10 @@ def test_private_repository_gate_precedes_forward_artifact_listing(monkeypatch):
     )
 
     assert calls == ["privacy", "artifact_listing"]
+    assert report["status"] == "NO_FORWARD_ARTIFACTS"
+    assert report["private_storage_verified"] is True
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
 
 
 def test_live_evaluator_rejects_naive_datetime_clock_before_private_storage_or_artifacts(monkeypatch):
@@ -441,11 +454,6 @@ def test_live_evaluator_rejects_naive_datetime_clock_before_private_storage_or_a
             "synthetic-read-only-token",
             now=datetime(2026, 11, 8, 3, 0),
         )
-
-    assert report["status"] == "NO_FORWARD_ARTIFACTS"
-    assert report["private_storage_verified"] is True
-    assert report["target_outcomes_read"] is False
-    assert report["target_outcomes_scored"] is False
 
 
 def test_private_storage_gate_is_before_artifact_listing_in_live_evaluator_source():
