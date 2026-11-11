@@ -205,6 +205,8 @@ def main() -> None:
     p.add_argument("--manifest-json", required=True, type=Path)
     p.add_argument("--audit-json", required=True, type=Path)
     args = p.parse_args()
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     if args.manifest_json == args.audit_json:
         raise ValueError("audit and manifest paths must differ")
     historical_bytes = args.existing_history_csv.read_bytes()
