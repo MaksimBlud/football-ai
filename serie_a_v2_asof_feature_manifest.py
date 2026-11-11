@@ -99,6 +99,8 @@ def _stats_asof(frame: pd.DataFrame, *, before_day: datetime) -> dict[str, deque
 
 
 def build_manifest(history: pd.DataFrame, quotes: list[dict]) -> dict:
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     _verify_original_feature_builder()
     original = load_verified_original()
     names = list(original["features"])
