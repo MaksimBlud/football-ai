@@ -8490,3 +8490,16 @@ The provider advertises a free request allowance (1,000/day; higher with GitHub)
 A closer read of the provider's own league-specific page found a material contradiction that narrows the candidate further. The shared soccer hub lists `/v1/matches/:id/statistics` as Free (with xG restricted to Solo+), but the Serie A capability matrix lists advanced match statistics (possession, shots, cards and xG) as **Edge**; the separate free `/v1/stored/matches/:id/stats` endpoint is documented as possession, shots and passes, which does not by itself supply the V2 corners/cards inputs. The provider must clarify in writing whether the required per-match score/corners/yellow/red fields are available on Free before this can be called a free source.
 
 The freshness evidence is also insufficient: the shared soccer page says team-stat data was last ingested 2026-09-16, while the Serie A page shows standings refreshed 2026-11-10. Current standings freshness does not establish current match-stat freshness. The page's aggregate historical coverage cannot be used as a current-season completeness denominator. Consequently, Big Balls remains an **unapproved candidate only**; do not create a collector, spend requests, or infer from it. No API key, account, API request, response download, or raw-data storage was used. References: https://bigballsdata.com/soccer-api and https://bigballsdata.com/serie-a-api.
+
+
+## 2026-11-11 01:48 UTC — stale #779 ancestry reintroduced retired target rows; embargo restored
+
+A deeper audit of the exact #779 branch found a critical regression that was not visible from the earlier workflow-level summary: because #779 still inherited the older #778 base, its copy of `market_anchor_v2_saved_cohort_replay.py` still contained 10 embedded target rows and its direct `validate_targets()` function did not have the current #778 deny guard. Current #778 HEAD `aa0cd076a15033d2d90c7c08cb3ff14c94c2e8ec` already had the safe state (`TARGETS=()`, direct validator denied). The old #779 branch therefore could not be treated as a safe descendant, even though its prior CI was green.
+
+Remediation committed to the existing Draft #779 branch (no new PR and no main change):
+- commit `efd60eec09113d7d66ab8b4db76792f5668ba2f5` copied the fail-closed saved-cohort module from current #778;
+- commit `19d1332bd69d345f1e7507e35dead8a5012bfe09` replaced the stale replay tests with the current #778 embargo tests;
+- current source now has an empty `TARGETS` tuple and direct `validate_targets()` is denied before validation; tests assert the empty tuple and early denial.
+- exact-head CI runs `42941355893` and `42941361473` were queued/in progress at the audit time; do not claim success until both are completed and tied to this exact SHA.
+
+PR #779 remains Draft and ancestry-stale: base `b2a034614d999683a8c334569dc07eb07b7ac589`; compare current #778 HEAD to new #779 HEAD remains diverged (52 ahead / 3 behind; merge base `60d1025e9556cdce05f93b9a71ce46d4d06096cb`). Keep HUMAN-MERGE. After parent integration, rebase the whole chain and rerun exact-head CI. The retired post-outcome replay must stay disabled; do not use its old report or any target rows for inference, scoring, selection, or promotion.
