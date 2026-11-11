@@ -462,7 +462,8 @@ def test_live_supabase_market_only_runner_rejects_offsetless_evaluation_observat
 
     with pytest.raises(ValueError, match="evaluation observed_at_utc must have a real UTC offset"):
         runner.evaluate_live_market_only_from_supabase(
-            client, rows, observed_at_utc="2026-11-06T12:00:00"
+            client, rows, preflight=_synthetic_source_preflight,
+            observed_at_utc="2026-11-06T12:00:00"
         )
 
     assert gate_calls == []
