@@ -36,6 +36,18 @@ PARENT_COMPLETED = "2026-10-18T06:32:00+00:00"
 HEAD = "a" * 40
 
 
+@pytest.fixture(autouse=True)
+def allow_synthetic_v2_inference_scope(monkeypatch):
+    """Offline fixtures use synthetic inputs; this is not provider authorization."""
+    import market_anchor_v2_source_rights as rights
+
+    monkeypatch.setattr(
+        rights,
+        "require_personal_research_inference_scope",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+
+
 class OffsetlessTZ(tzinfo):
     def utcoffset(self, dt):
         return None
