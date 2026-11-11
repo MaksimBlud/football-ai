@@ -1,47 +1,45 @@
-# Continuity update — 2026-11-11 07:54 UTC — direct-entrypoint rights gates and source-only scope separation
+# Continuity update — 2026-11-11 08:01 UTC — direct-entrypoint guard stack exact-head completion
 
-## Fresh main, original candidate and immutable V2 contract
+## Fresh main and frozen original candidate
 
-- Fresh `refs/heads/main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No main update or merge was performed.
-- Original `MARKET_ANCHOR_1X2_V2` candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
-- The original 19-feature order, 20×2 weights, scaler, imputer, medians, 3,799 training rows, `active_lambda=0`, `shadow_lambda=1`, failed stability gate and no-promotion policy remain unchanged. No XGBoost production model is used.
+- Fresh `refs/heads/main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main update or merge was performed.
+- Original `MARKET_ANCHOR_1X2_V2` candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; candidate blob `ac1303f6b096664983fbf52443bd0a381b23ba21`.
+- The exact original 19-feature order, 20×2 weights, scaler, imputer, medians, 3,799 training rows, `active_lambda=0`, `shadow_lambda=1`, failed stability gate and no-promotion policy remain unchanged. No legacy XGBoost production path is used.
 
-## Direct-entrypoint rights-gate integration
+## Current direct-entrypoint guard PR
 
-- PR #787 remains Draft and is stacked on exact parent PR #786 HEAD `6e61c92fd211862ef1ad067faa6789fe535779e5`; its exact current HEAD is `e86d8726ad649ee39d6af281a730441ecc66f273`.
-- Exact PR CI run [42982764520](https://github.com/MaksimBlud/football-ai/actions/runs/42982764520): **421 passed under Python 3.11 and 421 passed under Python 3.12**; production `.pkl` diff guard succeeded.
-- Exact push CI run [42982755863](https://github.com/MaksimBlud/football-ai/actions/runs/42982755863): same **421/421** and `.pkl` guard.
-- PR #787 absorbs the useful source-only/inference separation from sibling PR #788. PR #788 was closed as superseded, not merged.
-- Historical CSV loaders now expose separate `INFERENCE` and `SOURCE_CAPTURE` scopes. The current-form source-capture path uses only the narrower source-capture scope; the diagnostic/inference path still requires inference rights.
-- Source-only capture no longer calls `load_verified_original()` or loads model weights. It pins the unchanged expected candidate SHA as a code-level contract value; the later inference path independently loads and SHA-validates the actual candidate bytes before features/scoring.
-- Direct entrypoints fail closed before Supabase, GitHub artifact/network, CSV, quote metadata, or filesystem access when the required rights/private-storage gate fails.
-- PR #787 remains Draft because it depends on #786 and the parent stack. Do not merge it independently or retarget it to main before parents are integrated.
+- PR #787 remains Draft and is stacked on exact parent #786 HEAD `6e61c92fd211862ef1ad067faa6789fe535779e5`; exact current HEAD is `628bd531447fbe742b667a52bf43e09f37de1481`.
+- Exact PR CI [42983473604](https://github.com/MaksimBlud/football-ai/actions/runs/42983473604): **425 passed under Python 3.11 and 425 passed under Python 3.12**. Candidate-presence and production `.pkl` diff guards succeeded.
+- The branch uses one fail-closed direct-access module with separate `INFERENCE` and `SOURCE_CAPTURE` scopes. Direct quote, archive, feature, current-form forward, source-capture and source-attestation entrypoints check the appropriate rights/privacy gate before external reads or filesystem output.
+- Historical CSV loading is split: inference uses the inference scope; current-form source capture uses the narrower source-only scope. The source-only path no longer calls `load_verified_original()` or loads model weights; it pins the expected frozen candidate SHA as a code-level contract value. The later inference path independently loads and SHA-validates the actual candidate bytes before features/scoring.
+- CLI regressions prove the feature-manifest and prequote archive gate check rights before reading input files. Additional regressions prove private storage is required for source-only access and source-only rights cannot authorize inference entrypoints.
+- Older direct-entrypoint branches #779 and #782 and sibling #788 were closed as superseded; none was merged. PR #787 remains Draft until the #786 parent stack is integrated and exact-head CI is rerun.
 
-## Provider rights and repository privacy remain hard blockers
+## Live-access hold remains the immediate manual action
 
-- The checked Football-Data rights manifest still has `research_source_capture_permitted=false`, `research_inference_permitted=false`, `ai_model_training_permitted=false`, and `authorization=null`. The two-session download ceiling is not permission.
-- The GitHub repository is public. The private-artifact guard therefore also denies source archive access. Integrity/SHA checks do not grant rights or confidentiality.
-- No provider source request, new source archive, model inference, paid API call, or source upload was made in this run. Keep both scopes fail-closed pending provider clarification and private storage.
+- Main still declares schedules: current-form source capture 05:50 UTC, free real-quote diagnostic 06:13 UTC, original forward-only 08:08 UTC, current-form forward-only 08:18 UTC. The current main workflow files do not yet contain the new live-access hold.
+- PR #781 is OPEN, Ready for review, mergeable, exact HEAD `c48e0c2f6a486c9320b04c7670d84b74e8d2322a`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`; exact CI is **8/8 SUCCESS**.
+- PR #781 has not been merged. Manual merge remains the next operational action. Do not auto-merge or change the schedules.
 
-## Main live workflows and HUMAN-MERGE hold
+## Source rights and private storage remain blocking
 
-- Main still declares schedules: current-form source capture 05:50 UTC, free quote diagnostic 06:13 UTC, original forward-only 08:08 UTC, current-form forward-only 08:18 UTC. The checked main workflow files do not yet contain the new live-access hold.
-- PR #781 is OPEN, Ready for review, mergeable, exact HEAD `c48e0c2f6a486c9320b04c7670d84b74e8d2322a`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`; exact CI is **8/8 SUCCESS** (including the frozen-candidate recovery guard).
-- PR #781 has not been merged. Manual merge is still the required next operational action. Do not auto-merge and do not change schedules.
+- The checked Football-Data manifest has `research_source_capture_permitted=false`, `research_inference_permitted=false`, `ai_model_training_permitted=false`, and `authorization=null`. The two-session download ceiling is a limit, not permission.
+- The GitHub repository is public; the private-artifact guard therefore denies source archive access. SHA integrity does not grant data-use rights or confidentiality.
+- No provider source request, new source archive, model inference, paid API call or source upload was made in this run. Keep both source and inference scopes fail-closed pending provider clarification and private storage.
 
 ## Read-only Supabase pre-match inventory (2026-11-11)
 
-- Strict `public.odds_snapshots` filter: `snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= NOW()`.
-- Total: **3,915** strict pre-match snapshots / **327** unique events across nine leagues.
-- New snapshots in the last seven days: **0**. Future events with a saved strict pre-match quote: **0**.
+- Strict filter: `public.odds_snapshots.snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= NOW()`.
+- **3,915** strict pre-match snapshots / **327** unique events across nine leagues.
+- New strict pre-match snapshots in the last seven days: **0**. Future events with saved strict pre-match quotes: **0**.
 - Latest Serie A strict pre-match snapshot: `2026-10-13T14:48:53.042620Z`.
-- Serie A 2026-2027 feature-input metadata query used only `match_date,home_team,away_team`: **113 rows / 113 unique fixture identities**, 2026-08-22 through 2026-11-08. This count is only a feature-input gate; it is not the prospective target-outcome gate.
-- No score, result, settlement, target outcome, or protected 2026/27 outcome columns were selected. No Supabase writes/DDL were performed.
+- Serie A 2026-2027 feature-input metadata query selected only `match_date,home_team,away_team`: **113 rows / 113 unique fixture identities**, from 2026-08-22 through 2026-11-08. This is only the feature-input gate, not the prospective target-outcome gate.
+- No score, result, settlement, target outcome or protected 2026/27 outcome columns were selected. Supabase writes/DDL = 0.
 
 ## Supabase security advisory
 
-- Current metadata still reports RLS disabled on five public tables: `teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, `epl_ai_market_pair_ledger`.
-- This is a critical exposure. Do not auto-enable RLS without reviewing policies because existing application access may break. Proposed SQL for owner-controlled remediation:
+- RLS remains disabled on five public tables: `teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, `epl_ai_market_pair_ledger`.
+- This is a critical exposure. Do not auto-enable RLS without reviewing policies because existing application access may break. Owner-controlled remediation SQL:
   ```sql
   ALTER TABLE public.teams ENABLE ROW LEVEL SECURITY;
   ALTER TABLE public.predictions ENABLE ROW LEVEL SECURITY;
@@ -53,9 +51,8 @@
 ## Evaluation status
 
 - No new admissible prospective V2 forecasts or independent outcomes were created/read in this run. No new Brier/LogLoss comparison is available.
-- No claim of superiority over the market. `active_lambda=0` remains the market; `shadow_lambda=1` remains research-only.
-- Production `.pkl` unchanged; Supabase writes/DDL = 0; paid The Odds API calls = 0; no bets, promotion, threshold tuning or outcome-gate bypass.
-
+- No superiority claim against the market. `active_lambda=0` remains the market; `shadow_lambda=1` remains research-only.
+- Production `.pkl` unchanged; paid The Odds API calls = 0; no bets, promotion, threshold tuning or outcome-gate bypass.
 ---
 
 # Continuity update — 2026-11-11 06:17 UTC — clean rights-stack rebase and exact-head CI audit
