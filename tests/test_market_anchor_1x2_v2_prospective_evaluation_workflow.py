@@ -194,7 +194,7 @@ def test_live_market_only_bridge_binds_forecast_kickoff_to_lazy_outcome_reader(m
     monkeypatch.setattr(
         live,
         "require_private_repository_for_source_artifacts",
-        lambda repository, token, get: {
+        lambda repository, token: {
             "repository": repository,
             "private": True,
             "storage_policy": "PRIVATE_GITHUB_ACTIONS_ARTIFACTS",
@@ -228,9 +228,9 @@ def test_live_market_only_bridge_binds_forecast_kickoff_to_lazy_outcome_reader(m
     verified_source_sha = "b" * 64
     captured = {}
 
-    monkeypatch.setattr(live, "discover_forward_artifacts", lambda token, get: [artifact])
-    monkeypatch.setattr(live, "verify_forward_run", lambda item, token, get: forward_run)
-    monkeypatch.setattr(live, "get_archive", lambda artifact_id, token, get: raw_archive)
+    monkeypatch.setattr(live, "discover_forward_artifacts", lambda token: [artifact])
+    monkeypatch.setattr(live, "verify_forward_run", lambda item, token: forward_run)
+    monkeypatch.setattr(live, "get_archive", lambda artifact_id, token: raw_archive)
     monkeypatch.setattr(live, "extract_forward_artifact", lambda raw: ({}, embedded_source))
     monkeypatch.setattr(
         live, "normalize_forward_report",
@@ -242,7 +242,7 @@ def test_live_market_only_bridge_binds_forecast_kickoff_to_lazy_outcome_reader(m
     )
     monkeypatch.setattr(
         live, "verify_source_artifacts_for_candidates",
-        lambda items, token, current_gate_identities, get: {999: verified_source_sha},
+        lambda items, token, current_gate_identities: {999: verified_source_sha},
     )
 
     def read_exact(client, identities, kickoff_by_identity, *, observed_at_utc, **_kwargs):
@@ -285,7 +285,6 @@ def test_live_market_only_bridge_binds_forecast_kickoff_to_lazy_outcome_reader(m
         client,
         "read-only-test-token",
         now=datetime.fromisoformat("2026-11-05T12:00:00+00:00"),
-        get=lambda *_args, **_kwargs: None,
     )
 
     expected_identities = frozenset(
@@ -338,7 +337,6 @@ def test_run_live_evaluation_blocks_unlicensed_inference_before_privacy_or_artif
             Client(),
             "synthetic-read-only-token",
             now=datetime.fromisoformat("2026-11-08T06:00:00+00:00"),
-            get=forbidden,
         )
     assert calls == []
 
@@ -376,13 +374,13 @@ def test_public_repository_blocks_before_forward_artifact_listing_or_supabase_re
             pytest.fail("public repository must be rejected before any Supabase read")
 
     monkeypatch.setattr(live, "discover_forward_artifacts", forbidden_artifact_listing)
+    monkeypatch.setattr(live.requests, "get", fake_get)
 
     with pytest.raises(PermissionError, match="require a private GitHub repository"):
         live.run_live_evaluation(
             Client(),
             "synthetic-read-only-token",
             now=datetime.fromisoformat("2026-11-08T03:00:00+00:00"),
-            get=fake_get,
         )
 
     assert len(calls) == 1
@@ -405,17 +403,17 @@ def test_private_repository_gate_precedes_forward_artifact_listing(monkeypatch):
         calls.append("privacy")
         return _PrivateRepositoryResponse(True)
 
-    def empty_artifact_listing(token, get):
+    def empty_artifact_listing(token):
         calls.append("artifact_listing")
         return []
 
     monkeypatch.setattr(live, "discover_forward_artifacts", empty_artifact_listing)
+    monkeypatch.setattr(live.requests, "get", fake_get)
 
     report = live.run_live_evaluation(
         object(),
         "synthetic-read-only-token",
         now=datetime.fromisoformat("2026-11-08T03:00:00+00:00"),
-        get=fake_get,
     )
 
     assert calls == ["privacy", "artifact_listing"]
@@ -464,3 +462,12 @@ def test_private_storage_gate_is_before_artifact_listing_in_live_evaluator_sourc
     assert privacy >= 0
     assert artifact_listing >= 0
     assert privacy < artifact_listing
+
+
+
+def test_public_live_entrypoints_do_not_accept_caller_supplied_http_transport():
+    import inspect
+    import market_anchor_1x2_v2_prospective_evaluation as live
+
+    assert "get" not in inspect.signature(live.run_live_evaluation).parameters
+    assert "get" not in inspect.signature(live.verify_source_artifacts_for_candidates).parameters
