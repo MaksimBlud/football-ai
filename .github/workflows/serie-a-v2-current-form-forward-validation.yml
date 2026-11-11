@@ -1,0 +1,82 @@
+name: Serie A V2 Current-Form Forward Offline Validation
+
+on:
+  pull_request:
+    branches:
+      - research/v2-market-only-evaluator-stacked-on-727-20261108-run11
+    paths:
+      - ".github/workflows/serie-a-v2-current-form-forward-preview.yml"
+      - "tests/test_serie_a_v2_current_form_dependency_triggers.py"
+      - "serie_a_v2_current_form_source_capture.py"
+      - "serie_a_v2_current_form_forward_capture.py"
+      - "serie_a_v2_asof_feature_manifest.py"
+      - "serie_a_v2_frozen_shadow_preview.py"
+      - "serie_a_v2_live_diagnostic_report.py"
+      - "serie_a_v2_prequote_source_archive_gate.py"
+      - "market_anchor_v2_source_rights.py"
+      - "market_anchor_v2_source_capture_rights.py"
+      - "market_anchor_v2_artifact_privacy.py"
+      - "requirements-v2-research-py312.lock"
+      - "tests/test_serie_a_v2_*.py"
+      - "tests/test_market_anchor_v2_*.py"
+  push:
+    branches:
+      - research/v2-current-form-forward-push-validation-stacked-on-728-20261108-run11
+    paths:
+      - ".github/workflows/serie-a-v2-current-form-forward-preview.yml"
+      - "tests/test_serie_a_v2_current_form_dependency_triggers.py"
+      - "serie_a_v2_current_form_source_capture.py"
+      - "serie_a_v2_current_form_forward_capture.py"
+      - "serie_a_v2_asof_feature_manifest.py"
+      - "serie_a_v2_frozen_shadow_preview.py"
+      - "serie_a_v2_live_diagnostic_report.py"
+      - "serie_a_v2_prequote_source_archive_gate.py"
+      - "market_anchor_v2_source_rights.py"
+      - "market_anchor_v2_source_capture_rights.py"
+      - "market_anchor_v2_artifact_privacy.py"
+      - "requirements-v2-research-py312.lock"
+      - "tests/test_serie_a_v2_*.py"
+      - "tests/test_market_anchor_v2_*.py"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-offline-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install pinned V2 research dependencies
+        run: python -m pip install -r requirements-v2-research-py312.lock
+      - name: Compile current-form forward dependencies
+        run: |
+          python -m py_compile serie_a_v2_current_form_source_capture.py serie_a_v2_current_form_forward_capture.py serie_a_v2_asof_feature_manifest.py serie_a_v2_frozen_shadow_preview.py serie_a_v2_live_diagnostic_report.py serie_a_v2_prequote_source_archive_gate.py historical_football_signal_lab.py serie_a_runtime_config.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py market_anchor_v2_source_rights.py market_anchor_v2_source_capture_rights.py market_anchor_v2_artifact_privacy.py
+      - name: Run offline current-form source and forward regressions
+        run: |
+          python -m pytest -q \
+            tests/test_serie_a_v2_current_form_source_capture.py \
+            tests/test_serie_a_v2_current_form_forward_capture.py \
+            tests/test_serie_a_v2_asof_feature_manifest.py \
+            tests/test_serie_a_v2_atalanta_alias.py \
+            tests/test_serie_a_v2_frozen_shadow_preview.py \
+            tests/test_serie_a_v2_prequote_source_archive_gate.py \
+            tests/test_serie_a_v2_live_diagnostic_report.py \
+            tests/test_historical_football_signal_lab.py \
+            tests/test_serie_a_v2_manual_quote_trigger_contract.py \
+            tests/test_serie_a_v2_current_form_dependency_triggers.py \
+            tests/test_serie_a_v2_current_form_source_workflow_contract.py \
+            tests/test_market_anchor_v2_source_rights.py \
+            tests/test_market_anchor_v2_source_capture_rights.py \
+            tests/test_market_anchor_v2_artifact_privacy.py \
+            tests/test_serie_a_v2_public_source_download_budget.py
+      - name: Prove no production model pickle changed
+        run: |
+          git fetch origin research/v2-market-only-evaluator-stacked-on-727-20261108-run11
+          git diff --exit-code FETCH_HEAD...HEAD -- '*.pkl'
