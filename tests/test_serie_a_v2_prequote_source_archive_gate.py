@@ -20,10 +20,18 @@ from serie_a_v2_prequote_source_archive_gate import (
 
 @pytest.fixture(autouse=True)
 def allow_synthetic_source_archive_scope(monkeypatch):
+    import market_anchor_v2_source_rights as rights
+    import market_anchor_v2_artifact_privacy as privacy
+
     monkeypatch.setattr(
-        gate_module,
-        "_require_source_archive_read_scope",
+        rights,
+        "require_personal_research_inference_scope",
         lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: {"private": True, "storage_policy": "SYNTHETIC_TEST_ONLY"},
     )
 
 
