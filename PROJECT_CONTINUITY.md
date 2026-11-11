@@ -9185,3 +9185,14 @@ A new static-source candidate was identified for future lagged current-season in
 References reviewed:
 - Cornerflick data format and licence: https://cornerflick.com/data
 - API-Football terms were reviewed only as a separate rights reference, not as proof that API-Football is Cornerflick's upstream provider: https://apifootball.com/terms_of_use/
+
+
+## Integration-order correction — #781 versus #720 (2026-11-11 15:03 UTC)
+
+A direct GitHub compare was run between the exact #781 hold HEAD `c48e0c2f6a486c9320b04c7670d84b74e8d2322a` and #720 provider-rights HEAD `1b9464834dd5256b7d69499c1443378518dde256`:
+
+- Compare status: **DIVERGED**; merge base is main `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- #720 is 118 commits ahead of #781 and 27 commits behind it.
+- The branches modify the same live V2 workflow files (`serie-a-v2-current-form-source-capture`, `serie-a-v2-current-form-forward-preview`, `serie-a-v2-forward-preview`, `serie-a-v2-free-real-quote-diagnostic`) and the frozen V2 / research / Serie A validation workflows. They are not a clean linear stack.
+
+**Do not merge #720 at its current stale base after #781 without rebasing and revalidating.** The safe integration plan is: user manually merges the direct-main #781 live-access hold first; then #720 must be rebased onto the resulting fresh main while preserving the hold's default-deny conditions and every upload gate, followed by exact-head full CI. Only then can #727 and its descendants be considered. Do not merge #720 first if doing so could restore un-gated scheduled source capture or public artifact uploads. HUMAN-MERGE remains mandatory.
