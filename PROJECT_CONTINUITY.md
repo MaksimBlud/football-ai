@@ -8438,7 +8438,7 @@ The parent-loader pins now match the actual branch blobs: historical loader `f42
 
 PR #778 latest exact HEAD is `aa0cd076a15033d2d90c7c08cb3ff14c94c2e8ec`; its exact frozen suite [#42935139447](https://github.com/MaksimBlud/football-ai/actions/runs/42935139447) passed **414 on Python 3.11 and 414 on Python 3.12**, and its separate shadow validation [#42935139489](https://github.com/MaksimBlud/football-ai/actions/runs/42935139489) passed 15.
 
-PR #779 HEAD `44766eed08ceedb1736a0095e5e67f175928ed89` remains based on `b2a034614d999683a8c334569dc07eb07b7ac589`. Fresh comparison to #778 HEAD is still **diverged, 45 ahead / 3 behind**, merge base `60d1025e9556cdce05f93b9a71ce46d4d06096cb`. Keep #779 Draft; rebase after the parent chain is manually integrated, then rerun exact-head CI. No branch rewrite or merge was performed.
+PR #779 HEAD `44766eed08ceedb1736a0095e5e67f175928ed89` remains based on `b2a034614d999683a8c334569dc07eb07b7ac589`. Fresh comparison to #778 HEAD is still **diverged, 52 ahead / 3 behind**, merge base `60d1025e9556cdce05f93b9a71ce46d4d06096cb`. Keep #779 Draft; rebase after the parent chain is manually integrated, then rerun exact-head CI. No branch rewrite or merge was performed.
 
 ### Hold / main runtime
 
