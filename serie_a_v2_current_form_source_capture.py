@@ -23,7 +23,7 @@ from supabase import create_client
 
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA, load_verified_original
-from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes, fetch_public_history
+from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes, fetch_public_history_for_source_capture
 from market_anchor_v2_source_capture_rights import (
     SOURCE_CAPTURE_SCOPE,
     require_personal_research_source_capture_scope,
@@ -433,7 +433,7 @@ def capture_source_archive(
     client: Any,
     now: datetime,
     get=requests.get,
-    history_fetch=fetch_public_history,
+    history_fetch=fetch_public_history_for_source_capture,
     clock=lambda: datetime.now(timezone.utc),
 ) -> dict:
     """Capture the ten frozen historical seasons plus the gated current-season source."""
