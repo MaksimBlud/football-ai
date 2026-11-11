@@ -129,6 +129,7 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
     the CSVs. Pin the historical loader blob at the parent commit before the
     archive can be consumed for any original V2 quote.
     """
+    _require_private_source_archive_read_scope()
     run_id = archive.get("run_id")
     head_sha = archive.get("head_sha")
     if type(run_id) is not int or run_id <= 0:
