@@ -9637,3 +9637,16 @@ The provider's Terms explicitly permit use in models/internal tools and caching,
 PR #781 remains open and unmerged at exact head \`afe943305143b68b62e89f20010d78d6b48efd70\`; its 8/8 exact-head CI is successful. Until the owner manually merges it, main continues to run the scheduled live workflows described above. Existing public GitHub artifacts are not removed by that PR and must not be assumed private or deleted.
 
 Original candidate SHA, 19 feature order, weights, scaler/imputer, training fingerprint and cutoff remain unchanged. \`active_lambda=0\`; \`shadow_lambda=1\` research-only; stability gate FAILED; prospective target-outcome gate 0/30; Brier/LogLoss superiority over market not established. No main update, PR merge, production .pkl change, Supabase write/DDL, paid API request, bet, promotion, schedule change or other-agent setting change occurred.
+
+
+### Existing GitHub Actions artifact exposure — metadata-only inspection, 2026-11-11 23:59 UTC
+
+Artifact listings were queried for the three completed main runs above. No ZIP was downloaded or inspected.
+
+| Parent run | Artifact | Size | Created UTC | Expires UTC | Current status |
+|---|---|---:|---|---|---|
+| 43025058808 Current-Form Source Capture | 13857286039 | 439,429 bytes | 2026-11-11 13:00:12 | 2027-02-09 12:59:16 | Unexpired |
+| 43035977412 Free Real-Quote Diagnostic | 13862488931 | 425,068 bytes | 2026-11-11 14:11:44 | 2027-02-09 14:10:48 | Unexpired |
+| 43054458880 Original Forward-Only Preview | 13870532317 | 1,458 bytes | 2026-11-11 16:04:02 | 2027-02-09 16:03:21 | Unexpired |
+
+The repository is public. Treat these unexpired artifacts as lacking confidentiality; their presence is a live privacy/rights concern until their normal expiry or an owner-authorized cleanup. PR #781 prevents future live uploads after manual merge, but it does not delete these existing artifacts. No deletion was attempted because it was not authorized. The artifact contents were not downloaded, so no protected prospective target outcome was opened.
