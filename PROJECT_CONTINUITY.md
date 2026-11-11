@@ -8356,3 +8356,55 @@ A fresh search found public repository qhtexas/football-dataset, whose Serie A d
 The repository README and datapackage explicitly identify Football-Data.co.uk as the upstream source. The current official Football-Data policy says its free files are intended for private individuals' personal betting/academic research via manual download or at most light automated download twice per week, and are not intended for commercial or AI data-training products using automated bots/scrapers. The PDDL text itself cautions that a party can only license rights it owns and that users may need to clear other rights. Therefore the mirror's PDDL declaration is promising but does not independently establish that its maintainer owns or is authorized to waive the upstream database/data rights. Do not download, archive, infer from, or substitute this mirror until its maintainer's rights in the underlying Football-Data material are clarified or an applicable provider permission is recorded.
 
 Metadata only was inspected: no season CSV bytes (including no 2026/27 result file) were downloaded or opened. No API, account, paid provider, Supabase, target outcome, or model run was used. Treat this as a new historical-source candidate for rights review, not an approved source or a source-before-quote attestation.
+
+
+## 2026-11-11 01:06 UTC — exact candidate pin, downstream ancestry, and fresh pre-match database audit
+
+### Fresh main and frozen original V2 identity
+
+- Re-read `refs/heads/main` directly from GitHub: `40887ebb215730190d7a6c7a1693373ec4afcdfc`; main is unchanged.
+- Original candidate `research/models/market_anchor_v2_serie_a_frozen_candidate.json`: Git blob `ac1303f6b096664983fbf52443bd0a381b23ba21`; embedded artifact SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Candidate metadata still reports exactly 19 features, 3,799 training rows, a 20×2 weight matrix, `active_lambda=0`, `shadow_residual_lambda=1`, `stability_gate_passed=false`, and `automatic_promotion=false`.
+- Historical builder blob remains `401b3a0893371bfa4a488ec92a4a54af2678c8f7`; its `FEATURE_SETS["ALL_FOOTBALL"]` list matches the candidate's 19 names in the same order. No candidate, feature, weight, scaler, imputer, or production file changed.
+
+### New exact-head direct-inference identity guard — PR #778
+
+PR [#778](https://github.com/MaksimBlud/football-ai/pull/778) advanced to exact HEAD `aa0cd076a15033d2d90c7c08cb3ff14c94c2e8ec` (2026-11-11 00:55 UTC). Its new guard closes a frozen-identity gap: candidate validation previously trusted a self-reported artifact hash, so altered 20×2 weights with a recomputed self-hash could pass recipe/shape checks; capture-row validation also accepted any syntactically valid 64-character candidate SHA.
+
+The branch now pins candidate validation and every prospective shadow row to the exact original SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, tests the real frozen candidate JSON, and rejects recomputed-self-hash weight tampering and wrong capture-row candidate hashes. It does not alter the candidate or its weights.
+
+Exact-head evidence:
+- Frozen V2 Shadow Tests [#42935139447](https://github.com/MaksimBlud/football-ai/actions/runs/42935139447): **414 passed on Python 3.11 and 414 passed on Python 3.12**, both jobs SUCCESS; production `.pkl` guards passed.
+- Market Anchor 1X2 V2 Shadow Validation [#42935139489](https://github.com/MaksimBlud/football-ai/actions/runs/42935139489): **15 passed**, SUCCESS; production `.pkl` guard passed.
+- PR remains Draft and stacked on #777; HUMAN-MERGE only.
+
+### PR #779 ancestry is now three commits behind the updated #778
+
+PR [#779](https://github.com/MaksimBlud/football-ai/pull/779) remains at `3e936d64b1f490b8c8dc31951b35e446096ca94c`, based on `b2a034614d999683a8c334569dc07eb07b7ac589`. A fresh compare of #778 HEAD `aa0cd076...` to #779 HEAD returns **diverged, 28 ahead / 3 behind**, merge base `60d1025e9556cdce05f93b9a71ce46d4d06096cb`.
+
+The old #779 exact-head run [#42892646330](https://github.com/MaksimBlud/football-ai/actions/runs/42892646330) (430 tests per Python version) does not include the latest #778 candidate-SHA guard. Keep #779 Draft; rebase it on the integrated current #778 chain and rerun exact-head CI before treating it as a descendant or merge candidate. No branch rewrite was performed.
+
+### Main still has unheld V2 live workflow definitions
+
+Re-read the actual main workflow files. The original forward workflow is `.github/workflows/serie-a-v2-forward-preview.yml` (blob `48ce3b0d8e31c4cf293b94500e9c320047311467`); it still has the daily 08:08 UTC schedule, manual dispatch, and a no-cost `workflow_run` reader awakened only by a successful manually dispatched Serie A Odds Snapshots workflow. Other main schedules remain Current-Form Source Capture at 05:50 UTC, Free Real-Quote Diagnostic at 06:13 UTC, and Current-Form Forward-Only at 08:18 UTC.
+
+PR [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review at exact HEAD `c48e0c2f6a486c9320b04c7a1693373ec4afcdfc`, with **8/8 exact-head checks SUCCESS** (Frozen V2 suite 92 passed; recovery rebuild/proof/upload skipped under the false hold flag; production `.pkl` guard passed). It gates five original-V2 workflows and associated public artifact uploads, but has not been merged. Therefore the hold is **not active on main**; do not describe main as blocked. HUMAN-MERGE only. No cron or other agent setting was changed.
+
+### Fresh read-only Supabase audit — pre-match metadata only
+
+Database time: `2026-11-11 01:04:53 UTC`.
+
+The query selected only league, event ID, pre-kickoff timestamps and candidate-SHA/time metadata:
+- `public.odds_snapshots`: **3,915 strict pre-match snapshots / 327 events** across nine league labels.
+- New strict pre-match snapshots in the last seven days: **0**.
+- Future fixtures with saved strict pre-match quotes: **0**.
+- Latest saved Serie A strict pre-match quote: `2026-10-13 14:48:53.04262 UTC`.
+- `public.product_prediction_snapshots`, exact original candidate SHA plus `generated_at_utc < commence_time_utc` and `generated_at_utc <= NOW()`: **0 predictions / 0 events**.
+
+No odds values, match scores, results, settlements, or protected 2026/27 target outcomes were selected.
+
+### Scientific and operational boundary
+
+There is still no new admissible pre-kickoff original-V2 prediction cohort and no independent Brier/LogLoss comparison. The 30-primary-completed-event outcome gate remains CLOSED; do not read protected outcomes before it. `active_lambda=0` remains the market baseline and `shadow_lambda=1` remains research-only. Provider rights for automated historical/current-form source capture remain unresolved, so no source download or inference is authorized by this audit.
+
+No PR was merged; main, schedules, other agents, Supabase rows/schema, production `.pkl`, candidate weights and model contract were not changed. Paid provider calls and Supabase writes/DDL: zero.
