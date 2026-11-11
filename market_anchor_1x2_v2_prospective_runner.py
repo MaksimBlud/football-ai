@@ -9,8 +9,13 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import datetime, timezone
+import os
+import re
 from types import MappingProxyType
 from typing import Any, Callable, Iterable, Mapping
+
+from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
+from market_anchor_v2_source_rights import require_personal_research_inference_scope
 
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 import market_anchor_1x2_v2_prospective_evaluator as evaluator
@@ -22,6 +27,48 @@ from market_anchor_1x2_v2_prospective_evaluator import (
     evaluate_market_only_after_gate,
 )
 
+
+
+
+def _now_utc() -> datetime:
+    """Capture the real runtime clock; callers may not move outcome time into the future."""
+    return datetime.now(timezone.utc)
+
+
+def _require_v2_outcome_read_access() -> dict[str, Any]:
+    """Require provider inference rights and private artifact storage before any result read."""
+    require_personal_research_inference_scope()
+    return require_private_repository_for_source_artifacts(
+        os.environ.get("GITHUB_REPOSITORY", ""),
+        os.environ.get("GITHUB_TOKEN", ""),
+    )
+
+
+def _validate_source_preflight_attestation(
+    value: Any,
+    completed_fixture_gate_attestation: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Validate the real source-before-quote/SHA proof supplied by the live forward verifier."""
+    if not isinstance(value, Mapping) or value.get("verified") is not True:
+        raise PermissionError("source-before-quote preflight attestation is missing or unverified")
+    shas = value.get("source_archive_sha256")
+    if not isinstance(shas, Mapping) or not shas:
+        raise PermissionError("source preflight must bind at least one verified source archive SHA-256")
+    if type(value.get("verified_source_archive_count")) is not int or value["verified_source_archive_count"] != len(shas):
+        raise PermissionError("source preflight archive count does not match its SHA-256 map")
+    if any(not isinstance(k, (str, int)) or not isinstance(v, str) or re.fullmatch(r"[0-9a-f]{64}", v) is None for k, v in shas.items()):
+        raise PermissionError("source preflight contains a malformed source archive SHA-256")
+    if value.get("gate_fixture_identity_count") != completed_fixture_gate_attestation.get("completed_fixture_identity_count"):
+        raise PermissionError("source preflight fixture count differs from the frozen identity gate")
+    if value.get("gate_fixture_identity_sha256") != completed_fixture_gate_attestation.get("completed_fixture_identity_sha256"):
+        raise PermissionError("source preflight identity SHA differs from the frozen identity gate")
+    return {
+        "verified": True,
+        "source_archive_sha256": dict(shas),
+        "verified_source_archive_count": len(shas),
+        "gate_fixture_identity_count": value["gate_fixture_identity_count"],
+        "gate_fixture_identity_sha256": value["gate_fixture_identity_sha256"],
+    }
 
 def evaluate_live_prospective_cohort(
     client: Any,
@@ -37,6 +84,7 @@ def evaluate_live_prospective_cohort(
     enforces the 30 eligible completed primary-event gate and the separately
     pinned non-legacy incumbent requirement before it can invoke outcome_loader.
     """
+    _require_v2_outcome_read_access()
     if not callable(outcome_loader):
         raise ValueError("outcome_loader must be a lazy callable, not preloaded outcomes")
 
@@ -65,23 +113,37 @@ def evaluate_live_market_only_prospective_cohort(
     race between source-completeness verification and the outcome-read gate.
     It cannot receive target outcomes or alter the evaluator's attestation.
     """
+    _require_v2_outcome_read_access()
     if not callable(outcome_loader):
         raise ValueError("outcome_loader must be a lazy callable, not preloaded outcomes")
-    if preflight is not None and not callable(preflight):
-        raise ValueError("preflight must be a callable receiving identity metadata only")
+    if not callable(preflight):
+        raise ValueError("a verified source-before-quote preflight callback is required before live outcome evaluation")
 
     completed_identities, attestation = read_completed_fixture_gate(client)
     frozen_identities = frozenset(completed_identities)
     _validate_completed_fixture_gate_attestation(attestation, frozen_identities)
 
-    if preflight is not None:
-        detached_attestation = MappingProxyType(deepcopy(dict(attestation)))
-        preflight(frozen_identities, detached_attestation)
+    detached_attestation = MappingProxyType(deepcopy(dict(attestation)))
+    source_preflight_attestation = _validate_source_preflight_attestation(
+        preflight(frozen_identities, detached_attestation), attestation
+    )
+
+    def gated_outcome_loader(eligible_identities):
+        if not isinstance(eligible_identities, frozenset) or len(eligible_identities) < evaluator.MIN_COMPLETED_ELIGIBLE_FORECASTS:
+            raise PermissionError("outcome reader requires the frozen minimum of 30 eligible completed primary forecasts")
+        if not eligible_identities.issubset(frozen_identities):
+            raise PermissionError("eligible forecast identities fall outside the frozen completed-fixture gate")
+        return outcome_loader(
+            eligible_identities,
+            completed_fixture_identities=frozen_identities,
+            completed_fixture_gate_attestation=attestation,
+            source_preflight_attestation=source_preflight_attestation,
+        )
 
     return evaluate_market_only_after_gate(
         forecast_rows,
         frozen_identities,
-        outcome_loader,
+        gated_outcome_loader,
         completed_fixture_gate_attestation=attestation,
     )
 
@@ -121,6 +183,9 @@ def _read_exact_completed_outcomes(
     kickoff_by_identity: Mapping[tuple[str, str, str], str],
     *,
     observed_at_utc: str,
+    completed_fixture_identities: frozenset[tuple[str, str, str]],
+    completed_fixture_gate_attestation: Mapping[str, Any],
+    source_preflight_attestation: Mapping[str, Any],
 ) -> dict[tuple[str, str, str], str]:
     """Read H/D/A labels for exact gated identities, never scores or extra fixtures.
 
@@ -130,8 +195,17 @@ def _read_exact_completed_outcomes(
     """
     from datetime import date
 
-    if not isinstance(identities, frozenset) or not identities:
-        raise ValueError("outcome loader requires a non-empty frozen set of exact fixture identities")
+    _require_v2_outcome_read_access()
+    if not isinstance(identities, frozenset) or len(identities) < evaluator.MIN_COMPLETED_ELIGIBLE_FORECASTS:
+        raise PermissionError("outcome reader requires at least 30 eligible completed primary forecasts")
+    if not isinstance(completed_fixture_identities, frozenset) or not completed_fixture_identities:
+        raise PermissionError("outcome reader requires the frozen completed-fixture identity set")
+    if not identities.issubset(completed_fixture_identities):
+        raise PermissionError("outcome reader identities fall outside the frozen completed-fixture gate")
+    _validate_completed_fixture_gate_attestation(completed_fixture_gate_attestation, completed_fixture_identities)
+    _validate_source_preflight_attestation(source_preflight_attestation, completed_fixture_gate_attestation)
+    if not isinstance(kickoff_by_identity, Mapping) or set(kickoff_by_identity) != set(identities):
+        raise PermissionError("outcome reader kickoff map must exactly match the gated forecast identities")
     if not isinstance(kickoff_by_identity, Mapping):
         raise ValueError("outcome loader requires forecast-bound kickoff timestamps")
     observed_at = evaluator._utc(observed_at_utc, "evaluation observed_at_utc")
@@ -229,6 +303,7 @@ def evaluate_live_market_only_from_supabase(
     client: Any,
     forecast_rows: Iterable[Mapping[str, Any]],
     *,
+    preflight: Callable[[frozenset[tuple[str, str, str]], Mapping[str, Any]], Mapping[str, Any]] | None = None,
     observed_at_utc: str | None = None,
 ) -> dict[str, Any]:
     """Run market-vs-shadow evaluation with an internally lazy, exact-row outcome reader.
@@ -238,15 +313,24 @@ def evaluate_live_market_only_from_supabase(
     query is encapsulated in a callback and is invoked only after 30 eligible
     completed prospective forecasts pass the evaluator gate.
     """
+    _require_v2_outcome_read_access()
+    if not callable(preflight):
+        raise ValueError("a verified source-before-quote preflight callback is required before live outcome evaluation")
     rows, kickoff_by_identity = _forecast_kickoff_lookup(forecast_rows)
-    observed = observed_at_utc or datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    # Validate before the identity gate or any possible outcome query.
-    evaluator._utc(observed, "evaluation observed_at_utc")
+    clock = _now_utc()
+    if not isinstance(clock, datetime) or clock.tzinfo is None or clock.utcoffset() is None:
+        raise ValueError("system evaluation clock must have a real UTC offset")
+    clock = clock.astimezone(timezone.utc)
+    observed_time = clock if observed_at_utc is None else evaluator._utc(observed_at_utc, "evaluation observed_at_utc")
+    if observed_time > clock:
+        raise ValueError("evaluation observed_at_utc cannot be later than the actual current UTC clock")
+    observed = observed_time.isoformat().replace("+00:00", "Z")
     return evaluate_live_market_only_prospective_cohort(
         client,
         rows,
-        lambda identities: _read_exact_completed_outcomes(
-            client, identities, kickoff_by_identity, observed_at_utc=observed
+        lambda identities, **gate: _read_exact_completed_outcomes(
+            client, identities, kickoff_by_identity, observed_at_utc=observed, **gate
         ),
+        preflight=preflight,
     )
 

@@ -301,10 +301,16 @@ def verify_source_artifacts_for_candidates(
 def run_live_evaluation(client: Any, token: str, *, now: datetime | None = None, get=requests.get):
     # Defense in depth: imported callers must not bypass the CLI rights gate.
     require_personal_research_inference_scope()
+    actual_now = datetime.now(timezone.utc)
+    if not isinstance(actual_now, datetime) or actual_now.tzinfo is None or actual_now.utcoffset() is None:
+        raise ValueError("system evaluation clock must have a real UTC offset")
+    actual_now = actual_now.astimezone(timezone.utc)
     if now is None:
-        now = datetime.now(timezone.utc)
-    if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
-        raise ValueError("evaluation observation clock must have a real UTC offset")
+        now = actual_now
+    else:
+        now = evaluator._utc(now, "evaluation observation clock")
+        if now > actual_now:
+            raise ValueError("evaluation observation clock cannot be later than the actual current UTC clock")
     now = now.astimezone(timezone.utc)
     observed_at_utc = now.isoformat().replace("+00:00", "Z")
     base = {
@@ -367,7 +373,7 @@ def run_live_evaluation(client: Any, token: str, *, now: datetime | None = None,
     outcome_state = {"called": False}
     verified_shas: dict[int, str] = {}
 
-    def verify_source_preflight(completed_identities, _gate_attestation):
+    def verify_source_preflight(completed_identities, gate_attestation):
         # The runner supplies the one freshly read, immutable identity snapshot
         # that the evaluator will also use for its frozen 30-forecast gate.
         # Source verification remains metadata-only and runs before any outcome
@@ -378,11 +384,30 @@ def run_live_evaluation(client: Any, token: str, *, now: datetime | None = None,
             current_gate_identities=set(completed_identities),
             get=get,
         ))
+        return {
+            "verified": True,
+            "source_archive_sha256": {str(k): v for k, v in sorted(verified_shas.items())},
+            "verified_source_archive_count": len(verified_shas),
+            "gate_fixture_identity_count": len(completed_identities),
+            "gate_fixture_identity_sha256": evaluator._sha_fixture_set(completed_identities),
+        }
 
-    def lazy_outcome_loader(identities):
+    def lazy_outcome_loader(
+        identities,
+        *,
+        completed_fixture_identities,
+        completed_fixture_gate_attestation,
+        source_preflight_attestation,
+    ):
         outcome_state["called"] = True
         return _read_exact_completed_outcomes(
-            client, identities, kickoff_by_identity, observed_at_utc=observed_at_utc
+            client,
+            identities,
+            kickoff_by_identity,
+            observed_at_utc=observed_at_utc,
+            completed_fixture_identities=completed_fixture_identities,
+            completed_fixture_gate_attestation=completed_fixture_gate_attestation,
+            source_preflight_attestation=source_preflight_attestation,
         )
 
     try:
@@ -442,6 +467,7 @@ def main() -> int:
         token, url, key = (os.environ.get(name, "") for name in ("GITHUB_TOKEN", "SUPABASE_URL", "SUPABASE_KEY"))
         if not token or not url or not key:
             raise ValueError("GitHub read token and Supabase read credentials are required")
+        require_private_repository_for_source_artifacts(REPOSITORY, token)
         from supabase import create_client
         report = run_live_evaluation(create_client(url, key), token)
     except PermissionError as exc:
