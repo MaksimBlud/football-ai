@@ -197,7 +197,10 @@ def test_fallback_uses_latest_qualified_observation_only():
         v2_preview.shadow_preview([market(),market()], [features()], as_of_utc=NOW)
 
 
-def test_read_only_saved_supabase_query_does_not_call_provider():
+def test_read_only_saved_supabase_query_does_not_call_provider(monkeypatch):
+    import market_anchor_v2_source_rights as rights
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", lambda: None)
     class Result:
         data = [market()]
     class Q:
@@ -381,3 +384,25 @@ def test_cli_checks_research_scope_before_saved_quotes_and_inference(
 
     assert calls == ["rights", "saved_quotes", "inference"]
     assert json.loads(capsys.readouterr().out) == {"no_bet": True}
+
+
+def test_saved_quote_reader_enforces_inference_rights_before_supabase_access(monkeypatch):
+    import market_anchor_v2_source_rights as rights
+
+    def deny_scope():
+        raise PermissionError("V2 frozen inference scope remains unresolved")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", deny_scope)
+
+    class ForbiddenClient:
+        def table(self, name):
+            pytest.fail(f"Supabase table {name!r} must not be accessed before rights clearance")
+
+    with pytest.raises(PermissionError, match="V2 frozen inference scope remains unresolved"):
+        v2_preview.fetch_saved_upcoming_serie_a_quotes(ForbiddenClient(), now=NOW)
+
+
+def test_frozen_shadow_workflow_targets_rebased_quote_reader_rights_stack():
+    workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" / "serie-a-frozen-v2-shadow-tests.yml").read_text(encoding="utf-8")
+    assert "research/v2-prematch-quote-query-cutoff-rebased-on-780-20261111-run11" in workflow
+    assert "research/v2-direct-quote-reader-rights-gate-rebased-on-783-20261111-run11" in workflow
