@@ -43,6 +43,7 @@ TRAINING_DATA_THROUGH = pd.Timestamp("2026-06-30T23:59:59Z")
 ADMISSION_NOT_BEFORE = pd.Timestamp("2026-09-16T00:00:00Z")
 FIRST_OUTCOME_READ_GATE = 30
 INCUMBENT_MODEL_SHA256 = "1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5"
+FROZEN_CANDIDATE_SHA256 = "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
 FORBIDDEN_OUTCOME_FIELDS = frozenset(
     {"result", "outcome", "home_goals", "away_goals", "score", "final_score"}
 )
@@ -188,6 +189,8 @@ def validate_candidate_artifact(artifact: Mapping) -> None:
     supplied = body.pop("artifact_sha256")
     if _sha256_json(body) != supplied:
         raise ValueError("candidate artifact sha256 mismatch")
+    if supplied != FROZEN_CANDIDATE_SHA256:
+        raise ValueError("candidate artifact does not match the frozen original V2 SHA-256")
 
 
 def _artifact_residual_logits(features: pd.DataFrame, artifact: Mapping) -> np.ndarray:
@@ -303,6 +306,8 @@ def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
             expected = 64 if field.endswith("sha256") else 40
             if len(value) != expected or any(c not in "0123456789abcdef" for c in value):
                 raise ValueError(f"invalid {field}")
+            if field == "candidate_artifact_sha256" and value != FROZEN_CANDIDATE_SHA256:
+                raise ValueError("candidate artifact SHA differs from frozen original V2")
         candidate_artifacts.add(str(row["candidate_artifact_sha256"]))
         validated.append(row)
     if len(candidate_artifacts) > 1:

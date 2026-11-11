@@ -23,18 +23,9 @@ def allow_synthetic_v2_inference_scope(monkeypatch):
 
 
 def _artifact():
-    features = list(v2.FEATURE_SETS[v2.FEATURE_VARIANT])
-    body = {
-        **v2.candidate_recipe(),
-        "training_rows": 100,
-        "training_fingerprint_sha256": "a" * 64,
-        "imputer_medians": [0.0] * len(features),
-        "scaler_mean": [0.0] * len(features),
-        "scaler_scale": [1.0] * len(features),
-        "weights": [[0.0, 0.0] for _ in range(len(features) + 1)],
-    }
-    body["artifact_sha256"] = v2._sha256_json(body)
-    return body
+    return json.loads(
+        (ROOT / "research/models/market_anchor_v2_serie_a_frozen_candidate.json").read_text()
+    )
 
 
 def _row(**updates):
@@ -66,7 +57,7 @@ def _row(**updates):
         "shadow_residual_away_probability": 0.25,
         "active_lambda": 0.0,
         "stability_gate_passed": False,
-        "candidate_artifact_sha256": "b" * 64,
+        "candidate_artifact_sha256": v2.FROZEN_CANDIDATE_SHA256,
         "incumbent_model_sha256": v2.INCUMBENT_MODEL_SHA256,
         "code_commit_sha": "c" * 40,
     }
@@ -135,26 +126,34 @@ def test_candidate_recipe_is_frozen_and_refit_writer_paths_are_disabled(tmp_path
     assert not output.exists()
 
 
-def test_active_candidate_is_exact_market_even_when_shadow_residual_moves():
+def test_active_candidate_is_exact_market_even_when_original_shadow_residual_moves(monkeypatch):
+    import market_anchor_v2_source_rights as rights
+
+    monkeypatch.setattr(
+        rights, "require_personal_research_inference_scope", lambda: {"research_inference_permitted": True}
+    )
     artifact = _artifact()
-    artifact["weights"][0] = [0.35, -0.20]
-    body = dict(artifact)
-    body.pop("artifact_sha256")
-    artifact["artifact_sha256"] = v2._sha256_json(body)
     v2.validate_candidate_artifact(artifact)
 
-    market = np.array([[0.50, 0.25, 0.25], [0.30, 0.30, 0.40]])
-    features = pd.DataFrame(np.zeros((2, 19)), columns=artifact["features"])
+    market = np.array([[0.50, 0.25, 0.25]])
+    features = pd.DataFrame([artifact["imputer_medians"]], columns=artifact["features"])
     active = v2.predict_candidate(market, features, artifact)
     shadow = v2.predict_shadow_residual(market, features, artifact)
 
     np.testing.assert_allclose(active, market, atol=1e-12)
     assert not np.allclose(shadow, market, atol=1e-12)
 
-    broken = dict(artifact)
-    broken["active_lambda"] = 1.0
-    with pytest.raises(ValueError, match="frozen recipe"):
-        v2.validate_candidate_artifact(broken)
+
+def test_candidate_validator_rejects_rehashed_nonoriginal_weights():
+    artifact = _artifact()
+    tampered = json.loads(json.dumps(artifact))
+    tampered["weights"][0][0] += 0.01
+    body = dict(tampered)
+    body.pop("artifact_sha256")
+    tampered["artifact_sha256"] = v2._sha256_json(body)
+
+    with pytest.raises(ValueError, match="frozen original V2 SHA-256"):
+        v2.validate_candidate_artifact(tampered)
 
 
 def test_shadow_capture_accepts_only_pre_kickoff_outcome_free_serie_a_rows():
@@ -192,10 +191,9 @@ def test_shadow_capture_requires_frozen_training_and_incumbent_identity():
         v2.validate_shadow_capture_rows([_row(incumbent_model_sha256="d" * 64)])
 
 
-def test_shadow_capture_batch_cannot_mix_residual_artifacts():
-    row2 = _row(event_id="evt-2", candidate_artifact_sha256="d" * 64)
-    with pytest.raises(ValueError, match="cannot mix candidate artifacts"):
-        v2.validate_shadow_capture_rows([_row(), row2])
+def test_shadow_capture_rejects_nonoriginal_candidate_sha():
+    with pytest.raises(ValueError, match="candidate artifact SHA differs from frozen original V2"):
+        v2.validate_shadow_capture_rows([_row(candidate_artifact_sha256="d" * 64)])
 
 
 def test_outcome_gate_is_count_based_and_cannot_activate_v2_post_hoc():
