@@ -8468,3 +8468,18 @@ No odds values, scores, results, settlements, or protected 2026/27 target outcom
 No new admissible original-V2 prospective forecast exists in Supabase, so no independent Brier/LogLoss comparison can be computed. The 30-primary-completed-event outcome gate remains CLOSED. `active_lambda=0` remains the market baseline; `shadow_lambda=1` remains research-only. Provider rights for automated source access/inference remain unresolved; no source download or inference was performed in this audit.
 
 No PR merge, main ref change, production `.pkl` change, Supabase write/DDL, paid provider call, target-outcome read, schedule change, or other-agent configuration change occurred.
+
+
+## 2026-11-11 01:32 UTC — Big Balls free-tier source candidate reviewed (not approved for capture)
+
+A new public-source review found Big Balls Sports Data. Its official Terms of Service (effective 2026-08-10) explicitly allow customers to store API responses and use stored data as input to internal models, including training, evaluation and backtesting; derived models/predictions may be published, but raw field values may not be republished or resold. This is materially clearer than the Football-Data mirror situation for internal research: https://bigballsdata.com/legal/terms.
+
+The soccer documentation lists the free `/v1/matches/:id/statistics` route and per-team match fields including final home/away score, corners ("Won Corners"), yellow cards and red cards. These fields are potentially mappable to the frozen V2 inputs (points, goals for/against, corners for/against, yellow/red cards) without changing the 19-feature contract. The route's expected-goals field is Solo+ and is not required by this V2 candidate. Official field/endpoint reference: https://bigballsdata.com/soccer-api.
+
+However, the source is NOT cleared for live use:
+- Free soccer access is documented as current-season only; the 2016/17–2025/26 history needed to reproduce the frozen training cohort is not included in the free tier.
+- The public soccer documentation marks team statistics as partial and says team-stat data was last ingested 2026-09-16, while its Serie A page shows the current 2026/27 standings updated 2026-11-10. That freshness gap is material for November current-form features; standings freshness cannot be substituted for match-stat freshness.
+- Published coverage figures are aggregate across seasons and do not establish current-season completeness for every one of the required 19-feature inputs. Exact per-match field coverage, null rates, update timestamps and source provenance still need verification.
+- The provider forbids republishing raw field values. The repository is public, and the current private-source-artifact gate requires private repository storage; no raw API response may be placed in public code, commits, logs or Actions artifacts. Supabase writes remain prohibited.
+
+The provider advertises a free request allowance (1,000/day; higher with GitHub), but no API key was created, no API endpoint was called, no response bytes were downloaded, and no account or repository setting was changed. Do not add a collector or enable capture until (a) current-season match-stat freshness and field-level completeness are demonstrated on an authorized, non-outcome sample, (b) the source's capture timestamp can be pinned strictly before each quote, and (c) an approved private archive destination exists. Treat this as a promising rights candidate for internal research, not an approved source or evidence of any V2 forecast.
