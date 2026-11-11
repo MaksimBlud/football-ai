@@ -9415,3 +9415,51 @@ A metadata/official-terms-only screen was completed to identify a lawful, free s
 
 **Decision:** neither candidate is approved. Do not connect either source to the frozen feature builder, do not calculate V2 features from their data, and do not create a prospective forecast until upstream source rights, current-season coverage, all required feature definitions, retention/private-storage permission and inference scope are explicitly established. No change to candidate SHA, feature order, weights, scaler/imputer, lambda values, gates, schedules, Supabase or production artifacts.
 
+
+## 2026-11-11 19:56 UTC — exact-head and strict pre-match refresh
+
+### Main and original frozen V2 identity
+
+- Fresh `refs/heads/main` read: `40887ebb215730190d7a6c7a1693373ec4afcdfc`; unchanged.
+- Main `PROJECT_CONTINUITY.md` blob: `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`. The November evidence below remains on this documentation PR branch until HUMAN-MERGE.
+- Main original-forward workflow blob: `48ce3b0d8e31c4cf293b94500e9c320047311467`; it still has live source/quote steps and `if: always()` artifact upload. #781 is not merged, so its hold is not active on main.
+- Original candidate JSON blob remains `ac1303f6b096664983fbf52443bd0a381b23ba21`; candidate SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`. The original feature-builder blob remains `401b3a0893371bfa4a488ec92a4a54af2678c8f7`. The 19-feature order, weights, scaler/imputer, 3,799-row training fingerprint, `active_lambda=0`, `shadow_lambda=1`, failed stability gate and NO_BET are unchanged.
+
+### PR #781 — current exact HEAD supersedes the older c48 checkpoint
+
+- GitHub PR API current HEAD: `afe943305143b68b62e89f20010d78d6b48efd70`; base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`; OPEN, Ready for review, mergeable, not merged.
+- The current HEAD is newer than the older `c48e0c2...` value recorded in previous addenda. Its only additional commit tightens the workflow-inventory regression to detect actual `python script.py` invocations rather than false-positive `py_compile` references.
+- Exact-current-HEAD workflow runs: #43083511016, #43083511138, #43083510665, #43083510643, #43083510883, #43083510860, #43083510838, #43083510669 — **8/8 completed SUCCESS**.
+- Frozen V2 workflow #43083510860: **93 passed**; production-model hash guard passed.
+- Recovery workflow #43083510665: **39 passed**; candidate rebuild, proof and research-artifact upload were all correctly SKIPPED under default deny; production `.pkl` hash comparison passed.
+- The hold still requires HUMAN-MERGE. It does not alter main or retroactively remove existing public artifacts.
+
+### PR #787 — current direct-entrypoint guard exact-head proof
+
+- Current HEAD `272a0dc2d6a97fedc7964e8cc2614ba670220fae`, based on exact #786 HEAD `6e61c92fd211862ef1ad067faa6789fe535779e5`; Draft, HUMAN-MERGE only.
+- Exact-head original-V2 workflows: #43085253171 and #43085253302 — **2/2 SUCCESS**.
+- The frozen V2 regression suite passed **440 tests under Python 3.11** and **440 under Python 3.12**; both production `.pkl` guards passed.
+- These are offline/synthetic checks. They grant no source/inference rights and performed no live quote read, source download, Supabase access, target-outcome read or inference.
+
+### Fresh strictly pre-match Supabase query — 19:56 UTC
+
+Read-only SQL only; no result, score, settlement or target-outcome columns were selected.
+
+- `public.odds_snapshots`: **3,915** strictly pre-kickoff snapshots / **327** events across nine leagues.
+- Future kickoffs with saved strict pre-match quotes: **0** in every league.
+- Strict pre-match snapshots in the last seven days: **0**.
+- Latest stored Serie A quote remains `2026-10-13T14:48:53.042620Z`; latest EPL remains `2026-10-09T15:25:57.102061Z`.
+- `public.product_prediction_snapshots`, exact original candidate SHA and generated/persisted-before-kickoff predicates: **0** original-V2 pre-match predictions / **0** events.
+- Supabase writes/DDL: 0.
+
+### Security advisory detail
+
+The current Supabase security advisor reports:
+- RLS disabled on five exposed public tables: `teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, `epl_ai_market_pair_ledger`;
+- RLS enabled but no policies on four tables: `competitions`, `match_stats`, `matches`, `standings`.
+
+No DDL or policy change was made. Do not enable RLS blindly: policies must be designed first, or client-role access will be blocked. Remediation guidance: https://supabase.com/docs/guides/database/postgres/row-level-security
+
+### Binding conclusion
+
+The 110-event feature-input identity gate remains separate from the prospective evaluation gate. Eligible completed prospective original-V2 forecasts remain **0/30**; Brier and LogLoss are unavailable; no market-superiority claim is supported. Source/inference rights and private artifact storage remain unresolved. Do not download unapproved source data, run live inference, read protected outcomes, relax any gate, or merge automatically.
