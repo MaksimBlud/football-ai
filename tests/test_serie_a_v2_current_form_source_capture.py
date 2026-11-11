@@ -24,7 +24,7 @@ from serie_a_v2_current_form_source_capture import (
     _current_source_fixture_identities,
     _fixture_identity_sha256,
 )
-from serie_a_v2_live_diagnostic_report import _source_codes
+from serie_a_v2_live_diagnostic_report import _source_codes, fetch_public_history_for_source_capture
 
 
 @pytest.fixture(autouse=True)
@@ -1206,4 +1206,22 @@ def test_direct_capture_source_archive_requires_scope_before_candidate_or_io(mon
             now=datetime(2026, 11, 11, 1, tzinfo=timezone.utc),
             get=forbidden_get,
         )
+    assert not output_dir.exists()
+
+
+
+def test_direct_source_only_historical_loader_denies_before_http_or_archive_output(monkeypatch, tmp_path):
+    import market_anchor_v2_source_capture_rights as capture_rights
+
+    def deny():
+        raise PermissionError("private source-only capture scope is not cleared")
+
+    monkeypatch.setattr(capture_rights, "require_personal_research_source_capture_scope", deny)
+    output_dir = tmp_path / "must-not-be-created"
+
+    def forbidden_get(*_args, **_kwargs):
+        pytest.fail("historical CSV HTTP must not run before source-only rights")
+
+    with pytest.raises(PermissionError, match="private source-only capture scope is not cleared"):
+        fetch_public_history_for_source_capture(get=forbidden_get, capture_dir=output_dir)
     assert not output_dir.exists()
