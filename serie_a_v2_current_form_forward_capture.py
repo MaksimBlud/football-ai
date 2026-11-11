@@ -46,9 +46,9 @@ GITHUB_API = f"https://api.github.com/repos/{REPOSITORY}"
 ARTIFACT_NAME = "serie-a-v2-current-form-source-capture"
 SOURCE_WORKFLOW_PATH = ".github/workflows/serie-a-v2-current-form-source-capture.yml"
 SOURCE_CAPTURE_SCRIPT_PATH = "serie_a_v2_current_form_source_capture.py"
-EXPECTED_SOURCE_CAPTURE_SCRIPT_BLOB_SHA1 = "4f5837671727066903e798dd893753f13a925434"
+EXPECTED_SOURCE_CAPTURE_SCRIPT_BLOB_SHA1 = "6c2e04077dc325a255cc92c6b288fd035e9c981b"
 HISTORICAL_SOURCE_LOADER_PATH = "serie_a_v2_live_diagnostic_report.py"
-EXPECTED_HISTORICAL_SOURCE_LOADER_BLOB_SHA1 = "54805b05a03efac9466f1b77277cccb1e538cf64"
+EXPECTED_HISTORICAL_SOURCE_LOADER_BLOB_SHA1 = "f42ddd8ab1fdc939d909c2823d516c5b5f06de00"
 SOURCE_RIGHTS_HELPER_PATH = "market_anchor_v2_source_rights.py"
 EXPECTED_SOURCE_RIGHTS_HELPER_BLOB_SHA1 = "459ef1cf75073552d34c4cf4b2a07d24e4ade1f9"
 SOURCE_RIGHTS_MANIFEST_PATH = "research/source_rights/football_data_co_uk.json"
@@ -84,6 +84,8 @@ def _github_json(url: str, *, token: str, get=requests.get) -> dict:
 
 
 def discover_archives(*, token: str, get=requests.get) -> list[dict]:
+    from serie_a_v2_forward_capture import _require_private_source_archive_read_scope
+    _require_private_source_archive_read_scope()
     out, seen_ids = [], set()
     for page in range(1, 4):
         data = _github_json(
@@ -122,6 +124,8 @@ def discover_archives(*, token: str, get=requests.get) -> list[dict]:
 def verify_source_run(
     archive: Mapping[str, Any], *, quote_time: datetime, token: str, get=requests.get
 ) -> dict:
+    from serie_a_v2_forward_capture import _require_private_source_archive_read_scope
+    _require_private_source_archive_read_scope()
     run_id = archive.get("run_id")
     head_sha = archive.get("head_sha")
     if type(run_id) is not int or run_id <= 0:
@@ -174,6 +178,8 @@ def verify_source_run(
 
 
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
+    from serie_a_v2_forward_capture import _require_private_source_archive_read_scope
+    _require_private_source_archive_read_scope()
     if type(artifact_id) is not int or artifact_id <= 0:
         raise ValueError("invalid source artifact id")
     if not token:
@@ -262,6 +268,9 @@ def _validate_archive_member_sizes(infos: list[Any], *, expected_names: set[str]
 def verify_and_load_archive(
     raw: bytes, archive: Mapping[str, Any], parent: Mapping[str, Any]
 ) -> tuple[pd.DataFrame, dict]:
+    # This public helper parses current-season 2026/27 results from the ZIP.
+    from serie_a_v2_forward_capture import _require_private_source_archive_read_scope
+    _require_private_source_archive_read_scope()
     if not raw or len(raw) > MAX_ARCHIVE_BYTES:
         raise ValueError("current-form source archive is empty or too large")
     digest = hashlib.sha256(raw).hexdigest()
@@ -590,6 +599,9 @@ def verify_latest_source_archive(
     ):
         raise ValueError("source verification clock must have an explicit UTC offset")
     now = as_of_utc.astimezone(timezone.utc)
+    # Guard before inspecting metadata or invoking either external callback.
+    from serie_a_v2_forward_capture import _require_private_source_archive_read_scope
+    _require_private_source_archive_read_scope()
     candidates = sorted(
         (item for item in archive_metadata if item["created_at"] < now),
         key=lambda item: (item["created_at"], item["artifact_id"]),
@@ -757,6 +769,10 @@ def prepare_forward_capture(
     ):
         raise ValueError("current-form forward clock must have an explicit UTC offset")
     now = as_of_utc.astimezone(timezone.utc)
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+    require_personal_research_inference_scope()
+    from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
+    require_private_repository_for_source_artifacts()
     if write_sources_to is not None:
         write_sources_to.mkdir(parents=True, exist_ok=True)
     latest_quotes = _latest_quotes(quotes, now=now)
