@@ -8624,3 +8624,50 @@ A fresh file-level comparison was made against main `40887ebb215730190d7a6c7a169
 - The corresponding file on #778/#782 is blob `f3a572e3fd5c9fdc9f8ca1950ba7e551b0edd97e`; it pins `FROZEN_CANDIDATE_SHA256` to the exact original candidate and makes refit/write paths fail closed. #782 inherits that exact #778 file byte-for-byte.
 
 Therefore the candidate artifact itself is present and unchanged on main, but the strongest direct-call SHA/refit protections are still only in the unmerged frozen PR stack. Do not treat the candidate file's presence as proof that main has the full protected execution path. Preserve the #778 → #782 order and HUMAN-MERGE; do not merge #779.
+
+# Incremental V2 audit — 2026-11-11 05:49 UTC
+
+## Frozen original protocol gate: metadata count only
+
+The original protocol blob remains `65729e9639720e67624c1481190aa22ae606f151`. Its `first_outcome_read_gate` requires 30 completed primary-cohort events, with non-primary leagues excluded. A new metadata-only Supabase query against `public.league_finished_results` for `SERIE_A / 2026-2027` selected only `match_date, home_team, away_team` and returned:
+
+- 113 completed rows / 113 unique date-team fixture identities;
+- first date 2026-08-22; latest date 2026-11-08.
+
+Thus the protocol's **30-primary-completed-event count threshold is met**. This is only a count check; no score/result/outcome columns were selected and no target outcomes were opened or scored. It does not satisfy the separate current-form prospective evaluation requirement of 30 completed eligible forecasts. Exact original-candidate pre-kickoff predictions remain 0 rows / 0 events, so there is still no prospective V2 sample to score and no Brier/LogLoss comparison to report.
+
+## New source-policy dependency discovered in clean-rebase PR #782
+
+PR #782 is the clean-ancestry replacement for stale #779:
+
+- Base: exact #778 HEAD `aa0cd076a15033d2d90c7c08cb3ff14c94c2e8ec`.
+- HEAD: `984f00cf1c4c236dc4124ec1903e3ddd4c51474e`.
+- Compare: 17 ahead / 0 behind, 16 files.
+- Exact push run #42964652147 and PR run #42964659477 both completed 2/2 SUCCESS on that exact HEAD; Python 3.11 and 3.12 each passed 440 tests, and production `.pkl` hash guards passed.
+- #782 inherits #778's exact original candidate SHA pin and retired replay (`TARGETS=()`).
+
+However, #782 does **not** include the later source-policy recheck in sibling PR #780:
+
+- #782 manifest blob `b09ed11feb7a03ff729171bf39e88cda1341d488` still says `research_source_capture_permitted=true`, `PRIVATE_NONCOMMERCIAL_RESEARCH_ARCHIVE_ONLY`, policy page date `2026-11-06`.
+- #780 HEAD `48f55b6ef4dc40879d5232ac78ce55df51d2dce4` has manifest blob `b138d29f98e4cf3071d4c6a35a01dbb4e80e5afd`, sets `research_source_capture_permitted=false`, `NONE_PENDING_PROVIDER_CLARIFICATION`, and policy page date `2026-11-10`. Its source-capture rights module is also newer (blob `3029fae3dc4ef4c8c2b65d032db618579bf9b1ff` versus #782 blob `5bb688be5529469d0712e00b02d2014fc0a6ebd0`).
+- #782's direct `capture_source_archive()` still calls the source-capture permission gate and private-repository check. The current public-repository check blocks source archive access today, but if the repository later becomes private, #782's stale manifest would permit source-only capture without the newer #780 provider-policy hold.
+
+A top-level review comment was added to #782 (comment ID `6788433657`) with the exact blob/manifest evidence. **Keep #782 Draft** until #780's source-rights code, manifest, and tests are incorporated (or the descendant stack is rebased so #780 is included), then rerun full exact-head CI. The correct stack must carry #780 before the #742 → #774 → #777 → #778 → #782 descendants are considered ready. This does not authorize any source download.
+
+PR #780 itself is still Draft on #727 at exact HEAD `48f55b6ef4dc40879d5232ac78ce55df51d2dce4`; its exact PR run #42812927009 completed 2/2 SUCCESS. It remains a provider-policy hold, not a licence grant.
+
+## Main/live hold and current pre-match data
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. PR #781 remains OPEN / Ready for review / HUMAN-MERGE at exact HEAD `c48e0c2f6a486c9320b04c7670d84b74e8d2322a`; its eight PR-triggered runs are SUCCESS, including the frozen V2 suite and recovery job. It is not merged, so main still has live steps in the four existing workflows. Their cron strings remain unchanged: 05:50, 06:13, 08:08, 08:18 UTC. No schedule or workflow was changed or dispatched.
+
+Fresh read-only Supabase aggregates, restricted to strict pre-kickoff timestamp/identity metadata:
+- `public.odds_snapshots`: 3,915 snapshots / 327 events; 0 new in seven days; 0 future events with saved strict pre-match quotes; latest `2026-10-13 14:48:53.04262 UTC`.
+- `public.product_prediction_snapshots`, exact original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`: 0 strict pre-match predictions / 0 events.
+
+## Static review boundary note
+
+The static audit fetched the legacy `market_anchor_v2_saved_cohort_replay.py` source on main to inspect its callable entrypoints; that retired file contains pre-existing hardcoded post-outcome labels. No labels were copied into this addendum or used for feature construction, candidate/threshold selection, scoring, or metrics. Do not execute or use the legacy main-branch replay. The clean #778/#782 branch has `TARGETS=()` and blocks the retired replay entrypoints. This is a source-review exposure, not a new evaluation result.
+
+Supabase Security Advisor still reports critical RLS-disabled exposure on `teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, and `epl_ai_market_pair_ledger`. No DDL or writes were performed; enabling RLS without designed policies could break access.
+
+No source download, odds/API request, target-outcome query, live inference, Supabase write/DDL, production `.pkl` change, model refit, threshold tuning, promotion, bet, merge, main update, schedule change, or other-agent setting change occurred. Original 19-feature order/weights, candidate SHA, `active_lambda=0`, `shadow_lambda=1`, failed stability gate and NO_BET remain unchanged.
