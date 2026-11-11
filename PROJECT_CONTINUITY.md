@@ -9607,3 +9607,33 @@ The official API-Sports football page advertises a free 100-requests/day plan, b
 The site may be a useful discovery/index layer for match identity and possible field coverage, but it is **not an approved automated V2 source** until the underlying provider's rights are clarified in writing. A future authorized capture would still need exact response bytes, SHA-256, retrieval/parent-run timestamps strictly before each quote, field-level completeness, and private archive storage. A displayed post-match `last_updated` value is not a substitute for that source-before-quote proof.
 
 No Cornerflick/API-Football values were ingested into the original V2 feature builder, candidate, quote cohort or evaluator. No original feature, weight, scaler/imputer, candidate SHA, lambda, source gate, target-outcome gate, production artifact, workflow schedule, main ref or Supabase row/schema was changed.
+
+
+## Incremental original V2 evidence — 2026-11-11 23:48 UTC
+
+### Fresh main and exact scheduled workflow evidence
+
+The default branch is still exactly \`40887ebb215730190d7a6c7a1693373ec4afcdfc\`. The following scheduled runs were read by run id and their job logs, all on that exact main SHA:
+
+- Original Forward-Only Preview, run [43054458880](https://github.com/MaksimBlud/football-ai/actions/runs/43054458880), 2026-11-11 16:03 UTC: **71 tests passed**. The log reports \`source_archive_sha256_verified=true\`, source artifact 13862488931, parent source run 43035977412, 3,800 verified historical result rows, 10 pre-prospective source files, \`forecasts_created=0\`, \`quotes_seen=0\`, \`v2_diagnostic_previews_captured=0\`, \`paid_provider_calls=0\`, and \`supabase_writes=0\`.
+- Current-Form Forward-Only Preview, run [43055721034](https://github.com/MaksimBlud/football-ai/actions/runs/43055721034), 2026-11-11 16:10 UTC: **53 tests passed**. It verified source artifact 13857286039 with SHA-256 \`117d72e536f56d41b7b893700b51c8e1fc593cd40034fbedb8fc1f88a8cee6be\`, candidate SHA \`a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6\`, 110 current-season rows and 3,910 historical rows. It reports \`quotes_seen=0\`, \`v2_current_form_shadow_captured=0\`, \`target_outcomes_read=false\`, \`target_outcomes_scored=false\`, and zero production/Supabase writes or paid calls.
+- Current-Form Source Capture, run [43025058808](https://github.com/MaksimBlud/football-ai/actions/runs/43025058808), 2026-11-11 12:59 UTC: **19 tests passed**; the summary reports 110 completed primary events, 110 current-season completed-prior-day rows, 10 old-season source files, 11 total source files, and \`feature_source_gate_passed=true\`. It does not report target outcomes scored.
+- Free Real-Quote Diagnostic, run [43035977412](https://github.com/MaksimBlud/football-ai/actions/runs/43035977412), 2026-11-11 14:10 UTC: **53 tests passed**, 3,800 history rows, and zero Supabase writes. The forward run found no quote.
+
+These are successful code/workflow runs, not successful model forecasts. The source archive's SHA and 110-row feature-input gate do not create a prospective quote cohort. No Brier/LogLoss result exists. These runs occurred while PR #781 was still unmerged; the live-access hold therefore has not yet protected main.
+
+### Strict pre-match Supabase read-only check
+
+The only market-data query used \`snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= NOW()\`. It returned 3,915 strict pre-match odds snapshots across 327 events, zero new snapshots in the preceding seven days, and a latest snapshot of 2026-10-13 14:48:53 UTC. The exact frozen candidate SHA query against product_prediction_snapshots, with both generation and creation before kickoff, returned 0 rows / 0 events. No target-outcome or settlement columns were queried. No write or DDL occurred.
+
+### New no-cost provider audit — 5DollarFootballAPI
+
+Draft PR [#792](https://github.com/MaksimBlud/football-ai/pull/792) adds the official-pages-only audit at \`research/SERIE_A_V2_5DOLLAR_FOOTBALL_API_SOURCE_AUDIT_20261111.md\`, exact head \`843b1fefb5ea44c33b0729bb48f724a6aa211cef\`. Its six checks were in progress when recorded; do not describe this PR as CI-passed until the exact-head checks complete.
+
+The provider's Terms explicitly permit use in models/internal tools and caching, with attribution for public-facing Free/Community use and no raw-feed redistribution. The documented fixture schema includes goals, corners, yellow/red cards, UTC kickoff and fixture status. However, the dedicated Serie A page says full statistics are available on a free tier while the data-quality table labels Italy Serie A (id 3405541143) as Pro. General history/plan descriptions also differ. The reviewed fixture examples do not document a per-fixture upstream source-observed timestamp or named upstream source for every field. These are blocking ambiguities; no account, key, API call, odds request, data download or integration was performed. No paid plan is proposed.
+
+### Current hold and frozen contract
+
+PR #781 remains open and unmerged at exact head \`afe943305143b68b62e89f20010d78d6b48efd70\`; its 8/8 exact-head CI is successful. Until the owner manually merges it, main continues to run the scheduled live workflows described above. Existing public GitHub artifacts are not removed by that PR and must not be assumed private or deleted.
+
+Original candidate SHA, 19 feature order, weights, scaler/imputer, training fingerprint and cutoff remain unchanged. \`active_lambda=0\`; \`shadow_lambda=1\` research-only; stability gate FAILED; prospective target-outcome gate 0/30; Brier/LogLoss superiority over market not established. No main update, PR merge, production .pkl change, Supabase write/DDL, paid API request, bet, promotion, schedule change or other-agent setting change occurred.
