@@ -9463,3 +9463,43 @@ No DDL or policy change was made. Do not enable RLS blindly: policies must be de
 ### Binding conclusion
 
 The 110-event feature-input identity gate remains separate from the prospective evaluation gate. Eligible completed prospective original-V2 forecasts remain **0/30**; Brier and LogLoss are unavailable; no market-superiority claim is supported. Source/inference rights and private artifact storage remain unresolved. Do not download unapproved source data, run live inference, read protected outcomes, relax any gate, or merge automatically.
+
+## 2026-11-11 20:06 UTC — free-source rights and coverage screen: Footiqo / Stats API
+
+### Footiqo
+
+Official Footiqo pages advertise free, daily-updated 2026/27 Serie A team-stat pages for goals, corners and yellow cards, with overall/home/away summaries. This is a promising *manual research reference*, but not an autonomous source for the frozen V2 contract:
+
+- The public pages expose aggregate team averages/rates, not a verified raw match-by-match feed with the exact rolling last-5, last-10 and venue-5 windows required by the original 19 features. No per-feature source parity was demonstrated.
+- Footiqo's Dataset Licence & Data Access Policy, last updated 2026-10-08, permits legitimate official manual exports and private use for personal, non-commercial research/model testing; it explicitly prohibits automated scraping, crawling, bulk extraction and automated downloading without separate written permission.
+- The same policy says Footiqo's permission is subject to third-party rights and does not override upstream data-provider rights. It does not establish the upstream licence for every statistic.
+- Footiqo has no public API. Therefore it cannot be connected to the hourly source-before-quote pipeline under the current published policy. A manually exported file would also need a human-recorded capture timestamp and SHA before any later quote; that would not create an automated current-form feed.
+
+Official references:
+- https://footiqo.com/dataset-licence/ (manual export permitted; automation prohibited without written permission; third-party rights reserved)
+- https://footiqo.com/statistics/teams/goals/full-time-italy-serie-a/ (free 2026/27 goals aggregates)
+- https://footiqo.com/statistics/teams/corners/full-time-italy-serie-a/ (free 2026/27 corners aggregates)
+- https://footiqo.com/statistics/teams/cards/full-time-italy-serie-a/ (free 2026/27 yellow-card aggregates)
+- https://footiqo.com/database/ (manual CSV/Excel export information)
+
+Decision: do not scrape, automate exports, download samples, or use these aggregates as frozen V2 features. A human-approved manual non-commercial research export could be considered separately, but it would not satisfy the autonomous source-capture requirement and upstream rights still need clarification.
+
+### Stats API
+
+- Public pricing states 200 free requests once per new account, with no card or renewal; after that, continued use is paid. No account was created and no API request was made.
+- Its official Serie A coverage page describes only a **2025/26 historical CC0/OpenFootball snapshot** with 20 teams and 380 matches. It is explicitly not a live or guaranteed-fresh feed.
+- The general API advertises match statistics and odds only with partial, match-specific coverage flags. The public Serie A coverage page does not establish 2026/27 current-form availability or complete 19-feature statistics.
+- The CC0 historical fixture/results layer can help identify matches but cannot replace the original per-match goals/corners/cards input source. It is not an approved frozen V2 source.
+
+Official references:
+- https://stats-api.com/pricing (200 one-time free requests; paid tiers thereafter)
+- https://stats-api.com/football-api/serie-a (2025/26 historical CC0/OpenFootball snapshot; freshness not guaranteed)
+- https://stats-api.com/football-api (match-statistics and odds coverage is partial and must be checked per match)
+
+Decision: not a free, complete, current-season 19-feature source. Do not create an account or spend the one-time request allowance unless a separately approved metadata-only coverage plan shows it can answer a specific missing question.
+
+### Source feasibility conclusion
+
+Footiqo is currently the strongest newly identified *human/manual* free research candidate for current-season aggregate goals/corners/cards, but its published terms prohibit automated capture and its aggregate tables do not prove exact feature parity. Stats API's free tier is one-time and the documented Serie A dataset is historical 2025/26 results-only CC0, not a current-form replacement. Neither source is approved for automated V2 capture, and neither was accessed at the match-record/API level in this audit.
+
+Original V2 candidate, 19 features, weights, scaler/imputer, training fingerprint, lambda values, source/evaluation gates and production artifacts remain unchanged. No source data was downloaded, no API key/account was created, and no inference or target-outcome access occurred.
