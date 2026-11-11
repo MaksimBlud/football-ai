@@ -9021,3 +9021,55 @@ No CSV was downloaded, no API/account was used, no paid request was made, and no
 ## Safety
 
 No main update/merge, source download, quote request/read, live inference, target-outcome read, paid provider call, Supabase write/DDL, production `.pkl` change, refit, threshold tuning, bet, promotion, schedule change or other-agent setting change occurred. Preserve HUMAN-MERGE, source-before-quote, SHA checks, the original 19-feature/weight contract, `active_lambda=0`, `shadow_lambda=1`, NO_BET and both frozen gates.
+
+
+## 2026-11-11 — V2 evaluator workflow held closed by default; free-source feasibility recheck
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The repository is still public (`private=false`). The original forward workflow was re-read from main: it retains the 08:08 UTC schedule and the manual-paid-snapshot-only `workflow_run` condition. No original V2 source-capture, quote-diagnostic, original-forward or current-form-forward runtime run was found in the latest 2026-11-11 Actions inventory; do not claim new source or forecast capture.
+
+### Evaluator workflow hardening on PR #728
+
+PR #728's live evaluator workflow had Supabase credentials and the GitHub token at job scope, so they were present for dependency installation and offline tests. The workflow is now fail-closed by default:
+
+- `MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED="false"` at workflow scope;
+- Supabase URL/key and GitHub token are scoped only to the live evaluator step;
+- the live evaluator step and metrics artifact upload require the explicit flag to be true;
+- offline install, compile and synthetic tests remain available without credentials;
+- no trigger, schedule, provider call, model contract, weights, lambda or frozen outcome gate was changed.
+
+Final PR #728 HEAD: `dc263d5282631a38c7479a6d17a85a3622cbb1c8`. Exact-head push run [#43016057203](https://github.com/MaksimBlud/football-ai/actions/runs/43016057203) and PR run [#43016064832](https://github.com/MaksimBlud/football-ai/actions/runs/43016064832) both completed SUCCESS; the synthetic evaluator suite reported **122 passed**, and the production `.pkl` diff guard passed. The immediately preceding intermediate head failed one new assertion due to an over-escaped newline; the assertion was corrected, and the final exact HEAD is green. PR #728 remains Draft and stacked on #727's stale branch; it is not ready to merge until the full parent rights/privacy/quote chain is integrated and it is rebased/revalidated. No live evaluator dispatch, Supabase access, or outcome read occurred.
+
+### Current PR #787 and #781 exact state
+
+- PR #787 remains Draft, exact HEAD `9457fb63dfd1f5da7f0b0d215b86fa8a4c659001`, stacked on #786. Exact-head runs [#43011586865](https://github.com/MaksimBlud/football-ai/actions/runs/43011586865) and [#43011586786](https://github.com/MaksimBlud/football-ai/actions/runs/43011586786) passed: 435 tests on each Python 3.11/3.12 matrix lane and 15 separate original V2 shadow tests. The direct-entrypoint source-capture/inference split remains research-only; no live data was read.
+- PR #781 remains OPEN / Ready for review / mergeable at `c48e0c2f6a486c9320b04c7670d84b74e8d2322a`; all 8 exact-head checks passed. It holds the five existing live source/quote/recovery workflow paths and their artifact uploads while preserving schedules. It is not merged. HUMAN-MERGE only.
+- Main still lacks #781's hold. Do not dispatch the main live workflows while source rights and private storage are unresolved.
+
+### Read-only Supabase pre-match audit
+
+Only pre-match market rows and identity-only feature-gate metadata were queried:
+
+- Strict `public.odds_snapshots` predicate: `snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= NOW()`.
+- **3,915** strict pre-match snapshots / **327** unique events across nine leagues.
+- **0** strict pre-match snapshots / **0** events in the last seven days.
+- Latest saved Serie A quote: `2026-10-13T14:48:53Z`; latest EPL quote: `2026-10-09T15:25:57Z`.
+- Exact original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`: **0** strict pre-kickoff forecasts / **0** events in `public.product_prediction_snapshots`.
+- Serie A `2026-2027` identity-only query selected only `match_date, home_team, away_team`: **113 rows / 113 unique identities**, 2026-08-22 through 2026-11-08. No score, result, settlement or target-outcome columns were selected. The separate prospective evaluation gate remains **0/30**.
+
+Supabase writes/DDL remain 0.
+
+### Free-source feasibility recheck (no account, API call or download)
+
+- **Soccer Data** (official terms last updated 2026-10-30) advertises a $0 Free plan with 50 requests/day, current-season statistics endpoints, and no odds on the Free plan. Its terms allow caching/persisting data while the account/plan is active and displaying it in one's own product, but say the data belongs to Soccer Data or upstream providers and do not explicitly grant the specific frozen-AI-inference scope needed by this project. It is a possible *current-season statistics* candidate, not a drop-in historical replacement and not a quote source. Keep blocked pending written clarification of frozen inference, retention, and the relevant upstream rights. Official references: https://soccer-data.co/terms ; https://soccer-data.co/ ; https://soccer-data.co/docs/concepts/rate-limits .
+- **Gamblistics** Hugging Face dataset declares CC-BY-NC-4.0, describes a small recent English Premier League dataset (1,190 matches / 810 match-stat rows in the surfaced snapshot), and is not a full multi-league frozen-history replacement. Its noncommercial licence is not approved for this public model/product path without a separate rights review. Reference: https://huggingface.co/datasets/gamblistics-lab/sport-statistics .
+- **open-matchday** is informational/non-commercial and explicitly leaves upstream provider rights intact; it is not approved for this public model feed. Reference: https://github.com/oladeeayo/open-matchday .
+
+No candidate source was queried or downloaded. No free quote source was established. No paid odds API request was made.
+
+### Supabase security advisory
+
+RLS is still disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. This is a critical public-client exposure. No DDL was run; enabling RLS without reviewed policies could break application access. The exact advisory and remediation remain documented above.
+
+### Binding conclusion
+
+Original candidate SHA, 19-feature contract, weights, scaler/imputer, `active_lambda=0`, `shadow_lambda=1`, NO_BET and the 30-primary-completed-event gate are unchanged. The source/quote pipeline has no new eligible pre-kickoff observations; original V2 prospective forecasts remain 0/30. No Brier/LogLoss result or superiority claim is available. Main was not changed; no PR was merged; no source was downloaded; no target outcomes were read; no production `.pkl`, Supabase row/schema, schedule or other-agent setting was changed.
