@@ -7,6 +7,19 @@ import pandas as pd
 import pytest
 import serie_a_v2_current_form_source_capture as source_capture
 
+@pytest.fixture(autouse=True)
+def allow_synthetic_source_capture_and_private_storage(monkeypatch):
+    """Offline fixtures are synthetic and never authorize a live provider read."""
+    monkeypatch.setattr(
+        source_capture,
+        "_require_source_capture_and_private_storage",
+        lambda: {
+            "source_capture_scope": "SYNTHETIC_TEST_ONLY",
+            "artifact_storage": "SYNTHETIC_TEST_ONLY",
+        },
+    )
+
+
 from serie_a_v2_current_form_source_capture import (
     CURRENT_CODE,
     CURRENT_FILENAME,
@@ -1136,3 +1149,49 @@ def test_source_capture_push_runs_offline_validation_without_download_job():
     assert "GITHUB_TOKEN" not in validator_job
     assert "Check shared public-source download budget" in workflow
     assert "Capture frozen historical seasons plus gated current-form source" in workflow
+
+
+def test_direct_metadata_readers_deny_before_supabase_when_source_rights_are_unresolved(monkeypatch):
+    def deny_scope():
+        raise PermissionError("source-only capture scope unresolved")
+
+    monkeypatch.setattr(source_capture, "_require_source_capture_and_private_storage", deny_scope)
+
+    class ForbiddenClient:
+        def table(self, *_args, **_kwargs):
+            pytest.fail("Supabase metadata must not be read before source-capture rights")
+
+    now = datetime(2026, 10, 18, 8, 0, tzinfo=timezone.utc)
+    with pytest.raises(PermissionError, match="source-only capture scope unresolved"):
+        read_completed_primary_event_count(ForbiddenClient(), now=now)
+    with pytest.raises(PermissionError, match="source-only capture scope unresolved"):
+        read_completed_primary_event_identities(ForbiddenClient(), now=now)
+
+
+def test_capture_source_archive_denies_before_candidate_metadata_network_or_filesystem(
+    monkeypatch, tmp_path
+):
+    def deny_scope():
+        raise PermissionError("source-only capture scope unresolved")
+
+    monkeypatch.setattr(source_capture, "_require_source_capture_and_private_storage", deny_scope)
+    monkeypatch.setattr(
+        source_capture,
+        "load_verified_original",
+        lambda: pytest.fail("candidate/source work must not start before source-capture rights"),
+    )
+
+    class ForbiddenClient:
+        def table(self, *_args, **_kwargs):
+            pytest.fail("Supabase must not be read before source-capture rights")
+
+    output_dir = tmp_path / "must-not-be-created"
+    with pytest.raises(PermissionError, match="source-only capture scope unresolved"):
+        capture_source_archive(
+            output_dir=output_dir,
+            client=ForbiddenClient(),
+            now=datetime(2026, 10, 18, 8, 0, tzinfo=timezone.utc),
+            get=lambda *_args, **_kwargs: pytest.fail("public CSV request before source-capture rights"),
+            history_fetch=lambda **_kwargs: pytest.fail("historical CSV request before source-capture rights"),
+        )
+    assert not output_dir.exists()
