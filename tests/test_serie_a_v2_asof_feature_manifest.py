@@ -356,3 +356,54 @@ def test_feature_manifest_cli_denies_before_reading_history_or_quotes(monkeypatc
 
     assert not manifest.exists()
     assert not audit.exists()
+
+
+def test_bad_history_rejects_reversed_duplicate_after_v2_alias_normalization():
+    first = history().iloc[[0]].copy()
+    first["HomeTeam"] = "Atalanta"
+    first["AwayTeam"] = "Alpha"
+    reversed_fixture = first.copy()
+    reversed_fixture["HomeTeam"] = "Alpha"
+    reversed_fixture["AwayTeam"] = "Atalanta BC"
+    duplicated = pd.concat([first, reversed_fixture], ignore_index=True)
+
+    with pytest.raises(ValueError, match="collision"):
+        build_manifest(duplicated, [QUOTE])
+
+
+def test_history_rejects_time_of_day_that_could_bypass_same_date_fixture_identity():
+    first = history().iloc[[0]].copy()
+    first["HomeTeam"] = "Atalanta"
+    first["AwayTeam"] = "Alpha"
+    reversed_fixture = first.copy()
+    reversed_fixture["Date"] = "10/10/2026 12:00:00"
+    reversed_fixture["HomeTeam"] = "Alpha"
+    reversed_fixture["AwayTeam"] = "Atalanta BC"
+    malformed = pd.concat([first, reversed_fixture], ignore_index=True)
+
+    with pytest.raises(ValueError, match="date-only"):
+        build_manifest(malformed, [QUOTE])
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("FTHG", 1.5, "integer"),
+        ("HC", float("inf"), "non-finite"),
+    ],
+)
+def test_historical_count_stats_must_be_finite_nonnegative_integers(field, value, message):
+    malformed = history()
+    malformed[field] = malformed[field].astype(float)
+    malformed.loc[0, field] = value
+
+    with pytest.raises(ValueError, match=message):
+        build_manifest(malformed, [QUOTE])
+
+
+def test_history_rejects_explicit_midnight_timestamp_before_date_normalization():
+    malformed = history()
+    malformed.loc[0, "Date"] = "10/10/2026 00:00:00"
+
+    with pytest.raises(ValueError, match="date-only"):
+        build_manifest(malformed, [QUOTE])
