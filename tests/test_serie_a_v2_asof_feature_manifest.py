@@ -1,10 +1,12 @@
 """Date-only Serie A V2 feature adapter: exact original features, fail-closed tests."""
 from copy import deepcopy
 from datetime import datetime, timezone
+import sys
 
 import pandas as pd
 import pytest
 
+import serie_a_v2_asof_feature_manifest as manifest_module
 from serie_a_v2_asof_feature_manifest import build_manifest
 from serie_a_v2_frozen_shadow_preview import shadow_preview
 
@@ -320,3 +322,50 @@ def test_free_diagnostic_compiles_frozen_transitive_runtime_dependencies():
     compile_line = next(line for line in step.splitlines() if "python -m py_compile " in line)
     assert "market_anchor_1x2_v2_shadow.py" in compile_line
     assert "market_anchor_1x2_v1.py" in compile_line
+
+
+
+def test_direct_feature_builder_denies_before_history_or_quote_access(monkeypatch):
+    import market_anchor_v2_source_rights as rights
+
+    def deny():
+        raise PermissionError("V2 frozen inference scope remains unresolved")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", deny)
+
+    class ForbiddenHistory:
+        def __getattribute__(self, _name):
+            pytest.fail("historical source frame must not be inspected before rights clearance")
+
+    class ForbiddenQuotes:
+        def __iter__(self):
+            pytest.fail("saved quote rows must not be inspected before rights clearance")
+
+    with pytest.raises(PermissionError, match="V2 frozen inference scope remains unresolved"):
+        build_manifest(ForbiddenHistory(), ForbiddenQuotes())
+
+
+def test_feature_manifest_cli_denies_before_reading_history_or_quotes(monkeypatch, tmp_path):
+    import market_anchor_v2_source_rights as rights
+
+    def deny():
+        raise PermissionError("V2 frozen inference scope remains unresolved")
+
+    monkeypatch.setattr(rights, "require_personal_research_inference_scope", deny)
+    output_manifest = tmp_path / "must-not-be-written-manifest.json"
+    output_audit = tmp_path / "must-not-be-written-audit.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "serie_a_v2_asof_feature_manifest.py",
+            "--existing-history-csv", str(tmp_path / "must-not-be-read-history.csv"),
+            "--saved-quotes-json", str(tmp_path / "must-not-be-read-quotes.json"),
+            "--manifest-json", str(output_manifest),
+            "--audit-json", str(output_audit),
+        ],
+    )
+    with pytest.raises(PermissionError, match="V2 frozen inference scope remains unresolved"):
+        manifest_module.main()
+    assert not output_manifest.exists()
+    assert not output_audit.exists()
