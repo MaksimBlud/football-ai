@@ -14,6 +14,24 @@ from serie_a_v2_prequote_source_archive_gate import (
     ARCHIVE_REPORT, SOURCE_DIR, verify_archive,
 )
 
+@pytest.fixture(autouse=True)
+def allow_synthetic_v2_inference_scope(monkeypatch):
+    """Offline fixtures use synthetic inputs; this is not provider authorization."""
+    import market_anchor_v2_source_rights as rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    monkeypatch.setattr(
+        rights,
+        "require_personal_research_inference_scope",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: {"private": True, "storage_policy": "SYNTHETIC_TEST_ONLY"},
+    )
+
+
 AFTER = datetime(2026, 10, 15, 12, tzinfo=timezone.utc)
 OBSERVED = datetime(2026, 10, 13, 15, 22, tzinfo=timezone.utc)
 UPLOADED = "2026-10-13T15:22:55Z"
