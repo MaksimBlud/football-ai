@@ -8901,3 +8901,26 @@ No source download, odds/API request, target-outcome query, live inference, Supa
 
 - Supabase Security Advisor re-confirmed RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. This is a critical exposure. No DDL was executed; enabling RLS without reviewed policies can block legitimate access.
 - No main update/merge, production pickle change, source download, paid request, Supabase write/DDL, live inference, target-outcome read, bet, threshold change, or promotion occurred. Original candidate SHA, 19-feature contract, weights, `active_lambda=0`, `shadow_lambda=1`, and failed stability gate remain unchanged.
+
+
+# Incremental V2 audit — 2026-11-11 — evaluator transport hardening and free-source feasibility
+
+## PR #728: remove caller-controlled transport from live evaluator
+
+- Current HEAD: `7dfbebb364f2e60df106bd955f6b2db57946e5b9`; PR remains Draft.
+- Removed caller-supplied `get` HTTP transport from the two public live entrypoints `run_live_evaluation` and `verify_source_artifacts_for_candidates`. Live privacy, artifact and source verification now use the module-owned Requests transport; offline tests monkeypatch that transport internally and assert the public entrypoints expose no caller-controlled transport parameter.
+- Exact-head push and PR checks both completed SUCCESS on the same HEAD: [43007709954](https://github.com/MaksimBlud/football-ai/actions/runs/43007709954) and [43007720853](https://github.com/MaksimBlud/football-ai/actions/runs/43007720853). Both ran the offline-only validation job, including compile, synthetic evaluator/lazy-gate regression tests and production `.pkl` diff guard.
+- This is an offline code/test security change only. No live evaluator, quote reader, outcome reader, source download or Supabase write was run.
+- Ancestry is still stale: #728 is based on ancestor `8894ce8e0248a5502d60571ff073fc6d7847a43a`, while #727 HEAD is `18a3cfda4e83e44aca1252665d01804267d16467` (four commits after that base). Keep #728 Draft until it is reconciled onto the current rights/privacy stack, including the #780 source-policy hold and the later direct-entrypoint gates; rerun exact-head CI after rebase. HUMAN-MERGE only.
+
+## Free source feasibility for the frozen 19-feature contract
+
+The original as-of builder requires the exact historical fields `Date, HomeTeam, AwayTeam, FTHG, FTAG, FTR, HC, AC, HY, AY, HR, AR`; the candidate feature order and weights remain untouched. The following public-source review did not identify a complete, clearly permitted, zero-cost replacement for the full Serie A 2016/17–2026/27 history plus current-form capture:
+
+- **OpenLigaDB** publishes data under ODbL 1.0, with attribution and share-alike obligations for redistribution. Its current Serie A season/field coverage has not been established against all required columns, so it is not approved as a replacement source yet. Official: https://www.openligadb.de/en/license and https://www.openligadb.de/en/terms-of-use.
+- **open-matchday** exposes broad 2026/27 CSV match statistics, but its stated terms are informational/non-commercial only and explicitly leave upstream provider rights in place; it does not provide the required 10-season historical archive. Not approved for the project feed. https://github.com/oladeeayo/open-matchday/blob/master/README.md
+- **Footiqo** has free public statistics pages and sample downloads, but the complete 150,000+ match / 10+ season database is listed as a paid dataset (€49.99), and the public pages do not establish a machine-readable licence for the complete source. No download or use. https://footiqo.com/football-data/ and https://footiqo.com/premium/premium-football-database/
+- **OpenFootAPI** offers a free Starter tier for fixtures, competitions, standings and search; its CC0 OpenFootball archives provide historical fixtures/results, not the required corners/cards feature fields. Detailed current/statistical coverage is either sourced from other providers or requires a higher tier. It is not a complete free replacement. https://openfootapi.com/docs
+- **football-data.org** free access provides fixtures/results/standings, not the full corners/cards columns required by the frozen builder. https://www.football-data.org/documentation/api
+
+No CSV was downloaded, no API/account was used, no paid request was made, and no source was approved by inference from a free endpoint. Keep `research_source_capture_permitted=false` until a provider explicitly confirms the required AI/research use and field coverage. Preserve source-before-quote, archive SHA, private storage and the existing frozen gates.
