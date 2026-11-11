@@ -69,7 +69,7 @@ def test_source_preflight_and_outcome_evaluator_share_one_gate_snapshot():
     script = (ROOT / "market_anchor_1x2_v2_prospective_evaluation.py").read_text(encoding="utf-8")
     assert "read_completed_primary_event_identities" not in script
     assert "current_gate = " not in script
-    assert "def verify_source_preflight(completed_identities, _gate_attestation):" in script
+    assert "def verify_source_preflight(completed_identities, gate_attestation):" in script
     assert "preflight=verify_source_preflight" in script
     assert "current_gate_identities=set(completed_identities)" in script
 
@@ -410,6 +410,38 @@ def test_private_repository_gate_precedes_forward_artifact_listing(monkeypatch):
     )
 
     assert calls == ["privacy", "artifact_listing"]
+
+
+def test_live_evaluator_rejects_naive_datetime_clock_before_private_storage_or_artifacts(monkeypatch):
+    import market_anchor_1x2_v2_prospective_evaluation as live
+
+    monkeypatch.setattr(
+        live,
+        "require_personal_research_inference_scope",
+        lambda: {"scope_status": "TEST_ONLY_EXPLICITLY_AUTHORIZED"},
+    )
+    monkeypatch.setattr(
+        live,
+        "require_private_repository_for_source_artifacts",
+        lambda *_args, **_kwargs: pytest.fail(
+            "naive observation clock must be rejected before private-storage access"
+        ),
+    )
+    monkeypatch.setattr(
+        live,
+        "discover_forward_artifacts",
+        lambda *_args, **_kwargs: pytest.fail(
+            "naive observation clock must be rejected before artifact listing"
+        ),
+    )
+
+    with pytest.raises(ValueError, match="evaluation observation clock must have a real UTC offset"):
+        live.run_live_evaluation(
+            object(),
+            "synthetic-read-only-token",
+            now=datetime(2026, 11, 8, 3, 0),
+        )
+
     assert report["status"] == "NO_FORWARD_ARTIFACTS"
     assert report["private_storage_verified"] is True
     assert report["target_outcomes_read"] is False
