@@ -8544,3 +8544,29 @@ No source download, API request, odds-provider request, quote-price read, target
 ### Source-review boundary incident — 2026-11-11
 
 During external licence research, a public Cornerflick Serie A results page and search surfaces inadvertently displayed 2026/27 result listings before the V2 evaluation workflow was authorized to use outcomes. This was an accidental browsing exposure. No score/result values were copied into the repository or Supabase, supplied to the model, used for candidate/feature selection, forecast scoring, Brier/LogLoss, or evaluation; no Supabase outcome columns were queried. Treat the surfaced public data as contaminated and do not use it for any V2 work. Cornerflick is not an approved V2 source regardless: its CC BY 4.0 licence covers only its compilation, while its own data page leaves underlying match facts subject to upstream provider terms. No CSV or API data was downloaded. Keep all original outcome gates unchanged.
+
+
+# Incremental pre-match audit — 2026-11-11 03:51 UTC
+
+## Fresh Supabase metadata and prospective state
+
+- Read-only metadata-only query for `SERIE_A / 2026-2027` now finds **113 unique fixture identities**, latest metadata date 2026-11-08. Only `match_date, home_team, away_team` were aggregated; no score/result fields were selected.
+- This is the lagged-feature input gate only. It does not open the separate target-outcome evaluation gate, which remains CLOSED until 30 eligible prospective V2 forecasts have completed.
+- Strict pre-kickoff `public.odds_snapshots`: **3,915 snapshots / 327 events** across the existing nine leagues; no new snapshots in this read. Latest Serie A quote remains 2026-10-13 14:48:53 UTC.
+- `public.product_prediction_snapshots` filtered to exact original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`: **0** strictly pre-kickoff V2 predictions / **0** events.
+
+## Exact main-branch source/forward runtime
+
+On main `40887ebb215730190d7a6c7a1693373ec4afcdfc`:
+- Current-Form Source Capture [run 42827889788](https://github.com/MaksimBlud/football-ai/actions/runs/42827889788) SUCCESS on 2026-11-10 13:48 UTC; log reports feature-input gate **110** at capture time, 10 frozen historical CSVs + one current-season source, 3,910 historical rows, 0 paid calls and 0 Supabase writes. Source artifact **13770560196**, ZIP SHA-256 `f29363e28775032937108d102da1dda1ca2d5c1aa0f921cb4518bf3a82e9aec6`. Artifact contents were not downloaded/opened in this audit.
+- Current-Form Forward [run 42828048742](https://github.com/MaksimBlud/football-ai/actions/runs/42828048742) and later [run 42854487569](https://github.com/MaksimBlud/football-ai/actions/runs/42854487569) SUCCESS; both report **0 saved quotes / 0 V2 shadows**, target outcomes not read/scored, 0 paid calls and 0 Supabase writes.
+- Original Forward [run 42853738496](https://github.com/MaksimBlud/football-ai/actions/runs/42853738496) SUCCESS; **0 quotes / 0 previews / 0 prospective eligibility**.
+- Thus the current-form source archive is real and SHA-attested, but no new forecast was generated and no independent evaluation sample exists.
+
+## Current live-access hold
+
+- PR #781 exact HEAD remains `c48e0c2f6a486c9320b04c7a1693373ec4afcdfc`; its eight exact-head PR workflows are SUCCESS. The recovery job correctly skipped candidate rebuild, candidate proof and artifact upload.
+- PR #781 is still open and not merged; main retains the existing live workflow schedules: 05:50, 06:13, 08:08 and 08:18 UTC. The next source-capture slot after this audit is 05:50 UTC on 2026-11-11.
+- The PR hold is the required fail-closed protection pending provider AI-use clearance. HUMAN-MERGE remains mandatory; do not merge automatically or change the schedules in this research task.
+
+No artifact payload, score/result column, target outcome, or quote price was read in this incremental audit. No source/API request, Supabase write/DDL, paid provider call, model refit, threshold tuning, production `.pkl` change, merge, main update, or other-agent setting change occurred. The original candidate SHA, 19-feature contract, weights, `active_lambda=0`, `shadow_lambda=1`, NO_BET and both outcome gates remain unchanged.
