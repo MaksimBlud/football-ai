@@ -13,6 +13,8 @@ import serie_a_v2_current_form_source_capture as current_source
 import serie_a_v2_forward_capture as original_forward
 import serie_a_v2_live_diagnostic_report as diagnostic
 import serie_a_v2_prequote_source_archive_gate as archive_gate
+import market_anchor_1x2_v2_shadow as v2_shadow
+import serie_a_v2_frozen_shadow_preview as v2_preview
 
 
 NOW = datetime(2026, 11, 11, 6, 0, tzinfo=timezone.utc)
@@ -199,3 +201,68 @@ def test_private_storage_is_required_after_source_capture_scope(monkeypatch):
 
     with pytest.raises(PermissionError, match="direct-access test deny"):
         direct_access.require_v2_source_capture_access()
+
+
+
+def test_low_level_original_v2_scorers_require_private_storage_before_inputs(monkeypatch):
+    monkeypatch.setattr(
+        inference_rights,
+        "require_personal_research_inference_scope",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", _deny)
+
+    with pytest.raises(PermissionError, match="direct-access test deny"):
+        v2_shadow._artifact_residual_logits(_Forbidden(), _Forbidden())
+    with pytest.raises(PermissionError, match="direct-access test deny"):
+        v2_shadow.predict_shadow_residual(_Forbidden(), _Forbidden(), _Forbidden())
+    with pytest.raises(PermissionError, match="direct-access test deny"):
+        v2_shadow.predict_candidate(_Forbidden(), _Forbidden(), _Forbidden())
+
+
+def test_frozen_preview_load_score_and_quote_helpers_require_private_storage(monkeypatch):
+    monkeypatch.setattr(
+        inference_rights,
+        "require_personal_research_inference_scope",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", _deny)
+
+    class ForbiddenFile:
+        def read_text(self, *_args, **_kwargs):
+            pytest.fail("frozen candidate file was read before private-storage gate")
+
+    monkeypatch.setattr(v2_preview, "FROZEN_FILE", ForbiddenFile())
+
+    with pytest.raises(PermissionError, match="direct-access test deny"):
+        v2_preview.load_verified_original()
+    with pytest.raises(PermissionError, match="direct-access test deny"):
+        v2_preview.shadow_preview(_Forbidden(), _Forbidden(), as_of_utc=NOW)
+    with pytest.raises(PermissionError, match="direct-access test deny"):
+        v2_preview.fetch_saved_upcoming_serie_a_quotes(_ForbiddenClient(), now=NOW)
+
+
+def test_frozen_preview_cli_fails_closed_before_database_or_feature_file(monkeypatch, tmp_path, capsys):
+    import sys
+
+    missing_features = tmp_path / "must-not-be-read.json"
+    monkeypatch.setattr(sys, "argv", [
+        "serie_a_v2_frozen_shadow_preview.py",
+        "--features-json", str(missing_features),
+        "--saved-supabase-quotes",
+    ])
+    monkeypatch.setattr(
+        v2_preview,
+        "load_verified_original",
+        lambda: pytest.fail("candidate must not be loaded before direct-access gate"),
+    )
+    monkeypatch.setattr(
+        "market_anchor_v2_direct_access.require_v2_inference_access",
+        lambda: (_ for _ in ()).throw(PermissionError("preview CLI access blocked")),
+    )
+
+    v2_preview.main()
+    output = capsys.readouterr().out
+    assert "RESEARCH_SCOPE_BLOCKED" in output
+    assert "preview CLI access blocked" in output
+    assert not missing_features.exists()
