@@ -142,12 +142,8 @@ def _read_bounded_historical_csv_response(
                 pass
 
 
-def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -> tuple[pd.DataFrame, list[dict]]:
-    """Fetch only under the private, source-archive-only rights scope."""
-    from market_anchor_v2_source_capture_rights import require_personal_research_source_capture_scope
-    require_personal_research_source_capture_scope()
-    from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
-    require_private_repository_for_source_artifacts()
+def _fetch_public_history_unchecked(*, get=requests.get, capture_dir: Path | None = None) -> tuple[pd.DataFrame, list[dict]]:
+    """Internal bounded source loader; public wrappers enforce the required rights scope."""
     all_frames = []
     audit = []
     total_source_bytes = 0
@@ -206,6 +202,26 @@ def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -
             "completed_source_rows": len(frame),
         })
     return pd.concat(all_frames, ignore_index=True), audit
+
+
+def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -> tuple[pd.DataFrame, list[dict]]:
+    """Fetch source data for the original V2 inference path only after inference clearance."""
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+    require_personal_research_inference_scope()
+    from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
+    require_private_repository_for_source_artifacts()
+    return _fetch_public_history_unchecked(get=get, capture_dir=capture_dir)
+
+
+def fetch_public_history_for_source_capture(
+    *, get=requests.get, capture_dir: Path | None = None
+) -> tuple[pd.DataFrame, list[dict]]:
+    """Fetch historical bytes for private source-only archival; never authorizes inference."""
+    from market_anchor_v2_source_capture_rights import require_personal_research_source_capture_scope
+    require_personal_research_source_capture_scope()
+    from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
+    require_private_repository_for_source_artifacts()
+    return _fetch_public_history_unchecked(get=get, capture_dir=capture_dir)
 
 
 # Freeze rule is stronger than merely omitting this season from the remote
