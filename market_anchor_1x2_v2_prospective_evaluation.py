@@ -298,7 +298,7 @@ def verify_source_artifacts_for_candidates(
     return verified_shas
 
 
-def run_live_evaluation(client: Any, token: str, *, now: datetime | None = None, get=requests.get):
+def run_live_evaluation(client: Any, token: str, *, now: datetime | str | None = None, get=requests.get):
     # Defense in depth: imported callers must not bypass the CLI rights gate.
     require_personal_research_inference_scope()
     actual_now = datetime.now(timezone.utc)
@@ -307,10 +307,14 @@ def run_live_evaluation(client: Any, token: str, *, now: datetime | None = None,
     actual_now = actual_now.astimezone(timezone.utc)
     if now is None:
         now = actual_now
+    elif isinstance(now, datetime):
+        if now.tzinfo is None or now.utcoffset() is None:
+            raise ValueError("evaluation observation clock must have a real UTC offset")
+        now = now.astimezone(timezone.utc)
     else:
         now = evaluator._utc(now, "evaluation observation clock")
-        if now > actual_now:
-            raise ValueError("evaluation observation clock cannot be later than the actual current UTC clock")
+    if now > actual_now:
+        raise ValueError("evaluation observation clock cannot be later than the actual current UTC clock")
     now = now.astimezone(timezone.utc)
     observed_at_utc = now.isoformat().replace("+00:00", "Z")
     base = {
