@@ -1,3 +1,43 @@
+# Continuity update — 2026-11-11 09:10 UTC — close remaining direct frozen-inference/private-artifact bypasses
+
+## Fresh main, PR stack and exact candidate
+
+- Fresh `refs/heads/main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; repository visibility is **public**. No main update or merge was performed.
+- Original `MARKET_ANCHOR_1X2_V2` candidate remains SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, candidate blob `ac1303f6b096664983fbf52443bd0a381b23ba21`; original 19-feature order, 20×2 weights, scaler/imputer, 3,799 training rows, `active_lambda=0`, `shadow_lambda=1`, failed stability gate and no-promotion rule are unchanged.
+- The current code work is still isolated in Draft PR #787, stacked on exact #786 HEAD `6e61c92fd211862ef1ad067faa6789fe535779e5`. New #787 HEAD: `b4cf76bb8e477a9681b657aba5a2949a57e76bc7`, parent `628bd531447fbe742b667a52bf43e09f37de1481`. No merge.
+
+## New direct-entrypoint audit and repair
+
+A second pass over the actual callable V2 surfaces found a gap in the initial #787 pass: `market_anchor_1x2_v2_shadow` low-level `_artifact_residual_logits`, `predict_shadow_residual`, and `predict_candidate`, plus `serie_a_v2_frozen_shadow_preview` candidate loading, direct preview, saved-quote reader and CLI, checked provider inference rights but did not consistently require the separate private-artifact gate.
+
+Commit `b4cf76bb8e477a9681b657aba5a2949a57e76bc7` routes these entrypoints through `require_v2_inference_access()` before caller inputs, candidate bytes, Supabase reads or feature-file access. Negative regressions were added for the low-level scoring APIs, candidate loader, direct preview, quote reader and CLI.
+
+Exact-head CI:
+- [Serie A Frozen V2 Shadow Tests #42992707133](https://github.com/MaksimBlud/football-ai/actions/runs/42992707133): **428 passed on Python 3.11 and 428 passed on Python 3.12**.
+- [Market Anchor 1X2 V2 Shadow Validation #42992707166](https://github.com/MaksimBlud/football-ai/actions/runs/42992707166): **15 passed**.
+- Both exact-head PR runs completed SUCCESS. These are offline/synthetic regressions only, not a live inference authorization or model-quality result.
+
+## Rights, private storage and live workflow status
+
+- PR #720 is still open and not merged. Its rights manifest/policy remains fail-closed: source capture and inference are not authorized; the two-session weekly ceiling is a limit, not permission.
+- The repository is public, so the private GitHub Actions artifact gate correctly denies source/inference artifact access. No visibility change was made.
+- PR #781 remains OPEN / Ready for review / mergeable at exact HEAD `c48e0c2f6a486c9320b04c7670d84b74e8d2322a`, based on main `40887ebb215730190d7a6c7a1693373ec4afcdfc`; exact CI remains **8/8 SUCCESS**. It has not been merged. Main's four scheduled V2 workflows therefore remain unheld until the owner manually merges #781; their cron expressions were not changed.
+- The latest successful live V2 workflow runs remain on 2026-11-10: source capture #42827889788 (110 completed feature-source events, 11 CSVs, artifact #13770560196, SHA-256 `f29363e28775032937108d102da1dda1ca2d5c1aa0f921cb4518bf3a82e9aec6`); free diagnostic #42837720155 (0 eligible quotes); original forward #42853738496 (0 quotes / 0 V2 previews); current-form forward #42854487569 (0 quotes / 0 shadow captures, target-outcome gate false). No new V2 schedule run was present in the latest Actions history for 2026-11-11 at this audit time.
+
+## Read-only Supabase inventory
+
+- Strict quote predicate remains `snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= NOW()`.
+- `public.odds_snapshots`: **3,915** strict pre-match snapshots / **327** unique events; **0** future events with saved strict pre-match quotes; latest observation `2026-10-13T14:48:53.042620Z`.
+- Serie A 2026-2027 feature-input metadata query selected only `match_date,home_team,away_team`: **113 rows / 113 unique fixture identities**, latest date 2026-11-08. This is only the feature-input gate.
+- No target score/result/settlement columns were selected; the prospective 30-completed-forecast outcome gate remains closed. No new V2 prospective forecasts or Brier/LogLoss evidence exist.
+
+## Safety state
+
+- Production `.pkl` unchanged; original weights/contract unchanged; Supabase writes/DDL = 0; paid provider requests = 0; no source download or inference in this audit; no bet, threshold tuning, promotion or protected-outcome read.
+- Keep #787 Draft until the parent stack is manually integrated and exact-head CI is rerun. Do not merge or change main automatically.
+
+---
+
 # Continuity update — 2026-11-11 08:01 UTC — direct-entrypoint guard stack exact-head completion
 
 ## Fresh main and frozen original candidate
