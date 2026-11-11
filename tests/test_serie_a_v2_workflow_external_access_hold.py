@@ -229,3 +229,35 @@ def test_candidate_recovery_cannot_download_or_publish_until_source_clearance():
     assert f"if: {UPLOAD_GATE}" in upload
     assert "--restore-candidate-only" in rebuild
     assert "--save-research-candidate" in rebuild
+
+
+def test_live_v2_workflow_inventory_cannot_grow_around_the_hold():
+    """New V2 live workflows must be added to the explicit fail-closed inventory."""
+    workflow_dir = ROOT / ".github" / "workflows"
+    discovered = set()
+    live_script_markers = (
+        "serie_a_v2_current_form_source_capture.py",
+        "serie_a_v2_current_form_forward_capture.py",
+        "serie_a_v2_forward_capture.py",
+        "serie_a_v2_attest_real_source.py",
+        "market_anchor_v2_saved_cohort_replay.py",
+    )
+    for path in sorted(
+        [*workflow_dir.glob("*.yml"), *workflow_dir.glob("*.yaml")]
+    ):
+        text = path.read_text(encoding="utf-8")
+        has_v2_reference = "serie_a_v2_" in text or "market_anchor_v2_" in text
+        has_live_access = (
+            "secrets.SUPABASE_URL" in text
+            or "secrets.SUPABASE_KEY" in text
+            or "actions/upload-artifact@" in text
+            or any(marker in text for marker in live_script_markers)
+        )
+        if has_v2_reference and has_live_access:
+            discovered.add(path.relative_to(ROOT).as_posix())
+
+    assert discovered == set(WORKFLOWS), (
+        "V2 live workflow inventory changed without updating and gating the "
+        f"explicit hold contract; discovered={sorted(discovered)}, "
+        f"expected={sorted(WORKFLOWS)}"
+    )
