@@ -9583,3 +9583,27 @@ All SQL was read-only. No score, result, settlement, or target-outcome columns w
 - The Soccer Data source remains unapproved. The public repository/private-artifact incompatibility is an additional hard blocker: SHA integrity does not provide confidentiality, and the current direct guard intentionally fails closed on a public repository.
 
 No source/quote workflow was enabled, no source or quote was downloaded, no target outcome was read, no paid API call, refit, threshold tuning, bet, promotion, production `.pkl` change, Supabase write/DDL, main update, PR merge, schedule change, or other-agent setting change occurred.
+
+
+## Incremental original V2 source audit — Cornerflick, 2026-11-11 23:00 UTC
+
+### Public schema/coverage observation
+
+A public web-only audit identified Cornerflick as another possible current-season lagged-statistics source:
+
+- Its Serie A archive page advertises 110 records covering 2026-08-22 through 2026-11-08, with per-match records, timeline, lineups, statistics, and season CSV/JSON exports: https://cornerflick.com/football/leagues/serie-a/results
+- Its data page describes match-level JSON, event CSV, team-stat CSV, per-record refresh metadata, and a CC BY 4.0 reuse notice: https://cornerflick.com/data
+- A representative public match record identifies its underlying feed as **API-Football** and displays a last-updated time. This is not a per-field source timestamp and does not by itself prove that a source archive existed before a later bookmaker quote: https://cornerflick.com/football/serie-a/matches/napoli-vs-bologna-serie-a-2026-09-13
+
+### Rights decision — not approved
+
+The CC BY 4.0 notice is not sufficient to clear the underlying match facts. Cornerflick states that its licence covers its own compilation (selection, structure and annotation), while underlying match facts come from providers that set their own terms. API-Football's official terms state that its data are obtained from partners, that it does not grant a general licence for use/publication of its data in user applications, websites or products, and that users must obtain any required third-party authorizations:
+
+- https://cornerflick.com/data
+- https://www.api-football.com/terms
+
+The official API-Sports football page advertises a free 100-requests/day plan, but a free request allowance is not a data-use licence: https://api-sports.io/sports/football. No account/key was created, no API endpoint was called, no data file was downloaded, and no paid request was made.
+
+The site may be a useful discovery/index layer for match identity and possible field coverage, but it is **not an approved automated V2 source** until the underlying provider's rights are clarified in writing. A future authorized capture would still need exact response bytes, SHA-256, retrieval/parent-run timestamps strictly before each quote, field-level completeness, and private archive storage. A displayed post-match `last_updated` value is not a substitute for that source-before-quote proof.
+
+No Cornerflick/API-Football values were ingested into the original V2 feature builder, candidate, quote cohort or evaluator. No original feature, weight, scaler/imputer, candidate SHA, lambda, source gate, target-outcome gate, production artifact, workflow schedule, main ref or Supabase row/schema was changed.
