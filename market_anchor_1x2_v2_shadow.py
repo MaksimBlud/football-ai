@@ -18,12 +18,9 @@ from typing import Iterable, Mapping
 import numpy as np
 import pandas as pd
 
-from historical_football_signal_lab import FEATURE_SETS, RESULT_TO_INT
+from historical_football_signal_lab import FEATURE_SETS
 from market_anchor_1x2_v1 import (
     L2_PENALTY,
-    _market,
-    _prepare,
-    fit_residual_model,
     market_anchored_probabilities,
     validate_probabilities,
 )
@@ -46,6 +43,7 @@ TRAINING_DATA_THROUGH = pd.Timestamp("2026-06-30T23:59:59Z")
 ADMISSION_NOT_BEFORE = pd.Timestamp("2026-09-16T00:00:00Z")
 FIRST_OUTCOME_READ_GATE = 30
 INCUMBENT_MODEL_SHA256 = "1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5"
+FROZEN_CANDIDATE_SHA256 = "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
 FORBIDDEN_OUTCOME_FIELDS = frozenset(
     {"result", "outcome", "home_goals", "away_goals", "score", "final_score"}
 )
@@ -163,49 +161,11 @@ def candidate_recipe() -> dict:
     }
 
 
-def _training_fingerprint(frame: pd.DataFrame, features: list[str]) -> str:
-    cols = [
-        "league", "season", "match_date", "home_team", "away_team", "result",
-        "market_home", "market_draw", "market_away", *features,
-    ]
-    missing = set(cols) - set(frame.columns)
-    if missing:
-        raise ValueError("training frame missing columns: " + ", ".join(sorted(missing)))
-    canonical = frame[cols].copy()
-    canonical["match_date"] = pd.to_datetime(canonical["match_date"]).dt.strftime("%Y-%m-%d")
-    records = canonical.replace({np.nan: None}).to_dict(orient="records")
-    return _sha256_json({"rows": records})
-
-
 def fit_candidate_artifact(frame: pd.DataFrame) -> dict:
-    """Refit the frozen residual recipe on pre-2026/27 Serie A history only."""
-    prepared = _prepare(frame)
-    prepared = prepared[(prepared["league"] == PRIMARY_LEAGUE) & prepared["season"].isin(REFIT_SEASONS)].copy()
-    if prepared.empty:
-        raise ValueError("no eligible frozen Serie A training rows")
-    if pd.to_datetime(prepared["match_date"]).max() > TRAINING_DATA_THROUGH.tz_localize(None):
-        raise ValueError("training data exceeds frozen cutoff")
-
-    features = list(FEATURE_SETS[FEATURE_VARIANT])
-    market = _market(prepared)
-    y = prepared["result"].map(RESULT_TO_INT).to_numpy()
-    if np.isnan(y.astype(float)).any():
-        raise ValueError("training outcomes must be known historical labels")
-    model = fit_residual_model(prepared[features], y, market, l2_penalty=L2_PENALTY)
-
-    artifact = {
-        **candidate_recipe(),
-        "training_rows": int(len(prepared)),
-        "training_fingerprint_sha256": _training_fingerprint(prepared, features),
-        "imputer_medians": _finite_list(model.imputer.statistics_, len(features), "imputer_medians"),
-        "scaler_mean": _finite_list(model.scaler.mean_, len(features), "scaler_mean"),
-        "scaler_scale": _finite_list(model.scaler.scale_, len(features), "scaler_scale"),
-        "weights": _finite_matrix(model.weights, len(features) + 1, 2, "weights"),
-    }
-    artifact["artifact_sha256"] = _sha256_json(artifact)
-    validate_candidate_artifact(artifact)
-    return artifact
-
+    """Refitting the original frozen V2 candidate is disabled by the recovery contract."""
+    raise PermissionError(
+        "original MARKET_ANCHOR_1X2_V2 candidate is frozen; refitting is disabled"
+    )
 
 def validate_candidate_artifact(artifact: Mapping) -> None:
     recipe = candidate_recipe()
@@ -229,9 +189,16 @@ def validate_candidate_artifact(artifact: Mapping) -> None:
     supplied = body.pop("artifact_sha256")
     if _sha256_json(body) != supplied:
         raise ValueError("candidate artifact sha256 mismatch")
+    if supplied != FROZEN_CANDIDATE_SHA256:
+        raise ValueError("candidate artifact does not match the frozen original V2 SHA-256")
 
 
 def _artifact_residual_logits(features: pd.DataFrame, artifact: Mapping) -> np.ndarray:
+    # This importable low-level helper reads the frozen weights and feature vector.
+    # It must enforce the provider boundary even when no higher-level scorer is used.
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+
+    require_personal_research_inference_scope()
     validate_candidate_artifact(artifact)
     names = list(artifact["features"])
     if list(features.columns) != names:
@@ -251,6 +218,10 @@ def _artifact_residual_logits(features: pd.DataFrame, artifact: Mapping) -> np.n
 
 
 def predict_shadow_residual(market_probabilities: np.ndarray, features: pd.DataFrame, artifact: Mapping) -> np.ndarray:
+    # Direct imports must not bypass the frozen-inference rights boundary.
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+
+    require_personal_research_inference_scope()
     residual = _artifact_residual_logits(features, artifact)
     return market_anchored_probabilities(
         validate_probabilities(market_probabilities), residual, SHADOW_RESIDUAL_LAMBDA
@@ -259,15 +230,19 @@ def predict_shadow_residual(market_probabilities: np.ndarray, features: pd.DataF
 
 def predict_candidate(market_probabilities: np.ndarray, features: pd.DataFrame, artifact: Mapping) -> np.ndarray:
     """Return active V2 probabilities; currently exact market because the gate failed."""
+    # Even with active_lambda=0 this API inspects frozen residual weights and inputs.
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+
+    require_personal_research_inference_scope()
     residual = _artifact_residual_logits(features, artifact)
     return market_anchored_probabilities(validate_probabilities(market_probabilities), residual, ACTIVE_LAMBDA)
 
 
 def write_candidate_artifact(frame: pd.DataFrame, output: Path) -> dict:
-    artifact = fit_candidate_artifact(frame)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(artifact, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    return artifact
+    """Writing a newly fitted candidate is disabled; the original artifact is immutable."""
+    raise PermissionError(
+        "original MARKET_ANCHOR_1X2_V2 candidate is frozen; writing a refit artifact is disabled"
+    )
 
 
 def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
@@ -331,6 +306,8 @@ def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
             expected = 64 if field.endswith("sha256") else 40
             if len(value) != expected or any(c not in "0123456789abcdef" for c in value):
                 raise ValueError(f"invalid {field}")
+            if field == "candidate_artifact_sha256" and value != FROZEN_CANDIDATE_SHA256:
+                raise ValueError("candidate artifact SHA differs from frozen original V2")
         candidate_artifacts.add(str(row["candidate_artifact_sha256"]))
         validated.append(row)
     if len(candidate_artifacts) > 1:
