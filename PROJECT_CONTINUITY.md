@@ -8500,6 +8500,6 @@ Remediation committed to the existing Draft #779 branch (no new PR and no main c
 - commit `efd60eec09113d7d66ab8b4db76792f5668ba2f5` copied the fail-closed saved-cohort module from current #778;
 - commit `19d1332bd69d345f1e7507e35dead8a5012bfe09` replaced the stale replay tests with the current #778 embargo tests;
 - current source now has an empty `TARGETS` tuple and direct `validate_targets()` is denied before validation; tests assert the empty tuple and early denial.
-- exact-head CI runs `42941355893` and `42941361473` were queued/in progress at the audit time; do not claim success until both are completed and tied to this exact SHA.
+- exact-head CI runs `42941355893` and `42941361473` both completed SUCCESS on this exact SHA: Python 3.11 **439 passed**, Python 3.12 **439 passed**, and the production `.pkl` hash guard passed in both jobs.
 
 PR #779 remains Draft and ancestry-stale: base `b2a034614d999683a8c334569dc07eb07b7ac589`; compare current #778 HEAD to new #779 HEAD remains diverged (52 ahead / 3 behind; merge base `60d1025e9556cdce05f93b9a71ce46d4d06096cb`). Keep HUMAN-MERGE. After parent integration, rebase the whole chain and rerun exact-head CI. The retired post-outcome replay must stay disabled; do not use its old report or any target rows for inference, scoring, selection, or promotion.
