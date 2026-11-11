@@ -103,6 +103,17 @@ def _gate_attestation(identities: set[tuple[str, str, str]]) -> dict:
     }
 
 
+def _synthetic_source_preflight(identities, attestation):
+    """Synthetic source proof for offline tests only; never provider authorization."""
+    return {
+        "verified": True,
+        "source_archive_sha256": {"synthetic-source": "a" * 64},
+        "verified_source_archive_count": 1,
+        "gate_fixture_identity_count": attestation["completed_fixture_identity_count"],
+        "gate_fixture_identity_sha256": attestation["completed_fixture_identity_sha256"],
+    }
+
+
 def test_live_runner_reads_identity_gate_and_keeps_outcomes_lazy_when_incumbent_unpinned(monkeypatch):
     rows = _forecast_rows()
     # Mirror the current-form forward artifact: it contains no incumbent
@@ -212,7 +223,7 @@ def test_live_market_only_runner_uses_identity_gate_and_scores_only_after_30(mon
         return {key: "H" for key in keys}
 
     report = runner.evaluate_live_market_only_prospective_cohort(
-        client, rows, load_outcomes
+        client, rows, load_outcomes, preflight=_synthetic_source_preflight
     )
 
     assert gate_calls == [client]
@@ -287,7 +298,9 @@ def test_live_supabase_market_only_runner_does_not_read_results_below_30(monkeyp
     )
     client = _ExactOutcomeClient([])
 
-    report = runner.evaluate_live_market_only_from_supabase(client, rows)
+    report = runner.evaluate_live_market_only_from_supabase(
+        client, rows, preflight=_synthetic_source_preflight
+    )
 
     assert report["status"] == "OUTCOME_READ_GATE_CLOSED"
     assert report["eligible_completed_forecasts"] == 29
@@ -340,7 +353,9 @@ def test_live_supabase_market_only_runner_reads_only_exact_identity_and_result_a
             })
     client = _ExactOutcomeClient(outcome_rows)
 
-    report = runner.evaluate_live_market_only_from_supabase(client, rows)
+    report = runner.evaluate_live_market_only_from_supabase(
+        client, rows, preflight=_synthetic_source_preflight
+    )
 
     assert report["status"] == "EVALUATED_MARKET_ONLY_DIAGNOSTIC"
     assert report["scored_forecasts"] == 30
@@ -380,7 +395,9 @@ def test_live_supabase_market_only_runner_rejects_outcome_persisted_at_or_before
     client = _ExactOutcomeClient(outcome_rows)
 
     with pytest.raises(ValueError, match="persisted_at_utc must be strictly after kickoff_utc"):
-        runner.evaluate_live_market_only_from_supabase(client, rows)
+        runner.evaluate_live_market_only_from_supabase(
+        client, rows, preflight=_synthetic_source_preflight
+    )
 
     assert client.result_query_count == 1
     assert client.select_calls == ["match_date,home_team,away_team,result,persisted_at_utc"]
@@ -419,7 +436,8 @@ def test_live_supabase_market_only_runner_rejects_outcome_persisted_after_evalua
 
     with pytest.raises(ValueError, match="cannot be later than evaluation observation time"):
         runner.evaluate_live_market_only_from_supabase(
-            client, rows, observed_at_utc="2026-12-01T19:00:00Z"
+            client, rows, preflight=_synthetic_source_preflight,
+            observed_at_utc="2026-12-01T19:00:00Z"
         )
 
     assert client.result_query_count == 1
@@ -480,7 +498,9 @@ def test_live_supabase_market_only_runner_rejects_offsetless_outcome_persistence
     client = _ExactOutcomeClient(outcome_rows)
 
     with pytest.raises(ValueError, match="persisted_at_utc must have a real UTC offset"):
-        runner.evaluate_live_market_only_from_supabase(client, rows)
+        runner.evaluate_live_market_only_from_supabase(
+        client, rows, preflight=_synthetic_source_preflight
+    )
 
     assert client.result_query_count == 1
     assert client.select_calls == ["match_date,home_team,away_team,result,persisted_at_utc"]
@@ -532,7 +552,9 @@ def test_live_supabase_market_only_runner_rejects_missing_persistence_timestamp_
     client = _MissingPersistenceTimestampClient(outcome_rows)
 
     with pytest.raises(ValueError, match="outcome query returned fields outside the exact identity\\+result allowlist"):
-        runner.evaluate_live_market_only_from_supabase(client, rows)
+        runner.evaluate_live_market_only_from_supabase(
+        client, rows, preflight=_synthetic_source_preflight
+    )
 
     assert client.result_query_count == 1
     assert client.select_calls == ["match_date,home_team,away_team,result,persisted_at_utc"]
@@ -579,7 +601,9 @@ def test_live_supabase_market_only_runner_rejects_conflicting_duplicate_alias_re
     client = _ExactOutcomeClient(outcome_rows)
 
     with pytest.raises(ValueError, match="duplicate raw aliases disagree"):
-        runner.evaluate_live_market_only_from_supabase(client, rows)
+        runner.evaluate_live_market_only_from_supabase(
+        client, rows, preflight=_synthetic_source_preflight
+    )
 
     assert client.result_query_count == 1
     assert client.select_calls == ["match_date,home_team,away_team,result,persisted_at_utc"]
