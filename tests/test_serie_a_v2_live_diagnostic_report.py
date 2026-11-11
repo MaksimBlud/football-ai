@@ -589,8 +589,9 @@ def test_preflight_only_main_checks_rights_before_reading_saved_quotes(monkeypat
         "commence_time_utc": (current + timedelta(hours=2)).isoformat(),
     }
     order = []
+    import market_anchor_v2_direct_access as direct_access
     monkeypatch.setattr(
-        report_module, "require_personal_research_inference_scope",
+        direct_access, "require_v2_inference_access",
         lambda: order.append("rights"),
     )
     monkeypatch.setattr(
@@ -623,8 +624,9 @@ def test_preflight_only_denied_rights_stops_before_database_quote_read(monkeypat
         "--raw-source-dir", str(tmp_path / "unused"),
     ])
     monkeypatch.setitem(sys.modules, "database", SimpleNamespace(supabase=object()))
+    import market_anchor_v2_direct_access as direct_access
     monkeypatch.setattr(
-        report_module, "require_personal_research_inference_scope",
+        direct_access, "require_v2_inference_access",
         lambda: (_ for _ in ()).throw(PermissionError("scope blocked")),
     )
     monkeypatch.setattr(
@@ -739,3 +741,31 @@ def test_main_skips_public_history_download_when_no_fresh_future_quotes(tmp_path
     assert report["target_outcomes_read"] is False
     assert report["supabase_writes"] == 0
     assert not raw_dir.exists()
+
+
+@pytest.mark.parametrize(
+    ("loader", "expected_scope"),
+    [
+        (report_module.fetch_public_history_for_inference, "INFERENCE"),
+        (report_module.fetch_public_history_for_source_capture, "SOURCE_CAPTURE"),
+    ],
+)
+def test_public_history_loaders_require_their_own_scope_before_network_or_filesystem(
+    loader, expected_scope, monkeypatch, tmp_path
+):
+    observed = []
+    output_dir = tmp_path / expected_scope.lower()
+
+    def deny(scope):
+        observed.append(scope)
+        raise PermissionError("historical source scope unresolved")
+
+    def forbidden_get(*_args, **_kwargs):
+        pytest.fail("historical CSV request ran before the rights gate")
+
+    monkeypatch.setattr(report_module, "_require_public_history_scope", deny)
+    with pytest.raises(PermissionError, match="historical source scope unresolved"):
+        loader(get=forbidden_get, capture_dir=output_dir)
+
+    assert observed == [expected_scope]
+    assert not output_dir.exists()
