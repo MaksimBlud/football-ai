@@ -362,7 +362,8 @@ def main() -> None:
     if os.environ.get("GITHUB_REPOSITORY") != REPOSITORY:
         raise RuntimeError("wrong GitHub repository scope")
     try:
-        require_personal_research_inference_scope()
+        from market_anchor_v2_direct_access import require_v2_inference_access
+        require_v2_inference_access()
     except PermissionError as exc:
         report = write_research_scope_blocked_report(
             args.output, "SERIE_A_ORIGINAL_V2_FORWARD_CAPTURE", str(exc)
