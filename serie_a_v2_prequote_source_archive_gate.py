@@ -38,7 +38,7 @@ def _require_source_archive_read_scope() -> dict:
     return {"rights": rights, "artifact_privacy": privacy}
 
 
-def _verify_archive_unchecked(archive_path: Path, quotes: list[Mapping[str, Any]], *,
+def _verify_archive_with_rights(archive_path: Path, quotes: list[Mapping[str, Any]], *,
                    as_of_utc: datetime,
                    github_artifact_sha256: str | None = None,
                    github_artifact_created_at_utc: str | None = None) -> dict:
@@ -48,6 +48,7 @@ def _verify_archive_unchecked(archive_path: Path, quotes: list[Mapping[str, Any]
     authenticated GitHub API digest+timestamp is required to trust it as evidence.
     No quote can be called source-before-quote verified without BOTH values.
     """
+    _require_source_archive_read_scope()
     if (
         not isinstance(as_of_utc, datetime)
         or as_of_utc.tzinfo is None
