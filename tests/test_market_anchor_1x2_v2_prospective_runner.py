@@ -9,6 +9,24 @@ import market_anchor_1x2_v2_prospective_evaluator as evaluator
 import market_anchor_1x2_v2_prospective_runner as runner
 
 
+@pytest.fixture(autouse=True)
+def allow_synthetic_v2_live_evaluation_access(monkeypatch):
+    """Synthetic unit fixtures do not grant provider rights or enable live access."""
+    monkeypatch.setattr(
+        runner,
+        "require_personal_research_inference_scope",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(
+        runner,
+        "require_private_repository_for_source_artifacts",
+        lambda *_args, **_kwargs: {
+            "private": True,
+            "storage_policy": "SYNTHETIC_TEST_ONLY",
+        },
+    )
+
+
 def _forecast_rows(count: int = 30) -> list[dict]:
     rows = []
     first_day = date(2026, 10, 19)
@@ -107,7 +125,7 @@ def test_live_runner_reads_identity_gate_and_keeps_outcomes_lazy_when_incumbent_
     monkeypatch.setattr(runner, "read_completed_fixture_gate", read_gate)
     outcome_calls = []
 
-    def load_outcomes(keys):
+    def load_outcomes(keys, **_kwargs):
         outcome_calls.append(keys)
         return {key: "H" for key in keys}
 
@@ -145,6 +163,30 @@ def test_live_runner_stops_if_identity_gate_fails_before_evaluator_or_outcomes(m
 
     assert outcome_calls == []
 
+def test_live_runner_denies_unresolved_inference_before_identity_gate_or_outcomes(monkeypatch):
+    def deny_inference():
+        raise PermissionError("frozen-inference scope remains unresolved")
+
+    def forbidden_gate(_client):
+        pytest.fail("identity-only metadata gate must not run without inference authorization")
+
+    monkeypatch.setattr(runner, "require_personal_research_inference_scope", deny_inference)
+    monkeypatch.setattr(runner, "read_completed_fixture_gate", forbidden_gate)
+    outcome_calls = []
+
+    with pytest.raises(PermissionError, match="frozen-inference scope remains unresolved"):
+        runner.evaluate_live_market_only_prospective_cohort(
+            object(),
+            _forecast_rows(30),
+            lambda *args, **kwargs: outcome_calls.append((args, kwargs)) or {},
+            preflight=lambda *_args, **_kwargs: pytest.fail(
+                "source preflight must not run without inference authorization"
+            ),
+        )
+
+    assert outcome_calls == []
+
+
 def test_live_market_only_runner_uses_identity_gate_and_scores_only_after_30(monkeypatch):
     rows = _forecast_rows()
     for row in rows:
@@ -165,7 +207,7 @@ def test_live_market_only_runner_uses_identity_gate_and_scores_only_after_30(mon
     monkeypatch.setattr(runner, "read_completed_fixture_gate", read_gate)
     outcome_calls = []
 
-    def load_outcomes(keys):
+    def load_outcomes(keys, **_kwargs):
         outcome_calls.append(keys)
         return {key: "H" for key in keys}
 
