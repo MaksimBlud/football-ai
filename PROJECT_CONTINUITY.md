@@ -9170,3 +9170,18 @@ Original candidate SHA, 19-feature contract, weights, scaler/imputer, `active_la
 ### Binding status
 
 Source provenance is now runtime-verified for the 13:00 archive, but quote availability remains zero and no forecast was created. The feature-input metadata count (110 in the archived source; 113 identity-only rows in the latest earlier DB audit) is not the separate prospective evaluation sample. Eligible completed V2 forecasts remain 0/30; Brier/LogLoss remain unavailable; no market-superiority claim is supported. Provider AI-use permission and private artifact storage remain unresolved. Keep live access held, preserve both frozen gates and HUMAN-MERGE, and do not read protected target outcomes.
+
+
+## Additional free current-form source candidate — Cornerflick metadata and rights screen (2026-11-11)
+
+A new static-source candidate was identified for future lagged current-season inputs, without downloading any match file or consuming match results:
+
+- Cornerflick advertises per-season results as CSV/JSON and per-match JSON, timeline CSV, lineups CSV and team-statistics CSV. Its data page describes possession, shots, corners and other team measures; missing fields are explicitly omitted rather than silently set to zero. Every file carries a last-refreshed time.
+- Cornerflick publishes its compilation under CC BY 4.0, including commercial reuse with attribution. **That licence is expressly limited to Cornerflick's compilation** (selection, structure and annotation); its own page says underlying match facts come from data providers whose terms still apply, and recommends checking with the provider and Cornerflick before large-scale redistribution.
+- This makes Cornerflick a plausible *current-season lagged-statistics candidate*, not an approved source and not a drop-in historical replacement. Exact coverage for all 19 frozen V2 inputs, red-card definitions, full historical depth, automated extraction, long-term retention and model-inference rights remain unverified. No quote feed was established.
+- Binding next step: obtain written permission from Cornerflick and identify/clear the upstream provider's rights for automated research capture, SHA-pinned private retention and frozen-model inference. Until then, do not download, scrape, query, archive, calculate features from, or infer on this source.
+- No match-level result, score, settlement or target outcome was used in the V2 audit; no source bytes were downloaded.
+
+References reviewed:
+- Cornerflick data format and licence: https://cornerflick.com/data
+- API-Football terms were reviewed only as a separate rights reference, not as proof that API-Football is Cornerflick's upstream provider: https://apifootball.com/terms_of_use/
