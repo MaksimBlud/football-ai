@@ -1,3 +1,58 @@
+# Continuity update — 2026-11-11 06:17 UTC — clean rights-stack rebase and exact-head CI audit
+
+## Fresh main and immutable original candidate
+
+- GitHub refs/heads/main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; signed commit date 2026-10-18 08:20:05 UTC. No main update or merge was performed.
+- Original candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; candidate blob `ac1303f6b096664983fbf52443bd0a381b23ba21); protocol blob `65729e9639720e67624c1481190aa22ae606f151); historical feature builder blob `401b3a0893371bfa4a488ec92a4a54af2678c8f7`.
+- Original 19-feature order, 20×2 weights, medians, scaler, 3,799 training rows, `active_lambda=0`, `shadow_lambda=1`, failed stability gate and no-promotion policy remain unchanged.
+
+## Fresh strict pre-match Supabase inventory
+
+Read-only queries used only timestamps, event/team identity, league/season metadata and the exact candidate SHA. No odds prices, scores, results, settlements or target outcomes were selected.
+
+- `public.odds_snapshots`: 3,915 strict pre-kickoff snapshots / 327 events; 0 future events with saved strict pre-match quotes; latest strict snapshot `2026-10-13T14:48:53.04262Z`.
+- `public.product_prediction_snapshots`, exact original candidate SHA: 0 strict pre-match predictions / 0 events.
+- `public.epl_ai_market_pair_ledger`, exact original candidate SHA: 0 strict pre-match rows / 0 events.
+- Serie A current-form identity metadata in `public.league_finished_results`: 113 unique `(match_date, home_team, away_team)` identities for season `2026-2027`, latest date 2026-11-08. The query did not select score/result fields. This is only the feature-input metadata gate, not the separate target-outcome evaluation gate.
+- The 30-primary-completed-event target-outcome gate remains CLOSED; no 2026/27 target outcomes were read.
+
+## Current clean-ancestry rights stack
+
+The new linear replacement chain is:
+
+`#720 → #727 → #780 → #783 → #784 → #785 → #786`
+
+- #720: exact HEAD `1b9464834dd5256b7d69499c1443378518dde256`; 9/9 associated workflow runs SUCCESS.
+- #727: exact HEAD `18a3cfda4e83e44aca1252665d01804267d16467`; Frozen V2 suite 388 passed in Python 3.11 and 3.12; public-source-budget suite 24 passed; production `.pkl` guards passed.
+- #780: exact HEAD `48f55b6ef4dc40879d5232ac78ce55df51d2dce4`; run #42812927009 SUCCESS, 388 passed in both Python versions, production `.pkl` guards passed. This conservatively blocks automated Football-Data access pending provider clarification; it is not a rights grant.
+- #783 replaces #742 on #780: HEAD `a9c77854bc03036f1a15d0fed2dadf29e02c23e9`, 3 ahead / 0 behind; run #42966318614 SUCCESS, 388 passed in Python 3.11 and 3.12.
+- #784 replaces #774 on #783: HEAD `e6bf94944fc1fe075d588f325c5e88ce8b5c43ab`, 3 ahead / 0 behind; run #42966555209 SUCCESS, 390 passed in both Python versions.
+- #785 replaces #777 on #784: HEAD `dba4556c618239f6a67ea810195e5662b4772466`, 8 ahead / 0 behind; run #42967054287 SUCCESS, 391 passed in both Python versions; `pip check` and both production `.pkl` hash guards passed.
+- #786 replaces #778 on #785: HEAD `6e61c92fd211862ef1ad067faa6789fe535779e5`, 5 ahead / 0 behind; run #42967497143 SUCCESS (15 direct V2 contract tests) and run #42967497201 SUCCESS (414 passed in Python 3.11 and 414 in Python 3.12); compile, dependency and production `.pkl` guards passed.
+
+These are offline/synthetic regression results only. They do not authorize source capture or inference and are not model-quality evidence.
+
+## Separate direct-forward/report branch is not yet on the clean chain
+
+- #782 is the clean-ancestry replacement for #779 relative to the older #778 HEAD: exact HEAD `984f00cf1c4c236dc4124ec1903e3ddd4c51474e`, 17 ahead / 0 behind #778; run #42964659477 SUCCESS, 440 passed in Python 3.11 and 440 in Python 3.12, with production `.pkl` guards.
+- However, compare #786 HEAD against #782 HEAD returns `diverged`, 43 ahead / 29 behind, merge base #727 HEAD `18a3cfda4e83e44aca1252665d01804267d16467`. #782 is therefore not part of the new #783→#786 linear chain and must not be merged directly or treated as current.
+- After the parent chain is manually integrated, port/rebase #782's unique direct forward/report and private-artifact checks onto the latest #786 descendant and rerun exact-head CI. Do not integrate both #779 and #782. Keep #782 Draft.
+
+## Main live-workflow hold remains a manual blocker
+
+- PR #781 remains OPEN / Ready for review / mergeable / HUMAN-MERGE at exact HEAD `c48e0c2f6a486c9320b04c7670d84b74e8d2322a`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- All 8 exact-head PR workflow runs are SUCCESS, including the Frozen V2 suite and recovery workflow. The recovery job's candidate rebuild/proof/upload remain skipped; offline tests and production `.pkl` guard pass.
+- Static comparison confirms #781 gates five live source/quote steps and all four artifact uploads across the four scheduled V2 workflows plus the recovery workflow. It preserves the existing cron strings: 05:50, 06:13, 08:08 and 08:18 UTC. The corresponding main workflow files still lack the hold flag because #781 is not merged.
+- Manual integration order remains #781 first, then rebase #720 → #727 → #780 → #783 → #784 → #785 → #786 on fresh main. #781 does not change schedules; no workflow was dispatched by this audit.
+
+## Separate Supabase security advisory
+
+The current table metadata still reports RLS disabled on five public tables: `teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, and `epl_ai_market_pair_ledger`. No DDL or writes were performed. Do not enable RLS without designing and validating access policies; this is a separate application-security issue, not V2 evidence.
+
+No source CSV was downloaded, no bookmaker quote was read, no paid API was called, no target outcome was opened, no Supabase write/DDL occurred, no production `.pkl` or schedule changed, and no other-agent setting changed. HUMAN-MERGE only.
+
+---
+
 # Continuity update — 2026-11-11 00:56 UTC — exact original V2 artifact identity pin
 
 ## Fresh main and frozen candidate
