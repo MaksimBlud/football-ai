@@ -7,6 +7,7 @@ on:
       - research/v2-provider-ai-inference-rights-block-*
       - research/v2-integrated-private-quote-preflight-*
       - research/v2-source-policy-recheck-stacked-on-727-20261110-run11
+      - research/v2-prematch-quote-query-cutoff-rebased-on-780-20261111-run11
     paths:
       - "PROJECT_CONTINUITY.md"
       - "tests/test_serie_a_v2_dependency_lock_contract.py"
@@ -52,6 +53,14 @@ on:
       - "tests/test_market_anchor_v2_source_rights.py"
       - "tests/test_market_anchor_v2_source_capture_rights.py"
       - "tests/test_market_anchor_v2_artifact_privacy.py"
+      - ".github/workflows/serie-a-frozen-v2-shadow-tests.yml"
+
+  push:
+    branches:
+      - research/v2-direct-quote-reader-rights-gate-rebased-on-783-20261111-run11
+    paths:
+      - "serie_a_v2_frozen_shadow_preview.py"
+      - "tests/test_serie_a_v2_frozen_shadow_preview.py"
       - ".github/workflows/serie-a-frozen-v2-shadow-tests.yml"
 
 permissions:
