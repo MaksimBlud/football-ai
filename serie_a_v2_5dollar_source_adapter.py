@@ -86,6 +86,11 @@ def _require_private_path(path: Path, label: str) -> Path:
     resolved = candidate.resolve()
     if _is_inside(resolved):
         raise ValueError(f"{label} must be outside the public repository")
+    return resolved
+
+
+def _require_private_directory(path: Path, label: str) -> Path:
+    resolved = _require_private_path(path, label)
     if os.name != "posix":
         raise PermissionError(f"{label} filesystem permissions cannot be verified on this platform")
     metadata = resolved.stat(follow_symlinks=False)
@@ -93,6 +98,19 @@ def _require_private_path(path: Path, label: str) -> Path:
         raise ValueError(f"{label} must be an existing directory")
     if stat.S_IMODE(metadata.st_mode) & 0o077:
         raise PermissionError(f"{label} directory permissions must exclude group/other access")
+    return resolved
+
+
+def _require_private_file(path: Path, label: str) -> Path:
+    resolved = _require_private_path(path, label)
+    if os.name != "posix":
+        raise PermissionError(f"{label} filesystem permissions cannot be verified on this platform")
+    parent = _require_private_directory(resolved.parent, f"{label} parent")
+    metadata = resolved.stat(follow_symlinks=False)
+    if not stat.S_ISREG(metadata.st_mode):
+        raise ValueError(f"{label} must be a regular file")
+    if stat.S_IMODE(metadata.st_mode) & 0o077:
+        raise PermissionError(f"{label} file permissions must exclude group/other access")
     return resolved
 
 
@@ -173,28 +191,11 @@ def _safe_page_path(archive_dir: Path, value: object) -> Path:
     relative = Path(value)
     if relative.is_absolute() or ".." in relative.parts:
         raise ValueError("page file must be a safe relative path inside the private archive")
-    candidate = archive_dir / relative
-    current = archive_dir
-    for part in relative.parts:
-        current = current / part
-        if current.is_symlink():
-            raise PermissionError("captured page path must not contain symlinks")
-        if current != candidate:
-            directory_mode = stat.S_IMODE(current.stat(follow_symlinks=False).st_mode)
-            if directory_mode & 0o077:
-                raise PermissionError("private archive subdirectory permissions must exclude group/other access")
-    resolved = candidate.resolve()
+    resolved = _require_private_file(archive_dir / relative, "captured page file")
     try:
         resolved.relative_to(archive_dir.resolve())
     except ValueError as exc:
         raise ValueError("page file escaped the private archive") from exc
-    if not resolved.is_file():
-        raise ValueError("captured page file does not exist")
-    metadata = resolved.stat(follow_symlinks=False)
-    if not stat.S_ISREG(metadata.st_mode):
-        raise ValueError("captured page must be a regular file")
-    if stat.S_IMODE(metadata.st_mode) & 0o077:
-        raise PermissionError("captured page file permissions must exclude group/other access")
     return resolved
 
 
@@ -374,7 +375,7 @@ def build_manifest_from_private_archive(
 ) -> dict:
     """Build the unchanged 19-feature manifest from a previously captured private bundle."""
     _assert_rights_approved(rights_manifest)
-    archive_dir = _require_private_path(Path(archive_dir), "raw source archive")
+    archive_dir = _require_private_directory(Path(archive_dir), "raw source archive")
     if capture_manifest.get("schema_version") != "5DOLLAR_PRIVATE_CAPTURE_BUNDLE_V1":
         raise ValueError("unsupported capture bundle schema")
     if capture_manifest.get("league_id") != SERIE_A_PROVIDER_LEAGUE_ID:
@@ -595,20 +596,28 @@ def main() -> None:
     parser.add_argument("--rights-json", type=Path, default=DEFAULT_RIGHTS_MANIFEST)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
-    archive_dir = _require_private_path(args.archive_dir, "raw source archive")
-    capture_path = _require_private_path(args.capture_manifest, "capture manifest")
-    quotes_path = _require_private_path(args.quotes_json, "quote metadata")
+    archive_dir = _require_private_directory(args.archive_dir, "raw source archive")
+    capture_path = _require_private_file(args.capture_manifest, "capture manifest")
+    quotes_path = _require_private_file(args.quotes_json, "quote metadata")
     output_path = _require_private_path(args.output, "feature manifest output")
+    _require_private_directory(output_path.parent, "feature manifest output parent")
+    if output_path.exists() or output_path.is_symlink():
+        raise FileExistsError("refusing to overwrite an existing feature manifest")
     rights_path = args.rights_json.resolve()
     capture = json.loads(capture_path.read_text(encoding="utf-8"))
     quotes = json.loads(quotes_path.read_text(encoding="utf-8"))
     rights = json.loads(rights_path.read_text(encoding="utf-8"))
     result = build_manifest_from_private_archive(archive_dir, capture, quotes, rights)
-    if output_path.exists():
-        raise FileExistsError("refusing to overwrite an existing feature manifest")
-    if not output_path.parent.exists():
-        raise FileNotFoundError("output parent directory must already exist")
-    output_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    output_fd = os.open(output_path, flags, 0o600)
+    try:
+        with os.fdopen(output_fd, "w", encoding="utf-8") as output_file:
+            output_file.write(json.dumps(result, indent=2))
+    except BaseException:
+        output_path.unlink(missing_ok=True)
+        raise
     print(json.dumps({
         "schema_version": result["schema_version"],
         "candidate_sha256": result["candidate_sha256"],
