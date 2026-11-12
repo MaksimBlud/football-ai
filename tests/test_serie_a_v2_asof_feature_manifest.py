@@ -299,7 +299,7 @@ def _synthetic_5dollar_bundle(tmp_path, fixtures=None, quote=None):
     import json
 
     fixtures = fixtures if fixtures is not None else [
-        _synthetic_5dollar_fixture(i) for i in range(12)
+        _synthetic_5dollar_fixture(i) for i in range(30)
     ]
     fixtures = list(fixtures)
     fixtures.append({
@@ -403,7 +403,7 @@ def test_5dollar_offline_adapter_maps_exact_original_19_features_and_verifies_sh
     assert report["source_before_quote_order_validated"] is True
     assert report["source_before_quote_verified"] is False
     assert report["source_capture_attestation_required"] is True
-    assert report["source_capture"]["source_finished_fixture_count"] == 12
+    assert report["source_capture"]["source_finished_fixture_count"] == 30
     assert report["source_capture"]["source_skipped_non_finished_fixture_count"] == 1
     assert report["source_capture"]["upstream_source_observation_timestamp_available"] is False
     assert report["target_outcomes_read"] is False
@@ -424,7 +424,7 @@ def test_5dollar_adapter_preserves_original_same_utc_day_exclusion(tmp_path):
         20,
         kickoff_utc=datetime(2026, 11, 12, 7, 0, tzinfo=timezone.utc),
     )
-    fixtures = [_synthetic_5dollar_fixture(i) for i in range(12)] + [same_day]
+    fixtures = [_synthetic_5dollar_fixture(i) for i in range(30)] + [same_day]
     capture2, quotes2, rights2 = _synthetic_5dollar_bundle(
         tmp_path,
         fixtures=fixtures,
@@ -470,7 +470,7 @@ def test_5dollar_adapter_rejects_target_fixture_identity_even_when_provider_id_d
         "commence_time_utc": "2026-11-12T12:00:00+00:00",
         "snapshot_time_utc": "2026-11-12T08:05:00+00:00",
     }
-    fixtures = [_synthetic_5dollar_fixture(i) for i in range(12)]
+    fixtures = [_synthetic_5dollar_fixture(i) for i in range(30)]
     fixtures.append(_synthetic_5dollar_fixture(
         30,
         kickoff_utc=datetime(2026, 11, 12, 7, 0, tzinfo=timezone.utc),
@@ -484,7 +484,7 @@ def test_5dollar_adapter_rejects_missing_stats_not_zero_fills(tmp_path):
     import pytest
     from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
 
-    fixtures = [_synthetic_5dollar_fixture(i) for i in range(12)]
+    fixtures = [_synthetic_5dollar_fixture(i) for i in range(30)]
     fixtures[0]["corners"]["home"] = None
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path, fixtures)
     with pytest.raises(ValueError, match="non-negative integer"):
@@ -495,17 +495,21 @@ def test_5dollar_adapter_rejects_mixed_league_season_and_non_free_plan(tmp_path)
     import pytest
     from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
 
-    fixtures = [_synthetic_5dollar_fixture(i) for i in range(12)]
+    fixtures = [_synthetic_5dollar_fixture(i) for i in range(30)]
     fixtures[0]["league_season_id"] = "other-season"
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path, fixtures)
     with pytest.raises(ValueError, match="league_season_id"):
         build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
 
-    for plan in ("community", "pro"):
-        capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
-        capture["api_plan"] = plan
-        with pytest.raises(PermissionError, match="only an approved"):
-            build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    capture["api_plan"] = "community"
+    community_report = build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+    assert community_report["source_capture"]["api_plan"] == "community"
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    capture["api_plan"] = "pro"
+    with pytest.raises(PermissionError, match="only an approved"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
 
 
 def test_5dollar_adapter_default_rights_manifest_is_hold(tmp_path):
@@ -575,7 +579,7 @@ def test_5dollar_adapter_validates_all_pages_and_pagination_completeness(tmp_pat
 
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
     all_fixtures = json.loads((tmp_path / "page-1.json").read_text())["data"]
-    pages = [all_fixtures[:6], all_fixtures[6:]]
+    pages = [all_fixtures[:15], all_fixtures[15:]]
     page_records = []
     for number, fixtures in enumerate(pages, start=1):
         payload = {
@@ -618,7 +622,7 @@ def test_5dollar_adapter_validates_all_pages_and_pagination_completeness(tmp_pat
     capture["captured_at_utc"] = capture["response_received_at_utc"]
     report = build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
     assert report["source_capture"]["page_count"] == 2
-    assert report["source_capture"]["source_finished_fixture_count"] == 12
+    assert report["source_capture"]["source_finished_fixture_count"] == 30
 
     first_payload = json.loads((tmp_path / "page-1.json").read_text())
     first_payload["pagination"]["has_more"] = False
@@ -644,7 +648,7 @@ def test_5dollar_adapter_rejects_unconfirmed_finished_status(tmp_path):
     import pytest
     from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
 
-    fixtures = [_synthetic_5dollar_fixture(i) for i in range(12)]
+    fixtures = [_synthetic_5dollar_fixture(i) for i in range(30)]
     fixtures[0]["status_code"] = "unknown"
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path, fixtures)
     with pytest.raises(ValueError, match="full-time confirmation"):
