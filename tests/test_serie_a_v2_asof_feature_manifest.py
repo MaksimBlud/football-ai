@@ -388,12 +388,35 @@ def _synthetic_5dollar_bundle(tmp_path, fixtures=None, quote=None):
     return capture, [quote], _synthetic_5dollar_rights()
 
 
+@pytest.fixture(autouse=True)
+def _pin_synthetic_5dollar_rights_for_offline_tests(request, tmp_path, monkeypatch):
+    """Use a synthetic canonical manifest only inside isolated offline test cases."""
+    if (
+        not request.node.name.startswith("test_5dollar")
+        or request.node.name in {
+            "test_5dollar_adapter_default_rights_manifest_is_hold",
+            "test_5dollar_adapter_cli_cannot_override_checked_in_rights_manifest",
+        }
+    ):
+        return
+    import hashlib
+    import json
+    import serie_a_v2_5dollar_source_adapter as adapter
+
+    raw = (json.dumps(_synthetic_5dollar_rights(), sort_keys=True, indent=2) + "\\n").encode("utf-8")
+    path = tmp_path / "synthetic-5dollar-rights.json"
+    path.write_bytes(raw)
+    path.chmod(0o600)
+    monkeypatch.setattr(adapter, "DEFAULT_RIGHTS_MANIFEST", path)
+    monkeypatch.setattr(adapter, "DEFAULT_RIGHTS_MANIFEST_SHA256", hashlib.sha256(raw).hexdigest())
+
+
 def test_5dollar_offline_adapter_maps_exact_original_19_features_and_verifies_sha(tmp_path):
     from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
     from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
 
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
-    report = build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+    report = build_manifest_from_private_archive(tmp_path, capture, quotes)
 
     assert report["candidate_sha256"] == FROZEN_SHA
     assert report["feature_count"] == 19
@@ -426,7 +449,7 @@ def test_5dollar_adapter_rejects_group_or_world_accessible_archive_directory(tmp
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
     tmp_path.chmod(0o750)
     with pytest.raises(PermissionError, match="exclude group/other access"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
 
 def test_5dollar_adapter_rejects_group_or_world_readable_raw_page(tmp_path):
@@ -436,7 +459,7 @@ def test_5dollar_adapter_rejects_group_or_world_readable_raw_page(tmp_path):
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
     (tmp_path / "page-1.json").chmod(0o640)
     with pytest.raises(PermissionError, match="exclude group/other access"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
 
 def test_5dollar_adapter_rejects_symlinked_raw_page(tmp_path):
@@ -447,7 +470,7 @@ def test_5dollar_adapter_rejects_symlinked_raw_page(tmp_path):
     (tmp_path / "page-link.json").symlink_to("page-1.json")
     capture["pages"][0]["file"] = "page-link.json"
     with pytest.raises(PermissionError, match="must not be a symlink"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
 
 def test_5dollar_adapter_rejects_world_readable_private_capture_file(tmp_path):
@@ -480,7 +503,7 @@ def test_5dollar_adapter_preserves_original_same_utc_day_exclusion(tmp_path):
     from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
 
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
-    baseline = build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+    baseline = build_manifest_from_private_archive(tmp_path, capture, quotes)
     same_day = _synthetic_5dollar_fixture(
         99,
         kickoff_utc=datetime(2026, 11, 12, 7, 0, tzinfo=timezone.utc),
@@ -490,7 +513,7 @@ def test_5dollar_adapter_preserves_original_same_utc_day_exclusion(tmp_path):
         tmp_path,
         fixtures=fixtures,
     )
-    changed = build_manifest_from_private_archive(tmp_path, capture2, quotes2, rights2)
+    changed = build_manifest_from_private_archive(tmp_path, capture2, quotes2)
     assert changed["feature_manifests"][0]["features"] == baseline["feature_manifests"][0]["features"]
 
 
@@ -505,7 +528,7 @@ def test_5dollar_adapter_rejects_source_received_after_quote(tmp_path):
     capture["pages"][0]["request_started_at_utc"] = capture["request_started_at_utc"]
     capture["pages"][0]["response_received_at_utc"] = capture["response_received_at_utc"]
     with pytest.raises(ValueError, match="strictly before every quote"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
 
 def test_5dollar_adapter_rejects_raw_sha_mismatch(tmp_path):
@@ -515,7 +538,7 @@ def test_5dollar_adapter_rejects_raw_sha_mismatch(tmp_path):
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
     capture["pages"][0]["response_sha256"] = "0" * 64
     with pytest.raises(ValueError, match="SHA-256 mismatch"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
 
 def test_5dollar_adapter_rejects_target_fixture_identity_even_when_provider_id_differs(tmp_path):
@@ -538,7 +561,7 @@ def test_5dollar_adapter_rejects_target_fixture_identity_even_when_provider_id_d
     ))
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path, fixtures, quote)
     with pytest.raises(ValueError, match="target fixture identity"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
 
 def test_5dollar_adapter_rejects_missing_stats_not_zero_fills(tmp_path):
@@ -549,7 +572,7 @@ def test_5dollar_adapter_rejects_missing_stats_not_zero_fills(tmp_path):
     fixtures[0]["corners"]["home"] = None
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path, fixtures)
     with pytest.raises(ValueError, match="non-negative integer"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
 
 def test_5dollar_adapter_rejects_mixed_league_season_and_non_free_plan(tmp_path):
@@ -560,26 +583,48 @@ def test_5dollar_adapter_rejects_mixed_league_season_and_non_free_plan(tmp_path)
     fixtures[0]["league_season_id"] = "other-season"
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path, fixtures)
     with pytest.raises(ValueError, match="league_season_id"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
     capture["api_plan"] = "pro"
     with pytest.raises(PermissionError, match=r"only the \$0 Free plan"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
 
 def test_5dollar_adapter_default_rights_manifest_is_hold(tmp_path):
-    import json
+    import hashlib
     import pytest
     from serie_a_v2_5dollar_source_adapter import (
         DEFAULT_RIGHTS_MANIFEST,
+        DEFAULT_RIGHTS_MANIFEST_SHA256,
         build_manifest_from_private_archive,
     )
 
     capture, quotes, _ = _synthetic_5dollar_bundle(tmp_path)
-    rights = json.loads(DEFAULT_RIGHTS_MANIFEST.read_text(encoding="utf-8"))
+    assert hashlib.sha256(DEFAULT_RIGHTS_MANIFEST.read_bytes()).hexdigest() == DEFAULT_RIGHTS_MANIFEST_SHA256
     with pytest.raises(PermissionError, match="manifest is HOLD"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
+
+
+def test_5dollar_adapter_public_builder_has_no_caller_controlled_rights_argument():
+    import inspect
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    assert "rights_manifest" not in inspect.signature(build_manifest_from_private_archive).parameters
+
+
+def test_5dollar_adapter_rejects_canonical_rights_manifest_sha_mismatch(tmp_path, monkeypatch):
+    import json
+    import pytest
+    import serie_a_v2_5dollar_source_adapter as adapter
+
+    capture, quotes, _ = _synthetic_5dollar_bundle(tmp_path)
+    path = tmp_path / "tampered-rights.json"
+    path.write_text(json.dumps(_synthetic_5dollar_rights(), sort_keys=True, indent=2) + "\\n", encoding="utf-8")
+    monkeypatch.setattr(adapter, "DEFAULT_RIGHTS_MANIFEST", path)
+    monkeypatch.setattr(adapter, "DEFAULT_RIGHTS_MANIFEST_SHA256", "0" * 64)
+    with pytest.raises(PermissionError, match="manifest SHA-256 mismatch"):
+        adapter.build_manifest_from_private_archive(tmp_path, capture, quotes)
 
 
 def test_5dollar_adapter_rejects_community_plan_without_separate_eligibility_approval(tmp_path):
@@ -589,7 +634,7 @@ def test_5dollar_adapter_rejects_community_plan_without_separate_eligibility_app
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
     capture["api_plan"] = "community"
     with pytest.raises(PermissionError, match="Community Access requires separate eligibility approval"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
 
 def test_5dollar_adapter_rejects_public_archive_path(tmp_path):
@@ -601,7 +646,7 @@ def test_5dollar_adapter_rejects_public_archive_path(tmp_path):
 
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
     with pytest.raises(ValueError, match="outside the public repository"):
-        build_manifest_from_private_archive(REPO_ROOT, capture, quotes, rights)
+        build_manifest_from_private_archive(REPO_ROOT, capture, quotes)
 
 
 def test_5dollar_adapter_rejects_target_outcome_fields_and_naive_timestamps(tmp_path):
@@ -611,12 +656,12 @@ def test_5dollar_adapter_rejects_target_outcome_fields_and_naive_timestamps(tmp_
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
     quotes[0]["result"] = "H"
     with pytest.raises(ValueError, match="target outcome fields"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
     capture["request_started_at_utc"] = "2026-11-12T07:59:59"
     with pytest.raises(ValueError, match="explicit UTC offset"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
 
 def test_5dollar_adapter_cli_cannot_override_checked_in_rights_manifest(monkeypatch):
@@ -706,7 +751,7 @@ def test_5dollar_adapter_validates_all_pages_and_pagination_completeness(tmp_pat
     capture["pages"] = page_records
     capture["response_received_at_utc"] = "2026-11-12T08:00:01+00:00"
     capture["captured_at_utc"] = capture["response_received_at_utc"]
-    report = build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+    report = build_manifest_from_private_archive(tmp_path, capture, quotes)
     assert report["source_capture"]["page_count"] == 2
     assert report["source_capture"]["source_finished_fixture_count"] == 30
 
@@ -717,7 +762,7 @@ def test_5dollar_adapter_validates_all_pages_and_pagination_completeness(tmp_pat
     capture["pages"][0]["response_sha256"] = hashlib.sha256(bad_raw).hexdigest()
     capture["pages"][0]["response_bytes"] = len(bad_raw)
     with pytest.raises(ValueError, match="incomplete or page order"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
 
 def test_5dollar_adapter_rejects_request_url_with_credentials(tmp_path):
@@ -727,7 +772,7 @@ def test_5dollar_adapter_rejects_request_url_with_credentials(tmp_path):
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
     capture["pages"][0]["request_url"] += "&token=not-a-real-token"
     with pytest.raises(ValueError, match="credentials must not be embedded"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
 
 def test_5dollar_adapter_rejects_unconfirmed_finished_status(tmp_path):
@@ -738,7 +783,7 @@ def test_5dollar_adapter_rejects_unconfirmed_finished_status(tmp_path):
     fixtures[0]["status_code"] = "unknown"
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path, fixtures)
     with pytest.raises(ValueError, match="full-time confirmation"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
 
 def test_5dollar_adapter_requires_30_event_metadata_gate_before_reading_pages(tmp_path):
@@ -749,13 +794,13 @@ def test_5dollar_adapter_requires_30_event_metadata_gate_before_reading_pages(tm
     capture.pop("feature_source_gate")
     capture["pages"][0]["file"] = "missing-before-gate.json"
     with pytest.raises(PermissionError, match="feature-source gate"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
     capture["feature_source_gate"]["observed_completed_primary_events"] = 29
     capture["pages"][0]["file"] = "missing-before-gate.json"
     with pytest.raises(PermissionError, match="fewer than 30"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
 
 def test_5dollar_adapter_requires_metadata_only_gate_before_request_and_closed_target_gate(tmp_path):
@@ -765,17 +810,17 @@ def test_5dollar_adapter_requires_metadata_only_gate_before_request_and_closed_t
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
     capture["feature_source_gate"]["checked_at_utc"] = capture["request_started_at_utc"]
     with pytest.raises(ValueError, match="strictly before the first source request"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
     capture["feature_source_gate"]["score_or_result_fields_selected_for_gate"] = True
     with pytest.raises(PermissionError, match="feature-source gate"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
     capture["target_outcome_evaluation_gate"]["outcome_gate_open"] = True
     with pytest.raises(PermissionError, match="target-outcome gate"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
 
 def test_5dollar_adapter_rejects_unapproved_quote_metadata_fields(tmp_path):
@@ -785,7 +830,7 @@ def test_5dollar_adapter_rejects_unapproved_quote_metadata_fields(tmp_path):
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
     quotes[0]["full_time_score"] = "2-0"
     with pytest.raises(ValueError, match="unapproved fields"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
 
 def test_5dollar_adapter_rejects_page_timestamps_outside_capture_window(tmp_path):
@@ -795,7 +840,7 @@ def test_5dollar_adapter_rejects_page_timestamps_outside_capture_window(tmp_path
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
     capture["pages"][0]["request_started_at_utc"] = "2026-11-12T07:59:58+00:00"
     with pytest.raises(ValueError, match="outside the capture window"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
 
 
@@ -822,7 +867,7 @@ def test_5dollar_adapter_rejects_noncanonical_request_url_components(tmp_path, u
             "https://api.5dollarfootballapi.com" + url_suffix
         )
     with pytest.raises(ValueError):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
 
 def test_5dollar_adapter_rejects_pagination_count_or_page_size_mismatch(tmp_path):
@@ -838,7 +883,7 @@ def test_5dollar_adapter_rejects_pagination_count_or_page_size_mismatch(tmp_path
     capture["pages"][0]["response_sha256"] = hashlib.sha256(raw).hexdigest()
     capture["pages"][0]["response_bytes"] = len(raw)
     with pytest.raises(ValueError, match="count does not match page data length"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
     payload = json.loads((tmp_path / "page-1.json").read_text(encoding="utf-8"))
@@ -848,7 +893,7 @@ def test_5dollar_adapter_rejects_pagination_count_or_page_size_mismatch(tmp_path
     capture["pages"][0]["response_sha256"] = hashlib.sha256(raw).hexdigest()
     capture["pages"][0]["response_bytes"] = len(raw)
     with pytest.raises(ValueError, match="per_page does not match"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
 
 def test_5dollar_adapter_rejects_same_day_reversed_duplicate_after_alias_normalization(tmp_path):
@@ -885,7 +930,7 @@ def test_5dollar_adapter_rejects_same_day_reversed_duplicate_after_alias_normali
     fixtures.extend(_synthetic_5dollar_fixture(i + 1) for i in range(29))
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path, fixtures)
     with pytest.raises(ValueError, match="duplicate unordered historical fixture identity"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
 
 def test_5dollar_adapter_rejects_target_identity_when_source_orientation_is_reversed(tmp_path):
@@ -914,4 +959,4 @@ def test_5dollar_adapter_rejects_target_identity_when_source_orientation_is_reve
     quotes[0]["snapshot_time_utc"] = "2026-11-13T08:05:00+00:00"
 
     with pytest.raises(ValueError, match="target fixture identity appears as a completed source outcome"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
