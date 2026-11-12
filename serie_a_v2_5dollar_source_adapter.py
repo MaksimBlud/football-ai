@@ -33,7 +33,7 @@ SERIE_A_PROVIDER_LEAGUE_ID = 3405541143
 CURRENT_SERIE_A_SEASON = SERIE_A_RUNTIME_CONFIG.finished_results_source.season
 CURRENT_SERIE_A_SEASON_API_PARAMETER = CURRENT_SERIE_A_SEASON[:4]
 MIN_COMPLETED_FEATURE_SOURCE_EVENTS = 30
-ALLOWED_PLANS = frozenset(("free",))
+ALLOWED_PLANS = frozenset(("free", "community"))
 ALLOWED_QUOTE_FIELDS = frozenset((
     "event_id", "league", "home_team", "away_team",
     "commence_time_utc", "snapshot_time_utc",
@@ -443,8 +443,8 @@ def build_manifest_from_private_archive(
                 fixture, response_received, target_ids, target_identities, expected_season_id
             )
         )
-    if not history_rows:
-        raise ValueError("source bundle contains no completed Serie A history")
+    if len(history_rows) < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
+        raise ValueError("source bundle has fewer than 30 completed current-season Serie A fixtures")
     history = pd.DataFrame(history_rows, columns=REQUIRED_HISTORY_COLUMNS)
     base = build_original_manifest(history, quotes)
     base["schema_version"] = "SERIE_A_ORIGINAL_V2_5DOLLAR_PREQUOTE_SOURCE_V1"
