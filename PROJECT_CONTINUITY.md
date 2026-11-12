@@ -9745,3 +9745,43 @@ Draft PR [#795](https://github.com/MaksimBlud/football-ai/pull/795) is based dir
 The audit found a real timestamp-attestation edge case in `serie_a_v2_current_form_source_capture.py`: calling `datetime.astimezone()` on a naive injected `clock()` silently assumes the runner's local timezone. The fix rejects naive/invalid offsets, rejects an observation time before the feature-gate check, rejects an archive-created time before the source observation, and validates both clock readings before writing the current-season CSV. Three new regressions cover naive observation time, naive archive time, and a backwards clock. No model input, feature order, candidate SHA, weights, scaler/imputer, source cohort, gate, lambda or production artifact changes.
 
 The PR remains Draft/HUMAN-MERGE. CI is synthetic/offline only: no source/API request, odds read, Supabase access/write, model inference, target-outcome read, refit, threshold change, or workflow schedule change.
+
+
+## Original V2 atomic current-form archive publication — 2026-11-12 05:05 UTC
+
+### New code result: PR #796
+
+[PR #796](https://github.com/MaksimBlud/football-ai/pull/796) is a self-contained replacement/superset of #795 for review against main:
+
+- Base main: `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- Exact head: `e69ad9c2700b999ef186e4771a2fe06fd010155d`; compare is 5 commits ahead / 0 behind, two changed files.
+- PR remains Draft, mergeable, and HUMAN-MERGE only.
+- All seven exact-head PR workflows completed SUCCESS: Serie A #43158757694, Bundesliga #43158757681, Research #43158757679, Ligue 1 #43158757714, Product #43158757703, Frozen V2 Shadow Tests #43158757753, and Eredivisie #43158757678.
+- The exact Frozen V2 suite reports **89 passed**; production `.pkl` diff guard passed. These are offline/synthetic tests, not live inference or model-quality evidence.
+
+### Finding and fix
+
+The current-form source workflow uploads its output directory with `if: always()`. Before #796, the source capture wrote the ten historical CSVs directly into that directory, then fetched/validated the current-season CSV and validated the source/archive clocks. A late validation failure could leave the ten historical CSVs behind, and the unconditional upload step could publish a historical-only partial artifact even though the current CSV and manifest were absent.
+
+PR #796:
+- builds all files in a sibling temporary staging directory;
+- publishes only after the complete archive is valid, using one same-filesystem directory rename;
+- lets temporary-directory cleanup remove all partial historical/current files on any failure;
+- rejects symlink and non-empty output directories rather than overwriting prior evidence;
+- tests that late clock failures leave no historical CSV/staging directory, successful publication contains exactly 10 historical CSVs + current CSV + manifest, and an occupied output directory is preserved without Supabase/HTTP/history access.
+
+PR #796 includes the source-clock correction from #795. A comment on #795 points to #796 as the self-contained replacement; **do not merge #795 separately if #796 is accepted**.
+
+### Rights, runtime and Supabase boundaries
+
+- The exact provider manifest at the current rights stack still sets `research_source_capture_permitted=false`, `research_inference_permitted=false`, `ai_model_training_permitted=false`, and no provider authorization. The public repository also fails the private-artifact requirement in the direct-access gate. #796 does not authorize live capture.
+- PR [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready / mergeable at `afe943305143b68b62e89f20010d78d6b48efd70`, with 8/8 exact-head checks SUCCESS (93 Frozen V2 tests; recovery suite 39 tests; production pickle hashes unchanged). It is not merged, so its five live/recovery workflow and upload holds are not active on main.
+- Main's Original Forward workflow still has its scheduled/manual-reader triggers and 90-day artifact upload without the #781 default-deny flag. The latest verified main free diagnostic run remains #43035977412 (2026-11-11 14:11:48 UTC): source fetch and public artifact upload succeeded after the source-policy withdrawal; artifact #13862488931 digest `a7edf8034097e338f72264b004cc05e59f863f013af454aefd8ff6993795d96a`. It is a rights/privacy-control failure, not model-quality evidence. No protected 2026/27 result fields were read.
+- No fresh Supabase odds/prediction rows were queried in this cycle because the current direct-access/provider-rights gate denies those reads. The last verified strict pre-match-only aggregate remains 3,915 snapshots / 327 events across leagues, 620 / 63 for Serie A, zero new in seven days, zero future saved quotes, and zero pre-kickoff rows for the exact V2 candidate SHA (checkpoint 2026-11-12 03:55 UTC).
+- Supabase Security Advisor at 2026-11-12 04:54:37 UTC still reports RLS disabled on five public tables (`teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, `epl_ai_market_pair_ledger)); four other public tables have RLS enabled but no policies. No DDL or policy changes were made.
+
+### Frozen model state
+
+Original candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; original 19-feature order, weights, scaler/imputer, 20x2 matrix, training fingerprint and 2026-06-30 cutoff unchanged. `active_lambda=0`; `shadow_lambda=1` research-only; stability gate FAILED; target-outcome gate 0/30; no eligible independent Brier/LogLoss comparison.
+
+No main update or merge, source/odds request, Supabase row read/write/DDL, target-outcome read, paid API call, model inference/refit, threshold change, production `.pkl` change, schedule change, or other-agent setting change occurred in this checkpoint. HUMAN-MERGE only.
