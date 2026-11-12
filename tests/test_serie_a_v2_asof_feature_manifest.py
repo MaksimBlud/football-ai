@@ -534,3 +534,86 @@ def test_5dollar_adapter_has_no_network_or_supabase_client():
     assert "urllib.request" not in imported
     assert "requests.get(" not in source
     assert "create_client(" not in source
+
+
+def test_5dollar_adapter_validates_all_pages_and_pagination_completeness(tmp_path):
+    import hashlib
+    import json
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    all_fixtures = json.loads((tmp_path / "page-1.json").read_text())["data"]
+    pages = [all_fixtures[:6], all_fixtures[6:]]
+    page_records = []
+    for number, fixtures in enumerate(pages, start=1):
+        payload = {
+            "success": 1,
+            "data": fixtures,
+            "pagination": {
+                "page": number,
+                "per_page": 100,
+                "count": len(fixtures),
+                "has_more": number < len(pages),
+            },
+        }
+        raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+        filename = f"page-{number}.json"
+        (tmp_path / filename).write_bytes(raw)
+        received = (
+            "2026-11-12T08:00:00+00:00"
+            if number == 1 else "2026-11-12T08:00:01+00:00"
+        )
+        started = (
+            "2026-11-12T07:59:59+00:00"
+            if number == 1 else "2026-11-12T08:00:00+00:00"
+        )
+        page_records.append({
+            "page_number": number,
+            "file": filename,
+            "request_url": (
+                "https://api.5dollarfootballapi.com/v1/leagues/3405541143/fixtures"
+                f"?season=2026&page={number}&per_page=100"
+            ),
+            "http_status": 200,
+            "request_started_at_utc": started,
+            "response_received_at_utc": received,
+            "response_sha256": hashlib.sha256(raw).hexdigest(),
+            "response_bytes": len(raw),
+        })
+    capture["page_count"] = 2
+    capture["pages"] = page_records
+    capture["response_received_at_utc"] = "2026-11-12T08:00:01+00:00"
+    capture["captured_at_utc"] = capture["response_received_at_utc"]
+    report = build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+    assert report["source_capture"]["page_count"] == 2
+    assert report["source_capture"]["source_finished_fixture_count"] == 12
+
+    first_payload = json.loads((tmp_path / "page-1.json").read_text())
+    first_payload["pagination"]["has_more"] = False
+    bad_raw = json.dumps(first_payload, sort_keys=True, separators=(",", ":")).encode()
+    (tmp_path / "page-1.json").write_bytes(bad_raw)
+    capture["pages"][0]["response_sha256"] = hashlib.sha256(bad_raw).hexdigest()
+    capture["pages"][0]["response_bytes"] = len(bad_raw)
+    with pytest.raises(ValueError, match="incomplete or page order"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+
+def test_5dollar_adapter_rejects_request_url_with_credentials(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    capture["pages"][0]["request_url"] += "&token=not-a-real-token"
+    with pytest.raises(ValueError, match="credentials must not be embedded"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+
+def test_5dollar_adapter_rejects_unconfirmed_finished_status(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    fixtures = [_synthetic_5dollar_fixture(i) for i in range(12)]
+    fixtures[0]["status_code"] = "unknown"
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path, fixtures)
+    with pytest.raises(ValueError, match="full-time confirmation"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
