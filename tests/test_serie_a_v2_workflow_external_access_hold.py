@@ -236,6 +236,12 @@ EXTERNAL_IO_MARKERS = (
     # without binding Supabase credentials or invoking a known V2 script.
     "actions/download-artifact@",
     "actions/upload-artifact@",
+    # Inline Octokit scripts and gh CLI artifact/release commands can access GitHub data
+    # without spelling a token binding or invoking a known V2 Python script.
+    "actions/github-script@",
+    "gh run download",
+    "gh release download",
+    "git clone ",
     # GitHub API access can discover/download public artifacts directly.
     "secrets.GITHUB_TOKEN",
     "${{ github.token }}",
@@ -382,6 +388,19 @@ def test_external_io_inventory_recognizes_common_artifact_and_network_paths():
     assert all(_has_external_io(example) for example in examples)
     assert _has_external_io(
         "secrets.GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}"
+    )
+
+
+def test_external_io_inventory_recognizes_github_script_and_cli_download_paths():
+    examples = (
+        "uses: actions/github-script@v7\\nwith:\\n  script: await github.rest.actions.listArtifactsForRepo(...)",
+        "run: gh run download 123456789",
+        "run: gh release download v2.0.0",
+        "run: git clone https://example.invalid/source.git",
+    )
+    assert all(_has_external_io(example) for example in examples)
+    assert _is_original_v2_live_workflow(
+        "name: market-anchor-1x2-v2 source capture\\nuses: actions/github-script@v7"
     )
 
 
