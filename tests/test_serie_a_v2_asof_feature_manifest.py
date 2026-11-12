@@ -249,3 +249,288 @@ def test_online_manifest_matches_original_builder_after_frozen_30_match_truncati
         else:
             assert actual == pytest.approx(float(expected), abs=1e-12)
 
+
+
+# The following tests use synthetic 5Dollar-shaped fixtures only. They never
+# create an account, call an endpoint, read target outcomes, or authorize a
+# real source archive. The checked-in rights manifest remains HOLD.
+
+def _synthetic_5dollar_rights():
+    return {
+        "approval_status": "APPROVED",
+        "provider_model_use_permitted": True,
+        "provider_cache_permitted": True,
+        "provider_private_retention_permitted": True,
+        "upstream_rights_confirmed": True,
+        "free_serie_a_required_fields_confirmed": True,
+        "field_semantics_confirmed": True,
+        "private_archive_verified": True,
+        "raw_redistribution_permitted": False,
+        "test_fixture_only": True,
+    }
+
+
+def _synthetic_5dollar_fixture(index, kickoff_utc=None, home="Juventus", away="Inter Milan"):
+    from datetime import datetime, timedelta, timezone
+
+    kickoff = kickoff_utc or (
+        datetime(2026, 8, 1, 18, 0, tzinfo=timezone.utc) + timedelta(days=index)
+    )
+    return {
+        "id": 1000 + index,
+        "league": {"id": 3405541143, "name": "Italy Serie A"},
+        "league_season_id": "season-2026-27",
+        "kickoff_utc": kickoff.isoformat(),
+        "status": "finished",
+        "status_reason": None,
+        "status_code": "full",
+        "teams": {"home": {"name": home}, "away": {"name": away}},
+        "goals": {"home": 2 if index % 2 == 0 else 0, "away": 0 if index % 2 == 0 else 1},
+        "corners": {"home": 5 + index % 3, "away": 3 + index % 2},
+        "cards": {
+            "home": {"yellow": 1 + index % 2, "red": 0},
+            "away": {"yellow": 2 + index % 2, "red": 0},
+        },
+    }
+
+
+def _synthetic_5dollar_bundle(tmp_path, fixtures=None, quote=None):
+    import hashlib
+    import json
+
+    fixtures = fixtures if fixtures is not None else [
+        _synthetic_5dollar_fixture(i) for i in range(12)
+    ]
+    fixtures = list(fixtures)
+    fixtures.append({
+        "id": 9999,
+        "league": {"id": 3405541143, "name": "Italy Serie A"},
+        "league_season_id": "season-2026-27",
+        "kickoff_utc": "2026-11-13T17:00:00+00:00",
+        "status": "scheduled",
+        "status_reason": None,
+        "status_code": None,
+        "teams": {"home": {"name": "Juventus"}, "away": {"name": "Inter Milan"}},
+    })
+    payload = {
+        "success": 1,
+        "data": fixtures,
+        "pagination": {"page": 1, "per_page": 100, "count": len(fixtures), "has_more": False},
+    }
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    (tmp_path / "page-1.json").write_bytes(raw)
+    default_quote = {
+        "event_id": "odds-target-2026-11-13",
+        "league": "SERIE_A",
+        "home_team": "Juventus",
+        "away_team": "Inter",
+        "commence_time_utc": "2026-11-13T20:00:00+00:00",
+        "snapshot_time_utc": "2026-11-12T08:05:00+00:00",
+    }
+    quote = dict(quote or default_quote)
+    page = {
+        "page_number": 1,
+        "file": "page-1.json",
+        "request_url": "https://api.5dollarfootballapi.com/v1/leagues/3405541143/fixtures?season=2026&page=1&per_page=100",
+        "http_status": 200,
+        "request_started_at_utc": "2026-11-12T07:59:59+00:00",
+        "response_received_at_utc": "2026-11-12T08:00:00+00:00",
+        "response_sha256": hashlib.sha256(raw).hexdigest(),
+        "response_bytes": len(raw),
+    }
+    capture = {
+        "schema_version": "5DOLLAR_PRIVATE_CAPTURE_BUNDLE_V1",
+        "league_id": 3405541143,
+        "league_season_id": "season-2026-27",
+        "season": "2026/27",
+        "season_api_parameter": "2026",
+        "api_plan": "free",
+        "storage_class": "private_local",
+        "capture_run_id": "synthetic-run-only",
+        "capture_commit_sha": "a" * 40,
+        "request_started_at_utc": "2026-11-12T07:59:59+00:00",
+        "response_received_at_utc": "2026-11-12T08:00:00+00:00",
+        "captured_at_utc": "2026-11-12T08:00:00+00:00",
+        "page_count": 1,
+        "pages": [page],
+    }
+    return capture, [quote], _synthetic_5dollar_rights()
+
+
+def test_5dollar_offline_adapter_maps_exact_original_19_features_and_verifies_sha(tmp_path):
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+    from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    report = build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+    assert report["candidate_sha256"] == FROZEN_SHA
+    assert report["feature_count"] == 19
+    row = report["feature_manifests"][0]
+    assert len(row["features"]) == 19
+    assert row["features"]["diff_points_5"] == pytest.approx(3.0)
+    assert row["history_coverage"]["home"]["prior_matches_in_frozen_30_match_window"] == 12
+    assert row["history_coverage"]["away"]["prior_matches_in_frozen_30_match_window"] == 12
+    assert report["source_before_quote_verified"] is True
+    assert report["source_capture"]["source_finished_fixture_count"] == 12
+    assert report["source_capture"]["source_skipped_non_finished_fixture_count"] == 1
+    assert report["source_capture"]["upstream_source_observation_timestamp_available"] is False
+    assert report["target_outcomes_read"] is False
+    assert report["model_inference_performed"] is False
+    assert report["eligible_for_frozen_prospective_cohort"] is False
+    assert report["eligible_for_product_publication"] is False
+    assert report["scored"] is False
+    assert report["source_capture"]["raw_payload_emitted"] is False
+
+
+def test_5dollar_adapter_preserves_original_same_utc_day_exclusion(tmp_path):
+    from datetime import datetime, timezone
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    baseline = build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+    same_day = _synthetic_5dollar_fixture(
+        20,
+        kickoff_utc=datetime(2026, 11, 12, 7, 0, tzinfo=timezone.utc),
+    )
+    fixtures = [_synthetic_5dollar_fixture(i) for i in range(12)] + [same_day]
+    capture2, quotes2, rights2 = _synthetic_5dollar_bundle(
+        tmp_path,
+        fixtures=fixtures,
+    )
+    changed = build_manifest_from_private_archive(tmp_path, capture2, quotes2, rights2)
+    assert changed["feature_manifests"][0]["features"] == baseline["feature_manifests"][0]["features"]
+
+
+def test_5dollar_adapter_rejects_source_received_after_quote(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    capture["request_started_at_utc"] = "2026-11-12T08:05:01+00:00"
+    capture["response_received_at_utc"] = "2026-11-12T08:06:00+00:00"
+    capture["captured_at_utc"] = capture["response_received_at_utc"]
+    capture["pages"][0]["request_started_at_utc"] = capture["request_started_at_utc"]
+    capture["pages"][0]["response_received_at_utc"] = capture["response_received_at_utc"]
+    with pytest.raises(ValueError, match="strictly before every quote"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+
+def test_5dollar_adapter_rejects_raw_sha_mismatch(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    capture["pages"][0]["response_sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="SHA-256 mismatch"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+
+def test_5dollar_adapter_rejects_target_fixture_identity_even_when_provider_id_differs(tmp_path):
+    from datetime import datetime, timezone
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    quote = {
+        "event_id": "odds-provider-id",
+        "league": "SERIE_A",
+        "home_team": "Juventus",
+        "away_team": "Inter",
+        "commence_time_utc": "2026-11-12T12:00:00+00:00",
+        "snapshot_time_utc": "2026-11-12T08:05:00+00:00",
+    }
+    fixtures = [_synthetic_5dollar_fixture(i) for i in range(12)]
+    fixtures.append(_synthetic_5dollar_fixture(
+        30,
+        kickoff_utc=datetime(2026, 11, 12, 7, 0, tzinfo=timezone.utc),
+    ))
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path, fixtures, quote)
+    with pytest.raises(ValueError, match="target fixture identity"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+
+def test_5dollar_adapter_rejects_missing_stats_not_zero_fills(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    fixtures = [_synthetic_5dollar_fixture(i) for i in range(12)]
+    fixtures[0]["corners"]["home"] = None
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path, fixtures)
+    with pytest.raises(ValueError, match="non-negative integer"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+
+def test_5dollar_adapter_rejects_mixed_league_season_and_non_free_plan(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    fixtures = [_synthetic_5dollar_fixture(i) for i in range(12)]
+    fixtures[0]["league_season_id"] = "other-season"
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path, fixtures)
+    with pytest.raises(ValueError, match="league_season_id"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    capture["api_plan"] = "pro"
+    with pytest.raises(PermissionError, match="only an approved"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+
+def test_5dollar_adapter_default_rights_manifest_is_hold(tmp_path):
+    import json
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import (
+        DEFAULT_RIGHTS_MANIFEST,
+        build_manifest_from_private_archive,
+    )
+
+    capture, quotes, _ = _synthetic_5dollar_bundle(tmp_path)
+    rights = json.loads(DEFAULT_RIGHTS_MANIFEST.read_text(encoding="utf-8"))
+    with pytest.raises(PermissionError, match="manifest is HOLD"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+
+def test_5dollar_adapter_rejects_public_archive_path(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import (
+        REPO_ROOT,
+        build_manifest_from_private_archive,
+    )
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    with pytest.raises(ValueError, match="outside the public repository"):
+        build_manifest_from_private_archive(REPO_ROOT, capture, quotes, rights)
+
+
+def test_5dollar_adapter_rejects_target_outcome_fields_and_naive_timestamps(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    quotes[0]["result"] = "H"
+    with pytest.raises(ValueError, match="target outcome fields"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    capture["request_started_at_utc"] = "2026-11-12T07:59:59"
+    with pytest.raises(ValueError, match="explicit UTC offset"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+
+def test_5dollar_adapter_has_no_network_or_supabase_client():
+    import ast
+    from pathlib import Path
+    import serie_a_v2_5dollar_source_adapter as adapter
+
+    source = Path(adapter.__file__).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module.split(".")[0] + "." + node.module.split(".")[1] if node.module.startswith("urllib.") else node.module.split(".")[0])
+    assert not ({"requests", "httpx", "supabase", "aiohttp"} & imported)
+    assert "urllib.request" not in imported
+    assert "requests.get(" not in source
+    assert "create_client(" not in source
