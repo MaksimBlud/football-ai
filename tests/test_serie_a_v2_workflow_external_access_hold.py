@@ -254,6 +254,35 @@ def _has_external_io(text: str) -> bool:
     return any(marker in text for marker in EXTERNAL_IO_MARKERS)
 
 
+ORIGINAL_V2_REFERENCE_MARKERS = (
+    "serie_a_v2_",
+    "market_anchor_v2_",
+    # The original model's canonical module family includes the 1X2 token.
+    # Omitting it would let a new original-V2-only workflow escape inventory.
+    "market_anchor_1x2_v2_",
+)
+ORIGINAL_V2_LIVE_SCRIPT_MARKERS = (
+    "python serie_a_v2_current_form_source_capture.py",
+    "python serie_a_v2_current_form_forward_capture.py",
+    "python serie_a_v2_forward_capture.py",
+    "python serie_a_v2_attest_real_source.py",
+    "python market_anchor_v2_saved_cohort_replay.py",
+    "python market_anchor_1x2_v2_",
+    "python -m market_anchor_1x2_v2_",
+)
+
+
+def _is_original_v2_live_workflow(text: str) -> bool:
+    has_v2_reference = any(marker in text for marker in ORIGINAL_V2_REFERENCE_MARKERS)
+    has_live_access = (
+        "secrets.SUPABASE_URL" in text
+        or "secrets.SUPABASE_KEY" in text
+        or any(marker in text for marker in ORIGINAL_V2_LIVE_SCRIPT_MARKERS)
+        or _has_external_io(text)
+    )
+    return has_v2_reference and has_live_access
+
+
 def test_external_io_inventory_recognizes_common_artifact_and_network_paths():
     examples = (
         "uses: actions/download-artifact@v4",
@@ -272,29 +301,38 @@ def test_live_v2_workflow_inventory_cannot_grow_around_the_hold():
     """New V2 live workflows must be added to the explicit fail-closed inventory."""
     workflow_dir = ROOT / ".github" / "workflows"
     discovered = set()
-    live_script_markers = (
-        "python serie_a_v2_current_form_source_capture.py",
-        "python serie_a_v2_current_form_forward_capture.py",
-        "python serie_a_v2_forward_capture.py",
-        "python serie_a_v2_attest_real_source.py",
-        "python market_anchor_v2_saved_cohort_replay.py",
-    )
     for path in sorted(
         [*workflow_dir.glob("*.yml"), *workflow_dir.glob("*.yaml")]
     ):
         text = path.read_text(encoding="utf-8")
-        has_v2_reference = "serie_a_v2_" in text or "market_anchor_v2_" in text
-        has_live_access = (
-            "secrets.SUPABASE_URL" in text
-            or "secrets.SUPABASE_KEY" in text
-            or any(marker in text for marker in live_script_markers)
-            or _has_external_io(text)
-        )
-        if has_v2_reference and has_live_access:
+        if _is_original_v2_live_workflow(text):
             discovered.add(path.relative_to(ROOT).as_posix())
 
     unexpected = discovered - set(WORKFLOWS)
     assert not unexpected, (
         "New V2 live-access workflow(s) bypass the explicit fail-closed "
         f"inventory: {sorted(unexpected)}"
+    )
+
+
+
+def test_original_market_anchor_1x2_v2_script_cannot_escape_live_workflow_inventory():
+    # These original-model entrypoint forms must be recognized even when a new
+    # workflow does not mention the older serie_a_v2_ or market_anchor_v2_ names.
+    assert _is_original_v2_live_workflow(
+        "run: python market_anchor_1x2_v2_forward_capture.py"
+    )
+    assert _is_original_v2_live_workflow(
+        "run: python -m market_anchor_1x2_v2_prospective_runner"
+    )
+
+
+def test_original_market_anchor_1x2_v2_offline_validation_remains_allowed():
+    # The existing pull-request-only frozen V2 test workflow compiles the
+    # module and runs pytest; neither action is a live source/quote entrypoint.
+    assert not _is_original_v2_live_workflow(
+        "run: python -m py_compile market_anchor_1x2_v2_shadow.py"
+    )
+    assert not _is_original_v2_live_workflow(
+        "run: pytest -q tests/test_market_anchor_1x2_v2_shadow.py"
     )
