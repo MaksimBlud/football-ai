@@ -21,5 +21,8 @@
   "field_semantics_confirmed": false,
   "private_archive_verified": false,
   "approval_status": "HOLD",
-  "reason": "Public terms permit models/internal tools and caching, and public docs claim free top-five/current-season Serie A access. Do not use until the owner/provider confirms upstream field rights, exact Free-plan goals/corners/yellow/red completeness and semantics, and an approved private archive is available. No account, key, API call or data download has been made."
+  "reason": "Official terms permit use in internal models and caching, and the Serie A landing page claims free top-five/current-season access. However, the measured data-quality table explicitly labels Italy Serie A as Pro. Do not use until the provider resolves this plan conflict, confirms upstream field rights and exact Free-plan goals/corners/yellow/red completeness and semantics, and approves private retention/storage. No account, key, API call or data download has been made.",
+  "measured_data_quality_plan": "Pro",
+  "free_serie_a_entitlement_conflict": true,
+  "measured_data_quality_page_reviewed_at_utc": "2026-11-12"
 }
