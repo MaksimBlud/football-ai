@@ -231,6 +231,43 @@ def test_candidate_recovery_cannot_download_or_publish_until_source_clearance():
     assert "--save-research-candidate" in rebuild
 
 
+EXTERNAL_IO_MARKERS = (
+    # GitHub artifact transfers can read or publish research/source archives
+    # without binding Supabase credentials or invoking a known V2 script.
+    "actions/download-artifact@",
+    "actions/upload-artifact@",
+    # GitHub API access can discover/download public artifacts directly.
+    "secrets.GITHUB_TOKEN",
+    "${{ github.token }}",
+    "GITHUB_TOKEN:",
+    "gh api ",
+    # Direct HTTP clients/commands are also external data access paths.
+    "requests.get(",
+    "requests.post(",
+    "urllib.request",
+    "curl ",
+    "wget ",
+)
+
+
+def _has_external_io(text: str) -> bool:
+    return any(marker in text for marker in EXTERNAL_IO_MARKERS)
+
+
+def test_external_io_inventory_recognizes_common_artifact_and_network_paths():
+    examples = (
+        "uses: actions/download-artifact@v4",
+        "uses: actions/upload-artifact@v4",
+        "GITHUB_TOKEN: ${{ github.token }}",
+        "run: gh api repos/MaksimBlud/football-ai/actions/artifacts",
+        "run: curl https://example.invalid/source.csv",
+        "run: wget https://example.invalid/source.csv",
+        "python -c 'requests.get(url)'",
+        "python -c 'urllib.request.urlopen(url)'",
+    )
+    assert all(_has_external_io(example) for example in examples)
+
+
 def test_live_v2_workflow_inventory_cannot_grow_around_the_hold():
     """New V2 live workflows must be added to the explicit fail-closed inventory."""
     workflow_dir = ROOT / ".github" / "workflows"
@@ -251,6 +288,7 @@ def test_live_v2_workflow_inventory_cannot_grow_around_the_hold():
             "secrets.SUPABASE_URL" in text
             or "secrets.SUPABASE_KEY" in text
             or any(marker in text for marker in live_script_markers)
+            or _has_external_io(text)
         )
         if has_v2_reference and has_live_access:
             discovered.add(path.relative_to(ROOT).as_posix())
