@@ -1,3 +1,20 @@
+## 2026-11-12 17:56 UTC — Original MARKET_ANCHOR_1X2_V2: latest runtime and pre-match audit
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Main still lacks the default-deny workflow hold; all four scheduled live V2 workflows and the recovery workflow remain unheld. No schedule or workflow was changed in this iteration.
+
+- Original V2 Forward-Only [run 43261918181](https://github.com/MaksimBlud/football-ai/actions/runs/43261918181): **71 tests PASS**; actual source artifact SHA/parent verified; 0 quotes, 0 forecasts, 0 diagnostic previews, 0 paid calls, 0 Supabase writes, no target-outcome reads. Public report artifact 13963024080.
+- Current-Form Forward-Only [run 43262798305](https://github.com/MaksimBlud/football-ai/actions/runs/43262798305): **53 tests PASS**; source artifact 13951945358 and parent run 43232728352 verified; source age 10,123 seconds; 0 quotes, 0 lambda-1 shadows, no target-outcome reads/scoring, 0 paid calls/writes. Public artifact 13963944149, ZIP SHA-256 `469e665853c5f4a81774641fbb7f41b3d1961df91a75cb2f9a767e280ac4867c`.
+- Source capture [run 43232728352](https://github.com/MaksimBlud/football-ai/actions/runs/43232728352): **19 tests PASS**, 110 feature-input identities, 10 historic CSVs + 1 current-season CSV, source artifact 13951945358, SHA-256 `e7bb6e90466c278882225766424b17c229cab46da35dd80a4418e627c8ccb1e8`. This public artifact is not treated as authorized for further use while provider rights remain on HOLD.
+- Supabase read-only pre-match aggregate: **3,915** strict pre-match snapshots / **327** events; latest quote 2026-10-13 14:48:53 UTC; latest kickoff in those rows 2026-10-25 19:45 UTC; **0** rows for future kickoffs. Exact original V2 candidate SHA has **0** pre-match product prediction snapshots.
+- PR #781 exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`, 43 ahead / 0 behind, **8/8** exact-head workflows SUCCESS; Frozen V2 suite **103 PASS**, Recovery **49 PASS**, candidate rebuild/proof/upload skipped and production `.pkl` hash check PASS. OPEN, Ready for review, HUMAN-MERGE only; hold not active on main.
+- PR #802 Footballdata.io audit remains Draft, exact-head validation **6/6 SUCCESS**, source decision HOLD (free plan does not include Serie A; complete stats, AI/ML retention rights and source-before-quote provenance not established).
+
+The two latest forward runs are execution/provenance checks only, not forecasts or model-quality evidence. No protected target outcomes were read. No model weights, 19-feature contract, scaler/imputer, production `.pkl`, Supabase data/schema, schedules or other agents were changed. No paid provider request, promotion or bet occurred.
+
+Detailed exact run IDs, artifact digests, Supabase query scope and PR checks: [runtime audit report](research/SERIE_A_V2_RUNTIME_AUDIT_20261112_1553UTC.md).
+
+---
+
 ## 2026-11-12 15:00 UTC — Original V2: workflow hold strengthened, fresh pre-match-only Supabase audit, no eligible predictions
 
 **Fresh main:** `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Re-read `PROJECT_CONTINUITY.md`, the five live/recovery workflow YAMLs and current V2 PRs. Main still has four live source/quote workflows with schedules `13 6 * * *`, `50 5 * * *`, `8 8 * * *`, and `18 8 * * *`; the workflow-level default-deny hold is not on main.
