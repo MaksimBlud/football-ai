@@ -29,7 +29,14 @@ from serie_a_v2_asof_feature_manifest import (
 REPO_ROOT = Path(__file__).resolve().parent
 DEFAULT_RIGHTS_MANIFEST = REPO_ROOT / "research" / "source_rights" / "5dollarfootballapi.json"
 SERIE_A_PROVIDER_LEAGUE_ID = 3405541143
-ALLOWED_PLANS = frozenset(("free", "community"))
+CURRENT_SERIE_A_SEASON = "2026/27"
+CURRENT_SERIE_A_SEASON_API_PARAMETER = "2026"
+MIN_COMPLETED_FEATURE_SOURCE_EVENTS = 30
+ALLOWED_PLANS = frozenset(("free",))
+ALLOWED_QUOTE_FIELDS = frozenset((
+    "event_id", "league", "home_team", "away_team",
+    "commence_time_utc", "snapshot_time_utc",
+))
 FORBIDDEN_QUOTE_FIELDS = frozenset((
     "result", "outcome", "score", "home_goals", "away_goals",
     "final_score", "settlement", "prediction_correct", "match_winner",
@@ -82,8 +89,69 @@ def _assert_rights_approved(rights: dict) -> None:
     missing = [flag for flag in REQUIRED_RIGHTS_FLAGS if rights.get(flag) is not True]
     if missing:
         raise PermissionError("5Dollar source rights are not approved: " + ", ".join(missing))
-    if rights.get("raw_redistribution_permitted") is True:
+    if rights.get("raw_redistribution_permitted") is not False:
         raise PermissionError("raw source redistribution must remain prohibited")
+
+
+def _validate_feature_source_gate(capture_manifest: dict, request_started: datetime) -> dict:
+    """Require the existing 30-event metadata-only gate before any current-season result bytes are read."""
+    gate = capture_manifest.get("feature_source_gate")
+    if not isinstance(gate, dict):
+        raise PermissionError("current-form feature-source gate is missing or closed")
+    observed = gate.get("observed_completed_primary_events")
+    if (
+        gate.get("type") != "CURRENT_FORM_FEATURE_INPUT_ONLY"
+        or gate.get("primary_league") != "SERIE_A"
+        or gate.get("season") != CURRENT_SERIE_A_SEASON
+        or gate.get("minimum_completed_primary_events") != MIN_COMPLETED_FEATURE_SOURCE_EVENTS
+        or isinstance(observed, bool)
+        or not isinstance(observed, int)
+        or observed < MIN_COMPLETED_FEATURE_SOURCE_EVENTS
+        or gate.get("metadata_fields_read") != ["match_date", "home_team", "away_team"]
+        or gate.get("score_or_result_fields_selected_for_gate") is not False
+        or gate.get("passed") is not True
+    ):
+        raise PermissionError("current-form feature-source gate is not valid or has fewer than 30 metadata-only events")
+    checked_at = _parse_utc(gate.get("checked_at_utc"), "feature_source_gate.checked_at_utc")
+    if checked_at >= request_started:
+        raise ValueError("feature-source gate must be checked strictly before the first source request")
+
+    policy = capture_manifest.get("feature_policy")
+    if not isinstance(policy, dict) or any((
+        policy.get("use_current_season_matches_only_as_lagged_features") is not True,
+        policy.get("same_calendar_day_matches_excluded") is not True,
+        policy.get("future_or_unplayed_fixtures_used") is not False,
+        policy.get("model_weights_or_feature_definitions_changed") is not False,
+        policy.get("model_refit") is not False,
+        policy.get("model_selection") is not False,
+    )):
+        raise PermissionError("current-season feature policy is missing or differs from the frozen V2 contract")
+
+    evaluation_gate = capture_manifest.get("target_outcome_evaluation_gate")
+    if not isinstance(evaluation_gate, dict) or (
+        evaluation_gate.get("minimum_completed_eligible_prospective_forecasts") != 30
+        or evaluation_gate.get("outcomes_read_for_evaluation") is not False
+        or evaluation_gate.get("outcome_gate_open") is not False
+    ):
+        raise PermissionError("the separate 30-forecast target-outcome gate must remain closed")
+    if (
+        capture_manifest.get("target_outcomes_read") is not False
+        or capture_manifest.get("target_outcomes_scored") is not False
+        or capture_manifest.get("supabase_writes") != 0
+        or capture_manifest.get("paid_provider_calls") != 0
+    ):
+        raise PermissionError("capture bundle violates the no-target-outcome/no-write/no-paid-call contract")
+    return {
+        "type": gate["type"],
+        "primary_league": gate["primary_league"],
+        "season": gate["season"],
+        "minimum_completed_primary_events": MIN_COMPLETED_FEATURE_SOURCE_EVENTS,
+        "observed_completed_primary_events": observed,
+        "checked_at_utc": checked_at.isoformat(),
+        "metadata_fields_read": ["match_date", "home_team", "away_team"],
+        "score_or_result_fields_selected_for_gate": False,
+        "passed": True,
+    }
 
 
 def _safe_page_path(archive_dir: Path, value: object) -> Path:
@@ -224,6 +292,9 @@ def _validate_quotes(
         forbidden = FORBIDDEN_QUOTE_FIELDS.intersection(quote)
         if forbidden:
             raise ValueError("target outcome fields are forbidden: " + ", ".join(sorted(forbidden)))
+        unexpected = set(quote) - ALLOWED_QUOTE_FIELDS
+        if unexpected:
+            raise ValueError("quote metadata contains unapproved fields: " + ", ".join(sorted(unexpected)))
         if quote.get("league") != "SERIE_A":
             raise ValueError("quotes must be Serie A only")
         event_id = str(quote.get("event_id") or "").strip()
@@ -260,8 +331,9 @@ def build_manifest_from_private_archive(
     if not expected_season_id:
         raise ValueError("capture bundle must pin one league_season_id")
     season_api_parameter = str(capture_manifest.get("season_api_parameter") or "").strip()
-    if not season_api_parameter:
-        raise ValueError("capture bundle must pin the provider season parameter")
+    if (capture_manifest.get("season") != CURRENT_SERIE_A_SEASON
+            or season_api_parameter != CURRENT_SERIE_A_SEASON_API_PARAMETER):
+        raise ValueError("capture bundle must be pinned to the current Serie A 2026/27 season")
     if capture_manifest.get("api_plan") not in ALLOWED_PLANS:
         raise PermissionError("only an approved $0 Free or Community capture is accepted")
     if capture_manifest.get("storage_class") not in {"private_local", "private_object_store"}:
@@ -278,6 +350,7 @@ def build_manifest_from_private_archive(
     response_received = _parse_utc(capture_manifest.get("response_received_at_utc"), "response_received_at_utc")
     if response_received < request_started:
         raise ValueError("response was received before the request started")
+    feature_input_gate = _validate_feature_source_gate(capture_manifest, request_started)
     if response_received >= earliest_quote:
         raise ValueError("source response was not received strictly before every quote")
     if capture_manifest.get("captured_at_utc") != capture_manifest.get("response_received_at_utc"):
@@ -304,7 +377,9 @@ def build_manifest_from_private_archive(
             raise ValueError("all source pages must have HTTP 200")
         page_started = _parse_utc(page.get("request_started_at_utc"), "page request_started_at_utc")
         page_received = _parse_utc(page.get("response_received_at_utc"), "page response_received_at_utc")
-        if page_received < page_started or page_received >= earliest_quote:
+        if page_received < page_started or page_started < request_started or page_received > response_received:
+            raise ValueError("page request/response times fall outside the capture window")
+        if page_received >= earliest_quote:
             raise ValueError("each page must be received before every quote")
         raw_path = _safe_page_path(archive_dir, page.get("file"))
         raw_bytes = raw_path.read_bytes()
@@ -336,21 +411,27 @@ def build_manifest_from_private_archive(
             "response_sha256": digest,
             "response_bytes": len(raw_bytes),
         })
-    if sorted(page_numbers) != list(range(1, len(pages) + 1)):
-        raise ValueError("capture pages must be complete and contiguous from page 1")
+    if page_numbers != list(range(1, len(pages) + 1)):
+        raise ValueError("capture pages must be ordered and contiguous from page 1")
     if response_received != max(
         _parse_utc(page["response_received_at_utc"], "page response_received_at_utc")
         for page in pages
     ):
         raise ValueError("bundle response_received_at_utc must equal the latest page receipt")
+    if any(not isinstance(fixture, dict) for fixture in all_fixtures):
+        raise ValueError("fixture row must be an object")
+    for fixture in all_fixtures:
+        league = fixture.get("league")
+        if not isinstance(league, dict) or str(league.get("id")) != str(SERIE_A_PROVIDER_LEAGUE_ID):
+            raise ValueError("source page contains a fixture outside the exact Serie A league")
+        if str(fixture.get("league_season_id") or "").strip() != expected_season_id:
+            raise ValueError("source page contains a fixture outside the pinned Serie A season")
     fixture_ids = [str(f.get("id") or "").strip() for f in all_fixtures]
     if any(not value for value in fixture_ids) or len(fixture_ids) != len(set(fixture_ids)):
         raise ValueError("source fixture ids must be present and unique across pages")
     history_rows = []
     skipped_non_finished = 0
     for fixture in all_fixtures:
-        if not isinstance(fixture, dict):
-            raise ValueError("fixture row must be an object")
         if str(fixture.get("id")) in target_ids:
             raise ValueError("target quote event id appears in raw source bundle")
         if fixture.get("status") != "finished":
@@ -379,6 +460,22 @@ def build_manifest_from_private_archive(
         "response_received_at_utc": response_received.isoformat(),
         "collector_observation_before_every_quote": True,
         "upstream_source_observation_timestamp_available": False,
+        "feature_input_gate": feature_input_gate,
+        "feature_input_gate_attestation_required": True,
+        "feature_policy": {
+            "use_current_season_matches_only_as_lagged_features": True,
+            "same_calendar_day_matches_excluded": True,
+            "future_or_unplayed_fixtures_used": False,
+            "model_weights_or_feature_definitions_changed": False,
+            "model_refit": False,
+            "model_selection": False,
+        },
+        "target_outcome_evaluation_gate": {
+            "minimum_completed_eligible_prospective_forecasts": 30,
+            "outcomes_read_for_evaluation": False,
+            "outcome_gate_open": False,
+        },
+        "attribution_required": rights_manifest.get("public_attribution_required") is True,
         "page_count": len(page_evidence),
         "pages": page_evidence,
         "source_finished_fixture_count": len(history_rows),
@@ -389,6 +486,8 @@ def build_manifest_from_private_archive(
     # Local timestamp ordering and raw SHA are validated here. The referenced
     # GitHub Actions run/logs must still be checked independently before this
     # can be called an attested source-before-quote observation.
+    base["feature_input_gate_passed"] = True
+    base["feature_input_gate_attestation_required"] = True
     base["source_before_quote_order_validated"] = True
     base["source_before_quote_verified"] = False
     base["source_capture_attestation_required"] = True
