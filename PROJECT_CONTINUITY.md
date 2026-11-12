@@ -9697,3 +9697,42 @@ Read-only Supabase queries were limited to strict pre-match market metadata with
 - `active_lambda=0`; `shadow_lambda=1` research-only. Stability gate remains FAILED. Prospective target-outcome gate remains 0/30. Brier/LogLoss have not been computed on an eligible independent prospective cohort; no superiority over market is established.
 - No paid API request, model refit, threshold tuning, bet, promotion, production `.pkl` change, Supabase write/DDL, main update, PR merge, schedule change or other-agent setting change occurred.
 
+
+
+## Original MARKET_ANCHOR_1X2_V2 — fresh exact-head and live-data checkpoint, 2026-11-12 03:55 UTC
+
+### Main, open PRs, and current workflow safety
+
+- Fresh GitHub default-branch lookup still resolves `main` to `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The repository is public. Main's `PROJECT_CONTINUITY.md` blob is `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`; it still begins with the 2026-10-18 checkpoint. This PR branch carries the later continuity updates.
+- PR [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / ready / mergeable at exact head `afe943305143b68b62e89f20010d78d6b48efd70`, based on the unchanged main SHA. All eight exact-head checks remain SUCCESS. It holds the five current main live/recovery workflows and their uploads, but is not merged, so the hold is not active on main.
+- PR [#793](https://github.com/MaksimBlud/football-ai/pull/793) remains Draft at `4d91bf1f62ee41c5eb1f0f01cb1586e404ff4e48`, based on #787 head `272a0dc2d6a97fedc7964e8cc2614ba670220fae`; all six exact-head workflow checks are SUCCESS. It is the market-only evaluator port, still synthetic/offline and not authorized to read outcomes.
+- PR [#794](https://github.com/MaksimBlud/football-ai/pull/794) adds only the Big Balls Sports Data source audit. Exact head `e02ff2838f3c5e211e3bfe0e9d3c18781e0f7a83`; all six exact-head checks are SUCCESS (Research, Product, Serie A, Bundesliga, Ligue 1 and Eredivisie). It remains Draft and is not an integration approval.
+- PR #794's audit finds structural availability of goals/corners/cards and favourable internal-model storage terms, but Free-tier entitlement for Serie A team statistics is inconsistent across vendor pages; actual 2026/27 field coverage, field-level upstream lineage/licence and upstream observation timestamps remain unverified. No account/key/API request/download was made. The provider's own stored-only statistics route may support immutable capture + SHA, but our capture timestamp cannot substitute for missing upstream field-observation time. Keep the source denied pending written clarification.
+- The main `safe-engineering-automerge.yml` is restricted to same-repository `github-actions[bot]` relay drafts with exact six-check CI and a narrow allowlist. Run [#43146221159](https://github.com/MaksimBlud/football-ai/actions/runs/43146221159) completed SUCCESS with `SAFE_AUTO_MERGE_HEALTHY_NOOP: no eligible bot PR with verified six-check CI`; it merged nothing. Owner-authored V2 research PRs remain HUMAN-MERGE only.
+
+### Fresh actual main workflow evidence
+
+The main Original Forward workflow file is blob `48ce3b0d8e31c4cf293b94500e9c320047311467`. It remains scheduled at 08:08 UTC and can subscribe to completion of the manually dispatched `Serie A Odds Snapshots` workflow; it does not itself call a paid odds provider. It still uploads source/diagnostic artifacts with 90-day retention on current main. The current-form source/forward workflows also remain on main and upload 90-day artifacts. These live paths are not protected until #781 is manually merged. Existing public artifacts are not deleted by #781.
+
+### Strict pre-match Supabase refresh (read-only)
+
+Only `odds_snapshots` and non-outcome metadata in `product_prediction_snapshots` were queried. The odds predicate was exactly:
+
+`snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= NOW()`
+
+- All leagues: **3,915** strict pre-match snapshots across **327** unique events.
+- Serie A: **620** strict pre-match snapshots across **63** unique events; latest `2026-10-13 14:48:53.042620+00`.
+- Every league: **0** strict pre-match snapshots in the preceding seven days and **0** rows tied to future kickoffs.
+- Exact frozen candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6` in `product_prediction_snapshots`, requiring both `generated_at_utc < commence_time_utc` and `created_at < commence_time_utc`: **0 rows / 0 events**.
+- No result, score, settlement, or target-outcome columns were selected. No Supabase write or DDL occurred.
+
+The metadata-only feature-input gate in the current-form source code reads only `match_date,home_team,away_team` from the already designated completed-fixture ledger; it is separate from the 30-forecast target-outcome gate. The latter remains closed at **0/30**.
+
+### Frozen V2 state and next safe action
+
+- Original candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19-feature order, 20x2 weights, scaler/imputer, 3,799-row training fingerprint and 2026-06-30 cutoff remain unchanged.
+- `active_lambda=0`; `shadow_lambda=1` research-only; stability gate FAILED; prospective target-outcome gate 0/30. No eligible independent Brier/LogLoss comparison exists.
+- Next sequence remains owner HUMAN-MERGE of #781, then fresh-main re-read and exact-head rebase/integration of #720 → #727 → #780 → #783 → #784 → #785 → #786 → #787 → #793. Do not merge any PR in this automation run.
+- Continue source-rights research without API calls. A new source must have written permission, measured completeness for all required fields, defensible field-level lineage and upstream as-of semantics before any capture. Do not mix candidate-source cohorts or alter the original feature/weight contract.
+
+No main update, PR merge, source/quote download, target-outcome read, paid API request, model inference/refit, threshold change, production `.pkl` change, Supabase write/DDL, schedule change, or other-agent setting change occurred in this checkpoint.
