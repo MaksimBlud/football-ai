@@ -802,3 +802,32 @@ def test_5dollar_adapter_rejects_same_day_reversed_duplicate_after_alias_normali
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path, fixtures)
     with pytest.raises(ValueError, match="duplicate unordered historical fixture identity"):
         build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+
+def test_5dollar_adapter_rejects_target_identity_when_source_orientation_is_reversed(tmp_path):
+    from datetime import datetime, timezone
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    # A source page must not smuggle the target fixture's completed result
+    # under reversed home/away orientation on the same UTC date.
+    reversed_target = _synthetic_5dollar_fixture(
+        0,
+        kickoff_utc=datetime(2026, 11, 13, 7, 0, tzinfo=timezone.utc),
+        home="Inter Milan",
+        away="Juventus",
+    )
+    fixtures = [reversed_target]
+    fixtures.extend(_synthetic_5dollar_fixture(i + 1) for i in range(29))
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path, fixtures)
+
+    capture["request_started_at_utc"] = "2026-11-13T07:59:59+00:00"
+    capture["response_received_at_utc"] = "2026-11-13T08:00:00+00:00"
+    capture["captured_at_utc"] = capture["response_received_at_utc"]
+    capture["pages"][0]["request_started_at_utc"] = capture["request_started_at_utc"]
+    capture["pages"][0]["response_received_at_utc"] = capture["response_received_at_utc"]
+    capture["feature_source_gate"]["checked_at_utc"] = "2026-11-13T07:59:58+00:00"
+    quotes[0]["away_team"] = "Inter Milan"
+    quotes[0]["snapshot_time_utc"] = "2026-11-13T08:05:00+00:00"
+
+    with pytest.raises(ValueError, match="target fixture identity appears as a completed source outcome"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
