@@ -624,6 +624,24 @@ def test_5dollar_adapter_rejects_target_outcome_fields_and_naive_timestamps(tmp_
         build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
 
 
+def test_5dollar_adapter_cli_cannot_override_checked_in_rights_manifest(monkeypatch):
+    import sys
+    import pytest
+    import serie_a_v2_5dollar_source_adapter as adapter
+
+    monkeypatch.setattr(sys, "argv", [
+        "serie_a_v2_5dollar_source_adapter",
+        "--archive-dir", "/private/archive",
+        "--capture-manifest", "/private/capture.json",
+        "--quotes-json", "/private/quotes.json",
+        "--rights-json", "/tmp/approved-rights.json",
+        "--output", "/private/output.json",
+    ])
+    with pytest.raises(SystemExit) as error:
+        adapter.main()
+    assert error.value.code == 2
+
+
 def test_5dollar_adapter_has_no_network_or_supabase_client():
     import ast
     from pathlib import Path
