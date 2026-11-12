@@ -229,7 +229,7 @@ only; actual market evaluation still requires eligible main-branch forward
 artifacts with verified source archives and 30 completed primary forecast events.
 
 
-## Current source-rights and private-storage blockers — 2026-11-08
+## Current source-rights and private-storage blockers — 2026-11-12
 
 The evaluator is stacked on the integrated source-rights/privacy pipeline. These
 permissions are intentionally separate:
