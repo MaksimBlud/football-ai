@@ -353,6 +353,34 @@ def _synthetic_5dollar_bundle(tmp_path, fixtures=None, quote=None):
         "captured_at_utc": "2026-11-12T08:00:00+00:00",
         "page_count": 1,
         "pages": [page],
+        "feature_source_gate": {
+            "type": "CURRENT_FORM_FEATURE_INPUT_ONLY",
+            "primary_league": "SERIE_A",
+            "season": "2026/27",
+            "minimum_completed_primary_events": 30,
+            "observed_completed_primary_events": 30,
+            "checked_at_utc": "2026-11-12T07:59:58+00:00",
+            "metadata_fields_read": ["match_date", "home_team", "away_team"],
+            "score_or_result_fields_selected_for_gate": False,
+            "passed": True,
+        },
+        "feature_policy": {
+            "use_current_season_matches_only_as_lagged_features": True,
+            "same_calendar_day_matches_excluded": True,
+            "future_or_unplayed_fixtures_used": False,
+            "model_weights_or_feature_definitions_changed": False,
+            "model_refit": False,
+            "model_selection": False,
+        },
+        "target_outcome_evaluation_gate": {
+            "minimum_completed_eligible_prospective_forecasts": 30,
+            "outcomes_read_for_evaluation": False,
+            "outcome_gate_open": False,
+        },
+        "target_outcomes_read": False,
+        "target_outcomes_scored": False,
+        "paid_provider_calls": 0,
+        "supabase_writes": 0,
     }
     return capture, [quote], _synthetic_5dollar_rights()
 
@@ -368,7 +396,8 @@ def test_5dollar_offline_adapter_maps_exact_original_19_features_and_verifies_sh
     assert report["feature_count"] == 19
     row = report["feature_manifests"][0]
     assert len(row["features"]) == 19
-    assert row["features"]["diff_points_5"] == pytest.approx(3.0)
+    # Original V2 uses the frozen five-match mean, not a five-match sum.
+    assert row["features"]["diff_points_5"] == pytest.approx(0.6)
     assert row["history_coverage"]["home"]["prior_matches_in_frozen_30_match_window"] == 12
     assert row["history_coverage"]["away"]["prior_matches_in_frozen_30_match_window"] == 12
     assert report["source_before_quote_order_validated"] is True
@@ -472,10 +501,11 @@ def test_5dollar_adapter_rejects_mixed_league_season_and_non_free_plan(tmp_path)
     with pytest.raises(ValueError, match="league_season_id"):
         build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
 
-    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
-    capture["api_plan"] = "pro"
-    with pytest.raises(PermissionError, match="only an approved"):
-        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+    for plan in ("community", "pro"):
+        capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+        capture["api_plan"] = plan
+        with pytest.raises(PermissionError, match="only an approved"):
+            build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
 
 
 def test_5dollar_adapter_default_rights_manifest_is_hold(tmp_path):
@@ -618,4 +648,61 @@ def test_5dollar_adapter_rejects_unconfirmed_finished_status(tmp_path):
     fixtures[0]["status_code"] = "unknown"
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path, fixtures)
     with pytest.raises(ValueError, match="full-time confirmation"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+
+def test_5dollar_adapter_requires_30_event_metadata_gate_before_reading_pages(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    capture.pop("feature_source_gate")
+    capture["pages"][0]["file"] = "missing-before-gate.json"
+    with pytest.raises(PermissionError, match="feature-source gate"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    capture["feature_source_gate"]["observed_completed_primary_events"] = 29
+    capture["pages"][0]["file"] = "missing-before-gate.json"
+    with pytest.raises(PermissionError, match="fewer than 30"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+
+def test_5dollar_adapter_requires_metadata_only_gate_before_request_and_closed_target_gate(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    capture["feature_source_gate"]["checked_at_utc"] = capture["request_started_at_utc"]
+    with pytest.raises(ValueError, match="strictly before the first source request"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    capture["feature_source_gate"]["score_or_result_fields_selected_for_gate"] = True
+    with pytest.raises(PermissionError, match="feature-source gate"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    capture["target_outcome_evaluation_gate"]["outcome_gate_open"] = True
+    with pytest.raises(PermissionError, match="target-outcome gate"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+
+def test_5dollar_adapter_rejects_unapproved_quote_metadata_fields(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    quotes[0]["full_time_score"] = "2-0"
+    with pytest.raises(ValueError, match="unapproved fields"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+
+def test_5dollar_adapter_rejects_page_timestamps_outside_capture_window(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    capture["pages"][0]["request_started_at_utc"] = "2026-11-12T07:59:58+00:00"
+    with pytest.raises(ValueError, match="outside the capture window"):
         build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
