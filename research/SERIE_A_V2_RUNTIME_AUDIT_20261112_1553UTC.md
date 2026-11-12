@@ -204,3 +204,40 @@ Current PR API HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`; base main `40887
 PR #802 (Footballdata.io free Serie A audit) remains Draft and its exact HEAD has **6/6** PR validation workflows SUCCESS. Its documented decision remains HOLD: free plan does not include Serie A, and required statistics, AI/ML retention rights and source-before-quote provenance are not established. No account, key or provider request was made.
 
 No model weights, 19-feature contract, scaler/imputer, production `.pkl`, Supabase data/schema, schedules or other agents were changed. No paid API call, target-outcome read, promotion or bet occurred.
+
+
+## Additional free-source screen — Footiqo (2026-11-12, documentation-only)
+
+Official pages reviewed:
+- Terms of Use (updated 2026-10-08): https://footiqo.com/terms-of-use/
+- Dataset Licence & Data Access Policy (updated 2026-10-08): https://footiqo.com/dataset-licence/
+- Free football data overview: https://footiqo.com/football-data/
+- Serie A database schema: https://footiqo.com/es/base-de-datos/ligas/italia-serie-a/
+
+### Rights and access
+
+The published licence permits personal, non-commercial research and internal analytics, including local/private storage, statistical analysis, predictive-model development/testing, machine-learning experiments, derived features/probabilities, and retention of privately developed models/results. It expressly excludes redistribution and substantial publication of the underlying dataset.
+
+The same policy prohibits automated scraping/crawling, bulk extraction, automated CSV/Excel export access, and automated downloads of free or premium dataset files unless Footiqo separately authorizes the arrangement in writing. Manual exports through the normal website UI are permitted. Footiqo states that it has no public API. The policy also reserves third-party rights and says sources/methodologies and field coverage vary by competition, season and match; it does not guarantee complete field coverage.
+
+### Frozen 19-feature compatibility
+
+The public Serie A database documents match-level goals, corners and yellow-card fields for the current and previous seasons. The visible corners/cards export schema does not expose red-card fields. The frozen original candidate requires red-card rolling features (diff_red_5 and diff_red_10) as part of its unchanged 19-feature contract. No zero-fill, substitution, feature drop or refit is permitted.
+
+The reviewed public pages expose match date/kickoff and statistical fields, but no field-level source-observation timestamp or revision history. A local manual-export timestamp and SHA would prove which bytes were retained, not when each upstream statistic first became observable. Source-before-quote therefore remains unproven without a provider-side observation clock or a genuinely pre-quote archived export.
+
+The public policy also prohibits placing substantial underlying data in public repositories/file-sharing/public databases. Public GitHub Actions artifacts are therefore not an admissible storage target for Footiqo data. Its standard permission is personal/non-commercial/private; public or commercial product use and automated capture require separate written permission.
+
+### Decision
+
+**HOLD — not an admissible automated source for the unchanged original V2 contract.**
+
+Potentially useful only as a manually exported, private, non-commercial research source after:
+1. red-card coverage is documented for the exact required seasons/matches;
+2. third-party/upstream rights are clarified for those fields;
+3. a defensible source-observation timestamp is available before each quote;
+4. any automated access or public-product use is explicitly authorized in writing.
+
+No account/key was created; no file was downloaded or exported; no scraping/API request occurred; no Footiqo data was added to the candidate or any artifact.
+
+The public Serie A page is a mixed match-results/statistics view. Its rendered page included current-season match rows; no row-level 2026/27 score/stat values were extracted, analyzed, copied, or used. Those rows are excluded from V2 research and do not count toward the preregistered 30-forecast outcome gate.

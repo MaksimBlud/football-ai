@@ -10550,3 +10550,20 @@ Security Advisor at **2026-11-12 19:57 UTC** reports five public tables with RLS
 Original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19-feature order/builder, weights, scaler/imputer and training fingerprint remain unchanged. `active_lambda=0` remains the market; `shadow_lambda=1` is research-only. There are zero admissible exact-SHA prospective V2 predictions in Supabase. The independent 30-primary-completed-forecast outcome gate remains CLOSED; Brier/LogLoss comparison is not available and no V2 superiority claim is justified.
 
 No main update/merge, provider request or source download, target-outcome read, Supabase write/DDL, paid call, production pickle change, schedule change or other-agent setting change occurred in this audit.
+
+
+## 2026-11-12 — Footiqo free Serie A source screen
+
+A documentation-only audit of Footiqo's official Terms of Use and Dataset Licence & Data Access Policy found a potentially useful but currently inadmissible source:
+
+- The standard licence permits personal non-commercial research/internal analytics, private storage, model development/testing, ML experiments, derived features/probabilities, and retention of private models/results.
+- Manual exports through the normal website UI are permitted.
+- Automated scraping, bulk extraction, automated CSV/Excel exports, and automated free/premium dataset downloads require separate written permission; Footiqo has no public API.
+- Third-party rights are expressly reserved, and field coverage/source methods vary by competition, season and match.
+- The Serie A database exposes match-level corners and yellow cards, but its visible schema does not expose red cards. The original V2 contract requires both red-card rolling features and cannot be altered or imputed.
+- The reviewed pages do not expose field-level source-observation timestamps or revision history. A local export timestamp/SHA alone cannot prove source-before-quote.
+- The standard licence is private/non-commercial. Public artifacts, public data feeds and commercial/public-product use are not authorized by the standard permission.
+
+**Decision: HOLD for original V2.** Reconsider only after red-card coverage, upstream rights, source-observation clocks, and any automated/public-product permissions are confirmed in writing. No account, API key, download, export, scraping, model inference, or candidate change occurred.
+
+Process note: the public Serie A database page is a mixed current-season results/statistics view. Its rendered page included current-season match rows; no row-level 2026/27 values were extracted, analyzed, copied, or used. Those rows are excluded from all V2 research and do not count toward the preregistered 30-primary-completed-forecast outcome gate.
