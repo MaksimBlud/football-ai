@@ -31,6 +31,7 @@ from serie_a_v2_asof_feature_manifest import (
 
 REPO_ROOT = Path(__file__).resolve().parent
 DEFAULT_RIGHTS_MANIFEST = REPO_ROOT / "research" / "source_rights" / "5dollarfootballapi.json"
+DEFAULT_RIGHTS_MANIFEST_SHA256 = "293268983598d66f2554dfeca935b2975d627176f37d09ed85dfe025d96f84b8"
 SERIE_A_PROVIDER_LEAGUE_ID = 3405541143
 CURRENT_SERIE_A_SEASON = SERIE_A_RUNTIME_CONFIG.finished_results_source.season
 CURRENT_SERIE_A_SEASON_API_PARAMETER = CURRENT_SERIE_A_SEASON[:4]
@@ -114,7 +115,26 @@ def _require_private_file(path: Path, label: str) -> Path:
     return resolved
 
 
-def _assert_rights_approved(rights: dict) -> None:
+def _load_verified_rights_manifest() -> dict:
+    """Load only the reviewed repository manifest whose exact bytes are pinned in code."""
+    if DEFAULT_RIGHTS_MANIFEST.is_symlink() or not DEFAULT_RIGHTS_MANIFEST.is_file():
+        raise PermissionError("canonical 5Dollar source rights manifest is missing or not a regular file")
+    raw = DEFAULT_RIGHTS_MANIFEST.read_bytes()
+    digest = hashlib.sha256(raw).hexdigest()
+    if digest != DEFAULT_RIGHTS_MANIFEST_SHA256:
+        raise PermissionError("canonical 5Dollar source rights manifest SHA-256 mismatch")
+    try:
+        rights = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise PermissionError("canonical 5Dollar source rights manifest is invalid JSON") from exc
+    if not isinstance(rights, dict):
+        raise PermissionError("canonical 5Dollar source rights manifest must be a JSON object")
+    return rights
+
+
+def _assert_rights_approved() -> dict:
+    """Validate the pinned repository manifest; callers cannot supply approval data."""
+    rights = _load_verified_rights_manifest()
     if rights.get("approval_status") != "APPROVED":
         raise PermissionError("5Dollar source rights manifest is HOLD; ingestion is disabled")
     missing = [flag for flag in REQUIRED_RIGHTS_FLAGS if rights.get(flag) is not True]
@@ -122,6 +142,7 @@ def _assert_rights_approved(rights: dict) -> None:
         raise PermissionError("5Dollar source rights are not approved: " + ", ".join(missing))
     if rights.get("raw_redistribution_permitted") is not False:
         raise PermissionError("raw source redistribution must remain prohibited")
+    return rights
 
 
 def _validate_feature_source_gate(capture_manifest: dict, request_started: datetime) -> dict:
@@ -371,10 +392,9 @@ def build_manifest_from_private_archive(
     archive_dir: Path,
     capture_manifest: dict,
     quotes: list[dict],
-    rights_manifest: dict,
 ) -> dict:
-    """Build the unchanged 19-feature manifest from a previously captured private bundle."""
-    _assert_rights_approved(rights_manifest)
+    """Build the unchanged 19-feature manifest using only the pinned repository rights manifest."""
+    rights = _assert_rights_approved()
     archive_dir = _require_private_directory(Path(archive_dir), "raw source archive")
     if capture_manifest.get("schema_version") != "5DOLLAR_PRIVATE_CAPTURE_BUNDLE_V1":
         raise ValueError("unsupported capture bundle schema")
@@ -564,7 +584,7 @@ def build_manifest_from_private_archive(
             "outcomes_read_for_evaluation": False,
             "outcome_gate_open": False,
         },
-        "attribution_required": rights_manifest.get("public_attribution_required") is True,
+        "attribution_required": rights.get("public_attribution_required") is True,
         "page_count": len(page_evidence),
         "pages": page_evidence,
         "source_finished_fixture_count": len(history_rows),
@@ -602,11 +622,9 @@ def main() -> None:
     _require_private_directory(output_path.parent, "feature manifest output parent")
     if output_path.exists() or output_path.is_symlink():
         raise FileExistsError("refusing to overwrite an existing feature manifest")
-    rights_path = DEFAULT_RIGHTS_MANIFEST
     capture = json.loads(capture_path.read_text(encoding="utf-8"))
     quotes = json.loads(quotes_path.read_text(encoding="utf-8"))
-    rights = json.loads(rights_path.read_text(encoding="utf-8"))
-    result = build_manifest_from_private_archive(archive_dir, capture, quotes, rights)
+    result = build_manifest_from_private_archive(archive_dir, capture, quotes)
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
