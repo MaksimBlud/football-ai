@@ -236,11 +236,16 @@ def _side_stat(fixture: dict, group: str, side: str, field: str) -> int:
     return _nonnegative_integer(side_value, f"{group}.{side}")
 
 
+def _unordered_fixture_identity(home: str, away: str, match_day: object) -> tuple[object, tuple[str, str]]:
+    """Canonical unordered team pair plus UTC match date for identity embargoes."""
+    return (match_day, tuple(sorted((_canonical(home), _canonical(away)))))
+
+
 def _fixture_to_history_row(
     fixture: dict,
     capture_time: datetime,
     target_ids: set[str],
-    target_identities: set[tuple[str, str, object]],
+    target_identities: set[tuple[object, tuple[str, str]]],
     expected_season_id: str,
 ) -> dict:
     fixture_id = str(fixture.get("id") or "").strip()
@@ -271,7 +276,7 @@ def _fixture_to_history_row(
     away = away_obj.get("name")
     if not isinstance(home, str) or not home.strip() or not isinstance(away, str) or not away.strip():
         raise ValueError("fixture home/away team names are missing")
-    identity = (_canonical(home), _canonical(away), kickoff.date())
+    identity = _unordered_fixture_identity(home, away, kickoff.date())
     if identity in target_identities:
         raise ValueError("target fixture identity appears as a completed source outcome")
     goals = fixture.get("goals")
@@ -300,7 +305,7 @@ def _fixture_to_history_row(
 
 def _validate_quotes(
     quotes: list[dict],
-) -> tuple[list[tuple[datetime, datetime]], set[str], set[tuple[str, str, object]]]:
+) -> tuple[list[tuple[datetime, datetime]], set[str], set[tuple[object, tuple[str, str]]]]:
     if not isinstance(quotes, list) or not quotes:
         raise ValueError("quotes must be a non-empty list of pre-match metadata")
     timings = []
@@ -329,7 +334,7 @@ def _validate_quotes(
         away = quote.get("away_team")
         if not isinstance(home, str) or not home.strip() or not isinstance(away, str) or not away.strip():
             raise ValueError("quote home/away team identity is required")
-        target_identities.add((_canonical(home), _canonical(away), kickoff.date()))
+        target_identities.add(_unordered_fixture_identity(home, away, kickoff.date()))
         timings.append((quote_time, kickoff))
     return timings, target_ids, target_identities
 
@@ -491,11 +496,9 @@ def build_manifest_from_private_archive(
             fixture, response_received, target_ids, target_identities, expected_season_id
         )
         match_day = datetime.strptime(history_row["Date"], "%d/%m/%Y").date()
-        canonical_pair = tuple(sorted((
-            _canonical(history_row["HomeTeam"]),
-            _canonical(history_row["AwayTeam"]),
-        )))
-        history_identity = (match_day, canonical_pair)
+        history_identity = _unordered_fixture_identity(
+            history_row["HomeTeam"], history_row["AwayTeam"], match_day
+        )
         if history_identity in history_identity_keys:
             raise ValueError("duplicate unordered historical fixture identity on the same UTC date")
         history_identity_keys.add(history_identity)
