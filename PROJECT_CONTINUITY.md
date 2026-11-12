@@ -10077,3 +10077,64 @@ Only rows satisfying `snapshot_time_utc < commence_time_utc AND snapshot_time_ut
 - PR [#796](https://github.com/MaksimBlud/football-ai/pull/796) remains open with 7/7 CI SUCCESS for atomic archive publication; it is not permission to collect or publish source data and must be rechecked/rebased after #781 is manually integrated. PR #795 is not a substitute for #796's broader atomic-publication change.
 - Next: owner manually reviews/merges #781; then re-read fresh main and rebase the rights/evaluator/archive stack before any future live access. Continue only with offline code/tests and read-only pre-match metadata until a provider explicitly authorizes storage and model use and private artifact storage is available.
 - No main change, production `.pkl` change, Supabase write/DDL, paid provider request, cron change, automatic promotion, bet, or target-outcome read was performed in this cycle.
+
+
+## 2026-11-12 09:22 UTC — exact-head 5Dollar adapter hardening, rights conflict, and fresh pre-match inventory
+
+### Fresh main / continuity baseline
+- Latest repository commit search still resolves `main` to `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main ref was changed.
+- `PROJECT_CONTINUITY.md` on main is still the October 18 checkpoint (blob `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`). This PR remains the separate, HUMAN-MERGE documentation update.
+- The already merged #657, #659, and #660 were not recreated or modified.
+
+### Current protective PR #781
+- PR [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains open, Ready for review, mergeable, and **not merged**.
+- Current exact HEAD: `11292064cb08ca9f1da70940c5cdbe536ec4dec5`; base main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- Exact-head checks: **8/8 SUCCESS**:
+  - Frozen V2 Shadow Tests [#43179311118](https://github.com/MaksimBlud/football-ai/actions/runs/43179311118): **101 passed**; production `.pkl` diff guard passed.
+  - Recovery [#43179311031](https://github.com/MaksimBlud/football-ai/actions/runs/43179311031): **47 passed**; candidate rebuild, candidate proof, and artifact upload were all skipped under the hold; before/after production pickle hashes matched.
+  - Product [#43179311098](https://github.com/MaksimBlud/football-ai/actions/runs/43179311098), Serie A [#43179311040](https://github.com/MaksimBlud/football-ai/actions/runs/43179311040), Research [#43179311036](https://github.com/MaksimBlud/football-ai/actions/runs/43179311036), Bundesliga [#43179311426](https://github.com/MaksimBlud/football-ai/actions/runs/43179311426), Ligue 1 [#43179311237](https://github.com/MaksimBlud/football-ai/actions/runs/43179311237), Eredivisie [#43179311400](https://github.com/MaksimBlud/football-ai/actions/runs/43179311400).
+- The same six workflow files were reread on main. The fail-closed hold is **not** on main yet. Current main still contains source/forward workflows with schedules and `if: always()` artifact uploads (90-day retention), plus the recovery workflow's candidate-rebuild/upload path. Main remains publicly accessible. Do not claim the #781 hold is active until owner HUMAN-MERGE and fresh-main runtime proof.
+
+### Original forward workflow re-read
+- `.github/workflows/serie-a-v2-forward-preview.yml` on main is the original frozen V2 forward-only reader.
+- It runs on manual dispatch, on successful main `workflow_dispatch` completion of the existing `Serie A Odds Snapshots` workflow, and at 08:08 UTC daily.
+- It reads only already-saved quotes, runs source attestation before quote inference, and uploads a 90-day research artifact. It does not call the paid odds collector itself. The user-authorized paid snapshot workflow was not triggered.
+- This workflow is still live on main until #781 is manually merged.
+
+### New exact-head offline adapter hardening — PR #800
+- PR [#800](https://github.com/MaksimBlud/football-ai/pull/800) remains Draft/HUMAN-MERGE and is based directly on main; it is not integrated with the #720/#727/#780 rights stack and is **not eligible for merge/inference**.
+- Final exact HEAD: `7a7f124faa0ec111005db4ef33500a5798ad71e2`.
+- Exact-head CI: **7/7 SUCCESS**:
+  - Frozen V2 Shadow Tests [#43190352501](https://github.com/MaksimBlud/football-ai/actions/runs/43190352501): **110 passed**; production `.pkl` diff guard passed.
+  - Product [#43190352465](https://github.com/MaksimBlud/football-ai/actions/runs/43190352465), Serie A [#43190352472](https://github.com/MaksimBlud/football-ai/actions/runs/43190352472), Bundesliga [#43190352467](https://github.com/MaksimBlud/football-ai/actions/runs/43190352467), Eredivisie [#43190352656](https://github.com/MaksimBlud/football-ai/actions/runs/43190352656), Ligue 1 [#43190352980](https://github.com/MaksimBlud/football-ai/actions/runs/43190352980), Research [#43190352919](https://github.com/MaksimBlud/football-ai/actions/runs/43190352919).
+- The offline adapter now rejects non-standard HTTPS ports, URL fragments, duplicate/unexpected query parameters, and noncanonical/missing season/page/per-page parameters; validates pagination count/per-page and full non-final pages; and rejects same-UTC-day reversed duplicate fixtures after V2 alias normalization.
+- It reads only an already-captured private archive, verifies per-page SHA-256/byte count, and delegates to the unchanged original 19-feature builder. It does not call a provider, read Supabase, run model inference, or score outcomes. Its output deliberately keeps `source_before_quote_verified=false` until a real referenced GitHub capture run/log is independently attested.
+
+### 5DollarFootballAPI remains HOLD — free-tier conflict confirmed
+- Official terms say the provider permits data use in internal models and caching; raw-feed redistribution is prohibited, and public-facing Free/Community products require attribution. Terms: https://5dollarfootballapi.com/terms
+- The Serie A marketing page claims the league is included in Free: https://5dollarfootballapi.com/serie-a-api
+- The provider's measured data-quality table identifies Italy Serie A ID `3405541143` as **Pro**, conflicting with the marketing page: https://5dollarfootballapi.com/docs/data-quality
+- PR #800's rights manifest now explicitly records `measured_data_quality_plan=Pro` and `free_serie_a_entitlement_conflict=true`. Upstream rights, exact Free-plan field completeness/semantics, and private retention are still unconfirmed. No account/key/API call/data download was made. The offline adapter is not permission to ingest.
+- Existing PR [#792](https://github.com/MaksimBlud/football-ai/pull/792) already records this provider-plan conflict; do not duplicate its audit.
+
+### Fresh read-only Supabase pre-match checks — 2026-11-12 09:19 UTC
+Only metadata/timestamps from the pre-match odds table and pre-kickoff prediction metadata were selected; no score, result, settlement, or outcome fields were queried.
+- `odds_snapshots`, filtered by `snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= now()`: **3,915** strict pre-match snapshots / **327** unique events.
+- Strict pre-match snapshots in the last 7 days: **0**.
+- Future events with saved strict pre-match quotes: **0**.
+- Latest strict pre-match quote: `2026-10-13 14:48:53.04262+00`.
+- `product_prediction_snapshots`, filtered by exact frozen candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6` and `generated_at_utc < commence_time_utc`: **0 rows / 0 events**.
+- No Supabase writes or DDL.
+
+### Frozen model and evaluation status
+- Original candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 ordered features, 20×2 weights, 3,799 training rows, cutoff `2026-06-30T23:59:59+00:00).
+- `active_lambda=0` remains the market reference; `shadow_lambda=1` remains research-only. Stability gate remains FAILED; exact-candidate prospective prediction count is 0; target-outcome gate remains 0/30.
+- No target outcomes were read. No Brier/LogLoss superiority claim is supported. No model inference/refit, weight/feature change, production `.pkl` edit, paid API call, Supabase write/DDL, schedule change, main update, bet, or promotion occurred.
+
+### Next safe sequence
+1. Owner HUMAN-MERGE #781; do not auto-merge.
+2. Re-read fresh main and prove the hold is active in every source/forward/recovery workflow.
+3. Rebase #720 → #727 → #780 → #783–#787 and #793 onto that fresh main; preserve exact-head CI.
+4. Keep #800 Draft until the provider resolves the Free/Pro Serie A conflict, upstream rights/field semantics, and private retention; no API call in the meantime.
+5. Continue free source research and offline regression hardening only; then restore the real pre-match 19-feature V2 path without changing the frozen candidate.
+6. Do not open target outcomes before 30 eligible prospective forecasts are completed; only then run the preregistered independent Brier/LogLoss comparison.
