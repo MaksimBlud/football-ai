@@ -266,8 +266,9 @@ def build_manifest_from_private_archive(
         raise PermissionError("only an approved $0 Free or Community capture is accepted")
     if capture_manifest.get("storage_class") not in {"private_local", "private_object_store"}:
         raise PermissionError("raw source must be held in an approved private archive")
-    if not isinstance(capture_manifest.get("capture_run_id"), str) or not capture_manifest["capture_run_id"].strip():
-        raise ValueError("capture_run_id is required")
+    capture_run_id = capture_manifest.get("capture_run_id")
+    if not isinstance(capture_run_id, str) or not re.fullmatch(r"\\d{5,20}", capture_run_id):
+        raise ValueError("capture_run_id must be a numeric GitHub Actions run id")
     commit_sha = capture_manifest.get("capture_commit_sha")
     if not isinstance(commit_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", commit_sha):
         raise ValueError("capture_commit_sha must be a full Git SHA")
@@ -372,7 +373,7 @@ def build_manifest_from_private_archive(
         "league_season_id": expected_season_id,
         "season": capture_manifest.get("season"),
         "season_api_parameter": season_api_parameter,
-        "capture_run_id": capture_manifest["capture_run_id"],
+        "capture_run_id": capture_run_id,
         "capture_commit_sha": commit_sha,
         "request_started_at_utc": request_started.isoformat(),
         "response_received_at_utc": response_received.isoformat(),
@@ -385,7 +386,12 @@ def build_manifest_from_private_archive(
         "raw_payload_emitted": False,
     }
     # The adapter never opens target outcomes or invokes the candidate.
-    base["source_before_quote_verified"] = True
+    # Local timestamp ordering and raw SHA are validated here. The referenced
+    # GitHub Actions run/logs must still be checked independently before this
+    # can be called an attested source-before-quote observation.
+    base["source_before_quote_order_validated"] = True
+    base["source_before_quote_verified"] = False
+    base["source_capture_attestation_required"] = True
     base["target_outcomes_read"] = False
     base["model_inference_performed"] = False
     base["eligible_for_frozen_prospective_cohort"] = False
