@@ -297,12 +297,18 @@ def _has_non_test_python_entrypoint(text: str) -> bool:
 
 def _is_original_v2_live_workflow(text: str) -> bool:
     has_v2_reference = any(marker in text for marker in ORIGINAL_V2_REFERENCE_MARKERS)
+    has_original_v2_reference = (
+        "market_anchor_1x2_v2_" in text or "market-anchor-1x2-v2" in text
+    )
     has_live_access = (
         "secrets.SUPABASE_URL" in text
         or "secrets.SUPABASE_KEY" in text
         or any(marker in text for marker in ORIGINAL_V2_LIVE_SCRIPT_MARKERS)
         or _has_external_io(text)
-        or _has_non_test_python_entrypoint(text)
+        or (
+            has_original_v2_reference
+            and _has_non_test_python_entrypoint(text)
+        )
     )
     return has_v2_reference and has_live_access
 
@@ -365,13 +371,13 @@ def test_original_market_anchor_1x2_v2_offline_validation_remains_allowed():
 
 def test_hyphenated_original_v2_workflow_with_unknown_python_script_is_live_capable():
     assert _is_original_v2_live_workflow(
-        "name: Market Anchor 1X2 V2 source capture\nrun: python collect_source.py"
+        "name: market-anchor-1x2-v2 source capture\nrun: python collect_source.py"
     )
 
 
 def test_original_v2_pytest_and_compile_workflows_are_not_live_entrypoints():
     offline = """
-name: Market Anchor 1X2 V2 Shadow Validation
+name: market-anchor-1x2-v2-shadow-validation
 run: |
   python -m py_compile market_anchor_1x2_v2_shadow.py
   python -m pytest -q tests/test_market_anchor_1x2_v2_shadow.py
