@@ -134,3 +134,26 @@ The free allowance is a one-time grant, not a recurring free tier: the home page
 **Decision: HOLD.** Do not spend a one-time quota or create an account until rights, current Serie A coverage, quota amount and freshness semantics are clarified. No account/key or API calls were made.
 
 These sources do not justify substituting, blending, imputing or refitting any of the original 19 frozen V2 features.
+
+
+### API-Football / API-Sports
+
+Official sources:
+- [Terms](https://www.api-football.com/terms).
+- [Free and paid plans](https://www.api-football.com/pricing).
+- [Official endpoint guide](https://www.api-football.com/news/post/how-to-get-started-with-api-football-the-complete-beginner-s-guide).
+
+This is a technically stronger candidate than SportAPI for the feature schema: the documented fixture-statistics endpoint includes corners, shots, possession, yellow/red cards, and other match statistics. The provider explicitly says fields can be null when a competition does not track them. The Free plan is $0 with 100 requests/day, but free access is limited by season availability.
+
+The rights blocker is material: the provider says its data comes from partners, it does not grant a licence for use/publication in user applications, websites or products, and third-party league/federation/event-organizer authorizations remain the user's responsibility. Betting-platform use may require additional licences. The reviewed terms do not establish this project's right to retain the raw statistics for an ongoing model pipeline or to perform frozen-model inference.
+
+**Decision: HOLD pending written provider and relevant rights-holder permission plus exact Serie A season/field coverage.** No account/key was created and no API call was made.
+
+### Source-screen conclusion
+
+- SportAPI: broad free access, but no corners; cannot fill the original 19-feature contract.
+- API-Football: documented corners and other required statistics, but 100 requests/day, free-season limits, and unresolved use/retention/betting-product rights.
+- Stats API: broad normalized statistics and ingestion metadata, but only a one-time 200/500-request free grant, no freshness guarantee, variable match coverage, and unresolved retention/AI rights.
+- Football-Data.co.uk: source policy update 2026-11-10 caused the project to withdraw its automated source-capture permission and keep inference blocked; its current main-branch workflow is not yet protected by the pending hold PR.
+
+No candidate is currently cleared for automated collection, long-term archival, or original V2 inference. Do not blend providers or silently fill missing frozen features.
