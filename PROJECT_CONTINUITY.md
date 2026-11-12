@@ -10512,3 +10512,41 @@ The Security Advisor was refreshed at 2026-11-12 13:54 UTC. It still reports 5 p
 ### Scientific status unchanged
 
 The frozen candidate SHA, original 19-feature builder/order, weights, scaler/imputer and training fingerprint remain unchanged. active_lambda=0 is the market; shadow_lambda=1 remains research-only. There are still zero admissible exact-SHA prospective V2 predictions in Supabase and no eligible independent Brier/LogLoss sample. Do not claim V2 superiority or open the target-outcome gate.
+
+## Exact-head live-state audit — 2026-11-12 19:57 UTC
+
+This checkpoint was recorded from fresh GitHub main, exact PR heads, completed Actions jobs, and read-only Supabase queries. It does not authorize source capture or inference.
+
+### Main and live workflow state
+
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- GitHub reports the `main` branch as **unprotected** (`protected=false`) with no required status checks. No branch-protection change was made.
+- The four original V2 live workflows on main still retain their existing schedules: source capture `50 5 * * *`, free diagnostic `13 6 * * *`, original forward `8 8 * * *`, current-form forward `18 8 * * *`.
+- Actual main runs on 2026-11-12: Original Forward [43261918181](https://github.com/MaksimBlud/football-ai/actions/runs/43261918181), created 16:44:19 UTC; Current-Form Forward [43262798305](https://github.com/MaksimBlud/football-ai/actions/runs/43262798305), created 16:49:11 UTC. Both jobs completed SUCCESS on the exact main SHA. Their live attestation/preview and artifact-upload steps completed; this is execution evidence, not proof of admissible forecasts or model quality. No run artifacts were opened in this audit.
+- The workflow files still expose Supabase credentials to the live steps and publish artifacts under `if: always()`. This is why the workflow hold below remains urgent.
+
+### Exact open-PR status
+
+- **#781** remains open, Ready for review, mergeable, HUMAN-MERGE only; exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`, 8/8 PR-triggered runs SUCCESS. Frozen V2 suite: **103 passed**. Recovery's candidate rebuild, proof and artifact publication were SKIPPED; production pickle hash guard passed. This is the interim workflow-level default-deny hold for all four live workflows plus recovery. It has not been merged.
+- **#800** remains Draft; exact HEAD `9a2921004c6775d2bc85a473d06d05bd6e142d8b`, 7/7 PR-triggered runs SUCCESS; frozen V2 suite: **120 passed**. Its adapter loads only the canonical rights manifest pinned to SHA-256 `293268983598d66f2554dfeca935b2975d627176f37d09ed85dfe025d96f84b8`; the checked-in 5Dollar manifest remains HOLD. Synthetic test permissions are isolated to offline tests. No provider account, key, request or archive was used.
+- **#802** remains Draft; exact HEAD `b9cf4e92c76bb547612c9e623b1de2be15ea4a1e`; all **6/6** PR-triggered validation runs completed SUCCESS. The official-doc audit decision remains HOLD: the published Free plan excludes Serie A and upstream rights/retention/provenance are unresolved.
+- **#793** remains Draft and stacked on #787 (which is itself stacked on #786 → #785 → #784 → #783 → #780/#727/#720). Exact HEAD `d12e3884b78cd67e1d54a0c6d6d31f9201fb1c53`; exact-head validation: Frozen V2 **440 passed** on Python 3.11 and 3.12, evaluator **190 passed**. Source preflight is bound to the exact per-forecast artifact/parent SHA manifest immediately before the lazy outcome loader. Synthetic-only; the 30-forecast outcome gate remains closed. Do not merge independently of its rights stack.
+- **#796** remains Draft; exact HEAD `e69ad9c2700b999ef186e4771a2fe06fd010155d`, 7/7 CI SUCCESS including 89 Frozen V2 tests. It is the atomic-publication superset of #795; do not merge #795 separately. Live capture remains blocked by the independent rights/private-storage controls.
+- Documentation PR **#740** remains open against main. This checkpoint is documentation-only and does not alter main.
+
+### Read-only pre-match Supabase checkpoint
+
+- `odds_snapshots`: 3,966 total rows; 3,915 satisfy strict `snapshot_time_utc < commence_time_utc`; 327 distinct events; **0** future events with a saved pre-match quote.
+- Latest strict pre-match snapshot: **2026-10-13 14:48:53 UTC**; latest kickoff represented in that strict set: **2026-10-25 19:45:00 UTC**.
+- `product_prediction_snapshots`, filtered to exact original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6` and `generated_at_utc < commence_time_utc`: **0 rows / 0 events**.
+- No scores, results, settlements or target-outcome columns were selected. No Supabase write or DDL occurred.
+
+### Separate database-security blocker
+
+Security Advisor at **2026-11-12 19:57 UTC** reports five public tables with RLS disabled: `teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, `epl_ai_market_pair_ledger`. Four additional tables have RLS enabled but no policies: `competitions`, `match_stats`, `matches`, `standings`. No remediation was applied; enabling RLS without policies can block legitimate access. This remains owner-controlled and outside the V2 research changes.
+
+### Frozen V2 scientific status
+
+Original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19-feature order/builder, weights, scaler/imputer and training fingerprint remain unchanged. `active_lambda=0` remains the market; `shadow_lambda=1` is research-only. There are zero admissible exact-SHA prospective V2 predictions in Supabase. The independent 30-primary-completed-forecast outcome gate remains CLOSED; Brier/LogLoss comparison is not available and no V2 superiority claim is justified.
+
+No main update/merge, provider request or source download, target-outcome read, Supabase write/DDL, paid call, production pickle change, schedule change or other-agent setting change occurred in this audit.
