@@ -9883,3 +9883,104 @@ The actual outcome gate remains **0/30 eligible completed prospective forecasts*
   - Eredivisie PR Validation [#43167957976](https://github.com/MaksimBlud/football-ai/actions/runs/43167957976).
 - The small stacked PR #799 was fast-forwarded into the #781 head branch at the exact commit above and then closed as an empty duplicate; this did **not** merge or modify main. Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
 - This closes a static inventory-detection gap only. It does not activate the hold on main, authorize source capture, prove provider rights/private storage, or establish V2 predictive quality. The manual #781 merge and post-merge fresh-main proof remain outstanding. No source/quote/Supabase/target-outcome/paid-provider access occurred during this change.
+
+## Original V2 exact-state and source-policy refresh — 2026-11-12 06:47 UTC
+
+### Fresh main and frozen candidate identity
+
+- Re-read repository metadata, latest commits, main workflows and this file from main. Default branch remains main at exact SHA 40887ebb215730190d7a6c7a1693373ec4afcdfc; no main commit changed during this audit. The main-branch copy of PROJECT_CONTINUITY.md still begins at the older 2026-10-18 checkpoint; this newer continuity entry is only on the open documentation PR #740 branch.
+- Re-read research/models/market_anchor_v2_serie_a_frozen_candidate.json from main. Candidate blob: ac1303f6b096664983fbf52443bd0a381b23ba21; declared immutable artifact SHA-256: a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6.
+- Exact frozen feature order remains:
+  1. diff_points_5
+  2. diff_points_10
+  3. diff_points_venue5
+  4. diff_goals_for_5
+  5. diff_goals_for_10
+  6. diff_goals_against_5
+  7. diff_goals_against_10
+  8. diff_corners_for_5
+  9. diff_corners_for_10
+  10. diff_corners_against_5
+  11. diff_corners_against_10
+  12. diff_yellow_5
+  13. diff_yellow_10
+  14. diff_red_5
+  15. diff_red_10
+  16. diff_goals_for_venue5
+  17. diff_goals_against_venue5
+  18. diff_corners_for_venue5
+  19. diff_corners_against_venue5
+- Candidate metadata confirms 19 features, 20×2 weights, 3,799 training rows, training data through 2026-06-30T23:59:59Z, training fingerprint f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098, active_lambda=0, shadow_residual_lambda=1, stability_gate_passed=false, and automatic_promotion=false. Feature-builder Git blob remains 401b3a0893371bfa4a488ec92a4a54af2678c8f7. No candidate bytes, feature order, weights, scaler, imputer, training fingerprint, or production .pkl were changed.
+
+### Current main workflow and exact hold status
+
+- Re-read the four main workflows: serie-a-v2-forward-preview.yml, serie-a-v2-free-real-quote-diagnostic.yml, serie-a-v2-current-form-source-capture.yml, and serie-a-v2-current-form-forward-preview.yml. All four still contain their existing schedules, credentials scoped to live jobs, external source/quote steps, and 90-day artifact uploads. The #781 default-deny hold is not active on main.
+- The separate market-anchor-1x2-v2-shadow-validation.yml is pull-request-only, has no Supabase/GitHub secret binding, and does not upload source artifacts. It remains an offline regression workflow, not an additional live collection path.
+- PR #781 remains OPEN / Ready for review / mergeable / HUMAN-MERGE only, base main 40887ebb215730190d7a6c7a1693373ec4afcdfc, exact HEAD 349c1b72179549b194256af0f1e42ba0d35a4541. Exact-head CI is 8/8 SUCCESS:
+  - Frozen V2 Shadow Tests #43167957931: 94 passed; production .pkl diff guard passed.
+  - Research #43167957886.
+  - Bundesliga #43167957989.
+  - Product #43167957889.
+  - Ligue 1 #43167958309.
+  - Serie A #43167957926.
+  - Recovery #43167958133: offline original-V2 regressions and read-only production .pkl hash check passed; candidate rebuild, candidate proof and research-artifact publication were correctly skipped by the hold.
+  - Eredivisie #43167957976.
+- The #781 static inventory now detects unlisted V2 workflows using artifact download/upload, GitHub token/API, gh api, curl, wget, requests or urllib.request. It preserves the five existing workflow schedules and gates all live steps and artifact uploads. This is a branch-level hold only; owner HUMAN-MERGE and post-merge main verification remain required.
+
+### Latest original-V2 main runtime window
+
+The latest V2-specific scheduled main runs in the retrieved Actions window are still on 2026-11-11; no new original-V2 source-capture, free-diagnostic, or forward-preview run was observed on 2026-11-12 as of this audit.
+
+- Source capture #43025058808, 2026-11-11 12:59 UTC: 110 current-season source rows and 10 historical CSVs / 3,910 historical rows were archived; this remains an unresolved source-rights/public-artifact incident, not permission evidence.
+- Free Real-Quote Diagnostic #43035977412, 2026-11-11 14:10 UTC: source diagnostic ran and uploaded a public artifact while #781 was not merged. Do not download or republish it.
+- Original Forward-Only Preview #43054458880, 2026-11-11 16:03 UTC: source attestation succeeded, but quotes_seen=0, forecasts_created=0, and target outcomes were not read/scored.
+- Current-Form Forward-Only Preview #43055721034, 2026-11-11 16:10 UTC: source attestation succeeded, but quotes_seen=0, v2_current_form_shadow_captured=0, and target outcomes were not read/scored.
+
+The successful runs above are source/contract checks, not a real forecast or a model-quality result. Main remains capable of invoking these live paths until #781 is manually merged. No new source artifact was created in this audit.
+
+### Fresh read-only Supabase pre-match aggregate
+
+Only public.odds_snapshots was queried, with strict predicate:
+
+snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= now()
+
+Result at 2026-11-12 06:47 UTC:
+- Strict pre-match snapshots: 3,915.
+- Distinct events with strict pre-match snapshots: 327.
+- Strict pre-match snapshots in the preceding seven days: 0.
+- Future events with an already-saved strict pre-match quote: 0.
+- Latest strict pre-match snapshot: 2026-10-13 14:48:53.04262+00.
+
+No score, result, settlement, prediction-grade, or target-outcome column was selected. No other Supabase table was read. No Supabase write or DDL occurred.
+
+### Source-policy recheck and updated Big Balls audit
+
+PR #794 was updated in place with a current official-documentation recheck. New exact HEAD: e6c4e054f6c74fa0049234d750b33b041f97bf6f; base main 40887ebb215730190d7a6c7a1693373ec4afcdfc; Draft / open / mergeable. Exact-head CI is 6/6 SUCCESS:
+- Research #43172925061.
+- Serie A #43172925054.
+- Ligue 1 #43172925071.
+- Bundesliga #43172925123.
+- Eredivisie #43172925139.
+- Product #43172925291.
+
+The recheck confirms that Big Balls' current Terms explicitly permit storage and internal-model use of Big Balls data and allow derived outputs, but the vendor's own pages still conflict on the Free request cap (1,000/day vs 250/day) and Free history window (current + most-recent season vs current season only). The dedicated Serie A page's 92% team-stat figure is aggregate, not a 2026/27 per-match completeness result; the public coverage inventory does not list the per-match statistics route among the confirmed Serie A endpoints. Per-field upstream source lineage and upstream observation time remain unverified. Most importantly, Big Balls' terms do not clear the original candidate's separate Football-Data training provenance.
+
+Decision remains CONDITIONAL_CANDIDATE_NOT_APPROVED. No account/key/API request, odds request, source archive, dataset download, feature build or model inference was performed. Other existing source audits (#789–#792, #797–#798) remain research-only; none authorizes integration.
+
+### Prospective evaluation and scientific state
+
+- PR #793 remains Draft at 4d91bf1f62ee41c5eb1f0f01cb1586e404ff4e48, stacked on the rights-gated #787 branch. Its exact evaluator validation #43141842107 reports 183 passed; the exact frozen V2 test run #43141842233 passed. The evaluator is synthetic/offline; no live market comparison exists.
+- The separate target-outcome gate remains 0/30 eligible completed prospective forecasts. The evaluator must not invoke its lazy outcome loader before 30 unique eligible completed forecasts and the identity-only completed-fixture gate. No target outcomes were read in this audit.
+- Stability gate remains FAILED. No admissible independent Brier/LogLoss comparison exists; no V2-over-market superiority claim is supported.
+- active_lambda=0 remains the market reference; shadow_lambda=1 remains research-only. No refit, threshold tuning, bet, NO_BET override, automatic promotion, or legacy XGBoost production-model use occurred.
+
+### Next safe sequence
+
+1. Owner HUMAN-MERGE of #781; do not auto-merge.
+2. Re-read fresh main and prove the five live/recovery workflows and every associated artifact upload are held.
+3. Rebase #720 onto that fresh main, run exact full CI, then rebase the #727 → #780 → #783–#787 rights/direct-entrypoint stack and #793 evaluator.
+4. Keep #796 unmerged until the hold and rights/private-storage gates are in place; it supersedes #795 and must be revalidated on the correct ancestry.
+5. Continue only source-rights/provenance work without API calls until explicit permission, field coverage, private retention and source-before-quote semantics are established.
+6. Only then resume the unchanged original 19-feature V2 prospective path; do not open target outcomes before the 30-primary-completed-forecast gate.
+
+No main update or merge, paid The Odds API call, source/quote download, target-outcome read, Supabase write/DDL, model inference/refit, threshold change, production .pkl change, workflow schedule change, or other-agent setting change occurred in this checkpoint.
