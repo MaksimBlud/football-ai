@@ -298,6 +298,7 @@ def _synthetic_5dollar_bundle(tmp_path, fixtures=None, quote=None):
     import hashlib
     import json
 
+    tmp_path.chmod(0o700)
     fixtures = fixtures if fixtures is not None else [
         _synthetic_5dollar_fixture(i) for i in range(30)
     ]
@@ -318,7 +319,9 @@ def _synthetic_5dollar_bundle(tmp_path, fixtures=None, quote=None):
         "pagination": {"page": 1, "per_page": 100, "count": len(fixtures), "has_more": False},
     }
     raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    (tmp_path / "page-1.json").write_bytes(raw)
+    page_path = tmp_path / "page-1.json"
+    page_path.write_bytes(raw)
+    page_path.chmod(0o600)
     default_quote = {
         "event_id": "odds-target-2026-11-13",
         "league": "SERIE_A",
@@ -414,6 +417,37 @@ def test_5dollar_offline_adapter_maps_exact_original_19_features_and_verifies_sh
     assert report["eligible_for_product_publication"] is False
     assert report["scored"] is False
     assert report["source_capture"]["raw_payload_emitted"] is False
+
+
+def test_5dollar_adapter_rejects_group_or_world_accessible_archive_directory(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    tmp_path.chmod(0o750)
+    with pytest.raises(PermissionError, match="exclude group/other access"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+
+def test_5dollar_adapter_rejects_group_or_world_readable_raw_page(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    (tmp_path / "page-1.json").chmod(0o640)
+    with pytest.raises(PermissionError, match="exclude group/other access"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+
+def test_5dollar_adapter_rejects_symlinked_raw_page(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    (tmp_path / "page-link.json").symlink_to("page-1.json")
+    capture["pages"][0]["file"] = "page-link.json"
+    with pytest.raises(PermissionError, match="must not contain symlinks"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
 
 
 def test_5dollar_adapter_preserves_original_same_utc_day_exclusion(tmp_path):
