@@ -1,3 +1,57 @@
+## 2026-11-12 08:00 UTC — exact live-access inventory refresh and pre-match-only state
+
+### Fresh main and frozen original candidate
+
+- Re-read `refs/heads/main`: exact SHA remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Main is unchanged; its `PROJECT_CONTINUITY.md` still ends at the 2026-10-18 checkpoint. This newer continuity stream is on the open documentation PR only.
+- Re-read the actual main candidate JSON: blob `ac1303f6b096664983fbf52443bd0a381b23ba21`; declared artifact SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Candidate confirms 19 frozen features in the original order, a 20×2 weight matrix, 3,799 training rows through `2026-06-30T23:59:59Z`, training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`, `active_lambda=0`, `shadow_residual_lambda=1`, `stability_gate_passed=false`, `automatic_promotion=false`, and `opened_2026_27_outcomes_used=false`. No feature, weight, scaler, imputer, candidate or production artifact changed.
+
+### PR #781 — expanded fail-closed workflow inventory
+
+- Current exact HEAD: `11292064cb08ca9f1da70940c5cdbe536ec4dec5`; base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`; compare **41 ahead / 0 behind**, exact main merge base; seven changed files, only the six existing workflow changes plus the static hold-test file.
+- The inventory regression now recognizes artifact transfers, GitHub API/token access, common HTTP clients (`requests`, `httpx`, `aiohttp`, `urllib3`, `http.client`), `curl/wget`, alternate runtimes (Node/npx, Deno, Bun, Ruby, Perl, PowerShell), object-store copies, Git LFS, and generic Python helpers when the workflow name/path identifies a V2 workflow. It also has a regression preventing unrelated Product PR Validation from being misclassified merely because it compiles a V2 helper.
+- The five existing live/recovery V2 workflows retain their current triggers and schedules. All five source/quote/candidate-rebuild steps and all four artifact uploads remain default-deny under `MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=false`; credentials remain step-scoped. This is still an interim hold, not a provider licence or a private-storage solution.
+- Exact-current-HEAD GitHub Actions: **8/8 completed SUCCESS**:
+  - Serie A Frozen V2 Shadow Tests — [#43179311118](https://github.com/MaksimBlud/football-ai/actions/runs/43179311118): **101 passed**; synthetic frozen-weight checks passed; `git diff --exit-code -- '*.pkl'` passed.
+  - Research PR Validation — [#43179311036](https://github.com/MaksimBlud/football-ai/actions/runs/43179311036)
+  - Bundesliga PR Validation — [#43179311426](https://github.com/MaksimBlud/football-ai/actions/runs/43179311426)
+  - Recover Frozen Market Anchor V2 Candidate — [#43179311031](https://github.com/MaksimBlud/football-ai/actions/runs/43179311031): offline V2 regressions passed; exact frozen code checkout passed; candidate rebuild, checksum/proof and research-artifact upload were **SKIPPED** under default deny; production pickle hash comparison passed.
+  - Eredivisie PR Validation — [#43179311400](https://github.com/MaksimBlud/football-ai/actions/runs/43179311400)
+  - Serie A PR Validation — [#43179311040](https://github.com/MaksimBlud/football-ai/actions/runs/43179311040)
+  - Ligue 1 PR Validation — [#43179311237](https://github.com/MaksimBlud/football-ai/actions/runs/43179311237)
+  - Product PR Validation — [#43179311098](https://github.com/MaksimBlud/football-ai/actions/runs/43179311098)
+- Two intermediate test-only commits exposed case-normalization/path-identification errors and one unrelated Product workflow false positive; those were corrected before the current exact HEAD. The current eight runs above, not the intermediate failed runs, are the merge evidence.
+- PR #781 remains OPEN, non-draft, mergeable and **HUMAN-MERGE only**. Its hold is not active on main until an owner manually merges it and a fresh-main runtime audit proves the source/quote/rebuild/upload steps are skipped. Do not auto-merge.
+
+### Integration ancestry and nearby V2 work
+
+- PR #720 remains OPEN at `1b9464834dd5256b7d69499c1443378518dde256`, with its previously verified 9/9 CI. Fresh compare from current #781 HEAD shows #720 is **118 commits ahead / 41 commits behind**, diverged at main `40887ebb...`, and modifies overlapping V2 workflows, source gates and tests. Do not merge #720 as-is; only rebase it on fresh main after HUMAN-MERGE of #781, preserve every default-deny gate, then rerun exact-head CI.
+- PR #796 is the self-contained superset of #795: #796 is three commits ahead of #795 HEAD `9ec12f88dc5271027b956cfa4a6b228930cd7f79`, with no commits behind. #796 exact HEAD `e69ad9c2700b999ef186e4771a2fe06fd010155d` has 7/7 PR validation SUCCESS. Do not merge #795 separately. #796 remains subject to the same unresolved source-rights/private-storage gate.
+- PR #793 remains Draft on the #787 direct-entrypoint rights stack; its evaluator tests are synthetic and are not prospective market-comparison evidence.
+- New source audits #790, #791, #792, #794, #797 and #798 remain conditional/not approved. The strongest no-cost candidate on paper is 5DollarFootballAPI, but its own public pages conflict on free full Serie A statistics and do not establish field-level upstream rights/source-observed timestamps. Big Balls has a Free-vs-statistics entitlement conflict; Soccer Data does not establish long-term raw retention/upstream field lineage; open-matchday is non-commercial with mixed providers; Cornerflick's compilation licence does not clear upstream feeds; Stats API's 200 requests are one-time and its ingestion timestamp does not prove upstream observation time. No account, key, endpoint, dataset, quote or candidate feed was accessed.
+
+### Read-only Supabase pre-match audit
+
+Only `public.odds_snapshots` and pre-kickoff original-candidate prediction metadata were queried. Strict odds predicate: `snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= now()`.
+
+- **3,915** strict pre-match snapshots / **327** unique events across nine leagues.
+- **0** strict pre-match snapshots in the last seven days; **0** future events with a saved strict pre-match quote.
+- Latest saved Serie A pre-match quote remains `2026-10-13T14:48:53.042620Z`.
+- Exact original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6` in `product_prediction_snapshots`, with generation strictly before kickoff: **0 rows / 0 events**.
+- Security Advisor still reports RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger` and `public.epl_ai_market_pair_ledger`. This is a critical exposure; do not auto-enable RLS without designed policies. No DDL or policy change was made.
+
+### Binding rights and scientific status
+
+- The #720 rights manifest records Football-Data's public fair-use page update of 2026-11-06, a conservative internal decision of `research_inference_permitted=false` pending scope clarification, `ai_model_training_permitted=false`, no provider-issued AI inference licence, no commercial/public-product permission, and at most two automated download sessions per rolling seven days. This is the project's fail-closed interpretation, not a legal claim that all academic inference is explicitly prohibited.
+- Provider permission and private artifact storage remain unresolved. The public repository and existing public Actions artifacts are not private storage. Do not resume automated source capture or inference.
+- The 30-primary-completed-event target-outcome gate remains **0/30**; the separate prospective forecast evaluation gate also remains **0/30**. No protected 2026/27 target outcome was read. No Brier/LogLoss is available and no V2 superiority claim is supported.
+- No live quote, paid The Odds API call, source download, target-outcome read, Supabase write/DDL, production `.pkl` change, main update, schedule change, auto-promotion, bet, threshold tuning, or other-agent configuration change occurred in this audit. CI installed test dependencies from package registries, but did not access football-data providers, odds, Supabase or target outcomes.
+
+### Next safe sequence
+
+HUMAN-MERGE #781 first if accepted by the owner; verify the exact new main SHA and prove all live steps/uploads/rebuild are skipped. Then rebase #720 on fresh main, preserve the provider-rights and private-storage denial, and rerun exact-head full CI. Keep #796 and #793 behind those gates. Continue source-rights research without account creation, API calls or downloads; do not open target outcomes before the preregistered 30-event gate.
+
+
 ## 2026-11-11 — Exact main runtime refresh: zero quotes, verified source, privacy hold
 
 Verified against fresh `main` ref `40887ebb215730190d7a6c7a1693373ec4afcdfc` and live GitHub Actions at 2026-11-11 16:53 UTC. Main itself is unchanged. The file on main still begins with the 2026-10-18 checkpoint; this section is on the documentation PR branch only.
