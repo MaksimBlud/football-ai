@@ -587,6 +587,16 @@ def test_5dollar_adapter_default_rights_manifest_is_hold(tmp_path):
         build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
 
 
+def test_5dollar_adapter_rejects_community_plan_without_separate_eligibility_approval(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    capture["api_plan"] = "community"
+    with pytest.raises(PermissionError, match="Community Access requires separate eligibility approval"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+
 def test_5dollar_adapter_rejects_public_archive_path(tmp_path):
     import pytest
     from serie_a_v2_5dollar_source_adapter import (
