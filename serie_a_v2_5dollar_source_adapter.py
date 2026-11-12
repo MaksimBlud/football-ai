@@ -35,7 +35,7 @@ SERIE_A_PROVIDER_LEAGUE_ID = 3405541143
 CURRENT_SERIE_A_SEASON = SERIE_A_RUNTIME_CONFIG.finished_results_source.season
 CURRENT_SERIE_A_SEASON_API_PARAMETER = CURRENT_SERIE_A_SEASON[:4]
 MIN_COMPLETED_FEATURE_SOURCE_EVENTS = 30
-ALLOWED_PLANS = frozenset(("free", "community"))
+ALLOWED_PLANS = frozenset(("free",))
 ALLOWED_QUOTE_FIELDS = frozenset((
     "event_id", "league", "home_team", "away_team",
     "commence_time_utc", "snapshot_time_utc",
@@ -388,7 +388,7 @@ def build_manifest_from_private_archive(
             or season_api_parameter != CURRENT_SERIE_A_SEASON_API_PARAMETER):
         raise ValueError("capture bundle must be pinned to the current Serie A 2026/27 season")
     if capture_manifest.get("api_plan") not in ALLOWED_PLANS:
-        raise PermissionError("only an approved $0 Free or Community capture is accepted")
+        raise PermissionError("only the $0 Free plan is accepted; Community Access requires separate eligibility approval")
     if capture_manifest.get("storage_class") not in {"private_local", "private_object_store"}:
         raise PermissionError("raw source must be held in an approved private archive")
     capture_run_id = capture_manifest.get("capture_run_id")
