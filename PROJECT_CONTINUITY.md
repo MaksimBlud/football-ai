@@ -9650,3 +9650,50 @@ Artifact listings were queried for the three completed main runs above. No ZIP w
 | 43054458880 Original Forward-Only Preview | 13870532317 | 1,458 bytes | 2026-11-11 16:04:02 | 2027-02-09 16:03:21 | Unexpired |
 
 The repository is public. Treat these unexpired artifacts as lacking confidentiality; their presence is a live privacy/rights concern until their normal expiry or an owner-authorized cleanup. PR #781 prevents future live uploads after manual merge, but it does not delete these existing artifacts. No deletion was attempted because it was not authorized. The artifact contents were not downloaded, so no protected prospective target outcome was opened.
+
+
+## Original V2 evaluator and live-access recheck — 2026-11-12 02:39 UTC
+
+This addendum is documentation-only on the existing continuity PR branch. Main and all runtime data remain unchanged.
+
+### Fresh main, repository privacy, and live hold
+
+- GitHub branch API confirms main is still `40887ebb215730190d7a6c7a1693373ec4afcdfc`; the repository visibility is **public**.
+- Main's `PROJECT_CONTINUITY.md` still contains the 2026-10-18 checkpoint. This branch contains the subsequent audited updates; this addendum keeps the next cycle from repeating the evaluator and runtime checks.
+- PR [#781](https://github.com/MaksimBlud/football-ai/pull/781) is OPEN / Ready for review / mergeable at exact HEAD `afe943305143b68b62e89f20010d78d6b48efd70`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Its eight exact-head workflow runs (#43083511016, #43083511138, #43083510665, #43083510643, #43083510883, #43083510860, #43083510838, #43083510669) all completed SUCCESS; frozen V2 tests report 93 passed and recovery tests 39 passed. The hold gates all five source/quote/recovery live workflows and their artifact uploads while preserving existing schedules. It is **not merged**, so this hold is not active on main.
+- PR [#780](https://github.com/MaksimBlud/football-ai/pull/780), exact HEAD `48f55b6ef4dc40879d5232ac78ce55df51d2dce4), conservatively sets automated Football-Data source capture and frozen inference to deny-by-default after the official page update of 2026-11-10. It is stacked on #727 and remains unmerged. This is an internal rights-control decision pending provider clarification, not a legal conclusion.
+- PR #720 is still 118 commits ahead / 30 behind current #781. Do not merge it as-is. After owner HUMAN-MERGE of #781, re-read fresh main and rebase #720, then integrate #727 → #780 → #783 → #784 → #785 → #786 → #787 in order with exact-head CI.
+
+### New clean-ancestry market-only evaluator
+
+- New Draft PR [#793](https://github.com/MaksimBlud/football-ai/pull/793) replaces the diverged evaluator line #728 with a clean-ancestry port onto the direct-access/privacy stack.
+- Exact base is #787 HEAD `272a0dc2d6a97fedc7964e8cc2614ba670220fae`; exact PR HEAD is `4d91bf1f62ee41c5eb1f0f01cb1586e404ff4e48`. GitHub compare confirms 3 commits ahead / 0 behind and 14 changed files.
+- Exact-head PR checks: evaluator validation run #43141842107 SUCCESS (183 tests); frozen V2 run #43141842233 SUCCESS (440 tests on Python 3.11 and 440 on Python 3.12). The matching exact-head push runs #43141775683 and #43141775767 also completed SUCCESS. The production `.pkl` diff guards passed.
+- It preserves candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, the original 19 features/weights/scaler/imputer, cutoff, `active_lambda=0`, `shadow_lambda=1`, source-before-quote rules and first-eligible-per-fixture selection.
+- The market-only diagnostic is de-vigged market versus frozen V2 shadow using multiclass Brier and LogLoss plus paired fixture bootstrap summaries. It is not the full three-way review: no incumbent is pinned, `review_signal=false`, NO_BET and no promotion remain mandatory.
+- The lazy target-outcome reader remains closed below 30 unique eligible completed primary forecasts and reads only exact gated H/D/A identities after the gate. This is offline/synthetic CI evidence only. The workflow-level live flag is false; source rights are denied and the repository is public, so no live evaluator run or target-outcome read is authorized. HUMAN-MERGE only after all predecessors are integrated and revalidated on fresh main.
+
+### Re-read of real main workflows and strict pre-match data
+
+The following actual main runs were inspected by exact run ID and job logs; all used main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`:
+
+- Current-Form Source Capture [#43025058808](https://github.com/MaksimBlud/football-ai/actions/runs/43025058808), 2026-11-11 12:59 UTC: SUCCESS, 19 tests; 110 completed primary-event identities, 110 prior-day current-season rows, ten old-season CSVs, 11 source files, 3,910 historical matches, zero paid calls and zero Supabase writes. Public artifact #13857286039 has SHA-256 `117d72e536f56d41b7b893700b51c8e1fc593cd40034fbedb8fc1f88a8cee6be`.
+- Current-Form Forward [#43025215214](https://github.com/MaksimBlud/football-ai/actions/runs/43025215214), 2026-11-11 13:00 UTC: SUCCESS, 53 tests; source artifact and parent run verified, but `quotes_seen=0`, `v2_current_form_shadow_captured=0`, and target outcomes were neither read nor scored. Public forward artifact #13856997023 SHA-256 `7b400438a46319dc1ed15a411712d2cfb685945bd2d0d99330d362913b6c9a21`.
+- Free Real-Quote Diagnostic [#43035977412](https://github.com/MaksimBlud/football-ai/actions/runs/43035977412): SUCCESS, 53 tests, 3,800 historical rows, zero Supabase writes.
+- Original Forward [#43054458880](https://github.com/MaksimBlud/football-ai/actions/runs/43054458880): SUCCESS, 71 tests; real source ZIP SHA attested, 3,800 historical results and ten pre-prospective files verified, but `quotes_seen=0` and `v2_diagnostic_previews_captured=0`.
+- Current-Form Forward [#43055721034](https://github.com/MaksimBlud/football-ai/actions/runs/43055721034): SUCCESS, 53 tests; source artifact reverified, 3,910 historical rows and 110 current-season rows, but `quotes_seen=0` and `v2_current_form_shadow_captured=0`. Target outcomes remained unread and unscored.
+
+The 2026-11-11 source/forward runs occurred after the policy recheck and before #781 was merged; the existing public-main workflows therefore still accessed and uploaded source artifacts. #781 does not retroactively delete those already published artifacts. No artifact ZIP was downloaded or deleted in this audit.
+
+Read-only Supabase queries were limited to strict pre-match market metadata with `snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= NOW()`:
+- All leagues: 3,915 snapshots / 327 unique events; zero snapshots in the preceding seven days.
+- Serie A: 620 snapshots / 63 unique events; latest snapshot 2026-10-13 14:48:53 UTC.
+- Exact frozen candidate SHA in `product_prediction_snapshots`, with both generation and creation strictly before kickoff: 0 rows.
+- No scores, results, settlement fields or target outcomes were queried. No Supabase write or DDL occurred.
+
+### Frozen scientific state
+
+- Candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; original 19-feature contract, weights, scaler/imputer and training cutoff 2026-06-30 are unchanged.
+- `active_lambda=0`; `shadow_lambda=1` research-only. Stability gate remains FAILED. Prospective target-outcome gate remains 0/30. Brier/LogLoss have not been computed on an eligible independent prospective cohort; no superiority over market is established.
+- No paid API request, model refit, threshold tuning, bet, promotion, production `.pkl` change, Supabase write/DDL, main update, PR merge, schedule change or other-agent setting change occurred.
+
