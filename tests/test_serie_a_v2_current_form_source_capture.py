@@ -226,6 +226,10 @@ def test_source_capture_rejects_ambiguous_or_reversed_clocks_before_current_csv_
 
     assert not (tmp_path / CURRENT_FILENAME).exists()
     assert not (tmp_path / MANIFEST_FILENAME).exists()
+    # The workflow upload step uses if: always(); no historical-only partial
+    # archive may remain in its upload directory after a late validation error.
+    assert not list(tmp_path.glob("serie_a_*.csv"))
+    assert not list(tmp_path.parent.glob(f".{tmp_path.name}.staging-*"))
 
 
 def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_path):
@@ -279,6 +283,8 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert report["current_season_source_sha256"] == hashlib.sha256(raw).hexdigest()
     assert (tmp_path / CURRENT_FILENAME).read_bytes() == raw
     assert (tmp_path / MANIFEST_FILENAME).exists()
+    assert len(list(tmp_path.iterdir())) == 12  # 10 historical CSVs + current CSV + manifest
+    assert not list(tmp_path.parent.glob(f".{tmp_path.name}.staging-*"))
     assert report["target_outcomes_read"] is False
     assert report["target_outcomes_scored"] is False
     assert report["target_outcome_evaluation_gate"]["outcome_gate_open"] is False
