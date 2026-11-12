@@ -9984,3 +9984,42 @@ Decision remains CONDITIONAL_CANDIDATE_NOT_APPROVED. No account/key/API request,
 6. Only then resume the unchanged original 19-feature V2 prospective path; do not open target outcomes before the 30-primary-completed-forecast gate.
 
 No main update or merge, paid The Odds API call, source/quote download, target-outcome read, Supabase write/DDL, model inference/refit, threshold change, production .pkl change, workflow schedule change, or other-agent setting change occurred in this checkpoint.
+
+
+## 2026-11-12 — Original MARKET_ANCHOR_1X2_V2 workflow hold and fresh proof
+
+### Main and PR state
+- Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; it was not changed in this cycle.
+- PR [#657](https://github.com/MaksimBlud/football-ai/pull/657), [#659](https://github.com/MaksimBlud/football-ai/pull/659), and [#660](https://github.com/MaksimBlud/football-ai/pull/660) remain merged; no duplicate work was opened for them.
+- PR [#781](https://github.com/MaksimBlud/football-ai/pull/781) is still open, ready for review, mergeable, and **not merged**. Exact HEAD `bca2f8bc78caadee4aef1dbe993dd2f0398c807e`; base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`; 35 commits ahead, 0 behind.
+- The latest #781 update closes a concrete inventory gap: the prior static workflow detector did not recognize the canonical original-model module family `market_anchor_1x2_v2_*` or arbitrary Python entrypoints in a hyphenated original-1X2 workflow. It now recognizes the underscore/hyphen model identity, direct/module entrypoints and non-test Python commands for original V2 workflows, while keeping offline `py_compile`/`pytest` workflows allowed. A false positive in the unrelated Product PR validation workflow was removed by scoping generic Python detection to the original 1X2 identity.
+- Exact-head CI is **8/8 SUCCESS**: [Frozen V2 Shadow Tests #43176480805](https://github.com/MaksimBlud/football-ai/actions/runs/43176480805) (**98 passed**, production `.pkl` diff check passed); [Recovery #43176480772](https://github.com/MaksimBlud/football-ai/actions/runs/43176480772) (**44 passed**, production pickle hashes unchanged; candidate rebuild, candidate proof and artifact upload all **SKIPPED** while live access is false); [Research #43176480931](https://github.com/MaksimBlud/football-ai/actions/runs/43176480931), [Product #43176480783](https://github.com/MaksimBlud/football-ai/actions/runs/43176480783), [Serie A #43176480904](https://github.com/MaksimBlud/football-ai/actions/runs/43176480904), [Bundesliga #43176480767](https://github.com/MaksimBlud/football-ai/actions/runs/43176480767), [Ligue 1 #43176480806](https://github.com/MaksimBlud/football-ai/actions/runs/43176480806), and [Eredivisie #43176480944](https://github.com/MaksimBlud/football-ai/actions/runs/43176480944).
+- HUMAN-MERGE remains mandatory. No main merge or branch promotion was performed.
+
+### Main runtime still needs the hold
+The five live/recovery workflows in main still do not have the #781 fail-closed flag. Fresh main-run logs were read without downloading or opening any artifacts:
+- [Current-form source capture #43025058808](https://github.com/MaksimBlud/football-ai/actions/runs/43025058808), 2026-11-11 12:59 UTC: 110 prior-day current-season rows, 10 historical files plus one current-season file, 0 paid calls and 0 Supabase writes, no target outcomes scored. It nevertheless uploaded public artifact ID `13857286039`, SHA-256 `117d72e536f56d41b7b893700b51c8e1fc593cd40034fbedb8fc1f88a8cee6be`. Artifact was **not downloaded or inspected**.
+- [Current-form forward #43055721034](https://github.com/MaksimBlud/football-ai/actions/runs/43055721034): 0 quotes, 0 V2 shadows, target-outcome gate closed, 0 paid calls/writes.
+- [Original forward #43054458880](https://github.com/MaksimBlud/football-ai/actions/runs/43054458880): 0 quotes, 0 previews, not prospective-eligible.
+- [Free diagnostic #43035977412](https://github.com/MaksimBlud/football-ai/actions/runs/43035977412): 0 forecasts, 0 paid requests, 0 Supabase writes.
+- This confirms #781 remains the urgent manual integration step: the main workflows can still run source capture and publish artifacts even though the research source-rights gate is unresolved.
+
+### Read-only pre-match Supabase check
+Only rows satisfying `snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= now()` were counted. The exact original candidate was checked only against pre-kickoff prediction timestamps; no result/settlement columns were selected.
+- `odds_snapshots`: **3,915** pre-match snapshots across **327** event IDs.
+- First snapshot: `2026-08-15 12:23:35.608011+00`; latest: `2026-10-13 14:48:53.04262+00`.
+- New pre-match snapshots in the last 7 days: **0**; future kickoffs with saved pre-match quotes: **0**.
+- `product_prediction_snapshots` for exact candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, created before kickoff: **0 rows / 0 events**.
+- No Supabase writes or DDL.
+
+### Frozen candidate and evaluation contract
+- Main candidate file `research/models/market_anchor_v2_serie_a_frozen_candidate.json` still embeds artifact SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 ordered features, a 20×2 weight matrix, 3,799 training rows, training cutoff `2026-06-30T23:59:59+00:00`, `active_lambda=0`, `shadow_residual_lambda=1`, `stability_gate_passed=false`, and research-only/no-promotion flags. No original weights, feature order, scaler, imputer, or production `.pkl` changed.
+- The original 19-feature order remains: points 5/10/venue-5; goals-for 5/10; goals-against 5/10; corners-for 5/10; corners-against 5/10; yellow 5/10; red 5/10; goals-for/against venue-5; corners-for/against venue-5.
+- PR [#793](https://github.com/MaksimBlud/football-ai/pull/793) contains a separate market-only diagnostic path. After the unchanged **30 eligible completed prospective forecast** gate, it can score de-vigged market vs original V2 shadow using Brier and LogLoss without an incumbent vector; it never emits a review signal or promotion. The frozen full three-way review still requires a separately pinned, non-legacy incumbent. No old XGBoost model is restored or used. No target outcomes have been read; the exact-candidate pre-kickoff prediction count remains zero.
+- Keep the feature-input gate (30 completed primary events for lagged current-form inputs) distinct from the target-outcome evaluation gate (30 eligible prospective forecasts). Neither gate authorizes fitting, threshold tuning, promotion, or betting.
+
+### Source rights and pending work
+- PR [#794](https://github.com/MaksimBlud/football-ai/pull/794) is still a draft audit, not a source authorization. The Big Balls public API description/OpenAPI marks some match statistics as Free while the current plan matrix places advanced match stats at Edge; FAQ wording also conflicts. Upstream event-level observation timestamps and free-tier entitlement are not established. No API request/key use or data ingestion was performed.
+- PR [#796](https://github.com/MaksimBlud/football-ai/pull/796) remains open with 7/7 CI SUCCESS for atomic archive publication; it is not permission to collect or publish source data and must be rechecked/rebased after #781 is manually integrated. PR #795 is not a substitute for #796's broader atomic-publication change.
+- Next: owner manually reviews/merges #781; then re-read fresh main and rebase the rights/evaluator/archive stack before any future live access. Continue only with offline code/tests and read-only pre-match metadata until a provider explicitly authorizes storage and model use and private artifact storage is available.
+- No main change, production `.pkl` change, Supabase write/DDL, paid provider request, cron change, automatic promotion, bet, or target-outcome read was performed in this cycle.
