@@ -200,6 +200,17 @@ separate read-only bridge for that exact artifact schema.
   parent run, source manifest and current-form gate freshness relative to each
   quote time. The current Supabase gate query remains identity-only:
   match_date, home_team, away_team.
+- The live market-only runner passes the preflight callback the exact eligible
+  forecast source manifest, not merely the completed-fixture identity set.
+  Each manifest row binds canonical fixture identity, provider event ID,
+  source artifact ID/SHA-256, source parent run ID/SHA, source
+  observation/archive/parent-completion times, quote time, capture time and
+  kickoff. The callback's attestation must return exact per-artifact archive
+  SHA and parent-run maps, the forecast count/identity digest, and the
+  SHA-256 of the canonical per-forecast source manifest. Missing, extra,
+  mismatched or conflicting source references fail before the outcome loader.
+  Preflight remains after the 30-eligible-completed-forecast gate and before
+  the first result-column query.
 - Repeated forward artifacts can contain multiple quotes for one fixture. The
   separate frozen selection policy in
   experiments/market_anchor_1x2_v2_prospective_selection_policy.json selects
