@@ -446,7 +446,7 @@ def test_5dollar_adapter_rejects_symlinked_raw_page(tmp_path):
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
     (tmp_path / "page-link.json").symlink_to("page-1.json")
     capture["pages"][0]["file"] = "page-link.json"
-    with pytest.raises(PermissionError, match="must not contain symlinks"):
+    with pytest.raises(PermissionError, match="must not be a symlink"):
         build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
 
 
