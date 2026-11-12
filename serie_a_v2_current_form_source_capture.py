@@ -13,6 +13,7 @@ import hashlib
 from io import BytesIO
 import json
 import os
+import tempfile
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -172,7 +173,7 @@ def _as_aware_utc(value: datetime, label: str) -> datetime:
     return value.astimezone(timezone.utc)
 
 
-def capture_source_archive(
+def _capture_source_archive_contents(
     *,
     output_dir: Path,
     client: Any,
@@ -288,6 +289,48 @@ def capture_source_archive(
         json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+    return report
+
+
+
+def capture_source_archive(
+    *,
+    output_dir: Path,
+    client: Any,
+    now: datetime,
+    get=requests.get,
+    history_fetch=fetch_public_history,
+    clock=lambda: datetime.now(timezone.utc),
+) -> dict:
+    """Publish a complete source archive atomically; discard every partial file on failure."""
+    output_dir = Path(output_dir)
+    if output_dir.is_symlink():
+        raise ValueError("source archive output directory cannot be a symlink")
+    output_dir.parent.mkdir(parents=True, exist_ok=True)
+    if output_dir.exists():
+        if not output_dir.is_dir() or any(output_dir.iterdir()):
+            raise FileExistsError("source archive output directory must be absent or empty")
+        output_dir.rmdir()
+
+    # The workflow uploads this directory with if: always(). Build outside the
+    # upload path so a late clock/CSV/manifest failure cannot publish ten
+    # historical CSVs as a misleading partial current-form archive.
+    with tempfile.TemporaryDirectory(
+        prefix=f".{output_dir.name}.staging-",
+        dir=output_dir.parent,
+    ) as temporary_directory:
+        staged_dir = Path(temporary_directory)
+        report = _capture_source_archive_contents(
+            output_dir=staged_dir,
+            client=client,
+            now=now,
+            get=get,
+            history_fetch=history_fetch,
+            clock=clock,
+        )
+        # Same-filesystem directory rename publishes the validated archive as
+        # one unit. If any earlier step fails, TemporaryDirectory removes it.
+        os.replace(staged_dir, output_dir)
     return report
 
 
