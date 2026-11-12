@@ -165,6 +165,13 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     return result, len(frame) - len(completed)
 
 
+def _as_aware_utc(value: datetime, label: str) -> datetime:
+    """Reject ambiguous clocks instead of letting astimezone assume host local time."""
+    if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError(f"{label} must be timezone-aware")
+    return value.astimezone(timezone.utc)
+
+
 def capture_source_archive(
     *,
     output_dir: Path,
@@ -175,9 +182,7 @@ def capture_source_archive(
     clock=lambda: datetime.now(timezone.utc),
 ) -> dict:
     """Capture the ten frozen historical seasons plus the gated current-season source."""
-    if now.tzinfo is None:
-        raise ValueError("source capture clock must be timezone-aware")
-    at = now.astimezone(timezone.utc)
+    at = _as_aware_utc(now, "source capture clock")
     gate_count = read_completed_primary_event_count(client, now=at)
     if gate_count < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
         raise RuntimeError(
@@ -192,12 +197,17 @@ def capture_source_archive(
     response = get(CURRENT_URL, timeout=30)
     response.raise_for_status()
     raw = response.content
-    observed_at = clock().astimezone(timezone.utc)
+    observed_at = _as_aware_utc(clock(), "current-season source observation clock")
+    if observed_at < at:
+        raise ValueError("current-season source observation clock precedes capture gate check")
     current_rows, excluded_rows = validate_current_season_csv(raw, captured_at=observed_at)
     if len(current_rows) < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
         raise RuntimeError(
             "public current-season source has fewer completed prior-day matches than the feature-source gate"
         )
+    archive_created_at = _as_aware_utc(clock(), "source archive creation clock")
+    if archive_created_at < observed_at:
+        raise ValueError("source archive creation clock precedes latest source observation")
     current_path = output_dir / CURRENT_FILENAME
     current_path.write_bytes(raw)
     audits = list(old_audit) + [{
@@ -221,7 +231,7 @@ def capture_source_archive(
         "workflow_path": WORKFLOW_PATH,
         "git_sha": os.environ.get("GITHUB_SHA", ""),
         "workflow_run_id": os.environ.get("GITHUB_RUN_ID", ""),
-        "source_archive_created_at_utc": clock().astimezone(timezone.utc).isoformat(),
+        "source_archive_created_at_utc": archive_created_at.isoformat(),
         "frozen_candidate_sha256": FROZEN_SHA,
         "original_feature_builder_git_blob_sha1": "401b3a0893371bfa4a488ec92a4a54af2678c8f7",
         "feature_count": len(FEATURE_SETS["ALL_FOOTBALL"]),
