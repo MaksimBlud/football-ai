@@ -10168,3 +10168,42 @@ Only metadata/timestamps from the pre-match odds table and pre-kickoff predictio
 - The 5Dollar adapter PR #800 remains Draft and source HOLD; its local SHA/time checks deliberately leave independent source-before-quote attestation false. The Soccer Data audit #791 does not remove the same provenance/coverage blockers.
 - Keep the original 19 features, weights, scaler/imputer, candidate SHA, active_lambda=0, and shadow_lambda=1 unchanged. No model-quality claim is supported.
 - No main change/merge, Supabase write/DDL, paid API call, source download, target-outcome read, production .pkl change, schedule/agent-setting change, bet, or promotion occurred in this checkpoint. HUMAN-MERGE only.
+
+
+## 2026-11-12 10:07 UTC — 5Dollar offline adapter target-identity regression and fresh main/Supabase checkpoint
+
+### Fresh repository and original-forward workflow re-read
+- Fresh `main` remains exactly `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main ref change.
+- Re-read `.github/workflows/serie-a-v2-forward-preview.yml`: manual dispatch, successful main `workflow_dispatch` completion of the existing `Serie A Odds Snapshots` workflow, and daily 08:08 UTC schedule. It reads already-saved quotes only, performs source attestation before any quote inference, and uploads a 90-day research artifact. It does not invoke the paid odds collector itself.
+- Re-read current-form source, current-form forward, free diagnostic and recovery workflows. Their current main schedules remain 05:50, 08:18, 06:13 UTC respectively; recovery still has a manual dispatch/research artifact path. PR #781's hold is not active on main until owner HUMAN-MERGE.
+- Queried the main-branch GitHub Actions run collection for 2026-11-12 across four pages (329 runs fetched through approximately 10:07 UTC). No original Serie A V2 source/forward/diagnostic/recovery workflow run appeared in those main-branch results. This is an observed absence for this date/window, not proof that the scheduled triggers are permanently disabled.
+- No paid snapshot workflow was triggered.
+
+### PR #781 exact-head protection checkpoint
+- PR [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN, ready for review, mergeable, and unmerged.
+- Exact HEAD: `11292064cb08ca9f1da70940c5cdbe536ec4dec5`; base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- Exact-head checks: **8/8 SUCCESS** (Research, Product, Serie A, Bundesliga, Eredivisie, Ligue 1, Frozen V2 Shadow Tests, and recovery).
+- The hold gates the five live/recovery workflow surfaces and associated artifact uploads while retaining offline regression tests and existing cron expressions. The hold is still only in the PR branch; do not claim it protects main until HUMAN-MERGE and fresh-main proof.
+
+### PR #800 exact-head offline adapter regression
+- PR [#800](https://github.com/MaksimBlud/football-ai/pull/800) remains Draft/HUMAN-MERGE, based on main; current exact HEAD is `ee36e55db16c892726792d9b0062394fd6f3371b`.
+- A code review found that the adapter's explicit target-fixture embargo compared ordered home/away identities. A source row for the target clubs with reversed home/away orientation on the same UTC date could therefore pass that explicit embargo, even though the original builder's same-day cutoff would later exclude it from features.
+- Fixed in the #800 branch: target/source fixture identity is now the canonical unordered team pair plus UTC match date, reusing the same helper for duplicate-history rejection. Added a synthetic regression with a reversed-orientation completed target fixture; it must fail before original feature-manifest construction.
+- The two follow-up commits were fast-forwarded onto #800's own branch after confirming its expected prior HEAD. Temporary stacked PR #801 was closed unmerged as superseded; no separate duplicate PR remains.
+- Exact-head CI on `ee36e55db16c892726792d9b0062394fd6f3371b`: **7/7 SUCCESS**. Dedicated Frozen V2 Shadow Tests run [#43197252853](https://github.com/MaksimBlud/football-ai/actions/runs/43197252853) reports **111 passed**; production `.pkl` diff guard passed. Targeted Research [#43197253141](https://github.com/MaksimBlud/football-ai/actions/runs/43197253141) passed 4 tests and the remaining five workflow checks passed.
+- This remains an offline adapter only. Rights manifest `research/source_rights/5dollarfootballapi.json` is still HOLD due the provider's contradictory Free-vs-Pro Serie A entitlement, unresolved upstream field rights/semantics, and unverified private retention. The adapter has no network/Supabase client and explicitly leaves `source_before_quote_verified=false` pending independent GitHub run/log attestation. No API call, account/key, source download, quote-price read, model inference, or target-outcome read occurred.
+
+### Fresh read-only Supabase pre-match aggregates — 2026-11-12 10:04 UTC
+Only strict pre-kickoff quote timestamps/event identity metadata and exact-candidate prediction metadata were aggregated. No odds prices, scores, results, settlement or outcome fields were selected.
+- `odds_snapshots`, filtered by `snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= now()`: **3,915** strict pre-match snapshots / **327** unique events.
+- Strict pre-match snapshots in the last 7 days: **0**.
+- Future-kickoff events with saved strict pre-match quotes: **0**.
+- Latest strict pre-match snapshot: `2026-10-13 14:48:53.04262+00`.
+- `product_prediction_snapshots`, filtered by the exact original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6` and `generated_at_utc < commence_time_utc`: **0 rows / 0 events**.
+- No Supabase writes or DDL.
+
+### Frozen candidate and evaluation state
+- Original candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; original ordered 19 features, weights, scaler/imputer, 20×2 weight matrix, 3,799 training rows and cutoff `2026-06-30T23:59:59+00:00` remain unchanged.
+- `active_lambda=0` remains the market reference; `shadow_lambda=1` remains research-only. Stability gate remains FAILED; exact-candidate prospective prediction count remains 0; target-outcome gate remains **0/30**.
+- No admissible independent Brier/LogLoss comparison exists. No superiority claim is supported.
+- No main change/merge, Supabase write/DDL, paid API call, source download, production `.pkl` change, schedule/agent-setting change, bet, promotion, or protected target-outcome read occurred in this checkpoint. HUMAN-MERGE only.
