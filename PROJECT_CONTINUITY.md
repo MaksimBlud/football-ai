@@ -1,3 +1,30 @@
+## 2026-11-12 12:40 UTC — main workflow run and public artifact audit
+
+This is a follow-up to the 12:35 UTC addendum above. Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no workflow was manually dispatched and no schedule was changed.
+
+### Latest actual scheduled V2 runs on main
+
+The GitHub scheduled-run listing was filtered to `branch=main,event=schedule`. By 12:38 UTC on 2026-11-12, the latest four V2 schedule runs visible were still from 2026-11-11. No 2026-11-12 scheduled run for these four V2 workflows appeared, despite their cron definitions remaining present in main:
+- Original forward: `8 8 * * *`
+- Current-form forward: `18 8 * * *`
+- Current-form source capture: `50 5 * * *`
+- Free real-quote diagnostic: `13 6 * * *`
+
+This establishes a missed/absent scheduled run in the queried history, not that the workflows are disabled. No manual dispatch was used because the current source/rights gate is unresolved.
+
+### Exact main run logs and artifact metadata — no artifact downloads
+
+- Current-form source capture [run #43025058808](https://github.com/MaksimBlud/football-ai/actions/runs/43025058808), 2026-11-11 12:59 UTC: 19 tests PASS; `completed_primary_events=110`, `source_file_count=11`, `paid_provider_calls=0`, `supabase_writes=0`, `target_outcomes_scored=false`. Public artifact metadata: ID `13857286039`, 439,429 bytes.
+- Original forward [run #43054458880](https://github.com/MaksimBlud/football-ai/actions/runs/43054458880), 2026-11-11 16:03 UTC: 71 tests PASS; `forecasts_created=0`, `quotes_seen=0`, `v2_diagnostic_previews_captured=0`, `supabase_writes=0`; historical source SHA check passed. Public source-check artifact metadata: ID `13870532317`, 1,458 bytes.
+- Current-form forward [run #43055721034](https://github.com/MaksimBlud/football-ai/actions/runs/43055721034), 2026-11-11 16:10 UTC: 53 tests PASS; current-form archive SHA and parent run were verified; `current_season_history_rows=110`, `v2_current_form_shadow_captured=0`, `quotes_seen=0`, `target_outcome_evaluation_gate_open=false`, `production_or_supabase_writes=0`. Public artifact metadata: ID `13871741350`, 440,599 bytes.
+- Free real-quote diagnostic [run #43035977412](https://github.com/MaksimBlud/football-ai/actions/runs/43035977412), 2026-11-11 14:10 UTC: 53 tests PASS; public-only source check, no paid provider key, no target-outcome evaluation, no Supabase writes. Public artifact metadata: ID `13862488931`, 425,068 bytes.
+
+Only GitHub Actions run/artifact metadata and log summary lines were inspected; no artifact was downloaded or unpacked. The source-capture artifact is attached to the public repository. Its public accessibility, together with unresolved Football-Data AI-use rights, remains a material exposure. Do not delete or republish it automatically; owner review is required. PR #781 is the existing fail-closed workflow hold and remains unmerged.
+
+No live target outcomes, scores, settlement, or result labels were read. No Supabase writes/DDL, source API requests, paid calls, production artifact changes, or main changes occurred.
+
+---
+
 ## 2026-11-12 12:35 UTC — Original V2 full evaluator source-preflight closure and fresh read-only state
 
 **Main remains unchanged:** `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This update is documentation-only and records exact evidence from the current automation pass.
