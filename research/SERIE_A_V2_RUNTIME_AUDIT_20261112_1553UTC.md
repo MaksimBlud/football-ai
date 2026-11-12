@@ -157,3 +157,50 @@ The rights blocker is material: the provider says its data comes from partners, 
 - Football-Data.co.uk: source policy update 2026-11-10 caused the project to withdraw its automated source-capture permission and keep inference blocked; its current main-branch workflow is not yet protected by the pending hold PR.
 
 No candidate is currently cleared for automated collection, long-term archival, or original V2 inference. Do not blend providers or silently fill missing frozen features.
+
+
+## Latest recheck — 2026-11-12 17:56 UTC
+
+Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; the workflow hold is still absent from all five main V2 source/forward/recovery YAMLs. This is a fresh read of actual completed GitHub Actions jobs and read-only Supabase aggregates, not a new source collection or inference run initiated by this audit.
+
+### New original-V2 forward run
+
+[Original V2 Forward-Only run 43261918181](https://github.com/MaksimBlud/football-ai/actions/runs/43261918181) completed SUCCESS on main at 2026-11-12 16:45 UTC:
+
+- 71 tests PASS.
+- Real source archive attestation: artifact `13954739310`, created by successful main diagnostic run `43243852372`; exact ZIP SHA was verified.
+- 10 frozen historical CSVs / 3,800 historical matches verified; frozen candidate SHA matched.
+- `quotes_seen=0`, `future_quotes_checked=0`, `forecasts_created=0`, `v2_diagnostic_previews_captured=0`.
+- 0 paid provider calls; 0 Supabase writes; no target outcomes read/scored.
+- Small public report artifact `13963024080`, 1,459 bytes, ZIP SHA-256 `f7cd7ec7d7b20138dbfad18d510464026308e1a5d89e530b801a6bcfd01c56b2`.
+
+### New current-form forward run
+
+[Current-Form Forward-Only run 43262798305](https://github.com/MaksimBlud/football-ai/actions/runs/43262798305) completed SUCCESS on main at 2026-11-12 16:49 UTC:
+
+- 53 tests PASS.
+- Source artifact `13951945358` SHA-256 `e7bb6e90466c278882225766424b17c229cab46da35dd80a4418e627c8ccb1e8` and successful parent run `43232728352` / main SHA were verified.
+- Source age at verification: 10,123 seconds; verification status `VERIFIED`; candidate SHA matched.
+- `quotes_seen=0`, `v2_current_form_shadow_captured=0`; target outcomes not read/scored; 0 paid calls; 0 production/Supabase writes.
+- It nevertheless uploaded public artifact `13963944149`, 440,582 bytes, ZIP SHA-256 `469e665853c5f4a81774641fbb7f41b3d1961df91a75cb2f9a767e280ac4867c`.
+
+The source capture and forward runs are real provenance/runtime observations only. They do not authorize use of Football-Data bytes under the unresolved source-rights hold and are not model-quality evidence. The diagnostic source archive `13954739310` and current-form source archive `13951945358` remain public Actions artifacts; this audit did not download, unpack, delete or alter them.
+
+### Fresh Supabase pre-match-only aggregate
+
+Read-only SQL selected only pre-match quote timestamps, event identities and counts; no score, result, settlement or target-outcome fields were selected:
+
+- Strict `snapshot_time_utc < commence_time_utc`: **3,915** snapshots across **327** unique events.
+- Latest strict pre-match snapshot: **2026-10-13 14:48:53 UTC**.
+- Latest stored kickoff among those rows: **2026-10-25 19:45 UTC**; **0** rows are for future kickoffs as of this audit.
+- `product_prediction_snapshots` for exact frozen candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, filtered to `generated_at_utc < commence_time_utc`: **0** rows.
+
+### Exact #781 verification
+
+Current PR API HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`; base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`; compare **43 ahead / 0 behind**. All **8/8** exact-HEAD PR workflow runs completed SUCCESS. Frozen V2 Shadow Tests: **103 passed**, compile PASS, production `*.pkl` diff guard PASS. Recovery: **49 passed**; candidate rebuild, checksum proof and archive upload were SKIPPED; production pickle hash comparison PASS. PR remains OPEN, Ready for review, mergeable and HUMAN-MERGE only. The hold is not active on main until owner merge and fresh-main runtime proof.
+
+### Source candidate note
+
+PR #802 (Footballdata.io free Serie A audit) remains Draft and its exact HEAD has **6/6** PR validation workflows SUCCESS. Its documented decision remains HOLD: free plan does not include Serie A, and required statistics, AI/ML retention rights and source-before-quote provenance are not established. No account, key or provider request was made.
+
+No model weights, 19-feature contract, scaler/imputer, production `.pkl`, Supabase data/schema, schedules or other agents were changed. No paid API call, target-outcome read, promotion or bet occurred.
