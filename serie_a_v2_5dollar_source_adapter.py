@@ -102,7 +102,7 @@ def _safe_page_path(archive_dir: Path, value: object) -> Path:
     return resolved
 
 
-def _validate_request_url(value: object, page_number: int) -> str:
+def _validate_request_url(value: object, page_number: int, season_api_parameter: str) -> str:
     if not isinstance(value, str):
         raise ValueError("request_url is required for every captured page")
     parsed = urlparse(value)
@@ -117,6 +117,12 @@ def _validate_request_url(value: object, page_number: int) -> str:
         raise ValueError("credentials must not be embedded in request_url")
     if query.get("page") and query["page"][-1] != str(page_number):
         raise ValueError("request_url page does not match capture manifest")
+    if page_number > 1 and query.get("page", [None])[-1] != str(page_number):
+        raise ValueError("every page after page 1 must pin its page parameter")
+    if query.get("season", [None])[-1] != season_api_parameter:
+        raise ValueError("request_url must pin the exact captured season")
+    if query.get("per_page") and int(query["per_page"][-1]) > 100:
+        raise ValueError("request_url per_page exceeds the documented maximum")
     return value
 
 
@@ -253,6 +259,9 @@ def build_manifest_from_private_archive(
     expected_season_id = str(capture_manifest.get("league_season_id") or "").strip()
     if not expected_season_id:
         raise ValueError("capture bundle must pin one league_season_id")
+    season_api_parameter = str(capture_manifest.get("season_api_parameter") or "").strip()
+    if not season_api_parameter:
+        raise ValueError("capture bundle must pin the provider season parameter")
     if capture_manifest.get("api_plan") not in ALLOWED_PLANS:
         raise PermissionError("only an approved $0 Free or Community capture is accepted")
     if capture_manifest.get("storage_class") not in {"private_local", "private_object_store"}:
@@ -287,7 +296,9 @@ def build_manifest_from_private_archive(
         if not isinstance(number, int) or number < 1:
             raise ValueError("page_number must be a positive integer")
         page_numbers.append(number)
-        request_url = _validate_request_url(page.get("request_url"), number)
+        request_url = _validate_request_url(
+            page.get("request_url"), number, season_api_parameter
+        )
         if page.get("http_status") != 200:
             raise ValueError("all source pages must have HTTP 200")
         page_started = _parse_utc(page.get("request_started_at_utc"), "page request_started_at_utc")
@@ -360,6 +371,7 @@ def build_manifest_from_private_archive(
         "league_id": SERIE_A_PROVIDER_LEAGUE_ID,
         "league_season_id": expected_season_id,
         "season": capture_manifest.get("season"),
+        "season_api_parameter": season_api_parameter,
         "capture_run_id": capture_manifest["capture_run_id"],
         "capture_commit_sha": commit_sha,
         "request_started_at_utc": request_started.isoformat(),
