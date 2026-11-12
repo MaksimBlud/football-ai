@@ -120,3 +120,67 @@ Additional official pages:
 - https://bigballsdata.com/openapi.json (`/v1/as-of/coverage`)
 
 **Revised decision:** the route is listed as Free by the most specific registry, but the actual Serie A 2026/27 per-match statistics coverage remains unproven. Do not create an API key or make a request until the vendor confirms both Free-tier entitlement and measured coverage for all required fields. The source-before-quote and SHA design remains only a proposed design, not an implemented or tested integration.
+
+
+## 9. Recheck of mutable official documentation — 2026-11-12 06:47 UTC
+
+This recheck used only public provider documentation and terms. No account/key was created, no API or odds endpoint was called, no match payload or result was opened, and no dataset was downloaded.
+
+### Rights clarification now visible in the current Terms
+
+The current Terms page (effective 2026-08-10) expressly says that a customer may store API responses, use stored data as input to internal models including training/evaluation/backtesting, and publish or sell derived models, scores, predictions and aggregates. It prohibits redistributing the raw data feed or republishing raw field values. The provider's 2026-10-16 changelog says the Terms were updated to address storage, model use and derived outputs.
+
+This is a positive provider-side grant for Big Balls data. It does **not** establish the upstream licence or field-level source lineage for the exact Serie A corners/cards rows, and it does not resolve the separate Football-Data training provenance of the already-frozen original candidate. Big Balls cannot grant rights in the candidate's pre-existing Football-Data training corpus.
+
+Official pages:
+- Terms: https://bigballsdata.com/legal/terms
+- Changelog: https://bigballsdata.com/whats-new
+
+### Free-plan and history limits remain contradictory
+
+The current official pages now disagree on both request quota and history depth:
+
+| Official page | Free quota | Free history | Other relevant statement |
+|---|---:|---|---|
+| Homepage / pricing | 1,000/day (2,000 with GitHub) | current + most-recent season | scores, standings, stats; odds are Edge+ |
+| Soccer API page | 250/day (500 with GitHub) | current season only | 13-season archive exists, but Free is limited to current season |
+| Serie A page | 1,000/day (2,000 with GitHub) | page's displayed cohort is 2025/26 | reports 4,591 finished matches and team stats on 4,210 (92%) |
+
+The Serie A page's 92% figure is an aggregate across its displayed population; it is not a measured 2026/27 per-match field-completeness result. The page still displays a 2025/26 all-club snapshot, so it cannot establish current 2026/27 coverage by itself.
+
+Official pages:
+- Homepage: https://bigballsdata.com/
+- Pricing: https://bigballsdata.com/pricing
+- Soccer API: https://bigballsdata.com/soccer-api
+- Serie A API: https://bigballsdata.com/serie-a-api
+
+### Current coverage page does not close the statistics-route gap
+
+The current coverage page says its public endpoint list was last refreshed 2026-11-06 and that only endpoints confirmed serving at that refresh are listed. In the Serie A section it lists:
+- `/v1/matches`
+- `/v1/standings`
+- `/v1/stored/matches`
+- `/v1/leagues/{id}/xg-leaders`
+
+It does not list `/v1/matches/{id}/statistics`. The dedicated Serie A page reports 92% team-stat coverage, and the OpenAPI/league registry previously reviewed list the statistics route as Free, but the public coverage inventory does not independently confirm that route serving the required 2026/27 rows. Absence from that list is not proof that the route is unavailable; it is a missing confirmation.
+
+The changelog entry dated 2026-10-16 also says two stale claims about `GET /v1/matches/:id/statistics` were corrected. This makes the current endpoint contract and its measured coverage—not the marketing summary—the required authority for any future check.
+
+Official page: https://bigballsdata.com/coverage
+
+### Source-before-quote and original-candidate boundary
+
+The stored-only statistics route and hourly ingestion model remain potentially compatible with an immutable post-match capture: preserve exact response bytes, UTC retrieval time, response metadata and SHA-256, then require the complete source archive to precede any later quote strictly. However, the statistics response still does not document a per-field upstream `as_of` timestamp. The separate stored-stats surface exposes `fetched_at`/as-of metadata but is documented as often empty for soccer team-stat rows. Local capture time proves when our copy was observed; it does not prove the upstream provider's original observation time or field-specific source lineage.
+
+The current official pages therefore improve the rights picture but do not satisfy the remaining operational evidence:
+1. written confirmation of the actual Free quota/history window and Free entitlement for the exact Serie A `corner_kicks`, `yellow_cards`, and `red_cards` fields;
+2. a measured, season-specific 2026/27 per-match completeness result for those fields;
+3. field/provider lineage and the licence applicable to each required field;
+4. confirmation that immutable local capture time plus raw-response SHA is an acceptable source-before-quote attestation where the stats route has no upstream per-field timestamp; and
+5. separate resolution of the original candidate's Football-Data training/inference rights.
+
+### Revised disposition
+
+**Big Balls remains `CONDITIONAL_CANDIDATE_NOT_APPROVED`.** The current Terms expressly permit internal model use of Big Balls data, but the Free plan/history pages conflict, the current public coverage inventory does not confirm the per-match statistics route for Serie A 2026/27, and upstream field lineage/source time remain unresolved. The frozen original candidate's Football-Data provenance is a separate unresolved gate.
+
+No API key, API call, odds request, download, source archive, Supabase access/write, feature build, model inference, target-outcome read, refit, threshold change, production artifact change, or schedule change was performed. The original 19 features, candidate SHA, weights, scaler/imputer, `active_lambda=0`, `shadow_lambda=1`, and 30-event outcome gate remain unchanged.
