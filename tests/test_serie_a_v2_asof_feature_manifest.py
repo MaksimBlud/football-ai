@@ -450,6 +450,31 @@ def test_5dollar_adapter_rejects_symlinked_raw_page(tmp_path):
         build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
 
 
+def test_5dollar_adapter_rejects_world_readable_private_capture_file(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import _require_private_file
+
+    capture_path = tmp_path / "capture.json"
+    capture_path.write_text("{}", encoding="utf-8")
+    capture_path.chmod(0o644)
+    with pytest.raises(PermissionError, match="exclude group/other access"):
+        _require_private_file(capture_path, "capture manifest")
+
+
+def test_5dollar_adapter_rejects_nonprivate_capture_parent(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import _require_private_file
+
+    shared_dir = tmp_path / "shared"
+    shared_dir.mkdir()
+    shared_dir.chmod(0o755)
+    capture_path = shared_dir / "capture.json"
+    capture_path.write_text("{}", encoding="utf-8")
+    capture_path.chmod(0o600)
+    with pytest.raises(PermissionError, match="exclude group/other access"):
+        _require_private_file(capture_path, "capture manifest")
+
+
 def test_5dollar_adapter_preserves_original_same_utc_day_exclusion(tmp_path):
     from datetime import datetime, timezone
     from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
