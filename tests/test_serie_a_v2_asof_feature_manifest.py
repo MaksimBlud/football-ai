@@ -342,7 +342,7 @@ def _synthetic_5dollar_bundle(tmp_path, fixtures=None, quote=None):
         "schema_version": "5DOLLAR_PRIVATE_CAPTURE_BUNDLE_V1",
         "league_id": 3405541143,
         "league_season_id": "season-2026-27",
-        "season": "2026/27",
+        "season": "2026-2027",
         "season_api_parameter": "2026",
         "api_plan": "free",
         "storage_class": "private_local",
@@ -356,7 +356,7 @@ def _synthetic_5dollar_bundle(tmp_path, fixtures=None, quote=None):
         "feature_source_gate": {
             "type": "CURRENT_FORM_FEATURE_INPUT_ONLY",
             "primary_league": "SERIE_A",
-            "season": "2026/27",
+            "season": "2026-2027",
             "minimum_completed_primary_events": 30,
             "observed_completed_primary_events": 30,
             "checked_at_utc": "2026-11-12T07:59:58+00:00",
