@@ -21,7 +21,10 @@ from urllib.parse import parse_qs, urlparse
 
 import pandas as pd
 
-from serie_a_v2_asof_feature_manifest import build_manifest as build_original_manifest
+from serie_a_v2_asof_feature_manifest import (
+    _canonical,
+    build_manifest as build_original_manifest,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent
 DEFAULT_RIGHTS_MANIFEST = REPO_ROOT / "research" / "source_rights" / "5dollarfootballapi.json"
@@ -138,12 +141,16 @@ def _side_stat(fixture: dict, group: str, side: str, field: str) -> int:
         raise ValueError(f"finished fixture missing cards.{side}")
     if group == "cards":
         return _nonnegative_integer(side_value.get(field), f"cards.{side}.{field}")
-    if not isinstance(side_value, dict):
-        raise ValueError(f"finished fixture missing {group}.{side}")
-    return _nonnegative_integer(side_value.get(field), f"{group}.{side}.{field}")
+    return _nonnegative_integer(side_value, f"{group}.{side}")
 
 
-def _fixture_to_history_row(fixture: dict, capture_time: datetime, target_ids: set[str]) -> dict:
+def _fixture_to_history_row(
+    fixture: dict,
+    capture_time: datetime,
+    target_ids: set[str],
+    target_identities: set[tuple[str, str, object]],
+    expected_season_id: str,
+) -> dict:
     fixture_id = str(fixture.get("id") or "").strip()
     if not fixture_id:
         raise ValueError("fixture id is required")
@@ -156,6 +163,9 @@ def _fixture_to_history_row(fixture: dict, capture_time: datetime, target_ids: s
         raise ValueError("only provider-confirmed finished fixtures may become feature history")
     if fixture.get("status_reason") is not None or fixture.get("status_code") != "full":
         raise ValueError("finished fixture lacks explicit full-time confirmation")
+    season_id = str(fixture.get("league_season_id") or "").strip()
+    if not expected_season_id or season_id != expected_season_id:
+        raise ValueError("fixture league_season_id differs from the captured season")
     kickoff = _parse_utc(fixture.get("kickoff_utc"), "fixture kickoff_utc")
     if kickoff >= capture_time:
         raise ValueError("finished source fixture kickoff is not before collector capture")
@@ -169,6 +179,9 @@ def _fixture_to_history_row(fixture: dict, capture_time: datetime, target_ids: s
     away = away_obj.get("name")
     if not isinstance(home, str) or not home.strip() or not isinstance(away, str) or not away.strip():
         raise ValueError("fixture home/away team names are missing")
+    identity = (_canonical(home), _canonical(away), kickoff.date())
+    if identity in target_identities:
+        raise ValueError("target fixture identity appears as a completed source outcome")
     goals = fixture.get("goals")
     if not isinstance(goals, dict):
         raise ValueError("finished fixture missing goals")
@@ -191,11 +204,14 @@ def _fixture_to_history_row(fixture: dict, capture_time: datetime, target_ids: s
     }
 
 
-def _validate_quotes(quotes: list[dict]) -> tuple[list[tuple[datetime, datetime]], set[str]]:
+def _validate_quotes(
+    quotes: list[dict],
+) -> tuple[list[tuple[datetime, datetime]], set[str], set[tuple[str, str, object]]]:
     if not isinstance(quotes, list) or not quotes:
         raise ValueError("quotes must be a non-empty list of pre-match metadata")
     timings = []
     target_ids = set()
+    target_identities = set()
     for quote in quotes:
         if not isinstance(quote, dict):
             raise ValueError("quote row must be an object")
@@ -212,8 +228,13 @@ def _validate_quotes(quotes: list[dict]) -> tuple[list[tuple[datetime, datetime]
         kickoff = _parse_utc(quote.get("commence_time_utc"), "quote commence_time_utc")
         if quote_time >= kickoff:
             raise ValueError("quote snapshot must be strictly before kickoff")
+        home = quote.get("home_team")
+        away = quote.get("away_team")
+        if not isinstance(home, str) or not home.strip() or not isinstance(away, str) or not away.strip():
+            raise ValueError("quote home/away team identity is required")
+        target_identities.add((_canonical(home), _canonical(away), kickoff.date()))
         timings.append((quote_time, kickoff))
-    return timings, target_ids
+    return timings, target_ids, target_identities
 
 
 def build_manifest_from_private_archive(
@@ -229,6 +250,9 @@ def build_manifest_from_private_archive(
         raise ValueError("unsupported capture bundle schema")
     if capture_manifest.get("league_id") != SERIE_A_PROVIDER_LEAGUE_ID:
         raise ValueError("capture bundle must be the exact Serie A league")
+    expected_season_id = str(capture_manifest.get("league_season_id") or "").strip()
+    if not expected_season_id:
+        raise ValueError("capture bundle must pin one league_season_id")
     if capture_manifest.get("api_plan") not in ALLOWED_PLANS:
         raise PermissionError("only an approved $0 Free or Community capture is accepted")
     if capture_manifest.get("storage_class") not in {"private_local", "private_object_store"}:
@@ -238,7 +262,7 @@ def build_manifest_from_private_archive(
     commit_sha = capture_manifest.get("capture_commit_sha")
     if not isinstance(commit_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", commit_sha):
         raise ValueError("capture_commit_sha must be a full Git SHA")
-    timings, target_ids = _validate_quotes(quotes)
+    timings, target_ids, target_identities = _validate_quotes(quotes)
     earliest_quote = min(q[0] for q in timings)
     request_started = _parse_utc(capture_manifest.get("request_started_at_utc"), "request_started_at_utc")
     response_received = _parse_utc(capture_manifest.get("response_received_at_utc"), "response_received_at_utc")
@@ -320,7 +344,11 @@ def build_manifest_from_private_archive(
         if fixture.get("status") != "finished":
             skipped_non_finished += 1
             continue
-        history_rows.append(_fixture_to_history_row(fixture, response_received, target_ids))
+        history_rows.append(
+            _fixture_to_history_row(
+                fixture, response_received, target_ids, target_identities, expected_season_id
+            )
+        )
     if not history_rows:
         raise ValueError("source bundle contains no completed Serie A history")
     history = pd.DataFrame(history_rows, columns=REQUIRED_HISTORY_COLUMNS)
@@ -330,6 +358,7 @@ def build_manifest_from_private_archive(
     base["source_capture"] = {
         "api_plan": capture_manifest["api_plan"],
         "league_id": SERIE_A_PROVIDER_LEAGUE_ID,
+        "league_season_id": expected_season_id,
         "season": capture_manifest.get("season"),
         "capture_run_id": capture_manifest["capture_run_id"],
         "capture_commit_sha": commit_sha,
