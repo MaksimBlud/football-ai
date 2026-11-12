@@ -103,12 +103,27 @@ def _gate_attestation(identities: set[tuple[str, str, str]]) -> dict:
     }
 
 
-def _synthetic_source_preflight(identities, attestation):
+def _synthetic_source_preflight(source_requirements, attestation):
     """Synthetic source proof for offline tests only; never provider authorization."""
+    sources = [dict(source) for source in source_requirements]
+    archive_sha = {}
+    parent_ids = {}
+    parent_shas = {}
+    for source in sources:
+        key = str(source["source_artifact_id"])
+        archive_sha[key] = source["source_archive_sha256"]
+        parent_ids[key] = source["source_parent_run_id"]
+        parent_shas[key] = source["source_parent_run_sha"]
+    identities = {tuple(source["fixture_identity"]) for source in sources}
     return {
         "verified": True,
-        "source_archive_sha256": {"synthetic-source": "a" * 64},
-        "verified_source_archive_count": 1,
+        "source_archive_sha256": archive_sha,
+        "source_parent_run_id": parent_ids,
+        "source_parent_run_sha": parent_shas,
+        "verified_source_archive_count": len(archive_sha),
+        "verified_forecast_count": len(sources),
+        "forecast_source_manifest_sha256": runner._source_requirements_manifest_sha256(sources),
+        "verified_forecast_identity_sha256": evaluator._sha_fixture_set(identities),
         "gate_fixture_identity_count": attestation["completed_fixture_identity_count"],
         "gate_fixture_identity_sha256": attestation["completed_fixture_identity_sha256"],
     }
@@ -638,21 +653,18 @@ def test_market_only_preflight_and_evaluator_share_one_immutable_gate_snapshot(m
         gate_calls.append(received_client)
         return set(identities), attestation
 
-    def preflight(received_identities, received_attestation):
+    def preflight(received_sources, received_attestation):
         call_order.append("preflight")
-        preflight_seen.append((received_identities, received_attestation))
-        assert isinstance(received_identities, frozenset)
-        assert received_identities == frozenset(identities)
+        preflight_seen.append((received_sources, received_attestation))
+        assert isinstance(received_sources, tuple)
+        assert len(received_sources) == 30
+        assert {
+            tuple(source["fixture_identity"]) for source in received_sources
+        } == set(identities)
         # Mutating this detached nested list must not alter the attestation
         # later supplied to the evaluator.
         received_attestation["selected_columns"].append("result")
-        return {
-            "verified": True,
-            "source_archive_sha256": {"synthetic-source": "a" * 64},
-            "verified_source_archive_count": 1,
-            "gate_fixture_identity_count": received_attestation["completed_fixture_identity_count"],
-            "gate_fixture_identity_sha256": received_attestation["completed_fixture_identity_sha256"],
-        }
+        return _synthetic_source_preflight(received_sources, received_attestation)
 
     def fake_evaluate(received_rows, received_identities, outcome_loader, *, completed_fixture_gate_attestation):
         call_order.append("evaluate")
@@ -682,14 +694,140 @@ def test_market_only_preflight_and_evaluator_share_one_immutable_gate_snapshot(m
 
     assert gate_calls == [client]
     assert call_order == ["evaluate", "preflight", "outcome"]
-    assert preflight_seen[0][0] is evaluator_seen[0][0]
-    assert preflight_seen[0][0] == evaluator_seen[0][0]
+    assert {
+        tuple(source["fixture_identity"]) for source in preflight_seen[0][0]
+    } == evaluator_seen[0][0]
+    assert all(source["source_artifact_id"] == 20001 for source in preflight_seen[0][0])
     assert preflight_seen[0][1]["selected_columns"] == [
         "match_date", "home_team", "away_team", "result"
     ]
     assert len(outcome_calls) == 1
     assert outcome_calls[0] == frozenset(identities)
     assert report["status"] == "GATE_SNAPSHOT_REUSED"
+
+
+def test_market_only_preflight_rejects_source_sha_not_bound_to_exact_forecast_rows(monkeypatch):
+    rows = _forecast_rows(30)
+    for row in rows:
+        row.pop("incumbent_1x2")
+        row.pop("incumbent_evidence")
+    identities = {
+        (row["match_date"], row["home_team"], row["away_team"])
+        for row in rows
+    }
+    monkeypatch.setattr(
+        runner, "read_completed_fixture_gate",
+        lambda _client: (identities, _gate_attestation(identities)),
+    )
+    outcome_calls = []
+
+    def wrong_sha_preflight(source_requirements, attestation):
+        result = _synthetic_source_preflight(source_requirements, attestation)
+        result["source_archive_sha256"]["20001"] = "f" * 64
+        return result
+
+    with pytest.raises(PermissionError, match="archive SHA map does not exactly match"):
+        runner.evaluate_live_market_only_prospective_cohort(
+            object(),
+            rows,
+            lambda keys, **_kwargs: outcome_calls.append(keys) or {key: "H" for key in keys},
+            preflight=wrong_sha_preflight,
+        )
+
+    assert outcome_calls == []
+
+
+def test_market_only_preflight_rejects_parent_run_sha_not_bound_to_exact_forecast_rows(monkeypatch):
+    rows = _forecast_rows(30)
+    for row in rows:
+        row.pop("incumbent_1x2")
+        row.pop("incumbent_evidence")
+    identities = {
+        (row["match_date"], row["home_team"], row["away_team"])
+        for row in rows
+    }
+    monkeypatch.setattr(
+        runner, "read_completed_fixture_gate",
+        lambda _client: (identities, _gate_attestation(identities)),
+    )
+    outcome_calls = []
+
+    def wrong_parent_preflight(source_requirements, attestation):
+        result = _synthetic_source_preflight(source_requirements, attestation)
+        result["source_parent_run_sha"]["20001"] = "d" * 40
+        return result
+
+    with pytest.raises(PermissionError, match="parent-run SHA map does not exactly match"):
+        runner.evaluate_live_market_only_prospective_cohort(
+            object(),
+            rows,
+            lambda keys, **_kwargs: outcome_calls.append(keys) or {key: "H" for key in keys},
+            preflight=wrong_parent_preflight,
+        )
+
+    assert outcome_calls == []
+
+
+def test_market_only_preflight_receives_only_completed_eligible_forecast_sources(monkeypatch):
+    rows = _forecast_rows(31)
+    for row in rows:
+        row.pop("incumbent_1x2")
+        row.pop("incumbent_evidence")
+    completed_rows = rows[:30]
+    identities = {
+        (row["match_date"], row["home_team"], row["away_team"])
+        for row in completed_rows
+    }
+    monkeypatch.setattr(
+        runner, "read_completed_fixture_gate",
+        lambda _client: (identities, _gate_attestation(identities)),
+    )
+    preflight_seen = []
+    outcome_calls = []
+
+    def preflight(source_requirements, attestation):
+        preflight_seen.append(tuple(dict(source) for source in source_requirements))
+        return _synthetic_source_preflight(source_requirements, attestation)
+
+    report = runner.evaluate_live_market_only_prospective_cohort(
+        object(),
+        rows,
+        lambda keys, **_kwargs: outcome_calls.append(keys) or {key: "H" for key in keys},
+        preflight=preflight,
+    )
+
+    assert report["status"] == "EVALUATED_MARKET_ONLY_DIAGNOSTIC"
+    assert report["scored_forecasts"] == 30
+    assert len(preflight_seen) == 1
+    assert len(preflight_seen[0]) == 30
+    assert {
+        tuple(source["fixture_identity"]) for source in preflight_seen[0]
+    } == identities
+    assert len(outcome_calls) == 1
+    assert outcome_calls[0] == frozenset(identities)
+
+
+def test_source_requirements_reject_conflicting_metadata_for_one_artifact_id(monkeypatch):
+    rows = _forecast_rows(30)
+    rows[1]["source_archive_sha256"] = "f" * 64
+    gate_calls = []
+    monkeypatch.setattr(
+        runner, "read_completed_fixture_gate",
+        lambda _client: gate_calls.append(True) or (
+            {(row["match_date"], row["home_team"], row["away_team"]) for row in rows},
+            _gate_attestation({(row["match_date"], row["home_team"], row["away_team"]) for row in rows}),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="one source artifact ID maps to conflicting"):
+        runner.evaluate_live_market_only_prospective_cohort(
+            object(),
+            rows,
+            lambda *_args, **_kwargs: {},
+            preflight=_synthetic_source_preflight,
+        )
+
+    assert gate_calls == []
 
 
 def test_market_only_preflight_failure_stops_after_gate_before_outcomes(monkeypatch):
