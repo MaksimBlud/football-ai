@@ -712,3 +712,93 @@ def test_5dollar_adapter_rejects_page_timestamps_outside_capture_window(tmp_path
     capture["pages"][0]["request_started_at_utc"] = "2026-11-12T07:59:58+00:00"
     with pytest.raises(ValueError, match="outside the capture window"):
         build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+
+
+@pytest.mark.parametrize(
+    "url_suffix",
+    [
+        ":8443/v1/leagues/3405541143/fixtures?season=2026&page=1&per_page=100",
+        "/v1/leagues/3405541143/fixtures?season=2026&page=1&per_page=100#credential-fragment",
+        "/v1/leagues/3405541143/fixtures?season=2026&page=1&per_page=100&unexpected=value",
+        "/v1/leagues/3405541143/fixtures?season=2026&page=1&page=1&per_page=100",
+        "/v1/leagues/3405541143/fixtures?season=2026&page=1&per_page=101",
+    ],
+)
+def test_5dollar_adapter_rejects_noncanonical_request_url_components(tmp_path, url_suffix):
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    if url_suffix.startswith(":"):
+        capture["pages"][0]["request_url"] = (
+            "https://api.5dollarfootballapi.com" + url_suffix
+        )
+    else:
+        capture["pages"][0]["request_url"] = (
+            "https://api.5dollarfootballapi.com" + url_suffix
+        )
+    with pytest.raises(ValueError):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+
+def test_5dollar_adapter_rejects_pagination_count_or_page_size_mismatch(tmp_path):
+    import hashlib
+    import json
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    payload = json.loads((tmp_path / "page-1.json").read_text(encoding="utf-8"))
+    payload["pagination"]["count"] += 1
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    (tmp_path / "page-1.json").write_bytes(raw)
+    capture["pages"][0]["response_sha256"] = hashlib.sha256(raw).hexdigest()
+    capture["pages"][0]["response_bytes"] = len(raw)
+    with pytest.raises(ValueError, match="count does not match page data length"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    payload = json.loads((tmp_path / "page-1.json").read_text(encoding="utf-8"))
+    payload["pagination"]["per_page"] = 99
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    (tmp_path / "page-1.json").write_bytes(raw)
+    capture["pages"][0]["response_sha256"] = hashlib.sha256(raw).hexdigest()
+    capture["pages"][0]["response_bytes"] = len(raw)
+    with pytest.raises(ValueError, match="per_page does not match"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
+
+
+def test_5dollar_adapter_rejects_same_day_reversed_duplicate_after_alias_normalization(tmp_path):
+    from copy import deepcopy
+    from datetime import datetime, timezone
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    first = _synthetic_5dollar_fixture(
+        0,
+        kickoff_utc=datetime(2026, 8, 1, 18, 0, tzinfo=timezone.utc),
+        home="Atalanta",
+        away="Inter",
+    )
+    reversed_duplicate = deepcopy(first)
+    reversed_duplicate["id"] = 987654
+    reversed_duplicate["kickoff_utc"] = "2026-08-01T20:00:00+00:00"
+    reversed_duplicate["teams"] = {
+        "home": {"name": "Inter"},
+        "away": {"name": "Atalanta BC"},
+    }
+    reversed_duplicate["goals"] = {
+        "home": first["goals"]["away"],
+        "away": first["goals"]["home"],
+    }
+    reversed_duplicate["corners"] = {
+        "home": first["corners"]["away"],
+        "away": first["corners"]["home"],
+    }
+    reversed_duplicate["cards"] = {
+        "home": deepcopy(first["cards"]["away"]),
+        "away": deepcopy(first["cards"]["home"]),
+    }
+    fixtures = [first, reversed_duplicate]
+    fixtures.extend(_synthetic_5dollar_fixture(i + 1) for i in range(29))
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path, fixtures)
+    with pytest.raises(ValueError, match="duplicate unordered historical fixture identity"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
