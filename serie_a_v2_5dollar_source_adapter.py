@@ -593,7 +593,6 @@ def main() -> None:
     parser.add_argument("--archive-dir", required=True, type=Path)
     parser.add_argument("--capture-manifest", required=True, type=Path)
     parser.add_argument("--quotes-json", required=True, type=Path)
-    parser.add_argument("--rights-json", type=Path, default=DEFAULT_RIGHTS_MANIFEST)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     archive_dir = _require_private_directory(args.archive_dir, "raw source archive")
@@ -603,7 +602,7 @@ def main() -> None:
     _require_private_directory(output_path.parent, "feature manifest output parent")
     if output_path.exists() or output_path.is_symlink():
         raise FileExistsError("refusing to overwrite an existing feature manifest")
-    rights_path = args.rights_json.resolve()
+    rights_path = DEFAULT_RIGHTS_MANIFEST
     capture = json.loads(capture_path.read_text(encoding="utf-8"))
     quotes = json.loads(quotes_path.read_text(encoding="utf-8"))
     rights = json.loads(rights_path.read_text(encoding="utf-8"))
