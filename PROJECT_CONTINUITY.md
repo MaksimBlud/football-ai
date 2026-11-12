@@ -1,3 +1,62 @@
+## 2026-11-12 12:35 UTC — Original V2 full evaluator source-preflight closure and fresh read-only state
+
+**Main remains unchanged:** `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This update is documentation-only and records exact evidence from the current automation pass.
+
+### New full-path source-before-quote guard — PR #793
+
+Code review found that `evaluate_live_prospective_cohort()` required the 30-event identity gate and a lazy outcome loader, but unlike the market-only live wrapper it did not require independent source/archive/parent-run SHA preflight. The frozen incumbent is currently unpinned, so this was a latent path rather than a currently open outcome-read gate.
+
+Updated [PR #793](https://github.com/MaksimBlud/football-ai/pull/793) at exact HEAD `d12e3884b78cd67e1d54a0c6d6d31f9201fb1c53`:
+- full live path now requires a source-preflight callback before reading the identity gate;
+- exact eligible rows are bound to artifact IDs/SHA-256, parent-run IDs/SHA, and source/archive/parent-completion/quote/capture/kickoff timestamps;
+- preflight executes only after at least 30 eligible completed primary forecasts pass the evaluator and immediately before the lazy outcome loader;
+- wrong SHA/parent provenance or absent preflight fails before outcome access;
+- while the incumbent remains unpinned, neither preflight nor outcome loader runs.
+
+Added synthetic regressions for missing preflight, preflight-before-outcome ordering, and mismatched archive SHA. No live result query or target outcome was read.
+
+Exact-head CI:
+- [Frozen V2 Shadow Tests #43218929182](https://github.com/MaksimBlud/football-ai/actions/runs/43218929182): **440 PASS on Python 3.11 and 440 PASS on Python 3.12**; both production `*.pkl` diff guards passed.
+- [Prospective Evaluator Validation #43218929219](https://github.com/MaksimBlud/football-ai/actions/runs/43218929219): **190 PASS**, offline-only.
+- Duplicate push-triggered validation [#43218915550](https://github.com/MaksimBlud/football-ai/actions/runs/43218915550): **190 PASS**.
+
+PR #793 remains Draft and mergeable, **8 commits ahead / 0 behind** its #787 base. These are synthetic/regression results, not live inference or model-quality evidence.
+
+### Re-read of the original live workflow on main
+
+The five original V2 live/recovery workflows were read again directly from main. Main still has no `MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=false` hold:
+- original forward daily cron `8 8 * * *`;
+- current-form forward daily cron `18 8 * * *`;
+- current-form source capture daily cron `50 5 * * *`;
+- free real-quote diagnostic daily cron `13 6 * * *`;
+- candidate recovery remains manual.
+
+[PR #781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN, non-draft, mergeable, HUMAN-MERGE only; exact head `11292064cb08ca9f1da70940c5cdbe536ec4dec5`, 8/8 exact-head CI success. It has not been merged; main SHA remains unchanged. The workflow hold is therefore not yet active on main.
+
+### Fresh Supabase read-only pre-match/identity aggregates
+
+Strict odds predicate required both `snapshot_time_utc < commence_time_utc` and `created_at < commence_time_utc`, excluding late-persisted rows:
+- **3,915** strict pre-match snapshots across **327** events;
+- no rows persisted after kickoff while claiming a pre-kickoff snapshot;
+- last strict pre-match Serie A snapshot: `2026-10-13T14:48:53Z`;
+- no new snapshots in the latest seven-day interval reported by the current inventory.
+
+The preregistered metadata-only Serie A 2026/27 feature-input query selected only `match_date, home_team, away_team`: **113** unique fixture identities, 2026-08-22 through 2026-11-08. This is only the feature-input gate, not the separate 30-eligible-prospective-forecast outcome gate.
+
+A read-only aggregate on `product_prediction_snapshots` found **0** pre-kickoff rows with the exact frozen candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`. No target outcomes, scores, settlement or result labels were selected. No Supabase writes/DDL occurred.
+
+### Supabase security advisory — not changed
+
+The current table inventory reports RLS disabled on five public tables: `teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, and `epl_ai_market_pair_ledger`. No automatic RLS change was applied because enabling it without reviewed policies can block legitimate application access; this remains a separate owner-controlled security remediation.
+
+### Binding V2 state
+
+Original candidate SHA, 19-feature order/weights, imputer/scaler and lambda contract remain unchanged. `active_lambda=0` remains market fallback; `shadow_residual_lambda=1` remains research-only; NO_BET; no refit or promotion. The 30-primary-completed-event outcome gate remains closed because there are **0** exact-candidate pre-kickoff product snapshot rows in the checked table and no admissible prospective evaluation cohort was established. No Brier/LogLoss superiority claim is supported.
+
+No source API account/key/request/download, paid provider call, main merge, production `.pkl` change, Supabase write, schedule change, or other-agent setting change was made.
+
+---
+
 ## 2026-11-12 08:00 UTC — exact live-access inventory refresh and pre-match-only state
 
 ### Fresh main and frozen original candidate
