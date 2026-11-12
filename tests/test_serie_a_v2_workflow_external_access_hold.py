@@ -277,7 +277,7 @@ EXTERNAL_IO_MARKERS = (
 
 def _has_external_io(text: str) -> bool:
     normalized = text.lower()
-    return any(marker in normalized for marker in EXTERNAL_IO_MARKERS)
+    return any(marker.lower() in normalized for marker in EXTERNAL_IO_MARKERS)
 
 
 ORIGINAL_V2_REFERENCE_MARKERS = (
@@ -380,6 +380,9 @@ def test_external_io_inventory_recognizes_common_artifact_and_network_paths():
         "python -c 'urllib.request.urlopen(url)'",
     )
     assert all(_has_external_io(example) for example in examples)
+    assert _has_external_io(
+        "secrets.GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}"
+    )
 
 
 def test_external_io_inventory_recognizes_alternate_runtimes_and_http_clients():
