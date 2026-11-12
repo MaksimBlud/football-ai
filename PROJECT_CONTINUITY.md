@@ -10138,3 +10138,33 @@ Only metadata/timestamps from the pre-match odds table and pre-kickoff predictio
 4. Keep #800 Draft until the provider resolves the Free/Pro Serie A conflict, upstream rights/field semantics, and private retention; no API call in the meantime.
 5. Continue free source research and offline regression hardening only; then restore the real pre-match 19-feature V2 path without changing the frozen candidate.
 6. Do not open target outcomes before 30 eligible prospective forecasts are completed; only then run the preregistered independent Brier/LogLoss comparison.
+
+
+## 2026-11-12 09:38 UTC — final same-day runtime inventory, Soccer Data audit, and expanded Supabase RLS advisory
+
+### Main workflow freshness
+- Fresh main still resolves to 40887ebb215730190d7a6c7a1693373ec4afcdfc; compare main...main is identical. No main update was made.
+- The GitHub Actions runs collection for created=2026-11-12 returned 645 runs across seven pages through 09:38 UTC. None of those runs used the original V2 source/forward workflow paths or the V2 recovery workflow. This is an absence-of-new-runtime observation, not proof that GitHub's scheduled trigger is permanently disabled.
+- The latest observed main V2 runtime remains 2026-11-11:
+  - Original forward [#43054458880](https://github.com/MaksimBlud/football-ai/actions/runs/43054458880), 16:03:20 UTC: 71 tests passed; original source archive attestation verified 3,800 historical results / 10 prior-season files; quotes_seen=0, future_quotes_checked=0, v2_diagnostic_previews_captured=0, eligible_for_frozen_prospective_cohort=false, paid calls 0, Supabase writes 0. Its small forward output artifact was uploaded as artifact ID 13870532317, ZIP SHA-256 0b892f9cd03d8e1471e40b9486b6475e3dbe4633552c8dd9a66f45f0177045af.
+  - Current-form forward [#43055721034](https://github.com/MaksimBlud/football-ai/actions/runs/43055721034), 16:10:49 UTC: source artifact/parent verified, 110 current-season feature-input rows, but quotes_seen=0, v2_current_form_shadow_captured=0, target outcomes not read/scored, and no writes.
+  - Current-form source capture [#43025058808](https://github.com/MaksimBlud/football-ai/actions/runs/43025058808), 12:59:16 UTC: 110 completed prior-day rows and 11 source files; it uploaded public artifact ID 13857286039, SHA-256 117d72e536f56d41b7b893700b51c8e1fc593cd40034fbedb8fc1f88a8cee6be. This is a rights/privacy incident because the later source-rights decision withdrew automated Football-Data AI capture permission; it is not admissible prospective V2 evidence.
+  - Free diagnostic [#43035977412](https://github.com/MaksimBlud/football-ai/actions/runs/43035977412), 14:10:48 UTC: 3,800 historical rows, no usable quote/forecast cohort, and public source artifact upload. No paid calls or Supabase writes. Existing artifacts were not downloaded or deleted.
+- PR #781 remains the direct-main hold, still unmerged. Its current exact HEAD and 8/8 CI are recorded above; until owner HUMAN-MERGE and fresh-main runtime proof, its hold is not active on main.
+
+### New source candidate audit — Soccer Data
+- PR [#791](https://github.com/MaksimBlud/football-ai/pull/791) is Draft/HUMAN-MERGE, base main 40887ebb215730190d7a6c7a1693373ec4afcdfc, exact HEAD 54eb0d99ca7f3ef99ca66e70e35ca4305a7a0198.
+- Exact-head PR CI: **6/6 SUCCESS** — Research [#43191923516](https://github.com/MaksimBlud/football-ai/actions/runs/43191923516), Product [#43191923498](https://github.com/MaksimBlud/football-ai/actions/runs/43191923498), Serie A [#43191923384](https://github.com/MaksimBlud/football-ai/actions/runs/43191923384), Bundesliga [#43191923469](https://github.com/MaksimBlud/football-ai/actions/runs/43191923469), Ligue 1 [#43191923536](https://github.com/MaksimBlud/football-ai/actions/runs/43191923536), Eredivisie [#43191923394](https://github.com/MaksimBlud/football-ai/actions/runs/43191923394).
+- Public docs/terms claim a 50-request/day Free plan for current-season stats, no odds, and caching while the account is active. Timeline meta.last_updated and a full/none coverage flag are documented, but the general match-list/full-stats response does not expose a field-level upstream observation timestamp. Responses can be cached for five minutes and marked stale.
+- Exact Serie A coverage, complete goals/corners/cards field semantics, upstream rights, and an independent source-before-quote timestamp are still unverified. No account, API key, endpoint call, odds request, or data download was made. Candidate remains HOLD; the Free plan cannot replace the original 2016/17–2025/26 historical archive.
+
+### Fresh Supabase pre-match and security checks
+- Read-only strict pre-match query at 2026-11-12T09:38:08Z, using only odds_snapshots rows where snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= now(): **3,915 snapshots / 327 events**; **0** strict pre-match snapshots in seven days; **0** future-kickoff snapshots/events.
+- Exact original candidate SHA a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6 in product_prediction_snapshots, with generated_at_utc < commence_time_utc: **0 rows / 0 events**. No result, score, settlement, or target-outcome fields were selected.
+- Security Advisor at 2026-11-12T09:37:48Z still reports RLS disabled on five public tables (teams, predictions, match_statistics, league_prediction_ledger, epl_ai_market_pair_ledger). It additionally reports RLS enabled but no policies on four tables: competitions, match_stats, matches, standings. No DDL or policy changes were made; enabling RLS without designed policies could block legitimate access. Remediation guidance: https://supabase.com/docs/guides/database/postgres/row-level-security
+
+### Binding interpretation
+- No new pre-match quote or exact-SHA original-V2 forecast has appeared. The target-outcome gate remains closed at **0/30**; no protected 2026/27 outcomes were read.
+- The 5Dollar adapter PR #800 remains Draft and source HOLD; its local SHA/time checks deliberately leave independent source-before-quote attestation false. The Soccer Data audit #791 does not remove the same provenance/coverage blockers.
+- Keep the original 19 features, weights, scaler/imputer, candidate SHA, active_lambda=0, and shadow_lambda=1 unchanged. No model-quality claim is supported.
+- No main change/merge, Supabase write/DDL, paid API call, source download, target-outcome read, production .pkl change, schedule/agent-setting change, bet, or promotion occurred in this checkpoint. HUMAN-MERGE only.
