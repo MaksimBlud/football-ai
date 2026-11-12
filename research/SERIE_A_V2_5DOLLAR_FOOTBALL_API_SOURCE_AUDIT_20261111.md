@@ -5,9 +5,9 @@
 
 ## Decision
 
-**5DollarFootballAPI is the strongest new no-cost source candidate found in this audit, but it is not approved for V2 ingestion yet.** Its published terms explicitly permit use in models and internal tools and permit caching; its fixture schema exposes goals, corners and yellow/red cards. However, its own public pages conflict on whether the full Serie A statistics feed is available on a $0 plan, and the reviewed response examples do not expose a per-fixture source-observed timestamp or named upstream provider for each statistic.
+**5DollarFootballAPI is the strongest no-cost source candidate found so far, but it is not approved for V2 ingestion yet.** A fresh review of its current pricing and documentation clarifies that the Free plan explicitly includes the top-five leagues (including Serie A) and the last three months of results; the dedicated Serie A page also claims free current-season fixtures, goals, corners, cards and odds. The data-quality table labels Italy Serie A “Pro” in its twelve-month coverage view, which is more plausibly a historical-depth distinction than a contradiction about current-season fixtures. However, the exact Free-plan entitlement for every required goals/corners/yellow/red field is not independently confirmed by an authenticated response. Terms explicitly permit models/internal tools and caching, subject to attribution for public display and no raw-feed redistribution.
 
-Do not create an account, activate Community Access, call the API, or integrate it until the plan/coverage and upstream-rights questions are resolved by the owner/provider. No paid plan is proposed or authorized.
+No account, key, API call or data download was made. Do not create an account, self-attest for Community Access, call the API, or integrate until the owner authorizes the source and private-archive approach, and the remaining field-level rights/semantics questions are resolved. No paid plan is proposed or authorized.
 
 ## Official pages reviewed
 
@@ -33,25 +33,25 @@ This is materially clearer for model use than the sources rejected in earlier au
 
 Before integration, obtain written confirmation that the provider's upstream rights allow the specific Serie A match-stat fields, derived rolling features, frozen-model inference, private research retention and the intended project use. Do not redistribute raw responses.
 
-## Free-plan access and a material Serie A plan contradiction
+## Free-plan access and the current-season versus historical-depth distinction
 
 The public pages describe three relevant access levels:
 
 | Access | Published price | Published limits/history |
 |---|---:|---|
-| Free | $0 | 60 requests/hour, 20/minute ceiling; last 3 months of results/odds in the general API docs |
+| Free | $0 | Top-five leagues (EPL, La Liga, Serie A, Bundesliga, Ligue 1); 60 requests/hour, 20/minute ceiling; last 3 months of results/odds |
 | Community Access | $0 for eligible users | Top-five leagues plus one selected country pack; 300 requests/hour, 20/minute ceiling; last 12 months of results/odds; 12-month activation/renewal |
-| Pro | $5/month | 137 competitions and broader access; paid and therefore not authorized |
+| Pro | $5/month | 137 competitions and broader coverage/history; paid and therefore not authorized |
 
 Community Access is described for students, academic/non-profit researchers, early-career developers, or anyone for whom $5/month is a meaningful expense. It requires the account holder to select the applicable eligibility statement and a country pack. Eligibility must not be assumed or self-attested by this automation on the user's behalf.
 
-**The key unresolved contradiction:**
-- The dedicated Serie A page says Serie A is included in the free tier and that full statistics are included.
-- The Community Access page says the top five leagues are included at $0.
-- The machine-readable/data-quality page labels **Italy Serie A (league id 3405541143) as “Pro”**, not Free or Community.
-- The general API docs say Free history is three months, Pro is twelve months and Ultra is full history; the Community page separately advertises twelve months.
+**Clarified interpretation from the 2026-11-12 public-page review:**
+- The pricing page explicitly lists Serie A among the Free plan's top-five leagues and says Free returns the last three months of results/odds.
+- The dedicated Serie A page explicitly says Serie A fixtures, goals, corners, cards, odds and full statistics are included in Free.
+- The data-quality table reports Italy Serie A as “Pro” in a table measuring the preceding twelve months and thirteen seasons. The API docs separately state that Free has three months of history, Pro twelve months, and Ultra full history. This likely describes the deeper historical archive rather than current-season access; the table does not define the Plan column clearly enough to treat this as settled.
+- Community Access is a separate $0 plan for users who select an applicable eligibility statement, with top-five leagues plus one country pack, 300 requests/hour and twelve months of history. This automation must not self-attest or activate it.
 
-These statements are not safely reconcilable from the public documentation alone. A free account must not be assumed to return the full Serie A stats payload simply because the marketing page says “free”.
+**Remaining uncertainty:** no authenticated Free-plan response has been inspected, so the precise availability and completeness of the required goals/corners/yellow/red fields for current-season Serie A remains unverified. The 380 versus 385 finished-match counts were published at different refresh times (data-quality table 2026-11-11; dedicated Serie A page crawled 2026-11-12) and should not be treated as a stable contradiction. No paid plan or endpoint test is authorized.
 
 No Pro, Ultra, Business, Edge, or other paid access may be used.
 
@@ -60,12 +60,12 @@ No Pro, Ultra, Business, Edge, or other paid access may be used.
 The dedicated Serie A page reports:
 - league id 3405541143;
 - 4,803 fixtures on record and history since 2014;
-- 385 finished matches in its last-12-month summary;
+- 385 finished matches in its last-12-month summary when reviewed 2026-11-12;
 - 9.0 corners and 3.5 cards per match in that summary;
-- a claim that Serie A is available on the free tier with full statistics.
+- an explicit claim that Serie A goals, corners, cards, odds and full statistics are available in the Free tier.
 
 The data-quality page, generated 2026-11-11 05:05 UTC, reports the Italy Serie A row as:
-- plan: **Pro**;
+- plan: **Pro** in its twelve-month/seasonal completeness table;
 - 380 finished matches in the preceding 12 months;
 - corners: 100%;
 - half-time corners: 100%;
@@ -75,9 +75,9 @@ The data-quality page, generated 2026-11-11 05:05 UTC, reports the Italy Serie A
 - live stats: 100%;
 - first season: 2014, 13 seasons.
 
-The 380 versus 385 finished-match figures are also not reconciled on the reviewed pages. The data-quality HTML exposes a per-competition cards aggregate globally, but its visible competition table does not provide a separate per-league cards percentage. Do not infer 100% card completeness from the global 99.8% figure or from the Serie A average of 3.5 cards/match.
+The 380 versus 385 figures were refreshed on different dates and may simply reflect the five additional finished fixtures between page snapshots; this is not evidence of a data-quality defect. The data-quality HTML exposes a global cards aggregate but not a separate per-league cards percentage. Do not infer 100% card completeness from the global 99.8% figure or the Serie A average of 3.5 cards/match.
 
-These are provider-published aggregate claims, not independently measured data quality. The exact 2026/27 per-match completeness and Free/Community access remain unverified because no authenticated endpoint was called.
+These are provider-published aggregate claims, not independently measured data quality. The exact 2026/27 per-match completeness and Free-plan field entitlement remain unverified because no authenticated endpoint was called.
 
 ## Schema compatibility with the frozen 19-feature contract — documentation only
 
@@ -155,6 +155,16 @@ Therefore Free/Community cannot replace the original 2016/17–2025/26 historica
 
 No account/key, API request, odds request, data download, source archive, Supabase read/write, target-outcome read, workflow schedule change, production artifact change, or main update was performed.
 
+## 2026-11-12 public-doc clarification addendum
+
+The current pricing page now explicitly lists the top-five leagues, including Serie A, on the $0 Free plan, with three months of results/odds. The dedicated Serie A page says its goals/corners/cards/statistics and odds are included in Free. The “Pro” label on the data-quality table is attached to a twelve-month/13-season coverage view; the general docs say Free is limited to three months and Pro to twelve months. This makes the apparent Free-vs-Pro conflict more likely a history-depth distinction, but it does **not** prove the authenticated Free endpoint returns every required current-season field. The public pages remain mutable; the exact versions should be SHA-archived before any authorized use.
+
+The API docs show fixture-level `goals`, `corners`, `cards.yellow` and `cards.red`, plus `kickoff_utc` and explicit `status=finished`. The docs do not show a per-fixture `updated_at` or upstream source-observed timestamp. The public status page measures live-stat age and event-capture delay, not a per-fixture historical-stat publication time. A future capture could prove **our collector received the exact raw response before the later quote** using local request/response timestamps plus raw-byte SHA-256; it could not claim the provider's upstream publication time without a provider attestation.
+
+The original frozen feature builder needs exactly 19 differences over points, goals for/against, corners for/against, yellow and red cards, with 5/10-match and venue-5 windows. The documented fixture fields cover those raw-data families, but field-level compatibility is not proven. Required source-concordance checks remain: second-yellow/red semantics, null-versus-zero, corner/card completeness, team identity mapping, abandoned/postponed handling and regular-time-only results. No source response has been obtained, so no parity claim is made.
+
+The Free three-month window may cover the current 2026/27 season's rolling form at this date, but coverage per team and all required fields must be measured without shortening the frozen windows or changing imputation. It cannot replace the original 2016–2026 training archive. Community Access may provide twelve months, but eligibility is a user attestation and must not be selected by automation.
+
 ## Final disposition
 
-**Keep 5DollarFootballAPI as a high-priority no-cost candidate for a future source-concordance test, but do not integrate it yet.** Its Terms explicitly permit models/internal tools and caching, and its documented schema covers goals, corners and cards. The plan/coverage contradiction for Italy Serie A and the missing per-fixture source timestamp/upstream provenance prevent a defensible source-before-quote approval today.
+**Promote 5DollarFootballAPI to the first candidate for a future no-cost, current-season source-concordance test, but keep ingestion blocked.** Terms explicitly permit model/internal-tool use and caching, with public attribution and no raw-feed redistribution. The remaining blockers are authenticated field-level Free-plan confirmation, upstream field-rights/semantics clarification, a private raw-response archive, and the source-before-quote attestation policy. No account, key, API request, odds request, source download, Supabase write, inference, target-outcome read or production change occurred.
