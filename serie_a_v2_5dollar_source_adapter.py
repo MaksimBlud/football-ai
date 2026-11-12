@@ -17,7 +17,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qsl, urlparse
 
 import pandas as pd
 
@@ -179,19 +179,34 @@ def _validate_request_url(value: object, page_number: int, season_api_parameter:
         raise ValueError("only the documented 5Dollar HTTPS API host is accepted")
     if parsed.username or parsed.password:
         raise ValueError("credentials must not be embedded in request_url")
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError("request_url has an invalid port") from exc
+    if port not in (None, 443):
+        raise ValueError("request_url must use the provider's standard HTTPS port")
+    if parsed.fragment:
+        raise ValueError("request_url fragments are not permitted")
     if parsed.path.rstrip("/") != f"/v1/leagues/{SERIE_A_PROVIDER_LEAGUE_ID}/fixtures":
         raise ValueError("only the Serie A league-fixtures endpoint is accepted")
-    query = parse_qs(parsed.query)
-    if any(k.lower() in {"key", "api_key", "token", "access_token", "authorization"} for k in query):
-        raise ValueError("credentials must not be embedded in request_url")
-    if query.get("page") and query["page"][-1] != str(page_number):
+    try:
+        pairs = parse_qsl(parsed.query, keep_blank_values=True, strict_parsing=True)
+    except ValueError as exc:
+        raise ValueError("request_url query string is malformed") from exc
+    keys = [key for key, _ in pairs]
+    if len(pairs) != 3 or len(set(keys)) != 3 or set(keys) != {"season", "page", "per_page"}:
+        raise ValueError("request_url must contain exactly one season, page, and per_page parameter")
+    query = dict(pairs)
+    if query["page"] != str(page_number):
         raise ValueError("request_url page does not match capture manifest")
-    if page_number > 1 and query.get("page", [None])[-1] != str(page_number):
-        raise ValueError("every page after page 1 must pin its page parameter")
-    if query.get("season", [None])[-1] != season_api_parameter:
+    if query["season"] != season_api_parameter:
         raise ValueError("request_url must pin the exact captured season")
-    if query.get("per_page") and int(query["per_page"][-1]) > 100:
-        raise ValueError("request_url per_page exceeds the documented maximum")
+    try:
+        per_page = int(query["per_page"])
+    except ValueError as exc:
+        raise ValueError("request_url per_page must be an integer") from exc
+    if str(per_page) != query["per_page"] or not 1 <= per_page <= 100:
+        raise ValueError("request_url per_page must be between 1 and the documented maximum of 100")
     return value
 
 
@@ -361,7 +376,12 @@ def build_manifest_from_private_archive(
     pages = capture_manifest.get("pages")
     if not isinstance(pages, list) or not pages:
         raise ValueError("capture bundle pages are required")
-    if capture_manifest.get("page_count") != len(pages):
+    declared_page_count = capture_manifest.get("page_count")
+    if (
+        isinstance(declared_page_count, bool)
+        or not isinstance(declared_page_count, int)
+        or declared_page_count != len(pages)
+    ):
         raise ValueError("page_count does not match captured pages")
     page_numbers = []
     all_fixtures = []
@@ -370,12 +390,14 @@ def build_manifest_from_private_archive(
         if not isinstance(page, dict):
             raise ValueError("page record must be an object")
         number = page.get("page_number")
-        if not isinstance(number, int) or number < 1:
+        if isinstance(number, bool) or not isinstance(number, int) or number < 1:
             raise ValueError("page_number must be a positive integer")
         page_numbers.append(number)
         request_url = _validate_request_url(
             page.get("request_url"), number, season_api_parameter
         )
+        request_params = dict(parse_qsl(urlparse(request_url).query, keep_blank_values=True, strict_parsing=True))
+        requested_per_page = int(request_params["per_page"])
         if page.get("http_status") != 200:
             raise ValueError("all source pages must have HTTP 200")
         page_started = _parse_utc(page.get("request_started_at_utc"), "page request_started_at_utc")
@@ -398,13 +420,35 @@ def build_manifest_from_private_archive(
         if payload.get("success") != 1 or not isinstance(payload.get("data"), list):
             raise ValueError("provider response must have success=1 and a data array")
         pagination = payload.get("pagination")
-        if not isinstance(pagination, dict) or pagination.get("page") != number:
+        if (
+            not isinstance(pagination, dict)
+            or isinstance(pagination.get("page"), bool)
+            or not isinstance(pagination.get("page"), int)
+            or pagination.get("page") != number
+        ):
             raise ValueError("provider pagination page does not match capture manifest")
         if not isinstance(pagination.get("has_more"), bool):
             raise ValueError("provider pagination has_more must be boolean")
+        returned_count = pagination.get("count")
+        if (
+            isinstance(returned_count, bool)
+            or not isinstance(returned_count, int)
+            or returned_count != len(payload["data"])
+        ):
+            raise ValueError("provider pagination count does not match page data length")
+        returned_per_page = pagination.get("per_page")
+        if (
+            isinstance(returned_per_page, bool)
+            or not isinstance(returned_per_page, int)
+            or returned_per_page != requested_per_page
+            or len(payload["data"]) > returned_per_page
+        ):
+            raise ValueError("provider pagination per_page does not match the captured request")
         expected_has_more = number < len(pages)
         if pagination["has_more"] != expected_has_more:
             raise ValueError("capture bundle is incomplete or page order is inconsistent")
+        if pagination["has_more"] and len(payload["data"]) != returned_per_page:
+            raise ValueError("non-final provider page is shorter than its declared per_page")
         all_fixtures.extend(payload["data"])
         page_evidence.append({
             "page_number": number,
@@ -433,6 +477,7 @@ def build_manifest_from_private_archive(
     if any(not value for value in fixture_ids) or len(fixture_ids) != len(set(fixture_ids)):
         raise ValueError("source fixture ids must be present and unique across pages")
     history_rows = []
+    history_identity_keys = set()
     skipped_non_finished = 0
     for fixture in all_fixtures:
         if str(fixture.get("id")) in target_ids:
@@ -440,11 +485,19 @@ def build_manifest_from_private_archive(
         if fixture.get("status") != "finished":
             skipped_non_finished += 1
             continue
-        history_rows.append(
-            _fixture_to_history_row(
-                fixture, response_received, target_ids, target_identities, expected_season_id
-            )
+        history_row = _fixture_to_history_row(
+            fixture, response_received, target_ids, target_identities, expected_season_id
         )
+        match_day = datetime.strptime(history_row["Date"], "%d/%m/%Y").date()
+        canonical_pair = tuple(sorted((
+            _canonical(history_row["HomeTeam"]),
+            _canonical(history_row["AwayTeam"]),
+        )))
+        history_identity = (match_day, canonical_pair)
+        if history_identity in history_identity_keys:
+            raise ValueError("duplicate unordered historical fixture identity on the same UTC date")
+        history_identity_keys.add(history_identity)
+        history_rows.append(history_row)
     if len(history_rows) < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
         raise ValueError("source bundle has fewer than 30 completed current-season Serie A fixtures")
     history = pd.DataFrame(history_rows, columns=REQUIRED_HISTORY_COLUMNS)
