@@ -9849,3 +9849,19 @@ No main update or merge, production `.pkl` change, weight/contract change, Supab
 - Decision: `CONDITIONAL_CANDIDATE_NOT_APPROVED`; no account, API key, API request, data download, quote, Supabase, feature calculation, inference, or target-outcome read. The audit does not alter the original candidate or the 30-event gate.
 
 The latest source-candidate decisions remain: Openplay (#789), Open-Matchday (#790), Soccer Data (#791), 5DollarFootballAPI (#792), Big Balls (#794), Cornerflick (#797), and Stats API (#798) are research-only and none is approved for original V2 capture/inference. The best next step is written rights/provenance clarification with a provider, not another unlicensed API call.
+
+
+## Market-only evaluator code review — 2026-11-12 06:08 UTC
+
+A fresh source review of PR [#793](https://github.com/MaksimBlud/football-ai/pull/793), branch `research/v2-market-only-evaluator-rebased-on-787-20261112-run11`, confirms the intended V2-only comparison path:
+
+- `evaluate_market_only_after_gate()` is separate from the full three-way evaluator. It requires the incumbent reference to remain unpinned, rejects any incumbent vector/evidence, and scores only the exact de-vigged market vector versus the original V2 lambda-one shadow.
+- It requires **30 unique eligible completed prospective forecasts**, not merely 30 completed matches. At 29, it returns `OUTCOME_READ_GATE_CLOSED`, no metrics, and does not invoke the lazy outcome loader.
+- The live runner requires a verified source-before-quote preflight and a fresh identity-only completed-fixture gate before it can reach the lazy outcome loader.
+- The gate query contract selects only `match_date, home_team, away_team` from `public.league_finished_results` for Serie A 2026/27, with a fixed query-contract SHA-256 `181d76b75c092d46b57535591abbb4e625c3e54e9b0f876402c9a3e0ed2457fb`; score/result columns are not selected. This is gate metadata, not an outcome read.
+- The market-only path computes multiclass Brier and LogLoss plus a paired fixture-level 10,000-resample descriptive bootstrap. The bootstrap fraction is explicitly not a p-value. It always keeps `review_signal=false`, NO_BET, and no promotion.
+- The full three-way market/incumbent/shadow path remains blocked until a separately approved non-legacy incumbent identity and SHA are pinned. Legacy XGBoost incumbent evidence is explicitly rejected. No old production model is loaded or executed by the market-only path.
+
+Exact PR #793 validation on HEAD `4d91bf1f62ee41c5eb1f0f01cb1586e404ff4e48`: evaluator validation **183 passed**; frozen V2 tests **440 passed on Python 3.11** and **440 passed on Python 3.12**. These are synthetic/offline contract tests, not real prospective model-quality evidence.
+
+The actual outcome gate remains **0/30 eligible completed prospective forecasts**. No target outcomes were read by this review, and no Brier/LogLoss result exists for the live cohort.
