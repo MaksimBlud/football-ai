@@ -284,8 +284,12 @@ def _has_non_test_python_entrypoint(text: str) -> bool:
 
     for line in text.splitlines():
         command = line.strip()
-        if not re.match(r"^python(?:3(?:\.\d+)?)?\s+", command):
+        if not command or command.startswith("#"):
             continue
+        invocation = re.search(r"\bpython(?:3(?:\.\d+)?)?\s+", command)
+        if invocation is None:
+            continue
+        command = command[invocation.start():]
         if re.match(
             r"^python(?:3(?:\.\d+)?)?\s+-m\s+(?:pip|pytest|py_compile)\b",
             command,
