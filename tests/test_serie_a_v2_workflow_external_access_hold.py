@@ -282,6 +282,7 @@ def _has_external_io(text: str) -> bool:
 
 ORIGINAL_V2_REFERENCE_MARKERS = (
     "serie_a_v2_",
+    "serie-a-v2",
     "market_anchor_v2_",
     # The original model's canonical module family includes the 1X2 token.
     # The hyphenated workflow identity is also used by its validation workflow.
@@ -326,7 +327,10 @@ def _has_non_test_python_entrypoint(text: str) -> bool:
 
 
 def _is_original_v2_live_workflow(text: str, workflow_path: str = "") -> bool:
-    has_v2_reference = any(marker in text for marker in ORIGINAL_V2_REFERENCE_MARKERS)
+    reference_surface = f"{text} {workflow_path}".lower()
+    has_v2_reference = any(
+        marker in reference_surface for marker in ORIGINAL_V2_REFERENCE_MARKERS
+    )
     workflow_name = next(
         (
             line.split(":", 1)[1].strip().strip("\\\"'").lower()
