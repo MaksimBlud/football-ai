@@ -50,11 +50,11 @@ def _forecast_rows(count: int = 30) -> list[dict]:
             "eligible_for_current_form_forward_shadow": True,
             "eligible_for_product_publication": False,
             "shadow_evidence_status": "SOURCE_ARCHIVE_AND_PARENT_RUN_VERIFIED_BEFORE_QUOTE",
-            "source_artifact_id": 20001,
+            "source_artifact_id": 20001 + index,
             "source_archive_sha256": "a" * 64,
             "source_observed_at_utc": f"{match_day}T08:45:00Z",
             "source_archive_created_at_utc": f"{match_day}T08:50:00Z",
-            "source_parent_run_id": 30001,
+            "source_parent_run_id": 30001 + index,
             "source_parent_run_sha": "b" * 40,
             "source_parent_run_completed_at_utc": f"{match_day}T09:00:00Z",
             "quote_time_utc": f"{match_day}T09:10:00Z",
@@ -697,7 +697,7 @@ def test_market_only_preflight_and_evaluator_share_one_immutable_gate_snapshot(m
     assert {
         tuple(source["fixture_identity"]) for source in preflight_seen[0][0]
     } == evaluator_seen[0][0]
-    assert all(source["source_artifact_id"] == 20001 for source in preflight_seen[0][0])
+    assert len({source["source_artifact_id"] for source in preflight_seen[0][0]}) == 30
     assert preflight_seen[0][1]["selected_columns"] == [
         "match_date", "home_team", "away_team", "result"
     ]
@@ -809,6 +809,7 @@ def test_market_only_preflight_receives_only_completed_eligible_forecast_sources
 
 def test_source_requirements_reject_conflicting_metadata_for_one_artifact_id(monkeypatch):
     rows = _forecast_rows(30)
+    rows[1]["source_artifact_id"] = rows[0]["source_artifact_id"]
     rows[1]["source_archive_sha256"] = "f" * 64
     gate_calls = []
     monkeypatch.setattr(
