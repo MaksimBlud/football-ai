@@ -285,3 +285,20 @@ The exact candidate filter was SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b
 ### Frozen original candidate
 
 Candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features, 3,799 training rows, unchanged 20x2 weight matrix (19 features plus intercept), `active_lambda=0`, `shadow_lambda=1`, stability gate FAILED. No refit, weight/feature/scaler/imputer change, production `.pkl` change, promotion, bet, or outcome evaluation occurred.
+
+
+## Additional free-source screen — Cornerflick (2026-11-12; documentation only)
+
+Official generic documentation reviewed:
+- Data schema/licence: https://cornerflick.com/data
+- Terms of Service (last updated 2026-11-09): https://cornerflick.com/terms
+
+The data page describes per-match JSON/CSV, season-level CSV/JSON, match timelines, team statistics including corners, a provenance block, a `last_updated_at` metadata field, and dated notes for corrections after full time. It states a CC BY 4.0 licence for Cornerflick's compilation, selection, structure and annotations, with attribution required. It explicitly does **not** grant rights to underlying match facts, which remain subject to each upstream data provider's terms.
+
+The separate Terms of Service restrict the general site licence to personal, non-commercial reading and prohibit scraping, harvesting or bulk-download except as permitted by law. This conflicts with treating the public data-page wording as blanket permission for automated bulk collection or long-term model-source retention. The generic docs also do not establish complete red-card event coverage or exact 2016/17–2025/26 Serie A field completeness.
+
+**Decision: HOLD — not an admissible automated V2 source.** Do not scrape, bulk-download, or ingest. Reconsider only after written permission covering automated/private research collection and retention, upstream provider rights for the required fields, exact season coverage, and a field-completeness/observation-clock audit. No account, key, download, API request, or source archive was created.
+
+### Retrieval-boundary incident
+
+A broad web search for Cornerflick's historical Serie A coverage returned search-result snippets containing current 2026/27 match-result text. This was an unintended retrieval exposure under the strict no-read boundary. No current-season result values were deliberately extracted, copied, counted, scored, or used in any dataset, feature, model, or evaluation; those snippets are quarantined and excluded from the 30-event gate. No match page or current-season data file was opened or downloaded. Do not repeat broad searches that surface current-season match snippets; use only generic terms/licence/API documentation unless the protected-outcome gate has formally opened.
