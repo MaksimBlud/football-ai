@@ -128,3 +128,43 @@ Official timeline reference: https://soccer-data.co/docs/reference/matches/timel
 - `meta.last_updated` is a potentially useful upstream timeline-last-change timestamp and is stronger provenance evidence than local collector receipt alone. It is not yet proof that each feature field was observed at that time or that the provider's upstream source timestamp is independently auditable.
 
 Decision remains **HOLD / not approved** pending written provider confirmation of model-use scope and private retention, exact Serie A 2026/27 timeline coverage, event-category completeness (especially corners and `yellow_red_card`), and the meaning/source of `meta.last_updated`. No account/key, API call, source download, odds request, Supabase access, model inference, or target-outcome read was performed. No original V2 feature, weight, scaler/imputer, candidate SHA, lambda or gate was changed.
+
+## 2026-11-12 recheck — cache headers, Free-plan boundaries and source-before-quote
+
+Official pages were re-read on 2026-11-12. The Terms of Service page states **last updated 2026-10-30**. No account was created, no key was requested, and no API endpoint or API tester was called.
+
+### Newly pinned response-cache semantics
+
+The official Rate Limits documentation defines these response headers:
+
+- `X-Cache: MISS`: fetched fresh from the source;
+- `X-Cache: HIT`: served from Soccer Data's cache;
+- `X-Cache: STALE`: an older copy was served because a fresh answer could not be fetched;
+- `X-Cache-Age`: age in seconds for a STALE response.
+
+The docs say stale fallback can be up to 15 minutes for data that changes during a match and up to **6 hours for data that does not**, including finished-match statistics. Finished-match stats are cached longer, but no maximum age for ordinary HIT responses is documented. A future adapter must therefore reject `X-Cache: STALE`, preserve the exact cache headers, response bytes and local request/response timestamps, and never infer an upstream update timestamp from `HIT` alone.
+
+The timeline endpoint does expose `meta.last_updated`, `meta.coverage` and `meta.reason`. For timeline-backed event fields, a strict chain can require:
+`meta.last_updated <= response_received_at_utc < quote_time_utc < kickoff_utc`.
+For the aggregate stats endpoint, the reviewed schema does **not** document `meta.last_updated`; it exposes the required totals but only the HTTP cache headers. Such a capture can prove that the exact response bytes were received and archived before a later quote, but cannot claim the upstream provider's original observation time. Preserve the raw response SHA-256, parent run ID/SHA and archive creation time; reject STALE, missing/null required stats and any equal or reversed timestamps.
+
+### Feature coverage and limits
+
+- `GET /matches/{match_id}/stats` documents `corner_kicks`, `yellow_cards` and `red_cards` in `overview`, split home/away and full-match/half. Missing periods are `null`, never zero; detailed stats may return 404 when not collected.
+- `GET /matches/{match_id}` documents normal-time `score.home/away` and separate extra-time/penalty fields. The original Serie A league-only feature contract must not accidentally ingest cup shootouts or extra-time results.
+- `GET /matches/{match_id}/timeline` documents `goal`, `own_goal`, `penalty_scored`, `corner_kick`, `yellow_card`, `red_card` and `yellow_red_card`, with team identity and event order. Timeline coverage is explicitly `full` or `none`; `none` must be rejected, not treated as zero events.
+- The public Free plan is **$0, 50 requests/day, 10 requests/minute, current season only, all stats endpoints, no odds and no webhooks**. Each paginated page is a separate request; `per_page=100` is documented for match lists. The Free plan's live cache is normally five minutes; finished-match stats are cached longer. Odds endpoints are Pro/Business only and are outside this task.
+
+### Rights interpretation — still HOLD
+
+The Terms grant a non-exclusive, non-transferable licence to use the data in the user's own websites, apps and products (including paid products), and permit caching/storage **while the account is open and the plan active**. The licence ends when the account or terms end. Raw feed resale, sublicensing and redistribution as a standalone feed/dataset are prohibited.
+
+This is materially promising for a free internal source and own-product feature pipeline, but the terms do not explicitly name ML model training/inference or the long-term retention of derived feature evidence after account closure. They also say the data belongs to Soccer Data or providers it licenses, while the documentation does not identify the upstream provider separately for each field. Written confirmation is still required for:
+1. frozen-model feature engineering/inference in this prediction product;
+2. private retention of raw response archives and derived feature snapshots for reproducible research while the Free account remains active;
+3. what must be deleted when the account/plan ends, and whether hashes/derived non-raw records may be retained;
+4. the provider's authority to grant these uses for the underlying Serie A feed.
+
+Exact Serie A 2026/27 `team_stats` and timeline coverage, completed-event counts and null rates still require an authenticated coverage call. No key exists in this audit and no call was made. The Free plan is current-season only and cannot replace the 2016/17–2025/26 historical training archive; it could only be considered as a separately preregistered current-season input supplement under the unchanged 19-feature contract.
+
+**Decision remains HOLD.** Soccer Data is the strongest currently documented free candidate, but no ingestion, archive, feature build, inference or evaluation is authorized until written ML/retention rights, exact Serie A coverage and private-storage gates pass. Do not call odds endpoints, create an account/key, or use any paid plan.
