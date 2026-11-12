@@ -10275,3 +10275,47 @@ Only pre-match quote metadata/timestamps and exact-candidate prediction metadata
 3. Keep #796 behind the same rights/privacy chain; do not merge #795 separately.
 4. Continue official-terms/source provenance research only. No ingestion/inference until rights and private storage are independently approved.
 5. Restore a permitted pre-match 19-feature path, then collect 30 eligible prospective forecasts before any protected outcome read. Compare Brier/LogLoss only under the frozen protocol.
+
+
+## 2026-11-12 12:11 UTC — private archive/rights CLI hardening and exact-head V2 CI
+
+### Fresh repository, PR and workflow state
+
+- Re-read `refs/heads/main`: exact SHA remains `40887ebb215730190d7a6c7a1693373ec4afcdfc` (main commit date 2026-10-18). No main change.
+- PR [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready / mergeable / HUMAN-MERGE, exact HEAD `11292064cb08ca9f1da70940c5cdbe536ec4dec5`, base main, 41 ahead / 0 behind. Exact-head CI remains **8/8 SUCCESS**. Its five live/recovery surfaces are held only on the PR branch; no claim that main is protected until owner merge and fresh-main proof.
+- Re-read all five workflow definitions in main and #781. Cron expressions are byte-for-byte equal: free diagnostic `13 6 * * *`, original forward `8 8 * * *`, current-form source capture `50 5 * * *`, current-form forward `18 8 * * *`, recovery has no cron. No schedule was changed.
+- Queried scheduled main-branch Actions runs. The latest original V2 source/diagnostic/forward/current-form workflow runs remain on 2026-11-11; no new such main run was found on 2026-11-12 in the returned schedule window. This is observed absence, not proof that cron definitions are disabled.
+
+### Additional fail-closed fixes in PR #800
+
+- PR [#800](https://github.com/MaksimBlud/football-ai/pull/800) remains Draft / mergeable / HUMAN-MERGE, based on main. Exact final HEAD: `50acb2fef5882e6b8581db7d6438d2b9fc87bf3e`, 40 commits ahead / 0 behind; only three files are changed: the offline adapter, its synthetic tests, and its HOLD rights manifest.
+- Review found that "outside the public repository" alone did not prove raw source storage was private. The adapter now requires POSIX private directory permissions (no group/other access), private regular raw/capture/quote files, rejects symlinked inputs, requires a private output directory, writes output with mode `0600` and exclusive creation, and fails closed on platforms where these permissions cannot be verified.
+- The CLI no longer accepts a caller-supplied `--rights-json`; it always reads the checked-in rights manifest, which remains HOLD. This prevents a local alternate JSON file from overriding the repository's explicit denial.
+- The adapter now accepts only the `$0 Free` plan. Community Access is rejected pending separate user eligibility approval; the automation does not assume or self-attest eligibility.
+- Exact-head GitHub Actions: **7/7 SUCCESS**. Frozen V2 Shadow Tests [#43215308520](https://github.com/MaksimBlud/football-ai/actions/runs/43215308520): **118 passed**; production `*.pkl` diff guard PASS. Research PR Validation [#43215308522](https://github.com/MaksimBlud/football-ai/actions/runs/43215308522) and all five league/product checks SUCCESS.
+- The adapter remains offline-only. `source_before_quote_verified=false`, model inference=false, target outcomes read=false. No provider account/key/API call, source download, odds read, Supabase access, or real feature inference occurred. The 5Dollar rights manifest remains HOLD due unresolved Free Serie A entitlement/field completeness, upstream rights/semantics, and private-retention approval. Keep #800 Draft; CI does not authorize ingestion or evaluation.
+
+### Existing public Actions artifacts — metadata only
+
+- Rechecked artifact metadata for the last successful main V2 capture/diagnostic/forward runs. At least four unexpired artifacts remain downloadable from this public repository; no artifact contents were downloaded:
+  - current-form source capture: 439,429 bytes, created 2026-11-11 13:00:12 UTC, expires 2027-02-09 12:59:16 UTC;
+  - free real-quote diagnostic: 425,068 bytes, created 2026-11-11 14:11:44 UTC, expires 2027-02-09 14:10:48 UTC;
+  - original forward preview: 1,458 bytes, created 2026-11-11 16:04:02 UTC, expires 2027-02-09 16:03:21 UTC;
+  - current-form forward preview: 440,599 bytes, created 2026-11-11 16:11:29 UTC, expires 2027-02-09 16:10:49 UTC.
+- PR #781 prevents future live steps/artifact uploads only after it is merged; it does not delete these existing artifacts. No deletion was attempted.
+
+### Fresh read-only Supabase pre-match inventory — 2026-11-12 12:08 UTC
+
+Only strict pre-kickoff quote timestamps/event identity and exact-candidate prediction metadata were aggregated; no odds prices, scores, results, settlement or target-outcome fields were selected.
+
+- `public.odds_snapshots`, filtered by `snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= now()`: **3,915** strict pre-match snapshots / **327** unique events.
+- Strict pre-match snapshots in the last seven days: **0**; future-kickoff events with saved strict pre-match quotes: **0**.
+- `public.product_prediction_snapshots`, exact original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, and `generated_at_utc < commence_time_utc`: **0 rows / 0 events**.
+- No Supabase writes or DDL.
+
+### Frozen original model and scientific status
+
+- Original candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 ordered features, 20×2 weight matrix, 3,799 training rows through 2026-06-30, original scaler/imputer and training fingerprint unchanged.
+- `active_lambda=0` remains the market reference; `shadow_lambda=1` remains research-only. Stability gate remains FAILED; exact-candidate prospective forecast count remains 0; target-outcome gate remains **0/30**.
+- No admissible independent Brier/LogLoss comparison exists. No superiority claim is supported.
+- No main change/merge, Supabase write/DDL, paid provider call, source download, protected outcome read, production `.pkl` change, original feature/weight/lambda change, schedule/agent-setting change, bet, or promotion occurred. HUMAN-MERGE only.
