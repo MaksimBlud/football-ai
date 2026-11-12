@@ -10577,3 +10577,10 @@ Process incident: the public Serie A database page is a mixed results/statistics
 - Read-only Supabase pre-match aggregate: 3,915 strict pre-match snapshots across 327 events; 0 in the last 7 days; 0 upcoming events with a saved pre-match quote; 0 pre-match predictions tied to frozen candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
 - Original candidate remains 19 features / 3,799 training rows / unchanged weights; `active_lambda=0`, `shadow_lambda=1`, stability gate FAILED. No forecast, outcome evaluation, production write, paid API call, model refit or promotion.
 - Full run IDs, artifact digests, and the exact pre-match-only query are recorded in `research/SERIE_A_V2_RUNTIME_AUDIT_20261112_1553UTC.md`. Existing public Actions artifacts were not downloaded/opened.
+
+
+## 2026-11-12 22:05 UTC — Cornerflick source screen and retrieval quarantine
+
+- Cornerflick publishes per-match JSON/CSV and season-level files; its data page documents corners, timelines, provenance and `last_updated_at`, and claims CC BY 4.0 for its compilation. However the licence expressly leaves underlying match facts to upstream providers. Its separate Terms of Service (2026-11-09) limit general access to personal non-commercial reading and prohibit scraping/harvesting/bulk-download except as permitted by law. Complete Serie A red-card/season coverage and automated private research/retention permission are not established. **HOLD; no account, key, download, API request, scraping or archive.**
+- Retrieval incident: a broad search for historical Serie A coverage surfaced snippets with 2026/27 result text. No current-season result values were deliberately extracted, copied, counted, scored or used; the snippets are quarantined and excluded from the 30-event gate. No match page or current-season data file was opened/downloaded. Avoid broad match-result searches until the outcome gate is formally open.
+- Full source decision and process incident are recorded in `research/SERIE_A_V2_RUNTIME_AUDIT_20261112_1553UTC.md`. This is a documentation-only HOLD, not evidence of model inference or quality.
