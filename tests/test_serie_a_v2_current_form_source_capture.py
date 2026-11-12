@@ -148,6 +148,86 @@ def test_closed_feature_source_gate_stops_before_any_public_download(tmp_path):
     assert calls == []
 
 
+
+def _valid_source_capture_inputs(tmp_path, raw):
+    def fake_history(*, get, capture_dir):
+        audits = []
+        for code in _source_codes():
+            filename = f"serie_a_{code}.csv"
+            body = (
+                "Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HC,AC,HY,AY,HR,AR\\n"
+                f"01/10/{2000 + int(code[:2])},Juventus,Napoli,1,0,H,5,3,2,1,0,0\\n"
+            ).encode()
+            (capture_dir / filename).write_bytes(body)
+            audits.append({
+                "season_code": code,
+                "source_url": f"https://www.football-data.co.uk/mmz4281/{code}/I1.csv",
+                "archived_source_name": filename,
+                "csv_sha256": hashlib.sha256(body).hexdigest(),
+                "source_observed_at_utc": "2026-10-18T08:00:00+00:00",
+                "completed_source_rows": 1,
+            })
+        return pd.DataFrame([{"historical": 1}]), audits
+
+    class Response:
+        status_code = 200
+        url = CURRENT_URL
+        content = raw
+
+        def raise_for_status(self):
+            return None
+
+    return (
+        FakeQuery(event_rows(30)),
+        lambda url, timeout: Response(),
+        fake_history,
+    )
+
+
+@pytest.mark.parametrize(
+    ("clock_values", "message"),
+    [
+        (
+            [datetime(2026, 10, 18, 8, 1), datetime(2026, 10, 18, 8, 2, tzinfo=timezone.utc)],
+            "current-season source observation clock must be timezone-aware",
+        ),
+        (
+            [
+                datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc),
+                datetime(2026, 10, 18, 8, 2),
+            ],
+            "source archive creation clock must be timezone-aware",
+        ),
+        (
+            [
+                datetime(2026, 10, 18, 8, 2, tzinfo=timezone.utc),
+                datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc),
+            ],
+            "source archive creation clock precedes latest source observation",
+        ),
+    ],
+)
+def test_source_capture_rejects_ambiguous_or_reversed_clocks_before_current_csv_write(
+    tmp_path, clock_values, message
+):
+    raw = current_csv(n=30)
+    client, get, history_fetch = _valid_source_capture_inputs(tmp_path, raw)
+    values = iter(clock_values)
+
+    with pytest.raises(ValueError, match=message):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=client,
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=get,
+            history_fetch=history_fetch,
+            clock=lambda: next(values),
+        )
+
+    assert not (tmp_path / CURRENT_FILENAME).exists()
+    assert not (tmp_path / MANIFEST_FILENAME).exists()
+
+
 def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_path):
     raw = current_csv(n=30)
     source_times = iter([
