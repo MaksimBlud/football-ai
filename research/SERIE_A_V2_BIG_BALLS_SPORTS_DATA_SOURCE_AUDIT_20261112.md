@@ -103,3 +103,20 @@ The current candidate's stability gate remains FAILED. This source audit is not 
 **No integration is approved.** Before any free API request, obtain written confirmation of (a) Free-tier access to Serie A `corner_kicks`, `yellow_cards`, `red_cards`; (b) measured per-match coverage for 2026/27; (c) the upstream source/licence for those fields; and (d) whether our own pre-quote capture timestamp and SHA are acceptable in lieu of upstream per-field timestamps.
 
 No The Odds API or other paid odds source is involved. The model continues to use only already-saved, strictly pre-kickoff market snapshots. No production artifact, Supabase object, schedule, model weight or threshold is changed.
+
+
+## 8. Addendum — exact Serie A registry and measured-coverage page
+
+A second pass checked the vendor's **league-specific endpoint registry** and its coverage page, not only the OpenAPI and product FAQ.
+
+- The Serie A entry in https://bigballsdata.com/league-endpoints.json lists `GET /v1/matches/{id}/statistics` as Free.
+- This means the OpenAPI, league-specific endpoint registry and FAQ all say the route is Free. The Serie A product-page plan matrix still places “Advanced match statistics: possession, shots, cards and xG” under Edge. The exact field entitlement is therefore still contradictory in the vendor's own public material; the endpoint registry is the most specific positive evidence, but written confirmation is still required before a request.
+- The general coverage page says it was last refreshed 2026-11-06, with 59/148 endpoints confirmed serving. Soccer `team_stats` is labelled Partial. In the Serie A section, the currently listed confirmed endpoints are `/v1/matches`, `/v1/standings`, `/v1/stored/matches` and `/v1/leagues/{id}/xg-leaders`; the per-match statistics endpoint is not listed there. This does not prove the route returns no Serie A statistics, but it does mean the public measured-coverage page does not establish that it serves the required 2026/27 match rows.
+- The Free `GET /v1/as-of/coverage` endpoint is not a workaround for this gap. Its documented relations are only `odds`, `player_props` and `player_availability`; it does not report `fixture_statistics`/team-stat coverage.
+
+Additional official pages:
+- https://bigballsdata.com/league-endpoints.json
+- https://bigballsdata.com/coverage
+- https://bigballsdata.com/openapi.json (`/v1/as-of/coverage`)
+
+**Revised decision:** the route is listed as Free by the most specific registry, but the actual Serie A 2026/27 per-match statistics coverage remains unproven. Do not create an API key or make a request until the vendor confirms both Free-tier entitlement and measured coverage for all required fields. The source-before-quote and SHA design remains only a proposed design, not an implemented or tested integration.
