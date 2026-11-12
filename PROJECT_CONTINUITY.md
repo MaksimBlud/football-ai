@@ -9865,3 +9865,21 @@ A fresh source review of PR [#793](https://github.com/MaksimBlud/football-ai/pul
 Exact PR #793 validation on HEAD `4d91bf1f62ee41c5eb1f0f01cb1586e404ff4e48`: evaluator validation **183 passed**; frozen V2 tests **440 passed on Python 3.11** and **440 passed on Python 3.12**. These are synthetic/offline contract tests, not real prospective model-quality evidence.
 
 The actual outcome gate remains **0/30 eligible completed prospective forecasts**. No target outcomes were read by this review, and no Brier/LogLoss result exists for the live cohort.
+
+
+## Exact-head V2 workflow-hold inventory hardening — 2026-11-12 06:26 UTC
+
+- The workflow-level live-access hold PR [#781](https://github.com/MaksimBlud/football-ai/pull/781) now has exact HEAD `349c1b72179549b194256af0f1e42ba0d35a4541`, still based directly on main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, OPEN / Ready for review / mergeable / HUMAN-MERGE only.
+- Added a focused static regression to the existing hold inventory. Previously the inventory detected unlisted V2 workflows mainly through Supabase credentials and a fixed set of script commands; a new workflow using GitHub artifact download/upload, `github.token` / `GITHUB_TOKEN`, `gh api`, `curl`, `wget`, `requests`, or `urllib.request` could otherwise evade the inventory. The detector now treats those as external-I/O capabilities and has synthetic marker regressions.
+- The change is test-only: no workflow YAML, cron, credential scope, source, quote, model, production artifact, Supabase, or other-agent setting changed. The five existing live/recovery workflows remain the explicit hold inventory.
+- Exact-head CI for `349c1b72179549b194256af0f1e42ba0d35a4541`: **8/8 completed SUCCESS**:
+  - Serie A Frozen V2 Shadow Tests [#43167957931](https://github.com/MaksimBlud/football-ai/actions/runs/43167957931): **94 passed**; production `.pkl` diff guard PASS.
+  - Research PR Validation [#43167957886](https://github.com/MaksimBlud/football-ai/actions/runs/43167957886).
+  - Bundesliga PR Validation [#43167957989](https://github.com/MaksimBlud/football-ai/actions/runs/43167957989).
+  - Product PR Validation [#43167957889](https://github.com/MaksimBlud/football-ai/actions/runs/43167957889).
+  - Ligue 1 PR Validation [#43167958309](https://github.com/MaksimBlud/football-ai/actions/runs/43167958309).
+  - Serie A PR Validation [#43167957926](https://github.com/MaksimBlud/football-ai/actions/runs/43167957926).
+  - Recover Frozen Market Anchor V2 Candidate [#43167958133](https://github.com/MaksimBlud/football-ai/actions/runs/43167958133): hold correctly skips rebuild/proof/research-artifact publication; read-only production `.pkl` hash check succeeds.
+  - Eredivisie PR Validation [#43167957976](https://github.com/MaksimBlud/football-ai/actions/runs/43167957976).
+- The small stacked PR #799 was fast-forwarded into the #781 head branch at the exact commit above and then closed as an empty duplicate; this did **not** merge or modify main. Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- This closes a static inventory-detection gap only. It does not activate the hold on main, authorize source capture, prove provider rights/private storage, or establish V2 predictive quality. The manual #781 merge and post-merge fresh-main proof remain outstanding. No source/quote/Supabase/target-outcome/paid-provider access occurred during this change.
