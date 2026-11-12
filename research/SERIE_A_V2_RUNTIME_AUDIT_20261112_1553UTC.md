@@ -102,3 +102,35 @@ The English pricing/docs pages are inconsistent about the Free quota: the site s
 The documented match-stat endpoint supplies shots, shots on target, shots off target, fouls, passes, pass accuracy, tackles, saves and yellow cards; the events endpoint supplies goals, cards and substitutions. The documented payloads do not supply corners, and the API explicitly says it does not provide possession or xG. The frozen original candidate requires six distinct corners-derived inputs among its 19 features (`diff_corners_for_5/10`, `diff_corners_against_5/10`, and venue-specific corners for/against). Therefore SportAPI cannot currently supply the unchanged original 19-feature contract. Its fixture example has `updated_at`, but the stats response example has no field-level source timestamp; this does not establish when each statistic was first observed.
 
 **Decision: HOLD / not a complete V2 source.** No API key/account was created and no request was made. Do not mix partial SportAPI fields into the frozen candidate or substitute/impute missing corner features from another provider. Reconsider only after explicit provider clarification on retention/AI inference and documented complete corners coverage with a reliable observation clock.
+
+
+## Further source screens — API-Football and Stats API (no accounts or calls)
+
+### API-Football
+
+Official sources:
+- [Terms of service](https://www.api-football.com/terms).
+- [Pricing](https://www.api-football.com/pricing).
+- [Official API-Football guide to statistics](https://www.api-football.com/news/post/how-to-get-started-with-api-football-the-complete-beginner-s-guide).
+
+The documented `/fixtures/statistics` family includes the exact broad categories the frozen V2 needs, including corners, shots, possession and cards. The provider says not every league tracks every statistic and values may be null. Its Free plan is $0 with 100 requests/day, but free access is limited by available seasons.
+
+The decisive blocker is rights: the official terms say the data is obtained from partners, do not grant a licence for use and publication in applications/websites/products, and require users to obtain any necessary third-party authorizations. Betting-platform use may require additional rights-holder licences. No retention/ML-inference grant for this project's use was found.
+
+**Decision: HOLD pending written permission and per-season coverage proof.** No account/key was created and no API request was made.
+
+### Stats API (stats-api.com; distinct from TheStatsAPI)
+
+Official sources:
+- [Pricing](https://stats-api.com/pricing).
+- [Coverage/source policy](https://stats-api.com/coverage).
+- [Football AI / model-research use case](https://stats-api.com/use-cases/betting-models).
+- [FAQ](https://stats-api.com/faq).
+
+The published contract includes corners, shots, possession, cards and xG where available, with per-match coverage flags and source/ingestion timestamps. However, the coverage page explicitly says there is no promised maximum age or freshness guarantee; `source_updated_at` can be null. Coverage varies by league and match, and the current public pages do not establish complete Serie A 2026/27 statistics.
+
+The free allowance is a one-time grant, not a recurring free tier: the home page says 200 requests once, while the pricing page says 500 requests once. Both say no monthly reset or expiry. That conflict must be clarified; even the larger allowance is not a sustainable season-long collection budget for the complete frozen feature history. No sufficiently clear data-retention licence or written AI-training/inference permission was found in the reviewed public terms.
+
+**Decision: HOLD.** Do not spend a one-time quota or create an account until rights, current Serie A coverage, quota amount and freshness semantics are clarified. No account/key or API calls were made.
+
+These sources do not justify substituting, blending, imputing or refitting any of the original 19 frozen V2 features.
