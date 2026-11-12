@@ -9839,3 +9839,13 @@ No DDL or policy changes were made. Remediation guidance: https://supabase.com/d
 The original candidate remains SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, with the unchanged 19-feature order, original weights, scaler/imputer, training fingerprint and 20x2 matrix. `active_lambda=0`; `shadow_lambda=1` research-only; stability gate FAILED. The feature-input metadata gate has 110 identities, but the independent target-outcome evaluation gate remains **0/30 eligible completed prospective forecasts**. No admissible independent Brier/LogLoss comparison exists; no V2-over-market claim is supported.
 
 No main update or merge, production `.pkl` change, weight/contract change, Supabase write/DDL, paid odds call, schedule change, or other-agent setting change occurred. HUMAN-MERGE only.
+
+
+## Additional free-source candidate audit — 2026-11-12 06:06 UTC
+
+- New PR [#798](https://github.com/MaksimBlud/football-ai/pull/798), exact HEAD `c971cd7e017a2305ac0edddd9a76312e9661d622`, base main, one documentation-only file, is OPEN / Draft with **6/6** exact-head PR workflows SUCCESS. The Research PR Validation job completed successfully; its targeted suite reached the final RPL workflow-contract checks with no failure.
+- Stats API (stats-api.com) documents match-level corners/cards, per-match coverage flags, and ingestion provenance, but its advertised free allowance is **200 requests once**, not a recurring collection entitlement. Public league-specific guides show historical Serie A 2025/26 material; they do not establish complete 2026/27 Serie A current-form coverage.
+- Its own docs distinguish normalized-row `updated_at` (Stats API ingestion time) from upstream source time; for the OpenFootball bootstrap `source_updated_at` is null and `freshness_guaranteed=false`. Artifact SHA/retrieval time prove what Stats API imported and when it retrieved it, not when the underlying statistic became current. No complete public licence grant was found in the reviewed pages for raw retention, V2 feature use/inference, or upstream rights.
+- Decision: `CONDITIONAL_CANDIDATE_NOT_APPROVED`; no account, API key, API request, data download, quote, Supabase, feature calculation, inference, or target-outcome read. The audit does not alter the original candidate or the 30-event gate.
+
+The latest source-candidate decisions remain: Openplay (#789), Open-Matchday (#790), Soccer Data (#791), 5DollarFootballAPI (#792), Big Balls (#794), Cornerflick (#797), and Stats API (#798) are research-only and none is approved for original V2 capture/inference. The best next step is written rights/provenance clarification with a provider, not another unlicensed API call.
