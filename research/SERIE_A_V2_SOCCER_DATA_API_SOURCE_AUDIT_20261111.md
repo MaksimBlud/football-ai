@@ -168,3 +168,7 @@ This is materially promising for a free internal source and own-product feature 
 Exact Serie A 2026/27 `team_stats` and timeline coverage, completed-event counts and null rates still require an authenticated coverage call. No key exists in this audit and no call was made. The Free plan is current-season only and cannot replace the 2016/17–2025/26 historical training archive; it could only be considered as a separately preregistered current-season input supplement under the unchanged 19-feature contract.
 
 **Decision remains HOLD.** Soccer Data is the strongest currently documented free candidate, but no ingestion, archive, feature build, inference or evaluation is authorized until written ML/retention rights, exact Serie A coverage and private-storage gates pass. Do not call odds endpoints, create an account/key, or use any paid plan.
+
+### Betting-product licensing clause
+
+The same Terms also state that if data (including odds) is used in a betting, gaming or trading product, the customer is responsible for obtaining any licences required in every territory where the product is offered. Because the original V2 project is a 1X2 prediction product, its intended product classification and any applicable territory-specific permissions must be reviewed before using this feed in the site. The Free plan excludes odds endpoints; this audit does not propose or call them. This clause is an additional reason to keep the source on HOLD until the provider's written clarification and the project's legal position are documented.
