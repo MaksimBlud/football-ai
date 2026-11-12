@@ -16,6 +16,9 @@ on:
 permissions:
   contents: read
 
+env:
+  MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED: "false"
+
 jobs:
   restore:
     runs-on: ubuntu-latest
@@ -37,10 +40,10 @@ jobs:
         run: pip install numpy pandas requests scipy 'scikit-learn==1.7.2' pytest
       - name: Snapshot production model file hashes (read only)
         run: sha256sum ./*.pkl 2>/dev/null | sort > /tmp/recovery-pkl-before || true
-      - name: Assert synthetic frozen replay guards
+      - name: Run offline original V2 feature and frozen-candidate regressions
         run: |
-          python -m py_compile market_anchor_v2_saved_cohort_replay.py
-          python -m pytest -q tests/test_market_anchor_v2_saved_cohort_replay.py
+          python -m py_compile serie_a_v2_frozen_shadow_preview.py serie_a_v2_asof_feature_manifest.py
+          python -m pytest -q tests/test_serie_a_v2_frozen_shadow_preview.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_workflow_external_access_hold.py
       - name: Restore exact Sep-2026 model code from frozen Git commit
         shell: bash
         run: |
@@ -50,12 +53,14 @@ jobs:
             git show df19777087fb89af049eedce44ff93f0aa6e6360:"$file" > "/tmp/frozen-market-anchor-v2/$file"
           done
       - name: Rebuild September candidate from fixed 2016-2026 training input only
+        if: ${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
         run: |
           python market_anchor_v2_saved_cohort_replay.py \
             --frozen-source-dir /tmp/frozen-market-anchor-v2 \
             --restore-candidate-only \
             --save-research-candidate
       - name: Prove frozen checksum, immutable recipe and research-only status
+        if: ${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
         run: |
           python - <<'PY'
           import json
@@ -93,7 +98,9 @@ jobs:
         run: |
           sha256sum ./*.pkl 2>/dev/null | sort > /tmp/recovery-pkl-after || true
           diff -u /tmp/recovery-pkl-before /tmp/recovery-pkl-after
-      - uses: actions/upload-artifact@v4
+      - name: Archive recovered frozen V2 research candidate
+        if: ${{ always() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
+        uses: actions/upload-artifact@v4
         with:
           name: frozen-market-anchor-v2-serie-a-candidate
           path: |

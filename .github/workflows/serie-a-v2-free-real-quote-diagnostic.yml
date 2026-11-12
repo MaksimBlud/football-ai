@@ -24,13 +24,14 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED: "false"
+
 jobs:
   free-diagnostic:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
       OPENBLAS_NUM_THREADS: "1"
       OMP_NUM_THREADS: "1"
       MKL_NUM_THREADS: "1"
@@ -56,6 +57,10 @@ jobs:
           print("PASS: public-only source; no paid provider key in workflow")
           PY
       - name: Fetch and SHA-archive public source, preview original frozen V2 diagnostics
+        if: ${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_KEY"
@@ -63,7 +68,7 @@ jobs:
             --output artifacts/serie_a_v2_real_quote_diagnostic.json \
             --raw-source-dir artifacts/serie_a_v2_source_capture
       - name: Archive diagnostic and exact public CSV bytes for provenance
-        if: always()
+        if: ${{ always() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: serie-a-v2-free-real-quote-diagnostic

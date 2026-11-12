@@ -26,15 +26,15 @@ permissions:
   actions: read
   contents: read
 
+env:
+  MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED: "false"
+
 jobs:
   current-form-forward-preview:
     if: ${{ github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && ((github.event.workflow_run.name == 'Serie A V2 Current-Form Source Capture' && github.event.workflow_run.event != 'pull_request') || (github.event.workflow_run.name == 'Serie A Odds Snapshots' && github.event.workflow_run.event == 'workflow_dispatch'))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-      GITHUB_TOKEN: ${{ github.token }}
       GITHUB_REPOSITORY: ${{ github.repository }}
       GITHUB_REF: ${{ github.ref }}
       PYTHONPATH: .
@@ -60,6 +60,11 @@ jobs:
             tests/test_serie_a_v2_frozen_shadow_preview.py \
             tests/test_serie_a_v2_manual_quote_trigger_contract.py
       - name: Generate read-only current-form V2 shadow from already saved quotes
+        if: ${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_KEY"
@@ -68,7 +73,7 @@ jobs:
             --output artifacts/serie_a_v2_current_form_forward_preview.json \
             --sources-output-dir artifacts/serie_a_v2_current_form_sources_used
       - name: Archive pre-kickoff V2 shadow and exact source ZIPs
-        if: always()
+        if: ${{ always() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: serie-a-v2-current-form-forward-preview
