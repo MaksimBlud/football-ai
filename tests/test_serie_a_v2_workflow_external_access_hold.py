@@ -258,8 +258,9 @@ ORIGINAL_V2_REFERENCE_MARKERS = (
     "serie_a_v2_",
     "market_anchor_v2_",
     # The original model's canonical module family includes the 1X2 token.
-    # Omitting it would let a new original-V2-only workflow escape inventory.
+    # The hyphenated workflow identity is also used by its validation workflow.
     "market_anchor_1x2_v2_",
+    "market-anchor-1x2-v2",
 )
 ORIGINAL_V2_LIVE_SCRIPT_MARKERS = (
     "python serie_a_v2_current_form_source_capture.py",
@@ -272,6 +273,28 @@ ORIGINAL_V2_LIVE_SCRIPT_MARKERS = (
 )
 
 
+def _has_non_test_python_entrypoint(text: str) -> bool:
+    """Treat arbitrary Python execution in an original-V2 workflow as live-capable.
+
+    Only dependency installation, compilation and pytest are offline workflow
+    commands. A new helper script can perform network I/O without spelling an
+    HTTP client or credential in the YAML, so it must not escape the inventory.
+    """
+    import re
+
+    for line in text.splitlines():
+        command = line.strip()
+        if not re.match(r"^python(?:3(?:\\.\\d+)?)?\\s+", command):
+            continue
+        if re.match(
+            r"^python(?:3(?:\\.\\d+)?)?\\s+-m\\s+(?:pip|pytest|py_compile)\\b",
+            command,
+        ):
+            continue
+        return True
+    return False
+
+
 def _is_original_v2_live_workflow(text: str) -> bool:
     has_v2_reference = any(marker in text for marker in ORIGINAL_V2_REFERENCE_MARKERS)
     has_live_access = (
@@ -279,6 +302,7 @@ def _is_original_v2_live_workflow(text: str) -> bool:
         or "secrets.SUPABASE_KEY" in text
         or any(marker in text for marker in ORIGINAL_V2_LIVE_SCRIPT_MARKERS)
         or _has_external_io(text)
+        or _has_non_test_python_entrypoint(text)
     )
     return has_v2_reference and has_live_access
 
@@ -336,3 +360,20 @@ def test_original_market_anchor_1x2_v2_offline_validation_remains_allowed():
     assert not _is_original_v2_live_workflow(
         "run: pytest -q tests/test_market_anchor_1x2_v2_shadow.py"
     )
+
+
+
+def test_hyphenated_original_v2_workflow_with_unknown_python_script_is_live_capable():
+    assert _is_original_v2_live_workflow(
+        "name: Market Anchor 1X2 V2 source capture\nrun: python collect_source.py"
+    )
+
+
+def test_original_v2_pytest_and_compile_workflows_are_not_live_entrypoints():
+    offline = """
+name: Market Anchor 1X2 V2 Shadow Validation
+run: |
+  python -m py_compile market_anchor_1x2_v2_shadow.py
+  python -m pytest -q tests/test_market_anchor_1x2_v2_shadow.py
+"""
+    assert not _is_original_v2_live_workflow(offline)
