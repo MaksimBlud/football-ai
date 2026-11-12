@@ -86,3 +86,19 @@ The PR gates all five original/current-form source/quote/recovery workflows, the
 - No claim of V2 superiority or production readiness.
 
 No paid API calls, Supabase writes/DDL, production `.pkl` changes, model refits, promotions, bets, or protected target-outcome reads were performed.
+
+
+## Additional free-source screen — SportAPI (documentation-only, no calls)
+
+Official sources checked 2026-11-12:
+- Terms: https://sportapi.ai/terms (updated 2026-10-22).
+- API field reference: https://sportapi.ai/docs.
+- Serie A coverage listing: https://sportapi.ai/football-api/.
+
+The terms allow data use in one's own websites, apps, analysis and products, but prohibit raw-data-feed/API redistribution. They do not expressly settle long-term retention, AI-model training, or frozen-model inference. The terms also disclaim accuracy/completeness guarantees and warn that data may be late, incomplete or wrong.
+
+The English pricing/docs pages are inconsistent about the Free quota: the site says 1,000/day and 7,000/month, while the pricing FAQ says 2,000/day and 14,000/month through 2026-11-30, then 1,000/day and 7,000/month from 2026-12-01. Use the lower published ceiling until the provider clarifies.
+
+The documented match-stat endpoint supplies shots, shots on target, shots off target, fouls, passes, pass accuracy, tackles, saves and yellow cards; the events endpoint supplies goals, cards and substitutions. The documented payloads do not supply corners, and the API explicitly says it does not provide possession or xG. The frozen original candidate requires six distinct corners-derived inputs among its 19 features (`diff_corners_for_5/10`, `diff_corners_against_5/10`, and venue-specific corners for/against). Therefore SportAPI cannot currently supply the unchanged original 19-feature contract. Its fixture example has `updated_at`, but the stats response example has no field-level source timestamp; this does not establish when each statistic was first observed.
+
+**Decision: HOLD / not a complete V2 source.** No API key/account was created and no request was made. Do not mix partial SportAPI fields into the frozen candidate or substitute/impute missing corner features from another provider. Reconsider only after explicit provider clarification on retention/AI inference and documented complete corners coverage with a reliable observation clock.
