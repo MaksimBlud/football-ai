@@ -264,7 +264,9 @@ def _fixture_to_history_row(
     away_goals = _nonnegative_integer(goals.get("away"), "goals.away")
     result = "H" if home_goals > away_goals else ("A" if home_goals < away_goals else "D")
     return {
-        "Date": kickoff.date().isoformat(),
+        # Match the original Football-Data day-first date representation; ISO
+        # YYYY-MM-DD would be ambiguous under the frozen builder's dayfirst parser.
+        "Date": kickoff.strftime("%d/%m/%Y"),
         "HomeTeam": home.strip(),
         "AwayTeam": away.strip(),
         "FTHG": home_goals,
@@ -426,7 +428,7 @@ def build_manifest_from_private_archive(
         if not isinstance(league, dict) or str(league.get("id")) != str(SERIE_A_PROVIDER_LEAGUE_ID):
             raise ValueError("source page contains a fixture outside the exact Serie A league")
         if str(fixture.get("league_season_id") or "").strip() != expected_season_id:
-            raise ValueError("source page contains a fixture outside the pinned Serie A season")
+            raise ValueError("source page contains a fixture with a different league_season_id than the pinned Serie A season")
     fixture_ids = [str(f.get("id") or "").strip() for f in all_fixtures]
     if any(not value for value in fixture_ids) or len(fixture_ids) != len(set(fixture_ids)):
         raise ValueError("source fixture ids must be present and unique across pages")
