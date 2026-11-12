@@ -408,7 +408,7 @@ def test_serie_a_v2_workflow_with_unknown_python_helper_is_live_capable():
     # Generic helper names are not exempt just because the workflow only uses
     # the broad serie_a_v2_ family marker rather than the canonical 1X2 token.
     assert _is_original_v2_live_workflow(
-        "name: Serie A V2 source runner\\nrun: python collect_unlisted_source.py"
+        "name: serie_a_v2_source_runner\\nrun: python collect_unlisted_source.py"
     )
 
 
