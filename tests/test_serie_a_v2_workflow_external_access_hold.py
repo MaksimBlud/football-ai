@@ -244,9 +244,34 @@ EXTERNAL_IO_MARKERS = (
     # Direct HTTP clients/commands are also external data access paths.
     "requests.get(",
     "requests.post(",
+    "httpx.",
+    "aiohttp",
+    "urllib3.",
+    "http.client",
     "urllib.request",
     "curl ",
     "wget ",
+    "fetch(",
+    "axios.",
+    # Alternate runtimes can perform the same network/artifact access without
+    # importing a Python HTTP client or spelling curl/wget.
+    "node ",
+    "nodejs ",
+    "npx ",
+    "deno ",
+    "bun ",
+    "ruby ",
+    "perl ",
+    "pwsh ",
+    "powershell ",
+    "invoke-webrequest",
+    "invoke-restmethod",
+    # Common object-store / repository-data transfer commands.
+    "aws s3 cp ",
+    "gsutil cp ",
+    "az storage blob download",
+    "rclone copy ",
+    "git lfs pull",
 )
 
 
@@ -301,16 +326,13 @@ def _has_non_test_python_entrypoint(text: str) -> bool:
 
 def _is_original_v2_live_workflow(text: str) -> bool:
     has_v2_reference = any(marker in text for marker in ORIGINAL_V2_REFERENCE_MARKERS)
-    has_original_v2_reference = (
-        "market_anchor_1x2_v2_" in text or "market-anchor-1x2-v2" in text
-    )
     has_live_access = (
         "secrets.SUPABASE_URL" in text
         or "secrets.SUPABASE_KEY" in text
         or any(marker in text for marker in ORIGINAL_V2_LIVE_SCRIPT_MARKERS)
         or _has_external_io(text)
         or (
-            has_original_v2_reference
+            has_v2_reference
             and _has_non_test_python_entrypoint(text)
         )
     )
@@ -327,6 +349,27 @@ def test_external_io_inventory_recognizes_common_artifact_and_network_paths():
         "run: wget https://example.invalid/source.csv",
         "python -c 'requests.get(url)'",
         "python -c 'urllib.request.urlopen(url)'",
+    )
+    assert all(_has_external_io(example) for example in examples)
+
+
+def test_external_io_inventory_recognizes_alternate_runtimes_and_http_clients():
+    examples = (
+        "run: node scripts/capture.js",
+        "run: npx tsx scripts/capture.ts",
+        "run: deno run scripts/capture.ts",
+        "run: bun run scripts/capture.ts",
+        "run: pwsh -File capture.ps1",
+        "run: Invoke-WebRequest https://example.invalid/source.csv",
+        "python -c 'httpx.get(url)'",
+        "python -c 'aiohttp.ClientSession()'",
+        "python -c 'urllib3.PoolManager()'",
+        "python -c 'http.client.HTTPSConnection(host)'",
+        "python -c 'fetch(url)'",
+        "python -c 'axios.get(url)'",
+        "run: aws s3 cp s3://bucket/source.csv .",
+        "run: gsutil cp gs://bucket/source.csv .",
+        "run: git lfs pull",
     )
     assert all(_has_external_io(example) for example in examples)
 
@@ -358,6 +401,14 @@ def test_original_market_anchor_1x2_v2_script_cannot_escape_live_workflow_invent
     )
     assert _is_original_v2_live_workflow(
         "run: python -m market_anchor_1x2_v2_prospective_runner"
+    )
+
+
+def test_serie_a_v2_workflow_with_unknown_python_helper_is_live_capable():
+    # Generic helper names are not exempt just because the workflow only uses
+    # the broad serie_a_v2_ family marker rather than the canonical 1X2 token.
+    assert _is_original_v2_live_workflow(
+        "name: Serie A V2 source runner\\nrun: python collect_unlisted_source.py"
     )
 
 
