@@ -10331,3 +10331,10 @@ Only strict pre-kickoff quote timestamps/event identity and exact-candidate pred
 - Exact Serie A 2026/27 `team_stats`/timeline coverage and null rates remain unverified because the coverage endpoint requires an authorized key. No key, account, API request, API tester call or source download was used. Public docs indicate Serie A data history begins 2020/21, but the Free plan is current-season only and cannot reproduce the full 2016/17–2025/26 training archive.
 - Written confirmation remains necessary for frozen-model inference, derived team-form features, private raw/derived retention and retention after account termination; provider docs do not identify upstream rights separately per field. Decision remains **HOLD**. At most, this could be a separately preregistered current-season input supplement after rights, exact coverage and private-storage gates pass. It cannot silently replace historical inputs or alter the original 19-feature contract.
 - No The Odds API call/cron, paid provider call, account/key creation, source download, Supabase write/DDL, target-outcome read, model inference or main change occurred.
+
+
+## 2026-11-12 — Soccer Data audit exact-head completion
+
+- The updated Soccer Data source-rights audit is [PR #791](https://github.com/MaksimBlud/football-ai/pull/791), exact HEAD `413265bf09d8e2aabc9ab31db9ee39e90f291e51`, base main, 5 ahead / 0 behind, one audit file, Draft, **6/6 CI SUCCESS**.
+- The Terms also state that use in a betting, gaming or trading product may require territory-specific licences and puts responsibility on the customer. Because this is a 1X2 prediction product, product classification and any applicable licensing must be clarified before using the feed. The Free plan excludes odds; no odds endpoint is proposed.
+- Soccer Data remains the strongest documented $0 current-season stats candidate, not an approved source. No API account/key, coverage request, API tester call, source download or provider contact occurred. Written ML/inference, derived-feature, private-retention and upstream-rights confirmation remain mandatory.
