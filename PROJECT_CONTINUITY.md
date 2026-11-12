@@ -10437,3 +10437,32 @@ Only strict pre-kickoff quote timestamps/event identity and exact-candidate pred
 - Supabase Security Advisor at 2026-11-12 12:49:50 UTC reports RLS disabled on five public tables: `teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, `epl_ai_market_pair_ledger`; four other tables have RLS enabled but no policies: `competitions`, `match_stats`, `matches`, `standings`. No DDL or policy change was made. This remains a separate critical security blocker and must not be auto-remediated without an explicit policy decision.
 - The main candidate JSON still pins SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 features, 3,799 training rows, training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`, 20x2 weights, `active_lambda=0`, `shadow_residual_lambda=1`. No prospective original-V2 pre-match predictions with that SHA exist in Supabase; the 30-primary-completed-event outcome gate remains closed. No model-quality claim is supported.
 - No main change/merge, Supabase write/DDL, provider request/download, paid call, target-outcome read, model inference/refit, production artifact change, schedule change, or other-agent setting change occurred in this refresh.
+
+## 2026-11-12 13:54 UTC — Original V2 run-11 refresh
+
+### Fresh main and live-workflow status
+
+- Fresh main is still 40887ebb215730190d7a6c7a1693373ec4afcdfc; no main update or merge was made.
+- Re-read the four original/current-form source/forward workflows plus candidate recovery. On main, the live source/quote steps and artifact uploads remain ungated; their existing cron expressions are still present: current-form source 50 5 * * *, free diagnostic 13 6 * * *, original forward 8 8 * * *, current-form forward 18 8 * * *.
+- No original V2 source/forward/diagnostic run appeared in the main Actions window 2026-11-12 04:30–09:30 UTC. This is only a run-window observation, not proof that schedules are disabled.
+- Actual main runs from Nov 11 remain confirmed: current-form source [#43025058808](https://github.com/MaksimBlud/football-ai/actions/runs/43025058808) and current-form forward [#43025215214](https://github.com/MaksimBlud/football-ai/actions/runs/43025215214) completed SUCCESS; the free diagnostic [#43035977412](https://github.com/MaksimBlud/football-ai/actions/runs/43035977412) also completed SUCCESS. Their actual job-step summaries show the source fetch/archive, forward preview and diagnostic source/archive steps executed on public main. The Nov 11 source run reports the feature-input gate at 110 completed identities and 11 source files; the forward run reports zero quotes and zero current-form shadow captures, with target outcomes unread/unscored. The diagnostic run executed the source fetch/archive after the conservative provider-policy recheck. This is an operational rights/privacy issue, not model-quality evidence.
+- Current #781 HEAD is befccf3af49e7bd6bd1763cae9111e3304b6fbd6, 42 ahead / 0 behind main, exact-head 8/8 SUCCESS. It holds all four source/forward workflows and recovery, scopes credentials to gated steps, gates all related artifact uploads, and preserves schedules/offline tests. It remains open and requires HUMAN-MERGE; the hold is not active on main.
+- The repository's Safe Engineering Agent Auto-Merge is not an alternate path for #781: its code accepts only draft PRs authored by github-actions[bot] with title prefix draft(agents): staged; #781 is user-authored and non-draft. No automation or settings were changed.
+
+### Prospective evaluator and provider audit
+
+- #793 current HEAD d12e3884b78cd67e1d54a0c6d6d31f9201fb1c53 is stacked on #787, not directly on main. Exact-head CI: Frozen V2 440 passed and prospective evaluator 190 passed; source preflight is mandatory immediately before the lazy outcome loader. Synthetic-only; the independent incumbent remains unpinned and the 30-forecast outcome gate remains closed.
+- #794 was refreshed after a new public-documents check. New HEAD 63b5412a0a5a3177bb2454f7d836d220f2440574; exact-head PR validations 6/6 SUCCESS. The current generated league registry marks /v1/matches/{id}/statistics Free, while the current Serie A plan matrix marks the same required advanced match-statistics route Edge; the FAQ says Free except expected-goals. The page freshness check is dated 2026-11-10 16:01 UTC; the general coverage page labels soccer team_stats Partial and was last refreshed 2026-11-06. Terms permit stored data in internal models and derived outputs but disclaim completeness/accuracy/availability and do not establish field-level upstream lineage or upstream observation time. Big Balls remains CONDITIONAL_CANDIDATE_NOT_APPROVED; no key, request or download was used.
+- No paid The Odds API call, no source download, no inference or target-outcome read was performed.
+
+### Pre-match-only Supabase audit
+
+Read-only aggregate query on odds_snapshots, scoped to events with kickoff no later than 30 days ahead, returned 3,966 rows across 327 event IDs; 3,915 rows satisfy both snapshot_time_utc < commence_time_utc and snapshot_time_utc <= now(). First strict snapshot: 2026-08-15 12:23:35 UTC; last: 2026-10-13 14:48:53 UTC.
+
+A separate aggregate over product_prediction_snapshots filtered to the exact original candidate SHA a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6 returned 0 rows / 0 events under the strict pre-match generation-time condition. No score, result, settlement or target-outcome columns were selected.
+
+The Security Advisor was refreshed at 2026-11-12 13:54 UTC. It still reports 5 public tables with RLS disabled (teams, predictions, match_statistics, league_prediction_ledger, epl_ai_market_pair_ledger) and 4 tables with RLS enabled but no policies (competitions, match_stats, matches, standings). No remediation SQL was run: enabling RLS without policies can break access, and Supabase writes/DDL remain prohibited. This is a separate critical database-security issue for the owner to decide.
+
+### Scientific status unchanged
+
+The frozen candidate SHA, original 19-feature builder/order, weights, scaler/imputer and training fingerprint remain unchanged. active_lambda=0 is the market; shadow_lambda=1 remains research-only. There are still zero admissible exact-SHA prospective V2 predictions in Supabase and no eligible independent Brier/LogLoss sample. Do not claim V2 superiority or open the target-outcome gate.
