@@ -22,7 +22,7 @@ This is useful metadata for a future source review. It is **not sufficient autho
 
 Cornerflick's data page explicitly limits its CC BY 4.0 statement to the compilation it publishes (selection, structure, and annotation). It separately says that underlying match facts come from data providers whose own terms apply.
 
-The upstream API-Football terms reviewed for this audit state, among other things, that:
+The API-Football terms were reviewed as a conditional upstream-risk check. Cornerflick's general data page does not identify the exact upstream provider for each field, so API-Football is **not treated as a confirmed source mapping** in this audit. The terms state, among other things, that:
 
 - the supplied data is obtained from partners;
 - direct resale is prohibited without permission;
@@ -92,3 +92,13 @@ Actions taken:
 - Did not calculate features, run inference, alter the frozen candidate, or change any workflow.
 
 Next admissible step: obtain written upstream rights and timestamp/provenance clarification. Only then may a separately approved, source-only concordance study be designed. Until then, Cornerflick is **not an approved source** for original V2 capture or inference.
+
+
+## 8. Public sources reviewed (2026-11-12)
+
+1. Cornerflick, “Match data” — https://cornerflick.com/data  
+   The page describes the per-match JSON/events/lineups/team-statistics files, season CSV/JSON files, missing-field semantics, dated corrections, file-level `last_updated_at`, and the scope of the CC BY 4.0 compilation licence. It expressly leaves underlying match facts subject to data-provider terms.
+2. API-Football, “Terms of service” — https://www.api-football.com/terms  
+   The page states that the data comes from partners, direct resale is not allowed without permission, and it does not grant a general licence for use/publication of data in user applications or products; the user must obtain any necessary permissions from competent rights holders. The page itself says “Last updated: May 21, 2025.”
+
+**Attribution caveat:** the public Cornerflick overview does not name the upstream provider per field. The API-Football terms are therefore a conservative risk check, not proof that API-Football supplies every (or any particular) Cornerflick field. Obtain Cornerflick's written provider/field lineage before any further source review. No match-page payload or season dataset was opened to establish that mapping.
