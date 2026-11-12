@@ -421,7 +421,7 @@ def test_5dollar_adapter_preserves_original_same_utc_day_exclusion(tmp_path):
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
     baseline = build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
     same_day = _synthetic_5dollar_fixture(
-        20,
+        99,
         kickoff_utc=datetime(2026, 11, 12, 7, 0, tzinfo=timezone.utc),
     )
     fixtures = [_synthetic_5dollar_fixture(i) for i in range(30)] + [same_day]
