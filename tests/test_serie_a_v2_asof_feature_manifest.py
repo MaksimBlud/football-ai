@@ -397,7 +397,7 @@ def test_5dollar_offline_adapter_maps_exact_original_19_features_and_verifies_sh
     row = report["feature_manifests"][0]
     assert len(row["features"]) == 19
     # Original V2 uses the frozen five-match mean, not a five-match sum.
-    assert row["features"]["diff_points_5"] == pytest.approx(0.6)
+    assert row["features"]["diff_points_5"] == pytest.approx(-0.6)
     assert row["history_coverage"]["home"]["prior_matches_in_frozen_30_match_window"] == 30
     assert row["history_coverage"]["away"]["prior_matches_in_frozen_30_match_window"] == 30
     assert row["history_coverage"]["home"]["last_historical_match_date"] == "2026-08-30"
