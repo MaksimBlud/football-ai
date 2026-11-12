@@ -193,6 +193,8 @@ def _validate_request_url(value: object, page_number: int, season_api_parameter:
         pairs = parse_qsl(parsed.query, keep_blank_values=True, strict_parsing=True)
     except ValueError as exc:
         raise ValueError("request_url query string is malformed") from exc
+    if any(key.lower() in {"key", "api_key", "token", "access_token", "authorization"} for key, _ in pairs):
+        raise ValueError("credentials must not be embedded in request_url")
     keys = [key for key, _ in pairs]
     if len(pairs) != 3 or len(set(keys)) != 3 or set(keys) != {"season", "page", "per_page"}:
         raise ValueError("request_url must contain exactly one season, page, and per_page parameter")
