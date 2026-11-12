@@ -240,25 +240,59 @@ def evaluate_live_prospective_cohort(
     client: Any,
     forecast_rows: Iterable[Mapping[str, Any]],
     outcome_loader: Callable[[frozenset[tuple[str, str, str]]], Mapping[tuple[str, str, str], str]],
+    *,
+    preflight: Callable[[Iterable[Mapping[str, Any]], Mapping[str, Any]], Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """Evaluate using a fresh identity-only gate read and a lazy outcome loader.
+    """Evaluate the full three-way cohort only after exact source preflight.
 
-    This is the supported live orchestration path. It deliberately has no
-    parameters for caller-supplied completed identities, attestation, cutoff,
-    or preloaded outcomes. The gate reader samples its own current UTC clock
-    and selects only match_date/home_team/away_team. The pure evaluator then
-    enforces the 30 eligible completed primary-event gate and the separately
-    pinned non-legacy incumbent requirement before it can invoke outcome_loader.
+    The live path binds each eligible forecast to its source artifact SHA,
+    authenticated parent-run ID/SHA, and source/archive/parent/quote/capture/
+    kickoff clocks. The independent preflight runs only after the 30-event
+    evaluator gate and before the lazy outcome loader. The pure evaluator
+    remains database/network-free.
     """
     _require_v2_outcome_read_access()
     if not callable(outcome_loader):
         raise ValueError("outcome_loader must be a lazy callable, not preloaded outcomes")
+    if not callable(preflight):
+        raise ValueError("a verified source-before-quote preflight callback is required before live outcome evaluation")
 
+    rows = tuple(forecast_rows)
+    source_requirements_by_identity = _forecast_source_requirements(rows)
     completed_identities, attestation = read_completed_fixture_gate(client)
+    frozen_identities = frozenset(completed_identities)
+    _validate_completed_fixture_gate_attestation(attestation, frozen_identities)
+    detached_attestation = MappingProxyType(deepcopy(dict(attestation)))
+    expected_eligible_identities = frozenset(
+        identity for identity in source_requirements_by_identity
+        if identity in frozen_identities
+    )
+
+    def gated_outcome_loader(eligible_identities):
+        if not isinstance(eligible_identities, frozenset) or len(eligible_identities) < evaluator.MIN_COMPLETED_ELIGIBLE_FORECASTS:
+            raise PermissionError("outcome reader requires the frozen minimum of 30 eligible completed primary forecasts")
+        if not eligible_identities.issubset(frozen_identities):
+            raise PermissionError("eligible forecast identities fall outside the frozen completed-fixture gate")
+        if eligible_identities != expected_eligible_identities:
+            raise PermissionError("evaluator eligible identities differ from the exact forecast source manifest")
+        eligible_sources = tuple(
+            source_requirements_by_identity[identity]
+            for identity in sorted(eligible_identities)
+        )
+        preflight_inputs = tuple(
+            MappingProxyType(dict(source)) for source in eligible_sources
+        )
+        _validate_source_preflight_attestation(
+            preflight(preflight_inputs, detached_attestation),
+            attestation,
+            eligible_sources,
+        )
+        return outcome_loader(eligible_identities)
+
     return evaluate_after_gate(
-        forecast_rows,
-        completed_identities,
-        outcome_loader,
+        rows,
+        frozen_identities,
+        gated_outcome_loader,
         completed_fixture_gate_attestation=attestation,
     )
 

@@ -150,12 +150,19 @@ def test_live_runner_reads_identity_gate_and_keeps_outcomes_lazy_when_incumbent_
 
     monkeypatch.setattr(runner, "read_completed_fixture_gate", read_gate)
     outcome_calls = []
+    preflight_calls = []
 
     def load_outcomes(keys, **_kwargs):
         outcome_calls.append(keys)
         return {key: "H" for key in keys}
 
-    report = runner.evaluate_live_prospective_cohort(client, rows, load_outcomes)
+    def preflight(source_requirements, gate_attestation):
+        preflight_calls.append((source_requirements, gate_attestation))
+        return _synthetic_source_preflight(source_requirements, gate_attestation)
+
+    report = runner.evaluate_live_prospective_cohort(
+        client, rows, load_outcomes, preflight=preflight
+    )
 
     assert gate_calls == [client]
     assert report["eligible_completed_forecasts"] == 30
@@ -165,6 +172,98 @@ def test_live_runner_reads_identity_gate_and_keeps_outcomes_lazy_when_incumbent_
     assert report["outcome_read_gate_open"] is False
     assert report["target_outcomes_read"] is False
     assert report["target_outcomes_scored"] is False
+    assert preflight_calls == []
+    assert outcome_calls == []
+
+
+def test_live_runner_requires_source_preflight_before_reading_identity_gate(monkeypatch):
+    def forbidden_gate(_client):
+        pytest.fail("identity gate must not run without a source-before-quote preflight callback")
+
+    monkeypatch.setattr(runner, "read_completed_fixture_gate", forbidden_gate)
+    outcome_calls = []
+    with pytest.raises(ValueError, match="source-before-quote preflight callback is required"):
+        runner.evaluate_live_prospective_cohort(
+            object(), _forecast_rows(30),
+            lambda keys: outcome_calls.append(keys) or {},
+        )
+    assert outcome_calls == []
+
+
+def test_live_full_three_way_runner_preflights_exact_sources_before_outcome_loader(monkeypatch):
+    monkeypatch.setattr(
+        evaluator,
+        "FROZEN_INCUMBENT_REFERENCE",
+        {
+            "model_version": "synthetic-nonlegacy-incumbent-v1",
+            "artifact_sha256": "c" * 64,
+        },
+    )
+    rows = _forecast_rows(30)
+    identities = {
+        (row["match_date"], row["home_team"], row["away_team"])
+        for row in rows
+    }
+    monkeypatch.setattr(
+        runner, "read_completed_fixture_gate",
+        lambda _client: (identities, _gate_attestation(identities)),
+    )
+    calls = []
+    preflight_seen = []
+
+    def preflight(source_requirements, gate_attestation):
+        calls.append("preflight")
+        preflight_seen.extend(source_requirements)
+        return _synthetic_source_preflight(source_requirements, gate_attestation)
+
+    def load_outcomes(keys):
+        calls.append("outcome")
+        return {key: "H" for key in keys}
+
+    report = runner.evaluate_live_prospective_cohort(
+        object(), rows, load_outcomes, preflight=preflight
+    )
+    assert calls == ["preflight", "outcome"]
+    assert len(preflight_seen) == 30
+    assert {tuple(row["fixture_identity"]) for row in preflight_seen} == identities
+    assert report["status"] == "EVALUATED_RESEARCH_ONLY"
+    assert report["target_outcomes_read"] is True
+    assert report["target_outcomes_scored"] is True
+    assert report["no_bet"] is True
+    assert report["automatic_promotion"] is False
+
+
+def test_live_full_three_way_runner_rejects_wrong_source_sha_before_outcome_loader(monkeypatch):
+    monkeypatch.setattr(
+        evaluator,
+        "FROZEN_INCUMBENT_REFERENCE",
+        {
+            "model_version": "synthetic-nonlegacy-incumbent-v1",
+            "artifact_sha256": "c" * 64,
+        },
+    )
+    rows = _forecast_rows(30)
+    identities = {
+        (row["match_date"], row["home_team"], row["away_team"])
+        for row in rows
+    }
+    monkeypatch.setattr(
+        runner, "read_completed_fixture_gate",
+        lambda _client: (identities, _gate_attestation(identities)),
+    )
+    outcome_calls = []
+
+    def wrong_preflight(source_requirements, gate_attestation):
+        result = _synthetic_source_preflight(source_requirements, gate_attestation)
+        result["source_archive_sha256"]["20001"] = "f" * 64
+        return result
+
+    with pytest.raises(PermissionError, match="archive SHA map does not exactly match"):
+        runner.evaluate_live_prospective_cohort(
+            object(), rows,
+            lambda keys: outcome_calls.append(keys) or {key: "H" for key in keys},
+            preflight=wrong_preflight,
+        )
     assert outcome_calls == []
 
 
@@ -185,6 +284,7 @@ def test_live_runner_stops_if_identity_gate_fails_before_evaluator_or_outcomes(m
             object(),
             [],
             lambda keys: outcome_calls.append(keys) or {},
+            preflight=_synthetic_source_preflight,
         )
 
     assert outcome_calls == []

@@ -165,17 +165,20 @@ helper; all tests use synthetic forecasts/outcomes only.
 
 ## Safe live orchestration entry point
 
-Live callers should use `evaluate_live_prospective_cohort(client, forecast_rows, outcome_loader)`
+Live callers should use `evaluate_live_prospective_cohort(client, forecast_rows, outcome_loader, preflight=...)`
 from `market_anchor_1x2_v2_prospective_runner.py`. This wrapper obtains the
 completed-fixture identity set and digest-bound attestation itself through the
 production metadata-only gate reader; callers cannot inject a completed set,
-attestation, or cutoff. The pure evaluator receives the lazy outcome callback
-unchanged and remains the only code allowed to invoke it. If the identity gate
-fails, evaluation stops before the evaluator. If 30 eligible completed
-forecasts exist but the separately pinned non-legacy incumbent is still absent,
-the evaluator returns `EVALUATION_BLOCKED_UNPINNED_INCUMBENT` without reading
-any target outcome. The wrapper adds no model loading, network access, result
-query, fitting, selection, or production behavior.
+attestation, or cutoff. It binds the exact eligible forecasts to source artifact
+IDs/SHAs, parent-run IDs/SHAs, and the ordered source/archive/parent/quote/
+capture/kickoff timestamps. The required independent source preflight runs
+only after the evaluator confirms at least 30 eligible completed primary
+forecasts and immediately before the lazy outcome callback. Missing, extra,
+mismatched, or late source evidence fails before the first result query. If the
+separately pinned non-legacy incumbent is still absent, the evaluator returns
+`EVALUATION_BLOCKED_UNPINNED_INCUMBENT` without invoking either preflight or
+the outcome callback. The wrapper adds no model loading, network access,
+result query, fitting, selection, or production behavior of its own.
 
 
 ## Real forward-artifact bridge and live market-only evaluation
