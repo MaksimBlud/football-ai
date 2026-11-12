@@ -267,7 +267,7 @@ def build_manifest_from_private_archive(
     if capture_manifest.get("storage_class") not in {"private_local", "private_object_store"}:
         raise PermissionError("raw source must be held in an approved private archive")
     capture_run_id = capture_manifest.get("capture_run_id")
-    if not isinstance(capture_run_id, str) or not re.fullmatch(r"\\d{5,20}", capture_run_id):
+    if not isinstance(capture_run_id, str) or not re.fullmatch(r"\d{5,20}", capture_run_id):
         raise ValueError("capture_run_id must be a numeric GitHub Actions run id")
     commit_sha = capture_manifest.get("capture_commit_sha")
     if not isinstance(commit_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", commit_sha):
