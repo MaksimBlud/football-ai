@@ -276,7 +276,8 @@ EXTERNAL_IO_MARKERS = (
 
 
 def _has_external_io(text: str) -> bool:
-    return any(marker in text for marker in EXTERNAL_IO_MARKERS)
+    normalized = text.lower()
+    return any(marker in normalized for marker in EXTERNAL_IO_MARKERS)
 
 
 ORIGINAL_V2_REFERENCE_MARKERS = (
@@ -324,16 +325,40 @@ def _has_non_test_python_entrypoint(text: str) -> bool:
     return False
 
 
-def _is_original_v2_live_workflow(text: str) -> bool:
+def _is_original_v2_live_workflow(text: str, workflow_path: str = "") -> bool:
     has_v2_reference = any(marker in text for marker in ORIGINAL_V2_REFERENCE_MARKERS)
+    workflow_name = next(
+        (
+            line.split(":", 1)[1].strip().strip("\\\"'").lower()
+            for line in text.splitlines()
+            if line.strip().lower().startswith("name:")
+        ),
+        "",
+    )
+    identity = f"{workflow_name} {workflow_path.lower()}"
+    has_v2_workflow_identity = any(
+        marker in identity
+        for marker in (
+            "serie a v2",
+            "serie-a-v2",
+            "serie_a_v2",
+            "market-anchor-v2",
+            "market_anchor_v2",
+            "market-anchor-1x2-v2",
+            "market_anchor_1x2_v2",
+        )
+    )
     has_live_access = (
         "secrets.SUPABASE_URL" in text
         or "secrets.SUPABASE_KEY" in text
         or any(marker in text for marker in ORIGINAL_V2_LIVE_SCRIPT_MARKERS)
-        or _has_external_io(text)
         or (
             has_v2_reference
-            and _has_non_test_python_entrypoint(text)
+            and has_v2_workflow_identity
+            and (
+                _has_external_io(text)
+                or _has_non_test_python_entrypoint(text)
+            )
         )
     )
     return has_v2_reference and has_live_access
@@ -382,8 +407,9 @@ def test_live_v2_workflow_inventory_cannot_grow_around_the_hold():
         [*workflow_dir.glob("*.yml"), *workflow_dir.glob("*.yaml")]
     ):
         text = path.read_text(encoding="utf-8")
-        if _is_original_v2_live_workflow(text):
-            discovered.add(path.relative_to(ROOT).as_posix())
+        relative_path = path.relative_to(ROOT).as_posix()
+        if _is_original_v2_live_workflow(text, workflow_path=relative_path):
+            discovered.add(relative_path)
 
     unexpected = discovered - set(WORKFLOWS)
     assert not unexpected, (
@@ -409,6 +435,22 @@ def test_serie_a_v2_workflow_with_unknown_python_helper_is_live_capable():
     # the broad serie_a_v2_ family marker rather than the canonical 1X2 token.
     assert _is_original_v2_live_workflow(
         "name: serie_a_v2_source_runner\\nrun: python collect_unlisted_source.py"
+    )
+    assert _is_original_v2_live_workflow(
+        "name: Offline Helper\\nrun: python collect_unlisted_source.py",
+        workflow_path=".github/workflows/serie-a-v2-source-capture.yml",
+    )
+
+
+def test_product_validation_with_v2_test_path_is_not_misclassified():
+    product = """
+name: Product PR Validation
+run: |
+  python -m pytest -q tests/test_serie_a_v2_dependency_lock_contract.py
+"""
+    assert not _is_original_v2_live_workflow(
+        product,
+        workflow_path=".github/workflows/product-pr-validation.yml",
     )
 
 
