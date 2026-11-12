@@ -655,7 +655,9 @@ def test_5dollar_adapter_validates_all_pages_and_pagination_completeness(tmp_pat
         }
         raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
         filename = f"page-{number}.json"
-        (tmp_path / filename).write_bytes(raw)
+        page_path = tmp_path / filename
+        page_path.write_bytes(raw)
+        page_path.chmod(0o600)
         received = (
             "2026-11-12T08:00:00+00:00"
             if number == 1 else "2026-11-12T08:00:01+00:00"
