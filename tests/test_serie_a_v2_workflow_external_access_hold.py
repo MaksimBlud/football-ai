@@ -284,10 +284,10 @@ def _has_non_test_python_entrypoint(text: str) -> bool:
 
     for line in text.splitlines():
         command = line.strip()
-        if not re.match(r"^python(?:3(?:\\.\\d+)?)?\\s+", command):
+        if not re.match(r"^python(?:3(?:\.\d+)?)?\s+", command):
             continue
         if re.match(
-            r"^python(?:3(?:\\.\\d+)?)?\\s+-m\\s+(?:pip|pytest|py_compile)\\b",
+            r"^python(?:3(?:\.\d+)?)?\s+-m\s+(?:pip|pytest|py_compile)\b",
             command,
         ):
             continue
