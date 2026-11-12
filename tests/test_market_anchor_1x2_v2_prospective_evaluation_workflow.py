@@ -501,13 +501,18 @@ def test_live_evaluation_workflow_defaults_closed_and_scopes_credentials_to_live
 def test_offline_validation_workflow_tracks_current_direct_rights_stack():
     validation = ROOT / ".github" / "workflows" / "market-anchor-1x2-v2-prospective-evaluation-validation.yml"
     validation_text = validation.read_text(encoding="utf-8")
-    assert "research/v2-direct-entrypoint-rights-gates-on-786-20261111-run11" in validation_text
-    assert "research/v2-market-only-evaluator-rebased-on-787-20261112-run11" in validation_text
+    validation_pull = validation_text.split("  push:", 1)[0]
+    validation_push = validation_text.split("  push:", 1)[1].split("permissions:", 1)[0]
+    assert "research/v2-direct-entrypoint-rights-gates-on-786-20261111-run11" in validation_pull
+    assert "research/v2-market-only-evaluator-rebased-on-787-20261112-run11" in validation_push
     assert "market_anchor_v2_direct_access.py" in validation_text
     assert "tests/test_market_anchor_v2_direct_access.py" in validation_text
     assert "git fetch origin research/v2-direct-entrypoint-rights-gates-on-786-20261111-run11" in validation_text
 
     frozen = ROOT / ".github" / "workflows" / "serie-a-frozen-v2-shadow-tests.yml"
     frozen_text = frozen.read_text(encoding="utf-8")
-    assert "research/v2-direct-entrypoint-rights-gates-on-786-20261111-run11" in frozen_text
-    assert "research/v2-market-only-evaluator-rebased-on-787-20261112-run11" in frozen_text
+    frozen_pull = frozen_text.split("  push:", 1)[0]
+    frozen_push = frozen_text.split("  push:", 1)[1].split("permissions:", 1)[0]
+    assert "research/v2-direct-entrypoint-rights-gates-on-786-20261111-run11" in frozen_pull
+    assert "research/v2-market-only-evaluator-rebased-on-787-20261112-run11" not in frozen_pull
+    assert "research/v2-market-only-evaluator-rebased-on-787-20261112-run11" in frozen_push
