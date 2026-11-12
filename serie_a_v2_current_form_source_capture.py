@@ -13,6 +13,7 @@ import hashlib
 from io import BytesIO
 import json
 import os
+import tempfile
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -165,7 +166,14 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     return result, len(frame) - len(completed)
 
 
-def capture_source_archive(
+def _as_aware_utc(value: datetime, label: str) -> datetime:
+    """Reject ambiguous clocks instead of letting astimezone assume host local time."""
+    if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError(f"{label} must be timezone-aware")
+    return value.astimezone(timezone.utc)
+
+
+def _capture_source_archive_contents(
     *,
     output_dir: Path,
     client: Any,
@@ -175,9 +183,7 @@ def capture_source_archive(
     clock=lambda: datetime.now(timezone.utc),
 ) -> dict:
     """Capture the ten frozen historical seasons plus the gated current-season source."""
-    if now.tzinfo is None:
-        raise ValueError("source capture clock must be timezone-aware")
-    at = now.astimezone(timezone.utc)
+    at = _as_aware_utc(now, "source capture clock")
     gate_count = read_completed_primary_event_count(client, now=at)
     if gate_count < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
         raise RuntimeError(
@@ -192,12 +198,17 @@ def capture_source_archive(
     response = get(CURRENT_URL, timeout=30)
     response.raise_for_status()
     raw = response.content
-    observed_at = clock().astimezone(timezone.utc)
+    observed_at = _as_aware_utc(clock(), "current-season source observation clock")
+    if observed_at < at:
+        raise ValueError("current-season source observation clock precedes capture gate check")
     current_rows, excluded_rows = validate_current_season_csv(raw, captured_at=observed_at)
     if len(current_rows) < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
         raise RuntimeError(
             "public current-season source has fewer completed prior-day matches than the feature-source gate"
         )
+    archive_created_at = _as_aware_utc(clock(), "source archive creation clock")
+    if archive_created_at < observed_at:
+        raise ValueError("source archive creation clock precedes latest source observation")
     current_path = output_dir / CURRENT_FILENAME
     current_path.write_bytes(raw)
     audits = list(old_audit) + [{
@@ -221,7 +232,7 @@ def capture_source_archive(
         "workflow_path": WORKFLOW_PATH,
         "git_sha": os.environ.get("GITHUB_SHA", ""),
         "workflow_run_id": os.environ.get("GITHUB_RUN_ID", ""),
-        "source_archive_created_at_utc": clock().astimezone(timezone.utc).isoformat(),
+        "source_archive_created_at_utc": archive_created_at.isoformat(),
         "frozen_candidate_sha256": FROZEN_SHA,
         "original_feature_builder_git_blob_sha1": "401b3a0893371bfa4a488ec92a4a54af2678c8f7",
         "feature_count": len(FEATURE_SETS["ALL_FOOTBALL"]),
@@ -278,6 +289,48 @@ def capture_source_archive(
         json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+    return report
+
+
+
+def capture_source_archive(
+    *,
+    output_dir: Path,
+    client: Any,
+    now: datetime,
+    get=requests.get,
+    history_fetch=fetch_public_history,
+    clock=lambda: datetime.now(timezone.utc),
+) -> dict:
+    """Publish a complete source archive atomically; discard every partial file on failure."""
+    output_dir = Path(output_dir)
+    if output_dir.is_symlink():
+        raise ValueError("source archive output directory cannot be a symlink")
+    output_dir.parent.mkdir(parents=True, exist_ok=True)
+    if output_dir.exists():
+        if not output_dir.is_dir() or any(output_dir.iterdir()):
+            raise FileExistsError("source archive output directory must be absent or empty")
+        output_dir.rmdir()
+
+    # The workflow uploads this directory with if: always(). Build outside the
+    # upload path so a late clock/CSV/manifest failure cannot publish ten
+    # historical CSVs as a misleading partial current-form archive.
+    with tempfile.TemporaryDirectory(
+        prefix=f".{output_dir.name}.staging-",
+        dir=output_dir.parent,
+    ) as temporary_directory:
+        staged_dir = Path(temporary_directory)
+        report = _capture_source_archive_contents(
+            output_dir=staged_dir,
+            client=client,
+            now=now,
+            get=get,
+            history_fetch=history_fetch,
+            clock=clock,
+        )
+        # Same-filesystem directory rename publishes the validated archive as
+        # one unit. If any earlier step fails, TemporaryDirectory removes it.
+        os.replace(staged_dir, output_dir)
     return report
 
 
