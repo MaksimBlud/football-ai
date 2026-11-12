@@ -1,0 +1,393 @@
+"""Offline 5Dollar fixture adapter for the unchanged original Serie A V2 features.
+
+This module never calls a provider, odds endpoint, Supabase, GitHub API or network.
+It consumes an already captured private raw-response bundle, verifies every page
+SHA and collector receive-time against later pre-kickoff quotes, maps only the
+original goals/corners/cards inputs, then delegates to the existing frozen
+19-feature builder. It never runs model inference or scores target outcomes.
+
+The checked-in rights manifest is HOLD. Real archives are rejected until the
+owner/provider and private-storage gates are explicitly approved.
+"""
+from __future__ import annotations
+
+import argparse
+from datetime import datetime, timezone
+import hashlib
+import json
+from pathlib import Path
+import re
+from urllib.parse import parse_qs, urlparse
+
+import pandas as pd
+
+from serie_a_v2_asof_feature_manifest import build_manifest as build_original_manifest
+
+REPO_ROOT = Path(__file__).resolve().parent
+DEFAULT_RIGHTS_MANIFEST = REPO_ROOT / "research" / "source_rights" / "5dollarfootballapi.json"
+SERIE_A_PROVIDER_LEAGUE_ID = 3405541143
+ALLOWED_PLANS = frozenset(("free", "community"))
+FORBIDDEN_QUOTE_FIELDS = frozenset((
+    "result", "outcome", "score", "home_goals", "away_goals",
+    "final_score", "settlement", "prediction_correct", "match_winner",
+))
+REQUIRED_RIGHTS_FLAGS = (
+    "provider_model_use_permitted",
+    "provider_cache_permitted",
+    "provider_private_retention_permitted",
+    "upstream_rights_confirmed",
+    "free_serie_a_required_fields_confirmed",
+    "field_semantics_confirmed",
+    "private_archive_verified",
+)
+REQUIRED_HISTORY_COLUMNS = (
+    "Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR",
+    "HC", "AC", "HY", "AY", "HR", "AR",
+)
+
+
+def _parse_utc(value: object, label: str) -> datetime:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{label} must be an ISO-8601 timestamp")
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError(f"{label} must be an ISO-8601 timestamp") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError(f"{label} must include an explicit UTC offset")
+    return parsed.astimezone(timezone.utc)
+
+
+def _is_inside(path: Path, root: Path = REPO_ROOT) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def _require_private_path(path: Path, label: str) -> Path:
+    resolved = path.expanduser().resolve()
+    if _is_inside(resolved):
+        raise ValueError(f"{label} must be outside the public repository")
+    return resolved
+
+
+def _assert_rights_approved(rights: dict) -> None:
+    if rights.get("approval_status") != "APPROVED":
+        raise PermissionError("5Dollar source rights manifest is HOLD; ingestion is disabled")
+    missing = [flag for flag in REQUIRED_RIGHTS_FLAGS if rights.get(flag) is not True]
+    if missing:
+        raise PermissionError("5Dollar source rights are not approved: " + ", ".join(missing))
+    if rights.get("raw_redistribution_permitted") is True:
+        raise PermissionError("raw source redistribution must remain prohibited")
+
+
+def _safe_page_path(archive_dir: Path, value: object) -> Path:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("page file path is required")
+    relative = Path(value)
+    if relative.is_absolute() or ".." in relative.parts:
+        raise ValueError("page file must be a safe relative path inside the private archive")
+    resolved = (archive_dir / relative).resolve()
+    try:
+        resolved.relative_to(archive_dir.resolve())
+    except ValueError as exc:
+        raise ValueError("page file escaped the private archive") from exc
+    if not resolved.is_file():
+        raise ValueError("captured page file does not exist")
+    return resolved
+
+
+def _validate_request_url(value: object, page_number: int) -> str:
+    if not isinstance(value, str):
+        raise ValueError("request_url is required for every captured page")
+    parsed = urlparse(value)
+    if parsed.scheme != "https" or parsed.hostname != "api.5dollarfootballapi.com":
+        raise ValueError("only the documented 5Dollar HTTPS API host is accepted")
+    if parsed.username or parsed.password:
+        raise ValueError("credentials must not be embedded in request_url")
+    if parsed.path.rstrip("/") != f"/v1/leagues/{SERIE_A_PROVIDER_LEAGUE_ID}/fixtures":
+        raise ValueError("only the Serie A league-fixtures endpoint is accepted")
+    query = parse_qs(parsed.query)
+    if any(k.lower() in {"key", "api_key", "token", "access_token", "authorization"} for k in query):
+        raise ValueError("credentials must not be embedded in request_url")
+    if query.get("page") and query["page"][-1] != str(page_number):
+        raise ValueError("request_url page does not match capture manifest")
+    return value
+
+
+def _nonnegative_integer(value: object, label: str) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{label} must be a non-negative integer")
+    try:
+        number = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label} must be a non-negative integer") from exc
+    if number < 0 or str(value).strip() not in {str(number), f"{number}.0"}:
+        raise ValueError(f"{label} must be a non-negative integer")
+    return number
+
+
+def _side_stat(fixture: dict, group: str, side: str, field: str) -> int:
+    value = fixture.get(group)
+    if not isinstance(value, dict):
+        raise ValueError(f"finished fixture missing {group}")
+    side_value = value.get(side)
+    if not isinstance(side_value, dict) and group == "cards":
+        raise ValueError(f"finished fixture missing cards.{side}")
+    if group == "cards":
+        return _nonnegative_integer(side_value.get(field), f"cards.{side}.{field}")
+    if not isinstance(side_value, dict):
+        raise ValueError(f"finished fixture missing {group}.{side}")
+    return _nonnegative_integer(side_value.get(field), f"{group}.{side}.{field}")
+
+
+def _fixture_to_history_row(fixture: dict, capture_time: datetime, target_ids: set[str]) -> dict:
+    fixture_id = str(fixture.get("id") or "").strip()
+    if not fixture_id:
+        raise ValueError("fixture id is required")
+    if fixture_id in target_ids:
+        raise ValueError("target quote event id appears in source history")
+    league = fixture.get("league")
+    if not isinstance(league, dict) or str(league.get("id")) != str(SERIE_A_PROVIDER_LEAGUE_ID):
+        raise ValueError("source fixture is not the exact Serie A provider league")
+    if fixture.get("status") != "finished":
+        raise ValueError("only provider-confirmed finished fixtures may become feature history")
+    if fixture.get("status_reason") is not None or fixture.get("status_code") != "full":
+        raise ValueError("finished fixture lacks explicit full-time confirmation")
+    kickoff = _parse_utc(fixture.get("kickoff_utc"), "fixture kickoff_utc")
+    if kickoff >= capture_time:
+        raise ValueError("finished source fixture kickoff is not before collector capture")
+    teams = fixture.get("teams")
+    if not isinstance(teams, dict):
+        raise ValueError("fixture teams are missing")
+    home_obj, away_obj = teams.get("home"), teams.get("away")
+    if not isinstance(home_obj, dict) or not isinstance(away_obj, dict):
+        raise ValueError("fixture home/away team objects are missing")
+    home = home_obj.get("name")
+    away = away_obj.get("name")
+    if not isinstance(home, str) or not home.strip() or not isinstance(away, str) or not away.strip():
+        raise ValueError("fixture home/away team names are missing")
+    goals = fixture.get("goals")
+    if not isinstance(goals, dict):
+        raise ValueError("finished fixture missing goals")
+    home_goals = _nonnegative_integer(goals.get("home"), "goals.home")
+    away_goals = _nonnegative_integer(goals.get("away"), "goals.away")
+    result = "H" if home_goals > away_goals else ("A" if home_goals < away_goals else "D")
+    return {
+        "Date": kickoff.date().isoformat(),
+        "HomeTeam": home.strip(),
+        "AwayTeam": away.strip(),
+        "FTHG": home_goals,
+        "FTAG": away_goals,
+        "FTR": result,
+        "HC": _side_stat(fixture, "corners", "home", "home"),
+        "AC": _side_stat(fixture, "corners", "away", "away"),
+        "HY": _side_stat(fixture, "cards", "home", "yellow"),
+        "AY": _side_stat(fixture, "cards", "away", "yellow"),
+        "HR": _side_stat(fixture, "cards", "home", "red"),
+        "AR": _side_stat(fixture, "cards", "away", "red"),
+    }
+
+
+def _validate_quotes(quotes: list[dict]) -> tuple[list[tuple[datetime, datetime]], set[str]]:
+    if not isinstance(quotes, list) or not quotes:
+        raise ValueError("quotes must be a non-empty list of pre-match metadata")
+    timings = []
+    target_ids = set()
+    for quote in quotes:
+        if not isinstance(quote, dict):
+            raise ValueError("quote row must be an object")
+        forbidden = FORBIDDEN_QUOTE_FIELDS.intersection(quote)
+        if forbidden:
+            raise ValueError("target outcome fields are forbidden: " + ", ".join(sorted(forbidden)))
+        if quote.get("league") != "SERIE_A":
+            raise ValueError("quotes must be Serie A only")
+        event_id = str(quote.get("event_id") or "").strip()
+        if not event_id:
+            raise ValueError("quote event_id is required")
+        target_ids.add(event_id)
+        quote_time = _parse_utc(quote.get("snapshot_time_utc"), "quote snapshot_time_utc")
+        kickoff = _parse_utc(quote.get("commence_time_utc"), "quote commence_time_utc")
+        if quote_time >= kickoff:
+            raise ValueError("quote snapshot must be strictly before kickoff")
+        timings.append((quote_time, kickoff))
+    return timings, target_ids
+
+
+def build_manifest_from_private_archive(
+    archive_dir: Path,
+    capture_manifest: dict,
+    quotes: list[dict],
+    rights_manifest: dict,
+) -> dict:
+    """Build the unchanged 19-feature manifest from a previously captured private bundle."""
+    _assert_rights_approved(rights_manifest)
+    archive_dir = _require_private_path(Path(archive_dir), "raw source archive")
+    if capture_manifest.get("schema_version") != "5DOLLAR_PRIVATE_CAPTURE_BUNDLE_V1":
+        raise ValueError("unsupported capture bundle schema")
+    if capture_manifest.get("league_id") != SERIE_A_PROVIDER_LEAGUE_ID:
+        raise ValueError("capture bundle must be the exact Serie A league")
+    if capture_manifest.get("api_plan") not in ALLOWED_PLANS:
+        raise PermissionError("only an approved $0 Free or Community capture is accepted")
+    if capture_manifest.get("storage_class") not in {"private_local", "private_object_store"}:
+        raise PermissionError("raw source must be held in an approved private archive")
+    if not isinstance(capture_manifest.get("capture_run_id"), str) or not capture_manifest["capture_run_id"].strip():
+        raise ValueError("capture_run_id is required")
+    commit_sha = capture_manifest.get("capture_commit_sha")
+    if not isinstance(commit_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", commit_sha):
+        raise ValueError("capture_commit_sha must be a full Git SHA")
+    timings, target_ids = _validate_quotes(quotes)
+    earliest_quote = min(q[0] for q in timings)
+    request_started = _parse_utc(capture_manifest.get("request_started_at_utc"), "request_started_at_utc")
+    response_received = _parse_utc(capture_manifest.get("response_received_at_utc"), "response_received_at_utc")
+    if response_received < request_started:
+        raise ValueError("response was received before the request started")
+    if response_received >= earliest_quote:
+        raise ValueError("source response was not received strictly before every quote")
+    if capture_manifest.get("captured_at_utc") != capture_manifest.get("response_received_at_utc"):
+        raise ValueError("captured_at_utc must equal the exact response_received_at_utc")
+    pages = capture_manifest.get("pages")
+    if not isinstance(pages, list) or not pages:
+        raise ValueError("capture bundle pages are required")
+    if capture_manifest.get("page_count") != len(pages):
+        raise ValueError("page_count does not match captured pages")
+    page_numbers = []
+    all_fixtures = []
+    page_evidence = []
+    for page in pages:
+        if not isinstance(page, dict):
+            raise ValueError("page record must be an object")
+        number = page.get("page_number")
+        if not isinstance(number, int) or number < 1:
+            raise ValueError("page_number must be a positive integer")
+        page_numbers.append(number)
+        request_url = _validate_request_url(page.get("request_url"), number)
+        if page.get("http_status") != 200:
+            raise ValueError("all source pages must have HTTP 200")
+        page_started = _parse_utc(page.get("request_started_at_utc"), "page request_started_at_utc")
+        page_received = _parse_utc(page.get("response_received_at_utc"), "page response_received_at_utc")
+        if page_received < page_started or page_received >= earliest_quote:
+            raise ValueError("each page must be received before every quote")
+        raw_path = _safe_page_path(archive_dir, page.get("file"))
+        raw_bytes = raw_path.read_bytes()
+        digest = hashlib.sha256(raw_bytes).hexdigest()
+        if digest != page.get("response_sha256"):
+            raise ValueError("raw source response SHA-256 mismatch")
+        if page.get("response_bytes") != len(raw_bytes):
+            raise ValueError("raw source response byte count mismatch")
+        try:
+            payload = json.loads(raw_bytes.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("raw source response is not valid UTF-8 JSON") from exc
+        if payload.get("success") != 1 or not isinstance(payload.get("data"), list):
+            raise ValueError("provider response must have success=1 and a data array")
+        pagination = payload.get("pagination")
+        if not isinstance(pagination, dict) or pagination.get("page") != number:
+            raise ValueError("provider pagination page does not match capture manifest")
+        if not isinstance(pagination.get("has_more"), bool):
+            raise ValueError("provider pagination has_more must be boolean")
+        expected_has_more = number < len(pages)
+        if pagination["has_more"] != expected_has_more:
+            raise ValueError("capture bundle is incomplete or page order is inconsistent")
+        all_fixtures.extend(payload["data"])
+        page_evidence.append({
+            "page_number": number,
+            "request_url": request_url,
+            "request_started_at_utc": page_started.isoformat(),
+            "response_received_at_utc": page_received.isoformat(),
+            "response_sha256": digest,
+            "response_bytes": len(raw_bytes),
+        })
+    if sorted(page_numbers) != list(range(1, len(pages) + 1)):
+        raise ValueError("capture pages must be complete and contiguous from page 1")
+    if response_received != max(
+        _parse_utc(page["response_received_at_utc"], "page response_received_at_utc")
+        for page in pages
+    ):
+        raise ValueError("bundle response_received_at_utc must equal the latest page receipt")
+    fixture_ids = [str(f.get("id") or "").strip() for f in all_fixtures]
+    if any(not value for value in fixture_ids) or len(fixture_ids) != len(set(fixture_ids)):
+        raise ValueError("source fixture ids must be present and unique across pages")
+    history_rows = []
+    skipped_non_finished = 0
+    for fixture in all_fixtures:
+        if not isinstance(fixture, dict):
+            raise ValueError("fixture row must be an object")
+        if str(fixture.get("id")) in target_ids:
+            raise ValueError("target quote event id appears in raw source bundle")
+        if fixture.get("status") != "finished":
+            skipped_non_finished += 1
+            continue
+        history_rows.append(_fixture_to_history_row(fixture, response_received, target_ids))
+    if not history_rows:
+        raise ValueError("source bundle contains no completed Serie A history")
+    history = pd.DataFrame(history_rows, columns=REQUIRED_HISTORY_COLUMNS)
+    base = build_original_manifest(history, quotes)
+    base["schema_version"] = "SERIE_A_ORIGINAL_V2_5DOLLAR_PREQUOTE_SOURCE_V1"
+    base["source_provider"] = "5DollarFootballAPI"
+    base["source_capture"] = {
+        "api_plan": capture_manifest["api_plan"],
+        "league_id": SERIE_A_PROVIDER_LEAGUE_ID,
+        "season": capture_manifest.get("season"),
+        "capture_run_id": capture_manifest["capture_run_id"],
+        "capture_commit_sha": commit_sha,
+        "request_started_at_utc": request_started.isoformat(),
+        "response_received_at_utc": response_received.isoformat(),
+        "collector_observation_before_every_quote": True,
+        "upstream_source_observation_timestamp_available": False,
+        "page_count": len(page_evidence),
+        "pages": page_evidence,
+        "source_finished_fixture_count": len(history_rows),
+        "source_skipped_non_finished_fixture_count": skipped_non_finished,
+        "raw_payload_emitted": False,
+    }
+    # The adapter never opens target outcomes or invokes the candidate.
+    base["source_before_quote_verified"] = True
+    base["target_outcomes_read"] = False
+    base["model_inference_performed"] = False
+    base["eligible_for_frozen_prospective_cohort"] = False
+    base["eligible_for_product_publication"] = False
+    base["scored"] = False
+    return base
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--archive-dir", required=True, type=Path)
+    parser.add_argument("--capture-manifest", required=True, type=Path)
+    parser.add_argument("--quotes-json", required=True, type=Path)
+    parser.add_argument("--rights-json", type=Path, default=DEFAULT_RIGHTS_MANIFEST)
+    parser.add_argument("--output", required=True, type=Path)
+    args = parser.parse_args()
+    archive_dir = _require_private_path(args.archive_dir, "raw source archive")
+    capture_path = _require_private_path(args.capture_manifest, "capture manifest")
+    quotes_path = _require_private_path(args.quotes_json, "quote metadata")
+    output_path = _require_private_path(args.output, "feature manifest output")
+    rights_path = args.rights_json.resolve()
+    capture = json.loads(capture_path.read_text(encoding="utf-8"))
+    quotes = json.loads(quotes_path.read_text(encoding="utf-8"))
+    rights = json.loads(rights_path.read_text(encoding="utf-8"))
+    result = build_manifest_from_private_archive(archive_dir, capture, quotes, rights)
+    if output_path.exists():
+        raise FileExistsError("refusing to overwrite an existing feature manifest")
+    if not output_path.parent.exists():
+        raise FileNotFoundError("output parent directory must already exist")
+    output_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
+    print(json.dumps({
+        "schema_version": result["schema_version"],
+        "candidate_sha256": result["candidate_sha256"],
+        "feature_count": result["feature_count"],
+        "source_before_quote_verified": result["source_before_quote_verified"],
+        "source_page_count": result["source_capture"]["page_count"],
+        "source_finished_fixture_count": result["source_capture"]["source_finished_fixture_count"],
+        "eligible_for_frozen_prospective_cohort": False,
+        "model_inference_performed": False,
+        "target_outcomes_read": False,
+        "output": str(output_path),
+    }, indent=2))
+
+
+if __name__ == "__main__":
+    main()
