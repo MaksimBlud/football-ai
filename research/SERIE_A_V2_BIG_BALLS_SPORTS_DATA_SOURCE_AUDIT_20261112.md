@@ -184,3 +184,49 @@ The current official pages therefore improve the rights picture but do not satis
 **Big Balls remains `CONDITIONAL_CANDIDATE_NOT_APPROVED`.** The current Terms expressly permit internal model use of Big Balls data, but the Free plan/history pages conflict, the current public coverage inventory does not confirm the per-match statistics route for Serie A 2026/27, and upstream field lineage/source time remain unresolved. The frozen original candidate's Football-Data provenance is a separate unresolved gate.
 
 No API key, API call, odds request, download, source archive, Supabase access/write, feature build, model inference, target-outcome read, refit, threshold change, production artifact change, or schedule change was performed. The original 19 features, candidate SHA, weights, scaler/imputer, `active_lambda=0`, `shadow_lambda=1`, and 30-event outcome gate remain unchanged.
+
+
+## 10. Fresh mutable-documentation check — 2026-11-12 13:54 UTC
+
+This check used only the provider's public Terms, pricing, Serie A page, coverage page, and generated league-endpoint registry. No account/key was created, no API/odds request was made, and no match payload or dataset was downloaded.
+
+### The exact statistics-route Free entitlement is still contradictory
+
+The current generated league-endpoint registry lists `GET /v1/matches/{id}/statistics` as **Free** for soccer and describes it as per-team post-match statistics:
+https://bigballsdata.com/league-endpoints.json
+
+The current Serie A page contradicts that in its own plan matrix: “Advanced match statistics: possession, shots, cards and xG” and the same `/v1/matches/{id}/statistics` route are marked **Edge**. The page's explanatory plan summary also says these capabilities start at Edge. Yet the FAQ says the route is Free except `expected_goals`, which is Solo+:
+https://bigballsdata.com/serie-a-api
+
+The Free plan summary on that page lists scores, schedules, standings, teams, players and final box scores; it does not explicitly list the advanced match-stat fields needed by the frozen feature contract. The current public pages therefore do not provide an unambiguous entitlement for `corner_kicks`, `yellow_cards`, and `red_cards`.
+
+**Decision remains HOLD.** Do not create a key or test the endpoint until the provider confirms in writing that these exact fields are included on Free for Serie A. No paid tier is acceptable under the project constraints.
+
+### Freshness and measured coverage are not enough for source-before-quote
+
+The Serie A page says its served sources were checked on **2026-11-10 16:01 UTC**. It gives a separate source-as-of time for standings and odds, but does not publish a per-match/per-field upstream observation timestamp for the required team-stat rows. Its general coverage page says the endpoint inventory was last refreshed **2026-11-06** and labels soccer `team_stats` as **Partial**:
+https://bigballsdata.com/serie-a-api
+https://bigballsdata.com/coverage
+
+The dedicated page's public counts are also not a season-specific completeness proof for the 2026/27 required fields. The current page reports 4,941 Serie A matches across 13 seasons and 4,671 finished games in its archive summary; an earlier rendered section exposed a different finished-match/team-stat denominator. These aggregate figures cannot be used to infer that every 2026/27 match has complete goals, corners and card fields.
+
+The Terms explicitly permit storing responses and using stored data in internal models, including training/evaluation/backtesting, and permit derived outputs; raw-field redistribution is prohibited. They also disclaim completeness, accuracy and uninterrupted availability, noting that upstream sources can degrade or fail and response confidence metadata is the quality signal:
+https://bigballsdata.com/legal/terms
+
+That is a positive provider-side use grant, but it does not resolve field-level upstream lineage or the missing upstream observation time. Local retrieval time + immutable raw-response SHA can prove when our archive existed; it cannot by itself prove when the upstream provider first observed each field.
+
+### Quota page discrepancy
+
+The current pricing and Serie A pages say Free is 1,000 requests/day (2,000 with GitHub), while the soccer API page still surfaced a 250/day (500 with GitHub) statement in the public search snapshot. Do not design a collector around the larger number until the provider confirms the applicable quota for a Serie A Free key.
+
+### Revised disposition
+
+`CONDITIONAL_CANDIDATE_NOT_APPROVED` remains unchanged. The next permissible step is written clarification from the provider, not an API call. Required answers remain:
+
+1. Free entitlement for the exact Serie A corners/yellow/red fields;
+2. current 2026/27 match-level completeness by required field;
+3. upstream provider and licence for each field;
+4. whether the provider can expose field-level `as_of`/fetched-at timestamps or formally accepts immutable capture-time + SHA as the source-before-quote proof;
+5. the effective Free quota and current-season retention rules.
+
+No source integration, feature build, inference, target-outcome read, refit, threshold change, production artifact change, Supabase access/write, schedule change or paid request occurred. The original candidate SHA, 19-feature contract, weights, scaler/imputer, `active_lambda=0`, `shadow_lambda=1`, NO_BET and the 30-event evaluation gate remain unchanged.
