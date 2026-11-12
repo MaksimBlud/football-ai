@@ -232,6 +232,34 @@ def test_source_capture_rejects_ambiguous_or_reversed_clocks_before_current_csv_
     assert not list(tmp_path.parent.glob(f".{tmp_path.name}.staging-*"))
 
 
+def test_nonempty_output_directory_is_never_overwritten_or_read(tmp_path):
+    output_dir = tmp_path / "existing-archive"
+    output_dir.mkdir()
+    sentinel = output_dir / "preserve.txt"
+    sentinel.write_text("prior evidence", encoding="utf-8")
+    calls = []
+
+    def forbidden_history(**_kwargs):
+        calls.append("history")
+        raise AssertionError("history must not be read for an occupied output directory")
+
+    def forbidden_get(*_args, **_kwargs):
+        calls.append("http")
+        raise AssertionError("HTTP must not run for an occupied output directory")
+
+    with pytest.raises(FileExistsError, match="absent or empty"):
+        capture_source_archive(
+            output_dir=output_dir,
+            client=FakeQuery(event_rows(30)),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=forbidden_get,
+            history_fetch=forbidden_history,
+        )
+
+    assert sentinel.read_text(encoding="utf-8") == "prior evidence"
+    assert calls == []
+
+
 def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_path):
     raw = current_csv(n=30)
     source_times = iter([
