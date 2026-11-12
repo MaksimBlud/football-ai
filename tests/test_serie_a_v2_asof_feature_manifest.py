@@ -403,7 +403,7 @@ def _pin_synthetic_5dollar_rights_for_offline_tests(request, tmp_path, monkeypat
     import json
     import serie_a_v2_5dollar_source_adapter as adapter
 
-    raw = (json.dumps(_synthetic_5dollar_rights(), sort_keys=True, indent=2) + "\\n").encode("utf-8")
+    raw = (json.dumps(_synthetic_5dollar_rights(), sort_keys=True, indent=2) + "\n").encode("utf-8")
     path = tmp_path / "synthetic-5dollar-rights.json"
     path.write_bytes(raw)
     path.chmod(0o600)
@@ -620,7 +620,7 @@ def test_5dollar_adapter_rejects_canonical_rights_manifest_sha_mismatch(tmp_path
 
     capture, quotes, _ = _synthetic_5dollar_bundle(tmp_path)
     path = tmp_path / "tampered-rights.json"
-    path.write_text(json.dumps(_synthetic_5dollar_rights(), sort_keys=True, indent=2) + "\\n", encoding="utf-8")
+    path.write_text(json.dumps(_synthetic_5dollar_rights(), sort_keys=True, indent=2) + "\n", encoding="utf-8")
     monkeypatch.setattr(adapter, "DEFAULT_RIGHTS_MANIFEST", path)
     monkeypatch.setattr(adapter, "DEFAULT_RIGHTS_MANIFEST_SHA256", "0" * 64)
     with pytest.raises(PermissionError, match="manifest SHA-256 mismatch"):
