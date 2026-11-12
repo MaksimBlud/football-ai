@@ -564,7 +564,7 @@ def test_5dollar_adapter_rejects_mixed_league_season_and_non_free_plan(tmp_path)
 
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
     capture["api_plan"] = "pro"
-    with pytest.raises(PermissionError, match=r"only the \\$0 Free plan"):
+    with pytest.raises(PermissionError, match=r"only the \$0 Free plan"):
         build_manifest_from_private_archive(tmp_path, capture, quotes, rights)
 
 
