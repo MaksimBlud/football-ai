@@ -241,3 +241,47 @@ Potentially useful only as a manually exported, private, non-commercial research
 No account/key was created; no file was downloaded or exported; no scraping/API request occurred; no Footiqo data was added to the candidate or any artifact.
 
 Process incident: the public Serie A page is a mixed match-results/statistics view, and the page retrieval returned current-season 2026/27 match rows containing result/stat fields. This was an unintended retrieval exposure and should not have been opened under the strict no-read boundary. No row-level values were deliberately selected, copied into an analysis dataset, aggregated, scored, or used; no model evaluation was performed. Treat all returned row content as quarantined and excluded from feature building, model evaluation, and the preregistered 30-forecast outcome gate. No Supabase target-outcome rows were queried. Do not reopen this page.
+
+
+## Fresh exact-main runtime and pre-match-only database recheck — 2026-11-12 21:55 UTC
+
+### Main and live-workflow status
+
+- Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- The four original/current-form source/forward/diagnostic workflow files still have their scheduled triggers and artifact-upload steps; none has `MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED`. PR #781 is not merged, so its default-deny hold is not active on main.
+- No workflow settings, schedules, credentials, branch settings, or other agents were changed in this audit.
+
+### Actual GitHub Actions runs on unchanged main
+
+- Current-Form Source Capture [#43232728352](https://github.com/MaksimBlud/football-ai/actions/runs/43232728352), SUCCESS at 2026-11-12 14:01:06 UTC: the metadata-only feature-input gate counted 110 primary-event identities; 110 prior-day current-season rows plus 10 historical CSVs were captured (11 files total). Source ZIP SHA-256 `e7bb6e90466c278882225766424b17c229cab46da35dd80a4418e627c8ccb1e8`, artifact ID `13951945358`. The run reports 0 paid calls, 0 Supabase writes, and no target-outcome scoring.
+- Current-Form Forward-Only Preview [#43262798305](https://github.com/MaksimBlud/football-ai/actions/runs/43262798305), SUCCESS at 2026-11-12 16:49:56 UTC: exact source SHA and successful parent run verified; `quotes_seen=0`, `v2_current_form_shadow_captured=0`, target outcomes not read/scored, 0 paid calls, 0 Supabase writes. Forward ZIP SHA-256 `469e665853c5f4a81774641fbb7f41b3d1961df91a75cb2f9a767e280ac4867c`.
+- Original Forward-Only Preview [#43261918181](https://github.com/MaksimBlud/football-ai/actions/runs/43261918181), SUCCESS at 2026-11-12 16:45:02 UTC: source artifact ID `13954739310`, SHA-256 `f7cd7ec7d7b20138dbfad18d510464026308e1a5d89e530b801a6bcfd01c56b2`; 10 historical source CSVs / 3,800 verified historical rows; `quotes_seen=0`, `v2_diagnostic_previews_captured=0`, 0 paid calls, 0 Supabase writes.
+- Free Real-Quote Diagnostic [#43243852372](https://github.com/MaksimBlud/football-ai/actions/runs/43243852372), SUCCESS: original 19-feature diagnostic reported zero fixture rows and zero rows with all 19 features observed; no forecasts or quality metrics.
+- These are real source-integrity/runtime checks and public artifact creation on main, not prospective V2 predictions or model-quality evidence. Logs only were read; no Actions artifacts were downloaded or opened.
+
+### Supabase — aggregate pre-match rows only
+
+Read-only aggregate query used only `odds_snapshots` rows satisfying `snapshot_time_utc < commence_time_utc`, plus exact-candidate pre-match prediction metadata.
+
+| Measure | Result |
+|---|---:|
+| All odds snapshots | 3,966 |
+| Strict pre-match snapshots | 3,915 |
+| Unique events with strict pre-match snapshots | 327 |
+| Strict pre-match snapshots in last 7 days | 0 |
+| Upcoming events with a strict pre-match quote | 0 |
+| Latest strict pre-match snapshot | 2026-10-13 14:48:53 UTC |
+| Exact frozen-candidate pre-match predictions | 0 |
+
+The exact candidate filter was SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6` and `generated_at_utc < commence_time_utc`. No score, result, settlement, or target-outcome columns/rows were queried. No Supabase write or DDL occurred.
+
+### Current direct-main hold PR
+
+- [PR #781](https://github.com/MaksimBlud/football-ai/pull/781) current GitHub API HEAD: `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`; base main: `40887ebb215730190d7a6c7a1693373ec4afcdfc`; **43 ahead / 0 behind**, OPEN, Ready for review, mergeable.
+- Exact HEAD Actions: **8/8 SUCCESS**. Frozen V2 suite [#43242070289](https://github.com/MaksimBlud/football-ai/actions/runs/43242070289): **103 passed** and production `.pkl` hash guard PASS. Recovery [#43242070506](https://github.com/MaksimBlud/football-ai/actions/runs/43242070506): offline tests and production hash guard PASS; candidate rebuild/proof/upload SKIPPED.
+- The PR description has been refreshed with the current exact SHA, run links, and latest main-runtime evidence. No code, model, source archive, production artifact, or database file changed.
+- HUMAN-MERGE remains mandatory. After owner merge, read fresh main and prove every live source/quote/inference/recovery step and public upload is skipped before considering any further work.
+
+### Frozen original candidate
+
+Candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features, 3,799 training rows, unchanged 20x2 weight matrix (19 features plus intercept), `active_lambda=0`, `shadow_lambda=1`, stability gate FAILED. No refit, weight/feature/scaler/imputer change, production `.pkl` change, promotion, bet, or outcome evaluation occurred.
