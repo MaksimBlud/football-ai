@@ -21,6 +21,7 @@ from urllib.parse import parse_qs, urlparse
 
 import pandas as pd
 
+from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 from serie_a_v2_asof_feature_manifest import (
     _canonical,
     build_manifest as build_original_manifest,
@@ -29,8 +30,8 @@ from serie_a_v2_asof_feature_manifest import (
 REPO_ROOT = Path(__file__).resolve().parent
 DEFAULT_RIGHTS_MANIFEST = REPO_ROOT / "research" / "source_rights" / "5dollarfootballapi.json"
 SERIE_A_PROVIDER_LEAGUE_ID = 3405541143
-CURRENT_SERIE_A_SEASON = "2026/27"
-CURRENT_SERIE_A_SEASON_API_PARAMETER = "2026"
+CURRENT_SERIE_A_SEASON = SERIE_A_RUNTIME_CONFIG.finished_results_source.season
+CURRENT_SERIE_A_SEASON_API_PARAMETER = CURRENT_SERIE_A_SEASON[:4]
 MIN_COMPLETED_FEATURE_SOURCE_EVENTS = 30
 ALLOWED_PLANS = frozenset(("free",))
 ALLOWED_QUOTE_FIELDS = frozenset((
