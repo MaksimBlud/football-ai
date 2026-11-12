@@ -589,7 +589,7 @@ def test_5dollar_adapter_validates_all_pages_and_pagination_completeness(tmp_pat
             "data": fixtures,
             "pagination": {
                 "page": number,
-                "per_page": 100,
+                "per_page": 16,
                 "count": len(fixtures),
                 "has_more": number < len(pages),
             },
@@ -610,7 +610,7 @@ def test_5dollar_adapter_validates_all_pages_and_pagination_completeness(tmp_pat
             "file": filename,
             "request_url": (
                 "https://api.5dollarfootballapi.com/v1/leagues/3405541143/fixtures"
-                f"?season=2026&page={number}&per_page=100"
+                f"?season=2026&page={number}&per_page=16"
             ),
             "http_status": 200,
             "request_started_at_utc": started,
