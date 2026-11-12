@@ -46,7 +46,7 @@ Consequently, a local capture SHA plus Stats API ingestion timestamp would not y
 
 ## 5. Rights gate
 
-The reviewed public product, coverage, documentation and FAQ pages describe use cases for apps, research workflows and AI tools, but this audit did not locate a complete public data licence/terms grant that expressly resolves:
+The reviewed public product, coverage, documentation and FAQ pages describe use cases for apps, research workflows and AI tools. The FAQ links a Terms page at `https://stats-api.com/legal/terms`, but that page timed out during this audit and could not be reviewed. Therefore this audit did not verify a complete data licence/terms grant that expressly resolves:
 - private retention of raw match-stat responses;
 - model feature construction and inference;
 - AI model training or evaluation;
@@ -74,3 +74,19 @@ Next admissible step: obtain written confirmation of source rights, current-seas
 - Did not download or parse any match/season dataset.
 - Did not read saved quotes, Supabase rows, or target outcomes.
 - Did not calculate features, run inference, alter the frozen candidate, or change any workflow.
+
+
+## 8. Public sources reviewed (2026-11-12)
+
+1. Stats API, Coverage — https://stats-api.com/coverage  
+   Documents competition/season/match-specific coverage, historical Serie A 2025/26 material, and the source policy. It distinguishes OpenFootball's historical CC0 bootstrap from the enabled provider ingestion, and documents that OpenFootball `source_updated_at` is null with `freshness_guaranteed=false`.
+2. Stats API, Documentation — https://stats-api.com/docs  
+   Describes the versioned API, match statistics, corners/cards, coverage flags, and ingestion provenance.
+3. Stats API, Match endpoint guide — https://stats-api.com/docs/endpoints/matches  
+   Describes per-match `details_available`, null semantics for unavailable statistics, the `updated_at` ingestion-time meaning, and the distinction between retrieval time and source-observed time.
+4. Stats API, FAQ — https://stats-api.com/faq  
+   States that historical OpenFootball imports and enabled provider ingestion are recorded separately; documents that the free allowance is 200 requests once per new account, with no card, renewal, or expiry; and links to the Terms page.
+5. Stats API Terms link — https://stats-api.com/legal/terms  
+   Linked from the official FAQ, but the page timed out during this audit. No licence conclusion is inferred from an inaccessible page.
+
+No match page, season results file, current-season fixture result, or API response was opened to verify actual Serie A rows. The audit is based on public product/coverage/schema/policy metadata only.
