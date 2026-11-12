@@ -92,3 +92,25 @@ No account, API key, API request, odds endpoint, dataset download, source archiv
 ## Final disposition
 
 **Retain Soccer Data as a promising but unapproved free current-season candidate only.** Its documented schema contains plausible corners and card fields and its terms permit own-product analysis, but the free tier does not supply the required historical seasons, exact Serie A field coverage is unverified, and private-retention/model-inference scope needs written confirmation. Do not integrate it into original V2 yet.
+
+
+## 2026-11-12 official-docs follow-up — timeline timestamp and Free-tier constraints
+
+A second read of the current official endpoint pages adds one useful provenance detail, but does not lift the HOLD:
+
+- `GET /matches/{match_id}/timeline` documents `meta.last_updated` as the time the timeline last changed. It also exposes `coverage=full|none` and event types `goal`, `own_goal`, `penalty_scored`, `yellow_card`, `red_card`, `yellow_red_card`, and `corner_kick`. This is a candidate event-level timestamp for a future source-before-quote test, not yet an independently verified upstream observation timestamp.
+- `GET /matches/{match_id}/stats` documents the exact named totals `corner_kicks`, `yellow_cards`, and `red_cards`, but the documented response has no `last_updated` field. Do not treat the stats endpoint alone as source-time proof.
+- `GET /matches` returns competition/season IDs, status, kickoff, teams and finished score. Its `updated_at` is documented only inside the live clock; the finished-match row has no general source-update timestamp.
+- The Free plan uses a five-minute cache. The provider documents `X-Cache: STALE` / `X-Cache-Age` when a fresh answer cannot be fetched. A future capture would need to preserve these response headers and reject stale responses, in addition to recording local request/response times and exact raw-body SHA-256.
+- Free is 50 requests/day, current-season only, and has no odds. One list page plus a bounded number of timelines could fit the daily cap, but full-liga coverage of all recent matches for every club may exceed it; no batching claim is made without measured API usage. No paid plan or odds endpoint is proposed.
+- The timeline event mapping still needs a preregistered parity check: in particular, how `yellow_red_card` maps to the original Football-Data yellow/red count definitions, how own goals are assigned to the scoring side, and whether all required events are covered for Serie A. Missing/partial timelines must remain missing, never become zero.
+- Exact Serie A 2026/27 coverage still requires an authenticated coverage call. No account/key was created and no endpoint was called.
+
+Official pages rechecked on 2026-11-12:
+- Pricing/free plan and cache/retention terms: https://soccer-data.co/
+- List matches: https://soccer-data.co/docs/reference/matches/list
+- Match stats: https://soccer-data.co/docs/reference/matches/stats
+- Match timeline and `meta.last_updated`: https://soccer-data.co/docs/reference/matches/timeline
+- Pagination and fixed match ordering: https://soccer-data.co/docs/concepts/pagination
+
+**Updated disposition:** Soccer Data is a more promising provenance candidate because the timeline exposes a documented last-change timestamp. It remains **HOLD** pending written inference/retention and upstream-rights clarification, exact Serie A coverage, event-definition parity, private archive approval, and a bounded read-only capture test. Free has no odds, so it cannot provide the market reference. No integration, inference, source download, account creation, or target-outcome access is authorized by this audit.
