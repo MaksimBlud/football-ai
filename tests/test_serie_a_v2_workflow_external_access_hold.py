@@ -236,12 +236,27 @@ EXTERNAL_IO_MARKERS = (
     # without binding Supabase credentials or invoking a known V2 script.
     "actions/download-artifact@",
     "actions/upload-artifact@",
+    # GitHub cache and Pages artifacts are also persistent repository storage.
+    "actions/cache@",
+    "actions/cache/restore@",
+    "actions/cache/save@",
+    "actions/upload-pages-artifact@",
+    "actions/deploy-pages@",
     # Inline Octokit scripts and gh CLI artifact/release commands can access GitHub data
     # without spelling a token binding or invoking a known V2 Python script.
     "actions/github-script@",
     "gh run download",
     "gh release download",
+    "gh release upload ",
+    "gh api -x post ",
+    "gh api --method post ",
+    "gh api -x put ",
+    "gh api --method put ",
+    "gh api -x patch ",
+    "gh api --method patch ",
     "git clone ",
+    "git push ",
+    "git lfs push",
     # GitHub API access can discover/download public artifacts directly.
     "secrets.GITHUB_TOKEN",
     "${{ github.token }}",
@@ -256,7 +271,17 @@ EXTERNAL_IO_MARKERS = (
     "http.client",
     "urllib.request",
     "curl ",
+    "curl -t ",
+    "curl --upload-file ",
+    "curl -x put ",
+    "curl -x post ",
+    "curl -x patch ",
+    "curl --request put ",
+    "curl --request post ",
+    "curl --request patch ",
     "wget ",
+    "wget --method=put ",
+    "wget --method=post ",
     "fetch(",
     "axios.",
     # Alternate runtimes can perform the same network/artifact access without
@@ -274,10 +299,20 @@ EXTERNAL_IO_MARKERS = (
     "invoke-restmethod",
     # Common object-store / repository-data transfer commands.
     "aws s3 cp ",
+    "aws s3 sync ",
+    "aws s3api put-object",
     "gsutil cp ",
+    "gsutil rsync ",
     "az storage blob download",
+    "az storage blob upload",
+    "az storage blob upload-batch",
     "rclone copy ",
+    "rclone copyto ",
+    "rclone sync ",
     "git lfs pull",
+    "docker push ",
+    "twine upload ",
+    "npm publish",
 )
 
 
@@ -401,6 +436,37 @@ def test_external_io_inventory_recognizes_github_script_and_cli_download_paths()
     assert all(_has_external_io(example) for example in examples)
     assert _is_original_v2_live_workflow(
         "name: market-anchor-1x2-v2 source capture\\nuses: actions/github-script@v7"
+    )
+
+
+def test_external_io_inventory_recognizes_repository_storage_and_upload_paths():
+    examples = (
+        "uses: actions/cache@v4",
+        "uses: actions/cache/restore@v4",
+        "uses: actions/cache/save@v4",
+        "uses: actions/upload-pages-artifact@v3",
+        "uses: actions/deploy-pages@v4",
+        "run: gh release upload v2.0.0 source.zip",
+        "run: gh api -X POST repos/owner/repo/actions/artifacts",
+        "run: gh api --method PUT repos/owner/repo/contents/source.csv",
+        "run: git push origin main",
+        "run: git lfs push origin main",
+        "run: curl -T source.csv https://example.invalid/upload",
+        "run: curl --upload-file source.csv https://example.invalid/upload",
+        "run: curl -X PUT https://example.invalid/upload",
+        "run: wget --method=POST https://example.invalid/upload",
+        "run: aws s3 sync artifacts/ s3://bucket/",
+        "run: aws s3api put-object --bucket bucket --key source.csv",
+        "run: gsutil rsync artifacts/ gs://bucket/",
+        "run: az storage blob upload --file source.csv",
+        "run: rclone copyto source.csv remote:source.csv",
+        "run: docker push registry.example.invalid/model:latest",
+        "run: twine upload dist/*",
+        "run: npm publish",
+    )
+    assert all(_has_external_io(example) for example in examples)
+    assert _is_original_v2_live_workflow(
+        "name: market-anchor-1x2-v2 source capture\\nuses: actions/cache@v4"
     )
 
 
