@@ -9736,3 +9736,12 @@ The metadata-only feature-input gate in the current-form source code reads only 
 - Continue source-rights research without API calls. A new source must have written permission, measured completeness for all required fields, defensible field-level lineage and upstream as-of semantics before any capture. Do not mix candidate-source cohorts or alter the original feature/weight contract.
 
 No main update, PR merge, source/quote download, target-outcome read, paid API request, model inference/refit, threshold change, production `.pkl` change, Supabase write/DDL, schedule change, or other-agent setting change occurred in this checkpoint.
+
+
+## Original V2 source-clock hardening — 2026-11-12 04:10 UTC
+
+Draft PR [#795](https://github.com/MaksimBlud/football-ai/pull/795) is based directly on main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, two commits ahead / zero behind, exact head `9ec12f88dc5271027b956cfa4a6b228930cd7f79`. All seven exact-head PR checks completed SUCCESS. The dedicated `shadow-tests` job compiled the V2 source modules and ran **88 tests PASS** on Python 3.11, including `tests/test_serie_a_v2_current_form_source_capture.py`.
+
+The audit found a real timestamp-attestation edge case in `serie_a_v2_current_form_source_capture.py`: calling `datetime.astimezone()` on a naive injected `clock()` silently assumes the runner's local timezone. The fix rejects naive/invalid offsets, rejects an observation time before the feature-gate check, rejects an archive-created time before the source observation, and validates both clock readings before writing the current-season CSV. Three new regressions cover naive observation time, naive archive time, and a backwards clock. No model input, feature order, candidate SHA, weights, scaler/imputer, source cohort, gate, lambda or production artifact changes.
+
+The PR remains Draft/HUMAN-MERGE. CI is synthetic/offline only: no source/API request, odds read, Supabase access/write, model inference, target-outcome read, refit, threshold change, or workflow schedule change.
