@@ -15,6 +15,8 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
+import stat
 from pathlib import Path
 import re
 from urllib.parse import parse_qsl, urlparse
@@ -78,9 +80,19 @@ def _is_inside(path: Path, root: Path = REPO_ROOT) -> bool:
 
 
 def _require_private_path(path: Path, label: str) -> Path:
-    resolved = path.expanduser().resolve()
+    candidate = path.expanduser()
+    if candidate.is_symlink():
+        raise PermissionError(f"{label} must not be a symlink")
+    resolved = candidate.resolve()
     if _is_inside(resolved):
         raise ValueError(f"{label} must be outside the public repository")
+    if os.name != "posix":
+        raise PermissionError(f"{label} filesystem permissions cannot be verified on this platform")
+    metadata = resolved.stat(follow_symlinks=False)
+    if not stat.S_ISDIR(metadata.st_mode):
+        raise ValueError(f"{label} must be an existing directory")
+    if stat.S_IMODE(metadata.st_mode) & 0o077:
+        raise PermissionError(f"{label} directory permissions must exclude group/other access")
     return resolved
 
 
@@ -161,13 +173,28 @@ def _safe_page_path(archive_dir: Path, value: object) -> Path:
     relative = Path(value)
     if relative.is_absolute() or ".." in relative.parts:
         raise ValueError("page file must be a safe relative path inside the private archive")
-    resolved = (archive_dir / relative).resolve()
+    candidate = archive_dir / relative
+    current = archive_dir
+    for part in relative.parts:
+        current = current / part
+        if current.is_symlink():
+            raise PermissionError("captured page path must not contain symlinks")
+        if current != candidate:
+            directory_mode = stat.S_IMODE(current.stat(follow_symlinks=False).st_mode)
+            if directory_mode & 0o077:
+                raise PermissionError("private archive subdirectory permissions must exclude group/other access")
+    resolved = candidate.resolve()
     try:
         resolved.relative_to(archive_dir.resolve())
     except ValueError as exc:
         raise ValueError("page file escaped the private archive") from exc
     if not resolved.is_file():
         raise ValueError("captured page file does not exist")
+    metadata = resolved.stat(follow_symlinks=False)
+    if not stat.S_ISREG(metadata.st_mode):
+        raise ValueError("captured page must be a regular file")
+    if stat.S_IMODE(metadata.st_mode) & 0o077:
+        raise PermissionError("captured page file permissions must exclude group/other access")
     return resolved
 
 
