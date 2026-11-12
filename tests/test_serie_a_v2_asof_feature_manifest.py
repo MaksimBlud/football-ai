@@ -346,7 +346,7 @@ def _synthetic_5dollar_bundle(tmp_path, fixtures=None, quote=None):
         "season_api_parameter": "2026",
         "api_plan": "free",
         "storage_class": "private_local",
-        "capture_run_id": "synthetic-run-only",
+        "capture_run_id": "43180000000",
         "capture_commit_sha": "a" * 40,
         "request_started_at_utc": "2026-11-12T07:59:59+00:00",
         "response_received_at_utc": "2026-11-12T08:00:00+00:00",
@@ -371,7 +371,9 @@ def test_5dollar_offline_adapter_maps_exact_original_19_features_and_verifies_sh
     assert row["features"]["diff_points_5"] == pytest.approx(3.0)
     assert row["history_coverage"]["home"]["prior_matches_in_frozen_30_match_window"] == 12
     assert row["history_coverage"]["away"]["prior_matches_in_frozen_30_match_window"] == 12
-    assert report["source_before_quote_verified"] is True
+    assert report["source_before_quote_order_validated"] is True
+    assert report["source_before_quote_verified"] is False
+    assert report["source_capture_attestation_required"] is True
     assert report["source_capture"]["source_finished_fixture_count"] == 12
     assert report["source_capture"]["source_skipped_non_finished_fixture_count"] == 1
     assert report["source_capture"]["upstream_source_observation_timestamp_available"] is False
