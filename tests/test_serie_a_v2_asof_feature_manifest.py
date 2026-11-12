@@ -581,7 +581,7 @@ def test_5dollar_adapter_validates_all_pages_and_pagination_completeness(tmp_pat
 
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
     all_fixtures = json.loads((tmp_path / "page-1.json").read_text())["data"]
-    pages = [all_fixtures[:15], all_fixtures[15:]]
+    pages = [all_fixtures[:16], all_fixtures[16:]]
     page_records = []
     for number, fixtures in enumerate(pages, start=1):
         payload = {
