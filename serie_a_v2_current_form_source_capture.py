@@ -145,6 +145,11 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
         completed[field] = pd.to_numeric(completed[field], errors="coerce")
         if completed[field].isna().any() or (completed[field] < 0).any():
             raise ValueError("completed current-season match has missing/invalid " + field)
+        # Goals, corners and card totals are event counts. Accept values such
+        # as "5.0" from CSV parsers, but never let fractional counts enter the
+        # frozen rolling-feature builder as if they were observed statistics.
+        if not completed[field].eq(completed[field].round()).all():
+            raise ValueError("completed current-season match has non-integer " + field)
     if ((completed["FTHG"] > completed["FTAG"]) != (completed["FTR"] == "H")).any() or (
         (completed["FTHG"] < completed["FTAG"]) != (completed["FTR"] == "A")
     ).any():
