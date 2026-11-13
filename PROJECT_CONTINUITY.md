@@ -10691,3 +10691,56 @@ A direct read of the current default-branch files confirms that the original fro
 - The original feature builder remains blob `401b3a0893371bfa4a488ec92a4a54af2678c8f7`. The current date-only as-of manifest explicitly marks `independently_attested_information_time=false` and `eligible_for_frozen_prospective_cohort=false`; it is diagnostic only and does not establish source-before-quote provenance.
 
 This confirms the original V2 candidate artifact is saved and test-loaded on main; it does **not** mean it is active in production or that a real prospective forecast exists. The candidate remains market fallback at lambda 0, shadow-only at lambda 1, with the predeclared stability gate failed. No refit, candidate rebuild, weight/feature/scaler/imputer change, production `.pkl` change, live inference, target-outcome read, or promotion was performed by this audit.
+
+
+## 2026-11-13 10:48 UTC — fresh original V2 runtime and pre-match audit
+
+This checkpoint was read from fresh GitHub main and the current open V2 PRs. It is documentation-only and does not alter the frozen model contract.
+
+### Exact main and original candidate
+
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc` (latest main commit dated 2026-10-18 08:20:05 UTC). GitHub branch metadata reports `protected=false`; no branch-protection change was attempted.
+- Main candidate file: `research/models/market_anchor_v2_serie_a_frozen_candidate.json`, blob `ac1303f6b096664983fbf52443bd0a381b23ba21`.
+- Embedded candidate SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Exact candidate contents still pin the original 19-feature order, 20x2 weights, 3,799 training rows, training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`, `active_lambda=0`, `shadow_residual_lambda=1`, `stability_gate_passed=false`, `research_only=true`, and `automatic_promotion=false`.
+- No model file, weight, scaler, imputer, feature order, training fingerprint, production `.pkl`, or lambda was changed.
+
+### Current main workflow definitions and actual schedule runs
+
+The four existing main YAML schedules remain present and unchanged:
+
+| Workflow | UTC schedule | Latest observed main schedule run |
+|---|---:|---|
+| Current-Form Source Capture | 05:50 | 2026-11-12 14:00:16 — [#43232728352](https://github.com/MaksimBlud/football-ai/actions/runs/43232728352) |
+| Free Real-Quote Diagnostic | 06:13 | 2026-11-12 15:04:34 — [#43243852372](https://github.com/MaksimBlud/football-ai/actions/runs/43243852372) |
+| Original Forward-Only Preview | 08:08 | 2026-11-12 16:44:19 — [#43261918181](https://github.com/MaksimBlud/football-ai/actions/runs/43261918181) |
+| Current-Form Forward-Only Preview | 08:18 | 2026-11-12 16:49:11 — [#43262798305](https://github.com/MaksimBlud/football-ai/actions/runs/43262798305) |
+
+No newer scheduled run for these four V2 workflows was present in the first 100 recent repository Actions runs checked through 2026-11-13 10:48 UTC. Other main-branch scheduled workflows did run during that window, so this is an observed absence, not proof that these four schedules are disabled. The workflow definitions themselves were read directly from main.
+
+The last source capture's existing audit record identifies artifact `13951945358` and source ZIP SHA-256 `e7bb6e90466c278882225766424b17c229cab46da35dd80a4418e627c8ccb1e8`. The last current-form forward run verified its parent/source artifact, but recorded zero quotes and zero V2 shadow captures; no target outcomes were read or scored. The last original forward run also recorded zero quotes and zero V2 diagnostic previews. These are source/runtime checks, not prospective forecast evidence.
+
+### Read-only Supabase pre-match inventory
+
+Only strict pre-kickoff metadata was queried; no score, result, settlement, or target-outcome columns were selected.
+
+- `public.odds_snapshots`: 3,915 strict pre-match rows across 327 events.
+- Strict pre-match snapshots in the last seven days: 0.
+- Upcoming events with a saved strict pre-match quote: 0.
+- Latest saved quote: 2026-10-13 14:48:53 UTC.
+- `public.product_prediction_snapshots`, filtered to exact candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6` and strict generated-before-kickoff timing: 0 rows, 0 unique events, 0 upcoming forecasts.
+
+Therefore the original 30-primary-completed-event outcome gate remains CLOSED. No target outcomes were queried.
+
+### Open V2 PR state and exact-head CI
+
+- PR #781 remains OPEN / HUMAN-MERGE only at exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`; all 8 associated PR workflows are SUCCESS, including the original Frozen V2 workflow. It gates the four live source/quote workflows plus recovery candidate rebuild/publication and leaves their existing cron expressions unchanged. It is not merged, so the hold is not active on main.
+- PR #796 remains OPEN / Ready for review at `e69ad9c2700b999ef186e4771a2fe06fd010155d`; all 7 associated PR workflows are SUCCESS. It includes #795's source-clock validation and adds atomic archive publication. Do not merge #795 separately. Integration order remains #781 first, fresh-main hold verification, then #796.
+- PR #793 remains Draft and stacked on #787 at `a7eeb519d967a05bc528c878b0a8fc458cfbe016` (base #787 HEAD `272a0dc2d6a97fedc7964e8cc2614ba670220fae`). Exact-head evaluator validation reports 196 passed; Frozen V2 reports 440 passed on Python 3.11 and 440 on Python 3.12. These are offline/synthetic regressions only; they do not establish live forecasts or model superiority.
+- PR #800 remains Draft / HOLD at `9a2921004c6775d2bc85a473d06d05bd6e142d8b`; its offline adapter validates local archive hashes and timestamp order but independent provider/source attestation and provider rights remain unresolved.
+- PR #804 remains Draft / HOLD at `f2c2e00df612b06f9e2deda6a0febc8e1fc4ceec`; 7/7 PR workflows are SUCCESS. It is an official-doc audit only, not a provider approval or live-data test.
+- PR #740 is the existing documentation branch; this addendum is appended there rather than creating a duplicate continuity PR.
+
+### Safety and binding interpretation
+
+No paid The Odds API request or paid cron was invoked. No provider account/key/request/download was created or used. No Supabase write/DDL, target-outcome read, live inference, model refit, production artifact change, schedule edit, main update, PR merge, or other-agent change occurred. Source candidates remain HOLD until rights, exact frozen-feature completeness, provenance, and private retention are independently approved. Keep `active_lambda=0` as the market baseline and `shadow_lambda=1` research-only; no superiority claim is justified without an eligible independent Brier/LogLoss cohort.
