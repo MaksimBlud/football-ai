@@ -1,3 +1,17 @@
+## 2026-11-13 12:58 UTC — Original V2: missing scheduled runs, 113-fixture input gate, no prospective forecasts
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; main `PROJECT_CONTINUITY.md` is still at the 2026-10-18 entry. Full audit: [SERIE_A_V2_RUNTIME_AUDIT_20261113_1258UTC.md](research/SERIE_A_V2_RUNTIME_AUDIT_20261113_1258UTC.md).
+
+- Re-read the frozen candidate: SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features, 20×2 weights, 3,799 rows, fingerprint `f27ab985…a7a5098`; active lambda 0, shadow lambda 1, stability gate FAILED.
+- Re-read all four main V2 workflow YAMLs. Their Nov 13 schedule windows (05:50, 06:13, 08:08, 08:18 UTC) have no matching run in the date-bounded 05:30–09:00 Actions result (24 runs; other scheduled workflows ran). Cause unresolved; no dispatch/re-enable/schedule change. Main remains unprotected.
+- Supabase read-only: 3,915 strict pre-match odds / 327 events; Serie A 620; latest 2026-10-13 14:48:53 UTC; zero rows in last seven days; zero future-event quotes; zero exact-SHA V2 pre-kickoff predictions.
+- The separate feature-input metadata gate is 113/30 unique Serie A 2026/27 fixture identities (only date/home/away selected). It is open, but the target-outcome evaluation gate remains 0/30.
+- PR #793 market-only evaluator is synthetic/offline: 196 evaluator tests and 440 Frozen V2 tests on each of Python 3.11/3.12. It compares only market vs original V2 shadow after the same 30-event gate, loads no incumbent, and always sets `review_signal=false`. No real Brier/LogLoss exists.
+- #781 remains open 8/8 and first for manual merge; #796 remains open 7/7 and must be revalidated after #781. #804 remains source HOLD, 7/7.
+- Supabase security advisor reports 5 public RLS-disabled tables and 4 RLS-enabled tables without policies; no DDL/policy change was made.
+
+No protected outcomes, result/score columns, paid API, Supabase write, production artifact, model weights, schedule, main or other agent were touched.
+
 ## 2026-11-13 08:56 UTC — Original MARKET_ANCHOR_1X2_V2: fresh runtime, rights and pre-match audit
 
 Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This entry is based on a fresh read of main, the original V2 workflow YAMLs, exact GitHub Actions run/job logs, open V2 PR metadata/CI, and read-only Supabase pre-match aggregates. No target-outcome/result columns were selected.
