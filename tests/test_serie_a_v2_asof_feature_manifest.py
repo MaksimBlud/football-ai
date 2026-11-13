@@ -279,7 +279,7 @@ def test_live_football_api_source_audit_fails_closed_and_preserves_original_v2_c
     assert rights["free_plan"]["paid_plan_authorized"] is False
     assert rights["documented_serie_a_scope"]["league_page_identifies_serie_a_2026_2027"] is True
     assert rights["documented_serie_a_scope"]["actual_2026_27_match_statistics_coverage_verified"] is False
-    assert rights["documented_source_schema"]["last_updated_field_present"] is True
+    assert rights["documented_source_schema"]["per_match_last_updated_field_present"] is True
     assert rights["documented_source_schema"]["last_updated_is_upstream_source_observation_time_confirmed"] is False
     assert rights["documented_source_schema"]["yellow_red_card_counting_semantics_confirmed"] is False
     assert rights["documented_use_and_rights"]["terms_permit_resale_or_redistribution_to_end_users"] is True
