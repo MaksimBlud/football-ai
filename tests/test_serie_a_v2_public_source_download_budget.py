@@ -318,14 +318,32 @@ def test_workflow_contracts_keep_crons_and_shared_concurrency():
     )[1].split(
         "      - name: Upload shared public-source download attempt marker", 1
     )[0]
-    assert "if: ${{ steps.rights_preflight.outputs.allowed == 'true' }}" in diagnostic_budget_block
-    diagnostic_archive_block = diagnostic.split(
-        "      - name: Archive diagnostic and exact public CSV bytes for provenance", 1
-    )[1]
-    assert "if: ${{ always() && steps.rights_preflight.outputs.allowed == 'true' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success' }}" in diagnostic_archive_block
-    assert "github.event_name != 'push'" in diagnostic
-    assert "if: ${{ github.event_name != 'push' && steps.rights_preflight.outputs.allowed == 'true' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success' }}" in diagnostic
+    diagnostic_final_quote_block = diagnostic.split(
+        "      - name: Recheck saved future pre-kickoff quotes immediately before budget reservation", 1
+    )[1].split(
+        "      - name: Check shared public-source download budget", 1
+    )[0]
 
+    assert "steps.rights_preflight.outputs.allowed == 'true'" in diagnostic_final_quote_block
+    for quote_output in ("steps.quote_preflight.outputs.eligible_quote_rows",):
+        assert f"{quote_output} != ''" in diagnostic_final_quote_block
+        assert f"{quote_output} != '0'" in diagnostic_final_quote_block
+    assert diagnostic.index("Recheck saved future pre-kickoff quotes immediately before budget reservation") < diagnostic.index(
+        "Check shared public-source download budget"
+    )
+    assert "steps.rights_preflight.outputs.allowed == 'true'" in diagnostic_budget_block
+    for quote_output in ("steps.quote_preflight.outputs.eligible_quote_rows", "steps.final_quote_preflight.outputs.eligible_quote_rows"):
+        assert f"{quote_output} != ''" in diagnostic_budget_block
+        assert f"{quote_output} != '0'" in diagnostic_budget_block
+    diagnostic_marker_block = diagnostic.split("      - name: Upload shared public-source download attempt marker", 1)[1].split("\n      - name:", 1)[0]
+    diagnostic_fetch_block = diagnostic.split("      - name: Fetch and SHA-archive public source, preview original frozen V2 diagnostics", 1)[1].split("\n      - name:", 1)[0]
+    diagnostic_archive_block = diagnostic.split("      - name: Archive diagnostic and exact public CSV bytes for provenance", 1)[1]
+    for block in (diagnostic_marker_block, diagnostic_fetch_block, diagnostic_archive_block):
+        for quote_output in ("steps.quote_preflight.outputs.eligible_quote_rows", "steps.final_quote_preflight.outputs.eligible_quote_rows"):
+            assert f"{quote_output} != ''" in block
+            assert f"{quote_output} != '0'" in block
+    assert "always()" in diagnostic_archive_block
+    assert "github.event_name != 'push'" in diagnostic_fetch_block
 
 
 def test_discovery_bootstraps_cooldown_from_latest_existing_main_source_artifact():

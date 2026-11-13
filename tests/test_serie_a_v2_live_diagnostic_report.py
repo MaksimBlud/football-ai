@@ -488,3 +488,230 @@ def test_historical_source_final_url_mutations_fail_before_body_read_or_csv_writ
     assert body_reads == []
     assert list(tmp_path.glob("*.csv")) == []
 
+def test_quote_preflight_counts_only_fresh_future_strictly_prematch_rows():
+    from datetime import timedelta
+
+    fresh = quote()
+    assert report_module.count_fresh_future_prematch_quote_rows([fresh], now=NOW) == 1
+
+    stale = {
+        **fresh,
+        "snapshot_time_utc": (NOW - report_module.MAX_QUOTE_AGE - timedelta(seconds=1)).isoformat(),
+    }
+    assert report_module.count_fresh_future_prematch_quote_rows([stale], now=NOW) == 0
+
+    future_snapshot = {
+        **fresh,
+        "snapshot_time_utc": (NOW + timedelta(minutes=1)).isoformat(),
+    }
+    assert report_module.count_fresh_future_prematch_quote_rows([future_snapshot], now=NOW) == 0
+
+    completed = {
+        **fresh,
+        "commence_time_utc": (NOW - timedelta(minutes=1)).isoformat(),
+    }
+    assert report_module.count_fresh_future_prematch_quote_rows([completed], now=NOW) == 0
+
+
+def test_quote_preflight_rejects_at_kickoff_quotes_and_any_outcome_field():
+    at_kickoff = {
+        **quote(),
+        "snapshot_time_utc": quote()["commence_time_utc"],
+    }
+    with pytest.raises(ValueError, match="market quote at or after kickoff"):
+        report_module.count_fresh_future_prematch_quote_rows([at_kickoff], now=NOW)
+
+    outcome_contaminated = {**quote(), "FTR": "H"}
+    with pytest.raises(ValueError, match="outcomes or settlement fields"):
+        report_module.count_fresh_future_prematch_quote_rows([outcome_contaminated], now=NOW)
+
+
+def test_quote_preflight_report_is_metadata_only_and_never_admissible():
+    report = report_module.build_quote_preflight_report([quote()], as_of_utc=NOW)
+    assert report["experiment_id"] == "MARKET_ANCHOR_1X2_V2"
+    assert report["frozen_candidate_sha256"] == report_module.FROZEN_SHA
+    assert report["eligible_future_prematch_quote_rows"] == 1
+    assert report["public_http_requests"] == 0
+    assert report["paid_provider_requests"] == 0
+    assert report["supabase_reads"] == 1
+    assert report["supabase_writes"] == 0
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
+    assert report["model_inference_performed"] is False
+    assert report["source_download_performed"] is False
+    assert report["eligible_for_frozen_prospective_cohort"] is False
+    assert report["eligible_for_product_publication"] is False
+    assert report["no_bet"] is True
+
+
+def test_preflight_only_main_checks_rights_before_reading_saved_quotes(monkeypatch, tmp_path):
+    import sys
+    from types import SimpleNamespace
+    import json
+    from datetime import timedelta
+
+    output = tmp_path / "preflight.json"
+    monkeypatch.setattr(sys, "argv", [
+        "serie_a_v2_live_diagnostic_report.py",
+        "--preflight-only",
+        "--output", str(output),
+        "--raw-source-dir", str(tmp_path / "must-not-be-created"),
+    ])
+    monkeypatch.setitem(sys.modules, "database", SimpleNamespace(supabase=object()))
+    current = datetime.now(timezone.utc)
+    fresh_quote = {
+        **quote(),
+        "snapshot_time_utc": (current - timedelta(minutes=15)).isoformat(),
+        "commence_time_utc": (current + timedelta(hours=2)).isoformat(),
+    }
+    order = []
+    monkeypatch.setattr(
+        report_module, "require_personal_research_inference_scope",
+        lambda: order.append("rights"),
+    )
+    monkeypatch.setattr(
+        report_module, "fetch_saved_upcoming_serie_a_quotes",
+        lambda client, now: order.append("quotes") or [fresh_quote],
+    )
+    monkeypatch.setattr(
+        report_module, "fetch_public_history",
+        lambda **kwargs: pytest.fail("metadata-only quote preflight must not access Football-Data"),
+    )
+
+    report_module.main()
+    report = json.loads(output.read_text(encoding="utf-8"))
+    assert order == ["rights", "quotes"]
+    assert report["eligible_future_prematch_quote_rows"] == 1
+    assert report["source_download_performed"] is False
+    assert report["model_inference_performed"] is False
+    assert not (tmp_path / "must-not-be-created").exists()
+
+
+def test_preflight_only_denied_rights_stops_before_database_quote_read(monkeypatch, tmp_path):
+    import sys
+    from types import SimpleNamespace
+
+    output = tmp_path / "blocked.json"
+    monkeypatch.setattr(sys, "argv", [
+        "serie_a_v2_live_diagnostic_report.py",
+        "--preflight-only",
+        "--output", str(output),
+        "--raw-source-dir", str(tmp_path / "unused"),
+    ])
+    monkeypatch.setitem(sys.modules, "database", SimpleNamespace(supabase=object()))
+    monkeypatch.setattr(
+        report_module, "require_personal_research_inference_scope",
+        lambda: (_ for _ in ()).throw(PermissionError("scope blocked")),
+    )
+    monkeypatch.setattr(
+        report_module, "write_research_scope_blocked_report",
+        lambda path, workflow, reason: {"mode": "SOURCE_RIGHTS_BLOCKED", "reason": reason},
+    )
+    monkeypatch.setattr(
+        report_module, "fetch_saved_upcoming_serie_a_quotes",
+        lambda *args, **kwargs: pytest.fail("quote metadata must not be read when rights are blocked"),
+    )
+
+    report_module.main()
+    assert not output.exists()
+
+
+def test_free_diagnostic_rights_and_quote_preflight_precede_budget_and_source_access():
+    from pathlib import Path
+
+    workflow = Path(".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml").read_text(encoding="utf-8")
+    quote_step = workflow.index("- name: Preflight saved future pre-kickoff quotes (metadata only)")
+    rights_step = workflow.index("- name: Preflight frozen V2 source rights before source/quote access")
+    final_quote_step = workflow.index("- name: Recheck saved future pre-kickoff quotes immediately before budget reservation")
+    budget_step = workflow.index("- name: Check shared public-source download budget")
+    marker_step = workflow.index("- name: Upload shared public-source download attempt marker")
+    source_step = workflow.index("- name: Fetch and SHA-archive public source, preview original frozen V2 diagnostics")
+    assert rights_step < quote_step < final_quote_step < budget_step < marker_step < source_step
+    assert "--preflight-only" in workflow[quote_step:final_quote_step]
+    assert "steps.rights_preflight.outputs.allowed == 'true'" in workflow[quote_step:final_quote_step]
+    assert "steps.quote_preflight.outputs.eligible_quote_rows != '0'" in workflow[final_quote_step:budget_step]
+    assert "steps.final_quote_preflight.outputs.eligible_quote_rows != '0'" in workflow[budget_step:source_step]
+    assert "steps.rights_preflight.outputs.allowed == 'true'" in workflow[budget_step:source_step]
+    rights_block = workflow[rights_step:quote_step]
+    assert "require_personal_research_inference_scope()" in rights_block
+    assert "require_private_repository_for_source_artifacts()" in rights_block
+    assert "steps.quote_preflight.outputs.eligible_quote_rows != ''" in workflow[final_quote_step:budget_step]
+    assert "steps.final_quote_preflight.outputs.eligible_quote_rows != ''" in workflow[budget_step:source_step]
+
+
+
+def test_free_diagnostic_jobs_run_original_forward_loader_pin_regression():
+    from pathlib import Path
+
+    workflow = Path(".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml").read_text(encoding="utf-8")
+    validation = workflow.split("  validate-free-diagnostic:", 1)[1].split(
+        "\n\n  free-diagnostic:", 1
+    )[0]
+    live = workflow.split("  free-diagnostic:", 1)[1]
+    assert "serie_a_v2_forward_capture.py" in validation
+    assert "tests/test_serie_a_v2_forward_capture.py" in validation
+    assert "serie_a_v2_forward_capture.py" in live
+    assert "tests/test_serie_a_v2_forward_capture.py" in live
+    push_paths = workflow.split("    paths:", 1)[1].split("\n\nconcurrency:", 1)[0]
+    for path in (
+        "serie_a_v2_forward_capture.py",
+        "tests/test_serie_a_v2_forward_capture.py",
+        "tests/test_market_anchor_v2_source_rights.py",
+        "tests/test_serie_a_v2_current_form_source_workflow_contract.py",
+        "tests/test_serie_a_v2_current_form_dependency_triggers.py",
+    ):
+        assert f'"{path}"' in push_paths
+
+def test_quote_preflight_rejects_post_kickoff_snapshot():
+    row = {**quote(), "snapshot_time_utc": "2026-10-19T19:01:00Z"}
+    with pytest.raises(ValueError, match="market quote at or after kickoff"):
+        report_module.count_fresh_future_prematch_quote_rows([row], now=NOW)
+
+
+def test_quote_preflight_rejects_invalid_decimal_prices_before_source_download():
+    invalid_values = (None, True, 1.0, float("nan"), float("inf"), "not-a-price")
+    for key in ("home_odds", "draw_odds", "away_odds"):
+        for invalid in invalid_values:
+            row = {**quote(), key: invalid}
+            with pytest.raises(ValueError, match="invalid bookmaker decimal prices|missing bookmaker decimal prices"):
+                report_module.count_fresh_future_prematch_quote_rows([row], now=NOW)
+
+
+@pytest.mark.parametrize("field", ["snapshot_time_utc", "commence_time_utc"])
+def test_quote_preflight_rejects_offsetless_market_clocks(field):
+    row = {**quote(), field: "2026-10-13T15:00:00"}
+    with pytest.raises(ValueError, match="naive clock-time not allowed"):
+        report_module.count_fresh_future_prematch_quote_rows([row], now=NOW)
+
+
+def test_main_skips_public_history_download_when_no_fresh_future_quotes(tmp_path, monkeypatch):
+    import json
+    import sys
+    from types import SimpleNamespace
+
+    output = tmp_path / "report.json"
+    raw_dir = tmp_path / "raw"
+    monkeypatch.setattr(report_module, "require_personal_research_inference_scope", lambda: {})
+    monkeypatch.setitem(sys.modules, "database", SimpleNamespace(supabase=object()))
+    monkeypatch.setattr(
+        report_module, "fetch_saved_upcoming_serie_a_quotes",
+        lambda client, now: [],
+    )
+
+    def forbidden_download(**kwargs):
+        raise AssertionError("public source download must be skipped when no fresh quote exists")
+
+    monkeypatch.setattr(report_module, "fetch_public_history", forbidden_download)
+    monkeypatch.setattr(
+        sys, "argv",
+        ["serie_a_v2_live_diagnostic_report.py", "--output", str(output),
+         "--raw-source-dir", str(raw_dir)],
+    )
+    report_module.main()
+    report = json.loads(output.read_text(encoding="utf-8"))
+    assert report["mode"] == "NO_ELIGIBLE_FUTURE_PREMATCH_QUOTES_SOURCE_DOWNLOAD_SKIPPED"
+    assert report["eligible_future_prematch_quote_rows"] == 0
+    assert report["public_http_requests"] == 0
+    assert report["target_outcomes_read"] is False
+    assert report["supabase_writes"] == 0
+    assert not raw_dir.exists()

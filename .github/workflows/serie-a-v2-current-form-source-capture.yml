@@ -10,7 +10,7 @@ on:
     types:
       - completed
   push:
-    branches: [main, research/v2-705-699-integrated-20261106-run11, research/v2-block-blocked-source-capture-*]
+    branches: [main, research/v2-705-699-integrated-20261106-run11, research/v2-block-blocked-source-capture-*, research/v2-private-artifact-gate-*]
     paths:
       - "requirements-v2-research-py312.lock"
       - "serie_a_v2_current_form_source_capture.py"
@@ -18,7 +18,11 @@ on:
       - "experiments/market_anchor_1x2_v2_protocol.json"
       - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
       - "market_anchor_v2_source_rights.py"
+      - "market_anchor_v2_source_capture_rights.py"
+      - "market_anchor_v2_artifact_privacy.py"
       - "research/source_rights/football_data_co_uk.json"
+      - "research/SERIE_A_V2_SOURCE_CAPTURE_ONLY_SCOPE_20261107.md"
+      - "research/SERIE_A_V2_PROVIDER_AI_INFERENCE_RIGHTS_BLOCK_20261107.md"
       - "historical_football_signal_lab.py"
       - "serie_a_runtime_config.py"
       - "serie_a_v2_frozen_shadow_preview.py"
@@ -32,6 +36,9 @@ on:
       - "tests/test_serie_a_v2_asof_feature_manifest.py"
       - "tests/test_serie_a_v2_atalanta_alias.py"
       - "tests/test_serie_a_v2_current_form_source_capture.py"
+      - "tests/test_market_anchor_v2_source_capture_rights.py"
+      - "tests/test_market_anchor_v2_source_rights.py"
+      - "tests/test_market_anchor_v2_artifact_privacy.py"
       - "serie_a_v2_public_source_download_budget.py"
       - "tests/test_serie_a_v2_public_source_download_budget.py"
       - "tests/test_serie_a_v2_current_form_forward_capture.py"
@@ -69,8 +76,8 @@ jobs:
         run: python -m pip install -r requirements-v2-research-py312.lock
       - name: Validate current-form source capture without network or Supabase
         run: |
-          python -m py_compile serie_a_v2_current_form_source_capture.py serie_a_v2_current_form_forward_capture.py market_anchor_v2_source_rights.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py historical_football_signal_lab.py serie_a_runtime_config.py
-          python -m pytest -q tests/test_serie_a_v2_current_form_source_capture.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_atalanta_alias.py tests/test_serie_a_v2_frozen_shadow_preview.py tests/test_serie_a_v2_live_diagnostic_report.py tests/test_historical_football_signal_lab.py tests/test_serie_a_v2_current_form_source_workflow_contract.py tests/test_serie_a_v2_current_form_dependency_triggers.py tests/test_serie_a_v2_current_form_forward_capture.py tests/test_serie_a_v2_manual_quote_trigger_contract.py tests/test_market_anchor_v2_source_rights.py tests/test_serie_a_v2_public_source_download_budget.py
+          python -m py_compile serie_a_v2_current_form_source_capture.py serie_a_v2_current_form_forward_capture.py market_anchor_v2_source_rights.py market_anchor_v2_source_capture_rights.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py historical_football_signal_lab.py serie_a_runtime_config.py
+          python -m pytest -q tests/test_serie_a_v2_current_form_source_capture.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_atalanta_alias.py tests/test_serie_a_v2_frozen_shadow_preview.py tests/test_serie_a_v2_live_diagnostic_report.py tests/test_historical_football_signal_lab.py tests/test_serie_a_v2_current_form_source_workflow_contract.py tests/test_serie_a_v2_current_form_dependency_triggers.py tests/test_serie_a_v2_current_form_forward_capture.py tests/test_serie_a_v2_manual_quote_trigger_contract.py tests/test_market_anchor_v2_source_rights.py tests/test_market_anchor_v2_source_capture_rights.py tests/test_market_anchor_v2_artifact_privacy.py tests/test_serie_a_v2_public_source_download_budget.py
 
 
   capture-current-form:
@@ -97,23 +104,26 @@ jobs:
         run: python -m pip install -r requirements-v2-research-py312.lock
       - name: Validate feature-input gate and source integrity rules
         run: |
-          python -m py_compile serie_a_v2_current_form_source_capture.py serie_a_v2_current_form_forward_capture.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py
-          python -m pytest -q tests/test_serie_a_v2_current_form_source_capture.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_atalanta_alias.py tests/test_serie_a_v2_frozen_shadow_preview.py tests/test_serie_a_v2_live_diagnostic_report.py tests/test_historical_football_signal_lab.py tests/test_serie_a_v2_current_form_source_workflow_contract.py tests/test_serie_a_v2_current_form_dependency_triggers.py tests/test_serie_a_v2_current_form_forward_capture.py tests/test_serie_a_v2_manual_quote_trigger_contract.py
-      - name: Preflight frozen V2 source rights before metadata or download budget
+          python -m py_compile serie_a_v2_current_form_source_capture.py serie_a_v2_current_form_forward_capture.py market_anchor_v2_source_capture_rights.py market_anchor_1x2_v2_shadow.py market_anchor_1x2_v1.py
+          python -m pytest -q tests/test_serie_a_v2_current_form_source_capture.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_atalanta_alias.py tests/test_serie_a_v2_frozen_shadow_preview.py tests/test_serie_a_v2_live_diagnostic_report.py tests/test_historical_football_signal_lab.py tests/test_serie_a_v2_current_form_source_workflow_contract.py tests/test_serie_a_v2_current_form_dependency_triggers.py tests/test_serie_a_v2_current_form_forward_capture.py tests/test_serie_a_v2_manual_quote_trigger_contract.py tests/test_market_anchor_v2_source_capture_rights.py tests/test_market_anchor_v2_source_rights.py tests/test_market_anchor_v2_artifact_privacy.py
+      - name: Preflight private source-only research capture rights before metadata or download budget
         id: rights_preflight
         run: |
           python - <<'PY'
           import json
           import os
 
-          from market_anchor_v2_source_rights import require_personal_research_inference_scope
+          from market_anchor_v2_source_capture_rights import require_personal_research_source_capture_scope
+          from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
 
           try:
-              require_personal_research_inference_scope()
+              source_scope = require_personal_research_source_capture_scope()
+              storage_scope = require_private_repository_for_source_artifacts()
           except PermissionError as exc:
               allowed = "false"
               report = {
-                  "rights_preflight": "BLOCKED",
+                  "source_capture_rights_preflight": "BLOCKED",
+                  "source_artifact_storage": "BLOCKED",
                   "reason": str(exc),
                   "supabase_reads": 0,
                   "public_http_requests": 0,
@@ -123,7 +133,11 @@ jobs:
           else:
               allowed = "true"
               report = {
-                  "rights_preflight": "PASS",
+                  "source_capture_rights_preflight": "PASS",
+                  "source_capture_scope": source_scope["source_capture_scope"],
+                  "research_inference_permitted": False,
+                  "provider_issued_ai_inference_license": False,
+                  "source_artifact_storage": storage_scope["storage_policy"],
                   "supabase_reads_before_preflight": 0,
                   "public_http_requests_before_preflight": 0,
                   "download_budget_markers_before_preflight": 0,
@@ -144,12 +158,14 @@ jobs:
           from datetime import datetime, timezone
 
           import requests
-          from market_anchor_v2_source_rights import require_personal_research_inference_scope
+          from market_anchor_v2_source_capture_rights import require_personal_research_source_capture_scope
+          from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
           from supabase import create_client
 
           # Rights must be established before even reading the Supabase gate or
           # discovering/downloading a previously archived provider source.
-          rights_scope = require_personal_research_inference_scope()
+          source_scope = require_personal_research_source_capture_scope()
+          require_private_repository_for_source_artifacts()
 
           from serie_a_v2_current_form_source_capture import read_completed_primary_event_identities
           from serie_a_v2_current_form_forward_capture import (
@@ -195,8 +211,9 @@ jobs:
               "fresh_for_new_quote": verification.get("fresh_for_new_quote"),
               "fresh_for_current_feature_gate": verification.get("fresh_for_current_feature_gate"),
               "current_gate_identity_count": len(gate_identities),
-              "source_rights_scope": rights_scope.get("research_inference_scope"),
-              "provider_issued_ai_inference_license": rights_scope.get("provider_issued_ai_inference_license"),
+              "source_capture_scope": source_scope.get("source_capture_scope"),
+              "research_inference_permitted": source_scope.get("research_inference_permitted"),
+              "provider_issued_ai_inference_license": source_scope.get("provider_issued_ai_inference_license"),
               "metadata_fields_read": ["match_date", "home_team", "away_team"],
               "target_outcomes_read": False,
               "paid_provider_calls": 0,

@@ -276,6 +276,25 @@ def test_current_csv_uses_only_completed_rows_strictly_before_capture_day():
     assert not frame["Date"].str.contains("20/10/2026").any()
 
 
+@pytest.mark.parametrize(
+    "timestamp_date",
+    [
+        "01/08/2026 00:00:00",
+        "01/08/2026 12:30:00",
+        "2026-08-01T00:00:00Z",
+        "2026-08-01 12:30:00+00:00",
+    ],
+)
+def test_current_csv_rejects_timestamp_dates_before_pandas_normalization(timestamp_date):
+    raw = current_csv().decode().replace(
+        "01/08/2026,Home 0", f"{timestamp_date},Home 0", 1
+    ).encode()
+    with pytest.raises(ValueError, match="date-only"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
 def test_current_csv_rejects_reversed_duplicate_fixture_identity():
     raw = (
         ",".join(REQUIRED_COLUMNS) + "\n"
@@ -472,6 +491,10 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert (tmp_path / CURRENT_FILENAME).read_bytes() == raw
     assert (tmp_path / MANIFEST_FILENAME).exists()
     assert report["target_outcomes_read"] is False
+    assert report["source_capture_only"] is True
+    assert report["research_inference_permitted"] is False
+    assert report["model_inference_executed"] is False
+    assert report["model_training_executed"] is False
     assert report["target_outcomes_scored"] is False
     assert report["target_outcome_evaluation_gate"]["outcome_gate_open"] is False
     assert report["paid_provider_calls"] == report["supabase_writes"] == 0
@@ -941,24 +964,44 @@ def test_current_csv_rejects_completed_row_before_current_season_start():
         )
 
 
-@pytest.mark.parametrize(
-    ("original", "replacement", "field"),
-    [
-        (
-            "01/08/2026,Home 0,Away 0,1,0,H,5,3,2,1,0,0",
-            "01/08/2026,Home 0,Away 0,1.5,0,H,5,3,2,1,0,0",
-            "FTHG",
-        ),
-        (
-            "01/08/2026,Home 0,Away 0,1,0,H,5,3,2,1,0,0",
-            "01/08/2026,Home 0,Away 0,1,0,H,5.5,3,2,1,0,0",
-            "HC",
-        ),
-    ],
-)
-def test_current_csv_rejects_non_integer_goal_and_stat_counts(original, replacement, field):
-    raw = current_csv(n=30).decode().replace(original, replacement, 1).encode()
-    with pytest.raises(ValueError, match=f"non-integer {field}"):
+@pytest.mark.parametrize("column", ("FTHG", "FTAG", "HC", "AC", "HY", "AY", "HR", "AR"))
+def test_current_csv_rejects_non_integer_goal_and_stat_counts(column):
+    lines = current_csv(n=30).decode().splitlines()
+    header = lines[0].split(",")
+    row = lines[1].split(",")
+    row[header.index(column)] = "1.5"
+    lines[1] = ",".join(row)
+    raw = ("\n".join(lines) + "\n").encode()
+    with pytest.raises(ValueError, match=f"non-integer {column}"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
+def test_current_csv_accepts_integer_valued_decimal_count_cells():
+    lines = current_csv(n=30).decode().splitlines()
+    header = lines[0].split(",")
+    row = lines[1].split(",")
+    for column in ("FTHG", "FTAG", "HC", "AC", "HY", "AY", "HR", "AR"):
+        index = header.index(column)
+        row[index] = f"{float(row[index]):.1f}"
+    lines[1] = ",".join(row)
+    raw = ("\n".join(lines) + "\n").encode()
+    frame, excluded = validate_current_season_csv(
+        raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+    )
+    assert len(frame) == 30
+    assert excluded == 0
+
+
+def test_current_csv_rejects_infinite_count_values():
+    lines = current_csv(n=30).decode().splitlines()
+    header = lines[0].split(",")
+    row = lines[1].split(",")
+    row[header.index("HC")] = "inf"
+    lines[1] = ",".join(row)
+    raw = ("\n".join(lines) + "\n").encode()
+    with pytest.raises(ValueError, match="non-integer HC"):
         validate_current_season_csv(
             raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
         )
