@@ -1,0 +1,143 @@
+{
+  "schema_version": "LIVE_FOOTBALL_API_ORIGINAL_V2_SOURCE_RIGHTS_V1",
+  "provider": "Live Football API",
+  "operator": "FORCESCRIPTS LTD",
+  "reviewed_at_utc": "2026-11-13",
+  "terms_effective_date": "2026-01-01",
+  "official_references": {
+    "terms": "https://www.live-football-api.com/terms",
+    "pricing": "https://www.live-football-api.com/pricing",
+    "docs": "https://www.live-football-api.com/docs",
+    "serie_a": "https://www.live-football-api.com/serie-a-api",
+    "about": "https://www.live-football-api.com/about"
+  },
+  "free_plan": {
+    "free_credits_on_new_account": 500,
+    "credits_per_documented_endpoint_call": 1,
+    "recurring_free_allowance": false,
+    "card_required_for_initial_free_credits": false,
+    "free_credits_expire": false,
+    "paid_plan_authorized": false
+  },
+  "documented_use_and_rights": {
+    "terms_license_for_own_applications_products_and_services": true,
+    "terms_permit_resale_or_redistribution_to_end_users": true,
+    "pricing_claims_commercial_use_license_for_all_plans": true,
+    "explicit_model_training_permission_confirmed": false,
+    "explicit_internal_feature_inference_permission_confirmed": false,
+    "explicit_private_raw_response_retention_permission_confirmed": false,
+    "upstream_data_provider_and_field_rights_identified": false,
+    "raw_redistribution_rights_in_terms": true
+  },
+  "documented_serie_a_scope": {
+    "league_page_identifies_serie_a_2026_2027": true,
+    "league_page_claims_every_endpoint_works_for_serie_a": true,
+    "past_seasons_claimed": 96,
+    "current_season_fixture_endpoint_documented": true,
+    "actual_2026_27_match_statistics_coverage_verified": false,
+    "completed_match_detail_retrieval_semantics_documented": false
+  },
+  "documented_source_schema": {
+    "match_score_available": true,
+    "match_date_and_kickoff_available": true,
+    "team_points_derivable_from_match_results": true,
+    "live_match_details_stats_documented": [
+      "possession",
+      "shots",
+      "shots_on_target",
+      "corners"
+    ],
+    "event_types_documented": [
+      "goal",
+      "own_goal",
+      "yellow_card",
+      "red_card",
+      "substitution"
+    ],
+    "second_yellow_flag_may_be_present": true,
+    "yellow_red_card_counting_semantics_confirmed": false,
+    "per_match_last_updated_field_present": true,
+    "stale_flag_present": true,
+    "last_updated_is_upstream_source_observation_time_confirmed": false,
+    "per_field_source_observed_at_documented": false,
+    "upstream_correction_history_documented": false,
+    "immutable_source_release_identity_documented": false,
+    "raw_response_sha256_not_supplied_by_provider": true,
+    "local_capture_sha256_can_be_recorded_after_authorized_retrieval": true,
+    "source_before_quote_proof_available_before_capture": false,
+    "api_key_passed_in_query_parameter": true
+  },
+  "original_v2_feature_contract": {
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "required_feature_count": 19,
+    "feature_order": [
+      "diff_points_5",
+      "diff_points_10",
+      "diff_points_venue5",
+      "diff_goals_for_5",
+      "diff_goals_for_10",
+      "diff_goals_against_5",
+      "diff_goals_against_10",
+      "diff_corners_for_5",
+      "diff_corners_for_10",
+      "diff_corners_against_5",
+      "diff_corners_against_10",
+      "diff_yellow_5",
+      "diff_yellow_10",
+      "diff_red_5",
+      "diff_red_10",
+      "diff_goals_for_venue5",
+      "diff_goals_against_venue5",
+      "diff_corners_for_venue5",
+      "diff_corners_against_venue5"
+    ],
+    "schema_families_potentially_mappable": [
+      "points",
+      "goals_for",
+      "goals_against",
+      "corners_for",
+      "corners_against",
+      "yellow_cards",
+      "red_cards"
+    ],
+    "fully_verified_features": 0,
+    "unresolved_contract_items": [
+      "availability of live_match_details for already completed fixtures",
+      "current-season Serie A completeness for all required match-stat fields",
+      "yellow-card versus second-yellow/red-card counting parity",
+      "upstream observation and correction timestamps",
+      "provider and upstream rights for model feature construction and inference",
+      "private raw-response retention and source-before-quote archive controls"
+    ]
+  },
+  "gates": {
+    "written_upstream_rights_confirmed": false,
+    "model_training_permission_confirmed": false,
+    "internal_feature_inference_permission_confirmed": false,
+    "private_raw_retention_permission_confirmed": false,
+    "current_season_serie_a_statistics_completeness_confirmed": false,
+    "completed_match_detail_access_confirmed": false,
+    "card_semantics_confirmed": false,
+    "source_observation_timestamp_confirmed": false,
+    "private_archive_verified": false,
+    "source_before_quote_protocol_verified": false,
+    "live_ingestion_authorized": false,
+    "live_inference_authorized": false,
+    "target_outcome_access_authorized": false,
+    "paid_plan_authorized": false
+  },
+  "approval_status": "HOLD",
+  "reason": "Official documentation makes Live Football API a plausible low-cost Serie A candidate: 500 one-time free credits, a Serie A 2026/27 page, fixture/results endpoints, corners in match statistics, and yellow/red card event types. Terms permit use in own applications and redistribution to end users, but they do not expressly resolve internal ML feature/inference use, private raw retention, or upstream field rights. The live_match_details endpoint is described as real-time; access to complete post-match details for historical fixtures is not established. Its last_updated/stale fields do not establish upstream source-observation or correction time. No source-before-quote proof or complete 19-feature parity is available. Do not create an account, use credits, download data, infer, or evaluate until written clarification and a bounded source-only test are separately authorized.",
+  "reviewed_activity": {
+    "account_created": false,
+    "api_key_created": false,
+    "api_requests": 0,
+    "free_credits_spent": 0,
+    "paid_requests": 0,
+    "data_downloads": 0,
+    "supabase_access": false,
+    "quotes_read": false,
+    "target_outcomes_read": false,
+    "model_inference": false
+  }
+}

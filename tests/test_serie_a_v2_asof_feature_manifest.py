@@ -249,3 +249,51 @@ def test_online_manifest_matches_original_builder_after_frozen_30_match_truncati
         else:
             assert actual == pytest.approx(float(expected), abs=1e-12)
 
+
+
+def test_live_football_api_source_audit_fails_closed_and_preserves_original_v2_contract():
+    """Provider documentation audit only; no API access or model execution."""
+    import json
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    rights = json.loads(
+        (root / "research" / "source_rights" / "live_football_api.json").read_text(encoding="utf-8")
+    )
+    candidate = json.loads(
+        (root / "research" / "models" / "market_anchor_v2_serie_a_frozen_candidate.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert rights["schema_version"] == "LIVE_FOOTBALL_API_ORIGINAL_V2_SOURCE_RIGHTS_V1"
+    assert rights["provider"] == "Live Football API"
+    assert rights["approval_status"] == "HOLD"
+    contract = rights["original_v2_feature_contract"]
+    assert contract["candidate_sha256"] == candidate["artifact_sha256"]
+    assert contract["feature_order"] == candidate["features"]
+    assert contract["required_feature_count"] == 19
+    assert contract["fully_verified_features"] == 0
+    assert rights["free_plan"]["free_credits_on_new_account"] == 500
+    assert rights["free_plan"]["recurring_free_allowance"] is False
+    assert rights["free_plan"]["paid_plan_authorized"] is False
+    assert rights["documented_serie_a_scope"]["league_page_identifies_serie_a_2026_2027"] is True
+    assert rights["documented_serie_a_scope"]["actual_2026_27_match_statistics_coverage_verified"] is False
+    assert rights["documented_source_schema"]["per_match_last_updated_field_present"] is True
+    assert rights["documented_source_schema"]["last_updated_is_upstream_source_observation_time_confirmed"] is False
+    assert rights["documented_source_schema"]["yellow_red_card_counting_semantics_confirmed"] is False
+    assert rights["documented_use_and_rights"]["terms_permit_resale_or_redistribution_to_end_users"] is True
+    assert rights["documented_use_and_rights"]["explicit_model_training_permission_confirmed"] is False
+    assert rights["documented_use_and_rights"]["explicit_internal_feature_inference_permission_confirmed"] is False
+    assert rights["documented_use_and_rights"]["explicit_private_raw_response_retention_permission_confirmed"] is False
+    assert rights["documented_use_and_rights"]["upstream_data_provider_and_field_rights_identified"] is False
+    assert all(value is False for value in rights["gates"].values())
+    activity = rights["reviewed_activity"]
+    assert activity["api_requests"] == 0
+    assert activity["free_credits_spent"] == 0
+    assert activity["paid_requests"] == 0
+    assert activity["data_downloads"] == 0
+    assert activity["supabase_access"] is False
+    assert activity["quotes_read"] is False
+    assert activity["target_outcomes_read"] is False
+    assert activity["model_inference"] is False
