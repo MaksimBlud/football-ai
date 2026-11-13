@@ -1,3 +1,61 @@
+## 2026-11-13 08:56 UTC — Original MARKET_ANCHOR_1X2_V2: fresh runtime, rights and pre-match audit
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This entry is based on a fresh read of main, the original V2 workflow YAMLs, exact GitHub Actions run/job logs, open V2 PR metadata/CI, and read-only Supabase pre-match aggregates. No target-outcome/result columns were selected.
+
+### Frozen original candidate — unchanged
+
+- Candidate SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Original feature builder Git blob: `401b3a0893371bfa4a488ec92a4a54af2678c8f7`.
+- 19 ordered football features; 20x2 weight matrix; 3,799 training rows.
+- Training fingerprint: `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`.
+- Training cutoff: `2026-06-30T23:59:59+00:00`.
+- `active_lambda=0` (market anchor); `shadow_lambda=1` (research only).
+- Stability gate remains FAILED; NO_BET; automatic promotion disabled.
+- No old XGBoost production model restored; no candidate, weights, scaler, imputer or production `.pkl` changed.
+
+### Latest real main-branch V2 runtime
+
+All four runs below executed on main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc` on 2026-11-12:
+
+- Current-form source capture [run 43232728352](https://github.com/MaksimBlud/football-ai/actions/runs/43232728352), 14:00:16–14:01:09 UTC: 19 tests passed; metadata-only feature-input gate 110 completed fixture identities; 10 old-season CSVs + one current-season CSV; 3,910 historical rows. Artifact 13951945358, 439,426 bytes, SHA-256 `e7bb6e90466c278882225766424b17c229cab46da35dd80a4418e627c8ccb1e8`. Log reports zero paid calls, zero Supabase writes, target outcomes not scored. The 110-identity feature-input gate is NOT the separate evaluation gate.
+- Free real-quote diagnostic [run 43243852372](https://github.com/MaksimBlud/football-ai/actions/runs/43243852372), 15:04:34–15:05:27 UTC: 53 tests passed; mode `RESEARCH_ONLY_UNVERIFIED_PROVENANCE_NO_BET`; zero paid provider requests and zero Supabase writes. Artifact 13954739310, SHA-256 `b81100b497ce689aa339da25853999c2ffe306eb7fc3541fc0fb22f2c4ccbb95`. This is not an eligible forecast.
+- Original old-season forward [run 43261918181](https://github.com/MaksimBlud/football-ai/actions/runs/43261918181), 16:44:19–16:45:02 UTC: 71 tests passed; source ZIP attestation succeeded; `quotes_seen=0`, `future_quotes_checked=0`, `forecasts_created=0`, `v2_diagnostic_previews_captured=0`. Artifact 13963024080, SHA-256 `f7cd7ec7d7b20138dbfad18d510464026308e1a5d89e530b801a6bcfd01c56b2`.
+- Current-form forward [run 43262798305](https://github.com/MaksimBlud/football-ai/actions/runs/43262798305), 16:49:11–16:49:56 UTC: 53 tests passed; verified source artifact 13951945358 and successful parent run 43232728352; source archive SHA matched; `quotes_seen=0`, `v2_current_form_shadow_captured=0`, no target outcomes read/scored. Artifact 13963944149, SHA-256 `469e665853c5f4a81774641fbb7f41b3d1961df91a75cb2f9a767e280ac4867c`.
+
+As of 2026-11-13 08:56 UTC, no new main-branch source/forward/diagnostic V2 run is visible after 2026-11-12 16:49:56 UTC. The 2026-11-13 scheduled windows (05:50 source capture, 06:13 free diagnostic, 08:08 original forward, 08:18 current-form forward) have no corresponding run in the latest Actions history. The reason is unresolved; do not claim a workflow failure or a successful capture. Main still contains the live workflows and the hold is not active.
+
+### Strict pre-match Supabase inventory (read-only)
+
+- `public.odds_snapshots`, Serie A: 620 rows with `snapshot_time_utc < commence_time_utc`, 63 unique events.
+- Latest strict pre-match snapshot: 2026-10-13 14:48:53.042620 UTC.
+- Zero saved strict pre-match rows for future kickoffs at audit time.
+- `public.product_prediction_snapshots`: zero pre-kickoff Serie A rows and zero unique events with the exact original V2 candidate SHA.
+- No score/result/outcome columns were queried. The 30-primary-completed-event target-outcome gate remains CLOSED.
+
+### Live-access, privacy and HUMAN-MERGE state
+
+- Main branch reports `protected=false`; no branch settings were changed.
+- The trusted-main Safe Engineering Agent Auto-Merge workflow is explicitly restricted to same-repository `github-actions[bot]` engineering-relay drafts with exact six-check eligibility and a bounded allowlist. The V2 PRs below are not eligible under that contract; keep HUMAN-MERGE.
+- PR #781 remains OPEN, non-draft, mergeable; exact head `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`, 43 ahead / 0 behind main, 8/8 exact-head workflows SUCCESS. Frozen V2 suite: 103 passed; recovery job succeeded while rebuild/proof/archive steps were SKIPPED; production `.pkl` guard passed. Its seven-file diff gates all five live source/quote steps and all associated `always()` artifact uploads in the four V2 live workflows plus recovery. It preserves the four existing cron strings. This hold is not active until manually merged.
+- PR #796 remains OPEN, non-draft, mergeable; exact head `e69ad9c2700b999ef186e4771a2fe06fd010155d`, 5 ahead / 0 behind, 7/7 exact-head CI SUCCESS. It consolidates #795 and atomically stages all 10 historical CSVs + current-season CSV + manifest before publication. Do not merge #795 separately. Merge only after #781, because #796 touches the live source workflow path.
+- PR #787 remains Draft on the rights stack; exact head `272a0dc2d6a97fedc7964e8cc2614ba670220fae`.
+- PR #793 remains Draft on #787; exact head `a7eeb519d967a05bc528c878b0a8fc458cfbe016`; 2/2 exact-head workflows SUCCESS. Evaluator validation: 196 passed; frozen V2 shadow tests: 440 passed on Python 3.11 and 440 on Python 3.12. Synthetic/offline only; no live forecasts or quality claim.
+- PR #800 remains Draft, exact head `9a2921004c6775d2bc85a473d06d05bd6e142d8b`, 7/7 exact-head CI SUCCESS; offline 5Dollar adapter only, rights/private-storage/plan scope remains HOLD.
+- PR #794 Big Balls, #798 Stats API, #802 Footballdata.io, #803 SportAPI and #804 Live Football API remain research audits with unresolved rights, completeness, freshness/provenance or private-retention blockers. No provider account/key/API call or data download is authorized.
+
+### Next safe order
+
+1. Owner manually merges #781 at the exact verified head; then re-read fresh main and all four V2 live workflows before any further source/quote access.
+2. Revalidate #796 on the resulting main and consider its exact-head merge; do not merge #795 separately.
+3. Continue the #720 → #727 → #780 → #783–#787 rights/private-storage/direct-entrypoint dependency chain in ancestry order; #793 remains downstream of #787.
+4. Resolve one free source's upstream rights and private-retention permission before any ingestion. Do not treat local SHA/time as a licence grant.
+5. Only after an authorized pre-quote source archive and a genuinely new pre-kickoff quote, run the unchanged original V2 shadow. Do not read protected 2026/27 target outcomes until 30 eligible unique completed primary-cohort forecasts.
+6. Then compare de-vigged market vs V2 shadow using preregistered multiclass Brier/LogLoss and paired uncertainty; no superiority claim before that evidence.
+
+No main update, PR merge, Supabase write/DDL, paid provider request, target-outcome read, production artifact change, schedule change or other-agent setting change was performed in this audit.
+
+---
+
 ## 2026-11-12 17:56 UTC — Original MARKET_ANCHOR_1X2_V2: latest runtime and pre-match audit
 
 Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Main still lacks the default-deny workflow hold; all four scheduled live V2 workflows and the recovery workflow remain unheld. No schedule or workflow was changed in this iteration.
