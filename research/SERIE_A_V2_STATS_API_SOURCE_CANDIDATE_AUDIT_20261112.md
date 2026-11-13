@@ -2,7 +2,7 @@
 
 **Audit date:** 2026-11-12  
 **Scope:** official public product, coverage, documentation, provenance and FAQ pages only. No account, key, API request, dataset download, Supabase access, quote read, feature build, inference, or target-outcome analysis.  
-**Decision:** `CONDITIONAL_CANDIDATE_NOT_APPROVED`; not a current-form source at this time.
+**Decision:** `HOLD — NOT APPROVED`; not a current-form source at this time.
 
 ## 1. Summary
 
@@ -90,3 +90,22 @@ Next admissible step: obtain written confirmation of source rights, current-seas
    Linked from the official FAQ, but the page timed out during this audit. No licence conclusion is inferred from an inaccessible page.
 
 No match page, season results file, current-season fixture result, or API response was opened to verify actual Serie A rows. The audit is based on public product/coverage/schema/policy metadata only.
+
+
+## 9. Official product-scope contradiction — 2026-11-13 recheck
+
+A further review of the provider's own buyer guide found a material contradiction that must be resolved before this candidate can be reconsidered:
+
+- The official product/coverage/docs pages describe match-statistics endpoints and say corners/cards are available where covered.
+- The provider's own *Best Football Stats API 2026* guide, published 2026-08-31 and reviewed 2026-10-11, says the current beta uses OpenFootball football.json under CC0 and normalizes historical fixtures/results; it explicitly says the current beta does not provide a licensed live-score feed, incidents, odds, xG, players, lineups or injuries.
+- The guide does not reconcile this narrower current-beta description with the separate match-statistics claims. No authenticated current-season Serie A coverage response or match payload was retrieved to resolve the discrepancy.
+- The public home/authentication copy currently states a one-time 200-request allowance, while an indexed pricing-page version has stated 500. This is another reason not to plan a fixed request budget from cached marketing copy.
+
+The source-before-quote requirement is also still unmet: the OpenFootball historical bootstrap has `source_updated_at=null` and `freshness_guaranteed=false`; Stats API ingestion/retrieval timestamps and a local capture SHA prove when Stats API or this project retrieved bytes, not when the upstream football fact was first observed or corrected.
+
+**Binding disposition:** HOLD. Do not create an account/key, spend the one-time free allowance, download data, build features, or infer. Reconsider only after the provider supplies (a) written terms covering private retention and internal model feature/inference use, (b) a single authoritative statement of currently enabled match-statistics capabilities, (c) actual 2026/27 Serie A coverage for every required frozen field, and (d) source-observation/correction provenance or an explicitly approved substitute for each field.
+
+Additional official reference reviewed:
+- Stats API, *Choosing a Football Stats API in 2026: An Agent-First Buyer's Guide* — https://stats-api.com/blog/best-football-stats-api-2026-agent-first-guide (published 2026-08-31; reviewed 2026-10-11).
+
+No API request, account creation, key creation, dataset download, Supabase access, quote read, feature calculation, inference, or target-outcome access was performed during this recheck.
