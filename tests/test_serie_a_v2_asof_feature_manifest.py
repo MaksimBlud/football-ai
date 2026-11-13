@@ -249,3 +249,43 @@ def test_online_manifest_matches_original_builder_after_frozen_30_match_truncati
         else:
             assert actual == pytest.approx(float(expected), abs=1e-12)
 
+
+
+def test_sportapi_source_rights_audit_fails_closed_and_preserves_frozen_v2_contract():
+    """Documentation-only source gate: no provider calls or model changes."""
+    import json
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    rights = json.loads(
+        (root / "research" / "source_rights" / "sportapi.json").read_text(encoding="utf-8")
+    )
+    candidate = json.loads(
+        (root / "research" / "models" / "market_anchor_v2_serie_a_frozen_candidate.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert rights["schema_version"] == "SPORTAPI_ORIGINAL_V2_SOURCE_RIGHTS_V1"
+    assert rights["provider"] == "SportAPI"
+    assert rights["approval_status"] == "HOLD"
+    assert rights["original_v2_feature_contract"]["candidate_sha256"] == candidate["artifact_sha256"]
+    assert rights["original_v2_feature_contract"]["feature_order"] == candidate["features"]
+    assert rights["original_v2_feature_contract"]["required_feature_count"] == 19
+    unsupported = rights["original_v2_feature_contract"]["unsupported_original_features"]
+    assert len(unsupported) == 6
+    assert set(unsupported).issubset(set(candidate["features"]))
+    assert rights["documented_source_schema"]["corner_statistics_documented_in_openapi"] is False
+    assert rights["documented_source_schema"]["per_field_source_observed_at_documented"] is False
+    assert rights["documented_source_schema"]["per_field_correction_history_documented"] is False
+    assert rights["documented_use_and_rights"]["provider_analysis_use_permitted"] is True
+    assert rights["documented_use_and_rights"]["raw_redistribution_as_competing_feed_or_api_permitted"] is False
+    assert rights["documented_use_and_rights"]["model_training_permission_confirmed"] is False
+    assert rights["documented_use_and_rights"]["private_raw_retention_permission_confirmed"] is False
+    assert rights["documented_use_and_rights"]["upstream_rights_confirmed"] is False
+    assert all(value is False for value in rights["gates"].values())
+    assert rights["reviewed_activity"]["api_requests"] == 0
+    assert rights["reviewed_activity"]["data_downloads"] == 0
+    assert rights["reviewed_activity"]["supabase_access"] is False
+    assert rights["reviewed_activity"]["target_outcomes_read"] is False
+    assert rights["reviewed_activity"]["model_inference"] is False
