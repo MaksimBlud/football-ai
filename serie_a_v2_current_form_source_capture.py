@@ -30,6 +30,7 @@ from market_anchor_v2_source_capture_rights import (
     write_source_capture_scope_blocked_report,
 )
 from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
+from serie_a_v2_public_source_download_budget import require_current_download_reservation
 
 REPOSITORY = "MaksimBlud/football-ai"
 WORKFLOW_PATH = ".github/workflows/serie-a-v2-current-form-source-capture.yml"
@@ -137,6 +138,10 @@ def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
     """Read only event date/team metadata; no goals, result or settlement columns."""
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("feature-source gate clock must have a real UTC offset")
+    # Public metadata readers are importable independently of the capture CLI.
+    # Enforce source-only rights and private storage before Supabase access.
+    require_personal_research_source_capture_scope()
+    require_private_repository_for_source_artifacts()
     cutoff = now.astimezone(timezone.utc).date().isoformat()
     rows: list[dict[str, Any]] = []
     start = 0
@@ -190,6 +195,9 @@ def read_completed_primary_event_identities(
     """Read only date/team metadata and return canonical identities for source parity."""
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("feature-source gate clock must have an explicit UTC offset")
+    # Direct imports must not bypass the private source-only scope.
+    require_personal_research_source_capture_scope()
+    require_private_repository_for_source_artifacts()
     cutoff_date = now.astimezone(timezone.utc).date()
     cutoff = cutoff_date.isoformat()
     rows: list[dict[str, Any]] = []
@@ -423,6 +431,12 @@ def capture_source_archive(
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("source capture clock must have a real UTC offset")
     at = now.astimezone(timezone.utc)
+    # This importable API must enforce the same source-only, private-storage,
+    # and shared-session budget gates as the scheduled workflow before any
+    # candidate read, Supabase metadata, provider request, or output I/O.
+    source_scope = require_personal_research_source_capture_scope()
+    storage_scope = require_private_repository_for_source_artifacts()
+    require_current_download_reservation(workflow_path=WORKFLOW_PATH)
     # Authenticate the frozen candidate and exact source URL before any metadata read,
     # network request, or filesystem output. The manifest must attest the verified artifact.
     candidate = load_verified_original()
@@ -438,7 +452,7 @@ def capture_source_archive(
             "no current-season source request was made"
         )
     output_dir.mkdir(parents=True, exist_ok=True)
-    old_history, old_audit = history_fetch(get=get, capture_dir=output_dir)
+    old_history, old_audit = history_fetch(get=get, capture_dir=output_dir, budget_workflow_path=WORKFLOW_PATH)
     if old_history.empty or len(old_audit) != len(_source_codes()):
         raise ValueError("original frozen historical source archive incomplete")
     response = get(
@@ -503,6 +517,11 @@ def capture_source_archive(
         "experiment_id": "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY",
         "mode": "RESEARCH_ONLY_CURRENT_FORM_SOURCE_ARCHIVE",
         "source_capture_scope": SOURCE_CAPTURE_SCOPE,
+        "source_rights_manifest_sha256": source_scope["rights_manifest_sha256"],
+        "source_policy_url": source_scope["policy_url"],
+        "source_policy_checked_at_utc": source_scope["policy_checked_at_utc"],
+        "source_policy_page_updated_date": source_scope["policy_page_updated_date"],
+        "source_artifact_storage_policy": storage_scope["storage_policy"],
         "source_capture_only": True,
         "research_inference_permitted": False,
         "provider_issued_ai_inference_license": False,

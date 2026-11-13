@@ -212,6 +212,98 @@ def discover_latest_download_attempt(
     return created
 
 
+
+def require_current_download_reservation(
+    *,
+    workflow_path: str,
+    now: datetime | None = None,
+    get: Callable[..., Any] = requests.get,
+) -> datetime:
+    """Require an authenticated marker reserved by this exact main workflow run.
+
+    Workflow-level preflight is necessary but not sufficient: importable
+    download helpers must independently prove that the current run uploaded
+    its own shared-budget marker before any public CSV request or output I/O.
+    """
+    if workflow_path not in ALLOWED_WORKFLOW_PATHS:
+        raise ValueError("workflow path is not allowed to reserve the public-source budget")
+    if os.environ.get("GITHUB_REPOSITORY") != REPOSITORY:
+        raise RuntimeError("public-source download requires the original GitHub repository")
+    if os.environ.get("GITHUB_REF") != "refs/heads/main":
+        raise RuntimeError("public-source download requires the main branch")
+    token = os.environ.get("GITHUB_TOKEN", "")
+    run_id_text = os.environ.get("GITHUB_RUN_ID", "")
+    head_sha = os.environ.get("GITHUB_SHA", "")
+    if not isinstance(token, str) or not token.strip():
+        raise RuntimeError("public-source download requires a GitHub actions:read token")
+    if not isinstance(run_id_text, str) or not run_id_text.isascii() or not run_id_text.isdecimal():
+        raise RuntimeError("public-source download requires a valid current GitHub run id")
+    run_id = int(run_id_text)
+    if run_id <= 0 or not isinstance(head_sha, str) or SHA1_RE.fullmatch(head_sha) is None:
+        raise RuntimeError("public-source download requires the exact current GitHub run SHA")
+
+    captured = now or datetime.now(timezone.utc)
+    if not isinstance(captured, datetime) or captured.tzinfo is None or captured.utcoffset() is None:
+        raise ValueError("current public-source reservation clock must have a real UTC offset")
+    captured = captured.astimezone(timezone.utc)
+
+    matches: list[datetime] = []
+    page_size = 100
+    max_pages = 3
+    for page in range(1, max_pages + 1):
+        url = (
+            f"{GITHUB_API}/actions/artifacts?name={MARKER_ARTIFACT_NAME}"
+            f"&per_page={page_size}&page={page}"
+        )
+        payload = _api_json(url, token=token, get=get)
+        artifacts = payload.get("artifacts")
+        if not isinstance(artifacts, list):
+            raise ValueError("current-run budget marker listing lacks an artifacts array")
+        for artifact in artifacts:
+            if not isinstance(artifact, Mapping):
+                raise ValueError("current-run budget marker listing contains a malformed item")
+            if artifact.get("name") != MARKER_ARTIFACT_NAME or artifact.get("expired") is True:
+                continue
+            flow = artifact.get("workflow_run")
+            if not isinstance(flow, Mapping):
+                raise ValueError("current-run budget marker lacks its GitHub workflow parent")
+            if flow.get("id") != run_id:
+                continue
+            if flow.get("head_branch") != "main" or flow.get("head_sha") != head_sha:
+                raise ValueError("current-run budget marker has the wrong branch or commit SHA")
+            created = parse_utc(artifact.get("created_at"), field="current-run marker created_at")
+            if created > captured:
+                raise ValueError("current-run budget marker is later than the actual download clock")
+            matches.append(created)
+        if len(artifacts) < page_size:
+            break
+        if page == max_pages:
+            raise ValueError("current-run budget marker pagination exceeded its safety bound")
+
+    if len(matches) != 1:
+        raise RuntimeError("current workflow run must have exactly one uploaded public-source budget marker")
+
+    marker_created = matches[0]
+    run = _api_json(f"{GITHUB_API}/actions/runs/{run_id}", token=token, get=get)
+    if (
+        run.get("id") != run_id
+        or run.get("path") != workflow_path
+        or run.get("head_branch") != "main"
+        or run.get("head_sha") != head_sha
+        or run.get("event") not in ALLOWED_EVENTS
+        or run.get("status") not in {"in_progress", "completed"}
+    ):
+        raise ValueError("current public-source budget marker parent is not the exact approved main workflow")
+    run_created = parse_utc(run.get("created_at"), field="current source workflow created_at")
+    if marker_created < run_created:
+        raise ValueError("current public-source budget marker predates its workflow run")
+    if run.get("status") == "completed":
+        run_completed = parse_utc(run.get("updated_at"), field="current source workflow updated_at")
+        if marker_created > run_completed:
+            raise ValueError("current public-source budget marker postdates its completed workflow")
+    return marker_created
+
+
 def decide_download_permission(
     *, now: datetime, latest_attempt_at: datetime | None
 ) -> tuple[bool, datetime | None]:

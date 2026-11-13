@@ -4,6 +4,7 @@ from datetime import datetime, timezone, tzinfo
 import pandas as pd
 import pytest
 import serie_a_v2_live_diagnostic_report as report_module
+import serie_a_v2_public_source_download_budget as budget
 
 from serie_a_v2_live_diagnostic_report import (
     PUBLIC_BASE, _source_codes, fetch_public_history, make_report,
@@ -47,6 +48,152 @@ def source_audit(observed_at="2026-10-13T15:00:00Z"):
         "csv_sha256": "f" * 64,
         "completed_source_rows": 3,
     } for code in _source_codes()]
+
+
+@pytest.fixture(autouse=True)
+def allow_synthetic_v2_rights_for_offline_tests(monkeypatch):
+    """Synthetic fixtures model source-only archival, budget, and inference separately."""
+    import market_anchor_v2_source_rights as inference_rights
+    import market_anchor_v2_source_capture_rights as source_rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    monkeypatch.setattr(
+        inference_rights,
+        "require_personal_research_inference_scope",
+        lambda: {"rights_manifest_sha256": "a" * 64},
+    )
+    monkeypatch.setattr(
+        source_rights,
+        "require_personal_research_source_capture_scope",
+        lambda: {"source_capture_scope": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: {"private": True, "storage_policy": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(
+        budget,
+        "require_current_download_reservation",
+        lambda **_kwargs: datetime(2026, 10, 13, 15, 0, tzinfo=timezone.utc),
+    )
+
+
+def test_direct_public_history_fetch_enforces_source_only_rights_before_storage_or_network(monkeypatch, tmp_path):
+    import market_anchor_v2_source_rights as inference_rights
+    import market_anchor_v2_source_capture_rights as source_rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    calls = []
+
+    def deny_source_only():
+        calls.append("source_only_rights")
+        raise PermissionError("source-only scope remains unresolved")
+
+    monkeypatch.setattr(source_rights, "require_personal_research_source_capture_scope", deny_source_only)
+    monkeypatch.setattr(
+        inference_rights,
+        "require_personal_research_inference_scope",
+        lambda: pytest.fail("source-only archival must not require frozen-inference rights"),
+    )
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: pytest.fail("privacy lookup must not run after source-only rights denial"),
+    )
+    monkeypatch.setattr(
+        budget,
+        "require_current_download_reservation",
+        lambda **_kwargs: pytest.fail("budget lookup must not run after source-only rights denial"),
+    )
+
+    def forbidden_get(*_args, **_kwargs):
+        pytest.fail("historical source HTTP must not run before source-only rights")
+
+    archive_dir = tmp_path / "source-archive"
+    with pytest.raises(PermissionError, match="source-only scope remains unresolved"):
+        fetch_public_history(get=forbidden_get, capture_dir=archive_dir)
+
+    assert calls == ["source_only_rights"]
+    assert not archive_dir.exists()
+
+
+def test_direct_public_history_fetch_enforces_private_storage_after_source_only_rights_before_network(monkeypatch, tmp_path):
+    import market_anchor_v2_source_rights as inference_rights
+    import market_anchor_v2_source_capture_rights as source_rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    calls = []
+
+    def allow_source_only():
+        calls.append("source_only_rights")
+        return {"source_capture_scope": "SYNTHETIC_TEST_ONLY"}
+
+    def deny_private_storage():
+        calls.append("private_storage")
+        raise PermissionError("private repository required")
+
+    monkeypatch.setattr(source_rights, "require_personal_research_source_capture_scope", allow_source_only)
+    monkeypatch.setattr(
+        inference_rights,
+        "require_personal_research_inference_scope",
+        lambda: pytest.fail("source-only archival must not require frozen-inference rights"),
+    )
+    monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", deny_private_storage)
+    monkeypatch.setattr(
+        budget,
+        "require_current_download_reservation",
+        lambda **_kwargs: pytest.fail("budget lookup must not run after private-storage denial"),
+    )
+
+    def forbidden_get(*_args, **_kwargs):
+        pytest.fail("historical source HTTP must not run when private storage is unverified")
+
+    archive_dir = tmp_path / "source-archive"
+    with pytest.raises(PermissionError, match="private repository required"):
+        fetch_public_history(get=forbidden_get, capture_dir=archive_dir)
+
+    assert calls == ["source_only_rights", "private_storage"]
+    assert not archive_dir.exists()
+
+
+
+def test_direct_public_history_fetch_requires_current_budget_marker_before_http(monkeypatch, tmp_path):
+    import market_anchor_v2_source_capture_rights as source_rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    calls = []
+
+    def allow_source_only():
+        calls.append("source_only_rights")
+        return {"source_capture_scope": "SYNTHETIC_TEST_ONLY"}
+
+    def allow_private_storage():
+        calls.append("private_storage")
+        return {"private": True, "storage_policy": "SYNTHETIC_TEST_ONLY"}
+
+    def deny_budget(**kwargs):
+        calls.append(("budget", kwargs.get("workflow_path")))
+        raise RuntimeError("current workflow has no reserved public-source budget marker")
+
+    monkeypatch.setattr(source_rights, "require_personal_research_source_capture_scope", allow_source_only)
+    monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", allow_private_storage)
+    monkeypatch.setattr(budget, "require_current_download_reservation", deny_budget)
+
+    def forbidden_get(*_args, **_kwargs):
+        pytest.fail("historical source HTTP must not run without this run's budget marker")
+
+    archive_dir = tmp_path / "source-archive"
+    with pytest.raises(RuntimeError, match="no reserved public-source budget marker"):
+        fetch_public_history(get=forbidden_get, capture_dir=archive_dir)
+
+    assert calls == [
+        "source_only_rights",
+        "private_storage",
+        ("budget", report_module.SOURCE_WORKFLOW_PATH),
+    ]
+    assert not archive_dir.exists()
+
 
 
 def test_historical_source_rejects_oversized_content_length_before_body_read(tmp_path):

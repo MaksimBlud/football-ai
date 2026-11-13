@@ -26,6 +26,7 @@ from serie_a_v2_frozen_shadow_preview import (
 )
 from market_anchor_v2_source_rights import require_personal_research_inference_scope, write_research_scope_blocked_report
 
+SOURCE_WORKFLOW_PATH = ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
 PUBLIC_BASE = "https://www.football-data.co.uk/mmz4281"
 PAID_PROVIDER_REQUESTS = 0
 MAX_PUBLIC_SOURCE_FILES = len(SERIE_A_RUNTIME_CONFIG.historical_source.season_codes)
@@ -142,8 +143,19 @@ def _read_bounded_historical_csv_response(
                 pass
 
 
-def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -> tuple[pd.DataFrame, list[dict]]:
+def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None, budget_workflow_path: str = SOURCE_WORKFLOW_PATH) -> tuple[pd.DataFrame, list[dict]]:
     """Explicit, bounded configured public URLs; never odds API, never cache guess."""
+    # This helper can be imported without going through main(). Enforce
+    # source-only rights, private storage, and the exact current-run budget
+    # reservation before directory creation or any public HTTP request.
+    from market_anchor_v2_source_capture_rights import require_personal_research_source_capture_scope
+    from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
+    from serie_a_v2_public_source_download_budget import require_current_download_reservation
+
+    require_personal_research_source_capture_scope()
+    require_private_repository_for_source_artifacts()
+    require_current_download_reservation(workflow_path=budget_workflow_path)
+
     all_frames = []
     audit = []
     total_source_bytes = 0

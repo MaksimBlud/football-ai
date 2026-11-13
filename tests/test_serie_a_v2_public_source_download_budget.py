@@ -578,3 +578,122 @@ def test_fresh_source_refresh_skips_budget_reservation_and_public_download():
     assert "steps.source_refresh.outputs.capture != 'false'" in source
     assert "steps.public_source_budget.outputs.allowed == 'true'" in source
     assert "steps.upload_public_source_budget.outcome == 'success'" in source
+
+def _set_current_run_budget_environment(monkeypatch):
+    monkeypatch.setenv("GITHUB_REPOSITORY", budget.REPOSITORY)
+    monkeypatch.setenv("GITHUB_REF", "refs/heads/main")
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    monkeypatch.setenv("GITHUB_RUN_ID", "123")
+    monkeypatch.setenv("GITHUB_SHA", SHA)
+
+
+def test_current_download_reservation_authenticates_exact_run_marker_and_workflow(monkeypatch):
+    _set_current_run_budget_environment(monkeypatch)
+    now = datetime(2026, 11, 10, 1, 21, tzinfo=UTC)
+    artifact_url = (
+        f"{budget.GITHUB_API}/actions/artifacts?name={budget.MARKER_ARTIFACT_NAME}"
+        "&per_page=100&page=1"
+    )
+    run_url = f"{budget.GITHUB_API}/actions/runs/123"
+    artifact = {
+        "name": budget.MARKER_ARTIFACT_NAME,
+        "expired": False,
+        "created_at": "2026-11-10T01:20:00Z",
+        "workflow_run": {"id": 123, "head_branch": "main", "head_sha": SHA},
+    }
+    run = {
+        "id": 123,
+        "path": DIAGNOSTIC_PATH,
+        "head_branch": "main",
+        "head_sha": SHA,
+        "event": "schedule",
+        "status": "in_progress",
+        "created_at": "2026-11-10T01:19:00Z",
+        "updated_at": "2026-11-10T01:20:30Z",
+    }
+    calls = []
+
+    def get(url, **_kwargs):
+        calls.append(url)
+        if url == artifact_url:
+            return FakeResponse(url, {"total_count": 1, "artifacts": [artifact]})
+        if url == run_url:
+            return FakeResponse(url, run)
+        pytest.fail("unexpected GitHub API URL")
+
+    observed = budget.require_current_download_reservation(
+        workflow_path=DIAGNOSTIC_PATH, now=now, get=get
+    )
+    assert observed == datetime(2026, 11, 10, 1, 20, tzinfo=UTC)
+    assert calls == [artifact_url, run_url]
+
+
+def test_current_download_reservation_fails_closed_without_this_runs_marker(monkeypatch):
+    _set_current_run_budget_environment(monkeypatch)
+    artifact_url = (
+        f"{budget.GITHUB_API}/actions/artifacts?name={budget.MARKER_ARTIFACT_NAME}"
+        "&per_page=100&page=1"
+    )
+    calls = []
+
+    def get(url, **_kwargs):
+        calls.append(url)
+        return FakeResponse(url, {"total_count": 0, "artifacts": []})
+
+    with pytest.raises(RuntimeError, match="exactly one uploaded public-source budget marker"):
+        budget.require_current_download_reservation(
+            workflow_path=DIAGNOSTIC_PATH,
+            now=datetime(2026, 11, 10, 1, 21, tzinfo=UTC),
+            get=get,
+        )
+    assert calls == [artifact_url]
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    ["wrong_workflow", "wrong_sha", "wrong_branch", "marker_future"],
+)
+def test_current_download_reservation_rejects_mismatched_current_run_evidence(monkeypatch, mutation):
+    _set_current_run_budget_environment(monkeypatch)
+    now = datetime(2026, 11, 10, 1, 21, tzinfo=UTC)
+    artifact_url = (
+        f"{budget.GITHUB_API}/actions/artifacts?name={budget.MARKER_ARTIFACT_NAME}"
+        "&per_page=100&page=1"
+    )
+    run_url = f"{budget.GITHUB_API}/actions/runs/123"
+    artifact = {
+        "name": budget.MARKER_ARTIFACT_NAME,
+        "expired": False,
+        "created_at": "2026-11-10T01:20:00Z",
+        "workflow_run": {"id": 123, "head_branch": "main", "head_sha": SHA},
+    }
+    run = {
+        "id": 123,
+        "path": DIAGNOSTIC_PATH,
+        "head_branch": "main",
+        "head_sha": SHA,
+        "event": "schedule",
+        "status": "in_progress",
+        "created_at": "2026-11-10T01:19:00Z",
+        "updated_at": "2026-11-10T01:20:30Z",
+    }
+    if mutation == "wrong_workflow":
+        run["path"] = SOURCE_PATH
+    elif mutation == "wrong_sha":
+        artifact["workflow_run"]["head_sha"] = "b" * 40
+    elif mutation == "wrong_branch":
+        artifact["workflow_run"]["head_branch"] = "feature"
+    else:
+        artifact["created_at"] = "2026-11-10T01:22:00Z"
+
+    def get(url, **_kwargs):
+        if url == artifact_url:
+            return FakeResponse(url, {"total_count": 1, "artifacts": [artifact]})
+        if url == run_url:
+            return FakeResponse(url, run)
+        pytest.fail("unexpected GitHub API URL")
+
+    with pytest.raises((RuntimeError, ValueError)):
+        budget.require_current_download_reservation(
+            workflow_path=DIAGNOSTIC_PATH, now=now, get=get
+        )

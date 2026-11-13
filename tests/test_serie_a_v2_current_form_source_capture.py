@@ -26,6 +26,193 @@ from serie_a_v2_current_form_source_capture import (
 )
 from serie_a_v2_live_diagnostic_report import _source_codes
 
+import serie_a_v2_public_source_download_budget as budget
+
+
+@pytest.fixture(autouse=True)
+def _allow_synthetic_source_only_capture_and_budget(monkeypatch):
+    import market_anchor_v2_source_capture_rights as source_rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    def allow_source_only():
+        return {
+            "source_capture_scope": source_capture.SOURCE_CAPTURE_SCOPE,
+            "rights_manifest_sha256": "a" * 64,
+            "policy_url": "https://football-data.co.uk/contact.php",
+            "policy_checked_at_utc": "2026-11-07T01:56:17+00:00",
+            "policy_page_updated_date": "2026-11-06",
+        }
+
+    def allow_private_storage():
+        return {"private": True, "storage_policy": "PRIVATE_GITHUB_ACTIONS_ARTIFACTS"}
+
+    def allow_budget_reservation(**_kwargs):
+        return datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+
+    monkeypatch.setattr(source_capture, "require_personal_research_source_capture_scope", allow_source_only)
+    monkeypatch.setattr(source_rights, "require_personal_research_source_capture_scope", allow_source_only)
+    monkeypatch.setattr(source_capture, "require_private_repository_for_source_artifacts", allow_private_storage)
+    monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", allow_private_storage)
+    monkeypatch.setattr(source_capture, "require_current_download_reservation", allow_budget_reservation)
+    monkeypatch.setattr(budget, "require_current_download_reservation", allow_budget_reservation)
+
+
+def test_importable_capture_entrypoint_blocks_source_rights_denial_before_candidate_or_metadata(monkeypatch, tmp_path):
+    calls = []
+
+    def deny_rights():
+        calls.append("rights")
+        raise PermissionError("synthetic source-only rights denial")
+
+    def forbidden(*_args, **_kwargs):
+        pytest.fail("no later gate, candidate, Supabase, network, or filesystem work is allowed")
+
+    monkeypatch.setattr(source_capture, "require_personal_research_source_capture_scope", deny_rights)
+    monkeypatch.setattr(source_capture, "require_private_repository_for_source_artifacts", forbidden)
+    monkeypatch.setattr(source_capture, "require_current_download_reservation", forbidden)
+    monkeypatch.setattr(source_capture, "load_verified_original", forbidden)
+
+    with pytest.raises(PermissionError, match="synthetic source-only rights denial"):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=forbidden,
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=forbidden,
+            history_fetch=forbidden,
+        )
+
+    assert calls == ["rights"]
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_importable_capture_entrypoint_blocks_public_storage_before_candidate_or_metadata(monkeypatch, tmp_path):
+    calls = []
+
+    def allow_rights():
+        calls.append("rights")
+        return {"source_capture_scope": source_capture.SOURCE_CAPTURE_SCOPE}
+
+    def deny_storage():
+        calls.append("privacy")
+        raise PermissionError("synthetic public repository denial")
+
+    def forbidden(*_args, **_kwargs):
+        pytest.fail("budget, candidate, Supabase, network, and filesystem work must remain blocked")
+
+    monkeypatch.setattr(source_capture, "require_personal_research_source_capture_scope", allow_rights)
+    monkeypatch.setattr(source_capture, "require_private_repository_for_source_artifacts", deny_storage)
+    monkeypatch.setattr(source_capture, "require_current_download_reservation", forbidden)
+    monkeypatch.setattr(source_capture, "load_verified_original", forbidden)
+
+    with pytest.raises(PermissionError, match="synthetic public repository denial"):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=forbidden,
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=forbidden,
+            history_fetch=forbidden,
+        )
+
+    assert calls == ["rights", "privacy"]
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_importable_capture_entrypoint_requires_current_budget_marker_before_candidate_or_metadata(monkeypatch, tmp_path):
+    calls = []
+
+    def allow_rights():
+        calls.append("rights")
+        return {"source_capture_scope": source_capture.SOURCE_CAPTURE_SCOPE}
+
+    def allow_storage():
+        calls.append("privacy")
+        return {"private": True, "storage_policy": "PRIVATE_GITHUB_ACTIONS_ARTIFACTS"}
+
+    def deny_budget(**kwargs):
+        calls.append(("budget", kwargs.get("workflow_path")))
+        raise RuntimeError("current workflow has no reserved public-source budget marker")
+
+    def forbidden(*_args, **_kwargs):
+        pytest.fail("candidate, Supabase, network, and filesystem work must remain blocked")
+
+    monkeypatch.setattr(source_capture, "require_personal_research_source_capture_scope", allow_rights)
+    monkeypatch.setattr(source_capture, "require_private_repository_for_source_artifacts", allow_storage)
+    monkeypatch.setattr(source_capture, "require_current_download_reservation", deny_budget)
+    monkeypatch.setattr(source_capture, "load_verified_original", forbidden)
+
+    with pytest.raises(RuntimeError, match="no reserved public-source budget marker"):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=forbidden,
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=forbidden,
+            history_fetch=forbidden,
+        )
+
+    assert calls == ["rights", "privacy", ("budget", source_capture.WORKFLOW_PATH)]
+    assert list(tmp_path.iterdir()) == []
+
+
+
+@pytest.mark.parametrize(
+    "reader_name",
+    ["read_completed_primary_event_count", "read_completed_primary_event_identities"],
+)
+def test_direct_feature_gate_metadata_readers_enforce_source_rights_before_supabase(
+    reader_name, monkeypatch
+):
+    calls = []
+
+    def deny_rights():
+        calls.append("rights")
+        raise PermissionError("source-only scope denied")
+
+    def forbidden_privacy():
+        pytest.fail("privacy lookup must not run after source-rights denial")
+
+    class ForbiddenClient:
+        def table(self, _name):
+            pytest.fail("Supabase metadata must not be read before source-only rights")
+
+    monkeypatch.setattr(source_capture, "require_personal_research_source_capture_scope", deny_rights)
+    monkeypatch.setattr(source_capture, "require_private_repository_for_source_artifacts", forbidden_privacy)
+    reader = getattr(source_capture, reader_name)
+
+    with pytest.raises(PermissionError, match="source-only scope denied"):
+        reader(ForbiddenClient(), now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc))
+    assert calls == ["rights"]
+
+
+@pytest.mark.parametrize(
+    "reader_name",
+    ["read_completed_primary_event_count", "read_completed_primary_event_identities"],
+)
+def test_direct_feature_gate_metadata_readers_enforce_private_storage_before_supabase(
+    reader_name, monkeypatch
+):
+    calls = []
+
+    def allow_rights():
+        calls.append("rights")
+        return {"source_capture_scope": source_capture.SOURCE_CAPTURE_SCOPE}
+
+    def deny_privacy():
+        calls.append("privacy")
+        raise PermissionError("private repository required")
+
+    class ForbiddenClient:
+        def table(self, _name):
+            pytest.fail("Supabase metadata must not be read from public storage")
+
+    monkeypatch.setattr(source_capture, "require_personal_research_source_capture_scope", allow_rights)
+    monkeypatch.setattr(source_capture, "require_private_repository_for_source_artifacts", deny_privacy)
+    reader = getattr(source_capture, reader_name)
+
+    with pytest.raises(PermissionError, match="private repository required"):
+        reader(ForbiddenClient(), now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc))
+    assert calls == ["rights", "privacy"]
+
+
 
 def event_rows(n=30):
     start = date(2026, 8, 1)
@@ -360,7 +547,7 @@ def test_gate_open_rejects_csv_missing_a_gate_fixture_before_current_source_writ
         datetime(2026, 10, 18, 8, 2, tzinfo=timezone.utc),
     ])
 
-    def fake_history(*, get, capture_dir):
+    def fake_history(*, get, capture_dir, budget_workflow_path=None):
         audits = []
         for code in _source_codes():
             filename = f"serie_a_{code}.csv"
@@ -416,7 +603,7 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
         datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc),
         datetime(2026, 10, 18, 8, 2, tzinfo=timezone.utc),
     ])
-    def fake_history(*, get, capture_dir):
+    def fake_history(*, get, capture_dir, budget_workflow_path=None):
         audits = []
         for code in _source_codes():
             filename = f"serie_a_{code}.csv"
@@ -462,6 +649,9 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
         clock=lambda: next(source_times),
     )
     assert report["feature_source_gate"]["passed"] is True
+    assert report["source_rights_manifest_sha256"] == "a" * 64
+    assert report["source_policy_url"] == "https://football-data.co.uk/contact.php"
+    assert report["source_artifact_storage_policy"] == "PRIVATE_GITHUB_ACTIONS_ARTIFACTS"
     assert report["feature_source_gate"]["observed_completed_primary_events"] == 30
     assert report["feature_source_gate"]["score_or_result_fields_selected_for_gate"] is False
     assert report["feature_source_gate"]["gate_fixture_identity_count"] == 30
@@ -1080,7 +1270,7 @@ def test_source_gate_allows_extra_current_csv_identities_when_every_gate_identit
     """The CSV may contain fixtures persisted after the identity-only gate snapshot."""
     raw = current_csv(n=31)
 
-    def fake_history(*, get, capture_dir):
+    def fake_history(*, get, capture_dir, budget_workflow_path=None):
         audits = []
         for code in _source_codes():
             filename = f"serie_a_{code}.csv"
