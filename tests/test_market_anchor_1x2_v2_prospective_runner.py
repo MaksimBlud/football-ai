@@ -524,12 +524,12 @@ def test_live_supabase_market_only_runner_rejects_outcome_persisted_after_evalua
     ]
     # This timestamp is after kickoff but after the evaluator's frozen
     # observation clock; it must not be treated as already persisted evidence.
-    outcome_rows[0]["persisted_at_utc"] = "2026-12-01T20:00:00Z"
+    outcome_rows[0]["persisted_at_utc"] = "2026-11-01T20:00:00Z"
     client = _ExactOutcomeClient(outcome_rows)
 
     with pytest.raises(ValueError, match="cannot be later than evaluation observation time"):
         _run_market_only_supabase(
-            client, rows, observed_at_utc="2026-12-01T19:00:00Z"
+            client, rows, observed_at_utc="2026-11-01T19:00:00Z"
         )
 
     assert client.result_query_count == 1
