@@ -67,14 +67,19 @@ def test_prospective_evaluation_workflow_is_main_only_and_has_no_schedule_or_pai
 
 
 
-def test_source_preflight_and_outcome_evaluator_share_one_gate_snapshot():
-    script = (ROOT / "market_anchor_1x2_v2_prospective_evaluation.py").read_text(encoding="utf-8")
-    assert "read_completed_primary_event_identities" not in script
-    assert "current_gate = " not in script
-    assert "def verify_source_preflight(completed_identities, gate_attestation):" in script
-    assert "preflight=verify_source_preflight" in script
-    assert "current_gate_identities=set(completed_identities)" in script
-
+def test_source_archive_verification_is_runner_owned_and_precedes_frozen_selection():
+    runner_source = (ROOT / "market_anchor_1x2_v2_prospective_runner.py").read_text(encoding="utf-8")
+    bridge_source = (ROOT / "market_anchor_1x2_v2_prospective_evaluation.py").read_text(encoding="utf-8")
+    for function_name in ("evaluate_live_prospective_cohort", "evaluate_live_market_only_prospective_cohort"):
+        start = runner_source.index(f"def {function_name}(")
+        end = runner_source.find("\ndef ", start + 5)
+        block = runner_source[start:end if end >= 0 else len(runner_source)]
+        verify = block.find("proof = _verify_source_candidates(")
+        selection = block.find("selected, selection = _select_verified_candidates(")
+        assert verify >= 0 and selection >= 0 and verify < selection
+    assert "preflight=verify_source_preflight" not in bridge_source
+    assert "evaluate_live_market_only_from_supabase(" in bridge_source
+    assert "_read_exact_completed_outcomes" not in runner_source
 
 
 def test_live_evaluation_checks_ai_usage_rights_before_external_reads():
@@ -183,7 +188,7 @@ def test_prospective_github_api_json_accepts_exact_http_200_without_redirects():
     assert response.json_called is True
 
 
-def test_live_market_only_bridge_binds_forecast_kickoff_to_lazy_outcome_reader(monkeypatch):
+def test_live_market_only_bridge_passes_all_candidates_to_runner_without_preflight(monkeypatch):
     import hashlib
 
     import market_anchor_1x2_v2_prospective_evaluation as live
@@ -192,10 +197,8 @@ def test_live_market_only_bridge_binds_forecast_kickoff_to_lazy_outcome_reader(m
         live, "require_personal_research_inference_scope",
         lambda: {"scope_status": "TEST_ONLY_EXPLICITLY_AUTHORIZED"},
     )
-
     monkeypatch.setattr(
-        live,
-        "require_private_repository_for_source_artifacts",
+        live, "require_private_repository_for_source_artifacts",
         lambda repository, token: {
             "repository": repository,
             "private": True,
@@ -203,25 +206,24 @@ def test_live_market_only_bridge_binds_forecast_kickoff_to_lazy_outcome_reader(m
         },
     )
 
-    rows = []
     candidates = []
     for index in range(30):
-        row = {
-            "match_date": "2026-11-01",
-            "home_team": f"Home {index:02d}",
-            "away_team": f"Away {index:02d}",
-            "kickoff_utc": f"2026-11-01T{index % 24:02d}:00:00Z",
-            "source_artifact_id": 999,
-        }
-        rows.append(row)
         candidates.append({
-            "row": row,
+            "row": {
+                "match_date": "2026-11-01",
+                "home_team": f"Home {index:02d}",
+                "away_team": f"Away {index:02d}",
+                "kickoff_utc": f"2026-11-01T{index % 24:02d}:00:00Z",
+                "source_artifact_id": 999,
+            },
             "provenance": {"source_artifact_id": 999},
         })
 
     raw_archive = b"synthetic-forward-artifact"
     artifact = {
         "artifact_id": 123,
+        "run_id": 456,
+        "head_sha": "a" * 40,
         "sha256": hashlib.sha256(raw_archive).hexdigest(),
         "created_at_utc": "2026-11-01T12:00:00Z",
     }
@@ -238,49 +240,32 @@ def test_live_market_only_bridge_binds_forecast_kickoff_to_lazy_outcome_reader(m
         live, "normalize_forward_report",
         lambda report, forward_artifact_id, forward_run: candidates,
     )
-    monkeypatch.setattr(
-        live, "select_first_eligible_forecasts",
-        lambda items: (items, {"selected": len(items)}),
-    )
-    monkeypatch.setattr(
-        live, "verify_source_artifacts_for_candidates",
-        lambda items, token, current_gate_identities: {999: verified_source_sha},
-    )
 
-    def read_exact(client, identities, kickoff_by_identity, *, observed_at_utc, **_kwargs):
+    def evaluate_from_supabase(
+        client,
+        source_candidates,
+        *,
+        token,
+        observed_at_utc,
+        outcome_read_state,
+    ):
         captured["client"] = client
-        captured["identities"] = identities
-        captured["kickoff_by_identity"] = dict(kickoff_by_identity)
+        captured["source_candidates"] = list(source_candidates)
+        captured["token"] = token
         captured["observed_at_utc"] = observed_at_utc
-        return {identity: "H" for identity in identities}
-
-    monkeypatch.setattr(live, "_read_exact_completed_outcomes", read_exact)
-
-    def evaluate_market_only(client, selected_rows, outcome_loader, *, preflight):
-        identities = frozenset(
-            (row["match_date"], row["home_team"], row["away_team"])
-            for row in selected_rows
-        )
-        gate_attestation = {
-            "completed_fixture_identity_count": len(identities),
-            "completed_fixture_identity_sha256": live.evaluator._sha_fixture_set(identities),
-        }
-        source_preflight_attestation = preflight(identities, gate_attestation)
-        outcomes = outcome_loader(
-            identities,
-            completed_fixture_identities=identities,
-            completed_fixture_gate_attestation=gate_attestation,
-            source_preflight_attestation=source_preflight_attestation,
-        )
-        assert set(outcomes) == set(identities)
+        outcome_read_state["called"] = False
         return {
-            "status": "EVALUATED_MARKET_ONLY_DIAGNOSTIC",
-            "target_outcomes_read": True,
-            "target_outcomes_scored": True,
-            "scored_forecasts": len(identities),
+            "status": "OUTCOME_READ_GATE_CLOSED",
+            "target_outcomes_read": False,
+            "target_outcomes_scored": False,
+            "forecast_candidate_count": len(source_candidates),
+            "selected_unique_fixture_forecasts": 30,
+            "selection": {"selected": 30},
+            "source_archives_reverified": 1,
+            "source_archive_sha256": {"999": verified_source_sha},
         }
 
-    monkeypatch.setattr(live, "evaluate_live_market_only_prospective_cohort", evaluate_market_only)
+    monkeypatch.setattr(live, "evaluate_live_market_only_from_supabase", evaluate_from_supabase)
 
     client = object()
     report = live.run_live_evaluation(
@@ -289,21 +274,15 @@ def test_live_market_only_bridge_binds_forecast_kickoff_to_lazy_outcome_reader(m
         now=datetime.fromisoformat("2026-11-05T12:00:00+00:00"),
     )
 
-    expected_identities = frozenset(
-        (row["match_date"], row["home_team"], row["away_team"])
-        for row in rows
-    )
-    expected_kickoffs = {
-        (row["match_date"], row["home_team"], row["away_team"]): row["kickoff_utc"]
-        for row in rows
-    }
-    assert report["status"] == "EVALUATED_MARKET_ONLY_DIAGNOSTIC"
-    assert report["target_outcomes_read"] is True
+    assert report["status"] == "OUTCOME_READ_GATE_CLOSED"
+    assert report["target_outcomes_read"] is False
     assert captured["client"] is client
-    assert captured["identities"] == expected_identities
-    assert captured["kickoff_by_identity"] == expected_kickoffs
+    assert len(captured["source_candidates"]) == 30
+    assert captured["token"] == "read-only-test-token"
     assert captured["observed_at_utc"] == "2026-11-05T12:00:00Z"
-
+    assert report["selected_unique_fixture_forecasts"] == 30
+    assert report["source_archives_reverified"] == 1
+    assert report["source_archive_sha256"] == {"999": verified_source_sha}
 
 
 def test_prospective_evaluator_pr_validation_is_offline_and_secret_free():

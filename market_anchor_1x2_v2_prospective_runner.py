@@ -9,18 +9,15 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import datetime, timezone
-import hashlib
-import json
-import os
-import re
 from types import MappingProxyType
+import re
 from typing import Any, Callable, Iterable, Mapping
 
-from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
-from market_anchor_v2_source_rights import require_personal_research_inference_scope
-
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
+from market_anchor_1x2_v2_forward_artifact_adapter import select_first_eligible_forecasts
 import market_anchor_1x2_v2_prospective_evaluator as evaluator
+from market_anchor_v2_source_rights import require_personal_research_inference_scope
+from market_anchor_v2_artifact_privacy import require_private_repository_for_source_artifacts
 
 from market_anchor_1x2_v2_completed_fixture_gate import read_completed_fixture_gate
 from market_anchor_1x2_v2_prospective_evaluator import (
@@ -30,345 +27,179 @@ from market_anchor_1x2_v2_prospective_evaluator import (
 )
 
 
-
-
-def _now_utc() -> datetime:
-    """Capture the real runtime clock; callers may not move outcome time into the future."""
-    return datetime.now(timezone.utc)
-
-
-def _require_v2_outcome_read_access() -> dict[str, Any]:
-    """Require provider inference rights and private artifact storage before any result read."""
+def _require_live_research_access(token: str) -> None:
+    """Enforce rights and private storage before any live identity/source read."""
     require_personal_research_inference_scope()
-    return require_private_repository_for_source_artifacts(
-        os.environ.get("GITHUB_REPOSITORY", ""),
-        os.environ.get("GITHUB_TOKEN", ""),
+    if not isinstance(token, str) or not token.strip():
+        raise PermissionError("GITHUB_TOKEN is required for live source verification")
+    require_private_repository_for_source_artifacts(token=token)
+
+
+def _snapshot_source_candidates(source_candidates: Iterable[Mapping[str, Any]]) -> tuple[list[dict[str, Any]], tuple[Mapping[str, Any], ...]]:
+    """Detach selected forward rows and their embedded source ZIP provenance."""
+    rows: list[dict[str, Any]] = []
+    snapshots: list[Mapping[str, Any]] = []
+    for candidate in source_candidates:
+        if not isinstance(candidate, Mapping):
+            raise ValueError("source candidates must be mappings")
+        row, provenance = candidate.get("row"), candidate.get("provenance")
+        if not isinstance(row, Mapping) or not isinstance(provenance, Mapping):
+            raise ValueError("each source candidate must contain row and provenance mappings")
+        row_copy, provenance_copy = deepcopy(dict(row)), deepcopy(dict(provenance))
+        rows.append(row_copy)
+        snapshots.append(MappingProxyType({
+            "row": MappingProxyType(row_copy),
+            "provenance": MappingProxyType(provenance_copy),
+        }))
+    return rows, tuple(snapshots)
+
+
+def _verify_source_candidates(candidates: tuple[Mapping[str, Any], ...], *, token: str,
+                              current_gate_identities: frozenset[tuple[str, str, str]],
+                              gate_attestation: Mapping[str, Any]) -> Mapping[int, str]:
+    """Invoke the concrete GitHub artifact/ZIP/parent-run verifier, never a caller callback."""
+    from market_anchor_1x2_v2_prospective_evaluation import verify_source_artifacts_for_candidates
+    return verify_source_artifacts_for_candidates(
+        list(candidates), token=token, current_gate_identities=set(current_gate_identities)
     )
 
 
-def _source_requirements_manifest_sha256(
-    source_requirements: Iterable[Mapping[str, Any]],
-) -> str:
-    """Digest the exact per-forecast source/archive/parent/quote provenance contract."""
-    normalized = [dict(item) for item in source_requirements]
-    normalized.sort(key=lambda item: tuple(item["fixture_identity"]))
-    payload = json.dumps(
-        normalized, ensure_ascii=False, sort_keys=True, separators=(",", ":")
-    ).encode("utf-8")
-    return hashlib.sha256(payload).hexdigest()
+_SOURCE_ARCHIVE_SHA256_RE = re.compile(r"[0-9a-f]{64}")
 
 
-def _forecast_source_requirements(
-    forecast_rows: Iterable[Mapping[str, Any]],
-) -> dict[tuple[str, str, str], dict[str, Any]]:
-    """Bind each normalized forecast identity to its exact source and parent-run evidence."""
-    requirements: dict[tuple[str, str, str], dict[str, Any]] = {}
-    archive_metadata: dict[int, tuple[Any, ...]] = {}
-    timestamp_fields = (
-        "source_observed_at_utc",
-        "source_archive_created_at_utc",
-        "source_parent_run_completed_at_utc",
-        "quote_time_utc",
-        "forecast_captured_at_utc",
-        "kickoff_utc",
-    )
-    archive_fields = (
-        "source_archive_sha256",
-        "source_parent_run_id",
-        "source_parent_run_sha",
-        "source_observed_at_utc",
-        "source_archive_created_at_utc",
-        "source_parent_run_completed_at_utc",
-    )
+def _expected_source_artifact_shas(forecast_rows: Iterable[Mapping[str, Any]]) -> dict[int, str]:
+    expected: dict[int, str] = {}
     for row in forecast_rows:
-        identity, _, _ = evaluator._validate_forecast(row)
-        if identity in requirements:
-            raise ValueError("duplicate canonical fixture identity in source preflight requirements")
-        timestamps = {
-            field: evaluator._utc(row[field], field).isoformat().replace("+00:00", "Z")
-            for field in timestamp_fields
-        }
-        requirement = {
-            "fixture_identity": identity,
-            "event_id": row["event_id"].strip(),
-            "source_artifact_id": row["source_artifact_id"],
-            "source_archive_sha256": row["source_archive_sha256"],
-            "source_parent_run_id": row["source_parent_run_id"],
-            "source_parent_run_sha": row["source_parent_run_sha"],
-            **timestamps,
-        }
-        archive_id = requirement["source_artifact_id"]
-        archive_signature = tuple(requirement[field] for field in archive_fields)
-        previous = archive_metadata.get(archive_id)
-        if previous is not None and previous != archive_signature:
-            raise ValueError("one source artifact ID maps to conflicting SHA or parent-run provenance")
-        archive_metadata[archive_id] = archive_signature
-        requirements[identity] = requirement
-    return requirements
+        if not isinstance(row, Mapping):
+            raise ValueError("market-only forecast rows must be mappings before source verification")
+        source_id, source_sha = row.get("source_artifact_id"), row.get("source_archive_sha256")
+        if type(source_id) is not int or source_id <= 0:
+            raise ValueError("forecast source_artifact_id must be a positive integer")
+        if not isinstance(source_sha, str) or _SOURCE_ARCHIVE_SHA256_RE.fullmatch(source_sha) is None:
+            raise ValueError("forecast source_archive_sha256 must be a lowercase SHA-256")
+        previous = expected.setdefault(source_id, source_sha)
+        if previous != source_sha:
+            raise ValueError("one source artifact ID cannot map to multiple forecast SHA-256 values")
+    return expected
 
 
-def _validate_source_preflight_attestation(
-    value: Any,
-    completed_fixture_gate_attestation: Mapping[str, Any],
-    expected_source_requirements: Iterable[Mapping[str, Any]],
-) -> dict[str, Any]:
-    """Require the independent preflight result to bind every exact eligible forecast source."""
-    required_fields = {
-        "verified",
-        "source_archive_sha256",
-        "source_parent_run_id",
-        "source_parent_run_sha",
-        "verified_source_archive_count",
-        "verified_forecast_count",
-        "forecast_source_manifest_sha256",
-        "verified_forecast_identity_sha256",
-        "gate_fixture_identity_count",
-        "gate_fixture_identity_sha256",
+def _validate_source_preflight_sha_proof(expected: Mapping[int, str], proof: object) -> dict[int, str]:
+    if not isinstance(proof, Mapping):
+        raise ValueError("internal source verifier must return an artifact-ID-to-SHA-256 mapping")
+    verified: dict[int, str] = {}
+    for source_id, source_sha in proof.items():
+        if type(source_id) is not int or source_id <= 0:
+            raise ValueError("source verifier returned an invalid artifact ID")
+        if not isinstance(source_sha, str) or _SOURCE_ARCHIVE_SHA256_RE.fullmatch(source_sha) is None:
+            raise ValueError("source verifier returned an invalid artifact SHA-256")
+        verified[source_id] = source_sha
+    if set(verified) != set(expected):
+        raise ValueError("source verifier must cover exactly the selected source artifacts")
+    for source_id, source_sha in expected.items():
+        if verified.get(source_id) != source_sha:
+            raise ValueError("source verifier SHA proof does not match every selected forecast source artifact")
+    return verified
+
+
+def _attach_source_sha_proof(report: Mapping[str, Any], verified: Mapping[int, str]) -> dict[str, Any]:
+    result = dict(report)
+    result["source_archives_reverified"] = len(verified)
+    result["source_archive_sha256"] = {
+        str(source_id): source_sha for source_id, source_sha in sorted(verified.items())
     }
-    if not isinstance(value, Mapping) or set(value) != required_fields:
-        raise PermissionError("source-before-quote preflight attestation has missing or unapproved fields")
-    if value["verified"] is not True:
-        raise PermissionError("source-before-quote preflight attestation is missing or unverified")
+    return result
 
-    sources = [dict(item) for item in expected_source_requirements]
-    if not sources:
-        raise PermissionError("source preflight cannot attest an empty eligible forecast source set")
-    required_source_fields = {
-        "fixture_identity",
-        "event_id",
-        "source_artifact_id",
-        "source_archive_sha256",
-        "source_parent_run_id",
-        "source_parent_run_sha",
-        "source_observed_at_utc",
-        "source_archive_created_at_utc",
-        "source_parent_run_completed_at_utc",
-        "quote_time_utc",
-        "forecast_captured_at_utc",
-        "kickoff_utc",
-    }
-    expected_archive_sha: dict[str, str] = {}
-    expected_parent_ids: dict[str, int] = {}
-    expected_parent_shas: dict[str, str] = {}
-    identities: set[tuple[str, str, str]] = set()
-    archive_signatures: dict[str, tuple[Any, ...]] = {}
-    for source in sources:
-        if set(source) != required_source_fields:
-            raise PermissionError("source preflight input contains missing or unapproved forecast provenance fields")
-        identity_value = source["fixture_identity"]
-        if not isinstance(identity_value, (tuple, list)) or len(identity_value) != 3:
-            raise PermissionError("source preflight input has a malformed fixture identity")
-        identity = evaluator._identity(tuple(identity_value), label="source preflight fixture identity")
-        if identity in identities:
-            raise PermissionError("source preflight input contains a duplicate fixture identity")
-        identities.add(identity)
-        artifact_id = source["source_artifact_id"]
-        parent_id = source["source_parent_run_id"]
-        if type(artifact_id) is not int or artifact_id <= 0 or type(parent_id) is not int or parent_id <= 0:
-            raise PermissionError("source preflight input contains an invalid artifact or parent run ID")
-        archive_key = str(artifact_id)
-        archive_sha = source["source_archive_sha256"]
-        parent_sha = source["source_parent_run_sha"]
-        if not isinstance(archive_sha, str) or re.fullmatch(r"[0-9a-f]{64}", archive_sha) is None:
-            raise PermissionError("source preflight input contains a malformed archive SHA-256")
-        if not isinstance(parent_sha, str) or re.fullmatch(r"[0-9a-f]{40}", parent_sha) is None:
-            raise PermissionError("source preflight input contains a malformed parent-run SHA")
-        signature = (
-            archive_sha,
-            parent_id,
-            parent_sha,
-            source["source_observed_at_utc"],
-            source["source_archive_created_at_utc"],
-            source["source_parent_run_completed_at_utc"],
-        )
-        previous = archive_signatures.get(archive_key)
-        if previous is not None and previous != signature:
-            raise PermissionError("one source artifact ID maps to conflicting SHA or parent-run provenance")
-        archive_signatures[archive_key] = signature
-        expected_archive_sha[archive_key] = archive_sha
-        expected_parent_ids[archive_key] = parent_id
-        expected_parent_shas[archive_key] = parent_sha
 
-        observed = evaluator._utc(source["source_observed_at_utc"], "source_observed_at_utc")
-        archived = evaluator._utc(source["source_archive_created_at_utc"], "source_archive_created_at_utc")
-        parent_completed = evaluator._utc(
-            source["source_parent_run_completed_at_utc"], "source_parent_run_completed_at_utc"
-        )
-        quote = evaluator._utc(source["quote_time_utc"], "quote_time_utc")
-        captured = evaluator._utc(source["forecast_captured_at_utc"], "forecast_captured_at_utc")
-        kickoff = evaluator._utc(source["kickoff_utc"], "kickoff_utc")
-        if not (observed <= archived <= parent_completed < quote <= captured < kickoff):
-            raise PermissionError("source preflight input violates source-before-quote/kickoff ordering")
-        if quote - observed > evaluator.MAX_SOURCE_AGE or captured - quote > evaluator.MAX_QUOTE_AGE:
-            raise PermissionError("source preflight input violates the frozen source/quote age limits")
+def _select_verified_candidates(
+    immutable_candidates: tuple[Mapping[str, Any], ...],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Apply the frozen earliest-eligible policy only after source verification."""
+    selection_input = [
+        {"row": dict(item["row"]), "provenance": dict(item["provenance"])}
+        for item in immutable_candidates
+    ]
+    return select_first_eligible_forecasts(selection_input)
 
-    if not isinstance(value["source_archive_sha256"], Mapping) or dict(value["source_archive_sha256"]) != expected_archive_sha:
-        raise PermissionError("source preflight archive SHA map does not exactly match eligible forecast sources")
-    if not isinstance(value["source_parent_run_id"], Mapping) or dict(value["source_parent_run_id"]) != expected_parent_ids:
-        raise PermissionError("source preflight parent-run ID map does not exactly match eligible forecast sources")
-    if not isinstance(value["source_parent_run_sha"], Mapping) or dict(value["source_parent_run_sha"]) != expected_parent_shas:
-        raise PermissionError("source preflight parent-run SHA map does not exactly match eligible forecast sources")
-
-    manifest_sha = _source_requirements_manifest_sha256(sources)
-    identity_sha = evaluator._sha_fixture_set(identities)
-    if type(value["verified_source_archive_count"]) is not int or value["verified_source_archive_count"] != len(expected_archive_sha):
-        raise PermissionError("source preflight archive count does not match eligible forecast sources")
-    if type(value["verified_forecast_count"]) is not int or value["verified_forecast_count"] != len(sources):
-        raise PermissionError("source preflight forecast count does not match the eligible forecast source set")
-    if value["forecast_source_manifest_sha256"] != manifest_sha:
-        raise PermissionError("source preflight manifest SHA does not bind the exact eligible forecast sources")
-    if value["verified_forecast_identity_sha256"] != identity_sha:
-        raise PermissionError("source preflight fixture identity SHA does not match eligible forecasts")
-    if type(value["gate_fixture_identity_count"]) is not int or value["gate_fixture_identity_count"] != completed_fixture_gate_attestation.get("completed_fixture_identity_count"):
-        raise PermissionError("source preflight fixture count differs from the frozen identity gate")
-    if value["gate_fixture_identity_sha256"] != completed_fixture_gate_attestation.get("completed_fixture_identity_sha256"):
-        raise PermissionError("source preflight identity SHA differs from the frozen identity gate")
-    return {
-        "verified": True,
-        "source_archive_sha256": expected_archive_sha,
-        "source_parent_run_id": expected_parent_ids,
-        "source_parent_run_sha": expected_parent_shas,
-        "verified_source_archive_count": len(expected_archive_sha),
-        "verified_forecast_count": len(sources),
-        "forecast_source_manifest_sha256": manifest_sha,
-        "verified_forecast_identity_sha256": identity_sha,
-        "gate_fixture_identity_count": value["gate_fixture_identity_count"],
-        "gate_fixture_identity_sha256": value["gate_fixture_identity_sha256"],
-    }
 
 def evaluate_live_prospective_cohort(
     client: Any,
-    forecast_rows: Iterable[Mapping[str, Any]],
+    source_candidates: Iterable[Mapping[str, Any]],
     outcome_loader: Callable[[frozenset[tuple[str, str, str]]], Mapping[tuple[str, str, str], str]],
     *,
-    preflight: Callable[[Iterable[Mapping[str, Any]], Mapping[str, Any]], Mapping[str, Any]] | None = None,
+    token: str,
 ) -> dict[str, Any]:
-    """Evaluate the full three-way cohort only after exact source preflight.
+    """Evaluate only after rights, private storage, source ZIP and frozen gates.
 
-    The live path binds each eligible forecast to its source artifact SHA,
-    authenticated parent-run ID/SHA, and source/archive/parent/quote/capture/
-    kickoff clocks. The independent preflight runs only after the 30-event
-    evaluator gate and before the lazy outcome loader. The pure evaluator
-    remains database/network-free.
+    The caller cannot provide a preflight callback or SHA map. Every captured
+    source candidate is verified before the frozen selection policy is applied.
     """
-    _require_v2_outcome_read_access()
+    _require_live_research_access(token)
     if not callable(outcome_loader):
         raise ValueError("outcome_loader must be a lazy callable, not preloaded outcomes")
-    if not callable(preflight):
-        raise ValueError("a verified source-before-quote preflight callback is required before live outcome evaluation")
-
-    rows = tuple(forecast_rows)
-    source_requirements_by_identity = _forecast_source_requirements(rows)
+    rows, immutable_candidates = _snapshot_source_candidates(source_candidates)
+    expected_source_shas = _expected_source_artifact_shas(rows)
     completed_identities, attestation = read_completed_fixture_gate(client)
     frozen_identities = frozenset(completed_identities)
     _validate_completed_fixture_gate_attestation(attestation, frozen_identities)
     detached_attestation = MappingProxyType(deepcopy(dict(attestation)))
-    expected_eligible_identities = frozenset(
-        identity for identity in source_requirements_by_identity
-        if identity in frozen_identities
+    proof = _verify_source_candidates(
+        immutable_candidates, token=token, current_gate_identities=frozen_identities,
+        gate_attestation=detached_attestation,
     )
-
-    def gated_outcome_loader(eligible_identities):
-        if not isinstance(eligible_identities, frozenset) or len(eligible_identities) < evaluator.MIN_COMPLETED_ELIGIBLE_FORECASTS:
-            raise PermissionError("outcome reader requires the frozen minimum of 30 eligible completed primary forecasts")
-        if not eligible_identities.issubset(frozen_identities):
-            raise PermissionError("eligible forecast identities fall outside the frozen completed-fixture gate")
-        if eligible_identities != expected_eligible_identities:
-            raise PermissionError("evaluator eligible identities differ from the exact forecast source manifest")
-        eligible_sources = tuple(
-            source_requirements_by_identity[identity]
-            for identity in sorted(eligible_identities)
-        )
-        preflight_inputs = tuple(
-            MappingProxyType(dict(source)) for source in eligible_sources
-        )
-        _validate_source_preflight_attestation(
-            preflight(preflight_inputs, detached_attestation),
-            attestation,
-            eligible_sources,
-        )
-        return outcome_loader(eligible_identities)
-
-    return evaluate_after_gate(
-        rows,
-        frozen_identities,
-        gated_outcome_loader,
+    verified = _validate_source_preflight_sha_proof(expected_source_shas, proof)
+    selected, selection = _select_verified_candidates(immutable_candidates)
+    selected_rows = [dict(item["row"]) for item in selected]
+    report = evaluate_after_gate(
+        selected_rows, frozen_identities, outcome_loader,
         completed_fixture_gate_attestation=attestation,
     )
+    result = _attach_source_sha_proof(report, verified)
+    result["forecast_candidate_count"] = len(rows)
+    result["selected_unique_fixture_forecasts"] = len(selected)
+    result["selection"] = selection
+    return result
 
 
 def evaluate_live_market_only_prospective_cohort(
     client: Any,
-    forecast_rows: Iterable[Mapping[str, Any]],
+    source_candidates: Iterable[Mapping[str, Any]],
     outcome_loader: Callable[[frozenset[tuple[str, str, str]]], Mapping[tuple[str, str, str], str]],
     *,
-    preflight: Callable[[frozenset[tuple[str, str, str]], Mapping[str, Any]], None] | None = None,
+    token: str,
 ) -> dict[str, Any]:
-    """Run market-vs-shadow evaluation against one immutable identity-gate snapshot.
+    """Run market-vs-shadow evaluation with runner-owned source verification.
 
-    The optional preflight receives only the frozen identity set and a detached
-    attestation copy. It is intended for source/archive verification before
-    evaluation. The exact same identity set and original attestation are then
-    passed to the pure evaluator, avoiding a second Supabase gate read and any
-    race between source-completeness verification and the outcome-read gate.
-    It cannot receive target outcomes or alter the evaluator's attestation.
+    No caller-supplied callback or self-reported SHA map is accepted. All
+    captured source candidates are checked against GitHub artifact metadata,
+    embedded ZIP bytes, source parent workflow and quote-time order before the
+    frozen earliest-eligible selection policy or outcome loader can run.
     """
-    _require_v2_outcome_read_access()
+    _require_live_research_access(token)
     if not callable(outcome_loader):
         raise ValueError("outcome_loader must be a lazy callable, not preloaded outcomes")
-    if not callable(preflight):
-        raise ValueError("a verified source-before-quote preflight callback is required before live outcome evaluation")
-
-    rows = tuple(forecast_rows)
-    source_requirements_by_identity = _forecast_source_requirements(rows)
+    rows, immutable_candidates = _snapshot_source_candidates(source_candidates)
+    expected_source_shas = _expected_source_artifact_shas(rows)
     completed_identities, attestation = read_completed_fixture_gate(client)
     frozen_identities = frozenset(completed_identities)
     _validate_completed_fixture_gate_attestation(attestation, frozen_identities)
-
     detached_attestation = MappingProxyType(deepcopy(dict(attestation)))
-    expected_eligible_identities = frozenset(
-        identity for identity in source_requirements_by_identity
-        if identity in frozen_identities
+    proof = _verify_source_candidates(
+        immutable_candidates, token=token, current_gate_identities=frozen_identities,
+        gate_attestation=detached_attestation,
     )
-
-    def gated_outcome_loader(eligible_identities):
-        if not isinstance(eligible_identities, frozenset) or len(eligible_identities) < evaluator.MIN_COMPLETED_ELIGIBLE_FORECASTS:
-            raise PermissionError("outcome reader requires the frozen minimum of 30 eligible completed primary forecasts")
-        if not eligible_identities.issubset(frozen_identities):
-            raise PermissionError("eligible forecast identities fall outside the frozen completed-fixture gate")
-        if eligible_identities != expected_eligible_identities:
-            raise PermissionError("evaluator eligible identities differ from the exact forecast source manifest")
-        # The evaluator invokes this loader only after it has verified at least
-        # 30 unique eligible completed primary forecasts. Preflight receives the
-        # exact per-forecast source IDs/SHAs, parent-run IDs/SHAs and ordered
-        # observation/archive/parent/quote/capture/kickoff timestamps. It runs
-        # after the 30-event gate and before the first target-outcome read.
-        eligible_sources = tuple(
-            source_requirements_by_identity[identity]
-            for identity in sorted(eligible_identities)
-        )
-        preflight_inputs = tuple(
-            MappingProxyType(dict(source)) for source in eligible_sources
-        )
-        source_preflight_attestation = _validate_source_preflight_attestation(
-            preflight(preflight_inputs, detached_attestation),
-            attestation,
-            eligible_sources,
-        )
-        return outcome_loader(
-            eligible_identities,
-            completed_fixture_identities=frozen_identities,
-            completed_fixture_gate_attestation=attestation,
-            source_preflight_attestation=source_preflight_attestation,
-            eligible_source_requirements=eligible_sources,
-        )
-
-    return evaluate_market_only_after_gate(
-        rows,
-        frozen_identities,
-        gated_outcome_loader,
+    verified = _validate_source_preflight_sha_proof(expected_source_shas, proof)
+    selected, selection = _select_verified_candidates(immutable_candidates)
+    selected_rows = [dict(item["row"]) for item in selected]
+    report = evaluate_market_only_after_gate(
+        selected_rows, frozen_identities, outcome_loader,
         completed_fixture_gate_attestation=attestation,
     )
+    result = _attach_source_sha_proof(report, verified)
+    result["forecast_candidate_count"] = len(rows)
+    result["selected_unique_fixture_forecasts"] = len(selected)
+    result["selection"] = selection
+    return result
+
 
 # These aliases are the exact Serie A identity normalization used by the
 # original V2 current-form source and the frozen prospective evaluator.
@@ -400,114 +231,6 @@ def _raw_team_aliases(canonical: str) -> list[str]:
     return sorted(aliases)
 
 
-def _read_exact_completed_outcomes(
-    client: Any,
-    identities: frozenset[tuple[str, str, str]],
-    kickoff_by_identity: Mapping[tuple[str, str, str], str],
-    *,
-    observed_at_utc: str,
-    completed_fixture_identities: frozenset[tuple[str, str, str]],
-    completed_fixture_gate_attestation: Mapping[str, Any],
-    source_preflight_attestation: Mapping[str, Any],
-    eligible_source_requirements: Iterable[Mapping[str, Any]],
-) -> dict[tuple[str, str, str], str]:
-    """Read H/D/A labels for exact gated identities, never scores or extra fixtures.
-
-    This function is intended only as the lazy callback passed to the market-only
-    evaluator. Its caller must not invoke it before the evaluator opens the
-    30-eligible-completed-prospective-forecast gate.
-    """
-    from datetime import date
-
-    _require_v2_outcome_read_access()
-    if not isinstance(identities, frozenset) or len(identities) < evaluator.MIN_COMPLETED_ELIGIBLE_FORECASTS:
-        raise PermissionError("outcome reader requires at least 30 eligible completed primary forecasts")
-    if not isinstance(completed_fixture_identities, frozenset) or not completed_fixture_identities:
-        raise PermissionError("outcome reader requires the frozen completed-fixture identity set")
-    if not identities.issubset(completed_fixture_identities):
-        raise PermissionError("outcome reader identities fall outside the frozen completed-fixture gate")
-    _validate_completed_fixture_gate_attestation(completed_fixture_gate_attestation, completed_fixture_identities)
-    _validate_source_preflight_attestation(
-        source_preflight_attestation,
-        completed_fixture_gate_attestation,
-        eligible_source_requirements,
-    )
-    expected_source_identities = {
-        tuple(source["fixture_identity"]) for source in eligible_source_requirements
-    }
-    if expected_source_identities != set(identities):
-        raise PermissionError("outcome reader source manifest does not match the exact gated forecast identities")
-    if not isinstance(kickoff_by_identity, Mapping) or set(kickoff_by_identity) != set(identities):
-        raise PermissionError("outcome reader kickoff map must exactly match the gated forecast identities")
-    if not isinstance(kickoff_by_identity, Mapping):
-        raise ValueError("outcome loader requires forecast-bound kickoff timestamps")
-    observed_at = evaluator._utc(observed_at_utc, "evaluation observed_at_utc")
-    outcomes: dict[tuple[str, str, str], str] = {}
-    selected_columns = "match_date,home_team,away_team,result,persisted_at_utc"
-    for identity in sorted(identities):
-        if not isinstance(identity, tuple) or len(identity) != 3:
-            raise ValueError("outcome loader received a malformed fixture identity")
-        match_date, home, away = identity
-        try:
-            parsed_date = date.fromisoformat(match_date)
-        except (TypeError, ValueError) as exc:
-            raise ValueError("outcome loader fixture date must be canonical ISO form") from exc
-        if parsed_date.isoformat() != match_date:
-            raise ValueError("outcome loader fixture date must be canonical ISO form")
-        canonical_home = _canonical_team(home)
-        canonical_away = _canonical_team(away)
-        if canonical_home != home or canonical_away != away or home == away:
-            raise ValueError("outcome loader identities must already be canonical V2 fixture keys")
-        kickoff_value = kickoff_by_identity.get(identity)
-        if kickoff_value is None:
-            raise ValueError("gated fixture has no matching frozen forecast kickoff timestamp")
-        kickoff = evaluator._utc(kickoff_value, "kickoff_utc")
-        if kickoff.date().isoformat() != match_date:
-            raise ValueError("forecast kickoff UTC date does not match gated fixture identity")
-
-        response = (
-            client.table("league_finished_results")
-            .select(selected_columns)
-            .eq("league", SERIE_A_RUNTIME_CONFIG.identity.identifier)
-            .eq("season", SERIE_A_RUNTIME_CONFIG.finished_results_source.season)
-            .eq("match_date", match_date)
-            .in_("home_team", _raw_team_aliases(home))
-            .in_("away_team", _raw_team_aliases(away))
-            .execute()
-        )
-        rows = getattr(response, "data", None)
-        if not isinstance(rows, list) or not rows:
-            raise ValueError(f"no completed outcome row found for gated fixture {identity!r}")
-        labels: set[str] = set()
-        for row in rows:
-            if not isinstance(row, Mapping) or set(row) != {
-                "match_date", "home_team", "away_team", "result", "persisted_at_utc"
-            }:
-                raise ValueError("outcome query returned fields outside the exact identity+result allowlist")
-            raw_date = row["match_date"]
-            if isinstance(raw_date, date):
-                raw_date = raw_date.isoformat()
-            if raw_date != match_date:
-                raise ValueError("outcome query returned a different fixture date")
-            raw_home = _canonical_team(row["home_team"])
-            raw_away = _canonical_team(row["away_team"])
-            if (raw_date, raw_home, raw_away) != identity:
-                raise ValueError("outcome query returned a different canonical fixture identity")
-            persisted_at = evaluator._utc(row["persisted_at_utc"], "persisted_at_utc")
-            if persisted_at <= kickoff:
-                raise ValueError("outcome persisted_at_utc must be strictly after kickoff_utc")
-            if persisted_at > observed_at:
-                raise ValueError("outcome persisted_at_utc cannot be later than evaluation observation time")
-            label = row["result"]
-            if not isinstance(label, str) or label not in {"H", "D", "A"}:
-                raise ValueError("outcome query returned a malformed H/D/A result label")
-            labels.add(label)
-        if len(labels) != 1:
-            raise ValueError("duplicate raw aliases disagree on the completed fixture result")
-        outcomes[identity] = next(iter(labels))
-    return outcomes
-
-
 def _forecast_kickoff_lookup(
     forecast_rows: Iterable[Mapping[str, Any]],
 ) -> tuple[tuple[Mapping[str, Any], ...], dict[tuple[str, str, str], str]]:
@@ -534,36 +257,129 @@ def _forecast_kickoff_lookup(
 
 def evaluate_live_market_only_from_supabase(
     client: Any,
-    forecast_rows: Iterable[Mapping[str, Any]],
+    source_candidates: Iterable[Mapping[str, Any]],
     *,
-    preflight: Callable[[frozenset[tuple[str, str, str]], Mapping[str, Any]], Mapping[str, Any]] | None = None,
+    token: str,
     observed_at_utc: str | None = None,
+    outcome_read_state: dict[str, bool] | None = None,
 ) -> dict[str, Any]:
-    """Run market-vs-shadow evaluation with an internally lazy, exact-row outcome reader.
+    """Run market-vs-shadow evaluation with a gate-local exact-row outcome reader.
 
-    The only Supabase read before the frozen gate is the identity-only reader
-    used by evaluate_live_market_only_prospective_cohort. The result-column
-    query is encapsulated in a callback and is invoked only after 30 eligible
-    completed prospective forecasts pass the evaluator gate.
+    The result-column query exists only as a nested lazy callback. There is no
+    importable module-level outcome reader that can be called around the frozen
+    30-identity / 30-eligible-forecast gate. The optional state sink is audit
+    metadata only; it cannot initiate a read.
     """
-    _require_v2_outcome_read_access()
-    if not callable(preflight):
-        raise ValueError("a verified source-before-quote preflight callback is required before live outcome evaluation")
-    rows, kickoff_by_identity = _forecast_kickoff_lookup(forecast_rows)
-    clock = _now_utc()
-    if not isinstance(clock, datetime) or clock.tzinfo is None or clock.utcoffset() is None:
-        raise ValueError("system evaluation clock must have a real UTC offset")
-    clock = clock.astimezone(timezone.utc)
-    observed_time = clock if observed_at_utc is None else evaluator._utc(observed_at_utc, "evaluation observed_at_utc")
-    if observed_time > clock:
-        raise ValueError("evaluation observed_at_utc cannot be later than the actual current UTC clock")
+    _require_live_research_access(token)
+    state = {"called": False}
+    if outcome_read_state is not None:
+        if not isinstance(outcome_read_state, dict):
+            raise ValueError("outcome_read_state must be a mutable dictionary when supplied")
+        outcome_read_state["called"] = False
+
+    actual_now = datetime.now(timezone.utc)
+    if observed_at_utc is None:
+        observed_time = actual_now
+    else:
+        observed_time = evaluator._utc(observed_at_utc, "evaluation observed_at_utc")
+        if observed_time > actual_now:
+            raise ValueError("evaluation observed_at_utc cannot be later than the actual current UTC clock")
     observed = observed_time.isoformat().replace("+00:00", "Z")
-    return evaluate_live_market_only_prospective_cohort(
-        client,
-        rows,
-        lambda identities, **gate: _read_exact_completed_outcomes(
-            client, identities, kickoff_by_identity, observed_at_utc=observed, **gate
-        ),
-        preflight=preflight,
-    )
+
+    rows, candidate_snapshot = _snapshot_source_candidates(source_candidates)
+    rows, kickoff_by_identity = _forecast_kickoff_lookup(rows)
+
+    def load_exact_completed_outcomes_after_gate(
+        identities: frozenset[tuple[str, str, str]],
+    ) -> dict[tuple[str, str, str], str]:
+        # This closure is passed only to the pure evaluator, which invokes it
+        # after the frozen metadata-identity and eligible-forecast gates pass.
+        state["called"] = True
+        if outcome_read_state is not None:
+            outcome_read_state["called"] = True
+
+        from datetime import date
+
+        if (
+            not isinstance(identities, frozenset)
+            or len(identities) < evaluator.MIN_COMPLETED_ELIGIBLE_FORECASTS
+        ):
+            raise ValueError("outcome loader requires the frozen 30-eligible-completed-forecast gate")
+        if not identities.issubset(kickoff_by_identity):
+            raise PermissionError("outcome loader identities are outside the frozen forecast candidate set")
+        outcomes: dict[tuple[str, str, str], str] = {}
+        selected_columns = "match_date,home_team,away_team,result,persisted_at_utc"
+        for identity in sorted(identities):
+            if not isinstance(identity, tuple) or len(identity) != 3:
+                raise ValueError("outcome loader received a malformed fixture identity")
+            match_date, home, away = identity
+            try:
+                parsed_date = date.fromisoformat(match_date)
+            except (TypeError, ValueError) as exc:
+                raise ValueError("outcome loader fixture date must be canonical ISO form") from exc
+            if parsed_date.isoformat() != match_date:
+                raise ValueError("outcome loader fixture date must be canonical ISO form")
+            canonical_home = _canonical_team(home)
+            canonical_away = _canonical_team(away)
+            if canonical_home != home or canonical_away != away or home == away:
+                raise ValueError("outcome loader identities must already be canonical V2 fixture keys")
+            kickoff_value = kickoff_by_identity.get(identity)
+            if kickoff_value is None:
+                raise ValueError("gated fixture has no matching frozen forecast kickoff timestamp")
+            kickoff = evaluator._utc(kickoff_value, "kickoff_utc")
+            if kickoff.date().isoformat() != match_date:
+                raise ValueError("forecast kickoff UTC date does not match gated fixture identity")
+
+            response = (
+                client.table("league_finished_results")
+                .select(selected_columns)
+                .eq("league", SERIE_A_RUNTIME_CONFIG.identity.identifier)
+                .eq("season", SERIE_A_RUNTIME_CONFIG.finished_results_source.season)
+                .eq("match_date", match_date)
+                .in_("home_team", _raw_team_aliases(home))
+                .in_("away_team", _raw_team_aliases(away))
+                .execute()
+            )
+            rows_for_fixture = getattr(response, "data", None)
+            if not isinstance(rows_for_fixture, list) or not rows_for_fixture:
+                raise ValueError(f"no completed outcome row found for gated fixture {identity!r}")
+            labels: set[str] = set()
+            for row in rows_for_fixture:
+                if not isinstance(row, Mapping) or set(row) != {
+                    "match_date", "home_team", "away_team", "result", "persisted_at_utc"
+                }:
+                    raise ValueError("outcome query returned fields outside the exact identity+result allowlist")
+                raw_date = row["match_date"]
+                if isinstance(raw_date, date):
+                    raw_date = raw_date.isoformat()
+                if raw_date != match_date:
+                    raise ValueError("outcome query returned a different fixture date")
+                raw_home = _canonical_team(row["home_team"])
+                raw_away = _canonical_team(row["away_team"])
+                if (raw_date, raw_home, raw_away) != identity:
+                    raise ValueError("outcome query returned a different canonical fixture identity")
+                persisted_at = evaluator._utc(row["persisted_at_utc"], "persisted_at_utc")
+                if persisted_at <= kickoff:
+                    raise ValueError("outcome persisted_at_utc must be strictly after kickoff_utc")
+                if persisted_at > evaluator._utc(observed, "evaluation observed_at_utc"):
+                    raise ValueError("outcome persisted_at_utc cannot be later than evaluation observation time")
+                label = row["result"]
+                if not isinstance(label, str) or label not in {"H", "D", "A"}:
+                    raise ValueError("outcome query returned a malformed H/D/A result label")
+                labels.add(label)
+            if len(labels) != 1:
+                raise ValueError("duplicate raw aliases disagree on the completed fixture result")
+            outcomes[identity] = next(iter(labels))
+        return outcomes
+
+    try:
+        return evaluate_live_market_only_prospective_cohort(
+            client,
+            candidate_snapshot,
+            load_exact_completed_outcomes_after_gate,
+            token=token,
+        )
+    finally:
+        if outcome_read_state is not None:
+            outcome_read_state["called"] = state["called"]
 

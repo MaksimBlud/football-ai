@@ -165,58 +165,63 @@ helper; all tests use synthetic forecasts/outcomes only.
 
 ## Safe live orchestration entry point
 
-Live callers should use `evaluate_live_prospective_cohort(client, forecast_rows, outcome_loader, preflight=...)`
-from `market_anchor_1x2_v2_prospective_runner.py`. This wrapper obtains the
-completed-fixture identity set and digest-bound attestation itself through the
-production metadata-only gate reader; callers cannot inject a completed set,
-attestation, or cutoff. It binds the exact eligible forecasts to source artifact
-IDs/SHAs, parent-run IDs/SHAs, and the ordered source/archive/parent/quote/
-capture/kickoff timestamps. The required independent source preflight runs
-only after the evaluator confirms at least 30 eligible completed primary
-forecasts and immediately before the lazy outcome callback. Missing, extra,
-mismatched, or late source evidence fails before the first result query. If the
-separately pinned non-legacy incumbent is still absent, the evaluator returns
-`EVALUATION_BLOCKED_UNPINNED_INCUMBENT` without invoking either preflight or
-the outcome callback. The wrapper adds no model loading, network access,
-result query, fitting, selection, or production behavior of its own.
+The live market-only workflow calls
+`evaluate_live_market_only_from_supabase(client, source_candidates, token=...)`
+from `market_anchor_1x2_v2_prospective_runner.py`. It does not accept a
+caller-supplied preflight callback, source-SHA map, completed-fixture set,
+gate attestation, or result reader. The runner checks provider inference rights
+and private artifact storage before inspecting candidate input.
+
+The runner obtains the production identity-only completed-fixture gate,
+validates its digest-bound attestation, and internally re-verifies every
+captured source candidate against GitHub artifact metadata, embedded source ZIP
+bytes, parent workflow/run SHA, source manifest, feature-gate attestation and
+source-before-quote ordering. Only after all candidates pass does it apply the
+frozen earliest-eligible-per-fixture selection policy. The separate
+`evaluate_live_prospective_cohort()` full three-way path uses the same
+runner-owned source verifier and remains blocked while the non-legacy incumbent
+reference is unpinned.
+
+The market-only Supabase result reader is a nested closure, not an importable
+module-level helper. It is invoked only by the pure evaluator after the
+preregistered completed-primary metadata gate and the separate 30-eligible-
+completed-forecast gate pass. It queries only the exact selected fixture
+identities and the allowlisted result/persistence columns. A future observation
+clock, missing source proof, mismatched SHA, unresolved rights, public artifact
+repository or fewer than 30 eligible completed forecasts fails closed before
+the first target-result query. All tests use synthetic data; no live result is
+read during validation.
 
 
 ## Real forward-artifact bridge and live market-only evaluation
 
 The current-form forward workflow writes a GitHub Actions artifact named
-serie-a-v2-current-form-forward-preview. The prospective evaluator now has a
+`serie-a-v2-current-form-forward-preview`. The prospective evaluator has a
 separate read-only bridge for that exact artifact schema.
 
 - It accepts only a completed, successful main run of the exact
-  .github/workflows/serie-a-v2-current-form-forward-preview.yml workflow.
+  `.github/workflows/serie-a-v2-current-form-forward-preview.yml` workflow.
 - It verifies the forward ZIP against the GitHub artifact SHA-256 and validates
   the run ID, head SHA, workflow path, branch, event and artifact time.
-- It maps nested v2_preview and source_artifacts_used fields to the evaluator's
-  strict normalized schema, including source parent run ID, SHA and completion
-  time.
-- The odds_snapshots source has commence_time_utc but no match_date. The adapter
-  derives the date-only fixture identity from the UTC kickoff date. If this
-  identity does not match the metadata-only completed-fixture gate, the event
-  does not count; there is no team/date guessing fallback.
-- Before any outcome loader can run, the live bridge independently rechecks
-  source artifact metadata, embedded source ZIP SHA-256, successful source
-  parent run, source manifest and current-form gate freshness relative to each
-  quote time. The current Supabase gate query remains identity-only:
-  match_date, home_team, away_team.
-- The live market-only runner passes the preflight callback the exact eligible
-  forecast source manifest, not merely the completed-fixture identity set.
-  Each manifest row binds canonical fixture identity, provider event ID,
-  source artifact ID/SHA-256, source parent run ID/SHA, source
-  observation/archive/parent-completion times, quote time, capture time and
-  kickoff. The callback's attestation must return exact per-artifact archive
-  SHA and parent-run maps, the forecast count/identity digest, and the
-  SHA-256 of the canonical per-forecast source manifest. Missing, extra,
-  mismatched or conflicting source references fail before the outcome loader.
-  Preflight remains after the 30-eligible-completed-forecast gate and before
-  the first result-column query.
+- It maps nested `v2_preview` and `source_artifacts_used` fields to the strict
+  normalized schema, including source parent run ID, SHA and completion time.
+- The `odds_snapshots` source has `commence_time_utc` but no `match_date`.
+  The adapter derives the date-only fixture identity from the UTC kickoff date.
+  If this identity does not match the metadata-only completed-fixture gate,
+  the event does not count; there is no team/date guessing fallback.
+- Before frozen selection, the runner rechecks every candidate's source artifact
+  metadata, embedded source ZIP SHA-256, successful source parent run, source
+  manifest and current-form gate freshness relative to each quote time. The
+  current Supabase gate query remains identity-only: `match_date, home_team,
+  away_team`.
+- No caller-supplied preflight callback or self-reported SHA map is accepted.
+  Source verification is runner-owned and covers all captured candidates
+  before the frozen earliest-eligible selection policy is applied. Invalid or
+  conflicting source references fail the entire evaluation before any target
+  result query.
 - Repeated forward artifacts can contain multiple quotes for one fixture. The
   separate frozen selection policy in
-  experiments/market_anchor_1x2_v2_prospective_selection_policy.json selects
+  `experiments/market_anchor_1x2_v2_prospective_selection_policy.json` selects
   the earliest eligible forecast capture per canonical fixture. Equal capture
   timestamps fail closed; one provider event ID mapping to two fixture
   identities also fails closed. This rule is outcome-independent and
@@ -226,12 +231,16 @@ separate read-only bridge for that exact artifact schema.
   provider calls, writes nothing to Supabase and archives only metrics and
   provenance summaries, never raw outcomes.
 
-The market-only path uses the existing frozen 30-primary-completed-event gate.
-The runner first reads fixture identities only. Its lazy callback selects
-exact target H/D/A outcomes only after 30 unique eligible prospective forecasts
-intersect the completed-fixture set. Before that point the callback invocation
-count remains zero. The output is a market-versus-original-V2-shadow Brier and
-LogLoss diagnostic; it cannot emit a promotion decision.
+The market-only path uses two distinct frozen gates. First, the runner reads
+only completed-fixture identities (date and team names) and validates the
+preregistered 30-primary-completed-event metadata gate; no score or result
+column is selected. It then verifies source archives and applies the frozen
+selection policy. Second, the pure evaluator requires 30 unique eligible
+completed prospective forecasts intersecting that identity set. Only then can
+the nested reader select exact H/D/A outcomes and their persistence timestamps.
+Below either gate, the target-result reader is never invoked. The output is a
+market-versus-original-V2-shadow Brier and LogLoss diagnostic; it cannot emit a
+promotion decision.
 
 The separate three-way review path remains blocked while no approved,
 non-legacy frozen incumbent reference is pinned. This does not block the
@@ -240,7 +249,8 @@ does not fabricate an incumbent and does not revive the former XGBoost model.
 
 No live outcomes were read during implementation. This is code/test readiness
 only; actual market evaluation still requires eligible main-branch forward
-artifacts with verified source archives and 30 completed primary forecast events.
+artifacts with verified source archives and 30 completed primary forecast
+events.
 
 
 ## Current source-rights and private-storage blockers — 2026-11-12
