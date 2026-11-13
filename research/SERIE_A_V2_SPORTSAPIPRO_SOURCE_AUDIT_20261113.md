@@ -52,7 +52,7 @@ and retain the raw bytes, SHA-256, API version, fixture identity, parent workflo
 
 ## Privacy and free-tier request budget
 
-The Terms permit indefinite internal retention but prohibit publishing or bulk-sharing raw responses. This repository is public, so public GitHub Actions artifacts or committed raw payloads are not acceptable. A verified private archive is a prerequisite. Supabase writes/DDL are not authorized and were not attempted.
+The Terms permit indefinite internal retention but prohibit publishing or bulk-sharing raw responses. This repository is public, so public GitHub Actions artifacts or committed raw payloads are not acceptable. A verified private archive is a prerequisite. The project storage inventory was not inspected, so this audit does not claim that no private bucket exists. No private archive has been verified or authorized for this workflow. Supabase writes/DDL are not authorized and were not attempted.
 
 The project currently has 113 Serie A 2026/27 finished-fixture metadata rows (date and team identifiers only; no scores/results selected in this audit). A conservative lower-bound plan would need one match-statistics request and one incidents request per fixture, plus approximately four 30-fixture season-event pages: about 230 calls. At 100 requests/day that is at least three days if the quota is dedicated to this task. This is a planning estimate, not an API test; no requests were made. Incremental collection might reduce later daily usage, but only after rights, privacy, coverage and card semantics are cleared.
 

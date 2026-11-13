@@ -212,9 +212,11 @@
   },
   "private_storage": {
     "private_archive_storage_required": true,
-    "private_archive_storage_available_in_current_project": false,
     "public_github_raw_artifact_allowed": false,
-    "supabase_writes_or_ddl_authorized": false
+    "supabase_writes_or_ddl_authorized": false,
+    "private_archive_storage_verified": false,
+    "private_archive_storage_authorized": false,
+    "storage_inventory_checked": false
   },
   "request_budget_estimate": {
     "project_finished_serie_a_fixture_metadata_count": 113,

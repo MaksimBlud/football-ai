@@ -64,7 +64,9 @@ def test_free_rights_do_not_override_private_storage_and_provenance_gates():
     assert manifest["provenance"]["per_field_upstream_observation_timestamp_documented"] is False
     assert manifest["provenance"]["source_before_quote_approved"] is False
     assert manifest["private_storage"]["private_archive_storage_required"] is True
-    assert manifest["private_storage"]["private_archive_storage_available_in_current_project"] is False
+    assert manifest["private_storage"]["private_archive_storage_verified"] is False
+    assert manifest["private_storage"]["private_archive_storage_authorized"] is False
+    assert manifest["private_storage"]["storage_inventory_checked"] is False
     assert manifest["private_storage"]["public_github_raw_artifact_allowed"] is False
     assert manifest["coverage"]["second_yellow_mapping_documented"] is False
     assert manifest["coverage"]["current_2026_27_match_statistics_completeness_verified"] is False
