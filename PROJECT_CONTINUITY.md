@@ -1,3 +1,19 @@
+## 2026-11-13 22:54 UTC — Original V2: source archive verified, no admissible quote or forecast; rights and private-storage holds confirmed
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Main `PROJECT_CONTINUITY.md` is still at the 2026-10-18 entry. Full read-only runtime audit: [SERIE_A_V2_RUNTIME_AUDIT_20261113_2254UTC.md](research/SERIE_A_V2_RUNTIME_AUDIT_20261113_2254UTC.md).
+
+- Frozen original candidate unchanged: SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 ordered features, 20×2 weights, 3,799 training rows, fingerprint `f27ab985…a7a5098`; `active_lambda=0`, `shadow_lambda=1`, stability gate FAILED, NO_BET, automatic promotion disabled.
+- Real current-form source capture [run 43433793441](https://github.com/MaksimBlud/football-ai/actions/runs/43433793441): 19 tests PASS; 110 canonical Serie A 2026/27 completed fixture identities; 10 historical CSVs + 1 current-season CSV; 3,910 historical rows; artifact `14041720658`, SHA-256 `fd0f01fde281e37711a748aed01fe630c760d9d2879e06470893955e8e5e2932`.
+- Real current-form forward [run 43462612434](https://github.com/MaksimBlud/football-ai/actions/runs/43462612434): 53 tests PASS; source archive and parent run `43433793441` verified; parent completed 13:28:24 UTC and source artifact was created 13:28:21 UTC; source was fresh at verification. **0 quotes_seen, 0 shadow forecasts**, no target outcomes read/scored, no paid calls or writes. This proves the source archive/SHA/parent/freshness path, not a source-before-quote market pair.
+- Real original forward [run 43459529173](https://github.com/MaksimBlud/football-ai/actions/runs/43459529173): 71 tests PASS; 10 pre-prospective source files and 3,800 historical results attested; **0 quotes_seen, 0 forecasts_created**.
+- Read-only Supabase: 3,915 strict pre-match odds rows / 327 events across leagues; Serie A 620 rows / 63 events, latest 2026-10-13 14:48:53 UTC; zero Serie A rows in last seven days and zero future-event quotes. Feature-input identity query selected only date/team names: 113 raw rows / 110 canonical unique Serie A 2026/27 fixtures. Strict pre-match product snapshots: EPL 40, Serie A 0, exact original V2 SHA 0.
+- Repository visibility is PUBLIC. The #787 rights branch manifest now explicitly sets source capture=false, inference=false, AI training=false, provider-issued inference licence=false, authorization=null. Its private-artifact helper checks the current `GITHUB_REPOSITORY`, which is this public repo; no separate private archive target/uploader is implemented. Private storage and provider clearance are independent blockers.
+- [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN, non-draft, mergeable; exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`, 8/8 exact-head CI SUCCESS. It holds all five live V2 workflow/recovery steps and artifact uploads; HUMAN-MERGE only.
+- #720 remains diverged from #781: 118 commits ahead, 43 behind; rebase it onto post-#781 main before considering #727 and downstream rights PRs. [#806](https://github.com/MaksimBlud/football-ai/pull/806) and [#807](https://github.com/MaksimBlud/football-ai/pull/807) source audits each have 7/7 exact-head CI SUCCESS but remain HOLD/Draft.
+- Target-outcome evaluation gate remains **0/30**. No Brier/LogLoss comparison or model-superiority claim is available.
+
+No main change, merge, schedule change, Supabase write/DDL, provider request, target-outcome read, model inference/refit, production artifact change, or other-agent change was made.
+
 ## 2026-11-13 12:58 UTC — Original V2: missing scheduled runs, 113-fixture input gate, no prospective forecasts
 
 Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; main `PROJECT_CONTINUITY.md` is still at the 2026-10-18 entry. Full audit: [SERIE_A_V2_RUNTIME_AUDIT_20261113_1258UTC.md](research/SERIE_A_V2_RUNTIME_AUDIT_20261113_1258UTC.md).
