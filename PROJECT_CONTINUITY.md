@@ -10584,3 +10584,36 @@ Process incident: the public Serie A database page is a mixed results/statistics
 - Cornerflick publishes per-match JSON/CSV and season-level files; its data page documents corners, timelines, provenance and `last_updated_at`, and claims CC BY 4.0 for its compilation. However the licence expressly leaves underlying match facts to upstream providers. Its separate Terms of Service (2026-11-09) limit general access to personal non-commercial reading and prohibit scraping/harvesting/bulk-download except as permitted by law. Complete Serie A red-card/season coverage and automated private research/retention permission are not established. **HOLD; no account, key, download, API request, scraping or archive.**
 - Retrieval incident: a broad search for historical Serie A coverage surfaced snippets with 2026/27 result text. No current-season result values were deliberately extracted, copied, counted, scored or used; the snippets are quarantined and excluded from the 30-event gate. No match page or current-season data file was opened/downloaded. Avoid broad match-result searches until the outcome gate is formally open.
 - Full source decision and process incident are recorded in `research/SERIE_A_V2_RUNTIME_AUDIT_20261112_1553UTC.md`. This is a documentation-only HOLD, not evidence of model inference or quality.
+
+
+## Big Balls official-documents recheck — 2026-11-12
+
+This update supersedes the earlier note that the free-tier quota was contradictory. Only static official terms, pricing, soccer endpoint documentation and the OpenAPI schema were read; no account/key, API request, current-season match data, source download, odds, Supabase write, inference or target outcome was accessed.
+
+- Big Balls Terms of Service (effective 2026-08-10) explicitly permit customers to store API responses and use stored data in internal models, including training, evaluation and backtesting. Derived outputs may be published/sold; raw-feed and raw-field redistribution are prohibited.
+- Current official pricing and soccer hub agree on the Free plan: $0, one selected sport at a time, current season only, 1,000 requests/day (2,000 with GitHub) and 100 requests/minute. The older 250/day search snippet is stale.
+- The documented free `GET /v1/matches/{id}/statistics` endpoint is stored-only, written hourly, and the docs say upstream statistics usually post within roughly 30 minutes after full time. Its `FixtureTeamStatistics` schema includes `corner_kicks`, `yellow_cards`, and `red_cards`; goals are available in the match score. `expected_goals` is Solo+ but is not part of the frozen 19-feature contract.
+- The endpoint response is a plain `FixtureTeamStatistics` object and does not expose per-match `observed_at`, `source_updated_at`, or correction/version timestamps. The generic `FieldResult` schema has `source`, `fetchedAt`, and `ttlSeconds`, but it is not the documented match-statistics response shape.
+- The OpenAPI exposes only an opaque source-tier label, not vendor identity per field. The licence-notices page says football data is provided by Football-Data.org API. Written confirmation is still required that Big Balls' storage/internal-model grant covers the exact Serie A fields returned by this endpoint, including any Football-Data.org upstream material.
+- A local response-received timestamp plus raw-response SHA can prove that our immutable archive was captured before a later quote; it cannot prove the provider's original upstream observation/correction instant. A future collector must retain exact response bytes, SHA-256, endpoint/league/season, response-received UTC, quote UTC, kickoff UTC, parent run/commit SHA, and fail closed unless source capture is strictly before quote and quote is before kickoff.
+- Raw responses must remain private. The public GitHub repository and public Actions artifacts are not approved storage for provider raw fields. No provider account, API key, API request, download, or ingestion is authorized.
+
+**Decision: CONDITIONAL CANDIDATE / HOLD.** The current official docs make Big Balls more promising than the earlier audit suggested, but upstream per-field rights and private retention remain unresolved. No adapter is approved; no model inference or target-outcome evaluation is authorized.
+
+### Exact open-PR state at this checkpoint
+
+- #781 remains open, non-draft, HUMAN-MERGE only, exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`, 8/8 exact-head CI SUCCESS. It has not been merged; main still runs the four original live workflows.
+- #796 remains **Draft** (not Ready for review), exact HEAD `e69ad9c2700b999ef186e4771a2fe06fd010155d`, 7/7 CI SUCCESS. It is the atomic-archive superset of #795; do not merge #795 separately.
+- #800 remains Draft, exact HEAD `50acb2fef5882e6b8581db7d6438d2b9fc87bf3e`, 7/7 CI SUCCESS and 120 Frozen V2 tests; offline-only, canonical 5Dollar rights manifest remains HOLD.
+- #793 remains Draft and stacked on #787; exact HEAD `d12e3884b78cd67e1d54a0c6d6d31f9201fb1c53`, Frozen V2 440 and evaluator 190 tests passed. Synthetic-only; the 30-forecast outcome gate remains closed.
+- #794 source audit updated to exact HEAD `63b5412a0a5a3177bb2454f7d836d220f2440574`, 6/6 PR validation runs SUCCESS, Draft, mergeable. The PR description and conversation now contain the updated official Big Balls findings and HOLD conditions.
+
+### Fresh read-only pre-match Supabase checkpoint
+
+- `odds_snapshots`: 3,915 rows satisfy `snapshot_time_utc < commence_time_utc`, across 327 event IDs; latest strict pre-match snapshot remains 2026-10-13 14:48:53 UTC; no future event currently has a saved strict pre-match quote.
+- `product_prediction_snapshots`, filtered to the exact original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6` and `generated_at_utc < commence_time_utc`: 0 rows / 0 events.
+- No score, result, settlement or target-outcome columns were selected. No Supabase write or DDL occurred.
+
+The original V2 script still declares `active_lambda=0`, `shadow_lambda=1`, and a failed stability gate. Its frozen 19-feature order and weights were not modified. No Brier/LogLoss comparison or V2 superiority claim is available.
+
+No main update/merge, provider request/download, paid API call, target-outcome read, Supabase write/DDL, production `.pkl` change, schedule change, or other-agent setting change occurred. HUMAN-MERGE only.
