@@ -49,6 +49,18 @@ def source_audit(observed_at="2026-10-13T15:00:00Z"):
     } for code in _source_codes()]
 
 
+@pytest.fixture(autouse=True)
+def allow_synthetic_v2_inference_scope(monkeypatch):
+    """Keep offline numerical/source tests independent of live rights clearance."""
+    import market_anchor_v2_source_rights as rights
+
+    monkeypatch.setattr(
+        rights,
+        "require_personal_research_inference_scope",
+        lambda: {"rights_manifest_sha256": "a" * 64},
+    )
+
+
 def test_historical_source_rejects_oversized_content_length_before_body_read(tmp_path):
     class Response:
         status_code = 200

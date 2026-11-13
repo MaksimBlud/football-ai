@@ -1,10 +1,22 @@
 name: Serie A Frozen V2 Shadow Tests
 
 on:
+  push:
+    branches:
+      - research/v2-direct-feature-manifest-rights-gate-stacked-on-727-20261109-run11
+    paths:
+      - "serie_a_v2_asof_feature_manifest.py"
+      - "tests/test_serie_a_v2_asof_feature_manifest.py"
+      - "tests/test_serie_a_v2_atalanta_alias.py"
+      - "tests/test_serie_a_v2_live_diagnostic_report.py"
+      - "tests/test_serie_a_v2_forward_capture.py"
+      - "tests/test_serie_a_v2_current_form_forward_capture.py"
+      - ".github/workflows/serie-a-frozen-v2-shadow-tests.yml"
   pull_request:
     branches:
       - main
       - research/v2-provider-ai-inference-rights-block-*
+      - research/v2-integrated-private-quote-preflight-20261108
     paths:
       - "PROJECT_CONTINUITY.md"
       - "tests/test_serie_a_v2_dependency_lock_contract.py"

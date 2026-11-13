@@ -41,6 +41,18 @@ def fixture(event_id, home, away):
     }
 
 
+@pytest.fixture(autouse=True)
+def allow_synthetic_v2_inference_scope(monkeypatch):
+    """Keep offline numerical/source tests independent of live rights clearance."""
+    import market_anchor_v2_source_rights as rights
+
+    monkeypatch.setattr(
+        rights,
+        "require_personal_research_inference_scope",
+        lambda: {"rights_manifest_sha256": "a" * 64},
+    )
+
+
 @pytest.mark.parametrize("quote,atalanta_side", [
     (fixture("a", "Atalanta BC", "Frosinone"), "home"),
     (fixture("b", "AC Milan", "Atalanta BC"), "away"),
