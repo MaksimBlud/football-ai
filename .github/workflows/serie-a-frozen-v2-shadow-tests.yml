@@ -11,6 +11,7 @@ on:
       - research/v2-direct-quote-reader-rights-gate-rebased-on-783-20261111-run11
       - research/v2-direct-shadow-preview-inference-rights-gate-rebased-on-784-20261111-run11
       - research/v2-core-inference-and-refit-freeze-rebased-on-785-20261111-run11
+      - research/v2-direct-entrypoint-rights-gates-on-786-20261111-run11
     paths:
       - "PROJECT_CONTINUITY.md"
       - "tests/test_serie_a_v2_dependency_lock_contract.py"
@@ -69,6 +70,7 @@ on:
       - research/v2-direct-shadow-preview-inference-rights-gate-rebased-on-784-20261111-run11
       - research/v2-core-inference-and-refit-freeze-rebased-on-785-20261111-run11
       - research/v2-direct-entrypoint-rights-gates-on-786-20261111-run11
+      - research/v2-market-only-evaluator-rebased-on-787-20261112-run11
     paths:
       - "market_anchor_v2_direct_access.py"
       - "serie_a_v2_asof_feature_manifest.py"
