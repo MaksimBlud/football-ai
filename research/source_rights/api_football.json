@@ -1,0 +1,53 @@
+{
+  "provider": "API-Football (API-Sports)",
+  "reviewed_at_utc": "2026-11-13",
+  "decision": "HOLD",
+  "purpose": "Documentation-only assessment as a possible free current-form source for the unchanged original MARKET_ANCHOR_1X2_V2",
+  "free_plan": {
+    "price_usd_per_month": 0,
+    "requests_per_day": 100,
+    "season_access_rule": "Year-4 through Year-2",
+    "available_season_years_at_review": [2022, 2023, 2024],
+    "current_2026_2027_season_available": false
+  },
+  "documented_api_families": [
+    "fixtures",
+    "events",
+    "statistics",
+    "pre-match odds"
+  ],
+  "serie_a_exact_19_feature_mapping_verified": false,
+  "per_field_upstream_observation_or_correction_clock_verified": false,
+  "rights": {
+    "direct_data_resale_permitted": false,
+    "explicit_internal_ml_training_grant_found": false,
+    "explicit_private_raw_response_retention_grant_found": false,
+    "upstream_field_rights_verified": false
+  },
+  "authorization": {
+    "account_created": false,
+    "api_key_created": false,
+    "api_requests_made": 0,
+    "source_capture_permitted": false,
+    "feature_inference_permitted": false,
+    "quote_access_performed": false,
+    "target_outcomes_read": false
+  },
+  "original_v2_contract": {
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "feature_count": 19,
+    "weight_matrix_shape": [20, 2],
+    "training_rows": 3799,
+    "training_fingerprint_sha256": "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098",
+    "active_lambda": 0,
+    "shadow_residual_lambda": 1,
+    "stability_gate_passed": false,
+    "automatic_promotion": false
+  },
+  "official_sources": [
+    "https://www.api-football.com/",
+    "https://www.api-football.com/terms",
+    "https://www.api-football.com/news/post/how-to-get-all-data-from-a-league-with-api-football",
+    "https://www.api-football.com/documentation-v3"
+  ]
+}
