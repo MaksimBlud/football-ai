@@ -1,0 +1,128 @@
+{
+  "schema_version": "SPORTAPI_ORIGINAL_V2_SOURCE_RIGHTS_V1",
+  "provider": "SportAPI",
+  "reviewed_at_utc": "2026-11-13",
+  "terms_last_updated": "2026-10-22",
+  "official_references": {
+    "terms": "https://sportapi.ai/terms",
+    "pricing": "https://sportapi.ai/pricing",
+    "docs": "https://sportapi.ai/docs",
+    "openapi": "https://sportapi.ai/api/openapi.json",
+    "football_api": "https://sportapi.ai/football-api/",
+    "coverage": "https://sportapi.ai/coverage"
+  },
+  "free_plan": {
+    "all_endpoints_claimed": true,
+    "all_leagues_claimed": true,
+    "serie_a_listed_in_coverage": true,
+    "history_depth_confirmed": false,
+    "requests_per_day_through_2026_11_30": 2000,
+    "requests_per_month_through_2026_11_30": 14000,
+    "requests_per_day_from_2026_12_01": 1000,
+    "requests_per_month_from_2026_12_01": 7000,
+    "plan_access_tested": false
+  },
+  "documented_use_and_rights": {
+    "provider_analysis_use_permitted": true,
+    "provider_use_in_own_websites_apps_and_products_permitted": true,
+    "raw_redistribution_as_competing_feed_or_api_permitted": false,
+    "model_training_permission_confirmed": false,
+    "private_raw_retention_permission_confirmed": false,
+    "upstream_rights_confirmed": false,
+    "field_level_upstream_provenance_documented": false
+  },
+  "documented_source_schema": {
+    "fixture_fields_include": [
+      "kickoff_utc",
+      "updated_at",
+      "home_score",
+      "away_score",
+      "result",
+      "status"
+    ],
+    "fixture_updated_at_is_utc": true,
+    "fixture_updated_at_semantics_confirmed": false,
+    "per_field_source_observed_at_documented": false,
+    "per_field_correction_history_documented": false,
+    "team_match_statistics_fields": [
+      "shots",
+      "shots_on_target",
+      "shots_off_target",
+      "fouls",
+      "total_passes",
+      "pass_accuracy",
+      "tackles",
+      "tackle_success",
+      "saves",
+      "yellow_cards"
+    ],
+    "documented_match_event_families": [
+      "goals",
+      "assists",
+      "yellow_cards",
+      "red_cards",
+      "substitutions"
+    ],
+    "event_type_schema_is_open_string": true,
+    "corner_statistics_documented_in_openapi": false
+  },
+  "original_v2_feature_contract": {
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "feature_order": [
+      "diff_points_5",
+      "diff_points_10",
+      "diff_points_venue5",
+      "diff_goals_for_5",
+      "diff_goals_for_10",
+      "diff_goals_against_5",
+      "diff_goals_against_10",
+      "diff_corners_for_5",
+      "diff_corners_for_10",
+      "diff_corners_against_5",
+      "diff_corners_against_10",
+      "diff_yellow_5",
+      "diff_yellow_10",
+      "diff_red_5",
+      "diff_red_10",
+      "diff_goals_for_venue5",
+      "diff_goals_against_venue5",
+      "diff_corners_for_venue5",
+      "diff_corners_against_venue5"
+    ],
+    "unsupported_original_features": [
+      "diff_corners_for_5",
+      "diff_corners_for_10",
+      "diff_corners_against_5",
+      "diff_corners_against_10",
+      "diff_corners_for_venue5",
+      "diff_corners_against_venue5"
+    ],
+    "required_feature_count": 19,
+    "unsupported_feature_count": 6
+  },
+  "gates": {
+    "upstream_rights_confirmed": false,
+    "provider_model_training_permission_confirmed": false,
+    "provider_private_retention_permission_confirmed": false,
+    "free_serie_a_required_fields_confirmed": false,
+    "field_semantics_confirmed": false,
+    "corner_statistics_documented": false,
+    "per_field_observation_time_documented": false,
+    "private_archive_verified": false,
+    "live_ingestion_authorized": false,
+    "live_inference_authorized": false,
+    "target_outcome_access_authorized": false,
+    "paid_plan_authorized": false
+  },
+  "approval_status": "HOLD",
+  "reason": "Official SportAPI documentation lists Serie A and claims Free access to all endpoints and leagues. Its Terms permit use in own websites, apps, analysis and products, while prohibiting raw-data redistribution as a competing feed/API. However, the reviewed Terms do not expressly confirm model training or private raw-response retention; upstream rights and field-level provenance are not identified. The OpenAPI team-statistics schema contains no corner fields, and the documented event families do not establish corner counts. Six of the frozen 19 V2 features therefore remain unsupported. Fixture updated_at is UTC, but its source-observation/correction semantics are not documented. Do not create an account, ingest, infer or evaluate until written rights, full 19-feature coverage and provenance are confirmed.",
+  "reviewed_activity": {
+    "account_created": false,
+    "api_key_created": false,
+    "api_requests": 0,
+    "data_downloads": 0,
+    "supabase_access": false,
+    "target_outcomes_read": false,
+    "model_inference": false
+  }
+}
