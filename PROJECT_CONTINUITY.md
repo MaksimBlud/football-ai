@@ -10617,3 +10617,19 @@ This update supersedes the earlier note that the free-tier quota was contradicto
 The original V2 script still declares `active_lambda=0`, `shadow_lambda=1`, and a failed stability gate. Its frozen 19-feature order and weights were not modified. No Brier/LogLoss comparison or V2 superiority claim is available.
 
 No main update/merge, provider request/download, paid API call, target-outcome read, Supabase write/DDL, production `.pkl` change, schedule change, or other-agent setting change occurred. HUMAN-MERGE only.
+
+
+## Original V2 candidate file re-confirmed on main — 2026-11-12
+
+A direct read of the current default-branch files confirms that the original frozen candidate is already present on main; no refit/rebuild is needed to recover the saved research artifact.
+
+- Candidate JSON: `research/models/market_anchor_v2_serie_a_frozen_candidate.json`.
+- Git blob SHA-1: `ac1303f6b096664983fbf52443bd0a381b23ba21`.
+- Embedded canonical candidate SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Frozen ordered features: 19; weights: 20x2 (19 features plus intercept); imputer medians, scaler means and scaler scales: 19 each.
+- Training rows: 3,799; training fingerprint: `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`.
+- Candidate contract: `active_lambda=0`, `shadow_residual_lambda=1`, `stability_gate_passed=false`, research-only, automatic promotion false.
+- `serie_a_v2_frozen_shadow_preview.py` pins the same candidate SHA and calls `validate_candidate_artifact` before use. The frozen test `test_actual_sha_restored_candidate_is_used_and_shadow_is_not_active_market` loads the actual checked-in JSON, checks its SHA/row count/lambda, asserts active probabilities equal the market, and pins a deterministic shadow reference vector. The exact-main Frozen V2 Actions run [#43242070289](https://github.com/MaksimBlud/football-ai/actions/runs/43242070289) executed the frozen preview suite and reported **103 passed**; the full PR #781 exact-head CI remains 8/8 SUCCESS.
+- The original feature builder remains blob `401b3a0893371bfa4a488ec92a4a54af2678c8f7`. The current date-only as-of manifest explicitly marks `independently_attested_information_time=false` and `eligible_for_frozen_prospective_cohort=false`; it is diagnostic only and does not establish source-before-quote provenance.
+
+This confirms the original V2 candidate artifact is saved and test-loaded on main; it does **not** mean it is active in production or that a real prospective forecast exists. The candidate remains market fallback at lambda 0, shadow-only at lambda 1, with the predeclared stability gate failed. No refit, candidate rebuild, weight/feature/scaler/imputer change, production `.pkl` change, live inference, target-outcome read, or promotion was performed by this audit.
