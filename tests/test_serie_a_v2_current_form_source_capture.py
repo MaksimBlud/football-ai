@@ -159,6 +159,19 @@ def test_current_csv_accepts_integer_valued_decimal_count_cells():
 
 
 
+def test_current_csv_rejects_infinite_count_values():
+    lines = current_csv(n=30).decode().splitlines()
+    header = lines[0].split(",")
+    row = lines[1].split(",")
+    row[header.index("HC")] = "inf"
+    lines[1] = ",".join(row)
+    raw = ("\n".join(lines) + "\n").encode()
+    with pytest.raises(ValueError, match="non-integer HC"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
 def test_closed_feature_source_gate_stops_before_any_public_download(tmp_path):
     calls = []
     def forbidden_history(**_kwargs):
