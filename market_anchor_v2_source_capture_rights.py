@@ -20,7 +20,7 @@ from market_anchor_v2_source_rights import (
 )
 
 SOURCE_CAPTURE_SCOPE = "PRIVATE_NONCOMMERCIAL_RESEARCH_ARCHIVE_ONLY"
-EXPECTED_POLICY_URL = "https://football-data.co.uk/contact.php"
+EXPECTED_POLICY_URL = "https://football-data.co.uk/data"
 DOWNLOAD_BUDGET_POLICY = "TWO_AUTOMATED_SESSIONS_PER_ROLLING_7_DAYS"
 MAX_POLICY_AGE_SECONDS = 90 * 24 * 60 * 60
 
@@ -90,13 +90,13 @@ def require_personal_research_source_capture_scope(
     if (
         parts.scheme != "https"
         or parts.hostname != "football-data.co.uk"
-        or parts.path != "/contact.php"
+        or parts.path != "/data"
         or parts.username is not None
         or parts.password is not None
         or parts.query
         or parts.fragment
     ):
-        raise PermissionError("source-capture policy reference is not the official Football-Data fair-use page")
+        raise PermissionError("source-capture policy reference is not the official Football-Data data/fair-use page")
 
     summary = manifest.get("policy_summary")
     if (
