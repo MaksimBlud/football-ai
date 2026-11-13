@@ -135,7 +135,7 @@ def test_current_csv_rejects_fractional_goal_corner_and_card_counts(column):
     row = lines[1].split(",")
     row[header.index(column)] = "1.5"
     lines[1] = ",".join(row)
-    raw = ("\\n".join(lines) + "\\n").encode()
+    raw = ("\n".join(lines) + "\n").encode()
     with pytest.raises(ValueError, match=f"non-integer {column}"):
         validate_current_season_csv(
             raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
@@ -150,7 +150,7 @@ def test_current_csv_accepts_integer_valued_decimal_count_cells():
         index = header.index(column)
         row[index] = f"{float(row[index]):.1f}"
     lines[1] = ",".join(row)
-    raw = ("\\n".join(lines) + "\\n").encode()
+    raw = ("\n".join(lines) + "\n").encode()
     frame, excluded = validate_current_season_csv(
         raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
     )
