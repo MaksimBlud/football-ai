@@ -7,6 +7,7 @@ on:
       - research/v2-market-only-evaluator-restacked-on-820-20261114-run11
       - research/v2-strict-completed-gate-date-only-on-821-20261114-run11
       - research/v2-completed-fixture-direct-rights-guard-restacked-on-822-20261114-run11
+      - research/v2-direct-forward-artifact-api-rights-gate-restacked-on-823-20261114-run11
     paths:
       - "requirements-v2-research-py312.lock"
       - "market_anchor_1x2_v2_*.py"
@@ -30,6 +31,7 @@ on:
       - research/v2-market-only-evaluator-restacked-on-820-20261114-run11
       - research/v2-strict-completed-gate-date-only-on-821-20261114-run11
       - research/v2-completed-fixture-direct-rights-guard-restacked-on-822-20261114-run11
+      - research/v2-direct-forward-artifact-api-rights-gate-restacked-on-823-20261114-run11
     paths:
       - "requirements-v2-research-py312.lock"
       - "market_anchor_1x2_v2_*.py"

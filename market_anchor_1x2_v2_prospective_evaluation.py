@@ -52,6 +52,10 @@ def _utc(value: Any, field: str) -> datetime:
 
 
 def _github_json(url: str, token: str, get=requests.get) -> dict[str, Any]:
+    # This is the actual network boundary for forward-artifact listing and run
+    # verification. Guard direct imports here, not only the higher-level runner.
+    require_personal_research_inference_scope()
+    require_private_repository_for_source_artifacts(REPOSITORY, token)
     if not url.startswith(GITHUB_API + "/"):
         raise ValueError("GitHub API URL is outside the configured repository")
     response = get(
