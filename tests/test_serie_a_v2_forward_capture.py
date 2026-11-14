@@ -14,7 +14,7 @@ from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
 from serie_a_v2_forward_capture import (
     ARTIFACT_NAME, ARCHIVE_REPORT, SOURCE_DIR,
     discover_archives, prepare_forward_capture, verify_source_run,
-    SOURCE_WORKFLOW_PATH,
+    capture_forward_with_source_preflight, SOURCE_WORKFLOW_PATH,
 )
 
 NOW = datetime(2026, 10, 14, 7, 0, tzinfo=timezone.utc)
@@ -76,8 +76,12 @@ def fake_verified_parent_run(archive, quote_time):
     assert archive["run_id"] == 456
     assert archive["head_sha"] == "a" * 40
     assert quote_time.tzinfo is not None
-    return {"run_completed_at_utc": "2026-10-13T15:01:00Z",
-            "workflow_path": SOURCE_WORKFLOW_PATH, "run_id": 456}
+    return {
+        "run_completed_at_utc": "2026-10-13T15:01:00Z",
+        "workflow_path": SOURCE_WORKFLOW_PATH,
+        "run_id": 456,
+        "run_head_sha": "a" * 40,
+    }
 
 
 
@@ -327,3 +331,106 @@ def test_nonempty_forward_source_output_is_preserved_without_callbacks(tmp_path)
     assert calls == []
     assert marker.read_text(encoding="utf-8") == "preserve"
 
+
+
+
+def test_original_forward_source_sha_and_parent_are_verified_before_saved_quote_reader():
+    raw, metadata = make_source_archive()
+    events = []
+
+    def verify_parent(archive, quote_time):
+        events.append(("parent", quote_time))
+        return fake_verified_parent_run(archive, quote_time)
+
+    def load_archive(artifact_id):
+        events.append(("archive", artifact_id))
+        return raw
+
+    def fetch_quotes():
+        events.append(("quotes", None))
+        return [quote()]
+
+    report = capture_forward_with_source_preflight(
+        metadata,
+        as_of_utc=NOW,
+        fetch_quotes=fetch_quotes,
+        load_archive=load_archive,
+        verify_parent_run=verify_parent,
+    )
+
+    assert [name for name, _ in events] == ["parent", "archive", "quotes"]
+    assert report["source_preflight"]["verified"] is True
+    assert report["source_preflight"]["source_artifact_sha256"] == metadata[0]["sha256"]
+    assert report["source_preflight"]["quotes_read_after_source_preflight"] is True
+    assert report["v2_diagnostic_previews_captured"] == 1
+    assert report["rows"][0]["source_artifact_sha256"] == metadata[0]["sha256"]
+
+
+def test_original_forward_does_not_read_quotes_without_any_prior_source_archive():
+    calls = []
+
+    with pytest.raises(RuntimeError, match="no original V2 source archive before quote read"):
+        capture_forward_with_source_preflight(
+            [],
+            as_of_utc=NOW,
+            fetch_quotes=lambda: calls.append("quotes") or [quote()],
+            load_archive=lambda _artifact_id: calls.append("archive"),
+            verify_parent_run=lambda *_args: calls.append("parent"),
+        )
+
+    assert calls == []
+
+
+def test_original_forward_does_not_read_quotes_when_parent_workflow_is_unverified():
+    raw, metadata = make_source_archive()
+    calls = []
+
+    def reject_parent(_archive, _quote_time):
+        calls.append("parent")
+        raise ValueError("source artifact parent run is not the verified original V2 collector")
+
+    with pytest.raises(ValueError, match="verified original V2 collector"):
+        capture_forward_with_source_preflight(
+            metadata,
+            as_of_utc=NOW,
+            fetch_quotes=lambda: calls.append("quotes") or [quote()],
+            load_archive=lambda _artifact_id: calls.append("archive") or raw,
+            verify_parent_run=reject_parent,
+        )
+
+    assert calls == ["parent"]
+
+
+def test_original_forward_does_not_read_quotes_when_source_archive_sha_fails():
+    raw, metadata = make_source_archive()
+    calls = []
+
+    with pytest.raises(ValueError, match="archive digest mismatch"):
+        capture_forward_with_source_preflight(
+            metadata,
+            as_of_utc=NOW,
+            fetch_quotes=lambda: calls.append("quotes") or [quote()],
+            load_archive=lambda _artifact_id: calls.append("archive") or raw + b"tampered",
+            verify_parent_run=fake_verified_parent_run,
+        )
+
+    assert calls == ["archive"]
+
+
+def test_original_forward_source_preflight_does_not_backfill_quote_older_than_archive():
+    raw, metadata = make_source_archive()
+    calls = []
+
+    report = capture_forward_with_source_preflight(
+        metadata,
+        as_of_utc=NOW,
+        fetch_quotes=lambda: calls.append("quotes") or [quote("2026-10-13T14:48:53Z")],
+        load_archive=lambda _artifact_id: raw,
+        verify_parent_run=fake_verified_parent_run,
+    )
+
+    assert calls == ["quotes"]
+    assert report["source_preflight"]["verified"] is True
+    assert report["v2_diagnostic_previews_captured"] == 0
+    assert report["blocked_no_prior_source"] == 1
+    assert report["rows"][0]["v2_preview"] is None
