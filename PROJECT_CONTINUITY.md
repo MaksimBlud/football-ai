@@ -1,4 +1,15 @@
 
+## 2026-11-14 02:05 UTC — Current-form forward source publication hardened (PR #809)
+
+- Main's current-form forward workflow also uploads its output with `if: always()`. Its entrypoint performed source verification and quote processing while writing validated source ZIPs into the final artifact directory; a later saved-quote read or forward-capture failure could leave a partial bundle.
+- [PR #809](https://github.com/MaksimBlud/football-ai/pull/809) adds a single orchestrator: verify the latest source archive and its successful parent first, then read saved pre-match quotes, run the forward preview in the same sibling staging directory, and atomically publish only after the complete pass succeeds. Symlink/non-empty output paths fail closed and existing evidence is preserved.
+- Exact PR HEAD: `8448042f3c9d3bb66556cd4208721a7a92f17b8c`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, two files changed. Exact-head CI **7/7 SUCCESS**; Frozen V2 Shadow Tests [run 43544217140](https://github.com/MaksimBlud/football-ai/actions/runs/43544217140) reports **88 passed**, compile PASS, production `.pkl` diff guard PASS. Three new regressions cover source-before-quote ordering, complete publication, failure cleanup, and occupied-output preservation.
+- PR #809 is Ready for review but HUMAN-MERGE only. It overlaps `serie_a_v2_current_form_forward_capture.py` with the #720/#727/#780/#787 rights stack. Rebase/port it onto the final rights-stack main and rerun exact-head CI before manual merge.
+- #808 independently hardens the original old-season forward artifact path; #796 hardens current-form source-capture publication. All three are code/test-only safety changes, not provider permission or live-capture authorization.
+
+No new quotes, V2 predictions, target-outcome reads, Brier/LogLoss scores, or model-quality evidence were produced. Main remains unchanged; target-outcome gate remains 0/30.
+
+
 ## 2026-11-14 02:01 UTC — Original V2 forward artifact publication hardened (PR #808)
 
 Fresh main is still `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no PR has been merged in this iteration.
