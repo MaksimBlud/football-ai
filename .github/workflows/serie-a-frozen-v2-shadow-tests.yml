@@ -78,6 +78,8 @@ on:
       - research/v2-core-inference-and-refit-freeze-rebased-on-785-20261111-run11
       - research/v2-direct-entrypoint-rights-gates-on-786-20261111-run11
       - research/v2-direct-access-source-capture-stack-restacked-on-817-20261114-run11
+      - research/v2-current-form-atomic-source-capture-rights-stacked-on-787-20261114-run11
+      - research/v2-current-form-atomic-source-capture-restacked-on-818-20261114-run11
     paths:
       - "market_anchor_v2_direct_access.py"
       - "serie_a_v2_asof_feature_manifest.py"
