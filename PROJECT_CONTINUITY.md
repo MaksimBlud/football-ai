@@ -10817,3 +10817,83 @@ This checkpoint records the fresh main/runtime audit for the next V2-only cycle.
 - No new V2 workflow run, quote, eligible forecast, source permission, or evaluation event was established. The 30-forecast completed-event outcome gate remains closed. No merge, main change, Supabase write/DDL, provider/API request, source download, protected outcome read, schedule change, or other-agent setting change occurred.
 
 Next cycle: first recheck whether the four Nov 13 scheduled workflows appeared late; otherwise keep the cause unresolved, maintain HUMAN-MERGE for #781, and continue only independent offline rights/provenance work. Do not create duplicate source/evaluator PRs or weaken any gate.
+
+
+## 2026-11-14 — original V2 direct-gate rights fix and current evidence
+
+This checkpoint is based on a fresh read of GitHub `main`, the current open V2 PR stack, exact GitHub Actions runs, and read-only Supabase metadata. It does not change the frozen candidate contract.
+
+### Main and continuity state
+
+- `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc` (main commit dated 2026-10-18 08:20:05 UTC).
+- Main `PROJECT_CONTINUITY.md` remains blob `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`; its last dated entry is 2026-10-10. This open documentation PR is the existing continuity path; do not create a duplicate continuity PR.
+- The three live main V2 workflow blobs remain:
+  - Original Forward: `48ce3b0d8e31c4cf293b94500e9c320047311467`.
+  - Current-Form Forward: `6ebbcaff290a78e9ccffa4ac9a09bc0982eaff35`.
+  - Current-Form Source Capture: `9722416862b42d55ff7181003353c39620f23cf2`.
+- Each still has job-level `SUPABASE_URL` / `SUPABASE_KEY` and an Actions artifact upload guarded by `if: always()`. The repository is PUBLIC. The live hold is not active on main until PR #781 is manually merged.
+
+### Original candidate — unchanged and already saved on main
+
+- Candidate path: `research/models/market_anchor_v2_serie_a_frozen_candidate.json`.
+- Main blob SHA-1: `ac1303f6b096664983fbf52443bd0a381b23ba21`.
+- Canonical candidate artifact SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Exact frozen feature order remains 19:
+  `diff_points_5`, `diff_points_10`, `diff_points_venue5`, `diff_goals_for_5`, `diff_goals_for_10`, `diff_goals_against_5`, `diff_goals_against_10`, `diff_corners_for_5`, `diff_corners_for_10`, `diff_corners_against_5`, `diff_corners_against_10`, `diff_yellow_5`, `diff_yellow_10`, `diff_red_5`, `diff_red_10`, `diff_goals_for_venue5`, `diff_goals_against_venue5`, `diff_corners_for_venue5`, `diff_corners_against_venue5`.
+- Weights remain 20x2 (19 features plus intercept); imputer medians, scaler means and scaler scales remain length 19.
+- Training rows remain 3,799; training data ends 2026-06-30 23:59:59 UTC; training fingerprint remains `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`.
+- `active_lambda=0`, `shadow_residual_lambda=1`, `stability_gate_passed=false`, `research_only=true`, `automatic_promotion=false`, `opened_2026_27_outcomes_used=false`.
+- The protocol blob remains `65729e9639720e67624c1481190aa22ae606f151`; the first protected outcome read gate is 30 completed primary-league events, diagnostic-only. No weight, feature, scaler, imputer, candidate JSON, or production `.pkl` was changed.
+
+### Latest real main V2 runtime
+
+- Original Forward [run #43607489246](https://github.com/MaksimBlud/football-ai/actions/runs/43607489246), main SHA above, completed SUCCESS: 3,800 historical rows / 10 old-season files; `quotes_seen=0`, `forecasts_created=0`, `v2_diagnostic_previews_captured=0`. Its report-only artifact is #14118641609.
+- Current-Form Source Capture [run #43595368403](https://github.com/MaksimBlud/football-ai/actions/runs/43595368403) completed SUCCESS: 110 metadata-only completed fixture identities, 10 historical CSVs plus one current-season CSV, 3,910 historical rows. Source artifact #14114033421, SHA-256 `ffa5c5613d269e10f9bb928895294034d4ba43ba4723a69b61f1276a5ce6276a`.
+- Current-Form Forward [run #43608273625](https://github.com/MaksimBlud/football-ai/actions/runs/43608273625) completed SUCCESS: parent/source SHA verified, but `quotes_seen=0`, `v2_current_form_shadow_captured=0`, target outcomes not read or scored. It still uploaded source-bearing artifact #14118798411, SHA-256 `d924830c6ca4e29fc208bb45460f76902d81f129bc8f6a2fe909d1413dd0c76d`.
+- None of the source-bearing artifacts was downloaded or reused. These are provenance/runtime checks only, not V2 forecasts or performance evidence.
+
+### Fresh read-only pre-match Supabase state
+
+Only `public.odds_snapshots` league/event identity and snapshot/kickoff timestamps were queried. No odds values, score/result fields, target outcomes, or settlement fields were selected.
+
+- 3,915 strict pre-match snapshot rows across 327 events and nine leagues.
+- Strict condition: `snapshot_time_utc < commence_time_utc`.
+- Strict pre-match rows in the last seven days: 0.
+- Upcoming events with a saved strict pre-match snapshot: 0.
+- Serie A: 620 rows / 63 events; latest strict pre-match snapshot `2026-10-13 14:48:53 UTC`.
+- Exact candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6` in `public.product_prediction_snapshots`, filtered to generated-before-kickoff: 0 rows / 0 events.
+- No eligible prospective V2 forecast cohort has been accumulated; the 30-event outcome gate remains closed. The 110-event feature-input metadata gate is not the outcome gate.
+
+### Rights, private storage, and workflow hold
+
+- The rights manifest in the open #720 branch still says `research_inference_permitted=false`, `provider_issued_ai_inference_license=false`, and `authorization=null`.
+- The repository remains PUBLIC; source archive reuse and live V2 inference remain prohibited until the provider-issued scope and private storage requirements are resolved.
+- PR #781 remains OPEN / Ready for review at HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`, with 8/8 PR workflows SUCCESS. Its recovery job ran offline regressions; rebuild, checksum proof, and candidate artifact upload were skipped under default deny. The hold is not active on main until HUMAN-MERGE.
+- PR #720 is still based on main, not on #781; #727 is stacked on #720. PRs #813–#823 remain open in their dependency chain. Do not merge a downstream PR before its exact base is integrated and rechecked.
+
+### New direct completed-fixture rights fix — PR #823
+
+Review of the #822 evaluator stack found that the public `read_completed_fixture_gate(client)` API and its timestamp-controlled query implementation could read the identity-only `public.league_finished_results` projection without independently enforcing the provider frozen-inference rights gate. The higher-level runner already checked rights, but direct module callers could bypass it.
+
+- [PR #823](https://github.com/MaksimBlud/football-ai/pull/823), exact base #822 HEAD `a9d251b31866d8226ec518be7625d706a815b7d5`.
+- Final HEAD `77c73bc911369c944540084b727c9b7ccdc74a23`; 3 commits ahead / 0 behind; five intended files; Draft / HUMAN-MERGE.
+- The query implementation now calls `require_personal_research_inference_scope()` before constructing or executing the Supabase query. The selected allowlist remains exactly `match_date,home_team,away_team`; no score/result column is selected.
+- Regressions prove denied rights cause zero client/table access, and the allowed synthetic query checks rights before the identity-only projection. Synthetic tests explicitly stub rights; the actual manifest remains fail-closed.
+- Exact-head CI: push evaluator [#43640436146](https://github.com/MaksimBlud/football-ai/actions/runs/43640436146) = 207 passed; PR evaluator [#43640441867](https://github.com/MaksimBlud/football-ai/actions/runs/43640441867) = 207 passed; Frozen V2 [#43640441914](https://github.com/MaksimBlud/football-ai/actions/runs/43640441914) = 495 passed on Python 3.11 and 495 on Python 3.12. All four checks SUCCESS; compile, pip check, and production `.pkl` diff guards passed.
+- An earlier attempt failed because synthetic tests did not stub the newly enforced rights gate and one test used team labels that canonicalize to `Inter Milan` / `AC Milan`. Both test-only issues were corrected before the final exact SHA; only the final SHA is counted as validated.
+- PRs #821 and #822 remain OPEN / Draft / 4/4 exact-head CI SUCCESS. #823 remains Draft and must not be merged before #822 and the upstream rights/workflow stack.
+
+### Separate Supabase security advisor — no DDL performed
+
+Fresh Security Advisor at 2026-11-14 21:00 UTC reports five public tables with RLS disabled: `teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, and `epl_ai_market_pair_ledger`. It also reports four tables with RLS enabled but no policies: `competitions`, `match_stats`, `matches`, and `standings`. This is a separate database-security issue, not a V2 model change. No SQL was executed because Supabase DDL is prohibited in this task; enabling RLS without appropriate policies may block legitimate access and requires a separate policy review.
+
+### Binding next steps
+
+1. HUMAN-MERGE #781, then verify fresh main proves all five live source/quote/recovery workflows are held before any external access or artifact upload.
+2. Rebase/integrate #720 and #727 in dependency order; then integrate the rights, source, quote, and private-storage PR chain through #820.
+3. Integrate the frozen prospective evaluator #821, date-only gate #822, and direct identity-gate rights fix #823 only after their exact bases are present on main.
+4. Obtain written provider authorization for the exact frozen AI-inference use and private retention; no source capture or inference before this.
+5. Only then permit free pre-match source capture with upstream observation-time proof, source-before-quote ordering, and SHA; calculate the unchanged 19 features/weights.
+6. Accumulate 30 eligible prospective primary-league forecasts before any protected outcome read; then report independent de-vigged-market Brier and LogLoss. No tuning, refit, activation, promotion, or superiority claim.
+
+No main update/merge, Supabase write/DDL, paid provider call, source download/reuse, protected outcome read, production `.pkl` change, schedule change, or other-agent setting change occurred in this checkpoint. HUMAN-MERGE remains mandatory.
