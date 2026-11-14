@@ -253,7 +253,7 @@ artifacts with verified source archives and 30 completed primary forecast
 events.
 
 
-## Current source-rights and private-storage blockers — 2026-11-12
+## Current source-rights and private-storage blockers — 2026-11-14
 
 The evaluator is stacked on the integrated source-rights/privacy pipeline. These
 permissions are intentionally separate:
@@ -280,10 +280,10 @@ No protected 2026/27 outcomes were read in this integration; all evaluator
 and runner tests use synthetic data.
 
 
-## Market-only evaluation and current rights-stack rebase — 2026-11-12
+## Market-only evaluation and current rights-stack rebase — 2026-11-14
 
 The separately named `evaluate_market_only_after_gate()` path is the appropriate preregistered comparison when no frozen incumbent artifact identity has been approved. It accepts only the de-vigged market vector and original V2 lambda-one shadow vector, rejects incumbent evidence, and preserves the same 30-unique-eligible-completed-primary-forecast gate. Below 30, the lazy H/D/A loader is not called. At or above 30, it reports multiclass Brier and LogLoss plus paired fixture-level 10,000-resample percentile summaries. The bootstrap fraction is descriptive, not a p-value; the market-only path always keeps `review_signal=false`, NO_BET, and no promotion.
 
 The full three-way market/incumbent/shadow review remains blocked until a separately approved non-legacy incumbent version and artifact SHA are pinned. No XGBoost model is restored or substituted.
 
-This evaluator port is based on the exact direct-access rights stack from PR #787 at `272a0dc2d6a97fedc7964e8cc2614ba670220fae`, rather than the stale #727-only branch. The current source-rights manifest remains deny-by-default, the repository remains public, and PR #781 still holds live source/quote workflows. This rebase adds no source permission and does not enable live inference. Validation is offline/synthetic only; no Supabase, source archive, quote, or target outcome is read by CI.
+This restacked evaluator is based on exact PR #820 HEAD `97e66fe0807779327fd1970573896981cb444f94`. That ancestry includes the direct source/inference/private-storage controls from #818, atomic current-form source publication from #819, and secret-free offline forward validation from #820; it preserves the newer #727 identity/date regressions. The source-policy successor #813 still records source capture=false, inference=false, training=false and authorization=null; the repository remains public, and #781 is still the required manual live-workflow hold. This restack adds no source permission and does not enable live inference. Validation is offline/synthetic only; no Supabase, source archive, quote, or target outcome is read by CI.
