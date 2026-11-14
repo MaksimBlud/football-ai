@@ -17,7 +17,6 @@ on:
       - research/v2-current-form-forward-offline-push-validation-restacked-on-819-20261114-run11
       - research/v2-market-only-evaluator-restacked-on-820-20261114-run11
       - research/v2-strict-completed-gate-date-only-on-821-20261114-run11
-      - research/v2-completed-fixture-direct-rights-guard-restacked-on-822-20261114-run11
       - research/v2-source-policy-recheck-stacked-on-727-20261110-run11
       - research/v2-prematch-quote-query-cutoff-rebased-on-780-20261111-run11
       - research/v2-direct-quote-reader-rights-gate-rebased-on-783-20261111-run11
@@ -89,6 +88,7 @@ on:
       - research/v2-current-form-atomic-source-capture-restacked-on-818-20261114-run11
       - research/v2-market-only-evaluator-restacked-on-820-20261114-run11
       - research/v2-strict-completed-gate-date-only-on-821-20261114-run11
+      - research/v2-completed-fixture-direct-rights-guard-restacked-on-822-20261114-run11
     paths:
       - "market_anchor_v2_direct_access.py"
       - "serie_a_v2_asof_feature_manifest.py"
