@@ -14,6 +14,24 @@ from serie_a_v2_prequote_source_archive_gate import (
     ARCHIVE_REPORT, SOURCE_DIR, verify_archive,
 )
 
+@pytest.fixture(autouse=True)
+def allow_synthetic_v2_inference_scope(monkeypatch):
+    """Offline fixtures use synthetic inputs; this is not provider authorization."""
+    import market_anchor_v2_source_rights as rights
+    import market_anchor_v2_artifact_privacy as privacy
+
+    monkeypatch.setattr(
+        rights,
+        "require_personal_research_inference_scope",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: {"private": True, "storage_policy": "SYNTHETIC_TEST_ONLY"},
+    )
+
+
 AFTER = datetime(2026, 10, 15, 12, tzinfo=timezone.utc)
 OBSERVED = datetime(2026, 10, 13, 15, 22, tzinfo=timezone.utc)
 UPLOADED = "2026-10-13T15:22:55Z"
@@ -196,3 +214,30 @@ def test_github_artifact_created_at_exact_quote_time_is_not_prequote(tmp_path):
     assert result["source_archive_prequote_ready"] == 0
     assert result["by_quote"][0]["source_archive_before_quote"] is False
     assert result["blocked"]["ARCHIVE_NOT_BEFORE_QUOTE"] == 1
+
+
+
+def test_prequote_gate_cli_denies_before_reading_quote_file_or_archive(monkeypatch, tmp_path):
+    import sys
+    import serie_a_v2_prequote_source_archive_gate as archive_gate
+    import market_anchor_v2_direct_access as direct_access
+
+    missing_archive = tmp_path / "must-not-be-statted.zip"
+    missing_quotes = tmp_path / "must-not-be-read.json"
+    output = tmp_path / "must-not-be-written.json"
+    monkeypatch.setattr(sys, "argv", [
+        "serie_a_v2_prequote_source_archive_gate.py",
+        "--archive", str(missing_archive),
+        "--quotes-json", str(missing_quotes),
+        "--output", str(output),
+    ])
+    monkeypatch.setattr(
+        direct_access,
+        "require_v2_inference_access",
+        lambda: (_ for _ in ()).throw(PermissionError("direct quote/archive access blocked")),
+    )
+
+    with pytest.raises(PermissionError, match="direct quote/archive access blocked"):
+        archive_gate.main()
+
+    assert not output.exists()
