@@ -1,0 +1,43 @@
+name: MARKET_ANCHOR_1X2_V2 Lazy Client Source Gate Validation
+
+on:
+  push:
+    branches:
+      - research/v2-lazy-supabase-client-after-source-preflight-20261114-run11
+    paths:
+      - "serie_a_v2_current_form_forward_capture.py"
+      - "tests/test_serie_a_v2_current_form_forward_capture.py"
+      - ".github/workflows/market-anchor-v2-lazy-client-validation.yml"
+  pull_request:
+    branches:
+      - research/v2-current-form-forward-atomic-artifacts-20261113-run11
+    paths:
+      - "serie_a_v2_current_form_forward_capture.py"
+      - "tests/test_serie_a_v2_current_form_forward_capture.py"
+      - ".github/workflows/market-anchor-v2-lazy-client-validation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  offline-source-gate:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install offline V2 test dependencies
+        run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
+      - name: Compile original V2 current-form forward entrypoint
+        run: python -m py_compile serie_a_v2_current_form_forward_capture.py
+      - name: Run current-form forward and source-before-client regressions
+        run: python -m pytest -q tests/test_serie_a_v2_current_form_forward_capture.py
+      - name: Verify production model artifacts are unchanged
+        run: git diff --exit-code origin/main -- '*.pkl'
