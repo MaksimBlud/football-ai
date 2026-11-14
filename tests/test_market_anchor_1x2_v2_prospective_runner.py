@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta
 import pytest
 
 import market_anchor_1x2_v2_prospective_evaluator as evaluator
+import market_anchor_1x2_v2_completed_fixture_gate as completed_fixture_gate
 import market_anchor_1x2_v2_prospective_runner as runner
 from market_anchor_v2_source_rights import require_personal_research_inference_scope as actual_inference_rights_check
 
@@ -1104,3 +1105,35 @@ def test_live_supabase_runner_rejects_future_observation_clock_before_gate_or_re
     assert client.result_query_count == 0
     assert client.select_calls == []
     assert outcome_read_state["called"] is False
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        date(2026, 11, 1),
+        datetime(2026, 11, 1, 0, 0),
+        datetime(2026, 11, 1, 23, 30),
+    ],
+)
+def test_completed_fixture_gate_rejects_date_and_datetime_objects(value):
+    with pytest.raises(ValueError, match="canonical YYYY-MM-DD"):
+        completed_fixture_gate._match_date(value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "2026-11-01T00:00:00Z",
+        "2026-11-01T00:00:00+14:00",
+        "2026-11-01 00:00:00",
+        "2026-1-1",
+        "2026-11-01 ",
+    ],
+)
+def test_completed_fixture_gate_rejects_timestamp_and_noncanonical_date_strings(value):
+    with pytest.raises(ValueError, match="canonical YYYY-MM-DD"):
+        completed_fixture_gate._match_date(value)
+
+
+def test_completed_fixture_gate_accepts_only_canonical_iso_date_string():
+    assert completed_fixture_gate._match_date("2026-11-01") == date(2026, 11, 1)

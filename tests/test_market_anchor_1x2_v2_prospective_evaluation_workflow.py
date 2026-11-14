@@ -493,5 +493,6 @@ def test_offline_validation_workflow_tracks_current_direct_rights_stack():
     frozen_pull = frozen_text.split("  push:", 1)[0]
     frozen_push = frozen_text.split("  push:", 1)[1].split("permissions:", 1)[0]
     assert "research/v2-current-form-forward-offline-push-validation-restacked-on-819-20261114-run11" in frozen_pull
-    assert "research/v2-market-only-evaluator-restacked-on-820-20261114-run11" not in frozen_pull
+    # The evaluator branch is a required PR base for the strict-date follow-up.
+    assert "research/v2-market-only-evaluator-restacked-on-820-20261114-run11" in frozen_pull
     assert "research/v2-market-only-evaluator-restacked-on-820-20261114-run11" in frozen_push

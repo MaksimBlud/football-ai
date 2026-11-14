@@ -48,19 +48,18 @@ def _capture_utc(value: datetime) -> datetime:
 
 
 def _match_date(value: Any) -> date:
-    if isinstance(value, datetime):
-        return value.date()
-    if isinstance(value, date):
-        return value
-    if isinstance(value, str):
-        try:
-            parsed = date.fromisoformat(value)
-        except ValueError as exc:
-            raise ValueError("completed-fixture metadata date must be canonical YYYY-MM-DD") from exc
-        if parsed.isoformat() != value:
-            raise ValueError("completed-fixture metadata date must be canonical YYYY-MM-DD")
-        return parsed
-    raise ValueError("completed-fixture metadata row lacks a valid match_date")
+    # Supabase DATE values must remain canonical date-only strings. Accepting
+    # Python date/datetime objects here would silently normalize a timestamp
+    # (and potentially its timezone) into a different fixture day.
+    if not isinstance(value, str):
+        raise ValueError("completed-fixture metadata date must be canonical YYYY-MM-DD")
+    try:
+        parsed = date.fromisoformat(value)
+    except ValueError as exc:
+        raise ValueError("completed-fixture metadata date must be canonical YYYY-MM-DD") from exc
+    if parsed.isoformat() != value:
+        raise ValueError("completed-fixture metadata date must be canonical YYYY-MM-DD")
+    return parsed
 
 
 def _now_utc() -> datetime:
