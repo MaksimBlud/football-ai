@@ -5,7 +5,7 @@
 
 ## Why this provider is worth tracking
 
-The official pricing and documentation describe a $0 Free plan with 50 requests/day, 10 requests/minute, current-season access, all match-stat endpoints, and no odds. The match-stat endpoint documents home/away corner kicks, yellow cards and red cards; the match endpoint supplies match identity and scores. This is a plausible *statistics-only* candidate for lagged current-form inputs, not an odds provider.
+The official pricing and documentation describe a $0 Free plan with 50 requests/day, 10 requests/minute, current-season access, all match-stat endpoints, and no odds. The match-stat endpoint documents home/away corner kicks, yellow cards and red cards; the match-list/detail endpoints supply match identity and scores. The docs distinguish normal-time `score.home`/`score.away` from `score.winner` (which includes extra time and penalties); any future points mapping must use the original V2 normal-time semantics, not the winner field. This is a plausible *statistics-only* candidate for lagged current-form inputs, not an odds provider.
 
 Official sources:
 - Terms (last updated 30 October 2026): https://soccer-data.co/terms
@@ -13,7 +13,8 @@ Official sources:
 - Rate limits and cache headers: https://soccer-data.co/docs/concepts/rate-limits
 - Competition/season coverage: https://soccer-data.co/docs/concepts/coverage
 - Match statistics schema: https://soccer-data.co/docs/reference/matches/stats
-- Match list and score fields: https://soccer-data.co/docs/reference/matches
+- Match list and score fields: https://soccer-data.co/docs/reference/matches/list
+- Match detail: https://soccer-data.co/docs/reference/matches/show
 
 ## Why the decision remains HOLD
 
