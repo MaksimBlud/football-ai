@@ -54,7 +54,11 @@ def _push_paths(workflow_text: str) -> set[str]:
     paths_index = push_block.index("    paths:")
     paths = set()
     for line in push_block[paths_index + 1:]:
-        match = re.match(r'^\s*- "([^"]+)"\s*
+        match = re.match(r'^\s*- "([^"]+)"\s*$', line)
+        if match:
+            paths.add(match.group(1))
+    assert paths, "workflow must declare an explicit push path filter"
+    return paths
 
 
 REQUIRED_FORWARD_AUDIT_PATHS = {
