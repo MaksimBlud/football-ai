@@ -19,6 +19,8 @@ import zipfile
 import pandas as pd
 import requests
 
+from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
+
 from serie_a_v2_frozen_shadow_preview import (
     MAX_QUOTE_AGE, fetch_saved_upcoming_serie_a_quotes, parse_utc,
 )
@@ -32,13 +34,28 @@ REPOSITORY = "MaksimBlud/football-ai"
 ARTIFACT_NAME = "serie-a-v2-free-real-quote-diagnostic"
 SOURCE_WORKFLOW_PATH = ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
 SOURCE_LOADER_PATH = "serie_a_v2_live_diagnostic_report.py"
-EXPECTED_SOURCE_LOADER_BLOB_SHA1 = "54805b05a03efac9466f1b77277cccb1e538cf64"
+EXPECTED_SOURCE_LOADER_BLOB_SHA1 = "6a1c382e127dc0aa1088ef976fc436a78176b515"
 SOURCE_RIGHTS_HELPER_PATH = "market_anchor_v2_source_rights.py"
 EXPECTED_SOURCE_RIGHTS_HELPER_BLOB_SHA1 = "4495f6948ae8ec7c0ceeff8c08d7b1ca748cd841"
 SOURCE_RIGHTS_MANIFEST_PATH = "research/source_rights/football_data_co_uk.json"
 EXPECTED_SOURCE_RIGHTS_MANIFEST_BLOB_SHA1 = "b138d29f98e4cf3071d4c6a35a01dbb4e80e5afd"
 GITHUB_API = f"https://api.github.com/repos/{REPOSITORY}"
 SCHEMA_VERSION = "SERIE_A_ORIGINAL_V2_FORWARD_SOURCE_BEFORE_QUOTE_V1"
+
+# Canonicalize fixture labels only for duplicate detection. This never changes
+# quote prices, feature inputs, or the frozen candidate/model contract.
+_TEAM_IDENTITY_ALIASES = {
+    " ".join(str(alias).split()).casefold(): " ".join(str(canonical).split()).casefold()
+    for alias, canonical in SERIE_A_RUNTIME_CONFIG.aliases.items()
+}
+_TEAM_IDENTITY_ALIASES["atalanta bc"] = "atalanta"
+
+
+def _fixture_team_identity(value: str) -> str:
+    normalized = " ".join(value.split()).casefold()
+    return _TEAM_IDENTITY_ALIASES.get(normalized, normalized)
+
+
 
 
 def _github_json(url: str, *, token: str, get=requests.get) -> dict:
@@ -64,6 +81,8 @@ def _github_json(url: str, *, token: str, get=requests.get) -> dict:
 
 def discover_archives(*, token: str, get=requests.get) -> list[dict]:
     """Bound pagination and accept only main-branch, correct-name artifacts."""
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     out = []
     seen_ids = set()
     for page in range(1, 4):
@@ -114,6 +133,8 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
     the CSVs. Pin the historical loader blob at the parent commit before the
     archive can be consumed for any original V2 quote.
     """
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     run_id = archive.get("run_id")
     head_sha = archive.get("head_sha")
     if type(run_id) is not int or run_id <= 0:
@@ -161,6 +182,8 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
 
 
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     if not isinstance(artifact_id, int) or artifact_id <= 0:
         raise ValueError("invalid artifact id")
     url = f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip"
@@ -213,6 +236,8 @@ def prepare_forward_capture(
     admission: frozen incumbent, current-season form and outcome gate still
     missing. All resulting original-V2 probabilities are diagnostic only.
     """
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     if (
         not isinstance(as_of_utc, datetime)
         or as_of_utc.tzinfo is None
@@ -224,6 +249,7 @@ def prepare_forward_capture(
     if write_archives_to is not None:
         write_archives_to.mkdir(parents=True, exist_ok=True)
     identity_by_event_id = {}
+    event_id_by_unordered_fixture = {}
     for q in quotes:
         _guard_outcome_free(q)
         if q.get("league") != "SERIE_A":
@@ -232,15 +258,30 @@ def prepare_forward_capture(
         home, away = q.get("home_team"), q.get("away_team")
         if not all(isinstance(value, str) and value.strip() for value in (event, home, away)):
             raise ValueError("quote identity is incomplete")
+        event_key = event.strip()
+        if event_key != event:
+            raise ValueError("quote event_id must not contain surrounding whitespace")
         quote_time = parse_utc(q["snapshot_time_utc"])
         kickoff = parse_utc(q["commence_time_utc"])
         if quote_time > now or not quote_time < kickoff:
             raise ValueError("invalid stored quote timing")
-        event_identity = (home, away, kickoff)
-        prior_identity = identity_by_event_id.get(event)
+        home_key = _fixture_team_identity(home)
+        away_key = _fixture_team_identity(away)
+        if home_key == away_key:
+            raise ValueError("quote fixture identity has identical canonical teams")
+        event_identity = (home_key, away_key, kickoff)
+        prior_identity = identity_by_event_id.get(event_key)
         if prior_identity is not None and prior_identity != event_identity:
             raise ValueError("conflicting fixture identity for same original V2 event_id")
-        identity_by_event_id[event] = event_identity
+        identity_by_event_id[event_key] = event_identity
+
+        # Provider IDs can split one real fixture, including reversed Home/Away
+        # rows. Count the unordered canonical pair only for duplicate detection.
+        fixture_pair = (tuple(sorted((home_key, away_key))), kickoff)
+        prior_event_id = event_id_by_unordered_fixture.get(fixture_pair)
+        if prior_event_id is not None and prior_event_id != event_key:
+            raise ValueError("conflicting event IDs or orientation for same original V2 fixture")
+        event_id_by_unordered_fixture[fixture_pair] = event_key
 
     rows, cache = [], {}
     verified_runs = {}
@@ -354,7 +395,8 @@ def main() -> None:
     if os.environ.get("GITHUB_REPOSITORY") != REPOSITORY:
         raise RuntimeError("wrong GitHub repository scope")
     try:
-        require_personal_research_inference_scope()
+        from market_anchor_v2_direct_access import require_v2_inference_access
+        require_v2_inference_access()
     except PermissionError as exc:
         report = write_research_scope_blocked_report(
             args.output, "SERIE_A_ORIGINAL_V2_FORWARD_CAPTURE", str(exc)
