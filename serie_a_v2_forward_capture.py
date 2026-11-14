@@ -59,6 +59,9 @@ def _fixture_team_identity(value: str) -> str:
 
 
 def _github_json(url: str, *, token: str, get=requests.get) -> dict:
+    # Guard the actual HTTP boundary, not only archive-discovery callers.
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     if not token:
         raise ValueError("GitHub Actions read token missing")
     if not url.startswith(GITHUB_API + "/"):
