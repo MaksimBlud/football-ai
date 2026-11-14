@@ -166,6 +166,7 @@ def _prepare_forward_capture_contents(
     rows, cache = [], {}
     verified_runs = {}
     used_archives = {}
+    written_archives: set[int] = set()
     for q in quotes:
         _guard_outcome_free(q)
         if q.get("league") != "SERIE_A":
@@ -205,8 +206,6 @@ def _prepare_forward_capture_contents(
             if not isinstance(raw, bytes):
                 raise ValueError("archive loader returned non-bytes")
             cache[artifact_id] = raw
-            if write_archives_to is not None:
-                (write_archives_to / f"source_artifact_{artifact_id}.zip").write_bytes(raw)
         raw = cache[artifact_id]
         # Original offline guard validates the *full ZIP*, every CSV, time,
         # score embargo and separately retrieved GitHub digest.
@@ -221,6 +220,9 @@ def _prepare_forward_capture_contents(
             )
         if gate["source_archive_prequote_ready"] != 1:
             raise ValueError("source archive unexpectedly failed pre-quote gate")
+        if write_archives_to is not None and artifact_id not in written_archives:
+            (write_archives_to / f"source_artifact_{artifact_id}.zip").write_bytes(raw)
+            written_archives.add(artifact_id)
         with zipfile.ZipFile(BytesIO(raw), "r") as z:
             archived_report = json.loads(z.read(ARCHIVE_REPORT))
             audits = archived_report["public_source_files"]
