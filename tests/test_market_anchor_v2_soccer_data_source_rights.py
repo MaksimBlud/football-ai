@@ -40,6 +40,8 @@ def _json(path: Path) -> dict:
 def test_soccer_data_candidate_is_fail_closed_until_rights_and_coverage_clear():
     manifest = _json(MANIFEST)
     assert manifest["decision"] == "HOLD"
+    assert manifest["source_documents"]["match_list"] == "https://soccer-data.co/docs/reference/matches/list"
+    assert manifest["source_documents"]["match_detail"] == "https://soccer-data.co/docs/reference/matches/show"
     assert manifest["free_plan"]["price_usd"] == 0
     assert manifest["free_plan"]["requests_per_day"] == 50
     assert manifest["free_plan"]["requests_per_minute"] == 10
