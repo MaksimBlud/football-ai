@@ -530,3 +530,110 @@ def test_current_form_source_bytes_are_verified_before_supabase_client_and_quote
     assert report["latest_source_archive_verification"]["verified"] is True
     assert report["quote_read_skipped"] is False
     assert report["v2_current_form_shadow_captured"] == 1
+
+
+
+def test_stale_source_never_initializes_supabase_client(tmp_path):
+    raw, archives = make_archive()
+    events = []
+    now = datetime(2026, 10, 19, 7, 5, tzinfo=timezone.utc)
+    reader = make_lazy_saved_quote_reader(
+        url="https://supabase.invalid",
+        key="offline-placeholder",
+        now=now,
+        create_client_fn=lambda *_args: events.append("client") or object(),
+        quote_reader=lambda *_args, **_kwargs: events.append("quotes") or [quote()],
+    )
+
+    def load_archive(_artifact_id):
+        events.append("source_bytes")
+        return raw
+
+    def verify_parent(archive, *, quote_time):
+        events.append("source_parent")
+        return valid_parent(archive, quote_time=quote_time)
+
+    report = capture_forward_with_atomic_sources(
+        archives,
+        as_of_utc=now,
+        fetch_quotes=reader,
+        load_archive=load_archive,
+        verify_parent_run=verify_parent,
+        write_sources_to=tmp_path / "source-archives",
+    )
+
+    assert events == ["source_parent", "source_bytes"]
+    assert report["source_gate_blocked"] == "SOURCE_ARCHIVE_TOO_OLD"
+    assert report["quote_read_skipped"] is True
+    assert report["quotes_seen"] == 0
+
+
+def test_unverified_parent_never_initializes_supabase_client(tmp_path):
+    raw, archives = make_archive()
+    events = []
+    now = datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc)
+    reader = make_lazy_saved_quote_reader(
+        url="https://supabase.invalid",
+        key="offline-placeholder",
+        now=now,
+        create_client_fn=lambda *_args: events.append("client") or object(),
+        quote_reader=lambda *_args, **_kwargs: events.append("quotes") or [quote()],
+    )
+
+    def load_archive(_artifact_id):
+        events.append("source_bytes")
+        return raw
+
+    def verify_parent(*_args, **_kwargs):
+        events.append("source_parent")
+        raise ValueError("parent run not verified")
+
+    with pytest.raises(ValueError, match="parent run not verified"):
+        capture_forward_with_atomic_sources(
+            archives,
+            as_of_utc=now,
+            fetch_quotes=reader,
+            load_archive=load_archive,
+            verify_parent_run=verify_parent,
+            write_sources_to=tmp_path / "source-archives",
+        )
+
+    assert events == ["source_parent"]
+    assert "client" not in events
+    assert "quotes" not in events
+
+
+def test_source_digest_mismatch_never_initializes_supabase_client(tmp_path):
+    raw, archives = make_archive()
+    archives[0]["sha256"] = "0" * 64
+    events = []
+    now = datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc)
+    reader = make_lazy_saved_quote_reader(
+        url="https://supabase.invalid",
+        key="offline-placeholder",
+        now=now,
+        create_client_fn=lambda *_args: events.append("client") or object(),
+        quote_reader=lambda *_args, **_kwargs: events.append("quotes") or [quote()],
+    )
+
+    def load_archive(_artifact_id):
+        events.append("source_bytes")
+        return raw
+
+    def verify_parent(archive, *, quote_time):
+        events.append("source_parent")
+        return valid_parent(archive, quote_time=quote_time)
+
+    with pytest.raises(ValueError, match="artifact SHA256 mismatch"):
+        capture_forward_with_atomic_sources(
+            archives,
+            as_of_utc=now,
+            fetch_quotes=reader,
+            load_archive=load_archive,
+            verify_parent_run=verify_parent,
+            write_sources_to=tmp_path / "source-archives",
+        )
+
+    assert events == ["source_parent", "source_bytes"]
+    assert "client" not in events
+    assert "quotes" not in events
