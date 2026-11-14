@@ -385,3 +385,68 @@ def test_nonempty_current_form_forward_output_is_preserved_without_callbacks(tmp
     assert calls == []
     assert marker.read_text(encoding="utf-8") == "preserve"
 
+
+
+def test_atomic_current_form_forward_skips_quotes_without_verified_source_archive(tmp_path):
+    target = tmp_path / "source-archives"
+    calls = []
+    report = capture_forward_with_atomic_sources(
+        [],
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        fetch_quotes=lambda: calls.append("quotes") or [quote()],
+        load_archive=lambda _artifact_id: (_ for _ in ()).throw(
+            AssertionError("no source artifact should be downloaded")
+        ),
+        verify_parent_run=valid_parent,
+        write_sources_to=target,
+    )
+    assert calls == []
+    assert report["quotes_seen"] == 0
+    assert report["v2_current_form_shadow_captured"] == 0
+    assert report["blocked"]["NO_EARLIER_SOURCE_ARCHIVE"] == 1
+    assert report["latest_source_archive_verification"]["verified"] is False
+    assert report["quote_read_skipped"] is True
+    assert report["source_gate_blocked"] == "NO_EARLIER_SOURCE_ARCHIVE"
+    assert not target.exists()
+
+
+def test_atomic_current_form_forward_skips_quotes_when_verified_source_is_stale(tmp_path):
+    raw, archives = make_archive()
+    target = tmp_path / "source-archives"
+    calls = []
+    report = capture_forward_with_atomic_sources(
+        archives,
+        as_of_utc=datetime(2026, 10, 19, 7, 5, tzinfo=timezone.utc),
+        fetch_quotes=lambda: calls.append("quotes") or [quote()],
+        load_archive=lambda _artifact_id: raw,
+        verify_parent_run=valid_parent,
+        write_sources_to=target,
+    )
+    assert calls == []
+    assert report["quotes_seen"] == 0
+    assert report["v2_current_form_shadow_captured"] == 0
+    assert report["blocked"]["SOURCE_ARCHIVE_TOO_OLD"] == 1
+    assert report["latest_source_archive_verification"]["verified"] is True
+    assert report["latest_source_archive_verification"]["fresh_for_new_quote"] is False
+    assert report["quote_read_skipped"] is True
+    assert report["source_gate_blocked"] == "SOURCE_ARCHIVE_TOO_OLD"
+    assert not target.exists()
+
+
+def test_atomic_current_form_forward_skips_quotes_when_parent_run_is_unverified(tmp_path):
+    raw, archives = make_archive()
+    target = tmp_path / "source-archives"
+    calls = []
+    with pytest.raises(ValueError, match="parent run not verified"):
+        capture_forward_with_atomic_sources(
+            archives,
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            fetch_quotes=lambda: calls.append("quotes") or [quote()],
+            load_archive=lambda _artifact_id: raw,
+            verify_parent_run=lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                ValueError("parent run not verified")
+            ),
+            write_sources_to=target,
+        )
+    assert calls == []
+    assert not target.exists()

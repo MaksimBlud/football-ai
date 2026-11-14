@@ -580,6 +580,56 @@ def capture_forward_with_atomic_sources(
             verify_parent_run=verify_parent_run,
             write_sources_to=staged,
         )
+        # A verified-but-stale archive is not admissible for a new quote either.
+        # Do not even read saved quote snapshots until a fresh, SHA-verified
+        # source archive and its successful parent run have been authenticated.
+        if source_verification.get("verified") is not True:
+            source_gate_blocked = "NO_EARLIER_SOURCE_ARCHIVE"
+        elif source_verification.get("fresh_for_new_quote") is not True:
+            source_gate_blocked = "SOURCE_ARCHIVE_TOO_OLD"
+        else:
+            source_gate_blocked = None
+
+        if source_gate_blocked is not None:
+            blocked = {
+                "NO_EARLIER_SOURCE_ARCHIVE": 0,
+                "SOURCE_PARENT_UNVERIFIED": 0,
+                "SOURCE_ARCHIVE_TOO_OLD": 0,
+                "STALE_MARKET_QUOTE": 0,
+                "EXPIRED_FIXTURE": 0,
+                "NO_FEATURES": 0,
+                "ALL_FEATURES_MEDIAN_IMPUTED": 0,
+            }
+            blocked[source_gate_blocked] = 1
+            return {
+                "schema_version": SCHEMA_VERSION,
+                "experiment_id": "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY",
+                "mode": "READ_ONLY_PREKICKOFF_SHADOW_NO_BET",
+                "candidate_sha256": FROZEN_SHA,
+                "as_of_utc": as_of_utc.astimezone(timezone.utc).isoformat(),
+                "quotes_seen": 0,
+                "v2_current_form_shadow_captured": 0,
+                "blocked": blocked,
+                "rows": [],
+                "source_artifacts_used": [],
+                "latest_source_archive_verification": source_verification,
+                "active_lambda": 0.0,
+                "shadow_residual_lambda": 1.0,
+                "active_model_is_exact_de_vigged_market": True,
+                "target_outcomes_read": False,
+                "target_outcomes_scored": False,
+                "target_outcome_evaluation_gate_open": False,
+                "model_refit_or_selection": False,
+                "production_or_supabase_writes": 0,
+                "paid_provider_calls": 0,
+                "eligible_for_frozen_original_cohort": False,
+                "eligible_for_current_form_forward_shadow": False,
+                "eligible_for_product_publication": False,
+                "no_bet": True,
+                "quote_read_skipped": True,
+                "source_gate_blocked": source_gate_blocked,
+            }
+
         quotes = fetch_quotes()
         report = prepare_forward_capture(
             quotes,
@@ -590,6 +640,8 @@ def capture_forward_with_atomic_sources(
             write_sources_to=staged,
         )
         report["latest_source_archive_verification"] = source_verification
+        report["quote_read_skipped"] = False
+        report["source_gate_blocked"] = None
         if any(staged.iterdir()):
             os.replace(staged, target)
     return report
