@@ -21,7 +21,7 @@ import pandas as pd
 import requests
 
 from serie_a_v2_frozen_shadow_preview import (
-    fetch_saved_upcoming_serie_a_quotes, parse_utc,
+    FROZEN_SHA, fetch_saved_upcoming_serie_a_quotes, parse_utc,
 )
 from serie_a_v2_live_diagnostic_report import make_report
 from serie_a_v2_prequote_source_archive_gate import (
@@ -315,6 +315,127 @@ def prepare_forward_capture(
     return report
 
 
+def capture_forward_with_source_preflight(
+    archive_metadata: list[dict],
+    *,
+    as_of_utc: datetime,
+    fetch_quotes,
+    load_archive,
+    verify_parent_run,
+    write_archives_to: Path | None = None,
+) -> dict:
+    """Authenticate a complete old-season source ZIP before reading saved quotes.
+
+    The CLI/workflow source attestation is repeated here so direct invocation
+    cannot query Supabase first. Per-quote source-before-quote checks still run
+    inside prepare_forward_capture; this preflight only proves a valid source
+    archive and successful parent already exist before the quote reader starts.
+    """
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
+        raise ValueError("source preflight clock must be timezone-aware")
+    if not callable(fetch_quotes):
+        raise ValueError("saved quote reader must be a lazy callable")
+    now = as_of_utc.astimezone(timezone.utc)
+    candidates = [
+        archive for archive in archive_metadata
+        if isinstance(archive, dict)
+        and isinstance(archive.get("created_at"), datetime)
+        and archive["created_at"] < now
+    ]
+    if not candidates:
+        raise RuntimeError("no original V2 source archive before quote read")
+    latest = max(
+        candidates,
+        key=lambda archive: (archive["created_at"], archive["artifact_id"]),
+    )
+
+    # Verify parent workflow identity/completion before downloading or querying quotes.
+    parent = verify_parent_run(latest, now)
+    if not isinstance(parent, dict):
+        raise ValueError("source parent workflow attestation missing before quote read")
+    if (
+        parent.get("run_id") != latest.get("run_id")
+        or parent.get("run_head_sha") != latest.get("head_sha")
+        or parent.get("workflow_path") != SOURCE_WORKFLOW_PATH
+        or not parent.get("run_completed_at_utc")
+    ):
+        raise ValueError("source parent workflow identity mismatch before quote read")
+    parent_completed = parse_utc(parent["run_completed_at_utc"])
+    if not parent_completed < now:
+        raise ValueError("source parent workflow not complete before quote read")
+
+    raw = load_archive(latest["artifact_id"])
+    if not isinstance(raw, bytes) or not raw:
+        raise ValueError("source archive loader returned no bytes before quote read")
+    # Validate the GitHub artifact SHA, artifact clock, exact ten-source archive,
+    # frozen candidate identity and protected-season embargo with an empty quote
+    # list. No quote rows are available to this preflight.
+    with TemporaryDirectory() as temporary_directory:
+        archive_path = Path(temporary_directory) / "original-v2-source.zip"
+        archive_path.write_bytes(raw)
+        proof = verify_archive(
+            archive_path,
+            [],
+            as_of_utc=now,
+            github_artifact_sha256=latest["sha256"],
+            github_artifact_created_at_utc=latest["created_at"].isoformat(),
+        )
+    if (
+        proof.get("github_digest_matched") is not True
+        or proof.get("archived_csv_count") != 10
+        or proof.get("historical_match_rows", 0) <= 0
+        or proof.get("original_candidate_sha256") != FROZEN_SHA
+        or proof.get("quotes_checked") != 0
+        or proof.get("eligible_for_frozen_prospective_cohort") is not False
+        or proof.get("no_bet") is not True
+    ):
+        raise ValueError("original V2 source archive preflight is incomplete")
+
+    # This is the first point at which the stored quote reader may be invoked.
+    quotes = fetch_quotes()
+    if not isinstance(quotes, list):
+        raise ValueError("saved quote reader must return a list")
+
+    latest_id = latest["artifact_id"]
+
+    def load_verified_archive(artifact_id: int) -> bytes:
+        return raw if artifact_id == latest_id else load_archive(artifact_id)
+
+    def verify_parent_for_quote(archive: dict, quote_time: datetime) -> dict:
+        if archive.get("artifact_id") == latest_id:
+            if not parent_completed < quote_time:
+                raise ValueError("source workflow finished after quote")
+            return parent
+        return verify_parent_run(archive, quote_time)
+
+    report = prepare_forward_capture(
+        quotes,
+        archive_metadata,
+        as_of_utc=now,
+        load_archive=load_verified_archive,
+        verify_parent_run=verify_parent_for_quote,
+        write_archives_to=write_archives_to,
+    )
+    report["source_preflight"] = {
+        "verified": True,
+        "source_artifact_id": latest_id,
+        "source_artifact_sha256": latest["sha256"],
+        "source_artifact_created_at_utc": latest["created_at"].isoformat(),
+        "source_parent_run_id": latest["run_id"],
+        "source_parent_completed_at_utc": parent_completed.isoformat(),
+        "verified_historical_csv_count": proof["archived_csv_count"],
+        "verified_historical_match_rows": proof["historical_match_rows"],
+        "original_candidate_sha256": proof["original_candidate_sha256"],
+        "quotes_read_after_source_preflight": True,
+    }
+    report["quote_read_skipped"] = False
+    return report
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
@@ -323,14 +444,23 @@ def main() -> None:
     if os.environ.get("GITHUB_REPOSITORY") != REPOSITORY:
         raise RuntimeError("wrong GitHub repository scope")
     token = os.environ.get("GITHUB_TOKEN", "")
-    from database import supabase
     now = datetime.now(timezone.utc)
-    quotes = fetch_saved_upcoming_serie_a_quotes(supabase, now=now)
     archives = discover_archives(token=token)
-    report = prepare_forward_capture(
-        quotes, archives, as_of_utc=datetime.now(timezone.utc),
+
+    def fetch_quotes():
+        # Import/initialize the Supabase client only after source SHA + parent
+        # workflow + archive contract have been verified by the preflight.
+        from database import supabase
+        return fetch_saved_upcoming_serie_a_quotes(supabase, now=now)
+
+    report = capture_forward_with_source_preflight(
+        archives,
+        as_of_utc=now,
+        fetch_quotes=fetch_quotes,
         load_archive=lambda artifact_id: get_archive(artifact_id, token=token),
-        verify_parent_run=lambda a, qt: verify_source_run(a, quote_time=qt, token=token),
+        verify_parent_run=lambda archive, quote_time: verify_source_run(
+            archive, quote_time=quote_time, token=token
+        ),
         write_archives_to=args.sources_output_dir,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
