@@ -570,6 +570,8 @@ def test_offline_validation_workflow_tracks_current_direct_rights_stack():
     validation_push = validation_text.split("  push:", 1)[1].split("permissions:", 1)[0]
     assert "research/v2-current-form-forward-offline-push-validation-restacked-on-819-20261114-run11" in validation_pull
     assert "research/v2-market-only-evaluator-restacked-on-820-20261114-run11" in validation_push
+    assert "research/v2-direct-forward-artifact-api-rights-gate-restacked-on-823-20261114-run11" in validation_pull
+    assert "research/v2-direct-forward-artifact-api-rights-gate-restacked-on-823-20261114-run11" in validation_push
     assert "market_anchor_v2_direct_access.py" in validation_text
     assert "tests/test_market_anchor_v2_direct_access.py" in validation_text
     assert "git fetch origin research/v2-current-form-forward-offline-push-validation-restacked-on-819-20261114-run11" in validation_text
@@ -579,6 +581,9 @@ def test_offline_validation_workflow_tracks_current_direct_rights_stack():
     frozen_pull = frozen_text.split("  push:", 1)[0]
     frozen_push = frozen_text.split("  push:", 1)[1].split("permissions:", 1)[0]
     assert "research/v2-current-form-forward-offline-push-validation-restacked-on-819-20261114-run11" in frozen_pull
-    # The evaluator branch is a required PR base for the strict-date follow-up.
-    assert "research/v2-market-only-evaluator-restacked-on-820-20261114-run11" in frozen_pull
-    assert "research/v2-market-only-evaluator-restacked-on-820-20261114-run11" in frozen_push
+    # Each stacked prospective gate must trigger the same two-runtime frozen suite.
+    assert "research/v2-completed-fixture-direct-rights-guard-restacked-on-822-20261114-run11" in frozen_pull
+    assert "research/v2-direct-forward-artifact-api-rights-gate-restacked-on-823-20261114-run11" in frozen_pull
+    assert "research/v2-direct-forward-artifact-api-rights-gate-restacked-on-823-20261114-run11" in frozen_push
+    assert frozen_text.count("market_anchor_1x2_v2_prospective_evaluation.py") >= 3
+    assert frozen_text.count("tests/test_market_anchor_1x2_v2_prospective_evaluation_workflow.py") >= 3
