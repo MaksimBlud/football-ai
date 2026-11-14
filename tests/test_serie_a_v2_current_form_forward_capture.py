@@ -12,6 +12,7 @@ from serie_a_v2_current_form_forward_capture import (
     SOURCE_WORKFLOW_PATH,
     prepare_forward_capture,
     verify_latest_source_archive,
+    capture_forward_with_atomic_sources,
 )
 from serie_a_v2_current_form_source_capture import (
     CURRENT_CODE, CURRENT_FILENAME, CURRENT_SEASON, CURRENT_URL, REQUIRED_COLUMNS,
@@ -317,3 +318,70 @@ def test_unverified_parent_cannot_admit_quote():
     assert report["v2_current_form_shadow_captured"] == 0
     assert report["blocked"]["SOURCE_PARENT_UNVERIFIED"] == 1
     assert report["rows"][0]["status"] == "SOURCE_PARENT_UNVERIFIED"
+
+def test_atomic_current_form_forward_verifies_source_before_quotes_and_publishes_bundle(tmp_path):
+    raw, archives = make_archive()
+    target = tmp_path / "source-archives"
+    events = []
+
+    def load_archive(_artifact_id):
+        events.append("source")
+        return raw
+
+    def verify_parent(archive, *, quote_time):
+        events.append("parent")
+        return valid_parent(archive, quote_time=quote_time)
+
+    report = capture_forward_with_atomic_sources(
+        archives,
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        fetch_quotes=lambda: events.append("quotes") or [quote()],
+        load_archive=load_archive,
+        verify_parent_run=verify_parent,
+        write_sources_to=target,
+    )
+    assert events.index("source") < events.index("quotes")
+    assert report["latest_source_archive_verification"]["verified"] is True
+    assert report["v2_current_form_shadow_captured"] == 1
+    published = list(target.glob("current-form-source-artifact-*.zip"))
+    assert len(published) == 1
+    assert published[0].read_bytes() == raw
+    assert not list(tmp_path.glob(".source-archives.staging-*"))
+
+
+def test_current_form_forward_failure_after_source_verification_discards_staged_archives(tmp_path):
+    raw, archives = make_archive()
+    target = tmp_path / "source-archives"
+    bad_quote = {**quote(), "result": "H"}
+    with pytest.raises(ValueError, match="outcomes or settlement fields forbidden"):
+        capture_forward_with_atomic_sources(
+            archives,
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            fetch_quotes=lambda: [bad_quote],
+            load_archive=lambda _artifact_id: raw,
+            verify_parent_run=valid_parent,
+            write_sources_to=target,
+        )
+    assert not target.exists()
+    assert not list(tmp_path.glob(".source-archives.staging-*"))
+
+
+def test_nonempty_current_form_forward_output_is_preserved_without_callbacks(tmp_path):
+    _, archives = make_archive()
+    target = tmp_path / "source-archives"
+    target.mkdir()
+    marker = target / "owner-evidence.txt"
+    marker.write_text("preserve", encoding="utf-8")
+    calls = []
+    with pytest.raises(FileExistsError, match="must be absent or empty"):
+        capture_forward_with_atomic_sources(
+            archives,
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            fetch_quotes=lambda: calls.append("quotes"),
+            load_archive=lambda _artifact_id: calls.append("load"),
+            verify_parent_run=lambda *_args, **_kwargs: calls.append("verify"),
+            write_sources_to=target,
+        )
+    assert calls == []
+    assert marker.read_text(encoding="utf-8") == "preserve"
+
