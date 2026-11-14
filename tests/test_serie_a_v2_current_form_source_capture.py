@@ -45,7 +45,6 @@ def allow_synthetic_source_capture_scope(monkeypatch):
     )
 
 
-
 def event_rows(n=30):
     start = date(2026, 8, 1)
     return [
@@ -754,7 +753,7 @@ def test_frozen_candidate_is_verified_before_gate_reads_or_source_requests(monke
     assert list(tmp_path.iterdir()) == []
 
 
-def _fake_history_for_redirect_test(tmp_path):
+def _fake_history_for_redirect_test(capture_dir):
     audits = []
     for code in _source_codes():
         filename = f"serie_a_{code}.csv"
@@ -762,7 +761,7 @@ def _fake_history_for_redirect_test(tmp_path):
             "Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HC,AC,HY,AY,HR,AR\n"
             f"01/10/{2000 + int(code[:2])},Juventus,Napoli,1,0,H,5,3,2,1,0,0\n"
         ).encode()
-        (tmp_path / filename).write_bytes(body)
+        (capture_dir / filename).write_bytes(body)
         audits.append({
             "season_code": code,
             "source_url": f"https://www.football-data.co.uk/mmz4281/{code}/I1.csv",
@@ -838,7 +837,7 @@ def test_current_source_redirect_or_final_url_mismatch_fails_before_body_access(
             client=FakeQuery(event_rows(MIN_COMPLETED_FEATURE_SOURCE_EVENTS)),
             now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
             get=fake_get,
-            history_fetch=lambda **_kwargs: _fake_history_for_redirect_test(tmp_path),
+            history_fetch=lambda **kwargs: _fake_history_for_redirect_test(kwargs["capture_dir"]),
         )
 
     assert requests_seen == [(CURRENT_URL, 30, False, True)]
@@ -880,7 +879,7 @@ def test_current_source_rejects_oversized_content_length_before_reading_body(tmp
             client=FakeQuery(event_rows(MIN_COMPLETED_FEATURE_SOURCE_EVENTS)),
             now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
             get=fake_get,
-            history_fetch=lambda **_kwargs: _fake_history_for_redirect_test(tmp_path),
+            history_fetch=lambda **kwargs: _fake_history_for_redirect_test(kwargs["capture_dir"]),
             clock=lambda: pytest.fail("clock must not be sampled before body completion"),
         )
 
@@ -925,7 +924,7 @@ def test_current_source_rejects_non_ascii_or_non_decimal_content_length_before_b
             client=FakeQuery(event_rows(MIN_COMPLETED_FEATURE_SOURCE_EVENTS)),
             now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
             get=lambda url, timeout, allow_redirects=False, stream=False: response,
-            history_fetch=lambda **_kwargs: _fake_history_for_redirect_test(tmp_path),
+            history_fetch=lambda **kwargs: _fake_history_for_redirect_test(kwargs["capture_dir"]),
             clock=lambda: pytest.fail("clock must not be sampled before body completion"),
         )
 
@@ -965,7 +964,7 @@ def test_current_source_stream_enforces_actual_byte_limit_and_closes_early(tmp_p
             client=FakeQuery(event_rows(MIN_COMPLETED_FEATURE_SOURCE_EVENTS)),
             now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
             get=lambda url, timeout, allow_redirects=False, stream=False: response,
-            history_fetch=lambda **_kwargs: _fake_history_for_redirect_test(tmp_path),
+            history_fetch=lambda **kwargs: _fake_history_for_redirect_test(kwargs["capture_dir"]),
         )
 
     assert response.chunks_yielded == 1
@@ -1176,6 +1175,154 @@ def test_source_capture_push_runs_offline_validation_without_download_job():
     assert "Check shared public-source download budget" in workflow
     assert "Capture frozen historical seasons plus gated current-form source" in workflow
 
+
+
+def _atomic_source_capture_inputs(raw):
+    def fake_history(*, get, capture_dir):
+        audits = []
+        for code in _source_codes():
+            filename = f"serie_a_{code}.csv"
+            body = (
+                "Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HC,AC,HY,AY,HR,AR\\n"
+                f"01/10/{2000 + int(code[:2])},Juventus,Napoli,1,0,H,5,3,2,1,0,0\\n"
+            ).encode()
+            (capture_dir / filename).write_bytes(body)
+            audits.append({
+                "season_code": code,
+                "source_url": f"https://www.football-data.co.uk/mmz4281/{code}/I1.csv",
+                "archived_source_name": filename,
+                "csv_sha256": hashlib.sha256(body).hexdigest(),
+                "source_observed_at_utc": "2026-10-18T08:00:00+00:00",
+                "completed_source_rows": 1,
+            })
+        return pd.DataFrame([{"historical": 1}]), audits
+
+    class Response:
+        status_code = 200
+        url = CURRENT_URL
+        headers = {"Content-Length": str(len(raw))}
+
+        def iter_content(self, chunk_size):
+            assert chunk_size == 64 * 1024
+            yield raw
+
+        def raise_for_status(self):
+            return None
+
+        def close(self):
+            return None
+
+    return (
+        FakeQuery(event_rows(30)),
+        lambda _url, timeout, allow_redirects, stream: Response(),
+        fake_history,
+    )
+
+
+@pytest.mark.parametrize(
+    ("clock_values", "message"),
+    [
+        (
+            [
+                datetime(2026, 10, 18, 8, 1),
+                datetime(2026, 10, 18, 8, 2, tzinfo=timezone.utc),
+            ],
+            "source observation clock must have a real UTC offset",
+        ),
+        (
+            [
+                datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc),
+                datetime(2026, 10, 18, 8, 2),
+            ],
+            "source archive creation clock must have a real UTC offset",
+        ),
+        (
+            [
+                datetime(2026, 10, 18, 8, 2, tzinfo=timezone.utc),
+                datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc),
+            ],
+            "source archive creation timestamp precedes source observation",
+        ),
+    ],
+)
+def test_atomic_source_capture_rejects_ambiguous_or_reversed_clocks_without_partial_archive(
+    tmp_path, clock_values, message
+):
+    raw = current_csv(n=30)
+    client, get, history_fetch = _atomic_source_capture_inputs(raw)
+    values = iter(clock_values)
+    output_dir = tmp_path / "current-form-source"
+
+    with pytest.raises(ValueError, match=message):
+        capture_source_archive(
+            output_dir=output_dir,
+            client=client,
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=get,
+            history_fetch=history_fetch,
+            clock=lambda: next(values),
+        )
+
+    assert not output_dir.exists()
+    assert not list(tmp_path.glob(".current-form-source.staging-*"))
+
+
+def test_atomic_source_capture_refuses_nonempty_output_before_metadata_or_source_reads(tmp_path):
+    output_dir = tmp_path / "existing-source"
+    output_dir.mkdir()
+    sentinel = output_dir / "preserve.txt"
+    sentinel.write_text("prior evidence", encoding="utf-8")
+    calls = []
+
+    def forbidden_history(**_kwargs):
+        calls.append("history")
+        raise AssertionError("history must not be read for an occupied output directory")
+
+    def forbidden_get(*_args, **_kwargs):
+        calls.append("http")
+        raise AssertionError("HTTP must not run for an occupied output directory")
+
+    client = FakeQuery(event_rows(30))
+    with pytest.raises(FileExistsError, match="absent or empty"):
+        capture_source_archive(
+            output_dir=output_dir,
+            client=client,
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=forbidden_get,
+            history_fetch=forbidden_history,
+        )
+
+    assert sentinel.read_text(encoding="utf-8") == "prior evidence"
+    assert client.selected is None
+    assert calls == []
+
+
+def test_atomic_source_capture_publishes_complete_archive_as_one_directory(tmp_path):
+    raw = current_csv(n=30)
+    client, get, history_fetch = _atomic_source_capture_inputs(raw)
+    output_dir = tmp_path / "complete-source"
+    source_times = iter([
+        datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc),
+        datetime(2026, 10, 18, 8, 2, tzinfo=timezone.utc),
+    ])
+
+    report = capture_source_archive(
+        output_dir=output_dir,
+        client=client,
+        now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+        get=get,
+        history_fetch=history_fetch,
+        clock=lambda: next(source_times),
+    )
+
+    assert report["source_file_count"] == 11
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
+    assert report["supabase_writes"] == 0
+    assert len(list(output_dir.glob("serie_a_*.csv"))) == 11
+    assert (output_dir / MANIFEST_FILENAME).is_file()
+    assert len(list(output_dir.iterdir())) == 12
+    assert not list(tmp_path.glob(".complete-source.staging-*"))
 
 def test_source_only_candidate_contract_pin_does_not_load_model_weights(monkeypatch):
     import serie_a_v2_frozen_shadow_preview as frozen
