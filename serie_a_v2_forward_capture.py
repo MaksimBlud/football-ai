@@ -277,13 +277,12 @@ def _prepare_forward_capture_contents(
     }
 
 
-def prepare_forward_capture(
+def _prepare_forward_capture_with_atomic_sources_unchecked(
     quotes: list[dict], archive_metadata: list[dict], *,
     as_of_utc: datetime, load_archive, verify_parent_run,
     write_archives_to: Path | None = None,
 ) -> dict:
-    """Publish verified source ZIPs as one unit; discard partial output on failure."""
-    _require_v2_inference_access()
+    """Internal atomic publisher; caller must pass the direct V2 access gate first."""
     if write_archives_to is None:
         return _prepare_forward_capture_contents(
             quotes,
@@ -323,6 +322,23 @@ def prepare_forward_capture(
         if any(staged.iterdir()):
             os.replace(staged, target)
     return report
+
+
+def prepare_forward_capture(
+    quotes: list[dict], archive_metadata: list[dict], *,
+    as_of_utc: datetime, load_archive, verify_parent_run,
+    write_archives_to: Path | None = None,
+) -> dict:
+    """Publish verified source ZIPs as one unit after direct rights/privacy preflight."""
+    _require_v2_inference_access()
+    return _prepare_forward_capture_with_atomic_sources_unchecked(
+        quotes,
+        archive_metadata,
+        as_of_utc=as_of_utc,
+        load_archive=load_archive,
+        verify_parent_run=verify_parent_run,
+        write_archives_to=write_archives_to,
+    )
 
 
 def capture_forward_with_source_preflight(
@@ -427,7 +443,7 @@ def capture_forward_with_source_preflight(
             return parent
         return verify_parent_run(archive, quote_time)
 
-    report = prepare_forward_capture(
+    report = _prepare_forward_capture_with_atomic_sources_unchecked(
         quotes,
         archive_metadata,
         as_of_utc=now,
