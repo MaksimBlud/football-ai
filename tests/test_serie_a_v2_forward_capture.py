@@ -256,3 +256,74 @@ def test_catalog_rejects_missing_parent_run_identity_even_with_valid_digest():
     with pytest.raises(ValueError,match="missing GitHub parent run identity"):
         discover_archives(token="test-token",
                           get=lambda url,headers,timeout:Response())
+
+def test_verified_forward_source_archives_are_published_atomically(tmp_path):
+    raw, metadata = make_source_archive()
+    target = tmp_path / "source-archives"
+    report = prepare_forward_capture(
+        [quote()],
+        metadata,
+        as_of_utc=NOW,
+        load_archive=lambda _artifact_id: raw,
+        verify_parent_run=fake_verified_parent_run,
+        write_archives_to=target,
+    )
+    published = list(target.glob("source_artifact_*.zip"))
+    assert report["v2_diagnostic_previews_captured"] == 1
+    assert len(published) == 1
+    assert published[0].read_bytes() == raw
+    assert not list(tmp_path.glob(".source-archives.staging-*"))
+
+
+def test_unverified_forward_source_archive_is_never_published(tmp_path):
+    raw, metadata = make_source_archive()
+    target = tmp_path / "source-archives"
+    with pytest.raises(ValueError, match="digest mismatch"):
+        prepare_forward_capture(
+            [quote()],
+            metadata,
+            as_of_utc=NOW,
+            load_archive=lambda _artifact_id: raw + b"tampered",
+            verify_parent_run=fake_verified_parent_run,
+            write_archives_to=target,
+        )
+    assert not target.exists()
+    assert not list(tmp_path.glob(".source-archives.staging-*"))
+
+
+def test_later_quote_failure_discards_earlier_verified_source_archives(tmp_path):
+    raw, metadata = make_source_archive()
+    target = tmp_path / "source-archives"
+    later_bad_quote = {**quote("2026-10-14T06:05:00Z"), "result": "H"}
+    with pytest.raises(ValueError, match="outcomes or settlement fields forbidden"):
+        prepare_forward_capture(
+            [quote(), later_bad_quote],
+            metadata,
+            as_of_utc=NOW,
+            load_archive=lambda _artifact_id: raw,
+            verify_parent_run=fake_verified_parent_run,
+            write_archives_to=target,
+        )
+    assert not target.exists()
+    assert not list(tmp_path.glob(".source-archives.staging-*"))
+
+
+def test_nonempty_forward_source_output_is_preserved_without_callbacks(tmp_path):
+    _, metadata = make_source_archive()
+    target = tmp_path / "source-archives"
+    target.mkdir()
+    marker = target / "owner-evidence.txt"
+    marker.write_text("preserve", encoding="utf-8")
+    calls = []
+    with pytest.raises(FileExistsError, match="must be absent or empty"):
+        prepare_forward_capture(
+            [quote()],
+            metadata,
+            as_of_utc=NOW,
+            load_archive=lambda _artifact_id: calls.append("load"),
+            verify_parent_run=lambda *_args, **_kwargs: calls.append("verify"),
+            write_archives_to=target,
+        )
+    assert calls == []
+    assert marker.read_text(encoding="utf-8") == "preserve"
+
