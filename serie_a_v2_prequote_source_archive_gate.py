@@ -39,6 +39,8 @@ def verify_archive(archive_path: Path, quotes: list[Mapping[str, Any]], *,
     authenticated GitHub API digest+timestamp is required to trust it as evidence.
     No quote can be called source-before-quote verified without BOTH values.
     """
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     if (
         not isinstance(as_of_utc, datetime)
         or as_of_utc.tzinfo is None
@@ -181,6 +183,8 @@ def main() -> None:
     parser.add_argument("--github-artifact-created-at-utc", default=None)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     quotes = json.loads(args.quotes_json.read_text(encoding="utf-8"))
     if not isinstance(quotes, list):
         raise ValueError("quotes JSON must be a list")
