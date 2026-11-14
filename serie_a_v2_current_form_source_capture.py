@@ -13,6 +13,7 @@ import hashlib
 from io import BytesIO
 import json
 import os
+import tempfile
 from pathlib import Path
 from typing import Any, Mapping
 from urllib.parse import urlsplit
@@ -431,7 +432,14 @@ def _verify_frozen_candidate_contract_pin() -> str:
     return FROZEN_SHA
 
 
-def capture_source_archive(
+def _as_aware_utc(value: datetime, label: str) -> datetime:
+    """Reject ambiguous clocks instead of letting astimezone assume host local time."""
+    if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError(f"{label} must be timezone-aware")
+    return value.astimezone(timezone.utc)
+
+
+def _capture_source_archive_contents(
     *,
     output_dir: Path,
     client: Any,
@@ -443,9 +451,7 @@ def capture_source_archive(
     """Capture the ten frozen historical seasons plus the gated current-season source."""
     from market_anchor_v2_direct_access import require_v2_source_capture_access
     require_v2_source_capture_access()
-    if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
-        raise ValueError("source capture clock must have a real UTC offset")
-    at = now.astimezone(timezone.utc)
+    at = _as_aware_utc(now, "source capture clock")
     # Pin the unchanged candidate identity without loading model weights or invoking
     # the inference-only artifact validator from this source-only operation.
     _verify_frozen_candidate_contract_pin()
@@ -468,14 +474,7 @@ def capture_source_archive(
     # Stream and enforce the actual decompressed byte cap before materializing the
     # CSV. The observation clock is sampled only after the complete bounded body.
     raw = _read_bounded_current_source_body(response)
-    observed_clock = clock()
-    if (
-        not isinstance(observed_clock, datetime)
-        or observed_clock.tzinfo is None
-        or observed_clock.utcoffset() is None
-    ):
-        raise ValueError("source observation clock must have a real UTC offset")
-    observed_at = observed_clock.astimezone(timezone.utc)
+    observed_at = _as_aware_utc(clock(), "current-season source observation clock")
     if observed_at < at:
         raise ValueError("source observation timestamp precedes feature-source gate check")
     current_rows, excluded_rows = validate_current_season_csv(raw, captured_at=observed_at)
@@ -493,16 +492,9 @@ def capture_source_archive(
             "current-form CSV omits "
             f"{len(missing_gate_identities)} completed fixture identities used by the metadata gate"
         )
-    archive_clock = clock()
-    if (
-        not isinstance(archive_clock, datetime)
-        or archive_clock.tzinfo is None
-        or archive_clock.utcoffset() is None
-    ):
-        raise ValueError("source archive creation clock must have a real UTC offset")
-    archive_created_at = archive_clock.astimezone(timezone.utc)
+    archive_created_at = _as_aware_utc(clock(), "source archive creation clock")
     if archive_created_at < observed_at:
-        raise ValueError("source archive creation timestamp precedes source observation")
+        raise ValueError("source archive creation clock precedes latest source observation")
     current_path = output_dir / CURRENT_FILENAME
     current_path.write_bytes(raw)
     audits = list(old_audit) + [{
@@ -598,6 +590,49 @@ def capture_source_archive(
         json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+    return report
+
+
+def capture_source_archive(
+    *,
+    output_dir: Path,
+    client: Any,
+    now: datetime,
+    get=requests.get,
+    history_fetch=fetch_public_history_for_source_capture,
+    clock=lambda: datetime.now(timezone.utc),
+) -> dict:
+    """Publish a complete source archive atomically after rights preflight."""
+    from market_anchor_v2_direct_access import require_v2_source_capture_access
+    require_v2_source_capture_access()
+    output_dir = Path(output_dir)
+    if output_dir.is_symlink():
+        raise ValueError("source archive output directory cannot be a symlink")
+    output_dir.parent.mkdir(parents=True, exist_ok=True)
+    if output_dir.exists():
+        if not output_dir.is_dir() or any(output_dir.iterdir()):
+            raise FileExistsError("source archive output directory must be absent or empty")
+        output_dir.rmdir()
+
+    # The workflow's upload step may run with if: always(). Build outside the
+    # upload path so a late clock/CSV/manifest failure cannot publish ten
+    # historical CSVs as a misleading partial current-form archive.
+    with tempfile.TemporaryDirectory(
+        prefix=f".{output_dir.name}.staging-",
+        dir=output_dir.parent,
+    ) as temporary_directory:
+        staged_dir = Path(temporary_directory)
+        report = _capture_source_archive_contents(
+            output_dir=staged_dir,
+            client=client,
+            now=now,
+            get=get,
+            history_fetch=history_fetch,
+            clock=clock,
+        )
+        # Same-filesystem rename publishes the validated archive as one unit.
+        # TemporaryDirectory removes the staging path automatically on failure.
+        os.replace(staged_dir, output_dir)
     return report
 
 
