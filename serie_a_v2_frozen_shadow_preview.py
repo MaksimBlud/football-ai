@@ -295,11 +295,15 @@ def fetch_saved_upcoming_serie_a_quotes(client: Any, *, now: datetime) -> list[d
     """Read *existing* observations only. No odds provider call or DB write."""
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("now must be timezone-aware")
+    as_of = now.astimezone(timezone.utc).isoformat()
     items = (
         client.table("odds_snapshots")
         .select(",".join(MARKET_KEYS))
         .eq("league", "SERIE_A")
-        .gt("commence_time_utc", now.astimezone(timezone.utc).isoformat())
+        .gt("commence_time_utc", as_of)
+        # Since kickoff is strictly after as_of, this server-side bound ensures
+        # every returned quote was already observed by the forward-run clock.
+        .lte("snapshot_time_utc", as_of)
         .order("snapshot_time_utc", desc=True)
         .limit(1000).execute().data or []
     )
