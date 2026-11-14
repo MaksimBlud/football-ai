@@ -45,6 +45,7 @@ REPOSITORY = "MaksimBlud/football-ai"
 GITHUB_API = f"https://api.github.com/repos/{REPOSITORY}"
 ARTIFACT_NAME = "serie-a-v2-current-form-source-capture"
 SOURCE_WORKFLOW_PATH = ".github/workflows/serie-a-v2-current-form-source-capture.yml"
+EXPECTED_SOURCE_WORKFLOW_BLOB_SHA1 = "8d69ff630b44cc5fb19ad27639407fa751a2d7fc"
 SOURCE_CAPTURE_SCRIPT_PATH = "serie_a_v2_current_form_source_capture.py"
 EXPECTED_SOURCE_CAPTURE_SCRIPT_BLOB_SHA1 = "7d327c0c61e5e54bde91097979a03198cf538689"
 HISTORICAL_SOURCE_LOADER_PATH = "serie_a_v2_live_diagnostic_report.py"
@@ -155,6 +156,7 @@ def verify_source_run(
         (HISTORICAL_SOURCE_LOADER_PATH, EXPECTED_HISTORICAL_SOURCE_LOADER_BLOB_SHA1),
         (SOURCE_RIGHTS_HELPER_PATH, EXPECTED_SOURCE_RIGHTS_HELPER_BLOB_SHA1),
         (SOURCE_RIGHTS_MANIFEST_PATH, EXPECTED_SOURCE_RIGHTS_MANIFEST_BLOB_SHA1),
+        (SOURCE_WORKFLOW_PATH, EXPECTED_SOURCE_WORKFLOW_BLOB_SHA1),
     )
     verified_blobs = {}
     for path, expected_sha in source_blobs:
@@ -177,6 +179,7 @@ def verify_source_run(
         "historical_source_loader_blob_sha1": verified_blobs[HISTORICAL_SOURCE_LOADER_PATH],
         "source_rights_helper_blob_sha1": verified_blobs[SOURCE_RIGHTS_HELPER_PATH],
         "source_rights_manifest_blob_sha1": verified_blobs[SOURCE_RIGHTS_MANIFEST_PATH],
+        "source_workflow_blob_sha1": verified_blobs[SOURCE_WORKFLOW_PATH],
     }
 
 
