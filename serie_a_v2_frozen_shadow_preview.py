@@ -295,6 +295,11 @@ def fetch_saved_upcoming_serie_a_quotes(client: Any, *, now: datetime) -> list[d
     """Read *existing* observations only. No odds provider call or DB write."""
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("now must be timezone-aware")
+    # This public helper can be imported without the CLI/forward-runner.
+    # Enforce inference rights before any Supabase access.
+    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+
+    require_personal_research_inference_scope()
     as_of = now.astimezone(timezone.utc).isoformat()
     items = (
         client.table("odds_snapshots")
