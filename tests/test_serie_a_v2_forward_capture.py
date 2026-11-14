@@ -353,7 +353,6 @@ def test_original_forward_source_sha_and_parent_are_verified_before_saved_quote_
     report = capture_forward_with_source_preflight(
         metadata,
         as_of_utc=NOW,
-        require_access_fn=lambda: None,
         fetch_quotes=fetch_quotes,
         load_archive=load_archive,
         verify_parent_run=verify_parent,
@@ -374,7 +373,6 @@ def test_original_forward_does_not_read_quotes_without_any_prior_source_archive(
         capture_forward_with_source_preflight(
             [],
             as_of_utc=NOW,
-            require_access_fn=lambda: None,
             fetch_quotes=lambda: calls.append("quotes") or [quote()],
             load_archive=lambda _artifact_id: calls.append("archive"),
             verify_parent_run=lambda *_args: calls.append("parent"),
@@ -395,7 +393,6 @@ def test_original_forward_does_not_read_quotes_when_parent_workflow_is_unverifie
         capture_forward_with_source_preflight(
             metadata,
             as_of_utc=NOW,
-            require_access_fn=lambda: None,
             fetch_quotes=lambda: calls.append("quotes") or [quote()],
             load_archive=lambda _artifact_id: calls.append("archive") or raw,
             verify_parent_run=reject_parent,
@@ -412,7 +409,6 @@ def test_original_forward_does_not_read_quotes_when_source_archive_sha_fails():
         capture_forward_with_source_preflight(
             metadata,
             as_of_utc=NOW,
-            require_access_fn=lambda: None,
             fetch_quotes=lambda: calls.append("quotes") or [quote()],
             load_archive=lambda _artifact_id: calls.append("archive") or raw + b"tampered",
             verify_parent_run=fake_verified_parent_run,
@@ -428,7 +424,6 @@ def test_original_forward_source_preflight_does_not_backfill_quote_older_than_ar
     report = capture_forward_with_source_preflight(
         metadata,
         as_of_utc=NOW,
-        require_access_fn=lambda: None,
         fetch_quotes=lambda: calls.append("quotes") or [quote("2026-10-13T14:48:53Z")],
         load_archive=lambda _artifact_id: raw,
         verify_parent_run=fake_verified_parent_run,
@@ -501,3 +496,13 @@ def test_original_forward_source_preflight_denies_before_parent_archive_or_quote
         )
 
     assert events == ["access"]
+
+
+@pytest.fixture(autouse=True)
+def _offline_direct_access_gate(monkeypatch):
+    import sys
+    from types import ModuleType
+
+    module = ModuleType("market_anchor_v2_direct_access")
+    module.require_v2_inference_access = lambda: None
+    monkeypatch.setitem(sys.modules, "market_anchor_v2_direct_access", module)
