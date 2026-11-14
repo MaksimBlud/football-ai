@@ -23,8 +23,9 @@
     "rate_limits": "https://soccer-data.co/docs/concepts/rate-limits",
     "coverage": "https://soccer-data.co/docs/concepts/coverage",
     "match_stats": "https://soccer-data.co/docs/reference/matches/stats",
-    "match_list": "https://soccer-data.co/docs/reference/matches",
-    "data_model": "https://soccer-data.co/docs/concepts/data-model"
+    "match_list": "https://soccer-data.co/docs/reference/matches/list",
+    "data_model": "https://soccer-data.co/docs/concepts/data-model",
+    "match_detail": "https://soccer-data.co/docs/reference/matches/show"
   },
   "free_plan": {
     "price_usd": 0,
