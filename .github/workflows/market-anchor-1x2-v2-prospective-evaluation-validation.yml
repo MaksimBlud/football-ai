@@ -8,6 +8,7 @@ on:
       - research/v2-strict-completed-gate-date-only-on-821-20261114-run11
       - research/v2-completed-fixture-direct-rights-guard-restacked-on-822-20261114-run11
       - research/v2-direct-forward-artifact-api-rights-gate-restacked-on-823-20261114-run11
+      - research/v2-direct-github-json-rights-gates-restacked-on-824-20261114-run11
     paths:
       - "requirements-v2-research-py312.lock"
       - "market_anchor_1x2_v2_*.py"
@@ -16,6 +17,7 @@ on:
       - "market_anchor_v2_direct_access.py"
       - "market_anchor_v2_source_capture_rights.py"
       - "serie_a_v2_current_form_forward_capture.py"
+      - "serie_a_v2_forward_capture.py"
       - "serie_a_runtime_config.py"
       - "experiments/market_anchor_1x2_v2_prospective_selection_policy.json"
       - "research/MARKET_ANCHOR_1X2_V2_PROSPECTIVE_EVALUATOR.md"
@@ -32,6 +34,7 @@ on:
       - research/v2-strict-completed-gate-date-only-on-821-20261114-run11
       - research/v2-completed-fixture-direct-rights-guard-restacked-on-822-20261114-run11
       - research/v2-direct-forward-artifact-api-rights-gate-restacked-on-823-20261114-run11
+      - research/v2-direct-github-json-rights-gates-restacked-on-824-20261114-run11
     paths:
       - "requirements-v2-research-py312.lock"
       - "market_anchor_1x2_v2_*.py"
@@ -40,6 +43,7 @@ on:
       - "market_anchor_v2_direct_access.py"
       - "market_anchor_v2_source_capture_rights.py"
       - "serie_a_v2_current_form_forward_capture.py"
+      - "serie_a_v2_forward_capture.py"
       - "serie_a_runtime_config.py"
       - "experiments/market_anchor_1x2_v2_prospective_selection_policy.json"
       - "research/MARKET_ANCHOR_1X2_V2_PROSPECTIVE_EVALUATOR.md"
@@ -70,7 +74,7 @@ jobs:
         run: python -m pip install -r requirements-v2-research-py312.lock
       - name: Compile evaluator and frozen dependencies
         run: |
-          python -m py_compile market_anchor_1x2_v2_completed_fixture_gate.py market_anchor_1x2_v2_forward_artifact_adapter.py market_anchor_1x2_v2_prospective_evaluation.py market_anchor_1x2_v2_prospective_evaluator.py market_anchor_1x2_v2_prospective_runner.py market_anchor_v2_source_rights.py market_anchor_v2_source_capture_rights.py market_anchor_v2_artifact_privacy.py market_anchor_v2_direct_access.py serie_a_v2_current_form_forward_capture.py serie_a_runtime_config.py
+          python -m py_compile market_anchor_1x2_v2_completed_fixture_gate.py market_anchor_1x2_v2_forward_artifact_adapter.py market_anchor_1x2_v2_prospective_evaluation.py market_anchor_1x2_v2_prospective_evaluator.py market_anchor_1x2_v2_prospective_runner.py market_anchor_v2_source_rights.py market_anchor_v2_source_capture_rights.py market_anchor_v2_artifact_privacy.py market_anchor_v2_direct_access.py serie_a_v2_current_form_forward_capture.py serie_a_v2_forward_capture.py serie_a_runtime_config.py
       - name: Run synthetic-only evaluator and lazy-gate regressions
         run: |
           python -m pytest -q \
