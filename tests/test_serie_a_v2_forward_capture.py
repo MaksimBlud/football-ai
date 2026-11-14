@@ -13,8 +13,8 @@ from serie_a_v2_live_diagnostic_report import _source_codes, PUBLIC_BASE
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
 from serie_a_v2_forward_capture import (
     ARTIFACT_NAME, ARCHIVE_REPORT, SOURCE_DIR,
-    discover_archives, prepare_forward_capture, verify_source_run,
-    SOURCE_WORKFLOW_PATH,
+    discover_archives, get_archive, prepare_forward_capture, verify_source_run,
+    capture_forward_with_source_preflight, SOURCE_WORKFLOW_PATH,
 )
 
 NOW = datetime(2026, 10, 14, 7, 0, tzinfo=timezone.utc)
@@ -76,8 +76,12 @@ def fake_verified_parent_run(archive, quote_time):
     assert archive["run_id"] == 456
     assert archive["head_sha"] == "a" * 40
     assert quote_time.tzinfo is not None
-    return {"run_completed_at_utc": "2026-10-13T15:01:00Z",
-            "workflow_path": SOURCE_WORKFLOW_PATH, "run_id": 456}
+    return {
+        "run_completed_at_utc": "2026-10-13T15:01:00Z",
+        "workflow_path": SOURCE_WORKFLOW_PATH,
+        "run_id": 456,
+        "run_head_sha": "a" * 40,
+    }
 
 
 
@@ -256,3 +260,298 @@ def test_catalog_rejects_missing_parent_run_identity_even_with_valid_digest():
     with pytest.raises(ValueError,match="missing GitHub parent run identity"):
         discover_archives(token="test-token",
                           get=lambda url,headers,timeout:Response())
+
+def test_verified_forward_source_archives_are_published_atomically(tmp_path):
+    raw, metadata = make_source_archive()
+    target = tmp_path / "source-archives"
+    report = prepare_forward_capture(
+        [quote()],
+        metadata,
+        as_of_utc=NOW,
+        load_archive=lambda _artifact_id: raw,
+        verify_parent_run=fake_verified_parent_run,
+        write_archives_to=target,
+    )
+    published = list(target.glob("source_artifact_*.zip"))
+    assert report["v2_diagnostic_previews_captured"] == 1
+    assert len(published) == 1
+    assert published[0].read_bytes() == raw
+    assert not list(tmp_path.glob(".source-archives.staging-*"))
+
+
+def test_unverified_forward_source_archive_is_never_published(tmp_path):
+    raw, metadata = make_source_archive()
+    target = tmp_path / "source-archives"
+    with pytest.raises(ValueError, match="digest mismatch"):
+        prepare_forward_capture(
+            [quote()],
+            metadata,
+            as_of_utc=NOW,
+            load_archive=lambda _artifact_id: raw + b"tampered",
+            verify_parent_run=fake_verified_parent_run,
+            write_archives_to=target,
+        )
+    assert not target.exists()
+    assert not list(tmp_path.glob(".source-archives.staging-*"))
+
+
+def test_later_quote_failure_discards_earlier_verified_source_archives(tmp_path):
+    raw, metadata = make_source_archive()
+    target = tmp_path / "source-archives"
+    later_bad_quote = {**quote("2026-10-14T06:05:00Z"), "result": "H"}
+    with pytest.raises(ValueError, match="outcomes or settlement fields forbidden"):
+        prepare_forward_capture(
+            [quote(), later_bad_quote],
+            metadata,
+            as_of_utc=NOW,
+            load_archive=lambda _artifact_id: raw,
+            verify_parent_run=fake_verified_parent_run,
+            write_archives_to=target,
+        )
+    assert not target.exists()
+    assert not list(tmp_path.glob(".source-archives.staging-*"))
+
+
+def test_nonempty_forward_source_output_is_preserved_without_callbacks(tmp_path):
+    _, metadata = make_source_archive()
+    target = tmp_path / "source-archives"
+    target.mkdir()
+    marker = target / "owner-evidence.txt"
+    marker.write_text("preserve", encoding="utf-8")
+    calls = []
+    with pytest.raises(FileExistsError, match="must be absent or empty"):
+        prepare_forward_capture(
+            [quote()],
+            metadata,
+            as_of_utc=NOW,
+            load_archive=lambda _artifact_id: calls.append("load"),
+            verify_parent_run=lambda *_args, **_kwargs: calls.append("verify"),
+            write_archives_to=target,
+        )
+    assert calls == []
+    assert marker.read_text(encoding="utf-8") == "preserve"
+
+
+
+
+def test_original_forward_source_sha_and_parent_are_verified_before_saved_quote_reader():
+    raw, metadata = make_source_archive()
+    events = []
+
+    def verify_parent(archive, quote_time):
+        events.append(("parent", quote_time))
+        return fake_verified_parent_run(archive, quote_time)
+
+    def load_archive(artifact_id):
+        events.append(("archive", artifact_id))
+        return raw
+
+    def fetch_quotes():
+        events.append(("quotes", None))
+        return [quote()]
+
+    report = capture_forward_with_source_preflight(
+        metadata,
+        as_of_utc=NOW,
+        fetch_quotes=fetch_quotes,
+        load_archive=load_archive,
+        verify_parent_run=verify_parent,
+    )
+
+    assert [name for name, _ in events] == ["parent", "archive", "quotes"]
+    assert report["source_preflight"]["verified"] is True
+    assert report["source_preflight"]["source_artifact_sha256"] == metadata[0]["sha256"]
+    assert report["source_preflight"]["quotes_read_after_source_preflight"] is True
+    assert report["v2_diagnostic_previews_captured"] == 1
+    assert report["rows"][0]["source_artifact_sha256"] == metadata[0]["sha256"]
+
+
+def test_original_forward_does_not_read_quotes_without_any_prior_source_archive():
+    calls = []
+
+    with pytest.raises(RuntimeError, match="no original V2 source archive before quote read"):
+        capture_forward_with_source_preflight(
+            [],
+            as_of_utc=NOW,
+            fetch_quotes=lambda: calls.append("quotes") or [quote()],
+            load_archive=lambda _artifact_id: calls.append("archive"),
+            verify_parent_run=lambda *_args: calls.append("parent"),
+        )
+
+    assert calls == []
+
+
+def test_original_forward_does_not_read_quotes_when_parent_workflow_is_unverified():
+    raw, metadata = make_source_archive()
+    calls = []
+
+    def reject_parent(_archive, _quote_time):
+        calls.append("parent")
+        raise ValueError("source artifact parent run is not the verified original V2 collector")
+
+    with pytest.raises(ValueError, match="verified original V2 collector"):
+        capture_forward_with_source_preflight(
+            metadata,
+            as_of_utc=NOW,
+            fetch_quotes=lambda: calls.append("quotes") or [quote()],
+            load_archive=lambda _artifact_id: calls.append("archive") or raw,
+            verify_parent_run=reject_parent,
+        )
+
+    assert calls == ["parent"]
+
+
+def test_original_forward_does_not_read_quotes_when_source_archive_sha_fails():
+    raw, metadata = make_source_archive()
+    calls = []
+
+    with pytest.raises(ValueError, match="archive digest mismatch"):
+        capture_forward_with_source_preflight(
+            metadata,
+            as_of_utc=NOW,
+            fetch_quotes=lambda: calls.append("quotes") or [quote()],
+            load_archive=lambda _artifact_id: calls.append("archive") or raw + b"tampered",
+            verify_parent_run=fake_verified_parent_run,
+        )
+
+    assert calls == ["archive"]
+
+
+def test_original_forward_source_preflight_does_not_backfill_quote_older_than_archive():
+    raw, metadata = make_source_archive()
+    calls = []
+
+    report = capture_forward_with_source_preflight(
+        metadata,
+        as_of_utc=NOW,
+        fetch_quotes=lambda: calls.append("quotes") or [quote("2026-10-13T14:48:53Z")],
+        load_archive=lambda _artifact_id: raw,
+        verify_parent_run=fake_verified_parent_run,
+    )
+
+    assert calls == ["quotes"]
+    assert report["source_preflight"]["verified"] is True
+    assert report["v2_diagnostic_previews_captured"] == 0
+    assert report["blocked_no_prior_source"] == 1
+    assert report["rows"][0]["v2_preview"] is None
+
+
+
+def test_original_forward_source_preflight_runs_direct_access_gate_before_parent_archive_and_quotes(monkeypatch):
+    import sys
+    from types import ModuleType
+
+    raw, metadata = make_source_archive()
+    events = []
+    access_module = ModuleType("market_anchor_v2_direct_access")
+    access_module.require_v2_inference_access = lambda: events.append("access")
+    monkeypatch.setitem(sys.modules, "market_anchor_v2_direct_access", access_module)
+
+    def verify_parent(archive, quote_time):
+        events.append("parent")
+        return fake_verified_parent_run(archive, quote_time)
+
+    def load_archive(artifact_id):
+        events.append("archive")
+        return raw
+
+    def fetch_quotes():
+        events.append("quotes")
+        return [quote()]
+
+    report = capture_forward_with_source_preflight(
+        metadata,
+        as_of_utc=NOW,
+        fetch_quotes=fetch_quotes,
+        load_archive=load_archive,
+        verify_parent_run=verify_parent,
+    )
+
+    assert events == ["access", "parent", "archive", "quotes"]
+    assert report["source_preflight"]["verified"] is True
+    assert report["quotes_read_after_source_preflight"] if "quotes_read_after_source_preflight" in report else report["source_preflight"]["quotes_read_after_source_preflight"]
+
+
+def test_original_forward_source_preflight_denies_before_parent_archive_or_quote_callbacks(monkeypatch):
+    import sys
+    from types import ModuleType
+
+    events = []
+
+    def deny_access():
+        events.append("access")
+        raise PermissionError("provider/private-storage access is not cleared")
+
+    access_module = ModuleType("market_anchor_v2_direct_access")
+    access_module.require_v2_inference_access = deny_access
+    monkeypatch.setitem(sys.modules, "market_anchor_v2_direct_access", access_module)
+
+    with pytest.raises(PermissionError, match="provider/private-storage access is not cleared"):
+        capture_forward_with_source_preflight(
+            [],
+            as_of_utc=NOW,
+            fetch_quotes=lambda: events.append("quotes") or [quote()],
+            load_archive=lambda _artifact_id: events.append("archive"),
+            verify_parent_run=lambda *_args: events.append("parent"),
+        )
+
+    assert events == ["access"]
+
+
+@pytest.fixture(autouse=True)
+def _offline_direct_access_gate(monkeypatch):
+    import sys
+    from types import ModuleType
+
+    module = ModuleType("market_anchor_v2_direct_access")
+    module.require_v2_inference_access = lambda: None
+    monkeypatch.setitem(sys.modules, "market_anchor_v2_direct_access", module)
+
+@pytest.mark.parametrize(
+    "entrypoint",
+    ["discover_archives", "verify_source_run", "get_archive", "prepare_forward_capture"],
+)
+def test_original_forward_public_entrypoints_require_direct_access_before_io(
+    entrypoint, monkeypatch, tmp_path
+):
+    import sys
+    from types import ModuleType
+
+    events = []
+
+    def deny_access():
+        events.append("access")
+        raise PermissionError("provider/private-storage access is not cleared")
+
+    access_module = ModuleType("market_anchor_v2_direct_access")
+    access_module.require_v2_inference_access = deny_access
+    monkeypatch.setitem(sys.modules, "market_anchor_v2_direct_access", access_module)
+
+    def forbidden_get(*_args, **_kwargs):
+        events.append("network")
+        raise AssertionError("GitHub network must not be reached before the rights gate")
+
+    def forbidden_callback(*_args, **_kwargs):
+        events.append("callback")
+        raise AssertionError("caller callbacks must not run before the rights gate")
+
+    with pytest.raises(PermissionError, match="provider/private-storage access is not cleared"):
+        if entrypoint == "discover_archives":
+            discover_archives(token="offline-token", get=forbidden_get)
+        elif entrypoint == "verify_source_run":
+            verify_source_run({}, quote_time=NOW, token="offline-token", get=forbidden_get)
+        elif entrypoint == "get_archive":
+            get_archive(123, token="offline-token", get=forbidden_get)
+        else:
+            prepare_forward_capture(
+                [],
+                [],
+                as_of_utc=NOW,
+                load_archive=forbidden_callback,
+                verify_parent_run=forbidden_callback,
+                write_archives_to=tmp_path / "must-not-be-created",
+            )
+
+    assert events == ["access"]
+    assert not (tmp_path / "must-not-be-created").exists()
+
