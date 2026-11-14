@@ -287,6 +287,7 @@ def test_unverified_forward_source_archive_is_never_published(tmp_path):
             [quote()],
             metadata,
             as_of_utc=NOW,
+            require_access_fn=lambda: None,
             load_archive=lambda _artifact_id: raw + b"tampered",
             verify_parent_run=fake_verified_parent_run,
             write_archives_to=target,
@@ -304,6 +305,7 @@ def test_later_quote_failure_discards_earlier_verified_source_archives(tmp_path)
             [quote(), later_bad_quote],
             metadata,
             as_of_utc=NOW,
+            require_access_fn=lambda: None,
             load_archive=lambda _artifact_id: raw,
             verify_parent_run=fake_verified_parent_run,
             write_archives_to=target,
@@ -324,6 +326,7 @@ def test_nonempty_forward_source_output_is_preserved_without_callbacks(tmp_path)
             [quote()],
             metadata,
             as_of_utc=NOW,
+            require_access_fn=lambda: None,
             load_archive=lambda _artifact_id: calls.append("load"),
             verify_parent_run=lambda *_args, **_kwargs: calls.append("verify"),
             write_archives_to=target,
@@ -373,6 +376,7 @@ def test_original_forward_does_not_read_quotes_without_any_prior_source_archive(
         capture_forward_with_source_preflight(
             [],
             as_of_utc=NOW,
+            require_access_fn=lambda: None,
             fetch_quotes=lambda: calls.append("quotes") or [quote()],
             load_archive=lambda _artifact_id: calls.append("archive"),
             verify_parent_run=lambda *_args: calls.append("parent"),
@@ -393,6 +397,7 @@ def test_original_forward_does_not_read_quotes_when_parent_workflow_is_unverifie
         capture_forward_with_source_preflight(
             metadata,
             as_of_utc=NOW,
+            require_access_fn=lambda: None,
             fetch_quotes=lambda: calls.append("quotes") or [quote()],
             load_archive=lambda _artifact_id: calls.append("archive") or raw,
             verify_parent_run=reject_parent,
@@ -409,6 +414,7 @@ def test_original_forward_does_not_read_quotes_when_source_archive_sha_fails():
         capture_forward_with_source_preflight(
             metadata,
             as_of_utc=NOW,
+            require_access_fn=lambda: None,
             fetch_quotes=lambda: calls.append("quotes") or [quote()],
             load_archive=lambda _artifact_id: calls.append("archive") or raw + b"tampered",
             verify_parent_run=fake_verified_parent_run,
@@ -434,3 +440,65 @@ def test_original_forward_source_preflight_does_not_backfill_quote_older_than_ar
     assert report["v2_diagnostic_previews_captured"] == 0
     assert report["blocked_no_prior_source"] == 1
     assert report["rows"][0]["v2_preview"] is None
+
+
+
+def test_original_forward_source_preflight_runs_direct_access_gate_before_parent_archive_and_quotes(monkeypatch):
+    import sys
+    from types import ModuleType
+
+    raw, metadata = make_source_archive()
+    events = []
+    access_module = ModuleType("market_anchor_v2_direct_access")
+    access_module.require_v2_inference_access = lambda: events.append("access")
+    monkeypatch.setitem(sys.modules, "market_anchor_v2_direct_access", access_module)
+
+    def verify_parent(archive, quote_time):
+        events.append("parent")
+        return fake_verified_parent_run(archive, quote_time)
+
+    def load_archive(artifact_id):
+        events.append("archive")
+        return raw
+
+    def fetch_quotes():
+        events.append("quotes")
+        return [quote()]
+
+    report = capture_forward_with_source_preflight(
+        metadata,
+        as_of_utc=NOW,
+        fetch_quotes=fetch_quotes,
+        load_archive=load_archive,
+        verify_parent_run=verify_parent,
+    )
+
+    assert events == ["access", "parent", "archive", "quotes"]
+    assert report["source_preflight"]["verified"] is True
+    assert report["quotes_read_after_source_preflight"] if "quotes_read_after_source_preflight" in report else report["source_preflight"]["quotes_read_after_source_preflight"]
+
+
+def test_original_forward_source_preflight_denies_before_parent_archive_or_quote_callbacks(monkeypatch):
+    import sys
+    from types import ModuleType
+
+    events = []
+
+    def deny_access():
+        events.append("access")
+        raise PermissionError("provider/private-storage access is not cleared")
+
+    access_module = ModuleType("market_anchor_v2_direct_access")
+    access_module.require_v2_inference_access = deny_access
+    monkeypatch.setitem(sys.modules, "market_anchor_v2_direct_access", access_module)
+
+    with pytest.raises(PermissionError, match="provider/private-storage access is not cleared"):
+        capture_forward_with_source_preflight(
+            [],
+            as_of_utc=NOW,
+            fetch_quotes=lambda: events.append("quotes") or [quote()],
+            load_archive=lambda _artifact_id: events.append("archive"),
+            verify_parent_run=lambda *_args: events.append("parent"),
+        )
+
+    assert events == ["access"]
