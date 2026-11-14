@@ -2,12 +2,12 @@
   "schema_version": "FOOTBALL_AI_SOURCE_RIGHTS_V1",
   "provider": "Football-Data.co.uk",
   "source_url": "https://www.football-data.co.uk/",
-  "policy_url": "https://football-data.co.uk/contact.php",
-  "policy_checked_at_utc": "2026-11-07T01:56:17Z",
+  "policy_url": "https://football-data.co.uk/data",
+  "policy_checked_at_utc": "2026-11-10T11:57:30Z",
   "rights_status": "V2_FROZEN_INFERENCE_SCOPE_UNRESOLVED",
   "research_use_permitted": true,
-  "research_source_capture_permitted": true,
-  "research_source_capture_scope": "PRIVATE_NONCOMMERCIAL_RESEARCH_ARCHIVE_ONLY",
+  "research_source_capture_permitted": false,
+  "research_source_capture_scope": "NONE_PENDING_PROVIDER_CLARIFICATION",
   "research_inference_permitted": false,
   "research_inference_scope": "NONE_PENDING_SCOPE_CLARIFICATION",
   "ai_model_training_permitted": false,
@@ -16,8 +16,8 @@
   "public_product_use_permitted": false,
   "max_automated_download_sessions_per_week": 2,
   "download_budget_policy": "TWO_AUTOMATED_SESSIONS_PER_ROLLING_7_DAYS",
-  "policy_summary": "The official fair-use page displays Updated: 06/11/26. It describes free CSV/Excel data as intended for private individuals' personal betting and/or academic interest and research only, via manual download or at most two light automated download sessions per week. It says the data are not intended for commercial or AI data-training projects. The current page does not separately define frozen-model inference for noncommercial research.",
-  "policy_interpretation": "The official page expressly describes the free data as intended for private individuals' personal betting and/or academic interest and research, with at most two light automated download sessions per week. The project treats that stated allowance as permitting only private, noncommercial source-only archival/validation for research, subject to the private-repository and shared download-budget gates. This narrow source-capture scope does NOT authorize feature construction, frozen-model inference, AI model training, commercial use, public product publication, or redistribution. Frozen-model inference remains blocked until its separate scope is clarified or an alternative source with an applicable explicit licence is used. This is an internal scope classification, not a provider-issued inference licence or a claim that the provider expressly bans every form of inference.",
+  "policy_summary": "The official Football-Data data page, updated 10/11/26, describes the free CSV/Excel data as intended for private individuals only and excludes commercial or data-training products using automated bots, scrapers, or AI. The project has no provider clarification authorizing its automated GitHub Actions source capture in an AI workflow.",
+  "policy_interpretation": "The previous source-only capture allowance is withdrawn internally after the official page update on 2026-11-10. Because the project's proposed capture is an automated GitHub Actions process and the source feeds an AI model, the project cannot safely infer permission from the earlier private-research wording. Automated source capture is fail-closed pending explicit provider clarification. The two-session limit is a ceiling, not authorization. Frozen-model inference remains separately blocked; AI model training, commercial use, public product use, and redistribution remain prohibited. This is a conservative internal control, not a legal conclusion about every form of manual personal research.",
   "authorization": null,
-  "policy_page_updated_date": "2026-11-06"
+  "policy_page_updated_date": "2026-11-10"
 }
