@@ -10,9 +10,14 @@ from serie_a_v2_current_form_forward_capture import (
     ARTIFACT_NAME,
     MANIFEST_FILENAME,
     SOURCE_WORKFLOW_PATH,
+    discover_archives,
+    verify_source_run,
+    get_archive,
+    verify_and_load_archive,
     prepare_forward_capture,
     verify_latest_source_archive,
     capture_forward_with_atomic_sources,
+    make_lazy_saved_quote_reader,
 )
 from serie_a_v2_current_form_source_capture import (
     CURRENT_CODE, CURRENT_FILENAME, CURRENT_SEASON, CURRENT_URL, REQUIRED_COLUMNS,
@@ -450,3 +455,322 @@ def test_atomic_current_form_forward_skips_quotes_when_parent_run_is_unverified(
         )
     assert calls == []
     assert not target.exists()
+
+
+def test_lazy_saved_quote_reader_defers_client_creation_until_called():
+    events = []
+    now = datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc)
+    reader = make_lazy_saved_quote_reader(
+        url="https://supabase.invalid",
+        key="offline-placeholder",
+        now=now,
+        create_client_fn=lambda url, key: events.append("client") or object(),
+        quote_reader=lambda client, *, now: events.append("quotes") or [quote()],
+    )
+
+    assert events == []
+    assert reader() == [quote()]
+    assert events == ["client", "quotes"]
+
+
+def test_current_form_source_gate_does_not_initialize_supabase_client_without_archive(tmp_path):
+    events = []
+    now = datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc)
+    reader = make_lazy_saved_quote_reader(
+        url="https://supabase.invalid",
+        key="offline-placeholder",
+        now=now,
+        create_client_fn=lambda *_args: events.append("client") or object(),
+        quote_reader=lambda *_args, **_kwargs: events.append("quotes") or [quote()],
+    )
+
+    report = capture_forward_with_atomic_sources(
+        [],
+        as_of_utc=now,
+        fetch_quotes=reader,
+        load_archive=lambda _artifact_id: pytest.fail("no source archive should be loaded"),
+        verify_parent_run=valid_parent,
+        write_sources_to=tmp_path / "source-archives",
+    )
+
+    assert events == []
+    assert report["quote_read_skipped"] is True
+    assert report["source_gate_blocked"] == "NO_EARLIER_SOURCE_ARCHIVE"
+
+
+def test_current_form_source_bytes_are_verified_before_supabase_client_and_quote_read(tmp_path):
+    raw, archives = make_archive()
+    events = []
+    now = datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc)
+
+    def load_archive(_artifact_id):
+        events.append("source_bytes")
+        return raw
+
+    def verify_parent(archive, *, quote_time):
+        events.append("source_parent")
+        return valid_parent(archive, quote_time=quote_time)
+
+    reader = make_lazy_saved_quote_reader(
+        url="https://supabase.invalid",
+        key="offline-placeholder",
+        now=now,
+        create_client_fn=lambda _url, _key: events.append("client") or object(),
+        quote_reader=lambda _client, *, now: events.append("quotes") or [quote()],
+    )
+
+    report = capture_forward_with_atomic_sources(
+        archives,
+        as_of_utc=now,
+        fetch_quotes=reader,
+        load_archive=load_archive,
+        verify_parent_run=verify_parent,
+        write_sources_to=tmp_path / "source-archives",
+    )
+
+    assert events.index("source_parent") < events.index("source_bytes")
+    assert events.index("source_bytes") < events.index("client")
+    assert events.index("client") < events.index("quotes")
+    assert report["latest_source_archive_verification"]["verified"] is True
+    assert report["quote_read_skipped"] is False
+    assert report["v2_current_form_shadow_captured"] == 1
+
+
+
+def test_stale_source_never_initializes_supabase_client(tmp_path):
+    raw, archives = make_archive()
+    events = []
+    now = datetime(2026, 10, 19, 7, 5, tzinfo=timezone.utc)
+    reader = make_lazy_saved_quote_reader(
+        url="https://supabase.invalid",
+        key="offline-placeholder",
+        now=now,
+        create_client_fn=lambda *_args: events.append("client") or object(),
+        quote_reader=lambda *_args, **_kwargs: events.append("quotes") or [quote()],
+    )
+
+    def load_archive(_artifact_id):
+        events.append("source_bytes")
+        return raw
+
+    def verify_parent(archive, *, quote_time):
+        events.append("source_parent")
+        return valid_parent(archive, quote_time=quote_time)
+
+    report = capture_forward_with_atomic_sources(
+        archives,
+        as_of_utc=now,
+        fetch_quotes=reader,
+        load_archive=load_archive,
+        verify_parent_run=verify_parent,
+        write_sources_to=tmp_path / "source-archives",
+    )
+
+    assert events == ["source_parent", "source_bytes"]
+    assert report["source_gate_blocked"] == "SOURCE_ARCHIVE_TOO_OLD"
+    assert report["quote_read_skipped"] is True
+    assert report["quotes_seen"] == 0
+
+
+def test_unverified_parent_never_initializes_supabase_client(tmp_path):
+    raw, archives = make_archive()
+    events = []
+    now = datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc)
+    reader = make_lazy_saved_quote_reader(
+        url="https://supabase.invalid",
+        key="offline-placeholder",
+        now=now,
+        create_client_fn=lambda *_args: events.append("client") or object(),
+        quote_reader=lambda *_args, **_kwargs: events.append("quotes") or [quote()],
+    )
+
+    def load_archive(_artifact_id):
+        events.append("source_bytes")
+        return raw
+
+    def verify_parent(*_args, **_kwargs):
+        events.append("source_parent")
+        raise ValueError("parent run not verified")
+
+    with pytest.raises(ValueError, match="parent run not verified"):
+        capture_forward_with_atomic_sources(
+            archives,
+            as_of_utc=now,
+            fetch_quotes=reader,
+            load_archive=load_archive,
+            verify_parent_run=verify_parent,
+            write_sources_to=tmp_path / "source-archives",
+        )
+
+    assert events == ["source_parent"]
+    assert "client" not in events
+    assert "quotes" not in events
+
+
+def test_source_digest_mismatch_never_initializes_supabase_client(tmp_path):
+    raw, archives = make_archive()
+    archives[0]["sha256"] = "0" * 64
+    events = []
+    now = datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc)
+    reader = make_lazy_saved_quote_reader(
+        url="https://supabase.invalid",
+        key="offline-placeholder",
+        now=now,
+        create_client_fn=lambda *_args: events.append("client") or object(),
+        quote_reader=lambda *_args, **_kwargs: events.append("quotes") or [quote()],
+    )
+
+    def load_archive(_artifact_id):
+        events.append("source_bytes")
+        return raw
+
+    def verify_parent(archive, *, quote_time):
+        events.append("source_parent")
+        return valid_parent(archive, quote_time=quote_time)
+
+    with pytest.raises(ValueError, match="artifact SHA256 mismatch"):
+        capture_forward_with_atomic_sources(
+            archives,
+            as_of_utc=now,
+            fetch_quotes=reader,
+            load_archive=load_archive,
+            verify_parent_run=verify_parent,
+            write_sources_to=tmp_path / "source-archives",
+        )
+
+    assert events == ["source_parent", "source_bytes"]
+    assert "client" not in events
+    assert "quotes" not in events
+
+
+def test_lazy_saved_quote_reader_runs_direct_access_gate_before_client_and_quote(monkeypatch):
+    import sys
+    from types import ModuleType
+
+    events = []
+    access_module = ModuleType("market_anchor_v2_direct_access")
+    access_module.require_v2_inference_access = lambda: events.append("access")
+    monkeypatch.setitem(sys.modules, "market_anchor_v2_direct_access", access_module)
+
+    reader = make_lazy_saved_quote_reader(
+        url="https://supabase.invalid",
+        key="offline-placeholder",
+        now=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        create_client_fn=lambda _url, _key: events.append("client") or object(),
+        quote_reader=lambda _client, *, now: events.append("quotes") or [quote()],
+    )
+
+    assert events == []
+    assert reader() == [quote()]
+    assert events == ["access", "client", "quotes"]
+
+
+def test_lazy_saved_quote_reader_denies_before_client_or_quote_when_direct_gate_fails(monkeypatch):
+    import sys
+    from types import ModuleType
+
+    events = []
+
+    def deny_access():
+        events.append("access")
+        raise PermissionError("provider/private-storage access is not cleared")
+
+    access_module = ModuleType("market_anchor_v2_direct_access")
+    access_module.require_v2_inference_access = deny_access
+    monkeypatch.setitem(sys.modules, "market_anchor_v2_direct_access", access_module)
+
+    reader = make_lazy_saved_quote_reader(
+        url="https://supabase.invalid",
+        key="offline-placeholder",
+        now=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        create_client_fn=lambda _url, _key: events.append("client") or object(),
+        quote_reader=lambda _client, *, now: events.append("quotes") or [quote()],
+    )
+
+    with pytest.raises(PermissionError, match="provider/private-storage access is not cleared"):
+        reader()
+    assert events == ["access"]
+
+
+@pytest.fixture(autouse=True)
+def _offline_direct_access_gate(monkeypatch):
+    import sys
+    from types import ModuleType
+
+    module = ModuleType("market_anchor_v2_direct_access")
+    module.require_v2_inference_access = lambda: None
+    monkeypatch.setitem(sys.modules, "market_anchor_v2_direct_access", module)
+
+@pytest.mark.parametrize(
+    "entrypoint",
+    [
+        "discover_archives",
+        "verify_source_run",
+        "get_archive",
+        "verify_and_load_archive",
+        "verify_latest_source_archive",
+        "prepare_forward_capture",
+        "capture_forward_with_atomic_sources",
+    ],
+)
+def test_current_form_public_entrypoints_require_direct_access_before_io(
+    entrypoint, monkeypatch, tmp_path
+):
+    import sys
+    from types import ModuleType
+
+    events = []
+
+    def deny_access():
+        events.append("access")
+        raise PermissionError("provider/private-storage access is not cleared")
+
+    access_module = ModuleType("market_anchor_v2_direct_access")
+    access_module.require_v2_inference_access = deny_access
+    monkeypatch.setitem(sys.modules, "market_anchor_v2_direct_access", access_module)
+
+    def forbidden_get(*_args, **_kwargs):
+        events.append("network")
+        raise AssertionError("GitHub network must not be reached before the rights gate")
+
+    def forbidden_callback(*_args, **_kwargs):
+        events.append("callback")
+        raise AssertionError("source/quote callbacks must not run before the rights gate")
+
+    now = datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc)
+    with pytest.raises(PermissionError, match="provider/private-storage access is not cleared"):
+        if entrypoint == "discover_archives":
+            discover_archives(token="offline-token", get=forbidden_get)
+        elif entrypoint == "verify_source_run":
+            verify_source_run({}, quote_time=now, token="offline-token", get=forbidden_get)
+        elif entrypoint == "get_archive":
+            get_archive(123, token="offline-token", get=forbidden_get)
+        elif entrypoint == "verify_and_load_archive":
+            verify_and_load_archive(b"not-a-zip", {}, {})
+        elif entrypoint == "verify_latest_source_archive":
+            verify_latest_source_archive(
+                [],
+                as_of_utc=now,
+                load_archive=forbidden_callback,
+                verify_parent_run=forbidden_callback,
+                write_sources_to=tmp_path / "must-not-be-created",
+            )
+        elif entrypoint == "prepare_forward_capture":
+            prepare_forward_capture(
+                [], [], as_of_utc=now,
+                load_archive=forbidden_callback,
+                verify_parent_run=forbidden_callback,
+            )
+        else:
+            capture_forward_with_atomic_sources(
+                [],
+                as_of_utc=now,
+                fetch_quotes=forbidden_callback,
+                load_archive=forbidden_callback,
+                verify_parent_run=forbidden_callback,
+                write_sources_to=tmp_path / "must-not-be-created",
+            )
+
+    assert events == ["access"]
+    assert not (tmp_path / "must-not-be-created").exists()
+

@@ -46,6 +46,12 @@ MAX_ARCHIVE_BYTES = 16_000_000
 OLD_CUTOFF = pd.Timestamp("2026-07-01")
 
 
+def _require_v2_inference_access() -> dict:
+    """Require provider rights and private storage before V2 source/quote I/O."""
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    return require_v2_inference_access()
+
+
 def _github_json(url: str, *, token: str, get=requests.get) -> dict:
     if not token:
         raise ValueError("GitHub Actions actions:read token missing")
@@ -64,6 +70,7 @@ def _github_json(url: str, *, token: str, get=requests.get) -> dict:
 
 
 def discover_archives(*, token: str, get=requests.get) -> list[dict]:
+    _require_v2_inference_access()
     out, seen_ids = [], set()
     for page in range(1, 4):
         data = _github_json(
@@ -102,6 +109,7 @@ def discover_archives(*, token: str, get=requests.get) -> list[dict]:
 def verify_source_run(
     archive: Mapping[str, Any], *, quote_time: datetime, token: str, get=requests.get
 ) -> dict:
+    _require_v2_inference_access()
     run_id = archive.get("run_id")
     if type(run_id) is not int or run_id <= 0:
         raise ValueError("source artifact lacks parent workflow run")
@@ -128,6 +136,7 @@ def verify_source_run(
 
 
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
+    _require_v2_inference_access()
     if type(artifact_id) is not int or artifact_id <= 0:
         raise ValueError("invalid source artifact id")
     response = get(
@@ -149,6 +158,7 @@ def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
 def verify_and_load_archive(
     raw: bytes, archive: Mapping[str, Any], parent: Mapping[str, Any]
 ) -> tuple[pd.DataFrame, dict]:
+    _require_v2_inference_access()
     if not raw or len(raw) > MAX_ARCHIVE_BYTES:
         raise ValueError("current-form source archive is empty or too large")
     digest = hashlib.sha256(raw).hexdigest()
@@ -280,6 +290,7 @@ def verify_latest_source_archive(
     write_sources_to: Path | None = None,
 ) -> dict:
     """Verify the latest successful main source artifact even when all quotes are stale."""
+    _require_v2_inference_access()
     if as_of_utc.tzinfo is None:
         raise ValueError("source verification clock must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
@@ -371,6 +382,7 @@ def prepare_forward_capture(
     verify_parent_run,
     write_sources_to: Path | None = None,
 ) -> dict:
+    _require_v2_inference_access()
     if as_of_utc.tzinfo is None:
         raise ValueError("current-form forward clock must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
@@ -555,6 +567,7 @@ def capture_forward_with_atomic_sources(
     write_sources_to: Path,
 ) -> dict:
     """Verify source first, then capture quotes, publishing all source ZIPs atomically."""
+    _require_v2_inference_access()
     target = Path(write_sources_to)
     if target.is_symlink():
         raise ValueError("current-form forward source output cannot be a symlink")
@@ -647,6 +660,26 @@ def capture_forward_with_atomic_sources(
     return report
 
 
+def make_lazy_saved_quote_reader(
+    *,
+    url: str,
+    key: str,
+    now: datetime,
+    create_client_fn=create_client,
+    quote_reader=fetch_saved_upcoming_serie_a_quotes,
+):
+    """Initialize Supabase only after source preflight and the direct V2 access gate."""
+    def read_quotes():
+        # This import is intentionally lazy: the rights stack is integrated
+        # before this forward branch. If it is absent, direct quote access
+        # fails closed rather than silently bypassing the provider/private gate.
+        _require_v2_inference_access()
+        client = create_client_fn(url, key)
+        return quote_reader(client, now=now)
+
+    return read_quotes
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
@@ -672,11 +705,17 @@ def main() -> None:
     def verify_parent(archive: Mapping[str, Any], *, quote_time: datetime) -> dict:
         return verify_source_run(archive, quote_time=quote_time, token=token)
 
-    client = create_client(url, key)
+    fetch_quotes = make_lazy_saved_quote_reader(
+        url=url,
+        key=key,
+        now=now,
+        create_client_fn=create_client,
+        quote_reader=fetch_saved_upcoming_serie_a_quotes,
+    )
     report = capture_forward_with_atomic_sources(
         archives,
         as_of_utc=now,
-        fetch_quotes=lambda: fetch_saved_upcoming_serie_a_quotes(client, now=now),
+        fetch_quotes=fetch_quotes,
         load_archive=load_cached_archive,
         verify_parent_run=verify_parent,
         write_sources_to=args.sources_output_dir,
