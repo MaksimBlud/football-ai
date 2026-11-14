@@ -15,6 +15,18 @@ BASE = {"HC": 5, "AC": 4, "HY": 2, "AY": 1, "HR": 0, "AR": 0}
 ASOF = datetime(2026, 10, 13, 15, 1, tzinfo=timezone.utc)
 
 
+@pytest.fixture(autouse=True)
+def allow_synthetic_v2_inference_scope(monkeypatch):
+    """Offline fixtures use synthetic inputs; this is not provider authorization."""
+    import market_anchor_v2_source_rights as rights
+
+    monkeypatch.setattr(
+        rights,
+        "require_personal_research_inference_scope",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+
+
 def history():
     games = [
         ("03/10/2025", "Atalanta", "Juventus", 2, 1, "H"),

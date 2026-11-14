@@ -9,6 +9,10 @@ on:
       - research/v2-source-policy-recheck-restacked-on-727-20261114-run11
       - research/v2-prematch-quote-query-cutoff-rebased-on-780-20261111-run11
       - research/v2-prematch-quote-cutoff-restacked-on-813-20261114-run11
+      - research/v2-direct-quote-reader-rights-gate-rebased-on-783-20261111-run11
+      - research/v2-direct-quote-reader-rights-gate-restacked-on-814-20261114-run11
+      - research/v2-direct-shadow-preview-inference-rights-gate-rebased-on-784-20261111-run11
+      - research/v2-direct-shadow-preview-inference-rights-gate-restacked-on-815-20261114-run11
     paths:
       - "PROJECT_CONTINUITY.md"
       - "tests/test_serie_a_v2_dependency_lock_contract.py"
