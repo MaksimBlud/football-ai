@@ -35,6 +35,12 @@ GITHUB_API = f"https://api.github.com/repos/{REPOSITORY}"
 SCHEMA_VERSION = "SERIE_A_ORIGINAL_V2_FORWARD_SOURCE_BEFORE_QUOTE_V1"
 
 
+def _require_v2_inference_access() -> dict:
+    """Require provider rights and private artifact storage before any V2 I/O."""
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    return require_v2_inference_access()
+
+
 def _github_json(url: str, *, token: str, get=requests.get) -> dict:
     if not token:
         raise ValueError("GitHub Actions read token missing")
@@ -54,6 +60,7 @@ def _github_json(url: str, *, token: str, get=requests.get) -> dict:
 
 def discover_archives(*, token: str, get=requests.get) -> list[dict]:
     """Bound pagination and accept only main-branch, correct-name artifacts."""
+    _require_v2_inference_access()
     out = []
     seen_ids = set()
     for page in range(1, 4):
@@ -104,6 +111,7 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
     from the verified source workflow. A successful parent run must also have
     finished BEFORE the saved bookmaker quote, not only before inspection.
     """
+    _require_v2_inference_access()
     run_id = archive["run_id"]
     if type(run_id) is not int or run_id <= 0:
         raise ValueError("source archive is missing a parent GitHub run")
@@ -129,6 +137,7 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
 
 
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
+    _require_v2_inference_access()
     if not isinstance(artifact_id, int) or artifact_id <= 0:
         raise ValueError("invalid artifact id")
     url = f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip"
@@ -274,6 +283,7 @@ def prepare_forward_capture(
     write_archives_to: Path | None = None,
 ) -> dict:
     """Publish verified source ZIPs as one unit; discard partial output on failure."""
+    _require_v2_inference_access()
     if write_archives_to is None:
         return _prepare_forward_capture_contents(
             quotes,
@@ -335,8 +345,7 @@ def capture_forward_with_source_preflight(
     # inspection of caller-supplied archive metadata or callback invocation.
     # Import lazily so this stacked branch fails closed until the rights stack
     # containing market_anchor_v2_direct_access.py is integrated.
-    from market_anchor_v2_direct_access import require_v2_inference_access
-    require_v2_inference_access()
+    _require_v2_inference_access()
     if (
         not isinstance(as_of_utc, datetime)
         or as_of_utc.tzinfo is None
