@@ -323,6 +323,7 @@ def capture_forward_with_source_preflight(
     load_archive,
     verify_parent_run,
     write_archives_to: Path | None = None,
+    require_access_fn=None,
 ) -> dict:
     """Authenticate a complete old-season source ZIP before reading saved quotes.
 
@@ -331,6 +332,15 @@ def capture_forward_with_source_preflight(
     inside prepare_forward_capture; this preflight only proves a valid source
     archive and successful parent already exist before the quote reader starts.
     """
+    # The direct-call rights/private-storage boundary must precede even
+    # inspection of caller-supplied archive metadata or callback invocation.
+    # Import lazily so this stacked branch fails closed until the rights stack
+    # containing market_anchor_v2_direct_access.py is integrated.
+    if require_access_fn is None:
+        from market_anchor_v2_direct_access import require_v2_inference_access
+        require_v2_inference_access()
+    else:
+        require_access_fn()
     if (
         not isinstance(as_of_utc, datetime)
         or as_of_utc.tzinfo is None
