@@ -21,6 +21,7 @@ from market_anchor_1x2_v2_prospective_evaluator import (
     _sha_fixture_set,
 )
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
+from market_anchor_v2_source_rights import require_personal_research_inference_scope
 
 V2_ONLY_ALIASES = {"Atalanta BC": "Atalanta"}
 
@@ -83,11 +84,16 @@ def _read_completed_fixture_gate_at(
 ) -> tuple[set[tuple[str, str, str]], dict[str, Any]]:
     """Testable implementation; production callers use read_completed_fixture_gate().
 
+    Direct callers are subject to the same provider inference-rights gate as the
+    higher-level runner. The permission check must pass before the Supabase
+    query is constructed or executed.
+
     The attestation is computed from the actual rows returned by this query,
     rather than accepted from a caller-provided count or digest. Exact row-key
     validation also fails closed if a mocked, proxy, or changed response adds a
     result/score field despite the frozen select list.
     """
+    require_personal_research_inference_scope()
     captured = _capture_utc(captured_at)
     cutoff = captured.date()
     query = (
