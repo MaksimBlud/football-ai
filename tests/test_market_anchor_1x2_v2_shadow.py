@@ -14,11 +14,17 @@ ROOT = Path(__file__).resolve().parents[1]
 def allow_synthetic_v2_inference_scope(monkeypatch):
     """Offline fixtures use synthetic inputs; this is not provider authorization."""
     import market_anchor_v2_source_rights as rights
+    import market_anchor_v2_artifact_privacy as privacy
 
     monkeypatch.setattr(
         rights,
         "require_personal_research_inference_scope",
         lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(
+        privacy,
+        "require_private_repository_for_source_artifacts",
+        lambda: {"private": True, "scope_status": "SYNTHETIC_TEST_ONLY"},
     )
 
 

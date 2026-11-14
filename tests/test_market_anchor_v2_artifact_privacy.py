@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+import inspect
+
+import market_anchor_v2_artifact_privacy as privacy
 
 import pytest
 
@@ -17,31 +20,33 @@ class _PrivacyResponse:
         return self._payload
 
 
-def test_public_repository_blocks_source_artifact_access():
+def test_public_repository_blocks_source_artifact_access(monkeypatch):
     calls = []
 
-    def get(url, **kwargs):
+    def fake_get(url, **kwargs):
         calls.append((url, kwargs))
         return _PrivacyResponse({"full_name": "MaksimBlud/football-ai", "private": False})
 
+    monkeypatch.setattr(privacy.requests, "get", fake_get)
     with pytest.raises(PermissionError, match="require a private GitHub repository"):
         require_private_repository_for_source_artifacts(
-            "MaksimBlud/football-ai", "synthetic-token", get=get
+            "MaksimBlud/football-ai", "synthetic-token"
         )
     assert len(calls) == 1
     assert calls[0][0] == "https://api.github.com/repos/MaksimBlud/football-ai"
     assert calls[0][1]["allow_redirects"] is False
 
 
-def test_private_repository_allows_only_exact_authenticated_metadata_target():
+def test_private_repository_allows_only_exact_authenticated_metadata_target(monkeypatch):
     calls = []
 
-    def get(url, **kwargs):
+    def fake_get(url, **kwargs):
         calls.append((url, kwargs))
         return _PrivacyResponse({"full_name": "MaksimBlud/football-ai", "private": True})
 
+    monkeypatch.setattr(privacy.requests, "get", fake_get)
     result = require_private_repository_for_source_artifacts(
-        "MaksimBlud/football-ai", "synthetic-token", get=get
+        "MaksimBlud/football-ai", "synthetic-token"
     )
     assert result == {
         "repository": "MaksimBlud/football-ai",
@@ -52,13 +57,14 @@ def test_private_repository_allows_only_exact_authenticated_metadata_target():
     assert calls[0][1]["headers"]["Authorization"] == "Bearer synthetic-token"
 
 
-def test_privacy_lookup_fails_closed_on_redirect_wrong_identity_and_http_error():
+def test_privacy_lookup_fails_closed_on_redirect_wrong_identity_and_http_error(monkeypatch):
     def wrong_identity(url, **kwargs):
         return _PrivacyResponse({"full_name": "someone/else", "private": True})
 
+    monkeypatch.setattr(privacy.requests, "get", wrong_identity)
     with pytest.raises(PermissionError, match="identity does not match"):
         require_private_repository_for_source_artifacts(
-            "MaksimBlud/football-ai", "synthetic-token", get=wrong_identity
+            "MaksimBlud/football-ai", "synthetic-token"
         )
 
     def redirect(url, **kwargs):
@@ -67,34 +73,37 @@ def test_privacy_lookup_fails_closed_on_redirect_wrong_identity_and_http_error()
             url="https://api.github.com/repos/other/football-ai",
         )
 
+    monkeypatch.setattr(privacy.requests, "get", redirect)
     with pytest.raises(PermissionError, match="lookup failed"):
         require_private_repository_for_source_artifacts(
-            "MaksimBlud/football-ai", "synthetic-token", get=redirect
+            "MaksimBlud/football-ai", "synthetic-token"
         )
 
     def unavailable(url, **kwargs):
         return _PrivacyResponse({}, status_code=503)
 
+    monkeypatch.setattr(privacy.requests, "get", unavailable)
     with pytest.raises(PermissionError, match="lookup failed"):
         require_private_repository_for_source_artifacts(
-            "MaksimBlud/football-ai", "synthetic-token", get=unavailable
+            "MaksimBlud/football-ai", "synthetic-token"
         )
 
 
-def test_missing_repository_or_token_blocks_without_network():
+def test_missing_repository_or_token_blocks_without_network(monkeypatch):
     calls = []
 
     def forbidden_get(*args, **kwargs):
         calls.append((args, kwargs))
         raise AssertionError("privacy lookup must not run without validated identity and token")
 
+    monkeypatch.setattr(privacy.requests, "get", forbidden_get)
     with pytest.raises(PermissionError, match="identity is missing or malformed"):
         require_private_repository_for_source_artifacts(
-            "bad-repository", "synthetic-token", get=forbidden_get
+            "bad-repository", "synthetic-token"
         )
     with pytest.raises(PermissionError, match="GitHub token is required"):
         require_private_repository_for_source_artifacts(
-            "MaksimBlud/football-ai", "", get=forbidden_get
+            "MaksimBlud/football-ai", ""
         )
     assert calls == []
 
@@ -171,3 +180,25 @@ def test_every_live_v2_artifact_upload_is_guarded_by_private_storage_preflight()
             assert "steps.rights_preflight.outputs.allowed == 'true'" in step, (
                 f"{relative}: artifact upload is not disabled when private-storage preflight blocks"
             )
+
+
+def test_private_storage_gate_does_not_accept_caller_supplied_http_transport():
+    assert "get" not in inspect.signature(require_private_repository_for_source_artifacts).parameters
+
+def test_privacy_lookup_fails_closed_when_success_response_omits_url(monkeypatch):
+    class ResponseWithoutUrl:
+        status_code = 200
+
+        def json(self):
+            return {"full_name": "MaksimBlud/football-ai", "private": True}
+
+    monkeypatch.setattr(
+        privacy.requests,
+        "get",
+        lambda url, **kwargs: ResponseWithoutUrl(),
+    )
+    with pytest.raises(PermissionError, match="lookup failed"):
+        require_private_repository_for_source_artifacts(
+            "MaksimBlud/football-ai", "synthetic-token"
+        )
+

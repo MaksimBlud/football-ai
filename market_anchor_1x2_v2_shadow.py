@@ -196,9 +196,9 @@ def validate_candidate_artifact(artifact: Mapping) -> None:
 def _artifact_residual_logits(features: pd.DataFrame, artifact: Mapping) -> np.ndarray:
     # This importable low-level helper reads the frozen weights and feature vector.
     # It must enforce the provider boundary even when no higher-level scorer is used.
-    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+    from market_anchor_v2_direct_access import require_v2_inference_access
 
-    require_personal_research_inference_scope()
+    require_v2_inference_access()
     validate_candidate_artifact(artifact)
     names = list(artifact["features"])
     if list(features.columns) != names:
@@ -219,9 +219,9 @@ def _artifact_residual_logits(features: pd.DataFrame, artifact: Mapping) -> np.n
 
 def predict_shadow_residual(market_probabilities: np.ndarray, features: pd.DataFrame, artifact: Mapping) -> np.ndarray:
     # Direct imports must not bypass the frozen-inference rights boundary.
-    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+    from market_anchor_v2_direct_access import require_v2_inference_access
 
-    require_personal_research_inference_scope()
+    require_v2_inference_access()
     residual = _artifact_residual_logits(features, artifact)
     return market_anchored_probabilities(
         validate_probabilities(market_probabilities), residual, SHADOW_RESIDUAL_LAMBDA
@@ -231,9 +231,9 @@ def predict_shadow_residual(market_probabilities: np.ndarray, features: pd.DataF
 def predict_candidate(market_probabilities: np.ndarray, features: pd.DataFrame, artifact: Mapping) -> np.ndarray:
     """Return active V2 probabilities; currently exact market because the gate failed."""
     # Even with active_lambda=0 this API inspects frozen residual weights and inputs.
-    from market_anchor_v2_source_rights import require_personal_research_inference_scope
+    from market_anchor_v2_direct_access import require_v2_inference_access
 
-    require_personal_research_inference_scope()
+    require_v2_inference_access()
     residual = _artifact_residual_logits(features, artifact)
     return market_anchored_probabilities(validate_probabilities(market_probabilities), residual, ACTIVE_LAMBDA)
 
