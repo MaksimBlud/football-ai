@@ -647,6 +647,22 @@ def capture_forward_with_atomic_sources(
     return report
 
 
+def make_lazy_saved_quote_reader(
+    *,
+    url: str,
+    key: str,
+    now: datetime,
+    create_client_fn=create_client,
+    quote_reader=fetch_saved_upcoming_serie_a_quotes,
+):
+    """Initialize Supabase only when the source-preflight gate requests quotes."""
+    def read_quotes():
+        client = create_client_fn(url, key)
+        return quote_reader(client, now=now)
+
+    return read_quotes
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
@@ -672,11 +688,17 @@ def main() -> None:
     def verify_parent(archive: Mapping[str, Any], *, quote_time: datetime) -> dict:
         return verify_source_run(archive, quote_time=quote_time, token=token)
 
-    client = create_client(url, key)
+    fetch_quotes = make_lazy_saved_quote_reader(
+        url=url,
+        key=key,
+        now=now,
+        create_client_fn=create_client,
+        quote_reader=fetch_saved_upcoming_serie_a_quotes,
+    )
     report = capture_forward_with_atomic_sources(
         archives,
         as_of_utc=now,
-        fetch_quotes=lambda: fetch_saved_upcoming_serie_a_quotes(client, now=now),
+        fetch_quotes=fetch_quotes,
         load_archive=load_cached_archive,
         verify_parent_run=verify_parent,
         write_sources_to=args.sources_output_dir,
