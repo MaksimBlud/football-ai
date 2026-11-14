@@ -12,6 +12,7 @@ from io import BytesIO
 import json
 import os
 from pathlib import Path
+from tempfile import TemporaryDirectory
 import re
 from typing import Any
 import zipfile
@@ -145,7 +146,7 @@ def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
     return raw
 
 
-def prepare_forward_capture(
+def _prepare_forward_capture_contents(
     quotes: list[dict], archive_metadata: list[dict], *,
     as_of_utc: datetime, load_archive, verify_parent_run,
     write_archives_to: Path | None = None,
@@ -263,6 +264,53 @@ def prepare_forward_capture(
         "supabase_writes": 0,
         "training_or_promotion": False,
     }
+
+
+def prepare_forward_capture(
+    quotes: list[dict], archive_metadata: list[dict], *,
+    as_of_utc: datetime, load_archive, verify_parent_run,
+    write_archives_to: Path | None = None,
+) -> dict:
+    """Publish verified source ZIPs as one unit; discard partial output on failure."""
+    if write_archives_to is None:
+        return _prepare_forward_capture_contents(
+            quotes,
+            archive_metadata,
+            as_of_utc=as_of_utc,
+            load_archive=load_archive,
+            verify_parent_run=verify_parent_run,
+            write_archives_to=None,
+        )
+
+    target = Path(write_archives_to)
+    if target.is_symlink():
+        raise ValueError("forward source output directory cannot be a symlink")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.exists():
+        if not target.is_dir() or any(target.iterdir()):
+            raise FileExistsError("forward source output directory must be absent or empty")
+        target.rmdir()
+
+    # The workflow uploads this directory with if: always(). Keep all per-quote
+    # downloads in a sibling staging directory so a later failed quote or ZIP
+    # validation cannot publish an incomplete/unverified source bundle.
+    with TemporaryDirectory(
+        prefix=f".{target.name}.staging-",
+        dir=target.parent,
+    ) as temporary_directory:
+        staged = Path(temporary_directory) / "sources"
+        staged.mkdir()
+        report = _prepare_forward_capture_contents(
+            quotes,
+            archive_metadata,
+            as_of_utc=as_of_utc,
+            load_archive=load_archive,
+            verify_parent_run=verify_parent_run,
+            write_archives_to=staged,
+        )
+        if any(staged.iterdir()):
+            os.replace(staged, target)
+    return report
 
 
 def main() -> None:
