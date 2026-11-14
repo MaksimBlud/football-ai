@@ -435,7 +435,7 @@ def _verify_frozen_candidate_contract_pin() -> str:
 def _as_aware_utc(value: datetime, label: str) -> datetime:
     """Reject ambiguous clocks instead of letting astimezone assume host local time."""
     if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
-        raise ValueError(f"{label} must be timezone-aware")
+        raise ValueError(f"{label} must have a real UTC offset")
     return value.astimezone(timezone.utc)
 
 
@@ -474,7 +474,7 @@ def _capture_source_archive_contents(
     # Stream and enforce the actual decompressed byte cap before materializing the
     # CSV. The observation clock is sampled only after the complete bounded body.
     raw = _read_bounded_current_source_body(response)
-    observed_at = _as_aware_utc(clock(), "current-season source observation clock")
+    observed_at = _as_aware_utc(clock(), "source observation clock")
     if observed_at < at:
         raise ValueError("source observation timestamp precedes feature-source gate check")
     current_rows, excluded_rows = validate_current_season_csv(raw, captured_at=observed_at)
@@ -494,7 +494,7 @@ def _capture_source_archive_contents(
         )
     archive_created_at = _as_aware_utc(clock(), "source archive creation clock")
     if archive_created_at < observed_at:
-        raise ValueError("source archive creation clock precedes latest source observation")
+        raise ValueError("source archive creation timestamp precedes source observation")
     current_path = output_dir / CURRENT_FILENAME
     current_path.write_bytes(raw)
     audits = list(old_audit) + [{
@@ -609,10 +609,8 @@ def capture_source_archive(
     if output_dir.is_symlink():
         raise ValueError("source archive output directory cannot be a symlink")
     output_dir.parent.mkdir(parents=True, exist_ok=True)
-    if output_dir.exists():
-        if not output_dir.is_dir() or any(output_dir.iterdir()):
-            raise FileExistsError("source archive output directory must be absent or empty")
-        output_dir.rmdir()
+    if output_dir.exists() and (not output_dir.is_dir() or any(output_dir.iterdir())):
+        raise FileExistsError("source archive output directory must be absent or empty")
 
     # The workflow's upload step may run with if: always(). Build outside the
     # upload path so a late clock/CSV/manifest failure cannot publish ten
