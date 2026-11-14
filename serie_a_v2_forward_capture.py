@@ -33,6 +33,7 @@ from market_anchor_v2_source_rights import require_personal_research_inference_s
 REPOSITORY = "MaksimBlud/football-ai"
 ARTIFACT_NAME = "serie-a-v2-free-real-quote-diagnostic"
 SOURCE_WORKFLOW_PATH = ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
+EXPECTED_SOURCE_WORKFLOW_BLOB_SHA1 = "19a8353978f034808069cdf7e2092152138504d7"
 SOURCE_LOADER_PATH = "serie_a_v2_live_diagnostic_report.py"
 EXPECTED_SOURCE_LOADER_BLOB_SHA1 = "6a1c382e127dc0aa1088ef976fc436a78176b515"
 SOURCE_RIGHTS_HELPER_PATH = "market_anchor_v2_source_rights.py"
@@ -161,6 +162,7 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
         (SOURCE_LOADER_PATH, EXPECTED_SOURCE_LOADER_BLOB_SHA1),
         (SOURCE_RIGHTS_HELPER_PATH, EXPECTED_SOURCE_RIGHTS_HELPER_BLOB_SHA1),
         (SOURCE_RIGHTS_MANIFEST_PATH, EXPECTED_SOURCE_RIGHTS_MANIFEST_BLOB_SHA1),
+        (SOURCE_WORKFLOW_PATH, EXPECTED_SOURCE_WORKFLOW_BLOB_SHA1),
     )
     verified_blobs = {}
     for path, expected_sha in approved_source_files:
@@ -181,6 +183,7 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
         "source_loader_blob_sha1": verified_blobs[SOURCE_LOADER_PATH],
         "source_rights_helper_blob_sha1": verified_blobs[SOURCE_RIGHTS_HELPER_PATH],
         "source_rights_manifest_blob_sha1": verified_blobs[SOURCE_RIGHTS_MANIFEST_PATH],
+        "source_workflow_blob_sha1": verified_blobs[SOURCE_WORKFLOW_PATH],
     }
 
 
