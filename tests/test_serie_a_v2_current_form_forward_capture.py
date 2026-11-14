@@ -13,6 +13,7 @@ from serie_a_v2_current_form_forward_capture import (
     prepare_forward_capture,
     verify_latest_source_archive,
     capture_forward_with_atomic_sources,
+    make_lazy_saved_quote_reader,
 )
 from serie_a_v2_current_form_source_capture import (
     CURRENT_CODE, CURRENT_FILENAME, CURRENT_SEASON, CURRENT_URL, REQUIRED_COLUMNS,
@@ -450,3 +451,82 @@ def test_atomic_current_form_forward_skips_quotes_when_parent_run_is_unverified(
         )
     assert calls == []
     assert not target.exists()
+
+
+def test_lazy_saved_quote_reader_defers_client_creation_until_called():
+    events = []
+    now = datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc)
+    reader = make_lazy_saved_quote_reader(
+        url="https://supabase.invalid",
+        key="offline-placeholder",
+        now=now,
+        create_client_fn=lambda url, key: events.append("client") or object(),
+        quote_reader=lambda client, *, now: events.append("quotes") or [quote()],
+    )
+
+    assert events == []
+    assert reader() == [quote()]
+    assert events == ["client", "quotes"]
+
+
+def test_current_form_source_gate_does_not_initialize_supabase_client_without_archive(tmp_path):
+    events = []
+    now = datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc)
+    reader = make_lazy_saved_quote_reader(
+        url="https://supabase.invalid",
+        key="offline-placeholder",
+        now=now,
+        create_client_fn=lambda *_args: events.append("client") or object(),
+        quote_reader=lambda *_args, **_kwargs: events.append("quotes") or [quote()],
+    )
+
+    report = capture_forward_with_atomic_sources(
+        [],
+        as_of_utc=now,
+        fetch_quotes=reader,
+        load_archive=lambda _artifact_id: pytest.fail("no source archive should be loaded"),
+        verify_parent_run=valid_parent,
+        write_sources_to=tmp_path / "source-archives",
+    )
+
+    assert events == []
+    assert report["quote_read_skipped"] is True
+    assert report["source_gate_blocked"] == "NO_EARLIER_SOURCE_ARCHIVE"
+
+
+def test_current_form_source_bytes_are_verified_before_supabase_client_and_quote_read(tmp_path):
+    raw, archives = make_archive()
+    events = []
+    now = datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc)
+
+    def load_archive(_artifact_id):
+        events.append("source_bytes")
+        return raw
+
+    def verify_parent(archive, *, quote_time):
+        events.append("source_parent")
+        return valid_parent(archive, quote_time=quote_time)
+
+    reader = make_lazy_saved_quote_reader(
+        url="https://supabase.invalid",
+        key="offline-placeholder",
+        now=now,
+        create_client_fn=lambda _url, _key: events.append("client") or object(),
+        quote_reader=lambda _client, *, now: events.append("quotes") or [quote()],
+    )
+
+    report = capture_forward_with_atomic_sources(
+        archives,
+        as_of_utc=now,
+        fetch_quotes=reader,
+        load_archive=load_archive,
+        verify_parent_run=verify_parent,
+        write_sources_to=tmp_path / "source-archives",
+    )
+
+    assert events.index("source_parent") < events.index("source_bytes")
+    assert events.index("source_bytes") < events.index("client")
+    assert events.index("client") < events.index("quotes")
+    assert report["latest_source_archive_verification"]["verified"] is True
+    assert report["quote_read_skipped"] is False
+    assert report["v2_current_form_shadow_captured"] == 1
