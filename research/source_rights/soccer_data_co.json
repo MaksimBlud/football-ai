@@ -1,0 +1,247 @@
+{
+  "schema_version": "1.0",
+  "provider": "Soccer Data",
+  "provider_domain": "soccer-data.co",
+  "audit_date_utc": "2026-11-14",
+  "decision": "HOLD",
+  "decision_label": "PROMISING FREE CURRENT-SEASON MATCH-STATS CANDIDATE — NOT APPROVED FOR ORIGINAL V2 CAPTURE OR INFERENCE",
+  "reason_codes": [
+    "NO_EXPLICIT_INTERNAL_ML_TRAINING_OR_INFERENCE_GRANT_FOUND",
+    "UPSTREAM_PROVIDER_RIGHTS_NOT_IDENTIFIED",
+    "RAW_RETENTION_LICENSE_ENDS_WITH_ACCOUNT_OR_PLAN",
+    "NO_PER_FIELD_UPSTREAM_OBSERVATION_OR_CORRECTION_TIMESTAMPS",
+    "STATISTICS_CAN_ARRIVE_LATE_OR_CHANGE_AFTER_EVENT",
+    "FREE_PLAN_CURRENT_SEASON_ONLY",
+    "FREE_PLAN_EXCLUDES_ODDS",
+    "SERIE_A_2026_27_PER_MATCH_COVERAGE_NOT_VERIFIED",
+    "FREE_PLAN_CANNOT_REPLACE_EXISTING_TEN_HISTORICAL_SEASON_ARCHIVE_CONTRACT",
+    "PRIVATE_ARCHIVE_NOT_VERIFIED"
+  ],
+  "source_documents": {
+    "terms": "https://soccer-data.co/terms",
+    "pricing": "https://soccer-data.co/pricing",
+    "rate_limits": "https://soccer-data.co/docs/concepts/rate-limits",
+    "coverage": "https://soccer-data.co/docs/concepts/coverage",
+    "match_stats": "https://soccer-data.co/docs/reference/matches/stats",
+    "match_list": "https://soccer-data.co/docs/reference/matches",
+    "data_model": "https://soccer-data.co/docs/concepts/data-model"
+  },
+  "free_plan": {
+    "price_usd": 0,
+    "requests_per_day": 50,
+    "requests_per_minute": 10,
+    "all_stats_endpoints": true,
+    "current_season_only": true,
+    "odds_available": false,
+    "free_plan_duration": "FREE",
+    "provider_may_change_plan_features": true
+  },
+  "terms": {
+    "last_updated": "2026-10-30",
+    "data_owned_by_provider_or_licensed_upstream_providers": true,
+    "upstream_provider_names_disclosed": false,
+    "cache_and_store_while_account_open_and_plan_active_permitted": true,
+    "retention_after_account_or_plan_termination_permitted": false,
+    "raw_data_redistribution_permitted": false,
+    "explicit_internal_ml_training_permission_found": false,
+    "explicit_internal_ml_inference_permission_found": false,
+    "derived_prediction_retention_scope_explicitly_resolved": false,
+    "interpretation": "The reviewed terms do not expressly grant or prohibit internal ML training/inference. This is an unresolved permission question, not a legal conclusion that such use is prohibited."
+  },
+  "coverage": {
+    "documented_serie_a_history_start": "2020/21",
+    "free_plan_season_scope": "CURRENT_SEASON_ONLY",
+    "current_2026_27_serie_a_fixtures_verified": false,
+    "current_2026_27_serie_a_per_match_stats_coverage_verified": false,
+    "exact_coverage_requires_authenticated_coverage_endpoint": true,
+    "match_stats_may_return_not_available": true,
+    "exact_original_v2_source_parity_verified": false,
+    "existing_current_form_archive_file_count_required": 11,
+    "existing_current_form_archive_components": "10 historical season CSVs plus one current-season CSV",
+    "free_plan_satisfies_existing_11_file_contract": false
+  },
+  "feature_mapping": [
+    {
+      "feature": "diff_points_5",
+      "source": "completed match scores converted to 3/1/0 points",
+      "status": "candidate mapping; exact result semantics and completeness unverified"
+    },
+    {
+      "feature": "diff_points_10",
+      "source": "completed match scores converted to 3/1/0 points",
+      "status": "candidate mapping; exact result semantics and completeness unverified"
+    },
+    {
+      "feature": "diff_points_venue5",
+      "source": "completed match scores filtered by home/away venue",
+      "status": "candidate mapping; team identity and venue parity unverified"
+    },
+    {
+      "feature": "diff_goals_for_5",
+      "source": "match score, home/away",
+      "status": "documented candidate; per-match completeness unverified"
+    },
+    {
+      "feature": "diff_goals_for_10",
+      "source": "match score, home/away",
+      "status": "documented candidate; per-match completeness unverified"
+    },
+    {
+      "feature": "diff_goals_against_5",
+      "source": "match score, home/away",
+      "status": "documented candidate; per-match completeness unverified"
+    },
+    {
+      "feature": "diff_goals_against_10",
+      "source": "match score, home/away",
+      "status": "documented candidate; per-match completeness unverified"
+    },
+    {
+      "feature": "diff_corners_for_5",
+      "source": "match stats overview.corner_kicks",
+      "status": "documented candidate; null/missing values must be rejected, not set to zero"
+    },
+    {
+      "feature": "diff_corners_for_10",
+      "source": "match stats overview.corner_kicks",
+      "status": "documented candidate; null/missing values must be rejected, not set to zero"
+    },
+    {
+      "feature": "diff_corners_against_5",
+      "source": "match stats overview.corner_kicks",
+      "status": "documented candidate; null/missing values must be rejected, not set to zero"
+    },
+    {
+      "feature": "diff_corners_against_10",
+      "source": "match stats overview.corner_kicks",
+      "status": "documented candidate; null/missing values must be rejected, not set to zero"
+    },
+    {
+      "feature": "diff_yellow_5",
+      "source": "match stats overview.yellow_cards",
+      "status": "documented candidate; card semantics and completeness unverified"
+    },
+    {
+      "feature": "diff_yellow_10",
+      "source": "match stats overview.yellow_cards",
+      "status": "documented candidate; card semantics and completeness unverified"
+    },
+    {
+      "feature": "diff_red_5",
+      "source": "match stats overview.red_cards",
+      "status": "documented candidate; second-yellow/direct-red parity unverified"
+    },
+    {
+      "feature": "diff_red_10",
+      "source": "match stats overview.red_cards",
+      "status": "documented candidate; second-yellow/direct-red parity unverified"
+    },
+    {
+      "feature": "diff_goals_for_venue5",
+      "source": "match score filtered by home/away venue",
+      "status": "documented candidate; team identity and venue parity unverified"
+    },
+    {
+      "feature": "diff_goals_against_venue5",
+      "source": "match score filtered by home/away venue",
+      "status": "documented candidate; team identity and venue parity unverified"
+    },
+    {
+      "feature": "diff_corners_for_venue5",
+      "source": "match stats overview.corner_kicks filtered by home/away venue",
+      "status": "documented candidate; coverage and venue parity unverified"
+    },
+    {
+      "feature": "diff_corners_against_venue5",
+      "source": "match stats overview.corner_kicks filtered by home/away venue",
+      "status": "documented candidate; coverage and venue parity unverified"
+    }
+  ],
+  "provenance": {
+    "per_field_upstream_observation_timestamp_documented": false,
+    "per_field_correction_history_documented": false,
+    "response_cache_headers_documented": true,
+    "stale_response_age_header_documented": true,
+    "raw_response_receipt_timestamp_and_sha_can_prove_project_possession_before_quote": true,
+    "receipt_timestamp_proves_upstream_first_observation_or_correction_time": false,
+    "source_before_quote_approved": false,
+    "required_order_if_later_authorized": "private_raw_response_receipt_time_utc < quote_snapshot_time_utc < kickoff_utc",
+    "require_exact_raw_response_bytes": true,
+    "require_sha256": true,
+    "require_response_headers_and_cache_state": true,
+    "reject_stale_response": true,
+    "require_parent_workflow_run_id_and_commit_sha": true
+  },
+  "private_storage": {
+    "private_raw_archive_required": true,
+    "public_github_raw_artifact_allowed": false,
+    "private_archive_storage_verified": false,
+    "private_archive_storage_authorized": false,
+    "supabase_writes_or_ddl_authorized": false
+  },
+  "request_budget_estimate": {
+    "project_serie_a_canonical_completed_fixture_metadata_count": 110,
+    "assumed_stats_calls_per_fixture": 1,
+    "estimated_match_stats_calls": 110,
+    "free_requests_per_day": 50,
+    "minimum_utc_days_for_110_stats_calls": 3,
+    "extra_fixture_list_or_coverage_calls_included": false,
+    "estimate_only": true,
+    "provider_api_calls_made": 0
+  },
+  "frozen_candidate": {
+    "experiment_id": "MARKET_ANCHOR_1X2_V2",
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "training_rows": 3799,
+    "training_fingerprint_sha256": "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098",
+    "feature_count": 19,
+    "features": [
+      "diff_points_5",
+      "diff_points_10",
+      "diff_points_venue5",
+      "diff_goals_for_5",
+      "diff_goals_for_10",
+      "diff_goals_against_5",
+      "diff_goals_against_10",
+      "diff_corners_for_5",
+      "diff_corners_for_10",
+      "diff_corners_against_5",
+      "diff_corners_against_10",
+      "diff_yellow_5",
+      "diff_yellow_10",
+      "diff_red_5",
+      "diff_red_10",
+      "diff_goals_for_venue5",
+      "diff_goals_against_venue5",
+      "diff_corners_for_venue5",
+      "diff_corners_against_venue5"
+    ],
+    "weights_shape": [
+      20,
+      2
+    ],
+    "active_lambda": 0,
+    "shadow_residual_lambda": 1,
+    "stability_gate_passed": false,
+    "automatic_promotion": false
+  },
+  "project_authorization": {
+    "account_creation_authorized": false,
+    "api_key_creation_authorized": false,
+    "api_requests_authorized": false,
+    "data_download_authorized": false,
+    "source_capture_authorized": false,
+    "feature_build_authorized": false,
+    "inference_authorized": false,
+    "target_outcome_reads_authorized": false,
+    "paid_calls_authorized": false,
+    "supabase_writes_or_ddl_authorized": false
+  },
+  "non_results": {
+    "source_archive_created": false,
+    "model_inference_run": false,
+    "target_outcomes_read": false,
+    "brier_or_logloss_calculated": false,
+    "model_superiority_established": false
+  }
+}
