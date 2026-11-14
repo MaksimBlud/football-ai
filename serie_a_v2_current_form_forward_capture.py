@@ -654,9 +654,18 @@ def make_lazy_saved_quote_reader(
     now: datetime,
     create_client_fn=create_client,
     quote_reader=fetch_saved_upcoming_serie_a_quotes,
+    require_access_fn=None,
 ):
-    """Initialize Supabase only when the source-preflight gate requests quotes."""
+    """Initialize Supabase only after source preflight and the direct V2 access gate."""
     def read_quotes():
+        if require_access_fn is None:
+            # This import is intentionally lazy: the rights stack is integrated
+            # before this forward branch. If it is absent, direct quote access
+            # fails closed rather than silently bypassing the provider/private gate.
+            from market_anchor_v2_direct_access import require_v2_inference_access
+            require_v2_inference_access()
+        else:
+            require_access_fn()
         client = create_client_fn(url, key)
         return quote_reader(client, now=now)
 
