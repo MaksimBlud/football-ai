@@ -23,6 +23,7 @@ on:
       - "research/source_rights/football_data_co_uk.json"
       - "research/SERIE_A_V2_SOURCE_CAPTURE_ONLY_SCOPE_20261107.md"
       - "research/SERIE_A_V2_PROVIDER_AI_INFERENCE_RIGHTS_BLOCK_20261107.md"
+      - "research/SERIE_A_V2_SOURCE_POLICY_RECHECK_20261110.md"
       - "historical_football_signal_lab.py"
       - "serie_a_runtime_config.py"
       - "serie_a_v2_frozen_shadow_preview.py"

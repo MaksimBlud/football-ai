@@ -10,6 +10,7 @@ import re
 
 SOURCE_WORKFLOW = Path(".github/workflows/serie-a-v2-current-form-source-capture.yml")
 FORWARD_WORKFLOW = Path(".github/workflows/serie-a-v2-current-form-forward-preview.yml")
+VALIDATION_WORKFLOW = Path(".github/workflows/serie-a-v2-current-form-forward-validation.yml")
 
 REQUIRED_SOURCE_AUDIT_PATHS = {
     "serie_a_v2_current_form_source_capture.py",
@@ -25,6 +26,7 @@ REQUIRED_SOURCE_AUDIT_PATHS = {
     "market_anchor_v2_source_capture_rights.py",
     "tests/test_market_anchor_v2_source_capture_rights.py",
     "research/SERIE_A_V2_SOURCE_CAPTURE_ONLY_SCOPE_20261107.md",
+    "research/SERIE_A_V2_SOURCE_POLICY_RECHECK_20261110.md",
     "research/source_rights/football_data_co_uk.json",
     "experiments/market_anchor_1x2_v2_current_form_policy.json",
     "experiments/market_anchor_1x2_v2_protocol.json",
@@ -40,10 +42,14 @@ REQUIRED_SOURCE_AUDIT_PATHS = {
 }
 
 
-def _source_push_paths(workflow_text: str) -> set[str]:
+def _push_paths(workflow_text: str) -> set[str]:
     lines = workflow_text.splitlines()
     push_index = lines.index("  push:")
-    end_index = lines.index("concurrency:")
+    end_candidates = [
+        index for index, line in enumerate(lines)
+        if index > push_index and line in {"  workflow_run:", "concurrency:"}
+    ]
+    end_index = min(end_candidates)
     push_block = lines[push_index + 1:end_index]
     paths_index = push_block.index("    paths:")
     paths = set()
@@ -51,13 +57,57 @@ def _source_push_paths(workflow_text: str) -> set[str]:
         match = re.match(r'^\s*- "([^"]+)"\s*$', line)
         if match:
             paths.add(match.group(1))
-    assert paths, "source capture workflow must declare an explicit path filter"
+    assert paths, "workflow must declare an explicit push path filter"
     return paths
+
+
+REQUIRED_FORWARD_AUDIT_PATHS = {
+    "requirements-v2-research-py312.lock",
+    "serie_a_v2_current_form_forward_capture.py",
+    "serie_a_v2_current_form_source_capture.py",
+    "serie_a_v2_asof_feature_manifest.py",
+    "serie_a_v2_frozen_shadow_preview.py",
+    "market_anchor_1x2_v2_shadow.py",
+    "market_anchor_1x2_v1.py",
+    "serie_a_v2_live_diagnostic_report.py",
+    "serie_a_v2_prequote_source_archive_gate.py",
+    "serie_a_runtime_config.py",
+    "historical_football_signal_lab.py",
+    "experiments/market_anchor_1x2_v2_current_form_policy.json",
+    "experiments/market_anchor_1x2_v2_protocol.json",
+    "research/models/market_anchor_v2_serie_a_frozen_candidate.json",
+    "market_anchor_v2_source_rights.py",
+    "market_anchor_v2_source_capture_rights.py",
+    "market_anchor_v2_artifact_privacy.py",
+    "market_anchor_v2_direct_access.py",
+    "research/source_rights/football_data_co_uk.json",
+    "research/SERIE_A_V2_SOURCE_CAPTURE_ONLY_SCOPE_20261107.md",
+    "research/SERIE_A_V2_PROVIDER_AI_INFERENCE_RIGHTS_BLOCK_20261107.md",
+    "research/SERIE_A_V2_SOURCE_POLICY_RECHECK_20261110.md",
+    "tests/test_serie_a_v2_current_form_source_capture.py",
+    "tests/test_serie_a_v2_current_form_forward_capture.py",
+    "tests/test_serie_a_v2_asof_feature_manifest.py",
+    "tests/test_serie_a_v2_atalanta_alias.py",
+    "tests/test_serie_a_v2_frozen_shadow_preview.py",
+    "tests/test_serie_a_v2_prequote_source_archive_gate.py",
+    "tests/test_serie_a_v2_live_diagnostic_report.py",
+    "tests/test_historical_football_signal_lab.py",
+    "tests/test_serie_a_v2_manual_quote_trigger_contract.py",
+    "tests/test_serie_a_v2_current_form_dependency_triggers.py",
+    "tests/test_serie_a_v2_current_form_source_workflow_contract.py",
+    "tests/test_serie_a_v2_public_source_download_budget.py",
+    "tests/test_market_anchor_v2_source_rights.py",
+    "tests/test_market_anchor_v2_source_capture_rights.py",
+    "tests/test_market_anchor_v2_artifact_privacy.py",
+    "tests/test_market_anchor_v2_direct_access.py",
+    ".github/workflows/serie-a-v2-current-form-source-capture.yml",
+    ".github/workflows/serie-a-v2-current-form-forward-preview.yml",
+}
 
 
 def test_current_form_source_capture_reaudits_all_frozen_v2_dependencies():
     workflow = SOURCE_WORKFLOW.read_text(encoding="utf-8")
-    actual = _source_push_paths(workflow)
+    actual = _push_paths(workflow)
     missing = REQUIRED_SOURCE_AUDIT_PATHS - actual
     assert not missing, f"frozen V2 dependency changes would skip source audit: {sorted(missing)}"
 
@@ -119,6 +169,49 @@ def test_diagnostic_refresh_revalidates_live_feature_gate_before_reuse():
     assert '"metadata_fields_read": ["match_date", "home_team", "away_team"]' in refresh
     assert '"target_outcomes_read": False' in refresh
     assert "steps.source_refresh.outputs.capture != 'false'" in workflow
+
+def test_current_form_forward_reaudits_transitive_source_rights_dependencies():
+    workflow = FORWARD_WORKFLOW.read_text(encoding="utf-8")
+    actual = _push_paths(workflow)
+    missing = REQUIRED_FORWARD_AUDIT_PATHS - actual
+    assert not missing, (
+        "current-form forward push validation would miss transitive source/privacy dependencies: "
+        f"{sorted(missing)}"
+    )
+
+
+def test_current_form_forward_push_trigger_has_secret_free_offline_validation():
+    workflow = FORWARD_WORKFLOW.read_text(encoding="utf-8")
+    lines = workflow.splitlines()
+    validation_start = lines.index("  validate-current-form-forward:")
+    live_start = lines.index("  current-form-forward-preview:")
+    validation = "\n".join(lines[validation_start:live_start])
+    live = "\n".join(lines[live_start:])
+
+    assert "github.event_name == 'push'" in validation
+    assert "github.ref == 'refs/heads/main'" in validation
+    assert "python -m pytest -q" in validation
+    assert "fetch-depth: 0" in validation
+    assert "git diff --exit-code HEAD^...HEAD -- '*.pkl'" in validation
+    for secret in ("SUPABASE_URL", "SUPABASE_KEY", "GITHUB_TOKEN", "THE_ODDS_API_KEY"):
+        assert secret not in validation
+    assert "actions/upload-artifact" not in validation
+    assert "github.event_name == 'push'" not in live
+
+
+def test_current_form_forward_validation_workflow_is_offline_and_read_only():
+    workflow = VALIDATION_WORKFLOW.read_text(encoding="utf-8")
+    assert "pull_request:" in workflow and "push:" in workflow
+    assert "schedule:" not in workflow and "workflow_run:" not in workflow
+    assert "workflow_dispatch:" not in workflow
+    for secret in ("SUPABASE_URL", "SUPABASE_KEY", "GITHUB_TOKEN", "THE_ODDS_API_KEY"):
+        assert secret not in workflow
+    assert "actions/upload-artifact" not in workflow
+    assert "create_client(" not in workflow
+    assert "requests." not in workflow
+    assert "permissions:\n  contents: read" in workflow
+    assert "git diff --exit-code FETCH_HEAD...HEAD -- '*.pkl'" in workflow
+
 
 def test_current_form_forward_job_is_schedule_dispatch_or_approved_workflow_run_only():
     workflow = FORWARD_WORKFLOW.read_text(encoding="utf-8")
