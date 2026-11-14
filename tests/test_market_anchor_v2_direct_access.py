@@ -266,3 +266,27 @@ def test_frozen_preview_cli_fails_closed_before_database_or_feature_file(monkeyp
     assert "RESEARCH_SCOPE_BLOCKED" in output
     assert "preview CLI access blocked" in output
     assert not missing_features.exists()
+
+def test_direct_github_json_boundaries_require_inference_rights_before_input_or_http(monkeypatch):
+    import market_anchor_v2_direct_access as direct_access
+
+    monkeypatch.setattr(direct_access, "require_v2_inference_access", _deny)
+    for module in (original_forward, current_forward):
+        url = module.GITHUB_API + "/actions/artifacts?per_page=1"
+        # Empty token proves the rights check precedes even caller-input validation.
+        with pytest.raises(PermissionError, match="direct-access test deny"):
+            module._github_json(url, token="", get=_network_forbidden)
+
+
+def test_direct_github_json_boundaries_require_private_storage_before_http(monkeypatch):
+    monkeypatch.setattr(
+        inference_rights,
+        "require_personal_research_inference_scope",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", _deny)
+
+    for module in (original_forward, current_forward):
+        url = module.GITHUB_API + "/actions/artifacts?per_page=1"
+        with pytest.raises(PermissionError, match="direct-access test deny"):
+            module._github_json(url, token="synthetic-token", get=_network_forbidden)

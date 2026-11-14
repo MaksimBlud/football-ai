@@ -63,6 +63,9 @@ OLD_CUTOFF = pd.Timestamp("2026-07-01")
 
 
 def _github_json(url: str, *, token: str, get=requests.get) -> dict:
+    # Guard the actual HTTP boundary as well as the higher-level archive helpers.
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    require_v2_inference_access()
     if not token:
         raise ValueError("GitHub Actions actions:read token missing")
     if not url.startswith(GITHUB_API + "/"):
