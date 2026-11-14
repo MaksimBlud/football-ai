@@ -879,7 +879,7 @@ def test_current_source_rejects_oversized_content_length_before_reading_body(tmp
             client=FakeQuery(event_rows(MIN_COMPLETED_FEATURE_SOURCE_EVENTS)),
             now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
             get=fake_get,
-            history_fetch=lambda **_kwargs: _fake_history_for_redirect_test(tmp_path),
+            history_fetch=lambda **kwargs: _fake_history_for_redirect_test(kwargs["capture_dir"]),
             clock=lambda: pytest.fail("clock must not be sampled before body completion"),
         )
 
@@ -924,7 +924,7 @@ def test_current_source_rejects_non_ascii_or_non_decimal_content_length_before_b
             client=FakeQuery(event_rows(MIN_COMPLETED_FEATURE_SOURCE_EVENTS)),
             now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
             get=lambda url, timeout, allow_redirects=False, stream=False: response,
-            history_fetch=lambda **_kwargs: _fake_history_for_redirect_test(tmp_path),
+            history_fetch=lambda **kwargs: _fake_history_for_redirect_test(kwargs["capture_dir"]),
             clock=lambda: pytest.fail("clock must not be sampled before body completion"),
         )
 
@@ -964,7 +964,7 @@ def test_current_source_stream_enforces_actual_byte_limit_and_closes_early(tmp_p
             client=FakeQuery(event_rows(MIN_COMPLETED_FEATURE_SOURCE_EVENTS)),
             now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
             get=lambda url, timeout, allow_redirects=False, stream=False: response,
-            history_fetch=lambda **_kwargs: _fake_history_for_redirect_test(tmp_path),
+            history_fetch=lambda **kwargs: _fake_history_for_redirect_test(kwargs["capture_dir"]),
         )
 
     assert response.chunks_yielded == 1
