@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+from tempfile import TemporaryDirectory
 import re
 from typing import Any, Mapping
 import zipfile
@@ -544,6 +545,108 @@ def prepare_forward_capture(
     }
 
 
+def capture_forward_with_atomic_sources(
+    archive_metadata: list[dict],
+    *,
+    as_of_utc: datetime,
+    fetch_quotes,
+    load_archive,
+    verify_parent_run,
+    write_sources_to: Path,
+) -> dict:
+    """Verify source first, then capture quotes, publishing all source ZIPs atomically."""
+    target = Path(write_sources_to)
+    if target.is_symlink():
+        raise ValueError("current-form forward source output cannot be a symlink")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.exists():
+        if not target.is_dir() or any(target.iterdir()):
+            raise FileExistsError("current-form forward source output must be absent or empty")
+        target.rmdir()
+
+    # Both source-verification and quote-processing helpers write into this
+    # private staging directory. The workflow uploads the final path with
+    # if: always(), so publish nothing unless the complete forward pass succeeds.
+    with TemporaryDirectory(
+        prefix=f".{target.name}.staging-",
+        dir=target.parent,
+    ) as temporary_directory:
+        staged = Path(temporary_directory) / "sources"
+        staged.mkdir()
+        source_verification = verify_latest_source_archive(
+            archive_metadata,
+            as_of_utc=as_of_utc,
+            load_archive=load_archive,
+            verify_parent_run=verify_parent_run,
+            write_sources_to=staged,
+        )
+        # A verified-but-stale archive is not admissible for a new quote either.
+        # Do not even read saved quote snapshots until a fresh, SHA-verified
+        # source archive and its successful parent run have been authenticated.
+        if source_verification.get("verified") is not True:
+            source_gate_blocked = "NO_EARLIER_SOURCE_ARCHIVE"
+        elif source_verification.get("fresh_for_new_quote") is not True:
+            source_gate_blocked = "SOURCE_ARCHIVE_TOO_OLD"
+        else:
+            source_gate_blocked = None
+
+        if source_gate_blocked is not None:
+            blocked = {
+                "NO_EARLIER_SOURCE_ARCHIVE": 0,
+                "SOURCE_PARENT_UNVERIFIED": 0,
+                "SOURCE_ARCHIVE_TOO_OLD": 0,
+                "STALE_MARKET_QUOTE": 0,
+                "EXPIRED_FIXTURE": 0,
+                "NO_FEATURES": 0,
+                "ALL_FEATURES_MEDIAN_IMPUTED": 0,
+            }
+            blocked[source_gate_blocked] = 1
+            return {
+                "schema_version": SCHEMA_VERSION,
+                "experiment_id": "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY",
+                "mode": "READ_ONLY_PREKICKOFF_SHADOW_NO_BET",
+                "candidate_sha256": FROZEN_SHA,
+                "as_of_utc": as_of_utc.astimezone(timezone.utc).isoformat(),
+                "quotes_seen": 0,
+                "v2_current_form_shadow_captured": 0,
+                "blocked": blocked,
+                "rows": [],
+                "source_artifacts_used": [],
+                "latest_source_archive_verification": source_verification,
+                "active_lambda": 0.0,
+                "shadow_residual_lambda": 1.0,
+                "active_model_is_exact_de_vigged_market": True,
+                "target_outcomes_read": False,
+                "target_outcomes_scored": False,
+                "target_outcome_evaluation_gate_open": False,
+                "model_refit_or_selection": False,
+                "production_or_supabase_writes": 0,
+                "paid_provider_calls": 0,
+                "eligible_for_frozen_original_cohort": False,
+                "eligible_for_current_form_forward_shadow": False,
+                "eligible_for_product_publication": False,
+                "no_bet": True,
+                "quote_read_skipped": True,
+                "source_gate_blocked": source_gate_blocked,
+            }
+
+        quotes = fetch_quotes()
+        report = prepare_forward_capture(
+            quotes,
+            archive_metadata,
+            as_of_utc=as_of_utc,
+            load_archive=load_archive,
+            verify_parent_run=verify_parent_run,
+            write_sources_to=staged,
+        )
+        report["latest_source_archive_verification"] = source_verification
+        report["quote_read_skipped"] = False
+        report["source_gate_blocked"] = None
+        if any(staged.iterdir()):
+            os.replace(staged, target)
+    return report
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
@@ -569,24 +672,15 @@ def main() -> None:
     def verify_parent(archive: Mapping[str, Any], *, quote_time: datetime) -> dict:
         return verify_source_run(archive, quote_time=quote_time, token=token)
 
-    source_verification = verify_latest_source_archive(
-        archives,
-        as_of_utc=now,
-        load_archive=load_cached_archive,
-        verify_parent_run=verify_parent,
-        write_sources_to=args.sources_output_dir,
-    )
     client = create_client(url, key)
-    quotes = fetch_saved_upcoming_serie_a_quotes(client, now=now)
-    report = prepare_forward_capture(
-        quotes,
+    report = capture_forward_with_atomic_sources(
         archives,
         as_of_utc=now,
+        fetch_quotes=lambda: fetch_saved_upcoming_serie_a_quotes(client, now=now),
         load_archive=load_cached_archive,
         verify_parent_run=verify_parent,
         write_sources_to=args.sources_output_dir,
     )
-    report["latest_source_archive_verification"] = source_verification
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
                            encoding="utf-8")
