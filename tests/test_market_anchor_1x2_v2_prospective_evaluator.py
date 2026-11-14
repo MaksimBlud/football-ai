@@ -26,6 +26,16 @@ from market_anchor_1x2_v2_prospective_evaluator import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _allow_synthetic_completed_gate_rights(monkeypatch):
+    """Synthetic query-reader tests do not exercise provider authorization."""
+    monkeypatch.setattr(
+        gate_module,
+        "require_personal_research_inference_scope",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+
+
 def make_forecasts(n=30):
     rows = []
     start = date(2026, 10, 20)

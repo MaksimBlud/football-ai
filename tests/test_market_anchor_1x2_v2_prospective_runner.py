@@ -1201,8 +1201,8 @@ def test_completed_fixture_gate_checks_rights_before_identity_only_query(monkeyp
             return type("Response", (), {
                 "data": [{
                     "match_date": "2026-11-01",
-                    "home_team": "Inter",
-                    "away_team": "Milan",
+                    "home_team": "Inter Milan",
+                    "away_team": "AC Milan",
                 }]
             })()
 
@@ -1227,6 +1227,6 @@ def test_completed_fixture_gate_checks_rights_before_identity_only_query(monkeyp
     assert calls[0] == "rights"
     assert calls[1] == ("table", "league_finished_results")
     assert ("select", "match_date,home_team,away_team") in calls
-    assert identities == {("2026-11-01", "Inter", "Milan")}
+    assert identities == {("2026-11-01", "Inter Milan", "AC Milan")}
     assert attestation["selected_columns"] == ["match_date", "home_team", "away_team"]
     assert attestation["target_outcomes_read"] is False
