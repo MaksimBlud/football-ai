@@ -1,3 +1,18 @@
+
+## 2026-11-14 02:01 UTC — Original V2 forward artifact publication hardened (PR #808)
+
+Fresh main is still `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no PR has been merged in this iteration.
+
+- Main's `serie-a-v2-forward-preview.yml` uploads its output with `if: always()`. Before this change, `serie_a_v2_forward_capture.prepare_forward_capture()` wrote each downloaded ZIP into the upload directory before `verify_archive()` validated the GitHub digest and complete source contract. A digest/manifest failure could therefore leave unverified bytes for the unconditional upload; a later quote failure could leave a partial bundle.
+- [PR #808](https://github.com/MaksimBlud/football-ai/pull/808) wraps the original old-season forward output in a sibling temporary directory, writes a ZIP only after its SHA/source contract passes, and atomically renames the complete bundle only after the whole forward capture succeeds. Symlink/non-empty output paths fail closed and existing evidence is preserved.
+- Exact PR HEAD: `8a20aee97508acebeaa5bf279d96bc77b20c4db8`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, two files changed. Exact-head CI **7/7 SUCCESS**; Frozen V2 Shadow Tests [run 43543810037](https://github.com/MaksimBlud/football-ai/actions/runs/43543810037) reports **89 passed**, compile PASS, production `.pkl` diff guard PASS. Four new regressions cover verified publication, digest failure, later-quote failure cleanup, and preservation of occupied output.
+- PR #808 is Ready for review but HUMAN-MERGE only. It overlaps `serie_a_v2_forward_capture.py` with the #720/#727/#780/#783–#787 rights stack; do not merge it ahead of that stack. Rebase/port it onto the final rights-stack main and rerun exact-head CI before manual merge.
+- Related [PR #796](https://github.com/MaksimBlud/football-ai/pull/796) separately applies atomic publication to the current-form source capture: exact HEAD `e69ad9c2700b999ef186e4771a2fe06fd010155d`, 7/7 SUCCESS, 89 Frozen V2 tests, no live authorization. It also overlaps the source-rights stack and must be rebased/ported after that stack.
+- Fresh read-only Supabase check: Serie A `odds_snapshots` = 625 total / 620 strictly pre-kickoff / 63 events; latest strict pre-match snapshot `2026-10-13 14:48:53 UTC`; zero future-event pre-match quotes. Metadata-only Serie A 2026/27 feature-input query = 113 raw identities / 110 canonical identities (only date/home/away selected). Feature-input gate is open; prospective target-outcome evaluation remains **0/30**.
+- Latest real source/forward evidence remains runs #43433793441 and #43462612434: source artifact SHA verified and source parent completed before quote processing, but `quotes_seen=0` and `v2_current_form_shadow_captured=0`. Original forward #43459529173 also has `quotes_seen=0` and `forecasts_created=0`. No new V2 prediction or Brier/LogLoss result exists.
+
+The original candidate SHA, 19-feature order, 20x2 weights, scaler/imputer, training cutoff, `active_lambda=0`, `shadow_lambda=1`, NO_BET and 30-event target-outcome gate are unchanged. No main change, merge, Supabase write/DDL, provider request, target-outcome read, production artifact change, schedule change, or other-agent change occurred.
+
 ## 2026-11-13 22:54 UTC — Original V2: source archive verified, no admissible quote or forecast; rights and private-storage holds confirmed
 
 Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Main `PROJECT_CONTINUITY.md` is still at the 2026-10-18 entry. Full read-only runtime audit: [SERIE_A_V2_RUNTIME_AUDIT_20261113_2254UTC.md](research/SERIE_A_V2_RUNTIME_AUDIT_20261113_2254UTC.md).
