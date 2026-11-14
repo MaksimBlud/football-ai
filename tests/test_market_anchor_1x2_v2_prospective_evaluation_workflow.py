@@ -15,7 +15,7 @@ WORKFLOW = ROOT / ".github" / "workflows" / "market-anchor-1x2-v2-prospective-ev
 PROSPECTIVE_GITHUB_API = "https://api.github.com/repos/MaksimBlud/football-ai"
 
 
-def _load_prospective_github_json():
+def _load_prospective_github_json(*, rights_check=None, privacy_check=None):
     source_path = ROOT / "market_anchor_1x2_v2_prospective_evaluation.py"
     tree = ast.parse(source_path.read_text(encoding="utf-8"))
     function = next(
@@ -25,8 +25,15 @@ def _load_prospective_github_json():
     isolated = ast.Module(body=[function], type_ignores=[])
     namespace = {
         "GITHUB_API": PROSPECTIVE_GITHUB_API,
+        "REPOSITORY": "MaksimBlud/football-ai",
         "requests": SimpleNamespace(get=lambda *_args, **_kwargs: None),
         "Any": Any,
+        "require_personal_research_inference_scope": rights_check or (
+            lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"}
+        ),
+        "require_private_repository_for_source_artifacts": privacy_check or (
+            lambda *_args, **_kwargs: {"private": True, "storage_policy": "SYNTHETIC_TEST_ONLY"}
+        ),
     }
     exec(compile(ast.fix_missing_locations(isolated), str(source_path), "exec"), namespace)
     return namespace["_github_json"]
@@ -110,10 +117,19 @@ class _ProspectiveGithubJsonResponse:
         return self.payload
 
 
-def test_push_triggered_forward_run_is_rejected_by_artifact_verifier():
-    from market_anchor_1x2_v2_prospective_evaluation import verify_forward_run
+def test_push_triggered_forward_run_is_rejected_by_artifact_verifier(monkeypatch):
+    import market_anchor_1x2_v2_prospective_evaluation as live
     from market_anchor_1x2_v2_forward_artifact_adapter import FORWARD_WORKFLOW_NAME, FORWARD_WORKFLOW_PATH
 
+    monkeypatch.setattr(
+        live, "require_personal_research_inference_scope",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(
+        live, "require_private_repository_for_source_artifacts",
+        lambda *_args, **_kwargs: {"private": True, "storage_policy": "SYNTHETIC_TEST_ONLY"},
+    )
+    verify_forward_run = live.verify_forward_run
     url = PROSPECTIVE_GITHUB_API + "/actions/runs/789"
     response = _ProspectiveGithubJsonResponse(url, 200, {
         "id": 789,
@@ -186,6 +202,76 @@ def test_prospective_github_api_json_accepts_exact_http_200_without_redirects():
     assert github_json(url, "read-only-test-token", get=fake_get) == {"artifacts": []}
     assert request["allow_redirects"] is False
     assert response.json_called is True
+
+
+def test_prospective_github_json_checks_inference_rights_before_transport():
+    calls = []
+
+    def deny_rights():
+        calls.append("rights")
+        raise PermissionError("frozen-inference scope remains unresolved")
+
+    def forbidden_privacy(*_args, **_kwargs):
+        calls.append("privacy")
+        pytest.fail("privacy lookup must not run after denied inference rights")
+
+    github_json = _load_prospective_github_json(
+        rights_check=deny_rights, privacy_check=forbidden_privacy
+    )
+    with pytest.raises(PermissionError, match="frozen-inference scope remains unresolved"):
+        github_json(
+            PROSPECTIVE_GITHUB_API + "/actions/artifacts",
+            "read-only-test-token",
+            get=lambda *_args, **_kwargs: pytest.fail("HTTP must not run without inference rights"),
+        )
+    assert calls == ["rights"]
+
+
+def test_prospective_github_json_checks_private_storage_before_transport():
+    calls = []
+
+    def allow_rights():
+        calls.append("rights")
+
+    def deny_privacy(repository, token):
+        calls.append(("privacy", repository, token))
+        raise PermissionError("private GitHub repository is required")
+
+    github_json = _load_prospective_github_json(
+        rights_check=allow_rights, privacy_check=deny_privacy
+    )
+    with pytest.raises(PermissionError, match="private GitHub repository is required"):
+        github_json(
+            PROSPECTIVE_GITHUB_API + "/actions/artifacts",
+            "read-only-test-token",
+            get=lambda *_args, **_kwargs: pytest.fail("HTTP must not run before private storage is verified"),
+        )
+    assert calls == [
+        "rights",
+        ("privacy", "MaksimBlud/football-ai", "read-only-test-token"),
+    ]
+
+
+def test_direct_forward_artifact_discovery_cannot_bypass_inference_rights(monkeypatch):
+    import market_anchor_1x2_v2_prospective_evaluation as live
+
+    calls = []
+
+    def deny_rights():
+        calls.append("rights")
+        raise PermissionError("frozen-inference scope remains unresolved")
+
+    monkeypatch.setattr(live, "require_personal_research_inference_scope", deny_rights)
+    monkeypatch.setattr(
+        live, "require_private_repository_for_source_artifacts",
+        lambda *_args, **_kwargs: pytest.fail("private lookup must follow rights"),
+    )
+    with pytest.raises(PermissionError, match="frozen-inference scope remains unresolved"):
+        live.discover_forward_artifacts(
+            "read-only-test-token",
+            get=lambda *_args, **_kwargs: pytest.fail("artifact API must not run without rights"),
+        )
+    assert calls == ["rights"]
 
 
 def test_live_market_only_bridge_passes_all_candidates_to_runner_without_preflight(monkeypatch):
