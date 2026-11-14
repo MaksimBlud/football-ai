@@ -33,7 +33,7 @@ from market_anchor_v2_source_rights import require_personal_research_inference_s
 REPOSITORY = "MaksimBlud/football-ai"
 ARTIFACT_NAME = "serie-a-v2-free-real-quote-diagnostic"
 SOURCE_WORKFLOW_PATH = ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
-EXPECTED_SOURCE_WORKFLOW_BLOB_SHA1 = "19a8353978f034808069cdf7e2092152138504d7"
+EXPECTED_SOURCE_WORKFLOW_BLOB_SHA1 = "bcea1644a882349fafde3a4ae642882be5c5baaf"
 SOURCE_LOADER_PATH = "serie_a_v2_live_diagnostic_report.py"
 EXPECTED_SOURCE_LOADER_BLOB_SHA1 = "6a1c382e127dc0aa1088ef976fc436a78176b515"
 SOURCE_RIGHTS_HELPER_PATH = "market_anchor_v2_source_rights.py"
