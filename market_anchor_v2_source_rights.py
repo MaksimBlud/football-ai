@@ -157,11 +157,11 @@ def require_personal_research_inference_scope(
 ) -> dict:
     """Require the project's conservative clearance for frozen V2 inference.
 
-    The latest public fair-use page (updated 2026-11-06) describes private
-    personal/academic research as an intended use and excludes commercial or
-    AI data-training projects. It does not separately define frozen-model
-    inference. The project therefore keeps this path fail-closed until that
-    narrow inference scope is clarified or an applicable licence is recorded.
+    The official data page was updated 2026-11-10 and now describes the free data as
+    intended for private individuals only, excluding commercial or data-training
+    products using automated bots, scrapers, or AI. The project therefore keeps
+    automated source capture and frozen-model inference fail-closed pending
+    provider clarification or an applicable written licence.
     This is an internal risk-control decision, not a claim that the provider
     expressly prohibits every form of research inference. Missing clearance
     blocks before network, Supabase, archive, quote, feature, or model access.
@@ -263,8 +263,8 @@ def require_personal_research_inference_scope(
 
     policy_url = manifest.get("policy_url")
     policy_parts = urlsplit(policy_url if isinstance(policy_url, str) else "")
-    if policy_parts.scheme != "https" or policy_parts.hostname != "football-data.co.uk" or policy_parts.path != "/contact.php":
-        raise PermissionError("source policy reference is not the official Football-Data fair-use page")
+    if policy_parts.scheme != "https" or policy_parts.hostname != "football-data.co.uk" or policy_parts.path != "/data":
+        raise PermissionError("source policy reference is not the official Football-Data data/fair-use page")
     checked = _parse_utc(manifest.get("policy_checked_at_utc"), "policy_checked_at_utc")
     page_updated_raw = manifest.get("policy_page_updated_date")
     if not isinstance(page_updated_raw, str) or not page_updated_raw.strip():

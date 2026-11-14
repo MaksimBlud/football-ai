@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from market_anchor_v2_source_capture_rights import require_personal_research_source_capture_scope
 from market_anchor_v2_source_rights import (
     DEFAULT_RIGHTS_MANIFEST_PATH,
     require_ai_model_training_permission,
@@ -148,7 +149,7 @@ def _write_research_scope_manifest(tmp_path, **overrides):
     manifest = {
         "schema_version": "FOOTBALL_AI_SOURCE_RIGHTS_V1",
         "provider": "Football-Data.co.uk",
-        "policy_url": "https://football-data.co.uk/contact.php",
+        "policy_url": "https://football-data.co.uk/data",
         "policy_checked_at_utc": "2026-11-05T10:54:00Z",
         "policy_page_updated_date": "2026-11-04",
         "rights_status": "GRANTED",
@@ -359,23 +360,22 @@ def test_research_inference_rejects_noncanonical_policy_page_date(tmp_path):
         )
 
 
-def test_current_official_policy_wording_is_pinned_without_overstating_ai_usage_ban():
+def test_current_official_policy_recheck_blocks_automated_source_capture_and_inference():
     manifest = json.loads(DEFAULT_RIGHTS_MANIFEST_PATH.read_text(encoding="utf-8"))
-    assert manifest["policy_page_updated_date"] == "2026-11-06"
-    assert manifest["policy_checked_at_utc"] == "2026-11-07T01:56:17Z"
-    assert "AI data-training projects" in manifest["policy_summary"]
-    assert "AI-usage" not in manifest["policy_summary"]
-    assert "does not separately define" in manifest["policy_summary"]
+    now = datetime(2026, 11, 10, 11, 57, 30, tzinfo=timezone.utc)
+    assert manifest["policy_url"] == "https://football-data.co.uk/data"
+    assert manifest["policy_page_updated_date"] == "2026-11-10"
+    assert manifest["policy_checked_at_utc"] == "2026-11-10T11:57:30Z"
+    assert "automated bots, scrapers, or AI" in manifest["policy_summary"]
+    assert "provider clarification" in manifest["policy_interpretation"]
     assert manifest["research_use_permitted"] is True
-    assert manifest["research_source_capture_permitted"] is True
-    assert manifest["research_source_capture_scope"] == "PRIVATE_NONCOMMERCIAL_RESEARCH_ARCHIVE_ONLY"
-    assert "source-only archival/validation" in manifest["policy_interpretation"]
-    assert "frozen-model inference remains blocked" in manifest["policy_interpretation"].lower()
+    assert manifest["research_source_capture_permitted"] is False
+    assert manifest["research_source_capture_scope"] == "NONE_PENDING_PROVIDER_CLARIFICATION"
     assert manifest["research_inference_permitted"] is False
     assert manifest["provider_issued_ai_inference_license"] is False
+    assert manifest["ai_model_training_permitted"] is False
     assert manifest["authorization"] is None
+    with pytest.raises(PermissionError, match="not explicitly enabled"):
+        require_personal_research_source_capture_scope(DEFAULT_RIGHTS_MANIFEST_PATH, now=now)
     with pytest.raises(PermissionError, match="scope remains unresolved"):
-        require_personal_research_inference_scope(
-            DEFAULT_RIGHTS_MANIFEST_PATH,
-            now=datetime(2026, 11, 7, 2, 0, tzinfo=timezone.utc),
-        )
+        require_personal_research_inference_scope(DEFAULT_RIGHTS_MANIFEST_PATH, now=now)
