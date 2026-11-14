@@ -13,7 +13,7 @@ from serie_a_v2_live_diagnostic_report import _source_codes, PUBLIC_BASE
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
 from serie_a_v2_forward_capture import (
     ARTIFACT_NAME, ARCHIVE_REPORT, SOURCE_DIR,
-    discover_archives, prepare_forward_capture, verify_source_run,
+    discover_archives, get_archive, prepare_forward_capture, verify_source_run,
     capture_forward_with_source_preflight, SOURCE_WORKFLOW_PATH,
 )
 
@@ -506,3 +506,52 @@ def _offline_direct_access_gate(monkeypatch):
     module = ModuleType("market_anchor_v2_direct_access")
     module.require_v2_inference_access = lambda: None
     monkeypatch.setitem(sys.modules, "market_anchor_v2_direct_access", module)
+
+@pytest.mark.parametrize(
+    "entrypoint",
+    ["discover_archives", "verify_source_run", "get_archive", "prepare_forward_capture"],
+)
+def test_original_forward_public_entrypoints_require_direct_access_before_io(
+    entrypoint, monkeypatch, tmp_path
+):
+    import sys
+    from types import ModuleType
+
+    events = []
+
+    def deny_access():
+        events.append("access")
+        raise PermissionError("provider/private-storage access is not cleared")
+
+    access_module = ModuleType("market_anchor_v2_direct_access")
+    access_module.require_v2_inference_access = deny_access
+    monkeypatch.setitem(sys.modules, "market_anchor_v2_direct_access", access_module)
+
+    def forbidden_get(*_args, **_kwargs):
+        events.append("network")
+        raise AssertionError("GitHub network must not be reached before the rights gate")
+
+    def forbidden_callback(*_args, **_kwargs):
+        events.append("callback")
+        raise AssertionError("caller callbacks must not run before the rights gate")
+
+    with pytest.raises(PermissionError, match="provider/private-storage access is not cleared"):
+        if entrypoint == "discover_archives":
+            discover_archives(token="offline-token", get=forbidden_get)
+        elif entrypoint == "verify_source_run":
+            verify_source_run({}, quote_time=NOW, token="offline-token", get=forbidden_get)
+        elif entrypoint == "get_archive":
+            get_archive(123, token="offline-token", get=forbidden_get)
+        else:
+            prepare_forward_capture(
+                [],
+                [],
+                as_of_utc=NOW,
+                load_archive=forbidden_callback,
+                verify_parent_run=forbidden_callback,
+                write_archives_to=tmp_path / "must-not-be-created",
+            )
+
+    assert events == ["access"]
+    assert not (tmp_path / "must-not-be-created").exists()
+
