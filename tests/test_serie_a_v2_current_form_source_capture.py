@@ -753,7 +753,7 @@ def test_frozen_candidate_is_verified_before_gate_reads_or_source_requests(monke
     assert list(tmp_path.iterdir()) == []
 
 
-def _fake_history_for_redirect_test(tmp_path):
+def _fake_history_for_redirect_test(capture_dir):
     audits = []
     for code in _source_codes():
         filename = f"serie_a_{code}.csv"
@@ -761,7 +761,7 @@ def _fake_history_for_redirect_test(tmp_path):
             "Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HC,AC,HY,AY,HR,AR\n"
             f"01/10/{2000 + int(code[:2])},Juventus,Napoli,1,0,H,5,3,2,1,0,0\n"
         ).encode()
-        (tmp_path / filename).write_bytes(body)
+        (capture_dir / filename).write_bytes(body)
         audits.append({
             "season_code": code,
             "source_url": f"https://www.football-data.co.uk/mmz4281/{code}/I1.csv",
@@ -837,7 +837,7 @@ def test_current_source_redirect_or_final_url_mismatch_fails_before_body_access(
             client=FakeQuery(event_rows(MIN_COMPLETED_FEATURE_SOURCE_EVENTS)),
             now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
             get=fake_get,
-            history_fetch=lambda **_kwargs: _fake_history_for_redirect_test(tmp_path),
+            history_fetch=lambda **kwargs: _fake_history_for_redirect_test(kwargs["capture_dir"]),
         )
 
     assert requests_seen == [(CURRENT_URL, 30, False, True)]
@@ -1207,21 +1207,21 @@ def _atomic_source_capture_inputs(raw):
                 datetime(2026, 10, 18, 8, 1),
                 datetime(2026, 10, 18, 8, 2, tzinfo=timezone.utc),
             ],
-            "current-season source observation clock must be timezone-aware",
+            "source observation clock must have a real UTC offset",
         ),
         (
             [
                 datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc),
                 datetime(2026, 10, 18, 8, 2),
             ],
-            "source archive creation clock must be timezone-aware",
+            "source archive creation clock must have a real UTC offset",
         ),
         (
             [
                 datetime(2026, 10, 18, 8, 2, tzinfo=timezone.utc),
                 datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc),
             ],
-            "source archive creation clock precedes latest source observation",
+            "source archive creation timestamp precedes source observation",
         ),
     ],
 )
