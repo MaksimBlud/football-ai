@@ -460,7 +460,6 @@ def test_lazy_saved_quote_reader_defers_client_creation_until_called():
         url="https://supabase.invalid",
         key="offline-placeholder",
         now=now,
-        require_access_fn=lambda: None,
         create_client_fn=lambda url, key: events.append("client") or object(),
         quote_reader=lambda client, *, now: events.append("quotes") or [quote()],
     )
@@ -477,7 +476,6 @@ def test_current_form_source_gate_does_not_initialize_supabase_client_without_ar
         url="https://supabase.invalid",
         key="offline-placeholder",
         now=now,
-        require_access_fn=lambda: None,
         create_client_fn=lambda *_args: events.append("client") or object(),
         quote_reader=lambda *_args, **_kwargs: events.append("quotes") or [quote()],
     )
@@ -513,7 +511,6 @@ def test_current_form_source_bytes_are_verified_before_supabase_client_and_quote
         url="https://supabase.invalid",
         key="offline-placeholder",
         now=now,
-        require_access_fn=lambda: None,
         create_client_fn=lambda _url, _key: events.append("client") or object(),
         quote_reader=lambda _client, *, now: events.append("quotes") or [quote()],
     )
@@ -544,7 +541,6 @@ def test_stale_source_never_initializes_supabase_client(tmp_path):
         url="https://supabase.invalid",
         key="offline-placeholder",
         now=now,
-        require_access_fn=lambda: None,
         create_client_fn=lambda *_args: events.append("client") or object(),
         quote_reader=lambda *_args, **_kwargs: events.append("quotes") or [quote()],
     )
@@ -580,7 +576,6 @@ def test_unverified_parent_never_initializes_supabase_client(tmp_path):
         url="https://supabase.invalid",
         key="offline-placeholder",
         now=now,
-        require_access_fn=lambda: None,
         create_client_fn=lambda *_args: events.append("client") or object(),
         quote_reader=lambda *_args, **_kwargs: events.append("quotes") or [quote()],
     )
@@ -617,7 +612,6 @@ def test_source_digest_mismatch_never_initializes_supabase_client(tmp_path):
         url="https://supabase.invalid",
         key="offline-placeholder",
         now=now,
-        require_access_fn=lambda: None,
         create_client_fn=lambda *_args: events.append("client") or object(),
         quote_reader=lambda *_args, **_kwargs: events.append("quotes") or [quote()],
     )
@@ -692,3 +686,13 @@ def test_lazy_saved_quote_reader_denies_before_client_or_quote_when_direct_gate_
     with pytest.raises(PermissionError, match="provider/private-storage access is not cleared"):
         reader()
     assert events == ["access"]
+
+
+@pytest.fixture(autouse=True)
+def _offline_direct_access_gate(monkeypatch):
+    import sys
+    from types import ModuleType
+
+    module = ModuleType("market_anchor_v2_direct_access")
+    module.require_v2_inference_access = lambda: None
+    monkeypatch.setitem(sys.modules, "market_anchor_v2_direct_access", module)
