@@ -1147,6 +1147,12 @@ def test_verified_current_form_parent_accepts_only_pinned_main_capture_events(mo
                 "type": "file",
                 "sha": forward_capture_module.EXPECTED_SOURCE_RIGHTS_MANIFEST_BLOB_SHA1,
             }
+        if f"/contents/{forward_capture_module.SOURCE_WORKFLOW_PATH}?ref={HEAD}" in url:
+            return {
+                "path": forward_capture_module.SOURCE_WORKFLOW_PATH,
+                "type": "file",
+                "sha": forward_capture_module.EXPECTED_SOURCE_WORKFLOW_BLOB_SHA1,
+            }
         raise AssertionError(f"unexpected GitHub API URL: {url}")
 
     monkeypatch.setattr(forward_capture_module, "_github_json", fake_github_json)
@@ -1159,6 +1165,7 @@ def test_verified_current_form_parent_accepts_only_pinned_main_capture_events(mo
     assert verified["workflow_path"] == SOURCE_WORKFLOW_PATH
     assert verified["source_capture_blob_sha1"] == forward_capture_module.EXPECTED_SOURCE_CAPTURE_SCRIPT_BLOB_SHA1
     assert verified["historical_source_loader_blob_sha1"] == forward_capture_module.EXPECTED_HISTORICAL_SOURCE_LOADER_BLOB_SHA1
+    assert verified["source_workflow_blob_sha1"] == forward_capture_module.EXPECTED_SOURCE_WORKFLOW_BLOB_SHA1
 
 
 @pytest.mark.parametrize(
@@ -1174,6 +1181,7 @@ def test_verified_current_form_parent_accepts_only_pinned_main_capture_events(mo
         ),
         ("market_anchor_v2_source_rights.py", "0" * 40),
         ("research/source_rights/football_data_co_uk.json", "0" * 40),
+        (".github/workflows/serie-a-v2-current-form-source-capture.yml", "0" * 40),
     ],
 )
 def test_current_form_parent_rejects_pre_guard_source_and_rights_blobs(monkeypatch, bad_path, bad_sha):
@@ -1192,6 +1200,7 @@ def test_current_form_parent_rejects_pre_guard_source_and_rights_blobs(monkeypat
             forward_capture_module.HISTORICAL_SOURCE_LOADER_PATH,
             forward_capture_module.SOURCE_RIGHTS_HELPER_PATH,
             forward_capture_module.SOURCE_RIGHTS_MANIFEST_PATH,
+            forward_capture_module.SOURCE_WORKFLOW_PATH,
         ):
             if f"/contents/{path}?ref={HEAD}" in url:
                 sha = bad_sha if path == bad_path else (
@@ -1330,4 +1339,7 @@ def test_current_form_forward_source_and_rights_blob_pins_match_exact_repository
     )
     assert forward_capture_module.EXPECTED_SOURCE_RIGHTS_MANIFEST_BLOB_SHA1 == _repository_git_blob_sha1(
         root / forward_capture_module.SOURCE_RIGHTS_MANIFEST_PATH
+    )
+    assert forward_capture_module.EXPECTED_SOURCE_WORKFLOW_BLOB_SHA1 == _repository_git_blob_sha1(
+        root / forward_capture_module.SOURCE_WORKFLOW_PATH
     )
