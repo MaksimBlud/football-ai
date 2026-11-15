@@ -1612,5 +1612,5 @@ def test_current_form_forward_artifact_upload_requires_successful_capture():
         "      - name: Archive pre-kickoff V2 shadow and exact source ZIPs", 1
     )[1]
 
-    assert "if: \${{ success() && steps.rights_preflight.outputs.allowed == 'true' }}" in upload
-    assert "if: \${{ always() && steps.rights_preflight.outputs.allowed == 'true' }}" not in upload
+    assert "if: ${{ success() && steps.rights_preflight.outputs.allowed == 'true' }}" in upload
+    assert "if: ${{ always() && steps.rights_preflight.outputs.allowed == 'true' }}" not in upload
