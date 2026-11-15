@@ -12,7 +12,7 @@ SportsAPI Pro is a stronger *documented rights candidate* than several previousl
 - The Football V2 coverage documentation lists Serie A as a premium-depth competition (unique tournament ID 23) and says endpoint/competition access is the same on Free; only the daily request allowance differs.
 - The Terms, last updated 2026-09-01, apply the retention provisions to Free accounts. They expressly permit internal analytics, research, modeling, machine learning, backtesting and historical evaluation. They permit indefinite private retention of raw responses and retention of source/API-version identifiers, receipt timestamps and customer-generated hashes.
 - The same Terms prohibit publishing or bulk-sharing raw responses. The provider's upstream sources are not named, and the Terms disclaim accuracy/timeliness guarantees.
-- The pricing page labels the free plan "$0/1 Month". It is not clear from the reviewed public pages whether the free entitlement renews or remains available after that period.
+- The pricing page says all plans auto-renew every billing period, lists Free as "$0/1 Month" and "$0/mo" in the comparison table, and the Refund policy explicitly says the Free plan has no time limit. Read together, the current public pages support a recurring $0 Free plan rather than a one-month-only trial.
 
 This is a **conditional candidate**, not an approved source. The project currently has no verified private raw-response archive, no provider API account/key, and no authorization to make requests.
 
@@ -58,7 +58,7 @@ The project currently has 113 Serie A 2026/27 finished-fixture metadata rows (da
 
 ## Conditions to reconsider HOLD
 
-1. Confirm in writing whether the Free plan's "$0/1 Month" entitlement is renewable/ongoing and whether the 100/day limit applies to all required endpoints for Serie A 2026/27.
+1. Before any future authorized request, verify the account dashboard still shows the $0 Free plan and 100/day allowance; no account has been created and no API key or request is authorized in this audit.
 2. Confirm current-season Serie A match-stat coverage and exact per-match availability for every required prior fixture.
 3. Confirm yellow/red-card and second-yellow semantics match the original source convention; otherwise red-card features are not compatible.
 4. Provide a private raw-response archive with access controls, retention and auditability. Public GitHub artifacts are prohibited by the provider's own terms.
@@ -88,11 +88,11 @@ The separate Data Rights & Retention page (last modified 2026-10-24) repeats tho
 
 The provider does not identify its upstream providers by field and does not guarantee accuracy or timeliness. That is a data-quality/provenance limitation, not a separate-licence requirement under the current Terms.
 
-### Free-plan duration remains contradictory
+### Free-plan duration is documented as ongoing
 
-The current pricing page advertises 100 requests/day and 10 requests/minute, all endpoints and all competitions, but its plan header says "$0/1 Month". The comparison table labels Free "$0/mo". The Refund & Cancellation page says the Free plan has 100 requests/day, no credit card, and no time limit. The Terms apply retention rights to Free accounts.
+The current pricing page says all plans auto-renew every billing period; it labels the Free plan "$0/1 Month" in the plan card and "$0/mo" in the comparison table. The Refund & Cancellation page explicitly says Free has 100 requests/day, no credit card, and no time limit. The Terms apply data-retention rights to all Free accounts.
 
-These public statements do not establish unambiguously whether the free request entitlement is permanent, renews monthly, or is limited to an initial month. Keep the free entitlement on HOLD until the provider confirms the duration in writing. No paid upgrade or paid request is permitted.
+Read together, these public statements support an ongoing $0 Free plan with a monthly billing period and 100 requests/day. The previous duration ambiguity is resolved by the current public documentation. This is not an authorization to create an account or make requests: project authorization remains false, and no account/key was created. No paid upgrade or paid request is permitted.
 
 ### Exact feature-surface evidence
 
@@ -118,4 +118,4 @@ The latest read-only Supabase metadata query counted 113 unique completed Serie 
 
 ### Decision
 
-**HOLD remains.** The updated public Terms materially improve the documented rights position for internal ML and private raw retention, and the documentation covers the required corners/yellow-card fields plus card incidents. But the free-plan duration conflict, unverified Serie A 2026/27 payload completeness, red/second-yellow parity, and absence of an authorized private archive still prevent ingestion or inference. The original V2 candidate, 19-feature order, weights, scaler/imputer, lambdas, and 30-event outcome gate are unchanged.
+**HOLD remains.** The updated public Terms materially improve the documented rights position for internal ML and private raw retention, and the documentation covers the required corners/yellow-card fields plus card incidents. But unverified Serie A 2026/27 payload completeness, red/second-yellow parity, the absence of an authorized private archive, and the provider's no-guarantee accuracy/timeliness clause still prevent ingestion or inference. The original V2 candidate, 19-feature order, weights, scaler/imputer, lambdas, and 30-event outcome gate are unchanged.
