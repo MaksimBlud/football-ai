@@ -6569,3 +6569,49 @@ Exact-head CI for #837: **3/3 SUCCESS**:
 #837 remains Draft / HUMAN-MERGE because its base is #834, not main. No merge, main update, schedule change, paid request, Supabase write/DDL, protected target-outcome read, inference, refit, production artifact change, bet or promotion occurred.
 
 The separate current-form forward restack [PR #840](https://github.com/MaksimBlud/football-ai/pull/840) remains Draft on #835 at HEAD `d7a2ff28723b6ca6c762435302170d32c10b918f`; exact CI passed 530 tests on both Python 3.11 and 3.12 with production pickle guards. It is not yet integrated into #837 or main.
+
+
+## 2026-11-15 — fresh pre-match-only V2 checkpoint and source-candidate recheck
+
+### Main and source/quote execution
+
+- `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- Main `serie_a_v2_forward_capture.py` blob `5db02cbd1367ed25b994b152acf371421859a014` still calls the saved-quote reader before source archive discovery/verification in `main()`. This is a confirmed quote-before-source ordering defect; the interim workflow hold #781 is still OPEN and not active on main.
+- The current-form main file blob `326ac1921ce901a31aa6d73e6cbddb0782071964` still lacks the exact live feature-input identity-set comparison. The source-first exact-set successor is #843, stacked on #837; atomic current-form report publication is #847, stacked on #843.
+- Re-read actual main runs #43730695523 and #43731127758. Both completed SUCCESS. Original forward logged 0 quotes, 0 future quotes, 0 previews, 0 paid calls and 0 Supabase writes, but uploaded public report/source-attestation artifact #14167774653 (1,461 bytes). Current-form forward verified source artifact #14162164208 / parent #43716579727, logged 110 feature-input identities, 0 quotes and 0 shadow forecasts, but uploaded public source bytes in artifact #14168396582 (440,596 bytes). These are real main-branch external-access/public-upload steps, not forecasts or model-quality evidence.
+- Source capture #43716579727 uploaded artifact #14162164208 (439,421 bytes; SHA-256 `fc4d68eaba4592cd5fd7dd8ed83ccb27068cecde031e50ce62f525c5f4b739c6`) and reported 110 completed feature-input identities / 3,910 historical rows. Free diagnostic #43721234884 uploaded raw source artifact #14164502813 (425,069 bytes; SHA-256 `e16d5f4b235ba4dcd0a10b7637358abef59ac9506f0a7ef1a568a75663d7da49`) after 10 public HTTP requests; it scored 0 quotes. No artifact bytes were downloaded in this checkpoint.
+
+### Supabase — pre-match data only
+
+Read-only aggregate over `public.odds_snapshots` with strict `snapshot_time_utc < commence_time_utc`:
+
+- All nine leagues: 3,915 strict pre-match rows across 327 events.
+- Serie A: 620 strict pre-match rows across 63 events; latest snapshot `2026-10-13T14:48:53Z`.
+- Future-kickoff quote rows: 0 in every league.
+- `product_prediction_snapshots`: 40 rows generated before kickoff; 0 have the exact original V2 candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+
+No odds values, result rows, scores, settlement fields or protected 2026/27 outcomes were selected. No Supabase writes or DDL occurred.
+
+### Free current-form source recheck
+
+Existing source audit PR #790 was updated at HEAD `8627bf92460e1a0e88ea2810328ddc049ec155fb` after checking the current `oladeeayo/open-matchday` master commit `3a3ac5075ad614d94e0f908f9e0752f937a10cd9` (daily refresh commit, 2026-11-15 05:42:47 UTC). Its build summary was generated at 05:42:42 UTC, but the Serie A summary still reports 110 result rows, 110 corner rows, 270 fixtures and latest completed match date 2026-11-08. Thus the new build commit does not prove fresh Serie A match statistics; the visible data remains seven days behind on 2026-11-15. The compilation remains non-commercial-only and upstream provider rights remain applicable. No CSV bytes were downloaded or parsed. #790 was returned to Draft because no exact-head CI run/status appeared for the documentation-only update.
+
+### Supabase security advisory — separate from V2
+
+Supabase Security Advisor observed five `public` tables with RLS disabled: `teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, and `epl_ai_market_pair_ledger`. It also reports four tables with RLS enabled but no policies: `competitions`, `match_stats`, `matches`, and `standings`. This is a separate database security issue; no policy or schema change was attempted. Enabling RLS without suitable policies can block legitimate access, so policies must be designed before any remediation.
+
+### Frozen model state
+
+- Candidate SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Original `ALL_FOOTBALL` feature list matches the candidate exactly, 19/19 in the same order; original weights remain 20×2 and training rows remain 3,799.
+- `active_lambda=0`; `shadow_lambda=1`; stability gate FAILED; prospective eligible cohort remains 0/30.
+- No independent Brier/LogLoss evidence exists; V2 superiority over market is not established.
+
+### Open integration pointers
+
+- #781 remains the direct-main HUMAN-MERGE live-access hold, exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`, 8/8 exact-head checks SUCCESS.
+- #842 remains direct-main immutable-action pinning, exact HEAD `0e14a8d490c72e95820d82453fa0746d5479001f`, 7/7 SUCCESS.
+- #839 is this continuity checkpoint; revalidate its new exact HEAD after this update.
+- Original forward fix remains stacked #826 → #830 → #834 → #837; current-form identity-set fix #843 and atomic report/upload fix #847 follow it. Do not merge stacked children independently.
+
+All work in this checkpoint is read-only or documentation-only. No main merge, Supabase write/DDL, paid request, target-outcome read, model inference/refit, production `.pkl` change, promotion, bet, schedule change or other-agent setting change occurred.
