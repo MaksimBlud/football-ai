@@ -1,13 +1,13 @@
 ## 2026-11-15 22:00 UTC — current-form identity mismatch and atomic report hardening
 
-Fresh main remains \`40887ebb215730190d7a6c7a1693373ec4afcdfc\`. This update records the latest read-only runtime evidence and the new exact-head CI result. No main update or merge occurred.
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This update records the latest read-only runtime evidence and the new exact-head CI result. No main update or merge occurred.
 
 ### Newly verified main runtime: the 110-versus-113 gap was accepted by the old forward path
 
-- Current-form source capture [run #43716579727](https://github.com/MaksimBlud/football-ai/actions/runs/43716579727), main SHA above, completed SUCCESS at 12:59:45 UTC. Its actual log reports 10 historical CSVs plus the 2026/27 current-season CSV, 3,910 historical rows, and **110** prior-day current-season identities. Source artifact ID \`14162164208\`, 439,421 bytes, ZIP SHA-256 \`fc4d68eaba4592cd5fd7dd8ed83ccb27068cecde031e50ce62f525c5f4b739c6\`.
-- Current-form forward [run #43731127758](https://github.com/MaksimBlud/football-ai/actions/runs/43731127758), completed SUCCESS at 15:40:27 UTC. The report accepted that archive as \`VERIFIED\`, with \`current_season_history_rows=110\`, \`feature_input_gate_count=110\`, and \`fresh_for_new_quote=true\`. It read **0 quotes**, captured **0** V2 shadows, read/scored no target outcomes, made 0 paid-provider calls and 0 Supabase writes. Nevertheless it uploaded artifact ID \`14168396582\`, 440,596 bytes, ZIP SHA-256 \`16a95ffcbf0304fc8a464c98e833a8118fa5ac2756964c3479ed4431ec063f55\`.
-- A separate metadata-only Supabase query for Serie A 2026/27, selecting only \`match_date,home_team,away_team\`, returns **113** unique fixture identities through 2026-11-08. Therefore the old main path's count-only archive gate accepted a 110-identity archive while the live metadata gate had 113 identities. This is not a target-outcome read; no score/result/settlement fields were selected.
-- This is a real source-completeness failure, not merely a stale report. The source archive must not be used for new quote pairing. [PR #843](https://github.com/MaksimBlud/football-ai/pull/843), exact HEAD \`725d1c987a9bca1a936008a81dc8458a09791eac\`, reads the current identity set and compares it with the archived identity set before the deferred quote reader. Exact-head run [#43750160905](https://github.com/MaksimBlud/football-ai/actions/runs/43750160905): **552 passed on Python 3.11 and 552 on Python 3.12**, both production \`.pkl\` guards PASS. #843 remains Draft / stacked / HUMAN-MERGE only.
+- Current-form source capture [run #43716579727](https://github.com/MaksimBlud/football-ai/actions/runs/43716579727), main SHA above, completed SUCCESS at 12:59:45 UTC. Its actual log reports 10 historical CSVs plus the 2026/27 current-season CSV, 3,910 historical rows, and **110** prior-day current-season identities. Source artifact ID `14162164208`, 439,421 bytes, ZIP SHA-256 `fc4d68eaba4592cd5fd7dd8ed83ccb27068cecde031e50ce62f525c5f4b739c6`.
+- Current-form forward [run #43731127758](https://github.com/MaksimBlud/football-ai/actions/runs/43731127758), completed SUCCESS at 15:40:27 UTC. The report accepted that archive as `VERIFIED`, with `current_season_history_rows=110`, `feature_input_gate_count=110`, and `fresh_for_new_quote=true`. It read **0 quotes**, captured **0** V2 shadows, read/scored no target outcomes, made 0 paid-provider calls and 0 Supabase writes. Nevertheless it uploaded artifact ID `14168396582`, 440,596 bytes, ZIP SHA-256 `16a95ffcbf0304fc8a464c98e833a8118fa5ac2756964c3479ed4431ec063f55`.
+- A separate metadata-only Supabase query for Serie A 2026/27, selecting only `match_date,home_team,away_team`, returns **113** unique fixture identities through 2026-11-08. Therefore the old main path's count-only archive gate accepted a 110-identity archive while the live metadata gate had 113 identities. This is not a target-outcome read; no score/result/settlement fields were selected.
+- This is a real source-completeness failure, not merely a stale report. The source archive must not be used for new quote pairing. [PR #843](https://github.com/MaksimBlud/football-ai/pull/843), exact HEAD `725d1c987a9bca1a936008a81dc8458a09791eac`, reads the current identity set and compares it with the archived identity set before the deferred quote reader. Exact-head run [#43750160905](https://github.com/MaksimBlud/football-ai/actions/runs/43750160905): **552 passed on Python 3.11 and 552 on Python 3.12**, both production `.pkl` guards PASS. #843 remains Draft / stacked / HUMAN-MERGE only.
 
 ### Original forward and diagnostic runtime
 
@@ -17,22 +17,22 @@ Fresh main remains \`40887ebb215730190d7a6c7a1693373ec4afcdfc\`. This update rec
 
 ### Current read-only Supabase state
 
-All quote counts below use strict \`snapshot_time_utc < commence_time_utc\`; no result/outcome fields were selected.
+All quote counts below use strict `snapshot_time_utc < commence_time_utc`; no result/outcome fields were selected.
 
 - Across nine leagues: **3,915** strict pre-match odds snapshots / **327** unique events; zero snapshots had a future kickoff at query time.
-- Serie A: **620** strict pre-match snapshots / **63** unique events; latest snapshot \`2026-10-13 14:48:53.04262+00\`; zero future-kickoff snapshots.
-- Product prediction snapshots: 40 strict pre-match EPL rows/events under \`EPL_AI_MARKET_PAIR_V1\`; **0** rows/events with original candidate SHA \`a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6\`.
+- Serie A: **620** strict pre-match snapshots / **63** unique events; latest snapshot `2026-10-13 14:48:53.04262+00`; zero future-kickoff snapshots.
+- Product prediction snapshots: 40 strict pre-match EPL rows/events under `EPL_AI_MARKET_PAIR_V1`; **0** rows/events with original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
 - Serie A 2026/27 metadata-only identities: **113**. The archived current-form source has 110; exact-set parity is required before any saved quote may be read.
 
 ### New current-form forward artifact-integrity fix
 
-[PR #847](https://github.com/MaksimBlud/football-ai/pull/847) is a new Draft child of #843. It closes a distinct gap left after atomic source staging: the CLI still wrote the final JSON report directly, and the workflow's artifact upload used \`always()\` after rights preflight.
+[PR #847](https://github.com/MaksimBlud/football-ai/pull/847) is a new Draft child of #843. It closes a distinct gap left after atomic source staging: the CLI still wrote the final JSON report directly, and the workflow's artifact upload used `always()` after rights preflight.
 
-- Adds same-directory temporary JSON serialization, flush/fsync, atomic \`os.replace\`, symlink refusal and temporary-file cleanup.
-- Changes the artifact upload condition to \`success() && rights_preflight.allowed\`, so a failed capture/serialization cannot upload a partial report or staged source bundle.
+- Adds same-directory temporary JSON serialization, flush/fsync, atomic `os.replace`, symlink refusal and temporary-file cleanup.
+- Changes the artifact upload condition to `success() && rights_preflight.allowed`, so a failed capture/serialization cannot upload a partial report or staged source bundle.
 - Adds four offline regressions for complete JSON, interrupted serialization cleanup, symlink refusal and success-only upload.
-- Exact base #843: \`725d1c987a9bca1a936008a81dc8458a09791eac\`; exact HEAD: \`0391ad9acca72682a2c7429a77481445c35af3be\`.
-- Exact-head run [#43766615737](https://github.com/MaksimBlud/football-ai/actions/runs/43766615737): **556 passed on Python 3.11 and 556 on Python 3.12**; both production \`.pkl\` diff guards PASS. PR remains Draft and must not be merged before #843 and its rights/provenance parents.
+- Exact base #843: `725d1c987a9bca1a936008a81dc8458a09791eac`; exact HEAD: `0391ad9acca72682a2c7429a77481445c35af3be`.
+- Exact-head run [#43766615737](https://github.com/MaksimBlud/football-ai/actions/runs/43766615737): **556 passed on Python 3.11 and 556 on Python 3.12**; both production `.pkl` diff guards PASS. PR remains Draft and must not be merged before #843 and its rights/provenance parents.
 
 ### Source-provider decision remains HOLD
 
@@ -49,7 +49,7 @@ No provider account/key, API request, source download or odds call was made. No 
 
 ### Exact model and PR state
 
-The original candidate remains unchanged: SHA-256 \`a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6\`; 19 original features; 20×2 weight matrix; 3,799 training rows; training fingerprint \`f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098\`; \`active_lambda=0\`; \`shadow_lambda=1\`; stability gate FAILED; prospective primary cohort **0/30**. No Brier/LogLoss superiority claim is supported.
+The original candidate remains unchanged: SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 original features; 20×2 weight matrix; 3,799 training rows; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; `active_lambda=0`; `shadow_lambda=1`; stability gate FAILED; prospective primary cohort **0/30**. No Brier/LogLoss superiority claim is supported.
 
 Latest exact-head checks re-read:
 - #781: 8/8 SUCCESS; Ready for review, HUMAN-MERGE.
@@ -58,9 +58,9 @@ Latest exact-head checks re-read:
 - #843: 552 Python 3.11 + 552 Python 3.12; 2/2 SUCCESS, stacked Draft.
 - #846: 522 Python 3.11 + 522 Python 3.12; evaluator 215; exact-head checks SUCCESS, stacked Draft.
 - #847: 556 Python 3.11 + 556 Python 3.12; exact-head checks SUCCESS, stacked Draft.
-- #839's prior HEAD \`04ffc33dcfa7eaf0ffc494d9f697a748931b25f9\` passed 7/7; this documentation update requires a new exact-head CI run.
+- #839's prior HEAD `04ffc33dcfa7eaf0ffc494d9f697a748931b25f9` passed 7/7; this documentation update requires a new exact-head CI run.
 
-No main change, merge, paid API request, Supabase write/DDL, target-outcome read, production \`.pkl\` change, refit, bet, promotion, schedule change or other-agent setting change occurred.
+No main change, merge, paid API request, Supabase write/DDL, target-outcome read, production `.pkl` change, refit, bet, promotion, schedule change or other-agent setting change occurred.
 
 ## 2026-11-15 20:49 UTC — exact-head CI and live-workflow re-verification
 
