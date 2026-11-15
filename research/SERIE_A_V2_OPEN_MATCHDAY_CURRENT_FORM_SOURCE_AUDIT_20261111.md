@@ -137,3 +137,34 @@ No dataset CSV was downloaded or parsed. No upstream data-provider request or CS
 ## Final disposition
 
 **Do not integrate open-matchday into original V2 yet.** It is a promising metadata-level lead for 2026/27 match statistics, but the present evidence fails the upstream-rights, field-level provenance, complete-card-coverage and exact-source-parity requirements. Reconsider only after those blockers are resolved in writing and a separately frozen source-concordance protocol is approved.
+
+---
+
+## Fresh upstream recheck — 2026-11-15 (metadata only)
+
+The upstream repository was rechecked at its current immutable master head. No CSV was downloaded, opened or parsed.
+
+- Current master commit: `3a3ac5075ad614d94e0f908f9e0752f937a10cd9`.
+- Commit message: `Daily data refresh 2026-11-15`.
+- Commit author/committer time: `2026-11-15T05:42:47Z`.
+- The public `build_summary.json` reports `generated_utc=2026-11-15T05:42:42Z`.
+
+Despite that new daily build commit, the Serie A entry still reports:
+
+- `results=110`;
+- `corners=110`;
+- `fixtures=270`;
+- `latest=2026-11-08`;
+- all displayed dropped-row counters are zero and `errors=[]`.
+
+**Freshness conclusion:** the repository build metadata was refreshed on November 15, but the latest completed Serie A match represented in its published summary remains November 8. The dataset is therefore not a demonstrably current daily feature source as of November 15; a fresh build timestamp must not be confused with a fresh match-data timestamp. The summary is an upstream-published aggregate only; no CSV rows or field-level completeness were inspected.
+
+The current README still states daily 00:00 UTC publication, aggregate shots/fouls/cards coverage of about 19% of result rows, and non-commercial use only. The current DISCLAIMER still says the underlying providers retain their own rights and that the compilation does not override them. The LEAGUE_INDEX still identifies Serie A result sources as fixturedownload + ESPN + football-data.co.uk; FotMob is separately named for corner splits, without per-field observation timestamps or a row-level FotMob source code. These statements do not establish source parity or permission for V2 automated capture/inference.
+
+### Updated decision
+
+**HOLD — no ingestion or adapter activation.** The new build confirms that this candidate has not resolved the existing blockers; it adds a concrete seven-day completed-match freshness gap. Reconsider only after (a) written rights for every upstream field and the intended ML/retention use, (b) a field-level provenance and timestamp contract, (c) a frozen feature-completeness/parity protocol, and (d) approved private archive storage.
+
+The original V2 candidate SHA, 19-feature order, weights, scaler/imputer, training fingerprint, 3,799-row training set, `active_lambda=0`, `shadow_lambda=1`, NO_BET and 30-primary-completed-event outcome gate remain unchanged. This source audit provides no V2 inference, no prospective forecast, and no Brier/LogLoss evidence.
+
+No source CSV, API response, odds value, Supabase row, protected result or target outcome was accessed. No provider request, key/account creation, Supabase read/write/DDL, model inference/refit, production `.pkl` change, schedule change or main-branch update occurred.
