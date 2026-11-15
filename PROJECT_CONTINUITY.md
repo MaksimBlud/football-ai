@@ -6183,3 +6183,12 @@ Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The current-form 
 **Separate Supabase security alert:** Security Advisor still reports RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`; four other tables have RLS enabled but no policies. No DDL or policy change was made.
 
 No main update, merge, paid request, Supabase write/DDL, outcome evaluation read, model refit/promotion, schedule change, or other-agent setting change occurred.
+
+
+### Additional scheduled Free Real-Quote Diagnostic — 2026-11-15 13:52 UTC
+
+A second source-capture path also ran on the unchanged main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`: [GitHub Actions run #43721234884](https://github.com/MaksimBlud/football-ai/actions/runs/43721234884), SUCCESS.
+- The actual job log reports **10 public HTTP requests** to the Football-Data CSV source, **3,800 historical rows**, 19 original features, **0 quoted fixtures**, **0 diagnostic forecasts**, **0 paid-provider requests**, and **0 Supabase writes**. Mode: `RESEARCH_ONLY_UNVERIFIED_PROVENANCE_NO_BET`.
+- No quote/source pair was observed; `quotes_with_source_observed_after_quote=0` is not a source-before-quote proof when `quoted_fixtures=0`.
+- Raw CSV bytes were uploaded to public-repository Actions artifact ID `14164502813`, 425,069 bytes, ZIP SHA-256 `e16d5f4b235ba4dcd0a10b7637358abef59ac9506f0a7ef1a568a75663d7da49`. The audit read only logs and artifact metadata; it did not download artifact bytes.
+- The Football-Data policy manifest in #813 remains fail-closed for automated source capture/inference, and the repository is public. This workflow must remain held until provider clearance and private storage are independently verified. The new evidence was added to the discussion of #781; its hold patch covers this workflow and gates raw artifact upload without changing the existing schedule.
