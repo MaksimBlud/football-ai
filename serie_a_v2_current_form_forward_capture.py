@@ -13,7 +13,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from tempfile import TemporaryDirectory, mkstemp
 import re
 from typing import Any, Mapping
 import zipfile
@@ -1095,6 +1095,37 @@ def capture_forward_with_atomic_sources(
 
 
 
+
+def write_json_atomically(path: Path, payload: Mapping[str, Any]) -> None:
+    """Publish a complete JSON report with a same-directory atomic replace."""
+    target = Path(path)
+    if target.is_symlink():
+        raise ValueError("current-form forward report output cannot be a symlink")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = mkstemp(
+        prefix=f".{target.name}.staging-",
+        suffix=".tmp",
+        dir=str(target.parent),
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
+            json.dump(payload, handle, indent=2, ensure_ascii=False, sort_keys=True)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        if target.is_symlink():
+            raise ValueError("current-form forward report output cannot become a symlink")
+        os.replace(temporary, target)
+    except BaseException:
+        try:
+            os.close(descriptor)
+        except OSError:
+            pass
+        temporary.unlink(missing_ok=True)
+        raise
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
@@ -1148,9 +1179,7 @@ def main() -> None:
         current_gate_identities=current_gate_identities,
         write_sources_to=args.sources_output_dir,
     )
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
-                           encoding="utf-8")
+    write_json_atomically(args.output, report)
     print(json.dumps({
         "mode": report["mode"],
         "candidate_sha256": report["candidate_sha256"],
