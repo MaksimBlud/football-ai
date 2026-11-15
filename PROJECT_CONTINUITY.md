@@ -11102,3 +11102,50 @@ No source download, source-artifact reuse, protected outcome read, paid provider
 - No source or quote workflow was manually dispatched, no provider request/download was made, and no protected outcomes were read.
 
 No main update/merge, Supabase write/DDL, paid provider call, source-artifact reuse, production `.pkl` change, refit, promotion, schedule change or other-agent setting change occurred in this checkpoint. HUMAN-MERGE remains mandatory.
+
+
+---
+
+## 2026-11-15 07:52 UTC — original V2 source-feasibility and integration audit
+
+### Fresh repository and exact candidate
+
+- Default branch remains `main`, exact HEAD `40887ebb215730190d7a6c7a1693373ec4afcdfc`; repository visibility is still public.
+- Re-read the main candidate `research/models/market_anchor_v2_serie_a_frozen_candidate.json`: blob `ac1303f6b096664983fbf52443bd0a381b23ba21`, candidate SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`. The frozen 19-feature order, 20x2 weights, scaler/imputer, training fingerprint, training cutoff, `active_lambda=0`, and `shadow_residual_lambda=1` remain unchanged.
+- Main still contains the pre-hold original V2 workflows: free diagnostic blob `60bd304153e5c731ff6246c76fe2f3ace1bc0dcb`, original forward-preview blob `48ce3b0d8e31c4cf293b94500e9c320047311467`, and current-form source-capture blob `9722416862b42d55ff7181003353c39620f23cf2`. The main YAML still exposes job-level Supabase credentials and unconditional/always artifact-upload paths; do not dispatch these live workflows.
+
+### Source feasibility — no alternative cleared
+
+The official Football-Data page now states it is updated 10/11/26 and excludes commercial or data-training products using automated bots, scrapers, or AI. The current project manifest therefore remains fail-closed: automated source capture and frozen inference are not permitted pending provider clarification. This is an internal conservative control, not a legal conclusion about every form of manual research.
+
+Candidates checked without downloading match data or invoking an API:
+
+1. **OpenFootball / football.db** — public-domain/CC0 fixtures and results. It does not provide the corners, yellow cards, and red cards required by the frozen 19-feature contract. It cannot replace the current-form source for this candidate.
+2. **StatsBomb Open Data** — public research data with an attribution/logo requirement, but only selected competitions/seasons and no complete 2026/27 top-five current-form cohort. It is not a complete substitute for the frozen input history.
+3. **Cornerflick** — its data page says CC BY 4.0 applies to its compilation, while underlying match facts remain subject to upstream providers' terms. Its Terms, updated 2026-11-09, prohibit scraping, harvesting, or bulk downloads except as permitted by law and describe a personal non-commercial access licence. Not approved for automated source capture.
+4. **open-matchday** — its own terms describe a non-commercial compilation and explicitly preserve upstream provider rights; its source mix includes Football-Data.co.uk. Not cleared for this AI inference/source-capture use.
+
+No candidate currently satisfies all three requirements simultaneously: (a) adequate coverage of all 19 frozen inputs and current 2026/27 form, (b) explicit rights for the intended automated capture and frozen inference, and (c) durable source bytes captured strictly before each later quote. Do not add a source adapter, download, or inference path on the basis of public URL availability alone.
+
+### Current exact-head PR and CI evidence
+
+- **#836** remains Draft / HUMAN-MERGE, HEAD `9b4e2cdeb19ec6d276bb65c9872a10465ac8890c`, based on #826 HEAD `6d1b533e82afe4e708c6fa29f876d8048a1465f8`. Its two workflow runs completed successfully: evaluator run `43689698259` (1/1 job) and frozen V2 run `43689698149` (2/2 jobs). This is offline/synthetic validation only.
+- **#835** remains Draft / HUMAN-MERGE, HEAD `125a3801366ce8a904d8e56da0ca05c6597e95c1`; evaluator run `43688401330` and frozen V2 run `43688401358` completed successfully, including both Python 3.11/3.12 jobs.
+- **#834** remains Draft / HUMAN-MERGE, HEAD `f74a59b70d3149b81ef2c07c63dda54c1bf0b8d1`; evaluator run `43683001812` and frozen V2 run `43683001832` completed successfully.
+- **#781** remains OPEN and Ready for review, exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`; its eight observed PR workflow runs completed successfully. It is the separate live-access hold branch based directly on main.
+- Integration dependency is binding: #827/#828 descend from #781, while #813→#826→#830→#831/#834/#835/#836 descend from the separate rights/provenance chain. The latter heads do **not** contain #781's workflow hold. Do not merge any #826 descendants as if they inherited the hold. After the owner's manual #781 merge, restack the rights/provenance/evaluator chain on fresh main and rerun exact-head CI before considering integration.
+- The existing #740 continuity PR remains documentation-only and HUMAN-MERGE. This update is on its branch only; main is unchanged.
+
+### Read-only live-data checkpoint
+
+Only strict pre-match odds metadata was queried, with `snapshot_time_utc < commence_time_utc`:
+
+- 3,915 snapshots; 327 unique events; 9 leagues.
+- First snapshot: 2026-08-15 12:23:35.608011 UTC.
+- Last snapshot: 2026-10-13 14:48:53.042620 UTC.
+- Zero snapshots in the last seven days and zero snapshots for future fixtures.
+- Exact-candidate `product_prediction_snapshots` with `generated_at_utc < commence_time_utc`: 0 rows / 0 events.
+
+No result, score, settlement, or target-outcome fields were selected. The 30-primary-completed-event gate remains 0/30; independent Brier/LogLoss remain unavailable.
+
+No source/quote request, source archive download, paid provider call, Supabase write/DDL, protected outcome read, live inference, refit, production `.pkl` change, promotion, merge, main update, schedule change, or other-agent setting change occurred.
