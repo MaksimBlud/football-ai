@@ -2,6 +2,7 @@ from datetime import date, datetime, timedelta, timezone, tzinfo
 from io import BytesIO
 import hashlib
 import json
+from pathlib import Path
 import zipfile
 from typing import Any
 
@@ -18,6 +19,7 @@ from serie_a_v2_current_form_forward_capture import (
     prepare_forward_capture as _prepare_forward_capture,
     verify_and_load_archive,
     verify_latest_source_archive,
+    write_json_atomically,
 )
 from serie_a_v2_current_form_source_capture import (
     CURRENT_CODE, CURRENT_FILENAME, CURRENT_SEASON, CURRENT_URL, REQUIRED_COLUMNS,
@@ -1552,3 +1554,63 @@ def test_atomic_current_form_forward_does_not_publish_sources_for_malformed_quot
     assert events == ["quotes"]
     assert not target.exists()
     assert list(tmp_path.glob(".source-archives.staging-*")) == []
+
+
+def test_current_form_forward_report_writer_publishes_complete_json(tmp_path):
+    target = tmp_path / "forward-report.json"
+    payload = {
+        "experiment_id": "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY",
+        "quotes_seen": 0,
+        "target_outcomes_read": False,
+    }
+
+    write_json_atomically(target, payload)
+
+    raw = target.read_text(encoding="utf-8")
+    assert raw.endswith("\n")
+    assert json.loads(raw) == payload
+    assert list(tmp_path.glob(".forward-report.json.staging-*.tmp")) == []
+
+
+def test_current_form_forward_report_writer_removes_partial_file_on_serialization_error(
+    tmp_path, monkeypatch
+):
+    target = tmp_path / "forward-report.json"
+
+    def fail_after_partial_write(payload, handle, **kwargs):
+        handle.write('{"partial":')
+        raise RuntimeError("synthetic JSON serialization failure")
+
+    monkeypatch.setattr(forward_capture_module.json, "dump", fail_after_partial_write)
+    with pytest.raises(RuntimeError, match="synthetic JSON serialization failure"):
+        write_json_atomically(target, {"not": "published"})
+
+    assert not target.exists()
+    assert list(tmp_path.glob(".forward-report.json.staging-*.tmp")) == []
+
+
+def test_current_form_forward_report_writer_rejects_symlink_target(tmp_path):
+    existing = tmp_path / "existing.json"
+    existing.write_text('{"preserve":true}\n', encoding="utf-8")
+    target = tmp_path / "forward-report.json"
+    target.symlink_to(existing)
+
+    with pytest.raises(ValueError, match="cannot be a symlink"):
+        write_json_atomically(target, {"replacement": True})
+
+    assert existing.read_text(encoding="utf-8") == '{"preserve":true}\n'
+    assert target.is_symlink()
+
+
+def test_current_form_forward_artifact_upload_requires_successful_capture():
+    workflow = (
+        Path(__file__).resolve().parents[1]
+        / ".github" / "workflows"
+        / "serie-a-v2-current-form-forward-preview.yml"
+    ).read_text(encoding="utf-8")
+    upload = workflow.split(
+        "      - name: Archive pre-kickoff V2 shadow and exact source ZIPs", 1
+    )[1]
+
+    assert "if: \${{ success() && steps.rights_preflight.outputs.allowed == 'true' }}" in upload
+    assert "if: \${{ always() && steps.rights_preflight.outputs.allowed == 'true' }}" not in upload
