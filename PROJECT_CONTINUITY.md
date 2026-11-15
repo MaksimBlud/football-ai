@@ -11023,3 +11023,25 @@ No provider request/download, source-artifact download/reuse, Supabase write/DDL
 - The original candidate identity remains unchanged: SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 frozen features, `active_lambda=0`, `shadow_residual_lambda=1`. Prospective eligible completed forecasts remain 0/30; independent Brier/LogLoss remain unavailable.
 
 No source download, source-artifact reuse, protected outcome read, paid provider request, Supabase write/DDL, production `.pkl` change, refit, promotion, merge, main update, schedule change or other-agent setting change occurred in this checkpoint. HUMAN-MERGE remains mandatory.
+
+
+---
+
+## 2026-11-15 07:08 UTC — Exact outcome-read audit and scheduled-run verification
+
+### New market-only outcome-read audit fix
+
+- [PR #835](https://github.com/MaksimBlud/football-ai/pull/835) is Draft / HUMAN-MERGE, exact HEAD `125a3801366ce8a904d8e56da0ca05c6597e95c1`, based on #826 exact HEAD `6d1b533e82afe4e708c6fa29f876d8048a1465f8`, 2 commits ahead, mergeable.
+- The market-only prospective runner previously set its audit flag `target_outcomes_read=true` at callback entry, before validating the 30-forecast input and before a result query returned. A defensive validation failure could therefore be misreported as an outcome read even though no result query executed.
+- #835 now flips the flag only after the exact per-fixture result query returns. A sub-30 callback rejection or any pre-query validation failure leaves the flag false. Added two synthetic-only regressions: 29 identities fail without a database query and keep the flag false; the successful 30-identity path flips the flag only after the first exact query returns.
+- Exact HEAD check-runs: 3/3 SUCCESS. Frozen V2 shadow suite: 522 passed under Python 3.11 and 522 under Python 3.12; prospective evaluator offline-only suite: 215 passed. Production model hash guards passed in both runtimes. Runs: [43688401358](https://github.com/MaksimBlud/football-ai/actions/runs/43688401358) and [43688401330](https://github.com/MaksimBlud/football-ai/actions/runs/43688401330).
+- This changes only truthful read-state reporting. It does not change the 30-event gate, exact outcome query projection, forecast selection, market/shadow probabilities, bootstrap, candidate SHA, 19 features, weights, `active_lambda=0`, `shadow_residual_lambda=1`, or any production artifact. No live database/outcome read was performed by the PR tests.
+
+### Scheduled V2 workflow run audit
+
+- Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The main YAML confirms current-form source capture cron `50 5 * * *` (workflow blob `9722416862b42d55ff7181003353c39620f23cf2`) and original free real-quote diagnostic cron `13 6 * * *` (workflow blob `60bd304153e5c731ff6246c76fe2f3ace1bc0dcb`). Neither schedule was changed.
+- A fresh GitHub Actions query restricted to `event=schedule`, `branch=main`, and 2026-11-15 returned 24 scheduled runs from 00:19:07 through 07:04:30 UTC. None was a Serie A V2 source-capture, forward-preview, frozen-shadow, or prospective-evaluator run. In particular, the expected 05:50 current-form source capture and 06:13 original free diagnostic did not appear.
+- The scheduler was not globally idle: `Serie A Results Sync` completed successfully at 06:10:08 UTC (run [43684202626](https://github.com/MaksimBlud/football-ai/actions/runs/43684202626)); other scheduled workflows also ran. The absence is therefore specific to the V2 workflows in this observed window, but the available read API does not establish whether each workflow is disabled or why its schedule did not trigger. Do not infer a cause or manually dispatch any live workflow.
+- No source or quote workflow was manually dispatched, no provider request/download was made, and no protected outcomes were read.
+
+No main update/merge, Supabase write/DDL, paid provider call, source-artifact reuse, production `.pkl` change, refit, promotion, schedule change or other-agent setting change occurred in this checkpoint. HUMAN-MERGE remains mandatory.
