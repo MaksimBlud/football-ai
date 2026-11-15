@@ -1,5 +1,29 @@
 # Football AI — Project Continuity
 
+## 2026-11-15 16:54 UTC — fresh original/current-form forward and source-gate recheck
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This is a read-only runtime and metadata update; no main or database mutation occurred.
+
+### New exact-main Actions runs
+
+- **Original V2 Original Forward-Only Preview** — [run #43730695523](https://github.com/MaksimBlud/football-ai/actions/runs/43730695523), main SHA above, SUCCESS, 15:35:49 UTC. It independently attested source artifact #14164502813 from parent run #43721234884, SHA-256 `e16d5f4b235ba4dcd0a10b7637358abef59ac9506f0a7ef1a568a75663d7da49`, and reported `quotes_seen=0`, `v2_diagnostic_previews_captured=0`, `forecasts_created=0`, 0 paid provider calls and 0 Supabase writes. Its report-only artifact #14167774653 is 1,461 bytes, SHA-256 `6e0a9271866fc73995d6c7cd09461b2e6d1c5334d82fd426b08ca586ada87faa`.
+- **Current-Form Forward-Only Preview** — [run #43731127758](https://github.com/MaksimBlud/football-ai/actions/runs/43731127758), same main SHA, SUCCESS, 15:40:27 UTC. It verified source artifact #14162164208, SHA-256 `fc4d68eaba4592cd5fd7dd8ed83ccb27068cecde031e50ce62f525c5f4b739c6`, created by successful parent run #43716579727 completed at 12:59:45 UTC. At 15:40:22 UTC the archive was 9,642 seconds old and its captured feature-input gate count was 110. The forward log reported `quotes_seen=0`, `v2_current_form_shadow_captured=0`, target outcomes not read/scored, 0 paid calls and 0 Supabase writes. It nevertheless uploaded artifact #14168396582 (440,596 bytes, SHA-256 `16a95ffcbf0304fc8a464c98e833a8118fa5ac2756964c3479ed4431ec063f55`); the workflow's source-output path includes the verified raw source ZIP. This is another public raw-source artifact while the hold is still unmerged. No artifact bytes were downloaded.
+- The earlier source-capture run #43716579727 itself uploaded artifact #14162164208 (439,421 bytes); its log reported 3,910 historical rows, 110 current-season prior-day rows, 11 source files, and 0 paid calls / 0 Supabase writes / no target scoring.
+
+### Latest read-only Supabase metadata (Serie A scope)
+
+- `odds_snapshots`, strict `snapshot_time_utc < commence_time_utc`: 620 rows / 63 unique events; latest snapshot remains 2026-10-13 14:48:53.04262 UTC. At query time, future strict-pre-match rows/events: **0 / 0**.
+- `product_prediction_snapshots`, exact original candidate SHA and strict `generated_at_utc < commence_time_utc`: **0 rows / 0 events**.
+- The metadata-only current-form feature-input identity count is now **113** for Serie A 2026/27, selecting only `match_date, home_team, away_team`; no score/result columns were selected. The source artifact used by run #437311 attests only 110 identities. The archive must not be assumed current-gate-complete: the existing forward gate compares the current identity set to the archived set and must fail closed if any are missing. The next source capture must re-attest the current identity set before any future quote can be admitted.
+- This 113-identity input count is not the separate prospective outcome-evaluation gate and does not authorize target-outcome reads. The 30 eligible prospective forecast gate remains closed; exact V2 predictions remain zero.
+
+### Integration consequence
+
+The two successful forward runs occurred on unchanged public main after #781 was open and still unmerged. They created no quotes or forecasts, but the current-form path still uploaded raw source bytes publicly. [PR #781](https://github.com/MaksimBlud/football-ai/pull/781) remains the required HUMAN-MERGE-only default-deny hold. After owner merge, re-read fresh main and prove source fetch, quote read, and all associated artifact uploads are skipped. Existing artifacts are not retroactively removed by that hold.
+
+No paid request, Supabase write/DDL, target-outcome read, production `.pkl` change, refit, threshold tuning, bet, or promotion occurred. No schedule or other-agent setting changed.
+
+
 ## 2026-11-15 15:52 UTC — fresh read-only V2 checkpoint
 
 Fresh verification was performed against public GitHub `main`, the open V2 PR stack, exact Actions runs, and Supabase read-only pre-match metadata. This checkpoint supersedes earlier November 15 counts where they differ.
