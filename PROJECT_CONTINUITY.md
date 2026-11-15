@@ -1,3 +1,46 @@
+## 2026-11-15 04:25 UTC — Original V2 atomic prequote restack, evaluator action-pin restack, and fresh read-only inventory
+
+**Fresh main remains** `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This update records only evidence re-read from GitHub Actions logs, exact PR heads/checks, the current rights branch and a read-only strict pre-kickoff Supabase aggregate. No PR was merged and main was not changed.
+
+### Live main runtime and strict pre-match inventory
+
+The four latest relevant main runs remain the November 14 executions on the unchanged public main SHA:
+
+- Current-Form Source Capture [run 43595368403](https://github.com/MaksimBlud/football-ai/actions/runs/43595368403): 110 metadata-only completed-fixture identities; 10 historical CSVs plus one current-season CSV; 3,910 historical rows; 11 source files; artifact 14114033421, ZIP SHA-256 `ffa5c5613d269e10f9bb928895294034d4ba43ba4723a69b61f1276a5ce6276a`. No paid calls, Supabase writes, or target-outcome scoring.
+- Free Real-Quote Diagnostic [run 43599723217](https://github.com/MaksimBlud/football-ai/actions/runs/43599723217): 3,800 historical rows; no usable quote/feature rows; artifact 14115967062, ZIP SHA-256 `518e8cb20019bc1edabdd868272cb01f3aedae2076f90c400673a7996a4832b0`.
+- Original Forward [run 43607489246](https://github.com/MaksimBlud/football-ai/actions/runs/43607489246): verified the 10-file / 3,800-row historical source archive; `quotes_seen=0`, `forecasts_created=0`, `v2_diagnostic_previews_captured=0`; artifact 14118641609, ZIP SHA-256 `935c8c0699738a6e45681ecf00064c42cac1537f55c9e1c1cb2fd7d82b2a6da6`.
+- Current-Form Forward [run 43608273625](https://github.com/MaksimBlud/football-ai/actions/runs/43608273625): verified source artifact 14114033421 and its parent; 110 current-season rows / 3,910 historical rows; `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `target_outcomes_read=false`, `target_outcomes_scored=false`; artifact 14118798411, ZIP SHA-256 `d924830c6ca4e29fc208bb45460f76902d81f129bc8f6a2fe909d1413dd0c76d`.
+
+The actual logs were inspected; no source ZIP or quote payload was downloaded or opened in this audit. These main workflows still execute on public main and publish public Actions artifacts because [#781](https://github.com/MaksimBlud/football-ai/pull/781) is not merged. This is a confidentiality/rights-control issue, not permission to reuse the artifacts. The next step remains owner HUMAN-MERGE of #781 followed by fresh-main proof that all live source/quote/recovery steps and uploads are skipped under the default-false hold.
+
+Read-only Supabase query used only `public.odds_snapshots` rows satisfying `snapshot_time_utc < commence_time_utc`:
+
+- **3,915** strict pre-match snapshots across **327** events and 9 leagues.
+- **0** new strict pre-match snapshots in the last seven days.
+- **0** upcoming events with saved strict pre-match quotes.
+- Latest Serie A strict pre-match quote remains **2026-10-13 14:48:53 UTC**.
+
+No result/settlement columns or protected target outcomes were queried. Supabase writes/DDL: zero.
+
+### Current rights and frozen-candidate state
+
+The rights manifest on the current rights/provenance branch has SHA-1 blob `b138d29f98e4cf3071d4c6a35a01dbb4e80e5afd` and records source capture=false, inference=false, AI training=false, provider-issued inference licence=false, and authorization=null. The repository is PUBLIC; the private-artifact gate therefore also fails. The two independent blockers (provider clearance and private storage) remain unresolved.
+
+The original candidate remains unchanged: SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 frozen features; 20×2 weights; 3,799 training rows; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; `active_lambda=0`, `shadow_lambda=1`; stability gate FAILED; NO_BET; automatic promotion disabled. Eligible completed prospective forecasts remain **0/30**. No independent Brier/LogLoss comparison exists and no superiority claim is permitted.
+
+### New exact-head atomic forward and action-pin PRs
+
+- [#830 — restack atomic original source-before-quote capture on rights gates](https://github.com/MaksimBlud/football-ai/pull/830): exact HEAD `7136c04622e997ca5880bf13706db90b7817f104`; base is current #826 head `6d1b533e82afe4e708c6fa29f876d8048a1465f8`; 8 ahead / 0 behind. Ports the original forward source-preflight and all-or-nothing source ZIP publication onto the current direct-rights / private-storage / workflow-SHA stack. Exact-head checks: 3/3 SUCCESS — Frozen V2 **535 passed** on Python 3.11 and **535 passed** on Python 3.12; prospective evaluator **213 passed**; production `*.pkl` diff guards and compilation passed.
+- [#831 — restack immutable prospective evaluator action pins on #830](https://github.com/MaksimBlud/football-ai/pull/831): exact HEAD `2b7c69fdbf4e733d4157b3a6379f037822b06233`; base #830 exact HEAD `7136c04622e997ca5880bf13706db90b7817f104`; 4 ahead / 0 behind, four intended workflow/test files. Pins checkout/setup-python/upload-artifact in the remaining prospective evaluator workflow and adds the exact static regression. Exact-head checks: 5/5 SUCCESS — prospective evaluator **214 passed**; Frozen V2 **536 passed** on Python 3.11 and **536 passed** on Python 3.12; production `*.pkl` diff guards passed.
+- [#829](https://github.com/MaksimBlud/football-ai/pull/829) was closed as superseded: its #826 parent branch advanced after #829 was created, leaving it based on stale parent SHA `bf7075bee4b54bfe32ef93a9e8a517585b7ddd94`. The same narrow action-pin change is preserved in #831 on the current #830 head.
+- [#827](https://github.com/MaksimBlud/football-ai/pull/827) and [#828](https://github.com/MaksimBlud/football-ai/pull/828) remain the separate child chain on #781 for immutable action pins in the forward and recovery workflows; do not merge either automatically.
+
+All these PRs remain Draft/HUMAN-MERGE. #830/#831 validation is offline/synthetic; no source, quote, Supabase, provider, target-outcome, or live-inference access occurred. No candidate/weight/lambda/feature/eligibility changes, production `.pkl` changes, schedules, or main updates occurred.
+
+### Integration warning
+
+The #781 hold chain and the rights/provenance chain are separate branches. Do not merge the latter as a giant diverged stack or assume #827/#828 automatically include #826/#830/#831. After #781 is manually integrated, re-read fresh main, restack the #720→#727→#813 and #818→#819→#820→#821→#825→#826 rights/evaluator chain on that exact main, preserve the atomic original/current-form publication changes, and revalidate exact-head CI. Then port the #827/#828 action pins without losing the default-deny workflow hold, and retain #830/#831 changes on the same resulting rights-gated head. No auto-merge.
+
 
 ## 2026-11-14 02:05 UTC — Current-form forward source publication hardened (PR #809)
 
