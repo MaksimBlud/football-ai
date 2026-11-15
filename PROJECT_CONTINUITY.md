@@ -10958,3 +10958,38 @@ Fresh Security Advisor at 2026-11-14 21:00 UTC reports five public tables with R
 6. Accumulate 30 eligible prospective primary-league forecasts before any protected outcome read; then report independent de-vigged-market Brier and LogLoss. No tuning, refit, activation, promotion, or superiority claim.
 
 No main update/merge, Supabase write/DDL, paid provider call, source download/reuse, protected outcome read, production `.pkl` change, schedule change, or other-agent setting change occurred in this checkpoint. HUMAN-MERGE remains mandatory.
+
+
+---
+
+## 2026-11-15 05:48 UTC — Atomic forward-report publication and exact-head CI
+
+**Fresh main is still** `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No merge or main update occurred in this checkpoint.
+
+### Original V2 source/forward artifact integrity
+
+- [PR #830](https://github.com/MaksimBlud/football-ai/pull/830), base #826 exact HEAD `6d1b533e82afe4e708c6fa29f876d8048a1465f8`, HEAD `7136c04622e997ca5880bf13706db90b7817f104), remains Draft / HUMAN-MERGE. It restacks the original source-before-quote preflight and atomic source ZIP publication on the rights-gated evaluator/source chain.
+- [PR #834](https://github.com/MaksimBlud/football-ai/pull/834), base #830 exact HEAD `7136c04622e997ca5880bf13706db90b7817f104`, exact HEAD `43df963b33275af609ddbc867ed20353ef72dcee), remains Draft / HUMAN-MERGE, mergeable, 11 commits ahead / 0 behind, six changed files.
+- #834 includes the complete source-artifact success gate previously isolated in #833 and closes the remaining forward-report gap: JSON output is written to a same-directory temporary file, flushed/fsynced and atomically replaced; the workflow uploads the report/source bundle only if the forward-capture step succeeds, with missing files treated as an error. Regressions cover interrupted serialization, preservation of an existing report, successful JSON publication, symlink rejection, upload gating and unchanged schedule.
+- [Exact-head Prospective Evaluator Validation #43682476810](https://github.com/MaksimBlud/football-ai/actions/runs/43682476810): SUCCESS, 213 passed; compile and production `*.pkl` diff guard passed.
+- [Exact-head Frozen V2 Shadow Tests #43682476861](https://github.com/MaksimBlud/football-ai/actions/runs/43682476861): SUCCESS, 540 passed on Python 3.11 and 540 on Python 3.12; both production `*.pkl` diff guards passed; Python 3.12 `pip check` passed. All three check-runs refer to HEAD `43df963b33275af609ddbc867ed20353ef72dcee`.
+- PR #833 was closed as superseded by #834; its source-workflow fix is included in #834. PR #808 was closed as superseded by the rights-gated #830/#834 chain; do not merge the old main-based branch. PR #829 remains closed/superseded by #831.
+- #827/#828 remain separate Draft action-pin PRs based on #781; #831 remains a Draft evaluator action-pin child of #830. No merge was performed.
+
+### Current-form atomic-forward branch audit
+
+- PR #809 remains OPEN on main, but is not restacked on the rights chain. Comparing its HEAD `9e4e57ac3a9a268be44a97132468c8c2a974accc` with #820 HEAD `97e66fe0807779327fd1970573896981cb444f94` is DIVERGED (236 ahead / 3 behind from the common main base).
+- The #820 current-form forward module does not contain #809's `capture_forward_with_atomic_sources` wrapper. #809 is therefore a separate current-form extension and must not be merged directly; it needs a deliberate rights-gated restack if that scope is retained. This does not change the original V2 #830/#834 chain.
+
+### Fresh read-only pre-match state and model identity
+
+- Read only `public.odds_snapshots` with `snapshot_time_utc < commence_time_utc`: 3,915 strict pre-match rows, 327 unique events, 9 leagues; 0 strict pre-match rows in the last seven days; 0 upcoming events with a saved pre-match quote; latest snapshot `2026-10-13 14:48:53.042620 UTC`.
+- Main candidate blob remains `ac1303f6b096664983fbf52443bd0a381b23ba21`; artifact SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features, 3,799 training rows through 2026-06-30, `active_lambda=0`, `shadow_residual_lambda=1`, stability gate FAILED, no opened 2026/27 outcomes, no automatic promotion.
+- Main does not yet contain `research/source_rights/football_data_co_uk.json`; that fail-closed 2026-11-10 policy recheck is in open PR #813. The rights/source stack is not on main.
+- PR #781 remains OPEN / Ready for review, exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`, 8/8 CI SUCCESS. Its default-deny hold is not active on main until HUMAN-MERGE. Main still has live-capable V2 workflows and the repository is PUBLIC. Existing scheduled current-form source capture remains at 05:50 UTC and original free source capture at 06:13 UTC; schedules were not changed.
+
+### Separate Supabase security advisory
+
+A fresh read-only schema inventory again reports RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. This is a separate security issue. No RLS DDL or policies were applied; enabling RLS without suitable policies may block legitimate clients and requires an owner-controlled policy review.
+
+No provider request/download, source-artifact download/reuse, Supabase write/DDL, protected target-outcome read, refit, model/production artifact change, schedule change, main update, merge or other-agent setting change occurred in this checkpoint. The 30-primary-completed-event outcome gate remains closed; independent prospective Brier/LogLoss remain unavailable.
