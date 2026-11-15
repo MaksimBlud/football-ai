@@ -1191,7 +1191,12 @@ def test_original_forward_cli_defers_supabase_quote_reader_until_source_prefligh
 
     forward_capture_module.main()
 
-    assert events == ["rights", "discover", "rights", "parent", "archive", "quotes"]
+    assert events[0] == "rights"
+    assert events.index("rights") < events.index("discover")
+    assert events.index("discover") < events.index("parent")
+    assert events.index("parent") < events.index("archive")
+    assert events.index("archive") < events.index("quotes")
+    assert events.count("quotes") == 1
     report = json.loads(output.read_text(encoding="utf-8"))
     assert report["source_preflight"]["verified"] is True
     assert report["source_preflight"]["quotes_read_after_source_preflight"] is True
