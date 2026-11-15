@@ -11197,3 +11197,43 @@ Only `odds_snapshots` rows satisfying `snapshot_time_utc < commence_time_utc` we
 ### Scientific state and safety
 
 Original candidate remains blob `ac1303f6b096664983fbf52443bd0a381b23ba21`, SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features, original weights/scaler/imputer, training fingerprint and cutoff unchanged. `active_lambda=0`; `shadow_lambda=1`; stability gate FAILED; 30-primary-completed-event gate remains 0/30; Brier/LogLoss comparison unavailable. No source request, paid call, Supabase write/DDL, protected outcome read, live inference, refit, production `.pkl` change, promotion, merge, main update, schedule change, or other-agent setting change occurred in this checkpoint.
+
+
+---
+
+## 2026-11-15 11:02 UTC — SportsAPI Pro rights recheck and fresh pre-match metadata
+
+### New provider audit and exact CI
+
+- Updated existing [PR #806](https://github.com/MaksimBlud/football-ai/pull/806), still Draft / HUMAN-MERGE, with a fresh official-documentation recheck; no second provider PR was created.
+- Exact HEAD: `c10938e8152146ea1ef54f5482d1be002198591f`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- Exact-head CI: **7/7 SUCCESS**, including targeted research tests, shadow tests, validation, Serie A, Bundesliga, Ligue 1 and product-contract checks.
+- Current SportsAPI Pro Terms apply to Free accounts, permit internal modelling/ML/backtesting, indefinite private retention of raw responses, and retention of receipt timestamps and customer-generated hashes. They state no separate upstream licence is required for intended use. Raw payload publication/bulk sharing remains prohibited.
+- Free-plan duration is still contradictory: pricing page header says `$0/1 Month`, comparison table says `$0/mo`, while the Refund page says Free has no time limit. Written clarification is still required.
+- Official Football V2 coverage says Free and paid plans have the same endpoint/competition coverage; Free has 100 requests/day and 10/minute. Serie A is listed as a Premium-depth competition. Match statistics include home/away `cornerKicks` and `yellowCards`; incidents include goals and yellow/red-card events. Match statistics are live/post-match, so this is a candidate for lagged history, not target-match future data.
+- Provider terms permit local receipt-time + raw-byte SHA proof of project possession before a later quote. That is not a claim about upstream first-observation time. The required project order remains `private_source_capture_time_utc < quote_snapshot_time_utc < kickoff_utc`.
+- HOLD remains: no private raw archive is verified/authorized; no live 2026/27 Serie A payload has been checked; red-card/second-yellow semantics are not established; the Free entitlement duration needs written clarification. No account/key/API request/free credit or raw-data download was used.
+- Planning only: 113 unique completed Serie A 2026/27 fixture identities from a read-only metadata-only query. Official season event pages carry scores/status, so two per-fixture calls (statistics + incidents) plus four 30-event pages imply about 230 requests, at least three days at 100/day. This estimate is not authorization.
+
+### Fresh Supabase pre-match metadata
+
+Only identity fields `match_date, home_team, away_team` were selected from `league_finished_results` for `SERIE_A / 2026-2027`; no scores or results were selected:
+
+- **113** unique completed fixture identities. This is the feature-input coverage count only; it does **not** count toward the prospective evaluation gate.
+- Strict pre-match odds predicate: `snapshot_time_utc < commence_time_utc`: **3,915** rows, **327** events, 9 leagues.
+- Latest strict pre-match snapshot: **2026-10-13 14:48:53 UTC**.
+- Future-fixture strict pre-match quote rows: **0**.
+- Exact original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6` with `generated_at_utc < commence_time_utc`: **0** prediction rows / 0 events.
+- No score, settlement, result or protected target-outcome fields were read. The 30-primary-completed-forecast outcome gate remains **0/30**; independent Brier/LogLoss remain unavailable.
+
+### Integration and current main
+
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no merge or main update occurred.
+- [PR #781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review / mergeable, exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`, **8/8 exact-head checks SUCCESS**. It defaults the live-access flag to false across the original/current-form workflows, removes job-level Supabase credentials, scopes them only to the gated capture step, gates every live step and artifact upload, and preserves existing schedules. It is still the first manual integration step.
+- [PR #837](https://github.com/MaksimBlud/football-ai/pull/837) remains Draft / OPEN, exact HEAD `212c6ce4030cd955e98cc40bada3dd32d7c54544`, **3/3 exact-head checks SUCCESS**. It is stacked on #834 and must not be merged directly to main.
+- The current Football-Data policy recheck files in #813 and #818 have identical Git blob SHAs; the rights/provenance branch #818 contains the November 10 fail-closed policy update. Do not separately duplicate that change.
+- The rights/provenance/evaluator stack #818–#826, #830–#835 and the forward chain #834→#837 remain separate from #781 until a human merge of #781 and a fresh-main restack. Their offline CI success does not authorize live source access or prove model quality.
+
+### Scientific and safety state
+
+Original `MARKET_ANCHOR_1X2_V2` remains unchanged: 19 features, original 20×2 weights, scaler/imputer and training fingerprint; `active_lambda=0`, `shadow_lambda=1`; stability gate FAILED; automatic promotion false. No model inference, refit, production `.pkl` change, paid request, Supabase write/DDL, source download, protected outcome read, bet or promotion occurred.
