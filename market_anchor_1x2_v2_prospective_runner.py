@@ -294,10 +294,6 @@ def evaluate_live_market_only_from_supabase(
     ) -> dict[tuple[str, str, str], str]:
         # This closure is passed only to the pure evaluator, which invokes it
         # after the frozen metadata-identity and eligible-forecast gates pass.
-        state["called"] = True
-        if outcome_read_state is not None:
-            outcome_read_state["called"] = True
-
         from datetime import date
 
         if (
@@ -340,6 +336,11 @@ def evaluate_live_market_only_from_supabase(
                 .in_("away_team", _raw_team_aliases(away))
                 .execute()
             )
+            # Mark an outcome read only after the exact result query returned.
+            # Validation failures before this point must not be reported as reads.
+            state["called"] = True
+            if outcome_read_state is not None:
+                outcome_read_state["called"] = True
             rows_for_fixture = getattr(response, "data", None)
             if not isinstance(rows_for_fixture, list) or not rows_for_fixture:
                 raise ValueError(f"no completed outcome row found for gated fixture {identity!r}")
