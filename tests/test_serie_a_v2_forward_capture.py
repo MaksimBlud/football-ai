@@ -1049,3 +1049,77 @@ def test_original_source_artifact_upload_requires_successful_complete_capture():
     assert "always()" not in upload_block
     assert "if-no-files-found: error" in upload_block
     assert 'cron: "13 6 * * *"' in workflow
+
+
+def test_original_forward_report_write_is_atomic_on_serialization_failure(tmp_path, monkeypatch):
+    target = tmp_path / "forward.json"
+    previous = '{"previous":true}\\n'
+    target.write_text(previous, encoding="utf-8")
+
+    def fail_after_partial_write(payload, stream, **_kwargs):
+        stream.write('{"partial":')
+        raise OSError("simulated serialization failure")
+
+    monkeypatch.setattr(forward_capture_module.json, "dump", fail_after_partial_write)
+    with pytest.raises(OSError, match="simulated serialization failure"):
+        forward_capture_module._write_json_atomically(target, {"new": True})
+
+    assert target.read_text(encoding="utf-8") == previous
+    assert list(tmp_path.glob(".forward.json.tmp-*")) == []
+
+
+def test_original_forward_report_write_publishes_complete_json(tmp_path):
+    target = tmp_path / "forward.json"
+    forward_capture_module._write_json_atomically(
+        target,
+        {"schema_version": "SERIE_A_ORIGINAL_V2_FORWARD_SOURCE_BEFORE_QUOTE_V1", "no_bet": True},
+    )
+
+    assert json.loads(target.read_text(encoding="utf-8")) == {
+        "schema_version": "SERIE_A_ORIGINAL_V2_FORWARD_SOURCE_BEFORE_QUOTE_V1",
+        "no_bet": True,
+    }
+    assert list(tmp_path.glob(".forward.json.tmp-*")) == []
+
+
+def test_original_forward_report_write_rejects_symlink_target(tmp_path):
+    target = tmp_path / "forward.json"
+    destination = tmp_path / "destination.json"
+    target.symlink_to(destination)
+
+    with pytest.raises(ValueError, match="cannot be a symlink"):
+        forward_capture_module._write_json_atomically(target, {"no_bet": True})
+
+    assert not destination.exists()
+
+
+def test_original_forward_artifact_upload_requires_successful_complete_capture():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    workflow = (root / ".github/workflows/serie-a-v2-forward-preview.yml").read_text(
+        encoding="utf-8"
+    )
+    lines = workflow.splitlines()
+    capture_name = "      - name: Generate actual original frozen V2 source-verified read-only preview"
+    upload_name = "      - name: Save immutable original V2 predictions and exact older source bytes"
+
+    capture_start = lines.index(capture_name)
+    capture_end = next(
+        (i for i in range(capture_start + 1, len(lines)) if lines[i].startswith("      - name: ") or lines[i].startswith("      - uses: ")),
+        len(lines),
+    )
+    capture_block = "\\n".join(lines[capture_start:capture_end])
+    assert "id: forward_capture" in capture_block
+    assert "serie_a_v2_forward_capture.py" in capture_block
+
+    upload_start = lines.index(upload_name)
+    upload_end = next(
+        (i for i in range(upload_start + 1, len(lines)) if lines[i].startswith("      - name: ") or lines[i].startswith("      - uses: ")),
+        len(lines),
+    )
+    upload_block = "\\n".join(lines[upload_start:upload_end])
+    assert "steps.forward_capture.outcome == 'success'" in upload_block
+    assert "always()" not in upload_block
+    assert "if-no-files-found: error" in upload_block
+    assert 'cron: "8 8 * * *"' in workflow
