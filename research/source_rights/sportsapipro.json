@@ -2,15 +2,14 @@
   "schema_version": "1.0",
   "provider": "SportsAPI Pro",
   "provider_domain": "sportsapipro.com",
-  "audit_date_utc": "2026-11-13",
+  "audit_date_utc": "2026-11-15",
   "decision": "HOLD",
   "decision_label": "CONDITIONAL FREE-TIER CANDIDATE — NOT APPROVED FOR ORIGINAL V2 INGESTION OR INFERENCE",
   "reason_codes": [
     "PRIVATE_RAW_ARCHIVE_NOT_AVAILABLE",
-    "UPSTREAM_OBSERVATION_TIMESTAMP_NOT_DOCUMENTED",
+    "FREE_PLAN_DURATION_CONFLICTING_PUBLIC_STATEMENTS",
     "RED_CARD_AND_SECOND_YELLOW_PARITY_UNVERIFIED",
-    "SERIE_A_2026_27_PER_MATCH_COVERAGE_NOT_VERIFIED",
-    "FREE_PLAN_DURATION_AMBIGUOUS"
+    "SERIE_A_2026_27_PER_MATCH_COVERAGE_NOT_VERIFIED"
   ],
   "source_documents": {
     "terms": "https://www.sportsapipro.com/terms",
@@ -19,7 +18,10 @@
     "football_v2_overview": "https://docs.sportsapipro.com/api-reference/football-v2/overview",
     "match_endpoints": "https://docs.sportsapipro.com/api-reference/football-v2/match",
     "stats_catalogue": "https://docs.sportsapipro.com/api-reference/football-v2/stats-catalogue",
-    "coverage": "https://docs.sportsapipro.com/api-reference/football-v2/coverage"
+    "coverage": "https://docs.sportsapipro.com/api-reference/football-v2/coverage",
+    "data_rights": "https://docs.sportsapipro.com/data-rights",
+    "refund_policy": "https://sportsapipro.com/refund",
+    "football_coverage": "https://docs.sportsapipro.com/api-reference/football-v2/coverage"
   },
   "free_plan": {
     "price_usd": 0,
@@ -29,8 +31,15 @@
     "all_competitions": true,
     "no_credit_card_required": true,
     "pricing_page_duration_text": "$0/1 Month",
-    "duration_status": "UNCONFIRMED",
-    "recurring_free_entitlement_confirmed": false
+    "duration_status": "CONFLICTING_PUBLIC_STATEMENTS",
+    "recurring_free_entitlement_confirmed": false,
+    "duration_evidence": {
+      "pricing_header": "$0/1 Month",
+      "pricing_comparison": "$0/mo",
+      "refund_policy": "Free plan 100 requests/day, no time limit",
+      "terms_apply_to_free_accounts": true,
+      "resolution": "WRITTEN_PROVIDER_CLARIFICATION_REQUIRED"
+    }
   },
   "terms": {
     "last_updated": "2026-09-01",
@@ -45,7 +54,8 @@
     "provenance_receipt_timestamps_and_hashes_permitted": true,
     "upstream_provider_names_disclosed": false,
     "data_accuracy_or_timeliness_guaranteed": false,
-    "legal_entity_identity_fully_disclosed": false
+    "legal_entity_identity_fully_disclosed": false,
+    "no_third_party_licenses_required": true
   },
   "coverage": {
     "serie_a_unique_tournament_id": 23,
@@ -63,7 +73,13 @@
     "incidents_endpoint_documents_yellow_and_red_card_events": true,
     "match_level_red_card_stat_key_documented": false,
     "second_yellow_mapping_documented": false,
-    "exact_original_source_semantics_verified": false
+    "exact_original_source_semantics_verified": false,
+    "free_plan_same_endpoints_and_competitions_confirmed": true,
+    "free_plan_all_competitions": true,
+    "free_plan_all_endpoints": true,
+    "match_statistics_live_or_after_full_time_only": true,
+    "match_statistics_available_pre_match": false,
+    "incidents_endpoint_documents_goals_yellow_and_red_cards": true
   },
   "frozen_candidate": {
     "experiment_id": "MARKET_ANCHOR_1X2_V2",
@@ -208,7 +224,10 @@
     "required_order": "private_source_capture_time_utc < quote_snapshot_time_utc < kickoff_utc",
     "require_exact_raw_response_bytes": true,
     "require_parent_workflow_run_id_and_commit_sha": true,
-    "require_source_archive_sha256": true
+    "require_source_archive_sha256": true,
+    "receipt_timestamp_and_sha_permitted_by_terms": true,
+    "local_receipt_time_can_prove_project_possession_before_quote": true,
+    "upstream_first_observation_timestamp_documented": false
   },
   "private_storage": {
     "private_archive_storage_required": true,
@@ -221,12 +240,14 @@
   "request_budget_estimate": {
     "project_finished_serie_a_fixture_metadata_count": 113,
     "assumed_calls_per_fixture_for_statistics_and_incidents": 2,
-    "fixture_detail_calls_lower_bound": 226,
+    "fixture_detail_calls_lower_bound": 339,
     "assumed_event_list_pages_at_30_fixtures_per_page": 4,
-    "estimated_total_calls_lower_bound": 230,
-    "minimum_days_at_100_requests_per_day": 3,
+    "estimated_total_calls_lower_bound": 343,
+    "minimum_days_at_100_requests_per_day": 4,
     "estimate_only": true,
-    "provider_api_calls_made": 0
+    "provider_api_calls_made": 0,
+    "assumed_calls_per_fixture_for_detail_statistics_incidents": 3,
+    "assumptions": "One match-detail/scores call, one statistics call, one incidents call per fixture, plus four list pages; planning only, not tested."
   },
   "project_authorization": {
     "account_creation_authorized": false,
