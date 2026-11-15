@@ -1,3 +1,60 @@
+## 2026-11-15 07:25 UTC — Original V2 source-artifact upload gate and fresh-main audit
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; the public repository has not integrated the current live-access hold or the newer rights/provenance stack.
+
+### New PR #836 — free diagnostic artifact integrity
+
+[PR #836](https://github.com/MaksimBlud/football-ai/pull/836), Draft / HUMAN-MERGE, exact HEAD `9b4e2cdeb19ec6d276bb65c9872a10465ac8890c`, base exact #826 HEAD `6d1b533e82afe4e708c6fa29f876d8048a1465f8`, 3 ahead / 0 behind.
+
+The free original-V2 diagnostic previously uploaded its report and ten historical CSVs under `always()` with missing files treated as warnings. A failed source/quote capture could therefore publish a partial bundle. #836 gives the capture step an ID, permits upload only after that exact step succeeds, changes missing-file handling to error, adds a static regression, and refreshes the forward attestor's source-workflow blob pin to `6ae4a883e65b39b032639939a75ff4f4f8dc861d`.
+
+Exact-head CI:
+- Frozen V2 Python 3.11: **520 passed**; production `*.pkl` diff guard passed.
+- Prospective evaluator offline validation: **213 passed**; production `*.pkl` diff guard passed.
+- Both jobs SUCCESS on `9b4e2cdeb19ec6d276bb65c9872a10465ac8890c`.
+- No live source/quote request, Supabase access/write/DDL, target-outcome read, paid provider request, inference, refit, promotion, or schedule change.
+
+### New PR #835 — outcome-read audit truthfulness
+
+[PR #835](https://github.com/MaksimBlud/football-ai/pull/835), Draft / HUMAN-MERGE, exact HEAD `125a3801366ce8a904d8e56da0ca05c6597e95c1`, base exact #826 HEAD `6d1b533e82afe4e708c6fa29f876d8048a1465f8). The `target_outcomes_read` audit flag now changes only after the exact per-fixture result query returns, not before gate validation. Exact-head CI: **215 evaluator tests** and **522 frozen-V2 tests**, both SUCCESS. These are synthetic tests; no protected outcomes were read.
+
+### Fresh pre-match-only Supabase audit
+
+Read-only `public.odds_snapshots` query selected only event/league and snapshot/kickoff timestamps and required `snapshot_time_utc < commence_time_utc`:
+- 3,915 strict pre-match quote rows; 327 unique events; 9 leagues.
+- First snapshot: 2026-08-15 12:23:35 UTC.
+- Latest snapshot: 2026-10-13 14:48:53 UTC.
+- 0 strict pre-match rows in the last seven days; 0 upcoming events with saved pre-match quotes.
+
+Read-only `public.product_prediction_snapshots` query selected only model SHA, generated time, kickoff and event identity:
+- Exact original V2 SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`: **0** strict pre-match prediction rows and **0** events.
+
+No result/settlement columns or protected 2026/27 outcomes were queried.
+
+### Fresh-main original V2 candidate and runtime
+
+Main candidate file blob `ac1303f6b096664983fbf52443bd0a381b23ba21`; embedded candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`. It contains exactly **19 features**, 20×2 weights (including the intercept row), 19 scaler/imputer entries, 3,799 training rows through 2026-06-30, `active_lambda=0`, `shadow_residual_lambda=1`, and `stability_gate_passed=false`.
+
+Latest observed main-branch V2 live runs remain on 2026-11-14:
+- Current-form source capture [43595368403](https://github.com/MaksimBlud/football-ai/actions/runs/43595368403).
+- Free real-quote diagnostic [43599723217](https://github.com/MaksimBlud/football-ai/actions/runs/43599723217).
+- Original forward preview [43607489246](https://github.com/MaksimBlud/football-ai/actions/runs/43607489246).
+- Current-form forward preview [43608273625](https://github.com/MaksimBlud/football-ai/actions/runs/43608273625).
+
+No newer V2 source/forward scheduled run was present in the first 300 Actions records checked on 2026-11-15 07:15 UTC. This is an observation, not proof that schedules are disabled. The existing main workflow files still contain the live schedules and the older unconditional artifact-upload path.
+
+### Required manual hold and integration state
+
+[PR #781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review / HUMAN-MERGE at exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`, with 8/8 exact-head CI SUCCESS. It is still the required workflow-level hold: main still has live V2 source/quote jobs and job-level Supabase credentials. Do not merge any downstream source/evaluator PR ahead of this hold and the refreshed rights/private-storage stack.
+
+The Football-Data policy restack #813 records automated source capture=false, inference=false, AI training=false, authorization=null, but it is not on main. The repository remains public. Provider clearance and private artifact storage remain blockers.
+
+#657, #659 and #660 are confirmed merged. #808, #829 and #833 are confirmed closed without merge as superseded. #830/#831/#834, #835 and #836 remain open and HUMAN-MERGE only.
+
+### Scientific state
+
+The original candidate, 19-feature order, weights, scaler/imputer, frozen cohort, and lambda semantics remain unchanged. The 30-primary-completed-event target-outcome gate remains CLOSED; eligible prospective forecasts are 0. No independent Brier/LogLoss comparison exists, so V2 superiority over the market is not established. `active_lambda=0` remains the market; `shadow_lambda=1` remains research-only. No protected 2026/27 outcomes were opened.
+
 ## 2026-11-15 05:08 UTC — Original V2 source artifact partial-publication guard (PR #833)
 
 A fresh review of the exact original source workflow on the #830/#831 rights-gated branch found one remaining artifact-integrity gap: `serie_a_v2_live_diagnostic_report.py` writes historical CSVs incrementally, while the workflow's final raw-source upload used `if: always()` and `if-no-files-found: warn`. If a later CSV request or report-generation step failed after earlier files had been written, the upload step could still publish a partial source artifact. Downstream ten-file/SHA attestation would reject it, but publishing incomplete public evidence is unnecessary.
