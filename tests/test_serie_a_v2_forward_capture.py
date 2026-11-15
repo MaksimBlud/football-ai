@@ -1036,7 +1036,7 @@ def test_original_source_artifact_upload_requires_successful_complete_capture():
         len(lines),
     )
     capture_block = "\\n".join(lines[capture_start:capture_end])
-    assert "        id: source_capture" in capture_block
+    assert "        id: capture_original_v2" in capture_block
     assert "serie_a_v2_live_diagnostic_report.py" in capture_block
 
     upload_start = lines.index(upload_name)
@@ -1045,8 +1045,9 @@ def test_original_source_artifact_upload_requires_successful_complete_capture():
         len(lines),
     )
     upload_block = "\\n".join(lines[upload_start:upload_end])
-    assert "steps.source_capture.outcome == 'success'" in upload_block
+    assert "steps.capture_original_v2.outcome == 'success'" in upload_block
     assert "always()" not in upload_block
+    assert "if-no-files-found: warn" not in upload_block
     assert "if-no-files-found: error" in upload_block
     assert 'cron: "13 6 * * *"' in workflow
 
@@ -1124,3 +1125,80 @@ def test_original_forward_artifact_upload_requires_successful_complete_capture()
     assert "if-no-files-found: error" in upload_block
     assert 'cron: "8 8 * * *"' in workflow
 
+
+
+def test_original_forward_cli_defers_supabase_quote_reader_until_source_preflight(monkeypatch, tmp_path):
+    """Exercise the actual CLI orchestration, not only the pure preflight helper."""
+    import sys
+    from types import ModuleType
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            value = cls(2026, 10, 14, 7, 0, tzinfo=timezone.utc)
+            return value if tz is None else value.astimezone(tz)
+
+    monkeypatch.setattr(forward_capture_module, "datetime", FrozenDateTime)
+    raw, metadata = make_source_archive()
+    metadata[0]["created_at"] = FrozenDateTime(2026, 10, 13, 15, 0, tzinfo=timezone.utc)
+    events = []
+
+    access_module = ModuleType("market_anchor_v2_direct_access")
+    access_module.require_v2_inference_access = lambda: events.append("rights")
+    monkeypatch.setitem(sys.modules, "market_anchor_v2_direct_access", access_module)
+
+    database_module = ModuleType("database")
+    database_module.supabase = object()
+    monkeypatch.setitem(sys.modules, "database", database_module)
+
+    monkeypatch.setenv("GITHUB_REPOSITORY", forward_capture_module.REPOSITORY)
+    monkeypatch.setenv("GITHUB_TOKEN", "synthetic-read-only-token")
+    monkeypatch.setattr(
+        forward_capture_module,
+        "discover_archives",
+        lambda token: events.append("discover") or metadata,
+    )
+    monkeypatch.setattr(
+        forward_capture_module,
+        "verify_source_run",
+        lambda archive, quote_time, token: events.append("parent")
+        or fake_verified_parent_run(archive, quote_time),
+    )
+    monkeypatch.setattr(
+        forward_capture_module,
+        "get_archive",
+        lambda artifact_id, token: events.append("archive") or raw,
+    )
+    monkeypatch.setattr(
+        forward_capture_module,
+        "fetch_saved_upcoming_serie_a_quotes",
+        lambda client, now: events.append("quotes") or [quote()],
+    )
+
+    output = tmp_path / "report.json"
+    sources = tmp_path / "sources"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "serie_a_v2_forward_capture.py",
+            "--output",
+            str(output),
+            "--sources-output-dir",
+            str(sources),
+        ],
+    )
+
+    forward_capture_module.main()
+
+    assert events[0] == "rights"
+    assert events.index("rights") < events.index("discover")
+    assert events.index("discover") < events.index("parent")
+    assert events.index("parent") < events.index("archive")
+    assert events.index("archive") < events.index("quotes")
+    assert events.count("quotes") == 1
+    report = json.loads(output.read_text(encoding="utf-8"))
+    assert report["source_preflight"]["verified"] is True
+    assert report["source_preflight"]["quotes_read_after_source_preflight"] is True
+    assert report["v2_diagnostic_previews_captured"] == 1
+    assert len(list(sources.glob("source_artifact_*.zip"))) == 1

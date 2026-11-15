@@ -100,7 +100,13 @@ on:
       - research/v2-direct-github-json-rights-gates-restacked-on-824-20261114-run11
       - research/v2-pin-source-workflow-yaml-sha-restacked-on-825-20261114-run11
       - research/v2-original-forward-atomic-source-preflight-restacked-on-826-20261115-run11
+      - research/v2-forward-chain-includes-diagnostic-upload-gate-on-834-20261115-run11
     paths:
+      - "market_anchor_1x2_v2_*.py"
+      - "market_anchor_v2_*.py"
+      - "tests/test_market_anchor_1x2_v2_*.py"
+      - "tests/test_market_anchor_v2_*.py"
+      - ".github/workflows/market-anchor-1x2-v2-prospective-evaluation.yml"
       - "market_anchor_v2_direct_access.py"
       - "serie_a_v2_asof_feature_manifest.py"
       - "serie_a_v2_attest_real_source.py"
@@ -108,6 +114,8 @@ on:
       - "serie_a_v2_current_form_source_capture.py"
       - "tests/test_serie_a_v2_current_form_source_capture.py"
       - "serie_a_v2_forward_capture.py"
+      - "tests/test_serie_a_v2_forward_capture.py"
+      - ".github/workflows/market-anchor-1x2-v2-prospective-evaluation-validation.yml"
       - "serie_a_v2_live_diagnostic_report.py"
       - "serie_a_v2_prequote_source_archive_gate.py"
       - "tests/test_market_anchor_v2_direct_access.py"
