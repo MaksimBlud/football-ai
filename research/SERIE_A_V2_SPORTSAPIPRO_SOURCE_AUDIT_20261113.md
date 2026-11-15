@@ -52,7 +52,7 @@ and retain the raw bytes, SHA-256, API version, fixture identity, parent workflo
 
 ## Privacy and free-tier request budget
 
-The Terms permit indefinite internal retention but prohibit publishing or bulk-sharing raw responses. This repository is public, so public GitHub Actions artifacts or committed raw payloads are not acceptable. A verified private archive is a prerequisite. The project storage inventory was not inspected, so this audit does not claim that no private bucket exists. No private archive has been verified or authorized for this workflow. Supabase writes/DDL are not authorized and were not attempted.
+The Terms permit indefinite internal retention but prohibit publishing or bulk-sharing raw responses. This repository is public, so public GitHub Actions artifacts or committed raw payloads are not acceptable. A verified private archive is a prerequisite. A read-only Supabase Storage metadata inventory on 2026-11-15 found one existing private bucket, `model-artifacts` (`public=false`). This proves that a private bucket exists, but not that it is approved or configured for raw SportsAPI response archives: its declared purpose is model artifacts, no object listing/content was inspected, and no source-archive write or DDL was authorized. The current V2 privacy gate still checks GitHub repository privacy, while this repository is public. Therefore private raw-source storage remains unverified and unauthorized. Supabase writes/DDL were not attempted.
 
 The project currently has 113 Serie A 2026/27 finished-fixture metadata rows (date and team identifiers only; no scores/results selected in this audit). A conservative lower-bound plan would need one match-statistics request and one incidents request per fixture, plus approximately four 30-fixture season-event pages: about 230 calls. At 100 requests/day that is at least three days if the quota is dedicated to this task. This is a planning estimate, not an API test; no requests were made. Incremental collection might reduce later daily usage, but only after rights, privacy, coverage and card semantics are cleared.
 
@@ -119,3 +119,7 @@ The latest read-only Supabase metadata query counted 113 unique completed Serie 
 ### Decision
 
 **HOLD remains.** The updated public Terms materially improve the documented rights position for internal ML and private raw retention, and the documentation covers the required corners/yellow-card fields plus card incidents. But unverified Serie A 2026/27 payload completeness, red/second-yellow parity, the absence of an authorized private archive, and the provider's no-guarantee accuracy/timeliness clause still prevent ingestion or inference. The original V2 candidate, 19-feature order, weights, scaler/imputer, lambdas, and 30-event outcome gate are unchanged.
+
+## Read-only private-storage inventory — 2026-11-15
+
+A read-only query of `storage.buckets` returned exactly one bucket: `model-artifacts`, with `public=false`. No storage objects or payloads were inspected. The bucket name/purpose does not establish approval for raw provider archives, and no Supabase write, upload, policy change, or DDL is authorized. The existing V2 privacy helper still requires a private GitHub repository; the project repository remains public. This is a useful infrastructure lead, not a cleared storage destination. The source audit remains **HOLD**.
