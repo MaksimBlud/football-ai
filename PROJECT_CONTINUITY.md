@@ -11206,7 +11206,7 @@ Original candidate remains blob `ac1303f6b096664983fbf52443bd0a381b23ba21`, SHA-
 ### New provider audit and exact CI
 
 - Updated existing [PR #806](https://github.com/MaksimBlud/football-ai/pull/806), still Draft / HUMAN-MERGE, with a fresh official-documentation recheck; no second provider PR was created.
-- Exact HEAD: `c10938e8152146ea1ef54f5482d1be002198591f`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- Exact HEAD: `ebfaa71cc1ad526826a23df68b087d58c317987e`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
 - Exact-head CI: **7/7 SUCCESS**, including targeted research tests, shadow tests, validation, Serie A, Bundesliga, Ligue 1 and product-contract checks.
 - Current SportsAPI Pro Terms apply to Free accounts, permit internal modelling/ML/backtesting, indefinite private retention of raw responses, and retention of receipt timestamps and customer-generated hashes. They state no separate upstream licence is required for intended use. Raw payload publication/bulk sharing remains prohibited.
 - Free-plan duration is documented as ongoing: the pricing page says all plans auto-renew every billing period and lists Free as `$0/1 Month` / `$0/mo`; the Refund page explicitly says Free has 100 requests/day and no time limit; Terms apply to Free accounts. The earlier duration ambiguity is resolved by these public pages. No account, API key or request has been authorized.
