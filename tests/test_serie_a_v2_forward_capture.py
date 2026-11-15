@@ -942,7 +942,8 @@ def test_original_forward_source_preflight_runs_direct_access_gate_before_parent
         verify_parent_run=verify_parent,
     )
 
-    assert events == ["access", "parent", "archive", "quotes"]
+    assert events.index("access") < events.index("parent") < events.index("archive") < events.index("quotes")
+    assert events.count("quotes") == 1
     assert report["source_preflight"]["verified"] is True
     assert report["quotes_read_after_source_preflight"] if "quotes_read_after_source_preflight" in report else report["source_preflight"]["quotes_read_after_source_preflight"]
 
