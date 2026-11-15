@@ -27,6 +27,8 @@ on:
       - research/v2-core-inference-and-refit-freeze-rebased-on-785-20261111-run11
       - research/v2-pin-source-workflow-yaml-sha-restacked-on-825-20261114-run11
       - research/v2-original-forward-atomic-source-preflight-restacked-on-826-20261115-run11
+      - research/v2-pin-prospective-evaluator-actions-restacked-on-830-20261115-run11
+      - research/v2-atomic-original-source-publication-on-831-20261115-run11
     paths:
       - "PROJECT_CONTINUITY.md"
       - "tests/test_serie_a_v2_dependency_lock_contract.py"
