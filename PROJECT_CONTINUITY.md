@@ -1,3 +1,52 @@
+## 2026-11-15 18:54 UTC — original-forward order audit and core V2 CI pin
+
+Fresh main is still `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main mutation was made.
+
+### Original forward source-before-quote finding
+
+A direct read of main `serie_a_v2_forward_capture.py` (blob `5db02cbd1367ed25b994b152acf371421859a014`) shows that `main()` currently calls `fetch_saved_upcoming_serie_a_quotes(...)` at line 278 before `discover_archives(...)` at line 279 and before `prepare_forward_capture(...)` verifies source/parent provenance. Therefore the live main runner still reads saved quote metadata before it has authenticated a prior source archive. This is a concrete ordering defect, even if later per-row admission blocks the quote from scoring.
+
+The exact #837 head `e34452e80c59a8c691e07a71d7bb0195e1adc6ef` fixes the call order: it enforces the direct V2 rights gate, discovers source archives, and passes a deferred `fetch_quotes` callback to `capture_forward_with_source_preflight`. The callback only initializes the Supabase client and reads saved quotes after source archive bytes, parent run, SHA, and source-before-quote checks succeed. The output report is atomically written. Exact-head CI remains green:
+- [#43728038441](https://github.com/MaksimBlud/football-ai/actions/runs/43728038441): Python 3.11 and 3.12, **543 tests each**, both SUCCESS; production `.pkl` diff guards passed.
+- [#43728038434](https://github.com/MaksimBlud/football-ai/actions/runs/43728038434): **216** offline prospective-evaluator validation tests, SUCCESS; production `.pkl` diff guard passed.
+
+#837 is still Draft/stacked and not active on main. Do not claim the main ordering defect is fixed until its complete parent chain is manually integrated and fresh-main runtime is re-audited.
+
+### Duplicate evaluator audit PR consolidated
+
+Compared exact blobs at #835 head `125a3801366ce8a904d8e56da0ca05c6597e95c1` and #837 head above:
+- `market_anchor_1x2_v2_prospective_runner.py`: identical blob `c537b9352d1ffc9a4882d17c7362b8198471592a`.
+- `tests/test_market_anchor_1x2_v2_prospective_runner.py`: identical blob `c81d5bfccccdae52400ccea3cc1869e09883ddc1`.
+
+#837 already carries the exact #835 outcome-read audit code and regression tests. #835 was closed as superseded without merge; its changes remain present in #837.
+
+### New core original V2 CI hardening PR
+
+Added [PR #842](https://github.com/MaksimBlud/football-ai/pull/842), directly based on main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, exact head `0e14a8d490c72e95820d82453fa0746d5479001f`. It pins the remaining pull-request-only `Market Anchor 1X2 V2 Shadow Validation` workflow to official immutable checkout/setup-python commit SHAs and adds an offline regression test rejecting floating tags. The official refs were re-fetched from canonical Actions repositories and both commit signatures verified.
+
+Exact-head CI for #842: **7/7 SUCCESS**. The core V2 shadow workflow [#43749275368](https://github.com/MaksimBlud/football-ai/actions/runs/43749275368) ran the existing frozen V2 contract tests plus the new action-pin test: **11 passed**, production `.pkl` diff guard passed. The six other repository validation workflows also completed SUCCESS on the same exact head. PR remains Draft/HUMAN-MERGE only.
+
+[PR #841](https://github.com/MaksimBlud/football-ai/pull/841) remains Draft on #828 with exact head `c0fdf9f7524acfae1fc8bceb8f34b26a36c4b696`; its offline V2 workflow [#43744325947](https://github.com/MaksimBlud/football-ai/actions/runs/43744325947) completed SUCCESS with **107 tests passed** and production `.pkl` diff guard passed.
+
+### Current pre-match-only Supabase metadata
+
+Read-only SQL selected only event identity and timestamp/metadata fields; no score, result, settlement, or target-outcome columns were selected:
+- All leagues, strict `snapshot_time_utc < commence_time_utc`: **3,915** odds rows / **327** events; latest `2026-10-13 14:48:53.04262+00` UTC; upcoming strict-pre-match rows/events **0 / 0**.
+- `public.league_finished_results`, Serie A 2026-2027, selecting only `match_date, home_team, away_team`: **113** unique identities through 2026-11-08. This is the lagged feature-input identity set, not the separate outcome-evaluation gate.
+- Exact-candidate pre-kickoff `product_prediction_snapshots`: **0** rows / **0** events for SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Prospective evaluation gate remains **0/30**. No protected 2026/27 outcomes were read.
+
+The last current-form source artifact still attests 110 identities versus the 113 current metadata identities. #840 adds exact identity-set/freshness comparison and fail-closed quote-read prevention; this is not active on main yet.
+
+### Integration status
+
+- [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN/Ready for review, exact head `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`, 8/8 checks SUCCESS. Its default-deny live-access hold is not active on main until HUMAN-MERGE and fresh-main proof.
+- #827 → #828 → #841 remain the immutable-action stack; #837 carries the original source-before-quote/atomic forward chain and #840 the current-form exact-gate path.
+- #842 is a separate direct-main, offline-only core workflow hardening PR. No PR was merged and no main branch was changed.
+
+Candidate remains frozen SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 features, 20x2 weights, 3,799 training rows, `active_lambda=0`, `shadow_lambda=1`, stability gate FAILED. No refit, threshold tuning, production artifact change, paid request, Supabase write/DDL, target-outcome read, bet, or promotion occurred.
+ 
+
 ## 2026-11-15 18:02 UTC — remaining V2 source-workflow action pins
 
 Added [PR #841](https://github.com/MaksimBlud/football-ai/pull/841) as a narrow Draft child of #828 (base SHA `d58120f64a4ee833096ae58dd0d753f32e499853`). Exact head: `c0fdf9f7524acfae1fc8bceb8f34b26a36c4b696`; 4 commits ahead / 0 behind; 4 files changed. It pins checkout, setup-python and upload-artifact in the current-form source-capture and free diagnostic workflows, and pins checkout/setup-python in the offline frozen V2 regression workflow itself. It adds static assertions for these exact immutable refs and registers the child branch in the existing offline test workflow's push filter.
