@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - research/v2-current-form-forward-offline-push-validation-restacked-on-819-20261114-run11
+      - research/v2-market-only-evaluator-restacked-on-820-20261114-run11
     paths:
       - "requirements-v2-research-py312.lock"
       - "market_anchor_1x2_v2_*.py"
@@ -25,6 +26,7 @@ on:
   push:
     branches:
       - research/v2-market-only-evaluator-restacked-on-820-20261114-run11
+      - research/v2-market-only-outcome-read-audit-fix-restacked-on-821-20261115-run11
     paths:
       - "requirements-v2-research-py312.lock"
       - "market_anchor_1x2_v2_*.py"
