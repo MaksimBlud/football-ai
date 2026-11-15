@@ -54,8 +54,10 @@ def test_free_rights_do_not_override_private_storage_and_provenance_gates():
     assert manifest["free_plan"]["requests_per_minute"] == 10
     assert manifest["free_plan"]["all_endpoints"] is True
     assert manifest["free_plan"]["all_competitions"] is True
-    assert manifest["free_plan"]["duration_status"] == "CONFLICTING_PUBLIC_STATEMENTS"
-    assert manifest["free_plan"]["duration_evidence"]["resolution"] == "WRITTEN_PROVIDER_CLARIFICATION_REQUIRED"
+    assert manifest["free_plan"]["duration_status"] == "PUBLICLY_DOCUMENTED_NO_TIME_LIMIT"
+    assert manifest["free_plan"]["recurring_free_entitlement_confirmed"] is True
+    assert manifest["free_plan"]["duration_evidence"]["pricing_auto_renews_every_billing_period"] is True
+    assert manifest["free_plan"]["duration_evidence"]["resolution"] == "PUBLIC_DOCUMENTATION_SUPPORTS_RECURRING_FREE_PLAN"
 
     assert manifest["terms"]["applies_to_free_accounts"] is True
     assert manifest["terms"]["internal_modeling_machine_learning_backtesting_permitted"] is True
