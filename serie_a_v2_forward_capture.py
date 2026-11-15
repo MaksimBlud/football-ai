@@ -603,9 +603,9 @@ def _write_json_atomically(path: Path, payload: dict) -> None:
         dir=target.parent,
     )
     try:
-        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\\n") as stream:
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="") as stream:
             json.dump(payload, stream, ensure_ascii=False, indent=2, sort_keys=True)
-            stream.write("\\n")
+            stream.write("\n")
             stream.flush()
             os.fsync(stream.fileno())
         # The temporary file is in the destination directory, so replacement
