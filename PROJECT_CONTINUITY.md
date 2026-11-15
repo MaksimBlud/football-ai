@@ -6192,3 +6192,21 @@ A second source-capture path also ran on the unchanged main SHA `40887ebb2157301
 - No quote/source pair was observed; `quotes_with_source_observed_after_quote=0` is not a source-before-quote proof when `quoted_fixtures=0`.
 - Raw CSV bytes were uploaded to public-repository Actions artifact ID `14164502813`, 425,069 bytes, ZIP SHA-256 `e16d5f4b235ba4dcd0a10b7637358abef59ac9506f0a7ef1a568a75663d7da49`. The audit read only logs and artifact metadata; it did not download artifact bytes.
 - The Football-Data policy manifest in #813 remains fail-closed for automated source capture/inference, and the repository is public. This workflow must remain held until provider clearance and private storage are independently verified. The new evidence was added to the discussion of #781; its hold patch covers this workflow and gates raw artifact upload without changing the existing schedule.
+
+## 2026-11-15 — Original forward/evaluator chain exact-head regression proof
+
+The original-forward chain was extended without touching the frozen candidate or main:
+
+- [PR #837](https://github.com/MaksimBlud/football-ai/pull/837) now has exact HEAD `e34452e80c59a8c691e07a71d7bb0195e1adc6ef`, based on #834 (which is based on #830/#826). It carries original source-before-quote preflight, atomic source/report publication, and success-only source artifact upload.
+- The exact lazy outcome-read audit from #835 is included: the read-state flag becomes true only after the exact outcome query returns. This improves audit truthfulness; it does not open the protected outcome gate or change its 30-event requirement.
+- The immutable checkout/setup-python/upload-artifact commit pins and regression test from #831 are included in the prospective evaluator workflow. #831 was closed as superseded by #837 after the combined exact-head CI passed.
+- The frozen shadow workflow push path filter now covers prospective evaluator modules, tests and workflow changes, so these changes trigger the two-runtime suite.
+
+Exact-head CI for #837: **3/3 SUCCESS**:
+- shadow-tests: **543 passed** on Python 3.11; production model hash guard PASS;
+- py312-lock-tests: **543 passed** on Python 3.12; production model hash guard PASS;
+- validate-offline-only: **216 passed**; production pickle guard PASS.
+
+#837 remains Draft / HUMAN-MERGE because its base is #834, not main. No merge, main update, schedule change, paid request, Supabase write/DDL, protected target-outcome read, inference, refit, production artifact change, bet or promotion occurred.
+
+The separate current-form forward restack [PR #840](https://github.com/MaksimBlud/football-ai/pull/840) remains Draft on #835 at HEAD `d7a2ff28723b6ca6c762435302170d32c10b918f`; exact CI passed 530 tests on both Python 3.11 and 3.12 with production pickle guards. It is not yet integrated into #837 or main.
