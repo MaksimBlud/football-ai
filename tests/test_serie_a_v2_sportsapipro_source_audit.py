@@ -79,5 +79,7 @@ def test_free_rights_do_not_override_private_storage_and_provenance_gates():
     assert manifest["coverage"]["match_statistics_available_pre_match"] is False
     assert manifest["coverage"]["match_statistics_keys"] == ["cornerKicks", "yellowCards"]
     assert manifest["coverage"]["incidents_endpoint_documents_goals_yellow_and_red_cards"] is True
+    assert manifest["request_budget_estimate"]["estimated_total_calls_lower_bound"] == 230
+    assert manifest["request_budget_estimate"]["minimum_days_at_100_requests_per_day"] == 3
     assert manifest["coverage"]["current_2026_27_match_statistics_completeness_verified"] is False
     assert manifest["project_authorization"]["api_requests_authorized"] is False
