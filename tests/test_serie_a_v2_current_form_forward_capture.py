@@ -1621,8 +1621,9 @@ def _patch_current_form_cli_clock(monkeypatch):
     class FixedDateTime(datetime):
         @classmethod
         def now(cls, tz=None):
-            fixed = datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc)
-            return fixed if tz is None else fixed.astimezone(tz)
+            if tz is None:
+                return cls(2026, 10, 19, 5, 40)
+            return cls(2026, 10, 19, 5, 40, tzinfo=tz)
 
     monkeypatch.setattr(forward_capture_module, "datetime", FixedDateTime)
 
