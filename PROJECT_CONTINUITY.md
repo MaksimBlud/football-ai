@@ -11125,7 +11125,14 @@ Candidates checked without downloading match data or invoking an API:
 3. **Cornerflick** — its data page says CC BY 4.0 applies to its compilation, while underlying match facts remain subject to upstream providers' terms. Its Terms, updated 2026-11-09, prohibit scraping, harvesting, or bulk downloads except as permitted by law and describe a personal non-commercial access licence. Not approved for automated source capture.
 4. **open-matchday** — its own terms describe a non-commercial compilation and explicitly preserve upstream provider rights; its source mix includes Football-Data.co.uk. Not cleared for this AI inference/source-capture use.
 
-No candidate currently satisfies all three requirements simultaneously: (a) adequate coverage of all 19 frozen inputs and current 2026/27 form, (b) explicit rights for the intended automated capture and frozen inference, and (c) durable source bytes captured strictly before each later quote. Do not add a source adapter, download, or inference path on the basis of public URL availability alone.
+None of the candidates checked satisfies all three requirements simultaneously: (a) adequate coverage of all 19 frozen inputs and current 2026/27 form, (b) explicit rights for the intended automated capture and frozen inference, and (c) durable source bytes captured strictly before each later quote. Do not add a source adapter, download, or inference path on the basis of public URL availability alone.
+
+Sources reviewed (public metadata/pages only; no match-data downloads):
+- Football-Data policy: https://football-data.co.uk/data (page states Updated 10/11/26 and excludes commercial/data-training products using automated bots, scrapers, or AI).
+- OpenFootball public-domain results/fixtures: https://github.com/openfootball/football.json and https://openfootball.github.io/.
+- StatsBomb Open Data README and exact published competition/season index: https://github.com/hudl/open-data and https://raw.githubusercontent.com/statsbomb/open-data/master/data/competitions.json.
+- Cornerflick data licence and upstream-rights caveat: https://cornerflick.com/data; terms updated 2026-11-09: https://cornerflick.com/terms.
+- open-matchday compilation, non-commercial restriction, and upstream-provider caveat: https://github.com/oladeeayo/open-matchday.
 
 ### Current exact-head PR and CI evidence
 
