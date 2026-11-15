@@ -52,6 +52,7 @@ on:
       - "serie_a_v2_current_form_forward_capture.py"
       - "serie_a_v2_forward_capture.py"
       - "tests/test_serie_a_v2_forward_capture.py"
+      - ".github/workflows/serie-a-frozen-v2-shadow-tests.yml"
       - "serie_a_runtime_config.py"
       - "experiments/market_anchor_1x2_v2_prospective_selection_policy.json"
       - "research/MARKET_ANCHOR_1X2_V2_PROSPECTIVE_EVALUATOR.md"
