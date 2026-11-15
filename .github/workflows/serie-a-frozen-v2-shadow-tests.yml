@@ -37,6 +37,7 @@ on:
   push:
     branches:
       - research/v2-pin-forward-actions-restacked-on-781-20261114-run11
+      - research/v2-pin-recovery-actions-restacked-on-827-20261114-run11
 
 permissions:
   contents: read

@@ -594,3 +594,21 @@ def test_original_forward_workflows_pin_actions_to_verified_immutable_commits():
         assert "actions/checkout@v4" not in source
         assert "actions/setup-python@v5" not in source
         assert "actions/upload-artifact@v4" not in source
+
+
+def test_candidate_recovery_workflow_pins_actions_to_verified_immutable_commits():
+    """The gated original-candidate recovery workflow must not float action tags."""
+    path = ".github/workflows/recover-market-anchor-v2-candidate.yml"
+    source = _workflow(path)
+    expected = {
+        "actions/checkout@11d5960a326750d5838078e36cf38b85af677262": 1,
+        "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065": 1,
+        "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02": 1,
+    }
+    for immutable_ref, count in expected.items():
+        assert source.count(immutable_ref) == count, (
+            f"{path}: expected {count} uses of {immutable_ref}"
+        )
+    assert "actions/checkout@v4" not in source
+    assert "actions/setup-python@v5" not in source
+    assert "actions/upload-artifact@v4" not in source
