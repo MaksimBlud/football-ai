@@ -193,7 +193,7 @@ jobs:
             --output artifacts/serie_a_v2_current_form_forward_preview.json \
             --sources-output-dir artifacts/serie_a_v2_current_form_sources_used
       - name: Archive pre-kickoff V2 shadow and exact source ZIPs
-        if: ${{ always() && steps.rights_preflight.outputs.allowed == 'true' }}
+        if: ${{ success() && steps.rights_preflight.outputs.allowed == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: serie-a-v2-current-form-forward-preview
