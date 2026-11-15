@@ -1,3 +1,32 @@
+## 2026-11-15 19:04 UTC — current-form gate consolidated onto original forward chain
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main mutation occurred.
+
+### New integrated child PR #843
+
+[PR #843](https://github.com/MaksimBlud/football-ai/pull/843) now carries the exact current-form forward implementation from #840 on top of the original-forward/evaluator chain #837, rather than depending on the now-closed #835 branch.
+
+- Base #837 exact SHA: `659a15b6d5958d0cc74f08a9b7ef50279684bee3`.
+- Exact HEAD: `725d1c987a9bca1a936008a81dc8458a09791eac`.
+- 3 files changed: current-form forward runner, its tests, and the merged frozen V2 workflow.
+- The workflow is the #837 version with the #843 pull-request/push branch triggers and current-form forward test path included.
+- Current-form implementation and test are byte-identical to #840 blobs `12998651ed5a628a891c3e5354d38063821603cb` and `a1a0a8200700d9d5fe733a3bfcc8388aa517c313`.
+
+Exact CI [#43750160905](https://github.com/MaksimBlud/football-ai/actions/runs/43750160905): **552 tests passed on Python 3.11 and 552 passed on Python 3.12**; both production `.pkl` diff guards passed. Offline-only; no live data or Supabase access.
+
+#840 was closed as superseded without merge after exact blob comparison and successful #843 CI. No code was discarded. #843 remains Draft/HUMAN-MERGE and mergeable; do not merge before #837 and its parent chain.
+
+### Consolidated original-forward chain status
+
+- [#837](https://github.com/MaksimBlud/football-ai/pull/837): exact HEAD `659a15b6d5958d0cc74f08a9b7ef50279684bee3`, 544 PASS on Python 3.11 and 544 PASS on Python 3.12, plus 216 prospective-evaluator offline checks; 3/3 SUCCESS. Includes the actual CLI source-before-quote regression and #835 outcome-read audit.
+- [#843](https://github.com/MaksimBlud/football-ai/pull/843): exact current-form source-first child, 552 PASS on both Python versions.
+- [#842](https://github.com/MaksimBlud/football-ai/pull/842): core original V2 shadow workflow action pins, direct-main PR, 7/7 SUCCESS, Ready for review.
+- [#839](https://github.com/MaksimBlud/football-ai/pull/839): this documentation checkpoint; its prior exact HEAD `58222ae6c90b662fab94803c45afdeee8c0f2f5f` passed 7/7. This update requires fresh exact-head CI before it can be called green.
+- [#781](https://github.com/MaksimBlud/football-ai/pull/781): interim live-access hold, exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`, 8/8 SUCCESS, Ready for review; still not merged and not active on main.
+
+The original main quote-first ordering defect remains until #781 is manually integrated and #837's full parent chain is reviewed/integrated. No live inference, target-outcome read, provider request, Supabase write/DDL, model refit, production `.pkl` change, bet, or promotion occurred.
+ 
+
 ## 2026-11-15 19:01 UTC — original CLI source-before-quote regression green
 
 Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main change occurred.
