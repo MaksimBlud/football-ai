@@ -54,12 +54,17 @@ def test_free_rights_do_not_override_private_storage_and_provenance_gates():
     assert manifest["free_plan"]["requests_per_minute"] == 10
     assert manifest["free_plan"]["all_endpoints"] is True
     assert manifest["free_plan"]["all_competitions"] is True
-    assert manifest["free_plan"]["duration_status"] == "UNCONFIRMED"
+    assert manifest["free_plan"]["duration_status"] == "CONFLICTING_PUBLIC_STATEMENTS"
+    assert manifest["free_plan"]["duration_evidence"]["resolution"] == "WRITTEN_PROVIDER_CLARIFICATION_REQUIRED"
 
     assert manifest["terms"]["applies_to_free_accounts"] is True
     assert manifest["terms"]["internal_modeling_machine_learning_backtesting_permitted"] is True
     assert manifest["terms"]["raw_response_private_internal_retention_permitted"] is True
     assert manifest["terms"]["raw_response_publication_or_bulk_redistribution_permitted"] is False
+    assert manifest["terms"]["no_third_party_licenses_required"] is True
+    assert manifest["terms"]["provenance_receipt_timestamps_and_hashes_permitted"] is True
+    assert manifest["provenance"]["receipt_timestamp_and_sha_permitted_by_terms"] is True
+    assert manifest["provenance"]["local_receipt_time_can_prove_project_possession_before_quote"] is True
 
     assert manifest["provenance"]["per_field_upstream_observation_timestamp_documented"] is False
     assert manifest["provenance"]["source_before_quote_approved"] is False
@@ -69,5 +74,10 @@ def test_free_rights_do_not_override_private_storage_and_provenance_gates():
     assert manifest["private_storage"]["storage_inventory_checked"] is False
     assert manifest["private_storage"]["public_github_raw_artifact_allowed"] is False
     assert manifest["coverage"]["second_yellow_mapping_documented"] is False
+    assert manifest["coverage"]["free_plan_same_endpoints_and_competitions_confirmed"] is True
+    assert manifest["coverage"]["match_statistics_live_or_after_full_time_only"] is True
+    assert manifest["coverage"]["match_statistics_available_pre_match"] is False
+    assert manifest["coverage"]["match_statistics_keys"] == ["cornerKicks", "yellowCards"]
+    assert manifest["coverage"]["incidents_endpoint_documents_goals_yellow_and_red_cards"] is True
     assert manifest["coverage"]["current_2026_27_match_statistics_completeness_verified"] is False
     assert manifest["project_authorization"]["api_requests_authorized"] is False
