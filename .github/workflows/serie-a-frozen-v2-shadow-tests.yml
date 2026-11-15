@@ -100,6 +100,7 @@ on:
       - research/v2-direct-github-json-rights-gates-restacked-on-824-20261114-run11
       - research/v2-pin-source-workflow-yaml-sha-restacked-on-825-20261114-run11
       - research/v2-original-forward-atomic-source-preflight-restacked-on-826-20261115-run11
+      - research/v2-forward-chain-includes-diagnostic-upload-gate-on-834-20261115-run11
     paths:
       - "market_anchor_v2_direct_access.py"
       - "serie_a_v2_asof_feature_manifest.py"
