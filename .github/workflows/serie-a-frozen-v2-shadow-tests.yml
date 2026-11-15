@@ -110,6 +110,7 @@ on:
       - "tests/test_serie_a_v2_current_form_source_capture.py"
       - "serie_a_v2_forward_capture.py"
       - "tests/test_serie_a_v2_forward_capture.py"
+      - ".github/workflows/market-anchor-1x2-v2-prospective-evaluation-validation.yml"
       - "serie_a_v2_live_diagnostic_report.py"
       - "serie_a_v2_prequote_source_archive_gate.py"
       - "tests/test_market_anchor_v2_direct_access.py"
