@@ -34,6 +34,10 @@ on:
       - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
       - ".github/workflows/serie-a-frozen-v2-shadow-tests.yml"
 
+  push:
+    branches:
+      - research/v2-pin-forward-actions-restacked-on-781-20261114-run11
+
 permissions:
   contents: read
 
