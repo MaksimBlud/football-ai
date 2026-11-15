@@ -298,3 +298,53 @@ The original candidate's Football-Data training provenance is a separate unresol
 The next permissible step is written provider clarification and a separately approved private-storage design—not an API key, endpoint probe, or data request. No API key, request, download, odds access, Supabase access/write, source capture, feature build, inference, target-outcome read, refit, threshold change, production artifact change, or schedule change was performed.
 
 The original candidate SHA, ordered 19-feature contract, weights, scaler/imputer, training fingerprint, `active_lambda=0`, `shadow_lambda=1`, NO_BET and the 30-primary-completed-forecast outcome gate remain unchanged.
+
+
+## 12. Current OpenAPI and plan recheck — 2026-11-15 01:56 UTC
+
+This recheck read only the provider's public Terms, pricing page, Serie A page, licence notices and OpenAPI document. The OpenAPI currently advertises supported contract versions `2026-09-01` and `2026-11-09`. No account/key was created, no endpoint was called, and no match payload or source archive was accessed.
+
+### More precise endpoint evidence
+
+The current OpenAPI describes `GET /v1/matches/{id}/statistics` as a post-match team-stat endpoint:
+
+- `x-bbs-min-plan: free`;
+- factual box-score fields are available on Free;
+- `expected_goals` is absent below Solo;
+- data is persisted hourly in `fixture_statistics`;
+- the endpoint is stored-only and does not fetch upstream on request;
+- the provider says the upstream feed generally posts within about 30 minutes after full time for covered leagues;
+- when statistics are not yet present, the endpoint returns `meta.available=false` and null home/away sides.
+
+The current `FixtureTeamStatistics` schema explicitly includes nullable integer `corner_kicks`, `yellow_cards` and `red_cards`. It also states that all stat fields can be null where a league does not track a metric. Missing/null values must remain missing; they must never be converted to zero. Goals and points remain derived from the match score/linescore under the existing frozen builder's rules.
+
+This is stronger structural evidence than the earlier generic field list. It is still not a measured 2026/27 Serie A field-completeness result.
+
+### The plan conflict remains unresolved
+
+The general pricing page currently says Free is one selected sport at a time and includes the current plus most-recent season, with 1,000 requests/day (2,000 with GitHub) and 100 requests/minute. The Serie A-specific page still says Free covers only the current season, while Solo/Trio reach five seasons and Edge/Pro reach the full archive. The Serie A plan matrix/FAQ and the OpenAPI Free entitlement for the team-stat endpoint also remain inconsistent.
+
+Therefore the general pricing page does not prove that a Free Serie A key can retrieve every required historical row or every required team-stat field. No paid tier is considered.
+
+Official references:
+- Current pricing: https://bigballsdata.com/pricing
+- Serie A coverage and plan page: https://bigballsdata.com/serie-a-api
+- Current OpenAPI: https://bigballsdata.com/openapi.json
+
+### Refined source-before-quote interpretation
+
+The stored-only endpoint makes a local immutable capture timestamp useful evidence: if the exact raw response bytes are received at UTC time (T_s), hashed with SHA-256, and never overwritten, then that exact version was available to this project at (T_s). A later quote is admissible only if (T_s < T_q < T_k), with the parent capture run completed before (T_q), all hashes verified, and the feature rows restricted to completed matches before the target fixture.
+
+The absent upstream per-field timestamp is therefore a freshness/correction limitation, not by itself a reason that local source-before-quote ordering is impossible. It prevents claims about the provider's original observation or correction instant. Any later corrected response must be a new immutable version with a new capture timestamp and hash; the earlier archived bytes must not be replaced.
+
+### Upstream rights remain the decisive unresolved issue
+
+The provider's Terms expressly grant storage and internal-model use for its API responses. Its licence-notices page also says football data is provided by the Football-Data.org API. The public pages do not map `corner_kicks`, `yellow_cards` and `red_cards` individually to their upstream source or state which upstream licence covers each field. The Football-Data.org attribution alone does not establish that Big Balls' internal-model grant supersedes or includes all upstream rights.
+
+Written provider confirmation is still required for the exact Serie A fields and their upstream licence. The separate rights status of the original frozen training corpus must also be resolved independently.
+
+### Decision
+
+**`CONDITIONAL_CANDIDATE_NOT_APPROVED` remains unchanged.** The OpenAPI now gives a plausible Free endpoint and a workable local source-before-quote archive design, but the plan/season conflict, exact 2026/27 field coverage, upstream field-level rights, private raw-response retention, and original training-corpus rights remain unresolved.
+
+No API key, endpoint probe, request, download, odds access, Supabase access/write/DDL, source capture, feature build, inference, target-outcome read, refit, threshold change, production artifact change or schedule change was performed. The original candidate SHA, ordered 19-feature contract, weights, scaler/imputer, training fingerprint, `active_lambda=0`, `shadow_lambda=1`, NO_BET and 30-primary-completed-forecast outcome gate remain unchanged.
