@@ -1125,3 +1125,67 @@ def test_original_forward_artifact_upload_requires_successful_complete_capture()
     assert "if-no-files-found: error" in upload_block
     assert 'cron: "8 8 * * *"' in workflow
 
+
+
+def test_original_forward_cli_defers_supabase_quote_reader_until_source_preflight(monkeypatch, tmp_path):
+    """Exercise the actual CLI orchestration, not only the pure preflight helper."""
+    import sys
+    from types import ModuleType
+
+    raw, metadata = make_source_archive()
+    events = []
+
+    access_module = ModuleType("market_anchor_v2_direct_access")
+    access_module.require_v2_inference_access = lambda: events.append("rights")
+    monkeypatch.setitem(sys.modules, "market_anchor_v2_direct_access", access_module)
+
+    database_module = ModuleType("database")
+    database_module.supabase = object()
+    monkeypatch.setitem(sys.modules, "database", database_module)
+
+    monkeypatch.setenv("GITHUB_REPOSITORY", forward_capture_module.REPOSITORY)
+    monkeypatch.setenv("GITHUB_TOKEN", "synthetic-read-only-token")
+    monkeypatch.setattr(
+        forward_capture_module,
+        "discover_archives",
+        lambda token: events.append("discover") or metadata,
+    )
+    monkeypatch.setattr(
+        forward_capture_module,
+        "verify_source_run",
+        lambda archive, quote_time, token: events.append("parent")
+        or fake_verified_parent_run(archive, quote_time),
+    )
+    monkeypatch.setattr(
+        forward_capture_module,
+        "get_archive",
+        lambda artifact_id, token: events.append("archive") or raw,
+    )
+    monkeypatch.setattr(
+        forward_capture_module,
+        "fetch_saved_upcoming_serie_a_quotes",
+        lambda client, now: events.append("quotes") or [quote()],
+    )
+
+    output = tmp_path / "report.json"
+    sources = tmp_path / "sources"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "serie_a_v2_forward_capture.py",
+            "--output",
+            str(output),
+            "--sources-output-dir",
+            str(sources),
+        ],
+    )
+
+    forward_capture_module.main()
+
+    assert events == ["rights", "discover", "rights", "parent", "archive", "quotes"]
+    report = json.loads(output.read_text(encoding="utf-8"))
+    assert report["source_preflight"]["verified"] is True
+    assert report["source_preflight"]["quotes_read_after_source_preflight"] is True
+    assert report["v2_diagnostic_previews_captured"] == 1
+    assert len(list(sources.glob("source_artifact_*.zip"))) == 1
