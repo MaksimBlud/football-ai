@@ -653,6 +653,16 @@ def test_free_diagnostic_rights_and_quote_preflight_precede_budget_and_source_ac
     marker_step = workflow.index("- name: Upload shared public-source download attempt marker")
     source_step = workflow.index("- name: Fetch and SHA-archive public source, preview original frozen V2 diagnostics")
     assert rights_step < quote_step < final_quote_step < budget_step < marker_step < source_step
+    capture_end = workflow.index("\n      - name: Archive diagnostic and exact public CSV bytes for provenance", source_step)
+    capture_block = workflow[source_step:capture_end]
+    upload_start = capture_end
+    upload_block = workflow[upload_start:]
+    assert "id: capture_original_v2" in capture_block
+    assert "steps.capture_original_v2.outcome == 'success'" in upload_block
+    assert "always()" not in upload_block.split("uses: actions/upload-artifact", 1)[0]
+    assert "if-no-files-found: error" in upload_block
+    assert "if-no-files-found: warn" not in upload_block
+    assert 'cron: "13 6 * * *"' in workflow
     assert "--preflight-only" in workflow[quote_step:final_quote_step]
     assert "steps.rights_preflight.outputs.allowed == 'true'" in workflow[quote_step:final_quote_step]
     assert "steps.quote_preflight.outputs.eligible_quote_rows != '0'" in workflow[final_quote_step:budget_step]
