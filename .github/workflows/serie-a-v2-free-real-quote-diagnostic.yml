@@ -230,6 +230,7 @@ jobs:
           path: artifacts/public_source_download_budget/attempt.json
           retention-days: 90
       - name: Fetch and SHA-archive public source, preview original frozen V2 diagnostics
+        id: capture_original_v2
         if: ${{ github.event_name != 'push' && steps.rights_preflight.outputs.allowed == 'true' && steps.quote_preflight.outputs.eligible_quote_rows != '' && steps.quote_preflight.outputs.eligible_quote_rows != '0' && steps.final_quote_preflight.outputs.eligible_quote_rows != '' && steps.final_quote_preflight.outputs.eligible_quote_rows != '0' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success' }}
         run: |
           test -n "$SUPABASE_URL"
@@ -238,12 +239,12 @@ jobs:
             --output artifacts/serie_a_v2_real_quote_diagnostic.json \
             --raw-source-dir artifacts/serie_a_v2_source_capture
       - name: Archive diagnostic and exact public CSV bytes for provenance
-        if: ${{ always() && steps.rights_preflight.outputs.allowed == 'true' && steps.quote_preflight.outputs.eligible_quote_rows != '' && steps.quote_preflight.outputs.eligible_quote_rows != '0' && steps.final_quote_preflight.outputs.eligible_quote_rows != '' && steps.final_quote_preflight.outputs.eligible_quote_rows != '0' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success' }}
+        if: ${{ steps.capture_original_v2.outcome == 'success' && steps.rights_preflight.outputs.allowed == 'true' && steps.quote_preflight.outputs.eligible_quote_rows != '' && steps.quote_preflight.outputs.eligible_quote_rows != '0' && steps.final_quote_preflight.outputs.eligible_quote_rows != '' && steps.final_quote_preflight.outputs.eligible_quote_rows != '0' && steps.public_source_budget.outputs.allowed == 'true' && steps.upload_public_source_budget.outcome == 'success' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: serie-a-v2-free-real-quote-diagnostic
           path: |
             artifacts/serie_a_v2_real_quote_diagnostic.json
             artifacts/serie_a_v2_source_capture/
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 90
