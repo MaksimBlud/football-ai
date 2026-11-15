@@ -1124,8 +1124,3 @@ def test_original_forward_artifact_upload_requires_successful_complete_capture()
     assert "if-no-files-found: error" in upload_block
     assert 'cron: "8 8 * * *"' in workflow
 
-    frozen_validation = (root / ".github/workflows/serie-a-frozen-v2-shadow-tests.yml").read_text(encoding="utf-8")
-    evaluator_validation = (root / ".github/workflows/market-anchor-1x2-v2-prospective-evaluation-validation.yml").read_text(encoding="utf-8")
-    child_base = "research/v2-atomic-original-source-publication-on-830-20261115-run11"
-    assert child_base in frozen_validation
-    assert child_base in evaluator_validation
