@@ -1,3 +1,13 @@
+## 2026-11-15 18:02 UTC — remaining V2 source-workflow action pins
+
+Added [PR #841](https://github.com/MaksimBlud/football-ai/pull/841) as a narrow Draft child of #828 (base SHA `d58120f64a4ee833096ae58dd0d753f32e499853`). Exact head: `c0fdf9f7524acfae1fc8bceb8f34b26a36c4b696`; 4 commits ahead / 0 behind; 4 files changed. It pins checkout, setup-python and upload-artifact in the current-form source-capture and free diagnostic workflows, and pins checkout/setup-python in the offline frozen V2 regression workflow itself. It adds static assertions for these exact immutable refs and registers the child branch in the existing offline test workflow's push filter.
+
+Official action commit refs were resolved directly from their public repositories: checkout `11d5960a326750d5838078e36cf38b85af677262`, setup-python `a26af69be951a213d495a4c3e4e4022e16d87065`, upload-artifact `ea165f8d65b6e75b540449e92b4886f43607fa02`.
+
+Exact-head CI [run #43744325947](https://github.com/MaksimBlud/football-ai/actions/runs/43744325947) completed SUCCESS on head `c0fdf9f7524acfae1fc8bceb8f34b26a36c4b696`: **107 tests passed**, the original frozen candidate file was present, and `git diff --exit-code -- '*.pkl'` passed. This was offline/static regression only; the inherited live-access flag remains false and no provider, Supabase, source capture, or artifact upload step was executed.
+
+PR #841 remains Draft and HUMAN-MERGE-only. It is stacked on #828 → #827 → #781 and is not a main-based integration. No schedule, model artifact, feature, weight, quote rule, or data-access policy changed.
+
 # Football AI — Project Continuity
 
 ## 2026-11-15 16:54 UTC — fresh original/current-form forward and source-gate recheck
