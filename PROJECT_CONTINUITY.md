@@ -1,3 +1,50 @@
+## 2026-11-15 19:01 UTC — original CLI source-before-quote regression green
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main change occurred.
+
+### Original V2 forward CLI: actual entrypoint regression now passes
+
+A direct main read showed `serie_a_v2_forward_capture.py` blob `5db02cbd1367ed25b994b152acf371421859a014` still calls the saved-quote reader before source archive discovery/verification. #837's exact head has the corrected deferred callback and source preflight. Added a new test that executes the actual CLI `main()` with synthetic source ZIP, parent-run, and Supabase stubs, rather than testing only the pure helper. It verifies the order rights gate → source discovery → parent attestation → archive SHA validation → first quote-reader invocation, plus complete report/source archive publication.
+
+Latest #837 exact head: `659a15b6d5958d0cc74f08a9b7ef50279684bee3`, base #834 `f74a59b70d3149b81ef2c07c63dda54c1bf0b8d1`, 16 commits / 10 files. Exact-head CI is **3/3 SUCCESS**:
+- [#43749890085](https://github.com/MaksimBlud/football-ai/actions/runs/43749890085): **544 PASS on Python 3.11 and 544 PASS on Python 3.12**; both production `.pkl` diff guards passed.
+- [#43749890144](https://github.com/MaksimBlud/football-ai/actions/runs/43749890144): **216 PASS** prospective-evaluator offline checks; production `.pkl` diff guard passed.
+
+An intermediate version of the new test failed because it asserted an exact count of internal rights-guard calls; that assertion was corrected to check the required relative ordering and exactly one quote-reader invocation. The final exact head above is green. #837 remains Draft and stacked; this does not fix main until the parent chain is manually integrated.
+
+### Duplicate evaluator branch
+
+#835 was closed without merge after byte-for-byte comparison showed its prospective runner and test blobs are already included in #837. The exact changes remain in #837; no code was discarded.
+
+### Frozen candidate contract rechecked against current main
+
+- Candidate JSON blob: `ac1303f6b096664983fbf52443bd0a381b23ba21`.
+- Declared candidate SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Original feature-builder blob: `401b3a0893371bfa4a488ec92a4a54af2678c8f7`.
+- Parsed `FEATURE_SETS["ALL_FOOTBALL"]` and candidate feature list are an **exact ordered 19/19 match**; no missing or extra features.
+- Weight matrix remains 20 × 2; training rows 3,799; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; `active_lambda=0`; `shadow_lambda=1`; stability gate FAILED.
+
+No candidate, weights, scaler/imputer, training input, production `.pkl`, or threshold was changed.
+
+### Exact-head core workflow hardening
+
+[PR #842](https://github.com/MaksimBlud/football-ai/pull/842) is now Ready for review, directly based on main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, exact HEAD `0e14a8d490c72e95820d82453fa0746d5479001f`, mergeable. It pins the remaining pull-request-only core V2 shadow-validation workflow's checkout/setup-python actions to official immutable, signature-verified commits. Exact CI is **7/7 SUCCESS**; core workflow [#43749275368](https://github.com/MaksimBlud/football-ai/actions/runs/43749275368) ran **11 tests passed** and the production `.pkl` guard passed. No model or live workflow was changed.
+
+[PR #781](https://github.com/MaksimBlud/football-ai/pull/781) remains Ready for review, exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`, 8/8 checks SUCCESS. It is not merged; its default-deny live-access hold is not active on main. The current original forward quote-first defect and the #837 correction reinforce the need for the owner to integrate #781 before any further live main workflow run.
+
+### Pre-match-only Supabase state
+
+Read-only SQL selected only timestamps and fixture identity; no score/result/settlement columns:
+- Strict all-league pre-match odds: **3,915 rows / 327 events**; latest snapshot `2026-10-13 14:48:53.04262+00` UTC; upcoming strict-pre-match rows/events **0 / 0**.
+- Serie A 2026-2027 `league_finished_results` metadata only: **113 unique fixture identities** through 2026-11-08. This is feature-input metadata, not the prospective outcome gate.
+- Exact frozen-candidate pre-kickoff product predictions: **0 rows / 0 events**.
+- Prospective outcome gate remains **0/30**. No protected 2026/27 target outcomes were read.
+
+The last current-form archive still attests 110 identities against 113 current metadata identities; #840 contains the exact set/freshness fail-closed check but remains stacked and inactive on main.
+
+No paid API calls, Supabase writes/DDL, outcome reads, production artifact changes, refit, bets, or promotion. No schedules or other-agent settings changed.
+ 
+
 ## 2026-11-15 18:54 UTC — original-forward order audit and core V2 CI pin
 
 Fresh main is still `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main mutation was made.
