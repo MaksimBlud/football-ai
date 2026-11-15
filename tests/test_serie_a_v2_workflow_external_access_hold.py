@@ -612,3 +612,34 @@ def test_candidate_recovery_workflow_pins_actions_to_verified_immutable_commits(
     assert "actions/checkout@v4" not in source
     assert "actions/setup-python@v5" not in source
     assert "actions/upload-artifact@v4" not in source
+
+
+
+def test_current_form_source_capture_and_free_diagnostic_pin_all_actions_to_verified_immutable_commits():
+    """Source acquisition and diagnostics must not float third-party action tags."""
+    expected = {
+        "actions/checkout@11d5960a326750d5838078e36cf38b85af677262": 1,
+        "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065": 1,
+        "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02": 1,
+    }
+    for path in (
+        ".github/workflows/serie-a-v2-current-form-source-capture.yml",
+        ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml",
+    ):
+        source = _workflow(path)
+        for immutable_ref, count in expected.items():
+            assert source.count(immutable_ref) == count, (
+                f"{path}: expected {count} uses of {immutable_ref}"
+            )
+        assert "actions/checkout@v4" not in source
+        assert "actions/setup-python@v5" not in source
+        assert "actions/upload-artifact@v4" not in source
+
+
+def test_frozen_v2_offline_validation_workflow_pins_its_own_actions():
+    """The regression workflow itself must use immutable checkout/setup refs."""
+    source = _workflow(".github/workflows/serie-a-frozen-v2-shadow-tests.yml")
+    assert source.count("actions/checkout@11d5960a326750d5838078e36cf38b85af677262") == 1
+    assert source.count("actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065") == 1
+    assert "actions/checkout@v4" not in source
+    assert "actions/setup-python@v5" not in source
