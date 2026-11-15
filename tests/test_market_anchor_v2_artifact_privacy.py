@@ -158,7 +158,7 @@ def test_every_live_v2_artifact_upload_is_guarded_by_private_storage_preflight()
         lines = (root / relative).read_text(encoding="utf-8").splitlines()
         upload_indexes = [
             index for index, line in enumerate(lines)
-            if "uses: actions/upload-artifact@v4" in line
+            if "uses: actions/upload-artifact@" in line
         ]
         assert upload_indexes, f"{relative} must expose its artifact-upload steps for audit"
         for upload_index in upload_indexes:
@@ -202,3 +202,25 @@ def test_privacy_lookup_fails_closed_when_success_response_omits_url(monkeypatch
             "MaksimBlud/football-ai", "synthetic-token"
         )
 
+
+
+def test_source_capture_workflows_pin_actions_to_verified_immutable_commits():
+    """Source workflow action implementations must not float behind mutable tags."""
+    root = Path(__file__).resolve().parents[1]
+    expected = {
+        "actions/checkout@11d5960a326750d5838078e36cf38b85af677262": 2,
+        "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065": 2,
+        "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02": 2,
+    }
+    for relative in (
+        ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml",
+        ".github/workflows/serie-a-v2-current-form-source-capture.yml",
+    ):
+        source = (root / relative).read_text(encoding="utf-8")
+        for immutable_ref, count in expected.items():
+            assert source.count(immutable_ref) == count, (
+                f"{relative}: expected {count} uses of {immutable_ref}"
+            )
+        assert "actions/checkout@v4" not in source
+        assert "actions/setup-python@v5" not in source
+        assert "actions/upload-artifact@v4" not in source
