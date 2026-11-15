@@ -572,3 +572,25 @@ run: |
   python -m pytest -q tests/test_market_anchor_1x2_v2_shadow.py
 """
     assert not _is_original_v2_live_workflow(offline)
+
+
+
+def test_original_forward_workflows_pin_actions_to_verified_immutable_commits():
+    """Forward verification and artifact publication use the same pinned action commits."""
+    expected = {
+        "actions/checkout@11d5960a326750d5838078e36cf38b85af677262": 1,
+        "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065": 1,
+        "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02": 1,
+    }
+    for path in (
+        ".github/workflows/serie-a-v2-forward-preview.yml",
+        ".github/workflows/serie-a-v2-current-form-forward-preview.yml",
+    ):
+        source = _workflow(path)
+        for immutable_ref, count in expected.items():
+            assert source.count(immutable_ref) == count, (
+                f"{path}: expected {count} uses of {immutable_ref}"
+            )
+        assert "actions/checkout@v4" not in source
+        assert "actions/setup-python@v5" not in source
+        assert "actions/upload-artifact@v4" not in source
