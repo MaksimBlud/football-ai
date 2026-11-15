@@ -6615,3 +6615,54 @@ Supabase Security Advisor observed five `public` tables with RLS disabled: `team
 - Original forward fix remains stacked #826 → #830 → #834 → #837; current-form identity-set fix #843 and atomic report/upload fix #847 follow it. Do not merge stacked children independently.
 
 All work in this checkpoint is read-only or documentation-only. No main merge, Supabase write/DDL, paid request, target-outcome read, model inference/refit, production `.pkl` change, promotion, bet, schedule change or other-agent setting change occurred.
+
+## 2026-11-15 23:58 UTC — exact-head correction and pre-match-only refresh
+
+This section supersedes stale SHA/test-count/PR-state references in earlier November 15 notes.
+
+### Main and live workflow hold
+
+- Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- Main `serie_a_v2_forward_capture.py` blob `5db02cbd1367ed25b994b152acf371421859a014` still reads saved upcoming quotes before discovering/verifying the source archive. Its workflow still exposes Supabase/GitHub credentials at job scope, retains the 08:08 UTC schedule, and uploads with `if: always()`.
+- The direct-main safety hold [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review / HUMAN-MERGE, exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`; all **8/8** exact-head checks are SUCCESS. It is not active on main until manually merged.
+- Main current-form workflow likewise still exposes credentials and uses `if: always()`; #781 also holds that path.
+
+### Current exact PR heads and evidence
+
+- [#781](https://github.com/MaksimBlud/football-ai/pull/781): `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`, **8/8 SUCCESS**.
+- [#842](https://github.com/MaksimBlud/football-ai/pull/842): `0e14a8d490c72e95820d82453fa0746d5479001f`, **7/7 SUCCESS**.
+- [#839](https://github.com/MaksimBlud/football-ai/pull/839): current API HEAD `276b710402814456de693c431c602e258d4d4113`, **7/7 SUCCESS** on runs #43772333792, #43772333799, #43772333802, #43772333804, #43772333806, #43772333827 and #43772333842. Earlier body references to `51b9f3f...` are superseded.
+- [#790](https://github.com/MaksimBlud/football-ai/pull/790): `8627bf92460e1a0e88ea2810328ddc049ec155fb`, **6/6 SUCCESS** on runs #43772251173, #43772251177, #43772251193, #43772251204, #43772251211 and #43772251226. This supersedes earlier notes that exact-head CI was absent.
+- [#837](https://github.com/MaksimBlud/football-ai/pull/837): current exact HEAD `659a15b6d5958d0cc74f08a9b7ef50279684bee3`, **3/3 SUCCESS**: frozen V2 544 tests on Python 3.11 and 544 on Python 3.12 (run #43749890085), evaluator 216 tests (run #43749890144), production `.pkl` guards passed. Older `e34452e...` / 543-test references are superseded.
+- [#843](https://github.com/MaksimBlud/football-ai/pull/843): `725d1c987a9bca1a936008a81dc8458a09791eac`, 552 tests on each Python runtime and both production `.pkl` guards passed (run #43750160905).
+- [#846](https://github.com/MaksimBlud/football-ai/pull/846): `58105ecd531cb44c0f5b19b703cc2f013a02d50f`, frozen V2 522 tests on each Python runtime and evaluator 215 tests; all exact-head runs SUCCESS.
+- [#847](https://github.com/MaksimBlud/football-ai/pull/847): `0391ad9acca72682a2c7429a77481445c35af3be`, frozen V2 556 tests on each Python runtime and both `.pkl` guards passed (run #43766615737). Its atomic-report changes are carried into #848; keep #847 open as fallback until #848 CI finishes.
+- [#848](https://github.com/MaksimBlud/football-ai/pull/848): current HEAD `80fdc5bd3d278ba6d2544d3bec021d565be246bf`, base #843 exact SHA `725d1c987a9bca1a936008a81dc8458a09791eac`, 8 commits ahead / 0 behind, mergeable, Ready for review / HUMAN-MERGE. It consolidates #847's atomic report/success-only upload changes and adds two real-CLI source-before-quote regressions. Exact-head CI run #43777656710 is still IN_PROGRESS with `py312-lock-tests` and `shadow-tests`; no success claim until both finish.
+
+The #837 → #843 → #848 chain is stacked. Do not merge children before parents or before rights/private-storage gates. #848 is not a live run and does not authorize provider access.
+
+### Supabase — strictly pre-match observations only
+
+Read-only aggregate on `public.odds_snapshots` with `snapshot_time_utc < commence_time_utc`:
+
+- All nine leagues: **3,915** pre-match snapshots across **327** unique events.
+- Serie A: **620** snapshots across **63** events; latest `2026-10-13T14:48:53Z`.
+- Future-kickoff quote snapshots: **0** in every league.
+
+Read-only aggregate on `public.product_prediction_snapshots`, restricted to `generated_at_utc < commence_time_utc`:
+
+- **40** pre-match product snapshots.
+- **0** snapshots with original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Latest pre-match product snapshot `2026-10-09T15:29:33Z`.
+
+No score, result, settlement, or protected-outcome columns were selected. No Supabase writes/DDL occurred.
+
+### Frozen original V2 remains unchanged
+
+- Candidate SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Exact original 19-feature order; 20×2 original weight matrix; 3,799 training rows.
+- `active_lambda=0` market baseline; `shadow_lambda=1` research only.
+- Stability gate FAILED; permitted prospective outcome cohort **0/30**.
+- No independent Brier/LogLoss superiority evidence.
+
+No paid API calls, Supabase writes/DDL, protected outcome reads, model refit/promotion, production `.pkl` changes, main updates, bets, or schedule/other-agent changes occurred.
