@@ -74,3 +74,48 @@ The project currently has 113 Serie A 2026/27 finished-fixture metadata rows (da
 - Feature build / inference / evaluation: **not performed**.
 - Original candidate, 19 features, weights, scaler/imputer, lambda values, production `.pkl` and promotion gate: **unchanged**.
 - Status: `HOLD`; no provider integration or prediction is authorized.
+
+
+## Official documentation recheck — 2026-11-15
+
+This recheck used only the provider's current public legal and API documentation. No account, key, API request, data download, odds endpoint, or Supabase operation was performed.
+
+### Rights are clearer than the first audit recorded
+
+The current Terms of Service (last updated 2026-09-01) state that they apply to paid and Free accounts. Section 3 says customers may use the API data for applications, analytics, research and commercial products, and says separate third-party-provider licences are not required for intended use. Section 4 expressly permits internal modelling, machine learning, backtesting and historical evaluation; indefinite private retention of raw responses; and retention of receipt timestamps and customer-generated hashes.
+
+The separate Data Rights & Retention page (last modified 2026-10-24) repeats those rights. It also makes the restriction explicit: raw response bytes may be kept for internal audit/provenance but must not be published, bulk-shared, or exposed to third parties. The public GitHub repository and public Actions artifacts are therefore not acceptable storage for raw provider payloads.
+
+The provider does not identify its upstream providers by field and does not guarantee accuracy or timeliness. That is a data-quality/provenance limitation, not a separate-licence requirement under the current Terms.
+
+### Free-plan duration remains contradictory
+
+The current pricing page advertises 100 requests/day and 10 requests/minute, all endpoints and all competitions, but its plan header says "$0/1 Month". The comparison table labels Free "$0/mo". The Refund & Cancellation page says the Free plan has 100 requests/day, no credit card, and no time limit. The Terms apply retention rights to Free accounts.
+
+These public statements do not establish unambiguously whether the free request entitlement is permanent, renews monthly, or is limited to an initial month. Keep the free entitlement on HOLD until the provider confirms the duration in writing. No paid upgrade or paid request is permitted.
+
+### Exact feature-surface evidence
+
+The official Football V2 coverage page says Free, Pro, Ultra and Mega use the same endpoints and competitions; only daily request allowance differs. It documents a category-walk requirement because the flat tournament catalogue is incomplete.
+
+The official match-statistics endpoint is available during live matches and after full-time, not pre-match. Its documented stat catalogue includes home/away `cornerKicks` and `yellowCards`; the incidents endpoint documents goal and yellow/red-card events. Match detail/scores provide completed goals and results.
+
+This is a plausible lagged-history source for the frozen feature families, not a source for a target fixture's future statistics. The documentation examples are from a Bundesliga match. No current 2026/27 Serie A payload or field-completeness test was performed. Exact Serie A coverage, card conventions, and second-yellow treatment remain unverified. Missing values must still be rejected rather than converted to zero or imputed to manufacture source completeness.
+
+### Source-before-quote interpretation
+
+The Terms expressly permit retaining API receipt timestamps and customer-generated hashes. A private immutable archive can therefore prove project possession of exact response bytes before a later quote, provided it records the trusted receipt time, raw-byte SHA-256, API version, fixture identity, parent workflow run ID, exact commit SHA, and artifact creation time.
+
+That local receipt proof does not claim to know when the provider first observed or corrected an upstream fact. The original V2 capture contract is enforced at the project boundary:
+
+`private_source_capture_time_utc < quote_snapshot_time_utc < kickoff_utc`
+
+The source-before-quote gate remains CLOSED until the private archive and exact workflow/artifact attestation exist. No public artifact may contain raw provider responses.
+
+### Revised request-budget estimate
+
+The latest read-only Supabase metadata query counted 113 unique completed Serie A 2026/27 fixture identities using only `match_date, home_team, away_team`; no scores or result fields were selected. A conservative planning bound is three calls per fixture (match detail/scores, match statistics, incidents): 339 fixture calls, plus approximately four fixture-list pages, or about 343 calls. At 100 requests/day this is at least four quota days. This is only a planning estimate; no provider request or free credit was spent. The actual number may differ if a documented list response supplies some of the required detail.
+
+### Decision
+
+**HOLD remains.** The updated public Terms materially improve the documented rights position for internal ML and private raw retention, and the documentation covers the required corners/yellow-card fields plus card incidents. But the free-plan duration conflict, unverified Serie A 2026/27 payload completeness, red/second-yellow parity, and absence of an authorized private archive still prevent ingestion or inference. The original V2 candidate, 19-feature order, weights, scaler/imputer, lambdas, and 30-event outcome gate are unchanged.
