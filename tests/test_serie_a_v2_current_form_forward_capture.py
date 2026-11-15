@@ -1706,8 +1706,12 @@ def test_real_current_form_cli_verifies_source_sha_and_parent_before_first_quote
 
     forward_capture_module.main()
 
+    assert events.index("rights") < events.index("discover")
+    assert events.index("discover") < events.index("client")
     assert events.index("discover") < events.index("identity_metadata")
     assert events.index("identity_metadata") < events.index("parent")
+    assert events.count("archive_bytes") == 1
+    assert events.count("quotes") == 1
     assert events.index("parent") < events.index("archive_bytes")
     assert events.index("archive_bytes") < events.index("quotes")
     report = json.loads((tmp_path / "forward.json").read_text(encoding="utf-8"))
