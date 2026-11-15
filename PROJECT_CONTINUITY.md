@@ -1,3 +1,39 @@
+## 2026-11-15 20:49 UTC — exact-head CI and live-workflow re-verification
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This checkpoint adds verification only; no main mutation or merge.
+
+### Exact-head PR CI re-read
+
+All check runs below report the exact PR HEAD SHA, completed SUCCESS:
+
+- #839 documentation checkpoint HEAD `e6c8a27110034584cde3962e6722a37b1c110852`: **7/7** — runs #43756230623, #43756230643, #43756230648, #43756230650, #43756230705, #43756230713, #43756230769.
+- #842 original shadow-workflow immutable pins HEAD `0e14a8d490c72e95820d82453fa0746d5479001f`: **7/7** — runs #43749275290, #43749275368, #43749275372, #43749275432, #43749275440, #43749275545, #43749275386.
+- #781 default-deny live-access hold HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`: **8/8** — all eight check-runs independently report this exact HEAD and SUCCESS.
+- #837 source-before-quote/evaluator chain HEAD `659a15b6d5958d0cc74f08a9b7ef50279684bee3`: **3/3**.
+- #843 current-form atomic source-first child HEAD `725d1c987a9bca1a936008a81dc8458a09791eac`: **2/2**.
+- #846 outcome-read audit correction HEAD `58105ecd531cb44c0f5b19b703cc2f013a02d50f`: **4/4** (two validation workflows, including push and PR events).
+
+#837, #843 and #846 remain stacked/Draft; do not merge them directly to main. #781, #839 and #842 remain Ready for review and HUMAN-MERGE only.
+
+### Fresh main runtime: live steps are still executing
+
+Re-read actual run metadata, job records and job steps on unchanged main SHA:
+
+- Original Forward-Only Preview [#43730695523](https://github.com/MaksimBlud/football-ai/actions/runs/43730695523): source attestation, saved-quote preview and artifact upload all completed SUCCESS.
+- Current-Form Forward-Only Preview [#43731127758](https://github.com/MaksimBlud/football-ai/actions/runs/43731127758): saved-quote preview and artifact upload both completed SUCCESS.
+- Current-Form Source Capture [#43716579727](https://github.com/MaksimBlud/football-ai/actions/runs/43716579727): source capture and public artifact upload both completed SUCCESS.
+- Free Real-Quote Diagnostic [#43721234884](https://github.com/MaksimBlud/football-ai/actions/runs/43721234884): public source fetch/diagnostic and artifact upload both completed SUCCESS.
+
+Therefore #781's workflow-level hold is still **not active on main**. This remains a rights/privacy control blocker, not evidence of model quality. Do not trigger another live run.
+
+### Read-only data state
+
+The latest read-only Supabase aggregate still shows 3,915 strict pre-match odds rows / 327 events across nine leagues; Serie A has 620 rows / 63 events, latest quote snapshot 2026-10-13 14:48:53 UTC, and zero future-kickoff quote rows. The metadata-only Serie A 2026/27 fixture gate has 113 unique identities (2026-08-22 through 2026-11-08). No row carries the frozen candidate SHA; eligible prospective V2 forecasts remain 0/30. No score/result/settlement columns were selected.
+
+No target outcomes were read. No paid provider calls, Supabase writes/DDL, production `.pkl` changes, model refit, bets or promotion. No schedule or other-agent settings changed.
+
+---
+
 ## 2026-11-15 20:06 UTC — GOAL API rights audit and evaluator outcome-read restack
 
 Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main mutation occurred.
