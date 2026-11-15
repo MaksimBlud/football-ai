@@ -240,14 +240,13 @@
   "request_budget_estimate": {
     "project_finished_serie_a_fixture_metadata_count": 113,
     "assumed_calls_per_fixture_for_statistics_and_incidents": 2,
-    "fixture_detail_calls_lower_bound": 339,
+    "fixture_detail_calls_lower_bound": 226,
     "assumed_event_list_pages_at_30_fixtures_per_page": 4,
-    "estimated_total_calls_lower_bound": 343,
-    "minimum_days_at_100_requests_per_day": 4,
+    "estimated_total_calls_lower_bound": 230,
+    "minimum_days_at_100_requests_per_day": 3,
     "estimate_only": true,
     "provider_api_calls_made": 0,
-    "assumed_calls_per_fixture_for_detail_statistics_incidents": 3,
-    "assumptions": "One match-detail/scores call, one statistics call, one incidents call per fixture, plus four list pages; planning only, not tested."
+    "assumptions": "Official season event pages contain full match rows with home/away scores and status; two calls per fixture for statistics and incidents, plus four 30-fixture event-list pages. Planning only, not tested."
   },
   "project_authorization": {
     "account_creation_authorized": false,
