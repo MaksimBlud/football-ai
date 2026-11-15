@@ -1,5 +1,45 @@
 # Football AI — Project Continuity
 
+## 2026-11-15 15:52 UTC — fresh read-only V2 checkpoint
+
+Fresh verification was performed against public GitHub `main`, the open V2 PR stack, exact Actions runs, and Supabase read-only pre-match metadata. This checkpoint supersedes earlier November 15 counts where they differ.
+
+### Main and frozen candidate
+
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; branch protection is disabled (`protected=false`). No main update was made.
+- Original candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 frozen features, 20x2 weights, 3,799 training rows; `active_lambda=0`, `shadow_lambda=1` research-only; stability gate remains FAILED.
+- No exact-candidate pre-kickoff rows exist in `product_prediction_snapshots`; prospective evaluation remains 0/30. No 2026/27 target outcomes were read.
+
+### Current Supabase pre-match-only evidence (read-only, 2026-11-15)
+
+- `public.odds_snapshots` with strict `snapshot_time_utc < commence_time_utc`: 3,915 rows, 327 unique events, 9 leagues.
+- Latest strict pre-match snapshot: `2026-10-13 14:48:53.04262+00` UTC.
+- Strict pre-match snapshots for upcoming fixtures at query time: **0 rows / 0 events**.
+- Exact frozen-candidate pre-kickoff predictions: **0 rows / 0 events**.
+- No scores, results, settlement fields, or target outcomes were selected in these queries.
+
+### Open safety and forward PRs
+
+- [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN, Ready for review, mergeable, exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`, 8/8 successful checks. It is the interim hold for the main-branch V2 source/quote workflows while provider rights and private storage are unresolved. It has not been merged; public main still contains the live workflows and public artifact upload paths.
+- [#837](https://github.com/MaksimBlud/football-ai/pull/837) exact HEAD `e34452e80c59a8c691e07a71d7bb0195e1adc6ef`, stacked on #834, Draft/HUMAN-MERGE. Exact CI: Python 3.11 543 PASS, Python 3.12 543 PASS, prospective evaluator offline validation 216 PASS; all 3 checks SUCCESS. This is offline regression proof, not model-quality evidence.
+- [#840](https://github.com/MaksimBlud/football-ai/pull/840) exact HEAD `d7a2ff28723b6ca6c762435302170d32c10b918f`, stacked on #835, Draft/HUMAN-MERGE. Exact CI run #43722136251: both Python 3.11 and 3.12 jobs SUCCESS, 530 tests each. Do not merge it independently of the original-forward chain.
+- [#839](https://github.com/MaksimBlud/football-ai/pull/839) is the documentation checkpoint branch; this update requires fresh exact-head CI before its status can be called green.
+
+### Provider rights and source status
+
+- The Football-Data rights manifest in the pending rights stack records automated source capture, inference and AI training as not permitted pending provider clarification; authorization is null. This is not yet on main. #781 is therefore still required to stop current main workflows from collecting/uploading source archives.
+- SportsAPI Pro (#806) remains HOLD: internal ML/private raw retention appears in terms, but free-plan duration, upstream field rights, 2026/27 per-match completeness and upstream observation/correction clocks remain unresolved.
+- Big Balls (#794) remains HOLD: terms permit internal models, but upstream Football-Data.org rights/field lineage and per-match source-observation/correction timestamps are unresolved.
+- Other audited free candidates remain HOLD for rights, current-season coverage, corner-field completeness, provenance clocks, or private raw storage. No provider account/key or request was created.
+
+### Runtime and safety status
+
+- Latest already-audited main source/forward runs #43716579727, #43716649263 and #43721234884 produced no eligible quote/forecast pair; #43721234884 uploaded raw Football-Data CSV bytes to a public Actions artifact. No artifact bytes were downloaded in this checkpoint.
+- No paid API calls, Supabase writes/DDL, production `.pkl` changes, refit, threshold tuning, betting, promotion, or schedule/other-agent changes.
+- Next safe sequence: manual merge #781 on its verified SHA; reread main; then restack and validate the rights/private-storage and original-forward chain. Do not resume Football-Data automated capture or inference while the manifest remains HOLD. No Brier/LogLoss superiority claim is possible without the frozen prospective gate and eligible forecasts.
+
+
+
 
 ## 2026-10-18 — Original V2: preregistered current-form forward-only source and quote pipeline (runtime proof pending)
 
