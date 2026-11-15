@@ -12,6 +12,7 @@ from io import BytesIO
 import json
 import os
 from pathlib import Path
+from tempfile import TemporaryDirectory
 import re
 from typing import Any
 import zipfile
@@ -338,7 +339,6 @@ def _prepare_forward_capture_contents(
         raw = cache[artifact_id]
         # Original offline guard validates the *full ZIP*, every CSV, time,
         # score embargo and separately retrieved GitHub digest.
-        from tempfile import TemporaryDirectory
         with TemporaryDirectory() as td:
             src = Path(td) / "original_source.zip"
             src.write_bytes(raw)
