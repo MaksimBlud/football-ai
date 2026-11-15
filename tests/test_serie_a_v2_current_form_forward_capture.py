@@ -1486,3 +1486,61 @@ def test_atomic_current_form_forward_does_not_publish_partial_sources_if_quote_r
     assert not target.exists()
     assert list(tmp_path.glob(".source-archives.staging-*")) == []
 
+def test_atomic_current_form_forward_rejects_tampered_archive_before_quote_read(tmp_path):
+    raw, archives = make_archive()
+    events = []
+    target = tmp_path / "source-archives"
+
+    def verify_parent_run(archive, *, quote_time):
+        events.append("parent_run")
+        return valid_parent(archive, quote_time=quote_time)
+
+    def load_archive(_artifact_id):
+        events.append("source_bytes")
+        return raw
+
+    def fetch_quotes():
+        events.append("quotes")
+        return [quote()]
+
+    tampered_archives = [dict(archives[0], sha256="0" * 64)]
+    with pytest.raises(ValueError, match="SHA256 mismatch"):
+        capture_forward_with_atomic_sources(
+            tampered_archives,
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            fetch_quotes=fetch_quotes,
+            load_archive=load_archive,
+            verify_parent_run=verify_parent_run,
+            current_gate_identities=_fixture_current_gate_identities(),
+            write_sources_to=target,
+        )
+
+    assert events == ["parent_run", "source_bytes"]
+    assert not target.exists()
+    assert list(tmp_path.glob(".source-archives.staging-*")) == []
+
+
+def test_atomic_current_form_forward_does_not_publish_sources_for_malformed_quote_reader(tmp_path):
+    raw, archives = make_archive()
+    events = []
+    target = tmp_path / "source-archives"
+
+    def fetch_quotes():
+        events.append("quotes")
+        return {"not": "a list"}
+
+    with pytest.raises(TypeError, match="must return a list"):
+        capture_forward_with_atomic_sources(
+            archives,
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            fetch_quotes=fetch_quotes,
+            load_archive=lambda _artifact_id: raw,
+            verify_parent_run=valid_parent,
+            current_gate_identities=_fixture_current_gate_identities(),
+            write_sources_to=target,
+        )
+
+    assert events == ["quotes"]
+    assert not target.exists()
+    assert list(tmp_path.glob(".source-archives.staging-*")) == []
+
