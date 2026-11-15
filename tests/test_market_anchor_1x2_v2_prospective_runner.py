@@ -1230,3 +1230,123 @@ def test_completed_fixture_gate_checks_rights_before_identity_only_query(monkeyp
     assert identities == {("2026-11-01", "Inter Milan", "AC Milan")}
     assert attestation["selected_columns"] == ["match_date", "home_team", "away_team"]
     assert attestation["target_outcomes_read"] is False
+
+
+def test_market_only_outcome_read_audit_flag_stays_false_when_loader_rejects_before_query(monkeypatch):
+    rows = _forecast_rows(30)
+    identities = frozenset(
+        evaluator._identity(
+            (row["match_date"], row["home_team"], row["away_team"]),
+            label="test fixture",
+        )
+        for row in rows[:29]
+    )
+    monkeypatch.setattr(runner, "_require_live_research_access", lambda _token: None)
+    monkeypatch.setattr(runner, "_snapshot_source_candidates", lambda _items: (rows, tuple()))
+    monkeypatch.setattr(
+        runner,
+        "_forecast_kickoff_lookup",
+        lambda _rows: (rows, {
+            evaluator._identity(
+                (row["match_date"], row["home_team"], row["away_team"]),
+                label="test fixture",
+            ): row["kickoff_utc"]
+            for row in rows
+        }),
+    )
+
+    class ForbiddenClient:
+        def table(self, _name):
+            pytest.fail("result query must not run before loader input validation")
+
+    def invoke_loader(_client, _candidates, outcome_loader, *, token):
+        with pytest.raises(ValueError, match="30-eligible-completed-forecast gate"):
+            outcome_loader(identities)
+        return {"target_outcomes_read": False, "target_outcomes_scored": False}
+
+    monkeypatch.setattr(runner, "evaluate_live_market_only_prospective_cohort", invoke_loader)
+    state = {"called": True}
+    report = runner.evaluate_live_market_only_from_supabase(
+        ForbiddenClient(), [], token="synthetic", outcome_read_state=state
+    )
+
+    assert state == {"called": False}
+    assert report["target_outcomes_read"] is False
+
+
+def test_market_only_outcome_read_audit_flag_flips_only_after_exact_query_returns(monkeypatch):
+    rows = _forecast_rows(30)
+    identities = frozenset(
+        evaluator._identity(
+            (row["match_date"], row["home_team"], row["away_team"]),
+            label="test fixture",
+        )
+        for row in rows
+    )
+    kickoff_by_identity = {
+        evaluator._identity(
+            (row["match_date"], row["home_team"], row["away_team"]),
+            label="test fixture",
+        ): row["kickoff_utc"]
+        for row in rows
+    }
+    state = {"called": False}
+    monkeypatch.setattr(runner, "_require_live_research_access", lambda _token: None)
+    monkeypatch.setattr(runner, "_snapshot_source_candidates", lambda _items: (rows, tuple()))
+    monkeypatch.setattr(
+        runner, "_forecast_kickoff_lookup",
+        lambda _rows: (rows, kickoff_by_identity),
+    )
+
+    class Query:
+        def __init__(self):
+            self.filters = {}
+
+        def select(self, _columns):
+            return self
+
+        def eq(self, key, value):
+            self.filters[key] = value
+            return self
+
+        def in_(self, key, values):
+            self.filters[key] = values
+            return self
+
+        def execute(self):
+            assert state["called"] is (self.client.execute_count > 0)
+            self.client.execute_count += 1
+            home = self.filters["home_team"][0]
+            away = self.filters["away_team"][0]
+            return type("Response", (), {"data": [{
+                "match_date": self.filters["match_date"],
+                "home_team": home,
+                "away_team": away,
+                "result": "H",
+                "persisted_at_utc": "2026-11-01T00:00:00Z",
+            }]})()
+
+    class Client:
+        def __init__(self):
+            self.execute_count = 0
+
+        def table(self, _name):
+            query = Query()
+            query.client = self
+            return query
+
+    client = Client()
+
+    def invoke_loader(_client, _candidates, outcome_loader, *, token):
+        outcomes = outcome_loader(identities)
+        assert len(outcomes) == 30
+        return {"target_outcomes_read": True, "target_outcomes_scored": True}
+
+    monkeypatch.setattr(runner, "evaluate_live_market_only_prospective_cohort", invoke_loader)
+    report = runner.evaluate_live_market_only_from_supabase(
+        client, [], token="synthetic", outcome_read_state=state
+    )
+
+    assert client.execute_count == 30
+    assert state == {"called": True}
+    assert report["target_outcomes_read"] is True
