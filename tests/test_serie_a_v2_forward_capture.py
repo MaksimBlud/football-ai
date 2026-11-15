@@ -1053,7 +1053,7 @@ def test_original_source_artifact_upload_requires_successful_complete_capture():
 
 def test_original_forward_report_write_is_atomic_on_serialization_failure(tmp_path, monkeypatch):
     target = tmp_path / "forward.json"
-    previous = '{"previous":true}\\n'
+    previous = '{"previous":true}'
     target.write_text(previous, encoding="utf-8")
 
     def fail_after_partial_write(payload, stream, **_kwargs):
