@@ -1016,3 +1016,36 @@ def test_original_forward_public_entrypoints_require_direct_access_before_io(
 
     assert events == ["access"]
     assert not (tmp_path / "must-not-be-created").exists()
+
+
+def test_original_source_artifact_upload_requires_successful_complete_capture():
+    """A failed multi-CSV fetch must never publish a partial source artifact."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    workflow = (root / ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml").read_text(
+        encoding="utf-8"
+    )
+    lines = workflow.splitlines()
+    capture_name = "      - name: Fetch and SHA-archive public source, preview original frozen V2 diagnostics"
+    upload_name = "      - name: Archive diagnostic and exact public CSV bytes for provenance"
+
+    capture_start = lines.index(capture_name)
+    capture_end = next(
+        (i for i in range(capture_start + 1, len(lines)) if lines[i].startswith("      - name: ") or lines[i].startswith("      - uses: ")),
+        len(lines),
+    )
+    capture_block = "\\n".join(lines[capture_start:capture_end])
+    assert "        id: source_capture" in capture_block
+    assert "serie_a_v2_live_diagnostic_report.py" in capture_block
+
+    upload_start = lines.index(upload_name)
+    upload_end = next(
+        (i for i in range(upload_start + 1, len(lines)) if lines[i].startswith("      - name: ") or lines[i].startswith("      - uses: ")),
+        len(lines),
+    )
+    upload_block = "\\n".join(lines[upload_start:upload_end])
+    assert "steps.source_capture.outcome == 'success'" in upload_block
+    assert "always()" not in upload_block
+    assert "if-no-files-found: error" in upload_block
+    assert 'cron: "13 6 * * *"' in workflow
