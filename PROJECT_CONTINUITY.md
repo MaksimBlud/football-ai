@@ -10993,3 +10993,33 @@ No main update/merge, Supabase write/DDL, paid provider call, source download/re
 A fresh read-only schema inventory again reports RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. This is a separate security issue. No RLS DDL or policies were applied; enabling RLS without suitable policies may block legitimate clients and requires an owner-controlled policy review.
 
 No provider request/download, source-artifact download/reuse, Supabase write/DDL, protected target-outcome read, refit, model/production artifact change, schedule change, main update, merge or other-agent setting change occurred in this checkpoint. The 30-primary-completed-event outcome gate remains closed; independent prospective Brier/LogLoss remain unavailable.
+
+
+---
+
+## 2026-11-15 06:55 UTC — Current-form gate integrity and duplicate-PR consolidation
+
+**Fresh main remains** `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No merge or main update occurred.
+
+### Current-form source gate: verified fixes already preserved in #819
+
+- [PR #819](https://github.com/MaksimBlud/football-ai/pull/819) remains Draft / HUMAN-MERGE, exact HEAD `82358abb13fe03c60d33a713164b3e0f4b6f9171`, 4/4 exact-HEAD check-runs SUCCESS (two runs, each with `shadow-tests` and `py312-lock-tests`).
+- Comparing #813 HEAD `a0772aebe231cb6eefd657b629554ab7c658cc9a` to #819 HEAD shows #819 is 53 commits ahead and 0 behind. The #819 tree contains the exact #813 rights-manifest blob `b138d29f98e4cf3071d4c6a35a01dbb4e80e5afd`: source capture permission=false, inference permission=false, AI training permission=false, authorization=null. This is a fail-closed state, not permission to capture or infer.
+- The #819 source-capture implementation and tests already include the previously separate date/identity hardening: canonical date-only metadata, reversed duplicate primary-fixture rejection after team-alias normalization, current-season CSV timestamp rejection, reversed fixture duplicate rejection, integer/non-finite count-stat validation, populated rows without dates rejection, and exact coverage of gate fixture identities by the current CSV. The gate query remains restricted to `match_date,home_team,away_team`; outcome columns are not selected.
+- The exact #819 regression suite includes tests for both metadata count and identity-reader date/reversed-duplicate checks, plus current-CSV timestamp, reversed-duplicate, fractional/non-finite statistics and missing-date rows. This is stronger integrated coverage than the isolated drafts.
+- After verifying the same implementation and tests in #819, standalone Draft PRs #763 (canonical date-only metadata), #764 (malformed current-season source rows), and #765 (reversed duplicate metadata) were commented and closed as superseded. Their code/tests remain preserved in #819; none was merged and main was not changed.
+- **Integration constraint:** #819 is not based on #781. Comparing #781 HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2` to #819 HEAD shows divergent histories (230 commits ahead / 43 behind from main). #819's direct code rights/privacy gates are present, but its workflow YAML is not the #781 default-deny workflow hold. Do not merge #819 before the human merge of #781 and a deliberate restack; job-level secrets and artifact upload controls must be rechecked in the combined workflow.
+
+### Prospective market-only evaluator audit
+
+- The #826 evaluator branch contains a separate market-only diagnostic using the unchanged frozen 30-eligible-completed-forecast gate and a lazy outcome loader. It reports Brier and LogLoss for de-vigged market vs frozen V2 shadow, uses paired fixture-level bootstrap as descriptive uncertainty only, and hard-codes `review_signal=false`; no incumbent is substituted and no promotion is possible.
+- The full three-way evaluator remains blocked because `FROZEN_INCUMBENT_REFERENCE` is intentionally unpinned. This does not block the separate market-only diagnostic after the 30-event gate, but neither path has run on real prospective data. No outcome loader was called in this audit.
+- The live runner obtains the completed-fixture attestation through the metadata-only Supabase adapter, verifies source ZIP SHA and parent-run-before-quote provenance, then selects forecasts, and only then can the lazy outcome loader be called. The adapter itself rejects rows with fields outside the exact three-column identity allowlist.
+
+### Fresh main Actions inventory and pre-match-only Supabase state
+
+- The main-branch Actions run inventory returned 67 runs created between `2026-11-15 00:19:07 UTC` and `06:51:29 UTC`; none of those run names matched the Serie A V2 source-capture, forward-preview, frozen-shadow, or prospective-evaluator workflows. This records no V2 execution observed in that window; it does not establish that schedules are disabled.
+- Repeated only the strict pre-match `public.odds_snapshots` aggregate with `snapshot_time_utc < commence_time_utc`: 3,915 rows, 327 unique events, 0 new strict pre-match rows in seven days, 0 upcoming events with saved pre-match quotes; latest strict pre-match snapshot remains 2026-10-13 14:48:53 UTC. No score/result/settlement columns were read.
+- The original candidate identity remains unchanged: SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 frozen features, `active_lambda=0`, `shadow_residual_lambda=1`. Prospective eligible completed forecasts remain 0/30; independent Brier/LogLoss remain unavailable.
+
+No source download, source-artifact reuse, protected outcome read, paid provider request, Supabase write/DDL, production `.pkl` change, refit, promotion, merge, main update, schedule change or other-agent setting change occurred in this checkpoint. HUMAN-MERGE remains mandatory.
