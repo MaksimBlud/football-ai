@@ -587,3 +587,20 @@ def test_offline_validation_workflow_tracks_current_direct_rights_stack():
     assert "research/v2-direct-forward-artifact-api-rights-gate-restacked-on-823-20261114-run11" in frozen_push
     assert frozen_text.count("market_anchor_1x2_v2_prospective_evaluation.py") >= 3
     assert frozen_text.count("tests/test_market_anchor_1x2_v2_prospective_evaluation_workflow.py") >= 3
+
+
+def test_prospective_evaluation_workflow_pins_all_external_actions_to_immutable_commits():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    action_lines = [
+        line.strip().removeprefix("- ")
+        for line in text.splitlines()
+        if "uses: actions/" in line
+    ]
+    assert action_lines == [
+        "uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+        "uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+        "uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+    ]
+    assert "actions/checkout@v4" not in text
+    assert "actions/setup-python@v5" not in text
+    assert "actions/upload-artifact@v4" not in text

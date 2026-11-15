@@ -20,6 +20,7 @@ on:
       - research/v2-completed-fixture-direct-rights-guard-restacked-on-822-20261114-run11
       - research/v2-direct-forward-artifact-api-rights-gate-restacked-on-823-20261114-run11
       - research/v2-direct-github-json-rights-gates-restacked-on-824-20261114-run11
+      - research/v2-pin-source-workflow-yaml-sha-restacked-on-825-20261114-run11
       - research/v2-source-policy-recheck-stacked-on-727-20261110-run11
       - research/v2-prematch-quote-query-cutoff-rebased-on-780-20261111-run11
       - research/v2-direct-quote-reader-rights-gate-rebased-on-783-20261111-run11
@@ -72,6 +73,7 @@ on:
       - "market_anchor_1x2_v2_prospective_runner.py"
       - "tests/test_market_anchor_1x2_v2_prospective_runner.py"
       - "market_anchor_1x2_v2_prospective_evaluation.py"
+      - ".github/workflows/market-anchor-1x2-v2-prospective-evaluation.yml"
       - "tests/test_market_anchor_1x2_v2_prospective_evaluation_workflow.py"
       - "tests/test_market_anchor_v2_direct_access.py"
       - "research/source_rights/football_data_co_uk.json"
@@ -96,8 +98,12 @@ on:
       - research/v2-completed-fixture-direct-rights-guard-restacked-on-822-20261114-run11
       - research/v2-direct-forward-artifact-api-rights-gate-restacked-on-823-20261114-run11
       - research/v2-direct-github-json-rights-gates-restacked-on-824-20261114-run11
+      - research/v2-pin-prospective-evaluator-actions-restacked-on-826-20261115-run11
     paths:
       - "market_anchor_v2_direct_access.py"
+      - "market_anchor_1x2_v2_prospective_evaluation.py"
+      - "tests/test_market_anchor_1x2_v2_prospective_evaluation_workflow.py"
+      - ".github/workflows/market-anchor-1x2-v2-prospective-evaluation.yml"
       - "serie_a_v2_asof_feature_manifest.py"
       - "serie_a_v2_attest_real_source.py"
       - "serie_a_v2_current_form_forward_capture.py"

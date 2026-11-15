@@ -9,6 +9,7 @@ on:
       - research/v2-completed-fixture-direct-rights-guard-restacked-on-822-20261114-run11
       - research/v2-direct-forward-artifact-api-rights-gate-restacked-on-823-20261114-run11
       - research/v2-direct-github-json-rights-gates-restacked-on-824-20261114-run11
+      - research/v2-pin-source-workflow-yaml-sha-restacked-on-825-20261114-run11
     paths:
       - "requirements-v2-research-py312.lock"
       - "market_anchor_1x2_v2_*.py"
@@ -35,6 +36,7 @@ on:
       - research/v2-completed-fixture-direct-rights-guard-restacked-on-822-20261114-run11
       - research/v2-direct-forward-artifact-api-rights-gate-restacked-on-823-20261114-run11
       - research/v2-direct-github-json-rights-gates-restacked-on-824-20261114-run11
+      - research/v2-pin-prospective-evaluator-actions-restacked-on-826-20261115-run11
     paths:
       - "requirements-v2-research-py312.lock"
       - "market_anchor_1x2_v2_*.py"
