@@ -73,7 +73,19 @@ def test_free_rights_do_not_override_private_storage_and_provenance_gates():
     assert manifest["private_storage"]["private_archive_storage_required"] is True
     assert manifest["private_storage"]["private_archive_storage_verified"] is False
     assert manifest["private_storage"]["private_archive_storage_authorized"] is False
-    assert manifest["private_storage"]["storage_inventory_checked"] is False
+    assert manifest["private_storage"]["storage_inventory_checked"] is True
+    assert manifest["private_storage"]["storage_inventory_checked_date_utc"] == "2026-11-15"
+    assert manifest["private_storage"]["storage_inventory_method"] == (
+        "read-only SELECT name, public FROM storage.buckets"
+    )
+    assert manifest["private_storage"]["existing_buckets"] == [
+        {
+            "name": "model-artifacts",
+            "public": False,
+            "approved_for_raw_source_archives": False,
+        }
+    ]
+    assert manifest["private_storage"]["storage_objects_inspected"] is False
     assert manifest["private_storage"]["public_github_raw_artifact_allowed"] is False
     assert manifest["coverage"]["second_yellow_mapping_documented"] is False
     assert manifest["coverage"]["free_plan_same_endpoints_and_competitions_confirmed"] is True
