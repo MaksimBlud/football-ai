@@ -1,3 +1,63 @@
+## 2026-11-15 20:06 UTC — GOAL API rights audit and evaluator outcome-read restack
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main mutation occurred.
+
+### Main runtime re-read: two blocking gaps remain
+
+- `serie_a_v2_forward_capture.py` main blob `5db02cbd1367ed25b994b152acf371421859a014`: its actual `main()` calls `fetch_saved_upcoming_serie_a_quotes(...)` before `discover_archives(...)`. The production-main ordering is still quote-first, not source-before-quote.
+- `.github/workflows/serie-a-v2-forward-preview.yml` main blob `48ce3b0d8e31c4cf293b94500e9c320047311467` still schedules the free reader and can awaken it after a successful, manually dispatched `Serie A Odds Snapshots` workflow. The reader itself has no paid-provider request path, but it still has live Supabase/GitHub artifact access until the hold is manually integrated.
+- `serie_a_v2_current_form_forward_capture.py` main blob `326ac1921ce901a31aa6d73e6cbddb0782071964` still lacks `current_gate_identities` and `feature_input_gate_freshness`. The 110-archive versus 113-current-identity mismatch is therefore not yet fail-closed on main.
+- [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review at exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`; all 8 exact-head workflow runs completed SUCCESS. It is not merged and the hold is not active on main.
+- [#842](https://github.com/MaksimBlud/football-ai/pull/842) remains OPEN / Ready for review at `0e14a8d490c72e95820d82453fa0746d5479001f`; all 7 exact-head workflow runs completed SUCCESS.
+- [#839](https://github.com/MaksimBlud/football-ai/pull/839) is this documentation branch; its previous exact HEAD passed 7/7 and this checkpoint update requires a new exact-head CI run.
+
+### Fresh read-only Supabase evidence — metadata/strict pre-match only
+
+No score/result/settlement columns were selected.
+
+- `odds_snapshots`: 3,915 rows satisfying `snapshot_time_utc < commence_time_utc`, 327 unique event IDs across 9 leagues. No rows had a future kickoff at query time.
+- Serie A subset: 620 strict pre-match rows, 63 unique events; latest snapshot `2026-10-13 14:48:53.04262+00`. No future Serie A quote snapshots.
+- `product_prediction_snapshots`: 40 strict pre-match rows / 40 events across the table; 0 rows and 0 events carry the original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`. Latest generated row: `2026-10-09 15:29:33.136613+00`.
+- The exact metadata-only completed-fixture query for `league='SERIE_A'`, `season='2026-2027'`, selecting only `match_date, home_team, away_team`, returned 113 unique identities from 2026-08-22 through 2026-11-08. No target outcomes were read.
+- With 0 candidate-SHA prospective forecasts, the allowed primary cohort remains 0/30. No outcome gate opened.
+
+### New free-source candidate audit — GOAL API
+
+[PR #844](https://github.com/MaksimBlud/football-ai/pull/844) adds a documentation-only rights/coverage audit and an offline regression. Exact HEAD `bfdbf7adb11472e8af99f7a7d98f77403ad64f42`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Exact CI [#43755561157](https://github.com/MaksimBlud/football-ai/actions/runs/43755561157): **87 passed**, frozen-candidate presence and production `.pkl` diff guard passed. PR remains Draft / OPEN / mergeable.
+
+GOAL API is a plausible free-tier Serie A coverage candidate, not an approved source:
+- its public overview advertises 1,000 requests/day and no credit card; the pricing page's plan table was dynamically rendered and did not expose static numeric limits at audit time;
+- its Serie A page currently reports 2005–2027, 3,148 fixtures, 2,872 finished, 276 upcoming, 1,986 with match statistics and 2,587 with goals/cards/substitutions; these are aggregate counts, not a per-fixture 2026/27 completeness matrix;
+- its November 2026 Terms explicitly grant no licence to the underlying sports data and put responsibility for required third-party rights on the customer; internal ML training/inference and private raw-response retention are not expressly granted;
+- the Terms and Privacy name Devuslab LLC, while the current Serie A coverage-page footer names DEVARA SARL;
+- no statistic-level upstream observation timestamp or correction history is documented in the reviewed API reference.
+
+Decision: **HOLD**. No account/key, API request, source download, odds request, feature build, inference, target-outcome read or Supabase write was made. Official references: https://goal-api.com/terms ; https://goal-api.com/privacy ; https://goal-api.com/pricing ; https://goal-api.com/what-is-goal-api ; https://goal-api.com/coverage/italy-serie-a-api ; https://goal-api.com/documentation ; https://goal-api.com/blog/football-stats-api .
+
+### New outcome-read audit correction restacked on the complete rights chain
+
+[PR #846](https://github.com/MaksimBlud/football-ai/pull/846) ports the already reviewed #837 fix onto the later #826 direct-rights/source-workflow-pin ancestry. It moves `outcome_read_state` to true only after the exact Supabase result query's `.execute()` returns, and adds negative/positive boundary regressions.
+
+- Base #826 exact SHA: `6d1b533e82afe4e708c6fa29f876d8048a1465f8`.
+- Exact HEAD: `58105ecd531cb44c0f5b19b703cc2f013a02d50f`.
+- [Frozen V2 CI #43756082974](https://github.com/MaksimBlud/football-ai/actions/runs/43756082974): 522 PASS on Python 3.11 and 522 PASS on Python 3.12; both production pickle guards passed.
+- [Evaluator CI #43756083004](https://github.com/MaksimBlud/football-ai/actions/runs/43756083004): 215 PASS; production pickle guard passed.
+- Both workflows are exact-head completed SUCCESS. PR is Draft / OPEN / mergeable; it is stacked on #826 and must not be merged directly to main.
+
+The first attempt, [#845](https://github.com/MaksimBlud/football-ai/pull/845), was closed as superseded after its CI correctly exposed five pre-existing failures on the earlier #821 base, which predates the #822/#823 completed-fixture date-only/direct-rights implementation. No changes were merged or discarded; #846 is the corrected restack on #826.
+
+### Original candidate remains frozen
+
+- Candidate SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- 19 original features; 20×2 weight matrix; 3,799 training rows.
+- Training fingerprint: `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`.
+- `active_lambda=0`; `shadow_residual_lambda=1`; stability gate FAILED; automatic promotion disabled.
+- No independent Brier/LogLoss evidence exists because no admissible prospective cohort has passed the 30-event gate.
+
+No main change, PR merge, Supabase write/DDL, paid API call, source-provider call, production `.pkl` mutation, model refit, target-outcome read, bet or promotion occurred. No schedule or other-agent setting changed.
+
+---
+
 ## 2026-11-15 19:04 UTC — current-form gate consolidated onto original forward chain
 
 Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main mutation occurred.
