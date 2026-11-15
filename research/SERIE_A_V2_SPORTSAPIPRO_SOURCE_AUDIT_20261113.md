@@ -114,7 +114,7 @@ The source-before-quote gate remains CLOSED until the private archive and exact 
 
 ### Revised request-budget estimate
 
-The latest read-only Supabase metadata query counted 113 unique completed Serie A 2026/27 fixture identities using only `match_date, home_team, away_team`; no scores or result fields were selected. A conservative planning bound is three calls per fixture (match detail/scores, match statistics, incidents): 339 fixture calls, plus approximately four fixture-list pages, or about 343 calls. At 100 requests/day this is at least four quota days. This is only a planning estimate; no provider request or free credit was spent. The actual number may differ if a documented list response supplies some of the required detail.
+The latest read-only Supabase metadata query counted 113 unique completed Serie A 2026/27 fixture identities using only `match_date, home_team, away_team`; no scores or result fields were selected. The official coverage guide states that season event pages already contain the full match row, including home/away scores and status. Therefore a conservative plan is two per-fixture calls (match statistics and incidents): 226 fixture calls, plus four 30-fixture season-event pages, or about 230 calls. At 100 requests/day this is at least three quota days. This is only a planning estimate; no provider request or free credit was spent. If event pages fail to carry the exact score/identity fields needed, the estimate must be revised before any authorized collection.
 
 ### Decision
 
