@@ -11156,3 +11156,44 @@ Only strict pre-match odds metadata was queried, with `snapshot_time_utc < comme
 No result, score, settlement, or target-outcome fields were selected. The 30-primary-completed-event gate remains 0/30; independent Brier/LogLoss remain unavailable.
 
 No source/quote request, source archive download, paid provider call, Supabase write/DDL, protected outcome read, live inference, refit, production `.pkl` change, promotion, merge, main update, schedule change, or other-agent setting change occurred.
+
+
+---
+
+## 2026-11-15 09:18 UTC — original V2 source-upload gate integrated into one forward ancestry
+
+### Exact new PR and CI
+
+- **PR #837**: https://github.com/MaksimBlud/football-ai/pull/837
+- Draft / OPEN / mergeable / HUMAN-MERGE; base is #834 exact HEAD `f74a59b70d3149b81ef2c07c63dda54c1bf0b8d1`.
+- Exact HEAD: `212c6ce4030cd955e98cc40bada3dd32d7c54544`; 10 commits ahead / 0 behind; six changed files.
+- The audit found #834 still pinned the free-diagnostic source workflow as blob `ef52d8db7275eeb1de577ce8f0ff5edb2e7703e2`, while sibling #836 changed that workflow to blob `6ae4a883e65b39b032639939a75ff4f4f8dc861d` and gated artifact upload on successful complete capture. #837 carries the #836 workflow and regression onto the #834 atomic-forward ancestry and updates only the corresponding expected workflow blob SHA in `serie_a_v2_forward_capture.py`. The #830 source-before-quote and atomic source-bundle code remains preserved.
+- Corrected one stale regression expectation from the former `source_capture` step ID to the actual `capture_original_v2` ID; added a fail-on-missing-files assertion and CI path coverage for forward-capture tests.
+- Exact-head CI, all SUCCESS:
+  - [Evaluator validation #43698363262](https://github.com/MaksimBlud/football-ai/actions/runs/43698363262): **213 passed**, compile and production `.pkl` diff guard PASS.
+  - [Frozen V2 shadow tests #43698363319](https://github.com/MaksimBlud/football-ai/actions/runs/43698363319): **540 passed** on Python 3.11 and **540 passed** on Python 3.12; `pip check` and production `.pkl` guards PASS.
+  - All three check-runs point to exact HEAD `212c6ce4030cd955e98cc40bada3dd32d7c54544`.
+- PR #836 was closed as superseded by #837 after its exact workflow/test changes were carried onto the #834 ancestry. It was not merged.
+
+### Actual main runtime and remaining live-access hold
+
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main update occurred.
+- The last inspected original V2 scheduled source/forward runs on main are still 14 November:
+  - [Free Real-Quote Diagnostic #43599723217](https://github.com/MaksimBlud/football-ai/actions/runs/43599723217): SUCCESS; log reports **10 public HTTP requests**; artifact ID `14115967062`, ZIP digest `sha256:518e8cb20019bc1edabdd868272cb01f3aedae2076f90c400673a7996a4832b0`, 425,066 bytes.
+  - [Original Forward-Only Preview #43607489246](https://github.com/MaksimBlud/football-ai/actions/runs/43607489246): SUCCESS; source attestation reports SHA verified, source artifact `14115967062`, parent run `43599723217`, **3,800 historical rows / 10 source files**. It reports **0 quotes**, 0 future quotes checked, 0 V2 diagnostic previews, `NO_BET`, 0 paid calls and 0 Supabase writes. Forward artifact ID `14118641609`, ZIP digest `sha256:935c8c0699738a6e45681ecf00064c42cac1537f55c9e1c1cb2fd7d82b2a6da6`, 1,458 bytes.
+- These were pre-existing main-branch scheduled runs; this audit did not download their artifact bytes or make any source request. The public source download in the diagnostic run is a material rights concern: **#781 remains OPEN / HUMAN-MERGE**, so its fail-closed hold is not active on main yet. Do not dispatch these workflows. #781 exact HEAD remains `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`; its eight observed check-runs are SUCCESS.
+- Rights/provenance stack remains separate from #781: #720 → #727 → #813 → #822 → #823 → #824 → #825 → #826 → #830 → #831/#834/#837. Do not treat those descendants as containing #781 until manually restacked on fresh main and exact-head CI rerun.
+
+### Read-only pre-match database checkpoint
+
+Only `odds_snapshots` rows satisfying `snapshot_time_utc < commence_time_utc` were aggregated:
+
+- **3,915** strict pre-match snapshots across **327** events / 9 leagues.
+- Latest: Serie A `2026-10-13 14:48:53 UTC`; EPL `2026-10-09 15:25:57 UTC`; RPL `2026-09-05 15:07:55 UTC`.
+- Zero rows in the last seven days; zero snapshots for future fixtures.
+- Exact frozen candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6` in `product_prediction_snapshots`, strictly generated before kickoff: **0 rows / 0 events**.
+- No result, score, settlement, or target-outcome columns were queried.
+
+### Scientific state and safety
+
+Original candidate remains blob `ac1303f6b096664983fbf52443bd0a381b23ba21`, SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features, original weights/scaler/imputer, training fingerprint and cutoff unchanged. `active_lambda=0`; `shadow_lambda=1`; stability gate FAILED; 30-primary-completed-event gate remains 0/30; Brier/LogLoss comparison unavailable. No source request, paid call, Supabase write/DDL, protected outcome read, live inference, refit, production `.pkl` change, promotion, merge, main update, schedule change, or other-agent setting change occurred in this checkpoint.
