@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - research/v2-market-only-evaluator-restacked-on-820-20261114-run11
       - research/v2-provider-ai-inference-rights-block-*
       - research/v2-integrated-private-quote-preflight-*
       - research/v2-source-policy-recheck-restacked-on-727-20261114-run11
