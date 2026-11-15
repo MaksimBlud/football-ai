@@ -236,7 +236,17 @@
     "supabase_writes_or_ddl_authorized": false,
     "private_archive_storage_verified": false,
     "private_archive_storage_authorized": false,
-    "storage_inventory_checked": false
+    "storage_inventory_checked": true,
+    "storage_inventory_checked_date_utc": "2026-11-15",
+    "storage_inventory_method": "read-only SELECT name, public FROM storage.buckets",
+    "existing_buckets": [
+      {
+        "name": "model-artifacts",
+        "public": false,
+        "approved_for_raw_source_archives": false
+      }
+    ],
+    "storage_objects_inspected": false
   },
   "request_budget_estimate": {
     "project_finished_serie_a_fixture_metadata_count": 113,
