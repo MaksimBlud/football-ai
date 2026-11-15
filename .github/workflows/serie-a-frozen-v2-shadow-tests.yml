@@ -82,6 +82,7 @@ on:
       - research/v2-current-form-atomic-source-capture-rights-stacked-on-787-20261114-run11
       - research/v2-current-form-atomic-source-capture-restacked-on-818-20261114-run11
       - research/v2-market-only-evaluator-restacked-on-820-20261114-run11
+      - research/v2-current-form-source-first-forward-gate-restacked-on-821-20261115-run11
     paths:
       - "market_anchor_v2_direct_access.py"
       - "serie_a_v2_asof_feature_manifest.py"
