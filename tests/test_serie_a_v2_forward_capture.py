@@ -355,6 +355,7 @@ def test_successful_exact_source_workflow_and_prequote_completion_required():
         SOURCE_LOADER_PATH: EXPECTED_SOURCE_LOADER_BLOB_SHA1,
         SOURCE_RIGHTS_HELPER_PATH: EXPECTED_SOURCE_RIGHTS_HELPER_BLOB_SHA1,
         SOURCE_RIGHTS_MANIFEST_PATH: EXPECTED_SOURCE_RIGHTS_MANIFEST_BLOB_SHA1,
+        SOURCE_WORKFLOW_PATH: forward_capture_module.EXPECTED_SOURCE_WORKFLOW_BLOB_SHA1,
     }
     approved_urls = {
         path: f"{forward_capture_module.GITHUB_API}/contents/{path}?ref={'a'*40}"
@@ -380,6 +381,7 @@ def test_successful_exact_source_workflow_and_prequote_completion_required():
     assert result["source_loader_blob_sha1"] == EXPECTED_SOURCE_LOADER_BLOB_SHA1
     assert result["source_rights_helper_blob_sha1"] == EXPECTED_SOURCE_RIGHTS_HELPER_BLOB_SHA1
     assert result["source_rights_manifest_blob_sha1"] == EXPECTED_SOURCE_RIGHTS_MANIFEST_BLOB_SHA1
+    assert result["source_workflow_blob_sha1"] == forward_capture_module.EXPECTED_SOURCE_WORKFLOW_BLOB_SHA1
     for altered, expected in [
         ({"path":".github/workflows/other.yml"}, "verified original V2 collector"),
         ({"head_sha":"b"*40}, "verified original V2 collector"),
@@ -716,6 +718,9 @@ def test_original_forward_rights_blob_pins_match_exact_repository_bytes():
     )
     assert EXPECTED_SOURCE_LOADER_BLOB_SHA1 == _repository_git_blob_sha1(
         root / SOURCE_LOADER_PATH
+    )
+    assert forward_capture_module.EXPECTED_SOURCE_WORKFLOW_BLOB_SHA1 == _repository_git_blob_sha1(
+        root / SOURCE_WORKFLOW_PATH
     )
 
 def test_source_archive_created_at_equal_to_quote_is_not_prequote_source():
