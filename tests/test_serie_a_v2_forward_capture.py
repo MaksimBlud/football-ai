@@ -1132,7 +1132,15 @@ def test_original_forward_cli_defers_supabase_quote_reader_until_source_prefligh
     import sys
     from types import ModuleType
 
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            value = cls(2026, 10, 14, 7, 0, tzinfo=timezone.utc)
+            return value if tz is None else value.astimezone(tz)
+
+    monkeypatch.setattr(forward_capture_module, "datetime", FrozenDateTime)
     raw, metadata = make_source_archive()
+    metadata[0]["created_at"] = FrozenDateTime(2026, 10, 13, 15, 0, tzinfo=timezone.utc)
     events = []
 
     access_module = ModuleType("market_anchor_v2_direct_access")
