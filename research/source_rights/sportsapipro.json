@@ -7,9 +7,9 @@
   "decision_label": "CONDITIONAL FREE-TIER CANDIDATE — NOT APPROVED FOR ORIGINAL V2 INGESTION OR INFERENCE",
   "reason_codes": [
     "PRIVATE_RAW_ARCHIVE_NOT_AVAILABLE",
-    "FREE_PLAN_DURATION_CONFLICTING_PUBLIC_STATEMENTS",
     "RED_CARD_AND_SECOND_YELLOW_PARITY_UNVERIFIED",
-    "SERIE_A_2026_27_PER_MATCH_COVERAGE_NOT_VERIFIED"
+    "SERIE_A_2026_27_PER_MATCH_COVERAGE_NOT_VERIFIED",
+    "PROVIDER_DOES_NOT_GUARANTEE_DATA_ACCURACY_OR_TIMELINESS"
   ],
   "source_documents": {
     "terms": "https://www.sportsapipro.com/terms",
@@ -31,14 +31,15 @@
     "all_competitions": true,
     "no_credit_card_required": true,
     "pricing_page_duration_text": "$0/1 Month",
-    "duration_status": "CONFLICTING_PUBLIC_STATEMENTS",
-    "recurring_free_entitlement_confirmed": false,
+    "duration_status": "PUBLICLY_DOCUMENTED_NO_TIME_LIMIT",
+    "recurring_free_entitlement_confirmed": true,
     "duration_evidence": {
       "pricing_header": "$0/1 Month",
+      "pricing_auto_renews_every_billing_period": true,
       "pricing_comparison": "$0/mo",
-      "refund_policy": "Free plan 100 requests/day, no time limit",
+      "refund_policy": "Free plan 100 requests/day, no credit card, no time limit",
       "terms_apply_to_free_accounts": true,
-      "resolution": "WRITTEN_PROVIDER_CLARIFICATION_REQUIRED"
+      "resolution": "PUBLIC_DOCUMENTATION_SUPPORTS_RECURRING_FREE_PLAN"
     }
   },
   "terms": {
