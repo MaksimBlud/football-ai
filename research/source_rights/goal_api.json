@@ -1,0 +1,149 @@
+{
+  "schema_version": "1.0",
+  "provider": "GOAL API",
+  "provider_domain": "goal-api.com",
+  "audit_date_utc": "2026-11-15",
+  "decision": "HOLD",
+  "decision_label": "FREE-TIER CANDIDATE — NOT APPROVED FOR ORIGINAL V2 INGESTION OR INFERENCE",
+  "reason_codes": [
+    "UNDERLYING_SPORTS_DATA_RIGHTS_NOT_LICENSED_TO_CUSTOMER",
+    "INTERNAL_ML_RESEARCH_AND_PRIVATE_RAW_RETENTION_NOT_EXPLICIT",
+    "SERIE_A_2026_27_PER_MATCH_FEATURE_COVERAGE_NOT_VERIFIED",
+    "NO_STAT_LEVEL_UPSTREAM_OBSERVATION_OR_CORRECTION_TIMESTAMPS",
+    "PRIVATE_RAW_ARCHIVE_NOT_AVAILABLE",
+    "LEGAL_ENTITY_IDENTITY_INCONSISTENT_ACROSS_OFFICIAL_PAGES"
+  ],
+  "source_documents": {
+    "terms": "https://goal-api.com/terms",
+    "privacy": "https://goal-api.com/privacy",
+    "pricing": "https://goal-api.com/pricing",
+    "free_plan_faq": "https://goal-api.com/what-is-goal-api",
+    "serie_a_coverage": "https://goal-api.com/coverage/italy-serie-a-api",
+    "api_documentation": "https://goal-api.com/documentation",
+    "match_statistics_field_guide": "https://goal-api.com/blog/football-stats-api"
+  },
+  "free_plan": {
+    "price_usd": 0,
+    "published_requests_per_day": 1000,
+    "no_credit_card_required": true,
+    "quota_evidence_page": "https://goal-api.com/what-is-goal-api",
+    "pricing_table_static_values_available_at_audit": false,
+    "match_statistics_free_entitlement_independently_confirmed": false,
+    "odds_and_predictions_free": false,
+    "free_plan_duration_explicitly_guaranteed": false
+  },
+  "terms": {
+    "last_updated": "2026-11",
+    "terms_entity": "Devuslab LLC",
+    "privacy_entity": "Devuslab LLC",
+    "coverage_page_footer_entity": "DEVARA SARL",
+    "legal_entity_identity_fully_consistent": false,
+    "provider_says_data_is_licensed_from_third_parties": true,
+    "customer_license_to_underlying_sports_data_granted": false,
+    "customer_responsible_for_separate_underlying_data_rights": true,
+    "internal_research_use_explicitly_permitted": false,
+    "ai_model_training_explicitly_permitted": false,
+    "model_inference_explicitly_permitted": false,
+    "private_raw_response_retention_explicitly_permitted": false,
+    "private_raw_response_retention_expressly_prohibited": false,
+    "raw_standalone_feed_redistribution_permitted": false,
+    "data_accuracy_or_timeliness_guaranteed": false,
+    "free_plan_terms_may_change_without_prior_notice": true
+  },
+  "coverage": {
+    "competition": "Italy Serie A",
+    "displayed_season_range": "2005–2027",
+    "total_matches": 3148,
+    "finished_matches": 2872,
+    "upcoming_matches": 276,
+    "lineup_matches": 3143,
+    "match_statistics_matches": 1986,
+    "goals_cards_substitutions_matches": 2587,
+    "current_2026_27_match_statistics_completeness_verified": false,
+    "current_2026_27_events_and_cards_completeness_verified": false,
+    "coverage_counts_are_per_season": false,
+    "exact_original_source_semantics_verified": false,
+    "source_page_note": "The coverage page reports aggregate counts across its displayed range and says coverage varies by competition and endpoint; it does not provide a per-fixture 2026/27 completeness matrix."
+  },
+  "feature_mapping": [
+    {
+      "feature_family": "points and goals",
+      "candidate_source": "fixture/result scores",
+      "status": "candidate only; exact response-field and original feature-builder parity not verified"
+    },
+    {
+      "feature_family": "corners",
+      "candidate_source": "match-statistics guide describes corner kicks",
+      "status": "candidate only; exact API response key, per-fixture 2026/27 coverage and historical parity not verified"
+    },
+    {
+      "feature_family": "yellow cards",
+      "candidate_source": "match-statistics guide describes yellow cards",
+      "status": "candidate only; exact event/stat semantics and source parity not verified"
+    },
+    {
+      "feature_family": "red cards",
+      "candidate_source": "match-statistics guide describes red cards and match-card endpoints",
+      "status": "unverified; straight red versus second-yellow counting semantics are not documented sufficiently for frozen V2 parity"
+    },
+    {
+      "feature_family": "venue-specific rolling inputs",
+      "candidate_source": "fixture home/away identity plus completed scores and statistics",
+      "status": "candidate only; team identity, neutral venue and venue-history mapping not verified"
+    }
+  ],
+  "provenance": {
+    "kickoff_utc_documented": true,
+    "stat_level_upstream_observation_timestamp_documented": false,
+    "stat_level_correction_history_documented": false,
+    "live_clock_updated_at_is_a_stat_observation_timestamp": false,
+    "local_receipt_timestamp_and_raw_sha_can_prove_project_possession_before_quote": true,
+    "local_receipt_timestamp_proves_upstream_first_observation_time": false,
+    "source_before_quote_approved": false,
+    "required_order_if_later_authorized": "private_source_capture_time_utc < quote_snapshot_time_utc < kickoff_utc",
+    "exact_raw_response_bytes_required": true,
+    "parent_workflow_run_id_and_commit_sha_required": true,
+    "source_archive_sha256_required": true
+  },
+  "private_storage": {
+    "private_archive_storage_required": true,
+    "public_github_raw_artifact_allowed": false,
+    "repository_is_public": true,
+    "existing_private_supabase_bucket": "model-artifacts",
+    "existing_private_supabase_bucket_approved_for_raw_provider_archives": false,
+    "supabase_writes_or_ddl_authorized": false,
+    "private_archive_storage_verified": false,
+    "private_archive_storage_authorized": false,
+    "storage_objects_inspected": false
+  },
+  "frozen_candidate": {
+    "experiment_id": "MARKET_ANCHOR_1X2_V2",
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "training_fingerprint_sha256": "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098",
+    "training_rows": 3799,
+    "feature_count": 19,
+    "weights_shape": [20, 2],
+    "active_lambda": 0,
+    "shadow_residual_lambda": 1,
+    "stability_gate_passed": false,
+    "automatic_promotion": false
+  },
+  "project_authorization": {
+    "account_creation_authorized": false,
+    "api_key_creation_authorized": false,
+    "api_requests_authorized": false,
+    "data_download_authorized": false,
+    "raw_response_retention_authorized": false,
+    "feature_build_authorized": false,
+    "inference_authorized": false,
+    "target_outcome_reads_authorized": false,
+    "paid_calls_authorized": false,
+    "supabase_writes_authorized": false,
+    "supabase_ddl_authorized": false
+  },
+  "provider_api_calls_made": 0,
+  "source_downloads_made": 0,
+  "supabase_writes_made": 0,
+  "target_outcomes_read": false,
+  "model_inference_executed": false
+}
