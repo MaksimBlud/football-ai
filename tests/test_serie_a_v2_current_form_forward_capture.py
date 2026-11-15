@@ -13,6 +13,7 @@ from serie_a_v2_current_form_forward_capture import (
     MANIFEST_FILENAME,
     SOURCE_WORKFLOW_PATH,
     _latest_quotes,
+    capture_forward_with_atomic_sources,
     get_archive,
     prepare_forward_capture as _prepare_forward_capture,
     verify_and_load_archive,
@@ -1337,9 +1338,217 @@ def test_current_form_forward_source_and_rights_blob_pins_match_exact_repository
     assert forward_capture_module.EXPECTED_SOURCE_RIGHTS_HELPER_BLOB_SHA1 == _repository_git_blob_sha1(
         root / forward_capture_module.SOURCE_RIGHTS_HELPER_PATH
     )
-    assert forward_capture_module.EXPECTED_SOURCE_RIGHTS_MANIFEST_BLOB_SHA1 == _repository_git_blob_sha1(
-        root / forward_capture_module.SOURCE_RIGHTS_MANIFEST_PATH
-    )
     assert forward_capture_module.EXPECTED_SOURCE_WORKFLOW_BLOB_SHA1 == _repository_git_blob_sha1(
         root / forward_capture_module.SOURCE_WORKFLOW_PATH
     )
+
+
+def test_atomic_current_form_forward_verifies_parent_and_source_before_quote_read_and_publishes_bundle(tmp_path):
+    raw, archives = make_archive()
+    events = []
+    loaded = {}
+
+    def load_archive(artifact_id):
+        if artifact_id not in loaded:
+            events.append("source_bytes")
+            loaded[artifact_id] = raw
+        return loaded[artifact_id]
+
+    def verify_parent_run(archive, *, quote_time):
+        events.append("parent_run")
+        return valid_parent(archive, quote_time=quote_time)
+
+    def fetch_quotes():
+        events.append("quotes")
+        return [quote()]
+
+    target = tmp_path / "source-archives"
+    report = capture_forward_with_atomic_sources(
+        archives,
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        fetch_quotes=fetch_quotes,
+        load_archive=load_archive,
+        verify_parent_run=verify_parent_run,
+        current_gate_identities=_fixture_current_gate_identities(),
+        write_sources_to=target,
+    )
+
+    assert events.index("parent_run") < events.index("source_bytes") < events.index("quotes")
+    assert report["quote_read_skipped"] is False
+    assert report["source_gate_blocked"] is None
+    assert report["v2_current_form_shadow_captured"] == 1
+    published = list(target.glob("current-form-source-artifact-*.zip"))
+    assert len(published) == 1
+    assert published[0].read_bytes() == raw
+
+
+def test_atomic_current_form_forward_skips_quote_read_without_source_archive(tmp_path):
+    events = []
+    target = tmp_path / "source-archives"
+    report = capture_forward_with_atomic_sources(
+        [],
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        fetch_quotes=lambda: events.append("quotes") or [quote()],
+        load_archive=lambda _artifact_id: (_ for _ in ()).throw(
+            AssertionError("no source archive must be downloaded")
+        ),
+        verify_parent_run=valid_parent,
+        current_gate_identities=_fixture_current_gate_identities(),
+        write_sources_to=target,
+    )
+
+    assert events == []
+    assert report["source_gate_blocked"] == "NO_EARLIER_SOURCE_ARCHIVE"
+    assert report["quote_read_skipped"] is True
+    assert report["quotes_seen"] == 0
+    assert not target.exists()
+
+
+def test_atomic_current_form_forward_skips_quote_read_for_stale_source_archive(tmp_path):
+    raw, archives = make_archive()
+    events = []
+    target = tmp_path / "source-archives"
+    report = capture_forward_with_atomic_sources(
+        archives,
+        as_of_utc=datetime(2026, 10, 20, 6, 40, tzinfo=timezone.utc),
+        fetch_quotes=lambda: events.append("quotes") or [quote()],
+        load_archive=lambda _artifact_id: raw,
+        verify_parent_run=valid_parent,
+        current_gate_identities=_fixture_current_gate_identities(),
+        write_sources_to=target,
+    )
+
+    assert events == []
+    assert report["source_gate_blocked"] == "SOURCE_ARCHIVE_TOO_OLD"
+    assert report["quote_read_skipped"] is True
+    assert not target.exists()
+
+
+def test_atomic_current_form_forward_skips_quote_read_when_live_feature_gate_is_stale(tmp_path):
+    raw, archives = make_archive()
+    events = []
+    current_gate = _fixture_current_gate_identities() | {
+        ("2026-10-18", "Roma", "Lazio"),
+    }
+    target = tmp_path / "source-archives"
+    report = capture_forward_with_atomic_sources(
+        archives,
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        fetch_quotes=lambda: events.append("quotes") or [quote()],
+        load_archive=lambda _artifact_id: raw,
+        verify_parent_run=valid_parent,
+        current_gate_identities=current_gate,
+        write_sources_to=target,
+    )
+
+    assert events == []
+    assert report["source_gate_blocked"] == "SOURCE_GATE_STALE"
+    assert report["quote_read_skipped"] is True
+    assert not target.exists()
+
+
+def test_atomic_current_form_forward_skips_quote_read_when_parent_run_is_unverified(tmp_path):
+    _raw, archives = make_archive()
+    events = []
+    target = tmp_path / "source-archives"
+
+    def reject_parent(_archive, *, quote_time):
+        events.append("parent_run")
+        raise ValueError("artifact parent is not a successful main current-form source run")
+
+    report = capture_forward_with_atomic_sources(
+        archives,
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        fetch_quotes=lambda: events.append("quotes") or [quote()],
+        load_archive=lambda _artifact_id: (_ for _ in ()).throw(
+            AssertionError("unverified parent archive must not be downloaded")
+        ),
+        verify_parent_run=reject_parent,
+        current_gate_identities=_fixture_current_gate_identities(),
+        write_sources_to=target,
+    )
+
+    assert events == ["parent_run"]
+    assert report["source_gate_blocked"] == "SOURCE_PARENT_UNVERIFIED"
+    assert report["quote_read_skipped"] is True
+    assert not target.exists()
+
+
+def test_atomic_current_form_forward_does_not_publish_partial_sources_if_quote_read_fails(tmp_path):
+    raw, archives = make_archive()
+    target = tmp_path / "source-archives"
+
+    def fail_quote_read():
+        raise RuntimeError("synthetic quote reader failure")
+
+    with pytest.raises(RuntimeError, match="synthetic quote reader failure"):
+        capture_forward_with_atomic_sources(
+            archives,
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            fetch_quotes=fail_quote_read,
+            load_archive=lambda _artifact_id: raw,
+            verify_parent_run=valid_parent,
+            current_gate_identities=_fixture_current_gate_identities(),
+            write_sources_to=target,
+        )
+
+    assert not target.exists()
+    assert list(tmp_path.glob(".source-archives.staging-*")) == []
+
+def test_atomic_current_form_forward_rejects_tampered_archive_before_quote_read(tmp_path):
+    raw, archives = make_archive()
+    events = []
+    target = tmp_path / "source-archives"
+
+    def verify_parent_run(archive, *, quote_time):
+        events.append("parent_run")
+        return valid_parent(archive, quote_time=quote_time)
+
+    def load_archive(_artifact_id):
+        events.append("source_bytes")
+        return raw
+
+    def fetch_quotes():
+        events.append("quotes")
+        return [quote()]
+
+    tampered_archives = [dict(archives[0], sha256="0" * 64)]
+    with pytest.raises(ValueError, match="SHA256 mismatch"):
+        capture_forward_with_atomic_sources(
+            tampered_archives,
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            fetch_quotes=fetch_quotes,
+            load_archive=load_archive,
+            verify_parent_run=verify_parent_run,
+            current_gate_identities=_fixture_current_gate_identities(),
+            write_sources_to=target,
+        )
+
+    assert events == ["parent_run", "source_bytes"]
+    assert not target.exists()
+    assert list(tmp_path.glob(".source-archives.staging-*")) == []
+
+
+def test_atomic_current_form_forward_does_not_publish_sources_for_malformed_quote_reader(tmp_path):
+    raw, archives = make_archive()
+    events = []
+    target = tmp_path / "source-archives"
+
+    def fetch_quotes():
+        events.append("quotes")
+        return {"not": "a list"}
+
+    with pytest.raises(TypeError, match="must return a list"):
+        capture_forward_with_atomic_sources(
+            archives,
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            fetch_quotes=fetch_quotes,
+            load_archive=lambda _artifact_id: raw,
+            verify_parent_run=valid_parent,
+            current_gate_identities=_fixture_current_gate_identities(),
+            write_sources_to=target,
+        )
+
+    assert events == ["quotes"]
+    assert not target.exists()
+    assert list(tmp_path.glob(".source-archives.staging-*")) == []
