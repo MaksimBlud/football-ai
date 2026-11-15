@@ -1,3 +1,21 @@
+## 2026-11-15 05:08 UTC — Original V2 source artifact partial-publication guard (PR #833)
+
+A fresh review of the exact original source workflow on the #830/#831 rights-gated branch found one remaining artifact-integrity gap: `serie_a_v2_live_diagnostic_report.py` writes historical CSVs incrementally, while the workflow's final raw-source upload used `if: always()` and `if-no-files-found: warn`. If a later CSV request or report-generation step failed after earlier files had been written, the upload step could still publish a partial source artifact. Downstream ten-file/SHA attestation would reject it, but publishing incomplete public evidence is unnecessary.
+
+**PR #833** [prevent partial original source archive publication](https://github.com/MaksimBlud/football-ai/pull/833) is OPEN, Draft, mergeable, HUMAN-MERGE only. Exact HEAD: `98ce972b7a6f8d7ef3098e29e77c45507167c592`; base is the exact #830 head `7136c04622e997ca5880bf13706db90b7817f104`; 3 ahead / 0 behind; three files changed. The source-capture step now has ID `source_capture`; artifact upload requires that step's `outcome == 'success'`, no longer uses `always()`, and fails if expected artifact files are absent. The original forward verifier's pinned source-workflow Git blob SHA was refreshed to `ef52d8db7275eeb1de577ce8f0ff5edb2e7703e2`. A regression was added to the existing original-forward V2 suite; the existing schedule and rights/quote/budget gates are unchanged.
+
+**Exact-head CI on #833:**
+- Frozen V2 [run 43679543764](https://github.com/MaksimBlud/football-ai/actions/runs/43679543764): Python 3.11 **536 passed**, Python 3.12 **536 passed**; both jobs SUCCESS; production `*.pkl` hash guards SUCCESS.
+- Prospective evaluator [run 43679543904](https://github.com/MaksimBlud/football-ai/actions/runs/43679543904): **213 passed**; compile and production `*.pkl` hash guard SUCCESS.
+
+An initial stacked PR #832 was closed unmerged and superseded by #833 so the change is based directly on #830's exact atomic-forward head and its existing PR-validation branch filter. #833 is a sibling of #831 on #830; do not merge either before #830's rights/source-preflight parent is manually reviewed.
+
+The current main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; #781 live-access hold is still OPEN and not merged. The rights manifest continues to deny source capture, inference, AI training and provider-issued authorization; the repository remains public. This workflow change does not authorize live capture or artifact use.
+
+Fresh read-only strict pre-match Supabase aggregate on 2026-11-15: **3,915** rows, **327** events, **9** leagues; latest snapshot `2026-10-13 14:48:53.042620 UTC`; **0** rows for future kickoffs. The query filtered `snapshot_time_utc < commence_time_utc` and selected aggregate metadata only; no result/score/settlement fields were read. No Supabase writes/DDL, provider requests, artifact downloads, protected target-outcome reads, model changes, schedule changes or main updates occurred.
+
+---
+
 ## 2026-11-15 04:25 UTC — Original V2 atomic prequote restack, evaluator action-pin restack, and fresh read-only inventory
 
 **Fresh main remains** `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This update records only evidence re-read from GitHub Actions logs, exact PR heads/checks, the current rights branch and a read-only strict pre-kickoff Supabase aggregate. No PR was merged and main was not changed.
