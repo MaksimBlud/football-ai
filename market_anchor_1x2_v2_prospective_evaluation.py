@@ -300,32 +300,37 @@ def verify_source_artifacts_for_candidates(
 def _outcome_read_audit_fields(state: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """Expose attempted/returned query counts without misreporting transport failures."""
     audit = state if isinstance(state, Mapping) else {}
-    attempted_count = audit.get("query_attempt_count")
-    returned_count = audit.get("query_return_count")
-    if attempted_count is None:
-        attempted_count = 1 if audit.get("query_attempted") is True else 0
-    if returned_count is None:
-        returned_count = 1 if (
-            audit.get("query_returned") is True or audit.get("called") is True
-        ) else 0
-    if (
-        type(attempted_count) is not int
-        or attempted_count < 0
-        or type(returned_count) is not int
-        or returned_count < 0
+    raw_attempted = audit.get("query_attempt_count")
+    raw_returned = audit.get("query_return_count")
+    valid_attempted = type(raw_attempted) is int and raw_attempted >= 0
+    valid_returned = type(raw_returned) is int and raw_returned >= 0
+    attempted_count = raw_attempted if valid_attempted else (
+        1 if audit.get("query_attempted") is True else 0
+    )
+    returned_count = raw_returned if valid_returned else (
+        1 if audit.get("query_returned") is True or audit.get("called") is True else 0
+    )
+    attempted_flag = audit.get("query_attempted")
+    returned_flag = audit.get("query_returned")
+    called_flag = audit.get("called")
+    attempted = attempted_count > 0 or attempted_flag is True
+    returned = returned_count > 0 or returned_flag is True or called_flag is True
+    inconsistent = (
+        not valid_attempted
+        or not valid_returned
         or returned_count > attempted_count
-    ):
-        raise ValueError("outcome query audit counts are inconsistent")
-    attempted = attempted_count > 0
-    returned = returned_count > 0
-    if audit.get("query_attempted") is not None and audit.get("query_attempted") is not attempted:
-        raise ValueError("outcome query attempted flag disagrees with its count")
-    if audit.get("query_returned") is not None and audit.get("query_returned") is not returned:
-        raise ValueError("outcome query returned flag disagrees with its count")
-    if audit.get("called") is not None and audit.get("called") is not returned:
-        raise ValueError("legacy outcome query called flag disagrees with its return count")
+        or (attempted_flag is not None and attempted_flag is not attempted)
+        or (returned_flag is not None and returned_flag is not returned)
+        or (called_flag is not None and called_flag is not returned)
+        or (returned and not attempted)
+    )
 
-    if not attempted:
+    if inconsistent:
+        # Preserve uncertainty rather than converting malformed audit state into
+        # a false claim that no target-outcome request/read occurred.
+        status = "AUDIT_STATE_INCONSISTENT"
+        outcomes_read = None
+    elif not attempted:
         status = "NOT_ATTEMPTED"
         outcomes_read = False
     elif returned_count == 0:
