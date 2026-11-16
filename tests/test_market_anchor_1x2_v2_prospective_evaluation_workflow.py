@@ -371,6 +371,125 @@ def test_live_market_only_bridge_passes_all_candidates_to_runner_without_preflig
     assert report["source_archive_sha256"] == {"999": verified_source_sha}
 
 
+@pytest.mark.parametrize(
+    ("audit_state", "expected_read", "expected_returned", "expected_status"),
+    [
+        pytest.param(
+            {
+                "called": False,
+                "query_attempted": True,
+                "query_returned": False,
+                "query_attempt_count": 1,
+                "query_return_count": 0,
+            },
+            None,
+            False,
+            "ATTEMPTED_NO_RESPONSE",
+            id="first-query-response-lost",
+        ),
+        pytest.param(
+            {
+                "called": True,
+                "query_attempted": True,
+                "query_returned": True,
+                "query_attempt_count": 30,
+                "query_return_count": 29,
+            },
+            True,
+            True,
+            "PARTIAL_RESPONSES",
+            id="29-responses-before-30th-query-fails",
+        ),
+    ],
+)
+def test_live_bridge_reports_uncertain_or_partial_outcome_query_transport_state(
+    monkeypatch, audit_state, expected_read, expected_returned, expected_status
+):
+    import hashlib
+
+    import market_anchor_1x2_v2_prospective_evaluation as live
+
+    monkeypatch.setattr(
+        live,
+        "require_personal_research_inference_scope",
+        lambda: {"scope_status": "TEST_ONLY_EXPLICITLY_AUTHORIZED"},
+    )
+    monkeypatch.setattr(
+        live,
+        "require_private_repository_for_source_artifacts",
+        lambda repository, token: {
+            "repository": repository,
+            "private": True,
+            "storage_policy": "PRIVATE_GITHUB_ACTIONS_ARTIFACTS",
+        },
+    )
+
+    candidates = []
+    for index in range(30):
+        candidates.append({
+            "row": {
+                "match_date": "2026-11-01",
+                "home_team": f"Home {index:02d}",
+                "away_team": f"Away {index:02d}",
+                "kickoff_utc": f"2026-11-01T{index % 24:02d}:00:00Z",
+                "source_artifact_id": 999,
+            },
+            "provenance": {"source_artifact_id": 999},
+        })
+
+    raw_archive = b"synthetic-forward-artifact"
+    artifact = {
+        "artifact_id": 123,
+        "run_id": 456,
+        "head_sha": "a" * 40,
+        "sha256": hashlib.sha256(raw_archive).hexdigest(),
+        "created_at_utc": "2026-11-01T12:00:00Z",
+    }
+    forward_run = {"run_id": 456, "head_sha": "a" * 40}
+    embedded_source = {999: b"synthetic-source-archive"}
+
+    monkeypatch.setattr(live, "discover_forward_artifacts", lambda token: [artifact])
+    monkeypatch.setattr(live, "verify_forward_run", lambda item, token: forward_run)
+    monkeypatch.setattr(live, "get_archive", lambda artifact_id, token: raw_archive)
+    monkeypatch.setattr(live, "extract_forward_artifact", lambda raw: ({}, embedded_source))
+    monkeypatch.setattr(
+        live,
+        "normalize_forward_report",
+        lambda report, forward_artifact_id, forward_run: candidates,
+    )
+
+    def fail_after_synthetic_query_attempt(
+        client, source_candidates, *, token, observed_at_utc, outcome_read_state
+    ):
+        assert len(list(source_candidates)) == 30
+        outcome_read_state.update(audit_state)
+        raise RuntimeError("synthetic transport failure after outcome query")
+
+    monkeypatch.setattr(
+        live,
+        "evaluate_live_market_only_from_supabase",
+        fail_after_synthetic_query_attempt,
+    )
+
+    report = live.run_live_evaluation(
+        object(),
+        "read-only-test-token",
+        now=datetime.fromisoformat("2026-11-05T12:00:00+00:00"),
+    )
+
+    assert report["status"] == "BLOCKED"
+    assert report["target_outcomes_read"] is expected_read
+    assert report["target_outcome_query_attempted"] is True
+    assert report["target_outcome_query_returned"] is expected_returned
+    assert report["target_outcome_query_attempt_count"] == audit_state["query_attempt_count"]
+    assert report["target_outcome_query_return_count"] == audit_state["query_return_count"]
+    assert report["target_outcome_query_status"] == expected_status
+    assert report["target_outcomes_scored"] is False
+    assert report["raw_outcomes_included"] is False
+    assert report["no_bet"] is True
+    assert report["automatic_promotion"] is False
+
+
 def test_prospective_evaluator_pr_validation_is_offline_and_secret_free():
     validation = ROOT / ".github" / "workflows" / "market-anchor-1x2-v2-prospective-evaluation-validation.yml"
     text = validation.read_text(encoding="utf-8")

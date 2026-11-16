@@ -12,6 +12,7 @@ on:
       - main
       - research/v2-pin-source-workflow-yaml-sha-restacked-on-825-20261114-run11
       - research/v2-market-only-outcome-read-audit-fix-restacked-on-826-20261115-run11
+      - research/v2-outcome-query-attempt-audit-on-846-20261116-run11
       - research/v2-original-forward-atomic-source-preflight-restacked-on-826-20261115-run11
     paths:
       - "requirements-v2-research-py312.lock"
@@ -34,6 +35,7 @@ on:
       - ".github/workflows/market-anchor-1x2-v2-prospective-evaluation-validation.yml"
   push:
     branches:
+      - research/v2-outcome-query-count-audit-on-850-20261116-run11
       - research/v2-market-only-evaluator-restacked-on-820-20261114-run11
       - research/v2-strict-completed-gate-date-only-on-821-20261114-run11
       - research/v2-completed-fixture-direct-rights-guard-restacked-on-822-20261114-run11

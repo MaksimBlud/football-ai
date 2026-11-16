@@ -261,7 +261,7 @@ def evaluate_live_market_only_from_supabase(
     *,
     token: str,
     observed_at_utc: str | None = None,
-    outcome_read_state: dict[str, bool] | None = None,
+    outcome_read_state: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Run market-vs-shadow evaluation with a gate-local exact-row outcome reader.
 
@@ -271,7 +271,13 @@ def evaluate_live_market_only_from_supabase(
     query attempt separately from a returned response; it cannot initiate a read.
     """
     _require_live_research_access(token)
-    state = {"called": False, "query_attempted": False, "query_returned": False}
+    state = {
+        "called": False,
+        "query_attempted": False,
+        "query_returned": False,
+        "query_attempt_count": 0,
+        "query_return_count": 0,
+    }
     if outcome_read_state is not None:
         if not isinstance(outcome_read_state, dict):
             raise ValueError("outcome_read_state must be a mutable dictionary when supplied")
@@ -341,13 +347,17 @@ def evaluate_live_market_only_from_supabase(
             # reached the client. "called" remains the compatibility alias for a
             # query that returned a response.
             state["query_attempted"] = True
+            state["query_attempt_count"] += 1
             if outcome_read_state is not None:
                 outcome_read_state["query_attempted"] = True
+                outcome_read_state["query_attempt_count"] = state["query_attempt_count"]
             response = query.execute()
             state["query_returned"] = True
+            state["query_return_count"] += 1
             state["called"] = True
             if outcome_read_state is not None:
                 outcome_read_state["query_returned"] = True
+                outcome_read_state["query_return_count"] = state["query_return_count"]
                 outcome_read_state["called"] = True
             rows_for_fixture = getattr(response, "data", None)
             if not isinstance(rows_for_fixture, list) or not rows_for_fixture:
