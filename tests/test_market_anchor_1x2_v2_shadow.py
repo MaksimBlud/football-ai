@@ -156,6 +156,8 @@ def test_shadow_capture_accepts_only_pre_kickoff_outcome_free_serie_a_rows():
     {"metadata": {"result": "H"}},
     {"audit": [{"score": "1-0"}]},
     {"provider": {"HC": 11, "FTAG": 2}},
+    {"provider": {"HTHG": 1, "FTR": "H"}},
+    {"stats": {"HST": 6, "AST": 3, "HF": 12, "AF": 9}},
     {"stats": {"home_corners": 9, "away_yellows": 3}},
     {"nested": [{"source": {"Home_Goals": 2}}]},
 ])
