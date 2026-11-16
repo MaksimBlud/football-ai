@@ -220,3 +220,44 @@ def test_preserve_exact_frozen_predictions_with_explicit_imputation_diagnostics(
     assert row["historical_team_coverage"] is None
     assert row["market_1x2"] == pytest.approx(row["active_market_fallback_1x2"])
     assert row["no_bet"] is True
+
+
+
+@pytest.mark.parametrize("extra", [
+    {"history_coverage": {"last_fixture": {"result": "H"}}},
+    {"metadata": [{"score": "1-0"}]},
+    {"nested": [{"source": {"Home_Goals": 2}}]},
+    {"audit": {"settlement": {"winner": "home"}}},
+])
+def test_nested_or_case_variant_outcome_fields_are_rejected(extra):
+    row = features()
+    row.update(extra)
+    with pytest.raises(ValueError, match="result fields"):
+        v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
+
+
+
+@pytest.mark.parametrize("extra", [
+    {"source_stats": {"home_corners": 9}},
+    {"provider_row": {"HC": 11, "FTAG": 2}},
+    {"provider_row": {"HST": 7, "HTR": "H"}},
+    {"provider_row": {"HS": 14, "AST": 3, "FTR": "A"}},
+    {"match": {"home_yellows": 3, "away_reds": 1}},
+])
+def test_raw_match_statistics_and_provider_columns_are_rejected(extra):
+    row = features()
+    row.update(extra)
+    with pytest.raises(ValueError, match="result fields"):
+        v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
+
+
+@pytest.mark.parametrize("alias,value", [
+    ("HTR", "H"), ("HxG", 1.2), ("HST", 6), ("HFKC", 13),
+    ("HO", 3), ("HBP", 10), ("Attendance", 22000),
+])
+def test_preview_rejects_documented_football_data_match_stat_aliases(alias, value):
+    row = features()
+    row["provider_row"] = {alias: value}
+    with pytest.raises(ValueError, match="result fields"):
+        v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
+

@@ -25,10 +25,7 @@ FROZEN_FILE = Path(__file__).resolve().parent / (
 FROZEN_SHA = "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
 SCHEMA = "serie-a-market-anchor-v2-shadow-inference.v1"
 MAX_QUOTE_AGE = timedelta(hours=24)
-FORBIDDEN = frozenset((
-    "result", "outcome", "score", "home_goals", "away_goals",
-    "final_score", "settlement", "prediction_correct", "match_winner"
-))
+FORBIDDEN = v2.FORBIDDEN_OUTCOME_FIELDS
 MARKET_KEYS = (
     "event_id", "league", "home_team", "away_team", "commence_time_utc",
     "snapshot_time_utc", "home_odds", "draw_odds", "away_odds",
@@ -87,11 +84,28 @@ def _key(row: Mapping[str, Any]) -> tuple[str, str, str, datetime]:
 
 
 def _guard_outcome_free(row: Mapping[str, Any]):
-    if set(row).intersection(FORBIDDEN):
-        raise ValueError("outcomes or settlement fields forbidden at capture time")
-    features = row.get("features")
-    if isinstance(features, Mapping) and set(features).intersection(FORBIDDEN):
-        raise ValueError("result fields cannot be provided as model features")
+    """Reject protected outcome/settlement keys at any depth in capture input."""
+    pending = [row]
+    seen: set[int] = set()
+    while pending:
+        value = pending.pop()
+        if isinstance(value, Mapping):
+            identity = id(value)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            for key, nested in value.items():
+                if isinstance(key, str) and key.strip().lower() in FORBIDDEN:
+                    raise ValueError(
+                        "outcomes or settlement fields forbidden at capture time; nested outcome/result fields are forbidden anywhere in shadow input"
+                    )
+                pending.append(nested)
+        elif isinstance(value, (list, tuple)):
+            identity = id(value)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            pending.extend(value)
 
 
 def shadow_preview(
