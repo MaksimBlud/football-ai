@@ -56,8 +56,23 @@ FORBIDDEN_OUTCOME_FIELDS = frozenset({
     "home_cards", "away_cards", "home_yellow_cards", "away_yellow_cards",
     "home_red_cards", "away_red_cards",
     "home_points", "away_points", "points_home", "points_away",
-    "fthg", "ftag", "ftr", "hthg", "htag", "htr", "hs", "as", "hst", "ast",
-    "hf", "af", "hc", "ac", "hy", "ay", "hr", "ar",
+    # Football-Data result aliases (full-time and half-time).
+    "fthg", "hg", "ftag", "ag", "ftr", "res", "hthg", "htag", "htr",
+    # Football-Data post-match statistics; never valid raw capture-time inputs.
+    "hxg", "axg", "hs", "as", "hst", "ast", "hhw", "ahw",
+    "hf", "af", "hfkc", "afkc", "ho", "ao", "hbp", "abp", "attendance",
+    "hc", "ac", "hy", "ay", "hr", "ar",
+    # Common descriptive aliases for the same post-match fields.
+    "half_time_home_goals", "half_time_away_goals",
+    "home_xg", "away_xg", "xg_home", "xg_away",
+    "home_shots", "away_shots", "shots_home", "shots_away",
+    "home_shots_on_target", "away_shots_on_target",
+    "shots_on_target_home", "shots_on_target_away",
+    "home_hit_woodwork", "away_hit_woodwork",
+    "home_fouls", "away_fouls", "fouls_home", "fouls_away",
+    "home_free_kicks_conceded", "away_free_kicks_conceded",
+    "home_offsides", "away_offsides", "offsides_home", "offsides_away",
+    "home_bookings_points", "away_bookings_points", "crowd_attendance",
 })
 PROBABILITY_FIELDS = (
     ("market_home_probability", "market_draw_probability", "market_away_probability"),
