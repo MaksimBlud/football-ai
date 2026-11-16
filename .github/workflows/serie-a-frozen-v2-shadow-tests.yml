@@ -104,6 +104,7 @@ on:
       - research/v2-pin-source-workflow-yaml-sha-restacked-on-825-20261114-run11
       - research/v2-original-forward-atomic-source-preflight-restacked-on-826-20261115-run11
       - research/v2-forward-chain-includes-diagnostic-upload-gate-on-834-20261115-run11
+      - research/v2-current-form-cli-source-first-regression-20261115-run11
     paths:
       - "market_anchor_1x2_v2_*.py"
       - "market_anchor_v2_*.py"

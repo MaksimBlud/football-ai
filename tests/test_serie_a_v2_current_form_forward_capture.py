@@ -2,6 +2,8 @@ from datetime import date, datetime, timedelta, timezone, tzinfo
 from io import BytesIO
 import hashlib
 import json
+import sys
+from pathlib import Path
 import zipfile
 from typing import Any
 
@@ -18,6 +20,7 @@ from serie_a_v2_current_form_forward_capture import (
     prepare_forward_capture as _prepare_forward_capture,
     verify_and_load_archive,
     verify_latest_source_archive,
+    write_json_atomically,
 )
 from serie_a_v2_current_form_source_capture import (
     CURRENT_CODE, CURRENT_FILENAME, CURRENT_SEASON, CURRENT_URL, REQUIRED_COLUMNS,
@@ -1552,3 +1555,211 @@ def test_atomic_current_form_forward_does_not_publish_sources_for_malformed_quot
     assert events == ["quotes"]
     assert not target.exists()
     assert list(tmp_path.glob(".source-archives.staging-*")) == []
+
+
+def test_current_form_forward_report_writer_publishes_complete_json(tmp_path):
+    target = tmp_path / "forward-report.json"
+    payload = {
+        "experiment_id": "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY",
+        "quotes_seen": 0,
+        "target_outcomes_read": False,
+    }
+
+    write_json_atomically(target, payload)
+
+    raw = target.read_text(encoding="utf-8")
+    assert raw.endswith("\n")
+    assert json.loads(raw) == payload
+    assert list(tmp_path.glob(".forward-report.json.staging-*.tmp")) == []
+
+
+def test_current_form_forward_report_writer_removes_partial_file_on_serialization_error(
+    tmp_path, monkeypatch
+):
+    target = tmp_path / "forward-report.json"
+
+    def fail_after_partial_write(payload, handle, **kwargs):
+        handle.write('{"partial":')
+        raise RuntimeError("synthetic JSON serialization failure")
+
+    monkeypatch.setattr(forward_capture_module.json, "dump", fail_after_partial_write)
+    with pytest.raises(RuntimeError, match="synthetic JSON serialization failure"):
+        write_json_atomically(target, {"not": "published"})
+
+    assert not target.exists()
+    assert list(tmp_path.glob(".forward-report.json.staging-*.tmp")) == []
+
+
+def test_current_form_forward_report_writer_rejects_symlink_target(tmp_path):
+    existing = tmp_path / "existing.json"
+    existing.write_text('{"preserve":true}\n', encoding="utf-8")
+    target = tmp_path / "forward-report.json"
+    target.symlink_to(existing)
+
+    with pytest.raises(ValueError, match="cannot be a symlink"):
+        write_json_atomically(target, {"replacement": True})
+
+    assert existing.read_text(encoding="utf-8") == '{"preserve":true}\n'
+    assert target.is_symlink()
+
+
+def test_current_form_forward_artifact_upload_requires_successful_capture():
+    workflow = (
+        Path(__file__).resolve().parents[1]
+        / ".github" / "workflows"
+        / "serie-a-v2-current-form-forward-preview.yml"
+    ).read_text(encoding="utf-8")
+    upload = workflow.split(
+        "      - name: Archive pre-kickoff V2 shadow and exact source ZIPs", 1
+    )[1]
+
+    assert "if: ${{ success() && steps.rights_preflight.outputs.allowed == 'true' }}" in upload
+    assert "if: ${{ always() && steps.rights_preflight.outputs.allowed == 'true' }}" not in upload
+
+
+def _patch_current_form_cli_clock(monkeypatch):
+    class FixedDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            if tz is None:
+                return cls(2026, 10, 19, 5, 40)
+            return cls(2026, 10, 19, 5, 40, tzinfo=tz)
+
+    monkeypatch.setattr(forward_capture_module, "datetime", FixedDateTime)
+
+
+def _configure_current_form_cli(monkeypatch, tmp_path):
+    monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
+    monkeypatch.setenv("GITHUB_REF", "refs/heads/main")
+    monkeypatch.setenv("GITHUB_TOKEN", "synthetic-actions-read-token")
+    monkeypatch.setenv("SUPABASE_URL", "https://synthetic.supabase.invalid")
+    monkeypatch.setenv("SUPABASE_KEY", "synthetic-read-only-key")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "serie_a_v2_current_form_forward_capture.py",
+            "--output",
+            str(tmp_path / "forward.json"),
+            "--sources-output-dir",
+            str(tmp_path / "sources"),
+        ],
+    )
+
+
+def test_real_current_form_cli_verifies_source_sha_and_parent_before_first_quote_read(
+    tmp_path, monkeypatch
+):
+    raw, archives = make_archive()
+    events = []
+    _patch_current_form_cli_clock(monkeypatch)
+    _configure_current_form_cli(monkeypatch, tmp_path)
+
+    import market_anchor_v2_direct_access as direct_access
+    monkeypatch.setattr(
+        direct_access,
+        "require_v2_inference_access",
+        lambda: events.append("rights"),
+    )
+    monkeypatch.setattr(
+        forward_capture_module,
+        "discover_archives",
+        lambda *, token: events.append("discover") or archives,
+    )
+    monkeypatch.setattr(
+        forward_capture_module,
+        "create_client",
+        lambda url, key: events.append("client") or object(),
+    )
+
+    def read_identities(client, *, now):
+        events.append("identity_metadata")
+        assert now.isoformat() == "2026-10-19T05:40:00+00:00"
+        return _fixture_current_gate_identities()
+
+    def verify_parent(archive, *, quote_time, token):
+        events.append("parent")
+        return valid_parent(archive, quote_time=quote_time)
+
+    def load_archive(artifact_id, *, token):
+        events.append("archive_bytes")
+        assert artifact_id == 9876
+        return raw
+
+    def fetch_quotes(client, *, now):
+        events.append("quotes")
+        assert now.isoformat() == "2026-10-19T05:40:00+00:00"
+        return [quote()]
+
+    monkeypatch.setattr(
+        forward_capture_module,
+        "read_completed_primary_event_identities",
+        read_identities,
+    )
+    monkeypatch.setattr(forward_capture_module, "verify_source_run", verify_parent)
+    monkeypatch.setattr(forward_capture_module, "get_archive", load_archive)
+    monkeypatch.setattr(
+        forward_capture_module,
+        "fetch_saved_upcoming_serie_a_quotes",
+        fetch_quotes,
+    )
+
+    forward_capture_module.main()
+
+    assert events.index("rights") < events.index("discover")
+    assert events.index("discover") < events.index("client")
+    assert events.index("discover") < events.index("identity_metadata")
+    assert events.index("identity_metadata") < events.index("parent")
+    assert events.count("archive_bytes") == 1
+    assert events.count("quotes") == 1
+    assert events.index("parent") < events.index("archive_bytes")
+    assert events.index("archive_bytes") < events.index("quotes")
+    report = json.loads((tmp_path / "forward.json").read_text(encoding="utf-8"))
+    assert report["quotes_seen"] == 1
+    assert report["quote_read_skipped"] is False
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
+    assert report["no_bet"] is True
+    source_archives = list((tmp_path / "sources").glob("current-form-source-artifact-*.zip"))
+    assert len(source_archives) == 1
+    assert source_archives[0].read_bytes() == raw
+
+
+def test_real_current_form_cli_with_no_source_archive_never_creates_client_or_reads_quotes(
+    tmp_path, monkeypatch
+):
+    events = []
+    _patch_current_form_cli_clock(monkeypatch)
+    _configure_current_form_cli(monkeypatch, tmp_path)
+
+    import market_anchor_v2_direct_access as direct_access
+    monkeypatch.setattr(
+        direct_access,
+        "require_v2_inference_access",
+        lambda: events.append("rights"),
+    )
+    monkeypatch.setattr(
+        forward_capture_module,
+        "discover_archives",
+        lambda *, token: events.append("discover") or [],
+    )
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("no source archive must prevent all client/quote operations")
+
+    monkeypatch.setattr(forward_capture_module, "create_client", forbidden)
+    monkeypatch.setattr(forward_capture_module, "read_completed_primary_event_identities", forbidden)
+    monkeypatch.setattr(forward_capture_module, "get_archive", forbidden)
+    monkeypatch.setattr(forward_capture_module, "verify_source_run", forbidden)
+    monkeypatch.setattr(forward_capture_module, "fetch_saved_upcoming_serie_a_quotes", forbidden)
+
+    forward_capture_module.main()
+
+    assert "discover" in events
+    report = json.loads((tmp_path / "forward.json").read_text(encoding="utf-8"))
+    assert report["source_gate_blocked"] == "NO_EARLIER_SOURCE_ARCHIVE"
+    assert report["quote_read_skipped"] is True
+    assert report["quotes_seen"] == 0
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
+    assert not (tmp_path / "sources").exists()
