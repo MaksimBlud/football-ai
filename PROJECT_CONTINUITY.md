@@ -1,3 +1,65 @@
+## 2026-11-16 17:54 UTC — post-14:00 original V2 runtime, current metadata and independent core CI
+
+### Repository and merge state
+
+- Fresh `main`: `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main update or merge.
+- PR #781 remains OPEN / Ready for review / mergeable at exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`, with 8/8 exact-head checks SUCCESS. Its live-access hold is not active on main until HUMAN-MERGE.
+- The #839 documentation branch is updated separately; this checkpoint does not change main.
+- PR #842 remains an independent direct-main original-V2 CI hardening candidate at exact HEAD `0e14a8d490c72e95820d82453fa0746d5479001f`, base exact main, 7/7 exact-head checks SUCCESS. Its core shadow-validation job ran 11 tests and the production `.pkl` diff guard passed. Both immutable Action commits were independently re-fetched from their official repositories and have GitHub `verification.verified=true`. HUMAN-MERGE only.
+- PR #848 remains a child of #843 → #837, exact HEAD `f766944dfa3f2c2abbc78094408ec0224d94c696`, base #843 HEAD `725d1c987a9bca1a936008a81dc8458a09791eac`. Its two exact-head Frozen V2 jobs passed **559 tests on Python 3.11 and 559 on Python 3.12**, with both production `.pkl` diff guards passing. It is not a direct-main PR and must not be merged ahead of its parents and the rights/private-storage stack.
+
+### Latest actual main workflow runs (16 November)
+
+1. **Current-Form Source Capture** [run #43881612596](https://github.com/MaksimBlud/football-ai/actions/runs/43881612596), main SHA above, 14:02:17–14:03:23 UTC:
+   - 19 source-capture regressions passed;
+   - feature-input metadata gate reported 110 completed primary-event identities;
+   - 10 historical CSVs / 3,910 historical rows plus one current-season CSV with 110 prior-day rows (11 source files);
+   - frozen candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`;
+   - public Actions artifact #14231524491, 439,424 bytes, ZIP SHA-256 `b7f80f8503058cba2b6b6f6fea4c169434349ecd81b1b471b1ae6ddac64b7e6a`;
+   - 0 paid-provider calls, 0 Supabase writes, target outcomes not scored.
+2. **Current-Form Forward-Only Preview** [run #43881806382](https://github.com/MaksimBlud/football-ai/actions/runs/43881806382), 14:03:26–14:04:10 UTC:
+   - 53 regression tests passed;
+   - verified source artifact #14231524491 and its exact SHA, plus successful parent run #43881612596 completed at 14:03:23 UTC;
+   - source age at verification 44 seconds;
+   - `quotes_seen=0`, `v2_current_form_shadow_captured=0`, no target-outcome read/score, 0 paid calls and 0 writes;
+   - public report/source artifact #14232397119, ZIP SHA-256 `ce958ae73e6db6d61471b1e8e591b2536d5b085067c8e6f0975526c7a4cbb511`, 440,596 bytes.
+3. **Free Real-Quote Diagnostic** [run #43898091146](https://github.com/MaksimBlud/football-ai/actions/runs/43898091146), 15:36:05–15:36:58 UTC:
+   - 53 offline regressions passed;
+   - 10 public CSV HTTP requests / 3,800 historical rows;
+   - 0 quoted fixtures and 0 diagnostic scores; 0 paid requests and 0 Supabase writes;
+   - public artifact #14240321194, ZIP SHA-256 `0cb0a87effbaa3fca28d2e21ae7c2574a6db47bf23223a7fd614f051570dbce5`, 425,065 bytes.
+   - The logged `quotes_with_source_observed_after_quote=0` is vacuous with zero quoted fixtures; it is not a source-before-quote matched observation.
+
+These were real main-branch workflow executions, but none produced a V2 forecast or market comparison. They also occurred while the #781 rights/private-storage hold remained unmerged; the raw source/report artifacts were uploaded to public Actions storage. They do not grant provider rights or justify further automated source access. Do not repeat these live workflows until the rights and private-storage gates are resolved and the owner has manually integrated the hold.
+
+### Fresh read-only Supabase aggregates
+
+Only pre-match odds rows satisfying `snapshot_time_utc < commence_time_utc` were counted; no score, result, settlement, or correctness columns were selected.
+
+- Nine leagues: **3,915** strictly pre-match odds snapshots, **327** distinct event IDs, and **0** rows with future kickoff.
+- Serie A: **620** strictly pre-match snapshots / **63** event IDs; latest saved quote `2026-10-13T14:48:53Z`; 0 future-kickoff rows.
+- Serie A 2026/27 feature-input metadata: **113** distinct `(match_date, home_team, away_team)` identities. The query selected only these three metadata fields from `public.league_finished_results`; no result fields were read.
+- The source capture above reported 110 current-season identities versus 113 current database metadata identities. Counts alone do not identify the missing fixtures, but exact identity-set equality is not proven on main. The current main forward CLI does not re-read/compare the live metadata identity set. PR #843 adds the metadata-only identity-set comparison and fails closed on missing identities; PR #848 carries that code plus real-main-function source-before-quote regressions and atomic publication.
+- `product_prediction_snapshots`: 40 pre-kickoff EPL rows; 0 rows with the frozen original V2 candidate SHA. This is a separate product ledger, not evidence of an original V2 prospective prediction.
+
+### Source-order and rights audit
+
+- Main original CLI `serie_a_v2_forward_capture.py` still imports the Supabase reader and fetches saved quotes before discovering/verifying source archives.
+- Main free diagnostic CLI `serie_a_v2_live_diagnostic_report.py` still calls `fetch_saved_upcoming_serie_a_quotes` before `fetch_public_history`; its zero quote count does not prove ordering.
+- Main current-form forward CLI verifies the latest source archive before creating the Supabase client and reading quotes, but lacks the new direct inference-rights preflight and exact current metadata identity-set comparison carried by #843/#848.
+- #837 carries the original-forward/free-diagnostic source-first and upload-gate changes; #843 adds current-form exact identity-set/source-first behavior; #848 adds actual CLI ordering regressions and atomic report/source publication. All remain stacked and inactive on main.
+- Current rights decision remains fail-closed: source-use/inference permission is unresolved for AI inference/training, authorization is null, and public artifact storage does not satisfy the private-storage requirement. No additional source fetch, inference, or paid quote is authorized by these CI results.
+
+### Frozen model and evaluation
+
+- Candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; original 19-feature order, 20×2 coefficient matrix, imputer/scaler, 3,799 training rows and training fingerprint remain unchanged.
+- `active_lambda=0` remains exact de-vigged market; `shadow_residual_lambda=1` remains research-only.
+- Stability gate remains FAILED; prospective completed eligible forecast gate remains **0/30**.
+- No admissible Brier/LogLoss comparison exists; no claim of V2 superiority.
+
+No main change/merge, paid provider call, target-outcome read, Supabase write/DDL, production `.pkl` change, refit, threshold tuning, publication, promotion, bet, schedule change, or other-agent setting change occurred in this audit.
+
+
 # Football AI — Project Continuity
 
 ## 2026-11-16 06:51 UTC — fresh-main, run-log and pre-match database re-audit
