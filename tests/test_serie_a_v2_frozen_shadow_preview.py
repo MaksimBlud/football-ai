@@ -249,3 +249,15 @@ def test_raw_match_statistics_and_provider_columns_are_rejected(extra):
     row.update(extra)
     with pytest.raises(ValueError, match="result fields"):
         v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
+
+
+@pytest.mark.parametrize("alias,value", [
+    ("HTR", "H"), ("HxG", 1.2), ("HST", 6), ("HFKC", 13),
+    ("HO", 3), ("HBP", 10), ("Attendance", 22000),
+])
+def test_preview_rejects_documented_football_data_match_stat_aliases(alias, value):
+    row = features()
+    row["provider_row"] = {alias: value}
+    with pytest.raises(ValueError, match="result fields"):
+        v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
+
