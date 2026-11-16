@@ -267,8 +267,8 @@ def evaluate_live_market_only_from_supabase(
 
     The result-column query exists only as a nested lazy callback. There is no
     importable module-level outcome reader that can be called around the frozen
-    30-identity / 30-eligible-forecast gate. The optional state sink is audit
-    metadata only; it cannot initiate a read.
+    30-identity / 30-eligible-forecast gate. The optional state sink records
+    query attempt separately from a returned response; it cannot initiate a read.
     """
     _require_live_research_access(token)
     state = {"called": False, "query_attempted": False, "query_returned": False}
