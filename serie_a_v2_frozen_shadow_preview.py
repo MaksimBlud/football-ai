@@ -100,7 +100,7 @@ def _guard_outcome_free(row: Mapping[str, Any]):
             for key, nested in value.items():
                 if isinstance(key, str) and key.strip().lower() in FORBIDDEN:
                     raise ValueError(
-                        "outcome/result fields are forbidden anywhere in shadow input"
+                        "outcomes or settlement fields forbidden at capture time; nested outcome/result fields are forbidden anywhere in shadow input"
                     )
                 pending.append(nested)
         elif isinstance(value, (list, tuple)):
