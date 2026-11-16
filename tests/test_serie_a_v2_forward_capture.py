@@ -1202,3 +1202,80 @@ def test_original_forward_cli_defers_supabase_quote_reader_until_source_prefligh
     assert report["source_preflight"]["quotes_read_after_source_preflight"] is True
     assert report["v2_diagnostic_previews_captured"] == 1
     assert len(list(sources.glob("source_artifact_*.zip"))) == 1
+
+
+def test_original_forward_cli_without_source_archive_never_imports_database_or_reads_quotes(
+    monkeypatch, tmp_path
+):
+    """The actual original-forward CLI must fail before importing its lazy quote reader."""
+    import builtins
+    import sys
+    from types import ModuleType
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 10, 14, 7, 0, tzinfo=tz or timezone.utc)
+
+    monkeypatch.setattr(forward_capture_module, "datetime", FrozenDateTime)
+    events = []
+
+    access_module = ModuleType("market_anchor_v2_direct_access")
+    access_module.require_v2_inference_access = lambda: events.append("rights")
+    monkeypatch.setitem(sys.modules, "market_anchor_v2_direct_access", access_module)
+
+    monkeypatch.setenv("GITHUB_REPOSITORY", forward_capture_module.REPOSITORY)
+    monkeypatch.setenv("GITHUB_TOKEN", "synthetic-read-only-token")
+    monkeypatch.setattr(
+        forward_capture_module,
+        "discover_archives",
+        lambda token: events.append("discover") or [],
+    )
+
+    original_import = builtins.__import__
+
+    def guarded_import(name, *args, **kwargs):
+        if name == "database":
+            events.append("database_import")
+            raise AssertionError("Supabase must not be imported without a verified source archive")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+    monkeypatch.setattr(
+        forward_capture_module,
+        "verify_source_run",
+        lambda *args, **kwargs: pytest.fail("parent verification is impossible without an archive"),
+    )
+    monkeypatch.setattr(
+        forward_capture_module,
+        "get_archive",
+        lambda *args, **kwargs: pytest.fail("archive download is impossible without metadata"),
+    )
+    monkeypatch.setattr(
+        forward_capture_module,
+        "fetch_saved_upcoming_serie_a_quotes",
+        lambda *args, **kwargs: pytest.fail("saved quotes must never be read without a source archive"),
+    )
+
+    output = tmp_path / "report.json"
+    sources = tmp_path / "sources"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "serie_a_v2_forward_capture.py",
+            "--output",
+            str(output),
+            "--sources-output-dir",
+            str(sources),
+        ],
+    )
+
+    with pytest.raises(RuntimeError, match="no original V2 source archive before quote read"):
+        forward_capture_module.main()
+
+    assert events.count("rights") >= 1
+    assert events.index("rights") < events.index("discover")
+    assert "database_import" not in events
+    assert not output.exists()
+    assert not sources.exists()
