@@ -46,9 +46,18 @@ TRAINING_DATA_THROUGH = pd.Timestamp("2026-06-30T23:59:59Z")
 ADMISSION_NOT_BEFORE = pd.Timestamp("2026-09-16T00:00:00Z")
 FIRST_OUTCOME_READ_GATE = 30
 INCUMBENT_MODEL_SHA256 = "1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5"
-FORBIDDEN_OUTCOME_FIELDS = frozenset(
-    {"result", "outcome", "home_goals", "away_goals", "score", "final_score"}
-)
+FORBIDDEN_OUTCOME_FIELDS = frozenset({
+    "result", "outcome", "home_goals", "away_goals", "score", "final_score",
+    "settlement", "prediction_correct", "match_winner", "winner", "winning_team",
+    "home_score", "away_score", "full_time_score", "full_time_result",
+    "match_result", "match_outcome",
+    "home_corners", "away_corners", "corners_home", "corners_away",
+    "home_yellows", "away_yellows", "home_reds", "away_reds",
+    "home_cards", "away_cards", "home_yellow_cards", "away_yellow_cards",
+    "home_red_cards", "away_red_cards",
+    "home_points", "away_points", "points_home", "points_away",
+    "fthg", "ftag", "hc", "ac", "hy", "ay", "hr", "ar",
+})
 PROBABILITY_FIELDS = (
     ("market_home_probability", "market_draw_probability", "market_away_probability"),
     ("incumbent_home_probability", "incumbent_draw_probability", "incumbent_away_probability"),
@@ -270,6 +279,33 @@ def write_candidate_artifact(frame: pd.DataFrame, output: Path) -> dict:
     return artifact
 
 
+def _nested_forbidden_outcome_keys(value) -> set[str]:
+    """Return protected match-outcome keys found anywhere in nested containers."""
+    pending = [value]
+    seen: set[int] = set()
+    leaked: set[str] = set()
+    while pending:
+        current = pending.pop()
+        if isinstance(current, Mapping):
+            identity = id(current)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            for key, nested in current.items():
+                if isinstance(key, str):
+                    normalized = key.strip().lower()
+                    if normalized in FORBIDDEN_OUTCOME_FIELDS:
+                        leaked.add(normalized)
+                pending.append(nested)
+        elif isinstance(current, (list, tuple)):
+            identity = id(current)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            pending.extend(current)
+    return leaked
+
+
 def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
     validated: list[dict] = []
     seen_events: set[str] = set()
@@ -279,7 +315,7 @@ def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
         missing = REQUIRED_CAPTURE_FIELDS - row.keys()
         if missing:
             raise ValueError("shadow row missing fields: " + ", ".join(sorted(missing)))
-        leaked = FORBIDDEN_OUTCOME_FIELDS & row.keys()
+        leaked = _nested_forbidden_outcome_keys(raw)
         if leaked:
             raise ValueError("outcome fields are forbidden in shadow capture: " + ", ".join(sorted(leaked)))
         if row["experiment_id"] != EXPERIMENT_ID or row["evidence_class"] != EVIDENCE_CLASS:
