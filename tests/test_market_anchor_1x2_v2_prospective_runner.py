@@ -1270,7 +1270,11 @@ def test_market_only_outcome_read_audit_flag_stays_false_when_loader_rejects_bef
         ForbiddenClient(), [], token="synthetic", outcome_read_state=state
     )
 
-    assert state == {"called": False}
+    assert state == {
+        "called": False,
+        "query_attempted": False,
+        "query_returned": False,
+    }
     assert report["target_outcomes_read"] is False
 
 
@@ -1314,6 +1318,8 @@ def test_market_only_outcome_read_audit_flag_flips_only_after_exact_query_return
             return self
 
         def execute(self):
+            assert state["query_attempted"] is True
+            assert state["query_returned"] is (self.client.execute_count > 0)
             assert state["called"] is (self.client.execute_count > 0)
             self.client.execute_count += 1
             home = self.filters["home_team"][0]
@@ -1348,6 +1354,84 @@ def test_market_only_outcome_read_audit_flag_flips_only_after_exact_query_return
     )
 
     assert client.execute_count == 30
-    assert state == {"called": True}
+    assert state == {
+        "called": True,
+        "query_attempted": True,
+        "query_returned": True,
+    }
     assert report["target_outcomes_read"] is True
 
+
+
+
+def test_outcome_query_attempt_is_recorded_when_transport_fails_before_response(monkeypatch):
+    rows = _forecast_rows(30)
+    identities = frozenset(
+        evaluator._identity(
+            (row["match_date"], row["home_team"], row["away_team"]),
+            label="test fixture",
+        )
+        for row in rows
+    )
+    kickoff_by_identity = {
+        evaluator._identity(
+            (row["match_date"], row["home_team"], row["away_team"]),
+            label="test fixture",
+        ): row["kickoff_utc"]
+        for row in rows
+    }
+    monkeypatch.setattr(runner, "_require_live_research_access", lambda _token: None)
+    monkeypatch.setattr(runner, "_snapshot_source_candidates", lambda _items: (rows, tuple()))
+    monkeypatch.setattr(
+        runner, "_forecast_kickoff_lookup",
+        lambda _rows: (rows, kickoff_by_identity),
+    )
+
+    class Query:
+        def __init__(self):
+            self.filters = {}
+
+        def select(self, _columns):
+            return self
+
+        def eq(self, key, value):
+            self.filters[key] = value
+            return self
+
+        def in_(self, key, values):
+            self.filters[key] = values
+            return self
+
+        def execute(self):
+            self.client.execute_count += 1
+            raise RuntimeError("synthetic transport failure after query submission")
+
+    class Client:
+        def __init__(self):
+            self.execute_count = 0
+
+        def table(self, _name):
+            query = Query()
+            query.client = self
+            return query
+
+    client = Client()
+    state = {}
+
+    def invoke_loader(_client, _candidates, outcome_loader, *, token):
+        outcome_loader(identities)
+        pytest.fail("the synthetic query failure must propagate")
+
+    monkeypatch.setattr(runner, "evaluate_live_market_only_prospective_cohort", invoke_loader)
+
+    with pytest.raises(RuntimeError, match="transport failure after query submission"):
+        runner.evaluate_live_market_only_from_supabase(
+            client, [], token="synthetic", outcome_read_state=state
+        )
+
+    assert client.execute_count == 1
+    assert state == {
+        "called": False,
+        "query_attempted": True,
+        "query_returned": False,
+    }
