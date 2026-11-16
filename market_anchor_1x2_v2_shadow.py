@@ -56,7 +56,8 @@ FORBIDDEN_OUTCOME_FIELDS = frozenset({
     "home_cards", "away_cards", "home_yellow_cards", "away_yellow_cards",
     "home_red_cards", "away_red_cards",
     "home_points", "away_points", "points_home", "points_away",
-    "fthg", "ftag", "hc", "ac", "hy", "ay", "hr", "ar",
+    "fthg", "ftag", "ftr", "hthg", "htag", "htr", "hs", "as", "hst", "ast",
+    "hf", "af", "hc", "ac", "hy", "ay", "hr", "ar",
 })
 PROBABILITY_FIELDS = (
     ("market_home_probability", "market_draw_probability", "market_away_probability"),
