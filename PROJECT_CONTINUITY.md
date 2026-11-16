@@ -7087,3 +7087,40 @@ No additional PR was created for this issue because the existing #848 implementa
 - The current-form source/forward runs above were already scheduled main workflows observed in their real logs; no workflow was manually dispatched, no schedule/other-agent setting was changed, and this record does not supersede the unresolved source-rights/private-retention hold.
 
 No merge, main update, Supabase write/DDL, paid API request, target-outcome evaluation read, production `.pkl` modification, refit, promotion or bet occurred in this audit.
+
+## 2026-11-16 19:52 UTC — refreshed main runtime, pre-match ledger and all-five-workflow action pins
+
+**Main and runtime**
+
+- Fresh GitHub ref check: `main = 40887ebb215730190d7a6c7a1693373ec4afcdfc`. It has not changed. PR #781 is still OPEN / Ready for review, direct base main, exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`; all eight exact-head PR Actions runs are completed SUCCESS. Its default-deny hold is **not active on main** until HUMAN-MERGE.
+- Original forward [run #43927778344](https://github.com/MaksimBlud/football-ai/actions/runs/43927778344) on main completed SUCCESS: 71 tests passed; source artifact #14240321194 and parent #43898091146 were SHA-attested (10 frozen historical CSVs / 3,800 rows); `quotes_seen=0`, V2 previews=0, paid calls=0, Supabase writes=0. It still emitted public report-only artifact #14256147981. The direct-main original forward CLI remains quote-reader-first; #837/#843/#848 are not integrated.
+- Current-form source capture [run #43881612596](https://github.com/MaksimBlud/football-ai/actions/runs/43881612596) completed SUCCESS: metadata-only feature-input gate counted 110 unique identities; 10 historical CSVs plus one current-season CSV; 3,910 historical rows and 110 prior-day current-season rows. Source artifact #14231524491, SHA-256 `b7f80f8503058cba2b6b6f6fea4c169434349ecd81b1b471b1ae6ddac64b7e6a`.
+- Current-form forward [run #43930085547](https://github.com/MaksimBlud/football-ai/actions/runs/43930085547) completed SUCCESS: 53 tests passed; verified the source artifact SHA and parent run before quote access; `quotes_seen=0`, current-form shadow forecasts=0, target outcomes read/scored=false. It nevertheless uploaded public artifact #14257353951 (440,597 bytes, SHA-256 `9a95b30c2f16f9e526a37db9eaa5c679603195a66632bdb45795452354f941be`) containing source ZIPs.
+- Free real-quote diagnostic [run #43898091146](https://github.com/MaksimBlud/football-ai/actions/runs/43898091146) completed SUCCESS: 10 public historical CSV requests / 3,800 rows, 0 quote fixtures and 0 diagnostic forecasts. Its main CLI remains quote-reader-first; the successful run is not source-before-quote proof.
+- These green runtime runs are infrastructure evidence only, not new predictions or model-quality observations. Public Actions artifacts remain exposed while #781 is unmerged; no artifact was downloaded or deleted in this audit.
+
+**Strict pre-match Supabase reads only**
+
+- `public.odds_snapshots`, filtered by `snapshot_time_utc < commence_time_utc`: **3,915 rows / 327 unique events / 9 leagues**. Serie A: **620 / 63**; latest strictly pre-kickoff snapshot `2026-10-13T14:48:53.042620Z`.
+- `public.product_prediction_snapshots`, filtered by `generated_at_utc < commence_time_utc`: **40 rows**, **0** carrying original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; latest `2026-10-09T15:29:33.136613Z`.
+- Queries selected only pre-match timestamps, event/league identifiers and model SHA/count metadata; no score, result or settlement fields.
+
+**Current-form identity-set discrepancy**
+
+- The source archive's feature-input gate recorded **110** unique identities. A separate read-only metadata-only count from `league_finished_results` returned **113** Serie A 2026/27 identities through `2026-11-08`, selecting only `match_date,home_team,away_team`. This is a count discrepancy, not proof that exactly three canonical fixtures are absent.
+- The exact identity-set attestation and fail-closed archive coverage checks are implemented in child PR #843: it validates the gate identity list and SHA-256, recomputes current-source identity coverage, and blocks missing identities before the deferred quote reader. Its regression suite includes `test_forward_capture_fails_closed_when_new_completed_fixture_is_missing_from_archive`, `test_archive_loader_recomputes_gate_identity_coverage_against_current_source`, and `test_archive_loader_rejects_missing_gate_identity_list`. Exact-head run [#43750160905](https://github.com/MaksimBlud/football-ai/actions/runs/43750160905): both Python 3.11 and 3.12 jobs SUCCESS. The fix is not on main.
+
+**Five-workflow immutable-action coverage**
+
+- Child PR #853 was extended to pin `actions/checkout`, `actions/setup-python`, and `actions/upload-artifact` to verified full upstream commit SHAs across all five held V2 source/quote/recovery workflows, including the current-form source-capture and free diagnostic workflows previously omitted from the pin test.
+- Exact child HEAD `bf56afdff8e2cb6074d93bef00c0fb8c10428c13`; exact parent #781 HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`; compare **10 ahead / 0 behind**. Targeted exact-head run [#43943659300](https://github.com/MaksimBlud/football-ai/actions/runs/43943659300) SUCCESS: **20/20 tests passed** on Python 3.12.16. #853 remains Draft and must follow #781; after manual #781 integration it must be rebased and fully revalidated.
+- #848 exact-head run [#43777997889](https://github.com/MaksimBlud/football-ai/actions/runs/43777997889): both Python jobs SUCCESS, **559 tests on each runtime**, production `.pkl` guards passed. #848 remains stacked on #843 → #837.
+- #842 remains a separate direct-main immutable-action pin PR with 7/7 exact-head checks SUCCESS. #851 overlaps its frozen-workflow action-pin hunk; do not merge both without choosing one and restacking the other.
+
+**Frozen V2 and evaluation status**
+
+- Original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 features, 20×2 weights, 3,799 training rows and fingerprint remain unchanged.
+- `active_lambda=0` remains exact de-vigged market; `shadow_lambda=1` remains research-only; NO_BET remains enforced.
+- Feature-input gate is 110/30; the separate prospective completed-forecast outcome gate remains **0/30 and CLOSED**. No protected target outcomes were read, no Brier/LogLoss comparison was produced, and no superiority claim is justified.
+
+No merge, main ref update, Supabase write/DDL, paid provider request, production `.pkl` change, refit, promotion, bet, schedule change or other-agent setting change occurred in this checkpoint.
