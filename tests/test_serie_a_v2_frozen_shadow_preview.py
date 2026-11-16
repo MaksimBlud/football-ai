@@ -240,9 +240,11 @@ def test_nested_or_case_variant_outcome_fields_are_rejected(extra):
 @pytest.mark.parametrize("extra", [
     {"source_stats": {"home_corners": 9}},
     {"provider_row": {"HC": 11, "FTAG": 2}},
+    {"provider_row": {"HST": 7, "HTR": "H"}},
+    {"provider_row": {"HS": 14, "AST": 3, "FTR": "A"}},
     {"match": {"home_yellows": 3, "away_reds": 1}},
 ])
-def test_raw_corner_card_and_provider_outcome_columns_are_rejected(extra):
+def test_raw_match_statistics_and_provider_columns_are_rejected(extra):
     row = features()
     row.update(extra)
     with pytest.raises(ValueError, match="result fields"):
