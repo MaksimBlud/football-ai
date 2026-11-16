@@ -6906,3 +6906,45 @@ A public-documentation screen found a possible zero-cost source for part of the 
 - Serie A is named among the covered competitions, but per-match detailed-stat availability and the underlying rights for the exact fields remain unverified.
 
 Decision: HOLD as a possible supplementary statistics source only; not approved for V2 capture or inference. No account was created, no API key requested, no API request made, no quota consumed, and no provider data downloaded. Official references: https://sportapi.ai/pricing, https://sportapi.ai/football-api, https://sportapi.ai/terms.
+
+
+## 2026-11-16 — Fresh-main forward-order audit, pre-match database refresh, and remaining immutable-action pins
+
+**Fresh main and continuity check**
+- Fresh repository main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; latest commit search returned this same Oct 18 commit. The main `PROJECT_CONTINUITY.md` blob is `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b` and its leading checkpoint is still dated 2026-10-18. Newer Nov 15–16 evidence is therefore still on this documentation PR branch, not main.
+- This #839 branch before this update was `35593694a0008e2081770495d4ab276dfad43f9a`, 24 commits ahead / 0 behind main. The previous 1de0782 reference is stale; the exact current branch comparison is authoritative.
+
+**Original forward CLI — confirmed quote-first on main**
+- Main workflow `.github/workflows/serie-a-v2-forward-preview.yml` blob: `48ce3b0d8e31c4cf293b94500e9c320047311467`.
+- Main CLI `serie_a_v2_forward_capture.py` blob: `5db02cbd1367ed25b994b152acf371421859a014`.
+- In `main()`, the code imports `database.supabase`, calls `fetch_saved_upcoming_serie_a_quotes(...)`, and only then calls `discover_archives(...)`. Thus the CLI itself is still quote-first on main, even though the workflow has a separate source-attestation step before the CLI step. Do not treat workflow step order alone as proof of source-before-quote inside the CLI.
+- Direct-main hold [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review at exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`, 43 ahead / 0 behind main. Its eight associated runs are completed SUCCESS; the Frozen V2 log reports 103 tests passed. It gates live steps and every artifact upload across the five inventoried V2 workflows, but is not active on main until HUMAN-MERGE and fresh-main runtime verification.
+
+**New stacked immutable-action pin PR**
+- [#853](https://github.com/MaksimBlud/football-ai/pull/853) is intentionally stacked on #781, not main.
+- Exact HEAD `502e5d5031b745603f89daed8e428805eaed502d`; parent #781 exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`; compare 6 ahead / 0 behind, exact parent merge base.
+- Pins checkout `11d5960a326750d5838078e36cf38b85af677262`, setup-python `a26af69be951a213d495a4c3e4e4022e16d87065`, and upload-artifact `ea165f8d65b6e75b540449e92b4886f43607fa02` in the original forward, current-form forward, and recovery workflows changed by #781.
+- Adds a PR-only targeted validation workflow; no cron, source/quote access, Supabase credentials, artifact upload, or outcome reads.
+- Exact-head targeted CI [#43846539057](https://github.com/MaksimBlud/football-ai/actions/runs/43846539057): **1/1 SUCCESS**, actual job log **20 passed** on Python 3.12.16. PR remains Draft and stacked; after #781 is manually integrated, rebase onto fresh main and run full exact-head CI. Do not merge directly to main or ahead of #781.
+
+**Other exact-head action-pin checks**
+- [#842](https://github.com/MaksimBlud/football-ai/pull/842): HEAD `0e14a8d490c72e95820d82453fa0746d5479001f`, 7/7 completed SUCCESS; core shadow-validation log: 11 passed.
+- [#851](https://github.com/MaksimBlud/football-ai/pull/851): HEAD `c79445d10036c39b4d2cc88133434f67399983c5`, 7/7 completed SUCCESS; frozen V2 log: 86 passed.
+- These are direct-main PRs but still require HUMAN-MERGE and a fresh-main ancestry/CI check before integration.
+
+**Read-only Supabase pre-match refresh**
+- Queried only `public.odds_snapshots` timing/identity fields, with strict `snapshot_time_utc < commence_time_utc`; no odds values or result fields selected.
+- Strict pre-match total: **3,915 snapshots / 327 unique event IDs / 9 leagues**. Serie A: **620 snapshots / 63 event IDs**, latest `2026-10-13T14:48:53.042620Z`. Future-kickoff pre-match quote rows: **0**.
+- `public.product_prediction_snapshots` metadata-only query: **40** strictly pre-match EPL rows, all `EPL_AI_MARKET_PAIR_V1` with SHA `1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5`; none is an original V2 prediction. This legacy product ledger was not used for V2 evaluation.
+- No result/score/settlement table was queried. No new prospective V2 forecast or market quote was found.
+
+**Frozen original candidate re-read from main**
+- Candidate JSON blob: `ac1303f6b096664983fbf52443bd0a381b23ba21`; artifact SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Exact 19-feature order equals the main `ALL_FOOTBALL` order in builder blob `401b3a0893371bfa4a488ec92a4a54af2678c8f7`; six corner-form features, not eight.
+- Weight matrix **20×2**, all finite; 3,799 training rows; fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; training cutoff `2026-06-30T23:59:59Z`.
+- `active_lambda=0`, `shadow_residual_lambda=1`, `stability_gate_passed=false`, `opened_2026_27_outcomes_used=false`, `automatic_promotion=false`. No weights, features, scaler or imputer changed. Prospective evaluation remains **0/30**; no Brier/LogLoss superiority claim.
+
+**Supabase security advisory**
+- Current metadata inventory reports RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. This is a critical exposure warning for anon/authenticated roles. No DDL was run; enabling RLS without deliberate policies could break legitimate access. Keep this as a separately owner-controlled security remediation, not an automatic V2 research write.
+
+No main update or merge, Supabase writes/DDL, paid API call, source download, quote read, protected outcome read, production `.pkl` change, refit, promotion, bet, schedule change, or other-agent setting change occurred in this audit.
