@@ -25,10 +25,7 @@ FROZEN_FILE = Path(__file__).resolve().parent / (
 FROZEN_SHA = "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
 SCHEMA = "serie-a-market-anchor-v2-shadow-inference.v1"
 MAX_QUOTE_AGE = timedelta(hours=24)
-FORBIDDEN = frozenset((
-    "result", "outcome", "score", "home_goals", "away_goals",
-    "final_score", "settlement", "prediction_correct", "match_winner"
-))
+FORBIDDEN = v2.FORBIDDEN_OUTCOME_FIELDS
 MARKET_KEYS = (
     "event_id", "league", "home_team", "away_team", "commence_time_utc",
     "snapshot_time_utc", "home_odds", "draw_odds", "away_odds",
