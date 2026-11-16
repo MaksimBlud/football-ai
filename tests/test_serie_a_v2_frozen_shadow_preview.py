@@ -220,3 +220,17 @@ def test_preserve_exact_frozen_predictions_with_explicit_imputation_diagnostics(
     assert row["historical_team_coverage"] is None
     assert row["market_1x2"] == pytest.approx(row["active_market_fallback_1x2"])
     assert row["no_bet"] is True
+
+
+
+@pytest.mark.parametrize("extra", [
+    {"history_coverage": {"last_fixture": {"result": "H"}}},
+    {"metadata": [{"score": "1-0"}]},
+    {"nested": [{"source": {"Home_Goals": 2}}]},
+    {"audit": {"settlement": {"winner": "home"}}},
+])
+def test_nested_or_case_variant_outcome_fields_are_rejected(extra):
+    row = features()
+    row.update(extra)
+    with pytest.raises(ValueError, match="result fields"):
+        v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
