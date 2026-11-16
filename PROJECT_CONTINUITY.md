@@ -1,3 +1,33 @@
+# Football AI — Project Continuity
+
+## 2026-11-16 05:56 UTC — live pre-match event-ID collision audit
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; this checkpoint is documentation-only on the existing #839 branch. No main update or merge occurred.
+
+### New read-only market identity finding
+
+A strict pre-match-only query of `public.odds_snapshots` (`snapshot_time_utc < commence_time_utc`) found one Serie A provider event ID reused with two kickoff identities. Event ID `8f751e96142db860ba66bbea713baf50` is attached to Cagliari–Lecce at `2026-09-07 16:00:00+00` (6 snapshots) and `2026-09-07 16:30:00+00` (22 snapshots). Only event ID, teams, kickoff, snapshot time and row counts were selected; odds prices, scores, results and settlement fields were not read.
+
+This explains the aggregate difference between 63 distinct Serie A event IDs and 64 distinct `(kickoff, home, away)` keys: one ID has two kickoff timestamps for the same team pair. It is not evidence of two separate matches. Existing [PR #766](https://github.com/MaksimBlud/football-ai/pull/766), exact HEAD `d4f4eabf0389ffbebf0447dfd6a7330c2e3a9da8`, adds the correct fail-closed one-event-ID/one-fixture identity guard and regressions for reversed teams and conflicting kickoffs. Its exact-head checks are 7/7 SUCCESS; it remains Draft and must wait behind #781 and the rights/private-storage gates before any live workflow can run.
+
+### Refreshed pre-match-only aggregates
+
+- Nine leagues: 3,915 strict pre-match odds snapshots and 327 distinct provider event IDs; zero rows had a future kickoff at query time.
+- Serie A: 620 strict pre-match snapshots, 63 distinct event IDs, latest snapshot `2026-10-13T14:48:53.04262Z`; zero future-kickoff rows.
+- Serie A 2026/27 feature-input identity query selected only `match_date,home_team,away_team`: 113 unique identities from `2026-08-22` through `2026-11-08`. This opens only the lagged feature-input count gate, not target-outcome evaluation.
+- Product prediction snapshots: 40 strict pre-match rows; 0 rows with frozen V2 SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; latest `2026-10-09T15:29:33.136613Z`.
+
+### Main runtime and frozen model status
+
+The last verified main source/forward jobs remain the 2026-11-15 runs #43716579727, #43721234884, #43730695523 and #43731127758. Their GitHub job steps completed successfully, but the forward reports contained zero quotes and zero V2 previews. Two newer frozen-V2 test runs in the current run listing were PR-only, not main runtime proof.
+
+Main's `serie-a-v2-forward-preview.yml` still uses mutable `checkout@v4`/`setup-python@v5`, injects Supabase credentials at job scope, reads saved quotes in the original CLI before source verification, and uploads with `if: always()`. Current-form source capture also remains scheduled and uploads with `if: always()`. [PR #781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review, exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`, 8/8 SUCCESS; it is still the first manual integration priority.
+
+Frozen candidate unchanged: SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, original 19 features, 20×2 weights, 3,799 training rows, `active_lambda=0`, `shadow_lambda=1`, stability gate FAILED, prospective outcome cohort 0/30. No Brier/LogLoss superiority claim is supported.
+
+No Supabase writes/DDL, paid provider calls, target-outcome reads, production `.pkl` changes, refit, threshold tuning, promotion, bets, schedule changes or other-agent setting changes occurred.
+
+---
 ## 2026-11-15 22:00 UTC — current-form identity mismatch and atomic report hardening
 
 Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. This update records the latest read-only runtime evidence and the new exact-head CI result. No main update or merge occurred.
