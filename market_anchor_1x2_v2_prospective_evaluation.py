@@ -302,8 +302,12 @@ def _outcome_read_audit_fields(state: Mapping[str, Any] | None = None) -> dict[s
     audit = state if isinstance(state, Mapping) else {}
     raw_attempted = audit.get("query_attempt_count")
     raw_returned = audit.get("query_return_count")
-    valid_attempted = type(raw_attempted) is int and raw_attempted >= 0
-    valid_returned = type(raw_returned) is int and raw_returned >= 0
+    valid_attempted = raw_attempted is None or (
+        type(raw_attempted) is int and raw_attempted >= 0
+    )
+    valid_returned = raw_returned is None or (
+        type(raw_returned) is int and raw_returned >= 0
+    )
     attempted_count = raw_attempted if valid_attempted else (
         1 if audit.get("query_attempted") is True else 0
     )
