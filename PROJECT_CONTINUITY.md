@@ -7170,3 +7170,21 @@ No PR was merged, no main ref was changed, and no schedule, model contract, Supa
 - The dedicated Frozen V2 job log confirms **89 passed on CPython 3.11.18** and `git diff --exit-code -- '*.pkl'` passed. This exact run does not establish a Python 3.12 run; no such claim is made.
 - This is synthetic/offline input-embargo validation only. No source/quote access, Supabase query, inference, protected outcome read, refit, production artifact change or promotion occurred. Main still has the earlier top-level-only guard until this PR is manually integrated. HUMAN-MERGE only.
 - Fresh read-only pre-match Supabase aggregate reconfirmed `public.odds_snapshots` **3,915 rows / 327 events / 9 leagues** under `snapshot_time_utc < commence_time_utc`, and `public.product_prediction_snapshots` **40 rows / 40 events**, with **0** original V2 candidate SHA rows under `generated_at_utc < commence_time_utc`. No outcome columns were selected.
+
+
+### Free-source follow-up and exact V2 guard state — 2026-11-16 22:00 UTC
+
+**Official free-source screen (documentation only; no account, API key, endpoint request or data download):**
+
+- SportAPI.ai Terms, last updated 2026-10-22, allow data use in one's own websites, apps, analysis and products, while prohibiting raw-data feed/API redistribution. The provider says data is compiled from public sources and coverage depth varies. Its current football API documentation lists goals/cards/events and team statistics such as shots, fouls, passes and saves, but does not document a corners field or betting odds. This is a possible partial source, not a complete input source for the frozen 19-feature V2; upstream data rights and per-match completeness remain unverified. Official pages: https://sportapi.ai/terms and https://sportapi.ai/football-api.
+- PitchAPI's current official docs advertise one no-charge plan, 77 leagues and history back to 2021. The reviewed match/event/team-stat field lists cover goals, cards, shots and other analytics, but do not document corners; no public AI/inference or data-retention licence was located in the reviewed docs. No key or request was used. It is not a complete approved source for the frozen 19 features. Official docs: https://pitchapi.dev/.
+- The existing [#790 open-matchday audit](https://github.com/MaksimBlud/football-ai/pull/790) remains the more complete 2026/27 CSV candidate: its pinned Serie A metadata reports 110 result rows, 110 corner rows and 270 fixtures through 2026-11-08, but the compilation is non-commercial-only, has no OSI-approved licence, and leaves upstream provider rights in force. No CSV was downloaded or parsed; no inference permission is established.
+
+No source currently has documented rights and demonstrated complete, reliable coverage for all 19 frozen inputs. Football-Data's current V2 rights manifest remains fail-closed: automated source capture, inference and AI training are false; provider authorization is null. Do not resume automated capture or V2 inference from these candidates until the applicable source rights, current-season field coverage, observation timestamps and private-retention scope are explicitly established.
+
+**Recursive outcome embargo — final exact-head state:**
+
+- PR [#854](https://github.com/MaksimBlud/football-ai/pull/854) is OPEN / Ready for review / HUMAN-MERGE only; exact HEAD `e187e2d87e7e62d2d969e44684ec6d939667a44f`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- The recursive guard is now shared by the wrapper preview and core shadow-capture validator. It rejects nested raw goals/scores, corners, cards, points, settlement and Football-Data column aliases in mappings and list/tuple containers; the exact 19 aggregate feature names remain unchanged.
+- Exact-head GitHub Actions: **8/8 SUCCESS**. Frozen V2 tests [#43965292694] logged **92 passed** on CPython 3.11.18 and production `.pkl` diff guard PASS. Core shadow validation [#43965292817] logged **15 passed**. Research [#43965292878], Eredivisie [#43965292900], Product [#43965292786], Bundesliga [#43965292882], Ligue 1 [#43965292981] and Serie A [#43965292960] all completed SUCCESS.
+- Synthetic/offline tests only; no source/quote access, inference, Supabase access, target-outcome read, refit, production artifact change or promotion.
