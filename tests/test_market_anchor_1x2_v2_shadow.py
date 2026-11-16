@@ -152,6 +152,20 @@ def test_shadow_capture_accepts_only_pre_kickoff_outcome_free_serie_a_rows():
         v2.validate_shadow_capture_rows([_row(market_snapshot_time_utc="2026-09-15T23:59:00Z")])
 
 
+@pytest.mark.parametrize("extra", [
+    {"metadata": {"result": "H"}},
+    {"audit": [{"score": "1-0"}]},
+    {"provider": {"HC": 11, "FTAG": 2}},
+    {"stats": {"home_corners": 9, "away_yellows": 3}},
+    {"nested": [{"source": {"Home_Goals": 2}}]},
+])
+def test_shadow_capture_rejects_nested_raw_match_outcomes(extra):
+    row = _row()
+    row.update(extra)
+    with pytest.raises(ValueError, match="outcome fields"):
+        v2.validate_shadow_capture_rows([row])
+
+
 def test_shadow_capture_enforces_closed_gate_and_exact_market_fallback():
     with pytest.raises(ValueError, match="stability gate state"):
         v2.validate_shadow_capture_rows([_row(stability_gate_passed=True)])
