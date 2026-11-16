@@ -6788,3 +6788,20 @@ The identity-only Serie A feature-input metadata query (date/home/away only) ret
 - Frozen candidate remains SHA a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6, original 19 features and 20×2 weights, 3,799 training rows, active_lambda=0, shadow_lambda=1. Stability gate FAILED; eligible prospective completed-forecast cohort remains **0/30**. No independent Brier/LogLoss superiority evidence.
 
 No main change or merge, Supabase writes/DDL, paid API call, target-outcome read, production .pkl change, refit, promotion, bet, schedule change or other-agent setting change occurred.
+
+
+
+### Explicit source-rights and private-storage blocker (rechecked on #826 head)
+
+The #826 branch's pinned Football-Data rights manifest currently records:
+
+- rights_status: V2_FROZEN_INFERENCE_SCOPE_UNRESOLVED;
+- research_source_capture_permitted: false;
+- research_source_capture_scope: NONE_PENDING_PROVIDER_CLARIFICATION;
+- research_inference_permitted: false;
+- provider_issued_ai_inference_license: false;
+- ai_model_training_permitted: false;
+- authorization: null;
+- policy checked 2026-11-10T11:57:30Z, policy page update date 2026-11-10.
+
+The source-capture helper requires the explicit source-only flag and scope to be granted; the direct-access helper additionally requires private repository storage. The repository is currently public, so both checks fail closed. The 113 identity-only Serie A fixtures pass only the feature-input count threshold; they do not grant source access, inference rights, or access to target outcomes. No Football-Data CSV download or quote read is authorized. A future source-only permission would still not authorize V2 inference: the separate inference scope remains blocked pending provider clarification or a different properly licensed source.
