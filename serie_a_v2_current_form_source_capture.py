@@ -14,6 +14,7 @@ from io import BytesIO
 import json
 import os
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any, Mapping
 
 import pandas as pd
@@ -174,8 +175,14 @@ def capture_source_archive(
     history_fetch=fetch_public_history,
     clock=lambda: datetime.now(timezone.utc),
 ) -> dict:
-    """Capture the ten frozen historical seasons plus the gated current-season source."""
-    if now.tzinfo is None:
+    """Capture and atomically publish ten frozen seasons plus current-form source.
+
+    Every download and validation is staged in a private sibling directory.
+    The public output path appears only after all eleven CSVs and the manifest
+    are complete; a failed capture can never leave a partial source artifact
+    for the workflow's always-run artifact uploader.
+    """
+    if now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("source capture clock must be timezone-aware")
     at = now.astimezone(timezone.utc)
     gate_count = read_completed_primary_event_count(client, now=at)
@@ -185,101 +192,146 @@ def capture_source_archive(
             f"{gate_count} completed primary events < {MIN_COMPLETED_FEATURE_SOURCE_EVENTS}; "
             "no current-season source request was made"
         )
-    output_dir.mkdir(parents=True, exist_ok=True)
-    old_history, old_audit = history_fetch(get=get, capture_dir=output_dir)
-    if old_history.empty or len(old_audit) != len(_source_codes()):
-        raise ValueError("original frozen historical source archive incomplete")
-    response = get(CURRENT_URL, timeout=30)
-    response.raise_for_status()
-    raw = response.content
-    observed_at = clock().astimezone(timezone.utc)
-    current_rows, excluded_rows = validate_current_season_csv(raw, captured_at=observed_at)
-    if len(current_rows) < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
-        raise RuntimeError(
-            "public current-season source has fewer completed prior-day matches than the feature-source gate"
-        )
-    current_path = output_dir / CURRENT_FILENAME
-    current_path.write_bytes(raw)
-    audits = list(old_audit) + [{
-        "season_code": CURRENT_CODE,
-        "season": CURRENT_SEASON,
-        "source_url": CURRENT_URL,
-        "archived_source_name": CURRENT_FILENAME,
-        "csv_sha256": hashlib.sha256(raw).hexdigest(),
-        "source_observed_at_utc": observed_at.isoformat(),
-        "completed_source_rows": len(current_rows),
-        "total_source_rows": int(pd.read_csv(BytesIO(raw), low_memory=False).shape[0]),
-        "excluded_incomplete_or_same_day_rows": excluded_rows,
-    }]
-    if any(item["season_code"] == CURRENT_CODE for item in old_audit):
-        raise ValueError("current season unexpectedly appeared in frozen old-season source list")
-    report = {
-        "schema_version": SCHEMA_VERSION,
-        "experiment_id": "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY",
-        "mode": "RESEARCH_ONLY_CURRENT_FORM_SOURCE_ARCHIVE",
-        "repository": REPOSITORY,
-        "workflow_path": WORKFLOW_PATH,
-        "git_sha": os.environ.get("GITHUB_SHA", ""),
-        "workflow_run_id": os.environ.get("GITHUB_RUN_ID", ""),
-        "source_archive_created_at_utc": clock().astimezone(timezone.utc).isoformat(),
-        "frozen_candidate_sha256": FROZEN_SHA,
-        "original_feature_builder_git_blob_sha1": "401b3a0893371bfa4a488ec92a4a54af2678c8f7",
-        "feature_count": len(FEATURE_SETS["ALL_FOOTBALL"]),
-        "historical_season_codes": list(_source_codes()),
-        "current_season_code": CURRENT_CODE,
-        "current_season": CURRENT_SEASON,
-        "current_season_source_url": CURRENT_URL,
-        "current_season_source_sha256": hashlib.sha256(raw).hexdigest(),
-        "current_season_source_observed_at_utc": observed_at.isoformat(),
-        "current_season_completed_prior_day_rows": len(current_rows),
-        "current_season_total_csv_rows": audits[-1]["total_source_rows"],
-        "current_season_excluded_incomplete_or_same_day_rows": excluded_rows,
-        "feature_source_gate": {
-            "type": "CURRENT_FORM_FEATURE_INPUT_ONLY",
-            "primary_league": "SERIE_A",
-            "season": CURRENT_SEASON,
-            "minimum_completed_primary_events": MIN_COMPLETED_FEATURE_SOURCE_EVENTS,
-            "observed_completed_primary_events": gate_count,
-            "checked_at_utc": at.isoformat(),
-            "metadata_fields_read": ["match_date", "home_team", "away_team"],
-            "score_or_result_fields_selected_for_gate": False,
-            "passed": True,
-        },
-        "feature_policy": {
-            "use_current_season_matches_only_as_lagged_features": True,
-            "same_calendar_day_matches_excluded": True,
-            "future_or_unplayed_fixtures_used": False,
-            "model_weights_or_feature_definitions_changed": False,
-            "model_refit": False,
-            "model_selection": False,
-        },
-        "target_outcome_evaluation_gate": {
-            "minimum_completed_eligible_prospective_forecasts": 30,
-            "outcomes_read_for_evaluation": False,
-            "outcome_gate_open": False,
-            "purpose_after_gate": "diagnostic review only; no fitting, selection, or promotion",
-        },
-        "source_files": audits,
-        "historical_old_season_file_count": len(old_audit),
-        "source_file_count": len(audits),
-        "eligible_for_frozen_old_season_cohort": False,
-        "eligible_for_current_form_forward_shadow": False,
-        "eligible_for_product_publication": False,
-        "no_bet": True,
-        "paid_provider_calls": 0,
-        "supabase_reads": 1,
-        "supabase_writes": 0,
-        "target_outcomes_read": False,
-        "target_outcomes_scored": False,
-        "model_refit_or_promotion": False,
-    }
-    manifest_path = output_dir / MANIFEST_FILENAME
-    manifest_path.write_text(
-        json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    return report
 
+    target = Path(output_dir)
+    if target.is_symlink():
+        raise ValueError("source archive output cannot be a symlink")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.exists():
+        if not target.is_dir() or any(target.iterdir()):
+            raise FileExistsError("source archive output must be absent or empty")
+        target.rmdir()
+
+    report: dict
+    with TemporaryDirectory(
+        prefix=f".{target.name}.staging-",
+        dir=target.parent,
+    ) as temporary_directory:
+        staged = Path(temporary_directory) / "archive"
+        staged.mkdir()
+
+        old_history, old_audit = history_fetch(get=get, capture_dir=staged)
+        if old_history.empty or len(old_audit) != len(_source_codes()):
+            raise ValueError("original frozen historical source archive incomplete")
+
+        response = get(CURRENT_URL, timeout=30)
+        response.raise_for_status()
+        raw = response.content
+        observed_clock = clock()
+        if (
+            not isinstance(observed_clock, datetime)
+            or observed_clock.tzinfo is None
+            or observed_clock.utcoffset() is None
+        ):
+            raise ValueError("current-season source observation clock must be timezone-aware")
+        observed_at = observed_clock.astimezone(timezone.utc)
+        current_rows, excluded_rows = validate_current_season_csv(
+            raw, captured_at=observed_at
+        )
+        if len(current_rows) < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
+            raise RuntimeError(
+                "public current-season source has fewer completed prior-day matches than the feature-source gate"
+            )
+
+        current_path = staged / CURRENT_FILENAME
+        current_path.write_bytes(raw)
+        audits = list(old_audit) + [{
+            "season_code": CURRENT_CODE,
+            "season": CURRENT_SEASON,
+            "source_url": CURRENT_URL,
+            "archived_source_name": CURRENT_FILENAME,
+            "csv_sha256": hashlib.sha256(raw).hexdigest(),
+            "source_observed_at_utc": observed_at.isoformat(),
+            "completed_source_rows": len(current_rows),
+            "total_source_rows": int(pd.read_csv(BytesIO(raw), low_memory=False).shape[0]),
+            "excluded_incomplete_or_same_day_rows": excluded_rows,
+        }]
+        if any(item["season_code"] == CURRENT_CODE for item in old_audit):
+            raise ValueError("current season unexpectedly appeared in frozen old-season source list")
+
+        archive_clock = clock()
+        if (
+            not isinstance(archive_clock, datetime)
+            or archive_clock.tzinfo is None
+            or archive_clock.utcoffset() is None
+        ):
+            raise ValueError("source archive creation clock must be timezone-aware")
+        archive_created_at = archive_clock.astimezone(timezone.utc)
+        if archive_created_at < observed_at:
+            raise ValueError("source archive creation time precedes current source observation")
+
+        report = {
+            "schema_version": SCHEMA_VERSION,
+            "experiment_id": "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY",
+            "mode": "RESEARCH_ONLY_CURRENT_FORM_SOURCE_ARCHIVE",
+            "repository": REPOSITORY,
+            "workflow_path": WORKFLOW_PATH,
+            "git_sha": os.environ.get("GITHUB_SHA", ""),
+            "workflow_run_id": os.environ.get("GITHUB_RUN_ID", ""),
+            "source_archive_created_at_utc": archive_created_at.isoformat(),
+            "frozen_candidate_sha256": FROZEN_SHA,
+            "original_feature_builder_git_blob_sha1": "401b3a0893371bfa4a488ec92a4a54af2678c8f7",
+            "feature_count": len(FEATURE_SETS["ALL_FOOTBALL"]),
+            "historical_season_codes": list(_source_codes()),
+            "current_season_code": CURRENT_CODE,
+            "current_season": CURRENT_SEASON,
+            "current_season_source_url": CURRENT_URL,
+            "current_season_source_sha256": hashlib.sha256(raw).hexdigest(),
+            "current_season_source_observed_at_utc": observed_at.isoformat(),
+            "current_season_completed_prior_day_rows": len(current_rows),
+            "current_season_total_csv_rows": audits[-1]["total_source_rows"],
+            "current_season_excluded_incomplete_or_same_day_rows": excluded_rows,
+            "feature_source_gate": {
+                "type": "CURRENT_FORM_FEATURE_INPUT_ONLY",
+                "primary_league": "SERIE_A",
+                "season": CURRENT_SEASON,
+                "minimum_completed_primary_events": MIN_COMPLETED_FEATURE_SOURCE_EVENTS,
+                "observed_completed_primary_events": gate_count,
+                "checked_at_utc": at.isoformat(),
+                "metadata_fields_read": ["match_date", "home_team", "away_team"],
+                "score_or_result_fields_selected_for_gate": False,
+                "passed": True,
+            },
+            "feature_policy": {
+                "use_current_season_matches_only_as_lagged_features": True,
+                "same_calendar_day_matches_excluded": True,
+                "future_or_unplayed_fixtures_used": False,
+                "model_weights_or_feature_definitions_changed": False,
+                "model_refit": False,
+                "model_selection": False,
+            },
+            "target_outcome_evaluation_gate": {
+                "minimum_completed_eligible_prospective_forecasts": 30,
+                "outcomes_read_for_evaluation": False,
+                "outcome_gate_open": False,
+                "purpose_after_gate": "diagnostic review only; no fitting, selection, or promotion",
+            },
+            "source_files": audits,
+            "historical_old_season_file_count": len(old_audit),
+            "source_file_count": len(audits),
+            "eligible_for_frozen_old_season_cohort": False,
+            "eligible_for_current_form_forward_shadow": False,
+            "eligible_for_product_publication": False,
+            "no_bet": True,
+            "paid_provider_calls": 0,
+            "supabase_reads": 1,
+            "supabase_writes": 0,
+            "target_outcomes_read": False,
+            "target_outcomes_scored": False,
+            "model_refit_or_promotion": False,
+        }
+        manifest_path = staged / MANIFEST_FILENAME
+        manifest_path.write_text(
+            json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+        # Never replace a path that appeared while the capture was running.
+        if target.is_symlink() or target.exists():
+            raise FileExistsError("source archive output appeared before atomic publication")
+        os.replace(staged, target)
+
+    return report
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
