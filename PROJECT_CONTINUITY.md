@@ -6745,3 +6745,47 @@ These rows cannot seed a new prospective V2 forecast. No scores/results/settleme
 - No permitted independent Brier/LogLoss superiority evidence exists.
 
 No paid API requests, target-outcome reads, Supabase writes/DDL, production `.pkl` changes, refit, promotion, bets, main updates, schedule changes or other-agent setting changes occurred.
+
+
+## 2026-11-16 — atomic current-form source publication and refreshed pre-match audit
+
+### New source-capture failure mode and fix
+
+A code-path audit found that main's serie_a_v2_current_form_source_capture.py wrote the ten old-season CSVs directly into the final artifact directory before requesting and validating the current-season CSV. Its workflow uploads that directory under if: always(). If the current CSV request or validation failed, the uploader could therefore publish a partial ten-file artifact under the normal source-artifact name. The forward verifier would reject the failed parent, but the newest partial artifact could become the latest candidate and fail closed instead of providing a complete source archive. No such partial artifact was observed; this was a static failure-path finding.
+
+PR #852 fixes this without changing the workflow or schedule:
+
+- all historical CSVs, current-season CSV and manifest are staged in a private sibling directory;
+- the final output directory is published only after every source and manifest validation succeeds, using same-filesystem os.replace;
+- symlink and non-empty output targets are rejected; an existing empty target is allowed;
+- source-observation and archive-creation clocks must be timezone-aware and monotonic;
+- regressions cover historical-source failure, current CSV download failure, current CSV validation failure, and preservation of a pre-existing non-empty target.
+
+Exact PR HEAD 2a5b694d1ac546dd09a68c8353a1a36aeedf62a3, base main 40887ebb215730190d7a6c7a1693373ec4afcdfc, direct-main, OPEN / Ready for review / mergeable / HUMAN-MERGE only. Exact-head CI 7/7 SUCCESS: Frozen V2 Shadow Tests #43807481907 (89 passed; compilation and production .pkl guard passed); Research PR Validation #43807481837 SUCCESS with its no-.pkl guard; Serie A #43807481826, Ligue 1 #43807481813, Product #43807481824, Bundesliga #43807482019 and Eredivisie #43807481821 all SUCCESS. No live source, quote, Supabase, provider or target-outcome access occurred in this PR.
+
+### Refreshed Supabase state — metadata/pre-match only
+
+Read-only strict pre-match aggregate (snapshot_time_utc < commence_time_utc):
+
+- 3,915 odds_snapshots across 327 unique events and nine leagues;
+- Serie A: 620 snapshots / 63 events, latest 2026-10-13T14:48:53Z;
+- strict pre-match snapshots in the last seven days: 0;
+- future-kickoff quote rows: 0.
+
+Read-only product_prediction_snapshots aggregate, strictly before kickoff:
+
+- 40 pre-match rows;
+- 0 with original V2 candidate SHA a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6;
+- latest generated time 2026-10-09T15:29:33Z.
+
+The identity-only Serie A feature-input metadata query (date/home/away only) returned 113 raw unique fixtures for stored season label 2026-2027, from 2026-08-22 through 2026-11-08. The stored season label uses a hyphen; a slash-form filter is not equivalent. No score, result, settlement or prediction-correctness fields were selected.
+
+### Integration and model state
+
+- Main remains 40887ebb215730190d7a6c7a1693373ec4afcdfc. The original forward CLI still reads saved quotes before authenticating the source archive on main.
+- Direct-main safety hold PR #781 remains OPEN / Ready for review, exact HEAD 27da7c204d402b76f1f0a52fc1a3bef845fcc5d2, 8/8 SUCCESS. It is not active until HUMAN-MERGE.
+- PR #851 remains direct-main, exact HEAD c79445d10036c39b4d2cc88133434f67399983c5, 7/7 SUCCESS; it pins immutable actions in the central frozen V2 test workflow.
+- Source-before-quote CLI changes remain stacked in #837 → #843 → #848; do not merge children ahead of rights/private-storage parents.
+- Frozen candidate remains SHA a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6, original 19 features and 20×2 weights, 3,799 training rows, active_lambda=0, shadow_lambda=1. Stability gate FAILED; eligible prospective completed-forecast cohort remains 0/30. No independent Brier/LogLoss superiority evidence.
+
+No main change or merge, Supabase writes/DDL, paid API call, target-outcome read, production .pkl change, refit, promotion, bet, schedule change or other-agent setting change occurred.
