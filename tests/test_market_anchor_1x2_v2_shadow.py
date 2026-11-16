@@ -168,6 +168,22 @@ def test_shadow_capture_rejects_nested_raw_match_outcomes(extra):
         v2.validate_shadow_capture_rows([row])
 
 
+@pytest.mark.parametrize("alias,value", [
+    ("FTHG", 2), ("HG", 2), ("FTAG", 1), ("AG", 1),
+    ("FTR", "H"), ("Res", "H"), ("HTHG", 1), ("HTAG", 0), ("HTR", "H"),
+    ("HxG", 1.5), ("AxG", 0.7), ("HS", 14), ("AS", 8),
+    ("HST", 5), ("AST", 2), ("HHW", 1), ("AHW", 0),
+    ("HF", 11), ("AF", 13), ("HFKC", 10), ("AFKC", 9),
+    ("HO", 2), ("AO", 1), ("HC", 7), ("AC", 4),
+    ("HY", 2), ("AY", 1), ("HR", 0), ("AR", 1),
+    ("HBP", 10), ("ABP", 25), ("Attendance", 12000),
+])
+def test_shadow_capture_rejects_all_documented_football_data_result_stat_aliases(alias, value):
+    row = _row(provider_row={alias: value})
+    with pytest.raises(ValueError, match="outcome fields"):
+        v2.validate_shadow_capture_rows([row])
+
+
 def test_shadow_capture_enforces_closed_gate_and_exact_market_fallback():
     with pytest.raises(ValueError, match="stability gate state"):
         v2.validate_shadow_capture_rows([_row(stability_gate_passed=True)])
