@@ -6948,3 +6948,25 @@ Decision: HOLD as a possible supplementary statistics source only; not approved 
 - Current metadata inventory reports RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. This is a critical exposure warning for anon/authenticated roles. No DDL was run; enabling RLS without deliberate policies could break legitimate access. Keep this as a separately owner-controlled security remediation, not an automatic V2 research write.
 
 No main update or merge, Supabase writes/DDL, paid API call, source download, quote read, protected outcome read, production `.pkl` change, refit, promotion, bet, schedule change, or other-agent setting change occurred in this audit.
+
+
+### Factual clarification — source-rights manifest and live identity evidence (2026-11-16)
+
+The rights manifest on the #720 source-rights branch is blob `2b166bce84b33140bdccfbb13e55829139c0a9df`. Its precise fields are:
+- `research_use_permitted=true` (general private/academic research wording);
+- `research_inference_permitted=false`;
+- `research_inference_scope=NONE_PENDING_SCOPE_CLARIFICATION`;
+- `provider_issued_ai_inference_license=false`;
+- `ai_model_training_permitted=false`;
+- `authorization=null`;
+- maximum automated source sessions: **2 per rolling seven days**.
+
+Therefore, do not describe the manifest itself as having `research_source_capture_permitted=false`; that field is absent. The operational block is enforced by the pinned `require_personal_research_inference_scope()` helper, which the original/current-form source and forward entrypoints call before network, Supabase, archive, quote, feature, or inference access. The helper rejects the current unresolved inference scope and missing provider authorization. This is the project's conservative fail-closed decision, not a legal conclusion that the public policy expressly prohibits every form of frozen noncommercial research inference.
+
+**Real event-identity conflict and existing original-forward protection**
+- A metadata-only pre-match query found seven event IDs with multiple kickoff values across all leagues. It selected no odds values, scores, results, or settlement fields.
+- One Serie A case: Cagliari–Lecce event ID `8f751e96142db860ba66bbea713baf50`, with kickoff versions `2026-09-07T16:00:00Z` and `2026-09-07T16:30:00Z`, 28 strictly pre-match rows.
+- This is already covered in the original-forward implementation in [#848](https://github.com/MaksimBlud/football-ai/pull/848): before archive access it binds each event ID to one canonical home/away/kickoff identity and rejects an event ID reused for a different kickoff or fixture; it also rejects one unordered fixture split across provider IDs/orientations. The exact-head tests include same-event kickoff/home conflicts and duplicate fixture IDs. #848 remains stacked on #843 → #837; do not integrate ahead of its parents.
+- The same metadata query found six other cross-league IDs with conflicting kickoff values; the Serie A original V2 path is affected by the Cagliari–Lecce case above. No prospective future-kickoff quote rows exist in the current odds snapshot table, so this is a historical integrity proof, not a new forecast.
+
+No additional PR was created for this issue because the existing #848 implementation and regressions already cover it.
