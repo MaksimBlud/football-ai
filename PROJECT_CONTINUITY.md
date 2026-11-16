@@ -7124,3 +7124,39 @@ No merge, main update, Supabase write/DDL, paid API request, target-outcome eval
 - Feature-input gate is 110/30; the separate prospective completed-forecast outcome gate remains **0/30 and CLOSED**. No protected target outcomes were read, no Brier/LogLoss comparison was produced, and no superiority claim is justified.
 
 No merge, main ref update, Supabase write/DDL, paid provider request, production `.pkl` change, refit, promotion, bet, schedule change or other-agent setting change occurred in this checkpoint.
+
+
+## 2026-11-16 20:56 UTC — integration graph correction and source-rights hold
+
+A direct changed-file audit was performed for the current immutable-action PRs. This corrects the earlier continuity wording that treated #851 as overlapping #842 and described #853 as an additive child pin set.
+
+### Canonical workflow-pin chain
+
+The established chain remains:
+
+1. **#781** — direct-main default-deny hold for the five live source/quote/recovery workflows; exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`; eight exact-head PR workflows are completed SUCCESS.
+2. **#827** — pins original forward and current-form forward workflow actions; exact HEAD `6113175ad6af9f81c884ea3a79e549c6aed9e81f`.
+3. **#828** — pins candidate-recovery workflow actions; exact HEAD `d58120f64a4ee833096ae58dd0d753f32e499853`.
+4. **#841** — pins the remaining current-form source-capture and free-diagnostic workflows and the frozen test workflow; exact HEAD `c0fdf9f7524acfae1fc8bceb8f34b26a36c4b696`.
+
+Changed-file lists confirm that these children cover the five live workflows without needing a second competing pin branch. Earlier exact-head validation recorded 104, 105 and 107 frozen-V2 tests respectively for #827, #828 and #841; re-read exact current heads and CI before any future manual integration.
+
+### Duplicate alternatives — do not integrate together
+
+- **#853** repeats the same checkout/setup-python/upload-artifact pin hunks already present across #827, #828 and #841. It has its own targeted 20/20 CI success on `bf56afdff8e2cb6074d93bef00c0fb8c10428c13`, but it is an alternative implementation, not additive work. If selected, it must replace the overlapping #827/#828 changes and #841 must be restacked; otherwise retain the established chain. Do not integrate both.
+- **#851** changes only `serie-a-frozen-v2-shadow-tests.yml` plus a separate duplicate pin test; the same workflow pins and regression are already included in #841. Its own 7/7 CI is valid but does not make it additive. Do not integrate #851 alongside #841.
+- **#842 is separate, not the overlap noted above**: its changed files are `market-anchor-1x2-v2-shadow-validation.yml` and `tests/test_market_anchor_v2_workflow_action_pins.py`. Its exact HEAD `0e14a8d490c72e95820d82453fa0746d5479001f` has 7/7 SUCCESS, including the dedicated original MARKET_ANCHOR_1X2_V2 shadow-validation workflow. It can be considered independently after fresh-main ancestry and exact-head checks.
+
+### Direct-main original forward ordering defect
+
+Fresh main still points to `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The actual main blob for `serie_a_v2_forward_capture.py` is `5db02cbd1367ed25b994b152acf371421859a014`. Its `main()` currently calls `fetch_saved_upcoming_serie_a_quotes()` before `discover_archives()` and source-parent/SHA verification. The separate workflow attestation step does not change that internal call order. Therefore direct-main original forward remains quote-reader-first; the source-first fail-closed CLI correction and real-main() regression are still in #837 → #843 → #848, not main. The workflow-level hold #781 is not active until manually integrated.
+
+### Free-source rights decision
+
+PR #844's official-documentation-only GOAL API audit remains **HOLD**. No account, key, endpoint request or data download was made. The reviewed terms do not license underlying sports data, do not expressly grant internal model training/inference or private raw-response retention, and the public coverage page does not provide per-fixture 2026/27 completeness or statistic-level observation/correction timestamps. This is not an approved free source for V2 capture. Do not integrate its audit as an ingestion permission.
+
+### Outcome-query audit
+
+PR #850 remains a Draft child of #846. Its exact HEAD `0d83cbd215be788cf32fe803f84bbcb672b5d402` passed its synthetic-only prospective-evaluator workflow (216 tests plus compile and production `.pkl` diff guard). It distinguishes query attempted, query returned, and the backward-compatible returned-read flag when a transport error occurs. No live Supabase or target-outcome query was executed; the 30-primary-completed-forecast gate remains closed.
+
+No PR was merged, no main ref was changed, and no schedule, model contract, Supabase data/schema, paid API budget, production artifact, target-outcome access, promotion or bet was changed by this audit.
