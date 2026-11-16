@@ -168,3 +168,44 @@ The Free three-month window may cover the current 2026/27 season's rolling form 
 ## Final disposition
 
 **Promote 5DollarFootballAPI to the first candidate for a future no-cost, current-season source-concordance test, but keep ingestion blocked.** Terms explicitly permit model/internal-tool use and caching, with public attribution and no raw-feed redistribution. The remaining blockers are authenticated field-level Free-plan confirmation, upstream field-rights/semantics clarification, a private raw-response archive, and the source-before-quote attestation policy. No account, key, API request, odds request, source download, Supabase write, inference, target-outcome read or production change occurred.
+
+## Official documentation re-check — 2026-11-15/16 UTC
+
+The provider's current October 2026 Terms now give a clearer contractual statement for the API customer's use: data may be used in commercial products, websites, apps, models and internal tools; responses may be cached; public-facing Free/Community/Education products require attribution; raw data may not be resold or redistributed as a competing feed. This is materially more explicit than a generic "no resale" clause. It does not, by itself, document the upstream source/rights chain for every competition.
+
+Official references:
+- Terms of Service (last updated October 2026): https://5dollarfootballapi.com/terms
+- Data freshness & rights / API docs: https://5dollarfootballapi.com/docs
+- Serie A product page: https://5dollarfootballapi.com/serie-a-api
+- Machine-readable/HTML measured data quality: https://5dollarfootballapi.com/docs/data-quality
+- Pricing: https://5dollarfootballapi.com/pricing
+
+### Positive evidence
+
+1. Terms §4 and the API docs' “data freshness and rights” section explicitly allow model/internal-tool use and response caching. Free-plan attribution is required only when displayed in a public-facing product; private/internal use is exempt.
+2. The dedicated Serie A page explicitly says “Included in the free tier”, and its FAQ says odds and full statistics are included on Free. It currently shows Serie A fixtures, round 11, latest results dated 8 November 2026, and upcoming fixtures on 21–22 November.
+3. The Serie A page describes goals, corners, cards (full-time/half-time), live statistics and fixture-level odds. The generic fixture response example documents UTC kickoff, status, goals, corners, yellow/red cards, statistics and event data.
+4. The generic Free plan is documented as 60 requests/hour (also 20/minute), with no daily/monthly pool; Free history is only the last three months. Pro gives 12 months; Ultra gives full history.
+
+### Blocking contradiction — plan entitlement
+
+The dedicated Serie A page says Free, but the provider's measured data-quality table lists the exact same competition (Italy Serie A, league id 3405541143) as **Pro**, despite reporting 380 finished matches over the last 12 months and 100% coverage for corners, half-time corners, corner line, odds, events and live statistics. The pricing page says Free includes the top five leagues, while the data-quality table labels Serie A Pro. These first-party pages conflict; do not infer Free entitlement from the marketing page alone.
+
+The documentation also clarifies that Free history is three months, not the full history back to 2014. “History since 2014” describes the provider's stored depth, not what a Free key can retrieve. As of 15 November 2026, the three-month window would nominally cover the 2026/27 season start, but actual Free-plan access and row completeness have not been verified.
+
+### Source timestamp / provenance
+
+The public fixture response example exposes UTC kickoff and match/status fields but no per-fixture source-ingestion/observed timestamp. The provider publishes measured freshness separately on its status page. Therefore any future prospective capture must preserve the exact raw response bytes, record our own captured_at_utc at receipt, and SHA-256 the bytes. It must never relabel local capture time as the provider's upstream observation time. The frozen V2 source-before-quote gate must compare this local capture timestamp strictly against the independently sourced quote snapshot time and kickoff. No historical pre-kickoff claims can be reconstructed from a response downloaded after the fact.
+
+### Decision
+
+**HOLD — no account, API key, request, data download or integration.**
+
+Before any live capture, require written provider confirmation of all three:
+- Italy Serie A is included in the actual Free plan for the current account/key (the measured coverage table currently says Pro);
+- the Free plan exposes the required fixture/statistics fields and the full current-season window;
+- the provider has authority to grant the stated internal ML/caching permissions for the supplied Serie A data, including any upstream data partners.
+
+If these points are confirmed, the existing offline adapter can be evaluated for prospective 2026/27 collection only. It must store raw bytes, local capture time, response SHA, provider/endpoint/plan metadata and page completeness; then enforce source capture < quote snapshot < kickoff. No paid upgrade, no odds endpoint use, no backfilled historical inference and no production writes.
+
+No API calls, credentials, Supabase operations, protected outcome reads, model inference or production changes were made during this audit.
