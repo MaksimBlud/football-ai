@@ -6682,3 +6682,66 @@ This addendum supersedes the 23:58 in-progress/duplicate-PR lines above.
 - [#849](https://github.com/MaksimBlud/football-ai/pull/849) was closed as superseded after its original-forward no-source CLI test was carried into #848 and passed in the 559-test suite.
 
 No main merge or main change occurred. #848 remains stacked on #843 → #837 and must follow the full rights/private-storage parent chain. HUMAN-MERGE remains mandatory.
+
+
+## 2026-11-16 03:52 UTC — fresh main, frozen-workflow pin and pre-match refresh
+
+This addendum supersedes the earlier runtime/PR pointers above where they conflict.
+
+### Fresh main and original-forward ordering
+
+- GitHub ref `refs/heads/main` was re-read directly: `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No main update occurred.
+- Main `PROJECT_CONTINUITY.md` still ends with the older October 18 top-level checkpoint; the newer November 15/16 runtime evidence remains in this PR #839 branch and is not yet on main.
+- Main original CLI `serie_a_v2_forward_capture.py` blob `5db02cbd1367ed25b994b152acf371421859a014` still imports `database.supabase`, calls `fetch_saved_upcoming_serie_a_quotes`, and only then calls `discover_archives`. Thus the CLI itself remains quote-first on main.
+- Main original workflow `.github/workflows/serie-a-v2-forward-preview.yml` still has workflow_dispatch, the guarded workflow_run, the 08:08 UTC schedule, job-level Supabase credentials, and artifact upload under `if: always()`. The current main workflow uses mutable `actions/checkout@v4` and `actions/setup-python@v5`.
+- The direct-main live-access hold [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review / mergeable, exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`, with 8/8 exact-head checks SUCCESS. It is not active on main until HUMAN-MERGE. The original/current-form source and quote workflows therefore remain live-capable on main.
+- The actual-CLI source-before-quote and fail-closed no-source regression is in [#848](https://github.com/MaksimBlud/football-ai/pull/848), exact HEAD `f766944dfa3f2c2abbc78094408ec0224d94c696`, based on #843 exact SHA `725d1c987a9bca1a936008a81dc8458a09791eac`. Its exact run #43777997889 completed SUCCESS with 559 tests on Python 3.11 and 559 on Python 3.12; both production `.pkl` guards passed. It remains stacked and is not on main.
+
+### New exact-head result — #851 immutable frozen-test workflow
+
+- [PR #851](https://github.com/MaksimBlud/football-ai/pull/851) is a direct-main PR: base `40887ebb215730190d7a6c7a1693373ec4afcdfc`; exact HEAD `c79445d10036c39b4d2cc88133434f67399983c5`; one commit, two files, OPEN / Ready for review / mergeable.
+- It pins `actions/checkout` to `11d5960a326750d5838078e36cf38b85af677262` and `actions/setup-python` to `a26af69be951a213d495a4c3e4e4022e16d87065` in `.github/workflows/serie-a-frozen-v2-shadow-tests.yml`, and adds an offline static regression against mutable tags.
+- Exact-head Actions: **7/7 completed SUCCESS**. Frozen V2 run [#43795766955](https://github.com/MaksimBlud/football-ai/actions/runs/43795766955) ran the two pinned SHAs (confirmed in the job log), **86 tests passed**, and `git diff --exit-code -- '*.pkl'` passed. The six league/research/product PR validation runs also completed SUCCESS.
+- This is supply-chain/offline-regression evidence only. It does not execute live inference, grant provider rights, or establish V2 predictive quality. No merge was performed.
+
+### Other immutable-action branches — avoid duplicate work
+
+- [#842](https://github.com/MaksimBlud/football-ai/pull/842) remains direct-main, exact HEAD `0e14a8d490c72e95820d82453fa0746d5479001f`, 7/7 SUCCESS; it pins the core `market-anchor-1x2-v2-shadow-validation.yml`.
+- #827 pins original/current-form forward workflows but is stacked on #781.
+- #828 pins candidate recovery and is stacked on #827.
+- #841 pins current-form source capture and free diagnostic actions, but is stacked on #828 and overlaps the frozen workflow path. Reconcile its frozen-workflow hunk with direct-main #851 after the parent chain is integrated; do not merge the overlapping child as-is.
+- No new immutable-action pin PR was opened in this iteration; these existing branches already cover the remaining workflow files.
+
+### Fresh Supabase aggregates — pre-match rows only
+
+Read-only aggregate on `public.odds_snapshots`, strictly filtering `snapshot_time_utc < commence_time_utc` and selecting no outcome fields:
+
+| League | Pre-match snapshots | Unique events | Latest snapshot UTC | Future-kickoff rows |
+|---|---:|---:|---|---:|
+| Bundesliga | 394 | 35 | 2026-09-11 15:49:52 | 0 |
+| EPL | 1,135 | 70 | 2026-10-09 15:25:57 | 0 |
+| Eredivisie | 410 | 39 | 2026-09-11 15:50:20 | 0 |
+| La Liga | 798 | 52 | 2026-09-11 15:45:28 | 0 |
+| Ligue 1 | 387 | 35 | 2026-09-11 15:49:24 | 0 |
+| Primeira Liga | 9 | 9 | 2026-09-11 16:06:24 | 0 |
+| RPL | 153 | 15 | 2026-09-05 15:07:55 | 0 |
+| Serie A | 620 | 63 | 2026-10-13 14:48:53 | 0 |
+| Turkey Super Lig | 9 | 9 | 2026-09-11 16:06:26 | 0 |
+
+Total: **3,915** strictly pre-match snapshots across **327** events and nine leagues. No future-kickoff quote rows exist.
+
+Read-only `public.product_prediction_snapshots` aggregate, restricted to `generated_at_utc < commence_time_utc`:
+- 40 pre-match product snapshots;
+- 0 snapshots with original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`;
+- latest pre-match generated time `2026-10-09T15:29:33Z`.
+
+These rows cannot seed a new prospective V2 forecast. No scores/results/settlement columns were selected. Supabase writes/DDL remained zero.
+
+### Frozen model status
+
+- Original candidate SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- 19 frozen features, original 20×2 weight matrix, 3,799 training rows and fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`.
+- `active_lambda=0`; `shadow_lambda=1`; stability gate FAILED; independent prospective outcome cohort 0/30.
+- No permitted independent Brier/LogLoss superiority evidence exists.
+
+No paid API requests, target-outcome reads, Supabase writes/DDL, production `.pkl` changes, refit, promotion, bets, main updates, schedule changes or other-agent setting changes occurred.
