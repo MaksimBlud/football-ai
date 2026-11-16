@@ -6666,3 +6666,19 @@ No score, result, settlement, or protected-outcome columns were selected. No Sup
 - No independent Brier/LogLoss superiority evidence.
 
 No paid API calls, Supabase writes/DDL, protected outcome reads, model refit/promotion, production `.pkl` changes, main updates, bets, or schedule/other-agent changes occurred.
+
+
+## 2026-11-16 00:03 UTC — exact current-form/original CLI CI completion
+
+This addendum supersedes the 23:58 in-progress/duplicate-PR lines above.
+
+- [PR #848](https://github.com/MaksimBlud/football-ai/pull/848) exact HEAD `f766944dfa3f2c2abbc78094408ec0224d94c696`, base #843 exact SHA `725d1c987a9bca1a936008a81dc8458a09791eac`, 9 commits ahead / 0 behind, mergeable and Ready for review / HUMAN-MERGE.
+- [Frozen V2 Shadow Tests #43777997889](https://github.com/MaksimBlud/football-ai/actions/runs/43777997889) completed SUCCESS on this exact HEAD.
+- Python 3.11: **559 passed**; production `.pkl` diff guard PASS.
+- Python 3.12: **559 passed**; production `.pkl` diff guard PASS.
+- The suite now exercises the actual original forward CLI's no-source path: without an earlier verified archive, it raises before importing `database.supabase`, downloading an archive, reading saved quotes, or writing report/source artifacts.
+- The same #848 also carries the current-form CLI success/no-source ordering tests and atomic report/success-only artifact upload from #847.
+- [#847](https://github.com/MaksimBlud/football-ai/pull/847) was closed as superseded after its atomic-publication changes were carried into #848 and the consolidated exact-head CI passed.
+- [#849](https://github.com/MaksimBlud/football-ai/pull/849) was closed as superseded after its original-forward no-source CLI test was carried into #848 and passed in the 559-test suite.
+
+No main merge or main change occurred. #848 remains stacked on #843 → #837 and must follow the full rights/private-storage parent chain. HUMAN-MERGE remains mandatory.
