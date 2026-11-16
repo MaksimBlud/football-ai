@@ -1274,6 +1274,8 @@ def test_market_only_outcome_read_audit_flag_stays_false_when_loader_rejects_bef
         "called": False,
         "query_attempted": False,
         "query_returned": False,
+        "query_attempt_count": 0,
+        "query_return_count": 0,
     }
     assert report["target_outcomes_read"] is False
 
@@ -1321,6 +1323,8 @@ def test_market_only_outcome_read_audit_flag_flips_only_after_exact_query_return
             assert state["query_attempted"] is True
             assert state["query_returned"] is (self.client.execute_count > 0)
             assert state["called"] is (self.client.execute_count > 0)
+            assert state["query_attempt_count"] == self.client.execute_count + 1
+            assert state["query_return_count"] == self.client.execute_count
             self.client.execute_count += 1
             home = self.filters["home_team"][0]
             away = self.filters["away_team"][0]
@@ -1358,13 +1362,18 @@ def test_market_only_outcome_read_audit_flag_flips_only_after_exact_query_return
         "called": True,
         "query_attempted": True,
         "query_returned": True,
+        "query_attempt_count": 30,
+        "query_return_count": 30,
     }
     assert report["target_outcomes_read"] is True
 
 
 
 
-def test_outcome_query_attempt_is_recorded_when_transport_fails_before_response(monkeypatch):
+@pytest.mark.parametrize("successful_responses_before_failure", [0, 29])
+def test_outcome_query_attempt_and_return_counts_are_recorded_on_transport_failure(
+    successful_responses_before_failure, monkeypatch
+):
     rows = _forecast_rows(30)
     identities = frozenset(
         evaluator._identity(
@@ -1403,8 +1412,19 @@ def test_outcome_query_attempt_is_recorded_when_transport_fails_before_response(
             return self
 
         def execute(self):
+            attempt_index = self.client.execute_count
             self.client.execute_count += 1
-            raise RuntimeError("synthetic transport failure after query submission")
+            if attempt_index == successful_responses_before_failure:
+                raise RuntimeError("synthetic transport failure after query submission")
+            home = self.filters["home_team"][0]
+            away = self.filters["away_team"][0]
+            return type("Response", (), {"data": [{
+                "match_date": self.filters["match_date"],
+                "home_team": home,
+                "away_team": away,
+                "result": "H",
+                "persisted_at_utc": "2026-11-01T00:00:00Z",
+            }]})()
 
     class Client:
         def __init__(self):
@@ -1429,9 +1449,11 @@ def test_outcome_query_attempt_is_recorded_when_transport_fails_before_response(
             client, [], token="synthetic", outcome_read_state=state
         )
 
-    assert client.execute_count == 1
+    assert client.execute_count == successful_responses_before_failure + 1
     assert state == {
-        "called": False,
+        "called": successful_responses_before_failure > 0,
         "query_attempted": True,
-        "query_returned": False,
+        "query_returned": successful_responses_before_failure > 0,
+        "query_attempt_count": successful_responses_before_failure + 1,
+        "query_return_count": successful_responses_before_failure,
     }
