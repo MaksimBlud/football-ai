@@ -271,11 +271,11 @@ def evaluate_live_market_only_from_supabase(
     metadata only; it cannot initiate a read.
     """
     _require_live_research_access(token)
-    state = {"called": False}
+    state = {"called": False, "query_attempted": False, "query_returned": False}
     if outcome_read_state is not None:
         if not isinstance(outcome_read_state, dict):
             raise ValueError("outcome_read_state must be a mutable dictionary when supplied")
-        outcome_read_state["called"] = False
+        outcome_read_state.update(state)
 
     actual_now = datetime.now(timezone.utc)
     if observed_at_utc is None:
@@ -326,7 +326,7 @@ def evaluate_live_market_only_from_supabase(
             if kickoff.date().isoformat() != match_date:
                 raise ValueError("forecast kickoff UTC date does not match gated fixture identity")
 
-            response = (
+            query = (
                 client.table("league_finished_results")
                 .select(selected_columns)
                 .eq("league", SERIE_A_RUNTIME_CONFIG.identity.identifier)
@@ -334,12 +334,20 @@ def evaluate_live_market_only_from_supabase(
                 .eq("match_date", match_date)
                 .in_("home_team", _raw_team_aliases(home))
                 .in_("away_team", _raw_team_aliases(away))
-                .execute()
             )
-            # Mark an outcome read only after the exact result query returned.
-            # Validation failures before this point must not be reported as reads.
+            # Record the attempt immediately before the network call. A transport
+            # error can happen after PostgREST received the request, so an attempted
+            # query must never be reported as "not called" merely because no response
+            # reached the client. "called" remains the compatibility alias for a
+            # query that returned a response.
+            state["query_attempted"] = True
+            if outcome_read_state is not None:
+                outcome_read_state["query_attempted"] = True
+            response = query.execute()
+            state["query_returned"] = True
             state["called"] = True
             if outcome_read_state is not None:
+                outcome_read_state["query_returned"] = True
                 outcome_read_state["called"] = True
             rows_for_fixture = getattr(response, "data", None)
             if not isinstance(rows_for_fixture, list) or not rows_for_fixture:
@@ -382,5 +390,5 @@ def evaluate_live_market_only_from_supabase(
         )
     finally:
         if outcome_read_state is not None:
-            outcome_read_state["called"] = state["called"]
+            outcome_read_state.update(state)
 
