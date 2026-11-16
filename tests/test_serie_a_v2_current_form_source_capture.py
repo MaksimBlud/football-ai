@@ -204,3 +204,80 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert report["target_outcome_evaluation_gate"]["outcome_gate_open"] is False
     assert report["paid_provider_calls"] == report["supabase_writes"] == 0
     assert report["model_refit_or_promotion"] is False
+
+
+
+@pytest.mark.parametrize(
+    ("failure_stage", "exception_type", "message"),
+    [
+        ("historical", RuntimeError, "historical source failure"),
+        ("current_download", RuntimeError, "current CSV request failure"),
+        ("current_validation", ValueError, "completed result after capture date"),
+    ],
+)
+def test_failed_capture_never_publishes_partial_source_archive(
+    tmp_path, failure_stage, exception_type, message
+):
+    target = tmp_path / "published"
+    raw = current_csv(n=30, future_completed=failure_stage == "current_validation")
+
+    def fake_history(*, get, capture_dir):
+        capture_dir.mkdir(parents=True, exist_ok=True)
+        audits = []
+        for index, code in enumerate(_source_codes()):
+            filename = f"serie_a_{code}.csv"
+            (capture_dir / filename).write_bytes(b"partial historical source")
+            audits.append({"season_code": code, "archived_source_name": filename})
+            if failure_stage == "historical" and index == 2:
+                raise RuntimeError("historical source failure")
+        return pd.DataFrame([{"historical": 1}]), audits
+
+    class Response:
+        status_code = 200
+        url = CURRENT_URL
+
+        def __init__(self, content):
+            self.content = content
+
+        def raise_for_status(self):
+            return None
+
+    def fake_get(url, timeout):
+        if failure_stage == "current_download":
+            raise RuntimeError("current CSV request failure")
+        return Response(raw)
+
+    with pytest.raises(exception_type, match=message):
+        capture_source_archive(
+            output_dir=target,
+            client=FakeQuery(event_rows(30)),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=fake_get,
+            history_fetch=fake_history,
+            clock=lambda: datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc),
+        )
+
+    assert not target.exists()
+    assert not target.is_symlink()
+    assert not list(tmp_path.glob(".published.staging-*"))
+
+
+def test_nonempty_source_archive_output_is_never_overwritten(tmp_path):
+    target = tmp_path / "published"
+    target.mkdir()
+    sentinel = target / "keep.txt"
+    sentinel.write_text("preserve", encoding="utf-8")
+
+    def forbidden_history(**_kwargs):
+        raise AssertionError("existing output must be rejected before source downloads")
+
+    with pytest.raises(FileExistsError, match="must be absent or empty"):
+        capture_source_archive(
+            output_dir=target,
+            client=FakeQuery(event_rows(30)),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=lambda *_args, **_kwargs: pytest.fail("source request must not run"),
+            history_fetch=forbidden_history,
+        )
+
+    assert sentinel.read_text(encoding="utf-8") == "preserve"
