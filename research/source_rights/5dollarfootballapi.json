@@ -1,7 +1,7 @@
 {
   "schema_version": "5DOLLAR_ORIGINAL_V2_SOURCE_RIGHTS_V1",
   "provider": "5DollarFootballAPI",
-  "reviewed_at_utc": "2026-11-12",
+  "reviewed_at_utc": "2026-11-15",
   "terms_url": "https://5dollarfootballapi.com/terms",
   "pricing_url": "https://5dollarfootballapi.com/pricing",
   "serie_a_url": "https://5dollarfootballapi.com/serie-a-api",
@@ -21,8 +21,11 @@
   "field_semantics_confirmed": false,
   "private_archive_verified": false,
   "approval_status": "HOLD",
-  "reason": "Official terms permit use in internal models and caching, and the Serie A landing page claims free top-five/current-season access. However, the measured data-quality table explicitly labels Italy Serie A as Pro. Do not use until the provider resolves this plan conflict, confirms upstream field rights and exact Free-plan goals/corners/yellow/red completeness and semantics, and approves private retention/storage. No account, key, API call or data download has been made.",
+  "reason": "Official October 2026 terms permit use in internal models and caching, and the dedicated Serie A page claims Free access. However, the measured data-quality table labels Italy Serie A as Pro. Free history is only three months. The public fixture example exposes no per-fixture upstream observation timestamp; any future prospective capture must preserve raw response bytes, record local response receipt time separately, and SHA-256 the bytes. Do not use until the provider confirms actual Free-plan Serie A entitlement, required current-season field completeness/semantics, upstream rights for internal ML use, and approved private retention. No account, key, API call or data download has been made.",
   "measured_data_quality_plan": "Pro",
   "free_serie_a_entitlement_conflict": true,
-  "measured_data_quality_page_reviewed_at_utc": "2026-11-12"
+  "measured_data_quality_page_reviewed_at_utc": "2026-11-15",
+  "serie_a_page_claims_free_entitlement": true,
+  "source_observation_timestamp_available": false,
+  "local_response_receipt_time_required": true
 }
