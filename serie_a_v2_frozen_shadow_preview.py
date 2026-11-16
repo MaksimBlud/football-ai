@@ -87,11 +87,28 @@ def _key(row: Mapping[str, Any]) -> tuple[str, str, str, datetime]:
 
 
 def _guard_outcome_free(row: Mapping[str, Any]):
-    if set(row).intersection(FORBIDDEN):
-        raise ValueError("outcomes or settlement fields forbidden at capture time")
-    features = row.get("features")
-    if isinstance(features, Mapping) and set(features).intersection(FORBIDDEN):
-        raise ValueError("result fields cannot be provided as model features")
+    """Reject protected outcome/settlement keys at any depth in capture input."""
+    pending = [row]
+    seen: set[int] = set()
+    while pending:
+        value = pending.pop()
+        if isinstance(value, Mapping):
+            identity = id(value)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            for key, nested in value.items():
+                if isinstance(key, str) and key.strip().lower() in FORBIDDEN:
+                    raise ValueError(
+                        "outcome/result fields are forbidden anywhere in shadow input"
+                    )
+                pending.append(nested)
+        elif isinstance(value, (list, tuple)):
+            identity = id(value)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            pending.extend(value)
 
 
 def shadow_preview(
