@@ -281,3 +281,15 @@ def test_nonempty_source_archive_output_is_never_overwritten(tmp_path):
         )
 
     assert sentinel.read_text(encoding="utf-8") == "preserve"
+
+
+def test_current_csv_rejects_pre_2026_27_fixture_dates():
+    raw = current_csv(n=30).decode().replace(
+        "01/08/2026,Home 0,Away 0,1,0,H,5,3,2,1,0,0",
+        "01/05/2026,Home 0,Away 0,1,0,H,5,3,2,1,0,0",
+    ).encode()
+    with pytest.raises(ValueError, match="pre-2026/27 fixture dates"):
+        validate_current_season_csv(
+            raw,
+            captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+        )
