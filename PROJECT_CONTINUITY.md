@@ -6805,3 +6805,17 @@ The #826 branch's pinned Football-Data rights manifest currently records:
 - policy checked 2026-11-10T11:57:30Z, policy page update date 2026-11-10.
 
 The source-capture helper requires the explicit source-only flag and scope to be granted; the direct-access helper additionally requires private repository storage. The repository is currently public, so both checks fail closed. The 113 identity-only Serie A fixtures pass only the feature-input count threshold; they do not grant source access, inference rights, or access to target outcomes. No Football-Data CSV download or quote read is authorized. A future source-only permission would still not authorize V2 inference: the separate inference scope remains blocked pending provider clarification or a different properly licensed source.
+
+
+
+### Free-source candidate screen — SportAPI.ai (research only, no access performed)
+
+A public-documentation screen found a possible zero-cost source for part of the feature inputs, but not a complete replacement:
+
+- SportAPI.ai advertises a Free plan with all endpoints/leagues; its pricing page states 2,000 requests/day and 14,000/month through 2026-11-30, changing to 1,000/day and 7,000/month from 2026-12-01.
+- Its Terms allow use in one's own analysis, apps and products, while prohibiting raw-feed/API redistribution. The provider disclaims data accuracy/completeness and says not to rely on the service alone for betting/trading decisions. It also limits the rights it can grant to rights it actually holds.
+- The documented football API includes fixtures, results, match events and team statistics (shots, shots on target, fouls, passes, tackles, saves and yellow cards), but explicitly has no betting odds or xG. The published event/stat list does not document corners.
+- The original frozen V2 feature contract requires 19 features, including eight corner-form features (diff_corners_for/against at 5, 10 and venue-5 windows). Without verified Serie A corner coverage, the provider cannot supply the full frozen feature vector; without odds, it cannot provide the market anchor either.
+- Serie A is named among the covered competitions, but per-match detailed-stat availability and the underlying rights for the exact fields remain unverified.
+
+Decision: HOLD as a possible supplementary statistics source only; not approved for V2 capture or inference. No account was created, no API key requested, no API request made, no quota consumed, and no provider data downloaded. Official references: https://sportapi.ai/pricing, https://sportapi.ai/football-api, https://sportapi.ai/terms.
