@@ -12,6 +12,8 @@ on:
       - main
       - research/v2-pin-source-workflow-yaml-sha-restacked-on-825-20261114-run11
       - research/v2-market-only-outcome-read-audit-fix-restacked-on-826-20261115-run11
+      - research/v2-outcome-query-count-audit-on-850-20261116-run11
+      - research/v2-outcome-query-attempt-audit-on-846-20261116-run11
       - research/v2-original-forward-atomic-source-preflight-restacked-on-826-20261115-run11
     paths:
       - "requirements-v2-research-py312.lock"
