@@ -297,6 +297,58 @@ def verify_source_artifacts_for_candidates(
     return verified_shas
 
 
+def _outcome_read_audit_fields(state: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Expose attempted/returned query counts without misreporting transport failures."""
+    audit = state if isinstance(state, Mapping) else {}
+    attempted_count = audit.get("query_attempt_count")
+    returned_count = audit.get("query_return_count")
+    if attempted_count is None:
+        attempted_count = 1 if audit.get("query_attempted") is True else 0
+    if returned_count is None:
+        returned_count = 1 if (
+            audit.get("query_returned") is True or audit.get("called") is True
+        ) else 0
+    if (
+        type(attempted_count) is not int
+        or attempted_count < 0
+        or type(returned_count) is not int
+        or returned_count < 0
+        or returned_count > attempted_count
+    ):
+        raise ValueError("outcome query audit counts are inconsistent")
+    attempted = attempted_count > 0
+    returned = returned_count > 0
+    if audit.get("query_attempted") is not None and audit.get("query_attempted") is not attempted:
+        raise ValueError("outcome query attempted flag disagrees with its count")
+    if audit.get("query_returned") is not None and audit.get("query_returned") is not returned:
+        raise ValueError("outcome query returned flag disagrees with its count")
+    if audit.get("called") is not None and audit.get("called") is not returned:
+        raise ValueError("legacy outcome query called flag disagrees with its return count")
+
+    if not attempted:
+        status = "NOT_ATTEMPTED"
+        outcomes_read = False
+    elif returned_count == 0:
+        # The request may have reached PostgREST even though the client received
+        # no response. Do not falsely report that no target data was read.
+        status = "ATTEMPTED_NO_RESPONSE"
+        outcomes_read = None
+    elif returned_count < attempted_count:
+        status = "PARTIAL_RESPONSES"
+        outcomes_read = True
+    else:
+        status = "ALL_ATTEMPTS_RETURNED"
+        outcomes_read = True
+    return {
+        "target_outcomes_read": outcomes_read,
+        "target_outcome_query_attempted": attempted,
+        "target_outcome_query_returned": returned,
+        "target_outcome_query_attempt_count": attempted_count,
+        "target_outcome_query_return_count": returned_count,
+        "target_outcome_query_status": status,
+    }
+
+
 def run_live_evaluation(client: Any, token: str, *, now: datetime | str | None = None):
     # Defense in depth: imported callers must not bypass the CLI rights gate.
     require_personal_research_inference_scope()
@@ -324,6 +376,7 @@ def run_live_evaluation(client: Any, token: str, *, now: datetime | str | None =
         "production_or_supabase_writes": 0, "paid_provider_calls": 0,
         "raw_outcomes_included": False,
         "private_storage_verified": False,
+        **_outcome_read_audit_fields({}),
     }
     private_storage = require_private_repository_for_source_artifacts(
         os.environ.get("GITHUB_REPOSITORY", ""), token
@@ -369,7 +422,13 @@ def run_live_evaluation(client: Any, token: str, *, now: datetime | str | None =
                 "forecast_candidate_count": 0, "selected_unique_fixture_forecasts": 0,
                 "target_outcomes_read": False, "target_outcomes_scored": False}
 
-    outcome_state = {"called": False}
+    outcome_state = {
+        "called": False,
+        "query_attempted": False,
+        "query_returned": False,
+        "query_attempt_count": 0,
+        "query_return_count": 0,
+    }
     try:
         # The runner verifies every captured source archive before applying the
         # frozen earliest-eligible selection policy or considering target outcomes.
@@ -386,7 +445,8 @@ def run_live_evaluation(client: Any, token: str, *, now: datetime | str | None =
             "forward_artifacts": artifact_reports, "forecast_candidate_count": len(candidates),
             "selected_unique_fixture_forecasts": 0, "selection": None,
             "source_archives_reverified": 0, "source_archive_sha256": {},
-            "target_outcomes_read": outcome_state["called"], "target_outcomes_scored": False,
+            **_outcome_read_audit_fields(outcome_state),
+            "target_outcomes_scored": False,
             "error_type": type(exc).__name__, "error": str(exc),
         }
 
@@ -408,17 +468,20 @@ def run_live_evaluation(client: Any, token: str, *, now: datetime | str | None =
             "forward_artifacts": artifact_reports, "forecast_candidate_count": len(candidates),
             "selected_unique_fixture_forecasts": 0, "selection": None,
             "source_archives_reverified": 0, "source_archive_sha256": {},
-            "target_outcomes_read": outcome_state["called"], "target_outcomes_scored": False,
+            **_outcome_read_audit_fields(outcome_state),
+            "target_outcomes_scored": False,
             "error": "runner omitted the verified source SHA or frozen selection attestation",
         }
-    if outcome_state["called"] is not bool(evaluation.get("target_outcomes_read")):
+    outcome_audit = _outcome_read_audit_fields(outcome_state)
+    if outcome_audit["target_outcomes_read"] is not bool(evaluation.get("target_outcomes_read")):
         return {
             **base, "status": "BLOCKED", "forward_artifact_count": len(artifacts),
             "forward_artifacts": artifact_reports, "forecast_candidate_count": len(candidates),
             "selected_unique_fixture_forecasts": selected_count, "selection": dict(selection),
             "source_archives_reverified": source_archives_reverified,
             "source_archive_sha256": dict(source_archive_sha256),
-            "target_outcomes_read": outcome_state["called"], "target_outcomes_scored": False,
+            **outcome_audit,
+            "target_outcomes_scored": False,
             "error": "outcome-loader invocation differs from evaluator gate attestation",
         }
     return {
@@ -427,7 +490,7 @@ def run_live_evaluation(client: Any, token: str, *, now: datetime | str | None =
         "forecast_candidate_count": len(candidates), "selected_unique_fixture_forecasts": selected_count,
         "selection": dict(selection), "source_archives_reverified": source_archives_reverified,
         "source_archive_sha256": dict(source_archive_sha256),
-        "target_outcomes_read": outcome_state["called"],
+        **outcome_audit,
         "target_outcomes_scored": bool(evaluation.get("target_outcomes_scored")),
         "evaluation": evaluation,
     }
@@ -463,7 +526,8 @@ def main() -> int:
             "target_outcomes_read": False, "target_outcomes_scored": False,
             "no_bet": True, "automatic_promotion": False,
             "production_or_supabase_writes": 0, "paid_provider_calls": 0,
-            "raw_outcomes_included": False, "error_type": type(exc).__name__, "error": str(exc),
+            "raw_outcomes_included": False, **_outcome_read_audit_fields({}),
+            "error_type": type(exc).__name__, "error": str(exc),
         }
     except Exception as exc:
         report = {
@@ -473,7 +537,8 @@ def main() -> int:
             "target_outcomes_read": False, "target_outcomes_scored": False,
             "no_bet": True, "automatic_promotion": False,
             "production_or_supabase_writes": 0, "paid_provider_calls": 0,
-            "raw_outcomes_included": False, "error_type": type(exc).__name__, "error": str(exc),
+            "raw_outcomes_included": False, **_outcome_read_audit_fields({}),
+            "error_type": type(exc).__name__, "error": str(exc),
         }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
