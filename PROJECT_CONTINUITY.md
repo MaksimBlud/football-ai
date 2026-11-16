@@ -7160,3 +7160,13 @@ PR #844's official-documentation-only GOAL API audit remains **HOLD**. No accoun
 PR #850 remains a Draft child of #846. Its exact HEAD `0d83cbd215be788cf32fe803f84bbcb672b5d402` passed its synthetic-only prospective-evaluator workflow (216 tests plus compile and production `.pkl` diff guard). It distinguishes query attempted, query returned, and the backward-compatible returned-read flag when a transport error occurs. No live Supabase or target-outcome query was executed; the 30-primary-completed-forecast gate remains closed.
 
 No PR was merged, no main ref was changed, and no schedule, model contract, Supabase data/schema, paid API budget, production artifact, target-outcome access, promotion or bet was changed by this audit.
+
+
+### Recursive protected-outcome input guard — 2026-11-16 21:54 UTC
+
+- PR [#854](https://github.com/MaksimBlud/football-ai/pull/854) is **OPEN / Ready for review / not merged**, exact base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, exact HEAD `a8105eccd0874d58c0cbcacce2fe8837d85f2188`.
+- The two-file diff changes only `serie_a_v2_frozen_shadow_preview.py` and its frozen-shadow tests. The capture guard now recursively scans mappings and list/tuple containers, normalizes string keys with strip/lowercase, and avoids cycles; four synthetic regressions cover nested mapping, list, case-variant and settlement fields.
+- Exact-head PR workflows: **7/7 completed SUCCESS** — Research [#43955712139], Eredivisie [#43955712030], Frozen V2 Shadow Tests [#43955712173], Product [#43955712045], Ligue 1 [#43955712183], Bundesliga [#43955712431], Serie A [#43955712004].
+- The dedicated Frozen V2 job log confirms **89 passed on CPython 3.11.18** and `git diff --exit-code -- '*.pkl'` passed. This exact run does not establish a Python 3.12 run; no such claim is made.
+- This is synthetic/offline input-embargo validation only. No source/quote access, Supabase query, inference, protected outcome read, refit, production artifact change or promotion occurred. Main still has the earlier top-level-only guard until this PR is manually integrated. HUMAN-MERGE only.
+- Fresh read-only pre-match Supabase aggregate reconfirmed `public.odds_snapshots` **3,915 rows / 327 events / 9 leagues** under `snapshot_time_utc < commence_time_utc`, and `public.product_prediction_snapshots` **40 rows / 40 events**, with **0** original V2 candidate SHA rows under `generated_at_utc < commence_time_utc`. No outcome columns were selected.
