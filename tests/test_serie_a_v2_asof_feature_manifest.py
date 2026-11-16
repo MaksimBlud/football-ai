@@ -602,6 +602,12 @@ def test_5dollar_adapter_default_rights_manifest_is_hold(tmp_path):
 
     capture, quotes, _ = _synthetic_5dollar_bundle(tmp_path)
     assert hashlib.sha256(DEFAULT_RIGHTS_MANIFEST.read_bytes()).hexdigest() == DEFAULT_RIGHTS_MANIFEST_SHA256
+    rights_text = DEFAULT_RIGHTS_MANIFEST.read_text(encoding="utf-8")
+    assert '"reviewed_at_utc": "2026-11-15"' in rights_text
+    assert '"measured_data_quality_plan": "Pro"' in rights_text
+    assert '"free_serie_a_entitlement_conflict": true' in rights_text
+    assert '"source_observation_timestamp_available": false' in rights_text
+    assert '"local_response_receipt_time_required": true' in rights_text
     with pytest.raises(PermissionError, match="manifest is HOLD"):
         build_manifest_from_private_archive(tmp_path, capture, quotes)
 
