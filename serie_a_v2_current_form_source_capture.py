@@ -33,6 +33,7 @@ CURRENT_CODE = SERIE_A_RUNTIME_CONFIG.finished_results_source.season_code
 CURRENT_SEASON = SERIE_A_RUNTIME_CONFIG.finished_results_source.season
 CURRENT_URL = f"{PUBLIC_BASE}/{CURRENT_CODE}/{SERIE_A_RUNTIME_CONFIG.finished_results_source.competition_code}.csv"
 CURRENT_FILENAME = f"serie_a_{CURRENT_CODE}.csv"
+CURRENT_SEASON_START = date(int(CURRENT_SEASON[:4]), 7, 1)
 MANIFEST_FILENAME = "serie_a_v2_current_form_source_manifest.json"
 MIN_COMPLETED_FEATURE_SOURCE_EVENTS = 30
 MAX_CURRENT_CSV_BYTES = 2_000_000
@@ -132,6 +133,8 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
         raise ValueError("current-season source contains an unparseable fixture date")
     frame = frame.loc[nonblank_dates].copy()
     frame["_parsed_date"] = parsed_dates.loc[nonblank_dates].dt.date
+    if frame["_parsed_date"].lt(CURRENT_SEASON_START).any():
+        raise ValueError("current-season source contains pre-2026/27 fixture dates")
     cutoff = captured_at.astimezone(timezone.utc).date()
     ftr = frame["FTR"].fillna("").astype(str).str.strip().str.upper()
     valid_result = ftr.isin(("H", "D", "A"))
