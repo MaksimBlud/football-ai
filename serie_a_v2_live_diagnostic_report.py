@@ -13,6 +13,7 @@ import hashlib
 from io import BytesIO
 import json
 from pathlib import Path
+import time
 
 import pandas as pd
 import requests
@@ -26,6 +27,9 @@ from serie_a_v2_frozen_shadow_preview import (
 PUBLIC_BASE = "https://www.football-data.co.uk/mmz4281"
 PAID_PROVIDER_REQUESTS = 0
 MAX_PUBLIC_SOURCE_FILES = len(SERIE_A_RUNTIME_CONFIG.historical_source.season_codes)
+PUBLIC_FETCH_TIMEOUT_SECONDS = 30
+PUBLIC_FETCH_ATTEMPTS = 3
+PUBLIC_FETCH_BACKOFF_SECONDS = 1.0
 
 
 def _source_codes() -> list[str]:
@@ -38,8 +42,33 @@ def _source_codes() -> list[str]:
     return historical
 
 
-def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -> tuple[pd.DataFrame, list[dict]]:
-    """Explicit, bounded configured public URLs; never odds API, never cache guess."""
+def _fetch_public_csv(url: str, *, season_code: str, get=requests.get,
+                      sleep=time.sleep):
+    """Retry only transient public-source transport/server failures, never guess data."""
+    for attempt in range(PUBLIC_FETCH_ATTEMPTS):
+        try:
+            response = get(url, timeout=PUBLIC_FETCH_TIMEOUT_SECONDS)
+        except (requests.Timeout, requests.ConnectionError):
+            if attempt + 1 >= PUBLIC_FETCH_ATTEMPTS:
+                raise
+            sleep(PUBLIC_FETCH_BACKOFF_SECONDS * (2 ** attempt))
+            continue
+        status = getattr(response, "status_code", None)
+        if status == 200:
+            return response
+        if (isinstance(status, int) and 500 <= status < 600
+                and attempt + 1 < PUBLIC_FETCH_ATTEMPTS):
+            sleep(PUBLIC_FETCH_BACKOFF_SECONDS * (2 ** attempt))
+            continue
+        raise RuntimeError(
+            f"Public Serie A CSV unavailable: season={season_code}, http={status}"
+        )
+    raise RuntimeError("Public Serie A CSV retry loop exhausted")
+
+
+def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None,
+                         sleep=time.sleep) -> tuple[pd.DataFrame, list[dict]]:
+    """Fetch exact configured public CSVs with bounded transient retries; never odds API."""
     all_frames = []
     audit = []
     if capture_dir is not None:
@@ -48,9 +77,9 @@ def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -
         if len(code) != 4 or not code.isdigit():
             raise ValueError("unexpected historical season code")
         url = f"{PUBLIC_BASE}/{code}/{SERIE_A_RUNTIME_CONFIG.historical_source.competition_code}.csv"
-        response = get(url, timeout=30)
-        if response.status_code != 200:
-            raise RuntimeError(f"Public Serie A CSV unavailable: season={code}, http={response.status_code}")
+        response = _fetch_public_csv(
+            url, season_code=code, get=get, sleep=sleep
+        )
         body = response.content
         capture = datetime.now(timezone.utc)
         if capture_dir is not None:
