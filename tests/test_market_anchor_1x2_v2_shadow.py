@@ -276,3 +276,35 @@ def test_compact_outcome_alias_guard_preserves_frozen_derived_feature_names():
     assert v2.is_forbidden_outcome_field("H.G")
     assert not v2.is_forbidden_outcome_field("diff_goals_for_5")
 
+
+@pytest.mark.parametrize("provider_row", [
+    {"home_win": True},
+    {"away_win": True},
+    {"home_won": True},
+    {"away_won": True},
+    {"is_home_winner": True},
+    {"is_away_winner": True},
+    {"homeTeamWon": True},
+    {"winnerSide": "H"},
+    {"winnerTeamId": 123},
+    {"Result-1X2": "A"},
+    {"outcome_1x2": "D"},
+    {"draw_result": True},
+    {"isDraw": True},
+    {"was_draw": True},
+    {"drawn": True},
+    {"home_result": "W"},
+    {"away_result": "L"},
+])
+def test_shadow_capture_rejects_explicit_1x2_winner_and_draw_outcome_aliases(provider_row):
+    row = _row(provider_row=provider_row)
+    with pytest.raises(ValueError, match="outcome fields"):
+        v2.validate_shadow_capture_rows([row])
+
+
+def test_1x2_outcome_alias_guard_preserves_pre_match_market_and_frozen_features():
+    assert not v2.is_forbidden_outcome_field("home_odds")
+    assert not v2.is_forbidden_outcome_field("draw_odds")
+    assert not v2.is_forbidden_outcome_field("away_odds")
+    assert not v2.is_forbidden_outcome_field("diff_points_5")
+    assert not v2.is_forbidden_outcome_field("diff_goals_for_5")
