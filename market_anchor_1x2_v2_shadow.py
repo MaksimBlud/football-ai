@@ -48,6 +48,14 @@ FIRST_OUTCOME_READ_GATE = 30
 INCUMBENT_MODEL_SHA256 = "1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5"
 FORBIDDEN_OUTCOME_FIELDS = frozenset({
     "result", "outcome", "home_goals", "away_goals", "score", "final_score",
+    # Generic nested score-provider containers and common goal-count aliases.
+    "goal", "goals", "goal_count", "goals_count", "total_goals",
+    "goals_scored", "goals_conceded", "goals_for", "goals_against",
+    "goals_home", "goals_away", "home_goal", "away_goal",
+    "home_goals_scored", "away_goals_scored",
+    "home_goals_conceded", "away_goals_conceded",
+    "score_home", "score_away",
+    "full_time_goals", "half_time_goals", "fulltime_goals", "halftime_goals",
     "settlement", "prediction_correct", "match_winner", "winner", "winning_team",
     "home_score", "away_score", "full_time_score", "full_time_result",
     "match_result", "match_outcome",
@@ -295,6 +303,11 @@ def write_candidate_artifact(frame: pd.DataFrame, output: Path) -> dict:
     return artifact
 
 
+def normalize_outcome_field_name(key: str) -> str:
+    """Normalize whitespace/hyphen variants without altering frozen feature names."""
+    return "_".join(key.strip().lower().replace("-", " ").split())
+
+
 def _nested_forbidden_outcome_keys(value) -> set[str]:
     """Return protected match-outcome keys found anywhere in nested containers."""
     pending = [value]
@@ -309,7 +322,7 @@ def _nested_forbidden_outcome_keys(value) -> set[str]:
             seen.add(identity)
             for key, nested in current.items():
                 if isinstance(key, str):
-                    normalized = key.strip().lower()
+                    normalized = normalize_outcome_field_name(key)
                     if normalized in FORBIDDEN_OUTCOME_FIELDS:
                         leaked.add(normalized)
                 pending.append(nested)
