@@ -333,6 +333,11 @@ def test_1x2_outcome_alias_guard_preserves_pre_match_market_and_frozen_features(
     ("attributeName", "Draw Result"),
     ("propertyName", "Away Goals"),
     ("displayName", "Yellow Cards"),
+    ("shortName", "FT Result"),
+    ("displayName", "Final Result"),
+    ("abbreviation", "Fulltime Result"),
+    ("metricName", "FT Outcome"),
+    ("propertyName", "Full Time Outcome"),
 ])
 def test_shadow_capture_rejects_outcomes_encoded_as_typed_stat_descriptors(descriptor_key, descriptor_value):
     row = _row(provider_row={"statistics": [{descriptor_key: descriptor_value, "value": "H"}]})
