@@ -322,6 +322,17 @@ def test_1x2_outcome_alias_guard_preserves_pre_match_market_and_frozen_features(
     ("type", "Shots On Target"),
     ("key", ["F.T.H.G"]),
     ("attribute", "Red Cards"),
+    ("abbr", "FTR"),
+    ("abbreviation", "Full Time Result"),
+    ("shortName", "Home Goals"),
+    ("shortCode", "Result-1X2"),
+    ("statCode", "Corners"),
+    ("statisticCode", "Red Cards"),
+    ("fieldCode", "FTAG"),
+    ("metricCode", "Winner Side"),
+    ("attributeName", "Draw Result"),
+    ("propertyName", "Away Goals"),
+    ("displayName", "Yellow Cards"),
 ])
 def test_shadow_capture_rejects_outcomes_encoded_as_typed_stat_descriptors(descriptor_key, descriptor_value):
     row = _row(provider_row={"statistics": [{descriptor_key: descriptor_value, "value": "H"}]})
@@ -335,6 +346,8 @@ def test_typed_stat_descriptor_guard_uses_exact_names_not_arbitrary_text():
             {"name": "Market 1X2", "value": "1X2"},
             {"type": "Home Win Probability", "value": 0.55},
             {"label": "Possession Trend", "value": 58},
+            {"abbreviation": "Market 1X2", "value": "1X2"},
+            {"shortName": "Home Win Probability", "value": 0.55},
         ]
     })
     assert v2.validate_shadow_capture_rows([row])[0]["event_id"] == "evt-1"
