@@ -308,3 +308,33 @@ def test_1x2_outcome_alias_guard_preserves_pre_match_market_and_frozen_features(
     assert not v2.is_forbidden_outcome_field("away_odds")
     assert not v2.is_forbidden_outcome_field("diff_points_5")
     assert not v2.is_forbidden_outcome_field("diff_goals_for_5")
+
+
+@pytest.mark.parametrize(("descriptor_key", "descriptor_value"), [
+    ("name", "FTR"),
+    ("type", "Full Time Result"),
+    ("stat", "Home Goals"),
+    ("fieldName", "Result-1X2"),
+    ("metric", "Winner Side"),
+    ("label", "Draw Result"),
+    ("statistic", "Corners"),
+    ("name", "Yellow Cards"),
+    ("type", "Shots On Target"),
+    ("key", ["F.T.H.G"]),
+    ("attribute", "Red Cards"),
+])
+def test_shadow_capture_rejects_outcomes_encoded_as_typed_stat_descriptors(descriptor_key, descriptor_value):
+    row = _row(provider_row={"statistics": [{descriptor_key: descriptor_value, "value": "H"}]})
+    with pytest.raises(ValueError, match="outcome fields"):
+        v2.validate_shadow_capture_rows([row])
+
+
+def test_typed_stat_descriptor_guard_uses_exact_names_not_arbitrary_text():
+    row = _row(provider_row={
+        "statistics": [
+            {"name": "Market 1X2", "value": "1X2"},
+            {"type": "Home Win Probability", "value": 0.55},
+            {"label": "Possession Trend", "value": 58},
+        ]
+    })
+    assert v2.validate_shadow_capture_rows([row])[0]["event_id"] == "evt-1"
