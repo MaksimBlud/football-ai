@@ -70,6 +70,10 @@ FORBIDDEN_OUTCOME_FIELDS = frozenset({
     "result_code", "result_name", "outcome_code", "outcome_name",
     "home_team_result", "away_team_result",
     "winner_name", "winning_team_name", "winner_id", "winning_team_id",
+    # Preserve compact Football-Data xG aliases after camelCase tokenization.
+    "hx_g", "ax_g", "x_g_home", "x_g_away",
+    # Plural score and team-oriented score containers used by common APIs.
+    "scores", "scores_home", "scores_away", "home_scores", "away_scores",
     "settlement", "prediction_correct", "match_winner", "winner", "winning_team",
     "home_score", "away_score", "full_time_score", "full_time_result",
     "match_result", "match_outcome",
