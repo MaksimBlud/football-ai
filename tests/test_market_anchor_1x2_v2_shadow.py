@@ -255,3 +255,24 @@ def test_shadow_capture_rejects_generic_goals_containers_and_separator_aliases(p
 def test_derived_frozen_goal_features_remain_allowed():
     row = _row(features={"diff_goals_for_5": 0.1, "diff_goals_against_5": -0.1})
     assert v2.validate_shadow_capture_rows([row])[0]["event_id"] == "evt-1"
+
+
+@pytest.mark.parametrize("provider_row", [
+    {"F.T.H.G": 2},
+    {"H.G": 1},
+    {"F-T-A-G": 1},
+    {"H T R": "H"},
+    {"H-X-G": 1.4},
+    {"A.X.G": 0.7},
+])
+def test_shadow_capture_rejects_punctuation_separated_compact_outcome_aliases(provider_row):
+    row = _row(provider_row=provider_row)
+    with pytest.raises(ValueError, match="outcome fields"):
+        v2.validate_shadow_capture_rows([row])
+
+
+def test_compact_outcome_alias_guard_preserves_frozen_derived_feature_names():
+    assert v2.is_forbidden_outcome_field("F.T.H.G")
+    assert v2.is_forbidden_outcome_field("H.G")
+    assert not v2.is_forbidden_outcome_field("diff_goals_for_5")
+
