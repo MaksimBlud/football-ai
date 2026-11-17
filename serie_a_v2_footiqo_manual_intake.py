@@ -249,14 +249,18 @@ def _normalise_source(raw: bytes, *, received_at: datetime) -> tuple[pd.DataFram
     }
     for source, target in numeric_map.items():
         prior_day[target] = pd.to_numeric(prior_day[source], errors="coerce")
-        if prior_day[target].isna().any() or (prior_day[target] < 0).any():
+        if (
+            prior_day[target].isna().any()
+            or (prior_day[target] < 0).any()
+            or not all(math.isfinite(float(value)) for value in prior_day[target])
+        ):
             raise ValueError(f"completed manual Footiqo row has missing/invalid {source}")
 
     prior_day["FTR"] = prior_day["_ftr"]
-    if (
-        ((prior_day["FTHG"] > prior_day["FTAG"]) != (prior_day["FTR"] == "H")).any()
-        or ((prior_day["FTHG"] < prior_day["FTAG"]) != (prior_day["FTR"] == "A")).any()
-    ):
+    expected_ftr = pd.Series("D", index=prior_day.index)
+    expected_ftr.loc[prior_day["FTHG"] > prior_day["FTAG"]] = "H"
+    expected_ftr.loc[prior_day["FTHG"] < prior_day["FTAG"]] = "A"
+    if not expected_ftr.eq(prior_day["FTR"]).all():
         raise ValueError("manual Footiqo full-time result does not match goals")
 
     prior_day["_home"] = prior_day["HomeTeam"].map(_canonical_team)
@@ -289,9 +293,7 @@ def _normalise_source(raw: bytes, *, received_at: datetime) -> tuple[pd.DataFram
         "source_rows_total": len(frame),
         "current_season_rows": len(season_rows),
         "completed_prior_day_rows": len(normalised),
-        "incomplete_or_unplayed_rows_excluded": int(
-            len(season_rows) - len(prior_day) - int((season_rows["_match_date"] == capture_day).sum())
-        ),
+        "non_prior_completed_rows_excluded": int(len(season_rows) - len(prior_day)),
         "same_day_rows_excluded_without_kickoff_clock": int(
             (season_rows["_match_date"] == capture_day).sum()
         ),
@@ -321,8 +323,8 @@ def capture_manual_export(
     store = _assert_outside_repository(Path(private_store_dir), "private storage directory")
     source_path = _assert_outside_repository(Path(source_csv), "manual source CSV")
     gate_path = _assert_outside_repository(Path(gate_metadata_csv), "metadata-only gate CSV")
-    if not source_path.is_file() or not gate_path.is_file():
-        raise ValueError("manual source CSV and metadata-only gate CSV must both exist")
+    if not gate_path.is_file():
+        raise ValueError("metadata-only gate CSV must exist before source intake")
     store.mkdir(parents=True, exist_ok=True)
     if store.is_symlink():
         raise ValueError("private storage directory must not be a symlink")
@@ -330,8 +332,10 @@ def capture_manual_export(
     clock = _utc(now or datetime.now(timezone.utc), "capture clock")
     gate_raw = gate_path.read_bytes()
     gate_summary = _validate_gate_metadata(gate_raw, checked_at=clock)
-    # The protected source CSV is not opened until the metadata-only 30-event
-    # feature-input gate above has passed.
+    # Do not even stat/open the protected source CSV until the metadata-only
+    # 30-event feature-input gate above has passed.
+    if not source_path.is_file():
+        raise ValueError("manual source CSV must exist after the metadata-only gate passes")
     source_raw = source_path.read_bytes()
     source_received_at = _utc(datetime.now(timezone.utc) if now is None else now, "source receipt clock")
     normalised, source_summary = _normalise_source(source_raw, received_at=source_received_at)
@@ -425,17 +429,24 @@ def _load_verified_capture(capture_dir: Path) -> tuple[dict, pd.DataFrame]:
         raise ValueError("metadata-only gate archive SHA256 mismatch")
     gate_checked = _utc(manifest["gate_summary"]["gate_checked_at_utc"], "gate check time")
     gate_summary = _validate_gate_metadata(gate_raw, checked_at=gate_checked)
-    if gate_summary["canonical_primary_completed_events"] < MIN_PRIMARY_COMPLETED_EVENTS:
-        raise ValueError("30-primary-completed-event feature-input gate is not satisfied")
+    for key in (
+        "raw_metadata_rows", "canonical_primary_completed_events",
+        "minimum_required_primary_completed_events", "latest_match_date",
+        "metadata_fields", "outcome_fields_read", "metadata_only_export",
+    ):
+        if gate_summary.get(key) != manifest["gate_summary"].get(key):
+            raise ValueError("metadata-only feature gate summary does not match archived gate bytes")
 
     source_raw = (capture / "raw_source.csv").read_bytes()
     if hashlib.sha256(source_raw).hexdigest() != manifest.get("raw_source_sha256"):
         raise ValueError("manual Footiqo source archive SHA256 mismatch")
     source_received = _utc(manifest["source_received_at_utc"], "source receipt time")
     published = _utc(manifest["archive_published_at_utc"], "archive publication time")
-    if published < source_received:
-        raise ValueError("manual source archive publication predates source receipt")
-    history, _ = _normalise_source(source_raw, received_at=source_received)
+    if not gate_checked <= source_received <= published:
+        raise ValueError("metadata gate, source receipt and archive publication chronology is invalid")
+    history, source_summary = _normalise_source(source_raw, received_at=source_received)
+    if source_summary != manifest.get("source_summary"):
+        raise ValueError("manual source summary does not match the SHA-verified source bytes")
     return manifest, history
 
 
