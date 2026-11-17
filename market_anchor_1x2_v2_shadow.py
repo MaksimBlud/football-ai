@@ -322,6 +322,11 @@ def write_candidate_artifact(frame: pd.DataFrame, output: Path) -> dict:
     return artifact
 
 
+COMPACT_FORBIDDEN_OUTCOME_FIELDS = frozenset(
+    name.replace("_", "") for name in FORBIDDEN_OUTCOME_FIELDS
+)
+
+
 def normalize_outcome_field_name(key: str) -> str:
     """Canonicalize provider key spelling before the recursive outcome embargo.
 
@@ -336,6 +341,23 @@ def normalize_outcome_field_name(key: str) -> str:
     value = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", value)
     value = re.sub(r"[^A-Za-z0-9]+", "_", value)
     return value.strip("_").lower()
+
+
+def is_forbidden_outcome_field(key: str) -> bool:
+    """Match outcome aliases even when acronym letters are punctuation-separated.
+
+    The readable normalizer preserves separators as underscores (e.g. F.T.H.G
+    -> f_t_h_g). Compare a second compact form against the same frozen alias
+    set so punctuation cannot split a protected provider abbreviation.
+    """
+    normalized = normalize_outcome_field_name(key)
+    return bool(
+        normalized
+        and (
+            normalized in FORBIDDEN_OUTCOME_FIELDS
+            or normalized.replace("_", "") in COMPACT_FORBIDDEN_OUTCOME_FIELDS
+        )
+    )
 
 
 def _nested_forbidden_outcome_keys(value) -> set[str]:
@@ -353,7 +375,7 @@ def _nested_forbidden_outcome_keys(value) -> set[str]:
             for key, nested in current.items():
                 if isinstance(key, str):
                     normalized = normalize_outcome_field_name(key)
-                    if normalized in FORBIDDEN_OUTCOME_FIELDS:
+                    if is_forbidden_outcome_field(key):
                         leaked.add(normalized)
                 pending.append(nested)
         elif isinstance(current, (list, tuple)):
