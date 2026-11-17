@@ -1,8 +1,10 @@
 """Tests for actual historical-source + stored-market, always research-only."""
 from datetime import datetime, timezone
+import hashlib
 
 import pandas as pd
 import pytest
+import requests
 
 from serie_a_v2_live_diagnostic_report import (
     PUBLIC_BASE, _source_codes, fetch_public_history, make_report,
@@ -135,12 +137,163 @@ def test_public_free_history_never_downloads_protected_2026_27_outcomes():
     assert all(x["csv_sha256"] and x["source_observed_at_utc"] for x in audit)
 
 
+def test_public_history_capture_directory_is_sha_verified_and_published_as_one_bundle(tmp_path):
+    csv_bytes = history_fixture().to_csv(index=False).encode()
+    target = tmp_path / "source_capture"
+
+    class Response:
+        status_code = 200
+        content = csv_bytes
+
+    history, audit = fetch_public_history(
+        get=lambda url, timeout: Response(),
+        capture_dir=target,
+        sleep=lambda _: None,
+    )
+
+    assert len(history) == 30
+    files = sorted(target.glob("*.csv"))
+    assert len(files) == 10
+    assert {path.name for path in files} == {
+        item["archived_source_name"] for item in audit
+    }
+    for item in audit:
+        archived = (target / item["archived_source_name"]).read_bytes()
+        assert hashlib.sha256(archived).hexdigest() == item["csv_sha256"]
+    assert list(tmp_path.glob(".source_capture.staging-*")) == []
+
+
+def test_public_history_late_failure_never_publishes_partial_capture_directory(tmp_path):
+    csv_bytes = history_fixture().to_csv(index=False).encode()
+    target = tmp_path / "source_capture"
+    calls = []
+
+    class Response:
+        def __init__(self, status_code):
+            self.status_code = status_code
+            self.content = csv_bytes if status_code == 200 else b""
+
+    def fake_get(url, timeout):
+        calls.append(url)
+        return Response(200 if len(calls) <= 3 else 503)
+
+    with pytest.raises(RuntimeError, match="unavailable"):
+        fetch_public_history(
+            get=fake_get, capture_dir=target, sleep=lambda _: None
+        )
+
+    assert len(calls) == 6
+    assert not target.exists()
+    assert list(tmp_path.glob(".source_capture.staging-*")) == []
+
+
+def test_public_history_invalid_late_csv_never_publishes_partial_capture_directory(tmp_path):
+    valid_bytes = history_fixture().to_csv(index=False).encode()
+    invalid_bytes = history_fixture().drop(columns=["HC"]).to_csv(index=False).encode()
+    target = tmp_path / "source_capture"
+    calls = []
+
+    class Response:
+        status_code = 200
+        def __init__(self, body):
+            self.content = body
+
+    def fake_get(url, timeout):
+        calls.append(url)
+        return Response(valid_bytes if len(calls) <= 3 else invalid_bytes)
+
+    with pytest.raises(RuntimeError, match="missing stats"):
+        fetch_public_history(
+            get=fake_get, capture_dir=target, sleep=lambda _: None
+        )
+
+    assert len(calls) == 4
+    assert not target.exists()
+    assert list(tmp_path.glob(".source_capture.staging-*")) == []
+
+
+def test_public_history_refuses_existing_capture_destination(tmp_path):
+    target = tmp_path / "source_capture"
+    target.mkdir()
+    calls = []
+    with pytest.raises(RuntimeError, match="must not already exist"):
+        fetch_public_history(
+            get=lambda url, timeout: calls.append(url),
+            capture_dir=target,
+            sleep=lambda _: None,
+        )
+    assert calls == []
+    assert list(target.iterdir()) == []
+
+
+def test_public_history_refuses_symlink_capture_destination(tmp_path):
+    real_target = tmp_path / "real_source_capture"
+    real_target.mkdir()
+    target = tmp_path / "source_capture_link"
+    target.symlink_to(real_target, target_is_directory=True)
+    calls = []
+    with pytest.raises(RuntimeError, match="must not already exist"):
+        fetch_public_history(
+            get=lambda url, timeout: calls.append(url),
+            capture_dir=target,
+            sleep=lambda _: None,
+        )
+    assert calls == []
+    assert list(real_target.iterdir()) == []
+
+
+def test_public_history_retries_transient_read_timeout_and_archives_exact_success_bytes():
+    csv_bytes = history_fixture().to_csv(index=False).encode()
+    calls = []
+    sleeps = []
+    class Response:
+        status_code = 200
+        content = csv_bytes
+    def fake_get(url, timeout):
+        calls.append((url, timeout))
+        if len(calls) == 1:
+            raise requests.exceptions.ReadTimeout("temporary public-source timeout")
+        return Response()
+    history, audit = fetch_public_history(get=fake_get, sleep=sleeps.append)
+    assert len(calls) == 11
+    assert sleeps == [1.0]
+    assert len(audit) == 10
+    assert len(history) == 30
+    assert all(item["csv_sha256"] == hashlib.sha256(csv_bytes).hexdigest()
+               for item in audit)
+
+
+def test_public_history_retries_transient_server_error_once():
+    csv_bytes = history_fixture().to_csv(index=False).encode()
+    calls = []
+    sleeps = []
+    class Response:
+        def __init__(self, status_code):
+            self.status_code = status_code
+            self.content = csv_bytes if status_code == 200 else b""
+    def fake_get(url, timeout):
+        calls.append(url)
+        return Response(503 if len(calls) == 1 else 200)
+    history, audit = fetch_public_history(get=fake_get, sleep=sleeps.append)
+    assert len(calls) == 11
+    assert sleeps == [1.0]
+    assert len(history) == 30
+    assert len(audit) == 10
+
+
 def test_upstream_status_failure_is_not_filled_with_guessed_data():
+    calls = []
+    sleeps = []
     class BadResponse:
         status_code=503
         content=b""
+    def fake_get(url, timeout):
+        calls.append(url)
+        return BadResponse()
     with pytest.raises(RuntimeError,match="unavailable"):
-        fetch_public_history(get=lambda url,timeout: BadResponse())
+        fetch_public_history(get=fake_get, sleep=sleeps.append)
+    assert len(calls) == 3
+    assert sleeps == [1.0, 2.0]
 
 
 
