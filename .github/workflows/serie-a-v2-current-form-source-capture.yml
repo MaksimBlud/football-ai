@@ -56,7 +56,7 @@ jobs:
           python serie_a_v2_current_form_source_capture.py \
             --output-dir artifacts/serie_a_v2_current_form_source_capture
       - name: Archive source bytes and gate manifest for future quotes only
-        if: ${{ always() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
+        if: ${{ success() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: serie-a-v2-current-form-source-capture
