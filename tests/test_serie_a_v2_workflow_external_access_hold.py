@@ -3,14 +3,14 @@
 The current public main must not keep downloading provider CSVs, reading quote
 snapshots, or publishing source archives while provider rights and private
 artifact storage are unresolved. The workflows keep their offline tests and
-existing schedules; only live access and its artifact upload are held.
+existing schedules; live access is held and artifacts publish only after successful runs.
 """
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FLAG = "MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED"
 LIVE_GATE = "${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}"
-UPLOAD_GATE = "${{ always() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}"
+UPLOAD_GATE = "${{ success() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}"
 
 WORKFLOWS = {
     ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml": {
@@ -95,6 +95,17 @@ def test_live_steps_and_public_artifact_uploads_are_gated():
         upload = _step_block(text, spec["upload"])
         assert upload.count("if:") == 1 and f"if: {UPLOAD_GATE}" in upload, (
             f"{path}: artifact publication must have exactly one fail-closed condition"
+        )
+
+
+def test_failed_live_steps_cannot_publish_partial_artifacts():
+    for path, spec in WORKFLOWS.items():
+        upload = _step_block(_workflow(path), spec["upload"])
+        assert "success()" in upload, (
+            f"{path}: artifact upload must require successful preceding live steps"
+        )
+        assert "always()" not in upload, (
+            f"{path}: failed live steps must never publish partial source/report artifacts"
         )
 
 
