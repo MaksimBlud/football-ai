@@ -846,6 +846,103 @@ def test_original_forward_source_sha_and_parent_are_verified_before_saved_quote_
     assert report["v2_diagnostic_previews_captured"] == 1
     assert report["rows"][0]["source_artifact_sha256"] == metadata[0]["sha256"]
 
+
+def test_original_forward_skips_failed_newer_artifact_and_uses_verified_older_archive_before_quotes():
+    raw, metadata = make_source_archive()
+    older = metadata[0]
+    failed_newer = {
+        **older,
+        "artifact_id": 124,
+        "run_id": 457,
+        "head_sha": "b" * 40,
+        "created_at": datetime(2026, 10, 13, 15, 2, tzinfo=timezone.utc),
+    }
+    events = []
+
+    def verify_parent(archive, _as_of):
+        events.append(("parent", archive["artifact_id"]))
+        if archive["artifact_id"] == 124:
+            raise ValueError("source artifact parent run is not the verified original V2 collector")
+        return fake_verified_parent_run(archive, NOW)
+
+    def load_archive(artifact_id):
+        events.append(("archive", artifact_id))
+        return raw
+
+    def fetch_quotes():
+        events.append(("quotes", None))
+        return [quote()]
+
+    report = capture_forward_with_source_preflight(
+        [failed_newer, older],
+        as_of_utc=NOW,
+        fetch_quotes=fetch_quotes,
+        load_archive=load_archive,
+        verify_parent_run=verify_parent,
+    )
+
+    assert events == [
+        ("parent", 124),
+        ("parent", 123),
+        ("archive", 123),
+        ("quotes", None),
+    ]
+    assert report["source_preflight"]["source_artifact_id"] == 123
+    assert report["source_preflight"]["verified_source_artifact_count"] == 1
+    assert report["source_preflight"]["rejected_source_artifacts"][0]["artifact_id"] == 124
+    assert report["v2_diagnostic_previews_captured"] == 1
+
+
+def test_original_forward_uses_older_source_when_newer_parent_completed_after_quote():
+    raw, metadata = make_source_archive()
+    older = metadata[0]
+    newer = {
+        **older,
+        "artifact_id": 124,
+        "run_id": 457,
+        "head_sha": "b" * 40,
+        "created_at": datetime(2026, 10, 13, 15, 2, tzinfo=timezone.utc),
+    }
+    events = []
+
+    def verify_parent(archive, _as_of):
+        events.append(("parent", archive["artifact_id"]))
+        if archive["artifact_id"] == 124:
+            return {
+                "run_completed_at_utc": "2026-10-13T15:04:00Z",
+                "workflow_path": SOURCE_WORKFLOW_PATH,
+                "run_id": 457,
+                "run_head_sha": "b" * 40,
+            }
+        return fake_verified_parent_run(archive, NOW)
+
+    def load_archive(artifact_id):
+        events.append(("archive", artifact_id))
+        return raw
+
+    def fetch_quotes():
+        events.append(("quotes", None))
+        return [quote(ts="2026-10-13T15:03:00Z")]
+
+    report = capture_forward_with_source_preflight(
+        [newer, older],
+        as_of_utc=NOW,
+        fetch_quotes=fetch_quotes,
+        load_archive=load_archive,
+        verify_parent_run=verify_parent,
+    )
+
+    assert events == [
+        ("parent", 124),
+        ("archive", 124),
+        ("parent", 123),
+        ("archive", 123),
+        ("quotes", None),
+    ]
+    assert report["source_preflight"]["source_artifact_id"] == 124
+    assert report["rows"][0]["source_artifact_id"] == 123
+    assert report["rows"][0]["source_workflow_run"]["run_completed_at_utc"] == "2026-10-13T15:01:00+00:00"
+
 def test_original_forward_does_not_read_quotes_without_any_prior_source_archive():
     calls = []
 
