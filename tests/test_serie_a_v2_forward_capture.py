@@ -941,7 +941,7 @@ def test_original_forward_uses_older_source_when_newer_parent_completed_after_qu
     ]
     assert report["source_preflight"]["source_artifact_id"] == 124
     assert report["rows"][0]["source_artifact_id"] == 123
-    assert report["rows"][0]["verified_source_workflow_run"]["run_completed_at_utc"] == "2026-10-13T15:01:00+00:00"
+    assert report["rows"][0]["verified_source_workflow_run"]["run_completed_at_utc"] == "2026-10-13T15:01:00Z"
 
 def test_original_forward_does_not_read_quotes_without_any_prior_source_archive():
     calls = []
