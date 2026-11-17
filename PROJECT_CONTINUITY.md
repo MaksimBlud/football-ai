@@ -1,3 +1,60 @@
+## 2026-11-17 19:56 UTC — latest V2-only runtime and outcome-embargo audit
+
+**Fresh main remains** `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No merge or main update occurred in this run.
+
+### New outcome-embargo regression follow-up
+
+A static review of the typed-stat descriptor guard introduced in PR #863 found that exact outcome labels were inspected only when stored under a known descriptor key. The descriptor set did not include common abbreviation/display keys such as `abbr`, `abbreviation`, `shortName`, `statCode`, and `fieldCode`; e.g. a typed row `{"abbreviation":"FTR","value":"H"}` could evade the descriptor-value check.
+
+- New stacked Draft PR [#865](https://github.com/MaksimBlud/football-ai/pull/865), based on exact #863 HEAD `18c02ddd8b7e22e4817ca9b30d03c872f766cce4`.
+- Exact new HEAD: `e22980f2135789b30d9146c5790a9e644e5ba881`.
+- Exact-head CI [#44163901730](https://github.com/MaksimBlud/football-ai/actions/runs/44163901730): SUCCESS; Python compilation passed; core + Serie A preview suites **215 passed**; production `.pkl` diff guard passed.
+- The fix adds only exact descriptor-key aliases and synthetic negative/positive regressions. It does not alter candidate, features, weights, scaler/imputer, lambda, market fallback, or outcome gate.
+- Merge order remains #854 → #860 → #861 → #862 → #863 → #865. HUMAN-MERGE only.
+
+### Latest real current-form source/forward run
+
+On-main [Current-Form Forward Preview #44139119659](https://github.com/MaksimBlud/football-ai/actions/runs/44139119659) completed SUCCESS on main SHA above.
+
+- 53 regression tests passed.
+- It verified current-form source artifact ID `14339532222`, ZIP SHA-256 `2d286fb24131a20e45ca8bfffcc03f9173d3381629b9abda1f42eb77d6c90275`.
+- Parent source run `44108594696` completed at `2026-11-17T14:57:05Z`; source archive contained 10 old-season CSVs plus current `2627/I1.csv`, 3,910 historical rows and 110 current-season feature-input rows.
+- At verification time the source archive was valid and fresh; **quotes_seen=0**, **V2 current-form shadow forecasts=0**, no target outcomes read/scored, no paid calls, and no Supabase writes.
+- Uploaded forward report artifact ID `14353112902`, ZIP digest `1bc004f57c4339fccc1b85b904c8dd31170e359f37818f5aab7e10800c779569`.
+
+### Original forward source-provenance failure
+
+On-main [Original Forward-Only Preview #44138236517](https://github.com/MaksimBlud/football-ai/actions/runs/44138236517):
+
+- 71 offline tests passed.
+- Real source attestation failed closed: `source artifact parent run is not the verified original V2 collector`.
+- The quote/inference step was skipped; no forecast was generated.
+- The later artifact-upload step still ran under main's `if: always()`, but GitHub logged that no files existed and uploaded no artifact. PR #781 changes these uploads to success-only behind the default-deny access flag; that fix is still not on main.
+
+### Read-only saved-market inventory
+
+A read-only query on `public.odds_snapshots` selected only pre-kickoff rows satisfying `snapshot_time_utc < commence_time_utc`:
+
+- 3,915 pre-kickoff snapshots across 9 leagues and 327 distinct events.
+- 0 future events with saved pre-match quotes.
+- Latest saved pre-match snapshot: `2026-10-13T14:48:53Z` (Serie A).
+- No scores, results, settlement, or protected target outcomes were selected.
+
+### Open integration PRs and exact checks
+
+- PR #781 HEAD `3a70a8648895076efec2a80dc10b1798ed0d9261`: **8/8** exact-head checks SUCCESS; still open, HUMAN-MERGE.
+- PR #839 HEAD `1a0f178d734e1d60593042e1242210edf64040a6`: **7/7** exact-head checks SUCCESS before this documentation refresh; still open, HUMAN-MERGE.
+- PR #843/#848 remain stacked; their existing exact-head checks are green, but neither is merged.
+- PR #864 remains separate from the source-rights hold and must not be integrated before #781.
+
+### Frozen V2 invariants
+
+Candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; 3,799 training rows; exact 19-feature order; 20×2 weights; `active_lambda=0`; `shadow_lambda=1`; stability gate FAILED; prospective outcome gate remains 0/30; automatic promotion false.
+
+No protected outcomes were read, no refit/threshold tuning was performed, and no production `.pkl`, Supabase data/schema, schedules, or other agents were changed.
+
+---
+
 ## 2026-11-17 18:52 UTC — correction: 113 raw metadata identities canonicalize to 110 V2 fixture identities
 
 **This correction supersedes earlier entries in this document that described the raw 113-versus-110 count as evidence of three missing current-source fixtures. That interpretation was incorrect.**
