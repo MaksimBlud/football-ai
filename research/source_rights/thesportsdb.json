@@ -43,13 +43,14 @@
   "rights": {
     "api_content_copy_modify_allowed_by_provider_terms": true,
     "official_terms_require_third_party_owner_permission_or_legal_basis": true,
-    "upstream_provider_identified_in_documented_sample": "API-Football",
     "upstream_data_license_verified": false,
     "explicit_internal_ml_training_permission": false,
     "explicit_model_inference_permission": false,
     "explicit_private_raw_response_retention_permission": false,
     "explicit_public_redistribution_permission": false,
-    "rights_status": "PARTIAL_PROVIDER_PERMISSION_THIRD_PARTY_RIGHTS_UNKNOWN_NOT_APPROVED"
+    "rights_status": "PARTIAL_PROVIDER_PERMISSION_THIRD_PARTY_RIGHTS_UNKNOWN_NOT_APPROVED",
+    "third_party_identifier_field_observed": "idApiFootball",
+    "upstream_provider_identity_verified": false
   },
   "coverage": {
     "serie_a_2026_27_public_season_page_exists": true,
