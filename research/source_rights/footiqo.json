@@ -1,0 +1,348 @@
+{
+  "schema_version": "1.0",
+  "provider": "Footiqo",
+  "provider_domain": "footiqo.com",
+  "audit_date_utc": "2026-11-17",
+  "decision": "HOLD",
+  "decision_label": "PUBLIC FREE SERIE A TABLES AND NON-COMMERCIAL ML RIGHTS EXIST; AUTOMATED CAPTURE, RED-CARD PARITY, UPSTREAM RIGHTS AND SOURCE TIMING UNRESOLVED",
+  "reason_codes": [
+    "DATASET_POLICY_EXPLICITLY_PERMITS_PERSONAL_NONCOMMERCIAL_RESEARCH_AND_MACHINE_LEARNING_EXPERIMENTS",
+    "PRIVATE_STORAGE_OF_LEGITIMATELY_DOWNLOADED_DATA_IS_PERMITTED_FOR_NONCOMMERCIAL_ANALYSIS",
+    "MANUAL_CSV_EXPORTS_ARE_PERMITTED_BUT_AUTOMATED_EXTRACTION_REQUIRES_SEPARATE_WRITTEN_AUTHORIZATION",
+    "NO_PUBLIC_API_IS_OFFERED",
+    "SERIE_A_2026_27_PUBLIC_DATABASE_EXPOSES_MATCH_LEVEL_SCORE_CORNER_AND_YELLOW_CARD_FIELDS",
+    "TWO_FROZEN_RED_CARD_FEATURES_HAVE_NO_FIELD_IN_THE_REVIEWED_SERIE_A_TABLE",
+    "PER_MATCH_AND_PER_FIELD_SOURCE_OBSERVATION_OR_CORRECTION_TIMESTAMPS_ARE_NOT_DOCUMENTED",
+    "UPSTREAM_PROVIDER_AND_FIELD_LEVEL_THIRD_PARTY_RIGHTS_ARE_NOT_IDENTIFIED",
+    "FREE_DOWNLOADS_ARE_SAMPLES_WHILE_THE_FULL_MULTISEASON_DATABASE_IS_PAID",
+    "DAILY_PAGE_REFRESH_CLAIM_DOES_NOT_PROVE_PER_MATCH_SOURCE_TIME",
+    "NO_MANUAL_EXPORT_OR_RAW_SOURCE_SHA_WAS_CAPTURED",
+    "AUTOMATED_SOURCE_BEFORE_QUOTE_CAPTURE_IS_NOT_AUTHORIZED"
+  ],
+  "source_documents": {
+    "terms_of_use": "https://footiqo.com/terms-of-use/",
+    "dataset_licence": "https://footiqo.com/dataset-licence/",
+    "serie_a_database": "https://footiqo.com/database/leagues/italy-serie-a/",
+    "serie_a_current_season_corners": "https://footiqo.com/statistics/teams/corners/first-half-italy-serie-a/",
+    "dataset_overview": "https://footiqo.com/premium/",
+    "premium_historical_database": "https://footiqo.com/premium/premium-football-database/"
+  },
+  "free_access": {
+    "public_serie_a_database_page": true,
+    "current_season_2026_27_rows_visible": true,
+    "public_statistics_pages_free": true,
+    "manual_csv_excel_export_available": true,
+    "manual_export_permitted_by_dataset_policy": true,
+    "automated_export_without_written_authorization": false,
+    "public_api_available": false,
+    "free_downloads_are_samples": true,
+    "complete_multiseason_historical_archive_free": false,
+    "full_historical_database_price_eur": 49.99,
+    "no_paid_product_or_service_used_by_audit": true
+  },
+  "rights": {
+    "dataset_policy_explicitly_permits_personal_noncommercial_research": true,
+    "dataset_policy_explicitly_permits_predictive_model_development_and_testing": true,
+    "dataset_policy_explicitly_permits_machine_learning_experiments": true,
+    "dataset_policy_explicitly_permits_calculated_features_and_probabilities": true,
+    "dataset_policy_explicitly_permits_private_storage_of_legitimately_obtained_files": true,
+    "dataset_policy_permits_manual_exports": true,
+    "dataset_policy_requires_written_authorization_for_automated_extraction": true,
+    "explicit_commercial_product_use_permission": false,
+    "upstream_provider_identity_verified": false,
+    "upstream_field_level_rights_verified": false,
+    "rights_status": "PERSONAL_NONCOMMERCIAL_RESEARCH_AND_MANUAL_EXPORT_PERMITTED; AUTOMATED_ACCESS_AND_UPSTREAM_RIGHTS_NOT_CLEARED"
+  },
+  "coverage": {
+    "serie_a_2026_27_database_page_exists": true,
+    "serie_a_2026_27_match_level_score_fields_documented": true,
+    "serie_a_2026_27_match_level_corner_fields_documented": true,
+    "serie_a_2026_27_match_level_yellow_card_fields_documented": true,
+    "reviewed_score_fields": [
+      "FTHG",
+      "FTAG",
+      "FTR"
+    ],
+    "reviewed_corner_fields": [
+      "HCFT",
+      "ACFT"
+    ],
+    "reviewed_yellow_card_fields": [
+      "HYCFT",
+      "AYCFT"
+    ],
+    "red_card_field_documented_in_reviewed_serie_a_table": false,
+    "all_serie_a_2026_27_matches_complete_for_every_field_verified": false,
+    "missing_values_and_correction_semantics_verified": false,
+    "free_full_multiseason_archive_verified": false,
+    "feature_mapping_candidate_count": 17,
+    "feature_count": 19,
+    "full_19_feature_parity_verified": false
+  },
+  "provenance": {
+    "public_statistics_page_claims_daily_updates": true,
+    "per_match_source_observation_timestamp_documented": false,
+    "per_field_source_observation_timestamp_documented": false,
+    "per_match_correction_timestamp_documented": false,
+    "upstream_first_observation_time_proven": false,
+    "manual_export_receipt_time_could_prove_project_possession_if_exported_before_quote": true,
+    "project_receipt_timestamp_captured": false,
+    "raw_source_sha256_captured": false,
+    "source_archive_parent_provenance_verified": false,
+    "source_before_quote_verified": false,
+    "automated_capture_authorized": false
+  },
+  "frozen_candidate": {
+    "experiment_id": "MARKET_ANCHOR_1X2_V2",
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "training_fingerprint_sha256": "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098",
+    "training_rows": 3799,
+    "feature_count": 19,
+    "features": [
+      "diff_points_5",
+      "diff_points_10",
+      "diff_points_venue5",
+      "diff_goals_for_5",
+      "diff_goals_for_10",
+      "diff_goals_against_5",
+      "diff_goals_against_10",
+      "diff_corners_for_5",
+      "diff_corners_for_10",
+      "diff_corners_against_5",
+      "diff_corners_against_10",
+      "diff_yellow_5",
+      "diff_yellow_10",
+      "diff_red_5",
+      "diff_red_10",
+      "diff_goals_for_venue5",
+      "diff_goals_against_venue5",
+      "diff_corners_for_venue5",
+      "diff_corners_against_venue5"
+    ],
+    "result_and_goals_features": [
+      "diff_points_5",
+      "diff_points_10",
+      "diff_points_venue5",
+      "diff_goals_for_5",
+      "diff_goals_for_10",
+      "diff_goals_against_5",
+      "diff_goals_against_10",
+      "diff_goals_for_venue5",
+      "diff_goals_against_venue5"
+    ],
+    "corner_features": [
+      "diff_corners_for_5",
+      "diff_corners_for_10",
+      "diff_corners_against_5",
+      "diff_corners_against_10",
+      "diff_corners_for_venue5",
+      "diff_corners_against_venue5"
+    ],
+    "yellow_card_features": [
+      "diff_yellow_5",
+      "diff_yellow_10"
+    ],
+    "red_card_features": [
+      "diff_red_5",
+      "diff_red_10"
+    ],
+    "weights_shape": [
+      20,
+      2
+    ],
+    "active_lambda": 0,
+    "shadow_residual_lambda": 1,
+    "stability_gate_passed": false,
+    "automatic_promotion": false
+  },
+  "feature_mapping": [
+    {
+      "feature": "diff_points_5",
+      "source_table": "Footiqo Italy Serie A — Corners & Cards / Scores",
+      "candidate_source_fields": [
+        "FTHG",
+        "FTAG",
+        "FTR"
+      ],
+      "status": "candidate_match_level_fields_documented_coverage_and_exact_semantics_not_verified"
+    },
+    {
+      "feature": "diff_points_10",
+      "source_table": "Footiqo Italy Serie A — Corners & Cards / Scores",
+      "candidate_source_fields": [
+        "FTHG",
+        "FTAG",
+        "FTR"
+      ],
+      "status": "candidate_match_level_fields_documented_coverage_and_exact_semantics_not_verified"
+    },
+    {
+      "feature": "diff_points_venue5",
+      "source_table": "Footiqo Italy Serie A — Corners & Cards / Scores",
+      "candidate_source_fields": [
+        "FTHG",
+        "FTAG",
+        "FTR"
+      ],
+      "status": "candidate_match_level_fields_documented_coverage_and_exact_semantics_not_verified"
+    },
+    {
+      "feature": "diff_goals_for_5",
+      "source_table": "Footiqo Italy Serie A — Corners & Cards / Scores",
+      "candidate_source_fields": [
+        "FTHG",
+        "FTAG",
+        "FTR"
+      ],
+      "status": "candidate_match_level_fields_documented_coverage_and_exact_semantics_not_verified"
+    },
+    {
+      "feature": "diff_goals_for_10",
+      "source_table": "Footiqo Italy Serie A — Corners & Cards / Scores",
+      "candidate_source_fields": [
+        "FTHG",
+        "FTAG",
+        "FTR"
+      ],
+      "status": "candidate_match_level_fields_documented_coverage_and_exact_semantics_not_verified"
+    },
+    {
+      "feature": "diff_goals_against_5",
+      "source_table": "Footiqo Italy Serie A — Corners & Cards / Scores",
+      "candidate_source_fields": [
+        "FTHG",
+        "FTAG",
+        "FTR"
+      ],
+      "status": "candidate_match_level_fields_documented_coverage_and_exact_semantics_not_verified"
+    },
+    {
+      "feature": "diff_goals_against_10",
+      "source_table": "Footiqo Italy Serie A — Corners & Cards / Scores",
+      "candidate_source_fields": [
+        "FTHG",
+        "FTAG",
+        "FTR"
+      ],
+      "status": "candidate_match_level_fields_documented_coverage_and_exact_semantics_not_verified"
+    },
+    {
+      "feature": "diff_corners_for_5",
+      "source_table": "Footiqo Italy Serie A — Corners & Cards / Scores",
+      "candidate_source_fields": [
+        "HCFT",
+        "ACFT"
+      ],
+      "status": "candidate_match_level_fields_documented_coverage_and_exact_semantics_not_verified"
+    },
+    {
+      "feature": "diff_corners_for_10",
+      "source_table": "Footiqo Italy Serie A — Corners & Cards / Scores",
+      "candidate_source_fields": [
+        "HCFT",
+        "ACFT"
+      ],
+      "status": "candidate_match_level_fields_documented_coverage_and_exact_semantics_not_verified"
+    },
+    {
+      "feature": "diff_corners_against_5",
+      "source_table": "Footiqo Italy Serie A — Corners & Cards / Scores",
+      "candidate_source_fields": [
+        "HCFT",
+        "ACFT"
+      ],
+      "status": "candidate_match_level_fields_documented_coverage_and_exact_semantics_not_verified"
+    },
+    {
+      "feature": "diff_corners_against_10",
+      "source_table": "Footiqo Italy Serie A — Corners & Cards / Scores",
+      "candidate_source_fields": [
+        "HCFT",
+        "ACFT"
+      ],
+      "status": "candidate_match_level_fields_documented_coverage_and_exact_semantics_not_verified"
+    },
+    {
+      "feature": "diff_yellow_5",
+      "source_table": "Footiqo Italy Serie A — Corners & Cards / Scores",
+      "candidate_source_fields": [
+        "HYCFT",
+        "AYCFT"
+      ],
+      "status": "candidate_match_level_fields_documented_coverage_and_exact_semantics_not_verified"
+    },
+    {
+      "feature": "diff_yellow_10",
+      "source_table": "Footiqo Italy Serie A — Corners & Cards / Scores",
+      "candidate_source_fields": [
+        "HYCFT",
+        "AYCFT"
+      ],
+      "status": "candidate_match_level_fields_documented_coverage_and_exact_semantics_not_verified"
+    },
+    {
+      "feature": "diff_red_5",
+      "source_table": "Footiqo Italy Serie A — Corners & Cards / Scores",
+      "candidate_source_fields": [],
+      "status": "not_documented_in_reviewed_serie_a_corners_cards_table"
+    },
+    {
+      "feature": "diff_red_10",
+      "source_table": "Footiqo Italy Serie A — Corners & Cards / Scores",
+      "candidate_source_fields": [],
+      "status": "not_documented_in_reviewed_serie_a_corners_cards_table"
+    },
+    {
+      "feature": "diff_goals_for_venue5",
+      "source_table": "Footiqo Italy Serie A — Corners & Cards / Scores",
+      "candidate_source_fields": [
+        "FTHG",
+        "FTAG",
+        "FTR"
+      ],
+      "status": "candidate_match_level_fields_documented_coverage_and_exact_semantics_not_verified"
+    },
+    {
+      "feature": "diff_goals_against_venue5",
+      "source_table": "Footiqo Italy Serie A — Corners & Cards / Scores",
+      "candidate_source_fields": [
+        "FTHG",
+        "FTAG",
+        "FTR"
+      ],
+      "status": "candidate_match_level_fields_documented_coverage_and_exact_semantics_not_verified"
+    },
+    {
+      "feature": "diff_corners_for_venue5",
+      "source_table": "Footiqo Italy Serie A — Corners & Cards / Scores",
+      "candidate_source_fields": [
+        "HCFT",
+        "ACFT"
+      ],
+      "status": "candidate_match_level_fields_documented_coverage_and_exact_semantics_not_verified"
+    },
+    {
+      "feature": "diff_corners_against_venue5",
+      "source_table": "Footiqo Italy Serie A — Corners & Cards / Scores",
+      "candidate_source_fields": [
+        "HCFT",
+        "ACFT"
+      ],
+      "status": "candidate_match_level_fields_documented_coverage_and_exact_semantics_not_verified"
+    }
+  ],
+  "project_authorization": {
+    "account_creation_authorized": false,
+    "api_requests_authorized": false,
+    "manual_export_performed": false,
+    "automated_access_authorized": false,
+    "source_download_performed": false,
+    "source_sha_capture_performed": false,
+    "inference_authorized": false,
+    "paid_calls_authorized": false,
+    "supabase_reads_authorized": false,
+    "supabase_writes_authorized": false,
+    "supabase_ddl_authorized": false
+  },
+  "project_decision": "HOLD for automated ingestion and V2 inference. The provider's 2026-10-08 Dataset Licence permits manual exports and private non-commercial ML research, but expressly prohibits automated scraping, crawling and automated CSV/dataset downloads without separate written authorization. The reviewed Serie A match table documents candidate fields for 17 of 19 frozen features (scores/points, corners, yellow cards); the two red-card features are not documented. Coverage, upstream field rights, and per-match source/correction times remain unverified. Do not automate access, download data, calculate features or infer until written automated-access permission, full 19-feature coverage, upstream rights and source-before-quote provenance are established."
+}
