@@ -12,7 +12,10 @@ from datetime import datetime, timezone
 import hashlib
 from io import BytesIO
 import json
+import os
 from pathlib import Path
+import shutil
+import tempfile
 import time
 
 import pandas as pd
@@ -68,43 +71,66 @@ def _fetch_public_csv(url: str, *, season_code: str, get=requests.get,
 
 def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None,
                          sleep=time.sleep) -> tuple[pd.DataFrame, list[dict]]:
-    """Fetch exact configured public CSVs with bounded transient retries; never odds API."""
+    """Fetch exact configured public CSVs; publish a complete SHA-verified bundle atomically."""
     all_frames = []
     audit = []
-    if capture_dir is not None:
-        capture_dir.mkdir(parents=True, exist_ok=True)
-    for code in _source_codes():
-        if len(code) != 4 or not code.isdigit():
-            raise ValueError("unexpected historical season code")
-        url = f"{PUBLIC_BASE}/{code}/{SERIE_A_RUNTIME_CONFIG.historical_source.competition_code}.csv"
-        response = _fetch_public_csv(
-            url, season_code=code, get=get, sleep=sleep
-        )
-        body = response.content
-        capture = datetime.now(timezone.utc)
-        if capture_dir is not None:
-            (capture_dir / f"serie_a_{code}.csv").write_bytes(body)
-        frame = pd.read_csv(BytesIO(body), low_memory=False)
-        required = {"Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR",
-                    "HC", "AC", "HY", "AY", "HR", "AR"}
-        missing = required - set(frame.columns)
-        if missing:
-            raise RuntimeError(f"Public Serie A source {code} missing stats: {sorted(missing)}")
-        outcome = frame["FTR"].fillna("").astype(str).str.strip()
-        if not outcome.isin(("H", "D", "A")).all():
-            raise RuntimeError(f"Historical pre-freeze Serie A season {code} has missing/invalid results")
-        frame = frame.loc[:, list(sorted(required))].copy()
-        all_frames.append(frame)
-        audit.append({
-            "season_code": code,
-            "source_url": url,
-            "csv_sha256": hashlib.sha256(body).hexdigest(),
-            "archived_source_name": f"serie_a_{code}.csv",
-            "source_observed_at_utc": capture.isoformat(),
-            "completed_source_rows": len(frame),
-        })
-    return pd.concat(all_frames, ignore_index=True), audit
-
+    final_dir = Path(capture_dir) if capture_dir is not None else None
+    staging_dir = None
+    if final_dir is not None:
+        final_dir.parent.mkdir(parents=True, exist_ok=True)
+        if final_dir.is_symlink() or final_dir.exists():
+            raise RuntimeError("source capture output directory must not already exist")
+        staging_dir = Path(tempfile.mkdtemp(
+            prefix=f".{final_dir.name}.staging-", dir=final_dir.parent
+        ))
+    try:
+        for code in _source_codes():
+            if len(code) != 4 or not code.isdigit():
+                raise ValueError("unexpected historical season code")
+            url = f"{PUBLIC_BASE}/{code}/{SERIE_A_RUNTIME_CONFIG.historical_source.competition_code}.csv"
+            response = _fetch_public_csv(
+                url, season_code=code, get=get, sleep=sleep
+            )
+            body = response.content
+            capture = datetime.now(timezone.utc)
+            archived_name = f"serie_a_{code}.csv"
+            source_sha = hashlib.sha256(body).hexdigest()
+            if staging_dir is not None:
+                staged_file = staging_dir / archived_name
+                staged_file.write_bytes(body)
+                if hashlib.sha256(staged_file.read_bytes()).hexdigest() != source_sha:
+                    raise RuntimeError("archived public source bytes failed SHA256 verification")
+            frame = pd.read_csv(BytesIO(body), low_memory=False)
+            required = {"Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR",
+                        "HC", "AC", "HY", "AY", "HR", "AR"}
+            missing = required - set(frame.columns)
+            if missing:
+                raise RuntimeError(f"Public Serie A source {code} missing stats: {sorted(missing)}")
+            outcome = frame["FTR"].fillna("").astype(str).str.strip()
+            if not outcome.isin(("H", "D", "A")).all():
+                raise RuntimeError(f"Historical pre-freeze Serie A season {code} has missing/invalid results")
+            frame = frame.loc[:, list(sorted(required))].copy()
+            all_frames.append(frame)
+            audit.append({
+                "season_code": code,
+                "source_url": url,
+                "csv_sha256": source_sha,
+                "archived_source_name": archived_name,
+                "source_observed_at_utc": capture.isoformat(),
+                "completed_source_rows": len(frame),
+            })
+        if final_dir is not None:
+            # Recheck immediately before publication; never replace an existing
+            # archive or follow a symlink supplied as the destination.
+            if final_dir.is_symlink() or final_dir.exists():
+                raise RuntimeError("source capture output path appeared during capture")
+            assert staging_dir is not None
+            os.replace(staging_dir, final_dir)
+            staging_dir = None
+        return pd.concat(all_frames, ignore_index=True), audit
+    finally:
+        if staging_dir is not None:
+            shutil.rmtree(staging_dir, ignore_errors=True)
 
 # Freeze rule is stronger than merely omitting this season from the remote
 # downloader. A caller may pass a concatenated frame or forged source audit.
