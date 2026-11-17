@@ -1,8 +1,10 @@
 """Tests for actual historical-source + stored-market, always research-only."""
 from datetime import datetime, timezone
+import hashlib
 
 import pandas as pd
 import pytest
+import requests
 
 from serie_a_v2_live_diagnostic_report import (
     PUBLIC_BASE, _source_codes, fetch_public_history, make_report,
@@ -135,12 +137,58 @@ def test_public_free_history_never_downloads_protected_2026_27_outcomes():
     assert all(x["csv_sha256"] and x["source_observed_at_utc"] for x in audit)
 
 
+def test_public_history_retries_transient_read_timeout_and_archives_exact_success_bytes():
+    csv_bytes = history_fixture().to_csv(index=False).encode()
+    calls = []
+    sleeps = []
+    class Response:
+        status_code = 200
+        content = csv_bytes
+    def fake_get(url, timeout):
+        calls.append((url, timeout))
+        if len(calls) == 1:
+            raise requests.exceptions.ReadTimeout("temporary public-source timeout")
+        return Response()
+    history, audit = fetch_public_history(get=fake_get, sleep=sleeps.append)
+    assert len(calls) == 11
+    assert sleeps == [1.0]
+    assert len(audit) == 10
+    assert len(history) == 30
+    assert all(item["csv_sha256"] == hashlib.sha256(csv_bytes).hexdigest()
+               for item in audit)
+
+
+def test_public_history_retries_transient_server_error_once():
+    csv_bytes = history_fixture().to_csv(index=False).encode()
+    calls = []
+    sleeps = []
+    class Response:
+        def __init__(self, status_code):
+            self.status_code = status_code
+            self.content = csv_bytes if status_code == 200 else b""
+    def fake_get(url, timeout):
+        calls.append(url)
+        return Response(503 if len(calls) == 1 else 200)
+    history, audit = fetch_public_history(get=fake_get, sleep=sleeps.append)
+    assert len(calls) == 11
+    assert sleeps == [1.0]
+    assert len(history) == 30
+    assert len(audit) == 10
+
+
 def test_upstream_status_failure_is_not_filled_with_guessed_data():
+    calls = []
+    sleeps = []
     class BadResponse:
         status_code=503
         content=b""
+    def fake_get(url, timeout):
+        calls.append(url)
+        return BadResponse()
     with pytest.raises(RuntimeError,match="unavailable"):
-        fetch_public_history(get=lambda url,timeout: BadResponse())
+        fetch_public_history(get=fake_get, sleep=sleeps.append)
+    assert len(calls) == 3
+    assert sleeps == [1.0, 2.0]
 
 
 
