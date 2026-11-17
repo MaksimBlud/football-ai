@@ -239,6 +239,11 @@ def test_v2_code_does_not_reference_production_pickle_paths():
     {"provider_row": {"scoreLine": "2-0"}},
     {"provider_row": {"fullTime": {"home": 2, "away": 0}}},
     {"provider_row": {"home.goals": 2}},
+    {"provider_row": {"scores": [2, 0]}},
+    {"provider_row": {"homeScores": 2, "awayScores": 0}},
+    {"provider_row": {"scoresHomeTeam": 2, "scoresAwayTeam": 0}},
+    {"provider_row": {"scoreFullTime": "2-0"}},
+    {"provider_row": {"xGHome": 1.4, "xGAway": 0.6}},
 ])
 def test_shadow_capture_rejects_generic_goals_containers_and_separator_aliases(payload):
     row = _row()
