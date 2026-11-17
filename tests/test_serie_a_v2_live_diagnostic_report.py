@@ -187,6 +187,31 @@ def test_public_history_late_failure_never_publishes_partial_capture_directory(t
     assert list(tmp_path.glob(".source_capture.staging-*")) == []
 
 
+def test_public_history_invalid_late_csv_never_publishes_partial_capture_directory(tmp_path):
+    valid_bytes = history_fixture().to_csv(index=False).encode()
+    invalid_bytes = history_fixture().drop(columns=["HC"]).to_csv(index=False).encode()
+    target = tmp_path / "source_capture"
+    calls = []
+
+    class Response:
+        status_code = 200
+        def __init__(self, body):
+            self.content = body
+
+    def fake_get(url, timeout):
+        calls.append(url)
+        return Response(valid_bytes if len(calls) <= 3 else invalid_bytes)
+
+    with pytest.raises(RuntimeError, match="missing stats"):
+        fetch_public_history(
+            get=fake_get, capture_dir=target, sleep=lambda _: None
+        )
+
+    assert len(calls) == 4
+    assert not target.exists()
+    assert list(tmp_path.glob(".source_capture.staging-*")) == []
+
+
 def test_public_history_refuses_existing_capture_destination(tmp_path):
     target = tmp_path / "source_capture"
     target.mkdir()
