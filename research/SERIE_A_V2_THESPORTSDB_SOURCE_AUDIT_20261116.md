@@ -31,7 +31,7 @@ TheSportsDB is a more relevant candidate than a fixtures-only API: its public V1
 
 ## Frozen V2 contract — unchanged
 
-- Candidate artifact SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb9be93074f39e1a7a5098`.
+- Candidate artifact SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
 - Training fingerprint SHA-256: `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`.
 - 3,799 training rows; 19 original features in their original order; weight matrix 20×2.
 - `active_lambda=0` remains market-only; `shadow_lambda=1` remains research-only.
