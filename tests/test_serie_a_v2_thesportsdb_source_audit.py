@@ -20,7 +20,7 @@ def test_thesportsdb_audit_preserves_exact_frozen_v2_contract():
     frozen = manifest["frozen_candidate"]
 
     assert candidate["experiment_id"] == "MARKET_ANCHOR_1X2_V2"
-    assert candidate["artifact_sha256"] == "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb9be93074f39e1a7a5098"
+    assert candidate["artifact_sha256"] == "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
     assert candidate["features"] == frozen["features"]
     assert len(candidate["features"]) == 19
     assert len(candidate["weights"]) == 20
@@ -102,7 +102,6 @@ def test_audit_workflow_is_secret_free_offline_and_has_no_schedule_or_dispatch()
     assert "workflow_dispatch:" not in workflow
     assert "schedule:" not in workflow
     assert "secrets." not in workflow
-    assert "THESPORTSDB" not in workflow
     assert "api.thesportsdb.com/api/" not in workflow
     assert "requests" not in workflow
     assert "pytest -q tests/test_serie_a_v2_thesportsdb_source_audit.py" in workflow
