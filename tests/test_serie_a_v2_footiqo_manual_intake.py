@@ -197,6 +197,10 @@ def test_capture_archives_exact_raw_and_gate_bytes_outside_repository_with_sha(t
     assert manifest["raw_source_sha256"] == hashlib.sha256(source).hexdigest()
     assert manifest["gate_metadata_sha256"] == hashlib.sha256(gate).hexdigest()
     assert manifest["gate_summary"]["canonical_primary_completed_events"] == 30
+    assert manifest["gate_summary"]["current_season_start"] == "2026-07-01"
+    assert manifest["gate_summary"]["completion_status_independently_verified"] is False
+    assert manifest["gate_summary"]["primary_competition_independently_verified"] is False
+    assert manifest["gate_summary"]["evaluation_outcome_gate_satisfied"] is False
     assert manifest["source_summary"]["completed_prior_day_rows"] == 6
     assert manifest["manual_export"] is True
     assert manifest["automated_access"] is False
@@ -218,6 +222,10 @@ def test_gate_canonicalises_atalanta_alias_without_inflating_unique_event_count(
     manifest = __import__("json").loads((archive / "manifest.json").read_text())
     assert manifest["gate_summary"]["raw_metadata_rows"] == 31
     assert manifest["gate_summary"]["canonical_primary_completed_events"] == 30
+    assert manifest["gate_summary"]["current_season_start"] == "2026-07-01"
+    assert manifest["gate_summary"]["completion_status_independently_verified"] is False
+    assert manifest["gate_summary"]["primary_competition_independently_verified"] is False
+    assert manifest["gate_summary"]["evaluation_outcome_gate_satisfied"] is False
 
 
 def test_feature_vector_preserves_original_19_order_and_leaves_two_red_features_missing(tmp_path):
@@ -239,6 +247,9 @@ def test_feature_vector_preserves_original_19_order_and_leaves_two_red_features_
     assert row["upstream_observation_time_verified"] is False
     assert row["information_time_independently_attested"] is False
     assert report["metadata_gate_attestation_level"] == "operator_supplied_local_metadata_csv_not_supabase_authenticated"
+    assert report["feature_input_gate_completion_status_independently_verified"] is False
+    assert report["feature_input_gate_primary_competition_independently_verified"] is False
+    assert report["evaluation_outcome_gate_opened"] is False
     assert row["feature_input_outcomes_used"] is True
     assert row["target_quote_outcomes_read"] is False
     assert row["probabilities_generated"] is False
