@@ -277,6 +277,11 @@ def test_preview_rejects_documented_football_data_match_stat_aliases(alias, valu
     {"provider_row": {"scoreLine": "2-0"}},
     {"provider_row": {"fullTime": {"home": 2, "away": 0}}},
     {"provider_row": {"home.goals": 2}},
+    {"provider_row": {"scores": [2, 0]}},
+    {"provider_row": {"homeScores": 2, "awayScores": 0}},
+    {"provider_row": {"scoresHomeTeam": 2, "scoresAwayTeam": 0}},
+    {"provider_row": {"scoreFullTime": "2-0"}},
+    {"provider_row": {"xGHome": 1.4, "xGAway": 0.6}},
 ])
 def test_preview_rejects_generic_goals_containers_and_separator_aliases(extra):
     row = features()
