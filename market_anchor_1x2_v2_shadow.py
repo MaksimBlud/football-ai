@@ -74,6 +74,7 @@ FORBIDDEN_OUTCOME_FIELDS = frozenset({
     "hx_g", "ax_g", "x_g_home", "x_g_away",
     # Plural score and team-oriented score containers used by common APIs.
     "scores", "scores_home", "scores_away", "home_scores", "away_scores",
+    "scores_home_team", "scores_away_team", "score_full_time", "score_half_time",
     "settlement", "prediction_correct", "match_winner", "winner", "winning_team",
     "home_score", "away_score", "full_time_score", "full_time_result",
     "match_result", "match_outcome",
