@@ -329,3 +329,36 @@ def test_preview_rejects_explicit_1x2_winner_and_draw_outcome_aliases(alias, val
     row["provider_row"] = {alias: value}
     with pytest.raises(ValueError, match="result fields"):
         v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
+
+
+@pytest.mark.parametrize(("descriptor_key", "descriptor_value"), [
+    ("name", "FTR"),
+    ("type", "Full Time Result"),
+    ("stat", "Home Goals"),
+    ("fieldName", "Result-1X2"),
+    ("metric", "Winner Side"),
+    ("label", "Draw Result"),
+    ("statistic", "Corners"),
+    ("name", "Yellow Cards"),
+    ("type", "Shots On Target"),
+    ("key", ["F.T.H.G"]),
+    ("attribute", "Red Cards"),
+])
+def test_preview_rejects_outcomes_encoded_as_typed_stat_descriptors(descriptor_key, descriptor_value):
+    row = features()
+    row["provider_row"] = {"statistics": [{descriptor_key: descriptor_value, "value": "H"}]}
+    with pytest.raises(ValueError, match="result fields"):
+        v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
+
+
+def test_preview_typed_stat_descriptor_guard_preserves_pre_match_labels():
+    row = features()
+    row["provider_row"] = {
+        "statistics": [
+            {"name": "Market 1X2", "value": "1X2"},
+            {"type": "Home Win Probability", "value": 0.55},
+            {"label": "Possession Trend", "value": 58},
+        ]
+    }
+    report = v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
+    assert report["scored"] == 1
