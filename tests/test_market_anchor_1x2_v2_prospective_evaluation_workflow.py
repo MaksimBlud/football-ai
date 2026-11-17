@@ -69,7 +69,7 @@ def test_prospective_evaluation_workflow_is_main_only_and_has_no_schedule_or_pai
     assert "GITHUB_REPOSITORY: " + "$" + "{{ github.repository }}" in job
     assert "market_anchor_v2_artifact_privacy.py" in job
     assert "market_anchor_1x2_v2_prospective_evaluation.py" in job
-    assert "actions/upload-artifact@v4" in job
+    assert "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02" in job
     assert "retention-days: 90" in job
 
 
