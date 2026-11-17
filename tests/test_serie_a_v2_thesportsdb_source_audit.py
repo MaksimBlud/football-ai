@@ -78,6 +78,9 @@ def test_free_api_limits_and_serie_a_page_are_not_misrepresented_as_complete_api
     assert free["documented_free_rate_limit_per_minute"] == 30
     assert free["event_stats_free_limit"] == 5
     assert free["event_stats_premium_limit"] == 100
+    assert free["season_schedule_free_limit"] == 15
+    assert free["season_schedule_premium_limit"] == 3000
+    assert free["season_schedule_free_limit"] < coverage["serie_a_2026_27_page_event_count_claimed"]
     assert free["v1_legacy"] is True
     assert free["v2_premium_only"] is True
     assert coverage["serie_a_2026_27_public_season_page_exists"] is True
