@@ -187,7 +187,7 @@ def test_public_history_late_failure_never_publishes_partial_capture_directory(t
     assert list(tmp_path.glob(".source_capture.staging-*")) == []
 
 
-def test_public_history_refuses_existing_or_symlink_capture_destination(tmp_path):
+def test_public_history_refuses_existing_capture_destination(tmp_path):
     target = tmp_path / "source_capture"
     target.mkdir()
     calls = []
@@ -199,6 +199,22 @@ def test_public_history_refuses_existing_or_symlink_capture_destination(tmp_path
         )
     assert calls == []
     assert list(target.iterdir()) == []
+
+
+def test_public_history_refuses_symlink_capture_destination(tmp_path):
+    real_target = tmp_path / "real_source_capture"
+    real_target.mkdir()
+    target = tmp_path / "source_capture_link"
+    target.symlink_to(real_target, target_is_directory=True)
+    calls = []
+    with pytest.raises(RuntimeError, match="must not already exist"):
+        fetch_public_history(
+            get=lambda url, timeout: calls.append(url),
+            capture_dir=target,
+            sleep=lambda _: None,
+        )
+    assert calls == []
+    assert list(real_target.iterdir()) == []
 
 
 def test_public_history_retries_transient_read_timeout_and_archives_exact_success_bytes():
