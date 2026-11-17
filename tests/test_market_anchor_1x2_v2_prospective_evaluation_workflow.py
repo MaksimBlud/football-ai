@@ -706,3 +706,36 @@ def test_offline_validation_workflow_tracks_current_direct_rights_stack():
     assert "research/v2-direct-forward-artifact-api-rights-gate-restacked-on-823-20261114-run11" in frozen_push
     assert frozen_text.count("market_anchor_1x2_v2_prospective_evaluation.py") >= 3
     assert frozen_text.count("tests/test_market_anchor_1x2_v2_prospective_evaluation_workflow.py") >= 3
+
+
+def test_original_v2_prospective_evaluation_workflows_pin_immutable_actions():
+    pins = {
+        "actions/checkout": "11d5960a326750d5838078e36cf38b85af677262",
+        "actions/setup-python": "a26af69be951a213d495a4c3e4e4022e16d87065",
+        "actions/upload-artifact": "ea165f8d65b6e75b540449e92b4886f43607fa02",
+    }
+    workflow_specs = {
+        ".github/workflows/market-anchor-1x2-v2-prospective-evaluation.yml": {
+            "actions/checkout",
+            "actions/setup-python",
+            "actions/upload-artifact",
+        },
+        ".github/workflows/market-anchor-1x2-v2-prospective-evaluation-validation.yml": {
+            "actions/checkout",
+            "actions/setup-python",
+        },
+    }
+
+    for relative_path, expected_actions in workflow_specs.items():
+        content = (ROOT / relative_path).read_text(encoding="utf-8")
+        for action in pins:
+            if action in expected_actions:
+                assert content.count(f"uses: {action}@{pins[action]}") == 1
+            assert f"uses: {action}@v" not in content
+        assert content.count("uses: actions/") == len(expected_actions)
+
+    live_workflow = (
+        ROOT / ".github/workflows/market-anchor-1x2-v2-prospective-evaluation.yml"
+    ).read_text(encoding="utf-8")
+    assert 'MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED: "false"' in live_workflow
+    assert "schedule:" not in live_workflow
