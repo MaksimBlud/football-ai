@@ -194,8 +194,12 @@ def test_feature_vector_preserves_original_19_order_and_leaves_two_red_features_
     assert row["features"]["diff_red_10"] is None
     assert row["observed_frozen_feature_count"] <= 17
     assert row["median_imputed_frozen_feature_count"] >= 2
-    assert row["source_before_quote_verified"] is True
+    assert row["source_archive_before_quote_verified"] is True
+    assert row["project_possession_before_quote_verified"] is True
+    assert row["source_before_quote_verified"] is False
     assert row["upstream_observation_time_verified"] is False
+    assert row["information_time_independently_attested"] is False
+    assert report["metadata_gate_attestation_level"] == "operator_supplied_local_metadata_csv_not_supabase_authenticated"
     assert row["feature_input_outcomes_used"] is True
     assert row["target_quote_outcomes_read"] is False
     assert row["probabilities_generated"] is False
