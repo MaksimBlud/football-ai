@@ -137,6 +137,70 @@ def test_public_free_history_never_downloads_protected_2026_27_outcomes():
     assert all(x["csv_sha256"] and x["source_observed_at_utc"] for x in audit)
 
 
+def test_public_history_capture_directory_is_sha_verified_and_published_as_one_bundle(tmp_path):
+    csv_bytes = history_fixture().to_csv(index=False).encode()
+    target = tmp_path / "source_capture"
+
+    class Response:
+        status_code = 200
+        content = csv_bytes
+
+    history, audit = fetch_public_history(
+        get=lambda url, timeout: Response(),
+        capture_dir=target,
+        sleep=lambda _: None,
+    )
+
+    assert len(history) == 30
+    files = sorted(target.glob("*.csv"))
+    assert len(files) == 10
+    assert {path.name for path in files} == {
+        item["archived_source_name"] for item in audit
+    }
+    for item in audit:
+        archived = (target / item["archived_source_name"]).read_bytes()
+        assert hashlib.sha256(archived).hexdigest() == item["csv_sha256"]
+    assert list(tmp_path.glob(".source_capture.staging-*")) == []
+
+
+def test_public_history_late_failure_never_publishes_partial_capture_directory(tmp_path):
+    csv_bytes = history_fixture().to_csv(index=False).encode()
+    target = tmp_path / "source_capture"
+    calls = []
+
+    class Response:
+        def __init__(self, status_code):
+            self.status_code = status_code
+            self.content = csv_bytes if status_code == 200 else b""
+
+    def fake_get(url, timeout):
+        calls.append(url)
+        return Response(200 if len(calls) <= 3 else 503)
+
+    with pytest.raises(RuntimeError, match="unavailable"):
+        fetch_public_history(
+            get=fake_get, capture_dir=target, sleep=lambda _: None
+        )
+
+    assert len(calls) == 6
+    assert not target.exists()
+    assert list(tmp_path.glob(".source_capture.staging-*")) == []
+
+
+def test_public_history_refuses_existing_or_symlink_capture_destination(tmp_path):
+    target = tmp_path / "source_capture"
+    target.mkdir()
+    calls = []
+    with pytest.raises(RuntimeError, match="must not already exist"):
+        fetch_public_history(
+            get=lambda url, timeout: calls.append(url),
+            capture_dir=target,
+            sleep=lambda _: None,
+        )
+    assert calls == []
+    assert list(target.iterdir()) == []
+
+
 def test_public_history_retries_transient_read_timeout_and_archives_exact_success_bytes():
     csv_bytes = history_fixture().to_csv(index=False).encode()
     calls = []
