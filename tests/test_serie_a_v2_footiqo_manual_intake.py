@@ -131,6 +131,45 @@ def test_gate_rejects_any_score_or_result_column_before_opening_source(tmp_path)
         )
 
 
+
+def test_metadata_gate_rejects_pre_2026_27_fixtures_before_opening_source(tmp_path):
+    gate = pd.read_csv(pd.io.common.BytesIO(gate_csv()))
+    gate["match_date"] = "2026-06-30"
+    gate_path = tmp_path / "preseason-gate.csv"
+    gate.to_csv(gate_path, index=False)
+    missing_source = tmp_path / "source-does-not-exist.csv"
+
+    with pytest.raises(ValueError, match="before current 2026/27 season start"):
+        capture_manual_export(
+            source_csv=missing_source,
+            gate_metadata_csv=gate_path,
+            private_store_dir=tmp_path / "private",
+            manual_export_confirmed=True,
+            noncommercial_research_confirmed=True,
+            private_storage_confirmed=True,
+            now=NOW,
+        )
+
+
+@pytest.mark.parametrize("bad_date", ["2026-10-01T12:00:00Z", "2026-10-01suffix", "2026-1-1"])
+def test_metadata_gate_rejects_noncanonical_or_timestamp_dates_before_opening_source(tmp_path, bad_date):
+    gate = pd.read_csv(pd.io.common.BytesIO(gate_csv()))
+    gate.loc[0, "match_date"] = bad_date
+    gate_path = tmp_path / "noncanonical-gate.csv"
+    gate.to_csv(gate_path, index=False)
+    missing_source = tmp_path / "source-does-not-exist.csv"
+
+    with pytest.raises(ValueError, match="canonical YYYY-MM-DD"):
+        capture_manual_export(
+            source_csv=missing_source,
+            gate_metadata_csv=gate_path,
+            private_store_dir=tmp_path / "private",
+            manual_export_confirmed=True,
+            noncommercial_research_confirmed=True,
+            private_storage_confirmed=True,
+            now=NOW,
+        )
+
 def test_manual_noncommercial_private_confirmations_are_mandatory(tmp_path):
     source_path = tmp_path / "source.csv"
     gate_path = tmp_path / "gate.csv"
