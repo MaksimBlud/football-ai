@@ -28,6 +28,13 @@ Queries were restricted to `public.odds_snapshots` rows satisfying `snapshot_tim
 - Serie A: 620 pre-match snapshots, 63 events; same latest snapshot; zero future-kickoff snapshots.
 - No new V2 product forecast was produced by the current-form run.
 
+### Confirmed current-form identity-set mismatch
+
+A separate read-only metadata-only query matching the source-capture gate (`league_finished_results`; only distinct `match_date,home_team,away_team`; Serie A 2026-2027; dates from 2026-07-01 before the current date) returned **113** completed fixture identities, dated 2026-08-22 through 2026-11-08. The verified current-season CSV in source artifact `14339532222` contains **110** rows. This is a confirmed 113-vs-110 identity-set discrepancy; no scores/results/settlement columns were selected.
+
+The exact identity-set gate is implemented in stacked [PR #843](https://github.com/MaksimBlud/football-ai/pull/843), on #837 → #834. It compares the metadata identities with the archived identities and returns `SOURCE_GATE_STALE` before the deferred quote reader when they differ. Exact #843 HEAD `725d1c987a9bca1a936008a81dc8458a09791eac` passed 552 tests on Python 3.11 and 552 on Python 3.12; production `.pkl` guards passed. Do not merge #843 independently of its parents.
+
+
 ### Safety and scientific status
 
 No Supabase write/DDL, paid provider call, production `.pkl` change, refit, promotion, bet, schedule change, or protected target-outcome read occurred. Source capture/forward evidence is not prediction-quality evidence. The 30-primary-event outcome gate remains closed; no Brier/LogLoss superiority claim is permitted.
