@@ -185,10 +185,10 @@ def _validate_gate_metadata(raw: bytes, *, checked_at: datetime) -> dict:
     identities: set[tuple[str, str, str]] = set()
     dates: list[date] = []
     for row in frame.to_dict(orient="records"):
+        match_date_text = str(row["match_date"]).strip()
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", match_date_text):
+            raise ValueError("match_date must be canonical YYYY-MM-DD in metadata-only feature gate")
         try:
-            match_date_text = str(row["match_date"]).strip()
-            if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", match_date_text):
-                raise ValueError("match_date must be canonical YYYY-MM-DD in metadata-only feature gate")
             match_date = date.fromisoformat(match_date_text)
         except ValueError as exc:
             raise ValueError("invalid canonical match_date in metadata-only feature gate") from exc
