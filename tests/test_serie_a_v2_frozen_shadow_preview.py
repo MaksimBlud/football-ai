@@ -288,3 +288,19 @@ def test_preview_rejects_generic_goals_containers_and_separator_aliases(extra):
     row.update(extra)
     with pytest.raises(ValueError, match="result fields"):
         v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
+
+
+@pytest.mark.parametrize("alias,value", [
+    ("F.T.H.G", 2),
+    ("H.G", 1),
+    ("F-T-A-G", 1),
+    ("H T R", "H"),
+    ("H-X-G", 1.4),
+    ("A.X.G", 0.7),
+])
+def test_preview_rejects_punctuation_separated_compact_outcome_aliases(alias, value):
+    row = features()
+    row["provider_row"] = {alias: value}
+    with pytest.raises(ValueError, match="result fields"):
+        v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
+
