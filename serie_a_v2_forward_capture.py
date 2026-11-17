@@ -12,6 +12,7 @@ from io import BytesIO
 import json
 import os
 from pathlib import Path
+from tempfile import TemporaryDirectory
 import re
 from typing import Any
 import zipfile
@@ -22,7 +23,7 @@ import requests
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 
 from serie_a_v2_frozen_shadow_preview import (
-    MAX_QUOTE_AGE, fetch_saved_upcoming_serie_a_quotes, parse_utc,
+    FROZEN_SHA, MAX_QUOTE_AGE, fetch_saved_upcoming_serie_a_quotes, parse_utc,
 )
 from serie_a_v2_live_diagnostic_report import make_report
 from serie_a_v2_prequote_source_archive_gate import (
@@ -57,6 +58,12 @@ def _fixture_team_identity(value: str) -> str:
     return _TEAM_IDENTITY_ALIASES.get(normalized, normalized)
 
 
+
+
+def _require_v2_inference_access() -> dict:
+    """Require provider rights and private artifact storage before any V2 I/O."""
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    return require_v2_inference_access()
 
 
 def _github_json(url: str, *, token: str, get=requests.get) -> dict:
@@ -231,7 +238,7 @@ def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
             close()
 
 
-def prepare_forward_capture(
+def _prepare_forward_capture_contents(
     quotes: list[dict], archive_metadata: list[dict], *,
     as_of_utc: datetime, load_archive, verify_parent_run,
     write_archives_to: Path | None = None,
@@ -242,8 +249,6 @@ def prepare_forward_capture(
     admission: frozen incumbent, current-season form and outcome gate still
     missing. All resulting original-V2 probabilities are diagnostic only.
     """
-    from market_anchor_v2_direct_access import require_v2_inference_access
-    require_v2_inference_access()
     if (
         not isinstance(as_of_utc, datetime)
         or as_of_utc.tzinfo is None
@@ -292,6 +297,7 @@ def prepare_forward_capture(
     rows, cache = [], {}
     verified_runs = {}
     used_archives = {}
+    written_archives: set[int] = set()
     for q in quotes:
         quote_time = parse_utc(q["snapshot_time_utc"])
         kickoff = parse_utc(q["commence_time_utc"])
@@ -313,7 +319,20 @@ def prepare_forward_capture(
             record["status"] = "STALE_MARKET_QUOTE"
             rows.append(record)
             continue
-        candidates = [a for a in archive_metadata if a["created_at"] < quote_time]
+        candidates = []
+        for archive in archive_metadata:
+            if archive["created_at"] >= quote_time:
+                continue
+            # The source workflow itself must have completed before the quote.
+            # Artifact creation alone is insufficient: upload can precede a
+            # failed or still-running parent workflow.
+            parent_completed_at = archive.get("verified_parent_completed_at_utc")
+            if (
+                parent_completed_at is not None
+                and not parse_utc(parent_completed_at) < quote_time
+            ):
+                continue
+            candidates.append(archive)
         if not candidates:
             rows.append(record)
             continue
@@ -330,12 +349,9 @@ def prepare_forward_capture(
             if not isinstance(raw, bytes):
                 raise ValueError("archive loader returned non-bytes")
             cache[artifact_id] = raw
-            if write_archives_to is not None:
-                (write_archives_to / f"source_artifact_{artifact_id}.zip").write_bytes(raw)
         raw = cache[artifact_id]
         # Original offline guard validates the *full ZIP*, every CSV, time,
         # score embargo and separately retrieved GitHub digest.
-        from tempfile import TemporaryDirectory
         with TemporaryDirectory() as td:
             src = Path(td) / "original_source.zip"
             src.write_bytes(raw)
@@ -346,6 +362,9 @@ def prepare_forward_capture(
             )
         if gate["source_archive_prequote_ready"] != 1:
             raise ValueError("source archive unexpectedly failed pre-quote gate")
+        if write_archives_to is not None and artifact_id not in written_archives:
+            (write_archives_to / f"source_artifact_{artifact_id}.zip").write_bytes(raw)
+            written_archives.add(artifact_id)
         with zipfile.ZipFile(BytesIO(raw), "r") as z:
             archived_report = json.loads(z.read(ARCHIVE_REPORT))
             audits = archived_report["public_source_files"]
@@ -393,6 +412,257 @@ def prepare_forward_capture(
     }
 
 
+def _prepare_forward_capture_with_atomic_sources_unchecked(
+    quotes: list[dict], archive_metadata: list[dict], *,
+    as_of_utc: datetime, load_archive, verify_parent_run,
+    write_archives_to: Path | None = None,
+) -> dict:
+    """Internal atomic publisher; caller must pass the direct V2 access gate first."""
+    if write_archives_to is None:
+        return _prepare_forward_capture_contents(
+            quotes,
+            archive_metadata,
+            as_of_utc=as_of_utc,
+            load_archive=load_archive,
+            verify_parent_run=verify_parent_run,
+            write_archives_to=None,
+        )
+
+    target = Path(write_archives_to)
+    if target.is_symlink():
+        raise ValueError("forward source output directory cannot be a symlink")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.exists():
+        if not target.is_dir() or any(target.iterdir()):
+            raise FileExistsError("forward source output directory must be absent or empty")
+        target.rmdir()
+
+    # The workflow uploads this directory with if: always(). Keep all per-quote
+    # downloads in a sibling staging directory so a later failed quote or ZIP
+    # validation cannot publish an incomplete/unverified source bundle.
+    with TemporaryDirectory(
+        prefix=f".{target.name}.staging-",
+        dir=target.parent,
+    ) as temporary_directory:
+        staged = Path(temporary_directory) / "sources"
+        staged.mkdir()
+        report = _prepare_forward_capture_contents(
+            quotes,
+            archive_metadata,
+            as_of_utc=as_of_utc,
+            load_archive=load_archive,
+            verify_parent_run=verify_parent_run,
+            write_archives_to=staged,
+        )
+        if any(staged.iterdir()):
+            os.replace(staged, target)
+    return report
+
+
+def prepare_forward_capture(
+    quotes: list[dict], archive_metadata: list[dict], *,
+    as_of_utc: datetime, load_archive, verify_parent_run,
+    write_archives_to: Path | None = None,
+) -> dict:
+    """Publish verified source ZIPs as one unit after direct rights/privacy preflight."""
+    _require_v2_inference_access()
+    return _prepare_forward_capture_with_atomic_sources_unchecked(
+        quotes,
+        archive_metadata,
+        as_of_utc=as_of_utc,
+        load_archive=load_archive,
+        verify_parent_run=verify_parent_run,
+        write_archives_to=write_archives_to,
+    )
+
+
+def capture_forward_with_source_preflight(
+    archive_metadata: list[dict],
+    *,
+    as_of_utc: datetime,
+    fetch_quotes,
+    load_archive,
+    verify_parent_run,
+    write_archives_to: Path | None = None,
+) -> dict:
+    """Verify every candidate source archive before the first saved-quote read.
+
+    Failed, incomplete, or corrupt newer artifacts are rejected without making
+    them authoritative. A previous fully verified archive may be used, but
+    only if its artifact upload AND parent workflow completion both precede
+    the individual quote. All source bytes and GitHub digests are checked
+    before the lazy quote reader can run.
+    """
+    _require_v2_inference_access()
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
+        raise ValueError("source preflight clock must be timezone-aware")
+    if not callable(fetch_quotes):
+        raise ValueError("saved quote reader must be a lazy callable")
+    if not isinstance(archive_metadata, list):
+        raise ValueError("source archive metadata must be a list")
+
+    now = as_of_utc.astimezone(timezone.utc)
+    candidates = []
+    for archive in archive_metadata:
+        if not isinstance(archive, dict):
+            raise ValueError("malformed source archive metadata")
+        created_at = archive.get("created_at")
+        if (
+            not isinstance(created_at, datetime)
+            or created_at.tzinfo is None
+            or created_at.utcoffset() is None
+        ):
+            raise ValueError("source archive metadata requires a timezone-aware created_at")
+        if created_at.astimezone(timezone.utc) < now:
+            candidates.append(archive)
+    candidates.sort(
+        key=lambda archive: (
+            archive["created_at"].astimezone(timezone.utc),
+            archive.get("artifact_id", 0),
+        ),
+        reverse=True,
+    )
+    if not candidates:
+        raise RuntimeError("no original V2 source archive before quote read")
+
+    verified_sources: dict[int, dict] = {}
+    rejected_sources: list[dict] = []
+    for archive in candidates:
+        artifact_id = archive.get("artifact_id")
+        try:
+            parent = verify_parent_run(archive, now)
+            if not isinstance(parent, dict):
+                raise ValueError("source parent workflow attestation missing before quote read")
+            if (
+                parent.get("run_id") != archive.get("run_id")
+                or parent.get("run_head_sha") != archive.get("head_sha")
+                or parent.get("workflow_path") != SOURCE_WORKFLOW_PATH
+                or not parent.get("run_completed_at_utc")
+            ):
+                raise ValueError("source parent workflow identity mismatch before quote read")
+            parent_completed = parse_utc(parent["run_completed_at_utc"])
+            if not parent_completed < now:
+                raise ValueError("source parent workflow not complete before quote read")
+
+            raw = load_archive(artifact_id)
+            if not isinstance(raw, bytes) or not raw:
+                raise ValueError("source archive loader returned no bytes before quote read")
+            with TemporaryDirectory() as temporary_directory:
+                archive_path = Path(temporary_directory) / "original-v2-source.zip"
+                archive_path.write_bytes(raw)
+                proof = verify_archive(
+                    archive_path,
+                    [],
+                    as_of_utc=now,
+                    github_artifact_sha256=archive.get("sha256"),
+                    github_artifact_created_at_utc=archive["created_at"].isoformat(),
+                )
+            if (
+                proof.get("github_digest_matched") is not True
+                or proof.get("archived_csv_count") != 10
+                or proof.get("historical_match_rows", 0) <= 0
+                or proof.get("original_candidate_sha256") != FROZEN_SHA
+                or proof.get("quotes_checked") != 0
+                or proof.get("eligible_for_frozen_prospective_cohort") is not False
+                or proof.get("no_bet") is not True
+            ):
+                raise ValueError("original V2 source archive preflight is incomplete")
+        except (ValueError, zipfile.BadZipFile) as exc:
+            rejected_sources.append({
+                "artifact_id": artifact_id,
+                "reason": str(exc),
+            })
+            continue
+
+        verified_archive = {
+            **archive,
+            "verified_parent_completed_at_utc": parent_completed.isoformat(),
+        }
+        if artifact_id in verified_sources:
+            raise ValueError("duplicate verified source artifact id")
+        verified_sources[artifact_id] = {
+            "archive": verified_archive,
+            "parent": parent,
+            "parent_completed": parent_completed,
+            "raw": raw,
+            "proof": proof,
+        }
+
+    if not verified_sources:
+        reasons = "; ".join(
+            f"artifact {item['artifact_id']}: {item['reason']}"
+            for item in rejected_sources
+        )
+        raise ValueError(
+            "no verified original V2 source archive before quote read"
+            + (f" ({reasons})" if reasons else "")
+        )
+
+    verified_archive_metadata = [
+        entry["archive"] for entry in verified_sources.values()
+    ]
+    latest = max(
+        verified_archive_metadata,
+        key=lambda archive: (
+            archive["created_at"].astimezone(timezone.utc),
+            archive["artifact_id"],
+        ),
+    )
+    latest_id = latest["artifact_id"]
+    latest_entry = verified_sources[latest_id]
+    proof = latest_entry["proof"]
+    parent = latest_entry["parent"]
+    parent_completed = latest_entry["parent_completed"]
+
+    # This is the first point at which the stored quote reader may be invoked.
+    quotes = fetch_quotes()
+    if not isinstance(quotes, list):
+        raise ValueError("saved quote reader must return a list")
+
+    def load_verified_archive(artifact_id: int) -> bytes:
+        entry = verified_sources.get(artifact_id)
+        if entry is None:
+            raise ValueError("source archive was not SHA-verified before quote read")
+        return entry["raw"]
+
+    def verify_parent_for_quote(archive: dict, quote_time: datetime) -> dict:
+        entry = verified_sources.get(archive.get("artifact_id"))
+        if entry is None:
+            raise ValueError("source parent was not verified before quote read")
+        if not entry["parent_completed"] < quote_time:
+            raise ValueError("source workflow finished after quote")
+        return entry["parent"]
+
+    report = _prepare_forward_capture_with_atomic_sources_unchecked(
+        quotes,
+        verified_archive_metadata,
+        as_of_utc=now,
+        load_archive=load_verified_archive,
+        verify_parent_run=verify_parent_for_quote,
+        write_archives_to=write_archives_to,
+    )
+    report["source_preflight"] = {
+        "verified": True,
+        "source_artifact_id": latest_id,
+        "source_artifact_sha256": latest["sha256"],
+        "source_artifact_created_at_utc": latest["created_at"].isoformat(),
+        "source_parent_run_id": latest["run_id"],
+        "source_parent_completed_at_utc": parent_completed.isoformat(),
+        "verified_historical_csv_count": proof["archived_csv_count"],
+        "verified_historical_match_rows": proof["historical_match_rows"],
+        "original_candidate_sha256": proof["original_candidate_sha256"],
+        "verified_source_artifact_count": len(verified_sources),
+        "rejected_source_artifacts": rejected_sources,
+        "quotes_read_after_source_preflight": True,
+    }
+    report["quote_read_skipped"] = False
+    return report
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
@@ -410,14 +680,23 @@ def main() -> None:
         print(json.dumps(report, sort_keys=True))
         return
     token = os.environ.get("GITHUB_TOKEN", "")
-    from database import supabase
     now = datetime.now(timezone.utc)
-    quotes = fetch_saved_upcoming_serie_a_quotes(supabase, now=now)
     archives = discover_archives(token=token)
-    report = prepare_forward_capture(
-        quotes, archives, as_of_utc=datetime.now(timezone.utc),
+
+    def fetch_quotes():
+        # Initialize Supabase only after the source parent, raw ZIP, and SHA
+        # have been verified. This callback is the first saved-quote read.
+        from database import supabase
+        return fetch_saved_upcoming_serie_a_quotes(supabase, now=now)
+
+    report = capture_forward_with_source_preflight(
+        archives,
+        as_of_utc=now,
+        fetch_quotes=fetch_quotes,
         load_archive=lambda artifact_id: get_archive(artifact_id, token=token),
-        verify_parent_run=lambda a, qt: verify_source_run(a, quote_time=qt, token=token),
+        verify_parent_run=lambda archive, quote_time: verify_source_run(
+            archive, quote_time=quote_time, token=token
+        ),
         write_archives_to=args.sources_output_dir,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
