@@ -304,3 +304,28 @@ def test_preview_rejects_punctuation_separated_compact_outcome_aliases(alias, va
     with pytest.raises(ValueError, match="result fields"):
         v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
 
+
+@pytest.mark.parametrize("alias,value", [
+    ("home_win", True),
+    ("away_win", True),
+    ("home_won", True),
+    ("away_won", True),
+    ("is_home_winner", True),
+    ("is_away_winner", True),
+    ("homeTeamWon", True),
+    ("winnerSide", "H"),
+    ("winnerTeamId", 123),
+    ("Result-1X2", "A"),
+    ("outcome_1x2", "D"),
+    ("draw_result", True),
+    ("isDraw", True),
+    ("was_draw", True),
+    ("drawn", True),
+    ("home_result", "W"),
+    ("away_result", "L"),
+])
+def test_preview_rejects_explicit_1x2_winner_and_draw_outcome_aliases(alias, value):
+    row = features()
+    row["provider_row"] = {alias: value}
+    with pytest.raises(ValueError, match="result fields"):
+        v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
