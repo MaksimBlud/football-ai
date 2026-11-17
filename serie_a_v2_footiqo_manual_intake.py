@@ -17,6 +17,7 @@ import hashlib
 import json
 import math
 import os
+import re
 from pathlib import Path
 import shutil
 import tempfile
@@ -185,9 +186,14 @@ def _validate_gate_metadata(raw: bytes, *, checked_at: datetime) -> dict:
     dates: list[date] = []
     for row in frame.to_dict(orient="records"):
         try:
-            match_date = date.fromisoformat(str(row["match_date"])[:10])
+            match_date_text = str(row["match_date"]).strip()
+            if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", match_date_text):
+                raise ValueError("match_date must be canonical YYYY-MM-DD in metadata-only feature gate")
+            match_date = date.fromisoformat(match_date_text)
         except ValueError as exc:
-            raise ValueError("invalid match_date in metadata-only feature gate") from exc
+            raise ValueError("invalid canonical match_date in metadata-only feature gate") from exc
+        if match_date < CURRENT_SEASON_START:
+            raise ValueError("feature gate metadata includes a fixture before current 2026/27 season start")
         if match_date >= checked_at.date():
             raise ValueError("feature gate metadata includes a same-day or future fixture")
         home = _canonical_team(row["home_team"])
@@ -205,6 +211,10 @@ def _validate_gate_metadata(raw: bytes, *, checked_at: datetime) -> dict:
         "raw_metadata_rows": len(frame),
         "canonical_primary_completed_events": len(identities),
         "minimum_required_primary_completed_events": MIN_PRIMARY_COMPLETED_EVENTS,
+        "current_season_start": CURRENT_SEASON_START.isoformat(),
+        "completion_status_independently_verified": False,
+        "primary_competition_independently_verified": False,
+        "evaluation_outcome_gate_satisfied": False,
         "latest_match_date": max(dates).isoformat() if dates else None,
         "metadata_fields": list(FEATURE_GATE_COLUMNS),
         "outcome_fields_read": False,
@@ -442,7 +452,9 @@ def _load_verified_capture(capture_dir: Path) -> tuple[dict, pd.DataFrame]:
     gate_summary = _validate_gate_metadata(gate_raw, checked_at=gate_checked)
     for key in (
         "raw_metadata_rows", "canonical_primary_completed_events",
-        "minimum_required_primary_completed_events", "latest_match_date",
+        "minimum_required_primary_completed_events", "current_season_start",
+        "completion_status_independently_verified", "primary_competition_independently_verified",
+        "evaluation_outcome_gate_satisfied", "latest_match_date",
         "metadata_fields", "outcome_fields_read", "metadata_only_export",
     ):
         if gate_summary.get(key) != manifest["gate_summary"].get(key):
@@ -569,6 +581,9 @@ def build_manifest_from_capture(capture_dir: Path, quotes: list[Mapping[str, Any
         "upstream_observation_time_verified": False,
         "information_time_independently_attested": False,
         "metadata_gate_attestation_level": "operator_supplied_local_metadata_csv_not_supabase_authenticated",
+        "feature_input_gate_completion_status_independently_verified": False,
+        "feature_input_gate_primary_competition_independently_verified": False,
+        "evaluation_outcome_gate_opened": False,
         "gate_metadata_sha256": manifest["gate_metadata_sha256"],
         "feature_input_gate_events": manifest["gate_summary"]["canonical_primary_completed_events"],
         "feature_input_gate_minimum": MIN_PRIMARY_COMPLETED_EVENTS,
