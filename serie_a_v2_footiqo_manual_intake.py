@@ -293,7 +293,9 @@ def _normalise_source(raw: bytes, *, received_at: datetime) -> tuple[pd.DataFram
         "source_rows_total": len(frame),
         "current_season_rows": len(season_rows),
         "completed_prior_day_rows": len(normalised),
-        "non_prior_completed_rows_excluded": int(len(season_rows) - len(prior_day)),
+        "incomplete_or_unplayed_prior_rows_excluded": int(
+            ((season_rows["_match_date"] < capture_day) & ~season_rows["_ftr"].isin(("H", "D", "A"))).sum()
+        ),
         "same_day_rows_excluded_without_kickoff_clock": int(
             (season_rows["_match_date"] == capture_day).sum()
         ),
@@ -412,8 +414,17 @@ def _load_verified_capture(capture_dir: Path) -> tuple[dict, pd.DataFrame]:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     if manifest.get("schema_version") != SCHEMA_VERSION or manifest.get("manual_export") is not True:
         raise ValueError("unsupported manual source archive")
-    if manifest.get("eligible_for_product_publication") is not False:
-        raise ValueError("manual Footiqo archive cannot be used for product publication")
+    if not (
+        manifest.get("automated_access") is False
+        and manifest.get("noncommercial_research_only") is True
+        and manifest.get("private_storage_confirmed") is True
+        and manifest.get("commercial_product_use_permitted") is False
+        and manifest.get("source_observation_time_known") is False
+        and manifest.get("source_correction_time_known") is False
+        and manifest.get("eligible_for_frozen_prospective_cohort") is False
+        and manifest.get("eligible_for_product_publication") is False
+    ):
+        raise ValueError("manual Footiqo archive has an unsafe rights/provenance classification")
     contract = load_frozen_contract()
     rights = load_manual_rights()
     if (
@@ -524,8 +535,11 @@ def build_manifest_from_capture(capture_dir: Path, quotes: list[Mapping[str, Any
             "missing_feature_names": [name for name, value in vector.items() if value is None],
             "source_archive_sha256": manifest["raw_source_sha256"],
             "source_archive_published_at_utc": published.isoformat(),
-            "source_before_quote_verified": True,
+            "source_archive_before_quote_verified": True,
+            "project_possession_before_quote_verified": True,
+            "source_before_quote_verified": False,
             "upstream_observation_time_verified": False,
+            "information_time_independently_attested": False,
             "feature_input_outcomes_used": True,
             "target_quote_outcomes_read": False,
             "probabilities_generated": False,
@@ -549,6 +563,12 @@ def build_manifest_from_capture(capture_dir: Path, quotes: list[Mapping[str, Any
         "noncommercial_research_only": True,
         "source_archive_sha256": manifest["raw_source_sha256"],
         "source_archive_published_at_utc": published.isoformat(),
+        "source_archive_before_quote_verified": True,
+        "project_possession_before_quote_verified": True,
+        "source_before_quote_verified": False,
+        "upstream_observation_time_verified": False,
+        "information_time_independently_attested": False,
+        "metadata_gate_attestation_level": "operator_supplied_local_metadata_csv_not_supabase_authenticated",
         "gate_metadata_sha256": manifest["gate_metadata_sha256"],
         "feature_input_gate_events": manifest["gate_summary"]["canonical_primary_completed_events"],
         "feature_input_gate_minimum": MIN_PRIMARY_COMPLETED_EVENTS,
