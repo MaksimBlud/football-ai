@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Iterable, Mapping
 
@@ -56,6 +57,19 @@ FORBIDDEN_OUTCOME_FIELDS = frozenset({
     "home_goals_conceded", "away_goals_conceded",
     "score_home", "score_away",
     "full_time_goals", "half_time_goals", "fulltime_goals", "halftime_goals",
+    # Common camelCase/acronym and nested scoreline provider aliases.
+    "home_team_goals", "away_team_goals", "goals_home_team", "goals_away_team",
+    "home_team_score", "away_team_score",
+    "home_team_goals_scored", "away_team_goals_scored",
+    "home_team_goals_conceded", "away_team_goals_conceded",
+    "home_team_score_ft", "away_team_score_ft",
+    "ft_score", "ht_score", "score_ft", "score_ht",
+    "scoreline", "score_line", "match_score", "game_score",
+    "full_time_scoreline", "half_time_scoreline",
+    "full_time", "half_time", "fulltime", "halftime",
+    "result_code", "result_name", "outcome_code", "outcome_name",
+    "home_team_result", "away_team_result",
+    "winner_name", "winning_team_name", "winner_id", "winning_team_id",
     "settlement", "prediction_correct", "match_winner", "winner", "winning_team",
     "home_score", "away_score", "full_time_score", "full_time_result",
     "match_result", "match_outcome",
@@ -304,8 +318,19 @@ def write_candidate_artifact(frame: pd.DataFrame, output: Path) -> dict:
 
 
 def normalize_outcome_field_name(key: str) -> str:
-    """Normalize whitespace/hyphen variants without altering frozen feature names."""
-    return "_".join(key.strip().lower().replace("-", " ").split())
+    """Canonicalize provider key spelling before the recursive outcome embargo.
+
+    Handles snake/kebab/space/dot separators, camelCase and acronym boundaries
+    (for example homeTeamGoals, FTScore and score.line) without changing any
+    frozen derived feature names such as diff_goals_for_5.
+    """
+    if not isinstance(key, str):
+        return ""
+    value = key.strip()
+    value = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1_\2", value)
+    value = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", value)
+    value = re.sub(r"[^A-Za-z0-9]+", "_", value)
+    return value.strip("_").lower()
 
 
 def _nested_forbidden_outcome_keys(value) -> set[str]:
