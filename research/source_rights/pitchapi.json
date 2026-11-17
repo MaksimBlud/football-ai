@@ -1,0 +1,231 @@
+{
+  "schema_version": "1.0",
+  "provider": "PitchAPI",
+  "provider_domain": "pitchapi.dev",
+  "audit_date_utc": "2026-11-16",
+  "decision": "HOLD",
+  "decision_label": "FREE POST-MATCH API CANDIDATE — NOT APPROVED FOR ORIGINAL V2 INGESTION OR INFERENCE",
+  "reason_codes": [
+    "OFFICIAL_SERVICE_TERMS_OR_DATA_LICENSE_NOT_FOUND",
+    "SDK_MIT_LICENSE_DOES_NOT_GRANT_FOOTBALL_DATA_RIGHTS",
+    "NO_DOCUMENTED_CORNER_COUNT_FIELD_FOR_SIX_FROZEN_FEATURES",
+    "SERIE_A_2026_27_COMPETITION_COVERAGE_NOT_VERIFIED",
+    "MATCH_STATISTICS_ARE_POST_MATCH_ONLY",
+    "NO_PER_FIELD_UPSTREAM_OBSERVATION_OR_CORRECTION_TIMESTAMPS",
+    "PRIVATE_RAW_RESPONSE_RETENTION_NOT_EXPLICITLY_PERMITTED",
+    "UPSTREAM_DATA_PROVIDER_NOT_IDENTIFIED_IN_PUBLIC_API_REFERENCE",
+    "NO_ODDS_ENDPOINT"
+  ],
+  "source_documents": {
+    "api_reference": "https://pitchapi.dev/",
+    "python_sdk_pypi": "https://pypi.org/project/pitchapi/"
+  },
+  "free_plan": {
+    "price_usd": 0,
+    "one_plan_no_paid_tier_claimed": true,
+    "requests_unlimited_claimed": true,
+    "no_credit_card_or_trial_claimed": true,
+    "published_league_count": 77,
+    "history_from_year": 2021,
+    "plan_claim_is_not_a_data_license": true
+  },
+  "terms": {
+    "official_service_terms_found": false,
+    "official_data_license_found": false,
+    "sdk_mit_license_covers_client_source_only": true,
+    "sdk_mit_license_grants_underlying_data_rights": false,
+    "explicit_internal_ml_training_permission": false,
+    "explicit_model_inference_permission": false,
+    "explicit_private_raw_response_retention_permission": false,
+    "explicit_public_redistribution_permission": false,
+    "rights_status": "UNKNOWN_NOT_APPROVED",
+    "upstream_provider_disclosed": false
+  },
+  "coverage": {
+    "published_league_count": 77,
+    "league_catalogue_publicly_listed": false,
+    "serie_a_2026_27_coverage_verified": false,
+    "current_season_fixtures_claimed": true,
+    "upcoming_fixture_endpoint_documented": true,
+    "upcoming_fixture_scores_null_before_play": true,
+    "match_summary_score_fields_documented": true,
+    "match_statistics_available_pre_match": false,
+    "match_statistics_available_after_match": true,
+    "corner_count_key_documented": false,
+    "yellow_card_event_documented": true,
+    "red_card_event_documented": true,
+    "match_level_yellow_cards_example_documented": true,
+    "match_level_red_card_stat_key_documented": false,
+    "second_yellow_mapping_documented": false,
+    "analytics_coverage_universal": false,
+    "odds_endpoint_documented": false
+  },
+  "provenance": {
+    "response_timestamps_rfc3339_utc": true,
+    "per_field_upstream_observation_timestamp_documented": false,
+    "per_field_correction_timestamp_documented": false,
+    "live_endpoint_fetched_at_documented": true,
+    "live_endpoint_fetched_at_is_not_pre_match_source_proof": true,
+    "source_before_quote_approved": false,
+    "raw_response_sha_capture_verified": false,
+    "source_artifact_parent_run_provenance_verified": false
+  },
+  "private_storage": {
+    "private_archive_storage_required": true,
+    "private_raw_response_retention_explicitly_permitted": false,
+    "private_storage_authorized": false,
+    "public_github_raw_artifact_allowed": false
+  },
+  "project_authorization": {
+    "account_creation_authorized": false,
+    "api_requests_authorized": false,
+    "source_download_authorized": false,
+    "inference_authorized": false,
+    "paid_calls_authorized": false,
+    "supabase_reads_authorized": false,
+    "supabase_writes_authorized": false,
+    "supabase_ddl_authorized": false
+  },
+  "frozen_candidate": {
+    "experiment_id": "MARKET_ANCHOR_1X2_V2",
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "training_fingerprint_sha256": "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098",
+    "training_rows": 3799,
+    "feature_count": 19,
+    "features": [
+      "diff_points_5",
+      "diff_points_10",
+      "diff_points_venue5",
+      "diff_goals_for_5",
+      "diff_goals_for_10",
+      "diff_goals_against_5",
+      "diff_goals_against_10",
+      "diff_corners_for_5",
+      "diff_corners_for_10",
+      "diff_corners_against_5",
+      "diff_corners_against_10",
+      "diff_yellow_5",
+      "diff_yellow_10",
+      "diff_red_5",
+      "diff_red_10",
+      "diff_goals_for_venue5",
+      "diff_goals_against_venue5",
+      "diff_corners_for_venue5",
+      "diff_corners_against_venue5"
+    ],
+    "corner_features": [
+      "diff_corners_for_5",
+      "diff_corners_for_10",
+      "diff_corners_against_5",
+      "diff_corners_against_10",
+      "diff_corners_for_venue5",
+      "diff_corners_against_venue5"
+    ],
+    "weights_shape": [
+      20,
+      2
+    ],
+    "active_lambda": 0,
+    "shadow_residual_lambda": 1,
+    "stability_gate_passed": false,
+    "automatic_promotion": false
+  },
+  "feature_mapping": [
+    {
+      "feature": "diff_points_5",
+      "source": "completed match summary score_home/score_away; 3/1/0 points derived locally",
+      "status": "candidate_mapping_only_normal_time_and_identity_parity_unverified"
+    },
+    {
+      "feature": "diff_points_10",
+      "source": "completed match summary score_home/score_away; 3/1/0 points derived locally",
+      "status": "candidate_mapping_only_normal_time_and_identity_parity_unverified"
+    },
+    {
+      "feature": "diff_points_venue5",
+      "source": "completed match summary score_home/score_away; 3/1/0 points derived locally",
+      "status": "candidate_mapping_only_normal_time_and_identity_parity_unverified"
+    },
+    {
+      "feature": "diff_goals_for_5",
+      "source": "completed match summary score_home/score_away; 3/1/0 points derived locally",
+      "status": "candidate_mapping_only_normal_time_and_identity_parity_unverified"
+    },
+    {
+      "feature": "diff_goals_for_10",
+      "source": "completed match summary score_home/score_away; 3/1/0 points derived locally",
+      "status": "candidate_mapping_only_normal_time_and_identity_parity_unverified"
+    },
+    {
+      "feature": "diff_goals_against_5",
+      "source": "completed match summary score_home/score_away; 3/1/0 points derived locally",
+      "status": "candidate_mapping_only_normal_time_and_identity_parity_unverified"
+    },
+    {
+      "feature": "diff_goals_against_10",
+      "source": "completed match summary score_home/score_away; 3/1/0 points derived locally",
+      "status": "candidate_mapping_only_normal_time_and_identity_parity_unverified"
+    },
+    {
+      "feature": "diff_corners_for_5",
+      "source": "Published PitchAPI API reference",
+      "status": "not_documented"
+    },
+    {
+      "feature": "diff_corners_for_10",
+      "source": "Published PitchAPI API reference",
+      "status": "not_documented"
+    },
+    {
+      "feature": "diff_corners_against_5",
+      "source": "Published PitchAPI API reference",
+      "status": "not_documented"
+    },
+    {
+      "feature": "diff_corners_against_10",
+      "source": "Published PitchAPI API reference",
+      "status": "not_documented"
+    },
+    {
+      "feature": "diff_yellow_5",
+      "source": "matches.events yellowcard events; live example also shows yellow_cards",
+      "status": "candidate_mapping_only_event/stat_semantics_unverified"
+    },
+    {
+      "feature": "diff_yellow_10",
+      "source": "matches.events yellowcard events; live example also shows yellow_cards",
+      "status": "candidate_mapping_only_event/stat_semantics_unverified"
+    },
+    {
+      "feature": "diff_red_5",
+      "source": "matches.events redcard events",
+      "status": "candidate_mapping_only_second_yellow_semantics_unverified"
+    },
+    {
+      "feature": "diff_red_10",
+      "source": "matches.events redcard events",
+      "status": "candidate_mapping_only_second_yellow_semantics_unverified"
+    },
+    {
+      "feature": "diff_goals_for_venue5",
+      "source": "completed match summary score_home/score_away; 3/1/0 points derived locally",
+      "status": "candidate_mapping_only_normal_time_and_identity_parity_unverified"
+    },
+    {
+      "feature": "diff_goals_against_venue5",
+      "source": "completed match summary score_home/score_away; 3/1/0 points derived locally",
+      "status": "candidate_mapping_only_normal_time_and_identity_parity_unverified"
+    },
+    {
+      "feature": "diff_corners_for_venue5",
+      "source": "Published PitchAPI API reference",
+      "status": "not_documented"
+    },
+    {
+      "feature": "diff_corners_against_venue5",
+      "source": "Published PitchAPI API reference",
+      "status": "not_documented"
+    }
+  ],
+  "project_decision": "HOLD. Do not create an account, request an API key, call the provider, download data, build features, infer, or use this provider until legal terms, data rights, full 19-feature parity, Serie A coverage, private retention, and source-before-quote evidence are independently resolved."
+}
