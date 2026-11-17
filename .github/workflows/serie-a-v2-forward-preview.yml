@@ -91,7 +91,7 @@ jobs:
             --output artifacts/serie_a_v2_forward_source_checked.json \
             --sources-output-dir artifacts/serie_a_v2_forward_original_sources
       - name: Save immutable original V2 predictions and exact older source bytes
-        if: ${{ always() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
+        if: ${{ success() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: serie-a-v2-original-forward-source-checked
