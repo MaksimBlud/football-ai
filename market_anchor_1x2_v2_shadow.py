@@ -70,6 +70,12 @@ FORBIDDEN_OUTCOME_FIELDS = frozenset({
     "result_code", "result_name", "outcome_code", "outcome_name",
     "home_team_result", "away_team_result",
     "winner_name", "winning_team_name", "winner_id", "winning_team_id",
+    # Explicit 1X2 winner/side flags are outcomes, not pre-match market quotes.
+    "home_win", "away_win", "home_won", "away_won",
+    "is_home_winner", "is_away_winner", "home_team_won", "away_team_won",
+    "winner_side", "winning_side", "winner_team", "winner_team_id",
+    "result_1x2", "outcome_1x2", "match_result_1x2", "match_outcome_1x2",
+    "home_result", "away_result", "draw_result", "is_draw", "was_draw", "drawn",
     # Preserve compact Football-Data xG aliases after camelCase tokenization.
     "hx_g", "ax_g", "x_g_home", "x_g_away",
     # Plural score and team-oriented score containers used by common APIs.
