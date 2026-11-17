@@ -106,6 +106,18 @@ FORBIDDEN_OUTCOME_FIELDS = frozenset({
     "home_free_kicks_conceded", "away_free_kicks_conceded",
     "home_offsides", "away_offsides", "offsides_home", "offsides_away",
     "home_bookings_points", "away_bookings_points", "crowd_attendance",
+    # Generic post-match statistic labels used in typed name/value arrays.
+    "corner", "corners", "corner_kicks", "card", "cards", "yellow_card",
+    "yellow_cards", "red_card", "red_cards", "shot", "shots",
+    "shot_on_target", "shots_on_target", "shots_off_target",
+    "foul", "fouls", "offside", "offsides", "possession",
+    "expected_goal", "expected_goals", "xg", "free_kick", "free_kicks",
+    "save", "saves",
+})
+OUTCOME_FIELD_DESCRIPTOR_KEYS = frozenset({
+    "name", "field", "field_name", "stat", "stat_name", "statistic",
+    "statistic_name", "metric", "metric_name", "key", "label",
+    "attribute", "property", "code", "slug", "type", "stat_type",
 })
 PROBABILITY_FIELDS = (
     ("market_home_probability", "market_draw_probability", "market_away_probability"),
@@ -366,6 +378,26 @@ def is_forbidden_outcome_field(key: str) -> bool:
     )
 
 
+def forbidden_outcome_field_match(key: str, value=None) -> str | None:
+    """Return an exact forbidden field name, including typed stat descriptors.
+
+    Some providers encode statistics as arrays of records such as
+    {"name": "FTR", "value": "H"} or {"type": "Full Time Result", ...}.
+    The descriptor is a field name stored as a value, not a mapping key. Match
+    only exact normalized descriptor values; do not scan arbitrary free text or
+    substrings, so labels such as "Home Win Probability" remain admissible.
+    """
+    if is_forbidden_outcome_field(key):
+        return normalize_outcome_field_name(key)
+    if normalize_outcome_field_name(key) not in OUTCOME_FIELD_DESCRIPTOR_KEYS:
+        return None
+    candidates = value if isinstance(value, (list, tuple)) else (value,)
+    for candidate in candidates:
+        if isinstance(candidate, str) and is_forbidden_outcome_field(candidate):
+            return normalize_outcome_field_name(candidate)
+    return None
+
+
 def _nested_forbidden_outcome_keys(value) -> set[str]:
     """Return protected match-outcome keys found anywhere in nested containers."""
     pending = [value]
@@ -380,9 +412,9 @@ def _nested_forbidden_outcome_keys(value) -> set[str]:
             seen.add(identity)
             for key, nested in current.items():
                 if isinstance(key, str):
-                    normalized = normalize_outcome_field_name(key)
-                    if is_forbidden_outcome_field(key):
-                        leaked.add(normalized)
+                    matched = forbidden_outcome_field_match(key, nested)
+                    if matched:
+                        leaked.add(matched)
                 pending.append(nested)
         elif isinstance(current, (list, tuple)):
             identity = id(current)
