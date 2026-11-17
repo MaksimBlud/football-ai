@@ -384,6 +384,8 @@ def capture_manual_export(
             "commercial_product_use_permitted": False,
             "source_observation_time_known": False,
             "source_correction_time_known": False,
+            "timestamp_attestation_verified": False,
+            "timestamp_attestation_level": "LOCAL_CLOCK_UNATTESTED_MUTABLE_MANIFEST",
             "source_received_at_utc": source_received_at.isoformat(),
             "archive_published_at_utc": published_at.isoformat(),
             "raw_source_file": "raw_source.csv",
@@ -431,6 +433,8 @@ def _load_verified_capture(capture_dir: Path) -> tuple[dict, pd.DataFrame]:
         and manifest.get("commercial_product_use_permitted") is False
         and manifest.get("source_observation_time_known") is False
         and manifest.get("source_correction_time_known") is False
+        and manifest.get("timestamp_attestation_verified") is False
+        and manifest.get("timestamp_attestation_level") == "LOCAL_CLOCK_UNATTESTED_MUTABLE_MANIFEST"
         and manifest.get("eligible_for_frozen_prospective_cohort") is False
         and manifest.get("eligible_for_product_publication") is False
     ):
@@ -547,8 +551,10 @@ def build_manifest_from_capture(capture_dir: Path, quotes: list[Mapping[str, Any
             "missing_feature_names": [name for name, value in vector.items() if value is None],
             "source_archive_sha256": manifest["raw_source_sha256"],
             "source_archive_published_at_utc": published.isoformat(),
-            "source_archive_before_quote_verified": True,
-            "project_possession_before_quote_verified": True,
+            "source_archive_before_quote_verified": False,
+            "project_possession_before_quote_verified": False,
+            "local_archive_ordering_consistent": True,
+            "timestamp_attestation_verified": False,
             "source_before_quote_verified": False,
             "upstream_observation_time_verified": False,
             "information_time_independently_attested": False,
@@ -575,8 +581,10 @@ def build_manifest_from_capture(capture_dir: Path, quotes: list[Mapping[str, Any
         "noncommercial_research_only": True,
         "source_archive_sha256": manifest["raw_source_sha256"],
         "source_archive_published_at_utc": published.isoformat(),
-        "source_archive_before_quote_verified": True,
-        "project_possession_before_quote_verified": True,
+        "source_archive_before_quote_verified": False,
+        "project_possession_before_quote_verified": False,
+        "local_archive_ordering_consistent": True,
+        "timestamp_attestation_verified": False,
         "source_before_quote_verified": False,
         "upstream_observation_time_verified": False,
         "information_time_independently_attested": False,
