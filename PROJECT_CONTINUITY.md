@@ -1,3 +1,21 @@
+## 2026-11-17 18:52 UTC — correction: 113 raw metadata identities canonicalize to 110 V2 fixture identities
+
+**This correction supersedes earlier entries in this document that described the raw 113-versus-110 count as evidence of three missing current-source fixtures. That interpretation was incorrect.**
+
+A fresh read-only query selected only `match_date, home_team, away_team` from `public.league_finished_results` for Serie A `2026-2027` before 2026-11-17:
+
+- Raw rows: **113**; raw unique `(date, home, away)` triples: **113**.
+- Applying the existing V2-local identity normalizer (`Atalanta BC → Atalanta`) yields **110 canonical fixture identities**.
+- The three extra raw identities are duplicate alias representations of the same canonical fixtures:
+  - 2026-08-23: Atalanta–Sassuolo / Atalanta BC–Sassuolo.
+  - 2026-08-31: Atalanta–Bologna / Atalanta BC–Bologna.
+  - 2026-09-05: AS Roma–Atalanta / AS Roma–Atalanta BC.
+- This matches the main source-capture log's **110** canonical feature-input identities and the already-created source artifact's **110** current-season rows. It is not evidence that three canonical fixtures are absent.
+
+**What remains unproven:** count parity is not exact identity-set parity. The canonical database identity set still needs to be compared with the archived CSV identity set. PR #843 implements this exact canonical set/hash comparison and fails closed before the deferred quote reader if an identity is missing. Its exact-head offline CI is not a live proof, and its parent chain remains unmerged. Do not infer that the exact sets match until a permitted, rights-cleared source run proves it.
+
+This query did not select score, result, settlement, or correctness fields. No CSV bytes were downloaded, no quote was read, no target outcome was opened, and no source/inference rights were granted by this metadata check. The separate prospective evaluation gate remains **0/30**.
+
 ## 2026-11-17 17:38 UTC — fresh main V2 runtime and source/quote blockers
 
 ### Exact main and frozen contract
