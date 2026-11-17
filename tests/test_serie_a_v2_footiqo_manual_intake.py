@@ -267,8 +267,8 @@ def test_unattested_mutable_manifest_never_claims_verified_source_before_quote(t
     manifest_path = archive / "manifest.json"
     manifest = __import__("json").loads(manifest_path.read_text())
     # Local manifest timestamps can be edited; they are not a trusted timestamp authority.
-    manifest["source_received_at_utc"] = "2026-11-10T08:00:00+00:00"
-    manifest["archive_published_at_utc"] = "2026-11-10T09:00:00+00:00"
+    manifest["source_received_at_utc"] = "2026-11-10T10:01:00+00:00"
+    manifest["archive_published_at_utc"] = "2026-11-10T10:02:00+00:00"
     manifest_path.write_text(__import__("json").dumps(manifest, sort_keys=True))
 
     report = build_manifest_from_capture(archive, [QUOTE])
