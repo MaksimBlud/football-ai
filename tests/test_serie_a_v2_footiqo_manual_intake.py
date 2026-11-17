@@ -14,7 +14,7 @@ from historical_football_signal_lab import (
 )
 from serie_a_v2_footiqo_manual_intake import (
     EXPECTED_CANDIDATE_SHA256,
-    MIN_PRIMARY_COMPLETED_EVENTS,
+    MIN_CURRENT_SEASON_FIXTURE_IDENTITIES,
     REPOSITORY_ROOT,
     _normalise_source,
     build_manifest_from_capture,
@@ -95,9 +95,9 @@ def test_exact_frozen_v2_and_footiqo_manual_rights_are_pinned():
     assert rights["manifest"]["rights"]["explicit_commercial_product_use_permission"] is False
 
 
-def test_metadata_only_gate_requires_30_unique_canonical_primary_events_before_source_read(tmp_path):
+def test_metadata_only_gate_requires_30_unique_current_season_fixture_identities_before_source_read(tmp_path):
     gate_path = tmp_path / "gate.csv"
-    gate_path.write_bytes(gate_csv(MIN_PRIMARY_COMPLETED_EVENTS - 1))
+    gate_path.write_bytes(gate_csv(MIN_CURRENT_SEASON_FIXTURE_IDENTITIES - 1))
     missing_source = tmp_path / "source-does-not-exist.csv"
 
     with pytest.raises(ValueError, match="feature-input gate closed"):
@@ -196,7 +196,7 @@ def test_capture_archives_exact_raw_and_gate_bytes_outside_repository_with_sha(t
     assert (archive / "gate_metadata.csv").read_bytes() == gate
     assert manifest["raw_source_sha256"] == hashlib.sha256(source).hexdigest()
     assert manifest["gate_metadata_sha256"] == hashlib.sha256(gate).hexdigest()
-    assert manifest["gate_summary"]["canonical_primary_completed_events"] == 30
+    assert manifest["gate_summary"]["canonical_unique_current_season_fixture_identities"] == 30
     assert manifest["gate_summary"]["current_season_start"] == "2026-07-01"
     assert manifest["gate_summary"]["completion_status_independently_verified"] is False
     assert manifest["gate_summary"]["primary_competition_independently_verified"] is False
@@ -221,7 +221,7 @@ def test_gate_canonicalises_atalanta_alias_without_inflating_unique_event_count(
     archive = capture(tmp_path, gate=combined.to_csv(index=False).encode())
     manifest = __import__("json").loads((archive / "manifest.json").read_text())
     assert manifest["gate_summary"]["raw_metadata_rows"] == 31
-    assert manifest["gate_summary"]["canonical_primary_completed_events"] == 30
+    assert manifest["gate_summary"]["canonical_unique_current_season_fixture_identities"] == 30
     assert manifest["gate_summary"]["current_season_start"] == "2026-07-01"
     assert manifest["gate_summary"]["completion_status_independently_verified"] is False
     assert manifest["gate_summary"]["primary_competition_independently_verified"] is False
