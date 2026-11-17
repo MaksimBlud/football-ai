@@ -61,7 +61,8 @@ def test_provider_terms_are_partial_and_third_party_rights_keep_hold():
     rights = manifest["rights"]
     assert rights["api_content_copy_modify_allowed_by_provider_terms"] is True
     assert rights["official_terms_require_third_party_owner_permission_or_legal_basis"] is True
-    assert rights["upstream_provider_identified_in_documented_sample"] == "API-Football"
+    assert rights["third_party_identifier_field_observed"] == "idApiFootball"
+    assert rights["upstream_provider_identity_verified"] is False
     assert rights["upstream_data_license_verified"] is False
     assert rights["explicit_internal_ml_training_permission"] is False
     assert rights["explicit_model_inference_permission"] is False
