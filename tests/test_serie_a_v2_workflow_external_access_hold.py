@@ -583,3 +583,49 @@ run: |
   python -m pytest -q tests/test_market_anchor_1x2_v2_shadow.py
 """
     assert not _is_original_v2_live_workflow(offline)
+
+
+PINNED_ACTIONS = {
+    "actions/checkout": "11d5960a326750d5838078e36cf38b85af677262",
+    "actions/setup-python": "a26af69be951a213d495a4c3e4e4022e16d87065",
+    "actions/upload-artifact": "ea165f8d65b6e75b540449e92b4886f43607fa02",
+}
+
+HELD_V2_WORKFLOWS = (
+    ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml",
+    ".github/workflows/serie-a-v2-forward-preview.yml",
+    ".github/workflows/serie-a-v2-current-form-source-capture.yml",
+    ".github/workflows/serie-a-v2-current-form-forward-preview.yml",
+    ".github/workflows/recover-market-anchor-v2-candidate.yml",
+)
+
+
+def test_all_original_v2_live_workflows_pin_verified_immutable_actions():
+    for path in HELD_V2_WORKFLOWS:
+        text = _workflow(path)
+        for action, expected_sha in PINNED_ACTIONS.items():
+            references = [
+                line.split("uses:", 1)[1].strip()
+                for line in text.splitlines()
+                if "uses:" in line
+                and line.split("uses:", 1)[1].strip().startswith(f"{action}@")
+            ]
+            assert references == [f"{action}@{expected_sha}"], (
+                f"{path}: expected exactly one immutable {action} reference; "
+                f"found {references}"
+            )
+
+
+def test_targeted_action_pin_workflow_is_pull_request_only_and_immutable():
+    text = _workflow(".github/workflows/market-anchor-v2-held-action-pins.yml")
+    assert "pull_request:" in text
+    assert "workflow_dispatch:" not in text
+    assert "schedule:" not in text
+    assert "actions/checkout@11d5960a326750d5838078e36cf38b85af677262" in text
+    assert "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065" in text
+    assert "python -m pytest -q tests/test_serie_a_v2_workflow_external_access_hold.py" in text
+    assert '".github/workflows/serie-a-v2-current-form-source-capture.yml"' in text
+    assert '".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"' in text
+    assert "secrets.SUPABASE_URL" not in text
+    assert "secrets.SUPABASE_KEY" not in text
+    assert "actions/upload-artifact@" not in text
