@@ -12,6 +12,7 @@ from io import BytesIO
 import json
 import os
 from pathlib import Path
+import tempfile
 from tempfile import TemporaryDirectory
 import re
 from typing import Any
@@ -34,7 +35,7 @@ from market_anchor_v2_source_rights import require_personal_research_inference_s
 REPOSITORY = "MaksimBlud/football-ai"
 ARTIFACT_NAME = "serie-a-v2-free-real-quote-diagnostic"
 SOURCE_WORKFLOW_PATH = ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
-EXPECTED_SOURCE_WORKFLOW_BLOB_SHA1 = "bcea1644a882349fafde3a4ae642882be5c5baaf"
+EXPECTED_SOURCE_WORKFLOW_BLOB_SHA1 = "ef52d8db7275eeb1de577ce8f0ff5edb2e7703e2"
 SOURCE_LOADER_PATH = "serie_a_v2_live_diagnostic_report.py"
 EXPECTED_SOURCE_LOADER_BLOB_SHA1 = "6a1c382e127dc0aa1088ef976fc436a78176b515"
 SOURCE_RIGHTS_HELPER_PATH = "market_anchor_v2_source_rights.py"
@@ -663,6 +664,38 @@ def capture_forward_with_source_preflight(
     return report
 
 
+
+def _write_json_atomically(path: Path, payload: dict) -> None:
+    """Publish one complete forward report; never leave a partial upload candidate."""
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.is_symlink():
+        raise ValueError("forward report output cannot be a symlink")
+
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{target.name}.tmp-",
+        dir=target.parent,
+    )
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="") as stream:
+            json.dump(payload, stream, ensure_ascii=False, indent=2, sort_keys=True)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        # The temporary file is in the destination directory, so replacement
+        # is atomic on the same filesystem. Existing reports survive failures.
+        os.replace(temporary_name, target)
+    except BaseException:
+        try:
+            os.close(descriptor)
+        except OSError:
+            pass
+        try:
+            os.unlink(temporary_name)
+        except FileNotFoundError:
+            pass
+        raise
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
@@ -700,7 +733,7 @@ def main() -> None:
         write_archives_to=args.sources_output_dir,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)+"\n", encoding="utf-8")
+    _write_json_atomically(args.output, report)
     print(json.dumps({k: report[k] for k in (
         "mode", "quotes_seen", "future_quotes_checked",
         "v2_diagnostic_previews_captured", "blocked_no_prior_source",
