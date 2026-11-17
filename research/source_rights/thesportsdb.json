@@ -163,16 +163,6 @@
       "status": "candidate_mapping_only_exact_result_semantics_and_history_completeness_unverified"
     },
     {
-      "feature": "diff_goals_for_venue5",
-      "source": "Event results and correctly identified home/away event history",
-      "status": "candidate_mapping_only_exact_result_semantics_and_history_completeness_unverified"
-    },
-    {
-      "feature": "diff_goals_against_venue5",
-      "source": "Event results and correctly identified home/away event history",
-      "status": "candidate_mapping_only_exact_result_semantics_and_history_completeness_unverified"
-    },
-    {
       "feature": "diff_corners_for_5",
       "source": "Documented free event-stats sample does not expose a corner field",
       "status": "not_documented_in_free_sample"
@@ -189,16 +179,6 @@
     },
     {
       "feature": "diff_corners_against_10",
-      "source": "Documented free event-stats sample does not expose a corner field",
-      "status": "not_documented_in_free_sample"
-    },
-    {
-      "feature": "diff_corners_for_venue5",
-      "source": "Documented free event-stats sample does not expose a corner field",
-      "status": "not_documented_in_free_sample"
-    },
-    {
-      "feature": "diff_corners_against_venue5",
       "source": "Documented free event-stats sample does not expose a corner field",
       "status": "not_documented_in_free_sample"
     },
@@ -221,6 +201,26 @@
       "feature": "diff_red_10",
       "source": "Event timeline/statistics endpoints are listed but no free field mapping is documented",
       "status": "not_verified"
+    },
+    {
+      "feature": "diff_goals_for_venue5",
+      "source": "Event results and correctly identified home/away event history",
+      "status": "candidate_mapping_only_exact_result_semantics_and_history_completeness_unverified"
+    },
+    {
+      "feature": "diff_goals_against_venue5",
+      "source": "Event results and correctly identified home/away event history",
+      "status": "candidate_mapping_only_exact_result_semantics_and_history_completeness_unverified"
+    },
+    {
+      "feature": "diff_corners_for_venue5",
+      "source": "Documented free event-stats sample does not expose a corner field",
+      "status": "not_documented_in_free_sample"
+    },
+    {
+      "feature": "diff_corners_against_venue5",
+      "source": "Documented free event-stats sample does not expose a corner field",
+      "status": "not_documented_in_free_sample"
     }
   ],
   "project_authorization": {
