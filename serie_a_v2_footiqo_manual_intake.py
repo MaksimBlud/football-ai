@@ -38,7 +38,7 @@ EXPECTED_CANDIDATE_GIT_BLOB_SHA1 = "ac1303f6b096664983fbf52443bd0a381b23ba21"
 EXPECTED_FEATURE_BUILDER_GIT_BLOB_SHA1 = "401b3a0893371bfa4a488ec92a4a54af2678c8f7"
 EXPECTED_CANDIDATE_SHA256 = "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
 EXPECTED_TRAINING_FINGERPRINT = "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098"
-MIN_PRIMARY_COMPLETED_EVENTS = 30
+MIN_CURRENT_SEASON_FIXTURE_IDENTITIES = 30
 CURRENT_SEASON_START = date(2026, 7, 1)
 SCHEMA_VERSION = "MARKET_ANCHOR_1X2_V2_FOOTIQO_MANUAL_INTAKE_V1"
 FEATURE_GATE_COLUMNS = ("match_date", "home_team", "away_team")
@@ -202,15 +202,15 @@ def _validate_gate_metadata(raw: bytes, *, checked_at: datetime) -> dict:
             raise ValueError("invalid same-team identity in feature gate metadata")
         identities.add((match_date.isoformat(), home, away))
         dates.append(match_date)
-    if len(identities) < MIN_PRIMARY_COMPLETED_EVENTS:
+    if len(identities) < MIN_CURRENT_SEASON_FIXTURE_IDENTITIES:
         raise ValueError(
-            f"feature-input gate closed: {len(identities)} unique primary events "
-            f"< {MIN_PRIMARY_COMPLETED_EVENTS}"
+            f"feature-input gate closed: {len(identities)} unique current-season fixture identities "
+            f"< {MIN_CURRENT_SEASON_FIXTURE_IDENTITIES}"
         )
     return {
         "raw_metadata_rows": len(frame),
-        "canonical_primary_completed_events": len(identities),
-        "minimum_required_primary_completed_events": MIN_PRIMARY_COMPLETED_EVENTS,
+        "canonical_unique_current_season_fixture_identities": len(identities),
+        "minimum_required_current_season_fixture_identities": MIN_CURRENT_SEASON_FIXTURE_IDENTITIES,
         "current_season_start": CURRENT_SEASON_START.isoformat(),
         "completion_status_independently_verified": False,
         "primary_competition_independently_verified": False,
@@ -451,8 +451,8 @@ def _load_verified_capture(capture_dir: Path) -> tuple[dict, pd.DataFrame]:
     gate_checked = _utc(manifest["gate_summary"]["gate_checked_at_utc"], "gate check time")
     gate_summary = _validate_gate_metadata(gate_raw, checked_at=gate_checked)
     for key in (
-        "raw_metadata_rows", "canonical_primary_completed_events",
-        "minimum_required_primary_completed_events", "current_season_start",
+        "raw_metadata_rows", "canonical_unique_current_season_fixture_identities",
+        "minimum_required_current_season_fixture_identities", "current_season_start",
         "completion_status_independently_verified", "primary_competition_independently_verified",
         "evaluation_outcome_gate_satisfied", "latest_match_date",
         "metadata_fields", "outcome_fields_read", "metadata_only_export",
@@ -585,8 +585,8 @@ def build_manifest_from_capture(capture_dir: Path, quotes: list[Mapping[str, Any
         "feature_input_gate_primary_competition_independently_verified": False,
         "evaluation_outcome_gate_opened": False,
         "gate_metadata_sha256": manifest["gate_metadata_sha256"],
-        "feature_input_gate_events": manifest["gate_summary"]["canonical_primary_completed_events"],
-        "feature_input_gate_minimum": MIN_PRIMARY_COMPLETED_EVENTS,
+        "feature_input_gate_fixture_identities": manifest["gate_summary"]["canonical_unique_current_season_fixture_identities"],
+        "feature_input_gate_minimum_fixture_identities": MIN_CURRENT_SEASON_FIXTURE_IDENTITIES,
         "active_lambda": 0.0,
         "shadow_residual_lambda": 1.0,
         "stability_gate_passed": False,
