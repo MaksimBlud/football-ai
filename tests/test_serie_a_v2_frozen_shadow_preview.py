@@ -261,3 +261,18 @@ def test_preview_rejects_documented_football_data_match_stat_aliases(alias, valu
     with pytest.raises(ValueError, match="result fields"):
         v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
 
+
+
+
+@pytest.mark.parametrize("extra", [
+    {"provider_row": {"goals": {"home": 2, "away": 0}}},
+    {"provider_row": {"goal": {"home": 2}}},
+    {"provider_row": {"goals_scored": {"home": 2, "away": 0}}},
+    {"provider_row": {"Home Goals": 2}},
+    {"provider_row": {"home-goals": 2}},
+])
+def test_preview_rejects_generic_goals_containers_and_separator_aliases(extra):
+    row = features()
+    row.update(extra)
+    with pytest.raises(ValueError, match="result fields"):
+        v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
