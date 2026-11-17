@@ -1,3 +1,37 @@
+## 2026-11-17 17:38 UTC — fresh main V2 runtime and source/quote blockers
+
+### Exact main and frozen contract
+
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main update or merge occurred.
+- Original candidate: `research/models/market_anchor_v2_serie_a_frozen_candidate.json`, blob `ac1303f6b096664983fbf52443bd0a381b23ba21`, embedded artifact SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- 19 frozen features, 3,799 training rows, `active_lambda=0`, `shadow_residual_lambda=1`, stability gate FAILED, automatic promotion false.
+- Protocol blob `65729e9639720e67624c1481190aa22ae606f151` retains the first target-outcome read gate at 30 completed primary Serie A events. No target outcomes were opened in this check.
+
+### Fresh actual GitHub Actions evidence
+
+- Current-Form Source Capture [run #44108594696](https://github.com/MaksimBlud/football-ai/actions/runs/44108594696) SUCCESS on main. Artifact `14339532222`, 11 CSVs (10 historical + current-season), 3,910 historical rows + 110 current-season prior-day rows, ZIP SHA-256 `2d286fb24131a20e45ca8bfffcc03f9173d3381629b9abda1f42eb77d6c90275`. Paid calls 0; Supabase writes 0.
+- Current-Form Forward-Only Preview [run #44139119659](https://github.com/MaksimBlud/football-ai/actions/runs/44139119659) SUCCESS. 53 offline tests passed; exact source artifact and successful parent run verified. At run time source age was 9,687 seconds, within the existing 24-hour rule, but `quotes_seen=0` and `v2_current_form_shadow_captured=0`. Target outcomes read/scored=false; paid calls 0; Supabase writes 0. The workflow still uploaded report/source artifact `14353112902`.
+- Original V2 Forward-Only Preview [run #44138236517](https://github.com/MaksimBlud/football-ai/actions/runs/44138236517) FAILED after 71 offline tests passed: fail-closed provenance raised `source artifact parent run is not the verified original V2 collector`; no artifact was emitted by this failed forward run.
+- Free Real-Quote Diagnostic [run #44119690306](https://github.com/MaksimBlud/football-ai/actions/runs/44119690306) FAILED after a 30-second public-source ReadTimeout, yet main still published partial artifact `14345106143` through its unconditional upload path. This reinforces the need to merge the default-deny hold before enabling any retry or further source capture.
+
+### Current open-PR ordering
+
+- [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review at exact HEAD `27da7c204d402b76f1f0a52fc1a3bef845fcc5d2`, 8/8 PR-triggered checks SUCCESS. It gates all five live source/quote/recovery workflows, scopes credentials to gated steps, and gates artifact publication without changing schedules.
+- [#864](https://github.com/MaksimBlud/football-ai/pull/864) exact HEAD `5dff8f4e3aab64d424843ed5f72d96383655a669`, 7/7 checks SUCCESS; the frozen V2 job reports 87 tests and the production `.pkl` diff guard passes. It adds bounded retry to the public CSV fetch only. **Do not integrate #864 before #781**; after #781 is manually integrated, rebase/revalidate #864 and keep live access disabled until provider rights are cleared.
+- The existing source-before-quote chain #834 → #837 → #843 → #848 remains unmerged; do not duplicate or reorder it.
+
+### Read-only Supabase pre-match snapshot
+
+Queries were restricted to `public.odds_snapshots` rows satisfying `snapshot_time_utc < commence_time_utc`; no score/result/settlement columns were selected.
+
+- All leagues: 3,915 pre-match snapshots, 327 events, 9 leagues; latest snapshot `2026-10-13T14:48:53.04262Z`; zero future-kickoff snapshots.
+- Serie A: 620 pre-match snapshots, 63 events; same latest snapshot; zero future-kickoff snapshots.
+- No new V2 product forecast was produced by the current-form run.
+
+### Safety and scientific status
+
+No Supabase write/DDL, paid provider call, production `.pkl` change, refit, promotion, bet, schedule change, or protected target-outcome read occurred. Source capture/forward evidence is not prediction-quality evidence. The 30-primary-event outcome gate remains closed; no Brier/LogLoss superiority claim is permitted.
+
 ## 2026-11-16 17:54 UTC — post-14:00 original V2 runtime, current metadata and independent core CI
 
 ### Repository and merge state
