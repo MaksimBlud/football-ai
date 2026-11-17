@@ -241,8 +241,10 @@ def test_feature_vector_preserves_original_19_order_and_leaves_two_red_features_
     assert row["features"]["diff_red_10"] is None
     assert row["observed_frozen_feature_count"] <= 17
     assert row["median_imputed_frozen_feature_count"] >= 2
-    assert row["source_archive_before_quote_verified"] is True
-    assert row["project_possession_before_quote_verified"] is True
+    assert row["source_archive_before_quote_verified"] is False
+    assert row["project_possession_before_quote_verified"] is False
+    assert row["local_archive_ordering_consistent"] is True
+    assert row["timestamp_attestation_verified"] is False
     assert row["source_before_quote_verified"] is False
     assert row["upstream_observation_time_verified"] is False
     assert row["information_time_independently_attested"] is False
@@ -258,6 +260,36 @@ def test_feature_vector_preserves_original_19_order_and_leaves_two_red_features_
     assert report["shadow_residual_lambda"] == 1.0
     assert report["eligible_for_frozen_prospective_cohort"] is False
     assert report["eligible_for_product_publication"] is False
+
+
+def test_unattested_mutable_manifest_never_claims_verified_source_before_quote(tmp_path):
+    archive = capture(tmp_path)
+    manifest_path = archive / "manifest.json"
+    manifest = __import__("json").loads(manifest_path.read_text())
+    # Local manifest timestamps can be edited; they are not a trusted timestamp authority.
+    manifest["source_received_at_utc"] = "2026-11-10T08:00:00+00:00"
+    manifest["archive_published_at_utc"] = "2026-11-10T09:00:00+00:00"
+    manifest_path.write_text(__import__("json").dumps(manifest, sort_keys=True))
+
+    report = build_manifest_from_capture(archive, [QUOTE])
+    row = report["feature_rows"][0]
+    assert row["local_archive_ordering_consistent"] is True
+    assert row["timestamp_attestation_verified"] is False
+    assert row["source_archive_before_quote_verified"] is False
+    assert row["project_possession_before_quote_verified"] is False
+    assert row["source_before_quote_verified"] is False
+    assert row["eligible_for_frozen_prospective_cohort"] is False
+
+
+def test_manifest_cannot_claim_external_timestamp_attestation(tmp_path):
+    archive = capture(tmp_path)
+    manifest_path = archive / "manifest.json"
+    manifest = __import__("json").loads(manifest_path.read_text())
+    manifest["timestamp_attestation_verified"] = True
+    manifest_path.write_text(__import__("json").dumps(manifest, sort_keys=True))
+
+    with pytest.raises(ValueError, match="unsafe rights/provenance classification"):
+        build_manifest_from_capture(archive, [QUOTE])
 
 
 def test_manual_features_match_original_builder_for_all_supported_fields(tmp_path):
