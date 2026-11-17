@@ -68,6 +68,9 @@ FORBIDDEN_OUTCOME_FIELDS = frozenset({
     "full_time_scoreline", "half_time_scoreline",
     "full_time", "half_time", "fulltime", "halftime",
     "result_code", "result_name", "outcome_code", "outcome_name",
+    "ft_result", "ht_result", "final_result", "fulltime_result", "halftime_result",
+    "ft_outcome", "ht_outcome", "full_time_outcome", "half_time_outcome",
+    "fulltime_outcome", "halftime_outcome", "final_outcome",
     "home_team_result", "away_team_result",
     "winner_name", "winning_team_name", "winner_id", "winning_team_id",
     # Explicit 1X2 winner/side flags are outcomes, not pre-match market quotes.
