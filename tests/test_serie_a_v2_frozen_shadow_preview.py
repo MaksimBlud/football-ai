@@ -354,6 +354,11 @@ def test_preview_rejects_explicit_1x2_winner_and_draw_outcome_aliases(alias, val
     ("attributeName", "Draw Result"),
     ("propertyName", "Away Goals"),
     ("displayName", "Yellow Cards"),
+    ("shortName", "FT Result"),
+    ("displayName", "Final Result"),
+    ("abbreviation", "Fulltime Result"),
+    ("metricName", "FT Outcome"),
+    ("propertyName", "Full Time Outcome"),
 ])
 def test_preview_rejects_outcomes_encoded_as_typed_stat_descriptors(descriptor_key, descriptor_value):
     row = features()
