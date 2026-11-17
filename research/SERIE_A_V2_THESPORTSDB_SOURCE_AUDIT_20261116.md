@@ -16,7 +16,7 @@ TheSportsDB is a more relevant candidate than a fixtures-only API: its public V1
 - Free V1 access is documented with public key `123`, and a 30-requests/minute rate limit.
 - The API documentation lists `lookupeventstats.php` for event statistics; the documented free limit is 5, premium 100.
 - The public site has an Italian Serie A 2026/27 season page. Its page currently claims 380 events; this is a website catalogue claim, not proof that the free API exposes every event or its complete statistics.
-- The event-statistics example linked from the official docs returns five rows: Shots on Goal, Shots off Goal, Total Shots, Blocked Shots, and Shots insidebox. The sample rows include an `idApiFootball` value, indicating an upstream third-party identifier.
+- The event-statistics example linked from the official docs returns five rows: Shots on Goal, Shots off Goal, Total Shots, Blocked Shots, and Shots insidebox. The sample rows include an `idApiFootball` field. This is a third-party identifier signal only; it does not independently prove the actual upstream provider or its rights chain.
 
 ## Blocking gaps
 
