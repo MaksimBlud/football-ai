@@ -1,0 +1,238 @@
+{
+  "schema_version": "1.0",
+  "provider": "TheSportsDB",
+  "provider_domain": "thesportsdb.com",
+  "audit_date_utc": "2026-11-16",
+  "decision": "HOLD",
+  "decision_label": "FREE V1 API CANDIDATE — THIRD-PARTY DATA RIGHTS, FREE STAT COVERAGE AND SOURCE PROVENANCE UNRESOLVED",
+  "reason_codes": [
+    "TERMS_ALLOW_API_CONTENT_COPY_MODIFY_BUT_THIRD_PARTY_CONTENT_REQUIRES_OWNER_PERMISSION_OR_LEGAL_BASIS",
+    "EVENT_STATS_SAMPLE_IDENTIFIES_API_FOOTBALL_UPSTREAM_BUT_NO_UPSTREAM_DATA_LICENSE_EVIDENCE",
+    "FREE_EVENT_STATS_LIMIT_IS_5_AND_DOCUMENTED_SAMPLE_CONTAINS_ONLY_SHOT_STATS",
+    "NO_DOCUMENTED_FREE_CORNER_COUNT_FIELDS_FOR_SIX_FROZEN_FEATURES",
+    "NO_DOCUMENTED_FREE_YELLOW_RED_CARD_STAT_FIELDS_OR_COMPLETE_EVENT_TIMELINE_MAPPING",
+    "SERIE_A_2026_27_SEASON_PAGE_EXISTS_BUT_API_COVERAGE_AND_STAT_COMPLETENESS_UNVERIFIED",
+    "FREE_V1_IS_LEGACY_AND_V2_IS_PREMIUM_ONLY",
+    "NO_PER_FIELD_UPSTREAM_OBSERVATION_OR_CORRECTION_TIMESTAMPS",
+    "PRIVATE_RAW_RESPONSE_RETENTION_AND_INTERNAL_ML_INFERENCE_RIGHTS_NOT_EXPLICITLY_CONFIRMED",
+    "NO_ODDS_ENDPOINT"
+  ],
+  "source_documents": {
+    "terms": "https://api.thesportsdb.com/docs_terms_of_use.php",
+    "api_reference": "https://api.thesportsdb.com/documentation",
+    "pricing": "https://api.thesportsdb.com/docs_pricing.php?billing=monthly",
+    "serie_a_2026_27_season": "https://www.thesportsdb.com/season/4332-italian-serie-a/2026-2027",
+    "documented_event_stats_example": "https://www.thesportsdb.com/api/v1/json/123/lookupeventstats.php?id=1032723",
+    "official_forum_stats_note": "https://api.thesportsdb.com/forum_topic.php?t=6393"
+  },
+  "free_plan": {
+    "public_v1_key_advertised": "123",
+    "free_api_available": true,
+    "documented_free_rate_limit_per_minute": 30,
+    "event_stats_endpoint": "lookupeventstats.php",
+    "event_stats_free_limit": 5,
+    "event_stats_premium_limit": 100,
+    "season_schedule_free_limit": 15,
+    "season_schedule_premium_limit": 3000,
+    "free_api_for_development_projects": true,
+    "paid_subscription_required_for_published_app_store_apps": true,
+    "v1_legacy": true,
+    "v2_premium_only": true,
+    "no_paid_plan_or_credit_used_by_audit": true
+  },
+  "rights": {
+    "api_content_copy_modify_allowed_by_provider_terms": true,
+    "official_terms_require_third_party_owner_permission_or_legal_basis": true,
+    "upstream_data_license_verified": false,
+    "explicit_internal_ml_training_permission": false,
+    "explicit_model_inference_permission": false,
+    "explicit_private_raw_response_retention_permission": false,
+    "explicit_public_redistribution_permission": false,
+    "rights_status": "PARTIAL_PROVIDER_PERMISSION_THIRD_PARTY_RIGHTS_UNKNOWN_NOT_APPROVED",
+    "third_party_identifier_field_observed": "idApiFootball",
+    "upstream_provider_identity_verified": false
+  },
+  "coverage": {
+    "serie_a_2026_27_public_season_page_exists": true,
+    "serie_a_2026_27_page_event_count_claimed": 380,
+    "serie_a_2026_27_api_coverage_verified": false,
+    "all_teams_and_fixtures_api_coverage_verified": false,
+    "event_stats_available_for_all_serie_a_fixtures_verified": false,
+    "stats_completeness_universal": false,
+    "event_stats_documented": true,
+    "free_event_stats_sample_row_count": 5,
+    "free_event_stats_sample_names": [
+      "Shots on Goal",
+      "Shots off Goal",
+      "Total Shots",
+      "Blocked Shots",
+      "Shots insidebox"
+    ],
+    "corner_count_key_documented": false,
+    "yellow_card_stat_key_documented": false,
+    "red_card_stat_key_documented": false,
+    "complete_card_event_mapping_documented": false,
+    "odds_endpoint_documented": false
+  },
+  "provenance": {
+    "per_field_upstream_observation_timestamp_documented": false,
+    "per_field_correction_timestamp_documented": false,
+    "response_receipt_time_alone_proves_upstream_observation_time": false,
+    "source_before_quote_approved": false,
+    "raw_response_sha_capture_verified": false,
+    "immutable_source_artifact_parent_provenance_verified": false,
+    "future_private_archive_sha_and_receipt_time_possible_only_after_rights_clearance": true
+  },
+  "frozen_candidate": {
+    "experiment_id": "MARKET_ANCHOR_1X2_V2",
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "training_fingerprint_sha256": "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098",
+    "training_rows": 3799,
+    "feature_count": 19,
+    "features": [
+      "diff_points_5",
+      "diff_points_10",
+      "diff_points_venue5",
+      "diff_goals_for_5",
+      "diff_goals_for_10",
+      "diff_goals_against_5",
+      "diff_goals_against_10",
+      "diff_corners_for_5",
+      "diff_corners_for_10",
+      "diff_corners_against_5",
+      "diff_corners_against_10",
+      "diff_yellow_5",
+      "diff_yellow_10",
+      "diff_red_5",
+      "diff_red_10",
+      "diff_goals_for_venue5",
+      "diff_goals_against_venue5",
+      "diff_corners_for_venue5",
+      "diff_corners_against_venue5"
+    ],
+    "corner_features": [
+      "diff_corners_for_5",
+      "diff_corners_for_10",
+      "diff_corners_against_5",
+      "diff_corners_against_10",
+      "diff_corners_for_venue5",
+      "diff_corners_against_venue5"
+    ],
+    "weights_shape": [
+      20,
+      2
+    ],
+    "active_lambda": 0,
+    "shadow_residual_lambda": 1,
+    "stability_gate_passed": false,
+    "automatic_promotion": false
+  },
+  "feature_mapping": [
+    {
+      "feature": "diff_points_5",
+      "source": "Event results and correctly identified home/away event history",
+      "status": "candidate_mapping_only_exact_result_semantics_and_history_completeness_unverified"
+    },
+    {
+      "feature": "diff_points_10",
+      "source": "Event results and correctly identified home/away event history",
+      "status": "candidate_mapping_only_exact_result_semantics_and_history_completeness_unverified"
+    },
+    {
+      "feature": "diff_points_venue5",
+      "source": "Event results and correctly identified home/away event history",
+      "status": "candidate_mapping_only_exact_result_semantics_and_history_completeness_unverified"
+    },
+    {
+      "feature": "diff_goals_for_5",
+      "source": "Event results and correctly identified home/away event history",
+      "status": "candidate_mapping_only_exact_result_semantics_and_history_completeness_unverified"
+    },
+    {
+      "feature": "diff_goals_for_10",
+      "source": "Event results and correctly identified home/away event history",
+      "status": "candidate_mapping_only_exact_result_semantics_and_history_completeness_unverified"
+    },
+    {
+      "feature": "diff_goals_against_5",
+      "source": "Event results and correctly identified home/away event history",
+      "status": "candidate_mapping_only_exact_result_semantics_and_history_completeness_unverified"
+    },
+    {
+      "feature": "diff_goals_against_10",
+      "source": "Event results and correctly identified home/away event history",
+      "status": "candidate_mapping_only_exact_result_semantics_and_history_completeness_unverified"
+    },
+    {
+      "feature": "diff_corners_for_5",
+      "source": "Documented free event-stats sample does not expose a corner field",
+      "status": "not_documented_in_free_sample"
+    },
+    {
+      "feature": "diff_corners_for_10",
+      "source": "Documented free event-stats sample does not expose a corner field",
+      "status": "not_documented_in_free_sample"
+    },
+    {
+      "feature": "diff_corners_against_5",
+      "source": "Documented free event-stats sample does not expose a corner field",
+      "status": "not_documented_in_free_sample"
+    },
+    {
+      "feature": "diff_corners_against_10",
+      "source": "Documented free event-stats sample does not expose a corner field",
+      "status": "not_documented_in_free_sample"
+    },
+    {
+      "feature": "diff_yellow_5",
+      "source": "Event timeline/statistics endpoints are listed but no free field mapping is documented",
+      "status": "not_verified"
+    },
+    {
+      "feature": "diff_yellow_10",
+      "source": "Event timeline/statistics endpoints are listed but no free field mapping is documented",
+      "status": "not_verified"
+    },
+    {
+      "feature": "diff_red_5",
+      "source": "Event timeline/statistics endpoints are listed but no free field mapping is documented",
+      "status": "not_verified"
+    },
+    {
+      "feature": "diff_red_10",
+      "source": "Event timeline/statistics endpoints are listed but no free field mapping is documented",
+      "status": "not_verified"
+    },
+    {
+      "feature": "diff_goals_for_venue5",
+      "source": "Event results and correctly identified home/away event history",
+      "status": "candidate_mapping_only_exact_result_semantics_and_history_completeness_unverified"
+    },
+    {
+      "feature": "diff_goals_against_venue5",
+      "source": "Event results and correctly identified home/away event history",
+      "status": "candidate_mapping_only_exact_result_semantics_and_history_completeness_unverified"
+    },
+    {
+      "feature": "diff_corners_for_venue5",
+      "source": "Documented free event-stats sample does not expose a corner field",
+      "status": "not_documented_in_free_sample"
+    },
+    {
+      "feature": "diff_corners_against_venue5",
+      "source": "Documented free event-stats sample does not expose a corner field",
+      "status": "not_documented_in_free_sample"
+    }
+  ],
+  "project_authorization": {
+    "account_creation_authorized": false,
+    "api_requests_authorized": false,
+    "source_download_authorized": false,
+    "inference_authorized": false,
+    "paid_calls_authorized": false,
+    "supabase_reads_authorized": false,
+    "supabase_writes_authorized": false,
+    "supabase_ddl_authorized": false
+  },
+  "project_decision": "HOLD. Do not create an account, call the API, download data, build features, infer, or use this provider until third-party data rights, private retention, full 19-feature parity, Serie A API coverage, and source-before-quote provenance are independently established. No sample API call is authorized by this audit."
+}
