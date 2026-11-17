@@ -95,7 +95,7 @@ def _guard_outcome_free(row: Mapping[str, Any]):
                 continue
             seen.add(identity)
             for key, nested in value.items():
-                if isinstance(key, str) and key.strip().lower() in FORBIDDEN:
+                if isinstance(key, str) and v2.normalize_outcome_field_name(key) in FORBIDDEN:
                     raise ValueError(
                         "outcomes or settlement fields forbidden at capture time; nested outcome/result fields are forbidden anywhere in shadow input"
                     )

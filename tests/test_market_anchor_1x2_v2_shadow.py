@@ -224,3 +224,34 @@ def test_v2_code_does_not_reference_production_pickle_paths():
     assert "football_model_xgboost_elo.pkl" not in text
     assert "joblib.dump" not in text
     assert "--production" not in text
+
+
+@pytest.mark.parametrize("payload", [
+    {"provider_row": {"goals": {"home": 2, "away": 0}}},
+    {"provider_row": {"goal": {"home": 2}}},
+    {"provider_row": {"goals_scored": {"home": 2, "away": 0}}},
+    {"provider_row": {"Home Goals": 2}},
+    {"provider_row": {"home-goals": 2}},
+    {"provider_row": {"homeTeamGoals": 2, "awayTeamGoals": 0}},
+    {"provider_row": {"goalsHomeTeam": 2, "goalsAwayTeam": 0}},
+    {"provider_row": {"homeTeamScore": 2, "awayTeamScore": 0}},
+    {"provider_row": {"FTScore": {"home": 2, "away": 0}}},
+    {"provider_row": {"scoreLine": "2-0"}},
+    {"provider_row": {"fullTime": {"home": 2, "away": 0}}},
+    {"provider_row": {"home.goals": 2}},
+    {"provider_row": {"scores": [2, 0]}},
+    {"provider_row": {"homeScores": 2, "awayScores": 0}},
+    {"provider_row": {"scoresHomeTeam": 2, "scoresAwayTeam": 0}},
+    {"provider_row": {"scoreFullTime": "2-0"}},
+    {"provider_row": {"xGHome": 1.4, "xGAway": 0.6}},
+])
+def test_shadow_capture_rejects_generic_goals_containers_and_separator_aliases(payload):
+    row = _row()
+    row.update(payload)
+    with pytest.raises(ValueError, match="outcome fields"):
+        v2.validate_shadow_capture_rows([row])
+
+
+def test_derived_frozen_goal_features_remain_allowed():
+    row = _row(features={"diff_goals_for_5": 0.1, "diff_goals_against_5": -0.1})
+    assert v2.validate_shadow_capture_rows([row])[0]["event_id"] == "evt-1"
