@@ -562,3 +562,127 @@ def test_attestation_skips_malformed_manifest_and_uses_older_verified_archive(ma
     assert proof["rejected_source_artifacts"][0]["artifact_id"] == 766
     assert proof["rejected_source_artifacts"][0]["error_type"] == "ValueError"
     assert proof["quotes_read"] == proof["forecasts_created"] == 0
+
+
+# Uses the exact RuntimeError emitted by the original guarded GitHub JSON boundary.
+
+def test_attestation_skips_guarded_runtime_http_404_parent_and_uses_older_verified_archive():
+    raw, meta = source_fixture()
+    older = meta[0]
+    newer = _newer_candidate(older)
+    events = []
+
+    def verify(candidate, quote_time, token):
+        events.append(("verify", candidate["artifact_id"]))
+        if candidate["artifact_id"] == 766:
+            raise RuntimeError("GitHub API request failed with HTTP 404")
+        return _valid_parent_for_candidate(candidate, quote_time, token)
+
+    def load(artifact_id, token):
+        events.append(("load", artifact_id))
+        return raw
+
+    proof = attest_latest_source(
+        token="test-token",
+        now=NOW,
+        discover=lambda **kwargs: [older, newer],
+        load=load,
+        verify_run=verify,
+    )
+
+    assert events == [("verify", 766), ("verify", 765), ("load", 765)]
+    assert proof["source_artifact_id"] == 765
+    assert proof["source_candidate_fallback_used"] is True
+    assert proof["rejected_source_artifacts"][0]["artifact_id"] == 766
+    assert proof["rejected_source_artifacts"][0]["error_type"] == "RuntimeError"
+    assert proof["quotes_read"] == proof["forecasts_created"] == 0
+
+
+def test_attestation_does_not_fallback_on_guarded_runtime_http_503_parent():
+    raw, meta = source_fixture()
+    older = meta[0]
+    newer = _newer_candidate(older)
+    events = []
+
+    def verify(candidate, quote_time, token):
+        events.append(("verify", candidate["artifact_id"]))
+        if candidate["artifact_id"] == 766:
+            raise RuntimeError("GitHub API request failed with HTTP 503")
+        return _valid_parent_for_candidate(candidate, quote_time, token)
+
+    def load(artifact_id, token):
+        events.append(("load", artifact_id))
+        return raw
+
+    with pytest.raises(RuntimeError, match="HTTP 503"):
+        attest_latest_source(
+            token="test-token",
+            now=NOW,
+            discover=lambda **kwargs: [older, newer],
+            load=load,
+            verify_run=verify,
+        )
+
+    assert events == [("verify", 766)]
+
+
+
+def _deflate_corrupt_member(raw, member_name):
+    with zipfile.ZipFile(BytesIO(raw), "r") as source:
+        members = {name: source.read(name) for name in source.namelist()}
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as target:
+        for name, payload in members.items():
+            target.writestr(name, payload, compress_type=zipfile.ZIP_DEFLATED)
+    damaged = bytearray(buffer.getvalue())
+    cursor = 0
+    while True:
+        header = damaged.find(b"PK\x03\x04", cursor)
+        if header < 0:
+            raise AssertionError(f"ZIP member not found: {member_name}")
+        filename_length = int.from_bytes(damaged[header + 26:header + 28], "little")
+        extra_length = int.from_bytes(damaged[header + 28:header + 30], "little")
+        compressed_size = int.from_bytes(damaged[header + 18:header + 22], "little")
+        filename = bytes(damaged[header + 30:header + 30 + filename_length]).decode("utf-8")
+        data_start = header + 30 + filename_length + extra_length
+        if filename == member_name:
+            method = int.from_bytes(damaged[header + 8:header + 10], "little")
+            assert method == zipfile.ZIP_DEFLATED
+            damaged[data_start] ^= 0xFF
+            return bytes(damaged)
+        cursor = data_start + compressed_size
+
+
+def test_attestation_skips_deflate_corrupt_newer_archive_with_matching_sha():
+    raw, meta = source_fixture()
+    older = meta[0]
+    damaged = _deflate_corrupt_member(raw, ARCHIVE_REPORT)
+    newer = _newer_candidate(older, digest=hashlib.sha256(damaged).hexdigest())
+    events = []
+
+    def verify(candidate, quote_time, token):
+        events.append(("verify", candidate["artifact_id"]))
+        return _valid_parent_for_candidate(candidate, quote_time, token)
+
+    def load(artifact_id, token):
+        events.append(("load", artifact_id))
+        return damaged if artifact_id == 766 else raw
+
+    proof = attest_latest_source(
+        token="test-token",
+        now=NOW,
+        discover=lambda **kwargs: [older, newer],
+        load=load,
+        verify_run=verify,
+    )
+
+    assert events == [
+        ("verify", 766), ("load", 766),
+        ("verify", 765), ("load", 765),
+    ]
+    assert proof["source_artifact_id"] == 765
+    assert proof["source_candidate_fallback_used"] is True
+    rejected = proof["rejected_source_artifacts"][0]
+    assert rejected["artifact_id"] == 766
+    assert "decompress" in rejected["reason"].lower()
+    assert proof["quotes_read"] == proof["forecasts_created"] == 0
