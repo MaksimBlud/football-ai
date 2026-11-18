@@ -42,7 +42,8 @@
     "competition_catalogue_claimed": 1100,
     "actual_serie_a_2026_27_account_coverage_verified": false,
     "account_created": false,
-    "api_requests_performed": 0
+    "api_requests_performed": 0,
+    "historical_2016_2026_data_available_on_free_plan": false
   },
   "coverage": {
     "match_stats_endpoint_available_on_free_plan": true,
