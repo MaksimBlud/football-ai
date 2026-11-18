@@ -112,6 +112,10 @@ def summarize_completed_primary_events(
     raw_variants_by_canonical: dict[
         tuple[str, str, str], set[tuple[str, str]]
     ] = {}
+    # One unordered team pair on one date cannot count twice with reversed
+    # home/away orientation. Normalize aliases before this check so an
+    # Atalanta / Atalanta BC spelling change cannot bypass the event gate.
+    orientation_by_unordered_pair: dict[tuple[str, str, str], tuple[str, str]] = {}
     eligible_rows = 0
 
     for row in rows:
@@ -144,6 +148,12 @@ def summarize_completed_primary_events(
             raise ValueError("invalid primary event identity in gate metadata")
 
         date_key = parsed_date.isoformat()
+        unordered_key = (date_key, *sorted((home, away)))
+        previous_orientation = orientation_by_unordered_pair.get(unordered_key)
+        if previous_orientation is not None and previous_orientation != (home, away):
+            raise ValueError("reversed duplicate primary event identity in gate metadata")
+        orientation_by_unordered_pair[unordered_key] = (home, away)
+
         raw_unique.add((date_key, raw_home, raw_away))
         canonical_key = (date_key, home, away)
         canonical_unique.add(canonical_key)
