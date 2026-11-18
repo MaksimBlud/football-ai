@@ -7506,3 +7506,44 @@ Only rows with strict pre-kickoff ordering were selected; no score, result, sett
 - The independent prospective outcome gate remains **0/30 and CLOSED**. No Brier/LogLoss comparison or V2-over-market superiority claim is available.
 - Supabase Security Advisor / table metadata still reports RLS disabled on five public tables: `teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, `epl_ai_market_pair_ledger`. No DDL was run; enabling RLS without designed policies may block legitimate app access.
 - No main ref, schedule, other agent, Supabase schema/data, paid budget, production .pkl, original V2 contract, weights or evaluation gate was changed. No paid API request, odds request, protected 2026/27 outcome read, inference, training, promotion or bet was performed.
+
+
+## 2026-11-18 17:03 UTC — Original V2: 30-event identity audit, live-access hold, and exact-head PR state
+
+### Fresh main and frozen candidate
+
+- Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc` (commit date 2026-10-18 08:20:05 UTC). Main `PROJECT_CONTINUITY.md` remains the 2026-10-18 snapshot, blob `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`. This update is appended only to this existing documentation branch; main is unchanged.
+- Original candidate JSON blob remains `ac1303f6b096664983fbf52443bd0a381b23ba21`; artifact SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; 3,799 training rows; 19 features; 20×2 weights; `active_lambda=0`; `shadow_lambda=1`; stability gate FAILED; automatic promotion false. No candidate, weight, scaler, imputer, feature-order, training or production `.pkl` change.
+
+### Reconciled 30-primary-completed-event feature-input gate
+
+- A read-only Supabase query selected only `match_date,home_team,away_team` from `league_finished_results` for `league=SERIE_A`, season `2026-2027`, before the current UTC date. It returned **113 raw rows / 113 raw unique fixture identities**.
+- Applying the already-frozen V2-local alias `Atalanta BC -> Atalanta` yields **110 canonical unique identities**. Exactly three duplicate alias pairs collapse: Atalanta–Sassuolo (2026-08-23), Atalanta–Bologna (2026-08-31), and AS Roma–Atalanta (2026-09-05). There were no exact duplicate raw identities. This reconciles the source-capture run's reported **110** gate count.
+- No score, result, settlement or target-outcome columns were selected by this gate query. The preregistered threshold remains 30; this is only the lagged-feature-input gate. The separate prospective evaluation gate remains **0/30 and CLOSED**.
+
+### Source/quote and rights status
+
+- Main original-forward script still reads saved quotes before discovering/validating the source archive. The lazy quote-reader/source-first implementation remains in stacked Draft PR #830, exact HEAD `a773ba3642a9c3a05abcac4acf0b1b2c0606b601`, base branch #826, exact checks **3/3 SUCCESS**. Its main path verifies source parent run, raw ZIP, SHA and source contents before invoking the quote-reader callback. It is not merged.
+- Main current-form source capture remains scheduled and still uses Football-Data CSV; provider rights and private artifact storage are not cleared. Direct-main hold [#781](https://github.com/MaksimBlud/football-ai/pull/781) is OPEN / ready for review, exact HEAD `3a70a8648895076efec2a80dc10b1798ed0d9261`, base main, exact checks **8/8 SUCCESS**. It defaults all affected live V2 source/quote steps and public artifact uploads to disabled while retaining offline tests and existing schedules. HUMAN-MERGE only.
+- The Serie A paid Odds API workflow is `workflow_dispatch` only; no paid workflow or paid cron was invoked. No new paid request was made. The main original-forward `workflow_run` listener only reacts after a manual paid snapshot dispatch; it does not trigger the paid workflow itself.
+- Footiqo #859 remains HOLD for automated access and inference: manual non-commercial exports only, 17/19 documented feature fields, red cards missing, upstream rights and per-match observation/correction times unresolved. Local-only child #867 produces features only, no probabilities, and cannot attest independent completion/primary membership or source-before-quote. Soccer Data #874 remains HOLD. No source is cleared for automated 19-feature V2 inference/private raw retention.
+
+### Fresh read-only pre-match ledger
+
+- Strict `snapshot_time_utc < commence_time_utc` query: **3,915** pre-match odds snapshots / **327** events / **9** leagues. Serie A: **620** snapshots / **63** events; latest snapshot **2026-10-13 14:48:53 UTC**.
+- No pre-match odds snapshots exist after the 2026-11-18 source-capture run. Original candidate SHA matches in `product_prediction_snapshots`: **0**.
+- Main runs #44326186511 (source capture) and #44326358333 (current-form forward) succeeded, but the forward report had **0 quotes** and **0 V2 current-form shadows**. Diagnostic run #44336997243 also had **0 quotes / 0 scored previews**. Successful workflows are not model-quality evidence.
+- No target outcomes were read for independent evaluation. No Brier/LogLoss comparison exists; no V2-over-market superiority claim is allowed.
+
+### Exact-head PRs and dependency order
+
+- [#781](https://github.com/MaksimBlud/football-ai/pull/781): ready, exact HEAD `3a70a8648895076efec2a80dc10b1798ed0d9261`, base main, **8/8 SUCCESS**; highest-priority live-access/public-artifact hold.
+- [#875](https://github.com/MaksimBlud/football-ai/pull/875): Draft by design, exact HEAD `b25ad4c72c274b83fa3b4438f89f0a76d6de1838`, base #781, **2/2 SUCCESS** (18 tests per Python 3.11/3.12); binds the feature-source gate to the exact preregistered 30-event protocol.
+- [#876](https://github.com/MaksimBlud/football-ai/pull/876): Draft by design, exact HEAD `8836e46426032b18bac937c4b60a4b10f37bef90`, base #875, **4/4 SUCCESS** (19 tests per Python 3.11/3.12 across push/PR runs); direct source-capture entry points default-deny before Supabase/source access.
+- [#877](https://github.com/MaksimBlud/football-ai/pull/877): ready for review, exact HEAD `da0f6687a1e654c06567ab627cb18766039a422a`, base #876, **2/2 SUCCESS** in run [#44354022237](https://github.com/MaksimBlud/football-ai/actions/runs/44354022237); Python 3.11 and 3.12 each **26 passed**. Adds raw-vs-canonical gate identity audit, three-alias 113→110 regression, strict date-only gate metadata validation and manifest diagnostics. No threshold or model contract change.
+- [#854](https://github.com/MaksimBlud/football-ai/pull/854): independent main-based ready PR, exact HEAD `a8bb085dc58e486b511fd80a40722b1ac1fa5e60`, base main, mergeable, **8/8 SUCCESS**. Adds recursive nested protected-outcome field rejection to original V2 shadow input validation; no schedule, candidate, weights or production artifact change.
+- Keep HUMAN-MERGE order for the source-capture stack: **#781 → #875 → #876 → #877**. #854 is an independent main-based safety PR. No PR was merged by this run.
+
+### Non-actions
+
+No main ref or main file was changed; no Supabase writes/DDL; no paid API request; no source/quote capture was initiated by this run; no protected evaluation outcomes were opened; no inference, training/refit, threshold tuning, promotion, bet, production `.pkl` change, schedule change or other-agent setting change.
