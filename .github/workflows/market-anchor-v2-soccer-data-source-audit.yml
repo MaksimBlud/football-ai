@@ -1,0 +1,38 @@
+name: MARKET_ANCHOR V2 Soccer Data Source Audit
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "research/SERIE_A_V2_SOCCER_DATA_SOURCE_AUDIT_20261118.md"
+      - "research/source_rights/soccer_data.json"
+      - "tests/test_serie_a_v2_soccer_data_source_audit.py"
+      - ".github/workflows/market-anchor-v2-soccer-data-source-audit.yml"
+  push:
+    branches:
+      - research/v2-soccer-data-source-audit-20261118-run11
+    paths:
+      - "research/SERIE_A_V2_SOCCER_DATA_SOURCE_AUDIT_20261118.md"
+      - "research/source_rights/soccer_data.json"
+      - "tests/test_serie_a_v2_soccer_data_source_audit.py"
+      - ".github/workflows/market-anchor-v2-soccer-data-source-audit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  source-audit-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Verify original frozen V2 candidate and Soccer Data rights hold
+        run: python -m unittest discover -s tests -p 'test_serie_a_v2_soccer_data_source_audit.py' -v
