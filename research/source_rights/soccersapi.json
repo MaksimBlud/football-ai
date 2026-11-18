@@ -10,7 +10,7 @@
     "FIXTURE_MATCH_DETAIL_STATS_INCLUDE_IS_DOCUMENTED_FOR_FREE_PLAN",
     "FIXTURE_SCHEDULE_SUPPORTS_STATS_INCLUDE_WITHIN_PLAN_LEAGUE_SCOPE",
     "ITALY_PAGE_SHOWS_SERIE_A_2026_27_AND_MATCH_STATISTICS",
-    "FREE_PLAN_THREE_LEAGUE_SCOPE_CONFLICTS_WITH_ITALY_PAGE_CLAIM_OF_ALL_31_COMPETITIONS",
+    "FREE_PLAN_SCOPE_IS_THREE_CHOSEN_LEAGUES_AND_ITALY_PAGE_CLAIM_IS_NOT_ACCOUNT_ENTITLEMENT",
     "TERMS_IDENTIFY_SOCCERSAPI_DATA_AS_ITS_INTELLECTUAL_PROPERTY",
     "TERMS_PROHIBIT_PUBLIC_OR_COMMERCIAL_USE_WITHOUT_CLEAR_PERMISSION",
     "ATTRIBUTION_REQUIRED_FOR_PUBLICATION_OR_DISTRIBUTION",
@@ -25,6 +25,7 @@
   "source_documents": {
     "terms_of_service": "https://soccersapi.com/terms",
     "pricing": "https://soccersapi.com/pricing",
+    "plans_and_data_access": "https://docs.soccersapi.com/guides/plans-and-data-access/",
     "italy_coverage": "https://soccersapi.com/our-football-api-data/italy",
     "fixture_match_detail": "https://docs.soccersapi.com/fixtures/info/",
     "fixture_schedule": "https://docs.soccersapi.com/fixtures/schedule/",
@@ -40,6 +41,11 @@
     "fixture_schedule_stats_include_available_within_plan_league_scope": true,
     "italy_page_claims_free_key_reaches_all_31_italy_competitions": true,
     "free_plan_scope_is_consistent_across_pages": false,
+    "free_plan_scope_rule": "3 leagues chosen in dashboard; Standard datasets; account dashboard and leagues?t=list are authoritative",
+    "free_plan_statistics_dataset_available": true,
+    "free_plan_stats_scope_limited_to_selected_leagues": true,
+    "account_entitlement_for_serie_a_verified": false,
+    "null_statistics_fields_are_documented_as_normal_coverage_variance": true,
     "account_created": false,
     "api_requests_performed": 0
   },
@@ -63,6 +69,7 @@
     "candidate_feature_mapping_count": 19,
     "full_frozen_19_feature_parity_verified": false,
     "per_match_statistics_coverage_verified": false,
+    "per_match_statistics_may_be_null_under_documented_coverage_rules": true,
     "current_season_red_card_completeness_verified": false,
     "team_name_and_fixture_identity_parity_verified": false
   },
