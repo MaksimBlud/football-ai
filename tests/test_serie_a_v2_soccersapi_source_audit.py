@@ -22,7 +22,7 @@ class SoccersAPISourceAuditTests(unittest.TestCase):
         self.assertFalse(rights["rights"]["internal_noncommercial_ml_training_explicitly_permitted"])
         self.assertFalse(rights["rights"]["private_raw_source_retention_explicitly_permitted"])
         self.assertFalse(rights["project_authorization"]["account_creation_authorized"])
-        self.assertEqual(rights["project_authorization"]["api_requests_performed"], 0)
+        self.assertEqual(rights["free_access"]["api_requests_performed"], 0)
         self.assertFalse(rights["project_authorization"]["inference_performed"])
 
     def test_free_plan_claims_are_pinned_without_resolving_the_conflict(self):
