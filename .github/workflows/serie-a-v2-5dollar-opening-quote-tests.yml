@@ -20,7 +20,6 @@ on:
       - "serie_a_v2_5dollar_opening_quote_adapter.py"
       - "serie_a_v2_5dollar_source_adapter.py"
       - "serie_a_v2_asof_feature_manifest.py"
-      - "serie_a_v2_asof_feature_manifest.py"
       - "serie_a_v2_frozen_shadow_preview.py"
       - "historical_football_signal_lab.py"
       - "market_anchor_1x2_v1.py"
