@@ -7404,3 +7404,33 @@ Only rows with strict pre-kickoff ordering were selected; no score, result, sett
 - Main still has no verified original V2 prospective inference. The separate completed-primary evaluation gate remains **0/30 and CLOSED**. No independent Brier/LogLoss comparison exists; no claim of V2 superiority over the market is permitted.
 - Do not automate Football-Data or Footiqo capture, call SoccersAPI, use a paid odds provider, change cron/schedules, write Supabase, change production .pkl, open protected 2026/27 outcomes, tune thresholds, alter original V2 weights/contract, merge PRs, or change other agents.
 
+
+
+## 2026-11-18 13:25 UTC — Original V2 guarded GitHub 404 boundary and exact-head regression
+
+### Fresh main and source-before-quote status
+
+- Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; main `PROJECT_CONTINUITY.md` remains blob `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`. No main ref or file was changed.
+- Main `.github/workflows/serie-a-v2-forward-preview.yml` still invokes the original forward script whose `main()` reads saved Serie A quotes before discovering/validating source archives. The source-first lazy quote-reader implementation is in stacked Draft PR #830, not main.
+- #830 exact HEAD `a773ba3642a9c3a05abcac4acf0b1b2c0606b601` has 3/3 checks SUCCESS: `validate-offline-only`, `py312-lock-tests`, and `shadow-tests` (runs #44189893623 / #44189893387). It adds a lazy quote callback invoked only after parent-run, raw ZIP, SHA and source-content verification, plus rights/private-storage preflight. It is not merged.
+- Direct-main default-deny hold #781 remains OPEN / not merged at `3a70a8648895076efec2a80dc10b1798ed0d9261`, exact checks 8/8 SUCCESS. Atomic archive publisher #866 remains OPEN / not merged at `58c31ba5ec3fca144b33a6f15a01cb0c8234a7da`, exact checks 7/7 SUCCESS. HUMAN-MERGE only.
+
+### Original source fallback — exact-head fixes
+
+- #872 current HEAD `c1fc9b4ae1567941061dc4da00cb9552062bcc1a`, based on #869 `33efe835b7c9ac943fe539590111ba05e7882fb0`, exact run [#44309765891](https://github.com/MaksimBlud/football-ai/actions/runs/44309765891): Python 3.11 and 3.12 both SUCCESS, **74 passed each**.
+- #873 current HEAD `d7efccc46168fcb50b7042bae016b4eb870d105f`, exact PR run [#44313100118](https://github.com/MaksimBlud/football-ai/actions/runs/44313100118) and push run [#44313091548](https://github.com/MaksimBlud/football-ai/actions/runs/44313091548): both 2/2 SUCCESS, **83 passed on Python 3.11 and 83 on Python 3.12**. Compilation and frozen-candidate / production-`.pkl` diff guards passed.
+- #873 adds exact handling of the guarded GitHub JSON HTTP 404 RuntimeError (only candidate-specific missing parent at the parent-run stage; 503/auth/rate-limit/timeout remain fatal), plus a test that exercises the real `verify_source_run → _github_json` response boundary. The exact-head run also follows fixes to the ZIP byte-signature, invalid-UTF-8 fixture and synthetic parent identity. Prior run #44311310243 failed 4/82 on the old test fixtures; it is superseded by the two green current-head runs.
+- #873 remains Draft. Its base is #872's branch; current #872 head is `c1fc9b4...`. The #873 branch history is one commit behind that parent ref, although GitHub reports mergeable/clean. Restack/recheck against exact parent before any eventual integration. No real source, quote, Supabase, inference or target outcome was accessed by these branch-local tests.
+
+### Source rights and read-only data refresh
+
+- SoccersAPI audit #870 remains HOLD: Free plan/Serie A entitlement is inconsistent across public pages; terms do not expressly clear internal ML inference or private raw-response retention; per-match 19-feature coverage and first-observation/correction timestamps are unverified.
+- Open-source audit #868 remains HOLD: OpenLigaDB lacks corner/card fields; open-matchday has uneven coverage and inherits upstream rights. Footiqo #859 remains incomplete (17/19 documented features; automation requires written authorization). No replacement source is cleared for the frozen 19-feature contract.
+- Read-only `public.odds_snapshots` query used only rows where `snapshot_time_utc < commence_time_utc`: **3,915** strict pre-match rows, **327** events, **9** leagues; latest strict pre-match snapshot remains **2026-10-13 14:48:53 UTC** (Serie A); future events with saved pre-match quotes: **0**.
+- `public.product_prediction_snapshots`: **40** rows; original V2 candidate SHA matches: **0**. No score, result, settlement or correctness fields were queried.
+
+### Frozen candidate and security
+
+- Original candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features, 20×2 weights, 3,799 training rows; `active_lambda=0`, `shadow_lambda=1`; stability gate FAILED; independent prospective evaluation gate **0/30**. No Brier/LogLoss superiority claim is possible.
+- Supabase Security Advisor observed 2026-11-18 13:17:16 UTC: RLS disabled on five public tables (`teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, `epl_ai_market_pair_ledger`); four other tables have RLS enabled without policies. No DDL was executed. Enabling RLS without designed policies can break legitimate access.
+- No PR merged, no main write, no Supabase writes/DDL, no paid provider calls, no production `.pkl` changes, no protected 2026/27 outcomes read, no threshold/contract/weight changes, and no schedule or other-agent changes.
