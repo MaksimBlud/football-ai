@@ -1,3 +1,39 @@
+## 2026-11-18 22:00 UTC — direct V2 identity-reader regression and fresh pre-match runtime audit
+
+### Fresh main, frozen candidate, and exact PR chain
+
+- Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; the main copy of this document remains the older 2026-10-18 snapshot. This checkpoint is appended only to documentation PR #839; no main ref or file is changed.
+- Original `MARKET_ANCHOR_1X2_V2` remains frozen at SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 features, 20×2 weights, 3,799 training rows, training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`, `active_lambda=0`, `shadow_lambda=1`, stability gate FAILED, independent prospective outcome gate 0/30. No model weights, feature order, scaler/imputer, production `.pkl`, or candidate contract changed.
+- [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review, exact HEAD `3a70a8648895076efec2a80dc10b1798ed0d9261`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`; all 8 exact-head PR workflows completed SUCCESS. It keeps all affected live V2 source/quote steps and artifact uploads default-denied while retaining existing schedules and offline tests. HUMAN-MERGE only.
+- [#875](https://github.com/MaksimBlud/football-ai/pull/875) exact HEAD `b25ad4c72c274b83fa3b4438f89f0a76d6de1838`, base #781, dedicated run [#44322692751](https://github.com/MaksimBlud/football-ai/actions/runs/44322692751) 2/2 SUCCESS, 18 tests on Python 3.11 and 3.12.
+- [#876](https://github.com/MaksimBlud/football-ai/pull/876) exact HEAD `8836e46426032b18bac937c4b60a4b10f37bef90`, base #875, dedicated run [#44324863164](https://github.com/MaksimBlud/football-ai/actions/runs/44324863164) 2/2 SUCCESS, 19 tests on each Python version. Direct current-form source capture defaults to deny before metadata/source access.
+- [#877](https://github.com/MaksimBlud/football-ai/pull/877) now has exact HEAD `245c20b1acc398c5c8bad8541282378b66902cf3`, base exact #876 HEAD `8836e46426032b18bac937c4b60a4b10f37bef90`, 11 commits ahead / 0 behind. New regression directly calls `read_completed_primary_event_summary()` with live access unset and a forbidden client; it proves no Supabase metadata call occurs. Exact push run [#44407148755](https://github.com/MaksimBlud/football-ai/actions/runs/44407148755) completed 2/2 SUCCESS: **29 passed on Python 3.11 and 29 on Python 3.12**, plus `py_compile` passed. This extends the default-deny test to the new summary-reader entrypoint; it does not enable access or alter the 30-event protocol.
+- Required HUMAN-MERGE order remains **#781 → #875 → #876 → #877**. None was merged.
+
+### Actual main workflow executions on 2026-11-18
+
+All listed runs used main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Their SUCCESS status is infrastructure evidence only, not model-quality evidence.
+
+- Current-form source capture [#44326186511](https://github.com/MaksimBlud/football-ai/actions/runs/44326186511) completed at 14:37:46 UTC. Its log reported 110 canonical completed primary-event identities, 110 current-season prior-day rows, ten old-season CSVs plus one current-season CSV, zero paid calls, and zero Supabase writes. Artifact ID `14438015203`, 439,421 bytes, SHA-256 `0d4240f31418e206b36faf9e94d0782212a91cf6d51262c77b0349ab3f7fc852`. The archive contains Football-Data source bytes; provider rights remain HOLD, so digest/time do not grant AI-use permission.
+- Original forward [#44355495841](https://github.com/MaksimBlud/football-ai/actions/runs/44355495841) completed at 17:10:26 UTC. It verified ten pre-prospective historical source files / 3,800 historical rows, but logged `quotes_seen=0`, `v2_diagnostic_previews_captured=0`, no eligible prospective cohort, no target-outcome read/score, zero paid calls and zero Supabase writes. Output artifact ID `14451725631`, 1,457 bytes, SHA-256 `8625d2f3cd3d2601be7394287ffa904b101da329306b64db20a0d269c38f0809`.
+- Current-form forward [#44356799888](https://github.com/MaksimBlud/football-ai/actions/runs/44356799888) completed at 17:17:11 UTC. It verified source artifact `14438015203` and its successful main parent before quote inspection; source age at verification was 9,561 seconds, current-season history rows 110, and `quotes_seen=0`, `v2_current_form_shadow_captured=0`, target outcomes unread/unscored, zero paid calls and zero writes. Output artifact ID `14452497083`, 440,589 bytes, SHA-256 `67badae205c4b5d414e3dcf5d79b831b5f8bf4bfc62654893067ca366ce9ea75`.
+- The original and current-form forward runs occurred after #781's updated Ready-for-review head but before any manual merge; main still lacks the hold. The current-form source capture run preceded that PR update. Thus main live steps were still executable during these runs. The quote reader found zero rows, so no V2 forecasts were produced; this does not remove the live-access/rights blocker.
+
+### Fresh read-only Supabase pre-match evidence
+
+Only strictly pre-kickoff odds rows were queried using `snapshot_time_utc < commence_time_utc`; no score, result, settlement, or target-outcome fields were selected.
+
+- `public.odds_snapshots`: **3,915** strictly pre-match snapshots, **327** event IDs across nine leagues. Serie A: **620** snapshots / **63** events; latest `2026-10-13 14:48:53.04262 UTC`. Every league has zero future-kickoff snapshots and zero strictly pre-match snapshots in the preceding 24 hours.
+- `public.product_prediction_snapshots`: **40** strictly pre-match rows / 40 events, all with model SHA `1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5`; **zero** rows carry the original V2 candidate SHA. Latest generated pre-match row is `2026-10-09 15:29:33 UTC`.
+- No new quote or original-V2 prospective forecast is evidenced. No Supabase write/DDL or target-outcome read was performed.
+
+### Remaining scientific and safety blockers
+
+- Football-Data source use remains on HOLD pending provider clearance and private raw-source storage. No alternative free source has yet cleared full 19-feature coverage, upstream rights, AI-use permission, first-observation/correction timestamps and private retention.
+- The 30-event feature-input gate (110 canonical metadata identities) is distinct from the prospective evaluation gate, which remains **0/30 and CLOSED**. No target outcomes were read or scored.
+- No independent Brier/LogLoss comparison exists; no claim that V2 outperforms the market is permitted.
+- No paid API request, Supabase write/DDL, production `.pkl` change, main update, merge, refit, threshold tuning, bet, schedule change, or other-agent setting change occurred in this checkpoint.
+
 ## 2026-11-18 20:17 UTC — live metadata-only confirmation of the current-form feature gate
 
 Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. A read-only Supabase query selected only `match_date, home_team, away_team` from `public.league_finished_results` for Serie A 2026/27, dates 2026-07-01 through 2026-11-17. It returned 113 raw rows and 113 raw unique fixture identities. Applying the exact V2-local `Atalanta BC → Atalanta` alias produced **110 canonical unique fixtures**, with exactly three raw-identity collision groups:
