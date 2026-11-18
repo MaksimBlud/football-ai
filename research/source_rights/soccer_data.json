@@ -100,13 +100,14 @@
     "api_requests_authorized": false,
     "source_download_performed": false,
     "raw_source_sha256_captured": false,
-    "supabase_reads": 0,
     "supabase_writes": 0,
     "supabase_ddl": 0,
     "odds_requests": 0,
     "inference_performed": false,
     "protected_2026_27_outcomes_read": false,
-    "production_pickle_changed": false
+    "production_pickle_changed": false,
+    "supabase_reads_for_this_source_audit": 0,
+    "authorization_scope": "Soccer Data provider audit only; separate project-level read-only pre-match ledger checks are outside this provider audit."
   },
   "frozen_candidate": {
     "experiment_id": "MARKET_ANCHOR_1X2_V2",
