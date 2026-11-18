@@ -2,7 +2,7 @@
 
 **Audit date:** 2026-11-18  
 **Decision:** **HOLD — plausible current-season statistics supplement; not a historical-source replacement and not yet cleared for model use.**  
-**Scope:** official public documentation only. No account, API key, API request, download, Supabase access, odds request, feature calculation, inference, or protected outcome read was performed.
+**Scope:** official public documentation only. No account, API key, provider API request, source download, Supabase access for this provider audit, odds request, feature calculation, inference, or protected outcome read was performed. A separate project-level check used only read-only, strictly pre-kickoff odds aggregates and did not access this provider.
 
 ## What is technically promising
 
