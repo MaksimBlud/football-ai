@@ -17,8 +17,10 @@ from tempfile import TemporaryDirectory, mkstemp
 import re
 from typing import Any, Mapping
 import zipfile
+import zlib
 
 import pandas as pd
+from pandas.errors import ParserError
 import requests
 from supabase import create_client
 
@@ -588,6 +590,40 @@ def _current_gate_freshness(
     }
 
 
+def _source_archive_rejection(artifact_id: object, exc: BaseException, *, stage: str) -> dict:
+    return {
+        "artifact_id": artifact_id,
+        "stage": stage,
+        "error_type": type(exc).__name__,
+        "reason": str(exc),
+    }
+
+
+def _is_missing_github_resource(exc: BaseException) -> bool:
+    if isinstance(exc, requests.exceptions.HTTPError):
+        return getattr(getattr(exc, "response", None), "status_code", None) == 404
+    # This module's guarded JSON boundary reports non-200 responses as a
+    # RuntimeError. Only an explicit 404 is candidate-specific; 5xx/auth errors
+    # remain operational failures and must not be hidden by fallback.
+    return isinstance(exc, RuntimeError) and str(exc) == "GitHub API request failed with HTTP 404"
+
+
+def _is_source_archive_validation_error(exc: BaseException) -> bool:
+    return isinstance(
+        exc,
+        (
+            ValueError,
+            KeyError,
+            TypeError,
+            zipfile.BadZipFile,
+            EOFError,
+            zlib.error,
+            ParserError,
+            UnicodeError,
+        ),
+    )
+
+
 def verify_latest_source_archive(
     archive_metadata: list[dict],
     *,
@@ -597,8 +633,18 @@ def verify_latest_source_archive(
     current_gate_identities: set[tuple[str, str, str]] | None = None,
     write_sources_to: Path | None = None,
 ) -> dict:
-    """Verify the latest successful main source artifact even when all quotes are stale."""
+    """Choose the newest fully verified current-form source archive.
+
+    A failed source workflow can still upload a partial artifact because its
+    artifact step historically used if: always(). A successful parent run is
+    therefore necessary but not sufficient: the downloaded bytes, ZIP,
+    manifest, every raw source hash, and the current feature-input gate must
+    also verify. Candidate-specific failures are skipped so an older archive
+    can be used only if it independently passes the same freshness and gate
+    rules. Transient GitHub/network failures are never swallowed.
+    """
     from market_anchor_v2_direct_access import require_v2_inference_access
+
     require_v2_inference_access()
     if (
         not isinstance(as_of_utc, datetime)
@@ -622,31 +668,119 @@ def verify_latest_source_archive(
             "feature_source_gate_freshness": _current_gate_freshness(
                 current_gate_identities, None
             ),
+            "source_candidates_examined": 0,
+            "rejected_source_artifact_count": 0,
+            "rejected_source_artifacts": [],
+            "source_candidate_fallback_used": False,
+            "unverified_parent_artifact_count": 0,
+            "unverified_parent_artifact_ids": [],
             "target_outcomes_read": False,
             "target_outcomes_scored": False,
             "paid_provider_calls": 0,
             "supabase_writes": 0,
         }
+
     rejected_parent_artifact_ids: list[int] = []
-    archive = None
-    parent = None
-    # A failed source workflow can still upload a partial diagnostic artifact
-    # because the workflow's artifact step uses if: always(). Skip only the
-    # explicit parent-run rejection; integrity/timestamp failures remain fatal.
-    for candidate in candidates:
+    rejected_source_artifacts: list[dict] = []
+    first_verified: tuple[dict, bytes, int] | None = None
+    selected: tuple[dict, bytes, int] | None = None
+    last_archive_error: BaseException | None = None
+    examined = 0
+
+    for candidate_index, candidate in enumerate(candidates):
+        examined = candidate_index + 1
+        artifact_id = candidate.get("artifact_id")
         try:
             candidate_parent = verify_parent_run(candidate, quote_time=now)
-        except ValueError as exc:
-            if str(exc) != "artifact parent is not a successful main current-form source run":
-                raise
-            rejected_id = candidate.get("artifact_id")
-            if type(rejected_id) is int and rejected_id > 0:
-                rejected_parent_artifact_ids.append(rejected_id)
-            continue
-        archive = candidate
-        parent = candidate_parent
-        break
-    if archive is None:
+        except Exception as exc:
+            if isinstance(exc, (ValueError, KeyError, TypeError)) or _is_missing_github_resource(exc):
+                if type(artifact_id) is int and artifact_id > 0:
+                    rejected_parent_artifact_ids.append(artifact_id)
+                rejected_source_artifacts.append(
+                    _source_archive_rejection(artifact_id, exc, stage="parent")
+                )
+                continue
+            raise
+
+        try:
+            raw = load_archive(artifact_id)
+            history, source_meta = verify_and_load_archive(raw, candidate, candidate_parent)
+            latest_source = parse_utc(source_meta["latest_source_observed_at_utc"])
+            age_seconds = (now - latest_source).total_seconds()
+            if age_seconds < 0:
+                raise ValueError("source archive contains a source timestamp after verification time")
+            manifest = source_meta["manifest"]
+            gate_freshness = _current_gate_freshness(current_gate_identities, source_meta)
+        except Exception as exc:
+            if _is_missing_github_resource(exc) or _is_source_archive_validation_error(exc):
+                rejected_source_artifacts.append(
+                    _source_archive_rejection(artifact_id, exc, stage="archive")
+                )
+                last_archive_error = exc
+                continue
+            raise
+
+        report = {
+            "status": "VERIFIED",
+            "verified": True,
+            "verified_at_utc": now.isoformat(),
+            "artifact_id": artifact_id,
+            "artifact_sha256": source_meta["artifact_sha256"],
+            "source_archive_created_at_utc": source_meta["archive_created_at_utc"],
+            "latest_source_observed_at_utc": source_meta["latest_source_observed_at_utc"],
+            "source_age_seconds_at_verification": int(age_seconds),
+            "fresh_for_new_quote": (
+                age_seconds <= MAX_SOURCE_AGE.total_seconds() and gate_freshness["fresh"]
+            ),
+            "fresh_for_current_feature_gate": gate_freshness["fresh"],
+            "feature_source_gate_freshness": gate_freshness,
+            "parent_run": source_meta["parent_run"],
+            "feature_input_gate_count": manifest["feature_source_gate"]["observed_completed_primary_events"],
+            "feature_source_gate_attestation": source_meta["feature_source_gate_attestation"],
+            "historical_old_season_file_count": manifest["historical_old_season_file_count"],
+            "source_file_count": manifest["source_file_count"],
+            "historical_match_rows": source_meta["historical_match_rows"],
+            "current_season_history_rows": source_meta["current_season_history_rows"],
+            "current_season_latest_completed_fixture_date": source_meta[
+                "current_season_latest_completed_fixture_date"
+            ],
+            "candidate_sha256": FROZEN_SHA,
+            "target_outcomes_read": False,
+            "target_outcomes_scored": False,
+            "target_outcome_evaluation_gate_open": False,
+            "paid_provider_calls": 0,
+            "supabase_writes": 0,
+            "no_bet": True,
+            "unverified_parent_artifact_count": len(rejected_parent_artifact_ids),
+            "unverified_parent_artifact_ids": sorted(set(rejected_parent_artifact_ids)),
+            "source_candidates_examined": examined,
+            "rejected_source_artifact_count": len(rejected_source_artifacts),
+            "rejected_source_artifacts": list(rejected_source_artifacts),
+            "source_candidate_fallback_used": candidate_index > 0,
+        }
+        if first_verified is None:
+            first_verified = (report, raw, candidate_index)
+        # An older archive may have a newer source-observation clock or a
+        # more complete metadata-only gate than a later, stale upload. Keep
+        # searching until a fully fresh candidate is found.
+        if report["fresh_for_new_quote"]:
+            selected = (report, raw, candidate_index)
+            break
+
+    if selected is None:
+        selected = first_verified
+
+    if selected is None:
+        archive_rejections = [
+            item for item in rejected_source_artifacts if item.get("stage") == "archive"
+        ]
+        if archive_rejections:
+            detail = archive_rejections[-1]
+            raise ValueError(
+                "no fully verified current-form source archive; "
+                f"rejected {len(archive_rejections)} archive candidate(s): "
+                f"{detail['error_type']}: {detail['reason']}"
+            ) from last_archive_error
         return {
             "status": "NO_SOURCE_ARCHIVE",
             "verified": False,
@@ -660,57 +794,28 @@ def verify_latest_source_archive(
                 "NO_VERIFIED_SUCCESSFUL_SOURCE_PARENT" if rejected_parent_artifact_ids else None
             ),
             "unverified_parent_artifact_count": len(rejected_parent_artifact_ids),
-            "unverified_parent_artifact_ids": sorted(rejected_parent_artifact_ids),
+            "unverified_parent_artifact_ids": sorted(set(rejected_parent_artifact_ids)),
+            "source_candidates_examined": examined,
+            "rejected_source_artifact_count": len(rejected_source_artifacts),
+            "rejected_source_artifacts": rejected_source_artifacts,
+            "source_candidate_fallback_used": False,
             "target_outcomes_read": False,
             "target_outcomes_scored": False,
             "paid_provider_calls": 0,
             "supabase_writes": 0,
         }
-    raw = load_archive(archive["artifact_id"])
-    history, source_meta = verify_and_load_archive(raw, archive, parent)
+
+    report, raw, selected_index = selected
+    report["source_candidates_examined"] = examined
+    report["rejected_source_artifact_count"] = len(rejected_source_artifacts)
+    report["rejected_source_artifacts"] = rejected_source_artifacts
+    report["unverified_parent_artifact_count"] = len(rejected_parent_artifact_ids)
+    report["unverified_parent_artifact_ids"] = sorted(set(rejected_parent_artifact_ids))
+    report["source_candidate_fallback_used"] = selected_index > 0
     if write_sources_to is not None:
         write_sources_to.mkdir(parents=True, exist_ok=True)
-        (write_sources_to / f"current-form-source-artifact-{archive['artifact_id']}.zip").write_bytes(raw)
-    latest_source = parse_utc(source_meta["latest_source_observed_at_utc"])
-    age_seconds = (now - latest_source).total_seconds()
-    if age_seconds < 0:
-        raise ValueError("source archive contains a source timestamp after verification time")
-    manifest = source_meta["manifest"]
-    gate_freshness = _current_gate_freshness(current_gate_identities, source_meta)
-    return {
-        "status": "VERIFIED",
-        "verified": True,
-        "verified_at_utc": now.isoformat(),
-        "artifact_id": archive["artifact_id"],
-        "artifact_sha256": source_meta["artifact_sha256"],
-        "source_archive_created_at_utc": source_meta["archive_created_at_utc"],
-        "latest_source_observed_at_utc": source_meta["latest_source_observed_at_utc"],
-        "source_age_seconds_at_verification": int(age_seconds),
-        "fresh_for_new_quote": (
-            age_seconds <= MAX_SOURCE_AGE.total_seconds() and gate_freshness["fresh"]
-        ),
-        "fresh_for_current_feature_gate": gate_freshness["fresh"],
-        "feature_source_gate_freshness": gate_freshness,
-        "parent_run": source_meta["parent_run"],
-        "feature_input_gate_count": manifest["feature_source_gate"]["observed_completed_primary_events"],
-        "feature_source_gate_attestation": source_meta["feature_source_gate_attestation"],
-        "historical_old_season_file_count": manifest["historical_old_season_file_count"],
-        "source_file_count": manifest["source_file_count"],
-        "historical_match_rows": source_meta["historical_match_rows"],
-        "current_season_history_rows": source_meta["current_season_history_rows"],
-        "current_season_latest_completed_fixture_date": source_meta[
-            "current_season_latest_completed_fixture_date"
-        ],
-        "candidate_sha256": FROZEN_SHA,
-        "target_outcomes_read": False,
-        "target_outcomes_scored": False,
-        "target_outcome_evaluation_gate_open": False,
-        "paid_provider_calls": 0,
-        "supabase_writes": 0,
-        "no_bet": True,
-        "unverified_parent_artifact_count": len(rejected_parent_artifact_ids),
-        "unverified_parent_artifact_ids": sorted(rejected_parent_artifact_ids),
-    }
+        (write_sources_to / f"current-form-source-artifact-{report['artifact_id']}.zip").write_bytes(raw)
+    return report
 
 
 def _latest_quotes(quotes: list[dict], *, now: datetime) -> list[dict]:
