@@ -533,6 +533,7 @@ def capture_forward_with_source_preflight(
     rejected_sources: list[dict] = []
     for archive in candidates:
         artifact_id = archive.get("artifact_id")
+        stage = "parent_run"
         try:
             parent = verify_parent_run(archive, now)
             if not isinstance(parent, dict):
@@ -548,9 +549,11 @@ def capture_forward_with_source_preflight(
             if not parent_completed < now:
                 raise ValueError("source parent workflow not complete before quote read")
 
+            stage = "archive_download"
             raw = load_archive(artifact_id)
             if not isinstance(raw, bytes) or not raw:
                 raise ValueError("source archive loader returned no bytes before quote read")
+            stage = "archive_validation"
             with TemporaryDirectory() as temporary_directory:
                 archive_path = Path(temporary_directory) / "original-v2-source.zip"
                 archive_path.write_bytes(raw)
@@ -571,9 +574,25 @@ def capture_forward_with_source_preflight(
                 or proof.get("no_bet") is not True
             ):
                 raise ValueError("original V2 source archive preflight is incomplete")
+        except requests.exceptions.HTTPError as exc:
+            status_code = getattr(getattr(exc, "response", None), "status_code", None)
+            # A candidate-specific 404 means this parent run or artifact no
+            # longer exists. It is safe to try an older independently
+            # verifiable candidate. Authorization, rate-limit, timeout, 5xx,
+            # and every other operational HTTP failure remain fatal.
+            if status_code != 404:
+                raise
+            rejected_sources.append({
+                "artifact_id": artifact_id,
+                "stage": stage,
+                "http_status": status_code,
+                "reason": "GitHub source parent or artifact returned HTTP 404",
+            })
+            continue
         except (ValueError, zipfile.BadZipFile) as exc:
             rejected_sources.append({
                 "artifact_id": artifact_id,
+                "stage": stage,
                 "reason": str(exc),
             })
             continue
