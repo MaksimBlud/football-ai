@@ -1283,3 +1283,264 @@ def test_original_forward_public_entrypoints_require_direct_access_before_io(
 
     assert events == ["access"]
     assert not (tmp_path / "must-not-be-created").exists()
+
+
+
+def test_original_forward_skips_guarded_runtime_http_404_parent_and_uses_older_verified_archive():
+    raw, metadata = make_source_archive()
+    older = metadata[0]
+    newer = {
+        **older,
+        "artifact_id": 124,
+        "run_id": 457,
+        "head_sha": "b" * 40,
+        "created_at": datetime(2026, 10, 13, 15, 2, tzinfo=timezone.utc),
+    }
+    events = []
+
+    def verify_parent(archive, _as_of):
+        events.append(("parent", archive["artifact_id"]))
+        if archive["artifact_id"] == 124:
+            raise RuntimeError("GitHub API request failed with HTTP 404")
+        return fake_verified_parent_run(archive, NOW)
+
+    def load_archive(artifact_id):
+        events.append(("archive", artifact_id))
+        return raw
+
+    def fetch_quotes():
+        events.append(("quotes", None))
+        return [quote()]
+
+    report = capture_forward_with_source_preflight(
+        [newer, older],
+        as_of_utc=NOW,
+        fetch_quotes=fetch_quotes,
+        load_archive=load_archive,
+        verify_parent_run=verify_parent,
+    )
+
+    assert events == [
+        ("parent", 124), ("parent", 123),
+        ("archive", 123), ("quotes", None),
+    ]
+    assert report["source_preflight"]["source_artifact_id"] == 123
+    rejected = report["source_preflight"]["rejected_source_artifacts"][0]
+    assert rejected["artifact_id"] == 124
+    assert rejected["stage"] == "parent_run"
+    assert rejected["http_status"] == 404
+    assert report["source_preflight"]["quotes_read_after_source_preflight"] is True
+
+
+def test_original_forward_propagates_guarded_runtime_http_503_parent_before_quotes():
+    raw, metadata = make_source_archive()
+    older = metadata[0]
+    newer = {
+        **older,
+        "artifact_id": 124,
+        "run_id": 457,
+        "head_sha": "b" * 40,
+        "created_at": datetime(2026, 10, 13, 15, 2, tzinfo=timezone.utc),
+    }
+    events = []
+
+    def verify_parent(archive, _as_of):
+        events.append(("parent", archive["artifact_id"]))
+        if archive["artifact_id"] == 124:
+            raise RuntimeError("GitHub API request failed with HTTP 503")
+        return fake_verified_parent_run(archive, NOW)
+
+    def load_archive(artifact_id):
+        events.append(("archive", artifact_id))
+        return raw
+
+    def fetch_quotes():
+        events.append(("quotes", None))
+        return [quote()]
+
+    with pytest.raises(RuntimeError, match="HTTP 503"):
+        capture_forward_with_source_preflight(
+            [newer, older],
+            as_of_utc=NOW,
+            fetch_quotes=fetch_quotes,
+            load_archive=load_archive,
+            verify_parent_run=verify_parent,
+        )
+
+    assert events == [("parent", 124)]
+
+
+
+def _rewrite_source_archive_member(raw, member_name, replacement):
+    with zipfile.ZipFile(BytesIO(raw), "r") as source:
+        members = {name: source.read(name) for name in source.namelist()}
+    members[member_name] = replacement
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w") as target:
+        for name, payload in members.items():
+            target.writestr(name, payload)
+    return buffer.getvalue()
+
+
+def _deflate_corrupt_member(raw, member_name):
+    with zipfile.ZipFile(BytesIO(raw), "r") as source:
+        members = {name: source.read(name) for name in source.namelist()}
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as target:
+        for name, payload in members.items():
+            target.writestr(name, payload, compress_type=zipfile.ZIP_DEFLATED)
+    damaged = bytearray(buffer.getvalue())
+    cursor = 0
+    while True:
+        header = damaged.find(b"PK\x03\x04", cursor)
+        if header < 0:
+            raise AssertionError(f"ZIP member not found: {member_name}")
+        filename_length = int.from_bytes(damaged[header + 26:header + 28], "little")
+        extra_length = int.from_bytes(damaged[header + 28:header + 30], "little")
+        compressed_size = int.from_bytes(damaged[header + 18:header + 22], "little")
+        filename = bytes(damaged[header + 30:header + 30 + filename_length]).decode("utf-8")
+        data_start = header + 30 + filename_length + extra_length
+        if filename == member_name:
+            method = int.from_bytes(damaged[header + 8:header + 10], "little")
+            assert method == zipfile.ZIP_DEFLATED
+            damaged[data_start] ^= 0xFF
+            return bytes(damaged)
+        cursor = data_start + compressed_size
+
+
+def _capture_with_newer_invalid_archive(raw, invalid_raw, metadata):
+    older = metadata[0]
+    newer = {
+        **older,
+        "artifact_id": 124,
+        "run_id": 457,
+        "head_sha": "b" * 40,
+        "created_at": datetime(2026, 10, 13, 15, 2, tzinfo=timezone.utc),
+        "sha256": hashlib.sha256(invalid_raw).hexdigest(),
+    }
+    events = []
+
+    def verify_parent(archive, _as_of):
+        events.append(("parent", archive["artifact_id"]))
+        if archive["artifact_id"] == 124:
+            return {
+                "run_completed_at_utc": "2026-10-13T15:03:00Z",
+                "workflow_path": SOURCE_WORKFLOW_PATH,
+                "run_id": archive["run_id"],
+                "run_head_sha": archive["head_sha"],
+            }
+        return fake_verified_parent_run(archive, NOW)
+
+    def load_archive(artifact_id):
+        events.append(("archive", artifact_id))
+        return invalid_raw if artifact_id == 124 else raw
+
+    def fetch_quotes():
+        events.append(("quotes", None))
+        return [quote()]
+
+    report = capture_forward_with_source_preflight(
+        [newer, older],
+        as_of_utc=NOW,
+        fetch_quotes=fetch_quotes,
+        load_archive=load_archive,
+        verify_parent_run=verify_parent,
+    )
+    return report, events
+
+
+def test_original_forward_falls_back_after_matching_sha_deflate_corruption():
+    raw, metadata = make_source_archive()
+    damaged = _deflate_corrupt_member(raw, ARCHIVE_REPORT)
+    report, events = _capture_with_newer_invalid_archive(raw, damaged, metadata)
+
+    assert events == [
+        ("parent", 124), ("archive", 124),
+        ("parent", 123), ("archive", 123), ("quotes", None),
+    ]
+    assert report["source_preflight"]["source_artifact_id"] == 123
+    rejected = report["source_preflight"]["rejected_source_artifacts"][0]
+    assert rejected["artifact_id"] == 124
+    assert rejected["stage"] == "archive_validation"
+    assert "decompress" in rejected["reason"].lower()
+
+
+def test_original_forward_falls_back_after_invalid_utf8_manifest():
+    raw, metadata = make_source_archive()
+    invalid = _rewrite_source_archive_member(raw, ARCHIVE_REPORT, b"\xff")
+    report, events = _capture_with_newer_invalid_archive(raw, invalid, metadata)
+
+    assert events == [
+        ("parent", 124), ("archive", 124),
+        ("parent", 123), ("archive", 123), ("quotes", None),
+    ]
+    assert report["source_preflight"]["source_artifact_id"] == 123
+    rejected = report["source_preflight"]["rejected_source_artifacts"][0]
+    assert rejected["artifact_id"] == 124
+    assert rejected["stage"] == "archive_validation"
+    assert "utf-8" in rejected["reason"].lower()
+
+
+def test_original_forward_falls_back_after_malformed_csv_parser_error():
+    raw, metadata = make_source_archive()
+    with zipfile.ZipFile(BytesIO(raw), "r") as source:
+        members = {name: source.read(name) for name in source.namelist()}
+    report_json = json.loads(members[ARCHIVE_REPORT])
+    audit = report_json["public_source_files"][0]
+    csv_name = SOURCE_DIR + audit["archived_source_name"]
+    year = 2000 + int(audit["season_code"][:2])
+    malformed_csv = (
+        "Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HC,AC,HY,AY,HR,AR\n"
+        f"01/10/{year},Juventus,Napoli,2,1,H,7,3,2,1,0,0\n"
+        f"02/10/{year},Juventus,Napoli,2,1,H,7,3,2,1,0,0,EXTRA\n"
+    ).encode("utf-8")
+    members[csv_name] = malformed_csv
+    audit["csv_sha256"] = hashlib.sha256(malformed_csv).hexdigest()
+    audit["completed_source_rows"] = 2
+    members[ARCHIVE_REPORT] = json.dumps(report_json).encode("utf-8")
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w") as target:
+        for name, payload in members.items():
+            target.writestr(name, payload)
+    invalid = buffer.getvalue()
+
+    report, events = _capture_with_newer_invalid_archive(raw, invalid, metadata)
+
+    assert events == [
+        ("parent", 124), ("archive", 124),
+        ("parent", 123), ("archive", 123), ("quotes", None),
+    ]
+    assert report["source_preflight"]["source_artifact_id"] == 123
+    rejected = report["source_preflight"]["rejected_source_artifacts"][0]
+    assert rejected["artifact_id"] == 124
+    assert rejected["stage"] == "archive_validation"
+    assert "error tokenizing data" in rejected["reason"].lower()
+
+
+def test_verify_source_run_preserves_guarded_github_parent_404_runtime_error():
+    archive = {"run_id": 456, "head_sha": "a" * 40}
+    url = f"{forward_capture_module.GITHUB_API}/actions/runs/456"
+    response = forward_capture_module.requests.Response()
+    response.status_code = 404
+    response.url = url
+    calls = []
+
+    def get(requested_url, **kwargs):
+        calls.append((requested_url, kwargs))
+        return response
+
+    with pytest.raises(
+        RuntimeError,
+        match=r"^GitHub API request failed with HTTP 404$",
+    ):
+        verify_source_run(
+            archive,
+            quote_time=NOW,
+            token="test-token",
+            get=get,
+        )
+
+    assert len(calls) == 1
+    assert calls[0][0] == url
+    assert calls[0][1]["allow_redirects"] is False
+    assert calls[0][1]["timeout"] == 30
