@@ -300,6 +300,15 @@ def build_opening_prequote_manifest(
     still required; this function never marks source_before_quote_verified true.
     """
     source_adapter._assert_rights_approved()
+    if source_capture_manifest.get("api_plan") != "free":
+        raise PermissionError("only the $0 Free source archive is accepted")
+    if (
+        source_capture_manifest.get("target_outcomes_read") is not False
+        or source_capture_manifest.get("target_outcomes_scored") is not False
+        or source_capture_manifest.get("paid_provider_calls") != 0
+        or source_capture_manifest.get("supabase_writes") != 0
+    ):
+        raise PermissionError("source archive violates the no-outcome/no-paid-call/no-write contract")
 
     source_archive_dir = source_adapter._require_private_directory(
         Path(source_archive_dir), "raw source archive"
@@ -327,8 +336,12 @@ def build_opening_prequote_manifest(
         raise ValueError("raw opening-odds response is not valid UTF-8 JSON") from exc
     if not isinstance(payload, dict) or payload.get("success") != 1:
         raise ValueError("provider response must have success=1")
+    if set(payload) - {"success", "data"}:
+        raise ValueError("opening-odds response contains unapproved top-level fields")
     data = payload.get("data")
-    if not isinstance(data, dict) or str(data.get("fixture_id")) != fixture_id:
+    if not isinstance(data, dict) or set(data) - {"fixture_id", "bookmakers"}:
+        raise ValueError("opening-odds response contains unapproved data fields")
+    if str(data.get("fixture_id")) != fixture_id:
         raise ValueError("opening-odds response fixture_id does not match target metadata")
     bookmakers = data.get("bookmakers")
     if not isinstance(bookmakers, list):
