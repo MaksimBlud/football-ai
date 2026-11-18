@@ -352,3 +352,28 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert report["target_outcome_evaluation_gate"]["outcome_gate_open"] is False
     assert report["paid_provider_calls"] == report["supabase_writes"] == 0
     assert report["model_refit_or_promotion"] is False
+
+
+def test_live_serie_a_metadata_shape_reconciles_113_raw_to_110_canonical_identities():
+    rows = event_rows(110)
+    rows[0] = {"match_date": "2026-08-23", "home_team": "Atalanta", "away_team": "Sassuolo"}
+    rows[1] = {"match_date": "2026-08-31", "home_team": "Atalanta", "away_team": "Bologna"}
+    rows[2] = {"match_date": "2026-09-05", "home_team": "AS Roma", "away_team": "Atalanta"}
+    rows[-1]["match_date"] = "2026-11-17"
+    rows.extend([
+        {"match_date": "2026-08-23", "home_team": "Atalanta BC", "away_team": "Sassuolo"},
+        {"match_date": "2026-08-31", "home_team": "Atalanta BC", "away_team": "Bologna"},
+        {"match_date": "2026-09-05", "home_team": "AS Roma", "away_team": "Atalanta BC"},
+    ])
+
+    audit = summarize_completed_primary_events(
+        rows, before_date=date(2026, 11, 18)
+    )
+
+    assert audit["raw_metadata_rows"] == 113
+    assert audit["eligible_metadata_rows_before_cutoff"] == 113
+    assert audit["raw_unique_fixture_identities"] == 113
+    assert audit["canonical_unique_fixture_identities"] == 110
+    assert audit["exact_duplicate_metadata_rows"] == 0
+    assert audit["alias_collapsed_duplicate_identities"] == 3
+    assert audit["alias_collision_count"] == 3
