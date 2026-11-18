@@ -1964,3 +1964,46 @@ def test_atomic_current_form_forward_falls_back_before_any_saved_quote_read(tmp_
     assert published[0].read_bytes() == raw
     assert report["target_outcomes_read"] is False
     assert report["target_outcomes_scored"] is False
+
+
+
+def test_atomic_current_form_forward_does_not_read_quotes_when_only_fallback_source_is_stale(tmp_path):
+    raw, archives = make_archive()
+    older = archives[0]
+    newer = _newer_archive_metadata(older)
+    events = []
+
+    def verify_parent_run(archive, *, quote_time):
+        events.append(("parent", archive["artifact_id"]))
+        return valid_parent(archive, quote_time=quote_time)
+
+    def load_archive(artifact_id):
+        events.append(("source_bytes", artifact_id))
+        return raw + b"tampered" if artifact_id == newer["artifact_id"] else raw
+
+    def forbidden_quote_read():
+        events.append(("quotes", None))
+        pytest.fail("a stale fallback source must block before the saved-quote reader")
+
+    target = tmp_path / "source-archives"
+    report = capture_forward_with_atomic_sources(
+        [older, newer],
+        as_of_utc=datetime(2026, 10, 20, 6, 40, tzinfo=timezone.utc),
+        fetch_quotes=forbidden_quote_read,
+        load_archive=load_archive,
+        verify_parent_run=verify_parent_run,
+        current_gate_identities=_fixture_current_gate_identities(),
+        write_sources_to=target,
+    )
+
+    assert ("quotes", None) not in events
+    assert report["source_gate_blocked"] == "SOURCE_ARCHIVE_TOO_OLD"
+    assert report["quote_read_skipped"] is True
+    assert report["quotes_seen"] == 0
+    verification = report["latest_source_archive_verification"]
+    assert verification["artifact_id"] == older["artifact_id"]
+    assert verification["source_candidate_fallback_used"] is True
+    assert verification["fresh_for_new_quote"] is False
+    assert not target.exists()
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
