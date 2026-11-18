@@ -32,6 +32,11 @@ class SoccersAPISourceAuditTests(unittest.TestCase):
         self.assertTrue(access["fixture_match_detail_stats_include_available_on_free"])
         self.assertTrue(access["italy_page_claims_free_key_reaches_all_31_italy_competitions"])
         self.assertFalse(access["free_plan_scope_is_consistent_across_pages"])
+        self.assertIn("3 leagues chosen in dashboard", access["free_plan_scope_rule"])
+        self.assertTrue(access["free_plan_statistics_dataset_available"])
+        self.assertTrue(access["free_plan_stats_scope_limited_to_selected_leagues"])
+        self.assertFalse(access["account_entitlement_for_serie_a_verified"])
+        self.assertTrue(access["null_statistics_fields_are_documented_as_normal_coverage_variance"])
 
     def test_feature_coverage_is_candidate_only_not_proven(self):
         coverage = self.rights["coverage"]
