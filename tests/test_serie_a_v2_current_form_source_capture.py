@@ -354,7 +354,8 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert report["model_refit_or_promotion"] is False
 
 
-def test_live_serie_a_metadata_shape_reconciles_113_raw_to_110_canonical_identities():
+# This is a synthetic regression fixture, not a live Supabase query.
+def test_synthetic_metadata_fixture_reconciles_113_raw_to_110_canonical_identities():
     rows = event_rows(110)
     rows[0] = {"match_date": "2026-08-23", "home_team": "Atalanta", "away_team": "Sassuolo"}
     rows[1] = {"match_date": "2026-08-31", "home_team": "Atalanta", "away_team": "Bologna"}
