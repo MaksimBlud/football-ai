@@ -1,4 +1,4 @@
-"""Offline-only Bet365 opening-quote adapter for the unchanged original Serie A V2.
+"""Offline-only Bet365 opening-quote provenance parser for the original Serie A V2.
 
 This module has no HTTP client and never calls a provider, GitHub, Supabase or
 any network. It consumes an already captured private raw odds response, verifies
@@ -6,8 +6,11 @@ its SHA-256 and timestamps, and delegates the unchanged 19-feature calculation
 to the existing 5Dollar source adapter.
 
 Only the Bet365 1X2 opening price is accepted. Closing and in-play prices are
-never read. The checked-in provider-rights manifest remains HOLD, so real use
-fails closed until the existing approval gates are explicitly satisfied.
+never read. The original frozen training loader uses pre-closing B365H/PSH/AvgH
+fields, so this Free-tier opening quote is provenance-only and is explicitly
+not accepted as the model's market input. The checked-in provider-rights
+manifest remains HOLD, so real use fails closed until the existing approval
+gates are explicitly satisfied.
 """
 from __future__ import annotations
 
@@ -19,12 +22,7 @@ from pathlib import Path
 import re
 from urllib.parse import urlparse
 
-import numpy as np
-import pandas as pd
-
 import serie_a_v2_5dollar_source_adapter as source_adapter
-from historical_football_signal_lab import _market_probabilities
-from market_anchor_1x2_v1 import validate_probabilities
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
 
 PROVIDER = "5DollarFootballAPI"
@@ -370,16 +368,6 @@ def build_opening_prequote_manifest(
     if opened_at >= kickoff:
         raise ValueError("Bet365 opening quote must be strictly before kickoff")
 
-    market_row = pd.Series({
-        "B365H": home_odds,
-        "B365D": draw_odds,
-        "B365A": away_odds,
-    })
-    probabilities = np.asarray([_market_probabilities(market_row)], dtype=float)
-    probabilities = validate_probabilities(probabilities)
-    if probabilities.shape != (1, 3):
-        raise ValueError("original market conversion did not return one valid 1X2 probability row")
-
     quote_metadata = {
         "event_id": fixture_id,
         "league": "SERIE_A",
@@ -413,6 +401,7 @@ def build_opening_prequote_manifest(
             "api_plan": "free",
             "bookmaker_slug": "bet365",
             "market_price_stage": "opening",
+            "model_market_contract_match": False,
             "provider_fixture_id": fixture_id,
             "source_capture_run_id": source_capture_manifest["capture_run_id"],
             "source_capture_commit_sha": source_capture_manifest["capture_commit_sha"],
@@ -437,11 +426,12 @@ def build_opening_prequote_manifest(
             "draw": draw_odds,
             "away": away_odds,
         },
-        "market_probabilities": {
-            "home": float(probabilities[0, 0]),
-            "draw": float(probabilities[0, 1]),
-            "away": float(probabilities[0, 2]),
-        },
+        "market_contract_match": False,
+        "market_contract_note": (
+            "Original frozen training uses pre-closing B365H/PSH/AvgH; this "
+            "Free-tier endpoint exposes an opening quote only. These prices "
+            "are provenance-only and must not feed original V2 inference."
+        ),
         "source_before_quote_order_validated": True,
         "source_before_quote_verified": False,
         "source_capture_attestation_required": True,
