@@ -138,6 +138,12 @@ def test_source_capture_default_denies_before_metadata_or_any_source_request(tmp
             history_fetch=forbidden_history,
         )
 
+    with pytest.raises(RuntimeError, match=source_capture.LIVE_ACCESS_ENV):
+        read_completed_primary_event_count(
+            ForbiddenClient(),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+        )
+
     assert calls == []
     assert not output_dir.exists()
 
