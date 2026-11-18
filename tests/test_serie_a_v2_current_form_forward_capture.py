@@ -1763,3 +1763,204 @@ def test_real_current_form_cli_with_no_source_archive_never_creates_client_or_re
     assert report["target_outcomes_read"] is False
     assert report["target_outcomes_scored"] is False
     assert not (tmp_path / "sources").exists()
+
+
+
+def _newer_archive_metadata(older, *, artifact_id=9877, sha256=None):
+    return {
+        **older,
+        "artifact_id": artifact_id,
+        "created_at": older["created_at"] + timedelta(seconds=30),
+        "sha256": sha256 or older["sha256"],
+    }
+
+
+def _synthetic_http_error(status_code):
+    error = forward_capture_module.requests.exceptions.HTTPError(f"HTTP {status_code}")
+    error.response = type("Response", (), {"status_code": status_code})()
+    return error
+
+
+def test_latest_source_verification_skips_newer_bad_digest_and_uses_older_verified_archive(tmp_path):
+    raw, archives = make_archive()
+    older = archives[0]
+    newer = _newer_archive_metadata(older)
+    loaded = []
+
+    def load_archive(artifact_id):
+        loaded.append(artifact_id)
+        return raw + b"tampered" if artifact_id == newer["artifact_id"] else raw
+
+    report = verify_latest_source_archive(
+        [older, newer],
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        load_archive=load_archive,
+        verify_parent_run=valid_parent,
+        current_gate_identities=_fixture_current_gate_identities(),
+        write_sources_to=tmp_path,
+    )
+
+    assert loaded == [newer["artifact_id"], older["artifact_id"]]
+    assert report["status"] == "VERIFIED"
+    assert report["artifact_id"] == older["artifact_id"]
+    assert report["source_candidate_fallback_used"] is True
+    assert report["source_candidates_examined"] == 2
+    assert report["rejected_source_artifact_count"] == 1
+    assert report["rejected_source_artifacts"][0]["artifact_id"] == newer["artifact_id"]
+    assert report["rejected_source_artifacts"][0]["stage"] == "archive"
+    assert report["fresh_for_new_quote"] is True
+    published = list(tmp_path.glob("current-form-source-artifact-*.zip"))
+    assert len(published) == 1
+    assert published[0].name.endswith(f"{older['artifact_id']}.zip")
+    assert published[0].read_bytes() == raw
+
+
+def test_latest_source_verification_skips_newer_corrupt_zip_after_digest_match():
+    raw, archives = make_archive()
+    older = archives[0]
+    corrupt = b"not-a-valid-zip"
+    newer = _newer_archive_metadata(
+        older,
+        sha256=hashlib.sha256(corrupt).hexdigest(),
+    )
+    loaded = []
+
+    def load_archive(artifact_id):
+        loaded.append(artifact_id)
+        return corrupt if artifact_id == newer["artifact_id"] else raw
+
+    report = verify_latest_source_archive(
+        [older, newer],
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        load_archive=load_archive,
+        verify_parent_run=valid_parent,
+        current_gate_identities=_fixture_current_gate_identities(),
+    )
+
+    assert loaded == [newer["artifact_id"], older["artifact_id"]]
+    assert report["artifact_id"] == older["artifact_id"]
+    assert report["source_candidate_fallback_used"] is True
+    assert "BadZipFile" in report["rejected_source_artifacts"][0]["error_type"]
+
+
+def test_latest_source_verification_skips_missing_newer_artifact_but_not_transient_http_errors():
+    raw, archives = make_archive()
+    older = archives[0]
+    newer = _newer_archive_metadata(older)
+    loaded = []
+
+    def missing_then_older(artifact_id):
+        loaded.append(artifact_id)
+        if artifact_id == newer["artifact_id"]:
+            raise _synthetic_http_error(404)
+        return raw
+
+    report = verify_latest_source_archive(
+        [older, newer],
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        load_archive=missing_then_older,
+        verify_parent_run=valid_parent,
+        current_gate_identities=_fixture_current_gate_identities(),
+    )
+    assert loaded == [newer["artifact_id"], older["artifact_id"]]
+    assert report["artifact_id"] == older["artifact_id"]
+    assert report["source_candidate_fallback_used"] is True
+
+    transient_calls = []
+
+    def transient_then_older(artifact_id):
+        transient_calls.append(artifact_id)
+        if artifact_id == newer["artifact_id"]:
+            raise _synthetic_http_error(503)
+        return raw
+
+    with pytest.raises(forward_capture_module.requests.exceptions.HTTPError):
+        verify_latest_source_archive(
+            [older, newer],
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            load_archive=transient_then_older,
+            verify_parent_run=valid_parent,
+            current_gate_identities=_fixture_current_gate_identities(),
+        )
+    assert transient_calls == [newer["artifact_id"]]
+
+
+def test_per_quote_forward_skips_newer_bad_digest_and_uses_older_prequote_archive():
+    raw, archives = make_archive()
+    older = archives[0]
+    newer = _newer_archive_metadata(older)
+    loaded = []
+
+    def load_archive(artifact_id):
+        loaded.append(artifact_id)
+        return raw + b"tampered" if artifact_id == newer["artifact_id"] else raw
+
+    report = prepare_forward_capture(
+        [quote()],
+        [older, newer],
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        load_archive=load_archive,
+        verify_parent_run=valid_parent,
+    )
+
+    assert loaded == [newer["artifact_id"], older["artifact_id"]]
+    assert report["v2_current_form_shadow_captured"] == 1
+    row = report["rows"][0]
+    assert row["status"] == "CURRENT_FORM_V2_SHADOW_CAPTURED_PREKICKOFF"
+    assert row["source_artifact_id"] == older["artifact_id"]
+    assert row["source_candidate_fallback_used"] is True
+    assert row["source_candidates_examined"] == 2
+    assert row["rejected_source_artifacts"][0]["artifact_id"] == newer["artifact_id"]
+    assert row["source_artifact_sha256"] == hashlib.sha256(raw).hexdigest()
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
+    assert report["paid_provider_calls"] == 0
+    assert report["production_or_supabase_writes"] == 0
+
+
+def test_atomic_current_form_forward_falls_back_before_any_saved_quote_read(tmp_path):
+    raw, archives = make_archive()
+    older = archives[0]
+    newer = _newer_archive_metadata(older)
+    events = []
+    raw_cache = {}
+
+    def verify_parent_run(archive, *, quote_time):
+        events.append(("parent", archive["artifact_id"]))
+        return valid_parent(archive, quote_time=quote_time)
+
+    def load_archive(artifact_id):
+        if artifact_id not in raw_cache:
+            events.append(("source_bytes", artifact_id))
+            raw_cache[artifact_id] = (
+                raw + b"tampered" if artifact_id == newer["artifact_id"] else raw
+            )
+        return raw_cache[artifact_id]
+
+    def fetch_quotes():
+        events.append(("quotes", None))
+        return [quote()]
+
+    target = tmp_path / "source-archives"
+    report = capture_forward_with_atomic_sources(
+        [older, newer],
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        fetch_quotes=fetch_quotes,
+        load_archive=load_archive,
+        verify_parent_run=verify_parent_run,
+        current_gate_identities=_fixture_current_gate_identities(),
+        write_sources_to=target,
+    )
+
+    quote_index = events.index(("quotes", None))
+    assert quote_index > events.index(("source_bytes", newer["artifact_id"]))
+    assert quote_index > events.index(("source_bytes", older["artifact_id"]))
+    assert report["quote_read_skipped"] is False
+    assert report["source_gate_blocked"] is None
+    assert report["v2_current_form_shadow_captured"] == 1
+    assert report["rows"][0]["source_artifact_id"] == older["artifact_id"]
+    published = list(target.glob("current-form-source-artifact-*.zip"))
+    assert len(published) == 1
+    assert published[0].read_bytes() == raw
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
