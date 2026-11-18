@@ -1,6 +1,15 @@
 name: Original V2 Attestation Fallback Branch Validation
 
 on:
+  pull_request:
+    branches:
+      - research/v2-original-attestation-fallback-negative-tests-20261118-run11
+    paths:
+      - "serie_a_v2_attest_real_source.py"
+      - "tests/test_serie_a_v2_attest_real_source.py"
+      - "serie_a_v2_forward_capture.py"
+      - "tests/test_serie_a_v2_forward_capture.py"
+      - ".github/workflows/v2-original-attestation-fallback-branch-validation.yml"
   push:
     branches:
       - research/v2-original-attestation-fallback-negative-tests-20261118-run11
