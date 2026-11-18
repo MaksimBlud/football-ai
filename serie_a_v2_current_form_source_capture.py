@@ -16,6 +16,7 @@ import hashlib
 from io import BytesIO
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -102,34 +103,104 @@ def _canonical_team(value: Any) -> str:
     return V2_ONLY_ALIASES.get(known, known)
 
 
-def count_unique_completed_primary_events(
+def summarize_completed_primary_events(
     rows: list[Mapping[str, Any]], *, before_date: date
-) -> int:
-    """Count fixture identities only; never request or inspect goal/result fields."""
-    unique: set[tuple[str, str, str]] = set()
+) -> dict[str, Any]:
+    """Audit raw and canonical fixture identities using metadata fields only."""
+    raw_unique: set[tuple[str, str, str]] = set()
+    canonical_unique: set[tuple[str, str, str]] = set()
+    raw_variants_by_canonical: dict[
+        tuple[str, str, str], set[tuple[str, str]]
+    ] = {}
+    # One unordered team pair on one date cannot count twice with reversed
+    # home/away orientation. Normalize aliases before this check so an
+    # Atalanta / Atalanta BC spelling change cannot bypass the event gate.
+    orientation_by_unordered_pair: dict[tuple[str, str, str], tuple[str, str]] = {}
+    eligible_rows = 0
+
     for row in rows:
         match_date = row.get("match_date")
+        if isinstance(match_date, datetime):
+            raise ValueError("primary event date must be date-only, not a timestamp")
         if isinstance(match_date, date):
             parsed_date = match_date
         elif isinstance(match_date, str):
+            if re.fullmatch(r"\d{4}-\d{2}-\d{2}", match_date) is None:
+                raise ValueError("primary event date must be canonical YYYY-MM-DD")
             try:
-                parsed_date = date.fromisoformat(match_date[:10])
+                parsed_date = date.fromisoformat(match_date)
             except ValueError as exc:
                 raise ValueError("invalid primary event date in gate metadata") from exc
         else:
             raise ValueError("missing primary event date in gate metadata")
+
         if parsed_date >= before_date:
             continue
-        home = _canonical_team(row.get("home_team"))
-        away = _canonical_team(row.get("away_team"))
+        raw_home_value = row.get("home_team")
+        raw_away_value = row.get("away_team")
+        if not isinstance(raw_home_value, str) or not raw_home_value.strip():
+            raise ValueError("completed primary event has an empty team identity")
+        if not isinstance(raw_away_value, str) or not raw_away_value.strip():
+            raise ValueError("completed primary event has an empty team identity")
+        raw_home, raw_away = raw_home_value.strip(), raw_away_value.strip()
+        home, away = _canonical_team(raw_home), _canonical_team(raw_away)
         if home == away:
             raise ValueError("invalid primary event identity in gate metadata")
-        unique.add((parsed_date.isoformat(), home, away))
-    return len(unique)
+
+        date_key = parsed_date.isoformat()
+        unordered_key = (date_key, *sorted((home, away)))
+        previous_orientation = orientation_by_unordered_pair.get(unordered_key)
+        if previous_orientation is not None and previous_orientation != (home, away):
+            raise ValueError("reversed duplicate primary event identity in gate metadata")
+        orientation_by_unordered_pair[unordered_key] = (home, away)
+
+        raw_unique.add((date_key, raw_home, raw_away))
+        canonical_key = (date_key, home, away)
+        canonical_unique.add(canonical_key)
+        raw_variants_by_canonical.setdefault(canonical_key, set()).add((raw_home, raw_away))
+        eligible_rows += 1
+
+    alias_collision_examples = []
+    for (match_date, home, away), variants in sorted(raw_variants_by_canonical.items()):
+        if len(variants) > 1:
+            alias_collision_examples.append({
+                "match_date": match_date,
+                "canonical_home_team": home,
+                "canonical_away_team": away,
+                "raw_team_identity_variants": [
+                    {"home_team": raw_home, "away_team": raw_away}
+                    for raw_home, raw_away in sorted(variants)
+                ],
+            })
+
+    raw_unique_count = len(raw_unique)
+    canonical_unique_count = len(canonical_unique)
+    return {
+        "raw_metadata_rows": len(rows),
+        "eligible_metadata_rows_before_cutoff": eligible_rows,
+        "metadata_rows_on_or_after_cutoff": len(rows) - eligible_rows,
+        "raw_unique_fixture_identities": raw_unique_count,
+        "canonical_unique_fixture_identities": canonical_unique_count,
+        "exact_duplicate_metadata_rows": eligible_rows - raw_unique_count,
+        "alias_collapsed_duplicate_identities": raw_unique_count - canonical_unique_count,
+        "alias_collision_count": len(alias_collision_examples),
+        "alias_collision_examples": alias_collision_examples[:20],
+    }
 
 
-def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
-    """Read only event date/team metadata; no goals, result or settlement columns."""
+def count_unique_completed_primary_events(
+    rows: list[Mapping[str, Any]], *, before_date: date
+) -> int:
+    """Count canonical fixture identities only; never inspect score/result fields."""
+    return summarize_completed_primary_events(
+        rows, before_date=before_date
+    )["canonical_unique_fixture_identities"]
+
+
+def read_completed_primary_event_summary(
+    client: Any, *, now: datetime
+) -> dict[str, Any]:
+    """Read and audit only event date/team metadata; never read score/result fields."""
     require_live_access_allowed()
     if now.tzinfo is None:
         raise ValueError("feature-source gate clock must be timezone-aware")
@@ -157,7 +228,16 @@ def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
         start += page_size
         if start > 10000:
             raise ValueError("Supabase feature-source gate pagination exceeded safety bound")
-    return count_unique_completed_primary_events(rows, before_date=now.astimezone(timezone.utc).date())
+    return summarize_completed_primary_events(
+        rows, before_date=now.astimezone(timezone.utc).date()
+    )
+
+
+def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
+    """Compatibility wrapper returning the canonical completed-event count."""
+    return read_completed_primary_event_summary(
+        client, now=now
+    )["canonical_unique_fixture_identities"]
 
 
 def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[pd.DataFrame, int]:
@@ -232,7 +312,8 @@ def capture_source_archive(
         raise ValueError("source capture clock must be timezone-aware")
     at = now.astimezone(timezone.utc)
     preregistered_gate = validate_preregistered_outcome_read_gate()
-    gate_count = read_completed_primary_event_count(client, now=at)
+    gate_identity_audit = read_completed_primary_event_summary(client, now=at)
+    gate_count = gate_identity_audit["canonical_unique_fixture_identities"]
     if not outcome_read_permitted(gate_count):
         raise RuntimeError(
             "current-form feature-source gate closed by preregistered V2 outcome-read gate: "
@@ -294,6 +375,7 @@ def capture_source_archive(
             "checked_at_utc": at.isoformat(),
             "metadata_fields_read": ["match_date", "home_team", "away_team"],
             "score_or_result_fields_selected_for_gate": False,
+            "identity_audit": gate_identity_audit,
             "passed": outcome_read_permitted(gate_count),
         },
         "feature_source_gate": {
@@ -305,6 +387,7 @@ def capture_source_archive(
             "checked_at_utc": at.isoformat(),
             "metadata_fields_read": ["match_date", "home_team", "away_team"],
             "score_or_result_fields_selected_for_gate": False,
+            "identity_audit": gate_identity_audit,
             "uses_exact_preregistered_outcome_read_gate": True,
             "protocol_blob_sha1": preregistered_gate["protocol_blob_sha1"],
             "passed": outcome_read_permitted(gate_count),

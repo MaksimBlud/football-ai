@@ -15,6 +15,7 @@ on:
     branches:
       - research/v2-preregistered-outcome-gate-source-capture-20261118-run11
       - research/v2-current-form-cli-default-deny-20261118-run11
+      - research/v2-current-form-gate-identity-audit-on-876-20261118-run11
     paths:
       - "serie_a_v2_current_form_source_capture.py"
       - "tests/test_serie_a_v2_current_form_source_capture.py"

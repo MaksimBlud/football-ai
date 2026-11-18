@@ -20,6 +20,8 @@ from serie_a_v2_current_form_source_capture import (
     capture_source_archive,
     count_unique_completed_primary_events,
     read_completed_primary_event_count,
+    read_completed_primary_event_summary,
+    summarize_completed_primary_events,
     validate_current_season_csv,
     validate_preregistered_outcome_read_gate,
 )
@@ -100,6 +102,77 @@ def test_gate_counts_unique_primary_fixture_metadata_only_and_normalizes_aliases
     assert count_unique_completed_primary_events(
         rows, before_date=date(2026, 10, 18)
     ) == 2
+    audit = summarize_completed_primary_events(rows, before_date=date(2026, 10, 18))
+    assert audit["raw_metadata_rows"] == 4
+    assert audit["eligible_metadata_rows_before_cutoff"] == 3
+    assert audit["raw_unique_fixture_identities"] == 3
+    assert audit["canonical_unique_fixture_identities"] == 2
+    assert audit["exact_duplicate_metadata_rows"] == 0
+    assert audit["alias_collapsed_duplicate_identities"] == 1
+    assert audit["alias_collision_count"] == 1
+    assert audit["alias_collision_examples"][0]["raw_team_identity_variants"] == [
+        {"home_team": "Atalanta", "away_team": "Juventus"},
+        {"home_team": "Atalanta BC", "away_team": "Juventus"},
+    ]
+
+
+def test_gate_rejects_reversed_duplicate_fixture_after_v2_alias_normalization():
+    rows = [
+        {"match_date": "2026-08-23", "home_team": "Atalanta", "away_team": "Juventus"},
+        {"match_date": "2026-08-23", "home_team": "Juventus", "away_team": "Atalanta BC"},
+    ]
+    with pytest.raises(ValueError, match="reversed duplicate"):
+        summarize_completed_primary_events(
+            rows, before_date=date(2026, 10, 18)
+        )
+
+
+def test_capture_rejects_reversed_duplicate_gate_identity_before_any_source_download(tmp_path):
+    rows = event_rows(30)
+    rows[0] = {"match_date": "2026-08-23", "home_team": "Atalanta", "away_team": "Juventus"}
+    rows[1] = {"match_date": "2026-08-23", "home_team": "Juventus", "away_team": "Atalanta BC"}
+    calls = []
+
+    def forbidden_get(*_args, **_kwargs):
+        calls.append("current-season-source")
+        raise AssertionError("current-season source must not be requested after an ambiguous gate identity")
+
+    def forbidden_history(**_kwargs):
+        calls.append("historical-source")
+        raise AssertionError("historical source must not be requested after an ambiguous gate identity")
+
+    output_dir = tmp_path / "archive"
+    with pytest.raises(ValueError, match="reversed duplicate"):
+        capture_source_archive(
+            output_dir=output_dir,
+            client=FakeQuery(rows),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=forbidden_get,
+            history_fetch=forbidden_history,
+        )
+
+    assert calls == []
+    assert not output_dir.exists()
+
+
+@pytest.mark.parametrize(
+    "bad_date",
+    ["2026-10-01T12:00:00Z", "2026-10-01suffix", "2026-1-1", "20261001"],
+)
+def test_gate_rejects_noncanonical_or_timestamp_fixture_dates(bad_date):
+    with pytest.raises(ValueError, match="canonical YYYY-MM-DD"):
+        summarize_completed_primary_events(
+            [{"match_date": bad_date, "home_team": "Atalanta", "away_team": "Juventus"}],
+            before_date=date(2026, 10, 18),
+        )
+
+
+def test_gate_rejects_datetime_objects_as_fixture_dates():
+    with pytest.raises(ValueError, match="date-only"):
+        summarize_completed_primary_events(
+            [{"match_date": datetime(2026, 10, 1, 12), "home_team": "Atalanta", "away_team": "Juventus"}],
+            before_date=date(2026, 10, 18),
+        )
 
 
 def test_live_feature_gate_query_selects_only_fixture_metadata_not_scores():
@@ -108,6 +181,22 @@ def test_live_feature_gate_query_selects_only_fixture_metadata_not_scores():
         client, now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
     )
     assert count == 30
+    assert client.selected == "match_date,home_team,away_team"
+
+
+def test_live_feature_gate_audit_reports_raw_and_canonical_identity_counts():
+    rows = event_rows(30)
+    rows[0] = {"match_date": "2026-08-01", "home_team": "Atalanta", "away_team": "Gate Away 0"}
+    rows.append({"match_date": "2026-08-01", "home_team": "Atalanta BC", "away_team": "Gate Away 0"})
+    client = FakeQuery(rows)
+    audit = read_completed_primary_event_summary(
+        client, now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+    )
+    assert audit["raw_metadata_rows"] == 31
+    assert audit["raw_unique_fixture_identities"] == 31
+    assert audit["canonical_unique_fixture_identities"] == 30
+    assert audit["alias_collapsed_duplicate_identities"] == 1
+    assert audit["alias_collision_count"] == 1
     assert client.selected == "match_date,home_team,away_team"
 
 
@@ -278,6 +367,9 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     )
     assert report["feature_source_gate"]["passed"] is True
     assert report["feature_source_gate"]["observed_completed_primary_events"] == 30
+    assert report["feature_source_gate"]["identity_audit"]["raw_metadata_rows"] == 30
+    assert report["feature_source_gate"]["identity_audit"]["canonical_unique_fixture_identities"] == 30
+    assert report["feature_source_gate"]["identity_audit"]["alias_collapsed_duplicate_identities"] == 0
     assert report["feature_source_gate"]["score_or_result_fields_selected_for_gate"] is False
     assert report["feature_source_gate"]["uses_exact_preregistered_outcome_read_gate"] is True
     assert report["preregistered_outcome_read_gate"]["passed"] is True
@@ -299,3 +391,47 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert report["target_outcome_evaluation_gate"]["outcome_gate_open"] is False
     assert report["paid_provider_calls"] == report["supabase_writes"] == 0
     assert report["model_refit_or_promotion"] is False
+
+
+# This is a synthetic regression fixture, not a live Supabase query.
+def test_synthetic_metadata_fixture_reconciles_113_raw_to_110_canonical_identities():
+    rows = event_rows(110)
+    rows[0] = {"match_date": "2026-08-23", "home_team": "Atalanta", "away_team": "Sassuolo"}
+    rows[1] = {"match_date": "2026-08-31", "home_team": "Atalanta", "away_team": "Bologna"}
+    rows[2] = {"match_date": "2026-09-05", "home_team": "AS Roma", "away_team": "Atalanta"}
+    rows[-1]["match_date"] = "2026-11-17"
+    rows.extend([
+        {"match_date": "2026-08-23", "home_team": "Atalanta BC", "away_team": "Sassuolo"},
+        {"match_date": "2026-08-31", "home_team": "Atalanta BC", "away_team": "Bologna"},
+        {"match_date": "2026-09-05", "home_team": "AS Roma", "away_team": "Atalanta BC"},
+    ])
+
+    audit = summarize_completed_primary_events(
+        rows, before_date=date(2026, 11, 18)
+    )
+
+    assert audit["raw_metadata_rows"] == 113
+    assert audit["eligible_metadata_rows_before_cutoff"] == 113
+    assert audit["raw_unique_fixture_identities"] == 113
+    assert audit["canonical_unique_fixture_identities"] == 110
+    assert audit["exact_duplicate_metadata_rows"] == 0
+    assert audit["alias_collapsed_duplicate_identities"] == 3
+    assert audit["alias_collision_count"] == 3
+
+
+def test_direct_identity_summary_reader_default_denies_before_supabase_metadata(monkeypatch):
+    monkeypatch.delenv(source_capture.LIVE_ACCESS_ENV, raising=False)
+    calls = []
+
+    class ForbiddenClient:
+        def table(self, *_args, **_kwargs):
+            calls.append("supabase_metadata")
+            raise AssertionError("identity metadata must not be read while live access is disabled")
+
+    with pytest.raises(RuntimeError, match=source_capture.LIVE_ACCESS_ENV):
+        read_completed_primary_event_summary(
+            ForbiddenClient(),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+        )
+
+    assert calls == []
