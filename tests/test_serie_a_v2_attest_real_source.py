@@ -89,7 +89,8 @@ def valid_parent(meta, quote_time, token):
     assert meta["run_id"]==432
     assert quote_time==NOW
     return {"run_completed_at_utc":"2026-10-13T15:05:30+00:00",
-            "workflow_path":SOURCE_WORKFLOW_PATH}
+            "workflow_path":SOURCE_WORKFLOW_PATH,
+            "run_id":meta["run_id"], "run_head_sha":meta["head_sha"]}
 
 
 def test_complete_attestation_proves_actual_zip_contents_without_any_quotes():
@@ -217,3 +218,107 @@ def test_main_blocks_before_github_archive_discovery_when_research_scope_is_deni
     assert report["supabase_writes"] == 0
     assert report["quotes_read"] == 0
     assert report["forecasts_created"] == 0
+
+
+def test_attestation_skips_newer_failed_parent_and_uses_older_verified_archive():
+    raw, meta = source_fixture()
+    older = meta[0]
+    newer = {
+        **older,
+        "artifact_id": 766,
+        "run_id": 433,
+        "head_sha": "b" * 40,
+        "created_at": datetime(2026, 10, 13, 15, 6, tzinfo=timezone.utc),
+    }
+    events = []
+
+    def verify(candidate, quote_time, token):
+        events.append(("verify", candidate["artifact_id"]))
+        if candidate["artifact_id"] == 766:
+            raise ValueError("source artifact parent run is not the verified original V2 collector")
+        return valid_parent(candidate, quote_time, token)
+
+    def load(artifact_id, token):
+        events.append(("load", artifact_id))
+        return raw
+
+    proof = attest_latest_source(
+        token="test-token",
+        now=NOW,
+        discover=lambda **kwargs: [older, newer],
+        load=load,
+        verify_run=verify,
+    )
+
+    assert events == [("verify", 766), ("verify", 765), ("load", 765)]
+    assert proof["source_artifact_id"] == 765
+    assert proof["source_candidate_fallback_used"] is True
+    assert proof["source_candidates_examined"] == 2
+    assert proof["rejected_source_artifacts"][0]["artifact_id"] == 766
+    assert proof["quotes_read"] == proof["forecasts_created"] == 0
+
+
+def test_attestation_skips_newer_bad_digest_and_uses_older_verified_archive():
+    raw, meta = source_fixture()
+    older = meta[0]
+    newer = {
+        **older,
+        "artifact_id": 766,
+        "run_id": 433,
+        "head_sha": "b" * 40,
+        "created_at": datetime(2026, 10, 13, 15, 6, tzinfo=timezone.utc),
+    }
+    events = []
+
+    def verify(candidate, quote_time, token):
+        events.append(("verify", candidate["artifact_id"]))
+        if candidate["artifact_id"] == 766:
+            return {
+                "run_completed_at_utc": "2026-10-13T15:06:30Z",
+                "workflow_path": SOURCE_WORKFLOW_PATH,
+                "run_id": 433,
+                "run_head_sha": "b" * 40,
+            }
+        return valid_parent(candidate, quote_time, token)
+
+    def load(artifact_id, token):
+        events.append(("load", artifact_id))
+        return raw + b"tampered" if artifact_id == 766 else raw
+
+    proof = attest_latest_source(
+        token="test-token",
+        now=NOW,
+        discover=lambda **kwargs: [older, newer],
+        load=load,
+        verify_run=verify,
+    )
+
+    assert events == [
+        ("verify", 766), ("load", 766),
+        ("verify", 765), ("load", 765),
+    ]
+    assert proof["source_artifact_id"] == 765
+    assert proof["source_candidate_fallback_used"] is True
+    assert proof["rejected_source_artifacts"][0]["reason"].endswith("digest mismatch")
+    assert proof["source_archive_sha256_verified"] is True
+
+
+def test_attestation_rejects_parent_that_completed_after_archive_or_after_check_time():
+    raw, meta = source_fixture()
+
+    def late_parent(candidate, quote_time, token):
+        return {
+            "run_completed_at_utc": "2026-10-14T16:00:01Z",
+            "workflow_path": SOURCE_WORKFLOW_PATH,
+            "run_id": candidate["run_id"],
+            "run_head_sha": candidate["head_sha"],
+        }
+
+    with pytest.raises(ValueError, match="no fully verified.*completion time"):
+        attest_latest_source(
+            token="test-token",
+            now=NOW,
+            discover=lambda **kwargs: meta,
+            load=lambda artifact_id, token: raw,
+            verify_run=late_parent,
+        )
