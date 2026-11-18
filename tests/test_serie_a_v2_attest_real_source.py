@@ -322,3 +322,134 @@ def test_attestation_rejects_parent_that_completed_after_archive_or_after_check_
             load=lambda artifact_id, token: raw,
             verify_run=late_parent,
         )
+
+def _http_error_with_status(status_code):
+    from requests import HTTPError
+    from types import SimpleNamespace
+
+    error = HTTPError(f"HTTP {status_code}")
+    error.response = SimpleNamespace(status_code=status_code)
+    return error
+
+
+def _valid_parent_for_candidate(candidate, quote_time, token):
+    from datetime import timedelta
+
+    assert token == "test-token"
+    assert quote_time == NOW
+    completed = candidate["created_at"] + timedelta(seconds=30)
+    return {
+        "run_completed_at_utc": completed.isoformat(),
+        "workflow_path": SOURCE_WORKFLOW_PATH,
+        "run_id": candidate["run_id"],
+        "run_head_sha": candidate["head_sha"],
+    }
+
+
+def _newer_candidate(older, *, digest=None):
+    return {
+        **older,
+        "artifact_id": 766,
+        "run_id": 433,
+        "head_sha": "b" * 40,
+        "sha256": digest or older["sha256"],
+        "created_at": datetime(2026, 10, 13, 15, 6, tzinfo=timezone.utc),
+    }
+
+
+def test_attestation_skips_missing_newer_artifact_404_and_uses_older_verified_archive():
+    raw, meta = source_fixture()
+    older = meta[0]
+    newer = _newer_candidate(older)
+    events = []
+
+    def load(artifact_id, token):
+        events.append(("load", artifact_id))
+        if artifact_id == 766:
+            raise _http_error_with_status(404)
+        return raw
+
+    def verify(candidate, quote_time, token):
+        events.append(("verify", candidate["artifact_id"]))
+        return _valid_parent_for_candidate(candidate, quote_time, token)
+
+    proof = attest_latest_source(
+        token="test-token",
+        now=NOW,
+        discover=lambda **kwargs: [older, newer],
+        load=load,
+        verify_run=verify,
+    )
+
+    assert events == [
+        ("verify", 766), ("load", 766),
+        ("verify", 765), ("load", 765),
+    ]
+    assert proof["source_artifact_id"] == 765
+    assert proof["source_candidate_fallback_used"] is True
+    assert proof["rejected_source_artifacts"][0]["artifact_id"] == 766
+    assert proof["rejected_source_artifacts"][0]["error_type"] == "HTTPError"
+    assert proof["quotes_read"] == proof["forecasts_created"] == 0
+
+
+def test_attestation_does_not_fallback_on_newer_artifact_http_503():
+    raw, meta = source_fixture()
+    older = meta[0]
+    newer = _newer_candidate(older)
+    events = []
+
+    def load(artifact_id, token):
+        events.append(("load", artifact_id))
+        if artifact_id == 766:
+            raise _http_error_with_status(503)
+        return raw
+
+    def verify(candidate, quote_time, token):
+        events.append(("verify", candidate["artifact_id"]))
+        return _valid_parent_for_candidate(candidate, quote_time, token)
+
+    with pytest.raises(Exception) as error:
+        attest_latest_source(
+            token="test-token",
+            now=NOW,
+            discover=lambda **kwargs: [older, newer],
+            load=load,
+            verify_run=verify,
+        )
+
+    from requests import HTTPError
+    assert isinstance(error.value, HTTPError)
+    assert events == [("verify", 766), ("load", 766)]
+
+
+def test_attestation_skips_corrupt_newer_zip_with_matching_digest_and_uses_older():
+    raw, meta = source_fixture()
+    older = meta[0]
+    corrupt = b"not-a-valid-zip-archive"
+    newer = _newer_candidate(older, digest=hashlib.sha256(corrupt).hexdigest())
+    events = []
+
+    def load(artifact_id, token):
+        events.append(("load", artifact_id))
+        return corrupt if artifact_id == 766 else raw
+
+    def verify(candidate, quote_time, token):
+        events.append(("verify", candidate["artifact_id"]))
+        return _valid_parent_for_candidate(candidate, quote_time, token)
+
+    proof = attest_latest_source(
+        token="test-token",
+        now=NOW,
+        discover=lambda **kwargs: [older, newer],
+        load=load,
+        verify_run=verify,
+    )
+
+    assert events == [
+        ("verify", 766), ("load", 766),
+        ("verify", 765), ("load", 765),
+    ]
+    assert proof["source_artifact_id"] == 765
+    assert proof["source_candidate_fallback_used"] is True
+    assert proof["rejected_source_artifacts"][0]["error_type"] == "BadZipFile"
+    assert proof["source_archive_sha256_verified"] is True
