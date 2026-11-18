@@ -26,6 +26,12 @@ from serie_a_v2_current_form_source_capture import (
 from serie_a_v2_live_diagnostic_report import _source_codes
 
 
+@pytest.fixture(autouse=True)
+def allow_synthetic_source_capture(monkeypatch):
+    """Synthetic tests opt in explicitly; production entry points remain default-deny."""
+    monkeypatch.setenv(source_capture.LIVE_ACCESS_ENV, "true")
+
+
 def event_rows(n=30):
     start = date(2026, 8, 1)
     return [
@@ -103,6 +109,43 @@ def test_live_feature_gate_query_selects_only_fixture_metadata_not_scores():
     )
     assert count == 30
     assert client.selected == "match_date,home_team,away_team"
+
+
+def test_source_capture_default_denies_before_metadata_or_any_source_request(tmp_path, monkeypatch):
+    monkeypatch.delenv(source_capture.LIVE_ACCESS_ENV, raising=False)
+    calls = []
+
+    class ForbiddenClient:
+        def table(self, *_args, **_kwargs):
+            calls.append("supabase_metadata")
+            raise AssertionError("Supabase metadata must not be read while live access is disabled")
+
+    def forbidden_get(*_args, **_kwargs):
+        calls.append("current_source_http")
+        raise AssertionError("current-season source must not be requested while live access is disabled")
+
+    def forbidden_history(**_kwargs):
+        calls.append("historical_source_http")
+        raise AssertionError("historical source must not be requested while live access is disabled")
+
+    output_dir = tmp_path / "source-archive"
+    with pytest.raises(RuntimeError, match=source_capture.LIVE_ACCESS_ENV):
+        capture_source_archive(
+            output_dir=output_dir,
+            client=ForbiddenClient(),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=forbidden_get,
+            history_fetch=forbidden_history,
+        )
+
+    with pytest.raises(RuntimeError, match=source_capture.LIVE_ACCESS_ENV):
+        read_completed_primary_event_count(
+            ForbiddenClient(),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+        )
+
+    assert calls == []
+    assert not output_dir.exists()
 
 
 def test_feature_source_gate_is_exactly_the_preregistered_v2_outcome_read_gate():
