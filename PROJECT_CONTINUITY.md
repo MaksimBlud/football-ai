@@ -1,3 +1,18 @@
+## 2026-11-18 20:17 UTC — live metadata-only confirmation of the current-form feature gate
+
+Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. A read-only Supabase query selected only `match_date, home_team, away_team` from `public.league_finished_results` for Serie A 2026/27, dates 2026-07-01 through 2026-11-17. It returned 113 raw rows and 113 raw unique fixture identities. Applying the exact V2-local `Atalanta BC → Atalanta` alias produced **110 canonical unique fixtures**, with exactly three raw-identity collision groups:
+- 2026-08-23: Atalanta / Atalanta BC vs Sassuolo;
+- 2026-08-31: Atalanta / Atalanta BC vs Bologna;
+- 2026-09-05: AS Roma vs Atalanta / Atalanta BC.
+
+This is a **live metadata-only Supabase confirmation**, distinct from #877's synthetic regression fixture. No score, goals, result, settlement or prediction-correctness columns were selected. The 110 canonical fixtures exceed the preregistered 30-event **feature-input** gate; they do not satisfy or open the separate prospective target-outcome evaluation gate.
+
+The source workflow's actual [run 44326186511](https://github.com/MaksimBlud/football-ai/actions/runs/44326186511) on main reported `completed_primary_events=110`, `current_season_completed_prior_day_rows=110`, 10 frozen historical CSVs plus one current-season CSV, candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, zero paid calls and zero Supabase writes. Its artifact is ID `14438015203`, 439,421 bytes, SHA-256 `0d4240f31418e206b36faf9e94d0782212a91cf6d51262c77b0349ab3f7fc852`.
+
+The subsequent actual [current-form forward run 44356799888](https://github.com/MaksimBlud/football-ai/actions/runs/44356799888) verified that exact source artifact and successful main parent before quote inspection; its log reported `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `target_outcomes_read=false`, `target_outcomes_scored=false`, `target_outcome_evaluation_gate_open=false`, `paid_provider_calls=0`, and `production_or_supabase_writes=0`. The forward artifact is ID `14452497083`, 440,589 bytes, SHA-256 `67badae205c4b5d414e3dcf5d79b831b5f8bf4bfc62654893067ca366ce9ea75`. The source artifact was verified, but Football-Data use remains on HOLD pending provider clearance; artifact SHA/time is not permission to use the source for inference. PR #781 remains unmerged and HUMAN-MERGE applies.
+
+A separate read-only pre-match-only query of `public.odds_snapshots` retained only `snapshot_time_utc < commence_time_utc`: Serie A has 620 rows across 63 event IDs, latest snapshot 2026-10-13 14:48:53.04262 UTC; all leagues have zero quotes for future fixtures and zero pre-match snapshots in the preceding 24 hours. No new prospective V2 forecast exists. Original candidate, 19 features, weights, active lambda 0, shadow lambda 1, production files and evaluation gate are unchanged. No target outcomes were read or scored, no paid provider call or Supabase write/DDL occurred.
+
 ## 2026-11-18 — fresh main runtime audit: source artifact exists, no admissible upcoming quotes
 
 Main was re-read at exact SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The current-form and original-forward workflows are present on main. This entry records only verified run metadata and strictly pre-kickoff odds observations; it does not inspect any 2026/27 target outcome values.
