@@ -39,7 +39,7 @@ Official references:
 
 The public repository advertises 2026/27 CSVs for 75 competitions and a daily 00:00 UTC rebuild. It reports uneven coverage: results/fixtures across its catalogue, but shots/fouls/cards and corner totals on only about 19% of result rows; its top-10 corner-half splits have broader coverage. It has no odds, xG, lineups, or play-by-play.
 
-More importantly, the repository describes its compilation as informational, non-commercial use only and says upstream provider terms continue to apply. Its source list includes Football-Data.co.uk, ESPN, FotMob, Soccerway, OpenLigaDB and fixturedownload. The repository does not grant rights that override those upstream providers.
+More importantly, the repository describes its compilation as informational, non-commercial use only and says upstream provider terms continue to apply. Its own generated league index lists Serie A specifically as `fixturedownload + ESPN + fd.co.uk`; the repository README says match statistics come from football-data.co.uk and may lag by a gameweek or two. Therefore the detailed Serie A stat feed is not a new independent source: it inherits the Football-Data restriction above, while ESPN/fixturedownload rights remain separately applicable. The repository does not grant rights that override those upstream providers.
 
 **Decision:** HOLD. The aggregator is not an independently licensed full-coverage source for all 19 frozen V2 features. Its daily GitHub publication time and public CSV SHA alone do not cure upstream rights, per-match coverage gaps, or provider-level provenance.
 
