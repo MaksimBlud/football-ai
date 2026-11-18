@@ -122,7 +122,7 @@ def attest_latest_source(*, token: str, now: datetime, discover=discover_archive
             completed = completed.astimezone(timezone.utc)
             created = archive["created_at"].astimezone(timezone.utc)
             if completed >= at or created > completed:
-                raise ValueError("source parent was not successfully complete after upload and before attestation")
+                raise ValueError("source parent completion time is not strictly after upload and before attestation")
 
             raw = load(artifact_id, token=token)
             if not isinstance(raw, bytes) or not raw:
