@@ -453,3 +453,52 @@ def test_attestation_skips_corrupt_newer_zip_with_matching_digest_and_uses_older
     assert proof["source_candidate_fallback_used"] is True
     assert proof["rejected_source_artifacts"][0]["error_type"] == "BadZipFile"
     assert proof["source_archive_sha256_verified"] is True
+
+@pytest.mark.parametrize("status_code", [404, 503])
+def test_attestation_handles_parent_run_http_errors_before_archive_download(status_code):
+    raw, meta = source_fixture()
+    older = meta[0]
+    newer = _newer_candidate(older)
+    events = []
+
+    def verify(candidate, quote_time, token):
+        events.append(("verify", candidate["artifact_id"]))
+        if candidate["artifact_id"] == 766:
+            raise _http_error_with_status(status_code)
+        return _valid_parent_for_candidate(candidate, quote_time, token)
+
+    def load(artifact_id, token):
+        events.append(("load", artifact_id))
+        return raw
+
+    if status_code == 404:
+        proof = attest_latest_source(
+            token="test-token",
+            now=NOW,
+            discover=lambda **kwargs: [older, newer],
+            load=load,
+            verify_run=verify,
+        )
+        assert events == [
+            ("verify", 766),
+            ("verify", 765),
+            ("load", 765),
+        ]
+        assert proof["source_artifact_id"] == 765
+        assert proof["source_candidate_fallback_used"] is True
+        assert proof["rejected_source_artifacts"][0]["artifact_id"] == 766
+        assert proof["rejected_source_artifacts"][0]["error_type"] == "HTTPError"
+        assert proof["quotes_read"] == proof["forecasts_created"] == 0
+    else:
+        from requests import HTTPError
+
+        with pytest.raises(HTTPError) as error:
+            attest_latest_source(
+                token="test-token",
+                now=NOW,
+                discover=lambda **kwargs: [older, newer],
+                load=load,
+                verify_run=verify,
+            )
+        assert error.value.response.status_code == 503
+        assert events == [("verify", 766)]
