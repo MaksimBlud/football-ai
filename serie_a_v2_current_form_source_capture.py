@@ -47,6 +47,16 @@ REQUIRED_COLUMNS = (
 )
 NUMERIC_COLUMNS = ("FTHG", "FTAG", "HC", "AC", "HY", "AY", "HR", "AR")
 V2_ONLY_ALIASES = {"Atalanta BC": "Atalanta"}
+LIVE_ACCESS_ENV = "MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED"
+
+
+def require_live_access_allowed() -> None:
+    """Fail closed for every live source-capture entry point unless explicitly enabled."""
+    if os.environ.get(LIVE_ACCESS_ENV) != "true":
+        raise RuntimeError(
+            "live current-form source access is disabled; "
+            f"set {LIVE_ACCESS_ENV}=true only after source rights and private storage are cleared"
+        )
 
 
 def validate_preregistered_outcome_read_gate() -> dict[str, Any]:
@@ -216,6 +226,7 @@ def capture_source_archive(
     clock=lambda: datetime.now(timezone.utc),
 ) -> dict:
     """Capture the ten frozen historical seasons plus the gated current-season source."""
+    require_live_access_allowed()
     if now.tzinfo is None:
         raise ValueError("source capture clock must be timezone-aware")
     at = now.astimezone(timezone.utc)
@@ -345,6 +356,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
+    require_live_access_allowed()
     if os.environ.get("GITHUB_REPOSITORY") != REPOSITORY:
         raise RuntimeError("current-form source capture must run in the original GitHub repository")
     if os.environ.get("GITHUB_REF") != "refs/heads/main":
