@@ -1058,6 +1058,9 @@ def prepare_forward_capture(
                 "source_candidates_examined": examined,
                 "rejected_source_artifacts": parent_rejections + archive_rejections,
                 "source_freshness_rejections": age_rejections + gate_rejections,
+                "source_gate_freshness": (
+                    gate_rejections[-1]["source_gate_freshness"] if gate_rejections else None
+                ),
                 "v2_preview": None,
             })
             continue
