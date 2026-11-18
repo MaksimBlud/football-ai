@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import zipfile
+import zlib
 
 from pandas.errors import ParserError
 from requests import HTTPError
@@ -36,9 +37,13 @@ def _artifact_rejection(artifact_id, exc):
 
 
 def _is_missing_github_resource(exc):
+    if isinstance(exc, HTTPError):
+        return getattr(getattr(exc, "response", None), "status_code", None) == 404
+    # The guarded original V2 GitHub JSON boundary normalizes non-200
+    # responses to RuntimeError rather than requests.HTTPError.
     return (
-        isinstance(exc, HTTPError)
-        and getattr(getattr(exc, "response", None), "status_code", None) == 404
+        isinstance(exc, RuntimeError)
+        and str(exc) == "GitHub API request failed with HTTP 404"
     )
 
 
@@ -144,7 +149,7 @@ def attest_latest_source(*, token: str, now: datetime, discover=discover_archive
                 or not proven["no_bet"]
             ):
                 raise ValueError("real original V2 source proof incomplete")
-        except HTTPError as exc:
+        except (HTTPError, RuntimeError) as exc:
             if not _is_missing_github_resource(exc):
                 raise
             rejected.append(_artifact_rejection(artifact_id, exc))
@@ -152,7 +157,7 @@ def attest_latest_source(*, token: str, now: datetime, discover=discover_archive
             continue
         except (
             ValueError, KeyError, TypeError, zipfile.BadZipFile,
-            ParserError, UnicodeError,
+            EOFError, zlib.error, ParserError, UnicodeError,
         ) as exc:
             rejected.append(_artifact_rejection(artifact_id, exc))
             last_error = exc
