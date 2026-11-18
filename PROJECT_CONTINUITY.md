@@ -7434,3 +7434,41 @@ Only rows with strict pre-kickoff ordering were selected; no score, result, sett
 - Original candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features, 20×2 weights, 3,799 training rows; `active_lambda=0`, `shadow_lambda=1`; stability gate FAILED; independent prospective evaluation gate **0/30**. No Brier/LogLoss superiority claim is possible.
 - Supabase Security Advisor observed 2026-11-18 13:17:16 UTC: RLS disabled on five public tables (`teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, `epl_ai_market_pair_ledger`); four other tables have RLS enabled without policies. No DDL was executed. Enabling RLS without designed policies can break legitimate access.
 - No PR merged, no main write, no Supabase writes/DDL, no paid provider calls, no production `.pkl` changes, no protected 2026/27 outcomes read, no threshold/contract/weight changes, and no schedule or other-agent changes.
+
+
+## 2026-11-18 14:04 UTC — exact-parent restack and new free-source audit
+
+### Fresh main and frozen original candidate
+
+- Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Main `PROJECT_CONTINUITY.md` remains the older 2026-10-18 snapshot; this checkpoint is appended only to the existing documentation PR branch #839. Main was not changed.
+- Original candidate JSON on main remains blob `ac1303f6b096664983fbf52443bd0a381b23ba21`; frozen artifact SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; 3,799 training rows; exact original 19-feature order; 20×2 weights; `active_lambda=0`; `shadow_residual_lambda=1`; stability gate FAILED; automatic promotion false. No weights, scaler, imputer, feature order, candidate or production .pkl changed.
+
+### Original V2 Forward — exact-parent restack
+
+- #872 current HEAD is `c1fc9b4ae1567941061dc4da00cb9552062bcc1a`, based on #869 HEAD `33efe835b7c9ac943fe539590111ba05e7882fb0`. Exact-parent branch validation run [#44309765891](https://github.com/MaksimBlud/football-ai/actions/runs/44309765891) passed on that exact HEAD: Python 3.11 and 3.12, **74 tests each**.
+- #873 was restacked after the parent branch advanced. Current #873 HEAD is `f0f41a7a2af0698091c0aa5291b1c1abfbe3e477`; base is the exact #872 HEAD `c1fc9b4...`; compare is **5 ahead / 0 behind**, merge base equals the parent HEAD. The previous one-commit divergence is resolved.
+- Exact-head #873 branch-validation run [#44319008652](https://github.com/MaksimBlud/football-ai/actions/runs/44319008652) completed **2/2 jobs SUCCESS**; Python 3.11.18 and 3.12.16 each passed **83 tests**. Compilation and the frozen-candidate / production-.pkl diff guard passed in both jobs.
+- The restacked #873 diff contains only the original source-attestor/forward implementation, regression tests and branch-validation workflow. It does not change the candidate, feature contract, weights, scaler/imputer or production artifacts. #873 remains Draft and HUMAN-MERGE only; its parent/source-rights chain is not integrated.
+
+### New source candidate — Soccer Data Free plan
+
+- [#874 Soccer Data audit](https://github.com/MaksimBlud/football-ai/pull/874), exact HEAD `8eee169d0a75b67cefc30f8f23c96199c7b9ed93`, base main `40887ebb...`, four files only. It adds an official-docs audit, a source-rights HOLD manifest, six offline regression tests and a PR/push-only validation workflow. No API key/account was created and no provider API request was made.
+- Official Free-plan documentation advertises 50 requests/day, current-season-only access, all statistics endpoints and no odds endpoint. Match-stat docs list corners, yellow cards and red cards; match-list score fields remain null until full time. The Free plan cannot replace the original historical 2016–2026 source archive; exact Serie A 2026/27 account coverage and full 19-feature completeness are unverified.
+- Terms last updated 2026-10-30 allow caching/storing data and displaying it in the user's own websites/apps/services while the account and plan remain active, and prohibit raw-feed resale/redistribution. They do not explicitly address internal AI model training/inference or identify upstream field-level rights. Per-match first-observation and per-field correction timestamps are not documented; receipt time plus raw-byte SHA would prove only what the project possessed before a later quote, not provider first observation.
+- Decision remains **HOLD**. Written AI-use clarification, upstream rights, exact Serie A coverage, correction/provenance semantics and private storage are required before any account/API access, source capture, feature calculation or inference.
+- Dedicated source-audit push run [#44319969839](https://github.com/MaksimBlud/football-ai/actions/runs/44319969839) and PR run [#44319984295](https://github.com/MaksimBlud/football-ai/actions/runs/44319984295) both passed: Python 3.11 and 3.12 each passed **6/6** offline tests. All applicable PR workflows on exact HEAD passed **8/8**: Research #44319984461, Product #44319984212, Serie A #44319984219, Bundesliga #44319984150, Ligue 1 #44319984196, Eredivisie #44319984244, plus the two dedicated audit runs. The first attempt on superseded HEAD `53a50308...` caught a missing manifest field in the regression; the manifest was corrected before the green exact-head runs. #874 remains Draft / HUMAN-MERGE only.
+
+### Fresh read-only Supabase pre-match ledger
+
+- Only rows satisfying `snapshot_time_utc < commence_time_utc` were selected. No score, result, settlement, correctness or protected outcome columns were queried.
+- `public.odds_snapshots`: **3,915** strictly pre-match snapshots, **327** event IDs, **9** leagues. Latest strict pre-match snapshot is **2026-10-13 14:48:53 UTC** (Serie A). Latest per-league times remain EPL 2026-10-09, RPL 2026-09-05 and the other seven leagues 2026-09-11.
+- `public.product_prediction_snapshots`: **40** pre-kickoff prediction rows; **0** rows carry the frozen original V2 SHA; latest generated pre-kickoff row 2026-10-09 15:29:33 UTC. These rows do not prove an original V2 prospective run.
+- No Supabase writes or DDL were executed.
+
+### Remaining blockers and safety
+
+- Main `.github/workflows/serie-a-v2-forward-preview.yml` still has quote-first ordering. The source-first lazy quote-reader/preflight path is in Draft #830 and descendants, not main. Direct-main live-access hold #781 and atomic archive #866 remain open; no stacked PR was merged.
+- Current main repository is public. Raw source archives cannot be stored as public Actions artifacts; private storage and provider rights are still required. The Soccer Data audit does not clear either condition.
+- The independent prospective outcome gate remains **0/30 and CLOSED**. No Brier/LogLoss comparison or V2-over-market superiority claim is available.
+- Supabase Security Advisor / table metadata still reports RLS disabled on five public tables: `teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, `epl_ai_market_pair_ledger`. No DDL was run; enabling RLS without designed policies may block legitimate app access.
+- No main ref, schedule, other agent, Supabase schema/data, paid budget, production .pkl, original V2 contract, weights or evaluation gate was changed. No paid API request, odds request, protected 2026/27 outcome read, inference, training, promotion or bet was performed.
