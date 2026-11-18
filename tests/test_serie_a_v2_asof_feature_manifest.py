@@ -1072,7 +1072,7 @@ def _rewrite_opening_quote_response(quote_dir, quote_capture, mutate):
     quote_capture["response_bytes"] = len(raw)
 
 
-def test_5dollar_opening_quote_builds_original_19_features_from_bet365_opening_only(tmp_path):
+def test_5dollar_opening_quote_records_provenance_without_claiming_market_compatibility(tmp_path):
     from serie_a_v2_5dollar_opening_quote_adapter import build_opening_prequote_manifest
     from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
 
@@ -1081,16 +1081,15 @@ def test_5dollar_opening_quote_builds_original_19_features_from_bet365_opening_o
         tmp_path, capture, quote_dir, quote_capture, fixture
     )
 
-    inverse = [1 / 2.0, 1 / 3.5, 1 / 4.0]
-    total = sum(inverse)
     assert report["candidate_sha256"] == FROZEN_SHA
     assert report["feature_count"] == 19
     assert len(report["feature_manifest"]["features"]) == 19
     assert report["market_odds"] == {"home": 2.0, "draw": 3.5, "away": 4.0}
-    assert report["market_probabilities"]["home"] == pytest.approx(inverse[0] / total)
-    assert report["market_probabilities"]["draw"] == pytest.approx(inverse[1] / total)
-    assert report["market_probabilities"]["away"] == pytest.approx(inverse[2] / total)
+    assert report["market_contract_match"] is False
+    assert "pre-closing" in report["market_contract_note"]
+    assert "market_probabilities" not in report
     assert report["quote_capture"]["market_price_stage"] == "opening"
+    assert report["quote_capture"]["model_market_contract_match"] is False
     assert report["quote_capture"]["bookmaker_slug"] == "bet365"
     assert report["quote_capture"]["quote_opened_at_utc"] == "2026-11-12T08:01:00+00:00"
     assert report["quote_capture"]["upstream_quote_observation_timestamp_available"] is True
