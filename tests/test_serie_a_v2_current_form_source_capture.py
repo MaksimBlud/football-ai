@@ -116,10 +116,6 @@ def test_gate_counts_unique_primary_fixture_metadata_only_and_normalizes_aliases
     ]
 
 
-@pytest.mark.parametrize(
-    "bad_date",
-    ["2026-10-01T12:00:00Z", "2026-10-01suffix", "2026-1-1", "20261001"],
-)
 def test_gate_rejects_reversed_duplicate_fixture_after_v2_alias_normalization():
     rows = [
         {"match_date": "2026-08-23", "home_team": "Atalanta", "away_team": "Juventus"},
@@ -131,6 +127,10 @@ def test_gate_rejects_reversed_duplicate_fixture_after_v2_alias_normalization():
         )
 
 
+@pytest.mark.parametrize(
+    "bad_date",
+    ["2026-10-01T12:00:00Z", "2026-10-01suffix", "2026-1-1", "20261001"],
+)
 def test_gate_rejects_noncanonical_or_timestamp_fixture_dates(bad_date):
     with pytest.raises(ValueError, match="canonical YYYY-MM-DD"):
         summarize_completed_primary_events(
