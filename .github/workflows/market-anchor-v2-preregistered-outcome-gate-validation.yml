@@ -8,6 +8,8 @@ on:
       - "serie_a_v2_current_form_source_capture.py"
       - "tests/test_serie_a_v2_current_form_source_capture.py"
       - ".github/workflows/market-anchor-v2-preregistered-outcome-gate-validation.yml"
+      - "requirements-v2-research-py311.lock"
+      - "requirements-v2-research-py312.lock"
   push:
     branches:
       - research/v2-preregistered-outcome-gate-source-capture-20261118-run11
