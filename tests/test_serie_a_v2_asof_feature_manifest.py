@@ -1157,12 +1157,15 @@ def test_5dollar_opening_quote_rejects_non_bet365_and_duplicate_bet365(tmp_path)
     with pytest.raises(ValueError, match="exactly one Bet365"):
         build_opening_prequote_manifest(tmp_path, capture, quote_dir, quote_capture, fixture)
 
-    capture, quote_dir, quote_capture, fixture = _synthetic_opening_quote_bundle(tmp_path)
+    case2 = tmp_path / "case2"
+    case2.mkdir()
+    case2.chmod(0o700)
+    capture, quote_dir, quote_capture, fixture = _synthetic_opening_quote_bundle(case2)
     def duplicate(payload):
         payload["data"]["bookmakers"].append(copy.deepcopy(payload["data"]["bookmakers"][0]))
     _rewrite_opening_quote_response(quote_dir, quote_capture, duplicate)
     with pytest.raises(ValueError, match="exactly one Bet365"):
-        build_opening_prequote_manifest(tmp_path, capture, quote_dir, quote_capture, fixture)
+        build_opening_prequote_manifest(case2, capture, quote_dir, quote_capture, fixture)
 
 
 def test_5dollar_opening_quote_rejects_bad_raw_sha_and_non_free_plan(tmp_path):
@@ -1174,10 +1177,13 @@ def test_5dollar_opening_quote_rejects_bad_raw_sha_and_non_free_plan(tmp_path):
     with pytest.raises(ValueError, match="SHA-256 mismatch"):
         build_opening_prequote_manifest(tmp_path, capture, quote_dir, quote_capture, fixture)
 
-    capture, quote_dir, quote_capture, fixture = _synthetic_opening_quote_bundle(tmp_path)
+    case2 = tmp_path / "case2"
+    case2.mkdir()
+    case2.chmod(0o700)
+    capture, quote_dir, quote_capture, fixture = _synthetic_opening_quote_bundle(case2)
     quote_capture["api_plan"] = "pro"
     with pytest.raises(PermissionError, match="only the $0 Free plan"):
-        build_opening_prequote_manifest(tmp_path, capture, quote_dir, quote_capture, fixture)
+        build_opening_prequote_manifest(case2, capture, quote_dir, quote_capture, fixture)
 
 
 def test_5dollar_opening_quote_rejects_source_manifest_and_run_mismatch(tmp_path):
@@ -1189,10 +1195,13 @@ def test_5dollar_opening_quote_rejects_source_manifest_and_run_mismatch(tmp_path
     with pytest.raises(ValueError, match="different source capture run"):
         build_opening_prequote_manifest(tmp_path, capture, quote_dir, quote_capture, fixture)
 
-    capture, quote_dir, quote_capture, fixture = _synthetic_opening_quote_bundle(tmp_path)
+    case2 = tmp_path / "case2"
+    case2.mkdir()
+    case2.chmod(0o700)
+    capture, quote_dir, quote_capture, fixture = _synthetic_opening_quote_bundle(case2)
     quote_capture["source_capture_manifest_sha256"] = "0" * 64
     with pytest.raises(ValueError, match="manifest SHA-256 mismatch"):
-        build_opening_prequote_manifest(tmp_path, capture, quote_dir, quote_capture, fixture)
+        build_opening_prequote_manifest(case2, capture, quote_dir, quote_capture, fixture)
 
 
 def test_5dollar_opening_quote_rejects_target_outcome_fields_and_wrong_market_identity(tmp_path):
@@ -1204,10 +1213,13 @@ def test_5dollar_opening_quote_rejects_target_outcome_fields_and_wrong_market_id
     with pytest.raises(ValueError, match="target outcome fields are forbidden"):
         build_opening_prequote_manifest(tmp_path, capture, quote_dir, quote_capture, fixture)
 
-    capture, quote_dir, quote_capture, fixture = _synthetic_opening_quote_bundle(tmp_path)
+    case2 = tmp_path / "case2"
+    case2.mkdir()
+    case2.chmod(0o700)
+    capture, quote_dir, quote_capture, fixture = _synthetic_opening_quote_bundle(case2)
     fixture["league_id"] = 1
     with pytest.raises(ValueError, match="exact Serie A"):
-        build_opening_prequote_manifest(tmp_path, capture, quote_dir, quote_capture, fixture)
+        build_opening_prequote_manifest(case2, capture, quote_dir, quote_capture, fixture)
 
 
 def test_5dollar_opening_quote_rejects_target_fixture_if_it_is_inside_source_archive(tmp_path):
