@@ -417,3 +417,21 @@ def test_synthetic_metadata_fixture_reconciles_113_raw_to_110_canonical_identiti
     assert audit["exact_duplicate_metadata_rows"] == 0
     assert audit["alias_collapsed_duplicate_identities"] == 3
     assert audit["alias_collision_count"] == 3
+
+
+def test_direct_identity_summary_reader_default_denies_before_supabase_metadata(monkeypatch):
+    monkeypatch.delenv(source_capture.LIVE_ACCESS_ENV, raising=False)
+    calls = []
+
+    class ForbiddenClient:
+        def table(self, *_args, **_kwargs):
+            calls.append("supabase_metadata")
+            raise AssertionError("identity metadata must not be read while live access is disabled")
+
+    with pytest.raises(RuntimeError, match=source_capture.LIVE_ACCESS_ENV):
+        read_completed_primary_event_summary(
+            ForbiddenClient(),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+        )
+
+    assert calls == []
