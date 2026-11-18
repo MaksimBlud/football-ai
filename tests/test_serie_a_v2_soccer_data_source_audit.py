@@ -92,7 +92,7 @@ class SoccerDataSourceAuditTests(unittest.TestCase):
         authorization = self.rights["project_authorization"]
         self.assertEqual(authorization["source_download_performed"], False)
         self.assertEqual(authorization["raw_source_sha256_captured"], False)
-        self.assertEqual(authorization["supabase_reads"], 0)
+        self.assertEqual(authorization["supabase_reads_for_this_source_audit"], 0)
         self.assertEqual(authorization["supabase_writes"], 0)
         self.assertEqual(authorization["supabase_ddl"], 0)
         self.assertEqual(authorization["odds_requests"], 0)
