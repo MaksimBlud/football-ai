@@ -18,9 +18,9 @@ This makes SoccersAPI a more promising current-season technical candidate than s
 
 ## Free-plan and coverage ambiguity
 
-The pricing/home pages advertise a free plan with three leagues and 100 requests/day. The Italy page separately says the free key reaches all 31 Italian competitions. These statements do not clearly establish whether a free account can select Serie A while retaining the required fixture/statistics operations, or whether the country page describes the overall catalogue rather than the account entitlement.
+The pricing page advertises a free plan with three leagues and 100 requests/day. The official Plans and Data Access guide clarifies that Free means three leagues chosen in the dashboard and the Standard datasets; its operation matrix includes fixture schedule/detail and statistics for Free accounts. The same guide says the account dashboard and leagues?t=list are authoritative for the actual league scope, and that uncovered match statistics may legitimately return null. The Italy page separately says the free key reaches all 31 Italian competitions. Treat that country-page statement as catalogue coverage, not proof that one Free account can read all 31: the account is limited to three chosen leagues. Serie A entitlement still needs to be verified in the actual account, which this audit did not create.
 
-The fixture docs state that fixtures match detail is available on Free and that the stats include is also available on Free. The fixture schedule docs support stats include for a league within the account's plan scope. The standalone stats match route has a different plan matrix; do not substitute it or assume all statistics endpoints are free. Any future integration must use only the exact Free-plan operation confirmed by the provider and must fail closed on a plan-denied response.
+The fixture docs state that fixtures match detail is available on Free and that the stats include is also available on Free. The fixture schedule docs support stats include for a league within the account's plan scope. The Plans and Data Access guide explicitly lists statistics and match includes for Free, Standard and World Cup, while warning that per-match/competition coverage can still be absent and returned as null. The standalone stats match route has a different plan matrix; do not substitute it or assume all statistics endpoints are free. Any future integration must use only the exact Free-plan operation confirmed by the provider and must fail closed on a plan-denied response.
 
 The public Italy page was last updated 2026-11-07 and showed 11 rounds / 100 Serie A matches. It does not prove that every one of those matches has complete corners, yellow cards and red cards, or that the free account can retrieve those fields for all of them.
 
@@ -68,6 +68,7 @@ No historical refit, threshold tuning, source substitution, production .pkl chan
 ## Official documents reviewed
 
 - Pricing: https://soccersapi.com/pricing
+- Plans and Data Access: https://docs.soccersapi.com/guides/plans-and-data-access/
 - Terms (last updated 2025-02-22): https://soccersapi.com/terms
 - Italy coverage: https://soccersapi.com/our-football-api-data/italy
 - Fixture match detail / Free-plan stats include: https://docs.soccersapi.com/fixtures/info/
