@@ -7366,3 +7366,41 @@ Only odds rows with snapshot_time_utc < commence_time_utc were counted. No score
 Supabase Security Advisor observed at 2026-11-17 02:48 UTC reports RLS disabled on five public tables: public.teams, public.predictions, public.match_statistics, public.league_prediction_ledger, and public.epl_ai_market_pair_ledger. No DDL was executed. Enabling RLS without suitable policies can block legitimate app access; see https://supabase.com/docs/guides/database/postgres/row-level-security and let the owner decide the policies.
 
 No main ref, schedule, other agent, Supabase schema/data, paid budget, frozen model contract, production artifact or target-outcome access was changed by this run.
+
+
+## 2026-11-18 — Original V2: guarded GitHub 404 fallback correction and source eligibility refresh
+
+### Fresh main and frozen candidate
+
+- Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; repository visibility is **public**. The continuity file on main is still the 2026-10-18 snapshot (blob `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`). This checkpoint is appended only to this existing documentation branch; main is unchanged.
+- Main candidate JSON blob remains `ac1303f6b096664983fbf52443bd0a381b23ba21`; frozen artifact SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; 3,799 training rows; 19 features; 20×2 weights; `active_lambda=0`; `shadow_residual_lambda=1`; stability gate FAILED; automatic promotion false. No candidate, weight, scaler, imputer, feature-order or production .pkl change.
+
+### Newly found original-forward defect — exact RuntimeError vs HTTPError mismatch
+
+- The #872 source-fallback implementation tested `requests.HTTPError(404)`, but the guarded `_github_json` helper in its branch normalizes non-200 responses to `RuntimeError("GitHub API request failed with HTTP <status>")`. Thus the actual parent-run HTTP 404 path did not enter the fallback covered by the earlier tests. The current-form fallback in #871 already recognizes this exact RuntimeError shape.
+- New child PR [#873](https://github.com/MaksimBlud/football-ai/pull/873), exact HEAD `62c47e80c2ebe8afec73279a8b8e7b01bf964edc`, is OPEN / Draft / mergeable, based on #872's branch. It adds the exact HTTP-404 RuntimeError fallback to the original attestor and only at the original forward `parent_run` stage. HTTP 503 and other RuntimeErrors remain fatal. Four negative regressions cover 404 fallback and 503 fail-closed behavior in both paths. No quotes are read before source preflight.
+- #872 remains OPEN / Draft, current branch HEAD `c1fc9b4ae1567941061dc4da00cb9552062bcc1a`, based on #869 HEAD `33efe835b7c9ac943fe539590111ba05e7882fb0`. Its earlier branch validation run [#44290961324](https://github.com/MaksimBlud/football-ai/actions/runs/44290961324) completed 2/2 jobs (Python 3.11 and 3.12, 74 tests each) on prior code HEAD `f89ccc353407ac6d9c56c1dc6552169921560600`; the branch was subsequently advanced for workflow-trigger wiring, so this is **not** an exact-current-HEAD result for `c1fc9b4...`.
+- #873 is deliberately Draft. The available commit-workflow listing exposes only PR-triggered runs and currently returns no run for its exact HEAD; the branch-push validation run ID is not available through that listing. Do not claim #873 CI success or mark it ready until an exact-head run and both Python job logs are independently retrievable.
+- The branch-local validation checks only the original attestor/forward tests and the unchanged candidate/production-pickle diff guard. No provider, odds, Supabase, protected outcome, inference, training, promotion or product operation is part of these tests.
+
+### Fresh adjacent source audits — no source is approved yet
+
+- [#870 SoccersAPI audit](https://github.com/MaksimBlud/football-ai/pull/870), exact HEAD `6c52348a553028005d469ba77957325d77d001bb`, passed its dedicated two-runtime source-audit contract (run [#44234703864](https://github.com/MaksimBlud/football-ai/actions/runs/44234703864), Python 3.11 and 3.12). Decision remains **HOLD**: docs advertise a free plan with three chosen leagues and 100 requests/day and a Free fixture-detail stats include, but the Italy catalogue claim does not prove Serie A entitlement for a Free account. Terms do not explicitly clear internal ML training/inference, private raw-response retention or upstream field rights; per-match coverage and provider first-observation/correction timestamps are unverified. No account or API call was made.
+- [#868 open-source source-rights audit](https://github.com/MaksimBlud/football-ai/pull/868) remains OPEN. OpenLigaDB is ODbL but lacks corners/cards; open-matchday has uneven statistics coverage and inherits upstream rights; no reviewed source satisfies the complete 19-feature, rights, provenance and immutable-byte requirements.
+- [#859 Footiqo audit](https://github.com/MaksimBlud/football-ai/pull/859) remains OPEN. Its policy permits personal non-commercial manual exports and private storage of legitimately obtained files, but automated extraction needs written authorization. The reviewed Serie A table maps only 17/19 frozen features; red-card features are undocumented, upstream rights and per-match source/correction times remain unresolved.
+- Child [#867 manual Footiqo intake](https://github.com/MaksimBlud/football-ai/pull/867) is local-only: no network/API/Supabase client, archives exact CSV bytes and SHA outside the repository, requires a metadata-only 30-identity input gate, preserves missing red-card features, and generates no probabilities. Its local clock is explicitly unattested and it cannot claim source-before-quote or evaluation eligibility. It is not an automated source or a completed V2 inference path.
+
+### Fresh Supabase read-only pre-match evidence
+
+Only rows with strict pre-kickoff ordering were selected; no score, result, settlement or correctness fields were queried.
+
+- `public.odds_snapshots`: **3,915** rows, **327** distinct events, **9** leagues where `snapshot_time_utc < commence_time_utc`. Latest strictly pre-match snapshot is **2026-10-13 14:48:53 UTC** (Serie A). There are no later saved pre-match odds in this table.
+- `public.product_prediction_snapshots`: **40** strictly pre-match prediction rows / 40 events; **0** rows carry the frozen original V2 candidate SHA. Latest strictly pre-match prediction timestamp is **2026-10-09 15:29:33 UTC**.
+- No Supabase writes/DDL were performed and no target outcomes were read.
+
+### Integration and evaluation status
+
+- Direct-main live-access hold [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / not merged, current exact HEAD `3a70a8648895076efec2a80dc10b1798ed0d9261`. Atomic historical archive [#866](https://github.com/MaksimBlud/football-ai/pull/866) remains OPEN / not merged, exact HEAD `58c31ba5ec3fca144b33a6f15a01cb0c8234a7da`. Do not merge stacked source-fallback PRs ahead of their parents; HUMAN-MERGE only.
+- Main still has no verified original V2 prospective inference. The separate completed-primary evaluation gate remains **0/30 and CLOSED**. No independent Brier/LogLoss comparison exists; no claim of V2 superiority over the market is permitted.
+- Do not automate Football-Data or Footiqo capture, call SoccersAPI, use a paid odds provider, change cron/schedules, write Supabase, change production .pkl, open protected 2026/27 outcomes, tune thresholds, alter original V2 weights/contract, merge PRs, or change other agents.
+
