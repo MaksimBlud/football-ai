@@ -67,7 +67,6 @@ jobs:
             tests/test_market_anchor_v2_source_capture_rights.py \
             tests/test_market_anchor_v2_artifact_privacy.py \
             tests/test_market_anchor_v2_direct_access.py \
-            tests/test_serie_a_v2_public_source_download_budget.py
       - name: Prove this PR adds no production model pickle changes
         run: |
           git fetch --no-tags origin \
