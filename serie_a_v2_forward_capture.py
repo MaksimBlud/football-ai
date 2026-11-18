@@ -16,8 +16,10 @@ from tempfile import TemporaryDirectory
 import re
 from typing import Any
 import zipfile
+import zlib
 
 import pandas as pd
+from pandas.errors import ParserError
 import requests
 
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
@@ -589,7 +591,24 @@ def capture_forward_with_source_preflight(
                 "reason": "GitHub source parent or artifact returned HTTP 404",
             })
             continue
-        except (ValueError, zipfile.BadZipFile) as exc:
+        except RuntimeError as exc:
+            # verify_source_run uses the guarded JSON helper, which reports
+            # an HTTP 404 as this exact RuntimeError. Restrict fallback to
+            # the parent-run stage; 401/403/429/5xx and all other runtime
+            # failures remain fatal.
+            if (
+                stage != "parent_run"
+                or str(exc) != "GitHub API request failed with HTTP 404"
+            ):
+                raise
+            rejected_sources.append({
+                "artifact_id": artifact_id,
+                "stage": stage,
+                "http_status": 404,
+                "reason": str(exc),
+            })
+            continue
+        except (ValueError, zipfile.BadZipFile, EOFError, zlib.error, ParserError, UnicodeError) as exc:
             rejected_sources.append({
                 "artifact_id": artifact_id,
                 "stage": stage,
