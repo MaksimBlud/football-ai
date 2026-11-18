@@ -1,9 +1,12 @@
 """Gate-controlled, no-cost current-form source capture for frozen Serie A V2.
 
-The source is used only as lagged features for future fixtures. It does not
-read target scores for evaluation, fit/select weights, write Supabase, or call
-a paid odds provider. A separate prospective-evaluation gate remains closed
-until 30 eligible forecasts from this new forward-only cohort have completed.
+Completed 2026/27 match results are read only as lagged feature history for
+future fixtures, and only after the exact preregistered original V2 first-
+outcome-read gate of 30 completed Serie A primary events passes (the gate
+itself reads fixture metadata only). The separate prospective-evaluation
+gate remains closed until 30 eligible forecasts from this new forward-only
+cohort complete; no target outcome is read or scored for evaluation before
+that separate gate.
 """
 from __future__ import annotations
 
@@ -22,6 +25,7 @@ from supabase import create_client
 
 from historical_football_signal_lab import FEATURE_SETS
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
+from market_anchor_1x2_v2_shadow import FIRST_OUTCOME_READ_GATE, outcome_read_permitted
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
 from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes, fetch_public_history
 
@@ -33,7 +37,9 @@ CURRENT_SEASON = SERIE_A_RUNTIME_CONFIG.finished_results_source.season
 CURRENT_URL = f"{PUBLIC_BASE}/{CURRENT_CODE}/{SERIE_A_RUNTIME_CONFIG.finished_results_source.competition_code}.csv"
 CURRENT_FILENAME = f"serie_a_{CURRENT_CODE}.csv"
 MANIFEST_FILENAME = "serie_a_v2_current_form_source_manifest.json"
-MIN_COMPLETED_FEATURE_SOURCE_EVENTS = 30
+PROTOCOL_PATH = Path(__file__).resolve().parent / "experiments" / "market_anchor_1x2_v2_protocol.json"
+PREREGISTERED_PROTOCOL_BLOB_SHA1 = "65729e9639720e67624c1481190aa22ae606f151"
+MIN_COMPLETED_FEATURE_SOURCE_EVENTS = FIRST_OUTCOME_READ_GATE
 MAX_CURRENT_CSV_BYTES = 2_000_000
 REQUIRED_COLUMNS = (
     "Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR",
@@ -41,6 +47,41 @@ REQUIRED_COLUMNS = (
 )
 NUMERIC_COLUMNS = ("FTHG", "FTAG", "HC", "AC", "HY", "AY", "HR", "AR")
 V2_ONLY_ALIASES = {"Atalanta BC": "Atalanta"}
+
+
+def validate_preregistered_outcome_read_gate() -> dict[str, Any]:
+    """Fail closed unless the exact frozen V2 protocol still declares the 30-event gate."""
+    try:
+        raw = PROTOCOL_PATH.read_bytes()
+    except OSError as exc:
+        raise RuntimeError("preregistered V2 outcome-read protocol is unavailable") from exc
+    git_blob_header = b"blob " + str(len(raw)).encode("ascii") + bytes([0])
+    git_blob = hashlib.sha1(git_blob_header + raw).hexdigest()
+    if git_blob != PREREGISTERED_PROTOCOL_BLOB_SHA1:
+        raise RuntimeError("preregistered V2 outcome-read protocol blob changed")
+    try:
+        protocol = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("preregistered V2 outcome-read protocol is malformed") from exc
+    if not isinstance(protocol, dict):
+        raise RuntimeError("preregistered V2 outcome-read protocol is malformed")
+    gate = protocol.get("first_outcome_read_gate")
+    cohort = protocol.get("primary_cohort")
+    if (
+        not isinstance(gate, dict)
+        or not isinstance(cohort, dict)
+        or gate.get("completed_primary_events") != FIRST_OUTCOME_READ_GATE
+        or gate.get("outcome_read_before_gate") is not False
+        or cohort.get("league") != "SERIE_A"
+        or cohort.get("other_leagues_count_toward_gate") is not False
+    ):
+        raise RuntimeError("preregistered V2 outcome-read gate contract mismatch")
+    return {
+        "protocol_path": "experiments/market_anchor_1x2_v2_protocol.json",
+        "protocol_blob_sha1": git_blob,
+        "required_completed_primary_events": FIRST_OUTCOME_READ_GATE,
+        "primary_league": "SERIE_A",
+    }
 
 
 def _canonical_team(value: Any) -> str:
@@ -178,11 +219,12 @@ def capture_source_archive(
     if now.tzinfo is None:
         raise ValueError("source capture clock must be timezone-aware")
     at = now.astimezone(timezone.utc)
+    preregistered_gate = validate_preregistered_outcome_read_gate()
     gate_count = read_completed_primary_event_count(client, now=at)
-    if gate_count < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
+    if not outcome_read_permitted(gate_count):
         raise RuntimeError(
-            "current-form feature-source gate closed: "
-            f"{gate_count} completed primary events < {MIN_COMPLETED_FEATURE_SOURCE_EVENTS}; "
+            "current-form feature-source gate closed by preregistered V2 outcome-read gate: "
+            f"{gate_count} completed primary events < {FIRST_OUTCOME_READ_GATE}; "
             "no current-season source request was made"
         )
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -234,19 +276,30 @@ def capture_source_archive(
         "current_season_completed_prior_day_rows": len(current_rows),
         "current_season_total_csv_rows": audits[-1]["total_source_rows"],
         "current_season_excluded_incomplete_or_same_day_rows": excluded_rows,
-        "feature_source_gate": {
-            "type": "CURRENT_FORM_FEATURE_INPUT_ONLY",
-            "primary_league": "SERIE_A",
-            "season": CURRENT_SEASON,
-            "minimum_completed_primary_events": MIN_COMPLETED_FEATURE_SOURCE_EVENTS,
+        "preregistered_outcome_read_gate": {
+            **preregistered_gate,
             "observed_completed_primary_events": gate_count,
             "checked_at_utc": at.isoformat(),
             "metadata_fields_read": ["match_date", "home_team", "away_team"],
             "score_or_result_fields_selected_for_gate": False,
-            "passed": True,
+            "passed": outcome_read_permitted(gate_count),
+        },
+        "feature_source_gate": {
+            "type": "CURRENT_FORM_FEATURE_INPUT_ONLY",
+            "primary_league": "SERIE_A",
+            "season": CURRENT_SEASON,
+            "minimum_completed_primary_events": FIRST_OUTCOME_READ_GATE,
+            "observed_completed_primary_events": gate_count,
+            "checked_at_utc": at.isoformat(),
+            "metadata_fields_read": ["match_date", "home_team", "away_team"],
+            "score_or_result_fields_selected_for_gate": False,
+            "uses_exact_preregistered_outcome_read_gate": True,
+            "protocol_blob_sha1": preregistered_gate["protocol_blob_sha1"],
+            "passed": outcome_read_permitted(gate_count),
         },
         "feature_policy": {
             "use_current_season_matches_only_as_lagged_features": True,
+            "completed_current_season_match_results_read_for_lagged_features": True,
             "same_calendar_day_matches_excluded": True,
             "future_or_unplayed_fixtures_used": False,
             "model_weights_or_feature_definitions_changed": False,
@@ -269,6 +322,13 @@ def capture_source_archive(
         "paid_provider_calls": 0,
         "supabase_reads": 1,
         "supabase_writes": 0,
+        "current_season_completed_match_results_read_for_lagged_features": True,
+        "target_outcomes_read_for_evaluation": False,
+        "target_outcomes_read_scope": (
+            "legacy target_outcomes_read means evaluation targets only; completed prior "
+            "2026/27 matches are separately read as lagged feature sources after the "
+            "preregistered 30-primary-event gate"
+        ),
         "target_outcomes_read": False,
         "target_outcomes_scored": False,
         "model_refit_or_promotion": False,
