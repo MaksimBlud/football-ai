@@ -893,6 +893,176 @@ def test_original_forward_skips_failed_newer_artifact_and_uses_verified_older_ar
     assert report["v2_diagnostic_previews_captured"] == 1
 
 
+
+def _github_http_error(status_code):
+    response = forward_capture_module.requests.Response()
+    response.status_code = status_code
+    response.url = "https://api.github.com/repos/MaksimBlud/football-ai/actions/artifacts/124/zip"
+    return forward_capture_module.requests.exceptions.HTTPError(
+        f"synthetic GitHub HTTP {status_code}", response=response
+    )
+
+
+@pytest.mark.parametrize("failure_stage", ["parent_run", "archive_download"])
+def test_original_forward_skips_http_404_candidate_and_uses_verified_older_archive(failure_stage):
+    raw, metadata = make_source_archive()
+    older = metadata[0]
+    newer = {
+        **older,
+        "artifact_id": 124,
+        "run_id": 457,
+        "head_sha": "b" * 40,
+        "created_at": datetime(2026, 10, 13, 15, 2, tzinfo=timezone.utc),
+    }
+    events = []
+
+    def verify_parent(archive, _as_of):
+        events.append(("parent", archive["artifact_id"]))
+        if archive["artifact_id"] == 124 and failure_stage == "parent_run":
+            raise _github_http_error(404)
+        if archive["artifact_id"] == 124:
+            return {
+                "run_completed_at_utc": "2026-10-13T15:03:00Z",
+                "workflow_path": SOURCE_WORKFLOW_PATH,
+                "run_id": 457,
+                "run_head_sha": "b" * 40,
+            }
+        return fake_verified_parent_run(archive, NOW)
+
+    def load_archive(artifact_id):
+        events.append(("archive", artifact_id))
+        if artifact_id == 124 and failure_stage == "archive_download":
+            raise _github_http_error(404)
+        return raw
+
+    def fetch_quotes():
+        events.append(("quotes", None))
+        return [quote()]
+
+    report = capture_forward_with_source_preflight(
+        [newer, older],
+        as_of_utc=NOW,
+        fetch_quotes=fetch_quotes,
+        load_archive=load_archive,
+        verify_parent_run=verify_parent,
+    )
+
+    expected = (
+        [("parent", 124), ("parent", 123), ("archive", 123), ("quotes", None)]
+        if failure_stage == "parent_run"
+        else [("parent", 124), ("archive", 124), ("parent", 123), ("archive", 123), ("quotes", None)]
+    )
+    assert events == expected
+    assert report["source_preflight"]["source_artifact_id"] == 123
+    assert report["source_preflight"]["verified_source_artifact_count"] == 1
+    rejected = report["source_preflight"]["rejected_source_artifacts"][0]
+    assert rejected["artifact_id"] == 124
+    assert rejected["stage"] == failure_stage
+    assert rejected["http_status"] == 404
+    assert report["source_preflight"]["quotes_read_after_source_preflight"] is True
+
+
+@pytest.mark.parametrize("failure_stage", ["parent_run", "archive_download"])
+def test_original_forward_propagates_non_404_http_failure_before_quotes(failure_stage):
+    raw, metadata = make_source_archive()
+    newer = {
+        **metadata[0],
+        "artifact_id": 124,
+        "run_id": 457,
+        "head_sha": "b" * 40,
+        "created_at": datetime(2026, 10, 13, 15, 2, tzinfo=timezone.utc),
+    }
+    events = []
+
+    def verify_parent(archive, _as_of):
+        events.append(("parent", archive["artifact_id"]))
+        if archive["artifact_id"] == 124 and failure_stage == "parent_run":
+            raise _github_http_error(503)
+        if archive["artifact_id"] == 124:
+            return {
+                "run_completed_at_utc": "2026-10-13T15:03:00Z",
+                "workflow_path": SOURCE_WORKFLOW_PATH,
+                "run_id": 457,
+                "run_head_sha": "b" * 40,
+            }
+        return fake_verified_parent_run(archive, NOW)
+
+    def load_archive(artifact_id):
+        events.append(("archive", artifact_id))
+        if artifact_id == 124 and failure_stage == "archive_download":
+            raise _github_http_error(503)
+        return raw
+
+    def fetch_quotes():
+        events.append(("quotes", None))
+        return [quote()]
+
+    with pytest.raises(forward_capture_module.requests.exceptions.HTTPError) as error:
+        capture_forward_with_source_preflight(
+            [newer, metadata[0]],
+            as_of_utc=NOW,
+            fetch_quotes=fetch_quotes,
+            load_archive=load_archive,
+            verify_parent_run=verify_parent,
+        )
+
+    assert error.value.response.status_code == 503
+    assert ("quotes", None) not in events
+    assert ("parent", 123) not in events
+
+
+def test_original_forward_skips_corrupt_zip_with_matching_sha_and_uses_older_archive():
+    raw, metadata = make_source_archive()
+    corrupt = b"this is not a ZIP archive"
+    newer = {
+        **metadata[0],
+        "artifact_id": 124,
+        "run_id": 457,
+        "head_sha": "b" * 40,
+        "created_at": datetime(2026, 10, 13, 15, 2, tzinfo=timezone.utc),
+        "sha256": hashlib.sha256(corrupt).hexdigest(),
+    }
+    events = []
+
+    def verify_parent(archive, _as_of):
+        events.append(("parent", archive["artifact_id"]))
+        if archive["artifact_id"] == 124:
+            return {
+                "run_completed_at_utc": "2026-10-13T15:03:00Z",
+                "workflow_path": SOURCE_WORKFLOW_PATH,
+                "run_id": 457,
+                "run_head_sha": "b" * 40,
+            }
+        return fake_verified_parent_run(archive, NOW)
+
+    def load_archive(artifact_id):
+        events.append(("archive", artifact_id))
+        return corrupt if artifact_id == 124 else raw
+
+    def fetch_quotes():
+        events.append(("quotes", None))
+        return [quote()]
+
+    report = capture_forward_with_source_preflight(
+        [newer, metadata[0]],
+        as_of_utc=NOW,
+        fetch_quotes=fetch_quotes,
+        load_archive=load_archive,
+        verify_parent_run=verify_parent,
+    )
+
+    assert events == [
+        ("parent", 124), ("archive", 124),
+        ("parent", 123), ("archive", 123), ("quotes", None),
+    ]
+    assert report["source_preflight"]["source_artifact_id"] == 123
+    rejected = report["source_preflight"]["rejected_source_artifacts"][0]
+    assert rejected["artifact_id"] == 124
+    assert rejected["stage"] == "archive_validation"
+    assert "zip" in rejected["reason"].lower()
+    assert report["source_preflight"]["quotes_read_after_source_preflight"] is True
+
+
 def test_original_forward_uses_older_source_when_newer_parent_completed_after_quote():
     raw, metadata = make_source_archive()
     older = metadata[0]

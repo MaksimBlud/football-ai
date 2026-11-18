@@ -76,6 +76,8 @@ def verify_archive(archive_path: Path, quotes: list[Mapping[str, Any]], *,
             if info.file_size > 3_000_000 and info.filename == ARCHIVE_REPORT:
                 raise ValueError("oversized archived source audit")
         report = json.loads(z.read(ARCHIVE_REPORT))
+        if not isinstance(report, dict):
+            raise ValueError("archived source audit must be a JSON object")
         if report.get("frozen_candidate_sha256") != FROZEN_SHA:
             raise ValueError("archived frozen candidate mismatch")
         if report.get("2026_27_public_results_downloaded") is not False:
@@ -88,6 +90,17 @@ def verify_archive(archive_path: Path, quotes: list[Mapping[str, Any]], *,
         seen = set()
         frames = []
         for item in audits:
+            if not isinstance(item, dict):
+                raise ValueError("malformed archived source audit entry")
+            string_fields = (
+                "season_code", "source_url", "archived_source_name",
+                "csv_sha256", "source_observed_at_utc",
+            )
+            if not all(isinstance(item.get(field), str) for field in string_fields):
+                raise ValueError("archived source audit entry has invalid string fields")
+            completed_rows = item.get("completed_source_rows")
+            if type(completed_rows) is not int or completed_rows < 0:
+                raise ValueError("archived source audit entry has invalid row count")
             code = item.get("season_code")
             expected_name = SOURCE_DIR + f"serie_a_{code}.csv"
             expected_url = f"{PUBLIC_BASE}/{code}/I1.csv"
