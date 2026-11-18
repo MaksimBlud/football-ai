@@ -1,3 +1,37 @@
+# Original MARKET_ANCHOR_1X2_V2 — 2026-11-18 14:30 UTC checkpoint
+
+**Fresh main remains** `40887ebb215730190d7a6c7a1693373ec4afcdfc`; repository visibility is public and main branch protection reports false. No main write or PR merge occurred.
+
+## New exact-head engineering results
+
+- [PR #873](https://github.com/MaksimBlud/football-ai/pull/873) current HEAD `f0f41a7a2af0698091c0aa5291b1c1abfbe3e477`, child of #872. Exact validation run [#44319008652](https://github.com/MaksimBlud/football-ai/actions/runs/44319008652) completed SUCCESS with both Python 3.11 and 3.12 jobs green. It recognizes only the exact guarded GitHub JSON HTTP-404 RuntimeError as a parent-run fallback; 503 and other operational errors remain fatal. Corrupt deflate/CSV/UTF-8 candidates are rejected. No real source/quote request was made.
+- [PR #875](https://github.com/MaksimBlud/football-ai/pull/875) current HEAD `b25ad4c72c274b83fa3b4438f89f0a76d6de1838`, based on exact #781 hold HEAD `3a70a8648895076efec2a80dc10b1798ed0d9261`. Exact gate validation [#44322692751](https://github.com/MaksimBlud/football-ai/actions/runs/44322692751) SUCCESS, 2/2 Python jobs, 18 tests each. It pins preregistered protocol Git blob `65729e9639720e67624c1481190aa22ae606f151`, verifies the 30-primary-event Serie A gate before metadata/source access, and distinguishes completed current-season results used as lagged features after the gate from prospective evaluation targets. It does not execute source capture or read outcomes in CI.
+- [PR #876](https://github.com/MaksimBlud/football-ai/pull/876) current HEAD `c0d9aa4e6c8e6dca62c114dca3f5d1fb6cbcbf19`, stacked #876 → #875 → #781. Exact push run [#44324347440](https://github.com/MaksimBlud/football-ai/actions/runs/44324347440) and PR run [#44324398561](https://github.com/MaksimBlud/football-ai/actions/runs/44324398561) both SUCCESS; Python 3.11 and 3.12 each report 19 passed. It adds defense-in-depth default-deny inside `capture_source_archive()` and CLI `main()`: absent `MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=true`, no Supabase metadata read, public-source HTTP call or output-directory creation is allowed. A regression proves zero external calls. No schedule changed. Draft / HUMAN-MERGE only.
+- [PR #874](https://github.com/MaksimBlud/football-ai/pull/874) exact HEAD `9f1afef57118e92265ff766931b506394a78f9cd`, 8/8 applicable CI checks SUCCESS. Soccer Data Free plan is $0 / 50 requests per day / current-season only; match-stat docs list corners and discipline, but exact Serie A 2026/27 coverage, upstream field rights, explicit AI training/inference rights, and first-observation/correction timestamps are unverified. Decision remains HOLD; no account or API request was made.
+- [PR #781](https://github.com/MaksimBlud/football-ai/pull/781) remains direct-main OPEN / Ready for review, exact HEAD `3a70a8648895076efec2a80dc10b1798ed0d9261`, 8/8 exact-head workflows SUCCESS. It default-denies live source/quote/recovery operations and artifact publication while preserving existing schedules. It is not on main until HUMAN-MERGE.
+
+## Current main workflow safety state
+
+Main `.github/workflows/serie-a-v2-current-form-source-capture.yml` still has the 05:50 UTC daily schedule and no workflow-level default-deny flag; its source-capture step and `if: always()` artifact upload remain enabled on main. The latest scheduled main capture is [#44108594696](https://github.com/MaksimBlud/football-ai/actions/runs/44108594696), 2026-11-17 SUCCESS; no 2026-11-18 scheduled run was present in the checked schedule-run history. The #781 hold and #876 script-level guard are not merged. Do not enable further live source access: provider rights and private raw-artifact storage remain unresolved. The #781 change preserves the existing schedule; it does not add a paid cron or call a paid odds provider.
+
+## Fresh read-only Supabase evidence (metadata and pre-kickoff only)
+
+- `public.league_finished_results`, Serie A 2026-2027, metadata columns only: 113 raw rows / 113 raw identities; V2 alias normalization `Atalanta BC → Atalanta` yields 110 canonical identities; 2026-08-22 through 2026-11-08. No score/result fields were selected.
+- `public.odds_snapshots`, strictly `snapshot_time_utc < commence_time_utc`: 3,915 snapshots / 327 events / 9 leagues; zero future-kickoff rows or events. Serie A: 620 snapshots / 63 events; latest `2026-10-13T14:48:53.04262Z`.
+- `public.product_prediction_snapshots`: zero strictly pre-kickoff rows carrying the exact original V2 candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- `public.league_h2h_bookmaker_snapshots`: zero rows.
+- No Supabase writes or DDL were performed.
+
+## Binding frozen-model and security status
+
+Original candidate remains SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`, 3,799 training rows, exact 19-feature order, 20×2 weights, `active_lambda=0`, `shadow_lambda=1`, stability gate FAILED, prospective evaluation gate 0/30, no promotion. No Brier/LogLoss superiority claim is permitted.
+
+Supabase Security Advisor at 2026-11-18 14:22 UTC still reports RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`; four other public tables have RLS enabled without policies. No DDL was applied. Remediation requires policies before enabling RLS.
+
+No protected target outcomes, paid API requests, source downloads, quote reads outside strict pre-match aggregates, production `.pkl` changes, model refit, promotion, bets, schedule changes, or other-agent changes occurred in this checkpoint.
+
+---
+
 ## 2026-11-17 19:56 UTC — latest V2-only runtime and outcome-embargo audit
 
 **Fresh main remains** `40887ebb215730190d7a6c7a1693373ec4afcdfc`. No merge or main update occurred in this run.
