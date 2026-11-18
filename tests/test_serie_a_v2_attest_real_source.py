@@ -502,3 +502,63 @@ def test_attestation_handles_parent_run_http_errors_before_archive_download(stat
             )
         assert error.value.response.status_code == 503
         assert events == [("verify", 766)]
+
+@pytest.mark.parametrize(
+    "malformation",
+    ["root_not_object", "non_object_audit_entry", "missing_observation_time"],
+)
+def test_attestation_skips_malformed_manifest_and_uses_older_verified_archive(malformation):
+    raw, meta = source_fixture()
+    older = meta[0]
+    with zipfile.ZipFile(BytesIO(raw), "r") as source:
+        members = {
+            name: source.read(name)
+            for name in source.namelist()
+        }
+    report = json.loads(members[ARCHIVE_REPORT])
+    if malformation == "root_not_object":
+        replacement = []
+    elif malformation == "non_object_audit_entry":
+        report["public_source_files"][0] = None
+        replacement = report
+    else:
+        del report["public_source_files"][0]["source_observed_at_utc"]
+        replacement = report
+    members[ARCHIVE_REPORT] = json.dumps(replacement).encode("utf-8")
+
+    malformed_buffer = BytesIO()
+    with zipfile.ZipFile(malformed_buffer, "w") as target:
+        for name, content in members.items():
+            target.writestr(name, content)
+    malformed_raw = malformed_buffer.getvalue()
+    newer = _newer_candidate(
+        older,
+        digest=hashlib.sha256(malformed_raw).hexdigest(),
+    )
+    events = []
+
+    def verify(candidate, quote_time, token):
+        events.append(("verify", candidate["artifact_id"]))
+        return _valid_parent_for_candidate(candidate, quote_time, token)
+
+    def load(artifact_id, token):
+        events.append(("load", artifact_id))
+        return malformed_raw if artifact_id == 766 else raw
+
+    proof = attest_latest_source(
+        token="test-token",
+        now=NOW,
+        discover=lambda **kwargs: [older, newer],
+        load=load,
+        verify_run=verify,
+    )
+
+    assert events == [
+        ("verify", 766), ("load", 766),
+        ("verify", 765), ("load", 765),
+    ]
+    assert proof["source_artifact_id"] == 765
+    assert proof["source_candidate_fallback_used"] is True
+    assert proof["rejected_source_artifacts"][0]["artifact_id"] == 766
+    assert proof["rejected_source_artifacts"][0]["error_type"] == "ValueError"
+    assert proof["quotes_read"] == proof["forecasts_created"] == 0
