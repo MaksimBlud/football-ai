@@ -55,9 +55,8 @@ def validate_preregistered_outcome_read_gate() -> dict[str, Any]:
         raw = PROTOCOL_PATH.read_bytes()
     except OSError as exc:
         raise RuntimeError("preregistered V2 outcome-read protocol is unavailable") from exc
-    git_blob = hashlib.sha1(
-        f"blob {len(raw)}\\0".encode("ascii") + raw
-    ).hexdigest()
+    git_blob_header = b"blob " + str(len(raw)).encode("ascii") + bytes([0])
+    git_blob = hashlib.sha1(git_blob_header + raw).hexdigest()
     if git_blob != PREREGISTERED_PROTOCOL_BLOB_SHA1:
         raise RuntimeError("preregistered V2 outcome-read protocol blob changed")
     try:
