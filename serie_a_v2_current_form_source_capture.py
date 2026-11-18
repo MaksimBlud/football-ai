@@ -130,6 +130,7 @@ def count_unique_completed_primary_events(
 
 def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
     """Read only event date/team metadata; no goals, result or settlement columns."""
+    require_live_access_allowed()
     if now.tzinfo is None:
         raise ValueError("feature-source gate clock must be timezone-aware")
     cutoff = now.astimezone(timezone.utc).date().isoformat()
