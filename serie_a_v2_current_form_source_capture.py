@@ -121,7 +121,7 @@ def summarize_completed_primary_events(
         if isinstance(match_date, date):
             parsed_date = match_date
         elif isinstance(match_date, str):
-            if re.fullmatch(r"\\d{4}-\\d{2}-\\d{2}", match_date) is None:
+            if re.fullmatch(r"\d{4}-\d{2}-\d{2}", match_date) is None:
                 raise ValueError("primary event date must be canonical YYYY-MM-DD")
             try:
                 parsed_date = date.fromisoformat(match_date)
