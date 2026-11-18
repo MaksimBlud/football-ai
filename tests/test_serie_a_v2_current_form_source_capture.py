@@ -127,6 +127,34 @@ def test_gate_rejects_reversed_duplicate_fixture_after_v2_alias_normalization():
         )
 
 
+def test_capture_rejects_reversed_duplicate_gate_identity_before_any_source_download(tmp_path):
+    rows = event_rows(30)
+    rows[0] = {"match_date": "2026-08-23", "home_team": "Atalanta", "away_team": "Juventus"}
+    rows[1] = {"match_date": "2026-08-23", "home_team": "Juventus", "away_team": "Atalanta BC"}
+    calls = []
+
+    def forbidden_get(*_args, **_kwargs):
+        calls.append("current-season-source")
+        raise AssertionError("current-season source must not be requested after an ambiguous gate identity")
+
+    def forbidden_history(**_kwargs):
+        calls.append("historical-source")
+        raise AssertionError("historical source must not be requested after an ambiguous gate identity")
+
+    output_dir = tmp_path / "archive"
+    with pytest.raises(ValueError, match="reversed duplicate"):
+        capture_source_archive(
+            output_dir=output_dir,
+            client=FakeQuery(rows),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=forbidden_get,
+            history_fetch=forbidden_history,
+        )
+
+    assert calls == []
+    assert not output_dir.exists()
+
+
 @pytest.mark.parametrize(
     "bad_date",
     ["2026-10-01T12:00:00Z", "2026-10-01suffix", "2026-1-1", "20261001"],
