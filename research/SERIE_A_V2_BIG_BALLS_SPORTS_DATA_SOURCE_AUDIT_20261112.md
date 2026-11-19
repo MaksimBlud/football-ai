@@ -391,3 +391,14 @@ Official references:
 - Current OpenAPI: https://bigballsdata.com/openapi.json
 - Changelog (2026-11-11 Free endpoint clarification): https://bigballsdata.com/whats-new
 - Coverage (measured refresh 2026-11-06): https://bigballsdata.com/coverage
+
+
+## 14. Distinguish the Big Balls upstream from the original candidate's training source — 2026-11-19
+
+The Big Balls licence notice attributes its football feed to the **Football-Data.org API**. The original frozen V2 candidate's ten historical training/source CSVs are instead downloaded from **Football-Data.co.uk** at `https://www.football-data.co.uk/mmz4281/{season}/I1.csv`. These are separate services and separate terms. Big Balls' internal-model grant must not be treated as a licence for the already-trained candidate's Football-Data.co.uk corpus.
+
+The current official Football-Data.co.uk data page (displayed updated **2026-11-16**) says its free CSV/Excel data is intended for private individuals only and explicitly excludes commercial or data-training products using automated bots/scrapers/AI; it also says the data are provided for league match prediction only. It says the files are **at least** updated twice weekly; that is an update cadence, not a maximum download quota. The exact page is https://www.football-data.co.uk/data.php.
+
+Accordingly, even if Big Balls' Free route entitlement and its own storage/internal-model terms are later confirmed in writing, that does not clear the original candidate's historical training corpus. The frozen candidate's existing training-data rights and any continuing use of its learned weights remain a separate **HOLD** pending explicit provider permission or a documented legal/rights determination. No retraining, refit, substitute source, candidate/weight change, or production promotion is authorized by this audit.
+
+This is a correction/clarification only. No Football-Data.co.uk CSV was requested or downloaded; no Big Balls key or endpoint was used; no quote, Supabase object, outcome, feature, or inference was accessed.
