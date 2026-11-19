@@ -10,9 +10,9 @@ This audit used public provider documentation and repository documentation only.
 
 ### 1. Football-Data.co.uk — HOLD for the current daily automated workflow
 
-The provider's current public fair-use guidance says its free CSV/Excel data is intended for private individuals for personal betting and/or academic research, and limits automated downloads to light use (at most twice per week). Its data page also excludes commercial/data-training products using heavy repeated automated downloads.
+The provider's current public fair-use guidance says its free CSV/Excel data is intended for private individuals for personal betting and/or academic research. The page says the files are updated at least twice weekly (Sunday and Wednesday); that is the publisher's update cadence, not a maximum download limit. Its data page explicitly excludes commercial/data-training products using automated bots/scrapers/AI and does not affirmatively grant the intended automated AI-model pipeline.
 
-The current V2 source-capture design requests ten historical season CSVs plus the current-season CSV on a daily schedule. That is not the documented light twice-weekly pattern. The provider's public guidance is not an affirmative grant for this daily, repeated AI-model data pipeline.
+The current V2 source-capture design requests ten historical season CSVs plus the current-season CSV on a daily schedule. The official page does not state a maximum download frequency; the issue is that its private-individual/personal-betting-or-academic-research framing and AI/data-training restriction do not affirmatively authorize this daily automated model-data pipeline.
 
 **Decision:** do not run or re-enable daily automated Football-Data capture under the current free terms. Keep live access held unless the owner obtains a provider-approved scope or the source policy changes. This is a conservative engineering gate, not legal advice.
 
