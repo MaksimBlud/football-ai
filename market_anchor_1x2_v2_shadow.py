@@ -68,6 +68,9 @@ FORBIDDEN_OUTCOME_FIELDS = frozenset({
     "full_time_scoreline", "half_time_scoreline",
     "full_time", "half_time", "fulltime", "halftime",
     "result_code", "result_name", "outcome_code", "outcome_name",
+    "ft_result", "ht_result", "final_result", "fulltime_result", "halftime_result",
+    "ft_outcome", "ht_outcome", "full_time_outcome", "half_time_outcome",
+    "fulltime_outcome", "halftime_outcome", "final_outcome",
     "home_team_result", "away_team_result",
     "winner_name", "winning_team_name", "winner_id", "winning_team_id",
     # Explicit 1X2 winner/side flags are outcomes, not pre-match market quotes.
@@ -118,6 +121,15 @@ OUTCOME_FIELD_DESCRIPTOR_KEYS = frozenset({
     "name", "field", "field_name", "stat", "stat_name", "statistic",
     "statistic_name", "metric", "metric_name", "key", "label",
     "attribute", "property", "code", "slug", "type", "stat_type",
+    # Provider schemas also store the statistic identity in abbreviation/code
+    # and display-name fields; inspect only these exact descriptor keys.
+    "abbr", "abbreviation", "short_name", "short_code",
+    "stat_code", "statistic_code", "field_code", "metric_code",
+    "attribute_name", "property_name", "display_name",
+    # Some provider schemas expose statistic identifiers separately from labels.
+    "stat_id", "statistic_id", "field_id", "metric_id",
+    "attribute_id", "property_id", "data_key", "stat_key",
+    "outcome_key", "result_key",
 })
 PROBABILITY_FIELDS = (
     ("market_home_probability", "market_draw_probability", "market_away_probability"),
