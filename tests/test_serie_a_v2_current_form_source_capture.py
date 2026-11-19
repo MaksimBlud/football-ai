@@ -306,6 +306,20 @@ def test_current_csv_rejects_completed_future_result_and_missing_stats():
         )
 
 
+def test_current_csv_rejects_reversed_duplicate_fixture_after_v2_alias_normalization():
+    header = ",".join(REQUIRED_COLUMNS)
+    raw = (
+        header + "\n"
+        "01/08/2026,Atalanta,Juventus,1,0,H,5,3,2,1,0,0\n"
+        "01/08/2026,Juventus,Atalanta BC,0,1,A,3,5,1,2,0,0\n"
+    ).encode()
+
+    with pytest.raises(ValueError, match="reversed duplicate fixture identities"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
 def test_closed_feature_source_gate_stops_before_any_public_download(tmp_path):
     calls = []
     def forbidden_history(**_kwargs):
