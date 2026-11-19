@@ -402,3 +402,40 @@ The current official Football-Data.co.uk data page (displayed updated **2026-11-
 Accordingly, even if Big Balls' Free route entitlement and its own storage/internal-model terms are later confirmed in writing, that does not clear the original candidate's historical training corpus. The frozen candidate's existing training-data rights and any continuing use of its learned weights remain a separate **HOLD** pending explicit provider permission or a documented legal/rights determination. No retraining, refit, substitute source, candidate/weight change, or production promotion is authorized by this audit.
 
 This is a correction/clarification only. No Football-Data.co.uk CSV was requested or downloaded; no Big Balls key or endpoint was used; no quote, Supabase object, outcome, feature, or inference was accessed.
+
+
+## 15. Fresh official documentation recheck — 2026-11-19 06:00 UTC
+
+This recheck used only public static terms, pricing, the public Serie A page, the generated league endpoint registry and the published OpenAPI schema. No account/key was created or used; no API endpoint, match-data response, odds, Supabase object, feature build, inference or target outcome was accessed.
+
+### What is now clearer
+
+1. **The non-xG statistics route is declared Free by the machine-readable gateway registry.** The current generated [league endpoint registry](https://bigballsdata.com/league-endpoints.json) lists `GET /v1/matches/{id}/statistics` as `plan: free` for Serie A (and the other football league pages). The current [OpenAPI](https://bigballsdata.com/openapi.json) likewise declares `x-bbs-min-plan: free`; its field-entitlement list puts only `data.home.expected_goals` and `data.away.expected_goals` at Solo. The endpoint description says factual box-score fields are Free and xG is omitted below Solo. The generated registry is described by the Serie A page as using the same registry enforced by the gateway.
+
+2. **The human-facing plan matrix is still inconsistent.** The [Serie A page](https://bigballsdata.com/serie-a-api) matrix shows the combined row “Advanced match statistics: possession, shots, cards and xG” only at Edge, while its FAQ says the statistics route is Free and xG is Solo+. The route-level machine registry and OpenAPI agree on Free for the route, but the combined marketing row still conflicts. Treat the route as a strong Free candidate, not as a permission to call it; obtain written confirmation if the entitlement distinction is material.
+
+3. **Current-season fixtures/standings are present, but field-level match-stat completeness is not established.** The Serie A page was checked at 2026-11-19 05:54 UTC and showed 2026/27 standings with 11 matches per club (table source 05:12 UTC). It reports 4,941 served Serie A matches across 13 seasons, with Free covering the current season only. This is evidence of current-season league coverage, not evidence that every 2026/27 match has the required per-team corners/cards fields. The page's freshness panel does not publish a 2026/27 per-match completeness denominator for `fixture_statistics`.
+
+4. **The endpoint can supply the relevant field family after a match, but it is not a pre-match feed for that same match.** The OpenAPI describes `GET /v1/matches/{id}/statistics` as post-match team statistics, persisted hourly; the upstream normally posts within roughly 30 minutes after full time. Its schema includes `corner_kicks`, `yellow_cards` and `red_cards`; match goals remain authoritative in the linescore. These can only be used as lagged inputs for a later fixture after the response has been captured and frozen.
+
+5. **No provider-origin observation/correction timestamp is exposed for this statistics object.** `FixtureTeamStatistics` has no `observed_at`, `source_updated_at`, revision or per-field timestamp. The route's custom metadata only documents `expected_goals_source`; the shared `ResponseMeta` provides an opaque source-tier label, confidence/cache fields and request id, but no source observation time. The OpenAPI explicitly says the source label is opaque and does not disclose vendor identity. A local capture timestamp plus raw-response SHA can prove that this project's exact bytes existed before a later quote; it cannot prove when the upstream first observed or last corrected those values.
+
+### Upstream rights remain a hard HOLD
+
+- Big Balls' [Terms of Service](https://bigballsdata.com/legal/terms), effective 2026-08-10, allow storing responses and using stored data in internal models (including training/evaluation/backtesting); derived outputs may be published/sold, while raw feed and raw field-value redistribution are prohibited.
+- Big Balls' [licence notices](https://bigballsdata.com/attribution) attribute football data to the Football-Data.org API. Its OpenAPI source field is only an opaque tier label (for example `aggregator-free` or `mixed`), not a vendor/field-level provenance map.
+- The public [Football-Data.org terms](https://www.football-data.org/about) remain dated 2018-06-01. They require a single application, fair use and attribution, but do not expressly document the specific stored-data/ML-training grant described in Big Balls' own terms.
+
+Therefore Big Balls' own internal-model grant is positive evidence, but it does not by itself prove the upstream licence for the exact Serie A corners/cards fields. Written confirmation from Big Balls that the upstream grant covers these exact fields and this internal model use remains required. This is not a finding that the upstream use is prohibited; it is an unresolved rights question.
+
+### Decision
+
+`CONDITIONAL_CANDIDATE_NOT_APPROVED` / **HOLD remains correct**. The plan-tier question is now substantially narrowed in favour of Free for non-xG statistics by the generated gateway registry and OpenAPI, but no API call or data capture is authorized until all of the following are resolved:
+
+1. written field-level upstream rights confirmation for the required Serie A fields and internal-model use;
+2. a measured 2026/27 per-match completeness audit for corners/yellow/red cards;
+3. a documented private retention path for raw responses and SHA-256 manifests (the GitHub repository is public);
+4. immutable capture records with `source_capture_completed_at < quote_time < kickoff`, exact response SHA-256, manifest SHA-256, parent-run identity and no overwrite on later corrections; and
+5. separate rights clearance for the original candidate's historical Football-Data.co.uk training corpus and the continued use of its learned weights.
+
+No API key, request, data download, quote read, Supabase read/write/DDL, inference, target-outcome read, model refit, threshold change, production artifact change, schedule change or main update was performed. The frozen candidate, 19-feature order, weights, scaler/imputer, training fingerprint, `active_lambda=0` and `shadow_lambda=1` remain unchanged.
