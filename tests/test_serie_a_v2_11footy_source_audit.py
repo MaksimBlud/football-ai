@@ -71,14 +71,20 @@ def test_release_integrity_metadata_is_not_misrepresented_as_download_verificati
     )
 
 
-def test_current_release_fails_the_frozen_24_hour_source_age_limit():
+def test_provider_release_age_is_not_misreported_as_local_archive_age():
     manifest = load_manifest()
     freshness = manifest["freshness"]
 
-    assert freshness["frozen_source_max_age_hours"] == 24
-    assert freshness["release_age_hours_at_audit"] > 24
-    assert freshness["passes_frozen_source_freshness_limit"] is False
-    assert freshness["current_release_freshness_status"] == "STALE_OVER_24_HOURS"
+    assert freshness["frozen_project_archive_max_age_hours"] == 24
+    assert freshness["provider_release_age_hours_at_audit"] > 24
+    assert freshness["provider_release_age_warning"] is True
+    assert freshness["project_archive_created"] is False
+    assert freshness["project_archive_age_hours"] is None
+    assert freshness["passes_frozen_project_archive_age_limit"] is None
+    assert freshness["current_source_fixture_coverage_verified"] is False
+    assert freshness["current_release_freshness_status"] == (
+        "RELEASE_AGE_WARNING_COVERAGE_UNVERIFIED"
+    )
     assert manifest["upstream_repository"]["documented_rebuild_cadence"] == (
         "after each round of matches"
     )
