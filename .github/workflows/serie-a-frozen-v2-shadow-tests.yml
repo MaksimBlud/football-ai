@@ -4,7 +4,6 @@ on:
   pull_request:
     branches:
       - main
-      - research/v2-workflow-live-access-hold-20261110-run11
     paths:
       - "serie_a_v2_frozen_shadow_preview.py"
       - "serie_a_v2_asof_feature_manifest.py"
