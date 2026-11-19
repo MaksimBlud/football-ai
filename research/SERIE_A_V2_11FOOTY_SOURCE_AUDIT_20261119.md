@@ -6,7 +6,7 @@
 
 ## Executive finding
 
-fm-devlab/11footy-dataset is a materially stronger *structural* candidate than several previously screened free sources. Its published schema contains match scores plus team-level corners, yellow cards and red cards, which can be mapped to the unchanged 19 inputs of the original Serie A MARKET_ANCHOR_1X2_V2. It also publishes a release checksum manifest and a signature asset.
+fm-devlab/11footy-dataset is a materially stronger *structural* candidate than several previously screened free sources. Its published schema contains match scores plus team-level corners, yellow cards and red cards, which can be mapped to the unchanged 19 inputs of the original Serie A MARKET_ANCHOR_1X2_V2. It also publishes a release checksum manifest and signature asset; the associated 11footy application repository publishes the corresponding OpenSSH verification key and verifier code.
 
 It is **not approved**. Three independent blockers remain:
 
@@ -27,7 +27,7 @@ Repository: https://github.com/fm-devlab/11footy-dataset
 - The SHA-256 values in the public manifest agree with GitHub's release asset digest metadata for the Serie A CSV ZIP and database archive:
   - CSV ZIP: 58f473c1eba5bd7c291a6380dadd3aba8ae67a47d17b92828e6f9b5a3b50b0c6.
   - DB XZ: bf9179e4ecb44afeea7c434c938730cf5aa714d17286996bafb4ddbe2fcfb09a.
-- This is a metadata cross-check only. The archive bytes were not downloaded or independently hashed. The repository tree contains no public-key file or verification instructions sufficient to independently verify SHA256SUMS.sig.
+- This is a metadata cross-check only. The archive bytes were not downloaded or independently hashed. The dataset repository tree itself contains no key, but the associated app repository fm-devlab/11footy at main SHA ec2ef14b0d74258d786266e26231bbcbca6d5efb publishes config/vesta/dataset-signers (blob SHA 2e013ac7047d8a0580440ac0171c96450d3af763). It contains an OpenSSH Ed25519 allowed-signer entry for principal and namespace 11footy-dataset. The associated src/vesta/dataset_proof.py (blob SHA 4d4c5512f6186469be8ba0733a85ed2a013cee35) documents and implements ssh-keygen -Y verify. The signature asset was not downloaded and the verification command was not run, so the release signature remains unverified in this audit.
 
 The README says the dataset is rebuilt after each round, not continuously. It also documents a format_version.built_at field shared by files in a release.
 
@@ -109,7 +109,7 @@ Keep approval_status=HOLD until all of the following are independently verified:
 
 1. upstream provider identity and written rights for the Serie A report/feed layers, including internal research, ML inference, private retention and any intended product use;
 2. confirmation that the non-commercial licence matches the actual project use; commercial use would require a different explicit licence;
-3. a public verification key and successful signature verification for SHA256SUMS.sig;
+3. pin the related-app allowed-signers file and verify SHA256SUMS.sig with OpenSSH before trusting the checksum manifest;
 4. a release whose completed-fixture identities cover every fixture in the current metadata-only gate, with no missing current-season match rows;
 5. a private immutable archive completed and SHA-verified strictly before the quote and still within the frozen 24-hour project-archive-age limit at quote admission;
 6. complete fixture-level coverage and field-definition parity for all 19 original features, without zero-filling unknowns or changing the original feature builder;
@@ -117,7 +117,7 @@ Keep approval_status=HOLD until all of the following are independently verified:
 
 ## Safety record
 
-This PR adds only a source-rights HOLD manifest, this audit note, an offline regression test and a PR-only validation workflow.
+This PR adds only a source-rights HOLD manifest, this audit note, an offline regression test and a PR-only validation workflow. The associated app repository was inspected only for the dataset signature key and verification helper; its prediction/model logic was not used.
 
 - Dataset CSV/SQLite assets downloaded: 0.
 - Provider/API requests: 0.
