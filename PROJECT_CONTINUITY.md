@@ -7733,3 +7733,21 @@ HUMAN-MERGE only. PR #880 remains Draft and must follow its parent chain; no mer
 ### Non-actions
 
 No merge, main update, Supabase write/DDL, paid provider call, new odds quote, source/API request, raw source download, protected outcome read, model inference/refit, threshold tuning, production `.pkl` change, schedule change, bet, promotion or other-agent setting change occurred.
+
+
+## 2026-11-19 — critical correction: Football-Data.co.uk AI/data-training use is explicitly restricted
+
+A fresh read of the current official page `https://www.football-data.co.uk/data.php` (displayed **Updated: 16/11/26**) materially clarifies the rights hold:
+
+- The page says the free CSV/Excel data is intended for **private individuals only** and explicitly excludes **commercial or data training products using automated bots/scrapers/AI**. It also says the data are provided for league match prediction only.
+- The page says files are **at least** updated twice weekly (Sunday nights and Wednesday nights). That is an update cadence, **not** a maximum download limit. Any earlier “at most two downloads per week” wording is unsupported and must not be repeated.
+- The original candidate's historical source files are `football-data.co.uk/mmz4281/{season}/I1.csv`. This is **Football-Data.co.uk**, not the separate **Football-Data.org API**. Big Balls' Football-Data.org attribution/terms do not license the original candidate's Football-Data.co.uk training corpus.
+- The main workflow still has daily 11-file automated Football-Data.co.uk source capture and public GitHub artifact upload. No schedule was changed. The source-capture hold [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains ready at exact HEAD `3a70a8648895076efec2a80dc10b1798ed0d9261`, **8/8 SUCCESS**, but unmerged. It must be HUMAN-MERGED before any further live source-capture path is treated as held. Do not download more Football-Data.co.uk CSVs or treat existing public artifacts as permission.
+- Existing frozen weights were trained on this corpus. Do not retrain, alter weights, change the 19-feature contract, or claim rights to use the trained candidate without explicit written permission or a documented rights determination. This is a rights hold, not a model-quality result.
+
+The audit correction is tracked in [#868](https://github.com/MaksimBlud/football-ai/pull/868), new HEAD `4c8d0e4cd9f16c6839d74e754b341bd4ad8cd7bc` (six validation workflows: five SUCCESS, Research still running at last check). Big Balls audit [#794](https://github.com/MaksimBlud/football-ai/pull/794) now distinguishes the separate upstream and the original corpus; latest HEAD `9bded515dc3ebb3d6e783cfdabeba31933214e35`, CI pending at last check.
+
+Official source:
+- Football-Data.co.uk current data page, updated 2026-11-16: https://www.football-data.co.uk/data.php
+
+No CSV/API request, download, quote read, Supabase write/DDL, outcome read, model inference/refit, threshold tuning, production change, schedule change or merge was performed.
