@@ -348,3 +348,46 @@ Written provider confirmation is still required for the exact Serie A fields and
 **`CONDITIONAL_CANDIDATE_NOT_APPROVED` remains unchanged.** The OpenAPI now gives a plausible Free endpoint and a workable local source-before-quote archive design, but the plan/season conflict, exact 2026/27 field coverage, upstream field-level rights, private raw-response retention, and original training-corpus rights remain unresolved.
 
 No API key, endpoint probe, request, download, odds access, Supabase access/write/DDL, source capture, feature build, inference, target-outcome read, refit, threshold change, production artifact change or schedule change was performed. The original candidate SHA, ordered 19-feature contract, weights, scaler/imputer, training fingerprint, `active_lambda=0`, `shadow_lambda=1`, NO_BET and 30-primary-completed-forecast outcome gate remain unchanged.
+
+
+## 13. Official documentation recheck — 2026-11-19
+
+This recheck used only the provider's public static Terms, current Serie A plan page, coverage page, changelog, and OpenAPI document. No account or key was created; no API endpoint, match payload, odds, source archive, Supabase object, or target outcome was accessed.
+
+### Free-tier entitlement: three current statements say Free, one Serie A matrix still says Edge
+
+New official changelog entry dated **2026-11-11** says `GET /v1/matches/:id/statistics` is now available on the Free plan, correcting seven league data rows that had incorrectly shown Solo; `expected_goals` remains Solo+. The current OpenAPI independently marks `GET /v1/matches/{id}/statistics` as `x-bbs-min-plan: free`, says factual box-score fields are free, and marks only `data.home.expected_goals` / `data.away.expected_goals` as Solo+. The current Serie A FAQ likewise says the route is Free except for the `expected_goals` field.
+
+However, the same current Serie A page's plan matrix (lines 957–958) and expanded plan explanation (line 982) still label “Advanced match statistics: possession, shots, cards and xG” / `/v1/matches/{id}/statistics` as Edge-only. This is a live internal documentation contradiction, not a resolved entitlement. The route-level OpenAPI/changelog/FAQ evidence is stronger and newer than the older matrix wording, but written confirmation remains prudent before relying on the Free entitlement.
+
+### Current coverage still does not establish Serie A team-stat completeness
+
+The public coverage page is updated on 2026-11-16, but its measured endpoint inventory explicitly says the last refresh was **2026-11-06**. It reports soccer `team_stats` as Partial and its Serie A confirmed-endpoint list still omits `/v1/matches/{id}/statistics`. This does not prove the route is empty; it means the published measured coverage does not prove that all 2026/27 Serie A matches have the corners/cards fields needed by the frozen 19-feature builder.
+
+### Freshness semantics clarified
+
+The OpenAPI still describes `/v1/matches/{id}/statistics` as stored-only and persisted hourly, with the upstream feed generally posting within about 30 minutes after full time. Its response schema contains the home/away statistic objects but no per-match or per-field `observed_at`, `source_updated_at`, revision, or correction timestamp.
+
+The separate `/v1/stored/matches/{id}/stats` route documents per-row `as_of` and `freshness_basis=ingested_at`, but its own contract warns that soccer `team_stats` may be empty and points to `/v1/matches/{id}/statistics` for team-level soccer stats. Its ingestion timestamp is not an upstream value-change timestamp.
+
+For a genuinely prospective cohort, a local immutable response archive can still establish that the exact bytes were in this project's possession before a later quote: capture UTC, response SHA-256, complete-manifest SHA-256, parent-run completion, quote time and kickoff must be recorded, with strict `source_capture_completed_at < quote_time < kickoff`. A later correction must create a new immutable archive version, never overwrite the earlier bytes. This proves project-availability time, not the provider's original observation/correction time.
+
+### Decision remains HOLD
+
+`CONDITIONAL_CANDIDATE_NOT_APPROVED` remains the correct disposition. The Nov 11 changelog improves the evidence for Free route entitlement but does not resolve:
+1. the contradictory Edge-only Serie A plan matrix;
+2. actual 2026/27 per-match completeness for corners/yellow/red cards;
+3. upstream vendor and licence mapping for the exact required fields;
+4. the independent private-storage requirement while the GitHub repository is public; or
+5. the separate rights/provenance status of the frozen candidate's historical Football-Data training corpus.
+
+No API key, request, download, odds access, Supabase read/write/DDL, source capture, feature build, inference, target-outcome read, refit, threshold change, production artifact change, schedule change or main update was performed.
+
+The frozen candidate SHA, 19-feature order, weights, scaler/imputer, training fingerprint, `active_lambda=0`, `shadow_lambda=1`, NO_BET and 30-primary-completed-forecast outcome gate remain unchanged.
+
+Official references:
+- Terms (effective 2026-08-10): https://bigballsdata.com/legal/terms
+- Serie A plan matrix and FAQ: https://bigballsdata.com/serie-a-api
+- Current OpenAPI: https://bigballsdata.com/openapi.json
+- Changelog (2026-11-11 Free endpoint clarification): https://bigballsdata.com/whats-new
+- Coverage (measured refresh 2026-11-06): https://bigballsdata.com/coverage
