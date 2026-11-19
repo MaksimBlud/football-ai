@@ -126,6 +126,10 @@ OUTCOME_FIELD_DESCRIPTOR_KEYS = frozenset({
     "abbr", "abbreviation", "short_name", "short_code",
     "stat_code", "statistic_code", "field_code", "metric_code",
     "attribute_name", "property_name", "display_name",
+    # Some provider schemas expose statistic identifiers separately from labels.
+    "stat_id", "statistic_id", "field_id", "metric_id",
+    "attribute_id", "property_id", "data_key", "stat_key",
+    "outcome_key", "result_key",
 })
 PROBABILITY_FIELDS = (
     ("market_home_probability", "market_draw_probability", "market_away_probability"),
