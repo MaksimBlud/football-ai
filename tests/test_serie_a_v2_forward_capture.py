@@ -2,7 +2,7 @@
 import hashlib
 from io import BytesIO
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import zipfile
 
 import pytest
@@ -377,3 +377,37 @@ def test_original_forward_blocks_quote_when_parent_completed_after_quote(monkeyp
     assert report["blocked_no_prior_source"] == 1
     assert report["rows"][0]["status"] == "NO_EARLIER_SOURCE_ARCHIVE"
     assert report["rows"][0]["v2_preview"] is None
+
+
+def test_original_forward_does_not_fallback_to_older_archive_when_newest_sha_is_invalid(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    raw, metadata = make_source_archive()
+    older = metadata[0]
+    newer = {
+        **older,
+        "artifact_id": 124,
+        "created_at": NOW - timedelta(minutes=1),
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    }
+    calls = []
+
+    def verify_parent(archive, quote_time):
+        calls.append(("parent", archive["artifact_id"]))
+        return _fully_verified_parent(archive, quote_time)
+
+    def load_archive(artifact_id):
+        calls.append(("archive", artifact_id))
+        return raw + b"tampered" if artifact_id == 124 else raw
+
+    with pytest.raises(ValueError, match="archive digest mismatch"):
+        capture_forward_with_source_preflight(
+            [older, newer],
+            as_of_utc=NOW,
+            fetch_quotes=lambda: calls.append(("quotes", None)) or [quote()],
+            load_archive=load_archive,
+            verify_parent_run=verify_parent,
+        )
+
+    # The newest source is authoritative for this attempt. Its failed digest
+    # must stop the pipeline rather than silently falling back to older bytes.
+    assert calls == [("parent", 124), ("archive", 124)]
