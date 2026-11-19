@@ -359,6 +359,16 @@ def test_preview_rejects_explicit_1x2_winner_and_draw_outcome_aliases(alias, val
     ("abbreviation", "Fulltime Result"),
     ("metricName", "FT Outcome"),
     ("propertyName", "Full Time Outcome"),
+    ("statId", "FTR"),
+    ("statisticId", "Full Time Result"),
+    ("fieldId", "FTAG"),
+    ("metricId", "Winner Side"),
+    ("attributeId", "Away Goals"),
+    ("propertyId", "Draw Result"),
+    ("dataKey", "HTR"),
+    ("statKey", "Red Cards"),
+    ("outcomeKey", "Final Result"),
+    ("resultKey", "Home Goals"),
 ])
 def test_preview_rejects_outcomes_encoded_as_typed_stat_descriptors(descriptor_key, descriptor_value):
     row = features()
@@ -376,6 +386,9 @@ def test_preview_typed_stat_descriptor_guard_preserves_pre_match_labels():
             {"label": "Possession Trend", "value": 58},
             {"abbreviation": "Market 1X2", "value": "1X2"},
             {"shortName": "Home Win Probability", "value": 0.55},
+            {"statId": "Market 1X2", "value": "1X2"},
+            {"fieldId": "Home Win Probability", "value": 0.55},
+            {"dataKey": "Possession Trend", "value": 58},
         ]
     }
     report = v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
