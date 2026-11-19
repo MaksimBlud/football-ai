@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 from datetime import date, datetime, timezone
 import hashlib
+import math
 from io import BytesIO
 import json
 import os
@@ -35,6 +36,8 @@ WORKFLOW_PATH = ".github/workflows/serie-a-v2-current-form-source-capture.yml"
 SCHEMA_VERSION = "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V1"
 CURRENT_CODE = SERIE_A_RUNTIME_CONFIG.finished_results_source.season_code
 CURRENT_SEASON = SERIE_A_RUNTIME_CONFIG.finished_results_source.season
+CURRENT_SEASON_START = date(int(CURRENT_SEASON[:4]), 7, 1)
+CURRENT_SEASON_END = date(int(CURRENT_SEASON[5:9]), 6, 30)
 CURRENT_URL = f"{PUBLIC_BASE}/{CURRENT_CODE}/{SERIE_A_RUNTIME_CONFIG.finished_results_source.competition_code}.csv"
 CURRENT_FILENAME = f"serie_a_{CURRENT_CODE}.csv"
 MANIFEST_FILENAME = "serie_a_v2_current_form_source_manifest.json"
@@ -241,70 +244,126 @@ def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
 
 
 def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[pd.DataFrame, int]:
-    """Return only completed, fully observed rows strictly before capture day.
+    """Return only complete, date-only, integer-count rows strictly before capture day.
 
     Football-Data is date-only. Same-day results are excluded because no reliable
-    kickoff clock is available. Unplayed future rows may exist in the CSV but
-    are never converted to features. The returned frame contains no incomplete
-    fixtures and exactly the original V2 builder's required columns.
+    kickoff clock is available. Invalid, duplicated, fractional or out-of-season
+    completed rows fail closed before any source archive can be published.
     """
-    if captured_at.tzinfo is None:
-        raise ValueError("current-season source capture clock must be timezone-aware")
+    if (
+        not isinstance(captured_at, datetime)
+        or captured_at.tzinfo is None
+        or captured_at.utcoffset() is None
+    ):
+        raise ValueError(
+            "current-season source capture clock must be timezone-aware with a real UTC offset"
+        )
     if not raw or len(raw) > MAX_CURRENT_CSV_BYTES:
         raise ValueError("current-season CSV is empty or exceeds size limit")
     frame = pd.read_csv(BytesIO(raw), low_memory=False)
     missing = set(REQUIRED_COLUMNS) - set(frame.columns)
     if missing:
-        raise ValueError("current-season source lacks required original V2 statistics: "
-                         + ", ".join(sorted(missing)))
-    nonblank_dates = frame["Date"].notna()
-    parsed_dates = pd.to_datetime(frame["Date"], dayfirst=True, format="mixed", errors="coerce")
+        raise ValueError(
+            "current-season source lacks required original V2 statistics: "
+            + ", ".join(sorted(missing))
+        )
+
+    missing_date = frame["Date"].isna() | frame["Date"].astype(str).str.strip().eq("")
+    payload_columns = ["HomeTeam", "AwayTeam", "FTR", *NUMERIC_COLUMNS]
+    has_payload = frame.loc[:, payload_columns].apply(
+        lambda column: column.notna() & column.astype(str).str.strip().ne(""),
+        axis=0,
+    ).any(axis=1)
+    if (missing_date & has_payload).any():
+        raise ValueError("current-season source contains populated fixture row without date")
+
+    nonblank_dates = ~missing_date
+    # Inspect original CSV cells before pandas can normalize explicit midnight
+    # timestamps or timezone-bearing values into apparently date-only values.
+    raw_dates = frame.loc[nonblank_dates, "Date"].astype(str).str.strip()
+    if raw_dates.str.contains(
+        r"(?i)(?:[Tt]\d{2}:\d{2}|[ \t]+\d{1,2}:\d{2}|[+-]\d{2}:\d{2}|[Zz]$)",
+        regex=True,
+    ).any():
+        raise ValueError("current-season source must use date-only fixture dates")
+
+    parsed_dates = pd.to_datetime(
+        frame["Date"], dayfirst=True, format="mixed", errors="coerce"
+    )
     if parsed_dates.loc[nonblank_dates].isna().any():
         raise ValueError("current-season source contains an unparseable fixture date")
     frame = frame.loc[nonblank_dates].copy()
     frame["_parsed_date"] = parsed_dates.loc[nonblank_dates].dt.date
+
     cutoff = captured_at.astimezone(timezone.utc).date()
     ftr = frame["FTR"].fillna("").astype(str).str.strip().str.upper()
     valid_result = ftr.isin(("H", "D", "A"))
+    has_statistics = frame.loc[:, list(NUMERIC_COLUMNS)].notna().any(axis=1)
+    malformed_prior_result = (
+        frame["_parsed_date"].lt(cutoff) & ~valid_result & has_statistics
+    )
+    if malformed_prior_result.any():
+        raise ValueError(
+            "past current-season row has statistics but invalid full-time result marker"
+        )
+
     future_completed = frame["_parsed_date"].gt(cutoff) & valid_result
     if future_completed.any():
         raise ValueError("current-season source contains a completed result after capture date")
+    pre_season_completed = frame["_parsed_date"].lt(CURRENT_SEASON_START) & valid_result
+    if pre_season_completed.any():
+        raise ValueError("current-season source contains a completed row before season start")
+    post_season_completed = frame["_parsed_date"].gt(CURRENT_SEASON_END) & valid_result
+    if post_season_completed.any():
+        raise ValueError("current-season source contains a completed row after season end")
+
     completed = frame.loc[frame["_parsed_date"].lt(cutoff) & valid_result].copy()
     completed["FTR"] = ftr.loc[completed.index]
     if completed.empty:
         raise ValueError("current-season source has no completed prior-day matches")
+
     for field in NUMERIC_COLUMNS:
         completed[field] = pd.to_numeric(completed[field], errors="coerce")
-        if completed[field].isna().any() or (completed[field] < 0).any():
+        if completed[field].isna().any():
             raise ValueError("completed current-season match has missing/invalid " + field)
+        values = completed[field].to_numpy(dtype=float)
+        if not all(math.isfinite(float(value)) for value in values):
+            raise ValueError("completed current-season match has non-finite " + field)
+        if any(float(value) < 0 for value in values):
+            raise ValueError("completed current-season match has negative " + field)
+        if any(not float(value).is_integer() for value in values):
+            raise ValueError("completed current-season match has non-integer " + field)
+
     if ((completed["FTHG"] > completed["FTAG"]) != (completed["FTR"] == "H")).any() or (
         (completed["FTHG"] < completed["FTAG"]) != (completed["FTR"] == "A")
     ).any():
         raise ValueError("current-season result does not match full-time goals")
+
     identities = []
-    orientation_by_unordered_pair: dict[tuple[str, str, str], tuple[str, str]] = {}
+    direction_by_pair: dict[tuple[str, str, str], tuple[str, str, str]] = {}
     for _, row in completed.iterrows():
         home = _canonical_team(row["HomeTeam"])
         away = _canonical_team(row["AwayTeam"])
         if home == away:
             raise ValueError("current-season fixture has identical canonical teams")
         date_key = row["_parsed_date"].isoformat()
-        unordered_key = (date_key, *sorted((home, away)))
-        previous_orientation = orientation_by_unordered_pair.get(unordered_key)
-        if previous_orientation is not None and previous_orientation != (home, away):
+        identity = (date_key, home, away)
+        unordered_pair = (date_key, *sorted((home, away)))
+        previous_direction = direction_by_pair.get(unordered_pair)
+        if previous_direction is not None and previous_direction != identity:
             raise ValueError(
-                "current-season source has reversed duplicate fixture identities"
+                "current-season source has reversed duplicate fixture identity"
             )
-        orientation_by_unordered_pair[unordered_key] = (home, away)
-        identities.append((date_key, home, away))
+        direction_by_pair[unordered_pair] = identity
+        identities.append(identity)
     if len(identities) != len(set(identities)):
         raise ValueError("current-season source has duplicate fixture identities")
+
     completed["Date"] = completed["_parsed_date"].map(
         lambda value: value.strftime("%d/%m/%Y")
     )
     result = completed.loc[:, list(REQUIRED_COLUMNS)].copy()
     return result, len(frame) - len(completed)
-
 
 def capture_source_archive(
     *,
