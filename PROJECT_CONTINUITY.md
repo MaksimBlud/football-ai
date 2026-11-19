@@ -7686,3 +7686,50 @@ No main ref or main file was changed; no Supabase writes/DDL; no paid API reques
 **Read-only pre-match database check (2026-11-19 UTC):** `odds_snapshots` queried only where `snapshot_time_utc < commence_time_utc`; all 9 stored leagues have **0 future events with a strict pre-kickoff quote**. Latest Serie A snapshot remains 2026-10-13 14:48:53 UTC. Future `product_prediction_snapshots` rows with the exact frozen candidate SHA: **0**. Metadata-only Serie A 2026-27 query selected only `match_date, home_team, away_team`: 113 raw rows → 110 canonical unordered identities after the frozen Atalanta alias; latest date 2026-11-08. This is the feature-input gate only; the separate prospective evaluation gate remains **0/30**. No scores/results were selected for this check.
 
 HUMAN-MERGE only. PR #880 remains Draft and must follow its parent chain; no merge or main update was performed.
+
+
+## 2026-11-19 06:00 UTC — fresh Supabase pre-match ledger and Big Balls free-statistics recheck
+
+### Fresh main and frozen original candidate
+
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; the main-branch `PROJECT_CONTINUITY.md` still ends at the 2026-10-18 checkpoint. This update is on the existing documentation PR #839 only; no main ref/file was changed.
+- Original candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; exact 19 features, original weights/scaler/imputer and training fingerprint are unchanged. Protocol: `active_lambda=0`, `shadow_residual_lambda=1`, `stability_gate_passed=false`. The original protocol's outcome-read gate requires 30 completed primary events; the separate current-form prospective evaluation gate requires 30 eligible completed forecasts. Neither gate permits refitting, threshold tuning or automatic promotion.
+
+### Supabase — read-only, pre-match/identity metadata only
+
+- `public.odds_snapshots` query selected only league/event/timestamp metadata and required `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= now()`. Result: **3,915** strict pre-match rows, **327** distinct events across **9** leagues; **0** future events have a saved strict pre-kickoff quote. Latest Serie A snapshot remains **2026-10-13 14:48:53.042620 UTC**.
+- `public.league_finished_results` query selected only `league, season, match_date, home_team, away_team` for `SERIE_A / 2026-2027`: **113** raw rows, **113** raw identity keys, **110** canonical identities after the existing Atalanta spelling alias; all 113 dates are before the current date, spanning **2026-08-22–2026-11-08**. This is the feature-input gate only; it is not the 30-forecast evaluation gate. No scores or result fields were selected.
+- `public.product_prediction_snapshots` filtered by the exact original candidate SHA and selected only pre-match identity/timestamps: **0** rows for that candidate and **0** future pre-match candidate forecasts.
+- No Supabase writes/DDL occurred. No protected target outcomes were read.
+
+### Fresh exact-main GitHub Actions runtime
+
+- [Current-Form Source Capture #44326186511](https://github.com/MaksimBlud/football-ai/actions/runs/44326186511): SUCCESS. Log reports 110 lagged current-season rows, 10 old-season CSVs, 11 total source files, exact candidate SHA, `paid_provider_calls=0`, `supabase_writes=0`, `target_outcomes_scored=false`. Artifact **14438015203**, SHA-256 `0d4240f31418e206b36faf9e94d0782212a91cf6d51262c77b0349ab3f7fc852`.
+- [Free Real-Quote Diagnostic #44336997243](https://github.com/MaksimBlud/football-ai/actions/runs/44336997243): SUCCESS, 3,800 historical rows, **0** future quotes, **0** feature previews, **0** paid requests and **0** Supabase writes. Artifact **14441402737**.
+- [Original Forward #44355495841](https://github.com/MaksimBlud/football-ai/actions/runs/44355495841): SUCCESS. Real source ZIP/parent attestation passed; 3,800 verified historical results / 10 pre-prospective CSVs; **0** quotes, **0** V2 diagnostic previews, **0** forecasts, **0** paid requests and **0** Supabase writes. Artifact **14451725631**, ZIP SHA-256 `8625d2f3cd3d2601be7394287ffa904b101da329306b64db20a0d269c38f0809`.
+- [Current-Form Forward #44356799888](https://github.com/MaksimBlud/football-ai/actions/runs/44356799888): SUCCESS. It verified source artifact **14438015203** and its exact parent before quote access; report has **0** quotes and **0** current-form shadow forecasts, with `target_outcomes_read=false`. Artifact **14452497083**, ZIP SHA-256 `67badae205c4b5d414e3dcf5d79b831b5f8bf4bfc62654893067ca366ce9ea75`.
+- These are successful infrastructure/source-attestation runs, not V2 accuracy evidence.
+
+### Public source-artifact hold is still unmerged
+
+- Fresh main workflow YAMLs still define the source-capture schedule `50 5 * * *`, free diagnostic `13 6 * * *`, Original Forward `8 8 * * *`, and Current-Form Forward `18 8 * * *`. No schedule was changed. The main YAMLs still include `actions/upload-artifact@v4` and do not contain the proposed live-access hold.
+- The repository is still public. Source artifact **14438015203** was uploaded as a **439,421-byte** GitHub Actions artifact. PR [#781](https://github.com/MaksimBlud/football-ai/pull/781), exact HEAD `3a70a8648895076efec2a80dc10b1798ed0d9261`, has **8/8 SUCCESS** and remains unmerged; it is still the first HUMAN-MERGE prerequisite. [#879](https://github.com/MaksimBlud/football-ai/pull/879), exact HEAD `b78010585c80b05ae5fc2a8b3572df14b32d9651`, has **4/4 SUCCESS** and remains Draft, to be restacked after #781. Do not merge, change repository visibility, cancel schedules, or enable live capture from this automation.
+
+### New Big Balls Sports Data documentation evidence — no provider request
+
+- The official changelog dated **2026-11-11** now says `GET /v1/matches/:id/statistics` is Free and only `expected_goals` remains Solo+. The current OpenAPI independently marks the route `x-bbs-min-plan: free`, says factual box-score fields are free, describes the endpoint as stored-only/hourly, and includes `corner_kicks`, `yellow_cards`, `red_cards` in the team-stat schema.
+- The current Serie A plan matrix still labels that same statistics route Edge-only, while the Serie A FAQ says Free except for `expected_goals`. The coverage page's measured inventory is still dated **2026-11-06**, labels soccer `team_stats` Partial, and does not list the per-match statistics route among confirmed Serie A endpoints. Actual 2026/27 per-fixture field completeness is not established.
+- The statistics response still has no per-field upstream observation/correction timestamp. A local immutable response capture timestamp + raw SHA can prove project possession before a later quote, but not the provider's original upstream observation time. Upstream field-level licence lineage and the separate original Football-Data training-corpus rights remain unresolved. Private raw retention is not available while the repository is public.
+- Existing [#794](https://github.com/MaksimBlud/football-ai/pull/794) was updated in place to exact HEAD `4ff473fa20e53b7768a58d15beebb5aea9e9f926`; its six validation workflows are **6/6 SUCCESS**. It remains Draft / `CONDITIONAL_CANDIDATE_NOT_APPROVED` / HOLD. No key, API request, download, match data, odds or inference was used.
+
+### Current-form source-before-quote PR stack
+
+- [#875](https://github.com/MaksimBlud/football-ai/pull/875): `b25ad4c72c274b83fa3b4438f89f0a76d6de1838`, **2/2 SUCCESS**.
+- [#876](https://github.com/MaksimBlud/football-ai/pull/876): `8836e46426032b18bac937c4b60a4b10f37bef90`, **2/2 SUCCESS**.
+- [#877](https://github.com/MaksimBlud/football-ai/pull/877): `245c20b1acc398c5c8bad8541282378b66902cf3`, **2/2 SUCCESS**; its tests preserve the 113→110 canonical identity audit.
+- [#880](https://github.com/MaksimBlud/football-ai/pull/880): `0bd1c8dbc0b467e7717cca846874c95156f1ffa1`, **2/2 SUCCESS**, Python 3.11 and 3.12 each **42 passed**. It makes the current-form quote reader lazy and refuses to instantiate the Supabase client when source verification fails. Draft / HUMAN-MERGE, stacked on #877 → #876 → #875 → #781.
+- [#839](https://github.com/MaksimBlud/football-ai/pull/839) remains the single documentation/continuity PR; this update is appended there rather than creating another continuity PR.
+
+### Non-actions
+
+No merge, main update, Supabase write/DDL, paid provider call, new odds quote, source/API request, raw source download, protected outcome read, model inference/refit, threshold tuning, production `.pkl` change, schedule change, bet, promotion or other-agent setting change occurred.
