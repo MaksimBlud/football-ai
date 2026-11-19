@@ -1,0 +1,374 @@
+{
+  "schema_version": "MARKET_ANCHOR_1X2_V2_SOURCE_RIGHTS_AUDIT_V1",
+  "provider": "11footy",
+  "candidate_id": "MARKET_ANCHOR_1X2_V2",
+  "audit_date_utc": "2026-11-19",
+  "audit_captured_at_utc": "2026-11-19T20:53:39Z",
+  "decision": "HOLD",
+  "scope": "public repository README, LICENSE, schema.sql, SHA256SUMS and GitHub release metadata only; no dataset asset was downloaded or parsed",
+  "upstream_repository": {
+    "url": "https://github.com/fm-devlab/11footy-dataset",
+    "default_branch": "main",
+    "main_commit_sha": "37db9c77c4509b9dcf4915b60b058cdeb1a6a772",
+    "latest_release_tag": "11footy-2026-11-10",
+    "latest_release_published_at_utc": "2026-11-11T00:13:37Z",
+    "release_age_hours_at_audit": 212.6672222222,
+    "documented_rebuild_cadence": "after each round of matches"
+  },
+  "release_assets": {
+    "italy.serie-a.csv.zip": {
+      "size_bytes": 37458938,
+      "github_asset_sha256": "58f473c1eba5bd7c291a6380dadd3aba8ae67a47d17b92828e6f9b5a3b50b0c6",
+      "sha256sums_sha256": "58f473c1eba5bd7c291a6380dadd3aba8ae67a47d17b92828e6f9b5a3b50b0c6"
+    },
+    "italy.serie-a.db.xz": {
+      "size_bytes": 35841640,
+      "github_asset_sha256": "bf9179e4ecb44afeea7c434c938730cf5aa714d17286996bafb4ddbe2fcfb09a",
+      "sha256sums_sha256": "bf9179e4ecb44afeea7c434c938730cf5aa714d17286996bafb4ddbe2fcfb09a"
+    },
+    "SHA256SUMS": {
+      "size_bytes": 4809,
+      "github_asset_sha256": "ff739474c97fbe334826049ad8a0ca71e9f2f7ccbd5c5386fcff0460f933aac6"
+    },
+    "SHA256SUMS.sig": {
+      "size_bytes": 310,
+      "github_asset_sha256": "36a1085585bc1ed5154e0dc131f2a088d2dd06394aaea6d25ec94f43dbed1548"
+    }
+  },
+  "source_integrity": {
+    "sha256_manifest_present": true,
+    "github_release_asset_digest_matches_manifest_for_serie_a_csv_zip": true,
+    "github_release_asset_digest_matches_manifest_for_serie_a_db_xz": true,
+    "signature_asset_present": true,
+    "signature_verification_key_published_in_repository_tree": false,
+    "downloaded_asset_bytes_verified": false,
+    "project_private_archive_created": false,
+    "source_before_quote_proven": false
+  },
+  "license_and_rights": {
+    "declared_license": "CC BY-NC 4.0",
+    "attribution_required": "11footy",
+    "noncommercial_use_only": true,
+    "commercial_use_authorized": false,
+    "upstream_rights_resolved": false,
+    "upstream_provider_names_disclosed": false,
+    "written_clearance_for_serie_a_report_or_feed_layers": false,
+    "rights_status": "HOLD"
+  },
+  "feature_compatibility": {
+    "original_feature_count": 19,
+    "structural_mapping_possible": true,
+    "exact_original_feature_order_preserved": true,
+    "exact_field_definition_parity_with_frozen_training_source_verified": false,
+    "per_fixture_completeness_verified": false,
+    "default_league_statistics_layer": "report",
+    "report_layer_documentation": "official match report counts",
+    "feed_layer_documentation": "live match feed counts",
+    "upstream_source_identity_by_layer_verified": false,
+    "feature_sources": {
+      "diff_points_5": {
+        "table": "matches",
+        "source_columns": [
+          "home_goals",
+          "away_goals",
+          "home_team_id",
+          "away_team_id"
+        ],
+        "join": "matches.home_team_id/away_team_id to team identity",
+        "layer": null,
+        "transform": "derive original 3/1/0 team points from full-time goals; preserve the frozen feature builder unchanged"
+      },
+      "diff_points_10": {
+        "table": "matches",
+        "source_columns": [
+          "home_goals",
+          "away_goals",
+          "home_team_id",
+          "away_team_id"
+        ],
+        "join": "matches.home_team_id/away_team_id to team identity",
+        "layer": null,
+        "transform": "derive original 3/1/0 team points from full-time goals; preserve the frozen feature builder unchanged"
+      },
+      "diff_points_venue5": {
+        "table": "matches",
+        "source_columns": [
+          "home_goals",
+          "away_goals",
+          "home_team_id",
+          "away_team_id"
+        ],
+        "join": "matches.home_team_id/away_team_id to team identity",
+        "layer": null,
+        "transform": "derive original 3/1/0 team points from full-time goals; preserve the frozen feature builder unchanged"
+      },
+      "diff_goals_for_5": {
+        "table": "matches",
+        "source_columns": [
+          "home_goals",
+          "away_goals",
+          "home_team_id",
+          "away_team_id"
+        ],
+        "join": "matches.home_team_id/away_team_id to team identity",
+        "layer": null,
+        "transform": "orient full-time goals for/against by team side; preserve the frozen rolling window"
+      },
+      "diff_goals_for_10": {
+        "table": "matches",
+        "source_columns": [
+          "home_goals",
+          "away_goals",
+          "home_team_id",
+          "away_team_id"
+        ],
+        "join": "matches.home_team_id/away_team_id to team identity",
+        "layer": null,
+        "transform": "orient full-time goals for/against by team side; preserve the frozen rolling window"
+      },
+      "diff_goals_against_5": {
+        "table": "matches",
+        "source_columns": [
+          "home_goals",
+          "away_goals",
+          "home_team_id",
+          "away_team_id"
+        ],
+        "join": "matches.home_team_id/away_team_id to team identity",
+        "layer": null,
+        "transform": "orient full-time goals for/against by team side; preserve the frozen rolling window"
+      },
+      "diff_goals_against_10": {
+        "table": "matches",
+        "source_columns": [
+          "home_goals",
+          "away_goals",
+          "home_team_id",
+          "away_team_id"
+        ],
+        "join": "matches.home_team_id/away_team_id to team identity",
+        "layer": null,
+        "transform": "orient full-time goals for/against by team side; preserve the frozen rolling window"
+      },
+      "diff_corners_for_5": {
+        "table": "match_team_statistics",
+        "source_columns": [
+          "corners",
+          "match_id",
+          "team_id",
+          "layer"
+        ],
+        "join": "match_team_statistics.match_id to matches.match_id and team_id to the corresponding home/away team",
+        "layer": "report",
+        "transform": "orient team corners for/against; report is the documented default layer for leagues"
+      },
+      "diff_corners_for_10": {
+        "table": "match_team_statistics",
+        "source_columns": [
+          "corners",
+          "match_id",
+          "team_id",
+          "layer"
+        ],
+        "join": "match_team_statistics.match_id to matches.match_id and team_id to the corresponding home/away team",
+        "layer": "report",
+        "transform": "orient team corners for/against; report is the documented default layer for leagues"
+      },
+      "diff_corners_against_5": {
+        "table": "match_team_statistics",
+        "source_columns": [
+          "corners",
+          "match_id",
+          "team_id",
+          "layer"
+        ],
+        "join": "match_team_statistics.match_id to matches.match_id and team_id to the corresponding home/away team",
+        "layer": "report",
+        "transform": "orient team corners for/against; report is the documented default layer for leagues"
+      },
+      "diff_corners_against_10": {
+        "table": "match_team_statistics",
+        "source_columns": [
+          "corners",
+          "match_id",
+          "team_id",
+          "layer"
+        ],
+        "join": "match_team_statistics.match_id to matches.match_id and team_id to the corresponding home/away team",
+        "layer": "report",
+        "transform": "orient team corners for/against; report is the documented default layer for leagues"
+      },
+      "diff_yellow_5": {
+        "table": "match_team_statistics",
+        "source_columns": [
+          "yellow_cards",
+          "match_id",
+          "team_id",
+          "layer"
+        ],
+        "join": "match_team_statistics.match_id to matches.match_id and team_id to the corresponding home/away team",
+        "layer": "report",
+        "transform": "team yellow-card count; report is the documented default layer for leagues"
+      },
+      "diff_yellow_10": {
+        "table": "match_team_statistics",
+        "source_columns": [
+          "yellow_cards",
+          "match_id",
+          "team_id",
+          "layer"
+        ],
+        "join": "match_team_statistics.match_id to matches.match_id and team_id to the corresponding home/away team",
+        "layer": "report",
+        "transform": "team yellow-card count; report is the documented default layer for leagues"
+      },
+      "diff_red_5": {
+        "table": "match_team_statistics",
+        "source_columns": [
+          "red_cards",
+          "match_id",
+          "team_id",
+          "layer"
+        ],
+        "join": "match_team_statistics.match_id to matches.match_id and team_id to the corresponding home/away team",
+        "layer": "report",
+        "transform": "team red-card count; report is the documented default layer for leagues"
+      },
+      "diff_red_10": {
+        "table": "match_team_statistics",
+        "source_columns": [
+          "red_cards",
+          "match_id",
+          "team_id",
+          "layer"
+        ],
+        "join": "match_team_statistics.match_id to matches.match_id and team_id to the corresponding home/away team",
+        "layer": "report",
+        "transform": "team red-card count; report is the documented default layer for leagues"
+      },
+      "diff_goals_for_venue5": {
+        "table": "matches",
+        "source_columns": [
+          "home_goals",
+          "away_goals",
+          "home_team_id",
+          "away_team_id"
+        ],
+        "join": "matches.home_team_id/away_team_id to team identity",
+        "layer": null,
+        "transform": "orient full-time goals for/against by team side; preserve the frozen rolling window"
+      },
+      "diff_goals_against_venue5": {
+        "table": "matches",
+        "source_columns": [
+          "home_goals",
+          "away_goals",
+          "home_team_id",
+          "away_team_id"
+        ],
+        "join": "matches.home_team_id/away_team_id to team identity",
+        "layer": null,
+        "transform": "orient full-time goals for/against by team side; preserve the frozen rolling window"
+      },
+      "diff_corners_for_venue5": {
+        "table": "match_team_statistics",
+        "source_columns": [
+          "corners",
+          "match_id",
+          "team_id",
+          "layer"
+        ],
+        "join": "match_team_statistics.match_id to matches.match_id and team_id to the corresponding home/away team",
+        "layer": "report",
+        "transform": "orient team corners for/against; report is the documented default layer for leagues"
+      },
+      "diff_corners_against_venue5": {
+        "table": "match_team_statistics",
+        "source_columns": [
+          "corners",
+          "match_id",
+          "team_id",
+          "layer"
+        ],
+        "join": "match_team_statistics.match_id to matches.match_id and team_id to the corresponding home/away team",
+        "layer": "report",
+        "transform": "orient team corners for/against; report is the documented default layer for leagues"
+      }
+    }
+  },
+  "schema_provenance": {
+    "format_version_build_timestamp_field": "built_at",
+    "matches_kickoff_timestamp_field": "kickoff_utc",
+    "correction_timestamp_field": "applied_corrections.applied_at",
+    "per_match_statistics_first_observation_timestamp": false,
+    "per_field_statistics_correction_history": false,
+    "match_team_statistics_observation_timestamp_fields": [],
+    "release_build_timestamp_is_global": true
+  },
+  "freshness": {
+    "frozen_source_max_age_hours": 24,
+    "release_age_hours_at_audit": 212.6672222222,
+    "passes_frozen_source_freshness_limit": false,
+    "current_release_freshness_status": "STALE_OVER_24_HOURS"
+  },
+  "original_v2": {
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "training_fingerprint_sha256": "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098",
+    "training_rows": 3799,
+    "features": [
+      "diff_points_5",
+      "diff_points_10",
+      "diff_points_venue5",
+      "diff_goals_for_5",
+      "diff_goals_for_10",
+      "diff_goals_against_5",
+      "diff_goals_against_10",
+      "diff_corners_for_5",
+      "diff_corners_for_10",
+      "diff_corners_against_5",
+      "diff_corners_against_10",
+      "diff_yellow_5",
+      "diff_yellow_10",
+      "diff_red_5",
+      "diff_red_10",
+      "diff_goals_for_venue5",
+      "diff_goals_against_venue5",
+      "diff_corners_for_venue5",
+      "diff_corners_against_venue5"
+    ],
+    "weight_matrix_shape": [
+      20,
+      2
+    ],
+    "active_lambda": 0,
+    "shadow_residual_lambda": 1,
+    "stability_gate_passed": false,
+    "evaluation_gate": "CLOSED_0_OF_30",
+    "automatic_promotion": false
+  },
+  "non_actions": {
+    "dataset_asset_downloads": 0,
+    "provider_api_requests": 0,
+    "supabase_reads": 0,
+    "supabase_writes": 0,
+    "supabase_ddl": 0,
+    "protected_2026_27_outcomes_read": false,
+    "feature_calculations": 0,
+    "inference_runs": 0,
+    "training_or_refit": false,
+    "production_pickle_changes": false,
+    "main_changes": 0,
+    "merges": 0,
+    "schedule_changes": 0,
+    "other_agent_settings_changes": 0
+  },
+  "reconsideration_requires": [
+    "written upstream rights and source identities for the Serie A report and live-feed statistics",
+    "confirmation that CC BY-NC 4.0 is compatible with the intended non-commercial scope; no commercial use under the declared licence",
+    "a verifiable public key for SHA256SUMS.sig and verification of downloaded release bytes",
+    "a new release whose built_at/source age is within the frozen 24-hour limit before each quote",
+    "private immutable project archive completed and SHA-256 verified before the quote",
+    "feature-by-feature definition and completeness parity with the frozen original training source",
+    "no changes to the original 19 features, candidate, weights, scaler, imputer, lambda semantics or frozen evaluation gate"
+  ]
+}
