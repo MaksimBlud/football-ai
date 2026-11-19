@@ -7613,3 +7613,21 @@ Only rows with strict pre-kickoff ordering were selected; no score, result, sett
 ### Non-actions
 
 No main ref or main file was changed; no Supabase writes/DDL; no paid API request; no source/quote capture was initiated by this run; no protected evaluation outcomes were opened; no inference, training/refit, threshold tuning, promotion, bet, production `.pkl` change, schedule change or other-agent setting change.
+
+
+## 2026-11-18 19:05 EST / 2026-11-19 00:05 UTC — SportsAPI Pro provenance refinement and fresh pre-match ledger
+
+### Original V2 and source candidate
+
+- Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main ref or file was changed.
+- Updated the existing free-source audit [#806](https://github.com/MaksimBlud/football-ai/pull/806) to exact HEAD `a73c3e057d35a63c72b4bd3253e140d666987bc6`, base main. The official SportsAPI Pro docs now explicitly document an event-level `changes.changeTimestamp` on season/schedule/match metadata, but do not show it on the separate match-statistics response or prove that it tracks corner/card corrections.
+- The match-statistics catalogue documents match-level `cornerKicks` and `yellowCards`, not a match-level red-card key. The incidents endpoint says yellow/red-card events exist, but its public schema does not define the second-yellow discriminator. Serie A catalogue access is documented (competition id 23), but actual 2026/27 per-fixture field completeness remains unverified.
+- Exact-head CI for #806 completed **7/7 SUCCESS**. Dedicated Frozen V2 Shadow Tests [#44425938020](https://github.com/MaksimBlud/football-ai/actions/runs/44425938020) passed **88 tests** and the production `.pkl` diff guard. Research [#44425938044](https://github.com/MaksimBlud/football-ai/actions/runs/44425938044), Serie A [#44425937953](https://github.com/MaksimBlud/football-ai/actions/runs/44425937953), Eredivisie [#44425937927](https://github.com/MaksimBlud/football-ai/actions/runs/44425937927), Product [#44425937903](https://github.com/MaksimBlud/football-ai/actions/runs/44425937903), Ligue 1 [#44425937987](https://github.com/MaksimBlud/football-ai/actions/runs/44425937987), and Bundesliga [#44425938098](https://github.com/MaksimBlud/football-ai/actions/runs/44425938098) all passed on the same exact HEAD.
+- #806 remains **Draft / HOLD / HUMAN-MERGE**. No API account/key/request, data download, feature build or inference occurred. The provider's explicit ML/private-retention terms do not override the missing authorized private archive, unverified red/second-yellow parity, or unverified current-season completeness. Event-level `changeTimestamp` is supplemental only; local receipt time + SHA remains the project-level source-before-quote proof.
+
+### Fresh read-only Supabase pre-match ledger
+
+- Query used only `public.odds_snapshots` metadata and the strict condition `snapshot_time_utc < commence_time_utc`; no odds values, results, scores, settlement or correctness fields were selected.
+- Result: **3,915** strict pre-match snapshots, **327** unique events, **9** leagues. Future events with a saved pre-match quote: **0**. Latest strict pre-match snapshot remains Serie A **2026-10-13 14:48:53 UTC**.
+- `public.product_prediction_snapshots` was queried only for model SHA, event identity and generated/kickoff timestamps with `generated_at_utc < commence_time_utc`: **40** pre-kickoff rows / **40** events; **0** carry the original V2 SHA; latest generated row **2026-10-09 15:29:33 UTC**.
+- No protected target outcomes were queried. No Supabase writes/DDL, provider calls, quote calls, source capture, inference, refit, production `.pkl` change, schedule change, PR merge or main update occurred.
