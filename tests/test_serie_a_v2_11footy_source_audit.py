@@ -62,7 +62,15 @@ def test_release_integrity_metadata_is_not_misrepresented_as_download_verificati
     assert integrity["github_release_asset_digest_matches_manifest_for_serie_a_csv_zip"] is True
     assert integrity["github_release_asset_digest_matches_manifest_for_serie_a_db_xz"] is True
     assert integrity["signature_asset_present"] is True
-    assert integrity["signature_verification_key_published_in_repository_tree"] is False
+    assert integrity["signature_verification_key_published_in_dataset_repository_tree"] is False
+    assert integrity["signature_verification_key_published_in_related_app_repository"] is True
+    assert integrity["signature_verification_key_available"] is True
+    assert integrity["signature_verification_principal"] == "11footy-dataset"
+    assert integrity["signature_verification_namespace"] == "11footy-dataset"
+    assert integrity["signature_verification_key_type"] == "ssh-ed25519"
+    assert integrity["signature_verification_implementation"] == "OpenSSH ssh-keygen -Y verify"
+    assert integrity["signature_verification_performed"] is False
+    assert integrity["signature_verified"] is False
     assert integrity["downloaded_asset_bytes_verified"] is False
     assert integrity["project_private_archive_created"] is False
     assert integrity["source_before_quote_proven"] is False
@@ -132,4 +140,6 @@ def test_audit_and_workflow_explicitly_describe_hold_without_live_access():
     assert "212.667 hours" in document
     assert "source-before-quote" in document
     assert "No dataset asset was downloaded" in document
+    assert "config/vesta/dataset-signers" in document
+    assert "signature remains unverified" in document
     assert manifest["decision"] == "HOLD"
