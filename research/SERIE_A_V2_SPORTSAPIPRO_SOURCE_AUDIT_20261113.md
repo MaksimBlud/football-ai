@@ -123,3 +123,42 @@ The latest read-only Supabase metadata query counted 113 unique completed Serie 
 ## Read-only private-storage inventory — 2026-11-15
 
 A read-only query of `storage.buckets` returned exactly one bucket: `model-artifacts`, with `public=false`. No storage objects or payloads were inspected. The bucket name/purpose does not establish approval for raw provider archives, and no Supabase write, upload, policy change, or DDL is authorized. The existing V2 privacy helper still requires a private GitHub repository; the project repository remains public. This is a useful infrastructure lead, not a cleared storage destination. The source audit remains **HOLD**.
+
+
+## 2026-11-18 official-documentation follow-up — event change stamps and exact match-stat schema
+
+Re-read the current official Football V2 documentation, the Terms, and the Data Rights & Retention page. This was a documentation-only check: no account/key was created, no provider endpoint was called, no free quota was spent, and no payload was downloaded.
+
+### What is now explicitly documented
+
+- The Football V2 coverage guide identifies Serie A as `uniqueTournament.id = 23`, labels Serie A a premium-depth competition, and says Free/Pro/Ultra/Mega share the same competitions and endpoints; only daily request allowance differs. It describes season-event pages with fixtures, scores and status and states major competitions have multi-season history. This establishes catalogue-level access, not actual completeness of every Serie A 2026/27 match payload.
+- The match-statistics catalogue (last modified 2026-11-14) lists match-level `cornerKicks` and `yellowCards`. It does **not** list a match-level `redCards` key. The team-season catalogue has `redCards` and `yellowRedCards`, but season aggregates are not a substitute for the frozen per-match red-card history.
+- The match incidents endpoint is documented as returning goals and yellow/red-card events. The public example does not expose a card-event payload schema or a second-yellow discriminator. Therefore direct-red versus second-yellow counting cannot yet be mapped to the original Football-Data red-card field without an assumption; the four red-card form features remain unverified.
+- The coverage guide now documents an event-level `changes` object on season-page, schedule and match-detail event records. It contains a changed-field list and `changeTimestamp` in Unix seconds. This is useful fixture-metadata change detection. The documentation does not establish that this stamp is present on the separate `/match/{matchId}/statistics` response or that its changed-field list captures every corner/card statistic correction. It is not a per-field statistics observation timestamp and does not prove the provider's first observation time.
+- The Terms and Data Rights page expressly permit internal analytics, research, machine learning, backtesting, private raw-response retention, receipt timestamps and customer-generated hashes for Free accounts. Raw responses must remain private and must not be published, bulk-shared or exposed to third parties.
+
+### Consequence for the original V2 source gate
+
+The local source-before-quote proof remains implementable as:
+
+`private_source_capture_time_utc < quote_snapshot_time_utc < kickoff_utc`
+
+with exact raw-response bytes, local receipt time, SHA-256, API/version identifiers, parent workflow run ID and exact commit SHA. The newly documented event-level `changeTimestamp` may be retained as supplemental metadata, but it must not replace local receipt time or be treated as a statistics-specific correction clock.
+
+The candidate remains **HOLD** for the same decisive reasons:
+
+1. No authorized private raw archive is available. The repository is public; the existing private `model-artifacts` bucket has not been approved for raw provider responses, and no storage write is authorized.
+2. The public schema does not establish match-level red-card / second-yellow parity with the original frozen feature semantics.
+3. Actual 2026/27 Serie A per-match statistics completeness has not been verified with a permitted payload.
+4. The provider disclaims accuracy/completeness/timeliness guarantees, so any later data must be validated and missing values must fail closed.
+
+No API request, account creation, key use, data download, Supabase access/write/DDL, odds read, target-outcome read, feature build, inference, refit, production artifact change, schedule change, main update or promotion occurred.
+
+### Official documentation rechecked
+
+- https://docs.sportsapipro.com/api-reference/football-v2/coverage
+- https://docs.sportsapipro.com/api-reference/football-v2/stats-catalogue
+- https://docs.sportsapipro.com/api-reference/football-v2/match
+- https://docs.sportsapipro.com/data-rights
+- https://www.sportsapipro.com/terms
+- https://www.sportsapipro.com/pricing
