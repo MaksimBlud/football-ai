@@ -7751,3 +7751,33 @@ Official source:
 - Football-Data.co.uk current data page, updated 2026-11-16: https://www.football-data.co.uk/data.php
 
 No CSV/API request, download, quote read, Supabase write/DDL, outcome read, model inference/refit, threshold tuning, production change, schedule change or merge was performed.
+
+
+## 2026-11-19 07:00 UTC — run 11 exact-main and V2 gate recheck
+
+### Exact main and Original Forward source order
+
+- Fresh `main` HEAD remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; the repository is still public.
+- On this exact main, `serie_a_v2_forward_capture.py` calls `fetch_saved_upcoming_serie_a_quotes(...)` at line 278 **before** `discover_archives(...)` at line 279 and before `prepare_forward_capture(...)` performs per-quote source verification. This is a live quote-first ordering defect, not merely a missing report field.
+- The fix exists in Draft [#830](https://github.com/MaksimBlud/football-ai/pull/830), exact HEAD `a773ba3642a9c3a05abcac4acf0b1b2c0606b601`, with **2/2 SUCCESS** on its exact SHA. Its `main()` discovers and verifies source archives first, and only passes a lazy `fetch_quotes` callback to `capture_forward_with_source_preflight`; Supabase is imported inside that callback after source parent/raw ZIP/SHA verification. #830 is stacked on #826, which is itself stacked on #825 and earlier rights gates; it is not in main.
+- [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains Ready, exact HEAD `3a70a8648895076efec2a80dc10b1798ed0d9261`, **8/8 SUCCESS**, but unmerged. Its default-deny live-access hold is not active on main. [#879](https://github.com/MaksimBlud/football-ai/pull/879) remains Draft, exact HEAD `b78010585c80b05ae5fc2a8b3572df14b32d9651`, **1/1 SUCCESS**, based on #781, and adds the private-repository requirement. Neither was merged or retargeted.
+- On main, `serie_a_v2_current_form_forward_capture.py` verifies an archive before the quote query, but it still creates the Supabase client and reads quotes even if that verification failed. Draft [#880](https://github.com/MaksimBlud/football-ai/pull/880), exact HEAD `0bd1c8dbc0b467e7717cca846874c95156f1ffa1`, has **1/1 SUCCESS** and makes quote access lazy/fail-closed; it remains stacked on #877 → #876 → #875 → #781.
+
+### Current official Big Balls source audit
+
+- Existing [#794](https://github.com/MaksimBlud/football-ai/pull/794) was updated in place, not duplicated. New exact HEAD `27eec8dd6f3dcea0e691fab98e8333fd7034e3a7`, **6/6 SUCCESS** on 2026-11-19.
+- Current generated gateway registry and OpenAPI both declare `GET /v1/matches/{id}/statistics` Free for the route, with xG field-only entitlement at Solo. The human Serie A plan matrix still places the combined “advanced statistics” row at Edge; retain this documentation discrepancy.
+- The endpoint is post-match, stored-only, hourly persisted; schema carries corners/yellow/red cards but no per-match upstream observation/correction timestamp. The response's source label is opaque, not a field-level vendor identity. Big Balls' own terms allow stored data in internal models, but its licence notice attributes football data to Football-Data.org; written upstream field-level rights confirmation remains a HOLD. This does not clear the separate Football-Data.co.uk historical training-corpus rights hold.
+- No API key, API request, data download or provider data was accessed.
+
+### Main scheduled runtime and Supabase pre-match-only recheck
+
+- The four V2 scheduled workflows still present on main are: source capture 05:50 UTC, free quote diagnostic 06:13 UTC, Original Forward 08:08 UTC, Current-Form Forward 08:18 UTC. No schedule or workflow setting was changed.
+- As of 2026-11-19 07:00 UTC, the latest scheduled main V2 runs returned by GitHub are still the four 2026-11-18 runs: source capture [#44326186511](https://github.com/MaksimBlud/football-ai/actions/runs/44326186511), free quote diagnostic [#44336997243](https://github.com/MaksimBlud/football-ai/actions/runs/44336997243), Original Forward [#44355495841](https://github.com/MaksimBlud/football-ai/actions/runs/44355495841), Current-Form Forward [#44356799888](https://github.com/MaksimBlud/football-ai/actions/runs/44356799888). No 2026-11-19 scheduled V2 run had appeared by 07:00 UTC; the 08:08 and 08:18 workflows were still in the future at this check.
+- Read-only Supabase query used only `public.odds_snapshots` with `snapshot_time_utc < commence_time_utc`: **3,915** pre-match snapshots across 9 leagues and **327** events. Latest saved pre-match quote remains Serie A **2026-10-13 14:48:53 UTC**. Future events with saved pre-match quotes: **0**.
+- Read-only `product_prediction_snapshots` query used only pre-match timestamps and model SHA: **40** pre-match rows, **0** rows with the exact frozen V2 candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; latest row generated **2026-10-09 15:29:33 UTC**. These 40 rows are not evidence of original V2 prospective predictions.
+- No completed-event outcomes or protected target values were queried. The evaluation gate remains **0/30**; no Brier/LogLoss comparison is authorized.
+
+### Non-actions
+
+No merge, main update, Supabase write/DDL, paid provider call, new quote, provider API request, raw-source download, protected outcome read, model inference/refit, threshold change, production `.pkl` change, schedule change, bet, promotion or other-agent setting change occurred. The original 19-feature/weight contract and `active_lambda=0` / `shadow_lambda=1` semantics remain unchanged.
