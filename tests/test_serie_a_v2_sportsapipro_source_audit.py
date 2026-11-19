@@ -96,4 +96,15 @@ def test_free_rights_do_not_override_private_storage_and_provenance_gates():
     assert manifest["request_budget_estimate"]["estimated_total_calls_lower_bound"] == 230
     assert manifest["request_budget_estimate"]["minimum_days_at_100_requests_per_day"] == 3
     assert manifest["coverage"]["current_2026_27_match_statistics_completeness_verified"] is False
+    assert manifest["coverage"]["serie_a_unique_tournament_id"] == 23
+    assert manifest["coverage"]["match_statistics_keys"] == ["cornerKicks", "yellowCards"]
+    assert manifest["coverage"]["match_level_red_card_stat_key_documented"] is False
+    assert manifest["coverage"]["incidents_endpoint_documents_goals_yellow_and_red_card_events"] is True
+    assert manifest["coverage"]["incident_card_payload_schema_documented"] is False
+    assert manifest["coverage"]["second_yellow_mapping_documented"] is False
+    assert manifest["provenance"]["event_change_timestamp_documented"] is True
+    assert manifest["provenance"]["event_change_timestamp_is_per_field"] is False
+    assert manifest["provenance"]["event_change_timestamp_statistics_payload_linkage_verified"] is False
+    assert manifest["provenance"]["event_change_timestamp_proves_statistics_first_observation"] is False
+    assert manifest["provenance"]["source_before_quote_approved"] is False
     assert manifest["project_authorization"]["api_requests_authorized"] is False
