@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DOC = ROOT / "research" / "SERIE_A_V2_API_FOOTBALL_SOURCE_RIGHTS_AUDIT_20261119.md"
+DOC = ROOT / "research" / "SERIE_A_V2_API_FOOTBALL_SOURCE_AUDIT_20261119.md"
 RIGHTS = ROOT / "research" / "source_rights" / "api_football.json"
 WORKFLOW = ROOT / ".github" / "workflows" / "market-anchor-v2-api-football-source-audit.yml"
 
