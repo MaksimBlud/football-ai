@@ -67,3 +67,31 @@ Therefore this audit authorizes **no** new provider calls, data download, workfl
 - Stability/evaluation gates: unchanged; no quality claim.
 - No protected target outcomes were read.
 - No production `.pkl`, Supabase data/schema, workflow schedules, or other agents were changed.
+
+
+## Official Football-Data.co.uk page recheck and correction — 2026-11-19
+
+The current official page is `https://www.football-data.co.uk/data.php` (displayed “Updated: 16/11/26”). This is a static documentation read only; no CSV URL was requested or downloaded.
+
+### Correct the earlier frequency wording
+
+The page says the files are “at least updated twice weekly (Sunday nights and Wednesday nights)”. That is the publisher's update cadence. It does **not** state a maximum of two downloads per week. The earlier phrase “at most twice per week” in section 1 of this audit is therefore not supported by the current official page and must not be repeated as a provider rate limit.
+
+The HOLD does not depend on that inferred limit. The same official page states that the free CSV/Excel data is intended for private individuals only and explicitly excludes “commercial or data training products using automated bots/scrapers/AI”. It also says the data are made available for league match prediction only. The existing project pattern—daily automated retrieval of ten historical season CSVs plus current-season CSV, immutable archival, and use in a trained AI candidate—does not have an affirmative permission grant under that wording.
+
+### Correct source identity and implications for the frozen candidate
+
+The historical files used by the original candidate are hosted at `football-data.co.uk` (CSV paths such as `/mmz4281/{season}/I1.csv`). This is **not** the separate `football-data.org` API. The latter's terms/attribution cannot be used as a licence for the former.
+
+The Football-Data.co.uk page says match-statistics compilation uses multiple upstream sources (including Sportinglife, BBC, ESPN, Bundesliga.de, Gazzetta.it and Football.fr) and provides no field-level licence grant for automated AI training or raw archive retention. The candidate's frozen training corpus and all future automated capture based on these CSVs therefore remain a rights HOLD unless the provider gives written permission for this exact personal/project/AI use. This audit does not determine legal status; it records the provider's published restriction and the absence of a documented exception.
+
+### Corrected disposition
+
+- **No** claim that the provider caps downloads at two per week.
+- **HOLD** automated daily downloads and AI training/inference use pending explicit written permission or a documented licence change.
+- Do not delete, overwrite, or redistribute existing artifacts as part of this research run; no repository or artifact mutation beyond this documentation commit was performed.
+- The existing default-deny live-access PR #781 remains the required operational protection. HUMAN-MERGE remains mandatory.
+- No CSV request/download, source capture, quote access, API request, Supabase access/write/DDL, feature build, inference, target-outcome read, refit, threshold change, production artifact change or schedule change occurred.
+
+Official source:
+- Current Football-Data.co.uk data page, updated 2026-11-16: https://www.football-data.co.uk/data.php
