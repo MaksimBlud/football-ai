@@ -1,3 +1,44 @@
+## 2026-11-19 01:55 UTC — private artifact gate exact-head CI and fresh pre-match audit
+
+### Fresh main and live-workflow safety
+
+- Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Repository metadata confirms `private=false` / public visibility. No main ref or file was changed in this iteration.
+- Re-read the actual main workflows and Python entrypoints. The five V2 workflows still lack the proposed private-repository preflight on main; the current source/quote steps and artifact uploads remain executable until the HUMAN-MERGE hold is integrated. In particular, main `serie_a_v2_forward_capture.py` blob `5db02cbd1367ed25b994b152acf371421859a014` still calls `fetch_saved_upcoming_serie_a_quotes()` at line 278 before `discover_archives()` at line 279. This is a confirmed quote-first defect, not just a workflow-label issue. The separate current-form forward entrypoint does verify source archives before it constructs the Supabase client and reads quotes, but its main workflow also remains ungated.
+- [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review, exact HEAD `3a70a8648895076efec2a80dc10b1798ed0d9261`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`; exact-head GitHub check-runs are **8/8 completed SUCCESS**. It is the first HUMAN-MERGE dependency. Its PR body has historical stale SHA text; use the live PR API HEAD and check-runs, not the body’s old SHA.
+- [#879](https://github.com/MaksimBlud/football-ai/pull/879) adds a read-only GitHub `.private` preflight to each of the five held V2 workflows and gates both live operations and artifact uploads on confirmed private visibility. Exact HEAD `b78010585c80b05ae5fc2a8b3572df14b32d9651`, base is exact #781 HEAD `3a70a8648895076efec2a80dc10b1798ed0d9261`. Exact-head check-runs: **4/4 SUCCESS** (push + PR events, Python 3.11 and 3.12); each runtime log shows **20 tests passed**, `py_compile` passed, and `git diff --exit-code -- '*.pkl'` passed. The separate earlier frozen-shadow run used a different SHA and is not counted in this exact-head total. #879 remains Draft and must be restacked on fresh main and revalidated only after #781 is manually merged.
+- Read-only audit of `safe-engineering-automerge.yml` and `safe_agent_automerge.py` confirms the scheduled merger only considers same-repo `github-actions[bot]` drafts titled `draft(agents): staged ...` on approved role branches with exact six-check CI. Owner-authored #781/#879 do not qualify. No auto-merge or main change occurred.
+
+### Original Forward source-before-quote dependency
+
+- [#830](https://github.com/MaksimBlud/football-ai/pull/830) remains OPEN / Draft at exact HEAD `a773ba3642a9c3a05abcac4acf0b1b2c0606b601`, based on #826 exact HEAD `6d1b533e82afe4e708c6fa29f876d8048a1465f8`. Its exact-head check-runs are **3/3 SUCCESS**. It moves the original saved-quote read behind verified source archive/parent-run/SHA preflight and preserves the no-backfill rule.
+- The dependency chain is still stacked: #826 → #830 → #869 → #872 → #873. #869 skips invalid newer artifacts, #872 hardens candidate validation/404 behavior, and #873 fixes the actual guarded JSON RuntimeError 404 path. These are separate dependencies; do not cherry-pick #830 alone or call main fixed before the chain is safely integrated and the real main runtime is re-proven.
+- Main current-form source capture and current-form forward remain separate workflows; their source-first logic does not repair the original old-cohort quote-first entrypoint.
+
+### Fresh read-only Supabase pre-match-only counts
+
+Queries selected only saved quote/prediction timestamps, event IDs, league and model identity; no score, result, settlement, or target-outcome columns were read.
+
+- `public.odds_snapshots`: 3,966 total rows; **3,915** satisfy `snapshot_time_utc < commence_time_utc`, covering **327** event IDs; 51 rows are not strictly pre-match. Latest strictly pre-match snapshot remains `2026-10-13 14:48:53.04262 UTC`.
+- `public.product_prediction_snapshots`: 40/40 rows are strictly pre-match. All 40 are `EPL_AI_MARKET_PAIR_V1`, model SHA `1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5`; none identifies the original V2 candidate. Latest generated time is `2026-10-09 15:29:33.136613 UTC`.
+- No new original V2 prospective prediction is evidenced. The independent completed-primary-event outcome gate remains 0/30. No target outcomes were queried.
+
+### Provider-rights correction
+
+- [#806 SportsAPI Pro audit](https://github.com/MaksimBlud/football-ai/pull/806) remains Draft / HOLD. Its recorded terms review says internal research/ML and private raw-response retention are permitted, but the pricing page labels Free as `$0/1 Month`, so ongoing free entitlement is not established. Its Football V2 docs classify Serie A depth as premium while documenting match-level corners/yellows and an incidents endpoint for cards. Upstream first-observation/correction timestamps, red-card/second-yellow parity, complete free-tier Serie A 2026/27 coverage, and approved private archive availability remain unresolved. Do not treat this source as approved or make provider calls.
+- #870 SoccersAPI, #874 Soccer Data, and #868 open-source provider audits remain HOLD; no provider was newly approved and no API call was made.
+
+### Preserved original V2 invariants
+
+Frozen candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features, 20×2 weights, 3,799 training rows, fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`, `active_lambda=0`, `shadow_lambda=1`. No refit, feature/weight/threshold change, production `.pkl` change, promotion, paid API request, Supabase write/DDL, or protected outcome read. Brier/LogLoss superiority over market is not established.
+
+### Next safe sequence
+
+1. HUMAN-MERGE #781, then verify fresh main and confirm all affected live steps/artifact uploads are held.
+2. Restack #879 onto fresh main and rerun exact-head CI before any live access can be enabled.
+3. Integrate the #826/#830/#869/#872/#873 original-forward chain in dependency order, with fresh-main checks and real source-before-quote runtime proof.
+4. Keep source providers on HOLD until ongoing free entitlement, field completeness, upstream correction provenance, rights, and private storage are evidenced.
+5. Only then calculate the unchanged 19-feature V2 shadow from eligible pre-kickoff inputs; keep outcome gate closed until its preregistered 30 prospective completed events.
+
 ## 2026-11-18 22:00 UTC — direct V2 identity-reader regression and fresh pre-match runtime audit
 
 ### Fresh main, frozen candidate, and exact PR chain
