@@ -52,15 +52,29 @@ jobs:
           for file in historical_football_signal_lab.py market_anchor_1x2_v1.py market_anchor_1x2_v2_shadow.py; do
             git show df19777087fb89af049eedce44ff93f0aa6e6360:"$file" > "/tmp/frozen-market-anchor-v2/$file"
           done
+      - name: Verify private repository storage before live V2 access
+        id: private-storage
+        if: ${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' && steps.private-storage.outputs.is_private == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          private="$(gh api "repos/${GITHUB_REPOSITORY}" --jq '.private')"
+          if [[ "$private" == "true" ]]; then
+            echo "is_private=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_private=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::V2 live access is held because this repository is public; no source or quote data will be accessed or uploaded"
+          fi
       - name: Rebuild September candidate from fixed 2016-2026 training input only
-        if: ${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
+        if: ${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' && steps.private-storage.outputs.is_private == 'true' }}
         run: |
           python market_anchor_v2_saved_cohort_replay.py \
             --frozen-source-dir /tmp/frozen-market-anchor-v2 \
             --restore-candidate-only \
             --save-research-candidate
       - name: Prove frozen checksum, immutable recipe and research-only status
-        if: ${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
+        if: ${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' && steps.private-storage.outputs.is_private == 'true' }}
         run: |
           python - <<'PY'
           import json
@@ -99,7 +113,7 @@ jobs:
           sha256sum ./*.pkl 2>/dev/null | sort > /tmp/recovery-pkl-after || true
           diff -u /tmp/recovery-pkl-before /tmp/recovery-pkl-after
       - name: Archive recovered frozen V2 research candidate
-        if: ${{ success() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
+        if: ${{ success() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' && steps.private-storage.outputs.is_private == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: frozen-market-anchor-v2-serie-a-candidate
