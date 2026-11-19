@@ -12,7 +12,7 @@ It is **not approved**. Three independent blockers remain:
 
 1. The declared dataset licence is **CC BY-NC 4.0**: non-commercial use with attribution only. Commercial use is not granted.
 2. The README describes a league report layer as official match-report statistics and a feed layer as live-feed statistics, but does not identify the upstream provider for either layer. The existing Lega Serie A rights audit (#883) records that official League content extraction requires express written consent. We cannot assume the 11footy compilation licence clears upstream rights.
-3. The latest public release is 11footy-2026-11-10, published 2026-11-11 00:13:37 UTC. At this audit time it is 212.667 hours old, exceeding the frozen V2 source-age limit of 24 hours. No newer release was visible.
+3. The latest public release is 11footy-2026-11-10, published 2026-11-11 00:13:37 UTC. At this audit time it is 212.667 hours old and no newer release was visible. This is a release-freshness warning; it does **not by itself prove** a violation of the frozen 24-hour project-archive-age rule. No authorized project archive exists and current completed-fixture coverage has not been checked.
 
 No dataset asset was downloaded, so no match-level coverage, missingness, feature parity, source-before-quote, or local archive SHA has been established.
 
@@ -88,7 +88,7 @@ The schema exposes:
 
 The match_team_statistics rows have no documented per-row first-observed timestamp or field-level correction timestamp. A pinned release plus a private archive and SHA could prove which exact release the project possessed before a later quote. It would not prove the provider's first observation time for every statistic.
 
-The current release was published 212.667 hours before this audit. The original V2 prospective protocol fixes a maximum source age of 24 hours. This release therefore fails the existing freshness contract. Do not relax the age limit or relabel retrieval time as source-observation time.
+The current release was published 212.667 hours before this audit. This is a warning that its current-season fixture coverage may be stale; no dataset rows were inspected, so completeness cannot be asserted. The frozen V2 policy's 24-hour limit applies to the age of the project's private source archive relative to quote admission, not automatically to the upstream release publication age. No project archive exists here, so that local age gate is not yet testable. A future authorized capture could satisfy the local archive-age rule only if the release's fixture identities cover every completed fixture in the current metadata-only gate and the archive is completed before the quote. Do not relax the 24-hour limit or mislabel local retrieval time as a provider first-observation timestamp.
 
 If a future release is within the frozen 24-hour limit and all rights are cleared, the safe sequence would be:
 
@@ -110,8 +110,8 @@ Keep approval_status=HOLD until all of the following are independently verified:
 1. upstream provider identity and written rights for the Serie A report/feed layers, including internal research, ML inference, private retention and any intended product use;
 2. confirmation that the non-commercial licence matches the actual project use; commercial use would require a different explicit licence;
 3. a public verification key and successful signature verification for SHA256SUMS.sig;
-4. a fresh release whose source age is within the frozen 24-hour limit before each quote;
-5. a private immutable archive completed and SHA-verified strictly before the quote;
+4. a release whose completed-fixture identities cover every fixture in the current metadata-only gate, with no missing current-season match rows;
+5. a private immutable archive completed and SHA-verified strictly before the quote and still within the frozen 24-hour project-archive-age limit at quote admission;
 6. complete fixture-level coverage and field-definition parity for all 19 original features, without zero-filling unknowns or changing the original feature builder;
 7. exact original candidate SHA, feature order, weights, scaler, imputer and lambda semantics remain unchanged.
 
