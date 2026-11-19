@@ -306,10 +306,15 @@
     "release_build_timestamp_is_global": true
   },
   "freshness": {
-    "frozen_source_max_age_hours": 24,
-    "release_age_hours_at_audit": 212.6672222222,
-    "passes_frozen_source_freshness_limit": false,
-    "current_release_freshness_status": "STALE_OVER_24_HOURS"
+    "frozen_project_archive_max_age_hours": 24,
+    "provider_release_age_hours_at_audit": 212.6672222222,
+    "provider_release_age_warning": true,
+    "project_archive_created": false,
+    "project_archive_age_hours": null,
+    "passes_frozen_project_archive_age_limit": null,
+    "current_source_fixture_coverage_verified": false,
+    "current_release_freshness_status": "RELEASE_AGE_WARNING_COVERAGE_UNVERIFIED",
+    "interpretation": "The frozen 24-hour limit applies to the project's private source archive age relative to quote admission. The 212.667-hour upstream release age is a warning, not by itself a measured violation of that local archive-age limit. No local archive or current-gate fixture-coverage check exists."
   },
   "original_v2": {
     "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
@@ -366,7 +371,7 @@
     "written upstream rights and source identities for the Serie A report and live-feed statistics",
     "confirmation that CC BY-NC 4.0 is compatible with the intended non-commercial scope; no commercial use under the declared licence",
     "a verifiable public key for SHA256SUMS.sig and verification of downloaded release bytes",
-    "a new release whose built_at/source age is within the frozen 24-hour limit before each quote",
+    "an authorized source release whose fixture identities cover every completed fixture in the current metadata gate; the project's private archive must then be completed and SHA-verified before each quote and remain within the frozen 24-hour archive-age limit",
     "private immutable project archive completed and SHA-256 verified before the quote",
     "feature-by-feature definition and completeness parity with the frozen original training source",
     "no changes to the original 19 features, candidate, weights, scaler, imputer, lambda semantics or frozen evaluation gate"
