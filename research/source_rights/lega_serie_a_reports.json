@@ -1,0 +1,68 @@
+{
+  "schema_version": "MARKET_ANCHOR_1X2_V2_SOURCE_RIGHTS_AUDIT_V1",
+  "provider": "Lega Calcio Serie A official match reports",
+  "candidate_id": "MARKET_ANCHOR_1X2_V2",
+  "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+  "decision": "HOLD",
+  "source_family": "official_league_match_reports_and_third_party_parsed_dataset",
+  "reviewed_at_utc": "2026-11-19",
+  "source_evidence": {
+    "official_terms_url": "https://en.legaseriea.it/terms-and-conditions",
+    "official_terms_updated": "2025-12-01",
+    "official_campaign_url": "https://www.legaseriea.it/serie-a/news/al-via-la-campagna-true-data-a-tutela-del-dato-ufficiale",
+    "official_campaign_date": "2026-08-28",
+    "third_party_repository_url": "https://github.com/matteovezzoli/serie-a-observatory",
+    "third_party_repo_claims_current_season": "2026/27",
+    "third_party_repo_reports_log_claims_publication_and_last_update_dates": true,
+    "third_party_repo_says_data_is_owned_by_lega_and_not_covered_by_code_mit_license": true
+  },
+  "permissions": {
+    "written_permission_obtained": false,
+    "extraction_or_use_without_written_permission": false,
+    "automated_capture_without_written_permission": false,
+    "manual_extraction_without_written_permission": false,
+    "internal_ml_training_authorized": false,
+    "internal_inference_authorized": false,
+    "private_raw_storage_authorized": false,
+    "commercial_use_authorized": false,
+    "redistribution_authorized": false
+  },
+  "provenance": {
+    "third_party_reports_log_has_publication_and_last_update_fields": true,
+    "provider_first_observation_timestamp_contract_verified": false,
+    "provider_correction_history_contract_verified": false,
+    "project_source_archive_created": false,
+    "source_before_quote_proven": false,
+    "correction_delay_reported_by_third_party_repo": "0-12 days after a match; not independently verified"
+  },
+  "coverage": {
+    "current_season_2026_27_listed_by_third_party_repo": true,
+    "exact_match_level_original_19_feature_coverage_verified": false,
+    "exact_red_card_and_corner_semantics_verified": false,
+    "complete_per_fixture_coverage_verified": false
+  },
+  "controls": {
+    "provider_api_requests": 0,
+    "source_downloads": 0,
+    "supabase_reads": 0,
+    "supabase_writes": 0,
+    "protected_outcomes_read": 0,
+    "feature_calculations": 0,
+    "model_inference_runs": 0,
+    "candidate_weights_changed": false,
+    "production_pkl_changed": false,
+    "active_lambda": 0,
+    "shadow_residual_lambda": 1,
+    "stability_gate_passed": false,
+    "automatic_promotion": false,
+    "evaluation_gate": "CLOSED"
+  },
+  "reconsideration_requires": [
+    "express written permission covering extraction and use of official match data",
+    "explicit internal ML/inference and private raw-storage rights",
+    "commercial rights if the downstream product is commercial",
+    "field-level proof of all 19 original V2 inputs and exact semantics",
+    "independently timestamped first-observation and correction provenance",
+    "private immutable raw archive with verified SHA-256 created strictly before each quote"
+  ]
+}
