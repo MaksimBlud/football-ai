@@ -7795,3 +7795,38 @@ The GitHub helper that lists workflow runs returns one workflow run per workflow
 - #880 `0bd1c8dbc0b467e7717cca846874c95156f1ffa1`: **2/2 SUCCESS** — preregistered-gate Python 3.11 and 3.12.
 
 All counts above were read from the exact commit check-run endpoints; all listed runs are completed SUCCESS. This corrects only CI accounting, not PR state, mergeability, or main contents. All PRs remain unmerged and subject to HUMAN-MERGE.
+
+## 2026-11-19 08:56 UTC — exact-main, scheduled-run and pre-match ledger refresh
+
+### Exact main and frozen original candidate
+
+- Fresh main remains 40887ebb215730190d7a6c7a1693373ec4afcdfc; repository visibility remains **public**.
+- Read the main candidate JSON and inference module directly. Candidate artifact SHA remains a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6; training fingerprint f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098; 3,799 training rows; exactly 19 frozen features and 20×2 weights; active_lambda=0, shadow_residual_lambda=1, stability_gate_passed=false, automatic_promotion=false. The inference module's FROZEN_SHA matches the JSON artifact SHA. No candidate, weight, scaler, imputer, feature-order or production artifact was changed.
+- Protocol still requires 30 completed primary Serie A prospective forecasts before any protected outcome read. The current evaluation gate remains 0/30; no outcome or score fields were queried.
+
+### Fresh main source-before-quote audit
+
+- Main's serie_a_v2_forward_capture.py still reads saved upcoming quotes before discovering/attesting the source archive. The exact fix is open in Draft [#830](https://github.com/MaksimBlud/football-ai/pull/830), HEAD a773ba3642a9c3a05abcac4acf0b1b2c0606b601, **3/3 exact check-runs SUCCESS**; it keeps the quote reader lazy until the source parent, archive and SHA pass. It is stacked on #826 and earlier rights gates, not in main.
+- Main's current-form forward verifies source metadata but still creates the Supabase client and reads saved quotes when verification has failed. Draft [#880](https://github.com/MaksimBlud/football-ai/pull/880), HEAD 0bd1c8dbc0b467e7717cca846874c95156f1ffa1, **2/2 exact check-runs SUCCESS** (Python 3.11/3.12), makes this read lazy and fail-closed. It remains stacked on #877 → #876 → #875 → #781.
+- [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains open/Ready, HEAD 3a70a8648895076efec2a80dc10b1798ed0d9261, **8/8 exact check-runs SUCCESS**. Its seven-file diff adds workflow-level MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=false to the five live V2/recovery workflows, gates live source/quote steps and artifact uploads, scopes credentials to gated steps, and preserves all existing cron expressions. It is not merged, so this hold is not active on main.
+- [#879](https://github.com/MaksimBlud/football-ai/pull/879) remains Draft, HEAD b78010585c80b05ae5fc2a8b3572df14b32d9651, **4/4 exact check-runs SUCCESS**; it adds the private-repository requirement and is stacked on #781. The repository is still public.
+- Current source-rights audits remain HOLD: [#868](https://github.com/MaksimBlud/football-ai/pull/868) HEAD de0c7d3baf520786b8f0bda531cf83663757ff5f, **6/6 SUCCESS**; [#794](https://github.com/MaksimBlud/football-ai/pull/794) HEAD 27eec8dd6f3dcea0e691fab98e8333fd7034e3a7, **6/6 SUCCESS**. Green documentation CI does not grant provider rights or authorize capture.
+
+### 2026-11-19 scheduled workflow observation
+
+- Main still declares the four V2 schedules: Current-Form Source Capture 50 5 * * *, Free Real-Quote Diagnostic 13 6 * * *, Original Forward 8 8 * * *, Current-Form Forward 18 8 * * * (UTC). These expressions were read from the exact main YAML files and were not changed.
+- A fresh GitHub Actions query filtered to event=schedule, branch=main, and 2026-11-19 05:00–09:00 UTC returned 12 scheduled runs, but **none** of the four V2 workflows. Other scheduled workflows did run in that window. This is an observed absence as of 08:56 UTC, not a failed V2 run and not proof that GitHub disabled the workflows. Do not manually dispatch or change schedules to compensate.
+- The last known V2 scheduled runs remain the four 2026-11-18 runs: source capture [#44326186511](https://github.com/MaksimBlud/football-ai/actions/runs/44326186511), free diagnostic [#44336997243](https://github.com/MaksimBlud/football-ai/actions/runs/44336997243), Original Forward [#44355495841](https://github.com/MaksimBlud/football-ai/actions/runs/44355495841), Current-Form Forward [#44356799888](https://github.com/MaksimBlud/football-ai/actions/runs/44356799888). Their prior SUCCESS results are infrastructure evidence only, not model-quality evidence.
+
+### Read-only Supabase pre-match refresh
+
+The query selected only event identities, model SHA and timestamp fields, with strict pre-kickoff predicates; it did not select scores, settlements or target outcomes:
+
+- public.odds_snapshots: **3,915** strict pre-kickoff rows / **327** events; latest snapshot **2026-10-13 14:48:53.042620 UTC**; **0** future events with a saved strict pre-kickoff quote.
+- public.product_prediction_snapshots: **40** strict pre-kickoff rows / **40** events; latest generated **2026-10-09 15:29:33.136613 UTC**; **0** rows match the exact frozen V2 candidate SHA.
+- The separate public.epl_ai_market_pair_ledger contains no exact original-V2 candidate SHA evidence; it is not counted as V2 prospective output.
+- No Supabase writes/DDL occurred. No protected 2026/27 outcome or score was read. No new provider request, odds request, source download, inference, refit, threshold change, bet or promotion occurred.
+
+### Non-actions
+
+No merge, main update, repository-visibility change, workflow dispatch, schedule change, Supabase write/DDL, paid API call, raw-source download, protected outcome read, model inference/refit, production .pkl change, or other-agent setting change. HUMAN-MERGE remains mandatory.
