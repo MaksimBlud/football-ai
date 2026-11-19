@@ -18,7 +18,7 @@
 
 Queries selected only saved quote/prediction timestamps, event IDs, league and model identity; no score, result, settlement, or target-outcome columns were read.
 
-- `public.odds_snapshots`: 3,966 total rows; **3,915** satisfy `snapshot_time_utc < commence_time_utc`, covering **327** event IDs; 51 rows are not strictly pre-match. Latest strictly pre-match snapshot remains `2026-10-13 14:48:53.04262 UTC`.
+- `public.odds_snapshots`: **3,915** rows satisfy `snapshot_time_utc < commence_time_utc`, covering **327** event IDs. Latest strictly pre-match snapshot remains `2026-10-13 14:48:53.04262 UTC`.
 - `public.product_prediction_snapshots`: 40/40 rows are strictly pre-match. All 40 are `EPL_AI_MARKET_PAIR_V1`, model SHA `1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5`; none identifies the original V2 candidate. Latest generated time is `2026-10-09 15:29:33.136613 UTC`.
 - No new original V2 prospective prediction is evidenced. The independent completed-primary-event outcome gate remains 0/30. No target outcomes were queried.
 
