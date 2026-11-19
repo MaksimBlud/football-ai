@@ -9,7 +9,8 @@
     "PRIVATE_RAW_ARCHIVE_NOT_AVAILABLE",
     "RED_CARD_AND_SECOND_YELLOW_PARITY_UNVERIFIED",
     "SERIE_A_2026_27_PER_MATCH_COVERAGE_NOT_VERIFIED",
-    "PROVIDER_DOES_NOT_GUARANTEE_DATA_ACCURACY_OR_TIMELINESS"
+    "PROVIDER_DOES_NOT_GUARANTEE_DATA_ACCURACY_OR_TIMELINESS",
+    "STATISTICS_CHANGE_TIMESTAMP_SCOPE_UNVERIFIED"
   ],
   "source_documents": {
     "terms": "https://www.sportsapipro.com/terms",
@@ -80,7 +81,11 @@
     "free_plan_all_endpoints": true,
     "match_statistics_live_or_after_full_time_only": true,
     "match_statistics_available_pre_match": false,
-    "incidents_endpoint_documents_goals_yellow_and_red_cards": true
+    "incidents_endpoint_documents_goals_yellow_and_red_cards": true,
+    "match_statistics_catalogue_last_modified": "2026-11-14",
+    "free_and_paid_plans_share_competitions_and_endpoints": true,
+    "incidents_endpoint_documents_goals_yellow_and_red_card_events": true,
+    "incident_card_payload_schema_documented": false
   },
   "frozen_candidate": {
     "experiment_id": "MARKET_ANCHOR_1X2_V2",
@@ -228,7 +233,14 @@
     "require_source_archive_sha256": true,
     "receipt_timestamp_and_sha_permitted_by_terms": true,
     "local_receipt_time_can_prove_project_possession_before_quote": true,
-    "upstream_first_observation_timestamp_documented": false
+    "upstream_first_observation_timestamp_documented": false,
+    "event_change_timestamp_documented": true,
+    "event_change_timestamp_scope": "event objects in season pages, schedule responses, and match-detail responses",
+    "event_change_timestamp_format": "Unix epoch seconds",
+    "event_change_timestamp_contains_changed_field_list": true,
+    "event_change_timestamp_is_per_field": false,
+    "event_change_timestamp_statistics_payload_linkage_verified": false,
+    "event_change_timestamp_proves_statistics_first_observation": false
   },
   "private_storage": {
     "private_archive_storage_required": true,
@@ -269,5 +281,6 @@
     "target_outcome_reads_authorized": false,
     "paid_calls_authorized": false,
     "supabase_writes_authorized": false
-  }
+  },
+  "documentation_followup_date_utc": "2026-11-18"
 }
