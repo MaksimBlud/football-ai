@@ -7781,3 +7781,17 @@ No CSV/API request, download, quote read, Supabase write/DDL, outcome read, mode
 ### Non-actions
 
 No merge, main update, Supabase write/DDL, paid provider call, new quote, provider API request, raw-source download, protected outcome read, model inference/refit, threshold change, production `.pkl` change, schedule change, bet, promotion or other-agent setting change occurred. The original 19-feature/weight contract and `active_lambda=0` / `shadow_lambda=1` semantics remain unchanged.
+
+
+## 2026-11-19 — exact check-run count normalization
+
+The GitHub helper that lists workflow runs returns one workflow run per workflow and is not the complete check-run count. The exact commit `check-runs` endpoint was queried for each current V2 HEAD; this supersedes the smaller counts stated in the immediately preceding run-11 summary:
+
+- #781 `3a70a8648895076efec2a80dc10b1798ed0d9261`: **8/8 SUCCESS**.
+- #794 `27eec8dd6f3dcea0e691fab98e8333fd7034e3a7`: **6/6 SUCCESS**.
+- #830 `a773ba3642a9c3a05abcac4acf0b1b2c0606b601`: **3/3 SUCCESS** — `validate-offline-only`, `py312-lock-tests`, `shadow-tests`.
+- #839 `bfae6ef21ffe43091506527754ae80d9bd3a1786`: **8/8 SUCCESS**.
+- #879 `b78010585c80b05ae5fc2a8b3572df14b32d9651`: **4/4 SUCCESS** — Python 3.11/3.12 across both exact-head workflow runs.
+- #880 `0bd1c8dbc0b467e7717cca846874c95156f1ffa1`: **2/2 SUCCESS** — preregistered-gate Python 3.11 and 3.12.
+
+All counts above were read from the exact commit check-run endpoints; all listed runs are completed SUCCESS. This corrects only CI accounting, not PR state, mergeability, or main contents. All PRs remain unmerged and subject to HUMAN-MERGE.
