@@ -3,14 +3,14 @@
 The current public main must not keep downloading provider CSVs, reading quote
 snapshots, or publishing source archives while provider rights and private
 artifact storage are unresolved. The workflows keep their offline tests and
-existing schedules; live access is held and artifacts publish only after successful runs.
+existing schedules; live access and artifact publication additionally require GitHub to confirm that this repository is private.
 """
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FLAG = "MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED"
-LIVE_GATE = "${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}"
-UPLOAD_GATE = "${{ success() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}"
+LIVE_GATE = "${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' && steps.private-storage.outputs.is_private == 'true' }}"
+UPLOAD_GATE = "${{ success() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' && steps.private-storage.outputs.is_private == 'true' }}"
 
 WORKFLOWS = {
     ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml": {
@@ -19,6 +19,7 @@ WORKFLOWS = {
             "Fetch and SHA-archive public source, preview original frozen V2 diagnostics",
         ),
         "upload": "Archive diagnostic and exact public CSV bytes for provenance",
+        "private_guard": "Verify private repository storage before live V2 access",
     },
     ".github/workflows/serie-a-v2-forward-preview.yml": {
         "cron": "8 8 * * *",
@@ -27,6 +28,7 @@ WORKFLOWS = {
             "Generate actual original frozen V2 source-verified read-only preview",
         ),
         "upload": "Save immutable original V2 predictions and exact older source bytes",
+        "private_guard": "Verify private repository storage before live V2 access",
     },
     ".github/workflows/serie-a-v2-current-form-source-capture.yml": {
         "cron": "50 5 * * *",
@@ -34,6 +36,7 @@ WORKFLOWS = {
             "Capture frozen historical seasons plus gated current-form source",
         ),
         "upload": "Archive source bytes and gate manifest for future quotes only",
+        "private_guard": "Verify private repository storage before live V2 access",
     },
     ".github/workflows/serie-a-v2-current-form-forward-preview.yml": {
         "cron": "18 8 * * *",
@@ -41,6 +44,7 @@ WORKFLOWS = {
             "Generate read-only current-form V2 shadow from already saved quotes",
         ),
         "upload": "Archive pre-kickoff V2 shadow and exact source ZIPs",
+        "private_guard": "Verify private repository storage before live V2 access",
     },
     ".github/workflows/recover-market-anchor-v2-candidate.yml": {
         "cron": None,
@@ -49,6 +53,7 @@ WORKFLOWS = {
             "Prove frozen checksum, immutable recipe and research-only status",
         ),
         "upload": "Archive recovered frozen V2 research candidate",
+        "private_guard": "Verify private repository storage before live V2 access",
     },
 }
 
@@ -97,6 +102,23 @@ def test_live_steps_and_public_artifact_uploads_are_gated():
             f"{path}: artifact publication must have exactly one fail-closed condition"
         )
 
+
+
+def test_private_storage_preflight_is_read_only_and_required_before_live_access():
+    for path, spec in WORKFLOWS.items():
+        text = _workflow(path)
+        guard = _step_block(text, spec["private_guard"])
+        assert guard.count("if:") == 1
+        assert "if: ${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}" in guard
+        assert "GH_TOKEN: ${{ github.token }}" in guard
+        assert "gh api \"repos/${GITHUB_REPOSITORY}\" --jq '.private'" in guard
+        assert 'echo "is_private=true" >> "$GITHUB_OUTPUT"' in guard
+        assert 'echo "is_private=false" >> "$GITHUB_OUTPUT"' in guard
+        first_live = min(text.index(f"      - name: {name}") for name in spec["live"])
+        assert text.index(f"      - name: {spec['private_guard']}") < first_live
+        for name in spec["live"]:
+            assert "steps.private-storage.outputs.is_private == 'true'" in _step_block(text, name)
+        assert "steps.private-storage.outputs.is_private == 'true'" in _step_block(text, spec["upload"])
 
 def test_failed_live_steps_cannot_publish_partial_artifacts():
     for path, spec in WORKFLOWS.items():
