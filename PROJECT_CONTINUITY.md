@@ -7856,3 +7856,36 @@ No merge, main update, repository-visibility change, workflow dispatch, schedule
 
 - Supabase metadata still reports five public tables without RLS: `teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, `epl_ai_market_pair_ledger`. No DDL or policy change was performed under the explicit no-Supabase-writes/DDL constraint.
 - No merge, main update, paid API request, provider download, quote creation, Supabase write/DDL, protected target-outcome read, replay metric, model inference/refit, threshold change, production `.pkl` change, schedule change, bet, promotion or other-agent setting change occurred. HUMAN-MERGE remains mandatory.
+
+
+## 2026-11-20 01:02 UTC — current-form direct-access guard and fresh runtime evidence
+
+### Exact main and original candidate
+
+- Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; repository visibility is still public. Root workflow hold [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains open/Ready and unmerged. Its six-file workflow scope includes current-form source capture and current-form forward preview; until manual integration, main continues to run the existing live steps and publish public Actions artifacts.
+- Candidate JSON was re-read from main: artifact SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; 3,799 training rows; 19 frozen features; 20×2 weights; `active_lambda=0`, `shadow_lambda=1`, stability gate FAILED. The protocol and current-form policy remain unchanged. The 110-event feature-input gate does not open the separate 30-eligible-prospective-forecast outcome evaluation gate, which remains 0/30. No target outcomes were queried.
+
+### New PR #893 — current-form forward direct-access rights
+
+- Draft [#893](https://github.com/MaksimBlud/football-ai/pull/893), exact HEAD `6cbf603c1754db408962a0a492028e01845c5487`, is based on #890 exact HEAD `aade422896d32e38f1a1afb5dde7e1bae5351399`; it is four commits ahead of that exact base and has no merge conflict.
+- The current-form forward module now requires source-capture/private-storage rights before GitHub metadata, parent-run, artifact-download, archive-parse and latest-source verification boundaries. Feature preparation requires both source-capture and frozen-inference scopes. The CLI checks inference rights before creating a Supabase client or reading saved quotes. Source-only archive verification remains separate from inference permission.
+- Added poison-input/forbidden-callback regressions and a dedicated Python 3.11/3.12 offline workflow. Exact HEAD check-runs: **4/4 SUCCESS**. Push run [#44650196490](https://github.com/MaksimBlud/football-ai/actions/runs/44650196490) and PR run [#44650236502](https://github.com/MaksimBlud/football-ai/actions/runs/44650236502) both passed Python 3.11 and 3.12; each environment reports **17 passed**, compile passed, and production `.pkl` diff guard passed. PR remains Draft/HUMAN-MERGE.
+- This is a direct-access rights guard; it does not replace the separate lazy quote-read change in #880. #893 has not changed schedules, source/quote contracts, model parameters or production artifacts.
+
+### Fresh main scheduled runtime — 2026-11-19 UTC
+
+- Current-Form Source Capture [#44546769851](https://github.com/MaksimBlud/football-ai/actions/runs/44546769851), main SHA, completed SUCCESS: **19 tests passed**; 11 source files; 3,800 historical rows plus 110 current-season completed prior-day rows (3,910 combined history rows); current-season feature-input gate count 110; target outcomes not read/scored; paid provider calls 0; Supabase writes 0. Artifact ID `14539778406`, uploaded ZIP SHA-256 `14f27f391a25079156b58b7dbb7df848f6a3dd43f478da02e4c591e0bc5a9261`.
+- Current-Form Forward [#44546932844](https://github.com/MaksimBlud/football-ai/actions/runs/44546932844): **53 tests passed**; the exact source artifact/parent run was verified, source age at verification 37 seconds; `quotes_seen=0`, current-form shadows 0, paid calls 0, production/Supabase writes 0, target outcomes not read/scored. Later Current-Form Forward [#44576503723](https://github.com/MaksimBlud/football-ai/actions/runs/44576503723) also passed **53 tests**, verified the same source artifact at age 9,558 seconds, and again found 0 quotes / 0 shadows.
+- Original Forward [#44575314016](https://github.com/MaksimBlud/football-ai/actions/runs/44575314016): **71 tests passed**; the old-season source ZIP/parent attestation verified 10 CSVs / 3,800 historical rows; `quotes_seen=0`, future quotes checked 0, diagnostic previews 0, paid calls 0, Supabase writes 0. These are source/provenance and regression results, not model-quality evidence.
+- The current-form source artifact was uploaded while the repository was public. This is an unresolved confidentiality/provider-rights exposure on main until #781 is manually integrated; no attempt was made to delete, alter or replace artifacts.
+
+### Fresh read-only Supabase and security checks
+
+- Strict pre-kickoff `public.odds_snapshots` query: **3,915** rows / **327** events; **0** future events with strict pre-match quotes; latest saved strict pre-match quote remains **2026-10-13 14:48:53.042620 UTC**.
+- Strict pre-kickoff `public.product_prediction_snapshots`: **40** rows; **0** match the exact frozen original V2 candidate SHA; latest generated **2026-10-09 15:29:33.136613 UTC**. No scores, settlements or protected target values were selected.
+- Security Advisor observed at **2026-11-20 00:56:30 UTC** still reports RLS disabled on five public tables: `teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, `epl_ai_market_pair_ledger`. Four other tables have RLS enabled but no policies: `competitions`, `match_stats`, `matches`, `standings`. No DDL or policy changes were performed.
+
+### Non-actions and next dependency
+
+- No merge, main update, Supabase write/DDL, paid provider call, new quote, protected outcome read, model inference/refit, threshold tuning, production `.pkl` change, schedule change, bet, promotion or other-agent setting change occurred.
+- HUMAN-MERGE remains mandatory. #781 is still the first manual integration blocker; #893 must remain behind #890 and its rights-gate ancestry. The next scientific blocker remains the absence of new permitted pre-match quotes: no eligible prospective V2 predictions exist, so the 30-forecast evaluation gate remains closed and Brier/LogLoss superiority cannot be claimed.
