@@ -23,7 +23,7 @@
     "coverage_uk": 7,
     "coverage_world": 139,
     "status_snapshot_updated_at_utc": "2026-11-20T16:53:41.146Z",
-    "status_snapshot_age_at_check_seconds": 6887,
+    "status_snapshot_age_at_check_seconds": 6877,
     "served_quote_age_seconds": {
       "p50": 516,
       "p95": 1186,
