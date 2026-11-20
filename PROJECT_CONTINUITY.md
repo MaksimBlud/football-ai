@@ -7830,3 +7830,29 @@ The query selected only event identities, model SHA and timestamp fields, with s
 ### Non-actions
 
 No merge, main update, repository-visibility change, workflow dispatch, schedule change, Supabase write/DDL, paid API call, raw-source download, protected outcome read, model inference/refit, production .pkl change, or other-agent setting change. HUMAN-MERGE remains mandatory.
+
+
+## 2026-11-20 00:05 UTC — run 11 original V2 direct-access and replay quarantine
+
+### Exact main and model state
+
+- Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; repository visibility is still public. This section is a documentation-only update on this PR branch; no main change or merge occurred.
+- Original candidate remains `MARKET_ANCHOR_1X2_V2`, SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`, 3,799 training rows, 19 features, 20×2 weights; `active_lambda=0`, `shadow_lambda=1`, stability gate FAILED, prospective evaluation gate 0/30. No model contract, weights, scaler, imputer or production artifact changed.
+
+### New exact-head safety PRs
+
+- [#891](https://github.com/MaksimBlud/football-ai/pull/891), exact HEAD `e0d729d78a24a977f8cf76c04bcee19de4488c22`, is a Draft child of #890. It closes direct-call gaps in `serie_a_v2_live_diagnostic_report` and `serie_a_v2_frozen_shadow_preview`: provider source-capture rights now precede public HTTP/local archive writes; frozen-inference/private-storage rights precede diagnostic scoring, Supabase quote reads and CLI resource access. Exact PR run [#44641797955](https://github.com/MaksimBlud/football-ai/actions/runs/44641797955): **2/2 SUCCESS**, Python 3.11 and 3.12 each **39 passed**, compile and production `.pkl` diff guard passed.
+- [#892](https://github.com/MaksimBlud/football-ai/pull/892), exact HEAD `74a9da354f67ea36793487c7f8087ec2748c4f5f`, is a sibling Draft child of #890. It adds provider-issued/domain-bound/time-bounded AI-training rights plus private source-capture checks before training CSV access; hard-holds the retrospective saved-cohort replay/current-season target path until a future reviewed change after the separate prospective evaluation gate; and replaces the old outcome-scoring replay tests with AST-only safety tests. Exact PR run [#44642582440](https://github.com/MaksimBlud/football-ai/actions/runs/44642582440): **2/2 SUCCESS**, Python 3.11 and 3.12 each **16 passed**, compile and production `.pkl` diff guard passed. The workflow did not import the replay module, download CSVs, or read target rows.
+- The preceding rights chain remains Draft/unmerged and exact-head green: #879 `b78010585c80b05ae5fc2a8b3572df14b32d9651`; #884 `ec79bb1d2c227e44450ddeaddfde97ec210dbf52`; #885 `2f0f3f2900e8eb12db284b0bfecd6f0fe0fc097d`; #887 `954be44504bfa8c519d3813cbf43ab7c53efcaad`; #888 `6cfef9ffe8e13009284a3227775ec5bfcda0b84e`; #889 `7d95be58d40ee0d851fbef042b098b749aa13384`; #890 `aade422896d32e38f1a1afb5dde7e1bae5351399`. All remain dependent on root hold #781. No PR was merged or retargeted.
+
+### Fresh Original Forward and pre-match ledger evidence
+
+- Main Original Forward run [#44575314016](https://github.com/MaksimBlud/football-ai/actions/runs/44575314016), exact main SHA, completed SUCCESS: **71 tests passed**; the real old-season ZIP SHA/parent attestation succeeded for 10 CSVs / 3,800 historical rows; `quotes_seen=0`, `future_quotes_checked=0`, V2 previews **0**, paid calls **0**, Supabase writes **0**. This is source-attestation evidence, not a forecast.
+- Main free diagnostic run [#44557292973](https://github.com/MaksimBlud/football-ai/actions/runs/44557292973): **53 tests passed**, 10 public HTTP requests, 3,800 historical rows, `quoted_fixtures=0`, `diagnostic_scored=0`, paid calls **0**, Supabase writes **0**. Its raw-source artifact was uploaded publicly while main/repository visibility remains public; root #781 is therefore still the first manual integration blocker.
+- Fresh read-only Supabase query selected only strict pre-kickoff timestamps and event IDs: Serie A **620** strict pre-match rows / **63** events, **0** future events with a saved quote; latest Serie A quote remains **2026-10-13 14:48:53 UTC**. Exact frozen V2 candidate rows in `product_prediction_snapshots`: **0**. No scores, results, settlements or target outcomes were selected.
+- Other free-source audits remain HOLD: Football-Data.co.uk, Big Balls, Soccer Data, SoccersAPI, API-Football, Lega Serie A reports and 11footy. None has yet proved all required field-level rights, 19-feature coverage and source-before-quote provenance.
+
+### Security and non-actions
+
+- Supabase metadata still reports five public tables without RLS: `teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, `epl_ai_market_pair_ledger`. No DDL or policy change was performed under the explicit no-Supabase-writes/DDL constraint.
+- No merge, main update, paid API request, provider download, quote creation, Supabase write/DDL, protected target-outcome read, replay metric, model inference/refit, threshold change, production `.pkl` change, schedule change, bet, promotion or other-agent setting change occurred. HUMAN-MERGE remains mandatory.
