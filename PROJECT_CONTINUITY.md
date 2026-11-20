@@ -8049,3 +8049,37 @@ A single SELECT-only aggregate used only `event_id`, `snapshot_time_utc`, `creat
 - Root [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready / mergeable / HUMAN-MERGE at exact HEAD `3a70a8648895076efec2a80dc10b1798ed0d9261`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, with **8/8 exact-head checks SUCCESS**. It is not merged. [#879](https://github.com/MaksimBlud/football-ai/pull/879) remains Draft and stacked on #781; #884 remains Draft on #879.
 - Original V2 remains unchanged: candidate SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 frozen features, original 20×2 weights, training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; `active_lambda=0), `shadow_lambda=1). Stability gate FAILED; independent prospective evaluation gate **0/30**. No Brier/LogLoss superiority claim.
 - No merge, main write, Supabase write/DDL, paid provider call, protected target-outcome read, production `.pkl` change, refit, threshold tuning, bet, promotion, schedule change or other-agent setting change occurred. HUMAN-MERGE remains mandatory.
+
+
+
+## 2026-11-20 18:48 UTC — ODSS free quote-source audit; original V2 remains HOLD
+
+### Fresh main, workflow and existing PR chain
+
+- Re-read main. Main SHA remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; main `PROJECT_CONTINUITY.md` blob remains `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b` (the main copy still ends 2026-10-18). This update is confined to the existing documentation PR branch; no main write or merge occurred.
+- Main Original Forward workflow remains `.github/workflows/serie-a-v2-forward-preview.yml`; main `serie_a_v2_forward_capture.py` still calls the saved quote reader at line 278 before source archive discovery at line 279. The source-before-quote fix is not on main.
+- Latest observed main Original Forward run: [#44777970547](https://github.com/MaksimBlud/football-ai/actions/runs/44777970547), SUCCESS on main SHA, 71 tests passed, verified source archive #14642541146, but `quotes_seen=0`, `future_quotes_checked=0`, `v2_diagnostic_previews_captured=0`, no paid calls and no Supabase writes.
+- Latest observed Current-Form Source Capture: [#44753230529](https://github.com/MaksimBlud/football-ai/actions/runs/44753230529), SUCCESS, 19 tests passed, 11 source files (10 historical + 1 current season), source ZIP SHA-256 `2237cc30b84b2e982586ce7ef44b3ab4887c286e5f3320b8f9579cdc8e9dbca8`.
+- Latest observed Current-Form Forward: [#44778623731](https://github.com/MaksimBlud/football-ai/actions/runs/44778623731), SUCCESS, 53 tests passed, 3,800 historical rows + 110 current-season rows, 11 source files; `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `target_outcomes_read=false`, `target_outcomes_scored=false`. This proves source archive verification, not a quote/model pair.
+- Root [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready / HUMAN-MERGE at exact HEAD `3a70a8648895076efec2a80dc10b1798ed0d9261`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, 8/8 exact-head checks SUCCESS. [#879](https://github.com/MaksimBlud/football-ai/pull/879) remains Draft, 4/4 exact-head checks SUCCESS, stacked on #781. [#884](https://github.com/MaksimBlud/football-ai/pull/884) remains Draft, 2/2 exact-head checks SUCCESS, stacked on #879. [#885](https://github.com/MaksimBlud/football-ai/pull/885) remains Draft, 2/2 exact-head checks SUCCESS. No PR was merged.
+
+### Fresh read-only Supabase checks (metadata only)
+
+- `odds_snapshots`: 3,966 total rows; 3,915 satisfy both `snapshot_time_utc < commence_time_utc` and `created_at < commence_time_utc`; 327 unique strictly pre-match events; 51 rows have both timestamps at/after kickoff; zero timestamp-order disagreements. Latest strict pre-match snapshot remains `2026-10-13T14:48:53.042620Z`; no future-kickoff pre-match quotes exist.
+- `league_finished_results` identity-only query for Serie A 2026-2027 returned 113 distinct raw `(match_date, home_team, away_team)` identities, 2026-08-22 through 2026-11-08. No score, result, settlement, or outcome columns were selected. The existing source-capture path normalizes these to 110 canonical identities; this is a feature-input metadata gate, not the 30-event prospective evaluation gate.
+- No Supabase write or DDL occurred.
+
+### New ODSS API public audit — separate candidate, not integrated
+
+- Added `research/MARKET_ANCHOR_1X2_V2_ODSS_API_FREE_QUOTE_SOURCE_AUDIT_20261120.md` and machine-readable `research/market_anchor_1x2_v2_odss_api_source_audit_20261120.json`, plus a static regression in `tests/test_market_anchor_1x2_v2_odss_source_audit.py`. These files are on this existing research/documentation PR branch.
+- Official public materials list the Free plan at €0, 500 requests per 30-day period, 30 requests/minute and up to 5,000 records per request; pre-match 1X2 and internal model/bot/analysis use are listed. The Free plan does not authorize external quote display; raw redistribution is restricted. The public `/odds/history` endpoint is not active.
+- Public metadata snapshot observed Serie A at 54 events / 200 books and `/coverage` at 211 total brands. Public status payload timestamp was `2026-11-20T16:53:41.146Z`; its served quote-age p50/p95/p99 were 516/1,186/1,216 seconds, with 20.31% over 15 minutes. The status payload was about 1h54m old at this audit time; these are not an SLA or proof of current per-event coverage.
+- Critical timestamp nuance: OpenAPI defines `last_update` as the provider engine's last-read time per bookmaker price, not a bookmaker-native quote-change timestamp; `generated_at` timestamps the served snapshot, and per-book `start_time` may override event `commence_time`. A strict source-first capture would have to preserve raw response bytes, response generated time, local receipt time, per-book last_update, and effective kickoff; missing/suspended 1X2 legs must be rejected.
+- Long-term private raw-response retention on Free is not explicit in the reviewed terms, and no historical quote backfill is available. More importantly, the frozen original V2 quote contract reads only existing saved Serie A quote observations and does not authorize a new provider path. ODSS therefore remains `HOLD_NO_INTEGRATION`; no new provider, quote benchmark, or market contract is introduced.
+- Only public product/legal/OpenAPI and unauthenticated metadata were inspected. No account/key, authenticated odds request, mock odds request, raw quote download, paid call, Supabase write/DDL, model-code change, or protected-outcome read occurred.
+
+### Frozen original V2 and safety
+
+- Candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 frozen features, original 20×2 weights, scaler/imputer and training fingerprint unchanged.
+- `active_lambda=0` remains exact market fallback; `shadow_lambda=1` remains research-only. Stability gate FAILED; prospective evaluation gate remains 0/30. No Brier/LogLoss superiority claim is supported.
+- No merge, main write, Supabase write/DDL, paid provider call, protected target-outcome read, production `.pkl` change, refit, threshold tuning, bet, promotion, schedule change or other-agent setting change occurred. HUMAN-MERGE remains mandatory.
