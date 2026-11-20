@@ -238,7 +238,7 @@ def test_odss_api_free_candidate_remains_held_outside_frozen_original_v2():
     assert audit["current_v2_contract"]["shadow_lambda"] == 1.0
     assert audit["rights"]["free_internal_model_analysis_listed_as_permitted"] is True
     assert audit["rights"]["free_tier_long_term_raw_retention_confirmed"] is False
-    assert audit["rights"]["external_display_permitted"] is False
+    assert audit["free_plan"]["external_display_permitted"] is False
     assert audit["rights"]["historical_odds_endpoint_enabled"] is False
     assert audit["actions"]["api_key_created"] is False
     assert audit["actions"]["authenticated_odds_requests_made"] is False
