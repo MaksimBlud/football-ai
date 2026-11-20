@@ -354,6 +354,31 @@ EXTERNAL_IO_MARKERS = (
     "s3cmd put ",
     "oras pull ",
     "crane pull ",
+    # Compiled-language runtimes and explicit shell/container launchers can
+    # perform network I/O without using the already-covered HTTP/socket CLIs.
+    "go run ",
+    "go test ",
+    "cargo run ",
+    "cargo test ",
+    "rustc ",
+    "java -jar ",
+    "jshell ",
+    "php ",
+    "Rscript ",
+    "julia ",
+    "swift ",
+    "dotnet ",
+    "lua ",
+    "luajit ",
+    "bash ",
+    "sh ",
+    "zsh ",
+    "fish ",
+    "docker run ",
+    "podman run ",
+    "nerdctl run ",
+    "ctr run ",
+    "buildah run ",
 )
 
 
@@ -566,6 +591,41 @@ def test_external_io_inventory_recognizes_raw_socket_and_remote_transfer_paths()
     )
     assert _is_original_v2_live_workflow(
         "name: market-anchor-1x2-v2 source capture\\nrun: bash -c 'exec 3<>/dev/tcp/example.invalid/443'"
+    )
+
+
+def test_external_io_inventory_recognizes_compiled_runtimes_shells_and_containers():
+    examples = (
+        "run: go run cmd/capture.go",
+        "run: go test ./internal/source",
+        "run: cargo run --bin source_capture",
+        "run: cargo test --all",
+        "run: rustc capture.rs && ./capture",
+        "run: java -jar source-capture.jar",
+        "run: jshell capture.jsh",
+        "run: php capture.php",
+        "run: Rscript capture.R",
+        "run: julia capture.jl",
+        "run: swift run SourceCapture",
+        "run: dotnet run --project SourceCapture",
+        "run: lua capture.lua",
+        "run: luajit capture.lua",
+        "run: bash capture.sh",
+        "run: sh capture.sh",
+        "run: zsh capture.zsh",
+        "run: fish capture.fish",
+        "run: docker run --network host source-capture:latest",
+        "run: podman run source-capture:latest",
+        "run: nerdctl run source-capture:latest",
+        "run: ctr run source-capture:latest capture",
+        "run: buildah run source-capture",
+    )
+    assert all(_has_external_io(example) for example in examples)
+    assert _is_original_v2_live_workflow(
+        "name: market-anchor-1x2-v2 source capture\\nrun: go run cmd/capture.go"
+    )
+    assert _is_original_v2_live_workflow(
+        "name: serie-a-v2 source capture\\nrun: docker run source-capture:latest"
     )
 
 
