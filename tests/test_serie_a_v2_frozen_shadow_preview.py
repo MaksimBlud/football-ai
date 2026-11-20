@@ -220,3 +220,29 @@ def test_preserve_exact_frozen_predictions_with_explicit_imputation_diagnostics(
     assert row["historical_team_coverage"] is None
     assert row["market_1x2"] == pytest.approx(row["active_market_fallback_1x2"])
     assert row["no_bet"] is True
+
+
+def test_odss_api_free_candidate_remains_held_outside_frozen_original_v2():
+    audit_path = Path(
+        "research/market_anchor_1x2_v2_odss_api_source_audit_20261120.json"
+    )
+    audit = json.loads(audit_path.read_text(encoding="utf-8"))
+
+    assert audit["candidate_status"] == "HOLD_NO_INTEGRATION"
+    assert audit["decision"]["integration_allowed_by_current_v2_contract"] is False
+    assert audit["current_v2_contract"]["candidate_sha256"] == (
+        "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
+    )
+    assert audit["current_v2_contract"]["frozen_feature_count"] == 19
+    assert audit["current_v2_contract"]["active_lambda"] == 0.0
+    assert audit["current_v2_contract"]["shadow_lambda"] == 1.0
+    assert audit["rights"]["free_internal_model_analysis_listed_as_permitted"] is True
+    assert audit["rights"]["free_tier_long_term_raw_retention_confirmed"] is False
+    assert audit["rights"]["external_display_permitted"] is False
+    assert audit["rights"]["historical_odds_endpoint_enabled"] is False
+    assert audit["actions"]["api_key_created"] is False
+    assert audit["actions"]["authenticated_odds_requests_made"] is False
+    assert audit["actions"]["supabase_writes"] is False
+    assert audit["actions"]["supabase_ddl"] is False
+    assert audit["actions"]["paid_provider_calls"] is False
+    assert audit["actions"]["model_code_changed"] is False
