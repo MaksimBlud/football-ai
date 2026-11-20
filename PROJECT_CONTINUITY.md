@@ -1,3 +1,7 @@
+## 2026-11-20 21:50 UTC — DataSportsAPI Free statistics source screen (HOLD)
+
+A new official-documentation-only screen was added in `research/MARKET_ANCHOR_1X2_V2_DATASPORTSAPI_FREE_STATS_SOURCE_AUDIT_20261120.md` and its JSON manifest. DataSportsAPI's terms (updated 16 Nov 2026) permit use in own products/analysis including commercial use, but Free finished-match history is only **7 days** (1,000 requests/day during beta, 10/minute). The Serie A page says current-season team statistics are available on all plans, but these season aggregates are not the original V2 per-match rolling last-5/last-10 inputs. The fixture-scoped statistics endpoint is documented as live match statistics; no per-stat first-observed/correction timestamp or explicit long-term private raw-archive permission was found. Terms identify third-party data sources but not the upstream Serie A rights chain. **Decision: HOLD / NO INTEGRATION.** No account/key, authenticated calls, odds calls, source download, Supabase write/DDL, model change or protected outcome read. The candidate SHA, 19-feature contract and lambdas remain unchanged.
+
 ## 2026-11-20 20:52 UTC — independent Original Forward payload and pre-match ledger verification
 
 This is a read-only verification supplement to the 16:54 UTC Original Forward run already recorded above. It does not create a new forecast or reopen any outcome gate.
