@@ -1,0 +1,81 @@
+{
+  "schema_version": "MARKET_ANCHOR_1X2_V2_EXTERNAL_QUOTE_SOURCE_AUDIT_V1",
+  "source": "odss-api",
+  "checked_at_utc": "2026-11-20T18:48:18Z",
+  "candidate_status": "HOLD_NO_INTEGRATION",
+  "free_plan": {
+    "price_eur_per_month": 0,
+    "requests_per_30_day_period": 500,
+    "requests_per_minute": 30,
+    "max_records_per_request": 5000,
+    "prematch_1x2_available": true,
+    "internal_model_analysis_listed_as_permitted": true,
+    "external_display_permitted": false
+  },
+  "public_coverage_observation": {
+    "leagues_endpoint_read": true,
+    "leagues_count": 37,
+    "serie_a_events_reported": 54,
+    "serie_a_books_reported": 200,
+    "coverage_total": 211,
+    "coverage_italy": 46,
+    "coverage_usa": 19,
+    "coverage_uk": 7,
+    "coverage_world": 139,
+    "status_snapshot_updated_at_utc": "2026-11-20T16:53:41.146Z",
+    "status_snapshot_age_at_check_seconds": 6887,
+    "served_quote_age_seconds": {
+      "p50": 516,
+      "p95": 1186,
+      "p99": 1216,
+      "share_over_900_seconds": 0.2031
+    },
+    "note": "Public metadata only; not an authenticated odds response, not a guarantee of current Serie A quote coverage."
+  },
+  "timestamps": {
+    "quote_last_update_semantics": "Provider engine last-read time per bookmaker price; not a bookmaker-native quote-change timestamp.",
+    "response_generated_at_available": true,
+    "per_book_start_time_can_override_event_commence_time": true,
+    "required_admission": "source archive completed before quote last_update; last_update and effective per-book kickoff strictly before kickoff; response generated_at and local receipt time recorded; reject missing or suspended 1X2 legs."
+  },
+  "rights": {
+    "free_internal_model_analysis_listed_as_permitted": true,
+    "external_display_requires_separate_display_license": true,
+    "raw_data_redistribution_permitted": false,
+    "free_tier_long_term_raw_retention_confirmed": false,
+    "historical_odds_endpoint_enabled": false,
+    "written_retention_confirmation_required": true
+  },
+  "current_v2_contract": {
+    "quote_source": "Existing saved SERIE_A 1X2 quote observations from the existing read-only Supabase ledger; this workflow never calls an odds provider.",
+    "new_provider_would_change_quote_source_contract": true,
+    "integration_allowed": false,
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "frozen_feature_count": 19,
+    "active_lambda": 0,
+    "shadow_lambda": 1
+  },
+  "actions": {
+    "public_metadata_endpoints_inspected": true,
+    "authenticated_odds_requests_made": false,
+    "api_key_created": false,
+    "synthetic_mock_odds_requested": false,
+    "raw_quote_data_downloaded": false,
+    "model_code_changed": false,
+    "supabase_writes": false,
+    "supabase_ddl": false,
+    "paid_provider_calls": false
+  },
+  "decision": {
+    "status": "HOLD_NO_INTEGRATION",
+    "integration_allowed_by_current_v2_contract": false,
+    "reasons": [
+      "The frozen V2 quote-source contract is limited to existing saved SERIE_A 1X2 observations and does not authorize a new provider path.",
+      "The free plan is described for internal model analysis, but long-term raw-data retention rights are not explicit in the reviewed materials.",
+      "The history endpoint is not active, so no historical backfill is available.",
+      "The public status snapshot reports a non-trivial stale-price tail and was itself stale at this audit time.",
+      "Provider event IDs cannot be assumed to match existing Supabase event IDs.",
+      "No account, key, authenticated request, or permission to change the frozen quote-source contract was supplied."
+    ]
+  }
+}
