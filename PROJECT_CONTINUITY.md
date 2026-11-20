@@ -8071,7 +8071,7 @@ A single SELECT-only aggregate used only `event_id`, `snapshot_time_utc`, `creat
 
 ### New ODSS API public audit — separate candidate, not integrated
 
-- Added `research/MARKET_ANCHOR_1X2_V2_ODSS_API_FREE_QUOTE_SOURCE_AUDIT_20261120.md` and machine-readable `research/market_anchor_1x2_v2_odss_api_source_audit_20261120.json`, plus a static regression in `tests/test_market_anchor_1x2_v2_odss_source_audit.py`. These files are on this existing research/documentation PR branch.
+- Added `research/MARKET_ANCHOR_1X2_V2_ODSS_API_FREE_QUOTE_SOURCE_AUDIT_20261120.md` and machine-readable `research/market_anchor_1x2_v2_odss_api_source_audit_20261120.json`, plus an ODSS HOLD regression embedded in the already-executed `tests/test_serie_a_v2_frozen_shadow_preview.py` (the standalone test file was removed after confirming the base-branch workflow does not execute newly added test paths). These files are on this existing research/documentation PR branch.
 - Official public materials list the Free plan at €0, 500 requests per 30-day period, 30 requests/minute and up to 5,000 records per request; pre-match 1X2 and internal model/bot/analysis use are listed. The Free plan does not authorize external quote display; raw redistribution is restricted. The public `/odds/history` endpoint is not active.
 - Public metadata snapshot observed Serie A at 54 events / 200 books and `/coverage` at 211 total brands. Public status payload timestamp was `2026-11-20T16:53:41.146Z`; its served quote-age p50/p95/p99 were 516/1,186/1,216 seconds, with 20.31% over 15 minutes. The status payload was about 1h54m old at this audit time; these are not an SLA or proof of current per-event coverage.
 - Critical timestamp nuance: OpenAPI defines `last_update` as the provider engine's last-read time per bookmaker price, not a bookmaker-native quote-change timestamp; `generated_at` timestamps the served snapshot, and per-book `start_time` may override event `commence_time`. A strict source-first capture would have to preserve raw response bytes, response generated time, local receipt time, per-book last_update, and effective kickoff; missing/suspended 1X2 legs must be rejected.
@@ -8083,3 +8083,10 @@ A single SELECT-only aggregate used only `event_id`, `snapshot_time_utc`, `creat
 - Candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 frozen features, original 20×2 weights, scaler/imputer and training fingerprint unchanged.
 - `active_lambda=0` remains exact market fallback; `shadow_lambda=1` remains research-only. Stability gate FAILED; prospective evaluation gate remains 0/30. No Brier/LogLoss superiority claim is supported.
 - No merge, main write, Supabase write/DDL, paid provider call, protected target-outcome read, production `.pkl` change, refit, threshold tuning, bet, promotion, schedule change or other-agent setting change occurred. HUMAN-MERGE remains mandatory.
+
+
+### ODSS audit regression exact-head CI correction
+
+- The first draft placed the assertion in a new standalone test path that the base-branch workflow did not execute; the first run correctly exposed a JSON-key mismatch. Both were corrected: the assertion now lives in the existing V2 frozen-shadow test module that the main workflow already runs, and it checks `free_plan.external_display_permitted`.
+- Exact final test commit before this documentation-only correction: `189d0d047995bb9bc47f241738e111f776b0980b`. [Frozen V2 Shadow Tests](https://github.com/MaksimBlud/football-ai/actions/runs/44799056562) passed **86 tests**, including the new ODSS HOLD assertion. Exact-head CI on that commit was **8/8 SUCCESS**, with no failures and the targeted-research job confirming no `.pkl` changes.
+- The initial failing run is retained as a transparent regression history; it is not counted as a passing result. No model, workflow schedule, main branch, or production artifact was changed.
