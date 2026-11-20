@@ -7889,3 +7889,11 @@ No merge, main update, repository-visibility change, workflow dispatch, schedule
 
 - No merge, main update, Supabase write/DDL, paid provider call, new quote, protected outcome read, model inference/refit, threshold tuning, production `.pkl` change, schedule change, bet, promotion or other-agent setting change occurred.
 - HUMAN-MERGE remains mandatory. #781 is still the first manual integration blocker; #893 must remain behind #890 and its rights-gate ancestry. The next scientific blocker remains the absence of new permitted pre-match quotes: no eligible prospective V2 predictions exist, so the 30-forecast evaluation gate remains closed and Brier/LogLoss superiority cannot be claimed.
+
+
+## 2026-11-20 01:03 UTC — #893 final exact-head supersession
+
+- The current exact HEAD of Draft [#893](https://github.com/MaksimBlud/football-ai/pull/893) is now `5fd6fe2a8ef131dd166dfcac2785d74fab970a4d`, based on #890 HEAD `aade422896d32e38f1a1afb5dde7e1bae5351399`. A final direct-helper gap was closed: `_latest_quotes` now checks frozen-inference rights before inspecting caller quote inputs.
+- Exact-head PR validation [#44650479805](https://github.com/MaksimBlud/football-ai/actions/runs/44650479805): **2/2 SUCCESS**, Python 3.11 and 3.12 each **18 passed**; compile and production `.pkl` diff guard passed. This is the authoritative exact-head PR CI result.
+- Exact-head push validation [#44650475671](https://github.com/MaksimBlud/football-ai/actions/runs/44650475671) was still running at 2026-11-20 01:02:46 UTC: Python 3.11 had completed SUCCESS; Python 3.12 was in progress. Do not count this push run as complete. Earlier exact-head `6cbf603c...` had 4/4 checks, but is superseded by `5fd6fe2a...`.
+- #893 remains Draft/open/HUMAN-MERGE. It is a child of #890, not a replacement for #880's independent no-quote-without-verified-source change. No merge or main update occurred.
