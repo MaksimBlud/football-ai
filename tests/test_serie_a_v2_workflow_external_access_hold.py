@@ -401,7 +401,7 @@ def _has_unreviewed_action(text: str) -> bool:
     import re
 
     for line in text.splitlines():
-        match = re.match(r"^\\s*uses:\\s*([^\\s]+)", line, re.IGNORECASE)
+        match = re.match(r"^\s*uses:\s*([^\s]+)", line, re.IGNORECASE)
         if match is None:
             continue
         action = match.group(1).split("@", 1)[0].lower()
@@ -763,7 +763,7 @@ def test_external_io_inventory_rejects_unreviewed_composite_and_marketplace_acti
     assert all(_has_unreviewed_action(example) for example in examples)
     assert all(
         _is_original_v2_live_workflow(
-            f"name: serie-a-v2 source capture\\n{example}"
+            f"name: serie-a-v2 source capture\n{example}"
         )
         for example in examples
     )
