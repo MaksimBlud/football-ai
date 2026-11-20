@@ -1,3 +1,42 @@
+## 2026-11-20 20:52 UTC — independent Original Forward payload and pre-match ledger verification
+
+This is a read-only verification supplement to the 16:54 UTC Original Forward run already recorded above. It does not create a new forecast or reopen any outcome gate.
+
+### Downloaded Original Forward report artifact
+
+- Downloaded GitHub Actions artifact #14650229424 (1,460 bytes) from [run #44777970547](https://github.com/MaksimBlud/football-ai/actions/runs/44777970547).
+- Independently computed ZIP SHA-256: `6a0c0a0a6c210462cf3f48290eadeb24c3d6a1418973d9e093ca45adaba0eec2`, matching the workflow artifact digest.
+- ZIP contains only `serie_a_v2_forward_source_checked.json` and `serie_a_v2_real_source_attestation.json`; no CSV or target-outcome file was opened.
+- Forward report payload: `quotes_seen=0`, `future_quotes_checked=0`, `v2_diagnostic_previews_captured=0`, `eligible_for_frozen_prospective_cohort=false`, `paid_provider_calls=0`, `supabase_writes=0`, `training_or_promotion=false`, `uses_2026_27_results=false`.
+- Source attestation payload: source artifact #14642541146 / SHA-256 `6c8c60378b656e43f918f7630c089278e4ebec43488d2b75a9616d2cb7b66c09`; authenticated source parent run #44762405350 on the same main SHA; parent completed at 15:22:04 UTC; 10 pre-prospective CSVs / 3,800 historical matches; original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; `source_archive_sha256_verified=true`; zero quotes read and zero protected 2026/27 results read.
+- Interpretation: real source-archive integrity/provenance proof, but no source/quote/prediction triplet and no prospective V2 observation.
+
+### Fresh Supabase pre-match-only aggregate
+
+Read-only SQL selected only counts, event IDs for distinct counting, and the two timestamps from `public.odds_snapshots`; no score, result, settlement, or target-outcome fields were selected.
+
+- Total rows: **3,966**.
+- Both `snapshot_time_utc < commence_time_utc` and `created_at < commence_time_utc`: **3,915**.
+- Both timestamps at/after kickoff: **51**.
+- Disagreement between the two pre-kickoff predicates: **0**.
+- Distinct events in the strict pre-kickoff subset: **327**.
+- Latest strict pre-kickoff snapshot: **2026-10-13 14:48:53.042620 UTC**; latest corresponding `created_at`: **2026-10-13 14:48:53.157404 UTC**.
+- Upcoming Serie A strict pre-kickoff rows/events at audit time: **0 / 0**; latest kickoff in the saved Serie A subset: **2026-10-25 19:45:00 UTC**.
+
+The dual-timestamp condition is a conservative filter, not a tamper-proof persistence attestation: the live `created_at` column is writable by service_role, as separately documented in PR #897. No Supabase write or DDL occurred.
+
+### Current blockers remain unchanged
+
+- Main is still `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- Main Original Forward still reads saved quotes before source archive discovery/verification; source-before-quote remains in the open child chain #884 → #879 → #781.
+- Root default-deny PR #781 remains HUMAN-MERGE only. Its exact HEAD and 8/8 checks are recorded in the preceding update.
+- No fresh saved Serie A quote exists for a future V2 capture; prospective eligible forecasts remain **0/30**.
+- Frozen candidate, 19 features, weights, scaler/imputer, `active_lambda=0`, `shadow_lambda=1`, stability/evaluation gates, production `.pkl`, schedules and other-agent settings remain unchanged.
+
+No merge, main update, paid API request, Supabase write/DDL, protected target-outcome read, refit, threshold tuning, bet, or promotion was performed.
+
+---
+
 ## 2026-11-20 14:55 UTC — fresh current-form artifact attestation and live-main hold evidence
 
 ### Exact main and documentation state
