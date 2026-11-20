@@ -401,7 +401,7 @@ def _has_unreviewed_action(text: str) -> bool:
     import re
 
     for line in text.splitlines():
-        match = re.match(r"^\s*uses:\s*([^\s]+)", line, re.IGNORECASE)
+        match = re.match(r"^\s*(?:-\s*)?uses:\s*([^\s]+)", line, re.IGNORECASE)
         if match is None:
             continue
         action = match.group(1).split("@", 1)[0].lower()
@@ -759,6 +759,10 @@ def test_external_io_inventory_rejects_unreviewed_composite_and_marketplace_acti
         "uses: vendor/source-fetch@v1",
         "uses: docker://ghcr.io/vendor/source-capture:latest",
         "uses: actions/github-script@v7",
+        "      - uses: ./.github/actions/source-capture",
+        "      - uses: vendor/source-fetch@v1",
+        "      - uses: docker://ghcr.io/vendor/source-capture:latest",
+        "      - uses: actions/github-script@v7",
     )
     assert all(_has_unreviewed_action(example) for example in examples)
     assert all(
