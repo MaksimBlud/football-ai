@@ -281,3 +281,37 @@ def test_api_football_free_stats_candidate_remains_held_outside_frozen_original_
     assert audit["actions"]["model_weights_changed"] is False
     assert audit["actions"]["production_pkl_changed"] is False
     assert audit["actions"]["protected_outcomes_read"] is False
+
+
+def test_datasportsapi_free_candidate_remains_held_outside_frozen_original_v2():
+    audit_path = Path(
+        "research/market_anchor_1x2_v2_datasportsapi_free_stats_source_audit_20261120.json"
+    )
+    audit = json.loads(audit_path.read_text(encoding="utf-8"))
+
+    assert audit["candidate_status"] == "HOLD_NO_INTEGRATION"
+    assert audit["free_plan"]["price_usd_per_month"] == 0
+    assert audit["free_plan"]["finished_match_history_days"] == 7
+    assert audit["serie_a"]["current_season_team_statistics_available_all_plans"] is True
+    assert audit["technical_coverage"]["free_last_10_match_reconstruction_from_current_historical_window_possible"] is False
+    assert audit["technical_coverage"]["team_season_totals_substitute_for_original_rolling_match_features"] is False
+    assert audit["technical_coverage"]["per_fixture_per_stat_first_observation_timestamp_documented"] is False
+    assert audit["rights"]["own_products_and_analysis_including_commercial_use_permitted"] is True
+    assert audit["rights"]["upstream_serie_a_statistics_rights_chain_identified"] is False
+    assert audit["rights"]["long_term_private_raw_response_retention_explicitly_granted"] is False
+    assert audit["current_v2_contract"]["candidate_sha256"] == (
+        "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
+    )
+    assert audit["current_v2_contract"]["frozen_feature_count"] == 19
+    assert audit["current_v2_contract"]["active_lambda"] == 0
+    assert audit["current_v2_contract"]["shadow_lambda"] == 1
+    assert audit["actions"]["account_created"] is False
+    assert audit["actions"]["authenticated_api_requests"] == 0
+    assert audit["actions"]["source_downloads"] == 0
+    assert audit["actions"]["odds_endpoint_called"] is False
+    assert audit["actions"]["supabase_writes"] == 0
+    assert audit["actions"]["supabase_ddl"] is False
+    assert audit["actions"]["model_code_changed"] is False
+    assert audit["actions"]["model_weights_changed"] is False
+    assert audit["actions"]["production_pkl_changed"] is False
+    assert audit["actions"]["protected_2026_27_outcomes_read"] is False
