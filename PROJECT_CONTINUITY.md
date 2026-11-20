@@ -8090,3 +8090,12 @@ A single SELECT-only aggregate used only `event_id`, `snapshot_time_utc`, `creat
 - The first draft placed the assertion in a new standalone test path that the base-branch workflow did not execute; the first run correctly exposed a JSON-key mismatch. Both were corrected: the assertion now lives in the existing V2 frozen-shadow test module that the main workflow already runs, and it checks `free_plan.external_display_permitted`.
 - Exact final test commit before this documentation-only correction: `189d0d047995bb9bc47f241738e111f776b0980b`. [Frozen V2 Shadow Tests](https://github.com/MaksimBlud/football-ai/actions/runs/44799056562) passed **86 tests**, including the new ODSS HOLD assertion. Exact-head CI on that commit was **8/8 SUCCESS**, with no failures and the targeted-research job confirming no `.pkl` changes.
 - The initial failing run is retained as a transparent regression history; it is not counted as a passing result. No model, workflow schedule, main branch, or production artifact was changed.
+
+
+## 2026-11-20 — API-Football Free statistics source candidate (HOLD)
+
+Official-pages-only audit added to the original V2 research branch. The $0 Free plan lists 100 requests/day and a per-fixture Statistics endpoint; the documentation lists several useful match-stat families but does not establish complete 19-feature parity, Free Serie A 2026/27 coverage, or per-stat source-observation timestamps. At one request per fixture, 380 match-stat rows require at least four daily quotas, excluding ancillary calls.
+
+The terms state that data is obtained from partners, no publication license is granted for user applications/websites/products, users must obtain necessary third-party permissions, and no commercial rights are granted on covered competitions. No upstream rights chain or written internal-ML permission was verified. **Decision: HOLD / NO INTEGRATION.** No account/key/API request or source download; no odds endpoint; no Supabase write/DDL; no model, weights, production .pkl, or protected outcome access.
+
+Evidence: https://www.api-football.com/pricing/ ; https://www.api-football.com/documentation-v3 ; https://www.api-football.com/terms

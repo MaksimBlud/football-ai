@@ -246,3 +246,38 @@ def test_odss_api_free_candidate_remains_held_outside_frozen_original_v2():
     assert audit["actions"]["supabase_ddl"] is False
     assert audit["actions"]["paid_provider_calls"] is False
     assert audit["actions"]["model_code_changed"] is False
+
+
+def test_api_football_free_stats_candidate_remains_held_outside_frozen_original_v2():
+    audit_path = Path(
+        "research/market_anchor_1x2_v2_api_football_free_stats_source_audit_20261120.json"
+    )
+    audit = json.loads(audit_path.read_text(encoding="utf-8"))
+
+    assert audit["candidate_status"] == "HOLD_NO_INTEGRATION"
+    assert audit["free_plan"]["price_usd_per_month"] == 0
+    assert audit["free_plan"]["requests_per_day"] == 100
+    assert audit["free_plan"]["statistics_endpoint_listed"] is True
+    assert audit["technical_coverage"]["free_serie_a_2026_27_coverage_verified"] is False
+    assert audit["technical_coverage"]["complete_original_19_feature_parity_verified"] is False
+    assert audit["technical_coverage"]["per_stat_source_observation_timestamp_documented"] is False
+    assert audit["rights"]["provider_publication_license_granted"] is False
+    assert audit["rights"]["commercial_rights_on_competitions_granted"] is False
+    assert audit["rights"]["internal_model_use_explicitly_cleared"] is False
+    assert audit["current_v2_contract"]["new_source_integration_allowed"] is False
+    assert audit["current_v2_contract"]["candidate_sha256"] == (
+        "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
+    )
+    assert audit["current_v2_contract"]["frozen_feature_count"] == 19
+    assert audit["current_v2_contract"]["active_lambda"] == 0
+    assert audit["current_v2_contract"]["shadow_lambda"] == 1
+    assert audit["actions"]["api_key_created"] is False
+    assert audit["actions"]["authenticated_api_requests_made"] is False
+    assert audit["actions"]["provider_api_calls"] == 0
+    assert audit["actions"]["odds_endpoint_called"] is False
+    assert audit["actions"]["supabase_writes"] is False
+    assert audit["actions"]["supabase_ddl"] is False
+    assert audit["actions"]["model_code_changed"] is False
+    assert audit["actions"]["model_weights_changed"] is False
+    assert audit["actions"]["production_pkl_changed"] is False
+    assert audit["actions"]["protected_outcomes_read"] is False

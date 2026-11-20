@@ -78,3 +78,14 @@ Queries were SELECT-only and limited to pre-match quote metadata/probabilities a
 5. Preserve the 30-primary-completed-prospective-forecast gate. Only after it opens may an independent evaluator read target outcomes and calculate Brier/LogLoss.
 
 No paid API calls, Supabase writes/DDL, production `.pkl` changes, protected target-outcome reads, merge, or main changes were performed for this report.
+
+
+## API-Football Free statistics-source audit — 2026-11-20
+
+A new official-pages-only candidate was screened for **fixture statistics only**, not for a new quote source. The Free plan is listed at $0 with 100 requests/day and includes a Statistics endpoint; the documented endpoint is per fixture. The documentation lists shots, corners, fouls, offsides, possession, cards, saves and passing fields, but does not verify complete parity with the original 19-feature contract or Free coverage for Serie A 2026/27.
+
+At one request per fixture, a full 380-fixture season would require at least 380 requests (four 100-request daily quotas), excluding fixtures/coverage calls and retries. The inspected statistics documentation does not establish a per-stat first-observed timestamp; local receipt time + SHA would prove local possession before a later quote, not upstream first-observation time.
+
+The provider's terms say data comes from partners, no publication license is granted for user applications/websites/products, users must obtain required third-party permissions, and the provider grants no commercial rights on covered competitions. No upstream rights chain or written internal-ML permission was established.
+
+**Decision: HOLD / NO INTEGRATION.** No account/key/API request, odds endpoint, source download, Supabase write/DDL, model or weight change, production .pkl change, or protected-outcome read. The existing frozen source/quote contract remains unchanged. Machine-readable audit: `research/market_anchor_1x2_v2_api_football_free_stats_source_audit_20261120.json`; regression is embedded in the existing frozen-shadow test module.
