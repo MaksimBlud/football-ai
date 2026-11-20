@@ -324,6 +324,36 @@ EXTERNAL_IO_MARKERS = (
     "docker push ",
     "twine upload ",
     "npm publish",
+    # Raw socket and remote-copy tools can transfer source data without HTTP clients.
+    "nc ",
+    "netcat ",
+    "ncat ",
+    "socat ",
+    "telnet ",
+    "openssl s_client",
+    "ssh ",
+    "scp ",
+    "sftp ",
+    "rsync ",
+    "ftp ",
+    "/dev/tcp/",
+    "/dev/udp/",
+    "git fetch https://",
+    "git fetch git://",
+    "git fetch ssh://",
+    "git fetch git@",
+    "git pull https://",
+    "git pull git://",
+    "git pull ssh://",
+    "git pull git@",
+    "git archive --remote",
+    "docker pull ",
+    "podman pull ",
+    "azcopy copy ",
+    "s3cmd get ",
+    "s3cmd put ",
+    "oras pull ",
+    "crane pull ",
 )
 
 
@@ -500,6 +530,59 @@ def test_external_io_inventory_recognizes_alternate_runtimes_and_http_clients():
         "run: git lfs pull",
     )
     assert all(_has_external_io(example) for example in examples)
+
+
+def test_external_io_inventory_recognizes_raw_socket_and_remote_transfer_paths():
+    examples = (
+        "run: nc -w 5 example.invalid 443",
+        "run: netcat -zv example.invalid 443",
+        "run: ncat example.invalid 443",
+        "run: socat - TCP:example.invalid:443",
+        "run: telnet example.invalid 443",
+        "run: openssl s_client -connect example.invalid:443",
+        "run: bash -c 'exec 3<>/dev/tcp/example.invalid/443'",
+        "run: sh -c 'exec 3<>/dev/udp/example.invalid/443'",
+        "run: ssh user@example.invalid",
+        "run: scp source.csv user@example.invalid:/tmp/",
+        "run: sftp user@example.invalid",
+        "run: rsync source.csv user@example.invalid:/tmp/",
+        "run: ftp example.invalid",
+        "run: git fetch https://example.invalid/source.git",
+        "run: git pull git://example.invalid/source.git main",
+        "run: git fetch ssh://example.invalid/source.git",
+        "run: git pull git@example.invalid:source.git main",
+        "run: git archive --remote=https://example.invalid/source.git HEAD",
+        "run: docker pull registry.example.invalid/source:latest",
+        "run: podman pull registry.example.invalid/source:latest",
+        "run: azcopy copy source.csv https://example.invalid/container",
+        "run: s3cmd get s3://bucket/source.csv .",
+        "run: s3cmd put source.csv s3://bucket/source.csv",
+        "run: oras pull registry.example.invalid/source:latest",
+        "run: crane pull registry.example.invalid/source:latest source.tar",
+    )
+    assert all(_has_external_io(example) for example in examples)
+    assert _is_original_v2_live_workflow(
+        "name: market-anchor-1x2-v2 source capture\\nrun: nc -w 5 example.invalid 443"
+    )
+    assert _is_original_v2_live_workflow(
+        "name: market-anchor-1x2-v2 source capture\\nrun: bash -c 'exec 3<>/dev/tcp/example.invalid/443'"
+    )
+
+
+def test_repository_metadata_fetch_for_pickle_diff_guard_is_not_provider_io():
+    offline_validation = """
+name: Market Anchor 1X2 V2 Shadow Validation
+run: |
+  git fetch origin main
+  git diff --name-only origin/main...HEAD -- '*.pkl'
+  python -m py_compile market_anchor_1x2_v2_shadow.py
+  pytest -q tests/test_market_anchor_1x2_v2_shadow.py
+"""
+    assert not _has_external_io(offline_validation)
+    assert not _is_original_v2_live_workflow(
+        offline_validation,
+        workflow_path=".github/workflows/market-anchor-1x2-v2-shadow-validation.yml",
+    )
 
 
 def test_live_v2_workflow_inventory_cannot_grow_around_the_hold():
