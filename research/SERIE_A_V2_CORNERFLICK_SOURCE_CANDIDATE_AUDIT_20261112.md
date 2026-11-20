@@ -2,7 +2,7 @@
 
 **Audit date:** 2026-11-12  
 **Scope:** public data-use statement and upstream API terms only. No account, key, API request, CSV/JSON dataset download, Supabase access, quote read, feature build, inference, or target-outcome analysis.  
-**Decision:** `CONDITIONAL_CANDIDATE_NOT_APPROVED`.
+**Decision:** `HOLD_NOT_APPROVED` (updated after the 2026-11-18 Terms revision).
 
 ## 1. Summary
 
@@ -102,3 +102,32 @@ Next admissible step: obtain written upstream rights and timestamp/provenance cl
    The page states that the data comes from partners, direct resale is not allowed without permission, and it does not grant a general licence for use/publication of data in user applications or products; the user must obtain any necessary permissions from competent rights holders. The page itself says “Last updated: May 21, 2025.”
 
 **Attribution caveat:** the public Cornerflick overview does not name the upstream provider per field. The API-Football terms are therefore a conservative risk check, not proof that API-Football supplies every (or any particular) Cornerflick field. Obtain Cornerflick's written provider/field lineage before any further source review. No match-page payload or season dataset was opened to establish that mapping.
+
+
+## 9. Updated official Terms review — 2026-11-20
+
+The official Cornerflick Terms page now displays **“Last updated · 18 November 2026.”** The public data page continues to say that finished-match files are free to download/reuse and that the published compilation is CC BY 4.0. However, the Terms page separately states:
+
+- acceptable use excludes scraping, harvesting, or bulk-downloading content except as permitted by law;
+- the intellectual-property grant is a personal, non-exclusive, non-transferable licence to access and read the Service for the user's own non-commercial use; and
+- live sports data is supplied by third parties and may be delayed or inaccurate.
+
+This creates a material licence/contract ambiguity for the intended workflow. The data page's CC BY 4.0 grant is expressly limited to Cornerflick's compilation (selection, structure, and annotation), while the Terms page describes a narrower personal/non-commercial access licence and restricts scraping/bulk downloads. The public pages do not explain whether the downloadable match files are separately licensed for automated bulk capture, private retention, internal ML training, or inference, or how the two statements interact.
+
+**Updated binding decision: HOLD.** Do not automate downloads, bulk-capture, retain, train on, calculate features from, or infer with Cornerflick data on the strength of the CC BY 4.0 compilation statement alone. This is a source-rights hold, not a conclusion that a particular use is unlawful.
+
+Before reconsideration, obtain written, dataset-specific clarification from Cornerflick covering:
+1. which licence governs the season CSV/JSON and per-match JSON/CSV files, and whether it overrides or supplements the general Terms;
+2. whether automated collection, bulk downloads, private raw retention, internal feature generation, ML training and inference are permitted;
+3. whether commercial use is permitted or the permission is strictly non-commercial;
+4. the upstream provider and rights-holder identity for each relevant statistics family, plus written upstream clearance for this intended use; and
+5. whether `last_updated_at` is source-observed time, provider-ingestion time, or Cornerflick publication time, with immutable version and correction-history semantics.
+
+No endpoint was called, no CSV/JSON file or match page was downloaded/opened, no account or API key was created, and no 2026/27 result or score was read. The preregistered outcome gate remains closed.
+
+## 10. Additional public sources reviewed (2026-11-20)
+
+3. Cornerflick, “Terms” — https://cornerflick.com/terms (page states last updated 2026-11-18). Reviewed only the published terms text: acceptable-use restriction on scraping/harvesting/bulk downloads; personal non-commercial access/read licence; third-party live-data caveat.
+4. Cornerflick, “Editorial standards” — https://cornerflick.com/editorial-standards. The page says live scores, lineups and statistics come from established data providers and are labelled as such, but does not name the provider(s) or supply per-field provenance in the reviewed public text.
+
+These additional pages strengthen the HOLD; they do not identify a cleared upstream source or authorize V2 ingestion.
