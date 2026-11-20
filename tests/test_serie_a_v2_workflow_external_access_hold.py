@@ -324,12 +324,90 @@ EXTERNAL_IO_MARKERS = (
     "docker push ",
     "twine upload ",
     "npm publish",
+    # Raw socket and remote-copy tools can transfer source data without HTTP clients.
+    "nc ",
+    "netcat ",
+    "ncat ",
+    "socat ",
+    "telnet ",
+    "openssl s_client",
+    "ssh ",
+    "scp ",
+    "sftp ",
+    "rsync ",
+    "ftp ",
+    "/dev/tcp/",
+    "/dev/udp/",
+    "git fetch https://",
+    "git fetch git://",
+    "git fetch ssh://",
+    "git fetch git@",
+    "git pull https://",
+    "git pull git://",
+    "git pull ssh://",
+    "git pull git@",
+    "git archive --remote",
+    "docker pull ",
+    "podman pull ",
+    "azcopy copy ",
+    "s3cmd get ",
+    "s3cmd put ",
+    "oras pull ",
+    "crane pull ",
+    # Compiled-language runtimes and explicit shell/container launchers can
+    # perform network I/O without using the already-covered HTTP/socket CLIs.
+    "go run ",
+    "go test ",
+    "cargo run ",
+    "cargo test ",
+    "rustc ",
+    "java -jar ",
+    "jshell ",
+    "php ",
+    "Rscript ",
+    "julia ",
+    "swift ",
+    "dotnet ",
+    "lua ",
+    "luajit ",
+    "bash ",
+    "sh ",
+    "zsh ",
+    "fish ",
+    "docker run ",
+    "podman run ",
+    "nerdctl run ",
+    "ctr run ",
+    "buildah run ",
 )
 
 
 def _has_external_io(text: str) -> bool:
     normalized = text.lower()
     return any(marker.lower() in normalized for marker in EXTERNAL_IO_MARKERS)
+
+
+TRUSTED_OFFLINE_ACTIONS = frozenset({"actions/checkout", "actions/setup-python"})
+
+
+def _has_unreviewed_action(text: str) -> bool:
+    """Reject local, container, and third-party workflow actions in V2 workflows.
+
+    A composite or marketplace action can perform network I/O without spelling
+    a client, URL, credential, or Python entrypoint in the workflow YAML.
+    Only the two narrowly used setup actions are treated as offline bootstrap.
+    Artifact, cache, script, and all other actions remain external-access paths.
+    """
+    import re
+
+    for line in text.splitlines():
+        match = re.match(r"^\s*(?:-\s*)?uses:\s*([^\s]+)", line, re.IGNORECASE)
+        if match is None:
+            continue
+        action = match.group(1).split("@", 1)[0].lower()
+        if action not in TRUSTED_OFFLINE_ACTIONS:
+            return True
+    return False
 
 
 ORIGINAL_V2_REFERENCE_MARKERS = (
@@ -414,6 +492,7 @@ def _is_original_v2_live_workflow(text: str, workflow_path: str = "") -> bool:
             and (
                 _has_external_io(text)
                 or _has_non_test_python_entrypoint(text)
+                or _has_unreviewed_action(text)
             )
         )
     )
@@ -502,6 +581,94 @@ def test_external_io_inventory_recognizes_alternate_runtimes_and_http_clients():
     assert all(_has_external_io(example) for example in examples)
 
 
+def test_external_io_inventory_recognizes_raw_socket_and_remote_transfer_paths():
+    examples = (
+        "run: nc -w 5 example.invalid 443",
+        "run: netcat -zv example.invalid 443",
+        "run: ncat example.invalid 443",
+        "run: socat - TCP:example.invalid:443",
+        "run: telnet example.invalid 443",
+        "run: openssl s_client -connect example.invalid:443",
+        "run: bash -c 'exec 3<>/dev/tcp/example.invalid/443'",
+        "run: sh -c 'exec 3<>/dev/udp/example.invalid/443'",
+        "run: ssh user@example.invalid",
+        "run: scp source.csv user@example.invalid:/tmp/",
+        "run: sftp user@example.invalid",
+        "run: rsync source.csv user@example.invalid:/tmp/",
+        "run: ftp example.invalid",
+        "run: git fetch https://example.invalid/source.git",
+        "run: git pull git://example.invalid/source.git main",
+        "run: git fetch ssh://example.invalid/source.git",
+        "run: git pull git@example.invalid:source.git main",
+        "run: git archive --remote=https://example.invalid/source.git HEAD",
+        "run: docker pull registry.example.invalid/source:latest",
+        "run: podman pull registry.example.invalid/source:latest",
+        "run: azcopy copy source.csv https://example.invalid/container",
+        "run: s3cmd get s3://bucket/source.csv .",
+        "run: s3cmd put source.csv s3://bucket/source.csv",
+        "run: oras pull registry.example.invalid/source:latest",
+        "run: crane pull registry.example.invalid/source:latest source.tar",
+    )
+    assert all(_has_external_io(example) for example in examples)
+    assert _is_original_v2_live_workflow(
+        "name: market-anchor-1x2-v2 source capture\\nrun: nc -w 5 example.invalid 443"
+    )
+    assert _is_original_v2_live_workflow(
+        "name: market-anchor-1x2-v2 source capture\\nrun: bash -c 'exec 3<>/dev/tcp/example.invalid/443'"
+    )
+
+
+def test_external_io_inventory_recognizes_compiled_runtimes_shells_and_containers():
+    examples = (
+        "run: go run cmd/capture.go",
+        "run: go test ./internal/source",
+        "run: cargo run --bin source_capture",
+        "run: cargo test --all",
+        "run: rustc capture.rs && ./capture",
+        "run: java -jar source-capture.jar",
+        "run: jshell capture.jsh",
+        "run: php capture.php",
+        "run: Rscript capture.R",
+        "run: julia capture.jl",
+        "run: swift run SourceCapture",
+        "run: dotnet run --project SourceCapture",
+        "run: lua capture.lua",
+        "run: luajit capture.lua",
+        "run: bash capture.sh",
+        "run: sh capture.sh",
+        "run: zsh capture.zsh",
+        "run: fish capture.fish",
+        "run: docker run --network host source-capture:latest",
+        "run: podman run source-capture:latest",
+        "run: nerdctl run source-capture:latest",
+        "run: ctr run source-capture:latest capture",
+        "run: buildah run source-capture",
+    )
+    assert all(_has_external_io(example) for example in examples)
+    assert _is_original_v2_live_workflow(
+        "name: market-anchor-1x2-v2 source capture\\nrun: go run cmd/capture.go"
+    )
+    assert _is_original_v2_live_workflow(
+        "name: serie-a-v2 source capture\\nrun: docker run source-capture:latest"
+    )
+
+
+def test_repository_metadata_fetch_for_pickle_diff_guard_is_not_provider_io():
+    offline_validation = """
+name: Market Anchor 1X2 V2 Shadow Validation
+run: |
+  git fetch origin main
+  git diff --name-only origin/main...HEAD -- '*.pkl'
+  python -m py_compile market_anchor_1x2_v2_shadow.py
+  pytest -q tests/test_market_anchor_1x2_v2_shadow.py
+"""
+    assert not _has_external_io(offline_validation)
+    assert not _is_original_v2_live_workflow(
+        offline_validation,
+        workflow_path=".github/workflows/market-anchor-1x2-v2-shadow-validation.yml",
+    )
+
+
 def test_live_v2_workflow_inventory_cannot_grow_around_the_hold():
     """New V2 live workflows must be added to the explicit fail-closed inventory."""
     workflow_dir = ROOT / ".github" / "workflows"
@@ -582,4 +749,37 @@ run: |
   python -m py_compile market_anchor_1x2_v2_shadow.py
   python -m pytest -q tests/test_market_anchor_1x2_v2_shadow.py
 """
+    assert not _is_original_v2_live_workflow(offline)
+
+
+
+def test_external_io_inventory_rejects_unreviewed_composite_and_marketplace_actions():
+    examples = (
+        "uses: ./.github/actions/source-capture",
+        "uses: vendor/source-fetch@v1",
+        "uses: docker://ghcr.io/vendor/source-capture:latest",
+        "uses: actions/github-script@v7",
+        "      - uses: ./.github/actions/source-capture",
+        "      - uses: vendor/source-fetch@v1",
+        "      - uses: docker://ghcr.io/vendor/source-capture:latest",
+        "      - uses: actions/github-script@v7",
+    )
+    assert all(_has_unreviewed_action(example) for example in examples)
+    assert all(
+        _is_original_v2_live_workflow(
+            f"name: serie-a-v2 source capture\n{example}"
+        )
+        for example in examples
+    )
+
+
+def test_offline_v2_bootstrap_actions_remain_allowed():
+    offline = """
+name: serie-a-v2 offline validation
+steps:
+  - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+  - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+  - run: python -m pytest -q tests/test_serie_a_v2_frozen_shadow_preview.py
+"""
+    assert not _has_unreviewed_action(offline)
     assert not _is_original_v2_live_workflow(offline)
