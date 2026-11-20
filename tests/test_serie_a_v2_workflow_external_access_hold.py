@@ -387,6 +387,29 @@ def _has_external_io(text: str) -> bool:
     return any(marker.lower() in normalized for marker in EXTERNAL_IO_MARKERS)
 
 
+TRUSTED_OFFLINE_ACTIONS = frozenset({"actions/checkout", "actions/setup-python"})
+
+
+def _has_unreviewed_action(text: str) -> bool:
+    """Reject local, container, and third-party workflow actions in V2 workflows.
+
+    A composite or marketplace action can perform network I/O without spelling
+    a client, URL, credential, or Python entrypoint in the workflow YAML.
+    Only the two narrowly used setup actions are treated as offline bootstrap.
+    Artifact, cache, script, and all other actions remain external-access paths.
+    """
+    import re
+
+    for line in text.splitlines():
+        match = re.match(r"^\\s*uses:\\s*([^\\s]+)", line, re.IGNORECASE)
+        if match is None:
+            continue
+        action = match.group(1).split("@", 1)[0].lower()
+        if action not in TRUSTED_OFFLINE_ACTIONS:
+            return True
+    return False
+
+
 ORIGINAL_V2_REFERENCE_MARKERS = (
     "serie_a_v2_",
     "serie-a-v2",
@@ -469,6 +492,7 @@ def _is_original_v2_live_workflow(text: str, workflow_path: str = "") -> bool:
             and (
                 _has_external_io(text)
                 or _has_non_test_python_entrypoint(text)
+                or _has_unreviewed_action(text)
             )
         )
     )
@@ -725,4 +749,33 @@ run: |
   python -m py_compile market_anchor_1x2_v2_shadow.py
   python -m pytest -q tests/test_market_anchor_1x2_v2_shadow.py
 """
+    assert not _is_original_v2_live_workflow(offline)
+
+
+
+def test_external_io_inventory_rejects_unreviewed_composite_and_marketplace_actions():
+    examples = (
+        "uses: ./.github/actions/source-capture",
+        "uses: vendor/source-fetch@v1",
+        "uses: docker://ghcr.io/vendor/source-capture:latest",
+        "uses: actions/github-script@v7",
+    )
+    assert all(_has_unreviewed_action(example) for example in examples)
+    assert all(
+        _is_original_v2_live_workflow(
+            f"name: serie-a-v2 source capture\\n{example}"
+        )
+        for example in examples
+    )
+
+
+def test_offline_v2_bootstrap_actions_remain_allowed():
+    offline = """
+name: serie-a-v2 offline validation
+steps:
+  - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+  - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+  - run: python -m pytest -q tests/test_serie_a_v2_frozen_shadow_preview.py
+"""
+    assert not _has_unreviewed_action(offline)
     assert not _is_original_v2_live_workflow(offline)
