@@ -1,3 +1,39 @@
+## 2026-11-20 14:55 UTC — fresh current-form artifact attestation and live-main hold evidence
+
+### Exact main and documentation state
+- Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; repository visibility is public and `main` is not branch-protected.
+- Main `PROJECT_CONTINUITY.md` blob remains `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`; this documentation branch is `research/v2-runtime-checkpoint-20261115-1354z`, updated from blob `c68c9c75839bc73c82b820a437af1161a9122a4f`.
+- No main ref, production artifact, model file, schedule, Supabase data/schema, or other-agent setting was changed.
+
+### New actual current-form source capture on main
+- Scheduled workflow [run #44753230529](https://github.com/MaksimBlud/football-ai/actions/runs/44753230529) ran on exact main SHA above and completed SUCCESS at `2026-11-20T14:25:55Z`.
+- It uploaded Actions artifact #14636526350, 439,420 bytes, GitHub digest `sha256:2237cc30b84b2e982586ce7ef44b3ab4887c286e5f3320b8f9579cdc8e9dbca8`.
+- The downloaded ZIP's SHA-256 matches the GitHub artifact digest. Without parsing/opening any CSV contents, raw-byte SHA-256 was independently recomputed for all 11 CSV members and every value matched the JSON manifest.
+- The archive contains ten frozen historical CSVs / 3,800 rows and the current-season `serie_a_2627.csv` member / 110 prior-day rows. Current-season raw member SHA-256: `91f517fedb41215a32e80faa8f4ec44e26d970e557c6c120a664686dbc4d22f0`.
+- The preregistered feature-input gate reports 110 canonical completed Serie A identities against the unchanged minimum 30. Its exact Supabase projection is `match_date,home_team,away_team`; manifest says `score_or_result_fields_selected_for_gate=false`. This is the lagged-feature input gate only. The separate 30-eligible-prospective-forecast evaluation gate remains closed.
+- Current source observation: `2026-11-20T14:25:49.861700Z`; archive creation: `2026-11-20T14:25:49.878748Z`; parent workflow completed: `2026-11-20T14:25:55Z`.
+
+### New current-form forward verification
+- [Run #44753397772](https://github.com/MaksimBlud/football-ai/actions/runs/44753397772) began at `14:25:59Z), after the source artifact and successful parent workflow, and completed SUCCESS at `14:26:35Z`.
+- Forward artifact #14635868174 has GitHub digest `sha256:9bb32720cde38549d53077bee6ece5194433c69d70c09ecd2e6161ec69ba9e53`. Its embedded source ZIP is byte-identical to artifact #14636526350 (SHA-256 `2237cc30...`).
+- Its report records source status VERIFIED, exact source artifact ID/digest, successful parent run #44753230529, exact candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 110 current-season lagged rows and 3,910 historical rows.
+- It also records zero saved quotes, zero preview rows, zero shadow captures, `target_outcomes_read=false`, `target_outcomes_scored=false`, `target_outcome_evaluation_gate_open=false`, zero paid calls and zero Supabase writes. This is source/provenance evidence only, not a forecast or quality evaluation.
+- This audit hashed source CSV bytes only; it did not parse or inspect any 2026/27 score/result values.
+
+### Critical live-main hold remains unmerged
+- The current main source-capture workflow still runs the scheduled capture and uploads the raw source ZIP to Actions artifacts while the repository is public and source-rights/private-storage clearance is unresolved.
+- New evidence was recorded in [PR #781 comment #7042993492](https://github.com/MaksimBlud/football-ai/pull/781#issuecomment-7042993492). The exact PR #781 HEAD remains `3a70a8648895076efec2a80dc10b1798ed0d9261`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, OPEN / Ready for review / not merged, with 8/8 completed SUCCESS check-runs all bound to that exact HEAD.
+- #781 changes both current-form workflows and Original Forward: default `MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=false`, removes Supabase secrets from job-level environments, skips live source/quote steps, and skips raw artifact uploads unless explicitly allowed. Existing schedule definitions remain unchanged.
+- The main original-forward script is still quote-first: `fetch_saved_upcoming_serie_a_quotes()` is called before `discover_archives()`; the workflow still uploads its artifact with `if: always()`. The latest observed Original Forward run [#44575314016](https://github.com/MaksimBlud/football-ai/actions/runs/44575314016) (2026-11-19 17:16 UTC) had zero quotes and zero diagnostic previews, so it does not prove a positive-quote source-before-quote path. Minimal source-first correction remains [PR #884](https://github.com/MaksimBlud/football-ai/pull/884), stacked on #879 → #781; #884 exact HEAD `ec79bb1d2c227e44450ddeaddfde97ec210dbf52`, 2/2 exact-head checks SUCCESS.
+- Current-form no-source quote-read protection remains [PR #880](https://github.com/MaksimBlud/football-ai/pull/880), stacked on #877 → #876 → #875 → #781; exact HEAD `0bd1c8dbc0b467e7717cca846874c95156f1ffa1`, 2/2 exact-head checks SUCCESS.
+- Source rights remain HOLD. The public archive run is a technical integrity observation, not permission to continue public raw-data capture. Do not enable the live-access flag; do not merge child PRs out of order. HUMAN-MERGE only.
+
+### Frozen original V2 and evaluation
+- Candidate SHA, original 19-feature order, 20x2 weights, scaler/imputer and training fingerprint remain unchanged.
+- `active_lambda=0) remains the market; `shadow_lambda=1` remains research-only; stability gate remains FAILED; prospective evaluation remains 0/30.
+- No Brier/LogLoss superiority claim, refit, threshold tuning, production `.pkl` change, promotion, betting or product publication.
+
+
 ## 2026-11-19 01:55 UTC — private artifact gate exact-head CI and fresh pre-match audit
 
 ### Fresh main and live-workflow safety
