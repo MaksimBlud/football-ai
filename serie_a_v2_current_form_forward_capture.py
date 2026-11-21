@@ -343,6 +343,75 @@ def verify_latest_source_archive(
     }
 
 
+def _verified_source_precedes_quote_read(source_verification: Mapping[str, Any]) -> bool:
+    """Require a fully attested original-V2 source archive before any quote read."""
+    if not isinstance(source_verification, Mapping):
+        return False
+    if (
+        source_verification.get("status") != "VERIFIED"
+        or source_verification.get("verified") is not True
+        or source_verification.get("candidate_sha256") != FROZEN_SHA
+    ):
+        return False
+    artifact_id = source_verification.get("artifact_id")
+    digest = source_verification.get("artifact_sha256")
+    parent = source_verification.get("parent_run")
+    if type(artifact_id) is not int or artifact_id <= 0:
+        return False
+    if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+        return False
+    if not isinstance(parent, Mapping):
+        return False
+    if (
+        type(parent.get("run_id")) is not int
+        or parent["run_id"] <= 0
+        or not isinstance(parent.get("run_head_sha"), str)
+        or not re.fullmatch(r"[0-9a-f]{40}", parent["run_head_sha"])
+        or parent.get("workflow_path") != SOURCE_WORKFLOW_PATH
+    ):
+        return False
+    try:
+        verified_at = parse_utc(source_verification["verified_at_utc"])
+        source_created = parse_utc(source_verification["source_archive_created_at_utc"])
+        latest_source = parse_utc(source_verification["latest_source_observed_at_utc"])
+        parent_created = parse_utc(parent["run_created_at_utc"])
+        parent_completed = parse_utc(parent["run_completed_at_utc"])
+    except (KeyError, TypeError, ValueError):
+        return False
+    return (
+        latest_source <= source_created
+        and parent_created <= source_created <= parent_completed < verified_at
+    )
+
+
+def read_quotes_after_verified_source(
+    source_verification: Mapping[str, Any],
+    *,
+    quote_loader,
+) -> tuple[list[dict], dict]:
+    """Invoke the saved-quote reader only after source provenance and both rights gates pass."""
+    v2_access.require_v2_source_capture_access()
+    if not _verified_source_precedes_quote_read(source_verification):
+        return [], {
+            "status": "SKIPPED_NO_VERIFIED_SOURCE_ARCHIVE",
+            "quote_reader_called": False,
+        }
+    # A verified source alone does not grant frozen inference or quote access.
+    v2_access.require_v2_inference_access()
+    if not callable(quote_loader):
+        raise ValueError("saved quote reader must be callable")
+    quotes = quote_loader()
+    if not isinstance(quotes, list):
+        raise ValueError("saved quote reader must return a list")
+    return quotes, {
+        "status": "READ_AFTER_VERIFIED_SOURCE_ARCHIVE",
+        "quote_reader_called": True,
+        "source_artifact_id": source_verification["artifact_id"],
+        "source_artifact_sha256": source_verification["artifact_sha256"],
+        "source_parent_run_id": source_verification["parent_run"]["run_id"],
+    }
+
+
 def _latest_quotes(quotes: list[dict], *, now: datetime) -> list[dict]:
     v2_access.require_v2_inference_access()
     latest = {}
@@ -591,20 +660,30 @@ def main() -> None:
         verify_parent_run=verify_parent,
         write_sources_to=args.sources_output_dir,
     )
-    # Frozen inference permission is checked after source provenance, but before
-    # Supabase client creation or any saved-quote read.
-    v2_access.require_v2_inference_access()
-    client = create_client(url, key)
-    quotes = fetch_saved_upcoming_serie_a_quotes(client, now=now)
+    def read_saved_quotes() -> list[dict]:
+        # Both source provenance and frozen-inference rights are checked before
+        # this callback can construct a Supabase client or inspect saved quotes.
+        client = create_client(url, key)
+        return fetch_saved_upcoming_serie_a_quotes(client, now=now)
+
+    quotes, quote_read_gate = read_quotes_after_verified_source(
+        source_verification,
+        quote_loader=read_saved_quotes,
+    )
     report = prepare_forward_capture(
         quotes,
         archives,
         as_of_utc=now,
         load_archive=load_cached_archive,
         verify_parent_run=verify_parent,
-        write_sources_to=args.sources_output_dir,
+        write_sources_to=(
+            args.sources_output_dir
+            if quote_read_gate["quote_reader_called"]
+            else None
+        ),
     )
     report["latest_source_archive_verification"] = source_verification
+    report["quote_read_gate"] = quote_read_gate
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
                            encoding="utf-8")
@@ -613,6 +692,7 @@ def main() -> None:
         "candidate_sha256": report["candidate_sha256"],
         "quotes_seen": report["quotes_seen"],
         "latest_source_archive_verification": report["latest_source_archive_verification"],
+        "quote_read_gate": report["quote_read_gate"],
         "v2_current_form_shadow_captured": report["v2_current_form_shadow_captured"],
         "blocked": report["blocked"],
         "target_outcomes_read": report["target_outcomes_read"],
