@@ -4,6 +4,9 @@ from io import BytesIO
 import json
 from datetime import datetime, timedelta, timezone
 import zipfile
+import sys
+
+import serie_a_v2_forward_capture as forward_capture
 
 import pytest
 
@@ -15,6 +18,7 @@ from serie_a_v2_forward_capture import (
     ARTIFACT_NAME, ARCHIVE_REPORT, SOURCE_DIR,
     capture_forward_with_source_preflight, discover_archives,
     prepare_forward_capture, verify_source_run, SOURCE_WORKFLOW_PATH,
+    require_private_repository,
 )
 
 NOW = datetime(2026, 10, 14, 7, 0, tzinfo=timezone.utc)
@@ -429,6 +433,11 @@ def test_original_forward_cli_default_denies_before_archive_discovery_or_databas
     monkeypatch.setenv("GITHUB_TOKEN", "synthetic-token")
     monkeypatch.setattr(
         forward_module,
+        "require_private_repository",
+        lambda *, token: {"repository": "MaksimBlud/football-ai", "private": True},
+    )
+    monkeypatch.setattr(
+        forward_module,
         "discover_archives",
         lambda **_kwargs: events.append("archive_discovery") or [],
     )
@@ -482,6 +491,11 @@ def test_original_forward_cli_verifies_parent_and_zip_before_lazy_database_impor
     monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
     monkeypatch.setenv("GITHUB_TOKEN", "synthetic-token")
+    monkeypatch.setattr(
+        forward_module,
+        "require_private_repository",
+        lambda *, token: {"repository": "MaksimBlud/football-ai", "private": True},
+    )
     monkeypatch.setattr(forward_module, "datetime", FrozenNow)
 
     def discover_archives(*, token):
@@ -578,6 +592,11 @@ def test_original_forward_cli_invalid_archive_sha_blocks_database_import_and_quo
     monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
     monkeypatch.setenv("GITHUB_TOKEN", "synthetic-token")
+    monkeypatch.setattr(
+        forward_module,
+        "require_private_repository",
+        lambda *, token: {"repository": "MaksimBlud/football-ai", "private": True},
+    )
     monkeypatch.setattr(forward_module, "datetime", FrozenNow)
 
     def discover_archives(*, token):
@@ -640,4 +659,94 @@ def test_original_forward_cli_invalid_archive_sha_blocks_database_import_and_quo
         "archive_download_and_sha_input",
     ]
     assert not output.exists()
+    assert not sources.exists()
+
+
+def test_private_repository_guard_accepts_only_exact_private_repository(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    url = "https://api.github.com/repos/MaksimBlud/football-ai"
+    calls = []
+
+    class Response:
+        status_code = 200
+        def __init__(self, data):
+            self.url = url
+            self.data = data
+        def json(self):
+            return self.data
+
+    def get(requested_url, headers, timeout, allow_redirects):
+        calls.append((requested_url, allow_redirects))
+        assert headers["Authorization"] == "Bearer test-token"
+        return Response({"full_name": "MaksimBlud/football-ai", "private": True})
+
+    assert require_private_repository(token="test-token", get=get) == {
+        "repository": "MaksimBlud/football-ai", "private": True
+    }
+    assert calls == [(url, False)]
+
+
+def test_private_repository_guard_rejects_public_repository_before_source_access(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    url_value = "https://api.github.com/repos/MaksimBlud/football-ai"
+
+    class Response:
+        status_code = 200
+        url = url_value
+        def json(self):
+            return {"full_name": "MaksimBlud/football-ai", "private": False}
+
+    with pytest.raises(PermissionError, match="requires the exact GitHub repository to be private"):
+        require_private_repository(
+            token="test-token",
+            get=lambda requested_url, headers, timeout, allow_redirects: Response(),
+        )
+
+
+def test_private_repository_guard_rejects_redirect_without_parsing_body(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    url_value = "https://api.github.com/repos/MaksimBlud/football-ai"
+
+    class Response:
+        status_code = 302
+        url = url_value
+        def json(self):
+            raise AssertionError("redirect body must not be parsed")
+
+    with pytest.raises(ValueError, match="HTTP 302"):
+        require_private_repository(
+            token="test-token",
+            get=lambda requested_url, headers, timeout, allow_redirects: Response(),
+        )
+
+
+def test_original_forward_cli_checks_private_repository_before_archive_discovery(monkeypatch, tmp_path):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    output = tmp_path / "output" / "forward.json"
+    sources = tmp_path / "sources"
+    monkeypatch.setattr(sys, "argv", [
+        "serie_a_v2_forward_capture.py",
+        "--output", str(output),
+        "--sources-output-dir", str(sources),
+    ])
+    calls = []
+
+    def reject_public_repository(*, token):
+        calls.append(("privacy", token))
+        raise PermissionError("repository is public")
+
+    def forbidden_discovery(*, token):
+        calls.append(("archives", token))
+        raise AssertionError("archive discovery must not run for a public repository")
+
+    monkeypatch.setattr(forward_capture, "require_private_repository", reject_public_repository)
+    monkeypatch.setattr(forward_capture, "discover_archives", forbidden_discovery)
+
+    with pytest.raises(PermissionError, match="repository is public"):
+        forward_capture.main()
+
+    assert calls == [("privacy", "test-token")]
+    assert not output.parent.exists()
     assert not sources.exists()
