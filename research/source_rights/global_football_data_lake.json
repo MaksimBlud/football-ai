@@ -53,14 +53,13 @@
       "corners_home_away": 22.7,
       "yellow_cards_home_away": 20.9,
       "red_cards_home_away": 22.7,
-      "stats_fetched_at": 74.0
+      "stats_fetched_at": 74
     },
     "current_2026_27_completed_stats_coverage_confirmed": false,
     "exact_original_19_feature_parity_confirmed": false
   },
   "frozen_v2": {
     "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
-    "training_fingerprint": "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098",
     "feature_count": 19,
     "active_lambda": 0,
     "shadow_lambda": 1,
@@ -68,7 +67,9 @@
     "eligible_for_source_capture": false,
     "eligible_for_inference": false,
     "eligible_for_frozen_prospective_cohort": false,
-    "no_bet": true
+    "no_bet": true,
+    "candidate_git_blob_sha1": "ac1303f6b096664983fbf52443bd0a381b23ba21",
+    "training_fingerprint_sha256": "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098"
   },
   "non_actions": {
     "provider_requests": 0,
