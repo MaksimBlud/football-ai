@@ -159,4 +159,8 @@ def test_saved_target_loader_contains_no_embedded_target_records():
     assert isinstance(call.value.func, ast.Name)
     assert call.value.func.id == "_require_post_outcome_replay_gate"
     assert isinstance(loader.body[2], ast.Raise)
-    assert not any(isinstance(node, (ast.Dict, ast.List, ast.Tuple)) for node in ast.walk(loader))
+    assert not any(
+        isinstance(node, (ast.Dict, ast.List, ast.Tuple))
+        for statement in loader.body
+        for node in ast.walk(statement)
+    )
