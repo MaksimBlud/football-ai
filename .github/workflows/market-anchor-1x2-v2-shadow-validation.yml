@@ -6,6 +6,7 @@ on:
       - "market_anchor_1x2_v2_shadow.py"
       - "experiments/market_anchor_1x2_v2_protocol.json"
       - "tests/test_market_anchor_1x2_v2_shadow.py"
+      - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
       - ".github/workflows/market-anchor-1x2-v2-shadow-validation.yml"
       - "market_anchor_1x2_v1.py"
       - "historical_football_signal_lab.py"
