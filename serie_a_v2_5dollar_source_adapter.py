@@ -295,7 +295,7 @@ def _fixture_to_history_row(
     capture_time: datetime,
     target_ids: set[str],
     target_identities: set[tuple[object, tuple[str, str]]],
-    expected_season_id: str,
+    expected_season_id: str | None,
 ) -> dict:
     fixture_id = str(fixture.get("id") or "").strip()
     if not fixture_id:
@@ -309,9 +309,12 @@ def _fixture_to_history_row(
         raise ValueError("only provider-confirmed finished fixtures may become feature history")
     if fixture.get("status_reason") is not None or fixture.get("status_code") != "full":
         raise ValueError("finished fixture lacks explicit full-time confirmation")
+    # The public fixture schema does not document league_season_id on each row.
+    # The exact season is pinned by every /leagues/{id}/fixtures?season=... URL;
+    # if a provider season id is additionally present, use it as a cross-check.
     season_id = str(fixture.get("league_season_id") or "").strip()
-    if not expected_season_id or season_id != expected_season_id:
-        raise ValueError("fixture league_season_id differs from the captured season")
+    if expected_season_id and season_id and season_id != expected_season_id:
+        raise ValueError("fixture league_season_id differs from the pinned capture manifest")
     kickoff = _parse_utc(fixture.get("kickoff_utc"), "fixture kickoff_utc")
     if kickoff >= capture_time:
         raise ValueError("finished source fixture kickoff is not before collector capture")
@@ -400,9 +403,10 @@ def build_manifest_from_private_archive(
         raise ValueError("unsupported capture bundle schema")
     if capture_manifest.get("league_id") != SERIE_A_PROVIDER_LEAGUE_ID:
         raise ValueError("capture bundle must be the exact Serie A league")
-    expected_season_id = str(capture_manifest.get("league_season_id") or "").strip()
-    if not expected_season_id:
-        raise ValueError("capture bundle must pin one league_season_id")
+    # The provider's documented league-fixtures endpoint scopes the season via
+    # the required query parameter. Per-fixture league_season_id is not part of
+    # its published response schema, so an id is optional cross-check metadata.
+    expected_season_id = str(capture_manifest.get("league_season_id") or "").strip() or None
     season_api_parameter = str(capture_manifest.get("season_api_parameter") or "").strip()
     if (capture_manifest.get("season") != CURRENT_SERIE_A_SEASON
             or season_api_parameter != CURRENT_SERIE_A_SEASON_API_PARAMETER):
@@ -526,8 +530,9 @@ def build_manifest_from_private_archive(
         league = fixture.get("league")
         if not isinstance(league, dict) or str(league.get("id")) != str(SERIE_A_PROVIDER_LEAGUE_ID):
             raise ValueError("source page contains a fixture outside the exact Serie A league")
-        if str(fixture.get("league_season_id") or "").strip() != expected_season_id:
-            raise ValueError("source page contains a fixture with a different league_season_id than the pinned Serie A season")
+        fixture_season_id = str(fixture.get("league_season_id") or "").strip()
+        if expected_season_id and fixture_season_id and fixture_season_id != expected_season_id:
+            raise ValueError("source page contains a fixture with a different optional league_season_id than the pinned Serie A season")
     fixture_ids = [str(f.get("id") or "").strip() for f in all_fixtures]
     if any(not value for value in fixture_ids) or len(fixture_ids) != len(set(fixture_ids)):
         raise ValueError("source fixture ids must be present and unique across pages")
