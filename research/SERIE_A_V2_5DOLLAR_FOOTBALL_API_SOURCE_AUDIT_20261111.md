@@ -239,3 +239,18 @@ This is a schema-compatibility correction only. It does not activate the source,
 **HOLD — no account, key, API request, odds request, data download, Supabase operation, source archive, feature calculation, inference, or target-outcome read.** Before any use, written confirmation is still required for actual Free-plan Serie A access and completeness, upstream rights for internal model use, and private raw-response retention. The provider's published terms permit model/internal use and caching, but do not identify the upstream rights chain or a durable private-retention term. Local receipt time and raw-byte SHA can prove what this collector received before a later quote; they cannot substitute for a provider-guaranteed upstream observation timestamp.
 
 The existing adapter remains offline-only and the original `active_lambda=0`, `shadow_lambda=1`, 19 features, weights, scaler/imputer and evaluation gate remain unchanged.
+
+
+## Current-season Free-window sufficiency check — 2026-11-21 UTC
+
+A date-window calculation improves the practical feasibility assessment without changing the HOLD decision:
+
+- The official [Lega Serie A calendar](https://www.legaseriea.it/serie-a/news/le-date-della-stagione-2026-2027) says the 2026/27 season starts on the weekend of 23 August 2026; its [first-round announcement](https://www.legaseriea.it/serie-a/news/ecco-la-prima-giornata-della-serie-a-enilive-2026-27) lists matches on 22–24 August.
+- The provider's [Serie A page](https://5dollarfootballapi.com/serie-a-api), crawled 2026-11-21, shows round 11 and all 20 teams at 11 played; its latest listed results are 7–8 November and upcoming fixtures 21–22 November. That implies 110 completed league fixtures through round 11 (20 teams × 11 appearances / 2).
+- The Free plan publishes a three-month results window. On 2026-11-21, a three-calendar-month lookback begins around 2026-08-21, so the published season start and all 11 rounds nominally fit inside that window. This is enough in principle for the original model's last-10 team windows and venue-specific last-5 windows, provided every match and required statistic is returned.
+- The league-fixtures endpoint permits `per_page=100`, has no 24-hour span cap, and paginates the season-scoped result set. A 110-fixture round-11 corpus would therefore require two pages at most, below the Free plan's published 60 requests/hour.
+- The 19 frozen features require goals (for/against and derived points), corners (for/against), and yellow/red cards. The provider's public Serie A page says goals, corners and cards are present on every fixture and claims full statistics on Free.
+
+This is a **published-plan feasibility estimate, not a measured Free-key result**. It does not prove that the actual account/key receives all 110 fixtures, all required fields, or complete/consistent card/corner values. The separate measured data-quality table still labels Italy Serie A Pro. No authenticated response has been captured, and no upstream observation timestamp is documented.
+
+**Disposition remains HOLD.** The source is now the strongest no-cost candidate for a narrowly scoped, authorized conformance test because its published three-month window nominally covers the 2026/27 10-match feature history at round 11 and the request count is small. Before any account/key or capture, still require written confirmation of Free-plan Serie A entitlement and required-field completeness, upstream rights for internal model use, and private raw-response retention. No API key, API/odds request, download, inference, or Supabase operation was performed for this calculation.
