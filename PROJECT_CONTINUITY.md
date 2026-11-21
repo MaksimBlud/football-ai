@@ -6373,3 +6373,36 @@ A fresh public-docs scan was completed without creating accounts, keys, API call
 - The FootballAPIs.com directory is a catalogue of API plans, not a match-data source and is not a data integration candidate.
 
 No candidate in this scan is approved. Do not use the open-matchday data merely because the CSV is public or its compilation is free; its non-commercial restriction and upstream provider terms remain binding questions. The existing #792/#794/#800 source audits remain the authoritative detailed reviews of 5Dollar and Big Balls.
+
+## 2026-11-21 03:30 UTC — current-form source-capture rights restack and strict pre-match recheck
+
+### Fresh main and HUMAN-MERGE baseline
+
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; it was not modified in this cycle.
+- Main branch protection is disabled (`protected=false`; required status enforcement off). Do not infer that green PR checks protect main; retain HUMAN-MERGE.
+- Root live-workflow hold [PR #781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / not merged, HEAD `3a70a8648895076efec2a80dc10b1798ed0d9261`, exact-head CI 8/8 SUCCESS. The daily source/forward workflow schedules remain present on main and are not held there yet. No live workflow was manually dispatched.
+
+### New current-form source-capture rights restack
+
+- [PR #898](https://github.com/MaksimBlud/football-ai/pull/898), Draft / OPEN, exact HEAD `dd96b6bb9ed628ec5d85814ee779fb90d12c9c86`, base is PR #891 HEAD `3714eadd432d580a2d848c1b35599223dc581ab0`.
+- Exact PR-triggered run [44861183108](https://github.com/MaksimBlud/football-ai/actions/runs/44861183108) SUCCESS: Python 3.11 **19 passed**, Python 3.12 **19 passed**; production `.pkl` diff guard passed in both jobs. Matching push run [44861155971](https://github.com/MaksimBlud/football-ai/actions/runs/44861155971) also SUCCESS on the same HEAD.
+- Confirmed gap: current-form source-capture public API, metadata helper and CLI did not enforce the newer provider-issued source-capture rights/private-storage chain before Supabase metadata or source access. #898 applies the existing SHA-pinned rights validator and private repository check before those entrypoints.
+- #898 also ports the exact preregistered V2 gate semantics previously isolated in #875: protocol blob SHA `65729e9639720e67624c1481190aa22ae606f151`, `FIRST_OUTCOME_READ_GATE=30`, Serie A-only primary cohort, metadata-only gate query, and separate still-closed 30-prospective-forecast evaluation gate. Protocol tampering fails before metadata/source access.
+- The checked-in Football-Data rights manifest still says source capture is not permitted. The real manifest test proves denial occurs before private-repository API lookup; CI used synthetic rights only for offline fixture tests. No live source request occurred.
+- #898 is a restack of the #875/#876 source-capture work on the newer #888/#889/#890/#891 rights chain. Do not merge #875/#876 independently; review #898 as the replacement current-form source-capture path.
+
+### Strict pre-match Supabase audit (SELECT only)
+
+- The stricter filter `snapshot_time_utc < commence_time_utc AND created_at < commence_time_utc` returned **3,915** rows across **327** unique events.
+- No row had a pre-kickoff snapshot with a missing or post-kickoff `created_at` value.
+- Latest strict Serie A snapshot remains `2026-10-13T14:48:53.042620Z`.
+- Previous same-cycle filter confirmed **0** future-event strict pre-match quote rows. No scores, results, settlements or protected target outcomes were selected.
+
+### Original V2 and live-data state
+
+- Candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; 3,799 training rows; 19 frozen features; 20×2 weights; frozen scaler/imputer.
+- `active_lambda=0` remains the market fallback; `shadow_lambda=1` remains research-only; stability gate remains FAILED; independent evaluation remains **0/30**.
+- Last verified main runs remain Original Forward #44777970547, Current-Form Source Capture #44753230529 and Current-Form Forward #44778623731. No new admissible quote or shadow forecast was observed in this cycle.
+- No Brier/LogLoss claim or V2-over-market superiority is supported.
+
+No merge, main update, Supabase write/DDL, paid API request, target-outcome read, production artifact change, model refit, threshold tuning, promotion, bet, schedule change or other-agent setting change occurred.
