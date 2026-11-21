@@ -28,6 +28,18 @@ PARENT_COMPLETED = "2026-10-18T06:32:00+00:00"
 HEAD = "a" * 40
 
 
+@pytest.fixture(autouse=True)
+def _allow_synthetic_v2_inference_access(monkeypatch):
+    """Synthetic permission is limited to offline tests; real manifest stays deny-by-default."""
+    import serie_a_v2_frozen_shadow_preview as frozen_preview
+
+    monkeypatch.setattr(
+        frozen_preview,
+        "require_v2_inference_access",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+
+
 def quote(
     snapshot="2026-10-19T05:30:00Z",
     kickoff="2026-10-19T18:00:00Z",
@@ -38,6 +50,7 @@ def quote(
         "home_team": "Juventus",
         "away_team": "Napoli",
         "snapshot_time_utc": snapshot,
+        "created_at": (datetime.fromisoformat(snapshot.replace("Z", "+00:00")) - timedelta(seconds=1)).isoformat(),
         "commence_time_utc": kickoff,
         "home_odds": 2.2,
         "draw_odds": 3.4,

@@ -43,6 +43,7 @@ def quote():
         "home_team":"Inter Milan","away_team":"Napoli",
         "commence_time_utc":"2026-10-19T19:00:00Z",
         "snapshot_time_utc":"2026-10-13T14:00:00Z",
+        "created_at":"2026-10-13T13:59:59Z",
         "home_odds":1.8,"draw_odds":3.9,"away_odds":5.0,
     }
 
