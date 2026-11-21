@@ -355,8 +355,8 @@ def test_main_never_creates_supabase_client_when_no_source_archive_exists(monkey
     monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
     monkeypatch.setenv("GITHUB_REF", "refs/heads/main")
     monkeypatch.setenv("GITHUB_TOKEN", "offline-test-token")
-    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
-    monkeypatch.setenv("SUPABASE_KEY", "offline-test-key")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
     monkeypatch.setattr(module, "discover_archives", lambda **_kwargs: [])
     monkeypatch.setattr(
         v2_access,
@@ -404,8 +404,8 @@ def test_real_main_rejects_discovered_archive_with_wrong_candidate_before_client
     monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
     monkeypatch.setenv("GITHUB_REF", "refs/heads/main")
     monkeypatch.setenv("GITHUB_TOKEN", "offline-test-token")
-    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
-    monkeypatch.setenv("SUPABASE_KEY", "offline-test-key")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
     monkeypatch.setattr(
         module,
         "discover_archives",
