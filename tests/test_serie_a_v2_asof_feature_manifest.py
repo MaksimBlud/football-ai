@@ -393,6 +393,7 @@ def _pin_synthetic_5dollar_rights_for_offline_tests(request, tmp_path, monkeypat
         or request.node.name in {
             "test_5dollar_adapter_default_rights_manifest_is_hold",
             "test_5dollar_adapter_cli_cannot_override_checked_in_rights_manifest",
+            "test_5dollar_current_official_free_plan_evidence_is_clarified_but_stays_hold",
         }
     ):
         return
@@ -591,6 +592,7 @@ def test_5dollar_adapter_rejects_mixed_league_season_and_non_free_plan(tmp_path)
 
 def test_5dollar_adapter_default_rights_manifest_is_hold(tmp_path):
     import hashlib
+    import json
     import pytest
     from serie_a_v2_5dollar_source_adapter import (
         DEFAULT_RIGHTS_MANIFEST,
@@ -599,13 +601,23 @@ def test_5dollar_adapter_default_rights_manifest_is_hold(tmp_path):
     )
 
     capture, quotes, _ = _synthetic_5dollar_bundle(tmp_path)
-    assert hashlib.sha256(DEFAULT_RIGHTS_MANIFEST.read_bytes()).hexdigest() == DEFAULT_RIGHTS_MANIFEST_SHA256
-    rights_text = DEFAULT_RIGHTS_MANIFEST.read_text(encoding="utf-8")
-    assert '"reviewed_at_utc": "2026-11-15"' in rights_text
-    assert '"measured_data_quality_plan": "Pro"' in rights_text
-    assert '"free_serie_a_entitlement_conflict": true' in rights_text
-    assert '"source_observation_timestamp_available": false' in rights_text
-    assert '"local_response_receipt_time_required": true' in rights_text
+    raw = DEFAULT_RIGHTS_MANIFEST.read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == DEFAULT_RIGHTS_MANIFEST_SHA256
+    rights = json.loads(raw.decode("utf-8"))
+    assert rights["reviewed_at_utc"] == "2026-11-21"
+    assert rights["measured_data_quality_plan"] == "Pro for the last-12-month window"
+    assert rights["free_serie_a_entitlement_conflict"] is False
+    assert rights["free_history_months"] == 3
+    assert rights["data_quality_last_12_months"]["finished_matches"] == 380
+    assert rights["data_quality_last_12_months"]["corners_pct"] == 100
+    assert rights["data_quality_last_12_months"]["cards_pct"] == 100
+    assert rights["data_quality_last_12_months"]["does_not_establish_free_3_month_field_completeness"] is True
+    assert rights["serie_a_current_free_claim"]["authenticated_response_verified"] is False
+    assert rights["source_observation_timestamp_available"] is False
+    assert rights["local_response_receipt_time_required"] is True
+    assert rights["approval_status"] == "HOLD"
+    assert rights["upstream_rights_confirmed"] is False
+    assert rights["provider_private_retention_permitted"] is False
     with pytest.raises(PermissionError, match="manifest is HOLD"):
         build_manifest_from_private_archive(tmp_path, capture, quotes)
 
