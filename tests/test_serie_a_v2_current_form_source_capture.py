@@ -306,6 +306,120 @@ def test_current_csv_rejects_completed_future_result_and_missing_stats():
         )
 
 
+def test_current_csv_rejects_reversed_duplicate_fixture_after_v2_alias_normalization():
+    header = ",".join(REQUIRED_COLUMNS)
+    raw = (
+        header + "\n"
+        "01/08/2026,Atalanta,Juventus,1,0,H,5,3,2,1,0,0\n"
+        "01/08/2026,Juventus,Atalanta BC,0,1,A,3,5,1,2,0,0\n"
+    ).encode()
+
+    with pytest.raises(ValueError, match="reversed duplicate fixture identity"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
+@pytest.mark.parametrize(
+    "timestamp_date",
+    [
+        "01/08/2026 00:00:00",
+        "01/08/2026 12:30:00",
+        "2026-08-01T00:00:00Z",
+        "2026-08-01 12:30:00+00:00",
+    ],
+)
+def test_current_csv_rejects_timestamp_dates_before_pandas_normalization(timestamp_date):
+    raw = current_csv().decode().replace(
+        "01/08/2026,Home 0", f"{timestamp_date},Home 0", 1
+    ).encode()
+    with pytest.raises(ValueError, match="date-only"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
+@pytest.mark.parametrize("column", ("FTHG", "FTAG", "HC", "AC", "HY", "AY", "HR", "AR"))
+def test_current_csv_rejects_non_integer_goal_and_stat_counts(column):
+    lines = current_csv(n=30).decode().splitlines()
+    header = lines[0].split(",")
+    row = lines[1].split(",")
+    row[header.index(column)] = "1.5"
+    lines[1] = ",".join(row)
+    raw = ("\n".join(lines) + "\n").encode()
+    with pytest.raises(ValueError, match=f"non-integer {column}"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
+def test_current_csv_rejects_infinite_count_values():
+    lines = current_csv(n=30).decode().splitlines()
+    header = lines[0].split(",")
+    row = lines[1].split(",")
+    row[header.index("HC")] = "inf"
+    lines[1] = ",".join(row)
+    raw = ("\n".join(lines) + "\n").encode()
+    with pytest.raises(ValueError, match="non-finite HC"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
+def test_current_csv_accepts_integer_valued_decimal_count_cells():
+    lines = current_csv(n=30).decode().splitlines()
+    header = lines[0].split(",")
+    row = lines[1].split(",")
+    for column in ("FTHG", "FTAG", "HC", "AC", "HY", "AY", "HR", "AR"):
+        index = header.index(column)
+        row[index] = f"{float(row[index]):.1f}"
+    lines[1] = ",".join(row)
+    raw = ("\n".join(lines) + "\n").encode()
+    frame, excluded = validate_current_season_csv(
+        raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+    )
+    assert len(frame) == 30
+    assert excluded == 0
+
+
+def test_current_csv_rejects_populated_fixture_row_without_date():
+    raw = (
+        ",".join(REQUIRED_COLUMNS) + "\n"
+        ",Atalanta,Juventus,1,0,H,5,3,2,1,0,0\n"
+    ).encode()
+    with pytest.raises(ValueError, match="populated fixture row without date"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
+def test_current_csv_rejects_past_statistics_with_invalid_result_marker():
+    raw = (
+        ",".join(REQUIRED_COLUMNS) + "\n"
+        "01/08/2026,Atalanta,Juventus,1,0,,5,3,2,1,0,0\n"
+    ).encode()
+    with pytest.raises(ValueError, match="invalid full-time result marker"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
+def test_current_csv_rejects_completed_row_before_current_season_start():
+    raw = current_csv(n=1).decode().replace("01/08/2026", "30/06/2026", 1).encode()
+    with pytest.raises(ValueError, match="before season start"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
+def test_current_csv_rejects_completed_row_after_current_season_end():
+    raw = current_csv(n=1).decode().replace("01/08/2026", "01/07/2027", 1).encode()
+    with pytest.raises(ValueError, match="after season end"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2027, 8, 1, 8, tzinfo=timezone.utc)
+        )
+
+
 def test_closed_feature_source_gate_stops_before_any_public_download(tmp_path):
     calls = []
     def forbidden_history(**_kwargs):
