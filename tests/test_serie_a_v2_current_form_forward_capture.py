@@ -6,6 +6,14 @@ import zipfile
 
 import pytest
 
+import market_anchor_v2_direct_access as v2_access
+
+@pytest.fixture(autouse=True)
+def _allow_synthetic_source_and_inference_rights(monkeypatch):
+    synthetic = lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"}
+    monkeypatch.setattr(v2_access, "require_v2_source_capture_access", synthetic)
+    monkeypatch.setattr(v2_access, "require_v2_inference_access", synthetic)
+
 from serie_a_v2_current_form_forward_capture import (
     ARTIFACT_NAME,
     MANIFEST_FILENAME,
