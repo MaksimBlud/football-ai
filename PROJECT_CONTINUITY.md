@@ -8242,3 +8242,11 @@ Both time predicates agreed for every row (zero disagreements). There are no str
 No merge, main write, Supabase write/DDL, paid API request, API key creation, source download, production `.pkl` change, candidate/weight/feature change, refit, threshold tuning, target-outcome read, betting, promotion, schedule change or other-agent setting change occurred.
 
 Next safe sequence remains: owner review/merge #781; then re-read fresh main; integrate the private-storage and source-before-quote dependency chain only in its declared order; resolve written source rights before any new source capture; then calculate only the frozen 19 features on eligible pre-match data. The independent 30-forecast gate and Brier/LogLoss evaluation remain closed.
+
+
+## 2026-11-21 01:06 UTC — 5Dollar Free-window feasibility refinement
+
+- The official Lega calendar places the 2026/27 opening round on 22–24 August 2026. The provider's public Serie A page on 2026-11-21 shows round 11, all 20 teams at 11 played, latest results on 7–8 November, and upcoming fixtures on 21–22 November. That is 110 completed fixtures through round 11.
+- The 5Dollar Free plan publishes a three-calendar-month results window. On 2026-11-21, the nominal lookback begins around 2026-08-21, so the full season-to-round-11 window fits on paper. The documented league-fixtures endpoint supports `season=2026`, up to 100 fixtures/page and no 24-hour span cap; the 110-match corpus would require at most two pages. The frozen 10-match and venue-5 windows therefore appear feasible on the Free window if every required row/stat is actually returned.
+- This is a **public-documentation feasibility estimate only**, not a measured Free-key response. It does not resolve the Free-versus-Pro Serie A entitlement conflict, upstream rights, durable private retention, or missing upstream observation timestamps. No account, key, API/odds request, or data download was made. HOLD remains.
+- The latest 5Dollar audit is [PR #792](https://github.com/MaksimBlud/football-ai/pull/792), HEAD `e48239d0a405a0e98a5dd270f1740deef7b3eb7d`, **6/6 exact-head CI SUCCESS**. The offline schema adapter remains [PR #800](https://github.com/MaksimBlud/football-ai/pull/800), HEAD `140baffdc9ec55a4fb04de8806d0ee8811686940`, **7/7 exact-head CI SUCCESS**, 120 frozen shadow tests passed, no production `.pkl` diff.
