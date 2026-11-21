@@ -16,7 +16,7 @@ on:
       - ".github/workflows/market-anchor-v2-original-forward-inference-rights-validation.yml"
   pull_request:
     branches:
-      - research/v2-original-forward-private-cli-guard-on-884-20261119-run11
+      - research/v2-original-forward-private-cli-guard-restacked-on-884-20261121-run11
     paths:
       - "serie_a_v2_forward_capture.py"
       - "market_anchor_v2_direct_access.py"
