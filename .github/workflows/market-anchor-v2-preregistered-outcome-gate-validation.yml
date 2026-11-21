@@ -7,6 +7,8 @@ on:
       - research/v2-preregistered-outcome-gate-source-capture-20261118-run11
       - research/v2-current-form-gate-identity-audit-on-876-20261118-run11
       - research/v2-current-form-no-quote-without-verified-source-20261119-run11
+      - research/v2-current-form-source-reject-reversed-duplicates-20261119-1054z
+      - research/v2-current-form-exact-identity-reconciliation-on-882-20261121-run11
     paths:
       - "serie_a_v2_current_form_source_capture.py"
       - "tests/test_serie_a_v2_current_form_source_capture.py"
@@ -23,6 +25,7 @@ on:
       - research/v2-current-form-cli-default-deny-20261118-run11
       - research/v2-current-form-gate-identity-audit-on-876-20261118-run11
       - research/v2-current-form-source-reject-reversed-duplicates-20261119-1054z
+      - research/v2-current-form-exact-identity-reconciliation-on-882-20261121-run11
     paths:
       - "serie_a_v2_current_form_source_capture.py"
       - "tests/test_serie_a_v2_current_form_source_capture.py"

@@ -106,6 +106,17 @@ def _canonical_team(value: Any) -> str:
     return V2_ONLY_ALIASES.get(known, known)
 
 
+def _canonical_fixture_identity_sha256(
+    identities: set[tuple[str, str, str]] | list[tuple[str, str, str]]
+) -> str:
+    payload = json.dumps(
+        sorted(identities), ensure_ascii=False, separators=(",", ":")
+    ).encode("utf-8")
+    return hashlib.sha256(
+        b"SERIE_A_V2_CANONICAL_FIXTURE_IDENTITIES_V1\\0" + payload
+    ).hexdigest()
+
+
 def summarize_completed_primary_events(
     rows: list[Mapping[str, Any]], *, before_date: date
 ) -> dict[str, Any]:
@@ -184,6 +195,7 @@ def summarize_completed_primary_events(
         "metadata_rows_on_or_after_cutoff": len(rows) - eligible_rows,
         "raw_unique_fixture_identities": raw_unique_count,
         "canonical_unique_fixture_identities": canonical_unique_count,
+        "canonical_fixture_identity_sha256": _canonical_fixture_identity_sha256(canonical_unique),
         "exact_duplicate_metadata_rows": eligible_rows - raw_unique_count,
         "alias_collapsed_duplicate_identities": raw_unique_count - canonical_unique_count,
         "alias_collision_count": len(alias_collision_examples),
@@ -365,6 +377,66 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     result = completed.loc[:, list(REQUIRED_COLUMNS)].copy()
     return result, len(frame) - len(completed)
 
+def summarize_current_season_csv_identities(frame: pd.DataFrame) -> dict[str, Any]:
+    """Hash canonical date/home/away identities only; never inspect score/stat columns."""
+    required = {"Date", "HomeTeam", "AwayTeam"}
+    if not required.issubset(frame.columns):
+        raise ValueError("current-season identity frame lacks required fixture metadata")
+
+    identities: set[tuple[str, str, str]] = set()
+    orientation_by_unordered_pair: dict[tuple[str, str, str], tuple[str, str, str]] = {}
+    for row in frame.loc[:, ["Date", "HomeTeam", "AwayTeam"]].itertuples(index=False):
+        try:
+            parsed_date = pd.to_datetime(row.Date, format="%d/%m/%Y", errors="raise").date()
+        except (TypeError, ValueError) as exc:
+            raise ValueError("current-season identity date is not canonical date-only CSV") from exc
+        home = _canonical_team(row.HomeTeam)
+        away = _canonical_team(row.AwayTeam)
+        if home == away:
+            raise ValueError("current-season identity has identical canonical teams")
+        identity = (parsed_date.isoformat(), home, away)
+        unordered = (identity[0], *sorted((home, away)))
+        previous = orientation_by_unordered_pair.get(unordered)
+        if previous is not None and previous != identity:
+            raise ValueError("current-season identity has reversed duplicate fixture")
+        orientation_by_unordered_pair[unordered] = identity
+        identities.add(identity)
+
+    if len(identities) != len(frame):
+        raise ValueError("current-season identity frame contains duplicate fixture identities")
+    return {
+        "canonical_unique_fixture_identities": len(identities),
+        "canonical_fixture_identity_sha256": _canonical_fixture_identity_sha256(identities),
+        "identity_columns_read": ["Date", "HomeTeam", "AwayTeam"],
+    }
+
+
+def validate_current_season_identity_match(
+    metadata_summary: Mapping[str, Any], current_rows: pd.DataFrame
+) -> dict[str, Any]:
+    """Require exact set equality between Supabase metadata and source CSV fixture identities."""
+    source_summary = summarize_current_season_csv_identities(current_rows)
+    metadata_count = metadata_summary.get("canonical_unique_fixture_identities")
+    metadata_sha256 = metadata_summary.get("canonical_fixture_identity_sha256")
+    if (
+        not isinstance(metadata_count, int)
+        or not isinstance(metadata_sha256, str)
+        or source_summary["canonical_unique_fixture_identities"] != metadata_count
+        or source_summary["canonical_fixture_identity_sha256"] != metadata_sha256
+    ):
+        raise RuntimeError(
+            "current-season CSV fixture identities do not exactly match Supabase metadata-only gate"
+        )
+    return {
+        "metadata_canonical_fixture_identities": metadata_count,
+        "source_canonical_fixture_identities": source_summary["canonical_unique_fixture_identities"],
+        "metadata_identity_sha256": metadata_sha256,
+        "source_identity_sha256": source_summary["canonical_fixture_identity_sha256"],
+        "exact_identity_match": True,
+        "identity_columns_compared": ["match_date/home_team/away_team", "Date/HomeTeam/AwayTeam"],
+    }
+
+
 def capture_source_archive(
     *,
     output_dir: Path,
@@ -397,6 +469,9 @@ def capture_source_archive(
     raw = response.content
     observed_at = clock().astimezone(timezone.utc)
     current_rows, excluded_rows = validate_current_season_csv(raw, captured_at=observed_at)
+    current_identity_audit = validate_current_season_identity_match(
+        gate_identity_audit, current_rows
+    )
     if len(current_rows) < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
         raise RuntimeError(
             "public current-season source has fewer completed prior-day matches than the feature-source gate"
@@ -435,6 +510,7 @@ def capture_source_archive(
         "current_season_source_sha256": hashlib.sha256(raw).hexdigest(),
         "current_season_source_observed_at_utc": observed_at.isoformat(),
         "current_season_completed_prior_day_rows": len(current_rows),
+        "current_season_identity_audit": current_identity_audit,
         "current_season_total_csv_rows": audits[-1]["total_source_rows"],
         "current_season_excluded_incomplete_or_same_day_rows": excluded_rows,
         "preregistered_outcome_read_gate": {
@@ -456,6 +532,7 @@ def capture_source_archive(
             "metadata_fields_read": ["match_date", "home_team", "away_team"],
             "score_or_result_fields_selected_for_gate": False,
             "identity_audit": gate_identity_audit,
+            "source_identity_audit": current_identity_audit,
             "uses_exact_preregistered_outcome_read_gate": True,
             "protocol_blob_sha1": preregistered_gate["protocol_blob_sha1"],
             "passed": outcome_read_permitted(gate_count),
