@@ -52,7 +52,8 @@ def test_current_season_and_exact_frozen_feature_parity_are_not_assumed(manifest
 def test_original_v2_contract_and_lambdas_remain_frozen(manifest):
     v2 = manifest["frozen_v2"]
     assert v2["candidate_sha256"] == "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
-    assert v2["training_fingerprint"] == "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098"
+    assert v2["candidate_git_blob_sha1"] == "ac1303f6b096664983fbf52443bd0a381b23ba21"
+    assert v2["training_fingerprint_sha256"] == "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098"
     assert v2["feature_count"] == 19
     assert v2["active_lambda"] == 0
     assert v2["shadow_lambda"] == 1
