@@ -7,6 +7,8 @@ import zipfile
 import sys
 
 import serie_a_v2_forward_capture as forward_capture
+import serie_a_v2_frozen_shadow_preview as frozen_preview
+import serie_a_v2_live_diagnostic_report as live_diagnostic
 
 import pytest
 
@@ -32,11 +34,16 @@ def _allow_synthetic_v2_inference_access(monkeypatch):
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
     monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
     monkeypatch.setenv("GITHUB_TOKEN", "synthetic-test-token")
+    synthetic_inference = lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"}
     monkeypatch.setattr(
         market_anchor_v2_direct_access,
         "require_v2_inference_access",
-        lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
+        synthetic_inference,
     )
+    # These modules bind the guard at import time; patch their local references
+    # too, so synthetic forward tests do not depend on live provider rights.
+    monkeypatch.setattr(frozen_preview, "require_v2_inference_access", synthetic_inference)
+    monkeypatch.setattr(live_diagnostic, "require_v2_inference_access", synthetic_inference)
 AFTER_CAPTURE = datetime(2026, 10, 14, 6, 0, tzinfo=timezone.utc)
 
 
