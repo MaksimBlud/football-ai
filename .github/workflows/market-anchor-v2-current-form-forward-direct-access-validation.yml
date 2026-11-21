@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - research/v2-current-form-no-quote-without-verified-source-restacked-on-900-20261121-run11
+      - research/v2-current-form-source-freshness-gate-on-903-20261121-run11
     paths:
       - "serie_a_v2_current_form_forward_capture.py"
       - "market_anchor_v2_direct_access.py"
@@ -17,6 +18,7 @@ on:
     branches:
       - research/v2-free-diagnostic-token-binding-on-898-20261121-run11
       - research/v2-current-form-forward-direct-access-on-899-20261121-run11
+      - research/v2-current-form-no-quote-without-verified-source-restacked-on-900-20261121-run11
     paths:
       - "serie_a_v2_current_form_forward_capture.py"
       - "market_anchor_v2_direct_access.py"
