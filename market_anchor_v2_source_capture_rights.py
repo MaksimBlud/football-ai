@@ -22,6 +22,7 @@ EXPECTED_PROVIDER = "Football-Data.co.uk"
 EXPECTED_CAPTURE_SCOPE = "AUTOMATED_SOURCE_CAPTURE_AND_NONCOMMERCIAL_RESEARCH"
 REQUIRED_AUTHORIZATION_SCOPES = {"AUTOMATED_SOURCE_CAPTURE", "NONCOMMERCIAL_RESEARCH"}
 DOWNLOAD_BUDGET_POLICY = "TWO_AUTOMATED_SESSIONS_PER_ROLLING_7_DAYS"
+EXPECTED_EVIDENCE_HOSTS = {"football-data.co.uk", "www.football-data.co.uk"}
 
 
 def _parse_utc(value: object, field: str) -> datetime:
@@ -92,7 +93,11 @@ def require_personal_research_source_capture_scope(
     if authorization.get("kind") not in {"written_permission", "open_license"}:
         raise PermissionError("source-capture authorization kind is not approved")
     scope = authorization.get("scope")
-    if not isinstance(scope, list) or not REQUIRED_AUTHORIZATION_SCOPES.issubset(set(scope)):
+    if (
+        not isinstance(scope, list)
+        or not all(isinstance(item, str) for item in scope)
+        or not REQUIRED_AUTHORIZATION_SCOPES.issubset(set(scope))
+    ):
         raise PermissionError("authorization does not cover automated source capture and noncommercial research")
     for field in ("license_name", "rights_holder", "reviewed_by"):
         value = authorization.get(field)
@@ -104,11 +109,13 @@ def require_personal_research_source_capture_scope(
     if (
         parts.scheme != "https"
         or not parts.hostname
+        or parts.hostname.lower() not in EXPECTED_EVIDENCE_HOSTS
+        or parts.netloc.lower() not in EXPECTED_EVIDENCE_HOSTS
         or parts.username is not None
         or parts.password is not None
         or parts.fragment
     ):
-        raise PermissionError("source-capture evidence URL must be a direct HTTPS reference")
+        raise PermissionError("source-capture evidence URL must be a direct HTTPS reference on the provider domain")
 
     evidence_file = authorization.get("evidence_file")
     if not isinstance(evidence_file, str) or not evidence_file.strip():
@@ -142,11 +149,17 @@ def require_personal_research_source_capture_scope(
     reviewed_at = _parse_utc(authorization.get("reviewed_at_utc"), "reviewed_at_utc")
     if reviewed_at > now_utc:
         raise PermissionError("source-capture authorization review time is in the future")
-    valid_from = authorization.get("valid_from_utc")
-    if valid_from is not None and _parse_utc(valid_from, "valid_from_utc") > now_utc:
+    valid_from_raw = authorization.get("valid_from_utc")
+    valid_until_raw = authorization.get("valid_until_utc")
+    if valid_from_raw is None or valid_until_raw is None:
+        raise PermissionError("source-capture authorization requires both valid_from_utc and valid_until_utc")
+    valid_from = _parse_utc(valid_from_raw, "valid_from_utc")
+    valid_until = _parse_utc(valid_until_raw, "valid_until_utc")
+    if valid_until <= valid_from:
+        raise PermissionError("source-capture authorization validity window is empty or reversed")
+    if valid_from > now_utc:
         raise PermissionError("source-capture authorization is not yet valid")
-    valid_until = authorization.get("valid_until_utc")
-    if valid_until is not None and _parse_utc(valid_until, "valid_until_utc") <= now_utc:
+    if valid_until <= now_utc:
         raise PermissionError("source-capture authorization has expired")
 
     policy_url = manifest.get("policy_url")
