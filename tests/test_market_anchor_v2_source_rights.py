@@ -10,13 +10,13 @@ from market_anchor_v2_source_rights import (
     require_personal_research_inference_scope,
 )
 
-NOW = datetime(2026, 11, 19, 21, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 11, 21, 12, 0, tzinfo=timezone.utc)
 
 
 def _write_synthetic_grant(
     tmp_path,
     *,
-    policy_page_updated_date="2026-11-10",
+    policy_page_updated_date="2026-11-20",
     evidence_url="https://football-data.co.uk/data",
     valid_from="2026-11-10T00:00:00Z",
     valid_until="2026-12-01T00:00:00Z",
@@ -29,7 +29,7 @@ def _write_synthetic_grant(
         "schema_version": "FOOTBALL_AI_SOURCE_RIGHTS_V1",
         "provider": "Football-Data.co.uk",
         "policy_url": "https://football-data.co.uk/data",
-        "policy_checked_at_utc": "2026-11-10T11:57:30Z",
+        "policy_checked_at_utc": "2026-11-21T11:52:37Z",
         "policy_page_updated_date": policy_page_updated_date,
         "rights_status": "GRANTED",
         "research_use_permitted": True,
@@ -64,6 +64,14 @@ def _write_synthetic_grant(
 
 
 def test_current_repository_manifest_keeps_frozen_inference_closed():
+    manifest = json.loads(DEFAULT_RIGHTS_MANIFEST_PATH.read_text(encoding="utf-8"))
+    assert manifest["policy_page_updated_date"] == "2026-11-20"
+    assert manifest["policy_checked_at_utc"] == "2026-11-21T11:52:37Z"
+    assert manifest["research_source_capture_permitted"] is False
+    assert manifest["research_inference_permitted"] is False
+    assert manifest["ai_model_training_permitted"] is False
+    assert manifest["provider_issued_ai_inference_license"] is False
+    assert manifest["authorization"] is None
     with pytest.raises(PermissionError, match="scope remains unresolved"):
         require_personal_research_inference_scope(
             DEFAULT_RIGHTS_MANIFEST_PATH,
@@ -147,7 +155,7 @@ def test_malformed_inference_scope_fails_closed_without_type_error(tmp_path):
 
 
 def test_policy_page_update_cannot_postdate_its_review(tmp_path):
-    path, _ = _write_synthetic_grant(tmp_path, policy_page_updated_date="2026-11-20")
+    path, _ = _write_synthetic_grant(tmp_path, policy_page_updated_date="2026-11-22")
     with pytest.raises(PermissionError, match="later than policy review"):
         require_personal_research_inference_scope(
             path,
