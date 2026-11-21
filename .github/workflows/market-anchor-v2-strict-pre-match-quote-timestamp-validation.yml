@@ -3,6 +3,20 @@ name: Original V2 Strict Pre-Match Quote Timestamp Validation
 on:
   push:
     branches:
+      - research/v2-collector-created-at-default-contract-on-896-20261120-run11
+    paths:
+      - "serie_a_v2_frozen_shadow_preview.py"
+      - "tests/test_serie_a_v2_frozen_shadow_preview.py"
+      - "tests/test_serie_a_v2_atalanta_alias.py"
+      - "tests/test_serie_a_v2_forward_capture.py"
+      - "tests/test_serie_a_v2_current_form_forward_capture.py"
+      - "tests/test_serie_a_v2_live_diagnostic_report.py"
+      - "tests/test_serie_a_v2_original_diagnostic_direct_access.py"
+      - "tests/test_serie_a_v2_quote_persistence_timestamp_contract.py"
+      - "research/SERIE_A_V2_QUOTE_PERSISTENCE_TIMESTAMP_AUDIT_20261120.md"
+      - ".github/workflows/market-anchor-v2-strict-pre-match-quote-timestamp-validation.yml"
+  pull_request:
+    branches:
       - research/v2-strict-db-created-at-pre-kickoff-on-891-20261120-run11
     paths:
       - "serie_a_v2_frozen_shadow_preview.py"
@@ -12,18 +26,8 @@ on:
       - "tests/test_serie_a_v2_current_form_forward_capture.py"
       - "tests/test_serie_a_v2_live_diagnostic_report.py"
       - "tests/test_serie_a_v2_original_diagnostic_direct_access.py"
-      - ".github/workflows/market-anchor-v2-strict-pre-match-quote-timestamp-validation.yml"
-  pull_request:
-    branches:
-      - research/v2-original-diagnostic-direct-access-guard-on-890-20261119-run11
-    paths:
-      - "serie_a_v2_frozen_shadow_preview.py"
-      - "tests/test_serie_a_v2_frozen_shadow_preview.py"
-      - "tests/test_serie_a_v2_atalanta_alias.py"
-      - "tests/test_serie_a_v2_forward_capture.py"
-      - "tests/test_serie_a_v2_current_form_forward_capture.py"
-      - "tests/test_serie_a_v2_live_diagnostic_report.py"
-      - "tests/test_serie_a_v2_original_diagnostic_direct_access.py"
+      - "tests/test_serie_a_v2_quote_persistence_timestamp_contract.py"
+      - "research/SERIE_A_V2_QUOTE_PERSISTENCE_TIMESTAMP_AUDIT_20261120.md"
       - ".github/workflows/market-anchor-v2-strict-pre-match-quote-timestamp-validation.yml"
 
 permissions:
@@ -66,7 +70,8 @@ jobs:
             serie_a_v2_frozen_shadow_preview.py \
             serie_a_v2_forward_capture.py \
             serie_a_v2_current_form_forward_capture.py \
-            serie_a_v2_live_diagnostic_report.py
+            serie_a_v2_live_diagnostic_report.py \
+            save_serie_a_odds_snapshot.py
       - name: Run original V2 strict pre-match regressions
         run: |
           python -m pytest -q \
@@ -75,10 +80,11 @@ jobs:
             tests/test_serie_a_v2_forward_capture.py \
             tests/test_serie_a_v2_current_form_forward_capture.py \
             tests/test_serie_a_v2_live_diagnostic_report.py \
-            tests/test_serie_a_v2_original_diagnostic_direct_access.py
+            tests/test_serie_a_v2_original_diagnostic_direct_access.py \
+            tests/test_serie_a_v2_quote_persistence_timestamp_contract.py
       - name: Guard production model binaries
         env:
-          BASE_REF: ${{ github.base_ref || 'research/v2-original-diagnostic-direct-access-guard-on-890-20261119-run11' }}
+          BASE_REF: ${{ github.base_ref || 'research/v2-strict-db-created-at-pre-kickoff-on-891-20261120-run11' }}
         run: |
           set -euo pipefail
           git fetch --no-tags origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
