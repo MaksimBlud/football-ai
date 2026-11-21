@@ -30,6 +30,7 @@ jobs:
       GITHUB_REPOSITORY: ${{ github.repository }}
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_RUN_ID: ${{ github.run_id }}
+      GITHUB_TOKEN: ${{ github.token }}
       PYTHONPATH: .
       OPENBLAS_NUM_THREADS: "1"
       OMP_NUM_THREADS: "1"
@@ -43,7 +44,7 @@ jobs:
         run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
       - name: Validate feature-input gate and source integrity rules
         run: |
-          python -m py_compile serie_a_v2_current_form_source_capture.py
+          python -m py_compile market_anchor_v2_direct_access.py market_anchor_v2_source_capture_rights.py market_anchor_v2_artifact_privacy.py serie_a_v2_current_form_source_capture.py
           python -m pytest -q tests/test_serie_a_v2_current_form_source_capture.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_atalanta_alias.py
       - name: Verify private repository storage before live V2 access
         id: private-storage
