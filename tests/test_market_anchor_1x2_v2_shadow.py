@@ -1,3 +1,4 @@
+import hashlib
 import json
 from pathlib import Path
 
@@ -192,3 +193,27 @@ def test_v2_code_does_not_reference_production_pickle_paths():
     assert "football_model_xgboost_elo.pkl" not in text
     assert "joblib.dump" not in text
     assert "--production" not in text
+
+
+def test_saved_frozen_candidate_matches_original_artifact():
+    candidate_path = ROOT / "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
+    raw = candidate_path.read_bytes()
+    git_blob_sha1 = hashlib.sha1(
+        f"blob {len(raw)}\\0".encode("ascii") + raw
+    ).hexdigest()
+    assert git_blob_sha1 == "ac1303f6b096664983fbf52443bd0a381b23ba21"
+
+    candidate = json.loads(raw)
+    v2.validate_candidate_artifact(candidate)
+    assert candidate["artifact_sha256"] == "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
+    assert candidate["training_fingerprint_sha256"] == "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098"
+    assert candidate["training_rows"] == 3799
+    assert candidate["features"] == list(v2.FEATURE_SETS[v2.FEATURE_VARIANT])
+    assert len(candidate["features"]) == 19
+    assert len(candidate["weights"]) == 20
+    assert all(len(row) == 2 for row in candidate["weights"])
+    assert candidate["active_lambda"] == 0.0
+    assert candidate["shadow_residual_lambda"] == 1.0
+    assert candidate["stability_gate_passed"] is False
+    assert candidate["automatic_promotion"] is False
+    assert candidate["opened_2026_27_outcomes_used"] is False
