@@ -6242,3 +6242,29 @@ No merge, main update, Supabase write/DDL, paid API request, target-outcome read
 - #891, #892 and #893 each still base on old #890 HEAD aade422896d32e38f1a1afb5dde7e1bae5351399; their recorded heads e0d729d78a24a977f8cf76c04bcee19de4488c22, 5408e7392b4a73b89b2525735c3cfd17c736e4dc and 5fd6fe2a8ef131dd166dfcac2785d74fab970a4d respectively each have 4/4 successful checks on the old ancestry.
 
 These checks are real exact-head results for those historical commits, but they are not evidence that the current #885→#887→#888→#889→#890→(#891/#892/#893) stack is integrated. Rebase/restack sequentially, preserve all source-rights gates, then rerun exact-head CI at every child. No descendant merge is authorized by this checkpoint.
+
+
+## 2026-11-21 02:52 UTC — full rights-gate child stack restacked
+
+The private/inference-rights child chain was restacked sequentially after #885's corrected private-CLI test fixtures. Every new child now names the current parent HEAD as its base; all new heads are one commit ahead of their parent. Exact check-runs:
+
+- #885 HEAD a1d065f1c3a03895bbef5b72e5bf664cdd68f33f on #884 c38834ec6c2bd0079afca9e63a9ce75a8cd17043: 4/4 SUCCESS.
+- #887 HEAD a24ddc440e5eae36edc120e53c7f63d59c754475 on #885 a1d065f1c3a03895bbef5b72e5bf664cdd68f33f: 4/4 SUCCESS.
+- #888 HEAD 2fe841747355c4909c551a17d9df372b3b1bae2a on #887 a24ddc440e5eae36edc120e53c7f63d59c754475: 4/4 SUCCESS.
+- #889 HEAD 2948deab0a1f651b4f2331a739a2c80af65d0c8c on #888 2fe841747355c4909c551a17d9df372b3b1bae2a: 4/4 SUCCESS.
+- #890 HEAD 48c5ab40a8ad0408f60262fbff46728f5bda4108 on #889 2948deab0a1f651b4f2331a739a2c80af65d0c8c: 4/4 SUCCESS.
+- #891 HEAD 3714eadd432d580a2d848c1b35599223dc581ab0 on #890 48c5ab40a8ad0408f60262fbff46728f5bda4108: 4/4 SUCCESS.
+- #892 HEAD 7501c4cd2f38a55462b0564590ee2109280d2e99 on #890 48c5ab40a8ad0408f60262fbff46728f5bda4108: 4/4 SUCCESS.
+- #893 HEAD 6082fc9f80dff501c220166c5a53abe0b71db13e on #890 48c5ab40a8ad0408f60262fbff46728f5bda4108: four exact-head checks are still in progress at this checkpoint.
+
+The new heads are not merge approvals. Keep all these PRs Draft / HUMAN-MERGE and preserve dependency order. No merge was performed.
+
+### Big Balls source recheck and current V2 contract
+
+PR #794 current official-docs audit HEAD 4328d066fc76d55848b6903438c6da733b3faef8 has 6/6 exact-head CI SUCCESS. Its Terms (effective 2026-08-10) explicitly permit stored API responses as internal-model inputs, including training/evaluation/backtesting, and allow derived outputs to be published/sold; raw fields cannot be redistributed. The current OpenAPI marks /v1/matches/{id}/statistics Free with expected_goals Solo+, while the same Serie A plan matrix marks advanced match stats Edge and the FAQ says Free except xG. The provider has not resolved that contradiction in writing. Current-season standings show 20 clubs with 11 matches each as of 2026-11-19, but per-fixture stats completeness is not published. The endpoint is stored-only/hourly and exposes no per-field first-observed timestamp. Decision remains HOLD; no account/key/API request or data download.
+
+The source rights gate also remains independent from the frozen training corpus. Football-Data.co.uk's 2026-11-20 contact page caps otherwise permitted light automated downloads at twice per week maximum and excludes AI data-training projects; the main daily collector therefore remains unauthorized. Big Balls' own terms do not clear the original Football-Data.co.uk training corpus or the learned frozen weights.
+
+### Continuity PR validation state
+
+This PR's PROJECT_CONTINUITY.md is now exact current-main content plus additive checkpoints; current main lines are preserved byte-for-byte and the diff contains no deletions in PROJECT_CONTINUITY.md. The latest documentation HEAD is 4f31ffc26cceeef49af211bfa2e61a1a0cee365e; its new exact-head CI is pending and must be rechecked before this documentation PR is presented as green.
