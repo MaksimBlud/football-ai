@@ -279,7 +279,6 @@ def _synthetic_5dollar_fixture(index, kickoff_utc=None, home="Juventus", away="I
     return {
         "id": 1000 + index,
         "league": {"id": 3405541143, "name": "Italy Serie A"},
-        "league_season_id": "season-2026-27",
         "kickoff_utc": kickoff.isoformat(),
         "status": "finished",
         "status_reason": None,
@@ -306,7 +305,6 @@ def _synthetic_5dollar_bundle(tmp_path, fixtures=None, quote=None):
     fixtures.append({
         "id": 9999,
         "league": {"id": 3405541143, "name": "Italy Serie A"},
-        "league_season_id": "season-2026-27",
         "kickoff_utc": "2026-11-13T17:00:00+00:00",
         "status": "scheduled",
         "status_reason": None,
@@ -344,7 +342,6 @@ def _synthetic_5dollar_bundle(tmp_path, fixtures=None, quote=None):
     capture = {
         "schema_version": "5DOLLAR_PRIVATE_CAPTURE_BUNDLE_V1",
         "league_id": 3405541143,
-        "league_season_id": "season-2026-27",
         "season": "2026-2027",
         "season_api_parameter": "2026",
         "api_plan": "free",
@@ -582,6 +579,7 @@ def test_5dollar_adapter_rejects_mixed_league_season_and_non_free_plan(tmp_path)
     fixtures = [_synthetic_5dollar_fixture(i) for i in range(30)]
     fixtures[0]["league_season_id"] = "other-season"
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path, fixtures)
+    capture["league_season_id"] = "season-2026-27"
     with pytest.raises(ValueError, match="league_season_id"):
         build_manifest_from_private_archive(tmp_path, capture, quotes)
 
