@@ -384,19 +384,50 @@ def _verified_source_precedes_quote_read(source_verification: Mapping[str, Any])
     )
 
 
+def _verified_source_is_fresh(source_verification: Mapping[str, Any]) -> bool:
+    """Recompute the frozen 24-hour source-age rule before allowing any quote read."""
+    if not isinstance(source_verification, Mapping):
+        return False
+    if source_verification.get("fresh_for_new_quote") is not True:
+        return False
+    reported_age = source_verification.get("source_age_seconds_at_verification")
+    if type(reported_age) is not int or reported_age < 0:
+        return False
+    try:
+        verified_at = parse_utc(source_verification["verified_at_utc"])
+        latest_source = parse_utc(source_verification["latest_source_observed_at_utc"])
+    except (KeyError, TypeError, ValueError):
+        return False
+    actual_age = (verified_at - latest_source).total_seconds()
+    return (
+        0 <= actual_age <= MAX_SOURCE_AGE.total_seconds()
+        and reported_age == int(actual_age)
+        and reported_age <= MAX_SOURCE_AGE.total_seconds()
+    )
+
+
 def read_quotes_after_verified_source(
     source_verification: Mapping[str, Any],
     *,
     quote_loader,
 ) -> tuple[list[dict], dict]:
-    """Invoke the saved-quote reader only after source provenance and both rights gates pass."""
+    """Read saved quotes only after provenance, source freshness and both rights gates pass."""
     v2_access.require_v2_source_capture_access()
     if not _verified_source_precedes_quote_read(source_verification):
         return [], {
             "status": "SKIPPED_NO_VERIFIED_SOURCE_ARCHIVE",
             "quote_reader_called": False,
         }
-    # A verified source alone does not grant frozen inference or quote access.
+    if not _verified_source_is_fresh(source_verification):
+        return [], {
+            "status": "SKIPPED_STALE_SOURCE_ARCHIVE",
+            "quote_reader_called": False,
+            "source_age_seconds_at_verification": source_verification.get(
+                "source_age_seconds_at_verification"
+            ),
+            "max_source_age_seconds": int(MAX_SOURCE_AGE.total_seconds()),
+        }
+    # A verified, fresh source alone does not grant frozen inference or quote access.
     v2_access.require_v2_inference_access()
     if not callable(quote_loader):
         raise ValueError("saved quote reader must be callable")
@@ -404,11 +435,14 @@ def read_quotes_after_verified_source(
     if not isinstance(quotes, list):
         raise ValueError("saved quote reader must return a list")
     return quotes, {
-        "status": "READ_AFTER_VERIFIED_SOURCE_ARCHIVE",
+        "status": "READ_AFTER_VERIFIED_FRESH_SOURCE_ARCHIVE",
         "quote_reader_called": True,
         "source_artifact_id": source_verification["artifact_id"],
         "source_artifact_sha256": source_verification["artifact_sha256"],
         "source_parent_run_id": source_verification["parent_run"]["run_id"],
+        "source_age_seconds_at_verification": source_verification[
+            "source_age_seconds_at_verification"
+        ],
     }
 
 
