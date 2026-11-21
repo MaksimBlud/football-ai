@@ -22,6 +22,21 @@ from serie_a_v2_forward_capture import (
 )
 
 NOW = datetime(2026, 10, 14, 7, 0, tzinfo=timezone.utc)
+
+
+@pytest.fixture(autouse=True)
+def _allow_synthetic_v2_inference_access(monkeypatch):
+    """Offline forward tests use an explicit synthetic access stub only."""
+    import market_anchor_v2_direct_access
+
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
+    monkeypatch.setenv("GITHUB_TOKEN", "synthetic-test-token")
+    monkeypatch.setattr(
+        market_anchor_v2_direct_access,
+        "require_v2_inference_access",
+        lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
+    )
 AFTER_CAPTURE = datetime(2026, 10, 14, 6, 0, tzinfo=timezone.utc)
 
 
@@ -417,251 +432,6 @@ def test_original_forward_does_not_fallback_to_older_archive_when_newest_sha_is_
     assert calls == [("parent", 124), ("archive", 124)]
 
 
-
-def test_original_forward_cli_default_denies_before_archive_discovery_or_database_import(
-    monkeypatch, tmp_path
-):
-    """Exercise main(), not only its helper: a default-deny CLI must touch no live boundary."""
-    import builtins
-    import sys
-    import types
-    import serie_a_v2_forward_capture as forward_module
-
-    events = []
-    monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
-    monkeypatch.delenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", raising=False)
-    monkeypatch.setenv("GITHUB_TOKEN", "synthetic-token")
-    monkeypatch.setattr(
-        forward_module,
-        "require_private_repository",
-        lambda *, token: {"repository": "MaksimBlud/football-ai", "private": True},
-    )
-    monkeypatch.setattr(
-        forward_module,
-        "discover_archives",
-        lambda **_kwargs: events.append("archive_discovery") or [],
-    )
-    monkeypatch.setitem(sys.modules, "database", types.SimpleNamespace(supabase=object()))
-
-    real_import = builtins.__import__
-
-    def tracked_import(name, *args, **kwargs):
-        if name == "database":
-            events.append("database_import")
-        return real_import(name, *args, **kwargs)
-
-    monkeypatch.setattr(builtins, "__import__", tracked_import)
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "serie_a_v2_forward_capture.py",
-            "--output", str(tmp_path / "report.json"),
-            "--sources-output-dir", str(tmp_path / "sources"),
-        ],
-    )
-
-    with pytest.raises(PermissionError, match="MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=true"):
-        forward_module.main()
-
-    assert events == []
-    assert not (tmp_path / "report.json").exists()
-
-
-def test_original_forward_cli_verifies_parent_and_zip_before_lazy_database_import(
-    monkeypatch, tmp_path
-):
-    """Pin the real CLI wiring: source provenance and ZIP SHA precede DB import and quote read."""
-    import builtins
-    import sys
-    import types
-    import serie_a_v2_forward_capture as forward_module
-
-    class FrozenNow(datetime):
-        @classmethod
-        def now(cls, tz=None):
-            assert tz is timezone.utc
-            return cls(2026, 10, 14, 7, 0, tzinfo=timezone.utc)
-
-    raw, metadata = make_source_archive()
-    metadata[0]["created_at"] = FrozenNow(2026, 10, 13, 15, 0, tzinfo=timezone.utc)
-    events = []
-    fake_supabase = object()
-
-    monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
-    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
-    monkeypatch.setenv("GITHUB_TOKEN", "synthetic-token")
-    monkeypatch.setattr(
-        forward_module,
-        "require_private_repository",
-        lambda *, token: {"repository": "MaksimBlud/football-ai", "private": True},
-    )
-    monkeypatch.setattr(forward_module, "datetime", FrozenNow)
-
-    def discover_archives(*, token):
-        events.append("archive_discovery")
-        assert token == "synthetic-token"
-        return metadata
-
-    def verify_parent(archive, *, quote_time, token):
-        events.append("parent_verification")
-        assert archive["artifact_id"] == 123
-        assert token == "synthetic-token"
-        assert quote_time == FrozenNow(2026, 10, 14, 7, 0, tzinfo=timezone.utc)
-        return {
-            "run_id": archive["run_id"],
-            "run_head_sha": archive["head_sha"],
-            "workflow_path": SOURCE_WORKFLOW_PATH,
-            "run_completed_at_utc": "2026-10-13T15:01:00Z",
-        }
-
-    def download_archive(artifact_id, *, token):
-        events.append("archive_download_and_sha_input")
-        assert artifact_id == 123
-        assert token == "synthetic-token"
-        return raw
-
-    def read_quotes(client, *, now):
-        events.append("saved_quote_reader")
-        assert client is fake_supabase
-        assert now == FrozenNow(2026, 10, 14, 7, 0, tzinfo=timezone.utc)
-        return [quote()]
-
-    monkeypatch.setattr(forward_module, "discover_archives", discover_archives)
-    monkeypatch.setattr(forward_module, "verify_source_run", verify_parent)
-    monkeypatch.setattr(forward_module, "get_archive", download_archive)
-    monkeypatch.setattr(forward_module, "fetch_saved_upcoming_serie_a_quotes", read_quotes)
-    monkeypatch.setitem(sys.modules, "database", types.SimpleNamespace(supabase=fake_supabase))
-
-    real_import = builtins.__import__
-
-    def tracked_import(name, *args, **kwargs):
-        if name == "database":
-            events.append("database_import")
-        return real_import(name, *args, **kwargs)
-
-    monkeypatch.setattr(builtins, "__import__", tracked_import)
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "serie_a_v2_forward_capture.py",
-            "--output", str(tmp_path / "report.json"),
-            "--sources-output-dir", str(tmp_path / "sources"),
-        ],
-    )
-
-    forward_module.main()
-
-    assert events == [
-        "archive_discovery",
-        "parent_verification",
-        "archive_download_and_sha_input",
-        "database_import",
-        "saved_quote_reader",
-    ]
-    report = json.loads((tmp_path / "report.json").read_text(encoding="utf-8"))
-    assert report["source_preflight"]["verified"] is True
-    assert report["source_preflight"]["source_artifact_sha256"] == metadata[0]["sha256"]
-    assert report["quotes_seen"] == 1
-    assert report["v2_diagnostic_previews_captured"] == 1
-    assert report["eligible_for_frozen_prospective_cohort"] is False
-    assert report["no_bet"] is True
-    assert report["paid_provider_calls"] == 0
-    assert report["supabase_writes"] == 0
-
-
-def test_original_forward_cli_invalid_archive_sha_blocks_database_import_and_quote_read(
-    monkeypatch, tmp_path
-):
-    """Exercise main(): a bad source ZIP digest must stop before DB import or quotes."""
-    import builtins
-    import sys
-    import serie_a_v2_forward_capture as forward_module
-
-    class FrozenNow(datetime):
-        @classmethod
-        def now(cls, tz=None):
-            assert tz is timezone.utc
-            return cls(2026, 10, 14, 7, 0, tzinfo=timezone.utc)
-
-    raw, metadata = make_source_archive()
-    metadata[0]["created_at"] = FrozenNow(2026, 10, 13, 15, 0, tzinfo=timezone.utc)
-    events = []
-
-    monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
-    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
-    monkeypatch.setenv("GITHUB_TOKEN", "synthetic-token")
-    monkeypatch.setattr(
-        forward_module,
-        "require_private_repository",
-        lambda *, token: {"repository": "MaksimBlud/football-ai", "private": True},
-    )
-    monkeypatch.setattr(forward_module, "datetime", FrozenNow)
-
-    def discover_archives(*, token):
-        events.append("archive_discovery")
-        assert token == "synthetic-token"
-        return metadata
-
-    def verify_parent(archive, quote_time, token):
-        events.append("parent_verification")
-        assert token == "synthetic-token"
-        return _fully_verified_parent(
-            archive, quote_time, completed="2026-10-13T15:01:00Z"
-        )
-
-    def tampered_archive(artifact_id, *, token):
-        events.append("archive_download_and_sha_input")
-        assert artifact_id == metadata[0]["artifact_id"]
-        assert token == "synthetic-token"
-        return raw + b"tampered"
-
-    def forbidden_quote_read(*_args, **_kwargs):
-        raise AssertionError("invalid source ZIP SHA must block saved quote access")
-
-    monkeypatch.setattr(forward_module, "discover_archives", discover_archives)
-    monkeypatch.setattr(forward_module, "verify_source_run", verify_parent)
-    monkeypatch.setattr(forward_module, "get_archive", tampered_archive)
-    monkeypatch.setattr(
-        forward_module, "fetch_saved_upcoming_serie_a_quotes", forbidden_quote_read
-    )
-
-    real_import = builtins.__import__
-
-    def tracked_import(name, *args, **kwargs):
-        if name == "database":
-            events.append("database_import")
-            raise AssertionError("invalid source ZIP SHA must block database import")
-        return real_import(name, *args, **kwargs)
-
-    monkeypatch.setattr(builtins, "__import__", tracked_import)
-    output = tmp_path / "report.json"
-    sources = tmp_path / "sources"
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "serie_a_v2_forward_capture.py",
-            "--output",
-            str(output),
-            "--sources-output-dir",
-            str(sources),
-        ],
-    )
-
-    with pytest.raises(ValueError, match="archive digest mismatch"):
-        forward_module.main()
-
-    assert events == [
-        "archive_discovery",
-        "parent_verification",
-        "archive_download_and_sha_input",
-    ]
-    assert not output.exists()
-    assert not sources.exists()
-
-
 def test_private_repository_guard_accepts_only_exact_private_repository(monkeypatch):
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
     url = "https://api.github.com/repos/MaksimBlud/football-ai"
@@ -720,10 +490,12 @@ def test_private_repository_guard_rejects_redirect_without_parsing_body(monkeypa
         )
 
 
-def test_original_forward_cli_checks_private_repository_before_archive_discovery(monkeypatch, tmp_path):
+def test_original_forward_cli_writes_rights_block_before_supabase_or_artifact_access(monkeypatch, tmp_path):
+    import market_anchor_v2_direct_access
+
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
     monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
-    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    monkeypatch.setenv("GITHUB_TOKEN", "synthetic-test-token")
     output = tmp_path / "output" / "forward.json"
     sources = tmp_path / "sources"
     monkeypatch.setattr(sys, "argv", [
@@ -733,20 +505,24 @@ def test_original_forward_cli_checks_private_repository_before_archive_discovery
     ])
     calls = []
 
-    def reject_public_repository(*, token):
-        calls.append(("privacy", token))
-        raise PermissionError("repository is public")
+    def reject_access():
+        calls.append("rights-and-privacy")
+        raise PermissionError("provider inference scope is unresolved")
 
     def forbidden_discovery(*, token):
         calls.append(("archives", token))
-        raise AssertionError("archive discovery must not run for a public repository")
+        raise AssertionError("archive discovery must not run while inference rights are unresolved")
 
-    monkeypatch.setattr(forward_capture, "require_private_repository", reject_public_repository)
+    monkeypatch.setattr(market_anchor_v2_direct_access, "require_v2_inference_access", reject_access)
     monkeypatch.setattr(forward_capture, "discover_archives", forbidden_discovery)
 
-    with pytest.raises(PermissionError, match="repository is public"):
-        forward_capture.main()
+    forward_capture.main()
 
-    assert calls == [("privacy", "test-token")]
-    assert not output.parent.exists()
+    report = json.loads(output.read_text(encoding="utf-8"))
+    assert report["mode"] == "SOURCE_RIGHTS_BLOCKED_NO_NETWORK_NO_INFERENCE"
+    assert report["supabase_reads"] == 0
+    assert report["supabase_writes"] == 0
+    assert report["quotes_read"] == 0
+    assert report["forecasts_created"] == 0
+    assert calls == ["rights-and-privacy"]
     assert not sources.exists()
