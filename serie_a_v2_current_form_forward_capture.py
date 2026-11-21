@@ -682,9 +682,8 @@ def main() -> None:
     if os.environ.get("GITHUB_REF") != "refs/heads/main":
         raise RuntimeError("current-form V2 source/forecast workflow must run from main")
     token = os.environ.get("GITHUB_TOKEN", "")
-    url, key = os.environ.get("SUPABASE_URL", ""), os.environ.get("SUPABASE_KEY", "")
-    if not token or not url or not key:
-        raise RuntimeError("GitHub actions:read and Supabase read-only credentials are required")
+    if not token:
+        raise RuntimeError("GitHub Actions actions:read credential is required for source verification")
     now = datetime.now(timezone.utc)
     archives = discover_archives(token=token)
     raw_cache = {}
@@ -706,8 +705,12 @@ def main() -> None:
     )
 
     def read_saved_quotes() -> list[dict]:
-        # Both source provenance and frozen-inference rights are checked before
-        # this callback can construct a Supabase client or inspect saved quotes.
+        # Source provenance and inference rights have already passed. Resolve
+        # Supabase secrets only now, immediately before the read-only quote query.
+        url = os.environ.get("SUPABASE_URL", "")
+        key = os.environ.get("SUPABASE_KEY", "")
+        if not url or not key:
+            raise RuntimeError("Supabase read-only credentials are required after source and inference gates")
         client = create_client(url, key)
         return fetch_saved_upcoming_serie_a_quotes(client, now=now)
 
