@@ -1,0 +1,83 @@
+{
+  "schema_version": "MARKET_ANCHOR_1X2_V2_SOURCE_RIGHTS_AUDIT_V1",
+  "source_id": "global_football_soccer_data_lake",
+  "source_repository": "https://github.com/v-eatpizzanot/soccer-dataset",
+  "source_dataset": "https://huggingface.co/datasets/eatpizzanot/soccer-dataset",
+  "reviewed_at_utc": "2026-11-21T12:14:59Z",
+  "approval_status": "HOLD",
+  "rights": {
+    "publisher_license_claim": "CC-BY-4.0",
+    "huggingface_license_metadata": "cc-by-4.0",
+    "top_level_license_text_file_found": false,
+    "upstream_field_level_rights_cleared": false,
+    "internal_ml_use_explicitly_authorized": false,
+    "private_raw_archive_retention_explicitly_authorized": false,
+    "redistribution_permitted_for_project": false
+  },
+  "upstream_sources": [
+    {
+      "provider": "API-Football",
+      "policy_url": "https://www.api-football.com/terms",
+      "rights_status": "HOLD",
+      "reason": "The provider says its data is obtained from partners, does not grant a general publication licence, and places responsibility for third-party competition rights on the user. The checked terms do not expressly grant this project's internal AI-model research archive and long-term private raw retention."
+    },
+    {
+      "provider": "Football-Data.co.uk",
+      "policy_url": "https://football-data.co.uk/contact.php",
+      "rights_status": "NOT_APPROVED_FOR_AUTOMATED_AI_TRAINING",
+      "reason": "The current fair-use policy limits the described free use to private personal betting or academic research, caps light automated downloads at twice weekly, and expressly says the data is not intended for commercial or AI data-training projects using automated bots or scrapers."
+    }
+  ],
+  "provenance": {
+    "upstream_sources_are_mixed": true,
+    "field_level_upstream_provider_lineage_confirmed": false,
+    "source_before_quote_proven": false,
+    "source_observation_timestamp_available": false,
+    "known_at_semantics": "KICKOFF_PLUS_105_MINUTES_DERIVED_NOT_PROVIDER_OBSERVED",
+    "known_at_is_actual_capture_timestamp": false,
+    "stats_fetched_at_null_fraction": 0.74,
+    "stats_fetched_at_is_complete": false,
+    "raw_source_bytes_archived_by_this_project": false,
+    "raw_source_sha256_verified_by_this_project": false
+  },
+  "coverage": {
+    "repository_quality_report_generated_at": "2026-07-05T07:51:00Z",
+    "readme_reported_fixtures": 673966,
+    "readme_reported_played_fixtures": 644901,
+    "readme_reported_leagues": 271,
+    "readme_reported_date_range": "2008-06-07 through 2027-06-06",
+    "data_dictionary_match_stats_rows": 283834,
+    "match_stats_null_percent": {
+      "shots_total_home_away": 23.1,
+      "shots_on_goal_home_away": 23.1,
+      "corners_home_away": 22.7,
+      "yellow_cards_home_away": 20.9,
+      "red_cards_home_away": 22.7,
+      "stats_fetched_at": 74.0
+    },
+    "current_2026_27_completed_stats_coverage_confirmed": false,
+    "exact_original_19_feature_parity_confirmed": false
+  },
+  "frozen_v2": {
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "training_fingerprint": "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098",
+    "feature_count": 19,
+    "active_lambda": 0,
+    "shadow_lambda": 1,
+    "weights_changed": false,
+    "eligible_for_source_capture": false,
+    "eligible_for_inference": false,
+    "eligible_for_frozen_prospective_cohort": false,
+    "no_bet": true
+  },
+  "non_actions": {
+    "provider_requests": 0,
+    "dataset_downloaded": false,
+    "api_key_created": false,
+    "supabase_accessed": false,
+    "protected_outcomes_read": false,
+    "model_inference_run": false,
+    "training_or_refit": false,
+    "production_artifact_changed": false
+  }
+}
