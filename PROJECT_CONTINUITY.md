@@ -6406,3 +6406,11 @@ No candidate in this scan is approved. Do not use the open-matchday data merely 
 - No Brier/LogLoss claim or V2-over-market superiority is supported.
 
 No merge, main update, Supabase write/DDL, paid API request, target-outcome read, production artifact change, model refit, threshold tuning, promotion, bet, schedule change or other-agent setting change occurred.
+
+## 2026-11-21 03:32 UTC — final exact-head retest for current-form capture rights
+
+- PR #898 received a least-privilege workflow adjustment: `GITHUB_TOKEN` is now scoped only to the gated capture step, not the whole job. The live workflow flag remains `false`; schedules and triggers are unchanged.
+- Current PR #898 HEAD is `ea97737d02cdbf4952ab94bfb8e7436b7a4f5828`, based on #891 HEAD `3714eadd432d580a2d848c1b35599223dc581ab0`.
+- Exact PR run [44861467621](https://github.com/MaksimBlud/football-ai/actions/runs/44861467621) SUCCESS; Python 3.11 and 3.12 each report **19 passed**; production `.pkl` diff guard passed in both jobs. Exact matching push run [44861463277](https://github.com/MaksimBlud/football-ai/actions/runs/44861463277) also SUCCESS.
+- This final HEAD supersedes the earlier #898 HEAD `dd96b6bb9ed628ec5d85814ee779fb90d12c9c86` recorded in the preceding checkpoint. No merge was performed; #898 remains Draft/HUMAN-MERGE and its parent chain remains unmerged.
+- The documentation PR #839 itself is now at HEAD `43ca64a7a2744112d9dbaae0e448bd957b1f732e`; its exact eight workflows all completed SUCCESS (8/8). The current-main 6,152-line continuity file remains an exact prefix; this branch adds only checkpoint text.
