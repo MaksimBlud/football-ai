@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 
 import market_anchor_1x2_v2_shadow as v2
+from market_anchor_v2_direct_access import require_v2_inference_access
 
 FROZEN_FILE = Path(__file__).resolve().parent / (
     "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
@@ -106,6 +107,7 @@ def shadow_preview(
     This module cannot verify that source; it marks every preview NOT eligible
     for the strict preregistered prospective V2 cohort. Do not persist it.
     """
+    require_v2_inference_access()
     if as_of_utc.tzinfo is None:
         raise ValueError("as_of_utc must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
@@ -248,6 +250,7 @@ def shadow_preview(
 
 def fetch_saved_upcoming_serie_a_quotes(client: Any, *, now: datetime) -> list[dict]:
     """Read *existing* observations only. No odds provider call or DB write."""
+    require_v2_inference_access()
     items = (
         client.table("odds_snapshots")
         .select(",".join(MARKET_KEYS))
@@ -260,6 +263,8 @@ def fetch_saved_upcoming_serie_a_quotes(client: Any, *, now: datetime) -> list[d
 
 
 def main() -> None:
+    # Deny before importing Supabase or reading the external feature file.
+    require_v2_inference_access()
     parser = argparse.ArgumentParser(
         description="Pre-match Serie A frozen V2 shadow preview; read-only, no betting or promotion"
     )
