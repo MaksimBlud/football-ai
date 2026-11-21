@@ -78,8 +78,15 @@ def require_ai_model_training_permission(
     if authorization.get("kind") not in {"written_permission", "open_license"}:
         raise PermissionError("source-rights authorization kind is not approved")
 
+    if authorization.get("provider_issued") is not True:
+        raise PermissionError("AI training authorization must be explicitly provider-issued")
+
     scope = authorization.get("scope")
-    if not isinstance(scope, list) or not REQUIRED_SCOPES.issubset(set(scope)):
+    if (
+        not isinstance(scope, list)
+        or not all(isinstance(item, str) for item in scope)
+        or not REQUIRED_SCOPES.issubset(set(scope))
+    ):
         raise PermissionError("source-rights authorization does not cover AI model training and noncommercial research")
 
     for field in ("license_name", "rights_holder", "reviewed_by"):
@@ -92,11 +99,13 @@ def require_ai_model_training_permission(
     if (
         parts.scheme != "https"
         or not parts.hostname
+        or parts.hostname.lower() not in EXPECTED_INFERENCE_EVIDENCE_HOSTS
+        or parts.netloc.lower() not in EXPECTED_INFERENCE_EVIDENCE_HOSTS
         or parts.username is not None
         or parts.password is not None
         or parts.fragment
     ):
-        raise PermissionError("source-rights evidence URL must be a direct HTTPS reference")
+        raise PermissionError("source-rights evidence URL must be a direct HTTPS reference on the provider domain")
 
     evidence_file = authorization.get("evidence_file")
     if not isinstance(evidence_file, str) or not evidence_file.strip():
@@ -126,12 +135,26 @@ def require_ai_model_training_permission(
     reviewed_at = _parse_utc(authorization.get("reviewed_at_utc"), "reviewed_at_utc")
     if reviewed_at > now_utc:
         raise PermissionError("source-rights evidence review time is in the future")
-    valid_from = authorization.get("valid_from_utc")
-    if valid_from is not None and _parse_utc(valid_from, "valid_from_utc") > now_utc:
+    valid_from_raw = authorization.get("valid_from_utc")
+    valid_until_raw = authorization.get("valid_until_utc")
+    if valid_from_raw is None or valid_until_raw is None:
+        raise PermissionError("AI training authorization requires both valid_from_utc and valid_until_utc")
+    valid_from = _parse_utc(valid_from_raw, "valid_from_utc")
+    valid_until = _parse_utc(valid_until_raw, "valid_until_utc")
+    if valid_until <= valid_from:
+        raise PermissionError("AI training authorization validity window is empty or reversed")
+    if valid_from > now_utc:
         raise PermissionError("source-rights authorization is not yet valid")
-    valid_until = authorization.get("valid_until_utc")
-    if valid_until is not None and _parse_utc(valid_until, "valid_until_utc") <= now_utc:
+    if valid_until <= now_utc:
         raise PermissionError("source-rights authorization has expired")
+
+    policy_updated_raw = manifest.get("policy_page_updated_date")
+    try:
+        policy_updated = date.fromisoformat(policy_updated_raw)
+    except (TypeError, ValueError) as exc:
+        raise PermissionError("source-rights policy page update date is invalid") from exc
+    if policy_updated > reviewed_at.date():
+        raise PermissionError("source-rights policy page was updated later than policy review")
 
     return {
         "provider": EXPECTED_PROVIDER,
@@ -144,6 +167,9 @@ def require_ai_model_training_permission(
         "scope": sorted(scope),
         "reviewed_by": authorization["reviewed_by"],
         "reviewed_at_utc": reviewed_at.isoformat(),
+        "authorization_valid_from_utc": valid_from.isoformat(),
+        "authorization_valid_until_utc": valid_until.isoformat(),
+        "scope_status": "GRANTED",
         "commercial_use_permitted": manifest.get("commercial_use_permitted") is True,
     }
 
