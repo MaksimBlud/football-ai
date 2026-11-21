@@ -17,7 +17,7 @@ The new source archive uses current-season match results **only as lagged input 
 
 ## Source and time-order rules
 
-- A free daily GitHub Actions workflow archives the exact ten frozen historical CSVs plus current `2627/I1.csv`, hashes every source file, records source observation times, and stores the source-gate manifest.
+- The GitHub Actions source-capture workflow on current `main` is still scheduled daily (`50 5 * * *`) and its live step is not yet held there. This is an unresolved provider-rights risk, not authorization: the current official Football-Data page says files are updated at least twice weekly (Sunday/Wednesday); that is a publisher update cadence, not a maximum download limit. The same page limits its free CSV/Excel offering to private individuals for personal betting/academic research and excludes commercial/data-training products using automated bots/scrapers/AI. No affirmative permission for this automated AI-model pipeline is documented. PR #781 proposes a fail-closed live-access hold without changing the schedule; it is not merged. Do not dispatch or rely on live source capture until provider rights are clarified and the hold/private-artifact chain is integrated.
 - The current-season CSV is requested only after the feature-input gate passes. Unplayed rows and incomplete matches are excluded. Since Football-Data match dates do not reliably contain kickoff clocks, all matches on the quote's UTC calendar day are excluded from the feature history.
 - A future quote may use this archive only if the archive artifact **and its successful main-branch parent run** completed before the saved quote, all source hashes match, and source observation is no more than 24 hours before the quote.
 - Quotes must themselves be no more than 24 hours old and strictly pre-kickoff. If a source is later than a quote, the quote is blocked. No backfill.
@@ -33,3 +33,19 @@ A preview is not yet a completed evaluation. Only after 30 eligible prospective 
 ## First post-merge proof to check
 
 The first source run should show the feature-input gate count, 10 old CSVs plus the current-season CSV, matching SHA256s, and zero database writes/paid requests. The first forward run should correctly block the October 13 quotes as source-after-quote and stale, without backfilling them. A valid future quote captured after the source run is the first possible new-cohort observation.
+
+
+## 2026-11-19 — provider-rights and public-artifact hold
+
+The source archive's project receipt timestamp and SHA can prove that the project possessed exact bytes before a later quote; they do **not** prove when Football-Data or an upstream provider first observed or corrected each field. The provider documentation reviewed in [PR #868](https://github.com/MaksimBlud/football-ai/pull/868) says the files are updated at least twice weekly; this is an update cadence, not a download cap. It does not supply per-match first-observation/correction timestamps, and its free-use wording does not grant the intended automated AI data-training/inference pipeline. The daily 11-file capture described above therefore remains **HOLD** pending explicit rights/permission. This note does not change the workflow schedule, candidate, feature order, weights, lambda values, or evaluation gates.
+
+As of main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, the repository is public and the live source-capture step remains executable. Main run [#44326186511](https://github.com/MaksimBlud/football-ai/actions/runs/44326186511) on 2026-11-18 actually uploaded artifact `14438015203` (SHA-256 `0d4240f31418e206b36faf9e94d0782212a91cf6d51262c77b0349ab3f7fc852`) containing ten historical CSVs plus current-season CSV bytes. It recorded 110 lagged current-season rows, zero paid provider calls, zero Supabase writes, and no target-outcome scoring. The artifact is in a public repository; do not treat its availability as provider clearance.
+
+[PR #781](https://github.com/MaksimBlud/football-ai/pull/781) proposes `MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=false` by default, gates all live source/quote steps and artifact uploads, and preserves existing schedules. It remains open at exact HEAD `3a70a8648895076efec2a80dc10b1798ed0d9261` with 8/8 CI success. [PR #879](https://github.com/MaksimBlud/football-ai/pull/879) adds a read-only private-repository check before any live artifact access; it remains a Draft child of #781 at `b78010585c80b05ae5fc2a8b3572df14b32d9651`, with 4/4 CI jobs successful. Neither PR is merged. Until the hold is integrated and provider rights are explicitly cleared, no further live source capture or manual dispatch is authorized by this contract.
+
+
+## 2026-11-21 — separate contact-page download cap
+
+A separate re-read of https://football-data.co.uk/contact.php (updated 2026-11-20) adds an explicit limit not stated on the data/download page: free CSV/Excel use is for private individuals' personal betting and/or academic research, with manual download or at most light automated download **twice per week maximum**. The same contact page separately excludes commercial or AI data-training projects using automated bots/scrapers and says no permission should be assumed when a request for such usage receives no response.
+
+This does not contradict the data/download page's “updated at least twice weekly” wording: that is the publisher's Sunday/Wednesday publication cadence, while the contact page sets the user's maximum automated-download frequency. The current main source-capture workflow runs daily and the project is an automated AI-model pipeline, so both the frequency and purpose are outside the stated free-use scope. Keep the live-access hold in place; no schedule change or source access is authorized by this note.
