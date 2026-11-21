@@ -169,8 +169,6 @@ def test_cli_inference_rights_gate_runs_before_supabase_client_creation(monkeypa
     monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
     monkeypatch.setenv("GITHUB_REF", "refs/heads/main")
     monkeypatch.setenv("GITHUB_TOKEN", "synthetic-test-token")
-    monkeypatch.setenv("SUPABASE_URL", "https://example.invalid")
-    monkeypatch.setenv("SUPABASE_KEY", "synthetic-test-key")
     monkeypatch.setattr(forward, "discover_archives", lambda **_kwargs: [])
     monkeypatch.setattr(
         forward,
