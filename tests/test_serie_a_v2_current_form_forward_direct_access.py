@@ -175,7 +175,7 @@ def test_cli_inference_rights_gate_runs_before_supabase_client_creation(monkeypa
     monkeypatch.setattr(
         forward,
         "verify_latest_source_archive",
-        lambda *_args, **_kwargs: {"status": "NO_SOURCE_ARCHIVE", "verified": False},
+        lambda *_args, **_kwargs: _verified_source_mapping(),
     )
     monkeypatch.setattr(
         forward,
