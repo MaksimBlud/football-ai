@@ -420,6 +420,46 @@ def test_current_csv_rejects_completed_row_after_current_season_end():
         )
 
 
+def test_csv_identity_digest_matches_metadata_after_v2_alias_normalization():
+    metadata = event_rows(30)
+    metadata[0] = {
+        "match_date": "2026-08-01",
+        "home_team": "Atalanta BC",
+        "away_team": "Juventus",
+    }
+    raw = current_csv(n=30).decode().replace(
+        "01/08/2026,Home 0,Away 0,1,0,H,5,3,2,1,0,0",
+        "01/08/2026,Atalanta,Juventus,1,0,H,5,3,2,1,0,0",
+    ).encode()
+    metadata_summary = summarize_completed_primary_events(
+        metadata, before_date=date(2026, 10, 18)
+    )
+    frame, _ = validate_current_season_csv(
+        raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+    )
+
+    matched = source_capture.validate_current_season_identity_match(metadata_summary, frame)
+
+    assert matched["exact_identity_match"] is True
+    assert matched["metadata_canonical_fixture_identities"] == 30
+    assert matched["source_canonical_fixture_identities"] == 30
+    assert matched["metadata_identity_sha256"] == matched["source_identity_sha256"]
+
+
+def test_same_count_but_different_fixture_identity_fails_closed():
+    metadata_summary = summarize_completed_primary_events(
+        event_rows(30), before_date=date(2026, 10, 18)
+    )
+    frame, _ = validate_current_season_csv(
+        current_csv(n=30),
+        captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+    )
+    frame.loc[0, "HomeTeam"] = "Different Home"
+
+    with pytest.raises(RuntimeError, match="do not exactly match Supabase metadata-only gate"):
+        source_capture.validate_current_season_identity_match(metadata_summary, frame)
+
+
 def test_closed_feature_source_gate_stops_before_any_public_download(tmp_path):
     calls = []
     def forbidden_history(**_kwargs):
