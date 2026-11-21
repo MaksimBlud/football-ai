@@ -390,6 +390,58 @@ def test_main_never_creates_supabase_client_when_no_source_archive_exists(monkey
     assert not sources.exists()
 
 
+def test_main_requires_supabase_credentials_only_after_verified_source_and_inference(
+    monkeypatch, tmp_path
+):
+    import sys
+    import serie_a_v2_current_form_forward_capture as module
+
+    raw, _archives = make_archive()
+    verified_source = _verified_source_report(raw)
+    monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
+    monkeypatch.setenv("GITHUB_REF", "refs/heads/main")
+    monkeypatch.setenv("GITHUB_TOKEN", "offline-test-token")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
+    monkeypatch.setattr(module, "discover_archives", lambda **_kwargs: [])
+    monkeypatch.setattr(
+        module,
+        "verify_latest_source_archive",
+        lambda *_args, **_kwargs: verified_source,
+    )
+    monkeypatch.setattr(
+        module,
+        "create_client",
+        lambda *_args, **_kwargs: pytest.fail("client must not be created without credentials"),
+    )
+    monkeypatch.setattr(
+        module,
+        "fetch_saved_upcoming_serie_a_quotes",
+        lambda *_args, **_kwargs: pytest.fail("quote reader must not run without credentials"),
+    )
+    output = tmp_path / "forward.json"
+    sources = tmp_path / "sources"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "serie_a_v2_current_form_forward_capture.py",
+            "--output",
+            str(output),
+            "--sources-output-dir",
+            str(sources),
+        ],
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="Supabase read-only credentials are required after source and inference gates",
+    ):
+        module.main()
+    assert not output.exists()
+    assert not sources.exists()
+
+
 def test_real_main_rejects_discovered_archive_with_wrong_candidate_before_client_or_quote_read(
     monkeypatch, tmp_path
 ):
