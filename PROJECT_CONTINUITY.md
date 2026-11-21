@@ -8176,3 +8176,69 @@ Evidence: https://www.api-football.com/pricing/ ; https://www.api-football.com/d
 - Candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; 3,799 training rows; original 19-feature order, 20×2 weights, scaler and imputer unchanged.
 - `active_lambda=0` remains the market; `shadow_lambda=1` remains research-only. Stability gate FAILED; independent prospective evaluation gate **0/30**. No eligible new quote or forecast, no Brier/LogLoss comparison, and no claim of superiority over market.
 - No merge, main update, Supabase write/DDL, paid API call, protected prospective target-outcome read, production `.pkl` change, refit, threshold tuning, betting, promotion, schedule change or other-agent setting change occurred. HUMAN-MERGE remains mandatory.
+
+
+## 2026-11-21 — V2 Research Brain run 11: fresh state and source-schema correction
+
+### Repository and continuity checkpoint
+
+- Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main commit or merge occurred during this run.
+- `main:PROJECT_CONTINUITY.md` is still the older 6,152-line blob `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b` and contains no 2026-11-21 V2 checkpoint. This PR branch appends to it; a line-order check confirmed every main line remains in the same relative order in this branch.
+- GitHub reports `main` branch protection as disabled. No branch-protection settings were changed; this remains a repository-owner security decision.
+- The existing Safe Engineering Agent Auto-Merge workflow was inspected after its workflow-run trigger. Run [#44847612399](https://github.com/MaksimBlud/football-ai/actions/runs/44847612399) ended `SAFE_AUTO_MERGE_HEALTHY_NOOP: no eligible bot PR with verified six-check CI`; its log says only same-repository `github-actions[bot]` engineering relay drafts are eligible. It did not merge any user PR. No auto-merge configuration or other-agent setting was changed.
+
+### Original Forward and source-before-quote
+
+- The latest verified main Original Forward run remains [#44777970547](https://github.com/MaksimBlud/football-ai/actions/runs/44777970547), 2026-11-20 16:54 UTC. Its real artifact contained zero quotes, zero prospective previews, zero paid-provider calls and zero Supabase writes. No newer Original Forward, Current-Form Forward, or Current-Form Source Capture run appeared in the 2026-11-20/21 workflow-run search.
+- Main `serie_a_v2_forward_capture.py` still invokes `fetch_saved_upcoming_serie_a_quotes()` before `discover_archives()`. This remains a live main-branch ordering defect.
+- [PR #884](https://github.com/MaksimBlud/football-ai/pull/884), HEAD `1d366777df7cf68f2d4b82975317317d818407e7`, has 2/2 exact-head CI SUCCESS. Its CLI tests require default-deny, parent workflow identity, source ZIP SHA verification and source preflight before the lazy Supabase import/quote reader. It remains Draft and depends on the #781/#879 protection chain.
+- [PR #781](https://github.com/MaksimBlud/football-ai/pull/781), HEAD `3a70a8648895076efec2a80dc10b1798ed0d9261`, remains Ready for review with 8/8 exact-head checks. Its branch sets `MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=false` for both Original Forward and Current-Form Source Capture, so their live source/quote steps are skipped there. Main has not received that default-deny guard yet. HUMAN-MERGE only.
+
+### New 5DollarFootballAPI schema correction — no integration
+
+- The official [league-fixtures docs](https://5dollarfootballapi.com/docs/league-fixtures) specify `GET /v1/leagues/{id}/fixtures?season=2026` (or a listed season such as `26/27`) as the season-scoped bulk route, with pagination up to 100. The published fixture shape contains league id, kickoff, status, goals, corners and yellow/red cards; it does not promise a per-fixture `league_season_id`.
+- The original frozen 19 features require only points derived from goals, goals-for/against, corners-for/against, and yellow/red cards over the frozen 5/10-match and venue-5 windows. Shots, possession and xG are not required.
+- [PR #800](https://github.com/MaksimBlud/football-ai/pull/800) was corrected to pin `season=2026` in every captured request URL instead of requiring the undocumented per-fixture season-id field. An optional season-id is still cross-checked if both the capture manifest and fixture provide it. Synthetic fixtures now match the published schema without that field.
+- New exact HEAD: `140baffdc9ec55a4fb04de8806d0ee8811686940`; **7/7 exact-head CI SUCCESS**. Frozen V2 Shadow Tests: **120 passed**; production `.pkl` diff guard PASS. This is an offline adapter only; no account, API key, API/odds request, data download, feature calculation on real data or inference occurred.
+- [PR #792](https://github.com/MaksimBlud/football-ai/pull/792) now includes the 2026-11-21 official endpoint-schema addendum. HEAD `c4ed6e47dfc12494d578e0eabda819fe5feb958c`; **6/6 exact-head CI SUCCESS**. It clarifies that the schema-family fit is stronger but the rights decision remains HOLD.
+- HOLD reasons remain: dedicated Serie A marketing page claims Free, while the measured data-quality table labels Serie A Pro; no authenticated Free response; no confirmed upstream data-rights chain; no explicit durable private-retention term; no provider-guaranteed per-fixture upstream observation timestamp. Provider Terms allow model/internal use and caching, but do not resolve those upstream questions. Do not create an account/key, self-attest for Community Access, or call the API.
+
+### Additional free-source screen: StatArena API — HOLD
+
+- Current docs label `GET /v1/matches/live`, `/live/leagues/:id`, and `/upcoming/leagues/:id` Free, but `GET /v1/matches/date/:date` and `GET /v1/matches/:matchId` Basic. The add-on `statistics` is marked Free, but the higher route plan applies. Thus the Free tier does not document the completed-match history/detail path needed for rolling 5/10-match features.
+- Pricing currently lists 8 selected Free competitions and 100 requests/hour; it does not grant the detailed current-season history advertised under Basic. Public legal terms defer service conditions to account registration and contain no explicit data licence for model use, caching or private retention.
+- Decision: HOLD; no account, key, API request or data download. This is not a replacement for the 5Dollar candidate.
+
+### Read-only Supabase odds snapshot audit — pre-match metadata only
+
+Query predicate: `snapshot_time_utc < commence_time_utc AND created_at < commence_time_utc`. No scores, results, settlement or target-outcome columns were selected.
+
+| League | Rows | Strict pre-kickoff rows | Distinct events | Future strict rows |
+|---|---:|---:|---:|---:|
+| BUNDESLIGA | 404 | 394 | 35 | 0 |
+| EPL | 1,151 | 1,135 | 70 | 0 |
+| EREDIVISIE | 412 | 410 | 39 | 0 |
+| LA_LIGA | 806 | 798 | 52 | 0 |
+| LIGUE_1 | 394 | 387 | 35 | 0 |
+| PRIMEIRA_LIGA | 9 | 9 | 9 | 0 |
+| RPL | 156 | 153 | 15 | 0 |
+| SERIE_A | 625 | 620 | 63 | 0 |
+| TURKEY_SUPER_LIG | 9 | 9 | 9 | 0 |
+| **Total** | **3,966** | **3,915** | **327** | **0** |
+
+Both time predicates agreed for every row (zero disagreements). There are no strict future-kickoff quote rows in any listed league. Latest strict Serie A snapshot remains `2026-10-13 14:48:53.042620 UTC`. This does not create a prospective cohort. `created_at` is not immutable against service-role updates, so it is not standalone cryptographic proof; source SHA and parent-run evidence remain required. SELECT only; no Supabase write/DDL.
+
+### Frozen original model — unchanged
+
+- Candidate SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Training fingerprint: `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; 3,799 training rows.
+- Exactly 19 original features, 20×2 weights, scaler and imputer remain frozen.
+- `active_lambda=0` remains the market; `shadow_lambda=1` remains research-only.
+- Stability gate: FAILED. Prospective evaluation gate: **0/30**. No eligible prospective forecast and no independent Brier/LogLoss comparison. No claim of superiority over market.
+- The previously recorded 110-event metadata-only feature-input count is not the 30-forecast evaluation gate and does not authorize use of the Football-Data archive while its daily automated source policy remains unresolved. No protected 2026/27 outcomes were opened.
+
+### Non-actions and next blockers
+
+No merge, main write, Supabase write/DDL, paid API request, API key creation, source download, production `.pkl` change, candidate/weight/feature change, refit, threshold tuning, target-outcome read, betting, promotion, schedule change or other-agent setting change occurred.
+
+Next safe sequence remains: owner review/merge #781; then re-read fresh main; integrate the private-storage and source-before-quote dependency chain only in its declared order; resolve written source rights before any new source capture; then calculate only the frozen 19 features on eligible pre-match data. The independent 30-forecast gate and Brier/LogLoss evaluation remain closed.
