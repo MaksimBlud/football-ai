@@ -8305,3 +8305,18 @@ The provider's 2026-11-11 changelog says `GET /v1/matches/:id/statistics` is Fre
 - Existing continuity PR #839 before this checkpoint: HEAD `639e09f37a0658b50af6afa66a9ee6a83b6d8779`, 8/8 exact-head workflows SUCCESS.
 
 All PRs remain HUMAN-MERGE only. No merge, main write, schedule change, paid request, Supabase write/DDL, production artifact change, target-outcome read, refit, threshold tuning, or auto-promotion occurred.
+
+
+## 2026-11-21 — direct-entrypoint rights and outcome-blind replay stack audit
+
+Fresh open-PR metadata and exact-head workflow checks were read after the runtime checkpoint above. All are still open/unmerged; HUMAN-MERGE only.
+
+- **#885 private-repository guard:** HEAD `2f0f3f2900e8eb12db284b0bfecd6f0fe0fc097d`, base `ec79bb1d2c227e44450ddeaddfde97ec210dbf52`. The current #884 head is `1d366777df7cf68f2d4b82975317317d818407e7`, so #885's recorded parent/base is stale; GitHub reports #885 `mergeable=false`, and no current exact-head workflow run was returned. Do not merge; it needs a reviewed restack/revalidation.
+- **#887 original-forward inference/private-storage direct guard:** HEAD `954be44504bfa8c519d3813cbf43ab7c53efcaad`, base #885 HEAD `2f0f3f2900e8eb12db284b0bfecd6f0fe0fc097d`; dedicated run [#44625563764](https://github.com/MaksimBlud/football-ai/actions/runs/44625563764), 2/2 SUCCESS (Python 3.11/3.12).
+- **#888 separate source-capture rights helper:** HEAD `6cfef9ffe8e13009284a3227775ec5bfcda0b84e`, base #887 HEAD above; push and PR runs [#44628009402](https://github.com/MaksimBlud/football-ai/actions/runs/44628009402) and [#44627999541](https://github.com/MaksimBlud/football-ai/actions/runs/44627999541), 4/4 SUCCESS, 36 tests per Python version. Its two-sessions-per-rolling-week limit is an internal conservative project safeguard only, **not** a provider quota; the current Football-Data.co.uk wording is corrected above. The real capture permission remains false.
+- **#891 original diagnostic direct-entrypoint rights guard:** HEAD `e0d729d78a24a977f8cf76c04bcee19de4488c22`, base #890 HEAD `aade422896d32e38f1a1afb5dde7e1bae5351399`; run [#44641797955](https://github.com/MaksimBlud/football-ai/actions/runs/44641797955), 2/2 SUCCESS.
+- **#892 unconditional retrospective replay hold / stronger AI-training rights:** HEAD `5408e7392b4a73b89b2525735c3cfd17c736e4dc`, same #890 base; run [#44643276974](https://github.com/MaksimBlud/football-ai/actions/runs/44643276974), 2/2 SUCCESS, 18 outcome-blind/synthetic tests per Python version. The post-outcome retrospective replay remains blocked; its old target cohort is not an admissible prospective evaluation.
+- **#893 current-form forward direct source/inference guard:** HEAD `5fd6fe2a8ef131dd166dfcac2785d74fab970a4d`, same #890 base; run [#44650479805](https://github.com/MaksimBlud/football-ai/actions/runs/44650479805), 2/2 SUCCESS.
+- **#896 strict quote persistence-before-kickoff:** HEAD `7a47d310b2a6fda62267cd63557fb3cdd10d2b03`, base #891 HEAD above; run [#44666194948](https://github.com/MaksimBlud/football-ai/actions/runs/44666194948), 2/2 SUCCESS, 69 tests per Python version.
+
+These are offline safety/rights/timestamp proofs, not source clearance or model-quality evidence. The root #781 workflow hold remains the first manual review; no child may be merged out of dependency order. The stale #885 base is an additional chain blocker. No PR was merged and main remains unchanged.
