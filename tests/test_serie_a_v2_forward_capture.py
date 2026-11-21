@@ -10,6 +10,7 @@ import serie_a_v2_forward_capture as forward_capture
 
 import pytest
 
+import serie_a_v2_frozen_shadow_preview as frozen_preview
 from serie_a_v2_frozen_shadow_preview import parse_utc
 
 import serie_a_v2_live_diagnostic_report as live_diagnostic
@@ -40,6 +41,11 @@ def _allow_synthetic_v2_inference_access(monkeypatch):
     )
     monkeypatch.setattr(
         live_diagnostic,
+        "require_v2_inference_access",
+        lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(
+        frozen_preview,
         "require_v2_inference_access",
         lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
     )

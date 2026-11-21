@@ -128,12 +128,13 @@ def test_feature_time_after_quote_is_ineligible():
 
 def test_actual_kickoff_must_be_future():
     expired_kickoff = "2026-10-12T19:00:00Z"
-    with pytest.raises(ValueError, match="persisted at or after kickoff"):
-        v2_preview.shadow_preview(
-            [market(commence_time_utc=expired_kickoff,
-                    snapshot_time_utc="2026-10-12T12:00:00Z",
-                    created_at=expired_kickoff)], [], as_of_utc=NOW
-        )
+    report = v2_preview.shadow_preview(
+        [market(commence_time_utc=expired_kickoff,
+                snapshot_time_utc="2026-10-12T12:00:00Z",
+                created_at="2026-10-12T11:59:59Z")], [], as_of_utc=NOW
+    )
+    assert report["scored"] == 0
+    assert report["blocked"]["EXPIRED_FIXTURE"] == 1
 
 
 def test_quote_database_row_must_be_persisted_before_kickoff():
