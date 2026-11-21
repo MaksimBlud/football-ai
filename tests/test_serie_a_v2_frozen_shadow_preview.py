@@ -141,7 +141,11 @@ def test_quote_database_row_must_be_persisted_before_kickoff():
     expired_kickoff = "2026-10-12T19:00:00Z"
     with pytest.raises(ValueError, match="persisted at or after kickoff"):
         v2_preview.shadow_preview(
-            [market(commence_time_utc=expired_kickoff, created_at=expired_kickoff)],
+            [market(
+            commence_time_utc=expired_kickoff,
+            snapshot_time_utc="2026-10-12T18:00:00Z",
+            created_at=expired_kickoff,
+        )],
             [features()], as_of_utc=NOW
         )
 
