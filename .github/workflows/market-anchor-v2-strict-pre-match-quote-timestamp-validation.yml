@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - research/v2-collector-created-at-default-contract-on-896-20261120-run11
+      - research/v2-persist-after-snapshot-order-on-897-20261121-run11
     paths:
       - "serie_a_v2_frozen_shadow_preview.py"
       - "tests/test_serie_a_v2_frozen_shadow_preview.py"
@@ -18,6 +19,7 @@ on:
   pull_request:
     branches:
       - research/v2-strict-db-created-at-pre-kickoff-on-891-20261120-run11
+      - research/v2-collector-created-at-default-contract-on-896-20261120-run11
     paths:
       - "serie_a_v2_frozen_shadow_preview.py"
       - "tests/test_serie_a_v2_frozen_shadow_preview.py"
