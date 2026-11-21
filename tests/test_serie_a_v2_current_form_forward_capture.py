@@ -359,6 +359,11 @@ def test_main_never_creates_supabase_client_when_no_source_archive_exists(monkey
     monkeypatch.setenv("SUPABASE_KEY", "offline-test-key")
     monkeypatch.setattr(module, "discover_archives", lambda **_kwargs: [])
     monkeypatch.setattr(
+        v2_access,
+        "require_v2_inference_access",
+        lambda: pytest.fail("no-source reporting must not require inference access"),
+    )
+    monkeypatch.setattr(
         module,
         "create_client",
         lambda *_args, **_kwargs: pytest.fail("Supabase client must not be created before source verification"),
@@ -380,6 +385,8 @@ def test_main_never_creates_supabase_client_when_no_source_archive_exists(monkey
     assert report["v2_current_form_shadow_captured"] == 0
     assert report["latest_source_archive_verification"]["status"] == "NO_SOURCE_ARCHIVE"
     assert report["quote_read_gate"]["quote_reader_called"] is False
+    assert report["rows"] == []
+    assert report["source_artifacts_used"] == []
     assert not sources.exists()
 
 
@@ -413,6 +420,11 @@ def test_real_main_rejects_discovered_archive_with_wrong_candidate_before_client
     def forbidden(*_args, **_kwargs):
         raise AssertionError("invalid source provenance must prevent client and quote access")
 
+    monkeypatch.setattr(
+        v2_access,
+        "require_v2_inference_access",
+        lambda: pytest.fail("invalid-source reporting must not require inference access"),
+    )
     monkeypatch.setattr(module, "create_client", forbidden)
     monkeypatch.setattr(module, "fetch_saved_upcoming_serie_a_quotes", forbidden)
     monkeypatch.setattr(module, "get_archive", forbidden)
