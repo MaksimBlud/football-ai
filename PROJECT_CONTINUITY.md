@@ -6360,3 +6360,16 @@ No merge, main update, Supabase write/DDL, provider request, paid API call, targ
 Candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; 3,799 rows; 19 features; 20×2 weights; frozen scaler/imputer; `active_lambda=0`; `shadow_lambda=1`; stability gate FAILED; prospective evaluation gate 0/30. No Brier/LogLoss conclusion and no protected 2026/27 target outcomes read.
 
 No merge, main write, Supabase write/DDL, paid API, source-provider request, model artifact mutation, refit, weight/feature/contract change, promotion, bet, schedule change or other-agent setting change.
+
+
+## 2026-11-21 03:14 UTC — additional free-source screen (no provider access)
+
+A fresh public-docs scan was completed without creating accounts, keys, API calls, downloads, or source capture:
+
+- **open-matchday** advertises daily 2026/27 CSVs for 75 competitions including Serie A, fixtures, scores and some match statistics. It explicitly limits the compilation to informational/non-commercial use; upstream providers retain their own terms. Its own README says detailed shots/fouls/cards/corners occur in only about 19% of result rows, stats can lag one or two gameweeks, and the pipeline mixes OpenLigaDB, fixturedownload, ESPN, Football-Data, FotMob and Soccerway. There is no per-row first-observed timestamp; the daily build time is not a per-field source attestation. **HOLD / not approved for V2 capture or inference.**
+- **PitchAPI** is advertised as free with no paid tier, but the public documentation/independent coverage record does not establish a licence, commercial-use right, named upstream data provider, or verified per-league coverage. **HOLD pending written terms and provenance.**
+- **Footballdata.io / Soccer Data / SportStatsAPI** advertise free tiers, but the reviewed free-tier material does not establish unrestricted model-training/commercial rights; some explicitly restrict the free tier to non-commercial use. **HOLD.**
+- **Openplay** is CC BY 4.0 but is a snapshot ending in 2025/26 and the upstream event source is WhoScored; it does not solve current 2026/27 pre-match capture or the upstream-rights question. **HOLD.**
+- The FootballAPIs.com directory is a catalogue of API plans, not a match-data source and is not a data integration candidate.
+
+No candidate in this scan is approved. Do not use the open-matchday data merely because the CSV is public or its compilation is free; its non-commercial restriction and upstream provider terms remain binding questions. The existing #792/#794/#800 source audits remain the authoritative detailed reviews of 5Dollar and Big Balls.
