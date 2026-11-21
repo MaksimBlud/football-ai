@@ -106,3 +106,39 @@ This must be distinguished from the data/download page, https://www.football-dat
 The earlier 2026-11-19 correction in this audit correctly rejected an inference from the data-page publication cadence, but it did not account for the separate contact-page maximum. The correct conclusion is therefore stronger: the current daily automated collector exceeds the stated twice-weekly maximum **and** the project's automated AI/data-training purpose is outside the stated free-use scope. The default-deny hold remains required; no download, API request, source capture, quote access, or Supabase operation is authorized by this correction.
 
 This records the provider's published wording as an engineering eligibility gate, not a legal opinion.
+
+## 2026-11-21 — Soccer Data free API candidate (documentation-only audit; HOLD)
+
+A new public candidate was reviewed from the provider's official Terms, pricing and API reference. No account was created, no key requested, no API endpoint called, no match dataset downloaded, and no outcome or Supabase data accessed.
+
+### Published free-plan scope
+
+The official pricing page states that Free provides **50 requests/day**, **10 requests/minute**, current-season data only, all stats endpoints, and no odds. The odds endpoints require Pro or Business. Coverage varies by competition and season and is intended to be checked through the provider's coverage endpoints. The provider's terms say it may change Free-plan features.
+
+### Potential feature coverage — incomplete until verified
+
+The documented played-match stats endpoint `GET /v1/matches/{match_id}/stats` lists `corner_kicks`, `yellow_cards`, `red_cards`, `shots_on_target`, and other team statistics. It returns 409 while a match is live, 404 when detailed statistics are unavailable, and null for unrecorded fields; null must never be treated as zero.
+
+The documented `GET /v1/matches` endpoint exposes fixture identity/status/kickoff and, for finished matches, score fields in the same response. The reference documents no field-projection parameter. Therefore it is **not** an outcome-blind way to enumerate finished 2026/27 matches before the protected outcome gate. The stats endpoint itself does not document an upstream `updated_at` / `last_updated` field; `live.updated_at` applies only to the in-play clock, not the historical statistics payload.
+
+Even after an authorized gate, the Free plan is current-season-only and has no odds. It cannot replace the original candidate's 2016–2026 training archive or the saved pre-match market source. At one stats request per match, 50/day would also require multiple UTC days to backfill 100 match records for a full last-10 view; actual Serie A event coverage and field completeness remain unverified because the coverage endpoint was not called.
+
+### Terms and provenance blockers
+
+The Terms of Service (last updated 2026-10-30) state that data belongs to Soccer Data or providers it licenses from; the user receives a non-exclusive, non-transferable licence. Caching and storage are allowed only while the account/plan remains active; the licence ends when the account closes. The terms allow showing data in one's own websites/apps, including paid ones, but prohibit reselling, sublicensing or redistributing raw data.
+
+The published terms do **not expressly grant AI/ML training, model-development, derived-feature retention, or long-term private research-archive rights**, and they do not identify the upstream provider/field-level rights in the API terms. No assumption of training permission or upstream sublicensing is made.
+
+### Decision
+
+**HOLD — not approved for V2 capture.** It may be reconsidered only after written provider confirmation explicitly covers (a) the original V2's automated feature extraction/model-development use, (b) private raw-response and derived-feature retention for the intended duration, (c) the relevant upstream provider rights for Serie A 2026/27 team stats, and (d) whether a capture-time GitHub artifact SHA is sufficient provenance when the API does not expose a historical-stat update timestamp. Actual coverage must then be checked using the documented coverage endpoint without reading protected scores before the applicable gate.
+
+No source capture, API request, paid request, odds request, Supabase operation, inference, protected-outcome read, refit, threshold tuning, promotion, schedule change, production artifact change, or main update was performed.
+
+Official references:
+- Terms of Service, last updated 2026-10-30: https://soccer-data.co/terms
+- Free / paid plan limits: https://soccer-data.co/pricing
+- List matches response fields and finished-match score exposure: https://soccer-data.co/docs/reference/matches/list
+- Played-match team statistics fields and missing-value behavior: https://soccer-data.co/docs/reference/matches/stats
+- Competition/season coverage endpoint documentation: https://soccer-data.co/docs/concepts/coverage
+
