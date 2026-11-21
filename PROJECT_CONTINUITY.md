@@ -6322,3 +6322,41 @@ No scores, outcomes, settlements or protected target fields were queried.
 ### Non-actions
 
 No merge, main update, Supabase write/DDL, provider request, paid API call, target-outcome read, production `.pkl` change, refit, weight/feature/contract change, promotion, bet, schedule change or other-agent setting change. All branches remain subject to HUMAN-MERGE and dependency order.
+
+
+## 2026-11-21 03:12 UTC — restacked timestamp chain and final exact-head validation
+
+### New restack and regression evidence
+
+- #896 was stale/dirty against the current #891 branch. It has been restacked directly on #891 HEAD `3714eadd432d580a2d848c1b35599223dc581ab0`.
+- Current #896 HEAD: `cd2bc9cceeba7a5b69eb3172315e7b5810bc6b85`; GitHub reports 1 ahead / 0 behind and `mergeable=true`.
+- #896 exact-head validation: 4/4 check runs SUCCESS (push + PR, Python 3.11 and 3.12); each Python run reports 72 passed. Compilation and production `.pkl` diff guard passed. The intermediate HEAD `e98dd72a...` failed two forward tests because the synthetic test fixture had not stubbed the newly imported frozen-preview inference guard; that fixture is now explicitly patched, and the expired-fixture and persistence-at-kickoff cases are separate tests.
+- #897 was restacked directly on corrected #896 HEAD `cd2bc9cceeba7a5b69eb3172315e7b5810bc6b85`. Current #897 HEAD: `ea3a9d5bc86294239ed693948044c5b065cbdecd`; GitHub reports 1 ahead / 0 behind and `mergeable=true`.
+- #897 exact-head validation: 4/4 check runs SUCCESS (push + PR, Python 3.11 and 3.12); each Python run reports 76 passed. Compilation and production `.pkl` diff guard passed.
+- The strict reader now selects `created_at`, filters both `snapshot_time_utc` and `created_at` no later than the capture clock, and rejects either timestamp at/after kickoff. The trusted collector regression proves the repository writer drops caller-supplied `created_at` and leaves the Postgres default. The database field remains mutable by service_role; this is not a cryptographic attestation.
+
+### Current-form source-order branch integration warning
+
+- #880 remains the separate source-before-quote fix on the #875 → #876 → #877 line: HEAD `d16fa3c1e9d83b6917c8a46975b18ab238572c2f`, exact run #44852999179 SUCCESS, 43 passed on Python 3.11 and 3.12.
+- #893 remains on the #890 rights line: HEAD `6082fc9f80dff501c220166c5a53abe0b71db13e`, exact run #44856767023 SUCCESS. Its PR body ancestry sentence was corrected to live API base #890 HEAD `48c5ab40a8ad0408f60262fbff46728f5bda4108`.
+- Both #880 and #893 change `serie_a_v2_current_form_forward_capture.py`. Do not merge them independently without choosing a merge order and restacking the later PR onto the earlier one. No branch has been merged.
+
+### Continuity PR exact-head state
+
+- #839 current HEAD is `882bf5052e7ba37e5e7c390abeed0e6c9bd40b09` against main `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- Exact-head checks: 8/8 SUCCESS. Frozen V2 Shadow job #44858904016 reports 88 passed; production `.pkl` diff guard passed.
+- The continuity file remains additive versus main: 6,152 original lines retained in order; current diff reports 173 additions and zero deletions in `PROJECT_CONTINUITY.md`. The PR includes research/audit/test files only; no model artifact or schedule modification.
+
+### Latest pre-match-only evidence remains unchanged
+
+- Supabase SELECT over `public.odds_snapshots`, requiring both `snapshot_time_utc < commence_time_utc` and `created_at < commence_time_utc`: 3,966 total, 3,915 strict pre-match rows, 327 unique events.
+- Strict Serie A: 620 rows / 63 events; latest `2026-10-13T14:48:53.042620Z`.
+- No future strict pre-match odds rows; metadata-only future fixture query on `public.matches` returned no rows.
+- Free-source approvals remain HOLD: Football-Data daily automated AI capture is not cleared; 5Dollar and Big Balls have unresolved Free/Pro/Edge or upstream-rights/timestamp questions; 11footy is CC BY-NC 4.0 and not approved.
+- Separate Supabase security finding: RLS is disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. No policy/DDL change was attempted because DDL is outside scope.
+
+### Original V2 remains frozen and unevaluated
+
+Candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; 3,799 rows; 19 features; 20×2 weights; frozen scaler/imputer; `active_lambda=0`; `shadow_lambda=1`; stability gate FAILED; prospective evaluation gate 0/30. No Brier/LogLoss conclusion and no protected 2026/27 target outcomes read.
+
+No merge, main write, Supabase write/DDL, paid API, source-provider request, model artifact mutation, refit, weight/feature/contract change, promotion, bet, schedule change or other-agent setting change.
