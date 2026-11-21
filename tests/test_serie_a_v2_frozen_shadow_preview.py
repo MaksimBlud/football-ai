@@ -30,7 +30,7 @@ def market(**overrides):
         "league": "SERIE_A", "event_id": "event-serie-a-001",
         "home_team": "Inter", "away_team": "Napoli",
         "commence_time_utc": KICKOFF, "snapshot_time_utc": QUOTE,
-        "created_at": "2026-10-13T13:59:59Z",
+        "created_at": "2026-10-13T14:00:01Z",
         "home_odds": 2.4, "draw_odds": 3.2, "away_odds": 3.0,
     }
     row.update(overrides)
@@ -131,7 +131,7 @@ def test_actual_kickoff_must_be_future():
     report = v2_preview.shadow_preview(
         [market(commence_time_utc=expired_kickoff,
                 snapshot_time_utc="2026-10-12T12:00:00Z",
-                created_at="2026-10-12T11:59:59Z")], [], as_of_utc=NOW
+                created_at="2026-10-12T12:00:01Z")], [], as_of_utc=NOW
     )
     assert report["scored"] == 0
     assert report["blocked"]["EXPIRED_FIXTURE"] == 1
@@ -151,6 +151,15 @@ def test_quote_database_row_must_be_persisted_by_capture_clock():
     with pytest.raises(ValueError, match="persisted after capture clock"):
         v2_preview.shadow_preview(
             [market(created_at=future_created_at)], [features()], as_of_utc=NOW
+        )
+
+
+def test_quote_database_row_must_not_precede_declared_snapshot_observation():
+    with pytest.raises(ValueError, match="persisted before declared snapshot time"):
+        v2_preview.shadow_preview(
+            [market(created_at="2026-10-13T13:59:59Z")],
+            [features()],
+            as_of_utc=NOW,
         )
 
 
@@ -203,9 +212,11 @@ def test_fallback_uses_latest_qualified_observation_only():
 
 def test_read_only_saved_supabase_query_does_not_call_provider():
     class Result:
-        data = [market()]
+        def __init__(self, data):
+            self.data = data
     class Q:
-        def __init__(self):
+        def __init__(self, rows):
+            self.rows = rows
             self.calls = []
         def select(self, v):
             self.calls.append("select")
@@ -224,18 +235,22 @@ def test_read_only_saved_supabase_query_does_not_call_provider():
             return self
         def order(self, *a, **kw): self.calls.append("order");return self
         def limit(self, n): self.calls.append("limit");assert n==1000;return self
-        def execute(self): self.calls.append("execute");return Result()
+        def execute(self): self.calls.append("execute");return Result(self.rows)
     class DB:
-        def __init__(self): self.query=Q()
+        def __init__(self, rows): self.query=Q(rows)
         def table(self, name):
             assert name=="odds_snapshots"
             return self.query
-    db=DB()
+    db=DB([market()])
     assert v2_preview.fetch_saved_upcoming_serie_a_quotes(db,now=NOW)==[market()]
     assert db.query.calls==[
         "select", "eq", "gt", ("lte", "snapshot_time_utc"),
         ("lte", "created_at"), "order", "limit", "execute",
     ]
+
+    invalid_db = DB([market(created_at="2026-10-13T13:59:59Z")])
+    with pytest.raises(ValueError, match="persisted before declared snapshot time"):
+        v2_preview.fetch_saved_upcoming_serie_a_quotes(invalid_db, now=NOW)
 
 
 def test_research_no_promotion_or_outcome_read_source():
