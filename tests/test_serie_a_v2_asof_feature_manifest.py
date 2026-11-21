@@ -964,3 +964,26 @@ def test_5dollar_adapter_rejects_target_identity_when_source_orientation_is_reve
 
     with pytest.raises(ValueError, match="target fixture identity appears as a completed source outcome"):
         build_manifest_from_private_archive(tmp_path, capture, quotes)
+
+
+
+def test_5dollar_current_official_free_plan_evidence_is_clarified_but_stays_hold():
+    import hashlib
+    import json
+    import serie_a_v2_5dollar_source_adapter as adapter
+
+    raw = adapter.DEFAULT_RIGHTS_MANIFEST.read_bytes()
+    rights = json.loads(raw.decode("utf-8"))
+    assert hashlib.sha256(raw).hexdigest() == adapter.DEFAULT_RIGHTS_MANIFEST_SHA256
+    assert rights["free_serie_a_entitlement_conflict"] is False
+    assert rights["free_history_months"] == 3
+    quality = rights["data_quality_last_12_months"]
+    assert quality["finished_matches"] == 380
+    assert quality["corners_pct"] == quality["cards_pct"] == 100
+    assert quality["plan_for_12_month_window"] == "Pro"
+    assert quality["does_not_establish_free_3_month_field_completeness"] is True
+    assert rights["serie_a_current_free_claim"]["authenticated_response_verified"] is False
+    assert rights["approval_status"] == "HOLD"
+    assert rights["upstream_rights_confirmed"] is False
+    assert rights["provider_private_retention_permitted"] is False
+    assert rights["free_serie_a_required_fields_confirmed"] is False
