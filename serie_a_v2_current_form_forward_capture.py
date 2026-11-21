@@ -626,6 +626,50 @@ def prepare_forward_capture(
     }
 
 
+def _empty_forward_report(*, as_of_utc: datetime) -> dict:
+    """Build an outcome-free no-source report without requiring inference access."""
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
+        raise ValueError("empty forward report clock must be timezone-aware")
+    now = as_of_utc.astimezone(timezone.utc)
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "experiment_id": "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY",
+        "mode": "READ_ONLY_PREKICKOFF_SHADOW_NO_BET",
+        "candidate_sha256": FROZEN_SHA,
+        "as_of_utc": now.isoformat(),
+        "quotes_seen": 0,
+        "v2_current_form_shadow_captured": 0,
+        "blocked": {
+            "NO_EARLIER_SOURCE_ARCHIVE": 0,
+            "SOURCE_PARENT_UNVERIFIED": 0,
+            "SOURCE_ARCHIVE_TOO_OLD": 0,
+            "STALE_MARKET_QUOTE": 0,
+            "EXPIRED_FIXTURE": 0,
+            "NO_FEATURES": 0,
+            "ALL_FEATURES_MEDIAN_IMPUTED": 0,
+        },
+        "rows": [],
+        "source_artifacts_used": [],
+        "active_lambda": 0.0,
+        "shadow_residual_lambda": 1.0,
+        "active_model_is_exact_de_vigged_market": True,
+        "target_outcomes_read": False,
+        "target_outcomes_scored": False,
+        "target_outcome_evaluation_gate_open": False,
+        "model_refit_or_selection": False,
+        "production_or_supabase_writes": 0,
+        "paid_provider_calls": 0,
+        "eligible_for_frozen_original_cohort": False,
+        "eligible_for_current_form_forward_shadow": False,
+        "eligible_for_product_publication": False,
+        "no_bet": True,
+    }
+
+
 def main() -> None:
     # Direct CLI calls must not bypass the provider source-capture scope.
     v2_access.require_v2_source_capture_access()
@@ -658,8 +702,9 @@ def main() -> None:
         as_of_utc=now,
         load_archive=load_cached_archive,
         verify_parent_run=verify_parent,
-        write_sources_to=args.sources_output_dir,
+        write_sources_to=None,
     )
+
     def read_saved_quotes() -> list[dict]:
         # Both source provenance and frozen-inference rights are checked before
         # this callback can construct a Supabase client or inspect saved quotes.
@@ -670,18 +715,19 @@ def main() -> None:
         source_verification,
         quote_loader=read_saved_quotes,
     )
-    report = prepare_forward_capture(
-        quotes,
-        archives,
-        as_of_utc=now,
-        load_archive=load_cached_archive,
-        verify_parent_run=verify_parent,
-        write_sources_to=(
-            args.sources_output_dir
-            if quote_read_gate["quote_reader_called"]
-            else None
-        ),
-    )
+    if quote_read_gate["quote_reader_called"]:
+        report = prepare_forward_capture(
+            quotes,
+            archives,
+            as_of_utc=now,
+            load_archive=load_cached_archive,
+            verify_parent_run=verify_parent,
+            write_sources_to=args.sources_output_dir,
+        )
+    else:
+        # A no-source report is metadata-only: do not invoke the inference path
+        # or require inference rights merely to record that quotes were skipped.
+        report = _empty_forward_report(as_of_utc=now)
     report["latest_source_archive_verification"] = source_verification
     report["quote_read_gate"] = quote_read_gate
     args.output.parent.mkdir(parents=True, exist_ok=True)
