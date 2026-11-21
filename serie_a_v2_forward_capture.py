@@ -45,6 +45,15 @@ def require_v2_live_access() -> None:
         )
 
 
+
+
+
+def _require_v2_inference_access() -> dict:
+    """Require explicit provider inference clearance and private artifact storage."""
+    from market_anchor_v2_direct_access import require_v2_inference_access
+    return require_v2_inference_access()
+
+
 def require_private_repository(*, token: str, get=requests.get) -> dict:
     """Fail closed before source/quote access unless this exact repo is private."""
     require_v2_live_access()
@@ -73,6 +82,7 @@ def require_private_repository(*, token: str, get=requests.get) -> dict:
 
 def _github_json(url: str, *, token: str, get=requests.get) -> dict:
     require_v2_live_access()
+    _require_v2_inference_access()
     if not token:
         raise ValueError("GitHub Actions read token missing")
     if not url.startswith(GITHUB_API + "/"):
@@ -141,6 +151,8 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
     from the verified source workflow. A successful parent run must also have
     finished BEFORE the saved bookmaker quote, not only before inspection.
     """
+    require_v2_live_access()
+    _require_v2_inference_access()
     run_id = archive["run_id"]
     if type(run_id) is not int or run_id <= 0:
         raise ValueError("source archive is missing a parent GitHub run")
@@ -167,6 +179,7 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
 
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
     require_v2_live_access()
+    _require_v2_inference_access()
     if not isinstance(artifact_id, int) or artifact_id <= 0:
         raise ValueError("invalid artifact id")
     url = f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip"
@@ -195,6 +208,8 @@ def prepare_forward_capture(
     admission: frozen incumbent, current-season form and outcome gate still
     missing. All resulting original-V2 probabilities are diagnostic only.
     """
+    require_v2_live_access()
+    _require_v2_inference_access()
     if as_of_utc.tzinfo is None:
         raise ValueError("as_of_utc must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
@@ -330,6 +345,7 @@ def capture_forward_with_source_preflight(
     rather than silently falling back to older source bytes.
     """
     require_v2_live_access()
+    _require_v2_inference_access()
     if (
         not isinstance(as_of_utc, datetime)
         or as_of_utc.tzinfo is None
@@ -456,12 +472,18 @@ def main() -> None:
     if os.environ.get("GITHUB_REPOSITORY") != REPOSITORY:
         raise RuntimeError("wrong GitHub repository scope")
     require_v2_live_access()
+    try:
+        _require_v2_inference_access()
+    except PermissionError as exc:
+        from market_anchor_v2_source_rights import write_research_scope_blocked_report
+        report = write_research_scope_blocked_report(
+            args.output, "SERIE_A_ORIGINAL_V2_FORWARD_CAPTURE", str(exc)
+        )
+        print(json.dumps(report, sort_keys=True))
+        return
     token = os.environ.get("GITHUB_TOKEN", "")
     if not token:
         raise RuntimeError("GitHub Actions read token is required after the V2 live-access gate")
-    # Defense in depth: the workflow checks privacy too, but direct CLI use
-    # must not bypass that guard before artifact metadata or quotes are read.
-    require_private_repository(token=token)
     now = datetime.now(timezone.utc)
     archives = discover_archives(token=token)
     raw_cache = {}

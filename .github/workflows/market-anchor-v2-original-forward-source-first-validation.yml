@@ -9,12 +9,6 @@ on:
       - "serie_a_v2_forward_capture.py"
       - "tests/test_serie_a_v2_forward_capture.py"
       - ".github/workflows/market-anchor-v2-original-forward-source-first-validation.yml"
-  pull_request:
-    types: [opened, synchronize, reopened]
-    paths:
-      - "serie_a_v2_forward_capture.py"
-      - "tests/test_serie_a_v2_forward_capture.py"
-      - ".github/workflows/market-anchor-v2-original-forward-source-first-validation.yml"
 
 permissions:
   contents: read
