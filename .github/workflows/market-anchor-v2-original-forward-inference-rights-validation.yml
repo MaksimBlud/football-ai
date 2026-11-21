@@ -5,16 +5,15 @@ on:
     branches:
       - research/v2-original-forward-inference-rights-gate-on-885-20261119-run11
       - research/v2-source-capture-rights-scope-on-887-20261119-run11
+      - research/v2-source-capture-explicit-validity-on-888-20261119-run11
     paths:
       - "serie_a_v2_forward_capture.py"
       - "market_anchor_v2_direct_access.py"
       - "market_anchor_v2_source_rights.py"
       - "market_anchor_v2_source_capture_rights.py"
-      - "market_anchor_v2_source_capture_rights.py"
       - "market_anchor_v2_artifact_privacy.py"
       - "research/source_rights/football_data_co_uk.json"
       - "tests/test_market_anchor_v2_source_rights.py"
-      - "tests/test_market_anchor_v2_source_capture_rights.py"
       - "tests/test_market_anchor_v2_source_capture_rights.py"
       - "tests/test_serie_a_v2_forward_capture.py"
       - "tests/test_serie_a_v2_original_forward_direct_access.py"
@@ -23,6 +22,7 @@ on:
     branches:
       - research/v2-original-forward-private-cli-guard-on-884-20261119-run11
       - research/v2-original-forward-inference-rights-gate-on-885-20261119-run11
+      - research/v2-source-capture-rights-scope-on-887-20261119-run11
     paths:
       - "serie_a_v2_forward_capture.py"
       - "market_anchor_v2_direct_access.py"

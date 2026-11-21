@@ -12,7 +12,15 @@ import market_anchor_v2_source_capture_rights as capture_rights
 NOW = datetime(2026, 11, 19, 22, 0, tzinfo=timezone.utc)
 
 
-def _synthetic_capture_grant(tmp_path, *, page_updated="2026-11-10"):
+def _synthetic_capture_grant(
+    tmp_path,
+    *,
+    page_updated="2026-11-10",
+    evidence_url="https://football-data.co.uk/contact.php",
+    valid_from="2026-11-10T00:00:00Z",
+    valid_until="2026-12-01T00:00:00Z",
+    scope=None,
+):
     evidence = tmp_path / "provider-capture-permission.txt"
     evidence_bytes = b"synthetic provider-issued automated source-capture permission; tests only"
     evidence.write_bytes(evidence_bytes)
@@ -40,14 +48,14 @@ def _synthetic_capture_grant(tmp_path, *, page_updated="2026-11-10"):
             "kind": "written_permission",
             "license_name": "Synthetic capture-only permission",
             "rights_holder": "Football-Data.co.uk",
-            "scope": ["AUTOMATED_SOURCE_CAPTURE", "NONCOMMERCIAL_RESEARCH"],
-            "evidence_url": "https://football-data.co.uk/contact.php",
+            "scope": scope if scope is not None else ["AUTOMATED_SOURCE_CAPTURE", "NONCOMMERCIAL_RESEARCH"],
+            "evidence_url": evidence_url,
             "evidence_file": evidence.name,
             "evidence_sha256": hashlib.sha256(evidence_bytes).hexdigest(),
             "reviewed_by": "synthetic-test-reviewer",
             "reviewed_at_utc": "2026-11-11T12:00:00Z",
-            "valid_from_utc": "2026-11-10T00:00:00Z",
-            "valid_until_utc": "2026-12-01T00:00:00Z",
+            "valid_from_utc": valid_from,
+            "valid_until_utc": valid_until,
         },
     }
     path = tmp_path / "rights.json"
@@ -95,6 +103,44 @@ def test_policy_page_updated_after_review_fails_closed(tmp_path):
         capture_rights.require_personal_research_source_capture_scope(
             path, repo_root=tmp_path, now=NOW
         )
+
+
+@pytest.mark.parametrize("field", ["valid_from_utc", "valid_until_utc"])
+def test_missing_authorization_validity_bound_fails_closed(tmp_path, field):
+    path, _ = _synthetic_capture_grant(tmp_path)
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    del manifest["authorization"][field]
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    with pytest.raises(PermissionError, match="requires both valid_from_utc and valid_until_utc"):
+        capture_rights.require_personal_research_source_capture_scope(path, repo_root=tmp_path, now=NOW)
+
+
+def test_expired_source_capture_grant_fails_closed(tmp_path):
+    path, _ = _synthetic_capture_grant(tmp_path, valid_until="2026-11-18T00:00:00Z")
+    with pytest.raises(PermissionError, match="authorization has expired"):
+        capture_rights.require_personal_research_source_capture_scope(path, repo_root=tmp_path, now=NOW)
+
+
+def test_reversed_source_capture_validity_window_fails_closed(tmp_path):
+    path, _ = _synthetic_capture_grant(
+        tmp_path,
+        valid_from="2026-12-02T00:00:00Z",
+        valid_until="2026-12-01T00:00:00Z",
+    )
+    with pytest.raises(PermissionError, match="validity window is empty or reversed"):
+        capture_rights.require_personal_research_source_capture_scope(path, repo_root=tmp_path, now=NOW)
+
+
+def test_source_capture_evidence_must_be_on_provider_domain(tmp_path):
+    path, _ = _synthetic_capture_grant(tmp_path, evidence_url="https://example.com/provider-permission.pdf")
+    with pytest.raises(PermissionError, match="on the provider domain"):
+        capture_rights.require_personal_research_source_capture_scope(path, repo_root=tmp_path, now=NOW)
+
+
+def test_malformed_authorization_scope_fails_closed_without_type_error(tmp_path):
+    path, _ = _synthetic_capture_grant(tmp_path, scope=[["AUTOMATED_SOURCE_CAPTURE"], "NONCOMMERCIAL_RESEARCH"])
+    with pytest.raises(PermissionError, match="does not cover automated source capture"):
+        capture_rights.require_personal_research_source_capture_scope(path, repo_root=tmp_path, now=NOW)
 
 
 def test_direct_source_capture_checks_rights_before_private_storage(monkeypatch):
