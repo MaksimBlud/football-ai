@@ -14,7 +14,7 @@ on:
       - ".github/workflows/market-anchor-v2-original-diagnostic-direct-access-validation.yml"
   pull_request:
     branches:
-      - research/v2-inference-rights-explicit-validity-on-889-20261119-run11
+      - research/v2-football-data-policy-refresh-on-890-20261121-run11
     paths:
       - "serie_a_v2_live_diagnostic_report.py"
       - "serie_a_v2_frozen_shadow_preview.py"
