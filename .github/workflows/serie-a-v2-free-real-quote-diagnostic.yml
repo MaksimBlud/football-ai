@@ -75,6 +75,7 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_KEY"
