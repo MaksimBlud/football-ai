@@ -136,3 +136,24 @@ def test_target_feature_builder_materializes_targets_only_after_gate():
     assert call_lines["require_v2_source_capture_access"] < call_lines["require_v2_inference_access"]
     assert call_lines["require_v2_inference_access"] < call_lines["download_csv"]
 
+
+
+def test_saved_target_loader_contains_no_embedded_target_records():
+    import ast
+    from pathlib import Path
+
+    source_path = Path(__file__).resolve().parents[1] / "market_anchor_v2_saved_cohort_replay.py"
+    tree = ast.parse(source_path.read_text(encoding="utf-8"))
+    loader = next(
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "_load_saved_targets_after_gate"
+    )
+    assert len(loader.body) == 2
+    call = loader.body[0]
+    assert isinstance(call, ast.Expr)
+    assert isinstance(call.value, ast.Call)
+    assert isinstance(call.value.func, ast.Name)
+    assert call.value.func.id == "_require_post_outcome_replay_gate"
+    assert isinstance(loader.body[1], ast.Raise)
+    assert not any(isinstance(node, (ast.Dict, ast.List, ast.Tuple)) for node in ast.walk(loader))
