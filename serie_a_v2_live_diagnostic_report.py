@@ -22,6 +22,10 @@ from serie_a_v2_asof_feature_manifest import build_manifest
 from serie_a_v2_frozen_shadow_preview import (
     fetch_saved_upcoming_serie_a_quotes, parse_utc, shadow_preview,
 )
+from market_anchor_v2_direct_access import (
+    require_v2_inference_access,
+    require_v2_source_capture_access,
+)
 
 PUBLIC_BASE = "https://www.football-data.co.uk/mmz4281"
 PAID_PROVIDER_REQUESTS = 0
@@ -40,6 +44,7 @@ def _source_codes() -> list[str]:
 
 def fetch_public_history(*, get=requests.get, capture_dir: Path | None = None) -> tuple[pd.DataFrame, list[dict]]:
     """Explicit, bounded configured public URLs; never odds API, never cache guess."""
+    require_v2_source_capture_access()
     all_frames = []
     audit = []
     if capture_dir is not None:
@@ -121,6 +126,7 @@ def _assert_original_v2_source_embargo(history: pd.DataFrame, audit: list[dict],
 
 def make_report(quotes: list[dict], history: pd.DataFrame, source_audit: list[dict], *,
                 as_of_utc: datetime) -> dict:
+    require_v2_inference_access()
     if not source_audit:
         raise ValueError("history provenance required")
     if as_of_utc.tzinfo is None:
@@ -189,6 +195,10 @@ def make_report(quotes: list[dict], history: pd.DataFrame, source_audit: list[di
 
 
 def main() -> None:
+    # Refuse before importing the database client, reading quotes, or fetching
+    # provider history. Capture and inference are independent permissions.
+    require_v2_inference_access()
+    require_v2_source_capture_access()
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--raw-source-dir", type=Path, required=True)
