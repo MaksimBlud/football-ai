@@ -46,7 +46,7 @@ def fixture(event_id, home, away):
         "event_id": event_id, "league": "SERIE_A",
         "home_team": home, "away_team": away,
         "snapshot_time_utc": "2026-10-13T15:00:00Z",
-        "created_at": "2026-10-13T14:59:59Z",
+        "created_at": "2026-10-13T15:00:01Z",
         "commence_time_utc": "2026-10-19T17:00:00Z",
         "home_odds": 2.2, "draw_odds": 3.4, "away_odds": 3.1,
     }

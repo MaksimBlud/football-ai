@@ -50,7 +50,7 @@ def quote(
         "home_team": "Juventus",
         "away_team": "Napoli",
         "snapshot_time_utc": snapshot,
-        "created_at": (datetime.fromisoformat(snapshot.replace("Z", "+00:00")) - timedelta(seconds=1)).isoformat(),
+        "created_at": (datetime.fromisoformat(snapshot.replace("Z", "+00:00")) + timedelta(seconds=1)).isoformat(),
         "commence_time_utc": kickoff,
         "home_odds": 2.2,
         "draw_odds": 3.4,

@@ -50,3 +50,22 @@ This PR does not add DDL, policies, triggers, writes, or any new database access
 No change to the original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19-feature order, 20x2 weights, scaler/imputer, training fingerprint, `active_lambda=0`, `shadow_lambda=1`, NO_BET, stability gate, or 30-primary-completed-event outcome-read gate.
 
 No paid API calls, no Supabase writes/DDL, no production `.pkl` changes, no model refit/promotion, no target-outcome reads, no schedule changes, and no HUMAN-MERGE bypass.
+
+
+## 2026-11-21 extension — persistence must not predate declared observation
+
+A new read-only query was restricted to rows satisfying both strict pre-match conditions:
+`snapshot_time_utc < commence_time_utc` and `created_at < commence_time_utc`.
+For the V2 primary league (Serie A), it returned **620 rows across 63 events**. Among these strict pre-match rows:
+
+- `created_at < snapshot_time_utc`: **0**;
+- persisted at or after declared snapshot: **620**;
+- minimum persistence lag: **0.098635 seconds**;
+- maximum persistence lag: **1.337460 seconds**;
+- latest strict pre-match snapshot: `2026-10-13T14:48:53.042620Z`.
+
+This run selected only pre-match rows and timestamp/league/event fields; no score, result, settlement or target-outcome fields were queried.
+
+The follow-up reader guard in PR #905 requires `created_at >= snapshot_time_utc` for any quote that is not future-dated relative to the capture clock. The same invariant is enforced by both the frozen V2 shadow preview and the saved-quote reader. A future-dated snapshot remains blocked by the existing future-quote/capture-clock rules.
+
+This strengthens the existing source-before-quote chain: an eligible quote row must not claim a snapshot observation later than its database persistence timestamp. It does **not** make `created_at` immutable or independently prove the writer identity; the service-role override limitation documented above remains. The trusted collector payload contract and source archive SHA/parent-workflow attestation remain required.
