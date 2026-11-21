@@ -8321,3 +8321,47 @@ Fresh open-PR metadata and exact-head workflow checks were read after the runtim
 - **#896 strict quote persistence-before-kickoff:** HEAD `7a47d310b2a6fda62267cd63557fb3cdd10d2b03`, base #891 HEAD above; run [#44666194948](https://github.com/MaksimBlud/football-ai/actions/runs/44666194948), 2/2 SUCCESS, 69 tests per Python version.
 
 These are offline safety/rights/timestamp proofs, not source clearance or model-quality evidence. The root #781 workflow hold remains the first manual review; no child may be merged out of dependency order. The stale #885 base is an additional chain blocker. No PR was merged and main remains unchanged.
+
+
+## 2026-11-21 02:14 UTC — post-correction exact-head status and remaining blockers
+
+This section supersedes older PR HEAD references in the checkpoint above.
+
+### Current source policy (both statements, correctly distinguished)
+
+The official fair-data policy page [Football-Data.co.uk contact / fair use](https://football-data.co.uk/contact.php), updated 2026-11-20, limits free CSV/Excel use to private individuals for personal betting and/or academic research, via manual download or at most light automated download **twice per week maximum**. It separately excludes commercial or AI data-training projects using automated bots/scrapers and says permission requests for such use will not receive a response; assume no permission is granted.
+
+The separate data/download page's “at least updated twice weekly” wording is publication cadence, not download permission. The daily main collector is both more frequent than the permitted automated cadence and outside the stated AI/data-training purpose. The hold remains required. The two-session internal cap in #888 aligns with the provider's maximum cadence for otherwise permitted private/academic use; it does not authorize this project.
+
+### Latest open V2 PR HEADs and exact CI
+
+- #781 root live-workflow hold: `3a70a8648895076efec2a80dc10b1798ed0d9261`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, 8/8 exact-head SUCCESS, OPEN/mergeable, not merged.
+- #879 private-artifact gate: `b78010585c80b05ae5fc2a8b3572df14b32d9651`, base #781, 4/4 exact-head SUCCESS.
+- #884 original-forward source-before-quote: current HEAD `c38834ec6c2bd0079afca9e63a9ce75a8cd17043`, base #879. Added a CLI-level tampered-ZIP-SHA test proving no database import, quote reader, report or source directory occurs after digest failure. The dedicated validation workflow is push-only on this stacked branch; the available run-list only returns PR-triggered runs, so no exact-head run is independently visible yet. Prior verified HEAD `1d366777df7cf68f2d4b82975317317d818407e7` had 2/2 SUCCESS (79 tests per Python version). Do not call the new HEAD CI-green until its exact run is visible.
+- #885 original-forward private-repository guard: HEAD `2f0f3f2900e8eb12db284b0bfecd6f0fe0fc097d`, base `ec79bb1d2c227e44450ddeaddfde97ec210dbf52`, while current #884 is `c38834ec6c2bd0079afca9e63a9ce75a8cd17043`. GitHub reports #885 mergeable=false; no exact-head run surfaced. Restack/revalidate before review; downstream #887 remains dependent on it.
+- #887 original-forward inference/private-storage direct guard: `954be44504bfa8c519d3813cbf43ab7c53efcaad`, 2/2 SUCCESS.
+- #888 separate source-capture rights helper: `6cfef9ffe8e13009284a3227775ec5bfcda0b84e`, 4/4 SUCCESS, 36 tests per Python version. Capture permission remains false.
+- #891 original diagnostic direct-access guard: `e0d729d78a24a977f8cf76c04bcee19de4488c22`, 2/2 SUCCESS.
+- #892 unconditional retrospective-replay hold / stronger AI-training rights: `5408e7392b4a73b89b2525735c3cfd17c736e4dc`, 2/2 SUCCESS, 18 outcome-blind/synthetic tests per Python version.
+- #893 current-form direct source/inference guard: `5fd6fe2a8ef131dd166dfcac2785d74fab970a4d`, 2/2 SUCCESS.
+- #896 strict saved-quote persistence-before-kickoff: `7a47d310b2a6fda62267cd63557fb3cdd10d2b03`, 2/2 SUCCESS, 69 tests per Python version.
+- #880 current-form source-verification-before-client/quote: `d16fa3c1e9d83b6917c8a46975b18ab238572c2f`, 2/2 SUCCESS, 43 tests per Python version; CLI invalid-candidate-SHA negative path added.
+- #792 5Dollar source audit: `e48239d0a405a0e98a5dd270f1740deef7b3eb7d`, 6/6 SUCCESS; HOLD.
+- #800 5Dollar offline adapter: `140baffdc9ec55a4fb04de8806d0ee8811686940`, 7/7 SUCCESS, Frozen V2 Shadow 120 passed; no API request; HOLD.
+- #794 Big Balls source audit: `540e87f384a4302adf07882b6f508a0e6a7cbe50`, 6/6 SUCCESS; Free route entitlement is better documented, but upstream rights, field completeness, source timestamps and private retention remain HOLD.
+- This continuity PR #839: current HEAD `5881ecb9d374802bc76de07e14e5ec9834f506f0`, 8/8 SUCCESS; documentation-only. Its La Liga path-filter run is unrelated and is not V2 evidence.
+
+### Supabase security advisory
+
+A fresh schema inventory still flags RLS disabled on five public tables: `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. This is separate from the V2 quote inventory and must be reviewed. No DDL was run; enabling RLS without appropriate policies may break legitimate application access.
+
+Suggested enablement statements only (not executed):
+```sql
+ALTER TABLE public.teams ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.predictions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.match_statistics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.league_prediction_ledger ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.epl_ai_market_pair_ledger ENABLE ROW LEVEL SECURITY;
+```
+
+No merge, main update, Supabase write/DDL, paid API request, target-outcome read, refit, threshold tuning, production artifact change, schedule change or other-agent setting change occurred. HUMAN-MERGE remains mandatory.
