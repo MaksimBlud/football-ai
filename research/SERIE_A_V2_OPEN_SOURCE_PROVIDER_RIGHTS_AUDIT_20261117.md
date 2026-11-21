@@ -95,3 +95,14 @@ The Football-Data.co.uk page says match-statistics compilation uses multiple ups
 
 Official source:
 - Current Football-Data.co.uk data page, updated 2026-11-16: https://www.football-data.co.uk/data.php
+
+
+## 2026-11-21 — separate contact-page frequency check (corrected distinction)
+
+A fresh read of the provider's separate fair-data policy page, https://football-data.co.uk/contact.php (page updated **2026-11-20**), confirms the exact wording: free CSV/Excel use is intended for private individuals for personal betting and/or academic research only, via manual download or at most light automated download **twice per week maximum**. The same paragraph separately excludes commercial or AI data-training projects using automated bots/scrapers and says that permission requests for such usage will not receive a response; assume no permission is granted.
+
+This must be distinguished from the data/download page, https://www.football-data.co.uk/data.php, which says files are published/updated at least twice weekly (Sunday and Wednesday). That is the provider's publication cadence, not the user's download allowance. The two statements are consistent and both apply.
+
+The earlier 2026-11-19 correction in this audit correctly rejected an inference from the data-page publication cadence, but it did not account for the separate contact-page maximum. The correct conclusion is therefore stronger: the current daily automated collector exceeds the stated twice-weekly maximum **and** the project's automated AI/data-training purpose is outside the stated free-use scope. The default-deny hold remains required; no download, API request, source capture, quote access, or Supabase operation is authorized by this correction.
+
+This records the provider's published wording as an engineering eligibility gate, not a legal opinion.
