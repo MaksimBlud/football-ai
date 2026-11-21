@@ -10,8 +10,10 @@ import serie_a_v2_forward_capture as forward_capture
 
 import pytest
 
+import serie_a_v2_frozen_shadow_preview as frozen_preview
 from serie_a_v2_frozen_shadow_preview import parse_utc
 
+import serie_a_v2_live_diagnostic_report as live_diagnostic
 from serie_a_v2_live_diagnostic_report import _source_codes, PUBLIC_BASE
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
 from serie_a_v2_forward_capture import (
@@ -37,6 +39,16 @@ def _allow_synthetic_v2_inference_access(monkeypatch):
         "require_v2_inference_access",
         lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
     )
+    monkeypatch.setattr(
+        live_diagnostic,
+        "require_v2_inference_access",
+        lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(
+        frozen_preview,
+        "require_v2_inference_access",
+        lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
+    )
 AFTER_CAPTURE = datetime(2026, 10, 14, 6, 0, tzinfo=timezone.utc)
 
 
@@ -45,6 +57,7 @@ def quote(ts="2026-10-14T06:00:00Z"):
         "league": "SERIE_A", "event_id": "new-fixture-original-v2",
         "home_team": "Juventus", "away_team": "Napoli",
         "snapshot_time_utc": ts,
+        "created_at": (datetime.fromisoformat(ts.replace("Z", "+00:00")) - timedelta(seconds=1)).isoformat(),
         "commence_time_utc": "2026-10-20T18:00:00Z",
         "home_odds": 1.92, "draw_odds": 3.45, "away_odds": 4.22,
     }
