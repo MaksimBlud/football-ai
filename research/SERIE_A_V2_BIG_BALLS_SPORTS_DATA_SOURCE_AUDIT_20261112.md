@@ -482,14 +482,12 @@ This is a **date/window feasibility estimate only**. It is not an authenticated 
 The original candidate SHA, ordered 19-feature contract, weights, scaler/imputer, training fingerprint, `active_lambda=0`, `shadow_lambda=1`, NO_BET and the 30-primary-completed-forecast outcome gate remain unchanged. No paid API, Supabase write/DDL, target-outcome read, refit, threshold change, production artifact change, schedule change or main update occurred.
 
 
-## 17. Current Football-Data.co.uk rights clarification — 2026-11-21 01:59 UTC
+## 17. Current Football-Data.co.uk rights clarification — 2026-11-21 02:09 UTC
 
-A fresh read of the official Football-Data.co.uk data page (visible update date **2026-11-20**) sharpens the separate rights HOLD for the already-frozen candidate's historical training corpus:
+The official fair-data policy page https://football-data.co.uk/contact.php is visibly updated **2026-11-20**. It states that free CSV/Excel use is intended for private individuals for personal betting and/or academic research only, via manual download or at most light automated download **twice per week maximum**. It separately excludes commercial or AI data-training projects using automated bots/scrapers; requests for permission for such usage will not receive a response, and users should assume no permission is granted.
 
-https://www.football-data.co.uk/data.php
+The separate data/download page's “at least updated twice weekly” wording is a publication cadence, not permission to download more frequently. Both statements can be true: files are refreshed at least twice weekly, while automated downloads for permitted private/academic use are capped at twice weekly. The daily automated collector and the frozen candidate's AI/model-training use remain outside the stated free-use scope.
 
-The page says the free CSV/Excel data is intended for private individuals only and **not** for commercial or data-training products using automated bots/scrapers/AI. It also says the files are “at least updated twice weekly”; that is an update cadence, not a maximum permitted download frequency. Earlier descriptions of a two-downloads-per-week maximum should not be relied upon.
-
-This is distinct from Football-Data.org, the upstream attribution named by Big Balls. Big Balls' terms for its own API responses do not clear the original candidate's Football-Data.co.uk training corpus or the continued use of its learned weights. The provider's current published wording makes this a material rights blocker for the original candidate; obtain written permission or a separately documented rights determination before treating the frozen weights as cleared for continued AI use. This records the provider's published wording, not a legal conclusion.
+This is distinct from Football-Data.org, the upstream attribution named by Big Balls. Big Balls' terms for its own API responses do not clear the original candidate's separate Football-Data.co.uk training corpus or the continued use of its learned weights. Written permission or a separately documented rights determination is required before treating the original frozen weights as cleared for continued AI use. This records provider wording, not a legal conclusion.
 
 No CSV was downloaded or opened, no Big Balls key/request was made, and no source/quote/Supabase data, feature, inference, target outcome, model artifact, or production file was accessed or changed. The original candidate SHA, 19-feature order, weights, scaler/imputer, training fingerprint, `active_lambda=0`, `shadow_lambda=1`, NO_BET and 30-primary-completed-forecast outcome gate remain unchanged.
