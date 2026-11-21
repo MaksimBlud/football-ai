@@ -1,0 +1,92 @@
+name: Original V2 Strict Pre-Match Quote Timestamp Validation
+
+on:
+  push:
+    branches:
+      - research/v2-quote-persistence-timestamp-restacked-on-914-20261121-run11
+    paths:
+      - "serie_a_v2_frozen_shadow_preview.py"
+      - "tests/test_serie_a_v2_frozen_shadow_preview.py"
+      - "tests/test_serie_a_v2_atalanta_alias.py"
+      - "tests/test_serie_a_v2_forward_capture.py"
+      - "tests/test_serie_a_v2_current_form_forward_capture.py"
+      - "tests/test_serie_a_v2_live_diagnostic_report.py"
+      - "tests/test_serie_a_v2_original_diagnostic_direct_access.py"
+      - "tests/test_serie_a_v2_quote_persistence_timestamp_contract.py"
+      - "research/SERIE_A_V2_QUOTE_PERSISTENCE_TIMESTAMP_AUDIT_20261120.md"
+      - ".github/workflows/market-anchor-v2-strict-pre-match-quote-timestamp-validation.yml"
+  pull_request:
+    branches:
+      - research/v2-replay-training-rights-restacked-on-913-20261121-run11
+    paths:
+      - "serie_a_v2_frozen_shadow_preview.py"
+      - "tests/test_serie_a_v2_frozen_shadow_preview.py"
+      - "tests/test_serie_a_v2_atalanta_alias.py"
+      - "tests/test_serie_a_v2_forward_capture.py"
+      - "tests/test_serie_a_v2_current_form_forward_capture.py"
+      - "tests/test_serie_a_v2_live_diagnostic_report.py"
+      - "tests/test_serie_a_v2_original_diagnostic_direct_access.py"
+      - "tests/test_serie_a_v2_quote_persistence_timestamp_contract.py"
+      - "research/SERIE_A_V2_QUOTE_PERSISTENCE_TIMESTAMP_AUDIT_20261120.md"
+      - ".github/workflows/market-anchor-v2-strict-pre-match-quote-timestamp-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: original-v2-strict-prematch-quote-timestamps-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  offline-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    env:
+      PYTHONPATH: .
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - name: Checkout exact research branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install offline regression dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest==9.2.0 numpy pandas scipy scikit-learn requests supabase python-dotenv
+          python -m pip check
+      - name: Compile original V2 quote and forward modules
+        run: |
+          python -m py_compile \
+            serie_a_v2_frozen_shadow_preview.py \
+            serie_a_v2_forward_capture.py \
+            serie_a_v2_current_form_forward_capture.py \
+            serie_a_v2_live_diagnostic_report.py \
+            save_serie_a_odds_snapshot.py
+      - name: Run original V2 strict pre-match regressions
+        run: |
+          python -m pytest -q \
+            tests/test_serie_a_v2_frozen_shadow_preview.py \
+            tests/test_serie_a_v2_atalanta_alias.py \
+            tests/test_serie_a_v2_forward_capture.py \
+            tests/test_serie_a_v2_current_form_forward_capture.py \
+            tests/test_serie_a_v2_live_diagnostic_report.py \
+            tests/test_serie_a_v2_original_diagnostic_direct_access.py \
+            tests/test_serie_a_v2_quote_persistence_timestamp_contract.py
+      - name: Guard production model binaries
+        env:
+          BASE_REF: ${{ github.base_ref || 'research/v2-replay-training-rights-restacked-on-913-20261121-run11' }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+          BASE_COMMIT="$(git merge-base "refs/remotes/origin/${BASE_REF}" HEAD)"
+          git diff --exit-code "$BASE_COMMIT" HEAD -- '*.pkl'

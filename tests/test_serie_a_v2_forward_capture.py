@@ -52,6 +52,7 @@ def quote(ts="2026-10-14T06:00:00Z"):
         "league": "SERIE_A", "event_id": "new-fixture-original-v2",
         "home_team": "Juventus", "away_team": "Napoli",
         "snapshot_time_utc": ts,
+        "created_at": (datetime.fromisoformat(ts.replace("Z", "+00:00")) + timedelta(seconds=1)).isoformat(),
         "commence_time_utc": "2026-10-20T18:00:00Z",
         "home_odds": 1.92, "draw_odds": 3.45, "away_odds": 4.22,
     }
