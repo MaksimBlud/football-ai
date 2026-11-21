@@ -161,6 +161,7 @@ CREDENTIAL_BINDINGS = {
         "Fetch and SHA-archive public source, preview original frozen V2 diagnostics": {
             "SUPABASE_URL": "${{ secrets.SUPABASE_URL }}",
             "SUPABASE_KEY": "${{ secrets.SUPABASE_KEY }}",
+            "GITHUB_TOKEN": "${{ github.token }}",
         },
     },
     ".github/workflows/serie-a-v2-forward-preview.yml": {
@@ -177,6 +178,7 @@ CREDENTIAL_BINDINGS = {
         "Capture frozen historical seasons plus gated current-form source": {
             "SUPABASE_URL": "${{ secrets.SUPABASE_URL }}",
             "SUPABASE_KEY": "${{ secrets.SUPABASE_KEY }}",
+            "GITHUB_TOKEN": "${{ github.token }}",
         },
     },
     ".github/workflows/serie-a-v2-current-form-forward-preview.yml": {
