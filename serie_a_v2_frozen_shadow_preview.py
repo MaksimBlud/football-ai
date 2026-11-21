@@ -138,6 +138,8 @@ def shadow_preview(
         created_at = parse_utc(row["created_at"])
         if created_at > now:
             raise ValueError("market quote row persisted after capture clock")
+        if snapshot <= now and created_at < snapshot:
+            raise ValueError("market quote row persisted before declared snapshot time")
         if not created_at < ident[3]:
             raise ValueError("market quote row persisted at or after kickoff")
         observation_key = (*ident, snapshot)
@@ -278,6 +280,8 @@ def fetch_saved_upcoming_serie_a_quotes(client: Any, *, now: datetime) -> list[d
         kickoff = parse_utc(row["commence_time_utc"])
         snapshot = parse_utc(row["snapshot_time_utc"])
         created_at = parse_utc(row["created_at"])
+        if created_at < snapshot:
+            raise ValueError("saved quote row persisted before declared snapshot time")
         if not as_of < kickoff or snapshot > as_of or created_at > as_of:
             raise ValueError("saved quote was not persisted and observed by the forward capture clock")
         if not snapshot < kickoff or not created_at < kickoff:
