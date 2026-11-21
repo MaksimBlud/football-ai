@@ -1,6 +1,40 @@
 # Football AI — Project Continuity
 
 
+## 2026-11-21 08:17 UTC — Original V2 source-before-quote restack and free-source rights audit
+
+### Fresh main / continuity
+- Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; main `PROJECT_CONTINUITY.md` remains 6,152 lines at blob `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`. This entry is appended only to the open continuity PR #839 branch; no main update or merge occurred.
+- PR #781 remains OPEN / HUMAN-MERGE, exact HEAD `3a70a8648895076efec2a80dc10b1798ed0d9261`, 8/8 exact-head workflows SUCCESS. The default-deny hold is not active on main until owner merge and fresh-main proof.
+- PR #884 remains OPEN; exact HEAD `c38834ec6c2bd0079afca9e63a9ce75a8cd17043`, exact PR workflow SUCCESS, Python 3.11/3.12 each 80 passed. Its old Original Forward source-first fix is not on main.
+- PR #900 remains OPEN / Draft, exact HEAD `d0f66f3495fc94a492a2ac8079c963730cbc2057`; exact PR CI SUCCESS, Python 3.11/3.12 each 18 passed.
+- PR #901 remains OPEN / Draft, exact HEAD `eab0ef1429c604b30e69874a0557c36d0ecabaac`; exact PR CI SUCCESS, Python 3.11/3.12 each 18 passed.
+- PR #902 remains OPEN / Draft, exact HEAD `0ecc8097bc9f34849a5d1f1ecf05966f1a6f619d`; 7/7 exact-head PR workflows SUCCESS; the dedicated original-candidate integrity test reports 11 passed.
+
+### New PR #903 — current-form quote reader now fails closed before any Supabase access
+- PR [#903](https://github.com/MaksimBlud/football-ai/pull/903) is OPEN / Draft / unmerged / mergeable, based on exact PR #900 HEAD `d0f66f3495fc94a492a2ac8079c963730cbc2057`; exact head `16b50f2c70e0477fdcbb23faad5e639da3533652`; compare 13 ahead / 0 behind, four files changed.
+- Restacks the existing source-before-quote fix from #880 onto #900. It requires exact frozen candidate SHA, source artifact ID/SHA, authenticated parent-run identity, exact source workflow path and strict parent/source/verification time ordering before any quote reader can run.
+- Source-capture rights are checked before inspecting the attestation; inference rights are checked before the lazy quote callback. Supabase URL/key are resolved only inside that callback, after both gates.
+- If no verified source exists, it emits an outcome-free metadata-only skip report with zero quotes, no inference, no Supabase credentials/client and no copied source artifact. If a source exists but inference rights are unresolved, it fails before secret lookup or client creation.
+- Exact push [#44883790037](https://github.com/MaksimBlud/football-ai/actions/runs/44883790037) and PR [#44883795454](https://github.com/MaksimBlud/football-ai/actions/runs/44883795454) both SUCCESS on exact head: Python 3.11 and 3.12 each **28 passed**, compile and production `.pkl` guard PASS.
+- #903 is a parallel child of #900, not a child of #901. If #901 is merged first, #903 must be restacked before integration. A comment on #880 says not to merge #880 independently; #903 is the current restack.
+- No live source, quote, Supabase, or target-outcome access was performed by #903 CI. No model inference or production changes.
+
+### New source audit — Soccer Data Free API (HOLD)
+- Updated source-rights audit PR [#868](https://github.com/MaksimBlud/football-ai/pull/868), exact HEAD `f90379ad5e222d318cdb1fa13ac569252126d4b4`, 6/6 exact-head PR workflows SUCCESS; one documentation file changed.
+- Official terms/pricing/docs show Free has 50 requests/day, current-season-only stats, no odds; stats endpoint exposes corners/cards/shots on target but field coverage varies and is per match. Terms permit storage only while account/plan is active and prohibit raw data redistribution; they do not expressly grant AI/ML training or long-term research-archive rights and do not identify upstream field-level rights. Finished-match list returns score fields in the same response and documents no field projection; no historical-stat update timestamp is documented. Candidate remains **HOLD**, no API key/account/request.
+- Football-Data, OpenLigaDB and open-matchday remain HOLD for the reasons recorded in #868. No new free source is approved for original V2 capture.
+
+### Read-only Supabase pre-match status
+- Aggregate SELECT on `public.odds_snapshots`, restricted to `snapshot_time_utc < commence_time_utc` and `created_at < commence_time_utc`, returned **3,915** strict pre-kickoff rows across **327** events; Serie A **620** rows / **63** events. Latest strict Serie A snapshot remains `2026-10-13T14:48:53.042620Z`.
+- A separate future-only aggregate with the same strict timestamp conditions returned **0** future rows / **0** events. No new eligible quote exists for a source-before-quote forecast pair.
+- No score/result/settlement fields or protected target outcomes were selected. `created_at` remains mutable by service_role and is not cryptographic proof.
+
+### Frozen model and binding gates
+- Candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; training fingerprint `f27ab985ae90bb8e94bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098` (as recorded in the existing candidate audit); 3,799 training rows; 19 frozen features; 20×2 weights; original scaler/imputer; `active_lambda=0`; `shadow_lambda=1`; stability FAILED; independent prospective evaluation **0/30**.
+- No Brier/LogLoss comparison or V2-over-market claim is supported.
+- No main update or merge; Supabase writes/DDL=0; paid API requests=0; target outcomes read/scored=0; production `.pkl` unchanged; no schedules or other agents changed. HUMAN-MERGE remains mandatory.
+
 ## 2026-10-18 — Original V2: preregistered current-form forward-only source and quote pipeline (runtime proof pending)
 
 PRs #668 and #669 are now merged to main: exact original feature-builder parity is pinned to `historical_football_signal_lab.py` Git blob `401b3a0893371bfa4a488ec92a4a54af2678c8f7`, and the original lambda-1 shadow vector is pinned to an exact 1e-12 reference; stale SHA weight tampering fails closed. Latest main before this new branch: `a3db1325f9ad29d2cbf412e0f8e1d7a43642acbf`.
