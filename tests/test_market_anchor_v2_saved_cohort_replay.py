@@ -149,11 +149,14 @@ def test_saved_target_loader_contains_no_embedded_target_records():
         if isinstance(node, ast.FunctionDef)
         and node.name == "_load_saved_targets_after_gate"
     )
-    assert len(loader.body) == 2
-    call = loader.body[0]
+    assert len(loader.body) == 3
+    assert isinstance(loader.body[0], ast.Expr)
+    assert isinstance(loader.body[0].value, ast.Constant)
+    assert isinstance(loader.body[0].value.value, str)
+    call = loader.body[1]
     assert isinstance(call, ast.Expr)
     assert isinstance(call.value, ast.Call)
     assert isinstance(call.value.func, ast.Name)
     assert call.value.func.id == "_require_post_outcome_replay_gate"
-    assert isinstance(loader.body[1], ast.Raise)
+    assert isinstance(loader.body[2], ast.Raise)
     assert not any(isinstance(node, (ast.Dict, ast.List, ast.Tuple)) for node in ast.walk(loader))
