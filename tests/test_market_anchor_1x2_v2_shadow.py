@@ -199,7 +199,7 @@ def test_saved_frozen_candidate_matches_original_artifact():
     candidate_path = ROOT / "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
     raw = candidate_path.read_bytes()
     git_blob_sha1 = hashlib.sha1(
-        f"blob {len(raw)}\\0".encode("ascii") + raw
+        f"blob {len(raw)}\0".encode("ascii") + raw
     ).hexdigest()
     assert git_blob_sha1 == "ac1303f6b096664983fbf52443bd0a381b23ba21"
 
