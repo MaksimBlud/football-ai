@@ -8,6 +8,8 @@ import sys
 import pandas as pd
 import pytest
 
+from market_anchor_1x2_v2_shadow import FIRST_OUTCOME_READ_GATE, outcome_read_permitted
+
 import market_anchor_v2_artifact_privacy as artifact_privacy
 import market_anchor_v2_direct_access as direct_access
 import serie_a_v2_current_form_source_capture as source_capture
