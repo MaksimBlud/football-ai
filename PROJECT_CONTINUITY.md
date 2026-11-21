@@ -6268,3 +6268,57 @@ The source rights gate also remains independent from the frozen training corpus.
 ### Continuity PR validation state
 
 This PR's PROJECT_CONTINUITY.md is now exact current-main content plus additive checkpoints; current main lines are preserved byte-for-byte and the diff contains no deletions in PROJECT_CONTINUITY.md. The latest documentation HEAD is 4f31ffc26cceeef49af211bfa2e61a1a0cee365e; its new exact-head CI is pending and must be rechecked before this documentation PR is presented as green.
+
+
+## 2026-11-21 02:48 UTC — fresh V2-only main, CI and pre-match data revalidation
+
+### Immutable main baseline and source-order defects
+
+- Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; current-main `PROJECT_CONTINUITY.md` blob is `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b` (6,152 lines).
+- Main `serie_a_v2_forward_capture.py` blob `5db02cbd1367ed25b994b152acf371421859a014`: its CLI imports the database client and reads saved quotes before `discover_archives()`. This is still a real source-before-quote defect on main; #884 is the isolated correction.
+- Main `serie_a_v2_current_form_forward_capture.py` blob `326ac1921ce901a31aa6d73e6cbddb0782071964`: it verifies the latest source archive, then unconditionally creates the Supabase client and reads saved quotes even when verification returned `NO_SOURCE_ARCHIVE`. #880 contains the lazy quote-read correction.
+- The current main workflows still contain their live steps. The free diagnostic workflow blob is `60bd304153e5c731ff6246c76fe2f3ace1bc0dcb`; the current-form forward workflow blob is `6ebbcaff290a78e9ccffa4ac9a09bc0982eaff35`. The default-deny #781 hold is not in main.
+
+### Current exact-head PR state — commit-bound Actions reads
+
+- #781 root live-workflow hold: base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`, HEAD `3a70a8648895076efec2a80dc10b1798ed0d9261`, OPEN / Ready for review, 8/8 exact-head checks SUCCESS. HUMAN-MERGE only.
+- #879 private artifact/repository gate: HEAD `b78010585c80b05ae5fc2a8b3572df14b32d9651`; dedicated run #44433687358 SUCCESS.
+- #884 original-forward source-before-quote CLI: HEAD `c38834ec6c2bd0079afca9e63a9ce75a8cd17043`; exact-commit run #44854473405 SUCCESS.
+- #885 private-repository CLI guard: HEAD `a1d065f1c3a03895bbef5b72e5bf664cdd68f33f`; run #44855586194 SUCCESS.
+- Restacked rights descendants are now all green on their current exact commits: #887 `a24ddc440e5eae36edc120e53c7f63d59c754475` / run #44856571059; #888 `2fe841747355c4909c551a17d9df372b3b1bae2a` / #44856603410; #889 `2948deab0a1f651b4f2331a739a2c80af65d0c8c` / #44856627660; #890 `48c5ab40a8ad0408f60262fbff46728f5bda4108` / #44856649953; #891 `3714eadd432d580a2d848c1b35599223dc581ab0` / #44856698681; #892 `7501c4cd2f38a55462b0564590ee2109280d2e99` / #44856732341; #893 `6082fc9f80dff501c220166c5a53abe0b71db13e` / #44856767023. Each named dedicated workflow completed SUCCESS on the commit passed to the run lookup.
+- #880 current-form no-quote-without-verified-source: HEAD `d16fa3c1e9d83b6917c8a46975b18ab238572c2f`, base #877 HEAD `245c20b1acc398c5c8bad8541282378b66902cf3`, exact run #44852999179 SUCCESS; Python 3.11 and 3.12 each report 43 passed. Its branch is the #875 → #876 → #877 line. #893 is a separate descendant of #890 and also changes the same current-form forward file. Do not integrate both branches independently without a deliberate restack/ancestry reconciliation.
+- #893's live PR API base SHA is #890 HEAD `48c5ab40a8ad0408f60262fbff46728f5bda4108`; its PR body still contains an older parent SHA `aade422896d32e38f1a1afb5dde7e1bae5351399`. Refresh that stale body sentence before merge review.
+- #895 raw-socket/remote-transfer workflow-hold scanner: HEAD `9431c13c3696d063f1c7ba0989bbfb87656639af`, run #44723931083 SUCCESS, based on #781.
+- #896 strict saved-quote persistence: HEAD `7a47d310b2a6fda62267cd63557fb3cdd10d2b03`, run #44666194948 SUCCESS, but GitHub currently reports mergeable=false. #897 is its child, HEAD `9915b039621ac5317feae7f449c493a344fe45f4`, run #44671316543 SUCCESS. Do not merge #897 ahead of #896.
+- #839 documentation/source-audit PR: exact HEAD `e461a3ea3af4686c660df144e3e40fe5459c3daa`, 8/8 exact-head Actions workflows SUCCESS. The Frozen V2 Shadow job log for run #44856827814 explicitly reports 88 passed and the production `.pkl` diff guard passed.
+
+### Free-source research status
+
+- #792 5DollarFootballAPI official audit HEAD `e48239d0a405a0e98a5dd270f1740deef7b3eb7d`: 6/6 exact-head workflows SUCCESS. The provider's fixture example does not contain per-fixture `league_season_id`; the schema correction is recorded. Provider remains HOLD due Free-vs-Pro Serie A conflict, unresolved upstream rights/private retention and no upstream observation timestamp.
+- #800 offline 5Dollar adapter HEAD `140baffdc9ec55a4fb04de8806d0ee8811686940`: 7/7 exact-head workflows SUCCESS; Frozen V2 Shadow suite 120 passed. It has no network client and makes no request. It is not source approval.
+- #794 Big Balls audit HEAD `4328d066fc76d55848b6903438c6da733b3faef8`: 6/6 exact-head workflows SUCCESS. HOLD remains: plan matrix conflicts with the Free OpenAPI route, upstream attribution points to Football-Data, and there is no per-match upstream first-observed timestamp.
+- #886 11footy remains HOLD: CC BY-NC 4.0, upstream source rights unresolved and no per-match first-observed timestamp; no exact-head Actions run was returned for its current commit.
+- Football-Data's current free-use wording does not authorize the existing daily automated AI source/training pattern. No provider is approved for capture or inference.
+
+### Supabase — SELECT only, pre-match fields only
+
+A new aggregate queried only `public.odds_snapshots`, requiring BOTH `snapshot_time_utc < commence_time_utc` and `created_at < commence_time_utc`:
+
+- 3,966 total rows; 3,915 strict pre-match rows; 327 unique events.
+- Strict pre-match Serie A rows: 620; unique events: 63; latest snapshot `2026-10-13T14:48:53.042620Z`.
+- No future strict pre-match odds rows were returned.
+- A separate metadata-only query of `public.matches` selected only league/date/home/away fixture fields for dates from current_date onward and returned no future fixture rows.
+- The mutable `created_at` field is not a cryptographic attestation; the source ZIP SHA and authenticated parent-workflow completion must remain part of the proof.
+
+No scores, outcomes, settlements or protected target fields were queried.
+
+### Frozen original candidate and scientific gate
+
+- Candidate SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; 3,799 training rows.
+- Exact original 19-feature order, 20×2 weights, scaler and imputer remain frozen.
+- `active_lambda=0` remains the market; `shadow_lambda=1` remains research-only; stability gate FAILED; prospective outcome-read gate remains 0/30.
+- The 110 completed-event feature-input identity count is not the separate 30-prospective-forecast evaluation gate. No Brier/LogLoss claim is available and no protected 2026/27 target outcome was read.
+
+### Non-actions
+
+No merge, main update, Supabase write/DDL, provider request, paid API call, target-outcome read, production `.pkl` change, refit, weight/feature/contract change, promotion, bet, schedule change or other-agent setting change. All branches remain subject to HUMAN-MERGE and dependency order.
