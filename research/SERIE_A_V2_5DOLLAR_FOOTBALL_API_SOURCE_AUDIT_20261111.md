@@ -209,3 +209,33 @@ Before any live capture, require written provider confirmation of all three:
 If these points are confirmed, the existing offline adapter can be evaluated for prospective 2026/27 collection only. It must store raw bytes, local capture time, response SHA, provider/endpoint/plan metadata and page completeness; then enforce source capture < quote snapshot < kickoff. No paid upgrade, no odds endpoint use, no backfilled historical inference and no production writes.
 
 No API calls, credentials, Supabase operations, protected outcome reads, model inference or production changes were made during this audit.
+
+
+## Official endpoint-schema re-check — 2026-11-21 UTC
+
+The current official [League fixtures endpoint documentation](https://5dollarfootballapi.com/docs/league-fixtures) now provides a sufficiently explicit *request-level* season contract for the offline adapter:
+
+- `GET /v1/leagues/{id}/fixtures` is described as the bulk entry point for a league's fixtures/results; it supports a `season` parameter, described as the season listed for the league (examples `2026` or `26/27`) and says this parameter selects that season's kickoff window.
+- The endpoint supports pagination, with `per_page` up to 100, and no 24-hour span cap for the league-specific route.
+- Its published fixture example includes `id`, `league.id`, `kickoff_utc`, `status`, `status_reason`, `status_code`, `goals`, `corners`, and `cards.home/away.yellow/red`.
+- The published fixture example does **not** document a per-fixture `league_season_id`. The season is instead pinned by the request URL's `season` parameter. A client must not require an undocumented field when the published response schema does not promise it.
+
+The generic [List fixtures documentation](https://5dollarfootballapi.com/docs/fixtures) independently states that Free history is limited to three months and its response example also shows the exact raw families needed by the frozen 19 features: goals, corners, yellow cards and red cards. The original candidate's 19 features use points derived from goals plus goals-for/against, corners-for/against, yellow cards and red cards (5/10-match and venue-5 windows); they do not require shots, possession or xG. This improves the *documented schema-family fit*, but does not establish authenticated Free-plan completeness or source parity.
+
+The dedicated [Serie A page](https://5dollarfootballapi.com/serie-a-api) continues to claim Free access and shows 2026/27 round-11 results and upcoming fixtures dated 21–22 November 2026. This remains a provider-published claim, not an authenticated Free-key response. The measured data-quality page's Pro label and the missing upstream-rights/retention details remain unresolved.
+
+### Adapter consequence
+
+The offline-only [PR #800](https://github.com/MaksimBlud/football-ai/pull/800) was updated on 2026-11-21 to:
+- require the exact Serie A league-fixtures endpoint and `season=2026` in every captured page URL;
+- stop requiring undocumented `league_season_id` in each fixture or capture manifest;
+- retain an optional fixture/manifest season-id cross-check if both values are supplied;
+- use synthetic fixtures matching the published response shape, without a per-fixture season id.
+
+This is a schema-compatibility correction only. It does not activate the source, weaken any rights gate, or change the original V2 feature/model contract.
+
+### Disposition unchanged
+
+**HOLD — no account, key, API request, odds request, data download, Supabase operation, source archive, feature calculation, inference, or target-outcome read.** Before any use, written confirmation is still required for actual Free-plan Serie A access and completeness, upstream rights for internal model use, and private raw-response retention. The provider's published terms permit model/internal use and caching, but do not identify the upstream rights chain or a durable private-retention term. Local receipt time and raw-byte SHA can prove what this collector received before a later quote; they cannot substitute for a provider-guaranteed upstream observation timestamp.
+
+The existing adapter remains offline-only and the original `active_lambda=0`, `shadow_lambda=1`, 19 features, weights, scaler/imputer and evaluation gate remain unchanged.
