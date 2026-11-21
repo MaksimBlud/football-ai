@@ -6,6 +6,7 @@ on:
       - research/v2-original-forward-inference-rights-gate-on-885-20261119-run11
       - research/v2-source-capture-rights-scope-on-887-20261119-run11
       - research/v2-source-capture-explicit-validity-on-888-20261119-run11
+      - research/v2-inference-rights-explicit-validity-on-889-20261119-run11
     paths:
       - "serie_a_v2_forward_capture.py"
       - "market_anchor_v2_direct_access.py"
@@ -23,6 +24,7 @@ on:
       - research/v2-original-forward-private-cli-guard-on-884-20261119-run11
       - research/v2-original-forward-inference-rights-gate-on-885-20261119-run11
       - research/v2-source-capture-rights-scope-on-887-20261119-run11
+      - research/v2-source-capture-explicit-validity-on-888-20261119-run11
     paths:
       - "serie_a_v2_forward_capture.py"
       - "market_anchor_v2_direct_access.py"
