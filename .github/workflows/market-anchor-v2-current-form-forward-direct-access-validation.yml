@@ -3,7 +3,6 @@ name: Original V2 Current-Form Forward Direct-Access Rights Validation
 on:
   push:
     branches:
-      - research/v2-replay-training-rights-restacked-on-900-20261121-run11
       - research/v2-current-form-no-quote-without-verified-source-restacked-on-900-20261121-run11
     paths:
       - "serie_a_v2_current_form_forward_capture.py"
