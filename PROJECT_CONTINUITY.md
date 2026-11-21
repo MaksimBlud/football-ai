@@ -8365,3 +8365,42 @@ ALTER TABLE public.epl_ai_market_pair_ledger ENABLE ROW LEVEL SECURITY;
 ```
 
 No merge, main update, Supabase write/DDL, paid API request, target-outcome read, refit, threshold tuning, production artifact change, schedule change or other-agent setting change occurred. HUMAN-MERGE remains mandatory.
+
+
+## 2026-11-21 02:24 UTC — fresh main/runtime, Supabase and source-policy correction
+
+### Main and real scheduled workflow evidence
+
+Fresh main remains 40887ebb215730190d7a6c7a1693373ec4afcdfc. No merge or main update occurred.
+
+- Original V2 Forward run [44777970547](https://github.com/MaksimBlud/football-ai/actions/runs/44777970547), scheduled on that exact main: SUCCESS; **71 tests passed**. The real source attestation verified 10 historical CSVs / 3,800 historical matches and the frozen candidate SHA. The forward report states quotes_seen=0, future_quotes_checked=0, v2_diagnostic_previews_captured=0, eligible_for_frozen_prospective_cohort=false, paid_provider_calls=0, supabase_writes=0. Artifact 14650229424, SHA-256 6a0c0a0a6c210462cf3f48290eadeb24c3d6a1418973d9e093ca45adaba0eec2.
+- Current-Form Source Capture run [44753230529](https://github.com/MaksimBlud/football-ai/actions/runs/44753230529): SUCCESS; **19 tests passed**. It archived 10 old-season CSVs plus current-season 2026/27 CSV, 3,910 match rows in total, and 110 completed fixture identities for the feature-input gate. The report explicitly says target_outcomes_scored=false. Artifact 14636526350, SHA-256 2237cc30b84b2e982586ce7ef44b3ab4887c286e5f3320b8f9579cdc8e9dbca8.
+- Current-Form Forward run [44778623731](https://github.com/MaksimBlud/football-ai/actions/runs/44778623731): SUCCESS; **53 tests passed**. It independently verified the source artifact ID, SHA, parent workflow ID/head SHA and completion timestamp. The source archive was 9,169 seconds old at verification, inside the frozen 24-hour source-age rule. It still reports quotes_seen=0, v2_current_form_shadow_captured=0, target_outcomes_read=false, target_outcomes_scored=false, and zero writes/provider calls. Artifact 14650324439, SHA-256 62a1b4cc86a0a70e7b89da63e58391ec4d4e383c7c3720f69397dccc98a122ee.
+
+The 110-event feature-input gate is not the separate 30-prospective-forecast evaluation gate. Evaluation remains CLOSED at 0/30.
+
+### Fresh read-only Supabase pre-match aggregate
+
+Read only public.odds_snapshots columns and pre-kickoff aggregate fields; no scores, results, settlements, or target outcomes were queried. At 2026-11-21 02:16 UTC:
+
+- 3,966 total odds rows.
+- 3,915 rows have both snapshot_time_utc < commence_time_utc and created_at < commence_time_utc.
+- 327 unique events in that strict subset.
+- **0** strict pre-kickoff rows for future events.
+- Latest eligible Serie A snapshot: 2026-10-13T14:48:53.042620Z; corresponding row creation time 2026-10-13T14:48:53.157404Z.
+
+The created_at filter is not immutable proof: service-role INSERT/UPDATE privileges remain. Keep the trusted-writer/SHA/parent-run chain; do not overstate database timestamps.
+
+### Exact-head PR corrections and validation
+
+- Root live-access hold #781 remains OPEN / Ready for review on main base 40887ebb215730190d7a6c7a1693373ec4afcdfc, HEAD 3a70a8648895076efec2a80dc10b1798ed0d9261, 8/8 exact-head checks SUCCESS. It is not merged. Main is still public and daily source/forward workflows remain active until the owner manually merges the hold; no new capture is authorized by this audit.
+- Original-forward source-before-quote #884 current HEAD c38834ec6c2bd0079afca9e63a9ce75a8cd17043, base #879 HEAD b78010585c80b05ae5fc2a8b3572df14b32d9651. Exact push and PR checks: 4/4 SUCCESS; Python 3.11 and 3.12 each **80 passed**; production .pkl diff guard passed. The new CLI tampered-ZIP SHA path fails before database import, saved-quote access, report creation or source publication.
+- Private-repository CLI child #885 was restacked after #884 advanced. Its base is now the exact #884 HEAD above; current child HEAD a1d065f1c3a03895bbef5b72e5bf664cdd68f33f, one commit ahead / zero behind, mergeable. The first exact-head attempt exposed two existing synthetic CLI tests that called the new privacy preflight without stubbing it (HTTP 401); those fixtures were corrected. **New exact-head CI is still running; do not claim it green until both Python jobs pass.**
+- Open-source source audit #868 was corrected to distinguish the two official Football-Data pages. The contact/fair-use page, updated 2026-11-20, explicitly limits otherwise permitted light automated downloads to **twice per week maximum** and separately excludes commercial or AI data-training projects using automated bots/scrapers. The data page's “updated at least twice weekly” is only publication cadence. Updated audit HEAD 2daefda90169f260ef99b0b2a58e34e505c0e4c3; exact PR CI **6/6 SUCCESS**. This reinforces HOLD; it does not authorize the existing daily AI data capture.
+- Lega Serie A official reports (#883) remain HOLD pending express written consent; 11footy (#886) remains HOLD due CC BY-NC 4.0, unresolved upstream rights and stale release. No source candidate was connected or downloaded.
+
+### Frozen model and non-actions
+
+Original candidate SHA a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6; training fingerprint f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098; 3,799 training rows; original 19-feature order and 20×2 weights; frozen scaler/imputer; active_lambda=0, shadow_lambda=1. Stability gate FAILED; prospective evaluation gate CLOSED 0/30. No Brier/LogLoss superiority claim.
+
+No merge, main update, Supabase write/DDL, paid request, protected target-outcome read, model refit, threshold tuning, production artifact change, schedule change or other-agent setting change occurred. HUMAN-MERGE remains mandatory.
