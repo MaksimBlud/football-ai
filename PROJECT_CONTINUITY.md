@@ -6414,3 +6414,54 @@ No merge, main update, Supabase write/DDL, paid API request, target-outcome read
 - Exact PR run [44861467621](https://github.com/MaksimBlud/football-ai/actions/runs/44861467621) SUCCESS; Python 3.11 and 3.12 each report **19 passed**; production `.pkl` diff guard passed in both jobs. Exact matching push run [44861463277](https://github.com/MaksimBlud/football-ai/actions/runs/44861463277) also SUCCESS.
 - This final HEAD supersedes the earlier #898 HEAD `dd96b6bb9ed628ec5d85814ee779fb90d12c9c86` recorded in the preceding checkpoint. No merge was performed; #898 remains Draft/HUMAN-MERGE and its parent chain remains unmerged.
 - The documentation PR #839 itself is now at HEAD `43ca64a7a2744112d9dbaae0e448bd957b1f732e`; its exact eight workflows all completed SUCCESS (8/8). The current-main 6,152-line continuity file remains an exact prefix; this branch adds only checkpoint text.
+
+
+## 2026-11-21 03:56 UTC — rights-gated source capture, token binding, and fresh runtime audit
+
+### Fresh main and continuity
+
+- Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no merge or main write occurred in this iteration.
+- This update is appended to the existing PR #839 continuity branch; it does not rewrite prior history.
+- Original candidate remains SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`, 3,799 training rows, 19 features, 20x2 weights. `active_lambda=0`, `shadow_lambda=1`; stability FAILED and evaluation gate CLOSED at 0/30. The 110 feature-input identities do not open the separate evaluation gate.
+
+### New PR #899 — step-scoped rights token
+
+- PR [#899](https://github.com/MaksimBlud/football-ai/pull/899), HEAD `90cc6d93b283ea4411ab6331021c6db396c2525f`, is stacked on #898 HEAD `ea97737d02cdbf4952ab94bfb8e7436b7a4f5828`.
+- Finding: the rights-gated original free diagnostic calls the source-capture and inference/private-storage checks before Supabase import or public CSV fetch, but its workflow did not pass `GITHUB_TOKEN` to the live step. The privacy check therefore could not authenticate repository visibility. Current-form source capture also now requires the token, so the static contract test was updated for both paths.
+- Fix: `GITHUB_TOKEN` is step-scoped only to the already private-storage-gated free-diagnostic live step; the workflow-level live flag remains literal `false`. No schedule or trigger changed.
+- Exact PR workflow run [44863575065](https://github.com/MaksimBlud/football-ai/actions/runs/44863575065): SUCCESS, Python 3.11 and 3.12; **72 tests passed on each**, compile and `.pkl` diff guard passed.
+- No live workflow was dispatched. Public repository visibility still causes the private-storage preflight to hold; no source, quote, or Supabase access was enabled.
+
+### Related exact-head CI
+
+- #898 HEAD `ea97737d02cdbf4952ab94bfb8e7436b7a4f5828`: 2/2 matrix jobs SUCCESS, 19 tests passed on each Python 3.11/3.12.
+- #896 HEAD `cd2bc9cceeba7a5b69eb3172315e7b5810bc6b85`: 2/2 SUCCESS, 72 tests passed on each; strict `snapshot_time_utc` and `created_at` pre-kickoff filtering added to the research reader.
+- #897 HEAD `ea3a9d5bc86294239ed693948044c5b065cbdecd`: 2/2 SUCCESS, 76 tests passed on each; pins the repository Serie A writer to omit caller-supplied `created_at`, leaving new-row timestamp generation to the database default. This does not make the database column immutable: service_role can still override it.
+- #884 source-before-quote isolated validation: exact-head PR run SUCCESS.
+- #781 root default-deny hold: 8/8 required workflows SUCCESS, OPEN / Ready for review, not merged. HUMAN-MERGE remains mandatory.
+
+### Actual main workflow runs — 2026-11-20
+
+All three runs below are on main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc` and completed SUCCESS:
+
+- Original Forward [44777970547](https://github.com/MaksimBlud/football-ai/actions/runs/44777970547): 71 tests passed; source ZIP SHA verified; 10 historical CSVs / 3,800 historical matches; quotes_seen=0, future_quotes_checked=0, diagnostic previews=0, target outcomes not read, paid calls=0, Supabase writes=0.
+- Current-Form Source Capture [44753230529](https://github.com/MaksimBlud/football-ai/actions/runs/44753230529): 19 tests passed; 110 completed fixture identities passed the input gate; 10 old-season files plus current-season file (11 total), 3,910 historical/current rows in the archive; 0 paid calls and 0 Supabase writes. The 110 input identities are not the evaluation gate.
+- Current-Form Forward [44778623731](https://github.com/MaksimBlud/football-ai/actions/runs/44778623731): 53 tests passed; source artifact 14636526350 SHA-256 `2237cc30b84b2e982586ce7ef44b3ab4887c286e5f3320b8f9579cdc8e9dbca8` and parent run/head/completion verified; source age 9,169 seconds. quotes_seen=0, shadow forecasts=0, target_outcomes_read=false, target_outcomes_scored=false, paid calls=0, Supabase writes=0.
+
+**Critical main-branch gap:** these live steps are still present on main because #781 has not been manually merged. Its default-deny change preserves schedules but gates source downloads, quote reads, and artifact publication. Do not enable live access by changing the flag; provider source rights remain unresolved and this repository is public.
+
+### Supabase — read-only odds fields only
+
+Fresh SELECT against `public.odds_snapshots` used only `league,event_id,snapshot_time_utc,commence_time_utc,created_at`:
+
+- Total rows: 3,966.
+- Strict pre-kickoff rows requiring both timestamps before kickoff: 3,915.
+- Unique events in that strict subset: 327.
+- Future strict pre-kickoff rows/events: 0/0.
+- Serie A strict pre-kickoff rows: 620; latest snapshot `2026-10-13T14:48:53.042620Z`; latest row `created_at` `2026-10-13T14:48:53.157404Z`.
+
+No scores, results, settlements, or protected evaluation outcomes were queried. `created_at` is mutable by service_role and is not cryptographic proof; retain the source archive SHA, authenticated parent workflow completion, and strict quote-time evidence.
+
+### Binding next step
+
+Owner manually reviews/merges #781 first. Then re-read fresh main and integrate the rights-gated ancestry in dependency order. Keep #899 stacked on #898. Do not merge any child independently, do not make Supabase writes/DDL, do not use paid APIs, and do not claim V2 superiority before the separate frozen 30-forecast evaluation gate and Brier/LogLoss comparison.
