@@ -439,3 +439,44 @@ Therefore Big Balls' own internal-model grant is positive evidence, but it does 
 5. separate rights clearance for the original candidate's historical Football-Data.co.uk training corpus and the continued use of its learned weights.
 
 No API key, request, data download, quote read, Supabase read/write/DDL, inference, target-outcome read, model refit, threshold change, production artifact change, schedule change or main update was performed. The frozen candidate, 19-feature order, weights, scaler/imputer, training fingerprint, `active_lambda=0` and `shadow_lambda=1` remain unchanged.
+
+
+## 16. Official plan-entitlement and current-season feasibility recheck — 2026-11-21 01:49 UTC
+
+This recheck used only public Big Balls documentation, changelog, OpenAPI/coverage pages, the public Football-Data.org terms, and the published Serie A calendar/table. No account/key was created; no authenticated API request, match-stat payload, odds, source archive, Supabase object, feature build, inference, or target outcome was accessed.
+
+### The Free route entitlement is now more strongly supported
+
+The provider's official changelog dated **2026-11-11** states that `GET /v1/matches/:id/statistics` is available on the Free plan and that the earlier Solo classification on seven league data rows was incorrect; `expected_goals` remains Solo+. The current OpenAPI and generated league-endpoint registry also classify the route as Free, while the route schema exposes factual team-stat fields including `corner_kicks`, `yellow_cards`, and `red_cards`.
+
+This supersedes the earlier conclusion that route entitlement itself was wholly unresolved. The older Serie A marketing matrix still labels a combined “advanced match statistics” row Edge, and the public Free-history wording is inconsistent between the homepage/pricing and soccer/Serie A pages. The current evidence therefore supports **Free access to non-xG match statistics at the route level**, but it does not prove the actual entitlement of a particular account or the completeness of the required Serie A rows. Do not use a paid tier.
+
+Official references:
+- Changelog, 2026-11-11: https://bigballsdata.com/whats-new
+- OpenAPI: https://bigballsdata.com/openapi.json
+- Generated league endpoint registry: https://bigballsdata.com/league-endpoints.json
+- Serie A page: https://bigballsdata.com/serie-a-api
+- Pricing: https://bigballsdata.com/pricing
+- Soccer API page: https://bigballsdata.com/soccer-api
+
+### Current-season history window is plausible, not yet measured
+
+The official Lega calendar places the 2026/27 opening round on **22–24 August 2026**. The public Big Balls Serie A page checked on **2026-11-21** shows round 11, with all 20 clubs at 11 matches played and latest completed fixtures on 7–8 November. This implies **110 completed fixtures** through that round (20 clubs × 11 appearances ÷ 2).
+
+The Free history is described as current-season on the soccer page and current + most-recent season on the general pricing page; the dedicated Serie A page has also shown a stale 2025/26 panel. If the Free match-list route returns all 110 2026/27 fixtures with the required statistics, the documented 100-row page limit means at most two pages are needed. The original last-10 and venue-last-5 rolling windows would then be long enough in principle.
+
+This is a **date/window feasibility estimate only**. It is not an authenticated Free-key response, does not establish that every match has a statistics row, and does not establish non-null corners/cards for every required fixture.
+
+### Remaining blockers — HOLD is unchanged
+
+1. **Upstream rights / field lineage:** Big Balls' licence notice attributes football data to Football-Data.org API, but the public response's source label is opaque and does not map each required field to a vendor/licence. Football-Data.org's public Terms remain dated 2018-06-01 and require one application, fair use and attribution, but do not expressly document the same internal-model/storage grant. Obtain written field-level confirmation that the upstream rights cover Serie A corners/yellow/red cards and internal-model use.
+2. **Measured completeness:** the public coverage page (last endpoint refresh 2026-11-06) labels soccer team statistics Partial and does not provide a 2026/27 per-fixture completeness matrix for corners/yellow/red cards. The Serie A aggregate team-stat percentage is not a current-season field-level denominator.
+3. **Upstream observation/correction time:** the statistics response has no per-match/per-field upstream observation, revision or correction timestamp. A local capture timestamp + exact raw-response SHA can prove when our immutable copy existed, not when the upstream first observed or corrected each field. Any future cohort must preserve exact response bytes, response/manifest SHA-256, UTC capture time and authenticated parent-run completion, with strict `source_capture_completed_at < quote_time < kickoff`; corrections must create a new immutable version.
+4. **Private retention:** the repository is public. Raw responses and manifests must not be committed or uploaded as public GitHub Actions artifacts. A verified private retention destination is not yet approved/implemented.
+5. **Original candidate training provenance:** Big Balls' terms do not clear the frozen candidate's separate Football-Data.co.uk training corpus or the continued use of its learned weights. That remains an independent rights HOLD.
+
+### Decision
+
+**`CONDITIONAL_CANDIDATE_NOT_APPROVED` / HOLD.** The 2026-11-11 changelog materially improves the Free-tier entitlement evidence, and the current-season window is nominally sufficient by date. Neither finding authorizes an account/key, request, download, source capture, feature construction or inference. Written upstream rights, measured per-match completeness, private retention, source-time semantics, and separate original-training-corpus rights remain unresolved.
+
+The original candidate SHA, ordered 19-feature contract, weights, scaler/imputer, training fingerprint, `active_lambda=0`, `shadow_lambda=1`, NO_BET and the 30-primary-completed-forecast outcome gate remain unchanged. No paid API, Supabase write/DDL, target-outcome read, refit, threshold change, production artifact change, schedule change or main update occurred.
