@@ -11,6 +11,15 @@ import market_anchor_1x2_v2_shadow as v2
 import serie_a_v2_frozen_shadow_preview as v2_preview
 
 NOW = datetime(2026, 10, 13, 15, 0, tzinfo=timezone.utc)
+
+
+@pytest.fixture(autouse=True)
+def _allow_synthetic_inference_for_offline_tests(monkeypatch):
+    monkeypatch.setattr(
+        v2_preview,
+        "require_v2_inference_access",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
 KICKOFF = "2026-10-19T19:00:00Z"
 QUOTE = "2026-10-13T14:00:00+00:00"
 CUTOFF = "2026-10-13T13:00:00Z"
