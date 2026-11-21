@@ -443,3 +443,65 @@ def test_unverified_parent_cannot_admit_quote():
     assert report["v2_current_form_shadow_captured"] == 0
     assert report["blocked"]["SOURCE_PARENT_UNVERIFIED"] == 1
     assert report["rows"][0]["status"] == "SOURCE_PARENT_UNVERIFIED"
+
+
+def test_real_main_rejects_discovered_archive_with_wrong_candidate_before_client_or_quote_read(
+    monkeypatch, tmp_path
+):
+    import sys
+    import serie_a_v2_current_form_forward_capture as module
+
+    raw, _archives = make_archive()
+    invalid_source = _verified_source_report(raw)
+    invalid_source["candidate_sha256"] = "0" * 64
+    events = []
+
+    monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
+    monkeypatch.setenv("GITHUB_REF", "refs/heads/main")
+    monkeypatch.setenv("GITHUB_TOKEN", "offline-test-token")
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_KEY", "offline-test-key")
+    monkeypatch.setattr(
+        module,
+        "discover_archives",
+        lambda **_kwargs: events.append("discover") or [],
+    )
+    monkeypatch.setattr(
+        module,
+        "verify_latest_source_archive",
+        lambda *_args, **_kwargs: events.append("verify") or invalid_source,
+    )
+
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("invalid source provenance must prevent client and quote access")
+
+    monkeypatch.setattr(module, "create_client", forbidden)
+    monkeypatch.setattr(module, "fetch_saved_upcoming_serie_a_quotes", forbidden)
+    monkeypatch.setattr(module, "get_archive", forbidden)
+    output = tmp_path / "forward.json"
+    sources = tmp_path / "sources"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "serie_a_v2_current_form_forward_capture.py",
+            "--output",
+            str(output),
+            "--sources-output-dir",
+            str(sources),
+        ],
+    )
+
+    module.main()
+
+    assert events == ["discover", "verify"]
+    report = json.loads(output.read_text(encoding="utf-8"))
+    assert report["quotes_seen"] == 0
+    assert report["v2_current_form_shadow_captured"] == 0
+    assert report["quote_read_gate"] == {
+        "status": "SKIPPED_NO_VERIFIED_SOURCE_ARCHIVE",
+        "quote_reader_called": False,
+    }
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
+    assert not sources.exists()
