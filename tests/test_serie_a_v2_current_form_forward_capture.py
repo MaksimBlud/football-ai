@@ -267,7 +267,7 @@ def _verified_source_report(raw, *, fresh_for_new_quote=True):
         "artifact_sha256": hashlib.sha256(raw).hexdigest(),
         "source_archive_created_at_utc": ARCHIVE_DECLARED,
         "latest_source_observed_at_utc": SOURCE_OBSERVED,
-        "source_age_seconds_at_verification": 23 * 60 * 60,
+        "source_age_seconds_at_verification": 23 * 60 * 60 + 15 * 60,
         "fresh_for_new_quote": fresh_for_new_quote,
         "candidate_sha256": FROZEN_SHA,
         "parent_run": {
@@ -330,9 +330,59 @@ def test_quote_reader_requires_parent_completion_before_source_verification():
     assert gate["quote_reader_called"] is False
 
 
-def test_quote_reader_runs_only_after_verified_source_even_if_source_is_stale_now():
+def test_quote_reader_skips_stale_source_before_inference_rights_or_loader():
     raw, _archives = make_archive()
     source = _verified_source_report(raw, fresh_for_new_quote=False)
+    source["latest_source_observed_at_utc"] = "2026-10-18T05:39:59+00:00"
+    source["source_age_seconds_at_verification"] = 24 * 60 * 60 + 1
+    calls = []
+    quotes, gate = read_quotes_after_verified_source(
+        source,
+        quote_loader=lambda: calls.append("called") or [quote()],
+    )
+    assert quotes == []
+    assert calls == []
+    assert gate["status"] == "SKIPPED_STALE_SOURCE_ARCHIVE"
+    assert gate["quote_reader_called"] is False
+    assert gate["source_age_seconds_at_verification"] == 24 * 60 * 60 + 1
+
+
+def test_quote_reader_recomputes_source_age_instead_of_trusting_freshness_flag():
+    raw, _archives = make_archive()
+    source = _verified_source_report(raw, fresh_for_new_quote=True)
+    source["latest_source_observed_at_utc"] = "2026-10-18T05:39:59+00:00"
+    source["source_age_seconds_at_verification"] = 24 * 60 * 60 + 1
+    calls = []
+    quotes, gate = read_quotes_after_verified_source(
+        source,
+        quote_loader=lambda: calls.append("called") or [quote()],
+    )
+    assert quotes == []
+    assert calls == []
+    assert gate["status"] == "SKIPPED_STALE_SOURCE_ARCHIVE"
+    assert gate["quote_reader_called"] is False
+
+
+def test_quote_reader_rejects_inconsistent_reported_source_age():
+    raw, _archives = make_archive()
+    source = _verified_source_report(raw, fresh_for_new_quote=True)
+    source["source_age_seconds_at_verification"] += 1
+    calls = []
+    quotes, gate = read_quotes_after_verified_source(
+        source,
+        quote_loader=lambda: calls.append("called") or [quote()],
+    )
+    assert quotes == []
+    assert calls == []
+    assert gate["status"] == "SKIPPED_STALE_SOURCE_ARCHIVE"
+    assert gate["quote_reader_called"] is False
+
+
+def test_quote_reader_accepts_source_at_exact_24_hour_freshness_boundary():
+    raw, _archives = make_archive()
+    source = _verified_source_report(raw, fresh_for_new_quote=True)
+    source["latest_source_observed_at_utc"] = "2026-10-18T05:40:00+00:00"
+    source["source_age_seconds_at_verification"] = 24 * 60 * 60
     calls = []
     quotes, gate = read_quotes_after_verified_source(
         source,
@@ -340,11 +390,9 @@ def test_quote_reader_runs_only_after_verified_source_even_if_source_is_stale_no
     )
     assert quotes == [quote()]
     assert calls == ["called"]
-    assert gate["status"] == "READ_AFTER_VERIFIED_SOURCE_ARCHIVE"
+    assert gate["status"] == "READ_AFTER_VERIFIED_FRESH_SOURCE_ARCHIVE"
     assert gate["quote_reader_called"] is True
-    assert gate["source_artifact_id"] == 9876
-    assert gate["source_artifact_sha256"] == hashlib.sha256(raw).hexdigest()
-    assert gate["source_parent_run_id"] == 123
+    assert gate["source_age_seconds_at_verification"] == 24 * 60 * 60
 
 
 def test_main_never_creates_supabase_client_when_no_source_archive_exists(monkeypatch, tmp_path):
