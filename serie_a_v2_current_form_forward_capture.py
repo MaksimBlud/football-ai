@@ -17,6 +17,8 @@ import re
 from typing import Any, Mapping
 import zipfile
 
+import market_anchor_v2_direct_access as v2_access
+
 import pandas as pd
 import requests
 from supabase import create_client
@@ -46,6 +48,7 @@ OLD_CUTOFF = pd.Timestamp("2026-07-01")
 
 
 def _github_json(url: str, *, token: str, get=requests.get) -> dict:
+    v2_access.require_v2_source_capture_access()
     if not token:
         raise ValueError("GitHub Actions actions:read token missing")
     if not url.startswith(GITHUB_API + "/"):
@@ -63,6 +66,7 @@ def _github_json(url: str, *, token: str, get=requests.get) -> dict:
 
 
 def discover_archives(*, token: str, get=requests.get) -> list[dict]:
+    v2_access.require_v2_source_capture_access()
     out, seen_ids = [], set()
     for page in range(1, 4):
         data = _github_json(
@@ -101,6 +105,7 @@ def discover_archives(*, token: str, get=requests.get) -> list[dict]:
 def verify_source_run(
     archive: Mapping[str, Any], *, quote_time: datetime, token: str, get=requests.get
 ) -> dict:
+    v2_access.require_v2_source_capture_access()
     run_id = archive.get("run_id")
     if type(run_id) is not int or run_id <= 0:
         raise ValueError("source artifact lacks parent workflow run")
@@ -127,6 +132,7 @@ def verify_source_run(
 
 
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
+    v2_access.require_v2_source_capture_access()
     if type(artifact_id) is not int or artifact_id <= 0:
         raise ValueError("invalid source artifact id")
     response = get(
@@ -148,6 +154,7 @@ def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
 def verify_and_load_archive(
     raw: bytes, archive: Mapping[str, Any], parent: Mapping[str, Any]
 ) -> tuple[pd.DataFrame, dict]:
+    v2_access.require_v2_source_capture_access()
     if not raw or len(raw) > MAX_ARCHIVE_BYTES:
         raise ValueError("current-form source archive is empty or too large")
     digest = hashlib.sha256(raw).hexdigest()
@@ -279,6 +286,7 @@ def verify_latest_source_archive(
     write_sources_to: Path | None = None,
 ) -> dict:
     """Verify the latest successful main source artifact even when all quotes are stale."""
+    v2_access.require_v2_source_capture_access()
     if as_of_utc.tzinfo is None:
         raise ValueError("source verification clock must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
@@ -336,6 +344,7 @@ def verify_latest_source_archive(
 
 
 def _latest_quotes(quotes: list[dict], *, now: datetime) -> list[dict]:
+    v2_access.require_v2_inference_access()
     latest = {}
     seen = set()
     for q in quotes:
@@ -370,6 +379,10 @@ def prepare_forward_capture(
     verify_parent_run,
     write_sources_to: Path | None = None,
 ) -> dict:
+    # Source and inference are separate permissions; both are required before
+    # quote/feature inputs are inspected or any preview is constructed.
+    v2_access.require_v2_source_capture_access()
+    v2_access.require_v2_inference_access()
     if as_of_utc.tzinfo is None:
         raise ValueError("current-form forward clock must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
@@ -545,6 +558,8 @@ def prepare_forward_capture(
 
 
 def main() -> None:
+    # Direct CLI calls must not bypass the provider source-capture scope.
+    v2_access.require_v2_source_capture_access()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--sources-output-dir", type=Path, required=True)
@@ -576,6 +591,9 @@ def main() -> None:
         verify_parent_run=verify_parent,
         write_sources_to=args.sources_output_dir,
     )
+    # Frozen inference permission is checked after source provenance, but before
+    # Supabase client creation or any saved-quote read.
+    v2_access.require_v2_inference_access()
     client = create_client(url, key)
     quotes = fetch_saved_upcoming_serie_a_quotes(client, now=now)
     report = prepare_forward_capture(
