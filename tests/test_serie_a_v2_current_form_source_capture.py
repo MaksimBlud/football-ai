@@ -371,3 +371,43 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert report["target_outcome_evaluation_gate"]["outcome_gate_open"] is False
     assert report["paid_provider_calls"] == report["supabase_writes"] == 0
     assert report["model_refit_or_promotion"] is False
+
+
+def test_source_capture_workflow_is_default_deny_and_preserves_existing_schedule():
+    """The scheduled workflow may run tests, but cannot fetch or publish source by default."""
+    workflow_path = (
+        Path(__file__).resolve().parents[1]
+        / ".github"
+        / "workflows"
+        / "serie-a-v2-current-form-source-capture.yml"
+    )
+    workflow = workflow_path.read_text(encoding="utf-8")
+
+    # Preserve the existing schedule; this regression does not authorize or alter it.
+    assert 'cron: "50 5 * * *"' in workflow
+    assert "  workflow_dispatch:" in workflow
+    assert 'MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED: "false"' in workflow
+
+    private_check = workflow.split("- name: Verify private repository storage before live V2 access", 1)[1]
+    capture_step = workflow.split(
+        "- name: Capture frozen historical seasons plus gated current-form source", 1
+    )[1].split("- name: Archive source bytes and gate manifest for future quotes only", 1)[0]
+    upload_step = workflow.split(
+        "- name: Archive source bytes and gate manifest for future quotes only", 1
+    )[1]
+
+    assert "if: ${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}" in private_check
+    assert (
+        "if: ${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' "
+        "&& steps.private-storage.outputs.is_private == 'true' }}"
+    ) in capture_step
+    assert "SUPABASE_URL: ${{ secrets.SUPABASE_URL }}" in capture_step
+    assert "SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}" in capture_step
+    assert (
+        "if: ${{ success() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' "
+        "&& steps.private-storage.outputs.is_private == 'true' }}"
+    ) in upload_step
+
+    job_header = workflow.split("  capture-current-form:", 1)[1].split("    steps:", 1)[0]
+    assert "SUPABASE_URL" not in job_header
+    assert "SUPABASE_KEY" not in job_header
