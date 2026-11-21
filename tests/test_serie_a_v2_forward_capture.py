@@ -433,6 +433,11 @@ def test_original_forward_cli_default_denies_before_archive_discovery_or_databas
     monkeypatch.setenv("GITHUB_TOKEN", "synthetic-token")
     monkeypatch.setattr(
         forward_module,
+        "require_private_repository",
+        lambda *, token: {"repository": "MaksimBlud/football-ai", "private": True},
+    )
+    monkeypatch.setattr(
+        forward_module,
         "discover_archives",
         lambda **_kwargs: events.append("archive_discovery") or [],
     )
@@ -486,6 +491,11 @@ def test_original_forward_cli_verifies_parent_and_zip_before_lazy_database_impor
     monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
     monkeypatch.setenv("GITHUB_TOKEN", "synthetic-token")
+    monkeypatch.setattr(
+        forward_module,
+        "require_private_repository",
+        lambda *, token: {"repository": "MaksimBlud/football-ai", "private": True},
+    )
     monkeypatch.setattr(forward_module, "datetime", FrozenNow)
 
     def discover_archives(*, token):
@@ -582,6 +592,11 @@ def test_original_forward_cli_invalid_archive_sha_blocks_database_import_and_quo
     monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
     monkeypatch.setenv("GITHUB_TOKEN", "synthetic-token")
+    monkeypatch.setattr(
+        forward_module,
+        "require_private_repository",
+        lambda *, token: {"repository": "MaksimBlud/football-ai", "private": True},
+    )
     monkeypatch.setattr(forward_module, "datetime", FrozenNow)
 
     def discover_archives(*, token):
