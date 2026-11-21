@@ -158,7 +158,7 @@ def require_personal_research_inference_scope(
 ) -> dict:
     """Require the project's conservative clearance for frozen V2 inference.
 
-    The official data page was updated 2026-11-10 and now describes the free data as
+    The official data page was updated 2026-11-20 and now describes the free data as
     intended for private individuals only, excluding commercial or data-training
     products using automated bots, scrapers, or AI. The project therefore keeps
     automated source capture and frozen-model inference fail-closed pending

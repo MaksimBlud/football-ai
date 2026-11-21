@@ -9,13 +9,13 @@ import market_anchor_v2_artifact_privacy as privacy
 import market_anchor_v2_direct_access as direct_access
 import market_anchor_v2_source_capture_rights as capture_rights
 
-NOW = datetime(2026, 11, 19, 22, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 11, 21, 12, 0, tzinfo=timezone.utc)
 
 
 def _synthetic_capture_grant(
     tmp_path,
     *,
-    page_updated="2026-11-10",
+    page_updated="2026-11-20",
     evidence_url="https://football-data.co.uk/contact.php",
     valid_from="2026-11-10T00:00:00Z",
     valid_until="2026-12-01T00:00:00Z",
@@ -41,7 +41,7 @@ def _synthetic_capture_grant(
         "max_automated_download_sessions_per_week": 2,
         "download_budget_policy": "TWO_AUTOMATED_SESSIONS_PER_ROLLING_7_DAYS",
         "policy_url": "https://football-data.co.uk/data",
-        "policy_checked_at_utc": "2026-11-10T11:57:30Z",
+        "policy_checked_at_utc": "2026-11-21T11:52:37Z",
         "policy_page_updated_date": page_updated,
         "authorization": {
             "provider_issued": True,
@@ -64,6 +64,13 @@ def _synthetic_capture_grant(
 
 
 def test_current_provider_manifest_keeps_automated_capture_closed():
+    manifest = json.loads(capture_rights.DEFAULT_RIGHTS_MANIFEST_PATH.read_text(encoding="utf-8"))
+    assert manifest["policy_page_updated_date"] == "2026-11-20"
+    assert manifest["policy_checked_at_utc"] == "2026-11-21T11:52:37Z"
+    assert manifest["research_source_capture_permitted"] is False
+    assert manifest["research_inference_permitted"] is False
+    assert manifest["ai_model_training_permitted"] is False
+    assert manifest["authorization"] is None
     with pytest.raises(PermissionError, match="automated source capture is not permitted"):
         capture_rights.require_personal_research_source_capture_scope(now=NOW)
 
@@ -98,7 +105,7 @@ def test_tampered_capture_permission_evidence_fails_sha_check(tmp_path):
 
 
 def test_policy_page_updated_after_review_fails_closed(tmp_path):
-    path, _ = _synthetic_capture_grant(tmp_path, page_updated="2026-11-20")
+    path, _ = _synthetic_capture_grant(tmp_path, page_updated="2026-11-22")
     with pytest.raises(PermissionError, match="later than policy review"):
         capture_rights.require_personal_research_source_capture_scope(
             path, repo_root=tmp_path, now=NOW
