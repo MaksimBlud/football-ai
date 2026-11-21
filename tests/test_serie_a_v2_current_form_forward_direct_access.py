@@ -169,13 +169,11 @@ def test_cli_inference_rights_gate_runs_before_supabase_client_creation(monkeypa
     monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
     monkeypatch.setenv("GITHUB_REF", "refs/heads/main")
     monkeypatch.setenv("GITHUB_TOKEN", "synthetic-test-token")
-    monkeypatch.setenv("SUPABASE_URL", "https://example.invalid")
-    monkeypatch.setenv("SUPABASE_KEY", "synthetic-test-key")
     monkeypatch.setattr(forward, "discover_archives", lambda **_kwargs: [])
     monkeypatch.setattr(
         forward,
         "verify_latest_source_archive",
-        lambda *_args, **_kwargs: {"status": "NO_SOURCE_ARCHIVE", "verified": False},
+        lambda *_args, **_kwargs: _verified_source_mapping(),
     )
     monkeypatch.setattr(
         forward,
@@ -185,3 +183,61 @@ def test_cli_inference_rights_gate_runs_before_supabase_client_creation(monkeypa
 
     with pytest.raises(PermissionError, match="frozen-inference scope unresolved"):
         forward.main()
+
+def _verified_source_mapping():
+    return {
+        "status": "VERIFIED",
+        "verified": True,
+        "verified_at_utc": "2026-11-20T00:00:00Z",
+        "artifact_id": 123,
+        "artifact_sha256": "a" * 64,
+        "source_archive_created_at_utc": "2026-11-19T23:40:00Z",
+        "latest_source_observed_at_utc": "2026-11-19T23:30:00Z",
+        "candidate_sha256": forward.FROZEN_SHA,
+        "parent_run": {
+            "run_id": 456,
+            "run_head_sha": "b" * 40,
+            "workflow_path": forward.SOURCE_WORKFLOW_PATH,
+            "run_created_at_utc": "2026-11-19T23:35:00Z",
+            "run_completed_at_utc": "2026-11-19T23:50:00Z",
+        },
+    }
+
+
+def test_quote_reader_direct_entrypoint_requires_source_rights_before_mapping_access(monkeypatch):
+    monkeypatch.setattr(forward.v2_access, "require_v2_source_capture_access", _deny_source)
+    with pytest.raises(PermissionError, match="source-capture scope unresolved"):
+        forward.read_quotes_after_verified_source(
+            _Poison(),
+            quote_loader=_forbidden,
+        )
+
+
+def test_quote_reader_direct_entrypoint_requires_inference_rights_before_quote_loader(monkeypatch):
+    monkeypatch.setattr(
+        forward.v2_access,
+        "require_v2_source_capture_access",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(forward.v2_access, "require_v2_inference_access", _deny_inference)
+    with pytest.raises(PermissionError, match="frozen-inference scope unresolved"):
+        forward.read_quotes_after_verified_source(
+            _verified_source_mapping(),
+            quote_loader=_forbidden,
+        )
+
+
+def test_quote_reader_skips_without_source_without_requesting_inference_rights(monkeypatch):
+    monkeypatch.setattr(
+        forward.v2_access,
+        "require_v2_source_capture_access",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(forward.v2_access, "require_v2_inference_access", _deny_inference)
+    quotes, gate = forward.read_quotes_after_verified_source(
+        {"status": "NO_SOURCE_ARCHIVE", "verified": False},
+        quote_loader=_forbidden,
+    )
+    assert quotes == []
+    assert gate["quote_reader_called"] is False
+
