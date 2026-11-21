@@ -8,7 +8,6 @@ on:
       - research/v2-source-capture-explicit-validity-on-888-20261119-run11
       - research/v2-inference-rights-explicit-validity-on-889-20261119-run11
       - research/v2-football-data-policy-refresh-on-890-20261121-run11
-      - research/v2-football-data-policy-refresh-on-890-20261121-run11
       - research/v2-global-football-data-lake-rights-audit-on-906-20261121-run11
     paths:
       - "serie_a_v2_forward_capture.py"
@@ -33,6 +32,7 @@ on:
       - research/v2-source-capture-rights-scope-on-887-20261119-run11
       - research/v2-source-capture-explicit-validity-on-888-20261119-run11
       - research/v2-inference-rights-explicit-validity-on-889-20261119-run11
+      - research/v2-football-data-policy-refresh-on-890-20261121-run11
     paths:
       - "serie_a_v2_forward_capture.py"
       - "market_anchor_v2_direct_access.py"
@@ -40,6 +40,9 @@ on:
       - "market_anchor_v2_source_capture_rights.py"
       - "market_anchor_v2_artifact_privacy.py"
       - "research/source_rights/football_data_co_uk.json"
+      - "research/source_rights/global_football_data_lake.json"
+      - "research/GLOBAL_FOOTBALL_DATA_LAKE_SOURCE_RIGHTS_AUDIT_20261121.md"
+      - "tests/test_global_football_data_lake_rights_hold.py"
       - "research/SERIE_A_V2_SOURCE_POLICY_RECHECK_20261121.md"
       - "tests/test_market_anchor_v2_source_rights.py"
       - "tests/test_market_anchor_v2_source_capture_rights.py"
