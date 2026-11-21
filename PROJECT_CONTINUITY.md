@@ -6228,3 +6228,17 @@ Football-Data.co.uk's current free-use scope does not clear the daily automated 
 Next sequence: owner manually merges #781; reread fresh main; then resolve #879 private retention, #884 source-before-quote and #885 private-repository checks in dependency order; obtain written source rights/plan confirmation; only then consider a private raw source archive with exact bytes, SHA, receipt timestamp and parent completion strictly before each saved quote. No new quote provider is admitted: the frozen V2 quote contract remains the existing saved Serie A 1X2 observations. After eligible source and quote capture, calculate the unchanged 19 features; only after 30 eligible prospective forecasts may the protected target-outcome gate open for independent Brier/LogLoss diagnostics against de-vigged market and frozen incumbent.
 
 No merge, main update, Supabase write/DDL, paid API request, target-outcome read, production artifact change, model refit, threshold tuning, auto-promotion, bet or schedule/other-agent setting change occurred.
+
+
+## 2026-11-21 02:40 UTC — descendant PR ancestry after #885 restack
+
+#885 was restacked and its exact new HEAD is green, but its descendants have not yet been restacked. Do not merge any descendant from this old stack until the chain is rebuilt and exact-head CI is rerun:
+
+- #885 current HEAD a1d065f1c3a03895bbef5b72e5bf664cdd68f33f, parent #884 current HEAD c38834ec6c2bd0079afca9e63a9ce75a8cd17043; 4/4 exact-head checks SUCCESS (84 passed on Python 3.11 and 3.12).
+- #887 still records old base 24b0928ad3d73f9a2e4f91f1948e6521d7c41de8 rather than #885 current HEAD. Its own HEAD 954be44504bfa8c519d3813cbf43ab7c53efcaad has 4/4 successful checks on the old ancestry.
+- #888 still bases on old #887 HEAD 954be44504bfa8c519d3813cbf43ab7c53efcaad; its own HEAD 6cfef9ffe8e13009284a3227775ec5bfcda0b84e has 4/4 successful checks on that old ancestry.
+- #889 still bases on old #888 HEAD 6cfef9ffe8e13009284a3227775ec5bfcda0b84e; its own HEAD 7d95be58d40ee0d851fbef042b098b749aa13384 has 4/4 successful checks on that old ancestry.
+- #890 still bases on old #889 HEAD 7d95be58d40ee0d851fbef042b098b749aa13384; its own HEAD aade422896d32e38f1a1afb5dde7e1bae5351399 has 4/4 successful checks on that old ancestry.
+- #891, #892 and #893 each still base on old #890 HEAD aade422896d32e38f1a1afb5dde7e1bae5351399; their recorded heads e0d729d78a24a977f8cf76c04bcee19de4488c22, 5408e7392b4a73b89b2525735c3cfd17c736e4dc and 5fd6fe2a8ef131dd166dfcac2785d74fab970a4d respectively each have 4/4 successful checks on the old ancestry.
+
+These checks are real exact-head results for those historical commits, but they are not evidence that the current #885→#887→#888→#889→#890→(#891/#892/#893) stack is integrated. Rebase/restack sequentially, preserve all source-rights gates, then rerun exact-head CI at every child. No descendant merge is authorized by this checkpoint.
