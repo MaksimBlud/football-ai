@@ -491,3 +491,38 @@ The separate data/download page's “at least updated twice weekly” wording is
 This is distinct from Football-Data.org, the upstream attribution named by Big Balls. Big Balls' terms for its own API responses do not clear the original candidate's separate Football-Data.co.uk training corpus or the continued use of its learned weights. Written permission or a separately documented rights determination is required before treating the original frozen weights as cleared for continued AI use. This records provider wording, not a legal conclusion.
 
 No CSV was downloaded or opened, no Big Balls key/request was made, and no source/quote/Supabase data, feature, inference, target outcome, model artifact, or production file was accessed or changed. The original candidate SHA, 19-feature order, weights, scaler/imputer, training fingerprint, `active_lambda=0`, `shadow_lambda=1`, NO_BET and 30-primary-completed-forecast outcome gate remain unchanged.
+
+
+## 18. Official documentation recheck — 2026-11-21
+
+This is a static read of the provider's current Terms, Serie A page, Pricing page, OpenAPI and licence notices. No account/key was created and no API request, dataset download, odds request, Supabase access, feature calculation or inference was performed.
+
+### Rights language is favourable for Big Balls responses, but not a blanket clearance of the frozen training corpus
+
+The Terms of Service (effective 2026-08-10) expressly say customers may retain API responses in their own systems and use stored data as input to internal models, including training, evaluation and backtesting; derived models/predictions may be published or sold. Raw API fields may not be resold or republished. This is materially clearer than the rights wording of several other free candidates.
+
+The public licence-notices page currently says “Football data provided by the Football-Data.org API.” That is not the same entity/domain as Football-Data.co.uk, which supplied the frozen candidate's original CSV training corpus. The notice is not field-specific and does not identify the upstream source for Serie A corners/cards. Big Balls' API terms also do not, by themselves, resolve the separate rights status of the original Football-Data.co.uk training corpus or continued use of weights learned from it. Keep that separate HOLD explicit.
+
+### Current endpoint and Free-plan evidence — still contradictory
+
+The current OpenAPI at https://bigballsdata.com/openapi.json (version 2026-11-09) describes GET /v1/matches/{id}/statistics as a stored-only, post-match soccer team-stat endpoint. It states that the endpoint is Free; the computed expected_goals field is omitted below Solo. The FixtureTeamStatistics schema includes nullable corner_kicks, yellow_cards and red_cards, alongside the match's canonical UUID, status, UTC kickoff and score. The API says team statistics are persisted hourly and upstream posts are generally within about 30 minutes after full-time.
+
+However, the Serie A product plan matrix at https://bigballsdata.com/serie-a-api still places “Advanced match statistics: possession, shots, cards and xG” under Edge, while the same page's FAQ says the statistics route is Free and only expected_goals is Solo+. The OpenAPI and FAQ agree on Free factual team stats; the matrix disagrees. This is not resolved by a documentation-only inference. Written provider confirmation for the exact Free-plan Serie A fields remains required before any request.
+
+### Current-season window and coverage
+
+The Serie A page's standings source is dated 2026-11-19 05:12 UTC and lists 20 clubs with 11 matches played each. It reports 4,671 Serie A matches across 13 seasons, but the same plan page says Free reaches only the current season. Eleven current-season matches per club are nominally enough for the frozen last-10 and venue-last-5 windows for the next fixtures, if the required team-stat rows exist for all those matches.
+
+That is not a measured coverage result. The page does not publish current-season per-fixture completeness for corner_kicks/yellow_cards/red_cards, and the public historical aggregate cannot be substituted for a Serie A 2026/27 coverage audit. The API's all-league coverage percentage is not proof that every required field exists on every current-season fixture.
+
+### Provenance interpretation
+
+The OpenAPI says the statistics endpoint is stored-only and never fetches upstream on request. It does not expose a per-match or per-field first-observed/fetched-at timestamp in the response schema. The published hourly ingestion cadence is not a timestamp for a specific value.
+
+A future, separately authorized project capture could still prove which exact bytes the project possessed before a later quote: archive the raw response and canonical manifest privately, record UTC request start/receipt and parent workflow completion, compute SHA-256 over exact bytes, and require source archive completion strictly before quote time and quote time strictly before kickoff. That proves project-side possession/order; it must not be mislabelled as the provider's original first-observation time. Any later correction must be a new immutable archive/version and SHA.
+
+### Decision
+
+**Remain CONDITIONAL_CANDIDATE_NOT_APPROVED / HOLD.** Big Balls is still the strongest current-season candidate found so far because its Terms expressly allow stored data as internal-model input and the OpenAPI structurally supplies the unchanged corner/card inputs on a Free-labelled endpoint. But no API request is authorized until the provider resolves the Free-plan matrix conflict and confirms the upstream rights/field scope. No raw response can be stored publicly; a verified private retention path is still required. The frozen candidate's separate training-corpus rights HOLD also remains independent.
+
+No source integration, provider request, download, odds access, Supabase operation, feature build, inference, target-outcome read, model/contract change, production artifact change, threshold change, schedule change or main update occurred.
