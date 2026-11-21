@@ -555,3 +555,89 @@ def test_original_forward_cli_verifies_parent_and_zip_before_lazy_database_impor
     assert report["no_bet"] is True
     assert report["paid_provider_calls"] == 0
     assert report["supabase_writes"] == 0
+
+
+def test_original_forward_cli_invalid_archive_sha_blocks_database_import_and_quote_read(
+    monkeypatch, tmp_path
+):
+    """Exercise main(): a bad source ZIP digest must stop before DB import or quotes."""
+    import builtins
+    import sys
+    import serie_a_v2_forward_capture as forward_module
+
+    class FrozenNow(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            assert tz is timezone.utc
+            return cls(2026, 10, 14, 7, 0, tzinfo=timezone.utc)
+
+    raw, metadata = make_source_archive()
+    metadata[0]["created_at"] = FrozenNow(2026, 10, 13, 15, 0, tzinfo=timezone.utc)
+    events = []
+
+    monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    monkeypatch.setenv("GITHUB_TOKEN", "synthetic-token")
+    monkeypatch.setattr(forward_module, "datetime", FrozenNow)
+
+    def discover_archives(*, token):
+        events.append("archive_discovery")
+        assert token == "synthetic-token"
+        return metadata
+
+    def verify_parent(archive, quote_time, token):
+        events.append("parent_verification")
+        assert token == "synthetic-token"
+        return _fully_verified_parent(
+            archive, quote_time, completed="2026-10-13T15:01:00Z"
+        )
+
+    def tampered_archive(artifact_id, *, token):
+        events.append("archive_download_and_sha_input")
+        assert artifact_id == metadata[0]["artifact_id"]
+        assert token == "synthetic-token"
+        return raw + b"tampered"
+
+    def forbidden_quote_read(*_args, **_kwargs):
+        raise AssertionError("invalid source ZIP SHA must block saved quote access")
+
+    monkeypatch.setattr(forward_module, "discover_archives", discover_archives)
+    monkeypatch.setattr(forward_module, "verify_source_run", verify_parent)
+    monkeypatch.setattr(forward_module, "get_archive", tampered_archive)
+    monkeypatch.setattr(
+        forward_module, "fetch_saved_upcoming_serie_a_quotes", forbidden_quote_read
+    )
+
+    real_import = builtins.__import__
+
+    def tracked_import(name, *args, **kwargs):
+        if name == "database":
+            events.append("database_import")
+            raise AssertionError("invalid source ZIP SHA must block database import")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", tracked_import)
+    output = tmp_path / "report.json"
+    sources = tmp_path / "sources"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "serie_a_v2_forward_capture.py",
+            "--output",
+            str(output),
+            "--sources-output-dir",
+            str(sources),
+        ],
+    )
+
+    with pytest.raises(ValueError, match="archive digest mismatch"):
+        forward_module.main()
+
+    assert events == [
+        "archive_discovery",
+        "parent_verification",
+        "archive_download_and_sha_input",
+    ]
+    assert not output.exists()
+    assert not sources.exists()
