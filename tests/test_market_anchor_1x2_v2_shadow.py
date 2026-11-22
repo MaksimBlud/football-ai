@@ -375,3 +375,34 @@ def test_shadow_capture_rejects_coerced_probability_types(field):
 def test_shadow_capture_rejects_non_string_identity_and_sha_fields(field, value):
     with pytest.raises(ValueError, match=field):
         v2.validate_shadow_capture_rows([_row(**{field: value})])
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("home_team", ""),
+        ("home_team", "   "),
+        ("home_team", None),
+        ("home_team", 1),
+        ("home_team", " Home "),
+        ("away_team", ""),
+        ("away_team", "   "),
+        ("away_team", None),
+        ("away_team", 1),
+        ("away_team", " Away "),
+    ],
+)
+def test_shadow_capture_rejects_invalid_team_identity_values(field, value):
+    with pytest.raises(ValueError, match=field):
+        v2.validate_shadow_capture_rows([_row(**{field: value})])
+
+
+def test_shadow_capture_rejects_same_team_on_both_sides_after_normalization():
+    with pytest.raises(ValueError, match="distinct teams"):
+        v2.validate_shadow_capture_rows([_row(home_team="A  Team", away_team="a team")])
+
+
+@pytest.mark.parametrize("event_id", [" evt-1", "evt-1 "])
+def test_shadow_capture_rejects_noncanonical_event_id_whitespace(event_id):
+    with pytest.raises(ValueError, match="canonical"):
+        v2.validate_shadow_capture_rows([_row(event_id=event_id)])
