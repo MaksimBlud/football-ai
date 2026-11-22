@@ -447,14 +447,14 @@ def _has_unreviewed_action(text: str) -> bool:
 
 UNREVIEWED_LAUNCHER_PATTERNS = (
     # Build/package runners can invoke local scripts with arbitrary network access.
-    r"^\\s*(?:npm|yarn|pnpm)\\s+(?:run|exec|install|ci|start|build|test)\\b",
-    r"^\\s*(?:make|gmake|just|task|gradle|mvn|bazel|buck)\\b",
-    r"^\\s*(?:composer|bundle)\\s+exec\\b",
-    r"^\\s*rake\\b",
-    r"^\\s*mix\\s+(?:run|test)\\b",
+    r"^(?:npm|yarn|pnpm)\s+(?:run|exec|install|ci|start|build|test)\b",
+    r"^(?:make|gmake|just|task|gradle|mvn|bazel|buck)\b",
+    r"^(?:composer|bundle)\s+exec\b",
+    r"^rake\b",
+    r"^mix\s+(?:run|test)\b",
     # Direct local launchers and sourced scripts are otherwise invisible to
     # the HTTP/socket marker inventory.
-    r"^\\s*(?:\\./|source\\s+|\\.\\s+)\\S+",
+    r"^(?:\./|source\s+|\.\s+)\S+",
 )
 
 
@@ -462,11 +462,19 @@ def _has_unreviewed_launcher(text: str) -> bool:
     """Fail closed on build runners or local scripts in original-V2 workflows."""
     import re
 
-    return any(
-        re.search(pattern, line.strip(), re.IGNORECASE)
-        for line in text.splitlines()
-        for pattern in UNREVIEWED_LAUNCHER_PATTERNS
-    )
+    for line in text.splitlines():
+        command = line.strip()
+        if not command or command.startswith("#"):
+            continue
+        command = re.sub(r"^(?:-\s*)?run:\s*", "", command, flags=re.IGNORECASE)
+        if command in {"", "|", ">", "|-", ">-"}:
+            continue
+        if any(
+            re.search(pattern, command, re.IGNORECASE)
+            for pattern in UNREVIEWED_LAUNCHER_PATTERNS
+        ):
+            return True
+    return False
 
 
 ORIGINAL_V2_REFERENCE_MARKERS = (
@@ -578,14 +586,14 @@ def test_external_io_inventory_recognizes_common_artifact_and_network_paths():
 
 def test_external_io_inventory_recognizes_github_script_and_cli_download_paths():
     examples = (
-        "uses: actions/github-script@v7\\nwith:\\n  script: await github.rest.actions.listArtifactsForRepo(...)",
+        "uses: actions/github-script@v7\nwith:\n  script: await github.rest.actions.listArtifactsForRepo(...)",
         "run: gh run download 123456789",
         "run: gh release download v2.0.0",
         "run: git clone https://example.invalid/source.git",
     )
     assert all(_has_external_io(example) for example in examples)
     assert _is_original_v2_live_workflow(
-        "name: market-anchor-1x2-v2 source capture\\nuses: actions/github-script@v7"
+        "name: market-anchor-1x2-v2 source capture\nuses: actions/github-script@v7"
     )
 
 
@@ -616,7 +624,7 @@ def test_external_io_inventory_recognizes_repository_storage_and_upload_paths():
     )
     assert all(_has_external_io(example) for example in examples)
     assert _is_original_v2_live_workflow(
-        "name: market-anchor-1x2-v2 source capture\\nuses: actions/cache@v4"
+        "name: market-anchor-1x2-v2 source capture\nuses: actions/cache@v4"
     )
 
 
@@ -671,10 +679,10 @@ def test_external_io_inventory_recognizes_raw_socket_and_remote_transfer_paths()
     )
     assert all(_has_external_io(example) for example in examples)
     assert _is_original_v2_live_workflow(
-        "name: market-anchor-1x2-v2 source capture\\nrun: nc -w 5 example.invalid 443"
+        "name: market-anchor-1x2-v2 source capture\nrun: nc -w 5 example.invalid 443"
     )
     assert _is_original_v2_live_workflow(
-        "name: market-anchor-1x2-v2 source capture\\nrun: bash -c 'exec 3<>/dev/tcp/example.invalid/443'"
+        "name: market-anchor-1x2-v2 source capture\nrun: bash -c 'exec 3<>/dev/tcp/example.invalid/443'"
     )
 
 
@@ -706,10 +714,10 @@ def test_external_io_inventory_recognizes_compiled_runtimes_shells_and_container
     )
     assert all(_has_external_io(example) for example in examples)
     assert _is_original_v2_live_workflow(
-        "name: market-anchor-1x2-v2 source capture\\nrun: go run cmd/capture.go"
+        "name: market-anchor-1x2-v2 source capture\nrun: go run cmd/capture.go"
     )
     assert _is_original_v2_live_workflow(
-        "name: serie-a-v2 source capture\\nrun: docker run source-capture:latest"
+        "name: serie-a-v2 source capture\nrun: docker run source-capture:latest"
     )
 
 
@@ -764,10 +772,10 @@ def test_serie_a_v2_workflow_with_unknown_python_helper_is_live_capable():
     # Generic helper names are not exempt just because the workflow only uses
     # the broad serie_a_v2_ family marker rather than the canonical 1X2 token.
     assert _is_original_v2_live_workflow(
-        "name: serie_a_v2_source_runner\\nrun: python collect_unlisted_source.py"
+        "name: serie_a_v2_source_runner\nrun: python collect_unlisted_source.py"
     )
     assert _is_original_v2_live_workflow(
-        "name: Offline Helper\\nrun: python collect_unlisted_source.py",
+        "name: Offline Helper\nrun: python collect_unlisted_source.py",
         workflow_path=".github/workflows/serie-a-v2-source-capture.yml",
     )
 
@@ -905,7 +913,7 @@ def test_unreviewed_build_and_local_script_launchers_are_live_capable():
   ./scripts/capture.sh""",
     )
     for example in examples:
-        workflow = f"name: market-anchor-1x2-v2 source capture\\n{example}"
+        workflow = f"name: market-anchor-1x2-v2 source capture\n{example}"
         assert _has_unreviewed_launcher(example)
         assert _is_original_v2_live_workflow(workflow)
 
