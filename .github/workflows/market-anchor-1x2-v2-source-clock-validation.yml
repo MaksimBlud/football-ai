@@ -9,6 +9,7 @@ on:
       - research/v2-current-form-identity-digest-restacked-on-918-20261122-run11
       - research/v2-source-observation-after-response-on-920-20261122-run11
       - research/v2-source-redirect-origin-guard-on-921-20261122-run11
+      - research/v2-atomic-current-form-source-capture-on-922-20261122-run11
     paths:
       - "serie_a_v2_current_form_source_capture.py"
       - "tests/test_serie_a_v2_current_form_source_capture.py"
@@ -22,6 +23,7 @@ on:
       - research/v2-feature-gate-clock-guard-on-917-20261122-run11
       - research/v2-capture-entry-clock-offset-guard-on-919-20261122-run11
       - research/v2-source-observation-after-response-on-920-20261122-run11
+      - research/v2-source-redirect-origin-guard-on-921-20261122-run11
     paths:
       - "serie_a_v2_current_form_source_capture.py"
       - "tests/test_serie_a_v2_current_form_source_capture.py"

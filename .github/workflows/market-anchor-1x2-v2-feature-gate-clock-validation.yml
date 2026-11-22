@@ -3,7 +3,7 @@ name: Original V2 Feature Gate Clock Validation
 on:
   push:
     branches:
-      - research/v2-source-redirect-origin-guard-on-921-20261122-run11
+      - research/v2-atomic-current-form-source-capture-on-922-20261122-run11
     paths:
       - "serie_a_v2_current_form_source_capture.py"
       - "serie_a_v2_live_diagnostic_report.py"
@@ -13,7 +13,7 @@ on:
 
   pull_request:
     branches:
-      - research/v2-source-observation-after-response-on-920-20261122-run11
+      - research/v2-source-redirect-origin-guard-on-921-20261122-run11
     paths:
       - "serie_a_v2_current_form_source_capture.py"
       - "serie_a_v2_live_diagnostic_report.py"
