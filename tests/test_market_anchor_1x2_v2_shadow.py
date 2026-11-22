@@ -307,3 +307,30 @@ def test_frozen_stability_gate_rejects_non_mapping_bootstrap_sections():
         report[section] = []
         with pytest.raises(ValueError, match=section):
             v2.stability_gate(report)
+
+
+def test_frozen_stability_gate_rejects_out_of_range_bootstrap_probabilities():
+    base = json.loads(
+        (ROOT / "experiments/market_anchor_1x2_v1_robustness_report.json").read_text()
+    )
+    fields = (
+        ("final_oot_brier_bootstrap", "bootstrap_probability_better_than_market"),
+        ("final_oot_log_loss_bootstrap", "bootstrap_probability_better_than_market"),
+    )
+    for section, field in fields:
+        for value in (-0.001, 1.001):
+            report = json.loads(json.dumps(base))
+            report[section][field] = value
+            with pytest.raises(ValueError, match="between 0 and 1"):
+                v2.stability_gate(report)
+
+
+def test_frozen_stability_gate_rejects_more_dual_wins_than_prior_seasons():
+    report = json.loads(
+        (ROOT / "experiments/market_anchor_1x2_v1_robustness_report.json").read_text()
+    )
+    report["retrospective_prior_season_dual_wins"] = (
+        report["retrospective_prior_seasons"] + 1
+    )
+    with pytest.raises(ValueError, match="cannot exceed"):
+        v2.stability_gate(report)

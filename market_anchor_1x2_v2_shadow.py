@@ -105,6 +105,13 @@ def _finite_report_number(value: object, field: str) -> float:
     return float(value)
 
 
+def _probability_report_number(value: object, field: str) -> float:
+    number = _finite_report_number(value, field)
+    if not 0.0 <= number <= 1.0:
+        raise ValueError(f"{field} must be between 0 and 1")
+    return number
+
+
 def _nonnegative_report_count(value: object, field: str) -> int:
     if type(value) is not int or value < 0:
         raise ValueError(f"{field} must be a nonnegative integer")
@@ -152,6 +159,10 @@ def stability_gate(report: Mapping) -> dict:
         report.get("retrospective_prior_season_dual_wins"),
         "retrospective_prior_season_dual_wins",
     )
+    if dual_wins > prior_seasons:
+        raise ValueError(
+            "retrospective_prior_season_dual_wins cannot exceed retrospective_prior_seasons"
+        )
     brier = report.get("final_oot_brier_bootstrap")
     log_loss = report.get("final_oot_log_loss_bootstrap")
     if not isinstance(brier, Mapping):
@@ -167,11 +178,11 @@ def stability_gate(report: Mapping) -> dict:
         log_loss.get("bootstrap_ci95_high"),
         "final_oot_log_loss_bootstrap.bootstrap_ci95_high",
     )
-    brier_probability = _finite_report_number(
+    brier_probability = _probability_report_number(
         brier.get("bootstrap_probability_better_than_market"),
         "final_oot_brier_bootstrap.bootstrap_probability_better_than_market",
     )
-    log_loss_probability = _finite_report_number(
+    log_loss_probability = _probability_report_number(
         log_loss.get("bootstrap_probability_better_than_market"),
         "final_oot_log_loss_bootstrap.bootstrap_probability_better_than_market",
     )
