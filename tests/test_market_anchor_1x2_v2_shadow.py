@@ -407,6 +407,20 @@ def test_shadow_capture_requires_feature_source_strictly_before_market_quote(fea
 @pytest.mark.parametrize(
     ("field", "value"),
     [
+        ("incumbent_generated_at_utc", "2026-09-18T16:55:00Z"),
+        ("candidate_generated_at_utc", "2026-09-18T16:55:00Z"),
+        ("incumbent_generated_at_utc", "2026-09-18T17:00:00Z"),
+        ("candidate_generated_at_utc", "2026-09-18T17:00:00Z"),
+    ],
+)
+def test_shadow_capture_rejects_equal_quote_or_capture_timestamps(field, value):
+    with pytest.raises(ValueError, match="strictly precede"):
+        v2.validate_shadow_capture_rows([_row(**{field: value})])
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
         ("home_team", ""),
         ("home_team", "   "),
         ("home_team", None),
