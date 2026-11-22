@@ -7192,3 +7192,20 @@ All listed test counts are reproduced under Python 3.11 and 3.12 for both push a
 
 ### Non-actions
 No main update/merge, source/provider request by this audit, paid API request, Supabase write/DDL, protected target-outcome read, V2 inference/refit, threshold tuning, production `.pkl` change, betting, promotion, schedule change or other-agent setting change.
+
+## 2026-11-22 21:59 UTC — strict integer input for the frozen outcome-read gate
+
+### Exact-head PR and CI
+- [PR #933](https://github.com/MaksimBlud/football-ai/pull/933) is OPEN / Draft / HUMAN-MERGE only, stacked directly on #932 exact HEAD `8ff52f14efbd7ca14836d40e92f47fa83ceadcad`.
+- Exact #933 HEAD: `91b9c29dc16ffe7674f55774aa42350c27f3368d`; compare is 1 ahead / 0 behind its exact #932 parent; GitHub reports mergeable.
+- Exact-head workflow [#45075006891](https://github.com/MaksimBlud/football-ai/actions/runs/45075006891) completed SUCCESS: compile PASS, **60 V2 regression tests passed**, production `.pkl` diff guard PASS.
+- The prior `outcome_read_permitted()` accepted any value that compared numerically with 30. A non-integer value such as `30.5` could therefore satisfy the frozen gate, and Python booleans are integer subclasses.
+- The function now accepts only Python/NumPy integer scalars, explicitly rejects bool/NumPy bool, floats (including 30.0 and 30.5), strings and None, and rejects negative counts. The threshold remains exactly 30.
+- The function still depends on its caller to supply a count derived from the preregistered canonical unique-primary-event identity gate; this type check does not itself prove event uniqueness or open the gate.
+
+### Frozen state and non-actions
+- Original candidate remains SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features, 20×2 weights, 3,799 training rows, training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`, active lambda 0, shadow lambda 1, stability gate FAILED, evaluation 0/30.
+- No new admissible pre-kickoff quote or prospective V2 shadow forecast was found. The latest read-only `public.odds_snapshots` aggregate remains 3,915 strict pre-kickoff rows / 327 events across nine leagues, 0 strict future rows/events, latest strict Serie A snapshot `2026-10-13T14:48:53.042620Z`.
+- PR #781 remains OPEN / Ready for review, exact HEAD `3a70a8648895076efec2a80dc10b1798ed0d9261`, 8/8 exact-head CI SUCCESS. The default-deny hold is not active on main until owner manual merge and fresh-main verification.
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; its continuity file is still the October 18 blob `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`. Supabase schema metadata still reports RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`; no DDL or policy change was attempted.
+- No main update/merge, Supabase write/DDL, provider request/download, paid API call, protected outcome read, inference, refit, threshold tuning, production `.pkl` change, bet, promotion, schedule change or other-agent change.
