@@ -14,6 +14,7 @@ from io import BytesIO
 import json
 import os
 import re
+import tempfile
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -393,9 +394,18 @@ def _capture_source_archive(
     history_fetch=fetch_public_history,
     clock=lambda: datetime.now(timezone.utc),
 ) -> dict:
-    """Internal capture after source rights and private storage have been verified."""
+    """Publish only a complete, rights-gated source archive; discard partial staging."""
     at = _clock_utc(lambda: now, field="source capture clock")
     preregistered_gate = validate_preregistered_outcome_read_gate()
+
+    output_dir = Path(output_dir)
+    if output_dir.is_symlink():
+        raise ValueError("source archive output directory cannot be a symlink")
+    if output_dir.exists() and (
+        not output_dir.is_dir() or any(output_dir.iterdir())
+    ):
+        raise FileExistsError("source archive output directory must be absent or empty")
+
     gate_identity_audit = _read_completed_primary_event_summary(client, now=at)
     gate_count = gate_identity_audit["canonical_unique_fixture_identities"]
     if not outcome_read_permitted(gate_count):
@@ -404,6 +414,45 @@ def _capture_source_archive(
             f"{gate_count} completed primary events < {FIRST_OUTCOME_READ_GATE}; "
             "no current-season source request was made"
         )
+
+    # Directory creation happens only after the explicit clock, protocol, and
+    # metadata-only feature-input gates. Stage beside the destination so the
+    # final rename is same-filesystem and atomic.
+    output_dir.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(
+        prefix=f".{output_dir.name}.staging-",
+        dir=output_dir.parent,
+    ) as temporary_directory:
+        staged_dir = Path(temporary_directory)
+        report = _capture_source_archive_contents(
+            output_dir=staged_dir,
+            at=at,
+            preregistered_gate=preregistered_gate,
+            gate_identity_audit=gate_identity_audit,
+            access=access,
+            get=get,
+            history_fetch=history_fetch,
+            clock=clock,
+        )
+        # Existing empty destinations are replaceable; nonempty destinations
+        # were rejected above so previously preserved evidence is never lost.
+        os.replace(staged_dir, output_dir)
+        return report
+
+
+def _capture_source_archive_contents(
+    *,
+    output_dir: Path,
+    at: datetime,
+    preregistered_gate: Mapping[str, Any],
+    gate_identity_audit: Mapping[str, Any],
+    access: Mapping[str, Any],
+    get=requests.get,
+    history_fetch=fetch_public_history,
+    clock=lambda: datetime.now(timezone.utc),
+) -> dict:
+    """Build every source byte and the manifest inside an unpublished staging directory."""
+    gate_count = gate_identity_audit["canonical_unique_fixture_identities"]
     output_dir.mkdir(parents=True, exist_ok=True)
     old_history, old_audit = history_fetch(get=get, capture_dir=output_dir)
     if old_history.empty or len(old_audit) != len(_source_codes()):

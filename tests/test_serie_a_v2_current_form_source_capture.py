@@ -824,3 +824,100 @@ def test_current_source_rejects_unexpected_final_url_before_body_or_observation(
     assert clock_calls == []
     assert not (tmp_path / CURRENT_FILENAME).exists()
     assert not (tmp_path / MANIFEST_FILENAME).exists()
+
+def test_source_archive_discards_partial_historical_files_after_redirect(tmp_path):
+    output_dir = tmp_path / "published"
+    events = []
+
+    class RedirectResponse:
+        status_code = 302
+        url = "https://redirect.invalid/current-season.csv"
+
+        @property
+        def content(self):
+            raise AssertionError("redirect body must not be read")
+
+        def raise_for_status(self):
+            events.append("status_checked")
+
+    def fake_get(url, timeout, allow_redirects=True):
+        assert url == CURRENT_URL
+        assert timeout == 30
+        assert allow_redirects is False
+        events.append("request")
+        return RedirectResponse()
+
+    with pytest.raises(RuntimeError, match="requires HTTP 200 without redirects"):
+        source_capture._capture_source_archive(
+            output_dir=output_dir,
+            client=FakeQuery(event_rows(30)),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            access=_synthetic_source_capture_access(),
+            get=fake_get,
+            history_fetch=_clock_order_history,
+            clock=lambda: pytest.fail("observation clock must not be read after redirect"),
+        )
+
+    assert events == ["request", "status_checked"]
+    assert not output_dir.exists()
+    assert not list(tmp_path.glob(".published.staging-*"))
+
+
+def test_source_archive_refuses_occupied_output_without_overwrite_or_io(tmp_path):
+    output_dir = tmp_path / "existing"
+    output_dir.mkdir()
+    sentinel = output_dir / "preserve.txt"
+    sentinel.write_text("previous evidence", encoding="utf-8")
+
+    def forbidden(*_args, **_kwargs):
+        pytest.fail("occupied output must be rejected before metadata or source access")
+
+    with pytest.raises(FileExistsError, match="must be absent or empty"):
+        source_capture._capture_source_archive(
+            output_dir=output_dir,
+            client=object(),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            access=_synthetic_source_capture_access(),
+            get=forbidden,
+            history_fetch=forbidden,
+        )
+
+    assert sentinel.read_text(encoding="utf-8") == "previous evidence"
+    assert list(output_dir.iterdir()) == [sentinel]
+    assert not list(tmp_path.glob(".existing.staging-*"))
+
+
+def test_source_archive_success_atomically_publishes_all_files(tmp_path):
+    output_dir = tmp_path / "published"
+    raw = current_csv(n=30)
+    clock_values = iter([
+        datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc),
+        datetime(2026, 10, 18, 8, 2, tzinfo=timezone.utc),
+    ])
+
+    class Response:
+        status_code = 200
+        url = CURRENT_URL
+        content = raw
+
+        def raise_for_status(self):
+            return None
+
+    report = source_capture._capture_source_archive(
+        output_dir=output_dir,
+        client=FakeQuery(event_rows(30)),
+        now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+        access=_synthetic_source_capture_access(),
+        get=lambda url, timeout, allow_redirects=False: Response(),
+        history_fetch=_clock_order_history,
+        clock=lambda: next(clock_values),
+    )
+
+    expected = {f"serie_a_{code}.csv" for code in _source_codes()}
+    expected.update({CURRENT_FILENAME, MANIFEST_FILENAME})
+    assert output_dir.is_dir()
+    assert {path.name for path in output_dir.iterdir()} == expected
+    assert report["source_file_count"] == 11
+    assert report["current_season_source_sha256"] == hashlib.sha256(raw).hexdigest()
+    assert not list(tmp_path.glob(".published.staging-*"))
+
