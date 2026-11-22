@@ -50,6 +50,23 @@ def test_candidate_artifact_rejects_coercible_non_numeric_types():
         with pytest.raises(ValueError, match=field):
             v2.validate_candidate_artifact(artifact)
 
+def test_candidate_artifact_rejects_integer_boolean_recipe_flags():
+    cases = [
+        ("stability_gate_passed", 0),
+        ("opened_2026_27_outcomes_used", 0),
+        ("research_only", 1),
+        ("automatic_promotion", 0),
+    ]
+    for field, value in cases:
+        artifact = _artifact()
+        artifact[field] = value
+        body = dict(artifact)
+        body.pop("artifact_sha256")
+        artifact["artifact_sha256"] = v2._sha256_json(body)
+        with pytest.raises(ValueError, match=field):
+            v2.validate_candidate_artifact(artifact)
+
+
 def _row(**updates):
     row = {
         "experiment_id": v2.EXPERIMENT_ID,
