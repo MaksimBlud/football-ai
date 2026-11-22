@@ -47,7 +47,7 @@ def test_candidate_artifact_rejects_coercible_non_numeric_types():
         body = dict(artifact)
         body.pop("artifact_sha256")
         artifact["artifact_sha256"] = v2._sha256_json(body)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=field):
             v2.validate_candidate_artifact(artifact)
 
 def _row(**updates):
