@@ -257,3 +257,53 @@ def test_saved_frozen_candidate_matches_original_artifact():
     assert candidate["stability_gate_passed"] is False
     assert candidate["automatic_promotion"] is False
     assert candidate["opened_2026_27_outcomes_used"] is False
+
+
+def test_frozen_stability_gate_rejects_coercible_scalar_types():
+    base = json.loads(
+        (ROOT / "experiments/market_anchor_1x2_v1_robustness_report.json").read_text()
+    )
+    cases = [
+        ("frozen_lambda", "1.0"),
+        ("frozen_lambda", True),
+        ("retrospective_prior_seasons", "6"),
+        ("retrospective_prior_seasons", 6.0),
+        ("retrospective_prior_seasons", True),
+        ("retrospective_prior_season_dual_wins", "2"),
+        ("retrospective_prior_season_dual_wins", False),
+    ]
+    for field, value in cases:
+        report = json.loads(json.dumps(base))
+        report[field] = value
+        with pytest.raises(ValueError, match=field):
+            v2.stability_gate(report)
+
+
+def test_frozen_stability_gate_rejects_coercible_or_nonfinite_bootstrap_metrics():
+    base = json.loads(
+        (ROOT / "experiments/market_anchor_1x2_v1_robustness_report.json").read_text()
+    )
+    cases = [
+        ("final_oot_brier_bootstrap", "bootstrap_ci95_high", "0.003"),
+        ("final_oot_brier_bootstrap", "bootstrap_ci95_high", True),
+        ("final_oot_brier_bootstrap", "bootstrap_probability_better_than_market", float("nan")),
+        ("final_oot_log_loss_bootstrap", "bootstrap_ci95_high", float("inf")),
+        ("final_oot_log_loss_bootstrap", "bootstrap_probability_better_than_market", "0.63"),
+        ("final_oot_log_loss_bootstrap", "bootstrap_probability_better_than_market", False),
+    ]
+    for section, field, value in cases:
+        report = json.loads(json.dumps(base))
+        report[section][field] = value
+        with pytest.raises(ValueError, match=field):
+            v2.stability_gate(report)
+
+
+def test_frozen_stability_gate_rejects_non_mapping_bootstrap_sections():
+    base = json.loads(
+        (ROOT / "experiments/market_anchor_1x2_v1_robustness_report.json").read_text()
+    )
+    for section in ("final_oot_brier_bootstrap", "final_oot_log_loss_bootstrap"):
+        report = json.loads(json.dumps(base))
+        report[section] = []
+        with pytest.raises(ValueError, match=section):
+            v2.stability_gate(report)
