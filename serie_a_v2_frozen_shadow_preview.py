@@ -22,7 +22,7 @@ import market_anchor_1x2_v2_shadow as v2
 FROZEN_FILE = Path(__file__).resolve().parent / (
     "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
 )
-FROZEN_SHA = "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
+FROZEN_SHA = v2.FROZEN_CANDIDATE_ARTIFACT_SHA256
 SCHEMA = "serie-a-market-anchor-v2-shadow-inference.v1"
 MAX_QUOTE_AGE = timedelta(hours=24)
 FORBIDDEN = frozenset((
