@@ -46,6 +46,26 @@ REQUIRED_COLUMNS = (
 NUMERIC_COLUMNS = ("FTHG", "FTAG", "HC", "AC", "HY", "AY", "HR", "AR")
 V2_ONLY_ALIASES = {"Atalanta BC": "Atalanta"}
 
+def _clock_utc(clock, *, field: str) -> datetime:
+    """Require an explicit timezone before persisting source-provenance timestamps."""
+    value = clock()
+    if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError(f"{field} must return a timezone-aware datetime")
+    return value.astimezone(timezone.utc)
+
+
+def _archive_creation_utc(clock, *, observed_at: datetime) -> datetime:
+    """Do not write an archive timestamp that predates the source observation."""
+    if observed_at.tzinfo is None or observed_at.utcoffset() is None:
+        raise ValueError("source observation timestamp must be timezone-aware")
+    observed = observed_at.astimezone(timezone.utc)
+    created = _clock_utc(clock, field="source archive creation clock")
+    if created < observed:
+        raise ValueError("source archive creation clock precedes source observation")
+    return created
+
+
+
 
 def validate_preregistered_outcome_read_gate() -> dict[str, Any]:
     """Fail closed unless the exact frozen V2 protocol still declares the 30-event gate."""
@@ -239,7 +259,7 @@ def _capture_source_archive(
     response = get(CURRENT_URL, timeout=30)
     response.raise_for_status()
     raw = response.content
-    observed_at = clock().astimezone(timezone.utc)
+    observed_at = _clock_utc(clock, field="current-season source observation clock")
     current_rows, excluded_rows = validate_current_season_csv(raw, captured_at=observed_at)
     if len(current_rows) < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
         raise RuntimeError(
@@ -260,6 +280,7 @@ def _capture_source_archive(
     }]
     if any(item["season_code"] == CURRENT_CODE for item in old_audit):
         raise ValueError("current season unexpectedly appeared in frozen old-season source list")
+    archive_created_at = _archive_creation_utc(clock, observed_at=observed_at)
     report = {
         "schema_version": SCHEMA_VERSION,
         "experiment_id": "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY",
@@ -268,7 +289,7 @@ def _capture_source_archive(
         "workflow_path": WORKFLOW_PATH,
         "git_sha": os.environ.get("GITHUB_SHA", ""),
         "workflow_run_id": os.environ.get("GITHUB_RUN_ID", ""),
-        "source_archive_created_at_utc": clock().astimezone(timezone.utc).isoformat(),
+        "source_archive_created_at_utc": archive_created_at.isoformat(),
         "frozen_candidate_sha256": FROZEN_SHA,
         "original_feature_builder_git_blob_sha1": "401b3a0893371bfa4a488ec92a4a54af2678c8f7",
         "feature_count": len(FEATURE_SETS["ALL_FOOTBALL"]),

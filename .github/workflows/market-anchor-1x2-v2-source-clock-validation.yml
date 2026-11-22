@@ -1,0 +1,54 @@
+name: Original V2 Source Capture Clock Validation
+
+on:
+  push:
+    branches:
+      - research/v2-source-clock-utc-guard-restacked-on-916-run11
+      - research/v2-feature-gate-clock-guard-on-917-20261122-run11
+    paths:
+      - "serie_a_v2_current_form_source_capture.py"
+      - "tests/test_serie_a_v2_current_form_source_capture.py"
+      - "tests/test_serie_a_v2_workflow_external_access_hold.py"
+      - ".github/workflows/market-anchor-1x2-v2-source-clock-validation.yml"
+  pull_request:
+    branches:
+      - research/v2-workflow-egress-guard-restacked-on-915-20261121-run11
+      - research/v2-source-clock-utc-guard-restacked-on-916-run11
+    paths:
+      - "serie_a_v2_current_form_source_capture.py"
+      - "tests/test_serie_a_v2_current_form_source_capture.py"
+      - "tests/test_serie_a_v2_workflow_external_access_hold.py"
+      - ".github/workflows/market-anchor-1x2-v2-source-clock-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: original-v2-source-clock-validation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  offline-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - name: Checkout exact research branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install offline regression dependencies
+        run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
+      - name: Compile original V2 current-form source capture
+        run: python -m py_compile serie_a_v2_current_form_source_capture.py
+      - name: Run source capture chronology and no-outcome regressions
+        run: python -m pytest -q tests/test_serie_a_v2_current_form_source_capture.py tests/test_serie_a_v2_workflow_external_access_hold.py
+      - name: Guard production model binaries
+        run: git diff --exit-code origin/main...HEAD -- '*.pkl'
