@@ -408,8 +408,12 @@ def _capture_source_archive(
     old_history, old_audit = history_fetch(get=get, capture_dir=output_dir)
     if old_history.empty or len(old_audit) != len(_source_codes()):
         raise ValueError("original frozen historical source archive incomplete")
-    response = get(CURRENT_URL, timeout=30)
+    response = get(CURRENT_URL, timeout=30, allow_redirects=False)
     response.raise_for_status()
+    if response.status_code != 200:
+        raise RuntimeError("current-season source requires HTTP 200 without redirects")
+    if getattr(response, "url", None) != CURRENT_URL:
+        raise ValueError("current-season source response URL differs from configured URL")
     raw = response.content
     observed_at = _clock_utc(clock, field="current-season source observation clock")
     current_rows, excluded_rows = validate_current_season_csv(raw, captured_at=observed_at)

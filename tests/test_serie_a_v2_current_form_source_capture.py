@@ -452,7 +452,7 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
         output_dir=tmp_path,
         client=FakeQuery(event_rows(30)),
         now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
-        get=lambda url, timeout: Response(),
+        get=lambda url, timeout, allow_redirects=False: Response(),
         history_fetch=fake_history,
         clock=lambda: next(source_times),
     )
@@ -587,6 +587,8 @@ def test_source_archive_rejects_naive_clock_for_observation_and_archive_time(
         return pd.DataFrame([{"historical": 1}]), audits
 
     class Response:
+        status_code = 200
+        url = CURRENT_URL
         content = raw
         def raise_for_status(self):
             return None
@@ -602,7 +604,7 @@ def test_source_archive_rejects_naive_clock_for_observation_and_archive_time(
             client=object(),
             now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
             access=_synthetic_source_capture_access(),
-            get=lambda url, timeout: Response(),
+            get=lambda url, timeout, allow_redirects=False: Response(),
             history_fetch=fake_history,
             clock=lambda: clock_values.pop(0),
         )
@@ -666,8 +668,9 @@ def test_current_source_observation_clock_is_taken_after_successful_http_respons
         def raise_for_status(self):
             events.append("response_complete")
 
-    def fake_get(url, timeout):
+    def fake_get(url, timeout, allow_redirects=False):
         assert url == CURRENT_URL
+        assert allow_redirects is False
         assert timeout == 30
         events.append("request_started")
         return Response()
@@ -710,8 +713,9 @@ def test_failed_current_source_http_response_never_gets_observation_timestamp(tm
             events.append("response_failed")
             raise RuntimeError("synthetic source HTTP failure")
 
-    def fake_get(url, timeout):
+    def fake_get(url, timeout, allow_redirects=False):
         assert url == CURRENT_URL
+        assert allow_redirects is False
         events.append("request_started")
         return FailedResponse()
 
@@ -731,6 +735,92 @@ def test_failed_current_source_http_response_never_gets_observation_timestamp(tm
         )
 
     assert events == ["request_started", "response_failed"]
+    assert clock_calls == []
+    assert not (tmp_path / CURRENT_FILENAME).exists()
+    assert not (tmp_path / MANIFEST_FILENAME).exists()
+
+
+
+def test_current_source_rejects_redirect_response_before_observation_clock_or_write(tmp_path):
+    events = []
+    clock_calls = []
+
+    class RedirectResponse:
+        status_code = 302
+        url = "https://redirect.invalid/current-season.csv"
+
+        @property
+        def content(self):
+            raise AssertionError("redirect response body must not be read")
+
+        def raise_for_status(self):
+            events.append("status_checked")
+
+    def fake_get(url, timeout, allow_redirects=True):
+        assert url == CURRENT_URL
+        assert timeout == 30
+        assert allow_redirects is False
+        events.append("request")
+        return RedirectResponse()
+
+    def clock():
+        clock_calls.append("called")
+        return datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc)
+
+    with pytest.raises(RuntimeError, match="requires HTTP 200 without redirects"):
+        source_capture._capture_source_archive(
+            output_dir=tmp_path,
+            client=FakeQuery(event_rows(30)),
+            now=datetime(2026, 10, 18, 8, 0, tzinfo=timezone.utc),
+            access=_synthetic_source_capture_access(),
+            get=fake_get,
+            history_fetch=_clock_order_history,
+            clock=clock,
+        )
+
+    assert events == ["request", "status_checked"]
+    assert clock_calls == []
+    assert not (tmp_path / CURRENT_FILENAME).exists()
+    assert not (tmp_path / MANIFEST_FILENAME).exists()
+
+
+def test_current_source_rejects_unexpected_final_url_before_body_or_observation(tmp_path):
+    events = []
+    clock_calls = []
+
+    class RedirectedSuccess:
+        status_code = 200
+        url = "https://redirect.invalid/current-season.csv"
+
+        @property
+        def content(self):
+            raise AssertionError("unexpected response body must not be read")
+
+        def raise_for_status(self):
+            events.append("status_checked")
+
+    def fake_get(url, timeout, allow_redirects=True):
+        assert url == CURRENT_URL
+        assert allow_redirects is False
+        events.append("request")
+        return RedirectedSuccess()
+
+    def clock():
+        clock_calls.append("called")
+        return datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc)
+
+    with pytest.raises(ValueError, match="response URL differs from configured URL"):
+        source_capture._capture_source_archive(
+            output_dir=tmp_path,
+            client=FakeQuery(event_rows(30)),
+            now=datetime(2026, 10, 18, 8, 0, tzinfo=timezone.utc),
+            access=_synthetic_source_capture_access(),
+            get=fake_get,
+            history_fetch=_clock_order_history,
+            clock=clock,
+        )
+
+    assert events == ["request", "status_checked"]
     assert clock_calls == []
     assert not (tmp_path / CURRENT_FILENAME).exists()
     assert not (tmp_path / MANIFEST_FILENAME).exists()
