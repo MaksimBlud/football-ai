@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone, tzinfo
 from pathlib import Path
 from types import SimpleNamespace
 import hashlib
@@ -46,6 +46,19 @@ def _synthetic_source_capture_access():
             "storage_policy": "PRIVATE_GITHUB_ACTIONS_ARTIFACTS",
         },
     }
+
+
+class NoOffsetTZ(tzinfo):
+    """tzinfo object that is not actually aware because utcoffset is None."""
+
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+    def tzname(self, dt):
+        return "no-offset"
 
 
 @pytest.fixture(autouse=True)
@@ -137,6 +150,17 @@ def test_live_feature_gate_query_selects_only_fixture_metadata_not_scores():
     assert client.selected == "match_date,home_team,away_team"
 
 
+def test_feature_gate_rejects_tzinfo_without_utc_offset_before_supabase_read():
+    class ForbiddenClient:
+        def table(self, *_args, **_kwargs):
+            raise AssertionError("Supabase must not be queried with a non-aware gate clock")
+
+    now = datetime(2026, 10, 18, 8, tzinfo=NoOffsetTZ())
+    assert now.tzinfo is not None and now.utcoffset() is None
+    with pytest.raises(ValueError, match="feature-source gate clock must be timezone-aware"):
+        read_completed_primary_event_count(ForbiddenClient(), now=now)
+
+
 def test_feature_source_gate_is_exactly_the_preregistered_v2_outcome_read_gate():
     protocol_path = Path(__file__).resolve().parents[1] / "experiments" / "market_anchor_1x2_v2_protocol.json"
     protocol = json.loads(protocol_path.read_text(encoding="utf-8"))
@@ -151,6 +175,13 @@ def test_feature_source_gate_is_exactly_the_preregistered_v2_outcome_read_gate()
     contract = validate_preregistered_outcome_read_gate()
     assert contract["protocol_blob_sha1"] == source_capture.PREREGISTERED_PROTOCOL_BLOB_SHA1
     assert contract["required_completed_primary_events"] == 30
+
+
+def test_current_season_csv_rejects_tzinfo_without_utc_offset():
+    captured_at = datetime(2026, 10, 18, 8, tzinfo=NoOffsetTZ())
+    assert captured_at.tzinfo is not None and captured_at.utcoffset() is None
+    with pytest.raises(ValueError, match="current-season source capture clock must be timezone-aware"):
+        validate_current_season_csv(current_csv(30), captured_at=captured_at)
 
 
 def test_changed_preregistered_protocol_fails_before_metadata_or_source_access(tmp_path, monkeypatch):
