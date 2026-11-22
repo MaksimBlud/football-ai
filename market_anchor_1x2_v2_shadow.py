@@ -370,11 +370,20 @@ def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
             raise ValueError("wrong experiment identity")
         if row["league"] != PRIMARY_LEAGUE:
             raise ValueError("only Serie A counts as the V2 primary cohort")
-        if bool(row["stability_gate_passed"]) is not STABILITY_GATE_PASSED:
+        stability_value = row["stability_gate_passed"]
+        if type(stability_value) is not bool:
+            raise ValueError("stability_gate_passed must be a boolean")
+        if stability_value is not STABILITY_GATE_PASSED:
             raise ValueError("shadow row stability gate state differs from frozen contract")
-        if float(row["active_lambda"]) != ACTIVE_LAMBDA:
+        active_lambda = row["active_lambda"]
+        if not _is_numeric_scalar(active_lambda) or not np.isfinite(active_lambda):
+            raise ValueError("active_lambda must be a finite numeric scalar")
+        if float(active_lambda) != ACTIVE_LAMBDA:
             raise ValueError("shadow row active lambda differs from frozen contract")
-        event_id = str(row["event_id"]).strip()
+        event_value = row["event_id"]
+        if not isinstance(event_value, str):
+            raise ValueError("event_id must be a string")
+        event_id = event_value.strip()
         if not event_id or event_id in seen_events:
             raise ValueError("event_id must be non-empty and unique")
         seen_events.add(event_id)
@@ -402,20 +411,30 @@ def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
 
         validated_probabilities = []
         for triple in PROBABILITY_FIELDS:
+            raw_values = [row[name] for name in triple]
+            if not all(_is_numeric_scalar(value) for value in raw_values):
+                raise ValueError(
+                    f"{triple[0]} probability values must be finite numeric scalars"
+                )
             validated_probabilities.append(
-                validate_probabilities(np.asarray([[float(row[name]) for name in triple]], dtype=float))[0]
+                validate_probabilities(np.asarray([raw_values], dtype=float))[0]
             )
         market_p, _, active_p, _ = validated_probabilities
         if not np.allclose(active_p, market_p, atol=1e-12, rtol=0.0):
             raise ValueError("active V2 candidate must equal market while stability gate is closed")
-        if str(row["incumbent_model_sha256"]) != INCUMBENT_MODEL_SHA256:
+        incumbent_sha = row["incumbent_model_sha256"]
+        if not isinstance(incumbent_sha, str) or incumbent_sha != INCUMBENT_MODEL_SHA256:
             raise ValueError("incumbent model sha differs from frozen production comparator")
         for field in ("candidate_artifact_sha256", "code_commit_sha"):
-            value = str(row[field])
+            value = row[field]
             expected = 64 if field.endswith("sha256") else 40
-            if len(value) != expected or any(c not in "0123456789abcdef" for c in value):
+            if (
+                not isinstance(value, str)
+                or len(value) != expected
+                or any(c not in "0123456789abcdef" for c in value)
+            ):
                 raise ValueError(f"invalid {field}")
-        candidate_artifacts.add(str(row["candidate_artifact_sha256"]))
+        candidate_artifacts.add(row["candidate_artifact_sha256"])
         validated.append(row)
     if len(candidate_artifacts) > 1:
         raise ValueError("one shadow capture batch cannot mix candidate artifacts")
