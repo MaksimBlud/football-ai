@@ -46,6 +46,7 @@ TRAINING_DATA_THROUGH = pd.Timestamp("2026-06-30T23:59:59Z")
 ADMISSION_NOT_BEFORE = pd.Timestamp("2026-09-16T00:00:00Z")
 FIRST_OUTCOME_READ_GATE = 30
 INCUMBENT_MODEL_SHA256 = "1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5"
+FROZEN_CANDIDATE_ARTIFACT_SHA256 = "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
 FORBIDDEN_OUTCOME_FIELDS = frozenset(
     {"result", "outcome", "home_goals", "away_goals", "score", "final_score"}
 )
@@ -449,6 +450,8 @@ def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
         validated.append(row)
     if len(candidate_artifacts) > 1:
         raise ValueError("one shadow capture batch cannot mix candidate artifacts")
+    if candidate_artifacts and candidate_artifacts != {FROZEN_CANDIDATE_ARTIFACT_SHA256}:
+        raise ValueError("candidate_artifact_sha256 differs from frozen V2 candidate")
     return validated
 
 

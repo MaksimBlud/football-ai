@@ -96,7 +96,7 @@ def _row(**updates):
         "shadow_residual_away_probability": 0.25,
         "active_lambda": 0.0,
         "stability_gate_passed": False,
-        "candidate_artifact_sha256": "b" * 64,
+        "candidate_artifact_sha256": v2.FROZEN_CANDIDATE_ARTIFACT_SHA256,
         "incumbent_model_sha256": v2.INCUMBENT_MODEL_SHA256,
         "code_commit_sha": "c" * 40,
     }
@@ -375,6 +375,11 @@ def test_shadow_capture_rejects_coerced_probability_types(field):
 def test_shadow_capture_rejects_non_string_identity_and_sha_fields(field, value):
     with pytest.raises(ValueError, match=field):
         v2.validate_shadow_capture_rows([_row(**{field: value})])
+
+
+def test_shadow_capture_rejects_well_formed_non_frozen_candidate_sha():
+    with pytest.raises(ValueError, match="frozen V2 candidate"):
+        v2.validate_shadow_capture_rows([_row(candidate_artifact_sha256="b" * 64)])
 
 
 @pytest.mark.parametrize(
