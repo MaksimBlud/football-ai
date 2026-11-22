@@ -76,6 +76,26 @@ def _step_block(text: str, name: str) -> str:
     return "\n".join(lines[start:end])
 
 
+def _step_condition(block: str) -> str:
+    conditions = [
+        line.strip()[len("if: "):]
+        for line in block.splitlines()
+        if line.strip().startswith("if: ")
+    ]
+    assert len(conditions) == 1, "each live/upload step must have exactly one condition"
+    return conditions[0]
+
+
+def _assert_live_condition(block: str, path: str, step_name: str) -> None:
+    condition = _step_condition(block)
+    assert f"env.{FLAG} == 'true'" in condition, (
+        f"{path}: {step_name} must retain the workflow-level default-deny gate"
+    )
+    assert "steps.private-storage.outputs.is_private == 'true'" in condition, (
+        f"{path}: {step_name} must also require verified private artifact storage"
+    )
+
+
 def test_all_live_v2_workflows_default_to_external_access_disabled():
     for path in WORKFLOWS:
         text = _workflow(path)
@@ -89,12 +109,17 @@ def test_live_steps_and_public_artifact_uploads_are_gated():
         text = _workflow(path)
         for name in spec["live"]:
             block = _step_block(text, name)
-            assert block.count("if:") == 1 and f"if: {LIVE_GATE}" in block, (
-                f"{path}: live step must have exactly one fail-closed condition: {name}"
-            )
+            _assert_live_condition(block, path, name)
         upload = _step_block(text, spec["upload"])
-        assert upload.count("if:") == 1 and f"if: {UPLOAD_GATE}" in upload, (
-            f"{path}: artifact publication must have exactly one fail-closed condition"
+        condition = _step_condition(upload)
+        assert "success()" in condition, (
+            f"{path}: artifact publication must require successful preceding steps"
+        )
+        assert f"env.{FLAG} == 'true'" in condition, (
+            f"{path}: artifact publication must retain the default-deny gate"
+        )
+        assert "steps.private-storage.outputs.is_private == 'true'" in condition, (
+            f"{path}: artifact publication must require verified private storage"
         )
 
 
@@ -184,9 +209,7 @@ def test_live_credentials_are_not_exposed_to_offline_steps():
             )
         for step_name, bindings in step_bindings.items():
             block = _step_block(text, step_name)
-            assert f"if: {LIVE_GATE}" in block, (
-                f"{path}: credential-bearing step must remain fail-closed: {step_name}"
-            )
+            _assert_live_condition(block, path, step_name)
             assert "        env:" in block, (
                 f"{path}: live credentials must be step-scoped: {step_name}"
             )
@@ -220,8 +243,17 @@ def test_every_artifact_upload_in_live_workflows_is_gated():
         ]
         assert upload_indices, f"{path}: expected at least one artifact upload"
         for index in upload_indices:
-            assert index > 0 and lines[index - 1].strip() == f"if: {UPLOAD_GATE}", (
-                f"{path}: every artifact upload must be gated, not only a named upload step"
+            assert index > 0, f"{path}: upload condition missing"
+            condition_line = lines[index - 1].strip()
+            assert condition_line.startswith("if: "), (
+                f"{path}: every artifact upload must have an immediately preceding condition"
+            )
+            condition = condition_line[len("if: "):]
+            assert "success()" in condition and f"env.{FLAG} == 'true'" in condition, (
+                f"{path}: every artifact upload must require success and the default-deny gate"
+            )
+            assert "steps.private-storage.outputs.is_private == 'true'" in condition, (
+                f"{path}: every artifact upload must require verified private storage"
             )
 
 
@@ -233,11 +265,14 @@ def test_candidate_recovery_cannot_download_or_publish_until_source_clearance():
     assert "pytest -q tests/test_market_anchor_v2_saved_cohort_replay.py" not in text
     assert "py_compile market_anchor_v2_saved_cohort_replay.py" not in text
     rebuild = _step_block(text, "Rebuild September candidate from fixed 2016-2026 training input only")
-    assert f"if: {LIVE_GATE}" in rebuild
+    _assert_live_condition(rebuild, path, "candidate rebuild")
     proof = _step_block(text, "Prove frozen checksum, immutable recipe and research-only status")
-    assert f"if: {LIVE_GATE}" in proof
+    _assert_live_condition(proof, path, "candidate checksum proof")
     upload = _step_block(text, "Archive recovered frozen V2 research candidate")
-    assert f"if: {UPLOAD_GATE}" in upload
+    upload_condition = _step_condition(upload)
+    assert "success()" in upload_condition
+    assert f"env.{FLAG} == 'true'" in upload_condition
+    assert "steps.private-storage.outputs.is_private == 'true'" in upload_condition
     assert "--restore-candidate-only" in rebuild
     assert "--save-research-candidate" in rebuild
 
