@@ -384,9 +384,20 @@ def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
         if not isinstance(event_value, str):
             raise ValueError("event_id must be a string")
         event_id = event_value.strip()
-        if not event_id or event_id in seen_events:
-            raise ValueError("event_id must be non-empty and unique")
+        if not event_id or event_value != event_id or event_id in seen_events:
+            raise ValueError("event_id must be a non-empty canonical string and unique")
         seen_events.add(event_id)
+
+        home_team = row["home_team"]
+        away_team = row["away_team"]
+        if type(home_team) is not str or not home_team or home_team != home_team.strip():
+            raise ValueError("home_team must be a non-empty canonical string")
+        if type(away_team) is not str or not away_team or away_team != away_team.strip():
+            raise ValueError("away_team must be a non-empty canonical string")
+        home_identity = " ".join(home_team.split()).casefold()
+        away_identity = " ".join(away_team.split()).casefold()
+        if home_identity == away_identity:
+            raise ValueError("home_team and away_team must identify distinct teams")
 
         kickoff = _as_utc(row["kickoff_utc"], "kickoff_utc")
         capture = _as_utc(row["capture_time_utc"], "capture_time_utc")
