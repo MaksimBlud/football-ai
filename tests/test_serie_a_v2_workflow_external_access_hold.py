@@ -818,3 +818,35 @@ steps:
 """
     assert not _has_unreviewed_action(offline)
     assert not _is_original_v2_live_workflow(offline)
+
+
+def test_private_repository_preflight_is_present_read_only_and_precedes_live_steps():
+    """Keep the private-storage preflight itself covered, not just its output reference."""
+    guard_name = "Verify private repository storage before live V2 access"
+    for path, spec in WORKFLOWS.items():
+        source = _workflow(path)
+        guard = _step_block(source, guard_name)
+
+        assert guard.count("if:") == 1
+        assert f"if: ${{{{ env.{FLAG} == 'true' }}}}" in guard
+        assert "id: private-storage" in guard
+        assert "GH_TOKEN: ${{ github.token }}" in guard
+        assert 'gh api "repos/${GITHUB_REPOSITORY}" --jq \' .private\'' not in guard
+        assert 'gh api "repos/${GITHUB_REPOSITORY}" --jq \'.private\'' in guard
+        assert 'echo "is_private=true" >> "$GITHUB_OUTPUT"' in guard
+        assert 'echo "is_private=false" >> "$GITHUB_OUTPUT"' in guard
+
+        guard_position = source.index(f"      - name: {guard_name}")
+        first_live_position = min(
+            source.index(f"      - name: {name}") for name in spec["live"]
+        )
+        assert guard_position < first_live_position, (
+            f"{path}: private-storage preflight must precede every live source/quote step"
+        )
+
+        for name in spec["live"]:
+            block = _step_block(source, name)
+            assert "steps.private-storage.outputs.is_private == 'true'" in _step_condition(block)
+
+        upload = _step_block(source, spec["upload"])
+        assert "steps.private-storage.outputs.is_private == 'true'" in _step_condition(upload)
