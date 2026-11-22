@@ -4,6 +4,14 @@ on:
   push:
     branches:
       - research/v2-feature-gate-clock-guard-on-917-20261122-run11
+      - research/v2-current-form-identity-digest-restacked-on-918-20261122-run11
+    paths:
+      - "serie_a_v2_current_form_source_capture.py"
+      - "tests/test_serie_a_v2_current_form_source_capture.py"
+      - ".github/workflows/market-anchor-1x2-v2-feature-gate-clock-validation.yml"
+  pull_request:
+    branches:
+      - research/v2-feature-gate-clock-guard-on-917-20261122-run11
     paths:
       - "serie_a_v2_current_form_source_capture.py"
       - "tests/test_serie_a_v2_current_form_source_capture.py"
