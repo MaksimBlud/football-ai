@@ -229,6 +229,14 @@ def validate_candidate_artifact(artifact: Mapping) -> None:
             or not np.isfinite(value)
         ):
             raise ValueError(f"{field} must be a finite numeric scalar")
+    for field in (
+        "stability_gate_passed",
+        "opened_2026_27_outcomes_used",
+        "research_only",
+        "automatic_promotion",
+    ):
+        if type(artifact.get(field)) is not bool:
+            raise ValueError(f"{field} must be a boolean")
     recipe = candidate_recipe()
     for key, expected in recipe.items():
         if artifact.get(key) != expected:
