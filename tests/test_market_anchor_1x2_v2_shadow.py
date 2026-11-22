@@ -27,6 +27,29 @@ def _artifact():
     return body
 
 
+
+def test_candidate_artifact_rejects_coercible_non_numeric_types():
+    cases = [
+        ("training_rows", True),
+        ("training_rows", 100.5),
+        ("training_rows", "100"),
+        ("active_lambda", False),
+        ("shadow_residual_lambda", True),
+        ("l2_penalty", True),
+        ("imputer_medians", ["0.0"] * 19),
+        ("scaler_mean", [False] + [0.0] * 18),
+        ("weights", [["0.0", "0.0"] for _ in range(20)]),
+        ("training_fingerprint_sha256", int("1" * 64)),
+    ]
+    for field, value in cases:
+        artifact = _artifact()
+        artifact[field] = value
+        body = dict(artifact)
+        body.pop("artifact_sha256")
+        artifact["artifact_sha256"] = v2._sha256_json(body)
+        with pytest.raises(ValueError, match=field):
+            v2.validate_candidate_artifact(artifact)
+
 def _row(**updates):
     row = {
         "experiment_id": v2.EXPERIMENT_ID,
