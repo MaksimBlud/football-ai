@@ -445,6 +445,30 @@ def _has_unreviewed_action(text: str) -> bool:
     return False
 
 
+UNREVIEWED_LAUNCHER_PATTERNS = (
+    # Build/package runners can invoke local scripts with arbitrary network access.
+    r"^\\s*(?:npm|yarn|pnpm)\\s+(?:run|exec|install|ci|start|build|test)\\b",
+    r"^\\s*(?:make|gmake|just|task|gradle|mvn|bazel|buck)\\b",
+    r"^\\s*(?:composer|bundle)\\s+exec\\b",
+    r"^\\s*rake\\b",
+    r"^\\s*mix\\s+(?:run|test)\\b",
+    # Direct local launchers and sourced scripts are otherwise invisible to
+    # the HTTP/socket marker inventory.
+    r"^\\s*(?:\\./|source\\s+|\\.\\s+)\\S+",
+)
+
+
+def _has_unreviewed_launcher(text: str) -> bool:
+    """Fail closed on build runners or local scripts in original-V2 workflows."""
+    import re
+
+    return any(
+        re.search(pattern, line.strip(), re.IGNORECASE)
+        for line in text.splitlines()
+        for pattern in UNREVIEWED_LAUNCHER_PATTERNS
+    )
+
+
 ORIGINAL_V2_REFERENCE_MARKERS = (
     "serie_a_v2_",
     "serie-a-v2",
@@ -528,6 +552,7 @@ def _is_original_v2_live_workflow(text: str, workflow_path: str = "") -> bool:
                 _has_external_io(text)
                 or _has_non_test_python_entrypoint(text)
                 or _has_unreviewed_action(text)
+                or _has_unreviewed_launcher(text)
             )
         )
     )
@@ -851,3 +876,45 @@ def test_private_repository_preflight_is_present_read_only_and_precedes_live_ste
 
         upload = _step_block(source, spec["upload"])
         assert "steps.private-storage.outputs.is_private == 'true'" in _step_condition(upload)
+
+
+
+def test_unreviewed_build_and_local_script_launchers_are_live_capable():
+    examples = (
+        "run: npm run capture",
+        "run: npm exec capture",
+        "run: yarn run capture",
+        "run: pnpm run capture",
+        "run: make capture",
+        "run: gmake capture",
+        "run: just capture",
+        "run: task capture",
+        "run: gradle run",
+        "run: mvn exec:java",
+        "run: bazel run //:capture",
+        "run: composer exec capture",
+        "run: bundle exec ruby capture.rb",
+        "run: rake capture",
+        "run: mix run capture.exs",
+        "run: ./scripts/capture.sh",
+        "run: source scripts/capture.sh",
+        "run: . scripts/capture.sh",
+        """run: |
+  npm run capture""",
+        """run: |
+  ./scripts/capture.sh""",
+    )
+    for example in examples:
+        workflow = f"name: market-anchor-1x2-v2 source capture\\n{example}"
+        assert _has_unreviewed_launcher(example)
+        assert _is_original_v2_live_workflow(workflow)
+
+
+def test_unreviewed_launcher_guard_preserves_offline_python_validation():
+    offline = """name: market-anchor-1x2-v2 offline validation
+run: |
+  python -m py_compile market_anchor_1x2_v2_shadow.py
+  python -m pytest -q tests/test_market_anchor_1x2_v2_shadow.py
+"""
+    assert not _has_unreviewed_launcher(offline)
+    assert not _is_original_v2_live_workflow(offline)
