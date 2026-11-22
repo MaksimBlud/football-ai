@@ -446,12 +446,12 @@ def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
                 or any(c not in "0123456789abcdef" for c in value)
             ):
                 raise ValueError(f"invalid {field}")
-        if row["candidate_artifact_sha256"] != FROZEN_CANDIDATE_ARTIFACT_SHA256:
-            raise ValueError("candidate_artifact_sha256 differs from frozen V2 candidate")
         candidate_artifacts.add(row["candidate_artifact_sha256"])
         validated.append(row)
     if len(candidate_artifacts) > 1:
         raise ValueError("one shadow capture batch cannot mix candidate artifacts")
+    if candidate_artifacts and candidate_artifacts != {FROZEN_CANDIDATE_ARTIFACT_SHA256}:
+        raise ValueError("candidate_artifact_sha256 differs from frozen V2 candidate")
     return validated
 
 
