@@ -92,21 +92,28 @@ def _as_utc(value: object, field: str) -> pd.Timestamp:
     return ts.tz_convert("UTC")
 
 
+def _is_numeric_scalar(value: object) -> bool:
+    return (
+        not isinstance(value, (bool, np.bool_))
+        and isinstance(value, (int, float, np.integer, np.floating))
+    )
+
+
 def _finite_list(values: object, expected: int, field: str) -> list[float]:
-    raw = np.asarray(values)
-    if raw.shape != (expected,) or raw.dtype.kind not in "iuf":
+    raw = np.asarray(values, dtype=object)
+    if raw.shape != (expected,) or not all(_is_numeric_scalar(x) for x in raw.flat):
         raise ValueError(f"{field} must contain {expected} finite numeric values")
-    arr = raw.astype(float, copy=False)
+    arr = np.asarray(values, dtype=float)
     if not np.isfinite(arr).all():
         raise ValueError(f"{field} must contain {expected} finite numeric values")
     return [float(x) for x in arr]
 
 
 def _finite_matrix(values: object, rows: int, cols: int, field: str) -> list[list[float]]:
-    raw = np.asarray(values)
-    if raw.shape != (rows, cols) or raw.dtype.kind not in "iuf":
+    raw = np.asarray(values, dtype=object)
+    if raw.shape != (rows, cols) or not all(_is_numeric_scalar(x) for x in raw.flat):
         raise ValueError(f"{field} must be a finite numeric {rows}x{cols} matrix")
-    arr = raw.astype(float, copy=False)
+    arr = np.asarray(values, dtype=float)
     if not np.isfinite(arr).all():
         raise ValueError(f"{field} must be a finite numeric {rows}x{cols} matrix")
     return [[float(x) for x in row] for row in arr]
