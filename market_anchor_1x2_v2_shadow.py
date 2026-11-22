@@ -93,16 +93,22 @@ def _as_utc(value: object, field: str) -> pd.Timestamp:
 
 
 def _finite_list(values: object, expected: int, field: str) -> list[float]:
-    arr = np.asarray(values, dtype=float)
-    if arr.shape != (expected,) or not np.isfinite(arr).all():
-        raise ValueError(f"{field} must contain {expected} finite values")
+    raw = np.asarray(values)
+    if raw.shape != (expected,) or raw.dtype.kind not in "iuf":
+        raise ValueError(f"{field} must contain {expected} finite numeric values")
+    arr = raw.astype(float, copy=False)
+    if not np.isfinite(arr).all():
+        raise ValueError(f"{field} must contain {expected} finite numeric values")
     return [float(x) for x in arr]
 
 
 def _finite_matrix(values: object, rows: int, cols: int, field: str) -> list[list[float]]:
-    arr = np.asarray(values, dtype=float)
-    if arr.shape != (rows, cols) or not np.isfinite(arr).all():
-        raise ValueError(f"{field} must be a finite {rows}x{cols} matrix")
+    raw = np.asarray(values)
+    if raw.shape != (rows, cols) or raw.dtype.kind not in "iuf":
+        raise ValueError(f"{field} must be a finite numeric {rows}x{cols} matrix")
+    arr = raw.astype(float, copy=False)
+    if not np.isfinite(arr).all():
+        raise ValueError(f"{field} must be a finite numeric {rows}x{cols} matrix")
     return [[float(x) for x in row] for row in arr]
 
 
@@ -208,6 +214,14 @@ def fit_candidate_artifact(frame: pd.DataFrame) -> dict:
 
 
 def validate_candidate_artifact(artifact: Mapping) -> None:
+    for field in ("shadow_residual_lambda", "active_lambda", "l2_penalty"):
+        value = artifact.get(field)
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float, np.integer, np.floating))
+            or not np.isfinite(value)
+        ):
+            raise ValueError(f"{field} must be a finite numeric scalar")
     recipe = candidate_recipe()
     for key, expected in recipe.items():
         if artifact.get(key) != expected:
@@ -219,12 +233,15 @@ def validate_candidate_artifact(artifact: Mapping) -> None:
     if (scale <= 0).any():
         raise ValueError("scaler_scale must be positive")
     _finite_matrix(artifact.get("weights"), len(features) + 1, 2, "weights")
-    if int(artifact.get("training_rows", 0)) <= 0:
-        raise ValueError("training_rows must be positive")
+    training_rows = artifact.get("training_rows")
+    if type(training_rows) is not int or training_rows <= 0:
+        raise ValueError("training_rows must be a positive integer")
     for field in ("training_fingerprint_sha256", "artifact_sha256"):
-        value = str(artifact.get(field, ""))
-        if len(value) != 64 or any(c not in "0123456789abcdef" for c in value):
-            raise ValueError(f"{field} must be lowercase sha256")
+        value = artifact.get(field)
+        if not isinstance(value, str) or len(value) != 64 or any(
+            c not in "0123456789abcdef" for c in value
+        ):
+            raise ValueError(f"{field} must be a lowercase sha256 string")
     body = dict(artifact)
     supplied = body.pop("artifact_sha256")
     if _sha256_json(body) != supplied:
