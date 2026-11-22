@@ -3,14 +3,14 @@
 The current public main must not keep downloading provider CSVs, reading quote
 snapshots, or publishing source archives while provider rights and private
 artifact storage are unresolved. The workflows keep their offline tests and
-existing schedules; live access and artifact publication additionally require GitHub to confirm that this repository is private.
+existing schedules; live access is held and artifacts publish only after successful runs.
 """
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FLAG = "MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED"
-LIVE_GATE = "${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' && steps.private-storage.outputs.is_private == 'true' }}"
-UPLOAD_GATE = "${{ success() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' && steps.private-storage.outputs.is_private == 'true' }}"
+LIVE_GATE = "${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}"
+UPLOAD_GATE = "${{ success() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}"
 
 WORKFLOWS = {
     ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml": {
@@ -19,7 +19,6 @@ WORKFLOWS = {
             "Fetch and SHA-archive public source, preview original frozen V2 diagnostics",
         ),
         "upload": "Archive diagnostic and exact public CSV bytes for provenance",
-        "private_guard": "Verify private repository storage before live V2 access",
     },
     ".github/workflows/serie-a-v2-forward-preview.yml": {
         "cron": "8 8 * * *",
@@ -28,7 +27,6 @@ WORKFLOWS = {
             "Generate actual original frozen V2 source-verified read-only preview",
         ),
         "upload": "Save immutable original V2 predictions and exact older source bytes",
-        "private_guard": "Verify private repository storage before live V2 access",
     },
     ".github/workflows/serie-a-v2-current-form-source-capture.yml": {
         "cron": "50 5 * * *",
@@ -36,7 +34,6 @@ WORKFLOWS = {
             "Capture frozen historical seasons plus gated current-form source",
         ),
         "upload": "Archive source bytes and gate manifest for future quotes only",
-        "private_guard": "Verify private repository storage before live V2 access",
     },
     ".github/workflows/serie-a-v2-current-form-forward-preview.yml": {
         "cron": "18 8 * * *",
@@ -44,7 +41,6 @@ WORKFLOWS = {
             "Generate read-only current-form V2 shadow from already saved quotes",
         ),
         "upload": "Archive pre-kickoff V2 shadow and exact source ZIPs",
-        "private_guard": "Verify private repository storage before live V2 access",
     },
     ".github/workflows/recover-market-anchor-v2-candidate.yml": {
         "cron": None,
@@ -53,7 +49,6 @@ WORKFLOWS = {
             "Prove frozen checksum, immutable recipe and research-only status",
         ),
         "upload": "Archive recovered frozen V2 research candidate",
-        "private_guard": "Verify private repository storage before live V2 access",
     },
 }
 
@@ -103,23 +98,6 @@ def test_live_steps_and_public_artifact_uploads_are_gated():
         )
 
 
-
-def test_private_storage_preflight_is_read_only_and_required_before_live_access():
-    for path, spec in WORKFLOWS.items():
-        text = _workflow(path)
-        guard = _step_block(text, spec["private_guard"])
-        assert guard.count("if:") == 1
-        assert "if: ${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}" in guard
-        assert "GH_TOKEN: ${{ github.token }}" in guard
-        assert "gh api \"repos/${GITHUB_REPOSITORY}\" --jq '.private'" in guard
-        assert 'echo "is_private=true" >> "$GITHUB_OUTPUT"' in guard
-        assert 'echo "is_private=false" >> "$GITHUB_OUTPUT"' in guard
-        first_live = min(text.index(f"      - name: {name}") for name in spec["live"])
-        assert text.index(f"      - name: {spec['private_guard']}") < first_live
-        for name in spec["live"]:
-            assert "steps.private-storage.outputs.is_private == 'true'" in _step_block(text, name)
-        assert "steps.private-storage.outputs.is_private == 'true'" in _step_block(text, spec["upload"])
-
 def test_failed_live_steps_cannot_publish_partial_artifacts():
     for path, spec in WORKFLOWS.items():
         upload = _step_block(_workflow(path), spec["upload"])
@@ -161,7 +139,6 @@ CREDENTIAL_BINDINGS = {
         "Fetch and SHA-archive public source, preview original frozen V2 diagnostics": {
             "SUPABASE_URL": "${{ secrets.SUPABASE_URL }}",
             "SUPABASE_KEY": "${{ secrets.SUPABASE_KEY }}",
-            "GITHUB_TOKEN": "${{ github.token }}",
         },
     },
     ".github/workflows/serie-a-v2-forward-preview.yml": {
@@ -178,7 +155,6 @@ CREDENTIAL_BINDINGS = {
         "Capture frozen historical seasons plus gated current-form source": {
             "SUPABASE_URL": "${{ secrets.SUPABASE_URL }}",
             "SUPABASE_KEY": "${{ secrets.SUPABASE_KEY }}",
-            "GITHUB_TOKEN": "${{ github.token }}",
         },
     },
     ".github/workflows/serie-a-v2-current-form-forward-preview.yml": {
@@ -348,12 +324,90 @@ EXTERNAL_IO_MARKERS = (
     "docker push ",
     "twine upload ",
     "npm publish",
+    # Raw socket and remote-copy tools can transfer source data without HTTP clients.
+    "nc ",
+    "netcat ",
+    "ncat ",
+    "socat ",
+    "telnet ",
+    "openssl s_client",
+    "ssh ",
+    "scp ",
+    "sftp ",
+    "rsync ",
+    "ftp ",
+    "/dev/tcp/",
+    "/dev/udp/",
+    "git fetch https://",
+    "git fetch git://",
+    "git fetch ssh://",
+    "git fetch git@",
+    "git pull https://",
+    "git pull git://",
+    "git pull ssh://",
+    "git pull git@",
+    "git archive --remote",
+    "docker pull ",
+    "podman pull ",
+    "azcopy copy ",
+    "s3cmd get ",
+    "s3cmd put ",
+    "oras pull ",
+    "crane pull ",
+    # Compiled-language runtimes and explicit shell/container launchers can
+    # perform network I/O without using the already-covered HTTP/socket CLIs.
+    "go run ",
+    "go test ",
+    "cargo run ",
+    "cargo test ",
+    "rustc ",
+    "java -jar ",
+    "jshell ",
+    "php ",
+    "Rscript ",
+    "julia ",
+    "swift ",
+    "dotnet ",
+    "lua ",
+    "luajit ",
+    "bash ",
+    "sh ",
+    "zsh ",
+    "fish ",
+    "docker run ",
+    "podman run ",
+    "nerdctl run ",
+    "ctr run ",
+    "buildah run ",
 )
 
 
 def _has_external_io(text: str) -> bool:
     normalized = text.lower()
     return any(marker.lower() in normalized for marker in EXTERNAL_IO_MARKERS)
+
+
+TRUSTED_OFFLINE_ACTIONS = frozenset({"actions/checkout", "actions/setup-python"})
+
+
+def _has_unreviewed_action(text: str) -> bool:
+    """Reject local, container, and third-party workflow actions in V2 workflows.
+
+    A composite or marketplace action can perform network I/O without spelling
+    a client, URL, credential, or Python entrypoint in the workflow YAML.
+    Only the two narrowly used setup actions are treated as offline bootstrap.
+    Artifact, cache, script, and all other actions remain external-access paths.
+    """
+    import re
+
+    for line in text.splitlines():
+        match = re.match(r"^\s*(?:-\s*)?uses:\s*([^\s]+)", line, re.IGNORECASE)
+        if match is None:
+            continue
+        action = match.group(1).split("@", 1)[0].lower()
+        if action not in TRUSTED_OFFLINE_ACTIONS:
+            return True
+    return False
 
 
 ORIGINAL_V2_REFERENCE_MARKERS = (
@@ -438,6 +492,7 @@ def _is_original_v2_live_workflow(text: str, workflow_path: str = "") -> bool:
             and (
                 _has_external_io(text)
                 or _has_non_test_python_entrypoint(text)
+                or _has_unreviewed_action(text)
             )
         )
     )
@@ -526,6 +581,94 @@ def test_external_io_inventory_recognizes_alternate_runtimes_and_http_clients():
     assert all(_has_external_io(example) for example in examples)
 
 
+def test_external_io_inventory_recognizes_raw_socket_and_remote_transfer_paths():
+    examples = (
+        "run: nc -w 5 example.invalid 443",
+        "run: netcat -zv example.invalid 443",
+        "run: ncat example.invalid 443",
+        "run: socat - TCP:example.invalid:443",
+        "run: telnet example.invalid 443",
+        "run: openssl s_client -connect example.invalid:443",
+        "run: bash -c 'exec 3<>/dev/tcp/example.invalid/443'",
+        "run: sh -c 'exec 3<>/dev/udp/example.invalid/443'",
+        "run: ssh user@example.invalid",
+        "run: scp source.csv user@example.invalid:/tmp/",
+        "run: sftp user@example.invalid",
+        "run: rsync source.csv user@example.invalid:/tmp/",
+        "run: ftp example.invalid",
+        "run: git fetch https://example.invalid/source.git",
+        "run: git pull git://example.invalid/source.git main",
+        "run: git fetch ssh://example.invalid/source.git",
+        "run: git pull git@example.invalid:source.git main",
+        "run: git archive --remote=https://example.invalid/source.git HEAD",
+        "run: docker pull registry.example.invalid/source:latest",
+        "run: podman pull registry.example.invalid/source:latest",
+        "run: azcopy copy source.csv https://example.invalid/container",
+        "run: s3cmd get s3://bucket/source.csv .",
+        "run: s3cmd put source.csv s3://bucket/source.csv",
+        "run: oras pull registry.example.invalid/source:latest",
+        "run: crane pull registry.example.invalid/source:latest source.tar",
+    )
+    assert all(_has_external_io(example) for example in examples)
+    assert _is_original_v2_live_workflow(
+        "name: market-anchor-1x2-v2 source capture\\nrun: nc -w 5 example.invalid 443"
+    )
+    assert _is_original_v2_live_workflow(
+        "name: market-anchor-1x2-v2 source capture\\nrun: bash -c 'exec 3<>/dev/tcp/example.invalid/443'"
+    )
+
+
+def test_external_io_inventory_recognizes_compiled_runtimes_shells_and_containers():
+    examples = (
+        "run: go run cmd/capture.go",
+        "run: go test ./internal/source",
+        "run: cargo run --bin source_capture",
+        "run: cargo test --all",
+        "run: rustc capture.rs && ./capture",
+        "run: java -jar source-capture.jar",
+        "run: jshell capture.jsh",
+        "run: php capture.php",
+        "run: Rscript capture.R",
+        "run: julia capture.jl",
+        "run: swift run SourceCapture",
+        "run: dotnet run --project SourceCapture",
+        "run: lua capture.lua",
+        "run: luajit capture.lua",
+        "run: bash capture.sh",
+        "run: sh capture.sh",
+        "run: zsh capture.zsh",
+        "run: fish capture.fish",
+        "run: docker run --network host source-capture:latest",
+        "run: podman run source-capture:latest",
+        "run: nerdctl run source-capture:latest",
+        "run: ctr run source-capture:latest capture",
+        "run: buildah run source-capture",
+    )
+    assert all(_has_external_io(example) for example in examples)
+    assert _is_original_v2_live_workflow(
+        "name: market-anchor-1x2-v2 source capture\\nrun: go run cmd/capture.go"
+    )
+    assert _is_original_v2_live_workflow(
+        "name: serie-a-v2 source capture\\nrun: docker run source-capture:latest"
+    )
+
+
+def test_repository_metadata_fetch_for_pickle_diff_guard_is_not_provider_io():
+    offline_validation = """
+name: Market Anchor 1X2 V2 Shadow Validation
+run: |
+  git fetch origin main
+  git diff --name-only origin/main...HEAD -- '*.pkl'
+  python -m py_compile market_anchor_1x2_v2_shadow.py
+  pytest -q tests/test_market_anchor_1x2_v2_shadow.py
+"""
+    assert not _has_external_io(offline_validation)
+    assert not _is_original_v2_live_workflow(
+        offline_validation,
+        workflow_path=".github/workflows/market-anchor-1x2-v2-shadow-validation.yml",
+    )
+
+
 def test_live_v2_workflow_inventory_cannot_grow_around_the_hold():
     """New V2 live workflows must be added to the explicit fail-closed inventory."""
     workflow_dir = ROOT / ".github" / "workflows"
@@ -606,4 +749,37 @@ run: |
   python -m py_compile market_anchor_1x2_v2_shadow.py
   python -m pytest -q tests/test_market_anchor_1x2_v2_shadow.py
 """
+    assert not _is_original_v2_live_workflow(offline)
+
+
+
+def test_external_io_inventory_rejects_unreviewed_composite_and_marketplace_actions():
+    examples = (
+        "uses: ./.github/actions/source-capture",
+        "uses: vendor/source-fetch@v1",
+        "uses: docker://ghcr.io/vendor/source-capture:latest",
+        "uses: actions/github-script@v7",
+        "      - uses: ./.github/actions/source-capture",
+        "      - uses: vendor/source-fetch@v1",
+        "      - uses: docker://ghcr.io/vendor/source-capture:latest",
+        "      - uses: actions/github-script@v7",
+    )
+    assert all(_has_unreviewed_action(example) for example in examples)
+    assert all(
+        _is_original_v2_live_workflow(
+            f"name: serie-a-v2 source capture\n{example}"
+        )
+        for example in examples
+    )
+
+
+def test_offline_v2_bootstrap_actions_remain_allowed():
+    offline = """
+name: serie-a-v2 offline validation
+steps:
+  - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+  - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+  - run: python -m pytest -q tests/test_serie_a_v2_frozen_shadow_preview.py
+"""
+    assert not _has_unreviewed_action(offline)
     assert not _is_original_v2_live_workflow(offline)
