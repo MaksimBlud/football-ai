@@ -228,6 +228,19 @@ def test_outcome_gate_is_count_based_and_cannot_activate_v2_post_hoc():
         v2.outcome_read_permitted(-1)
 
 
+@pytest.mark.parametrize(
+    "count",
+    [True, False, np.bool_(True), 29.0, 30.0, 30.5, "30", None],
+)
+def test_outcome_gate_rejects_non_integer_event_counts(count):
+    with pytest.raises(ValueError, match="nonnegative integer"):
+        v2.outcome_read_permitted(count)
+
+
+def test_outcome_gate_accepts_numpy_integer_count():
+    assert v2.outcome_read_permitted(np.int64(30))
+
+
 def test_v2_code_does_not_reference_production_pickle_paths():
     text = (ROOT / "market_anchor_1x2_v2_shadow.py").read_text()
     assert "football_model_xgboost_elo.pkl" not in text

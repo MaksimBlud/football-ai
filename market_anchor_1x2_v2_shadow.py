@@ -457,6 +457,11 @@ def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
 
 
 def outcome_read_permitted(completed_primary_events: int) -> bool:
+    """Open the frozen outcome-read gate only from an exact integer event count."""
+    if isinstance(completed_primary_events, (bool, np.bool_)) or not isinstance(
+        completed_primary_events, (int, np.integer)
+    ):
+        raise ValueError("completed_primary_events must be a nonnegative integer")
     if completed_primary_events < 0:
-        raise ValueError("completed_primary_events cannot be negative")
-    return completed_primary_events >= FIRST_OUTCOME_READ_GATE
+        raise ValueError("completed_primary_events must be a nonnegative integer")
+    return int(completed_primary_events) >= FIRST_OUTCOME_READ_GATE
