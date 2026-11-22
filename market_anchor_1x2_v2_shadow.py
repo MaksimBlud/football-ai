@@ -413,12 +413,12 @@ def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
         if min(market_time, incumbent_time, candidate_time) < ADMISSION_NOT_BEFORE:
             raise ValueError("retroactive/backfilled prediction inputs are forbidden")
         if not (feature_cutoff < market_time < kickoff):
-            raise ValueError("feature history cutoff and market snapshot must be strictly ordered before kickoff")
+            raise ValueError("feature history cutoff must be strictly before market snapshot and capture pre-kickoff")
         if not (
             market_time < incumbent_time < capture < kickoff
             and market_time < candidate_time < capture < kickoff
         ):
-            raise ValueError("market snapshot must strictly precede both model predictions, which must strictly precede capture")
+            raise ValueError("market snapshot must precede both model predictions; both predictions must strictly precede capture pre-kickoff")
         if training_cutoff != TRAINING_DATA_THROUGH:
             raise ValueError("candidate training cutoff differs from frozen contract")
 
