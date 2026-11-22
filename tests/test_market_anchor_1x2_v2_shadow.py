@@ -334,3 +334,44 @@ def test_frozen_stability_gate_rejects_more_dual_wins_than_prior_seasons():
     )
     with pytest.raises(ValueError, match="cannot exceed"):
         v2.stability_gate(report)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("stability_gate_passed", 0),
+        ("stability_gate_passed", None),
+        ("active_lambda", "0"),
+        ("active_lambda", False),
+    ],
+)
+def test_shadow_capture_rejects_coerced_gate_and_lambda_types(field, value):
+    with pytest.raises(ValueError, match=field):
+        v2.validate_shadow_capture_rows([_row(**{field: value})])
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "market_home_probability",
+        "incumbent_home_probability",
+        "candidate_home_probability",
+        "shadow_residual_home_probability",
+    ],
+)
+def test_shadow_capture_rejects_coerced_probability_types(field):
+    with pytest.raises(ValueError, match="probability"):
+        v2.validate_shadow_capture_rows([_row(**{field: "0.5"})])
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("event_id", 1),
+        ("candidate_artifact_sha256", int("1" * 64)),
+        ("code_commit_sha", int("1" * 40)),
+    ],
+)
+def test_shadow_capture_rejects_non_string_identity_and_sha_fields(field, value):
+    with pytest.raises(ValueError, match=field):
+        v2.validate_shadow_capture_rows([_row(**{field: value})])
