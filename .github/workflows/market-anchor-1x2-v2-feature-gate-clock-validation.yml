@@ -3,22 +3,22 @@ name: Original V2 Feature Gate Clock Validation
 on:
   push:
     branches:
-      - research/v2-feature-gate-clock-guard-on-917-20261122-run11
-      - research/v2-capture-entry-clock-offset-guard-on-919-20261122-run11
-      - research/v2-current-form-identity-digest-restacked-on-918-20261122-run11
+      - research/v2-source-redirect-origin-guard-on-921-20261122-run11
+    paths:
+      - "serie_a_v2_current_form_source_capture.py"
+      - "serie_a_v2_live_diagnostic_report.py"
+      - "tests/test_serie_a_v2_current_form_source_capture.py"
+      - "tests/test_serie_a_v2_live_diagnostic_report.py"
+      - ".github/workflows/market-anchor-1x2-v2-feature-gate-clock-validation.yml"
+
+  pull_request:
+    branches:
       - research/v2-source-observation-after-response-on-920-20261122-run11
     paths:
       - "serie_a_v2_current_form_source_capture.py"
+      - "serie_a_v2_live_diagnostic_report.py"
       - "tests/test_serie_a_v2_current_form_source_capture.py"
-      - ".github/workflows/market-anchor-1x2-v2-feature-gate-clock-validation.yml"
-  pull_request:
-    branches:
-      - research/v2-current-form-identity-digest-restacked-on-918-20261122-run11
-      - research/v2-feature-gate-clock-guard-on-917-20261122-run11
-      - research/v2-capture-entry-clock-offset-guard-on-919-20261122-run11
-    paths:
-      - "serie_a_v2_current_form_source_capture.py"
-      - "tests/test_serie_a_v2_current_form_source_capture.py"
+      - "tests/test_serie_a_v2_live_diagnostic_report.py"
       - ".github/workflows/market-anchor-1x2-v2-feature-gate-clock-validation.yml"
 
 permissions:
@@ -48,8 +48,8 @@ jobs:
       - name: Install offline regression dependencies
         run: python -m pip install pandas numpy scipy scikit-learn requests supabase python-dotenv pytest
       - name: Compile original V2 current-form source capture
-        run: python -m py_compile serie_a_v2_current_form_source_capture.py
+        run: python -m py_compile serie_a_v2_current_form_source_capture.py serie_a_v2_live_diagnostic_report.py
       - name: Run feature-gate clock and source-capture regressions
-        run: python -m pytest -q tests/test_serie_a_v2_current_form_source_capture.py tests/test_serie_a_v2_workflow_external_access_hold.py
+        run: python -m pytest -q tests/test_serie_a_v2_current_form_source_capture.py tests/test_serie_a_v2_live_diagnostic_report.py tests/test_serie_a_v2_workflow_external_access_hold.py
       - name: Guard production model binaries
         run: git diff --exit-code origin/main...HEAD -- '*.pkl'
