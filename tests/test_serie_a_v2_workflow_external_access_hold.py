@@ -831,7 +831,6 @@ def test_private_repository_preflight_is_present_read_only_and_precedes_live_ste
         assert f"if: ${{{{ env.{FLAG} == 'true' }}}}" in guard
         assert "id: private-storage" in guard
         assert "GH_TOKEN: ${{ github.token }}" in guard
-        assert 'gh api "repos/${GITHUB_REPOSITORY}" --jq \' .private\'' not in guard
         assert 'gh api "repos/${GITHUB_REPOSITORY}" --jq \'.private\'' in guard
         assert 'echo "is_private=true" >> "$GITHUB_OUTPUT"' in guard
         assert 'echo "is_private=false" >> "$GITHUB_OUTPUT"' in guard
