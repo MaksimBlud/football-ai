@@ -394,9 +394,7 @@ def _capture_source_archive(
     clock=lambda: datetime.now(timezone.utc),
 ) -> dict:
     """Internal capture after source rights and private storage have been verified."""
-    if now.tzinfo is None:
-        raise ValueError("source capture clock must be timezone-aware")
-    at = now.astimezone(timezone.utc)
+    at = _clock_utc(lambda: now, field="source capture clock")
     preregistered_gate = validate_preregistered_outcome_read_gate()
     gate_identity_audit = _read_completed_primary_event_summary(client, now=at)
     gate_count = gate_identity_audit["canonical_unique_fixture_identities"]
