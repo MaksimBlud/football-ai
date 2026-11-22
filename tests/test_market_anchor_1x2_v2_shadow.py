@@ -383,6 +383,28 @@ def test_shadow_capture_rejects_well_formed_non_frozen_candidate_sha():
 
 
 @pytest.mark.parametrize(
+    "field",
+    ["incumbent_generated_at_utc", "candidate_generated_at_utc"],
+)
+def test_shadow_capture_rejects_prediction_generated_before_market_snapshot(field):
+    with pytest.raises(ValueError, match="market snapshot must precede"):
+        v2.validate_shadow_capture_rows([
+            _row(**{field: "2026-09-18T16:54:00Z"})
+        ])
+
+
+@pytest.mark.parametrize(
+    "feature_cutoff",
+    ["2026-09-18T16:55:00Z", "2026-09-18T16:56:00Z"],
+)
+def test_shadow_capture_requires_feature_source_strictly_before_market_quote(feature_cutoff):
+    with pytest.raises(ValueError, match="feature history cutoff must be strictly before"):
+        v2.validate_shadow_capture_rows([
+            _row(feature_history_cutoff_utc=feature_cutoff)
+        ])
+
+
+@pytest.mark.parametrize(
     ("field", "value"),
     [
         ("home_team", ""),
