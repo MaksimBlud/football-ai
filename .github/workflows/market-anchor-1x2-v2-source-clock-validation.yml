@@ -5,6 +5,7 @@ on:
     branches:
       - research/v2-source-clock-utc-guard-restacked-on-916-run11
       - research/v2-feature-gate-clock-guard-on-917-20261122-run11
+      - research/v2-capture-entry-clock-offset-guard-on-919-20261122-run11
       - research/v2-current-form-identity-digest-restacked-on-918-20261122-run11
     paths:
       - "serie_a_v2_current_form_source_capture.py"
@@ -15,6 +16,7 @@ on:
     branches:
       - research/v2-workflow-egress-guard-restacked-on-915-20261121-run11
       - research/v2-source-clock-utc-guard-restacked-on-916-run11
+      - research/v2-current-form-identity-digest-restacked-on-918-20261122-run11
       - research/v2-feature-gate-clock-guard-on-917-20261122-run11
     paths:
       - "serie_a_v2_current_form_source_capture.py"

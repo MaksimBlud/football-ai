@@ -526,6 +526,33 @@ def test_source_capture_workflow_is_default_deny_and_preserves_existing_schedule
     assert "SUPABASE_URL" not in job_header
     assert "SUPABASE_KEY" not in job_header
 
+@pytest.mark.parametrize(
+    "capture_now",
+    [
+        datetime(2026, 10, 18, 8, 0),
+        datetime(2026, 10, 18, 8, 0, tzinfo=NoOffsetTZ()),
+    ],
+)
+def test_source_archive_rejects_nonaware_entry_clock_before_metadata_or_source_access(
+    tmp_path, capture_now
+):
+    def forbidden(*_args, **_kwargs):
+        pytest.fail("no metadata query or source request may run with a non-aware entry clock")
+
+    with pytest.raises(ValueError, match="source capture clock must return a timezone-aware datetime"):
+        source_capture._capture_source_archive(
+            output_dir=tmp_path,
+            client=object(),
+            now=capture_now,
+            access=_synthetic_source_capture_access(),
+            get=forbidden,
+            history_fetch=forbidden,
+        )
+
+    assert not (tmp_path / CURRENT_FILENAME).exists()
+    assert not (tmp_path / MANIFEST_FILENAME).exists()
+
+
 @pytest.mark.parametrize("naive_call", [1, 2])
 def test_source_archive_rejects_naive_clock_for_observation_and_archive_time(
     tmp_path, monkeypatch, naive_call
