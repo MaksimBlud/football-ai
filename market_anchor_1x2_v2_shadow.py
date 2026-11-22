@@ -99,6 +99,18 @@ def _is_numeric_scalar(value: object) -> bool:
     )
 
 
+def _finite_report_number(value: object, field: str) -> float:
+    if not _is_numeric_scalar(value) or not np.isfinite(value):
+        raise ValueError(f"{field} must be a finite numeric scalar")
+    return float(value)
+
+
+def _nonnegative_report_count(value: object, field: str) -> int:
+    if type(value) is not int or value < 0:
+        raise ValueError(f"{field} must be a nonnegative integer")
+    return value
+
+
 def _finite_list(values: object, expected: int, field: str) -> list[float]:
     raw = np.asarray(values, dtype=object)
     if raw.shape != (expected,) or not all(_is_numeric_scalar(x) for x in raw.flat):
@@ -121,26 +133,55 @@ def _finite_matrix(values: object, rows: int, cols: int, field: str) -> list[lis
 
 def stability_gate(report: Mapping) -> dict:
     """Evaluate the frozen multi-period/uncertainty gate without tuning it."""
+    if not isinstance(report, Mapping):
+        raise ValueError("robustness report must be a mapping")
     if report.get("experiment_id") != "MARKET_ANCHOR_1X2_V1_ROBUSTNESS":
         raise ValueError("wrong robustness experiment")
     if report.get("target_league") != PRIMARY_LEAGUE:
         raise ValueError("robustness report must target Serie A")
     if report.get("frozen_feature_variant") != FEATURE_VARIANT:
         raise ValueError("robustness feature variant differs from frozen V2 recipe")
-    if float(report.get("frozen_lambda")) != SHADOW_RESIDUAL_LAMBDA:
+    frozen_lambda = _finite_report_number(report.get("frozen_lambda"), "frozen_lambda")
+    if frozen_lambda != SHADOW_RESIDUAL_LAMBDA:
         raise ValueError("robustness lambda differs from frozen V2 residual recipe")
 
-    prior_seasons = int(report["retrospective_prior_seasons"])
-    dual_wins = int(report["retrospective_prior_season_dual_wins"])
-    brier = report["final_oot_brier_bootstrap"]
-    log_loss = report["final_oot_log_loss_bootstrap"]
+    prior_seasons = _nonnegative_report_count(
+        report.get("retrospective_prior_seasons"), "retrospective_prior_seasons"
+    )
+    dual_wins = _nonnegative_report_count(
+        report.get("retrospective_prior_season_dual_wins"),
+        "retrospective_prior_season_dual_wins",
+    )
+    brier = report.get("final_oot_brier_bootstrap")
+    log_loss = report.get("final_oot_log_loss_bootstrap")
+    if not isinstance(brier, Mapping):
+        raise ValueError("final_oot_brier_bootstrap must be a mapping")
+    if not isinstance(log_loss, Mapping):
+        raise ValueError("final_oot_log_loss_bootstrap must be a mapping")
+
+    brier_ci_high = _finite_report_number(
+        brier.get("bootstrap_ci95_high"),
+        "final_oot_brier_bootstrap.bootstrap_ci95_high",
+    )
+    log_loss_ci_high = _finite_report_number(
+        log_loss.get("bootstrap_ci95_high"),
+        "final_oot_log_loss_bootstrap.bootstrap_ci95_high",
+    )
+    brier_probability = _finite_report_number(
+        brier.get("bootstrap_probability_better_than_market"),
+        "final_oot_brier_bootstrap.bootstrap_probability_better_than_market",
+    )
+    log_loss_probability = _finite_report_number(
+        log_loss.get("bootstrap_probability_better_than_market"),
+        "final_oot_log_loss_bootstrap.bootstrap_probability_better_than_market",
+    )
     checks = {
         "required_prior_seasons": prior_seasons == STABILITY_REQUIRED_PRIOR_SEASONS,
         "min_prior_dual_metric_wins": dual_wins >= STABILITY_MIN_DUAL_WINS,
-        "brier_ci95_entirely_better_than_market": float(brier["bootstrap_ci95_high"]) < STABILITY_MAX_CI95_HIGH,
-        "log_loss_ci95_entirely_better_than_market": float(log_loss["bootstrap_ci95_high"]) < STABILITY_MAX_CI95_HIGH,
-        "brier_probability_better_at_least_95pct": float(brier["bootstrap_probability_better_than_market"]) >= STABILITY_MIN_PROBABILITY_BETTER,
-        "log_loss_probability_better_at_least_95pct": float(log_loss["bootstrap_probability_better_than_market"]) >= STABILITY_MIN_PROBABILITY_BETTER,
+        "brier_ci95_entirely_better_than_market": brier_ci_high < STABILITY_MAX_CI95_HIGH,
+        "log_loss_ci95_entirely_better_than_market": log_loss_ci_high < STABILITY_MAX_CI95_HIGH,
+        "brier_probability_better_at_least_95pct": brier_probability >= STABILITY_MIN_PROBABILITY_BETTER,
+        "log_loss_probability_better_at_least_95pct": log_loss_probability >= STABILITY_MIN_PROBABILITY_BETTER,
     }
     return {
         "passed": all(checks.values()),
@@ -148,10 +189,10 @@ def stability_gate(report: Mapping) -> dict:
         "observed": {
             "prior_seasons": prior_seasons,
             "prior_dual_metric_wins": dual_wins,
-            "brier_ci95_high": float(brier["bootstrap_ci95_high"]),
-            "log_loss_ci95_high": float(log_loss["bootstrap_ci95_high"]),
-            "brier_probability_better_than_market": float(brier["bootstrap_probability_better_than_market"]),
-            "log_loss_probability_better_than_market": float(log_loss["bootstrap_probability_better_than_market"]),
+            "brier_ci95_high": brier_ci_high,
+            "log_loss_ci95_high": log_loss_ci_high,
+            "brier_probability_better_than_market": brier_probability,
+            "log_loss_probability_better_than_market": log_loss_probability,
         },
     }
 
