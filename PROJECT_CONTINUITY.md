@@ -7345,3 +7345,37 @@ Provider references: https://5dollarfootballapi.com/terms ; https://5dollarfootb
 **Frozen V2 and non-actions**
 - Candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features, original weights, scaler, imputer, and training fingerprint remain unchanged. `active_lambda=0`, `shadow_lambda=1`, stability gate FAILED, prospective evaluation 0/30.
 - No protected 2026/27 outcomes read; no source download/use; no provider request; no paid API call; no Supabase write/DDL; no production `.pkl` change; no model refit, threshold, weight, feature, or schedule change; no main update or merge; no other-agent setting change.
+
+
+## 2026-11-23 06:03 UTC — prevent duplicate Serie A fixtures from inflating the V2 primary cohort
+
+**Fresh repository and workflow state**
+- Re-read main and the continuity branch before changes. Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main update or merge occurred.
+- Re-read Original Forward and Current-Form workflow YAML on main and on the #781 hold branch. Main still has the old live workflow definitions; #781 has the fail-closed step gates but is not integrated.
+- Main's latest visible V2 scheduled runs remain on 2026-11-22: Current-Form Forward [#45042946420](https://github.com/MaksimBlud/football-ai/actions/runs/45042946420), Original Forward [#45042303864](https://github.com/MaksimBlud/football-ai/actions/runs/45042303864), Free Real-Quote Diagnostic [#45033051083](https://github.com/MaksimBlud/football-ai/actions/runs/45033051083), and Current-Form Source Capture [#45028522381](https://github.com/MaksimBlud/football-ai/actions/runs/45028522381). No new V2 scheduled run for 2026-11-23 05:50 UTC was visible in the current scheduled-run listing; no workflow was dispatched or changed.
+- The Safe Engineering Agent Auto-Merge run inspected at [#45115328533](https://github.com/MaksimBlud/football-ai/actions/runs/45115328533) reported `SAFE_AUTO_MERGE_HEALTHY_NOOP: no eligible bot PR with verified six-check CI`; it did not merge a PR. HUMAN-MERGE remains in force.
+
+**New V2 cohort-integrity defect and fix**
+- Re-audit of the strict #933 shadow validator found that it rejected duplicate `event_id` values but did not reject the same real fixture appearing under two different provider event IDs. Reversed home/away labels and known club aliases could therefore allow one fixture to be counted twice if a later cohort collector combined those rows. This is a pseudo-replication risk for the 30-primary-completed-event gate.
+- Updated the existing #933 branch only. Exact final HEAD: `4dc97b5e6bf12d6bb47fa6229cb960d605b47c0f`; base #932 `8ff52f14efbd7ca14836d40e92f47fa83ceadcad`; compare 5 ahead / 0 behind; PR #933 remains OPEN / Draft / mergeable and unmerged.
+- The validator now deduplicates within a complete supplied cohort by (Serie A, local Europe/Rome match date, unordered pair of canonical teams). Canonicalization applies the existing Serie A runtime aliases plus the V2 historical `Atalanta BC -> Atalanta` alias. It rejects duplicate fixtures across different event IDs, reversed home/away duplicates, and same-club aliases; it still permits the same clubs to meet on a different match date.
+- This is a cohort-integrity check only. The frozen 19-feature order, candidate artifact SHA, training fingerprint, original weights/scaler/imputer, `active_lambda=0`, `shadow_lambda=1`, failed stability gate and prediction math are unchanged.
+- Updated the pre-existing artifact-mismatch test fixture to use a genuinely distinct match, then added four regressions for duplicate IDs, reversed/aliased fixture duplicates, same-team runtime aliases, and distinct match dates.
+- Exact final-head CI [#45121512759](https://github.com/MaksimBlud/football-ai/actions/runs/45121512759) is **SUCCESS**: **184 passed**, Python compilation passed, and production `.pkl` diff guard passed. This result applies only to exact HEAD `4dc97b5e...`; no result is inferred for intermediate commits.
+
+**Free-source and rights recheck**
+- PR #906's Football-Data manifest remains `V2_FROZEN_INFERENCE_SCOPE_UNRESOLVED`: automated source capture false, inference false, AI training false, provider-issued inference license false, authorization null. The official policy page was reported updated 2026-11-20; the two-download ceiling is not authorization for this automated AI workflow.
+- PR #907's Global Football Data Lake audit remains HOLD: aggregate CC-BY-4.0 metadata does not clear mixed API-Football/Football-Data upstream rights; field-level lineage is unresolved; source-before-quote is unproven; `stats_fetched_at` is null for 74% of rows; `known_at` is derived kickoff+105 minutes, not a provider-observed timestamp; no raw source bytes or project SHA archive exists.
+- PR #886's 11footy audit remains HOLD: declared CC BY-NC 4.0, upstream report/feed providers unidentified, signature not independently verified, no per-row first-observation time, and exact 19-feature field-definition parity/per-fixture coverage unverified.
+- PR #883's Lega report audit remains HOLD: no express written consent for extraction, internal ML/inference, private raw retention or commercial use. No source asset was downloaded or used in any of these audits.
+
+**Supabase — read-only pre-match metadata only**
+- Repeated the strict timestamp-only aggregation on `public.odds_snapshots`: **3,915** strict pre-kickoff rows / **327** events / **9** leagues.
+- A separate future-only query returned **0** future strict rows and **0** future strict events. Latest strict pre-match snapshot remains **2026-10-13 14:48:53 UTC** (Serie A).
+- No scores, results, settlements or protected outcome columns were selected.
+
+**Remaining blockers and non-actions**
+- Root workflow hold PR #781 remains at exact HEAD `5552bec363ae72ad7aef04c598d2ce861f33eb42`, 8/8 CI SUCCESS, OPEN / Ready for review; it is not active on main until owner manual merge.
+- Original Forward source-first fix remains in #884 and Current-Form fail-closed source-before-quote fix remains in #913; neither is integrated into main.
+- No new prospective predictions, no source download/use, no provider/API request, no paid API call, no Supabase write/DDL, no protected 2026/27 outcome read, no production `.pkl` change, no weight/feature/threshold change, no main update, no merge, no schedule change, and no other-agent setting change occurred.
+- The 30-primary-completed-event gate remains CLOSED; independent Brier/LogLoss evaluation against the market is still unavailable. Do not infer model superiority.
