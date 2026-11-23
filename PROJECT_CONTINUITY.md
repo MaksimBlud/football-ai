@@ -7250,3 +7250,34 @@ Official provider documentation was re-read on 2026-11-23. This was a documentat
 **Decision remains HOLD.** Before any API request or integration, require written clarification of (1) whether Serie A fixture/results/events/statistics are actually included on Free and Community despite the Pro label, (2) upstream rights covering AI/model feature use and private raw-response archiving, (3) retention/deletion terms for raw archives, and (4) the exact fields and historical window available to the $0 plan. If those are resolved, the first test must be a single non-production, read-only conformance capture with raw response bytes, UTC observation time, SHA-256, strict source-before-quote ordering, and a per-team 30-match coverage report. No original V2 feature, weight, training or market contract may change.
 
 Provider references: https://5dollarfootballapi.com/terms ; https://5dollarfootballapi.com/pricing ; https://5dollarfootballapi.com/docs ; https://5dollarfootballapi.com/docs/data-quality ; https://5dollarfootballapi.com/status .
+
+
+### 2026-11-23 01:48 UTC — fresh-main, workflow, PR ancestry, and pre-match database checkpoint
+
+**Fresh repository state**
+- Default branch is still `main` at `40887ebb215730190d7a6c7a1693373ec4afcdfc` (last commit 2026-10-18 08:20:05 UTC). Repository visibility is **public** and GitHub reports `main.protected=false`; no branch-protection rules are active.
+- No main update or merge was made. This checkpoint is documentation-only on PR #839.
+
+**Root live-workflow hold — PR #781**
+- Current exact PR HEAD: `020697894b79b25f981673925a6734007f8d5200`; base main `40887ebb...`; compare is **50 ahead / 0 behind**. PR is OPEN, Ready for review, mergeable, not merged.
+- Exact-HEAD workflow runs returned by the commit-specific GitHub Actions endpoint: **8/8 SUCCESS**. Frozen V2 Shadow [#45086912393](https://github.com/MaksimBlud/football-ai/actions/runs/45086912393) ran the original frozen candidate against strict synthetic inputs; recovery [#45086912473](https://github.com/MaksimBlud/football-ai/actions/runs/45086912473) passed 53 offline tests, restored the frozen code for comparison, skipped candidate rebuild/proof/publication, and passed the production-pickle hash guard.
+- Independently fetched all five workflow files at the exact #781 branch HEAD. Each has workflow-level `MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED: "false"`; every identified live source/quote/recovery step is gated, and every upload-artifact step requires both success and the flag. Existing cron strings remain `13 6 * * *`, `8 8 * * *`, `50 5 * * *`, and `18 8 * * *`; the recovery workflow has no cron. These conditions are on the PR branch only and do **not** protect main until the owner manually merges #781.
+- #781 does not itself prove provider rights or private storage. The private-repository child PR #879 is still based on the older #781 SHA `3a70a864...`. Current #879 HEAD is `b78010585c80b05ae5fc2a8b3572df14b32d9651`; comparing it with the new #781 HEAD `020697...` is **DIVERGED (1 ahead / 14 behind)**. Do not merge or retarget this child until it is safely restacked on the current parent.
+- Original Forward source-first child #884 remains OPEN/Draft at `c38834ec6c2bd0079afca9e63a9ce75a8cd17043`, based on #879's old HEAD `b780105...`. Its PR description records that this latest SHA's CLI tampered-ZIP follow-up has **no independently surfaced exact-HEAD CI**; the last verified 2/2 run (79 tests per Python version) was on the older SHA `1d366777...`. Do not treat the older CI as validating the current head.
+
+**Other exact-head V2 checks**
+- PR #933 exact HEAD `91b9c29dc16ffe7674f55774aa42350c27f3368d`: [run #45075006891](https://github.com/MaksimBlud/football-ai/actions/runs/45075006891) SUCCESS; exact log shows **60 passed**, compilation and production `.pkl` diff guard passed. It hardens only the input type for the unchanged 30-event gate; it does not establish 30 eligible forecasts.
+- PR #839 documentation branch HEAD before this checkpoint: `72b0a1935318cf2dc4a271d25b2e7174b3392984`, compare **4 ahead / 0 behind**. Its exact-head commit-specific run list is **8/8 SUCCESS**; Frozen V2 Shadow [#45092252758](https://github.com/MaksimBlud/football-ai/actions/runs/45092252758) reports **89 passed** and production `.pkl` guard passed. This new documentation commit requires its own fresh exact-head CI; prior CI is not inherited by the new SHA.
+
+**Original Forward source-order finding**
+- Fresh main source blob for `serie_a_v2_forward_capture.py` is `b2770d726ffafe7a3cef706b57d3391063cbfe1b`. Its current `main()` still imports/reads saved quotes before `discover_archives()`; this violates the requested source-before-quote order. The source-first preflight exists only in stacked PR #884 and is not integrated. No quote read or live run was initiated in this audit.
+
+**Supabase — read-only, pre-match odds metadata only**
+- Read-only aggregation of `public.odds_snapshots` using `snapshot_time_utc < commence_time_utc AND created_at < commence_time_utc AND snapshot_time_utc <= created_at`: **3,915 strict pre-match rows / 327 distinct events / 9 leagues**; future pre-match rows/events: **0**.
+- By league (rows / events; latest qualifying snapshot UTC): Bundesliga 394/35 (2026-09-11 15:49:52); EPL 1,135/70 (2026-10-09 15:25:57); Eredivisie 410/39 (2026-09-11 15:50:20); La Liga 798/52 (2026-09-11 15:45:28); Ligue 1 387/35 (2026-09-11 15:49:24); Primeira Liga 9/9 (2026-09-11 16:06:24); RPL 153/15 (2026-09-05 15:07:55); Serie A 620/63 (2026-10-13 14:48:53); Turkey Super Lig 9/9 (2026-09-11 16:06:26). These are timestamp/identity aggregates only; no scores, outcomes, or settlement fields were selected.
+- Schema inventory again reports RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. This is a CRITICAL exposure for anon/authenticated roles. No remediation SQL was executed; policies must be designed before enabling RLS. `public.odds_snapshots` has RLS enabled.
+
+**Frozen V2 and non-actions**
+- Original candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features and original weights unchanged; `active_lambda=0`, `shadow_lambda=1` research-only; stability gate remains FAILED; prospective evaluation remains **0/30**.
+- No paid provider call, no source archive download/use, no Supabase write/DDL, no production `.pkl` change, no model refit/weight/feature/threshold change, no protected 2026/27 outcome read, no merge, and no schedule/other-agent setting change.
+- Next integration order remains owner-controlled #781 first; then restack #879 on the exact merged root and revalidate #884 and descendants. Provider-rights and private-storage HOLDs remain mandatory. Do not claim model superiority without an eligible independent Brier/LogLoss comparison.
