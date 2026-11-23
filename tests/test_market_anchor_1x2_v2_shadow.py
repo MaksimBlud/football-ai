@@ -285,9 +285,9 @@ def test_shadow_capture_rejects_source_archive_or_parent_run_after_quote():
         v2.validate_shadow_capture_rows([row])
 
 
-def test_shadow_capture_requires_feature_cutoff_to_match_verified_source_observation():
-    row = _row(feature_history_cutoff_utc="2026-09-18T16:49:00Z")
-    with pytest.raises(ValueError, match="equal the verified latest source observation"):
+def test_shadow_capture_rejects_feature_cutoff_after_verified_source_observation():
+    row = _row(feature_history_cutoff_utc="2026-09-18T16:51:00Z")
+    with pytest.raises(ValueError, match="cannot be later than the verified latest source observation"):
         v2.validate_shadow_capture_rows([row])
 
 
