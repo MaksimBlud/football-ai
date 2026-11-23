@@ -79,8 +79,17 @@ def fake_verified_parent_run(archive, quote_time):
     assert archive["run_id"] == 456
     assert archive["head_sha"] == "a" * 40
     assert quote_time.tzinfo is not None
-    return {"run_completed_at_utc": "2026-10-13T15:01:00Z",
-            "workflow_path": SOURCE_WORKFLOW_PATH, "run_id": 456}
+    return {
+        "run_id": 456,
+        "run_head_sha": "a" * 40,
+        "workflow_path": SOURCE_WORKFLOW_PATH,
+        "head_branch": "main",
+        "event": "push",
+        "status": "completed",
+        "conclusion": "success",
+        "run_created_at_utc": "2026-10-13T14:40:00Z",
+        "run_completed_at_utc": "2026-10-13T15:01:00Z",
+    }
 
 
 
@@ -102,6 +111,31 @@ def test_forward_v2_scores_only_after_real_prior_archive_and_never_promotes():
     assert report["no_bet"] is True
     row = report["rows"][0]
     assert row["source_artifact_sha256"] == metadata[0]["sha256"]
+    provenance = row["source_provenance"]
+    assert set(provenance) == {
+        "artifact_id", "artifact_sha256", "artifact_head_sha",
+        "artifact_created_at_utc", "latest_source_observed_at_utc",
+        "archive_sha256_verified", "source_member_sha256_verified",
+        "manifest_candidate_sha_verified", "parent_run",
+    }
+    assert provenance["artifact_id"] == 123
+    assert provenance["artifact_sha256"] == metadata[0]["sha256"]
+    assert provenance["artifact_head_sha"] == "a" * 40
+    assert provenance["latest_source_observed_at_utc"] == "2026-10-13T14:50:00+00:00"
+    assert provenance["archive_sha256_verified"] is True
+    assert provenance["source_member_sha256_verified"] is True
+    assert provenance["manifest_candidate_sha_verified"] is True
+    assert provenance["parent_run"] == {
+        "run_id": 456,
+        "run_head_sha": "a" * 40,
+        "workflow_path": SOURCE_WORKFLOW_PATH,
+        "head_branch": "main",
+        "event": "push",
+        "status": "completed",
+        "conclusion": "success",
+        "run_created_at_utc": "2026-10-13T14:40:00+00:00",
+        "run_completed_at_utc": "2026-10-13T15:01:00+00:00",
+    }
     assert row["status"] == "SOURCE_BEFORE_QUOTE_V2_DIAGNOSTIC_ONLY"
     assert row["v2_preview"]["model_candidate_sha256"] == FROZEN_SHA
     assert row["v2_preview"]["market_1x2"] == pytest.approx(
@@ -212,6 +246,11 @@ def test_successful_exact_source_workflow_and_prequote_completion_required(monke
                                token="test-token", get=get)
     assert hits == ["https://api.github.com/repos/MaksimBlud/football-ai/actions/runs/456"]
     assert result["workflow_path"] == SOURCE_WORKFLOW_PATH
+    assert result["head_branch"] == "main"
+    assert result["event"] == "push"
+    assert result["status"] == "completed"
+    assert result["conclusion"] == "success"
+    assert result["run_created_at_utc"] == "2026-10-13T14:40:00+00:00"
     assert result["run_completed_at_utc"] == "2026-10-13T15:01:00+00:00"
     for altered, expected in [
         ({"path":".github/workflows/other.yml"}, "verified original V2 collector"),
@@ -269,6 +308,11 @@ def _fully_verified_parent(archive, quote_time, completed="2026-10-13T15:01:00Z"
         "run_id": archive["run_id"],
         "run_head_sha": archive["head_sha"],
         "workflow_path": SOURCE_WORKFLOW_PATH,
+        "head_branch": "main",
+        "event": "push",
+        "status": "completed",
+        "conclusion": "success",
+        "run_created_at_utc": "2026-10-13T14:40:00Z",
         "run_completed_at_utc": completed,
     }
 
@@ -317,6 +361,10 @@ def test_original_forward_verifies_parent_and_zip_sha_before_saved_quote_reader(
     assert report["source_preflight"]["verified"] is True
     assert report["source_preflight"]["source_artifact_sha256"] == metadata[0]["sha256"]
     assert report["source_preflight"]["original_candidate_sha256"] == FROZEN_SHA
+    assert report["source_preflight"]["source_provenance"]["archive_sha256_verified"] is True
+    assert report["source_preflight"]["source_provenance"]["source_member_sha256_verified"] is True
+    assert report["source_preflight"]["source_provenance"]["manifest_candidate_sha_verified"] is True
+    assert report["source_preflight"]["source_provenance"]["parent_run"]["run_completed_at_utc"] == "2026-10-13T15:01:00+00:00"
     assert report["source_preflight"]["quotes_read_after_source_preflight"] is True
     assert report["v2_diagnostic_previews_captured"] == 1
     assert report["eligible_for_frozen_prospective_cohort"] is False
@@ -504,12 +552,9 @@ def test_original_forward_cli_verifies_parent_and_zip_before_lazy_database_impor
         assert archive["artifact_id"] == 123
         assert token == "synthetic-token"
         assert quote_time == FrozenNow(2026, 10, 14, 7, 0, tzinfo=timezone.utc)
-        return {
-            "run_id": archive["run_id"],
-            "run_head_sha": archive["head_sha"],
-            "workflow_path": SOURCE_WORKFLOW_PATH,
-            "run_completed_at_utc": "2026-10-13T15:01:00Z",
-        }
+        return _fully_verified_parent(
+            archive, quote_time, completed="2026-10-13T15:01:00Z"
+        )
 
     def download_archive(artifact_id, *, token):
         events.append("archive_download_and_sha_input")
@@ -566,6 +611,75 @@ def test_original_forward_cli_verifies_parent_and_zip_before_lazy_database_impor
     assert report["no_bet"] is True
     assert report["paid_provider_calls"] == 0
     assert report["supabase_writes"] == 0
+
+
+@pytest.mark.parametrize(
+    "case, expected_message",
+    [
+        ("wrong_parent_branch", "authenticated original V2 collector"),
+        ("pull_request_event", "authenticated original V2 collector"),
+        ("in_progress_parent", "authenticated original V2 collector"),
+        ("wrong_parent_head", "authenticated original V2 collector"),
+        ("missing_parent_field", "parent run provenance is incomplete"),
+        ("archive_digest_unverified", "archive, member hashes"),
+        ("archive_digest_mismatch", "archive, member hashes"),
+        ("member_hash_unverified", "archive, member hashes"),
+        ("manifest_unverified", "archive, member hashes"),
+        ("candidate_manifest_mismatch", "archive, member hashes"),
+        ("source_after_archive", "chronology is invalid"),
+        ("parent_created_after_archive", "chronology is invalid"),
+        ("parent_completed_after_quote", "chronology is invalid"),
+    ],
+)
+def test_source_provenance_builder_rejects_unverified_or_misordered_facts(
+    case, expected_message
+):
+    from copy import deepcopy
+    from serie_a_v2_forward_capture import build_source_provenance
+
+    _raw, metadata = make_source_archive()
+    archive = deepcopy(metadata[0])
+    quote_time = datetime(2026, 10, 14, 6, 0, tzinfo=timezone.utc)
+    parent = fake_verified_parent_run(archive, quote_time)
+    proof = {
+        "archive_sha256": archive["sha256"],
+        "github_digest_matched": True,
+        "archive_sha256_verified": True,
+        "source_member_sha256_verified": True,
+        "manifest_candidate_sha_verified": True,
+        "original_candidate_sha256": FROZEN_SHA,
+        "latest_source_observed_at_utc": "2026-10-13T14:50:00Z",
+    }
+
+    if case == "wrong_parent_branch":
+        parent["head_branch"] = "research/other"
+    elif case == "pull_request_event":
+        parent["event"] = "pull_request"
+    elif case == "in_progress_parent":
+        parent["status"] = "in_progress"
+    elif case == "wrong_parent_head":
+        parent["run_head_sha"] = "b" * 40
+    elif case == "missing_parent_field":
+        parent.pop("run_created_at_utc")
+    elif case == "archive_digest_unverified":
+        proof["archive_sha256_verified"] = False
+    elif case == "archive_digest_mismatch":
+        proof["archive_sha256"] = "0" * 64
+    elif case == "member_hash_unverified":
+        proof["source_member_sha256_verified"] = False
+    elif case == "manifest_unverified":
+        proof["manifest_candidate_sha_verified"] = False
+    elif case == "candidate_manifest_mismatch":
+        proof["original_candidate_sha256"] = "0" * 64
+    elif case == "source_after_archive":
+        proof["latest_source_observed_at_utc"] = "2026-10-13T15:01:00Z"
+    elif case == "parent_created_after_archive":
+        parent["run_created_at_utc"] = "2026-10-13T15:01:00Z"
+    elif case == "parent_completed_after_quote":
+        parent["run_completed_at_utc"] = "2026-10-14T06:01:00Z"
+
+    with pytest.raises(ValueError, match=expected_message):
+        build_source_provenance(archive, parent, proof, quote_time=quote_time)
 
 
 def test_original_forward_cli_invalid_archive_sha_blocks_database_import_and_quote_read(
