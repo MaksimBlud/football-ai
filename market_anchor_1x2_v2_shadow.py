@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Iterable, Mapping
 
@@ -27,6 +28,7 @@ from market_anchor_1x2_v1 import (
     market_anchored_probabilities,
     validate_probabilities,
 )
+from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 
 EXPERIMENT_ID = "MARKET_ANCHOR_1X2_V2"
 EVIDENCE_CLASS = "PROSPECTIVE_SHADOW"
@@ -46,10 +48,93 @@ TRAINING_DATA_THROUGH = pd.Timestamp("2026-06-30T23:59:59Z")
 ADMISSION_NOT_BEFORE = pd.Timestamp("2026-09-16T00:00:00Z")
 FIRST_OUTCOME_READ_GATE = 30
 INCUMBENT_MODEL_SHA256 = "1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5"
+# Keep the same narrow V2-only alias used by the original historical feature adapter.
+V2_HISTORICAL_TEAM_ALIASES = {"Atalanta BC": "Atalanta"}
 FROZEN_CANDIDATE_ARTIFACT_SHA256 = "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
-FORBIDDEN_OUTCOME_FIELDS = frozenset(
-    {"result", "outcome", "home_goals", "away_goals", "score", "final_score"}
-)
+FORBIDDEN_OUTCOME_FIELDS = frozenset({
+    "result", "outcome", "home_goals", "away_goals", "score", "final_score",
+    # Generic nested score-provider containers and common goal-count aliases.
+    "goal", "goals", "goal_count", "goals_count", "total_goals",
+    "goals_scored", "goals_conceded", "goals_for", "goals_against",
+    "goals_home", "goals_away", "home_goal", "away_goal",
+    "home_goals_scored", "away_goals_scored",
+    "home_goals_conceded", "away_goals_conceded",
+    "score_home", "score_away",
+    "full_time_goals", "half_time_goals", "fulltime_goals", "halftime_goals",
+    # Common camelCase/acronym and nested scoreline provider aliases.
+    "home_team_goals", "away_team_goals", "goals_home_team", "goals_away_team",
+    "home_team_score", "away_team_score",
+    "home_team_goals_scored", "away_team_goals_scored",
+    "home_team_goals_conceded", "away_team_goals_conceded",
+    "home_team_score_ft", "away_team_score_ft",
+    "ft_score", "ht_score", "score_ft", "score_ht",
+    "scoreline", "score_line", "match_score", "game_score",
+    "full_time_scoreline", "half_time_scoreline",
+    "full_time", "half_time", "fulltime", "halftime",
+    "result_code", "result_name", "outcome_code", "outcome_name",
+    "ft_result", "ht_result", "final_result", "fulltime_result", "halftime_result",
+    "ft_outcome", "ht_outcome", "full_time_outcome", "half_time_outcome",
+    "fulltime_outcome", "halftime_outcome", "final_outcome",
+    "home_team_result", "away_team_result",
+    "winner_name", "winning_team_name", "winner_id", "winning_team_id",
+    # Explicit 1X2 winner/side flags are outcomes, not pre-match market quotes.
+    "home_win", "away_win", "home_won", "away_won",
+    "is_home_winner", "is_away_winner", "home_team_won", "away_team_won",
+    "winner_side", "winning_side", "winner_team", "winner_team_id",
+    "result_1x2", "outcome_1x2", "match_result_1x2", "match_outcome_1x2",
+    "home_result", "away_result", "draw_result", "is_draw", "was_draw", "drawn",
+    # Preserve compact Football-Data xG aliases after camelCase tokenization.
+    "hx_g", "ax_g", "x_g_home", "x_g_away",
+    # Plural score and team-oriented score containers used by common APIs.
+    "scores", "scores_home", "scores_away", "home_scores", "away_scores",
+    "scores_home_team", "scores_away_team", "score_full_time", "score_half_time",
+    "settlement", "prediction_correct", "match_winner", "winner", "winning_team",
+    "home_score", "away_score", "full_time_score", "full_time_result",
+    "match_result", "match_outcome",
+    "home_corners", "away_corners", "corners_home", "corners_away",
+    "home_yellows", "away_yellows", "home_reds", "away_reds",
+    "home_cards", "away_cards", "home_yellow_cards", "away_yellow_cards",
+    "home_red_cards", "away_red_cards",
+    "home_points", "away_points", "points_home", "points_away",
+    # Football-Data result aliases (full-time and half-time).
+    "fthg", "hg", "ftag", "ag", "ftr", "res", "hthg", "htag", "htr",
+    # Football-Data post-match statistics; never valid raw capture-time inputs.
+    "hxg", "axg", "hs", "as", "hst", "ast", "hhw", "ahw",
+    "hf", "af", "hfkc", "afkc", "ho", "ao", "hbp", "abp", "attendance",
+    "hc", "ac", "hy", "ay", "hr", "ar",
+    # Common descriptive aliases for the same post-match fields.
+    "half_time_home_goals", "half_time_away_goals",
+    "home_xg", "away_xg", "xg_home", "xg_away",
+    "home_shots", "away_shots", "shots_home", "shots_away",
+    "home_shots_on_target", "away_shots_on_target",
+    "shots_on_target_home", "shots_on_target_away",
+    "home_hit_woodwork", "away_hit_woodwork",
+    "home_fouls", "away_fouls", "fouls_home", "fouls_away",
+    "home_free_kicks_conceded", "away_free_kicks_conceded",
+    "home_offsides", "away_offsides", "offsides_home", "offsides_away",
+    "home_bookings_points", "away_bookings_points", "crowd_attendance",
+    # Generic post-match statistic labels used in typed name/value arrays.
+    "corner", "corners", "corner_kicks", "card", "cards", "yellow_card",
+    "yellow_cards", "red_card", "red_cards", "shot", "shots",
+    "shot_on_target", "shots_on_target", "shots_off_target",
+    "foul", "fouls", "offside", "offsides", "possession",
+    "expected_goal", "expected_goals", "xg", "free_kick", "free_kicks",
+    "save", "saves",
+})
+OUTCOME_FIELD_DESCRIPTOR_KEYS = frozenset({
+    "name", "field", "field_name", "stat", "stat_name", "statistic",
+    "statistic_name", "metric", "metric_name", "key", "label",
+    "attribute", "property", "code", "slug", "type", "stat_type",
+    # Provider schemas also store the statistic identity in abbreviation/code
+    # and display-name fields; inspect only these exact descriptor keys.
+    "abbr", "abbreviation", "short_name", "short_code",
+    "stat_code", "statistic_code", "field_code", "metric_code",
+    "attribute_name", "property_name", "display_name",
+    # Some provider schemas expose statistic identifiers separately from labels.
+    "stat_id", "statistic_id", "field_id", "metric_id",
+    "attribute_id", "property_id", "data_key", "stat_key",
+    "outcome_key", "result_key",
+})
 PROBABILITY_FIELDS = (
     ("market_home_probability", "market_draw_probability", "market_away_probability"),
     ("incumbent_home_probability", "incumbent_draw_probability", "incumbent_away_probability"),
@@ -91,6 +176,14 @@ def _as_utc(value: object, field: str) -> pd.Timestamp:
     if ts.tzinfo is None:
         raise ValueError(f"{field} must be timezone-aware UTC")
     return ts.tz_convert("UTC")
+
+
+def _canonical_shadow_team_identity(value: str) -> str:
+    """Apply the existing Serie A/V2 aliases only for cohort deduplication."""
+    stripped = value.strip()
+    runtime_name = SERIE_A_RUNTIME_CONFIG.aliases.get(stripped, stripped)
+    historical_name = V2_HISTORICAL_TEAM_ALIASES.get(runtime_name, runtime_name)
+    return " ".join(historical_name.split()).casefold()
 
 
 def _is_numeric_scalar(value: object) -> bool:
@@ -355,16 +448,103 @@ def write_candidate_artifact(frame: pd.DataFrame, output: Path) -> dict:
     return artifact
 
 
+COMPACT_FORBIDDEN_OUTCOME_FIELDS = frozenset(
+    name.replace("_", "") for name in FORBIDDEN_OUTCOME_FIELDS
+)
+
+
+def normalize_outcome_field_name(key: str) -> str:
+    """Canonicalize provider key spelling before the recursive outcome embargo.
+
+    Handles snake/kebab/space/dot separators, camelCase and acronym boundaries
+    (for example homeTeamGoals, FTScore and score.line) without changing any
+    frozen derived feature names such as diff_goals_for_5.
+    """
+    if not isinstance(key, str):
+        return ""
+    value = key.strip()
+    value = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1_\2", value)
+    value = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", value)
+    value = re.sub(r"[^A-Za-z0-9]+", "_", value)
+    return value.strip("_").lower()
+
+
+def is_forbidden_outcome_field(key: str) -> bool:
+    """Match outcome aliases even when acronym letters are punctuation-separated.
+
+    The readable normalizer preserves separators as underscores (e.g. F.T.H.G
+    -> f_t_h_g). Compare a second compact form against the same frozen alias
+    set so punctuation cannot split a protected provider abbreviation.
+    """
+    normalized = normalize_outcome_field_name(key)
+    return bool(
+        normalized
+        and (
+            normalized in FORBIDDEN_OUTCOME_FIELDS
+            or normalized.replace("_", "") in COMPACT_FORBIDDEN_OUTCOME_FIELDS
+        )
+    )
+
+
+def forbidden_outcome_field_match(key: str, value=None) -> str | None:
+    """Return an exact forbidden field name, including typed stat descriptors.
+
+    Some providers encode statistics as arrays of records such as
+    {"name": "FTR", "value": "H"} or {"type": "Full Time Result", ...}.
+    The descriptor is a field name stored as a value, not a mapping key. Match
+    only exact normalized descriptor values; do not scan arbitrary free text or
+    substrings, so labels such as "Home Win Probability" remain admissible.
+    """
+    if is_forbidden_outcome_field(key):
+        return normalize_outcome_field_name(key)
+    if normalize_outcome_field_name(key) not in OUTCOME_FIELD_DESCRIPTOR_KEYS:
+        return None
+    candidates = value if isinstance(value, (list, tuple)) else (value,)
+    for candidate in candidates:
+        if isinstance(candidate, str) and is_forbidden_outcome_field(candidate):
+            return normalize_outcome_field_name(candidate)
+    return None
+
+
+def _nested_forbidden_outcome_keys(value) -> set[str]:
+    """Return protected match-outcome keys found anywhere in nested containers."""
+    pending = [value]
+    seen: set[int] = set()
+    leaked: set[str] = set()
+    while pending:
+        current = pending.pop()
+        if isinstance(current, Mapping):
+            identity = id(current)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            for key, nested in current.items():
+                if isinstance(key, str):
+                    matched = forbidden_outcome_field_match(key, nested)
+                    if matched:
+                        leaked.add(matched)
+                pending.append(nested)
+        elif isinstance(current, (list, tuple)):
+            identity = id(current)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            pending.extend(current)
+    return leaked
+
+
+
 def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
     validated: list[dict] = []
     seen_events: set[str] = set()
+    seen_fixtures: set[tuple[str, str, tuple[str, str]]] = set()
     candidate_artifacts: set[str] = set()
     for raw in rows:
         row = dict(raw)
         missing = REQUIRED_CAPTURE_FIELDS - row.keys()
         if missing:
             raise ValueError("shadow row missing fields: " + ", ".join(sorted(missing)))
-        leaked = FORBIDDEN_OUTCOME_FIELDS & row.keys()
+        leaked = _nested_forbidden_outcome_keys(raw)
         if leaked:
             raise ValueError("outcome fields are forbidden in shadow capture: " + ", ".join(sorted(leaked)))
         if row["experiment_id"] != EXPERIMENT_ID or row["evidence_class"] != EVIDENCE_CLASS:
@@ -395,12 +575,25 @@ def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
             raise ValueError("home_team must be a non-empty canonical string")
         if type(away_team) is not str or not away_team or away_team != away_team.strip():
             raise ValueError("away_team must be a non-empty canonical string")
-        home_identity = " ".join(home_team.split()).casefold()
-        away_identity = " ".join(away_team.split()).casefold()
+        home_identity = _canonical_shadow_team_identity(home_team)
+        away_identity = _canonical_shadow_team_identity(away_team)
         if home_identity == away_identity:
             raise ValueError("home_team and away_team must identify distinct teams")
 
         kickoff = _as_utc(row["kickoff_utc"], "kickoff_utc")
+        # Provider event IDs are not a sufficient unit for the 30-event gate:
+        # the same Serie A fixture can be duplicated under different IDs or
+        # reversed home/away labels. Deduplicate by canonical teams and local
+        # fixture date, without changing any frozen feature or model input.
+        fixture_day = kickoff.tz_convert(SERIE_A_RUNTIME_CONFIG.identity.timezone).date().isoformat()
+        fixture_identity = (
+            PRIMARY_LEAGUE,
+            fixture_day,
+            tuple(sorted((home_identity, away_identity))),
+        )
+        if fixture_identity in seen_fixtures:
+            raise ValueError("duplicate canonical primary fixture identity")
+        seen_fixtures.add(fixture_identity)
         capture = _as_utc(row["capture_time_utc"], "capture_time_utc")
         market_time = _as_utc(row["market_snapshot_time_utc"], "market_snapshot_time_utc")
         incumbent_time = _as_utc(row["incumbent_generated_at_utc"], "incumbent_generated_at_utc")
@@ -457,6 +650,11 @@ def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
 
 
 def outcome_read_permitted(completed_primary_events: int) -> bool:
+    """Open the frozen outcome-read gate only from an exact integer event count."""
+    if isinstance(completed_primary_events, (bool, np.bool_)) or not isinstance(
+        completed_primary_events, (int, np.integer)
+    ):
+        raise ValueError("completed_primary_events must be a nonnegative integer")
     if completed_primary_events < 0:
-        raise ValueError("completed_primary_events cannot be negative")
-    return completed_primary_events >= FIRST_OUTCOME_READ_GATE
+        raise ValueError("completed_primary_events must be a nonnegative integer")
+    return int(completed_primary_events) >= FIRST_OUTCOME_READ_GATE
