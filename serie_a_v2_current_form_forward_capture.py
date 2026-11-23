@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import re
 from typing import Any, Mapping
+from urllib.parse import urlsplit
 import zipfile
 
 import market_anchor_v2_direct_access as v2_access
@@ -131,21 +132,76 @@ def verify_source_run(
     }
 
 
+def _validated_artifact_download_location(location: Any) -> str:
+    """Accept only the HTTPS Azure artifact-download URL returned by GitHub.
+
+    The signed Location is a short-lived bearer URL. Fetch it separately
+    without forwarding GitHub credentials or API headers; unknown origins
+    and additional redirects fail closed.
+    """
+    if not isinstance(location, str) or not location or len(location) > 4096:
+        raise ValueError("GitHub artifact redirect Location is missing or invalid")
+    try:
+        parsed = urlsplit(location)
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError("GitHub artifact redirect Location is malformed") from exc
+    host = (parsed.hostname or "").lower()
+    if (
+        parsed.scheme != "https"
+        or port not in (None, 443)
+        or parsed.netloc.lower() not in {host, f"{host}:443"}
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.fragment
+        or not re.fullmatch(r"productionresultssa\\d+\\.blob\\.core\\.windows\\.net", host)
+        or not parsed.path.startswith("/actions-results/")
+        or not parsed.query
+        or any(part in {".", ".."} for part in parsed.path.split("/"))
+    ):
+        raise ValueError("GitHub artifact redirect origin or URL shape is not allowed")
+    return location
+
+
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
     v2_access.require_v2_source_capture_access()
     if type(artifact_id) is not int or artifact_id <= 0:
         raise ValueError("invalid source artifact id")
+    if not isinstance(token, str) or not token.strip():
+        raise ValueError("GitHub Actions actions:read token missing")
+
+    api_url = f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip"
     response = get(
-        f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip",
+        api_url,
         headers={
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
         },
         timeout=90,
+        allow_redirects=False,
     )
     response.raise_for_status()
-    raw = response.content
+    if (
+        getattr(response, "status_code", None) != 302
+        or getattr(response, "url", api_url) != api_url
+        or getattr(response, "history", ())
+    ):
+        raise ValueError("GitHub artifact API must return one un-followed HTTP 302")
+
+    location = _validated_artifact_download_location(
+        getattr(response, "headers", {}).get("Location")
+    )
+    download = get(location, timeout=90, allow_redirects=False)
+    download.raise_for_status()
+    if (
+        getattr(download, "status_code", None) != 200
+        or getattr(download, "url", location) != location
+        or getattr(download, "history", ())
+    ):
+        raise ValueError("GitHub artifact storage must return one un-followed HTTP 200")
+
+    raw = download.content
     if not raw or len(raw) > MAX_ARCHIVE_BYTES:
         raise ValueError("current-form source archive is empty or too large")
     return raw
