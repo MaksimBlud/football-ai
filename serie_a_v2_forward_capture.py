@@ -53,9 +53,17 @@ def _require_v2_inference_access() -> dict:
     return require_v2_inference_access()
 
 
+
+def _require_v2_source_capture_rights() -> dict:
+    """Require the distinct provider source-capture grant before source access."""
+    from market_anchor_v2_direct_access import require_v2_source_capture_rights
+    return require_v2_source_capture_rights()
+
+
 def require_private_repository(*, token: str, get=requests.get) -> dict:
     """Fail closed before source/quote access unless this exact repo is private."""
     require_v2_live_access()
+    _require_v2_source_capture_rights()
     _require_v2_inference_access()
     if not isinstance(token, str) or not token.strip():
         raise ValueError("GitHub Actions read token missing for private-repository verification")
@@ -82,6 +90,7 @@ def require_private_repository(*, token: str, get=requests.get) -> dict:
 
 def _github_json(url: str, *, token: str, get=requests.get) -> dict:
     require_v2_live_access()
+    _require_v2_source_capture_rights()
     _require_v2_inference_access()
     if not token:
         raise ValueError("GitHub Actions read token missing")
@@ -152,6 +161,7 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
     finished BEFORE the saved bookmaker quote, not only before inspection.
     """
     require_v2_live_access()
+    _require_v2_source_capture_rights()
     _require_v2_inference_access()
     run_id = archive["run_id"]
     if type(run_id) is not int or run_id <= 0:
@@ -316,6 +326,7 @@ def _validated_artifact_download_location(location: Any) -> str:
 
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
     require_v2_live_access()
+    _require_v2_source_capture_rights()
     _require_v2_inference_access()
     if type(artifact_id) is not int or artifact_id <= 0:
         raise ValueError("invalid GitHub artifact id")
@@ -372,6 +383,7 @@ def prepare_forward_capture(
     missing. All resulting original-V2 probabilities are diagnostic only.
     """
     require_v2_live_access()
+    _require_v2_source_capture_rights()
     _require_v2_inference_access()
     if as_of_utc.tzinfo is None:
         raise ValueError("as_of_utc must be timezone-aware")
@@ -511,6 +523,7 @@ def capture_forward_with_source_preflight(
     rather than silently falling back to older source bytes.
     """
     require_v2_live_access()
+    _require_v2_source_capture_rights()
     _require_v2_inference_access()
     if (
         not isinstance(as_of_utc, datetime)
@@ -643,6 +656,7 @@ def main() -> None:
         raise RuntimeError("wrong GitHub repository scope")
     require_v2_live_access()
     try:
+        _require_v2_source_capture_rights()
         _require_v2_inference_access()
     except PermissionError as exc:
         from market_anchor_v2_source_rights import write_research_scope_blocked_report
