@@ -6,19 +6,66 @@ on:
       - research/v2-original-forward-redirect-guard-restacked-on-938-20261123-run11
       - research/v2-original-forward-private-cli-guard-restacked-on-939-20261123-run11
       - research/v2-original-forward-export-source-provenance-on-943-20261123-run11
+      - research/v2-original-forward-rights-persistence-restack-on-944-20261123-run11
     paths:
       - "serie_a_v2_forward_capture.py"
       - "serie_a_v2_prequote_source_archive_gate.py"
+      - "serie_a_v2_attest_real_source.py"
+      - "serie_a_v2_live_diagnostic_report.py"
+      - "serie_a_v2_frozen_shadow_preview.py"
       - "tests/test_serie_a_v2_forward_capture.py"
       - "tests/test_serie_a_v2_prequote_source_archive_gate.py"
+      - "tests/test_serie_a_v2_attest_real_source.py"
+      - "tests/test_serie_a_v2_live_diagnostic_report.py"
+      - "tests/test_serie_a_v2_frozen_shadow_preview.py"
+      - "tests/test_serie_a_v2_asof_feature_manifest.py"
+      - "tests/test_serie_a_v2_atalanta_alias.py"
+      - "market_anchor_v2_source_rights.py"
+      - "market_anchor_v2_source_capture_rights.py"
+      - "market_anchor_v2_artifact_privacy.py"
+      - "market_anchor_v2_direct_access.py"
+      - "market_anchor_v2_saved_cohort_replay.py"
+      - "research/source_rights/football_data_co_uk.json"
+      - "research/SERIE_A_V2_SOURCE_POLICY_RECHECK_20261121.md"
+      - "research/SERIE_A_V2_QUOTE_PERSISTENCE_TIMESTAMP_AUDIT_20261120.md"
+      - "tests/test_market_anchor_v2_source_rights.py"
+      - "tests/test_market_anchor_v2_source_capture_rights.py"
+      - "tests/test_serie_a_v2_original_diagnostic_direct_access.py"
+      - "tests/test_serie_a_v2_forward_direct_access_rights.py"
+      - "tests/test_market_anchor_v2_saved_cohort_replay.py"
+      - "tests/test_market_anchor_v2_training_rights.py"
+      - "tests/test_serie_a_v2_quote_persistence_timestamp_contract.py"
       - ".github/workflows/market-anchor-v2-original-forward-source-first-validation.yml"
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - "serie_a_v2_forward_capture.py"
       - "serie_a_v2_prequote_source_archive_gate.py"
+      - "serie_a_v2_attest_real_source.py"
+      - "serie_a_v2_live_diagnostic_report.py"
+      - "serie_a_v2_frozen_shadow_preview.py"
       - "tests/test_serie_a_v2_forward_capture.py"
       - "tests/test_serie_a_v2_prequote_source_archive_gate.py"
+      - "tests/test_serie_a_v2_attest_real_source.py"
+      - "tests/test_serie_a_v2_live_diagnostic_report.py"
+      - "tests/test_serie_a_v2_frozen_shadow_preview.py"
+      - "tests/test_serie_a_v2_asof_feature_manifest.py"
+      - "tests/test_serie_a_v2_atalanta_alias.py"
+      - "market_anchor_v2_source_rights.py"
+      - "market_anchor_v2_source_capture_rights.py"
+      - "market_anchor_v2_artifact_privacy.py"
+      - "market_anchor_v2_direct_access.py"
+      - "market_anchor_v2_saved_cohort_replay.py"
+      - "research/source_rights/football_data_co_uk.json"
+      - "research/SERIE_A_V2_SOURCE_POLICY_RECHECK_20261121.md"
+      - "research/SERIE_A_V2_QUOTE_PERSISTENCE_TIMESTAMP_AUDIT_20261120.md"
+      - "tests/test_market_anchor_v2_source_rights.py"
+      - "tests/test_market_anchor_v2_source_capture_rights.py"
+      - "tests/test_serie_a_v2_original_diagnostic_direct_access.py"
+      - "tests/test_serie_a_v2_forward_direct_access_rights.py"
+      - "tests/test_market_anchor_v2_saved_cohort_replay.py"
+      - "tests/test_market_anchor_v2_training_rights.py"
+      - "tests/test_serie_a_v2_quote_persistence_timestamp_contract.py"
       - ".github/workflows/market-anchor-v2-original-forward-source-first-validation.yml"
 
 permissions:
@@ -62,7 +109,12 @@ jobs:
             serie_a_v2_prequote_source_archive_gate.py \
             serie_a_v2_live_diagnostic_report.py \
             serie_a_v2_asof_feature_manifest.py \
-            serie_a_v2_frozen_shadow_preview.py
+            serie_a_v2_frozen_shadow_preview.py \
+            market_anchor_v2_source_rights.py \
+            market_anchor_v2_source_capture_rights.py \
+            market_anchor_v2_artifact_privacy.py \
+            market_anchor_v2_direct_access.py \
+            market_anchor_v2_saved_cohort_replay.py
       - name: Run original V2 source-first and frozen-contract regressions
         run: |
           python -m pytest -q \
@@ -73,6 +125,13 @@ jobs:
             tests/test_serie_a_v2_live_diagnostic_report.py \
             tests/test_serie_a_v2_asof_feature_manifest.py \
             tests/test_serie_a_v2_atalanta_alias.py \
-            tests/test_serie_a_v2_frozen_shadow_preview.py
+            tests/test_serie_a_v2_frozen_shadow_preview.py \
+            tests/test_market_anchor_v2_source_rights.py \
+            tests/test_market_anchor_v2_source_capture_rights.py \
+            tests/test_serie_a_v2_original_diagnostic_direct_access.py \
+            tests/test_serie_a_v2_forward_direct_access_rights.py \
+            tests/test_market_anchor_v2_saved_cohort_replay.py \
+            tests/test_market_anchor_v2_training_rights.py \
+            tests/test_serie_a_v2_quote_persistence_timestamp_contract.py
       - name: Guard production model binaries
         run: git diff --exit-code origin/main...HEAD -- '*.pkl'

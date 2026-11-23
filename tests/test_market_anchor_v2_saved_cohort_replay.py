@@ -1,163 +1,166 @@
-import numpy as np
+"""Outcome-blind static safety checks for the quarantined saved-cohort replay."""
+import ast
+from pathlib import Path
 
-import market_anchor_v2_saved_cohort_replay as replay
+
+SCRIPT = Path("market_anchor_v2_saved_cohort_replay.py")
 
 
-def _score(field: str):
-    y = np.asarray([replay.RESULT_TO_INT[row["result"]] for row in replay.TARGETS], dtype=int)
-    p = np.asarray([row[field] for row in replay.TARGETS], dtype=float)
-    onehot = np.eye(3)[y]
+def _tree():
+    # Replace the lazy target-literal body before parsing. This test validates
+    # gate structure without parsing or materializing protected target rows.
+    source = SCRIPT.read_text(encoding="utf-8")
+    start = source.index("def _load_saved_targets_after_gate")
+    end = source.index("\n\ndef ", start)
+    safe_stub = (
+        "def _load_saved_targets_after_gate() -> tuple[dict[str, object], ...]:\n"
+        "    _require_post_outcome_replay_gate()\n"
+        "    return ()\n"
+    )
+    return ast.parse(source[:start] + safe_stub + source[end:])
+
+
+def _functions():
     return {
-        "accuracy": float((p.argmax(axis=1) == y).mean()),
-        "brier": float(np.mean(np.sum((p - onehot) ** 2, axis=1))),
-        "log_loss": float(-np.mean(np.log(p[np.arange(len(y)), y]))),
+        node.name: node
+        for node in _tree().body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
     }
 
 
-def test_saved_serie_a_cohort_is_exactly_ten_unique_events():
-    replay.validate_targets()
-    assert len(replay.TARGETS) == 10
-    assert len({row["event_id"] for row in replay.TARGETS}) == 10
-    assert replay.PRIMARY_LEAGUE == "SERIE_A"
-    assert replay.FROZEN_PARENT_REPLAY_EVENTS == 47
+def _first_statement_after_docstring(node):
+    body = list(node.body)
+    if (
+        body
+        and isinstance(body[0], ast.Expr)
+        and isinstance(body[0].value, ast.Constant)
+        and isinstance(body[0].value.value, str)
+    ):
+        body.pop(0)
+    return body[0] if body else None
 
 
-def test_frozen_recipe_identity_is_not_tuned_in_replay():
-    assert replay.FEATURE_VARIANT == "ALL_FOOTBALL"
-    assert replay.SHADOW_LAMBDA == 1.0
-    assert replay.L2_PENALTY == 1.0
-    assert replay.FROZEN_V2_COMMIT == "df19777087fb89af049eedce44ff93f0aa6e6360"
-    assert replay.HISTORY_CUTOFF_DATE.strftime("%Y-%m-%d") == "2026-09-11"
+def _first_call_name(node):
+    statement = _first_statement_after_docstring(node)
+    if not isinstance(statement, ast.Expr) or not isinstance(statement.value, ast.Call):
+        return None
+    func = statement.value.func
+    return func.id if isinstance(func, ast.Name) else None
 
 
-def test_saved_market_and_old_model_metrics_are_frozen():
-    market = _score("market")
-    old = _score("old_model")
-    assert abs(market["accuracy"] - 0.6) <= 1e-15
-    assert abs(market["brier"] - 0.5662948173955555) <= 1e-15
-    assert abs(market["log_loss"] - 0.9674878846519602) <= 1e-15
-    assert abs(old["accuracy"] - 0.5) <= 1e-15
-    assert abs(old["brier"] - 0.5265153874268573) <= 1e-15
-    assert abs(old["log_loss"] - 0.906202231280792) <= 1e-15
-
-
-def test_frozen_source_blob_pins_cover_every_restored_module():
-    assert replay.EXPECTED_FROZEN_GIT_BLOBS == {
-        "historical_football_signal_lab.py": "401b3a0893371bfa4a488ec92a4a54af2678c8f7",
-        "market_anchor_1x2_v1.py": "58c35bf3768f7bf2b951f19a37b9a5f46b6b9801",
-        "market_anchor_1x2_v2_shadow.py": "b2770d726ffafe7a3cef706b57d3391063cbfe1b",
+def _calls_in(node):
+    return {
+        call.func.id
+        for call in ast.walk(node)
+        if isinstance(call, ast.Call) and isinstance(call.func, ast.Name)
     }
 
 
-def test_saved_replay_report_is_provenance_locked():
-    import json
+def test_post_outcome_entrypoints_fail_closed_before_reading_targets():
+    functions = _functions()
+    for name in (
+        "validate_targets",
+        "build_target_features",
+        "replay",
+        "assert_same_frozen_replay",
+    ):
+        assert _first_call_name(functions[name]) == "_require_post_outcome_replay_gate"
+
+
+def test_training_entrypoints_require_rights_before_any_source_access():
+    functions = _functions()
+    for name in (
+        "download_csv",
+        "build_training_frame",
+        "restore_frozen_candidate_from_training_history",
+    ):
+        assert _first_call_name(functions[name]) == "_require_training_data_access"
+
+
+def test_training_access_requires_provider_training_and_private_capture_rights():
+    calls = _calls_in(_functions()["_require_training_data_access"])
+    assert "require_ai_model_training_permission" in calls
+    assert "require_v2_source_capture_access" in calls
+
+
+def test_post_outcome_gate_is_an_unconditional_permission_error():
+    gate = _functions()["_require_post_outcome_replay_gate"]
+    assert len(gate.body) == 2
+    assert isinstance(gate.body[0], ast.Expr)  # docstring
+    raised = gate.body[1]
+    assert isinstance(raised, ast.Raise)
+    assert isinstance(raised.exc, ast.Call)
+    assert isinstance(raised.exc.func, ast.Name)
+    assert raised.exc.func.id == "PermissionError"
+
+
+def test_default_cli_path_is_gated_before_replay_call():
+    main = _functions()["main"]
+    gate_lines = [
+        node.lineno for node in ast.walk(main)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "_require_post_outcome_replay_gate"
+    ]
+    replay_lines = [
+        node.lineno for node in ast.walk(main)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "replay"
+    ]
+    assert gate_lines and replay_lines
+    assert min(gate_lines) < min(replay_lines)
+
+
+def test_saved_target_literal_is_lazy_and_not_a_module_level_binding():
+    tree = _tree()
+    module_assignments = [
+        node for node in tree.body if isinstance(node, (ast.Assign, ast.AnnAssign))
+    ]
+    assert not any(
+        isinstance(target, ast.Name) and target.id == "TARGETS"
+        for node in module_assignments
+        for target in (node.targets if isinstance(node, ast.Assign) else [node.target])
+    )
+    assert _first_call_name(_functions()["_load_saved_targets_after_gate"]) == "_require_post_outcome_replay_gate"
+
+def test_target_feature_builder_materializes_targets_only_after_gate():
+    node = _functions()["build_target_features"]
+    call_lines = {
+        call.func.id: call.lineno
+        for call in ast.walk(node)
+        if isinstance(call, ast.Call) and isinstance(call.func, ast.Name)
+    }
+    assert call_lines["_require_post_outcome_replay_gate"] < call_lines["_load_saved_targets_after_gate"]
+    assert call_lines["_load_saved_targets_after_gate"] < call_lines["require_v2_source_capture_access"]
+    assert call_lines["require_v2_source_capture_access"] < call_lines["require_v2_inference_access"]
+    assert call_lines["require_v2_inference_access"] < call_lines["download_csv"]
+
+
+
+def test_saved_target_loader_contains_no_embedded_target_records():
+    import ast
     from pathlib import Path
-    frozen = json.loads(
-        Path("experiments/market_anchor_v2_saved_cohort_replay_report.json").read_text()
+
+    source_path = Path(__file__).resolve().parents[1] / "market_anchor_v2_saved_cohort_replay.py"
+    tree = ast.parse(source_path.read_text(encoding="utf-8"))
+    loader = next(
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "_load_saved_targets_after_gate"
     )
-    replay.assert_same_frozen_replay(frozen)
-    assert frozen["candidate_artifact_sha256"] == (
-        "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
+    assert len(loader.body) == 3
+    assert isinstance(loader.body[0], ast.Expr)
+    assert isinstance(loader.body[0].value, ast.Constant)
+    assert isinstance(loader.body[0].value.value, str)
+    call = loader.body[1]
+    assert isinstance(call, ast.Expr)
+    assert isinstance(call.value, ast.Call)
+    assert isinstance(call.value.func, ast.Name)
+    assert call.value.func.id == "_require_post_outcome_replay_gate"
+    assert isinstance(loader.body[2], ast.Raise)
+    assert not any(
+        isinstance(node, (ast.Dict, ast.List, ast.Tuple))
+        for statement in loader.body
+        for node in ast.walk(statement)
     )
-    assert frozen["training_fingerprint_sha256"] == (
-        "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098"
-    )
-
-
-def test_provenance_and_outcome_tampering_are_rejected():
-    import json
-    from copy import deepcopy
-    from pathlib import Path
-    import pytest
-    good = json.loads(
-        Path("experiments/market_anchor_v2_saved_cohort_replay_report.json").read_text()
-    )
-    for key, replacement in [
-        ("candidate_artifact_sha256", "0" * 64),
-        ("training_fingerprint_sha256", "a" * 64),
-        ("active_lambda", 1.0),
-        ("stability_gate_passed", True),
-        ("football_data_sha256", {}),
-        ("production_promotion", True),
-    ]:
-        bad = deepcopy(good)
-        bad[key] = replacement
-        with pytest.raises(ValueError, match="provenance drift"):
-            replay.assert_same_frozen_replay(bad)
-    for changed_field in ("result", "event_id"):
-        bad = deepcopy(good)
-        bad["predictions"][0][changed_field] = "tampered"
-        with pytest.raises(ValueError, match="event drift"):
-            replay.assert_same_frozen_replay(bad)
-    bad = deepcopy(good)
-    bad["predictions"][0]["shadow_lambda_1"][0] += .01
-    with pytest.raises(ValueError, match="probabilities drift"):
-        replay.assert_same_frozen_replay(bad)
-
-
-def test_candidate_export_cannot_target_production_paths():
-    from pathlib import Path
-    code = Path("market_anchor_v2_saved_cohort_replay.py").read_text()
-    assert "save_research_candidate: bool = False" in code
-    assert "--save-research-candidate" in code
-    assert '"artifacts/market_anchor_v2_saved_cohort_replay/candidate_model.json"' in code
-    assert "v2.validate_candidate_artifact(artifact)" in code
-    assert "assert_same_frozen_replay(report)" in code
-    assert 'if artifact["artifact_sha256"] != report["candidate_artifact_sha256"]:' in code
-    for dangerous in ["joblib.dump(", "pickle.dump(", "os.system(", ".upsert(", "supabase.table(", "api.the-odds-api.com"]:
-        assert dangerous not in code
-
-
-def test_original_frozen_weights_restoration_does_not_read_mutable_2026_27():
-    from pathlib import Path
-    src = Path("market_anchor_v2_saved_cohort_replay.py").read_text()
-    frozen_function = src.split(
-        "def restore_frozen_candidate_from_training_history(", 1
-    )[1].split("\ndef main()", 1)[0]
-    assert "build_training_frame(_lab)" in frozen_function
-    assert "build_target_features(" not in frozen_function
-    assert "CURRENT_SEASON_CODE" not in frozen_function
-    assert 'historical_hashes.get(season) != frozen_hashes.get(season)' in frozen_function
-    assert 'refit_exact_sha_match = model["artifact_sha256"] == original["artifact_sha256"]' in frozen_function
-    assert 'v2.validate_candidate_artifact(original)' in frozen_function
-    assert 'output.write_text(json.dumps(original,' in frozen_function
-    assert 'numerical_diffs' in frozen_function
-    assert 'if not all(np.isfinite(d) and d <= 1e-8' in frozen_function
-    assert '"replayed_september_target_fixtures": False' in frozen_function
-    assert '"production_promotion": False' in frozen_function
-    assert "--restore-candidate-only" in src
-
-
-def test_durable_recovered_serie_a_candidate_is_frozen_and_not_production():
-    import json
-    from pathlib import Path
-    recovered = json.loads(
-        Path("research/models/market_anchor_v2_serie_a_frozen_candidate.json").read_text()
-    )
-    old = json.loads(
-        Path("experiments/market_anchor_v2_saved_cohort_replay_report.json").read_text()
-    )
-    assert recovered["primary_league"] == "SERIE_A"
-    assert recovered["feature_variant"] == "ALL_FOOTBALL"
-    assert recovered["artifact_sha256"] == old["candidate_artifact_sha256"]
-    # The exact Python JSON decimal literals matter to the frozen SHA;
-    # do NOT pass through JavaScript Number/JSON.stringify when storing weights.
-    import hashlib
-    body = dict(recovered)
-    supplied = body.pop("artifact_sha256")
-    raw = json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
-    assert hashlib.sha256(raw.encode("utf-8")).hexdigest() == supplied
-    assert recovered["training_fingerprint_sha256"] == old["training_fingerprint_sha256"]
-    assert recovered["training_rows"] == old["training_rows"] == 3799
-    assert recovered["active_lambda"] == 0.0
-    assert recovered["shadow_residual_lambda"] == 1.0
-    assert recovered["stability_gate_passed"] is False
-    assert recovered["automatic_promotion"] is False
-    assert recovered["research_only"] is True
-    assert len(recovered["weights"]) == len(recovered["features"]) + 1
-    assert all(len(w) == 2 for w in recovered["weights"])
-    assert len(recovered["imputer_medians"]) == len(recovered["features"])
-    assert len(recovered["scaler_mean"]) == len(recovered["features"])
-    assert len(recovered["scaler_scale"]) == len(recovered["features"])
-    assert all(isinstance(x, (float, int)) for row in recovered["weights"] for x in row)
-

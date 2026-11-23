@@ -19,8 +19,15 @@ from serie_a_v2_forward_capture import (
 from serie_a_v2_prequote_source_archive_gate import verify_archive
 
 
+def _require_v2_source_capture_access() -> dict:
+    """Require provider-cleared source access and private artifact storage."""
+    from market_anchor_v2_direct_access import require_v2_source_capture_access
+    return require_v2_source_capture_access()
+
+
 def attest_latest_source(*, token: str, now: datetime, discover=discover_archives,
                          load=get_archive, verify_run=verify_source_run) -> dict:
+    _require_v2_source_capture_access()
     if now.tzinfo is None:
         raise ValueError("source attestation needs an aware UTC clock")
     at = now.astimezone(timezone.utc)
@@ -82,6 +89,7 @@ def main() -> None:
     args = parser.parse_args()
     if os.environ.get("GITHUB_REPOSITORY") != REPOSITORY:
         raise RuntimeError("source proof must run in original GitHub repository")
+    _require_v2_source_capture_access()
     token = os.environ.get("GITHUB_TOKEN", "")
     if not token:
         raise RuntimeError("GITHUB_TOKEN actions:read missing")

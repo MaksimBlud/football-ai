@@ -11,6 +11,16 @@ import pytest
 from serie_a_v2_asof_feature_manifest import build_manifest
 from serie_a_v2_frozen_shadow_preview import load_verified_original, shadow_preview
 
+@pytest.fixture(autouse=True)
+def synthetic_inference_clearance(monkeypatch):
+    import serie_a_v2_frozen_shadow_preview as frozen_preview
+    monkeypatch.setattr(
+        frozen_preview,
+        "require_v2_inference_access",
+        lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
+    )
+
+
 BASE = {"HC": 5, "AC": 4, "HY": 2, "AY": 1, "HR": 0, "AR": 0}
 ASOF = datetime(2026, 10, 13, 15, 1, tzinfo=timezone.utc)
 
@@ -36,6 +46,7 @@ def fixture(event_id, home, away):
         "event_id": event_id, "league": "SERIE_A",
         "home_team": home, "away_team": away,
         "snapshot_time_utc": "2026-10-13T15:00:00Z",
+        "created_at": "2026-10-13T15:00:01Z",
         "commence_time_utc": "2026-10-19T17:00:00Z",
         "home_odds": 2.2, "draw_odds": 3.4, "away_odds": 3.1,
     }
