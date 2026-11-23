@@ -66,12 +66,12 @@
     "api_requests": 0,
     "source_download_performed": false,
     "raw_source_sha256_captured": false,
-    "supabase_reads": 0,
     "supabase_writes": 0,
     "supabase_ddl": 0,
     "protected_2026_27_evaluation_outcomes_read": false,
     "model_inference_performed": false,
-    "production_pickle_changed": false
+    "production_pickle_changed": false,
+    "provider_audit_supabase_reads": 0
   },
   "frozen_candidate": {
     "experiment_id": "MARKET_ANCHOR_1X2_V2",
@@ -105,7 +105,7 @@
       "Underlying data comes from third-party providers, but their identity and field-level rights were not established.",
       "Detailed statistics vary by competition and may be unavailable for a match; exact 2026/27 Serie A per-fixture completeness was not checked.",
       "Per-field first-observed and correction timestamps are not documented; local receipt time and SHA do not prove upstream first observation.",
-      "No account, key, API request, source download, Supabase operation or inference was authorized or performed."
+      "No provider account/key, provider API request, provider source download, provider-specific Supabase read or inference was authorized or performed; the separate project-level pre-match odds audit used SELECT only and no writes/DDL."
     ]
   }
 }

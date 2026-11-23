@@ -93,14 +93,14 @@ def test_original_frozen_candidate_is_pinned_and_unchanged():
     assert candidate["automatic_promotion"] is audit["automatic_promotion"] is False
 
 
-def test_no_provider_or_project_access_was_performed():
+def test_no_provider_specific_access_was_performed():
     auth = _load()["project_authorization"]
     assert auth["account_created"] is False
     assert auth["api_key_created"] is False
     assert auth["api_requests"] == 0
     assert auth["source_download_performed"] is False
     assert auth["raw_source_sha256_captured"] is False
-    assert auth["supabase_reads"] == 0
+    assert auth["provider_audit_supabase_reads"] == 0
     assert auth["supabase_writes"] == 0
     assert auth["supabase_ddl"] == 0
     assert auth["protected_2026_27_evaluation_outcomes_read"] is False
