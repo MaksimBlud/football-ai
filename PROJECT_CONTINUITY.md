@@ -7404,3 +7404,15 @@ Provider references: https://5dollarfootballapi.com/terms ; https://5dollarfootb
 - Read-only pre-match odds metadata remains 3,915 strict rows / 327 events / 9 leagues; future strict rows/events 0; latest strict Serie A snapshot 2026-10-13 14:48:53 UTC.
 - The 30-primary-completed-event gate remains CLOSED. No protected outcomes were read. No independent Brier/LogLoss comparison is available, and no V2 superiority claim is justified.
 - No Supabase write/DDL, paid provider call, source download/use, production `.pkl` change, candidate/feature/weight/threshold change, main update, merge, schedule change or other-agent setting change occurred in this cycle.
+
+
+### 2026-11-23 06:10 UTC — exact-head CI correction for source-before-quote child PRs
+
+This corrects the 2026-11-23 01:48 UTC checkpoint, which said the latest #884 SHA lacked independently surfaced exact-head CI. The current exact heads do have successful runs:
+
+- **#884 Original Forward source-first** — HEAD `c38834ec6c2bd0079afca9e63a9ce75a8cd17043`; exact run [#44854473405](https://github.com/MaksimBlud/football-ai/actions/runs/44854473405); Python 3.12: **80 passed**, Python 3.11: **80 passed**; compilation and production `.pkl` diff guards passed.
+- **#913 Current-Form fail-closed source-before-quote** — HEAD `23ba2b6b9651f07f819004ab9c2fbd9fc37c641b`; exact run [#44938903345](https://github.com/MaksimBlud/football-ai/actions/runs/44938903345); Python 3.12: **31 passed**, Python 3.11: **31 passed**; compilation and production `.pkl` diff guards passed.
+- **#923 atomic source capture / feature-gate clock** — HEAD `2ddef8a7b66324224e5a0d243f364a36109b9420`; [#45069538763](https://github.com/MaksimBlud/football-ai/actions/runs/45069538763) Python 3.12/3.11: **71 passed each**; [#45069538786](https://github.com/MaksimBlud/football-ai/actions/runs/45069538786) Python 3.12/3.11: **58 passed each**. Compilation and production `.pkl` diff guards passed.
+- These exact-head successes do not integrate the fixes. #884 remains based on old #879; #913 remains based on #912; #923 remains based on #922. All remain open Draft children requiring ancestry reconciliation after owner HUMAN-MERGE of root #781.
+
+**Documentation checkpoint CI:** PR #839 exact HEAD `f903605c5114ee349863ec494aee46aabed1c58c` is OPEN / Ready for review / mergeable, not merged. Its exact-head commit run list is **8/8 SUCCESS**; V2-specific Frozen Shadow [#45122138210](https://github.com/MaksimBlud/football-ai/actions/runs/45122138210) reports **89 passed** and the production `.pkl` guard passed. The unrelated La Liga prospective run was not inspected or used for V2 conclusions.
