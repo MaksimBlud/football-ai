@@ -7209,3 +7209,28 @@ No main update/merge, source/provider request by this audit, paid API request, S
 - PR #781 remains OPEN / Ready for review, exact HEAD `3a70a8648895076efec2a80dc10b1798ed0d9261`, 8/8 exact-head CI SUCCESS. The default-deny hold is not active on main until owner manual merge and fresh-main verification.
 - Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; its continuity file is still the October 18 blob `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`. Supabase schema metadata still reports RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`; no DDL or policy change was attempted.
 - No main update/merge, Supabase write/DDL, provider request/download, paid API call, protected outcome read, inference, refit, threshold tuning, production `.pkl` change, bet, promotion, schedule change or other-agent change.
+
+
+## 2026-11-23 00:08 UTC — V2 live-workflow hold inventory strengthened
+
+### Exact root-hold head and CI
+- Root [PR #781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review / mergeable / not merged. It is based on main `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- After a fresh static audit, #781 was advanced to exact HEAD `020697894b79b25f981673925a6734007f8d5200`; exact compare is **50 ahead / 0 behind**, 7 changed files.
+- Exact-head PR CI: **8/8 SUCCESS**. Frozen V2 Shadow [#45086912393](https://github.com/MaksimBlud/football-ai/actions/runs/45086912393): **107 passed**, compile and production `.pkl` diff guard PASS. Recovery [#45086912473](https://github.com/MaksimBlud/football-ai/actions/runs/45086912473): **53 passed**; candidate rebuild/proof/upload steps were skipped by the default-deny flag and production pickle hash guard passed.
+- Other exact-head checks: Research [#45086912434](https://github.com/MaksimBlud/football-ai/actions/runs/45086912434), Serie A [#45086912328](https://github.com/MaksimBlud/football-ai/actions/runs/45086912328), Bundesliga [#45086912338](https://github.com/MaksimBlud/football-ai/actions/runs/45086912338), Ligue 1 [#45086912344](https://github.com/MaksimBlud/football-ai/actions/runs/45086912344), Eredivisie [#45086912365](https://github.com/MaksimBlud/football-ai/actions/runs/45086912365), Product [#45086912465](https://github.com/MaksimBlud/football-ai/actions/runs/45086912465). Research/Product/league runs are CI path-filter checks, not additional V2 model evidence.
+
+### New static-guard gap closed
+The earlier #781 inventory caught an unlisted new V2 workflow, but did not reject a new external-I/O or non-test Python step added inside one of the five already-inventoried V2 workflows. It also checked job-level credentials but not workflow-level secrets inherited by offline steps.
+
+The one-file test update now:
+- enumerates every top-level step in each of the five V2 live workflows;
+- requires every external-I/O, credential-bearing or non-test Python entrypoint to be explicitly listed and gated as a live step or successful-only artifact upload;
+- allows only the named existing offline inline-Python source-contract check;
+- rejects workflow-level Supabase/GitHub/API credential bindings;
+- includes synthetic regressions for an unlisted Python source helper, an unlisted network request and a workflow-level Supabase secret.
+
+A temporary child PR #934 was closed after transplanting the same test-only change into root #781 so the root PR's exact-head CI could run. It was not merged. #781 remains HUMAN-MERGE only.
+
+### Current limitations and non-actions
+- This change strengthens the hold's regression coverage; it does not activate the hold on main. The live source/quote workflows remain unblocked on main until owner manual merge of #781 and fresh-main verification.
+- No provider request/download, paid API call, Supabase write/DDL, protected target-outcome read, V2 inference/refit, threshold tuning, production `.pkl` change, main update, merge, schedule change or other-agent setting change occurred in this cycle.
