@@ -28,6 +28,7 @@ from market_anchor_1x2_v1 import (
     market_anchored_probabilities,
     validate_probabilities,
 )
+from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 
 EXPERIMENT_ID = "MARKET_ANCHOR_1X2_V2"
 EVIDENCE_CLASS = "PROSPECTIVE_SHADOW"
@@ -47,6 +48,8 @@ TRAINING_DATA_THROUGH = pd.Timestamp("2026-06-30T23:59:59Z")
 ADMISSION_NOT_BEFORE = pd.Timestamp("2026-09-16T00:00:00Z")
 FIRST_OUTCOME_READ_GATE = 30
 INCUMBENT_MODEL_SHA256 = "1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5"
+# Keep the same narrow V2-only alias used by the original historical feature adapter.
+V2_HISTORICAL_TEAM_ALIASES = {"Atalanta BC": "Atalanta"}
 FROZEN_CANDIDATE_ARTIFACT_SHA256 = "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
 FORBIDDEN_OUTCOME_FIELDS = frozenset({
     "result", "outcome", "home_goals", "away_goals", "score", "final_score",
@@ -173,6 +176,14 @@ def _as_utc(value: object, field: str) -> pd.Timestamp:
     if ts.tzinfo is None:
         raise ValueError(f"{field} must be timezone-aware UTC")
     return ts.tz_convert("UTC")
+
+
+def _canonical_shadow_team_identity(value: str) -> str:
+    """Apply the existing Serie A/V2 aliases only for cohort deduplication."""
+    stripped = value.strip()
+    runtime_name = SERIE_A_RUNTIME_CONFIG.aliases.get(stripped, stripped)
+    historical_name = V2_HISTORICAL_TEAM_ALIASES.get(runtime_name, runtime_name)
+    return " ".join(historical_name.split()).casefold()
 
 
 def _is_numeric_scalar(value: object) -> bool:
@@ -526,6 +537,7 @@ def _nested_forbidden_outcome_keys(value) -> set[str]:
 def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
     validated: list[dict] = []
     seen_events: set[str] = set()
+    seen_fixtures: set[tuple[str, str, tuple[str, str]]] = set()
     candidate_artifacts: set[str] = set()
     for raw in rows:
         row = dict(raw)
@@ -563,12 +575,25 @@ def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
             raise ValueError("home_team must be a non-empty canonical string")
         if type(away_team) is not str or not away_team or away_team != away_team.strip():
             raise ValueError("away_team must be a non-empty canonical string")
-        home_identity = " ".join(home_team.split()).casefold()
-        away_identity = " ".join(away_team.split()).casefold()
+        home_identity = _canonical_shadow_team_identity(home_team)
+        away_identity = _canonical_shadow_team_identity(away_team)
         if home_identity == away_identity:
             raise ValueError("home_team and away_team must identify distinct teams")
 
         kickoff = _as_utc(row["kickoff_utc"], "kickoff_utc")
+        # Provider event IDs are not a sufficient unit for the 30-event gate:
+        # the same Serie A fixture can be duplicated under different IDs or
+        # reversed home/away labels. Deduplicate by canonical teams and local
+        # fixture date, without changing any frozen feature or model input.
+        fixture_day = kickoff.tz_convert(SERIE_A_RUNTIME_CONFIG.identity.timezone).date().isoformat()
+        fixture_identity = (
+            PRIMARY_LEAGUE,
+            fixture_day,
+            tuple(sorted((home_identity, away_identity))),
+        )
+        if fixture_identity in seen_fixtures:
+            raise ValueError("duplicate canonical primary fixture identity")
+        seen_fixtures.add(fixture_identity)
         capture = _as_utc(row["capture_time_utc"], "capture_time_utc")
         market_time = _as_utc(row["market_snapshot_time_utc"], "market_snapshot_time_utc")
         incumbent_time = _as_utc(row["incumbent_generated_at_utc"], "incumbent_generated_at_utc")
