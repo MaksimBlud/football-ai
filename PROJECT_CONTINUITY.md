@@ -7321,3 +7321,27 @@ Provider references: https://5dollarfootballapi.com/terms ; https://5dollarfootb
 - Current Football-Data rights manifest remains fail-closed: rights status V2_FROZEN_INFERENCE_SCOPE_UNRESOLVED, AI training permission false, provider-issued AI-inference license false, authorization null. No inference/training is authorized by this project manifest.
 - Supabase read-only odds_snapshots audit remains 3,915 strict pre-match snapshots across 327 events and nine leagues; future eligible quotes 0. The table schema contains odds and timestamp fields only, not the 19 historical team-statistic inputs. No match-result, score or settlement columns were queried.
 - No provider/API request, source download, artifact download, quote read, Supabase write/DDL, protected target-outcome read, production .pkl change, candidate/feature/weight change, schedule change, main update, merge or other-agent setting change occurred.
+
+## 2026-11-23 05:00 UTC — merge recursive outcome embargo into the strict V2 shadow branch
+
+- Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main update or merge occurred.
+- Cross-branch audit found that the strict candidate/timestamp stack (#924–#933) still checked only top-level forbidden keys in `validate_shadow_capture_rows`. The separate nested-outcome stack (#854–#865) already had a recursive guard, but that guard was not present in the strict #933 branch. This left the two protections split across incompatible review stacks.
+- Ported the previously CI-tested recursive implementation from #865 into the latest strict #933 branch, preserving the newer candidate SHA, type validation, exact 19-feature recipe, temporal checks, and exact-integer 30-event gate.
+- The validator now rejects protected score/result/goal/winner/post-match-statistic keys anywhere in nested mappings, lists, or tuples; normalizes snake_case, camelCase, punctuation, dots, spaces, and compact provider abbreviations; and checks exact typed-stat descriptor fields. It deliberately preserves pre-match odds and frozen derived feature names such as `diff_goals_for_5`.
+- Added ten regression functions, including nested provider payloads, Football-Data aliases, punctuation-separated abbreviations, 1X2 winner flags, typed descriptors, and positive controls for allowed market/derived fields. The strict V2 test module now has 40 test functions and 180 parametrized cases.
+- Exact final PR #933 HEAD: `9034815100eb05030a462785483bb56375df0028`, based on #932 `8ff52f14efbd7ca14836d40e92f47fa83ceadcad`; 3 commits ahead / 0 behind; OPEN / Draft / mergeable; not merged.
+- The first intermediate commit `2fe2a462...` produced six pytest fixture errors because the copied multi-line parametrization decorators were not included. This was corrected in the next commit before final verification. Exact final-head CI [#45115047106](https://github.com/MaksimBlud/football-ai/actions/runs/45115047106) is **SUCCESS**: **180 passed**, compile succeeded, and production `.pkl` diff guard passed. No claim is carried from the failed intermediate SHA to the final SHA.
+- The earlier #865 source branch had 245 tests passing on its own exact head, but remains a separate open stack; the recursive protection is now also present in #933 so the latest candidate/timestamp contract no longer omits it. No existing PR was merged or closed.
+
+**Fresh main runtime recheck**
+- Main `serie_a_v2_forward_capture.py` blob `5db02cbd1367ed25b994b152acf371421859a014` still reads saved Supabase quotes before `discover_archives()`. This is still the original-forward source-before-quote violation. The source-first fix is in #884, not main.
+- Main `serie_a_v2_current_form_forward_capture.py` blob `326ac1921ce901a31aa6d73e6cbddb0782071964` verifies the latest source archive, but then unconditionally creates the Supabase client and reads saved quotes even if source verification did not pass. The fail-closed source-before-quote fix is in #913, not main.
+- Root workflow hold #781 remains OPEN / Ready for review at `5552bec363ae72ad7aef04c598d2ce861f33eb42`, exact 8/8 CI SUCCESS. It is not active on main until owner HUMAN-MERGE. No attempt was made to run, dispatch, cancel, or modify scheduled workflows.
+
+**Supabase — pre-match-only read**
+- Fresh read-only `odds_snapshots` aggregation returned **3,915** strict pre-kickoff rows across **327** events and **9** leagues; future eligible rows/events remain **0**.
+- The latest qualifying Serie A snapshot remains 2026-10-13 14:48:53 UTC. No score, result, settlement, or target-outcome field was selected.
+
+**Frozen V2 and non-actions**
+- Candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features, original weights, scaler, imputer, and training fingerprint remain unchanged. `active_lambda=0`, `shadow_lambda=1`, stability gate FAILED, prospective evaluation 0/30.
+- No protected 2026/27 outcomes read; no source download/use; no provider request; no paid API call; no Supabase write/DDL; no production `.pkl` change; no model refit, threshold, weight, feature, or schedule change; no main update or merge; no other-agent setting change.
