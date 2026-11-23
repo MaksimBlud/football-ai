@@ -15,6 +15,7 @@ QUOTE = {
     "away_team": "Beta",
     "commence_time_utc": "2026-10-19T19:00:00+00:00",
     "snapshot_time_utc": "2026-10-13T15:00:00+00:00",
+    "created_at": "2026-10-13T15:00:01+00:00",
     "home_odds": 2.1, "draw_odds": 3.4, "away_odds": 4.0,
 }
 

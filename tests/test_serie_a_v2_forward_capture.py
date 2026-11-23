@@ -62,10 +62,12 @@ def test_discover_archives_denies_before_any_github_api_call(monkeypatch):
 
 
 def quote(ts="2026-10-14T06:00:00Z"):
+    snapshot = datetime.fromisoformat(ts.replace("Z", "+00:00"))
     return {
         "league": "SERIE_A", "event_id": "new-fixture-original-v2",
         "home_team": "Juventus", "away_team": "Napoli",
         "snapshot_time_utc": ts,
+        "created_at": (snapshot + timedelta(seconds=1)).isoformat().replace("+00:00", "Z"),
         "commence_time_utc": "2026-10-20T18:00:00Z",
         "home_odds": 1.92, "draw_odds": 3.45, "away_odds": 4.22,
     }
