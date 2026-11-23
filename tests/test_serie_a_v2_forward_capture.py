@@ -37,6 +37,30 @@ def synthetic_inference_clearance(monkeypatch):
     monkeypatch.setattr(live_diagnostic, "require_v2_source_capture_access", synthetic)
 
 
+def test_discover_archives_denies_before_any_github_api_call(monkeypatch):
+    import market_anchor_v2_direct_access
+
+    calls = []
+
+    def deny_inference():
+        calls.append("rights")
+        raise PermissionError("provider inference scope is unresolved")
+
+    monkeypatch.setattr(
+        market_anchor_v2_direct_access,
+        "require_v2_inference_access",
+        deny_inference,
+    )
+
+    def forbidden_http(*args, **kwargs):
+        calls.append("http")
+        raise AssertionError("GitHub artifact discovery must not run before rights clearance")
+
+    with pytest.raises(PermissionError, match="inference scope"):
+        discover_archives(token="synthetic-token", get=forbidden_http)
+    assert calls == ["rights"]
+
+
 def quote(ts="2026-10-14T06:00:00Z"):
     return {
         "league": "SERIE_A", "event_id": "new-fixture-original-v2",
