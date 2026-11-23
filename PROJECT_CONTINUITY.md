@@ -7534,3 +7534,39 @@ No main update, merge, Supabase write/DDL, provider/API request, source download
 **Scientific status / non-actions**
 - The preregistered 30-primary-completed-event outcome-read gate remains CLOSED; no protected 2026/27 target outcomes were read. No independent Brier/LogLoss comparison exists; no V2-over-market superiority claim is justified.
 - No Supabase writes/DDL, paid provider request, source-artifact download/use, production `.pkl` modification, feature/weight/threshold change, main update, merge, schedule change or other-agent setting change occurred.
+
+
+### 2026-11-23 — Original V2 separate source-capture scope guard; exact-head CI
+
+**Fresh main / frozen-candidate verification**
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; Branch API reports `protected=false`. Main `PROJECT_CONTINUITY.md` blob is `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b` (6,152 lines); this new checkpoint is appended only on this open #839 documentation branch.
+- Main Original Forward source file blob is `5db02cbd1367ed25b994b152acf371421859a014`. Static re-read confirms its current `main()` reads saved quote metadata before discovering/verifying source archives. The source-first and rights changes below are not on main.
+- Frozen candidate JSON blob on main: `ac1303f6b096664983fbf52443bd0a381b23ba21`; candidate SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; 3,799 rows; exact 19 features; 20×2 weights; `active_lambda=0`; `shadow_residual_lambda=1`; stability gate false; research-only true; no 2026/27 outcomes used. The original V2 source blobs remain exactly `market_anchor_1x2_v2_shadow.py=b2770d726ffafe7a3cef706b57d3391063cbfe1b` and `historical_football_signal_lab.py=401b3a0893371bfa4a488ec92a4a54af2678c8f7`. No inference or feature calculation was run.
+
+**New direct-access finding**
+- A fresh audit of the exact #945 head `8517d0d39879ed2564de3ca8d7ff003f10f4dd46` found that original Forward required provider-issued frozen-inference permission and private storage, but did not independently require the distinct automated source-capture grant before archive discovery, parent-run metadata reads, or ZIP download.
+- This is a real partial-scope bypass: an inference-only authorization could have allowed source-archive access even if automated source capture remained unauthorized. The checked-in rights manifest on the open rights branch currently denies automated capture, frozen inference and AI training; authorization is null. No such access was attempted in this audit.
+
+**New Draft PR #946**
+- [PR #946 — enforce separate source-capture rights in original Forward](https://github.com/MaksimBlud/football-ai/pull/946), Draft / OPEN / HUMAN-MERGE only; child of #945.
+- Parent #945 HEAD: `8517d0d39879ed2564de3ca8d7ff003f10f4dd46`; exact #946 HEAD: `8c13bb0178b1b7e18b16e2c74ce46cdc70d94ce9`; compare **1 ahead / 0 behind**, merge base is exact parent.
+- Adds a rights-only source-capture validator and requires it independently before original-forward archive metadata, parent workflow, ZIP download, caller-supplied archive processing, preflight callbacks and CLI source discovery. The separate inference/private-storage guard remains mandatory; neither scope substitutes for the other.
+- Adds offline negative tests for the partial-scope case (inference synthetically allowed, capture denied), proving no input iteration, source metadata/HTTP, archive download, callback, quote/Supabase access or forecast occurs.
+- Exact push CI [#45233429006](https://github.com/MaksimBlud/football-ai/actions/runs/45233429006) and exact PR CI [#45233487016](https://github.com/MaksimBlud/football-ai/actions/runs/45233487016) both completed SUCCESS on HEAD `8c13bb0178b1b7e18b16e2c74ce46cdc70d94ce9`. Python 3.11: **189 passed**; Python 3.12: **189 passed**; compile and production `.pkl` diff guard passed. PR remains Draft and unmerged.
+- Parent #945 remains Draft at `8517d0d39879ed2564de3ca8d7ff003f10f4dd46`; exact PR [#45228090869](https://github.com/MaksimBlud/football-ai/actions/runs/45228090869) and push [#45228080028](https://github.com/MaksimBlud/football-ai/actions/runs/45228080028) passed **181 tests on each of Python 3.11 and 3.12**, compile and production `.pkl` guard. #944 remains the preceding provenance parent. None of #938–#946 is integrated into main.
+
+**Root HOLD / live main control**
+- [Root HOLD #781](https://github.com/MaksimBlud/football-ai/pull/781) is OPEN / Ready for review / mergeable at exact HEAD `5552bec363ae72ad7aef04c598d2ce861f33eb42`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`; it is not merged and its default-deny workflow hold is not active on main.
+- All **8/8 exact-head runs** report SUCCESS on that SHA: Product [#45108795827](https://github.com/MaksimBlud/football-ai/actions/runs/45108795827), Recovery [#45108795897](https://github.com/MaksimBlud/football-ai/actions/runs/45108795897), Serie A [#45108795789](https://github.com/MaksimBlud/football-ai/actions/runs/45108795789), Bundesliga [#45108795785](https://github.com/MaksimBlud/football-ai/actions/runs/45108795785), Frozen V2 Shadow [#45108795798](https://github.com/MaksimBlud/football-ai/actions/runs/45108795798), Eredivisie [#45108795794](https://github.com/MaksimBlud/football-ai/actions/runs/45108795794), Ligue 1 [#45108795793](https://github.com/MaksimBlud/football-ai/actions/runs/45108795793), and Research [#45108795804](https://github.com/MaksimBlud/football-ai/actions/runs/45108795804). Frozen V2 Shadow log: **113 passed**; Recovery log: **59 passed**; recovery rebuild/proof/upload steps were skipped under default deny and production hash guard passed.
+- Manual HUMAN-MERGE of #781 remains the immediate safety priority. Do not merge #946 or the descendants before the root hold and exact dependency chain are reviewed. No merge/main update was performed.
+
+**Read-only Supabase pre-match inventory**
+- Query selected only `public.odds_snapshots` league/event identity and quote/kickoff/persistence timestamps, with strict conditions `snapshot_time_utc < commence_time_utc`, `created_at < commence_time_utc`, and `snapshot_time_utc <= created_at`.
+- Result: **3,966** total rows; **3,915** strict pre-match rows; **327** distinct events; **9** leagues; **0** future strict rows / **0** future strict events.
+- Serie A: 625 total rows, 620 strict pre-match rows, 63 events. Latest strict Serie A snapshot: **2026-10-13 14:48:53.042620 UTC**.
+- No score, result, settlement or protected outcome columns were selected. No Supabase write/DDL occurred.
+
+**Scientific status and non-actions**
+- The preregistered 30-primary-completed-event gate remains **0/30 / CLOSED**. No protected 2026/27 outcomes were read, and no independent Brier Score / LogLoss comparison is available. No V2-over-market superiority claim is justified.
+- No provider/source request or download, paid API request, Supabase write/DDL, inference, training/refit, threshold tuning, production `.pkl` change, candidate/feature/weight change, main update, merge, schedule change or other-agent setting change occurred.
+- `active_lambda=0` remains the market; `shadow_lambda=1` remains research-only; NO_BET and frozen gates remain unchanged.
