@@ -279,8 +279,8 @@ def _validate_capture_source_provenance(
     artifact_created = _as_utc(value["artifact_created_at_utc"], "artifact_created_at_utc")
     run_created = _as_utc(parent["run_created_at_utc"], "source_run_created_at_utc")
     run_completed = _as_utc(parent["run_completed_at_utc"], "source_run_completed_at_utc")
-    if feature_cutoff != source_observed:
-        raise ValueError("feature history cutoff must equal the verified latest source observation")
+    if feature_cutoff > source_observed:
+        raise ValueError("feature history cutoff cannot be later than the verified latest source observation")
     if not (
         source_observed <= artifact_created
         and run_created <= artifact_created <= run_completed < market_time
