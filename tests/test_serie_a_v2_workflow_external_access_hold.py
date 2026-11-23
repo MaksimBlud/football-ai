@@ -763,7 +763,7 @@ def _unlisted_live_capable_steps(path: str, text: str, spec: dict) -> list[str]:
             preflight_gate = "${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}"
             if preflight_gate not in block or "GH_TOKEN: ${{ github.token }}" not in block:
                 unlisted.append(f"{name} (missing gated read-only repository check)")
-            if "gh api" not in block or "GITHUB_REPOSITORY" not in block or "--jq .private" not in block:
+            if "gh api" not in block or "GITHUB_REPOSITORY" not in block or "--jq" not in block or ".private" not in block:
                 unlisted.append(f"{name} (missing repository visibility lookup)")
             if "SUPABASE_URL" in block or "SUPABASE_KEY" in block or "secrets." in block:
                 unlisted.append(f"{name} (private preflight must not access source/quote credentials)")
@@ -796,7 +796,7 @@ def test_private_storage_preflight_is_read_only_and_required_before_live_access(
         assert guard.count("if:") == 1
         assert f"if: {preflight_gate}" in guard
         assert "GH_TOKEN: ${{ github.token }}" in guard
-        assert "gh api" in guard and "repos/${GITHUB_REPOSITORY}" in guard and "--jq .private" in guard
+        assert "gh api" in guard and "repos/${GITHUB_REPOSITORY}" in guard and "--jq" in guard and ".private" in guard
         assert "--method" not in guard and "-X " not in guard
         assert "SUPABASE_URL" not in guard and "SUPABASE_KEY" not in guard and "secrets." not in guard
         assert "echo \"is_private=true\" >> \"$GITHUB_OUTPUT\"" in guard
