@@ -7590,3 +7590,31 @@ No main update, merge, Supabase write/DDL, provider/API request, source download
 - Exact-head CI on #705: **8/8 SUCCESS**, including dedicated budget tests [#42071252036](https://github.com/MaksimBlud/football-ai/actions/runs/42071252036), Frozen V2 Shadow [#42071252238](https://github.com/MaksimBlud/football-ai/actions/runs/42071252238), and the product/research/league PR validations listed on that exact SHA.
 - Scope caution: #705 modifies both the original Free Real-Quote Diagnostic and the separate Current-Form Source Capture workflow. This task remains strictly original `MARKET_ANCHOR_1X2_V2`; do not blindly merge/restack its current-form changes or change that workflow's settings. The original-V2 diagnostic portion can be considered after the root HOLD and provider-rights chain are resolved. #705 predates the 2026-11-20 policy change and does **not** replace the newer source-capture/inference/privacy rights guards.
 - #705 is still OPEN / Draft and not on main. The 2026-11-23 17:57 main diagnostic run above therefore had no active budget marker/guard. Do not repeat a separate implementation of the same two-workflow budget mechanism.
+
+
+### 2026-11-23 19:54 UTC — correction: current-form source and forward artifacts are present
+
+**Exact current-form source run and artifact metadata**
+- Source workflow [#45217596300](https://github.com/MaksimBlud/football-ai/actions/runs/45217596300), event `schedule`, main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`, ran 2026-11-23 16:32:08–16:33:11 UTC. Job `137842843129` completed SUCCESS; 19 focused tests passed.
+- The run summary reports 10 historical CSVs plus one current-season CSV (`source_file_count=11`), 3,919 historical match rows, 119 current-season prior-day rows, and **110 completed primary fixture identities** for the outcome-free feature-input gate. `target_outcomes_scored=false`; no target outcome values were read. The 110 metadata identities do not satisfy or open the separate evaluation gate.
+- Artifact ID `14839276758`, 440,550 bytes, SHA-256 `2a6cb4902da93c4d15050ba9407543a19bc32c68c3f1f5c4ebe07202bb8c7bd9`, created 16:33:07 UTC, 90-day retention. Upload log says 12 files (11 source files plus accompanying capture metadata/report). Artifact bytes were not downloaded or opened.
+
+**Exact current-form forward run**
+- Follow-up [#45217802275](https://github.com/MaksimBlud/football-ai/actions/runs/45217802275), triggered by the successful source workflow, completed 16:33:16–16:33:53 UTC. Job `137843578402` completed SUCCESS; **53 tests passed**.
+- Its log verifies source artifact `14839276758` and SHA above, parent run `45217596300`, main head SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`, source observation `2026-11-23T16:33:05.648572Z`, archive creation `16:33:07Z`, parent completion `16:33:11Z`, and verification at `16:33:46.945356Z`. This proves source/archive/parent integrity for the capture, but **quotes_seen=0 and current-form shadow forecasts=0**; no quote-level source-before-quote event was tested.
+- The follow-up artifact is ID `14839356793`, 441,723 bytes, SHA-256 `946a440f135cbf69668ea175361227e965eb3040443e61dc070cf4547b9505fd`. Its bytes were not downloaded or opened.
+- This corrects the earlier 17:31 checkpoint's statement that the source-run artifact listing returned no artifacts: the artifact is present in the current Actions metadata and the successful job log. The earlier statement is superseded; no archive bytes were inspected.
+
+**Rights and hold interpretation**
+- Both workflows ran on public main before the root HOLD was merged. The provider-rights restack #945/#946 still explicitly denies automated source capture and frozen inference; these successful runs do not grant permission and are not admissible prospective V2 forecasts.
+- Root [#781](https://github.com/MaksimBlud/football-ai/pull/781) is the existing exact hold for the current-form source capture, current-form forward, original forward, free diagnostic and recovery workflows. Its exact HEAD remains `5552bec363ae72ad7aef04c598d2ce861f33eb42`, 8/8 PR-triggered checks SUCCESS, OPEN / Ready for review. Its patch gates all five live source/quote steps and all associated artifact uploads while preserving offline tests and existing schedules. It remains HUMAN-MERGE only; no main update was made.
+- Branch API still reports `protected=false`; no branch-protection setting was changed.
+
+**Read-only pre-match ledger recheck**
+- SELECT-only query against `public.odds_snapshots`, using strict `snapshot_time_utc < commence_time_utc`, `created_at < commence_time_utc`, and `snapshot_time_utc <= created_at`: **3,966** total rows, **3,915** strict pre-match rows, **327** events, **9** leagues, **0** future strict rows/events. Latest strict Serie A snapshot remains `2026-10-13 14:48:53.042620 UTC`.
+- No score/result/settlement columns were selected; no Supabase write/DDL occurred.
+
+**Binding scientific state**
+- Original frozen candidate remains SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 3,799 training rows, exact 19-feature order, 20×2 weights, `active_lambda=0`, `shadow_lambda=1`; no inference or feature calculation was run in this checkpoint.
+- The preregistered 30-primary-completed-event outcome gate remains **0/30 / CLOSED**. No protected 2026/27 outcome was read; no independent Brier/LogLoss result exists; no V2-over-market superiority claim is justified.
+- No source download or artifact bytes were fetched by this audit, no paid API, no Supabase write/DDL, no model/weight/feature/threshold change, no production `.pkl` change, no main update, no merge, no schedule or other-agent setting change.
