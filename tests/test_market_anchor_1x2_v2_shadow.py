@@ -462,6 +462,15 @@ def test_shadow_capture_rejects_noncanonical_event_id_whitespace(event_id):
         v2.validate_shadow_capture_rows([_row(event_id=event_id)])
 
 
+@pytest.mark.parametrize("extra", [
+    {"metadata": {"result": "H"}},
+    {"audit": [{"score": "1-0"}]},
+    {"provider": {"HC": 11, "FTAG": 2}},
+    {"provider": {"HTHG": 1, "FTR": "H"}},
+    {"stats": {"HST": 6, "AST": 3, "HF": 12, "AF": 9}},
+    {"stats": {"home_corners": 9, "away_yellows": 3}},
+    {"nested": [{"source": {"Home_Goals": 2}}]},
+])
 def test_shadow_capture_rejects_nested_raw_match_outcomes(extra):
     row = _row()
     row.update(extra)
@@ -469,12 +478,41 @@ def test_shadow_capture_rejects_nested_raw_match_outcomes(extra):
         v2.validate_shadow_capture_rows([row])
 
 
+@pytest.mark.parametrize("alias,value", [
+    ("FTHG", 2), ("HG", 2), ("FTAG", 1), ("AG", 1),
+    ("FTR", "H"), ("Res", "H"), ("HTHG", 1), ("HTAG", 0), ("HTR", "H"),
+    ("HxG", 1.5), ("AxG", 0.7), ("HS", 14), ("AS", 8),
+    ("HST", 5), ("AST", 2), ("HHW", 1), ("AHW", 0),
+    ("HF", 11), ("AF", 13), ("HFKC", 10), ("AFKC", 9),
+    ("HO", 2), ("AO", 1), ("HC", 7), ("AC", 4),
+    ("HY", 2), ("AY", 1), ("HR", 0), ("AR", 1),
+    ("HBP", 10), ("ABP", 25), ("Attendance", 12000),
+])
 def test_shadow_capture_rejects_all_documented_football_data_result_stat_aliases(alias, value):
     row = _row(provider_row={alias: value})
     with pytest.raises(ValueError, match="outcome fields"):
         v2.validate_shadow_capture_rows([row])
 
 
+@pytest.mark.parametrize("payload", [
+    {"provider_row": {"goals": {"home": 2, "away": 0}}},
+    {"provider_row": {"goal": {"home": 2}}},
+    {"provider_row": {"goals_scored": {"home": 2, "away": 0}}},
+    {"provider_row": {"Home Goals": 2}},
+    {"provider_row": {"home-goals": 2}},
+    {"provider_row": {"homeTeamGoals": 2, "awayTeamGoals": 0}},
+    {"provider_row": {"goalsHomeTeam": 2, "goalsAwayTeam": 0}},
+    {"provider_row": {"homeTeamScore": 2, "awayTeamScore": 0}},
+    {"provider_row": {"FTScore": {"home": 2, "away": 0}}},
+    {"provider_row": {"scoreLine": "2-0"}},
+    {"provider_row": {"fullTime": {"home": 2, "away": 0}}},
+    {"provider_row": {"home.goals": 2}},
+    {"provider_row": {"scores": [2, 0]}},
+    {"provider_row": {"homeScores": 2, "awayScores": 0}},
+    {"provider_row": {"scoresHomeTeam": 2, "scoresAwayTeam": 0}},
+    {"provider_row": {"scoreFullTime": "2-0"}},
+    {"provider_row": {"xGHome": 1.4, "xGAway": 0.6}},
+])
 def test_shadow_capture_rejects_generic_goals_containers_and_separator_aliases(payload):
     row = _row()
     row.update(payload)
@@ -487,6 +525,14 @@ def test_derived_frozen_goal_features_remain_allowed():
     assert v2.validate_shadow_capture_rows([row])[0]["event_id"] == "evt-1"
 
 
+@pytest.mark.parametrize("provider_row", [
+    {"F.T.H.G": 2},
+    {"H.G": 1},
+    {"F-T-A-G": 1},
+    {"H T R": "H"},
+    {"H-X-G": 1.4},
+    {"A.X.G": 0.7},
+])
 def test_shadow_capture_rejects_punctuation_separated_compact_outcome_aliases(provider_row):
     row = _row(provider_row=provider_row)
     with pytest.raises(ValueError, match="outcome fields"):
@@ -499,6 +545,25 @@ def test_compact_outcome_alias_guard_preserves_frozen_derived_feature_names():
     assert not v2.is_forbidden_outcome_field("diff_goals_for_5")
 
 
+@pytest.mark.parametrize("provider_row", [
+    {"home_win": True},
+    {"away_win": True},
+    {"home_won": True},
+    {"away_won": True},
+    {"is_home_winner": True},
+    {"is_away_winner": True},
+    {"homeTeamWon": True},
+    {"winnerSide": "H"},
+    {"winnerTeamId": 123},
+    {"Result-1X2": "A"},
+    {"outcome_1x2": "D"},
+    {"draw_result": True},
+    {"isDraw": True},
+    {"was_draw": True},
+    {"drawn": True},
+    {"home_result": "W"},
+    {"away_result": "L"},
+])
 def test_shadow_capture_rejects_explicit_1x2_winner_and_draw_outcome_aliases(provider_row):
     row = _row(provider_row=provider_row)
     with pytest.raises(ValueError, match="outcome fields"):
@@ -513,6 +578,45 @@ def test_1x2_outcome_alias_guard_preserves_pre_match_market_and_frozen_features(
     assert not v2.is_forbidden_outcome_field("diff_goals_for_5")
 
 
+@pytest.mark.parametrize(("descriptor_key", "descriptor_value"), [
+    ("name", "FTR"),
+    ("type", "Full Time Result"),
+    ("stat", "Home Goals"),
+    ("fieldName", "Result-1X2"),
+    ("metric", "Winner Side"),
+    ("label", "Draw Result"),
+    ("statistic", "Corners"),
+    ("name", "Yellow Cards"),
+    ("type", "Shots On Target"),
+    ("key", ["F.T.H.G"]),
+    ("attribute", "Red Cards"),
+    ("abbr", "FTR"),
+    ("abbreviation", "Full Time Result"),
+    ("shortName", "Home Goals"),
+    ("shortCode", "Result-1X2"),
+    ("statCode", "Corners"),
+    ("statisticCode", "Red Cards"),
+    ("fieldCode", "FTAG"),
+    ("metricCode", "Winner Side"),
+    ("attributeName", "Draw Result"),
+    ("propertyName", "Away Goals"),
+    ("displayName", "Yellow Cards"),
+    ("shortName", "FT Result"),
+    ("displayName", "Final Result"),
+    ("abbreviation", "Fulltime Result"),
+    ("metricName", "FT Outcome"),
+    ("propertyName", "Full Time Outcome"),
+    ("statId", "FTR"),
+    ("statisticId", "Full Time Result"),
+    ("fieldId", "FTAG"),
+    ("metricId", "Winner Side"),
+    ("attributeId", "Away Goals"),
+    ("propertyId", "Draw Result"),
+    ("dataKey", "HTR"),
+    ("statKey", "Red Cards"),
+    ("outcomeKey", "Final Result"),
+    ("resultKey", "Home Goals"),
+])
 def test_shadow_capture_rejects_outcomes_encoded_as_typed_stat_descriptors(descriptor_key, descriptor_value):
     row = _row(provider_row={"statistics": [{descriptor_key: descriptor_value, "value": "H"}]})
     with pytest.raises(ValueError, match="outcome fields"):
