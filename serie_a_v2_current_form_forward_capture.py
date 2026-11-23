@@ -154,7 +154,7 @@ def _validated_artifact_download_location(location: Any) -> str:
         or parsed.username is not None
         or parsed.password is not None
         or parsed.fragment
-        or not re.fullmatch(r"productionresultssa\\d+\\.blob\\.core\\.windows\\.net", host)
+        or not re.fullmatch(r"productionresultssa[0-9]+\\.blob\\.core\\.windows\\.net", host)
         or not parsed.path.startswith("/actions-results/")
         or not parsed.query
         or any(part in {".", ".."} for part in parsed.path.split("/"))
