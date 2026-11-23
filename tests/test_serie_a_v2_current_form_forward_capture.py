@@ -20,6 +20,7 @@ from serie_a_v2_current_form_forward_capture import (
     ARTIFACT_NAME,
     MANIFEST_FILENAME,
     SOURCE_WORKFLOW_PATH,
+    get_archive,
     prepare_forward_capture,
     read_quotes_after_verified_source,
     verify_latest_source_archive,
@@ -628,3 +629,173 @@ def test_unverified_parent_cannot_admit_quote():
     assert report["v2_current_form_shadow_captured"] == 0
     assert report["blocked"]["SOURCE_PARENT_UNVERIFIED"] == 1
     assert report["rows"][0]["status"] == "SOURCE_PARENT_UNVERIFIED"
+
+
+class _FakeArtifactDownloadResponse:
+    def __init__(self, status_code, url, *, headers=None, content=b"", history=()):
+        self.status_code = status_code
+        self.url = url
+        self.headers = headers or {}
+        self.content = content
+        self.history = list(history)
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise RuntimeError(f"HTTP {self.status_code}")
+
+
+def test_current_form_get_archive_uses_one_uncredentialed_signed_redirect():
+    api_url = (
+        "https://api.github.com/repos/MaksimBlud/football-ai/"
+        "actions/artifacts/123/zip"
+    )
+    signed_url = (
+        "https://productionresultssa0.blob.core.windows.net/"
+        "actions-results/container/archive.zip?sig=synthetic"
+    )
+    archive_bytes = bytes.fromhex("504b0304") + b"synthetic-zip"
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append((url, kwargs))
+        if len(calls) == 1:
+            return _FakeArtifactDownloadResponse(
+                302, api_url, headers={"Location": signed_url}
+            )
+        return _FakeArtifactDownloadResponse(200, signed_url, content=archive_bytes)
+
+    assert get_archive(123, token="synthetic-token", get=fake_get) == archive_bytes
+    assert len(calls) == 2
+    assert calls[0][0] == api_url
+    assert calls[0][1]["allow_redirects"] is False
+    assert calls[0][1]["headers"]["Authorization"] == "Bearer synthetic-token"
+    assert calls[1][0] == signed_url
+    assert calls[1][1]["allow_redirects"] is False
+    assert "headers" not in calls[1][1]
+
+
+@pytest.mark.parametrize(
+    "location",
+    [
+        "http://productionresultssa0.blob.core.windows.net/actions-results/a.zip?sig=x",
+        "https://evil.example/actions-results/a.zip?sig=x",
+        "https://productionresults.evil.blob.core.windows.net/actions-results/a.zip?sig=x",
+        "https://productionresultssa0.blob.core.windows.net/other/a.zip?sig=x",
+        "https://user@productionresultssa0.blob.core.windows.net/actions-results/a.zip?sig=x",
+        "https://productionresultssa0.blob.core.windows.net:444/actions-results/a.zip?sig=x",
+        "https://productionresultssa0.blob.core.windows.net/actions-results/a.zip",
+        "https://productionresultssa0.blob.core.windows.net/actions-results/../a.zip?sig=x",
+        "https://productionresultssa0.blob.core.windows.net:/actions-results/a.zip?sig=x",
+        "https://productionresultssa0.blob.core.windows.net/actions-results/a.zip?sig=x#fragment",
+    ],
+)
+def test_current_form_get_archive_rejects_untrusted_redirect_before_second_request(
+    location
+):
+    api_url = (
+        "https://api.github.com/repos/MaksimBlud/football-ai/"
+        "actions/artifacts/123/zip"
+    )
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append((url, kwargs))
+        return _FakeArtifactDownloadResponse(302, api_url, headers={"Location": location})
+
+    with pytest.raises(ValueError, match="redirect"):
+        get_archive(123, token="synthetic-token", get=fake_get)
+    assert len(calls) == 1
+    assert calls[0][1]["allow_redirects"] is False
+
+
+def test_current_form_get_archive_rejects_missing_location_and_non_redirect_response():
+    api_url = (
+        "https://api.github.com/repos/MaksimBlud/football-ai/"
+        "actions/artifacts/123/zip"
+    )
+    calls = []
+
+    def missing_location(url, **kwargs):
+        calls.append(url)
+        return _FakeArtifactDownloadResponse(302, api_url)
+
+    with pytest.raises(ValueError, match="Location"):
+        get_archive(123, token="synthetic-token", get=missing_location)
+    assert calls == [api_url]
+
+    calls.clear()
+
+    def api_200(url, **kwargs):
+        calls.append(url)
+        return _FakeArtifactDownloadResponse(200, api_url, content=b"not-a-redirect")
+
+    with pytest.raises(ValueError, match="HTTP 302"):
+        get_archive(123, token="synthetic-token", get=api_200)
+    assert calls == [api_url]
+
+
+def test_current_form_get_archive_rejects_second_redirect_without_forwarding_token():
+    api_url = (
+        "https://api.github.com/repos/MaksimBlud/football-ai/"
+        "actions/artifacts/123/zip"
+    )
+    signed_url = (
+        "https://productionresultssa0.blob.core.windows.net/"
+        "actions-results/container/archive.zip?sig=synthetic"
+    )
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append((url, kwargs))
+        if len(calls) == 1:
+            return _FakeArtifactDownloadResponse(302, api_url, headers={"Location": signed_url})
+        return _FakeArtifactDownloadResponse(
+            302, signed_url, headers={"Location": "https://evil.example/next"}
+        )
+
+    with pytest.raises(ValueError, match="HTTP 200"):
+        get_archive(123, token="synthetic-token", get=fake_get)
+    assert len(calls) == 2
+    assert "headers" not in calls[1][1]
+
+
+def test_current_form_get_archive_rejects_unexpected_final_url_and_history():
+    api_url = (
+        "https://api.github.com/repos/MaksimBlud/football-ai/"
+        "actions/artifacts/123/zip"
+    )
+    signed_url = (
+        "https://productionresultssa0.blob.core.windows.net/"
+        "actions-results/container/archive.zip?sig=synthetic"
+    )
+
+    def wrong_final_url(url, **kwargs):
+        if url == api_url:
+            return _FakeArtifactDownloadResponse(302, api_url, headers={"Location": signed_url})
+        return _FakeArtifactDownloadResponse(200, "https://evil.example/other", content=b"zip")
+
+    with pytest.raises(ValueError, match="HTTP 200"):
+        get_archive(123, token="synthetic-token", get=wrong_final_url)
+
+    def hidden_redirect_history(url, **kwargs):
+        return _FakeArtifactDownloadResponse(
+            302, api_url, headers={"Location": signed_url}, history=[object()]
+        )
+
+    with pytest.raises(ValueError, match="HTTP 302"):
+        get_archive(123, token="synthetic-token", get=hidden_redirect_history)
+
+
+@pytest.mark.parametrize("artifact_id", [True, 0, -1, "123"])
+def test_current_form_get_archive_rejects_invalid_artifact_identity_before_network(artifact_id):
+    calls = []
+    with pytest.raises(ValueError, match="artifact id"):
+        get_archive(artifact_id, token="synthetic-token", get=lambda *a, **k: calls.append(a))
+    assert calls == []
+
+
+def test_current_form_get_archive_rejects_missing_token_before_network():
+    calls = []
+    with pytest.raises(ValueError, match="token missing"):
+        get_archive(123, token=" ", get=lambda *a, **k: calls.append(a))
+    assert calls == []
