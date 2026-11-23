@@ -154,6 +154,12 @@ def verify_archive(archive_path: Path, quotes: list[Mapping[str, Any]], *,
         "historical_match_rows": len(historical),
         "archive_sha256": digest,
         "github_digest_matched": sha_matches_github,
+        "archive_sha256_verified": sha_matches_github,
+        # Reaching this return means every frozen source member hash and the
+        # frozen candidate manifest were checked against the downloaded ZIP.
+        "source_member_sha256_verified": len(source_times) == len(expected_names),
+        "manifest_candidate_sha_verified": report.get("frozen_candidate_sha256") == FROZEN_SHA,
+        "latest_source_observed_at_utc": max(source_times).isoformat(),
         "github_artifact_created_at_utc": uploaded.isoformat() if uploaded else None,
         "quotes_checked": len(quotes),
         "source_archive_prequote_ready": eligible_quote_count,
