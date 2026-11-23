@@ -325,6 +325,60 @@ EXTERNAL_IO_MARKERS = (
     "docker push ",
     "twine upload ",
     "npm publish",
+    # Raw sockets and remote-copy tools can transfer source data without HTTP clients.
+    "nc ",
+    "netcat ",
+    "ncat ",
+    "socat ",
+    "telnet ",
+    "openssl s_client",
+    "ssh ",
+    "scp ",
+    "sftp ",
+    "rsync ",
+    "ftp ",
+    "/dev/tcp/",
+    "/dev/udp/",
+    "git fetch https://",
+    "git fetch git://",
+    "git fetch ssh://",
+    "git fetch git@",
+    "git pull https://",
+    "git pull git://",
+    "git pull ssh://",
+    "git pull git@",
+    "git archive --remote",
+    "docker pull ",
+    "podman pull ",
+    "azcopy copy ",
+    "s3cmd get ",
+    "s3cmd put ",
+    "oras pull ",
+    "crane pull ",
+    # Other runtimes and shell/container launchers can perform network I/O.
+    "go run ",
+    "go test ",
+    "cargo run ",
+    "cargo test ",
+    "rustc ",
+    "java -jar ",
+    "jshell ",
+    "php ",
+    "Rscript ",
+    "julia ",
+    "swift ",
+    "dotnet ",
+    "lua ",
+    "luajit ",
+    "bash ",
+    "sh ",
+    "zsh ",
+    "fish ",
+    "docker run ",
+    "podman run ",
+    "nerdctl run ",
+    "ctr run ",
+    "buildah run ",
 )
 
 
@@ -788,4 +842,76 @@ jobs:
     assert _is_original_v2_live_workflow(
         workflow,
         workflow_path=".github/workflows/serie-a-v2-reusable-source.yml",
+    )
+
+
+def test_external_io_inventory_recognizes_raw_socket_and_remote_transfer_paths():
+    examples = (
+        "run: nc -w 5 example.invalid 443",
+        "run: netcat -zv example.invalid 443",
+        "run: ncat example.invalid 443",
+        "run: socat - TCP:example.invalid:443",
+        "run: telnet example.invalid 443",
+        "run: openssl s_client -connect example.invalid:443",
+        "run: bash -c 'exec 3<>/dev/tcp/example.invalid/443'",
+        "run: sh -c 'exec 3<>/dev/udp/example.invalid/443'",
+        "run: ssh user@example.invalid",
+        "run: scp source.csv user@example.invalid:/tmp/",
+        "run: sftp user@example.invalid",
+        "run: rsync source.csv user@example.invalid:/tmp/",
+        "run: ftp example.invalid",
+        "run: git fetch https://example.invalid/source.git",
+        "run: git pull git://example.invalid/source.git main",
+        "run: git fetch ssh://example.invalid/source.git",
+        "run: git pull git@example.invalid:source.git main",
+        "run: git archive --remote=https://example.invalid/source.git HEAD",
+        "run: docker pull registry.example.invalid/source:latest",
+        "run: podman pull registry.example.invalid/source:latest",
+        "run: azcopy copy source.csv https://example.invalid/container",
+        "run: s3cmd get s3://bucket/source.csv .",
+        "run: s3cmd put source.csv s3://bucket/source.csv",
+        "run: oras pull registry.example.invalid/source:latest",
+        "run: crane pull registry.example.invalid/source:latest source.tar",
+    )
+    assert all(_has_external_io(example) for example in examples)
+    assert _is_original_v2_live_workflow(
+        "name: market-anchor-1x2-v2 source capture\nrun: nc -w 5 example.invalid 443"
+    )
+    assert _is_original_v2_live_workflow(
+        "name: serie-a-v2 source capture\nrun: bash -c 'exec 3<>/dev/tcp/example.invalid/443'"
+    )
+
+
+def test_external_io_inventory_recognizes_compiled_runtimes_shells_and_containers():
+    examples = (
+        "run: go run cmd/capture.go",
+        "run: go test ./internal/source",
+        "run: cargo run --bin source_capture",
+        "run: cargo test --all",
+        "run: rustc capture.rs && ./capture",
+        "run: java -jar source-capture.jar",
+        "run: jshell capture.jsh",
+        "run: php capture.php",
+        "run: Rscript capture.R",
+        "run: julia capture.jl",
+        "run: swift run SourceCapture",
+        "run: dotnet run --project SourceCapture",
+        "run: lua capture.lua",
+        "run: luajit capture.lua",
+        "run: bash capture.sh",
+        "run: sh capture.sh",
+        "run: zsh capture.zsh",
+        "run: fish capture.fish",
+        "run: docker run --network host source-capture:latest",
+        "run: podman run source-capture:latest",
+        "run: nerdctl run source-capture:latest",
+        "run: ctr run source-capture:latest capture",
+        "run: buildah run source-capture",
+    )
+    assert all(_has_external_io(example) for example in examples)
+    assert _is_original_v2_live_workflow(
+        "name: market-anchor-1x2-v2 source capture\nrun: go run cmd/capture.go"
+    )
+    assert _is_original_v2_live_workflow(
+        "name: serie-a-v2 source capture\nrun: docker run source-capture:latest"
     )
