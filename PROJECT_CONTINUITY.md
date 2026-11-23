@@ -7300,3 +7300,24 @@ Provider references: https://5dollarfootballapi.com/terms ; https://5dollarfootb
 - PR #781 remains OPEN / Ready for review / mergeable and unmerged. Its base remains main 40887ebb; it is 51 commits ahead / 0 behind. The live-access hold is still inactive on main until owner HUMAN-MERGE.
 - PR #934 remains closed unmerged; its earlier test changes and this follow-up are carried directly in #781. No duplicate PR was opened.
 - No source/provider request, artifact download, quote read, Supabase write/DDL, target-outcome read, production .pkl change, candidate/feature/weight change, schedule change, main update, merge, or other-agent setting change occurred in this update.
+
+## 2026-11-23 03:34 UTC — close reusable-workflow job bypass in the live-access hold
+
+- Rechecking the updated #781 scanner found one additional workflow form not represented by step-level uses parsing: a reusable workflow invoked directly at jobs.<job>.uses (four-space YAML indentation). A new original-V2 workflow could otherwise call an unreviewed reusable workflow without a Python command or known network marker.
+- Updated the same #781 branch, not main. Exact new HEAD: 85541f1963db168be9d7f788725637b17ce9f5db. The action inventory now checks reusable-workflow job references as well as six-space uses-first steps and eight-space step uses fields. Unreviewed references fail closed.
+- Added a synthetic regression for a V2 workflow whose job directly uses an unreviewed reusable workflow.
+- Exact new-head CI: **8/8 SUCCESS**:
+  - Frozen V2 Shadow [#45106690163](https://github.com/MaksimBlud/football-ai/actions/runs/45106690163): **111 passed**; production model hash check succeeded.
+  - Recovery [#45106690149](https://github.com/MaksimBlud/football-ai/actions/runs/45106690149): **57 passed**; default-deny recovery path succeeded.
+  - Research [#45106690207](https://github.com/MaksimBlud/football-ai/actions/runs/45106690207).
+  - Product [#45106690147](https://github.com/MaksimBlud/football-ai/actions/runs/45106690147).
+  - Serie A [#45106690200](https://github.com/MaksimBlud/football-ai/actions/runs/45106690200).
+  - Bundesliga [#45106690171](https://github.com/MaksimBlud/football-ai/actions/runs/45106690171).
+  - Ligue 1 [#45106690178](https://github.com/MaksimBlud/football-ai/actions/runs/45106690178).
+  - Eredivisie [#45106690199](https://github.com/MaksimBlud/football-ai/actions/runs/45106690199).
+- PR #781 remains OPEN / Ready for review / mergeable, base main 40887ebb215730190d7a6c7a1693373ec4afcdfc, 52 commits ahead / 0 behind. No merge or main update.
+- Ancestry recheck: #879 remains diverged from current #781 by 14 commits ahead / 2 behind (merge base 3a70a8648895076efec2a80dc10b1798ed0d9261); #884 is 7 ahead / 0 behind its #879 parent; #885 is 2 ahead / 0 behind its #884 parent. Do not restack/merge these children until the owner manually integrates #781 and the fresh main is reread.
+- Current original candidate remains unchanged: artifact SHA a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6; training fingerprint f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098; 3,799 training rows; exact 19-feature order; 20x2 weights; active_lambda=0; shadow_residual_lambda=1; stability gate FAILED; 30-prospective-forecast evaluation gate 0/30.
+- Current Football-Data rights manifest remains fail-closed: rights status V2_FROZEN_INFERENCE_SCOPE_UNRESOLVED, AI training permission false, provider-issued AI-inference license false, authorization null. No inference/training is authorized by this project manifest.
+- Supabase read-only odds_snapshots audit remains 3,915 strict pre-match snapshots across 327 events and nine leagues; future eligible quotes 0. The table schema contains odds and timestamp fields only, not the 19 historical team-statistic inputs. No match-result, score or settlement columns were queried.
+- No provider/API request, source download, artifact download, quote read, Supabase write/DDL, protected target-outcome read, production .pkl change, candidate/feature/weight change, schedule change, main update, merge or other-agent setting change occurred.
