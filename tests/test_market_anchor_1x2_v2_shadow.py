@@ -287,6 +287,197 @@ def test_outcome_gate_accepts_numpy_integer_count():
     assert v2.outcome_read_permitted(np.int64(30))
 
 
+def _completed_gate_batch(count):
+    captures = []
+    metadata = []
+    first_day = pd.Timestamp("2026-09-18")
+    for index in range(count):
+        day = (first_day + pd.Timedelta(days=index)).strftime("%Y-%m-%d")
+        home = f"Home {index}"
+        away = f"Away {index}"
+        captures.append(_row(
+            event_id=f"gate-event-{index}",
+            home_team=home,
+            away_team=away,
+            kickoff_utc=f"{day}T18:45:00Z",
+            capture_time_utc=f"{day}T17:00:00Z",
+            market_snapshot_time_utc=f"{day}T16:55:00Z",
+            incumbent_generated_at_utc=f"{day}T16:58:00Z",
+            candidate_generated_at_utc=f"{day}T16:59:00Z",
+            feature_history_cutoff_utc=f"{day}T16:50:00Z",
+        ))
+        metadata.append({
+            "league": "SERIE_A",
+            "season": v2.COMPLETED_PRIMARY_SEASON,
+            "match_date": day,
+            "home_team": home,
+            "away_team": away,
+            "source_updated_at_utc": f"{day}T21:00:00Z",
+            "persisted_at_utc": f"{day}T21:01:00Z",
+        })
+    return captures, metadata
+
+
+def _build_completed_gate(captures, metadata, **overrides):
+    args = {
+        "source_table": v2.COMPLETED_PRIMARY_METADATA_SOURCE_TABLE,
+        "selected_columns": v2.COMPLETED_PRIMARY_METADATA_COLUMNS,
+        "as_of_utc": "2026-11-23T12:00:00Z",
+    }
+    args.update(overrides)
+    return v2.build_completed_primary_event_gate(captures, metadata, **args)
+
+
+def test_completed_primary_gate_stays_closed_with_29_matched_captured_fixtures():
+    captures, metadata = _completed_gate_batch(29)
+    gate = _build_completed_gate(captures, metadata)
+    assert gate["completed_primary_events"] == 29
+    assert gate["outcome_read_permitted"] is False
+    assert gate["target_outcomes_read"] is False
+    assert gate["outcome_values_selected"] is False
+    assert len(gate["completed_fixture_identity_sha256"]) == 64
+
+
+def test_completed_primary_gate_opens_at_exactly_30_unique_matched_fixtures():
+    captures, metadata = _completed_gate_batch(30)
+    gate = _build_completed_gate(captures, metadata)
+    assert gate["completed_primary_events"] == 30
+    assert gate["outcome_read_permitted"] is True
+    assert gate["validated_capture_rows"] == 30
+    assert gate["metadata_rows_seen"] == 30
+    assert gate["selected_columns"] == list(v2.COMPLETED_PRIMARY_METADATA_COLUMNS)
+    assert gate["source_table"] == "public.league_finished_results"
+    assert gate["target_outcomes_read"] is False
+    assert gate["outcome_values_selected"] is False
+
+
+def test_completed_primary_gate_counts_only_captured_fixtures_not_unmatched_results():
+    captures, metadata = _completed_gate_batch(30)
+    metadata.append({
+        "league": "SERIE_A",
+        "season": v2.COMPLETED_PRIMARY_SEASON,
+        "match_date": "2026-10-20",
+        "home_team": "Uncaptured Home",
+        "away_team": "Uncaptured Away",
+        "source_updated_at_utc": "2026-10-20T21:00:00Z",
+        "persisted_at_utc": "2026-10-20T21:01:00Z",
+    })
+    gate = _build_completed_gate(captures, metadata)
+    assert gate["metadata_rows_seen"] == 31
+    assert gate["completed_primary_events"] == 30
+    assert gate["outcome_read_permitted"] is True
+
+
+def test_completed_primary_gate_uses_local_serie_a_fixture_date():
+    capture = _row(
+        home_team="Atalanta BC",
+        away_team="Milan",
+        kickoff_utc="2026-09-18T22:30:00Z",
+        capture_time_utc="2026-09-18T21:00:00Z",
+        market_snapshot_time_utc="2026-09-18T20:55:00Z",
+        incumbent_generated_at_utc="2026-09-18T20:58:00Z",
+        candidate_generated_at_utc="2026-09-18T20:59:00Z",
+        feature_history_cutoff_utc="2026-09-18T20:50:00Z",
+    )
+    metadata = [{
+        "league": "SERIE_A",
+        "season": v2.COMPLETED_PRIMARY_SEASON,
+        "match_date": "2026-09-19",
+        "home_team": "Atalanta",
+        "away_team": "AC Milan",
+        "source_updated_at_utc": "2026-09-19T01:00:00Z",
+        "persisted_at_utc": "2026-09-19T01:01:00Z",
+    }]
+    gate = _build_completed_gate([capture], metadata)
+    assert gate["completed_primary_events"] == 1
+    assert gate["outcome_read_permitted"] is False
+
+
+@pytest.mark.parametrize("source_table", [
+    "public.odds_snapshots",
+    "public.predictions",
+    "public.league_prediction_ledger",
+])
+def test_completed_primary_gate_rejects_unregistered_metadata_source(source_table):
+    captures, metadata = _completed_gate_batch(30)
+    with pytest.raises(ValueError, match="source table"):
+        _build_completed_gate(captures, metadata, source_table=source_table)
+
+
+def test_completed_primary_gate_rejects_any_result_or_extra_selected_column():
+    captures, metadata = _completed_gate_batch(30)
+    with pytest.raises(ValueError, match="exact outcome-free metadata columns"):
+        _build_completed_gate(
+            captures,
+            metadata,
+            selected_columns=(*v2.COMPLETED_PRIMARY_METADATA_COLUMNS, "home_goals"),
+        )
+    metadata[0]["home_goals"] = 2
+    with pytest.raises(ValueError, match="only the exact preregistered metadata columns"):
+        _build_completed_gate(captures, metadata)
+
+
+def test_completed_primary_gate_rejects_wrong_season_and_non_primary_league():
+    captures, metadata = _completed_gate_batch(1)
+    wrong_season = [dict(metadata[0], season="2025-2026")]
+    with pytest.raises(ValueError, match="outside the frozen primary season"):
+        _build_completed_gate(captures, wrong_season)
+    wrong_league = [dict(metadata[0], league="EPL")]
+    with pytest.raises(ValueError, match="non-primary league"):
+        _build_completed_gate(captures, wrong_league)
+
+
+def test_completed_primary_gate_rejects_duplicate_completed_fixture_alias_rows():
+    captures, metadata = _completed_gate_batch(1)
+    trailing_space = [dict(metadata[0], home_team="Home 0 ", away_team="Away 0")]
+    with pytest.raises(ValueError, match="canonical non-empty string"):
+        _build_completed_gate(captures, trailing_space)
+    captures[0]["home_team"] = "Atalanta BC"
+    captures[0]["away_team"] = "Milan"
+    alias_rows = [
+        dict(metadata[0], home_team="Atalanta", away_team="AC Milan"),
+        dict(metadata[0], home_team="Atalanta BC", away_team="Milan"),
+    ]
+    with pytest.raises(ValueError, match="duplicate completed canonical primary fixture"):
+        _build_completed_gate(captures, alias_rows)
+
+
+def test_completed_primary_gate_rejects_reversed_home_away_orientation():
+    captures, metadata = _completed_gate_batch(1)
+    reversed_metadata = [dict(metadata[0], home_team="Away 0", away_team="Home 0")]
+    with pytest.raises(ValueError, match="orientation differs"):
+        _build_completed_gate(captures, reversed_metadata)
+
+
+def test_completed_primary_gate_rejects_invalid_or_naive_result_metadata_clocks():
+    captures, metadata = _completed_gate_batch(1)
+    naive = [dict(metadata[0], source_updated_at_utc="2026-09-18T21:00:00")]
+    with pytest.raises(ValueError):
+        _build_completed_gate(captures, naive)
+    inverted = [dict(metadata[0], source_updated_at_utc="2026-09-18T21:02:00Z")]
+    with pytest.raises(ValueError, match="not ordered"):
+        _build_completed_gate(captures, inverted)
+    future_persist = [dict(metadata[0], persisted_at_utc="2026-11-24T00:00:00Z")]
+    with pytest.raises(ValueError, match="not ordered"):
+        _build_completed_gate(captures, future_persist)
+
+
+def test_completed_primary_gate_rejects_future_kickoff_even_if_metadata_is_supplied():
+    captures, metadata = _completed_gate_batch(1)
+    future_capture = dict(captures[0])
+    future_capture["kickoff_utc"] = "2026-11-24T18:45:00Z"
+    future_capture["capture_time_utc"] = "2026-11-24T17:00:00Z"
+    future_capture["market_snapshot_time_utc"] = "2026-11-24T16:55:00Z"
+    future_capture["incumbent_generated_at_utc"] = "2026-11-24T16:58:00Z"
+    future_capture["candidate_generated_at_utc"] = "2026-11-24T16:59:00Z"
+    future_capture["feature_history_cutoff_utc"] = "2026-11-24T16:50:00Z"
+    future_metadata = [dict(metadata[0], match_date="2026-11-24",
+                             source_updated_at_utc="2026-11-23T00:00:00Z",
+                             persisted_at_utc="2026-11-23T01:00:00Z")]
+    with pytest.raises(ValueError, match="kickoff is not before"):
+        _build_completed_gate([future_capture], future_metadata)
+
+
 def test_v2_code_does_not_reference_production_pickle_paths():
     text = (ROOT / "market_anchor_1x2_v2_shadow.py").read_text()
     assert "football_model_xgboost_elo.pkl" not in text

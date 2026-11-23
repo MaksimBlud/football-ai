@@ -47,6 +47,12 @@ REFIT_SEASONS = tuple(f"{y}-{y+1}" for y in range(2016, 2026))
 TRAINING_DATA_THROUGH = pd.Timestamp("2026-06-30T23:59:59Z")
 ADMISSION_NOT_BEFORE = pd.Timestamp("2026-09-16T00:00:00Z")
 FIRST_OUTCOME_READ_GATE = 30
+COMPLETED_PRIMARY_METADATA_SOURCE_TABLE = "public.league_finished_results"
+COMPLETED_PRIMARY_METADATA_COLUMNS = (
+    "league", "season", "match_date", "home_team", "away_team",
+    "source_updated_at_utc", "persisted_at_utc",
+)
+COMPLETED_PRIMARY_SEASON = SERIE_A_RUNTIME_CONFIG.finished_results_source.season
 INCUMBENT_MODEL_SHA256 = "1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5"
 # Keep the same narrow V2-only alias used by the original historical feature adapter.
 V2_HISTORICAL_TEAM_ALIASES = {"Atalanta BC": "Atalanta"}
@@ -650,7 +656,7 @@ def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
 
 
 def outcome_read_permitted(completed_primary_events: int) -> bool:
-    """Open the frozen outcome-read gate only from an exact integer event count."""
+    """Apply the unchanged 30-event threshold to a count built from verified metadata."""
     if isinstance(completed_primary_events, (bool, np.bool_)) or not isinstance(
         completed_primary_events, (int, np.integer)
     ):
@@ -658,3 +664,138 @@ def outcome_read_permitted(completed_primary_events: int) -> bool:
     if completed_primary_events < 0:
         raise ValueError("completed_primary_events must be a nonnegative integer")
     return int(completed_primary_events) >= FIRST_OUTCOME_READ_GATE
+
+
+def build_completed_primary_event_gate(
+    capture_rows: Iterable[Mapping],
+    completed_fixture_metadata: Iterable[Mapping],
+    *,
+    source_table: str,
+    selected_columns: Iterable[str],
+    as_of_utc: object,
+) -> dict:
+    """Build the 30-event gate from captured V2 fixtures and outcome-free result metadata.
+
+    The only accepted source is public.league_finished_results, and the only
+    selected fields are league/season/fixture identity plus source/persistence
+    timestamps. Scores, results, winners and post-match statistics are neither
+    selected nor accepted. The caller must obtain these rows with a read-only
+    metadata-only query; this helper itself performs no I/O.
+    """
+    if source_table != COMPLETED_PRIMARY_METADATA_SOURCE_TABLE:
+        raise ValueError("completed-event gate source table is not the preregistered results metadata table")
+    columns = tuple(selected_columns)
+    if columns != COMPLETED_PRIMARY_METADATA_COLUMNS:
+        raise ValueError("completed-event gate must select only the exact outcome-free metadata columns")
+
+    now = _as_utc(as_of_utc, "as_of_utc")
+    validated_capture = validate_shadow_capture_rows(capture_rows)
+    timezone_name = SERIE_A_RUNTIME_CONFIG.identity.timezone
+    capture_by_fixture: dict[tuple[str, str, str, str], pd.Timestamp] = {}
+    capture_by_unordered_fixture: dict[tuple[str, str, tuple[str, str]], tuple[str, str, str, str]] = {}
+
+    for row in validated_capture:
+        kickoff = _as_utc(row["kickoff_utc"], "kickoff_utc")
+        local_match_date = kickoff.tz_convert(timezone_name).date().isoformat()
+        home_identity = _canonical_shadow_team_identity(row["home_team"])
+        away_identity = _canonical_shadow_team_identity(row["away_team"])
+        ordered_key = (PRIMARY_LEAGUE, local_match_date, home_identity, away_identity)
+        unordered_key = (
+            PRIMARY_LEAGUE, local_match_date,
+            tuple(sorted((home_identity, away_identity))),
+        )
+        if unordered_key in capture_by_unordered_fixture:
+            raise ValueError("duplicate captured canonical primary fixture identity")
+        capture_by_fixture[ordered_key] = kickoff
+        capture_by_unordered_fixture[unordered_key] = ordered_key
+
+    seen_completed_fixtures: set[tuple[str, str, tuple[str, str]]] = set()
+    matched_evidence = []
+    expected_keys = set(COMPLETED_PRIMARY_METADATA_COLUMNS)
+
+    for raw in completed_fixture_metadata:
+        if not isinstance(raw, Mapping) or set(raw.keys()) != expected_keys:
+            raise ValueError("completed fixture metadata must contain only the exact preregistered metadata columns")
+        if _nested_forbidden_outcome_keys(raw):
+            raise ValueError("completed fixture metadata contains forbidden outcome fields")
+        if raw["league"] != PRIMARY_LEAGUE:
+            raise ValueError("completed fixture metadata contains a non-primary league")
+        if raw["season"] != COMPLETED_PRIMARY_SEASON:
+            raise ValueError("completed fixture metadata is outside the frozen primary season")
+
+        match_date = raw["match_date"]
+        if type(match_date) is not str or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", match_date):
+            raise ValueError("completed fixture match_date must be an exact ISO calendar date")
+        try:
+            parsed_match_date = pd.Timestamp(match_date)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError("completed fixture match_date is invalid") from exc
+        if parsed_match_date.tzinfo is not None or parsed_match_date.strftime("%Y-%m-%d") != match_date:
+            raise ValueError("completed fixture match_date must be a canonical date without a time or offset")
+
+        home_team = raw["home_team"]
+        away_team = raw["away_team"]
+        if type(home_team) is not str or not home_team or home_team != home_team.strip():
+            raise ValueError("completed fixture home_team must be a canonical non-empty string")
+        if type(away_team) is not str or not away_team or away_team != away_team.strip():
+            raise ValueError("completed fixture away_team must be a canonical non-empty string")
+        home_identity = _canonical_shadow_team_identity(home_team)
+        away_identity = _canonical_shadow_team_identity(away_team)
+        if home_identity == away_identity:
+            raise ValueError("completed fixture must identify two distinct teams")
+
+        source_updated = _as_utc(raw["source_updated_at_utc"], "source_updated_at_utc")
+        persisted = _as_utc(raw["persisted_at_utc"], "persisted_at_utc")
+        if not source_updated <= persisted <= now:
+            raise ValueError("completed fixture source and persistence timestamps are not ordered before the gate clock")
+
+        ordered_key = (PRIMARY_LEAGUE, match_date, home_identity, away_identity)
+        unordered_key = (
+            PRIMARY_LEAGUE, match_date,
+            tuple(sorted((home_identity, away_identity))),
+        )
+        if unordered_key in seen_completed_fixtures:
+            raise ValueError("duplicate completed canonical primary fixture metadata")
+        seen_completed_fixtures.add(unordered_key)
+
+        captured_key = capture_by_unordered_fixture.get(unordered_key)
+        if captured_key is None:
+            continue
+        if captured_key != ordered_key:
+            raise ValueError("completed metadata home/away orientation differs from the frozen V2 capture")
+        kickoff = capture_by_fixture[ordered_key]
+        if not kickoff < now:
+            raise ValueError("completed primary fixture kickoff is not before the gate clock")
+        if not kickoff < source_updated <= persisted <= now:
+            raise ValueError("completed primary fixture lacks post-kickoff source evidence persisted before the gate clock")
+        matched_evidence.append((
+            ordered_key,
+            source_updated.isoformat(),
+            persisted.isoformat(),
+        ))
+
+    matched_evidence.sort()
+    digest_payload = json.dumps(
+        [
+            [*fixture_key, source_updated, persisted]
+            for fixture_key, source_updated, persisted in matched_evidence
+        ],
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    completed_count = len(matched_evidence)
+    return {
+        "source_table": COMPLETED_PRIMARY_METADATA_SOURCE_TABLE,
+        "selected_columns": list(COMPLETED_PRIMARY_METADATA_COLUMNS),
+        "primary_season": COMPLETED_PRIMARY_SEASON,
+        "as_of_utc": now.isoformat(),
+        "validated_capture_rows": len(validated_capture),
+        "metadata_rows_seen": len(seen_completed_fixtures),
+        "completed_primary_events": completed_count,
+        "completed_fixture_identity_sha256": hashlib.sha256(
+            digest_payload.encode("utf-8")
+        ).hexdigest(),
+        "outcome_read_permitted": outcome_read_permitted(completed_count),
+        "target_outcomes_read": False,
+        "outcome_values_selected": False,
+    }
