@@ -212,9 +212,44 @@ def test_shadow_capture_requires_frozen_training_and_incumbent_identity():
 
 
 def test_shadow_capture_batch_cannot_mix_residual_artifacts():
-    row2 = _row(event_id="evt-2", candidate_artifact_sha256="d" * 64)
+    row2 = _row(
+        event_id="evt-2",
+        home_team="Home 2",
+        away_team="Away 2",
+        candidate_artifact_sha256="d" * 64,
+    )
     with pytest.raises(ValueError, match="cannot mix candidate artifacts"):
         v2.validate_shadow_capture_rows([_row(), row2])
+
+
+def test_shadow_capture_rejects_duplicate_fixture_under_distinct_event_ids():
+    with pytest.raises(ValueError, match="duplicate canonical primary fixture"):
+        v2.validate_shadow_capture_rows([_row(), _row(event_id="evt-2")])
+
+
+def test_shadow_capture_rejects_reversed_fixture_and_v2_alias_duplicates():
+    first = _row(home_team="Atalanta BC", away_team="Milan")
+    second = _row(event_id="evt-2", home_team="AC Milan", away_team="Atalanta")
+    with pytest.raises(ValueError, match="duplicate canonical primary fixture"):
+        v2.validate_shadow_capture_rows([first, second])
+
+
+def test_shadow_capture_rejects_runtime_alias_for_same_team_on_both_sides():
+    with pytest.raises(ValueError, match="distinct teams"):
+        v2.validate_shadow_capture_rows([_row(home_team="Milan", away_team="AC Milan")])
+
+
+def test_shadow_capture_allows_same_clubs_on_distinct_local_match_dates():
+    row2 = _row(
+        event_id="evt-2",
+        kickoff_utc="2026-09-19T18:45:00Z",
+        capture_time_utc="2026-09-19T17:00:00Z",
+        market_snapshot_time_utc="2026-09-19T16:55:00Z",
+        incumbent_generated_at_utc="2026-09-19T16:58:00Z",
+        candidate_generated_at_utc="2026-09-19T16:59:00Z",
+        feature_history_cutoff_utc="2026-09-19T16:50:00Z",
+    )
+    assert len(v2.validate_shadow_capture_rows([_row(), row2])) == 2
 
 
 def test_outcome_gate_is_count_based_and_cannot_activate_v2_post_hoc():
