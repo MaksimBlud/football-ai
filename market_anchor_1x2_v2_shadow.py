@@ -170,14 +170,30 @@ def stability_gate(report: Mapping) -> dict:
     if not isinstance(log_loss, Mapping):
         raise ValueError("final_oot_log_loss_bootstrap must be a mapping")
 
+    brier_ci_low = _finite_report_number(
+        brier.get("bootstrap_ci95_low"),
+        "final_oot_brier_bootstrap.bootstrap_ci95_low",
+    )
     brier_ci_high = _finite_report_number(
         brier.get("bootstrap_ci95_high"),
         "final_oot_brier_bootstrap.bootstrap_ci95_high",
+    )
+    if brier_ci_low > brier_ci_high:
+        raise ValueError(
+            "final_oot_brier_bootstrap bootstrap_ci95_low cannot exceed bootstrap_ci95_high"
+        )
+    log_loss_ci_low = _finite_report_number(
+        log_loss.get("bootstrap_ci95_low"),
+        "final_oot_log_loss_bootstrap.bootstrap_ci95_low",
     )
     log_loss_ci_high = _finite_report_number(
         log_loss.get("bootstrap_ci95_high"),
         "final_oot_log_loss_bootstrap.bootstrap_ci95_high",
     )
+    if log_loss_ci_low > log_loss_ci_high:
+        raise ValueError(
+            "final_oot_log_loss_bootstrap bootstrap_ci95_low cannot exceed bootstrap_ci95_high"
+        )
     brier_probability = _probability_report_number(
         brier.get("bootstrap_probability_better_than_market"),
         "final_oot_brier_bootstrap.bootstrap_probability_better_than_market",

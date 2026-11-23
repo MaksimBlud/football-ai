@@ -286,6 +286,8 @@ def test_frozen_stability_gate_rejects_coercible_or_nonfinite_bootstrap_metrics(
     cases = [
         ("final_oot_brier_bootstrap", "bootstrap_ci95_high", "0.003"),
         ("final_oot_brier_bootstrap", "bootstrap_ci95_high", True),
+        ("final_oot_brier_bootstrap", "bootstrap_ci95_low", float("nan")),
+        ("final_oot_log_loss_bootstrap", "bootstrap_ci95_low", True),
         ("final_oot_brier_bootstrap", "bootstrap_probability_better_than_market", float("nan")),
         ("final_oot_log_loss_bootstrap", "bootstrap_ci95_high", float("inf")),
         ("final_oot_log_loss_bootstrap", "bootstrap_probability_better_than_market", "0.63"),
@@ -334,3 +336,26 @@ def test_frozen_stability_gate_rejects_more_dual_wins_than_prior_seasons():
     )
     with pytest.raises(ValueError, match="cannot exceed"):
         v2.stability_gate(report)
+
+def test_frozen_stability_gate_rejects_reversed_bootstrap_confidence_intervals():
+    base = json.loads(
+        (ROOT / "experiments/market_anchor_1x2_v1_robustness_report.json").read_text()
+    )
+    for section in ("final_oot_brier_bootstrap", "final_oot_log_loss_bootstrap"):
+        report = json.loads(json.dumps(base))
+        report[section]["bootstrap_ci95_low"] = (
+            report[section]["bootstrap_ci95_high"] + 0.000001
+        )
+        with pytest.raises(ValueError, match="cannot exceed"):
+            v2.stability_gate(report)
+
+
+def test_frozen_shadow_workflow_uses_pinned_actions_and_python_matrix():
+    workflow = (
+        ROOT / ".github/workflows/market-anchor-1x2-v2-shadow-validation.yml"
+    ).read_text()
+    assert "actions/checkout@11d5960a326750d5838078e36cf38b85af677262" in workflow
+    assert "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065" in workflow
+    assert 'python-version: ["3.11", "3.12"]' in workflow
+    assert "python-version: ${{ matrix.python-version }}" in workflow
+    assert "fail-fast: false" in workflow
