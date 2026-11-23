@@ -7507,3 +7507,30 @@ This corrects the 2026-11-23 01:48 UTC checkpoint, which said the latest #884 SH
 
 **Non-actions**
 No main update, merge, Supabase write/DDL, provider/API request, source download, paid API call, inference, refit, threshold tuning, production `.pkl` change, candidate/feature/weight change, protected outcome read, schedule change or other-agent setting change. The 30-primary-completed-event evaluation gate remains CLOSED; no independent Brier/LogLoss result or V2 superiority claim exists.
+
+
+### 2026-11-23 17:31 UTC — Original V2 source-provenance and rights-restack exact-head CI
+
+**Fresh repository state**
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; main `PROJECT_CONTINUITY.md` blob remains `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`. This main document still does not contain the current Nov 23 runtime entries; this note is on the open documentation PR #839 only.
+- Re-read the original V2 protocol and frozen candidate on main. Candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; 3,799 training rows; exact 19-feature order; 20x2 weights; active lambda 0; shadow lambda 1; stability gate false. No candidate bytes, weights, feature order or thresholds changed.
+
+**Source provenance / direct-access restack**
+- [PR #944](https://github.com/MaksimBlud/football-ai/pull/944), exact HEAD `12f9df3b2df07dbf192292af5ac2dc7edb00fa83`, is a Draft child of #943. Exact run [#45213354517](https://github.com/MaksimBlud/football-ai/actions/runs/45213354517) succeeded on Python 3.11 and 3.12: 113 tests passed on each; compilation and production `.pkl` diff guard passed.
+- [PR #945](https://github.com/MaksimBlud/football-ai/pull/945) is a Draft child of #944. Its first exact-head CI exposed six stale synthetic quote fixtures because the newly enforced market contract requires `created_at`. Only three test fixtures were corrected to supply an offset-aware persistence time one second after the quote; no production logic or frozen V2 contract was weakened.
+- Final #945 HEAD: `8517d0d39879ed2564de3ca8d7ff003f10f4dd46`. Exact PR run [#45228090869](https://github.com/MaksimBlud/football-ai/actions/runs/45228090869) and push run [#45228080028](https://github.com/MaksimBlud/football-ai/actions/runs/45228080028) both succeeded: **181 tests passed on Python 3.11 and 181 on Python 3.12**, compilation passed, production `.pkl` guard passed. #945 remains OPEN / Draft / HUMAN-MERGE, based on #944; no merge occurred.
+- #945 carries the source-first/private-artifact chain plus separate source-capture, frozen-inference and training-rights checks, and strict quote persistence ordering. The checked-in Football-Data manifest says automated source capture=false, frozen inference=false, AI training=false, provider-issued inference license=false, authorization=null. The repository is public, while source archives require private storage. Thus this is a fail-closed control stack, **not permission to collect or infer**.
+
+**Actual main runtime / control gap**
+- Main `.github/workflows/serie-a-v2-forward-preview.yml` still has its 08:08 UTC schedule and workflow_run trigger after a successful manually dispatched Serie A Odds Snapshots workflow. Main `serie_a_v2_forward_capture.py` still reads saved quotes before discovering/verifying the source archive in its current `main()` path. The source-first and rights fixes are in the open #938–#945 ancestry, not on main.
+- Fresh scheduled Current-Form Source Capture run [#45217596300](https://github.com/MaksimBlud/football-ai/actions/runs/45217596300), 2026-11-23 16:32 UTC, completed SUCCESS. Only job/step metadata was inspected; the artifact listing returned no artifacts, and no artifact bytes were downloaded or opened. This is the separate current-form cohort, not evidence for the original old-season-only V2 cohort and not admissible prospective evidence. Because the current rights manifest denies automated source capture, this run does not clear the rights HOLD.
+- Root workflow HOLD [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review at `5552bec363ae72ad7aef04c598d2ce861f33eb42`; it has not been integrated. HUMAN-MERGE remains mandatory. The branch-protection endpoint could not be read in this cycle (GitHub API returned 403 for the connected integration), so no new claim about branch protection is made.
+
+**Supabase — read-only pre-match odds only**
+- Strict filter: `snapshot_time_utc < commence_time_utc`, `created_at < commence_time_utc`, and `snapshot_time_utc <= created_at`.
+- Aggregate: **3,966** rows total; **3,915** strict pre-match rows across **327** events and **9** leagues. Serie A: **625** total rows, **620** strict rows, **63** distinct events; latest strict Serie A snapshot remains **2026-10-13 14:48:53 UTC**.
+- A separate rolling-24-hour future Serie A quote query returned **0 rows / 0 events**. No scores, results, settlements or protected 2026/27 outcome columns were selected.
+
+**Scientific status / non-actions**
+- The preregistered 30-primary-completed-event outcome-read gate remains CLOSED; no protected 2026/27 target outcomes were read. No independent Brier/LogLoss comparison exists; no V2-over-market superiority claim is justified.
+- No Supabase writes/DDL, paid provider request, source-artifact download/use, production `.pkl` modification, feature/weight/threshold change, main update, merge, schedule change or other-agent setting change occurred.
