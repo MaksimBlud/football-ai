@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 
 import market_anchor_1x2_v2_shadow as v2
+from market_anchor_v2_direct_access import require_v2_inference_access
 
 FROZEN_FILE = Path(__file__).resolve().parent / (
     "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
@@ -31,7 +32,7 @@ FORBIDDEN = frozenset((
 ))
 MARKET_KEYS = (
     "event_id", "league", "home_team", "away_team", "commence_time_utc",
-    "snapshot_time_utc", "home_odds", "draw_odds", "away_odds",
+    "snapshot_time_utc", "created_at", "home_odds", "draw_odds", "away_odds",
 )
 FEATURE_KEYS = (
     "event_id", "home_team", "away_team", "commence_time_utc",
@@ -106,6 +107,7 @@ def shadow_preview(
     This module cannot verify that source; it marks every preview NOT eligible
     for the strict preregistered prospective V2 cohort. Do not persist it.
     """
+    require_v2_inference_access()
     if as_of_utc.tzinfo is None:
         raise ValueError("as_of_utc must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
@@ -133,6 +135,13 @@ def shadow_preview(
         if ident[1] == ident[2]:
             raise ValueError("identical home/away team identities")
         snapshot = parse_utc(row["snapshot_time_utc"])
+        created_at = parse_utc(row["created_at"])
+        if created_at > now:
+            raise ValueError("market quote row persisted after capture clock")
+        if snapshot <= now and created_at < snapshot:
+            raise ValueError("market quote row persisted before declared snapshot time")
+        if not created_at < ident[3]:
+            raise ValueError("market quote row persisted at or after kickoff")
         observation_key = (*ident, snapshot)
         if observation_key in unique:
             raise ValueError("duplicate exact market observation")
@@ -206,6 +215,7 @@ def shadow_preview(
             "league": "SERIE_A", "event_id": event_id,
             "home_team": home, "away_team": away,
             "kickoff_utc": kickoff.isoformat(), "market_snapshot_time_utc": snapshot.isoformat(),
+            "quote_row_created_at_utc": parse_utc(row["created_at"]).isoformat(),
             "feature_history_cutoff_utc": cutoff.isoformat(),
             "observed_frozen_feature_count": len(feature_keys) - len(missing_names),
             "median_imputed_frozen_feature_count": len(missing_names),
@@ -247,19 +257,41 @@ def shadow_preview(
 
 
 def fetch_saved_upcoming_serie_a_quotes(client: Any, *, now: datetime) -> list[dict]:
-    """Read *existing* observations only. No odds provider call or DB write."""
+    """Read only saved quotes persisted by the capture clock and strictly before kickoff."""
+    require_v2_inference_access()
+    if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError("now must be timezone-aware")
+    as_of = now.astimezone(timezone.utc)
+    as_of_text = as_of.isoformat()
     items = (
         client.table("odds_snapshots")
         .select(",".join(MARKET_KEYS))
         .eq("league", "SERIE_A")
-        .gt("commence_time_utc", now.astimezone(timezone.utc).isoformat())
+        .gt("commence_time_utc", as_of_text)
+        .lte("snapshot_time_utc", as_of_text)
+        .lte("created_at", as_of_text)
         .order("snapshot_time_utc", desc=True)
         .limit(1000).execute().data or []
     )
-    return list(items)
+    rows = list(items)
+    for row in rows:
+        if not all(key in row for key in MARKET_KEYS):
+            raise ValueError("saved market observation has missing fields")
+        kickoff = parse_utc(row["commence_time_utc"])
+        snapshot = parse_utc(row["snapshot_time_utc"])
+        created_at = parse_utc(row["created_at"])
+        if created_at < snapshot:
+            raise ValueError("saved quote row persisted before declared snapshot time")
+        if not as_of < kickoff or snapshot > as_of or created_at > as_of:
+            raise ValueError("saved quote was not persisted and observed by the forward capture clock")
+        if not snapshot < kickoff or not created_at < kickoff:
+            raise ValueError("saved quote violates strict pre-match timestamp contract")
+    return rows
 
 
 def main() -> None:
+    # Deny before importing Supabase or reading the external feature file.
+    require_v2_inference_access()
     parser = argparse.ArgumentParser(
         description="Pre-match Serie A frozen V2 shadow preview; read-only, no betting or promotion"
     )
