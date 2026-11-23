@@ -7379,3 +7379,28 @@ Provider references: https://5dollarfootballapi.com/terms ; https://5dollarfootb
 - Original Forward source-first fix remains in #884 and Current-Form fail-closed source-before-quote fix remains in #913; neither is integrated into main.
 - No new prospective predictions, no source download/use, no provider/API request, no paid API call, no Supabase write/DDL, no protected 2026/27 outcome read, no production `.pkl` change, no weight/feature/threshold change, no main update, no merge, no schedule change, and no other-agent setting change occurred.
 - The 30-primary-completed-event gate remains CLOSED; independent Brier/LogLoss evaluation against the market is still unavailable. Do not infer model superiority.
+
+
+### 2026-11-23 06:08 UTC — exact final CI and re-read of main Original Forward runtime
+
+**Final strict V2 cohort-identity CI**
+- Added two final regressions to the existing #933 branch: the same fixture remains a duplicate when provider kickoff times differ but the Europe/Rome local match date is the same; the V2 historical alias map used for deduplication must remain identical to the original feature manifest's alias map.
+- Exact final #933 HEAD: `9fc4fb17dae8d47952983dde0af6b7d006bf3403`; base #932 `8ff52f14efbd7ca14836d40e92f47fa83ceadcad`; 6 ahead / 0 behind; OPEN / Draft / mergeable; not merged.
+- Exact-head CI [#45122002023](https://github.com/MaksimBlud/football-ai/actions/runs/45122002023) is **SUCCESS**: **186 passed**, compilation passed, and the production `.pkl` diff guard passed.
+- The frozen candidate JSON blob is byte-identical on main and #933 (`ac1303f6b096664983fbf52443bd0a381b23ba21)); candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098); 3,799 rows; 19 features; 20x2 weights; active lambda 0; shadow lambda 1; stability gate false. The original feature-builder blob remains `401b3a0893371bfa4a488ec92a4a54af2678c8f7`.
+
+**Re-read of actual main-branch V2 runs from 2026-11-22**
+- Current-Form Source Capture [#45028522381](https://github.com/MaksimBlud/football-ai/actions/runs/45028522381): 110 completed primary-event identities, 10 historical source files plus 1 current-season file, zero paid calls, zero Supabase writes, zero outcome scoring. GitHub artifact ID `14756317850`; artifact ZIP SHA-256 `cf96923f75616bd2d045997e89863c0a32b7b453736a90cc353447c2c7dae955`.
+- Free Real-Quote Diagnostic [#45033051083](https://github.com/MaksimBlud/football-ai/actions/runs/45033051083): 3,800 history rows, **0 diagnostic scored**, 0 rows with all 19 observed features, 0 paid requests, 0 Supabase writes. It uploaded artifact ID `14758338536`, ZIP SHA-256 `42b9a2557490a39e5b376bf425977aa25ec386372ae7a3b4158d77bafc866a11`.
+- Original Forward [#45042303864](https://github.com/MaksimBlud/football-ai/actions/runs/45042303864): verified the parent source artifact and SHA, 3,800 historical rows / 10 source files, but `quotes_seen=0`, `future_quotes_checked=0`, `v2_diagnostic_previews_captured=0`, `paid_provider_calls=0`, `supabase_writes=0). The report artifact was ID `14761239606`, SHA-256 `bc9b763893f3aae87ed2a2c6fe35077344da3b67bf97181861215ace29c2860b`.
+- Current-Form Forward [#45042946420](https://github.com/MaksimBlud/football-ai/actions/runs/45042946420): verified source artifact `14756317850` with SHA above; 110 current-season history rows and 3,910 historical rows; `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `target_outcomes_read=false`, `target_outcomes_scored=false`, `production_or_supabase_writes=0`, `paid_provider_calls=0`. Its report artifact was ID `14762112192`, SHA-256 `9757907b9b72e771c5776362a38440d24441828966883a92e704a6cdf36c2359`.
+- These are real main-branch runs, not PR simulations. They confirm no forecasts were captured because no qualifying quotes were present. The uploaded artifacts were inspected only through Actions logs/metadata; no artifact bytes were downloaded or used in this cycle.
+- The latest visible V2 scheduled run remains 2026-11-22 16:16 UTC. No 2026-11-23 05:50 UTC Current-Form Source Capture run appeared in the fresh schedule listing. No manual dispatch or schedule change was made.
+
+**Control gap**
+- The main-branch capture/forward workflows above ran before the current rights-gate branch was integrated. PR #906's latest Football-Data manifest now says automated source capture is false and authorization is null; #781's workflow hold remains unmerged. Thus main still does not enforce the current internal HOLD. Owner manual merge of #781 (and the rights chain after restack/review) remains the required control; this run did not change main or dispatch/cancel any workflow.
+
+**Supabase and evaluation**
+- Read-only pre-match odds metadata remains 3,915 strict rows / 327 events / 9 leagues; future strict rows/events 0; latest strict Serie A snapshot 2026-10-13 14:48:53 UTC.
+- The 30-primary-completed-event gate remains CLOSED. No protected outcomes were read. No independent Brier/LogLoss comparison is available, and no V2 superiority claim is justified.
+- No Supabase write/DDL, paid provider call, source download/use, production `.pkl` change, candidate/feature/weight/threshold change, main update, merge, schedule change or other-agent setting change occurred in this cycle.
