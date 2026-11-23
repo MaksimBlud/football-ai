@@ -7281,3 +7281,22 @@ Provider references: https://5dollarfootballapi.com/terms ; https://5dollarfootb
 - Original candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features and original weights unchanged; `active_lambda=0`, `shadow_lambda=1` research-only; stability gate remains FAILED; prospective evaluation remains **0/30**.
 - No paid provider call, no source archive download/use, no Supabase write/DDL, no production `.pkl` change, no model refit/weight/feature/threshold change, no protected 2026/27 outcome read, no merge, and no schedule/other-agent setting change.
 - Next integration order remains owner-controlled #781 first; then restack #879 on the exact merged root and revalidate #884 and descendants. Provider-rights and private-storage HOLDs remain mandatory. Do not claim model superiority without an eligible independent Brier/LogLoss comparison.
+
+## 2026-11-23 03:28 UTC — harden the workflow-hold step inventory
+
+- Fresh main remains 40887ebb215730190d7a6c7a1693373ec4afcdfc; no main update or merge occurred.
+- Re-audit of the exact #781 head 020697894b79b25f981673925a6734007f8d5200 found a static-inventory gap: the step parser recognized only named steps and uses-first steps, so an unnamed top-level - run: could escape the inventory. The workflow-wide action check also inspected only the first action reference, so an unreviewed action after actions/checkout could be missed.
+- Updated the existing #781 branch, not main: exact new HEAD 498bfef1ed811dac74767cb4e04ca69d1135fe29, one commit after 020697. The scanner now enumerates every top-level Actions step, gives unnamed steps explicit sentinel identities, checks every uses reference, and treats unreviewed actions as live-capable. Only the existing checkout and Python setup actions are allowlisted for offline validation; artifact publication remains confined to the named, separately gated upload step.
+- Added regressions for unnamed Python collection, unnamed curl, an unreviewed action, an unreviewed action after checkout, and the exact offline-action allowlist.
+- Exact new-head CI: 8/8 SUCCESS on 498bfef1:
+  - Frozen V2 Shadow #45106091851: 110 passed; production model hash comparison passed.
+  - Recovery #45106091871: 56 passed; default-deny recovery workflow completed successfully.
+  - Research #45106091856.
+  - Product #45106091806.
+  - Serie A #45106091966.
+  - Bundesliga #45106091933.
+  - Ligue 1 #45106091916.
+  - Eredivisie #45106091973.
+- PR #781 remains OPEN / Ready for review / mergeable and unmerged. Its base remains main 40887ebb; it is 51 commits ahead / 0 behind. The live-access hold is still inactive on main until owner HUMAN-MERGE.
+- PR #934 remains closed unmerged; its earlier test changes and this follow-up are carried directly in #781. No duplicate PR was opened.
+- No source/provider request, artifact download, quote read, Supabase write/DDL, target-outcome read, production .pkl change, candidate/feature/weight change, schedule change, main update, merge, or other-agent setting change occurred in this update.
