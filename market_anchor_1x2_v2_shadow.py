@@ -53,6 +53,30 @@ COMPLETED_PRIMARY_METADATA_COLUMNS = (
     "source_updated_at_utc", "persisted_at_utc",
 )
 COMPLETED_PRIMARY_SEASON = SERIE_A_RUNTIME_CONFIG.finished_results_source.season
+COMPLETED_GATE_SOURCE_WORKFLOW_PATH = ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
+COMPLETED_GATE_SOURCE_EVENTS = frozenset({"push", "schedule", "workflow_dispatch"})
+COMPLETED_GATE_SOURCE_PROVENANCE_KEYS = frozenset({
+    "artifact_id",
+    "artifact_sha256",
+    "artifact_head_sha",
+    "artifact_created_at_utc",
+    "latest_source_observed_at_utc",
+    "archive_sha256_verified",
+    "source_member_sha256_verified",
+    "manifest_candidate_sha_verified",
+    "parent_run",
+})
+COMPLETED_GATE_SOURCE_PARENT_RUN_KEYS = frozenset({
+    "run_id",
+    "run_head_sha",
+    "workflow_path",
+    "head_branch",
+    "event",
+    "status",
+    "conclusion",
+    "run_created_at_utc",
+    "run_completed_at_utc",
+})
 INCUMBENT_MODEL_SHA256 = "1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5"
 # Keep the same narrow V2-only alias used by the original historical feature adapter.
 V2_HISTORICAL_TEAM_ALIASES = {"Atalanta BC": "Atalanta"}
@@ -167,6 +191,7 @@ REQUIRED_CAPTURE_FIELDS = frozenset(
         "code_commit_sha",
         "active_lambda",
         "stability_gate_passed",
+        "source_provenance",
     }
     | {name for triple in PROBABILITY_FIELDS for name in triple}
 )
@@ -197,6 +222,70 @@ def _is_numeric_scalar(value: object) -> bool:
         not isinstance(value, (bool, np.bool_))
         and isinstance(value, (int, float, np.integer, np.floating))
     )
+
+
+def _validate_capture_source_provenance(
+    value: object,
+    *,
+    feature_cutoff: pd.Timestamp,
+    market_time: pd.Timestamp,
+) -> None:
+    """Require authenticated source-archive and parent-run chronology for gate rows.
+
+    These fields are the persisted result of the existing GitHub artifact ZIP,
+    member CSV, frozen-manifest and parent-workflow verification. The parent
+    workflow must be the exact free original-V2 source collector on main.
+    """
+    if not isinstance(value, Mapping) or set(value.keys()) != COMPLETED_GATE_SOURCE_PROVENANCE_KEYS:
+        raise ValueError("source_provenance must contain only the exact verified archive fields")
+    artifact_id = value["artifact_id"]
+    if type(artifact_id) is not int or artifact_id <= 0:
+        raise ValueError("source artifact id must be a positive integer")
+    artifact_sha = value["artifact_sha256"]
+    if not isinstance(artifact_sha, str) or not re.fullmatch(r"[0-9a-f]{64}", artifact_sha):
+        raise ValueError("source artifact SHA256 must be lowercase hexadecimal")
+    artifact_head = value["artifact_head_sha"]
+    if not isinstance(artifact_head, str) or not re.fullmatch(r"[0-9a-f]{40}", artifact_head):
+        raise ValueError("source artifact head SHA must be lowercase hexadecimal")
+    for field in (
+        "archive_sha256_verified",
+        "source_member_sha256_verified",
+        "manifest_candidate_sha_verified",
+    ):
+        if type(value[field]) is not bool or value[field] is not True:
+            raise ValueError(f"{field} must be exactly true")
+
+    parent = value["parent_run"]
+    if not isinstance(parent, Mapping) or set(parent.keys()) != COMPLETED_GATE_SOURCE_PARENT_RUN_KEYS:
+        raise ValueError("source parent run must contain only the exact verified workflow fields")
+    run_id = parent["run_id"]
+    if type(run_id) is not int or run_id <= 0:
+        raise ValueError("source parent run id must be a positive integer")
+    run_head = parent["run_head_sha"]
+    if not isinstance(run_head, str) or not re.fullmatch(r"[0-9a-f]{40}", run_head):
+        raise ValueError("source parent run head SHA must be lowercase hexadecimal")
+    if run_head != artifact_head:
+        raise ValueError("source parent run head SHA differs from artifact head SHA")
+    if parent["workflow_path"] != COMPLETED_GATE_SOURCE_WORKFLOW_PATH:
+        raise ValueError("source parent run is not the exact original V2 free source workflow")
+    if parent["head_branch"] != "main":
+        raise ValueError("source parent run must originate from main")
+    if parent["event"] not in COMPLETED_GATE_SOURCE_EVENTS:
+        raise ValueError("source parent run event is not allowed")
+    if parent["status"] != "completed" or parent["conclusion"] != "success":
+        raise ValueError("source parent run must be completed successfully")
+
+    source_observed = _as_utc(value["latest_source_observed_at_utc"], "latest_source_observed_at_utc")
+    artifact_created = _as_utc(value["artifact_created_at_utc"], "artifact_created_at_utc")
+    run_created = _as_utc(parent["run_created_at_utc"], "source_run_created_at_utc")
+    run_completed = _as_utc(parent["run_completed_at_utc"], "source_run_completed_at_utc")
+    if feature_cutoff > source_observed:
+        raise ValueError("feature history cutoff cannot be later than the verified latest source observation")
+    if not (
+        source_observed <= artifact_created
+        and run_created <= artifact_created <= run_completed < market_time
+    ):
+        raise ValueError("verified source archive and parent workflow must finish strictly before the market quote")
 
 
 def _finite_report_number(value: object, field: str) -> float:
@@ -606,6 +695,9 @@ def validate_shadow_capture_rows(rows: Iterable[Mapping]) -> list[dict]:
         candidate_time = _as_utc(row["candidate_generated_at_utc"], "candidate_generated_at_utc")
         feature_cutoff = _as_utc(row["feature_history_cutoff_utc"], "feature_history_cutoff_utc")
         training_cutoff = _as_utc(row["candidate_training_data_through_utc"], "candidate_training_data_through_utc")
+        _validate_capture_source_provenance(
+            row["source_provenance"], feature_cutoff=feature_cutoff, market_time=market_time
+        )
 
         if kickoff < ADMISSION_NOT_BEFORE or capture < ADMISSION_NOT_BEFORE:
             raise ValueError("retroactive/backfilled rows are forbidden")
