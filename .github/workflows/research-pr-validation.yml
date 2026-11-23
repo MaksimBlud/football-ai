@@ -196,3 +196,5 @@ jobs:
             exit 1
           fi
           echo "PASS: no .pkl changes in PR"
+      - name: Validate original V2 SportAPI source-rights audit (offline only)
+        run: python -m pytest -q tests/test_serie_a_v2_sportapi_source_audit.py
