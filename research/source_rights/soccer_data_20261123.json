@@ -1,0 +1,111 @@
+{
+  "schema_version": "MARKET_ANCHOR_1X2_V2_EXTERNAL_CURRENT_FORM_SOURCE_AUDIT_V1",
+  "provider": "Soccer Data",
+  "checked_at_utc": "2026-11-23T20:00:00Z",
+  "candidate_status": "HOLD_NO_INTEGRATION",
+  "free_plan": {
+    "monthly_price_usd": 0,
+    "requests_per_day": 50,
+    "requests_per_minute": 10,
+    "season_scope": "current season only",
+    "all_stats_endpoints_included": true,
+    "betting_odds_available": false,
+    "api_key_required": true
+  },
+  "documented_fields": {
+    "match_results_and_goals": true,
+    "standings_points": true,
+    "corner_kicks": true,
+    "yellow_cards": true,
+    "red_cards": true,
+    "schema_level_original_v2_feature_families_present": true,
+    "exact_serie_a_2026_27_per_fixture_statistics_coverage_verified": false,
+    "all_19_feature_values_complete_for_every_required_fixture_verified": false
+  },
+  "coverage": {
+    "advertised_competitions": 1100,
+    "detailed_stats_vary_by_competition": true,
+    "exact_serie_a_2026_27_coverage_matrix_obtained": false,
+    "coverage_api_requires_key": true,
+    "coverage_api_called": false,
+    "free_plan_historical_seasons_available": false
+  },
+  "rights": {
+    "data_owned_by_provider_or_licensed_third_parties": true,
+    "license_nonexclusive_and_nontransferable": true,
+    "cache_and_store_while_account_and_plan_active": true,
+    "display_in_own_websites_apps_and_services_permitted": true,
+    "raw_data_redistribution_permitted": false,
+    "license_ends_when_account_or_terms_end": true,
+    "explicit_internal_ml_training_permission": false,
+    "explicit_internal_ml_inference_permission": false,
+    "upstream_provider_identity_verified": false,
+    "upstream_field_level_rights_verified": false,
+    "written_ai_use_upstream_and_retention_clarification_required": true,
+    "authorization": null,
+    "interpretation": "ML training/inference are not expressly addressed in the reviewed Terms; absence of an express grant is not treated as permission or as a finding that use is prohibited."
+  },
+  "provenance": {
+    "provider_first_observed_timestamp_documented": false,
+    "per_field_correction_timestamp_documented": false,
+    "stats_may_arrive_late_or_change_after_event": true,
+    "free_plan_live_cache_minutes": 5,
+    "project_receipt_time_and_sha256_can_be_recorded_if_later_authorized": true,
+    "source_before_quote_proven": false,
+    "interpretation": "Project receipt time and SHA can prove possession of exact response bytes before a later quote; they do not establish upstream first-observation or correction time."
+  },
+  "original_training_corpus": {
+    "source": "Football-Data.co.uk",
+    "training_corpus_rights_resolved": false,
+    "free_plan_can_replace_2016_2026_training_history": false,
+    "model_refit_or_weight_change_allowed": false
+  },
+  "project_authorization": {
+    "account_created": false,
+    "api_key_created": false,
+    "api_requests": 0,
+    "source_download_performed": false,
+    "raw_source_sha256_captured": false,
+    "supabase_reads": 0,
+    "supabase_writes": 0,
+    "supabase_ddl": 0,
+    "protected_2026_27_evaluation_outcomes_read": false,
+    "model_inference_performed": false,
+    "production_pickle_changed": false
+  },
+  "frozen_candidate": {
+    "experiment_id": "MARKET_ANCHOR_1X2_V2",
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "training_fingerprint_sha256": "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098",
+    "training_rows": 3799,
+    "feature_count": 19,
+    "weights_shape": [
+      20,
+      2
+    ],
+    "active_lambda": 0,
+    "shadow_residual_lambda": 1,
+    "stability_gate_passed": false,
+    "automatic_promotion": false
+  },
+  "official_documents": {
+    "home": "https://soccer-data.co/",
+    "pricing": "https://soccer-data.co/pricing",
+    "terms": "https://soccer-data.co/terms",
+    "match_stats": "https://soccer-data.co/docs/reference/matches/stats",
+    "match_timeline": "https://soccer-data.co/docs/reference/matches/timeline",
+    "coverage": "https://soccer-data.co/docs/concepts/coverage"
+  },
+  "decision": {
+    "status": "HOLD_NO_INTEGRATION",
+    "integration_allowed": false,
+    "reasons": [
+      "Free plan is current-season-only and cannot replace the historical Football-Data training corpus used by the frozen candidate.",
+      "Reviewed Terms do not expressly settle internal ML training/inference or derived-weight retention; written clarification is required.",
+      "Underlying data comes from third-party providers, but their identity and field-level rights were not established.",
+      "Detailed statistics vary by competition and may be unavailable for a match; exact 2026/27 Serie A per-fixture completeness was not checked.",
+      "Per-field first-observed and correction timestamps are not documented; local receipt time and SHA do not prove upstream first observation.",
+      "No account, key, API request, source download, Supabase operation or inference was authorized or performed."
+    ]
+  }
+}
