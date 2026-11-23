@@ -85,6 +85,10 @@ def test_current_saved_quote_cannot_be_backdated_by_later_public_sources(tmp_pat
     assert result["source_archive_prequote_ready"] == 0
     assert result["blocked"]["ARCHIVE_NOT_BEFORE_QUOTE"] == 1
     assert result["github_digest_matched"] is True
+    assert result["archive_sha256_verified"] is True
+    assert result["source_member_sha256_verified"] is True
+    assert result["manifest_candidate_sha_verified"] is True
+    assert result["latest_source_observed_at_utc"] == OBSERVED.isoformat()
     assert result["eligible_for_frozen_prospective_cohort"] is False
     assert result["no_bet"] is True
     assert result["paid_provider_calls"] == result["supabase_writes"] == 0
@@ -107,6 +111,10 @@ def test_no_authenticated_metadata_never_qualifies_time_readiness(tmp_path):
     archive, digest = make_archive(tmp_path)
     result = verify_archive(archive, [quote("2026-10-14T12:00:00Z")], as_of_utc=AFTER)
     assert result["source_archive_prequote_ready"] == 0
+    assert result["archive_sha256_verified"] is False
+    assert result["source_member_sha256_verified"] is True
+    assert result["manifest_candidate_sha_verified"] is True
+    assert result["latest_source_observed_at_utc"] == OBSERVED.isoformat()
     assert result["blocked"]["UNATTESTED_GITHUB_METADATA"] == 1
 
 
