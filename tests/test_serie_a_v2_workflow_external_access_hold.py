@@ -348,6 +348,8 @@ def _action_refs(block: str) -> list[str]:
         match = re.match(r"^      - uses:\s*(\S+)", line)
         if match is None:
             match = re.match(r"^        uses:\s*(\S+)", line)
+        if match is None:
+            match = re.match(r"^    uses:\s*(\S+)", line)
         if match is not None:
             actions.append(match.group(1).strip('"').strip("'").lower())
     return actions
@@ -776,3 +778,14 @@ def test_only_existing_checkout_and_python_setup_actions_are_offline_allowlisted
         "      - name: Setup Python\n        uses: actions/setup-python@v5"
     )
     assert _has_unapproved_action("      - uses: actions/cache@v4")
+
+def test_unreviewed_reusable_workflow_job_is_live_capable():
+    workflow = """name: Serie A V2 Source Helper
+jobs:
+  capture:
+    uses: vendor/collection-workflow/.github/workflows/collect.yml@v1
+"""
+    assert _is_original_v2_live_workflow(
+        workflow,
+        workflow_path=".github/workflows/serie-a-v2-reusable-source.yml",
+    )
