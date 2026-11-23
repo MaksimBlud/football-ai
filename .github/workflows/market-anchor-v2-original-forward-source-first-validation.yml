@@ -7,6 +7,7 @@ on:
       - research/v2-original-forward-private-cli-guard-restacked-on-939-20261123-run11
       - research/v2-original-forward-export-source-provenance-on-943-20261123-run11
       - research/v2-original-forward-rights-persistence-restack-on-944-20261123-run11
+      - research/v2-forward-capture-scope-guard-on-945-20261123-run11
     paths:
       - "serie_a_v2_forward_capture.py"
       - "serie_a_v2_prequote_source_archive_gate.py"

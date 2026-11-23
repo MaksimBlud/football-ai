@@ -32,6 +32,7 @@ def synthetic_inference_clearance(monkeypatch):
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
     synthetic = lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"}
     monkeypatch.setattr(market_anchor_v2_direct_access, "require_v2_inference_access", synthetic)
+    monkeypatch.setattr(market_anchor_v2_direct_access, "require_v2_source_capture_rights", synthetic)
     monkeypatch.setattr(frozen_preview, "require_v2_inference_access", synthetic)
     monkeypatch.setattr(live_diagnostic, "require_v2_inference_access", synthetic)
     monkeypatch.setattr(live_diagnostic, "require_v2_source_capture_access", synthetic)

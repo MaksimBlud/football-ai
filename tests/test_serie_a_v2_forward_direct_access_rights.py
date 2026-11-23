@@ -34,8 +34,25 @@ def _allow_live(monkeypatch):
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
 
 
+def _allow_capture(monkeypatch):
+    monkeypatch.setattr(
+        market_anchor_v2_direct_access,
+        "require_v2_source_capture_rights",
+        lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
+    )
+
+
+def _allow_inference(monkeypatch):
+    monkeypatch.setattr(
+        market_anchor_v2_direct_access,
+        "require_v2_inference_access",
+        lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
+    )
+
+
 def test_forward_preparation_denies_before_iterating_quote_or_archive_inputs(monkeypatch):
     _allow_live(monkeypatch)
+    _allow_capture(monkeypatch)
     calls = []
     monkeypatch.setattr(
         market_anchor_v2_direct_access,
@@ -58,6 +75,7 @@ def test_forward_preparation_denies_before_iterating_quote_or_archive_inputs(mon
 
 def test_source_preflight_denies_before_any_callback(monkeypatch):
     _allow_live(monkeypatch)
+    _allow_capture(monkeypatch)
     calls = []
     monkeypatch.setattr(
         market_anchor_v2_direct_access,
@@ -98,6 +116,7 @@ def test_source_preflight_denies_before_any_callback(monkeypatch):
 )
 def test_forward_github_entrypoints_deny_before_http(monkeypatch, operation):
     _allow_live(monkeypatch)
+    _allow_capture(monkeypatch)
     rights_calls = []
     http_calls = []
     monkeypatch.setattr(
@@ -118,6 +137,7 @@ def test_forward_github_entrypoints_deny_before_http(monkeypatch, operation):
 
 def test_forward_cli_writes_metadata_only_block_before_archive_or_supabase(monkeypatch, tmp_path):
     _allow_live(monkeypatch)
+    _allow_capture(monkeypatch)
     monkeypatch.setenv("GITHUB_REPOSITORY", forward_capture.REPOSITORY)
     monkeypatch.setenv("GITHUB_TOKEN", "synthetic-token")
     output = tmp_path / "reports" / "blocked.json"
@@ -184,3 +204,144 @@ def test_source_attestation_cli_denies_before_token_or_network(monkeypatch, tmp_
         attestation.main()
     assert calls == ["source-capture-rights"]
     assert not output.exists()
+
+
+
+def test_forward_preparation_denies_before_inputs_when_source_capture_scope_is_missing(monkeypatch):
+    _allow_live(monkeypatch)
+    _allow_inference(monkeypatch)
+    calls = []
+    monkeypatch.setattr(
+        market_anchor_v2_direct_access,
+        "require_v2_source_capture_rights",
+        _deny_capture(calls),
+    )
+
+    class Poison:
+        def __iter__(self):
+            raise AssertionError("quotes and archive metadata must not be touched without capture rights")
+
+    with pytest.raises(PermissionError, match="source-capture scope"):
+        forward_capture.prepare_forward_capture(
+            Poison(), Poison(), as_of_utc=NOW,
+            load_archive=lambda *_: pytest.fail("archive download must not run"),
+            verify_parent_run=lambda *_: pytest.fail("parent lookup must not run"),
+        )
+    assert calls == ["source-capture-rights"]
+
+
+def test_source_preflight_denies_before_callbacks_when_source_capture_scope_is_missing(monkeypatch):
+    _allow_live(monkeypatch)
+    _allow_inference(monkeypatch)
+    calls = []
+    monkeypatch.setattr(
+        market_anchor_v2_direct_access,
+        "require_v2_source_capture_rights",
+        _deny_capture(calls),
+    )
+    callbacks = []
+
+    with pytest.raises(PermissionError, match="source-capture scope"):
+        forward_capture.capture_forward_with_source_preflight(
+            [],
+            as_of_utc=NOW,
+            fetch_quotes=lambda: callbacks.append("quotes"),
+            load_archive=lambda *_: callbacks.append("archive"),
+            verify_parent_run=lambda *_: callbacks.append("parent"),
+        )
+    assert calls == ["source-capture-rights"]
+    assert callbacks == []
+
+
+def test_discover_archives_denies_before_github_api_when_source_capture_scope_is_missing(monkeypatch):
+    _allow_live(monkeypatch)
+    _allow_inference(monkeypatch)
+    calls = []
+    monkeypatch.setattr(
+        market_anchor_v2_direct_access,
+        "require_v2_source_capture_rights",
+        _deny_capture(calls),
+    )
+
+    def forbidden_http(*args, **kwargs):
+        pytest.fail("source artifact metadata must not be requested without capture rights")
+
+    with pytest.raises(PermissionError, match="source-capture scope"):
+        forward_capture.discover_archives(token="synthetic-token", get=forbidden_http)
+    assert calls == ["source-capture-rights"]
+
+
+@pytest.mark.parametrize(
+    "operation",
+    [
+        lambda get: forward_capture._github_json(
+            forward_capture.GITHUB_API + "/actions/artifacts",
+            token="synthetic-token", get=get,
+        ),
+        lambda get: forward_capture.verify_source_run(
+            {}, quote_time=NOW, token="synthetic-token", get=get,
+        ),
+        lambda get: forward_capture.get_archive(
+            123, token="synthetic-token", get=get,
+        ),
+        lambda get: forward_capture.require_private_repository(
+            token="synthetic-token", get=get,
+        ),
+    ],
+)
+def test_forward_source_entrypoints_deny_before_http_when_capture_scope_is_missing(monkeypatch, operation):
+    _allow_live(monkeypatch)
+    _allow_inference(monkeypatch)
+    calls = []
+    http_calls = []
+    monkeypatch.setattr(
+        market_anchor_v2_direct_access,
+        "require_v2_source_capture_rights",
+        _deny_capture(calls),
+    )
+
+    def forbidden_http(*args, **kwargs):
+        http_calls.append((args, kwargs))
+        raise AssertionError("source HTTP must not run before source-capture rights clearance")
+
+    with pytest.raises(PermissionError, match="source-capture scope"):
+        operation(forbidden_http)
+    assert calls == ["source-capture-rights"]
+    assert http_calls == []
+
+
+def test_forward_cli_writes_block_before_archive_or_supabase_when_capture_scope_is_missing(monkeypatch, tmp_path):
+    _allow_live(monkeypatch)
+    _allow_inference(monkeypatch)
+    monkeypatch.setenv("GITHUB_REPOSITORY", forward_capture.REPOSITORY)
+    monkeypatch.setenv("GITHUB_TOKEN", "synthetic-token")
+    output = tmp_path / "reports" / "blocked-capture.json"
+    sources = tmp_path / "source-zips"
+    monkeypatch.setattr(sys, "argv", [
+        "serie_a_v2_forward_capture.py",
+        "--output", str(output),
+        "--sources-output-dir", str(sources),
+    ])
+    calls = []
+    monkeypatch.setattr(
+        market_anchor_v2_direct_access,
+        "require_v2_source_capture_rights",
+        _deny_capture(calls),
+    )
+    monkeypatch.setattr(
+        forward_capture,
+        "discover_archives",
+        lambda **kwargs: pytest.fail("archive discovery must not run without capture rights"),
+    )
+
+    forward_capture.main()
+
+    report = json.loads(output.read_text(encoding="utf-8"))
+    assert report["mode"] == "SOURCE_RIGHTS_BLOCKED_NO_NETWORK_NO_INFERENCE"
+    assert report["supabase_reads"] == 0
+    assert report["supabase_writes"] == 0
+    assert report["quotes_read"] == 0
+    assert report["forecasts_created"] == 0
+    assert report["paid_provider_calls"] == 0
+    assert calls == ["source-capture-rights"]
+    assert not sources.exists()

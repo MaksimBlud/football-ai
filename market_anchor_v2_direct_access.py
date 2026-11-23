@@ -31,3 +31,15 @@ def require_v2_source_capture_access() -> dict:
         "rights": rights,
         "artifact_privacy": privacy,
     }
+
+
+
+def require_v2_source_capture_rights() -> dict:
+    """Require the provider's separate source-capture grant, without conflating scopes.
+
+    This local rights check intentionally does not perform the private-repository
+    lookup. Forward capture must also pass the independent inference/private-storage
+    guard before any archive or quote operation.
+    """
+    from market_anchor_v2_source_capture_rights import require_personal_research_source_capture_scope
+    return require_personal_research_source_capture_scope()
