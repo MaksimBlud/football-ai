@@ -3,7 +3,7 @@ name: Original V2 Forward Source-First Isolated Validation
 on:
   push:
     branches:
-      - research/v2-original-forward-source-first-restacked-on-879-20261123-run11
+      - research/v2-original-forward-redirect-guard-restacked-on-938-20261123-run11
     paths:
       - "serie_a_v2_forward_capture.py"
       - "tests/test_serie_a_v2_forward_capture.py"
