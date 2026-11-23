@@ -583,3 +583,118 @@ run: |
   python -m pytest -q tests/test_market_anchor_1x2_v2_shadow.py
 """
     assert not _is_original_v2_live_workflow(offline)
+
+
+OFFLINE_PYTHON_STEPS = {
+    ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml": {
+        "Verify source access, no paid credentials",
+    },
+}
+SECRET_BINDING_MARKERS = (
+    "secrets.SUPABASE_URL",
+    "secrets.SUPABASE_KEY",
+    "secrets.GITHUB_TOKEN",
+    "SUPABASE_URL:",
+    "SUPABASE_KEY:",
+    "GITHUB_TOKEN:",
+    "API_FOOTBALL_KEY:",
+)
+
+
+def _workflow_step_blocks(text: str):
+    """Yield each top-level Actions step with its exact name and full block."""
+    lines = text.splitlines()
+    starts = [
+        index
+        for index, line in enumerate(lines)
+        if line.startswith("      - name: ") or line.startswith("      - uses: ")
+    ]
+    for position, start in enumerate(starts):
+        end = starts[position + 1] if position + 1 < len(starts) else len(lines)
+        header = lines[start].strip()
+        name = header[len("- name: "):] if header.startswith("- name: ") else header
+        yield name, "\n".join(lines[start:end])
+
+
+def _unlisted_live_capable_steps(path: str, text: str, spec: dict) -> list[str]:
+    """Find external-I/O, credential-bearing, or non-test Python steps outside the allowlist."""
+    allowed_live = set(spec["live"])
+    allowed_offline_python = OFFLINE_PYTHON_STEPS.get(path, set())
+    upload_name = spec["upload"]
+    unlisted = []
+
+    for name, block in _workflow_step_blocks(text):
+        has_credentials = any(marker in block for marker in SECRET_BINDING_MARKERS)
+        has_external_io = _has_external_io(block)
+        has_python_entrypoint = _has_non_test_python_entrypoint(block)
+
+        if name in allowed_live:
+            if LIVE_GATE not in block:
+                unlisted.append(f"{name} (missing live gate)")
+            continue
+        if name == upload_name:
+            if UPLOAD_GATE not in block:
+                unlisted.append(f"{name} (missing upload gate)")
+            continue
+        if name in allowed_offline_python:
+            if has_credentials or has_external_io:
+                unlisted.append(f"{name} (offline allowlist contains credentials or external I/O)")
+            continue
+        if has_credentials or has_external_io or has_python_entrypoint:
+            unlisted.append(name)
+
+    return unlisted
+
+
+def test_every_live_capable_step_in_existing_v2_workflows_is_explicitly_gated_or_offline():
+    """A new step in an already-inventoried workflow must not bypass the named hold."""
+    for path, spec in WORKFLOWS.items():
+        text = _workflow(path)
+        unexpected = _unlisted_live_capable_steps(path, text, spec)
+        assert not unexpected, (
+            f"{path}: unlisted live-capable step(s) bypass the explicit hold inventory: "
+            f"{unexpected}"
+        )
+
+        workflow_header = text.split("\njobs:", 1)[0]
+        workflow_credentials = [
+            marker for marker in SECRET_BINDING_MARKERS if marker in workflow_header
+        ]
+        assert not workflow_credentials, (
+            f"{path}: workflow-level credentials would be inherited by offline steps: "
+            f"{workflow_credentials}"
+        )
+
+
+def test_step_inventory_detects_new_network_or_python_entrypoints_in_existing_v2_workflow():
+    path = ".github/workflows/serie-a-v2-current-form-source-capture.yml"
+    synthetic = """name: Serie A V2 Current-Form Source Capture
+jobs:
+  capture:
+    steps:
+      - name: Existing offline tests
+        run: python -m pytest -q
+      - name: Unexpected unguarded source helper
+        run: python collect_source.py
+      - name: Unexpected unguarded network call
+        run: curl https://example.invalid/source.csv
+"""
+    assert _unlisted_live_capable_steps(path, synthetic, WORKFLOWS[path]) == [
+        "Unexpected unguarded source helper",
+        "Unexpected unguarded network call",
+    ]
+
+
+def test_step_inventory_rejects_workflow_level_supabase_credentials():
+    path = ".github/workflows/serie-a-v2-current-form-source-capture.yml"
+    synthetic = """name: Serie A V2 Current-Form Source Capture
+env:
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+jobs:
+  capture:
+    steps:
+      - name: Offline tests
+        run: python -m pytest -q
+"""
+    workflow_header = synthetic.split("\njobs:", 1)[0]
+    assert any(marker in workflow_header for marker in SECRET_BINDING_MARKERS)
