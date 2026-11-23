@@ -7676,3 +7676,41 @@ No main update, merge, Supabase write/DDL, provider/API request, source download
 - The docs do not establish per-field first-observed/correction timestamps. A future authorized local receipt-time+SHA archive could prove project possession before a quote, not upstream first observation.
 - Free is current-season-only and cannot replace the separate Football-Data historical training corpus used by the frozen candidate. Its rights and frozen-weight inference rights remain unresolved.
 - Decision **HOLD_NO_INTEGRATION**. No provider account/key, provider API request, source download, provider-specific Supabase read, inference or outcome read was made for this candidate audit. The separate project-level pre-match odds-snapshot audit used SELECT only; no Supabase writes/DDL occurred. Original 19 features and candidate hashes are pinned unchanged.
+
+
+### 2026-11-23 22:52 UTC — fresh main/runtime, all-league pre-match quote audit, and root-hold status
+
+**Repository and branch state**
+- Fresh GitHub repository metadata confirms default branch `main`, public visibility, and unchanged latest main commit `40887ebb215730190d7a6c7a1693373ec4afcdfc` (the latest commit search result remains dated 2026-10-18). Main `PROJECT_CONTINUITY.md` blob is `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`; it still begins with the 2026-10-18 current-form contract. The current documentation checkpoint is being maintained only on this PR branch.
+- Root HOLD [PR #781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review / not merged. Exact HEAD `5552bec363ae72ad7aef04c598d2ce861f33eb42`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`; all eight exact-head check-runs are completed SUCCESS. The hold is not active on main.
+- Private-repository child [PR #879](https://github.com/MaksimBlud/football-ai/pull/879) remains Draft, exact HEAD `02bf0873979551ddd98511df013a27f872893990`, based on #781. Original-forward source-first chain #938 → #939 → #940 → #943 → #944 → #945 → #946 remains open/Draft and dependent on #879/#781. No PR was merged and main was not changed.
+- Current documentation PR #839 is updated only on branch `research/v2-runtime-checkpoint-20261115-1354z`; the exact pre-update head was `1b02e852783e54fdfab79edec1f893bebed91e32`. No model, source archive, workflow, production artifact or database file is changed by this checkpoint.
+
+**Actual main-branch Current-Form Source Capture**
+- Run [#45217596300](https://github.com/MaksimBlud/football-ai/actions/runs/45217596300), main SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`, completed SUCCESS on 2026-11-23.
+- Exact job steps: 19 tests passed; the source capture completed. Log reports 10 historical CSVs, 119 completed prior-day 2026/27 rows, 110 unique completed-event identities admitted by the metadata-only feature-input gate, 11 source files, 0 paid provider calls and 0 Supabase writes.
+- Public artifact metadata: ID `14839276758`, 440,550 bytes, GitHub SHA-256 `2a6cb4902da93c4d15050ba9407543a19bc32c68c3f1f5c4ebe07202bb8c7bd9`, created `2026-11-23T16:33:07Z`. The current-form source validator reads completed-match statistics including goals/results/cards/corners into the CSV archive; the feature-input Supabase query itself selects only `match_date,home_team,away_team`. These lagged feature inputs are not the separate target-outcome evaluation cohort. As already clarified above, the archive was not downloaded/opened by this audit, and source-rights plus the strict interpretation of the 2026/27 embargo remain unresolved.
+
+**Actual main-branch Current-Form Forward**
+- Run [#45257233004](https://github.com/MaksimBlud/football-ai/actions/runs/45257233004), same main SHA, completed SUCCESS at `2026-11-23T20:14:40Z`.
+- The actual job completed 53 tests, verified parent source run #45217596300, source artifact #14839276758 and its SHA-256, with source age 13,288 seconds at verification (within the code's 24-hour limit).
+- Log values: `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `target_outcomes_read=false`, `target_outcomes_scored=false`, `paid_provider_calls=0`, `production_or_supabase_writes=0`.
+- Despite zero quotes and zero forecasts, the archive step completed and published artifact #14857862796 (441,731 bytes), GitHub digest `sha256:5e9515e6105164a2c3a4421c580c38ec73d29bbdd5b9b2de69c1967bd134c3a8`. This is new evidence that public main still uploads source ZIP bytes on an empty-quote run while the repository is public and the root HOLD/private-storage PRs are unmerged. No artifact bytes were downloaded/opened in this audit.
+
+**Actual main-branch Original Forward**
+- Run [#45255423039](https://github.com/MaksimBlud/football-ai/actions/runs/45255423039), same main SHA, completed SUCCESS at `2026-11-23T20:04:28Z`; 71 tests passed.
+- It verified the pre-existing old-season source artifact #14845759695 (3,800 historical rows, 10 pre-prospective source files; SHA-256 `fa2cd29f5b6f8c7155f3d8081764aed2f653df20f05bcc35a281bdc788455a37`). It reported `quotes_seen=0`, `future_quotes_checked=0`, `v2_diagnostic_previews_captured=0`, `forecasts_created=0`, `paid_provider_calls=0`, `supabase_writes=0`, and `eligible_for_frozen_prospective_cohort=false`.
+- Its small report/attestation artifact is #14859255542, 1,459 bytes, digest `sha256:aa3c94d7013939c9744db0af4bc6e2cbe8c385cf2eb125e7ce7f855c155829a8`. No forecast or quality metric resulted.
+
+**Fresh read-only Supabase pre-match-only audit**
+- Read only `public.odds_snapshots` timestamp/event/league fields; no result, score, settlement or payload columns were selected.
+- Strict definition: `snapshot_time_utc < commence_time_utc`, `snapshot_time_utc <= created_at`, and `created_at < commence_time_utc`.
+- Across nine leagues: 3,966 rows total; 3,915 strict pre-match rows; 327 distinct events with strict pre-match snapshots; **0 future events** with a strict pre-match snapshot. Latest strict snapshot remains Serie A `2026-10-13T14:48:53.042620Z`; latest EPL is `2026-10-09T15:25:57.102061Z`. No fresh saved pre-match quotes exist for a prospective V2 capture.
+
+**Frozen model and gate status**
+- Original candidate SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 3,799 training rows, exact 19-feature contract, 20×2 original weights, `active_lambda=0`, `shadow_lambda=1`; unchanged.
+- Stability gate remains FAILED; target-outcome gate remains **0/30 / CLOSED**. No Brier/LogLoss independent evaluation and no V2-over-market claim.
+- No target evaluation outcomes were read/scored; however, the current-form feature archive includes completed 2026/27 result/statistics rows as lagged features. Do not describe this as “no 2026/27 results accessed” in the broad sense. No archive bytes were opened by this audit.
+- No paid odds API request, Supabase write/DDL, model inference/refit, threshold tuning, production `.pkl` change, schedule/other-agent change, main update, merge, promotion or bet.
+
+**Next safe step:** HUMAN-MERGE review of #781 first; after it is manually integrated, re-read fresh main and prove every live source/quote step and artifact upload is skipped. Then revalidate the private-storage and source-first child chain on the new base. Do not access the current-form archive or initiate any new provider capture while the rights/embargo HOLD remains.
