@@ -12,6 +12,30 @@ import market_anchor_1x2_v2_shadow as v2
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _source_provenance(day="2026-09-18"):
+    return {
+        "artifact_id": 12345,
+        "artifact_sha256": "a" * 64,
+        "artifact_head_sha": "b" * 40,
+        "artifact_created_at_utc": f"{day}T16:51:00Z",
+        "latest_source_observed_at_utc": f"{day}T16:50:00Z",
+        "archive_sha256_verified": True,
+        "source_member_sha256_verified": True,
+        "manifest_candidate_sha_verified": True,
+        "parent_run": {
+            "run_id": 67890,
+            "run_head_sha": "b" * 40,
+            "workflow_path": v2.COMPLETED_GATE_SOURCE_WORKFLOW_PATH,
+            "head_branch": "main",
+            "event": "schedule",
+            "status": "completed",
+            "conclusion": "success",
+            "run_created_at_utc": f"{day}T16:45:00Z",
+            "run_completed_at_utc": f"{day}T16:52:00Z",
+        },
+    }
+
+
 def _artifact():
     features = list(v2.FEATURE_SETS[v2.FEATURE_VARIANT])
     body = {
@@ -81,6 +105,7 @@ def _row(**updates):
         "incumbent_generated_at_utc": "2026-09-18T16:58:00Z",
         "candidate_generated_at_utc": "2026-09-18T16:59:00Z",
         "feature_history_cutoff_utc": "2026-09-18T16:50:00Z",
+        "source_provenance": _source_provenance(),
         "candidate_training_data_through_utc": "2026-06-30T23:59:59Z",
         "market_home_probability": 0.50,
         "market_draw_probability": 0.25,
@@ -204,6 +229,68 @@ def test_shadow_capture_enforces_closed_gate_and_exact_market_fallback():
         ])
 
 
+def test_shadow_capture_requires_source_archive_sha_and_parent_run_attestation():
+    assert len(v2.validate_shadow_capture_rows([_row()])) == 1
+    missing = _row()
+    missing.pop("source_provenance")
+    with pytest.raises(ValueError, match="source_provenance"):
+        v2.validate_shadow_capture_rows([missing])
+
+    bad_digest = _row()
+    bad_digest["source_provenance"]["artifact_sha256"] = "A" * 64
+    with pytest.raises(ValueError, match="artifact SHA256"):
+        v2.validate_shadow_capture_rows([bad_digest])
+
+    bad_workflow = _row()
+    bad_workflow["source_provenance"]["parent_run"]["workflow_path"] = ".github/workflows/other.yml"
+    with pytest.raises(ValueError, match="exact original V2 free source workflow"):
+        v2.validate_shadow_capture_rows([bad_workflow])
+
+    wrong_head = _row()
+    wrong_head["source_provenance"]["parent_run"]["run_head_sha"] = "c" * 40
+    with pytest.raises(ValueError, match="differs from artifact head SHA"):
+        v2.validate_shadow_capture_rows([wrong_head])
+
+    unverified_zip = _row()
+    unverified_zip["source_provenance"]["archive_sha256_verified"] = False
+    with pytest.raises(ValueError, match="archive_sha256_verified"):
+        v2.validate_shadow_capture_rows([unverified_zip])
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("head_branch", "feature-branch"),
+        ("event", "pull_request"),
+        ("status", "in_progress"),
+        ("conclusion", "failure"),
+    ],
+)
+def test_shadow_capture_rejects_untrusted_source_parent_run_state(field, value):
+    row = _row()
+    row["source_provenance"]["parent_run"][field] = value
+    with pytest.raises(ValueError):
+        v2.validate_shadow_capture_rows([row])
+
+
+def test_shadow_capture_rejects_source_archive_or_parent_run_after_quote():
+    row = _row()
+    row["source_provenance"]["artifact_created_at_utc"] = "2026-09-18T16:56:00Z"
+    with pytest.raises(ValueError, match="strictly before the market quote"):
+        v2.validate_shadow_capture_rows([row])
+
+    row = _row()
+    row["source_provenance"]["parent_run"]["run_completed_at_utc"] = "2026-09-18T16:55:00Z"
+    with pytest.raises(ValueError, match="strictly before the market quote"):
+        v2.validate_shadow_capture_rows([row])
+
+
+def test_shadow_capture_requires_feature_cutoff_to_match_verified_source_observation():
+    row = _row(feature_history_cutoff_utc="2026-09-18T16:49:00Z")
+    with pytest.raises(ValueError, match="equal the verified latest source observation"):
+        v2.validate_shadow_capture_rows([row])
+
+
 def test_shadow_capture_requires_frozen_training_and_incumbent_identity():
     with pytest.raises(ValueError, match="training cutoff"):
         v2.validate_shadow_capture_rows([_row(candidate_training_data_through_utc="2026-09-01T00:00:00Z")])
@@ -248,6 +335,7 @@ def test_shadow_capture_allows_same_clubs_on_distinct_local_match_dates():
         incumbent_generated_at_utc="2026-09-19T16:58:00Z",
         candidate_generated_at_utc="2026-09-19T16:59:00Z",
         feature_history_cutoff_utc="2026-09-19T16:50:00Z",
+        source_provenance=_source_provenance("2026-09-19"),
     )
     assert len(v2.validate_shadow_capture_rows([_row(), row2])) == 2
 
@@ -305,6 +393,7 @@ def _completed_gate_batch(count):
             incumbent_generated_at_utc=f"{day}T16:58:00Z",
             candidate_generated_at_utc=f"{day}T16:59:00Z",
             feature_history_cutoff_utc=f"{day}T16:50:00Z",
+            source_provenance=_source_provenance(day),
         ))
         metadata.append({
             "league": "SERIE_A",
@@ -471,6 +560,7 @@ def test_completed_primary_gate_rejects_future_kickoff_even_if_metadata_is_suppl
     future_capture["incumbent_generated_at_utc"] = "2026-11-24T16:58:00Z"
     future_capture["candidate_generated_at_utc"] = "2026-11-24T16:59:00Z"
     future_capture["feature_history_cutoff_utc"] = "2026-11-24T16:50:00Z"
+    future_capture["source_provenance"] = _source_provenance("2026-11-24")
     future_metadata = [dict(metadata[0], match_date="2026-11-24",
                              source_updated_at_utc="2026-11-23T00:00:00Z",
                              persisted_at_utc="2026-11-23T01:00:00Z")]
