@@ -12,13 +12,20 @@ import market_anchor_1x2_v2_shadow as v2
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _source_provenance(day="2026-09-18"):
+def _source_provenance(
+    day="2026-09-18",
+    *,
+    source_observed="16:50:00",
+    artifact_created="16:51:00",
+    run_created="16:45:00",
+    run_completed="16:52:00",
+):
     return {
         "artifact_id": 12345,
         "artifact_sha256": "a" * 64,
         "artifact_head_sha": "b" * 40,
-        "artifact_created_at_utc": f"{day}T16:51:00Z",
-        "latest_source_observed_at_utc": f"{day}T16:50:00Z",
+        "artifact_created_at_utc": f"{day}T{artifact_created}Z",
+        "latest_source_observed_at_utc": f"{day}T{source_observed}Z",
         "archive_sha256_verified": True,
         "source_member_sha256_verified": True,
         "manifest_candidate_sha_verified": True,
@@ -30,8 +37,8 @@ def _source_provenance(day="2026-09-18"):
             "event": "schedule",
             "status": "completed",
             "conclusion": "success",
-            "run_created_at_utc": f"{day}T16:45:00Z",
-            "run_completed_at_utc": f"{day}T16:52:00Z",
+            "run_created_at_utc": f"{day}T{run_created}Z",
+            "run_completed_at_utc": f"{day}T{run_completed}Z",
         },
     }
 
@@ -215,7 +222,11 @@ def test_shadow_capture_accepts_only_pre_kickoff_outcome_free_serie_a_rows():
             _row(kickoff_utc="2026-09-15T18:45:00Z", capture_time_utc="2026-09-15T17:00:00Z")
         ])
     with pytest.raises(ValueError, match="backfilled prediction inputs"):
-        v2.validate_shadow_capture_rows([_row(market_snapshot_time_utc="2026-09-15T23:59:00Z")])
+        v2.validate_shadow_capture_rows([_row(
+            market_snapshot_time_utc="2026-09-15T23:59:00Z",
+            feature_history_cutoff_utc="2026-09-15T16:50:00Z",
+            source_provenance=_source_provenance("2026-09-15"),
+        )])
 
 
 def test_shadow_capture_enforces_closed_gate_and_exact_market_fallback():
@@ -467,6 +478,13 @@ def test_completed_primary_gate_uses_local_serie_a_fixture_date():
         incumbent_generated_at_utc="2026-09-18T20:58:00Z",
         candidate_generated_at_utc="2026-09-18T20:59:00Z",
         feature_history_cutoff_utc="2026-09-18T20:50:00Z",
+        source_provenance=_source_provenance(
+            "2026-09-18",
+            source_observed="20:50:00",
+            artifact_created="20:51:00",
+            run_created="20:45:00",
+            run_completed="20:52:00",
+        ),
     )
     metadata = [{
         "league": "SERIE_A",
@@ -738,10 +756,17 @@ def test_shadow_capture_rejects_prediction_generated_before_market_snapshot(fiel
     ["2026-09-18T16:55:00Z", "2026-09-18T16:56:00Z"],
 )
 def test_shadow_capture_requires_feature_source_strictly_before_market_quote(feature_cutoff):
-    with pytest.raises(ValueError, match="feature history cutoff must be strictly before"):
-        v2.validate_shadow_capture_rows([
-            _row(feature_history_cutoff_utc=feature_cutoff)
-        ])
+    row = _row(
+        feature_history_cutoff_utc=feature_cutoff,
+        source_provenance=_source_provenance(
+            source_observed=feature_cutoff[11:19],
+            artifact_created="16:57:00",
+            run_created="16:56:00",
+            run_completed="16:58:00",
+        ),
+    )
+    with pytest.raises(ValueError, match="strictly before the market quote"):
+        v2.validate_shadow_capture_rows([row])
 
 
 @pytest.mark.parametrize(
