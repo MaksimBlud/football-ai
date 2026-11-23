@@ -46,6 +46,32 @@ def require_v2_live_access() -> None:
         )
 
 
+def require_private_repository(*, token: str, get=requests.get) -> dict:
+    """Fail closed before source/quote access unless this exact repo is private."""
+    require_v2_live_access()
+    if not isinstance(token, str) or not token.strip():
+        raise ValueError("GitHub Actions read token missing for private-repository verification")
+    url = GITHUB_API
+    response = get(url, headers={
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }, timeout=30, allow_redirects=False)
+    if getattr(response, "url", None) != url:
+        raise ValueError("unexpected GitHub repository metadata response URL")
+    status = getattr(response, "status_code", None)
+    if status != 200:
+        raise ValueError(f"GitHub repository metadata request returned HTTP {status}")
+    data = response.json()
+    if not isinstance(data, dict) or data.get("full_name") != REPOSITORY:
+        raise ValueError("GitHub repository metadata identity mismatch")
+    if data.get("private") is not True:
+        raise PermissionError(
+            "original V2 source/quote access requires the exact GitHub repository to be private"
+        )
+    return {"repository": REPOSITORY, "private": True}
+
+
 def _github_json(url: str, *, token: str, get=requests.get) -> dict:
     require_v2_live_access()
     if not token:
@@ -487,6 +513,9 @@ def main() -> None:
     token = os.environ.get("GITHUB_TOKEN", "")
     if not token:
         raise RuntimeError("GitHub Actions read token is required after the V2 live-access gate")
+    # Defense in depth: workflow privacy checks do not protect direct CLI invocation.
+    # Verify this exact repository is private before artifact metadata, archive, or quote access.
+    require_private_repository(token=token)
     now = datetime.now(timezone.utc)
     archives = discover_archives(token=token)
     raw_cache = {}
