@@ -19,6 +19,16 @@ QUOTE = {
 }
 
 
+@pytest.fixture(autouse=True)
+def synthetic_inference_clearance(monkeypatch):
+    import serie_a_v2_frozen_shadow_preview as frozen_preview
+    monkeypatch.setattr(
+        frozen_preview,
+        "require_v2_inference_access",
+        lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
+    )
+
+
 def history():
     base = {"HC": 4, "AC": 2, "HY": 1, "AY": 2, "HR": 0, "AR": 0}
     return pd.DataFrame([
