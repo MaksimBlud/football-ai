@@ -27,11 +27,14 @@ AFTER_CAPTURE = datetime(2026, 10, 14, 6, 0, tzinfo=timezone.utc)
 @pytest.fixture(autouse=True)
 def synthetic_inference_clearance(monkeypatch):
     import market_anchor_v2_direct_access
-    monkeypatch.setattr(
-        market_anchor_v2_direct_access,
-        "require_v2_inference_access",
-        lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
-    )
+    import serie_a_v2_frozen_shadow_preview as frozen_preview
+    import serie_a_v2_live_diagnostic_report as live_diagnostic
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    synthetic = lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"}
+    monkeypatch.setattr(market_anchor_v2_direct_access, "require_v2_inference_access", synthetic)
+    monkeypatch.setattr(frozen_preview, "require_v2_inference_access", synthetic)
+    monkeypatch.setattr(live_diagnostic, "require_v2_inference_access", synthetic)
+    monkeypatch.setattr(live_diagnostic, "require_v2_source_capture_access", synthetic)
 
 
 def quote(ts="2026-10-14T06:00:00Z"):
