@@ -64,6 +64,41 @@ No provider/source request, artifact download, new quote, Supabase write/DDL, pr
 
 # Football AI — Project Continuity
 
+## 2026-11-23 08:28 UTC — Original Forward artifact redirect boundary hardened; exact CI passed
+
+### Fresh main and unchanged candidate
+- Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; main `PROJECT_CONTINUITY.md` blob remains `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`. No main update or merge occurred.
+- Original candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; 3,799 training rows; 19 frozen features; 20×2 weights; active lambda 0; shadow lambda 1; stability gate FAILED. No model, weights, scaler, imputer, or production `.pkl` changes.
+
+### Root hold and current Original Forward source-first chain
+- Root [PR #781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review / HUMAN-MERGE, exact HEAD `5552bec363ae72ad7aef04c598d2ce861f33eb42`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`; 8/8 exact-head workflows SUCCESS. Frozen V2 Shadow: 113 passed; Recovery: 59 passed; other six validation workflows SUCCESS. Main is still public and these default-deny controls are not active on main until manual merge.
+- [PR #879](https://github.com/MaksimBlud/football-ai/pull/879) is the private-storage child of #781 at HEAD `02bf0873979551ddd98511df013a27f872893990`.
+- [PR #884](https://github.com/MaksimBlud/football-ai/pull/884) is the source-first Original Forward child of #879 at HEAD `9bfbe01eef1280167285018adadf207248212d07`. Exact-head run [#45137153740](https://github.com/MaksimBlud/football-ai/actions/runs/45137153740) succeeded on Python 3.11 and 3.12: **80 tests passed in each**, compilation and production `.pkl` diff guard passed. Its sibling private-artifact validation [#45137153902](https://github.com/MaksimBlud/football-ai/actions/runs/45137153902) succeeded on both Python versions.
+- Fresh main still has Original Forward blob `5db02cbd1367ed25b994b152acf371421859a014` and the wrong direct-CLI order: Supabase client / saved-quote read precedes source archive discovery and verification. #884 moves the lazy DB import and saved-quote reader after successful source-parent and complete ZIP SHA verification. This is not yet active on main.
+
+### New PR #935 — artifact redirect origin and token-isolation guard
+- [PR #935](https://github.com/MaksimBlud/football-ai/pull/935) is a Draft child of #884, based on exact #884 HEAD `9bfbe01eef1280167285018adadf207248212d07`; current HEAD `d2e6d84fbe080fe05271d576c815a551d36487ef`; compare **4 ahead / 0 behind**, exactly two files changed.
+- Finding: #884's `get_archive()` correctly runs only after source-parent verification, but its artifact ZIP request still used automatic HTTP redirects. GitHub documents the artifact ZIP endpoint as a **302** with a short-lived `Location` URL: https://docs.github.com/en/rest/actions/artifacts#download-an-artifact.
+- The new guard disables automatic redirects, requires the documented single 302, validates the current expected HTTPS GitHub Actions Azure artifact-storage host/path shape, then performs a separate bare GET without forwarding the GitHub bearer token or API headers. It requires one HTTP 200 and rejects unknown/lookalike origins, HTTP, userinfo, nonstandard ports, unsigned/malformed paths, missing Location and a second redirect.
+- Offline synthetic exact-head run [#45138819630](https://github.com/MaksimBlud/football-ai/actions/runs/45138819630): **92 tests passed on Python 3.11 and 92 on Python 3.12**; compile and production `.pkl` diff guards passed. No real artifact URL was requested and no ZIP was downloaded. The host/path allowlist is therefore CI-tested synthetically; a real artifact redirect remains deliberately unverified while provider rights/private storage are on HOLD.
+- PR #935 is OPEN / Draft / mergeable. It is not integrated. The #885/#887 private-CLI and inference-rights descendants are based on an older #884 ancestry and must be deliberately restacked before any integration; do not merge a sibling/duplicate branch.
+
+### Current pre-match quote store — read-only
+- Read-only `public.odds_snapshots` query used only league, event ID, snapshot time, kickoff time and created-at chronology; no result/score/settlement fields were selected.
+- Strict chronology (`snapshot_time_utc < commence_time_utc`, `created_at < commence_time_utc`, `snapshot_time_utc <= created_at`) returns **3,915 rows / 327 events** across nine leagues.
+- Future strict rows/events: **0 / 0**. Latest strict snapshot: `2026-10-13T14:48:53.042620Z`. No fresh prospective market quote exists in this table.
+- No Supabase write/DDL or protected outcome query occurred.
+
+### Separate integrity and evaluation controls
+- [PR #902](https://github.com/MaksimBlud/football-ai/pull/902) remains OPEN / Ready for review on main, HEAD `0ecc8097bc9f34849a5d1f1ecf05966f1a6f619d`; its seven exact-head workflows succeeded, including the original V2 candidate integrity test. No merge occurred.
+- [PR #933](https://github.com/MaksimBlud/football-ai/pull/933) remains OPEN / Draft on the strict temporal-order / outcome-gate branch, HEAD `9fc4fb17dae8d47952983dde0af6b7d006bf3403`; exact-head run [#45122002023](https://github.com/MaksimBlud/football-ai/actions/runs/45122002023) succeeded. Its recursive protected-outcome embargo and canonical duplicate-event gate are offline controls only.
+- The 30-primary-completed-event evaluation gate remains 0/30 for eligible prospective V2 forecasts. The separate 110-event feature-input metadata gate must not be conflated with it. No protected 2026/27 outcomes were read; no Brier/LogLoss superiority claim is permitted.
+
+### Non-actions
+No main update, merge, source/artifact download, provider request, paid API call, Supabase write/DDL, protected outcome read, inference, refit, threshold tuning, production `.pkl` change, promotion, bet, schedule change, or other-agent change. HUMAN-MERGE only.
+
+---
+
 
 ## 2026-11-21 08:17 UTC — Original V2 source-before-quote restack and free-source rights audit
 
