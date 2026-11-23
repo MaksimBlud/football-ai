@@ -6,6 +6,7 @@ artifact storage are unresolved. The workflows keep their offline tests and
 existing schedules; live access is held and artifacts publish only after successful runs.
 """
 from pathlib import Path
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 FLAG = "MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED"
@@ -332,6 +333,30 @@ def _has_external_io(text: str) -> bool:
     return any(marker.lower() in normalized for marker in EXTERNAL_IO_MARKERS)
 
 
+# Only these actions are allowed in offline validation steps. Artifact uploads
+# remain allowed solely in their separately named, gated upload step.
+OFFLINE_ACTIONS = {
+    "actions/checkout@v4",
+    "actions/setup-python@v5",
+}
+
+
+def _action_refs(block: str) -> list[str]:
+    """Return all top-level uses references in a workflow or individual step."""
+    actions = []
+    for line in block.splitlines():
+        match = re.match(r"^      - uses:\s*(\S+)", line)
+        if match is None:
+            match = re.match(r"^        uses:\s*(\S+)", line)
+        if match is not None:
+            actions.append(match.group(1).strip('"').strip("'").lower())
+    return actions
+
+
+def _has_unapproved_action(block: str) -> bool:
+    return any(action not in OFFLINE_ACTIONS for action in _action_refs(block))
+
+
 ORIGINAL_V2_REFERENCE_MARKERS = (
     "serie_a_v2_",
     "serie-a-v2",
@@ -407,6 +432,7 @@ def _is_original_v2_live_workflow(text: str, workflow_path: str = "") -> bool:
     has_live_access = (
         "secrets.SUPABASE_URL" in text
         or "secrets.SUPABASE_KEY" in text
+        or _has_unapproved_action(text)
         or any(marker in text for marker in ORIGINAL_V2_LIVE_SCRIPT_MARKERS)
         or (
             has_v2_reference
@@ -602,18 +628,31 @@ SECRET_BINDING_MARKERS = (
 
 
 def _workflow_step_blocks(text: str):
-    """Yield each top-level Actions step with its exact name and full block."""
+    """Yield every top-level Actions step, including unnamed run/uses steps."""
     lines = text.splitlines()
     starts = [
         index
         for index, line in enumerate(lines)
-        if line.startswith("      - name: ") or line.startswith("      - uses: ")
+        if re.match(r"^      -(?:\s|$)", line)
     ]
     for position, start in enumerate(starts):
         end = starts[position + 1] if position + 1 < len(starts) else len(lines)
-        header = lines[start].strip()
-        name = header[len("- name: "):] if header.startswith("- name: ") else header
-        yield name, "\n".join(lines[start:end])
+        block_lines = lines[start:end]
+        header = block_lines[0].strip()
+        first_name = re.match(r"^- name:\s*(.*)$", header)
+        later_name = next(
+            (
+                match.group(1).strip()
+                for line in block_lines[1:]
+                if (match := re.match(r"^        name:\s*(.*)$", line))
+            ),
+            None,
+        )
+        name = (
+            (first_name.group(1).strip() if first_name else later_name)
+            or f"<unnamed step line {start + 1}>"
+        )
+        yield name, "\n".join(block_lines)
 
 
 def _unlisted_live_capable_steps(path: str, text: str, spec: dict) -> list[str]:
@@ -626,6 +665,7 @@ def _unlisted_live_capable_steps(path: str, text: str, spec: dict) -> list[str]:
     for name, block in _workflow_step_blocks(text):
         has_credentials = any(marker in block for marker in SECRET_BINDING_MARKERS)
         has_external_io = _has_external_io(block)
+        has_unapproved_action = _has_unapproved_action(block)
         has_python_entrypoint = _has_non_test_python_entrypoint(block)
 
         if name in allowed_live:
@@ -637,10 +677,10 @@ def _unlisted_live_capable_steps(path: str, text: str, spec: dict) -> list[str]:
                 unlisted.append(f"{name} (missing upload gate)")
             continue
         if name in allowed_offline_python:
-            if has_credentials or has_external_io:
-                unlisted.append(f"{name} (offline allowlist contains credentials or external I/O)")
+            if has_credentials or has_external_io or has_unapproved_action:
+                unlisted.append(f"{name} (offline allowlist contains credentials, external I/O, or an unapproved action)")
             continue
-        if has_credentials or has_external_io or has_python_entrypoint:
+        if has_credentials or has_external_io or has_python_entrypoint or has_unapproved_action:
             unlisted.append(name)
 
     return unlisted
@@ -698,3 +738,41 @@ jobs:
 """
     workflow_header = synthetic.split("\njobs:", 1)[0]
     assert any(marker in workflow_header for marker in SECRET_BINDING_MARKERS)
+
+def test_unnamed_steps_and_unapproved_actions_cannot_bypass_the_hold():
+    path = ".github/workflows/serie-a-v2-current-form-source-capture.yml"
+    synthetic = """name: Serie A V2 Current-Form Source Capture
+jobs:
+  capture:
+    steps:
+      - name: Existing offline tests
+        run: python -m pytest -q
+      - run: python collect_source.py
+      - run: curl https://example.invalid/source.csv
+      - uses: vendor/unreviewed-source-action@v1
+"""
+    unexpected = _unlisted_live_capable_steps(path, synthetic, WORKFLOWS[path])
+    assert len(unexpected) == 3
+    assert all(item.startswith("<unnamed step line ") for item in unexpected)
+
+
+def test_unknown_action_after_checkout_in_new_v2_workflow_is_live_capable():
+    workflow = """name: Serie A V2 Source Helper
+jobs:
+  capture:
+    steps:
+      - uses: actions/checkout@v4
+      - uses: vendor/unreviewed-source-action@v1
+"""
+    assert _is_original_v2_live_workflow(
+        workflow,
+        workflow_path=".github/workflows/serie-a-v2-unreviewed-action.yml",
+    )
+
+
+def test_only_existing_checkout_and_python_setup_actions_are_offline_allowlisted():
+    assert not _has_unapproved_action("      - uses: actions/checkout@v4")
+    assert not _has_unapproved_action(
+        "      - name: Setup Python\n        uses: actions/setup-python@v5"
+    )
+    assert _has_unapproved_action("      - uses: actions/cache@v4")
