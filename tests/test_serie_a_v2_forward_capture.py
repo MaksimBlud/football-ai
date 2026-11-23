@@ -13,7 +13,7 @@ from serie_a_v2_live_diagnostic_report import _source_codes, PUBLIC_BASE
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
 from serie_a_v2_forward_capture import (
     ARTIFACT_NAME, ARCHIVE_REPORT, SOURCE_DIR,
-    capture_forward_with_source_preflight, discover_archives,
+    capture_forward_with_source_preflight, discover_archives, get_archive,
     prepare_forward_capture, verify_source_run, SOURCE_WORKFLOW_PATH,
 )
 
