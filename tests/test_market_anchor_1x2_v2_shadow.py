@@ -460,3 +460,76 @@ def test_shadow_capture_rejects_same_team_on_both_sides_after_normalization():
 def test_shadow_capture_rejects_noncanonical_event_id_whitespace(event_id):
     with pytest.raises(ValueError, match="canonical"):
         v2.validate_shadow_capture_rows([_row(event_id=event_id)])
+
+
+def test_shadow_capture_rejects_nested_raw_match_outcomes(extra):
+    row = _row()
+    row.update(extra)
+    with pytest.raises(ValueError, match="outcome fields"):
+        v2.validate_shadow_capture_rows([row])
+
+
+def test_shadow_capture_rejects_all_documented_football_data_result_stat_aliases(alias, value):
+    row = _row(provider_row={alias: value})
+    with pytest.raises(ValueError, match="outcome fields"):
+        v2.validate_shadow_capture_rows([row])
+
+
+def test_shadow_capture_rejects_generic_goals_containers_and_separator_aliases(payload):
+    row = _row()
+    row.update(payload)
+    with pytest.raises(ValueError, match="outcome fields"):
+        v2.validate_shadow_capture_rows([row])
+
+
+def test_derived_frozen_goal_features_remain_allowed():
+    row = _row(features={"diff_goals_for_5": 0.1, "diff_goals_against_5": -0.1})
+    assert v2.validate_shadow_capture_rows([row])[0]["event_id"] == "evt-1"
+
+
+def test_shadow_capture_rejects_punctuation_separated_compact_outcome_aliases(provider_row):
+    row = _row(provider_row=provider_row)
+    with pytest.raises(ValueError, match="outcome fields"):
+        v2.validate_shadow_capture_rows([row])
+
+
+def test_compact_outcome_alias_guard_preserves_frozen_derived_feature_names():
+    assert v2.is_forbidden_outcome_field("F.T.H.G")
+    assert v2.is_forbidden_outcome_field("H.G")
+    assert not v2.is_forbidden_outcome_field("diff_goals_for_5")
+
+
+def test_shadow_capture_rejects_explicit_1x2_winner_and_draw_outcome_aliases(provider_row):
+    row = _row(provider_row=provider_row)
+    with pytest.raises(ValueError, match="outcome fields"):
+        v2.validate_shadow_capture_rows([row])
+
+
+def test_1x2_outcome_alias_guard_preserves_pre_match_market_and_frozen_features():
+    assert not v2.is_forbidden_outcome_field("home_odds")
+    assert not v2.is_forbidden_outcome_field("draw_odds")
+    assert not v2.is_forbidden_outcome_field("away_odds")
+    assert not v2.is_forbidden_outcome_field("diff_points_5")
+    assert not v2.is_forbidden_outcome_field("diff_goals_for_5")
+
+
+def test_shadow_capture_rejects_outcomes_encoded_as_typed_stat_descriptors(descriptor_key, descriptor_value):
+    row = _row(provider_row={"statistics": [{descriptor_key: descriptor_value, "value": "H"}]})
+    with pytest.raises(ValueError, match="outcome fields"):
+        v2.validate_shadow_capture_rows([row])
+
+
+def test_typed_stat_descriptor_guard_uses_exact_names_not_arbitrary_text():
+    row = _row(provider_row={
+        "statistics": [
+            {"name": "Market 1X2", "value": "1X2"},
+            {"type": "Home Win Probability", "value": 0.55},
+            {"label": "Possession Trend", "value": 58},
+            {"abbreviation": "Market 1X2", "value": "1X2"},
+            {"shortName": "Home Win Probability", "value": 0.55},
+            {"statId": "Market 1X2", "value": "1X2"},
+            {"fieldId": "Home Win Probability", "value": 0.55},
+            {"dataKey": "Possession Trend", "value": 58},
+        ]
+    })
+    assert v2.validate_shadow_capture_rows([row])[0]["event_id"] == "evt-1"
