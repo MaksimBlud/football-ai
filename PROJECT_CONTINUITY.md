@@ -7416,3 +7416,28 @@ This corrects the 2026-11-23 01:48 UTC checkpoint, which said the latest #884 SH
 - These exact-head successes do not integrate the fixes. #884 remains based on old #879; #913 remains based on #912; #923 remains based on #922. All remain open Draft children requiring ancestry reconciliation after owner HUMAN-MERGE of root #781.
 
 **Documentation checkpoint CI:** PR #839 exact HEAD `f903605c5114ee349863ec494aee46aabed1c58c` is OPEN / Ready for review / mergeable, not merged. Its exact-head commit run list is **8/8 SUCCESS**; V2-specific Frozen Shadow [#45122138210](https://github.com/MaksimBlud/football-ai/actions/runs/45122138210) reports **89 passed** and the production `.pkl` guard passed. The unrelated La Liga prospective run was not inspected or used for V2 conclusions.
+
+
+### 2026-11-23 06:49 UTC — SportAPI free source audit (HOLD) and fresh control recheck
+
+**New free-source candidate: SportAPI.ai**
+- Reviewed only official public pages: Terms updated 2026-11-20, pricing, API documentation, coverage and the Serie A guide. No account or API key was created; no API request or data download was made.
+- Free plan advertises all endpoints/leagues; quota is 2,000 requests/day and 14,000/month through 2026-11-30, then 1,000/day and 7,000/month from 2026-12-01. No odds endpoint.
+- Official Serie A guide identifies league ID 3 and a 2026/27 example. The reviewed stats schema lists shots, passes, fouls, tackles, saves and yellow cards; events list goals and red/yellow cards; standings include points and goals for/against. Corners are not documented in the reviewed stats/event schemas. Six original V2 features are corner-dependent, so full 19-feature parity is not established. Per-fixture Serie A completeness and free historical depth remain unverified.
+- Terms allow use in own websites/apps/analysis/products and prohibit raw-feed resale, but do not expressly resolve internal ML training/inference or private raw-response retention. Upstream providers/field-level rights are not identified. `updated_at` is documented as UTC but is not defined as per-field first-observed/correction time. Decision: **HOLD_NO_INTEGRATION** pending written rights, full feature coverage, retention and timestamp clarification.
+- Audit manifest: `research/source_rights/sportapi_20261123.json`; offline contract tests: `tests/test_serie_a_v2_sportapi_source_audit.py`. No original model/feature/weight change.
+
+**Fresh repository and runtime control check**
+- GitHub main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; Branch API reports `protected=false` and `protection.enabled=false`. This is a concrete control gap: #781's hold is still not active on main.
+- #781 exact HEAD `5552bec363ae72ad7aef04c598d2ce861f33eb42`: 8/8 PR-triggered runs SUCCESS, including 113 Frozen V2 Shadow tests and 59 Recovery tests. OPEN / Ready for review / mergeable; HUMAN-MERGE only.
+- #933 exact HEAD `9fc4fb17dae8d47952983dde0af6b7d006bf3403`: exact run #45122002023 SUCCESS, 186 tests, production `.pkl` diff guard PASS; OPEN / Draft, stacked on #932.
+- #839 prior HEAD `533022658378b4716afafa0f12eb47ca816a1854`: 8/8 exact-head PR runs SUCCESS, including 89 Frozen V2 Shadow tests. This new audit commit will require its own exact-head CI.
+- Original Forward source-first #884 and Current-Form fail-closed source-before-quote #913 remain open children, not integrated. Their exact offline validations remain #44854473405 (80 tests per Python 3.11/3.12) and #44938903345 (31 per Python 3.11/3.12), respectively. #923 atomic source capture remains on its separate #919→#923 chain.
+
+**Read-only Supabase pre-match ledger**
+- Rechecked only `public.odds_snapshots` using `snapshot_time_utc < commence_time_utc`, `created_at < commence_time_utc`, and `snapshot_time_utc <= created_at`.
+- All nine leagues: 3,915 strict rows / 327 events; 0 future strict rows/events. Latest strict snapshot remains 2026-10-13 14:48:53 UTC (Serie A).
+- No scores, results, settlements or protected outcomes were selected.
+
+**Non-actions**
+No main update, merge, Supabase write/DDL, provider/API request, source download, paid API call, inference, refit, threshold tuning, production `.pkl` change, candidate/feature/weight change, protected outcome read, schedule change or other-agent setting change. The 30-primary-completed-event evaluation gate remains CLOSED; no independent Brier/LogLoss result or V2 superiority claim exists.

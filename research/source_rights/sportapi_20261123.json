@@ -1,0 +1,130 @@
+{
+  "schema_version": "MARKET_ANCHOR_1X2_V2_EXTERNAL_CURRENT_FORM_SOURCE_AUDIT_V1",
+  "source": "sportapi.ai",
+  "checked_at_utc": "2026-11-23T06:49:00Z",
+  "candidate_status": "HOLD_NO_INTEGRATION",
+  "free_plan": {
+    "monthly_price_usd": 0,
+    "requests_per_day_through_2026_11_30": 2000,
+    "requests_per_month_through_2026_11_30": 14000,
+    "requests_per_day_from_2026_12_01": 1000,
+    "requests_per_month_from_2026_12_01": 7000,
+    "all_endpoints_and_leagues_advertised": true,
+    "api_key_required": true,
+    "betting_odds_available": false,
+    "history_depth_documented": false
+  },
+  "public_coverage": {
+    "leagues_advertised": 117,
+    "italy_serie_a_example_league_id": 3,
+    "serie_a_2026_27_example_confirmed": true,
+    "exact_serie_a_2026_27_per_fixture_statistics_coverage_verified": false,
+    "per_fixture_completeness_matrix_available": false,
+    "coverage_depth_varies_by_competition": true
+  },
+  "documented_fields": {
+    "standings": [
+      "played",
+      "won",
+      "drawn",
+      "lost",
+      "goals_for",
+      "goals_against",
+      "points"
+    ],
+    "match_events": [
+      "goal",
+      "yellow_card",
+      "red_card",
+      "substitution"
+    ],
+    "fixture_stats": [
+      "shots",
+      "shots_on_target",
+      "shots_off_target",
+      "fouls",
+      "total_passes",
+      "pass_accuracy",
+      "tackles",
+      "tackle_success",
+      "saves",
+      "yellow_cards"
+    ],
+    "corners_documented_in_reviewed_match_stats_or_event_schema": false,
+    "original_v2_corner_feature_parity": false,
+    "original_v2_full_19_feature_parity_verified": false
+  },
+  "rights": {
+    "own_websites_apps_analysis_and_products_listed_as_permitted": true,
+    "raw_data_feed_resale_or_redistribution_permitted": false,
+    "explicit_internal_ml_training_permission": false,
+    "explicit_internal_ml_inference_permission": false,
+    "explicit_private_raw_response_retention_permission": false,
+    "upstream_provider_identity_verified": false,
+    "upstream_field_level_rights_verified": false,
+    "written_ai_use_upstream_and_retention_clarification_required": true,
+    "terms_last_updated": "2026-11-20"
+  },
+  "provenance": {
+    "fixture_updated_at_utc_field_documented": true,
+    "example_fixture_updated_at_utc": "2026-10-11T01:43:09Z",
+    "example_fixture_kickoff_utc": "2026-10-10T11:30:00Z",
+    "updated_at_semantics": "API record update time in an example; not a documented per-field first-observed or correction timestamp",
+    "per_match_first_observation_timestamp_documented": false,
+    "per_field_correction_timestamp_documented": false,
+    "response_etag_documented": true,
+    "cache_age_or_provider_first_observed_semantics_documented": false,
+    "project_receipt_time_and_sha256_can_be_recorded_in_a_future_authorized_capture": true,
+    "source_before_quote_proven": false,
+    "receipt_time_and_sha_would_prove_project_possession_not_provider_first_observation": true
+  },
+  "project_authorization": {
+    "account_created": false,
+    "api_key_created": false,
+    "api_requests": 0,
+    "source_download_performed": false,
+    "raw_source_sha256_captured": false,
+    "supabase_reads": 0,
+    "supabase_writes": 0,
+    "supabase_ddl": 0,
+    "protected_2026_27_outcomes_read": false,
+    "model_inference_performed": false,
+    "production_pickle_changed": false
+  },
+  "frozen_candidate": {
+    "experiment_id": "MARKET_ANCHOR_1X2_V2",
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "training_fingerprint_sha256": "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098",
+    "training_rows": 3799,
+    "feature_count": 19,
+    "weights_shape": [
+      20,
+      2
+    ],
+    "active_lambda": 0,
+    "shadow_residual_lambda": 1,
+    "stability_gate_passed": false,
+    "automatic_promotion": false
+  },
+  "official_documents": {
+    "terms": "https://sportapi.ai/terms",
+    "pricing": "https://sportapi.ai/pricing",
+    "documentation": "https://sportapi.ai/docs",
+    "coverage": "https://sportapi.ai/coverage",
+    "serie_a_guide": "https://sportapi.ai/guides/serie-a-website",
+    "serie_a_example": "https://serie-a.sportapi.ai/"
+  },
+  "decision": {
+    "status": "HOLD_NO_INTEGRATION",
+    "integration_allowed": false,
+    "reasons": [
+      "The Free plan has no odds endpoint and does not replace the existing frozen market-quote source.",
+      "The reviewed stats/event schemas do not document corner totals, so full parity with the original 19-feature V2 contract is not established.",
+      "Exact 2026/27 Serie A per-fixture completeness for the required fields is not verified.",
+      "Terms permit use in own websites, apps, analysis and products but do not expressly settle internal ML training/inference or private raw-response retention.",
+      "Upstream data providers and field-level rights are not identified.",
+      "The documented fixture updated_at is not a per-field first-observation or correction timestamp.",
+      "No account, API key, provider request, source download or project authorization was created."
+    ]
+  }
+}
