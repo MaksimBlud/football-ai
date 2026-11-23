@@ -197,15 +197,16 @@ def build_source_provenance(
     if not isinstance(artifact_head, str) or not re.fullmatch(r"[0-9a-f]{40}", artifact_head):
         raise ValueError("source provenance artifact head SHA is invalid")
     artifact_created_raw = archive.get("created_at")
+    # Use timezone-aware duck typing here: CLI tests replace this module's
+    # datetime clock with a frozen subclass, while parsed quote timestamps are
+    # still ordinary datetime instances.
     if (
-        not isinstance(artifact_created_raw, datetime)
-        or artifact_created_raw.tzinfo is None
+        getattr(artifact_created_raw, "tzinfo", None) is None
         or artifact_created_raw.utcoffset() is None
     ):
         raise ValueError("source provenance artifact creation time must be timezone-aware")
     if (
-        not isinstance(quote_time, datetime)
-        or quote_time.tzinfo is None
+        getattr(quote_time, "tzinfo", None) is None
         or quote_time.utcoffset() is None
     ):
         raise ValueError("source provenance quote time must be timezone-aware")
