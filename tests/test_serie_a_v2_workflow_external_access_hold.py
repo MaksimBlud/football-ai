@@ -613,7 +613,7 @@ def _workflow_step_blocks(text: str):
         end = starts[position + 1] if position + 1 < len(starts) else len(lines)
         header = lines[start].strip()
         name = header[len("- name: "):] if header.startswith("- name: ") else header
-        yield name, "\\n".join(lines[start:end])
+        yield name, "\n".join(lines[start:end])
 
 
 def _unlisted_live_capable_steps(path: str, text: str, spec: dict) -> list[str]:
@@ -656,7 +656,7 @@ def test_every_live_capable_step_in_existing_v2_workflows_is_explicitly_gated_or
             f"{unexpected}"
         )
 
-        workflow_header = text.split("\\njobs:", 1)[0]
+        workflow_header = text.split("\njobs:", 1)[0]
         workflow_credentials = [
             marker for marker in SECRET_BINDING_MARKERS if marker in workflow_header
         ]
@@ -696,5 +696,5 @@ jobs:
       - name: Offline tests
         run: python -m pytest -q
 """
-    workflow_header = synthetic.split("\\njobs:", 1)[0]
+    workflow_header = synthetic.split("\njobs:", 1)[0]
     assert any(marker in workflow_header for marker in SECRET_BINDING_MARKERS)
