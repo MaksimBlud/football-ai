@@ -200,9 +200,12 @@ def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
     require_v2_live_access()
     if type(artifact_id) is not int or artifact_id <= 0:
         raise ValueError("invalid GitHub artifact id")
-    url = f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip"
     if not token:
         raise ValueError("GitHub token required")
+    # Defense in depth: imported callers must not bypass the CLI's private-repo
+    # gate and download source bytes directly from a public repository.
+    require_private_repository(token=token, get=get)
+    url = f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip"
 
     # Do not let the HTTP client follow an API redirect while carrying the
     # GitHub token. GitHub documents this endpoint as one 302 with a short-lived
