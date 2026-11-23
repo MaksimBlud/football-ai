@@ -772,13 +772,13 @@ def test_get_archive_rejects_second_redirect_without_following_or_token(monkeypa
 
 def test_private_repository_guard_accepts_only_exact_private_repository(monkeypatch):
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
-    url = "https://api.github.com/repos/MaksimBlud/football-ai"
+    url_value = "https://api.github.com/repos/MaksimBlud/football-ai"
     calls = []
 
     class Response:
         status_code = 200
         def __init__(self, data):
-            self.url = url
+            self.url = url_value
             self.data = data
         def json(self):
             return self.data
@@ -792,17 +792,17 @@ def test_private_repository_guard_accepts_only_exact_private_repository(monkeypa
         "repository": "MaksimBlud/football-ai", "private": True
     }
     assert len(calls) == 1
-    assert calls[0][0] == url
+    assert calls[0][0] == url_value
     assert calls[0][3] is False
 
 
 def test_private_repository_guard_rejects_public_repository_before_source_access(monkeypatch):
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
-    url = "https://api.github.com/repos/MaksimBlud/football-ai"
+    url_value = "https://api.github.com/repos/MaksimBlud/football-ai"
 
     class Response:
         status_code = 200
-        url = url
+        url = url_value
         def json(self):
             return {"full_name": "MaksimBlud/football-ai", "private": False}
 
@@ -815,11 +815,11 @@ def test_private_repository_guard_rejects_public_repository_before_source_access
 
 def test_private_repository_guard_rejects_wrong_repository_identity(monkeypatch):
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
-    url = "https://api.github.com/repos/MaksimBlud/football-ai"
+    url_value = "https://api.github.com/repos/MaksimBlud/football-ai"
 
     class Response:
         status_code = 200
-        url = url
+        url = url_value
         def json(self):
             return {"full_name": "attacker/other-repo", "private": True}
 
@@ -832,11 +832,11 @@ def test_private_repository_guard_rejects_wrong_repository_identity(monkeypatch)
 
 def test_private_repository_guard_rejects_redirect_without_parsing_body(monkeypatch):
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
-    url = "https://api.github.com/repos/MaksimBlud/football-ai"
+    url_value = "https://api.github.com/repos/MaksimBlud/football-ai"
 
     class Response:
         status_code = 302
-        url = url
+        url = url_value
         def json(self):
             raise AssertionError("redirect body must not be parsed")
 
