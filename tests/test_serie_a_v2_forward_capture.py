@@ -591,6 +591,13 @@ def test_original_forward_cli_invalid_archive_sha_blocks_database_import_and_quo
     monkeypatch.setenv("GITHUB_TOKEN", "synthetic-token")
     monkeypatch.setattr(forward_module, "datetime", FrozenNow)
 
+    def allow_private_repository(*, token):
+        events.append("private_repository_check")
+        assert token == "synthetic-token"
+        return {"repository": "MaksimBlud/football-ai", "private": True}
+
+    monkeypatch.setattr(forward_module, "require_private_repository", allow_private_repository)
+
     def discover_archives(*, token):
         events.append("archive_discovery")
         assert token == "synthetic-token"
