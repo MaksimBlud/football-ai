@@ -251,6 +251,17 @@ def test_shadow_capture_allows_same_clubs_on_distinct_local_match_dates():
     )
     assert len(v2.validate_shadow_capture_rows([_row(), row2])) == 2
 
+def test_shadow_capture_rejects_same_fixture_with_different_kickoff_time_same_local_date():
+    row2 = _row(event_id="evt-2", kickoff_utc="2026-09-18T20:00:00Z")
+    with pytest.raises(ValueError, match="duplicate canonical primary fixture"):
+        v2.validate_shadow_capture_rows([_row(), row2])
+
+
+def test_shadow_identity_aliases_match_original_feature_manifest():
+    from serie_a_v2_asof_feature_manifest import V2_HISTORICAL_TEAM_ALIASES
+
+    assert v2.V2_HISTORICAL_TEAM_ALIASES == V2_HISTORICAL_TEAM_ALIASES
+
 
 def test_outcome_gate_is_count_based_and_cannot_activate_v2_post_hoc():
     assert not v2.outcome_read_permitted(0)
