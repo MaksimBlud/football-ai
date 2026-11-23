@@ -1,3 +1,34 @@
+## 2026-11-23 — Original V2: current-form artifact redirect transport hardening
+
+### Fresh main and frozen candidate
+- Fresh `main` remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; repository visibility is still public. No main changes or merges were made.
+- Re-read the original candidate on main: Git blob `ac1303f6b096664983fbf52443bd0a381b23ba21`, candidate SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`, 3,799 rows, unchanged 19-feature order and 20×2 weights, active lambda 0, shadow lambda 1, stability gate FAILED, automatic promotion false. Feature-builder Git blob remains `401b3a0893371bfa4a488ec92a4a54af2678c8f7`.
+- The current main `serie_a_v2_current_form_forward_capture.py` still has no direct-access guard import and its `get_archive()` follows redirects automatically. The `market_anchor_v2_direct_access.py` guard is present on the #923 research chain but not on main. #781 (live-access hold) and #879 (private-repository artifact gate) remain OPEN and unmerged; do not treat branch-only guards as deployed.
+
+### PR #936 — current-form artifact redirect origin guard
+- [PR #936](https://github.com/MaksimBlud/football-ai/pull/936) is OPEN / Draft / HUMAN-MERGE, child of exact #923 HEAD `2ddef8a7b66324224e5a0d243f364a36109b9420`; final HEAD `5abd4e1db8301bfca34efec09a95accedd082641`, 5 commits ahead / 0 behind, 3 files changed.
+- Current-form `get_archive()` now requires exactly one HTTP 302 from the exact GitHub artifact API URL, validates HTTPS Azure artifact-storage host/authority/path, and fetches the signed Location in a separate request with redirects disabled and no GitHub token/API headers. It requires exactly one HTTP 200 and retains the downstream archive-size and SHA-256 checks.
+- Offline synthetic tests cover allowed redirect, untrusted/malformed origins, userinfo, nonstandard/trailing port, wrong path, missing query/Location, API 200, second redirect, final URL/history mismatch, invalid artifact IDs, and missing token. No live artifact was downloaded.
+- Exact final-head PR CI [#45143275390](https://github.com/MaksimBlud/football-ai/actions/runs/45143275390) and push CI [#45143265405](https://github.com/MaksimBlud/football-ai/actions/runs/45143265405) both SUCCESS. Python 3.11: 64 passed; Python 3.12: 64 passed; compile and production `.pkl` diff guard PASS.
+- Intermediate SHA `bd8bc4d5f136e2820436ec3027323b0a1827457c` initially failed both matrix runs due an over-escaped hostname regex; the matcher was corrected to a literal-dot character-class pattern and the exact final SHA above passed both runs. Do not report the intermediate run as passing.
+- #936 does not activate any workflow or access path on main. It must not be merged before its #923 → #922 → #921 source-chain parents and the broader #781/#879 rights/private-storage chain are manually reviewed.
+
+### Current-form source and quote chronology
+- Re-read current-form source/forward code and workflows on main and #923. The #923 chain retains the fail-closed source-capture access guard and live workflow hold; main does not yet contain that complete rights/private-storage guard.
+- Existing original V2 source/quote ordering work remains in #884/#935 and #913–#923. #935's original-forward redirect guard is separate from this new #936 current-form guard; neither has live archive-download proof because live access is held.
+- #923 exact source-capture validation runs [#45069538763](https://github.com/MaksimBlud/football-ai/actions/runs/45069538763) and [#45069538786](https://github.com/MaksimBlud/football-ai/actions/runs/45069538786) both SUCCESS. #935 exact isolated validation [#45138819630](https://github.com/MaksimBlud/football-ai/actions/runs/45138819630) SUCCESS.
+- #933 exact shadow validation [#45122002023](https://github.com/MaksimBlud/football-ai/actions/runs/45122002023) SUCCESS. #781 exact-head workflows: 8/8 SUCCESS; #902 exact-head workflows: 7/7 SUCCESS. All remain unmerged; HUMAN-MERGE applies.
+
+### Read-only pre-match Supabase evidence
+- Queried only `public.odds_snapshots` and only quote/clock/identity columns with strict predicates `snapshot_time_utc < commence_time_utc`, `created_at < commence_time_utc`, and `snapshot_time_utc <= created_at`.
+- Result: 3,915 strict pre-match rows across 327 unique events and 9 leagues. Serie A: 620 rows / 63 events; latest strict quote `2026-10-13 14:48:53.042620+00`. No post-match scores, outcomes, settlement, or protected 2026/27 results were queried. No Supabase writes/DDL.
+- No fresh prospective Serie A quotes exist after the October 13 snapshot window; the independent prospective evaluation gate remains 0/30. No Brier/LogLoss superiority claim is justified.
+
+### Safety invariants
+- No paid The Odds API calls, no production `.pkl` changes, no candidate/weight/feature changes, no Supabase writes/DDL, no main merge, no promotion, no betting output, and no protected outcome reads.
+- Next: preserve HUMAN-MERGE ordering; manually review #781/#879 rights and private-storage hold first, then restack source-first parents and current-form redirect guard. Only after legal/source clearance may real pre-match archives and 19-feature V2 shadows be captured prospectively.
+
+
 ## 2026-11-22 03:00 UTC — Original V2 identity SHA and source-clock boundary restacks
 
 ### Fresh main and frozen candidate
