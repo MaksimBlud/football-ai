@@ -397,6 +397,8 @@ def _has_external_io(text: str) -> bool:
 OFFLINE_ACTIONS = {
     "actions/checkout@v4",
     "actions/setup-python@v5",
+    "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+    "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
 }
 
 
@@ -465,8 +467,6 @@ def _has_non_test_python_entrypoint(text: str) -> bool:
 
 
 def _is_original_v2_live_workflow(text: str, workflow_path: str = "") -> bool:
-    if workflow_path.endswith("market-anchor-v2-private-artifact-gate-validation.yml"):
-        return False
     reference_surface = f"{text} {workflow_path}".lower()
     has_v2_reference = any(
         marker in reference_surface for marker in ORIGINAL_V2_REFERENCE_MARKERS
@@ -623,7 +623,20 @@ def test_private_artifact_gate_validation_workflow_is_offline_only():
     assert "git diff --exit-code" in text
     action_lines = [line.strip() for line in text.splitlines() if "uses:" in line]
     assert len(action_lines) == 2
+    assert set(_action_refs(text)) <= OFFLINE_ACTIONS
     assert all(line.startswith("uses: actions/checkout@") or line.startswith("uses: actions/setup-python@") for line in action_lines)
+
+def test_original_forward_source_first_validation_workflow_is_offline_only():
+    path = ".github/workflows/market-anchor-v2-original-forward-source-first-validation.yml"
+    text = _workflow(path)
+    assert "schedule:" not in text
+    assert "workflow_dispatch:" not in text
+    assert "SUPABASE_URL" not in text and "SUPABASE_KEY" not in text
+    assert "GITHUB_TOKEN:" not in text and "secrets." not in text
+    assert "actions/upload-artifact" not in text and "actions/download-artifact" not in text
+    assert "python -m pytest -q" in text
+    assert "git diff --exit-code origin/main...HEAD --" in text
+    assert set(_action_refs(text)) <= OFFLINE_ACTIONS
 
 def test_original_market_anchor_1x2_v2_script_cannot_escape_live_workflow_inventory():
     # These original-model entrypoint forms must be recognized even when a new
@@ -884,6 +897,8 @@ def test_only_existing_checkout_and_python_setup_actions_are_offline_allowlisted
     assert not _has_unapproved_action(
         "      - name: Setup Python\n        uses: actions/setup-python@v5"
     )
+    assert not _has_unapproved_action("      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262")
+    assert not _has_unapproved_action("      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065")
     assert _has_unapproved_action("      - uses: actions/cache@v4")
 
 def test_unreviewed_reusable_workflow_job_is_live_capable():
