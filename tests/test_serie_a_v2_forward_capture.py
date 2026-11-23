@@ -663,7 +663,7 @@ def test_get_archive_fetches_signed_storage_url_without_forwarding_github_token(
         "https://productionresultssa0.blob.core.windows.net/"
         "actions-results/container/archive.zip?sig=synthetic"
     )
-    archive_bytes = b"PK\\x03\\x04synthetic-zip"
+    archive_bytes = bytes.fromhex("504b0304") + b"synthetic-zip"
     calls = []
 
     def fake_get(url, **kwargs):
@@ -689,6 +689,7 @@ def test_get_archive_fetches_signed_storage_url_without_forwarding_github_token(
     [
         "http://productionresultssa0.blob.core.windows.net/actions-results/a.zip?sig=x",
         "https://evil.example/actions-results/a.zip?sig=x",
+        "https://productionresults.evil.blob.core.windows.net/actions-results/a.zip?sig=x",
         "https://productionresultssa0.blob.core.windows.net/other/a.zip?sig=x",
         "https://user@productionresultssa0.blob.core.windows.net/actions-results/a.zip?sig=x",
         "https://productionresultssa0.blob.core.windows.net:444/actions-results/a.zip?sig=x",
