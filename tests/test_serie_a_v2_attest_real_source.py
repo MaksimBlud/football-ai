@@ -17,6 +17,16 @@ from serie_a_v2_prequote_source_archive_gate import ARCHIVE_REPORT, SOURCE_DIR
 NOW = datetime(2026, 10, 14, 16, tzinfo=timezone.utc)
 
 
+@pytest.fixture(autouse=True)
+def synthetic_source_capture_clearance(monkeypatch):
+    import market_anchor_v2_direct_access
+    monkeypatch.setattr(
+        market_anchor_v2_direct_access,
+        "require_v2_source_capture_access",
+        lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
+    )
+
+
 def source_fixture():
     sources = {}
     manifest = []
