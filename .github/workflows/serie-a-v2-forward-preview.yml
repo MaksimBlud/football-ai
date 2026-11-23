@@ -70,15 +70,29 @@ jobs:
             tests/test_serie_a_v2_asof_feature_manifest.py \
             tests/test_serie_a_v2_atalanta_alias.py \
             tests/test_serie_a_v2_frozen_shadow_preview.py
-      - name: Attest original historical source ZIP from real GitHub Actions (no quotes read)
+      - name: Verify private repository storage before live V2 access
+        id: private-storage
         if: ${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          private="$(gh api "repos/${GITHUB_REPOSITORY}" --jq .private)"
+          if [[ "$private" == "true" ]]; then
+            echo "is_private=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_private=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::V2 live access is held because this repository is public; no source or quote data will be accessed or uploaded"
+          fi
+      - name: Attest original historical source ZIP from real GitHub Actions (no quotes read)
+        if: ${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' && steps.private-storage.outputs.is_private == 'true' }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           python serie_a_v2_attest_real_source.py \
             --output artifacts/serie_a_v2_real_source_attestation.json
       - name: Generate actual original frozen V2 source-verified read-only preview
-        if: ${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
+        if: ${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' && steps.private-storage.outputs.is_private == 'true' }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
@@ -91,7 +105,7 @@ jobs:
             --output artifacts/serie_a_v2_forward_source_checked.json \
             --sources-output-dir artifacts/serie_a_v2_forward_original_sources
       - name: Save immutable original V2 predictions and exact older source bytes
-        if: ${{ success() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}
+        if: ${{ success() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' && steps.private-storage.outputs.is_private == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: serie-a-v2-original-forward-source-checked
