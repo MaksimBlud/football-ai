@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - research/v2-private-repository-artifact-gate-on-781-20261119-run11
+      - research/v2-original-forward-source-first-minimal-on-879-20261119-run11
     paths:
       - "tests/test_serie_a_v2_workflow_external_access_hold.py"
       - ".github/workflows/serie-a-v2-forward-preview.yml"
@@ -15,6 +16,7 @@ on:
   pull_request:
     branches:
       - research/v2-workflow-live-access-hold-20261110-run11
+      - research/v2-private-repository-artifact-gate-on-781-20261119-run11
     paths:
       - "tests/test_serie_a_v2_workflow_external_access_hold.py"
       - ".github/workflows/serie-a-v2-forward-preview.yml"
