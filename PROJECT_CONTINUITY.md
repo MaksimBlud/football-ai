@@ -7714,3 +7714,46 @@ No main update, merge, Supabase write/DDL, provider/API request, source download
 - No paid odds API request, Supabase write/DDL, model inference/refit, threshold tuning, production `.pkl` change, schedule/other-agent change, main update, merge, promotion or bet.
 
 **Next safe step:** HUMAN-MERGE review of #781 first; after it is manually integrated, re-read fresh main and prove every live source/quote step and artifact upload is skipped. Then revalidate the private-storage and source-first child chain on the new base. Do not access the current-form archive or initiate any new provider capture while the rights/embargo HOLD remains.
+
+### 2026-11-23 23:52 UTC — fresh main ordering, live-action recheck, and strict pre-match odds inventory
+
+**Fresh repository and PR state**
+- GitHub repository metadata and commit lookup confirm the default branch is still public `main` at `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The main-branch `PROJECT_CONTINUITY.md` blob is `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b` and still begins with the 2026-10-18 entry; this checkpoint remains on the research branch only.
+- Root live-access HOLD [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / not merged, exact HEAD `5552bec363ae72ad7aef04c598d2ce861f33eb42`, base `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The eight runs returned for that exact commit all completed SUCCESS: #45108795827, #45108795897, #45108795789, #45108795785, #45108795798, #45108795794, #45108795793, #45108795804. The HOLD therefore remains a reviewed change, not an active main-branch control.
+- Private-artifact child [#879](https://github.com/MaksimBlud/football-ai/pull/879) remains Draft at `02bf0873979551ddd98511df013a27f872893990`, based on #781's exact HEAD. Original-forward source-first restack [#938](https://github.com/MaksimBlud/football-ai/pull/938) remains Draft at `14d765ca2b55e939d9ab5790abbbecd3a29f2614` on #879. Rights/provenance descendant [#946](https://github.com/MaksimBlud/football-ai/pull/946) remains Draft at `8c13bb0178b1b7e18b16e2c74ce46cdc70d94ce9`; its exact-head offline validation run #45233487016 passed on Python 3.11 and 3.12 (189 tests each). No dependency was merged.
+- Documentation PR [#839](https://github.com/MaksimBlud/football-ai/pull/839) is still OPEN at exact HEAD `95bdc24bc272719e1efb7ef18b3aec688c005c7a`. Eight exact-head workflows completed SUCCESS: #45284172683, #45284172839, #45284172879, #45284172778, #45284172672, #45284172757, #45284172988, #45284172724.
+
+**Main-branch code-order findings (read-only inspection)**
+- In main `serie_a_v2_forward_capture.py`, `main()` reads saved upcoming quotes at line 279 before discovering source archives at line 280 and calling `prepare_forward_capture` at line 281. Thus the main-branch original-forward entrypoint does not establish source-before-quote ordering. The corrected source-first CLI implementation is still only in #938 and descendants; it is not on main.
+- In main `serie_a_v2_current_form_forward_capture.py`, source archive discovery/verification occurs before the saved-quote reader, but the verified ZIP is written to the workflow artifact directory. The main workflow's upload-artifact step still uses `if: always()` (workflow lines 69–80); the source/quote live steps and artifact publication have not received #781's default-deny gate on main. The current-form workflow therefore still exposes source ZIP artifacts while the repository remains public.
+- The #781 diff adds `MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=false` to the five held workflows, conditions live steps on explicit `true`, and conditions artifact upload on successful live steps plus that flag. This is the right root control to review manually; it has not been integrated.
+
+**Latest real pre-match workflow evidence (main SHA above)**
+- Current-form source capture [run #45217596300](https://github.com/MaksimBlud/football-ai/actions/runs/45217596300) completed SUCCESS. Its actual log reports 19 tests passed, ten old-season CSVs, 119 completed prior-day current-season rows, 110 unique completed-event identities at the metadata-only feature-input gate, 11 source files, zero paid provider calls and zero Supabase writes. Artifact #14839276758, 440,550 bytes, SHA-256 `2a6cb4902da93c4d15050ba9407543a19bc32c68c3f1f5c4ebe07202bb8c7bd9`.
+- Current-form forward [run #45257233004](https://github.com/MaksimBlud/football-ai/actions/runs/45257233004) completed SUCCESS with 53 tests. It verified the parent run and source artifact above; source age at verification was 13,288 seconds. It reported `quotes_seen=0`, `v2_current_form_shadow_captured=0`, `target_outcomes_read=false`, `target_outcomes_scored=false`, zero paid calls and zero Supabase writes. Nevertheless it published artifact #14857862796 (441,731 bytes), SHA-256 `5e9515e6105164a2c3a4421c580c38ec73d29bbdd5b9b2de69c1967bd134c3a8`.
+- Original forward [run #45255423039](https://github.com/MaksimBlud/football-ai/actions/runs/45255423039) completed SUCCESS with 71 tests. It verified 3,800 historical rows from ten pre-prospective files, but `quotes_seen=0`, `future_quotes_checked=0`, `v2_diagnostic_previews_captured=0`, `forecasts_created=0`, and zero paid calls/Supabase writes. No forecast-quality evidence resulted.
+- The current-form source workflow log reports 119 current-season completed rows as lagged feature history. This audit did **not** download or open the source ZIP or inspect those rows. The separate target-outcome evaluation gate remains CLOSED; no target outcomes were read or scored here. Keep the feature-input metadata gate distinct from the 30-primary-completed-event target-outcome gate.
+
+**Fresh read-only Supabase odds audit**
+- Project `besxwboamipygwvrsblz`; SELECT only from `public.odds_snapshots`. Selected only league, event ID and snapshot/created/kickoff timestamps; no score, result, settlement or payload columns.
+- Strict pre-match predicate: `snapshot_time_utc < commence_time_utc`, `created_at >= snapshot_time_utc`, and `created_at < commence_time_utc`.
+- Across nine leagues: **3,966** snapshots total, **3,915** strict pre-match snapshots, **327** distinct events with strict pre-match snapshots, and **0** future events with a strict pre-match snapshot.
+- Strict pre-match rows by league: Bundesliga 394/404 (35 events); EPL 1,135/1,151 (70); Eredivisie 410/412 (39); La Liga 798/806 (52); Ligue 1 387/394 (35); Primeira Liga 9/9 (9); RPL 153/156 (15); Serie A 620/625 (63); Turkey Super Lig 9/9 (9). Latest strict snapshot: Serie A `2026-10-13T14:48:53.042620Z`; EPL `2026-10-09T15:25:57.102061Z`. No new prospective pre-match quote is available.
+
+**Supabase security advisory (not remediated)**
+- The live schema/advisor reports RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. Supabase classifies these tables as exposed to `anon` and `authenticated` roles. `public.odds_snapshots` has RLS enabled.
+- No DDL was executed. Supabase's suggested enablement statements are recorded for owner review only; policies must be designed before enabling RLS because doing so without policies can break legitimate access:
+
+```sql
+ALTER TABLE public.teams ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.predictions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.match_statistics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.league_prediction_ledger ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.epl_ai_market_pair_ledger ENABLE ROW LEVEL SECURITY;
+```
+
+**Frozen V2 and non-actions**
+- Original candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; original 19-feature contract and 20×2 weights unchanged; `active_lambda=0` remains the market, `shadow_lambda=1` remains research-only. Stability gate remains FAILED and prospective target-outcome gate remains **0/30 / CLOSED**. No Brier/LogLoss prospective comparison or superiority claim.
+- No archive bytes or protected target outcomes were opened; no paid API call, Supabase write/DDL, inference, refit, threshold tuning, production `.pkl` change, main update, merge, promotion, bet, schedule change or other-agent change occurred.
+
+**Next safe action:** HUMAN-MERGE review of #781 first. After a human integration, re-read fresh main and verify all five held workflows skip source/quote access and artifact upload. Only then rebase the private-repository/source-first chain and continue offline V2 verification. Do not initiate source capture or quote access while rights and embargo remain unresolved.
