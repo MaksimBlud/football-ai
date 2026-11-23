@@ -24,6 +24,16 @@ NOW = datetime(2026, 10, 14, 7, 0, tzinfo=timezone.utc)
 AFTER_CAPTURE = datetime(2026, 10, 14, 6, 0, tzinfo=timezone.utc)
 
 
+@pytest.fixture(autouse=True)
+def synthetic_inference_clearance(monkeypatch):
+    import market_anchor_v2_direct_access
+    monkeypatch.setattr(
+        market_anchor_v2_direct_access,
+        "require_v2_inference_access",
+        lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
+    )
+
+
 def quote(ts="2026-10-14T06:00:00Z"):
     return {
         "league": "SERIE_A", "event_id": "new-fixture-original-v2",
