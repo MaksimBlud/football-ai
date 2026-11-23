@@ -4,7 +4,9 @@ from io import BytesIO
 import json
 from datetime import datetime, timedelta, timezone
 import zipfile
+import sys
 
+import serie_a_v2_forward_capture as forward_capture
 import pytest
 
 from serie_a_v2_frozen_shadow_preview import parse_utc
@@ -15,6 +17,7 @@ from serie_a_v2_forward_capture import (
     ARTIFACT_NAME, ARCHIVE_REPORT, SOURCE_DIR,
     capture_forward_with_source_preflight, discover_archives, get_archive,
     prepare_forward_capture, verify_source_run, SOURCE_WORKFLOW_PATH,
+    require_private_repository,
 )
 
 NOW = datetime(2026, 10, 14, 7, 0, tzinfo=timezone.utc)
@@ -765,3 +768,156 @@ def test_get_archive_rejects_second_redirect_without_following_or_token(monkeypa
     assert "headers" not in calls[1][1]
     assert calls[1][1]["allow_redirects"] is False
 
+
+
+def test_private_repository_guard_accepts_only_exact_private_repository(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    url = "https://api.github.com/repos/MaksimBlud/football-ai"
+    calls = []
+
+    class Response:
+        status_code = 200
+        def __init__(self, data):
+            self.url = url
+            self.data = data
+        def json(self):
+            return self.data
+
+    def get(requested_url, headers, timeout, allow_redirects):
+        calls.append((requested_url, headers, timeout, allow_redirects))
+        assert headers["Authorization"] == "Bearer test-token"
+        return Response({"full_name": "MaksimBlud/football-ai", "private": True})
+
+    assert require_private_repository(token="test-token", get=get) == {
+        "repository": "MaksimBlud/football-ai", "private": True
+    }
+    assert len(calls) == 1
+    assert calls[0][0] == url
+    assert calls[0][3] is False
+
+
+def test_private_repository_guard_rejects_public_repository_before_source_access(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    url = "https://api.github.com/repos/MaksimBlud/football-ai"
+
+    class Response:
+        status_code = 200
+        url = url
+        def json(self):
+            return {"full_name": "MaksimBlud/football-ai", "private": False}
+
+    with pytest.raises(PermissionError, match="requires the exact GitHub repository to be private"):
+        require_private_repository(
+            token="test-token",
+            get=lambda requested_url, headers, timeout, allow_redirects: Response(),
+        )
+
+
+def test_private_repository_guard_rejects_wrong_repository_identity(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    url = "https://api.github.com/repos/MaksimBlud/football-ai"
+
+    class Response:
+        status_code = 200
+        url = url
+        def json(self):
+            return {"full_name": "attacker/other-repo", "private": True}
+
+    with pytest.raises(ValueError, match="identity mismatch"):
+        require_private_repository(
+            token="test-token",
+            get=lambda requested_url, headers, timeout, allow_redirects: Response(),
+        )
+
+
+def test_private_repository_guard_rejects_redirect_without_parsing_body(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    url = "https://api.github.com/repos/MaksimBlud/football-ai"
+
+    class Response:
+        status_code = 302
+        url = url
+        def json(self):
+            raise AssertionError("redirect body must not be parsed")
+
+    with pytest.raises(ValueError, match="HTTP 302"):
+        require_private_repository(
+            token="test-token",
+            get=lambda requested_url, headers, timeout, allow_redirects: Response(),
+        )
+
+
+def test_private_repository_guard_rejects_unexpected_final_url(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+
+    class Response:
+        status_code = 200
+        url = "https://evil.example/repos/MaksimBlud/football-ai"
+        def json(self):
+            raise AssertionError("unexpected response URL must be rejected before parsing")
+
+    with pytest.raises(ValueError, match="response URL"):
+        require_private_repository(
+            token="test-token",
+            get=lambda requested_url, headers, timeout, allow_redirects: Response(),
+        )
+
+
+def test_original_forward_cli_checks_private_repository_before_archive_discovery(monkeypatch, tmp_path):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    output = tmp_path / "output" / "forward.json"
+    sources = tmp_path / "sources"
+    monkeypatch.setattr(sys, "argv", [
+        "serie_a_v2_forward_capture.py",
+        "--output", str(output),
+        "--sources-output-dir", str(sources),
+    ])
+    calls = []
+
+    def reject_public_repository(*, token):
+        calls.append(("privacy", token))
+        raise PermissionError("repository is public")
+
+    def forbidden_discovery(*, token):
+        calls.append(("archives", token))
+        raise AssertionError("archive discovery must not run for a public repository")
+
+    monkeypatch.setattr(forward_capture, "require_private_repository", reject_public_repository)
+    monkeypatch.setattr(forward_capture, "discover_archives", forbidden_discovery)
+
+    with pytest.raises(PermissionError, match="repository is public"):
+        forward_capture.main()
+
+    assert calls == [("privacy", "test-token")]
+    assert not output.parent.exists()
+    assert not sources.exists()
+
+
+def test_original_forward_cli_keeps_live_access_gate_before_private_metadata(monkeypatch, tmp_path):
+    monkeypatch.delenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", raising=False)
+    monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    output = tmp_path / "output" / "forward.json"
+    sources = tmp_path / "sources"
+    monkeypatch.setattr(sys, "argv", [
+        "serie_a_v2_forward_capture.py",
+        "--output", str(output),
+        "--sources-output-dir", str(sources),
+    ])
+    calls = []
+
+    def forbidden(*_args, **_kwargs):
+        calls.append("called")
+        raise AssertionError("no metadata or archive access before live-access approval")
+
+    monkeypatch.setattr(forward_capture, "require_private_repository", forbidden)
+    monkeypatch.setattr(forward_capture, "discover_archives", forbidden)
+
+    with pytest.raises(PermissionError, match="MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=true"):
+        forward_capture.main()
+
+    assert calls == []
+    assert not output.parent.exists()
+    assert not sources.exists()
