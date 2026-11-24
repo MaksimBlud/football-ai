@@ -11,7 +11,7 @@ Big Balls Sports Data is a materially stronger free-source candidate than the pr
 However, this is **not yet a cleared source for the original frozen V2**:
 
 1. The current official OpenAPI and Serie A FAQ now both confirm that `GET /v1/matches/{id}/statistics` is Free; `expected_goals` remains Solo+. The earlier Edge-plan discrepancy is superseded. The separate Free season-depth conflict remains unresolved.
-2. The global pricing page says Free includes the current and most-recent season, while the dedicated Serie A page says Free covers only the current season. This conflict remains.
+2. The global pricing page contradicts itself: its summary says Free covers the current season, while its Free-plan bullet says current plus most-recent season; the dedicated Serie A page says current season only. This conflict remains.
 3. Published Serie A team-stat coverage is 4,210 / 4,591 finished matches (91.7%) across the provider's measured archive, not a current-2026/27 per-fixture completeness result.
 4. The upstream provider/field-rights chain and the meaning of per-match first-observed/correction timestamps are not independently established.
 5. No authenticated Free response was examined. No account, key, API call or download was made.
@@ -127,3 +127,8 @@ The current first-party [OpenAPI specification](https://bigballsdata.com/openapi
 The Free endpoint entitlement is now documented, but the Free season-depth conflict (global pricing versus the Serie A page), current 2026/27 field completeness, upstream rights, account-closure retention, and upstream first-observation/correction semantics remain unresolved. Local receipt UTC plus SHA-256 would prove only that the project possessed those exact response bytes before a later quote. It would not prove when the upstream first observed or corrected each field.
 
 No account/key was created, no provider/API request or data download was made, no Supabase access occurred for this provider audit, and no integration or inference is authorized. Decision remains **HOLD_NO_INTEGRATION**.
+
+
+### Season-depth contradiction recheck — 2026-11-24
+
+The current [global pricing page](https://bigballsdata.com/pricing) is internally inconsistent: its plan introduction says Free covers the current season, while the Free-tier bullet says current plus most-recent season. The dedicated [Serie A page](https://bigballsdata.com/serie-a-api) also describes Free as current-season access. Therefore the Free season-depth entitlement remains unresolved; no multi-season access is assumed.
