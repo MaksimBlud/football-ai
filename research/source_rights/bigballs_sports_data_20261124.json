@@ -1,7 +1,7 @@
 {
   "schema_version": "MARKET_ANCHOR_1X2_V2_PROVIDER_AUDIT_V1",
   "provider": "Big Balls Sports Data",
-  "reviewed_at_utc": "2026-11-24T12:52:28Z",
+  "reviewed_at_utc": "2026-11-24T18:19:34Z",
   "decision": "HOLD_NO_INTEGRATION",
   "official_evidence": {
     "terms_url": "https://bigballsdata.com/legal/terms",
@@ -13,7 +13,11 @@
     "changelog_url": "https://bigballsdata.com/whats-new",
     "terms_storage_and_model_use_sections": [
       "Usage rights"
-    ]
+    ],
+    "openapi_url": "https://bigballsdata.com/openapi.json",
+    "openapi_checked_at_utc": "2026-11-24T18:19:34Z",
+    "openapi_upstream_aggregation_description": "19+ free-tier upstream sources and 10 MCP scrapers; specific upstream source per field is not identified in the public OpenAPI description",
+    "current_serie_a_faq_checked_at_utc": "2026-11-24T18:19:34Z"
   },
   "provider_terms": {
     "api_response_storage_permitted": true,
@@ -36,10 +40,15 @@
     "odds_available": false,
     "expected_goals_available_on_free": false,
     "match_statistics_endpoint": "GET /v1/matches/{id}/statistics",
-    "match_statistics_endpoint_free_status": "CONFLICTING_OFFICIAL_DOCUMENTATION",
+    "match_statistics_endpoint_free_status": "CONFIRMED_FREE_IN_CURRENT_OPENAPI_AND_SERIE_A_FAQ",
     "changelog_says_statistics_endpoint_free_from": "2026-11-11",
-    "serie_a_page_matrix_still_labels_statistics_endpoint": "EDGE",
-    "serie_a_faq_says_route_free_but_expected_goals_solo_plus": true
+    "serie_a_page_matrix_still_labels_statistics_endpoint": false,
+    "serie_a_faq_says_route_free_but_expected_goals_solo_plus": true,
+    "openapi_endpoint_min_plan": "free",
+    "openapi_expected_goals_field_min_plan": "solo",
+    "match_statistics_endpoint_mode": "STORED_ONLY_POST_MATCH",
+    "match_statistics_endpoint_updates_hourly": true,
+    "upstream_posts_after_full_time_minutes_approx": 30
   },
   "coverage": {
     "all_seasons_finished_matches": 4591,
@@ -55,7 +64,15 @@
     "corners": "Advertised in soccer team-stat field catalogue; per-match Free response completeness is not verified.",
     "yellow_cards": "Advertised in soccer team-stat field catalogue; per-match Free response completeness is not verified.",
     "red_cards": "Advertised in soccer team-stat field catalogue; per-match Free response completeness is not verified.",
-    "exact_19_feature_parity_verified": false
+    "exact_19_feature_parity_verified": false,
+    "documented_source_fields": {
+      "points": "Derived from canonical final match score using the original 3/1/0 points rule",
+      "goals_for_against": "Canonical home/away final score",
+      "corners_for_against": "FixtureTeamStatistics.corner_kicks",
+      "yellow_cards": "FixtureTeamStatistics.yellow_cards",
+      "red_cards": "FixtureTeamStatistics.red_cards"
+    },
+    "feature_families_documented": true
   },
   "provenance": {
     "kickoff_utc_documented": true,
@@ -64,7 +81,10 @@
     "per_field_correction_timestamp_semantics_documented": false,
     "post_match_corrections_possible": true,
     "local_receipt_time_and_sha_can_prove_project_possession_before_quote": true,
-    "local_receipt_time_and_sha_prove_upstream_first_observation": false
+    "local_receipt_time_and_sha_prove_upstream_first_observation": false,
+    "statistics_endpoint_mode": "STORED_ONLY_POST_MATCH",
+    "statistics_endpoint_updates_hourly": true,
+    "upstream_post_match_availability_delay_minutes_approx": 30
   },
   "private_archive_protocol_if_later_authorized": {
     "preserve_exact_response_body_bytes": true,
@@ -107,12 +127,14 @@
     "supabase_reads_for_provider_audit": 0
   },
   "decision_reasons": [
-    "The provider terms are promising for private raw-response storage and internal model research, but the upstream field-rights chain is not independently documented.",
-    "Official Free-plan documentation conflicts on whether Serie A match-statistics access is Free or Edge and whether Free history includes one or two seasons.",
-    "Published 91.7% aggregate team-stat coverage is all-seasons coverage; current 2026/27 and required-field completeness are not reported.",
-    "No authenticated Free-plan response or match-level schema sample was reviewed.",
-    "Per-match first-observed and per-field correction timestamp semantics are not documented.",
-    "No account, key, request, source download, or owner authorization was provided."
+    "Current official OpenAPI and the current Serie A FAQ now confirm GET /v1/matches/{id}/statistics is Free; expected_goals is Solo+ and is not part of the original 19-feature contract.",
+    "The Free season-depth documentation still conflicts: the global pricing page says current plus most-recent season, while the dedicated Serie A page says current season only.",
+    "The OpenAPI describes aggregation from 19+ free-tier upstream sources and 10 MCP scrapers but does not identify the upstream source or rights chain for each required field.",
+    "The published 91.7% team-stat coverage is an older all-seasons aggregate, not current 2026/27 per-fixture or corner/yellow/red field completeness.",
+    "No authenticated Free-plan response or match-level schema sample was reviewed; no account, key or provider request was created.",
+    "The statistics route is stored-only and post-match, with hourly persistence and an approximate upstream delay of 30 minutes; per-match first-observed and per-field correction timestamp semantics remain undocumented.",
+    "Local receipt time and SHA can prove the project possessed exact response bytes before a later quote, but cannot prove upstream first observation or correction history.",
+    "Retention after account closure and written upstream field-rights clarification remain unresolved; owner authorization has not been provided."
   ],
   "integration_allowed": false,
   "automated_capture_authorized": false,
