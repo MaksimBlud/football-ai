@@ -802,16 +802,20 @@ def test_current_form_get_archive_rejects_missing_token_before_network():
     assert calls == []
 
 @pytest.mark.parametrize(
-    ("created_at", "remove_created_at", "message"),
+    ("created_at", "remove_created_at", "as_of_utc", "message"),
     [
-        (None, True, "saved quote row is missing created_at"),
-        ("2026-10-19T05:29:59Z", False, "saved quote row persisted before declared snapshot time"),
-        ("2026-10-19T05:40:01Z", False, "saved quote row persisted after capture clock"),
-        ("2026-10-19T18:00:00Z", False, "saved quote row persisted at or after kickoff"),
+        (None, True, datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+         "saved quote row is missing created_at"),
+        ("2026-10-19T05:29:59Z", False, datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+         "saved quote row persisted before declared snapshot time"),
+        ("2026-10-19T05:40:01Z", False, datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+         "saved quote row persisted after capture clock"),
+        ("2026-10-19T18:00:00Z", False, datetime(2026, 10, 19, 19, 0, tzinfo=timezone.utc),
+         "saved quote row persisted at or after kickoff"),
     ],
 )
 def test_current_form_quote_persistence_is_preflighted_before_source_callbacks(
-    created_at, remove_created_at, message
+    created_at, remove_created_at, as_of_utc, message
 ):
     raw, archives = make_archive()
     candidate = quote()
@@ -825,7 +829,7 @@ def test_current_form_quote_persistence_is_preflighted_before_source_callbacks(
         prepare_forward_capture(
             [candidate],
             archives,
-            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            as_of_utc=as_of_utc,
             load_archive=lambda _artifact_id: callbacks.append("archive") or raw,
             verify_parent_run=lambda *_args, **_kwargs: callbacks.append("parent") or {},
         )
