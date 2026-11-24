@@ -8076,3 +8076,32 @@ Read-only SELECT from `public.odds_snapshots` used only league, event ID, snapsh
 - No source-provider account/key/request/download, no paid odds request, no protected 2026/27 target-outcome read in this cycle, no Supabase write/DDL, no inference/refit, no threshold tuning, no production `.pkl` change, no main update/merge/promotion/bet, and no schedule or other-agent change.
 
 **Next safe action:** keep the root #781 HUMAN-MERGE review first. After a human merge, re-read main and verify the five live workflows skip source/quote access and artifact publication. Continue the existing #879 → #938 → #949 → #950 → #951 chain only after each parent is integrated; keep #952 and #874 as HOLD-only source audits until rights, exact coverage and private retention are independently cleared.
+
+
+## 2026-11-24 16:52 UTC — fresh main runtime checkpoint: current-form source archive verified, zero quote rows
+
+### Exact main and live workflows
+
+- Fresh default-branch main remains 40887ebb215730190d7a6c7a1693373ec4afcdfc; repository visibility is PUBLIC.
+- Read the exact current-main original-forward, current-form source-capture, and current-form forward workflow files. The original forward workflow still has the daily 08:08 UTC schedule, workflow_run on manually dispatched Serie A Odds Snapshots, live Supabase/GitHub credentials at job scope, and an artifact upload guarded by if: always(). The current-form source/forward workflows also still run on main with actions/checkout@v4, setup-python@v5, and public artifact uploads. No schedule was changed by this checkpoint.
+- Root default-deny PR #781 remains OPEN / Ready for review / mergeable, exact HEAD 5552bec363ae72ad7aef04c598d2ce861f33eb42, base main 40887ebb215730190d7a6c7a1693373ec4afcdfc, 8/8 exact-head checks SUCCESS. It gates all five original V2 live source/quote/recovery workflows and their uploads, including current-form source capture; it is not active on main until HUMAN-MERGE. PR #879 remains its private-repository child and is also unmerged.
+
+### Actual main-branch source and forward runs — metadata only, no artifact bytes copied into this report
+
+- Current-form source capture run #45438071171 completed SUCCESS at 2026-11-24 16:32:06 UTC on the main SHA above. The real job log reports the feature-input-only metadata gate passed with 120 unique completed primary events / 120 prior-day current-season rows; it captured 10 frozen historical CSVs plus 1 current-season CSV, 3,920 historical match rows, original candidate SHA a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6, zero paid provider calls and zero Supabase writes. Source artifact ID 14942801007, 440,666 bytes, GitHub ZIP SHA-256 a2f9e5882f268040b13400e37b2e30d345d72c494129c955aa008b6e90ff64d1, created 16:32:04 UTC, expiry 2027-02-22. The current-season parser uses only prior-day completed rows as lagged feature inputs after the separate 30-event feature-input gate; this is not the prospective evaluation-outcome gate.
+- Current-form forward preview run #45438267623 completed SUCCESS at 16:32:56 UTC. It independently verified source artifact ID 14942801007, its ZIP SHA, exact parent source workflow/run ID/head SHA, source observation 16:32:03.032 UTC, artifact creation 16:32:04 UTC, and parent completion 16:32:06 UTC before verification at 16:32:50 UTC (source age 46 seconds). It reports 3,920 historical match rows, 120 current-season history rows, 11 source files, 0 saved quote rows seen, 0 V2 current-form shadow captures, target evaluation gate CLOSED, no target outcomes read/scored, zero paid calls and zero production/Supabase writes. Forward artifact ID 14940799787, 441,831 bytes, SHA-256 37aad433404e55602b21df6f78f201d850f2720eac874daedef0ff5101d987ac, created 16:32:53 UTC, expiry 2027-02-22.
+- Both runs used the still-public repository's standard Actions artifact store. Artifact metadata is recorded here; archive bytes and match outcome values were not downloaded or inspected in this checkpoint. This is real source-archive/SHA/parent chronology runtime evidence, but it is not a real quote, a V2 prediction, or a model-quality result. It also confirms that the unmerged #781 hold is operationally important: source capture and public artifact publication still ran on main despite the separate provider-rights/private-storage HOLD.
+
+### Fresh Supabase pre-match-only read
+
+Read-only SELECT from public.odds_snapshots; selected only league, event ID, snapshot time, persistence time and kickoff time. Eligibility required snapshot_time_utc < commence_time_utc, snapshot_time_utc <= created_at, and created_at < commence_time_utc. No score/result/settlement columns were selected.
+
+- All leagues: 3,966 rows total; 3,915 strict pre-match rows; 327 unique events; 0 future-event eligible quote rows; 0 rows with persistence before snapshot.
+- Serie A: 625 total; 620 strict pre-match; 63 unique events; 0 future eligible quote rows; latest eligible snapshot remains 2026-10-13 14:48:53.042620 UTC.
+- No new prospective market quote is available for the original V2 current-form cohort.
+
+### Frozen V2 boundary
+
+Candidate SHA, exact 19-feature order, 20×2 weights, scaler/imputer, training fingerprint, active_lambda=0, shadow_lambda=1, failed historical stability gate and separate 30-eligible-prospective-forecast evaluation gate are unchanged. Evaluation remains 0/30 / CLOSED; no Brier/LogLoss comparison or superiority claim. No inference was performed because the current-form forward run had zero saved quotes.
+
+No Supabase writes/DDL, paid API requests, target-evaluation outcome reads, production .pkl changes, main updates, PR merges, promotions, bets, schedule changes, or other-agent changes occurred. HUMAN-MERGE remains mandatory.
