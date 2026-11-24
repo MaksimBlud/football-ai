@@ -10,6 +10,7 @@ on:
       - research/v2-forward-capture-scope-guard-on-945-20261123-run11
       - research/v2-source-provenance-writer-gate-integration-on-946-20261124-run11
       - research/v2-preview-outcome-embargo-on-947-20261124-run11
+      - research/v2-source-first-validator-node24-pins-on-949-20261124-run11
     paths:
       - "serie_a_v2_forward_capture.py"
       - "serie_a_v2_prequote_source_archive_gate.py"
@@ -44,6 +45,7 @@ on:
       - "tests/test_market_anchor_v2_saved_cohort_replay.py"
       - "tests/test_market_anchor_v2_training_rights.py"
       - "tests/test_serie_a_v2_quote_persistence_timestamp_contract.py"
+      - "tests/test_serie_a_v2_source_first_validation_workflow_contract.py"
       - ".github/workflows/market-anchor-v2-original-forward-source-first-validation.yml"
   pull_request:
     types: [opened, synchronize, reopened]
@@ -81,6 +83,7 @@ on:
       - "tests/test_market_anchor_v2_saved_cohort_replay.py"
       - "tests/test_market_anchor_v2_training_rights.py"
       - "tests/test_serie_a_v2_quote_persistence_timestamp_contract.py"
+      - "tests/test_serie_a_v2_source_first_validation_workflow_contract.py"
       - ".github/workflows/market-anchor-v2-original-forward-source-first-validation.yml"
 
 permissions:
@@ -105,11 +108,12 @@ jobs:
       MKL_NUM_THREADS: "1"
     steps:
       - name: Checkout exact research branch
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Set up Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install offline regression dependencies
@@ -149,6 +153,7 @@ jobs:
             tests/test_serie_a_v2_forward_direct_access_rights.py \
             tests/test_market_anchor_v2_saved_cohort_replay.py \
             tests/test_market_anchor_v2_training_rights.py \
-            tests/test_serie_a_v2_quote_persistence_timestamp_contract.py
+            tests/test_serie_a_v2_quote_persistence_timestamp_contract.py \
+            tests/test_serie_a_v2_source_first_validation_workflow_contract.py
       - name: Guard production model binaries
         run: git diff --exit-code origin/main...HEAD -- '*.pkl'
