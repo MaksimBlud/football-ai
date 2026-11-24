@@ -8174,3 +8174,29 @@ No provider/API request or download, paid odds request, Supabase write/DDL, prot
 - Final exact-head CI [#45457151474](https://github.com/MaksimBlud/football-ai/actions/runs/45457151474): **2/2 SUCCESS**; Python 3.11 **525 passed**, Python 3.12 **525 passed**; module compilation and production `.pkl` diff guard both passed.
 - These are offline/synthetic tests only. The provider rights manifest remains HOLD, so no real source/quote requests or inference are permitted. No Supabase access/write/DDL, protected target-outcome read, model refit, threshold tuning, production artifact change, main update, merge, schedule change, promotion, or betting occurred.
 - PR #955 remains Draft/HUMAN-MERGE and must follow #954 and the existing #781-rooted chain.
+## 2026-11-24 18:32 UTC — Big Balls Free endpoint recheck and exact-head audit
+
+### Original V2 source candidate: Big Balls Sports Data
+
+- Existing Draft [PR #952](https://github.com/MaksimBlud/football-ai/pull/952) was updated in place; no duplicate PR was created. Exact HEAD: `001c146eb92a4f31f9b7d56814951fb45ab662fe`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- The current official OpenAPI and Serie A FAQ now confirm `GET /v1/matches/{id}/statistics` is Free; `expected_goals` is Solo+ and is not part of the original 19 features. The earlier endpoint-tier discrepancy is superseded.
+- The statistics endpoint is stored-only, persisted hourly, and upstream statistics generally appear about 30 minutes after full time. It is only a possible lagged input source for later fixtures, not live pre-kickoff statistics for the same match.
+- Documented field families can map to the unchanged original features: final score -> goals and 3/1/0 points; `corner_kicks` -> corners; `yellow_cards` and `red_cards` -> cards. Exact 19-feature parity is NOT verified because current 2026/27 per-fixture and per-field completeness is unknown.
+- The Free season-depth conflict remains: global pricing advertises current plus most-recent season, while the Serie A page says current season only. The OpenAPI describes 19+ free-tier upstream sources and 10 MCP scrapers without identifying the upstream source/rights chain per required field. Per-match first-observed and per-field correction timestamps are undocumented; account-closure retention is undefined.
+- Provider decision remains `HOLD_NO_INTEGRATION`; no account/key, provider request, download, provider-specific Supabase read, integration, feature calculation or inference was performed. Private receipt UTC + SHA could prove project possession before a later quote, not upstream first observation.
+- Exact-head validation for #952: **7/7 workflow runs SUCCESS** on `001c146...`; dedicated [run #45460140252](https://github.com/MaksimBlud/football-ai/actions/runs/45460140252) passed **10 tests on Python 3.11 and 10 on Python 3.12**; both production `.pkl` diff guards passed. This is offline audit CI, not a live provider test.
+
+### Current main runtime and root hold
+
+- Main remains public at `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main change or merge occurred.
+- Main current-form source capture [#45438071171](https://github.com/MaksimBlud/football-ai/actions/runs/45438071171) succeeded with 120 feature-input gate events, 11 CSV files and archive SHA-256 `a2f9e5882f268040b13400e37b2e30d345d72c494129c955aa008b6e90ff64d1`. Raw source bytes were published as public Actions artifact `14942801007`.
+- Forward verification [#45438267623](https://github.com/MaksimBlud/football-ai/actions/runs/45438267623) verified the parent workflow and archive SHA 46 seconds later; it had 0 eligible quote rows and 0 shadow captures. The archive's public publication remains a live privacy/rights blocker.
+- Root default-deny PR #781 remains OPEN / Ready for review / mergeable, exact HEAD `5552bec363ae72ad7aef04c598d2ce861f33eb42`, exact-head CI 8/8 SUCCESS. It has not been merged; HUMAN-MERGE is required before treating the hold as active on main.
+- Current-form rights/private-storage child #954 remains Draft, exact HEAD `ec7aa84293a10c46c2dfb07f68bb4e0f1ebcc8c1`; exact CI 2/2, 514 tests on Python 3.11 and 3.12. Atomic/redirect-safe child #955 remains Draft, exact HEAD `3d9e2b48c05db7c4d9899eacb30b937e01f09dc3`; exact CI 2/2, 525 tests on each version. Both are offline/synthetic only and must follow #781 and ancestors.
+- Original-forward quote-persistence child #951 remains Draft at `f1ad14e783b4f03e8887516f6805d4650233fead`, 499 tests on each Python version; current-form helper child #953 remains Draft at `2fa0aa46e79966075ed911052a9c6dfa9f19888f`, 102 tests on each version. Neither grants source or inference rights.
+
+### Pre-match market data and model status
+
+- Read-only SELECT only from `public.odds_snapshots`; no target-outcome columns were queried. All leagues: 3,966 rows, 3,915 strict pre-match rows, 327 events, 0 future events with eligible quotes. Serie A: 625 total rows, 620 strict pre-match rows, 63 events, 0 future eligible quotes. Latest eligible Serie A snapshot remains 2026-10-13 14:48:53 UTC.
+- Original frozen candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; exact 19 ordered features, 20×2 weights, `active_lambda=0`, `shadow_lambda=1`. Historical stability gate FAILED; prospective evaluation remains 0/30 / CLOSED. The 120 completed events passed only the feature-input threshold after the preregistered 30-event gate; the separate prospective target-outcome evaluation gate remains closed.
+- No independent Brier/LogLoss comparison or superiority claim. No model inference on a future event, refit, threshold tuning, production `.pkl` change, Supabase write/DDL, paid API request, merge, promotion, bet, schedule change or other-agent setting change occurred.
