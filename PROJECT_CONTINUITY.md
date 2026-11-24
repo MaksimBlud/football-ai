@@ -7848,3 +7848,39 @@ ALTER TABLE public.epl_ai_market_pair_ledger ENABLE ROW LEVEL SECURITY;
 - Read-only `public.odds_snapshots` recheck remains 3,966 total rows, 3,915 strict pre-match rows, 327 event IDs, and zero future events with strict pre-match quotes. No result/score/payload/settlement columns were selected. Target-outcome gate remains 0/30 / CLOSED.
 
 No protected 2026/27 target outcome was read, no production `.pkl` was opened or modified, no paid API was called, no Supabase write/DDL occurred, and no merge, main update, promotion, or bet was performed.
+
+
+## 2026-11-24 02:52 UTC — Original V2: writer-to-gate integration and fresh main/runtime audit
+
+### Fresh main and active workflow defect
+- Repository default branch is `main`, visibility is `public`; current main commit remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- Fresh main `PROJECT_CONTINUITY.md` blob `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b` still starts with the 2026-10-18 checkpoint; it does not carry the current November source-rights/provenance checkpoint.
+- Main `serie_a_v2_forward_capture.py` blob `5db02cbd1367ed25b994b152acf371421859a014` still invokes `fetch_saved_upcoming_serie_a_quotes()` before `discover_archives()` and source verification. Main workflow `.github/workflows/serie-a-v2-forward-preview.yml` blob `48ce3b0d8e31c4cf293b94500e9c320047311467` still uploads the source/prediction artifact under `if: always()` and has no default-deny live-access or private-storage gate. Thus the unsafe ordering/public-artifact path remains active on main until the root HOLD chain is manually integrated.
+
+### Current HOLD and dependency chain (all still open; HUMAN-MERGE)
+- Root [#781](https://github.com/MaksimBlud/football-ai/pull/781): live PR API exact HEAD `5552bec363ae72ad7aef04c598d2ce861f33eb42`, Ready for review, base main `40887ebb...`; all eight associated exact-head workflow runs completed SUCCESS (run IDs: 45108795827, 45108795897, 45108795789, 45108795785, 45108795798, 45108795794, 45108795793, 45108795804). The PR body contains an older superseded SHA `3a70a864...`; use the live PR API HEAD above, not that stale body paragraph.
+- [#879](https://github.com/MaksimBlud/football-ai/pull/879) remains Draft, child of #781, exact HEAD `02bf0873979551ddd98511df013a27f872893990`; exact validation run #45136504472 SUCCESS.
+- [#938](https://github.com/MaksimBlud/football-ai/pull/938) remains Draft, child of #879, exact HEAD `14d765ca2b55e939d9ab5790abbbecd3a29f2614`; exact source-first validation run #45161516045 SUCCESS.
+- [#944](https://github.com/MaksimBlud/football-ai/pull/944) remains Draft, exact HEAD `12f9df3b2df07dbf192292af5ac2dc7edb00fa83`; exact CI run #45213354517 SUCCESS (113 tests on Python 3.11 and 113 on 3.12; compile and production-binary diff guard pass).
+- [#945](https://github.com/MaksimBlud/football-ai/pull/945) restacks rights, persistence timestamps and outcome holds on #944; remains Draft.
+- [#946](https://github.com/MaksimBlud/football-ai/pull/946) remains Draft, exact HEAD `8c13bb0178b1b7e18b16e2c74ce46cdc70d94ce9`; exact source-first validation run #45233487016 SUCCESS, 189 tests on each Python version; no provider request or real source access.
+- [#947](https://github.com/MaksimBlud/football-ai/pull/947) is the integration child of #946, exact HEAD `3839f256ac7c910d914d70cb0781cf58b55f82fa`; source-first validation runs #45309141329 (push) and #45309325902 (PR) SUCCESS, and frozen-shadow validation run #45309325907 SUCCESS. The exact Python 3.11 and 3.12 source-first jobs each report **396 passed**; production `.pkl` diff guard passes. #947 calls the actual `build_source_provenance()` writer and passes its returned envelope into `validate_shadow_capture_rows()` using synthetic offline fixtures. This proves writer/validator schema integration only, not live provenance or prediction quality.
+
+### Provider rights and source access
+- #946's manifest/guards retain separate denials for automated source capture, frozen inference and AI training; no permission was granted. No source/API request or archive download was performed in this checkpoint.
+- Source-before-quote is implemented on the #938/#946/#947 research chain but is not yet on main. Do not run the public main live workflow while it remains unprotected; #781 must be manually reviewed first.
+
+### Fresh Supabase pre-match-only read
+Read-only SELECT from `public.odds_snapshots`, using `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= created_at < commence_time_utc`:
+- 3,966 total rows; 3,915 strict pre-match rows; 327 distinct events; 0 future strict pre-match rows.
+- League strict rows: Bundesliga 394; EPL 1,135; Eredivisie 410; La Liga 798; Ligue 1 387; Primeira Liga 9; RPL 153; Serie A 620; Turkey Super Lig 9.
+- `created_at` is mutable by privileged database roles; these counts are temporal consistency evidence, not cryptographic source attestation.
+- Supabase table/advisory inspection also reports RLS disabled on `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. No remediation DDL was executed; policies must be designed before enabling RLS.
+
+### Frozen model and evaluation status
+- Original candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 ordered features; 20×2 weights; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; `active_lambda=0`, `shadow_lambda=1`.
+- Historical stability gate remains FAILED: 2/6 dual-metric prior-season wins; Brier CI95 upper +0.003236877; LogLoss CI95 upper +0.006038958; corresponding superiority probabilities 0.6831 and 0.6317. No thresholds or weights changed.
+- Prospective outcome gate remains 0/30. Incumbent comparator provenance is unresolved; do not run the legacy XGBoost model, fabricate incumbent probabilities, or read protected 2026/27 outcomes.
+- No scientific superiority claim is permitted until the original frozen gate is satisfied and independent Brier/LogLoss evaluation is completed.
+
+No main update or merge, no Supabase write/DDL, no paid provider call, no production `.pkl` access/change, no inference/refit, no schedule/agent changes, and no protected target-outcome read.
