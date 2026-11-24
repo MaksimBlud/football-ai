@@ -7757,3 +7757,27 @@ ALTER TABLE public.epl_ai_market_pair_ledger ENABLE ROW LEVEL SECURITY;
 - No archive bytes or protected target outcomes were opened; no paid API call, Supabase write/DDL, inference, refit, threshold tuning, production `.pkl` change, main update, merge, promotion, bet, schedule change or other-agent change occurred.
 
 **Next safe action:** HUMAN-MERGE review of #781 first. After a human integration, re-read fresh main and verify all five held workflows skip source/quote access and artifact upload. Only then rebase the private-repository/source-first chain and continue offline V2 verification. Do not initiate source capture or quote access while rights and embargo remain unresolved.
+
+
+### 2026-11-24 00:52 UTC — incumbent comparator identity and provider-rights gate
+
+**Fresh main and repository control**
+- Re-read GitHub default branch and commit API: `main=40887ebb215730190d7a6c7a1693373ec4afcdfc`; main `PROJECT_CONTINUITY.md` blob `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b` still contains the October 18 checkpoint. The branch API reports `protected=false`; repository visibility is `public`.
+- Main does not contain `market_anchor_v2_source_rights.py`, `market_anchor_v2_source_capture_rights.py`, or `research/source_rights/football_data_co_uk.json` (404 at main). Its original forward file remains the older blob `5db02cbd1367ed25b994b152acf371421859a014`. Main workflow `.github/workflows/serie-a-v2-free-real-quote-diagnostic.yml` remains blob `60bd304153e5c731ff6246c76fe2f3ace1bc0dcb`, with Supabase secrets available to the job and an unconditional `if: always()` source-artifact upload. The current-form source and forward workflows also still publish artifacts under `if: always()`.
+- Root default-deny [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN, exact HEAD `5552bec363ae72ad7aef04c598d2ce861f33eb42`; all eight workflow runs tied to that exact SHA completed SUCCESS. This is not active on main until HUMAN-MERGE.
+
+**Provider rights — hard stop, not a scheduling problem**
+- On the original-forward rights branch [#946](https://github.com/MaksimBlud/football-ai/pull/946), exact HEAD `8c13bb0178b1b7e18b16e2c74ce46cdc70d94ce9`, the pinned Football-Data manifest records `research_source_capture_permitted=false`, `research_inference_permitted=false`, `ai_model_training_permitted=false`, `rights_status=V2_FROZEN_INFERENCE_SCOPE_UNRESOLVED`, and `authorization=null`. The official policy pages were reviewed on 2026-11-21 and displayed an update date of 2026-11-20. The source-capture and inference guards fail closed; the two-downloads-per-week limit is explicitly only a ceiling, not authorization.
+- #946's exact-head isolated validation run #45233487016 completed SUCCESS on Python 3.11 and 3.12. No source download, quote read, inference, training, or live call is authorized by this manifest. Do not resume automated Football-Data capture or frozen V2 inference without a provider-issued grant covering the exact use and private retention.
+
+**New evaluation-integrity blocker: incumbent identity and as-of evidence**
+- The frozen V2 protocol `experiments/market_anchor_1x2_v2_protocol.json` requires four-way row probabilities: de-vigged market, frozen production incumbent, original candidate, and lambda-1 residual shadow. Its review signal requires both Brier and LogLoss to beat market **and** incumbent.
+- The outcome-gate validator at #942 hard-codes `INCUMBENT_MODEL_SHA256=1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5` and requires incumbent probabilities plus `incumbent_generated_at_utc`. The repository tree also contains `football_model_xgboost_elo.pkl`, but this audit did not access the binary and did **not** establish that its digest equals the incumbent SHA. Do not infer that mapping or run the legacy artifact.
+- The current capture-row contract and #944 source-provenance writer establish source archive/parent-run chronology, but do not establish a separate incumbent model/input provenance envelope. Therefore the frozen incumbent comparator is not independently as-of verified. This must remain an explicit unresolved blocker; do not use or revive XGBoost to fill it, and do not change the registered V2 protocol or weights to bypass it.
+- #942 itself states that existing forward writers did not yet emit its required source-provenance envelope; #944 adds that writer on a separate open branch. No real capture row is presently proven eligible for the 30-event gate.
+
+**Current exact PR/CI checkpoint**
+- Documentation PR #839 remains OPEN on this branch. Before this note, exact HEAD was `7b8ed429fd8f76ef5cfa33a3e4ac202cdcc58269`; its eight exact-head runs #45292961786, #45292961581, #45292961625, #45292961791, #45292961703, #45292961558, #45292961651, and #45292962786 all completed SUCCESS. This note is a documentation-only follow-up; new exact-head CI must pass before describing it as validated.
+- Read-only `public.odds_snapshots` recheck remains 3,966 total rows, 3,915 strict pre-match rows, 327 event IDs, and zero future events with strict pre-match quotes. No result/score/payload/settlement columns were selected. Target-outcome gate remains 0/30 / CLOSED.
+
+No protected 2026/27 target outcome was read, no production `.pkl` was opened or modified, no paid API was called, no Supabase write/DDL occurred, and no merge, main update, promotion, or bet was performed.
