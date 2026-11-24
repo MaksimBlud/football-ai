@@ -13,6 +13,8 @@ from pathlib import Path
 import re
 from urllib.parse import urlsplit
 
+from market_anchor_v2_provider_policy_evidence import verify_fair_use_policy_evidence
+
 REPOSITORY_ROOT = Path(__file__).resolve().parent
 DEFAULT_RIGHTS_MANIFEST_PATH = (
     REPOSITORY_ROOT / "research" / "source_rights" / "football_data_co_uk.json"
@@ -136,6 +138,7 @@ def require_ai_model_training_permission(
     return {
         "provider": EXPECTED_PROVIDER,
         "rights_manifest_sha256": hashlib.sha256(raw).hexdigest(),
+        **fair_use_policy,
         "evidence_file": evidence_file,
         "evidence_sha256": actual_sha,
         "evidence_url": evidence_url,
@@ -180,6 +183,17 @@ def require_personal_research_inference_scope(
         raise PermissionError("source-rights manifest schema is not approved")
     if manifest.get("provider") != EXPECTED_PROVIDER:
         raise PermissionError("source-rights manifest provider does not match the inference source")
+
+    if now is None:
+        now = datetime.now(timezone.utc)
+    if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
+        raise PermissionError("source-rights verification clock must have a real UTC offset")
+    now_utc = now.astimezone(timezone.utc)
+    fair_use_policy = verify_fair_use_policy_evidence(
+        manifest,
+        now_utc=now_utc,
+        repo_root=root,
+    )
     if manifest.get("provider_issued_ai_inference_license") is not True:
         raise PermissionError(
             "the frozen-inference scope remains unresolved under the current public policy; no V2 inference or source use is allowed"
