@@ -397,6 +397,9 @@ def _has_external_io(text: str) -> bool:
 OFFLINE_ACTIONS = {
     "actions/checkout@v4",
     "actions/setup-python@v5",
+    # Immutable upstream commit references used by the current source-first chain.
+    "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+    "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
 }
 
 
@@ -1019,4 +1022,18 @@ def test_held_action_pin_validation_is_pull_request_only_and_credential_free():
     for workflow in HELD_V2_ACTION_WORKFLOWS:
         assert f'"{workflow}"' in text
     assert f'"{path}"' in text
-    assert f'"{testPath}"' in text
+    assert '"tests/test_serie_a_v2_workflow_external_access_hold.py"' in text
+
+
+def test_original_forward_source_first_validation_workflow_is_offline_only():
+    path = ".github/workflows/market-anchor-v2-original-forward-source-first-validation.yml"
+    text = _workflow(path)
+    assert "schedule:" not in text
+    assert "workflow_dispatch:" not in text
+    assert "SUPABASE_URL" not in text and "SUPABASE_KEY" not in text
+    assert "GITHUB_TOKEN:" not in text and "secrets." not in text
+    assert "actions/upload-artifact" not in text
+    assert "actions/download-artifact" not in text
+    assert all(action in OFFLINE_ACTIONS for action in _action_refs(text))
+    assert "python -m pytest -q" in text
+    assert "git diff --exit-code" in text
