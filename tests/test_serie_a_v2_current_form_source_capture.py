@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone, tzinfo
 from pathlib import Path
 from types import SimpleNamespace
 import hashlib
@@ -341,7 +341,7 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
         output_dir=tmp_path,
         client=FakeQuery(event_rows(30)),
         now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
-        get=lambda url, timeout: Response(),
+        get=lambda url, timeout, allow_redirects=False: Response(),
         history_fetch=fake_history,
         clock=lambda: next(source_times),
     )
@@ -411,6 +411,14 @@ def test_source_capture_workflow_is_default_deny_and_preserves_existing_schedule
     job_header = workflow.split("  capture-current-form:", 1)[1].split("    steps:", 1)[0]
     assert "SUPABASE_URL" not in job_header
     assert "SUPABASE_KEY" not in job_header
+    assert '"serie_a_v2_live_diagnostic_report.py"' in workflow
+    assert '"tests/test_serie_a_v2_live_diagnostic_report.py"' in workflow
+    assert "serie_a_v2_live_diagnostic_report.py" in workflow.split(
+        "name: Validate feature-input gate and source integrity rules", 1
+    )[1].split("      - name: Verify private repository storage before live V2 access", 1)[0]
+    assert "tests/test_serie_a_v2_live_diagnostic_report.py" in workflow.split(
+        "name: Validate feature-input gate and source integrity rules", 1
+    )[1].split("      - name: Verify private repository storage before live V2 access", 1)[0]
 
 
 def test_current_form_capture_scopes_github_token_only_to_gated_capture_step():
@@ -445,9 +453,17 @@ def test_current_form_source_capture_rights_validation_is_covered_by_source_firs
     assert "research/v2-current-form-source-capture-rights-on-951-20261124-run11" in workflow
     assert '"serie_a_v2_current_form_source_capture.py"' in workflow
     assert '"tests/test_serie_a_v2_current_form_source_capture.py"' in workflow
+    assert '"serie_a_v2_live_diagnostic_report.py"' in workflow
+    assert '"tests/test_serie_a_v2_live_diagnostic_report.py"' in workflow
+    assert "serie_a_v2_live_diagnostic_report.py" in workflow.split(
+        "name: Compile original V2 source-first modules", 1
+    )[1].split("      - name: Run original V2 source-first and frozen-contract regressions", 1)[0]
     assert "serie_a_v2_current_form_source_capture.py" in workflow.split(
         "name: Compile original V2 source-first modules", 1
     )[1].split("      - name: Run original V2 source-first and frozen-contract regressions", 1)[0]
+    assert "tests/test_serie_a_v2_live_diagnostic_report.py" in workflow.split(
+        "      - name: Run original V2 source-first and frozen-contract regressions", 1
+    )[1].split("      - name: Guard production model binaries", 1)[0]
     assert "tests/test_serie_a_v2_current_form_source_capture.py" in workflow.split(
         "      - name: Run original V2 source-first and frozen-contract regressions", 1
     )[1].split("      - name: Guard production model binaries", 1)[0]
@@ -459,3 +475,263 @@ def test_current_form_source_capture_rights_validation_is_covered_by_source_firs
     assert "actions/upload-artifact" not in workflow
     assert "actions/download-artifact" not in workflow
     assert "git diff --exit-code origin/main...HEAD -- '*.pkl'" in workflow
+
+
+def _write_historical_capture_sources(*, get, capture_dir):
+    audits = []
+    for code in _source_codes():
+        filename = f"serie_a_{code}.csv"
+        body = (
+            "Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HC,AC,HY,AY,HR,AR\\n"
+            f"01/10/{2000 + int(code[:2])},Juventus,Napoli,1,0,H,5,3,2,1,0,0\\n"
+        ).encode()
+        (capture_dir / filename).write_bytes(body)
+        audits.append({
+            "season_code": code,
+            "source_url": f"https://www.football-data.co.uk/mmz4281/{code}/I1.csv",
+            "archived_source_name": filename,
+            "csv_sha256": hashlib.sha256(body).hexdigest(),
+            "source_observed_at_utc": "2026-10-18T08:00:00+00:00",
+            "completed_source_rows": 1,
+        })
+    return pd.DataFrame([{"historical": 1}]), audits
+
+
+def test_source_capture_clock_rejects_naive_or_offsetless_datetime():
+    class NoOffset(tzinfo):
+        def utcoffset(self, _dt):
+            return None
+
+        def dst(self, _dt):
+            return None
+
+    values = [
+        datetime(2026, 10, 18, 8, 1),
+        datetime(2026, 10, 18, 8, 1, tzinfo=NoOffset()),
+    ]
+    for value in values:
+        with pytest.raises(ValueError, match="timezone-aware"):
+            source_capture._clock_utc(lambda value=value: value, field="test source clock")
+
+
+def test_source_capture_clock_normalizes_explicit_offset_to_utc():
+    local = datetime(2026, 10, 18, 11, 1, tzinfo=timezone(timedelta(hours=3)))
+    assert source_capture._clock_utc(
+        lambda: local, field="test source clock"
+    ) == datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc)
+
+
+def test_source_archive_creation_clock_cannot_precede_source_observation():
+    observed = datetime(2026, 10, 18, 8, 2, tzinfo=timezone.utc)
+    earlier = datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc)
+    with pytest.raises(ValueError, match="precedes source observation"):
+        source_capture._archive_creation_utc(lambda: earlier, observed_at=observed)
+    assert source_capture._archive_creation_utc(
+        lambda: observed, observed_at=observed
+    ) == observed
+
+
+def test_source_archive_rejects_naive_entry_clock_before_metadata_or_io(tmp_path):
+    def forbidden(*_args, **_kwargs):
+        pytest.fail("invalid source clock must fail before metadata or source access")
+
+    with pytest.raises(ValueError, match="timezone-aware"):
+        source_capture._capture_source_archive(
+            output_dir=tmp_path / "published",
+            client=object(),
+            now=datetime(2026, 10, 18, 8),
+            access=_synthetic_source_capture_access(),
+            get=forbidden,
+            history_fetch=forbidden,
+        )
+    assert not (tmp_path / "published").exists()
+
+
+def test_source_archive_refuses_symlink_or_occupied_output_before_metadata_or_io(tmp_path):
+    def forbidden(*_args, **_kwargs):
+        pytest.fail("unsafe output destination must fail before metadata or source access")
+
+    occupied = tmp_path / "occupied"
+    occupied.mkdir()
+    sentinel = occupied / "preserve.txt"
+    sentinel.write_text("previous evidence", encoding="utf-8")
+    with pytest.raises(FileExistsError, match="must be absent or empty"):
+        source_capture._capture_source_archive(
+            output_dir=occupied,
+            client=object(),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            access=_synthetic_source_capture_access(),
+            get=forbidden,
+            history_fetch=forbidden,
+        )
+    assert sentinel.read_text(encoding="utf-8") == "previous evidence"
+    assert list(occupied.iterdir()) == [sentinel]
+
+    target = tmp_path / "target"
+    target.mkdir()
+    link = tmp_path / "symlink-destination"
+    link.symlink_to(target, target_is_directory=True)
+    with pytest.raises(ValueError, match="cannot be a symlink"):
+        source_capture._capture_source_archive(
+            output_dir=link,
+            client=object(),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            access=_synthetic_source_capture_access(),
+            get=forbidden,
+            history_fetch=forbidden,
+        )
+    assert list(target.iterdir()) == []
+
+
+def test_source_archive_discards_partial_history_after_current_source_redirect(tmp_path):
+    output_dir = tmp_path / "published"
+    events = []
+
+    class RedirectResponse:
+        status_code = 302
+        url = "https://redirect.invalid/current-season.csv"
+
+        @property
+        def content(self):
+            raise AssertionError("redirect body must not be read")
+
+        def raise_for_status(self):
+            events.append("response_checked")
+
+    def fake_get(url, timeout, allow_redirects=False):
+        assert url == CURRENT_URL
+        assert timeout == 30
+        assert allow_redirects is False
+        events.append("request")
+        return RedirectResponse()
+
+    with pytest.raises(RuntimeError, match="requires HTTP 200 without redirects"):
+        source_capture._capture_source_archive(
+            output_dir=output_dir,
+            client=FakeQuery(event_rows(30)),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            access=_synthetic_source_capture_access(),
+            get=fake_get,
+            history_fetch=_write_historical_capture_sources,
+            clock=lambda: pytest.fail("observation clock must not be read after redirect"),
+        )
+
+    assert events == ["request", "response_checked"]
+    assert not output_dir.exists()
+    assert not list(tmp_path.glob(".published.staging-*"))
+
+
+def test_source_archive_rejects_unexpected_current_final_url_before_body_or_clock(tmp_path):
+    output_dir = tmp_path / "published"
+
+    class RedirectedSuccess:
+        status_code = 200
+        url = "https://redirect.invalid/current-season.csv"
+
+        @property
+        def content(self):
+            raise AssertionError("unexpected response body must not be read")
+
+        def raise_for_status(self):
+            return None
+
+    def fake_get(url, timeout, allow_redirects=False):
+        assert url == CURRENT_URL
+        assert allow_redirects is False
+        return RedirectedSuccess()
+
+    with pytest.raises(ValueError, match="response URL differs from configured URL"):
+        source_capture._capture_source_archive(
+            output_dir=output_dir,
+            client=FakeQuery(event_rows(30)),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            access=_synthetic_source_capture_access(),
+            get=fake_get,
+            history_fetch=_write_historical_capture_sources,
+            clock=lambda: pytest.fail("observation clock must not be read after unexpected URL"),
+        )
+    assert not output_dir.exists()
+    assert not list(tmp_path.glob(".published.staging-*"))
+
+
+def test_source_archive_publishes_complete_source_set_atomically(tmp_path):
+    output_dir = tmp_path / "published"
+    raw = current_csv(n=30)
+    events = []
+    clock_values = iter([
+        datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc),
+        datetime(2026, 10, 18, 8, 2, tzinfo=timezone.utc),
+    ])
+
+    class Response:
+        status_code = 200
+        url = CURRENT_URL
+
+        @property
+        def content(self):
+            events.append("body_read")
+            return raw
+
+        def raise_for_status(self):
+            events.append("response_checked")
+
+    def fake_get(url, timeout, allow_redirects=False):
+        assert url == CURRENT_URL
+        assert timeout == 30
+        assert allow_redirects is False
+        events.append("request")
+        return Response()
+
+    def clock():
+        events.append(f"clock_{len([item for item in events if item.startswith('clock_')]) + 1}")
+        return next(clock_values)
+
+    report = source_capture._capture_source_archive(
+        output_dir=output_dir,
+        client=FakeQuery(event_rows(30)),
+        now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+        access=_synthetic_source_capture_access(),
+        get=fake_get,
+        history_fetch=_write_historical_capture_sources,
+        clock=clock,
+    )
+
+    expected = {f"serie_a_{code}.csv" for code in _source_codes()}
+    expected.update({CURRENT_FILENAME, MANIFEST_FILENAME})
+    assert output_dir.is_dir()
+    assert {path.name for path in output_dir.iterdir()} == expected
+    assert report["source_file_count"] == 11
+    assert report["current_season_source_sha256"] == hashlib.sha256(raw).hexdigest()
+    assert report["source_archive_created_at_utc"] == "2026-10-18T08:02:00+00:00"
+    assert events[-5:] == ["request", "response_checked", "body_read", "clock_1", "clock_2"]
+    assert not list(tmp_path.glob(".published.staging-*"))
+
+
+def test_source_archive_rejects_backwards_archive_clock_without_publication(tmp_path):
+    output_dir = tmp_path / "published"
+    raw = current_csv(n=30)
+    clock_values = iter([
+        datetime(2026, 10, 18, 8, 2, tzinfo=timezone.utc),
+        datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc),
+    ])
+
+    class Response:
+        status_code = 200
+        url = CURRENT_URL
+        content = raw
+
+        def raise_for_status(self):
+            return None
+
+    with pytest.raises(ValueError, match="precedes source observation"):
+        source_capture._capture_source_archive(
+            output_dir=output_dir,
+            client=FakeQuery(event_rows(30)),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            access=_synthetic_source_capture_access(),
+            get=lambda url, timeout, allow_redirects=False: Response(),
+            history_fetch=_write_historical_capture_sources,
+            clock=lambda: next(clock_values),
+        )
+    assert not output_dir.exists()
+    assert not list(tmp_path.glob(".published.staging-*"))
