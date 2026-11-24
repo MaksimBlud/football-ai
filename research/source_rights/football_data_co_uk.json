@@ -24,6 +24,7 @@
   "fair_use_policy_checked_at_utc": "2026-11-24T23:52:28Z",
   "fair_use_policy_page_updated_date": "2026-11-24",
   "fair_use_policy_evidence_file": "research/source_rights/evidence/football_data_contact_fair_use_20261124.md",
-  "fair_use_policy_evidence_sha256": "397ae960028c57917339eda2a9ef847b1ef908d99d25d97984ea3c25bbd36068",
-  "automated_download_ceiling_is_authorization": false
+  "fair_use_policy_evidence_sha256": "83878a159f7adc5ac81471f2ec8a3e0a951b9d4936bc4cb23c9a7045472d6be8",
+  "automated_download_ceiling_is_authorization": false,
+  "fair_use_policy_evidence_kind": "LOCAL_PARAPHRASE_NOTE_NOT_PROVIDER_PAGE_BYTES"
 }
