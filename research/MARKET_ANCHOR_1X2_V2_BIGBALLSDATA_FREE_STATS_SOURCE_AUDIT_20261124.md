@@ -76,10 +76,10 @@ No source capture, API request or SHA was created in this audit. The source-befo
 ## Public landing-page integrity warning
 
 The provider's official [Serie A page](https://bigballsdata.com/serie-a-api) contains visible cross-sport contamination at the checked revision:
-- The tile labelled "Latest served Serie A match" displays **Soldier Field**, a **20–10** score, and **Q4 / NYG drive** American-football text.
+- The page's "Verified match event replay" identifies **Fiorentina 2–2 Juventus**; its "Latest served Serie A match" tile identifies the same fixture but shows **20–10**, **Soldier Field**, and **Q4 / NYG drive** American-football text.
 - A tile labelled Serie A fantasy displays NFL player names and metrics (including CMC and NACUA).
 
-The page reports 4,941 total Serie A matches and 4,671 finished games. The difference is 270, which is consistent with 270 scheduled fixtures remaining in a 20-team, 38-round season; it is not treated as a contradiction. The NFL content is a direct public-page observation, not an API-response test. It does not prove every underlying API row is wrong, but it is a severe data-integrity warning that requires a provider explanation before any data use.
+The page reports 4,941 total Serie A matches and 4,671 finished games. The difference is 270, which is consistent with 270 scheduled fixtures remaining in a 20-team, 38-round season; it is not treated as a contradiction. The same-fixture 2–2 versus 20–10 score conflict and NFL content are direct public-page observations, not API-response tests. They do not prove every underlying API row is wrong, but they are severe data-integrity warnings that require a provider explanation before any data use.
 
 ## Frozen V2 invariants
 
