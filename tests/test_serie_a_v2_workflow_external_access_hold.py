@@ -397,9 +397,12 @@ def _has_external_io(text: str) -> bool:
 OFFLINE_ACTIONS = {
     "actions/checkout@v4",
     "actions/setup-python@v5",
-    # Immutable upstream commit references used by the current source-first chain.
+    # Immutable Node 20 refs retained by the parent source-first validation workflow.
     "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
     "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+    # Current held workflows use immutable Node 24 upstream commits.
+    "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+    "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1",
 }
 
 
@@ -977,9 +980,9 @@ def test_external_io_inventory_recognizes_compiled_runtimes_shells_and_container
 # chain as the V2 live-access hold. These are immutable upstream commit SHAs,
 # independently resolved from the official actions/* repositories.
 PINNED_ACTIONS_V2 = {
-    "actions/checkout": "11d5960a326750d5838078e36cf38b85af677262",
-    "actions/setup-python": "a26af69be951a213d495a4c3e4e4022e16d87065",
-    "actions/upload-artifact": "ea165f8d65b6e75b540449e92b4886f43607fa02",
+    "actions/checkout": "d23441a48e516b6c34aea4fa41551a30e30af803",
+    "actions/setup-python": "ece7cb06caefa5fff74198d8649806c4678c61a1",
+    "actions/upload-artifact": "b7c566a772e6b6bfb58ed0dc250532a479d7789f",
 }
 
 HELD_V2_ACTION_WORKFLOWS = (
@@ -1013,8 +1016,8 @@ def test_held_action_pin_validation_is_pull_request_only_and_credential_free():
     assert "pull_request:" in text
     assert "workflow_dispatch:" not in text
     assert "schedule:" not in text
-    assert "actions/checkout@11d5960a326750d5838078e36cf38b85af677262" in text
-    assert "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065" in text
+    assert "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803" in text
+    assert "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1" in text
     assert "actions/upload-artifact@" not in text
     assert "secrets.SUPABASE_URL" not in text
     assert "secrets.SUPABASE_KEY" not in text
