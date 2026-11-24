@@ -10,7 +10,7 @@ Big Balls Sports Data is the strongest newly reviewed free current-season statis
 
 The provider advertises Serie A scores, standings and match statistics. Its documented soccer match-statistics schema includes corners, yellow cards and red cards; match scores provide goals, and points can be derived from completed match results. These fields map to the unchanged 19-feature families at schema level.
 
-**It is not cleared for integration.** The provider aggregates many upstream sources but explicitly hides vendor identity behind an opaque source-tier label. The public coverage matrix marks soccer team statistics as partial, all fixture-stat fields are nullable, and exact 2026/27 Serie A per-fixture completeness is not established. The official pages also conflict on the Free plan's season scope. No provider API call was made.
+**It is not cleared for integration.** The provider aggregates many upstream sources but explicitly hides vendor identity behind an opaque source-tier label. The public coverage matrix marks soccer team statistics as partial, all fixture-stat fields are nullable, and exact 2026/27 Serie A per-fixture completeness is not established. The official pages also conflict on the Free plan's season scope. In addition, the official Serie A landing page visibly contains cross-sport contamination: its purported latest Serie A match tile shows Soldier Field, a 20–10 score and Q4/NFL-drive text; a Serie A fantasy tile includes NFL player names; and the page gives conflicting Serie A archive counts (4,941 versus 4,671). This is a severe data-integrity red flag, not a cosmetic issue to ignore. No provider API call was made.
 
 ## Free plan and contract
 
@@ -72,6 +72,15 @@ A related endpoint, `GET /v1/stored/matches/{id}/stats`, documents `meta.as_of` 
 If written upstream clearance and exact feature coverage are later established, a future-only authorized collector could preserve the exact response bytes, request path/parameters (excluding credentials), response headers, local receipt UTC time and SHA-256 in private storage **before** reading any later saved market quote. That would prove that the project possessed those exact bytes before the quote. It would not prove when the upstream source first observed or corrected each field.
 
 No source capture, API request or SHA was created in this audit. The source-before-quote gate remains **unproven**.
+
+## Public landing-page integrity warning
+
+The provider's official [Serie A page](https://bigballsdata.com/serie-a-api) contains multiple visible contradictions at the checked revision:
+- The tile labelled "Latest served Serie A match" displays **Soldier Field**, a **20–10** score, and **Q4 / NYG drive** American-football text.
+- A tile labelled Serie A fantasy displays NFL player names (including CMC and NACUA).
+- The top summary reports **4,941 Serie A matches**, while the archive table on the same page reports **4,671 finished games** for the same 13-season span.
+
+These are direct observations on the provider's public Serie A page, not API-response tests. They do not prove every underlying API row is wrong, but they are strong evidence that the public page/data presentation is not internally reliable. Until the provider explains the cross-sport contamination and reconciles the counts, this source must remain on HOLD even if the licence language is attractive.
 
 ## Frozen V2 invariants
 
