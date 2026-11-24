@@ -104,12 +104,12 @@ def test_original_frozen_v2_candidate_is_exact_and_unchanged():
 
 def test_no_account_key_request_download_or_model_operation_was_performed():
     auth = load_audit()["project_authorization"]
-    assert auth["account_created"] is False
-    assert auth["api_key_created"] is False
-    assert auth["api_requests"] == 0
-    assert auth["source_download_performed"] is False
-    assert auth["raw_source_sha256_captured"] is False
-    assert auth["supabase_reads"] == 0
+    assert auth["provider_account_created"] is False
+    assert auth["provider_api_key_created"] is False
+    assert auth["provider_api_requests"] == 0
+    assert auth["provider_source_download_performed"] is False
+    assert auth["provider_response_sha256_captured"] is False
+    assert auth["supabase_reads_for_provider_audit"] == 0
     assert auth["supabase_writes"] == 0
     assert auth["supabase_ddl"] == 0
     assert auth["protected_2026_27_outcomes_read"] is False
