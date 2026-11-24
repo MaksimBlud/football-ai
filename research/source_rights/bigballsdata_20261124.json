@@ -1,0 +1,124 @@
+{
+  "schema_version": "MARKET_ANCHOR_1X2_V2_EXTERNAL_CURRENT_FORM_SOURCE_AUDIT_V1",
+  "source": "Big Balls Sports Data",
+  "checked_at_utc": "2026-11-24T05:52:32Z",
+  "candidate_status": "HOLD_NO_INTEGRATION",
+  "free_plan": {
+    "monthly_price_usd": 0,
+    "requests_per_day": 1000,
+    "requests_per_minute": 100,
+    "no_credit_card_advertised": true,
+    "free_season_scope_global_pricing": "current + most-recent season",
+    "free_season_scope_serie_a_page": "current season only",
+    "free_season_scope_conflict_between_official_pages": true,
+    "current_2026_27_serie_a_listed": true,
+    "match_scores_available": true,
+    "standings_available": true,
+    "match_statistics_available": true,
+    "bookmaker_odds_available": false,
+    "bookmaker_odds_minimum_plan": "Edge",
+    "bookmaker_odds_advertised_monthly_price_usd": 149,
+    "historical_training_corpus_2014_2026_available_on_free_plan": false,
+    "api_key_required_for_authenticated_full_data_access": true
+  },
+  "documented_endpoints": {
+    "match_list": "GET /v1/matches",
+    "stored_match_stats": "GET /v1/stored/matches/{id}/stats",
+    "soccer_match_statistics": "GET /v1/matches/{id}/statistics",
+    "soccer_match_statistics_minimum_plan": "free",
+    "soccer_match_statistics_storage": "persisted hourly; stored-only response",
+    "soccer_match_statistics_timing": "upstream feed commonly posts within about 30 minutes after full time",
+    "soccer_match_statistics_coverage_status": "team_stats partial in public coverage matrix",
+    "xg_below_solo": "omitted"
+  },
+  "documented_fields": {
+    "score_supplies_goals_for_and_against": true,
+    "points_can_be_derived_from_completed_match_score": true,
+    "corner_kicks_field_documented": true,
+    "yellow_cards_field_documented": true,
+    "red_cards_field_documented": true,
+    "all_fixture_team_stat_fields_nullable": true,
+    "exact_serie_a_2026_27_per_fixture_completeness_verified": false,
+    "every_required_corner_and_card_value_available_for_each_prior_fixture_verified": false,
+    "original_v2_full_19_feature_parity_verified": false
+  },
+  "rights": {
+    "terms_effective_date": "2026-08-10",
+    "private_api_response_storage_and_retention_permitted_by_provider_terms": true,
+    "internal_model_training_evaluation_and_backtesting_permitted_by_provider_terms": true,
+    "internal_model_inference_permitted_by_provider_terms": true,
+    "derived_models_scores_predictions_and_aggregates_owned_by_customer_under_terms": true,
+    "raw_data_feed_redistribution_permitted": false,
+    "upstream_provider_identity_verified": false,
+    "upstream_field_level_rights_verified": false,
+    "written_upstream_rights_confirmation_required": true
+  },
+  "provenance": {
+    "response_meta_source_is_opaque_tier_label": true,
+    "response_meta_source_reveals_vendor_identity": false,
+    "field_result_schema_has_source_string": true,
+    "field_result_source_is_documented_as_vendor_identity": false,
+    "field_result_schema_applies_to_soccer_match_statistics_response": false,
+    "soccer_match_statistics_route_exposes_per_record_as_of": false,
+    "soccer_match_statistics_route_exposes_per_field_first_observed_time": false,
+    "stored_stats_route_meta_as_of_semantics": "ingested_at, not request time or upstream provider update",
+    "stored_stats_route_often_returns_empty_team_stats_for_soccer": true,
+    "stored_stats_route_points_to_soccer_match_statistics_endpoint": true,
+    "provider_first_observed_timestamp_documented": false,
+    "per_field_correction_timestamp_documented": false,
+    "local_receipt_time_and_raw_sha256_can_prove_project_possession_before_quote_if_later_authorized": true,
+    "local_receipt_time_and_raw_sha256_prove_upstream_first_observation": false,
+    "source_before_quote_proven": false
+  },
+  "project_authorization": {
+    "account_created": false,
+    "api_key_created": false,
+    "provider_api_requests": 0,
+    "source_download_performed": false,
+    "raw_source_sha256_captured": false,
+    "provider_specific_supabase_reads": 0,
+    "general_read_only_serie_a_prematch_odds_queries": 1,
+    "supabase_writes": 0,
+    "supabase_ddl": 0,
+    "protected_2026_27_outcomes_read": false,
+    "model_inference_performed": false,
+    "production_pickle_changed": false
+  },
+  "frozen_candidate": {
+    "experiment_id": "MARKET_ANCHOR_1X2_V2",
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "training_fingerprint_sha256": "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098",
+    "training_rows": 3799,
+    "feature_count": 19,
+    "weights_shape": [
+      20,
+      2
+    ],
+    "active_lambda": 0,
+    "shadow_residual_lambda": 1,
+    "stability_gate_passed": false,
+    "automatic_promotion": false
+  },
+  "official_documents": {
+    "terms": "https://bigballsdata.com/legal/terms",
+    "pricing": "https://bigballsdata.com/",
+    "introduction": "https://bigballsdata.com/docs/introduction",
+    "openapi": "https://bigballsdata.com/openapi.json",
+    "coverage": "https://bigballsdata.com/coverage",
+    "serie_a": "https://bigballsdata.com/serie-a-api"
+  },
+  "decision": {
+    "status": "HOLD_NO_INTEGRATION",
+    "integration_allowed": false,
+    "possible_role_if_cleared": "future-only current-season lagged statistics for the unchanged original 19-feature builder; not a replacement training corpus and not a market-odds source",
+    "reasons": [
+      "Provider terms explicitly permit private response retention and internal model training, evaluation, backtesting and inference; this is stronger than several previously reviewed free providers.",
+      "The official pricing and Serie A pages disagree on whether Free includes the current plus most-recent season or only the current season; either scope is insufficient for the original 2014-2026 training corpus.",
+      "The Free plan does not include bookmaker odds; the existing frozen market-quote source must remain unchanged.",
+      "The required goals, points, corners and card feature families are schema-level present, but all match-stat fields are nullable and the public coverage matrix marks soccer team_stats partial; exact 2026/27 Serie A per-fixture completeness is unverified.",
+      "The API aggregates many upstream sources; meta.source is an opaque tier label and does not reveal the vendor identity. Upstream identities and field-level rights are not verified.",
+      "The soccer match-statistics endpoint is stored-only and updated hourly but does not document per-record or per-field first-observed/correction timestamps. Local receipt time plus SHA could prove possession before a future quote only after authorized capture.",
+      "No provider account, key, API request or source download was created; no feature calculation or inference was performed."
+    ]
+  }
+}
