@@ -433,37 +433,29 @@ def test_current_form_capture_scopes_github_token_only_to_gated_capture_step():
     assert "steps.private-storage.outputs.is_private == 'true'" in capture_step
 
 
-def test_current_form_source_capture_rights_validator_is_offline_and_credentialless():
+
+def test_current_form_source_capture_rights_validation_is_covered_by_source_first_ci():
     workflow_path = (
         Path(__file__).resolve().parents[1]
         / ".github"
         / "workflows"
-        / "market-anchor-v2-current-form-source-capture-rights-validation.yml"
+        / "market-anchor-v2-original-forward-source-first-validation.yml"
     )
     workflow = workflow_path.read_text(encoding="utf-8")
-    uses = [
-        line.split("uses:", 1)[1].strip()
-        for line in workflow.splitlines()
-        if "uses:" in line
-    ]
-    assert uses == [
-        "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
-        "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1",
-    ]
+    assert "research/v2-current-form-source-capture-rights-on-951-20261124-run11" in workflow
+    assert '"serie_a_v2_current_form_source_capture.py"' in workflow
+    assert '"tests/test_serie_a_v2_current_form_source_capture.py"' in workflow
+    assert "serie_a_v2_current_form_source_capture.py" in workflow.split(
+        "name: Compile original V2 source-first modules", 1
+    )[1].split("      - name: Run original V2 source-first and frozen-contract regressions", 1)[0]
+    assert "tests/test_serie_a_v2_current_form_source_capture.py" in workflow.split(
+        "      - name: Run original V2 source-first and frozen-contract regressions", 1
+    )[1].split("      - name: Guard production model binaries", 1)[0]
     assert "persist-credentials: false" in workflow
     assert "contents: read" in workflow
-    for forbidden in (
-        "secrets.",
-        "SUPABASE_",
-        "THE_ODDS_API",
-        "GITHUB_TOKEN",
-        "${{ github.token }}",
-        "workflow_dispatch:",
-        "workflow_run:",
-        "schedule:",
-        "actions/upload-artifact",
-        "actions/download-artifact",
-    ):
-        assert forbidden not in workflow
-    assert "research/v2-current-form-source-capture-rights-on-951-20261124-run11" in workflow
-    assert "research/v2-original-forward-persisted-quote-row-gate-on-950-20261124-run11" in workflow
+    assert "secrets." not in workflow
+    assert "SUPABASE_" not in workflow
+    assert "GITHUB_TOKEN" not in workflow
+    assert "actions/upload-artifact" not in workflow
+    assert "actions/download-artifact" not in workflow
+    assert "git diff --exit-code origin/main...HEAD -- '*.pkl'" in workflow
