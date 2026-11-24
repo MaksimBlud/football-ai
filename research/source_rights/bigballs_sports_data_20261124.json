@@ -1,0 +1,121 @@
+{
+  "schema_version": "MARKET_ANCHOR_1X2_V2_PROVIDER_AUDIT_V1",
+  "provider": "Big Balls Sports Data",
+  "reviewed_at_utc": "2026-11-24T12:52:28Z",
+  "decision": "HOLD_NO_INTEGRATION",
+  "official_evidence": {
+    "terms_url": "https://bigballsdata.com/legal/terms",
+    "terms_effective_date": "2026-08-10",
+    "serie_a_url": "https://bigballsdata.com/serie-a-api",
+    "soccer_guide_url": "https://bigballsdata.com/docs/soccer",
+    "endpoint_reference_url": "https://bigballsdata.com/docs/endpoints",
+    "coverage_url": "https://bigballsdata.com/coverage",
+    "changelog_url": "https://bigballsdata.com/whats-new",
+    "terms_storage_and_model_use_sections": [
+      "Usage rights"
+    ]
+  },
+  "provider_terms": {
+    "api_response_storage_permitted": true,
+    "internal_model_use_permitted": true,
+    "internal_training_evaluation_backtesting_permitted": true,
+    "raw_feed_resale_or_redistribution_permitted": false,
+    "raw_field_republication_permitted": false,
+    "upstream_provider_identity_and_field_level_rights_independently_verified": false,
+    "retention_after_account_closure_explicitly_defined": false,
+    "terms_grant_scope": "Private storage and internal models; raw feed redistribution remains prohibited."
+  },
+  "free_plan": {
+    "monthly_price_usd": 0,
+    "requests_per_day": 1000,
+    "requests_per_minute": 100,
+    "current_season_access_advertised": true,
+    "current_plus_most_recent_season_advertised_on_global_pricing": true,
+    "serie_a_page_says_free_covers_current_season": true,
+    "season_depth_status": "CONFLICTING_OFFICIAL_DOCUMENTATION",
+    "odds_available": false,
+    "expected_goals_available_on_free": false,
+    "match_statistics_endpoint": "GET /v1/matches/{id}/statistics",
+    "match_statistics_endpoint_free_status": "CONFLICTING_OFFICIAL_DOCUMENTATION",
+    "changelog_says_statistics_endpoint_free_from": "2026-11-11",
+    "serie_a_page_matrix_still_labels_statistics_endpoint": "EDGE",
+    "serie_a_faq_says_route_free_but_expected_goals_solo_plus": true
+  },
+  "coverage": {
+    "all_seasons_finished_matches": 4591,
+    "all_seasons_matches_with_team_stats": 4210,
+    "all_seasons_team_stats_coverage": 0.917,
+    "current_2026_27_match_level_coverage": "UNKNOWN",
+    "field_level_corner_yellow_red_card_coverage": "UNKNOWN",
+    "coverage_snapshot_last_refreshed": "2026-11-06",
+    "no_authenticated_free_plan_response_reviewed": true
+  },
+  "original_v2_feature_mapping": {
+    "results_and_goals": "Potentially derivable from canonical match final scores.",
+    "corners": "Advertised in soccer team-stat field catalogue; per-match Free response completeness is not verified.",
+    "yellow_cards": "Advertised in soccer team-stat field catalogue; per-match Free response completeness is not verified.",
+    "red_cards": "Advertised in soccer team-stat field catalogue; per-match Free response completeness is not verified.",
+    "exact_19_feature_parity_verified": false
+  },
+  "provenance": {
+    "kickoff_utc_documented": true,
+    "response_source_or_update_metadata_present_when_available": true,
+    "per_match_first_observed_timestamp_semantics_documented": false,
+    "per_field_correction_timestamp_semantics_documented": false,
+    "post_match_corrections_possible": true,
+    "local_receipt_time_and_sha_can_prove_project_possession_before_quote": true,
+    "local_receipt_time_and_sha_prove_upstream_first_observation": false
+  },
+  "private_archive_protocol_if_later_authorized": {
+    "preserve_exact_response_body_bytes": true,
+    "preserve_request_path_and_nonsecret_query": true,
+    "preserve_response_headers_and_provider_metadata": true,
+    "record_local_receipt_time_utc": true,
+    "sha256_exact_body_bytes": true,
+    "require_capture_time_before_later_quote_snapshot": true,
+    "store_only_in_private_repository_or_private_storage": true,
+    "public_raw_artifact_upload_allowed": false,
+    "paid_odds_or_paid_provider_calls_allowed": false
+  },
+  "frozen_candidate": {
+    "experiment_id": "MARKET_ANCHOR_1X2_V2",
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "training_fingerprint_sha256": "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098",
+    "training_rows": 3799,
+    "feature_count": 19,
+    "weight_shape": [
+      20,
+      2
+    ],
+    "active_lambda": 0,
+    "shadow_residual_lambda": 1,
+    "stability_gate_passed": false,
+    "automatic_promotion": false
+  },
+  "project_authorization": {
+    "account_created": false,
+    "api_key_created": false,
+    "api_requests": 0,
+    "source_download_performed": false,
+    "raw_source_sha256_captured": false,
+    "supabase_reads": 0,
+    "supabase_writes": 0,
+    "supabase_ddl": 0,
+    "protected_2026_27_outcomes_read": false,
+    "model_inference_performed": false,
+    "model_refit_or_training_performed": false,
+    "production_pickle_changed": false
+  },
+  "decision_reasons": [
+    "The provider terms are promising for private raw-response storage and internal model research, but the upstream field-rights chain is not independently documented.",
+    "Official Free-plan documentation conflicts on whether Serie A match-statistics access is Free or Edge and whether Free history includes one or two seasons.",
+    "Published 91.7% aggregate team-stat coverage is all-seasons coverage; current 2026/27 and required-field completeness are not reported.",
+    "No authenticated Free-plan response or match-level schema sample was reviewed.",
+    "Per-match first-observed and per-field correction timestamp semantics are not documented.",
+    "No account, key, request, source download, or owner authorization was provided."
+  ],
+  "integration_allowed": false,
+  "automated_capture_authorized": false,
+  "frozen_inference_authorized": false,
+  "model_retraining_allowed_by_project": false
+}
