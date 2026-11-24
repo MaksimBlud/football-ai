@@ -32,3 +32,39 @@ def test_source_first_validator_runs_this_contract_test_on_push_and_pull_request
     assert text.count(f'      - "{TEST_PATH}"') == 2
     assert f"            {TEST_PATH}" in text
     assert f"      - {BRANCH}" in text
+
+
+def test_source_first_validator_is_read_only_and_cannot_access_live_data_or_publish_artifacts():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    permissions = re.search(
+        r"(?ms)^permissions:\\n((?:[ \\t]+[^\\n]*\\n)+)", text
+    )
+    assert permissions is not None
+    assert permissions.group(1).splitlines() == ["  contents: read"]
+
+    # This isolated validator must remain offline with no provider/database token scope.
+    for forbidden in (
+        "secrets.",
+        "SUPABASE_",
+        "THE_ODDS_API",
+        "GITHUB_TOKEN",
+        "${{ github.token }}",
+    ):
+        assert forbidden not in text
+
+    # Only push and pull_request are permitted; no scheduled or manually
+    # dispatched entrypoint may turn this validator into a live workflow.
+    assert not re.search(
+        r"(?m)^\\s+(?:schedule|workflow_dispatch|workflow_run):", text
+    )
+    assert not re.search(
+        r"(?m)^\\s*uses:\\s*actions/(?:upload|download)-artifact@", text
+    )
+
+    checkout = re.search(
+        r"(?ms)^      - name: Checkout exact research branch\\n"
+        r"(?P<body>.*?)(?=^      - name:|\\Z)",
+        text,
+    )
+    assert checkout is not None
+    assert "persist-credentials: false" in checkout.group("body")
