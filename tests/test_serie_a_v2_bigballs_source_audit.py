@@ -47,17 +47,50 @@ def test_provider_terms_are_promising_but_do_not_authorize_public_raw_redistribu
     assert terms["retention_after_account_closure_explicitly_defined"] is False
 
 
-def test_free_plan_conflicts_are_preserved_as_hold_not_resolved_by_assumption():
+def test_free_plan_endpoint_is_confirmed_free_but_season_depth_remains_hold():
     free = load_audit()["free_plan"]
     assert free["monthly_price_usd"] == 0
     assert free["requests_per_day"] == 1000
     assert free["requests_per_minute"] == 100
     assert free["odds_available"] is False
     assert free["expected_goals_available_on_free"] is False
-    assert free["season_depth_status"] == "CONFLICTING_OFFICIAL_DOCUMENTATION"
-    assert free["match_statistics_endpoint_free_status"] == "CONFLICTING_OFFICIAL_DOCUMENTATION"
+    assert free["match_statistics_endpoint_free_status"] == "CONFIRMED_FREE_IN_CURRENT_OPENAPI_AND_SERIE_A_FAQ"
+    assert free["openapi_endpoint_min_plan"] == "free"
+    assert free["openapi_expected_goals_field_min_plan"] == "solo"
+    assert free["serie_a_page_matrix_still_labels_statistics_endpoint"] is False
     assert free["changelog_says_statistics_endpoint_free_from"] == "2026-11-11"
-    assert free["serie_a_page_matrix_still_labels_statistics_endpoint"] == "EDGE"
+    assert free["season_depth_status"] == "CONFLICTING_OFFICIAL_DOCUMENTATION"
+    assert free["current_plus_most_recent_season_advertised_on_global_pricing"] is True
+    assert free["serie_a_page_says_free_covers_current_season"] is True
+
+
+def test_match_statistics_route_is_stored_post_match_and_not_a_live_pre_match_feed():
+    audit = load_audit()
+    free = audit["free_plan"]
+    provenance = audit["provenance"]
+    assert free["match_statistics_endpoint_mode"] == "STORED_ONLY_POST_MATCH"
+    assert free["match_statistics_endpoint_updates_hourly"] is True
+    assert free["upstream_posts_after_full_time_minutes_approx"] == 30
+    assert provenance["statistics_endpoint_mode"] == "STORED_ONLY_POST_MATCH"
+    assert provenance["statistics_endpoint_updates_hourly"] is True
+    assert provenance["upstream_post_match_availability_delay_minutes_approx"] == 30
+    assert provenance["per_match_first_observed_timestamp_semantics_documented"] is False
+    assert provenance["per_field_correction_timestamp_semantics_documented"] is False
+    assert provenance["local_receipt_time_and_sha_can_prove_project_possession_before_quote"] is True
+    assert provenance["local_receipt_time_and_sha_prove_upstream_first_observation"] is False
+
+
+def test_documented_stat_fields_cover_original_families_without_claiming_exact_19_parity():
+    mapping = load_audit()["original_v2_feature_mapping"]
+    fields = mapping["documented_source_fields"]
+    assert "final match score" in fields["points"]
+    assert "final score" in fields["goals_for_against"]
+    assert fields["corners_for_against"] == "FixtureTeamStatistics.corner_kicks"
+    assert fields["yellow_cards"] == "FixtureTeamStatistics.yellow_cards"
+    assert fields["red_cards"] == "FixtureTeamStatistics.red_cards"
+    assert mapping["feature_families_documented"] is True
+    assert mapping["exact_19_feature_parity_verified"] is False
+    assert "expected_goals" not in EXPECTED_FEATURES
 
 
 def test_aggregate_team_stats_coverage_is_not_misrepresented_as_current_season_completeness():
