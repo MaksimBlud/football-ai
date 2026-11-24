@@ -150,6 +150,7 @@ def test_forward_v2_scores_only_after_real_prior_archive_and_never_promotes():
     assert report["eligible_for_product_publication"] is False
     assert report["no_bet"] is True
     row = report["rows"][0]
+    assert row["quote_row_created_at_utc"] == "2026-10-14T06:00:01+00:00"
     assert row["source_artifact_sha256"] == metadata[0]["sha256"]
     provenance = row["source_provenance"]
     assert set(provenance) == {
@@ -182,6 +183,50 @@ def test_forward_v2_scores_only_after_real_prior_archive_and_never_promotes():
         row["v2_preview"]["active_market_fallback_1x2"]
     )
     assert row["v2_preview"]["eligible_for_frozen_prospective_cohort"] is False
+
+
+@pytest.mark.parametrize(
+    ("created_at", "message"),
+    [
+        ("2026-10-14T05:59:59Z", "persisted before declared snapshot time"),
+        ("2026-10-14T07:00:01Z", "persisted after capture clock"),
+        ("2026-10-20T18:00:00Z", "persisted at or after kickoff"),
+    ],
+)
+def test_forward_capture_rejects_invalid_quote_persistence_time_before_archive_io(
+    created_at, message
+):
+    raw, metadata = make_source_archive()
+    calls = []
+    with pytest.raises(ValueError, match=message):
+        prepare_forward_capture(
+            [{**quote(), "created_at": created_at}],
+            metadata,
+            as_of_utc=NOW,
+            load_archive=lambda _artifact_id: calls.append("archive") or raw,
+            verify_parent_run=lambda archive, quote_time: (
+                calls.append("parent") or fake_verified_parent_run(archive, quote_time)
+            ),
+        )
+    assert calls == []
+
+
+def test_forward_capture_requires_database_persistence_timestamp_before_archive_io():
+    raw, metadata = make_source_archive()
+    calls = []
+    missing = quote()
+    del missing["created_at"]
+    with pytest.raises(ValueError, match="saved quote row is missing created_at"):
+        prepare_forward_capture(
+            [missing],
+            metadata,
+            as_of_utc=NOW,
+            load_archive=lambda _artifact_id: calls.append("archive") or raw,
+            verify_parent_run=lambda archive, quote_time: (
+                calls.append("parent") or fake_verified_parent_run(archive, quote_time)
+            ),
+        )
+    assert calls == []
 
 
 def test_original_october_13_quote_is_not_backfilled_from_later_archive():
