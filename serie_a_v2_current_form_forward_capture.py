@@ -516,6 +516,15 @@ def _latest_quotes(quotes: list[dict], *, now: datetime) -> list[dict]:
             raise ValueError("quote identity is incomplete")
         kickoff = parse_utc(q["commence_time_utc"])
         snapshot = parse_utc(q["snapshot_time_utc"])
+        if "created_at" not in q:
+            raise ValueError("saved quote row is missing created_at")
+        created_at = parse_utc(q["created_at"])
+        if created_at > now:
+            raise ValueError("saved quote row persisted after capture clock")
+        if snapshot <= now and created_at < snapshot:
+            raise ValueError("saved quote row persisted before declared snapshot time")
+        if not created_at < kickoff:
+            raise ValueError("saved quote row persisted at or after kickoff")
         if snapshot > now or not snapshot < kickoff:
             raise ValueError("invalid current-form quote timing")
         identity = (event, home, away, kickoff)
@@ -569,6 +578,7 @@ def prepare_forward_capture(
             "home_team": quote["home_team"],
             "away_team": quote["away_team"],
             "quote_time_utc": quote_time.isoformat(),
+            "quote_row_created_at_utc": parse_utc(quote["created_at"]).isoformat(),
             "kickoff_utc": kickoff.isoformat(),
         }
         if not now < kickoff:
