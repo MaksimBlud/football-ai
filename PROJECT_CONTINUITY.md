@@ -1,3 +1,41 @@
+## 2026-11-24 01:52 UTC — Original V2: fresh all-league pre-match quote audit and exact documentation CI
+
+### Fresh repository and PR state
+- Re-read public `main`: `40887ebb215730190d7a6c7a1693373ec4afcdfc`; main `PROJECT_CONTINUITY.md` blob remains `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`. The main branch and its workflows were not modified.
+- Existing documentation PR [#839](https://github.com/MaksimBlud/football-ai/pull/839) exact HEAD before this checkpoint: `be8060f00820d0850ed88fa31ae1751632b15954`.
+- All eight exact-head PR jobs on that SHA completed SUCCESS: Research `45301110919`, Product `45301110949`, Serie A `45301110908`, Bundesliga `45301111409`, Frozen V2 Shadow `45301111449`, Ligue 1 `45301110960`, Eredivisie `45301111052`, and La Liga `45301111230`. Each run's sole job was independently read and reported `completed/success`.
+- Root workflow HOLD [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review / HUMAN-MERGE at `5552bec363ae72ad7aef04c598d2ce861f33eb42`; its eight exact-head jobs remain SUCCESS. It is not integrated, so it does not protect main yet. Private-artifact guard #879 and source-first chain #938 remain draft children and are not integrated.
+
+### Read-only Supabase pre-match aggregate
+- Queried only `public.odds_snapshots` and only `league,event_id,snapshot_time_utc,commence_time_utc,created_at`; no scores, results, settlement, target outcomes, or other result-bearing fields were selected.
+- Strict predicate: `snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= created_at AND created_at < commence_time_utc`.
+- All nine stored leagues: **3,966 total rows; 3,915 strict pre-match rows; 327 distinct strict pre-match events; 0 future-kickoff strict rows/events**. Thus 51 stored rows do not satisfy the strict persistence/time predicate.
+- Per-league result (total / strict rows / strict events / future strict rows):
+  - Bundesliga: 404 / 394 / 35 / 0
+  - EPL: 1,151 / 1,135 / 70 / 0
+  - Eredivisie: 412 / 410 / 39 / 0
+  - La Liga: 806 / 798 / 52 / 0
+  - Ligue 1: 394 / 387 / 35 / 0
+  - Primeira Liga: 9 / 9 / 9 / 0
+  - RPL: 156 / 153 / 15 / 0
+  - Serie A: 625 / 620 / 63 / 0
+  - Turkey Super Lig: 9 / 9 / 9 / 0
+- Latest strict Serie A quote remains `2026-10-13T14:48:53.042620Z`. No new future event has a strict pre-match quote. These are timestamp-consistency counts, not cryptographic source attestation: privileged writers can alter `created_at`.
+- The table schema reports RLS enabled for `public.odds_snapshots`. No Supabase write, DDL, source download, provider request, or outcome query occurred.
+
+### Live V2 runtime remains diagnostic-only
+- Current-Form Source Capture [run #45217596300](https://github.com/MaksimBlud/football-ai/actions/runs/45217596300) succeeded on main and produced a public source archive despite the project's current Football-Data manifest HOLD. The archive was not downloaded or reused in this audit.
+- Current-Form Forward [run #45257233004](https://github.com/MaksimBlud/football-ai/actions/runs/45257233004): `quotes_seen=0`, `v2_current_form_shadow_captured=0`, target outcomes not read/scored.
+- Original Forward [run #45255423039](https://github.com/MaksimBlud/football-ai/actions/runs/45255423039): 71 tests passed, but `quotes_seen=0`, `future_quotes_checked=0`, `v2_diagnostic_previews_captured=0`; no eligible prospective forecast.
+- The main workflows still need the manual root HOLD integration. Do not treat a successful diagnostic workflow or a public artifact as permission to use provider data.
+
+### Frozen V2 and evaluation boundary
+- Original candidate remains SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 features, original 20×2 weights, scaler/imputer and training fingerprint unchanged; `active_lambda=0`, `shadow_lambda=1`.
+- The independent 30-primary-completed-event outcome gate remains CLOSED / 0 of 30. No prospective Brier/LogLoss comparison or superiority claim is available.
+- No XGBoost execution, production `.pkl` access/change, refit, threshold tuning, promotion, bet, paid API request, schedule change, merge, or main update.
+
+HUMAN-MERGE only. This checkpoint is documentation-only and does not authorize source capture, inference, quote access, or outcome reads.
+
 ## 2026-11-23 21:58 UTC — Original V2: current-form archive was re-fetched and republished despite zero quotes
 
 ### Fresh main and frozen candidate
