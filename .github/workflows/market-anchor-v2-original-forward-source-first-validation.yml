@@ -152,7 +152,7 @@ jobs:
             tests/test_serie_a_v2_forward_direct_access_rights.py \
             tests/test_market_anchor_v2_saved_cohort_replay.py \
             tests/test_market_anchor_v2_training_rights.py \
-            tests/test_serie_a_v2_quote_persistence_timestamp_contract.py \\
+            tests/test_serie_a_v2_quote_persistence_timestamp_contract.py \
             tests/test_serie_a_v2_source_first_validation_workflow_contract.py
       - name: Guard production model binaries
         run: git diff --exit-code origin/main...HEAD -- '*.pkl'
