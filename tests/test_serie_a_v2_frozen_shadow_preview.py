@@ -290,3 +290,191 @@ def test_preserve_exact_frozen_predictions_with_explicit_imputation_diagnostics(
     assert row["historical_team_coverage"] is None
     assert row["market_1x2"] == pytest.approx(row["active_market_fallback_1x2"])
     assert row["no_bet"] is True
+
+
+@pytest.mark.parametrize("extra", [
+    {"history_coverage": {"last_fixture": {"result": "H"}}},
+    {"metadata": [{"score": "1-0"}]},
+    {"nested": [{"source": {"Home_Goals": 2}}]},
+    {"audit": {"settlement": {"winner": "home"}}},
+])
+def test_nested_or_case_variant_outcome_fields_are_rejected(extra):
+    row = features()
+    row.update(extra)
+    with pytest.raises(ValueError, match="result fields"):
+        v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
+
+
+
+@pytest.mark.parametrize("extra", [
+    {"source_stats": {"home_corners": 9}},
+    {"provider_row": {"HC": 11, "FTAG": 2}},
+    {"provider_row": {"HST": 7, "HTR": "H"}},
+    {"provider_row": {"HS": 14, "AST": 3, "FTR": "A"}},
+    {"match": {"home_yellows": 3, "away_reds": 1}},
+])
+def test_raw_match_statistics_and_provider_columns_are_rejected(extra):
+    row = features()
+    row.update(extra)
+    with pytest.raises(ValueError, match="result fields"):
+        v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
+
+
+@pytest.mark.parametrize("alias,value", [
+    ("HTR", "H"), ("HxG", 1.2), ("HST", 6), ("HFKC", 13),
+    ("HO", 3), ("HBP", 10), ("Attendance", 22000),
+])
+def test_preview_rejects_documented_football_data_match_stat_aliases(alias, value):
+    row = features()
+    row["provider_row"] = {alias: value}
+    with pytest.raises(ValueError, match="result fields"):
+        v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
+
+
+
+
+@pytest.mark.parametrize("extra", [
+    {"provider_row": {"goals": {"home": 2, "away": 0}}},
+    {"provider_row": {"goal": {"home": 2}}},
+    {"provider_row": {"goals_scored": {"home": 2, "away": 0}}},
+    {"provider_row": {"Home Goals": 2}},
+    {"provider_row": {"home-goals": 2}},
+    {"provider_row": {"homeTeamGoals": 2, "awayTeamGoals": 0}},
+    {"provider_row": {"goalsHomeTeam": 2, "goalsAwayTeam": 0}},
+    {"provider_row": {"homeTeamScore": 2, "awayTeamScore": 0}},
+    {"provider_row": {"FTScore": {"home": 2, "away": 0}}},
+    {"provider_row": {"scoreLine": "2-0"}},
+    {"provider_row": {"fullTime": {"home": 2, "away": 0}}},
+    {"provider_row": {"home.goals": 2}},
+    {"provider_row": {"scores": [2, 0]}},
+    {"provider_row": {"homeScores": 2, "awayScores": 0}},
+    {"provider_row": {"scoresHomeTeam": 2, "scoresAwayTeam": 0}},
+    {"provider_row": {"scoreFullTime": "2-0"}},
+    {"provider_row": {"xGHome": 1.4, "xGAway": 0.6}},
+])
+def test_preview_rejects_generic_goals_containers_and_separator_aliases(extra):
+    row = features()
+    row.update(extra)
+    with pytest.raises(ValueError, match="result fields"):
+        v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
+
+
+@pytest.mark.parametrize("alias,value", [
+    ("F.T.H.G", 2),
+    ("H.G", 1),
+    ("F-T-A-G", 1),
+    ("H T R", "H"),
+    ("H-X-G", 1.4),
+    ("A.X.G", 0.7),
+])
+def test_preview_rejects_punctuation_separated_compact_outcome_aliases(alias, value):
+    row = features()
+    row["provider_row"] = {alias: value}
+    with pytest.raises(ValueError, match="result fields"):
+        v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
+
+
+@pytest.mark.parametrize("alias,value", [
+    ("home_win", True),
+    ("away_win", True),
+    ("home_won", True),
+    ("away_won", True),
+    ("is_home_winner", True),
+    ("is_away_winner", True),
+    ("homeTeamWon", True),
+    ("winnerSide", "H"),
+    ("winnerTeamId", 123),
+    ("Result-1X2", "A"),
+    ("outcome_1x2", "D"),
+    ("draw_result", True),
+    ("isDraw", True),
+    ("was_draw", True),
+    ("drawn", True),
+    ("home_result", "W"),
+    ("away_result", "L"),
+])
+def test_preview_rejects_explicit_1x2_winner_and_draw_outcome_aliases(alias, value):
+    row = features()
+    row["provider_row"] = {alias: value}
+    with pytest.raises(ValueError, match="result fields"):
+        v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
+
+
+@pytest.mark.parametrize(("descriptor_key", "descriptor_value"), [
+    ("name", "FTR"),
+    ("type", "Full Time Result"),
+    ("stat", "Home Goals"),
+    ("fieldName", "Result-1X2"),
+    ("metric", "Winner Side"),
+    ("label", "Draw Result"),
+    ("statistic", "Corners"),
+    ("name", "Yellow Cards"),
+    ("type", "Shots On Target"),
+    ("key", ["F.T.H.G"]),
+    ("attribute", "Red Cards"),
+    ("abbr", "FTR"),
+    ("abbreviation", "Full Time Result"),
+    ("shortName", "Home Goals"),
+    ("shortCode", "Result-1X2"),
+    ("statCode", "Corners"),
+    ("statisticCode", "Red Cards"),
+    ("fieldCode", "FTAG"),
+    ("metricCode", "Winner Side"),
+    ("attributeName", "Draw Result"),
+    ("propertyName", "Away Goals"),
+    ("displayName", "Yellow Cards"),
+    ("shortName", "FT Result"),
+    ("displayName", "Final Result"),
+    ("abbreviation", "Fulltime Result"),
+    ("metricName", "FT Outcome"),
+    ("propertyName", "Full Time Outcome"),
+    ("statId", "FTR"),
+    ("statisticId", "Full Time Result"),
+    ("fieldId", "FTAG"),
+    ("metricId", "Winner Side"),
+    ("attributeId", "Away Goals"),
+    ("propertyId", "Draw Result"),
+    ("dataKey", "HTR"),
+    ("statKey", "Red Cards"),
+    ("outcomeKey", "Final Result"),
+    ("resultKey", "Home Goals"),
+])
+def test_preview_rejects_outcomes_encoded_as_typed_stat_descriptors(descriptor_key, descriptor_value):
+    row = features()
+    row["provider_row"] = {"statistics": [{descriptor_key: descriptor_value, "value": "H"}]}
+    with pytest.raises(ValueError, match="result fields"):
+        v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
+
+
+def test_preview_typed_stat_descriptor_guard_preserves_pre_match_labels():
+    row = features()
+    row["provider_row"] = {
+        "statistics": [
+            {"name": "Market 1X2", "value": "1X2"},
+            {"type": "Home Win Probability", "value": 0.55},
+            {"label": "Possession Trend", "value": 58},
+            {"abbreviation": "Market 1X2", "value": "1X2"},
+            {"shortName": "Home Win Probability", "value": 0.55},
+            {"statId": "Market 1X2", "value": "1X2"},
+            {"fieldId": "Home Win Probability", "value": 0.55},
+            {"dataKey": "Possession Trend", "value": 58},
+        ]
+    }
+    report = v2_preview.shadow_preview([market()], [row], as_of_utc=NOW)
+    assert report["scored"] == 1
+
+
+def test_market_snapshot_rejects_nested_protected_outcome_fields():
+    row = market()
+    row["provider_payload"] = {"statistics": [{"name": "FTR", "value": "H"}]}
+    with pytest.raises(ValueError, match="result fields"):
+        v2_preview.shadow_preview([row], [features()], as_of_utc=NOW)
+
+
+def test_nested_outcome_guard_is_cycle_safe_for_non_outcome_metadata():
+    metadata = {}
+    metadata["self"] = metadata
+    report = v2_preview.shadow_preview(
+        [market()], [features(metadata=metadata)], as_of_utc=NOW
+    )
+    assert report["scored"] == 1
