@@ -8259,3 +8259,45 @@ No provider/API request or download, paid odds request, Supabase write/DDL, prot
 - Added a runtime assertion after checkout that local Git config contains neither the GitHub HTTP extraheader nor credential `includeIf` entries, plus a static regression across all five workflows. [Exact-head push validator #45486240507](https://github.com/MaksimBlud/football-ai/actions/runs/45486240507) completed SUCCESS: runtime credential cleanup assertion passed and offline regression passed (2 assertions).
 - #956 remains Draft / HUMAN-MERGE and is stacked on #955; do not merge it ahead of #955 and the existing source-rights/private-storage chain. This hardening does not itself grant any source or inference permission.
 - No paid provider requests, source downloads, Supabase access/writes, protected outcome reads, model inference, production `.pkl` changes, main updates, merges, schedule changes, or other-agent setting changes occurred.
+
+
+## 2026-11-24 21:52 UTC — exact-head CI and strict pre-match recheck
+
+### Fresh GitHub state
+- Public repository main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Main `PROJECT_CONTINUITY.md` is still the older blob `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`; this checkpoint is confined to the existing documentation PR #839.
+- Documentation PR #839 exact HEAD `cdfe3da0f5a66f0ac23ea349d2697ee9e06b1b05` has now completed **8/8 exact-head checks SUCCESS**: validate-and-freeze, product-contract-tests, targeted-research-tests, shadow-tests, ligue1-validation, bundesliga-validation, validate, and serie-a-validation. This supersedes the earlier transient 0/8-in-progress checkpoint in the PR body.
+- Root hold PR #781 remains OPEN / Ready for review / mergeable, exact HEAD `5552bec363ae72ad7aef04c598d2ce861f33eb42`, with 8/8 exact-head checks SUCCESS. It is not merged; HUMAN-MERGE remains required.
+- PR #956 remains Draft / HUMAN-MERGE, exact HEAD `c6d2ca5f8a669bf61b480a5e6ed15076ef71c93b`; its credential-isolation validator completed SUCCESS (1 job, 2 assertions). It remains stacked on #955 and is not a substitute for the root hold.
+
+### Main-branch live-access exposure still exists
+- Main remains public. The main current-form source-capture workflow still has its daily `50 5 * * *` schedule and an artifact upload step conditioned with `if: always()`.
+- The original forward workflow on main still has a quote-triggered path and an `if: always()` artifact upload. The root default-deny hold is not active on main until #781 is manually merged and a fresh-main audit confirms all five held workflows skip live access and artifact publication.
+- No workflow was dispatched or rerun by this checkpoint.
+
+### Strictly pre-match-only Supabase aggregate
+Only `public.odds_snapshots` chronology fields were selected. Strict rows require `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= created_at < commence_time_utc`.
+
+| League | Strict pre-match rows | Events | Future strict rows |
+|---|---:|---:|---:|
+| Bundesliga | 394 | 35 | 0 |
+| EPL | 1,135 | 70 | 0 |
+| Eredivisie | 410 | 39 | 0 |
+| La Liga | 798 | 52 | 0 |
+| Ligue 1 | 387 | 35 | 0 |
+| Primeira Liga | 9 | 9 | 0 |
+| RPL | 153 | 15 | 0 |
+| Serie A | 620 | 63 | 0 |
+| Turkey Super Lig | 9 | 9 | 0 |
+| **Total** | **3,915** | **327** | **0** |
+
+- Total saved rows: 3,966; 51 rows have snapshot or persistence time at/after kickoff; 0 rows have `created_at < snapshot_time_utc`. No future event has a strictly pre-match quote. Latest eligible Serie A snapshot remains `2026-10-13T14:48:53.042620Z`.
+- No score, result, settlement, or protected target-outcome columns were selected. `created_at` remains mutable by privileged writers and is not cryptographic provenance.
+
+### Original V2 contract re-verified from main artifacts
+- Candidate SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 exact ordered features; 20 weight rows × 2 outputs; 3,799 training rows through `2026-06-30T23:59:59Z`.
+- `active_lambda=0`; `shadow_residual_lambda=1`; historical stability gate remains FAILED; automatic promotion remains false.
+- Current-form feature-input gate remains 30 completed primary events and selects only match date/team identity metadata to establish the count. Separate prospective target-evaluation gate remains 30 eligible completed forward forecasts; current count is **0/30 / CLOSED**. Backfill remains false.
+- No candidate, feature order, weights, scaler/imputer, training fingerprint, lambda, threshold, or production `.pkl` changed. No provider has been cleared for automated capture/inference; Soccer Data, Big Balls and other previously audited candidates remain HOLD.
+
+### Non-actions
+No provider account/key/request/download, paid odds request, workflow dispatch, Supabase write/DDL, protected target-outcome read, inference/refit, threshold tuning, production artifact change, main update, merge, promotion, bet, schedule change, or other-agent setting change occurred.
