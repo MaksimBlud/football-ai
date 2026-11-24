@@ -13,6 +13,7 @@ import hashlib
 from io import BytesIO
 import json
 import os
+import tempfile
 from pathlib import Path
 from typing import Any, Mapping
 
