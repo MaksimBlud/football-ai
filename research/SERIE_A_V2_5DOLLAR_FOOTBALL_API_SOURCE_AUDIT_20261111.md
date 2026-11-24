@@ -275,3 +275,14 @@ The unchanged original `ALL_FOOTBALL` feature set contains 19 differences over p
 Community Access is a plausible no-cost route only if the account holder independently and truthfully qualifies, selects Italy, and later verifies that the activated account actually returns the required Serie A fixtures/fields. No such eligibility or activation is assumed here. The provider still has not publicly identified the upstream rights chain for these fields or documented a durable private research-archive retention term. The current adapter's pinned rights manifest therefore remains HOLD; its Community-plan rejection remains intentional until separate eligibility and entitlement approval are recorded.
 
 No account/key was created, no eligibility statement was selected, no API or odds endpoint was called, no provider data was downloaded or archived, no feature calculation/inference was run, no Supabase operation occurred, and no 2026/27 match-level outcome was accessed. No paid plan or paid request is proposed.
+
+### Same-day provider data-quality refresh — 2026-11-24 UTC
+
+A second read of the official [Italy Serie A data-quality page](https://5dollarfootballapi.com/docs/data-quality/3405541143) now reports it was recounted four hours before this check. The page currently labels the competition **Pro and Ultra** for its 12-month/13-season view and reports:
+- 383/383 finished fixtures in the last 12 months;
+- 100% corners, half-time corners, corner line, odds, events, live statistics and cards;
+- 2026/27 season: 119 fixtures / 119 finished, dates 2026-08-23 through 2026-11-23, and 100% in each of those completeness columns.
+
+These are aggregate provider-published coverage counts only. No match-level rows, scores, results, settlements or protected outcomes were accessed. The change from the earlier 110/110 table snapshot is a later page refresh, not a contradiction in a frozen dataset.
+
+This strengthens the provider's **claimed** current-season field completeness, but does not resolve the plan label: the same page says Pro/Ultra, while the pricing and Community pages describe $0 routes. Community's one-country-pack entitlement must be selected and self-attested by the account holder; this automation must not do that. No authenticated plan response exists. Keep HOLD until the owner authorizes any eligibility action and the account's actual Italy/Serie A access is independently confirmed, plus upstream rights and private-archive retention are clarified.
