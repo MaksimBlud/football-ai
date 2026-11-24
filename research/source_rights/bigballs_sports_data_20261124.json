@@ -1,7 +1,7 @@
 {
   "schema_version": "MARKET_ANCHOR_1X2_V2_PROVIDER_AUDIT_V1",
   "provider": "Big Balls Sports Data",
-  "reviewed_at_utc": "2026-11-24T18:19:34Z",
+  "reviewed_at_utc": "2026-11-24T18:35:00Z",
   "decision": "HOLD_NO_INTEGRATION",
   "official_evidence": {
     "terms_url": "https://bigballsdata.com/legal/terms",
@@ -17,7 +17,9 @@
     "openapi_url": "https://bigballsdata.com/openapi.json",
     "openapi_checked_at_utc": "2026-11-24T18:19:34Z",
     "openapi_upstream_aggregation_description": "19+ free-tier upstream sources and 10 MCP scrapers; specific upstream source per field is not identified in the public OpenAPI description",
-    "current_serie_a_faq_checked_at_utc": "2026-11-24T18:19:34Z"
+    "current_serie_a_faq_checked_at_utc": "2026-11-24T18:19:34Z",
+    "pricing_url": "https://bigballsdata.com/pricing",
+    "pricing_page_checked_at_utc": "2026-11-24T18:35:00Z"
   },
   "provider_terms": {
     "api_response_storage_permitted": true,
@@ -36,7 +38,7 @@
     "current_season_access_advertised": true,
     "current_plus_most_recent_season_advertised_on_global_pricing": true,
     "serie_a_page_says_free_covers_current_season": true,
-    "season_depth_status": "CONFLICTING_OFFICIAL_DOCUMENTATION",
+    "season_depth_status": "CONFLICTING_OFFICIAL_DOCUMENTATION_WITHIN_GLOBAL_PRICING_AND_SERIE_A_PAGE",
     "odds_available": false,
     "expected_goals_available_on_free": false,
     "match_statistics_endpoint": "GET /v1/matches/{id}/statistics",
@@ -48,7 +50,10 @@
     "openapi_expected_goals_field_min_plan": "solo",
     "match_statistics_endpoint_mode": "STORED_ONLY_POST_MATCH",
     "match_statistics_endpoint_updates_hourly": true,
-    "upstream_posts_after_full_time_minutes_approx": 30
+    "upstream_posts_after_full_time_minutes_approx": 30,
+    "pricing_page_summary_says_current_season": true,
+    "pricing_page_plan_bullet_says_current_plus_most_recent_season": true,
+    "pricing_page_internal_season_depth_conflict": true
   },
   "coverage": {
     "all_seasons_finished_matches": 4591,
@@ -128,7 +133,7 @@
   },
   "decision_reasons": [
     "Current official OpenAPI and the current Serie A FAQ now confirm GET /v1/matches/{id}/statistics is Free; expected_goals is Solo+ and is not part of the original 19-feature contract.",
-    "The Free season-depth documentation still conflicts: the global pricing page says current plus most-recent season, while the dedicated Serie A page says current season only.",
+    "The Free season-depth documentation conflicts internally: the global pricing page summary says current season, its Free plan bullet says current plus most-recent season, and the dedicated Serie A page says current season only.",
     "The OpenAPI describes aggregation from 19+ free-tier upstream sources and 10 MCP scrapers but does not identify the upstream source or rights chain for each required field.",
     "The published 91.7% team-stat coverage is an older all-seasons aggregate, not current 2026/27 per-fixture or corner/yellow/red field completeness.",
     "No authenticated Free-plan response or match-level schema sample was reviewed; no account, key or provider request was created.",
