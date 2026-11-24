@@ -44,3 +44,12 @@ def test_every_held_original_v2_workflow_disables_persisted_checkout_credentials
             step,
             flags=re.MULTILINE,
         ), f"{relative}: checkout token must not be persisted in local git config"
+
+
+def test_validator_checks_runtime_git_config_after_checkout():
+    workflow = (ROOT / ".github/workflows/market-anchor-v2-checkout-credential-isolation.yml").read_text(encoding="utf-8")
+    assert "persist-credentials: false" in workflow
+    assert "git config --local --get-all http.https://github.com/.extraheader" in workflow
+    assert "git config --local --get-regexp '^includeIf\\.gitdir:'" in workflow
+    assert "secrets." not in workflow
+    assert "GITHUB_TOKEN" not in workflow
