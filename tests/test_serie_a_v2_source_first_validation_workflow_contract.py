@@ -20,11 +20,11 @@ EXPECTED_USES = [
 
 def test_source_first_validation_uses_only_exact_upstream_verified_node24_actions():
     text = WORKFLOW.read_text(encoding="utf-8")
-    actual = re.findall(r"^\\s*uses:\\s*([^\\s]+)\\s*$", text, flags=re.MULTILINE)
+    actual = re.findall(r"^\s*uses:\s*([^\s]+)\s*$", text, flags=re.MULTILINE)
     assert actual == EXPECTED_USES
     assert "actions/checkout@11d5960a326750d5838078e36cf38b85af677262" not in text
     assert "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065" not in text
-    assert not re.search(r"^\\s*uses:\\s*actions/(?:checkout|setup-python)@v\\d+\\s*$", text, re.MULTILINE)
+    assert not re.search(r"^\s*uses:\s*actions/(?:checkout|setup-python)@v\d+\s*$", text, re.MULTILINE)
 
 
 def test_source_first_validator_runs_this_contract_test_on_push_and_pull_request():
