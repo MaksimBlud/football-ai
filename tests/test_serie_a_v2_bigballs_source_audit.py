@@ -1,0 +1,137 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+AUDIT = ROOT / "research" / "source_rights" / "bigballs_sports_data_20261124.json"
+CANDIDATE = ROOT / "research" / "models" / "market_anchor_v2_serie_a_frozen_candidate.json"
+WORKFLOW = ROOT / ".github" / "workflows" / "market-anchor-v2-bigballs-source-audit.yml"
+
+EXPECTED_FEATURES = [
+    "diff_points_5",
+    "diff_points_10",
+    "diff_points_venue5",
+    "diff_goals_for_5",
+    "diff_goals_for_10",
+    "diff_goals_against_5",
+    "diff_goals_against_10",
+    "diff_corners_for_5",
+    "diff_corners_for_10",
+    "diff_corners_against_5",
+    "diff_corners_against_10",
+    "diff_yellow_5",
+    "diff_yellow_10",
+    "diff_red_5",
+    "diff_red_10",
+    "diff_goals_for_venue5",
+    "diff_goals_against_venue5",
+    "diff_corners_for_venue5",
+    "diff_corners_against_venue5",
+]
+
+
+def load_audit():
+    return json.loads(AUDIT.read_text(encoding="utf-8"))
+
+
+def test_provider_terms_are_promising_but_do_not_authorize_public_raw_redistribution():
+    audit = load_audit()
+    terms = audit["provider_terms"]
+    assert terms["api_response_storage_permitted"] is True
+    assert terms["internal_model_use_permitted"] is True
+    assert terms["internal_training_evaluation_backtesting_permitted"] is True
+    assert terms["raw_feed_resale_or_redistribution_permitted"] is False
+    assert terms["raw_field_republication_permitted"] is False
+    assert terms["upstream_provider_identity_and_field_level_rights_independently_verified"] is False
+    assert terms["retention_after_account_closure_explicitly_defined"] is False
+
+
+def test_free_plan_conflicts_are_preserved_as_hold_not_resolved_by_assumption():
+    free = load_audit()["free_plan"]
+    assert free["monthly_price_usd"] == 0
+    assert free["requests_per_day"] == 1000
+    assert free["requests_per_minute"] == 100
+    assert free["odds_available"] is False
+    assert free["expected_goals_available_on_free"] is False
+    assert free["season_depth_status"] == "CONFLICTING_OFFICIAL_DOCUMENTATION"
+    assert free["match_statistics_endpoint_free_status"] == "CONFLICTING_OFFICIAL_DOCUMENTATION"
+    assert free["changelog_says_statistics_endpoint_free_from"] == "2026-11-11"
+    assert free["serie_a_page_matrix_still_labels_statistics_endpoint"] == "EDGE"
+
+
+def test_aggregate_team_stats_coverage_is_not_misrepresented_as_current_season_completeness():
+    coverage = load_audit()["coverage"]
+    assert coverage["all_seasons_finished_matches"] == 4591
+    assert coverage["all_seasons_matches_with_team_stats"] == 4210
+    assert round(coverage["all_seasons_team_stats_coverage"], 3) == 0.917
+    assert coverage["current_2026_27_match_level_coverage"] == "UNKNOWN"
+    assert coverage["field_level_corner_yellow_red_card_coverage"] == "UNKNOWN"
+
+
+def test_source_receipt_time_and_sha_are_required_but_not_claimed_as_upstream_first_observation():
+    provenance = load_audit()["provenance"]
+    protocol = load_audit()["private_archive_protocol_if_later_authorized"]
+    assert provenance["kickoff_utc_documented"] is True
+    assert provenance["per_match_first_observed_timestamp_semantics_documented"] is False
+    assert provenance["per_field_correction_timestamp_semantics_documented"] is False
+    assert provenance["local_receipt_time_and_sha_can_prove_project_possession_before_quote"] is True
+    assert provenance["local_receipt_time_and_sha_prove_upstream_first_observation"] is False
+    assert protocol["preserve_exact_response_body_bytes"] is True
+    assert protocol["record_local_receipt_time_utc"] is True
+    assert protocol["sha256_exact_body_bytes"] is True
+    assert protocol["require_capture_time_before_later_quote_snapshot"] is True
+    assert protocol["store_only_in_private_repository_or_private_storage"] is True
+    assert protocol["public_raw_artifact_upload_allowed"] is False
+
+
+def test_original_frozen_v2_candidate_is_exact_and_unchanged():
+    audit = load_audit()
+    frozen = audit["frozen_candidate"]
+    candidate = json.loads(CANDIDATE.read_text(encoding="utf-8"))
+    assert candidate["experiment_id"] == "MARKET_ANCHOR_1X2_V2"
+    assert candidate["artifact_sha256"] == frozen["candidate_sha256"]
+    assert candidate["training_fingerprint_sha256"] == frozen["training_fingerprint_sha256"]
+    assert candidate["features"] == EXPECTED_FEATURES
+    assert len(candidate["features"]) == frozen["feature_count"] == 19
+    assert len(candidate["weights"]) == 20
+    assert all(isinstance(row, list) and len(row) == 2 for row in candidate["weights"])
+    assert candidate["active_lambda"] == frozen["active_lambda"] == 0
+    assert candidate["shadow_residual_lambda"] == frozen["shadow_residual_lambda"] == 1
+    assert candidate["stability_gate_passed"] is frozen["stability_gate_passed"] is False
+    assert candidate["automatic_promotion"] is frozen["automatic_promotion"] is False
+
+
+def test_no_account_key_request_download_or_model_operation_was_performed():
+    auth = load_audit()["project_authorization"]
+    assert auth["account_created"] is False
+    assert auth["api_key_created"] is False
+    assert auth["api_requests"] == 0
+    assert auth["source_download_performed"] is False
+    assert auth["raw_source_sha256_captured"] is False
+    assert auth["supabase_reads"] == 0
+    assert auth["supabase_writes"] == 0
+    assert auth["supabase_ddl"] == 0
+    assert auth["protected_2026_27_outcomes_read"] is False
+    assert auth["model_inference_performed"] is False
+    assert auth["model_refit_or_training_performed"] is False
+    assert auth["production_pickle_changed"] is False
+
+
+def test_audit_does_not_authorize_integration_or_change_project_training_policy():
+    audit = load_audit()
+    assert audit["decision"] == "HOLD_NO_INTEGRATION"
+    assert audit["integration_allowed"] is False
+    assert audit["automated_capture_authorized"] is False
+    assert audit["frozen_inference_authorized"] is False
+    assert audit["model_retraining_allowed_by_project"] is False
+
+
+def test_isolated_validation_workflow_is_read_only_and_has_no_live_triggers_or_secrets():
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    for forbidden in ("schedule:", "workflow_run:", "workflow_dispatch:", "secrets.", "SUPABASE_", "upload-artifact"):
+        assert forbidden not in workflow
+    assert "permissions:\n  contents: read" in workflow
+    assert "persist-credentials: false" in workflow
+    assert "d23441a48e516b6c34aea4fa41551a30e30af803" in workflow
+    assert "ece7cb06caefa5fff74198d8649806c4678c61a1" in workflow
