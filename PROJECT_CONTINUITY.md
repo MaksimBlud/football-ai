@@ -1,3 +1,21 @@
+## 2026-11-24 — Big Balls Sports Data free Serie A statistics source audit
+
+A new provider was screened using only official public Terms, pricing, coverage and OpenAPI documentation. No account/key was created, no provider API request was sent, and no match data was downloaded.
+
+**Positive evidence:** the provider's Terms (effective 2026-08-10) explicitly permit private API-response storage and use as input to internal models, including training, evaluation and backtesting; derived models and outputs belong to the customer. Its documented Free soccer statistics route `GET /v1/matches/{id}/statistics` is available on Free, stores post-match home/away team statistics hourly, and documents corners, yellow cards and red cards. Scores provide goals; points can be derived from completed scores. This is a potential future-only current-form source for the unchanged original 19-feature builder, not a market-odds source.
+
+**Hold reasons:** official pricing and Serie A pages conflict on whether Free covers the current plus most-recent season or current season only; either scope does not replace the original 2014–2026 training corpus. The public coverage matrix marks soccer team statistics Partial and every fixture stat field is nullable, so exact Serie A 2026/27 per-fixture completeness is not proven. The API aggregates 19+ upstream sources and 10 MCP scrapers; `meta.source` is explicitly an opaque tier label and hides vendor identity. The soccer statistics route does not document per-record/per-field first-observed or correction timestamps. A related stored-stats route's `meta.as_of` is ingestion time, not upstream update time, and is often empty for soccer.
+
+**Decision:** `HOLD_NO_INTEGRATION`. Written upstream vendor/field-level rights confirmation and per-fixture coverage evidence are required. If later cleared, only a future-only lagged-input capture with exact response bytes, local receipt UTC and SHA-256 before the market quote may be considered. No feature, weight, candidate, training corpus, quote source, lambda or frozen gate is changed.
+
+Audit: `research/MARKET_ANCHOR_1X2_V2_BIGBALLSDATA_FREE_STATS_SOURCE_AUDIT_20261124.md`  
+Machine-readable audit: `research/source_rights/bigballsdata_20261124.json`  
+Offline regression: `tests/test_serie_a_v2_bigballsdata_source_audit.py`
+
+Frozen candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 features, 20×2 weights, `active_lambda=0`, `shadow_lambda=1`, stability gate FAILED, no automatic promotion. The audit made zero provider API requests, zero provider downloads, zero Supabase writes/DDL, and read no protected 2026/27 outcomes.
+
+---
+
 ## 2026-11-24 — Footiqo free-source rights and pre-match suitability audit
 
 A new public-source candidate, Footiqo, was screened using its official pages only; no account was created, no file/sample/export was downloaded, and no automated request was sent.
