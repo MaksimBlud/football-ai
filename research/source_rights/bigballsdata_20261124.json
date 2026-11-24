@@ -119,7 +119,7 @@
       "The API aggregates many upstream sources; meta.source is an opaque tier label and does not reveal the vendor identity. Upstream identities and field-level rights are not verified.",
       "The soccer match-statistics endpoint is stored-only and updated hourly but does not document per-record or per-field first-observed/correction timestamps. Local receipt time plus SHA could prove possession before a future quote only after authorized capture.",
       "No provider account, key, API request or source download was created; no feature calculation or inference was performed.",
-      "The official Serie A landing page itself contains cross-sport contamination: its purported latest Serie A match tile shows Soldier Field, a 20-10 score and Q4/NFL-drive text; the page also displays NFL player names in a Serie A fantasy tile and conflicting Serie A archive counts (4,941 versus 4,671). Treat this as a severe data-integrity red flag until the provider explains and corrects it."
+      "The official Serie A landing page visibly mixes American-football content into its purported latest Serie A match tile (Soldier Field, a 20-10 score and Q4/NYG drive text) and a Serie A fantasy tile (NFL player names and metrics). This is a severe data-integrity red flag until explained. The 4,941 total-match versus 4,671 finished-game difference is 270 and is consistent with remaining scheduled fixtures, so it is not treated as a contradiction."
     ]
   },
   "public_page_integrity_flags": {
@@ -129,7 +129,11 @@
     "serie_a_page_player_fantasy_tile_contains_nfl_player_names": true,
     "serie_a_match_count_top_summary": 4941,
     "serie_a_finished_match_count_archive_table": 4671,
-    "published_match_count_conflict": true,
-    "severe_public_page_data_integrity_red_flag": true
+    "published_match_count_conflict": false,
+    "severe_public_page_data_integrity_red_flag": true,
+    "serie_a_page_fantasy_tile_displays_nfl_player_names_and_metrics": true,
+    "match_count_difference": 270,
+    "current_season_scheduled_unplayed_fixtures_explain_difference": true,
+    "red_flag_basis": "cross-sport NFL content shown inside the Serie A page; the 4,941 total-match vs 4,671 finished-game difference is consistent with 270 scheduled fixtures remaining and is not treated as a contradiction"
   }
 }
