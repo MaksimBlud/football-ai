@@ -9,7 +9,7 @@ import market_anchor_v2_artifact_privacy as privacy
 import market_anchor_v2_direct_access as direct_access
 import market_anchor_v2_source_capture_rights as capture_rights
 
-NOW = datetime(2026, 11, 19, 22, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 11, 25, 0, 0, tzinfo=timezone.utc)
 
 
 def _synthetic_capture_grant(
@@ -24,6 +24,9 @@ def _synthetic_capture_grant(
     evidence = tmp_path / "provider-capture-permission.txt"
     evidence_bytes = b"synthetic provider-issued automated source-capture permission; tests only"
     evidence.write_bytes(evidence_bytes)
+    policy_evidence = tmp_path / "football_data_contact_fair_use_20261124.md"
+    policy_evidence_bytes = b"synthetic fair-use policy evidence for tests only"
+    policy_evidence.write_bytes(policy_evidence_bytes)
     manifest = {
         "schema_version": "FOOTBALL_AI_SOURCE_RIGHTS_V1",
         "provider": "Football-Data.co.uk",
@@ -43,6 +46,11 @@ def _synthetic_capture_grant(
         "policy_url": "https://football-data.co.uk/data",
         "policy_checked_at_utc": "2026-11-10T11:57:30Z",
         "policy_page_updated_date": page_updated,
+        "fair_use_policy_url": "https://football-data.co.uk/contact.php",
+        "fair_use_policy_checked_at_utc": "2026-11-24T23:52:28Z",
+        "fair_use_policy_page_updated_date": "2026-11-24",
+        "fair_use_policy_evidence_file": policy_evidence.name,
+        "fair_use_policy_evidence_sha256": hashlib.sha256(policy_evidence_bytes).hexdigest(),
         "authorization": {
             "provider_issued": True,
             "kind": "written_permission",
@@ -168,3 +176,21 @@ def test_direct_source_capture_checks_private_storage_after_rights(monkeypatch):
     monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", deny_privacy)
     with pytest.raises(PermissionError, match="private storage is not approved"):
         direct_access.require_v2_source_capture_access()
+
+
+def test_current_manifest_pins_updated_fair_use_page_and_keeps_capture_denied():
+    manifest = json.loads(capture_rights.DEFAULT_RIGHTS_MANIFEST_PATH.read_text(encoding="utf-8"))
+    assert manifest["fair_use_policy_url"] == "https://football-data.co.uk/contact.php"
+    assert manifest["fair_use_policy_page_updated_date"] == "2026-11-24"
+    assert manifest["research_source_capture_permitted"] is False
+    assert manifest["provider_issued_source_capture_license"] is False
+    assert manifest["research_inference_permitted"] is False
+    assert manifest["ai_model_training_permitted"] is False
+    assert manifest["authorization"] is None
+
+
+def test_fair_use_policy_evidence_sha_mismatch_fails_closed(tmp_path):
+    path, _ = _synthetic_capture_grant(tmp_path)
+    (tmp_path / "football_data_contact_fair_use_20261124.md").write_text("tampered", encoding="utf-8")
+    with pytest.raises(PermissionError, match="fair-use policy evidence SHA-256 mismatch"):
+        capture_rights.require_personal_research_source_capture_scope(path, repo_root=tmp_path, now=NOW)
