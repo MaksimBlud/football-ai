@@ -3,7 +3,7 @@
 - Provider page: https://football-data.co.uk/contact.php
 - Page update displayed by the provider: 2026-11-24
 - Retrieved and reviewed: 2026-11-24T23:52:28Z
-- Evidence type: official provider webpage; documentation-only review, no download or API request.
+- Evidence type: official provider webpage reviewed; this local note is a paraphrase, not a byte-for-byte copy of the provider page. No download or API request was made.
 
 ## Observed policy (paraphrase)
 
