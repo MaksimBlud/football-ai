@@ -36,11 +36,11 @@ def test_source_first_validator_runs_this_contract_test_on_push_and_pull_request
 
 def test_source_first_validator_is_read_only_and_cannot_access_live_data_or_publish_artifacts():
     text = WORKFLOW.read_text(encoding="utf-8")
-    permissions = re.search(
-        r"(?ms)^permissions:\\n((?:[ \\t]+[^\\n]*\\n)+)", text
-    )
-    assert permissions is not None
-    assert permissions.group(1).splitlines() == ["  contents: read"]
+    lines = text.splitlines()
+
+    permissions_index = lines.index("permissions:")
+    assert lines[permissions_index + 1] == "  contents: read"
+    assert lines[permissions_index + 2] == ""
 
     # This isolated validator must remain offline with no provider/database token scope.
     for forbidden in (
@@ -54,17 +54,20 @@ def test_source_first_validator_is_read_only_and_cannot_access_live_data_or_publ
 
     # Only push and pull_request are permitted; no scheduled or manually
     # dispatched entrypoint may turn this validator into a live workflow.
-    assert not re.search(
-        r"(?m)^\\s+(?:schedule|workflow_dispatch|workflow_run):", text
+    assert not any(
+        line.strip().startswith(("schedule:", "workflow_dispatch:", "workflow_run:"))
+        for line in lines
     )
-    assert not re.search(
-        r"(?m)^\\s*uses:\\s*actions/(?:upload|download)-artifact@", text
+    assert not any(
+        "uses: actions/upload-artifact@" in line
+        or "uses: actions/download-artifact@" in line
+        for line in lines
     )
 
-    checkout = re.search(
-        r"(?ms)^      - name: Checkout exact research branch\\n"
-        r"(?P<body>.*?)(?=^      - name:|\\Z)",
-        text,
-    )
-    assert checkout is not None
-    assert "persist-credentials: false" in checkout.group("body")
+    checkout_start = lines.index("      - name: Checkout exact research branch")
+    next_steps = [
+        i for i in range(checkout_start + 1, len(lines))
+        if lines[i].startswith("      - name: ")
+    ]
+    checkout_end = min(next_steps) if next_steps else len(lines)
+    assert "          persist-credentials: false" in lines[checkout_start:checkout_end]
