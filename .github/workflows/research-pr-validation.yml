@@ -197,4 +197,4 @@ jobs:
           fi
           echo "PASS: no .pkl changes in PR"
       - name: Validate original V2 external free-source audits (offline only)
-        run: python -m pytest -q tests/test_serie_a_v2_sportapi_source_audit.py tests/test_serie_a_v2_soccer_data_source_audit.py
+        run: python -m pytest -q tests/test_serie_a_v2_sportapi_source_audit.py tests/test_serie_a_v2_soccer_data_source_audit.py tests/test_serie_a_v2_bigballsdata_source_audit.py
