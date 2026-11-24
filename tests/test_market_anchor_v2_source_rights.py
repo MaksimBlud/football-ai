@@ -38,6 +38,7 @@ def _write_synthetic_grant(
         "fair_use_policy_checked_at_utc": "2026-11-24T23:52:28Z",
         "fair_use_policy_page_updated_date": "2026-11-24",
         "fair_use_policy_evidence_file": policy_evidence.name,
+        "fair_use_policy_evidence_kind": "LOCAL_PARAPHRASE_NOTE_NOT_PROVIDER_PAGE_BYTES",
         "fair_use_policy_evidence_sha256": hashlib.sha256(policy_evidence_bytes).hexdigest(),
         "rights_status": "GRANTED",
         "research_use_permitted": True,
@@ -168,6 +169,7 @@ def test_current_manifest_pins_updated_fair_use_page_and_keeps_all_ai_permission
     manifest = json.loads(DEFAULT_RIGHTS_MANIFEST_PATH.read_text(encoding="utf-8"))
     assert manifest["fair_use_policy_url"] == "https://football-data.co.uk/contact.php"
     assert manifest["fair_use_policy_page_updated_date"] == "2026-11-24"
+    assert manifest["fair_use_policy_evidence_kind"] == "LOCAL_PARAPHRASE_NOTE_NOT_PROVIDER_PAGE_BYTES"
     assert manifest["research_source_capture_permitted"] is False
     assert manifest["research_inference_permitted"] is False
     assert manifest["ai_model_training_permitted"] is False
