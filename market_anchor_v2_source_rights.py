@@ -61,6 +61,17 @@ def require_ai_model_training_permission(
         raise PermissionError("source-rights manifest schema is not approved")
     if manifest.get("provider") != EXPECTED_PROVIDER:
         raise PermissionError("source-rights manifest provider does not match the training source")
+
+    if now is None:
+        now = datetime.now(timezone.utc)
+    if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
+        raise PermissionError("source-rights verification clock must have a real UTC offset")
+    now_utc = now.astimezone(timezone.utc)
+    fair_use_policy = verify_fair_use_policy_evidence(
+        manifest,
+        now_utc=now_utc,
+        repo_root=root,
+    )
     if manifest.get("rights_status") != "GRANTED":
         raise PermissionError("Football-Data AI model-training permission is not granted")
     if manifest.get("ai_model_training_permitted") is not True:
@@ -161,9 +172,9 @@ def require_personal_research_inference_scope(
 ) -> dict:
     """Require the project's conservative clearance for frozen V2 inference.
 
-    The official data page was updated 2026-11-10 and now describes the free data as
-    intended for private individuals only, excluding commercial or data-training
-    products using automated bots, scrapers, or AI. The project therefore keeps
+    The official data page was updated 2026-11-10 and the fair-use contact page was
+    updated 2026-11-24. The current terms limit automated downloads and exclude
+    commercial or AI data-training projects using automated bots or scrapers. The project therefore keeps
     automated source capture and frozen-model inference fail-closed pending
     provider clarification or an applicable written licence.
     This is an internal risk-control decision, not a claim that the provider
@@ -312,6 +323,7 @@ def require_personal_research_inference_scope(
     return {
         "provider": EXPECTED_PROVIDER,
         "rights_manifest_sha256": hashlib.sha256(raw).hexdigest(),
+        **fair_use_policy,
         "scope_status": manifest["rights_status"],
         "research_inference_scope": manifest["research_inference_scope"],
         "policy_url": policy_url,
