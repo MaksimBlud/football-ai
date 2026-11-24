@@ -8,6 +8,7 @@ import re
 from urllib.parse import urlsplit
 
 EXPECTED_FAIR_USE_POLICY_URL = "https://football-data.co.uk/contact.php"
+EXPECTED_EVIDENCE_KIND = "LOCAL_PARAPHRASE_NOTE_NOT_PROVIDER_PAGE_BYTES"
 MAX_POLICY_REVIEW_AGE_SECONDS = 90 * 86400
 
 
@@ -70,6 +71,9 @@ def verify_fair_use_policy_evidence(
         raise PermissionError("fair-use policy page update date is later than its review")
     if (now - checked).total_seconds() > MAX_POLICY_REVIEW_AGE_SECONDS:
         raise PermissionError("fair-use policy review is stale")
+
+    if manifest.get("fair_use_policy_evidence_kind") != EXPECTED_EVIDENCE_KIND:
+        raise PermissionError("fair-use policy evidence kind must identify a local paraphrase note, not provider page bytes")
 
     relative = manifest.get("fair_use_policy_evidence_file")
     if not isinstance(relative, str) or not relative.strip():
