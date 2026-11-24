@@ -968,3 +968,55 @@ def test_external_io_inventory_recognizes_compiled_runtimes_shells_and_container
     assert _is_original_v2_live_workflow(
         "name: serie-a-v2 source capture\nrun: docker run source-capture:latest"
     )
+
+
+# Supply-chain pins are kept on the same current source-first/private-storage
+# chain as the V2 live-access hold. These are immutable upstream commit SHAs,
+# independently resolved from the official actions/* repositories.
+PINNED_ACTIONS_V2 = {
+    "actions/checkout": "11d5960a326750d5838078e36cf38b85af677262",
+    "actions/setup-python": "a26af69be951a213d495a4c3e4e4022e16d87065",
+    "actions/upload-artifact": "ea165f8d65b6e75b540449e92b4886f43607fa02",
+}
+
+HELD_V2_ACTION_WORKFLOWS = (
+    ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml",
+    ".github/workflows/serie-a-v2-forward-preview.yml",
+    ".github/workflows/serie-a-v2-current-form-source-capture.yml",
+    ".github/workflows/serie-a-v2-current-form-forward-preview.yml",
+    ".github/workflows/recover-market-anchor-v2-candidate.yml",
+)
+
+
+def test_original_v2_held_workflows_use_only_verified_immutable_action_commits():
+    for path in HELD_V2_ACTION_WORKFLOWS:
+        text = _workflow(path)
+        for action, expected_sha in PINNED_ACTIONS_V2.items():
+            references = [
+                line.split("uses:", 1)[1].strip()
+                for line in text.splitlines()
+                if "uses:" in line
+                and line.split("uses:", 1)[1].strip().startswith(f"{action}@")
+            ]
+            assert references == [f"{action}@{expected_sha}"], (
+                f"{path}: expected exactly one immutable {action} reference; "
+                f"found {references}"
+            )
+
+
+def test_held_action_pin_validation_is_pull_request_only_and_credential_free():
+    path = ".github/workflows/market-anchor-v2-held-action-pins.yml"
+    text = _workflow(path)
+    assert "pull_request:" in text
+    assert "workflow_dispatch:" not in text
+    assert "schedule:" not in text
+    assert "actions/checkout@11d5960a326750d5838078e36cf38b85af677262" in text
+    assert "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065" in text
+    assert "actions/upload-artifact@" not in text
+    assert "secrets.SUPABASE_URL" not in text
+    assert "secrets.SUPABASE_KEY" not in text
+    assert "GITHUB_TOKEN:" not in text
+    for workflow in HELD_V2_ACTION_WORKFLOWS:
+        assert f'"{workflow}"' in text
+    assert f'"{path}"' in text
+    assert f'"{testPath}"' in text
