@@ -8071,7 +8071,7 @@ Read-only SELECT from `public.odds_snapshots` used only league, event ID, snapsh
 - No score, result, settlement or protected target-outcome columns were selected. The ledger has no new prospective quotes for the original V2 cohort.
 
 ### Frozen original V2 and gates
-- Candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; exact ordered 19 features and 20×2 weights unchanged; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; `active_lambda=0), `shadow_lambda=1).
+- Candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; exact ordered 19 features and 20×2 weights unchanged; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; `active_lambda=0`, `shadow_lambda=1`.
 - Historical stability gate remains FAILED. Prospective evaluation cohort remains 0/30 / CLOSED; no eligible independent Brier/LogLoss comparison and no superiority claim. The incumbent comparator's separate as-of provenance remains unresolved; do not revive or run the legacy XGBoost artifact to fill that gap.
 - No source-provider account/key/request/download, no paid odds request, no protected 2026/27 target-outcome read in this cycle, no Supabase write/DDL, no inference/refit, no threshold tuning, no production `.pkl` change, no main update/merge/promotion/bet, and no schedule or other-agent change.
 
