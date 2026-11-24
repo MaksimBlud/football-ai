@@ -50,7 +50,7 @@ def test_free_original_v2_still_preserves_archive_proof_and_no_bet():
     assert "tests/test_serie_a_v2_asof_feature_manifest.py" in free
     assert "serie_a_v2_forward_capture.py" in free
     assert "--sources-output-dir" in free
-    assert "actions/upload-artifact@v4" in free
+    assert "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f" in free
     assert "verify_archive(" in runner
     assert "github_artifact_sha256=" in runner
     assert '"eligible_for_frozen_prospective_cohort": False' in runner
