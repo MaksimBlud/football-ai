@@ -8105,3 +8105,59 @@ Read-only SELECT from public.odds_snapshots; selected only league, event ID, sna
 Candidate SHA, exact 19-feature order, 20×2 weights, scaler/imputer, training fingerprint, active_lambda=0, shadow_lambda=1, failed historical stability gate and separate 30-eligible-prospective-forecast evaluation gate are unchanged. Evaluation remains 0/30 / CLOSED; no Brier/LogLoss comparison or superiority claim. No inference was performed because the current-form forward run had zero saved quotes.
 
 No Supabase writes/DDL, paid API requests, target-evaluation outcome reads, production .pkl changes, main updates, PR merges, promotions, bets, schedule changes, or other-agent changes occurred. HUMAN-MERGE remains mandatory.
+
+
+## 2026-11-24 18:03 UTC — current-form source-rights restack, exact CI, and public-artifact runtime audit
+
+### Fresh main and actual current-form runtime
+
+- Re-read main, `PROJECT_CONTINUITY.md`, original forward source/workflow, both current-form workflows, open V2 PR heads, exact GitHub check-runs, and pre-match-only Supabase aggregates. Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; repository visibility remains PUBLIC. Main was not changed.
+- Main `.github/workflows/serie-a-v2-current-form-source-capture.yml` is blob `9722416862b42d55ff7181003353c39620f23cf2`. Its current job still puts `SUPABASE_URL` and `SUPABASE_KEY` at job scope, runs capture without a source-rights/private-storage check, and uploads the raw source artifact with `if: always()`.
+- Main `.github/workflows/serie-a-v2-current-form-forward-preview.yml` is blob `6ebbcaff290a78e9ccffa4ac9a09bc0982eaff35`. It still puts Supabase/GitHub credentials at job scope and uploads the preview/source ZIPs with `if: always()`. Its daily schedule remains `18 8 * * *`; its workflow_run filter permits the odds-snapshot parent only when that parent was manually dispatched. No paid snapshot was dispatched by this checkpoint.
+- Actual source-capture run [#45438071171](https://github.com/MaksimBlud/football-ai/actions/runs/45438071171), on exact main SHA above, completed SUCCESS. Its real job log reports 120 completed primary metadata events, 120 prior-day current-season rows, 3,920 historical rows, 10 old-season CSVs plus 1 current-season CSV, 11 source files, candidate SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 0 paid provider calls, 0 Supabase writes, and no target-outcome evaluation. Artifact ID `14942801007`, 440,666 bytes, SHA-256 `a2f9e5882f268040b13400e37b2e30d345d72c494129c955aa008b6e90ff64d1`.
+- Actual current-form forward run [#45438267623](https://github.com/MaksimBlud/football-ai/actions/runs/45438267623) independently verified that exact source artifact SHA and its parent workflow/run identity. Source observation `16:32:03.032766Z`, artifact creation `16:32:04Z`, parent completion `16:32:06Z), verification `16:32:50Z), source age 46 seconds. It reports 0 saved quote rows, 0 V2 current-form shadow captures, 0 target outcomes read/scored, 0 paid calls, and 0 production/Supabase writes. Forward artifact ID `14940799787`, 441,831 bytes, SHA-256 `37aad433404e55602b21df6f78f201d850f2720eac874daedef0ff5101d987ac`.
+- The source and forward job logs show the Supabase credentials were present across unrelated job steps because they are job-scoped. Both artifacts were uploaded to the still-public repository's Actions artifact store. Archive bytes and match outcome values were not downloaded or inspected in this checkpoint. This is real source-archive/SHA/parent chronology evidence, not a real quote, prediction, or model-quality result.
+
+### Root default-deny hold
+
+- [PR #781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review / mergeable / HUMAN-MERGE only, exact HEAD `5552bec363ae72ad7aef04c598d2ce861f33eb42`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- Re-read the exact commit check-runs: all **8/8 completed SUCCESS**, every check reports the exact HEAD above. Runs: #45108795793, #45108795897, #45108795789, #45108795804, #45108795785, #45108795798, #45108795794, #45108795827.
+- Until a human merges #781 and a fresh-main audit confirms the live steps and artifact uploads are skipped, its hold is not active on main. The actual 16:32 UTC runs above demonstrate why this manual root hold is urgent.
+
+### New current-form source-capture rights restack — PR #954
+
+- Created Draft [PR #954](https://github.com/MaksimBlud/football-ai/pull/954), a clean restack of the existing current-form rights work from #910 onto #951. Exact base #951 HEAD `f1ad14e783b4f03e8887516f6805d4650233fead`; final PR HEAD `ec7aa84293a10c46c2dfb07f68bb4e0f1ebcc8c1`; 7 commits from the exact parent; 4 changed files. It remains mergeable and unmerged.
+- The public current-form source-capture helper previously lacked a direct rights/privacy guard even though its workflow had a default-deny flag. The restack requires explicit source-capture permission plus private-repository storage before public helpers, Supabase metadata reads, source HTTP, or archive creation. The CLI checks rights before creating the Supabase client.
+- The feature-input gate now validates the unchanged protocol Git blob SHA-1 `65729e9639720e67624c1481190aa22ae606f151` and derives the 30-primary-completed-event threshold from the frozen V2 protocol. The gate query selects only `match_date,home_team,away_team`; completed current-season results are described separately as lagged feature inputs after that gate. The prospective evaluation-outcome gate remains separate and closed.
+- Current `research/source_rights/football_data_co_uk.json` still has `research_source_capture_permitted=false`, `research_inference_permitted=false`, and `rights_status=V2_FROZEN_INFERENCE_SCOPE_UNRESOLVED`. Therefore the new direct guard fails closed before Supabase/source access; it does not authorize capture.
+- Existing schedule/triggers are unchanged and `MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED` remains `false). `GITHUB_TOKEN` is now scoped only to the already-gated capture step; Supabase keys remain step-scoped. The source-first validator was extended to include this current-form module and its tests.
+
+### Exact PR #954 CI evidence
+
+- Dedicated current-form rights validation [#45454852550](https://github.com/MaksimBlud/football-ai/actions/runs/45454852550), predecessor SHA `9c04dd6f1bd7f7fb32bce9277debec35d5a8cc17`: **2/2 SUCCESS**, Python 3.11 **33 passed**, Python 3.12 **33 passed**, production `.pkl` diff guard passed.
+- Full source-first validation [#45454852563](https://github.com/MaksimBlud/football-ai/actions/runs/45454852563), same predecessor SHA: **2/2 SUCCESS**, Python 3.11 **514 passed**, Python 3.12 **514 passed**, production `.pkl` diff guard passed. This run includes the current-form rights tests and original source-first/frozen-contract regressions.
+- Exact final PR HEAD `ec7aa84293a10c46c2dfb07f68bb4e0f1ebcc8c1`: PR check run [#45454870284](https://github.com/MaksimBlud/football-ai/actions/runs/45454870284) **2/2 SUCCESS**. The final commit after the predecessor CI only deleted a redundant one-off validator workflow; the tested source, tests, and live workflow are unchanged.
+- All these CI runs are offline/synthetic contract tests. They do not prove provider permission, private deployment, live source/quote runtime, or model quality. HUMAN-MERGE only; review #954 only after #951 and all ancestors.
+
+### Exact open V2 PR heads and current CI refresh
+
+- #950: exact HEAD `79a71f0fa12c5ce52ee20915c9013bff4464c7ed`, 4/4 check-runs SUCCESS (push + PR, Python 3.11/3.12).
+- #951: exact HEAD `f1ad14e783b4f03e8887516f6805d4650233fead`, 2/2 SUCCESS; 499 tests per Python 3.11/3.12 job.
+- #952 Big Balls audit: exact HEAD `1c364dd83f9a9735112c58256c94d3dfc3c94c10`, 10/10 check-runs SUCCESS. Decision remains HOLD / no integration; Free entitlement, current-season per-field completeness, and timestamp/correction provenance remain unresolved.
+- #953 current-form direct quote-row persistence preflight: exact HEAD `2fa0aa46e79966075ed911052a9c6dfa9f19888f`, 4/4 check-runs SUCCESS; 102 tests per Python 3.11/3.12 job in its dedicated workflow.
+- #839 documentation PR: exact HEAD `1015fcb90179f9da7b01a94195fee13f3cdd854a`, 8/8 check-runs SUCCESS. This checkpoint is appended here and requires a fresh CI rerun after this documentation commit.
+- Existing #874 Soccer Data audit remains HOLD-only; no duplicate provider audit or integration was created.
+
+### Fresh strict pre-match-only Supabase inventory
+
+Read-only SELECT from `public.odds_snapshots`; only `league,event_id,snapshot_time_utc,created_at,commence_time_utc` were used. Strict eligibility required `snapshot_time_utc < commence_time_utc`, `snapshot_time_utc <= created_at`, and `created_at < commence_time_utc`. No score, result, settlement, or target-outcome columns were selected.
+
+- All leagues: 3,966 total rows; 3,915 strictly pre-match rows; 327 unique strictly pre-match events; 0 future events with an eligible quote.
+- Serie A: 625 total rows; 620 strictly pre-match rows; 63 events; latest eligible snapshot `2026-10-13T14:48:53.042620Z`.
+- No new prospective quote or shadow forecast is available.
+
+### Frozen original V2 boundary
+
+Candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; exact ordered 19 features and 20×2 weights remain unchanged; `active_lambda=0`, `shadow_lambda=1`. Historical stability gate remains FAILED; prospective evaluation remains 0/30 / CLOSED. No independent Brier/LogLoss comparison and no superiority claim.
+
+No provider/API request or download, paid odds request, Supabase write/DDL, protected evaluation-outcome read, real-data inference/refit, threshold tuning, production `.pkl` change, main update, merge, promotion, publication, bet, schedule change, or other-agent setting change occurred in this checkpoint.
