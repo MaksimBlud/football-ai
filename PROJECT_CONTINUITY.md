@@ -8301,3 +8301,26 @@ Only `public.odds_snapshots` chronology fields were selected. Strict rows requir
 
 ### Non-actions
 No provider account/key/request/download, paid odds request, workflow dispatch, Supabase write/DDL, protected target-outcome read, inference/refit, threshold tuning, production artifact change, main update, merge, promotion, bet, schedule change, or other-agent setting change occurred.
+
+
+## 2026-11-24 22:06 UTC — current-form no-source quote-read guard restacked
+
+### New PR #957 — exact-head offline proof
+- Added draft child [PR #957](https://github.com/MaksimBlud/football-ai/pull/957) on the current #781-rooted chain. Exact parent is PR #956 HEAD `c6d2ca5f8a669bf61b480a5e6ed15076ef71c93b`; source implementation restacked from existing PR #903 HEAD `12c841fdc492ebe8ca913c8388fc4a6029e0a78b` rather than duplicated.
+- PR #957 exact HEAD: `6ec18204ffc8195074cbbbfe6aa3247b87965e2b`; changed files are only the current-form forward module, its regression tests, a direct-access regression file, and its isolated validation workflow. No `.pkl`, candidate, Supabase, or provider manifest file changed.
+- Exact-head offline CI: **4/4 SUCCESS** across [push run #45497500542](https://github.com/MaksimBlud/football-ai/actions/runs/45497500542) and [PR run #45497512529](https://github.com/MaksimBlud/football-ai/actions/runs/45497512529); Python 3.11 and 3.12 each report **31 passed** in both runs. The first pre-correction attempt exposed a stale fixture without `created_at`; only the fixture was corrected to reflect the existing strict persisted-quote contract, then both exact-head runs passed.
+- Concrete current-form gap on the #956 parent: `main()` verified the latest source archive but still created a Supabase client/read saved quotes when the source verification returned `NO_SOURCE_ARCHIVE` or invalid/stale provenance. Per-quote filtering happened only after the read.
+- #957 now requires source-capture rights/private storage, authenticated exact parent workflow, archive SHA, frozen candidate SHA, source chronology and the unchanged 24-hour freshness limit before quote access. If no valid/fresh source exists, it emits a metadata-only skip report with zero quote reads and no Supabase client. Frozen-inference rights are checked before the lazy quote reader resolves Supabase secrets/client.
+- This is offline regression proof only. The current provider-rights manifest remains HOLD; no real source, quote, Supabase or provider request was made. No target outcomes were read, no inference/refit or weight/feature/threshold changes occurred.
+
+### Original forward/current-form source-first status
+- Fresh main still has the original forward CLI ordering `fetch_saved_upcoming_serie_a_quotes()` before `discover_archives()`; source-first CLI preflight is on open PR #938, exact HEAD `14d765ca2b55e939d9ab5790abbbecd3a29f2614`, with 4/4 offline checks SUCCESS.
+- The current-form no-source quote-read correction is now represented by #957 (4/4 offline checks SUCCESS), stacked on #956 → #955 → #954 → #951 → … → #781. Neither #938 nor #957 is merged; no main change.
+- Root PR #781 remains OPEN / Ready for review / mergeable, exact HEAD `5552bec363ae72ad7aef04c598d2ce861f33eb42`, 8/8 CI SUCCESS. HUMAN-MERGE remains required.
+
+### Latest real current-form runtime remains non-evaluable
+- Main run [#45470879407](https://github.com/MaksimBlud/football-ai/actions/runs/45470879407), 2026-11-24 19:30 UTC, verified source artifact #14942801007 and its SHA `a2f9e5882f268040b13400e37b2e30d345d72c494129c955aa008b6e90ff64d1`; 120 current-season lagged rows and 3,920 historical rows were attested.
+- Exact log result: `quotes_seen=0`, `v2_current_form_shadow_captured=0`, target outcomes read/scored=false, Supabase writes=0, paid provider calls=0. This is source archive provenance proof, not a live V2 forecast or quality result.
+
+### Non-actions
+No main update, merge, paid request, source download, Supabase write/DDL, protected target-outcome read, real inference/refit, production `.pkl` change, feature/weight/threshold change, promotion, bet, schedule change, or other-agent setting change.
