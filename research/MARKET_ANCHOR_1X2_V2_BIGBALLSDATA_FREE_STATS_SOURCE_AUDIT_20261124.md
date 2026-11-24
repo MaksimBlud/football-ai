@@ -6,7 +6,7 @@
 
 ## Executive finding
 
-Big Balls Sports Data is the strongest newly reviewed free current-season statistics candidate in this pass. Its official Terms of Service expressly permit customers to store API responses privately and use stored data as input to internal models, including training, evaluation and backtesting; model outputs are the customer's. Raw feed redistribution is prohibited. This is materially clearer than the ML/storage permissions found in several other free-source audits.
+Big Balls Sports Data is the strongest newly reviewed free current-season statistics candidate in this pass. Its official Terms of Service expressly permit customers to store API responses privately and use stored data as input to internal models, including training, evaluation and backtesting; model outputs are the customer's. The Terms do not separately name inference, so this audit does not treat inference as an independently confirmed permission. Raw feed redistribution is prohibited. This is materially clearer than the ML/storage permissions found in several other free-source audits.
 
 The provider advertises Serie A scores, standings and match statistics. Its documented soccer match-statistics schema includes corners, yellow cards and red cards; match scores provide goals, and points can be derived from completed match results. These fields map to the unchanged 19-feature families at schema level.
 
