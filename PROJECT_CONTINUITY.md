@@ -1,3 +1,32 @@
+## 2026-11-24 02:00 UTC — Original V2: recomputed frozen stability gate and comparator/provenance audit
+
+### Independent recomputation of the frozen historical stability gate
+- Read only the original V2 Python contract/tests and the two frozen historical JSON reports; no 2026/27 target outcomes or production model bytes were read.
+- Main `market_anchor_1x2_v2_shadow.py` blob: `b2770d726ffafe7a3cef706b57d3391063cbfe1b`.
+- Frozen V2 protocol blob: `65729e9639720e67624c1481190aa22ae606f151`.
+- Frozen V1 robustness report blob: `96d2f462849a70276a2c27a2c0cc18ec0672b00a`, exactly matching the SHA pinned in the V2 code and protocol.
+- Recomputed the unchanged gate directly from the pinned report:
+  - prior seasons: 6 (passes the count requirement);
+  - prior seasons winning both metrics: 2 (required at least 4);
+  - Brier bootstrap CI95 high: **+0.003236877119355216** (must be below 0);
+  - probability Brier is better than market: **0.6831** (must be at least 0.95);
+  - LogLoss bootstrap CI95 high: **+0.006038957657259541** (must be below 0);
+  - probability LogLoss is better than market: **0.6317** (must be at least 0.95).
+- Result: **1 of 6 checks passes; stability gate remains FAILED**. This independently reproduces the existing test result; no threshold, feature, weight, or report was changed.
+
+### Frozen comparator limitation
+- The protocol comparator set is exactly `DE_VIGGED_MARKET`, `FROZEN_PRODUCTION_INCUMBENT`, and `INACTIVE_LAMBDA_1_RESIDUAL_SHADOW`.
+- The code pins `INCUMBENT_MODEL_SHA256=1e516fe91420fdc2d6479e9fb92b005c4a0c75c7f0f217493dd6b27fd64d99a5` and validates the supplied row hash against that constant, but the capture contract does not independently attest how the incumbent probability triplet was generated.
+- Because the user prohibits returning to the legacy XGBoost production model and prohibits production `.pkl` changes, no incumbent model was executed, loaded, or modified. Incumbent prediction provenance therefore remains unresolved; do not fabricate it or open the outcome gate. The market-only baseline remains independently identifiable, but the frozen protocol still lists the incumbent as a required comparator.
+
+### Source-provenance writer/validator compatibility review
+- Compared the exact offline patches of #944's `build_source_provenance()` writer and #942's `_validate_capture_source_provenance()` gate validator.
+- The outer and nested `parent_run` field sets match exactly; both enforce source observation ≤ archive creation, parent creation ≤ archive creation ≤ parent completion < market quote, and the validator additionally requires the feature cutoff not later than the verified source observation.
+- This is static schema alignment only. #944 and #942 remain separate open draft branches; no combined integration test or live source/quote row has yet demonstrated the writer output passing the validator. Keep the gate closed until the code is integrated in dependency order and an actual permitted source/quote capture exists.
+- No source/provider request, archive download, quote read, Supabase access, target-outcome read, XGBoost execution, production `.pkl` access/change, refit, threshold tuning, schedule change, merge, main update, promotion, or bet occurred.
+
+Frozen V2 invariants remain unchanged: 19 features, original 20×2 weights, candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, `active_lambda=0`, `shadow_lambda=1`, NO_BET, automatic promotion false, and the 30-primary-completed-event outcome gate CLOSED.
+
 ## 2026-11-24 01:52 UTC — Original V2: fresh all-league pre-match quote audit and exact documentation CI
 
 ### Fresh repository and PR state
