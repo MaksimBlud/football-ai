@@ -115,10 +115,12 @@ def test_official_serie_a_page_has_cross_sport_and_count_integrity_red_flags():
     assert flags["serie_a_page_latest_match_tile_contains_american_football_score_20_10"] is True
     assert flags["serie_a_page_latest_match_tile_mentions_soldier_field"] is True
     assert flags["serie_a_page_latest_match_tile_contains_q4_drive_and_nfl_team_text"] is True
-    assert flags["serie_a_page_player_fantasy_tile_contains_nfl_player_names"] is True
+    assert flags["serie_a_page_fantasy_tile_displays_nfl_player_names_and_metrics"] is True
     assert flags["serie_a_match_count_top_summary"] == 4941
     assert flags["serie_a_finished_match_count_archive_table"] == 4671
-    assert flags["published_match_count_conflict"] is True
+    assert flags["match_count_difference"] == 270
+    assert flags["current_season_scheduled_unplayed_fixtures_explain_difference"] is True
+    assert flags["published_match_count_conflict"] is False
     assert flags["severe_public_page_data_integrity_red_flag"] is True
 
 
