@@ -254,3 +254,24 @@ A date-window calculation improves the practical feasibility assessment without 
 This is a **published-plan feasibility estimate, not a measured Free-key result**. It does not prove that the actual account/key receives all 110 fixtures, all required fields, or complete/consistent card/corner values. The separate measured data-quality table still labels Italy Serie A Pro. No authenticated response has been captured, and no upstream observation timestamp is documented.
 
 **Disposition remains HOLD.** The source is now the strongest no-cost candidate for a narrowly scoped, authorized conformance test because its published three-month window nominally covers the 2026/27 10-match feature history at round 11 and the request count is small. Before any account/key or capture, still require written confirmation of Free-plan Serie A entitlement and required-field completeness, upstream rights for internal model use, and private raw-response retention. No API key, API/odds request, download, inference, or Supabase operation was performed for this calculation.
+
+## Official-plan re-check — 2026-11-24 UTC (public pages only)
+
+The provider now documents a second **$0 Community Access** route more explicitly. This is a possible free entitlement path, not an authorization to use it:
+
+- The [Community Access page](https://5dollarfootballapi.com/community) describes a $0 plan for users who truthfully select one of the published eligibility categories (student; academic/non-profit research; early-career developer; or someone for whom US$5/month is a meaningful expense).
+- It adds the top-five leagues plus one selected country pack, 12 months of results/odds history, 300 requests/hour with a 20/minute ceiling, and a 12-month activation/renewal period.
+- The page says the account holder selects the applicable eligibility statement and country pack. **This automation must not select a category, self-attest, create an account, or activate Community Access on the user's behalf.**
+- The page permits model/internal-tool use and response caching, with attribution for public-facing products and no raw-feed resale/redistribution. The provider's [Terms](https://5dollarfootballapi.com/terms) state the same general use restrictions.
+
+The [pricing page](https://5dollarfootballapi.com/pricing) distinguishes Free (last 3 months) from Community (last 12 months). The [Italy Serie A data-quality page](https://5dollarfootballapi.com/docs/data-quality/3405541143), freshly recounted on 2026-11-24, labels Italy Serie A as Pro and Ultra for its 12-month/13-season table; it reports 380/380 finished matches in the last 12 months with 100% corners, half-time corners, corner lines, odds, events, live statistics and cards. Its season table reports 110/110 finished 2026/27 fixtures through 2026-11-09 with 100% for those fields. These are aggregate provider-published completeness figures, not match-level outcomes and not an authenticated Community response. The dedicated [Serie A page](https://5dollarfootballapi.com/serie-a-api) continues to claim the league and full statistics are in Free. The plan/coverage distinction therefore remains unverified for an actual account.
+
+### Implication for the frozen 19 features
+
+The unchanged original `ALL_FOOTBALL` feature set contains 19 differences over points, goals for/against, corners for/against, yellow cards and red cards (5-match, 10-match and venue-5 windows). The existing offline adapter maps only these documented raw families. The public fixture schema documents goals, corners and yellow/red totals; no shots, possession or xG are required by this feature set. This is schema-family compatibility only: exact card semantics (especially second-yellow/red treatment), null-versus-zero behavior, team-side mapping and actual Community/Italy entitlement remain unverified.
+
+### Decision remains HOLD
+
+Community Access is a plausible no-cost route only if the account holder independently and truthfully qualifies, selects Italy, and later verifies that the activated account actually returns the required Serie A fixtures/fields. No such eligibility or activation is assumed here. The provider still has not publicly identified the upstream rights chain for these fields or documented a durable private research-archive retention term. The current adapter's pinned rights manifest therefore remains HOLD; its Community-plan rejection remains intentional until separate eligibility and entitlement approval are recorded.
+
+No account/key was created, no eligibility statement was selected, no API or odds endpoint was called, no provider data was downloaded or archived, no feature calculation/inference was run, no Supabase operation occurred, and no 2026/27 match-level outcome was accessed. No paid plan or paid request is proposed.
