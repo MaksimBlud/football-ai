@@ -8042,3 +8042,37 @@ These were scheduled main executions, not initiated by this research run. The cu
 ### Controls
 - No provider/API request, source download, paid odds request, Supabase write/DDL, protected 2026/27 outcome read, inference on real data, retraining/refit, threshold tuning, production `.pkl` change, main update, merge, promotion, publication, bet, schedule change, or other-agent setting change occurred in this checkpoint.
 - Preserve `active_lambda=0` as the market identity and `shadow_lambda=1` as research only. Keep source capture and inference held until provider rights, private storage, and source-before-quote evidence are independently cleared.
+
+## 2026-11-24 13:52 UTC — Fresh main, exact-head V2 chain and strict pre-match ledger recheck
+
+### Main and original-forward runtime
+- Re-read repository metadata, default-branch commit, main continuity file, original forward script/workflow, and current open V2 PRs. Main remains public at `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Main `PROJECT_CONTINUITY.md` remains blob `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b` and still starts with the October 18 checkpoint.
+- Main `serie_a_v2_forward_capture.py` remains blob `5db02cbd1367ed25b994b152acf371421859a014`; its old `main()` reads saved quote rows before discovering and verifying source archives. Main `.github/workflows/serie-a-v2-forward-preview.yml` still exposes Supabase/GitHub credentials at job scope and publishes its artifact under `if: always()`. The default-deny/source-first/private-storage chain is not active on main until HUMAN-MERGE.
+- Main `serie_a_v2_frozen_shadow_preview.py` still has a `MARKET_KEYS` projection without `created_at`. The #951 research stack adds `created_at` to that projection and tests the persisted-quote query contract; do not cherry-pick or merge #951 without its complete #781 → #879 → #938 ancestry.
+
+### Exact open V2 PRs and associated CI
+- Root HOLD [#781](https://github.com/MaksimBlud/football-ai/pull/781): OPEN / Ready for review; live PR API HEAD `5552bec363ae72ad7aef04c598d2ce861f33eb42`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`. Eight exact-HEAD associated workflows all SUCCESS: 45108795827, 45108795897, 45108795789, 45108795785, 45108795798, 45108795794, 45108795793, 45108795804. Run #45108795798 independently reports the exact same head SHA. HUMAN-MERGE only.
+- Private-storage child [#879](https://github.com/MaksimBlud/football-ai/pull/879): OPEN / Draft, exact HEAD `02bf0873979551ddd98511df013a27f872893990`; its exact validation run #45136504472 SUCCESS.
+- Source-first original-forward child [#938](https://github.com/MaksimBlud/football-ai/pull/938): OPEN / Draft, exact HEAD `14d765ca2b55e939d9ab5790abbbecd3a29f2614`; isolated validation run #45161516045 SUCCESS. Its CLI verifies the latest source parent and ZIP SHA before importing Supabase or reading saved quotes.
+- Immutable-action-pin child [#949](https://github.com/MaksimBlud/football-ai/pull/949): exact HEAD `1003148980e7421a4014e0bafc6e466b4b0c4f12`; run #45362170371 SUCCESS.
+- Source-first validator hardening [#950](https://github.com/MaksimBlud/football-ai/pull/950): exact HEAD `79a71f0fa12c5ce52ee20915c9013bff4464c7ed`; run #45379676444 SUCCESS. It disables persisted checkout credentials in the isolated validator.
+- Persisted quote-row chronology [#951](https://github.com/MaksimBlud/football-ai/pull/951): exact HEAD `f1ad14e783b4f03e8887516f6805d4650233fead`; exact validation run #45390159817 SUCCESS on Python 3.11 and 3.12, 499 tests in each job. It requires quote-row `created_at` to be at/after the declared snapshot, no later than the capture clock, and strictly before kickoff; the stacked quote reader selects and validates that field.
+- Big Balls free-source audit [#952](https://github.com/MaksimBlud/football-ai/pull/952): exact HEAD `1c364dd83f9a9735112c58256c94d3dfc3c94c10`; seven associated PR workflows SUCCESS. Dedicated audit run #45401901429 is tied to that exact SHA. Decision remains HOLD / no integration: public plan/statistics documentation conflicts, current-season per-field completeness is unproven, and timestamp/correction provenance remains unresolved.
+- The existing Soccer Data audit [#874](https://github.com/MaksimBlud/football-ai/pull/874) is already OPEN / Draft at exact HEAD `9f1afef57118e92265ff766931b506394a78f9cd`, with seven associated workflows SUCCESS. Do not create a duplicate audit. It records the Free-plan/current-season limitation, storage only while account/plan remain active, no explicit AI training/inference grant, upstream-rights uncertainty, stale-cache semantics and no account/API access.
+- Documentation PR [#839](https://github.com/MaksimBlud/football-ai/pull/839) was at exact HEAD `4b5617f71778949c3887adbeaf15a4a6e28a6dd6` before this checkpoint; its eight associated exact-head workflows all SUCCESS (45400687075, 45400687083, 45400687146, 45400687253, 45400687217, 45400687458, 45400687062, 45400687094). Its PR body still names a different, superseded SHA `c6c707b1...`; the live PR API head is authoritative. This documentation update must receive fresh CI before it is described as validated.
+
+### Fresh Supabase pre-match-only ledger check
+Read-only SELECT from `public.odds_snapshots` used only league, event ID, snapshot time, persistence time and kickoff time. Eligibility required:
+`snapshot_time_utc < commence_time_utc`,
+`created_at < commence_time_utc`, and
+`snapshot_time_utc <= created_at`.
+- All leagues: 3,966 total rows; 3,915 strictly pre-match rows; 327 unique pre-match event IDs; zero rows for future events with a strictly pre-match quote.
+- Serie A: 625 total rows; 620 strictly pre-match rows; 63 unique events; zero future-event pre-match rows. Latest eligible Serie A snapshot remains `2026-10-13T14:48:53.042620Z`.
+- No score, result, settlement or protected target-outcome columns were selected. The ledger has no new prospective quotes for the original V2 cohort.
+
+### Frozen original V2 and gates
+- Candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; exact ordered 19 features and 20×2 weights unchanged; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; `active_lambda=0), `shadow_lambda=1).
+- Historical stability gate remains FAILED. Prospective evaluation cohort remains 0/30 / CLOSED; no eligible independent Brier/LogLoss comparison and no superiority claim. The incumbent comparator's separate as-of provenance remains unresolved; do not revive or run the legacy XGBoost artifact to fill that gap.
+- No source-provider account/key/request/download, no paid odds request, no protected 2026/27 target-outcome read in this cycle, no Supabase write/DDL, no inference/refit, no threshold tuning, no production `.pkl` change, no main update/merge/promotion/bet, and no schedule or other-agent change.
+
+**Next safe action:** keep the root #781 HUMAN-MERGE review first. After a human merge, re-read main and verify the five live workflows skip source/quote access and artifact publication. Continue the existing #879 → #938 → #949 → #950 → #951 chain only after each parent is integrated; keep #952 and #874 as HOLD-only source audits until rights, exact coverage and private retention are independently cleared.
