@@ -46,12 +46,13 @@
     "terms_effective_date": "2026-08-10",
     "private_api_response_storage_and_retention_permitted_by_provider_terms": true,
     "internal_model_training_evaluation_and_backtesting_permitted_by_provider_terms": true,
-    "internal_model_inference_permitted_by_provider_terms": true,
     "derived_models_scores_predictions_and_aggregates_owned_by_customer_under_terms": true,
     "raw_data_feed_redistribution_permitted": false,
     "upstream_provider_identity_verified": false,
     "upstream_field_level_rights_verified": false,
-    "written_upstream_rights_confirmation_required": true
+    "written_upstream_rights_confirmation_required": true,
+    "internal_model_inference_explicitly_named_in_terms": false,
+    "internal_model_use_as_input_permitted": true
   },
   "provenance": {
     "response_meta_source_is_opaque_tier_label": true,
@@ -112,7 +113,7 @@
     "integration_allowed": false,
     "possible_role_if_cleared": "future-only current-season lagged statistics for the unchanged original 19-feature builder; not a replacement training corpus and not a market-odds source",
     "reasons": [
-      "Provider terms explicitly permit private response retention and internal model training, evaluation, backtesting and inference; this is stronger than several previously reviewed free providers.",
+      "Provider terms explicitly permit private response retention and internal model use, including training, evaluation and backtesting; inference is not separately named in the Terms; this is stronger than several previously reviewed free providers.",
       "The official pricing and Serie A pages disagree on whether Free includes the current plus most-recent season or only the current season; either scope is insufficient for the original 2014-2026 training corpus.",
       "The Free plan does not include bookmaker odds; the existing frozen market-quote source must remain unchanged.",
       "The required goals, points, corners and card feature families are schema-level present, but all match-stat fields are nullable and the public coverage matrix marks soccer team_stats partial; exact 2026/27 Serie A per-fixture completeness is unverified.",
