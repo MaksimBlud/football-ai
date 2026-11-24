@@ -115,6 +115,11 @@ def test_official_serie_a_page_has_cross_sport_and_count_integrity_red_flags():
     flags = _load()["public_page_integrity_flags"]
     assert flags["serie_a_page_latest_match_tile_contains_american_football_score_20_10"] is True
     assert flags["serie_a_page_latest_match_tile_mentions_soldier_field"] is True
+    assert flags["verified_event_replay_fiorentina_juventus_score_home"] == 2
+    assert flags["verified_event_replay_fiorentina_juventus_score_away"] == 2
+    assert flags["latest_match_tile_fiorentina_juventus_score_home"] == 20
+    assert flags["latest_match_tile_fiorentina_juventus_score_away"] == 10
+    assert flags["same_fixture_score_conflict"] is True
     assert flags["serie_a_page_latest_match_tile_contains_q4_drive_and_nfl_team_text"] is True
     assert flags["serie_a_page_fantasy_tile_displays_nfl_player_names_and_metrics"] is True
     assert flags["serie_a_match_count_top_summary"] == 4941
