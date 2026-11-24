@@ -110,6 +110,18 @@ def test_no_provider_access_or_model_operation_was_performed():
     assert auth["production_pickle_changed"] is False
 
 
+def test_official_serie_a_page_has_cross_sport_and_count_integrity_red_flags():
+    flags = _load()["public_page_integrity_flags"]
+    assert flags["serie_a_page_latest_match_tile_contains_american_football_score_20_10"] is True
+    assert flags["serie_a_page_latest_match_tile_mentions_soldier_field"] is True
+    assert flags["serie_a_page_latest_match_tile_contains_q4_drive_and_nfl_team_text"] is True
+    assert flags["serie_a_page_player_fantasy_tile_contains_nfl_player_names"] is True
+    assert flags["serie_a_match_count_top_summary"] == 4941
+    assert flags["serie_a_finished_match_count_archive_table"] == 4671
+    assert flags["published_match_count_conflict"] is True
+    assert flags["severe_public_page_data_integrity_red_flag"] is True
+
+
 def test_candidate_audit_does_not_authorize_integration():
     decision = _load()["decision"]
     assert decision["status"] == "HOLD_NO_INTEGRATION"
