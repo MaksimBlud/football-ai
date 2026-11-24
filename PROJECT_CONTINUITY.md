@@ -1,3 +1,30 @@
+## 2026-11-24 — Footiqo free-source rights and pre-match suitability audit
+
+A new public-source candidate, Footiqo, was screened using its official pages only; no account was created, no file/sample/export was downloaded, and no automated request was sent.
+
+Official evidence:
+- Dataset Licence & Data Access Policy (last updated 2026-10-08): https://footiqo.com/dataset-licence/
+- Serie A public database page: https://footiqo.com/database/leagues/italy-serie-a/
+- Dataset coverage/pricing: https://footiqo.com/premium/premium-football-database/
+
+What the official pages establish:
+- The Serie A page exposes current and historical match tables and CSV/Excel export controls. It advertises separate views for scores, corners/cards, shots/possession, xG and odds. The public table visibly includes match date, home/away teams, full-time goals and result; field availability varies by match, season and page.
+- The policy expressly permits users who legitimately obtain data through official download/export functions to retain it privately for personal, non-commercial research, statistical analysis, predictive modelling, backtesting and machine-learning experiments. It applies to free samples and public-table exports as well as purchased datasets.
+- The same policy prohibits automated scraping/crawling, automated bulk extraction, automated access to export endpoints, and automated downloading of free or premium datasets unless Footiqo gives separate written authorization. It says no public API is currently provided. Manual export is permitted for personal non-commercial research.
+- The policy does not override third-party data-provider rights; it states that underlying source rights can differ. Coverage/completeness is not guaranteed.
+- The full historical database is listed at €49.99 and the separate 19-bookmaker historical pre-match-odds collection at €99.99; free samples are not the full datasets.
+
+V2 decision:
+- **HOLD for automated source capture and scheduled ingestion**: the published policy does not authorize automation, there is no public API, and written automation permission is absent.
+- **Possible manual research-only source** if the project use is personal/non-commercial and the official export route is used. This is not an approved replacement for the automated source-before-quote pipeline.
+- The public pages do not establish a per-match first-observed timestamp, complete 19-feature coverage, or upstream rights for every field. A match date is not a provider-observed timestamp. Therefore Footiqo cannot presently satisfy the frozen source-before-quote evidence contract or be admitted as a complete 19-feature prospective source.
+- Do not use public exports to backfill the frozen prospective cohort. Do not treat the advertised 1X2 odds tables as a substitute for the project's independently timestamped saved market snapshots.
+- Next evidence required before reconsideration: written permission for automated capture (if automation is desired), a provider statement covering upstream rights and ML use, exact field/season coverage for all 19 frozen features, and a provider-observed first-available timestamp or equivalent immutable receipt evidence.
+
+This is a source-rights/field-provenance screen only; it does not change the original V2 model, protocol, feature order, weights, lambda values, source cohort, workflow schedules, or outcome gates.
+
+---
+
 ## 2026-11-24 02:00 UTC — Original V2: recomputed frozen stability gate and comparator/provenance audit
 
 ### Independent recomputation of the frozen historical stability gate
