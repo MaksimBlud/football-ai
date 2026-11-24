@@ -7884,3 +7884,19 @@ Read-only SELECT from `public.odds_snapshots`, using `snapshot_time_utc < commen
 - No scientific superiority claim is permitted until the original frozen gate is satisfied and independent Brier/LogLoss evaluation is completed.
 
 No main update or merge, no Supabase write/DDL, no paid provider call, no production `.pkl` access/change, no inference/refit, no schedule/agent changes, and no protected target-outcome read.
+
+
+## 2026-11-24 — Original V2: post-policy main workflow execution and public artifact evidence
+
+### Official provider policy cross-check and actual main executions
+- Official Football-Data data page says the free CSV/Excel data are intended for private individuals only and excludes commercial or data-training products using automated bots/scrapers/AI: https://football-data.co.uk/data
+- Official fair-use/contact page says use is for personal betting or academic research via manual download or at most light automated downloads (twice weekly maximum), excludes commercial or AI data-training projects using automated bots/scrapers, and says to assume no permission for other use without a response: https://football-data.co.uk/contact.php
+- Current project rights manifest `research/source_rights/football_data_co_uk.json`, blob `96ee20eb99abc2eb73d1ff67d71e1d6fcdeab310`, checked 2026-11-21T11:52:37Z: `research_source_capture_permitted=false`, `research_inference_permitted=false`, `ai_model_training_permitted=false`, `authorization=null`. The two-download ceiling is not an authorization.
+
+Despite that internal HOLD, the unchanged public main (`40887ebb...`) executed the following scheduled runs on 2026-11-23:
+
+- **Current-Form Source Capture** [run #45217596300](https://github.com/MaksimBlud/football-ai/actions/runs/45217596300), SUCCESS, main SHA `40887ebb...`, 16:32:08–16:33:11 UTC. It fetched/archived 10 historical CSVs plus one current-season CSV; the verified downstream manifest reports 3,919 historical rows, 119 current-season rows, 110 outcome-free feature-input-gate fixtures, 11 source files, and source observation at 16:33:05 UTC. Public artifact #14839276758, 440,550 bytes, SHA-256 `2a6cb4902da93c4d15050ba9407543a19bc32c68c3f1f5c4ebe07202bb8c7bd9`.
+- **Current-Form Forward-Only Preview** [run #45257233004](https://github.com/MaksimBlud/football-ai/actions/runs/45257233004), SUCCESS, main SHA `40887ebb...`. Its log reports 53 tests passed, 0 saved quotes, 0 V2 current-form shadow captures, target outcomes not read/scored, 0 paid provider calls, and 0 Supabase/production writes. Nevertheless, it uploaded public artifact #14857862796, 441,731 bytes, SHA-256 `5e9515e6105164a2c3a4421c580c38ec73d29bbdd5b9b2de69c1967bd134c3a8`, containing the current-form preview and source bytes.
+- **Original Forward-Only Preview** [run #45255423039](https://github.com/MaksimBlud/football-ai/actions/runs/45255423039), SUCCESS, main SHA `40887ebb...`. Its log reports 71 tests passed; source attestation verified 10 historical pre-prospective CSVs / 3,800 matches, but 0 quotes, 0 future quotes checked, 0 V2 previews, 0 paid calls and 0 Supabase writes. It still uploaded public diagnostic artifact #14859255542 (1,459 bytes), SHA-256 `aa3c94d7013939c9744db0af4bc6e2cbe8c385cf2eb125e7ce7f855c155829a8`.
+
+These were scheduled main executions, not initiated by this research run. The current-form source and forward workflow accessed and republished source bytes after the project rights manifest had set automated capture and inference to false. This is a concrete reason to keep live access held. Do not repeat these source reads or downloads. Root PR #781 remains the required manual default-deny workflow hold; #879 adds the private-storage gate and #938/#945/#946 add source-first/direct-entrypoint rights enforcement. No PR was merged and main was not changed here.
