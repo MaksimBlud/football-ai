@@ -59,7 +59,8 @@ def test_provider_terms_allow_internal_models_but_upstream_rights_remain_unverif
     rights = _load()["rights"]
     assert rights["private_api_response_storage_and_retention_permitted_by_provider_terms"] is True
     assert rights["internal_model_training_evaluation_and_backtesting_permitted_by_provider_terms"] is True
-    assert rights["internal_model_inference_permitted_by_provider_terms"] is True
+    assert rights["internal_model_use_as_input_permitted"] is True
+    assert rights["internal_model_inference_explicitly_named_in_terms"] is False
     assert rights["derived_models_scores_predictions_and_aggregates_owned_by_customer_under_terms"] is True
     assert rights["raw_data_feed_redistribution_permitted"] is False
     assert rights["upstream_provider_identity_verified"] is False
