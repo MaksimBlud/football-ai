@@ -202,6 +202,7 @@ def test_current_form_v2_scores_only_future_quote_with_prequote_source_and_stays
     assert report["v2_current_form_shadow_captured"] == 1
     row = report["rows"][0]
     assert row["status"] == "CURRENT_FORM_V2_SHADOW_CAPTURED_PREKICKOFF"
+    assert row["quote_row_created_at_utc"] == "2026-10-19T05:30:01+00:00"
     preview = row["v2_preview"]
     assert preview["model_candidate_sha256"] == FROZEN_SHA
     assert preview["eligible_for_current_form_forward_shadow"] is True
@@ -799,3 +800,35 @@ def test_current_form_get_archive_rejects_missing_token_before_network():
     with pytest.raises(ValueError, match="token missing"):
         get_archive(123, token=" ", get=lambda *a, **k: calls.append(a))
     assert calls == []
+
+@pytest.mark.parametrize(
+    ("created_at", "remove_created_at", "message"),
+    [
+        (None, True, "saved quote row is missing created_at"),
+        ("2026-10-19T05:29:59Z", False, "saved quote row persisted before declared snapshot time"),
+        ("2026-10-19T05:40:01Z", False, "saved quote row persisted after capture clock"),
+        ("2026-10-19T18:00:00Z", False, "saved quote row persisted at or after kickoff"),
+    ],
+)
+def test_current_form_quote_persistence_is_preflighted_before_source_callbacks(
+    created_at, remove_created_at, message
+):
+    raw, archives = make_archive()
+    candidate = quote()
+    if remove_created_at:
+        candidate.pop("created_at")
+    else:
+        candidate["created_at"] = created_at
+    callbacks = []
+
+    with pytest.raises(ValueError, match=message):
+        prepare_forward_capture(
+            [candidate],
+            archives,
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            load_archive=lambda _artifact_id: callbacks.append("archive") or raw,
+            verify_parent_run=lambda *_args, **_kwargs: callbacks.append("parent") or {},
+        )
+
+    assert callbacks == [], "invalid quote persistence must fail before source or parent I/O"
+
