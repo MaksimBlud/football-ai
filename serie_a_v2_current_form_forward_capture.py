@@ -17,6 +17,8 @@ import re
 from typing import Any, Mapping
 import zipfile
 
+import market_anchor_v2_direct_access as v2_access
+
 import pandas as pd
 import requests
 from supabase import create_client
@@ -46,6 +48,7 @@ OLD_CUTOFF = pd.Timestamp("2026-07-01")
 
 
 def _github_json(url: str, *, token: str, get=requests.get) -> dict:
+    v2_access.require_v2_source_capture_access()
     if not token:
         raise ValueError("GitHub Actions actions:read token missing")
     if not url.startswith(GITHUB_API + "/"):
@@ -63,6 +66,7 @@ def _github_json(url: str, *, token: str, get=requests.get) -> dict:
 
 
 def discover_archives(*, token: str, get=requests.get) -> list[dict]:
+    v2_access.require_v2_source_capture_access()
     out, seen_ids = [], set()
     for page in range(1, 4):
         data = _github_json(
@@ -101,6 +105,7 @@ def discover_archives(*, token: str, get=requests.get) -> list[dict]:
 def verify_source_run(
     archive: Mapping[str, Any], *, quote_time: datetime, token: str, get=requests.get
 ) -> dict:
+    v2_access.require_v2_source_capture_access()
     run_id = archive.get("run_id")
     if type(run_id) is not int or run_id <= 0:
         raise ValueError("source artifact lacks parent workflow run")
@@ -127,6 +132,7 @@ def verify_source_run(
 
 
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
+    v2_access.require_v2_source_capture_access()
     if type(artifact_id) is not int or artifact_id <= 0:
         raise ValueError("invalid source artifact id")
     response = get(
@@ -148,6 +154,7 @@ def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
 def verify_and_load_archive(
     raw: bytes, archive: Mapping[str, Any], parent: Mapping[str, Any]
 ) -> tuple[pd.DataFrame, dict]:
+    v2_access.require_v2_source_capture_access()
     if not raw or len(raw) > MAX_ARCHIVE_BYTES:
         raise ValueError("current-form source archive is empty or too large")
     digest = hashlib.sha256(raw).hexdigest()
@@ -279,6 +286,7 @@ def verify_latest_source_archive(
     write_sources_to: Path | None = None,
 ) -> dict:
     """Verify the latest successful main source artifact even when all quotes are stale."""
+    v2_access.require_v2_source_capture_access()
     if as_of_utc.tzinfo is None:
         raise ValueError("source verification clock must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
@@ -335,7 +343,111 @@ def verify_latest_source_archive(
     }
 
 
+def _verified_source_precedes_quote_read(source_verification: Mapping[str, Any]) -> bool:
+    """Require a fully attested original-V2 source archive before any quote read."""
+    if not isinstance(source_verification, Mapping):
+        return False
+    if (
+        source_verification.get("status") != "VERIFIED"
+        or source_verification.get("verified") is not True
+        or source_verification.get("candidate_sha256") != FROZEN_SHA
+    ):
+        return False
+    artifact_id = source_verification.get("artifact_id")
+    digest = source_verification.get("artifact_sha256")
+    parent = source_verification.get("parent_run")
+    if type(artifact_id) is not int or artifact_id <= 0:
+        return False
+    if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+        return False
+    if not isinstance(parent, Mapping):
+        return False
+    if (
+        type(parent.get("run_id")) is not int
+        or parent["run_id"] <= 0
+        or not isinstance(parent.get("run_head_sha"), str)
+        or not re.fullmatch(r"[0-9a-f]{40}", parent["run_head_sha"])
+        or parent.get("workflow_path") != SOURCE_WORKFLOW_PATH
+    ):
+        return False
+    try:
+        verified_at = parse_utc(source_verification["verified_at_utc"])
+        source_created = parse_utc(source_verification["source_archive_created_at_utc"])
+        latest_source = parse_utc(source_verification["latest_source_observed_at_utc"])
+        parent_created = parse_utc(parent["run_created_at_utc"])
+        parent_completed = parse_utc(parent["run_completed_at_utc"])
+    except (KeyError, TypeError, ValueError):
+        return False
+    return (
+        latest_source <= source_created
+        and parent_created <= source_created <= parent_completed < verified_at
+    )
+
+
+def _verified_source_is_fresh(source_verification: Mapping[str, Any]) -> bool:
+    """Recompute the frozen 24-hour source-age rule before allowing any quote read."""
+    if not isinstance(source_verification, Mapping):
+        return False
+    if source_verification.get("fresh_for_new_quote") is not True:
+        return False
+    reported_age = source_verification.get("source_age_seconds_at_verification")
+    if type(reported_age) is not int or reported_age < 0:
+        return False
+    try:
+        verified_at = parse_utc(source_verification["verified_at_utc"])
+        latest_source = parse_utc(source_verification["latest_source_observed_at_utc"])
+    except (KeyError, TypeError, ValueError):
+        return False
+    actual_age = (verified_at - latest_source).total_seconds()
+    return (
+        0 <= actual_age <= MAX_SOURCE_AGE.total_seconds()
+        and reported_age == int(actual_age)
+        and reported_age <= MAX_SOURCE_AGE.total_seconds()
+    )
+
+
+def read_quotes_after_verified_source(
+    source_verification: Mapping[str, Any],
+    *,
+    quote_loader,
+) -> tuple[list[dict], dict]:
+    """Read saved quotes only after provenance, source freshness and both rights gates pass."""
+    v2_access.require_v2_source_capture_access()
+    if not _verified_source_precedes_quote_read(source_verification):
+        return [], {
+            "status": "SKIPPED_NO_VERIFIED_SOURCE_ARCHIVE",
+            "quote_reader_called": False,
+        }
+    if not _verified_source_is_fresh(source_verification):
+        return [], {
+            "status": "SKIPPED_STALE_SOURCE_ARCHIVE",
+            "quote_reader_called": False,
+            "source_age_seconds_at_verification": source_verification.get(
+                "source_age_seconds_at_verification"
+            ),
+            "max_source_age_seconds": int(MAX_SOURCE_AGE.total_seconds()),
+        }
+    # A verified, fresh source alone does not grant frozen inference or quote access.
+    v2_access.require_v2_inference_access()
+    if not callable(quote_loader):
+        raise ValueError("saved quote reader must be callable")
+    quotes = quote_loader()
+    if not isinstance(quotes, list):
+        raise ValueError("saved quote reader must return a list")
+    return quotes, {
+        "status": "READ_AFTER_VERIFIED_FRESH_SOURCE_ARCHIVE",
+        "quote_reader_called": True,
+        "source_artifact_id": source_verification["artifact_id"],
+        "source_artifact_sha256": source_verification["artifact_sha256"],
+        "source_parent_run_id": source_verification["parent_run"]["run_id"],
+        "source_age_seconds_at_verification": source_verification[
+            "source_age_seconds_at_verification"
+        ],
+    }
+
+
 def _latest_quotes(quotes: list[dict], *, now: datetime) -> list[dict]:
+    v2_access.require_v2_inference_access()
     latest = {}
     seen = set()
     for q in quotes:
@@ -370,6 +482,10 @@ def prepare_forward_capture(
     verify_parent_run,
     write_sources_to: Path | None = None,
 ) -> dict:
+    # Source and inference are separate permissions; both are required before
+    # quote/feature inputs are inspected or any preview is constructed.
+    v2_access.require_v2_source_capture_access()
+    v2_access.require_v2_inference_access()
     if as_of_utc.tzinfo is None:
         raise ValueError("current-form forward clock must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
@@ -544,7 +660,53 @@ def prepare_forward_capture(
     }
 
 
+def _empty_forward_report(*, as_of_utc: datetime) -> dict:
+    """Build an outcome-free no-source report without requiring inference access."""
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
+        raise ValueError("empty forward report clock must be timezone-aware")
+    now = as_of_utc.astimezone(timezone.utc)
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "experiment_id": "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY",
+        "mode": "READ_ONLY_PREKICKOFF_SHADOW_NO_BET",
+        "candidate_sha256": FROZEN_SHA,
+        "as_of_utc": now.isoformat(),
+        "quotes_seen": 0,
+        "v2_current_form_shadow_captured": 0,
+        "blocked": {
+            "NO_EARLIER_SOURCE_ARCHIVE": 0,
+            "SOURCE_PARENT_UNVERIFIED": 0,
+            "SOURCE_ARCHIVE_TOO_OLD": 0,
+            "STALE_MARKET_QUOTE": 0,
+            "EXPIRED_FIXTURE": 0,
+            "NO_FEATURES": 0,
+            "ALL_FEATURES_MEDIAN_IMPUTED": 0,
+        },
+        "rows": [],
+        "source_artifacts_used": [],
+        "active_lambda": 0.0,
+        "shadow_residual_lambda": 1.0,
+        "active_model_is_exact_de_vigged_market": True,
+        "target_outcomes_read": False,
+        "target_outcomes_scored": False,
+        "target_outcome_evaluation_gate_open": False,
+        "model_refit_or_selection": False,
+        "production_or_supabase_writes": 0,
+        "paid_provider_calls": 0,
+        "eligible_for_frozen_original_cohort": False,
+        "eligible_for_current_form_forward_shadow": False,
+        "eligible_for_product_publication": False,
+        "no_bet": True,
+    }
+
+
 def main() -> None:
+    # Direct CLI calls must not bypass the provider source-capture scope.
+    v2_access.require_v2_source_capture_access()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--sources-output-dir", type=Path, required=True)
@@ -554,9 +716,8 @@ def main() -> None:
     if os.environ.get("GITHUB_REF") != "refs/heads/main":
         raise RuntimeError("current-form V2 source/forecast workflow must run from main")
     token = os.environ.get("GITHUB_TOKEN", "")
-    url, key = os.environ.get("SUPABASE_URL", ""), os.environ.get("SUPABASE_KEY", "")
-    if not token or not url or not key:
-        raise RuntimeError("GitHub actions:read and Supabase read-only credentials are required")
+    if not token:
+        raise RuntimeError("GitHub Actions actions:read credential is required for source verification")
     now = datetime.now(timezone.utc)
     archives = discover_archives(token=token)
     raw_cache = {}
@@ -574,19 +735,38 @@ def main() -> None:
         as_of_utc=now,
         load_archive=load_cached_archive,
         verify_parent_run=verify_parent,
-        write_sources_to=args.sources_output_dir,
+        write_sources_to=None,
     )
-    client = create_client(url, key)
-    quotes = fetch_saved_upcoming_serie_a_quotes(client, now=now)
-    report = prepare_forward_capture(
-        quotes,
-        archives,
-        as_of_utc=now,
-        load_archive=load_cached_archive,
-        verify_parent_run=verify_parent,
-        write_sources_to=args.sources_output_dir,
+
+    def read_saved_quotes() -> list[dict]:
+        # Source provenance and inference rights have already passed. Resolve
+        # Supabase secrets only now, immediately before the read-only quote query.
+        url = os.environ.get("SUPABASE_URL", "")
+        key = os.environ.get("SUPABASE_KEY", "")
+        if not url or not key:
+            raise RuntimeError("Supabase read-only credentials are required after source and inference gates")
+        client = create_client(url, key)
+        return fetch_saved_upcoming_serie_a_quotes(client, now=now)
+
+    quotes, quote_read_gate = read_quotes_after_verified_source(
+        source_verification,
+        quote_loader=read_saved_quotes,
     )
+    if quote_read_gate["quote_reader_called"]:
+        report = prepare_forward_capture(
+            quotes,
+            archives,
+            as_of_utc=now,
+            load_archive=load_cached_archive,
+            verify_parent_run=verify_parent,
+            write_sources_to=args.sources_output_dir,
+        )
+    else:
+        # A no-source report is metadata-only: do not invoke the inference path
+        # or require inference rights merely to record that quotes were skipped.
+        report = _empty_forward_report(as_of_utc=now)
     report["latest_source_archive_verification"] = source_verification
+    report["quote_read_gate"] = quote_read_gate
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
                            encoding="utf-8")
@@ -595,6 +775,7 @@ def main() -> None:
         "candidate_sha256": report["candidate_sha256"],
         "quotes_seen": report["quotes_seen"],
         "latest_source_archive_verification": report["latest_source_archive_verification"],
+        "quote_read_gate": report["quote_read_gate"],
         "v2_current_form_shadow_captured": report["v2_current_form_shadow_captured"],
         "blocked": report["blocked"],
         "target_outcomes_read": report["target_outcomes_read"],

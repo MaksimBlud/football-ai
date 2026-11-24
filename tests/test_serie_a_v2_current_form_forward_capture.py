@@ -6,11 +6,22 @@ import zipfile
 
 import pytest
 
+import market_anchor_v2_direct_access as v2_access
+import serie_a_v2_frozen_shadow_preview as frozen_shadow_preview
+
+@pytest.fixture(autouse=True)
+def _allow_synthetic_source_and_inference_rights(monkeypatch):
+    synthetic = lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"}
+    monkeypatch.setattr(v2_access, "require_v2_source_capture_access", synthetic)
+    monkeypatch.setattr(v2_access, "require_v2_inference_access", synthetic)
+    monkeypatch.setattr(frozen_shadow_preview, "require_v2_inference_access", synthetic)
+
 from serie_a_v2_current_form_forward_capture import (
     ARTIFACT_NAME,
     MANIFEST_FILENAME,
     SOURCE_WORKFLOW_PATH,
     prepare_forward_capture,
+    read_quotes_after_verified_source,
     verify_latest_source_archive,
 )
 from serie_a_v2_current_form_source_capture import (
@@ -38,6 +49,7 @@ def quote(
         "home_team": "Juventus",
         "away_team": "Napoli",
         "snapshot_time_utc": snapshot,
+        "created_at": (datetime.fromisoformat(snapshot.replace("Z", "+00:00")) + timedelta(seconds=1)).isoformat(),
         "commence_time_utc": kickoff,
         "home_odds": 2.2,
         "draw_odds": 3.4,
@@ -245,6 +257,305 @@ def test_missing_source_artifact_is_explicitly_reported_without_reading_outcomes
     assert report["verified"] is False
     assert report["target_outcomes_read"] is False
     assert report["target_outcomes_scored"] is False
+
+
+def _verified_source_report(raw, *, fresh_for_new_quote=True):
+    return {
+        "status": "VERIFIED",
+        "verified": True,
+        "verified_at_utc": "2026-10-19T05:40:00+00:00",
+        "artifact_id": 9876,
+        "artifact_sha256": hashlib.sha256(raw).hexdigest(),
+        "source_archive_created_at_utc": ARCHIVE_DECLARED,
+        "latest_source_observed_at_utc": SOURCE_OBSERVED,
+        "source_age_seconds_at_verification": 23 * 60 * 60 + 15 * 60,
+        "fresh_for_new_quote": fresh_for_new_quote,
+        "candidate_sha256": FROZEN_SHA,
+        "parent_run": {
+            "run_id": 123,
+            "run_head_sha": HEAD,
+            "workflow_path": SOURCE_WORKFLOW_PATH,
+            "run_created_at_utc": PARENT_CREATED,
+            "run_completed_at_utc": PARENT_COMPLETED,
+        },
+    }
+
+
+def test_quote_reader_is_never_called_when_no_source_archive_is_verified():
+    source = verify_latest_source_archive(
+        [],
+        as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+        load_archive=lambda _artifact_id: (_ for _ in ()).throw(
+            AssertionError("no archive should be downloaded")
+        ),
+        verify_parent_run=valid_parent,
+    )
+    calls = []
+    quotes, gate = read_quotes_after_verified_source(
+        source,
+        quote_loader=lambda: calls.append("called") or [quote()],
+    )
+    assert quotes == []
+    assert calls == []
+    assert gate == {
+        "status": "SKIPPED_NO_VERIFIED_SOURCE_ARCHIVE",
+        "quote_reader_called": False,
+    }
+
+
+def test_quote_reader_rejects_unpinned_or_incomplete_source_provenance():
+    raw, _archives = make_archive()
+    source = _verified_source_report(raw)
+    source["candidate_sha256"] = "0" * 64
+    calls = []
+    quotes, gate = read_quotes_after_verified_source(
+        source,
+        quote_loader=lambda: calls.append("called") or [quote()],
+    )
+    assert quotes == []
+    assert calls == []
+    assert gate["quote_reader_called"] is False
+
+
+def test_quote_reader_requires_parent_completion_before_source_verification():
+    raw, _archives = make_archive()
+    source = _verified_source_report(raw)
+    source["parent_run"]["run_completed_at_utc"] = "2026-10-19T05:41:00+00:00"
+    calls = []
+    quotes, gate = read_quotes_after_verified_source(
+        source,
+        quote_loader=lambda: calls.append("called") or [quote()],
+    )
+    assert quotes == []
+    assert calls == []
+    assert gate["quote_reader_called"] is False
+
+
+def test_quote_reader_skips_stale_source_before_inference_rights_or_loader():
+    raw, _archives = make_archive()
+    source = _verified_source_report(raw, fresh_for_new_quote=False)
+    source["latest_source_observed_at_utc"] = "2026-10-18T05:39:59+00:00"
+    source["source_age_seconds_at_verification"] = 24 * 60 * 60 + 1
+    calls = []
+    quotes, gate = read_quotes_after_verified_source(
+        source,
+        quote_loader=lambda: calls.append("called") or [quote()],
+    )
+    assert quotes == []
+    assert calls == []
+    assert gate["status"] == "SKIPPED_STALE_SOURCE_ARCHIVE"
+    assert gate["quote_reader_called"] is False
+    assert gate["source_age_seconds_at_verification"] == 24 * 60 * 60 + 1
+
+
+def test_quote_reader_recomputes_source_age_instead_of_trusting_freshness_flag():
+    raw, _archives = make_archive()
+    source = _verified_source_report(raw, fresh_for_new_quote=True)
+    source["latest_source_observed_at_utc"] = "2026-10-18T05:39:59+00:00"
+    source["source_age_seconds_at_verification"] = 24 * 60 * 60 + 1
+    calls = []
+    quotes, gate = read_quotes_after_verified_source(
+        source,
+        quote_loader=lambda: calls.append("called") or [quote()],
+    )
+    assert quotes == []
+    assert calls == []
+    assert gate["status"] == "SKIPPED_STALE_SOURCE_ARCHIVE"
+    assert gate["quote_reader_called"] is False
+
+
+def test_quote_reader_rejects_inconsistent_reported_source_age():
+    raw, _archives = make_archive()
+    source = _verified_source_report(raw, fresh_for_new_quote=True)
+    source["source_age_seconds_at_verification"] += 1
+    calls = []
+    quotes, gate = read_quotes_after_verified_source(
+        source,
+        quote_loader=lambda: calls.append("called") or [quote()],
+    )
+    assert quotes == []
+    assert calls == []
+    assert gate["status"] == "SKIPPED_STALE_SOURCE_ARCHIVE"
+    assert gate["quote_reader_called"] is False
+
+
+def test_quote_reader_accepts_source_at_exact_24_hour_freshness_boundary():
+    raw, _archives = make_archive()
+    source = _verified_source_report(raw, fresh_for_new_quote=True)
+    source["latest_source_observed_at_utc"] = "2026-10-18T05:40:00+00:00"
+    source["source_age_seconds_at_verification"] = 24 * 60 * 60
+    calls = []
+    quotes, gate = read_quotes_after_verified_source(
+        source,
+        quote_loader=lambda: calls.append("called") or [quote()],
+    )
+    assert quotes == [quote()]
+    assert calls == ["called"]
+    assert gate["status"] == "READ_AFTER_VERIFIED_FRESH_SOURCE_ARCHIVE"
+    assert gate["quote_reader_called"] is True
+    assert gate["source_age_seconds_at_verification"] == 24 * 60 * 60
+
+
+def test_main_never_creates_supabase_client_when_no_source_archive_exists(monkeypatch, tmp_path):
+    import json
+    import sys
+    import serie_a_v2_current_form_forward_capture as module
+
+    monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
+    monkeypatch.setenv("GITHUB_REF", "refs/heads/main")
+    monkeypatch.setenv("GITHUB_TOKEN", "offline-test-token")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
+    monkeypatch.setattr(module, "discover_archives", lambda **_kwargs: [])
+    monkeypatch.setattr(
+        v2_access,
+        "require_v2_inference_access",
+        lambda: pytest.fail("no-source reporting must not require inference access"),
+    )
+    monkeypatch.setattr(
+        module,
+        "create_client",
+        lambda *_args, **_kwargs: pytest.fail("Supabase client must not be created before source verification"),
+    )
+    output = tmp_path / "forward.json"
+    sources = tmp_path / "sources"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["serie_a_v2_current_form_forward_capture.py",
+         "--output", str(output),
+         "--sources-output-dir", str(sources)],
+    )
+
+    module.main()
+
+    report = json.loads(output.read_text(encoding="utf-8"))
+    assert report["quotes_seen"] == 0
+    assert report["v2_current_form_shadow_captured"] == 0
+    assert report["latest_source_archive_verification"]["status"] == "NO_SOURCE_ARCHIVE"
+    assert report["quote_read_gate"]["quote_reader_called"] is False
+    assert report["rows"] == []
+    assert report["source_artifacts_used"] == []
+    assert not sources.exists()
+
+
+def test_main_requires_supabase_credentials_only_after_verified_source_and_inference(
+    monkeypatch, tmp_path
+):
+    import sys
+    import serie_a_v2_current_form_forward_capture as module
+
+    raw, _archives = make_archive()
+    verified_source = _verified_source_report(raw)
+    monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
+    monkeypatch.setenv("GITHUB_REF", "refs/heads/main")
+    monkeypatch.setenv("GITHUB_TOKEN", "offline-test-token")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
+    monkeypatch.setattr(module, "discover_archives", lambda **_kwargs: [])
+    monkeypatch.setattr(
+        module,
+        "verify_latest_source_archive",
+        lambda *_args, **_kwargs: verified_source,
+    )
+    monkeypatch.setattr(
+        module,
+        "create_client",
+        lambda *_args, **_kwargs: pytest.fail("client must not be created without credentials"),
+    )
+    monkeypatch.setattr(
+        module,
+        "fetch_saved_upcoming_serie_a_quotes",
+        lambda *_args, **_kwargs: pytest.fail("quote reader must not run without credentials"),
+    )
+    output = tmp_path / "forward.json"
+    sources = tmp_path / "sources"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "serie_a_v2_current_form_forward_capture.py",
+            "--output",
+            str(output),
+            "--sources-output-dir",
+            str(sources),
+        ],
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="Supabase read-only credentials are required after source and inference gates",
+    ):
+        module.main()
+    assert not output.exists()
+    assert not sources.exists()
+
+
+def test_real_main_rejects_discovered_archive_with_wrong_candidate_before_client_or_quote_read(
+    monkeypatch, tmp_path
+):
+    import sys
+    import serie_a_v2_current_form_forward_capture as module
+
+    raw, _archives = make_archive()
+    invalid_source = _verified_source_report(raw)
+    invalid_source["candidate_sha256"] = "0" * 64
+    events = []
+
+    monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
+    monkeypatch.setenv("GITHUB_REF", "refs/heads/main")
+    monkeypatch.setenv("GITHUB_TOKEN", "offline-test-token")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
+    monkeypatch.setattr(
+        module,
+        "discover_archives",
+        lambda **_kwargs: events.append("discover") or [],
+    )
+    monkeypatch.setattr(
+        module,
+        "verify_latest_source_archive",
+        lambda *_args, **_kwargs: events.append("verify") or invalid_source,
+    )
+
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("invalid source provenance must prevent client and quote access")
+
+    monkeypatch.setattr(
+        v2_access,
+        "require_v2_inference_access",
+        lambda: pytest.fail("invalid-source reporting must not require inference access"),
+    )
+    monkeypatch.setattr(module, "create_client", forbidden)
+    monkeypatch.setattr(module, "fetch_saved_upcoming_serie_a_quotes", forbidden)
+    monkeypatch.setattr(module, "get_archive", forbidden)
+    output = tmp_path / "forward.json"
+    sources = tmp_path / "sources"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "serie_a_v2_current_form_forward_capture.py",
+            "--output",
+            str(output),
+            "--sources-output-dir",
+            str(sources),
+        ],
+    )
+
+    module.main()
+
+    assert events == ["discover", "verify"]
+    report = json.loads(output.read_text(encoding="utf-8"))
+    assert report["quotes_seen"] == 0
+    assert report["v2_current_form_shadow_captured"] == 0
+    assert report["quote_read_gate"] == {
+        "status": "SKIPPED_NO_VERIFIED_SOURCE_ARCHIVE",
+        "quote_reader_called": False,
+    }
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
+    assert not sources.exists()
 
 
 def test_precontract_quote_is_never_backfilled_from_a_later_source_archive():
