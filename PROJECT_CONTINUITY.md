@@ -8018,3 +8018,27 @@ These were scheduled main executions, not initiated by this research run. The cu
 - No protected match-level 2026/27 outcome was read in this checkpoint; the provider page supplied only aggregate coverage counts. No source/API request, paid request, Supabase write/DDL, model inference/refit, threshold tuning, production `.pkl` change, main update, merge, promotion, bet, schedule change or other-agent setting change.
 
 **Next safe action:** HUMAN-MERGE review of #781 first. Keep #792/#800 as a no-cost source candidate only; no Community self-attestation or provider access without the account holder's authorization and written rights/retention clearance. Continue source-before-quote and frozen-contract verification on the research chain; do not open a new prospective evaluation until the separate 30-primary-completed-forecast gate and incumbent-provenance requirements are satisfied.
+
+
+## 2026-11-24 13:09 UTC — Original V2 source audit and persisted-quote gate
+
+### Fresh main and original forward chain
+- Default branch remains public at `40887ebb215730190d7a6c7a1693373ec4afcdfc`. The main `PROJECT_CONTINUITY.md` is still the October 18 checkpoint; this open documentation branch carries the newer V2 continuity record. No main update or merge was performed.
+- Root default-deny hold #781 remains OPEN / Ready for review at exact HEAD `5552bec363ae72ad7aef04c598d2ce861f33eb42`; its eight exact-head workflow runs are SUCCESS. Until HUMAN-MERGE, the hold is not active on main.
+- Original forward child #951 is OPEN / Draft at exact HEAD `f1ad14e783b4f03e8887516f6805d4650233fead`, parent #950 exact HEAD `79a71f0fa12c5ce52ee20915c9013bff4464c7ed`. Exact CI [#45390159817](https://github.com/MaksimBlud/football-ai/actions/runs/45390159817): 2/2 SUCCESS, 499 passed on Python 3.11 and 499 on Python 3.12. It closes the direct-helper bypass by requiring persisted quote `created_at` to be at/after the declared snapshot, no later than capture time, and strictly before kickoff. The stacked branch's saved-quote reader selects and validates `created_at`; the #951 change protects direct callers too.
+- #951 remains dependent on the full source-first/private-storage chain; it is not a standalone main merge candidate.
+
+### New independent free-source candidate — Big Balls Sports Data
+- Draft PR #952 is an independent audit branch from main, exact HEAD `5513f7092d619f8984365ed5b719524862cd47b5`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`; it does not integrate a provider.
+- Exact-head PR checks: 7/7 SUCCESS. Dedicated original-V2 audit [#45400213689](https://github.com/MaksimBlud/football-ai/actions/runs/45400213689): 2/2 SUCCESS, 8 tests passed on Python 3.11 and 8 on Python 3.12; production `.pkl` diff guard passed. Research PR Validation [#45400213617](https://github.com/MaksimBlud/football-ai/actions/runs/45400213617) also ran the new contract test and passed.
+- Official Big Balls Terms (effective 2026-08-10) permit storing API responses in private systems and internal model training/evaluation/backtesting, while prohibiting raw-feed redistribution. Official docs conflict on whether Serie A `/v1/matches/{id}/statistics` and two-season history are Free or paid/current-season-only. Published Serie A team-stat coverage is 4,210 / 4,591 (91.7%) across the measured archive; 2026/27 per-fixture and per-field coverage is not published.
+- Decision remains `HOLD_NO_INTEGRATION`: upstream field-rights, account-level Free entitlement, current-season completeness, and timestamp/correction semantics remain unresolved. No account, API key, provider request, or download was made. See [PR #952](https://github.com/MaksimBlud/football-ai/pull/952).
+
+### Fresh pre-match-only Supabase inventory
+- Read-only query used only `public.odds_snapshots` and strict predicates `snapshot_time_utc < commence_time_utc` and `created_at < commence_time_utc`; no outcome, score, settlement or target fields were selected.
+- **3,915** strict pre-match rows, **327** unique events, **0** future strict pre-match rows/events. Serie A: **620** strict pre-match rows, **63** events; latest strict Serie A snapshot `2026-10-13T14:48:53.042620Z`.
+- No Supabase writes/DDL. The 30-primary-completed-event prospective evaluation gate remains **0/30 / CLOSED**; no independent Brier/LogLoss result and no superiority claim.
+
+### Controls
+- No provider/API request, source download, paid odds request, Supabase write/DDL, protected 2026/27 outcome read, inference on real data, retraining/refit, threshold tuning, production `.pkl` change, main update, merge, promotion, publication, bet, schedule change, or other-agent setting change occurred in this checkpoint.
+- Preserve `active_lambda=0` as the market identity and `shadow_lambda=1` as research only. Keep source capture and inference held until provider rights, private storage, and source-before-quote evidence are independently cleared.
