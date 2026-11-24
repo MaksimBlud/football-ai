@@ -1,0 +1,32 @@
+name: MARKET_ANCHOR V2 Held Workflow Action Pins
+
+on:
+  pull_request:
+    branches:
+      - main
+      - research/v2-preview-outcome-embargo-on-947-20261124-run11
+    paths:
+      - ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
+      - ".github/workflows/serie-a-v2-forward-preview.yml"
+      - ".github/workflows/serie-a-v2-current-form-source-capture.yml"
+      - ".github/workflows/serie-a-v2-current-form-forward-preview.yml"
+      - ".github/workflows/recover-market-anchor-v2-candidate.yml"
+      - "tests/test_serie_a_v2_workflow_external_access_hold.py"
+      - ".github/workflows/market-anchor-v2-held-action-pins.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify-held-v2-action-pins:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+      - name: Install pinned pytest
+        run: python -m pip install pytest==9.2.0
+      - name: Verify held V2 workflow contracts and immutable action pins
+        run: python -m pytest -q tests/test_serie_a_v2_workflow_external_access_hold.py

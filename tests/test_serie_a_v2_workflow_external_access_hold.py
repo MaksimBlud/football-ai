@@ -397,6 +397,12 @@ def _has_external_io(text: str) -> bool:
 OFFLINE_ACTIONS = {
     "actions/checkout@v4",
     "actions/setup-python@v5",
+    # Immutable Node 20 refs retained by the parent source-first validation workflow.
+    "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+    "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+    # Current held workflows use immutable Node 24 upstream commits.
+    "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+    "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1",
 }
 
 
@@ -968,3 +974,69 @@ def test_external_io_inventory_recognizes_compiled_runtimes_shells_and_container
     assert _is_original_v2_live_workflow(
         "name: serie-a-v2 source capture\nrun: docker run source-capture:latest"
     )
+
+
+# Supply-chain pins are kept on the same current source-first/private-storage
+# chain as the V2 live-access hold. These are immutable upstream commit SHAs,
+# independently resolved from the official actions/* repositories.
+PINNED_ACTIONS_V2 = {
+    "actions/checkout": "d23441a48e516b6c34aea4fa41551a30e30af803",
+    "actions/setup-python": "ece7cb06caefa5fff74198d8649806c4678c61a1",
+    "actions/upload-artifact": "b7c566a772e6b6bfb58ed0dc250532a479d7789f",
+}
+
+HELD_V2_ACTION_WORKFLOWS = (
+    ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml",
+    ".github/workflows/serie-a-v2-forward-preview.yml",
+    ".github/workflows/serie-a-v2-current-form-source-capture.yml",
+    ".github/workflows/serie-a-v2-current-form-forward-preview.yml",
+    ".github/workflows/recover-market-anchor-v2-candidate.yml",
+)
+
+
+def test_original_v2_held_workflows_use_only_verified_immutable_action_commits():
+    for path in HELD_V2_ACTION_WORKFLOWS:
+        text = _workflow(path)
+        for action, expected_sha in PINNED_ACTIONS_V2.items():
+            references = [
+                line.split("uses:", 1)[1].strip()
+                for line in text.splitlines()
+                if "uses:" in line
+                and line.split("uses:", 1)[1].strip().startswith(f"{action}@")
+            ]
+            assert references == [f"{action}@{expected_sha}"], (
+                f"{path}: expected exactly one immutable {action} reference; "
+                f"found {references}"
+            )
+
+
+def test_held_action_pin_validation_is_pull_request_only_and_credential_free():
+    path = ".github/workflows/market-anchor-v2-held-action-pins.yml"
+    text = _workflow(path)
+    assert "pull_request:" in text
+    assert "workflow_dispatch:" not in text
+    assert "schedule:" not in text
+    assert "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803" in text
+    assert "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1" in text
+    assert "actions/upload-artifact@" not in text
+    assert "secrets.SUPABASE_URL" not in text
+    assert "secrets.SUPABASE_KEY" not in text
+    assert "GITHUB_TOKEN:" not in text
+    for workflow in HELD_V2_ACTION_WORKFLOWS:
+        assert f'"{workflow}"' in text
+    assert f'"{path}"' in text
+    assert '"tests/test_serie_a_v2_workflow_external_access_hold.py"' in text
+
+
+def test_original_forward_source_first_validation_workflow_is_offline_only():
+    path = ".github/workflows/market-anchor-v2-original-forward-source-first-validation.yml"
+    text = _workflow(path)
+    assert "schedule:" not in text
+    assert "workflow_dispatch:" not in text
+    assert "SUPABASE_URL" not in text and "SUPABASE_KEY" not in text
+    assert "GITHUB_TOKEN:" not in text and "secrets." not in text
+    assert "actions/upload-artifact" not in text
+    assert "actions/download-artifact" not in text
+    assert all(action in OFFLINE_ACTIONS for action in _action_refs(text))
+    assert "python -m pytest -q" in text
+    assert "git diff --exit-code" in text
