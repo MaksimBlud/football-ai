@@ -59,8 +59,11 @@ def test_free_plan_endpoint_is_confirmed_free_but_season_depth_remains_hold():
     assert free["openapi_expected_goals_field_min_plan"] == "solo"
     assert free["serie_a_page_matrix_still_labels_statistics_endpoint"] is False
     assert free["changelog_says_statistics_endpoint_free_from"] == "2026-11-11"
-    assert free["season_depth_status"] == "CONFLICTING_OFFICIAL_DOCUMENTATION"
+    assert free["season_depth_status"] == "CONFLICTING_OFFICIAL_DOCUMENTATION_WITHIN_GLOBAL_PRICING_AND_SERIE_A_PAGE"
     assert free["current_plus_most_recent_season_advertised_on_global_pricing"] is True
+    assert free["pricing_page_summary_says_current_season"] is True
+    assert free["pricing_page_plan_bullet_says_current_plus_most_recent_season"] is True
+    assert free["pricing_page_internal_season_depth_conflict"] is True
     assert free["serie_a_page_says_free_covers_current_season"] is True
 
 
