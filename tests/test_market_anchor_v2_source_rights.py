@@ -10,7 +10,7 @@ from market_anchor_v2_source_rights import (
     require_personal_research_inference_scope,
 )
 
-NOW = datetime(2026, 11, 19, 21, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 11, 25, 0, 0, tzinfo=timezone.utc)
 
 
 def _write_synthetic_grant(
@@ -25,12 +25,20 @@ def _write_synthetic_grant(
     evidence = tmp_path / "provider-permission.txt"
     evidence_bytes = b"synthetic provider-issued frozen inference permission for tests only"
     evidence.write_bytes(evidence_bytes)
+    policy_evidence = tmp_path / "football_data_contact_fair_use_20261124.md"
+    policy_evidence_bytes = b"synthetic fair-use policy evidence for tests only"
+    policy_evidence.write_bytes(policy_evidence_bytes)
     manifest = {
         "schema_version": "FOOTBALL_AI_SOURCE_RIGHTS_V1",
         "provider": "Football-Data.co.uk",
         "policy_url": "https://football-data.co.uk/data",
         "policy_checked_at_utc": "2026-11-10T11:57:30Z",
         "policy_page_updated_date": policy_page_updated_date,
+        "fair_use_policy_url": "https://football-data.co.uk/contact.php",
+        "fair_use_policy_checked_at_utc": "2026-11-24T23:52:28Z",
+        "fair_use_policy_page_updated_date": "2026-11-24",
+        "fair_use_policy_evidence_file": policy_evidence.name,
+        "fair_use_policy_evidence_sha256": hashlib.sha256(policy_evidence_bytes).hexdigest(),
         "rights_status": "GRANTED",
         "research_use_permitted": True,
         "research_source_capture_permitted": False,
@@ -154,3 +162,22 @@ def test_policy_page_update_cannot_postdate_its_review(tmp_path):
             repo_root=tmp_path,
             now=NOW,
         )
+
+
+def test_current_manifest_pins_updated_fair_use_page_and_keeps_all_ai_permissions_closed():
+    manifest = json.loads(DEFAULT_RIGHTS_MANIFEST_PATH.read_text(encoding="utf-8"))
+    assert manifest["fair_use_policy_url"] == "https://football-data.co.uk/contact.php"
+    assert manifest["fair_use_policy_page_updated_date"] == "2026-11-24"
+    assert manifest["research_source_capture_permitted"] is False
+    assert manifest["research_inference_permitted"] is False
+    assert manifest["ai_model_training_permitted"] is False
+    assert manifest["provider_issued_source_capture_license"] is False
+    assert manifest["provider_issued_ai_inference_license"] is False
+    assert manifest["authorization"] is None
+
+
+def test_fair_use_policy_evidence_sha_mismatch_fails_closed(tmp_path):
+    path, _ = _write_synthetic_grant(tmp_path)
+    (tmp_path / "football_data_contact_fair_use_20261124.md").write_text("tampered", encoding="utf-8")
+    with pytest.raises(PermissionError, match="fair-use policy evidence SHA-256 mismatch"):
+        require_personal_research_inference_scope(path, repo_root=tmp_path, now=NOW)
