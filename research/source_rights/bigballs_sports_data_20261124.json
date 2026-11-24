@@ -93,18 +93,18 @@
     "automatic_promotion": false
   },
   "project_authorization": {
-    "account_created": false,
-    "api_key_created": false,
-    "api_requests": 0,
-    "source_download_performed": false,
-    "raw_source_sha256_captured": false,
-    "supabase_reads": 0,
     "supabase_writes": 0,
     "supabase_ddl": 0,
     "protected_2026_27_outcomes_read": false,
     "model_inference_performed": false,
     "model_refit_or_training_performed": false,
-    "production_pickle_changed": false
+    "production_pickle_changed": false,
+    "provider_account_created": false,
+    "provider_api_key_created": false,
+    "provider_api_requests": 0,
+    "provider_source_download_performed": false,
+    "provider_response_sha256_captured": false,
+    "supabase_reads_for_provider_audit": 0
   },
   "decision_reasons": [
     "The provider terms are promising for private raw-response storage and internal model research, but the upstream field-rights chain is not independently documented.",
