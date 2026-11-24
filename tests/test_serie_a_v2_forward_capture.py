@@ -186,21 +186,21 @@ def test_forward_v2_scores_only_after_real_prior_archive_and_never_promotes():
 
 
 @pytest.mark.parametrize(
-    ("created_at", "message"),
+    ("created_at", "kickoff", "message"),
     [
-        ("2026-10-14T05:59:59Z", "persisted before declared snapshot time"),
-        ("2026-10-14T07:00:01Z", "persisted after capture clock"),
-        ("2026-10-20T18:00:00Z", "persisted at or after kickoff"),
+        ("2026-10-14T05:59:59Z", "2026-10-20T18:00:00Z", "persisted before declared snapshot time"),
+        ("2026-10-14T07:00:01Z", "2026-10-20T18:00:00Z", "persisted after capture clock"),
+        ("2026-10-14T06:30:00Z", "2026-10-14T06:30:00Z", "persisted at or after kickoff"),
     ],
 )
 def test_forward_capture_rejects_invalid_quote_persistence_time_before_archive_io(
-    created_at, message
+    created_at, kickoff, message
 ):
     raw, metadata = make_source_archive()
     calls = []
     with pytest.raises(ValueError, match=message):
         prepare_forward_capture(
-            [{**quote(), "created_at": created_at}],
+            [{**quote(), "created_at": created_at, "commence_time_utc": kickoff}],
             metadata,
             as_of_utc=NOW,
             load_archive=lambda _artifact_id: calls.append("archive") or raw,
