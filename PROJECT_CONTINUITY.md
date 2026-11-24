@@ -7927,3 +7927,32 @@ Despite that internal HOLD, the unchanged public main (`40887ebb...`) executed t
 - **Original Forward-Only Preview** [run #45255423039](https://github.com/MaksimBlud/football-ai/actions/runs/45255423039), SUCCESS, main SHA `40887ebb...`. Its log reports 71 tests passed; source attestation verified 10 historical pre-prospective CSVs / 3,800 matches, but 0 quotes, 0 future quotes checked, 0 V2 previews, 0 paid calls and 0 Supabase writes. It still uploaded public diagnostic artifact #14859255542 (1,459 bytes), SHA-256 `aa3c94d7013939c9744db0af4bc6e2cbe8c385cf2eb125e7ce7f855c155829a8`.
 
 These were scheduled main executions, not initiated by this research run. The current-form source and forward workflow accessed and republished source bytes after the project rights manifest had set automated capture and inference to false. This is a concrete reason to keep live access held. Do not repeat these source reads or downloads. Root PR #781 remains the required manual default-deny workflow hold; #879 adds the private-storage gate and #938/#945/#946 add source-first/direct-entrypoint rights enforcement. No PR was merged and main was not changed here.
+
+
+## 2026-11-24 04:56 UTC — Original V2: preview-wrapper outcome embargo integrated and exact CI verified
+
+### Fresh main / workflow audit
+- Re-read repository metadata, default-branch commit, PROJECT_CONTINUITY.md, the main original-forward script and workflow. Main remains public at 40887ebb215730190d7a6c7a1693373ec4afcdfc; the main continuity file still begins with the October 18 checkpoint.
+- Main serie_a_v2_forward_capture.py remains blob 5db02cbd1367ed25b994b152acf371421859a014. It reads saved quote rows at line 278 before discovering/verifying source archives at line 279.
+- Main .github/workflows/serie-a-v2-forward-preview.yml remains blob 48ce3b0d8e31c4cf293b94500e9c320047311467; its artifact upload still uses if: always(). The default-deny #781 hold is not active on main.
+
+### New source-first integration child
+- [PR #947](https://github.com/MaksimBlud/football-ai/pull/947) remains Draft / HUMAN-MERGE, exact HEAD 3839f256ac7c910d914d70cb0781cf58b55f82fa, based on #946. Its exact source-first push and PR validation jobs each passed 396 tests on Python 3.11 and 3.12; the frozen shadow validation also passed. It joins the actual build_source_provenance() writer output to the actual frozen gate validator using synthetic/offline evidence only.
+- Audit found that #947's core market_anchor_1x2_v2_shadow.py already carries the recursive outcome guard, while the separate serie_a_v2_frozen_shadow_preview.py::_guard_outcome_free wrapper still checked only a short top-level set and the nested feature mapping. That left a distinct direct-preview input boundary insufficiently guarded.
+
+### New PR #948 — wrapper embargo hardening
+- [PR #948](https://github.com/MaksimBlud/football-ai/pull/948) is Draft / HUMAN-MERGE, a child of #947, exact HEAD 73ce0e91df1f89fde9b8bfc13551b439149e3f0a; base is the exact #947 HEAD above.
+- Reuses the core V2 canonical forbidden_outcome_field_match() and frozen alias set; recursively checks nested mappings/lists/tuples in both market and feature inputs; tracks visited container identities.
+- Adds synthetic regressions for nested/case variants, raw statistics, Football-Data aliases, generic goal/score containers, punctuation-split aliases, explicit 1X2 winner/draw fields, typed-stat descriptors, valid pre-match labels, nested market payloads, and cyclic benign metadata.
+- Exact HEAD CI: push [run #45329765110](https://github.com/MaksimBlud/football-ai/actions/runs/45329765110) and PR [run #45329787667](https://github.com/MaksimBlud/football-ai/actions/runs/45329787667) both 2/2 SUCCESS. Python 3.11 and 3.12 each report 492 passed; compilation and production .pkl diff guard pass. This is offline/synthetic safety evidence, not live data or model-quality evidence.
+- PR #948 remains Draft and must not merge independently of #947 and its full rights/source-first parent chain.
+
+### Rights and pre-match database status
+- The #946 source-rights manifest remains blob 96ee20eb99abc2eb73d1ff67d71e1d6fcdeab310: automated source capture, frozen inference and AI training are all false; authorization is null. The separate source-capture and inference access guards require provider-issued, scope-specific evidence and fail closed.
+- Fresh read-only Supabase SELECT used only league,event_id,snapshot_time_utc,created_at,commence_time_utc from public.odds_snapshots, with snapshot_time_utc < commence_time_utc and snapshot_time_utc <= created_at < commence_time_utc. Result: 3,915 strict pre-match rows, 327 distinct events, 0 future events with strict pre-match quotes. Latest strict snapshot remains Serie A 2026-10-13T14:48:53.042620Z; no target outcomes, score, result or settlement columns were queried.
+- Per-league strict pre-match rows: Bundesliga 394; EPL 1,135; Eredivisie 410; La Liga 798; Ligue 1 387; Primeira Liga 9; RPL 153; Serie A 620; Turkey Super Lig 9.
+
+### Frozen model and non-actions
+- Original candidate remains SHA-256 a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6, 19 ordered features, 20×2 weights, training fingerprint f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098; active_lambda=0, shadow_lambda=1.
+- Historical stability gate remains FAILED (2/6 dual-metric prior-season wins); prospective outcome gate remains 0/30 / CLOSED. Incumbent comparator provenance is still unresolved. No Brier/LogLoss superiority claim.
+- No source/provider request or archive download, quote read by this cycle, protected 2026/27 outcome read, paid API call, Supabase write/DDL, inference/refit, threshold tuning, production .pkl change, main update, merge, promotion, bet, schedule change or other-agent change.
