@@ -31,7 +31,7 @@ from serie_a_v2_asof_feature_manifest import (
 
 REPO_ROOT = Path(__file__).resolve().parent
 DEFAULT_RIGHTS_MANIFEST = REPO_ROOT / "research" / "source_rights" / "5dollarfootballapi.json"
-DEFAULT_RIGHTS_MANIFEST_SHA256 = "224d01a34e6a3c3f45632fdc6d8c2a569ed696a28d1c974b8bf66af72c137404"
+DEFAULT_RIGHTS_MANIFEST_SHA256 = "2f6bb45a5b45bcff18d1a7133a42afcae74f5f2f4aea19a69972a09ec98b809c"
 SERIE_A_PROVIDER_LEAGUE_ID = 3405541143
 CURRENT_SERIE_A_SEASON = SERIE_A_RUNTIME_CONFIG.finished_results_source.season
 CURRENT_SERIE_A_SEASON_API_PARAMETER = CURRENT_SERIE_A_SEASON[:4]
@@ -39,7 +39,7 @@ MIN_COMPLETED_FEATURE_SOURCE_EVENTS = 30
 ALLOWED_PLANS = frozenset(("free",))
 ALLOWED_QUOTE_FIELDS = frozenset((
     "event_id", "league", "home_team", "away_team",
-    "commence_time_utc", "snapshot_time_utc",
+    "commence_time_utc", "snapshot_time_utc", "created_at",
 ))
 FORBIDDEN_QUOTE_FIELDS = frozenset((
     "result", "outcome", "score", "home_goals", "away_goals",
@@ -379,9 +379,12 @@ def _validate_quotes(
             raise ValueError("quote event_id is required")
         target_ids.add(event_id)
         quote_time = _parse_utc(quote.get("snapshot_time_utc"), "quote snapshot_time_utc")
+        quote_created_at = _parse_utc(quote.get("created_at"), "quote created_at")
         kickoff = _parse_utc(quote.get("commence_time_utc"), "quote commence_time_utc")
-        if quote_time >= kickoff:
-            raise ValueError("quote snapshot must be strictly before kickoff")
+        if not quote_time <= quote_created_at < kickoff:
+            raise ValueError(
+                "quote chronology must satisfy snapshot_time_utc <= created_at < commence_time_utc"
+            )
         home = quote.get("home_team")
         away = quote.get("away_team")
         if not isinstance(home, str) or not home.strip() or not isinstance(away, str) or not away.strip():
