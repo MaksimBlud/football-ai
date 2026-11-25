@@ -39,7 +39,7 @@ def test_recovery_workflow_pins_all_actions_and_disables_checkout_credentials():
     )[1].split("      - uses: actions/setup-python@", 1)[0]
     assert "persist-credentials: false" in checkout_step
     assert "fetch-depth: 0" in checkout_step
-    assert "permissions:\\n  contents: read" in workflow
+    assert "permissions:\n  contents: read" in workflow
     assert "schedule:" not in workflow
     for forbidden in (
         "secrets.",
