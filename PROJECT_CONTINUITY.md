@@ -8614,3 +8614,15 @@ Original candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff207
 The evaluation-blinding protocol deviation recorded above remains in force: the Footiqo Serie A page returned 2026/27 score/result columns during policy-link inspection. No values were copied or used, but the page is disqualified as an outcome-blind source for this assistant. Any later scientific outcome evaluation must use a separately blinded reviewer/process.
 
 No provider request/download, paid API call, Supabase write/DDL, protected-outcome query/use, inference/refit, threshold tuning, production `.pkl` change, merge, main update, promotion, bet, schedule change, or other-agent setting change occurred.
+
+
+## 2026-11-25 — OpenFootAPI official source audit (PR #959)
+
+- New separate Draft PR [#959](https://github.com/MaksimBlud/football-ai/pull/959), exact HEAD `2c7314cd059f96f9553279f4e913bd745ea02ffb`, base main `40887ebb215730190d7c6a7a1693373ec4afcdfc`.
+- Official OpenFootAPI Terms of Service (effective 2026-09-07) expressly permit internal statistical research, model training, evaluation and validation on data lawfully received, and allow indefinite retention of exact responses, normalized fields, derived aggregates, hashes and audit records. Upstream competition licences still attach; raw-feed redistribution is not granted.
+- Free Starter: $0, no card, 5,000 requests/month, 60/minute; documented fixtures, scores, schedules, standings/form and search. Developer ($14/month) adds live events/commentary, lineups and xG; no paid plan or trial used.
+- The 2026/27 coverage page lists all five top leagues. The free plan does not document match events, lineups, xG or match-level team statistics; the API reference does not document a corner-count endpoint. Full unchanged 19-feature parity is therefore unavailable on free Starter. The exact per-competition licence metadata is documented but was not fetched.
+- Provider docs do not specify per-field upstream first-seen/correction timestamps. A private local archive could prove project receipt-before-quote with its own timestamp and SHA-256, but not upstream first-publication chronology.
+- Decision: `HOLD_NO_FULL_19_FEATURE_COVERAGE`; no account/key, API request, download, feature build or inference.
+- Dedicated secret-free/offline CI [#45557758806](https://github.com/MaksimBlud/football-ai/actions/runs/45557758806) completed SUCCESS on exact HEAD; six synthetic/offline assertions passed. No Supabase, odds or protected outcomes accessed.
+- Original candidate SHA, 19 features, 20×2 weights, `active_lambda=0`, `shadow_lambda=1`, FAILED historical stability and CLOSED 0/30 outcome gate remain unchanged. No main update or merge.
