@@ -1,13 +1,14 @@
 """Prevent event wiring from accidentally turning V2 into paid automated odds calls.
 
-These are static safety regressions complementing the existing paid workflow
-budget contract. The V2 trigger observes a successful *already manual* run;
-it MUST NOT schedule or dispatch a new paid odds workflow.
+These static regressions complement the existing paid-workflow budget contract.
+The V2 trigger may observe an already-manual run, but it must not create paid
+provider calls or a scheduled odds workflow.
 """
 from pathlib import Path
 
 PAID = Path(".github/workflows/serie-a-odds-snapshots.yml")
 FREE = Path(".github/workflows/serie-a-v2-forward-preview.yml")
+HOLD_CI = Path(".github/workflows/market-anchor-v2-paid-odds-workflow-hold.yml")
 
 
 def _step_block(workflow: str, name: str) -> str:
@@ -24,6 +25,7 @@ def test_original_paid_serie_a_collector_remains_dispatch_only():
     assert "name: Serie A Odds Snapshots" in header
     assert "workflow_dispatch:" in header
     assert "schedule:" not in header
+    assert "pull_request:" not in header
     assert "workflow_run:" not in header
     assert "push:" not in header
     assert "repository_dispatch:" not in header
@@ -37,8 +39,6 @@ def test_paid_snapshot_workflow_is_default_denied_and_secrets_are_step_scoped():
     job_before_steps = paid.split("jobs:", 1)[1].split("steps:", 1)[0]
 
     assert 'THE_ODDS_API_ACCESS_ALLOWED: "false"' in header
-    assert "pull_request:" in header
-    assert "tests/test_serie_a_v2_manual_quote_trigger_contract.py" in header
     assert "THE_ODDS_API_KEY" not in job_before_steps
     assert "SUPABASE_URL" not in job_before_steps
     assert "SUPABASE_KEY" not in job_before_steps
@@ -63,6 +63,19 @@ def test_paid_snapshot_workflow_is_default_denied_and_secrets_are_step_scoped():
     assert "python scheduled_serie_a_odds_snapshot.py" in _step_block(
         paid, "Run adaptive Serie A snapshot check"
     )
+
+
+def test_paid_odds_hold_ci_is_secret_free_and_never_scheduled():
+    workflow = HOLD_CI.read_text(encoding="utf-8")
+    header = workflow.split("jobs:", 1)[0]
+    assert "push:" in header
+    assert "pull_request:" in header
+    assert "schedule:" not in header
+    assert "workflow_dispatch:" not in header
+    assert "secrets." not in workflow
+    assert "THE_ODDS_API_KEY" not in workflow
+    assert "scheduled_serie_a_odds_snapshot.py" not in workflow
+    assert "pytest -q tests/test_serie_a_v2_manual_quote_trigger_contract.py" in workflow
 
 
 def test_free_original_v2_observes_manual_paid_result_without_starting_provider():
