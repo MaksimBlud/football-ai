@@ -1,0 +1,79 @@
+{
+  "schema_version": "MARKET_ANCHOR_1X2_V2_SOURCE_RIGHTS_AUDIT_V1",
+  "provider": "Football API (footballapi.org; operated by DeveloperData.net)",
+  "distinct_from": [
+    "API-Football",
+    "API-Sports"
+  ],
+  "official_sources": {
+    "home": "https://footballapi.org/",
+    "complimentary_key": "https://footballapi.org/key",
+    "match_stats": "https://footballapi.org/documentation/match-stats",
+    "terms": "https://footballapi.org/terms"
+  },
+  "terms_last_updated": "2026-10-21",
+  "free_plan": {
+    "price": 0,
+    "card_required": false,
+    "competitions": "current-season Premier League only",
+    "requests_per_day": 50,
+    "requests_per_minute": 10
+  },
+  "match_stats_endpoint": {
+    "method": "GET",
+    "path": "/v1/matches/{match_id}/stats",
+    "documented_fields": [
+      "corners",
+      "expected_goals",
+      "fouls",
+      "offsides",
+      "passes_accurate",
+      "passes_total",
+      "possession_pct",
+      "red_cards",
+      "saves",
+      "shots_blocked",
+      "shots_inside_box",
+      "shots_off_target",
+      "shots_on_target",
+      "shots_outside_box",
+      "shots_total",
+      "yellow_cards"
+    ],
+    "response_example_has_request_id": true,
+    "documented_per_field_first_seen_or_correction_timestamp": false
+  },
+  "rights": {
+    "use_in_own_work_apps_sites": "permitted_by_published_terms",
+    "public_display_to_own_users": "permitted_by_published_terms",
+    "redistribution_or_resale_of_data": "prohibited",
+    "bulk_download_to_rebuild_collection": "prohibited",
+    "private_raw_response_retention": "not_explicitly_resolved",
+    "private_ml_training_or_evaluation": "not_explicitly_resolved",
+    "derived_feature_retention": "not_explicitly_resolved",
+    "upstream_first_seen_or_correction_history": "not_documented"
+  },
+  "target_model": {
+    "experiment_id": "MARKET_ANCHOR_1X2_V2",
+    "league": "SERIE_A",
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "frozen_feature_count": 19,
+    "weight_matrix_shape": [
+      20,
+      2
+    ],
+    "active_lambda": 0,
+    "shadow_lambda": 1
+  },
+  "decision": "HOLD_WRONG_LEAGUE_AND_UNPROVEN_RETENTION_RIGHTS",
+  "api_requests_made": 0,
+  "account_or_key_created": false,
+  "raw_data_downloaded": false,
+  "supabase_accessed": false,
+  "supabase_writes": 0,
+  "feature_builds": 0,
+  "inference_runs": 0,
+  "protected_outcomes_read": false,
+  "production_artifact_changed": false,
+  "model_contract_changed": false
+}

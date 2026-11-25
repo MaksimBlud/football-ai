@@ -1,0 +1,33 @@
+name: MARKET_ANCHOR V2 FootballAPI.org Source Audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "research/MARKET_ANCHOR_1X2_V2_FOOTBALLAPI_ORG_SOURCE_AUDIT_20261125.md"
+      - "research/source_rights/footballapi_org_20261125.json"
+      - "tests/test_serie_a_v2_footballapi_org_source_audit.py"
+      - ".github/workflows/market-anchor-v2-footballapi-org-source-audit.yml"
+  pull_request:
+    paths:
+      - "research/MARKET_ANCHOR_1X2_V2_FOOTBALLAPI_ORG_SOURCE_AUDIT_20261125.md"
+      - "research/source_rights/footballapi_org_20261125.json"
+      - "tests/test_serie_a_v2_footballapi_org_source_audit.py"
+      - ".github/workflows/market-anchor-v2-footballapi-org-source-audit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  source-rights-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+      - name: Run offline source-rights assertions
+        run: python tests/test_serie_a_v2_footballapi_org_source_audit.py
