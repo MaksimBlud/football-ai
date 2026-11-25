@@ -76,6 +76,7 @@ def _bundle():
     }
     rights = {
         "provider": "Big Balls Sports Data",
+        "decision": "APPROVED",
         "integration_allowed": True,
         "automated_capture_authorized": True,
         "frozen_inference_authorized": True,
