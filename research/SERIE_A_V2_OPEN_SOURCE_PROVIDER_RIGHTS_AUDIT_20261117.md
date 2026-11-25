@@ -236,3 +236,34 @@ Official sources reviewed:
 **Decision: HOLD_NO_2026_27_FREE_SEASON_AND_UNCLEAR_DATA_RIGHTS.** The Free plan cannot supply the 2026/27 lagged statistics needed for the original frozen V2 candidate, and the terms do not clearly authorize model research/use or the necessary retention/publication scope. No paid plan is considered.
 
 No account/key was created; no API request, data download, source archive, Supabase access, feature calculation, inference, protected 2026/27 outcome read, refit, threshold change, production `.pkl` change, or schedule change occurred. The original candidate SHA, 19-feature order, 20×2 weights, scaler/imputer, `active_lambda=0`, `shadow_lambda=1`, FAILED historical stability and CLOSED 0/30 prospective outcome gate remain unchanged.
+
+
+## 2026-11-25 — Footballdata.io free-tier candidate (official-page audit; HOLD)
+
+A new public documentation candidate was screened because the provider advertises a free football API and match statistics. This was an official-pages-only review. No account/key was created, no API request or dataset download was made, and no Supabase, quote, target-outcome, or inference path was accessed.
+
+### Potentially relevant published scope
+
+- The official site advertises a Free plan with 2,000 requests/month and five leagues. It lists fixtures/results/live status and some match-stat capability, but the same page's plan-access matrix assigns Match Stats to Pro.
+- The official documentation describes a match-stats endpoint with goals, corners, yellow/red cards, shots on target and other statistics. However, the provider's own help page specifically says detailed corner statistics require the Pro plan. Another help page says Free match stats do not include advanced match-level statistics.
+- The public pricing/help pages do not establish that Italy Serie A is one of the five Free competitions, nor that the full frozen V2 field set is available on Free. No authenticated Free response was reviewed.
+
+### Rights and retention blockers
+
+- Terms last updated 2026-05-03 describe Free access as for testing, development, small projects or non-commercial use and may require attribution.
+- The terms permit API responses to be used in applications, analysis tools, prediction products and internal systems, but prohibit raw-feed redistribution/resale.
+- Caching is allowed for reasonable performance/reliability. Long-term storage, bulk replication, data warehousing or rebuilding a competing database may require written permission or an enterprise agreement. That does not affirmatively authorize the immutable private raw archive and long-horizon feature-history retention required by the V2 protocol.
+- The terms say the service may rely on third-party data providers, while leaving third-party rights and data accuracy/availability unresolved. The reviewed public docs do not establish the upstream licence chain or per-match/per-field first-observed and correction timestamps.
+
+### Decision
+
+**HOLD_NO_FREE_CORNER_CARD_AND_RETENTION_CLEARANCE.** Do not create an account/key, call the API, download data, capture source bytes, or integrate this provider. Reconsider only after written confirmation of (1) Italy Serie A Free entitlement, (2) Free-plan corners/yellow/red card field availability and completeness for every required match, (3) rights for the project's intended internal model research and private raw/derived retention duration, (4) upstream provider rights, and (5) source observation/correction timestamp semantics. The current evidence is not sufficient to construct the original 19-feature vector or prove source-before-quote.
+
+Official references reviewed:
+- Terms, last updated 2026-05-03: https://footballdata.io/terms/
+- Official pricing/plan matrix: https://footballdata.io/
+- Match stats documentation: https://footballdata.io/documentation/matches/
+- Corner-statistics help page (states Pro required): https://footballdata.io/help/how-do-i-get-corner-statistics-for-football-matches
+- Free-plan limits and conflicting stats descriptions: https://footballdata.io/help/what-data-can-i-get-from-the-free-plan and https://footballdata.io/help/what-are-the-api-rate-limits-and-request-quotas
+
+No source, quote, feature, outcome, or model data was accessed. Original V2 candidate SHA, 19-feature order, weights, scaler/imputer, `active_lambda=0`, `shadow_lambda=1`, stability gate and 30-event outcome gate remain unchanged. No workflow, schedule, Supabase, production artifact, main branch or other-agent setting was changed. HUMAN-MERGE only.
