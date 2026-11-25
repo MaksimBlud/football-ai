@@ -71,3 +71,49 @@ Therefore the repository-level CC-BY declaration is promising but is not treated
 ## Next admissible step
 
 Only after written upstream-rights clarification: define a frozen, source-only comparison protocol for the ten original V2 training seasons, pin the exact openplay release, and measure missing-match/field-definition differences without refitting, selecting features, changing weights, or opening the protected prospective target-outcome cohort. Treat any differences as a source-compatibility result, not a reason to retune V2.
+
+
+## Upstream recheck after the 2026-11-23 LICENSE change — 2026-11-25
+
+The current public upstream default branch was re-read at commit:
+
+- `nlbair/openplay@3ea39b0f4c542e8b7a5b5f5f02339175c10b4d61` — `Update LICENSE`, committed 2026-11-23 18:51:44 UTC.
+- Current README blob: `c74c6930c88eba648303a689d713cb126122fa3d`.
+- Current LICENSE blob: `91a5c0fd6beea9cbddf1078a8938b47b122b3143`.
+- Current DATA_DICTIONARY blob: `67aad458fefc7a2d33bcb190ce382131a2216716`.
+
+### License correction — supersedes the earlier CC-BY wording
+
+The current LICENSE no longer states a standard CC-BY 4.0 licence. It now says the data may be shared and adapted for any purpose with attribution, while also saying the underlying match-event data was collected from public match pages and rights holders may request removal.
+
+The current README does not name a specific upstream event-data provider; it describes the release as a snapshot of event data collected from public match pages. Therefore the earlier WhoScored/Opta attribution in this audit's original 2026-11-11 summary is **not independently supported by the current public README/LICENSE** and must not be treated as a verified upstream identity. The actual source publisher(s), their terms, and the scope of the maintainer's rights to sublicense the underlying event data remain unresolved.
+
+This is a material license/provenance change, not a clearance. The custom LICENSE text is more permissive than the earlier wording, but it is not a standard CC-BY grant and does not document upstream permissions, source contracts, retention, ML-training rights, or a takedown-safe chain of title. Keep the source on HOLD until the maintainer identifies the source page/provider(s) and provides written rights clarification for the intended private retention and V2 research/evaluation use.
+
+### Additional technical fit from the current data dictionary
+
+The current dictionary documents the following potentially useful historical team-level fields in `team_match_stats`, with 100% filled rates within that table:
+
+- `goals_for`, `goals_against`, `side`, and `date`;
+- `corners_taken`;
+- `yellow_cards`, `second_yellows`, and `red_cards`.
+
+Points are derivable from the 90-minute league result, while corners-against can be joined from the opponent's team row. The separate `matches` table documents a stable `match_id`, source page `url`, and `scraped_at` timestamp (100% filled in the dictionary). This is a stronger schema-level candidate for the original 19 feature families than the previously reviewed CSV aggregators.
+
+However, this is **not yet feature parity**:
+- the README reports 4,549/4,561 Serie A matches with event data (99.74%), leaving 12 Serie A matches without event data;
+- the README says 58 matches have known data issues, while the current dictionary describes 69 `data_issues.csv` rows; this published count discrepancy must be resolved;
+- `yellow_cards` and `second_yellows` are separate fields, while the original Football-Data `HY/AY` semantics must be matched exactly before deriving the frozen yellow feature;
+- straight `red_cards` may not be equivalent to the original `HR/AR` treatment of dismissals;
+- event-derived corner counts may differ from official match-stat counts;
+- the `scraped_at` clock is documented as the time a page was saved, but its generating process, source timezone, correction history, and upstream first-observed meaning have not been independently verified.
+
+The repository's README says 26,536 matches have event data, while the dictionary describes 26,547 rows in `matches.parquet`; this additional aggregate discrepancy should be reconciled before any use.
+
+### Scope and disposition
+
+This is a documentation/schema review only. No release asset, Parquet file, CSV, match row, score, quote, provider endpoint, Supabase row, or protected 2026/27 outcome was accessed or downloaded.
+
+**Updated disposition: HOLD_PENDING_UPSTREAM_RIGHTS_AND_FEATURE_SEMANTIC_PARITY.** The candidate may be suitable for a future independent historical source-concordance audit because it documents the relevant team statistics and a per-match scrape timestamp. It is not approved for ingestion, feature calculation, model inference, training/refit, or prospective capture. It contains no 2026/27 season data and cannot supply current form for future 2026/27 quotes.
+
+The original MARKET_ANCHOR_1X2_V2 candidate SHA, 19-feature order, weights, scaler/imputer, training fingerprint, `active_lambda=0`, `shadow_lambda=1`, FAILED historical stability gate and CLOSED 0/30 outcome gate remain unchanged. No production artifact, schedule, main branch, or other agent setting was changed.
