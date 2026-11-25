@@ -9,7 +9,7 @@ import market_anchor_v2_source_rights as source_rights
 import serie_a_v2_forward_capture as original_forward
 
 
-NOW = datetime(2026, 11, 19, 21, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 11, 25, 0, 0, tzinfo=timezone.utc)
 
 
 def _deny():
