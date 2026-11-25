@@ -1,0 +1,104 @@
+{
+  "schema_version": "market-anchor-v2-source-rights-audit.v1",
+  "provider": "OpenFootAPI",
+  "audit_date_utc": "2026-11-25",
+  "decision": "HOLD_NO_FULL_19_FEATURE_COVERAGE",
+  "original_model": {
+    "name": "MARKET_ANCHOR_1X2_V2",
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "feature_count": 19,
+    "weight_shape": [
+      20,
+      2
+    ],
+    "active_lambda": 0,
+    "shadow_lambda": 1,
+    "historical_stability": "FAILED",
+    "prospective_outcome_gate": "CLOSED_0_OF_30"
+  },
+  "free_plan": {
+    "name": "Starter",
+    "price_usd_per_month": 0,
+    "requests_per_month": 5000,
+    "requests_per_minute": 60,
+    "credit_card_required": false,
+    "documented_features": [
+      "fixtures",
+      "scores",
+      "schedules",
+      "standings",
+      "form_tables",
+      "team_search"
+    ],
+    "not_documented_in_free_plan": [
+      "match_events",
+      "lineups",
+      "xg",
+      "match_level_corners",
+      "match_level_cards",
+      "odds"
+    ]
+  },
+  "paid_plan_boundary": {
+    "developer_price_usd_per_month": 14,
+    "documented_additions": [
+      "live_events_and_commentary",
+      "lineups",
+      "xg_and_shot_maps",
+      "live_stream",
+      "webhooks",
+      "derived_form_elo_rest_table_position",
+      "model_derived_fair_odds"
+    ],
+    "used": false
+  },
+  "data_rights": {
+    "internal_statistical_research_permitted_for_lawfully_received_data": true,
+    "internal_model_training_permitted_for_lawfully_received_data": true,
+    "internal_evaluation_and_validation_permitted_for_lawfully_received_data": true,
+    "exact_response_retention_permitted_without_maximum_period": true,
+    "normalized_fields_and_hash_audit_records_retention_permitted": true,
+    "raw_underlying_feed_redistribution_permitted": false,
+    "upstream_competition_licences_remain_binding": true,
+    "free_plan_commercial_use": "NOT_EXPLICITLY_GRANTED"
+  },
+  "provenance": {
+    "response_source_metadata_documented": true,
+    "per_competition_licence_metadata_documented": true,
+    "upstream_first_seen_or_correction_timestamps_documented": false,
+    "local_receipt_timestamp_and_sha256_can_prove_project_possession_before_quote": true,
+    "upstream_first_publication_before_quote_proven": false
+  },
+  "coverage": {
+    "top_five_2026_27_competitions_listed": true,
+    "free_plan_full_match_statistics_verified": false,
+    "serie_a_free_plan_full_19_feature_parity": false,
+    "documented_openfootball_cc0_archive_leagues": [
+      "Premier League",
+      "La Liga",
+      "Serie A",
+      "Ligue 1"
+    ],
+    "per_competition_runtime_licence_metadata_not_fetched": true
+  },
+  "frozen_feature_gaps": {
+    "full_19_feature_parity": false,
+    "missing_feature_families": [
+      "corners",
+      "match_level_team_statistics"
+    ],
+    "reason": "The free Starter plan documents fixtures, scores, standings/form and search; the API reference does not document a match-level corner/statistics endpoint. Events, lineups and xG are Developer-plan additions; the documented event types do not include corners."
+  },
+  "authorization": {
+    "account_created": false,
+    "api_key_created": false,
+    "provider_requests_made": 0,
+    "raw_data_downloaded": false,
+    "source_capture_approved": false,
+    "feature_build_approved": false,
+    "inference_approved": false,
+    "supabase_access_or_write": false,
+    "protected_outcomes_read": false,
+    "paid_calls": 0
+  }
+}
