@@ -1,4 +1,4 @@
-"""Ensure held original V2 workflows do not persist checkout credentials.
+"""Ensure original V2 workflows do not persist checkout credentials.
 
 These workflows use explicit, step-scoped GitHub API tokens where required.
 Persisting checkout credentials in .git/config is unnecessary and increases
@@ -15,6 +15,7 @@ WORKFLOWS = (
     ".github/workflows/serie-a-v2-current-form-source-capture.yml",
     ".github/workflows/serie-a-v2-current-form-forward-preview.yml",
     ".github/workflows/recover-market-anchor-v2-candidate.yml",
+    ".github/workflows/serie-a-frozen-v2-shadow-tests.yml",
 )
 
 
