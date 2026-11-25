@@ -327,6 +327,7 @@ def _synthetic_5dollar_bundle(tmp_path, fixtures=None, quote=None):
         "away_team": "Inter",
         "commence_time_utc": "2026-11-13T20:00:00+00:00",
         "snapshot_time_utc": "2026-11-12T08:05:00+00:00",
+        "created_at": "2026-11-12T08:05:01+00:00",
     }
     quote = dict(quote or default_quote)
     page = {
@@ -551,6 +552,7 @@ def test_5dollar_adapter_rejects_target_fixture_identity_even_when_provider_id_d
         "away_team": "Inter",
         "commence_time_utc": "2026-11-12T12:00:00+00:00",
         "snapshot_time_utc": "2026-11-12T08:05:00+00:00",
+        "created_at": "2026-11-12T08:05:01+00:00",
     }
     fixtures = [_synthetic_5dollar_fixture(i) for i in range(30)]
     fixtures.append(_synthetic_5dollar_fixture(
@@ -979,7 +981,7 @@ def test_5dollar_adapter_rejects_target_identity_when_source_orientation_is_reve
 
 
 
-def test_5dollar_current_official_free_plan_evidence_is_clarified_but_stays_hold():
+def test_5dollar_current_official_free_entitlement_conflict_remains_hold():
     import hashlib
     import json
     import serie_a_v2_5dollar_source_adapter as adapter
@@ -987,15 +989,66 @@ def test_5dollar_current_official_free_plan_evidence_is_clarified_but_stays_hold
     raw = adapter.DEFAULT_RIGHTS_MANIFEST.read_bytes()
     rights = json.loads(raw.decode("utf-8"))
     assert hashlib.sha256(raw).hexdigest() == adapter.DEFAULT_RIGHTS_MANIFEST_SHA256
-    assert rights["free_serie_a_entitlement_conflict"] is False
+    assert rights["reviewed_at_utc"] == "2026-11-25"
+    assert rights["free_serie_a_entitlement_conflict"] is True
     assert rights["free_history_months"] == 3
     quality = rights["data_quality_last_12_months"]
-    assert quality["finished_matches"] == 380
+    assert quality["finished_matches"] == 383
     assert quality["corners_pct"] == quality["cards_pct"] == 100
-    assert quality["plan_for_12_month_window"] == "Pro"
-    assert quality["does_not_establish_free_3_month_field_completeness"] is True
+    assert quality["plan_for_12_month_window"] == "Pro and Ultra"
+    assert quality["does_not_establish_free_community_field_entitlement"] is True
+    current = rights["data_quality_current_season_2026_27"]
+    assert current["fixtures"] == current["finished"] == 119
+    assert current["corners_pct"] == current["cards_pct"] == 100
+    assert current["plan_label"] == "Pro and Ultra"
+    community = rights["community_access_claims"]
+    assert community["price_usd_per_month"] == 0
+    assert community["history_months"] == 12
+    assert community["requests_per_hour"] == 300
+    assert community["account_holder_self_attestation_required"] is True
+    assert community["authenticated_response_verified"] is False
     assert rights["serie_a_current_free_claim"]["authenticated_response_verified"] is False
     assert rights["approval_status"] == "HOLD"
     assert rights["upstream_rights_confirmed"] is False
     assert rights["provider_private_retention_permitted"] is False
     assert rights["free_serie_a_required_fields_confirmed"] is False
+    assert rights["source_observation_timestamp_available"] is False
+
+
+
+def test_5dollar_adapter_requires_persisted_quote_created_at_and_strict_chronology(tmp_path):
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    del quotes[0]["created_at"]
+    with pytest.raises(ValueError, match="quote created_at must be an ISO-8601 timestamp"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    quotes[0]["created_at"] = "2026-11-12T08:04:59+00:00"
+    with pytest.raises(ValueError, match="quote chronology"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    quotes[0]["created_at"] = "2026-11-13T20:00:00+00:00"
+    with pytest.raises(ValueError, match="quote chronology"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
+
+
+def test_5dollar_adapter_rejects_naive_quote_created_at(tmp_path):
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    quotes[0]["created_at"] = "2026-11-12T08:05:01"
+    with pytest.raises(ValueError, match="explicit UTC offset"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
+
+
+def test_5dollar_adapter_accepts_created_at_equal_to_snapshot_time(tmp_path):
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    quotes[0]["created_at"] = quotes[0]["snapshot_time_utc"]
+    report = build_manifest_from_private_archive(tmp_path, capture, quotes)
+    assert report["source_before_quote_order_validated"] is True
+    assert report["source_before_quote_verified"] is False
