@@ -212,3 +212,27 @@ Official references:
 **Decision: HOLD_NO_AUTOMATED_CAPTURE.** Footiqo is a possible manual-export source for private, non-commercial exploratory research only, if the file is legitimately obtained and upstream rights are confirmed. It is not approved for this project's recurring automated source capture, commercial/public product use, or current-form inference. No account, email request, API call, automated export, dataset download, source archive, feature calculation, inference, odds read, Supabase access, or protected-outcome use was performed for this audit.
 
 A manually obtained file would still need its exact original bytes, SHA-256, receipt timestamp, source URL/export method, upstream-rights evidence, and archive-before-quote chronology. A local receipt timestamp and hash prove which bytes the project received and when; they do not prove when an upstream statistic was first observed or last corrected.
+
+
+## 2026-11-25 — API-Football / API-Sports Free-plan screen (documentation-only; HOLD)
+
+Official sources reviewed:
+- https://www.api-football.com/
+- https://www.api-football.com/news/post/how-to-get-all-data-from-a-league-with-api-football (published 2026-10-26)
+- https://www.api-football.com/documentation-v3
+- https://www.api-football.com/terms
+
+### Technical fit
+- Official pricing advertises a Free plan at $0, 100 requests/day and 10 requests/minute, with the statistics endpoint exposed; free plans are explicitly limited by available seasons.
+- Official documentation lists per-fixture statistics including shots on goal, shots off goal, total shots, corner kicks, yellow cards and red cards. The fixtures endpoint also exposes goals/results, so several original V2 feature families are technically represented.
+- The 2026-10-26 official league-data guide states that the Free plan covers seasons from Year-4 through Year-2. In 2026 this means 2022, 2023 and 2024; it explicitly says a 2021 season is unavailable on Free. Therefore the Free plan does **not** provide the current 2026/27 season required for lagged current-form features. Exact Serie A per-season coverage remains unverified because no account or API request was used.
+- The API changelog documents batching up to 20 fixture IDs in one fixtures request, which could reduce quota use if a permitted season were available. That does not overcome the season restriction or rights issue.
+
+### Rights and provenance
+- The Terms say the data is obtained from partners, prohibit resale, provide the feed "as is", and state that no licence is granted for use/publication of data in user applications or products; necessary permissions must be obtained from competent rights holders. Third-party league/federation/event-organizer rights remain the user's responsibility.
+- The reviewed Terms do not expressly grant AI/ML training or evaluation rights, nor do they establish a clear private raw-response retention term for this use.
+- The docs describe update frequencies but do not provide per-match first-observed or per-field correction timestamps. A future local receipt time + SHA-256 could prove project possession before a later quote, not upstream first publication.
+
+**Decision: HOLD_NO_2026_27_FREE_SEASON_AND_UNCLEAR_DATA_RIGHTS.** The Free plan cannot supply the 2026/27 lagged statistics needed for the original frozen V2 candidate, and the terms do not clearly authorize model research/use or the necessary retention/publication scope. No paid plan is considered.
+
+No account/key was created; no API request, data download, source archive, Supabase access, feature calculation, inference, protected 2026/27 outcome read, refit, threshold change, production `.pkl` change, or schedule change occurred. The original candidate SHA, 19-feature order, 20×2 weights, scaler/imputer, `active_lambda=0`, `shadow_lambda=1`, FAILED historical stability and CLOSED 0/30 prospective outcome gate remain unchanged.
