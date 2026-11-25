@@ -5,16 +5,20 @@ on:
     branches:
       - research/v2-bigballs-free-source-rights-audit-20261124-run11
     paths:
+      - "market_anchor_v2_bigballs_archive_gate.py"
       - "research/MARKET_ANCHOR_1X2_V2_BIGBALLS_FREE_SOURCE_AUDIT_20261124.md"
       - "research/source_rights/bigballs_sports_data_20261124.json"
+      - "tests/test_market_anchor_v2_bigballs_archive_gate.py"
       - "tests/test_serie_a_v2_bigballs_source_audit.py"
       - ".github/workflows/market-anchor-v2-bigballs-source-audit.yml"
   pull_request:
     branches:
       - main
     paths:
+      - "market_anchor_v2_bigballs_archive_gate.py"
       - "research/MARKET_ANCHOR_1X2_V2_BIGBALLS_FREE_SOURCE_AUDIT_20261124.md"
       - "research/source_rights/bigballs_sports_data_20261124.json"
+      - "tests/test_market_anchor_v2_bigballs_archive_gate.py"
       - "tests/test_serie_a_v2_bigballs_source_audit.py"
       - ".github/workflows/market-anchor-v2-bigballs-source-audit.yml"
 
@@ -40,11 +44,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - name: Run offline source-rights and frozen-contract audit
+      - name: Run offline source-rights, archive chronology, and frozen-contract audit
         run: |
-          python -m py_compile tests/test_serie_a_v2_bigballs_source_audit.py
+          python -m py_compile market_anchor_v2_bigballs_archive_gate.py tests/test_market_anchor_v2_bigballs_archive_gate.py tests/test_serie_a_v2_bigballs_source_audit.py
           python -m pip install pytest
-          python -m pytest -q tests/test_serie_a_v2_bigballs_source_audit.py
+          python -m pytest -q tests/test_serie_a_v2_bigballs_source_audit.py tests/test_market_anchor_v2_bigballs_archive_gate.py
       - name: Enforce no production model artifact changes
         run: |
           git fetch --no-tags origin main
