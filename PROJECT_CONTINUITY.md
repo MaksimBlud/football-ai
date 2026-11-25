@@ -8430,3 +8430,57 @@ The strongest documented zero-dollar candidate remains the existing 5Dollar offl
 
 This 5Dollar adapter is a more complete *offline preparation* than the Big Balls audit, but neither provider is authorized for live capture. Big Balls [PR #952](https://github.com/MaksimBlud/football-ai/pull/952) remains a separate HOLD audit; its new offline receipt/SHA validator does not change that decision.
 
+
+
+## Original MARKET_ANCHOR_1X2_V2 continuation — 2026-11-25 01:04 UTC
+
+### Exact main and forward-workflow audit
+
+- Fresh `main` is still `40887ebb215730190d7c6a7a1693373ec4afcdfc` (2026-10-18 commit); repository remains public. No merge or main update occurred.
+- Original workflow `.github/workflows/serie-a-v2-forward-preview.yml` remains at blob `48ce3b0d8e31c4cf293b94500e9c320047311467`. Its CLI `serie_a_v2_forward_capture.py` still reads saved upcoming quotes before calling `discover_archives` (main lines 276–279). This is the original quote-before-source ordering. The workflow keeps its existing 08:08 UTC schedule; no schedule change was made. Its paid-snapshot `workflow_run` filter only accepts a successful main `workflow_dispatch` parent; no paid workflow was triggered in this run.
+- Current-form workflow `.github/workflows/serie-a-v2-current-form-forward-preview.yml` remains at blob `6ebbcaff290a78e9ccffa4ac9a09bc0982eaff35`. Its main CLI discovers and verifies the latest source archive before creating the Supabase client and reading quotes, but it still reads quotes even if that source-verification result is a HOLD. PR #957 is the separate fail-closed fix that skips quote reads when no verified source exists. Its existing schedule was not changed.
+- Root [PR #781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review / mergeable / not merged, with 8/8 exact-head CI success. [PR #938](https://github.com/MaksimBlud/football-ai/pull/938) contains the original source-before-quote correction; [PR #957](https://github.com/MaksimBlud/football-ai/pull/957) contains the current-form no-quote-without-source correction. [PR #951](https://github.com/MaksimBlud/football-ai/pull/951) and [PR #953](https://github.com/MaksimBlud/football-ai/pull/953) add persisted quote `created_at` chronology checks. [PR #956](https://github.com/MaksimBlud/football-ai/pull/956) hardens checkout credential persistence. These remain unmerged; HUMAN-MERGE applies.
+
+### New Big Balls audit/gate result
+
+- Existing [PR #952](https://github.com/MaksimBlud/football-ai/pull/952) was updated in place; no duplicate PR was created. Final exact HEAD: `ac993da741483b5b8224b673246f3397b29ab846`; base main remains the SHA above.
+- Exact-head checks: **10/10 SUCCESS**. Dedicated offline audit: **32 passed on Python 3.11 and 32 passed on Python 3.12**. Research targeted validation: **4 passed**. Both dedicated Python jobs and the research validation reported no production `.pkl` changes.
+- Fresh official [OpenAPI](https://bigballsdata.com/openapi.json), [soccer hub](https://bigballsdata.com/soccer-api), and FAQ list `GET /v1/matches/{id}/statistics` as Free, but the dedicated [Serie A plan matrix](https://bigballsdata.com/serie-a-api) lists advanced match statistics as starting at Edge. The same Serie A page's FAQ says Free. The direct first-party contradiction is recorded as `CONFLICTING_OFFICIAL_DOCUMENTATION`; decision remains `HOLD_NO_INTEGRATION`.
+- The statistics route is stored-only post-match data, persisted hourly and generally available around 30 minutes after full time; it is a possible lagged input only, not a live pre-kickoff statistics feed. Current-season per-fixture/per-field completeness, upstream field rights, and correction semantics remain unverified.
+- Hardened `market_anchor_v2_bigballs_archive_gate.py`: the public validator now loads the canonical repository rights manifest itself, verifies its exact Git blob SHA-1, and rejects any decision other than `APPROVED`. Caller-supplied approval mappings are no longer accepted. The canonical manifest remains `HOLD_NO_INTEGRATION`; synthetic approval is used only through test monkeypatching.
+- [PR #800](https://github.com/MaksimBlud/football-ai/pull/800) remains the more complete offline 5Dollar adapter, but its provider Free/Community field entitlement and rights remain HOLD. [PR #958](https://github.com/MaksimBlud/football-ai/pull/958) records Football-Data's current fair-use restriction; automated capture/AI-training use is not authorized. No provider account/key, self-attestation, request, download or source archive was created.
+
+### Fresh pre-match-only Supabase audit
+
+Read-only SQL queried only `league`, `event_id`, `snapshot_time_utc`, `created_at` and `commence_time_utc` from `public.odds_snapshots`. Strict rule:
+
+```sql
+snapshot_time_utc < commence_time_utc
+AND snapshot_time_utc <= created_at
+AND created_at < commence_time_utc
+```
+
+- Total rows: **3,966**; strict pre-match rows: **3,915** across **327 events**; future events with a strict quote: **0**.
+- Latest strict pre-match snapshot: `2026-10-13T14:48:53.042620Z`.
+- Per league: Bundesliga 394/35; EPL 1,135/70; Eredivisie 410/39; La Liga 798/52; Ligue 1 387/35; Primeira Liga 9/9; RPL 153/15; Serie A 620/63; Turkey Super Lig 9/9 (strict rows / event IDs).
+- Read-only table metadata reports `public.match_statistics` and `public.match_stats` both at 0 rows. This database currently has historical market snapshots, not stored raw team-statistics rows for the V2 feature builder.
+
+### Critical Supabase RLS advisory — not changed
+
+The current Supabase advisor reports RLS disabled on five public tables:
+
+| Table | Approximate rows | RLS |
+|---|---:|---|
+| `public.teams` | 0 | disabled |
+| `public.predictions` | 0 | disabled |
+| `public.match_statistics` | 0 | disabled |
+| `public.league_prediction_ledger` | 184 | disabled |
+| `public.epl_ai_market_pair_ledger` | 40 | disabled |
+
+Supabase classifies this as **critical**: anon/authenticated roles may read or modify rows. No remediation was applied because this task prohibits Supabase DDL and enabling RLS without policies would block legitimate application access. Any future change requires owner review and explicit policies before RLS is enabled.
+
+### Frozen candidate and safety
+
+- Original candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 ordered features; 20×2 weights; `active_lambda=0`; `shadow_lambda=1`.
+- Historical stability gate remains FAILED. Prospective evaluation remains **0/30 / CLOSED**. No Brier/LogLoss comparison or superiority claim is available.
+- No provider request/download, paid API call, Supabase write/DDL, protected 2026/27 outcome read, inference/refit, feature/weight/threshold change, production `.pkl` change, merge, promotion, bet, schedule change, or other-agent setting change occurred. HUMAN-MERGE only.
