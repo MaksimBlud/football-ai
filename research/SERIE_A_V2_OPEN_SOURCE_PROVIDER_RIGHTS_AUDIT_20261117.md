@@ -185,3 +185,30 @@ Official references:
 - Terms of Service (last updated 2026-10-20): https://www.balldontlie.io/terms.html
 
 No paid request, free-tier request, trial, account/key creation, source capture, data download, quote read, Supabase access/write/DDL, protected-outcome read, inference/refit, threshold change, production `.pkl` change, main update, merge, schedule change, or promotion occurred. Original candidate SHA, 19 features/order, 20×2 weights, `active_lambda=0`, `shadow_lambda=1`, stability FAILED and prospective gate 0/30 / CLOSED remain unchanged.
+
+## 2026-11-25 — Footiqo free-download and public-export rights audit (documentation-only; HOLD for automated V2 capture)
+
+Official policy reviewed: https://footiqo.com/dataset-licence/ (last updated 2026-10-08). The policy explicitly applies to premium datasets, free downloadable samples, and CSV/Excel exports from public statistics tables.
+
+### What the policy affirmatively permits
+- A user who legitimately obtains data through the official download/export functions may download and retain it locally or in a private database for **personal, non-commercial research and internal analysis**.
+- Statistical analysis, historical research, predictive-model development/testing, backtesting and machine-learning experiments are expressly listed as permitted activities.
+- Automated processing of files that have already been legitimately downloaded is permitted within that non-commercial scope.
+
+### What it does not permit by default
+- Automated scraping/crawling, automated bulk extraction of match records, automated access to CSV/Excel export endpoints, and automated downloading of free or premium files require separate written authorisation.
+- The provider says it does not currently offer a public API.
+- Commercial use, public data feeds, redistribution or publication of substantial underlying data require separate written permission.
+- The policy grants only rights Footiqo is entitled to provide; it does not override upstream/third-party data rights.
+
+The official product page advertises a free Big Five 2025/26 historical sample and says public league tables may be exported manually. It does not establish a free, automated 2026/27 match-statistics feed, per-fixture first-observed/correction timestamps, or complete 19-feature coverage for each Serie A fixture.
+
+Official references:
+- https://footiqo.com/dataset-licence/
+- https://footiqo.com/premium/premium-football-database/
+- https://footiqo.com/product/free-big-five-football-database-2025-26-season/
+- https://footiqo.com/database/leagues/italy-serie-a/
+
+**Decision: HOLD_NO_AUTOMATED_CAPTURE.** Footiqo is a possible manual-export source for private, non-commercial exploratory research only, if the file is legitimately obtained and upstream rights are confirmed. It is not approved for this project's recurring automated source capture, commercial/public product use, or current-form inference. No account, email request, API call, automated export, dataset download, source archive, feature calculation, inference, odds read, Supabase access, or protected-outcome use was performed for this audit.
+
+A manually obtained file would still need its exact original bytes, SHA-256, receipt timestamp, source URL/export method, upstream-rights evidence, and archive-before-quote chronology. A local receipt timestamp and hash prove which bytes the project received and when; they do not prove when an upstream statistic was first observed or last corrected.
