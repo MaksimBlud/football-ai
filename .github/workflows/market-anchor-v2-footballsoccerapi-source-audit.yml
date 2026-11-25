@@ -1,0 +1,53 @@
+name: Original V2 Football Soccer API Free-Tier Source Audit
+
+on:
+  push:
+    branches:
+      - research/v2-footballsoccerapi-free-tier-audit-20261125-run11
+    paths:
+      - "research/MARKET_ANCHOR_1X2_V2_FOOTBALLSOCCERAPI_FREE_AUDIT_20261125.md"
+      - "research/source_rights/footballsoccerapi_20261125.json"
+      - "tests/test_serie_a_v2_footballsoccerapi_free_audit.py"
+      - ".github/workflows/market-anchor-v2-footballsoccerapi-source-audit.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "research/MARKET_ANCHOR_1X2_V2_FOOTBALLSOCCERAPI_FREE_AUDIT_20261125.md"
+      - "research/source_rights/footballsoccerapi_20261125.json"
+      - "tests/test_serie_a_v2_footballsoccerapi_free_audit.py"
+      - ".github/workflows/market-anchor-v2-footballsoccerapi-source-audit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  offline-source-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - name: Checkout exact source without persisted credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run offline provider-rights and frozen-contract assertions
+        run: |
+          python -m py_compile tests/test_serie_a_v2_footballsoccerapi_free_audit.py
+          python tests/test_serie_a_v2_footballsoccerapi_free_audit.py
+      - name: Enforce no production model artifact changes
+        run: |
+          git fetch --no-tags origin main
+          if git diff --name-only origin/main...HEAD | grep -E '\.pkl$'; then
+            echo "FAIL: production .pkl changes are forbidden"
+            exit 1
+          fi
+          echo "PASS: no production .pkl changes"
