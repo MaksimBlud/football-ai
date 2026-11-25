@@ -25,6 +25,8 @@ from serie_a_v2_current_form_source_capture import (
     capture_source_archive,
     count_unique_completed_primary_events,
     read_completed_primary_event_count,
+    read_completed_primary_event_summary,
+    summarize_completed_primary_events,
     validate_current_season_csv,
     validate_preregistered_outcome_read_gate,
 )
@@ -348,6 +350,8 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert report["feature_source_gate"]["passed"] is True
     assert report["feature_source_gate"]["observed_completed_primary_events"] == 30
     assert report["feature_source_gate"]["score_or_result_fields_selected_for_gate"] is False
+    assert report["feature_source_gate"]["identity_audit"]["canonical_unique_fixture_identities"] == 30
+    assert report["preregistered_outcome_read_gate"]["identity_audit"]["canonical_unique_fixture_identities"] == 30
     assert report["feature_source_gate"]["uses_exact_preregistered_outcome_read_gate"] is True
     assert report["preregistered_outcome_read_gate"]["passed"] is True
     assert report["preregistered_outcome_read_gate"]["required_completed_primary_events"] == 30
@@ -735,3 +739,85 @@ def test_source_archive_rejects_backwards_archive_clock_without_publication(tmp_
         )
     assert not output_dir.exists()
     assert not list(tmp_path.glob(".published.staging-*"))
+
+
+
+def test_gate_identity_audit_reconciles_aliases_and_rejects_reversed_duplicates():
+    rows = [
+        {"match_date": "2026-10-01", "home_team": "Atalanta", "away_team": "Juventus"},
+        {"match_date": "2026-10-01", "home_team": "Atalanta BC", "away_team": "Juventus"},
+        {"match_date": "2026-10-02", "home_team": "Milan", "away_team": "Inter"},
+        {"match_date": "2026-10-19", "home_team": "Roma", "away_team": "Napoli"},
+    ]
+    audit = summarize_completed_primary_events(rows, before_date=date(2026, 10, 18))
+    assert audit["raw_metadata_rows"] == 4
+    assert audit["eligible_metadata_rows_before_cutoff"] == 3
+    assert audit["raw_unique_fixture_identities"] == 3
+    assert audit["canonical_unique_fixture_identities"] == 2
+    assert audit["exact_duplicate_metadata_rows"] == 0
+    assert audit["alias_collapsed_duplicate_identities"] == 1
+    assert audit["alias_collision_count"] == 1
+
+    reversed_rows = [
+        {"match_date": "2026-08-23", "home_team": "Atalanta", "away_team": "Juventus"},
+        {"match_date": "2026-08-23", "home_team": "Juventus", "away_team": "Atalanta BC"},
+    ]
+    with pytest.raises(ValueError, match="reversed duplicate"):
+        summarize_completed_primary_events(reversed_rows, before_date=date(2026, 10, 18))
+
+
+@pytest.mark.parametrize(
+    "bad_date",
+    ["2026-10-01T12:00:00Z", "2026-10-01suffix", "2026-1-1", "20261001"],
+)
+def test_gate_rejects_noncanonical_or_timestamp_fixture_dates(bad_date):
+    with pytest.raises(ValueError, match="canonical YYYY-MM-DD"):
+        summarize_completed_primary_events(
+            [{"match_date": bad_date, "home_team": "Atalanta", "away_team": "Juventus"}],
+            before_date=date(2026, 10, 18),
+        )
+
+
+def test_gate_rejects_datetime_objects_as_fixture_dates():
+    with pytest.raises(ValueError, match="date-only"):
+        summarize_completed_primary_events(
+            [{"match_date": datetime(2026, 10, 1, 12), "home_team": "Atalanta", "away_team": "Juventus"}],
+            before_date=date(2026, 10, 18),
+        )
+
+
+def test_live_feature_gate_summary_reads_only_fixture_metadata():
+    client = FakeQuery(event_rows(30))
+    audit = read_completed_primary_event_summary(
+        client, now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+    )
+    assert audit["canonical_unique_fixture_identities"] == 30
+    assert audit["raw_metadata_rows"] == 30
+    assert client.selected == "match_date,home_team,away_team"
+
+
+def test_reversed_duplicate_gate_identity_fails_before_any_source_download(tmp_path):
+    rows = event_rows(30)
+    rows[0] = {"match_date": "2026-08-23", "home_team": "Atalanta", "away_team": "Juventus"}
+    rows[1] = {"match_date": "2026-08-23", "home_team": "Juventus", "away_team": "Atalanta BC"}
+    calls = []
+
+    def forbidden_get(*_args, **_kwargs):
+        calls.append("current-source")
+        raise AssertionError("current source must not be requested after an ambiguous gate identity")
+
+    def forbidden_history(**_kwargs):
+        calls.append("historical-source")
+        raise AssertionError("historical source must not be requested after an ambiguous gate identity")
+
+    output_dir = tmp_path / "archive"
+    with pytest.raises(ValueError, match="reversed duplicate"):
+        capture_source_archive(
+            output_dir=output_dir,
+            client=FakeQuery(rows),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=forbidden_get,
+            history_fetch=forbidden_history,
+        )
+    assert calls == []
+    assert not output_dir.exists()
