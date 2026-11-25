@@ -39,6 +39,11 @@ def test_paid_snapshot_workflow_is_default_denied_and_secrets_are_step_scoped():
     job_before_steps = paid.split("jobs:", 1)[1].split("steps:", 1)[0]
 
     assert 'THE_ODDS_API_ACCESS_ALLOWED: "false"' in header
+    # The workflow-level false default must be the only definition; a later
+    # job/step env override could otherwise re-enable paid calls.
+    assert paid.count("THE_ODDS_API_ACCESS_ALLOWED:") == 1
+    assert paid.count('THE_ODDS_API_ACCESS_ALLOWED: "false"') == 1
+    assert 'THE_ODDS_API_ACCESS_ALLOWED: "true"' not in paid
     assert "THE_ODDS_API_KEY" not in job_before_steps
     assert "SUPABASE_URL" not in job_before_steps
     assert "SUPABASE_KEY" not in job_before_steps
