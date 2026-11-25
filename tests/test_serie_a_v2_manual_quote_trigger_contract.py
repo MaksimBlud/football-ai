@@ -19,6 +19,26 @@ def _step_block(workflow: str, name: str) -> str:
     return tail if next_step < 0 else tail[:next_step]
 
 
+def _checkout_step(workflow: str) -> str:
+    lines = workflow.splitlines()
+    starts = [
+        i for i, line in enumerate(lines)
+        if line.lstrip().startswith("- uses: actions/checkout@")
+    ]
+    assert len(starts) == 1, f"expected one pinned checkout step, found {len(starts)}"
+    start = starts[0]
+    indent = len(lines[start]) - len(lines[start].lstrip())
+    end = next(
+        (
+            i for i in range(start + 1, len(lines))
+            if len(lines[i]) - len(lines[i].lstrip()) == indent
+            and lines[i].lstrip().startswith("- ")
+        ),
+        len(lines),
+    )
+    return "\n".join(lines[start:end])
+
+
 def test_original_paid_serie_a_collector_remains_dispatch_only():
     paid = PAID.read_text(encoding="utf-8")
     header = paid.split("concurrency:", 1)[0]
@@ -70,15 +90,20 @@ def test_paid_snapshot_workflow_is_default_denied_and_secrets_are_step_scoped():
     )
 
 
-def test_paid_odds_hold_ci_is_secret_free_and_never_scheduled():
+def test_paid_odds_hold_ci_is_secret_free_never_scheduled_and_does_not_persist_checkout_token():
     workflow = HOLD_CI.read_text(encoding="utf-8")
     header = workflow.split("jobs:", 1)[0]
+    checkout = _checkout_step(workflow)
     assert "push:" in header
     assert "pull_request:" in header
+    assert "research/v2-paid-odds-hold-checkout-token-isolation-on-960-20261125-run11" in header
     assert "schedule:" not in header
     assert "workflow_dispatch:" not in header
     assert "secrets." not in workflow
     assert "THE_ODDS_API_KEY" not in workflow
+    assert "GITHUB_TOKEN" not in workflow
+    assert "actions/checkout@11d5960a326750d5838078e36cf38b85af677262" in checkout
+    assert "persist-credentials: false" in checkout
     assert "scheduled_serie_a_odds_snapshot.py" not in workflow
     assert "pytest -q tests/test_serie_a_v2_manual_quote_trigger_contract.py" in workflow
 

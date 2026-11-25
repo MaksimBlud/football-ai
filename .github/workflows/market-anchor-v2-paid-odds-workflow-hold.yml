@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "research/v2-paid-odds-manual-workflow-default-deny-on-781-20261125-run11"
+      - "research/v2-paid-odds-hold-checkout-token-isolation-on-960-20261125-run11"
     paths:
       - ".github/workflows/serie-a-odds-snapshots.yml"
       - ".github/workflows/market-anchor-v2-paid-odds-workflow-hold.yml"
@@ -12,6 +13,7 @@ on:
     branches:
       - main
       - research/v2-workflow-live-access-hold-20261110-run11
+      - research/v2-paid-odds-manual-workflow-default-deny-on-781-20261125-run11
     paths:
       - ".github/workflows/serie-a-odds-snapshots.yml"
       - ".github/workflows/market-anchor-v2-paid-odds-workflow-hold.yml"
@@ -26,6 +28,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.12"
