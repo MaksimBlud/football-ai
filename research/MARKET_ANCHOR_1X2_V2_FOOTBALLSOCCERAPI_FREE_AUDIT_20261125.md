@@ -27,7 +27,7 @@ This is a material entitlement conflict. No assumption is made that the match-de
 
 The [Acceptable Use Policy](https://footballsoccerapi.com/acceptable-use), last updated 2026-09-05, expressly allows building applications, dashboards, models, research and content; storing what is needed in one's own systems; and retaining it after cancellation. The [Terms of Service](https://footballsoccerapi.com/terms), last updated 2026-10-27, also allow use in one's own work/apps/sites, including commercial use, while prohibiting bulk resale, redistribution, republishing, or downloading the archive to rebuild a competing database.
 
-Those terms make the provider more promising for private research than several previously reviewed providers. They do **not** solve the Free-tier data-availability problem.
+Those terms make the provider more promising for private research than several previously reviewed providers: private raw response retention and retention after cancellation are explicitly permitted by the acceptable-use policy. They do **not** solve the Free-tier data-availability problem.
 
 ## Why the Free plan cannot feed the frozen 19-feature candidate
 
