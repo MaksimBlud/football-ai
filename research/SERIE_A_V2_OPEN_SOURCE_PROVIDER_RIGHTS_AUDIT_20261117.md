@@ -142,3 +142,46 @@ Official references:
 - Played-match team statistics fields and missing-value behavior: https://soccer-data.co/docs/reference/matches/stats
 - Competition/season coverage endpoint documentation: https://soccer-data.co/docs/concepts/coverage
 
+
+
+## New candidate — BALLDONTLIE Serie A API (2026-11-25)
+
+This is an official-documentation-only plan/rights screen. No account, API key, trial, API request, match-data download, quote, Supabase row, or protected outcome was accessed.
+
+### Free-tier entitlement
+
+The official Serie A API documentation says its data catalogue reaches 2010-current, but the endpoint plan matrix is decisive:
+
+| Endpoint | Free | ALL-STAR | GOAT |
+|---|---:|---:|---:|
+| Teams / rosters / players / standings | Yes | Yes | Yes |
+| Matches | **No** | Yes | Yes |
+| Match events / lineups | **No** | Yes | Yes |
+| Player match stats | **No** | **No** | Yes |
+| Team match stats | **No** | **No** | Yes |
+| Betting odds | **No** | **No** | Yes |
+
+- Free: **$0**, 5 requests/minute.
+- ALL-STAR: **$9.99/month per league**; provides match identities/events/lineups, but not team match statistics.
+- GOAT: **$39.99/month per league**; required for team/player match statistics.
+- The 7-day GOAT trial requires a payment method and converts to paid access unless cancelled. It is not an acceptable workaround under the project's no-paid-access rule.
+
+The documented team-match-stat response includes useful V2 ingredients such as shots, shots on target, fouls, yellow cards, red cards and corners (some fields may be null), but this endpoint is GOAT-only. The Free plan cannot even enumerate Serie A match rows through the Matches endpoint. Therefore the provider is **not a free source for the original 19-feature input contract**.
+
+### Data-use terms — positive, but not sufficient
+
+The official Terms of Service are marked **Last Updated: 2026-10-20**. Section 6 expressly permits lawful personal/commercial uses, caching, storage, archiving, analysis, publishing and AI model training/evaluation/backtesting for data lawfully obtained through the user's plan; it states no fixed retention/deletion deadline for lawfully obtained data. A separate licence or attribution is not required for the provider's own rights.
+
+However, Sections 1, 8 and 11 say the service aggregates third-party data, does not guarantee its origin/accuracy/completeness, does not clear every third-party right, and makes the user responsible for obtaining any required third-party rights. The broad AI permission therefore does **not** resolve upstream league/vendor rights or data-quality/field-provenance risk.
+
+The docs also do not establish a cryptographic per-match first-observed/correction timestamp for the historical team-stat payload. Any future authorized use would still require exact raw response bytes, a receipt UTC timestamp, SHA-256, a successful parent-workflow identity, private storage, and strict source-before-quote ordering.
+
+### Decision
+
+**HOLD_NO_FREE_TIER_ACCESS.** BALLDONTLIE has unusually explicit model-training and retention terms for lawfully obtained data, but the required Serie A match/team-stat endpoints are not included in Free. The necessary Team Match Stats endpoint is GOAT-only ($39.99/month per league), which is outside the user's no-paid-API constraint. Do not create an account, trial, key, or request; do not substitute another provider or alter the frozen feature contract.
+
+Official references:
+- Serie A API plan matrix and endpoint schema: https://seriea.balldontlie.io/
+- Terms of Service (last updated 2026-10-20): https://www.balldontlie.io/terms.html
+
+No paid request, free-tier request, trial, account/key creation, source capture, data download, quote read, Supabase access/write/DDL, protected-outcome read, inference/refit, threshold change, production `.pkl` change, main update, merge, schedule change, or promotion occurred. Original candidate SHA, 19 features/order, 20×2 weights, `active_lambda=0`, `shadow_lambda=1`, stability FAILED and prospective gate 0/30 / CLOSED remain unchanged.
