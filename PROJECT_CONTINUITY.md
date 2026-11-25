@@ -8324,3 +8324,26 @@ No provider account/key/request/download, paid odds request, workflow dispatch, 
 
 ### Non-actions
 No main update, merge, paid request, source download, Supabase write/DDL, protected target-outcome read, real inference/refit, production `.pkl` change, feature/weight/threshold change, promotion, bet, schedule change, or other-agent setting change.
+
+## 2026-11-25 00:02 UTC — Football-Data fair-use policy refreshed
+
+### Official provider restriction newly confirmed
+- The official Football-Data contact/fair-use page displays **Updated: 24/11/26** and limits the free CSV/Excel data to private personal-betting or academic-research use, with manual access or light automated downloads capped at two sessions per week. It says the data is not intended for commercial or AI data-training projects involving automated bots/scrapers: https://football-data.co.uk/contact.php
+- This is stronger and newer evidence than the earlier 2026-11-10 data-page review. The two-session ceiling is a ceiling, **not an authorization**. The project therefore keeps automated capture, frozen inference, and AI model training denied; provider-issued permissions remain false and `authorization=null`.
+- A local review note was added at `research/source_rights/evidence/football_data_contact_fair_use_20261124.md`. Its SHA-256 is `83878a159f7adc5ac81471f2ec8a3e0a951b9d4936bc4cb23c9a7045472d6be8`. This is the SHA of the local paraphrase note, **not** a hash of the provider's webpage bytes.
+- New helper `market_anchor_v2_provider_policy_evidence.py` validates the exact official contact-page URL, displayed update date, review freshness, safe repository-relative evidence path, and local-note SHA. Source-capture, frozen-inference, and training-rights validators call it before granting access. It makes no network request.
+- The manifest remains fail-closed: `research_source_capture_permitted=false`, `research_inference_permitted=false`, `ai_model_training_permitted=false`, `provider_issued_source_capture_license=false`, `provider_issued_ai_inference_license=false`, and `authorization=null`.
+
+### New PR #958 — exact-head offline proof
+- Draft child PR: https://github.com/MaksimBlud/football-ai/pull/958
+- Exact base: PR #890 HEAD `48c5ab40a8ad0408f60262fbff46728f5bda4108`; that branch remains inside the #781-rooted HUMAN-MERGE chain.
+- Exact PR #958 HEAD: `1346d807b41d9d536b21199d110ab55e9e6d6164`.
+- Push validation #45514744553: SUCCESS on that exact SHA; Python 3.11 **52 passed**, Python 3.12 **52 passed**; compile, dependency check, and production `.pkl` diff guard passed.
+- The first complete attempt exposed three test-only issues (missing explicit false source-capture licence in the manifest and one test clock predating the new evidence timestamp); those were corrected. The final exact-head run passed.
+- No source account/key/request/download, inference, training, quote read, Supabase read/write/DDL, protected outcome read, candidate/weight/feature/threshold change, production `.pkl` change, schedule change, or main update occurred.
+
+### Main and data status unchanged
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; root hold #781 remains OPEN / Ready for review / mergeable, not merged. Main still exposes the old daily V2 workflow schedules and quote-first original-forward CLI until the #781-rooted chain is manually merged and re-audited.
+- Latest strict pre-match-only Supabase aggregate remains 3,915 eligible rows / 327 events, with **0 future events** carrying a strictly pre-match quote. Latest eligible Serie A snapshot remains `2026-10-13T14:48:53.042620Z`. No score/result/settlement columns were queried.
+- Original candidate remains SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 ordered features, 20×2 weights, `active_lambda=0`, `shadow_lambda=1`, historical stability FAILED, prospective evaluation 0/30 / CLOSED. No superiority over market is established.
+
