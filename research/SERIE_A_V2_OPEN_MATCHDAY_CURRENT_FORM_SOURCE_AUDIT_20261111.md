@@ -168,3 +168,31 @@ The current README still states daily 00:00 UTC publication, aggregate shots/fou
 The original V2 candidate SHA, 19-feature order, weights, scaler/imputer, training fingerprint, 3,799-row training set, `active_lambda=0`, `shadow_lambda=1`, NO_BET and 30-primary-completed-event outcome gate remain unchanged. This source audit provides no V2 inference, no prospective forecast, and no Brier/LogLoss evidence.
 
 No source CSV, API response, odds value, Supabase row, protected result or target outcome was accessed. No provider request, key/account creation, Supabase read/write/DDL, model inference/refit, production `.pkl` change, schedule change or main-branch update occurred.
+
+## Fresh upstream recheck — 2026-11-25 (metadata only)
+
+The same public repository was rechecked at an immutable current master commit. Only README, DISCLAIMER, LEAGUE_INDEX, DATA_DICTIONARY and build-summary metadata were read; no CSV, result row, score, quote, provider API, Supabase row or protected outcome was downloaded or opened.
+
+- Current upstream master commit: `96677da89111985ef0b445ba45012b00d60d0490`.
+- Commit time: `2026-11-24T09:23:30Z`; message: `Daily data refresh 2026-11-24`.
+- README blob remains `b50fe89e1735e6d306ea6dc8eae5169cb6f47a7e`.
+- DISCLAIMER blob remains `198a9cc33cfe25534213a38346d7f10e07e6a1a9`.
+- LEAGUE_INDEX blob remains `e3f18cd3e9a5d7b38e4ce6cfd1d592251c06e79c`.
+- DATA_DICTIONARY blob remains `640dc58c2de961afbdb9b3960a71216ecb230223`.
+- Updated build-summary blob: `4110ae0f279fb7209971300ce062d9ded7efcc07`; generated at `2026-11-24T09:12:24Z`.
+
+The latest published Serie A summary entry now reports **120 results, 120 corner rows, 260 fixtures, latest completed date 2026-11-23, and no listed build errors**. These are upstream aggregate counters only; no CSV rows were inspected. The 120/120 corner counter improves the prior 110/110 metadata count, but it does not establish complete yellow/red-card fields or exact per-match feature parity.
+
+### Rights and provenance recheck
+
+- The repository README and DISCLAIMER blobs are unchanged. The compilation is still expressly **informational/non-commercial**; sale, sublicensing, paid access and a commercial data feed are prohibited. The disclaimer says upstream provider rights remain with the publishers and are not overridden by this compilation.
+- The Serie A index still lists `fixturedownload + ESPN + fd.co.uk`. The README/data dictionary separately attribute top-10 first-/second-half corner splits to FotMob. The public row-level `source` field does not provide a separate per-field FotMob source/observation timestamp. FotMob is not included in the disclaimer's provider-terms table. This remains a field-level provenance and rights gap.
+- The latest football-data.co.uk fair-use pages were refreshed on 2026-11-24 and are pinned by the separate football-ai [PR #958](https://github.com/MaksimBlud/football-ai/pull/958). That audit records automated source capture, inference and AI-model training as **not authorized** absent provider-issued permission. Since open-matchday's Serie A source list explicitly includes `fd.co.uk`, the aggregator cannot be treated as a rights-cleared workaround or an independent source. ESPN/FotMob/fixturedownload upstream rights also remain separately applicable.
+- The README still reports aggregate shots/fouls/cards coverage of about 19% of all result rows; no per-league per-field completeness matrix is published. The Serie A 120-corner summary counter does not prove all frozen yellow/red-card inputs are present.
+- The daily build timestamp and immutable Git commit can support a future receipt-time/SHA archive, but there are no documented per-match first-observed or correction timestamps. Any future authorized capture would still need exact bytes, local receipt UTC, SHA-256, private storage, successful parent-run identity and strict source-before-quote ordering.
+
+### Updated disposition
+
+**HOLD_NO_INTEGRATION.** The source has improved current-season metadata freshness (latest Serie A date 2026-11-23), but the decisive blockers remain: non-commercial-only compilation terms, unresolved upstream ML/retention rights, Football-Data's current AI/data-training restriction, missing FotMob field-level lineage, and unverified per-fixture yellow/red-card completeness and feature parity. No provider request, data download, adapter, model inference, quote read, Supabase access/write/DDL, protected-outcome read, refit, production artifact change, schedule change, main update or merge occurred.
+
+The original candidate SHA, 19-feature order, 20×2 weights, scaler/imputer, `active_lambda=0`, `shadow_lambda=1`, historical stability FAILED and prospective evaluation 0/30 / CLOSED remain unchanged. No Brier/LogLoss superiority claim is available.
