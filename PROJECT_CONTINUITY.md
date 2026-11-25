@@ -8414,3 +8414,19 @@ Per-league strict counts:
 Read-only `COUNT(*)` checks on `public.match_statistics` and `public.match_stats` returned **0 rows in both tables**. Thus the current Supabase database contains admissible historical market snapshots but no stored raw team-statistics rows in those two candidate feature tables. This is not a feature-input or evaluation dataset and does not support V2 inference.
 
 No writes/DDL occurred. The query did not read protected target outcomes.
+
+
+## Free-source priority update — 2026-11-25 (official 5Dollar recheck)
+
+The strongest documented zero-dollar candidate remains the existing 5Dollar offline adapter, not an approved live source:
+
+- Existing audit [PR #792](https://github.com/MaksimBlud/football-ai/pull/792), exact HEAD `c98cc0d6e14fbdef487ee87830c8cd459cfe8e6d`, records the provider's current-season Serie A coverage claim and the unresolved Free/Community entitlement.
+- Existing offline adapter [PR #800](https://github.com/MaksimBlud/football-ai/pull/800), exact HEAD `a3be5ced21f768a53a2c6dbdf72a346efd040434`, already implements a no-network/private-archive adapter: raw-page SHA checks, exact endpoint/season pinning, local response receipt times, strict receipt-before-quote, private filesystem checks, rights HOLD, target-fixture exclusion, and mapping only goals/corners/cards into the existing frozen 19-feature builder. It uses no provider odds and performs no inference. Its synthetic feature-parity tests preserve the original feature order and missing-value semantics.
+- Fresh official [Serie A data-quality page](https://5dollarfootballapi.com/docs/data-quality/3405541143) now reports **119/119 finished 2026/27 fixtures through 2026-11-23**, 100% corners, HT corners, corner line, odds, events, live stats and cards; the last-12-month aggregate is **383/383**. The same page labels the competition **Pro and Ultra**.
+- Official [Terms](https://5dollarfootballapi.com/terms), updated October 2026, allow models/internal tools and caching, while prohibiting raw-feed resale/redistribution. Free/Community public-facing use requires attribution; private/internal use does not.
+- Official [Community Access](https://5dollarfootballapi.com/community) is a $0 plan for qualifying users, with top-five leagues plus one country pack, 12-month history, 300 requests/hour (20/minute), and account-holder self-attestation. The automation did not and must not self-attest or create an account/key.
+- Official [league-fixtures docs](https://5dollarfootballapi.com/docs/league-fixtures) expose goals, corners, cards, kickoff/status and `season=2026`. The existing adapter maps only these fields to the original V2 input columns. No per-fixture upstream first-observation/correction timestamp is documented; local receipt time + raw SHA proves only when the exact bytes entered the private archive.
+- **HOLD remains mandatory.** The data-quality page's Pro/Ultra label conflicts with the Free/Community entitlement claim for the required Serie A fields. No authenticated Free/Community response or written provider clarification proves field-level access, upstream rights or private-retention terms. No account, key, self-attestation, API request, odds request, download or source archive was created.
+
+This 5Dollar adapter is a more complete *offline preparation* than the Big Balls audit, but neither provider is authorized for live capture. Big Balls [PR #952](https://github.com/MaksimBlud/football-ai/pull/952) remains a separate HOLD audit; its new offline receipt/SHA validator does not change that decision.
+
