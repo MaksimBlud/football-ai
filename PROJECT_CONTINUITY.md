@@ -8687,3 +8687,11 @@ No provider request/download, paid API call, Supabase write/DDL, protected-outco
 - No Supabase writes/DDL, paid API calls, protected outcome reads, inference, refit, threshold tuning, production `.pkl` change, merge, promotion, betting, schedule change or other-agent setting change occurred.
 
 HUMAN-MERGE only. No PR in this checkpoint is merged by this automation.
+
+
+## Provider-audit follow-up — 2026-11-25 09:14 UTC
+
+- Existing open provider-rights audit [#868](https://github.com/MaksimBlud/football-ai/pull/868) was updated in place; exact HEAD `9367e2ac8a624ff00e7362e3a0e718a8ad22e2ef`, base main unchanged, **6/6 PR workflows SUCCESS**. New API-Football screen: Free is 100 requests/day / 10 per minute, but the official 2026-10-26 guide says free access covers Year-4 through Year-2 (2022–2024 in 2026), not the required 2026/27 season. Terms say data is partner-sourced, do not grant a licence for use/publication in user products, and leave third-party rights to the user; AI/ML and private raw-response retention are not expressly granted. Decision: HOLD; no account/key/API request/download.
+- New Draft [#962](https://github.com/MaksimBlud/football-ai/pull/962) exact HEAD `37fe482d9265e30e3370acec0c210bb024f23b4c`, **7/7 PR workflows SUCCESS**; dedicated audit ran 7 offline assertions on Python 3.11 and 3.12 and passed both production `.pkl` guards. Football Soccer API Free is yesterday-only and its current pricing/free-key pages hold back statistics/history; the Match detail page conflicts by describing `team_figures` on Free. Decision: HOLD; no account/key/API request/download.
+- The preceding documentation HEAD `22465ad3a286320dca9876e2949b633533e4d8d2` completed **8/8 exact-head PR workflows SUCCESS**, including **89 original V2 shadow tests** and the production-artifact guard. This checkpoint is being extended with the two provider-audit results; its new HEAD must receive its own exact-head CI before any CI-success claim.
+- These provider audits do not alter the frozen 19-feature candidate or grant any integration permission. No provider request, source download, Supabase write/DDL, protected outcome read, inference, refit, production `.pkl` change, main update, merge, promotion, bet, schedule change or other-agent setting change occurred.
