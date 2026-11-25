@@ -1,0 +1,124 @@
+{
+  "schema_version": "MARKET_ANCHOR_1X2_V2_OPEN_MATCHDAY_SOURCE_AUDIT_V1",
+  "reviewed_at_utc": "2026-11-25T12:55:00Z",
+  "provider": {
+    "name": "open-matchday",
+    "repository": "oladeeayo/open-matchday",
+    "reviewed_commit": "968bc4fdb0adfd2a412962793b59fda2c39bdfd9",
+    "reviewed_commit_message": "Daily data refresh 2026-11-25",
+    "readme_blob_sha1": "b50fe89e1735e6d306ea6dc8eae5169cb6f47a7e",
+    "disclaimer_blob_sha1": "198a9cc33cfe25534213a38346d7f10e07e6a1a9",
+    "data_readme_blob_sha1": "f34fa976fed69e6099da58e121cf641a1488cf90",
+    "league_index_blob_sha1": "e3f18cd3e9a5d7b38e4ce6cfd1d592251c06e79c",
+    "data_dictionary_blob_sha1": "640dc58c2de961afbdb9b3960a71216ecb230223",
+    "build_summary_blob_sha1": "84ff681b9840d4b5204f311e179e19e6a10c211e",
+    "build_generated_utc": "2026-11-25T07:50:20Z"
+  },
+  "decision": "HOLD_NONCOMMERCIAL_AND_UPSTREAM_RIGHTS_AND_FIELD_PROVENANCE_UNRESOLVED",
+  "scope": {
+    "candidate_experiment": "MARKET_ANCHOR_1X2_V2",
+    "primary_league": "SERIE_A",
+    "use_case_under_review": "Potential lagged current-season feature source only",
+    "provider_data_downloaded": false,
+    "provider_api_called": false,
+    "account_or_key_created": false
+  },
+  "observed_serie_a_catalogue_metadata": {
+    "folder": "data/ITA_1_serie-a",
+    "documented_sources": ["fixturedownload", "ESPN", "football-data.co.uk"],
+    "season": "2026/27",
+    "results_rows": 120,
+    "rows_with_corner_totals_reported_by_build_summary": 120,
+    "fixtures_rows": 260,
+    "latest_result_match_date": "2026-11-23",
+    "errors_reported_by_build_summary": [],
+    "source_of_corner_splits_claimed_in_readme": "FotMob",
+    "per_match_completeness_of_all_six_corner_fields_verified": false,
+    "stable_match_id_in_results_schema": false
+  },
+  "coverage": {
+    "free_access": true,
+    "free_scope": "Current season dataset",
+    "historical_2016_17_through_2025_26_replacement": false,
+    "documented_result_fields_include": [
+      "full_time_goals",
+      "half_time_goals",
+      "shots",
+      "shots_on_target",
+      "fouls",
+      "corners",
+      "yellow_cards",
+      "red_cards"
+    ],
+    "corner_totals_claimed": true,
+    "corner_half_splits_claimed_for_top_10_leagues": true,
+    "exact_serie_a_per_match_six_corner_field_coverage": "UNVERIFIED",
+    "all_19_original_v2_features_covered_for_each_event": false,
+    "same_day_and_pre_quote_as_of_semantics": "Not independently established from provider first-seen/correction metadata"
+  },
+  "rights": {
+    "dataset_terms": "Informational, non-commercial use only",
+    "commercial_use_permitted": false,
+    "redistribution_or_paid_feed_permitted": false,
+    "attribution_required_for_public_use": true,
+    "upstream_rights_cleared_for_private_ml_research": false,
+    "upstream_rights_cleared_for_product_or_commercial_use": false,
+    "documented_upstream_sources": [
+      "football-data.co.uk",
+      "fixturedownload.com",
+      "OpenLigaDB",
+      "ESPN",
+      "FotMob",
+      "Soccerway"
+    ],
+    "provider_terms_notes": {
+      "football-data.co.uk": "Disclaimer describes personal, non-commercial use.",
+      "ESPN": "Disclaimer describes personal, non-commercial use.",
+      "FotMob": "README identifies FotMob as the source for top-10 corner splits, but the disclaimer's provider-terms table does not enumerate FotMob.",
+      "fixturedownload.com": "Disclaimer gives a short free-feed summary; exact reuse/retention terms not established here.",
+      "OpenLigaDB": "Documented as a German-league source; not the Serie A source listed in LEAGUE_INDEX.",
+      "Soccerway": "Listed as a possible merge source; exact Serie A field-level contribution and rights not established."
+    },
+    "written_permission_for_private_raw_storage": false,
+    "written_permission_for_model_training_or_evaluation": false
+  },
+  "chronology": {
+    "repository_refresh_cadence_claim": "Daily at 00:00 UTC",
+    "repository_build_timestamp_available": true,
+    "exact_git_commit_and_blob_sha_available": true,
+    "per_field_upstream_first_observed_timestamp": false,
+    "per_field_upstream_correction_timestamp": false,
+    "provider_publication_timestamp": false,
+    "local_project_source_before_quote_proof_possible_if_archived_before_quote": true,
+    "upstream_first_seen_before_quote_proof": false,
+    "source_before_quote_status": "NOT_APPROVED_PENDING_RIGHTS_AND_UPSTREAM_CHRONOLOGY"
+  },
+  "model_contract": {
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "feature_count": 19,
+    "feature_order_unchanged": true,
+    "weights_shape": [20, 2],
+    "active_lambda": 0.0,
+    "shadow_lambda": 1.0,
+    "historical_stability_gate": "FAILED",
+    "prospective_outcome_gate": "CLOSED_0_OF_30"
+  },
+  "safety": {
+    "raw_dataset_downloaded": false,
+    "raw_dataset_archived": false,
+    "provider_api_calls": 0,
+    "supabase_reads": 0,
+    "supabase_writes": 0,
+    "supabase_ddl": 0,
+    "saved_quote_reads": 0,
+    "feature_builds": 0,
+    "inference_runs": 0,
+    "protected_2026_27_outcomes_read": false,
+    "training_or_refit": false,
+    "production_pkl_changes": 0,
+    "schedule_changes": 0,
+    "paid_provider_calls": 0,
+    "automatic_promotion": false,
+    "betting": false
+  }
+}
