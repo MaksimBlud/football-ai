@@ -1,7 +1,7 @@
 {
   "schema_version": "5DOLLAR_ORIGINAL_V2_SOURCE_RIGHTS_V1",
   "provider": "5DollarFootballAPI",
-  "reviewed_at_utc": "2026-11-25",
+  "reviewed_at_utc": "2026-11-25T22:04:00Z",
   "terms_url": "https://5dollarfootballapi.com/terms",
   "pricing_url": "https://5dollarfootballapi.com/pricing",
   "serie_a_url": "https://5dollarfootballapi.com/serie-a-api",
@@ -27,7 +27,7 @@
   "field_semantics_confirmed": false,
   "private_archive_verified": false,
   "approval_status": "HOLD",
-  "reason": "Fresh official evidence reviewed 2026-11-25: the Italy Serie A data-quality page reports 119/119 finished 2026/27 fixtures through 2026-11-23 and 383/383 finished fixtures over the last 12 months, with 100% corners, half-time corners, corner line, odds, events, live stats and cards; the page labels the competition Pro and Ultra. The Free and Community pages describe zero-dollar access to top-five leagues, with Community adding a country pack and 12-month history, while the Terms permit models/internal tools and caching and prohibit raw-feed redistribution. The current-season 119/119 measurements are inside the Free three-month window but remain labelled Pro and Ultra, so the required Serie A goals/corners/cards entitlement for Free/Community is unresolved. No authenticated Free/Community response or written clarification verifies field-level access, upstream rights, or private-retention terms. No per-fixture upstream first-observation/correction timestamp is documented; local receipt time and raw SHA can prove only when exact bytes entered the private archive. Keep HOLD; do not create an account, self-attest, request a key, call an API, download data, archive provider payloads, calculate features, or run inference until entitlement, upstream rights and private retention are separately approved. No paid plan is authorized.",
+  "reason": "Fresh official evidence checked 2026-11-25: the live Italy Serie A data-quality page labels the league Pro and Ultra and reports 120/120 finished 2026/27 fixtures through 2026-11-24 plus 382/382 finished in the rolling 12-month window, with 100% corners, half-time corners, corner line, odds, events, live stats and cards. The Free pricing and dedicated Serie A pages claim top-five/Serie A statistics and odds are available at $0; the data-quality plan label still conflicts, and no authenticated Free/Community response verifies the required fields. Terms permit commercial model/internal-tool use and caching, but do not disclose upstream licensors or grant raw-feed redistribution; the licence ends with the account/terms. The trust center reports event-capture delay against its own event minute (97.3% within 2 match-minutes; 62 retractions; 705 minute revisions) and explicitly does not claim an independent clock. No per-fixture upstream first-observation/correction timestamp is documented. Keep HOLD until actual Free-plan Serie A field entitlement, upstream rights and private archive/retention scope are confirmed in writing. No account, self-attestation, API key, request, download, archive, feature calculation, inference, quote read or paid plan is authorized.",
   "measured_data_quality_plan": "Pro and Ultra",
   "free_serie_a_entitlement_conflict": true,
   "measured_data_quality_page_reviewed_at_utc": "2026-11-25",
@@ -57,7 +57,7 @@
   },
   "data_quality_last_12_months": {
     "window": "last_12_months",
-    "finished_matches": 383,
+    "finished_matches": 382,
     "corners_pct": 100,
     "half_time_corners_pct": 100,
     "corner_line_pct": 100,
@@ -70,9 +70,9 @@
   },
   "data_quality_current_season_2026_27": {
     "from": "2026-08-23",
-    "through": "2026-11-23",
-    "fixtures": 119,
-    "finished": 119,
+    "through": "2026-11-24",
+    "fixtures": 120,
+    "finished": 120,
     "corners_pct": 100,
     "half_time_corners_pct": 100,
     "corner_line_pct": 100,
@@ -86,5 +86,23 @@
   "source_observation_timestamp_available": false,
   "local_response_receipt_time_required": true,
   "upstream_rights_documented": false,
-  "private_retention_duration_documented": false
+  "private_retention_duration_documented": false,
+  "trust_center": {
+    "checked_at_utc": "2026-11-25T22:04:00Z",
+    "url": "https://5dollarfootballapi.com/trust",
+    "event_capture_delay_pct_within_2_match_minutes": 97.3,
+    "events_sampled": 2126,
+    "matches_sampled": 385,
+    "p50_match_minutes": 0,
+    "p95_match_minutes": 1,
+    "max_match_minutes": 43,
+    "retracted_events": 62,
+    "minute_revisions": 705,
+    "measured_at_utc": "2026-11-21T15:05:00Z",
+    "clock_basis": "provider's own event minute; no independent end-to-end clock",
+    "upstream_provider_identity_disclosed": false
+  },
+  "active_subscription_cache_permitted": true,
+  "private_research_archive_authorized": false,
+  "post_termination_retention_permitted": false
 }
