@@ -10,7 +10,7 @@ from market_anchor_v2_source_rights import (
     require_personal_research_inference_scope,
 )
 
-NOW = datetime(2026, 11, 25, 0, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 11, 25, 0, 10, tzinfo=timezone.utc)
 
 
 def _write_synthetic_grant(

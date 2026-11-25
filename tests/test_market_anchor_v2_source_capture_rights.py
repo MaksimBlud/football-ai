@@ -9,7 +9,7 @@ import market_anchor_v2_artifact_privacy as privacy
 import market_anchor_v2_direct_access as direct_access
 import market_anchor_v2_source_capture_rights as capture_rights
 
-NOW = datetime(2026, 11, 25, 0, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 11, 25, 0, 10, tzinfo=timezone.utc)
 
 
 def _synthetic_capture_grant(
