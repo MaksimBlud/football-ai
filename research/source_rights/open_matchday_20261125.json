@@ -74,7 +74,7 @@
     "provider_terms_notes": {
       "football-data.co.uk": "Disclaimer describes personal, non-commercial use.",
       "ESPN": "Disclaimer describes personal, non-commercial use.",
-      "FotMob": "README identifies FotMob as the source for top-10 corner splits, but the disclaimer's provider-terms table does not enumerate FotMob.",
+      "FotMob": "README identifies FotMob as the source for top-10 corner splits, but FotMob is absent from the disclaimer's provider-terms table.",
       "fixturedownload.com": "Disclaimer gives a short free-feed summary; exact reuse/retention terms not established here.",
       "OpenLigaDB": "Documented as a German-league source; not the Serie A source listed in LEAGUE_INDEX.",
       "Soccerway": "Listed as a possible merge source; exact Serie A field-level contribution and rights not established."
