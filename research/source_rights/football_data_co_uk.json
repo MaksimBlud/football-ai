@@ -3,7 +3,7 @@
   "provider": "Football-Data.co.uk",
   "source_url": "https://www.football-data.co.uk/",
   "policy_url": "https://football-data.co.uk/data",
-  "policy_checked_at_utc": "2026-11-21T11:52:37Z",
+  "policy_checked_at_utc": "2026-11-25T00:03:23Z",
   "rights_status": "V2_FROZEN_INFERENCE_SCOPE_UNRESOLVED",
   "research_use_permitted": true,
   "research_source_capture_permitted": false,
@@ -16,8 +16,16 @@
   "public_product_use_permitted": false,
   "max_automated_download_sessions_per_week": 2,
   "download_budget_policy": "TWO_AUTOMATED_SESSIONS_PER_ROLLING_7_DAYS",
-  "policy_summary": "The official Football-Data data page, updated 20/11/26, describes the free CSV/Excel data as intended for private individuals and excludes commercial or AI data-training products using automated bots, scrapers, or AI. The official fair-use/contact page, also updated 20/11/26, limits automated downloads to light use at most twice per week and says no permission should be assumed for other uses without a response.",
-  "policy_interpretation": "The previous source-only capture allowance is withdrawn internally after the official page update on 2026-11-20. Because the project's proposed capture is an automated GitHub Actions process and the source feeds an AI model, the project cannot safely infer permission from the earlier private-research wording. Automated source capture is fail-closed pending explicit provider clarification. The two-session limit is a ceiling, not authorization. Frozen-model inference remains separately blocked; AI model training, commercial use, public product use, and redistribution remain prohibited. This is a conservative internal control, not a legal conclusion about every form of manual personal research.",
+  "policy_summary": "Both official Football-Data pages display 2026-11-24 updates. The data page limits free CSV/Excel use to private individuals and excludes commercial or data-training products using automated bots/scrapers/AI. The contact page limits intended use to personal betting or academic research, permits at most light automated access twice per week, and excludes commercial or AI data-training projects involving bots/scrapers.",
+  "policy_interpretation": "No provider-issued permission exists for automated capture, frozen inference, or AI model training. The two-session weekly ceiling is not authorization. The current provider terms explicitly exclude AI data-training projects involving automated bots/scrapers; the project therefore keeps automated source capture, frozen-model inference, and AI model training denied. Authorization remains null. This is a conservative internal control, not a legal conclusion about every form of personal or academic research.",
   "authorization": null,
-  "policy_page_updated_date": "2026-11-20"
+  "policy_page_updated_date": "2026-11-24",
+  "fair_use_policy_url": "https://football-data.co.uk/contact.php",
+  "fair_use_policy_checked_at_utc": "2026-11-25T00:03:23Z",
+  "fair_use_policy_page_updated_date": "2026-11-24",
+  "fair_use_policy_evidence_file": "research/source_rights/evidence/football_data_contact_fair_use_20261124.md",
+  "fair_use_policy_evidence_sha256": "95ddec10a2f8959635831044cdd4f6f7b0764a92f2f12cd2307210025895eb96",
+  "automated_download_ceiling_is_authorization": false,
+  "fair_use_policy_evidence_kind": "LOCAL_PARAPHRASE_NOTE_NOT_PROVIDER_PAGE_BYTES",
+  "provider_issued_source_capture_license": false
 }
