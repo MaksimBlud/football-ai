@@ -26,5 +26,6 @@
   "fair_use_policy_evidence_file": "research/source_rights/evidence/football_data_contact_fair_use_20261124.md",
   "fair_use_policy_evidence_sha256": "83878a159f7adc5ac81471f2ec8a3e0a951b9d4936bc4cb23c9a7045472d6be8",
   "automated_download_ceiling_is_authorization": false,
-  "fair_use_policy_evidence_kind": "LOCAL_PARAPHRASE_NOTE_NOT_PROVIDER_PAGE_BYTES"
+  "fair_use_policy_evidence_kind": "LOCAL_PARAPHRASE_NOTE_NOT_PROVIDER_PAGE_BYTES",
+  "provider_issued_source_capture_license": false
 }
