@@ -73,6 +73,7 @@ def _bundle():
         "paid_odds_used": False,
     }
     rights = {
+        "provider": "Big Balls Sports Data",
         "integration_allowed": True,
         "automated_capture_authorized": True,
         "frozen_inference_authorized": True,
@@ -87,6 +88,7 @@ def _validate(bundle=None, **overrides):
         "archive_manifest": archive,
         "match_body": match_body,
         "statistics_body": statistics_body,
+        "quote_match_id": "target-match-1",
         "quote_snapshot_time_utc": "2026-11-11T08:00:00Z",
         "quote_created_at_utc": "2026-11-11T08:00:01Z",
         "target_kickoff_utc": "2026-11-11T18:00:00Z",
@@ -270,4 +272,16 @@ def test_non_serie_a_and_wrong_source_endpoint_are_rejected():
     rights, archive, match_body, statistics_body, *_ = _bundle()
     archive["statistics_endpoint"] = "/v1/matches/source-match-1/odds"
     with pytest.raises(ArchiveGateError, match="unexpected statistics endpoint"):
+        _validate((rights, archive, match_body, statistics_body, None, None))
+
+
+def test_quote_fixture_identity_must_match_the_target_match():
+    with pytest.raises(ArchiveGateError, match="quote match ID does not match"):
+        _validate(quote_match_id="different-target")
+
+
+def test_provider_rights_manifest_must_name_big_balls():
+    rights, archive, match_body, statistics_body, *_ = _bundle()
+    rights["provider"] = "Another Provider"
+    with pytest.raises(ArchiveGateError, match="does not match Big Balls"):
         _validate((rights, archive, match_body, statistics_body, None, None))
