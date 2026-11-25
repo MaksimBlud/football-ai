@@ -43,7 +43,8 @@ jobs:
           PY
       - name: Confirm paid provider access is held
         if: ${{ env.THE_ODDS_API_ACCESS_ALLOWED != 'true' }}
-        run: echo "HOLD: no The Odds API quota preflight, odds request, or Supabase snapshot write is permitted"
+        run: |
+          echo "HOLD: no The Odds API quota preflight, odds request, or Supabase snapshot write is permitted"
       - name: Check required secrets
         if: ${{ env.THE_ODDS_API_ACCESS_ALLOWED == 'true' }}
         env:
