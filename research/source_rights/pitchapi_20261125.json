@@ -1,0 +1,124 @@
+{
+  "schema_version": "MARKET_ANCHOR_1X2_V2_PROVIDER_RIGHTS_AUDIT_V1",
+  "provider": "PitchAPI",
+  "audit_date_utc": "2026-11-25",
+  "official_sources": {
+    "api_documentation": "https://pitchapi.dev/",
+    "python_sdk_documentation": "https://pypi.org/project/pitchapi/0.1.6/",
+    "documentation_checked_utc": "2026-11-25"
+  },
+  "free_plan": {
+    "price_usd_monthly": 0,
+    "paid_tier_advertised": false,
+    "card_required": false,
+    "request_allowance": "unlimited",
+    "documented_league_count": 77,
+    "documented_history_start_year": 2021,
+    "api_key_required": true,
+    "free_entitlement_claim": "Every endpoint and every league in the published catalogue; full history back to 2021",
+    "serie_a_2026_27_coverage_independently_verified": false
+  },
+  "documented_data": {
+    "upcoming_fixture_filter": true,
+    "match_summary_has_utc_kickoff": true,
+    "completed_match_stats_endpoint": true,
+    "team_stats_examples": [
+      "expected_goals",
+      "expected_goals_on_target",
+      "expected_goals_open_play",
+      "expected_goals_set_play",
+      "BallPossesion",
+      "accurate_passes",
+      "touches_opp_box"
+    ],
+    "shot_endpoint_has_is_on_target": true,
+    "shot_endpoint_has_expected_goals": true,
+    "event_types_documented": [
+      "goals",
+      "yellow_cards",
+      "red_cards",
+      "substitutions",
+      "penalties"
+    ],
+    "corner_count_field_documented": false,
+    "complete_original_19_feature_coverage_proven": false,
+    "missing_original_feature_family": "corners_for_and_corners_against"
+  },
+  "provenance": {
+    "response_timestamps_rfc3339_utc_documented": true,
+    "match_kickoff_time_utc_documented": true,
+    "completed_match_stats_first_observed_timestamp_documented": false,
+    "per_field_correction_timestamp_documented": false,
+    "live_endpoint_fetched_at_age_seconds_and_stale_documented": true,
+    "live_timestamp_applies_to_completed_match_stats": false,
+    "local_capture_time_and_raw_sha_can_prove_project_possession_before_a_later_quote": true,
+    "local_capture_time_and_raw_sha_prove_upstream_first_observation": false
+  },
+  "rights": {
+    "official_terms_linked_from_documentation": false,
+    "official_terms_or_data_license_text_verified": false,
+    "upstream_data_providers_identified": false,
+    "private_raw_response_retention_permission_confirmed": false,
+    "ai_model_training_or_inference_permission_confirmed": false,
+    "long_term_research_archive_permission_confirmed": false,
+    "pypi_sdk_mit_license_covers_client_code_only": true,
+    "pypi_states_api_data_is_governed_separately_by_pitchapi_terms": true
+  },
+  "original_v2_contract": {
+    "experiment_id": "MARKET_ANCHOR_1X2_V2",
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "candidate_git_blob_sha": "ac1303f6b096664983fbf52443bd0a381b23ba21",
+    "features": [
+      "diff_points_5",
+      "diff_points_10",
+      "diff_points_venue5",
+      "diff_goals_for_5",
+      "diff_goals_for_10",
+      "diff_goals_against_5",
+      "diff_goals_against_10",
+      "diff_corners_for_5",
+      "diff_corners_for_10",
+      "diff_corners_against_5",
+      "diff_corners_against_10",
+      "diff_yellow_5",
+      "diff_yellow_10",
+      "diff_red_5",
+      "diff_red_10",
+      "diff_goals_for_venue5",
+      "diff_goals_against_venue5",
+      "diff_corners_for_venue5",
+      "diff_corners_against_venue5"
+    ],
+    "corner_features": [
+      "diff_corners_for_5",
+      "diff_corners_for_10",
+      "diff_corners_against_5",
+      "diff_corners_against_10",
+      "diff_corners_for_venue5",
+      "diff_corners_against_venue5"
+    ],
+    "active_lambda": 0,
+    "shadow_residual_lambda": 1,
+    "stability_gate_passed": false,
+    "prospective_outcome_gate": "CLOSED_0_OF_30",
+    "candidate_or_feature_contract_changed": false
+  },
+  "decision": "HOLD_NO_DOCUMENTED_CORNER_FEATURES_AND_UNCLEAR_DATA_RIGHTS_AND_UPSTREAM_PROVENANCE",
+  "authorization": {
+    "provider_account_created": false,
+    "provider_api_key_created": false,
+    "provider_api_requests": 0,
+    "source_downloads": 0,
+    "raw_response_sha256_captured": false,
+    "supabase_accessed": false,
+    "supabase_writes": 0,
+    "supabase_ddl": 0,
+    "feature_builds": 0,
+    "inference_runs": 0,
+    "protected_2026_27_outcomes_read": false,
+    "model_refit_or_training_performed": false,
+    "production_pickle_changed": false,
+    "paid_api_calls": 0,
+    "cron_created": false
+  }
+}
