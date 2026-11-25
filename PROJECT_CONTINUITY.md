@@ -8740,3 +8740,43 @@ The original frozen candidate SHA, 19-feature order, 20x2 weights, scaler/impute
 - New official-page-only candidate: Footballdata.io. Decision `HOLD_NO_FREE_CORNER_CARD_AND_RETENTION_CLEARANCE`. Its plan matrix conflicts with its help pages on Free match-stat access; the official corner-stat help page specifically places detailed corners on Pro. The five-league Free entitlement does not establish Italy Serie A access. Terms limit Free to testing/development/small or non-commercial use, permit only reasonable caching, and say long-term storage/bulk replication/data warehousing may require written permission or enterprise agreement. The upstream provider/right chain and per-field first-observed/correction times are not established.
 - No account/key, API request, source download, quote access, feature build, inference, Supabase operation or target-outcome read occurred. The provider is not approved for any original V2 input.
 - Original candidate SHA, 19-feature order, 20×2 weights, scaler/imputer, `active_lambda=0`, `shadow_lambda=1`, failed historical stability and CLOSED 0/30 prospective outcome gate remain unchanged. HUMAN-MERGE only.
+
+---
+
+## 2026-11-25 18:47 UTC — fresh main runtime, strict pre-match ledger and unresolved hold
+
+This checkpoint was collected from the live GitHub API and a read-only Supabase query. It does not use source ZIP bytes or target-outcome fields.
+
+### Fresh main and runtime
+
+- main still points to 40887ebb215730190d7a6c7a1693373ec4afcdfc; repository visibility is public.
+- Original V2 Forward run [#45676816331](https://github.com/MaksimBlud/football-ai/actions/runs/45676816331), created 2026-11-25 18:36:05 UTC, completed SUCCESS on that exact main SHA. Its exact job log reports 71 tests passed; the existing Free Real-Quote Diagnostic parent artifact #15045735754 passed archive SHA attestation (3,800 historical rows / 10 files). The original forward reader then reported quotes_seen=0, future_quotes_checked=0, v2_diagnostic_previews_captured=0, 0 paid calls and 0 Supabase writes. It uploaded a 1,459-byte no-forecast artifact #15051822133, ZIP SHA-256 f63f72580eedcc2d97ff747ec7376693658b9068d34efd86eb0c88d5bac7478f.
+- Current-Form Forward run [#45677293419](https://github.com/MaksimBlud/football-ai/actions/runs/45677293419), created 18:38:55 UTC, completed SUCCESS on the same main SHA. Its exact job log reports 53 tests passed; it verified the prior Current-Form Source Capture artifact #15040616453 (SHA-256 831287e5b04743e97ddf7410fa7194836a32964346f6de63d8fcec298175d05e, 3,920 historical rows, 120 current-season feature-input rows, 10 historical CSVs). It then reported quotes_seen=0, v2_current_form_shadow_captured=0, no target-outcome reads/scoring, 0 paid calls and 0 Supabase writes. It still uploaded artifact #15050714548 (2 files, ZIP SHA-256 782e136ddcac7c9f83f2dcbfd8bc6e38843fb19d4da24fbc04360fee08769c25).
+- These are real runtime/empty-quote results, not V2 forecasts or model-quality evidence. The underlying Football-Data capture remains unauthorized under the current provider-rights HOLD; none of its archive bytes were downloaded or reused in this checkpoint.
+
+### Root hold and dependent source-first work
+
+- Root [PR #781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review / mergeable / not merged. Exact HEAD 5552bec363ae72ad7aef04c598d2ce861f33eb42; all 8 exact-head workflows are SUCCESS. Its diff explicitly holds the original forward, current-form source/forward, free diagnostic and recovery workflows, removes job-wide secrets, gates all live steps and artifact uploads, and leaves offline tests/schedules intact. The just-observed main runs prove that this hold is not active until HUMAN-MERGE.
+- Original source-before-quote chain remains open: #879 → #938 → #939 → #940 → #943 → #944 → #945 and the later persisted quote chronology / rights descendants. Main's original forward CLI still reads saved quote metadata before source archive discovery. Do not treat the green source-first branch tests as main runtime proof.
+- [PR #957](https://github.com/MaksimBlud/football-ai/pull/957) separately prevents current-form quote reads without verified source; [#958](https://github.com/MaksimBlud/football-ai/pull/958) pins the current Football-Data policy and keeps source use denied. Both remain open in their parent chain.
+- [PR #967](https://github.com/MaksimBlud/football-ai/pull/967) exact HEAD 096e4a918ea3f57b1caecc0ab686f0655259cb1c has its exact dedicated checkout-credential validation SUCCESS; it is a child of #956 and remains Draft/HUMAN-MERGE only.
+
+### Fresh pre-match-only Supabase aggregate
+
+Read-only query selected only league, event_id, snapshot_time_utc, created_at, commence_time_utc from public.odds_snapshots. Eligibility was strictly:
+snapshot_time_utc < commence_time_utc AND snapshot_time_utc <= created_at AND created_at < commence_time_utc.
+
+- All leagues: **3,915 strict pre-match rows / 327 event IDs / 0 future events with a strict eligible quote**.
+- Serie A: **620 strict pre-match rows / 63 event IDs / 0 future events with a strict eligible quote**.
+- Latest strict Serie A snapshot remains 2026-10-13T14:48:53.042620Z.
+- No score, result, settlement or protected target-outcome fields were queried.
+
+### Frozen original V2 and gates
+
+- Candidate SHA-256 remains a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6.
+- Exact ordered feature list remains 19; weights remain 20×2; scaler/imputer and training fingerprint are unchanged.
+- active_lambda=0 (exact de-vigged market fallback); shadow_lambda=1 (research-only residual).
+- Historical stability gate remains FAILED; prospective outcome-read/evaluation gate remains CLOSED at **0/30**. No independent prospective Brier/LogLoss comparison exists.
+- The 120 current-season metadata rows belong only to the separate feature-input gate; they are not 120 prospective V2 forecasts and do not open the outcome gate.
+
+No provider request/download, paid API call, Supabase write/DDL, protected-outcome read, inference, refit, threshold change, production pkl change, main update, merge, promotion, bet, schedule change or other-agent setting change occurred. HUMAN-MERGE only.
