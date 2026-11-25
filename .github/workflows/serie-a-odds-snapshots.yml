@@ -5,6 +5,7 @@ on:
   pull_request:
     branches:
       - main
+      - research/v2-workflow-live-access-hold-20261110-run11
     paths:
       - ".github/workflows/serie-a-odds-snapshots.yml"
       - "tests/test_serie_a_v2_manual_quote_trigger_contract.py"
@@ -48,14 +49,14 @@ jobs:
           print("PASS: Serie A remains MARKET_ONLY")
           PY
       - name: Confirm paid provider access is held
-        if: \${{ env.THE_ODDS_API_ACCESS_ALLOWED != 'true' }}
+        if: ${{ env.THE_ODDS_API_ACCESS_ALLOWED != 'true' }}
         run: echo "HOLD: no The Odds API quota preflight, odds request, or Supabase snapshot write is permitted"
       - name: Check required secrets
-        if: \${{ env.THE_ODDS_API_ACCESS_ALLOWED == 'true' }}
+        if: ${{ env.THE_ODDS_API_ACCESS_ALLOWED == 'true' }}
         env:
-          THE_ODDS_API_KEY: \${{ secrets.THE_ODDS_API_KEY }}
-          SUPABASE_URL: \${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: \${{ secrets.SUPABASE_KEY }}
+          THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
           python - <<'PY'
           import os
@@ -66,14 +67,14 @@ jobs:
           print("PASS: Serie A snapshot secrets available; values not printed")
           PY
       - name: Protect provider hard reserve
-        if: \${{ env.THE_ODDS_API_ACCESS_ALLOWED == 'true' }}
+        if: ${{ env.THE_ODDS_API_ACCESS_ALLOWED == 'true' }}
         env:
-          THE_ODDS_API_KEY: \${{ secrets.THE_ODDS_API_KEY }}
+          THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
         run: python odds_api_budget_guard.py --max-cost 1
       - name: Run adaptive Serie A snapshot check
-        if: \${{ env.THE_ODDS_API_ACCESS_ALLOWED == 'true' }}
+        if: ${{ env.THE_ODDS_API_ACCESS_ALLOWED == 'true' }}
         env:
-          THE_ODDS_API_KEY: \${{ secrets.THE_ODDS_API_KEY }}
-          SUPABASE_URL: \${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: \${{ secrets.SUPABASE_KEY }}
+          THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: python scheduled_serie_a_odds_snapshot.py
