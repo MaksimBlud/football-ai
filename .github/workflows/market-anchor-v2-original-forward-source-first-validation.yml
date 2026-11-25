@@ -13,6 +13,7 @@ on:
       - research/v2-source-first-validator-node24-pins-on-949-20261124-run11
       - research/v2-current-form-source-capture-rights-on-951-20261124-run11
       - research/v2-current-form-atomic-redirect-clock-guards-on-954-20261124-run11
+      - research/v2-football-data-fair-use-refresh-20261124-run11
     paths:
       - "serie_a_v2_forward_capture.py"
       - "serie_a_v2_current_form_source_capture.py"
@@ -36,14 +37,17 @@ on:
       - "market_anchor_1x2_v1.py"
       - "market_anchor_v2_source_rights.py"
       - "market_anchor_v2_source_capture_rights.py"
+      - "market_anchor_v2_provider_policy_evidence.py"
       - "market_anchor_v2_artifact_privacy.py"
       - "market_anchor_v2_direct_access.py"
       - "market_anchor_v2_saved_cohort_replay.py"
       - "research/source_rights/football_data_co_uk.json"
+      - "research/source_rights/evidence/football_data_contact_fair_use_20261124.md"
       - "research/SERIE_A_V2_SOURCE_POLICY_RECHECK_20261121.md"
       - "research/SERIE_A_V2_QUOTE_PERSISTENCE_TIMESTAMP_AUDIT_20261120.md"
       - "tests/test_market_anchor_v2_source_rights.py"
       - "tests/test_market_anchor_v2_source_capture_rights.py"
+      - "tests/test_serie_a_v2_original_forward_direct_access.py"
       - "tests/test_serie_a_v2_original_diagnostic_direct_access.py"
       - "tests/test_serie_a_v2_forward_direct_access_rights.py"
       - "tests/test_market_anchor_v2_saved_cohort_replay.py"
@@ -51,8 +55,9 @@ on:
       - "tests/test_serie_a_v2_quote_persistence_timestamp_contract.py"
       - "tests/test_serie_a_v2_source_first_validation_workflow_contract.py"
       - ".github/workflows/market-anchor-v2-original-forward-source-first-validation.yml"
+      - ".github/workflows/market-anchor-v2-original-forward-inference-rights-validation.yml"
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, edited]
     paths:
       - "serie_a_v2_forward_capture.py"
       - "serie_a_v2_current_form_source_capture.py"
@@ -76,14 +81,17 @@ on:
       - "market_anchor_1x2_v1.py"
       - "market_anchor_v2_source_rights.py"
       - "market_anchor_v2_source_capture_rights.py"
+      - "market_anchor_v2_provider_policy_evidence.py"
       - "market_anchor_v2_artifact_privacy.py"
       - "market_anchor_v2_direct_access.py"
       - "market_anchor_v2_saved_cohort_replay.py"
       - "research/source_rights/football_data_co_uk.json"
+      - "research/source_rights/evidence/football_data_contact_fair_use_20261124.md"
       - "research/SERIE_A_V2_SOURCE_POLICY_RECHECK_20261121.md"
       - "research/SERIE_A_V2_QUOTE_PERSISTENCE_TIMESTAMP_AUDIT_20261120.md"
       - "tests/test_market_anchor_v2_source_rights.py"
       - "tests/test_market_anchor_v2_source_capture_rights.py"
+      - "tests/test_serie_a_v2_original_forward_direct_access.py"
       - "tests/test_serie_a_v2_original_diagnostic_direct_access.py"
       - "tests/test_serie_a_v2_forward_direct_access_rights.py"
       - "tests/test_market_anchor_v2_saved_cohort_replay.py"
@@ -91,6 +99,7 @@ on:
       - "tests/test_serie_a_v2_quote_persistence_timestamp_contract.py"
       - "tests/test_serie_a_v2_source_first_validation_workflow_contract.py"
       - ".github/workflows/market-anchor-v2-original-forward-source-first-validation.yml"
+      - ".github/workflows/market-anchor-v2-original-forward-inference-rights-validation.yml"
 
 permissions:
   contents: read
@@ -139,6 +148,7 @@ jobs:
             market_anchor_1x2_v2_shadow.py \
             market_anchor_v2_source_rights.py \
             market_anchor_v2_source_capture_rights.py \
+            market_anchor_v2_provider_policy_evidence.py \
             market_anchor_v2_artifact_privacy.py \
             market_anchor_v2_direct_access.py \
             market_anchor_v2_saved_cohort_replay.py
@@ -157,6 +167,7 @@ jobs:
             tests/test_market_anchor_1x2_v2_shadow.py \
             tests/test_market_anchor_v2_source_rights.py \
             tests/test_market_anchor_v2_source_capture_rights.py \
+            tests/test_serie_a_v2_original_forward_direct_access.py \
             tests/test_serie_a_v2_original_diagnostic_direct_access.py \
             tests/test_serie_a_v2_forward_direct_access_rights.py \
             tests/test_market_anchor_v2_saved_cohort_replay.py \
