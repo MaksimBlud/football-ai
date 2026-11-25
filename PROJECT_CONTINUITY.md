@@ -8564,3 +8564,41 @@ Containment:
 - Any future scientific evaluation must use a separately blinded reviewer/process and must not rely on this assistant's claimed ignorance of the exposed page. The original frozen candidate, 19-feature order, weights, active_lambda=0, shadow_lambda=1, and NO_BET contract remain unchanged.
 
 This is recorded as a protocol deviation, not as evaluation evidence. No protected outcomes are reproduced here.
+
+## 2026-11-25 04:13 UTC — fresh main runtime, pre-match Supabase and security checkpoint
+
+### Main and exact runtime (main SHA unchanged)
+Main remains public at `40887ebb215730190d7c6a7a1693373ec4afcdfc`. The latest observed scheduled main runs are:
+- Original Forward [#45470457348](https://github.com/MaksimBlud/football-ai/actions/runs/45470457348), SUCCESS on exact main SHA. Its log verifies the old-season source archive SHA and parent run, but reports `quotes_seen=0`, `future_quotes_checked=0`, `v2_diagnostic_previews_captured=0`, `forecasts_created=0`. It uploaded public artifact #14957381523 (ZIP SHA-256 `ccb812b6d31b25ac4ea05436f49c7040b466eca02e3fc151a70c19605c819cb0`).
+- Current-Form Source Capture [#45438071171](https://github.com/MaksimBlud/football-ai/actions/runs/45438071171), SUCCESS on exact main SHA. It reports 120 completed-primary metadata identities, 10 historical files + one current-season file, zero paid calls and zero Supabase writes. It uploaded artifact #14942801007 (ZIP SHA-256 `a2f9e5882f268040b13400e37b2e30d345d72c494129c955aa008b6e90ff64d1`).
+- Current-Form Forward [#45470879407](https://github.com/MaksimBlud/football-ai/actions/runs/45470879407), SUCCESS on exact main SHA. It verified artifact #14942801007 and its successful parent, but reports `quotes_seen=0` and `v2_current_form_shadow_captured=0`. It uploaded artifact #14956308026 (ZIP SHA-256 `f1111b896cfc875dc58f2b7e0a0817115f19ec81e37af3629fefa4a810447faa`).
+
+The current-form source artifact is Football-Data-derived and was published while the repository was public and the provider-rights manifest denies automated capture/AI use. Treat it and the other public source artifacts as **not eligible for V2 reuse**; do not download, infer from, or republish them. Successful Actions status is not a provider licence. The root default-deny PR #781 is still open/unmerged, so the live steps and public artifact uploads remain enabled on main.
+
+### Fresh Supabase pre-match-only query
+Only `public.odds_snapshots` fields `league, event_id, snapshot_time_utc, commence_time_utc, created_at` were selected; no score/result/settlement fields or result tables were queried.
+
+- All leagues: 3,966 rows; 3,915 satisfy `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= created_at < commence_time_utc`; 327 distinct events; zero future events with a strict pre-match quote.
+- Serie A: 625 rows; 620 strict pre-match rows; 63 distinct events; zero future strict pre-match events. Latest admissible snapshot remains 2026-10-13 14:48:53.042620 UTC.
+- Across the full table, 51 rows fail at least one strict timing condition. Do not count them as eligible.
+
+### Fresh Supabase security advisor
+The security advisor reports **ERROR: RLS disabled in public** for five tables: `public.teams`, `public.predictions`, `public.match_statistics`, `public.league_prediction_ledger`, and `public.epl_ai_market_pair_ledger`. It also reports INFO for four tables with RLS enabled but no policies: `public.competitions`, `public.match_stats`, `public.matches`, and `public.standings`.
+
+No DDL or policy changes were made. Do not enable RLS blindly; policies and service-role/application access must be reviewed first. The five-table remediation SQL is presented to the owner in the run report only; it was not executed.
+
+### Source-rights update
+Existing provider-rights PR #868 now includes the Footiqo policy audit: its 2026-10-08 policy applies to free samples and public exports, allows local/private storage and ML only for personal non-commercial research, prohibits automated scraping/bulk exports/downloads without written authorization, and does not override third-party rights. Decision: manual non-commercial exploratory files only if legitimately obtained and upstream rights are confirmed; no automated V2 capture or commercial/public product use. PR #868 exact HEAD `343c39debea7fa76228425bda12ad77edab5846c`: 6/6 exact-head checks SUCCESS.
+
+### Current source-first/root chain
+- Root #781 exact HEAD `5552bec363ae72ad7aef04c598d2ce861f33eb42`: 8/8 exact-head checks SUCCESS; still OPEN, Ready for review, HUMAN-MERGE only.
+- Original forward source-first #938 exact HEAD `14d765ca2b55e939d9ab5790abbbecd3a29f2614`: 4/4 offline checks SUCCESS. Main's current CLI still calls the saved-quote reader before source archive discovery; #938 defers quote reading until rights, private storage, source archive, SHA and parent-run chronology are verified.
+- Current-form no-quote-without-source #957 exact HEAD `6ec18204ffc8195074cbbbfe6aa3247b87965e2b`: 4/4 offline checks SUCCESS. It keeps the quote reader lazy until source attestation/freshness and rights pass.
+- These are stacked behind #781 and their parent PRs; no merge was performed.
+
+### Scientific status and protocol note
+Original candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 ordered features, 20×2 weights, training fingerprint unchanged, `active_lambda=0`, `shadow_lambda=1`; historical stability FAILED, prospective outcome-evaluation gate 0/30 and CLOSED. No admissible future quote exists, so no real forward V2 prediction or Brier/LogLoss comparison exists.
+
+The evaluation-blinding protocol deviation recorded above remains in force: the Footiqo Serie A page returned 2026/27 score/result columns during policy-link inspection. No values were copied or used, but the page is disqualified as an outcome-blind source for this assistant. Any later scientific outcome evaluation must use a separately blinded reviewer/process.
+
+No provider request/download, paid API call, Supabase write/DDL, protected-outcome query/use, inference/refit, threshold tuning, production `.pkl` change, merge, main update, promotion, bet, schedule change, or other-agent setting change occurred.
