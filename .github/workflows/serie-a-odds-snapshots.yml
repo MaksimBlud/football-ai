@@ -2,13 +2,6 @@ name: Serie A Odds Snapshots
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches:
-      - main
-      - research/v2-workflow-live-access-hold-20261110-run11
-    paths:
-      - ".github/workflows/serie-a-odds-snapshots.yml"
-      - "tests/test_serie_a_v2_manual_quote_trigger_contract.py"
 
 env:
   THE_ODDS_API_ACCESS_ALLOWED: "false"
