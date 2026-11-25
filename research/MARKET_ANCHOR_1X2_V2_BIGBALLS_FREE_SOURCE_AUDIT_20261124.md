@@ -132,3 +132,18 @@ No account/key was created, no provider/API request or data download was made, n
 ### Season-depth contradiction recheck — 2026-11-24
 
 The current [global pricing page](https://bigballsdata.com/pricing) is internally inconsistent: its plan introduction says Free covers the current season, while the Free-tier bullet says current plus most-recent season. The dedicated [Serie A page](https://bigballsdata.com/serie-a-api) also describes Free as current-season access. Therefore the Free season-depth entitlement remains unresolved; no multi-season access is assumed.
+
+
+## Offline private pre-quote archive gate — 2026-11-24
+
+A pure-Python validation helper and synthetic regression suite now make the future receipt/SHA protocol executable without enabling any provider access:
+
+- `market_anchor_v2_bigballs_archive_gate.py` validates already-present raw response bytes only; it performs no HTTP, storage, Supabase, feature calculation, inference, or outcome evaluation.
+- Both the canonical match response and the stored post-match statistics response must be supplied as exact bytes with matching SHA-256 values, endpoint paths, source match identity, and matching home/away team IDs.
+- The source match must be finished and carry both final scores. The statistics response must explicitly report `meta.available=true`; missing corner/card fields remain listed as missing and are never converted to zero or imputed by this gate.
+- The source match kickoff must precede both local receipt times; both receipts must precede private archive creation; archive creation must strictly precede the quote snapshot; and the quote chronology must satisfy `snapshot_time <= created_at < target_kickoff`.
+- The archive must identify the documented Free plan, zero paid provider calls/odds, private raw storage, no public raw-artifact upload, and the exact frozen candidate SHA.
+- The current provider manifest is intentionally still `HOLD_NO_INTEGRATION`. Its false authorization flags cause the gate to reject a real bundle until written provider clarification and separate owner approval exist.
+- The return value explicitly states that upstream first observation is NOT proven, and that no feature calculation, imputation, model inference, Supabase write, or bet occurred.
+
+The synthetic fixtures are contract tests only. They do not represent a real provider response, prove Free-plan account entitlement, resolve season-depth/current-field coverage, or authorize source capture. The original 19-feature order, candidate, weights, `active_lambda=0`, and `shadow_residual_lambda=1` remain unchanged.
