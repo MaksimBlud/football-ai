@@ -196,3 +196,22 @@ The latest published Serie A summary entry now reports **120 results, 120 corner
 **HOLD_NO_INTEGRATION.** The source has improved current-season metadata freshness (latest Serie A date 2026-11-23), but the decisive blockers remain: non-commercial-only compilation terms, unresolved upstream ML/retention rights, Football-Data's current AI/data-training restriction, missing FotMob field-level lineage, and unverified per-fixture yellow/red-card completeness and feature parity. No provider request, data download, adapter, model inference, quote read, Supabase access/write/DDL, protected-outcome read, refit, production artifact change, schedule change, main update or merge occurred.
 
 The original candidate SHA, 19-feature order, 20×2 weights, scaler/imputer, `active_lambda=0`, `shadow_lambda=1`, historical stability FAILED and prospective evaluation 0/30 / CLOSED remain unchanged. No Brier/LogLoss superiority claim is available.
+
+
+## Same-day upstream recheck — 2026-11-25 07:50 UTC (metadata only)
+
+A further immutable upstream master commit was observed after the 2026-11-24 checkpoint above:
+
+- Current upstream master commit: `968bc4fdb0adfd2a412962793b59fda2c39bdfd9`.
+- Commit message: `Daily data refresh 2026-11-25`.
+- README blob: `b50fe89e1735e6d306ea6dc8eae5169cb6f47a7e`.
+- DISCLAIMER blob: `198a9cc33cfe25534213a38346d7f10e07e6a1a9`.
+- DATA_DICTIONARY blob: `640dc58c2de961afbdb9b3960a71216ecb230223`.
+- LEAGUE_INDEX blob: `e3f18cd3e9a5d7b38e4ce6cfd1d592251c06e79c`.
+- Updated build-summary blob: `84ff681b9840d4b5204f311e179e19e6a10c211e`; generated at `2026-11-25T07:50:20Z`.
+
+The latest Serie A metadata is unchanged from the 2026-11-24 checkpoint: **120 result rows, 120 corner rows, 260 fixtures, latest completed date 2026-11-23, and no listed build errors**. This is an upstream aggregate metadata check only. No per-match CSV, score, result row, quote, provider API, Supabase row, or protected outcome was accessed.
+
+The newer commit confirms that the repository itself refreshed on November 25, but it does not make the latest Serie A completed-match date newer than November 23. The README still states non-commercial-only use; the upstream disclaimer still leaves provider rights with each publisher; the Serie A source list still includes football-data.co.uk; and the FotMob corner-split lineage remains without per-field source/correction timestamps or a matching entry in the provider-terms table.
+
+**Disposition remains HOLD_NO_INTEGRATION.** The exact commit and build timestamp could support project-local source-before-quote evidence only after written rights and private storage are approved. They do not establish upstream first-observed chronology, complete 19-feature coverage, or permission for private ML retention/training/evaluation. No CSV download, source capture, quote read, Supabase access/write/DDL, feature build, inference, outcome read, training/refit, production artifact change, schedule change, main update or merge occurred.
