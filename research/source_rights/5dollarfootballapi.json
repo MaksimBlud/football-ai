@@ -1,7 +1,7 @@
 {
   "schema_version": "5DOLLAR_ORIGINAL_V2_SOURCE_RIGHTS_V1",
   "provider": "5DollarFootballAPI",
-  "reviewed_at_utc": "2026-11-25T22:04:00Z",
+  "reviewed_at_utc": "2026-11-25",
   "terms_url": "https://5dollarfootballapi.com/terms",
   "pricing_url": "https://5dollarfootballapi.com/pricing",
   "serie_a_url": "https://5dollarfootballapi.com/serie-a-api",
@@ -104,5 +104,6 @@
   },
   "active_subscription_cache_permitted": true,
   "private_research_archive_authorized": false,
-  "post_termination_retention_permitted": false
+  "post_termination_retention_permitted": false,
+  "reviewed_at_time_utc": "2026-11-25T22:04:00Z"
 }

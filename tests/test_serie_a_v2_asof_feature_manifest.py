@@ -608,17 +608,18 @@ def test_5dollar_adapter_default_rights_manifest_is_hold(tmp_path):
     assert hashlib.sha256(raw).hexdigest() == DEFAULT_RIGHTS_MANIFEST_SHA256
     rights = json.loads(raw.decode("utf-8"))
     assert rights["reviewed_at_utc"] == "2026-11-25"
+    assert rights["reviewed_at_time_utc"] == "2026-11-25T22:04:00Z"
     assert rights["measured_data_quality_page_reviewed_at_utc"] == "2026-11-25"
     assert rights["measured_data_quality_plan"] == "Pro and Ultra"
     assert rights["free_serie_a_entitlement_conflict"] is True
     assert rights["free_history_months"] == 3
     quality = rights["data_quality_last_12_months"]
-    assert quality["finished_matches"] == 383
+    assert quality["finished_matches"] == 382
     assert quality["corners_pct"] == quality["cards_pct"] == 100
     assert quality["plan_for_12_month_window"] == "Pro and Ultra"
     assert quality["does_not_establish_free_community_field_entitlement"] is True
     current = rights["data_quality_current_season_2026_27"]
-    assert current["fixtures"] == current["finished"] == 119
+    assert current["fixtures"] == current["finished"] == 120
     assert current["corners_pct"] == current["cards_pct"] == 100
     assert current["plan_label"] == "Pro and Ultra"
     community = rights["community_access_claims"]
@@ -636,6 +637,14 @@ def test_5dollar_adapter_default_rights_manifest_is_hold(tmp_path):
     assert rights["approval_status"] == "HOLD"
     assert rights["upstream_rights_confirmed"] is False
     assert rights["provider_private_retention_permitted"] is False
+    assert rights["active_subscription_cache_permitted"] is True
+    assert rights["private_research_archive_authorized"] is False
+    assert rights["post_termination_retention_permitted"] is False
+    trust = rights["trust_center"]
+    assert trust["event_capture_delay_pct_within_2_match_minutes"] == 97.3
+    assert trust["retracted_events"] == 62
+    assert trust["minute_revisions"] == 705
+    assert trust["upstream_provider_identity_disclosed"] is False
     assert rights["free_serie_a_required_fields_confirmed"] is False
     with pytest.raises(PermissionError, match="manifest is HOLD"):
         build_manifest_from_private_archive(tmp_path, capture, quotes)

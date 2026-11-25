@@ -31,7 +31,7 @@ from serie_a_v2_asof_feature_manifest import (
 
 REPO_ROOT = Path(__file__).resolve().parent
 DEFAULT_RIGHTS_MANIFEST = REPO_ROOT / "research" / "source_rights" / "5dollarfootballapi.json"
-DEFAULT_RIGHTS_MANIFEST_SHA256 = "2f6bb45a5b45bcff18d1a7133a42afcae74f5f2f4aea19a69972a09ec98b809c"
+DEFAULT_RIGHTS_MANIFEST_SHA256 = "b7d8c7b5718ee1b54be721091bb27f85c7beede4da67e2628ec9bfbf3864dbab"
 SERIE_A_PROVIDER_LEAGUE_ID = 3405541143
 CURRENT_SERIE_A_SEASON = SERIE_A_RUNTIME_CONFIG.finished_results_source.season
 CURRENT_SERIE_A_SEASON_API_PARAMETER = CURRENT_SERIE_A_SEASON[:4]
