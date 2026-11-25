@@ -8551,3 +8551,16 @@ Only public.odds_snapshots was queried. Selected fields were league, event_id, s
 Original candidate SHA-256 a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6, 19 ordered features, 20×2 weights, active_lambda=0, shadow_lambda=1 unchanged. Historical stability remains FAILED; prospective evaluation remains 0/30 / CLOSED; no Brier/LogLoss comparison or market-superiority claim exists.
 
 No main update, PR merge, provider request/download, paid API call, Supabase write/DDL, protected 2026/27 target-outcome read, inference/refit, production .pkl change, feature/weight/threshold change, promotion, bet, schedule change, or other-agent setting change occurred. HUMAN-MERGE only.
+
+## 2026-11-25 — evaluation-blinding protocol deviation (external page exposure; no use)
+
+During a documentation-only provider-rights review, the public Footiqo Italy Serie A database page was opened to inspect its policy links. The returned page content included current-season 2026/27 score/result columns. This was an **unintended exposure of protected target outcomes before the preregistered gate**.
+
+Containment:
+- No 2026/27 result values were copied into the repository, Supabase, a report, a dataset, or a model input.
+- No target-outcome query was made against Supabase; no Brier/LogLoss, settlement, feature calculation, inference, model selection, or threshold work used the page.
+- The exposed current-season page is disqualified as an outcome-blind source for this assistant's later evaluation. Do not revisit it or use any of its 2026/27 score/result content.
+- The original prospective outcome-read gate remains CLOSED at the project's recorded count; this exposure does not satisfy or advance the 30-primary-completed-event gate.
+- Any future scientific evaluation must use a separately blinded reviewer/process and must not rely on this assistant's claimed ignorance of the exposed page. The original frozen candidate, 19-feature order, weights, active_lambda=0, shadow_lambda=1, and NO_BET contract remain unchanged.
+
+This is recorded as a protocol deviation, not as evaluation evidence. No protected outcomes are reproduced here.
