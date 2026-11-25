@@ -8509,3 +8509,35 @@ Supabase classifies this as **critical**: anon/authenticated roles may read or m
 
 ### Frozen V2 and safety
 Original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 ordered features, 20×2 weights, `active_lambda=0`, `shadow_lambda=1` unchanged. Historical stability remains FAILED; prospective evaluation remains 0/30 / CLOSED. Original and current-form forward runs still report `quotes_seen=0` and zero V2 shadow previews. No Brier/LogLoss prospective comparison or superiority claim exists. No paid request, Supabase write/DDL, protected-outcome evaluation, inference/refit, production `.pkl` change, threshold change, merge, promotion, bet, schedule or other-agent setting change occurred.
+
+
+## Original V2 continuation — 2026-11-25 02:52 UTC: exact forward runtime and pre-match chronology recheck
+
+### Fresh main and workflow state
+- Fresh main remains 40887ebb215730190d7a6c7a1693373ec4afcdfc; PROJECT_CONTINUITY.md on main is still the older 2026-10-18 checkpoint. This update is on the existing documentation PR branch only.
+- Re-read main .github/workflows/serie-a-v2-forward-preview.yml, serie-a-v2-current-form-forward-preview.yml, serie-a-v2-current-form-source-capture.yml, and the corresponding Python entrypoints.
+- The original-forward CLI still calls fetch_saved_upcoming_serie_a_quotes() before discover_archives(); source-first fix is in open #938. The current-form CLI still creates the Supabase client and invokes the quote reader after verify_latest_source_archive() even if that verifier returns a non-verified result; the no-quote-without-verified-source fix is in open #957. Both child PRs remain unmerged and stacked behind the root hold.
+- Main workflows still have scheduled source/forward triggers and the original-forward artifact upload remains if: always(). Root #781 remains OPEN / Ready for review / mergeable / not merged, exact HEAD 5552bec363ae72ad7aef04c598d2ce861f33eb42, 8/8 exact-head checks SUCCESS. No workflow or schedule was changed.
+
+### Exact live GitHub Actions evidence
+- Original Forward run #45470457348, 2026-11-24 19:27:49 UTC, main SHA above: job SUCCESS; all offline/source attestation/forward steps SUCCESS. Real source-only attestation verified 10 pre-prospective historical CSVs / 3,800 historical rows and source artifact #14947466958 from parent run #45450183033. Actual forward output: quotes_seen=0, future_quotes_checked=0, v2_diagnostic_previews_captured=0, no paid calls, no Supabase writes, no outcomes. Its uploaded report ZIP is artifact #14957381523, SHA-256 ccb812b6d31b25ac4ea05436f49c7040b466eca02e3fc151a70c19605c819cb0.
+- Current-Form Source Capture run #45438071171, 2026-11-24 16:31 UTC: job SUCCESS; metadata-only feature-input gate counted 120 completed Serie A event identities; 120 prior-day current-season rows plus 10 historical CSVs were archived (11 files total). Artifact #14942801007 is 440,666 bytes, SHA-256 a2f9e5882f268040b13400e37b2e30d345d72c494129c955aa008b6e90ff64d1. The artifact is in the public repository while rights remain denied; do not reuse it as an authorized V2 source.
+- Current-Form Forward run #45470879407, 2026-11-24 19:30 UTC: job SUCCESS; latest source archive/parent run verified, 120 current-season lagged rows and 3,920 historical rows attested, source age 10,719 seconds at verification. Actual output: quotes_seen=0, v2_current_form_shadow_captured=0; no outcomes, paid calls or Supabase writes. This proves source-archive verification only, not a source-before-quote forecast or V2 quality.
+- All three runs uploaded public GitHub artifacts because the root hold is not on main. Successful CI/runtime completion does not grant provider rights or make those artifacts eligible for V2 inference.
+
+### Fresh read-only Supabase pre-match-only query
+Only public.odds_snapshots was queried. Selected fields were league, event_id, snapshot_time_utc, created_at, and commence_time_utc; no score/result/settlement columns were selected. Strict row rule: snapshot_time_utc < commence_time_utc AND created_at >= snapshot_time_utc AND created_at < commence_time_utc.
+- 3,966 total rows; 3,915 strict pre-match rows; 327 distinct events; 0 future events with a strict pre-match quote.
+- 51 rows failed at least one strict chronology condition (snapshot at/after kickoff, persistence at/after kickoff, or persistence before snapshot).
+- Strict rows / event IDs by league: Bundesliga 394/35; EPL 1,135/70; Eredivisie 410/39; La Liga 798/52; Ligue 1 387/35; Primeira Liga 9/9; RPL 153/15; Serie A 620/63; Turkey Super Lig 9/9.
+- Latest strict pre-match snapshot remains Serie A 2026-10-13T14:48:53.042620Z. No current future quote exists for original V2 forward capture.
+
+### Existing provider candidate and exact CI status
+- PR #800 is an offline-only 5Dollar adapter for the unchanged original 19-feature builder. Exact HEAD 40717ffea5d880a8b753520aa59cef002c81ad05; 7/7 exact-head checks SUCCESS. Its pinned rights manifest remains HOLD: the official Serie A quality page reports 119/119 finished 2026/27 fixtures through Nov 23 with 100% measured corners/cards, but labels the measurement plan Pro/Ultra; authenticated Free/Community field entitlement, upstream rights, private retention, and upstream first-observed/correction times remain unverified. The adapter deliberately returns source_before_quote_verified=false, requires independent capture attestation, and does not run inference. No account, self-attestation, key, request, or download occurred.
+- Existing #952 Big Balls remains HOLD / 10/10 exact-head CI; #790 open-matchday remains HOLD / 6/6; #868 BALLDONTLIE remains HOLD_NO_FREE_TIER_ACCESS / 6/6. None is approved for capture or inference.
+- #938 source-first original forward is 4/4 offline checks SUCCESS at exact HEAD 14d765ca2b55e939d9ab5790abbbecd3a29f2614; #957 current-form no-quote-without-verified-source is 4/4 SUCCESS at exact HEAD 6ec18204ffc8195074cbbbfe6aa3247b87965e2b. Both remain Draft and unmerged.
+
+### Frozen candidate and non-actions
+Original candidate SHA-256 a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6, 19 ordered features, 20×2 weights, active_lambda=0, shadow_lambda=1 unchanged. Historical stability remains FAILED; prospective evaluation remains 0/30 / CLOSED; no Brier/LogLoss comparison or market-superiority claim exists.
+
+No main update, PR merge, provider request/download, paid API call, Supabase write/DDL, protected 2026/27 target-outcome read, inference/refit, production .pkl change, feature/weight/threshold change, promotion, bet, schedule change, or other-agent setting change occurred. HUMAN-MERGE only.
