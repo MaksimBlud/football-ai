@@ -3,6 +3,7 @@ name: Original V2 Current-Form Forward Direct-Access Rights Validation
 on:
   push:
     branches:
+      - research/v2-no-quote-until-verified-source-restack-on-966-20261125-run11
       - research/v2-current-form-no-quote-without-verified-source-on-956-20261124-run11
       - research/v2-current-form-source-freshness-gate-on-903-20261121-run11
     paths:
@@ -19,6 +20,7 @@ on:
       - research/v2-held-workflow-checkout-credential-isolation-on-955-20261124-run11
       - research/v2-free-diagnostic-token-binding-on-898-20261121-run11
       - research/v2-current-form-forward-direct-access-on-899-20261121-run11
+      - research/v2-current-form-identity-audit-restack-on-958-20261125-run11
       - research/v2-current-form-no-quote-without-verified-source-restacked-on-900-20261121-run11
     paths:
       - "serie_a_v2_current_form_forward_capture.py"
