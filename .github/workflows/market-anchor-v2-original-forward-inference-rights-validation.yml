@@ -96,3 +96,5 @@ jobs:
             tests/test_serie_a_v2_forward_capture.py
       - name: Guard production model binaries
         run: git diff --exit-code origin/main...HEAD -- '*.pkl'
+
+# Restacked on the current #957 rights/source-first chain; offline-only validation, no provider or Supabase access.
