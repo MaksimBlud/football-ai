@@ -61,6 +61,7 @@ def validate_private_prequote_archive(
     archive_manifest: Mapping[str, Any],
     match_body: bytes,
     statistics_body: bytes,
+    quote_match_id: str,
     quote_snapshot_time_utc: str,
     quote_created_at_utc: str,
     target_kickoff_utc: str,
@@ -91,6 +92,11 @@ def validate_private_prequote_archive(
     if archive_manifest.get("paid_odds_used") is not False:
         raise ArchiveGateError("paid odds use is forbidden")
 
+    if rights_manifest.get("provider") != "Big Balls Sports Data":
+        raise ArchiveGateError("provider rights manifest does not match Big Balls Sports Data")
+
+    if not isinstance(expected_candidate_sha256, str):
+        raise ArchiveGateError("expected candidate SHA-256 is invalid")
     expected = expected_candidate_sha256.lower()
     if re.fullmatch(r"[0-9a-f]{64}", expected) is None:
         raise ArchiveGateError("expected candidate SHA-256 is invalid")
@@ -105,6 +111,8 @@ def validate_private_prequote_archive(
         raise ArchiveGateError("target_match_id is required")
     if source_id == target_id:
         raise ArchiveGateError("source and target match IDs must differ")
+    if quote_match_id != target_id:
+        raise ArchiveGateError("quote match ID does not match target match ID")
 
     if archive_manifest.get("match_endpoint") != f"/v1/matches/{source_id}":
         raise ArchiveGateError("unexpected match endpoint")
