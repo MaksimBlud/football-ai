@@ -8375,3 +8375,42 @@ No main update, merge, paid request, source download, Supabase write/DDL, protec
 - Root [PR #781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review / mergeable / not merged. Main remains public and its legacy scheduled source/forward workflows are not yet held on main. HUMAN-MERGE is required before any downstream integration.
 - No Big Balls account/key/request/download, paid call, Supabase write/DDL, protected outcome read, inference/refit, production `.pkl` change, model/feature/weight/threshold change, schedule change, or other-agent setting change occurred in this checkpoint.
 
+
+
+## Fresh Supabase pre-match-only recheck — 2026-11-25
+
+Read-only SQL selected only `league`, `event_id`, `snapshot_time_utc`, `created_at`, and `commence_time_utc` from `public.odds_snapshots`. No odds values, scores, results, settlements, or target-outcome fields were selected.
+
+Strict admission remained:
+
+```sql
+snapshot_time_utc < commence_time_utc
+AND snapshot_time_utc <= created_at
+AND created_at < commence_time_utc
+```
+
+- Total odds-snapshot rows: **3,966**.
+- Strict pre-match rows: **3,915** across **327 event IDs**.
+- Future events with a strict pre-match quote: **0**.
+- Rows not strictly pre-match: **51**.
+- Rows with `created_at < snapshot_time_utc`: **0**.
+- Rows missing any of the three required timestamps: **0**.
+- Latest strict pre-match snapshot: `2026-10-13T14:48:53.042620Z`.
+
+Per-league strict counts:
+
+| League | All rows | Strict pre-match rows | Strict event IDs | Future strict events |
+|---|---:|---:|---:|---:|
+| Bundesliga | 404 | 394 | 35 | 0 |
+| EPL | 1,151 | 1,135 | 70 | 0 |
+| Eredivisie | 412 | 410 | 39 | 0 |
+| La Liga | 806 | 798 | 52 | 0 |
+| Ligue 1 | 394 | 387 | 35 | 0 |
+| Primeira Liga | 9 | 9 | 9 | 0 |
+| RPL | 156 | 153 | 15 | 0 |
+| Serie A | 625 | 620 | 63 | 0 |
+| Turkey Super Lig | 9 | 9 | 9 | 0 |
+
+Read-only `COUNT(*)` checks on `public.match_statistics` and `public.match_stats` returned **0 rows in both tables**. Thus the current Supabase database contains admissible historical market snapshots but no stored raw team-statistics rows in those two candidate feature tables. This is not a feature-input or evaluation dataset and does not support V2 inference.
+
+No writes/DDL occurred. The query did not read protected target outcomes.
