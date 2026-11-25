@@ -8484,3 +8484,28 @@ Supabase classifies this as **critical**: anon/authenticated roles may read or m
 - Original candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 ordered features; 20×2 weights; `active_lambda=0`; `shadow_lambda=1`.
 - Historical stability gate remains FAILED. Prospective evaluation remains **0/30 / CLOSED**. No Brier/LogLoss comparison or superiority claim is available.
 - No provider request/download, paid API call, Supabase write/DDL, protected 2026/27 outcome read, inference/refit, feature/weight/threshold change, production `.pkl` change, merge, promotion, bet, schedule change, or other-agent setting change occurred. HUMAN-MERGE only.
+
+
+## Original V2 continuation — 2026-11-25 02:01 UTC: refreshed free-source audits
+
+### Existing open-matchday audit refreshed in place — PR #790
+- No duplicate PR was created. Existing [PR #790](https://github.com/MaksimBlud/football-ai/pull/790) now pins upstream `oladeeayo/open-matchday` master commit `96677da89111985ef0b445ba45012b00d60d0490` (committed 2026-11-24 09:23:30 UTC).
+- Its build summary (generated 09:12:24 UTC) reports Serie A **120 results / 120 corner rows / 260 fixtures**, latest completed date **2026-11-23**, no listed build errors. This is an aggregate metadata count only; no CSV row was downloaded or inspected.
+- README, DISCLAIMER, LEAGUE_INDEX and DATA_DICTIONARY blobs remain unchanged from the prior audit. The repository still states non-commercial-only use and leaves upstream rights with providers. Serie A sources remain fixturedownload + ESPN + fd.co.uk; the README/data dictionary separately identify FotMob for top-10 corner splits, but no per-field FotMob source/observation timestamp is published and FotMob is absent from the disclaimer's upstream-terms table.
+- The latest Football-Data fair-use review in #958 denies automated capture/inference/AI training absent provider-issued permission. The aggregator therefore is not a rights-cleared workaround. Yellow/red-card per-match completeness and exact frozen feature parity remain unverified.
+- New exact HEAD `6bf7ef95a4c2a2b7531dbfb2006ad72f54355de9`; **6/6 PR workflows SUCCESS**. [PR #790](https://github.com/MaksimBlud/football-ai/pull/790) remains Draft / HUMAN-MERGE / HOLD_NO_INTEGRATION.
+
+### Existing broad source-rights audit extended — PR #868
+- No duplicate PR was created. Existing [PR #868](https://github.com/MaksimBlud/football-ai/pull/868) now includes an official-document-only BALLDONTLIE Serie A API screen.
+- BALLDONTLIE's Terms of Service (last updated 2026-10-20) expressly allow commercial app use, AI model training/evaluation/backtesting, and retention of data lawfully obtained through the user's plan. However, the terms do not clear third-party rights; the provider says its data is aggregated from third parties and does not guarantee source, completeness or consistency.
+- The official Serie A plan matrix says Free has 5 requests/minute but **no Matches, Match Events, Match Lineups, Player Match Stats, Team Match Stats or Odds**. The team-match-stat endpoint containing corners/cards/shots is GOAT-only at **$39.99/month per league**; the 7-day trial requires a payment method and is not a free workaround. User's no-paid-API rule therefore blocks this source.
+- Decision: `HOLD_NO_FREE_TIER_ACCESS`. No account, trial, API key, provider request or data download was created.
+- New exact HEAD `724d18f8e054eff86607a2baf54a4a28722629da`; **6/6 PR workflows SUCCESS**. [PR #868](https://github.com/MaksimBlud/football-ai/pull/868) remains open, not merged.
+
+### Live source-policy conflict still requires HUMAN-MERGE
+- Main remains public at `40887ebb215730190d7c6a7a1693373ec4afcdfc`. The scheduled current-form source-capture run #45438071171 on 2026-11-24 successfully uploaded public GitHub artifact `14942801007` (440,666 bytes; SHA-256 `a2f9e5882f268040b13400e37b2e30d345d72c494129c955aa008b6e90ff64d1`) containing 10 historical CSVs plus one current-season CSV. Its metadata-only feature-input gate count was 120; it scored no target outcomes and made no Supabase writes or paid calls.
+- This capture ran on public main while the refreshed Football-Data policy evidence in #958 says automated capture, inference and AI training remain denied. The artifact must not be reused as an authorized V2 source. It remains attached to the public-repository run until GitHub artifact expiry (2027-02-22); no deletion was attempted.
+- Root [PR #781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review / mergeable / not merged, exact HEAD `5552bec363ae72ad7aef04c598d2ce861f33eb42`, **8/8 exact-head CI SUCCESS**. Private-storage #879 and source-before-quote children #938/#954/#955/#957 remain unmerged. HUMAN-MERGE only; no merge or schedule change was performed.
+
+### Frozen V2 and safety
+Original candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 ordered features, 20×2 weights, `active_lambda=0`, `shadow_lambda=1` unchanged. Historical stability remains FAILED; prospective evaluation remains 0/30 / CLOSED. Original and current-form forward runs still report `quotes_seen=0` and zero V2 shadow previews. No Brier/LogLoss prospective comparison or superiority claim exists. No paid request, Supabase write/DDL, protected-outcome evaluation, inference/refit, production `.pkl` change, threshold change, merge, promotion, bet, schedule or other-agent setting change occurred.
