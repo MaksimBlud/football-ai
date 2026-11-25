@@ -139,7 +139,7 @@ The current [global pricing page](https://bigballsdata.com/pricing) is internall
 A pure-Python validation helper and synthetic regression suite now make the future receipt/SHA protocol executable without enabling any provider access:
 
 - `market_anchor_v2_bigballs_archive_gate.py` validates already-present raw response bytes only; it performs no HTTP, storage, Supabase, feature calculation, inference, or outcome evaluation.
-- Both the canonical match response and the stored post-match statistics response must be supplied as exact bytes with matching SHA-256 values, endpoint paths, source match identity, and matching home/away team IDs.
+- Both the canonical match response and the stored post-match statistics response must be supplied as exact bytes with matching SHA-256 values, endpoint paths, source match identity, and matching home/away team IDs. The saved quote's match ID must equal the declared target match ID.
 - The source match must be finished and carry both final scores. The statistics response must explicitly report `meta.available=true`; missing corner/card fields remain listed as missing and are never converted to zero or imputed by this gate.
 - The source match kickoff must precede both local receipt times; both receipts must precede private archive creation; archive creation must strictly precede the quote snapshot; and the quote chronology must satisfy `snapshot_time <= created_at < target_kickoff`.
 - The archive must identify the documented Free plan, zero paid provider calls/odds, private raw storage, no public raw-artifact upload, and the exact frozen candidate SHA.
