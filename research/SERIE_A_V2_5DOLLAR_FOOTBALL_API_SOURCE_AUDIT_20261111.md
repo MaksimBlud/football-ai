@@ -286,3 +286,27 @@ A second read of the official [Italy Serie A data-quality page](https://5dollarf
 These are aggregate provider-published coverage counts only. No match-level rows, scores, results, settlements or protected outcomes were accessed. The change from the earlier 110/110 table snapshot is a later page refresh, not a contradiction in a frozen dataset.
 
 This strengthens the provider's **claimed** current-season field completeness, but does not resolve the plan label: the same page says Pro/Ultra, while the pricing and Community pages describe $0 routes. Community's one-country-pack entitlement must be selected and self-attested by the account holder; this automation must not do that. No authenticated plan response exists. Keep HOLD until the owner authorizes any eligibility action and the account's actual Italy/Serie A access is independently confirmed, plus upstream rights and private-archive retention are clarified.
+
+
+### 2026-11-25 official-page re-check — updated coverage, same entitlement HOLD
+
+Checked the provider's live first-party pages again on 2026-11-25 22:05 UTC. This is a documentation-only refresh; no account, key, endpoint request, data download or match-level inspection occurred.
+
+**Positive rights/plan evidence**
+- The current [Terms of Service](https://5dollarfootballapi.com/terms), last updated October 2026, expressly allow use of the data in commercial websites, apps, **models and internal tools**, display to end users, and caching of API responses. Free/Community/Education public-facing products must show the provider attribution; raw-feed resale/redistribution remains prohibited.
+- The current [pricing page](https://5dollarfootballapi.com/pricing) advertises a $0 Free plan for the top five leagues, 60 requests/hour, Bet365 markets and the last three months of results. Community Access is also $0, but requires the account holder to truthfully self-attest to an eligibility category and select one country pack; this automation must not self-attest or activate it.
+- The dedicated [Serie A page](https://5dollarfootballapi.com/serie-a-api) continues to say that Serie A, full statistics and odds are available on Free.
+
+**Conflicting live measured-coverage evidence**
+- The current [Italy Serie A data-quality page](https://5dollarfootballapi.com/docs/data-quality/3405541143), opened at 2026-11-25 22:04 UTC, labels the league **Pro and Ultra**.
+- It reports **120/120 finished 2026/27 fixtures through 2026-11-24**, with 100% corners, half-time corners, corner-line, odds, events, live statistics and cards; its rolling 12-month table reports 382/382.
+- These are aggregate provider-published coverage claims, not an authenticated Free/Community response. The plan label still conflicts with the Free claims on the pricing and Serie A pages. The earlier 119/119-through-Nov-23 snapshot is superseded by this current 120/120 page view; no inference is made about any individual match.
+
+**V2 implications**
+- The public field families still appear compatible with the frozen 19-feature contract (goals/points, corners, yellow cards and red cards) without changing feature order or weights.
+- Exact Free-plan entitlement to every required match-stat field, second-yellow/red-card semantics, null-versus-zero behavior, per-fixture completeness and upstream licensor authority remain unverified.
+- Terms permit model/internal-tool use and caching, but do not identify the upstream providers or prove their field-level sublicensing authority. The licence also does not grant raw-feed redistribution. Any future raw archive must remain private and within the active account/plan licence; no public GitHub Actions artifact is an acceptable storage destination.
+- No per-fixture upstream first-observed/correction timestamp is documented. If later authorized, record exact response bytes, request parameters (excluding credentials), response headers, local receipt UTC and SHA-256 privately before any later quote. This proves project possession before quote, not upstream first observation.
+- The separate rights status of the historical Football-Data training corpus and the already-frozen candidate remains unresolved; this current-season provider audit does not clear that corpus.
+
+**Decision remains HOLD — no integration.** Written confirmation is still required for actual Free-plan Serie A match-stat entitlement, upstream licensing authority and private retention. Community Access remains an account-holder-only eligibility action. No API key, account, request, download, source capture, feature calculation, inference, quote read, Supabase operation, production change or protected-outcome read was performed.
