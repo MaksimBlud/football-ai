@@ -1,3 +1,13 @@
+## Scientific interpretation note — 2026-11-25: keep the original V2 stability gate correctly attributed
+
+The frozen parent contract `experiments/market_anchor_1x2_v2_protocol.json` (blob `65729e9639720e67624c1481190aa22ae606f151`) explicitly sets `stability_gate.evaluation_source = MARKET_ANCHOR_1X2_V1_ROBUSTNESS` and pins V1 robustness report blob `96d2f462849a70276a2c27a2c0cc18ec0672b00a`. Therefore the gate's recorded bootstrap intervals/probabilities and 2/6 dual-metric season count are **inherited V1 robustness evidence used as a frozen conservative admission guard**; they are not a direct historical performance estimate of the original V2 19-feature residual. The gate remains FAILED exactly as frozen, but reports must not mislabel those V1 statistics as a V2 backtest.
+
+The separate saved V2 replay is only a ten-match, already-known-outcome diagnostic (`POST_OUTCOME_DIAGNOSTIC_REPLAY`), not untouched OOT or prospective evidence. Its small descriptive Brier/LogLoss deltas cannot override the failed stability guard or establish V2-over-market superiority. The independent prospective 30-primary-completed-forecast outcome gate remains CLOSED at 0/30; no protected 2026/27 target outcomes may be read before that gate.
+
+No contract, candidate, 19-feature order, weights, scaler/imputer, `active_lambda=0`, `shadow_lambda=1`, thresholds, or production artifact is changed by this clarification. The legacy XGBoost production model is not executed, restored, refitted, or promoted. If any frozen comparator required by the protocol lacks admissible as-of provenance, report it as unavailable rather than substituting another model or weakening the comparison.
+
+---
+
 ## 2026-11-24 — Big Balls Sports Data free Serie A statistics source audit
 
 A new provider was screened using only official public Terms, pricing, coverage and OpenAPI documentation. No account/key was created, no provider API request was sent, and no match data was downloaded.
