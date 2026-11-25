@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 import re
 from urllib.parse import urlsplit
+from market_anchor_v2_provider_policy_evidence import verify_fair_use_policy_evidence
 
 REPOSITORY_ROOT = Path(__file__).resolve().parent
 DEFAULT_RIGHTS_MANIFEST_PATH = (
@@ -71,6 +72,12 @@ def require_ai_model_training_permission(
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise PermissionError("source-rights verification clock must have a real UTC offset")
     now_utc = now.astimezone(timezone.utc)
+
+    fair_use_policy = verify_fair_use_policy_evidence(
+        manifest,
+        now_utc=now_utc,
+        repo_root=root,
+    )
 
     authorization = manifest.get("authorization")
     if not isinstance(authorization, dict):
@@ -159,6 +166,7 @@ def require_ai_model_training_permission(
     return {
         "provider": EXPECTED_PROVIDER,
         "rights_manifest_sha256": hashlib.sha256(raw).hexdigest(),
+        **fair_use_policy,
         "evidence_file": evidence_file,
         "evidence_sha256": actual_sha,
         "evidence_url": evidence_url,
@@ -184,9 +192,9 @@ def require_personal_research_inference_scope(
 ) -> dict:
     """Require the project's conservative clearance for frozen V2 inference.
 
-    The official data page was updated 2026-11-20 and now describes the free data as
-    intended for private individuals only, excluding commercial or data-training
-    products using automated bots, scrapers, or AI. The project therefore keeps
+    The official data page and fair-use contact page were updated 2026-11-24. The current
+    terms limit automated downloads and exclude commercial or AI data-training projects
+    involving automated bots or scrapers. The project therefore keeps
     automated source capture and frozen-model inference fail-closed pending
     provider clarification or an applicable written licence.
     This is an internal risk-control decision, not a claim that the provider
@@ -284,6 +292,12 @@ def require_personal_research_inference_scope(
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise PermissionError("source-rights verification clock must have a real UTC offset")
     now_utc = now.astimezone(timezone.utc)
+
+    fair_use_policy = verify_fair_use_policy_evidence(
+        manifest,
+        now_utc=now_utc,
+        repo_root=root,
+    )
     reviewed_at = _parse_utc(authorization.get("reviewed_at_utc"), "reviewed_at_utc")
     if reviewed_at > now_utc:
         raise PermissionError("AI-inference authorization review time is in the future")
@@ -324,6 +338,7 @@ def require_personal_research_inference_scope(
     return {
         "provider": EXPECTED_PROVIDER,
         "rights_manifest_sha256": hashlib.sha256(raw).hexdigest(),
+        **fair_use_policy,
         "scope_status": manifest["rights_status"],
         "research_inference_scope": manifest["research_inference_scope"],
         "policy_url": policy_url,
